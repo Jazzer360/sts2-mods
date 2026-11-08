@@ -32,7 +32,7 @@ The game shows these only as card text. `CardModel.Keywords` merges local keywor
 - [~] **Ethereal translucency**: any card that is Ethereal right now renders at reduced opacity, whatever the source.
   - Sources: canonical Ethereal cards; Music Box (adds Ethereal to its copy); Hexed affliction via `HexPower` (granted globally, gone when Hex is removed).
   - Must still be readable. Opacity is a setting (default ~70%).
-- [~] **Ethereal badge** (top-center glyph), next to the translucency.
+- ~~Ethereal badge~~: dropped in 0.3.0; translucency alone marks Ethereal.
 - [~] **Retain badge**: from the Retain keyword or single-turn retain (`ShouldRetainThisTurn`).
   - Adds Retain: Anointed, Calculated Gamble, Dredge, Gold Axe, Misery, Monologue, Reaper Form, Royal Gamble, Scrawl, Times Up, Wish, Wisp; enchantments Royally Approved and Steady.
   - Single-turn retain: Expertise.
@@ -146,7 +146,7 @@ These relics are "armed" until their first use, then go quiet. The game marks th
 | [~] | **Throwing Axe** | every card in hand | the first card you play this combat is played twice. Any type, so the marker should help you choose the card |
 | [~] | **Burning Sticks** | skills that will exhaust: Exhaust skills (including added Exhaust), plus Ethereal skills at end of turn | the first skill exhausted this combat returns a copy to your hand. Exhaust from Ethereal counts too (`causedByEthereal` is accepted) |
 | [~] | Unsettling Lamp | cards that apply a debuff to an enemy | the first card that debuffs an enemy this combat applies double the debuff. Doesn't trigger or get spent against a target with Artifact. Note that on the card |
-| [~] | Permafrost | powers | the first power played this combat gives block |
+| [x] | Permafrost | powers | the first power played this combat gives block |
 | [~] | Pael's Eye | (hand-wide) | once per combat, ending a turn with no cards played exhausts your hand and gives an extra turn. While armed, show "end turn now = extra turn" if you haven't played a card yet |
 
 **Once per turn** (re-arms each turn):
@@ -183,7 +183,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [~] **Enemy attack intents**: sum `AttackIntent.GetTotalDamage(targets, owner)` across enemies (multi-hit included). Multiplayer: count only intents that target you.
 - [~] **Burn** (in hand, end of turn): blockable.
 - [~] **Decay**: blockable.
-- [~] **Infection**: blockable.
+- [x] **Infection**: blockable.
 - [~] **Toxic**: blockable.
 - [~] **Wither**: blockable.
 - [~] **Constrict** (debuff, after your turn ends): blockable (`Unpowered`).
@@ -191,13 +191,13 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [~] **Disintegration** (debuff, late end of turn): blockable.
 - [~] Unblockable, listed separately: Regret (HP loss = cards in hand), Bad Luck, Beckon, Demise. Poison is already previewed by the game.
 - [ ] Not damage, but worth a reminder: Doubt (Weak), Shame (Frail), Debt (lose gold).
-- [ ] **Health-bar preview**: render the expected loss after block alongside the game's existing Poison/Doom preview in `NHealthBar`.
+- [ ] **Health-bar preview** (the summary line now sits under the HP bar; a bar overlay is still open): render the expected loss after block alongside the game's existing Poison/Doom preview in `NHealthBar`.
 
 ---
 
 ## 6. Shuffle warning → `shuffle-warning`
 
-- [~] Draw-pile counter: "N until shuffle" near the draw pile.
+- ~~Draw-pile counter~~: dropped in 0.3.0 (the card badges are enough).
 - [~] Badge on draw cards and potions in hand whose draw would exceed the draw pile (forcing a reshuffle).
 - [~] While a shuffle is possible, mark the cards in hand that will stay out of the new draw pile.
 - [ ] Find every draw source: cards using `CardPileCmd.Draw` and draw potions, and which ones have a fixed amount.

@@ -17,12 +17,15 @@ public enum CounterKind
 /// <param name="TypeName">The relic's class name in the game (e.g. "PenNib").</param>
 /// <param name="ThresholdVar">DynamicVars key holding the threshold, or null to use Fixed.</param>
 /// <param name="CrossTurn">Keeps counting across turns/combats: always shown, sorted first.</param>
+/// <param name="InTray">Show a row in the Relic Counters tray. Off for one-shot relics whose
+/// on-card icon (Relic Reminders) already says everything.</param>
 public sealed record RelicCounterSpec(
     string TypeName,
     CounterKind Kind,
     string? ThresholdVar = null,
     int Fixed = 0,
-    bool CrossTurn = false);
+    bool CrossTurn = false,
+    bool InTray = true);
 
 /// <summary>
 /// Every relic the Relic Counters tray knows about. Thresholds are read live from the relic's
@@ -63,14 +66,15 @@ public static class RelicSpecs
         new RelicCounterSpec("Chandelier", CounterKind.OnTurn, Fixed: 3),
         new RelicCounterSpec("SparklingRouge", CounterKind.OnTurn, Fixed: 3),
 
-        // One-shot: armed until first use.
-        new RelicCounterSpec("Vambrace", CounterKind.OneShot),
-        new RelicCounterSpec("ThrowingAxe", CounterKind.OneShot),
-        new RelicCounterSpec("BurningSticks", CounterKind.OneShot),
-        new RelicCounterSpec("UnsettlingLamp", CounterKind.OneShot),
+        // One-shot: armed until first use. Only Pael's Eye gets a tray row (it has no card to
+        // mark); the rest are shown on the cards that would use them (Relic Reminders).
+        new RelicCounterSpec("Vambrace", CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec("ThrowingAxe", CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec("BurningSticks", CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec("UnsettlingLamp", CounterKind.OneShot, InTray: false),
         new RelicCounterSpec("PaelsEye", CounterKind.OneShot),
-        new RelicCounterSpec("Permafrost", CounterKind.OneShot),
-        new RelicCounterSpec("MusicBox", CounterKind.OneShot),
+        new RelicCounterSpec("Permafrost", CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec("MusicBox", CounterKind.OneShot, InTray: false),
     };
 
     private static readonly Dictionary<string, RelicCounterSpec> ByName = All.ToDictionary(s => s.TypeName);

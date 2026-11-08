@@ -8,8 +8,8 @@ Display-only quality-of-life tweaks for Slay the Spire 2. The mod doesn't change
 | Relic Counters | Pip tray above your hand for Pen Nib, Kunai, Stone Calendar and every other counter relic |
 | Relic Reminders | Relic icons on the cards they affect; attacks glow when Pen Nib is ready |
 | Block Forecast | The block you'll gain at end of turn (Plating, Frost orbs...) beside your block |
-| Incoming Damage | Total blockable damage this round, including Burn/Decay/Constrict |
-| Shuffle Warning | When a draw will reshuffle, and which hand cards stay out |
+| Incoming Damage | One line under your HP: incoming damage, end-of-turn block, damage you will take |
+| Shuffle Warning | Card badges when a draw can reshuffle, and which hand cards stay out |
 | Intent Forecast | Each enemy's upcoming moves |
 
 Everything above is still planned. See [docs/FEATURES.md](../../docs/FEATURES.md) for the full description of each change, [docs/TRACKER.md](../../docs/TRACKER.md) for progress, and [CHANGELOG.md](../../CHANGELOG.md) for patch notes.

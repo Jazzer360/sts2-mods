@@ -29,6 +29,7 @@ public static class ModEntry
 
         var settingsFile = new JsonSettingsFile<QolSettings>(JsonSettingsFile<QolSettings>.DefaultPathFor(typeof(ModEntry), Id), Log);
         var settings = settingsFile.Load();
+        MigrateLayout(settings);
 
         var host = new OverlayHost(Id, Log)
         {
@@ -46,8 +47,8 @@ public static class ModEntry
             new CardIndicatorsFeature(ctx),
             new RelicCountersFeature(ctx),
             new RelicRemindersFeature(ctx),
+            new IncomingDamageFeature(ctx), // before Block Forecast: it hides when this is shown
             new BlockForecastFeature(ctx),
-            new IncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
             new IntentForecastFeature(),
         };
@@ -73,6 +74,18 @@ public static class ModEntry
         var renderer = new CardOverlayRenderer(host, ctx.Decor);
         host.AddLateFrame(renderer.Render);
         host.Start();
+    }
+
+    /// <summary>Resets saved positions whose defaults changed, so players get the new defaults.</summary>
+    private static void MigrateLayout(QolSettings settings)
+    {
+        if (settings.LayoutVersion < 2)
+        {
+            // 0.3.0: Incoming Damage moved under the player's HP; Shuffle Warning lost its widget.
+            settings.Widgets.Remove("incoming-damage");
+            settings.Widgets.Remove("shuffle-warning");
+        }
+        settings.LayoutVersion = QolSettings.CurrentLayoutVersion;
     }
 
     private static Key ParseKey(string? name, Key fallback)

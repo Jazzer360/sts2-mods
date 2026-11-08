@@ -21,6 +21,12 @@ public sealed class WidgetLayout
     public float Scale { get; set; } = 1f;
     public float Opacity { get; set; } = 1f;
 
+    /// <summary>
+    /// Attached to a game element (e.g. below the player's health bar) instead of a screen
+    /// anchor. Offsets are then relative to that element's bottom-center. Middle-click toggles.
+    /// </summary>
+    public bool FollowGame { get; set; }
+
     public WidgetLayout Clone() => (WidgetLayout)MemberwiseClone();
 
     public static (float X, float Y) Fraction(ScreenAnchor a) => a switch

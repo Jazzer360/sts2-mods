@@ -66,6 +66,14 @@ public sealed class MovableWidget
     /// <summary>Set by the owning feature each frame: does the widget have anything to show?</summary>
     public bool HasContent { get; set; }
 
+    /// <summary>
+    /// Screen rect of the game element this widget can attach to (null when it isn't on screen).
+    /// When the layout has FollowGame, the widget sits centered below this rect.
+    /// </summary>
+    public Func<Rect2?>? FollowTarget { get; set; }
+
+    private Rect2? CurrentTarget => _layout.FollowGame ? FollowTarget?.Invoke() : null;
+
     internal void UpdateLayout(OverlayHost host)
     {
         var unlocked = host.LayoutUnlocked;
@@ -73,7 +81,8 @@ public sealed class MovableWidget
         Root.MouseFilter = unlocked ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
         Root.AddThemeStyleboxOverride("panel", unlocked ? _unlockedStyle : _lockedStyle);
         _placeholder.Visible = unlocked;
-        _placeholder.Text = unlocked ? $"{_title}  ({_layout.Anchor})" : _title;
+        var where = _layout.FollowGame && FollowTarget != null ? "attached" : _layout.Anchor.ToString();
+        _placeholder.Text = unlocked ? $"{_title}  ({where})" : _title;
         Root.Modulate = new Color(1, 1, 1, Mathf.Clamp(_layout.Opacity, 0.1f, 1f));
 
         Root.ResetSize();
@@ -84,10 +93,22 @@ public sealed class MovableWidget
 
         var vp = host.ViewportSize;
         var size = Root.Size * scale;
-        var (fx, fy) = WidgetLayout.Fraction(_layout.Anchor);
-        var pos = new Vector2(vp.X * fx - size.X * fx + _layout.OffsetX, vp.Y * fy - size.Y * fy + _layout.OffsetY);
+        Vector2 pos;
+        if (CurrentTarget is { } target)
+        {
+            pos = AttachPoint(target, size) + new Vector2(_layout.OffsetX, _layout.OffsetY);
+        }
+        else
+        {
+            var (fx, fy) = WidgetLayout.Fraction(_layout.Anchor);
+            pos = new Vector2(vp.X * fx - size.X * fx + _layout.OffsetX, vp.Y * fy - size.Y * fy + _layout.OffsetY);
+        }
         Root.Position = Clamp(pos, size, vp);
     }
+
+    /// <summary>Top-left that centers the widget just below the target.</summary>
+    private static Vector2 AttachPoint(Rect2 target, Vector2 size)
+        => new(target.Position.X + target.Size.X / 2 - size.X / 2, target.End.Y);
 
     private static Vector2 Clamp(Vector2 pos, Vector2 size, Vector2 vp)
     {
@@ -122,6 +143,14 @@ public sealed class MovableWidget
                 _host.RaiseLayoutChanged();
                 Root.AcceptEvent();
             }
+            else if (mb.Pressed && mb.ButtonIndex == MouseButton.Middle && FollowTarget != null)
+            {
+                // Toggle between attached-to-game-element and a screen anchor, keeping it in place.
+                _layout.FollowGame = !_layout.FollowGame;
+                StoreOffsetForCurrentMode();
+                _host.Toast(_layout.FollowGame ? $"{_title}: attached to game element" : $"{_title}: pinned to screen", 2.5f);
+                Root.AcceptEvent();
+            }
             else if (mb.Pressed && (mb.ButtonIndex == MouseButton.WheelUp || mb.ButtonIndex == MouseButton.WheelDown))
             {
                 var step = mb.ButtonIndex == MouseButton.WheelUp ? 0.1f : -0.1f;
@@ -138,9 +167,34 @@ public sealed class MovableWidget
         }
     }
 
-    /// <summary>Pick the nearest of the nine anchors to the widget's center and store an offset from it.</summary>
+    private void StoreOffsetForCurrentMode()
+    {
+        if (CurrentTarget is { } target)
+        {
+            var size = Root.Size * Root.Scale;
+            var off = Root.Position - AttachPoint(target, size);
+            _layout.OffsetX = off.X;
+            _layout.OffsetY = off.Y;
+            _host.RaiseLayoutChanged();
+        }
+        else
+        {
+            Reanchor();
+        }
+    }
+
+    /// <summary>
+    /// After a drag: if attached to a game element, store the offset from it; otherwise pick
+    /// the nearest of the nine screen anchors and store an offset from that.
+    /// </summary>
     private void Reanchor()
     {
+        if (CurrentTarget != null)
+        {
+            StoreOffsetForCurrentMode();
+            return;
+        }
+
         var vp = _host.ViewportSize;
         var size = Root.Size * Root.Scale;
         var center = Root.Position + size / 2;
@@ -172,5 +226,6 @@ public sealed class MovableWidget
         _layout.OffsetY = src.OffsetY;
         _layout.Scale = src.Scale;
         _layout.Opacity = src.Opacity;
+        _layout.FollowGame = src.FollowGame;
     }
 }

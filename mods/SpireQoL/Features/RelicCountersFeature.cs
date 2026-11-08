@@ -68,7 +68,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
 
         var ordered = me.Relics
             .Select(r => (Relic: r, Spec: RelicSpecs.For(r.GetType().Name)))
-            .Where(x => x.Spec != null && _ctx.Settings.RelicEnabled(x.Spec.TypeName))
+            .Where(x => x.Spec != null && x.Spec.InTray && _ctx.Settings.RelicEnabled(x.Spec.TypeName))
             .OrderByDescending(x => x.Spec!.CrossTurn)
             .ThenBy(x => x.Spec!.Kind)
             .ToList();

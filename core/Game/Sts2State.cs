@@ -60,6 +60,38 @@ public static class Sts2State
         }
     }
 
+    /// <summary>
+    /// Screen rect covering the local player's HP bar and the power icons under it, or null.
+    /// From NCombatRoom.CreatureNodes → NCreature "%HealthBar" (NCreatureStateDisplay), whose
+    /// own scene has "%HealthBar" (NHealthBar) and "%PowerContainer".
+    /// </summary>
+    public static Godot.Rect2? PlayerStatusRect()
+    {
+        var me = Me;
+        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
+        if (me == null || room == null) return null;
+
+        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == me.Creature);
+        var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
+        if (display == null || !display.IsVisibleInTree()) return null;
+
+        Godot.Rect2? rect = null;
+        foreach (var part in new[] { display.GetNodeOrNull<Godot.Control>("%HealthBar"), display.GetNodeOrNull<Godot.Control>("%PowerContainer") })
+        {
+            if (part == null || !part.IsVisibleInTree() || part.Size.X < 1) continue;
+            var r = ScreenRect(part);
+            rect = rect is { } acc ? acc.Merge(r) : r;
+        }
+        return rect ?? ScreenRect(display);
+    }
+
+    /// <summary>A control's rect in viewport (screen) coordinates, accounting for cameras and canvas layers.</summary>
+    public static Godot.Rect2 ScreenRect(Godot.Control c)
+    {
+        var xf = c.GetGlobalTransformWithCanvas();
+        return new Godot.Rect2(xf.Origin, c.Size * xf.Scale);
+    }
+
     /// <summary>Cards the local player finished playing this turn (from combat history).</summary>
     public static IEnumerable<CardModel> CardsPlayedThisTurn(Player me)
     {

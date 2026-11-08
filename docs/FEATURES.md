@@ -21,7 +21,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 ## What the mod adds to the game, technically
 
-- **One CanvasLayer** (`SpireQoL_Overlay`, layer 10) under the scene tree root. It holds the floating widgets and a toast message.
+- **One CanvasLayer** (`SpireQoL_Overlay`, layer 10) under the scene tree root. It holds the floating widgets and a toast message. Widgets attached to a game element read that element's screen position each frame; they never modify it.
 - **One `SceneTree.ProcessFrame` callback.** It runs each feature, then draws card decorations.
 - **A child node `SpireQoL_CardOverlay`** under `%CardContainer` of each card node in your hand that has something to show. While a decorated card is in your hand, Spire QoL changes that container's `Modulate` alpha (Ethereal translucency). The alpha is restored as soon as the node stops showing that card. The game reuses card nodes, so this matters.
 - **A subscription to `CombatManager.CombatSetUp`,** to know the current combat.
@@ -37,7 +37,8 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
   - **Drag** to move it.
   - **Mouse wheel** over it to scale it (0.4×–3×).
   - **Right-click** to reset it to its default place and size.
-  - On drop, it re-anchors to the nearest of nine screen points (corners, edge centers, center). The position is saved relative to that point, so it survives resolution changes. Indicators can't be dragged off screen.
+  - **Middle-click** (widgets that can attach to a game element, currently Incoming Damage): toggle between *attached* (follows the element, e.g. stays under your HP) and *pinned to the screen*.
+  - On drop, a pinned widget re-anchors to the nearest of nine screen points (corners, edge centers, center). An attached widget stores its offset from the element. Either way, positions survive resolution changes. Indicators can't be dragged off screen.
   - Locking makes them click-through again and saves the layout.
 - **F9: hide/show all overlays.**
 - A short message in the top-left confirms each hotkey.
@@ -48,7 +49,8 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | --- | --- | --- |
 | `Features` | all `true` | turn features on/off by id |
 | `Relics` | (empty) | relic class name → `false` to hide it from counters and reminders, e.g. `"PenNib": false` |
-| `Widgets` | defaults | saved positions (`Anchor`, `OffsetX/Y`, `Scale`, `Opacity`) |
+| `Widgets` | defaults | saved positions (`Anchor`, `OffsetX/Y`, `Scale`, `Opacity`, `FollowGame`) |
+| `LayoutVersion` | (managed) | when a release changes a default position, older saved positions for that widget are reset once |
 | `UnlockLayoutKey` / `HideAllKey` | `F8` / `F9` | Godot key names |
 | `EtherealOpacity` | `0.7` | 0.25–1 |
 | `ShowInnateEternalBadges` | `false` | |
@@ -57,7 +59,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | `FlashHz` | `2.5` | flash speed |
 | `ShuffleHandMarkers` | `true` | KEPT badges |
 
-**Not yet:** an in-game settings menu (for now, use the file), anchoring to game elements (health bar, hand), grid snap, per-widget opacity control in game.
+**Not yet:** an in-game settings menu (for now, use the file), attaching to game elements other than the player's HP (hand, draw pile), grid snap, per-widget opacity control in game.
 
 ---
 
@@ -65,9 +67,8 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 **What you see:** mid-combat changes to a card in your hand, which the game otherwise shows only as text. Badges sit in a row just *above* the card's top edge, so they never cover the cost, title, enchantment tab or affliction overlay.
 
-- **Ethereal cards are translucent** (70% by default) whenever they're Ethereal right now, whatever the source: the card itself, Music Box copies, or Hex (which grants Ethereal through a power).
+- **Ethereal cards are translucent** (70% by default) whenever they're Ethereal right now, whatever the source: the card itself, Music Box copies, or Hex (which grants Ethereal through a power). Translucency is the only Ethereal marker; there's no text badge.
 - **Keyword badges:**
-  - `ETH` Ethereal
   - `RET` Retain; `RET·1` retained this turn only (e.g. Expertise)
   - `SLY` Sly; `SLY·1` Sly this turn only (Hand Trick)
   - `+EXH` Exhaust that was *added* (cards that always exhaust get no badge)
@@ -94,7 +95,7 @@ Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
   - Velvet Choker shows plays left and turns red at 1.
   - Pocketwatch shows green while you're within its card limit and red ("missed") once you go over.
 - **Turn-trigger relics** show progress to their turn and say "next turn" the turn before: Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3).
-- **One-shot relics** show one segment: green "ready" while unused, "used" afterwards. Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Pael's Eye, Permafrost (per combat); Music Box (per turn).
+- **Pael's Eye** shows one segment: green "ready" while unused this combat, "used" afterwards. It's the only one-shot relic in the tray, because it has no card to mark. The other one-shot relics (Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box) appear only as icons on the cards that would use them (Relic Reminders).
 
 Thresholds are read live from each relic, so balance patches are picked up automatically.
 
@@ -126,7 +127,7 @@ Thresholds are read live from each relic, so balance patches are picked up autom
 
 ## Block Forecast
 
-**What you see** (default: left side of the screen): `Block 5  +6 at end of turn` with a breakdown, so you stop overblocking. Shown only during your turn when something will add block.
+**What you see** (default: left side of the screen): `Block 5  +6 at end of turn` with a breakdown, so you stop overblocking. Shown only during your turn when something will add block, **and only when Incoming Damage isn't showing** (that line already includes end-of-turn block).
 
 Counts:
 - Plating
@@ -144,11 +145,13 @@ Counts:
 
 ## Incoming Damage
 
-**What you see** (default: left side, above Block Forecast), during your turn:
-- `Incoming 18`: total blockable damage this round.
-- `vs block 5+6 → take 7` in red, or `→ fully blocked (+3 spare)` in green. This counts your current block plus the Block Forecast.
-- A breakdown: each attacking enemy (with hit count) and each self-damage source.
-- `Unblockable HP loss N`, listed separately and never mixed into the total.
+**What you see**, during your turn: one line centered under your HP bar and power icons. It follows your character, and you can move it (F8) or detach it (middle-click).
+
+`Incoming 18   Block 11   Take 7`
+
+- **Incoming:** everything headed at you this round, blockable or not.
+- **Block:** your block at end of turn: current block plus Block Forecast sources.
+- **Take:** what you'll actually lose: blockable damage left after block, plus any unblockable HP loss. Red, or green `No damage` when you're covered.
 
 Sources:
 - **Blockable:** enemy attack intents, using the game's own intent numbers (`AttackIntent.GetTotalDamage`, so Strength, Vulnerable etc. are included); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration debuffs.
@@ -156,17 +159,17 @@ Sources:
 
 **Game UI touched:** none; our own widget.
 
-**Not yet:** health-bar preview, per-player targeting in multiplayer (all attack intents are counted).
+**Game UI read (not changed):** the player's `NCreature` → `%HealthBar` (`NCreatureStateDisplay`) → its `%HealthBar` and `%PowerContainer`, for placement only.
+
+**Not yet:** health-bar preview, per-player targeting in multiplayer (all attack intents are counted), per-source breakdown on hover.
 
 ---
 
 ## Shuffle Warning
 
-**What you see** (default: bottom-left, near the draw pile), during your turn when your draw pile is low (5 or fewer) or a shuffle is possible:
-- `Reshuffle after N more draws` (or `Next draw reshuffles`), plus draw and discard pile sizes.
-- `SHUFFLE` badge on draw cards in hand whose draw is more than your draw pile.
-- Potions that would cause a shuffle, listed in the widget.
-- `KEPT` badge on your other hand cards while a mid-turn shuffle is possible: they'll stay out of the new draw pile.
+**What you see:** card badges only, appearing during your turn when something can reshuffle your discard pile mid-turn. There's no summary box.
+- `SHUFFLE` on draw cards in hand whose draw is more than your draw pile.
+- `KEPT` on your other hand cards while a shuffle is possible, from one of those cards or from a draw potion (Swift Potion, Bottled Potential, Clarity, Cure All, Glowwater). These cards will stay out of the new draw pile.
 
 Draw cards and potions are a fixed list from the decompile (TRACKER §6).
 

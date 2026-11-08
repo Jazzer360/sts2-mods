@@ -6,6 +6,22 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.3.0 (feedback from first test)
+#### Changed
+- **Incoming Damage** is now one line, `Incoming N · Block N · Take N`, centered under the player's HP and power icons. It follows your character. "Take" includes unblockable HP loss. Your saved position for it is reset once to the new default.
+- **Block Forecast** hides while Incoming Damage is showing, since that line already includes end-of-turn block.
+- **Relic Counters:** one-shot relics no longer get a tray row; their icon on the card that uses them is enough. Pael's Eye keeps its row (it has no card to mark).
+- **Card Indicators:** removed the `ETH` badge; translucency alone marks Ethereal cards.
+
+#### Removed
+- **Shuffle Warning** summary box. The `SHUFFLE` / `KEPT` card badges remain.
+
+#### Added
+- Widgets can attach to a game element. Middle-click (while the layout is unlocked) toggles attached vs. pinned to the screen.
+
+#### Verified in game
+- Permafrost reminder on powers; Infection damage (Phrog Parasite) counted in Incoming Damage. Mod loads cleanly, with no errors in the log.
+
 ### Spire QoL 0.2.0 (first in-game test build, game v0.111.0)
 #### Added
 - **Layout system:** F8 unlocks the layout. Then drag widgets to move them, scroll to scale them, right-click to reset; they snap to the nearest of nine screen anchors. F9 hides/shows all overlays. Positions are saved to `SpireQoL.settings.cfg`.

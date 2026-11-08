@@ -17,6 +17,11 @@ public sealed class QolSettings
     /// <summary>Widget id → placement. Filled with defaults on first run.</summary>
     public Dictionary<string, WidgetLayout> Widgets { get; set; } = new();
 
+    public const int CurrentLayoutVersion = 2;
+
+    /// <summary>Bumped when default widget positions change; older saved positions get reset.</summary>
+    public int LayoutVersion { get; set; }
+
     public string UnlockLayoutKey { get; set; } = "F8";
     public string HideAllKey { get; set; } = "F9";
 

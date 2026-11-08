@@ -43,7 +43,8 @@ public sealed class BlockForecastFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        var m = Sts2State.IsPlayerTurn ? TurnEndModel.Compute() : null;
+        // When Incoming Damage is showing, it already includes end-of-turn block.
+        var m = Sts2State.IsPlayerTurn && !_ctx.IncomingShown ? TurnEndModel.Compute() : null;
         if (m == null || (m.BlockGain == 0 && m.NextTurnBlock.Count == 0))
         {
             _widget!.HasContent = false;

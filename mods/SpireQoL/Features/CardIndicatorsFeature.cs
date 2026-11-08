@@ -13,7 +13,7 @@ namespace SpireQoL.Features;
 /// Mid-combat card modifiers made visible. Spec: docs/FEATURES.md#card-indicators.
 ///  - Ethereal cards are translucent, whatever made them Ethereal (CardModel.Keywords
 ///    merges the card's own keywords with ones granted by powers like Hex).
-///  - Keyword badges above the card: ETH, RET (RET·1 for this turn only), SLY, +EXH when
+///  - Keyword badges above the card: RET (RET·1 for this turn only), SLY, +EXH when
 ///    Exhaust was added. INN/ETR optional.
 ///  - Cards a power or relic blocks from being played (Bound, Ringing, Smog, Velvet Choker)
 ///    are dimmed with the reason. Galvanized cards show the damage they'll deal you.
@@ -22,7 +22,6 @@ namespace SpireQoL.Features;
 public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 {
     private static readonly Color Dark = new(0.08f, 0.08f, 0.1f, 0.92f);
-    private static readonly BadgeSpec Ethereal = new("ETH", new Color(0.62f, 0.55f, 0.95f, 0.95f), Colors.White);
     private static readonly BadgeSpec Retain = new("RET", new Color(0.2f, 0.65f, 0.55f, 0.95f), Colors.White);
     private static readonly BadgeSpec RetainOnce = new("RET·1", new Color(0.2f, 0.65f, 0.55f, 0.95f), Colors.White);
     private static readonly BadgeSpec Sly = new("SLY", new Color(0.55f, 0.3f, 0.6f, 0.95f), Colors.White);
@@ -70,8 +69,8 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 
             if (kw.Contains(CardKeyword.Ethereal))
             {
+                // Translucency alone marks Ethereal; no text badge.
                 d.Opacity = Mathf.Clamp(s.EtherealOpacity, 0.25f, 1f);
-                d.Badges.Add(Ethereal);
             }
             if (kw.Contains(CardKeyword.Retain)) d.Badges.Add(Retain);
             else if (card.ShouldRetainThisTurn) d.Badges.Add(RetainOnce);
