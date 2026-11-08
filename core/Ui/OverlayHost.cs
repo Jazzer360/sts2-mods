@@ -39,6 +39,15 @@ public sealed class OverlayHost
     /// <summary>When true, every overlay is hidden (hotkey).</summary>
     public bool HideAll { get; private set; }
 
+    /// <summary>
+    /// When this returns true the floating widgets hide, so game screens opened on top of combat
+    /// (pause menu, pile views, rewards, map) aren't covered. Card decorations live on the card
+    /// nodes themselves, so they already sit underneath those screens.
+    /// </summary>
+    public Func<bool>? SuppressWhen { get; set; }
+
+    public bool Suppressed { get; private set; }
+
     public Key UnlockLayoutKey { get; set; } = Key.F8;
     public Key HideAllKey { get; set; } = Key.F9;
 
@@ -102,9 +111,18 @@ public sealed class OverlayHost
     {
         HandleHotkeys();
 
+        try
+        {
+            Suppressed = SuppressWhen?.Invoke() ?? false;
+        }
+        catch
+        {
+            Suppressed = false;
+        }
         if (Layer != null)
         {
-            Layer.Visible = !HideAll;
+            // The toast stays visible even when suppressed, so hotkey feedback still shows.
+            Layer.Visible = !HideAll || (_toast?.Visible ?? false);
         }
 
         foreach (var (id, feature) in _features)

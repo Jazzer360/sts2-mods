@@ -6,6 +6,21 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.5.0 (feedback from third test)
+#### Added
+- **Countdown powers in the counter tray:** Orbit, Automation, Cacophony (across turns); Panache, Pale Blue Dot (per turn); and the enemy power Withering Presence (every 6 of your cards adds a Wither), in red.
+- **Pael's Tears:**
+  - The counter tray shows whether you still have energy to carry into next turn.
+  - Cards that would spend your last energy (including X-cost cards) get a crossed-out Pael's Tears icon.
+
+#### Changed
+- Counters longer than 12 steps (Cacophony's 33) show only the countdown number, no bar.
+- Incoming Damage's attack icon now matches the incoming total's tier, using the same thresholds as enemy intents.
+
+#### Fixed
+- Incoming Damage's attack icon showed the game's missing-texture placeholder. The plain `intent_attack.tres` isn't shipped; the game uses tiered `attack/intent_attack_N` icons.
+- The counter tray and other floating widgets drew over the pause menu, pile views, deck view, rewards and the map. They now hide while any of those are open.
+
 ### Spire QoL 0.4.0 (feedback from second test)
 #### Changed
 - **Incoming Damage** is now a stacked sum with the game's attack/defend icons: incoming, minus end-of-turn block, equals damage taken.

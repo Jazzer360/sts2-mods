@@ -12,6 +12,35 @@ public enum CounterKind
     OnTurn,
     /// <summary>Armed until first use this combat or turn.</summary>
     OneShot,
+    /// <summary>Pael's Tears: good while you still have energy to carry over to next turn.</summary>
+    KeepEnergy,
+}
+
+/// <param name="TypeName">The power's class name (e.g. "PanachePower").</param>
+/// <param name="Threshold">Steps per cycle (from the decompile; the game shows "left" via DisplayAmount).</param>
+/// <param name="Unit">Short noun for the label ("cards", "energy"...).</param>
+/// <param name="OnEnemy">Lives on an enemy but counts your plays (Withering Presence).</param>
+public sealed record PowerCounterSpec(string TypeName, int Threshold, string Unit, bool CrossTurn = false, bool OnEnemy = false);
+
+/// <summary>
+/// Powers that count down to an effect. The game exposes "steps left" as PowerModel.DisplayAmount.
+/// Thresholds are the reset values in each class (v0.111.0).
+/// </summary>
+public static class PowerSpecs
+{
+    public static readonly IReadOnlyList<PowerCounterSpec> All = new[]
+    {
+        new PowerCounterSpec("OrbitPower", 4, "energy", CrossTurn: true),       // every 4 energy spent: gain energy
+        new PowerCounterSpec("AutomationPower", 10, "draws", CrossTurn: true),  // every 10 cards drawn: gain energy
+        new PowerCounterSpec("CacophonyPower", 33, "draws", CrossTurn: true),   // every 33 cards drawn: damage an enemy
+        new PowerCounterSpec("PanachePower", 5, "cards"),                       // every 5 cards this turn: damage all enemies
+        new PowerCounterSpec("PaleBlueDotPower", 5, "attacks"),                 // 5 attacks this turn: draw next turn (once)
+        new PowerCounterSpec("WitheringPresencePower", 6, "cards", CrossTurn: true, OnEnemy: true), // every 6 cards: Wither in hand
+    };
+
+    private static readonly Dictionary<string, PowerCounterSpec> ByName = All.ToDictionary(s => s.TypeName);
+
+    public static PowerCounterSpec? For(string typeName) => ByName.TryGetValue(typeName, out var s) ? s : null;
 }
 
 /// <param name="TypeName">The relic's class name in the game (e.g. "PenNib").</param>
@@ -57,6 +86,7 @@ public static class RelicSpecs
         new RelicCounterSpec("LetterOpener", CounterKind.Counter, "Cards"),
         new RelicCounterSpec("BrilliantScarf", CounterKind.Counter, "Cards"),
         new RelicCounterSpec("VelvetChoker", CounterKind.Limit, "Cards"),
+        new RelicCounterSpec("PaelsTears", CounterKind.KeepEnergy, "Energy"),
         new RelicCounterSpec("Pocketwatch", CounterKind.StayUnder, "CardThreshold"),
 
         // Fire on a specific turn.

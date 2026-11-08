@@ -101,7 +101,7 @@ public sealed class MovableWidget
     internal void UpdateLayout(OverlayHost host)
     {
         var unlocked = host.LayoutUnlocked;
-        Root.Visible = !host.HideAll && (HasContent || unlocked);
+        Root.Visible = !host.HideAll && !host.Suppressed && (HasContent || unlocked);
         Root.MouseFilter = unlocked ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
         Root.AddThemeStyleboxOverride("panel", unlocked ? _unlockedStyle : _lockedStyle);
         _placeholder.Visible = unlocked;

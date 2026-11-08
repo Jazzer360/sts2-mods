@@ -37,6 +37,7 @@ public static class ModEntry
             HideAllKey = ParseKey(settings.HideAllKey, Key.F9),
         };
         host.LayoutChanged += settingsFile.Save;
+        host.SuppressWhen = Sts2State.IsScreenOpenOverCombat;
 
         var ctx = new QolContext(settingsFile, host);
         Sts2State.Init();

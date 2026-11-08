@@ -26,19 +26,20 @@ public sealed class TickBar
     public void Set(int filled, int total, Color fill, Color empty)
     {
         total = Math.Clamp(total, 1, 40);
+        // Long counters (e.g. 33) get thinner segments so every bar stays about the same length.
+        var width = total <= 12 ? _segWidth : Math.Max(2f, _segWidth * 12f / total);
+        var gap = total <= 12 ? 2 : 1;
+        Root.AddThemeConstantOverride("separation", gap);
         while (_segments.Count < total)
         {
-            var seg = new ColorRect
-            {
-                CustomMinimumSize = new Vector2(_segWidth, _height),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
+            var seg = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore };
             _segments.Add(seg);
             Root.AddChild(seg);
         }
         for (var i = 0; i < _segments.Count; i++)
         {
             _segments[i].Visible = i < total;
+            _segments[i].CustomMinimumSize = new Vector2(width, _height);
             _segments[i].Color = i < filled ? fill : empty;
         }
     }

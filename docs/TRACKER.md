@@ -92,6 +92,24 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [~] | Metronome | orbs channeled | 7th | each combat | deal damage |
 | [ ] | Pael's Legion | cooldown (turns) | 2 | after use | block multiplier **(verify)** |
 
+### Countdown powers (same tray; the game's `PowerModel.DisplayAmount` is "steps left")
+
+| Done | Power | Counts | Fires at | Resets | Effect |
+| --- | --- | --- | --- | --- | --- |
+| [~] | Orbit | energy spent | 4 | never | gain energy |
+| [~] | Automation | cards drawn | 10 | never | gain energy |
+| [~] | Cacophony | cards drawn | 33 | never | damage a random enemy (number only, no bar) |
+| [~] | Panache | cards played | 5 | each turn | damage all enemies |
+| [~] | Pale Blue Dot | attacks played | 5 | each turn (once) | draw next turn |
+| [~] | Withering Presence (enemy) | your cards played | 6 | never | Wither added to your hand |
+| — | Feral, Monologue, Sloth, Tender, Slow, Tag Team | | | | custom display, but not a countdown to an effect; skipped |
+
+### Energy carry-over
+
+| Done | Relic | Display |
+| --- | --- | --- |
+| [~] | Pael's Tears | tray: `+2 next turn` while energy > 0. Cards: crossed icon on playable cards whose cost ≥ current energy (X-cost included) |
+
 ### Turn-counter relics (same tray, counting turns)
 
 | Done | Relic | Fires | Effect |

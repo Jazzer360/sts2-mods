@@ -69,6 +69,21 @@ public sealed class RelicRemindersFeature : IFeature, IFrameFeature
                     }
                     break;
 
+                case "PaelsTears":
+                {
+                    // Ending the turn with energy left gives energy next turn. Cross out cards that
+                    // would spend your last energy (X-cost cards spend it all).
+                    var energy = me.PlayerCombatState?.Energy ?? 0;
+                    if (energy > 0)
+                    {
+                        foreach (var c in hand)
+                        {
+                            if (c.EnergyCost.GetAmountToSpend() >= energy && c.CanPlay(out _, out _)) Mark(c, relic, crossed: true);
+                        }
+                    }
+                    break;
+                }
+
                 case "ArtOfWar":
                 case "RippleBasin":
                     if (attacksPlayed == 0)

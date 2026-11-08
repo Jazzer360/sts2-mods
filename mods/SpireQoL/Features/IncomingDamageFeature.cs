@@ -35,6 +35,8 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     private Label? _incoming;
     private Label? _block;
     private Label? _result;
+    private TextureRect? _attackIcon;
+    private readonly Texture2D?[] _attackTiers = new Texture2D?[5];
 
     public IncomingDamageFeature(QolContext ctx) => _ctx = ctx;
 
@@ -66,7 +68,12 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         grid.AddThemeConstantOverride("h_separation", 8);
         grid.AddThemeConstantOverride("v_separation", 2);
 
-        grid.AddChild(UiKit.Icon(LoadIntentIcon("intent_attack"), IconSize));
+        for (var tier = 1; tier <= 5; tier++)
+        {
+            _attackTiers[tier - 1] = LoadIntentIcon($"attack/intent_attack_{tier}");
+        }
+        _attackIcon = UiKit.Icon(_attackTiers[0], IconSize);
+        grid.AddChild(_attackIcon);
         _incoming = Number(IncomingColor);
         grid.AddChild(_incoming);
 
@@ -101,7 +108,9 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         _ctx.IncomingShown = true;
 
         var take = m.DamageThrough + m.UnblockableTotal;
-        _incoming!.Text = $"{m.BlockableTotal + m.UnblockableTotal}";
+        var incoming = m.BlockableTotal + m.UnblockableTotal;
+        _attackIcon!.Texture = _attackTiers[AttackTier(incoming) - 1] ?? _attackTiers.FirstOrDefault(t => t != null);
+        _incoming!.Text = $"{incoming}";
         _block!.Text = $"− {m.ExpectedBlock}";
         _result!.Text = $"{take}";
         _result.AddThemeColorOverride("font_color", take > 0 ? TakeColor : SafeColor);
@@ -124,7 +133,20 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         MouseFilter = Control.MouseFilterEnum.Ignore,
     };
 
-    /// <summary>The game's own intent icons (atlases/intent_atlas.sprites/*.tres).</summary>
+    /// <summary>Same tiers the game uses for an enemy's attack intent icon (AttackIntent.GetTexture).</summary>
+    private static int AttackTier(int damage) => damage switch
+    {
+        < 5 => 1,
+        < 10 => 2,
+        < 20 => 3,
+        < 40 => 4,
+        _ => 5,
+    };
+
+    /// <summary>
+    /// The game's own intent icons (atlases/intent_atlas.sprites/*.tres). Attack uses the tiered
+    /// attack/intent_attack_N icons; the plain intent_attack.tres isn't shipped (shows a placeholder).
+    /// </summary>
     private static Texture2D? LoadIntentIcon(string name)
     {
         try

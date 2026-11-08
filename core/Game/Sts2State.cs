@@ -152,6 +152,20 @@ public static class Sts2State
         return new Godot.Rect2(xf.Origin, c.Size * xf.Scale);
     }
 
+    /// <summary>
+    /// True while a game screen covers combat: pause menu, pile and deck views (capstone screens:
+    /// NCapstoneContainer), rewards and card-choice screens (NOverlayStack), or the map.
+    /// </summary>
+    public static bool IsScreenOpenOverCombat()
+    {
+        var capstone = MegaCrit.Sts2.Core.Nodes.Screens.Capstones.NCapstoneContainer.Instance;
+        if (capstone != null && capstone.InUse) return true;
+        var overlays = MegaCrit.Sts2.Core.Nodes.Screens.Overlays.NOverlayStack.Instance;
+        if (overlays != null && overlays.ScreenCount > 0) return true;
+        var map = MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen.Instance;
+        return map != null && map.IsOpen;
+    }
+
     /// <summary>Cards the local player finished playing this turn (from combat history).</summary>
     public static IEnumerable<CardModel> CardsPlayedThisTurn(Player me)
     {

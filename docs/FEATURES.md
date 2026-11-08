@@ -22,6 +22,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 ## What the mod adds to the game, technically
 
 - **One CanvasLayer** (`SpireQoL_Overlay`, layer 10) under the scene tree root. It holds the floating widgets and a toast message. Widgets attached to a game element read that element's screen position each frame; they never modify it.
+- **Floating widgets hide while a game screen covers combat:** the pause menu, draw/discard/exhaust pile and deck views (`NCapstoneContainer.InUse`), card rewards and card-choice screens (`NOverlayStack.ScreenCount > 0`), and the map (`NMapScreen.IsOpen`). Card decorations live on the card nodes in your hand, so they already sit underneath those screens.
 - **One `SceneTree.ProcessFrame` callback.** It runs each feature, then draws card decorations.
 - **A child node `SpireQoL_CardOverlay`** under `%CardContainer` of each card node in your hand that has something to show. While a decorated card is in your hand, Spire QoL changes that container's `Modulate` alpha (Ethereal translucency). The alpha is restored as soon as the node stops showing that card. The game reuses card nodes, so this matters.
 - **A subscription to `CombatManager.CombatSetUp`,** to know the current combat.
@@ -86,7 +87,7 @@ Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
 
 ## Relic Counters
 
-**What you see:** a compact tray (by default bottom-center, above your hand) with one row per counter relic you own: the relic's icon, a bar split into one segment per step, and a short label.
+**What you see:** a compact tray (by default bottom-center, above your hand) with one row per counter relic or countdown power you have: its icon, a bar split into one segment per step, and a short label. Counters longer than 12 steps (Cacophony's 33) show only the countdown number, no bar.
 
 - **Counters that carry across turns and combats sort first:** Pen Nib, Nunchaku, Tuning Fork, Iron Club, Galactic Dust, Joss Paper, Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core, Metronome.
 - **Then per-turn counters:** Kunai, Shuriken, Ornamental Fan, Kusarigama, Letter Opener, Brilliant Scarf.
@@ -95,6 +96,11 @@ Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
   - Velvet Choker shows plays left and turns red at 1.
   - Pocketwatch shows green while you're within its card limit and red ("missed") once you go over.
 - **Turn-trigger relics** show progress to their turn and say "next turn" the turn before: Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3).
+- **Pael's Tears** shows green `+2 next turn` while you still have energy (ending your turn with energy left gives energy next turn), and red `no energy left` once you've spent it all.
+- **Countdown powers** (sorted after relics; the game's `PowerModel.DisplayAmount` is "steps left"). The bar fills toward the next trigger and flashes when one step is left:
+  - Across turns: Orbit (every 4 energy spent), Automation (every 10 cards drawn), Cacophony (every 33 cards drawn, number only).
+  - Per turn: Panache (every 5 cards played), Pale Blue Dot (5 attacks; shows `done` once it has fired this turn).
+  - Enemy powers that count *your* plays, in red: Withering Presence (every 6 cards you play adds a Wither to your hand).
 - **Pael's Eye** shows one segment: green "ready" while unused this combat, "used" afterwards. It's the only one-shot relic in the tray, because it has no card to mark. The other one-shot relics (Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box) appear only as icons on the cards that would use them (Relic Reminders).
 
 Thresholds are read live from each relic, so balance patches are picked up automatically.
@@ -109,7 +115,9 @@ Thresholds are read live from each relic, so balance patches are picked up autom
 
 **What you see:** the relic's own icon on the cards in your hand that it cares about, in the same row above the card as the badges.
 
-- **Crossed-out icon = playing this card stops this relic working this turn.** Art of War and Ripple Basin on every attack, until you've played an attack this turn.
+- **Crossed-out icon = playing this card stops this relic working this turn.**
+  - Art of War and Ripple Basin on every attack, until you've played an attack this turn.
+  - Pael's Tears on every playable card that would spend your last energy (its current cost ≥ your energy, and all X-cost cards).
 - **Pen Nib ready:** attacks get a pulsing violet border plus the Pen Nib icon. This attack will use the double damage.
 - **One-shot relics, while still unused:**
   - Vambrace on cards that give block
@@ -146,7 +154,7 @@ Not counted: Horn Cleat and Captain's Wheel give block at the *start* of turn 2/
 
 ## Incoming Damage
 
-**What you see**, during your turn: a small stacked sum, read like a math problem. It uses the game's own attack and defend intent icons:
+**What you see**, during your turn: a small stacked sum, read like a math problem. It uses the game's own intent icons: defend, and the attack icon tier that matches the incoming total (the same thresholds enemies use: under 5, 10, 20, 40, and 40+):
 
 ```
 [attack]  14     incoming damage
