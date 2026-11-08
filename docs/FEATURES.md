@@ -62,6 +62,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 - **Stone Calendar** shows turns 1–7 and blinks throughout turn 7 ("fires when you end this turn").
 - **Inverse counters** show what's left: Velvet Choker (card plays left), Pocketwatch (still within its limit).
 - Turn-trigger relics (Horn Cleat, Captain's Wheel, Candelabra, Chandelier, Sparkling Rouge, Happy Flower, Pendulum...) show turns until they fire.
+- One-shot relics (Vambrace, Throwing Axe, Burning Sticks...) show a single pip: lit while armed, unlit once used this combat or turn.
 
 Full relic list: [TRACKER.md §2](TRACKER.md#2-counter-relics--relic-counters-pip-tray-above-the-hand).
 
@@ -79,7 +80,10 @@ Full relic list: [TRACKER.md §2](TRACKER.md#2-counter-relics--relic-counters-pi
 
 - **Pen Nib ready:** attacks in hand get a pulsing border in a color the game doesn't use. It tells you this attack will consume Pen Nib.
 - **Struck-through icon:** playing this card breaks a relic's condition (Art of War, Ripple Basin on attacks).
-- **Normal icon:** playing this card triggers or advances a relic (Permafrost, Mummified Hand, Game Piece, Ivory Tile, Chemical X...).
+- **Normal icon:** playing this card triggers or advances a relic (Mummified Hand, Game Piece, Ivory Tile, Chemical X...).
+- **One-shot relics** (first time each combat or each turn): while the relic is still armed, its icon appears on every card in hand that would use it, and disappears once it's spent. A matching lit pip sits in the Relic Counters tray.
+  - Once per combat: Vambrace (block cards), Throwing Axe (every card), Burning Sticks (skills that will exhaust, including Ethereal skills at end of turn), Unsettling Lamp (cards that debuff an enemy), Permafrost (powers), Pael's Eye ("end turn now = extra turn").
+  - Once per turn: Music Box (attacks), Rainbow Ring (missing card types).
 - If several relics apply, one icon with a stack count is shown; hover to expand.
 
 Full relic list: [TRACKER.md §3](TRACKER.md#3-condition-relics--relic-reminders-icons-on-cards-in-hand).

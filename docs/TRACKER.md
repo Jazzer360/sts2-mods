@@ -51,7 +51,7 @@ The game already recolors changed costs (blue = increased, green = decreased, re
 - [ ] **Temporary cost change**: small clock glyph on the cost while the change expires at end of turn or on play. Sources: Snecko Oil and Enlightenment (this turn / until played); Flatten, Pinpoint, Stomp (this turn); Bookmark, Rocket Punch, Slumbering Essence (until played).
 - [ ] **Global cost modifiers**, shown on affected cards. Powers: Borrowed Time, Corruption, Curious, Free Attack, Free Power, Free Skill, Tangled, Veilpiercer, Void Form. Relics: Brilliant Scarf, Spiked Gauntlets.
 - [ ] **Replay count** (card plays more than once) badge. Sources: Hidden Gem, Soldier's Stew, Sword Sage power, Transfigure.
-- [ ] **"Plays twice" next play**: Burst, Duplication, Echo Form, One-Two Punch, Signal Boost, Tag Team powers; Throwing Axe relic. Mark the cards in hand this applies to.
+- [ ] **"Plays twice" next play**: Burst, Duplication, Echo Form, One-Two Punch, Signal Boost, Tag Team powers. Mark the cards in hand this applies to. (Throwing Axe is handled under one-shot relics, §3.)
 
 ### Afflictions (monster-applied)
 All seven already have game overlays (`AfflictionModel.OverlayPath`). Our job is to stay out of their way and add the "can't play right now" state the game doesn't show. **(verify)** in game which of these the game already dims.
@@ -117,23 +117,46 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [ ] | Art of War | attacks | struck-through icon while no attack played this turn (playing one loses next turn's energy) |
 | [ ] | Ripple Basin | attacks | struck-through icon: playing an attack loses the end-of-turn block |
 | [ ] | Rainbow Ring | missing card types | attack/skill/power played this turn; highlight the missing types |
-| [ ] | Permafrost | powers | first power this combat gives block |
 | [ ] | Mummified Hand | powers | playing a power makes a random card in hand free |
 | [ ] | Game Piece | powers | draw on power play |
 | [ ] | Lost Wisp | powers | damage on power play |
 | [ ] | Daughter of the Wind | attacks | block per attack |
-| [ ] | Music Box | first attack each turn | makes an Ethereal copy |
 | [ ] | Ivory Tile | cards costing ≥3 | refund energy |
 | [ ] | Helical Dart | Shivs | +Dexterity |
 | [ ] | Razor Tooth | attacks/skills | upgrades the card when played **(verify types)** |
 | [ ] | Chemical X | X-cost cards | +2 to X |
 | [ ] | Strike Dummy / Fake Strike Dummy | Strikes | +damage |
-| [ ] | Unsettling Lamp, Vambrace, Pael's Eye | first matching card | one-shot effects **(verify)** |
 | [ ] | Velvet Choker | all cards | dim everything once the 6th card is played |
 | [ ] | Cloak Clasp | hand | end-of-turn block per card left in hand (feeds `block-forecast`) |
 | [ ] | Screaming Flagon | hand | damage at end of turn if hand is empty |
 | [ ] | Tingsha, Tough Bandages | discard | discard triggers **(verify)** |
-| [ ] | Charon's Ashes, Forgotten Soul, Burning Sticks | exhaust | exhaust triggers **(verify)** |
+| [ ] | Charon's Ashes, Forgotten Soul | exhaust | exhaust triggers **(verify)** |
+
+### One-shot relics (first time each combat / each turn)
+
+These relics are "armed" until their first use, then go quiet. The game marks them `Status = Active` while armed. Spire QoL shows:
+- **On cards:** the relic's icon on every card in hand that would use it, *only while it's still armed*. The icons disappear the moment it's spent.
+- **In the relic tray:** a single lit pip while armed, unlit once used. They share the tray with the counter relics.
+
+**Once per combat** (re-arms when combat starts):
+
+| Done | Relic | Cards marked | Effect, from the code |
+| --- | --- | --- | --- |
+| [ ] | **Vambrace** | cards that grant block | the first card that grants you block this combat gives double block. Only block from that one card is doubled |
+| [ ] | **Throwing Axe** | every card in hand | the first card you play this combat is played twice. Any type, so the marker should help you choose the card |
+| [ ] | **Burning Sticks** | skills that will exhaust: Exhaust skills (including added Exhaust), plus Ethereal skills at end of turn | the first skill exhausted this combat returns a copy to your hand. Exhaust from Ethereal counts too (`causedByEthereal` is accepted) |
+| [ ] | Unsettling Lamp | cards that apply a debuff to an enemy | the first card that debuffs an enemy this combat applies double the debuff. Doesn't trigger or get spent against a target with Artifact. Note that on the card |
+| [ ] | Permafrost | powers | the first power played this combat gives block |
+| [ ] | Pael's Eye | (hand-wide) | once per combat, ending a turn with no cards played exhausts your hand and gives an extra turn. While armed, show "end turn now = extra turn" if you haven't played a card yet |
+
+**Once per turn** (re-arms each turn):
+
+| Done | Relic | Cards marked | Effect, from the code |
+| --- | --- | --- | --- |
+| [ ] | Music Box | attacks | the first attack each turn adds an Ethereal copy to your hand |
+| [ ] | Rainbow Ring | missing card types | playing an attack, a skill and a power in the same turn gives +Strength/+Dexterity (once per turn) |
+| [ ] | Mini Regent | (stars) | triggers on stars spent once per turn **(verify)** |
+| [ ] | Regalite | (generated cards) | block when a card is generated, once per turn **(verify)** |
 
 ---
 

@@ -11,6 +11,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Mod scaffold: entry point and per-feature isolation, so a feature that fails to load turns itself off and the others keep working.
 - Feature stubs (no visible effect yet): Card Indicators, Relic Counters, Relic Reminders, Block Forecast, Incoming Damage, Shuffle Warning, Intent Forecast.
 
+#### Planned
+- One-shot relic reminders: Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Pael's Eye (once per combat); Music Box, Rainbow Ring (once per turn).
+
 #### Changed
 - Split the planned "Combat Math" into **Block Forecast** and **Incoming Damage**. "Keyword Badges" grew into **Card Indicators** (adds Ethereal translucency and modifier markers).
 
