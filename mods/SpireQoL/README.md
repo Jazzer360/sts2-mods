@@ -4,14 +4,14 @@ Display-only quality-of-life tweaks for Slay the Spire 2. The mod doesn't change
 
 | Feature | What you'll see |
 | --- | --- |
-| Card Indicators | Ethereal cards turn translucent; badges for Retain/Ethereal/Sly; markers for temporary cost changes and afflictions |
-| Relic Counters | Pip tray above your hand for Pen Nib, Kunai, Stone Calendar and every other counter relic |
+| Card Indicators | Ethereal cards turn translucent; badges for Retain/Sly/added Exhaust; cards blocked by afflictions are dimmed |
+| Relic Counters | Tick-bar tray above your hand for Pen Nib, Kunai, Stone Calendar and every other counter relic |
 | Relic Reminders | Relic icons on the cards they affect; attacks glow when Pen Nib is ready |
 | Block Forecast | The block you'll gain at end of turn (Plating, Frost orbs...) beside your block |
 | Incoming Damage | One line under your HP: incoming damage, end-of-turn block, damage you will take |
 | Shuffle Warning | Card badges when a draw can reshuffle, and which hand cards stay out |
-| Intent Forecast | Each enemy's upcoming moves |
+| Intent Forecast | Each enemy's upcoming moves (not built yet) |
 
-Everything above is still planned. See [docs/FEATURES.md](../../docs/FEATURES.md) for the full description of each change, [docs/TRACKER.md](../../docs/TRACKER.md) for progress, and [CHANGELOG.md](../../CHANGELOG.md) for patch notes.
+Everything except Intent Forecast is in the current test build. See [docs/FEATURES.md](../../docs/FEATURES.md) for the full description of each change, [docs/TRACKER.md](../../docs/TRACKER.md) for progress, and [CHANGELOG.md](../../CHANGELOG.md) for patch notes.
 
 Each feature lives in `Features/` and is registered in `ModEntry.cs`. If a game update breaks one feature, that feature turns itself off and logs why. The rest keep working.
