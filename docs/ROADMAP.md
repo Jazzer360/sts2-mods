@@ -1,44 +1,51 @@
 # Roadmap
 
-This is a condensed copy of the "StS2 Mod Suite — Design Notes" doc (https://claude.ai/artifact/RridSZiNPVRXimjbxYM3Rb). The doc has the full design for each idea.
+The full design lives in the "StS2 Mod Suite — Design Notes" doc (https://claude.ai/artifact/RridSZiNPVRXimjbxYM3Rb). Other docs:
+- [FEATURES.md](FEATURES.md): what each feature does, kept complete.
+- [TRACKER.md](TRACKER.md): the item-by-item work list (relics, card modifiers, damage and block sources).
+- [CHANGELOG.md](../CHANGELOG.md): patch notes.
 
 ## How the ideas are grouped
 
-The original plan had six one-job mods. Here they're split by what kind of mod they are:
-
 - **Spire QoL** (`mods/SpireQoL`) shows information the game already has, in a clearer place. It never tells you what to pick. Each feature is a toggle.
-- **Advisory mods** (later, separate) judge your choices. They need their own data pipeline and are bigger projects.
-- **Existing mods we use instead of building**: Relic Stats for StS2, Display the Spire.
+- **Advisory mods** (later, separate) judge your choices: Synergy Helper and Deck Metrics.
+- **Existing mods we use instead of building:** Relic Stats for StS2, Display the Spire.
 
-| Idea | Goes in | Size | Notes |
-| --- | --- | --- | --- |
-| Keyword Badges | Spire QoL | S | Retain/Ethereal glyph on cards, read from live card state |
-| Relic Reminders+ | Spire QoL | M | Relic icon on affected cards in hand; rules stored as data |
-| Intent Forecast | Spire QoL | M | Upcoming enemy moves above the intent, showing how certain each one is |
-| Combat Math | Spire QoL | S | Incoming damage vs. block, net damage, per-enemy breakdown |
-| Synergy Helper | own mod (later) | M | Synergy/anti-synergy markers on reward/shop cards |
-| Deck Metrics | own mod (later) | L | Monte Carlo hand sim, consistency Δ vs. skip |
+| Spire QoL feature | Size | Covers |
+| --- | --- | --- |
+| Settings and layout (core) | M | toggles, draggable/anchored indicators, lock/unlock, reset |
+| Card Indicators | M | Ethereal translucency, keyword badges, cost/replay duration markers, affliction states |
+| Relic Counters | M | pip tray above hand; Pen Nib and Stone Calendar get attention effects |
+| Relic Reminders | M | relic icons on affected cards; Pen Nib-ready attack glow |
+| Block Forecast | S | end-of-turn block (Plating, Frost, Orichalcum...) beside current block |
+| Incoming Damage | S | summed blockable damage incl. Burn/Decay/Constrict; health-bar preview |
+| Shuffle Warning | S | draws that force a reshuffle; which hand cards stay out |
+| Intent Forecast | M | upcoming enemy moves |
 
 ## Build order
 
-1. ~~Decompile `sts2.dll`~~ done (v0.111.0, in `~/git/sts2-decompiled`). Still to confirm: where card keywords are stored, how monster AI is structured, and which class is the card-reward screen.
-2. ~~Repo + core~~ the scaffold is done. Next: a settings layer (per-feature toggles), a hotkey to hide overlays, and a smoke-test script.
-3. **Keyword Badges.** It's small, but it uses every piece of the pipeline: a Harmony patch, reading live card state, and adding a UI node to cards.
-4. **Relic Reminders+**, starting with Art of War, Ripple Basin and Unceasing Top.
-5. **Intent Forecast** and **Combat Math**, in whichever order you miss more.
-6. Then the advisory mods: Synergy Helper first, then Deck Metrics.
+1. ~~Decompile and repo scaffold.~~ Done.
+2. **Core settings and layout.** Every indicator depends on it, so build it first.
+3. **Relic Counters**, starting with Pen Nib, Stone Calendar, Kunai/Shuriken. Highest value; it's generic over `RelicModel.ShowCounter/DisplayAmount/Status`, so most relics come almost free.
+4. **Block Forecast** and **Incoming Damage**. They share the "what happens at end of turn" model.
+5. **Card Indicators**: Ethereal translucency first, then badges, then markers.
+6. **Relic Reminders**, starting with the Pen Nib-ready glow, Art of War, Ripple Basin.
+7. **Shuffle Warning.**
+8. **Intent Forecast.**
+9. The advisory mods.
 
 ## Shared-infra principles
 
-- Read live game objects instead of hardcoding values.
+- Read live game objects instead of hardcoding values. Thresholds come from each relic's `DynamicVars`.
 - Each feature is patched under its own Harmony id. If a patch fails, only that feature turns off, and the failure goes to the log (`FeatureHost`).
-- Display-only mods set `"affects_gameplay": false`, so multiplayer doesn't require everyone to have them.
-- Keep extracted data in a language-neutral format (JSON) so it can be shared with `sts2-engine`.
+- Display-only mods set `"affects_gameplay": false`.
+- Never reuse the game's glow or cost colors. Never cover existing card UI (TRACKER §8).
+- Keep extracted data language-neutral (JSON) so it can be shared with `sts2-engine`.
 
 ## Open questions
 
-- [ ] Which Mintyspire features do you actually miss? That decides how big Combat Math is.
-- [ ] Intent Forecast default: always-on mini row, or show on hover?
+- [ ] Which Mintyspire features do you actually miss?
+- [ ] Intent Forecast default: always-on mini row, or hover?
+- [ ] Does the game have a mod-settings hook, or do we add our own menu button?
 - [ ] Try STS2 Card Advisor before building Synergy Helper.
-- [ ] Ask jorbs about reading Spirebird data.
-- [ ] Workshop release: needs polish, localization, and a settings UI.
+- [ ] Workshop release: polish, localization, settings UI.

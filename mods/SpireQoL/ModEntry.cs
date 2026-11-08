@@ -23,10 +23,13 @@ public static class ModEntry
         Log.Info($"loading v{typeof(ModEntry).Assembly.GetName().Version}");
 
         Features
-            .Add(new KeywordBadgesFeature())
+            .Add(new CardIndicatorsFeature())
+            .Add(new RelicCountersFeature())
             .Add(new RelicRemindersFeature())
-            .Add(new IntentForecastFeature())
-            .Add(new CombatMathFeature());
+            .Add(new BlockForecastFeature())
+            .Add(new IncomingDamageFeature())
+            .Add(new ShuffleWarningFeature())
+            .Add(new IntentForecastFeature());
 
         // TODO: read per-feature toggles from mod settings once core has a settings layer.
         Features.ApplyAll();

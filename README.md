@@ -8,7 +8,9 @@ A development monorepo for my Slay the Spire 2 mods. Everything shares one build
 
 | Mod | Folder | What it does | Status |
 | --- | --- | --- | --- |
-| **Spire QoL** | [`mods/SpireQoL`](mods/SpireQoL) | Display-only QoL: keyword badges, relic reminders on cards, intent forecast, combat math. Each feature can be toggled on or off. | Scaffolded |
+| **Spire QoL** | [`mods/SpireQoL`](mods/SpireQoL) | Display-only QoL: card modifier indicators, relic counters and reminders, block forecast, incoming damage, shuffle warning, intent forecast. Each feature can be toggled, and indicators can be placed anywhere. | Scaffolded |
+
+**Docs:** [Feature reference](docs/FEATURES.md) (everything the mods change) · [Tracker](docs/TRACKER.md) (work list) · [Changelog](CHANGELOG.md) (patch notes) · [Roadmap](docs/ROADMAP.md)
 
 Future mods (Synergy Helper, Deck Metrics) give advice rather than plain QoL, so they will be separate mods. See [docs/ROADMAP.md](docs/ROADMAP.md).
 

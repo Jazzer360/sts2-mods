@@ -4,15 +4,13 @@ using Sts2Mods.Core.Features;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// Relic consequences shown on the cards in hand at the moment they matter.
+/// Relic consequences shown on the cards in hand. Spec: docs/FEATURES.md#relic-reminders.
 ///
-/// Plan (see docs/ROADMAP.md):
-///  - Card overlay (top corner): relic icon on affected cards; struck through if playing
-///    the card breaks the relic's condition (Art of War on attacks).
-///  - Event pop near the draw pile (Unceasing Top), relic pulse in the top bar.
-///  - Rules are data (YAML/JSON), not code, using a small predicate vocabulary.
-///    Relics outside the vocabulary get no overlay rather than a wrong one.
-///  - First three rules: Art of War, Ripple Basin, Unceasing Top.
+///  - Card overlay (top corner): the relic's icon on each affected card. Struck through if
+///    playing the card breaks the relic's condition (Art of War, Ripple Basin on attacks).
+///  - Pen Nib ready: attacks in hand get a pulsing border in a color the game doesn't use.
+///  - Rules are data, built from a small predicate vocabulary. Relics outside it get no
+///    overlay rather than a wrong one.
 /// </summary>
 public sealed class RelicRemindersFeature : IFeature
 {
