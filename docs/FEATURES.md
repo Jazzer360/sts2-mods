@@ -135,7 +135,8 @@ Counts:
 - Orichalcum / Fake Orichalcum (only if you currently have 0 block, like the game checks)
 - Cloak Clasp (block × cards in hand)
 - Ripple Basin (only if you haven't played an attack this turn)
-- Horn Cleat / Captain's Wheel are listed as "next turn" the turn before they fire
+
+Not counted: Horn Cleat and Captain's Wheel give block at the *start* of turn 2/3, after the enemy has attacked; Relic Counters shows their countdown.
 
 **Game UI touched:** none; our own widget.
 
@@ -145,23 +146,42 @@ Counts:
 
 ## Incoming Damage
 
-**What you see**, during your turn: one line centered under your HP bar and power icons. It follows your character, and you can move it (F8) or detach it (middle-click).
+**What you see**, during your turn: a small stacked sum, read like a math problem. It uses the game's own attack and defend intent icons:
 
-`Incoming 18   Block 11   Take 7`
+```
+[attack]  14     incoming damage
+[defend] − 5     your block at end of turn
+──────────
+      =   9     what you'll lose (red), or 0 in green
+```
 
-- **Incoming:** everything headed at you this round, blockable or not.
-- **Block:** your block at end of turn: current block plus Block Forecast sources.
-- **Take:** what you'll actually lose: blockable damage left after block, plus any unblockable HP loss. Red, or green `No damage` when you're covered.
+**Placement:** it sits just left of your block indicator, at the left end of your HP bar, and follows your character. If that doesn't fit on screen (your character stands near the left edge), it drops below the HP bar and every row of power icons instead; wrapped rows are measured. Move it with F8, or middle-click to pin it to the screen instead.
 
-Sources:
-- **Blockable:** enemy attack intents, using the game's own intent numbers (`AttackIntent.GetTotalDamage`, so Strength, Vulnerable etc. are included); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration debuffs.
+**How the numbers are worked out:** the enemy turn is simulated hit by hit, in turn order:
+- **Your end-of-turn self damage** lands first, against your end-of-turn block.
+- **Poison:** an enemy that Poison will kill doesn't attack. Poison ticks at the start of its turn, before it moves. The amount is the game's own poison preview (`PoisonPower.CalculateTotalDamageNextTurn`), which already applies per-hit damage caps such as Exoskeleton's **Hard To Kill** (each instance capped, e.g. at 9). Skulking Colony's **Hardened Shell** caps an enemy's *total* HP loss per turn; the game's preview ignores that, so we apply it.
+- **Doom doesn't stop attacks.** Doomed enemies die at the end of their own turn, after attacking.
+- **Retaliation** can kill an attacker partway through a multi-hit. Each later hit is then cancelled, because the game checks for a dead attacker before every hit.
+  - Thorns hits before each blow. The blow during which Thorns kills still lands.
+  - Flame Barrier hits after each blow.
+  - Reflect, after each blow, deals the damage you blocked.
+  - Retaliation damage goes through the game's damage hook, so the enemy's caps and Vulnerable apply. It hits the enemy's block first; enemy block is assumed cleared at its turn start unless it has Barricade.
+- **Unblockable HP loss** (Regret, Bad Luck, Beckon, Demise) is added to both the incoming and the result.
+
+**Sources:**
+- **Blockable:** enemy attack intents (`AttackIntent.GetSingleDamage` × hits, the same numbers the game shows); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration debuffs.
 - **Unblockable:** Regret (HP loss = cards in hand), Bad Luck, Beckon, Demise.
 
 **Game UI touched:** none; our own widget.
 
-**Game UI read (not changed):** the player's `NCreature` → `%HealthBar` (`NCreatureStateDisplay`) → its `%HealthBar` and `%PowerContainer`, for placement only.
+**Game UI read (not changed):** the player's `NCreature` → `%HealthBar` (`NCreatureStateDisplay`) → its `%HealthBar` (and that bar's `%BlockContainer`) and `%PowerContainer`'s icons, for placement only.
 
-**Not yet:** health-bar preview, per-player targeting in multiplayer (all attack intents are counted), per-source breakdown on hover.
+**Not yet:**
+- Health-bar preview.
+- Per-player targeting in multiplayer (all attack intents are counted).
+- Breakdown on hover.
+- Enemies that gain block mid-turn before retaliation lands.
+- Other end-of-turn effects that could kill enemies first (e.g. Lightning orbs).
 
 ---
 

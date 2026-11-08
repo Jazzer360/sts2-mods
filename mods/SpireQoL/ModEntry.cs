@@ -85,6 +85,11 @@ public static class ModEntry
             settings.Widgets.Remove("incoming-damage");
             settings.Widgets.Remove("shuffle-warning");
         }
+        if (settings.LayoutVersion < 3)
+        {
+            // 0.4.0: Incoming Damage moved to the left of the block indicator.
+            settings.Widgets.Remove("incoming-damage");
+        }
         settings.LayoutVersion = QolSettings.CurrentLayoutVersion;
     }
 

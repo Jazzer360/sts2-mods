@@ -1,9 +1,11 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
-using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Orbs;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
+using MegaCrit.Sts2.Core.ValueProps;
 using Sts2Mods.Core.Game;
 
 namespace SpireQoL.Combat;
@@ -12,23 +14,47 @@ public sealed record Source(string Name, int Amount);
 
 /// <summary>
 /// Predicts what happens between now and the start of your next turn: block you'll gain
-/// automatically, blockable damage you'll take, and unblockable HP loss.
+/// automatically, damage that will actually land on you, and what gets through your block.
+///
+/// Enemy attacks are simulated hit by hit, in turn order, because:
+///  - Poison ticks at the start of the enemy's turn, before it acts (PoisonPower.AfterSideTurnStart).
+///    An enemy it kills never attacks. (Doom does NOT stop attacks: doomed enemies die at the end
+///    of their own turn, DoomPower.BeforeSideTurnEnd.)
+///  - Retaliation can kill an attacker mid-combo. The attack loop checks Attacker.IsDead before
+///    each hit (AttackCommand), so later hits are cancelled. The hit during which Thorns kills
+///    still lands: Thorns fires in BeforeDamageReceived, and CreatureCmd.Damage doesn't re-check
+///    the dealer.
+///  - Damage caps: Hard To Kill (Exoskeleton) caps each damage instance, and the game's own
+///    numbers already include it (PoisonPower.CalculateTotalDamageNextTurn and Hook.ModifyDamage
+///    both run the cap step). Hardened Shell (Skulking Colony) caps total HP lost per turn
+///    (reset at turn start), which the game's poison preview doesn't include, so we apply it.
 /// Every source is from the v0.111.0 decompile; see docs/TRACKER.md §4–5.
 /// Values are raw (no Dexterity/Frail on end-of-turn block, which is Unpowered in the game).
 /// </summary>
 public sealed class TurnEndModel
 {
     public List<Source> EndOfTurnBlock { get; } = new();
-    public List<Source> NextTurnBlock { get; } = new();
+
+    /// <summary>Blockable damage that will actually land (self damage + enemy hits that happen).</summary>
     public List<Source> Blockable { get; } = new();
     public List<Source> Unblockable { get; } = new();
 
     public int CurrentBlock { get; private set; }
+
+    /// <summary>Attacking enemies left out because Poison kills them before they act.</summary>
+    public int SkippedPoisoned { get; private set; }
+
+    /// <summary>Enemy hits cancelled because retaliation (Thorns etc.) kills the attacker first.</summary>
+    public int CancelledHits { get; private set; }
+
     public int BlockGain => EndOfTurnBlock.Sum(s => s.Amount);
     public int BlockableTotal => Blockable.Sum(s => s.Amount);
     public int UnblockableTotal => Unblockable.Sum(s => s.Amount);
     public int ExpectedBlock => CurrentBlock + BlockGain;
-    public int DamageThrough => Math.Max(0, BlockableTotal - ExpectedBlock);
+
+    /// <summary>Blockable damage that gets through block (from the hit-by-hit simulation).</summary>
+    public int DamageThrough { get; private set; }
+
     public int Overblock => Math.Max(0, ExpectedBlock - BlockableTotal);
 
     // Blockable end-of-turn damage from cards in hand (DamageVar "Damage").
@@ -55,7 +81,7 @@ public sealed class TurnEndModel
         // ---- End-of-turn block ----
         foreach (var power in me.Creature.Powers)
         {
-            if (power.GetType().Name == "PlatingPower" && power.Amount > 0)
+            if (power is PlatingPower && power.Amount > 0)
             {
                 m.EndOfTurnBlock.Add(new Source("Plating", power.Amount));
             }
@@ -79,53 +105,28 @@ public sealed class TurnEndModel
                 case "Orichalcum":
                 case "FakeOrichalcum":
                     // Checked before other end-of-turn block lands, against current block only.
-                    if (me.Creature.Block <= 0) m.EndOfTurnBlock.Add(new Source(Title(relic), Sts2State.Var(relic, "Block")));
+                    if (me.Creature.Block <= 0) m.EndOfTurnBlock.Add(new Source(SafeTitle(relic), Sts2State.Var(relic, "Block")));
                     break;
                 case "CloakClasp":
                     if (hand.Count > 0) m.EndOfTurnBlock.Add(new Source($"Cloak Clasp ×{hand.Count}", hand.Count * Sts2State.Var(relic, "Block")));
                     break;
                 case "RippleBasin":
-                    if (attacksThisTurn == 0) m.EndOfTurnBlock.Add(new Source(Title(relic), Sts2State.Var(relic, "Block")));
+                    if (attacksThisTurn == 0) m.EndOfTurnBlock.Add(new Source(SafeTitle(relic), Sts2State.Var(relic, "Block")));
                     break;
-                case "HornCleat":
-                    if (Sts2State.TurnNumber == 1) m.NextTurnBlock.Add(new Source(Title(relic), Sts2State.Var(relic, "Block")));
-                    break;
-                case "CaptainsWheel":
-                    if (Sts2State.TurnNumber == 2) m.NextTurnBlock.Add(new Source(Title(relic), Sts2State.Var(relic, "Block")));
-                    break;
+                // Horn Cleat / Captain's Wheel give block at the START of turn 2/3, after the
+                // enemy has attacked, so they don't belong here. Relic Counters shows their countdown.
             }
         }
 
-        // ---- Enemy attacks ----
-        var targets = cs.Players.Select(p => p.Creature).ToList();
-        foreach (var enemy in cs.Enemies)
-        {
-            if (!enemy.IsAlive || enemy.Monster == null || enemy.IsStunned) continue;
-            var total = 0;
-            var hits = 0;
-            foreach (var intent in enemy.Monster.NextMove.Intents)
-            {
-                if (intent is AttackIntent attack)
-                {
-                    total += attack.GetTotalDamage(targets, enemy);
-                    hits += Math.Max(1, attack.Repeats);
-                }
-            }
-            if (total > 0)
-            {
-                var name = SafeTitle(enemy.Monster);
-                m.Blockable.Add(new Source(hits > 1 ? $"{name} ({hits} hits)" : name, total));
-            }
-        }
-
-        // ---- Your own end-of-turn damage ----
+        // ---- Your own end-of-turn damage (happens before the enemy turn) ----
+        var block = m.ExpectedBlock;
         var regret = 0;
         foreach (var card in hand)
         {
             var type = card.GetType().Name;
             if (BlockableHandCards.Contains(type))
             {
-                m.Blockable.Add(new Source(SafeTitle(card), Sts2State.Var(card, "Damage")));
+                m.LandBlockable(SafeTitle(card), Sts2State.Var(card, "Damage"), ref block);
             }
             else if (UnblockableHandCards.Contains(type))
             {
@@ -142,14 +143,124 @@ public sealed class TurnEndModel
         {
             var type = power.GetType().Name;
             if (power.Amount <= 0) continue;
-            if (BlockableDebuffs.Contains(type)) m.Blockable.Add(new Source(SafeTitle(power), power.Amount));
+            if (BlockableDebuffs.Contains(type)) m.LandBlockable(SafeTitle(power), power.Amount, ref block);
             else if (UnblockableDebuffs.Contains(type)) m.Unblockable.Add(new Source(SafeTitle(power), power.Amount));
+        }
+
+        // ---- Enemy turn, hit by hit ----
+        var thorns = me.Creature.GetPower<ThornsPower>()?.Amount ?? 0;
+        var flameBarrier = me.Creature.GetPower<FlameBarrierPower>()?.Amount ?? 0;
+        var hasReflect = me.Creature.HasPower<ReflectPower>();
+        var targets = cs.Players.Select(p => p.Creature).ToList();
+
+        foreach (var enemy in cs.Enemies)
+        {
+            if (!enemy.IsAlive || enemy.Monster == null || enemy.IsStunned) continue;
+
+            var attacks = enemy.Monster.NextMove.Intents.OfType<AttackIntent>().ToList();
+            if (attacks.Count == 0) continue;
+
+            // Enemy HP and Hardened Shell budget after its poison tick.
+            var hp = enemy.CurrentHp;
+            var shellLeft = enemy.GetPower<HardenedShellPower>()?.Amount ?? int.MaxValue;
+            var poison = enemy.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0;
+            var poisonTaken = Math.Min(poison, shellLeft);
+            hp -= poisonTaken;
+            if (shellLeft != int.MaxValue) shellLeft -= poisonTaken;
+            if (hp <= 0)
+            {
+                m.SkippedPoisoned++;
+                continue;
+            }
+            // Enemy block is cleared at the start of its turn unless it has Barricade.
+            var enemyBlock = enemy.HasPower<BarricadePower>() ? enemy.Block : 0;
+
+            var landed = 0;
+            var hitsLanded = 0;
+            var dead = false;
+            foreach (var attack in attacks)
+            {
+                var perHit = attack.GetSingleDamage(targets, enemy);
+                var hits = Math.Max(1, attack.Repeats);
+                for (var i = 0; i < hits; i++)
+                {
+                    if (dead)
+                    {
+                        m.CancelledHits++;
+                        continue;
+                    }
+
+                    // Thorns: before the hit lands. The hit still lands even if this kills.
+                    if (thorns > 0) dead |= HitEnemy(Retaliate(me.Creature, enemy, thorns), ref hp, ref enemyBlock, ref shellLeft);
+
+                    var blocked = Math.Min(block, perHit);
+                    block -= blocked;
+                    m.DamageThrough += perHit - blocked;
+                    landed += perHit;
+                    hitsLanded++;
+
+                    // After the hit: Flame Barrier, and Reflect (damage = amount blocked).
+                    if (!dead && flameBarrier > 0) dead |= HitEnemy(Retaliate(me.Creature, enemy, flameBarrier), ref hp, ref enemyBlock, ref shellLeft);
+                    if (!dead && hasReflect && blocked > 0) dead |= HitEnemy(Retaliate(me.Creature, enemy, blocked), ref hp, ref enemyBlock, ref shellLeft);
+                }
+            }
+
+            if (landed > 0)
+            {
+                var name = SafeTitle(enemy.Monster);
+                m.Blockable.Add(new Source(hitsLanded > 1 ? $"{name} ({hitsLanded} hits)" : name, landed));
+            }
         }
 
         return m;
     }
 
-    private static string Title(RelicModel relic) => SafeTitle(relic);
+    private void LandBlockable(string name, int amount, ref int block)
+    {
+        if (amount <= 0) return;
+        Blockable.Add(new Source(name, amount));
+        var blocked = Math.Min(block, amount);
+        block -= blocked;
+        DamageThrough += amount - blocked;
+    }
+
+    /// <summary>
+    /// A retaliation hit's damage after the game's own modifiers (Hook.ModifyDamage with all hook
+    /// types). That includes damage caps: Exoskeleton's Hard To Kill caps each damage instance
+    /// (ModifyDamageCap), so three 12-damage hits deal 9 each, 27 total.
+    /// </summary>
+    private static int Retaliate(Creature me, Creature enemy, int amount)
+    {
+        try
+        {
+            var dmg = Hook.ModifyDamage(me.Player!.RunState, enemy.CombatState, enemy, me, amount,
+                ValueProp.Unpowered, null, null, ModifyDamageHookType.All, CardPreviewMode.None, out _);
+            return Math.Max(0, (int)dmg);
+        }
+        catch
+        {
+            return amount;
+        }
+    }
+
+    /// <summary>
+    /// Retaliation damage to an enemy: through its block, then HP. Hardened Shell (Skulking
+    /// Colony) is different from Hard To Kill: it caps the *total* HP lost per turn
+    /// (HardenedShellPower.ModifyHpLostBeforeOstyLate), so we track what's left of it.
+    /// </summary>
+    private static bool HitEnemy(int amount, ref int hp, ref int enemyBlock, ref int shellLeft)
+    {
+        var absorbed = Math.Min(enemyBlock, amount);
+        enemyBlock -= absorbed;
+        var toHp = amount - absorbed;
+        if (shellLeft != int.MaxValue)
+        {
+            toHp = Math.Min(toHp, Math.Max(0, shellLeft));
+            shellLeft -= toHp;
+        }
+        hp -= toHp;
+        return hp <= 0;
+    }
 
     public static string SafeTitle(AbstractModel model)
     {

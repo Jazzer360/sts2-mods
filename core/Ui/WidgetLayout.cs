@@ -1,5 +1,12 @@
 namespace Sts2Mods.Core.Ui;
 
+/// <summary>Where an attached widget sits relative to its game element.</summary>
+public enum AttachSide
+{
+    Below,
+    LeftOf,
+}
+
 /// <summary>The nine screen anchors a widget can be pinned to.</summary>
 public enum ScreenAnchor
 {

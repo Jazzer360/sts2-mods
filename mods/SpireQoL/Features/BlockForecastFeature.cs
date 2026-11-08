@@ -45,18 +45,14 @@ public sealed class BlockForecastFeature : IFeature, IFrameFeature
     {
         // When Incoming Damage is showing, it already includes end-of-turn block.
         var m = Sts2State.IsPlayerTurn && !_ctx.IncomingShown ? TurnEndModel.Compute() : null;
-        if (m == null || (m.BlockGain == 0 && m.NextTurnBlock.Count == 0))
+        if (m == null || m.BlockGain == 0)
         {
             _widget!.HasContent = false;
             return;
         }
 
         _widget!.HasContent = true;
-        _headline!.Text = m.BlockGain > 0
-            ? $"Block {m.CurrentBlock}  +{m.BlockGain} at end of turn"
-            : $"Block {m.CurrentBlock}";
-        var parts = m.EndOfTurnBlock.Select(s => $"{s.Name} {s.Amount}")
-            .Concat(m.NextTurnBlock.Select(s => $"next turn: {s.Name} {s.Amount}"));
-        _detail!.Text = string.Join("  ·  ", parts);
+        _headline!.Text = $"Block {m.CurrentBlock}  +{m.BlockGain} at end of turn";
+        _detail!.Text = string.Join("  ·  ", m.EndOfTurnBlock.Select(s => $"{s.Name} {s.Amount}"));
     }
 }

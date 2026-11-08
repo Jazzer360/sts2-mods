@@ -66,13 +66,37 @@ public sealed class MovableWidget
     /// <summary>Set by the owning feature each frame: does the widget have anything to show?</summary>
     public bool HasContent { get; set; }
 
-    /// <summary>
-    /// Screen rect of the game element this widget can attach to (null when it isn't on screen).
-    /// When the layout has FollowGame, the widget sits centered below this rect.
-    /// </summary>
-    public Func<Rect2?>? FollowTarget { get; set; }
+    private readonly List<(Func<Rect2?> Target, AttachSide Side)> _attach = new();
 
-    private Rect2? CurrentTarget => _layout.FollowGame ? FollowTarget?.Invoke() : null;
+    /// <summary>
+    /// Adds a game element this widget can attach to (when the layout has FollowGame). Candidates
+    /// are tried in order; the first whose placement fits on screen wins, so e.g. "left of the
+    /// block icon" can fall back to "below the HP bar" when the character is near the screen edge.
+    /// The target returns the element's screen rect, or null when it isn't on screen.
+    /// </summary>
+    public MovableWidget AttachTo(Func<Rect2?> target, AttachSide side)
+    {
+        _attach.Add((target, side));
+        return this;
+    }
+
+    /// <summary>Top-left the widget would have (before the saved offset) if attached, or null.</summary>
+    private Vector2? AttachBase(Vector2 size)
+    {
+        if (!_layout.FollowGame || _attach.Count == 0) return null;
+        var vp = _host.ViewportSize;
+        var offset = new Vector2(_layout.OffsetX, _layout.OffsetY);
+        Vector2? fallback = null;
+        foreach (var (target, side) in _attach)
+        {
+            if (target() is not { } rect) continue;
+            var p = AttachPoint(rect, side, size);
+            var q = p + offset;
+            if (q.X >= 0 && q.Y >= 0 && q.X + size.X <= vp.X && q.Y + size.Y <= vp.Y) return p;
+            fallback ??= p;
+        }
+        return fallback;
+    }
 
     internal void UpdateLayout(OverlayHost host)
     {
@@ -81,7 +105,7 @@ public sealed class MovableWidget
         Root.MouseFilter = unlocked ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
         Root.AddThemeStyleboxOverride("panel", unlocked ? _unlockedStyle : _lockedStyle);
         _placeholder.Visible = unlocked;
-        var where = _layout.FollowGame && FollowTarget != null ? "attached" : _layout.Anchor.ToString();
+        var where = _layout.FollowGame && _attach.Count > 0 ? "attached" : _layout.Anchor.ToString();
         _placeholder.Text = unlocked ? $"{_title}  ({where})" : _title;
         Root.Modulate = new Color(1, 1, 1, Mathf.Clamp(_layout.Opacity, 0.1f, 1f));
 
@@ -94,9 +118,9 @@ public sealed class MovableWidget
         var vp = host.ViewportSize;
         var size = Root.Size * scale;
         Vector2 pos;
-        if (CurrentTarget is { } target)
+        if (AttachBase(size) is { } attachBase)
         {
-            pos = AttachPoint(target, size) + new Vector2(_layout.OffsetX, _layout.OffsetY);
+            pos = attachBase + new Vector2(_layout.OffsetX, _layout.OffsetY);
         }
         else
         {
@@ -106,9 +130,12 @@ public sealed class MovableWidget
         Root.Position = Clamp(pos, size, vp);
     }
 
-    /// <summary>Top-left that centers the widget just below the target.</summary>
-    private static Vector2 AttachPoint(Rect2 target, Vector2 size)
-        => new(target.Position.X + target.Size.X / 2 - size.X / 2, target.End.Y);
+    /// <summary>Top-left for the widget next to the target: centered below it, or left of it and vertically centered.</summary>
+    private static Vector2 AttachPoint(Rect2 target, AttachSide side, Vector2 size) => side switch
+    {
+        AttachSide.LeftOf => new(target.Position.X - size.X - 6, target.Position.Y + target.Size.Y / 2 - size.Y / 2),
+        _ => new(target.Position.X + target.Size.X / 2 - size.X / 2, target.End.Y),
+    };
 
     private static Vector2 Clamp(Vector2 pos, Vector2 size, Vector2 vp)
     {
@@ -143,7 +170,7 @@ public sealed class MovableWidget
                 _host.RaiseLayoutChanged();
                 Root.AcceptEvent();
             }
-            else if (mb.Pressed && mb.ButtonIndex == MouseButton.Middle && FollowTarget != null)
+            else if (mb.Pressed && mb.ButtonIndex == MouseButton.Middle && _attach.Count > 0)
             {
                 // Toggle between attached-to-game-element and a screen anchor, keeping it in place.
                 _layout.FollowGame = !_layout.FollowGame;
@@ -169,10 +196,10 @@ public sealed class MovableWidget
 
     private void StoreOffsetForCurrentMode()
     {
-        if (CurrentTarget is { } target)
+        var size = Root.Size * Root.Scale;
+        if (AttachBase(size) is { } attachBase)
         {
-            var size = Root.Size * Root.Scale;
-            var off = Root.Position - AttachPoint(target, size);
+            var off = Root.Position - attachBase;
             _layout.OffsetX = off.X;
             _layout.OffsetY = off.Y;
             _host.RaiseLayoutChanged();
@@ -189,7 +216,7 @@ public sealed class MovableWidget
     /// </summary>
     private void Reanchor()
     {
-        if (CurrentTarget != null)
+        if (_layout.FollowGame && _attach.Count > 0)
         {
             StoreOffsetForCurrentMode();
             return;

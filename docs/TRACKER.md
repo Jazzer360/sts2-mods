@@ -169,7 +169,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [~] **Orichalcum / Fake Orichalcum**: block if you have none at end of turn.
 - [~] **Cloak Clasp**: block × cards in hand.
 - [~] **Ripple Basin**: block if no attack played this turn.
-- [~] **Horn Cleat / Captain's Wheel**: start of turn 2/3 (show the turn before).
+- ~~**Horn Cleat / Captain's Wheel**~~: not end-of-turn block (they fire at the start of turn 2/3, after enemies attack). Countdown lives in Relic Counters.
 - [ ] **Rage / Skittish** powers: block on card play/hit **(verify)**; shown on cards, not in the end-of-turn total.
 - [ ] **Sturdy Clamp**: block isn't cleared. Show carried block for next turn.
 - [ ] **Parrying Shield**: deals damage if you end with ≥N block. Show its threshold.
@@ -191,6 +191,8 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [~] **Disintegration** (debuff, late end of turn): blockable.
 - [~] Unblockable, listed separately: Regret (HP loss = cards in hand), Bad Luck, Beckon, Demise. Poison is already previewed by the game.
 - [ ] Not damage, but worth a reminder: Doubt (Weak), Shame (Frail), Debt (lose gold).
+- [~] **Doesn't count enemies Poison kills before they act** (with Hard To Kill per-hit cap and Hardened Shell per-turn cap). Doom does NOT prevent attacks.
+- [~] **Retaliation cancels remaining hits**: Thorns (before each hit; the killing hit still lands), Flame Barrier and Reflect (after each hit), through the game's damage hook.
 - [ ] **Health-bar preview** (the summary line now sits under the HP bar; a bar overlay is still open): render the expected loss after block alongside the game's existing Poison/Doom preview in `NHealthBar`.
 
 ---

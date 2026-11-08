@@ -6,6 +6,20 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.4.0 (feedback from second test)
+#### Changed
+- **Incoming Damage** is now a stacked sum with the game's attack/defend icons: incoming, minus end-of-turn block, equals damage taken.
+- **Incoming Damage placement:** now just left of the block indicator on your HP bar. If that doesn't fit on screen, it goes below the HP bar and every row of power icons (measured from the icons, so wrapped rows count). It no longer covers your powers. Your saved position for it is reset once.
+- **Incoming Damage accuracy:** the enemy turn is now simulated hit by hit.
+  - Enemies that Poison will kill before they act are left out.
+  - Retaliation (Thorns, Flame Barrier, Reflect) that kills an attacker mid multi-hit cancels its remaining hits.
+  - Exoskeleton's Hard To Kill (per-hit cap) and Skulking Colony's Hardened Shell (per-turn total cap) are both handled.
+  - Doom does not stop attacks; doomed enemies still attack before dying.
+- **Block Forecast** no longer lists Horn Cleat / Captain's Wheel. Their block arrives at the start of your turn, after the enemy attacks.
+
+#### Added
+- Widgets can try several attach points in order, falling back when one doesn't fit on screen.
+
 ### Spire QoL 0.3.0 (feedback from first test)
 #### Changed
 - **Incoming Damage** is now one line, `Incoming N · Block N · Take N`, centered under the player's HP and power icons. It follows your character. "Take" includes unblockable HP loss. Your saved position for it is reset once to the new default.

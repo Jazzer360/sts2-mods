@@ -75,14 +75,74 @@ public static class Sts2State
         var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
         if (display == null || !display.IsVisibleInTree()) return null;
 
-        Godot.Rect2? rect = null;
-        foreach (var part in new[] { display.GetNodeOrNull<Godot.Control>("%HealthBar"), display.GetNodeOrNull<Godot.Control>("%PowerContainer") })
+        var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
+        var rect = bar != null && bar.Size.X >= 1 ? ScreenRect(bar) : ScreenRect(display);
+
+        // The power container doesn't size itself to its icons (it reported a tiny rect in game
+        // while an icon drew below it), so measure the icons themselves.
+        var powers = display.GetNodeOrNull<Godot.Control>("%PowerContainer");
+        var iconHeight = 0f;
+        if (powers != null)
         {
-            if (part == null || !part.IsVisibleInTree() || part.Size.X < 1) continue;
-            var r = ScreenRect(part);
-            rect = rect is { } acc ? acc.Merge(r) : r;
+            foreach (var r in VisibleControlRects(powers))
+            {
+                rect = rect.Merge(r);
+                iconHeight = Math.Max(iconHeight, r.Size.Y);
+            }
         }
-        return rect ?? ScreenRect(display);
+
+        // Always leave room for one row of power icons under the bar, so the widget doesn't
+        // jump when the first buff or debuff appears.
+        if (iconHeight > 0) _lastPowerRowHeight = iconHeight;
+        var reserveBottom = (bar != null ? ScreenRect(bar).End.Y : rect.End.Y) + _lastPowerRowHeight + 4;
+        if (rect.End.Y < reserveBottom)
+        {
+            rect = new Godot.Rect2(rect.Position, new Godot.Vector2(rect.Size.X, reserveBottom - rect.Position.Y));
+        }
+        return rect;
+    }
+
+    private static float _lastPowerRowHeight = 44f;
+
+    /// <summary>
+    /// Screen rect of the player's block indicator (NHealthBar "%BlockContainer", at the left end
+    /// of the HP bar), or the HP bar itself. The block icon hides at 0 block, but its node keeps
+    /// its place, so the rect is stable either way.
+    /// </summary>
+    public static Godot.Rect2? PlayerBlockRect()
+    {
+        var me = Me;
+        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
+        if (me == null || room == null) return null;
+
+        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == me.Creature);
+        var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
+        if (display == null || !display.IsVisibleInTree()) return null;
+
+        var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
+        var block = bar?.GetNodeOrNull<Godot.Control>("%BlockContainer");
+        if (block != null && block.Size.X >= 1)
+        {
+            // Vertically, use the HP bar's band so the widget centers on the bar, not the icon.
+            var b = ScreenRect(block);
+            var hp = ScreenRect(bar!);
+            return new Godot.Rect2(new Godot.Vector2(b.Position.X, hp.Position.Y), new Godot.Vector2(b.Size.X, hp.Size.Y));
+        }
+        return bar != null && bar.Size.X >= 1 ? ScreenRect(bar) : ScreenRect(display);
+    }
+
+    /// <summary>Screen rects of visible, non-empty controls under a node (one level of nesting deep enough for power icons).</summary>
+    private static IEnumerable<Godot.Rect2> VisibleControlRects(Godot.Node parent)
+    {
+        foreach (var child in parent.GetChildren())
+        {
+            if (child is not Godot.Control c || !c.IsVisibleInTree()) continue;
+            if (c.Size.X >= 4 && c.Size.Y >= 4) yield return ScreenRect(c);
+            foreach (var grand in c.GetChildren())
+            {
+                if (grand is Godot.Control g && g.IsVisibleInTree() && g.Size.X >= 4 && g.Size.Y >= 4) yield return ScreenRect(g);
+            }
+        }
     }
 
     /// <summary>A control's rect in viewport (screen) coordinates, accounting for cameras and canvas layers.</summary>
