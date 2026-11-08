@@ -12,6 +12,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Feature stubs (no visible effect yet): Card Indicators, Relic Counters, Relic Reminders, Block Forecast, Incoming Damage, Shuffle Warning, Intent Forecast.
 
 #### Planned
+- Relic Counters display is now a condensed tick-mark bar per relic that flashes when ready; counters that carry across turns always show and sort first.
+- Relic Reminders overlay the relic icon on affected cards, crossed out when playing the card breaks that relic this turn.
 - One-shot relic reminders: Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Pael's Eye (once per combat); Music Box, Rainbow Ring (once per turn).
 
 #### Changed

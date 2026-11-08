@@ -69,9 +69,9 @@ Shown by the game's `%Enchantment` tab, so no new indicator. Only make sure our 
 
 ---
 
-## 2. Counter relics → `relic-counters` (pip tray above the hand)
+## 2. Counter relics → `relic-counters` (tick-bar tray above the hand)
 
-Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game sets `Active` one step before it fires). Pips fill as the counter advances. The row **pulses** when one step away and **blinks** when the next qualifying card fires it.
+Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game sets `Active` one step before it fires). Each relic gets one condensed bar: icon plus tick-marked segments that fill as the counter advances. The bar **flashes** when the next qualifying card fires it. Counters that carry across turns or combats are always shown and sort first.
 
 | Done | Relic | Counts | Fires at | Resets | Effect |
 | --- | --- | --- | --- | --- | --- |
@@ -136,7 +136,7 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 
 These relics are "armed" until their first use, then go quiet. The game marks them `Status = Active` while armed. Spire QoL shows:
 - **On cards:** the relic's icon on every card in hand that would use it, *only while it's still armed*. The icons disappear the moment it's spent.
-- **In the relic tray:** a single lit pip while armed, unlit once used. They share the tray with the counter relics.
+- **In the relic tray:** a single lit segment while armed, dark once used. They share the tray with the counter relics.
 
 **Once per combat** (re-arms when combat starts):
 

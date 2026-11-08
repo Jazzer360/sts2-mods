@@ -15,7 +15,7 @@ The full design lives in the "StS2 Mod Suite — Design Notes" doc (https://clau
 | --- | --- | --- |
 | Settings and layout (core) | M | toggles, draggable/anchored indicators, lock/unlock, reset |
 | Card Indicators | M | Ethereal translucency, keyword badges, cost/replay duration markers, affliction states |
-| Relic Counters | M | pip tray above hand; Pen Nib and Stone Calendar get attention effects |
+| Relic Counters | M | condensed tick-bar tray above hand; Pen Nib and Stone Calendar get attention effects |
 | Relic Reminders | M | relic icons on affected cards; Pen Nib-ready attack glow |
 | Block Forecast | S | end-of-turn block (Plating, Frost, Orichalcum...) beside current block |
 | Incoming Damage | S | summed blockable damage incl. Burn/Decay/Constrict; health-bar preview |
