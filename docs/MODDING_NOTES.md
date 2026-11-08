@@ -41,3 +41,10 @@ These live in `data_sts2_windows_x86_64/`: `sts2.dll`, `GodotSharp.dll`, `0Harmo
 ## Logging
 
 `MegaCrit.Sts2.Core.Logging.Log.Info/Warn/Error(string, int skipFrames)`. Use `ModLog` from core, which adds a `[ModId]` prefix to each line.
+
+## Things that bit us
+
+- **Mods can't define Godot node classes with `_Process`/`_Draw` overrides.** The loader calls `AssemblyLoadContext.LoadFromAssemblyPath` and nothing else; it never registers the assembly with Godot's `ScriptManagerBridge`. So everything here uses plain Godot nodes (`Label`, `ColorRect`, `PanelContainer`...) driven by one `SceneTree.ProcessFrame` callback, with input through the `GuiInput` signal (see `core/Ui/OverlayHost.cs`).
+- **Don't save settings as `*.json` in the mod folder.** The loader parses every `*.json` under `mods/` as a manifest. We use `<ModId>.settings.cfg` (JSON content).
+- **Card nodes are pooled.** `NCard` instances are reused for other cards, so anything set on one (e.g. `Modulate`) must be undone when it stops showing the card we decorated (`mods/SpireQoL/Cards/CardOverlayRenderer.cs`).
+- **Log file:** `%APPDATA%\SlayTheSpire2\logs\godot.log` (older sessions are timestamped next to it). Our lines start with `[SpireQoL]`.

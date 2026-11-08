@@ -1,7 +1,12 @@
+using Godot;
 using MegaCrit.Sts2.Core.Modding;
+using SpireQoL.Cards;
 using SpireQoL.Features;
 using Sts2Mods.Core;
 using Sts2Mods.Core.Features;
+using Sts2Mods.Core.Game;
+using Sts2Mods.Core.Settings;
+using Sts2Mods.Core.Ui;
 
 namespace SpireQoL;
 
@@ -22,16 +27,54 @@ public static class ModEntry
     {
         Log.Info($"loading v{typeof(ModEntry).Assembly.GetName().Version}");
 
-        Features
-            .Add(new CardIndicatorsFeature())
-            .Add(new RelicCountersFeature())
-            .Add(new RelicRemindersFeature())
-            .Add(new BlockForecastFeature())
-            .Add(new IncomingDamageFeature())
-            .Add(new ShuffleWarningFeature())
-            .Add(new IntentForecastFeature());
+        var settingsFile = new JsonSettingsFile<QolSettings>(JsonSettingsFile<QolSettings>.DefaultPathFor(typeof(ModEntry), Id), Log);
+        var settings = settingsFile.Load();
 
-        // TODO: read per-feature toggles from mod settings once core has a settings layer.
-        Features.ApplyAll();
+        var host = new OverlayHost(Id, Log)
+        {
+            UnlockLayoutKey = ParseKey(settings.UnlockLayoutKey, Key.F8),
+            HideAllKey = ParseKey(settings.HideAllKey, Key.F9),
+        };
+        host.LayoutChanged += settingsFile.Save;
+
+        var ctx = new QolContext(settingsFile, host);
+        Sts2State.Init();
+
+        // Order matters for card decorations: later features add badges after earlier ones.
+        IFeature[] features =
+        {
+            new CardIndicatorsFeature(ctx),
+            new RelicCountersFeature(ctx),
+            new RelicRemindersFeature(ctx),
+            new BlockForecastFeature(ctx),
+            new IncomingDamageFeature(ctx),
+            new ShuffleWarningFeature(ctx),
+            new IntentForecastFeature(),
+        };
+        foreach (var f in features) Features.Add(f);
+
+        Features.ApplyAll(f => settings.Features.TryGetValue(f.Id, out var on) ? on : f.EnabledByDefault);
+
+        // Write every feature id into settings so players can see what can be toggled.
+        foreach (var f in features)
+        {
+            settings.Features.TryAdd(f.Id, f.EnabledByDefault);
+        }
+        settingsFile.Save();
+
+        foreach (var f in features)
+        {
+            if (f is IFrameFeature frame && Features.States[f.Id] == FeatureState.Active)
+            {
+                host.AddFeature(f.Id, frame);
+            }
+        }
+
+        var renderer = new CardOverlayRenderer(host, ctx.Decor);
+        host.AddLateFrame(renderer.Render);
+        host.Start();
     }
+
+    private static Key ParseKey(string? name, Key fallback)
+        => Enum.TryParse<Key>(name, ignoreCase: true, out var key) ? key : fallback;
 }

@@ -2,164 +2,180 @@
 
 This is the complete list of every change Spire QoL makes to the game. If a change isn't here, the mod doesn't make it. Each feature lists what you see, its settings, which game UI it touches, and the game methods it patches.
 
-**Status key:** 🟢 shipped · 🟡 in progress · ⚪ planned
+**Status key:** 🟢 shipped · 🟡 built, being tested in game · ⚪ planned
 
 Spire QoL is **display-only**. It never changes game state, damage, cards or saves. Its manifest sets `"affects_gameplay": false`, so you can join multiplayer lobbies whose players don't have it. See [MODDING_NOTES.md](MODDING_NOTES.md).
 
+**Harmony patches: none.** Every feature works by reading live game state once per frame and drawing its own nodes. Nothing in the game's code is replaced or changed.
+
 | Feature | Id | Status | Default |
 | --- | --- | --- | --- |
-| [Settings and layout](#settings-and-layout) | (core) | ⚪ | always on |
-| [Card Indicators](#card-indicators) | `card-indicators` | ⚪ | on |
-| [Relic Counters](#relic-counters) | `relic-counters` | ⚪ | on |
-| [Relic Reminders](#relic-reminders) | `relic-reminders` | ⚪ | on |
-| [Block Forecast](#block-forecast) | `block-forecast` | ⚪ | on |
-| [Incoming Damage](#incoming-damage) | `incoming-damage` | ⚪ | on |
-| [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | ⚪ | on |
-| [Intent Forecast](#intent-forecast) | `intent-forecast` | ⚪ | on |
+| [Settings and layout](#settings-and-layout) | (core) | 🟡 | always on |
+| [Card Indicators](#card-indicators) | `card-indicators` | 🟡 | on |
+| [Relic Counters](#relic-counters) | `relic-counters` | 🟡 | on |
+| [Relic Reminders](#relic-reminders) | `relic-reminders` | 🟡 | on |
+| [Block Forecast](#block-forecast) | `block-forecast` | 🟡 | on |
+| [Incoming Damage](#incoming-damage) | `incoming-damage` | 🟡 | on |
+| [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | 🟡 | on |
+| [Intent Forecast](#intent-forecast) | `intent-forecast` | ⚪ | on (does nothing yet) |
+
+## What the mod adds to the game, technically
+
+- **One CanvasLayer** (`SpireQoL_Overlay`, layer 10) under the scene tree root. It holds the floating widgets and a toast message.
+- **One `SceneTree.ProcessFrame` callback.** It runs each feature, then draws card decorations.
+- **A child node `SpireQoL_CardOverlay`** under `%CardContainer` of each card node in your hand that has something to show. While a decorated card is in your hand, Spire QoL changes that container's `Modulate` alpha (Ethereal translucency). The alpha is restored as soon as the node stops showing that card. The game reuses card nodes, so this matters.
+- **A subscription to `CombatManager.CombatSetUp`,** to know the current combat.
+- **One file**, `mods/SpireQoL/SpireQoL.settings.cfg` (JSON). Never written to game saves.
 
 ---
 
 ## Settings and layout
 
-**What you see:** a Spire QoL entry in settings, and on-screen indicators you can place yourself.
+**What you see:** floating indicators you can place yourself, and two hotkeys.
 
-- Turn each feature on or off.
-- **Unlock layout** (menu or hotkey): every floating indicator gets an outline and can be dragged. **Lock** freezes them in place and makes them click-through.
-- **Anchor:** pin each indicator to a screen corner, edge or center, or to a game element (health bar, hand, draw pile, relic bar). Positions are stored relative to the anchor, so they survive resolution changes.
-- Per indicator: scale, opacity, reset to default. **Reset all** restores the whole layout.
-- Optional grid snap while dragging. Indicators that end up off-screen are pulled back.
-- **Hide all overlays** hotkey.
+- **F8: unlock/lock layout.** When unlocked, every floating indicator shows with an orange outline, even if it has nothing to show right now:
+  - **Drag** to move it.
+  - **Mouse wheel** over it to scale it (0.4×–3×).
+  - **Right-click** to reset it to its default place and size.
+  - On drop, it re-anchors to the nearest of nine screen points (corners, edge centers, center). The position is saved relative to that point, so it survives resolution changes. Indicators can't be dragged off screen.
+  - Locking makes them click-through again and saves the layout.
+- **F9: hide/show all overlays.**
+- A short message in the top-left confirms each hotkey.
 
-**Stored in:** a JSON file in the mod's folder. Never written to game saves.
+**Settings file** (`SpireQoL.settings.cfg`, edit while the game is closed):
 
-**Game UI touched / patches:** *to be filled in when implemented.*
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `Features` | all `true` | turn features on/off by id |
+| `Relics` | (empty) | relic class name → `false` to hide it from counters and reminders, e.g. `"PenNib": false` |
+| `Widgets` | defaults | saved positions (`Anchor`, `OffsetX/Y`, `Scale`, `Opacity`) |
+| `UnlockLayoutKey` / `HideAllKey` | `F8` / `F9` | Godot key names |
+| `EtherealOpacity` | `0.7` | 0.25–1 |
+| `ShowInnateEternalBadges` | `false` | |
+| `DimBlockedCards` | `true` | |
+| `PulseOneStepEarly` | `false` | Relic Counters also flash two steps before firing |
+| `FlashHz` | `2.5` | flash speed |
+| `ShuffleHandMarkers` | `true` | KEPT badges |
+
+**Not yet:** an in-game settings menu (for now, use the file), anchoring to game elements (health bar, hand), grid snap, per-widget opacity control in game.
 
 ---
 
 ## Card Indicators
 
-**What you see:** mid-combat changes to a card that the game otherwise shows only as text.
+**What you see:** mid-combat changes to a card in your hand, which the game otherwise shows only as text. Badges sit in a row just *above* the card's top edge, so they never cover the cost, title, enchantment tab or affliction overlay.
 
-- **Ethereal cards are translucent** (default ~70% opacity, adjustable) whenever they are Ethereal this combat, whatever the source: the card itself, Music Box copies, or Hex.
-- **Keyword badges** (top-center): Ethereal, Retain (including retain for this turn only), Sly (including this turn only), and Exhaust when it was added. Innate and Eternal badges are available but off by default.
-- **Duration markers:** "free this turn", "free this combat", a clock on temporary cost changes, replay count, and "plays twice" next play.
-- **Affliction states:** cards that can't be played right now because of Bound, Ringing or Smog are dimmed. Galvanized cards get a "this hurts you" glyph. The game's own affliction overlays are left as they are.
+- **Ethereal cards are translucent** (70% by default) whenever they're Ethereal right now, whatever the source: the card itself, Music Box copies, or Hex (which grants Ethereal through a power).
+- **Keyword badges:**
+  - `ETH` Ethereal
+  - `RET` Retain; `RET·1` retained this turn only (e.g. Expertise)
+  - `SLY` Sly; `SLY·1` Sly this turn only (Hand Trick)
+  - `+EXH` Exhaust that was *added* (cards that always exhaust get no badge)
+  - `INN` / `ETR` Innate / Eternal, off by default
+- **Blocked cards are dimmed** with the reason: `BOUND`, `RINGING`, `SMOG`, `CARD LIMIT` (Velvet Choker). Detected with the game's own `CardModel.CanPlay`.
+- **Galvanized** cards show `−N HP` (the damage playing them deals you).
 
-**Settings:** each badge type on/off · Ethereal opacity · badge slot (top-center / corner).
+Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
 
-**Game UI touched:** card node (`NCard`). Adds children only; never moves or recolors the cost, title, enchantment tab or affliction overlay. Uses no glow color the game already uses.
+**Game UI touched:** card nodes in the hand (see "technically" above).
 
-**Patches:** *to be filled in when implemented.*
+**Not yet:** free-this-turn / free-this-combat / temporary-cost duration markers, replay count, "plays twice" markers, decorations outside the hand (draw/discard views).
 
 ---
 
 ## Relic Counters
 
-**What you see:** a compact tray (by default above your hand) with one slim bar per counter relic you own: the relic's icon followed by a bar divided by tick marks, one segment per step. Segments fill as the counter advances.
+**What you see:** a compact tray (by default bottom-center, above your hand) with one row per counter relic you own: the relic's icon, a bar split into one segment per step, and a short label.
 
-- **Condensed by design:** a 10-step relic like Pen Nib is one short bar, not ten separate icons.
-- **Counters that carry across turns and combats** (Pen Nib, Nunchaku, Tuning Fork, Iron Club, Stone Calendar) are always visible during combat and sort first. Per-turn counters (Kunai, Shuriken...) sit after them.
-- The bar **flashes** when the next qualifying card will fire it ("ready"). A subtler pulse one step earlier is optional.
-- **Pen Nib** blinks hard when ready, and attacks in hand light up (see Relic Reminders).
-- **Stone Calendar** shows turns 1–7 and blinks throughout turn 7 ("fires when you end this turn").
-- **Inverse counters** show what's left: Velvet Choker (card plays left), Pocketwatch (still within its limit).
-- Turn-trigger relics (Horn Cleat, Captain's Wheel, Candelabra, Chandelier, Sparkling Rouge, Happy Flower, Pendulum...) show turns until they fire.
-- One-shot relics (Vambrace, Throwing Axe, Burning Sticks...) show a single-segment bar: lit while armed, dark once used this combat or turn.
+- **Counters that carry across turns and combats sort first:** Pen Nib, Nunchaku, Tuning Fork, Iron Club, Galactic Dust, Joss Paper, Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core, Metronome.
+- **Then per-turn counters:** Kunai, Shuriken, Ornamental Fan, Kusarigama, Letter Opener, Brilliant Scarf.
+- **The row flashes when the next qualifying action fires the relic.** This uses the game's own "about to fire" state (`RelicModel.Status == Active`). Pen Nib flashes at 9/10. Stone Calendar flashes all of turn 7.
+- **Limits:**
+  - Velvet Choker shows plays left and turns red at 1.
+  - Pocketwatch shows green while you're within its card limit and red ("missed") once you go over.
+- **Turn-trigger relics** show progress to their turn and say "next turn" the turn before: Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3).
+- **One-shot relics** show one segment: green "ready" while unused, "used" afterwards. Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Pael's Eye, Permafrost (per combat); Music Box (per turn).
 
-Full relic list: [TRACKER.md §2](TRACKER.md#2-counter-relics--relic-counters-tick-bar-tray-above-the-hand).
+Thresholds are read live from each relic, so balance patches are picked up automatically.
 
-**Settings:** per-relic on/off · tray position (movable) · flash intensity · bar length/scale. The look will be tuned once it's running in game.
+**Game UI touched:** none; the tray is our own overlay. The relic bar's own counters are unchanged.
 
-**Game UI touched:** none of the game's own nodes. The tray is a new overlay. The relic bar's own counters are left as they are.
-
-**Patches:** *to be filled in when implemented.*
+**Not yet:** Pael's Legion, Mini Regent, Regalite, Rainbow Ring rows.
 
 ---
 
 ## Relic Reminders
 
-**What you see:** the relic's own icon overlaid on the cards in your hand that it cares about, so a glance at a card says what playing it does to your relics.
+**What you see:** the relic's own icon on the cards in your hand that it cares about, in the same row above the card as the badges.
 
-- **Breaks:** the relic icon, crossed out, means "playing this card stops this relic working this turn." Example: Art of War on every attack while you haven't attacked yet; Ripple Basin on attacks.
-- **Pen Nib ready:** attacks in hand get a pulsing border in a color the game doesn't use. It tells you this attack will consume Pen Nib.
-- **Normal icon:** playing this card triggers or advances a relic (Mummified Hand, Game Piece, Ivory Tile, Chemical X...).
-- **One-shot relics** (first time each combat or each turn): while the relic is still armed, its icon appears on every card in hand that would use it, and disappears once it's spent. A matching lit segment sits in the Relic Counters tray.
-  - Once per combat: Vambrace (block cards), Throwing Axe (every card), Burning Sticks (skills that will exhaust, including Ethereal skills at end of turn), Unsettling Lamp (cards that debuff an enemy), Permafrost (powers), Pael's Eye ("end turn now = extra turn").
-  - Once per turn: Music Box (attacks), Rainbow Ring (missing card types).
-- If several relics apply, one icon with a stack count is shown; hover to expand.
+- **Crossed-out icon = playing this card stops this relic working this turn.** Art of War and Ripple Basin on every attack, until you've played an attack this turn.
+- **Pen Nib ready:** attacks get a pulsing violet border plus the Pen Nib icon. This attack will use the double damage.
+- **One-shot relics, while still unused:**
+  - Vambrace on cards that give block
+  - Throwing Axe on every card
+  - Burning Sticks on skills that will exhaust (Exhaust skills, plus Ethereal skills that exhaust at end of turn)
+  - Unsettling Lamp on cards that apply a debuff
+  - Permafrost on powers
+  - Music Box on attacks (first attack each turn)
 
-Full relic list: [TRACKER.md §3](TRACKER.md#3-condition-relics--relic-reminders-icons-on-cards-in-hand).
+**Game UI touched:** card nodes in the hand.
 
-**Settings:** per-relic on/off · icon corner.
-
-**Game UI touched:** card node (`NCard`), top corner only.
-
-**Patches:** *to be filled in when implemented.*
+**Not yet:** stacking several icons into one with a count, Pael's Eye "end turn = extra turn" hint, Rainbow Ring, the condition relics in TRACKER §3 beyond the ones above.
 
 ---
 
 ## Block Forecast
 
-**What you see:** "+N" next to your block: the block you'll gain automatically at end of turn, so you stop overblocking.
+**What you see** (default: left side of the screen): `Block 5  +6 at end of turn` with a breakdown, so you stop overblocking. Shown only during your turn when something will add block.
 
-Counts: Plating, Frost orb passives (including extra triggers), Orichalcum, Cloak Clasp, Ripple Basin (if still eligible), Sturdy Clamp carry-over. Horn Cleat and Captain's Wheel are shown the turn before they fire.
+Counts:
+- Plating
+- Frost orb passives (times the game's passive trigger count, so trigger-boosting effects are included)
+- Orichalcum / Fake Orichalcum (only if you currently have 0 block, like the game checks)
+- Cloak Clasp (block × cards in hand)
+- Ripple Basin (only if you haven't played an attack this turn)
+- Horn Cleat / Captain's Wheel are listed as "next turn" the turn before they fire
 
-Full source list: [TRACKER.md §4](TRACKER.md#4-end-of-turn-block-sources--block-forecast).
+**Game UI touched:** none; our own widget.
 
-**Settings:** position (movable, default beside the player's block) · show breakdown on hover.
-
-**Game UI touched:** player health bar area (`NHealthBar`), alongside the block icon.
-
-**Patches:** *to be filled in when implemented.*
+**Not yet:** Sturdy Clamp carry-over, Parrying Shield threshold, placement next to the health bar.
 
 ---
 
 ## Incoming Damage
 
-**What you see:** the total blockable damage you'll take this round, and how much will get through your current block plus the forecast block.
+**What you see** (default: left side, above Block Forecast), during your turn:
+- `Incoming 18`: total blockable damage this round.
+- `vs block 5+6 → take 7` in red, or `→ fully blocked (+3 spare)` in green. This counts your current block plus the Block Forecast.
+- A breakdown: each attacking enemy (with hit count) and each self-damage source.
+- `Unblockable HP loss N`, listed separately and never mixed into the total.
 
-- Includes enemy attack intents (multi-hit included) and blockable end-of-turn self damage: Burn, Decay, Infection, Toxic, Wither in hand; Constrict, Magic Bomb, Disintegration debuffs.
-- **Unblockable** HP loss (Regret, Bad Luck, Beckon, Demise) is shown separately, never mixed into the blockable total.
-- The health bar previews the expected loss, next to the game's existing Poison/Doom preview.
-- Multiplayer: counts only intents that target you.
+Sources:
+- **Blockable:** enemy attack intents, using the game's own intent numbers (`AttackIntent.GetTotalDamage`, so Strength, Vulnerable etc. are included); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration debuffs.
+- **Unblockable:** Regret (HP loss = cards in hand), Bad Luck, Beckon, Demise.
 
-Full source list: [TRACKER.md §5](TRACKER.md#5-incoming-damage--incoming-damage).
+**Game UI touched:** none; our own widget.
 
-**Settings:** position (movable) · health-bar preview on/off · per-enemy breakdown on hover.
-
-**Game UI touched:** player health bar (`NHealthBar`).
-
-**Patches:** *to be filled in when implemented.*
+**Not yet:** health-bar preview, per-player targeting in multiplayer (all attack intents are counted).
 
 ---
 
 ## Shuffle Warning
 
-**What you see:** a reminder of when a draw will reshuffle your discard pile. Cards in your hand at that moment stay out of the new draw pile, so you can choose what to hold and what to reshuffle.
+**What you see** (default: bottom-left, near the draw pile), during your turn when your draw pile is low (5 or fewer) or a shuffle is possible:
+- `Reshuffle after N more draws` (or `Next draw reshuffles`), plus draw and discard pile sizes.
+- `SHUFFLE` badge on draw cards in hand whose draw is more than your draw pile.
+- Potions that would cause a shuffle, listed in the widget.
+- `KEPT` badge on your other hand cards while a mid-turn shuffle is possible: they'll stay out of the new draw pile.
 
-- "N until shuffle" by the draw pile.
-- A shuffle badge on draw cards and potions whose draw would run past the end of the draw pile.
-- While a shuffle is possible, cards in hand get a subtle "stays out of the next draw pile" marker.
+Draw cards and potions are a fixed list from the decompile (TRACKER §6).
 
-**Settings:** position of the counter (movable) · hand markers on/off.
+**Game UI touched:** card nodes in the hand.
 
-**Game UI touched:** draw pile area, card nodes in hand, potion slots.
-
-**Patches:** *to be filled in when implemented.*
+**Not yet:** cards whose draw amount isn't a simple number (Compile Driver, Dagger Throw, Escape Plan, Mad Science, Pillage, Prepared, Restlessness, Scrawl), badges on potion slots.
 
 ---
 
 ## Intent Forecast
 
-**What you see:** each enemy's upcoming moves, shrunk and faded above its current intent.
-
-- Moves known for certain: solid icons, 2–3 ahead.
-- Random branches: icons side by side with odds, or "?" when the odds can't be worked out.
-- Conditional moves: icon with a condition marker; hover to explain.
-- Damage numbers use current Strength and are marked approximate.
-
-**Settings:** always-on vs. hover · moves ahead.
-
-**Game UI touched:** enemy intent area.
-
-**Patches:** *to be filled in when implemented.*
+⚪ Planned. Needs research into monster AI first (TRACKER §7). Registered but does nothing.

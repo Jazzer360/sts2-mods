@@ -25,12 +25,12 @@ The full design lives in the "StS2 Mod Suite — Design Notes" doc (https://clau
 ## Build order
 
 1. ~~Decompile and repo scaffold.~~ Done.
-2. **Core settings and layout.** Every indicator depends on it, so build it first.
-3. **Relic Counters**, starting with Pen Nib, Stone Calendar, Kunai/Shuriken. Highest value; it's generic over `RelicModel.ShowCounter/DisplayAmount/Status`, so most relics come almost free.
-4. **Block Forecast** and **Incoming Damage**. They share the "what happens at end of turn" model.
-5. **Card Indicators**: Ethereal translucency first, then badges, then markers.
-6. **Relic Reminders**, starting with the Pen Nib-ready glow, Art of War, Ripple Basin.
-7. **Shuffle Warning.**
+2. ~~**Core settings and layout.**~~ Built in 0.2.0 (settings file + draggable widgets; in-game menu still to do).
+3. ~~**Relic Counters**~~ built in 0.2.0, starting with Pen Nib, Stone Calendar, Kunai/Shuriken. Highest value; it's generic over `RelicModel.ShowCounter/DisplayAmount/Status`, so most relics come almost free.
+4. ~~**Block Forecast** and **Incoming Damage**.~~ Built in 0.2.0. They share the "what happens at end of turn" model.
+5. ~~**Card Indicators**~~ (0.2.0: translucency, badges, blocked-card dimming): Ethereal translucency first, then badges, then markers.
+6. ~~**Relic Reminders**~~ (0.2.0), starting with the Pen Nib-ready glow, Art of War, Ripple Basin.
+7. ~~**Shuffle Warning.**~~ Built in 0.2.0.
 8. **Intent Forecast.**
 9. The advisory mods.
 
