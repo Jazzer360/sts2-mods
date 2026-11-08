@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsSts2Mod>true</IsSts2Mod>
+    <!-- Must match "id" in SpireQoL.json: the game loads <id>.dll. -->
+    <AssemblyName>SpireQoL</AssemblyName>
+    <RootNamespace>SpireQoL</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>

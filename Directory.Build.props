@@ -1,0 +1,30 @@
+<Project>
+  <!--
+    Shared build settings for every mod in this repo.
+
+    The game's assemblies are referenced straight from your install, so nothing
+    from the game is ever committed. If your install isn't at the default Steam
+    path, copy Sts2.local.props.example to Sts2.local.props and set Sts2Dir there
+    (that file is gitignored).
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)Sts2.local.props" Condition="Exists('$(MSBuildThisFileDirectory)Sts2.local.props')" />
+
+  <PropertyGroup>
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <Sts2Dir Condition="'$(Sts2Dir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</Sts2Dir>
+    <Sts2DataDir>$(Sts2Dir)\data_sts2_windows_x86_64</Sts2DataDir>
+    <Sts2ModsDir>$(Sts2Dir)\mods</Sts2ModsDir>
+
+    <TargetFramework>net9.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+
+    <!-- Copy the built mod into the game's mods/ folder after each build. Turn off with -p:InstallToGame=false. -->
+    <InstallToGame Condition="'$(InstallToGame)' == ''">true</InstallToGame>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+Sts2.local.props
+
+# Never commit game files or decompiled game code.
+*.pck
+sts2.dll
+GodotSharp.dll
+0Harmony.dll
+decompiled/

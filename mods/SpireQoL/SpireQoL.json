@@ -1,0 +1,12 @@
+{
+  "id": "SpireQoL",
+  "name": "Spire QoL",
+  "author": "Derek Jass",
+  "description": "Display-only quality-of-life tweaks: keyword badges, relic reminders on cards, enemy intent forecast, and incoming-damage math. Each feature can be toggled.",
+  "version": "0.1.0",
+  "has_dll": true,
+  "has_pck": false,
+  "affects_gameplay": false,
+  "dependencies": [],
+  "min_game_version": "v0.111.0"
+}

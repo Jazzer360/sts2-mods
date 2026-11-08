@@ -1,0 +1,34 @@
+<Project>
+  <!--
+    Applies to any project that sets <IsSts2Mod>true</IsSts2Mod>.
+
+    The game's loader (MegaCrit.Sts2.Core.Modding.ModManager) scans <game>/mods recursively
+    for *.json manifests, then loads <id>.dll (and <id>.pck if has_pck) from the same folder.
+    So each mod's AssemblyName must equal its manifest id.
+  -->
+  <ItemGroup Condition="'$(IsSts2Mod)' == 'true'">
+    <!-- Game assemblies: compile against them, never copy them. -->
+    <Reference Include="sts2" HintPath="$(Sts2DataDir)\sts2.dll" Private="false" />
+    <Reference Include="GodotSharp" HintPath="$(Sts2DataDir)\GodotSharp.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(Sts2DataDir)\0Harmony.dll" Private="false" />
+
+    <!-- Shared core is compiled into each mod, so players never need to install a separate dependency. -->
+    <Compile Include="$(RepoRoot)core\**\*.cs" Link="Core\%(RecursiveDir)%(Filename)%(Extension)" />
+
+    <None Include="$(AssemblyName).json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="CheckSts2Install" BeforeTargets="ResolveAssemblyReferences" Condition="'$(IsSts2Mod)' == 'true'">
+    <Error Condition="!Exists('$(Sts2DataDir)\sts2.dll')"
+           Text="Couldn't find sts2.dll under '$(Sts2DataDir)'. Copy Sts2.local.props.example to Sts2.local.props and set Sts2Dir to your Slay the Spire 2 install folder." />
+  </Target>
+
+  <Target Name="InstallModToGame" AfterTargets="Build" Condition="'$(IsSts2Mod)' == 'true' And '$(InstallToGame)' == 'true'">
+    <ItemGroup>
+      <_ModFiles Include="$(OutDir)$(AssemblyName).dll;$(OutDir)$(AssemblyName).pdb;$(OutDir)$(AssemblyName).json" />
+      <_ModFiles Include="$(OutDir)$(AssemblyName).pck" Condition="Exists('$(OutDir)$(AssemblyName).pck')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ModFiles)" DestinationFolder="$(Sts2ModsDir)\$(AssemblyName)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Installed $(AssemblyName) -> $(Sts2ModsDir)\$(AssemblyName)" />
+  </Target>
+</Project>
