@@ -28,10 +28,7 @@ public sealed class CardDecor
     /// <summary>Whole-card opacity (Ethereal). Null = untouched.</summary>
     public float? Opacity { get; set; }
 
-    /// <summary>Darken the card: it can't be played right now (the reason is a crossed tab).</summary>
-    public bool Dim { get; set; }
-
-    public bool IsEmpty => Tabs.Count == 0 && Opacity == null && !Dim;
+    public bool IsEmpty => Tabs.Count == 0 && Opacity == null;
 
     /// <summary>Settings filter (QolSettings.TabEnabled); null = everything shown.</summary>
     internal Func<string, bool>? Filter { get; init; }

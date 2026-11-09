@@ -74,18 +74,6 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             var replays = card.GetEnchantedReplayCount();
             if (replays > 0) d.AddTab("replay", null, text: $"{replays + 1}×");
 
-            if (d.Enabled("blocked") && Blocker(card) is { } blocker)
-            {
-                d.Dim = true;
-                var icon = blocker switch
-                {
-                    RelicModel r => GameIcons.Relic(r),
-                    PowerModel p => GameIcons.Power(p),
-                    _ => null,
-                };
-                d.AddTab("blocked", icon, crossed: true);
-            }
-
             {
                 // One tag per source, each with that source's own icon (Burst, Echo Form,
                 // Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or the card's
@@ -151,15 +139,5 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             foreach (var enemy in cs.HittableEnemies) Add(enemy);
         }
         return sources;
-    }
-
-    private static readonly HashSet<string> Blockers = new() { "ChainsOfBindingPower", "RingingPower", "SmoggyPower", "VelvetChoker" };
-
-    /// <summary>The power or relic stopping this card from being played (game's own CanPlay), if it's one we show.</summary>
-    private static AbstractModel? Blocker(CardModel card)
-    {
-        if (card.CanPlay(out var reason, out var preventer)) return null;
-        if (!reason.HasFlag(UnplayableReason.BlockedByHook) || preventer == null) return null;
-        return Blockers.Contains(preventer.GetType().Name) ? preventer : null;
     }
 }

@@ -146,10 +146,10 @@ public static class ModEntry
     private static void MigrateTabs(QolSettings settings)
     {
         if (settings.ShowDoublePlay == false) settings.Tabs["double-play:*"] = false;
-        if (settings.DimBlockedCards == false) settings.Tabs["blocked"] = false;
         settings.ShowDoublePlay = null;
         settings.DimBlockedCards = null;
         settings.ShowInnateEternalBadges = null; // Innate/Eternal tabs were removed
+        settings.Tabs.Remove("blocked"); // 0.23.1: the game's crossed-out cost already marks these cards
     }
 
     /// <summary>

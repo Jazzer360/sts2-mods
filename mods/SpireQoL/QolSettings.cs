@@ -42,7 +42,7 @@ public sealed class QolSettings
     public string SettingsKey { get; set; } = "F10";
 
     /// <summary>
-    /// On-card tab kind → shown. Keys are tab keys ("retain", "sly", "blocked", "shuffle",
+    /// On-card tab kind → shown. Keys are tab keys ("retain", "sly", "replay", "shuffle",
     /// "relic:PenNib", "proc:FeelNoPainPower", "double-play:BurstPower"...) or a group switch
     /// ("relic:*", "proc:*", "double-play:*"). A tab shows only if both its own key and its group
     /// are on, so a group set to false hides the whole group. Missing = shown.

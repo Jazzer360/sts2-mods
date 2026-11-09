@@ -530,14 +530,12 @@ public sealed class SettingsMenu
     private Control? TabPreview(string key)
     {
         Texture2D? tex = null;
-        var crossed = false;
         try
         {
             switch (key)
             {
                 case "retain": tex = Cards.GameIcons.Enchantment<MegaCrit.Sts2.Core.Models.Enchantments.Steady>(); break;
                 case "sly": tex = Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.MasterPlannerPower>(); break;
-                case "blocked": tex = Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.ChainsOfBindingPower>(); crossed = true; break;
                 case "shuffle": tex = Cards.GameIcons.DiscardPile(); break; // only known in combat
                 case "replay":
                     var l = Label("2×", 22, Text);
@@ -551,7 +549,6 @@ public sealed class SettingsMenu
             tex = null;
         }
         var icon = UiKit.Icon(Cards.GameIcons.Valid(tex) ? tex : null, IconSize);
-        if (crossed) AddSlash(icon);
         return icon;
     }
 

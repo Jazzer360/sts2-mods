@@ -47,7 +47,6 @@ public sealed class CardOverlayRenderer
         public required NCard Card;
         public required Control Container;
         public required Control Overlay;
-        public required ColorRect Dim;
         public bool TouchedAlpha;
         public bool Seen;
         public readonly List<Control> Tabs = new();
@@ -116,10 +115,7 @@ public sealed class CardOverlayRenderer
         var overlay = new Control { Name = OverlayName, MouseFilter = Control.MouseFilterEnum.Ignore };
         container.AddChild(overlay);
 
-        var dim = new ColorRect { Color = new Color(0, 0, 0, 0.55f), MouseFilter = Control.MouseFilterEnum.Ignore };
-        overlay.AddChild(dim);
-
-        var entry = new Entry { Card = card, Container = container, Overlay = overlay, Dim = dim };
+        var entry = new Entry { Card = card, Container = container, Overlay = overlay };
         _entries[id] = entry;
         return entry;
     }
@@ -150,10 +146,6 @@ public sealed class CardOverlayRenderer
         {
             e.Container.MoveChild(e.Overlay, -1);
         }
-
-        e.Dim.Visible = d.Dim;
-        e.Dim.Position = Vector2.Zero;
-        e.Dim.Size = size;
 
         var layer = PlaceTagLayer(e, size);
         ApplyTabs(e, d.Tabs, layer);

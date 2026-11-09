@@ -32,7 +32,6 @@ public static class SettingsCatalog
         new TabEntry("retain", "Retain", "Cards that stay in your hand at end of turn (permanently or this turn only). Steady icon."),
         new TabEntry("sly", "Sly", "Cards with Sly (permanently or this turn only). Master Planner icon."),
         new TabEntry("replay", "Replay", "Cards that replay themselves (Hidden Gem, Transfigure, Sword Sage, enchantments): a \"2×\" tab with the total plays."),
-        new TabEntry("blocked", "Can't be played", "Crossed tab and a dimmed card when Chains of Binding, Ringing, Smog or Velvet Choker stops it."),
         new TabEntry("shuffle", "Reshuffle", "Discard pile icon on cards whose draw would shuffle your discard pile back into your draw pile."),
     };
 
@@ -99,7 +98,7 @@ public static class SettingsCatalog
         new("EmotionChip", SourceGroup.Relic, "Cards that cost you HP"),
         new("RedSkull", SourceGroup.Relic, "Cards that take you to half HP or below"),
         new("BrilliantScarf", SourceGroup.Relic, null, "Cards this turn, toward the free one"),
-        new("VelvetChoker", SourceGroup.Relic, null, "Plays left this turn; red at 1 (its block is the \"Can't be played\" tab)"),
+        new("VelvetChoker", SourceGroup.Relic, null, "Plays left this turn; red at 1"),
         new("Pocketwatch", SourceGroup.Relic, null, "Cards this turn: green while under its limit, red once over"),
         new("StoneCalendar", SourceGroup.Relic, null, "Turn timer: turns until its damage", TrackerDefault: false),
         new("HappyFlower", SourceGroup.Relic, null, "Turn timer: turns until its energy", TrackerDefault: false),

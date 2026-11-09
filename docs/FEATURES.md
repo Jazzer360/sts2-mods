@@ -50,7 +50,7 @@ Opens with **F10** (setting `SettingsKey`), the **Spire QoL settings** button on
 
 - **Pages:** General (features and options), Card tabs, Relics, Your powers, Enemy powers.
 - **General:** each feature on/off, live (a feature switched off is skipped each frame and its widgets hide; no restart): Card Indicators, Proc Indicators, Relic Counters, Incoming Damage, Shuffle Warning, and the two prediction checks. Options: amounts on proc tabs (`ProcNumbers`), indirect procs (`ProcIndirect`), tracker flashes early (`PulseOneStepEarly`), send error reports (`ReportErrors`, live), and sliders for Ethereal opacity and tracker flash speed.
-- **Card tabs:** Retain, Sly, Replay, Can't be played, Reshuffle, each with its icon, plus the family switches (all proc tabs, all double-play tabs). Tab kinds seen in play that the catalog doesn't describe yet are listed under **Other**, so everything stays switchable.
+- **Card tabs:** Retain, Sly, Replay, Reshuffle, each with its icon, plus the family switches (all proc tabs, all double-play tabs). Tab kinds seen in play that the catalog doesn't describe yet are listed under **Other**, so everything stays switchable.
 - **Relics / Your powers / Enemy powers:** a table, one row per relic or power the mod knows: the game's icon (with the red slash if its tab is crossed) and name (hover for the game's own description), then two checkboxes: **On cards** (its tab, with what it marks and shows) and **Tracker** (its Relic Counters row, with what it counts). Each column has All on / All off for the rows listed. Rows come from `Menu/SettingsCatalog.cs`, which covers every Proc Indicators rule, every double-play source and every tracker entry.
 - **Search** filters every page by name or description; **Only what's in this fight** (in combat) lists only relics and powers you or the enemies have right now.
 
@@ -85,7 +85,7 @@ Opens with **F10** (setting `SettingsKey`), the **Spire QoL settings** button on
 | `ReportErrors` | `true` | send crashes and audit mismatches, with the game state at the time, to the mod's Sentry project (see "Error reporting") |
 | `UnlockLayoutKey` / `HideAllKey` / `SettingsKey` | `F8` / `F9` / `F10` | Godot key names |
 | `EtherealOpacity` | `0.8` | 0.25–1 (a saved 0.7, the old default, is raised to 0.8 once) |
-| `Tabs` | every tab shown | one entry per on-card tab kind, added (as `true`) the first time that kind appears, plus a group switch per family: `"proc:*"`, `"double-play:*"`. Set any to `false` to hide it; a group set to `false` hides its whole family. Keys: `retain`, `sly`, `replay`, `blocked` (also turns off dimming), `shuffle`, `double-play:<Source>`, `proc:<Source>` (class names, e.g. `proc:FeelNoPainPower`). Replaces `ShowDoublePlay` / `DimBlockedCards` (migrated once) and `ShowInnateEternalBadges` (removed). |
+| `Tabs` | every tab shown | one entry per on-card tab kind, added (as `true`) the first time that kind appears, plus a group switch per family: `"proc:*"`, `"double-play:*"`. Set any to `false` to hide it; a group set to `false` hides its whole family. Keys: `retain`, `sly`, `replay`, `shuffle`, `double-play:<Source>`, `proc:<Source>` (class names, e.g. `proc:FeelNoPainPower`). Replaces `ShowDoublePlay` / `DimBlockedCards` (migrated once) and `ShowInnateEternalBadges` (removed). |
 | `ProcNumbers` | `true` | amounts on block / damage / summon proc tabs; `false` = icon only |
 | `ProcIndirect` | `true` | count procs one step removed: cards that exhaust or discard other cards, draw, or create cards |
 | `ShowTurnTimers` | (removed) | replaced in 0.23.0 by per-relic `Relics` entries (turn timers default off); a saved `true` turned them all on once |
@@ -107,9 +107,10 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 - **Look:** each tag is a copy of the card's own enchantment tab (the game's banner art), rotated a quarter turn so it hangs off the top edge the way an enchantment tab hangs off the side. **It draws beneath the card art but above the card's glow**, tucked about 17% under the top edge, so the card itself covers the tucked part. The icon is drawn slightly smaller (85%), centered as if the tag were tucked 25% (the backdrop sits a little lower than the icon, evening out the margins above and below it). Each tag carries the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
 - **Text instead of an icon only for replay:** replay on the card itself has no power or relic to show, so its tab reads `2×` (total plays).
 - **Numbers only for amounts:** a tab shows a number only when the proc gains you block, deals damage or summons, and the amount is the point (e.g. Feel No Pain on True Grit: `3`). It sits at the icon's lower-right corner, like a power amount. Everything else is icon only.
-- **Red slash:** the icon crossed out means playing this card breaks or is blocked by that thing, hurts you, or helps the enemy (Enrage, Galvanized...).
+- **Plain vs crossed:** a plain tab means playing this card does something extra. A crossed tab (red slash) is a warning: playing it might be bad for you, because it helps the enemy (Enrage, Curl Up), hurts you (Thorns, Galvanized) or gives up a relic's bonus (Art of War, Pael's Tears).
 - **One per source:** each source shows at most one tab per card. Tabs keep their size and spacing; if a row would be wider than the card, only the gaps shrink (tabs overlap, later ones on top), so a row never spills past the card's edges.
-- **Not tabs:** the only on-card effects that aren't tabs are **dimming** (the card can't be played right now; the reason is a crossed tab) and **Ethereal translucency**.
+- **Not tabs:** the only on-card effect that isn't a tab is **Ethereal translucency**.
+- **Not marked: cards that can't be played.** The game already crosses out the cost of a card that can't be played for any reason other than cost (`NCard` unplayable energy/star icon) and drops its glow, so there's no tab for it (removed in 0.23.1).
 
 | Tab icon | Meaning | Feature |
 | --- | --- | --- |
@@ -117,7 +118,6 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 | Master Planner (power) | Sly (permanent or this turn only) | Card Indicators |
 | The double-play source (Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe) | plays more than once because of it | Card Indicators |
 | Text `2×` (no icon) | Replay on the card itself (Hidden Gem, Transfigure, Sword Sage, enchantments): total plays | Card Indicators |
-| Bound / Ringing / Smog power, or Velvet Choker, **crossed** + card dimmed | can't be played right now | Card Indicators |
 | Discard pile | its draw would reshuffle your discard pile into the draw pile | Shuffle Warning |
 | A power or relic (+ amount for block / damage / summon) | playing this sets it off: see [Proc Indicators](#proc-indicators) | Proc Indicators |
 | A power or relic, **crossed** (+ amount for damage to you) | playing this helps the enemy, hurts you, or gives up a relic (Enrage, Thorns, Curl Up, Galvanized, Art of War, Pael's Tears, Pael's Eye...) | Proc Indicators |
@@ -134,7 +134,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 - **Retain:** a Steady tab (Steady is the game's Retain enchantment). **Sly:** a Master Planner tab (the de-facto Sly power). Granted-for-this-turn (Expertise, Hand Trick) looks the same.
 - **Replay** on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, enchantments): a text tab `2×`, the card's total plays (`CardModel.GetEnchantedReplayCount` + 1). The card text says "Replay", but it's easy to miss without hovering.
 - **Added keywords get no tab:** the game prints every keyword a card currently has (including added Exhaust) on the card itself. (The Goopy "added Exhaust" tab was removed in 0.21.0.)
-- **Blocked cards** (Bound, Ringing, Smog, Velvet Choker): the card is dimmed, with a crossed tab showing the blocking power's or relic's icon. Detected with the game's own `CardModel.CanPlay`.
+- **Blocked cards** (Bound, Ringing, Smog, Velvet Choker): no tab since 0.23.1. The game's own crossed-out cost shows it whenever `CardModel.CanPlay` fails for a reason other than cost, which covers every case the old tab did.
 - **Galvanized** moved to [Proc Indicators](#proc-indicators) in 0.19.0 (crossed Galvanic tab with the damage you take).
 - **Double play:** one tab per source, with that source's own icon: the power (Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team) or the relic (Throwing Axe). Replay on the card itself is the `2×` tab instead. The game's query reports which models changed the count, so new sources get their own icon automatically.
   - The count comes from the game's own play-count query, the one it runs when you play the card: enchanted replays + 1, then `Hook.ModifyCardPlayCount`. So it covers Echo Form (first N cards each turn), Burst (skills), Duplication, One-Two Punch (attacks), Signal Boost (powers), Throwing Axe (first card each combat), Tag Team, enchantments, and anything added later.
