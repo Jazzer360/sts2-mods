@@ -35,8 +35,6 @@ public sealed class QolSettings
     public bool PulseOneStepEarly { get; set; } = false;
     public float FlashHz { get; set; } = 2.5f;
 
-    // Shuffle Warning
-    public bool ShuffleHandMarkers { get; set; } = true;
 
     public bool RelicEnabled(string relicTypeName) => !Relics.TryGetValue(relicTypeName, out var on) || on;
 

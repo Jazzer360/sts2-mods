@@ -6,20 +6,29 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Cards;
 
 /// <summary>
-/// Draws CardDecor onto the card nodes in the hand.
+/// Draws CardDecor onto the card nodes in the hand, in one uniform visual language:
 ///
-/// Placement rules (docs/TRACKER.md §8): badges and relic icons sit in a row just above the
-/// card's top edge, so they never cover the cost, title, enchantment tab or affliction
-/// overlay. The overlay is the last child of the card's %CardContainer, so it follows the
-/// card's hover scale and hand rotation.
+///  - **Tabs** along the card's top edge: copies of the card's own enchantment tab
+///    (NCard.EnchantmentTab: "%Enchantment" with an "Icon" TextureRect and a "Label" MegaLabel),
+///    centered and overlapping the edge slightly. In a fanned hand the card tops stay visible
+///    while the sides are covered, so the tabs read at a glance without hovering. A red slash on
+///    a tab means "playing this breaks or is blocked by this".
+///  - **Dim**: the card can't be played right now.
+///  - **Opacity**: Ethereal translucency.
 ///
-/// Card nodes are pooled and reused by the game, so anything we change on a node is undone
-/// as soon as that node stops showing a decorated hand card.
+/// Everything lives in an overlay that's the last child of the card's %CardContainer, so it
+/// follows the card's hover scale and hand rotation. Card nodes are pooled and reused by the
+/// game, so anything we change on a node is undone as soon as that node stops showing a
+/// decorated hand card.
 /// </summary>
 public sealed class CardOverlayRenderer
 {
     private const string OverlayName = "SpireQoL_CardOverlay";
     private static readonly Vector2 DefaultCardSize = new(300f, 422f);
+    private static readonly Color SlashColor = new(1f, 0.15f, 0.1f, 0.95f);
+
+    private const float TabGap = 6f;
+    private const float TabOverlap = 0.3f; // fraction of the tab height that sits on the card
 
     private readonly OverlayHost _host;
     private readonly CardDecorFrame _frame;
@@ -36,93 +45,10 @@ public sealed class CardOverlayRenderer
         public required NCard Card;
         public required Control Container;
         public required Control Overlay;
-        public required HBoxContainer Row;
         public required ColorRect Dim;
-        public required Label DimLabel;
-        public required ColorRect[] Border;
-        public string Signature = "";
         public bool TouchedAlpha;
         public bool Seen;
         public readonly List<Control> Tabs = new();
-    }
-
-    // ---- Keyword tabs ----
-    // Copies of the card's own enchantment tab (NCard.EnchantmentTab: "%Enchantment" with an
-    // "Icon" TextureRect and a "Label" MegaLabel), in a centered row along the card's TOP edge,
-    // overlapping it slightly. In a fanned hand the card tops stay visible while the sides are
-    // covered by neighbours, so this reads at a glance without hovering.
-    private const float TabGap = 6f;
-    private const float TabOverlap = 0.3f; // fraction of the tab height that sits on the card
-
-    /// <returns>How far the tabs reach above the card's top edge (0 when none).</returns>
-    private float ApplyTabs(Entry e, List<TabSpec> tabs)
-    {
-        var template = e.Card.EnchantmentTab;
-        if (tabs.Count == 0 || template == null || !GodotObject.IsInstanceValid(template))
-        {
-            HideTabs(e);
-            return 0f;
-        }
-
-        while (e.Tabs.Count < tabs.Count)
-        {
-            var copy = (Control)template.Duplicate();
-            copy.Name = "SpireQoL_KeywordTab";
-            ClearUniqueNames(copy);
-            copy.MouseFilter = Control.MouseFilterEnum.Ignore;
-            // Inside our overlay (which follows the card frame), behind the badge row.
-            e.Overlay.AddChild(copy);
-            e.Overlay.MoveChild(copy, 0);
-            e.Tabs.Add(copy);
-        }
-
-        var tabSize = template.Size * template.Scale;
-        var total = tabs.Count * tabSize.X + (tabs.Count - 1) * TabGap;
-        var x0 = (e.Overlay.Size.X - total) / 2f;
-        var y = -tabSize.Y * (1f - TabOverlap);
-        for (var i = 0; i < e.Tabs.Count; i++)
-        {
-            var tab = e.Tabs[i];
-            if (!GodotObject.IsInstanceValid(tab)) continue;
-            var on = i < tabs.Count;
-            tab.Visible = on;
-            if (!on) continue;
-
-            var spec = tabs[i];
-            tab.Position = new Vector2(x0 + i * (tabSize.X + TabGap), y);
-            tab.Scale = template.Scale;
-            tab.Rotation = 0f;
-            // Not the template's tint: the game greys its tab for a disabled enchantment.
-            tab.Modulate = Colors.White;
-            tab.SelfModulate = Colors.White;
-
-            if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
-            {
-                icon.Texture = spec.Icon;
-                icon.Modulate = Colors.White;
-            }
-            if (tab.GetNodeOrNull<Label>("Label") is { } label)
-            {
-                label.Visible = spec.Label != null;
-                label.Text = spec.Label ?? "";
-            }
-        }
-        return -y;
-    }
-
-    private static void HideTabs(Entry e)
-    {
-        foreach (var tab in e.Tabs)
-        {
-            if (GodotObject.IsInstanceValid(tab)) tab.Visible = false;
-        }
-    }
-
-    /// <summary>A duplicated scene piece keeps "%unique" flags; clear them so the card's own lookups aren't confused.</summary>
-    private static void ClearUniqueNames(Node node)
-    {
-        node.UniqueNameInOwner = false;
-        foreach (var child in node.GetChildren()) ClearUniqueNames(child);
     }
 
     public void Render()
@@ -153,7 +79,6 @@ public sealed class CardOverlayRenderer
             }
             if (e.Seen) continue;
             e.Overlay.Visible = false;
-            HideTabs(e);
             if (e.TouchedAlpha)
             {
                 SetAlpha(e.Container, 1f);
@@ -180,27 +105,8 @@ public sealed class CardOverlayRenderer
 
         var dim = new ColorRect { Color = new Color(0, 0, 0, 0.55f), MouseFilter = Control.MouseFilterEnum.Ignore };
         overlay.AddChild(dim);
-        var dimLabel = UiKit.Label("", 30, new Color(1f, 0.85f, 0.85f));
-        dimLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        dimLabel.VerticalAlignment = VerticalAlignment.Center;
-        dim.AddChild(dimLabel);
 
-        var border = new ColorRect[4];
-        for (var i = 0; i < 4; i++)
-        {
-            border[i] = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore };
-            overlay.AddChild(border[i]);
-        }
-
-        var row = UiKit.Row(4);
-        row.Alignment = BoxContainer.AlignmentMode.Center;
-        overlay.AddChild(row);
-
-        var entry = new Entry
-        {
-            Card = card, Container = container, Overlay = overlay, Row = row,
-            Dim = dim, DimLabel = dimLabel, Border = border,
-        };
+        var entry = new Entry { Card = card, Container = container, Overlay = overlay, Dim = dim };
         _entries[id] = entry;
         return entry;
     }
@@ -232,54 +138,12 @@ public sealed class CardOverlayRenderer
             e.Container.MoveChild(e.Overlay, -1);
         }
 
-        // Badge + relic row, just above the top edge.
-        var sig = d.RowSignature();
-        if (sig != e.Signature)
-        {
-            e.Signature = sig;
-            UiKit.Clear(e.Row);
-            foreach (var b in d.Badges)
-            {
-                e.Row.AddChild(UiKit.Badge(b.Text, b.Bg, b.Fg, 18));
-            }
-            foreach (var r in d.Relics)
-            {
-                e.Row.AddChild(RelicIcon(r));
-            }
-        }
-        e.Row.Visible = d.Badges.Count > 0 || d.Relics.Count > 0;
-        e.Row.ResetSize();
-        e.Row.Size = new Vector2(size.X, e.Row.Size.Y);
-        e.Row.Position = new Vector2(0, -e.Row.Size.Y - 4);
-
-        // Dim + reason.
-        e.Dim.Visible = d.DimReason != null;
+        e.Dim.Visible = d.Dim;
         e.Dim.Position = Vector2.Zero;
         e.Dim.Size = size;
-        e.DimLabel.Text = d.DimReason ?? "";
-        e.DimLabel.Position = Vector2.Zero;
-        e.DimLabel.Size = size;
 
-        // Pulsing border.
-        var showBorder = d.Border != null;
-        if (showBorder)
-        {
-            var c = d.Border!.Value;
-            c.A = 0.35f + 0.65f * UiKit.Pulse(_host.Time, 2f);
-            const float t = 7f;
-            SetRect(e.Border[0], new Vector2(-t, -t), new Vector2(size.X + 2 * t, t), c);
-            SetRect(e.Border[1], new Vector2(-t, size.Y), new Vector2(size.X + 2 * t, t), c);
-            SetRect(e.Border[2], new Vector2(-t, 0), new Vector2(t, size.Y), c);
-            SetRect(e.Border[3], new Vector2(size.X, 0), new Vector2(t, size.Y), c);
-        }
-        foreach (var b in e.Border) b.Visible = showBorder;
+        ApplyTabs(e, d.Tabs);
 
-        // Keyword tabs (Retain, Sly, double play).
-        // Tabs straddle the top edge; push the badge/relic row up above them.
-        var tabRise = ApplyTabs(e, d.Tabs);
-        e.Row.Position = new Vector2(0, -e.Row.Size.Y - 4 - tabRise);
-
-        // Translucency.
         if (d.Opacity is { } a)
         {
             SetAlpha(e.Container, a);
@@ -292,37 +156,107 @@ public sealed class CardOverlayRenderer
         }
     }
 
-    private static Control RelicIcon(RelicMark r)
+    private void ApplyTabs(Entry e, List<TabSpec> tabs)
     {
-        const float s = 40f;
-        var holder = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        holder.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.05f, 0.05f, 0.08f, 0.8f), 6, 2));
-        var inner = new Control { CustomMinimumSize = new Vector2(s, s), MouseFilter = Control.MouseFilterEnum.Ignore };
-        holder.AddChild(inner);
-        var icon = UiKit.Icon(r.Icon, s);
-        inner.AddChild(icon);
-        if (r.Crossed)
+        var template = e.Card.EnchantmentTab;
+        if (template == null || !GodotObject.IsInstanceValid(template))
         {
-            icon.Modulate = new Color(1, 1, 1, 0.75f);
-            var line = new ColorRect
-            {
-                Color = new Color(1f, 0.15f, 0.1f, 0.95f),
-                Size = new Vector2(s * 1.3f, 5),
-                PivotOffset = new Vector2(s * 0.65f, 2.5f),
-                Position = new Vector2(s / 2 - s * 0.65f, s / 2 - 2.5f),
-                Rotation = -Mathf.Pi / 4,
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            inner.AddChild(line);
+            HideTabs(e);
+            return;
         }
-        return holder;
+
+        while (e.Tabs.Count < tabs.Count)
+        {
+            e.Tabs.Add(MakeTab(template, e.Overlay));
+        }
+
+        // Center the row on the top edge; shrink it if it would be wider than the card.
+        var tabSize = template.Size * template.Scale;
+        var total = tabs.Count * tabSize.X + Math.Max(0, tabs.Count - 1) * TabGap;
+        var fit = total > e.Overlay.Size.X && total > 0 ? e.Overlay.Size.X / total : 1f;
+        var scale = template.Scale * fit;
+        var step = (tabSize.X + TabGap) * fit;
+        var x0 = (e.Overlay.Size.X - total * fit) / 2f;
+        var y = -tabSize.Y * fit * (1f - TabOverlap);
+
+        for (var i = 0; i < e.Tabs.Count; i++)
+        {
+            var tab = e.Tabs[i];
+            if (!GodotObject.IsInstanceValid(tab)) continue;
+            var on = i < tabs.Count;
+            tab.Visible = on;
+            if (!on) continue;
+
+            var spec = tabs[i];
+            tab.Position = new Vector2(x0 + i * step, y);
+            tab.Scale = scale;
+            tab.Rotation = 0f;
+            // Not the template's tint: the game greys its tab for a disabled enchantment.
+            tab.Modulate = Colors.White;
+            tab.SelfModulate = Colors.White;
+
+            if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
+            {
+                icon.Texture = spec.Icon;
+                icon.Modulate = spec.Crossed ? new Color(1, 1, 1, 0.8f) : Colors.White;
+                if (icon.GetNodeOrNull<ColorRect>("SpireQoL_Slash") is { } slash)
+                {
+                    slash.Visible = spec.Crossed;
+                    if (spec.Crossed) LayoutSlash(slash, icon.Size);
+                }
+            }
+            if (tab.GetNodeOrNull<Label>("Label") is { } label)
+            {
+                label.Visible = spec.Label != null;
+                label.Text = spec.Label ?? "";
+            }
+        }
     }
 
-    private static void SetRect(ColorRect r, Vector2 pos, Vector2 size, Color c)
+    private static Control MakeTab(Control template, Control overlay)
     {
-        r.Position = pos;
-        r.Size = size;
-        r.Color = c;
+        var tab = (Control)template.Duplicate();
+        tab.Name = "SpireQoL_Tab";
+        ClearUniqueNames(tab);
+        tab.MouseFilter = Control.MouseFilterEnum.Ignore;
+        if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
+        {
+            icon.AddChild(new ColorRect
+            {
+                Name = "SpireQoL_Slash",
+                Color = SlashColor,
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                Visible = false,
+            });
+        }
+        overlay.AddChild(tab);
+        return tab;
+    }
+
+    /// <summary>A diagonal red bar across the icon (bottom-left to top-right).</summary>
+    private static void LayoutSlash(ColorRect slash, Vector2 iconSize)
+    {
+        var len = iconSize.Length() * 0.9f;
+        var thick = Math.Max(3f, iconSize.Y * 0.12f);
+        slash.Size = new Vector2(len, thick);
+        slash.PivotOffset = slash.Size / 2;
+        slash.Position = iconSize / 2 - slash.Size / 2;
+        slash.Rotation = -Mathf.Atan2(iconSize.Y, iconSize.X);
+    }
+
+    private static void HideTabs(Entry e)
+    {
+        foreach (var tab in e.Tabs)
+        {
+            if (GodotObject.IsInstanceValid(tab)) tab.Visible = false;
+        }
+    }
+
+    /// <summary>A duplicated scene piece keeps "%unique" flags; clear them so the card's own lookups aren't confused.</summary>
+    private static void ClearUniqueNames(Node node)
+    {
+        node.UniqueNameInOwner = false;
+        foreach (var child in node.GetChildren()) ClearUniqueNames(child);
     }
 
     private static void SetAlpha(Control c, float a)

@@ -61,43 +61,60 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | `LayoutVersion` | (managed) | when a release changes a default position, older saved positions for that widget are reset once |
 | `UnlockLayoutKey` / `HideAllKey` | `F8` / `F9` | Godot key names |
 | `EtherealOpacity` | `0.8` | 0.25–1 (a saved 0.7, the old default, is raised to 0.8 once) |
-| `ShowInnateEternalBadges` | `false` | |
+| `ShowInnateEternalBadges` | `false` | Innate / Eternal tabs |
 | `DimBlockedCards` | `true` | |
 | `ShowDoublePlay` | `true` | Echo Form tab on cards that play more than once |
 | `PulseOneStepEarly` | `false` | Relic Counters also flash two steps before firing |
 | `FlashHz` | `2.5` | flash speed |
-| `ShuffleHandMarkers` | `true` | KEPT badges |
 
 **Not yet:** an in-game settings menu (for now, use the file), attaching to game elements other than the player's HP (hand, draw pile), grid snap, per-widget opacity control in game.
 
 ---
 
+## On-card tabs: one language for everything on a card
+
+Every indicator about a specific card in your hand uses the **same form**: a tab in a centered row along the card's **top edge**, overlapping it slightly. In a fanned hand the tops of cards stay visible while their sides are covered, so you can read the tabs at a glance without hovering. A tab means something out of the ordinary will happen when you play that card.
+
+- **Look:** each tab is a copy of the card's own enchantment tab, the game's banner art, carrying the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
+- **Number:** the tab's small number slot holds a count when one matters: play count, damage, or `1` = this turn only.
+- **Red slash:** the icon crossed out means playing this card breaks or is blocked by that thing.
+- **One per source:** each source shows at most one tab per card. If a card has many, the row shrinks to fit the card's width.
+- **Not tabs:** the only on-card effects that aren't tabs are **dimming** (the card can't be played right now; the reason is a crossed tab) and **Ethereal translucency**.
+
+| Tab icon | Meaning | Feature |
+| --- | --- | --- |
+| Steady (enchantment) | Retain; `1` = this turn only | Card Indicators |
+| Master Planner (power) | Sly; `1` = this turn only | Card Indicators |
+| Echo Form (power), number | plays N times | Card Indicators |
+| Goopy (enchantment) | Exhaust was *added* to this card | Card Indicators |
+| Royally Approved / Tezcatara's Ember (enchantments) | Innate / Eternal (off by default) | Card Indicators |
+| Galvanic (power), number | Galvanized: playing it deals you N damage | Card Indicators |
+| Bound / Ringing / Smog power, or Velvet Choker, **crossed** + card dimmed | can't be played right now | Card Indicators |
+| Draw pile | its draw would reshuffle your discard pile | Shuffle Warning |
+| A relic | playing this uses the relic (Pen Nib ready, one-shot relics) | Relic Reminders |
+| A relic, **crossed** | playing this stops the relic working (Art of War, Ripple Basin, Pael's Tears) | Relic Reminders |
+
+**Game UI touched:** card nodes in the hand: tab copies live inside our `SpireQoL_CardOverlay` node (see "technically" above). The game's own enchantment tab is only read as a template.
+
+---
+
 ## Card Indicators
 
-**What you see:** mid-combat changes to a card in your hand, which the game otherwise shows only as text. Everything sits along or just above the card's top edge, where it stays visible in a fanned hand. It never covers the cost, the enchantment tab or the affliction overlay, and the tabs only overlap the top sliver of the card.
+**What you see:** mid-combat changes to a card in your hand that the game otherwise shows only as text, as on-card tabs (see above).
 
-- **Ethereal cards are translucent** (80% opacity by default) when Ethereal is on the card itself: cards that are always Ethereal, and Music Box copies. **Not** when Ethereal comes from Hex (the act 3 elite's Hexed affliction): Hex makes every card Ethereal through a power (a "global" keyword source), and the game's affliction overlay already marks those cards. Translucency is the only Ethereal marker; there's no text badge.
-- **Keyword tabs** (native style): Retain, Sly and double play show as tabs in a centered row along the card's **top edge**, overlapping it slightly. In a fanned hand the tops of cards stay visible while their sides are covered, so you can read them at a glance without hovering. Each tab is a copy of the card's own enchantment tab (the game's banner art).
-  - **Retain:** the Steady enchantment's icon (Steady is the game's Retain enchantment).
-  - **Sly:** the Master Planner power's icon (the de-facto Sly power).
-  - A `1` in the tab's number slot means this turn only: Retain from Expertise, Sly from Hand Trick.
-- **Text badges and relic icons** sit in a row just above the tabs, for what has no native icon yet:
-  - `+EXH` Exhaust that was *added* (cards that always exhaust get no badge)
-  - `INN` / `ETR` Innate / Eternal, off by default
-- **Blocked cards are dimmed** with the reason: `BOUND`, `RINGING`, `SMOG`, `CARD LIMIT` (Velvet Choker). Detected with the game's own `CardModel.CanPlay`.
-- **Galvanized** cards show `−N HP` (the damage playing them deals you).
-- **Double play:** a card that will play more than once gets a tab with the **Echo Form** power's icon, the same native tab style as Retain and Sly. The tab's number is the play count (`2`, `3`...).
+- **Ethereal cards are translucent** (80% opacity by default) when Ethereal is on the card itself: cards that are always Ethereal, and Music Box copies. **Not** when Ethereal comes from Hex (the act 3 elite's Hexed affliction): Hex makes every card Ethereal through a power (a "global" keyword source), and the game's affliction overlay already marks those cards.
+- **Retain:** a Steady tab (Steady is the game's Retain enchantment). **Sly:** a Master Planner tab (the de-facto Sly power). `1` = this turn only (Expertise, Hand Trick).
+- **Added Exhaust:** a Goopy tab (Goopy is the enchantment that adds Exhaust). Cards that always exhaust get nothing.
+- **Innate / Eternal** (setting `ShowInnateEternalBadges`, off by default): Royally Approved / Tezcatara's Ember tabs, the enchantments that grant them.
+- **Blocked cards** (Bound, Ringing, Smog, Velvet Choker): the card is dimmed, with a crossed tab showing the blocking power's or relic's icon. Detected with the game's own `CardModel.CanPlay`.
+- **Galvanized:** a Galvanic tab with the damage playing the card deals you.
+- **Double play:** an Echo Form tab with the play count (`2`, `3`...).
   - The count comes from the game's own play-count query, the one it runs when you play the card: enchanted replays + 1, then `Hook.ModifyCardPlayCount`. So it covers Echo Form (first N cards each turn), Burst (skills), Duplication, One-Two Punch (attacks), Signal Boost (powers), Throwing Axe (first card each combat), Tag Team, enchantments, and anything added later.
   - Tag Team only doubles attacks aimed at the enemy that has it. Single-target cards are checked against each enemy, and the best case is shown.
-
-Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
-
-**Game UI touched:** card nodes in the hand (see "technically" above).
 
 **Not yet:** free-this-turn / free-this-combat / temporary-cost duration markers, decorations outside the hand (draw/discard views).
 
 ---
-
 ## Relic Counters
 
 **What you see:** a compact tray, by default attached just right of your HP bar with its bottom edge level with the bar's bottom (so it stays clear of enemies), with one row per counter relic or countdown power you have: its icon, a bar split into one segment per step, and a short label. Counters longer than 12 steps (Cacophony's 33) show only the countdown number, no bar.
@@ -126,23 +143,22 @@ Thresholds are read live from each relic, so balance patches are picked up autom
 
 ## Relic Reminders
 
-**What you see:** the relic's own icon on the cards in your hand that it cares about, in the same row above the card as the badges.
+**What you see:** a tab with the relic's icon on the cards in your hand that it cares about (see "On-card tabs").
 
-- **Crossed-out icon = playing this card stops this relic working this turn.**
+- **Crossed tab = playing this card stops this relic working this turn.**
   - Art of War and Ripple Basin on every attack, until you've played an attack this turn.
   - Pael's Tears on every playable card that would spend your last energy (its current cost ≥ your energy, and all X-cost cards).
-- **Pen Nib ready:** attacks get a pulsing violet border plus the Pen Nib icon. This attack will use the double damage.
-- **One-shot relics, while still unused:**
-  - Vambrace on cards that give block
-  - Throwing Axe on every card
-  - Burning Sticks on skills that will exhaust (Exhaust skills, plus Ethereal skills that exhaust at end of turn)
-  - Unsettling Lamp on cards that apply a debuff
-  - Permafrost on powers
-  - Music Box on attacks (first attack each turn)
+- **Plain tab = playing this card uses the relic.**
+  - Pen Nib, when ready, on attacks: this attack gets the double damage. The tray row also flashes.
+  - One-shot relics, while still unused:
+    - Vambrace on cards that give block
+    - Throwing Axe on every card
+    - Burning Sticks on skills that will exhaust (Exhaust skills, plus Ethereal skills that exhaust at end of turn)
+    - Unsettling Lamp on cards that apply a debuff
+    - Permafrost on powers
+    - Music Box on attacks (first attack each turn)
 
-**Game UI touched:** card nodes in the hand.
-
-**Not yet:** stacking several icons into one with a count, Pael's Eye "end turn = extra turn" hint, Rainbow Ring, the condition relics in TRACKER §3 beyond the ones above.
+**Not yet:** Pael's Eye "end turn = extra turn" hint, Rainbow Ring, the condition relics in TRACKER §3 beyond the ones above.
 
 ---
 
@@ -208,15 +224,11 @@ Not counted: Horn Cleat and Captain's Wheel give block at the *start* of turn 2/
 
 ## Shuffle Warning
 
-**What you see:** card badges only, appearing during your turn when something can reshuffle your discard pile mid-turn. There's no summary box.
-- `SHUFFLE` on draw cards in hand whose draw is more than your draw pile.
-- `KEPT` on your other hand cards while a shuffle is possible, from one of those cards or from a draw potion (Swift Potion, Bottled Potential, Clarity, Cure All, Glowwater). These cards will stay out of the new draw pile.
+**What you see:** a **draw pile** tab (the game's own draw pile icon) on draw cards in your hand whose draw is more than your draw pile, so playing them reshuffles your discard pile mid-turn. Nothing else: you know what a reshuffle means for the cards in your hand.
 
-Draw cards and potions are a fixed list from the decompile (TRACKER §6).
+Draw cards are a fixed list from the decompile (TRACKER §6). The draw pile icon is read from the live draw pile button (`NCombatUi.DrawPile` → `Icon`).
 
-**Game UI touched:** card nodes in the hand.
-
-**Not yet:** cards whose draw amount isn't a simple number (Compile Driver, Dagger Throw, Escape Plan, Mad Science, Pillage, Prepared, Restlessness, Scrawl), badges on potion slots.
+**Not yet:** cards whose draw amount isn't a simple number (Compile Driver, Dagger Throw, Escape Plan, Mad Science, Pillage, Prepared, Restlessness, Scrawl), and draw potions (potion slots have no tab yet).
 
 ---
 

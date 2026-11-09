@@ -14,51 +14,19 @@ namespace SpireQoL.Features;
 
 /// <summary>
 /// Mid-combat card modifiers made visible. Spec: docs/FEATURES.md#card-indicators.
-///  - Ethereal cards are translucent, whatever made them Ethereal (CardModel.Keywords
-///    merges the card's own keywords with ones granted by powers like Hex).
-///  - Retain and Sly as native-style tabs (copies of the enchantment tab) on the left edge;
-///    badges above the card for +EXH when
-///    Exhaust was added. INN/ETR optional.
-///  - Cards a power or relic blocks from being played (Bound, Ringing, Smog, Velvet Choker)
-///    are dimmed with the reason. Galvanized cards show the damage they'll deal you.
-/// Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
+/// Everything is an on-card tab (CardOverlayRenderer), except Ethereal translucency and dimming.
+///  - Retain: Steady (the Retain enchantment). Sly: Master Planner (the Sly power).
+///    "1" in the tab = this turn only.
+///  - Added Exhaust: Goopy (the enchantment that adds Exhaust). Optional Innate: Royally Approved;
+///    Eternal: Tezcatara's Ember (the enchantments that add them).
+///  - Double play: Echo Form, with the play count.
+///  - Galvanized: Galvanic power icon, with the damage it deals you.
+///  - Blocked by Bound / Ringing / Smog / Velvet Choker: card dimmed + crossed tab with the
+///    blocking power's or relic's icon.
+///  - Ethereal (on the card itself, not from Hex): translucent.
 /// </summary>
 public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 {
-    private static readonly Color Dark = new(0.08f, 0.08f, 0.1f, 0.92f);
-    private static Texture2D? _retainIcon;
-    private static Texture2D? _slyIcon;
-    private static bool _iconsLoaded;
-
-    private static Texture2D? RetainIcon { get { LoadIcons(); return _retainIcon; } }
-    private static Texture2D? SlyIcon { get { LoadIcons(); return _slyIcon; } }
-    private static Texture2D? _doublePlayIcon;
-    private static Texture2D? DoublePlayIcon { get { LoadIcons(); return _doublePlayIcon; } }
-
-    /// <summary>
-    /// Icons from the game's own models: Steady (the Retain enchantment), Master Planner (the Sly
-    /// power), Echo Form (the iconic play-twice power).
-    /// </summary>
-    private static void LoadIcons()
-    {
-        if (_iconsLoaded) return;
-        _iconsLoaded = true;
-        try { _retainIcon = ModelDb.Enchantment<Steady>().Icon; } catch { _retainIcon = null; }
-        try { _slyIcon = ModelDb.Power<MasterPlannerPower>().Icon; } catch { _slyIcon = null; }
-        try { _doublePlayIcon = ModelDb.Power<EchoFormPower>().Icon; } catch { _doublePlayIcon = null; }
-    }
-    private static readonly BadgeSpec AddedExhaust = new("+EXH", new Color(0.85f, 0.45f, 0.15f, 0.95f), Colors.White);
-    private static readonly BadgeSpec Innate = new("INN", Dark, new Color(0.9f, 0.9f, 0.9f));
-    private static readonly BadgeSpec Eternal = new("ETR", Dark, new Color(0.9f, 0.9f, 0.9f));
-
-    private static readonly Dictionary<string, string> BlockReasons = new()
-    {
-        ["ChainsOfBindingPower"] = "BOUND",
-        ["RingingPower"] = "RINGING",
-        ["SmoggyPower"] = "SMOG",
-        ["VelvetChoker"] = "CARD LIMIT",
-    };
-
     private readonly QolContext _ctx;
 
     public CardIndicatorsFeature(QolContext ctx) => _ctx = ctx;
@@ -94,44 +62,47 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             // every card is Ethereal and the game's own affliction overlay already shows it.
             if (card.GetKeywordsWithSources(KeywordSources.Local).Contains(CardKeyword.Ethereal))
             {
-                // Translucency alone marks Ethereal; no text badge.
                 d.Opacity = Mathf.Clamp(s.EtherealOpacity, 0.25f, 1f);
             }
-            // Retain and Sly as native-style tabs on the card's left edge (copies of the game's
-            // enchantment tab): Steady's icon (the Retain enchantment) and Master Planner's icon
-            // (the Sly power). "1" in the tab's number slot = this turn only.
-            if (kw.Contains(CardKeyword.Retain)) d.Tabs.Add(new TabSpec("retain", RetainIcon, null));
-            else if (card.ShouldRetainThisTurn) d.Tabs.Add(new TabSpec("retain", RetainIcon, "1"));
 
-            if (kw.Contains(CardKeyword.Sly)) d.Tabs.Add(new TabSpec("sly", SlyIcon, null));
-            else if (card.IsSlyThisTurn) d.Tabs.Add(new TabSpec("sly", SlyIcon, "1"));
+            if (kw.Contains(CardKeyword.Retain)) d.AddTab("retain", GameIcons.Enchantment<Steady>());
+            else if (card.ShouldRetainThisTurn) d.AddTab("retain", GameIcons.Enchantment<Steady>(), "1");
 
-            if (kw.Contains(CardKeyword.Exhaust) && !canonical.Contains(CardKeyword.Exhaust)) d.Badges.Add(AddedExhaust);
+            if (kw.Contains(CardKeyword.Sly)) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>());
+            else if (card.IsSlyThisTurn) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>(), "1");
+
+            if (kw.Contains(CardKeyword.Exhaust) && !canonical.Contains(CardKeyword.Exhaust))
+            {
+                d.AddTab("exhaust", GameIcons.Enchantment<Goopy>());
+            }
 
             if (s.ShowInnateEternalBadges)
             {
-                if (kw.Contains(CardKeyword.Innate)) d.Badges.Add(Innate);
-                if (kw.Contains(CardKeyword.Eternal)) d.Badges.Add(Eternal);
+                if (kw.Contains(CardKeyword.Innate)) d.AddTab("innate", GameIcons.Enchantment<RoyallyApproved>());
+                if (kw.Contains(CardKeyword.Eternal)) d.AddTab("eternal", GameIcons.Enchantment<TezcatarasEmber>());
             }
 
             if (card.Affliction?.GetType().Name == "Galvanized" && card.Affliction.Amount > 0)
             {
-                d.Badges.Add(new BadgeSpec($"−{card.Affliction.Amount} HP", new Color(0.7f, 0.15f, 0.2f, 0.95f), Colors.White));
+                d.AddTab("galvanized", GameIcons.Power<GalvanicPower>(), card.Affliction.Amount.ToString());
             }
 
-            if (s.DimBlockedCards && BlockedReason(card) is { } reason)
+            if (s.DimBlockedCards && Blocker(card) is { } blocker)
             {
-                d.DimReason = reason;
+                d.Dim = true;
+                var icon = blocker switch
+                {
+                    RelicModel r => GameIcons.Relic(r),
+                    PowerModel p => GameIcons.Power(p),
+                    _ => null,
+                };
+                d.AddTab("blocked", icon, crossed: true);
             }
 
             if (s.ShowDoublePlay)
             {
                 var plays = PlayCount(card);
-                if (plays > 1)
-                {
-                    // Echo Form icon on a native-style tab; the tab's number is the play count.
-                    d.Tabs.Add(new TabSpec("double-play", DoublePlayIcon, plays.ToString()));
-                }
+                if (plays > 1) d.AddTab("double-play", GameIcons.Power<EchoFormPower>(), plays.ToString());
             }
         }
     }
@@ -161,10 +132,13 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         return best;
     }
 
-    private static string? BlockedReason(CardModel card)
+    private static readonly HashSet<string> Blockers = new() { "ChainsOfBindingPower", "RingingPower", "SmoggyPower", "VelvetChoker" };
+
+    /// <summary>The power or relic stopping this card from being played (game's own CanPlay), if it's one we show.</summary>
+    private static AbstractModel? Blocker(CardModel card)
     {
         if (card.CanPlay(out var reason, out var preventer)) return null;
         if (!reason.HasFlag(UnplayableReason.BlockedByHook) || preventer == null) return null;
-        return BlockReasons.TryGetValue(preventer.GetType().Name, out var text) ? text : null;
+        return Blockers.Contains(preventer.GetType().Name) ? preventer : null;
     }
 }

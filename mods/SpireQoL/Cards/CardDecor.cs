@@ -3,16 +3,15 @@ using MegaCrit.Sts2.Core.Models;
 
 namespace SpireQoL.Cards;
 
-public sealed record BadgeSpec(string Text, Color Bg, Color Fg);
-
-public sealed record RelicMark(Texture2D? Icon, string Name, bool Crossed);
-
 /// <summary>
-/// A keyword shown as a native-style tab on the card's left edge: a copy of the card's own
-/// enchantment tab with a different icon (Steady for Retain, Master Planner for Sly).
-/// Label is the tab's small number ("1" = this turn only), or null.
+/// One on-card indicator. Every on-card indicator uses this same form: a native-style tab (a copy
+/// of the card's own enchantment tab) in a row along the card's top edge, with
+///  - Icon: what's affecting the card (a relic, power, enchantment, the draw pile...),
+///  - Label: the tab's small number, or null (play count, "1" = this turn only, damage...),
+///  - Crossed: a red slash = playing this card breaks or blocks something.
+/// Key de-duplicates (one tab per source per card).
 /// </summary>
-public sealed record TabSpec(string Key, Texture2D? Icon, string? Label);
+public sealed record TabSpec(string Key, Texture2D? Icon, string? Label = null, bool Crossed = false);
 
 /// <summary>
 /// What should be drawn on one card this frame. Features fill it in; CardOverlayRenderer draws it.
@@ -20,24 +19,21 @@ public sealed record TabSpec(string Key, Texture2D? Icon, string? Label);
 /// </summary>
 public sealed class CardDecor
 {
-    public List<BadgeSpec> Badges { get; } = new();
-    public List<RelicMark> Relics { get; } = new();
     public List<TabSpec> Tabs { get; } = new();
 
     /// <summary>Whole-card opacity (Ethereal). Null = untouched.</summary>
     public float? Opacity { get; set; }
 
-    /// <summary>Darken the card and show a reason (e.g. "BOUND").</summary>
-    public string? DimReason { get; set; }
+    /// <summary>Darken the card: it can't be played right now (the reason is a crossed tab).</summary>
+    public bool Dim { get; set; }
 
-    /// <summary>Pulsing border color (Pen Nib ready). Null = none.</summary>
-    public Color? Border { get; set; }
+    public bool IsEmpty => Tabs.Count == 0 && Opacity == null && !Dim;
 
-    public bool IsEmpty => Badges.Count == 0 && Relics.Count == 0 && Tabs.Count == 0 && Opacity == null && DimReason == null && Border == null;
-
-    /// <summary>Changes only when the badge/relic row needs rebuilding.</summary>
-    public string RowSignature()
-        => string.Join("|", Badges.Select(b => b.Text)) + "#" + string.Join("|", Relics.Select(r => r.Name + (r.Crossed ? "x" : "")));
+    public void AddTab(string key, Texture2D? icon, string? label = null, bool crossed = false)
+    {
+        if (Tabs.Any(t => t.Key == key)) return;
+        Tabs.Add(new TabSpec(key, icon, label, crossed));
+    }
 }
 
 /// <summary>Per-frame collection of decorations, keyed by card model.</summary>

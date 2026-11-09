@@ -21,3 +21,4 @@ Any change to mod behavior updates all three in the same commit:
 - Never reuse the game's glow colors (NCardHighlight cyan/gold/red) or cost colors (blue/green/red).
 - Never cover a card's cost, title, enchantment tab or affliction overlay.
 - Every free-floating indicator is a movable widget (core layout system): draggable when unlocked, anchored, resettable.
+- **Every on-card indicator is an on-card tab** (`CardDecor.AddTab`): a copy of the card's enchantment tab along the card's top edge, with a game icon (relic/power/enchantment/pile), an optional number, and an optional red slash ("this breaks/blocks that"). No text badges, borders or one-off visuals. The only exceptions are dimming (unplayable) and Ethereal translucency. Icons come from the game's own art (`GameIcons`). Document new tabs in the table in docs/FEATURES.md "On-card tabs".

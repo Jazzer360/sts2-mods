@@ -219,7 +219,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 
 - ~~Draw-pile counter~~: dropped in 0.3.0 (the card badges are enough).
 - [~] Badge on draw cards and potions in hand whose draw would exceed the draw pile (forcing a reshuffle).
-- [~] While a shuffle is possible, mark the cards in hand that will stay out of the new draw pile.
+- ~~KEPT marker on other hand cards~~: dropped in 0.12.0 (the draw-pile tab is enough).
 - [ ] Find every draw source: cards using `CardPileCmd.Draw` and draw potions, and which ones have a fixed amount.
 
 ---
@@ -244,6 +244,6 @@ Existing game UI found in `Nodes/Cards/NCard.cs` and `NHealthBar.cs`:
 Rules:
 - [~] Never reuse the game's glow colors (cyan `0,.957,.988`, gold `1,.784,0`, red `.83,0,.33`) or cost colors.
 - [~] Badges go top-center; relic overlays top-corner; nothing covers the cost, title, enchantment tab or affliction overlay.
-- [ ] At most one relic overlay icon per card; several stack with a count.
+- [~] One visual language: every on-card indicator is a tab along the top edge (0.12.0); one tab per source; the row shrinks to fit.
 - [ ] Everything works on enlarged (hover) cards and in grid/pile views.
 - [~] A global hotkey hides all overlays.

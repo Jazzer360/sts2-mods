@@ -14,16 +14,15 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// The relic's icon on the cards in hand it cares about. Spec: docs/FEATURES.md#relic-reminders.
-///  - Crossed out: playing this card stops the relic working this turn (Art of War, Ripple Basin).
-///  - Plain: playing this card uses a one-shot relic while it's still armed (Vambrace, Throwing
-///    Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box).
-///  - Pen Nib ready: attacks get a pulsing violet border (a color the game doesn't use).
+/// The relic's icon as an on-card tab on the cards in hand it cares about (the same tab language
+/// as every other on-card indicator). Spec: docs/FEATURES.md#relic-reminders.
+///  - Crossed out: playing this card stops the relic working this turn (Art of War, Ripple Basin,
+///    Pael's Tears).
+///  - Plain: playing this card uses the relic (Pen Nib when ready; one-shot relics while still
+///    armed: Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box).
 /// </summary>
 public sealed class RelicRemindersFeature : IFeature, IFrameFeature
 {
-    private static readonly Color PenNibBorder = new(0.75f, 0.35f, 1f);
-
     private readonly QolContext _ctx;
     private readonly Dictionary<Type, bool> _debuffVarCache = new();
 
@@ -61,11 +60,7 @@ public sealed class RelicRemindersFeature : IFeature, IFrameFeature
                 case "PenNib":
                     if (relic.Status == RelicStatus.Active)
                     {
-                        foreach (var c in hand.Where(c => c.Type == CardType.Attack))
-                        {
-                            _ctx.Decor.For(c).Border = PenNibBorder;
-                            Mark(c, relic, crossed: false);
-                        }
+                        foreach (var c in hand.Where(c => c.Type == CardType.Attack)) Mark(c, relic, crossed: false);
                     }
                     break;
 
@@ -126,11 +121,7 @@ public sealed class RelicRemindersFeature : IFeature, IFrameFeature
     }
 
     private void Mark(CardModel card, RelicModel relic, bool crossed)
-    {
-        Texture2D? icon = null;
-        try { icon = relic.Icon; } catch { /* no art */ }
-        _ctx.Decor.For(card).Relics.Add(new RelicMark(icon, relic.GetType().Name, crossed));
-    }
+        => _ctx.Decor.For(card).AddTab("relic:" + relic.GetType().Name, GameIcons.Relic(relic), crossed: crossed);
 
     private static bool GrantsBlock(CardModel c) => c.DynamicVars.ContainsKey("Block") || c.DynamicVars.ContainsKey("CalculatedBlock");
 
