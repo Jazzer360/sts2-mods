@@ -67,7 +67,11 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             var canonical = card.CanonicalKeywords.ToHashSet();
             var d = _ctx.Decor.For(card);
 
-            if (kw.Contains(CardKeyword.Ethereal))
+            // Only Ethereal that's on the card itself (KeywordSources.Local: the card's own keyword,
+            // or Music Box's copy). Ethereal granted by Hex (the Hexed affliction, via
+            // HexPower.TryModifyKeywordsInCombat) is a Global source and is skipped: when Hex hits,
+            // every card is Ethereal and the game's own affliction overlay already shows it.
+            if (card.GetKeywordsWithSources(KeywordSources.Local).Contains(CardKeyword.Ethereal))
             {
                 // Translucency alone marks Ethereal; no text badge.
                 d.Opacity = Mathf.Clamp(s.EtherealOpacity, 0.25f, 1f);

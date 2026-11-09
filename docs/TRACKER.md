@@ -14,7 +14,7 @@ Legend: `[ ]` to do · `[~]` built, needs an in-game check · `[x]` done · **(v
 - [ ] **In-game settings menu**: an entry in the game's settings/mods screen. **(verify)** whether the game has a mod-settings hook, or whether we add our own button.
 - [~] **Movable widgets**: every free-floating indicator (relic counter tray, incoming-damage readout, block forecast, shuffle counter) is a `MovableWidget`.
   - [~] **Unlock layout** toggle (menu and hotkey): widgets show an outline and can be dragged. **Lock** freezes them and makes them click-through.
-  - [ ] **Anchor**: each widget pins to a screen corner/edge/center, or to a game element (player health bar, hand, draw pile, relic bar). Positions are stored as anchor + offset, so they survive resolution and window-size changes.
+  - [~] **Anchor** (0.6.0: Ctrl+1–9 picks a screen anchor; HP bar and block icon attach points done; hand/draw pile still to do): each widget pins to a screen corner/edge/center, or to a game element (player health bar, hand, draw pile, relic bar). Positions are stored as anchor + offset, so they survive resolution and window-size changes.
   - [ ] **Snap**: optional grid snap while dragging.
   - [~] **Scale and opacity** per widget.
   - [~] **Reset**: per widget and "reset all" to defaults.
@@ -108,7 +108,7 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 
 | Done | Relic | Display |
 | --- | --- | --- |
-| [~] | Pael's Tears | tray: `+2 next turn` while energy > 0. Cards: crossed icon on playable cards whose cost ≥ current energy (X-cost included) |
+| [x] | Pael's Tears | tray: `+2 next turn` while energy > 0. Cards: crossed icon on playable cards whose cost ≥ current energy (X-cost included) |
 
 ### Turn-counter relics (same tray, counting turns)
 

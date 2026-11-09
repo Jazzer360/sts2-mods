@@ -57,10 +57,14 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
 
     public void Attach(OverlayHost host)
     {
+        // Right of the player's HP bar, bottom edges level, so it never sits on top of enemies.
+        // Falls back to bottom-center above the hand when the HP bar isn't on screen.
         _widget = _ctx.Widget(Id, "Relic Counters", new WidgetLayout
         {
-            Anchor = ScreenAnchor.Bottom, OffsetX = 0, OffsetY = -300,
+            FollowGame = true, OffsetX = 0, OffsetY = 0,
+            Anchor = ScreenAnchor.Bottom,
         });
+        _widget.AttachTo(Sts2State.PlayerHpBarRect, AttachSide.RightOfBottom);
     }
 
     public void OnFrame(OverlayHost host)

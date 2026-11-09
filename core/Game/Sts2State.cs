@@ -152,6 +152,36 @@ public static class Sts2State
         return new Godot.Rect2(xf.Origin, c.Size * xf.Scale);
     }
 
+    /// <summary>Screen rect of just the local player's HP bar (NHealthBar), or null.</summary>
+    public static Godot.Rect2? PlayerHpBarRect()
+    {
+        var me = Me;
+        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
+        if (me == null || room == null) return null;
+        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == me.Creature);
+        var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
+        if (display == null || !display.IsVisibleInTree()) return null;
+        var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
+        return bar != null && bar.Size.X >= 1 ? ScreenRect(bar) : ScreenRect(display);
+    }
+
+    /// <summary>
+    /// Where floating widgets should draw so cards in hand cover them: directly before the
+    /// NPlayerHand node in its parent (NCombatUi). Null outside combat.
+    /// </summary>
+    public static (Godot.Node Parent, int Index)? WidgetUnderlay()
+    {
+        // Only during live combat with nothing on top. The combat room (and our widgets with it,
+        // if they were still inside) is freed when you leave for the map, quit from the pause
+        // menu, or reach game over, and each of those is preceded by combat ending or a screen
+        // opening. Returning null moves the widgets back to our own layer first.
+        if (!InCombat || IsScreenOpenOverCombat()) return null;
+        var hand = NPlayerHand.Instance;
+        if (hand == null || !Godot.GodotObject.IsInstanceValid(hand) || !hand.IsInsideTree()) return null;
+        var parent = hand.GetParent();
+        return parent == null ? null : (parent, hand.GetIndex());
+    }
+
     /// <summary>
     /// True while a game screen covers combat: pause menu, pile and deck views (capstone screens:
     /// NCapstoneContainer), rewards and card-choice screens (NOverlayStack), or the map.

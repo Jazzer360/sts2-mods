@@ -21,7 +21,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 ## What the mod adds to the game, technically
 
-- **One CanvasLayer** (`SpireQoL_Overlay`, layer 10) under the scene tree root. It holds the floating widgets and a toast message. Widgets attached to a game element read that element's screen position each frame; they never modify it.
+- **One CanvasLayer** (`SpireQoL_Overlay`, layer 10) under the scene tree root, holding a toast message and a `SpireQoL_Widgets` container for the floating widgets. **During live combat with no screen open, that container is moved inside the game's `NCombatUi`, directly before the `%Hand` node, so your cards draw over the widgets.** It moves back to our layer when combat ends, when any screen opens over combat, and while the layout is unlocked (so the hand can't swallow drag clicks). Widgets attached to a game element read that element's screen position each frame; they never modify it.
 - **Floating widgets hide while a game screen covers combat:** the pause menu, draw/discard/exhaust pile and deck views (`NCapstoneContainer.InUse`), card rewards and card-choice screens (`NOverlayStack.ScreenCount > 0`), and the map (`NMapScreen.IsOpen`). Card decorations live on the card nodes in your hand, so they already sit underneath those screens.
 - **One `SceneTree.ProcessFrame` callback.** It runs each feature, then draws card decorations.
 - **A child node `SpireQoL_CardOverlay`** under `%CardContainer` of each card node in your hand that has something to show. While a decorated card is in your hand, Spire QoL changes that container's `Modulate` alpha (Ethereal translucency). The alpha is restored as soon as the node stops showing that card. The game reuses card nodes, so this matters.
@@ -38,7 +38,8 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
   - **Drag** to move it.
   - **Mouse wheel** over it to scale it (0.4×–3×).
   - **Right-click** to reset it to its default place and size.
-  - **Middle-click** (widgets that can attach to a game element, currently Incoming Damage): toggle between *attached* (follows the element, e.g. stays under your HP) and *pinned to the screen*.
+  - **Middle-click** (widgets that can attach to a game element: Incoming Damage, Relic Counters): toggle between *attached* (follows the element) and *pinned to the screen*.
+  - **Ctrl+1–9** while hovering a widget: pin it to that screen anchor, laid out like a numpad (7 8 9 top, 4 5 6 middle, 1 2 3 bottom). It stays where it is; only the point it's measured from changes. Ctrl avoids the game's number-key card shortcuts.
   - On drop, a pinned widget re-anchors to the nearest of nine screen points (corners, edge centers, center). An attached widget stores its offset from the element. Either way, positions survive resolution changes. Indicators can't be dragged off screen.
   - Locking makes them click-through again and saves the layout.
 - **F9: hide/show all overlays.**
@@ -53,7 +54,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | `Widgets` | defaults | saved positions (`Anchor`, `OffsetX/Y`, `Scale`, `Opacity`, `FollowGame`) |
 | `LayoutVersion` | (managed) | when a release changes a default position, older saved positions for that widget are reset once |
 | `UnlockLayoutKey` / `HideAllKey` | `F8` / `F9` | Godot key names |
-| `EtherealOpacity` | `0.7` | 0.25–1 |
+| `EtherealOpacity` | `0.8` | 0.25–1 (a saved 0.7, the old default, is raised to 0.8 once) |
 | `ShowInnateEternalBadges` | `false` | |
 | `DimBlockedCards` | `true` | |
 | `PulseOneStepEarly` | `false` | Relic Counters also flash two steps before firing |
@@ -68,7 +69,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 **What you see:** mid-combat changes to a card in your hand, which the game otherwise shows only as text. Badges sit in a row just *above* the card's top edge, so they never cover the cost, title, enchantment tab or affliction overlay.
 
-- **Ethereal cards are translucent** (70% by default) whenever they're Ethereal right now, whatever the source: the card itself, Music Box copies, or Hex (which grants Ethereal through a power). Translucency is the only Ethereal marker; there's no text badge.
+- **Ethereal cards are translucent** (80% opacity by default) when Ethereal is on the card itself: cards that are always Ethereal, and Music Box copies. **Not** when Ethereal comes from Hex (the act 3 elite's Hexed affliction): Hex makes every card Ethereal through a power (a "global" keyword source), and the game's affliction overlay already marks those cards. Translucency is the only Ethereal marker; there's no text badge.
 - **Keyword badges:**
   - `RET` Retain; `RET·1` retained this turn only (e.g. Expertise)
   - `SLY` Sly; `SLY·1` Sly this turn only (Hand Trick)
@@ -87,7 +88,7 @@ Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
 
 ## Relic Counters
 
-**What you see:** a compact tray (by default bottom-center, above your hand) with one row per counter relic or countdown power you have: its icon, a bar split into one segment per step, and a short label. Counters longer than 12 steps (Cacophony's 33) show only the countdown number, no bar.
+**What you see:** a compact tray, by default attached just right of your HP bar with its bottom edge level with the bar's bottom (so it stays clear of enemies), with one row per counter relic or countdown power you have: its icon, a bar split into one segment per step, and a short label. Counters longer than 12 steps (Cacophony's 33) show only the countdown number, no bar.
 
 - **Counters that carry across turns and combats sort first:** Pen Nib, Nunchaku, Tuning Fork, Iron Club, Galactic Dust, Joss Paper, Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core, Metronome.
 - **Then per-turn counters:** Kunai, Shuriken, Ornamental Fan, Kusarigama, Letter Opener, Brilliant Scarf.

@@ -17,7 +17,7 @@ public sealed class QolSettings
     /// <summary>Widget id → placement. Filled with defaults on first run.</summary>
     public Dictionary<string, WidgetLayout> Widgets { get; set; } = new();
 
-    public const int CurrentLayoutVersion = 3;
+    public const int CurrentLayoutVersion = 4;
 
     /// <summary>Bumped when default widget positions change; older saved positions get reset.</summary>
     public int LayoutVersion { get; set; }
@@ -26,7 +26,7 @@ public sealed class QolSettings
     public string HideAllKey { get; set; } = "F9";
 
     // Card Indicators
-    public float EtherealOpacity { get; set; } = 0.7f;
+    public float EtherealOpacity { get; set; } = 0.8f;
     public bool ShowInnateEternalBadges { get; set; } = false;
     public bool DimBlockedCards { get; set; } = true;
 

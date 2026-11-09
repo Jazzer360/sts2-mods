@@ -50,7 +50,9 @@ public sealed class MovableWidget
         box.AddChild(Content);
 
         Root.GuiInput += OnGuiInput;
-        host.Layer!.AddChild(Root);
+        Root.MouseEntered += () => Hovered = true;
+        Root.MouseExited += () => Hovered = false;
+        host.WidgetRoot!.AddChild(Root);
         host.RegisterWidget(this);
         _host = host;
     }
@@ -65,6 +67,26 @@ public sealed class MovableWidget
 
     /// <summary>Set by the owning feature each frame: does the widget have anything to show?</summary>
     public bool HasContent { get; set; }
+
+    /// <summary>Mouse is over the widget (only tracked while the layout is unlocked).</summary>
+    public bool Hovered { get; private set; }
+
+    /// <summary>
+    /// Pin to a screen anchor chosen by the player (Ctrl+1–9 while hovering), keeping the widget
+    /// where it is on screen. Detaches it from any game element.
+    /// </summary>
+    internal void SetAnchor(ScreenAnchor anchor)
+    {
+        var vp = _host.ViewportSize;
+        var size = Root.Size * Root.Scale;
+        var (fx, fy) = WidgetLayout.Fraction(anchor);
+        _layout.FollowGame = false;
+        _layout.Anchor = anchor;
+        _layout.OffsetX = Root.Position.X - (vp.X * fx - size.X * fx);
+        _layout.OffsetY = Root.Position.Y - (vp.Y * fy - size.Y * fy);
+        _host.RaiseLayoutChanged();
+        _host.Toast($"{_title}: anchored {anchor}", 2.5f);
+    }
 
     private readonly List<(Func<Rect2?> Target, AttachSide Side)> _attach = new();
 
@@ -134,6 +156,7 @@ public sealed class MovableWidget
     private static Vector2 AttachPoint(Rect2 target, AttachSide side, Vector2 size) => side switch
     {
         AttachSide.LeftOf => new(target.Position.X - size.X - 6, target.Position.Y + target.Size.Y / 2 - size.Y / 2),
+        AttachSide.RightOfBottom => new(target.End.X + 8, target.End.Y - size.Y),
         _ => new(target.Position.X + target.Size.X / 2 - size.X / 2, target.End.Y),
     };
 

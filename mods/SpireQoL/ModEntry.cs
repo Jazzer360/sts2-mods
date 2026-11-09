@@ -38,6 +38,7 @@ public static class ModEntry
         };
         host.LayoutChanged += settingsFile.Save;
         host.SuppressWhen = Sts2State.IsScreenOpenOverCombat;
+        host.WidgetUnderlay = Sts2State.WidgetUnderlay; // widgets draw under the cards in hand
 
         var ctx = new QolContext(settingsFile, host);
         Sts2State.Init();
@@ -90,6 +91,12 @@ public static class ModEntry
         {
             // 0.4.0: Incoming Damage moved to the left of the block indicator.
             settings.Widgets.Remove("incoming-damage");
+        }
+        if (settings.LayoutVersion < 4)
+        {
+            // 0.6.0: the counter tray attaches to the right of the HP bar; Ethereal default 0.7 → 0.8.
+            settings.Widgets.Remove("relic-counters");
+            if (Math.Abs(settings.EtherealOpacity - 0.7f) < 0.001f) settings.EtherealOpacity = 0.8f;
         }
         settings.LayoutVersion = QolSettings.CurrentLayoutVersion;
     }

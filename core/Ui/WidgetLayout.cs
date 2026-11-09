@@ -5,6 +5,8 @@ public enum AttachSide
 {
     Below,
     LeftOf,
+    /// <summary>To the right, with the widget's bottom edge level with the target's bottom.</summary>
+    RightOfBottom,
 }
 
 /// <summary>The nine screen anchors a widget can be pinned to.</summary>
