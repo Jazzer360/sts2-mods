@@ -83,8 +83,18 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ attacks on enemies
 
-    /// <summary>Hits per play of an attack card (its Repeat value, else 1), times plays.</summary>
+    /// <summary>
+    /// Hits of an attack card across plays, not counting target-dependent hits (see HitsOn).
+    /// From HitsPerPlay: hard-coded multi-hits, X costs and calculated hits, else Repeat, else 1.
+    /// </summary>
     public int AttackHits { get; init; }
+
+    /// <summary>Cards in hand besides this one (Fiend Fire hits once per card it exhausts).</summary>
+    private int OtherHandCards { get; init; }
+
+    /// <summary>Hits on this enemy across plays (Dismantle hits Vulnerable enemies twice).</summary>
+    public int HitsOn(Creature enemy)
+        => AttackHits == 0 ? 0 : HitsPerPlay(Card, Card.GetType().Name, Combat, enemy, Energy, Stars, OtherHandCards) * Math.Max(1, Plays);
 
     /// <summary>
     /// Whether this card can hit <paramref name="enemy"/> with a powered attack (your attack, not
@@ -116,7 +126,7 @@ public sealed class PlayFacts
     }
 
     /// <summary>Total damage this card deals to the enemy across all its hits (before block).</summary>
-    public int TotalDamage(Creature enemy) => DamagePerHit(enemy) * AttackHits;
+    public int TotalDamage(Creature enemy) => DamagePerHit(enemy) * HitsOn(enemy);
 
     /// <summary>Damage that gets past the enemy's current block.</summary>
     public int Unblocked(Creature enemy) => Math.Max(0, TotalDamage(enemy) - enemy.Block);
@@ -164,7 +174,8 @@ public sealed class PlayFacts
             OstyAttacks = OstyAttackCards.Contains(name) ? Math.Max(1, plays) : 0,
             LosesHp = card.DynamicVars.ContainsKey("HpLoss"),
             HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
-            AttackHits = IsPlayerAttack(card) ? Math.Max(1, Sts2State.Var(card, "Repeat", 1)) * Math.Max(1, plays) : 0,
+            OtherHandCards = others.Count,
+            AttackHits = IsPlayerAttack(card) ? HitsPerPlay(card, name, cs, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
         };
     }
 
@@ -267,6 +278,54 @@ public sealed class PlayFacts
     }
 
     /// <summary>An attack you deal yourself (a Damage value; Osty attacks use OstyDamage instead).</summary>
+    /// <summary>
+    /// Hits per play of an attack card, matching each card's OnPlay (decompile v0.111.0): cards
+    /// that pass a fixed number, their X value or a calculation to WithHitCount instead of
+    /// using their Repeat value. Unknown target (null): target-dependent cards count their minimum.
+    /// </summary>
+    internal static int HitsPerPlay(CardModel card, string name, ICombatState cs, Creature? target, int energy, int stars, int otherCards)
+    {
+        try
+        {
+            switch (name)
+            {
+                case "AstralPulse" or "DaggerSpray" or "Maul" or "Refract" or "RipAndTear" or "Thrash" or "TwinStrike" or "Uproar":
+                    return 2;
+                case "Eradicate" or "Skewer" or "Volley" or "Whirlwind":
+                    return XValue(cs, card, energy);
+                case "HeavenlyDrill":
+                {
+                    var x = XValue(cs, card, energy);
+                    return x >= Sts2State.Var(card, "Energy") ? x * 2 : x;
+                }
+                case "Stardust":
+                    return XValue(cs, card, stars);
+                case "Dismantle":
+                    return target != null && target.HasPower<VulnerablePower>() ? 2 : 1;
+                case "Spite": // the Repeat value only after you lost HP this turn (when the card glows gold)
+                    return Sts2State.Private(card, "ShouldGlowGoldInternal", false) ? Sts2State.Var(card, "Repeat", 2) : 1;
+                case "FiendFire":
+                    return otherCards;
+                case "MadScience":
+                    return card is MadScience ms && ms.TinkerTimeRider == MegaCrit.Sts2.Core.Models.Events.TinkerTime.RiderEffect.Violence
+                        ? Sts2State.Var(card, "ViolenceHits", 1)
+                        : 1;
+            }
+            if (card.DynamicVars.TryGetValue("CalculatedHits", out var v) && v is CalculatedVar calc)
+                return Math.Max(0, (int)calc.Calculate(target));
+        }
+        catch
+        {
+            // fall through to the Repeat value
+        }
+        return Math.Max(1, Sts2State.Var(card, "Repeat", 1));
+    }
+
+    private static int XValue(ICombatState cs, CardModel card, int spent)
+    {
+        try { return Math.Max(0, MegaCrit.Sts2.Core.Hooks.Hook.ModifyXValue(cs, card, spent)); } catch { return Math.Max(0, spent); }
+    }
+
     private static bool IsPlayerAttack(CardModel card)
         => card.Type == CardType.Attack
            && (card.DynamicVars.ContainsKey("Damage") || card.DynamicVars.ContainsKey("CalculatedDamage"))

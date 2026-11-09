@@ -161,7 +161,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
   - Across turns: Orbit (every 4 energy spent), Automation (every 10 cards drawn), Cacophony (every 33 cards drawn, number only).
   - Per turn: Panache (every 5 cards played), Pale Blue Dot (5 cards played, any type; shows `done` once it has fired this turn).
   - Enemy powers that count *your* plays, in red: Withering Presence (every 6 cards you play adds a Wither to your hand).
-- **Not in the tray:** Pael's Tears and Pael's Eye (crossed tabs on the cards that would give them up), and one-shot relics (Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box: tabs on the cards that would use them).
+- **Not in the tray:** Pael's Tears and Pael's Eye (crossed tabs on the cards that would give them up), and one-shot relics (Vambrace, Pael's Legion, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box: tabs on the cards that would use them; the game shows Pael's Legion's cooldown on the relic).
 
 Thresholds are read live from each relic, so balance patches are picked up automatically.
 
@@ -194,7 +194,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 **How the numbers are worked out:** the enemy turn is simulated hit by hit, in turn order:
 - **Osty** (Necrobinder): enemies never target Osty, but its Die For You power takes the part of an enemy attack that gets through *your* block (pets share your block), up to Osty's HP; the overkill comes back to you. Damage that isn't an attack (Burn, Constrict, HP loss) isn't redirected. The Osty row uses Die For You's icon.
 - **Your end-of-turn self damage** lands first, against your end-of-turn block.
-- **Your end-of-turn damage to enemies** lands before they act, so an enemy it kills doesn't attack: Hailstorm (enough Frost orbs), The Bomb (last tick), Screaming Flagon (empty hand), Stone Calendar (its turn), Charon's Ashes (per Ethereal card exhausting) hit every enemy; Lightning orb passives, Parrying Shield and Forgotten Soul hit a random enemy, so they're counted only when there's one enemy. Enemy block is still up at that point.
+- **Your end-of-turn damage to enemies** lands before they act, so an enemy it kills doesn't attack: Hailstorm (enough Frost orbs), The Bomb (last tick), Screaming Flagon (empty hand), Stone Calendar (its turn), Charon's Ashes (per Ethereal card exhausting) hit every enemy; Consuming Shadow's evoked orbs (one per stack, last orb first, after orb passives) hit the lowest-HP enemy (Dark, including this turn's growth) or every enemy (Glass); Lightning orb passives and evokes, Parrying Shield and Forgotten Soul hit a random enemy, so they're counted only when there's one enemy (with several, a kill we can't be sure of would hide an attack). Enemy block is still up at that point.
 - **HP-loss effects**, in the game's order, on every hit that reaches your HP: Tungsten Rod (−1 each), Beating Remnant (caps HP lost per turn), then Buffer (cancels a hit, one charge each). Intangible is already in the enemy intent numbers.
 - **Poison:** an enemy that Poison will kill doesn't attack. Poison ticks at the start of its turn, before it moves. The amount is the game's own poison preview (`PoisonPower.CalculateTotalDamageNextTurn`), which already applies per-hit damage caps such as Exoskeleton's **Hard To Kill** (each instance capped, e.g. at 9). Skulking Colony's **Hardened Shell** caps an enemy's *total* HP loss per turn; the game's preview ignores that, so we apply it.
 - **Doom doesn't stop attacks.** Doomed enemies die at the end of their own turn, after attacking.
@@ -211,6 +211,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 - **End-of-turn block** (the "block" line = current block + these):
   - Plating
   - Frost orb passives (times the game's passive trigger count, so trigger-boosting effects are included)
+  - Frost orbs evoked by Consuming Shadow (their evoke block)
   - Orichalcum / Fake Orichalcum (only if you currently have 0 block, like the game checks)
   - Cloak Clasp (block × cards in hand)
   - Ripple Basin (only if you haven't played an attack this turn)
@@ -243,9 +244,9 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 - Several enemies with the same power share one tab, amounts added.
 - Cards that can't be played (Unplayable, blocked, or their own condition unmet, via `CardModel.CanPlay`) get no proc tabs. Cards you can't afford yet still show them, since energy can come mid-turn.
 
-**Uses or breaks a relic** (formerly Relic Reminders): Pen Nib ready (attacks); crossed Art of War / Ripple Basin (attacks, until you've played one this turn); crossed Pael's Tears (cards that would spend your last energy); crossed Pael's Eye (every card, while armed and nothing played this turn: playing one gives up the extra turn); one-shot Vambrace (block cards), Burning Sticks (skills that exhaust when played), Unsettling Lamp (debuffing cards), Music Box (attacks).
+**Uses or breaks a relic** (formerly Relic Reminders): Pen Nib ready (attacks); crossed Art of War / Ripple Basin (attacks, until you've played one this turn); crossed Pael's Tears (cards that would spend your last energy); crossed Pael's Eye (every card, while armed and nothing played this turn: playing one gives up the extra turn); one-shot Vambrace (block cards), Pael's Legion (block cards while it's off cooldown: double block), Burning Sticks (skills that exhaust when played), Unsettling Lamp (debuffing cards), Music Box (attacks).
 
-**Your attack against enemies** (from the card's damage to each enemy, through the game's damage math, vs that enemy's block and HP):
+**Your attack against enemies** (from the card's damage to each enemy, through the game's damage math, times its hits, vs that enemy's block and HP). Hits match each card's own code: its Repeat value, or a fixed count (Twin Strike, Whirlwind's X...), a calculated count (Finisher, Flechettes...), or a condition (Dismantle on a Vulnerable enemy, Spite after you lost HP this turn, Fiend Fire per other card in hand):
 - Thorns on an enemy: **crossed**, damage to you per hit. Curl Up (it gains block), Personal Hive (Dazed into your deck), Asleep / Slumber (wakes it): **crossed**.
 - Burrowed (breaking its block stuns it), Flutter, Plow, Shriek (stuns), The Gambit (it dies), Slippery (HP loss capped at 1, crossed).
 - Killing an enemy: Gremlin Horn (energy and a draw); crossed for enemy death effects (Infested, Steam Eruption, Surprise, and Crab Rage / Ravenous on the others).

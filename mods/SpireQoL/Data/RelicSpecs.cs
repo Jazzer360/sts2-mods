@@ -109,6 +109,7 @@ public static class RelicSpecs
         new RelicCounterSpec("PaelsEye", CounterKind.OneShot, InTray: false), // crossed tab on cards instead
         new RelicCounterSpec("Permafrost", CounterKind.OneShot, InTray: false),
         new RelicCounterSpec("MusicBox", CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec("PaelsLegion", CounterKind.OneShot, InTray: false), // the game shows its cooldown on the relic
     };
 
     private static readonly Dictionary<string, RelicCounterSpec> ByName = All.ToDictionary(s => s.TypeName);

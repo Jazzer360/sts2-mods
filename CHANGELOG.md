@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.4
+#### Added
+- Pael's Legion: a tab on cards that gain block while it's off cooldown (that card gets double block), like Vambrace.
+- Incoming Damage counts Consuming Shadow: evoked Frost orbs add block, evoked Dark and Glass orbs hit enemies before they act (so a kill stops their attack).
+#### Fixed
+- Attacks that hit several times without a Repeat value (Twin Strike, Whirlwind and other X-cost attacks, Finisher, Flechettes, Fiend Fire, Dismantle on a Vulnerable enemy...) were counted as one hit, so kill, block-break and per-hit tabs (Thorns, Slumber) could be missing or low. Spite now counts its extra hit only after you lost HP this turn.
+
 ### Spire QoL 0.23.3
 #### Fixed
 - Mummified Hand's tab only shows on a Power when another card in your hand still costs energy or stars. Before, every Power got it, even when there was nothing left to make free.

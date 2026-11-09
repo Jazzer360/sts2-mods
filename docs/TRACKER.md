@@ -87,10 +87,10 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [~] | Brilliant Scarf | any card | 5th | each turn | that card is free |
 | [~] | Velvet Choker | any card | limit 6 | each turn | **inverse**: show plays left; warn at 5 |
 | [~] | Pocketwatch | any card | ≤3 played | each turn | **inverse**: stays lit while ≤3; play a 4th and next turn's extra draw is lost |
-| [~] | Joss Paper | exhausts | 5th | **(verify)** | draw |
-| [~] | Galactic Dust | stars spent | 10 | **(verify)** | gain block |
+| [~] | Joss Paper | exhausts | 5th | never (carries across combats; Ethereal exhausts count at end of turn) | draw |
+| [~] | Galactic Dust | stars spent | 10 | never (saved across combats) | gain block |
 | [~] | Metronome | orbs channeled | 7th | each combat | deal damage |
-| [ ] | Pael's Legion | cooldown (turns) | 2 | after use | block multiplier **(verify)** |
+| [~] | Pael's Legion | cooldown (turns) | 2 | after use | double block on the next block card. 0.23.4: no tray row (the game shows the cooldown on the relic); tab on block cards while off cooldown, like Vambrace |
 
 ### Countdown powers (same tray; the game's `PowerModel.DisplayAmount` is "steps left")
 
@@ -141,14 +141,14 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [~] | Daughter of the Wind | attacks | block per attack |
 | [~] | Ivory Tile | cards costing ≥3 | refund energy |
 | [~] | Helical Dart | Shivs | +Dexterity |
-| [~] | Razor Tooth | attacks/skills | upgrades the card when played **(verify types)** |
+| [~] | Razor Tooth | attacks and skills that can still be upgraded | upgrades the card when played |
 | [~] | Chemical X | X-cost cards | +2 to X |
 | — | Strike Dummy / Fake Strike Dummy | Strikes | not a tab: it's a damage modifier (`ModifyDamageAdditive`), so the card's own damage number already includes it |
 | — | Velvet Choker | | no card tab since 0.23.1: the tracker shows plays left, and the game crosses out the cost once you can't play more |
 | [~] | Cloak Clasp | hand | end-of-turn block per card left in hand (counted in `incoming-damage`) |
 | [~] | Screaming Flagon | hand | damage at end of turn if your hand is empty: counted by Incoming Damage (end-of-turn effects) |
-| [~] | Tingsha, Tough Bandages | discard | discard triggers **(verify)** |
-| [~] | Charon's Ashes, Forgotten Soul | exhaust | exhaust triggers **(verify)** |
+| [~] | Tingsha, Tough Bandages | discard | per card discarded on your turn: 3 damage to a random enemy / 3 block |
+| [~] | Charon's Ashes, Forgotten Soul | exhaust | per card exhausted: 3 damage to all enemies / 1 damage to a random enemy |
 
 ### One-shot relics (first time each combat / each turn)
 
@@ -173,8 +173,8 @@ These relics are "armed" until their first use, then go quiet. The game marks th
 | --- | --- | --- | --- |
 | [~] | Music Box | attacks | the first attack each turn adds an Ethereal copy to your hand |
 | [~] | Rainbow Ring | missing card types | playing an attack, a skill and a power in the same turn gives +Strength/+Dexterity (once per turn) |
-| [~] | Mini Regent | (stars) | triggers on stars spent once per turn **(verify)** |
-| [~] | Regalite | (generated cards) | block when a card is generated, once per turn **(verify)** |
+| [~] | Mini Regent | (stars) | the first star spend each turn gives +1 Strength (`UsedThisTurn`, reset at your turn start) |
+| [~] | Regalite | (generated cards) | 4 block the first time you create a card each turn (`UsedThisTurn`) |
 
 ---
 
@@ -182,7 +182,7 @@ These relics are "armed" until their first use, then go quiet. The game marks th
 
 Shows "+N at end of turn" beside current block, so you don't overblock.
 
-- [~] **Plating** (power): gain N block at end of turn **(verify decay rule)**.
+- [~] **Plating** (power): gain N block early in your end of turn (`BeforeSideTurnEndEarly`, before end-of-turn damage); the stack drops by 1 at your turn start (not turn 1).
 - [~] **Frost orb passive**: each Frost gives `PassiveVal` block, times the passive trigger count (`Hook.ModifyOrbPassiveTriggerCount`).
 - [~] **Orichalcum / Fake Orichalcum**: block if you have none at end of turn.
 - [~] **Cloak Clasp**: block × cards in hand.
@@ -190,7 +190,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - ~~**Horn Cleat / Captain's Wheel**~~: not end-of-turn block (they fire at the start of turn 2/3, after enemies attack). Countdown lives in Relic Counters.
 - [~] **Feel No Pain + Ethereal** (gap found 2026-11-09, counted in 0.19.0): Ethereal cards left in hand exhaust at end of turn, and Feel No Pain gives `Amount` block per exhaust (Unpowered, so no Dexterity). That block lands before the enemy attacks but isn't counted yet. Same for **Dark Embrace**-style exhaust procs that give block (see §9).
 - [~] **Rage / Skittish**: card tabs (Proc Indicators): Rage gives you block on attacks; Skittish (enemy) is crossed, it gains block when hit. Not in the end-of-turn total.
-- [ ] **Sturdy Clamp**: block isn't cleared. Show carried block for next turn.
+- — **Sturdy Clamp** (keeps up to 10 block into your next turn): nothing to add. Incoming Damage reads your real block each turn, which includes what it kept, and the mod doesn't show wasted block. A "kept for next turn" readout would be a new display.
 - [~] **Parrying Shield**: counted by Incoming Damage when you'll end with enough block. With several enemies its target is random and isn't counted yet (§10).
 
 ---
@@ -288,13 +288,13 @@ Before the decision, one tab per effect had the source's icon and **no numbers**
 | Done | Source | Cards marked | Effect, from the code (v0.111.0) |
 | --- | --- | --- | --- |
 | [~] | **Intimidating Helmet** (relic) | cards that will **spend ≥2 energy** | `BeforeCardPlayed`: if the energy actually spent (`cardPlay.Resources.EnergyValue`) is ≥ 2 (`EnergyVar`), gain 4 block (Unpowered). So it's energy spent, not printed cost: cost reductions and free plays don't count; X-cost cards count with ≥2 energy available. Trigger tab (or +4 block under A/B). |
-| [~] | **Mini Regent** (relic) | cards that spend **stars**, while unused this turn | `AfterStarsSpent`: the first star spend each turn gives +1 Strength (`UsedThisTurn` resets at turn start). Trigger tab. **(verify)** how to read `UsedThisTurn` (private; maybe `Status`), and whether non-card star spends count. Also listed in §3. |
+| [~] | **Mini Regent** (relic) | cards that spend **stars**, while unused this turn | `AfterStarsSpent`: the first star spend each turn gives +1 Strength. Read through its private `UsedThisTurn` (reset at your turn start). Any star spend counts. Trigger tab. Also listed in §3. |
 | [~] | **Feel No Pain** (power) | cards that exhaust when played (Exhaust, added Exhaust) **and cards that exhaust other cards** | `AfterCardExhausted`: `Amount` block per card exhausted (Unpowered). Exhaust-others cards: Brand, Burning Pact, Cinder, Cleanse, Fiend Fire, Flak Cannon, Purity, Scavenge, Second Wind, Stoke, Thrash, True Grit. Count exhausts per card (True Grit: 1 if there's another card in hand; Second Wind / Fiend Fire: per matching card; Burning Pact: its count). Ethereal end-of-turn exhausts go in Incoming Damage (§4). Stacks: two copies show double. |
 | [~] | **Spirit of Ash** (power) | **Ethereal** cards | `BeforeCardPlayed`: playing an Ethereal card gains `Amount` block (Unpowered). |
 | [~] | **Sleight of Flesh** (power) | cards that **apply debuffs to enemies** | `AfterPowerAmountChanged`: each non-temporary debuff you apply to an enemy deals `Amount` damage (Unpowered) to that enemy. Count applications per target; **Artifact** cancels an application (so it doesn't trigger), so subtract the target's Artifact charges. Multi-target cards count per enemy. |
-| [~] | Dark Embrace (power) | exhausting cards (same list as Feel No Pain) | `AfterCardExhausted`: draw per exhaust **(verify amount)**. Trigger tab. |
-| [~] | Charon's Ashes, Forgotten Soul, Joss Paper (relics) | exhausting cards | `AfterCardExhausted` procs **(verify effects)**. Burning Sticks is already shown (§3). |
-| [~] | Child of the Stars (power), Galactic Dust (relic) | star-spending cards | `AfterStarsSpent` procs **(verify effects)**. |
+| [~] | Dark Embrace (power) | exhausting cards (same list as Feel No Pain) | `AfterCardExhausted`: draws `Amount` per exhaust; Ethereal exhausts are saved up and drawn later. Trigger tab. |
+| [~] | Charon's Ashes, Forgotten Soul, Joss Paper (relics) | exhausting cards | `AfterCardExhausted`: 3 damage to all enemies; 1 damage to a random enemy; draw at the 5th exhaust. Burning Sticks is already shown (§3). |
+| [~] | Child of the Stars (power), Galactic Dust (relic) | star-spending cards | `AfterStarsSpent`: `Amount` block per star spent; 10 block per 10 stars spent (saved across combats). |
 | [~] | Shroud, Vicious, Vital Spark (powers) | Doom / Vulnerable appliers; Tainted cards | Built in 0.19.0. Sandpit and Sword Sage don't react to card plays (checked). |
 | [x] | **Full sweep** (2026-11-09) | | Every power and relic overriding the play, exhaust, discard, draw, stars, energy, debuff, block, damage, card-created and shuffle hooks. The resulting source list is in FEATURES.md "Proc Indicators". |
 | [~] | Procs of procs, Metronome, Bone Flute, Rupture, Black Hole on star gain | | 0.20.0. Juggernaut counts block from every proc; Metronome counts Storm's lightning; Black Hole counts The Sealed Throne's stars. |
@@ -315,8 +315,8 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [~] Proc audit: budget check (unexplained effects), exact damage ranges, combat summaries.
 - [~] Tray: Pael's Tears / Eye rows removed; turn timers opt-in.
 - [x] Removed the Goopy "added Exhaust" tab and the replay-enchantment double-play tab (the card text already shows both).
-- [ ] Forecast: random-target end-of-turn damage with several enemies (Lightning, Parrying Shield, Forgotten Soul) isn't counted; Consuming Shadow's evokes aren't modeled.
-- [ ] Tags: enemy death effects that revive (Adaptable, Illusion, Reattach); attack hit counts beyond a card's Repeat value (e.g. hard-coded multi-hits).
+- [x] Forecast: random-target end-of-turn damage with several enemies (Lightning, Parrying Shield, Forgotten Soul) stays uncounted by design: we can't know which enemy it hits, and a kill we can't be sure of would hide an attack. Consuming Shadow's evokes are modeled in 0.23.4 (Frost block, Dark on the lowest-HP enemy, Glass on all, Lightning random).
+- [x] Tags: enemy death effects that revive (Adaptable, Illusion, Reattach): checked, no change. Their death still runs the normal death hooks (`wasRemovalPrevented` false), so Gremlin Horn and on-death powers fire as tagged, and the revive replaces their next move (no attack). Attack hit counts beyond the Repeat value: fixed in 0.23.4 (`PlayFacts.HitsPerPlay`: fixed counts, X costs, calculated hits, Dismantle, Spite, Fiend Fire, Mad Science).
 - [ ] Read the first audit summaries and fix what they show.
 
 ---
@@ -337,6 +337,6 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] `Relics` = tracker only; relic tabs via `Tabs`; turn timers per relic (migrated).
 - [x] Checked in game (main menu, Mods screen button, every page, Esc, toggles saved).
 - [ ] Check in combat: pause-menu button, toggling a feature / tab mid-turn, "only what's in this fight".
-- [ ] Keep `Menu/SettingsCatalog.cs` in sync with new proc rules and tracker specs (the log warns on unknown tab keys and missing tracker rows).
+- Standing rule (CLAUDE.md): keep `Menu/SettingsCatalog.cs` in sync with new proc rules and tracker specs (the log warns on unknown tab keys and missing tracker rows).
 - [x] 0.23.1: removed the "can't be played" tab and dimming; the game's crossed-out cost covers every case (`NCard` unplayable cost icon on any non-cost `CanPlay` failure). Crossed tabs now only mean "might be bad for you".
 - [x] 0.23.2: settings menu Reset defaults button, game cursor, discard pile icon on Shuffle Warning (loaded from `res://images/packed/combat_ui/discard_pile.png` outside combat).

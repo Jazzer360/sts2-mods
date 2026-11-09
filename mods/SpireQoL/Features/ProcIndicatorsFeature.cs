@@ -310,13 +310,13 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
                     // ---- powers on enemies: being hit by your attack
                     case "ThornsPower" when onEnemy && f.CanHit(e):
-                        return Damage(a, f.AttackHits, Spread.Me, dealer: e, harmful: true);
+                        return Damage(a, f.HitsOn(e), Spread.Me, dealer: e, harmful: true);
                     case "CurlUpPower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);          // it gains block
                     case "PersonalHivePower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);    // Dazed into your draw pile
                     case "AsleepPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true);   // wakes it
-                    case "SlumberPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.AttackHits: return Hit.Trig(harmful: true);
+                    case "SlumberPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(harmful: true);
                     case "BurrowedPower" when onEnemy && f.BreaksBlock(e): return Hit.Trig();                // stuns it
-                    case "FlutterPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.AttackHits: return Hit.Trig(); // stuns it
+                    case "FlutterPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(); // stuns it
                     case "PlowPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
                     case "ShriekPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
                     case "TheGambitPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig();             // it dies
@@ -359,6 +359,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // while armed and nothing has been played, every card gives that up.
                     case "PaelsEye" when armed && Sts2State.CountPlayedThisTurn(_me) == 0: return Hit.Trig(harmful: true);
                     case "Vambrace" when armed && f.BlockGains > 0: return Hit.Trig();
+                    // Off cooldown, the next card that gains block gets double block, then it rests 2 turns.
+                    case "PaelsLegion" when armed && f.BlockGains > 0: return Hit.Trig();
                     case "BurningSticks" when armed && type == CardType.Skill && f.ExhaustsSelf: return Hit.Trig();
                     case "UnsettlingLamp" when armed && f.EnemyDebuffs.Count > 0: return Hit.Trig();
                     case "MusicBox" when armed && type == CardType.Attack: return Hit.Trig();

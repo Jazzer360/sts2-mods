@@ -55,6 +55,7 @@ public static class SettingsCatalog
         new("PaelsTears", SourceGroup.Relic, Crossed + "cards that spend your last energy (gives up next turn's carry-over)"),
         new("PaelsEye", SourceGroup.Relic, Crossed + "any card while armed and nothing played yet (gives up the extra turn)"),
         new("Vambrace", SourceGroup.Relic, "Cards that gain block, while unused this combat"),
+        new("PaelsLegion", SourceGroup.Relic, "Cards that gain block, while it's off cooldown (double block)"),
         new("BurningSticks", SourceGroup.Relic, "Skills that exhaust themselves, while unused this combat"),
         new("UnsettlingLamp", SourceGroup.Relic, "Cards that debuff enemies, while unused this combat"),
         new("MusicBox", SourceGroup.Relic, "Attacks, while unused this turn"),

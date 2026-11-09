@@ -114,6 +114,8 @@ public sealed class TurnEndModel
             }
         }
         if (frost > 0) m.EndOfTurnBlock.Add(new Source("Frost", (int)frost));
+        foreach (var (orb, value) in ShadowEvokes(me, cs))
+            if (orb is FrostOrb && value > 0) m.EndOfTurnBlock.Add(new Source("Consuming Shadow (Frost)", value));
 
         foreach (var relic in me.Relics)
         {
@@ -298,8 +300,10 @@ public sealed class TurnEndModel
     /// the enemy's modifiers are applied when it lands):
     ///  - all enemies: Hailstorm (enough Frost orbs), The Bomb (last tick), Screaming Flagon (empty
     ///    hand), Stone Calendar (its turn), Charon's Ashes (per Ethereal card exhausting);
-    ///  - one random enemy: Lightning orb passives, Parrying Shield, Forgotten Soul (per Ethereal):
-    ///    only counted when there's a single enemy, since the target is random.
+    ///  - Consuming Shadow's evokes: Dark (lowest-HP enemy), Glass (all);
+    ///  - one random enemy: Lightning orb passives and evokes, Parrying Shield, Forgotten Soul (per
+    ///    Ethereal): only counted when there's a single enemy, since the target is random. With
+    ///    several enemies they're left out on purpose: a kill we can't be sure of would hide an attack.
     /// </summary>
     private static Dictionary<Creature, List<int>> EndOfTurnHits(TurnEndModel m, MegaCrit.Sts2.Core.Entities.Players.Player me, MegaCrit.Sts2.Core.Combat.ICombatState cs, IReadOnlyList<CardModel> hand)
     {
@@ -331,6 +335,9 @@ public sealed class TurnEndModel
                 case "ParryingShield": if (m.ExpectedBlock >= Sts2State.Var(r, "Block")) random.Add(("Parrying Shield", Sts2State.Var(r, "Damage"))); break;
             }
         }
+        var evokes = ShadowEvokes(me, cs);
+        foreach (var (orb, value) in evokes)
+            if (orb is LightningOrb) random.Add(("Consuming Shadow (Lightning)", value));
         foreach (var orb in me.PlayerCombatState!.OrbQueue.Orbs)
         {
             if (orb is not LightningOrb) continue;
@@ -350,6 +357,22 @@ public sealed class TurnEndModel
             foreach (var e in enemies) Add(e, amount);
             if (amount > 0) m.EndOfTurnDamage.Add(new Source(name + " (all)", amount));
         }
+        // Consuming Shadow's Dark and Glass evokes have fixed targets: the lowest-HP enemy, and all.
+        foreach (var (orb, value) in evokes)
+        {
+            if (value <= 0 || enemies.Count == 0) continue;
+            if (orb is DarkOrb)
+            {
+                var weakest = enemies.MinBy(e => e.CurrentHp)!;
+                Add(weakest, value);
+                m.EndOfTurnDamage.Add(new Source("Consuming Shadow (Dark)", value));
+            }
+            else if (orb is GlassOrb)
+            {
+                foreach (var e in enemies) Add(e, value);
+                m.EndOfTurnDamage.Add(new Source("Consuming Shadow (Glass, all)", value));
+            }
+        }
         if (enemies.Count == 1)
         {
             foreach (var (name, amount) in random)
@@ -359,6 +382,28 @@ public sealed class TurnEndModel
             }
         }
         return hits;
+    }
+
+    /// <summary>
+    /// The orbs Consuming Shadow evokes at the very end of your turn (AfterSideTurnEnd: after orb
+    /// passives, before enemies act): one per stack, last orb first (OrbCmd.EvokeLast), each with its
+    /// value by then. A Dark orb's passive (BeforeTurnEndOrbTrigger) has grown its evoke value first.
+    /// </summary>
+    private static List<(OrbModel Orb, int Value)> ShadowEvokes(MegaCrit.Sts2.Core.Entities.Players.Player me, MegaCrit.Sts2.Core.Combat.ICombatState cs)
+    {
+        var result = new List<(OrbModel, int)>();
+        var shadow = me.Creature.Powers.FirstOrDefault(p => p is ConsumingShadowPower);
+        if (shadow == null || me.PlayerCombatState == null) return result;
+        var orbs = me.PlayerCombatState.OrbQueue.Orbs.ToList();
+        for (var i = 0; i < shadow.Amount && orbs.Count > 0; i++)
+        {
+            var orb = orbs[^1];
+            orbs.RemoveAt(orbs.Count - 1);
+            var value = orb.EvokeVal;
+            if (orb is DarkOrb) value += orb.PassiveVal * Hook.ModifyOrbPassiveTriggerCount(cs, orb, 1, out _);
+            result.Add((orb, (int)value));
+        }
+        return result;
     }
 
     /// <summary>

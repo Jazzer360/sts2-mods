@@ -262,6 +262,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         {
             "Permafrost" => !Sts2State.Private(relic, "ActivatedThisCombat", true),
             "MusicBox" => !Sts2State.Private(relic, "WasUsedThisTurn", true),
+            "PaelsLegion" => Sts2State.Private(relic, "Cooldown", 1) <= 0, // Status isn't Active at combat start
             _ => relic.Status == RelicStatus.Active,
         };
     }
