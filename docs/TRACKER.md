@@ -260,17 +260,28 @@ Two kinds of proc:
 - **Trigger only:** "this card sets off that relic," like the existing relic reminders. Tab with the relic's or power's icon, no number. Examples: Intimidating Helmet, Mini Regent.
 - **Quantified:** the proc gains block, deals damage or grants a stat, and the exact amount is worth knowing. Example: Feel No Pain on True Grit shows +3 block (+4 upgraded, +6 with two copies of the power).
 
-### Open decision: iconography for quantified procs
+### Decided (2026-11-09): source icon + number
 
-Today's rule (CLAUDE.md, UI rules) is one tab per effect, with the source's icon and **no numbers**. Quantified procs need a decision:
+Quantified procs use **option A**: one tab per source, with the source's own icon (power or relic) and the amount as a number (e.g. Feel No Pain icon, `3`). Trigger-only procs keep the plain icon, with no number. CLAUDE.md's UI rules and docs/FEATURES.md "On-card tabs" allow a number on quantified proc tabs only. Revisit option B if cards end up with too many tabs.
+
+### Configuration: every indicator can be turned off (defaults: everything on)
+
+Players should be able to trim what shows, down to single indicators. Defaults show everything.
+
+- [ ] **Per-tab toggles:** one setting per tab kind, keyed by the tab key (`retain`, `sly`, `exhaust`, `innate`, `eternal`, `galvanized`, `blocked`, `double-play:<source>`, `shuffle`, `relic:<Relic>`, `proc:<Source>`), default on. Replaces the one-off switches (`ShowDoublePlay`, `ShowInnateEternalBadges`, `DimBlockedCards`) with migration from saved values. Note: `ShowInnateEternalBadges` is currently **off** by default; it should become on.
+- [ ] **Per-proc options:** show the number or icon only; count procs one step removed (e.g. Feel No Pain on True Grit) or direct ones only.
+- [ ] **Group switches:** all relic tabs, all proc tabs, all keyword tabs, so a player doesn't have to flip dozens.
+- [ ] Builds on the per-relic `Relics` table and the per-feature `Features` table that exist now. An in-game menu (§0) makes these usable without editing the `.cfg` file.
+
+### Options considered
+
+Before the decision, one tab per effect had the source's icon and **no numbers**. The options for quantified procs were:
 
 | Option | Looks like | For | Against |
 | --- | --- | --- | --- |
 | **A. Source icon + number** | Feel No Pain icon, `3` | Keeps one tab per source, so you can see *why*; the number gives *how much*. Fits the current language with one change: numbers are allowed on quantified procs. | Three block procs on one card make three tabs. |
 | **B. Block / damage icon + number** | Block icon, `3` (sum of all block procs) | "Block is block": one tab per outcome, totals summed. Fewer tabs. | Loses the source; needs block/damage icons from the game's art (intent or status icons). |
 | C. Source icon only | Feel No Pain icon | No rule change. | Doesn't answer "how much". |
-
-Leaning A (source and amount both visible, consistent with every other tab). Whichever is picked, CLAUDE.md's "no numbers" rule and docs/FEATURES.md "On-card tabs" get updated to match.
 
 ### Sources
 
