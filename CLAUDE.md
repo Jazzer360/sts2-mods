@@ -27,7 +27,7 @@ Every change to a mod ships as a release:
 2. Commit and push to `main`.
 3. Run `./scripts/release.ps1` (needs the game installed and `gh` logged in). It builds, zips `dist/<ModId>-<version>.zip` and creates the GitHub release `<modid>-v<version>`.
 
-The "Release check" workflow fails on `main` until the current version has a release with its zip, and on any change to mod code since the last release without a version bump. Don't leave it red: if you can't run the script (game running, no `gh`), tell the user the release is still pending.
+The "Release check" workflow waits up to 20 minutes after a push to `main` for the current version's release (with its zip), so release right after pushing. It fails immediately on a version mismatch, a missing changelog section, or mod code changed since the last release without a version bump. Don't leave it red: if you can't run the script (game running, no `gh`), tell the user the release is still pending.
 
 ## UI rules
 

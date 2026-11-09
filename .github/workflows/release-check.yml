@@ -5,8 +5,10 @@
 #   - every mod's .json and .csproj versions match, and CHANGELOG.md has a section for it;
 #   - mod code (mods/<ModId>, core/, build files) didn't change since the mod's last release
 #     without a version bump;
-#   - on main: the current version has a GitHub release with its zip attached. Until you run
-#     scripts/release.ps1 this check is red; publishing the release re-runs it.
+#   - on main: the current version has a GitHub release with its zip. The normal flow is push,
+#     then run scripts/release.ps1, so a push to main WAITS for the release (polling every 30s for
+#     up to 20 minutes) instead of failing straight away. It fails only if no release shows up in
+#     that time. Version and changelog problems still fail immediately.
 name: Release check
 
 on:
@@ -23,6 +25,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,11 +35,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REQUIRE_RELEASE: ${{ github.event_name != 'pull_request' }}
+          # Minutes to wait for a missing release on a push (it's published right after the push).
+          RELEASE_WAIT_MINUTES: ${{ github.event_name == 'push' && '20' || '0' }}
         shell: bash
         run: |
           set -uo pipefail
           status=0
           err()  { echo "::error::$*"; status=1; }
+          pending=()   # "tag|zip|label" for each release that must exist
 
           for manifest in mods/*/*.json; do
             dir=$(dirname "$manifest")
@@ -61,15 +67,24 @@ jobs:
               fi
             fi
 
-            if [ "$REQUIRE_RELEASE" = "true" ]; then
-              assets=$(gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null)
-              if [ $? -ne 0 ]; then
-                err "$name $version has no GitHub release yet. Run ./scripts/release.ps1 on a machine with the game installed."
-              elif ! echo "$assets" | grep -qx "$id-$version.zip"; then
-                err "Release $tag is missing $id-$version.zip. Re-run ./scripts/release.ps1 or attach the zip."
-              else
-                echo "Release $tag has $id-$version.zip."
+            [ "$REQUIRE_RELEASE" = "true" ] && pending+=("$tag|$id-$version.zip|$name $version")
+          done
+
+          # Version and changelog problems fail right away; there's nothing to wait for.
+          [ $status -eq 0 ] || exit $status
+
+          has_release() { gh release view "$1" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "$2"; }
+          deadline=$(( $(date +%s) + RELEASE_WAIT_MINUTES * 60 ))
+          for item in "${pending[@]}"; do
+            tag="${item%%|*}"; rest="${item#*|}"; zip="${rest%%|*}"; label="${rest#*|}"
+            until has_release "$tag" "$zip"; do
+              if [ "$(date +%s)" -ge "$deadline" ]; then
+                err "$label has no GitHub release with $zip. Run ./scripts/release.ps1 on a machine with the game installed."
+                continue 2
               fi
-            fi
+              echo "Waiting for release $tag ($zip)... run ./scripts/release.ps1"
+              sleep 30
+            done
+            echo "Release $tag has $zip."
           done
           exit $status

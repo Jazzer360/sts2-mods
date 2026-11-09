@@ -91,7 +91,7 @@ It needs the game installed (the build compiles against the game's assemblies) a
 
 - a mod's `.json` and `.csproj` versions differ, or `CHANGELOG.md` has no `### <Mod Name> <version>` section;
 - mod code (`mods/<ModId>`, `core/`, build files) changed since the mod's last release but the version wasn't bumped;
-- on `main`: the current version has no GitHub release with its zip. It stays red until you run the script; publishing the release re-runs the check.
+- on `main`: the current version still has no GitHub release with its zip after 20 minutes. A push to `main` waits (polling every 30 seconds) for the release you publish right after pushing, so the normal flow stays green. Version and changelog problems fail immediately.
 
 The mods can't be built in GitHub's cloud: the game's assemblies are never committed, and GitHub's runners don't have the game.
 

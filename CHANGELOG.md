@@ -208,6 +208,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - No in-game settings menu yet (edit the `.cfg` file). Intent Forecast not built. No health-bar damage preview. See "Not yet" under each feature in `docs/FEATURES.md`.
 
 ### Repo
+#### Changed
+- Release check: a push to `main` waits up to 20 minutes for the release instead of failing when the release is published a few seconds after the push.
+
 #### Added
 - `ResetModSettingsOnInstall` (set in `Sts2.local.props`): each dev install deletes the installed settings file, so a new build starts with everything shown.
 - `scripts/release.ps1`: builds each mod, zips `dist/<ModId>-<version>.zip` and publishes it as a GitHub release, with the version's changelog section as notes.
