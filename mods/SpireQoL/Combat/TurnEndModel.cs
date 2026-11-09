@@ -118,6 +118,16 @@ public sealed class TurnEndModel
             }
         }
 
+        // Feel No Pain: Ethereal cards still in hand exhaust at end of turn (CombatManager.DoTurnEnd,
+        // after Orichalcum has already checked your block), each giving its block (Unpowered).
+        var fnp = me.Creature.Powers.Where(p => p is FeelNoPainPower).Sum(p => p.Amount);
+        if (fnp > 0)
+        {
+            var fading = hand.Count(c => c.Keywords.Contains(CardKeyword.Ethereal)
+                                         && (c.HasTurnEndInHandEffect || Hook.ShouldEtherealTrigger(cs, c)));
+            if (fading > 0) m.EndOfTurnBlock.Add(new Source($"Feel No Pain ×{fading}", fading * fnp));
+        }
+
         // ---- Your own end-of-turn damage (happens before the enemy turn) ----
         var block = m.ExpectedBlock;
         var regret = 0;

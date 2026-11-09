@@ -18,10 +18,8 @@ namespace SpireQoL.Features;
 /// Everything is an on-card tab (CardOverlayRenderer), except Ethereal translucency and dimming.
 ///  - Retain: Steady (the Retain enchantment). Sly: Master Planner (the Sly power).
 ///    (This-turn-only Retain/Sly look the same as permanent ones: tags are icon-only.)
-///  - Added Exhaust: Goopy (the enchantment that adds Exhaust). Optional Innate: Royally Approved;
-///    Eternal: Tezcatara's Ember (the enchantments that add them).
+///  - Added Exhaust: Goopy (the enchantment that adds Exhaust).
 ///  - Double play: the icon of whatever causes it (Burst, Echo Form, Throwing Axe, ...).
-///  - Galvanized: Galvanic power icon (playing it damages you).
 ///  - Blocked by Bound / Ringing / Smog / Velvet Choker: card dimmed + crossed tab with the
 ///    blocking power's or relic's icon.
 ///  - Ethereal (on the card itself, not from Hex): translucent.
@@ -77,18 +75,7 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
                 d.AddTab("exhaust", GameIcons.Enchantment<Goopy>());
             }
 
-            if (s.ShowInnateEternalBadges)
-            {
-                if (kw.Contains(CardKeyword.Innate)) d.AddTab("innate", GameIcons.Enchantment<RoyallyApproved>());
-                if (kw.Contains(CardKeyword.Eternal)) d.AddTab("eternal", GameIcons.Enchantment<TezcatarasEmber>());
-            }
-
-            if (card.Affliction?.GetType().Name == "Galvanized" && card.Affliction.Amount > 0)
-            {
-                d.AddTab("galvanized", GameIcons.Power<GalvanicPower>());
-            }
-
-            if (s.DimBlockedCards && Blocker(card) is { } blocker)
+            if (d.Enabled("blocked") && Blocker(card) is { } blocker)
             {
                 d.Dim = true;
                 var icon = blocker switch
@@ -100,7 +87,6 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
                 d.AddTab("blocked", icon, crossed: true);
             }
 
-            if (s.ShowDoublePlay)
             {
                 // One tag per source, each with that source's own icon (Burst, Echo Form,
                 // Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or the card's
@@ -130,6 +116,20 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
     /// Tag Team only doubles attacks aimed at the enemy that has it, so single-target cards are
     /// also checked against each enemy and every source that applies to any of them is shown.
     /// </summary>
+    /// <summary>How many times the card would play right now (best case over targets).</summary>
+    public static int PlayCount(CardModel card)
+    {
+        var cs = Sts2State.Combat;
+        if (cs == null) return 1;
+        var baseCount = card.GetEnchantedReplayCount() + 1;
+        var best = Hook.ModifyCardPlayCount(cs, card, baseCount, null, out _);
+        if (card.TargetType == TargetType.AnyEnemy)
+        {
+            foreach (var enemy in cs.HittableEnemies) best = Math.Max(best, Hook.ModifyCardPlayCount(cs, card, baseCount, enemy, out _));
+        }
+        return Math.Max(1, best);
+    }
+
     private static List<AbstractModel> ExtraPlaySources(CardModel card)
     {
         var sources = new List<AbstractModel>();

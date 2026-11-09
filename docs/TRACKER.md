@@ -11,7 +11,7 @@ Legend: `[ ]` to do · `[~]` built, needs an in-game check · `[x]` done · **(v
 ## 0. Core: settings and layout (`core/`, used by every feature)
 
 - [~] **Settings storage**: per-feature on/off and options, saved to a JSON file in the mod's own folder (not in game saves). Survives game updates.
-- [ ] **In-game settings menu**: an entry in the game's settings/mods screen. **(verify)** whether the game has a mod-settings hook, or whether we add our own button.
+- [ ] **In-game settings menu** (planned; deferred while features are being built, 2026-11-09): an entry in the game's settings/mods screen. **(verify)** whether the game has a mod-settings hook, or whether we add our own button.
 - [~] **Movable widgets**: every free-floating indicator (relic counter tray, incoming-damage readout, block forecast, shuffle counter) is a `MovableWidget`.
   - [~] **Unlock layout** toggle (menu and hotkey): widgets show an outline and can be dragged. **Lock** freezes them and makes them click-through.
   - [~] **Anchor** (0.6.0: Ctrl+1–9 picks a screen anchor; HP bar and block icon attach points done; hand/draw pile still to do): each widget pins to a screen corner/edge/center, or to a game element (player health bar, hand, draw pile, relic bar). Positions are stored as anchor + offset, so they survive resolution and window-size changes.
@@ -38,9 +38,7 @@ The game shows these only as card text. `CardModel.Keywords` merges local keywor
   - Single-turn retain: Expertise.
 - [~] **Sly tab** (0.9.0: Master Planner icon on a copy of the enchantment tab): from the Sly keyword or single-turn Sly (`IsSlyThisTurn`; Hand Trick).
 - [~] **Exhaust badge**, only when Exhaust was *added* (Goopy enchantment), not for cards that always exhaust.
-- [~] **Innate / Eternal badges**: off by default (they matter in the deck view, not mid-combat).
-  - Adds Innate: Afterimage, Aggression, Arsenal, Beacon of Hope, Big Bang, Call of the Void, Entropy, Hello World, Infinite Blades, Juggling, Machine Learning, Mad Science, Royally Approved, Soulbound, Speedster, Tyranny.
-  - Adds Eternal: Tezcatara's Ember.
+- ~~**Innate / Eternal badges**~~: removed in 0.19.0. Neither can be added or removed mid-combat, so they don't say anything about playing the card now.
 - [ ] **Keyword removed** marker, e.g. Exhaust stripped. Removes keywords: Apparition, Chill, Demonic Shield, Discovery, Echo Form, Fusion, Graveblast, Hologram, Hotfix, Ignition, Know Thy Place, Mimic, Mirage, Prolong, Rainbow, Secret Technique, Secret Weapon, Soul's Power, Thinking Ahead, Transfigure, Underworld, Void Form, Voltaic. **(verify)** whether these remove a keyword from *other* cards or only from themselves. Only the first case needs a marker.
 
 ### Cost and play-count changes
@@ -188,7 +186,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [~] **Cloak Clasp**: block × cards in hand.
 - [~] **Ripple Basin**: block if no attack played this turn.
 - ~~**Horn Cleat / Captain's Wheel**~~: not end-of-turn block (they fire at the start of turn 2/3, after enemies attack). Countdown lives in Relic Counters.
-- [ ] **Feel No Pain + Ethereal** (gap found 2026-11-09): Ethereal cards left in hand exhaust at end of turn, and Feel No Pain gives `Amount` block per exhaust (Unpowered, so no Dexterity). That block lands before the enemy attacks but isn't counted yet. Same for **Dark Embrace**-style exhaust procs that give block (see §9).
+- [~] **Feel No Pain + Ethereal** (gap found 2026-11-09, counted in 0.19.0): Ethereal cards left in hand exhaust at end of turn, and Feel No Pain gives `Amount` block per exhaust (Unpowered, so no Dexterity). That block lands before the enemy attacks but isn't counted yet. Same for **Dark Embrace**-style exhaust procs that give block (see §9).
 - [ ] **Rage / Skittish** powers: block on card play/hit **(verify)**; shown on cards, not in the end-of-turn total.
 - [ ] **Sturdy Clamp**: block isn't cleared. Show carried block for next turn.
 - [ ] **Parrying Shield**: deals damage if you end with ≥N block. Show its threshold.
@@ -252,7 +250,7 @@ Rules:
 
 ---
 
-## 9. Proc indicators (proposed 2026-11-09, not started)
+## 9. Proc indicators → `proc-indicators` (built in 0.19.0; full source list in FEATURES.md)
 
 **Goal:** show, on each card in hand, every power or relic that playing it would set off. "Damage is damage, block is block": if a card's play gains block or deals damage through a proc, the card should say so, including procs one step removed (a card that *exhausts another card* while Feel No Pain is up).
 
@@ -268,10 +266,10 @@ Quantified procs use **option A**: one tab per source, with the source's own ico
 
 Players should be able to trim what shows, down to single indicators. Defaults show everything.
 
-- [ ] **Per-tab toggles:** one setting per tab kind, keyed by the tab key (`retain`, `sly`, `exhaust`, `innate`, `eternal`, `galvanized`, `blocked`, `double-play:<source>`, `shuffle`, `relic:<Relic>`, `proc:<Source>`), default on. Replaces the one-off switches (`ShowDoublePlay`, `ShowInnateEternalBadges`, `DimBlockedCards`) with migration from saved values. Note: `ShowInnateEternalBadges` is currently **off** by default; it should become on.
-- [ ] **Per-proc options:** show the number or icon only; count procs one step removed (e.g. Feel No Pain on True Grit) or direct ones only.
-- [ ] **Group switches:** all relic tabs, all proc tabs, all keyword tabs, so a player doesn't have to flip dozens.
-- [ ] Builds on the per-relic `Relics` table and the per-feature `Features` table that exist now. An in-game menu (§0) makes these usable without editing the `.cfg` file.
+- [~] **Per-tab toggles** (0.19.0): `Tabs` in settings, one key per tab kind (`retain`, `sly`, `exhaust`, `blocked`, `shuffle`, `double-play:<source>`, `relic:<Relic>`, `proc:<Source>`), added as each kind first appears, default on. Replaced `ShowDoublePlay` and `DimBlockedCards` (migrated); `ShowInnateEternalBadges` removed with the tabs.
+- [~] **Per-proc options** (0.19.0): `ProcNumbers` (show amounts), `ProcIndirect` (count procs one step removed).
+- [~] **Group switches** (0.19.0): `relic:*`, `proc:*`, `double-play:*` in `Tabs`.
+- [x] Builds on the per-relic `Relics` table and the per-feature `Features` table that exist now. An in-game menu (§0) makes these usable without editing the `.cfg` file.
 
 ### Options considered
 
@@ -287,13 +285,14 @@ Before the decision, one tab per effect had the source's icon and **no numbers**
 
 | Done | Source | Cards marked | Effect, from the code (v0.111.0) |
 | --- | --- | --- | --- |
-| [ ] | **Intimidating Helmet** (relic) | cards that will **spend ≥2 energy** | `BeforeCardPlayed`: if the energy actually spent (`cardPlay.Resources.EnergyValue`) is ≥ 2 (`EnergyVar`), gain 4 block (Unpowered). So it's energy spent, not printed cost: cost reductions and free plays don't count; X-cost cards count with ≥2 energy available. Trigger tab (or +4 block under A/B). |
-| [ ] | **Mini Regent** (relic) | cards that spend **stars**, while unused this turn | `AfterStarsSpent`: the first star spend each turn gives +1 Strength (`UsedThisTurn` resets at turn start). Trigger tab. **(verify)** how to read `UsedThisTurn` (private; maybe `Status`), and whether non-card star spends count. Also listed in §3. |
-| [ ] | **Feel No Pain** (power) | cards that exhaust when played (Exhaust, added Exhaust) **and cards that exhaust other cards** | `AfterCardExhausted`: `Amount` block per card exhausted (Unpowered). Exhaust-others cards: Brand, Burning Pact, Cinder, Cleanse, Fiend Fire, Flak Cannon, Purity, Scavenge, Second Wind, Stoke, Thrash, True Grit. Count exhausts per card (True Grit: 1 if there's another card in hand; Second Wind / Fiend Fire: per matching card; Burning Pact: its count). Ethereal end-of-turn exhausts go in Incoming Damage (§4). Stacks: two copies show double. |
-| [ ] | **Spirit of Ash** (power) | **Ethereal** cards | `BeforeCardPlayed`: playing an Ethereal card gains `Amount` block (Unpowered). |
-| [ ] | **Sleight of Flesh** (power) | cards that **apply debuffs to enemies** | `AfterPowerAmountChanged`: each non-temporary debuff you apply to an enemy deals `Amount` damage (Unpowered) to that enemy. Count applications per target; **Artifact** cancels an application (so it doesn't trigger), so subtract the target's Artifact charges. Multi-target cards count per enemy. |
-| [ ] | Dark Embrace (power) | exhausting cards (same list as Feel No Pain) | `AfterCardExhausted`: draw per exhaust **(verify amount)**. Trigger tab. |
-| [ ] | Charon's Ashes, Forgotten Soul, Joss Paper (relics) | exhausting cards | `AfterCardExhausted` procs **(verify effects)**. Burning Sticks is already shown (§3). |
-| [ ] | Child of the Stars (power), Galactic Dust (relic) | star-spending cards | `AfterStarsSpent` procs **(verify effects)**. |
-| [ ] | Shroud, Vicious, Sandpit, Vital Spark, Sword Sage (powers) | debuff/buff appliers | `AfterPowerAmountChanged` procs **(verify which react to your debuffs)**. |
-| [ ] | **Full sweep** | | Every power and relic overriding `BeforeCardPlayed` / `AfterCardPlayed` / `AfterCardExhausted` / `AfterCardDiscarded` / `AfterStarsSpent` / `AfterPowerAmountChanged`, to list each proc and its condition. |
+| [~] | **Intimidating Helmet** (relic) | cards that will **spend ≥2 energy** | `BeforeCardPlayed`: if the energy actually spent (`cardPlay.Resources.EnergyValue`) is ≥ 2 (`EnergyVar`), gain 4 block (Unpowered). So it's energy spent, not printed cost: cost reductions and free plays don't count; X-cost cards count with ≥2 energy available. Trigger tab (or +4 block under A/B). |
+| [~] | **Mini Regent** (relic) | cards that spend **stars**, while unused this turn | `AfterStarsSpent`: the first star spend each turn gives +1 Strength (`UsedThisTurn` resets at turn start). Trigger tab. **(verify)** how to read `UsedThisTurn` (private; maybe `Status`), and whether non-card star spends count. Also listed in §3. |
+| [~] | **Feel No Pain** (power) | cards that exhaust when played (Exhaust, added Exhaust) **and cards that exhaust other cards** | `AfterCardExhausted`: `Amount` block per card exhausted (Unpowered). Exhaust-others cards: Brand, Burning Pact, Cinder, Cleanse, Fiend Fire, Flak Cannon, Purity, Scavenge, Second Wind, Stoke, Thrash, True Grit. Count exhausts per card (True Grit: 1 if there's another card in hand; Second Wind / Fiend Fire: per matching card; Burning Pact: its count). Ethereal end-of-turn exhausts go in Incoming Damage (§4). Stacks: two copies show double. |
+| [~] | **Spirit of Ash** (power) | **Ethereal** cards | `BeforeCardPlayed`: playing an Ethereal card gains `Amount` block (Unpowered). |
+| [~] | **Sleight of Flesh** (power) | cards that **apply debuffs to enemies** | `AfterPowerAmountChanged`: each non-temporary debuff you apply to an enemy deals `Amount` damage (Unpowered) to that enemy. Count applications per target; **Artifact** cancels an application (so it doesn't trigger), so subtract the target's Artifact charges. Multi-target cards count per enemy. |
+| [~] | Dark Embrace (power) | exhausting cards (same list as Feel No Pain) | `AfterCardExhausted`: draw per exhaust **(verify amount)**. Trigger tab. |
+| [~] | Charon's Ashes, Forgotten Soul, Joss Paper (relics) | exhausting cards | `AfterCardExhausted` procs **(verify effects)**. Burning Sticks is already shown (§3). |
+| [~] | Child of the Stars (power), Galactic Dust (relic) | star-spending cards | `AfterStarsSpent` procs **(verify effects)**. |
+| [~] | Shroud, Vicious, Vital Spark (powers) | Doom / Vulnerable appliers; Tainted cards | Built in 0.19.0. Sandpit and Sword Sage don't react to card plays (checked). |
+| [x] | **Full sweep** (2026-11-09) | | Every power and relic overriding the play, exhaust, discard, draw, stars, energy, debuff, block, damage, card-created and shuffle hooks. The resulting source list is in FEATURES.md "Proc Indicators". |
+| [ ] | Not yet | | Procs set off by procs (Afterimage block → Juggernaut), Metronome (orbs channeled), Bone Flute (Osty attacks), Pagestorm / Iteration (depend on what you draw), Rupture (HP loss from cards), Beacon of Hope / Hammer Time (multiplayer). |

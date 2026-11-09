@@ -19,7 +19,7 @@ namespace SpireQoL.Features;
 ///  - Crossed out: playing this card stops the relic working this turn (Art of War, Ripple Basin,
 ///    Pael's Tears).
 ///  - Plain: playing this card uses the relic (Pen Nib when ready; one-shot relics while still
-///    armed: Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box).
+///    armed: Vambrace, Burning Sticks, Unsettling Lamp, Music Box; Throwing Axe is a double-play tab, Permafrost a proc tab).
 /// </summary>
 public sealed class RelicRemindersFeature : IFeature, IFrameFeature
 {
@@ -92,11 +92,6 @@ public sealed class RelicRemindersFeature : IFeature, IFrameFeature
                         foreach (var c in hand.Where(GrantsBlock)) Mark(c, relic, false);
                     break;
 
-                case "ThrowingAxe":
-                    if (RelicCountersFeature.IsArmed(relic, me))
-                        foreach (var c in hand) Mark(c, relic, false);
-                    break;
-
                 case "BurningSticks":
                     if (RelicCountersFeature.IsArmed(relic, me))
                         foreach (var c in hand.Where(WillExhaustSkill)) Mark(c, relic, false);
@@ -105,11 +100,6 @@ public sealed class RelicRemindersFeature : IFeature, IFrameFeature
                 case "UnsettlingLamp":
                     if (RelicCountersFeature.IsArmed(relic, me))
                         foreach (var c in hand.Where(AppliesDebuff)) Mark(c, relic, false);
-                    break;
-
-                case "Permafrost":
-                    if (RelicCountersFeature.IsArmed(relic, me))
-                        foreach (var c in hand.Where(c => c.Type == CardType.Power)) Mark(c, relic, false);
                     break;
 
                 case "MusicBox":
@@ -130,7 +120,8 @@ public sealed class RelicRemindersFeature : IFeature, IFrameFeature
     {
         if (c.Type != CardType.Skill) return false;
         var kw = c.Keywords;
-        return kw.Contains(CardKeyword.Exhaust) || kw.Contains(CardKeyword.Ethereal);
+        return kw.Contains(CardKeyword.Exhaust) || kw.Contains(CardKeyword.Ethereal)
+               || c.Owner.Creature.Powers.Any(p => p is MegaCrit.Sts2.Core.Models.Powers.CorruptionPower);
     }
 
     /// <summary>Cards carrying a PowerVar&lt;T&gt; for a debuff power (Weak, Vulnerable, Poison...).</summary>

@@ -29,6 +29,9 @@
       <_ModFiles Include="$(OutDir)$(AssemblyName).pck" Condition="Exists('$(OutDir)$(AssemblyName).pck')" />
     </ItemGroup>
     <Copy SourceFiles="@(_ModFiles)" DestinationFolder="$(Sts2ModsDir)\$(AssemblyName)" SkipUnchangedFiles="true" />
+    <!-- Dev convenience (set in Sts2.local.props): start every installed build from default settings. -->
+    <Delete Files="$(Sts2ModsDir)\$(AssemblyName)\$(AssemblyName).settings.cfg" Condition="'$(ResetModSettingsOnInstall)' == 'true'" />
+    <Message Importance="high" Text="Reset $(AssemblyName) settings to defaults (ResetModSettingsOnInstall)" Condition="'$(ResetModSettingsOnInstall)' == 'true'" />
     <Message Importance="high" Text="Installed $(AssemblyName) -> $(Sts2ModsDir)\$(AssemblyName)" />
   </Target>
 </Project>

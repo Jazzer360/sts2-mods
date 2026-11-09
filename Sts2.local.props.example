@@ -1,7 +1,9 @@
 <Project>
-  <!-- Copy to Sts2.local.props (gitignored) to override machine-specific paths. -->
+  <!-- Copy to Sts2.local.props (gitignored) to override machine-specific settings. -->
   <PropertyGroup>
     <Sts2Dir>D:\SteamLibrary\steamapps\common\Slay the Spire 2</Sts2Dir>
     <!-- <InstallToGame>false</InstallToGame> -->
+    <!-- Delete the installed mod's settings file on each install, so every build starts from defaults: -->
+    <!-- <ResetModSettingsOnInstall>true</ResetModSettingsOnInstall> -->
   </PropertyGroup>
 </Project>

@@ -11,6 +11,7 @@ public sealed class QolContext
     {
         SettingsFile = settingsFile;
         Host = host;
+        Decor.Filter = key => Settings.TabEnabled(key);
     }
 
     public JsonSettingsFile<QolSettings> SettingsFile { get; }

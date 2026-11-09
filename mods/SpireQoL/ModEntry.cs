@@ -30,6 +30,7 @@ public static class ModEntry
         var settingsFile = new JsonSettingsFile<QolSettings>(JsonSettingsFile<QolSettings>.DefaultPathFor(typeof(ModEntry), Id), Log);
         var settings = settingsFile.Load();
         MigrateLayout(settings);
+        MigrateTabs(settings);
 
         var host = new OverlayHost(Id, Log)
         {
@@ -49,6 +50,7 @@ public static class ModEntry
             new CardIndicatorsFeature(ctx),
             new RelicCountersFeature(ctx),
             new RelicRemindersFeature(ctx),
+            new ProcIndicatorsFeature(ctx),
             new IncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
             new IntentForecastFeature(),
@@ -74,6 +76,19 @@ public static class ModEntry
 
         var renderer = new CardOverlayRenderer(host, ctx.Decor);
         host.AddLateFrame(renderer.Render);
+
+        // New tab kinds are written into settings as they first appear (so the file lists every
+        // tab that can be turned off). Save at most every few seconds.
+        ulong lastSave = 0;
+        host.AddLateFrame(() =>
+        {
+            if (!settings.TabsDirty) return;
+            var now = Time.GetTicksMsec();
+            if (now - lastSave < 3000) return;
+            lastSave = now;
+            settings.TabsDirty = false;
+            settingsFile.Save();
+        });
         host.Start();
     }
 
@@ -98,6 +113,16 @@ public static class ModEntry
             if (Math.Abs(settings.EtherealOpacity - 0.7f) < 0.001f) settings.EtherealOpacity = 0.8f;
         }
         settings.LayoutVersion = QolSettings.CurrentLayoutVersion;
+    }
+
+    /// <summary>0.19.0: the one-off tab switches became entries in Tabs.</summary>
+    private static void MigrateTabs(QolSettings settings)
+    {
+        if (settings.ShowDoublePlay == false) settings.Tabs["double-play:*"] = false;
+        if (settings.DimBlockedCards == false) settings.Tabs["blocked"] = false;
+        settings.ShowDoublePlay = null;
+        settings.DimBlockedCards = null;
+        settings.ShowInnateEternalBadges = null; // Innate/Eternal tabs were removed
     }
 
     private static Key ParseKey(string? name, Key fallback)

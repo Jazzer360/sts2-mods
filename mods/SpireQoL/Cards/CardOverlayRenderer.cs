@@ -228,12 +228,19 @@ public sealed class CardOverlayRenderer
         var tagW = tabSize.Y;
         var tagH = tabSize.X;
 
-        // Center the row on the top edge; shrink it if it would be wider than the card.
-        var total = tabs.Count * tagW + Math.Max(0, tabs.Count - 1) * TabGap;
-        var fit = total > layer.Size.X && total > 0 ? layer.Size.X / total : 1f;
-        var scale = template.Scale * fit;
-        var step = (tagW + TabGap) * fit;
-        var x0 = (layer.Size.X - total * fit) / 2f;
+        // Center the row on the top edge. Tags keep their size; if the row would be wider than the
+        // card, only the spacing shrinks (tags move closer, overlapping if they must), so the row
+        // never spills past the card's edges. Later tags draw over earlier ones.
+        const float fit = 1f;
+        var scale = template.Scale;
+        var step = tagW + TabGap;
+        var width = tabs.Count * tagW + Math.Max(0, tabs.Count - 1) * TabGap;
+        if (width > layer.Size.X && tabs.Count > 1)
+        {
+            step = Math.Max(0f, (layer.Size.X - tagW) / (tabs.Count - 1));
+            width = step * (tabs.Count - 1) + tagW;
+        }
+        var x0 = (layer.Size.X - width) / 2f;
         // Tucked under the card's top edge (the card art covers the tucked part); the icon end
         // sticks out above.
         var top = -tagH * fit * (1f - TabOverlap - TagDrop);
@@ -282,8 +289,26 @@ public sealed class CardOverlayRenderer
                     if (spec.Crossed) LayoutSlash(slash, icon.Size);
                 }
             }
-            // Tags are icon-only: the tab's number label stays hidden.
-            if (tab.GetNodeOrNull<Label>("Label") is { } label) label.Visible = false;
+            // The tab's number label shows only on quantified proc tabs (block / damage / summon).
+            if (tab.GetNodeOrNull<Label>("Label") is { } label)
+            {
+                label.Visible = spec.Number != null;
+                if (spec.Number is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic)
+                {
+                    // Upright like the icon, centered on the icon's lower-right corner as the game
+                    // places power amounts. In the tab's unrotated coordinates, screen-down is +x
+                    // and screen-right is -y.
+                    label.Text = n.ToString();
+                    label.HorizontalAlignment = HorizontalAlignment.Center;
+                    label.VerticalAlignment = VerticalAlignment.Center;
+                    label.PivotOffset = label.Size / 2f;
+                    label.Rotation = -Mathf.Pi / 2f;
+                    var half = ic.Size * IconScale / 2f;
+                    var iconCenter = ic.Position + ic.Size / 2f;
+                    var corner = iconCenter + new Vector2(half.Y * 0.8f, -half.X * 0.8f);
+                    label.Position = corner - label.Size / 2f;
+                }
+            }
         }
     }
 
