@@ -41,15 +41,15 @@ The game shows these only as card text. `CardModel.Keywords` merges local keywor
 - [~] **Sly tab** (0.9.0: Master Planner icon on a copy of the enchantment tab): from the Sly keyword or single-turn Sly (`IsSlyThisTurn`; Hand Trick).
 - ~~**Exhaust badge**~~ (added Exhaust, Goopy): removed. Added keywords are in the card text, so they don't get a tab.
 - ~~**Innate / Eternal badges**~~: removed in 0.19.0. Neither can be added or removed mid-combat, so they don't say anything about playing the card now.
-- [ ] **Keyword removed** marker, e.g. Exhaust stripped. Removes keywords: Apparition, Chill, Demonic Shield, Discovery, Echo Form, Fusion, Graveblast, Hologram, Hotfix, Ignition, Know Thy Place, Mimic, Mirage, Prolong, Rainbow, Secret Technique, Secret Weapon, Soul's Power, Thinking Ahead, Transfigure, Underworld, Void Form, Voltaic. **(verify)** whether these remove a keyword from *other* cards or only from themselves. Only the first case needs a marker.
+- ~~**Keyword removed** marker~~: dropped (2026-11-09). The change is in the card text, and tabs don't repeat the card text.
 
 ### Cost and play-count changes
 The game already recolors changed costs (blue = increased, green = decreased, red = can't afford). We add *duration* only.
 
-- [ ] **"Free this turn"** marker. Sources: Abundance, Attack/Skill/Power/Colorless potions, Bullet Time, Crossbow, Discovery, Distraction, Infernal Blade, Jeweled Mask, Liquid Memories, Mad Science, Mummified Hand, Orobic Acid, Splash, Vexing Puzzlebox, White Noise.
-- [ ] **"Free this combat"** marker. Sources: Metamorphosis, Touch of Insanity.
-- [ ] **Temporary cost change**: small clock glyph on the cost while the change expires at end of turn or on play. Sources: Snecko Oil and Enlightenment (this turn / until played); Flatten, Pinpoint, Stomp (this turn); Bookmark, Rocket Punch, Slumbering Essence (until played).
-- [ ] **Global cost modifiers**, shown on affected cards. Powers: Borrowed Time, Corruption, Curious, Free Attack, Free Power, Free Skill, Tangled, Veilpiercer, Void Form. Relics: Brilliant Scarf, Spiked Gauntlets.
+- ~~**"Free this turn"** marker~~: dropped (2026-11-09). The game already shows the new cost, and a tab only answers "does something happen when I play this?"
+- ~~**"Free this combat"** marker~~: dropped (2026-11-09), same reason.
+- ~~**Temporary cost change** glyph~~: dropped (2026-11-09). Not a tab, and the game already recolors changed costs.
+- ~~**Global cost modifiers**~~: dropped (2026-11-09). The game already shows the modified cost on each card.
 - [~] **Replay count** (0.10.0: covered by the double-play tab, via the game's own play-count query). Sources: Hidden Gem, Soldier's Stew, Sword Sage power, Transfigure.
 - [~] **"Plays twice" next play** (0.10.0, via `Hook.ModifyCardPlayCount`; 0.18.0: the tab shows the source's own icon): Burst, Duplication, Echo Form, One-Two Punch, Signal Boost, Tag Team powers. Mark the cards in hand this applies to. (Throwing Axe is handled under one-shot relics, §3.)
 
@@ -59,7 +59,7 @@ All seven already have game overlays (`AfflictionModel.OverlayPath`). Our job is
 - [x] **Bound** (Chains of Binding): one Bound card per turn. The game crosses out the cost of the others.
 - [x] **Ringing**: the game crosses out the cost once it can't be played.
 - [x] **Smog** (Smoggy): the game crosses out the cost once it can't be played.
-- [ ] **Entangled** (Tangled): attacks cost +N. The game already recolors the cost; no extra work unless the overlay is unclear.
+- [x] **Entangled** (Tangled): attacks cost +N. The game recolors the cost; nothing to add.
 - [~] **Hexed** (Hex): grants Ethereal → handled by translucency. Confirm the overlay and translucency look right together.
 - [~] **Galvanized** (Galvanic): playing the card deals N damage to you. Crossed Galvanic tab (Proc Indicators).
 - [~] **Tainted**: playing a Tainted card triggers Vital Spark. Crossed Vital Spark tab (Proc Indicators, 0.19.0).
