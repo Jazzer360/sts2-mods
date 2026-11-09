@@ -70,7 +70,9 @@ foreach ($m in $mods) {
 
     $tag = "$($id.ToLower())-v$version"
     if (-not $DryRun) {
-        gh release view $tag *> $null
+        # "release not found" goes to stderr, which Windows PowerShell turns into a terminating
+        # error under ErrorActionPreference=Stop; relax it just for this probe.
+        & { $ErrorActionPreference = 'Continue'; gh release view $tag 2>&1 | Out-Null }
         if ($LASTEXITCODE -eq 0) { Write-Host "$name $version is already released ($tag), skipping."; continue }
     }
 
