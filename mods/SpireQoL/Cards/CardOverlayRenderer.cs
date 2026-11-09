@@ -255,13 +255,31 @@ public sealed class CardOverlayRenderer
             if (!on) continue;
 
             var spec = tabs[i];
+            try
+            {
+                LayoutTab(tab, spec, x0 + i * step, top, tagW * fit, scale);
+            }
+            catch (Exception ex)
+            {
+                // Never leave a tag half-configured: a copy of the card's enchantment tab that
+                // failed partway would still show that enchantment's icon and number.
+                tab.Visible = false;
+                if (_tabErrors++ % 600 == 0) ModEntry.Log.Warn($"tab layout failed ({spec.Key}), tab hidden: {ex.Message}");
+            }
+        }
+    }
+
+    private int _tabErrors;
+
+    private static void LayoutTab(Control tab, TabSpec spec, float left, float top, float visualWidth, Vector2 scale)
+    {
+        {
             // Rotating +90° about the node's top-left puts its visual box at x ∈ [-h, 0], so shift
             // right by the visual width to land the tag's top-left at (left, top).
-            var left = x0 + i * step;
             tab.PivotOffset = Vector2.Zero;
             tab.Rotation = Mathf.Pi / 2f;
             tab.Scale = scale;
-            tab.Position = new Vector2(left + tagW * fit, top);
+            tab.Position = new Vector2(left + visualWidth, top);
             // Not the template's tint: the game greys its tab for a disabled enchantment.
             tab.Modulate = Colors.White;
             tab.SelfModulate = Colors.White;
@@ -278,7 +296,7 @@ public sealed class CardOverlayRenderer
                 icon.Rotation = -Mathf.Pi / 2f;
                 icon.Scale = new Vector2(IconScale, IconScale);
                 icon.Position = visibleCenter - icon.Size / 2f;
-                icon.Texture = spec.Icon;
+                icon.Texture = GameIcons.Valid(spec.Icon) ? spec.Icon : null;
                 // The game sets this on its own icon for a disabled enchantment, which runs the icon
                 // through the backdrop's green colorize shader; Duplicate() copies whatever it was.
                 icon.UseParentMaterial = false;

@@ -9,6 +9,10 @@ Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). Design notes: doc
 - Mod AssemblyName == manifest `id` == `<ModId>.json` filename.
 - Every feature implements `IFeature` and is applied through `FeatureHost`, so one broken patch can't crash the game.
 
+## Logs first
+
+Before working on in-game feedback, read the game logs (`%APPDATA%\SlayTheSpire2\logs\godot*.log`, newest first): `[SpireQoL]` errors, and `[SpireQoL] [audit]` lines (forecast and proc mismatches). Fix or note what they show, then clear the old log files once they're addressed.
+
 ## Documentation rules (required with every change)
 
 Any change to mod behavior updates all three in the same commit:

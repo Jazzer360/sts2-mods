@@ -27,6 +27,11 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 - **A child node `SpireQoL_CardOverlay`** under `%CardContainer` of each card node in your hand that has something to show. While a decorated card is in your hand, Spire QoL changes that container's `Modulate` alpha (Ethereal translucency). The alpha is restored as soon as the node stops showing that card. The game reuses card nodes, so this matters.
 - **A subscription to `CombatManager.CombatSetUp`,** to know the current combat.
 - **One file**, `mods/SpireQoL/SpireQoL.settings.cfg` (JSON). Never written to game saves. New on-card tab kinds are added to it as they first appear (saved at most every 3 seconds).
+- **Two audits write to the game log** (`godot.log`, lines start with `[SpireQoL] [audit]`) when a prediction doesn't match what happened, to surface bugs:
+  - **Forecast audit:** the Incoming Damage forecast from the last moment of your turn, against the HP you and Osty actually lost by your next turn (from the game's combat history). A mismatch logs the forecast breakdown and every damage and block entry.
+  - **Proc audit:** the tabs on a card just before you played it, against what happened until your next card play. It logs a relic or power that fired with no tab, a relic tab whose relic didn't fire, proc block that differs, and proc damage predicted but not dealt (or the reverse).
+  - Both only read the combat history and subscribe to relics' and powers' `Flashed` events. They're the features `forecast-audit` and `proc-audit`, on by default.
+- **Error logging is capped:** a failure that repeats every frame is logged in full once, then as a count every ~600 repeats.
 - **No Harmony patches.** Everything is read from live game state each frame; the game's hook queries it calls (`Hook.ModifyCardPlayCount`, `ModifyBlock`, `ModifyDamage`, `ShouldEtherealTrigger`, `ModifyOrbPassiveTriggerCount`) are pure queries with no side effects.
 
 ---
@@ -173,6 +178,7 @@ Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a p
 ```
 [attack]  14     incoming damage
 [defend] − 5     your block at end of turn
+[osty]   − 4     what Osty absorbs (Necrobinder, only while Osty is out; red if it dies)
 ──────────
       =   9     what you'll lose (red), or 0 in green
 ```
@@ -180,6 +186,7 @@ Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a p
 **Placement:** it sits just left of your block indicator, at the left end of your HP bar, and follows your character. If that doesn't fit on screen (your character stands near the left edge), it drops below the HP bar and every row of power icons instead; wrapped rows are measured. Move it with F8, or middle-click to pin it to the screen instead.
 
 **How the numbers are worked out:** the enemy turn is simulated hit by hit, in turn order:
+- **Osty** (Necrobinder): enemies never target Osty, but its Die For You power takes the part of an enemy attack that gets through *your* block (pets share your block), up to Osty's HP; the overkill comes back to you. Damage that isn't an attack (Burn, Constrict, HP loss) isn't redirected. The Osty row uses Die For You's icon.
 - **Your end-of-turn self damage** lands first, against your end-of-turn block.
 - **Poison:** an enemy that Poison will kill doesn't attack. Poison ticks at the start of its turn, before it moves. The amount is the game's own poison preview (`PoisonPower.CalculateTotalDamageNextTurn`), which already applies per-hit damage caps such as Exoskeleton's **Hard To Kill** (each instance capped, e.g. at 9). Skulking Colony's **Hardened Shell** caps an enemy's *total* HP loss per turn; the game's preview ignores that, so we apply it.
 - **Doom doesn't stop attacks.** Doomed enemies die at the end of their own turn, after attacking.
@@ -242,10 +249,10 @@ Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a p
 | Pillar of Creation | cards that create cards | block × cards created |
 | Gravity, Serpent Form | every card | damage |
 | Panache | the card that completes its count | damage |
-| Black Hole | star-cost cards | damage |
+| Black Hole | cards that spend stars or gain stars (Gather Light, Venerate...; every card under The Sealed Throne) | damage per trigger |
 | Haunt | Soul | damage |
 | Sleight of Flesh | cards that apply debuffs to enemies | damage × debuffs that land (Artifact cancels one each; single-target cards use the best target) |
-| Juggernaut | cards that gain block | damage per block gain |
+| Juggernaut | cards that gain block, counting block from other procs (Afterimage, Feel No Pain...) | damage per block gain |
 | Speedster | cards that draw | damage × cards drawn |
 | Cacophony | cards whose draws finish its countdown | damage |
 | Smokestack | cards that create statuses | damage × statuses |
@@ -269,6 +276,9 @@ Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a p
 | Tender, Smoggy (on you) | every card / skills | **crossed** trigger |
 | Galvanic (enemy) | Galvanized cards | **crossed**, damage to you |
 | Vital Spark (enemy) | Tainted cards | **crossed** trigger |
+| Rupture | cards that cost you HP (Bloodletting-style HP loss) | trigger |
+| Metronome | cards whose channels reach its orb count (including Storm's lightning from a power) | damage |
+| Bone Flute | cards that make Osty attack, while Osty is out | block |
 | Intimidating Helmet | cards spending ≥ 2 energy (energy actually spent: X-cost counts your energy) | block |
 | Daughter of the Wind | attacks | block |
 | Permafrost | powers (first this combat) | block |
@@ -294,7 +304,11 @@ Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a p
 
 **Game UI touched:** on-card tabs only (see above). **Game code read (not changed):** `Hook.ModifyCardPlayCount`, `Hook.ModifyBlock`, `Hook.ModifyDamage`, `CardEnergyCost.GetAmountToSpend`, `CardModel.GetStarCostWithModifiers`, and a few relics' and powers' private counters (read by reflection).
 
-**Not yet:** procs set off by other procs (e.g. Afterimage block setting off Juggernaut), Metronome (orbs channeled), Bone Flute (Osty attacks), Pagestorm / Iteration (what you draw), Rupture (HP loss from cards).
+**Procs of procs:** a second pass runs the procs that other procs feed: block from any proc counts toward Juggernaut, Storm's lightning toward Metronome, and The Sealed Throne's stars toward Black Hole.
+
+**Not shown on purpose:** procs that fire on *drawing* a card (Pagestorm, Iteration, Automation, Speedster on draw...) happen when the card is drawn, not when you play it, so there's no choice to inform.
+
+**Not yet:** deeper chains (a proc's block setting off Juggernaut whose damage sets off something else).
 
 ---
 

@@ -54,6 +54,8 @@ public static class ModEntry
             new IncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
             new IntentForecastFeature(),
+            new Diagnostics.ForecastAudit(),
+            new Diagnostics.ProcAudit(ctx),
         };
         foreach (var f in features) Features.Add(f);
 

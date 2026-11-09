@@ -62,6 +62,8 @@ public sealed class OverlayHost
     public void AddFeature(string id, IFrameFeature feature) => _features.Add((id, feature));
 
     /// <summary>Runs after all features each frame (e.g. a shared renderer).</summary>
+    private readonly Dictionary<string, int> _lateErrors = new();
+
     public void AddLateFrame(Action action) => _lateFrame.Add(action);
 
     internal void RegisterWidget(MovableWidget widget) => _widgets.Add(widget);
@@ -153,7 +155,15 @@ public sealed class OverlayHost
         foreach (var late in _lateFrame)
         {
             try { late(); }
-            catch (Exception ex) { _log.Error($"late frame error: {ex}"); }
+            catch (Exception ex)
+            {
+                // Log the first occurrence in full, then only a count every 600 repeats (~10s), so a
+                // per-frame failure can't flood the game log.
+                var key = ex.GetType().Name + ex.TargetSite;
+                var n = _lateErrors[key] = (_lateErrors.TryGetValue(key, out var prev) ? prev : 0) + 1;
+                if (n == 1) _log.Error($"late frame error: {ex}");
+                else if (n % 600 == 0) _log.Error($"late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         if (WidgetRoot != null)

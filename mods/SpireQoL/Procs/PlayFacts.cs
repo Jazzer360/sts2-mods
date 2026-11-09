@@ -64,6 +64,18 @@ public sealed class PlayFacts
     /// <summary>Enemies its debuffs can land on: every enemy for all-enemy cards, else each possible target.</summary>
     public bool HitsAllEnemies { get; init; }
 
+    /// <summary>Orbs it channels (for Metronome).</summary>
+    public int Channels { get; init; }
+
+    /// <summary>Times it gains you stars (for Black Hole).</summary>
+    public int StarGains { get; init; }
+
+    /// <summary>Times Osty attacks because of it (for Bone Flute).</summary>
+    public int OstyAttacks { get; init; }
+
+    /// <summary>It makes you lose HP (HpLoss value), for Rupture.</summary>
+    public bool LosesHp { get; init; }
+
     public int TotalExhausts => (ExhaustsSelf ? 1 : 0) + ExhaustsOthers;
 
     // ------------------------------------------------------------------ building
@@ -98,6 +110,10 @@ public sealed class PlayFacts
             GeneratedStatuses = statuses * Math.Max(1, plays),
             EnemyDebuffs = EnemyDebuffTypes(card),
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
+            Channels = ChannelCount(card, name, me) * Math.Max(1, plays),
+            StarGains = StarGainCards.Contains(name) ? Math.Max(1, plays) : 0,
+            OstyAttacks = OstyAttackCards.Contains(name) ? Math.Max(1, plays) : 0,
+            LosesHp = card.DynamicVars.ContainsKey("HpLoss"),
         };
     }
 
@@ -198,6 +214,31 @@ public sealed class PlayFacts
         if (name == "SecondWind") return others.Count(c => c.Type != CardType.Attack);
         return card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock") ? 1 : 0;
     }
+
+    // ------------------------------------------------------------------ orbs, stars, Osty
+
+    private static int ChannelCount(CardModel card, string name, Player me) => name switch
+    {
+        "BallLightning" or "Chill" or "ColdSnap" or "Coolheaded" or "Fusion" or "Glasswork" or "Ignition"
+            or "Null" or "ShadowShield" or "Spinner" or "Zap" or "Darkness" => 1,
+        "Glacier" => 2,
+        "MeteorStrike" or "Rainbow" => 3,
+        "Chaos" or "ConsumingShadow" or "Hibernate" or "IceLance" or "Refract" => Sts2State.Var(card, "Repeat", 1),
+        "Tempest" => me.PlayerCombatState?.Energy ?? 0, // X lightning
+        _ => 0,
+    };
+
+    // Cards that gain you stars when played (PlayerCmd.GainStars in OnPlay).
+    private static readonly HashSet<string> StarGainCards = new()
+    {
+        "BigBang", "GatherLight", "Glow", "HiddenCache", "KnockoutBlow", "RoyalGamble", "ShiningStrike", "SolarStrike", "Venerate",
+    };
+
+    // Cards that make Osty attack.
+    private static readonly HashSet<string> OstyAttackCards = new()
+    {
+        "BoneShards", "Flatten", "HighFive", "Poke", "Protector", "Rattle", "RightHandHand", "SicEm", "Snap", "Squeeze", "SweepingGaze", "Unleash",
+    };
 
     // ------------------------------------------------------------------ generated cards
 

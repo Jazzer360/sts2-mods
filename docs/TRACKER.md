@@ -26,6 +26,8 @@ Legend: `[ ]` to do · `[~]` built, needs an in-game check · `[x]` done · **(v
 
 ## 1. Card modifiers → `card-indicators`
 
+- [ ] **Decide: keep the Sly tab?** (2026-11-09) It doesn't fit "happens when you play this card". It helped when choosing cards to retain before Well Laid Plans changed; the game already makes Sly cards glow when you pick cards to discard. Stays for now.
+
 ### Keywords
 The game shows these only as card text. `CardModel.Keywords` merges local keywords (on the card) with global ones (granted by powers), so a single read catches both.
 
@@ -295,4 +297,7 @@ Before the decision, one tab per effect had the source's icon and **no numbers**
 | [~] | Child of the Stars (power), Galactic Dust (relic) | star-spending cards | `AfterStarsSpent` procs **(verify effects)**. |
 | [~] | Shroud, Vicious, Vital Spark (powers) | Doom / Vulnerable appliers; Tainted cards | Built in 0.19.0. Sandpit and Sword Sage don't react to card plays (checked). |
 | [x] | **Full sweep** (2026-11-09) | | Every power and relic overriding the play, exhaust, discard, draw, stars, energy, debuff, block, damage, card-created and shuffle hooks. The resulting source list is in FEATURES.md "Proc Indicators". |
-| [ ] | Not yet | | Procs set off by procs (Afterimage block → Juggernaut), Metronome (orbs channeled), Bone Flute (Osty attacks), Pagestorm / Iteration (depend on what you draw), Rupture (HP loss from cards), Beacon of Hope / Hammer Time (multiplayer). |
+| [~] | Procs of procs, Metronome, Bone Flute, Rupture, Black Hole on star gain | | 0.20.0. Juggernaut counts block from every proc; Metronome counts Storm's lightning; Black Hole counts The Sealed Throne's stars. |
+| — | On-draw procs (Pagestorm, Iteration, Automation...) | | Not shown by design: they fire on draw, not on play (decided 2026-11-09). |
+| [ ] | Not yet | | Deeper chains (a proc's damage setting off another proc), Beacon of Hope / Hammer Time (multiplayer). |
+| [~] | **Audits** | | 0.20.0: forecast and proc audits log mismatches to godot.log. Read the log before each round of work. |

@@ -57,6 +57,11 @@ public sealed class TurnEndModel
 
     public int Overblock => Math.Max(0, ExpectedBlock - BlockableTotal);
 
+    /// <summary>Necrobinder: Osty's HP now (0 if Osty isn't out), and how much of the enemy turn it absorbs.</summary>
+    public int OstyHp { get; private set; }
+    public int OstyTaken { get; private set; }
+    public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
+
     // Blockable end-of-turn damage from cards in hand (DamageVar "Damage").
     private static readonly HashSet<string> BlockableHandCards = new() { "Burn", "Decay", "Infection", "Toxic", "Wither" };
 
@@ -163,6 +168,15 @@ public sealed class TurnEndModel
         var hasReflect = me.Creature.HasPower<ReflectPower>();
         var targets = cs.Players.Select(p => p.Creature).ToList();
 
+        // Osty (Necrobinder): enemies never target it (monster attacks target PlayerCreatures), but
+        // its Die For You power redirects a powered attack's unblocked damage on you to Osty
+        // (DieForYouPower.ModifyUnblockedDamageTarget). Hits on you use your block first; Osty
+        // takes what gets through, up to its HP, and the overkill comes back to you
+        // (CreatureCmd.Damage). Unpowered damage (Burn, Constrict...) isn't redirected.
+        var osty = me.Osty;
+        var ostyHp = osty != null && osty.IsAlive && osty.HasPower<DieForYouPower>() ? osty.CurrentHp : 0;
+        m.OstyHp = ostyHp;
+
         foreach (var enemy in cs.Enemies)
         {
             if (!enemy.IsAlive || enemy.Monster == null || enemy.IsStunned) continue;
@@ -205,7 +219,11 @@ public sealed class TurnEndModel
 
                     var blocked = Math.Min(block, perHit);
                     block -= blocked;
-                    m.DamageThrough += perHit - blocked;
+                    var through = perHit - blocked;
+                    var toOsty = Math.Min(through, ostyHp);
+                    ostyHp -= toOsty;
+                    m.OstyTaken += toOsty;
+                    m.DamageThrough += through - toOsty;
                     landed += perHit;
                     hitsLanded++;
 

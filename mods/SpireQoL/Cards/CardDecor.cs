@@ -11,7 +11,8 @@ namespace SpireQoL.Cards;
 ///  - Number: only on quantified proc tabs (block gained, damage dealt, summon), else null.
 /// Key de-duplicates (one tab per source per card) and is the tab's settings key.
 /// </summary>
-public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null);
+/// Amount is the proc amount even when the number isn't displayed (ProcNumbers off), for the audit.
+public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null, string? Kind = null, int Amount = 0);
 
 /// <summary>
 /// What should be drawn on one card this frame. Features fill it in; CardOverlayRenderer draws it.
@@ -33,11 +34,12 @@ public sealed class CardDecor
     internal Func<string, bool>? Filter { get; init; }
 
     /// <returns>Whether the tab was added (false if a tab with this key exists or it's turned off).</returns>
-    public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null)
+    /// <param name="kind">"block", "damage" or "summon" for quantified procs (with <paramref name="amount"/>), else null.</param>
+    public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, string? kind = null, int amount = 0)
     {
         if (Tabs.Any(t => t.Key == key)) return false;
         if (Filter != null && !Filter(key)) return false;
-        Tabs.Add(new TabSpec(key, icon, crossed, number));
+        Tabs.Add(new TabSpec(key, icon, crossed, number, kind, amount));
         return true;
     }
 
@@ -65,5 +67,18 @@ public sealed class CardDecorFrame
 
     public CardDecor? Get(CardModel card) => _decor.TryGetValue(card, out var d) ? d : null;
 
-    public void Clear() => _decor.Clear();
+    /// <summary>Last frame's tabs per card (what was predicted just before a card was played; used by ProcAudit).</summary>
+    public IReadOnlyDictionary<CardModel, IReadOnlyList<TabSpec>> Previous { get; private set; }
+        = new Dictionary<CardModel, IReadOnlyList<TabSpec>>(ReferenceEqualityComparer.Instance);
+
+    public void Clear()
+    {
+        var snap = new Dictionary<CardModel, IReadOnlyList<TabSpec>>(ReferenceEqualityComparer.Instance);
+        foreach (var (card, d) in _decor)
+        {
+            if (d.Tabs.Count > 0) snap[card] = d.Tabs.ToList();
+        }
+        Previous = snap;
+        _decor.Clear();
+    }
 }

@@ -52,12 +52,17 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     private enum Kind { Trigger, Block, Damage, Summon }
 
-    private readonly record struct Hit(Kind Kind, int Amount, bool Harmful = false)
+    /// <param name="Count">Separate instances (block gains for Juggernaut).</param>
+    private readonly record struct Hit(Kind Kind, int Amount, bool Harmful = false, int Count = 1)
     {
         public static Hit Trig(bool harmful = false) => new(Kind.Trigger, 0, harmful);
     }
 
     private readonly HashSet<string> _warned = new();
+
+    // Procs that other procs can set off; evaluated in a second pass with these extras.
+    private static readonly HashSet<string> SecondOrder = new() { "JuggernautPower", "Metronome", "BlackHolePower" };
+    private int _xBlockGains, _xChannels, _xStarGains;
 
     private static bool CanEverPlayNow(CardModel card)
     {
@@ -119,18 +124,34 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             var d = _ctx.Decor.For(card);
             // Several enemies can carry the same power: one tab, amounts summed.
             var merged = new Dictionary<string, (AbstractModel Src, Hit Hit)>();
-            foreach (var src in sources)
+            void Run(bool secondOrder)
             {
-                Hit? hit;
-                try { hit = Evaluate(src, f); }
-                catch { hit = null; }
-                if (hit is not { } h) continue;
-                if (h.Kind != Kind.Trigger && h.Amount <= 0) continue;
-                var key = "proc:" + src.GetType().Name;
-                merged[key] = merged.TryGetValue(key, out var prev)
-                    ? (prev.Src, prev.Hit with { Amount = prev.Hit.Amount + h.Amount })
-                    : (src, h);
+                foreach (var src in sources)
+                {
+                    if (SecondOrder.Contains(src.GetType().Name) != secondOrder) continue;
+                    Hit? hit;
+                    try { hit = Evaluate(src, f); }
+                    catch { hit = null; }
+                    if (hit is not { } h) continue;
+                    if (h.Kind != Kind.Trigger && h.Amount <= 0) continue;
+                    var key = "proc:" + src.GetType().Name;
+                    merged[key] = merged.TryGetValue(key, out var prev)
+                        ? (prev.Src, prev.Hit with { Amount = prev.Hit.Amount + h.Amount, Count = prev.Hit.Count + h.Count })
+                        : (src, h);
+                }
             }
+
+            // First-order procs, then the procs they set off (procs of procs): block gains feed
+            // Juggernaut, Storm's lightning feeds Metronome, The Sealed Throne's stars feed Black Hole.
+            _xBlockGains = _xChannels = _xStarGains = 0;
+            Run(secondOrder: false);
+            _xBlockGains = merged.Values.Where(m => m.Hit.Kind == Kind.Block).Sum(m => m.Hit.Count);
+            foreach (var (src, h) in merged.Values)
+            {
+                if (src is PowerModel { } sp && sp.GetType().Name == "StormPower") _xChannels += sp.Amount * f.Plays;
+                if (src is PowerModel { } tp && tp.GetType().Name == "TheSealedThronePower" && tp.Amount > 0) _xStarGains += f.Plays;
+            }
+            Run(secondOrder: true);
 
             foreach (var (key, (src, h)) in merged)
             {
@@ -141,7 +162,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     _ => null,
                 };
                 int? number = h.Kind != Kind.Trigger && _ctx.Settings.ProcNumbers ? h.Amount : null;
-                d.AddTab(key, icon, crossed: h.Harmful, number: number);
+                var kind = h.Kind switch { Kind.Block => "block", Kind.Damage => "damage", Kind.Summon => "summon", _ => null };
+                d.AddTab(key, icon, crossed: h.Harmful, number: number, kind: kind, amount: h.Amount);
             }
         }
     }
@@ -170,14 +192,21 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 switch (p.GetType().Name)
                 {
                     // ---- your powers: on play
-                    case "AfterimagePower" when mine: return Block(a * plays);
-                    case "RagePower" when mine && type == CardType.Attack: return Block(a * plays);
-                    case "SpiritOfAshPower" when mine && card.Keywords.Contains(CardKeyword.Ethereal): return Block(a * plays);
-                    case "DanseMacabrePower" when mine && f.Energy >= Sts2State.Var(p, "Energy", 2): return Block(a * plays);
+                    case "AfterimagePower" when mine: return BlockN(a, plays);
+                    case "RagePower" when mine && type == CardType.Attack: return BlockN(a, plays);
+                    case "SpiritOfAshPower" when mine && card.Keywords.Contains(CardKeyword.Ethereal): return BlockN(a, plays);
+                    case "DanseMacabrePower" when mine && f.Energy >= Sts2State.Var(p, "Energy", 2): return BlockN(a, plays);
                     case "GravityPower" when mine: return Damage(a * plays);
                     case "SerpentFormPower" when mine: return Damage(a * plays);
                     case "PanachePower" when mine && plays >= Sts2State.Var(p, "CardsLeft", 5): return Damage(a);
-                    case "BlackHolePower" when mine && f.Stars > 0: return Damage(a);
+                    // Second order (run after first-order procs, which can feed them): stars
+                    // gained also set off Black Hole (The Sealed Throne gains stars on every card).
+                    case "BlackHolePower" when mine:
+                    {
+                        var times = (f.Stars > 0 ? 1 : 0) + f.StarGains + _xStarGains;
+                        return times > 0 ? Damage(a * times) : null;
+                    }
+                    case "RupturePower" when mine && f.LosesHp: return Hit.Trig();
                     case "DevourLifePower" when mine && card is Soul: return new Hit(Kind.Summon, a * plays);
                     case "HauntPower" when mine && card is Soul: return new Hit(Kind.Damage, a * plays);
                     case "StormPower" when mine && type == CardType.Power: return Hit.Trig();
@@ -201,7 +230,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
 
                     // ---- your powers: exhaust / discard / draw / stars / energy / debuffs / created cards
-                    case "FeelNoPainPower" when mine && exhausts > 0: return Block(a * exhausts);
+                    case "FeelNoPainPower" when mine && exhausts > 0: return BlockN(a, exhausts);
                     case "DarkEmbracePower" when mine && exhausts > 0: return Hit.Trig();
                     case "ChildOfTheStarsPower" when mine && f.Stars > 0: return Block(a * f.Stars);
                     case "OrbitPower" when mine && f.Energy > 0 && f.Energy >= p.DisplayAmount: return Hit.Trig();
@@ -212,14 +241,15 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "StratagemPower" when mine && shuffles: return Hit.Trig();
                     case "SleightOfFleshPower" when mine: return Damage(a * f.DebuffsLandingTotal());
                     case "ViciousPower" when mine && f.DebuffsLandingTotal(t => t == typeof(VulnerablePower)) > 0: return Hit.Trig();
-                    case "ShroudPower" when mine: return Block(a * f.DebuffsLandingTotal(t => t == typeof(DoomPower)));
-                    case "JuggernautPower" when mine && f.BlockGains > 0: return Damage(a * f.BlockGains);
+                    case "ShroudPower" when mine: return BlockN(a, f.DebuffsLandingTotal(t => t == typeof(DoomPower)));
+                    // Every block gain sets it off, including block from other procs (Afterimage...).
+                    case "JuggernautPower" when mine && f.BlockGains + _xBlockGains > 0: return Damage(a * (f.BlockGains + _xBlockGains));
                     case "EnvenomPower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "ConcoctPower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "ReaperFormPower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "MonarchsGazePower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "ArsenalPower" when mine && generated > 0: return Hit.Trig();
-                    case "PillarOfCreationPower" when mine && generated > 0: return Block(a * generated);
+                    case "PillarOfCreationPower" when mine && generated > 0: return BlockN(a, generated);
                     case "SmokestackPower" when mine && statuses > 0: return Damage(a * statuses);
                     case "TrashToTreasurePower" when mine && statuses > 0: return Hit.Trig();
 
@@ -296,6 +326,14 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
                     case "Regalite" when generated > 0 && !Sts2State.Private(r, "UsedThisTurn", true): return RelicBlock(r, 1);
                     case "TheAbacus" when shuffles: return RelicBlock(r, 1);
+                    case "Metronome":
+                    {
+                        var n = N("OrbCount", 7);
+                        var channeled = Sts2State.Private(r, "OrbsChanneled", n);
+                        var channels = f.Channels + _xChannels;
+                        return channels > 0 && channeled < n && channeled + channels >= n ? RelicDamage(r, 1) : null;
+                    }
+                    case "BoneFlute" when f.OstyAttacks > 0 && _me.IsOstyAlive: return RelicBlock(r, f.OstyAttacks);
                     case "UnceasingTop" when Sts2State.Hand(_me).Count == 1 && draws == 0 && generated == 0: return Hit.Trig();
                 }
                 return null;
@@ -340,8 +378,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     {
         var props = r.DynamicVars.TryGetValue("Block", out var v) && v is BlockVar bv ? bv.Props : ValueProp.Unpowered;
         var one = Block(Sts2State.Var(r, "Block"), props).Amount;
-        return new Hit(Kind.Block, one * Math.Max(0, times));
+        return new Hit(Kind.Block, one * Math.Max(0, times), Count: Math.Max(0, times));
     }
+
+    /// <summary><paramref name="times"/> separate block gains of <paramref name="each"/>.</summary>
+    private Hit BlockN(int each, int times) => times <= 0 ? new Hit(Kind.Block, 0, Count: 0)
+        : new Hit(Kind.Block, Block(each).Amount * times, Count: times);
 
     private Hit RelicDamage(RelicModel r, int times)
     {

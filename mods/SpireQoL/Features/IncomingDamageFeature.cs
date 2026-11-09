@@ -2,6 +2,8 @@ using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Helpers;
 using SpireQoL.Combat;
+using SpireQoL.Cards;
+using MegaCrit.Sts2.Core.Models.Powers;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -81,6 +83,12 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         _block = Number(BlockColor);
         grid.AddChild(_block);
 
+        // Necrobinder: what Osty absorbs (Die For You), shown only while Osty is out.
+        _ostyIcon = UiKit.Icon(GameIcons.Power<DieForYouPower>(), IconSize);
+        grid.AddChild(_ostyIcon);
+        _osty = Number(OstyColor);
+        grid.AddChild(_osty);
+
         grid.AddChild(Rule());
         grid.AddChild(Rule());
 
@@ -110,9 +118,22 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         _attackIcon!.Texture = _attackTiers[AttackTier(incoming) - 1] ?? _attackTiers.FirstOrDefault(t => t != null);
         _incoming!.Text = $"{incoming}";
         _block!.Text = $"− {m.ExpectedBlock}";
+        var ostyOut = m.OstyHp > 0;
+        _ostyIcon!.Visible = ostyOut;
+        _osty!.Visible = ostyOut;
+        if (ostyOut)
+        {
+            _osty.Text = $"− {m.OstyTaken}";
+            // Red when the enemy turn kills Osty (its overkill already counts toward yours).
+            _osty.AddThemeColorOverride("font_color", m.OstyDies ? TakeColor : OstyColor);
+        }
         _result!.Text = $"{take}";
         _result.AddThemeColorOverride("font_color", take > 0 ? TakeColor : SafeColor);
     }
+
+    private TextureRect? _ostyIcon;
+    private Label? _osty;
+    private static readonly Color OstyColor = new(0.75f, 0.85f, 0.7f);
 
     private static Label Number(Color color)
     {

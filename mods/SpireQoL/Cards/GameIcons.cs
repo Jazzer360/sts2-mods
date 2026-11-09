@@ -43,7 +43,7 @@ public static class GameIcons
     /// </summary>
     public static Texture2D? DiscardPile()
     {
-        if (_discardPile != null) return _discardPile;
+        if (Valid(_discardPile)) return _discardPile;
         _discardPile = PileIcon(NCombatRoom.Instance?.Ui?.DiscardPile);
         return _discardPile;
     }
@@ -51,7 +51,7 @@ public static class GameIcons
     /// <summary>The draw pile button's icon (NCombatUi.DrawPile → "Icon").</summary>
     public static Texture2D? DrawPile()
     {
-        if (_drawPile != null) return _drawPile;
+        if (Valid(_drawPile)) return _drawPile;
         _drawPile = PileIcon(NCombatRoom.Instance?.Ui?.DrawPile);
         return _drawPile;
     }
@@ -87,9 +87,17 @@ public static class GameIcons
         return null;
     }
 
+    /// <summary>
+    /// A cached texture can be freed under us: enchantment icons come from the game's
+    /// PreloadManager cache, which is unloaded between rooms/acts. Using a freed one throws
+    /// ObjectDisposedException (0.16.0 hit this ~47,000 times in one session, leaving tags
+    /// half-drawn with a stale enchantment icon). So every cached texture is checked first.
+    /// </summary>
+    public static bool Valid(Texture2D? tex) => tex != null && GodotObject.IsInstanceValid(tex);
+
     private static Texture2D? Cached(Type key, Func<Texture2D?> load)
     {
-        if (Cache.TryGetValue(key, out var tex)) return tex;
+        if (Cache.TryGetValue(key, out var tex) && Valid(tex)) return tex;
         try { tex = load(); } catch { tex = null; }
         Cache[key] = tex;
         return tex;
