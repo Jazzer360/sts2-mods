@@ -62,7 +62,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | `EtherealOpacity` | `0.8` | 0.25–1 (a saved 0.7, the old default, is raised to 0.8 once) |
 | `ShowInnateEternalBadges` | `false` | Innate / Eternal tabs |
 | `DimBlockedCards` | `true` | |
-| `ShowDoublePlay` | `true` | Echo Form tab on cards that play more than once |
+| `ShowDoublePlay` | `true` | Tab with the source's icon on cards that play more than once |
 | `PulseOneStepEarly` | `false` | Relic Counters also flash two steps before firing |
 | `FlashHz` | `2.5` | flash speed |
 
@@ -84,7 +84,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 | --- | --- | --- |
 | Steady (enchantment) | Retain (permanent or this turn only) | Card Indicators |
 | Master Planner (power) | Sly (permanent or this turn only) | Card Indicators |
-| Echo Form (power) | plays more than once (any source: Echo Form, Throwing Axe, Burst...) | Card Indicators |
+| The double-play source (Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or a replay enchantment) | plays more than once because of it | Card Indicators |
 | Goopy (enchantment) | Exhaust was *added* to this card | Card Indicators |
 | Royally Approved / Tezcatara's Ember (enchantments) | Innate / Eternal (off by default) | Card Indicators |
 | Galvanic (power) | Galvanized: playing it damages you | Card Indicators |
@@ -107,7 +107,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 - **Innate / Eternal** (setting `ShowInnateEternalBadges`, off by default): Royally Approved / Tezcatara's Ember tabs, the enchantments that grant them.
 - **Blocked cards** (Bound, Ringing, Smog, Velvet Choker): the card is dimmed, with a crossed tab showing the blocking power's or relic's icon. Detected with the game's own `CardModel.CanPlay`.
 - **Galvanized:** a Galvanic tab (playing the card damages you).
-- **Double play:** an Echo Form tab, whatever the source.
+- **Double play:** one tab per source, with that source's own icon: the power (Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team), the relic (Throwing Axe), or the card's replay enchantment. The game's query reports which models changed the count, so new sources get their own icon automatically.
   - The count comes from the game's own play-count query, the one it runs when you play the card: enchanted replays + 1, then `Hook.ModifyCardPlayCount`. So it covers Echo Form (first N cards each turn), Burst (skills), Duplication, One-Two Punch (attacks), Signal Boost (powers), Throwing Axe (first card each combat), Tag Team, enchantments, and anything added later.
   - Tag Team only doubles attacks aimed at the enemy that has it. Single-target cards are checked against each enemy, and the best case is shown.
 

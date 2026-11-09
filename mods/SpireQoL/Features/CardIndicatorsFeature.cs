@@ -1,6 +1,7 @@
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Enchantments;
@@ -19,7 +20,7 @@ namespace SpireQoL.Features;
 ///    (This-turn-only Retain/Sly look the same as permanent ones: tags are icon-only.)
 ///  - Added Exhaust: Goopy (the enchantment that adds Exhaust). Optional Innate: Royally Approved;
 ///    Eternal: Tezcatara's Ember (the enchantments that add them).
-///  - Double play: Echo Form.
+///  - Double play: the icon of whatever causes it (Burst, Echo Form, Throwing Axe, ...).
 ///  - Galvanized: Galvanic power icon (playing it damages you).
 ///  - Blocked by Bound / Ringing / Smog / Velvet Choker: card dimmed + crossed tab with the
 ///    blocking power's or relic's icon.
@@ -101,35 +102,57 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 
             if (s.ShowDoublePlay)
             {
-                var plays = PlayCount(card);
-                if (plays > 1) d.AddTab("double-play", GameIcons.Power<EchoFormPower>());
+                // One tag per source, each with that source's own icon (Burst, Echo Form,
+                // Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or the card's
+                // replay enchantment).
+                foreach (var src in ExtraPlaySources(card))
+                {
+                    var icon = src switch
+                    {
+                        RelicModel r => GameIcons.Relic(r),
+                        PowerModel p => GameIcons.Power(p),
+                        EnchantmentModel en => GameIcons.Enchantment(en),
+                        _ => null,
+                    };
+                    d.AddTab("double-play:" + src.GetType().Name, icon ?? GameIcons.Power<EchoFormPower>());
+                }
             }
         }
     }
 
     /// <summary>
-    /// How many times this card would play right now: the same calculation the game runs when
-    /// you play it (CardModel.GeneratePlayCount): enchanted replays + 1, then Hook.ModifyCardPlayCount.
-    /// That covers Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing
-    /// Axe and anything added later. The hook is a pure query; side effects live in
+    /// What would make this card play more than once right now: the same calculation the game
+    /// runs when you play it (CardModel.GeneratePlayCount): enchanted replays + 1, then
+    /// Hook.ModifyCardPlayCount, which reports the models that changed the count. That covers
+    /// Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe and
+    /// anything added later. The hook is a pure query; side effects live in
     /// AfterModifyingCardPlayCount, which we never call.
     /// Tag Team only doubles attacks aimed at the enemy that has it, so single-target cards are
-    /// checked against each enemy and the best case is shown.
+    /// also checked against each enemy and every source that applies to any of them is shown.
     /// </summary>
-    private static int PlayCount(CardModel card)
+    private static List<AbstractModel> ExtraPlaySources(CardModel card)
     {
+        var sources = new List<AbstractModel>();
         var cs = Sts2State.Combat;
-        if (cs == null) return 1;
-        var baseCount = card.GetEnchantedReplayCount() + 1;
-        var best = Hook.ModifyCardPlayCount(cs, card, baseCount, null, out _);
-        if (card.TargetType == TargetType.AnyEnemy)
+        if (cs == null) return sources;
+        var replays = card.GetEnchantedReplayCount();
+        if (replays > 0 && card.Enchantment != null) sources.Add(card.Enchantment);
+
+        void Add(Creature? target)
         {
-            foreach (var enemy in cs.HittableEnemies)
+            Hook.ModifyCardPlayCount(cs, card, replays + 1, target, out var models);
+            foreach (var m in models)
             {
-                best = Math.Max(best, Hook.ModifyCardPlayCount(cs, card, baseCount, enemy, out _));
+                if (!sources.Contains(m)) sources.Add(m);
             }
         }
-        return best;
+
+        Add(null);
+        if (card.TargetType == TargetType.AnyEnemy)
+        {
+            foreach (var enemy in cs.HittableEnemies) Add(enemy);
+        }
+        return sources;
     }
 
     private static readonly HashSet<string> Blockers = new() { "ChainsOfBindingPower", "RingingPower", "SmoggyPower", "VelvetChoker" };

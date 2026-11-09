@@ -23,6 +23,11 @@ public static class GameIcons
         try { return power.Icon; } catch { return null; }
     }
 
+    public static Texture2D? Enchantment(EnchantmentModel enchantment)
+    {
+        try { return enchantment.Icon; } catch { return null; }
+    }
+
     /// <summary>A power's icon by type, from its canonical model (e.g. Echo Form, Master Planner).</summary>
     public static Texture2D? Power<T>() where T : PowerModel
         => Cached(typeof(T), () => ModelDb.Power<T>().Icon);

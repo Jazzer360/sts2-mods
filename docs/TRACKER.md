@@ -51,7 +51,7 @@ The game already recolors changed costs (blue = increased, green = decreased, re
 - [ ] **Temporary cost change**: small clock glyph on the cost while the change expires at end of turn or on play. Sources: Snecko Oil and Enlightenment (this turn / until played); Flatten, Pinpoint, Stomp (this turn); Bookmark, Rocket Punch, Slumbering Essence (until played).
 - [ ] **Global cost modifiers**, shown on affected cards. Powers: Borrowed Time, Corruption, Curious, Free Attack, Free Power, Free Skill, Tangled, Veilpiercer, Void Form. Relics: Brilliant Scarf, Spiked Gauntlets.
 - [~] **Replay count** (0.10.0: covered by the double-play tab, via the game's own play-count query). Sources: Hidden Gem, Soldier's Stew, Sword Sage power, Transfigure.
-- [~] **"Plays twice" next play** (0.10.0: Echo Form tab with the play count, via `Hook.ModifyCardPlayCount`): Burst, Duplication, Echo Form, One-Two Punch, Signal Boost, Tag Team powers. Mark the cards in hand this applies to. (Throwing Axe is handled under one-shot relics, §3.)
+- [~] **"Plays twice" next play** (0.10.0, via `Hook.ModifyCardPlayCount`; 0.18.0: the tab shows the source's own icon): Burst, Duplication, Echo Form, One-Two Punch, Signal Boost, Tag Team powers. Mark the cards in hand this applies to. (Throwing Axe is handled under one-shot relics, §3.)
 
 ### Afflictions (monster-applied)
 All seven already have game overlays (`AfflictionModel.OverlayPath`). Our job is to stay out of their way and add the "can't play right now" state the game doesn't show. **(verify)** in game which of these the game already dims.
