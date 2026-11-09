@@ -49,8 +49,7 @@ public static class ModEntry
             new CardIndicatorsFeature(ctx),
             new RelicCountersFeature(ctx),
             new RelicRemindersFeature(ctx),
-            new IncomingDamageFeature(ctx), // before Block Forecast: it hides when this is shown
-            new BlockForecastFeature(ctx),
+            new IncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
             new IntentForecastFeature(),
         };

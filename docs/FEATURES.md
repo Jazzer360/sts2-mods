@@ -14,7 +14,6 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Card Indicators](#card-indicators) | `card-indicators` | 🟡 | on |
 | [Relic Counters](#relic-counters) | `relic-counters` | 🟡 | on |
 | [Relic Reminders](#relic-reminders) | `relic-reminders` | 🟡 | on |
-| [Block Forecast](#block-forecast) | `block-forecast` | 🟡 | on |
 | [Incoming Damage](#incoming-damage) | `incoming-damage` | 🟡 | on |
 | [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | 🟡 | on |
 | [Intent Forecast](#intent-forecast) | `intent-forecast` | ⚪ | on (does nothing yet) |
@@ -73,9 +72,9 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 ## On-card tabs: one language for everything on a card
 
-Every indicator about a specific card in your hand uses the **same form**: a tab in a centered row along the card's **top edge**, overlapping it slightly. In a fanned hand the tops of cards stay visible while their sides are covered, so you can read the tabs at a glance without hovering. A tab means something out of the ordinary will happen when you play that card.
+Every indicator about a specific card in your hand uses the **same form**: a **tag** hanging up off the card's **top edge**, centered in a row, one tag per effect. In a fanned hand the tops of cards stay visible while their sides are covered, so you can read the tags at a glance without hovering. A tag means something out of the ordinary will happen when you play that card.
 
-- **Look:** each tab is a copy of the card's own enchantment tab, the game's banner art, carrying the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
+- **Look:** each tag is a copy of the card's own enchantment tab (the game's banner art), rotated a quarter turn so it hangs off the top edge the way an enchantment tab hangs off the side. The icon and number stay upright. Only a sliver overlaps the card frame, so tags stay clear of the card name. Each tag carries the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
 - **Number:** the tab's small number slot holds a count when one matters: play count, damage, or `1` = this turn only.
 - **Red slash:** the icon crossed out means playing this card breaks or is blocked by that thing.
 - **One per source:** each source shows at most one tab per card. If a card has many, the row shrinks to fit the card's width.
@@ -162,25 +161,6 @@ Thresholds are read live from each relic, so balance patches are picked up autom
 
 ---
 
-## Block Forecast
-
-**What you see** (default: left side of the screen): `Block 5  +6 at end of turn` with a breakdown, so you stop overblocking. Shown only during your turn when something will add block, **and only when Incoming Damage isn't showing** (that line already includes end-of-turn block).
-
-Counts:
-- Plating
-- Frost orb passives (times the game's passive trigger count, so trigger-boosting effects are included)
-- Orichalcum / Fake Orichalcum (only if you currently have 0 block, like the game checks)
-- Cloak Clasp (block × cards in hand)
-- Ripple Basin (only if you haven't played an attack this turn)
-
-Not counted: Horn Cleat and Captain's Wheel give block at the *start* of turn 2/3, after the enemy has attacked; Relic Counters shows their countdown.
-
-**Game UI touched:** none; our own widget.
-
-**Not yet:** Sturdy Clamp carry-over, Parrying Shield threshold, placement next to the health bar.
-
----
-
 ## Incoming Damage
 
 **What you see**, during your turn: a small stacked sum, read like a math problem. It uses the game's own intent icons: defend, and the attack icon tier that matches the incoming total (the same thresholds enemies use: under 5, 10, 20, 40, and 40+):
@@ -208,6 +188,13 @@ Not counted: Horn Cleat and Captain's Wheel give block at the *start* of turn 2/
 **Sources:**
 - **Blockable:** enemy attack intents (`AttackIntent.GetSingleDamage` × hits, the same numbers the game shows); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration debuffs.
 - **Unblockable:** Regret (HP loss = cards in hand), Bad Luck, Beckon, Demise.
+- **End-of-turn block** (the "block" line = current block + these):
+  - Plating
+  - Frost orb passives (times the game's passive trigger count, so trigger-boosting effects are included)
+  - Orichalcum / Fake Orichalcum (only if you currently have 0 block, like the game checks)
+  - Cloak Clasp (block × cards in hand)
+  - Ripple Basin (only if you haven't played an attack this turn)
+  - Not counted: Horn Cleat and Captain's Wheel. They give block at the *start* of turn 2/3, after the enemy has attacked; Relic Counters shows their countdown.
 
 **Game UI touched:** none; our own widget.
 

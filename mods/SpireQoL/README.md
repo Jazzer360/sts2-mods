@@ -7,7 +7,6 @@ Display-only quality-of-life tweaks for Slay the Spire 2. The mod doesn't change
 | Card Indicators | Ethereal cards turn translucent; badges for Retain/Sly/added Exhaust; cards blocked by afflictions are dimmed |
 | Relic Counters | Tick-bar tray above your hand for Pen Nib, Kunai, Stone Calendar and every other counter relic |
 | Relic Reminders | Relic icons on the cards they affect; attacks glow when Pen Nib is ready |
-| Block Forecast | The block you'll gain at end of turn (Plating, Frost orbs...) beside your block |
 | Incoming Damage | One line under your HP: incoming damage, end-of-turn block, damage you will take |
 | Shuffle Warning | Card badges when a draw can reshuffle, and which hand cards stay out |
 | Intent Forecast | Each enemy's upcoming moves (not built yet) |

@@ -28,7 +28,7 @@ public sealed class CardOverlayRenderer
     private static readonly Color SlashColor = new(1f, 0.15f, 0.1f, 0.95f);
 
     private const float TabGap = 6f;
-    private const float TabOverlap = 0.3f; // fraction of the tab height that sits on the card
+    private const float TabOverlap = 0.15f; // fraction of the tag length that overlaps the card frame
 
     private readonly OverlayHost _host;
     private readonly CardDecorFrame _frame;
@@ -170,14 +170,22 @@ public sealed class CardOverlayRenderer
             e.Tabs.Add(MakeTab(template, e.Overlay));
         }
 
-        // Center the row on the top edge; shrink it if it would be wider than the card.
+        // The enchantment tab is drawn to stick out sideways from the card's left edge. Rotated a
+        // quarter turn clockwise, its card-side end points down, so each tag hangs up off the
+        // top edge like an enchantment tab would off the side. Visually a rotated tag is
+        // tabSize.Y wide and tabSize.X tall.
         var tabSize = template.Size * template.Scale;
-        var total = tabs.Count * tabSize.X + Math.Max(0, tabs.Count - 1) * TabGap;
+        var tagW = tabSize.Y;
+        var tagH = tabSize.X;
+
+        // Center the row on the top edge; shrink it if it would be wider than the card.
+        var total = tabs.Count * tagW + Math.Max(0, tabs.Count - 1) * TabGap;
         var fit = total > e.Overlay.Size.X && total > 0 ? e.Overlay.Size.X / total : 1f;
         var scale = template.Scale * fit;
-        var step = (tabSize.X + TabGap) * fit;
+        var step = (tagW + TabGap) * fit;
         var x0 = (e.Overlay.Size.X - total * fit) / 2f;
-        var y = -tabSize.Y * fit * (1f - TabOverlap);
+        // Mostly above the edge: only a sliver overlaps the frame, clear of the card name.
+        var top = -tagH * fit * (1f - TabOverlap);
 
         for (var i = 0; i < e.Tabs.Count; i++)
         {
@@ -188,15 +196,22 @@ public sealed class CardOverlayRenderer
             if (!on) continue;
 
             var spec = tabs[i];
-            tab.Position = new Vector2(x0 + i * step, y);
+            // Rotating +90° about the node's top-left puts its visual box at x ∈ [-h, 0], so shift
+            // right by the visual width to land the tag's top-left at (left, top).
+            var left = x0 + i * step;
+            tab.PivotOffset = Vector2.Zero;
+            tab.Rotation = Mathf.Pi / 2f;
             tab.Scale = scale;
-            tab.Rotation = 0f;
+            tab.Position = new Vector2(left + tagW * fit, top);
             // Not the template's tint: the game greys its tab for a disabled enchantment.
             tab.Modulate = Colors.White;
             tab.SelfModulate = Colors.White;
 
             if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
             {
+                // Keep the icon upright inside the rotated tag.
+                icon.PivotOffset = icon.Size / 2f;
+                icon.Rotation = -Mathf.Pi / 2f;
                 icon.Texture = spec.Icon;
                 icon.Modulate = spec.Crossed ? new Color(1, 1, 1, 0.8f) : Colors.White;
                 if (icon.GetNodeOrNull<ColorRect>("SpireQoL_Slash") is { } slash)
@@ -207,6 +222,8 @@ public sealed class CardOverlayRenderer
             }
             if (tab.GetNodeOrNull<Label>("Label") is { } label)
             {
+                label.PivotOffset = label.Size / 2f;
+                label.Rotation = -Mathf.Pi / 2f;
                 label.Visible = spec.Label != null;
                 label.Text = spec.Label ?? "";
             }

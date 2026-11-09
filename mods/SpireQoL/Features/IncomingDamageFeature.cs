@@ -96,7 +96,6 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        _ctx.IncomingShown = false;
         var m = Sts2State.IsPlayerTurn ? TurnEndModel.Compute() : null;
         if (m == null || (m.BlockableTotal == 0 && m.UnblockableTotal == 0))
         {
@@ -105,7 +104,6 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         }
 
         _widget!.HasContent = true;
-        _ctx.IncomingShown = true;
 
         var take = m.DamageThrough + m.UnblockableTotal;
         var incoming = m.BlockableTotal + m.UnblockableTotal;

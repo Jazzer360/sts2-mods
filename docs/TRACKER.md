@@ -178,7 +178,7 @@ These relics are "armed" until their first use, then go quiet. The game marks th
 
 ---
 
-## 4. End-of-turn block sources → `block-forecast`
+## 4. End-of-turn block sources → `incoming-damage` (Block Forecast widget removed in 0.13.0)
 
 Shows "+N at end of turn" beside current block, so you don't overblock.
 
