@@ -220,7 +220,8 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - ~~Draw-pile counter~~: dropped in 0.3.0 (the card badges are enough).
 - [~] Badge on draw cards and potions in hand whose draw would exceed the draw pile (forcing a reshuffle).
 - ~~KEPT marker on other hand cards~~: dropped in 0.12.0 (the draw-pile tab is enough).
-- [ ] Find every draw source: cards using `CardPileCmd.Draw` and draw potions, and which ones have a fixed amount.
+- [x] Every draw card: all `CardPileCmd.Draw` callers, including Prepared, Dagger Throw, Escape Plan, Pillage, Scrawl, Compile Driver, Restlessness, Huddle Up, Mad Science (Wisdom).
+- [ ] Draw potions (need a potion-slot tab).
 
 ---
 
