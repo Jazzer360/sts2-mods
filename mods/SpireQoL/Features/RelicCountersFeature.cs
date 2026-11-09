@@ -85,8 +85,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         foreach (var relic in me.Relics)
         {
             var spec = RelicSpecs.For(relic.GetType().Name);
-            if (spec == null || !spec.InTray || !_ctx.Settings.RelicEnabled(spec.TypeName)) continue;
-            if (spec.TurnTimer && !_ctx.Settings.ShowTurnTimers) continue;
+            if (spec == null || !spec.InTray || !_ctx.Settings.TrackerEnabled(spec.TypeName, !spec.TurnTimer)) continue;
             if (Evaluate(relic, spec, me) is { } state)
             {
                 entries.Add((relic, spec.CrossTurn ? 0 : 2, state));
@@ -95,7 +94,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
 
         foreach (var (power, spec) in CountdownPowers(me))
         {
-            if (!_ctx.Settings.RelicEnabled(spec.TypeName)) continue;
+            if (!_ctx.Settings.TrackerEnabled(spec.TypeName)) continue;
             entries.Add((power, spec.CrossTurn ? 1 : 3, EvaluatePower(power, spec)));
         }
 

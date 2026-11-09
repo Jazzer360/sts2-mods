@@ -22,6 +22,8 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 - **One CanvasLayer** (`SpireQoL_Overlay`, layer 10) under the scene tree root, holding a toast message and a `SpireQoL_Widgets` container for the floating widgets. **During live combat with no screen open, that container is moved inside the game's `NCombatUi`, directly before the `%Hand` node, so your cards draw over the widgets.** It moves back to our layer when combat ends, when any screen opens over combat, and while the layout is unlocked (so the hand can't swallow drag clicks). Widgets attached to a game element read that element's screen position each frame; they never modify it.
 - **Floating widgets hide while a game screen covers combat:** the pause menu, draw/discard/exhaust pile and deck views (`NCapstoneContainer.InUse`), card rewards and card-choice screens (`NOverlayStack.ScreenCount > 0`), and the map (`NMapScreen.IsOpen`). Card decorations live on the card nodes in your hand, so they already sit underneath those screens.
+- **A second CanvasLayer** (`SpireQoL_Settings`, layer 100) for the settings menu, hidden until opened. While the menu is open it registers itself with the game's `NHotkeyManager` as a blocking screen (`AddBlockingScreen` / `RemoveBlockingScreen`, the game's own mechanism for popups), so game hotkeys do nothing, and pushes its own Esc / back binding (`ui_cancel`, `mega_pause_and_back`, `mega_back`) to close it; both are removed when it closes.
+- **Two "Spire QoL settings" buttons** (plain Godot `Button`s) added as children of game nodes while those screens are open: the Mods screen's info panel (`NModdingScreen` → `%ModInfoContainer`, only while Spire QoL is the selected mod) and the pause menu (`NPauseMenu`, bottom-left). Found each frame from `NGame.Instance.MainMenu.SubmenuStack.Peek()` and `NCapstoneContainer.Instance.CurrentCapstoneScreen`.
 - **One `SceneTree.ProcessFrame` callback.** It runs each feature, then draws card decorations.
 - **A child node `SpireQoL_CardOverlay`** under `%CardContainer` of each card node in your hand that has something to show. While a decorated card is in your hand, Spire QoL changes that container's `Modulate` alpha (Ethereal translucency). The alpha is restored as soon as the node stops showing that card. The game reuses card nodes, so this matters.
 - **A subscription to `CombatManager.CombatSetUp`,** to know the current combat.
@@ -40,7 +42,19 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 ## Settings and layout
 
-**What you see:** floating indicators you can place yourself, and two hotkeys.
+**What you see:** a settings menu, floating indicators you can place yourself, and hotkeys.
+
+### Settings menu
+
+Opens with **F10** (setting `SettingsKey`), the **Spire QoL settings** button on the Mods screen (Settings → Mod Settings → select Spire QoL) or the same button on the pause menu. Every change applies right away and is saved. Esc or Close closes it; game hotkeys are blocked while it's open.
+
+- **Pages:** General (features and options), Card tabs, Relics, Your powers, Enemy powers.
+- **General:** each feature on/off, live (a feature switched off is skipped each frame and its widgets hide; no restart): Card Indicators, Proc Indicators, Relic Counters, Incoming Damage, Shuffle Warning, and the two prediction checks. Options: amounts on proc tabs (`ProcNumbers`), indirect procs (`ProcIndirect`), tracker flashes early (`PulseOneStepEarly`), send error reports (`ReportErrors`, live), and sliders for Ethereal opacity and tracker flash speed.
+- **Card tabs:** Retain, Sly, Replay, Can't be played, Reshuffle, each with its icon, plus the family switches (all proc tabs, all double-play tabs). Tab kinds seen in play that the catalog doesn't describe yet are listed under **Other**, so everything stays switchable.
+- **Relics / Your powers / Enemy powers:** a table, one row per relic or power the mod knows: the game's icon (with the red slash if its tab is crossed) and name (hover for the game's own description), then two checkboxes: **On cards** (its tab, with what it marks and shows) and **Tracker** (its Relic Counters row, with what it counts). Each column has All on / All off for the rows listed. Rows come from `Menu/SettingsCatalog.cs`, which covers every Proc Indicators rule, every double-play source and every tracker entry.
+- **Search** filters every page by name or description; **Only what's in this fight** (in combat) lists only relics and powers you or the enemies have right now.
+
+### Layout and hotkeys
 
 - **F8: unlock/lock layout.** When unlocked, every floating indicator shows with an orange outline, even if it has nothing to show right now, plus a header with:
   - **A 3×3 pin picker.** It chooses which corner or edge of the widget stays fixed when the widget grows or shrinks. With the bottom-left pin, for example, extra counter rows grow the widget upward and to the right. Picking a pin never moves the widget. The orange square is the current pin.
@@ -59,21 +73,22 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 - **F9: hide/show all overlays.**
 - A short message in the top-left confirms each hotkey.
 
-**Settings file** (`SpireQoL.settings.cfg`, edit while the game is closed):
+**Settings file** (`SpireQoL.settings.cfg`; everything here except key names and positions is also in the settings menu; edit while the game is closed):
 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `Features` | all `true` | turn features on/off by id |
-| `Relics` | (empty) | relic class name → `false` to hide it from counters and reminders, e.g. `"PenNib": false` |
+| `Relics` | (empty) | Relic Counters tray: relic or power class name → shown, e.g. `"PenNib": false`. Missing = shown, except turn timers (off). Since 0.23.0 this is the tray only; relic tabs are `Tabs` `proc:<Relic>` (a saved `false` was copied there once) |
+| `SettingsVersion` | (managed) | migrations of older settings files run once |
 | `Widgets` | defaults | saved positions (`Anchor` = pin, `OffsetX/Y`, `Scale`, `Opacity`, `FollowGame`, `CustomPin`) |
 | `LayoutVersion` | (managed) | when a release changes a default position, older saved positions for that widget are reset once |
 | `ReportErrors` | `true` | send crashes and audit mismatches, with the game state at the time, to the mod's Sentry project (see "Error reporting") |
-| `UnlockLayoutKey` / `HideAllKey` | `F8` / `F9` | Godot key names |
+| `UnlockLayoutKey` / `HideAllKey` / `SettingsKey` | `F8` / `F9` / `F10` | Godot key names |
 | `EtherealOpacity` | `0.8` | 0.25–1 (a saved 0.7, the old default, is raised to 0.8 once) |
 | `Tabs` | every tab shown | one entry per on-card tab kind, added (as `true`) the first time that kind appears, plus a group switch per family: `"proc:*"`, `"double-play:*"`. Set any to `false` to hide it; a group set to `false` hides its whole family. Keys: `retain`, `sly`, `replay`, `blocked` (also turns off dimming), `shuffle`, `double-play:<Source>`, `proc:<Source>` (class names, e.g. `proc:FeelNoPainPower`). Replaces `ShowDoublePlay` / `DimBlockedCards` (migrated once) and `ShowInnateEternalBadges` (removed). |
 | `ProcNumbers` | `true` | amounts on block / damage / summon proc tabs; `false` = icon only |
 | `ProcIndirect` | `true` | count procs one step removed: cards that exhaust or discard other cards, draw, or create cards |
-| `ShowTurnTimers` | `false` | Relic Counters also shows relics that count turns on their own (Horn Cleat, Candelabra, Captain's Wheel, Chandelier, Sparkling Rouge, Stone Calendar, Happy Flower, Pendulum, Pollinous Core) |
+| `ShowTurnTimers` | (removed) | replaced in 0.23.0 by per-relic `Relics` entries (turn timers default off); a saved `true` turned them all on once |
 | `PulseOneStepEarly` | `false` | Relic Counters also flash two steps before firing |
 | `FlashHz` | `2.5` | flash speed |
 
@@ -132,7 +147,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 
 **What you see:** a compact tray, by default attached just right of your HP bar with its bottom edge level with the bar's bottom (so it stays clear of enemies), with one row per counter relic or countdown power you have: its icon, a bar split into one segment per step, and a short label. Counters longer than 12 steps (Cacophony's 33) show only the countdown number, no bar.
 
-**What belongs here:** counters you push forward by playing (cards, attacks, skills, energy, draws, orbs, stars, exhausts) and per-turn card limits. On/off relic states are on-card tabs instead (Pael's Tears, Pael's Eye, one-shot relics), and relics that just count turns are opt-in (`ShowTurnTimers`).
+**What belongs here:** counters you push forward by playing (cards, attacks, skills, energy, draws, orbs, stars, exhausts) and per-turn card limits. On/off relic states are on-card tabs instead (Pael's Tears, Pael's Eye, one-shot relics), and relics that just count turns are opt-in (Tracker checkbox per relic in the settings menu, off by default).
 
 - **Counters that carry across turns and combats sort first:** Pen Nib, Nunchaku, Tuning Fork, Iron Club, Galactic Dust, Joss Paper, Metronome.
 - **Then per-turn counters:** Kunai, Shuriken, Ornamental Fan, Kusarigama, Letter Opener, Brilliant Scarf.
@@ -140,7 +155,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 - **Limits:**
   - Velvet Choker shows plays left and turns red at 1.
   - Pocketwatch shows green while you're within its card limit and red ("missed") once you go over.
-- **Turn timers** (only with `ShowTurnTimers`): Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3), shown with progress and "next turn" the turn before; Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core as counters.
+- **Turn timers** (off by default; switch each on in the settings menu, Relics page, Tracker column): Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3), shown with progress and "next turn" the turn before; Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core as counters.
 - **Countdown powers** (sorted after relics; the game's `PowerModel.DisplayAmount` is "steps left"). The bar fills toward the next trigger and flashes when one step is left:
   - Across turns: Orbit (every 4 energy spent), Automation (every 10 cards drawn), Cacophony (every 33 cards drawn, number only).
   - Per turn: Panache (every 5 cards played), Pale Blue Dot (5 cards played, any type; shows `done` once it has fired this turn).

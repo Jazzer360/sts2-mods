@@ -21,7 +21,7 @@ Slay the Spire 2 mods. **Spire QoL** is display-only: it shows information the g
 
 The game keeps modded progress separate from your unmodded saves.
 
-**Using it:** in combat, press **F8** to unlock the layout and drag indicators around (F8 again to lock it), and **F9** to hide or show all overlays. Every feature and setting is described in the [feature reference](docs/FEATURES.md). Settings live in `mods/SpireQoL/SpireQoL.settings.cfg`, which is created on first run; edit it while the game is closed.
+**Using it:** press **F10** (or use the **Spire QoL settings** button on the Mods screen or the pause menu) for the settings menu, where every feature, card tab and tracker row can be switched on or off. In combat, press **F8** to unlock the layout and drag indicators around (F8 again to lock it), and **F9** to hide or show all overlays. Every feature and setting is described in the [feature reference](docs/FEATURES.md). Settings live in `mods/SpireQoL/SpireQoL.settings.cfg`, which is created on first run; edit it while the game is closed.
 
 **Updating:** download the new zip and extract it over the old one, replacing the files. Your settings file is kept.
 

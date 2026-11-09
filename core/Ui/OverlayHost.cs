@@ -61,12 +61,39 @@ public sealed class OverlayHost
 
     public void AddFeature(string id, IFrameFeature feature) => _features.Add((id, feature));
 
+    /// <summary>
+    /// Settings lookup: is this feature switched on right now? A feature switched off is skipped
+    /// each frame and its widgets are hidden, so features can be toggled while the game runs.
+    /// Null = all on.
+    /// </summary>
+    public Func<string, bool>? FeatureEnabled { get; set; }
+
+    private readonly Dictionary<MovableWidget, string> _widgetOwner = new();
+    private readonly List<(Key Key, Action Action)> _hotkeys = new();
+    private string? _running; // feature whose Attach/OnFrame is running (owns widgets created now)
+
+    /// <summary>Runs <paramref name="action"/> when <paramref name="key"/> is pressed (polled each frame).</summary>
+    public void AddHotkey(Key key, Action action) => _hotkeys.Add((key, action));
+
+    private bool IsOn(string id)
+    {
+        try { return FeatureEnabled?.Invoke(id) ?? true; }
+        catch { return true; }
+    }
+
     /// <summary>Runs after all features each frame (e.g. a shared renderer).</summary>
     private readonly Dictionary<string, int> _lateErrors = new();
 
     public void AddLateFrame(Action action) => _lateFrame.Add(action);
 
-    internal void RegisterWidget(MovableWidget widget) => _widgets.Add(widget);
+    internal void RegisterWidget(MovableWidget widget)
+    {
+        _widgets.Add(widget);
+        if (_running != null) _widgetOwner[widget] = _running;
+    }
+
+    /// <summary>False when the feature that made this widget is switched off.</summary>
+    internal bool OwnerOn(MovableWidget widget) => !_widgetOwner.TryGetValue(widget, out var id) || IsOn(id);
 
     internal void RaiseLayoutChanged() => LayoutChanged?.Invoke();
 
@@ -97,6 +124,7 @@ public sealed class OverlayHost
 
         foreach (var (id, feature) in _features)
         {
+            _running = id;
             try
             {
                 feature.Attach(this);
@@ -109,6 +137,7 @@ public sealed class OverlayHost
             }
         }
 
+        _running = null;
         tree.ProcessFrame += OnFrame;
         _log.Info($"overlay ready ({_features.Count} frame features). {UnlockLayoutKey}: unlock layout, {HideAllKey}: hide all");
     }
@@ -138,6 +167,8 @@ public sealed class OverlayHost
             {
                 continue;
             }
+            if (!IsOn(id)) continue;
+            _running = id;
             try
             {
                 feature.OnFrame(this);
@@ -153,6 +184,8 @@ public sealed class OverlayHost
                 }
             }
         }
+
+        _running = null;
 
         foreach (var late in _lateFrame)
         {
@@ -263,6 +296,16 @@ public sealed class OverlayHost
                 var hovered = _widgets.FirstOrDefault(w => w.Hovered);
                 if (hovered != null) hovered.SetPin(anchor);
                 else Toast("Hover a widget, then Ctrl+1–9 to pick its anchor", 2.5f);
+            }
+        }
+        foreach (var (key, action) in _hotkeys)
+        {
+            if (!Pressed(key)) continue;
+            try { action(); }
+            catch (Exception ex)
+            {
+                _log.Error($"hotkey {key} failed: {ex}");
+                Diagnostics.ErrorReporter.Instance?.Exception(ex, "hotkey");
             }
         }
         if (Pressed(HideAllKey))

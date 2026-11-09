@@ -120,7 +120,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // Sources: your powers, your relics, and powers on enemies (theirs, or ones you applied).
         var sources = new List<AbstractModel>();
         sources.AddRange(me.Creature.Powers);
-        sources.AddRange(me.Relics.Where(r => _ctx.Settings.RelicEnabled(r.GetType().Name)));
+        sources.AddRange(me.Relics); // each relic's tab has its own switch (Tabs "proc:<Relic>")
         // All living enemies: an untargetable one's powers still fire.
         foreach (var enemy in cs.Enemies.Where(e => e.IsAlive)) sources.AddRange(enemy.Powers);
 

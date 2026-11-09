@@ -36,6 +36,34 @@ public sealed class FeatureHost
         return this;
     }
 
+    /// <summary>
+    /// Applies a feature that was off at startup (turned on from the settings menu). Returns
+    /// false if it failed. Frame-only features have nothing to patch, so this is instant.
+    /// </summary>
+    public bool EnableLate(string id)
+    {
+        var feature = _features.FirstOrDefault(f => f.Id == id);
+        if (feature == null) return false;
+        if (_states[id] == FeatureState.Active) return true;
+        if (_states[id] == FeatureState.Failed) return false;
+        var harmony = new Harmony($"{_modId}.{feature.Id}");
+        try
+        {
+            feature.Apply(harmony);
+            _states[id] = FeatureState.Active;
+            _log.Info($"[{id}] turned on");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _states[id] = FeatureState.Failed;
+            _log.Error($"[{id}] failed to apply; feature turned off. {ex}");
+            Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".Apply");
+            try { harmony.UnpatchAll(harmony.Id); } catch { /* best effort */ }
+            return false;
+        }
+    }
+
     /// <param name="isEnabled">Settings lookup; defaults to each feature's EnabledByDefault.</param>
     public void ApplyAll(Func<IFeature, bool>? isEnabled = null)
     {

@@ -50,7 +50,7 @@ public static class PowerSpecs
 /// <param name="InTray">Show a row in the Relic Counters tray. Off for one-shot relics whose
 /// on-card tab (Proc Indicators) already says everything.</param>
 /// <param name="TurnTimer">Counts turns on its own (you can't speed it up by playing): shown only
-/// with the ShowTurnTimers setting.</param>
+/// in the tray only when turned on in the settings menu (Relics entry; off by default).</param>
 public sealed record RelicCounterSpec(
     string TypeName,
     CounterKind Kind,

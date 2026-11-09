@@ -11,7 +11,7 @@ Legend: `[ ]` to do · `[~]` built, needs an in-game check · `[x]` done · **(v
 ## 0. Core: settings and layout (`core/`, used by every feature)
 
 - [~] **Settings storage**: per-feature on/off and options, saved to a JSON file in the mod's own folder (not in game saves). Survives game updates.
-- [ ] **In-game settings menu** (planned; deferred while features are being built, 2026-11-09): an entry in the game's settings/mods screen. **(verify)** whether the game has a mod-settings hook, or whether we add our own button.
+- [x] **In-game settings menu** → 0.23.0: F10, plus buttons on the Mods screen (Spire QoL selected) and the pause menu. The game has no mod-settings hook, so it's our own layer; game hotkeys are blocked through NHotkeyManager.
 - [~] **Movable widgets**: every free-floating indicator (relic counter tray, incoming-damage readout, block forecast, shuffle counter) is a `MovableWidget`.
   - [~] **Unlock layout** toggle (menu and hotkey): widgets show an outline and can be dragged. **Lock** freezes them and makes them click-through.
   - [~] **Anchor** (0.6.0: Ctrl+1–9 picks a screen anchor; HP bar and block icon attach points done; hand/draw pile still to do): each widget pins to a screen corner/edge/center, or to a game element (player health bar, hand, draw pile, relic bar). Positions are stored as anchor + offset, so they survive resolution and window-size changes.
@@ -327,4 +327,15 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [~] Workflow: Sentry → GitHub issues (`auto-report`), resolve on close, reopen on regression.
 - [x] Sentry project created; DSN in `ReportingConfig.cs` (0.22.1).
 - [x] Repo secret `SENTRY_AUTH_TOKEN` and variables `SENTRY_ORG` (derek-jass) / `SENTRY_PROJECT` (spire-qol) set; sync verified (2026-11-09).
+
+---
+
+## 12. Settings menu (2026-11-09) → 0.23.0
+
+- [x] Menu: General, Card tabs, Relics, Your powers, Enemy powers; icon + name + what the tab / tracker shows; search; this-fight filter; All on/off.
+- [x] Live feature on/off (OverlayHost.FeatureEnabled; widgets of a switched-off feature hide).
+- [x] `Relics` = tracker only; relic tabs via `Tabs`; turn timers per relic (migrated).
+- [x] Checked in game (main menu, Mods screen button, every page, Esc, toggles saved).
+- [ ] Check in combat: pause-menu button, toggling a feature / tab mid-turn, "only what's in this fight".
+- [ ] Keep `Menu/SettingsCatalog.cs` in sync with new proc rules and tracker specs (the log warns on unknown tab keys and missing tracker rows).
 

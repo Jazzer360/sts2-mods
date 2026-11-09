@@ -31,6 +31,7 @@ public static class ModEntry
         var settings = settingsFile.Load();
         MigrateLayout(settings);
         MigrateTabs(settings);
+        MigrateSettings(settings);
 
         var host = new OverlayHost(Id, Log)
         {
@@ -75,13 +76,22 @@ public static class ModEntry
         }
         settingsFile.Save();
 
+        // Features switched off are still attached, just skipped each frame, so the settings menu
+        // can turn them on and off while the game runs (host.FeatureEnabled).
+        var defaults = features.ToDictionary(f => f.Id, f => f.EnabledByDefault);
+        host.FeatureEnabled = id => settings.Features.TryGetValue(id, out var on) ? on : !defaults.TryGetValue(id, out var d) || d;
         foreach (var f in features)
         {
-            if (f is IFrameFeature frame && Features.States[f.Id] == FeatureState.Active)
+            if (f is IFrameFeature frame && Features.States[f.Id] != FeatureState.Failed)
             {
                 host.AddFeature(f.Id, frame);
             }
         }
+
+        var menu = new Menu.SettingsMenu(ctx, Features, host);
+        host.AddHotkey(ParseKey(settings.SettingsKey, Key.F10), menu.Toggle);
+        host.AddLateFrame(menu.OnFrame);
+        Menu.SettingsCatalog.Check(Log);
 
         var renderer = new CardOverlayRenderer(host, ctx.Decor);
         host.AddLateFrame(renderer.Render);
@@ -89,6 +99,7 @@ public static class ModEntry
         // New tab kinds are written into settings as they first appear (so the file lists every
         // tab that can be turned off). Save at most every few seconds.
         ulong lastSave = 0;
+        var warnedKeys = new HashSet<string>();
         host.AddLateFrame(() =>
         {
             if (!settings.TabsDirty) return;
@@ -97,6 +108,13 @@ public static class ModEntry
             lastSave = now;
             settings.TabsDirty = false;
             settingsFile.Save();
+            foreach (var key in settings.Tabs.Keys)
+            {
+                if (!key.EndsWith(":*") && !Menu.SettingsCatalog.IsKnownTabKey(key) && warnedKeys.Add(key))
+                {
+                    Log.Warn($"tab kind {key} isn't in the settings menu catalog (Menu/SettingsCatalog.cs); it's listed under Card tabs > Other");
+                }
+            }
         });
         host.Start();
     }
@@ -132,6 +150,28 @@ public static class ModEntry
         settings.ShowDoublePlay = null;
         settings.DimBlockedCards = null;
         settings.ShowInnateEternalBadges = null; // Innate/Eternal tabs were removed
+    }
+
+    /// <summary>
+    /// 0.23.0 (settings menu): Relics now only controls the tracker tray (relic tabs are
+    /// Tabs "proc:<Relic>"), and turn timers became per-relic tracker entries (off by default).
+    /// </summary>
+    private static void MigrateSettings(QolSettings settings)
+    {
+        if (settings.SettingsVersion < 1)
+        {
+            foreach (var (relic, on) in settings.Relics.ToList())
+            {
+                // Relics also held countdown powers (tray only); only relic tabs were hidden by it.
+                if (!on && !relic.EndsWith("Power")) settings.Tabs["proc:" + relic] = false;
+            }
+            if (settings.ShowTurnTimers == true)
+            {
+                foreach (var spec in Data.RelicSpecs.All.Where(s => s.TurnTimer)) settings.Relics.TryAdd(spec.TypeName, true);
+            }
+        }
+        settings.ShowTurnTimers = null;
+        settings.SettingsVersion = QolSettings.CurrentSettingsVersion;
     }
 
     private static Key ParseKey(string? name, Key fallback)

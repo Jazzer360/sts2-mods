@@ -33,7 +33,11 @@ public sealed class ErrorReporter
     /// <summary>Tags added to every report (mod version, game version...).</summary>
     public Dictionary<string, string> Tags { get; } = new();
 
-    public bool Enabled => _client != null;
+    /// <summary>Reports are being sent: a client exists and the player's switch is on.</summary>
+    public bool Enabled => _client != null && Active;
+
+    /// <summary>The player's on/off switch (ReportErrors). Can be flipped while the game runs.</summary>
+    public bool Active { get; set; }
 
     private ErrorReporter(SentryClient? client, ModLog log)
     {
@@ -41,11 +45,15 @@ public sealed class ErrorReporter
         _log = log;
     }
 
-    /// <summary>Creates the reporter (disabled when <paramref name="dsn"/> is empty or reporting is turned off).</summary>
+    /// <summary>
+    /// Creates the reporter. With a DSN the client always exists (creating it sends nothing), so
+    /// reporting can be switched on later from the settings menu; <paramref name="enabled"/> is
+    /// the starting value of <see cref="Active"/>.
+    /// </summary>
     public static ErrorReporter Init(string dsn, bool enabled, string release, ModLog log)
     {
         SentryClient? client = null;
-        if (enabled && !string.IsNullOrWhiteSpace(dsn))
+        if (!string.IsNullOrWhiteSpace(dsn))
         {
             try
             {
@@ -61,7 +69,7 @@ public sealed class ErrorReporter
                     MaxBreadcrumbs = 0,
                     SendClientReports = false,
                 });
-                log.Info("error reporting on (Sentry)");
+                log.Info(enabled ? "error reporting on (Sentry)" : "error reporting off (ReportErrors = false)");
             }
             catch (Exception ex)
             {
@@ -70,9 +78,9 @@ public sealed class ErrorReporter
         }
         else
         {
-            log.Info(enabled ? "error reporting off (no DSN in this build)" : "error reporting off (ReportErrors = false)");
+            log.Info("error reporting off (no DSN in this build)");
         }
-        Instance = new ErrorReporter(client, log);
+        Instance = new ErrorReporter(client, log) { Active = enabled };
         return Instance;
     }
 
@@ -110,7 +118,7 @@ public sealed class ErrorReporter
 
     private void Send(string[] fingerprint, Action<SentryEvent> fill, Exception? ex)
     {
-        if (_client == null) return;
+        if (_client == null || !Active) return;
         var key = string.Join("|", fingerprint);
         lock (_lock)
         {

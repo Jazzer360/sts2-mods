@@ -11,7 +11,11 @@ public sealed class QolSettings
     /// <summary>Feature id → enabled. Missing ids use the feature's default.</summary>
     public Dictionary<string, bool> Features { get; set; } = new();
 
-    /// <summary>Relic class name (e.g. "PenNib") → shown. Missing = shown.</summary>
+    /// <summary>
+    /// Relic Counters tray: relic or power class name (e.g. "PenNib", "OrbitPower") → shown.
+    /// Missing = the default: shown, except turn timers (Horn Cleat, Happy Flower...), which are off.
+    /// On-card tabs for relics are separate (Tabs, "proc:PenNib").
+    /// </summary>
     public Dictionary<string, bool> Relics { get; set; } = new();
 
     /// <summary>Widget id → placement. Filled with defaults on first run.</summary>
@@ -22,6 +26,11 @@ public sealed class QolSettings
     /// <summary>Bumped when default widget positions change; older saved positions get reset.</summary>
     public int LayoutVersion { get; set; }
 
+    public const int CurrentSettingsVersion = 1;
+
+    /// <summary>Bumped when a setting's meaning changes; older files are migrated once (ModEntry.Migrate).</summary>
+    public int SettingsVersion { get; set; }
+
     /// <summary>
     /// Send crashes and audit mismatches (with the game state at the time; nothing personal) to the
     /// mod's Sentry project, where they become GitHub issues. See README "Error reporting".
@@ -30,6 +39,7 @@ public sealed class QolSettings
 
     public string UnlockLayoutKey { get; set; } = "F8";
     public string HideAllKey { get; set; } = "F9";
+    public string SettingsKey { get; set; } = "F10";
 
     /// <summary>
     /// On-card tab kind → shown. Keys are tab keys ("retain", "sly", "blocked", "shuffle",
@@ -59,13 +69,18 @@ public sealed class QolSettings
     public bool? ShowInnateEternalBadges { get; set; }
 
     // Relic Counters
-    /// <summary>Also show relics that count turns on their own (Horn Cleat, Candelabra, Captain's Wheel, Happy Flower...).</summary>
-    public bool ShowTurnTimers { get; set; } = false;
+    // Replaced by per-relic Relics entries in 0.23.0 (turn timers default off); read once, then dropped.
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ShowTurnTimers { get; set; }
     public bool PulseOneStepEarly { get; set; } = false;
     public float FlashHz { get; set; } = 2.5f;
 
 
-    public bool RelicEnabled(string relicTypeName) => !Relics.TryGetValue(relicTypeName, out var on) || on;
+    /// <summary>Is this relic or power shown in the Relic Counters tray?</summary>
+    public bool TrackerEnabled(string typeName, bool defaultOn = true) => Relics.TryGetValue(typeName, out var on) ? on : defaultOn;
+
+    /// <summary>A tab's own switch, ignoring its group (for the settings menu).</summary>
+    public bool TabOwn(string key) => !Tabs.TryGetValue(key, out var on) || on;
 
     /// <summary>Set when a new tab key or group was added to <see cref="Tabs"/> and should be saved.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
