@@ -29,6 +29,8 @@ The game keeps modded progress separate from your unmodded saves.
 
 **Problems?** The game's log is at `%APPDATA%\SlayTheSpire2\logs\godot.log`; the mod's lines start with `[SpireQoL]`. Please include it when [opening an issue](https://github.com/Jazzer360/sts2-mods/issues). StS2 is in beta and patches often, so a game update can break the mod until a new release comes out.
 
+**Error reporting:** Spire QoL sends a report when one of its features hits an error, or when its own checks find that a prediction didn't match what the game did (for example, a forecast that was off). Reports go to the mod's Sentry project and become GitHub issues. A report contains the mod and game versions, the error, and the combat at that moment: your character, HP, powers, relics, hand, the enemies, and recent combat events. It contains **no personal information**: no name, Steam ID, machine name or IP address. Each problem is sent at most once per session. To turn it off, set `"ReportErrors": false` in `mods/SpireQoL/SpireQoL.settings.cfg`.
+
 ---
 
 ## For developers
@@ -94,6 +96,10 @@ It needs the game installed (the build compiles against the game's assemblies) a
 - on `main`: the current version still has no GitHub release with its zip after 20 minutes. A push to `main` waits (polling every 30 seconds) for the release you publish right after pushing, so the normal flow stays green. Version and changelog problems fail immediately.
 
 The mods can't be built in GitHub's cloud: the game's assemblies are never committed, and GitHub's runners don't have the game.
+
+## Automatic bug reports
+
+Crashes and audit mismatches from players' games arrive as GitHub issues labelled `auto-report`, mirrored hourly from the mod's Sentry project by the [Sentry issues](.github/workflows/sentry-issues.yml) workflow. It needs the repo secret `SENTRY_AUTH_TOKEN` and the variables `SENTRY_ORG` and `SENTRY_PROJECT`.
 
 ## Adding a new mod
 

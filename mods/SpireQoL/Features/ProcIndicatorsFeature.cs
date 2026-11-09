@@ -138,7 +138,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             }
             catch (Exception ex)
             {
-                if (_warned.Add(card.GetType().Name)) ModEntry.Log.Warn($"proc facts failed for {card.GetType().Name}: {ex.Message}");
+                if (_warned.Add(card.GetType().Name))
+                {
+                    ModEntry.Log.Warn($"proc facts failed for {card.GetType().Name}: {ex.Message}");
+                    Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "play-facts:" + card.GetType().Name);
+                }
                 continue;
             }
 

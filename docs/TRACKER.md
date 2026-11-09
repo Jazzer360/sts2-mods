@@ -319,3 +319,11 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [ ] Tags: enemy death effects that revive (Adaptable, Illusion, Reattach); attack hit counts beyond a card's Repeat value (e.g. hard-coded multi-hits).
 - [ ] Read the first audit summaries and fix what they show.
 
+---
+
+## 11. Automatic bug reports (2026-11-09) → 0.22.0
+
+- [~] Mod: Sentry reporting of crashes and audit mismatches with a full state snapshot (`ReportErrors`, on).
+- [~] Workflow: Sentry → GitHub issues (`auto-report`), resolve on close, reopen on regression.
+- [ ] Owner: create the Sentry project, put the DSN in `ReportingConfig.cs`, add `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` to the repo.
+

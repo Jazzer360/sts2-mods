@@ -13,6 +13,10 @@ Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). Design notes: doc
 
 Before working on in-game feedback, read the game logs, starting with the `[audit] combat summary` lines (`%APPDATA%\SlayTheSpire2\logs\godot*.log`, newest first): `[SpireQoL]` errors, and `[SpireQoL] [audit]` lines (forecast and proc mismatches). Fix or note what they show, then clear the old log files once they're addressed.
 
+## Automatic bug reports
+
+Crashes and audit mismatches from players' games become GitHub issues labelled `auto-report` (via Sentry and the Sentry issues workflow). When adding a feature that can fail or predict something, make sure failures reach `ErrorReporter` (the frame loop does this for exceptions) and that predictions are checked by an audit.
+
 ## Documentation rules (required with every change)
 
 Any change to mod behavior updates all three in the same commit:

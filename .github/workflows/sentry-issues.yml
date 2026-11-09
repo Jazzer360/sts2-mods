@@ -1,0 +1,34 @@
+# Mirrors the mod's Sentry issues (crashes and audit mismatches reported from players' games) to
+# GitHub issues labelled auto-report, every hour. See .github/scripts/sentry-sync.mjs.
+#
+# Setup (once): repository secret SENTRY_AUTH_TOKEN (Sentry auth token with project:read,
+# event:read, event:write), and repository variables SENTRY_ORG and SENTRY_PROJECT (slugs).
+# SENTRY_API is only needed for a non-US Sentry region (e.g. https://de.sentry.io).
+name: Sentry issues
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Mirror Sentry issues to GitHub
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          SENTRY_API: ${{ vars.SENTRY_API }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/sentry-sync.mjs

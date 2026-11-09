@@ -190,17 +190,53 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (issues.Count > 0)
             {
                 log.Warn($"[audit] played {w.CardName}: {string.Join("; ", issues)}. Tabs were: {tabs}.");
+                var lines = new List<string>();
                 foreach (var e in _history.Entries.Skip(w.From))
                 {
                     if (e is BlockGainedEntry or DamageReceivedEntry or CardPlayStartedEntry or PowerReceivedEntry or CardDrawnEntry or CardGeneratedEntry or OrbChanneledEntry)
+                    {
                         log.Warn($"[audit]   {e.HumanReadableString}");
+                        lines.Add(e.HumanReadableString);
+                    }
                 }
+                Report(w, issues, tabs, lines);
             }
             foreach (var m in model) log.Info($"[audit] [model] played {w.CardName}: {m}");
         }
         catch (Exception ex)
         {
             ModEntry.Log.Warn($"[audit] couldn't check {w.CardName}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// One Sentry report per issue, grouped by what's wrong rather than by amounts: a missing or
+    /// silent source groups by that source; block, damage and budget issues group by the card.
+    /// </summary>
+    private static void Report(Window w, List<string> issues, string tabs, List<string> window)
+    {
+        var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;
+        if (reporter is not { Enabled: true }) return;
+        var card = w.Card.GetType().Name;
+        foreach (var issue in issues)
+        {
+            var colon = issue.IndexOf(':');
+            var kind = colon > 0 ? issue[..colon] : issue;
+            var rest = colon > 0 ? issue[(colon + 1)..].Trim() : "";
+            // "unexplained: 2 more draws than the card's own 1" → effect "draws";
+            // "unexplained: powers applied (X, Y)" → effect "powers".
+            var effect = rest.Contains(" more ")
+                ? rest.Split(" more ")[1].Split(" than ")[0]
+                : rest.Split(' ')[0];
+            string[] fp = kind switch
+            {
+                "no tab" or "didn't fire" => new[] { kind, rest.Split(' ')[0] },
+                "unexplained" => new[] { kind, card, effect },
+                _ => new[] { kind, card },
+            };
+            reporter.Mismatch("proc", $"Proc audit: {issue} (played {card})", fp,
+                $"Played {w.CardName} ({card}).\nIssue: {issue}\nAll issues this play: {string.Join("; ", issues)}\nTabs before the play: {tabs}",
+                new Dictionary<string, string> { ["audit_window"] = string.Join("\n", window) });
         }
     }
 

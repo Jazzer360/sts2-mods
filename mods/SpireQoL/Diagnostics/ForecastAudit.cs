@@ -140,9 +140,28 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         log.Warn($"[audit]   forecast: block {f.CurrentBlock} + end of turn {List(f.EndOfTurnBlock)}; blockable {List(f.Blockable)}; " +
                  $"unblockable {List(f.Unblockable)}; your end-of-turn damage {List(f.EndOfTurnDamage)}; " +
                  $"skipped (poison {f.SkippedPoisoned}, end of turn {f.SkippedEndOfTurn}), cancelled hits {f.CancelledHits}, Osty HP {f.OstyHp}.");
+        var lines = new List<string>();
         foreach (var e in window)
         {
-            if (e is DamageReceivedEntry or BlockGainedEntry) log.Warn($"[audit]   actual: {e.HumanReadableString}");
+            if (e is DamageReceivedEntry or BlockGainedEntry)
+            {
+                log.Warn($"[audit]   actual: {e.HumanReadableString}");
+                lines.Add(e.HumanReadableString);
+            }
+        }
+
+        // One report per issue, grouped by what was wrong and the encounter.
+        var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;
+        if (reporter is not { Enabled: true }) return;
+        var encounter = Sts2State.Combat?.Encounter?.GetType().Name ?? "unknown";
+        var breakdown = $"block {f.CurrentBlock} + end of turn {List(f.EndOfTurnBlock)}\nblockable {List(f.Blockable)}\nunblockable {List(f.Unblockable)}\n" +
+                        $"your end-of-turn damage {List(f.EndOfTurnDamage)}\nskipped: poison {f.SkippedPoisoned}, end of turn {f.SkippedEndOfTurn}; cancelled hits {f.CancelledHits}; Osty HP {f.OstyHp}";
+        foreach (var issue in issues)
+        {
+            var kind = issue.Split(':')[0];
+            reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", new[] { kind, encounter },
+                $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}",
+                new Dictionary<string, string> { ["audit_window"] = string.Join("\n", lines) });
         }
     }
 

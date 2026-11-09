@@ -22,6 +22,12 @@ public sealed class QolSettings
     /// <summary>Bumped when default widget positions change; older saved positions get reset.</summary>
     public int LayoutVersion { get; set; }
 
+    /// <summary>
+    /// Send crashes and audit mismatches (with the game state at the time; nothing personal) to the
+    /// mod's Sentry project, where they become GitHub issues. See README "Error reporting".
+    /// </summary>
+    public bool ReportErrors { get; set; } = true;
+
     public string UnlockLayoutKey { get; set; } = "F8";
     public string HideAllKey { get; set; } = "F9";
 

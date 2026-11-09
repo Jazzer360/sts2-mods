@@ -42,6 +42,14 @@ public static class ModEntry
         host.WidgetUnderlay = Sts2State.WidgetUnderlay; // widgets draw under the cards in hand
 
         var ctx = new QolContext(settingsFile, host);
+
+        // Error reporting: crashes and audit mismatches go to Sentry with the game state attached.
+        var version = typeof(ModEntry).Assembly.GetName().Version?.ToString(3) ?? "?";
+        var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Init(Diagnostics.ReportingConfig.Dsn, settings.ReportErrors, $"spireqol@{version}", Log);
+        reporter.Tags["mod_version"] = version;
+        try { reporter.Tags["game_version"] = MegaCrit.Sts2.Core.Nodes.NGame.GetGameVersion(); } catch { }
+        reporter.ContextProvider = () => Diagnostics.Snapshot.Capture(ctx);
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
         Sts2State.Init();
 
         // Order matters for card decorations: later features add badges after earlier ones.

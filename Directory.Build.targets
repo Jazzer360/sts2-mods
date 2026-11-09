@@ -11,6 +11,8 @@
     <Reference Include="sts2" HintPath="$(Sts2DataDir)\sts2.dll" Private="false" />
     <Reference Include="GodotSharp" HintPath="$(Sts2DataDir)\GodotSharp.dll" Private="false" />
     <Reference Include="0Harmony" HintPath="$(Sts2DataDir)\0Harmony.dll" Private="false" />
+    <!-- The game ships Sentry .NET; mods report through their own client (core/Diagnostics/ErrorReporter.cs). -->
+    <Reference Include="Sentry" HintPath="$(Sts2DataDir)\Sentry.dll" Private="false" />
 
     <!-- Shared core is compiled into each mod, so players never need to install a separate dependency. -->
     <Compile Include="$(RepoRoot)core\**\*.cs" Link="Core\%(RecursiveDir)%(Filename)%(Extension)" />

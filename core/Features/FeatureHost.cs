@@ -59,6 +59,7 @@ public sealed class FeatureHost
             {
                 _states[feature.Id] = FeatureState.Failed;
                 _log.Error($"[{feature.Id}] failed to apply; feature turned off. {ex}");
+                Diagnostics.ErrorReporter.Instance?.Exception(ex, feature.Id + ".Apply");
                 try { harmony.UnpatchAll(harmony.Id); } catch { /* best effort */ }
             }
         }

@@ -105,6 +105,7 @@ public sealed class OverlayHost
             {
                 _errors[id] = MaxErrorsBeforeDisable;
                 _log.Error($"[{id}] failed to attach; feature turned off. {ex}");
+                Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".Attach");
             }
         }
 
@@ -145,6 +146,7 @@ public sealed class OverlayHost
             {
                 n = _errors[id] = (_errors.TryGetValue(id, out var prev) ? prev : 0) + 1;
                 _log.Error($"[{id}] frame error {n}/{MaxErrorsBeforeDisable}: {ex}");
+                Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".OnFrame");
                 if (n >= MaxErrorsBeforeDisable)
                 {
                     _log.Error($"[{id}] turned off after repeated errors");
@@ -161,7 +163,11 @@ public sealed class OverlayHost
                 // per-frame failure can't flood the game log.
                 var key = ex.GetType().Name + ex.TargetSite;
                 var n = _lateErrors[key] = (_lateErrors.TryGetValue(key, out var prev) ? prev : 0) + 1;
-                if (n == 1) _log.Error($"late frame error: {ex}");
+                if (n == 1)
+                {
+                    _log.Error($"late frame error: {ex}");
+                    Diagnostics.ErrorReporter.Instance?.Exception(ex, "late-frame");
+                }
                 else if (n % 600 == 0) _log.Error($"late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
             }
         }

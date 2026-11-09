@@ -265,6 +265,7 @@ public sealed class CardOverlayRenderer
                 // failed partway would still show that enchantment's icon and number.
                 tab.Visible = false;
                 if (_tabErrors++ % 600 == 0) ModEntry.Log.Warn($"tab layout failed ({spec.Key}), tab hidden: {ex.Message}");
+                Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "tab-layout");
             }
         }
     }
