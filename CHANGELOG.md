@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.8.0
+#### Added
+- **Double-play indicator:** cards that will play more than once get echo ripples, copies of the card's own glow outline expanding outward and fading, inspired by Echo Form's afterimages, plus a `×2` / `×3` badge.
+  - The count comes from the game's own play-count calculation, so Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Throwing Axe, Tag Team (best case across enemies) and enchantment replays are all covered.
+  - Setting: `ShowDoublePlay`.
+
 ### Spire QoL 0.7.0 (feedback from fifth test)
 #### Added
 - **Pin picker and Attach button** on every widget while the layout is unlocked (F8):

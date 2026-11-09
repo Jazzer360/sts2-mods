@@ -1,6 +1,7 @@
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
 using Sts2Mods.Core.Features;
@@ -99,7 +100,42 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             {
                 d.DimReason = reason;
             }
+
+            if (s.ShowDoublePlay)
+            {
+                var plays = PlayCount(card);
+                if (plays > 1)
+                {
+                    d.PlayCount = plays;
+                    d.Badges.Add(new BadgeSpec($"×{plays}", new Color(0.42f, 0.32f, 0.7f, 0.95f), Colors.White));
+                }
+            }
         }
+    }
+
+    /// <summary>
+    /// How many times this card would play right now: the same calculation the game runs when
+    /// you play it (CardModel.GeneratePlayCount): enchanted replays + 1, then Hook.ModifyCardPlayCount.
+    /// That covers Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing
+    /// Axe and anything added later. The hook is a pure query; side effects live in
+    /// AfterModifyingCardPlayCount, which we never call.
+    /// Tag Team only doubles attacks aimed at the enemy that has it, so single-target cards are
+    /// checked against each enemy and the best case is shown.
+    /// </summary>
+    private static int PlayCount(CardModel card)
+    {
+        var cs = Sts2State.Combat;
+        if (cs == null) return 1;
+        var baseCount = card.GetEnchantedReplayCount() + 1;
+        var best = Hook.ModifyCardPlayCount(cs, card, baseCount, null, out _);
+        if (card.TargetType == TargetType.AnyEnemy)
+        {
+            foreach (var enemy in cs.HittableEnemies)
+            {
+                best = Math.Max(best, Hook.ModifyCardPlayCount(cs, card, baseCount, enemy, out _));
+            }
+        }
+        return best;
     }
 
     private static string? BlockedReason(CardModel card)

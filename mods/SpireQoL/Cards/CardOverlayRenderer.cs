@@ -43,6 +43,80 @@ public sealed class CardOverlayRenderer
         public string Signature = "";
         public bool TouchedAlpha;
         public bool Seen;
+        public readonly List<TextureRect> Echoes = new();
+    }
+
+    // ---- Double-play echoes ----
+    // Copies of the card's own glow outline (NCard.CardHighlight: a TextureRect with the game's
+    // highlight shader, "width" parameter) that expand outward and fade on a loop, like Echo
+    // Form's afterimages. They sit right above the real highlight, beneath the card art.
+    private static readonly Color EchoColor = new(0.82f, 0.74f, 1f);
+    private const float EchoPeriod = 1.4f;   // seconds per ripple
+    private const float EchoGrowth = 0.10f;  // +10% size at the end of a ripple
+    private const float EchoAlpha = 0.85f;
+    private const float EchoWidth = 0.09f;   // highlight shader outline width (game uses 0.075 when shown)
+
+    private void ApplyEchoes(Entry e, int playCount)
+    {
+        var want = playCount <= 1 ? 0 : Math.Min(3, playCount);
+        var highlight = e.Card.CardHighlight;
+        if (highlight == null || !GodotObject.IsInstanceValid(highlight)) want = 0;
+
+        while (e.Echoes.Count < want)
+        {
+            var echo = new TextureRect
+            {
+                Name = "SpireQoL_Echo",
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                StretchMode = highlight!.StretchMode,
+                ExpandMode = highlight.ExpandMode,
+            };
+            if (highlight.Material is ShaderMaterial mat)
+            {
+                var copy = (ShaderMaterial)mat.Duplicate();
+                copy.SetShaderParameter("width", EchoWidth);
+                echo.Material = copy;
+            }
+            highlight.GetParent().AddChild(echo);
+            e.Echoes.Add(echo);
+        }
+
+        for (var i = 0; i < e.Echoes.Count; i++)
+        {
+            var echo = e.Echoes[i];
+            if (!GodotObject.IsInstanceValid(echo)) continue;
+            var on = i < want;
+            echo.Visible = on;
+            if (!on) continue;
+
+            // Match the real highlight, then sit just above it.
+            echo.Texture = highlight!.Texture;
+            echo.Size = highlight.Size;
+            echo.Position = highlight.Position;
+            echo.Rotation = highlight.Rotation;
+            echo.PivotOffset = highlight.Size / 2;
+            var parent = highlight.GetParent();
+            if (echo.GetParent() == parent && echo.GetIndex() != highlight.GetIndex() + 1 + i)
+            {
+                parent.MoveChild(echo, Math.Min(parent.GetChildCount() - 1, highlight.GetIndex() + 1 + i));
+            }
+
+            // Staggered ripples: each starts at the outline and grows/fades outward.
+            var t = (_host.Time / EchoPeriod + (float)i / want) % 1f;
+            var s = 1f + EchoGrowth * t;
+            echo.Scale = highlight.Scale * s;
+            var c = EchoColor;
+            c.A = EchoAlpha * (1f - t) * (1f - t);
+            echo.Modulate = c;
+        }
+    }
+
+    private static void HideEchoes(Entry e)
+    {
+        foreach (var echo in e.Echoes)
+        {
+            if (GodotObject.IsInstanceValid(echo)) echo.Visible = false;
+        }
     }
 
     public void Render()
@@ -73,6 +147,7 @@ public sealed class CardOverlayRenderer
             }
             if (e.Seen) continue;
             e.Overlay.Visible = false;
+            HideEchoes(e);
             if (e.TouchedAlpha)
             {
                 SetAlpha(e.Container, 1f);
@@ -192,6 +267,9 @@ public sealed class CardOverlayRenderer
             SetRect(e.Border[3], new Vector2(size.X, 0), new Vector2(t, size.Y), c);
         }
         foreach (var b in e.Border) b.Visible = showBorder;
+
+        // Double-play echoes.
+        ApplyEchoes(e, d.PlayCount);
 
         // Translucency.
         if (d.Opacity is { } a)

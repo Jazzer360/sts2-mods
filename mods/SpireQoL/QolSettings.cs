@@ -29,6 +29,7 @@ public sealed class QolSettings
     public float EtherealOpacity { get; set; } = 0.8f;
     public bool ShowInnateEternalBadges { get; set; } = false;
     public bool DimBlockedCards { get; set; } = true;
+    public bool ShowDoublePlay { get; set; } = true;
 
     // Relic Counters
     public bool PulseOneStepEarly { get; set; } = false;
