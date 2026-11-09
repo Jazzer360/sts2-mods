@@ -339,3 +339,4 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [ ] Check in combat: pause-menu button, toggling a feature / tab mid-turn, "only what's in this fight".
 - [ ] Keep `Menu/SettingsCatalog.cs` in sync with new proc rules and tracker specs (the log warns on unknown tab keys and missing tracker rows).
 - [x] 0.23.1: removed the "can't be played" tab and dimming; the game's crossed-out cost covers every case (`NCard` unplayable cost icon on any non-cost `CanPlay` failure). Crossed tabs now only mean "might be bad for you".
+- [x] 0.23.2: settings menu Reset defaults button, game cursor, discard pile icon on Shuffle Warning (loaded from `res://images/packed/combat_ui/discard_pile.png` outside combat).

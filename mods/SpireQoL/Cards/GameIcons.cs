@@ -44,7 +44,7 @@ public static class GameIcons
     public static Texture2D? DiscardPile()
     {
         if (Valid(_discardPile)) return _discardPile;
-        _discardPile = PileIcon(NCombatRoom.Instance?.Ui?.DiscardPile);
+        _discardPile = PileIcon(NCombatRoom.Instance?.Ui?.DiscardPile) ?? LoadTexture(DiscardPilePath);
         return _discardPile;
     }
 
@@ -57,6 +57,21 @@ public static class GameIcons
     }
 
     private static Texture2D? _discardPile;
+
+    /// <summary>The discard pile art outside combat (the game's own path, NetScreenTypeExtensions CardPile).</summary>
+    private const string DiscardPilePath = "res://images/packed/combat_ui/discard_pile.png";
+
+    private static Texture2D? LoadTexture(string path)
+    {
+        try
+        {
+            return ResourceLoader.Exists(path) ? ResourceLoader.Load<Texture2D>(path) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private static Texture2D? PileIcon(Node? button)
     {

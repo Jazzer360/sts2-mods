@@ -45,7 +45,7 @@ public sealed class SettingsMenu
 
     private static readonly (string Id, string Name, string Description)[] FeatureRows =
     {
-        ("card-indicators", "Card Indicators", "Retain, Sly, replay, double-play and \"can't be played\" tabs; Ethereal cards fade."),
+        ("card-indicators", "Card Indicators", "Retain, Sly, replay and double-play tabs; Ethereal cards fade."),
         ("proc-indicators", "Proc Indicators", "A tab for every relic or power a card would set off (the Relics and powers pages)."),
         ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar."),
         ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes)."),
@@ -232,6 +232,11 @@ public sealed class SettingsMenu
         var (only, onlyBox) = Check(false, _ => Rebuild(), "Only what's in this fight", "Show only relics and powers you or the enemies have right now (in combat).");
         _onlyHere = only;
         header.AddChild(onlyBox);
+        var reset = MakeButton("Reset defaults", 20);
+        reset.TooltipText = "Every feature, option, card tab and tracker row back to its default. Keeps hotkeys, widget positions and error reporting.";
+        reset.CustomMinimumSize = new Vector2(230, 0); // fits "Click again to reset" without moving the header
+        reset.Pressed += () => ConfirmReset(reset);
+        header.AddChild(reset);
         var close = MakeButton("Close", 20);
         close.Pressed += Close;
         header.AddChild(close);
@@ -318,7 +323,7 @@ public sealed class SettingsMenu
         {
             if (!Matches(name, desc)) continue;
             var failed = _features.States.TryGetValue(id, out var st) && st == FeatureState.Failed;
-            SimpleRow(name, failed ? desc + " (turned off after an error; restart the game)" : desc, FeatureOn(id), on => SetFeature(id, on));
+            SimpleRow(name, failed ? desc + " (turned off after an error; restart the game)" : desc, FeatureOn(id), on => SetFeature(id, on), FeatureIcon(id));
         }
 
         Section("Options");
@@ -472,6 +477,46 @@ public sealed class SettingsMenu
         Saved();
     }
 
+    /// <summary>The first click arms the button; a second click within 4 s resets.</summary>
+    private void ConfirmReset(Button button)
+    {
+        if (button.Text != ResetConfirm)
+        {
+            button.Text = ResetConfirm;
+            button.GetTree().CreateTimer(4).Timeout += () =>
+            {
+                if (GodotObject.IsInstanceValid(button)) button.Text = "Reset defaults";
+            };
+            return;
+        }
+        button.Text = "Reset defaults";
+        ResetDefaults();
+    }
+
+    private const string ResetConfirm = "Click again to reset";
+
+    /// <summary>
+    /// Everything the menu shows back to its default. Hotkeys, widget positions and the error
+    /// reporting choice are kept: they aren't display preferences, and reporting is the
+    /// player's own consent.
+    /// </summary>
+    private void ResetDefaults()
+    {
+        var d = new QolSettings();
+        S.Features.Clear();
+        S.Tabs.Clear();
+        S.Relics.Clear();
+        S.ProcNumbers = d.ProcNumbers;
+        S.ProcIndirect = d.ProcIndirect;
+        S.PulseOneStepEarly = d.PulseOneStepEarly;
+        S.EtherealOpacity = d.EtherealOpacity;
+        S.FlashHz = d.FlashHz;
+        foreach (var (id, _, _) in FeatureRows)
+            if (FeatureOn(id)) _features.EnableLate(id);
+        Saved();
+        Rebuild();
+    }
+
     private void SetTab(string key, bool on)
     {
         S.Tabs[key] = on;
@@ -487,7 +532,7 @@ public sealed class SettingsMenu
     private void Option(string name, string desc, bool value, Action<bool> set)
     {
         if (!Matches(name, desc)) return;
-        SimpleRow(name, desc, value, v => { set(v); Saved(); });
+        SimpleRow(name, desc, value, v => { set(v); Saved(); }, IconSpacer());
     }
 
     private void Saved() => _ctx.SettingsFile.Save();
@@ -536,7 +581,7 @@ public sealed class SettingsMenu
             {
                 case "retain": tex = Cards.GameIcons.Enchantment<MegaCrit.Sts2.Core.Models.Enchantments.Steady>(); break;
                 case "sly": tex = Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.MasterPlannerPower>(); break;
-                case "shuffle": tex = Cards.GameIcons.DiscardPile(); break; // only known in combat
+                case "shuffle": tex = Cards.GameIcons.DiscardPile(); break;
                 case "replay":
                     var l = Label("2×", 22, Text);
                     l.CustomMinimumSize = new Vector2(IconSize, IconSize);
@@ -551,6 +596,26 @@ public sealed class SettingsMenu
         var icon = UiKit.Icon(Cards.GameIcons.Valid(tex) ? tex : null, IconSize);
         return icon;
     }
+
+    /// <summary>The icon next to a feature on the General page (a spacer when it has none).</summary>
+    private static Control FeatureIcon(string id)
+    {
+        Texture2D? tex = null;
+        try
+        {
+            if (id == "shuffle-warning") tex = Cards.GameIcons.DiscardPile();
+        }
+        catch
+        {
+            tex = null;
+        }
+        return Cards.GameIcons.Valid(tex)
+            ? UiKit.Icon(tex, IconSize)
+            : IconSpacer();
+    }
+
+    private static Control IconSpacer() =>
+        new Control { CustomMinimumSize = new Vector2(IconSize, IconSize), MouseFilter = Control.MouseFilterEnum.Ignore };
 
     private static void AddSlash(Control icon)
     {
@@ -579,6 +644,7 @@ public sealed class SettingsMenu
         if (!Matches(name, desc)) return;
         var row = RowBox();
         row.AddChild(new Control { CustomMinimumSize = new Vector2(CheckSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        row.AddChild(IconSpacer());
         row.AddChild(Label(name, 20, Text, NameWidth));
         var valueLabel = Label(fmt(value), 20, Accent, 70);
         var slider = new HSlider
@@ -627,7 +693,6 @@ public sealed class SettingsMenu
             FocusMode = Control.FocusModeEnum.None,
             SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
             TooltipText = tooltip ?? "",
-            MouseDefaultCursorShape = Control.CursorShape.PointingHand,
         };
         StyleBoxFlat Box(Color bg, Color border)
         {
@@ -657,7 +722,6 @@ public sealed class SettingsMenu
         var l = Label(text, 18, Muted);
         l.MouseFilter = Control.MouseFilterEnum.Stop;
         l.TooltipText = tooltip ?? "";
-        l.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
         if (expand)
         {
             l.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -673,7 +737,7 @@ public sealed class SettingsMenu
 
     private static Button MakeButton(string text, int size)
     {
-        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None, MouseDefaultCursorShape = Control.CursorShape.PointingHand };
+        var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None };
         b.AddThemeFontSizeOverride("font_size", size);
         var normal = UiKit.PanelStyle(new Color(0.13f, 0.13f, 0.17f), 6, 14);
         normal.SetBorderWidthAll(1);

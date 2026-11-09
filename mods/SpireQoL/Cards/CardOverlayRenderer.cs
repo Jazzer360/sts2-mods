@@ -12,8 +12,7 @@ namespace SpireQoL.Cards;
 ///    (NCard.EnchantmentTab: "%Enchantment" with an "Icon" TextureRect and a "Label" MegaLabel),
 ///    centered and overlapping the edge slightly. In a fanned hand the card tops stay visible
 ///    while the sides are covered, so the tabs read at a glance without hovering. A red slash on
-///    a tab means "playing this breaks or is blocked by this".
-///  - **Dim**: the card can't be played right now.
+///    a tab means "playing this might be bad for you".
 ///  - **Opacity**: Ethereal translucency.
 ///
 /// Everything lives in an overlay that's the last child of the card's %CardContainer, so it
