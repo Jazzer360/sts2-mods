@@ -63,7 +63,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | `EtherealOpacity` | `0.8` | 0.25–1 (a saved 0.7, the old default, is raised to 0.8 once) |
 | `ShowInnateEternalBadges` | `false` | |
 | `DimBlockedCards` | `true` | |
-| `ShowDoublePlay` | `true` | echo ripples and ×N badge on cards that play more than once |
+| `ShowDoublePlay` | `true` | Echo Form tab on cards that play more than once |
 | `PulseOneStepEarly` | `false` | Relic Counters also flash two steps before firing |
 | `FlashHz` | `2.5` | flash speed |
 | `ShuffleHandMarkers` | `true` | KEPT badges |
@@ -86,10 +86,9 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
   - `INN` / `ETR` Innate / Eternal, off by default
 - **Blocked cards are dimmed** with the reason: `BOUND`, `RINGING`, `SMOG`, `CARD LIMIT` (Velvet Choker). Detected with the game's own `CardModel.CanPlay`.
 - **Galvanized** cards show `−N HP` (the damage playing them deals you).
-- **Double play:** a card that will play more than once gets **echo ripples**: copies of the card's own glow outline (the game's highlight texture and shader) that expand outward and fade on a loop, in soft lavender, like Echo Form's afterimages. Two echoes for ×2, three for ×3 or more. A `×2` / `×3` badge shows the exact count.
+- **Double play:** a card that will play more than once gets a tab with the **Echo Form** power's icon, the same native tab style as Retain and Sly. The tab's number is the play count (`2`, `3`...).
   - The count comes from the game's own play-count query, the one it runs when you play the card: enchanted replays + 1, then `Hook.ModifyCardPlayCount`. So it covers Echo Form (first N cards each turn), Burst (skills), Duplication, One-Two Punch (attacks), Signal Boost (powers), Throwing Axe (first card each combat), Tag Team, enchantments, and anything added later.
   - Tag Team only doubles attacks aimed at the enemy that has it. Single-target cards are checked against each enemy, and the best case is shown.
-  - The echoes sit right above the card's real highlight and beneath the card art, so they read as part of the card frame.
 
 Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
 

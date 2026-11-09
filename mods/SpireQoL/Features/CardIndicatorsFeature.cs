@@ -32,14 +32,20 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 
     private static Texture2D? RetainIcon { get { LoadIcons(); return _retainIcon; } }
     private static Texture2D? SlyIcon { get { LoadIcons(); return _slyIcon; } }
+    private static Texture2D? _doublePlayIcon;
+    private static Texture2D? DoublePlayIcon { get { LoadIcons(); return _doublePlayIcon; } }
 
-    /// <summary>Steady (the Retain enchantment) and Master Planner (the Sly power), from the game's own models.</summary>
+    /// <summary>
+    /// Icons from the game's own models: Steady (the Retain enchantment), Master Planner (the Sly
+    /// power), Echo Form (the iconic play-twice power).
+    /// </summary>
     private static void LoadIcons()
     {
         if (_iconsLoaded) return;
         _iconsLoaded = true;
         try { _retainIcon = ModelDb.Enchantment<Steady>().Icon; } catch { _retainIcon = null; }
         try { _slyIcon = ModelDb.Power<MasterPlannerPower>().Icon; } catch { _slyIcon = null; }
+        try { _doublePlayIcon = ModelDb.Power<EchoFormPower>().Icon; } catch { _doublePlayIcon = null; }
     }
     private static readonly BadgeSpec AddedExhaust = new("+EXH", new Color(0.85f, 0.45f, 0.15f, 0.95f), Colors.White);
     private static readonly BadgeSpec Innate = new("INN", Dark, new Color(0.9f, 0.9f, 0.9f));
@@ -123,8 +129,8 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
                 var plays = PlayCount(card);
                 if (plays > 1)
                 {
-                    d.PlayCount = plays;
-                    d.Badges.Add(new BadgeSpec($"×{plays}", new Color(0.42f, 0.32f, 0.7f, 0.95f), Colors.White));
+                    // Echo Form icon on a native-style tab; the tab's number is the play count.
+                    d.Tabs.Add(new TabSpec("double-play", DoublePlayIcon, plays.ToString()));
                 }
             }
         }

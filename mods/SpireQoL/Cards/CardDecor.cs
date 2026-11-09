@@ -33,10 +33,7 @@ public sealed class CardDecor
     /// <summary>Pulsing border color (Pen Nib ready). Null = none.</summary>
     public Color? Border { get; set; }
 
-    /// <summary>How many times the card will play (2+ draws echo ripples). 1 = normal.</summary>
-    public int PlayCount { get; set; } = 1;
-
-    public bool IsEmpty => Badges.Count == 0 && Relics.Count == 0 && Tabs.Count == 0 && Opacity == null && DimReason == null && Border == null && PlayCount <= 1;
+    public bool IsEmpty => Badges.Count == 0 && Relics.Count == 0 && Tabs.Count == 0 && Opacity == null && DimReason == null && Border == null;
 
     /// <summary>Changes only when the badge/relic row needs rebuilding.</summary>
     public string RowSignature()

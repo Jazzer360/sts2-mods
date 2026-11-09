@@ -6,6 +6,17 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.10.0
+#### Changed
+- **Double play** now shows as a native-style tab with the Echo Form power icon, with the play count in the tab's number slot. It replaces the `×N` badge and the echo ripples.
+
+#### Removed
+- Echo ripples (0.8.0). They didn't render in game; the card's glow node likely has no plain texture to copy.
+
+#### Verified
+- 0.8.0 session log: no errors.
+- The HP bar node reports a 0×0 box at the bar's center, which confirms why the tray drew over the bar before 0.7.0. The measured container is 250px wide.
+
 ### Spire QoL 0.9.0
 #### Changed
 - **Retain and Sly** now show as native-style tabs on the card's left edge, replacing the `RET` / `SLY` text badges. Each tab is a copy of the card's own enchantment tab.
