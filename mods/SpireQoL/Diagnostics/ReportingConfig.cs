@@ -6,5 +6,5 @@ namespace SpireQoL.Diagnostics;
 /// </summary>
 public static class ReportingConfig
 {
-    public const string Dsn = "";
+    public const string Dsn = "https://f6f7175270fbc62653db5bb91d32aa19@o514923.ingest.us.sentry.io/4512403016318976";
 }

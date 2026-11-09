@@ -325,5 +325,6 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 
 - [~] Mod: Sentry reporting of crashes and audit mismatches with a full state snapshot (`ReportErrors`, on).
 - [~] Workflow: Sentry → GitHub issues (`auto-report`), resolve on close, reopen on regression.
-- [ ] Owner: create the Sentry project, put the DSN in `ReportingConfig.cs`, add `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` to the repo.
+- [x] Sentry project created; DSN in `ReportingConfig.cs` (0.22.1).
+- [ ] Owner: add `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` to the repo.
 
