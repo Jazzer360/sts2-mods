@@ -119,8 +119,8 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [~] | Fake Happy Flower | every 5 turns | +1 energy |
 | [~] | Pendulum | every 3 turns | extra draw |
 | [~] | Pollinous Core | every 4 turns | +2 draw |
-| [~] | Horn Cleat | turn 2 | gain block (also feeds `block-forecast`) |
-| [~] | Captain's Wheel | turn 3 | gain block (also feeds `block-forecast`) |
+| [~] | Horn Cleat | turn 2 | gain block (start of turn, after enemies attack: not counted as end-of-turn block) |
+| [~] | Captain's Wheel | turn 3 | gain block (start of turn, after enemies attack: not counted as end-of-turn block) |
 | [~] | Candelabra | turn 2 | +2 energy |
 | [~] | Chandelier | turn 3 | +3 energy |
 | [~] | Sparkling Rouge | turn 3 | +Strength/+Dexterity |
@@ -145,7 +145,7 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [ ] | Chemical X | X-cost cards | +2 to X |
 | [ ] | Strike Dummy / Fake Strike Dummy | Strikes | +damage |
 | [~] | Velvet Choker | all cards | dim everything once the 6th card is played |
-| [~] | Cloak Clasp | hand | end-of-turn block per card left in hand (feeds `block-forecast`) |
+| [~] | Cloak Clasp | hand | end-of-turn block per card left in hand (counted in `incoming-damage`) |
 | [ ] | Screaming Flagon | hand | damage at end of turn if hand is empty |
 | [ ] | Tingsha, Tough Bandages | discard | discard triggers **(verify)** |
 | [ ] | Charon's Ashes, Forgotten Soul | exhaust | exhaust triggers **(verify)** |
