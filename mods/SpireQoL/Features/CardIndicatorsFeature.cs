@@ -3,6 +3,8 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Enchantments;
+using MegaCrit.Sts2.Core.Models.Powers;
 using SpireQoL.Cards;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
@@ -14,7 +16,8 @@ namespace SpireQoL.Features;
 /// Mid-combat card modifiers made visible. Spec: docs/FEATURES.md#card-indicators.
 ///  - Ethereal cards are translucent, whatever made them Ethereal (CardModel.Keywords
 ///    merges the card's own keywords with ones granted by powers like Hex).
-///  - Keyword badges above the card: RET (RET·1 for this turn only), SLY, +EXH when
+///  - Retain and Sly as native-style tabs (copies of the enchantment tab) on the left edge;
+///    badges above the card for +EXH when
 ///    Exhaust was added. INN/ETR optional.
 ///  - Cards a power or relic blocks from being played (Bound, Ringing, Smog, Velvet Choker)
 ///    are dimmed with the reason. Galvanized cards show the damage they'll deal you.
@@ -23,10 +26,21 @@ namespace SpireQoL.Features;
 public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 {
     private static readonly Color Dark = new(0.08f, 0.08f, 0.1f, 0.92f);
-    private static readonly BadgeSpec Retain = new("RET", new Color(0.2f, 0.65f, 0.55f, 0.95f), Colors.White);
-    private static readonly BadgeSpec RetainOnce = new("RET·1", new Color(0.2f, 0.65f, 0.55f, 0.95f), Colors.White);
-    private static readonly BadgeSpec Sly = new("SLY", new Color(0.55f, 0.3f, 0.6f, 0.95f), Colors.White);
-    private static readonly BadgeSpec SlyOnce = new("SLY·1", new Color(0.55f, 0.3f, 0.6f, 0.95f), Colors.White);
+    private static Texture2D? _retainIcon;
+    private static Texture2D? _slyIcon;
+    private static bool _iconsLoaded;
+
+    private static Texture2D? RetainIcon { get { LoadIcons(); return _retainIcon; } }
+    private static Texture2D? SlyIcon { get { LoadIcons(); return _slyIcon; } }
+
+    /// <summary>Steady (the Retain enchantment) and Master Planner (the Sly power), from the game's own models.</summary>
+    private static void LoadIcons()
+    {
+        if (_iconsLoaded) return;
+        _iconsLoaded = true;
+        try { _retainIcon = ModelDb.Enchantment<Steady>().Icon; } catch { _retainIcon = null; }
+        try { _slyIcon = ModelDb.Power<MasterPlannerPower>().Icon; } catch { _slyIcon = null; }
+    }
     private static readonly BadgeSpec AddedExhaust = new("+EXH", new Color(0.85f, 0.45f, 0.15f, 0.95f), Colors.White);
     private static readonly BadgeSpec Innate = new("INN", Dark, new Color(0.9f, 0.9f, 0.9f));
     private static readonly BadgeSpec Eternal = new("ETR", Dark, new Color(0.9f, 0.9f, 0.9f));
@@ -77,11 +91,14 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
                 // Translucency alone marks Ethereal; no text badge.
                 d.Opacity = Mathf.Clamp(s.EtherealOpacity, 0.25f, 1f);
             }
-            if (kw.Contains(CardKeyword.Retain)) d.Badges.Add(Retain);
-            else if (card.ShouldRetainThisTurn) d.Badges.Add(RetainOnce);
+            // Retain and Sly as native-style tabs on the card's left edge (copies of the game's
+            // enchantment tab): Steady's icon (the Retain enchantment) and Master Planner's icon
+            // (the Sly power). "1" in the tab's number slot = this turn only.
+            if (kw.Contains(CardKeyword.Retain)) d.Tabs.Add(new TabSpec("retain", RetainIcon, null));
+            else if (card.ShouldRetainThisTurn) d.Tabs.Add(new TabSpec("retain", RetainIcon, "1"));
 
-            if (kw.Contains(CardKeyword.Sly)) d.Badges.Add(Sly);
-            else if (card.IsSlyThisTurn) d.Badges.Add(SlyOnce);
+            if (kw.Contains(CardKeyword.Sly)) d.Tabs.Add(new TabSpec("sly", SlyIcon, null));
+            else if (card.IsSlyThisTurn) d.Tabs.Add(new TabSpec("sly", SlyIcon, "1"));
 
             if (kw.Contains(CardKeyword.Exhaust) && !canonical.Contains(CardKeyword.Exhaust)) d.Badges.Add(AddedExhaust);
 

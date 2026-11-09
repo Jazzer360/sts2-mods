@@ -8,6 +8,13 @@ public sealed record BadgeSpec(string Text, Color Bg, Color Fg);
 public sealed record RelicMark(Texture2D? Icon, string Name, bool Crossed);
 
 /// <summary>
+/// A keyword shown as a native-style tab on the card's left edge: a copy of the card's own
+/// enchantment tab with a different icon (Steady for Retain, Master Planner for Sly).
+/// Label is the tab's small number ("1" = this turn only), or null.
+/// </summary>
+public sealed record TabSpec(string Key, Texture2D? Icon, string? Label);
+
+/// <summary>
 /// What should be drawn on one card this frame. Features fill it in; CardOverlayRenderer draws it.
 /// Collecting first and drawing once keeps features from fighting over the same card.
 /// </summary>
@@ -15,6 +22,7 @@ public sealed class CardDecor
 {
     public List<BadgeSpec> Badges { get; } = new();
     public List<RelicMark> Relics { get; } = new();
+    public List<TabSpec> Tabs { get; } = new();
 
     /// <summary>Whole-card opacity (Ethereal). Null = untouched.</summary>
     public float? Opacity { get; set; }
@@ -28,7 +36,7 @@ public sealed class CardDecor
     /// <summary>How many times the card will play (2+ draws echo ripples). 1 = normal.</summary>
     public int PlayCount { get; set; } = 1;
 
-    public bool IsEmpty => Badges.Count == 0 && Relics.Count == 0 && Opacity == null && DimReason == null && Border == null && PlayCount <= 1;
+    public bool IsEmpty => Badges.Count == 0 && Relics.Count == 0 && Tabs.Count == 0 && Opacity == null && DimReason == null && Border == null && PlayCount <= 1;
 
     /// <summary>Changes only when the badge/relic row needs rebuilding.</summary>
     public string RowSignature()

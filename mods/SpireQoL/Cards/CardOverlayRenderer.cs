@@ -44,6 +44,79 @@ public sealed class CardOverlayRenderer
         public bool TouchedAlpha;
         public bool Seen;
         public readonly List<TextureRect> Echoes = new();
+        public readonly List<Control> Tabs = new();
+    }
+
+    // ---- Keyword tabs ----
+    // Copies of the card's own enchantment tab (NCard.EnchantmentTab: "%Enchantment" with an
+    // "Icon" TextureRect and a "Label" MegaLabel), stacked down the left edge below the
+    // enchantment slot, the way a second enchantment would look.
+    private const float TabGap = 4f;
+
+    private void ApplyTabs(Entry e, List<TabSpec> tabs)
+    {
+        var template = e.Card.EnchantmentTab;
+        if (template == null || !GodotObject.IsInstanceValid(template))
+        {
+            HideTabs(e);
+            return;
+        }
+
+        while (e.Tabs.Count < tabs.Count)
+        {
+            var copy = (Control)template.Duplicate();
+            copy.Name = "SpireQoL_KeywordTab";
+            ClearUniqueNames(copy);
+            copy.MouseFilter = Control.MouseFilterEnum.Ignore;
+            template.GetParent().AddChild(copy);
+            e.Tabs.Add(copy);
+        }
+
+        // The game moves its tab up when the card has no star cost; follow wherever it is.
+        var step = template.Size.Y * template.Scale.Y + TabGap;
+        var slot = template.Visible ? 1 : 0;
+        for (var i = 0; i < e.Tabs.Count; i++)
+        {
+            var tab = e.Tabs[i];
+            if (!GodotObject.IsInstanceValid(tab)) continue;
+            var on = i < tabs.Count;
+            tab.Visible = on;
+            if (!on) continue;
+
+            var spec = tabs[i];
+            tab.Position = template.Position + Vector2.Down * step * (slot + i);
+            tab.Scale = template.Scale;
+            tab.Rotation = template.Rotation;
+            // Not the template's tint: the game greys its tab for a disabled enchantment.
+            tab.Modulate = Colors.White;
+            tab.SelfModulate = Colors.White;
+
+            if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
+            {
+                icon.Texture = spec.Icon;
+                icon.Modulate = Colors.White;
+            }
+            if (tab.GetNodeOrNull<Label>("Label") is { } label)
+            {
+                label.Visible = spec.Label != null;
+                label.Text = spec.Label ?? "";
+            }
+        }
+    }
+
+    private static void HideTabs(Entry e)
+    {
+        foreach (var tab in e.Tabs)
+        {
+            if (GodotObject.IsInstanceValid(tab)) tab.Visible = false;
+        }
+    }
+
+    /// <summary>A duplicated scene piece keeps "%unique" flags; clear them so the card's own lookups aren't confused.</summary>
+    private static void ClearUniqueNames(Node node)
+    {
+        node.UniqueNameInOwner = false;
+        foreach (var child in node.GetChildren()) ClearUniqueNames(child);
     }
 
     // ---- Double-play echoes ----
@@ -148,6 +221,7 @@ public sealed class CardOverlayRenderer
             if (e.Seen) continue;
             e.Overlay.Visible = false;
             HideEchoes(e);
+            HideTabs(e);
             if (e.TouchedAlpha)
             {
                 SetAlpha(e.Container, 1f);
@@ -268,8 +342,9 @@ public sealed class CardOverlayRenderer
         }
         foreach (var b in e.Border) b.Visible = showBorder;
 
-        // Double-play echoes.
+        // Double-play echoes and keyword tabs.
         ApplyEchoes(e, d.PlayCount);
+        ApplyTabs(e, d.Tabs);
 
         // Translucency.
         if (d.Opacity is { } a)

@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.9.0
+#### Changed
+- **Retain and Sly** now show as native-style tabs on the card's left edge, replacing the `RET` / `SLY` text badges. Each tab is a copy of the card's own enchantment tab.
+  - Retain uses the Steady enchantment icon; Sly uses the Master Planner power icon.
+  - A `1` in the tab means this turn only.
+
 ### Spire QoL 0.8.0
 #### Added
 - **Double-play indicator:** cards that will play more than once get echo ripples, copies of the card's own glow outline expanding outward and fading, inspired by Echo Form's afterimages, plus a `×2` / `×3` badge.

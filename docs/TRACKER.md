@@ -33,10 +33,10 @@ The game shows these only as card text. `CardModel.Keywords` merges local keywor
   - Sources: canonical Ethereal cards; Music Box (adds Ethereal to its copy); Hexed affliction via `HexPower` (granted globally, gone when Hex is removed).
   - Must still be readable. Opacity is a setting (default ~70%).
 - ~~Ethereal badge~~: dropped in 0.3.0; translucency alone marks Ethereal.
-- [~] **Retain badge**: from the Retain keyword or single-turn retain (`ShouldRetainThisTurn`).
+- [~] **Retain tab** (0.9.0: Steady icon on a copy of the enchantment tab; "1" = this turn only): from the Retain keyword or single-turn retain (`ShouldRetainThisTurn`).
   - Adds Retain: Anointed, Calculated Gamble, Dredge, Gold Axe, Misery, Monologue, Reaper Form, Royal Gamble, Scrawl, Times Up, Wish, Wisp; enchantments Royally Approved and Steady.
   - Single-turn retain: Expertise.
-- [~] **Sly badge**: from the Sly keyword or single-turn Sly (`IsSlyThisTurn`; Hand Trick).
+- [~] **Sly tab** (0.9.0: Master Planner icon on a copy of the enchantment tab): from the Sly keyword or single-turn Sly (`IsSlyThisTurn`; Hand Trick).
 - [~] **Exhaust badge**, only when Exhaust was *added* (Goopy enchantment), not for cards that always exhaust.
 - [~] **Innate / Eternal badges**: off by default (they matter in the deck view, not mid-combat).
   - Adds Innate: Afterimage, Aggression, Arsenal, Beacon of Hope, Big Bang, Call of the Void, Entropy, Hello World, Infinite Blades, Juggling, Machine Learning, Mad Science, Royally Approved, Soulbound, Speedster, Tyranny.
