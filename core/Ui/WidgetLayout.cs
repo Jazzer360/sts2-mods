@@ -9,7 +9,10 @@ public enum AttachSide
     RightOfBottom,
 }
 
-/// <summary>The nine screen anchors a widget can be pinned to.</summary>
+/// <summary>
+/// A point on a 3×3 grid: used both for the widget's pin (which of its corners/edges stays
+/// fixed) and, in screen mode, the matching point of the screen it's measured from.
+/// </summary>
 public enum ScreenAnchor
 {
     TopLeft, Top, TopRight,
@@ -35,6 +38,12 @@ public sealed class WidgetLayout
     /// anchor. Offsets are then relative to that element's bottom-center. Middle-click toggles.
     /// </summary>
     public bool FollowGame { get; set; }
+
+    /// <summary>
+    /// The player chose the pin (Anchor) themselves. In attached mode this overrides the attach
+    /// point's natural pin; in screen mode Anchor is always the pin.
+    /// </summary>
+    public bool CustomPin { get; set; }
 
     public WidgetLayout Clone() => (WidgetLayout)MemberwiseClone();
 

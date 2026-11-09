@@ -100,7 +100,7 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [~] | Automation | cards drawn | 10 | never | gain energy |
 | [~] | Cacophony | cards drawn | 33 | never | damage a random enemy (number only, no bar) |
 | [~] | Panache | cards played | 5 | each turn | damage all enemies |
-| [~] | Pale Blue Dot | attacks played | 5 | each turn (once) | draw next turn |
+| [~] | Pale Blue Dot | cards played (any type) | 5 | each turn (once) | draw next turn |
 | [~] | Withering Presence (enemy) | your cards played | 6 | never | Wither added to your hand |
 | — | Feral, Monologue, Sloth, Tender, Slow, Tag Team | | | | custom display, but not a countdown to an effect; skipped |
 

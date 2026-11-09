@@ -34,7 +34,8 @@ public static class PowerSpecs
         new PowerCounterSpec("AutomationPower", 10, "draws", CrossTurn: true),  // every 10 cards drawn: gain energy
         new PowerCounterSpec("CacophonyPower", 33, "draws", CrossTurn: true),   // every 33 cards drawn: damage an enemy
         new PowerCounterSpec("PanachePower", 5, "cards"),                       // every 5 cards this turn: damage all enemies
-        new PowerCounterSpec("PaleBlueDotPower", 5, "attacks"),                 // 5 attacks this turn: draw next turn (once)
+        // Counts every card played this turn, despite the game's property being named "AttacksPlayedThisTurn".
+        new PowerCounterSpec("PaleBlueDotPower", 5, "cards"),                   // 5 cards this turn: draw next turn (once)
         new PowerCounterSpec("WitheringPresencePower", 6, "cards", CrossTurn: true, OnEnemy: true), // every 6 cards: Wither in hand
     };
 

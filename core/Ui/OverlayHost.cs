@@ -236,8 +236,8 @@ public sealed class OverlayHost
                 : $"{ModId}: layout locked.");
             if (!LayoutUnlocked) RaiseLayoutChanged();
         }
-        // Ctrl+1–9 over a widget (layout unlocked) pins it to that screen anchor, laid out like a
-        // numpad: 7 8 9 = top row, 4 5 6 = middle, 1 2 3 = bottom. Ctrl avoids the game's
+        // Ctrl+1–9 over a widget (layout unlocked) is a shortcut for its pin picker, laid out like
+        // a numpad: 7 8 9 = top row, 4 5 6 = middle, 1 2 3 = bottom. Ctrl avoids the game's
         // number-key card shortcuts.
         if (LayoutUnlocked && Input.IsPhysicalKeyPressed(Key.Ctrl))
         {
@@ -245,7 +245,7 @@ public sealed class OverlayHost
             {
                 if (!Pressed(key)) continue;
                 var hovered = _widgets.FirstOrDefault(w => w.Hovered);
-                if (hovered != null) hovered.SetAnchor(anchor);
+                if (hovered != null) hovered.SetPin(anchor);
                 else Toast("Hover a widget, then Ctrl+1–9 to pick its anchor", 2.5f);
             }
         }

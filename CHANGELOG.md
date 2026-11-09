@@ -6,6 +6,20 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.7.0 (feedback from fifth test)
+#### Added
+- **Pin picker and Attach button** on every widget while the layout is unlocked (F8):
+  - A 3×3 grid chooses which corner or edge of the widget stays fixed when it grows or shrinks.
+  - The button switches between following your character and staying fixed on screen.
+  - Ctrl+1–9 and middle-click remain as shortcuts.
+
+#### Changed
+- Dragging a widget keeps the pin you chose. It no longer silently re-anchors to the nearest screen point, which is why picking an anchor didn't seem to work.
+- Relic Counters measures the HP bar's visible container (`%HpBarContainer`). The bar node's own box stopped short, so the tray drew over the bar. It also gets 12px of padding. The measured rects are logged once per combat, for checking.
+
+#### Fixed
+- Pale Blue Dot's label said "attacks"; it counts every card played (the game's property is misleadingly named `AttacksPlayedThisTurn`).
+
 ### Spire QoL 0.6.0 (feedback from fourth test)
 #### Changed
 - **Floating widgets draw behind your cards in hand.** During combat they're placed inside the game's combat UI, just before the hand. They move back on top while the layout is unlocked, so you can drag them.

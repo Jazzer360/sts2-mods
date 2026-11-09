@@ -152,7 +152,11 @@ public static class Sts2State
         return new Godot.Rect2(xf.Origin, c.Size * xf.Scale);
     }
 
-    /// <summary>Screen rect of just the local player's HP bar (NHealthBar), or null.</summary>
+    /// <summary>
+    /// Screen rect of the local player's HP bar as drawn, or null. The NHealthBar node's own box
+    /// stopped short of the visible bar in game (a widget placed at its right edge sat over the
+    /// bar), so this measures NHealthBar's "%HpBarContainer" and the visible pieces inside it.
+    /// </summary>
     public static Godot.Rect2? PlayerHpBarRect()
     {
         var me = Me;
@@ -162,8 +166,29 @@ public static class Sts2State
         var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
         if (display == null || !display.IsVisibleInTree()) return null;
         var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
-        return bar != null && bar.Size.X >= 1 ? ScreenRect(bar) : ScreenRect(display);
+        if (bar == null) return ScreenRect(display);
+
+        var container = bar.GetNodeOrNull<Godot.Control>("%HpBarContainer");
+        if (container == null) return ScreenRect(bar);
+
+        var rect = ScreenRect(container);
+        foreach (var r in VisibleControlRects(container))
+        {
+            rect = rect.Merge(r);
+        }
+
+        // One log line per combat, so placement can be checked against the game log.
+        var combatId = MegaCrit.Sts2.Core.Combat.CombatManager.Instance.CurrentCombatId;
+        if (combatId != null && !Equals(combatId, _loggedHpBarFor))
+        {
+            _loggedHpBarFor = combatId;
+            MegaCrit.Sts2.Core.Logging.Log.Info(
+                $"[SpireQoL] HP bar rects: NHealthBar={ScreenRect(bar)} HpBarContainer={ScreenRect(container)} measured={rect} viewport={bar.GetViewportRect().Size}");
+        }
+        return rect;
     }
+
+    private static object? _loggedHpBarFor;
 
     /// <summary>
     /// Where floating widgets should draw so cards in hand cover them: directly before the

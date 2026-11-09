@@ -34,14 +34,20 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 **What you see:** floating indicators you can place yourself, and two hotkeys.
 
-- **F8: unlock/lock layout.** When unlocked, every floating indicator shows with an orange outline, even if it has nothing to show right now:
-  - **Drag** to move it.
+- **F8: unlock/lock layout.** When unlocked, every floating indicator shows with an orange outline, even if it has nothing to show right now, plus a header with:
+  - **A 3×3 pin picker.** It chooses which corner or edge of the widget stays fixed when the widget grows or shrinks. With the bottom-left pin, for example, extra counter rows grow the widget upward and to the right. Picking a pin never moves the widget. The orange square is the current pin.
+  - **An Attach button** (widgets that can follow a game element: Incoming Damage, Relic Counters). When attached, the widget follows your character. Otherwise it stays fixed on screen.
+- While unlocked:
+  - **Drag** to move a widget. It keeps your chosen pin; there's no automatic re-anchoring.
   - **Mouse wheel** over it to scale it (0.4×–3×).
-  - **Right-click** to reset it to its default place and size.
-  - **Middle-click** (widgets that can attach to a game element: Incoming Damage, Relic Counters): toggle between *attached* (follows the element) and *pinned to the screen*.
-  - **Ctrl+1–9** while hovering a widget: pin it to that screen anchor, laid out like a numpad (7 8 9 top, 4 5 6 middle, 1 2 3 bottom). It stays where it is; only the point it's measured from changes. Ctrl avoids the game's number-key card shortcuts.
-  - On drop, a pinned widget re-anchors to the nearest of nine screen points (corners, edge centers, center). An attached widget stores its offset from the element. Either way, positions survive resolution changes. Indicators can't be dragged off screen.
-  - Locking makes them click-through again and saves the layout.
+  - **Right-click** to reset it to its default place, pin and size.
+  - **Middle-click** is the same as the Attach button.
+  - **Ctrl+1–9** while hovering a widget is a shortcut for the pin picker, laid out like a numpad (7 8 9 top, 4 5 6 middle, 1 2 3 bottom). Ctrl avoids the game's number-key card shortcuts.
+- **How positions are stored:**
+  - **On screen:** the pin is measured from the matching point of the screen. A bottom-left pin is measured from the screen's bottom-left corner.
+  - **Attached:** the pin is measured from a point beside the game element. Relic Counters uses just right of the HP bar's bottom-right corner, with a natural bottom-left pin. Incoming Damage uses just left of the block icon, with a natural right pin.
+  - Either way, positions survive resolution changes, and widgets can't go off screen.
+- Locking makes the widgets click-through again and saves the layout.
 - **F9: hide/show all overlays.**
 - A short message in the top-left confirms each hotkey.
 
@@ -51,7 +57,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | --- | --- | --- |
 | `Features` | all `true` | turn features on/off by id |
 | `Relics` | (empty) | relic class name → `false` to hide it from counters and reminders, e.g. `"PenNib": false` |
-| `Widgets` | defaults | saved positions (`Anchor`, `OffsetX/Y`, `Scale`, `Opacity`, `FollowGame`) |
+| `Widgets` | defaults | saved positions (`Anchor` = pin, `OffsetX/Y`, `Scale`, `Opacity`, `FollowGame`, `CustomPin`) |
 | `LayoutVersion` | (managed) | when a release changes a default position, older saved positions for that widget are reset once |
 | `UnlockLayoutKey` / `HideAllKey` | `F8` / `F9` | Godot key names |
 | `EtherealOpacity` | `0.8` | 0.25–1 (a saved 0.7, the old default, is raised to 0.8 once) |
@@ -100,7 +106,7 @@ Colors avoid the game's glows (cyan/gold/red) and cost colors (blue/green/red).
 - **Pael's Tears** shows green `+2 next turn` while you still have energy (ending your turn with energy left gives energy next turn), and red `no energy left` once you've spent it all.
 - **Countdown powers** (sorted after relics; the game's `PowerModel.DisplayAmount` is "steps left"). The bar fills toward the next trigger and flashes when one step is left:
   - Across turns: Orbit (every 4 energy spent), Automation (every 10 cards drawn), Cacophony (every 33 cards drawn, number only).
-  - Per turn: Panache (every 5 cards played), Pale Blue Dot (5 attacks; shows `done` once it has fired this turn).
+  - Per turn: Panache (every 5 cards played), Pale Blue Dot (5 cards played, any type; shows `done` once it has fired this turn).
   - Enemy powers that count *your* plays, in red: Withering Presence (every 6 cards you play adds a Wither to your hand).
 - **Pael's Eye** shows one segment: green "ready" while unused this combat, "used" afterwards. It's the only one-shot relic in the tray, because it has no card to mark. The other one-shot relics (Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box) appear only as icons on the cards that would use them (Relic Reminders).
 
