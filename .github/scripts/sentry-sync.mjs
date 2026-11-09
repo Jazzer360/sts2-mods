@@ -23,8 +23,24 @@ if (!ORG || !PROJECT || !STOKEN) {
 
 async function sentry(path, init = {}) {
   const r = await fetch(`${SENTRY}/api/0${path}`, { ...init, headers: { Authorization: `Bearer ${STOKEN}`, "Content-Type": "application/json", ...(init.headers || {}) } });
-  if (!r.ok) throw new Error(`Sentry ${init.method || "GET"} ${path}: ${r.status} ${await r.text()}`);
+  if (!r.ok) {
+    const err = new Error(`Sentry ${init.method || "GET"} ${path}: ${r.status} ${await r.text()}`);
+    err.status = r.status;
+    throw err;
+  }
   return r.status === 204 ? null : r.json();
+}
+
+// The newest event of an issue. A brand-new issue can 404 on "latest" for a few minutes while
+// Sentry indexes it; then try the event list, and return null (retry next run) if that's empty too.
+async function latestEvent(id) {
+  try {
+    return await sentry(`/organizations/${ORG}/issues/${id}/events/latest/`);
+  } catch (e) {
+    if (e.status !== 404) throw e;
+  }
+  const list = await sentry(`/organizations/${ORG}/issues/${id}/events/?full=true&per_page=1`);
+  return list?.[0] ?? null;
 }
 
 async function github(path, init = {}) {
@@ -93,10 +109,16 @@ const mirrored = await mirroredIssues();
 const issues = await sentry(`/projects/${ORG}/${PROJECT}/issues/?query=${encodeURIComponent("is:unresolved")}&statsPeriod=14d&limit=100`);
 console.log(`${issues.length} unresolved Sentry issues, ${mirrored.size} mirrored.`);
 
+let failed = 0;
 for (const issue of issues) {
+ try {
   const gh = mirrored.get(issue.id);
   if (!gh) {
-    const event = await sentry(`/organizations/${ORG}/issues/${issue.id}/events/latest/`);
+    const event = await latestEvent(issue.id);
+    if (!event) {
+      console.log(`Sentry ${issue.id} has no event available yet; will retry next run.`);
+      continue;
+    }
     const kind = (event.tags || []).find((t) => t.key === "kind")?.value || "crash";
     const created = await github(`/repos/${REPO}/issues`, {
       method: "POST",
@@ -116,4 +138,13 @@ for (const issue of issues) {
       console.log(`resolved Sentry ${issue.id} (#${gh.number} is closed)`);
     }
   }
+ } catch (e) {
+  // One issue failing doesn't stop the others from syncing; the run still fails at the end.
+  failed++;
+  console.error(`Sentry ${issue.id}: ${e.message}`);
+ }
+}
+if (failed) {
+  console.error(`${failed} issue(s) failed to sync.`);
+  process.exit(1);
 }
