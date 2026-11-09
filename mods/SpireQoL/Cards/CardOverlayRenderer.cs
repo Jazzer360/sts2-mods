@@ -28,7 +28,7 @@ public sealed class CardOverlayRenderer
 
     private const float TabGap = 6f;
     private const float TabOverlap = 0.25f; // fraction of the tag length tucked under the card (hidden by the card art)
-    private const float TagDrop = 0.08f; // fraction of the tag length the backdrop slides down, the icon staying put on screen
+    private const float TagDrop = 0.08f; // fraction of the tag length the backdrop slides down (the icon stays centered in what's visible)
     private const float IconScale = 0.85f; // icon size relative to the tab art's own icon slot
 
     private readonly OverlayHost _host;
@@ -281,9 +281,9 @@ public sealed class CardOverlayRenderer
                 // Keep the icon upright, slightly smaller, and centered in the part of the tag that
                 // sticks out above the card. In the tab's own (unrotated) coordinates the length
                 // runs along x and maps downward onto the card after the +90° turn, so the visible
-                // part is x ∈ [0, length × (1 − overlap)].
-                // The backdrop sits TagDrop lower than that, so the icon moves back up by the same amount.
-                var visibleCenter = new Vector2(tab.Size.X * ((1f - TabOverlap) / 2f - TagDrop), tab.Size.Y / 2f);
+                // part is x ∈ [0, length × (1 − overlap − drop)] (the backdrop sits TagDrop lower).
+                // The icon is centered in that visible part.
+                var visibleCenter = new Vector2(tab.Size.X * (1f - TabOverlap - TagDrop) / 2f, tab.Size.Y / 2f);
                 icon.PivotOffset = icon.Size / 2f;
                 icon.Rotation = -Mathf.Pi / 2f;
                 icon.Scale = new Vector2(IconScale, IconScale);

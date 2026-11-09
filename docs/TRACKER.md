@@ -343,3 +343,4 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.23.1: removed the "can't be played" tab and dimming; the game's crossed-out cost covers every case (`NCard` unplayable cost icon on any non-cost `CanPlay` failure). Crossed tabs now only mean "might be bad for you".
 - [x] 0.23.2: settings menu Reset defaults button, game cursor, discard pile icon on Shuffle Warning (loaded from `res://images/packed/combat_ui/discard_pile.png` outside combat).
 - [x] 2026-11-09: "knowable information only" made a hard rule (CLAUDE.md). Audited the mod: no RNG or seed reads; random effects show amounts, never targets; enemy attacks come from the intent on screen; private reads are only counters and "already used" flags a player could track.
+- [~] 0.23.5: tab icons centered in the visible part of the tab (they sat 4% of the tab length too high).

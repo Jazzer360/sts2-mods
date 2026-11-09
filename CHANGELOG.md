@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.5
+#### Changed
+- Card tabs: the icon (and its number) sits a little lower, centered in the visible part of the tab instead of hugging its top edge.
+
 ### Spire QoL 0.23.4
 #### Added
 - Pael's Legion: a tab on cards that gain block while it's off cooldown (that card gets double block), like Vambrace.
