@@ -28,7 +28,8 @@ public sealed class CardOverlayRenderer
     private static readonly Color SlashColor = new(1f, 0.15f, 0.1f, 0.95f);
 
     private const float TabGap = 6f;
-    private const float TabOverlap = 0.4f; // fraction of the tag length tucked under the card (hidden by the card art)
+    private const float TabOverlap = 0.25f; // fraction of the tag length tucked under the card (hidden by the card art)
+    private const float IconScale = 0.85f; // icon size relative to the tab art's own icon slot
 
     private readonly OverlayHost _host;
     private readonly CardDecorFrame _frame;
@@ -256,9 +257,15 @@ public sealed class CardOverlayRenderer
 
             if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
             {
-                // Keep the icon upright inside the rotated tag.
+                // Keep the icon upright, slightly smaller, and centered in the part of the tag that
+                // sticks out above the card. In the tab's own (unrotated) coordinates the length
+                // runs along x and maps downward onto the card after the +90° turn, so the visible
+                // part is x ∈ [0, length × (1 − overlap)].
+                var visibleCenter = new Vector2(tab.Size.X * (1f - TabOverlap) / 2f, tab.Size.Y / 2f);
                 icon.PivotOffset = icon.Size / 2f;
                 icon.Rotation = -Mathf.Pi / 2f;
+                icon.Scale = new Vector2(IconScale, IconScale);
+                icon.Position = visibleCenter - icon.Size / 2f;
                 icon.Texture = spec.Icon;
                 icon.Modulate = spec.Crossed ? new Color(1, 1, 1, 0.8f) : Colors.White;
                 if (icon.GetNodeOrNull<ColorRect>("SpireQoL_Slash") is { } slash)

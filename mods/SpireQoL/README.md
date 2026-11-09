@@ -8,7 +8,7 @@ Display-only quality-of-life tweaks for Slay the Spire 2. The mod doesn't change
 | Relic Counters | Tick-bar tray beside your HP bar for counter relics and countdown powers (Pen Nib, Kunai, Stone Calendar, Panache...) |
 | Relic Reminders | Relic tags on the cards they affect, crossed when playing the card breaks the relic |
 | Incoming Damage | Stacked sum by your HP bar: incoming damage − end-of-turn block = damage you will take |
-| Shuffle Warning | Draw-pile tag on cards whose draw would reshuffle your discard pile |
+| Shuffle Warning | Discard-pile tag on cards whose draw would reshuffle your discard pile |
 | Intent Forecast | Each enemy's upcoming moves (not built yet) |
 
 Everything except Intent Forecast is in the current test build. See [docs/FEATURES.md](../../docs/FEATURES.md) for the full description of each change, [docs/TRACKER.md](../../docs/TRACKER.md) for progress, and [CHANGELOG.md](../../CHANGELOG.md) for patch notes.

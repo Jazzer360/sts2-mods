@@ -74,7 +74,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 Every indicator about a specific card in your hand uses the **same form**: a **tag** hanging up off the card's **top edge**, centered in a row, one tag per effect. In a fanned hand the tops of cards stay visible while their sides are covered, so you can read the tags at a glance without hovering. A tag means something out of the ordinary will happen when you play that card.
 
-- **Look:** each tag is a copy of the card's own enchantment tab (the game's banner art), rotated a quarter turn so it hangs off the top edge the way an enchantment tab hangs off the side. **It draws beneath the card art but above the card's glow**, tucked about 40% under the top edge, so the card itself covers the tucked part and only the icon end sticks out. Each tag carries the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
+- **Look:** each tag is a copy of the card's own enchantment tab (the game's banner art), rotated a quarter turn so it hangs off the top edge the way an enchantment tab hangs off the side. **It draws beneath the card art but above the card's glow**, tucked about 25% under the top edge, so the card itself covers the tucked part. The icon is drawn slightly smaller (85%) and centered in the part that sticks out. Each tag carries the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
 - **Icon only:** no numbers on tags. The icon says what's going on; you know the details.
 - **Red slash:** the icon crossed out means playing this card breaks or is blocked by that thing.
 - **One per source:** each source shows at most one tab per card. If a card has many, the row shrinks to fit the card's width.
@@ -89,7 +89,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 | Royally Approved / Tezcatara's Ember (enchantments) | Innate / Eternal (off by default) | Card Indicators |
 | Galvanic (power) | Galvanized: playing it damages you | Card Indicators |
 | Bound / Ringing / Smog power, or Velvet Choker, **crossed** + card dimmed | can't be played right now | Card Indicators |
-| Draw pile | its draw would reshuffle your discard pile | Shuffle Warning |
+| Discard pile | its draw would reshuffle your discard pile into the draw pile | Shuffle Warning |
 | A relic | playing this uses the relic (Pen Nib ready, one-shot relics) | Relic Reminders |
 | A relic, **crossed** | playing this stops the relic working (Art of War, Ripple Basin, Pael's Tears) | Relic Reminders |
 
@@ -211,9 +211,9 @@ Thresholds are read live from each relic, so balance patches are picked up autom
 
 ## Shuffle Warning
 
-**What you see:** a **draw pile** tab (the game's own draw pile icon) on draw cards in your hand whose draw is more than your draw pile, so playing them reshuffles your discard pile mid-turn. Nothing else: you know what a reshuffle means for the cards in your hand.
+**What you see:** a **discard pile** tab (the game's own discard pile icon) on draw cards in your hand whose draw is more than your draw pile, so playing them reshuffles your discard pile mid-turn. Nothing else: you know what a reshuffle means for the cards in your hand.
 
-Draw cards are a fixed list from the decompile (TRACKER §6). The draw pile icon is read from the live draw pile button (`NCombatUi.DrawPile` → `Icon`).
+Draw cards are a fixed list from the decompile (TRACKER §6). The discard pile icon is read from the live discard pile button (`NCombatUi.DiscardPile` → `Icon`).
 
 **Not yet:** cards whose draw amount isn't a simple number (Compile Driver, Dagger Throw, Escape Plan, Mad Science, Pillage, Prepared, Restlessness, Scrawl), and draw potions (potion slots have no tab yet).
 

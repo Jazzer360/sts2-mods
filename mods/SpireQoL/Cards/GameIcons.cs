@@ -32,16 +32,33 @@ public static class GameIcons
         => Cached(typeof(T), () => ModelDb.Enchantment<T>().Icon);
 
     /// <summary>
-    /// The draw pile button's icon (NCombatUi.DrawPile → "Icon"). It isn't referenced by path in
-    /// code, only in the scene, so it's read from the live button.
+    /// The discard pile button's icon (NCombatUi.DiscardPile → "Icon"), used for the shuffle tag:
+    /// a reshuffle is the discard pile going back into the draw pile. Pile icons aren't
+    /// referenced by path in code, only in the scene, so it's read from the live button.
     /// </summary>
+    public static Texture2D? DiscardPile()
+    {
+        if (_discardPile != null) return _discardPile;
+        _discardPile = PileIcon(NCombatRoom.Instance?.Ui?.DiscardPile);
+        return _discardPile;
+    }
+
+    /// <summary>The draw pile button's icon (NCombatUi.DrawPile → "Icon").</summary>
     public static Texture2D? DrawPile()
     {
         if (_drawPile != null) return _drawPile;
+        _drawPile = PileIcon(NCombatRoom.Instance?.Ui?.DrawPile);
+        return _drawPile;
+    }
+
+    private static Texture2D? _discardPile;
+
+    private static Texture2D? PileIcon(Node? button)
+    {
         try
         {
-            var icon = NCombatRoom.Instance?.Ui?.DrawPile?.GetNodeOrNull<Control>("Icon");
-            _drawPile = icon switch
+            var icon = button?.GetNodeOrNull<Control>("Icon");
+            return icon switch
             {
                 TextureRect tr => tr.Texture,
                 null => null,
@@ -50,9 +67,8 @@ public static class GameIcons
         }
         catch
         {
-            _drawPile = null;
+            return null;
         }
-        return _drawPile;
     }
 
     private static Texture2D? FirstTexture(Node node)

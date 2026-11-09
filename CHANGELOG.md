@@ -6,6 +6,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.15.0
+#### Changed
+- On-card tags sit higher: tucked 25% under the card's top edge (was 40%).
+- Tag icons are 85% size and centered in the part of the tag that sticks out above the card.
+- Shuffle Warning uses the **discard pile** icon instead of the draw pile icon.
+
+#### Verified in game
+- Tags render beneath the card art and above the card glow (0.14.0).
+
 ### Spire QoL 0.14.0
 #### Changed
 - **On-card tags draw beneath the card art but above the card's glow,** on their own layer inserted right after the glow node. They're tucked about 40% under the card's top edge, so the card covers the tucked part and only the icon end sticks out.

@@ -7,7 +7,7 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// A draw-pile tab on cards in hand whose draw would run past the end of your draw pile and
+/// A discard-pile tab on cards in hand whose draw would run past the end of your draw pile and
 /// reshuffle the discard pile mid-turn. Same on-card tab language as every other indicator.
 /// Spec: docs/FEATURES.md#shuffle-warning.
 /// </summary>
@@ -52,7 +52,7 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
         {
             if (DrawCards.Contains(c.GetType().Name) && Sts2State.Var(c, "Cards") > draw)
             {
-                _ctx.Decor.For(c).AddTab("shuffle", GameIcons.DrawPile());
+                _ctx.Decor.For(c).AddTab("shuffle", GameIcons.DiscardPile());
             }
         }
     }
