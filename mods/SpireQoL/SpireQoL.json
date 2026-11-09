@@ -2,7 +2,7 @@
   "id": "SpireQoL",
   "name": "Spire QoL",
   "author": "Derek Jass",
-  "description": "Display-only quality-of-life tweaks: card modifier indicators, relic counters and reminders, end-of-turn block forecast, incoming damage, shuffle warning, and enemy intent forecast. Each feature can be toggled and placed.",
+  "description": "Display-only quality-of-life tweaks: on-card indicators for card modifiers, relic and power counters, relic reminders, incoming damage, and a shuffle warning. Each feature can be toggled and placed.",
   "version": "0.18.0",
   "has_dll": true,
   "has_pck": false,

@@ -12,3 +12,6 @@ sts2.dll
 GodotSharp.dll
 0Harmony.dll
 decompiled/
+
+# Release packaging output (scripts/release.ps1)
+dist/

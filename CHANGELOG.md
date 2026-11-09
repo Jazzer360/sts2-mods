@@ -9,6 +9,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 ### Spire QoL 0.18.0
 #### Changed
 - **Double-play tabs show the icon of what's causing the extra play** instead of always Echo Form: Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or the card's replay enchantment. A card doubled by two sources gets one tab for each.
+- The mod description in the game's mod list no longer mentions Block Forecast (removed) or Intent Forecast (not built yet).
 
 ### Spire QoL 0.17.0
 #### Fixed
@@ -174,6 +175,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Repo
 #### Added
+- `scripts/release.ps1`: builds each mod, zips `dist/<ModId>-<version>.zip` and publishes it as a GitHub release, with the version's changelog section as notes.
+- "Release check" GitHub workflow: fails when a mod's versions disagree, the changelog lacks the version, mod code changed since the last release without a version bump, or (on main) the current version has no release with its zip.
+- README starts with player install instructions.
 - Shared `core/`: settings file, overlay host (frame loop, hotkeys, per-feature error isolation), movable widgets, tick bar, game-state helpers.
 - Monorepo build setup that references the game's assemblies from your install and copies built mods into `<game>/mods/`.
 - Docs: feature reference (`docs/FEATURES.md`), work tracker (`docs/TRACKER.md`), roadmap, and notes on how the mod loader works.

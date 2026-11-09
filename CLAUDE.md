@@ -16,6 +16,15 @@ Any change to mod behavior updates all three in the same commit:
 2. `CHANGELOG.md`: a line under **Unreleased** for the affected mod (Added / Changed / Fixed / Removed).
 3. `docs/TRACKER.md`: check off finished items, and add newly found relics, modifiers or sources.
 
+## Releasing (required with every mod update)
+
+Every change to a mod ships as a release:
+1. Bump the version in **both** `mods/<ModId>/<ModId>.json` and `<ModId>.csproj`, and put the changelog lines under a `### <Mod Name> <version>` heading.
+2. Commit and push to `main`.
+3. Run `./scripts/release.ps1` (needs the game installed and `gh` logged in). It builds, zips `dist/<ModId>-<version>.zip` and creates the GitHub release `<modid>-v<version>`.
+
+The "Release check" workflow fails on `main` until the current version has a release with its zip, and on any change to mod code since the last release without a version bump. Don't leave it red: if you can't run the script (game running, no `gh`), tell the user the release is still pending.
+
 ## UI rules
 
 - Never reuse the game's glow colors (NCardHighlight cyan/gold/red) or cost colors (blue/green/red).

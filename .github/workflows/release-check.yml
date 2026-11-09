@@ -1,0 +1,75 @@
+# Keeps releases in step with the code. The mods can't be built here (they compile against the
+# game's own assemblies, which are never committed), so releases are built and published locally
+# with scripts/release.ps1. This workflow makes sure that actually happens:
+#
+#   - every mod's .json and .csproj versions match, and CHANGELOG.md has a section for it;
+#   - mod code (mods/<ModId>, core/, build files) didn't change since the mod's last release
+#     without a version bump;
+#   - on main: the current version has a GitHub release with its zip attached. Until you run
+#     scripts/release.ps1 this check is red; publishing the release re-runs it.
+name: Release check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # tags and history, to diff against the last release
+
+      - name: Check versions, changelog and releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUIRE_RELEASE: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          status=0
+          err()  { echo "::error::$*"; status=1; }
+
+          for manifest in mods/*/*.json; do
+            dir=$(dirname "$manifest")
+            id=$(basename "$dir")
+            [ "$manifest" = "$dir/$id.json" ] || continue
+
+            version=$(jq -r .version "$manifest")
+            name=$(jq -r .name "$manifest")
+            proj=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$dir/$id.csproj" | head -1)
+            tag="$(echo "$id" | tr '[:upper:]' '[:lower:]')-v$version"
+            echo "== $name $version ($tag)"
+
+            [ "$proj" = "$version" ] || err "$id.csproj Version ($proj) doesn't match $id.json version ($version)."
+            grep -qF "### $name $version" CHANGELOG.md || err "CHANGELOG.md has no '### $name $version' section."
+
+            # Mod code changed since the last release without a version bump?
+            prefix="$(echo "$id" | tr '[:upper:]' '[:lower:]')-v"
+            last=$(git tag -l "${prefix}*" --sort=-v:refname | head -1)
+            if [ -n "$last" ] && [ "$last" = "$tag" ]; then
+              if ! git diff --quiet "$last" HEAD -- "$dir" core Directory.Build.props Directory.Build.targets; then
+                err "$name code changed since release $last but the version is still $version. Bump the version in $id.json and $id.csproj and add a CHANGELOG section."
+              fi
+            fi
+
+            if [ "$REQUIRE_RELEASE" = "true" ]; then
+              assets=$(gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null)
+              if [ $? -ne 0 ]; then
+                err "$name $version has no GitHub release yet. Run ./scripts/release.ps1 on a machine with the game installed."
+              elif ! echo "$assets" | grep -qx "$id-$version.zip"; then
+                err "Release $tag is missing $id-$version.zip. Re-run ./scripts/release.ps1 or attach the zip."
+              else
+                echo "Release $tag has $id-$version.zip."
+              fi
+            fi
+          done
+          exit $status
