@@ -107,6 +107,9 @@ public sealed class CardOverlayRenderer
         {
             return existing;
         }
+        // A stale entry's tag layer lives in the card node, not the overlay; free it so its tags
+        // don't linger on a reused node.
+        if (existing?.TagLayer != null && GodotObject.IsInstanceValid(existing.TagLayer)) existing.TagLayer.QueueFree();
 
         var container = card.GetNodeOrNull<Control>("%CardContainer") ?? card;
 
@@ -269,6 +272,9 @@ public sealed class CardOverlayRenderer
                 icon.Scale = new Vector2(IconScale, IconScale);
                 icon.Position = visibleCenter - icon.Size / 2f;
                 icon.Texture = spec.Icon;
+                // The game sets this on its own icon for a disabled enchantment, which runs the icon
+                // through the backdrop's green colorize shader; Duplicate() copies whatever it was.
+                icon.UseParentMaterial = false;
                 icon.Modulate = spec.Crossed ? new Color(1, 1, 1, 0.8f) : Colors.White;
                 if (icon.GetNodeOrNull<ColorRect>("SpireQoL_Slash") is { } slash)
                 {
@@ -287,6 +293,17 @@ public sealed class CardOverlayRenderer
         tab.Name = "SpireQoL_Tab";
         ClearUniqueNames(tab);
         tab.MouseFilter = Control.MouseFilterEnum.Ignore;
+        // The tab's backdrop uses a colorize shader (NCard.SetEnchantmentStatus sets h/s/v on it).
+        // Duplicate() shares that material with the card's own tab, so give each tag its own copy
+        // with the "enabled" values; otherwise a disabled enchantment greys our tags too.
+        if (tab.Material is ShaderMaterial sm)
+        {
+            var own = (ShaderMaterial)sm.Duplicate();
+            own.SetShaderParameter("h", 0.25);
+            own.SetShaderParameter("s", 0.4);
+            own.SetShaderParameter("v", 0.6);
+            tab.Material = own;
+        }
         if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
         {
             icon.AddChild(new ColorRect
