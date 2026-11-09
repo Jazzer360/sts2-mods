@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.6
+#### Fixed
+- Proc audit false alarms (logs and error reports only; nothing on screen changes):
+  - Cards played in quick succession: the next card's block was blamed on the previous card.
+  - Cards that apply their own powers without a power value (Borrowed Time, Spirit of Ash, Blight Strike's Doom, Invoke) were reported as "unexplained powers".
+  - Thorns expected damage even when you attacked a different enemy without Thorns.
+  - Catastrophe's auto-played (random) cards were checked as if they were predictable.
+
 ### Spire QoL 0.23.5
 #### Changed
 - Card tabs: the icon (and its number) sits a little lower, centered in the visible part of the tab instead of hugging its top edge.

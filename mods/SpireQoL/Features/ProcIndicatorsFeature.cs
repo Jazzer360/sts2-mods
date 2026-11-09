@@ -310,7 +310,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
                     // ---- powers on enemies: being hit by your attack
                     case "ThornsPower" when onEnemy && f.CanHit(e):
-                        return Damage(a, f.HitsOn(e), Spread.Me, dealer: e, harmful: true);
+                    {
+                        var thorns = Damage(a, f.HitsOn(e), Spread.Me, dealer: e, harmful: true);
+                        // A single-target or random attack might hit an enemy without Thorns instead.
+                        var mayMiss = !f.HitsAllEnemies && _cs.HittableEnemies.Any(o => o != e && !o.HasPower<ThornsPower>());
+                        return mayMiss ? thorns with { Min = 0 } : thorns;
+                    }
                     case "CurlUpPower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);          // it gains block
                     case "PersonalHivePower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);    // Dazed into your draw pile
                     case "AsleepPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true);   // wakes it

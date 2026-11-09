@@ -319,7 +319,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Removed the Goopy "added Exhaust" tab and the replay-enchantment double-play tab (the card text already shows both).
 - [x] Forecast: random-target end-of-turn damage with several enemies (Lightning, Parrying Shield, Forgotten Soul) stays uncounted by design: we can't know which enemy it hits, and a kill we can't be sure of would hide an attack. Consuming Shadow's evokes are modeled in 0.23.4 (Frost block, Dark on the lowest-HP enemy, Glass on all, Lightning random).
 - [x] Tags: enemy death effects that revive (Adaptable, Illusion, Reattach): checked, no change. Their death still runs the normal death hooks (`wasRemovalPrevented` false), so Gremlin Horn and on-death powers fire as tagged, and the revive replaces their next move (no attack). Attack hit counts beyond the Repeat value: fixed in 0.23.4 (`PlayFacts.HitsPerPlay`: fixed counts, X costs, calculated hits, Dismantle, Spite, Fiend Fire, Mad Science).
-- [ ] Read the first audit summaries and fix what they show.
+- [x] Read the first audit summaries and fix what they show (2026-11-09, 0.23.6: the first 16 reports were all audit false alarms: window overrun on quick plays, cards' own powers applied in code, Thorns on an untargeted enemy, Catastrophe's random auto-plays). Keep reading new ones.
 
 ---
 
@@ -344,3 +344,4 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.23.2: settings menu Reset defaults button, game cursor, discard pile icon on Shuffle Warning (loaded from `res://images/packed/combat_ui/discard_pile.png` outside combat).
 - [x] 2026-11-09: "knowable information only" made a hard rule (CLAUDE.md). Audited the mod: no RNG or seed reads; random effects show amounts, never targets; enemy attacks come from the intent on screen; private reads are only counters and "already used" flags a player could track.
 - [~] 0.23.5: tab icons centered in the visible part of the tab (they sat 4% of the tab length too high).
+- [x] Sentry sync: a brand-new issue whose event isn't indexed yet no longer fails the whole run (skipped, retried next hour).

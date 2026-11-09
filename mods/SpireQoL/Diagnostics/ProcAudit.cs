@@ -1,3 +1,5 @@
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History;
@@ -58,6 +60,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public required IReadOnlyList<TabSpec> Predicted;
         public required PlayFacts? Facts;
         public required int From;
+        /// <summary>History index of this play's own CardPlayStartedEntry.</summary>
+        public required int Start;
+        /// <summary>Exclusive end (the next play's window start), or -1 for "up to now".</summary>
+        public int To = -1;
         public readonly List<AbstractModel> Flashed = new();
     }
 
@@ -128,18 +134,27 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var i = _seen;
         foreach (var entry in count > _seen ? history.Entries.Skip(_seen) : Enumerable.Empty<CombatHistoryEntry>())
         {
-            if (entry is CardPlayStartedEntry { CardPlay: var play } && play.Card.Owner == me && play.IsFirstInSeries)
+            // Auto-plays (Catastrophe, Mayhem...) belong to the window of whatever played them.
+            if (entry is CardPlayStartedEntry { CardPlay: var play } && play.Card.Owner == me && play.IsFirstInSeries && !play.IsAutoPlay)
             {
+                // Procs that fire before the play is recorded (BeforeCardPlayed: Intimidating
+                // Helmet, Spirit of Ash...) land just before this entry, so the window starts at
+                // the previous frame's history size, unless the previous play started in this same
+                // frame (cards played quickly): then its window ends right at this entry.
+                var from = Math.Min(_seenAtLastFrame, i);
+                if (_open != null && _open.Start >= _seenAtLastFrame) from = i;
+                if (_open != null)
+                {
+                    from = Math.Max(from, _open.Start + 1);
+                    _open.To = from;
+                }
                 Close(me);
                 var predicted = _ctx.Decor.Previous.TryGetValue(play.Card, out var tabs) ? tabs : Array.Empty<TabSpec>();
                 ProcIndicatorsFeature.PreviousFacts.TryGetValue(play.Card, out var facts);
-                // Procs that fire before the play is recorded (BeforeCardPlayed: Intimidating
-                // Helmet, Spirit of Ash...) land just before this entry, so the window starts at
-                // the previous frame's history size.
                 _open = new Window
                 {
                     Card = play.Card, CardName = SafeTitle(play.Card), Predicted = predicted, Facts = facts,
-                    From = Math.Min(_seenAtLastFrame, i),
+                    From = from, Start = i,
                 };
             }
             i++;
@@ -177,7 +192,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
         try
         {
-            var issues = Compare(w, me, _history.Entries.Skip(w.From).ToList(), out var model);
+            var all = _history.Entries.Skip(w.From);
+            var entries = (w.To >= 0 ? all.Take(Math.Max(0, w.To - w.From)) : all).ToList();
+            var issues = Compare(w, me, entries, out var model);
             _checked++;
             if (issues.Count == 0) _matched++;
             foreach (var issue in issues)
@@ -191,7 +208,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             {
                 log.Warn($"[audit] played {w.CardName}: {string.Join("; ", issues)}. Tabs were: {tabs}.");
                 var lines = new List<string>();
-                foreach (var e in _history.Entries.Skip(w.From))
+                foreach (var e in entries)
                 {
                     if (e is BlockGainedEntry or DamageReceivedEntry or CardPlayStartedEntry or PowerReceivedEntry or CardDrawnEntry or CardGeneratedEntry or OrbChanneledEntry)
                     {
@@ -277,7 +294,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
         // ---- block from procs (exact)
         var procBlock = entries.OfType<BlockGainedEntry>()
-            .Where(b => b.Actor == me.Creature && !ReferenceEquals(b.CardPlay?.Card, w.Card))
+            .Where(b => b.Actor == me.Creature && b.CardPlay == null)
             .Sum(b => b.Amount);
         var predictedBlock = w.Predicted.Where(t => t.Kind == "block").Sum(t => t.Amount);
         if (procBlock != predictedBlock) issues.Add($"block: predicted {predictedBlock}, actual {procBlock}");
@@ -295,7 +312,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");
 
         // ---- budget: everything else the play caused
-        var f = w.Facts;
+        var autoPlayed = entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me);
+        if (autoPlayed) modelLines.Add("auto-played cards (random, so not predicted): budget not checked");
+        var f = autoPlayed ? null : w.Facts;
         bool Explained(Effect e) => sourceOf.Keys.Any(s => SourceEffects.TryGetValue(s, out var fx) && fx.Contains(e));
         void Budget(Effect e, string what, int actual, int own)
         {
@@ -327,16 +346,53 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Select(p => p.Power.GetType().Name)
             .Distinct()
             .ToList();
-        if (foreign.Count > 0 && !Explained(Effect.Power)) issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
+        if (foreign.Count > 0 && !autoPlayed && !Explained(Effect.Power)) issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
 
         return issues;
     }
 
     private static string Range(int min, int max) => min == max ? $"{min}" : $"{min}–{max}";
 
+    private static readonly Dictionary<Type, HashSet<Type>> AppliedInCode = new();
+
+    /// <summary>
+    /// Power types a card class applies in its own code: the T of every PowerCmd.Apply&lt;T&gt; call
+    /// in its methods, including async ones (their state machines' MoveNext). Read once per class
+    /// from the compiled code, so new and changed cards are covered without a table.
+    /// </summary>
+    private static HashSet<Type> PowersAppliedInCode(Type cardType)
+    {
+        if (AppliedInCode.TryGetValue(cardType, out var cached)) return cached;
+        var set = new HashSet<Type>();
+        const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        var methods = cardType.GetMethods(all).Cast<MethodBase>()
+            .Concat(cardType.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public)
+                .Where(t => typeof(IAsyncStateMachine).IsAssignableFrom(t))
+                .Select(t => t.GetMethod("MoveNext", all))
+                .Where(m => m != null)
+                .Cast<MethodBase>());
+        foreach (var m in methods)
+        {
+            try
+            {
+                foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                {
+                    if (ins.operand is MethodInfo { IsGenericMethod: true, Name: "Apply" } mi && mi.DeclaringType?.Name == "PowerCmd")
+                        set.Add(mi.GetGenericArguments()[0]);
+                }
+            }
+            catch
+            {
+                // a method we can't read: its powers stay "foreign"
+            }
+        }
+        AppliedInCode[cardType] = set;
+        return set;
+    }
+
     private static HashSet<Type> OwnPowerTypes(CardModel card)
     {
-        var set = new HashSet<Type>();
+        var set = new HashSet<Type>(PowersAppliedInCode(card.GetType()));
         foreach (var v in card.DynamicVars.Values)
         {
             var t = v.GetType();
