@@ -188,6 +188,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [~] **Cloak Clasp**: block × cards in hand.
 - [~] **Ripple Basin**: block if no attack played this turn.
 - ~~**Horn Cleat / Captain's Wheel**~~: not end-of-turn block (they fire at the start of turn 2/3, after enemies attack). Countdown lives in Relic Counters.
+- [ ] **Feel No Pain + Ethereal** (gap found 2026-11-09): Ethereal cards left in hand exhaust at end of turn, and Feel No Pain gives `Amount` block per exhaust (Unpowered, so no Dexterity). That block lands before the enemy attacks but isn't counted yet. Same for **Dark Embrace**-style exhaust procs that give block (see §9).
 - [ ] **Rage / Skittish** powers: block on card play/hit **(verify)**; shown on cards, not in the end-of-turn total.
 - [ ] **Sturdy Clamp**: block isn't cleared. Show carried block for next turn.
 - [ ] **Parrying Shield**: deals damage if you end with ≥N block. Show its threshold.
@@ -248,3 +249,40 @@ Rules:
 - [~] One visual language: every on-card indicator is a tab along the top edge (0.12.0); one tab per source; the row shrinks to fit.
 - [ ] Everything works on enlarged (hover) cards and in grid/pile views.
 - [~] A global hotkey hides all overlays.
+
+---
+
+## 9. Proc indicators (proposed 2026-11-09, not started)
+
+**Goal:** show, on each card in hand, every power or relic that playing it would set off. "Damage is damage, block is block": if a card's play gains block or deals damage through a proc, the card should say so, including procs one step removed (a card that *exhausts another card* while Feel No Pain is up).
+
+Two kinds of proc:
+- **Trigger only:** "this card sets off that relic," like the existing relic reminders. Tab with the relic's or power's icon, no number. Examples: Intimidating Helmet, Mini Regent.
+- **Quantified:** the proc gains block, deals damage or grants a stat, and the exact amount is worth knowing. Example: Feel No Pain on True Grit shows +3 block (+4 upgraded, +6 with two copies of the power).
+
+### Open decision: iconography for quantified procs
+
+Today's rule (CLAUDE.md, UI rules) is one tab per effect, with the source's icon and **no numbers**. Quantified procs need a decision:
+
+| Option | Looks like | For | Against |
+| --- | --- | --- | --- |
+| **A. Source icon + number** | Feel No Pain icon, `3` | Keeps one tab per source, so you can see *why*; the number gives *how much*. Fits the current language with one change: numbers are allowed on quantified procs. | Three block procs on one card make three tabs. |
+| **B. Block / damage icon + number** | Block icon, `3` (sum of all block procs) | "Block is block": one tab per outcome, totals summed. Fewer tabs. | Loses the source; needs block/damage icons from the game's art (intent or status icons). |
+| C. Source icon only | Feel No Pain icon | No rule change. | Doesn't answer "how much". |
+
+Leaning A (source and amount both visible, consistent with every other tab). Whichever is picked, CLAUDE.md's "no numbers" rule and docs/FEATURES.md "On-card tabs" get updated to match.
+
+### Sources
+
+| Done | Source | Cards marked | Effect, from the code (v0.111.0) |
+| --- | --- | --- | --- |
+| [ ] | **Intimidating Helmet** (relic) | cards that will **spend ≥2 energy** | `BeforeCardPlayed`: if the energy actually spent (`cardPlay.Resources.EnergyValue`) is ≥ 2 (`EnergyVar`), gain 4 block (Unpowered). So it's energy spent, not printed cost: cost reductions and free plays don't count; X-cost cards count with ≥2 energy available. Trigger tab (or +4 block under A/B). |
+| [ ] | **Mini Regent** (relic) | cards that spend **stars**, while unused this turn | `AfterStarsSpent`: the first star spend each turn gives +1 Strength (`UsedThisTurn` resets at turn start). Trigger tab. **(verify)** how to read `UsedThisTurn` (private; maybe `Status`), and whether non-card star spends count. Also listed in §3. |
+| [ ] | **Feel No Pain** (power) | cards that exhaust when played (Exhaust, added Exhaust) **and cards that exhaust other cards** | `AfterCardExhausted`: `Amount` block per card exhausted (Unpowered). Exhaust-others cards: Brand, Burning Pact, Cinder, Cleanse, Fiend Fire, Flak Cannon, Purity, Scavenge, Second Wind, Stoke, Thrash, True Grit. Count exhausts per card (True Grit: 1 if there's another card in hand; Second Wind / Fiend Fire: per matching card; Burning Pact: its count). Ethereal end-of-turn exhausts go in Incoming Damage (§4). Stacks: two copies show double. |
+| [ ] | **Spirit of Ash** (power) | **Ethereal** cards | `BeforeCardPlayed`: playing an Ethereal card gains `Amount` block (Unpowered). |
+| [ ] | **Sleight of Flesh** (power) | cards that **apply debuffs to enemies** | `AfterPowerAmountChanged`: each non-temporary debuff you apply to an enemy deals `Amount` damage (Unpowered) to that enemy. Count applications per target; **Artifact** cancels an application (so it doesn't trigger), so subtract the target's Artifact charges. Multi-target cards count per enemy. |
+| [ ] | Dark Embrace (power) | exhausting cards (same list as Feel No Pain) | `AfterCardExhausted`: draw per exhaust **(verify amount)**. Trigger tab. |
+| [ ] | Charon's Ashes, Forgotten Soul, Joss Paper (relics) | exhausting cards | `AfterCardExhausted` procs **(verify effects)**. Burning Sticks is already shown (§3). |
+| [ ] | Child of the Stars (power), Galactic Dust (relic) | star-spending cards | `AfterStarsSpent` procs **(verify effects)**. |
+| [ ] | Shroud, Vicious, Sandpit, Vital Spark, Sword Sage (powers) | debuff/buff appliers | `AfterPowerAmountChanged` procs **(verify which react to your debuffs)**. |
+| [ ] | **Full sweep** | | Every power and relic overriding `BeforeCardPlayed` / `AfterCardPlayed` / `AfterCardExhausted` / `AfterCardDiscarded` / `AfterStarsSpent` / `AfterPowerAmountChanged`, to list each proc and its condition. |
