@@ -74,14 +74,14 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 ## Card Indicators
 
-**What you see:** mid-combat changes to a card in your hand, which the game otherwise shows only as text. Badges sit in a row just *above* the card's top edge, so they never cover the cost, title, enchantment tab or affliction overlay.
+**What you see:** mid-combat changes to a card in your hand, which the game otherwise shows only as text. Everything sits along or just above the card's top edge, where it stays visible in a fanned hand. It never covers the cost, the enchantment tab or the affliction overlay, and the tabs only overlap the top sliver of the card.
 
 - **Ethereal cards are translucent** (80% opacity by default) when Ethereal is on the card itself: cards that are always Ethereal, and Music Box copies. **Not** when Ethereal comes from Hex (the act 3 elite's Hexed affliction): Hex makes every card Ethereal through a power (a "global" keyword source), and the game's affliction overlay already marks those cards. Translucency is the only Ethereal marker; there's no text badge.
-- **Keyword tabs** (native style): Retain and Sly show as tabs on the card's left edge. Each tab is a copy of the card's own enchantment tab (the game's banner art), stacked below the enchantment slot the way a second enchantment would sit.
+- **Keyword tabs** (native style): Retain, Sly and double play show as tabs in a centered row along the card's **top edge**, overlapping it slightly. In a fanned hand the tops of cards stay visible while their sides are covered, so you can read them at a glance without hovering. Each tab is a copy of the card's own enchantment tab (the game's banner art).
   - **Retain:** the Steady enchantment's icon (Steady is the game's Retain enchantment).
   - **Sly:** the Master Planner power's icon (the de-facto Sly power).
   - A `1` in the tab's number slot means this turn only: Retain from Expertise, Sly from Hand Trick.
-- **Text badges** above the card, for what has no native icon yet:
+- **Text badges and relic icons** sit in a row just above the tabs, for what has no native icon yet:
   - `+EXH` Exhaust that was *added* (cards that always exhaust get no badge)
   - `INN` / `ETR` Innate / Eternal, off by default
 - **Blocked cards are dimmed** with the reason: `BOUND`, `RINGING`, `SMOG`, `CARD LIMIT` (Velvet Choker). Detected with the game's own `CardModel.CanPlay`.

@@ -48,17 +48,20 @@ public sealed class CardOverlayRenderer
 
     // ---- Keyword tabs ----
     // Copies of the card's own enchantment tab (NCard.EnchantmentTab: "%Enchantment" with an
-    // "Icon" TextureRect and a "Label" MegaLabel), stacked down the left edge below the
-    // enchantment slot, the way a second enchantment would look.
-    private const float TabGap = 4f;
+    // "Icon" TextureRect and a "Label" MegaLabel), in a centered row along the card's TOP edge,
+    // overlapping it slightly. In a fanned hand the card tops stay visible while the sides are
+    // covered by neighbours, so this reads at a glance without hovering.
+    private const float TabGap = 6f;
+    private const float TabOverlap = 0.3f; // fraction of the tab height that sits on the card
 
-    private void ApplyTabs(Entry e, List<TabSpec> tabs)
+    /// <returns>How far the tabs reach above the card's top edge (0 when none).</returns>
+    private float ApplyTabs(Entry e, List<TabSpec> tabs)
     {
         var template = e.Card.EnchantmentTab;
-        if (template == null || !GodotObject.IsInstanceValid(template))
+        if (tabs.Count == 0 || template == null || !GodotObject.IsInstanceValid(template))
         {
             HideTabs(e);
-            return;
+            return 0f;
         }
 
         while (e.Tabs.Count < tabs.Count)
@@ -67,13 +70,16 @@ public sealed class CardOverlayRenderer
             copy.Name = "SpireQoL_KeywordTab";
             ClearUniqueNames(copy);
             copy.MouseFilter = Control.MouseFilterEnum.Ignore;
-            template.GetParent().AddChild(copy);
+            // Inside our overlay (which follows the card frame), behind the badge row.
+            e.Overlay.AddChild(copy);
+            e.Overlay.MoveChild(copy, 0);
             e.Tabs.Add(copy);
         }
 
-        // The game moves its tab up when the card has no star cost; follow wherever it is.
-        var step = template.Size.Y * template.Scale.Y + TabGap;
-        var slot = template.Visible ? 1 : 0;
+        var tabSize = template.Size * template.Scale;
+        var total = tabs.Count * tabSize.X + (tabs.Count - 1) * TabGap;
+        var x0 = (e.Overlay.Size.X - total) / 2f;
+        var y = -tabSize.Y * (1f - TabOverlap);
         for (var i = 0; i < e.Tabs.Count; i++)
         {
             var tab = e.Tabs[i];
@@ -83,9 +89,9 @@ public sealed class CardOverlayRenderer
             if (!on) continue;
 
             var spec = tabs[i];
-            tab.Position = template.Position + Vector2.Down * step * (slot + i);
+            tab.Position = new Vector2(x0 + i * (tabSize.X + TabGap), y);
             tab.Scale = template.Scale;
-            tab.Rotation = template.Rotation;
+            tab.Rotation = 0f;
             // Not the template's tint: the game greys its tab for a disabled enchantment.
             tab.Modulate = Colors.White;
             tab.SelfModulate = Colors.White;
@@ -101,6 +107,7 @@ public sealed class CardOverlayRenderer
                 label.Text = spec.Label ?? "";
             }
         }
+        return -y;
     }
 
     private static void HideTabs(Entry e)
@@ -268,7 +275,9 @@ public sealed class CardOverlayRenderer
         foreach (var b in e.Border) b.Visible = showBorder;
 
         // Keyword tabs (Retain, Sly, double play).
-        ApplyTabs(e, d.Tabs);
+        // Tabs straddle the top edge; push the badge/relic row up above them.
+        var tabRise = ApplyTabs(e, d.Tabs);
+        e.Row.Position = new Vector2(0, -e.Row.Size.Y - 4 - tabRise);
 
         // Translucency.
         if (d.Opacity is { } a)
