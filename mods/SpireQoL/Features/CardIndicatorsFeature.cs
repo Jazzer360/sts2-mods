@@ -16,11 +16,11 @@ namespace SpireQoL.Features;
 /// Mid-combat card modifiers made visible. Spec: docs/FEATURES.md#card-indicators.
 /// Everything is an on-card tab (CardOverlayRenderer), except Ethereal translucency and dimming.
 ///  - Retain: Steady (the Retain enchantment). Sly: Master Planner (the Sly power).
-///    "1" in the tab = this turn only.
+///    (This-turn-only Retain/Sly look the same as permanent ones: tags are icon-only.)
 ///  - Added Exhaust: Goopy (the enchantment that adds Exhaust). Optional Innate: Royally Approved;
 ///    Eternal: Tezcatara's Ember (the enchantments that add them).
-///  - Double play: Echo Form, with the play count.
-///  - Galvanized: Galvanic power icon, with the damage it deals you.
+///  - Double play: Echo Form.
+///  - Galvanized: Galvanic power icon (playing it damages you).
 ///  - Blocked by Bound / Ringing / Smog / Velvet Choker: card dimmed + crossed tab with the
 ///    blocking power's or relic's icon.
 ///  - Ethereal (on the card itself, not from Hex): translucent.
@@ -66,10 +66,10 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             }
 
             if (kw.Contains(CardKeyword.Retain)) d.AddTab("retain", GameIcons.Enchantment<Steady>());
-            else if (card.ShouldRetainThisTurn) d.AddTab("retain", GameIcons.Enchantment<Steady>(), "1");
+            else if (card.ShouldRetainThisTurn) d.AddTab("retain", GameIcons.Enchantment<Steady>());
 
             if (kw.Contains(CardKeyword.Sly)) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>());
-            else if (card.IsSlyThisTurn) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>(), "1");
+            else if (card.IsSlyThisTurn) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>());
 
             if (kw.Contains(CardKeyword.Exhaust) && !canonical.Contains(CardKeyword.Exhaust))
             {
@@ -84,7 +84,7 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 
             if (card.Affliction?.GetType().Name == "Galvanized" && card.Affliction.Amount > 0)
             {
-                d.AddTab("galvanized", GameIcons.Power<GalvanicPower>(), card.Affliction.Amount.ToString());
+                d.AddTab("galvanized", GameIcons.Power<GalvanicPower>());
             }
 
             if (s.DimBlockedCards && Blocker(card) is { } blocker)
@@ -102,7 +102,7 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             if (s.ShowDoublePlay)
             {
                 var plays = PlayCount(card);
-                if (plays > 1) d.AddTab("double-play", GameIcons.Power<EchoFormPower>(), plays.ToString());
+                if (plays > 1) d.AddTab("double-play", GameIcons.Power<EchoFormPower>());
             }
         }
     }

@@ -4,6 +4,6 @@
     <!-- Must match "id" in SpireQoL.json: the game loads <id>.dll. -->
     <AssemblyName>SpireQoL</AssemblyName>
     <RootNamespace>SpireQoL</RootNamespace>
-    <Version>0.13.0</Version>
+    <Version>0.14.0</Version>
   </PropertyGroup>
 </Project>

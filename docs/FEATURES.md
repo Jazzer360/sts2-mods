@@ -74,26 +74,26 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 Every indicator about a specific card in your hand uses the **same form**: a **tag** hanging up off the card's **top edge**, centered in a row, one tag per effect. In a fanned hand the tops of cards stay visible while their sides are covered, so you can read the tags at a glance without hovering. A tag means something out of the ordinary will happen when you play that card.
 
-- **Look:** each tag is a copy of the card's own enchantment tab (the game's banner art), rotated a quarter turn so it hangs off the top edge the way an enchantment tab hangs off the side. The icon and number stay upright. Only a sliver overlaps the card frame, so tags stay clear of the card name. Each tag carries the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
-- **Number:** the tab's small number slot holds a count when one matters: play count, damage, or `1` = this turn only.
+- **Look:** each tag is a copy of the card's own enchantment tab (the game's banner art), rotated a quarter turn so it hangs off the top edge the way an enchantment tab hangs off the side. **It draws beneath the card art but above the card's glow**, tucked about 40% under the top edge, so the card itself covers the tucked part and only the icon end sticks out. Each tag carries the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
+- **Icon only:** no numbers on tags. The icon says what's going on; you know the details.
 - **Red slash:** the icon crossed out means playing this card breaks or is blocked by that thing.
 - **One per source:** each source shows at most one tab per card. If a card has many, the row shrinks to fit the card's width.
 - **Not tabs:** the only on-card effects that aren't tabs are **dimming** (the card can't be played right now; the reason is a crossed tab) and **Ethereal translucency**.
 
 | Tab icon | Meaning | Feature |
 | --- | --- | --- |
-| Steady (enchantment) | Retain; `1` = this turn only | Card Indicators |
-| Master Planner (power) | Sly; `1` = this turn only | Card Indicators |
-| Echo Form (power), number | plays N times | Card Indicators |
+| Steady (enchantment) | Retain (permanent or this turn only) | Card Indicators |
+| Master Planner (power) | Sly (permanent or this turn only) | Card Indicators |
+| Echo Form (power) | plays more than once (any source: Echo Form, Throwing Axe, Burst...) | Card Indicators |
 | Goopy (enchantment) | Exhaust was *added* to this card | Card Indicators |
 | Royally Approved / Tezcatara's Ember (enchantments) | Innate / Eternal (off by default) | Card Indicators |
-| Galvanic (power), number | Galvanized: playing it deals you N damage | Card Indicators |
+| Galvanic (power) | Galvanized: playing it damages you | Card Indicators |
 | Bound / Ringing / Smog power, or Velvet Choker, **crossed** + card dimmed | can't be played right now | Card Indicators |
 | Draw pile | its draw would reshuffle your discard pile | Shuffle Warning |
 | A relic | playing this uses the relic (Pen Nib ready, one-shot relics) | Relic Reminders |
 | A relic, **crossed** | playing this stops the relic working (Art of War, Ripple Basin, Pael's Tears) | Relic Reminders |
 
-**Game UI touched:** card nodes in the hand: tab copies live inside our `SpireQoL_CardOverlay` node (see "technically" above). The game's own enchantment tab is only read as a template.
+**Game UI touched:** card nodes in the hand. Tag copies live in a `SpireQoL_TagLayer` node inserted directly after the card's glow (`NCard.CardHighlight`) in the glow's parent, so they draw above the glow and beneath the card art. It mirrors the card frame's transform each frame, and is hidden when the node stops showing a decorated hand card. The game's own enchantment tab is only read as a template.
 
 ---
 
@@ -102,12 +102,12 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 **What you see:** mid-combat changes to a card in your hand that the game otherwise shows only as text, as on-card tabs (see above).
 
 - **Ethereal cards are translucent** (80% opacity by default) when Ethereal is on the card itself: cards that are always Ethereal, and Music Box copies. **Not** when Ethereal comes from Hex (the act 3 elite's Hexed affliction): Hex makes every card Ethereal through a power (a "global" keyword source), and the game's affliction overlay already marks those cards.
-- **Retain:** a Steady tab (Steady is the game's Retain enchantment). **Sly:** a Master Planner tab (the de-facto Sly power). `1` = this turn only (Expertise, Hand Trick).
+- **Retain:** a Steady tab (Steady is the game's Retain enchantment). **Sly:** a Master Planner tab (the de-facto Sly power). Granted-for-this-turn (Expertise, Hand Trick) looks the same.
 - **Added Exhaust:** a Goopy tab (Goopy is the enchantment that adds Exhaust). Cards that always exhaust get nothing.
 - **Innate / Eternal** (setting `ShowInnateEternalBadges`, off by default): Royally Approved / Tezcatara's Ember tabs, the enchantments that grant them.
 - **Blocked cards** (Bound, Ringing, Smog, Velvet Choker): the card is dimmed, with a crossed tab showing the blocking power's or relic's icon. Detected with the game's own `CardModel.CanPlay`.
-- **Galvanized:** a Galvanic tab with the damage playing the card deals you.
-- **Double play:** an Echo Form tab with the play count (`2`, `3`...).
+- **Galvanized:** a Galvanic tab (playing the card damages you).
+- **Double play:** an Echo Form tab, whatever the source.
   - The count comes from the game's own play-count query, the one it runs when you play the card: enchanted replays + 1, then `Hook.ModifyCardPlayCount`. So it covers Echo Form (first N cards each turn), Burst (skills), Duplication, One-Two Punch (attacks), Signal Boost (powers), Throwing Axe (first card each combat), Tag Team, enchantments, and anything added later.
   - Tag Team only doubles attacks aimed at the enemy that has it. Single-target cards are checked against each enemy, and the best case is shown.
 

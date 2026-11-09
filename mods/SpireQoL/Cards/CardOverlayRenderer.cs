@@ -28,7 +28,7 @@ public sealed class CardOverlayRenderer
     private static readonly Color SlashColor = new(1f, 0.15f, 0.1f, 0.95f);
 
     private const float TabGap = 6f;
-    private const float TabOverlap = 0.15f; // fraction of the tag length that overlaps the card frame
+    private const float TabOverlap = 0.4f; // fraction of the tag length tucked under the card (hidden by the card art)
 
     private readonly OverlayHost _host;
     private readonly CardDecorFrame _frame;
@@ -49,6 +49,13 @@ public sealed class CardOverlayRenderer
         public bool TouchedAlpha;
         public bool Seen;
         public readonly List<Control> Tabs = new();
+
+        /// <summary>
+        /// Holds the tags, placed directly after the card's glow (NCard.CardHighlight) in the glow's
+        /// parent, so tags draw above the glow but beneath the card art. Mirrors the card frame's
+        /// transform, so tag positions are in card-frame coordinates. Falls back to Overlay.
+        /// </summary>
+        public Control? TagLayer;
     }
 
     public void Render()
@@ -79,6 +86,7 @@ public sealed class CardOverlayRenderer
             }
             if (e.Seen) continue;
             e.Overlay.Visible = false;
+            if (e.TagLayer != null && GodotObject.IsInstanceValid(e.TagLayer)) e.TagLayer.Visible = false;
             if (e.TouchedAlpha)
             {
                 SetAlpha(e.Container, 1f);
@@ -142,7 +150,8 @@ public sealed class CardOverlayRenderer
         e.Dim.Position = Vector2.Zero;
         e.Dim.Size = size;
 
-        ApplyTabs(e, d.Tabs);
+        var layer = PlaceTagLayer(e, size);
+        ApplyTabs(e, d.Tabs, layer);
 
         if (d.Opacity is { } a)
         {
@@ -156,7 +165,43 @@ public sealed class CardOverlayRenderer
         }
     }
 
-    private void ApplyTabs(Entry e, List<TabSpec> tabs)
+    /// <summary>
+    /// Puts the tag layer right after the card's glow node and makes it match the card frame
+    /// (via the overlay, which already does). Returns the layer, or the overlay as a fallback.
+    /// </summary>
+    private static Control PlaceTagLayer(Entry e, Vector2 size)
+    {
+        var glow = e.Card.CardHighlight;
+        if (glow == null || !GodotObject.IsInstanceValid(glow) || glow.GetParent() is not { } parent)
+        {
+            return e.Overlay;
+        }
+
+        if (e.TagLayer == null || !GodotObject.IsInstanceValid(e.TagLayer))
+        {
+            e.TagLayer = new Control { Name = "SpireQoL_TagLayer", MouseFilter = Control.MouseFilterEnum.Ignore };
+            parent.AddChild(e.TagLayer);
+        }
+        var layer = e.TagLayer;
+        if (layer.GetParent() != parent) layer.Reparent(parent, keepGlobalTransform: false);
+
+        // Directly above the glow, below everything the card draws after it (the card art).
+        var want = glow.GetIndex() + 1;
+        if (layer.GetIndex() < glow.GetIndex()) want = glow.GetIndex();
+        if (layer.GetIndex() != want) parent.MoveChild(layer, want);
+
+        // Same transform as the card frame (the overlay mirrors it inside the container).
+        var frameXf = e.Overlay.GetGlobalTransform();
+        var rel = parent is CanvasItem ci ? ci.GetGlobalTransform().AffineInverse() * frameXf : frameXf;
+        layer.Position = rel.Origin;
+        layer.Rotation = rel.Rotation;
+        layer.Scale = rel.Scale;
+        layer.Size = size;
+        layer.Visible = true;
+        return layer;
+    }
+
+    private void ApplyTabs(Entry e, List<TabSpec> tabs, Control layer)
     {
         var template = e.Card.EnchantmentTab;
         if (template == null || !GodotObject.IsInstanceValid(template))
@@ -167,7 +212,7 @@ public sealed class CardOverlayRenderer
 
         while (e.Tabs.Count < tabs.Count)
         {
-            e.Tabs.Add(MakeTab(template, e.Overlay));
+            e.Tabs.Add(MakeTab(template, layer));
         }
 
         // The enchantment tab is drawn to stick out sideways from the card's left edge. Rotated a
@@ -180,17 +225,19 @@ public sealed class CardOverlayRenderer
 
         // Center the row on the top edge; shrink it if it would be wider than the card.
         var total = tabs.Count * tagW + Math.Max(0, tabs.Count - 1) * TabGap;
-        var fit = total > e.Overlay.Size.X && total > 0 ? e.Overlay.Size.X / total : 1f;
+        var fit = total > layer.Size.X && total > 0 ? layer.Size.X / total : 1f;
         var scale = template.Scale * fit;
         var step = (tagW + TabGap) * fit;
-        var x0 = (e.Overlay.Size.X - total * fit) / 2f;
-        // Mostly above the edge: only a sliver overlaps the frame, clear of the card name.
+        var x0 = (layer.Size.X - total * fit) / 2f;
+        // Tucked under the card's top edge (the card art covers the tucked part); the icon end
+        // sticks out above.
         var top = -tagH * fit * (1f - TabOverlap);
 
         for (var i = 0; i < e.Tabs.Count; i++)
         {
             var tab = e.Tabs[i];
             if (!GodotObject.IsInstanceValid(tab)) continue;
+            if (tab.GetParent() != layer) tab.Reparent(layer, keepGlobalTransform: false);
             var on = i < tabs.Count;
             tab.Visible = on;
             if (!on) continue;
@@ -220,13 +267,8 @@ public sealed class CardOverlayRenderer
                     if (spec.Crossed) LayoutSlash(slash, icon.Size);
                 }
             }
-            if (tab.GetNodeOrNull<Label>("Label") is { } label)
-            {
-                label.PivotOffset = label.Size / 2f;
-                label.Rotation = -Mathf.Pi / 2f;
-                label.Visible = spec.Label != null;
-                label.Text = spec.Label ?? "";
-            }
+            // Tags are icon-only: the tab's number label stays hidden.
+            if (tab.GetNodeOrNull<Label>("Label") is { } label) label.Visible = false;
         }
     }
 

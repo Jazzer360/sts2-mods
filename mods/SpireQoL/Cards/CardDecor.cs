@@ -7,11 +7,11 @@ namespace SpireQoL.Cards;
 /// One on-card indicator. Every on-card indicator uses this same form: a native-style tab (a copy
 /// of the card's own enchantment tab) in a row along the card's top edge, with
 ///  - Icon: what's affecting the card (a relic, power, enchantment, the draw pile...),
-///  - Label: the tab's small number, or null (play count, "1" = this turn only, damage...),
+///  (Icon only: no numbers. The game tab's number label is always hidden.)
 ///  - Crossed: a red slash = playing this card breaks or blocks something.
 /// Key de-duplicates (one tab per source per card).
 /// </summary>
-public sealed record TabSpec(string Key, Texture2D? Icon, string? Label = null, bool Crossed = false);
+public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false);
 
 /// <summary>
 /// What should be drawn on one card this frame. Features fill it in; CardOverlayRenderer draws it.
@@ -29,10 +29,10 @@ public sealed class CardDecor
 
     public bool IsEmpty => Tabs.Count == 0 && Opacity == null && !Dim;
 
-    public void AddTab(string key, Texture2D? icon, string? label = null, bool crossed = false)
+    public void AddTab(string key, Texture2D? icon, bool crossed = false)
     {
         if (Tabs.Any(t => t.Key == key)) return;
-        Tabs.Add(new TabSpec(key, icon, label, crossed));
+        Tabs.Add(new TabSpec(key, icon, crossed));
     }
 }
 
