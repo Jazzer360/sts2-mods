@@ -44,7 +44,7 @@ The game shows these only as card text. `CardModel.Keywords` merges local keywor
 - ~~**Keyword removed** marker~~: dropped (2026-11-09). The change is in the card text, and tabs don't repeat the card text.
 
 ### Cost and play-count changes
-The game already recolors changed costs (blue = increased, green = decreased, red = can't afford). We add *duration* only.
+The game already recolors changed costs (blue = increased, green = decreased, red = can't afford), so cost changes get no tab. Only extra plays do.
 
 - ~~**"Free this turn"** marker~~: dropped (2026-11-09). The game already shows the new cost, and a tab only answers "does something happen when I play this?"
 - ~~**"Free this combat"** marker~~: dropped (2026-11-09), same reason.
