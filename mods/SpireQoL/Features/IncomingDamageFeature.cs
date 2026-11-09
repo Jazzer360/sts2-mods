@@ -113,7 +113,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 
         _widget!.HasContent = true;
 
-        var take = m.DamageThrough + m.UnblockableTotal;
+        var take = m.Taken;
         var incoming = m.BlockableTotal + m.UnblockableTotal;
         _attackIcon!.Texture = _attackTiers[AttackTier(incoming) - 1] ?? _attackTiers.FirstOrDefault(t => t != null);
         _incoming!.Text = $"{incoming}";

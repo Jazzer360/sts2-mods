@@ -48,14 +48,17 @@ public static class PowerSpecs
 /// <param name="ThresholdVar">DynamicVars key holding the threshold, or null to use Fixed.</param>
 /// <param name="CrossTurn">Keeps counting across turns/combats: always shown, sorted first.</param>
 /// <param name="InTray">Show a row in the Relic Counters tray. Off for one-shot relics whose
-/// on-card icon (Relic Reminders) already says everything.</param>
+/// on-card tab (Proc Indicators) already says everything.</param>
+/// <param name="TurnTimer">Counts turns on its own (you can't speed it up by playing): shown only
+/// with the ShowTurnTimers setting.</param>
 public sealed record RelicCounterSpec(
     string TypeName,
     CounterKind Kind,
     string? ThresholdVar = null,
     int Fixed = 0,
     bool CrossTurn = false,
-    bool InTray = true);
+    bool InTray = true,
+    bool TurnTimer = false);
 
 /// <summary>
 /// Every relic the Relic Counters tray knows about. Thresholds are read live from the relic's
@@ -72,11 +75,11 @@ public static class RelicSpecs
         new RelicCounterSpec("IronClub", CounterKind.Counter, "Cards", CrossTurn: true),
         new RelicCounterSpec("GalacticDust", CounterKind.Counter, "Stars", CrossTurn: true),
         new RelicCounterSpec("JossPaper", CounterKind.Counter, "ExhaustAmount", CrossTurn: true),
-        new RelicCounterSpec("StoneCalendar", CounterKind.Counter, "DamageTurn", CrossTurn: true),
-        new RelicCounterSpec("HappyFlower", CounterKind.Counter, "Turns", CrossTurn: true),
-        new RelicCounterSpec("FakeHappyFlower", CounterKind.Counter, "Turns", CrossTurn: true),
-        new RelicCounterSpec("Pendulum", CounterKind.Counter, "Turns", CrossTurn: true),
-        new RelicCounterSpec("PollinousCore", CounterKind.Counter, "Turns", CrossTurn: true),
+        new RelicCounterSpec("StoneCalendar", CounterKind.Counter, "DamageTurn", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec("HappyFlower", CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec("FakeHappyFlower", CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec("Pendulum", CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec("PollinousCore", CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
         new RelicCounterSpec("Metronome", CounterKind.Counter, "OrbCount", CrossTurn: true),
 
         // Per-turn counters.
@@ -87,15 +90,15 @@ public static class RelicSpecs
         new RelicCounterSpec("LetterOpener", CounterKind.Counter, "Cards"),
         new RelicCounterSpec("BrilliantScarf", CounterKind.Counter, "Cards"),
         new RelicCounterSpec("VelvetChoker", CounterKind.Limit, "Cards"),
-        new RelicCounterSpec("PaelsTears", CounterKind.KeepEnergy, "Energy"),
+        new RelicCounterSpec("PaelsTears", CounterKind.KeepEnergy, "Energy", InTray: false), // crossed tab on cards instead
         new RelicCounterSpec("Pocketwatch", CounterKind.StayUnder, "CardThreshold"),
 
         // Fire on a specific turn.
-        new RelicCounterSpec("HornCleat", CounterKind.OnTurn, Fixed: 2),
-        new RelicCounterSpec("Candelabra", CounterKind.OnTurn, Fixed: 2),
-        new RelicCounterSpec("CaptainsWheel", CounterKind.OnTurn, Fixed: 3),
-        new RelicCounterSpec("Chandelier", CounterKind.OnTurn, Fixed: 3),
-        new RelicCounterSpec("SparklingRouge", CounterKind.OnTurn, Fixed: 3),
+        new RelicCounterSpec("HornCleat", CounterKind.OnTurn, Fixed: 2, TurnTimer: true),
+        new RelicCounterSpec("Candelabra", CounterKind.OnTurn, Fixed: 2, TurnTimer: true),
+        new RelicCounterSpec("CaptainsWheel", CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
+        new RelicCounterSpec("Chandelier", CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
+        new RelicCounterSpec("SparklingRouge", CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
 
         // One-shot: armed until first use. Only Pael's Eye gets a tray row (it has no card to
         // mark); the rest are shown on the cards that would use them (Relic Reminders).
@@ -103,7 +106,7 @@ public static class RelicSpecs
         new RelicCounterSpec("ThrowingAxe", CounterKind.OneShot, InTray: false),
         new RelicCounterSpec("BurningSticks", CounterKind.OneShot, InTray: false),
         new RelicCounterSpec("UnsettlingLamp", CounterKind.OneShot, InTray: false),
-        new RelicCounterSpec("PaelsEye", CounterKind.OneShot),
+        new RelicCounterSpec("PaelsEye", CounterKind.OneShot, InTray: false), // crossed tab on cards instead
         new RelicCounterSpec("Permafrost", CounterKind.OneShot, InTray: false),
         new RelicCounterSpec("MusicBox", CounterKind.OneShot, InTray: false),
     };

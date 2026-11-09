@@ -49,7 +49,6 @@ public static class ModEntry
         {
             new CardIndicatorsFeature(ctx),
             new RelicCountersFeature(ctx),
-            new RelicRemindersFeature(ctx),
             new ProcIndicatorsFeature(ctx),
             new IncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),

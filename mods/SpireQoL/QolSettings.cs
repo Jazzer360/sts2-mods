@@ -53,6 +53,8 @@ public sealed class QolSettings
     public bool? ShowInnateEternalBadges { get; set; }
 
     // Relic Counters
+    /// <summary>Also show relics that count turns on their own (Horn Cleat, Candelabra, Captain's Wheel, Happy Flower...).</summary>
+    public bool ShowTurnTimers { get; set; } = false;
     public bool PulseOneStepEarly { get; set; } = false;
     public float FlashHz { get; set; } = 2.5f;
 

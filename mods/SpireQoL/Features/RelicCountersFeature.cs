@@ -86,6 +86,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         {
             var spec = RelicSpecs.For(relic.GetType().Name);
             if (spec == null || !spec.InTray || !_ctx.Settings.RelicEnabled(spec.TypeName)) continue;
+            if (spec.TurnTimer && !_ctx.Settings.ShowTurnTimers) continue;
             if (Evaluate(relic, spec, me) is { } state)
             {
                 entries.Add((relic, spec.CrossTurn ? 0 : 2, state));

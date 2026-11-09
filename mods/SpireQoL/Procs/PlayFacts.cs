@@ -76,7 +76,56 @@ public sealed class PlayFacts
     /// <summary>It makes you lose HP (HpLoss value), for Rupture.</summary>
     public bool LosesHp { get; init; }
 
+    /// <summary>HP it makes you lose, across plays.</summary>
+    public int HpLoss { get; init; }
+
     public int TotalExhausts => (ExhaustsSelf ? 1 : 0) + ExhaustsOthers;
+
+    // ------------------------------------------------------------------ attacks on enemies
+
+    /// <summary>Hits per play of an attack card (its Repeat value, else 1), times plays.</summary>
+    public int AttackHits { get; init; }
+
+    /// <summary>
+    /// Whether this card can hit <paramref name="enemy"/> with a powered attack (your attack, not
+    /// Osty's): all-enemy attacks hit everyone; single-target and random ones can hit any enemy.
+    /// </summary>
+    public bool CanHit(Creature enemy) => AttackHits > 0 && enemy.IsAlive && enemy.IsHittable;
+
+    /// <summary>
+    /// Damage per hit on <paramref name="enemy"/>, through the game's own damage math
+    /// (Hook.ModifyDamage with this card as the source: Strength, Vulnerable, caps...).
+    /// </summary>
+    public int DamagePerHit(Creature enemy)
+    {
+        if (AttackHits == 0) return 0;
+        try
+        {
+            decimal raw;
+            if (Card.DynamicVars.TryGetValue("CalculatedDamage", out var cv) && cv is CalculatedVar calc) raw = calc.Calculate(enemy);
+            else if (Card.DynamicVars.TryGetValue("Damage", out var dv)) raw = dv.BaseValue;
+            else return 0;
+            var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, Me.Creature, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move,
+                Card, null, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, CardPreviewMode.None, out _);
+            return Math.Max(0, (int)v);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>Total damage this card deals to the enemy across all its hits (before block).</summary>
+    public int TotalDamage(Creature enemy) => DamagePerHit(enemy) * AttackHits;
+
+    /// <summary>Damage that gets past the enemy's current block.</summary>
+    public int Unblocked(Creature enemy) => Math.Max(0, TotalDamage(enemy) - enemy.Block);
+
+    /// <summary>Breaks the enemy's block (it has some, and the attack deals at least that much).</summary>
+    public bool BreaksBlock(Creature enemy) => CanHit(enemy) && enemy.Block > 0 && TotalDamage(enemy) >= enemy.Block;
+
+    /// <summary>Kills the enemy (damage ≥ block + HP; ignores per-turn caps like Hardened Shell).</summary>
+    public bool Kills(Creature enemy) => CanHit(enemy) && TotalDamage(enemy) >= enemy.Block + enemy.CurrentHp;
 
     // ------------------------------------------------------------------ building
 
@@ -114,6 +163,8 @@ public sealed class PlayFacts
             StarGains = StarGainCards.Contains(name) ? Math.Max(1, plays) : 0,
             OstyAttacks = OstyAttackCards.Contains(name) ? Math.Max(1, plays) : 0,
             LosesHp = card.DynamicVars.ContainsKey("HpLoss"),
+            HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
+            AttackHits = IsPlayerAttack(card) ? Math.Max(1, Sts2State.Var(card, "Repeat", 1)) * Math.Max(1, plays) : 0,
         };
     }
 
@@ -214,6 +265,12 @@ public sealed class PlayFacts
         if (name == "SecondWind") return others.Count(c => c.Type != CardType.Attack);
         return card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock") ? 1 : 0;
     }
+
+    /// <summary>An attack you deal yourself (a Damage value; Osty attacks use OstyDamage instead).</summary>
+    private static bool IsPlayerAttack(CardModel card)
+        => card.Type == CardType.Attack
+           && (card.DynamicVars.ContainsKey("Damage") || card.DynamicVars.ContainsKey("CalculatedDamage"))
+           && card.TargetType is TargetType.AnyEnemy or TargetType.AllEnemies or TargetType.RandomEnemy;
 
     // ------------------------------------------------------------------ orbs, stars, Osty
 

@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
+using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
@@ -19,17 +20,18 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// "Does something happen the moment I play this card?" One tab per power or relic that playing
-/// the card would set off, with that source's icon. Spec: docs/FEATURES.md#proc-indicators.
+/// "Does something happen the moment I play this card that the card doesn't say?" One tab per
+/// power or relic that playing the card would set off, with that source's icon. Spec:
+/// docs/FEATURES.md#proc-indicators. (Relic Reminders were merged in here in 0.21.0.)
 ///
 ///  - Trigger: plain icon ("this sets off that").
 ///  - Block / damage / summon: icon plus the amount (QolSettings.ProcNumbers).
-///  - Harmful (helps the enemy or hurts you): crossed.
+///  - Harmful (helps the enemy, hurts you, or breaks one of your relics): crossed.
 ///
 /// Every rule mirrors the source's own hook in the decompile (v0.111.0). Facts about the card
-/// (play count, cost, exhausts, discards, draws, debuffs, created cards) come from PlayFacts.
-/// Counter relics (Kunai, Shuriken...) only show on the card that completes the count; the tray
-/// shows progress.
+/// (play count, cost, exhausts, discards, draws, debuffs, created cards, how hard it hits each
+/// enemy) come from PlayFacts. Each damage tab also records the exact damage range it predicts
+/// (per enemy, with each enemy's own modifiers) so ProcAudit can check it against real plays.
 /// </summary>
 public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 {
@@ -52,8 +54,13 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     private enum Kind { Trigger, Block, Damage, Summon }
 
+    /// <summary>Who a damage proc hits.</summary>
+    private enum Spread { All, Random, Specific, Me }
+
     /// <param name="Count">Separate instances (block gains for Juggernaut).</param>
-    private readonly record struct Hit(Kind Kind, int Amount, bool Harmful = false, int Count = 1)
+    /// <param name="Min">Damage procs: least total damage actually dealt (all targets, their modifiers).</param>
+    /// <param name="Max">Damage procs: most total damage actually dealt.</param>
+    private readonly record struct Hit(Kind Kind, int Amount, bool Harmful = false, int Count = 1, int Min = 0, int Max = 0)
     {
         public static Hit Trig(bool harmful = false) => new(Kind.Trigger, 0, harmful);
     }
@@ -84,8 +91,22 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private ICombatState _cs = null!;
     private bool _indirect;
 
+    /// <summary>Each hand card's PlayFacts on the previous frame (what ProcAudit expects a play to do).</summary>
+    public static IReadOnlyDictionary<CardModel, PlayFacts> PreviousFacts { get; private set; }
+        = new Dictionary<CardModel, PlayFacts>(ReferenceEqualityComparer.Instance);
+
+    private Dictionary<CardModel, PlayFacts> _facts = new(ReferenceEqualityComparer.Instance);
+
     public void OnFrame(OverlayHost host)
     {
+        // Keep last frame's facts for the audit, even on frames where nothing is computed (the
+        // hand just emptied, the turn is ending).
+        if (_facts.Count > 0 || PreviousFacts.Count > 0)
+        {
+            PreviousFacts = _facts;
+            _facts = new Dictionary<CardModel, PlayFacts>(ReferenceEqualityComparer.Instance);
+        }
+
         var me = Sts2State.Me;
         var cs = Sts2State.Combat;
         if (me == null || cs == null || !Sts2State.IsPlayerTurn) return;
@@ -121,6 +142,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 continue;
             }
 
+            _facts[card] = f;
             var d = _ctx.Decor.For(card);
             // Several enemies can carry the same power: one tab, amounts summed.
             var merged = new Dictionary<string, (AbstractModel Src, Hit Hit)>();
@@ -136,7 +158,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     if (h.Kind != Kind.Trigger && h.Amount <= 0) continue;
                     var key = "proc:" + src.GetType().Name;
                     merged[key] = merged.TryGetValue(key, out var prev)
-                        ? (prev.Src, prev.Hit with { Amount = prev.Hit.Amount + h.Amount, Count = prev.Hit.Count + h.Count })
+                        ? (prev.Src, prev.Hit with
+                        {
+                            Amount = prev.Hit.Amount + h.Amount, Count = prev.Hit.Count + h.Count,
+                            Min = prev.Hit.Min + h.Min, Max = prev.Hit.Max + h.Max,
+                        })
                         : (src, h);
                 }
             }
@@ -163,7 +189,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 };
                 int? number = h.Kind != Kind.Trigger && _ctx.Settings.ProcNumbers ? h.Amount : null;
                 var kind = h.Kind switch { Kind.Block => "block", Kind.Damage => "damage", Kind.Summon => "summon", _ => null };
-                d.AddTab(key, icon, crossed: h.Harmful, number: number, kind: kind, amount: h.Amount);
+                d.AddTab(key, icon, crossed: h.Harmful, number: number, kind: kind, amount: h.Amount, auditMin: h.Min, auditMax: h.Max);
             }
         }
     }
@@ -189,6 +215,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 var a = p.Amount;
                 var mine = p.Owner == _me.Creature;
                 var onEnemy = p.Owner.IsEnemy;
+                var e = p.Owner; // for powers on an enemy: that enemy
                 switch (p.GetType().Name)
                 {
                     // ---- your powers: on play
@@ -196,19 +223,19 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "RagePower" when mine && type == CardType.Attack: return BlockN(a, plays);
                     case "SpiritOfAshPower" when mine && card.Keywords.Contains(CardKeyword.Ethereal): return BlockN(a, plays);
                     case "DanseMacabrePower" when mine && f.Energy >= Sts2State.Var(p, "Energy", 2): return BlockN(a, plays);
-                    case "GravityPower" when mine: return Damage(a * plays);
-                    case "SerpentFormPower" when mine: return Damage(a * plays);
-                    case "PanachePower" when mine && plays >= Sts2State.Var(p, "CardsLeft", 5): return Damage(a);
-                    // Second order (run after first-order procs, which can feed them): stars
-                    // gained also set off Black Hole (The Sealed Throne gains stars on every card).
+                    case "GravityPower" when mine: return Damage(a, plays, Spread.All);
+                    case "SerpentFormPower" when mine: return Damage(a, plays, Spread.Random);
+                    case "PanachePower" when mine && plays >= Sts2State.Var(p, "CardsLeft", 5): return Damage(a, 1, Spread.All);
+                    // Second order: stars gained also set off Black Hole (The Sealed Throne gains
+                    // stars on every card).
                     case "BlackHolePower" when mine:
                     {
                         var times = (f.Stars > 0 ? 1 : 0) + f.StarGains + _xStarGains;
-                        return times > 0 ? Damage(a * times) : null;
+                        return times > 0 ? Damage(a, times, Spread.All) : null;
                     }
                     case "RupturePower" when mine && f.LosesHp: return Hit.Trig();
                     case "DevourLifePower" when mine && card is Soul: return new Hit(Kind.Summon, a * plays);
-                    case "HauntPower" when mine && card is Soul: return new Hit(Kind.Damage, a * plays);
+                    case "HauntPower" when mine && card is Soul: return Damage(a, plays, Spread.Random, props: ValueProp.Unblockable | ValueProp.Unpowered);
                     case "StormPower" when mine && type == CardType.Power: return Hit.Trig();
                     case "SubroutinePower" when mine && type == CardType.Power: return Hit.Trig();
                     case "CalamityPower" when mine && type == CardType.Attack: return Hit.Trig();
@@ -229,42 +256,71 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         return played < 5 && played + plays >= 5 ? Hit.Trig() : null;
                     }
 
+                    // ---- Sovereign Blade's buffs (the card text lists them, but it's easy to miss)
+                    case "SeekingEdgePower" when mine && card is SovereignBlade: return Hit.Trig(); // hits all enemies
+                    case "ParryPower" when mine && card is SovereignBlade: return Hit.Trig();       // gains block
+                    case "SwordSagePower" when mine && card is SovereignBlade: return Hit.Trig();   // replays
+                    case "ConquerorPower" when onEnemy && card is SovereignBlade: return Hit.Trig(); // more damage to that enemy
+
                     // ---- your powers: exhaust / discard / draw / stars / energy / debuffs / created cards
                     case "FeelNoPainPower" when mine && exhausts > 0: return BlockN(a, exhausts);
                     case "DarkEmbracePower" when mine && exhausts > 0: return Hit.Trig();
-                    case "ChildOfTheStarsPower" when mine && f.Stars > 0: return Block(a * f.Stars);
+                    case "ChildOfTheStarsPower" when mine && f.Stars > 0: return BlockN(a * f.Stars, 1);
                     case "OrbitPower" when mine && f.Energy > 0 && f.Energy >= p.DisplayAmount: return Hit.Trig();
                     case "AutomationPower" when mine && draws > 0 && draws >= p.DisplayAmount: return Hit.Trig();
-                    case "CacophonyPower" when mine && draws > 0 && draws >= p.DisplayAmount: return Damage(a);
-                    case "SpeedsterPower" when mine && draws > 0: return Damage(a * draws);
+                    case "CacophonyPower" when mine && draws > 0 && draws >= p.DisplayAmount: return Damage(a, 1, Spread.Random);
+                    case "SpeedsterPower" when mine && draws > 0: return Damage(a, draws, Spread.All);
                     case "CorrosiveWavePower" when mine && draws > 0: return Hit.Trig();
                     case "StratagemPower" when mine && shuffles: return Hit.Trig();
-                    case "SleightOfFleshPower" when mine: return Damage(a * f.DebuffsLandingTotal());
+                    case "SleightOfFleshPower" when mine && f.DebuffsLandingTotal() > 0:
+                        return f.HitsAllEnemies
+                            ? Damage(a, Math.Max(1, f.DebuffsLandingTotal() / Math.Max(1, _cs.HittableEnemies.Count)), Spread.All)
+                            : Damage(a, f.DebuffsLandingTotal(), Spread.Random);
                     case "ViciousPower" when mine && f.DebuffsLandingTotal(t => t == typeof(VulnerablePower)) > 0: return Hit.Trig();
                     case "ShroudPower" when mine: return BlockN(a, f.DebuffsLandingTotal(t => t == typeof(DoomPower)));
                     // Every block gain sets it off, including block from other procs (Afterimage...).
-                    case "JuggernautPower" when mine && f.BlockGains + _xBlockGains > 0: return Damage(a * (f.BlockGains + _xBlockGains));
+                    case "JuggernautPower" when mine && f.BlockGains + _xBlockGains > 0: return Damage(a, f.BlockGains + _xBlockGains, Spread.Random);
                     case "EnvenomPower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "ConcoctPower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "ReaperFormPower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "MonarchsGazePower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "ArsenalPower" when mine && generated > 0: return Hit.Trig();
                     case "PillarOfCreationPower" when mine && generated > 0: return BlockN(a, generated);
-                    case "SmokestackPower" when mine && statuses > 0: return Damage(a * statuses);
+                    case "SmokestackPower" when mine && statuses > 0: return Damage(a, statuses, Spread.All);
                     case "TrashToTreasurePower" when mine && statuses > 0: return Hit.Trig();
 
-                    // ---- powers on enemies
+                    // ---- powers on enemies: your plays
                     case "EnragePower" when onEnemy && type == CardType.Skill: return Hit.Trig(harmful: true);
                     case "SneakyPower" when onEnemy && type == CardType.Attack: return Hit.Trig(harmful: true);
                     case "ImitationLearningPower" when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
                     case "SkittishPower" when onEnemy && type == CardType.Attack && !Sts2State.Private(p, "HasGainedBlockThisTurn", true):
                         return Hit.Trig(harmful: true);
                     case "WitheringPresencePower" when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
-                    case "GalvanicPower" when card.Affliction is Galvanized: return new Hit(Kind.Damage, a * plays, Harmful: true);
+                    case "GalvanicPower" when card.Affliction is Galvanized:
+                        return Damage(a, plays, Spread.Me, props: ValueProp.Unpowered | ValueProp.Move, harmful: true);
                     case "VitalSparkPower" when card.Affliction is Tainted: return Hit.Trig(harmful: true);
-                    case "StranglePower" when onEnemy && p.Applier?.Player == _me: return new Hit(Kind.Damage, a * plays);
+                    case "StranglePower" when onEnemy && p.Applier?.Player == _me:
+                        return Damage(a, plays, Spread.Specific, target: e, props: ValueProp.Unblockable | ValueProp.Unpowered);
                     case "OblivionPower" when onEnemy && p.Applier?.Player == _me: return Hit.Trig();
                     case "SlowPower" when onEnemy: return Hit.Trig();
+
+                    // ---- powers on enemies: being hit by your attack
+                    case "ThornsPower" when onEnemy && f.CanHit(e):
+                        return Damage(a, f.AttackHits, Spread.Me, dealer: e, harmful: true);
+                    case "CurlUpPower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);          // it gains block
+                    case "PersonalHivePower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);    // Dazed into your draw pile
+                    case "AsleepPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true);   // wakes it
+                    case "SlumberPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.AttackHits: return Hit.Trig(harmful: true);
+                    case "BurrowedPower" when onEnemy && f.BreaksBlock(e): return Hit.Trig();                // stuns it
+                    case "FlutterPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.AttackHits: return Hit.Trig(); // stuns it
+                    case "PlowPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
+                    case "ShriekPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
+                    case "TheGambitPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig();             // it dies
+                    case "SlipperyPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true); // HP loss capped at 1
+
+                    // ---- powers on enemies: killing one
+                    case "InfestedPower" or "SteamEruptionPower" or "SurprisePower" when onEnemy && f.Kills(e): return Hit.Trig(harmful: true);
+                    case "CrabRagePower" or "RavenousPower" when onEnemy && _cs.HittableEnemies.Any(o => o != e && f.Kills(o)): return Hit.Trig(harmful: true);
                 }
                 return null;
             }
@@ -281,13 +337,33 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     var n = N("Cards", 0);
                     return matches && n > 0 && r.DisplayAmount % n + plays >= n;
                 }
+                var armed = RelicCountersFeature.IsArmed(r, _me);
                 switch (name)
                 {
+                    // ---- uses or breaks a relic (formerly Relic Reminders)
+                    case "PenNib" when r.Status == RelicStatus.Active && type == CardType.Attack: return Hit.Trig();
+                    case "ArtOfWar" or "RippleBasin" when type == CardType.Attack && Sts2State.CountPlayedThisTurn(_me, CardType.Attack) == 0:
+                        return Hit.Trig(harmful: true);
+                    case "PaelsTears":
+                    {
+                        // Ending the turn with energy left gives energy next turn: cards that would
+                        // spend your last energy (X-cost cards spend it all) give that up.
+                        var energy = _me.PlayerCombatState?.Energy ?? 0;
+                        return energy > 0 && f.Energy >= energy ? Hit.Trig(harmful: true) : null;
+                    }
+                    // Ending a turn without playing a card gives an extra turn (once per combat):
+                    // while armed and nothing has been played, every card gives that up.
+                    case "PaelsEye" when armed && Sts2State.CountPlayedThisTurn(_me) == 0: return Hit.Trig(harmful: true);
+                    case "Vambrace" when armed && f.BlockGains > 0: return Hit.Trig();
+                    case "BurningSticks" when armed && type == CardType.Skill && f.ExhaustsSelf: return Hit.Trig();
+                    case "UnsettlingLamp" when armed && f.EnemyDebuffs.Count > 0: return Hit.Trig();
+                    case "MusicBox" when armed && type == CardType.Attack: return Hit.Trig();
+
                     // ---- on play
                     case "IntimidatingHelmet" when f.Energy >= N("Energy", 2): return RelicBlock(r, plays);
                     case "DaughterOfTheWind" when type == CardType.Attack: return RelicBlock(r, plays);
-                    case "Permafrost" when type == CardType.Power && RelicCountersFeature.IsArmed(r, _me): return RelicBlock(r, 1);
-                    case "LostWisp" when type == CardType.Power: return RelicDamage(r, plays);
+                    case "Permafrost" when type == CardType.Power && armed: return RelicBlock(r, 1);
+                    case "LostWisp" when type == CardType.Power: return RelicDamage(r, plays, Spread.All);
                     case "GamePiece" when type == CardType.Power: return Hit.Trig();
                     case "MummifiedHand" when type == CardType.Power: return Hit.Trig();
                     case "HelicalDart" when card.Tags.Contains(CardTag.Shiv): return Hit.Trig();
@@ -306,16 +382,16 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // ---- counters completed by this card
                     case "Kunai" or "Shuriken" or "Nunchaku" when Completes(type == CardType.Attack): return Hit.Trig();
                     case "OrnamentalFan" when Completes(type == CardType.Attack): return RelicBlock(r, 1);
-                    case "Kusarigama" when Completes(type == CardType.Attack): return RelicDamage(r, 1);
-                    case "LetterOpener" when Completes(type == CardType.Skill): return RelicDamage(r, 1);
+                    case "Kusarigama" when Completes(type == CardType.Attack): return RelicDamage(r, 1, Spread.Random);
+                    case "LetterOpener" when Completes(type == CardType.Skill): return RelicDamage(r, 1, Spread.All);
                     case "TuningFork" when Completes(type == CardType.Skill): return RelicBlock(r, 1);
                     case "IronClub" when Completes(true): return Hit.Trig();
 
                     // ---- exhaust / discard / stars / created cards / shuffle / empty hand
-                    case "CharonsAshes" when exhausts > 0: return RelicDamage(r, exhausts);
-                    case "ForgottenSoul" when exhausts > 0: return RelicDamage(r, exhausts);
+                    case "CharonsAshes" when exhausts > 0: return RelicDamage(r, exhausts, Spread.All);
+                    case "ForgottenSoul" when exhausts > 0: return RelicDamage(r, exhausts, Spread.Random);
                     case "JossPaper" when exhausts > 0 && Sts2State.Private(r, "CardsExhausted", 0) + exhausts >= N("ExhaustAmount", 5): return Hit.Trig();
-                    case "Tingsha" when discards > 0: return RelicDamage(r, discards);
+                    case "Tingsha" when discards > 0: return RelicDamage(r, discards, Spread.Random);
                     case "ToughBandages" when discards > 0: return RelicBlock(r, discards);
                     case "MiniRegent" when f.Stars > 0 && !Sts2State.Private(r, "UsedThisTurn", true): return Hit.Trig();
                     case "GalacticDust" when f.Stars > 0:
@@ -331,10 +407,26 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         var n = N("OrbCount", 7);
                         var channeled = Sts2State.Private(r, "OrbsChanneled", n);
                         var channels = f.Channels + _xChannels;
-                        return channels > 0 && channeled < n && channeled + channels >= n ? RelicDamage(r, 1) : null;
+                        return channels > 0 && channeled < n && channeled + channels >= n ? RelicDamage(r, 1, Spread.All) : null;
                     }
                     case "BoneFlute" when f.OstyAttacks > 0 && _me.IsOstyAlive: return RelicBlock(r, f.OstyAttacks);
                     case "UnceasingTop" when Sts2State.Hand(_me).Count == 1 && draws == 0 && generated == 0: return Hit.Trig();
+
+                    // ---- your attack: breaking block, killing
+                    case "HandDrill" when _cs.HittableEnemies.Any(f.BreaksBlock): return Hit.Trig();
+                    case "GremlinHorn" when _cs.HittableEnemies.Any(f.Kills): return Hit.Trig();
+
+                    // ---- losing HP from the card (your turn)
+                    case "CentennialPuzzle" when f.HpLoss > 0 && !Sts2State.Private(r, "UsedThisCombat", true): return Hit.Trig();
+                    case "SelfFormingClay" when f.HpLoss > 0: return Hit.Trig();
+                    case "DemonTongue" when f.HpLoss > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true): return Hit.Trig();
+                    case "EmotionChip" when f.HpLoss > 0: return Hit.Trig();
+                    case "RedSkull" when f.HpLoss > 0:
+                    {
+                        var c = _me.Creature;
+                        var threshold = c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m;
+                        return c.CurrentHp > threshold && c.CurrentHp - f.HpLoss <= threshold ? Hit.Trig() : null;
+                    }
                 }
                 return null;
             }
@@ -345,50 +437,80 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     // ------------------------------------------------------------------ amounts
 
     /// <summary>Block you'd actually gain: the game's own block math (Dexterity/Frail only apply to powered block).</summary>
-    private Hit Block(int raw, ValueProp props = ValueProp.Unpowered)
+    private int BlockOf(int raw, ValueProp props = ValueProp.Unpowered)
     {
-        if (raw <= 0) return new Hit(Kind.Block, 0);
+        if (raw <= 0) return 0;
         try
         {
-            var v = Hook.ModifyBlock(_cs, _me.Creature, raw, props, null, null, out _);
-            return new Hit(Kind.Block, Math.Max(0, (int)v));
+            return Math.Max(0, (int)Hook.ModifyBlock(_cs, _me.Creature, raw, props, null, null, out _));
         }
         catch
         {
-            return new Hit(Kind.Block, raw);
+            return raw;
         }
     }
 
-    /// <summary>Damage per enemy hit, dealer side only (before each enemy's own modifiers such as Vulnerable).</summary>
-    private Hit Damage(int raw, ValueProp props = ValueProp.Unpowered)
-    {
-        if (raw <= 0) return new Hit(Kind.Damage, 0);
-        try
-        {
-            var v = Hook.ModifyDamage(_me.RunState, _cs, null, _me.Creature, raw, props, null, null, ModifyDamageHookType.All, CardPreviewMode.None, out _);
-            return new Hit(Kind.Damage, Math.Max(0, (int)v));
-        }
-        catch
-        {
-            return new Hit(Kind.Damage, raw);
-        }
-    }
+    /// <summary><paramref name="times"/> separate block gains of <paramref name="each"/>.</summary>
+    private Hit BlockN(int each, int times, ValueProp props = ValueProp.Unpowered) => times <= 0 || each <= 0
+        ? new Hit(Kind.Block, 0, Count: 0)
+        : new Hit(Kind.Block, BlockOf(each, props) * times, Count: times);
 
     private Hit RelicBlock(RelicModel r, int times)
     {
         var props = r.DynamicVars.TryGetValue("Block", out var v) && v is BlockVar bv ? bv.Props : ValueProp.Unpowered;
-        var one = Block(Sts2State.Var(r, "Block"), props).Amount;
-        return new Hit(Kind.Block, one * Math.Max(0, times), Count: Math.Max(0, times));
+        return BlockN(Sts2State.Var(r, "Block"), times, props);
     }
 
-    /// <summary><paramref name="times"/> separate block gains of <paramref name="each"/>.</summary>
-    private Hit BlockN(int each, int times) => times <= 0 ? new Hit(Kind.Block, 0, Count: 0)
-        : new Hit(Kind.Block, Block(each).Amount * times, Count: times);
-
-    private Hit RelicDamage(RelicModel r, int times)
+    private Hit RelicDamage(RelicModel r, int times, Spread spread)
     {
         var props = r.DynamicVars.TryGetValue("Damage", out var v) && v is DamageVar dv ? dv.Props : ValueProp.Unpowered;
-        var one = Damage(Sts2State.Var(r, "Damage"), props).Amount;
-        return new Hit(Kind.Damage, one * Math.Max(0, times));
+        return Damage(Sts2State.Var(r, "Damage"), times, spread, props: props);
+    }
+
+    /// <summary>
+    /// <paramref name="times"/> damage instances of <paramref name="each"/> raw damage.
+    /// The tab's number: per enemy hit, dealer side only (before each enemy's own modifiers),
+    /// except for one known target (that enemy, or you) where it's exact. The audit range (Min/Max)
+    /// applies every target's own modifiers: All = sum over enemies; Random = between the
+    /// least- and most-damaged enemy; Specific/Me = that creature.
+    /// </summary>
+    private Hit Damage(int each, int times, Spread spread, Creature? target = null, Creature? dealer = null,
+        ValueProp props = ValueProp.Unpowered, bool harmful = false)
+    {
+        if (each <= 0 || times <= 0) return new Hit(Kind.Damage, 0, harmful);
+        var from = dealer ?? (spread == Spread.Me ? null : _me.Creature);
+        int Mod(Creature? t)
+        {
+            try
+            {
+                return Math.Max(0, (int)Hook.ModifyDamage(_me.RunState, _cs, t, from, each, props, null, null, ModifyDamageHookType.All, CardPreviewMode.None, out _));
+            }
+            catch
+            {
+                return each;
+            }
+        }
+
+        var enemies = _cs.HittableEnemies;
+        int shown, min, max;
+        switch (spread)
+        {
+            case Spread.Specific when target != null:
+                shown = min = max = Mod(target) * times;
+                break;
+            case Spread.Me:
+                shown = min = max = Mod(_me.Creature) * times;
+                break;
+            case Spread.All:
+                shown = Mod(null) * times;
+                min = max = enemies.Sum(Mod) * times;
+                break;
+            default: // Random (or no enemies)
+                shown = Mod(null) * times;
+                min = enemies.Count > 0 ? enemies.Min(Mod) * times : 0;
+                max = enemies.Count > 0 ? enemies.Max(Mod) * times : 0;
+                break;
+        }
+        return new Hit(Kind.Damage, shown, harmful, Count: times, Min: min, Max: max);
     }
 }

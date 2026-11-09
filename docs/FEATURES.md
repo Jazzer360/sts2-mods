@@ -13,7 +13,6 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Settings and layout](#settings-and-layout) | (core) | 🟡 | always on |
 | [Card Indicators](#card-indicators) | `card-indicators` | 🟡 | on |
 | [Relic Counters](#relic-counters) | `relic-counters` | 🟡 | on |
-| [Relic Reminders](#relic-reminders) | `relic-reminders` | 🟡 | on |
 | [Incoming Damage](#incoming-damage) | `incoming-damage` | 🟡 | on |
 | [Proc Indicators](#proc-indicators) | `proc-indicators` | 🟡 | on |
 | [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | 🟡 | on |
@@ -29,7 +28,9 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 - **One file**, `mods/SpireQoL/SpireQoL.settings.cfg` (JSON). Never written to game saves. New on-card tab kinds are added to it as they first appear (saved at most every 3 seconds).
 - **Two audits write to the game log** (`godot.log`, lines start with `[SpireQoL] [audit]`) when a prediction doesn't match what happened, to surface bugs:
   - **Forecast audit:** the Incoming Damage forecast from the last moment of your turn, against the HP you and Osty actually lost by your next turn (from the game's combat history). A mismatch logs the forecast breakdown and every damage and block entry.
-  - **Proc audit:** the tabs on a card just before you played it, against what happened until your next card play. It logs a relic or power that fired with no tab, a relic tab whose relic didn't fire, proc block that differs, and proc damage predicted but not dealt (or the reverse).
+  - **Forecast audit** also checks the end-of-turn block it predicted, and splits the history by whose turn each entry happened on, so Poison ticking at the start of your next turn isn't counted.
+  - **Proc audit:** the tabs on a card just before you played it, against what happened until your next card play. It logs: a relic or power that fired with no tab; a relic tab whose relic didn't fire; proc block that differs (exact); proc damage outside the tabs' predicted range (to enemies and to you); and a **budget** check: draws, exhausts, discards, created cards, orbs, summons and powers applied beyond what the card itself does plus what its tabs can add are logged as "unexplained" (a missing tag). Less than the card's own is a `[model]` line (our model of the card is off, or a pile ran out).
+  - **Summaries:** at the end of each combat, one line per audit: `card plays checked, N matched (issue counts)` and `enemy turns forecast, N matched`.
   - Both only read the combat history and subscribe to relics' and powers' `Flashed` events. They're the features `forecast-audit` and `proc-audit`, on by default.
 - **Error logging is capped:** a failure that repeats every frame is logged in full once, then as a count every ~600 repeats.
 - **No Harmony patches.** Everything is read from live game state each frame; the game's hook queries it calls (`Hook.ModifyCardPlayCount`, `ModifyBlock`, `ModifyDamage`, `ShouldEtherealTrigger`, `ModifyOrbPassiveTriggerCount`) are pure queries with no side effects.
@@ -67,9 +68,10 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | `LayoutVersion` | (managed) | when a release changes a default position, older saved positions for that widget are reset once |
 | `UnlockLayoutKey` / `HideAllKey` | `F8` / `F9` | Godot key names |
 | `EtherealOpacity` | `0.8` | 0.25–1 (a saved 0.7, the old default, is raised to 0.8 once) |
-| `Tabs` | every tab shown | one entry per on-card tab kind, added (as `true`) the first time that kind appears, plus a group switch per family: `"relic:*"`, `"proc:*"`, `"double-play:*"`. Set any to `false` to hide it; a group set to `false` hides its whole family. Keys: `retain`, `sly`, `exhaust`, `blocked` (also turns off dimming), `shuffle`, `double-play:<Source>`, `relic:<Relic>`, `proc:<Source>` (class names, e.g. `proc:FeelNoPainPower`). Replaces `ShowDoublePlay` / `DimBlockedCards` (migrated once) and `ShowInnateEternalBadges` (removed). |
+| `Tabs` | every tab shown | one entry per on-card tab kind, added (as `true`) the first time that kind appears, plus a group switch per family: `"proc:*"`, `"double-play:*"`. Set any to `false` to hide it; a group set to `false` hides its whole family. Keys: `retain`, `sly`, `replay`, `blocked` (also turns off dimming), `shuffle`, `double-play:<Source>`, `proc:<Source>` (class names, e.g. `proc:FeelNoPainPower`). Replaces `ShowDoublePlay` / `DimBlockedCards` (migrated once) and `ShowInnateEternalBadges` (removed). |
 | `ProcNumbers` | `true` | amounts on block / damage / summon proc tabs; `false` = icon only |
 | `ProcIndirect` | `true` | count procs one step removed: cards that exhaust or discard other cards, draw, or create cards |
+| `ShowTurnTimers` | `false` | Relic Counters also shows relics that count turns on their own (Horn Cleat, Candelabra, Captain's Wheel, Chandelier, Sparkling Rouge, Stone Calendar, Happy Flower, Pendulum, Pollinous Core) |
 | `PulseOneStepEarly` | `false` | Relic Counters also flash two steps before firing |
 | `FlashHz` | `2.5` | flash speed |
 
@@ -86,6 +88,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 Every indicator about a specific card in your hand uses the **same form**: a **tag** hanging up off the card's **top edge**, centered in a row, one tag per effect. In a fanned hand the tops of cards stay visible while their sides are covered, so you can read the tags at a glance without hovering. A tag means something out of the ordinary will happen when you play that card.
 
 - **Look:** each tag is a copy of the card's own enchantment tab (the game's banner art), rotated a quarter turn so it hangs off the top edge the way an enchantment tab hangs off the side. **It draws beneath the card art but above the card's glow**, tucked about 17% under the top edge, so the card itself covers the tucked part. The icon is drawn slightly smaller (85%), centered as if the tag were tucked 25% (the backdrop sits a little lower than the icon, evening out the margins above and below it). Each tag carries the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
+- **Text instead of an icon only for replay:** replay on the card itself has no power or relic to show, so its tab reads `2×` (total plays).
 - **Numbers only for amounts:** a tab shows a number only when the proc gains you block, deals damage or summons, and the amount is the point (e.g. Feel No Pain on True Grit: `3`). It sits at the icon's lower-right corner, like a power amount. Everything else is icon only.
 - **Red slash:** the icon crossed out means playing this card breaks or is blocked by that thing, hurts you, or helps the enemy (Enrage, Galvanized...).
 - **One per source:** each source shows at most one tab per card. Tabs keep their size and spacing; if a row would be wider than the card, only the gaps shrink (tabs overlap, later ones on top), so a row never spills past the card's edges.
@@ -95,14 +98,12 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 | --- | --- | --- |
 | Steady (enchantment) | Retain (permanent or this turn only) | Card Indicators |
 | Master Planner (power) | Sly (permanent or this turn only) | Card Indicators |
-| The double-play source (Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or a replay enchantment) | plays more than once because of it | Card Indicators |
-| Goopy (enchantment) | Exhaust was *added* to this card | Card Indicators |
+| The double-play source (Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe) | plays more than once because of it | Card Indicators |
+| Text `2×` (no icon) | Replay on the card itself (Hidden Gem, Transfigure, Sword Sage, enchantments): total plays | Card Indicators |
 | Bound / Ringing / Smog power, or Velvet Choker, **crossed** + card dimmed | can't be played right now | Card Indicators |
 | Discard pile | its draw would reshuffle your discard pile into the draw pile | Shuffle Warning |
-| A relic | playing this uses the relic (Pen Nib ready, one-shot relics) | Relic Reminders |
 | A power or relic (+ amount for block / damage / summon) | playing this sets it off: see [Proc Indicators](#proc-indicators) | Proc Indicators |
-| A power or relic, **crossed** (+ amount for damage to you) | playing this helps the enemy or hurts you (Enrage, Sneaky, Imitation Learning, Skittish, Withering Presence, Tender, Smoggy, Vital Spark, Galvanized) | Proc Indicators |
-| A relic, **crossed** | playing this stops the relic working (Art of War, Ripple Basin, Pael's Tears) | Relic Reminders |
+| A power or relic, **crossed** (+ amount for damage to you) | playing this helps the enemy, hurts you, or gives up a relic (Enrage, Thorns, Curl Up, Galvanized, Art of War, Pael's Tears, Pael's Eye...) | Proc Indicators |
 
 **Game UI touched:** card nodes in the hand. Tag copies live in a `SpireQoL_TagLayer` node inserted directly after the card's glow (`NCard.CardHighlight`) in the glow's parent, so they draw above the glow and beneath the card art. It mirrors the card frame's transform each frame, and is hidden when the node stops showing a decorated hand card. The game's own enchantment tab is only read as a template.
 
@@ -114,10 +115,11 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 
 - **Ethereal cards are translucent** (80% opacity by default) when Ethereal is on the card itself: cards that are always Ethereal, and Music Box copies. **Not** when Ethereal comes from Hex (the act 3 elite's Hexed affliction): Hex makes every card Ethereal through a power (a "global" keyword source), and the game's affliction overlay already marks those cards.
 - **Retain:** a Steady tab (Steady is the game's Retain enchantment). **Sly:** a Master Planner tab (the de-facto Sly power). Granted-for-this-turn (Expertise, Hand Trick) looks the same.
-- **Added Exhaust:** a Goopy tab (Goopy is the enchantment that adds Exhaust). Cards that always exhaust get nothing.
+- **Replay** on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, enchantments): a text tab `2×`, the card's total plays (`CardModel.GetEnchantedReplayCount` + 1). The card text says "Replay", but it's easy to miss without hovering.
+- **Added keywords get no tab:** the game prints every keyword a card currently has (including added Exhaust) on the card itself. (The Goopy "added Exhaust" tab was removed in 0.21.0.)
 - **Blocked cards** (Bound, Ringing, Smog, Velvet Choker): the card is dimmed, with a crossed tab showing the blocking power's or relic's icon. Detected with the game's own `CardModel.CanPlay`.
 - **Galvanized** moved to [Proc Indicators](#proc-indicators) in 0.19.0 (crossed Galvanic tab with the damage you take).
-- **Double play:** one tab per source, with that source's own icon: the power (Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team), the relic (Throwing Axe), or the card's replay enchantment. The game's query reports which models changed the count, so new sources get their own icon automatically.
+- **Double play:** one tab per source, with that source's own icon: the power (Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team) or the relic (Throwing Axe). Replay on the card itself is the `2×` tab instead. The game's query reports which models changed the count, so new sources get their own icon automatically.
   - The count comes from the game's own play-count query, the one it runs when you play the card: enchanted replays + 1, then `Hook.ModifyCardPlayCount`. So it covers Echo Form (first N cards each turn), Burst (skills), Duplication, One-Two Punch (attacks), Signal Boost (powers), Throwing Axe (first card each combat), Tag Team, enchantments, and anything added later.
   - Tag Team only doubles attacks aimed at the enemy that has it. Single-target cards are checked against each enemy, and the best case is shown.
 
@@ -128,46 +130,32 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 
 **What you see:** a compact tray, by default attached just right of your HP bar with its bottom edge level with the bar's bottom (so it stays clear of enemies), with one row per counter relic or countdown power you have: its icon, a bar split into one segment per step, and a short label. Counters longer than 12 steps (Cacophony's 33) show only the countdown number, no bar.
 
-- **Counters that carry across turns and combats sort first:** Pen Nib, Nunchaku, Tuning Fork, Iron Club, Galactic Dust, Joss Paper, Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core, Metronome.
+**What belongs here:** counters you push forward by playing (cards, attacks, skills, energy, draws, orbs, stars, exhausts) and per-turn card limits. On/off relic states are on-card tabs instead (Pael's Tears, Pael's Eye, one-shot relics), and relics that just count turns are opt-in (`ShowTurnTimers`).
+
+- **Counters that carry across turns and combats sort first:** Pen Nib, Nunchaku, Tuning Fork, Iron Club, Galactic Dust, Joss Paper, Metronome.
 - **Then per-turn counters:** Kunai, Shuriken, Ornamental Fan, Kusarigama, Letter Opener, Brilliant Scarf.
 - **The row flashes when the next qualifying action fires the relic.** This uses the game's own "about to fire" state (`RelicModel.Status == Active`). Pen Nib flashes at 9/10. Stone Calendar flashes all of turn 7.
 - **Limits:**
   - Velvet Choker shows plays left and turns red at 1.
   - Pocketwatch shows green while you're within its card limit and red ("missed") once you go over.
-- **Turn-trigger relics** show progress to their turn and say "next turn" the turn before: Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3).
-- **Pael's Tears** shows green `+2 next turn` while you still have energy (ending your turn with energy left gives energy next turn), and red `no energy left` once you've spent it all.
+- **Turn timers** (only with `ShowTurnTimers`): Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3), shown with progress and "next turn" the turn before; Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core as counters.
 - **Countdown powers** (sorted after relics; the game's `PowerModel.DisplayAmount` is "steps left"). The bar fills toward the next trigger and flashes when one step is left:
   - Across turns: Orbit (every 4 energy spent), Automation (every 10 cards drawn), Cacophony (every 33 cards drawn, number only).
   - Per turn: Panache (every 5 cards played), Pale Blue Dot (5 cards played, any type; shows `done` once it has fired this turn).
   - Enemy powers that count *your* plays, in red: Withering Presence (every 6 cards you play adds a Wither to your hand).
-- **Pael's Eye** shows one segment: green "ready" while unused this combat, "used" afterwards. It's the only one-shot relic in the tray, because it has no card to mark. The other one-shot relics (Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box) appear only as icons on the cards that would use them (Relic Reminders).
+- **Not in the tray:** Pael's Tears and Pael's Eye (crossed tabs on the cards that would give them up), and one-shot relics (Vambrace, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box: tabs on the cards that would use them).
 
 Thresholds are read live from each relic, so balance patches are picked up automatically.
 
 **Game UI touched:** none; the tray is our own overlay. The relic bar's own counters are unchanged.
 
-**Not yet:** Pael's Legion, Mini Regent, Regalite, Rainbow Ring rows.
+Checked against every relic the game gives a counter (v0.111.0): the rest are run-level counters (teas, Girya, Winged Boots, Toy Box...), plus Pael's Legion (block cooldown) and Pael's Flesh (shows the turn number).
 
 ---
 
-## Relic Reminders
+## Relic Reminders (merged into Proc Indicators in 0.21.0)
 
-**What you see:** a tab with the relic's icon on the cards in your hand that it cares about (see "On-card tabs").
-
-- **Crossed tab = playing this card stops this relic working this turn.**
-  - Art of War and Ripple Basin on every attack, until you've played an attack this turn.
-  - Pael's Tears on every playable card that would spend your last energy (its current cost ≥ your energy, and all X-cost cards).
-- **Plain tab = playing this card uses the relic.**
-  - Pen Nib, when ready, on attacks: this attack gets the double damage. The tray row also flashes.
-  - One-shot relics, while still unused:
-    - Vambrace on cards that give block
-    - Burning Sticks on skills that will exhaust (Exhaust skills, every skill under Corruption, plus Ethereal skills that exhaust at end of turn)
-    - Unsettling Lamp on cards that apply a debuff
-    - Music Box on attacks (first attack each turn)
-
-Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a proc tab with its block (Proc Indicators); other on-play relics are in Proc Indicators too.
-
-**Not yet:** Pael's Eye "end turn = extra turn" hint.
+The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; one-shot Vambrace, Burning Sticks, Unsettling Lamp, Music Box) are now rules in [Proc Indicators](#proc-indicators), keyed `proc:<Relic>`, so every tab goes through one rule table and one audit.
 
 ---
 
@@ -188,6 +176,8 @@ Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a p
 **How the numbers are worked out:** the enemy turn is simulated hit by hit, in turn order:
 - **Osty** (Necrobinder): enemies never target Osty, but its Die For You power takes the part of an enemy attack that gets through *your* block (pets share your block), up to Osty's HP; the overkill comes back to you. Damage that isn't an attack (Burn, Constrict, HP loss) isn't redirected. The Osty row uses Die For You's icon.
 - **Your end-of-turn self damage** lands first, against your end-of-turn block.
+- **Your end-of-turn damage to enemies** lands before they act, so an enemy it kills doesn't attack: Hailstorm (enough Frost orbs), The Bomb (last tick), Screaming Flagon (empty hand), Stone Calendar (its turn), Charon's Ashes (per Ethereal card exhausting) hit every enemy; Lightning orb passives, Parrying Shield and Forgotten Soul hit a random enemy, so they're counted only when there's one enemy. Enemy block is still up at that point.
+- **HP-loss effects**, in the game's order, on every hit that reaches your HP: Tungsten Rod (−1 each), Beating Remnant (caps HP lost per turn), then Buffer (cancels a hit, one charge each). Intangible is already in the enemy intent numbers.
 - **Poison:** an enemy that Poison will kill doesn't attack. Poison ticks at the start of its turn, before it moves. The amount is the game's own poison preview (`PoisonPower.CalculateTotalDamageNextTurn`), which already applies per-hit damage caps such as Exoskeleton's **Hard To Kill** (each instance capped, e.g. at 9). Skulking Colony's **Hardened Shell** caps an enemy's *total* HP loss per turn; the game's preview ignores that, so we apply it.
 - **Doom doesn't stop attacks.** Doomed enemies die at the end of their own turn, after attacking.
 - **Retaliation** can kill an attacker partway through a multi-hit. Each later hit is then cancelled, because the game checks for a dead attacker before every hit.
@@ -234,6 +224,18 @@ Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a p
 - **Counter relics** (Kunai, Shuriken, Ornamental Fan, Nunchaku, Kusarigama, Letter Opener, Tuning Fork, Iron Club) show only on cards that complete the count; the tray shows progress.
 - Several enemies with the same power share one tab, amounts added.
 - Cards that can't be played (Unplayable, blocked, or their own condition unmet, via `CardModel.CanPlay`) get no proc tabs. Cards you can't afford yet still show them, since energy can come mid-turn.
+
+**Uses or breaks a relic** (formerly Relic Reminders): Pen Nib ready (attacks); crossed Art of War / Ripple Basin (attacks, until you've played one this turn); crossed Pael's Tears (cards that would spend your last energy); crossed Pael's Eye (every card, while armed and nothing played this turn: playing one gives up the extra turn); one-shot Vambrace (block cards), Burning Sticks (skills that exhaust when played), Unsettling Lamp (debuffing cards), Music Box (attacks).
+
+**Your attack against enemies** (from the card's damage to each enemy, through the game's damage math, vs that enemy's block and HP):
+- Thorns on an enemy: **crossed**, damage to you per hit. Curl Up (it gains block), Personal Hive (Dazed into your deck), Asleep / Slumber (wakes it): **crossed**.
+- Burrowed (breaking its block stuns it), Flutter, Plow, Shriek (stuns), The Gambit (it dies), Slippery (HP loss capped at 1, crossed).
+- Killing an enemy: Gremlin Horn (energy and a draw); crossed for enemy death effects (Infested, Steam Eruption, Surprise, and Crab Rage / Ravenous on the others).
+- Breaking block: Hand Drill (Vulnerable).
+
+**Losing HP from the card** (Bloodletting-style): Centennial Puzzle (first time each combat), Self-Forming Clay, Demon Tongue (first time each turn), Emotion Chip, Red Skull (when it takes you to its threshold), plus Rupture.
+
+**Sovereign Blade:** the powers buffing it show as tabs on the Blade: Seeking Edge (hits all enemies), Parry (gains block), Sword Sage (replays), Conqueror on an enemy (more Blade damage to it).
 
 **Sources** (each mirrors the source's own hook in the game code, v0.111.0):
 
@@ -308,7 +310,9 @@ Throwing Axe shows as a double-play tab (Card Indicators), and Permafrost as a p
 
 **Not shown on purpose:** procs that fire on *drawing* a card (Pagestorm, Iteration, Automation, Speedster on draw...) happen when the card is drawn, not when you play it, so there's no choice to inform.
 
-**Not yet:** deeper chains (a proc's block setting off Juggernaut whose damage sets off something else).
+**Audit data:** every damage tab also records the exact range of damage it predicts across its targets, with each target's own modifiers: the sum over every enemy for all-enemy procs, the least- to most-damaged enemy for random ones, or the exact amount for a known target. The proc audit checks real plays against it.
+
+**Not yet:** deeper chains (a proc's block setting off Juggernaut whose damage sets off something else); enemy death effects that revive (Adaptable, Illusion, Reattach).
 
 ---
 

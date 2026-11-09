@@ -2,6 +2,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
+using MegaCrit.Sts2.Core.Entities.Players;
 using SpireQoL.Combat;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
@@ -14,9 +15,12 @@ namespace SpireQoL.Diagnostics;
 /// game log (godot.log, lines start with [SpireQoL] [audit]) so forecast bugs surface.
 ///
 /// The forecast from the last frame of your turn (before ending the turn starts, so it covers all
-/// end-of-turn effects) is frozen. When your next turn starts, the combat history entries recorded
-/// in between (CombatManager.History: the game's own log of every damage instance) give the
-/// actual HP you and Osty lost. Read-only: it only reads the history.
+/// end-of-turn effects) is frozen. When your next turn starts, the combat history recorded in
+/// between is split by whose turn each entry happened on (the entry's own CurrentSide):
+///  - your end of turn (player side): block gained there vs the forecast's end-of-turn block;
+///  - your end of turn + the enemy turn: HP you and Osty lost vs the forecast. Entries from your
+///    next turn (Poison ticking on you at its start, etc.) are left out.
+/// A one-line summary per combat gives the match rate. Read-only: it only reads the history.
 /// </summary>
 public sealed class ForecastAudit : IFeature, IFrameFeature
 {
@@ -41,19 +45,31 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private int _frozenAt;
     private int _frozenTurn;
 
+    private CombatHistory? _history;
+    private int _checked;
+    private int _matched;
+
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
         if (me == null || !Sts2State.InCombat)
         {
+            Summarize();
             _frozen = null;
             _wasPlayerTurn = false;
+            _history = null;
             return;
         }
 
         var history = CombatManager.Instance.History;
-        var playerTurn = Sts2State.IsPlayerTurn;
+        if (!ReferenceEquals(history, _history))
+        {
+            Summarize();
+            _history = history;
+            _frozen = null;
+        }
 
+        var playerTurn = Sts2State.IsPlayerTurn;
         if (playerTurn)
         {
             // A frozen forecast from the previous turn: the enemy turn is over, compare.
@@ -76,29 +92,63 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         _wasPlayerTurn = playerTurn;
     }
 
-    private static void Compare(TurnEndModel f, CombatHistory history, int from, MegaCrit.Sts2.Core.Entities.Players.Player me)
+    private void Summarize()
     {
-        var entries = history.Entries.Skip(from).ToList();
-        var damage = entries.OfType<DamageReceivedEntry>().ToList();
-        var mine = damage.Where(d => d.Result.Receiver == me.Creature).ToList();
+        if (_checked == 0) return;
+        ModEntry.Log.Info($"[audit] combat summary: {_checked} enemy turns forecast, {_matched} matched.");
+        _checked = _matched = 0;
+    }
+
+    /// <summary>The side whose turn an entry happened on (CombatHistoryEntry.CurrentSide is private).</summary>
+    private static CombatSide SideOf(CombatHistoryEntry e) => Sts2State.Private(e, "CurrentSide", CombatSide.Player);
+
+    private void Compare(TurnEndModel f, CombatHistory history, int from, Player me)
+    {
+        // Your end of turn (player side), then the enemy turn; stop at your next turn.
+        var window = new List<CombatHistoryEntry>();
+        var endOfTurn = new List<CombatHistoryEntry>();
+        var sawEnemy = false;
+        foreach (var e in history.Entries.Skip(from))
+        {
+            var side = SideOf(e);
+            if (side == CombatSide.Enemy) sawEnemy = true;
+            else if (sawEnemy) break;
+            window.Add(e);
+            if (!sawEnemy) endOfTurn.Add(e);
+        }
+
         var osty = me.Osty;
-        var ostyHits = osty == null ? new List<DamageReceivedEntry>() : damage.Where(d => d.Result.Receiver == osty).ToList();
+        var damage = window.OfType<DamageReceivedEntry>().ToList();
+        var actualTaken = damage.Where(d => d.Result.Receiver == me.Creature).Sum(d => d.Result.UnblockedDamage);
+        var actualOsty = osty == null ? 0 : damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
+        var actualBlockGain = endOfTurn.OfType<BlockGainedEntry>().Where(b => b.Actor == me.Creature).Sum(b => b.Amount);
 
-        var actualTaken = mine.Sum(d => d.Result.UnblockedDamage);
-        var actualOsty = ostyHits.Sum(d => d.Result.UnblockedDamage);
-        var predictedTaken = f.DamageThrough + f.UnblockableTotal;
+        var issues = new List<string>();
+        if (actualTaken != f.Taken) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
+        if (actualOsty != f.OstyTaken) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
+        if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
 
-        if (actualTaken == predictedTaken && actualOsty == f.OstyTaken) return;
+        _checked++;
+        if (issues.Count == 0)
+        {
+            _matched++;
+            return;
+        }
 
         var log = ModEntry.Log;
-        log.Warn($"[audit] turn {Sts2State.TurnNumber - 1}: forecast took {predictedTaken} (Osty {f.OstyTaken}), actually took {actualTaken} (Osty {actualOsty}).");
-        log.Warn($"[audit]   forecast: block {f.CurrentBlock} + end of turn {string.Join(", ", f.EndOfTurnBlock.Select(s => $"{s.Name} {s.Amount}"))}; " +
-                 $"blockable {string.Join(", ", f.Blockable.Select(s => $"{s.Name} {s.Amount}"))}; " +
-                 $"unblockable {string.Join(", ", f.Unblockable.Select(s => $"{s.Name} {s.Amount}"))}; " +
-                 $"skipped (poison) {f.SkippedPoisoned}, cancelled hits {f.CancelledHits}, Osty HP {f.OstyHp}.");
-        foreach (var e in entries)
+        log.Warn($"[audit] turn {_frozenTurn} enemy turn: {string.Join("; ", issues)}.");
+        log.Warn($"[audit]   forecast: block {f.CurrentBlock} + end of turn {List(f.EndOfTurnBlock)}; blockable {List(f.Blockable)}; " +
+                 $"unblockable {List(f.Unblockable)}; your end-of-turn damage {List(f.EndOfTurnDamage)}; " +
+                 $"skipped (poison {f.SkippedPoisoned}, end of turn {f.SkippedEndOfTurn}), cancelled hits {f.CancelledHits}, Osty HP {f.OstyHp}.");
+        foreach (var e in window)
         {
             if (e is DamageReceivedEntry or BlockGainedEntry) log.Warn($"[audit]   actual: {e.HumanReadableString}");
         }
+    }
+
+    private static string List(IEnumerable<Source> sources)
+    {
+        var s = string.Join(", ", sources.Select(x => $"{x.Name} {x.Amount}"));
+        return s.Length == 0 ? "none" : s;
     }
 }

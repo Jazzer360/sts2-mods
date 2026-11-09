@@ -12,7 +12,10 @@ namespace SpireQoL.Cards;
 /// Key de-duplicates (one tab per source per card) and is the tab's settings key.
 /// </summary>
 /// Amount is the proc amount even when the number isn't displayed (ProcNumbers off), for the audit.
-public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null, string? Kind = null, int Amount = 0);
+/// AuditMin/AuditMax: for damage procs, the total damage range the audit expects (all targets).
+/// Text: shown instead of an icon (replay count, e.g. "2×"); null for icon tabs.
+public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null, string? Kind = null, int Amount = 0,
+    int AuditMin = 0, int AuditMax = 0, string? Text = null);
 
 /// <summary>
 /// What should be drawn on one card this frame. Features fill it in; CardOverlayRenderer draws it.
@@ -35,11 +38,12 @@ public sealed class CardDecor
 
     /// <returns>Whether the tab was added (false if a tab with this key exists or it's turned off).</returns>
     /// <param name="kind">"block", "damage" or "summon" for quantified procs (with <paramref name="amount"/>), else null.</param>
-    public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, string? kind = null, int amount = 0)
+    public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, string? kind = null, int amount = 0,
+        int auditMin = 0, int auditMax = 0, string? text = null)
     {
         if (Tabs.Any(t => t.Key == key)) return false;
         if (Filter != null && !Filter(key)) return false;
-        Tabs.Add(new TabSpec(key, icon, crossed, number, kind, amount));
+        Tabs.Add(new TabSpec(key, icon, crossed, number, kind, amount, auditMin, auditMax, text));
         return true;
     }
 

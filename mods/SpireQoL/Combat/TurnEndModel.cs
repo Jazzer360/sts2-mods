@@ -62,6 +62,18 @@ public sealed class TurnEndModel
     public int OstyTaken { get; private set; }
     public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
 
+    /// <summary>
+    /// HP you actually lose by the start of your next turn: everything that gets through block,
+    /// after HP-loss effects (Tungsten Rod, Beating Remnant, Buffer) and Osty. This is the widget's result.
+    /// </summary>
+    public int Taken { get; private set; }
+
+    /// <summary>Attacking enemies left out because your end-of-turn damage kills them first.</summary>
+    public int SkippedEndOfTurn { get; private set; }
+
+    /// <summary>Your end-of-turn damage to enemies (Hailstorm, The Bomb, Lightning...), for the audit log.</summary>
+    public List<Source> EndOfTurnDamage { get; } = new();
+
     // Blockable end-of-turn damage from cards in hand (DamageVar "Damage").
     private static readonly HashSet<string> BlockableHandCards = new() { "Burn", "Decay", "Infection", "Toxic", "Wither" };
 
@@ -135,31 +147,32 @@ public sealed class TurnEndModel
 
         // ---- Your own end-of-turn damage (happens before the enemy turn) ----
         var block = m.ExpectedBlock;
+        var hpLoss = HpLossEffects.For(me.Creature, playerTurn: true);
         var regret = 0;
         foreach (var card in hand)
         {
             var type = card.GetType().Name;
             if (BlockableHandCards.Contains(type))
             {
-                m.LandBlockable(SafeTitle(card), Sts2State.Var(card, "Damage"), ref block);
+                m.LandBlockable(SafeTitle(card), Sts2State.Var(card, "Damage"), ref block, hpLoss);
             }
             else if (UnblockableHandCards.Contains(type))
             {
-                m.Unblockable.Add(new Source(SafeTitle(card), Sts2State.Var(card, "HpLoss")));
+                m.LandUnblockable(SafeTitle(card), Sts2State.Var(card, "HpLoss"), hpLoss);
             }
             else if (type == "Regret")
             {
                 regret++;
             }
         }
-        if (regret > 0) m.Unblockable.Add(new Source(regret > 1 ? $"Regret ×{regret}" : "Regret", regret * hand.Count));
+        for (var i = 0; i < regret; i++) m.LandUnblockable(regret > 1 ? $"Regret {i + 1}" : "Regret", hand.Count, hpLoss);
 
         foreach (var power in me.Creature.Powers)
         {
             var type = power.GetType().Name;
             if (power.Amount <= 0) continue;
-            if (BlockableDebuffs.Contains(type)) m.LandBlockable(SafeTitle(power), power.Amount, ref block);
-            else if (UnblockableDebuffs.Contains(type)) m.Unblockable.Add(new Source(SafeTitle(power), power.Amount));
+            if (BlockableDebuffs.Contains(type)) m.LandBlockable(SafeTitle(power), power.Amount, ref block, hpLoss);
+            else if (UnblockableDebuffs.Contains(type)) m.LandUnblockable(SafeTitle(power), power.Amount, hpLoss);
         }
 
         // ---- Enemy turn, hit by hit ----
@@ -177,6 +190,10 @@ public sealed class TurnEndModel
         var ostyHp = osty != null && osty.IsAlive && osty.HasPower<DieForYouPower>() ? osty.CurrentHp : 0;
         m.OstyHp = ostyHp;
 
+        // Your end-of-turn damage to enemies lands before they act and can kill an attacker.
+        var eot = EndOfTurnHits(m, me, cs, hand);
+        hpLoss = HpLossEffects.For(me.Creature, playerTurn: false); // Beating Remnant resets each turn
+
         foreach (var enemy in cs.Enemies)
         {
             if (!enemy.IsAlive || enemy.Monster == null || enemy.IsStunned) continue;
@@ -184,9 +201,24 @@ public sealed class TurnEndModel
             var attacks = enemy.Monster.NextMove.Intents.OfType<AttackIntent>().ToList();
             if (attacks.Count == 0) continue;
 
-            // Enemy HP and Hardened Shell budget after its poison tick.
             var hp = enemy.CurrentHp;
             var shellLeft = enemy.GetPower<HardenedShellPower>()?.Amount ?? int.MaxValue;
+
+            // End of your turn: its block is still up then.
+            var eotBlock = enemy.Block;
+            var eotKill = false;
+            if (eot.TryGetValue(enemy, out var eotHits))
+            {
+                foreach (var h in eotHits) eotKill |= HitEnemy(Retaliate(me.Creature, enemy, h), ref hp, ref eotBlock, ref shellLeft);
+            }
+            if (eotKill)
+            {
+                m.SkippedEndOfTurn++;
+                continue;
+            }
+
+            // Its poison tick at the start of its turn. (Hardened Shell budget resets then.)
+            shellLeft = enemy.GetPower<HardenedShellPower>()?.Amount ?? int.MaxValue;
             var poison = enemy.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0;
             var poisonTaken = Math.Min(poison, shellLeft);
             hp -= poisonTaken;
@@ -197,7 +229,7 @@ public sealed class TurnEndModel
                 continue;
             }
             // Enemy block is cleared at the start of its turn unless it has Barricade.
-            var enemyBlock = enemy.HasPower<BarricadePower>() ? enemy.Block : 0;
+            var enemyBlock = enemy.HasPower<BarricadePower>() ? eotBlock : 0;
 
             var landed = 0;
             var hitsLanded = 0;
@@ -224,6 +256,7 @@ public sealed class TurnEndModel
                     ostyHp -= toOsty;
                     m.OstyTaken += toOsty;
                     m.DamageThrough += through - toOsty;
+                    m.Taken += hpLoss.Apply(through - toOsty);
                     landed += perHit;
                     hitsLanded++;
 
@@ -243,13 +276,137 @@ public sealed class TurnEndModel
         return m;
     }
 
-    private void LandBlockable(string name, int amount, ref int block)
+    private void LandBlockable(string name, int amount, ref int block, HpLossEffects hpLoss)
     {
         if (amount <= 0) return;
         Blockable.Add(new Source(name, amount));
         var blocked = Math.Min(block, amount);
         block -= blocked;
         DamageThrough += amount - blocked;
+        Taken += hpLoss.Apply(amount - blocked);
+    }
+
+    private void LandUnblockable(string name, int amount, HpLossEffects hpLoss)
+    {
+        if (amount <= 0) return;
+        Unblockable.Add(new Source(name, amount));
+        Taken += hpLoss.Apply(amount);
+    }
+
+    /// <summary>
+    /// Damage your end of turn deals to each enemy before the enemy turn (one entry per hit, raw;
+    /// the enemy's modifiers are applied when it lands):
+    ///  - all enemies: Hailstorm (enough Frost orbs), The Bomb (last tick), Screaming Flagon (empty
+    ///    hand), Stone Calendar (its turn), Charon's Ashes (per Ethereal card exhausting);
+    ///  - one random enemy: Lightning orb passives, Parrying Shield, Forgotten Soul (per Ethereal):
+    ///    only counted when there's a single enemy, since the target is random.
+    /// </summary>
+    private static Dictionary<Creature, List<int>> EndOfTurnHits(TurnEndModel m, MegaCrit.Sts2.Core.Entities.Players.Player me, MegaCrit.Sts2.Core.Combat.ICombatState cs, IReadOnlyList<CardModel> hand)
+    {
+        var enemies = cs.HittableEnemies;
+        var all = new List<(string Name, int Amount)>();
+        var random = new List<(string Name, int Amount)>();
+        var fading = hand.Count(c => c.Keywords.Contains(CardKeyword.Ethereal) && (c.HasTurnEndInHandEffect || Hook.ShouldEtherealTrigger(cs, c)));
+
+        foreach (var p in me.Creature.Powers)
+        {
+            switch (p.GetType().Name)
+            {
+                case "HailstormPower":
+                    if (me.PlayerCombatState!.OrbQueue.Orbs.Count(o => o is FrostOrb) >= Sts2State.Var(p, "FrostOrbs", 1)) all.Add(("Hailstorm", p.Amount));
+                    break;
+                case "TheBombPower":
+                    if (p.Amount <= 1) all.Add(("The Bomb", Sts2State.Var(p, "Damage")));
+                    break;
+            }
+        }
+        foreach (var r in me.Relics)
+        {
+            switch (r.GetType().Name)
+            {
+                case "ScreamingFlagon": if (hand.Count == 0) all.Add(("Screaming Flagon", Sts2State.Var(r, "Damage"))); break;
+                case "StoneCalendar": if (Sts2State.TurnNumber == Sts2State.Var(r, "DamageTurn", 7)) all.Add(("Stone Calendar", Sts2State.Var(r, "Damage"))); break;
+                case "CharonsAshes": for (var i = 0; i < fading; i++) all.Add(("Charon's Ashes", Sts2State.Var(r, "Damage"))); break;
+                case "ForgottenSoul": for (var i = 0; i < fading; i++) random.Add(("Forgotten Soul", Sts2State.Var(r, "Damage"))); break;
+                case "ParryingShield": if (m.ExpectedBlock >= Sts2State.Var(r, "Block")) random.Add(("Parrying Shield", Sts2State.Var(r, "Damage"))); break;
+            }
+        }
+        foreach (var orb in me.PlayerCombatState!.OrbQueue.Orbs)
+        {
+            if (orb is not LightningOrb) continue;
+            var triggers = Hook.ModifyOrbPassiveTriggerCount(cs, orb, 1, out _);
+            for (var i = 0; i < triggers; i++) random.Add(("Lightning", (int)orb.PassiveVal));
+        }
+
+        var hits = new Dictionary<Creature, List<int>>();
+        void Add(Creature e, int amount)
+        {
+            if (amount <= 0) return;
+            if (!hits.TryGetValue(e, out var l)) hits[e] = l = new List<int>();
+            l.Add(amount);
+        }
+        foreach (var (name, amount) in all)
+        {
+            foreach (var e in enemies) Add(e, amount);
+            if (amount > 0) m.EndOfTurnDamage.Add(new Source(name + " (all)", amount));
+        }
+        if (enemies.Count == 1)
+        {
+            foreach (var (name, amount) in random)
+            {
+                Add(enemies[0], amount);
+                if (amount > 0) m.EndOfTurnDamage.Add(new Source(name, amount));
+            }
+        }
+        return hits;
+    }
+
+    /// <summary>
+    /// What happens to damage reaching your HP, in the game's order (CreatureCmd.Damage →
+    /// Hook.ModifyHpLost): after Osty, Tungsten Rod (−N per instance) and Beating Remnant (caps HP
+    /// lost per turn; resets when each side's turn starts); then Buffer (cancels an instance, one
+    /// charge each).
+    /// </summary>
+    private sealed class HpLossEffects
+    {
+        private int _rod;
+        private int _remnantLeft = int.MaxValue;
+        private int _buffer;
+
+        public static HpLossEffects For(Creature me, bool playerTurn)
+        {
+            var e = new HpLossEffects { _buffer = me.GetPower<BufferPower>()?.Amount ?? 0 };
+            foreach (var r in me.Player?.Relics ?? (IReadOnlyList<RelicModel>)Array.Empty<RelicModel>())
+            {
+                switch (r.GetType().Name)
+                {
+                    case "TungstenRod": e._rod += Sts2State.Var(r, "HpLossReduction", 1); break;
+                    case "BeatingRemnant":
+                    {
+                        var cap = Sts2State.Var(r, "MaxHpLoss", int.MaxValue);
+                        // During your turn, what you've already lost this turn counts.
+                        var used = playerTurn ? (int)Sts2State.Private(r, "DamageReceivedThisTurn", 0m) : 0;
+                        e._remnantLeft = Math.Max(0, cap - used);
+                        break;
+                    }
+                }
+            }
+            return e;
+        }
+
+        public int Apply(int amount)
+        {
+            if (amount <= 0) return 0;
+            amount = Math.Max(0, amount - _rod);
+            amount = Math.Min(amount, _remnantLeft);
+            if (_remnantLeft != int.MaxValue) _remnantLeft -= amount;
+            if (amount > 0 && _buffer > 0)
+            {
+                _buffer--;
+                return 0;
+            }
+            return amount;
+        }
     }
 
     /// <summary>

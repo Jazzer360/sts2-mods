@@ -301,3 +301,21 @@ Before the decision, one tab per effect had the source's icon and **no numbers**
 | — | On-draw procs (Pagestorm, Iteration, Automation...) | | Not shown by design: they fire on draw, not on play (decided 2026-11-09). |
 | [ ] | Not yet | | Deeper chains (a proc's damage setting off another proc), Beacon of Hope / Hammer Time (multiplayer). |
 | [~] | **Audits** | | 0.20.0: forecast and proc audits log mismatches to godot.log. Read the log before each round of work. |
+
+---
+
+## 10. Review pass (2026-11-09) → 0.21.0
+
+Against the three pillars: (1) incoming damage covers everything ending the turn does, verified by the forecast audit; (2) the relic tray shows counters you push by playing; (3) a tag for everything a card play sets off that the card doesn't say, verified by the proc audit, including "unexplained" effects.
+
+- [~] Forecast: end-of-turn damage to enemies (kills before they attack); HP-loss effects (Tungsten Rod, Beating Remnant, Buffer).
+- [~] Forecast audit: end-of-turn block check; entries split by side; combat summaries.
+- [~] Tags: enemy reactions to your attacks, kills, block breaks, HP loss from cards; Sovereign Blade buffs; Pael's Eye; replay `2×` text tab.
+- [~] Relic Reminders merged into Proc Indicators.
+- [~] Proc audit: budget check (unexplained effects), exact damage ranges, combat summaries.
+- [~] Tray: Pael's Tears / Eye rows removed; turn timers opt-in.
+- [x] Removed the Goopy "added Exhaust" tab and the replay-enchantment double-play tab (the card text already shows both).
+- [ ] Forecast: random-target end-of-turn damage with several enemies (Lightning, Parrying Shield, Forgotten Soul) isn't counted; Consuming Shadow's evokes aren't modeled.
+- [ ] Tags: enemy death effects that revive (Adaptable, Illusion, Reattach); attack hit counts beyond a card's Repeat value (e.g. hard-coded multi-hits).
+- [ ] Read the first audit summaries and fix what they show.
+

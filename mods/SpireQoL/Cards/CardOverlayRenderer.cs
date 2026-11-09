@@ -296,7 +296,8 @@ public sealed class CardOverlayRenderer
                 icon.Rotation = -Mathf.Pi / 2f;
                 icon.Scale = new Vector2(IconScale, IconScale);
                 icon.Position = visibleCenter - icon.Size / 2f;
-                icon.Texture = GameIcons.Valid(spec.Icon) ? spec.Icon : null;
+                // Text tabs (replay "2×") have no icon.
+                icon.Texture = spec.Text == null && GameIcons.Valid(spec.Icon) ? spec.Icon : null;
                 // The game sets this on its own icon for a disabled enchantment, which runs the icon
                 // through the backdrop's green colorize shader; Duplicate() copies whatever it was.
                 icon.UseParentMaterial = false;
@@ -310,8 +311,18 @@ public sealed class CardOverlayRenderer
             // The tab's number label shows only on quantified proc tabs (block / damage / summon).
             if (tab.GetNodeOrNull<Label>("Label") is { } label)
             {
-                label.Visible = spec.Number != null;
-                if (spec.Number is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic)
+                label.Visible = spec.Number != null || spec.Text != null;
+                if (spec.Text != null && tab.GetNodeOrNull<TextureRect>("Icon") is { } ti)
+                {
+                    // Text tab: the text sits where the icon would, upright.
+                    label.Text = spec.Text;
+                    label.HorizontalAlignment = HorizontalAlignment.Center;
+                    label.VerticalAlignment = VerticalAlignment.Center;
+                    label.PivotOffset = label.Size / 2f;
+                    label.Rotation = -Mathf.Pi / 2f;
+                    label.Position = ti.Position + ti.Size / 2f - label.Size / 2f;
+                }
+                else if (spec.Number is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic)
                 {
                     // Upright like the icon, centered on the icon's lower-right corner as the game
                     // places power amounts. In the tab's unrotated coordinates, screen-down is +x

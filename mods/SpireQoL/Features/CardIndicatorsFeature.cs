@@ -18,7 +18,7 @@ namespace SpireQoL.Features;
 /// Everything is an on-card tab (CardOverlayRenderer), except Ethereal translucency and dimming.
 ///  - Retain: Steady (the Retain enchantment). Sly: Master Planner (the Sly power).
 ///    (This-turn-only Retain/Sly look the same as permanent ones: tags are icon-only.)
-///  - Added Exhaust: Goopy (the enchantment that adds Exhaust).
+///  - Replay on the card (Hidden Gem, Transfigure, Sword Sage, enchantments): a text tab "N×" (total plays).
 ///  - Double play: the icon of whatever causes it (Burst, Echo Form, Throwing Axe, ...).
 ///  - Blocked by Bound / Ringing / Smog / Velvet Choker: card dimmed + crossed tab with the
 ///    blocking power's or relic's icon.
@@ -52,7 +52,6 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         foreach (var card in Sts2State.Hand(me))
         {
             var kw = card.Keywords;
-            var canonical = card.CanonicalKeywords.ToHashSet();
             var d = _ctx.Decor.For(card);
 
             // Only Ethereal that's on the card itself (KeywordSources.Local: the card's own keyword,
@@ -70,10 +69,10 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             if (kw.Contains(CardKeyword.Sly)) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>());
             else if (card.IsSlyThisTurn) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>());
 
-            if (kw.Contains(CardKeyword.Exhaust) && !canonical.Contains(CardKeyword.Exhaust))
-            {
-                d.AddTab("exhaust", GameIcons.Enchantment<Goopy>());
-            }
+            // Replay on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, or
+            // an enchantment): no power or relic to show, so the tab reads "2×" (total plays).
+            var replays = card.GetEnchantedReplayCount();
+            if (replays > 0) d.AddTab("replay", null, text: $"{replays + 1}×");
 
             if (d.Enabled("blocked") && Blocker(card) is { } blocker)
             {
@@ -136,7 +135,6 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         var cs = Sts2State.Combat;
         if (cs == null) return sources;
         var replays = card.GetEnchantedReplayCount();
-        if (replays > 0 && card.Enchantment != null) sources.Add(card.Enchantment);
 
         void Add(Creature? target)
         {
