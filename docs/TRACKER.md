@@ -135,7 +135,7 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [~] | Art of War | attacks | struck-through icon while no attack played this turn (playing one loses next turn's energy) |
 | [~] | Ripple Basin | attacks | struck-through icon: playing an attack loses the end-of-turn block |
 | [ ] | Rainbow Ring | missing card types | attack/skill/power played this turn; highlight the missing types |
-| [ ] | Mummified Hand | powers | playing a power makes a random card in hand free |
+| [~] | Mummified Hand | powers, only when another hand card still costs something | playing a power makes a random card in hand free (0.23.3: no tab when nothing in hand costs anything) |
 | [ ] | Game Piece | powers | draw on power play |
 | [ ] | Lost Wisp | powers | damage on power play |
 | [ ] | Daughter of the Wind | attacks | block per attack |

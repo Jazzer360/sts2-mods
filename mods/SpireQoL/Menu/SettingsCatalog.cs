@@ -64,7 +64,7 @@ public static class SettingsCatalog
         new("Permafrost", SourceGroup.Relic, "Your first power this combat: block"),
         new("LostWisp", SourceGroup.Relic, "Powers: damage to all enemies"),
         new("GamePiece", SourceGroup.Relic, "Powers: draws"),
-        new("MummifiedHand", SourceGroup.Relic, "Powers: a card in hand costs 0"),
+        new("MummifiedHand", SourceGroup.Relic, "Powers, when another card in hand still costs energy or stars (one of them becomes free)"),
         new("HelicalDart", SourceGroup.Relic, "Shivs: Dexterity"),
         new("IvoryTile", SourceGroup.Relic, "Cards spending at least its energy threshold"),
         new("ChemicalX", SourceGroup.Relic, "X-cost cards"),

@@ -369,7 +369,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "Permafrost" when type == CardType.Power && armed: return RelicBlock(r, 1);
                     case "LostWisp" when type == CardType.Power: return RelicDamage(r, plays, Spread.All);
                     case "GamePiece" when type == CardType.Power: return Hit.Trig();
-                    case "MummifiedHand" when type == CardType.Power: return Hit.Trig();
+                    // A random other hand card becomes free this turn. It prefers cards that still
+                    // cost energy or stars, but picks one anyway when none do (and nothing changes).
+                    case "MummifiedHand" when type == CardType.Power:
+                        return Sts2State.Hand(_me).Any(c => c != card && c.CostsEnergyOrStars(includeGlobalModifiers: true)) ? Hit.Trig() : null;
                     case "HelicalDart" when card.Tags.Contains(CardTag.Shiv): return Hit.Trig();
                     case "IvoryTile" when f.Energy >= N("EnergyThreshold", 3): return Hit.Trig();
                     case "ChemicalX" when card.EnergyCost.CostsX || card.HasStarCostX: return Hit.Trig();

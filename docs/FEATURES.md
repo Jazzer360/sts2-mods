@@ -312,7 +312,8 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 | Charon's Ashes, Forgotten Soul | cards that exhaust | damage × exhausts |
 | Tingsha | cards that discard | damage × discards |
 | Kunai, Shuriken, Nunchaku, Iron Club | completing card | trigger |
-| Game Piece, Mummified Hand | powers | trigger |
+| Game Piece | powers | trigger |
+| Mummified Hand | powers, when another card in hand still costs energy or stars (one of them becomes free this turn) | trigger |
 | Helical Dart | Shivs | trigger |
 | Ivory Tile | cards spending ≥ its threshold | trigger |
 | Chemical X | X-cost cards | trigger |
