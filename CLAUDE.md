@@ -9,6 +9,16 @@ Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). Design notes: doc
 - Mod AssemblyName == manifest `id` == `<ModId>.json` filename.
 - Every feature implements `IFeature` and is applied through `FeatureHost`, so one broken patch can't crash the game.
 
+## Only knowable information (hard rule)
+
+Spire QoL shows nothing a player couldn't know. Assume a player with perfect memory and complete understanding of the game's mechanics, and no more. The mod presents what that player would know; it never looks ahead.
+
+- **Never** read the RNG or the seed (`RunState.Rng`, `Rng`, anything that predicts or replays a roll). Reverse-engineering the seed is technically possible for a player, but looking ahead at upcoming rolls is the line we don't cross.
+- **Never** show hidden state: the draw pile's order (its count and contents are fine; the game lets you view the pile, unordered), an enemy's move beyond the intent on screen (`MoveStateMachine`, follow-up states, the result of a random move pick), or anything about rewards, events or the map ahead.
+- **Allowed:** anything on screen or in the game's tooltips; counts and flags a player could keep track of themselves (cards played or exhausted this combat, "already triggered this turn"), even when we read them from a private field; and the game's rules applied to those (damage math, trigger conditions, odds).
+- **Random outcomes stay random.** Show the amount (or the range), never the target or the roll. When a prediction depends on a roll, leave it out (Lightning with several enemies isn't counted toward kills).
+- Diagnostics (logs, audits, error reports) may read anything, as long as none of it reaches the screen.
+
 ## Logs first
 
 Before working on in-game feedback, read the game logs, starting with the `[audit] combat summary` lines (`%APPDATA%\SlayTheSpire2\logs\godot*.log`, newest first): `[SpireQoL]` errors, and `[SpireQoL] [audit]` lines (forecast and proc mismatches). Fix or note what they show, then clear the old log files once they're addressed.

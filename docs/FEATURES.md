@@ -6,6 +6,8 @@ This is the complete list of every change Spire QoL makes to the game. If a chan
 
 Spire QoL is **display-only**. It never changes game state, damage, cards or saves. Its manifest sets `"affects_gameplay": false`, so you can join multiplayer lobbies whose players don't have it. See [MODDING_NOTES.md](MODDING_NOTES.md).
 
+**Only knowable information.** Spire QoL shows only what a player with perfect memory and full knowledge of the game's rules could work out. It never reads the RNG or the seed, the draw pile's order, or an enemy's move beyond the intent on screen. Random effects show their amount, never their target or roll, and predictions that would depend on a roll leave it out.
+
 **Harmony patches: none.** Every feature works by reading live game state once per frame and drawing its own nodes. Nothing in the game's code is replaced or changed.
 
 | Feature | Id | Status | Default |

@@ -228,6 +228,8 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 
 ## 7. Intent forecast → `intent-forecast`
 
+Knowable information only (CLAUDE.md): it may show the moves an enemy *can* make next and their odds, worked out from its move rules and what you've seen it do. Never the move it will actually pick, its RNG roll, or hidden state a player couldn't infer.
+
 - [ ] Confirm monster AI structure in `MonsterMoves/` (state machine vs. scripted).
 - [ ] Deterministic next moves.
 - [ ] Random branches with odds.
@@ -340,3 +342,4 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - Standing rule (CLAUDE.md): keep `Menu/SettingsCatalog.cs` in sync with new proc rules and tracker specs (the log warns on unknown tab keys and missing tracker rows).
 - [x] 0.23.1: removed the "can't be played" tab and dimming; the game's crossed-out cost covers every case (`NCard` unplayable cost icon on any non-cost `CanPlay` failure). Crossed tabs now only mean "might be bad for you".
 - [x] 0.23.2: settings menu Reset defaults button, game cursor, discard pile icon on Shuffle Warning (loaded from `res://images/packed/combat_ui/discard_pile.png` outside combat).
+- [x] 2026-11-09: "knowable information only" made a hard rule (CLAUDE.md). Audited the mod: no RNG or seed reads; random effects show amounts, never targets; enemy attacks come from the intent on screen; private reads are only counters and "already used" flags a player could track.

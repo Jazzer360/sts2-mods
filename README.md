@@ -1,6 +1,6 @@
 # sts2-mods
 
-Slay the Spire 2 mods. **Spire QoL** is display-only: it shows information the game already has, without changing gameplay.
+Slay the Spire 2 mods. **Spire QoL** is display-only: it shows information the game already has, without changing gameplay. It only shows what you could work out yourself with perfect memory and full knowledge of the rules: it never peeks at the RNG, the draw pile's order or enemies' upcoming moves.
 
 ## Installing
 
