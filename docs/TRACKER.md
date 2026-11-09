@@ -19,7 +19,7 @@ Legend: `[ ]` to do · `[~]` built, needs an in-game check · `[x]` done · **(v
   - [~] **Scale and opacity** per widget.
   - [~] **Reset**: per widget and "reset all" to defaults.
   - [~] Off-screen guard: a widget dragged or loaded outside the visible area is pulled back on screen.
-- [ ] On-card indicators (badges, overlays) don't move freely. Their slot (top-center, corners) is a setting.
+- ~~On-card indicator slot as a setting~~: dropped. Every on-card indicator is a tab along the card's top edge (see CLAUDE.md UI rules).
 - [~] **Hide all overlays** hotkey.
 
 ---
@@ -35,11 +35,11 @@ The game shows these only as card text. `CardModel.Keywords` merges local keywor
   - Sources: canonical Ethereal cards; Music Box (adds Ethereal to its copy); Hexed affliction via `HexPower` (granted globally, gone when Hex is removed).
   - Must still be readable. Opacity is a setting (default ~70%).
 - ~~Ethereal badge~~: dropped in 0.3.0; translucency alone marks Ethereal.
-- [~] **Retain tab** (0.9.0: Steady icon on a copy of the enchantment tab; "1" = this turn only): from the Retain keyword or single-turn retain (`ShouldRetainThisTurn`).
+- [~] **Retain tab** (0.9.0: Steady icon on a copy of the enchantment tab; retain for this turn only looks the same): from the Retain keyword or single-turn retain (`ShouldRetainThisTurn`).
   - Adds Retain: Anointed, Calculated Gamble, Dredge, Gold Axe, Misery, Monologue, Reaper Form, Royal Gamble, Scrawl, Times Up, Wish, Wisp; enchantments Royally Approved and Steady.
   - Single-turn retain: Expertise.
 - [~] **Sly tab** (0.9.0: Master Planner icon on a copy of the enchantment tab): from the Sly keyword or single-turn Sly (`IsSlyThisTurn`; Hand Trick).
-- [~] **Exhaust badge**, only when Exhaust was *added* (Goopy enchantment), not for cards that always exhaust.
+- ~~**Exhaust badge**~~ (added Exhaust, Goopy): removed. Added keywords are in the card text, so they don't get a tab.
 - ~~**Innate / Eternal badges**~~: removed in 0.19.0. Neither can be added or removed mid-combat, so they don't say anything about playing the card now.
 - [ ] **Keyword removed** marker, e.g. Exhaust stripped. Removes keywords: Apparition, Chill, Demonic Shield, Discovery, Echo Form, Fusion, Graveblast, Hologram, Hotfix, Ignition, Know Thy Place, Mimic, Mirage, Prolong, Rainbow, Secret Technique, Secret Weapon, Soul's Power, Thinking Ahead, Transfigure, Underworld, Void Form, Voltaic. **(verify)** whether these remove a keyword from *other* cards or only from themselves. Only the first case needs a marker.
 
@@ -54,18 +54,18 @@ The game already recolors changed costs (blue = increased, green = decreased, re
 - [~] **"Plays twice" next play** (0.10.0, via `Hook.ModifyCardPlayCount`; 0.18.0: the tab shows the source's own icon): Burst, Duplication, Echo Form, One-Two Punch, Signal Boost, Tag Team powers. Mark the cards in hand this applies to. (Throwing Axe is handled under one-shot relics, §3.)
 
 ### Afflictions (monster-applied)
-All seven already have game overlays (`AfflictionModel.OverlayPath`). Our job is to stay out of their way and add the "can't play right now" state the game doesn't show. **(verify)** in game which of these the game already dims.
+All seven already have game overlays (`AfflictionModel.OverlayPath`). Our job is to stay out of their way. The game also marks cards that can't be played (crossed-out cost), so there's no "can't play" tab (removed in 0.23.1).
 
-- [~] **Bound** (Chains of Binding): after one Bound card is played this turn, other Bound cards can't be played. Dim them.
-- [~] **Ringing**: after any card is played this turn, Ringing cards can't be played **(verify the exact rule)**. Dim them. Clears at end of turn.
-- [~] **Smog** (Smoggy): Smog skills can't be played. Applied to all skills after a skill is played. Dim them.
+- [x] **Bound** (Chains of Binding): one Bound card per turn. The game crosses out the cost of the others.
+- [x] **Ringing**: the game crosses out the cost once it can't be played.
+- [x] **Smog** (Smoggy): the game crosses out the cost once it can't be played.
 - [ ] **Entangled** (Tangled): attacks cost +N. The game already recolors the cost; no extra work unless the overlay is unclear.
 - [~] **Hexed** (Hex): grants Ethereal → handled by translucency. Confirm the overlay and translucency look right together.
-- [~] **Galvanized** (Galvanic): playing the power card deals N damage to you. Add a damage glyph so it's clear it hurts.
-- [ ] **Tainted**: skills; playing one applies Tainted (+N damage taken from attacks). **(verify)**
+- [~] **Galvanized** (Galvanic): playing the card deals N damage to you. Crossed Galvanic tab (Proc Indicators).
+- [~] **Tainted**: playing a Tainted card triggers Vital Spark. Crossed Vital Spark tab (Proc Indicators, 0.19.0).
 
 ### Enchantments (run-long, already have a game tab)
-Shown by the game's `%Enchantment` tab, so no new indicator. Only make sure our badges don't overlap it.
+Shown by the game's `%Enchantment` tab, so no new indicator. Only make sure our tabs don't overlap it.
 
 ---
 
@@ -75,7 +75,7 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 
 | Done | Relic | Counts | Fires at | Resets | Effect |
 | --- | --- | --- | --- | --- | --- |
-| [~] | **Pen Nib** | attacks | 10th | never (carries across combats) | next attack deals double. **Blink + glow attacks in hand when ready**; see `relic-reminders` |
+| [~] | **Pen Nib** | attacks | 10th | never (carries across combats) | next attack deals double. Pen Nib tab on attacks in hand when ready (§3) |
 | [~] | Nunchaku | attacks | 10th | never | +1 energy |
 | [~] | Tuning Fork | skills | 10th | never | gain block |
 | [~] | Iron Club | any card | 4th | never | draw |
@@ -127,28 +127,28 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 
 ---
 
-## 3. Condition relics → `relic-reminders` (icons on cards in hand)
+## 3. Condition relics → `proc-indicators` (tabs on cards in hand; Relic Reminders was merged into Proc Indicators)
 
 | Done | Relic | Show on | Meaning |
 | --- | --- | --- | --- |
-| [~] | **Pen Nib (ready)** | attacks | pulsing border in a non-game color: "this attack uses Pen Nib" |
+| [~] | **Pen Nib (ready)** | attacks | Pen Nib tab: "this attack uses Pen Nib" |
 | [~] | Art of War | attacks | struck-through icon while no attack played this turn (playing one loses next turn's energy) |
 | [~] | Ripple Basin | attacks | struck-through icon: playing an attack loses the end-of-turn block |
-| [ ] | Rainbow Ring | missing card types | attack/skill/power played this turn; highlight the missing types |
+| [~] | Rainbow Ring | the card that completes the set | tab on a card whose type completes attack + skill + power this turn |
 | [~] | Mummified Hand | powers, only when another hand card still costs something | playing a power makes a random card in hand free (0.23.3: no tab when nothing in hand costs anything) |
-| [ ] | Game Piece | powers | draw on power play |
-| [ ] | Lost Wisp | powers | damage on power play |
-| [ ] | Daughter of the Wind | attacks | block per attack |
-| [ ] | Ivory Tile | cards costing ≥3 | refund energy |
-| [ ] | Helical Dart | Shivs | +Dexterity |
-| [ ] | Razor Tooth | attacks/skills | upgrades the card when played **(verify types)** |
-| [ ] | Chemical X | X-cost cards | +2 to X |
-| [ ] | Strike Dummy / Fake Strike Dummy | Strikes | +damage |
-| [~] | Velvet Choker | all cards | dim everything once the 6th card is played |
+| [~] | Game Piece | powers | draw on power play |
+| [~] | Lost Wisp | powers | damage on power play |
+| [~] | Daughter of the Wind | attacks | block per attack |
+| [~] | Ivory Tile | cards costing ≥3 | refund energy |
+| [~] | Helical Dart | Shivs | +Dexterity |
+| [~] | Razor Tooth | attacks/skills | upgrades the card when played **(verify types)** |
+| [~] | Chemical X | X-cost cards | +2 to X |
+| — | Strike Dummy / Fake Strike Dummy | Strikes | not a tab: it's a damage modifier (`ModifyDamageAdditive`), so the card's own damage number already includes it |
+| — | Velvet Choker | | no card tab since 0.23.1: the tracker shows plays left, and the game crosses out the cost once you can't play more |
 | [~] | Cloak Clasp | hand | end-of-turn block per card left in hand (counted in `incoming-damage`) |
-| [ ] | Screaming Flagon | hand | damage at end of turn if hand is empty |
-| [ ] | Tingsha, Tough Bandages | discard | discard triggers **(verify)** |
-| [ ] | Charon's Ashes, Forgotten Soul | exhaust | exhaust triggers **(verify)** |
+| [~] | Screaming Flagon | hand | damage at end of turn if your hand is empty: counted by Incoming Damage (end-of-turn effects) |
+| [~] | Tingsha, Tough Bandages | discard | discard triggers **(verify)** |
+| [~] | Charon's Ashes, Forgotten Soul | exhaust | exhaust triggers **(verify)** |
 
 ### One-shot relics (first time each combat / each turn)
 
@@ -172,9 +172,9 @@ These relics are "armed" until their first use, then go quiet. The game marks th
 | Done | Relic | Cards marked | Effect, from the code |
 | --- | --- | --- | --- |
 | [~] | Music Box | attacks | the first attack each turn adds an Ethereal copy to your hand |
-| [ ] | Rainbow Ring | missing card types | playing an attack, a skill and a power in the same turn gives +Strength/+Dexterity (once per turn) |
-| [ ] | Mini Regent | (stars) | triggers on stars spent once per turn **(verify)** |
-| [ ] | Regalite | (generated cards) | block when a card is generated, once per turn **(verify)** |
+| [~] | Rainbow Ring | missing card types | playing an attack, a skill and a power in the same turn gives +Strength/+Dexterity (once per turn) |
+| [~] | Mini Regent | (stars) | triggers on stars spent once per turn **(verify)** |
+| [~] | Regalite | (generated cards) | block when a card is generated, once per turn **(verify)** |
 
 ---
 
@@ -189,9 +189,9 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [~] **Ripple Basin**: block if no attack played this turn.
 - ~~**Horn Cleat / Captain's Wheel**~~: not end-of-turn block (they fire at the start of turn 2/3, after enemies attack). Countdown lives in Relic Counters.
 - [~] **Feel No Pain + Ethereal** (gap found 2026-11-09, counted in 0.19.0): Ethereal cards left in hand exhaust at end of turn, and Feel No Pain gives `Amount` block per exhaust (Unpowered, so no Dexterity). That block lands before the enemy attacks but isn't counted yet. Same for **Dark Embrace**-style exhaust procs that give block (see §9).
-- [ ] **Rage / Skittish** powers: block on card play/hit **(verify)**; shown on cards, not in the end-of-turn total.
+- [~] **Rage / Skittish**: card tabs (Proc Indicators): Rage gives you block on attacks; Skittish (enemy) is crossed, it gains block when hit. Not in the end-of-turn total.
 - [ ] **Sturdy Clamp**: block isn't cleared. Show carried block for next turn.
-- [ ] **Parrying Shield**: deals damage if you end with ≥N block. Show its threshold.
+- [~] **Parrying Shield**: counted by Incoming Damage when you'll end with enough block. With several enemies its target is random and isn't counted yet (§10).
 
 ---
 
@@ -219,7 +219,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 ## 6. Shuffle warning → `shuffle-warning`
 
 - ~~Draw-pile counter~~: dropped in 0.3.0 (the card badges are enough).
-- [~] Badge on draw cards and potions in hand whose draw would exceed the draw pile (forcing a reshuffle).
+- [~] Discard pile tab on draw cards in hand whose draw would exceed the draw pile (forcing a reshuffle).
 - ~~KEPT marker on other hand cards~~: dropped in 0.12.0 (the draw-pile tab is enough).
 - [x] Every draw card: all `CardPileCmd.Draw` callers, including Prepared, Dagger Throw, Escape Plan, Pillage, Scrawl, Compile Driver, Restlessness, Huddle Up, Mad Science (Wisdom).
 - [ ] Draw potions (need a potion-slot tab).
@@ -245,7 +245,7 @@ Existing game UI found in `Nodes/Cards/NCard.cs` and `NHealthBar.cs`:
 
 Rules:
 - [~] Never reuse the game's glow colors (cyan `0,.957,.988`, gold `1,.784,0`, red `.83,0,.33`) or cost colors.
-- [~] Badges go top-center; relic overlays top-corner; nothing covers the cost, title, enchantment tab or affliction overlay.
+- [~] Every on-card indicator is a tab along the card's top edge; nothing covers the cost, title, enchantment tab or affliction overlay.
 - [~] One visual language: every on-card indicator is a tab along the top edge (0.12.0); one tab per source; the row shrinks to fit.
 - [ ] Everything works on enlarged (hover) cards and in grid/pile views.
 - [~] A global hotkey hides all overlays.
@@ -268,7 +268,7 @@ Quantified procs use **option A**: one tab per source, with the source's own ico
 
 Players should be able to trim what shows, down to single indicators. Defaults show everything.
 
-- [~] **Per-tab toggles** (0.19.0): `Tabs` in settings, one key per tab kind (`retain`, `sly`, `exhaust`, `blocked`, `shuffle`, `double-play:<source>`, `relic:<Relic>`, `proc:<Source>`), added as each kind first appears, default on. Replaced `ShowDoublePlay` and `DimBlockedCards` (migrated); `ShowInnateEternalBadges` removed with the tabs.
+- [~] **Per-tab toggles** (0.19.0): `Tabs` in settings, one key per tab kind (today: `retain`, `sly`, `replay`, `shuffle`, `double-play:<Source>`, `proc:<Source>`; `exhaust`, `relic:` and `blocked` are gone), added as each kind first appears, default on. Replaced `ShowDoublePlay` and `DimBlockedCards` (migrated); `ShowInnateEternalBadges` removed with the tabs.
 - [~] **Per-proc options** (0.19.0): `ProcNumbers` (show amounts), `ProcIndirect` (count procs one step removed).
 - [~] **Group switches** (0.19.0): `relic:*`, `proc:*`, `double-play:*` in `Tabs`.
 - [x] Builds on the per-relic `Relics` table and the per-feature `Features` table that exist now. An in-game menu (§0) makes these usable without editing the `.cfg` file.
