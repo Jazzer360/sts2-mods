@@ -353,3 +353,4 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [~] 0.23.12: Imbalanced tab (block threshold for a full block, from the Incoming Damage simulation). Suggested in game.
 - [~] 0.23.13: wake tabs judged by end of turn (play hits + orb evokes + proc damage per enemy from the first pass + `TurnEndModel.EndOfTurnHitsOn`). Found in game (Slumbering Beetle, Kusarigama + Lightning).
 - [~] 0.23.14: Unsettling Lamp skips enemies whose Artifact covers the play's debuffs (UnsettlingLamp.BeforePowerAmountChanged checks HasPower<ArtifactPower>). Found in game.
+- [~] 0.23.15: Feral tab (0-energy Attacks, charges left this turn). Suggested in game.

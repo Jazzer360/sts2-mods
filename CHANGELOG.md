@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.15
+#### Added
+- Feral: a tab on 0-cost Attacks while Feral has charges left this turn (the card returns to your hand).
+
 ### Spire QoL 0.23.14
 #### Fixed
 - Unsettling Lamp: no tab when Artifact would block the debuff (the lamp isn't used up then). It shows when some enemy you could debuff has fewer Artifact charges than the debuffs the card applies.

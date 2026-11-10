@@ -273,6 +273,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
                     case "MonologuePower" when mine: return Hit.Trig();
                     case "MasterPlannerPower" when mine && type == CardType.Skill: return Hit.Trig();
+                    // An Attack that spends 0 energy returns to your hand while Feral has charges left
+                    // this turn (DisplayAmount; FeralPower.ModifyCardPlayResultLocation). Not copies.
+                    case "FeralPower" when mine && type == CardType.Attack && f.Energy == 0 && !card.IsDupe && p.DisplayAmount > 0:
+                        return Hit.Trig();
                     case "TheSealedThronePower" when mine: return Hit.Trig();
                     case "TenderPower" when mine: return Hit.Trig(harmful: true);
                     case "SmoggyPower" when mine && type == CardType.Skill: return Hit.Trig(harmful: true);

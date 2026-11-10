@@ -287,6 +287,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 | Calamity, Envenom, Concoct, Reaper Form, Monarch's Gaze | attacks | trigger |
 | Juggling | your 3rd attack this turn | trigger |
 | Master Planner | skills | trigger (gains Sly) |
+| Feral | Attacks that spend 0 energy (not copies), while it has charges left this turn | trigger (returns to your hand; `FeralPower.ModifyCardPlayResultLocation`) |
 | Monologue, The Sealed Throne | every card | trigger |
 | Pale Blue Dot | your 5th card this turn | trigger |
 | Dark Embrace | cards that exhaust | trigger |

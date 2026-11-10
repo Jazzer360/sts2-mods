@@ -146,6 +146,7 @@ public static class SettingsCatalog
         new("MonarchsGazePower", SourceGroup.YourPower, "Attacks"),
         new("JugglingPower", SourceGroup.YourPower, "Your 3rd attack this turn"),
         new("MasterPlannerPower", SourceGroup.YourPower, "Skills: gain Sly"),
+        new("FeralPower", SourceGroup.YourPower, "0-cost Attacks, while it has charges this turn: back to your hand"),
         new("MonologuePower", SourceGroup.YourPower, "Every card"),
         new("TheSealedThronePower", SourceGroup.YourPower, "Every card: gain stars"),
         new("PaleBlueDotPower", SourceGroup.YourPower, "Your 5th card this turn", "Cards this turn, toward 5 (\"done\" once it fired)"),
