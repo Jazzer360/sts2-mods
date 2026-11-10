@@ -73,6 +73,9 @@ public sealed class TurnEndModel
     /// <summary>Your end-of-turn damage instances on each enemy, when certain (before it acts).</summary>
     public IReadOnlyDictionary<Creature, List<int>> EndOfTurnHitsOn { get; private set; } = new Dictionary<Creature, List<int>>();
 
+    /// <summary>Separate end-of-turn block gains (each sets off Juggernaut).</summary>
+    private int _eotBlockGains;
+
     /// <summary>Blockable damage landed so far this turn end, in order (for FullBlockNeeded).</summary>
     private int _blockDemand;
     public int OstyTaken { get; private set; }
@@ -117,6 +120,7 @@ public sealed class TurnEndModel
             if (power is PlatingPower && power.Amount > 0)
             {
                 m.EndOfTurnBlock.Add(new Source("Plating", power.Amount));
+                m._eotBlockGains++;
             }
         }
 
@@ -127,11 +131,16 @@ public sealed class TurnEndModel
             {
                 var triggers = Hook.ModifyOrbPassiveTriggerCount(cs, orb, 1, out _);
                 frost += orb.PassiveVal * triggers;
+                if (orb.PassiveVal > 0) m._eotBlockGains += triggers;
             }
         }
         if (frost > 0) m.EndOfTurnBlock.Add(new Source("Frost", (int)frost));
         foreach (var (orb, value) in ShadowEvokes(me, cs))
-            if (orb is FrostOrb && value > 0) m.EndOfTurnBlock.Add(new Source("Consuming Shadow (Frost)", value));
+            if (orb is FrostOrb && value > 0)
+            {
+                m.EndOfTurnBlock.Add(new Source("Consuming Shadow (Frost)", value));
+                m._eotBlockGains++;
+            }
 
         foreach (var relic in me.Relics)
         {
@@ -140,13 +149,25 @@ public sealed class TurnEndModel
                 case "Orichalcum":
                 case "FakeOrichalcum":
                     // Checked before other end-of-turn block lands, against current block only.
-                    if (me.Creature.Block <= 0) m.EndOfTurnBlock.Add(new Source(SafeTitle(relic), Sts2State.Var(relic, "Block")));
+                    if (me.Creature.Block <= 0)
+                    {
+                        m.EndOfTurnBlock.Add(new Source(SafeTitle(relic), Sts2State.Var(relic, "Block")));
+                        m._eotBlockGains++;
+                    }
                     break;
                 case "CloakClasp":
-                    if (hand.Count > 0) m.EndOfTurnBlock.Add(new Source($"Cloak Clasp ×{hand.Count}", hand.Count * Sts2State.Var(relic, "Block")));
+                    if (hand.Count > 0)
+                    {
+                        m.EndOfTurnBlock.Add(new Source($"Cloak Clasp ×{hand.Count}", hand.Count * Sts2State.Var(relic, "Block")));
+                        m._eotBlockGains++;
+                    }
                     break;
                 case "RippleBasin":
-                    if (attacksThisTurn == 0) m.EndOfTurnBlock.Add(new Source(SafeTitle(relic), Sts2State.Var(relic, "Block")));
+                    if (attacksThisTurn == 0)
+                    {
+                        m.EndOfTurnBlock.Add(new Source(SafeTitle(relic), Sts2State.Var(relic, "Block")));
+                        m._eotBlockGains++;
+                    }
                     break;
                 // Horn Cleat / Captain's Wheel give block at the START of turn 2/3, after the
                 // enemy has attacked, so they don't belong here. Relic Counters shows their countdown.
@@ -160,7 +181,11 @@ public sealed class TurnEndModel
         {
             var fading = hand.Count(c => c.Keywords.Contains(CardKeyword.Ethereal)
                                          && (c.HasTurnEndInHandEffect || Hook.ShouldEtherealTrigger(cs, c)));
-            if (fading > 0) m.EndOfTurnBlock.Add(new Source($"Feel No Pain ×{fading}", fading * fnp));
+            if (fading > 0)
+            {
+                m.EndOfTurnBlock.Add(new Source($"Feel No Pain ×{fading}", fading * fnp));
+                m._eotBlockGains += fading;
+            }
         }
 
         // ---- Your own end-of-turn damage (happens before the enemy turn) ----
@@ -336,6 +361,10 @@ public sealed class TurnEndModel
         {
             switch (p.GetType().Name)
             {
+                // Each end-of-turn block gain sets off Juggernaut on a random enemy.
+                case "JuggernautPower":
+                    for (var i = 0; i < m._eotBlockGains; i++) random.Add(("Juggernaut", p.Amount));
+                    break;
                 case "HailstormPower":
                     if (me.PlayerCombatState!.OrbQueue.Orbs.Count(o => o is FrostOrb) >= Sts2State.Var(p, "FrostOrbs", 1)) all.Add(("Hailstorm", p.Amount));
                     break;

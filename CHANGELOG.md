@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.20
+#### Fixed
+- Incoming Damage counts Juggernaut damage from your end-of-turn block (Plating, Frost orbs, Orichalcum, Cloak Clasp, Ripple Basin, Feel No Pain): with one enemy, a kill means it doesn't attack. Wake and kill tabs use it too.
+
 ### Spire QoL 0.23.19
 #### Fixed
 - Proc audit: tabs switched off in settings were invisible to the audit, so their procs would have been reported as missing tabs. It now checks against every prediction.
