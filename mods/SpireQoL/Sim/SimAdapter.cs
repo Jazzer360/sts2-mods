@@ -49,6 +49,9 @@ public static class SimAdapter
         [nameof(Rainbow)] = new[] { OrbKind.Lightning, OrbKind.Frost, OrbKind.Dark },
     };
 
+    /// <summary>The simulator channels this card's orbs (for the coverage check).</summary>
+    internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card == nameof(Tempest);
+
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
     private static readonly Dictionary<string, OrbKind> RepeatChannels = new()
     {

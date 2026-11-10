@@ -72,6 +72,7 @@ public static class ModEntry
             new IntentForecastFeature(),
             new Diagnostics.ForecastAudit(),
             new Diagnostics.ProcAudit(ctx),
+            new Diagnostics.CoverageWatch(),
         };
         foreach (var f in features) Features.Add(f);
 

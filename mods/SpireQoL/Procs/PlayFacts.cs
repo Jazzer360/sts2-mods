@@ -484,7 +484,7 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ exhaust / discard
 
-    private static int ExhaustOthers(CardModel card, string name, List<CardModel> others, int drawPile, int plays)
+    internal static int ExhaustOthers(CardModel card, string name, List<CardModel> others, int drawPile, int plays)
     {
         var n = others.Count;
         var p = Math.Max(1, plays);
@@ -505,7 +505,7 @@ public sealed class PlayFacts
         };
     }
 
-    private static int DiscardCount(CardModel card, string name, List<CardModel> others, int draws)
+    internal static int DiscardCount(CardModel card, string name, List<CardModel> others, int draws)
     {
         var n = others.Count;
         return name switch
@@ -522,7 +522,7 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ block
 
-    private static int BlockGainCount(CardModel card, string name, List<CardModel> others)
+    internal static int BlockGainCount(CardModel card, string name, List<CardModel> others)
     {
         if (name == nameof(SecondWind)) return others.Count(c => c.Type != CardType.Attack);
         return card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock") ? 1 : 0;
@@ -584,19 +584,19 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ orbs, stars, Osty
 
-    private static int ChannelCount(CardModel card, string name, Player me) => name switch
+    internal static int ChannelCount(CardModel card, string name, Player me) => name switch
     {
         nameof(BallLightning) or nameof(Chill) or nameof(ColdSnap) or nameof(Coolheaded) or nameof(Fusion) or nameof(Glasswork) or nameof(Ignition)
             or nameof(Null) or nameof(ShadowShield) or nameof(Spinner) or nameof(Zap) or nameof(Darkness) => 1,
         nameof(Glacier) => 2,
         nameof(MeteorStrike) or nameof(Rainbow) => 3,
         nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) => Sts2State.Var(card, "Repeat", 1),
-        nameof(Tempest) => me.PlayerCombatState?.Energy ?? 0, // X lightning
+        nameof(Tempest) => me?.PlayerCombatState?.Energy ?? 1, // X lightning
         _ => 0,
     };
 
     // Cards that gain you stars when played (PlayerCmd.GainStars in OnPlay).
-    private static readonly HashSet<string> StarGainCards = new()
+    internal static readonly HashSet<string> StarGainCards = new()
     {
         nameof(BigBang), nameof(GatherLight), nameof(Glow), nameof(HiddenCache), nameof(KnockoutBlow), nameof(RoyalGamble), nameof(ShiningStrike), nameof(SolarStrike), nameof(Venerate),
     };
@@ -609,7 +609,7 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ generated cards
 
-    private static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses)
+    internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses)
     {
         statuses = 0;
         int Var(string key, int fallback = 1) => Sts2State.Var(card, key, fallback);
@@ -633,7 +633,7 @@ public sealed class PlayFacts
             // Souls.
             case nameof(CaptureSpirit): case nameof(GlimpseBeyond): case nameof(GraveWarden): case nameof(Reave): return Var("Cards");
             case nameof(Severance): return 3;
-            case nameof(Dirge): return me.PlayerCombatState?.Energy ?? 0; // X souls
+            case nameof(Dirge): return me?.PlayerCombatState?.Energy ?? 1; // X souls
             // Other cards.
             case nameof(BundleOfJoy): case nameof(JackOfAllTrades): case nameof(Jackpot): case nameof(Metamorphosis): case nameof(DualWield): return Var("Cards");
             case nameof(HeirloomHammer): return Var("Repeat");

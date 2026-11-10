@@ -103,6 +103,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public Dictionary<Creature, int>? AfterIds;
         /// <summary>Why the after-play state wasn't captured.</summary>
         public string? AfterSkipped;
+        public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
     }
 
     private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
@@ -190,6 +191,20 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public SimState? After;
         public Dictionary<Creature, int>? AfterIds;
         public string? AfterSkipped;
+        /// <summary>Every power on every creature when the play started and when it finished.</summary>
+        public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
+    }
+
+    /// <summary>Power amounts on every creature in the fight, by creature and power class.</summary>
+    private static Dictionary<(Creature, string), int> PowerSnapshot()
+    {
+        var d = new Dictionary<(Creature, string), int>();
+        var cs = Sts2State.Combat;
+        if (cs == null) return d;
+        foreach (var c in cs.Creatures)
+            foreach (var p in c.Powers)
+                d[(c, p.GetType().Name)] = d.TryGetValue((c, p.GetType().Name), out var a) ? a + p.Amount : p.Amount;
+        return d;
     }
 
     private static ProcAudit? _instance;
@@ -255,7 +270,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             if (!_running.TryGetValue(action, out var rec))
             {
-                rec = new PlayRecord { Action = action, Target = play.Target, Before = CaptureBefore() };
+                rec = new PlayRecord { Action = action, Target = play.Target, Before = CaptureBefore(), PowersBefore = PowerSnapshot() };
                 _running[action] = rec;
                 action.AfterFinished += OnActionFinished;
                 action.BeforeCancelled += OnActionCancelled;
@@ -303,6 +318,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var cs = Sts2State.Combat;
             if (me != null && cs != null)
             {
+                rec.PowersAfter = PowerSnapshot();
                 try
                 {
                     rec.After = SimAdapter.Build(me, cs, out var ids);
@@ -477,6 +493,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
             Before = rec.Before, Target = rec.Target,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped,
+            PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
             StaleBecause = StaleBecause(hist, card, start, me),
         };
         Report(w, me, hist);
@@ -491,6 +508,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var issues = Compare(w, me, entries, flashed, out var model);
             ShuffleIssues(w, me, entries, flashed, issues, model);
             AfterPlayIssues(w, entries, issues, model);
+            PowerChangeIssues(w, me, entries, flashed, issues, model);
             if (w.StaleBecause != null && issues.Count > 0)
             {
                 // Played before the previous card finished: its tabs didn't see that card's effects.
@@ -565,6 +583,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             string[] fp = kind switch
             {
                 "no tab" or "didn't fire" => new[] { kind, rest.Split(' ')[0] },
+                "power went down" => new[] { kind, rest.Split(' ')[0] },
                 // Which powers, and which way an amount was off: different causes, different issues.
                 "unexplained" when effect == "powers" => new[] { kind, card, "powers", rest },
                 "unexplained" => new[] { kind, card, effect },
@@ -736,6 +755,46 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         else if (foreign.Count > 0 && !autoPlayed && !Explained(Effect.Power)) issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
 
         return issues;
+    }
+
+    // ------------------------------------------------------------------ every power
+
+    /// <summary>Powers the simulator tracks itself: the after-play check compares them.</summary>
+    private static readonly HashSet<string> SimComparedPowers = new()
+    {
+        nameof(PoisonPower), nameof(PlatingPower), nameof(JuggernautPower), nameof(ThornsPower), nameof(FlameBarrierPower), nameof(FeelNoPainPower),
+    };
+
+    /// <summary>
+    /// Every power on every creature, before the play against after it: a power that went down or
+    /// away with nothing in the play to explain it. Explained: powers the card applies, powers that
+    /// flashed (they acted: Flutter, Slippery, Curl Up...), sources with a tab, Artifact when the card
+    /// applies debuffs, temporary powers, the simulator's own powers (compared already), and anything on
+    /// a creature that died. Increases are the budget check's ("unexplained: powers applied").
+    /// </summary>
+    private static void PowerChangeIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, List<string> model)
+    {
+        if (w.PowersBefore == null || w.PowersAfter == null) return;
+        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay))
+        {
+            model.Add("power changes: not checked (auto-played cards)");
+            return;
+        }
+        var own = OwnPowerTypes(w.Card).Select(t => t.Name).ToHashSet();
+        var acted = flashed.Select(m => m.GetType().Name).ToHashSet();
+        var tabbed = w.Predicted.Select(t => t.Key.Contains(':') ? t.Key[(t.Key.IndexOf(':') + 1)..] : t.Key).ToHashSet();
+        var debuffs = w.Facts?.EnemyDebuffs.Count > 0;
+        foreach (var ((creature, type), before) in w.PowersBefore)
+        {
+            var after = w.PowersAfter.TryGetValue((creature, type), out var a) ? a : 0;
+            if (after >= before) continue;
+            if (!creature.IsAlive) continue;
+            if (own.Contains(type) || acted.Contains(type) || tabbed.Contains(type) || SimComparedPowers.Contains(type)) continue;
+            if (type == nameof(ArtifactPower) && debuffs) continue;
+            if (creature.Powers.FirstOrDefault(p => p.GetType().Name == type) is ITemporaryPower) continue;
+            var who = creature == me.Creature ? "you" : creature.Monster?.GetType().Name ?? "creature";
+            issues.Add($"power went down: {type} on {who} {before}→{after}, with nothing in the play to explain it");
+        }
     }
 
     // ------------------------------------------------------------------ shuffles
