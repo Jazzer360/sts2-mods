@@ -10,7 +10,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 #### Fixed
 - Juggernaut counts block from Frost orbs the card evokes (channelling into full slots, Dualcast...). The Imbalanced tab counts that block toward fully blocking a hit.
 #### Changed
-- Audits don't report what a random roll could have caused in multi-enemy fights (a random-target proc or Lightning evoke killing or hitting an enemy). Everything predictable in those fights is still checked.
+- Audits don't report an effect when the combat history shows a random roll caused it in a multi-enemy fight (a random-target proc or Lightning evoke hitting or killing an enemy). Everything else in those fights, including the rest of the same play, is still checked.
 
 ### Spire QoL 0.23.16
 #### Fixed
