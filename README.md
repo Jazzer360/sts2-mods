@@ -71,7 +71,7 @@ Each build also copies the mod into `<game>/mods/<ModId>/`. To skip that step:
 dotnet build -p:InstallToGame=false
 ```
 
-If the game isn't installed at the default Steam path, copy `Sts2.local.props.example` to `Sts2.local.props` and set `Sts2Dir`.
+If the game isn't installed at the default Steam path, copy `Sts2.local.props.example` to `Sts2.local.props` and set `Sts2Dir`. Full setup (tools, decompiling the game for reference, testing, error reports): [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ## Releasing
 
