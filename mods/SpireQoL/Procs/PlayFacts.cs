@@ -256,7 +256,7 @@ public sealed class PlayFacts
             RandomOutcome = cs.HittableEnemies.Count(e => e.IsAlive) > 1
                             && (evoked.Any(o => o is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
         };
-        facts.ResolveDraws(hand.Count, drawPile, name == "Cleanse");
+        facts.ResolveDraws(hand.Count, drawPile, name == nameof(Cleanse));
         return facts;
     }
 
@@ -332,10 +332,10 @@ public sealed class PlayFacts
         {
             switch (name)
             {
-                case "Dualcast": EvokeFront(2, true); break;
-                case "Quadcast": EvokeFront(Math.Max(1, Sts2State.Var(card, "Repeat", 4)), true); break;
-                case "MultiCast": EvokeFront(XValue(cs, card, SafeEnergy(card)) + (card.IsUpgraded ? 1 : 0), true); break;
-                case "Shatter":
+                case nameof(Dualcast): EvokeFront(2, true); break;
+                case nameof(Quadcast): EvokeFront(Math.Max(1, Sts2State.Var(card, "Repeat", 4)), true); break;
+                case nameof(MultiCast): EvokeFront(XValue(cs, card, SafeEnergy(card)) + (card.IsUpgraded ? 1 : 0), true); break;
+                case nameof(Shatter):
                     while (queue.Count > 0) EvokeFront(2, true);
                     break;
             }
@@ -451,16 +451,16 @@ public sealed class PlayFacts
     // Cards that draw DynamicVars["Cards"] cards (every CardPileCmd.Draw caller in the decompile).
     private static readonly HashSet<string> DrawCards = new()
     {
-        "Acrobatics", "Adrenaline", "Backflip", "BattleTrance", "BigBang", "BrightestFlame", "BurningPact",
-        "Constellation", "Coolheaded", "DecisionsDecisions", "DrumOfBattle", "Expertise", "Fetch", "Finesse",
-        "FlashOfSteel", "Ftl", "Glimmer", "Glow", "HuddleUp", "Impatience", "MasterOfStrategy", "MinionStrike",
-        "Neurosurge", "Offering", "Overclock", "Parse", "PhotonCut", "PommelStrike", "Prepared", "Prophesize",
-        "Reboot", "Reflex", "RocketPunch", "Scourge", "Scrape", "ShrugItOff", "Skim", "Slimed", "Soul",
-        "SpoilsOfBattle", "SweepingBeam", "ThinkingAhead",
+        nameof(Acrobatics), nameof(Adrenaline), nameof(Backflip), nameof(BattleTrance), nameof(BigBang), nameof(BrightestFlame), nameof(BurningPact),
+        nameof(Constellation), nameof(Coolheaded), nameof(DecisionsDecisions), nameof(DrumOfBattle), nameof(Expertise), nameof(Fetch), nameof(Finesse),
+        nameof(FlashOfSteel), nameof(Ftl), nameof(Glimmer), nameof(Glow), nameof(HuddleUp), nameof(Impatience), nameof(MasterOfStrategy), nameof(MinionStrike),
+        nameof(Neurosurge), nameof(Offering), nameof(Overclock), nameof(Parse), nameof(PhotonCut), nameof(PommelStrike), nameof(Prepared), nameof(Prophesize),
+        nameof(Reboot), nameof(Reflex), nameof(RocketPunch), nameof(Scourge), nameof(Scrape), nameof(ShrugItOff), nameof(Skim), nameof(Slimed), nameof(Soul),
+        nameof(SpoilsOfBattle), nameof(SweepingBeam), nameof(ThinkingAhead),
     };
 
     // Cards that always draw exactly one (Pillage draws at least one).
-    private static readonly HashSet<string> DrawOne = new() { "DaggerThrow", "EscapePlan", "Pillage" };
+    private static readonly HashSet<string> DrawOne = new() { nameof(DaggerThrow), nameof(EscapePlan), nameof(Pillage) };
 
     /// <summary>How many cards one play of this card draws right now (0 if it doesn't draw).</summary>
     public static int CardsDrawn(CardModel c, int handCount)
@@ -492,16 +492,16 @@ public sealed class PlayFacts
         return name switch
         {
             // One chosen or random card from hand, per play.
-            "Brand" or "BurningPact" or "TrueGrit" or "Scavenge" or "Cinder" => Math.Min(p, n),
-            "Thrash" => Math.Min(p, others.Count(c => c.Type == CardType.Attack)),
-            "Cleanse" => Math.Min(p, drawPile), // from the draw pile
+            nameof(Brand) or nameof(BurningPact) or nameof(TrueGrit) or nameof(Scavenge) or nameof(Cinder) => Math.Min(p, n),
+            nameof(Thrash) => Math.Min(p, others.Count(c => c.Type == CardType.Attack)),
+            nameof(Cleanse) => Math.Min(p, drawPile), // from the draw pile
             // The whole rest of the hand (a second play finds the hand empty).
-            "FiendFire" or "Stoke" => n,
-            "SecondWind" => others.Count(c => c.Type != CardType.Attack),
+            nameof(FiendFire) or nameof(Stoke) => n,
+            nameof(SecondWind) => others.Count(c => c.Type != CardType.Attack),
             // Up to Cards chosen cards: counted as the most it can exhaust.
-            "Purity" => Math.Min(n, Sts2State.Var(card, "Cards") * p),
+            nameof(Purity) => Math.Min(n, Sts2State.Var(card, "Cards") * p),
             // Every status card in your piles.
-            "FlakCannon" => card.DynamicVars.TryGetValue("CalculatedHits", out var v) && v is CalculatedVar cv ? (int)cv.Calculate(null) : 0,
+            nameof(FlakCannon) => card.DynamicVars.TryGetValue("CalculatedHits", out var v) && v is CalculatedVar cv ? (int)cv.Calculate(null) : 0,
             _ => 0,
         };
     }
@@ -512,11 +512,11 @@ public sealed class PlayFacts
         return name switch
         {
             // Discard after drawing, so the drawn cards are there to discard.
-            "Acrobatics" or "DaggerThrow" => Math.Min(1, n + draws),
-            "Prepared" => Math.Min(Sts2State.Var(card, "Cards"), n + draws),
-            "Survivor" => Math.Min(1, n),
-            "HiddenDaggers" => Math.Min(Sts2State.Var(card, "Cards"), n),
-            "CalculatedGamble" or "ShadowStep" or "StormOfSteel" => n,
+            nameof(Acrobatics) or nameof(DaggerThrow) => Math.Min(1, n + draws),
+            nameof(Prepared) => Math.Min(Sts2State.Var(card, "Cards"), n + draws),
+            nameof(Survivor) => Math.Min(1, n),
+            nameof(HiddenDaggers) => Math.Min(Sts2State.Var(card, "Cards"), n),
+            nameof(CalculatedGamble) or nameof(ShadowStep) or nameof(StormOfSteel) => n,
             _ => 0,
         };
     }
@@ -525,7 +525,7 @@ public sealed class PlayFacts
 
     private static int BlockGainCount(CardModel card, string name, List<CardModel> others)
     {
-        if (name == "SecondWind") return others.Count(c => c.Type != CardType.Attack);
+        if (name == nameof(SecondWind)) return others.Count(c => c.Type != CardType.Attack);
         return card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock") ? 1 : 0;
     }
 
@@ -541,24 +541,24 @@ public sealed class PlayFacts
         {
             switch (name)
             {
-                case "AstralPulse" or "DaggerSpray" or "Maul" or "Refract" or "RipAndTear" or "Thrash" or "TwinStrike" or "Uproar":
+                case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
                     return 2;
-                case "Eradicate" or "Skewer" or "Volley" or "Whirlwind":
+                case nameof(Eradicate) or nameof(Skewer) or nameof(Volley) or nameof(Whirlwind):
                     return XValue(cs, card, energy);
-                case "HeavenlyDrill":
+                case nameof(HeavenlyDrill):
                 {
                     var x = XValue(cs, card, energy);
                     return x >= Sts2State.Var(card, "Energy") ? x * 2 : x;
                 }
-                case "Stardust":
+                case nameof(Stardust):
                     return XValue(cs, card, stars);
-                case "Dismantle":
+                case nameof(Dismantle):
                     return target != null && target.HasPower<VulnerablePower>() ? 2 : 1;
-                case "Spite": // the Repeat value only after you lost HP this turn (when the card glows gold)
+                case nameof(Spite): // the Repeat value only after you lost HP this turn (when the card glows gold)
                     return Sts2State.Private(card, "ShouldGlowGoldInternal", false) ? Sts2State.Var(card, "Repeat", 2) : 1;
-                case "FiendFire":
+                case nameof(FiendFire):
                     return otherCards;
-                case "MadScience":
+                case nameof(MadScience):
                     return card is MadScience ms && ms.TinkerTimeRider == MegaCrit.Sts2.Core.Models.Events.TinkerTime.RiderEffect.Violence
                         ? Sts2State.Var(card, "ViolenceHits", 1)
                         : 1;
@@ -587,25 +587,25 @@ public sealed class PlayFacts
 
     private static int ChannelCount(CardModel card, string name, Player me) => name switch
     {
-        "BallLightning" or "Chill" or "ColdSnap" or "Coolheaded" or "Fusion" or "Glasswork" or "Ignition"
-            or "Null" or "ShadowShield" or "Spinner" or "Zap" or "Darkness" => 1,
-        "Glacier" => 2,
-        "MeteorStrike" or "Rainbow" => 3,
-        "Chaos" or "ConsumingShadow" or "Hibernate" or "IceLance" or "Refract" => Sts2State.Var(card, "Repeat", 1),
-        "Tempest" => me.PlayerCombatState?.Energy ?? 0, // X lightning
+        nameof(BallLightning) or nameof(Chill) or nameof(ColdSnap) or nameof(Coolheaded) or nameof(Fusion) or nameof(Glasswork) or nameof(Ignition)
+            or nameof(Null) or nameof(ShadowShield) or nameof(Spinner) or nameof(Zap) or nameof(Darkness) => 1,
+        nameof(Glacier) => 2,
+        nameof(MeteorStrike) or nameof(Rainbow) => 3,
+        nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) => Sts2State.Var(card, "Repeat", 1),
+        nameof(Tempest) => me.PlayerCombatState?.Energy ?? 0, // X lightning
         _ => 0,
     };
 
     // Cards that gain you stars when played (PlayerCmd.GainStars in OnPlay).
     private static readonly HashSet<string> StarGainCards = new()
     {
-        "BigBang", "GatherLight", "Glow", "HiddenCache", "KnockoutBlow", "RoyalGamble", "ShiningStrike", "SolarStrike", "Venerate",
+        nameof(BigBang), nameof(GatherLight), nameof(Glow), nameof(HiddenCache), nameof(KnockoutBlow), nameof(RoyalGamble), nameof(ShiningStrike), nameof(SolarStrike), nameof(Venerate),
     };
 
     // Cards that make Osty attack.
     private static readonly HashSet<string> OstyAttackCards = new()
     {
-        "BoneShards", "Flatten", "HighFive", "Poke", "Protector", "Rattle", "RightHandHand", "SicEm", "Snap", "Squeeze", "SweepingGaze", "Unleash",
+        nameof(BoneShards), nameof(Flatten), nameof(HighFive), nameof(Poke), nameof(Protector), nameof(Rattle), nameof(RightHandHand), nameof(SicEm), nameof(Snap), nameof(Squeeze), nameof(SweepingGaze), nameof(Unleash),
     };
 
     // ------------------------------------------------------------------ generated cards
@@ -617,31 +617,31 @@ public sealed class PlayFacts
         switch (name)
         {
             // Statuses.
-            case "BoostAway": case "CollisionCourse": case "GunkUp": case "Overclock": case "Turbo":
+            case nameof(BoostAway): case nameof(CollisionCourse): case nameof(GunkUp): case nameof(Overclock): case nameof(Turbo):
                 statuses = 1; return 1;
-            case "FightThrough":
+            case nameof(FightThrough):
                 statuses = 2; return 2;
-            case "CrashLanding":
+            case nameof(CrashLanding):
             {
                 var n = Math.Max(0, CardPile.MaxCardsInHand - others.Count);
                 statuses = n; return n;
             }
             // Shivs.
-            case "BladeDance": case "BladeOfInk": case "CloakAndDagger": case "UpMySleeve": return Var("Cards");
-            case "FanOfKnives": case "HiddenDaggers": return Var("Shivs");
-            case "LeadingStrike": case "BladeSymphony": return 1;
-            case "StormOfSteel": return others.Count;
+            case nameof(BladeDance): case nameof(BladeOfInk): case nameof(CloakAndDagger): case nameof(UpMySleeve): return Var("Cards");
+            case nameof(FanOfKnives): case nameof(HiddenDaggers): return Var("Shivs");
+            case nameof(LeadingStrike): case nameof(BladeSymphony): return 1;
+            case nameof(StormOfSteel): return others.Count;
             // Souls.
-            case "CaptureSpirit": case "GlimpseBeyond": case "GraveWarden": case "Reave": return Var("Cards");
-            case "Severance": return 3;
-            case "Dirge": return me.PlayerCombatState?.Energy ?? 0; // X souls
+            case nameof(CaptureSpirit): case nameof(GlimpseBeyond): case nameof(GraveWarden): case nameof(Reave): return Var("Cards");
+            case nameof(Severance): return 3;
+            case nameof(Dirge): return me.PlayerCombatState?.Energy ?? 0; // X souls
             // Other cards.
-            case "BundleOfJoy": case "JackOfAllTrades": case "Jackpot": case "Metamorphosis": case "DualWield": return Var("Cards");
-            case "HeirloomHammer": return Var("Repeat");
-            case "Stoke": return others.Count;
-            case "Abundance": case "AdaptiveStrike": case "Anger": case "Discovery": case "Distraction":
-            case "InfernalBlade": case "Largesse": case "ManifestAuthority": case "Outrage": case "Quasar":
-            case "Splash": case "Undeath": case "WhiteNoise":
+            case nameof(BundleOfJoy): case nameof(JackOfAllTrades): case nameof(Jackpot): case nameof(Metamorphosis): case nameof(DualWield): return Var("Cards");
+            case nameof(HeirloomHammer): return Var("Repeat");
+            case nameof(Stoke): return others.Count;
+            case nameof(Abundance): case nameof(AdaptiveStrike): case nameof(Anger): case nameof(Discovery): case nameof(Distraction):
+            case nameof(InfernalBlade): case nameof(Largesse): case nameof(ManifestAuthority): case nameof(Outrage): case nameof(Quasar):
+            case nameof(Splash): case nameof(Undeath): case nameof(WhiteNoise):
                 return 1;
         }
         return 0;

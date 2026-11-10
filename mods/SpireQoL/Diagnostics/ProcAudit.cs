@@ -20,6 +20,9 @@ using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
+using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Models.Cards;
 
 namespace SpireQoL.Diagnostics;
 
@@ -108,43 +111,43 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// Powers that flash when they change damage (caps), not because a play set them off. The
     /// card's damage already reflects them, so they never get a tab.
     /// </summary>
-    private static readonly HashSet<string> Modifiers = new() { "HardToKillPower", "HardenedShellPower", "IntangiblePower" };
+    private static readonly HashSet<string> Modifiers = new() { nameof(HardToKillPower), nameof(HardenedShellPower), nameof(IntangiblePower) };
 
     /// <summary>
     /// Your powers that react to which card is drawn (draw more, auto-play it): the draw order is
     /// hidden, so they're never predicted. When they fire on a play that drew cards, noted, not reported.
     /// </summary>
-    private static readonly HashSet<string> DrawReactive = new() { "PagestormPower", "IterationPower", "HellraiserPower", "ChainsOfBindingPower" };
+    private static readonly HashSet<string> DrawReactive = new() { nameof(PagestormPower), nameof(IterationPower), nameof(HellraiserPower), nameof(ChainsOfBindingPower) };
 
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
-    private static readonly HashSet<string> KillReactive = new() { "GremlinHorn" };
+    private static readonly HashSet<string> KillReactive = new() { nameof(GremlinHorn) };
 
     /// <summary>What a trigger tab's source can add beyond the card itself (for the budget check).</summary>
     private static readonly Dictionary<string, Effect[]> SourceEffects = new()
     {
         // draws (Dark Embrace, Game Piece, Iron Club, Joss Paper, Vicious and Centennial Puzzle are
         // counted in PlayFacts.Draws, so their tabs explain nothing beyond it)
-        ["GremlinHorn"] = new[] { Effect.Draw }, ["UnceasingTop"] = new[] { Effect.Draw }, ["CorrosiveWavePower"] = new[] { Effect.Power },
-        ["PagestormPower"] = new[] { Effect.Draw }, ["IterationPower"] = new[] { Effect.Draw },
-        ["BiiigHug"] = new[] { Effect.Generate },
+        [nameof(GremlinHorn)] = new[] { Effect.Draw }, [nameof(UnceasingTop)] = new[] { Effect.Draw }, [nameof(CorrosiveWavePower)] = new[] { Effect.Power },
+        [nameof(PagestormPower)] = new[] { Effect.Draw }, [nameof(IterationPower)] = new[] { Effect.Draw },
+        [nameof(BiiigHug)] = new[] { Effect.Generate },
         // created cards
-        ["CalamityPower"] = new[] { Effect.Generate }, ["JugglingPower"] = new[] { Effect.Generate }, ["MusicBox"] = new[] { Effect.Generate },
-        ["BurningSticks"] = new[] { Effect.Generate }, ["PersonalHivePower"] = new[] { Effect.Generate }, ["WitheringPresencePower"] = new[] { Effect.Generate },
-        ["ImitationLearningPower"] = new[] { Effect.Generate, Effect.Power },
+        [nameof(CalamityPower)] = new[] { Effect.Generate }, [nameof(JugglingPower)] = new[] { Effect.Generate }, [nameof(MusicBox)] = new[] { Effect.Generate },
+        [nameof(BurningSticks)] = new[] { Effect.Generate }, [nameof(PersonalHivePower)] = new[] { Effect.Generate }, [nameof(WitheringPresencePower)] = new[] { Effect.Generate },
+        [nameof(ImitationLearningPower)] = new[] { Effect.Generate, Effect.Power },
         // orbs
-        ["StormPower"] = new[] { Effect.Orb }, ["TrashToTreasurePower"] = new[] { Effect.Orb },
+        [nameof(StormPower)] = new[] { Effect.Orb }, [nameof(TrashToTreasurePower)] = new[] { Effect.Orb },
         // summons
-        ["DevourLifePower"] = new[] { Effect.Summon },
+        [nameof(DevourLifePower)] = new[] { Effect.Summon },
         // powers
-        ["MonologuePower"] = new[] { Effect.Power }, ["Kunai"] = new[] { Effect.Power }, ["Shuriken"] = new[] { Effect.Power },
-        ["HelicalDart"] = new[] { Effect.Power }, ["RainbowRing"] = new[] { Effect.Power }, ["MiniRegent"] = new[] { Effect.Power },
-        ["ArsenalPower"] = new[] { Effect.Power }, ["RupturePower"] = new[] { Effect.Power }, ["EnvenomPower"] = new[] { Effect.Power },
-        ["ConcoctPower"] = new[] { Effect.Power }, ["ReaperFormPower"] = new[] { Effect.Power }, ["MonarchsGazePower"] = new[] { Effect.Power },
-        ["OblivionPower"] = new[] { Effect.Power }, ["TenderPower"] = new[] { Effect.Power }, ["EnragePower"] = new[] { Effect.Power },
-        ["HandDrill"] = new[] { Effect.Power }, ["UnsettlingLamp"] = new[] { Effect.Power }, ["SelfFormingClay"] = new[] { Effect.Power },
-        ["RedSkull"] = new[] { Effect.Power }, ["CrabRagePower"] = new[] { Effect.Power }, ["RavenousPower"] = new[] { Effect.Power },
-        ["SlowPower"] = new[] { Effect.Power }, ["SmoggyPower"] = new[] { Effect.Power }, ["VitalSparkPower"] = new[] { Effect.Power },
-        ["SleightOfFleshPower"] = new[] { Effect.Power }, ["MasterPlannerPower"] = new[] { Effect.Power }, ["PaleBlueDotPower"] = new[] { Effect.Power },
+        [nameof(MonologuePower)] = new[] { Effect.Power }, [nameof(Kunai)] = new[] { Effect.Power }, [nameof(Shuriken)] = new[] { Effect.Power },
+        [nameof(HelicalDart)] = new[] { Effect.Power }, [nameof(RainbowRing)] = new[] { Effect.Power }, [nameof(MiniRegent)] = new[] { Effect.Power },
+        [nameof(ArsenalPower)] = new[] { Effect.Power }, [nameof(RupturePower)] = new[] { Effect.Power }, [nameof(EnvenomPower)] = new[] { Effect.Power },
+        [nameof(ConcoctPower)] = new[] { Effect.Power }, [nameof(ReaperFormPower)] = new[] { Effect.Power }, [nameof(MonarchsGazePower)] = new[] { Effect.Power },
+        [nameof(OblivionPower)] = new[] { Effect.Power }, [nameof(TenderPower)] = new[] { Effect.Power }, [nameof(EnragePower)] = new[] { Effect.Power },
+        [nameof(HandDrill)] = new[] { Effect.Power }, [nameof(UnsettlingLamp)] = new[] { Effect.Power }, [nameof(SelfFormingClay)] = new[] { Effect.Power },
+        [nameof(RedSkull)] = new[] { Effect.Power }, [nameof(CrabRagePower)] = new[] { Effect.Power }, [nameof(RavenousPower)] = new[] { Effect.Power },
+        [nameof(SlowPower)] = new[] { Effect.Power }, [nameof(SmoggyPower)] = new[] { Effect.Power }, [nameof(VitalSparkPower)] = new[] { Effect.Power },
+        [nameof(SleightOfFleshPower)] = new[] { Effect.Power }, [nameof(MasterPlannerPower)] = new[] { Effect.Power }, [nameof(PaleBlueDotPower)] = new[] { Effect.Power },
     };
 
     private CombatHistory? _history;
@@ -489,7 +492,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (w.Facts?.SimPending == true)
             {
                 // Its simulation was still running when the frame stopped waiting: its simulator tabs may be missing.
-                var simOnly = issues.Where(x => x.Contains("ImbalancedPower") || x.Contains("AsleepPower") || x.Contains("SlumberPower")).ToList();
+                var simOnly = issues.Where(x => x.Contains(nameof(ImbalancedPower)) || x.Contains(nameof(AsleepPower)) || x.Contains(nameof(SlumberPower))).ToList();
                 foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
                 issues.RemoveAll(simOnly.Contains);
             }
@@ -737,7 +740,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var shuffled = w.Shuffles > 0;
         if (shuffled == f.Shuffles) return;
         var autoPlayed = entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me);
-        var drawReactive = flashed.Any(m => DrawReactive.Contains(m.GetType().Name) || m.GetType().Name is "GremlinHorn" or "UnceasingTop");
+        var drawReactive = flashed.Any(m => DrawReactive.Contains(m.GetType().Name) || m.GetType().Name is nameof(GremlinHorn) or nameof(UnceasingTop));
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
         var why = $"(draws: predicted {f.Draws} = own {f.OwnDraws} + set off {f.ChainedDraws}{(f.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
         if (autoPlayed || (shuffled && drawReactive))
@@ -814,7 +817,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             Cmp("your block", pp.Block, ap.Block);
             Cmp("Plating", pp.Plating, ap.Plating);
-            Cmp("Juggernaut", pp.Juggernaut, ap.Juggernaut);
+            Cmp(nameof(Juggernaut), pp.Juggernaut, ap.Juggernaut);
             Cmp("Thorns", pp.Thorns, ap.Thorns);
             Cmp("Flame Barrier", pp.FlameBarrier, ap.FlameBarrier);
             Cmp("Feel No Pain", pp.FeelNoPain, ap.FeelNoPain);

@@ -268,7 +268,16 @@ public static class Sts2State
 
     public static T? Relic<T>(Player me) where T : RelicModel => me.Relics.OfType<T>().FirstOrDefault();
 
-    /// <summary>Reads a private member by name. Returns fallback if it's missing (game patch renamed it).</summary>
+    /// <summary>
+    /// Called once per type and member that <see cref="Private{T}"/> couldn't find (a game update
+    /// renamed or removed it): the rule reading it is silently using its fallback, so mods log and
+    /// report it.
+    /// </summary>
+    public static event Action<string, string>? MissingMember;
+
+    private static readonly HashSet<(Type, string)> _missing = new();
+
+    /// <summary>Reads a private member by name. Returns fallback if it's missing (game patch renamed it), and reports that once.</summary>
     public static T Private<T>(object obj, string member, T fallback)
     {
         try
@@ -278,6 +287,11 @@ public static class Sts2State
             if (p.PropertyExists()) return p.GetValue<T>();
             var f = t.Field(member);
             if (f.FieldExists()) return f.GetValue<T>();
+            lock (_missing)
+            {
+                if (!_missing.Add((obj.GetType(), member))) return fallback;
+            }
+            MissingMember?.Invoke(obj.GetType().Name, member);
         }
         catch
         {

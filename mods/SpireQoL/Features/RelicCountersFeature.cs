@@ -7,6 +7,7 @@ using SpireQoL.Data;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
+using MegaCrit.Sts2.Core.Models.Relics;
 
 namespace SpireQoL.Features;
 
@@ -263,8 +264,8 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
     {
         return relic.GetType().Name switch
         {
-            "Permafrost" => !Sts2State.Private(relic, "ActivatedThisCombat", true),
-            "MusicBox" => !Sts2State.Private(relic, "WasUsedThisTurn", true),
+            nameof(Permafrost) => !Sts2State.Private(relic, "ActivatedThisCombat", true),
+            nameof(MusicBox) => !Sts2State.Private(relic, "WasUsedThisTurn", true),
             "PaelsLegion" => Sts2State.Private(relic, "Cooldown", 1) <= 0, // Status isn't Active at combat start
             _ => relic.Status == RelicStatus.Active,
         };

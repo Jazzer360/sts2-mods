@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Afflictions;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.ValueProps;
 using SpireQoL.Cards;
 using SpireQoL.Combat;
@@ -73,7 +74,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     // Procs that other procs can set off; evaluated in a second pass with these extras.
     // Waking reads the first pass's proc damage on each enemy (Kusarigama etc.), so it runs second.
-    private static readonly HashSet<string> SecondOrder = new() { "JuggernautPower", "Metronome", "BlackHolePower" };
+    private static readonly HashSet<string> SecondOrder = new() { nameof(JuggernautPower), nameof(Metronome), nameof(BlackHolePower) };
     private int _xBlockGains, _xChannels, _xStarGains;
 
     private static bool CanEverPlayNow(CardModel card)
@@ -195,8 +196,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             _xBlockGains = merged.Values.Where(m => m.Hit.Kind == Kind.Block).Sum(m => m.Hit.Count);
             foreach (var (src, h) in merged.Values)
             {
-                if (src is PowerModel { } sp && sp.GetType().Name == "StormPower") _xChannels += sp.Amount * f.Plays;
-                if (src is PowerModel { } tp && tp.GetType().Name == "TheSealedThronePower" && tp.Amount > 0) _xStarGains += f.Plays;
+                if (src is PowerModel { } sp && sp.GetType().Name == nameof(StormPower)) _xChannels += sp.Amount * f.Plays;
+                if (src is PowerModel { } tp && tp.GetType().Name == nameof(TheSealedThronePower) && tp.Amount > 0) _xStarGains += f.Plays;
             }
             Run(secondOrder: true);
 
@@ -291,7 +292,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var procBlock = new List<int>();
         foreach (var (src, h) in merged.Values)
         {
-            if (src.GetType().Name == "JuggernautPower" || h.Harmful) continue;
+            if (src.GetType().Name == nameof(JuggernautPower) || h.Harmful) continue;
             if (h.Kind == Kind.Damage)
             {
                 if (h.OnEnemies != null)
@@ -367,9 +368,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 var name = p.GetType().Name;
                 Hit? hit = name switch
                 {
-                    "ImbalancedPower" when outcomes.Any(o => o.FirstHitBlockedInAll(id)) && !baseline.FirstHitBlockedInAll(id) => Hit.Trig(),
-                    "AsleepPower" when outcomes.Any(o => o.UnblockedMax(id) >= 1) && baseline.UnblockedMax(id) < 1 => Hit.Trig(harmful: true),
-                    "SlumberPower" when outcomes.Any(o => o.UnblockedMax(id) >= p.Amount) && baseline.UnblockedMax(id) < p.Amount => Hit.Trig(harmful: true),
+                    nameof(ImbalancedPower) when outcomes.Any(o => o.FirstHitBlockedInAll(id)) && !baseline.FirstHitBlockedInAll(id) => Hit.Trig(),
+                    nameof(AsleepPower) when outcomes.Any(o => o.UnblockedMax(id) >= 1) && baseline.UnblockedMax(id) < 1 => Hit.Trig(harmful: true),
+                    nameof(SlumberPower) when outcomes.Any(o => o.UnblockedMax(id) >= p.Amount) && baseline.UnblockedMax(id) < p.Amount => Hit.Trig(harmful: true),
                     _ => null,
                 };
                 if (hit is { } h) merged["proc:" + name] = (p, h);
@@ -407,41 +408,41 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 switch (p.GetType().Name)
                 {
                     // ---- your powers: on play
-                    case "AfterimagePower" when mine: return BlockN(a, plays);
-                    case "RagePower" when mine && type == CardType.Attack: return BlockN(a, plays);
-                    case "SpiritOfAshPower" when mine && card.Keywords.Contains(CardKeyword.Ethereal): return BlockN(a, plays);
-                    case "DanseMacabrePower" when mine && f.Energy >= Sts2State.Var(p, "Energy", 2): return BlockN(a, plays);
-                    case "GravityPower" when mine: return Damage(a, plays, Spread.All);
-                    case "SerpentFormPower" when mine: return Damage(a, plays, Spread.Random);
-                    case "PanachePower" when mine && plays >= Sts2State.Var(p, "CardsLeft", 5): return Damage(a, 1, Spread.All);
+                    case nameof(AfterimagePower) when mine: return BlockN(a, plays);
+                    case nameof(RagePower) when mine && type == CardType.Attack: return BlockN(a, plays);
+                    case nameof(SpiritOfAshPower) when mine && card.Keywords.Contains(CardKeyword.Ethereal): return BlockN(a, plays);
+                    case nameof(DanseMacabrePower) when mine && f.Energy >= Sts2State.Var(p, "Energy", 2): return BlockN(a, plays);
+                    case nameof(GravityPower) when mine: return Damage(a, plays, Spread.All);
+                    case nameof(SerpentFormPower) when mine: return Damage(a, plays, Spread.Random);
+                    case nameof(PanachePower) when mine && plays >= Sts2State.Var(p, "CardsLeft", 5): return Damage(a, 1, Spread.All);
                     // Second order: stars gained also set off Black Hole (The Sealed Throne gains
                     // stars on every card).
-                    case "BlackHolePower" when mine:
+                    case nameof(BlackHolePower) when mine:
                     {
                         var times = (f.Stars > 0 ? 1 : 0) + f.StarGains + _xStarGains;
                         return times > 0 ? Damage(a, times, Spread.All) : null;
                     }
-                    case "RupturePower" when mine && f.LosesHp: return Hit.Trig();
-                    case "DevourLifePower" when mine && card is Soul: return new Hit(Kind.Summon, a * plays);
-                    case "HauntPower" when mine && card is Soul: return Damage(a, plays, Spread.Random, props: ValueProp.Unblockable | ValueProp.Unpowered);
-                    case "StormPower" when mine && type == CardType.Power: return Hit.Trig();
-                    case "SubroutinePower" when mine && type == CardType.Power: return Hit.Trig();
-                    case "CalamityPower" when mine && type == CardType.Attack: return Hit.Trig();
-                    case "JugglingPower" when mine && type == CardType.Attack:
+                    case nameof(RupturePower) when mine && f.LosesHp: return Hit.Trig();
+                    case nameof(DevourLifePower) when mine && card is Soul: return new Hit(Kind.Summon, a * plays);
+                    case nameof(HauntPower) when mine && card is Soul: return Damage(a, plays, Spread.Random, props: ValueProp.Unblockable | ValueProp.Unpowered);
+                    case nameof(StormPower) when mine && type == CardType.Power: return Hit.Trig();
+                    case nameof(SubroutinePower) when mine && type == CardType.Power: return Hit.Trig();
+                    case nameof(CalamityPower) when mine && type == CardType.Attack: return Hit.Trig();
+                    case nameof(JugglingPower) when mine && type == CardType.Attack:
                     {
                         var attacks = Sts2State.CountPlayedThisTurn(_me, CardType.Attack);
                         return attacks < 3 && attacks + plays >= 3 ? Hit.Trig() : null;
                     }
-                    case "MonologuePower" when mine: return Hit.Trig();
-                    case "MasterPlannerPower" when mine && type == CardType.Skill: return Hit.Trig();
+                    case nameof(MonologuePower) when mine: return Hit.Trig();
+                    case nameof(MasterPlannerPower) when mine && type == CardType.Skill: return Hit.Trig();
                     // An Attack that spends 0 energy returns to your hand while Feral has charges left
                     // this turn (DisplayAmount; FeralPower.ModifyCardPlayResultLocation). Not copies.
-                    case "FeralPower" when mine && type == CardType.Attack && f.Energy == 0 && !card.IsDupe && p.DisplayAmount > 0:
+                    case nameof(FeralPower) when mine && type == CardType.Attack && f.Energy == 0 && !card.IsDupe && p.DisplayAmount > 0:
                         return Hit.Trig();
-                    case "TheSealedThronePower" when mine: return Hit.Trig();
-                    case "TenderPower" when mine: return Hit.Trig(harmful: true);
-                    case "SmoggyPower" when mine && type == CardType.Skill: return Hit.Trig(harmful: true);
-                    case "PaleBlueDotPower" when mine:
+                    case nameof(TheSealedThronePower) when mine: return Hit.Trig();
+                    case nameof(TenderPower) when mine: return Hit.Trig(harmful: true);
+                    case nameof(SmoggyPower) when mine && type == CardType.Skill: return Hit.Trig(harmful: true);
+                    case nameof(PaleBlueDotPower) when mine:
                     {
                         if (Sts2State.Private(p, "alreadyActivatedThisTurn", false)) return null;
                         var played = Sts2State.CountPlayedThisTurn(_me);
@@ -449,80 +450,80 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
 
                     // ---- Sovereign Blade's buffs (the card text lists them, but it's easy to miss)
-                    case "SeekingEdgePower" when mine && card is SovereignBlade: return Hit.Trig(); // hits all enemies
-                    case "ParryPower" when mine && card is SovereignBlade: return Hit.Trig();       // gains block
-                    case "SwordSagePower" when mine && card is SovereignBlade: return Hit.Trig();   // replays
-                    case "ConquerorPower" when onEnemy && card is SovereignBlade: return Hit.Trig(); // more damage to that enemy
+                    case nameof(SeekingEdgePower) when mine && card is SovereignBlade: return Hit.Trig(); // hits all enemies
+                    case nameof(ParryPower) when mine && card is SovereignBlade: return Hit.Trig();       // gains block
+                    case nameof(SwordSagePower) when mine && card is SovereignBlade: return Hit.Trig();   // replays
+                    case nameof(ConquerorPower) when onEnemy && card is SovereignBlade: return Hit.Trig(); // more damage to that enemy
 
                     // ---- your powers: exhaust / discard / draw / stars / energy / debuffs / created cards
-                    case "FeelNoPainPower" when mine && exhausts > 0: return BlockN(a, exhausts);
-                    case "DarkEmbracePower" when mine && exhausts > 0: return Hit.Trig();
-                    case "ChildOfTheStarsPower" when mine && f.Stars > 0: return BlockN(a * f.Stars, 1);
-                    case "OrbitPower" when mine && f.Energy > 0 && f.Energy >= p.DisplayAmount: return Hit.Trig();
-                    case "AutomationPower" when mine && draws > 0 && draws >= p.DisplayAmount: return Hit.Trig();
-                    case "CacophonyPower" when mine && draws > 0 && draws >= p.DisplayAmount: return Damage(a, 1, Spread.Random);
-                    case "SpeedsterPower" when mine && draws > 0: return Damage(a, draws, Spread.All);
-                    case "CorrosiveWavePower" when mine && draws > 0: return Hit.Trig();
-                    case "StratagemPower" when mine && shuffles: return Hit.Trig();
-                    case "SleightOfFleshPower" when mine && f.DebuffsLandingTotal() > 0:
+                    case nameof(FeelNoPainPower) when mine && exhausts > 0: return BlockN(a, exhausts);
+                    case nameof(DarkEmbracePower) when mine && exhausts > 0: return Hit.Trig();
+                    case nameof(ChildOfTheStarsPower) when mine && f.Stars > 0: return BlockN(a * f.Stars, 1);
+                    case nameof(OrbitPower) when mine && f.Energy > 0 && f.Energy >= p.DisplayAmount: return Hit.Trig();
+                    case nameof(AutomationPower) when mine && draws > 0 && draws >= p.DisplayAmount: return Hit.Trig();
+                    case nameof(CacophonyPower) when mine && draws > 0 && draws >= p.DisplayAmount: return Damage(a, 1, Spread.Random);
+                    case nameof(SpeedsterPower) when mine && draws > 0: return Damage(a, draws, Spread.All);
+                    case nameof(CorrosiveWavePower) when mine && draws > 0: return Hit.Trig();
+                    case nameof(StratagemPower) when mine && shuffles: return Hit.Trig();
+                    case nameof(SleightOfFleshPower) when mine && f.DebuffsLandingTotal() > 0:
                         return f.HitsAllEnemies
                             ? Damage(a, Math.Max(1, f.DebuffsLandingTotal() / Math.Max(1, _cs.HittableEnemies.Count)), Spread.All)
                             : Damage(a, f.DebuffsLandingTotal(), Spread.Random);
-                    case "ViciousPower" when mine && f.DebuffsLandingTotal(t => t == typeof(VulnerablePower)) > 0: return Hit.Trig();
-                    case "ShroudPower" when mine: return BlockN(a, f.DebuffsLandingTotal(t => t == typeof(DoomPower)));
+                    case nameof(ViciousPower) when mine && f.DebuffsLandingTotal(t => t == typeof(VulnerablePower)) > 0: return Hit.Trig();
+                    case nameof(ShroudPower) when mine: return BlockN(a, f.DebuffsLandingTotal(t => t == typeof(DoomPower)));
                     // Every block gain sets it off, including block from other procs (Afterimage...).
                     // Any block gain, including Frost orbs the card evokes.
-                    case "JuggernautPower" when mine && f.BlockGains + f.OrbBlockGains + _xBlockGains > 0:
+                    case nameof(JuggernautPower) when mine && f.BlockGains + f.OrbBlockGains + _xBlockGains > 0:
                         return Damage(a, f.BlockGains + f.OrbBlockGains + _xBlockGains, Spread.Random);
-                    case "EnvenomPower" when mine && type == CardType.Attack: return Hit.Trig();
-                    case "ConcoctPower" when mine && type == CardType.Attack: return Hit.Trig();
-                    case "ReaperFormPower" when mine && type == CardType.Attack: return Hit.Trig();
-                    case "MonarchsGazePower" when mine && type == CardType.Attack: return Hit.Trig();
-                    case "ArsenalPower" when mine && generated > 0: return Hit.Trig();
-                    case "PillarOfCreationPower" when mine && generated > 0: return BlockN(a, generated);
-                    case "SmokestackPower" when mine && statuses > 0: return Damage(a, statuses, Spread.All);
-                    case "TrashToTreasurePower" when mine && statuses > 0: return Hit.Trig();
+                    case nameof(EnvenomPower) when mine && type == CardType.Attack: return Hit.Trig();
+                    case nameof(ConcoctPower) when mine && type == CardType.Attack: return Hit.Trig();
+                    case nameof(ReaperFormPower) when mine && type == CardType.Attack: return Hit.Trig();
+                    case nameof(MonarchsGazePower) when mine && type == CardType.Attack: return Hit.Trig();
+                    case nameof(ArsenalPower) when mine && generated > 0: return Hit.Trig();
+                    case nameof(PillarOfCreationPower) when mine && generated > 0: return BlockN(a, generated);
+                    case nameof(SmokestackPower) when mine && statuses > 0: return Damage(a, statuses, Spread.All);
+                    case nameof(TrashToTreasurePower) when mine && statuses > 0: return Hit.Trig();
 
                     // ---- powers on enemies: your plays
-                    case "EnragePower" when onEnemy && type == CardType.Skill: return Hit.Trig(harmful: true);
-                    case "SneakyPower" when onEnemy && type == CardType.Attack: return Hit.Trig(harmful: true);
-                    case "ImitationLearningPower" when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
+                    case nameof(EnragePower) when onEnemy && type == CardType.Skill: return Hit.Trig(harmful: true);
+                    case nameof(SneakyPower) when onEnemy && type == CardType.Attack: return Hit.Trig(harmful: true);
+                    case nameof(ImitationLearningPower) when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
                     // Fully blocking its hit stuns it (Bowlbug: knocks it off balance). Plain tab on the
                     // card whose own block takes your end-of-turn block over that line.
-                    case "SkittishPower" when onEnemy && type == CardType.Attack && !Sts2State.Private(p, "HasGainedBlockThisTurn", true):
+                    case nameof(SkittishPower) when onEnemy && type == CardType.Attack && !Sts2State.Private(p, "HasGainedBlockThisTurn", true):
                         return Hit.Trig(harmful: true);
-                    case "WitheringPresencePower" when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
-                    case "GalvanicPower" when card.Affliction is Galvanized:
+                    case nameof(WitheringPresencePower) when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
+                    case nameof(GalvanicPower) when card.Affliction is Galvanized:
                         return Damage(a, plays, Spread.Me, props: ValueProp.Unpowered | ValueProp.Move, harmful: true);
-                    case "VitalSparkPower" when card.Affliction is Tainted: return Hit.Trig(harmful: true);
-                    case "StranglePower" when onEnemy && p.Applier?.Player == _me:
+                    case nameof(VitalSparkPower) when card.Affliction is Tainted: return Hit.Trig(harmful: true);
+                    case nameof(StranglePower) when onEnemy && p.Applier?.Player == _me:
                         return Damage(a, plays, Spread.Specific, target: e, props: ValueProp.Unblockable | ValueProp.Unpowered);
-                    case "OblivionPower" when onEnemy && p.Applier?.Player == _me: return Hit.Trig();
-                    case "SlowPower" when onEnemy: return Hit.Trig();
+                    case nameof(OblivionPower) when onEnemy && p.Applier?.Player == _me: return Hit.Trig();
+                    case nameof(SlowPower) when onEnemy: return Hit.Trig();
 
                     // ---- powers on enemies: being hit by your attack
-                    case "ThornsPower" when onEnemy && f.CanHit(e):
+                    case nameof(ThornsPower) when onEnemy && f.CanHit(e):
                     {
                         var thorns = Damage(a, f.HitsOn(e), Spread.Me, dealer: e, harmful: true);
                         // A single-target or random attack might hit an enemy without Thorns instead.
                         var mayMiss = !f.HitsAllEnemies && _cs.HittableEnemies.Any(o => o != e && !o.HasPower<ThornsPower>());
                         return mayMiss ? thorns with { Min = 0 } : thorns;
                     }
-                    case "CurlUpPower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);          // it gains block
-                    case "PersonalHivePower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);    // Dazed into your draw pile
+                    case nameof(CurlUpPower) when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);          // it gains block
+                    case nameof(PersonalHivePower) when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);    // Dazed into your draw pile
                     // Each damage instance that gets through its block counts (Asleep wakes on the first,
                     // Slumber after Amount of them). Judged by the end of your turn: this play's hits,
                     // procs and orb evokes strip block that your end-of-turn damage then gets through.
-                    case "BurrowedPower" when onEnemy && f.BreaksBlock(e): return Hit.Trig();                // stuns it
-                    case "FlutterPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(); // stuns it
-                    case "PlowPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
-                    case "ShriekPower" when onEnemy && f.UnblockedWithOrbs(e) > 0 && e.CurrentHp - f.UnblockedWithOrbs(e) <= a: return Hit.Trig();
-                    case "TheGambitPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig();             // it dies
-                    case "SlipperyPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true); // HP loss capped at 1
+                    case nameof(BurrowedPower) when onEnemy && f.BreaksBlock(e): return Hit.Trig();                // stuns it
+                    case nameof(FlutterPower) when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(); // stuns it
+                    case nameof(PlowPower) when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
+                    case nameof(ShriekPower) when onEnemy && f.UnblockedWithOrbs(e) > 0 && e.CurrentHp - f.UnblockedWithOrbs(e) <= a: return Hit.Trig();
+                    case nameof(TheGambitPower) when onEnemy && f.Unblocked(e) > 0: return Hit.Trig();             // it dies
+                    case nameof(SlipperyPower) when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true); // HP loss capped at 1
 
                     // ---- powers on enemies: killing one
-                    case "InfestedPower" or "SteamEruptionPower" or "SurprisePower" when onEnemy && f.Kills(e): return Hit.Trig(harmful: true);
-                    case "CrabRagePower" or "RavenousPower" when onEnemy && _cs.HittableEnemies.Any(o => o != e && f.Kills(o)): return Hit.Trig(harmful: true);
+                    case nameof(InfestedPower) or nameof(SteamEruptionPower) or nameof(SurprisePower) when onEnemy && f.Kills(e): return Hit.Trig(harmful: true);
+                    case nameof(CrabRagePower) or nameof(RavenousPower) when onEnemy && _cs.HittableEnemies.Any(o => o != e && f.Kills(o)): return Hit.Trig(harmful: true);
                 }
                 return null;
             }
@@ -543,10 +544,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 switch (name)
                 {
                     // ---- uses or breaks a relic (formerly Relic Reminders)
-                    case "PenNib" when r.Status == RelicStatus.Active && type == CardType.Attack: return Hit.Trig();
-                    case "ArtOfWar" or "RippleBasin" when type == CardType.Attack && Sts2State.CountPlayedThisTurn(_me, CardType.Attack) == 0:
+                    case nameof(PenNib) when r.Status == RelicStatus.Active && type == CardType.Attack: return Hit.Trig();
+                    case nameof(ArtOfWar) or nameof(RippleBasin) when type == CardType.Attack && Sts2State.CountPlayedThisTurn(_me, CardType.Attack) == 0:
                         return Hit.Trig(harmful: true);
-                    case "PaelsTears":
+                    case nameof(PaelsTears):
                     {
                         // Ending the turn with energy left gives energy next turn: cards that would
                         // spend your last energy (X-cost cards spend it all) give that up.
@@ -555,33 +556,33 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
                     // Ending a turn without playing a card gives an extra turn (once per combat):
                     // while armed and nothing has been played, every card gives that up.
-                    case "PaelsEye" when armed && Sts2State.CountPlayedThisTurn(_me) == 0: return Hit.Trig(harmful: true);
-                    case "Vambrace" when armed && f.BlockGains > 0: return Hit.Trig();
+                    case nameof(PaelsEye) when armed && Sts2State.CountPlayedThisTurn(_me) == 0: return Hit.Trig(harmful: true);
+                    case nameof(Vambrace) when armed && f.BlockGains > 0: return Hit.Trig();
                     // Off cooldown, the next card that gains block gets double block, then it rests 2 turns.
-                    case "PaelsLegion" when armed && f.BlockGains > 0: return Hit.Trig();
-                    case "BurningSticks" when armed && type == CardType.Skill && f.ExhaustsSelf: return Hit.Trig();
+                    case nameof(PaelsLegion) when armed && f.BlockGains > 0: return Hit.Trig();
+                    case nameof(BurningSticks) when armed && type == CardType.Skill && f.ExhaustsSelf: return Hit.Trig();
                     // It arms on a debuff to an enemy without Artifact (checked before Artifact uses a
                     // charge), so an enemy whose charges cover every debuff this play applies doesn't count.
-                    case "UnsettlingLamp" when armed && f.EnemyDebuffs.Count > 0
+                    case nameof(UnsettlingLamp) when armed && f.EnemyDebuffs.Count > 0
                                                && _cs.HittableEnemies.Any(e => (e.GetPower<ArtifactPower>()?.Amount ?? 0) < f.EnemyDebuffs.Count * Math.Max(1, plays)):
                         return Hit.Trig();
-                    case "MusicBox" when armed && type == CardType.Attack: return Hit.Trig();
+                    case nameof(MusicBox) when armed && type == CardType.Attack: return Hit.Trig();
 
                     // ---- on play
-                    case "IntimidatingHelmet" when f.Energy >= N("Energy", 2): return RelicBlock(r, plays);
-                    case "DaughterOfTheWind" when type == CardType.Attack: return RelicBlock(r, plays);
-                    case "Permafrost" when type == CardType.Power && armed: return RelicBlock(r, 1);
-                    case "LostWisp" when type == CardType.Power: return RelicDamage(r, plays, Spread.All);
-                    case "GamePiece" when type == CardType.Power: return Hit.Trig();
+                    case nameof(IntimidatingHelmet) when f.Energy >= N("Energy", 2): return RelicBlock(r, plays);
+                    case nameof(DaughterOfTheWind) when type == CardType.Attack: return RelicBlock(r, plays);
+                    case nameof(Permafrost) when type == CardType.Power && armed: return RelicBlock(r, 1);
+                    case nameof(LostWisp) when type == CardType.Power: return RelicDamage(r, plays, Spread.All);
+                    case nameof(GamePiece) when type == CardType.Power: return Hit.Trig();
                     // A random other hand card becomes free this turn. It prefers cards that still
                     // cost energy or stars, but picks one anyway when none do (and nothing changes).
-                    case "MummifiedHand" when type == CardType.Power:
+                    case nameof(MummifiedHand) when type == CardType.Power:
                         return Sts2State.Hand(_me).Any(c => c != card && c.CostsEnergyOrStars(includeGlobalModifiers: true)) ? Hit.Trig() : null;
-                    case "HelicalDart" when card.Tags.Contains(CardTag.Shiv): return Hit.Trig();
-                    case "IvoryTile" when f.Energy >= N("EnergyThreshold", 3): return Hit.Trig();
-                    case "ChemicalX" when card.EnergyCost.CostsX || card.HasStarCostX: return Hit.Trig();
-                    case "RazorTooth" when (type == CardType.Attack || type == CardType.Skill) && card.IsUpgradable: return Hit.Trig();
-                    case "RainbowRing":
+                    case nameof(HelicalDart) when card.Tags.Contains(CardTag.Shiv): return Hit.Trig();
+                    case nameof(IvoryTile) when f.Energy >= N("EnergyThreshold", 3): return Hit.Trig();
+                    case nameof(ChemicalX) when card.EnergyCost.CostsX || card.HasStarCostX: return Hit.Trig();
+                    case nameof(RazorTooth) when (type == CardType.Attack || type == CardType.Skill) && card.IsUpgradable: return Hit.Trig();
+                    case nameof(RainbowRing):
                     {
                         if (Sts2State.Private(r, "ActivationCountThisTurn", 0) >= 1) return null;
                         var played = Sts2State.CardsPlayedThisTurn(_me).Select(c => c.Type).Append(type).ToHashSet();
@@ -591,50 +592,50 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
 
                     // ---- counters completed by this card
-                    case "Kunai" or "Shuriken" or "Nunchaku" when Completes(type == CardType.Attack): return Hit.Trig();
-                    case "OrnamentalFan" when Completes(type == CardType.Attack): return RelicBlock(r, 1);
-                    case "Kusarigama" when Completes(type == CardType.Attack): return RelicDamage(r, 1, Spread.Random);
-                    case "LetterOpener" when Completes(type == CardType.Skill): return RelicDamage(r, 1, Spread.All);
-                    case "TuningFork" when Completes(type == CardType.Skill): return RelicBlock(r, 1);
-                    case "IronClub" when Completes(true): return Hit.Trig();
+                    case nameof(Kunai) or nameof(Shuriken) or nameof(Nunchaku) when Completes(type == CardType.Attack): return Hit.Trig();
+                    case nameof(OrnamentalFan) when Completes(type == CardType.Attack): return RelicBlock(r, 1);
+                    case nameof(Kusarigama) when Completes(type == CardType.Attack): return RelicDamage(r, 1, Spread.Random);
+                    case nameof(LetterOpener) when Completes(type == CardType.Skill): return RelicDamage(r, 1, Spread.All);
+                    case nameof(TuningFork) when Completes(type == CardType.Skill): return RelicBlock(r, 1);
+                    case nameof(IronClub) when Completes(true): return Hit.Trig();
 
                     // ---- exhaust / discard / stars / created cards / shuffle / empty hand
-                    case "CharonsAshes" when exhausts > 0: return RelicDamage(r, exhausts, Spread.All);
-                    case "ForgottenSoul" when exhausts > 0: return RelicDamage(r, exhausts, Spread.Random);
-                    case "JossPaper" when exhausts > 0 && Sts2State.Private(r, "CardsExhausted", 0) + exhausts >= N("ExhaustAmount", 5): return Hit.Trig();
-                    case "Tingsha" when discards > 0: return RelicDamage(r, discards, Spread.Random);
-                    case "ToughBandages" when discards > 0: return RelicBlock(r, discards);
-                    case "MiniRegent" when f.Stars > 0 && !Sts2State.Private(r, "UsedThisTurn", true): return Hit.Trig();
-                    case "GalacticDust" when f.Stars > 0:
+                    case nameof(CharonsAshes) when exhausts > 0: return RelicDamage(r, exhausts, Spread.All);
+                    case nameof(ForgottenSoul) when exhausts > 0: return RelicDamage(r, exhausts, Spread.Random);
+                    case nameof(JossPaper) when exhausts > 0 && Sts2State.Private(r, "CardsExhausted", 0) + exhausts >= N("ExhaustAmount", 5): return Hit.Trig();
+                    case nameof(Tingsha) when discards > 0: return RelicDamage(r, discards, Spread.Random);
+                    case nameof(ToughBandages) when discards > 0: return RelicBlock(r, discards);
+                    case nameof(MiniRegent) when f.Stars > 0 && !Sts2State.Private(r, "UsedThisTurn", true): return Hit.Trig();
+                    case nameof(GalacticDust) when f.Stars > 0:
                     {
                         var per = N("Stars", 10);
                         var times = per > 0 ? (Sts2State.Private(r, "StarsSpent", 0) + f.Stars) / per : 0;
                         return times > 0 ? RelicBlock(r, times) : null;
                     }
-                    case "Regalite" when generated > 0 && !Sts2State.Private(r, "UsedThisTurn", true): return RelicBlock(r, 1);
-                    case "TheAbacus" when shuffles: return RelicBlock(r, 1);
+                    case nameof(Regalite) when generated > 0 && !Sts2State.Private(r, "UsedThisTurn", true): return RelicBlock(r, 1);
+                    case nameof(TheAbacus) when shuffles: return RelicBlock(r, 1);
                     // A Soot (Unplayable status) into your draw pile on every shuffle (BiiigHug.AfterShuffle).
-                    case "BiiigHug" when shuffles: return Hit.Trig(harmful: true);
-                    case "Metronome":
+                    case nameof(BiiigHug) when shuffles: return Hit.Trig(harmful: true);
+                    case nameof(Metronome):
                     {
                         var n = N("OrbCount", 7);
                         var channeled = Sts2State.Private(r, "OrbsChanneled", n);
                         var channels = f.Channels + _xChannels;
                         return channels > 0 && channeled < n && channeled + channels >= n ? RelicDamage(r, 1, Spread.All) : null;
                     }
-                    case "BoneFlute" when f.OstyAttacks > 0 && _me.IsOstyAlive: return RelicBlock(r, f.OstyAttacks);
-                    case "UnceasingTop" when Sts2State.Hand(_me).Count == 1 && draws == 0 && generated == 0: return Hit.Trig();
+                    case nameof(BoneFlute) when f.OstyAttacks > 0 && _me.IsOstyAlive: return RelicBlock(r, f.OstyAttacks);
+                    case nameof(UnceasingTop) when Sts2State.Hand(_me).Count == 1 && draws == 0 && generated == 0: return Hit.Trig();
 
                     // ---- your attack: breaking block, killing
-                    case "HandDrill" when _cs.HittableEnemies.Any(f.BreaksBlock): return Hit.Trig();
-                    case "GremlinHorn" when _cs.HittableEnemies.Any(f.Kills): return Hit.Trig();
+                    case nameof(HandDrill) when _cs.HittableEnemies.Any(f.BreaksBlock): return Hit.Trig();
+                    case nameof(GremlinHorn) when _cs.HittableEnemies.Any(f.Kills): return Hit.Trig();
 
                     // ---- losing HP from the card (your turn)
-                    case "CentennialPuzzle" when f.HpLoss > 0 && !Sts2State.Private(r, "UsedThisCombat", true): return Hit.Trig();
-                    case "SelfFormingClay" when f.HpLoss > 0: return Hit.Trig();
-                    case "DemonTongue" when f.HpLoss > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true): return Hit.Trig();
-                    case "EmotionChip" when f.HpLoss > 0: return Hit.Trig();
-                    case "RedSkull" when f.HpLoss > 0:
+                    case nameof(CentennialPuzzle) when f.HpLoss > 0 && !Sts2State.Private(r, "UsedThisCombat", true): return Hit.Trig();
+                    case nameof(SelfFormingClay) when f.HpLoss > 0: return Hit.Trig();
+                    case nameof(DemonTongue) when f.HpLoss > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true): return Hit.Trig();
+                    case nameof(EmotionChip) when f.HpLoss > 0: return Hit.Trig();
+                    case nameof(RedSkull) when f.HpLoss > 0:
                     {
                         var c = _me.Creature;
                         var threshold = c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m;

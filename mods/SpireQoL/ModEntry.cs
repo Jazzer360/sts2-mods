@@ -52,6 +52,14 @@ public static class ModEntry
         reporter.ContextProvider = () => Diagnostics.Snapshot.Capture(ctx);
         AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
         Sts2State.Init();
+        // A private member a rule reads is gone (a game update renamed it): the rule silently uses its
+        // fallback, so say so once, in the log and as a report.
+        Sts2State.MissingMember += (type, member) =>
+        {
+            Log.Warn($"game member not found: {type}.{member} (a rule reading it uses its fallback)");
+            reporter.Mismatch("api", $"Game member not found: {type}.{member}", new[] { "missing-member", type, member },
+                $"Sts2State.Private couldn't find {type}.{member}. A game update probably renamed or removed it; the rule reading it is using its fallback value.");
+        };
 
         // Order matters for card decorations: later features add badges after earlier ones.
         IFeature[] features =

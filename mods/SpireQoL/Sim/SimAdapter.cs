@@ -10,6 +10,8 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using SpireQoL.Procs;
 using Sts2Mods.Core.Game;
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Relics;
 
 namespace SpireQoL.Sim;
 
@@ -21,41 +23,41 @@ namespace SpireQoL.Sim;
 public static class SimAdapter
 {
     // Blockable end-of-turn damage from cards in hand (DamageVar "Damage").
-    private static readonly HashSet<string> BlockableHandCards = new() { "Burn", "Decay", "Infection", "Toxic", "Wither" };
+    private static readonly HashSet<string> BlockableHandCards = new() { nameof(Burn), nameof(Decay), nameof(Infection), nameof(Toxic), nameof(Wither) };
 
     // Unblockable HP loss from cards in hand (HpLossVar "HpLoss"; Regret = cards in hand).
-    private static readonly HashSet<string> UnblockableHandCards = new() { "BadLuck", "Beckon" };
+    private static readonly HashSet<string> UnblockableHandCards = new() { nameof(BadLuck), nameof(Beckon) };
 
     // Debuffs on you that deal blockable damage after your turn ends, before block clears.
-    private static readonly HashSet<string> BlockableDebuffs = new() { "ConstrictPower", "MagicBombPower" };
+    private static readonly HashSet<string> BlockableDebuffs = new() { nameof(ConstrictPower), nameof(MagicBombPower) };
 
     // Debuffs that land after Parrying Shield (AfterSideTurnEndLate).
-    private static readonly HashSet<string> LateBlockableDebuffs = new() { "DisintegrationPower" };
+    private static readonly HashSet<string> LateBlockableDebuffs = new() { nameof(DisintegrationPower) };
 
-    private static readonly HashSet<string> UnblockableDebuffs = new() { "DemisePower" };
+    private static readonly HashSet<string> UnblockableDebuffs = new() { nameof(DemisePower) };
 
     /// <summary>Orbs each card channels (OrbCmd.Channel&lt;T&gt; in its OnPlay; decompile v0.111.0). Chaos is random.</summary>
     private static readonly Dictionary<string, OrbKind[]> Channels = new()
     {
-        ["BallLightning"] = new[] { OrbKind.Lightning }, ["Zap"] = new[] { OrbKind.Lightning },
-        ["Chill"] = new[] { OrbKind.Frost }, ["ColdSnap"] = new[] { OrbKind.Frost }, ["Coolheaded"] = new[] { OrbKind.Frost },
-        ["Glacier"] = new[] { OrbKind.Frost, OrbKind.Frost },
-        ["Fusion"] = new[] { OrbKind.Plasma }, ["Ignition"] = new[] { OrbKind.Plasma },
-        ["MeteorStrike"] = new[] { OrbKind.Plasma, OrbKind.Plasma, OrbKind.Plasma },
-        ["Glasswork"] = new[] { OrbKind.Glass }, ["Spinner"] = new[] { OrbKind.Glass },
-        ["Null"] = new[] { OrbKind.Dark }, ["ShadowShield"] = new[] { OrbKind.Dark }, ["Darkness"] = new[] { OrbKind.Dark },
-        ["Rainbow"] = new[] { OrbKind.Lightning, OrbKind.Frost, OrbKind.Dark },
+        [nameof(BallLightning)] = new[] { OrbKind.Lightning }, [nameof(Zap)] = new[] { OrbKind.Lightning },
+        [nameof(Chill)] = new[] { OrbKind.Frost }, [nameof(ColdSnap)] = new[] { OrbKind.Frost }, [nameof(Coolheaded)] = new[] { OrbKind.Frost },
+        [nameof(Glacier)] = new[] { OrbKind.Frost, OrbKind.Frost },
+        [nameof(Fusion)] = new[] { OrbKind.Plasma }, [nameof(Ignition)] = new[] { OrbKind.Plasma },
+        [nameof(MeteorStrike)] = new[] { OrbKind.Plasma, OrbKind.Plasma, OrbKind.Plasma },
+        [nameof(Glasswork)] = new[] { OrbKind.Glass }, [nameof(Spinner)] = new[] { OrbKind.Glass },
+        [nameof(Null)] = new[] { OrbKind.Dark }, [nameof(ShadowShield)] = new[] { OrbKind.Dark }, [nameof(Darkness)] = new[] { OrbKind.Dark },
+        [nameof(Rainbow)] = new[] { OrbKind.Lightning, OrbKind.Frost, OrbKind.Dark },
     };
 
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
     private static readonly Dictionary<string, OrbKind> RepeatChannels = new()
     {
-        ["ConsumingShadow"] = OrbKind.Dark, ["Hibernate"] = OrbKind.Frost, ["IceLance"] = OrbKind.Frost,
-        ["Refract"] = OrbKind.Glass, ["Chaos"] = OrbKind.Unknown,
+        [nameof(ConsumingShadow)] = OrbKind.Dark, [nameof(Hibernate)] = OrbKind.Frost, [nameof(IceLance)] = OrbKind.Frost,
+        [nameof(Refract)] = OrbKind.Glass, [nameof(Chaos)] = OrbKind.Unknown,
     };
 
     /// <summary>Your powers a card can give itself that the simulator models (PowerVar&lt;T&gt; on the card).</summary>
-    private static readonly HashSet<string> SelfPowers = new() { "PlatingPower", "JuggernautPower", "FeelNoPainPower", "ThornsPower", "FlameBarrierPower" };
+    private static readonly HashSet<string> SelfPowers = new() { nameof(PlatingPower), nameof(JuggernautPower), nameof(FeelNoPainPower), nameof(ThornsPower), nameof(FlameBarrierPower) };
 
     // ------------------------------------------------------------------ state
 
@@ -122,22 +124,22 @@ public static class SimAdapter
         {
             switch (pw.GetType().Name)
             {
-                case "JuggernautPower": p.Juggernaut += pw.Amount; break;
-                case "PlatingPower": p.Plating += pw.Amount; break;
-                case "FeelNoPainPower": p.FeelNoPain += pw.Amount; break;
-                case "HailstormPower":
+                case nameof(JuggernautPower): p.Juggernaut += pw.Amount; break;
+                case nameof(PlatingPower): p.Plating += pw.Amount; break;
+                case nameof(FeelNoPainPower): p.FeelNoPain += pw.Amount; break;
+                case nameof(HailstormPower):
                     p.Hailstorm += pw.Amount;
                     p.HailstormFrostNeeded = Sts2State.Var(pw, "FrostOrbs", 1);
                     break;
-                case "TheBombPower":
+                case nameof(TheBombPower):
                     if (pw.Amount <= 1) p.TheBombDamage += Sts2State.Var(pw, "Damage");
                     break;
-                case "ConsumingShadowPower": p.ConsumingShadow += pw.Amount; break;
-                case "ThornsPower": p.Thorns += pw.Amount; break;
-                case "FlameBarrierPower": p.FlameBarrier += pw.Amount; break;
-                case "ReflectPower": p.Reflect = true; break;
-                case "BufferPower": p.Buffer += pw.Amount; break;
-                case "EnvenomPower": p.Envenom += pw.Amount; break;
+                case nameof(ConsumingShadowPower): p.ConsumingShadow += pw.Amount; break;
+                case nameof(ThornsPower): p.Thorns += pw.Amount; break;
+                case nameof(FlameBarrierPower): p.FlameBarrier += pw.Amount; break;
+                case nameof(ReflectPower): p.Reflect = true; break;
+                case nameof(BufferPower): p.Buffer += pw.Amount; break;
+                case nameof(EnvenomPower): p.Envenom += pw.Amount; break;
             }
             var type = pw.GetType().Name;
             if (pw.Amount > 0 && BlockableDebuffs.Contains(type)) p.DebuffBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), pw.Amount));
@@ -148,24 +150,24 @@ public static class SimAdapter
         {
             switch (r.GetType().Name)
             {
-                case "Orichalcum":
-                case "FakeOrichalcum": p.OrichalcumBlock += Sts2State.Var(r, "Block"); break;
-                case "CloakClasp": p.CloakClaspPerCard += Sts2State.Var(r, "Block"); break;
-                case "RippleBasin": p.RippleBasinBlock += Sts2State.Var(r, "Block"); break;
-                case "ScreamingFlagon": p.ScreamingFlagonDamage += Sts2State.Var(r, "Damage"); break;
-                case "StoneCalendar":
+                case nameof(Orichalcum):
+                case nameof(FakeOrichalcum): p.OrichalcumBlock += Sts2State.Var(r, "Block"); break;
+                case nameof(CloakClasp): p.CloakClaspPerCard += Sts2State.Var(r, "Block"); break;
+                case nameof(RippleBasin): p.RippleBasinBlock += Sts2State.Var(r, "Block"); break;
+                case nameof(ScreamingFlagon): p.ScreamingFlagonDamage += Sts2State.Var(r, "Damage"); break;
+                case nameof(StoneCalendar):
                     if (Sts2State.TurnNumber == Sts2State.Var(r, "DamageTurn", 7)) p.StoneCalendarDamage += Sts2State.Var(r, "Damage");
                     break;
-                case "CharonsAshes": p.CharonsAshesDamage += Sts2State.Var(r, "Damage"); break;
-                case "ForgottenSoul": p.ForgottenSoulDamage += Sts2State.Var(r, "Damage"); break;
-                case "ParryingShield":
+                case nameof(CharonsAshes): p.CharonsAshesDamage += Sts2State.Var(r, "Damage"); break;
+                case nameof(ForgottenSoul): p.ForgottenSoulDamage += Sts2State.Var(r, "Damage"); break;
+                case nameof(ParryingShield):
                     p.ParryingShieldBlock = Sts2State.Var(r, "Block");
                     p.ParryingShieldDamage += Sts2State.Var(r, "Damage");
                     break;
-                case "TungstenRod": p.TungstenRod += Sts2State.Var(r, "HpLossReduction", 1); break;
-                case "SneckoSkull": p.PoisonBonus += Sts2State.Var(r, "PoisonPower", 1); break;
-                case "GoldPlatedCables": p.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
-                case "BeatingRemnant":
+                case nameof(TungstenRod): p.TungstenRod += Sts2State.Var(r, "HpLossReduction", 1); break;
+                case nameof(SneckoSkull): p.PoisonBonus += Sts2State.Var(r, nameof(PoisonPower), 1); break;
+                case nameof(GoldPlatedCables): p.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
+                case nameof(BeatingRemnant):
                 {
                     var cap = Sts2State.Var(r, "MaxHpLoss", int.MaxValue);
                     var used = (int)Sts2State.Private(r, "DamageReceivedThisTurn", 0m);
@@ -184,7 +186,7 @@ public static class SimAdapter
             var type = card.GetType().Name;
             if (BlockableHandCards.Contains(type)) p.HandBlockable.Add((SafeCardTitle(card), Sts2State.Var(card, "Damage")));
             else if (UnblockableHandCards.Contains(type)) p.HandUnblockable.Add((SafeCardTitle(card), Sts2State.Var(card, "HpLoss")));
-            else if (type == "Regret") p.RegretCards++;
+            else if (type == nameof(Regret)) p.RegretCards++;
         }
 
         p.OrbCapacity = pcs.OrbQueue.Capacity;
@@ -310,20 +312,20 @@ public static class SimAdapter
 
         // Orbs: evoke cards, then channels.
         var focus = me.Creature.GetPower<FocusPower>()?.Amount ?? 0;
-        var lightningBonus = me.Relics.Where(r => r.GetType().Name == "InfusedCore").Sum(r => Sts2State.Var(r, "ExtraDamage"));
+        var lightningBonus = me.Relics.Where(r => r.GetType().Name == nameof(InfusedCore)).Sum(r => Sts2State.Var(r, "ExtraDamage"));
         for (var i = 0; i < plays; i++)
         {
             switch (name)
             {
-                case "Dualcast": play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = 2 }); break;
-                case "Quadcast": play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 4)) }); break;
-                case "MultiCast":
+                case nameof(Dualcast): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = 2 }); break;
+                case nameof(Quadcast): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 4)) }); break;
+                case nameof(MultiCast):
                 {
                     var x = SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0);
                     if (x > 0) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = x });
                     break;
                 }
-                case "Shatter": play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeAllTwice }); break;
+                case nameof(Shatter): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeAllTwice }); break;
             }
             if (Channels.TryGetValue(name, out var kinds))
             {
@@ -333,7 +335,7 @@ public static class SimAdapter
             {
                 for (var r = 0; r < Math.Max(1, Sts2State.Var(card, "Repeat", 1)); r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(rk, focus, lightningBonus) });
             }
-            else if (name == "Tempest")
+            else if (name == nameof(Tempest))
             {
                 var x = SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0); // Tempest+ channels one more
                 for (var r = 0; r < x; r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
@@ -350,14 +352,14 @@ public static class SimAdapter
             if (amount <= 0) continue;
             switch (power)
             {
-                case "PlatingPower": play.AddPlating += amount; break;
-                case "JuggernautPower": play.AddJuggernaut += amount; break;
-                case "FeelNoPainPower": play.AddFeelNoPain += amount; break;
-                case "ThornsPower": play.AddThorns += amount; break;
-                case "FlameBarrierPower": play.AddFlameBarrier += amount; break;
-                case "PoisonPower":
+                case nameof(PlatingPower): play.AddPlating += amount; break;
+                case nameof(JuggernautPower): play.AddJuggernaut += amount; break;
+                case nameof(FeelNoPainPower): play.AddFeelNoPain += amount; break;
+                case nameof(ThornsPower): play.AddThorns += amount; break;
+                case nameof(FlameBarrierPower): play.AddFlameBarrier += amount; break;
+                case nameof(PoisonPower):
                     // Snecko Skull adds to every application (ModifyPowerAmountGivenAdditive).
-                    amount += plays * me.Relics.Where(r => r.GetType().Name == "SneckoSkull").Sum(r => Sts2State.Var(r, "PoisonPower", 1));
+                    amount += plays * me.Relics.Where(r => r.GetType().Name == nameof(SneckoSkull)).Sum(r => Sts2State.Var(r, nameof(PoisonPower), 1));
                     if (card.TargetType == TargetType.AnyEnemy)
                     {
                         play.Poison += amount;
@@ -412,8 +414,8 @@ public static class SimAdapter
             if (weak)
             {
                 m = 0.75m;
-                if (me.Relics.Any(r => r.GetType().Name == "PaperKrane")) m -= 0.15m;
-                if (e.Powers.Any(p => p.GetType().Name == "DebilitatePower")) m -= 1m - m;
+                if (me.Relics.Any(r => r.GetType().Name == nameof(PaperKrane))) m -= 0.15m;
+                if (e.Powers.Any(p => p.GetType().Name == nameof(DebilitatePower))) m -= 1m - m;
             }
             var hits = new List<int>();
             foreach (var attack in e.Monster!.NextMove.Intents.OfType<AttackIntent>())
