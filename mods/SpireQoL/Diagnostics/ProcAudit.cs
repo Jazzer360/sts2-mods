@@ -14,6 +14,9 @@ using SpireQoL.Features;
 using SpireQoL.Procs;
 using SpireQoL.Sim;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Commands;
+using MegaCrit.Sts2.Core.GameActions;
+using MegaCrit.Sts2.Core.GameActions.Multiplayer;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -24,9 +27,12 @@ namespace SpireQoL.Diagnostics;
 /// Checks every card play against what the mod predicted, and logs mismatches to the game log
 /// (lines start with [SpireQoL] [audit]), so missing or wrong tag rules surface from real play.
 ///
-/// For each card you play (first play of its series, from the game's combat history), the window
-/// runs from just before the play is recorded (BeforeCardPlayed procs land first) until your next
-/// card play or the end of your turn. Compared:
+/// Each card you play is one PlayCardAction in the game's action queue: spending its cost, before-play
+/// procs, the card, after-play procs, exhausting or discarding it, and every draw or effect its hooks
+/// set off. Everything that happens while that action is running is attributed to the play: history
+/// entries (CombatHistory.Changed), relic and power flashes, and shuffles (an observe-only prefix on
+/// CardPileCmd.Shuffle). Potions and ending the turn are other actions, so they never mix in. When the
+/// action finishes (GameAction.AfterFinished) the play has fully resolved and is checked. Compared:
 ///  - Fired with no tab: a relic or power that flashed (RelicModel/PowerModel.Flashed).
 ///  - Relic tab that didn't fire: a predicted, uncrossed relic tab whose relic never flashed.
 ///  - Proc block: block you gained from anything but the card itself vs the block tabs (exact).
@@ -58,6 +64,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     public void Apply(Harmony harmony)
     {
+        // Observe-only: counts shuffles (the game keeps no history entry for them). Doesn't change the game.
+        harmony.Patch(AccessTools.Method(typeof(CardPileCmd), nameof(CardPileCmd.Shuffle), new[] { typeof(PlayerChoiceContext), typeof(Player) }),
+            prefix: new HarmonyMethod(typeof(ProcAudit), nameof(ShufflePrefix)));
     }
 
     public void Attach(OverlayHost host)
@@ -70,27 +79,26 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public required string CardName;
         public required IReadOnlyList<TabSpec> Predicted;
         public required PlayFacts? Facts;
-        public required int From { get; set; }
-        /// <summary>Another play finished after this card's tabs were last computed (played quickly): not checked.</summary>
-        public string? StaleBecause;
-        /// <summary>Earliest possible start; when below From, Close picks the best fit in between.</summary>
-        public int FromMin = -1;
+        /// <summary>History entries the play's action added (see PlayRecord), and their span for reports.</summary>
+        public required List<int> Indices;
+        public required int From;
+        public required int To;
         /// <summary>History index of this play's own CardPlayStartedEntry.</summary>
         public required int Start;
-        /// <summary>Exclusive end (the next play's window start), or -1 for "up to now".</summary>
-        public int To = -1;
+        public required List<(int At, AbstractModel Model)> Flashes;
+        public int Shuffles;
+        /// <summary>Another play finished after this card's tabs were last computed (played quickly): not checked.</summary>
+        public string? StaleBecause;
         /// <summary>Game state when the play started (before its effects), for reports.</summary>
         public IReadOnlyDictionary<string, string>? Before;
         /// <summary>Frames between the card's last frame in hand and its play starting.</summary>
         public long Lag;
-        /// <summary>How the window's start was chosen (for reports).</summary>
-        public string Split = "";
         /// <summary>The play's target (single-target cards).</summary>
         public Creature? Target;
-        /// <summary>The simulator's state rebuilt from the game once the play had fully resolved.</summary>
+        /// <summary>The simulator's state rebuilt from the game when the play's action finished.</summary>
         public SimState? After;
         public Dictionary<Creature, int>? AfterIds;
-        /// <summary>Why the after-play state wasn't captured (another play started first...).</summary>
+        /// <summary>Why the after-play state wasn't captured.</summary>
         public string? AfterSkipped;
     }
 
@@ -139,8 +147,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         ["SleightOfFleshPower"] = new[] { Effect.Power }, ["MasterPlannerPower"] = new[] { Effect.Power }, ["PaleBlueDotPower"] = new[] { Effect.Power },
     };
 
-    private Window? _open;
-    private int _seen;
     private CombatHistory? _history;
     private readonly HashSet<AbstractModel> _subscribed = new(ReferenceEqualityComparer.Instance);
 
@@ -154,15 +160,46 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private readonly List<string> _turnPlays = new();
     private int _turnPlaysTurn = -1;
 
+    // ------------------------------------------------------------------ attribution to play actions
+
+    /// <summary>
+    /// One card play as the game ran it: a PlayCardAction, from spending its cost to its last
+    /// after-play effect (exhaust, the card moving to its pile, draws its hooks set off). Everything
+    /// that happened while it was the running action is attributed to it: history entries (by the
+    /// history's Changed event), relic and power flashes, and shuffles (CardPileCmd.Shuffle prefix).
+    /// </summary>
+    private sealed class PlayRecord
+    {
+        public required GameAction Action;
+        public Creature? Target;
+        public IReadOnlyDictionary<string, string>? Before;
+        public readonly List<int> Indices = new();
+        public readonly List<(int At, AbstractModel Model)> Flashes = new();
+        public int Shuffles;
+        public SimState? After;
+        public Dictionary<Creature, int>? AfterIds;
+        public string? AfterSkipped;
+    }
+
+    private static ProcAudit? _instance;
+    private ActionExecutor? _executor;
+    private PlayRecord? _current;
+    private readonly Dictionary<GameAction, PlayRecord> _running = new(ReferenceEqualityComparer.Instance);
+    private readonly Queue<PlayRecord> _finished = new();
+    private int _attributed;
+
     public void OnFrame(OverlayHost host)
     {
+        _instance = this;
         var me = Sts2State.Me;
         var cs = Sts2State.Combat;
         if (me == null || cs == null)
         {
-            Close(null);
+            _finished.Clear();
+            _running.Clear();
+            _current = null;
             Summarize();
-            _history = null;
+            DetachHistory();
             return;
         }
 
@@ -170,75 +207,146 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (!ReferenceEquals(history, _history))
         {
             Summarize();
+            DetachHistory();
             _history = history;
-            _seen = history.Entries.Count();
-            _open = null;
-            _flashes.Clear();
+            _attributed = history.Entries.Count();
+            _history.Changed += OnHistoryChanged;
+        }
+        var executor = RunManager.Instance?.ActionExecutor;
+        if (executor != null && !ReferenceEquals(executor, _executor))
+        {
+            if (_executor != null) _executor.BeforeActionExecuted -= OnBeforeAction;
+            _executor = executor;
+            _executor.BeforeActionExecuted += OnBeforeAction;
         }
 
         Subscribe(me, cs);
-        if (!ReferenceEquals(_endTurnSource, CombatManager.Instance))
-        {
-            _endTurnSource = CombatManager.Instance;
-            CombatManager.Instance.PlayerEndedTurn += OnPlayerEndedTurn;
-        }
-
-        var count = history.Entries.Count(); // list-backed: O(1)
-        var list = count > _seen ? history.Entries.ToList() : null;
-        for (var i = _seen; list != null && i < count; i++)
-        {
-            // Auto-plays (Catastrophe, Mayhem...) belong to the window of whatever played them.
-            if (list[i] is CardPlayStartedEntry { CardPlay: var play } && play.Card.Owner == me && play.IsFirstInSeries && !play.IsAutoPlay)
-            {
-                var from = SplitBefore(list, i, me, out var split, out var fromMin, out var boundLo, out var boundHi);
-                Close(me, boundLo, boundHi, from);
-                // The tabs it had when it was last in your hand: a play can start several frames
-                // after the card leaves the hand (the action queue was busy).
-                var predicted = _ctx.Decor.LastInHand.TryGetValue(play.Card, out var tabs) ? tabs : Array.Empty<TabSpec>();
-                ProcIndicatorsFeature.LastFacts.TryGetValue(play.Card, out var facts);
-                _open = new Window
-                {
-                    Card = play.Card, CardName = SafeTitle(play.Card), Predicted = predicted, Facts = facts,
-                    From = from, FromMin = fromMin, Start = i, Split = split,
-                    Lag = _ctx.Decor.LastSeenFrame.TryGetValue(play.Card, out var seen) ? _ctx.Decor.Frame - seen : -1,
-                    Before = CaptureBefore(),
-                    Target = play.Target,
-                    StaleBecause = StaleBecause(list, play.Card, i, me),
-                };
-            }
-        }
-        _seen = count;
-        _countAtFrame[_ctx.Decor.Frame] = count;
-        WatchPiles(me);
-        CaptureAfter(me, cs, list);
+        _countAtFrame[_ctx.Decor.Frame] = history.Entries.Count();
         if (_countAtFrame.Count > 600) _countAtFrame.Remove(_countAtFrame.Keys.Min());
 
-        if (_open != null && !Sts2State.IsPlayerTurn)
-        {
-            _open.To = count;
-            Close(me);
-        }
+        while (_finished.Count > 0) Check(_finished.Dequeue(), me);
     }
 
-    // Flashes with the history size when they happened, so they're split between plays the same
-    // way history entries are.
-    private readonly List<(int At, AbstractModel Model)> _flashes = new();
+    private void DetachHistory()
+    {
+        if (_history != null) _history.Changed -= OnHistoryChanged;
+        _history = null;
+    }
 
-    // End turn: the last play's window ends here, before end-of-turn effects (orb passives,
-    // Plating, Ethereal exhausts...), which otherwise land in it.
-    private CombatManager? _endTurnSource;
-
-    private void OnPlayerEndedTurn(Player player, bool _)
+    private void OnBeforeAction(GameAction action)
     {
         try
         {
-            if (_open == null || _history == null || player != Sts2State.Me) return;
-            _open.To = _history.Entries.Count();
-            Close(player);
+            if (action is not PlayCardAction play || play.Player != Sts2State.Me)
+            {
+                _current = null; // potions, end of turn, other players: not a play of yours
+                return;
+            }
+            if (!_running.TryGetValue(action, out var rec))
+            {
+                rec = new PlayRecord { Action = action, Target = play.Target, Before = CaptureBefore() };
+                _running[action] = rec;
+                action.AfterFinished += OnActionFinished;
+                action.BeforeCancelled += OnActionCancelled;
+                action.BeforePausedForPlayerChoice += OnActionPaused;
+            }
+            // Also called again when it resumes after a choice (Burning Pact's pick).
+            _current = rec;
         }
         catch (Exception ex)
         {
-            ModEntry.Log.Warn($"[audit] end-turn close failed: {ex.Message}");
+            ModEntry.Log.Warn($"[audit] couldn't track an action: {ex.Message}");
+        }
+    }
+
+    private void OnActionPaused(GameAction action)
+    {
+        OnHistoryChanged();
+        if (_current != null && ReferenceEquals(_current.Action, action)) _current = null;
+    }
+
+    private void OnActionCancelled(GameAction action)
+    {
+        Unhook(action);
+        _running.Remove(action);
+        if (_current != null && ReferenceEquals(_current.Action, action)) _current = null;
+    }
+
+    private void Unhook(GameAction action)
+    {
+        action.AfterFinished -= OnActionFinished;
+        action.BeforeCancelled -= OnActionCancelled;
+        action.BeforePausedForPlayerChoice -= OnActionPaused;
+    }
+
+    private void OnActionFinished(GameAction action)
+    {
+        try
+        {
+            OnHistoryChanged();
+            Unhook(action);
+            if (!_running.Remove(action, out var rec)) return;
+            if (_current != null && ReferenceEquals(_current.Action, action)) _current = null;
+            // The play has fully resolved and nothing else has run: the state it left.
+            var me = Sts2State.Me;
+            var cs = Sts2State.Combat;
+            if (me != null && cs != null)
+            {
+                try
+                {
+                    rec.After = SimAdapter.Build(me, cs, out var ids);
+                    rec.AfterIds = ids;
+                }
+                catch (Exception ex)
+                {
+                    rec.AfterSkipped = $"couldn't read the state: {ex.Message}";
+                }
+            }
+            _finished.Enqueue(rec);
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log.Warn($"[audit] couldn't finish an action: {ex.Message}");
+        }
+    }
+
+    /// <summary>New history entries belong to the play action running when they were added.</summary>
+    private void OnHistoryChanged()
+    {
+        if (_history == null) return;
+        var count = _history.Entries.Count();
+        if (count < _attributed) _attributed = count; // cleared
+        if (_current != null)
+            for (var i = _attributed; i < count; i++) _current.Indices.Add(i);
+        _attributed = count;
+    }
+
+    private void OnRelicFlashed(RelicModel relic, IEnumerable<Creature> _) => Flash(relic);
+
+    private void OnPowerFlashed(PowerModel power) => Flash(power);
+
+    private void Flash(AbstractModel m)
+    {
+        if (_history == null || _current == null) return;
+        OnHistoryChanged();
+        _current.Flashes.Add((_history.Entries.Count(), m));
+    }
+
+    /// <summary>
+    /// Harmony prefix on CardPileCmd.Shuffle (observes only; the game keeps no history entry for a
+    /// shuffle): counts it for the play running now.
+    /// </summary>
+    private static void ShufflePrefix(Player player)
+    {
+        try
+        {
+            var a = _instance;
+            if (a?._current == null || player != Sts2State.Me || CombatManager.Instance.IsOverOrEnding) return;
+            a._current.Shuffles++;
+        }
+        catch
+        {
+            // diagnostics only
         }
     }
 
@@ -260,175 +368,22 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         return null;
     }
 
-    private void OnRelicFlashed(RelicModel relic, IEnumerable<Creature> _) => Flash(relic);
-
-    private void OnPowerFlashed(PowerModel power) => Flash(power);
-
-    private void Flash(AbstractModel m)
-    {
-        if (_history == null) return;
-        _flashes.Add((_history.Entries.Count(), m));
-        if (_flashes.Count > 400) _flashes.RemoveRange(0, 200);
-    }
-
     /// <summary>
-    /// Where the play starting at history index <paramref name="start"/> begins. A play runs:
-    /// energy/stars spent → "before play" procs (Intimidating Helmet, Spirit of Ash, Pen Nib...) →
-    /// play started → the card → play finished → "after play" procs (counters, Tuning Fork...).
-    /// Between the previous play's finish and this start, the previous card's after-play procs come
-    /// first and this card's before-play procs last. Spending energy or stars marks the split
-    /// exactly; for a 0-cost card the split is the point that best fits the previous card's tabs.
+    /// The window for reports: the history around the play, each entry with its position, in our
+    /// own words (the game's draw text says "discarded"), marked when it isn't this play's, and the
+    /// relic and power flashes at their positions.
     /// </summary>
-    private int SplitBefore(List<CombatHistoryEntry> list, int start, Player me, out string how, out int fromMin, out int boundLo, out int boundHi)
-    {
-        how = "";
-        fromMin = -1;
-        boundLo = boundHi = -1;
-        var floor = _open != null ? _open.Start + 1 : 0;
-        var gapStart = start;
-        // A potion's entry is written after its effects, so nothing at or before it is this card's.
-        while (gapStart > floor && list[gapStart - 1] is not (CardPlayFinishedEntry or CardPlayStartedEntry or MonsterPerformedMoveEntry or PotionUsedEntry))
-            gapStart--;
-
-        for (var k = gapStart; k < start; k++)
-        {
-            if (list[k].Actor == me.Creature && list[k] is EnergySpentEntry or StarsModifiedEntry { Amount: < 0 })
-            {
-                how = $"at its energy/star spend (gap {gapStart}..{start})";
-                boundLo = boundHi = k;
-                return k;
-            }
-        }
-
-        if (_open == null)
-        {
-            // First play this turn with no cost (Snecko Eye, free cards): the gap holds
-            // start-of-turn effects, then this card's before-play procs, with nothing marking the
-            // split. Decided when the play is checked: the start that best fits its own tabs.
-            how = $"first play, no cost: best fit in gap {gapStart}..{start}";
-            fromMin = gapStart;
-            return start;
-        }
-
-        // 0-cost card after another play: the gap holds the previous card's after-play procs, then
-        // this card's before-play procs. The split is chosen when this card is checked too, as the
-        // point that best fits both cards' tabs together (ResolvePending).
-        how = $"0-cost after another play: joint fit in gap {gapStart}..{start}";
-        boundLo = gapStart;
-        boundHi = start;
-        return start;
-    }
-
-    // A checked play whose end is still open: its boundary with the next play is somewhere in
-    // [_pendLo, _pendHi], decided once the next play is complete.
-    private Window? _pending;
-    private int _pendLo, _pendHi;
-
-    /// <summary>
-    /// Where <paramref name="w"/>'s window over [from, to) ends when a potion was used during it. The
-    /// game writes the potion's entry after its effects (a Power Potion's card, a Lucky Tonic's
-    /// Buffer), so they sit between the card's last play finishing and that entry, after the card's
-    /// own after-play procs. The end is the point in that stretch that best fits the card's tabs.
-    /// </summary>
-    private int PotionCut(Window w, int from, int to, List<CombatHistoryEntry> hist, Player me)
-    {
-        var potion = -1;
-        for (var k = Math.Max(from, w.Start + 1); k < to; k++)
-        {
-            if (hist[k] is PotionUsedEntry)
-            {
-                potion = k;
-                break;
-            }
-        }
-        if (potion < 0) return to;
-        var lo = potion;
-        while (lo > w.Start + 1 && hist[lo - 1] is not (CardPlayFinishedEntry or CardPlayStartedEntry))
-            lo--;
-        var best = potion;
-        var bestIssues = int.MaxValue;
-        for (var k = potion; k >= Math.Max(lo, from); k--)
-        {
-            try
-            {
-                var n = Compare(w, me, hist.GetRange(from, k - from), FlashesIn(from, k), out _).Count;
-                if (n < bestIssues)
-                {
-                    bestIssues = n;
-                    best = k;
-                }
-            }
-            catch
-            {
-                // keep the current best
-            }
-        }
-        return best;
-    }
-
-    /// <summary>Issues for <paramref name="w"/> over history [from, to) (to stops before a potion's effects).</summary>
-    private int IssueCount(Window w, int from, int to, List<CombatHistoryEntry> hist, Player me)
-    {
-        try
-        {
-            to = PotionCut(w, from, Math.Min(to, hist.Count), hist, me);
-            return Compare(w, me, hist.GetRange(from, Math.Max(0, to - from)), FlashesIn(from, to), out _).Count;
-        }
-        catch
-        {
-            return 1000;
-        }
-    }
-
-    /// <summary>
-    /// Decides the pending boundary between the previous play and <paramref name="next"/>: the split
-    /// with the fewest issues for both together (ties: the gap goes to the previous play), then
-    /// reports the previous play.
-    /// </summary>
-    private void ResolvePending(Window next, int nextTo, List<CombatHistoryEntry> hist, Player me)
-    {
-        var p = _pending!;
-        _pending = null;
-        var best = _pendHi;
-        var bestIssues = int.MaxValue;
-        var tried = new List<string>();
-        for (var k = _pendHi; k >= _pendLo; k--)
-        {
-            var a = IssueCount(p, p.From, k, hist, me);
-            var b = IssueCount(next, k, nextTo, hist, me);
-            tried.Add($"{k}: {a}+{b}");
-            if (a + b < bestIssues)
-            {
-                bestIssues = a + b;
-                best = k;
-            }
-        }
-        p.To = best;
-        p.Split += $"; ended at {best} (joint fit with {next.CardName}; split: issues this+next = {string.Join(", ", tried)})";
-        next.From = best;
-        next.Split += $": start {best} (joint fit with {p.CardName})";
-        Report(p, me);
-    }
-
-    /// <summary>
-    /// The window for reports: every history entry from a little before it to a little after, with
-    /// its position, in our own words (the game's draw text says "discarded"), the relic and power
-    /// flashes at their positions, and markers for the window's start and end and the play's start.
-    /// </summary>
-    private List<string> WindowLines(Window w, List<CombatHistoryEntry> hist, Player me)
+    private static List<string> WindowLines(Window w, List<CombatHistoryEntry> hist, Player me)
     {
         var lines = new List<string>();
+        var mine = w.Indices.ToHashSet();
         var from = Math.Max(0, w.From - 3);
-        var to = Math.Min(hist.Count, (w.To >= 0 ? w.To : hist.Count) + 3);
-        var flashes = _flashes.Where(x => x.At > from && x.At <= to).ToList();
+        var to = Math.Min(hist.Count, w.To + 3);
         for (var i = from; i <= to; i++)
         {
-            if (i == w.From) lines.Add("── window start");
-            if (i == (w.To >= 0 ? w.To : hist.Count)) lines.Add("── window end");
-            foreach (var fl in flashes.Where(x => x.At == i)) lines.Add($"   ⚡ {fl.Model.GetType().Name} flashed");
+            foreach (var fl in w.Flashes.Where(x => x.At == i)) lines.Add($"   ⚡ {fl.Model.GetType().Name} flashed");
             if (i >= to) break;
-            var inside = i >= w.From && i < (w.To >= 0 ? w.To : hist.Count);
-            lines.Add($"{(inside ? "" : "(outside) ")}#{i} {Describe(hist[i], me)}");
+            lines.Add($"{(mine.Contains(i) ? "" : "(not this play) ")}#{i} {Describe(hist[i], me)}");
         }
         return lines;
     }
@@ -477,9 +432,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
-    private List<AbstractModel> FlashesIn(int from, int to)
-        => _flashes.Where(x => x.At > from && x.At <= to).Select(x => x.Model).ToList();
-
     private void Subscribe(Player me, ICombatState cs)
     {
         foreach (var r in me.Relics)
@@ -495,72 +447,38 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
-    private void Close(Player? me, int nextLo = -1, int nextHi = -1, int nextFrom = -1)
-    {
-        var w = _open;
-        _open = null;
-        if (w is { After: null, AfterSkipped: null }) w.AfterSkipped = "another play or the end of turn came before the play had fully resolved";
-        if (me == null || _history == null)
-        {
-            _pending = null;
-            return;
-        }
-        if (w == null) return;
-        try
-        {
-            var hist = _history.Entries.ToList();
-            var provisionalTo = nextFrom >= 0 ? nextFrom : (w.To >= 0 ? w.To : hist.Count);
-            if (_pending != null) ResolvePending(w, provisionalTo, hist, me);
-            if (nextLo >= 0 && nextHi > nextLo)
-            {
-                _pending = w;
-                _pendLo = nextLo;
-                _pendHi = nextHi;
-                return;
-            }
-            if (nextFrom >= 0) w.To = nextFrom;
-        }
-        catch (Exception ex)
-        {
-            ModEntry.Log.Warn($"[audit] couldn't split plays: {ex.Message}");
-        }
-        Report(w, me);
-    }
-
-    private void Report(Window w, Player me)
+    /// <summary>Checks one finished play of yours (see PlayRecord) and logs and reports what didn't match.</summary>
+    private void Check(PlayRecord rec, Player me)
     {
         if (_history == null) return;
+        var hist = _history.Entries.ToList();
+        var indices = rec.Indices.Where(i => i < hist.Count).ToList();
+        var start = indices.FirstOrDefault(i => hist[i] is CardPlayStartedEntry { CardPlay: var p } && p.Card.Owner == me && p.IsFirstInSeries && !p.IsAutoPlay, -1);
+        if (start < 0) return; // nothing was played (the card couldn't be played after all)
+        var card = ((CardPlayStartedEntry)hist[start]).CardPlay.Card;
+        var predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs : Array.Empty<TabSpec>();
+        ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts);
+        var w = new Window
+        {
+            Card = card, CardName = SafeTitle(card), Predicted = predicted, Facts = facts,
+            Start = start, From = indices.Min(), To = indices.Max() + 1, Indices = indices,
+            Flashes = rec.Flashes, Shuffles = rec.Shuffles,
+            Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
+            Before = rec.Before, Target = rec.Target,
+            After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped,
+            StaleBecause = StaleBecause(hist, card, start, me),
+        };
+        Report(w, me, hist);
+    }
+
+    private void Report(Window w, Player me, List<CombatHistoryEntry> hist)
+    {
         try
         {
-            var hist = _history.Entries.ToList();
-            var to = PotionCut(w, w.From, w.To >= 0 ? Math.Min(w.To, hist.Count) : hist.Count, hist, me);
-            if (w.FromMin >= 0 && w.FromMin < w.From)
-            {
-                var best = w.From;
-                var bestIssues = int.MaxValue;
-                for (var k = w.From; k >= w.FromMin; k--)
-                {
-                    try
-                    {
-                        var n = Compare(w, me, hist.GetRange(k, to - k), FlashesIn(k, to), out _).Count;
-                        if (n < bestIssues)
-                        {
-                            bestIssues = n;
-                            best = k;
-                        }
-                    }
-                    catch
-                    {
-                        // keep the current best
-                    }
-                }
-                w.From = best;
-                w.Split += $": chose {best}";
-            }
-            var entries = hist.GetRange(w.From, Math.Max(0, to - w.From));
-            w.To = to;
-            var issues = Compare(w, me, entries, FlashesIn(w.From, to), out var model);
-            ShuffleIssues(w, me, entries, FlashesIn(w.From, to), w.From, to, issues, model);
+            var entries = w.Indices.Select(i => hist[i]).ToList();
+            var flashed = w.Flashes.Select(x => x.Model).ToList();
+            var issues = Compare(w, me, entries, flashed, out var model);
+            ShuffleIssues(w, me, entries, flashed, issues, model);
             AfterPlayIssues(w, entries, issues, model);
             if (w.StaleBecause != null && issues.Count > 0)
             {
@@ -570,7 +488,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             if (w.Facts?.SimPending == true)
             {
-                // The simulator hadn't reached it yet: its simulator tabs may be missing.
+                // Its simulation was still running when the frame stopped waiting: its simulator tabs may be missing.
                 var simOnly = issues.Where(x => x.Contains("ImbalancedPower") || x.Contains("AsleepPower") || x.Contains("SlumberPower")).ToList();
                 foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
                 issues.RemoveAll(simOnly.Contains);
@@ -659,7 +577,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 $"\nFrom the card's last frame in hand to its play starting: {lag}" +
                 $"\nExpected from the card itself: {(w.Facts != null ? Snapshot.FactsLine(w.Facts) : "no facts")}" +
                 $"\nTabs hidden by settings: {Hidden(w)}" +
-                $"\nWindow: history {w.From}..{(w.To >= 0 ? w.To : w.From + windowSize)} ({windowSize} entries), play started at {w.Start}; start chosen {w.Split}",
+                $"\nPlay: {windowSize} history entries from its action (span {w.From}..{w.To}), play started at {w.Start}; shuffles {w.Shuffles}",
                 extra);
         }
     }
@@ -811,66 +729,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     // ------------------------------------------------------------------ shuffles
 
-    // The game keeps no history entry for a shuffle. CardPileCmd.Shuffle moves the discard pile into
-    // the empty draw pile with silent removals (no discard-pile event) and normal adds (draw-pile
-    // CardAdded). So a card added to the draw pile that was in the discard pile at its last event,
-    // and isn't there any more, came over silently: a shuffle. One per batch.
-    private CardPile? _drawPile, _discardPile;
-    private HashSet<CardModel> _discardSeen = new(ReferenceEqualityComparer.Instance);
-    private bool _inShuffle;
-    private readonly List<int> _shuffleAts = new();
-
-    private void WatchPiles(Player me)
-    {
-        var pcs = me.PlayerCombatState;
-        if (pcs == null) return;
-        if (!ReferenceEquals(pcs.DrawPile, _drawPile))
-        {
-            if (_drawPile != null) _drawPile.CardAdded -= OnDrawPileAdded;
-            _drawPile = pcs.DrawPile;
-            _drawPile.CardAdded += OnDrawPileAdded;
-            _shuffleAts.Clear();
-        }
-        if (!ReferenceEquals(pcs.DiscardPile, _discardPile))
-        {
-            if (_discardPile != null) _discardPile.ContentsChanged -= OnDiscardChanged;
-            _discardPile = pcs.DiscardPile;
-            _discardPile.ContentsChanged += OnDiscardChanged;
-            OnDiscardChanged();
-        }
-    }
-
-    private void OnDiscardChanged()
-    {
-        if (_discardPile == null) return;
-        _discardSeen = new HashSet<CardModel>(_discardPile.Cards, ReferenceEqualityComparer.Instance);
-        _inShuffle = false;
-    }
-
-    private void OnDrawPileAdded(CardModel card)
-    {
-        try
-        {
-            if (_discardPile == null || _history == null) return;
-            if (!_discardSeen.Contains(card) || _discardPile.Cards.Contains(card)) return;
-            _discardSeen.Remove(card);
-            if (_inShuffle) return;
-            _inShuffle = true;
-            _shuffleAts.Add(_history.Entries.Count());
-            if (_shuffleAts.Count > 200) _shuffleAts.RemoveRange(0, 100);
-        }
-        catch
-        {
-            // diagnostics only
-        }
-    }
-
-    /// <summary>Shuffles during the play against PlayFacts.Shuffles (the Shuffle Warning and shuffle procs).</summary>
-    private void ShuffleIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, int from, int to, List<string> issues, List<string> model)
+    /// <summary>Shuffles during the play (CardPileCmd.Shuffle prefix) against PlayFacts.Shuffles (the Shuffle Warning and shuffle procs).</summary>
+    private static void ShuffleIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, List<string> model)
     {
         var f = w.Facts;
         if (f == null) return;
-        var shuffled = _shuffleAts.Any(a => a >= from && a < to);
+        var shuffled = w.Shuffles > 0;
         if (shuffled == f.Shuffles) return;
         var autoPlayed = entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me);
         var drawReactive = flashed.Any(m => DrawReactive.Contains(m.GetType().Name) || m.GetType().Name is "GremlinHorn" or "UnceasingTop");
@@ -887,47 +751,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     }
 
     // ------------------------------------------------------------------ state after the play
-
-    private static bool ActionsIdle()
-    {
-        try
-        {
-            var rm = RunManager.Instance;
-            return rm != null && !rm.ActionExecutor.IsRunning && rm.ActionQueueSet.IsEmpty;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// The first frame where the open play has finished and the game has nothing left to do (its
-    /// after-play procs, the card moving to its pile, Dark Embrace draws...): rebuild the simulator's
-    /// state from the game, for the after-play check.
-    /// </summary>
-    private void CaptureAfter(Player me, ICombatState cs, List<CombatHistoryEntry>? list)
-    {
-        var w = _open;
-        if (w == null || w.After != null || w.AfterSkipped != null || !Sts2State.IsPlayerTurn || !ActionsIdle()) return;
-        var hist = list ?? _history?.Entries.ToList();
-        if (hist == null) return;
-        var finished = false;
-        for (var k = w.Start + 1; k < hist.Count; k++)
-        {
-            if (hist[k] is CardPlayFinishedEntry { CardPlay: var p } && ReferenceEquals(p.Card, w.Card)) finished = true;
-        }
-        if (!finished) return;
-        try
-        {
-            w.After = SimAdapter.Build(me, cs, out var ids);
-            w.AfterIds = ids;
-        }
-        catch (Exception ex)
-        {
-            w.AfterSkipped = $"couldn't read the state: {ex.Message}";
-        }
-    }
 
     /// <summary>
     /// The state the play left against the simulator's prediction of it (see the class summary).

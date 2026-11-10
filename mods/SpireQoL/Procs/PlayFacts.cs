@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Orbs;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Models.Relics;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Game;
 
@@ -255,59 +256,56 @@ public sealed class PlayFacts
             RandomOutcome = cs.HittableEnemies.Count(e => e.IsAlive) > 1
                             && (evoked.Any(o => o is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
         };
-        facts.ResolveDraws(hand.Count, name == "Cleanse" ? Math.Max(0, drawPile - facts.ExhaustsOthers) : drawPile);
+        facts.ResolveDraws(hand.Count, drawPile, name == "Cleanse");
         return facts;
     }
 
     /// <summary>
-    /// Total draws (own + chained), the hand-size limit, draw blockers, and whether they shuffle.
-    /// Decompile v0.111.0: DarkEmbracePower/JossPaper.AfterCardExhausted, GamePiece/IronClub.AfterCardPlayed,
-    /// ViciousPower.AfterPowerAmountChanged, CentennialPuzzle.AfterDamageReceived; NoDrawPower and
-    /// Fiddle.ShouldDraw; CardPileCmd.DrawInternal (stops at MaxCardsInHand).
+    /// Total draws (own + chained), the hand limit, draw blockers, and whether they shuffle: the
+    /// game's numbers for PlayChain.Resolve (pure, tested offline). Sources read here: Dark Embrace,
+    /// Vicious, Joss Paper, Game Piece, Iron Club, Centennial Puzzle; No Draw and Fiddle block draws.
     /// </summary>
-    private void ResolveDraws(int handCount, int drawPile)
+    private void ResolveDraws(int handCount, int drawPile, bool fromDrawPile)
     {
         var me = Me;
-        var plays = Math.Max(1, Plays);
-        DrawsBlocked = me.Creature.Powers.Any(p => p.GetType().Name == "NoDrawPower")
-                       || me.Relics.Any(r => r.GetType().Name == "Fiddle");
-        var chained = 0;
-        foreach (var p in me.Creature.Powers)
+        var i = new PlayChain.DrawInputs
         {
-            switch (p.GetType().Name)
-            {
-                case "DarkEmbracePower": chained += p.Amount * TotalExhausts; break;
-                case "ViciousPower": chained += p.Amount * DebuffsLandingTotal(t => t == typeof(VulnerablePower)); break;
-            }
-        }
+            OwnDraws = OwnDraws,
+            Plays = Math.Max(1, Plays),
+            IsPower = Card.Type == CardType.Power,
+            Exhausts = TotalExhausts,
+            ExhaustedFromHand = fromDrawPile ? 0 : ExhaustsOthers,
+            ExhaustedFromDrawPile = fromDrawPile ? ExhaustsOthers : 0,
+            HandCount = handCount,
+            DrawPile = drawPile,
+            DiscardPile = Sts2State.DiscardPileCount(me),
+            VulnerableLandings = DebuffsLandingTotal(t => t == typeof(VulnerablePower)),
+            LosesHp = HpLoss > 0,
+            Blocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(r => r is Fiddle),
+            DarkEmbrace = me.Creature.GetPower<DarkEmbracePower>()?.Amount ?? 0,
+            Vicious = me.Creature.GetPower<ViciousPower>()?.Amount ?? 0,
+        };
         foreach (var r in me.Relics)
         {
-            switch (r.GetType().Name)
+            switch (r)
             {
-                case "JossPaper" when TotalExhausts > 0:
-                {
-                    var n = Sts2State.Var(r, "ExhaustAmount", 5);
-                    if (n > 0) chained += (Sts2State.Private(r, "CardsExhausted", 0) + TotalExhausts) / n;
+                case JossPaper:
+                    i.JossPaperCount = Sts2State.Private(r, "CardsExhausted", 0);
+                    i.JossPaperEvery = Sts2State.Var(r, "ExhaustAmount", 5);
                     break;
-                }
-                case "GamePiece" when Card.Type == CardType.Power: chained += Sts2State.Var(r, "Cards", 1) * plays; break;
-                case "IronClub":
-                {
-                    var n = Sts2State.Var(r, "Cards", 4);
-                    if (n > 0) chained += (r.DisplayAmount % n + plays) / n;
+                case GamePiece: i.GamePiece += Sts2State.Var(r, "Cards", 1); break;
+                case IronClub:
+                    i.IronClubEvery = Sts2State.Var(r, "Cards", 4);
+                    i.IronClubCount = r.DisplayAmount; // CardsPlayed % Cards (reads Cards while it animates: % again)
                     break;
-                }
-                case "CentennialPuzzle" when HpLoss > 0 && !Sts2State.Private(r, "UsedThisCombat", true):
-                    chained += Sts2State.Var(r, "Cards", 3);
-                    break;
+                case CentennialPuzzle when !Sts2State.Private(r, "UsedThisCombat", true): i.CentennialPuzzle += Sts2State.Var(r, "Cards", 3); break;
             }
         }
-        ChainedDraws = chained;
-        // Room in hand: the card itself has left it, and cards it exhausts from hand first make room
-        // (Burning Pact exhausts, then draws).
-        var room = Math.Max(0, CardPile.MaxCardsInHand - (handCount - 1 - (Card.GetType().Name == "Cleanse" ? 0 : ExhaustsOthers)));
-        Draws = DrawsBlocked ? 0 : Math.Min(OwnDraws + chained, room);
-        Shuffles = Draws > drawPile && Sts2State.DiscardPileCount(me) > 0;
+        var result = PlayChain.Resolve(i);
+        DrawsBlocked = i.Blocked;
+        ChainedDraws = result.Chained;
+        Draws = result.Draws;
+        Shuffles = result.Shuffles;
     }
 
     /// <summary>

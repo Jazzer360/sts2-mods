@@ -7,7 +7,12 @@ Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). **Setup on a new 
 - Decompiled game source (read-only reference): `~/git/sts2-decompiled` (same path on every machine; local-only, never pushed; see its VERSION.json). If it's missing or older than the installed game, run `./scripts/decompile.ps1`. Look up real class/method names there before writing a Harmony patch or modelling a game rule; don't guess.
 - `core/` is compiled into each mod via a linked `<Compile Include>`; it is not a separate DLL.
 - Mod AssemblyName == manifest `id` == `<ModId>.json` filename.
-- Every feature implements `IFeature` and is applied through `FeatureHost`, so one broken patch can't crash the game.
+- Every feature implements `IFeature` and is applied through `FeatureHost`, so one broken patch can't crash the game. Spire QoL only uses observe-only patches (docs/DECISIONS.md #10).
+
+## Raise concerns, track decisions
+
+- **Raise concerns and ideas unprompted.** Whenever you notice something questionable (a direction that seems wrong, a fragile design, a gap in the audits, duplicated logic, a refactor that would pay off), say so with a concrete proposal, even when it would be a large or breaking change. Don't wait to be asked: the owner relies on this rather than reviewing every line. End a substantial piece of work with what you'd question or improve next.
+- **Decisions are tracked in docs/DECISIONS.md.** A new design or engineering decision gets an entry (what, why, what it replaced). Revisiting one is fine when there's a good reason: add a new entry naming the old one and the reason. Don't drift back to an earlier path silently, and don't reopen a decision without a reason it didn't already weigh.
 
 ## Only knowable information (hard rule)
 

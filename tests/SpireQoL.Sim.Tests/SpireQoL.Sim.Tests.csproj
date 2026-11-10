@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="..\..\mods\SpireQoL\Sim\SimState.cs" Link="Sim\SimState.cs" />
     <Compile Include="..\..\mods\SpireQoL\Sim\SimEngine.cs" Link="Sim\SimEngine.cs" />
+    <Compile Include="..\..\mods\SpireQoL\Sim\PlayChain.cs" Link="Sim\PlayChain.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Cases/*.json" CopyToOutputDirectory="PreserveNewest" />
