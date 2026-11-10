@@ -226,8 +226,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     // ------------------------------------------------------------------ rules
 
+    private PlayFacts? _curFacts;
+
     private Hit? Evaluate(AbstractModel src, PlayFacts f)
     {
+        _curFacts = f;
         var card = f.Card;
         var type = card.Type;
         var plays = f.Plays;
@@ -592,7 +595,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             }
         }
 
-        var enemies = _cs.HittableEnemies;
+        // Random and all-enemy procs land after the card: enemies it kills are gone by then (a play that
+        // kills every enemy, e.g. one that revives, leaves the proc nothing to hit).
+        var enemies = spread is Spread.Random or Spread.All && _curFacts is { } cf
+            ? _cs.HittableEnemies.Where(e => !cf.Kills(e)).ToList()
+            : _cs.HittableEnemies.ToList();
+        if (spread is Spread.Random or Spread.All && enemies.Count == 0) return new Hit(Kind.Damage, 0, harmful);
         int shown, min, max;
         switch (spread)
         {

@@ -81,7 +81,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// Powers that flash when they change damage (caps), not because a play set them off. The
     /// card's damage already reflects them, so they never get a tab.
     /// </summary>
-    private static readonly HashSet<string> Modifiers = new() { "HardToKillPower", "HardenedShellPower" };
+    private static readonly HashSet<string> Modifiers = new() { "HardToKillPower", "HardenedShellPower", "IntangiblePower" };
 
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
     private static readonly HashSet<string> KillReactive = new() { "GremlinHorn" };
@@ -164,9 +164,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // Auto-plays (Catastrophe, Mayhem...) belong to the window of whatever played them.
             if (list[i] is CardPlayStartedEntry { CardPlay: var play } && play.Card.Owner == me && play.IsFirstInSeries && !play.IsAutoPlay)
             {
-                var from = SplitBefore(list, i, me, out var split, out var fromMin);
-                if (_open != null) _open.To = from;
-                Close(me);
+                var from = SplitBefore(list, i, me, out var split, out var fromMin, out var boundLo, out var boundHi);
+                Close(me, boundLo, boundHi, from);
                 // The tabs it had when it was last in your hand: a play can start several frames
                 // after the card leaves the hand (the action queue was busy).
                 var predicted = _ctx.Decor.LastInHand.TryGetValue(play.Card, out var tabs) ? tabs : Array.Empty<TabSpec>();
@@ -230,10 +229,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// first and this card's before-play procs last. Spending energy or stars marks the split
     /// exactly; for a 0-cost card the split is the point that best fits the previous card's tabs.
     /// </summary>
-    private int SplitBefore(List<CombatHistoryEntry> list, int start, Player me, out string how, out int fromMin)
+    private int SplitBefore(List<CombatHistoryEntry> list, int start, Player me, out string how, out int fromMin, out int boundLo, out int boundHi)
     {
         how = "";
         fromMin = -1;
+        boundLo = boundHi = -1;
         var floor = _open != null ? _open.Start + 1 : 0;
         var gapStart = start;
         while (gapStart > floor && list[gapStart - 1] is not (CardPlayFinishedEntry or CardPlayStartedEntry or MonsterPerformedMoveEntry))
@@ -244,6 +244,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (list[k].Actor == me.Creature && list[k] is EnergySpentEntry or StarsModifiedEntry { Amount: < 0 })
             {
                 how = $"at its energy/star spend (gap {gapStart}..{start})";
+                boundLo = boundHi = k;
                 return k;
             }
         }
@@ -258,28 +259,67 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             return start;
         }
 
-        // 0-cost card after another play: try each split, keep the one where the previous card's
-        // window fits its tabs best (ties: give the gap to the previous card).
-        var best = start;
-        var bestIssues = int.MaxValue;
-        for (var k = start; k >= gapStart; k--)
+        // 0-cost card after another play: the gap holds the previous card's after-play procs, then
+        // this card's before-play procs. The split is chosen when this card is checked too, as the
+        // point that best fits both cards' tabs together (ResolvePending).
+        how = $"0-cost after another play: joint fit in gap {gapStart}..{start}";
+        boundLo = gapStart;
+        boundHi = start;
+        return start;
+    }
+
+    // A checked play whose end is still open: its boundary with the next play is somewhere in
+    // [_pendLo, _pendHi], decided once the next play is complete.
+    private Window? _pending;
+    private int _pendLo, _pendHi;
+
+    /// <summary>Issues for <paramref name="w"/> over history [from, to) (to stops at a potion).</summary>
+    private int IssueCount(Window w, int from, int to, List<CombatHistoryEntry> hist, Player me)
+    {
+        try
         {
-            try
+            to = Math.Min(to, hist.Count);
+            for (var k = w.Start + 1; k < to; k++)
             {
-                var issues = Compare(_open, me, list.GetRange(_open.From, Math.Max(0, k - _open.From)), FlashesIn(_open.From, k), out _).Count;
-                if (issues < bestIssues)
+                if (hist[k] is PotionUsedEntry)
                 {
-                    bestIssues = issues;
-                    best = k;
+                    to = k;
+                    break;
                 }
             }
-            catch
+            return Compare(w, me, hist.GetRange(from, Math.Max(0, to - from)), FlashesIn(from, to), out _).Count;
+        }
+        catch
+        {
+            return 1000;
+        }
+    }
+
+    /// <summary>
+    /// Decides the pending boundary between the previous play and <paramref name="next"/>: the split
+    /// with the fewest issues for both together (ties: the gap goes to the previous play), then
+    /// reports the previous play.
+    /// </summary>
+    private void ResolvePending(Window next, int nextTo, List<CombatHistoryEntry> hist, Player me)
+    {
+        var p = _pending!;
+        _pending = null;
+        var best = _pendHi;
+        var bestIssues = int.MaxValue;
+        for (var k = _pendHi; k >= _pendLo; k--)
+        {
+            var n = IssueCount(p, p.From, k, hist, me) + IssueCount(next, k, nextTo, hist, me);
+            if (n < bestIssues)
             {
-                // keep the current best
+                bestIssues = n;
+                best = k;
             }
         }
-        how = $"0-cost after another play: best fit at {best} (gap {gapStart}..{start})";
-        return best;
+        p.To = best;
+        p.Split += $"; ended at {best} (joint fit with {next.CardName})";
+        next.From = best;
+        next.Split += $": start {best} (joint fit with {p.CardName})";
+        Report(p, me);
     }
 
     private IReadOnlyDictionary<string, string>? CaptureBefore()
@@ -312,12 +352,40 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
-    private void Close(Player? me)
+    private void Close(Player? me, int nextLo = -1, int nextHi = -1, int nextFrom = -1)
     {
         var w = _open;
         _open = null;
-        if (w == null || me == null || _history == null) return;
+        if (me == null || _history == null)
+        {
+            _pending = null;
+            return;
+        }
+        if (w == null) return;
+        try
+        {
+            var hist = _history.Entries.ToList();
+            var provisionalTo = nextFrom >= 0 ? nextFrom : (w.To >= 0 ? w.To : hist.Count);
+            if (_pending != null) ResolvePending(w, provisionalTo, hist, me);
+            if (nextLo >= 0 && nextHi > nextLo)
+            {
+                _pending = w;
+                _pendLo = nextLo;
+                _pendHi = nextHi;
+                return;
+            }
+            if (nextFrom >= 0) w.To = nextFrom;
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log.Warn($"[audit] couldn't split plays: {ex.Message}");
+        }
+        Report(w, me);
+    }
 
+    private void Report(Window w, Player me)
+    {
+        if (_history == null) return;
         try
         {
             var hist = _history.Entries.ToList();

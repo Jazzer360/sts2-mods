@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.18
+#### Fixed
+- Kusarigama, Letter Opener and other random or all-enemy damage procs: no tab when the card kills every enemy (a reviving enemy keeps the fight going, but there's nothing to hit).
+- Proc audit false alarms (logs and error reports only): two 0-cost plays in a row now split their effects by fitting both cards together, so one card's after-play effects (Feral returning it, Game Piece's draw, an exhaust) aren't blamed on the next. Intangible capping a hit isn't reported as a missing tab.
+
 ### Spire QoL 0.23.17
 #### Fixed
 - Juggernaut counts block from Frost orbs the card evokes (channelling into full slots, Dualcast...). The Imbalanced tab counts that block toward fully blocking a hit.
