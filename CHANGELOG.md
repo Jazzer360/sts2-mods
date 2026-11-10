@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.19
+#### Fixed
+- Proc audit: tabs switched off in settings were invisible to the audit, so their procs would have been reported as missing tabs. It now checks against every prediction.
+#### Changed
+- Proc audit reports carry the full window (every history entry, numbered, with relic and power flashes at their positions and the window boundaries), what the card itself was expected to do, tabs hidden by settings, and how the split between plays was chosen. Orbs are listed with their values and slot capacity.
+
 ### Spire QoL 0.23.18
 #### Fixed
 - Kusarigama, Letter Opener and other random or all-enemy damage procs: no tab when the card kills every enemy (a reviving enemy keeps the fight going, but there's nothing to hit).

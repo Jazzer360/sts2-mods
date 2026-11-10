@@ -25,6 +25,12 @@ public sealed class CardDecor
 {
     public List<TabSpec> Tabs { get; } = new();
 
+    /// <summary>
+    /// Every tab the features predicted, including ones the settings hide. The audit checks against
+    /// these, so switching a tab off doesn't make its proc look unexplained.
+    /// </summary>
+    public List<TabSpec> Predicted { get; } = new();
+
     /// <summary>Whole-card opacity (Ethereal). Null = untouched.</summary>
     public float? Opacity { get; set; }
 
@@ -38,9 +44,11 @@ public sealed class CardDecor
     public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, string? kind = null, int amount = 0,
         int auditMin = 0, int auditMax = 0, string? text = null)
     {
-        if (Tabs.Any(t => t.Key == key)) return false;
+        if (Predicted.Any(t => t.Key == key)) return false;
+        var spec = new TabSpec(key, icon, crossed, number, kind, amount, auditMin, auditMax, text);
+        Predicted.Add(spec);
         if (Filter != null && !Filter(key)) return false;
-        Tabs.Add(new TabSpec(key, icon, crossed, number, kind, amount, auditMin, auditMax, text));
+        Tabs.Add(spec);
         return true;
     }
 
@@ -97,7 +105,7 @@ public sealed class CardDecorFrame
         var snap = new Dictionary<CardModel, IReadOnlyList<TabSpec>>(ReferenceEqualityComparer.Instance);
         foreach (var (card, d) in _decor)
         {
-            if (d.Tabs.Count > 0) snap[card] = d.Tabs.ToList();
+            if (d.Predicted.Count > 0) snap[card] = d.Predicted.ToList();
         }
         Previous = snap;
         foreach (var card in _seenThisFrame)

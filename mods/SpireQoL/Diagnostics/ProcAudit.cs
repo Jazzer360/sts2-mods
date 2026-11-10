@@ -306,20 +306,78 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         _pending = null;
         var best = _pendHi;
         var bestIssues = int.MaxValue;
+        var tried = new List<string>();
         for (var k = _pendHi; k >= _pendLo; k--)
         {
-            var n = IssueCount(p, p.From, k, hist, me) + IssueCount(next, k, nextTo, hist, me);
-            if (n < bestIssues)
+            var a = IssueCount(p, p.From, k, hist, me);
+            var b = IssueCount(next, k, nextTo, hist, me);
+            tried.Add($"{k}: {a}+{b}");
+            if (a + b < bestIssues)
             {
-                bestIssues = n;
+                bestIssues = a + b;
                 best = k;
             }
         }
         p.To = best;
-        p.Split += $"; ended at {best} (joint fit with {next.CardName})";
+        p.Split += $"; ended at {best} (joint fit with {next.CardName}; split: issues this+next = {string.Join(", ", tried)})";
         next.From = best;
         next.Split += $": start {best} (joint fit with {p.CardName})";
         Report(p, me);
+    }
+
+    /// <summary>
+    /// The window for reports: every history entry from a little before it to a little after, with
+    /// its position, in our own words (the game's draw text says "discarded"), the relic and power
+    /// flashes at their positions, and markers for the window's start and end and the play's start.
+    /// </summary>
+    private List<string> WindowLines(Window w, List<CombatHistoryEntry> hist, Player me)
+    {
+        var lines = new List<string>();
+        var from = Math.Max(0, w.From - 3);
+        var to = Math.Min(hist.Count, (w.To >= 0 ? w.To : hist.Count) + 3);
+        var flashes = _flashes.Where(x => x.At > from && x.At <= to).ToList();
+        for (var i = from; i <= to; i++)
+        {
+            if (i == w.From) lines.Add("── window start");
+            if (i == (w.To >= 0 ? w.To : hist.Count)) lines.Add("── window end");
+            foreach (var fl in flashes.Where(x => x.At == i)) lines.Add($"   ⚡ {fl.Model.GetType().Name} flashed");
+            if (i >= to) break;
+            var inside = i >= w.From && i < (w.To >= 0 ? w.To : hist.Count);
+            lines.Add($"{(inside ? "" : "(outside) ")}#{i} {Describe(hist[i], me)}");
+        }
+        return lines;
+    }
+
+    private static string Describe(CombatHistoryEntry e, Player me)
+    {
+        static string N(object? o) => o switch { null => "?", Creature c => c.Monster?.GetType().Name ?? c.Player?.Character?.GetType().Name ?? "creature", _ => o.GetType().Name };
+        try
+        {
+            return e switch
+            {
+                CardPlayStartedEntry s => $"play started: {N(s.CardPlay.Card)} (play {s.CardPlay.PlayIndex + 1}/{s.CardPlay.PlayCount}{(s.CardPlay.IsAutoPlay ? ", auto-play" : "")}, energy {s.CardPlay.Resources.EnergyValue})",
+                CardPlayFinishedEntry s => $"play finished: {N(s.CardPlay.Card)}",
+                CardDrawnEntry s => $"drew {N(s.Card)}{(s.FromHandDraw ? " (turn draw)" : "")}",
+                CardDiscardedEntry s => $"discarded {N(s.Card)}",
+                CardExhaustedEntry s => $"exhausted {N(s.Card)}",
+                CardGeneratedEntry s => $"created {N(s.Card)}",
+                CardAfflictedEntry s => $"afflicted {N(s.Card)} with {N(s.Affliction)}",
+                EnergySpentEntry s => $"spent {s.Amount} energy",
+                StarsModifiedEntry s => $"stars {(s.Amount >= 0 ? "+" : "")}{s.Amount}",
+                BlockGainedEntry s => $"{N(s.Actor)} gained {s.Amount} block{(s.CardPlay != null ? $" (from {N(s.CardPlay.Card)})" : "")}",
+                DamageReceivedEntry s => $"{N(s.Dealer)} → {N(s.Result.Receiver)}: {s.Result.TotalDamage} ({s.Result.BlockedDamage} blocked, {s.Result.UnblockedDamage} through){(s.Result.WasTargetKilled ? ", killed" : "")}{(s.CardSource != null ? $" [card {N(s.CardSource)}]" : " [no card]")}",
+                PowerReceivedEntry s => $"{N(s.Applier)} → {N(s.Actor)}: {N(s.Power)} {(s.Amount >= 0 ? "+" : "")}{s.Amount}",
+                OrbChanneledEntry s => $"channeled {N(s.Orb)}",
+                SummonedEntry s => $"summoned {s.Amount}",
+                PotionUsedEntry s => $"potion {N(s.Potion)}",
+                MonsterPerformedMoveEntry s => $"{N(s.Monster)} move {s.Move.Id}",
+                _ => e.Description,
+            };
+        }
+        catch
+        {
+            return e.GetType().Name;
+        }
     }
 
     private IReadOnlyDictionary<string, string>? CaptureBefore()
@@ -443,15 +501,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (issues.Count > 0)
             {
                 log.Warn($"[audit] played {w.CardName}: {string.Join("; ", issues)}. Tabs were: {tabs}.");
-                var lines = new List<string>();
-                foreach (var e in entries)
-                {
-                    if (e is BlockGainedEntry or DamageReceivedEntry or CardPlayStartedEntry or PowerReceivedEntry or CardDrawnEntry or CardGeneratedEntry or OrbChanneledEntry)
-                    {
-                        log.Warn($"[audit]   {e.HumanReadableString}");
-                        lines.Add(e.HumanReadableString);
-                    }
-                }
+                _tabFilter = _ctx.Decor.Filter;
+                var lines = WindowLines(w, hist, me);
+                foreach (var l in lines) log.Warn($"[audit]   {l}");
                 Report(w, issues, tabs, lines, entries.Count, string.Join("\n", _turnPlays));
             }
             foreach (var m in model) log.Info($"[audit] [model] played {w.CardName}: {m}");
@@ -466,6 +518,14 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// One Sentry report per issue, grouped by what's wrong rather than by amounts: a missing or
     /// silent source groups by that source; block, damage and budget issues group by the card.
     /// </summary>
+    private static Func<string, bool>? _tabFilter;
+
+    private static string Hidden(Window w)
+    {
+        var hidden = _tabFilter == null ? new List<string>() : w.Predicted.Where(t => !_tabFilter(t.Key)).Select(t => t.Key).ToList();
+        return hidden.Count == 0 ? "none" : string.Join(", ", hidden);
+    }
+
     private static void Report(Window w, List<string> issues, string tabs, List<string> window, int windowSize, string turnPlays)
     {
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;
@@ -500,6 +560,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             reporter.Mismatch("proc", $"Proc audit: {issue} (played {card})", fp,
                 $"Played {w.CardName} ({card}).\nIssue: {issue}\nAll issues this play: {string.Join("; ", issues)}\nTabs before the play: {tabs}" +
                 $"\nFrom the card's last frame in hand to its play starting: {lag}" +
+                $"\nExpected from the card itself: {(w.Facts != null ? Snapshot.FactsLine(w.Facts) : "no facts")}" +
+                $"\nTabs hidden by settings: {Hidden(w)}" +
                 $"\nWindow: history {w.From}..{(w.To >= 0 ? w.To : w.From + windowSize)} ({windowSize} entries), play started at {w.Start}; start chosen {w.Split}",
                 extra);
         }

@@ -39,7 +39,13 @@ public static class Snapshot
         Try(d, "player_powers", () => Powers(me.Creature));
         Try(d, "relics", () => string.Join(", ", me.Relics.Select(r =>
             $"{r.GetType().Name}{(r.ShowCounter ? $" [{r.DisplayAmount}]" : "")}{(r.Status != default ? $" ({r.Status})" : "")}")));
-        Try(d, "orbs", () => string.Join(", ", me.PlayerCombatState?.OrbQueue.Orbs.Select(o => o.GetType().Name) ?? Array.Empty<string>()));
+        Try(d, "orbs", () =>
+        {
+            var q = me.PlayerCombatState?.OrbQueue;
+            if (q == null) return "none";
+            var orbs = q.Orbs.Select((o, i) => $"{i + 1}. {o.GetType().Name} (passive {o.PassiveVal}, evoke {o.EvokeVal})");
+            return $"slots {q.Orbs.Count}/{q.Capacity}, front first: " + (q.Orbs.Count == 0 ? "empty" : string.Join(", ", orbs));
+        });
 
         Try(d, "enemies", () => string.Join("\n", cs.Enemies.Select(e =>
         {
@@ -69,9 +75,7 @@ public static class Snapshot
             var tabs = ctx.Decor.Previous.TryGetValue(c, out var t)
                 ? string.Join(", ", t.Select(x => x.Text ?? (x.Amount > 0 ? $"{x.Key} {x.Amount}{(x.AuditMax > 0 ? $" [{x.AuditMin}-{x.AuditMax}]" : "")}" : x.Key) + (x.Crossed ? " (crossed)" : "")))
                 : "none";
-            var facts = ProcIndicatorsFeature.PreviousFacts.TryGetValue(c, out var f)
-                ? $"plays {f.Plays}, energy {f.Energy}, stars {f.Stars}, exhausts {f.TotalExhausts}, discards {f.Discards}, draws {f.Draws}, created {f.Generated}, orbs {f.Channels}, hits {f.AttackHits}, block gains {f.BlockGains}, debuffs {string.Join("/", f.EnemyDebuffs.Select(x => x.Name))}"
-                : "no facts";
+            var facts = ProcIndicatorsFeature.PreviousFacts.TryGetValue(c, out var f) ? FactsLine(f) : "no facts";
             string cost;
             try { cost = c.EnergyCost.CostsX ? "X" : c.EnergyCost.GetAmountToSpend().ToString(); } catch { cost = "?"; }
             return $"{c.GetType().Name}{(c.IsUpgraded ? "+" : "")} ({c.Type}, cost {cost}, keywords {string.Join("/", c.Keywords)}" +
@@ -83,6 +87,12 @@ public static class Snapshot
             CombatManager.Instance.History.Entries.Reverse().Take(40).Reverse().Select(e => e.HumanReadableString)));
         return d;
     }
+
+    /// <summary>What the mod expects one play of a card to do (PlayFacts), for reports.</summary>
+    public static string FactsLine(SpireQoL.Procs.PlayFacts f) =>
+        $"plays {f.Plays}, energy {f.Energy}, stars {f.Stars}, exhausts {f.TotalExhausts}, discards {f.Discards}, draws {f.Draws}, created {f.Generated}, " +
+        $"orbs channeled {f.Channels}, hits {f.AttackHits}, block gains {f.BlockGains}, debuffs {string.Join("/", f.EnemyDebuffs.Select(x => x.Name))}, " +
+        $"orb evoke damage {f.OrbDamageMin}-{f.OrbDamageMax}, orb evoke block {f.OrbBlock}, random outcome {f.RandomOutcome}";
 
     private static string Powers(Creature c) => c.Powers.Count == 0 ? "none" : string.Join(", ", c.Powers.Select(p => $"{p.GetType().Name} {p.Amount}"));
 
