@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.10
+#### Fixed
+- Proc audit false alarms (logs and error reports only; nothing on screen changes):
+  - Relics and powers that fired in an earlier fight (Horn Cleat, Happy Flower, Lantern...) were reported as firing with no tab (a 0.23.9 regression).
+  - The first card of a turn costing 0 (Snecko Eye) picked up start-of-turn effects, or missed its own Spirit of Ash block.
+  - A potion used between plays (Lucky Tonic's Buffer) was blamed on the card before it.
+- Error reports are grouped by cause, so a new cause no longer reopens an unrelated report.
+
 ### Spire QoL 0.23.9
 #### Fixed
 - Proc audit false alarms (logs and error reports only; nothing on screen changes):

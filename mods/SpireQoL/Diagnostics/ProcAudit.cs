@@ -59,7 +59,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public required string CardName;
         public required IReadOnlyList<TabSpec> Predicted;
         public required PlayFacts? Facts;
-        public required int From;
+        public required int From { get; set; }
+        /// <summary>Earliest possible start; when below From, Close picks the best fit in between.</summary>
+        public int FromMin = -1;
         /// <summary>History index of this play's own CardPlayStartedEntry.</summary>
         public required int Start;
         /// <summary>Exclusive end (the next play's window start), or -1 for "up to now".</summary>
@@ -103,7 +105,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     private Window? _open;
     private int _seen;
-    private int _seenAtLastFrame;
     private CombatHistory? _history;
     private readonly HashSet<AbstractModel> _subscribed = new(ReferenceEqualityComparer.Instance);
 
@@ -134,8 +135,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         {
             Summarize();
             _history = history;
-            _seen = _seenAtLastFrame = history.Entries.Count();
+            _seen = history.Entries.Count();
             _open = null;
+            _flashes.Clear();
         }
 
         Subscribe(me, cs);
@@ -147,7 +149,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // Auto-plays (Catastrophe, Mayhem...) belong to the window of whatever played them.
             if (list[i] is CardPlayStartedEntry { CardPlay: var play } && play.Card.Owner == me && play.IsFirstInSeries && !play.IsAutoPlay)
             {
-                var from = SplitBefore(list, i, me, out var split);
+                var from = SplitBefore(list, i, me, out var split, out var fromMin);
                 if (_open != null) _open.To = from;
                 Close(me);
                 // The tabs it had when it was last in your hand: a play can start several frames
@@ -157,7 +159,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 _open = new Window
                 {
                     Card = play.Card, CardName = SafeTitle(play.Card), Predicted = predicted, Facts = facts,
-                    From = from, Start = i, Split = split,
+                    From = from, FromMin = fromMin, Start = i, Split = split,
                     Lag = _ctx.Decor.LastSeenFrame.TryGetValue(play.Card, out var seen) ? _ctx.Decor.Frame - seen : -1,
                     Before = CaptureBefore(),
                 };
@@ -165,8 +167,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
         _seen = count;
 
-        if (_open != null && !Sts2State.IsPlayerTurn) Close(me);
-        _seenAtLastFrame = count;
+        if (_open != null && !Sts2State.IsPlayerTurn)
+        {
+            _open.To = count;
+            Close(me);
+        }
     }
 
     // Flashes with the history size when they happened, so they're split between plays the same
@@ -192,9 +197,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// first and this card's before-play procs last. Spending energy or stars marks the split
     /// exactly; for a 0-cost card the split is the point that best fits the previous card's tabs.
     /// </summary>
-    private int SplitBefore(List<CombatHistoryEntry> list, int start, Player me, out string how)
+    private int SplitBefore(List<CombatHistoryEntry> list, int start, Player me, out string how, out int fromMin)
     {
         how = "";
+        fromMin = -1;
         var floor = _open != null ? _open.Start + 1 : 0;
         var gapStart = start;
         while (gapStart > floor && list[gapStart - 1] is not (CardPlayFinishedEntry or CardPlayStartedEntry or MonsterPerformedMoveEntry))
@@ -211,10 +217,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
         if (_open == null)
         {
-            // First play this turn with no cost: keep the old frame heuristic, but never reach
-            // back past the gap (start-of-turn effects aren't this card's).
-            how = $"first play, no cost: frame boundary (gap {gapStart}..{start})";
-            return Math.Max(gapStart, Math.Min(_seenAtLastFrame, start));
+            // First play this turn with no cost (Snecko Eye, free cards): the gap holds
+            // start-of-turn effects, then this card's before-play procs, with nothing marking the
+            // split. Decided when the play is checked: the start that best fits its own tabs.
+            how = $"first play, no cost: best fit in gap {gapStart}..{start}";
+            fromMin = gapStart;
+            return start;
         }
 
         // 0-cost card after another play: try each split, keep the one where the previous card's
@@ -279,9 +287,43 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
         try
         {
-            var all = _history.Entries.Skip(w.From);
-            var entries = (w.To >= 0 ? all.Take(Math.Max(0, w.To - w.From)) : all).ToList();
-            var issues = Compare(w, me, entries, FlashesIn(w.From, w.To >= 0 ? w.To : int.MaxValue), out var model);
+            var hist = _history.Entries.ToList();
+            var to = w.To >= 0 ? Math.Min(w.To, hist.Count) : hist.Count;
+            // A potion used during the window isn't the card's: the window ends there.
+            for (var k = w.Start + 1; k < to; k++)
+            {
+                if (hist[k] is PotionUsedEntry)
+                {
+                    to = k;
+                    break;
+                }
+            }
+            if (w.FromMin >= 0 && w.FromMin < w.From)
+            {
+                var best = w.From;
+                var bestIssues = int.MaxValue;
+                for (var k = w.From; k >= w.FromMin; k--)
+                {
+                    try
+                    {
+                        var n = Compare(w, me, hist.GetRange(k, to - k), FlashesIn(k, to), out _).Count;
+                        if (n < bestIssues)
+                        {
+                            bestIssues = n;
+                            best = k;
+                        }
+                    }
+                    catch
+                    {
+                        // keep the current best
+                    }
+                }
+                w.From = best;
+                w.Split += $": chose {best}";
+            }
+            var entries = hist.GetRange(w.From, Math.Max(0, to - w.From));
+            w.To = to;
+            var issues = Compare(w, me, entries, FlashesIn(w.From, to), out var model);
             _checked++;
             if (issues.Count == 0) _matched++;
             foreach (var issue in issues)
@@ -341,7 +383,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             string[] fp = kind switch
             {
                 "no tab" or "didn't fire" => new[] { kind, rest.Split(' ')[0] },
+                // Which powers, and which way an amount was off: different causes, different issues.
+                "unexplained" when effect == "powers" => new[] { kind, card, "powers", rest },
                 "unexplained" => new[] { kind, card, effect },
+                _ when rest.StartsWith("predicted") => new[] { kind, card, Direction(rest) },
                 _ => new[] { kind, card },
             };
             var extra = new Dictionary<string, string> { ["audit_window"] = string.Join("\n", window), ["turn_plays"] = turnPlays };
@@ -357,6 +402,20 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 $"\nWindow: history {w.From}..{(w.To >= 0 ? w.To : w.From + windowSize)} ({windowSize} entries), play started at {w.Start}; start chosen {w.Split}",
                 extra);
         }
+    }
+
+    /// <summary>"predicted 4, actual 0" → "less" (more/less than predicted; amounts left out).</summary>
+    private static string Direction(string rest)
+    {
+        static int Last(string x) => int.TryParse(new string(x.Trim().Reverse().TakeWhile(char.IsDigit).Reverse().ToArray()), out var v) ? v : 0;
+        var parts = rest.Split(',');
+        if (parts.Length < 2) return "";
+        var actual = Last(parts[1]);
+        var predicted = parts[0].Replace("predicted", "").Trim();
+        var range = predicted.Split('–');
+        var lo = Last(range[0]);
+        var hi = Last(range[^1]);
+        return actual > hi ? "more" : actual < lo ? "less" : "";
     }
 
     private void Summarize()
