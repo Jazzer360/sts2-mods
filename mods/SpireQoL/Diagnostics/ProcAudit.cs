@@ -236,7 +236,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         boundLo = boundHi = -1;
         var floor = _open != null ? _open.Start + 1 : 0;
         var gapStart = start;
-        while (gapStart > floor && list[gapStart - 1] is not (CardPlayFinishedEntry or CardPlayStartedEntry or MonsterPerformedMoveEntry))
+        // A potion's entry is written after its effects, so nothing at or before it is this card's.
+        while (gapStart > floor && list[gapStart - 1] is not (CardPlayFinishedEntry or CardPlayStartedEntry or MonsterPerformedMoveEntry or PotionUsedEntry))
             gapStart--;
 
         for (var k = gapStart; k < start; k++)
@@ -273,20 +274,54 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private Window? _pending;
     private int _pendLo, _pendHi;
 
-    /// <summary>Issues for <paramref name="w"/> over history [from, to) (to stops at a potion).</summary>
+    /// <summary>
+    /// Where <paramref name="w"/>'s window over [from, to) ends when a potion was used during it. The
+    /// game writes the potion's entry after its effects (a Power Potion's card, a Lucky Tonic's
+    /// Buffer), so they sit between the card's last play finishing and that entry, after the card's
+    /// own after-play procs. The end is the point in that stretch that best fits the card's tabs.
+    /// </summary>
+    private int PotionCut(Window w, int from, int to, List<CombatHistoryEntry> hist, Player me)
+    {
+        var potion = -1;
+        for (var k = Math.Max(from, w.Start + 1); k < to; k++)
+        {
+            if (hist[k] is PotionUsedEntry)
+            {
+                potion = k;
+                break;
+            }
+        }
+        if (potion < 0) return to;
+        var lo = potion;
+        while (lo > w.Start + 1 && hist[lo - 1] is not (CardPlayFinishedEntry or CardPlayStartedEntry))
+            lo--;
+        var best = potion;
+        var bestIssues = int.MaxValue;
+        for (var k = potion; k >= Math.Max(lo, from); k--)
+        {
+            try
+            {
+                var n = Compare(w, me, hist.GetRange(from, k - from), FlashesIn(from, k), out _).Count;
+                if (n < bestIssues)
+                {
+                    bestIssues = n;
+                    best = k;
+                }
+            }
+            catch
+            {
+                // keep the current best
+            }
+        }
+        return best;
+    }
+
+    /// <summary>Issues for <paramref name="w"/> over history [from, to) (to stops before a potion's effects).</summary>
     private int IssueCount(Window w, int from, int to, List<CombatHistoryEntry> hist, Player me)
     {
         try
         {
-            to = Math.Min(to, hist.Count);
-            for (var k = w.Start + 1; k < to; k++)
-            {
-                if (hist[k] is PotionUsedEntry)
-                {
-                    to = k;
-                    break;
-                }
-            }
+            to = PotionCut(w, from, Math.Min(to, hist.Count), hist, me);
             return Compare(w, me, hist.GetRange(from, Math.Max(0, to - from)), FlashesIn(from, to), out _).Count;
         }
         catch
@@ -447,16 +482,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         try
         {
             var hist = _history.Entries.ToList();
-            var to = w.To >= 0 ? Math.Min(w.To, hist.Count) : hist.Count;
-            // A potion used during the window isn't the card's: the window ends there.
-            for (var k = w.Start + 1; k < to; k++)
-            {
-                if (hist[k] is PotionUsedEntry)
-                {
-                    to = k;
-                    break;
-                }
-            }
+            var to = PotionCut(w, w.From, w.To >= 0 ? Math.Min(w.To, hist.Count) : hist.Count, hist, me);
             if (w.FromMin >= 0 && w.FromMin < w.From)
             {
                 var best = w.From;
