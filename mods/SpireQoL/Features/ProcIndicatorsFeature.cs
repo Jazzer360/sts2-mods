@@ -62,7 +62,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// <param name="Min">Damage procs: least total damage actually dealt (all targets, their modifiers).</param>
     /// <param name="Max">Damage procs: most total damage actually dealt.</param>
     private readonly record struct Hit(Kind Kind, int Amount, bool Harmful = false, int Count = 1, int Min = 0, int Max = 0,
-        IReadOnlyDictionary<Creature, List<int>>? OnEnemies = null)
+        IReadOnlyDictionary<Creature, List<int>>? OnEnemies = null, bool Random = false)
     {
         public static Hit Trig(bool harmful = false) => new(Kind.Trigger, 0, harmful);
     }
@@ -179,6 +179,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                             Amount = prev.Hit.Amount + h.Amount, Count = prev.Hit.Count + h.Count,
                             Min = prev.Hit.Min + h.Min, Max = prev.Hit.Max + h.Max,
                             OnEnemies = MergeHits(prev.Hit.OnEnemies, h.OnEnemies),
+                            Random = prev.Hit.Random || h.Random,
                         })
                         : (src, h);
                 }
@@ -205,6 +206,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 if (src is PowerModel { } tp && tp.GetType().Name == "TheSealedThronePower" && tp.Amount > 0) _xStarGains += f.Plays;
             }
             Run(secondOrder: true);
+
+            if (merged.Values.Any(m => m.Hit.Random)) f.RandomOutcome = true;
 
             foreach (var (key, (src, h)) in merged)
             {
@@ -310,7 +313,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "ViciousPower" when mine && f.DebuffsLandingTotal(t => t == typeof(VulnerablePower)) > 0: return Hit.Trig();
                     case "ShroudPower" when mine: return BlockN(a, f.DebuffsLandingTotal(t => t == typeof(DoomPower)));
                     // Every block gain sets it off, including block from other procs (Afterimage...).
-                    case "JuggernautPower" when mine && f.BlockGains + _xBlockGains > 0: return Damage(a, f.BlockGains + _xBlockGains, Spread.Random);
+                    // Any block gain, including Frost orbs the card evokes.
+                    case "JuggernautPower" when mine && f.BlockGains + f.OrbBlockGains + _xBlockGains > 0:
+                        return Damage(a, f.BlockGains + f.OrbBlockGains + _xBlockGains, Spread.Random);
                     case "EnvenomPower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "ConcoctPower" when mine && type == CardType.Attack: return Hit.Trig();
                     case "ReaperFormPower" when mine && type == CardType.Attack: return Hit.Trig();
@@ -326,7 +331,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "ImitationLearningPower" when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
                     // Fully blocking its hit stuns it (Bowlbug: knocks it off balance). Plain tab on the
                     // card whose own block takes your end-of-turn block over that line.
-                    case "ImbalancedPower" when onEnemy && CrossesFullBlock(e, card): return Hit.Trig();
+                    case "ImbalancedPower" when onEnemy && CrossesFullBlock(e, card, f): return Hit.Trig();
                     case "SkittishPower" when onEnemy && type == CardType.Attack && !Sts2State.Private(p, "HasGainedBlockThisTurn", true):
                         return Hit.Trig(harmful: true);
                     case "WitheringPresencePower" when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
@@ -506,13 +511,13 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         return _turnEnd;
     }
 
-    private bool CrossesFullBlock(Creature enemy, CardModel card)
+    private bool CrossesFullBlock(Creature enemy, CardModel card, PlayFacts f)
     {
         var te = TurnEnd();
         if (te == null || !te.FullBlockNeeded.TryGetValue(enemy, out var needed)) return false;
         var have = te.ExpectedBlock;
         if (have >= needed) return false;
-        return have + CardBlock(card) >= needed;
+        return have + CardBlock(card) + f.OrbBlock >= needed; // its own block, plus Frost orbs it evokes
     }
 
     private int CardBlock(CardModel card)
@@ -620,7 +625,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             case Spread.All: foreach (var e in enemies) On(e); break;
             case Spread.Random when enemies.Count == 1: On(enemies[0]); break;
         }
-        return new Hit(Kind.Damage, shown, harmful, Count: times, Min: min, Max: max, OnEnemies: on);
+        return new Hit(Kind.Damage, shown, harmful, Count: times, Min: min, Max: max, OnEnemies: on,
+            Random: spread == Spread.Random && enemies.Count > 1);
     }
 
     private static IReadOnlyDictionary<Creature, List<int>>? MergeHits(IReadOnlyDictionary<Creature, List<int>>? a, IReadOnlyDictionary<Creature, List<int>>? b)

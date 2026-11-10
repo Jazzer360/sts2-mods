@@ -82,6 +82,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private static readonly HashSet<string> Modifiers = new() { "HardToKillPower", "HardenedShellPower" };
 
+    /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
+    private static readonly HashSet<string> KillReactive = new() { "GremlinHorn" };
+
     /// <summary>What a trigger tab's source can add beyond the card itself (for the budget check).</summary>
     private static readonly Dictionary<string, Effect[]> SourceEffects = new()
     {
@@ -461,6 +464,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var issues = new List<string>();
         var modelLines = new List<string>();
         model = modelLines;
+        var random = w.Facts?.RandomOutcome == true;
         var sourceOf = new Dictionary<string, TabSpec>();
         foreach (var t in w.Predicted)
         {
@@ -471,7 +475,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // ---- sources that fired with no tab (missing rules)
         foreach (var m in flashed.Distinct())
         {
-            if (!sourceOf.ContainsKey(m.GetType().Name) && !Modifiers.Contains(m.GetType().Name)) issues.Add($"no tab: {m.GetType().Name} fired");
+            if (sourceOf.ContainsKey(m.GetType().Name) || Modifiers.Contains(m.GetType().Name)) continue;
+            // A random-target hit or kill (several enemies) can set off enemy powers and kill relics
+            // we can't predict: noted, not reported.
+            if (random && (m is PowerModel { Owner.IsEnemy: true } || KillReactive.Contains(m.GetType().Name)))
+            {
+                modelLines.Add($"{m.GetType().Name} fired after a random outcome (not predictable)");
+                continue;
+            }
+            issues.Add($"no tab: {m.GetType().Name} fired");
         }
 
         // ---- relic tabs whose relic didn't fire (crossed ones mean "this breaks it": no flash)
@@ -511,7 +523,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         bool Explained(Effect e) => sourceOf.Keys.Any(s => SourceEffects.TryGetValue(s, out var fx) && fx.Contains(e));
         void Budget(Effect e, string what, int actual, int own)
         {
-            if (actual > own && !Explained(e)) issues.Add($"unexplained: {actual - own} more {what} than the card's own {own}");
+            if (actual > own && !Explained(e) && random) modelLines.Add($"{actual - own} more {what} after a random outcome (not predictable)");
+            else if (actual > own && !Explained(e)) issues.Add($"unexplained: {actual - own} more {what} than the card's own {own}");
             else if (actual < own) modelLines.Add($"expected {own} {what}, saw {actual}");
         }
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
@@ -540,7 +553,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Select(p => p.Power.GetType().Name)
             .Distinct()
             .ToList();
-        if (foreign.Count > 0 && !autoPlayed && !Explained(Effect.Power)) issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
+        if (foreign.Count > 0 && random) modelLines.Add($"powers applied after a random outcome: {string.Join(", ", foreign)}");
+        else if (foreign.Count > 0 && !autoPlayed && !Explained(Effect.Power)) issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
 
         return issues;
     }

@@ -156,6 +156,16 @@ public sealed class PlayFacts
     /// <summary>Block you gain from Frost orbs this play evokes (EvokeVal, Unpowered).</summary>
     public int OrbBlock { get; init; }
 
+    /// <summary>Block gains from those Frost evokes (each sets off Juggernaut).</summary>
+    public int OrbBlockGains { get; init; }
+
+    /// <summary>
+    /// The play's outcome depends on a roll with more than one possible target: Lightning evokes or
+    /// a random-target attack with several enemies, or (set by Proc Indicators) a random-target proc.
+    /// The audit doesn't report what a random kill or hit could have set off.
+    /// </summary>
+    public bool RandomOutcome { get; set; }
+
     /// <summary>Damage that gets past the enemy's block, counting orbs this play evokes.</summary>
     public int UnblockedWithOrbs(Creature enemy)
         => Math.Max(0, (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) - enemy.Block);
@@ -207,6 +217,9 @@ public sealed class PlayFacts
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
             OrbBlock = OrbBlockFor(evoked, me, cs),
+            OrbBlockGains = evoked.Count(o => o is FrostOrb && o.EvokeVal > 0),
+            RandomOutcome = cs.HittableEnemies.Count(e => e.IsAlive) > 1
+                            && (evoked.Any(o => o is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
         };
     }
 
