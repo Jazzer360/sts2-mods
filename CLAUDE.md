@@ -53,7 +53,7 @@ Any change to mod behavior updates all three in the same commit:
 The outcome simulator is the core of every prediction, and its tests are what keep it right as rules are added. `dotnet test tests/SpireQoL.Sim.Tests` (no game needed; also runs on GitHub for every push that touches it).
 - Any change to `mods/SpireQoL/Sim/` adds or updates tests in `tests/SpireQoL.Sim.Tests` in the same commit: one scenario per rule (the game behavior it models, from the decompile), including the edge cases (random targets, kills changing later targets, caps, ordering).
 - A bug found in game or in an auto-report that the simulator could reproduce gets a failing test first, then the fix.
-- Keep the performance tests passing: a single simulation must stay well inside the per-frame budget (`SimBudgetMs` in ProcIndicatorsFeature).
+- Keep the performance tests passing: a single simulation must stay inside the per-frame budget (`SimBudgetMs`, 4 ms, in ProcIndicatorsFeature) on a dev machine, and under 30 ms on GitHub's runners.
 - Logic that can't run outside the game (the adapter, proc rules reading game objects) is checked by the in-game audits instead; keep those audits covering every prediction.
 
 ## Releasing (required with every mod update)

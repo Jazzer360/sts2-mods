@@ -62,9 +62,12 @@ public class SimPerformanceTests
         // is the cost of one simulation: it must fit the budget with room to spare. Generous for slow CI machines.
         var perSim = sw.Elapsed.TotalMilliseconds / (plays.Count + 1);
         _out.WriteLine($"{perSim:0.00} ms per simulation");
-        // Shared CI runners are several times slower and noisy: report there, enforce on a dev machine.
-        if (Environment.GetEnvironmentVariable("CI") == "true") return;
-        Assert.True(perSim < 4, $"{perSim:0.00} ms per simulation");
+        // On a dev machine: the per-frame budget card simulations get in game (SimBudgetMs), so one
+        // simulation never overruns a frame's budget. Shared CI runners are budget CPUs and noisy (about
+        // 10 ms per simulation measured there): 30 ms (about one frame at 30 fps) still catches a real
+        // slowdown with plenty of headroom.
+        var limit = Environment.GetEnvironmentVariable("CI") == "true" ? 30.0 : 4.0;
+        Assert.True(perSim < limit, $"{perSim:0.00} ms per simulation (limit {limit} ms)");
     }
 
     [Fact]
