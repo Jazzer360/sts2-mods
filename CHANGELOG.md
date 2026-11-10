@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.14
+#### Fixed
+- Unsettling Lamp: no tab when Artifact would block the debuff (the lamp isn't used up then). It shows when some enemy you could debuff has fewer Artifact charges than the debuffs the card applies.
+
 ### Spire QoL 0.23.13
 #### Fixed
 - Asleep / Slumber tabs (waking an enemy) now count everything that reaches the enemy by the end of your turn: the card's hits, orbs it evokes, damage procs it sets off (Kusarigama...) and your end-of-turn damage (Lightning orbs...). A Strike that strips enough block for your end-of-turn Lightning to get through now shows it wakes the enemy.

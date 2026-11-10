@@ -57,7 +57,7 @@ public static class SettingsCatalog
         new("Vambrace", SourceGroup.Relic, "Cards that gain block, while unused this combat"),
         new("PaelsLegion", SourceGroup.Relic, "Cards that gain block, while it's off cooldown (double block)"),
         new("BurningSticks", SourceGroup.Relic, "Skills that exhaust themselves, while unused this combat"),
-        new("UnsettlingLamp", SourceGroup.Relic, "Cards that debuff enemies, while unused this combat"),
+        new("UnsettlingLamp", SourceGroup.Relic, "Cards that debuff an enemy Artifact won't block, while unused this combat"),
         new("MusicBox", SourceGroup.Relic, "Attacks, while unused this turn"),
         new("ThrowingAxe", SourceGroup.Relic, "The card it will play twice", TagPrefix: "double-play:"),
         new("IntimidatingHelmet", SourceGroup.Relic, "Cards spending at least 2 energy: block"),

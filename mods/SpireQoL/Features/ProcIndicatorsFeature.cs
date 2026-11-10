@@ -396,7 +396,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // Off cooldown, the next card that gains block gets double block, then it rests 2 turns.
                     case "PaelsLegion" when armed && f.BlockGains > 0: return Hit.Trig();
                     case "BurningSticks" when armed && type == CardType.Skill && f.ExhaustsSelf: return Hit.Trig();
-                    case "UnsettlingLamp" when armed && f.EnemyDebuffs.Count > 0: return Hit.Trig();
+                    // It arms on a debuff to an enemy without Artifact (checked before Artifact uses a
+                    // charge), so an enemy whose charges cover every debuff this play applies doesn't count.
+                    case "UnsettlingLamp" when armed && f.EnemyDebuffs.Count > 0
+                                               && _cs.HittableEnemies.Any(e => (e.GetPower<ArtifactPower>()?.Amount ?? 0) < f.EnemyDebuffs.Count * Math.Max(1, plays)):
+                        return Hit.Trig();
                     case "MusicBox" when armed && type == CardType.Attack: return Hit.Trig();
 
                     // ---- on play
