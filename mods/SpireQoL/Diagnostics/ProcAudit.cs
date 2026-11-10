@@ -468,6 +468,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var enemyTabs = w.Predicted.Where(t => t.Kind == "damage" && !t.Crossed).ToList();
         var meTabs = w.Predicted.Where(t => t.Kind == "damage" && t.Crossed).ToList();
         var (eMin, eMax) = (enemyTabs.Sum(t => t.AuditMin), enemyTabs.Sum(t => t.AuditMax));
+        // Orbs the card itself evokes (Dualcast, channelling into full slots) deal unsourced damage too.
+        eMin += w.Facts?.OrbDamageMin ?? 0;
+        eMax += w.Facts?.OrbDamageMax ?? 0;
         var (mMin, mMax) = (meTabs.Sum(t => t.AuditMin), meTabs.Sum(t => t.AuditMax));
         if (toEnemies < eMin || toEnemies > eMax) issues.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}");
         if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");

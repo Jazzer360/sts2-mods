@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Orbs;
 using MegaCrit.Sts2.Core.Models.Powers;
 using Sts2Mods.Core.Game;
 
@@ -135,7 +136,24 @@ public sealed class PlayFacts
     public bool BreaksBlock(Creature enemy) => CanHit(enemy) && enemy.Block > 0 && TotalDamage(enemy) >= enemy.Block;
 
     /// <summary>Kills the enemy (damage ≥ block + HP; ignores per-turn caps like Hardened Shell).</summary>
-    public bool Kills(Creature enemy) => CanHit(enemy) && TotalDamage(enemy) >= enemy.Block + enemy.CurrentHp;
+    public bool Kills(Creature enemy)
+        => enemy.IsAlive && enemy.IsHittable
+           && (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) > 0
+           && (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) >= enemy.Block + enemy.CurrentHp;
+
+    // ------------------------------------------------------------------ orbs evoked by the play
+
+    /// <summary>
+    /// Damage each enemy takes from orbs this play evokes, when the target is certain: Glass hits
+    /// every enemy, Dark the lowest-HP one, Lightning a random one (counted only with one enemy).
+    /// </summary>
+    public IReadOnlyDictionary<Creature, int> OrbDamage { get; init; } = new Dictionary<Creature, int>();
+
+    /// <summary>Total orb evoke damage to enemies, including random Lightning (for the audit's range).</summary>
+    public int OrbDamageMin { get; init; }
+    public int OrbDamageMax { get; init; }
+
+    public int OrbDamageOn(Creature enemy) => OrbDamage.TryGetValue(enemy, out var d) ? d : 0;
 
     // ------------------------------------------------------------------ building
 
@@ -146,6 +164,7 @@ public sealed class PlayFacts
         var draws = CardsDrawn(card, hand.Count) * Math.Max(1, plays);
         var drawPile = Sts2State.DrawPileCount(me);
         var name = card.GetType().Name;
+        var orbs = OrbDamageFor(EvokedOrbs(card, name, me, cs, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays)), me, cs);
 
         return new PlayFacts
         {
@@ -176,7 +195,115 @@ public sealed class PlayFacts
             HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
             OtherHandCards = others.Count,
             AttackHits = IsPlayerAttack(card) ? HitsPerPlay(card, name, cs, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
+            OrbDamage = orbs.Exact,
+            OrbDamageMin = orbs.Min,
+            OrbDamageMax = orbs.Max,
         };
+    }
+
+    /// <summary>
+    /// Existing orbs this play evokes, in order: evoke cards (Dualcast and Quadcast evoke the front
+    /// orb several times, Multicast X times, Shatter every orb twice), and channelling into full
+    /// slots (each channel past capacity evokes the front orb first; OrbCmd.Channel). Orbs the play
+    /// channels and then evokes itself aren't counted (their type may be random).
+    /// </summary>
+    private static List<OrbModel> EvokedOrbs(CardModel card, string name, Player me, ICombatState cs, int channels, int plays)
+    {
+        var result = new List<OrbModel>();
+        var q = me.PlayerCombatState?.OrbQueue;
+        if (q == null) return result;
+        var queue = q.Orbs.Cast<OrbModel?>().ToList();
+        var cap = q.Capacity;
+        void EvokeFront(int times, bool remove)
+        {
+            if (queue.Count == 0) return;
+            for (var t = 0; t < times; t++)
+                if (queue[0] is { } o) result.Add(o);
+            if (remove) queue.RemoveAt(0);
+        }
+        for (var p = 0; p < plays; p++)
+        {
+            switch (name)
+            {
+                case "Dualcast": EvokeFront(2, true); break;
+                case "Quadcast": EvokeFront(Math.Max(1, Sts2State.Var(card, "Repeat", 4)), true); break;
+                case "MultiCast": EvokeFront(XValue(cs, card, SafeEnergy(card)) + (card.IsUpgraded ? 1 : 0), true); break;
+                case "Shatter":
+                    while (queue.Count > 0) EvokeFront(2, true);
+                    break;
+            }
+            for (var c = 0; c < channels / Math.Max(1, plays); c++)
+            {
+                if (cap <= 0) break;
+                if (queue.Count >= cap) EvokeFront(1, true);
+                queue.Add(null); // the new orb
+            }
+        }
+        return result;
+    }
+
+    private static (Dictionary<Creature, int> Exact, int Min, int Max) OrbDamageFor(List<OrbModel> evoked, Player me, ICombatState cs)
+    {
+        var none = (new Dictionary<Creature, int>(), 0, 0);
+        if (evoked.Count == 0) return none;
+        var enemies = cs.HittableEnemies.Where(e => e.IsAlive).ToList();
+        if (enemies.Count == 0) return none;
+        var exact = new Dictionary<Creature, int>();
+        int min = 0, max = 0;
+        int Mod(Creature t, decimal v)
+        {
+            try
+            {
+                return Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(me.RunState, cs, t, me.Creature, v,
+                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered, null, null, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, CardPreviewMode.None, out _));
+            }
+            catch
+            {
+                return (int)v;
+            }
+        }
+        void Add(Creature e, int d) => exact[e] = (exact.TryGetValue(e, out var x) ? x : 0) + d;
+        foreach (var orb in evoked)
+        {
+            var v = orb.EvokeVal;
+            if (v <= 0) continue;
+            switch (orb)
+            {
+                case GlassOrb:
+                    foreach (var e in enemies)
+                    {
+                        var d = Mod(e, v);
+                        Add(e, d);
+                        min += d;
+                        max += d;
+                    }
+                    break;
+                case DarkOrb:
+                {
+                    var weakest = enemies.MinBy(e => e.CurrentHp)!;
+                    var d = Mod(weakest, v);
+                    Add(weakest, d);
+                    min += d;
+                    max += d;
+                    break;
+                }
+                case LightningOrb:
+                    if (enemies.Count == 1)
+                    {
+                        var d = Mod(enemies[0], v);
+                        Add(enemies[0], d);
+                        min += d;
+                        max += d;
+                    }
+                    else
+                    {
+                        min += enemies.Min(e => Mod(e, v));
+                        max += enemies.Max(e => Mod(e, v));
+                    }
+                    break;
+            }
+        }
+        return (exact, min, max);
     }
 
     private static int SafeEnergy(CardModel card)
