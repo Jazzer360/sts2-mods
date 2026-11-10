@@ -23,6 +23,8 @@ public sealed class SimPlay
     /// <summary>Poison applied to the target (Single) or to every enemy (All).</summary>
     public int Poison;
     public bool PoisonAll;
+    /// <summary>Poison applied to a random enemy, RandomPoisonTimes times (Bouncing Flask).</summary>
+    public int RandomPoison, RandomPoisonTimes;
 
     /// <summary>
     /// Enemies whose intent damage the play changes (Weak it applies): their hits afterwards, per enemy id.
@@ -319,6 +321,24 @@ public static class SimEngine
         }
     }
 
+    /// <summary>Poison on a random living enemy: a branch per possible target (none with NoRandomHits: never overstates).</summary>
+    private static IEnumerable<SimState> PoisonRandom(SimState s, int amount)
+    {
+        var targets = s.NoRandomHits ? new List<int>() : s.Targetable.Select(e => e.Id).ToList();
+        if (targets.Count <= 1)
+        {
+            if (targets.Count == 1) s.Enemy(targets[0])!.AddPoison(amount);
+            yield return s;
+            yield break;
+        }
+        foreach (var id in targets)
+        {
+            var c = s.Clone();
+            c.Enemy(id)!.AddPoison(amount);
+            yield return c;
+        }
+    }
+
     private static void HitAll(SimState s, Func<SimEnemy, int> amount, bool card = false)
     {
         foreach (var e in s.Targetable.ToList())
@@ -502,6 +522,7 @@ public static class SimEngine
             s.P.HandCount = Math.Max(0, s.P.HandCount + p.HandDelta);
             s.P.Fading = Math.Max(0, s.P.Fading + p.FadingDelta);
             if (p.IsAttack) s.P.AttacksThisTurn++;
+            AllyDeaths(s); // deaths from the card's hits
 
             // Enemy reactions once the card is played (AfterCardPlayed; powers fire before your relics,
             // so this block is up before relic procs hit): Curl Up, Sneaky, Skittish.
@@ -531,6 +552,9 @@ public static class SimEngine
             }
         });
 
+        // Poison on random enemies (one branch per target each time).
+        for (var i = 0; i < p.RandomPoisonTimes && p.RandomPoison > 0; i++) b.Each(s => PoisonRandom(s, p.RandomPoison));
+
         // Procs it sets off.
         foreach (var proc in p.Procs)
         {
@@ -555,6 +579,8 @@ public static class SimEngine
             }
         }
         foreach (var amount in p.ProcBlock) b.Each(s => GainBlock(s, amount, null));
+
+        b.Do(AllyDeaths); // deaths from its procs
     }
 
     private static IEnumerable<SimState> EvokeAllTwice(SimState s)
@@ -715,8 +741,32 @@ public static class SimEngine
 
     // ------------------------------------------------------------------ enemy turn
 
+    /// <summary>
+    /// Enemies react to an ally's death as it happens (AfterDeath): Ravenous is stunned (and gains
+    /// Strength for later turns), Crab Rage gains Strength (its hits) and block, once.
+    /// </summary>
+    private static void AllyDeaths(SimState s)
+    {
+        foreach (var e in s.Enemies)
+        {
+            if (!e.Alive || !s.Enemies.Any(o => o != e && o.StartedAlive && !o.Alive)) continue;
+            if (e.Ravenous && !e.Stunned)
+            {
+                e.Stunned = true;
+                e.StunnedThisTurn = true;
+            }
+            if (e.HitsAfterAllyDies != null)
+            {
+                e.Hits = e.HitsAfterAllyDies;
+                e.HitsAfterAllyDies = null;
+                e.Block += e.CrabRageBlock;
+            }
+        }
+    }
+
     private static void EnemyTurn(SimState s)
     {
+        AllyDeaths(s); // deaths at your end of turn
         s.FullBlockNeeded = new Dictionary<int, int>(); // per branch (shared until now)
         // Beating Remnant's budget carries over from your turn (it resets only when your turn starts).
         var remnant = s.P.RemnantLeftPlayerTurn;

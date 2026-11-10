@@ -86,8 +86,8 @@ public sealed class PlayFacts
     public int BlockGains { get; init; }
 
     /// <summary>Cards it creates (Shivs, Souls, clones, statuses...), and how many of those are statuses.</summary>
-    public int Generated { get; init; }
-    public int GeneratedStatuses { get; init; }
+    public int Generated { get; private set; }
+    public int GeneratedStatuses { get; private set; }
 
     /// <summary>Debuff powers it applies to enemies (from its PowerVar&lt;T&gt; vars), e.g. Weak, Vulnerable, Doom.</summary>
     public IReadOnlyList<Type> EnemyDebuffs { get; init; } = Array.Empty<Type>();
@@ -269,6 +269,7 @@ public sealed class PlayFacts
             HandCount = handCount,
             DrawPile = drawPile,
             DiscardPile = Sts2State.DiscardPileCount(me),
+            DiscardedBeforeDraw = Card is CalculatedGamble ? Discards : 0,
             VulnerableLandings = DebuffsLandingTotal(t => t == typeof(VulnerablePower)),
             LosesHp = HpLoss > 0,
             Blocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(r => r is Fiddle),
@@ -296,6 +297,12 @@ public sealed class PlayFacts
         ChainedDraws = result.Chained;
         Draws = result.Draws;
         Shuffles = result.Shuffles;
+        // Biiig Hug puts a Soot (a status) into your draw pile on the shuffle: a created status.
+        if (Shuffles && me.Relics.Any(r => r is BiiigHug))
+        {
+            Generated += 1;
+            GeneratedStatuses += 1;
+        }
     }
 
     /// <summary>
@@ -462,6 +469,8 @@ public sealed class PlayFacts
         {
             // Draws up to a full hand; Scrawl itself has left the hand by then.
             case Scrawl: return Math.Max(0, CardPile.MaxCardsInHand - (handCount - 1));
+            // Discards the rest of your hand, then draws that many (CardCmd.DiscardAndDraw).
+            case CalculatedGamble: return Math.Max(0, handCount - 1);
             // Draws one per distinct orb type channeled.
             case CompileDriver when c.DynamicVars.TryGetValue("CalculatedCards", out var v) && v is CalculatedVar cv:
                 return (int)cv.Calculate(null);

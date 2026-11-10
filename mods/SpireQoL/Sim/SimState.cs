@@ -89,6 +89,15 @@ public sealed class SimEnemy
     /// <summary>Slippery: hits that lose it at most 1 HP each, left (0 = none).</summary>
     public int Slippery;
     public bool SlipperyTriggered;
+    /// <summary>Alive when the simulation starts (deaths after that set off Crab Rage and Ravenous).</summary>
+    public bool StartedAlive = true;
+    /// <summary>Ravenous: an ally dying stuns it (RavenousPower.AfterDeath).</summary>
+    public bool Ravenous;
+    /// <summary>Crab Rage: its hits once an ally has died (its Strength; null = no Crab Rage).</summary>
+    public List<int>? HitsAfterAllyDies;
+    /// <summary>Crab Rage: block it gains when an ally dies.</summary>
+    public int CrabRageBlock;
+
     /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
     public bool BlockBroken;
     /// <summary>Stunned by something during your turn (not at the start).</summary>
@@ -304,7 +313,8 @@ public sealed class SimState
             Add(e.Id); Add(e.Hp); Add(e.Block); Add(e.ShellLeft); Add(e.UnblockedInstances); Add(e.FirstHitFullyBlocked ? 1 : 0); Add(e.Poison); Add(e.DiedBeforeActing ? 1 : 0);
             Add(e.PoisonStacks); Add(e.CurlUp); Add(e.Skittish); Add(e.HitByCard ? 1 : 0); Add(e.ThroughByCard ? 1 : 0);
             Add(e.Stunned ? 1 : 0); Add(e.Burrowed ? 1 : 0); Add(e.Flutter); Add(e.StunAtHp); Add(e.Gambit ? 1 : 0); Add(e.Slippery);
-            Add(e.ReactedWithBlock ? 1 : 0); Add(e.BlockBroken ? 1 : 0); Add(e.GambitTriggered ? 1 : 0); Add(e.SlipperyTriggered ? 1 : 0);
+            Add(e.ReactedWithBlock ? 1 : 0); Add(e.BlockBroken ? 1 : 0);
+            Add(e.HitsAfterAllyDies == null ? 0 : 1); Add(e.Hits.Count); foreach (var hit in e.Hits) Add(hit); Add(e.GambitTriggered ? 1 : 0); Add(e.SlipperyTriggered ? 1 : 0);
         }
         Add(P.Orbs.Count);
         foreach (var o in P.Orbs)

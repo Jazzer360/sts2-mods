@@ -28,6 +28,8 @@ public static class PlayChain
         public int HandCount;
         public int DrawPile;
         public int DiscardPile;
+        /// <summary>Cards it discards from hand before drawing (Calculated Gamble): they're in the discard pile when it draws.</summary>
+        public int DiscardedBeforeDraw;
         /// <summary>Vulnerable applications that land on enemies (Vicious draws per application).</summary>
         public int VulnerableLandings;
         public bool LosesHp;
@@ -63,9 +65,9 @@ public static class PlayChain
         if (i.LosesHp) chained += i.CentennialPuzzle;
 
         // The card has left your hand; cards it exhausts from hand first make room.
-        var room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand));
+        var room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand - i.DiscardedBeforeDraw));
         var draws = i.Blocked ? 0 : Math.Min(i.OwnDraws + chained, room);
         var pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile);
-        return new DrawResult(draws, chained, draws > pile && i.DiscardPile > 0);
+        return new DrawResult(draws, chained, draws > pile && i.DiscardPile + i.DiscardedBeforeDraw > 0);
     }
 }

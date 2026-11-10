@@ -56,6 +56,20 @@ public static class SimAdapter
         [nameof(Refract)] = OrbKind.Glass, [nameof(Chaos)] = OrbKind.Unknown,
     };
 
+    /// <summary>
+    /// Cards that change enemies' Strength this turn (decompile v0.111.0): the value's key ("" = 1),
+    /// all enemies or the target, and the sign. The temporary ones (Piercing Wail, Dark Shackles...)
+    /// apply TemporaryStrengthPower subclasses that take Strength away until the end of the turn.
+    /// </summary>
+    private static readonly Dictionary<string, (string? Var, bool All, int Sign)> EnemyStrengthCards = new()
+    {
+        [nameof(PiercingWail)] = ("StrengthLoss", true, -1), [nameof(DarkShackles)] = ("StrengthLoss", false, -1),
+        [nameof(EnfeeblingTouch)] = ("StrengthLoss", false, -1), [nameof(CrushUnder)] = ("StrengthLoss", true, -1),
+        [nameof(Mangle)] = ("StrengthLoss", false, -1), [nameof(DyingStar)] = ("StrengthLoss", true, -1),
+        [nameof(SharedFate)] = ("EnemyStrengthLoss", false, -1), [nameof(Resonance)] = ("", true, -1),
+        [nameof(FightMe)] = ("EnemyStrength", false, 1),
+    };
+
     /// <summary>Your powers a card can give itself that the simulator models (PowerVar&lt;T&gt; on the card).</summary>
     private static readonly HashSet<string> SelfPowers = new() { nameof(PlatingPower), nameof(JuggernautPower), nameof(FeelNoPainPower), nameof(ThornsPower), nameof(FlameBarrierPower) };
 
@@ -96,6 +110,14 @@ public static class SimAdapter
             };
             // Burrowed keeps its block between turns (BurrowedPower.ShouldClearBlock), like Barricade.
             if (se.Burrowed) se.Barricade = true;
+            se.StartedAlive = e.IsAlive;
+            // An ally dying: Ravenous stuns it (and gives Strength for later); Crab Rage gives it Strength once.
+            se.Ravenous = e.HasPower<RavenousPower>();
+            if (e.GetPower<CrabRagePower>() is { } crab && AdjustedHits(e, me, cs, Sts2State.Var(crab, "StrengthPower"), false) is { } enraged)
+            {
+                se.HitsAfterAllyDies = enraged;
+                se.CrabRageBlock = Sts2State.Var(crab, "Block");
+            }
             if (!e.IsAlive) se.Hp = 0;
             if (e.GetPower<HardenedShellPower>() is { } shell)
             {
@@ -365,8 +387,17 @@ public static class SimAdapter
                 case nameof(ThornsPower): play.AddThorns += amount; break;
                 case nameof(FlameBarrierPower): play.AddFlameBarrier += amount; break;
                 case nameof(PoisonPower):
+                {
                     // Snecko Skull adds to every application (ModifyPowerAmountGivenAdditive).
-                    amount += plays * me.Relics.Where(r => r.GetType().Name == nameof(SneckoSkull)).Sum(r => Sts2State.Var(r, nameof(PoisonPower), 1));
+                    var skull = me.Relics.Where(r => r.GetType().Name == nameof(SneckoSkull)).Sum(r => Sts2State.Var(r, nameof(PoisonPower), 1));
+                    if (card.TargetType == TargetType.RandomEnemy)
+                    {
+                        // A random enemy each time, Repeat times (Bouncing Flask).
+                        play.RandomPoison = (int)v.BaseValue + skull;
+                        play.RandomPoisonTimes += Math.Max(1, Sts2State.Var(card, "Repeat", 1)) * plays;
+                        break;
+                    }
+                    amount += plays * skull;
                     if (card.TargetType == TargetType.AnyEnemy)
                     {
                         play.Poison += amount;
@@ -377,6 +408,7 @@ public static class SimAdapter
                         play.PoisonAll = true;
                     }
                     break;
+                }
             }
         }
         if (play.Poison > 0 && !play.PoisonAll) play.TargetId = targetId;
@@ -396,11 +428,19 @@ public static class SimAdapter
                 TargetType.AllEnemies => ids.Keys.Where(e => e.IsAlive && e.IsHittable).ToHashSet(),
                 _ => new HashSet<Creature>(),
             };
+        //  - Strength the card takes away (this turn: Piercing Wail, Dark Shackles...; for good: Shared
+        //    Fate, Resonance) or gives (Fight Me). Losing Strength is a debuff Artifact may take, so an
+        //    enemy with Artifact keeps its intent.
+        EnemyStrengthCards.TryGetValue(name, out var str);
+        var strengthTarget = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
         foreach (var (e, id) in ids)
         {
             if (!e.IsAlive) continue;
-            var weak = weakened.Contains(e) && !e.HasPower<WeakPower>() && (e.GetPower<ArtifactPower>()?.Amount ?? 0) == 0;
+            var artifact = (e.GetPower<ArtifactPower>()?.Amount ?? 0) > 0;
+            var weak = weakened.Contains(e) && !e.HasPower<WeakPower>() && !artifact;
             var strength = card.Type == CardType.Skill ? (e.GetPower<EnragePower>()?.Amount ?? 0) * plays : 0;
+            if (str.Var != null && (str.All ? e.IsHittable : e == strengthTarget) && (str.Sign > 0 || !artifact))
+                strength += str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var)) * plays;
             if (!weak && strength == 0) continue;
             if (AdjustedHits(e, me, cs, strength, weak) is { } hits) play.SetHits[id] = hits;
         }

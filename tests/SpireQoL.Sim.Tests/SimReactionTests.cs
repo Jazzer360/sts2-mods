@@ -138,13 +138,19 @@ public class SimReactionTests
         Assert.Contains(branches, b => b.Enemy(1)!.Block == 0 && b.Enemy(2)!.Hp == 27);
     }
 [Fact]
-    public void FullKeyChangesWhenAnIntentChangesButTheBranchKeyDoesNot()
+    public void FullKeyChangesWithAnythingTheBranchKeyLeavesOut()
     {
-        // Card simulations are cached by FullKey: Weak or Enrage changing an intent must invalidate them.
+        // Card simulations are cached by FullKey: a change in Plating (or relic values, hand cards...)
+        // must invalidate them, though branches never differ in it (the branch key leaves it out).
         var a = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
-        var b = new SimState { Enemies = { Enemy(1, 30, 0, 9) } };
+        var b = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
+        b.P.Plating = 4;
         Assert.Equal(a.Key(), b.Key());
         Assert.NotEqual(a.FullKey(), b.FullKey());
+        // Intents are in both (Crab Rage can change them in one branch).
+        var c = new SimState { Enemies = { Enemy(1, 30, 0, 9) } };
+        Assert.NotEqual(a.Key(), c.Key());
+        Assert.NotEqual(a.FullKey(), c.FullKey());
     }
 
     [Fact]
@@ -167,5 +173,18 @@ public class SimReactionTests
             Assert.Equal(sequential[i].Branches.Count, parallel[i].Branches.Count);
         }
     }
-}
 
+    [Fact]
+    public void RandomPoisonBranchesOverItsTargets()
+    {
+        // Bouncing Flask: 3 poison on a random enemy, 3 times. With one enemy all of it lands there.
+        var one = new SimState { Enemies = { Enemy(1, 9, 0, 10) } };
+        var flask = new SimPlay { Name = "Bouncing Flask", RandomPoison = 3, RandomPoisonTimes = 3 };
+        Assert.True(SimEngine.Run(one, flask).DeadInAll(1)); // 9 poison ticks before it acts
+        // With two enemies nothing is guaranteed, but killing either is possible.
+        var two = new SimState { Enemies = { Enemy(1, 9, 0, 10), Enemy(2, 9, 0, 10) } };
+        var o = SimEngine.Run(two, flask);
+        Assert.False(o.DeadInAll(1));
+        Assert.True(o.DeadInAny(1));
+    }
+}

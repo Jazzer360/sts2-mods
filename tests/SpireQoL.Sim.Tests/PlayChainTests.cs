@@ -93,4 +93,14 @@ public class PlayChainTests
         Assert.Equal(2, r.Draws);
         Assert.True(r.Shuffles);
     }
+
+    [Fact]
+    public void CalculatedGambleRefillsAnEmptyDiscardPileBeforeDrawing()
+    {
+        // Discards the 4 other cards, then draws 4 from a 2-card draw pile: the discards are shuffled in.
+        var i = new PlayChain.DrawInputs { OwnDraws = 4, HandCount = 5, DrawPile = 2, DiscardPile = 0, DiscardedBeforeDraw = 4 };
+        var r = PlayChain.Resolve(i);
+        Assert.Equal(4, r.Draws);
+        Assert.True(r.Shuffles);
+    }
 }
