@@ -64,7 +64,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public required int Start;
         /// <summary>Exclusive end (the next play's window start), or -1 for "up to now".</summary>
         public int To = -1;
-        public readonly List<AbstractModel> Flashed = new();
+        /// <summary>Game state when the play started (before its effects), for reports.</summary>
+        public IReadOnlyDictionary<string, string>? Before;
+        /// <summary>Frames between the card's last frame in hand and its play starting.</summary>
+        public long Lag;
+        /// <summary>How the window's start was chosen (for reports).</summary>
+        public string Split = "";
     }
 
     private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
@@ -107,6 +112,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private int _matched;
     private readonly Dictionary<string, int> _issueCounts = new();
 
+    // Every play this turn (card, its tabs, result), sent with each report: the turn is the unit
+    // that explains most mismatches (counters, "first this turn" relics, queued plays).
+    private readonly List<string> _turnPlays = new();
+    private int _turnPlaysTurn = -1;
+
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
@@ -131,33 +141,27 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         Subscribe(me, cs);
 
         var count = history.Entries.Count(); // list-backed: O(1)
-        var i = _seen;
-        foreach (var entry in count > _seen ? history.Entries.Skip(_seen) : Enumerable.Empty<CombatHistoryEntry>())
+        var list = count > _seen ? history.Entries.ToList() : null;
+        for (var i = _seen; list != null && i < count; i++)
         {
             // Auto-plays (Catastrophe, Mayhem...) belong to the window of whatever played them.
-            if (entry is CardPlayStartedEntry { CardPlay: var play } && play.Card.Owner == me && play.IsFirstInSeries && !play.IsAutoPlay)
+            if (list[i] is CardPlayStartedEntry { CardPlay: var play } && play.Card.Owner == me && play.IsFirstInSeries && !play.IsAutoPlay)
             {
-                // Procs that fire before the play is recorded (BeforeCardPlayed: Intimidating
-                // Helmet, Spirit of Ash...) land just before this entry, so the window starts at
-                // the previous frame's history size, unless the previous play started in this same
-                // frame (cards played quickly): then its window ends right at this entry.
-                var from = Math.Min(_seenAtLastFrame, i);
-                if (_open != null && _open.Start >= _seenAtLastFrame) from = i;
-                if (_open != null)
-                {
-                    from = Math.Max(from, _open.Start + 1);
-                    _open.To = from;
-                }
+                var from = SplitBefore(list, i, me, out var split);
+                if (_open != null) _open.To = from;
                 Close(me);
-                var predicted = _ctx.Decor.Previous.TryGetValue(play.Card, out var tabs) ? tabs : Array.Empty<TabSpec>();
-                ProcIndicatorsFeature.PreviousFacts.TryGetValue(play.Card, out var facts);
+                // The tabs it had when it was last in your hand: a play can start several frames
+                // after the card leaves the hand (the action queue was busy).
+                var predicted = _ctx.Decor.LastInHand.TryGetValue(play.Card, out var tabs) ? tabs : Array.Empty<TabSpec>();
+                ProcIndicatorsFeature.LastFacts.TryGetValue(play.Card, out var facts);
                 _open = new Window
                 {
                     Card = play.Card, CardName = SafeTitle(play.Card), Predicted = predicted, Facts = facts,
-                    From = from, Start = i,
+                    From = from, Start = i, Split = split,
+                    Lag = _ctx.Decor.LastSeenFrame.TryGetValue(play.Card, out var seen) ? _ctx.Decor.Frame - seen : -1,
+                    Before = CaptureBefore(),
                 };
             }
-            i++;
         }
         _seen = count;
 
@@ -165,9 +169,92 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         _seenAtLastFrame = count;
     }
 
-    private void OnRelicFlashed(RelicModel relic, IEnumerable<Creature> _) => _open?.Flashed.Add(relic);
+    // Flashes with the history size when they happened, so they're split between plays the same
+    // way history entries are.
+    private readonly List<(int At, AbstractModel Model)> _flashes = new();
 
-    private void OnPowerFlashed(PowerModel power) => _open?.Flashed.Add(power);
+    private void OnRelicFlashed(RelicModel relic, IEnumerable<Creature> _) => Flash(relic);
+
+    private void OnPowerFlashed(PowerModel power) => Flash(power);
+
+    private void Flash(AbstractModel m)
+    {
+        if (_history == null) return;
+        _flashes.Add((_history.Entries.Count(), m));
+        if (_flashes.Count > 400) _flashes.RemoveRange(0, 200);
+    }
+
+    /// <summary>
+    /// Where the play starting at history index <paramref name="start"/> begins. A play runs:
+    /// energy/stars spent → "before play" procs (Intimidating Helmet, Spirit of Ash, Pen Nib...) →
+    /// play started → the card → play finished → "after play" procs (counters, Tuning Fork...).
+    /// Between the previous play's finish and this start, the previous card's after-play procs come
+    /// first and this card's before-play procs last. Spending energy or stars marks the split
+    /// exactly; for a 0-cost card the split is the point that best fits the previous card's tabs.
+    /// </summary>
+    private int SplitBefore(List<CombatHistoryEntry> list, int start, Player me, out string how)
+    {
+        how = "";
+        var floor = _open != null ? _open.Start + 1 : 0;
+        var gapStart = start;
+        while (gapStart > floor && list[gapStart - 1] is not (CardPlayFinishedEntry or CardPlayStartedEntry or MonsterPerformedMoveEntry))
+            gapStart--;
+
+        for (var k = gapStart; k < start; k++)
+        {
+            if (list[k].Actor == me.Creature && list[k] is EnergySpentEntry or StarsModifiedEntry { Amount: < 0 })
+            {
+                how = $"at its energy/star spend (gap {gapStart}..{start})";
+                return k;
+            }
+        }
+
+        if (_open == null)
+        {
+            // First play this turn with no cost: keep the old frame heuristic, but never reach
+            // back past the gap (start-of-turn effects aren't this card's).
+            how = $"first play, no cost: frame boundary (gap {gapStart}..{start})";
+            return Math.Max(gapStart, Math.Min(_seenAtLastFrame, start));
+        }
+
+        // 0-cost card after another play: try each split, keep the one where the previous card's
+        // window fits its tabs best (ties: give the gap to the previous card).
+        var best = start;
+        var bestIssues = int.MaxValue;
+        for (var k = start; k >= gapStart; k--)
+        {
+            try
+            {
+                var issues = Compare(_open, me, list.GetRange(_open.From, Math.Max(0, k - _open.From)), FlashesIn(_open.From, k), out _).Count;
+                if (issues < bestIssues)
+                {
+                    bestIssues = issues;
+                    best = k;
+                }
+            }
+            catch
+            {
+                // keep the current best
+            }
+        }
+        how = $"0-cost after another play: best fit at {best} (gap {gapStart}..{start})";
+        return best;
+    }
+
+    private IReadOnlyDictionary<string, string>? CaptureBefore()
+    {
+        try
+        {
+            return Snapshot.Capture(_ctx);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private List<AbstractModel> FlashesIn(int from, int to)
+        => _flashes.Where(x => x.At > from && x.At <= to).Select(x => x.Model).ToList();
 
     private void Subscribe(Player me, ICombatState cs)
     {
@@ -194,7 +281,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         {
             var all = _history.Entries.Skip(w.From);
             var entries = (w.To >= 0 ? all.Take(Math.Max(0, w.To - w.From)) : all).ToList();
-            var issues = Compare(w, me, entries, out var model);
+            var issues = Compare(w, me, entries, FlashesIn(w.From, w.To >= 0 ? w.To : int.MaxValue), out var model);
             _checked++;
             if (issues.Count == 0) _matched++;
             foreach (var issue in issues)
@@ -204,6 +291,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             var log = ModEntry.Log;
             var tabs = w.Predicted.Count == 0 ? "none" : string.Join(", ", w.Predicted.Select(t => t.Text ?? (t.Amount > 0 ? $"{t.Key} {t.Amount}" : t.Key)));
+            if (Sts2State.TurnNumber != _turnPlaysTurn)
+            {
+                _turnPlays.Clear();
+                _turnPlaysTurn = Sts2State.TurnNumber;
+            }
+            _turnPlays.Add($"{_turnPlays.Count + 1}. {w.CardName}: tabs {tabs} → {(issues.Count == 0 ? "matched" : string.Join("; ", issues))}");
             if (issues.Count > 0)
             {
                 log.Warn($"[audit] played {w.CardName}: {string.Join("; ", issues)}. Tabs were: {tabs}.");
@@ -216,7 +309,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                         lines.Add(e.HumanReadableString);
                     }
                 }
-                Report(w, issues, tabs, lines);
+                Report(w, issues, tabs, lines, entries.Count, string.Join("\n", _turnPlays));
             }
             foreach (var m in model) log.Info($"[audit] [model] played {w.CardName}: {m}");
         }
@@ -230,7 +323,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// One Sentry report per issue, grouped by what's wrong rather than by amounts: a missing or
     /// silent source groups by that source; block, damage and budget issues group by the card.
     /// </summary>
-    private static void Report(Window w, List<string> issues, string tabs, List<string> window)
+    private static void Report(Window w, List<string> issues, string tabs, List<string> window, int windowSize, string turnPlays)
     {
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;
         if (reporter is not { Enabled: true }) return;
@@ -251,9 +344,18 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 "unexplained" => new[] { kind, card, effect },
                 _ => new[] { kind, card },
             };
+            var extra = new Dictionary<string, string> { ["audit_window"] = string.Join("\n", window), ["turn_plays"] = turnPlays };
+            if (w.Before != null)
+            {
+                foreach (var key in new[] { "player", "player_powers", "relics", "orbs", "enemies", "hand" })
+                    if (w.Before.TryGetValue(key, out var v)) extra["before_" + key] = v;
+            }
+            var lag = w.Lag < 0 ? "never seen in hand" : $"{w.Lag} frame(s)";
             reporter.Mismatch("proc", $"Proc audit: {issue} (played {card})", fp,
-                $"Played {w.CardName} ({card}).\nIssue: {issue}\nAll issues this play: {string.Join("; ", issues)}\nTabs before the play: {tabs}",
-                new Dictionary<string, string> { ["audit_window"] = string.Join("\n", window) });
+                $"Played {w.CardName} ({card}).\nIssue: {issue}\nAll issues this play: {string.Join("; ", issues)}\nTabs before the play: {tabs}" +
+                $"\nFrom the card's last frame in hand to its play starting: {lag}" +
+                $"\nWindow: history {w.From}..{(w.To >= 0 ? w.To : w.From + windowSize)} ({windowSize} entries), play started at {w.Start}; start chosen {w.Split}",
+                extra);
         }
     }
 
@@ -266,7 +368,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         _issueCounts.Clear();
     }
 
-    private static List<string> Compare(Window w, Player me, List<CombatHistoryEntry> entries, out List<string> model)
+    private static List<string> Compare(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, out List<string> model)
     {
         var issues = new List<string>();
         var modelLines = new List<string>();
@@ -279,7 +381,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
 
         // ---- sources that fired with no tab (missing rules)
-        foreach (var m in w.Flashed.Distinct())
+        foreach (var m in flashed.Distinct())
         {
             if (!sourceOf.ContainsKey(m.GetType().Name)) issues.Add($"no tab: {m.GetType().Name} fired");
         }
@@ -288,7 +390,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         foreach (var (name, t) in sourceOf)
         {
             if (t.Crossed || !t.Key.StartsWith("proc:")) continue;
-            if (me.Relics.Any(r => r.GetType().Name == name) && !w.Flashed.Any(f => f.GetType().Name == name))
+            if (me.Relics.Any(r => r.GetType().Name == name) && !flashed.Any(f => f.GetType().Name == name))
                 issues.Add($"didn't fire: {name}");
         }
 

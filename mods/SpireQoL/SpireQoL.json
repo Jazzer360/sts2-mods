@@ -3,7 +3,7 @@
   "name": "Spire QoL",
   "author": "Derek Jass",
   "description": "Display-only quality-of-life tweaks: on-card indicators for card modifiers and for every relic or power a card would set off, relic and power counters, incoming damage, and a shuffle warning. Press F10 (or the button below) for settings: every feature, card tab and tracker row can be switched on or off.",
-  "version": "0.23.8",
+  "version": "0.23.9",
   "has_dll": true,
   "has_pck": false,
   "affects_gameplay": false,

@@ -72,6 +72,26 @@ public sealed class CardDecorFrame
     public IReadOnlyDictionary<CardModel, IReadOnlyList<TabSpec>> Previous { get; private set; }
         = new Dictionary<CardModel, IReadOnlyList<TabSpec>>(ReferenceEqualityComparer.Instance);
 
+    /// <summary>
+    /// Each card's tabs from the last frame it was in your hand (empty if it had none). Kept after
+    /// the card leaves the hand, since a play can start several frames later (ProcAudit).
+    /// </summary>
+    public IReadOnlyDictionary<CardModel, IReadOnlyList<TabSpec>> LastInHand => _lastInHand;
+
+    private readonly Dictionary<CardModel, IReadOnlyList<TabSpec>> _lastInHand = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>Called by the decorating features for every card in hand they looked at this frame.</summary>
+    public void SeenInHand(CardModel card) => _seenThisFrame.Add(card);
+
+    private readonly HashSet<CardModel> _seenThisFrame = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>Frames rendered so far, and the frame each card was last seen in hand.</summary>
+    public long Frame { get; private set; }
+
+    public IReadOnlyDictionary<CardModel, long> LastSeenFrame => _lastSeenFrame;
+
+    private readonly Dictionary<CardModel, long> _lastSeenFrame = new(ReferenceEqualityComparer.Instance);
+
     public void Clear()
     {
         var snap = new Dictionary<CardModel, IReadOnlyList<TabSpec>>(ReferenceEqualityComparer.Instance);
@@ -80,6 +100,18 @@ public sealed class CardDecorFrame
             if (d.Tabs.Count > 0) snap[card] = d.Tabs.ToList();
         }
         Previous = snap;
+        foreach (var card in _seenThisFrame)
+        {
+            _lastInHand[card] = snap.TryGetValue(card, out var tabs) ? tabs : Array.Empty<TabSpec>();
+            _lastSeenFrame[card] = Frame;
+        }
+        if (_lastInHand.Count > 300)
+        {
+            _lastInHand.Clear(); // cards from long-gone turns
+            _lastSeenFrame.Clear();
+        }
+        Frame++;
+        _seenThisFrame.Clear();
         _decor.Clear();
     }
 }

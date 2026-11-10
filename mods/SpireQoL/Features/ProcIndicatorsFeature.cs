@@ -92,6 +92,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private bool _indirect;
 
     /// <summary>Each hand card's PlayFacts on the previous frame (what ProcAudit expects a play to do).</summary>
+    /// <summary>Each card's facts from the last frame it was in hand (kept after it leaves; ProcAudit).</summary>
+    public static IReadOnlyDictionary<CardModel, PlayFacts> LastFacts => _lastFacts;
+
+    private static readonly Dictionary<CardModel, PlayFacts> _lastFacts = new(ReferenceEqualityComparer.Instance);
+
     public static IReadOnlyDictionary<CardModel, PlayFacts> PreviousFacts { get; private set; }
         = new Dictionary<CardModel, PlayFacts>(ReferenceEqualityComparer.Instance);
 
@@ -126,6 +131,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
         foreach (var card in hand)
         {
+            _ctx.Decor.SeenInHand(card);
             // Nothing happens on play for a card that can't be played (Unplayable statuses and
             // curses, blocked cards, cards whose own condition isn't met). Cards you just can't
             // afford yet still show, since energy can come mid-turn.
@@ -147,6 +153,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             }
 
             _facts[card] = f;
+            _lastFacts[card] = f;
+            if (_lastFacts.Count > 300) _lastFacts.Clear();
             var d = _ctx.Decor.For(card);
             // Several enemies can carry the same power: one tab, amounts summed.
             var merged = new Dictionary<string, (AbstractModel Src, Hit Hit)>();

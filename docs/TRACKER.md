@@ -347,3 +347,4 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Sentry sync: a brand-new issue whose event isn't indexed yet no longer fails the whole run (skipped, retried next hour).
 - [~] 0.23.7: tabs stay on a held (dragged or aimed) card; tab icon nudged a little lower.
 - [~] 0.23.8: Relic Counters beside Osty's HP bar at the default placement (`MovableWidget.AttachToWhenDefault`); bigger `2×` text. Check in a Necrobinder fight, including after Osty dies.
+- [~] 0.23.9: proc audit uses each card's last tabs in hand and splits plays at the next card's energy/star spend (best fit for 0-cost); reports carry the before-play state, timing and window. Watch reports #11, #13, #17–#20 (VitalSpark/Tainted on Enfeebling Touch still to diagnose with the new context).

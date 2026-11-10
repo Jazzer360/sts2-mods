@@ -97,8 +97,10 @@ function body(issue, event) {
   b += `\n${kind === "mismatch" ? "A prediction didn't match what the game did." : "An exception was caught (the feature kept running or was turned off)."} Sections below are from the latest occurrence.\n`;
   b += block("Details", extra.details, 4000);
   b += block("Stack trace", stackTrace(event), 8000);
+  b += block("Plays this turn (tabs → result)", extra.turn_plays, 4000);
   b += block("Audit window (combat history during the check)", extra.audit_window, 5000);
-  for (const k of ["combat", "player", "player_powers", "relics", "orbs", "enemies", "hand"]) b += block(k.replace("_", " "), extra[k], 5000);
+  for (const k of ["player", "player_powers", "relics", "orbs", "enemies", "hand"]) b += block("before the play: " + k.replace("_", " "), extra["before_" + k], 5000);
+  for (const k of ["combat", "player", "player_powers", "relics", "orbs", "enemies", "hand"]) b += block((k === "combat" ? "" : "after: ") + k.replace("_", " "), extra[k], 5000);
   b += block("Combat history (last 40 entries)", extra.combat_history, 5000);
   b += block("Recent mod log", extra.recent_log, 6000);
   return clip(b, 64000);

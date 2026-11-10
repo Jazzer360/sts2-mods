@@ -51,6 +51,7 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 
         foreach (var card in Sts2State.Hand(me))
         {
+            _ctx.Decor.SeenInHand(card);
             var kw = card.Keywords;
             var d = _ctx.Decor.For(card);
 

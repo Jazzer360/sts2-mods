@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.9
+#### Fixed
+- Proc audit false alarms (logs and error reports only; nothing on screen changes):
+  - A play that started a few frames after you released the card (the first card of a turn, while start-of-turn effects run) was checked with no tabs, so a correct Tuning Fork tab was reported as missing.
+  - Effects that fire just before a play (Spirit of Ash on an Ethereal card, Intimidating Helmet, Pen Nib...) were blamed on the card played before it.
+#### Changed
+- Proc audit reports include every play this turn so far (tabs and result), the game state just before the play (relic counters, powers, hand with tabs, enemies), the timing between releasing the card and the play starting, and the history range checked.
+
 ### Spire QoL 0.23.8
 #### Changed
 - Relic Counters: with Osty out (Necrobinder), the tray sits right of Osty's HP bar instead of yours, so it doesn't cover Osty. Only at the default placement; a tray you've moved stays where you put it.
