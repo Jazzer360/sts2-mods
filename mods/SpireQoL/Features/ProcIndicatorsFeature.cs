@@ -356,7 +356,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "BurrowedPower" when onEnemy && f.BreaksBlock(e): return Hit.Trig();                // stuns it
                     case "FlutterPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(); // stuns it
                     case "PlowPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
-                    case "ShriekPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
+                    case "ShriekPower" when onEnemy && f.UnblockedWithOrbs(e) > 0 && e.CurrentHp - f.UnblockedWithOrbs(e) <= a: return Hit.Trig();
                     case "TheGambitPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig();             // it dies
                     case "SlipperyPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true); // HP loss capped at 1
 

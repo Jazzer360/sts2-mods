@@ -67,6 +67,9 @@ public sealed class TurnEndModel
     /// </summary>
     public Dictionary<Creature, int> FullBlockNeeded { get; } = new();
 
+    /// <summary>Random-target end-of-turn damage was left out (several enemies): HP lost can come in lower.</summary>
+    public bool RandomLeftOut { get; private set; }
+
     /// <summary>Your end-of-turn damage instances on each enemy, when certain (before it acts).</summary>
     public IReadOnlyDictionary<Creature, List<int>> EndOfTurnHitsOn { get; private set; } = new Dictionary<Creature, List<int>>();
 
@@ -357,6 +360,17 @@ public sealed class TurnEndModel
             if (orb is LightningOrb) random.Add(("Consuming Shadow (Lightning)", value));
         foreach (var orb in me.PlayerCombatState!.OrbQueue.Orbs)
         {
+            // Glass: every enemy, losing 1 damage per trigger (GlassOrb.Passive).
+            if (orb is GlassOrb)
+            {
+                var glassTriggers = Hook.ModifyOrbPassiveTriggerCount(cs, orb, 1, out _);
+                for (var i = 0; i < glassTriggers; i++)
+                {
+                    var v = (int)orb.PassiveVal - i;
+                    if (v > 0) all.Add(("Glass", v));
+                }
+                continue;
+            }
             if (orb is not LightningOrb) continue;
             var triggers = Hook.ModifyOrbPassiveTriggerCount(cs, orb, 1, out _);
             for (var i = 0; i < triggers; i++) random.Add(("Lightning", (int)orb.PassiveVal));
@@ -390,6 +404,8 @@ public sealed class TurnEndModel
                 m.EndOfTurnDamage.Add(new Source("Consuming Shadow (Glass, all)", value));
             }
         }
+        // With several enemies, random-target damage is left out (it could still kill one).
+        m.RandomLeftOut = enemies.Count > 1 && random.Any(r => r.Amount > 0);
         if (enemies.Count == 1)
         {
             foreach (var (name, amount) in random)

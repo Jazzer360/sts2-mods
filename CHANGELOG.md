@@ -6,6 +6,17 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.16
+#### Fixed
+- Incoming Damage counts your Glass orbs' end-of-turn damage to every enemy (an enemy it kills doesn't attack).
+- Shriek tab counts damage from orbs the card evokes.
+- Proc audit false alarms (logs and error reports only), found in a Defect run:
+  - End-of-turn effects (orb passives, Plating, Ethereal exhausts) were blamed on the last card played; its check now ends when you end your turn.
+  - Block from Frost orbs a card evokes (channelling into full slots, Dualcast) was reported as unexplained.
+  - Hard to Kill and Hardened Shell capping a hit were reported as missing tabs.
+  - Enemies applying powers to each other (Heist) were blamed on your card.
+- Forecast audit: HP lost lower than forecast isn't reported when random-target end-of-turn damage was left out on purpose.
+
 ### Spire QoL 0.23.15
 #### Added
 - Feral: a tab on 0-cost Attacks while Feral has charges left this turn (the card returns to your hand).

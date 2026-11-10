@@ -76,6 +76,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
 
+    /// <summary>
+    /// Powers that flash when they change damage (caps), not because a play set them off. The
+    /// card's damage already reflects them, so they never get a tab.
+    /// </summary>
+    private static readonly HashSet<string> Modifiers = new() { "HardToKillPower", "HardenedShellPower" };
+
     /// <summary>What a trigger tab's source can add beyond the card itself (for the budget check).</summary>
     private static readonly Dictionary<string, Effect[]> SourceEffects = new()
     {
@@ -141,6 +147,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
 
         Subscribe(me, cs);
+        if (!ReferenceEquals(_endTurnSource, CombatManager.Instance))
+        {
+            _endTurnSource = CombatManager.Instance;
+            CombatManager.Instance.PlayerEndedTurn += OnPlayerEndedTurn;
+        }
 
         var count = history.Entries.Count(); // list-backed: O(1)
         var list = count > _seen ? history.Entries.ToList() : null;
@@ -177,6 +188,24 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     // Flashes with the history size when they happened, so they're split between plays the same
     // way history entries are.
     private readonly List<(int At, AbstractModel Model)> _flashes = new();
+
+    // End turn: the last play's window ends here, before end-of-turn effects (orb passives,
+    // Plating, Ethereal exhausts...), which otherwise land in it.
+    private CombatManager? _endTurnSource;
+
+    private void OnPlayerEndedTurn(Player player, bool _)
+    {
+        try
+        {
+            if (_open == null || _history == null || player != Sts2State.Me) return;
+            _open.To = _history.Entries.Count();
+            Close(player);
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log.Warn($"[audit] end-turn close failed: {ex.Message}");
+        }
+    }
 
     private void OnRelicFlashed(RelicModel relic, IEnumerable<Creature> _) => Flash(relic);
 
@@ -442,7 +471,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // ---- sources that fired with no tab (missing rules)
         foreach (var m in flashed.Distinct())
         {
-            if (!sourceOf.ContainsKey(m.GetType().Name)) issues.Add($"no tab: {m.GetType().Name} fired");
+            if (!sourceOf.ContainsKey(m.GetType().Name) && !Modifiers.Contains(m.GetType().Name)) issues.Add($"no tab: {m.GetType().Name} fired");
         }
 
         // ---- relic tabs whose relic didn't fire (crossed ones mean "this breaks it": no flash)
@@ -457,7 +486,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var procBlock = entries.OfType<BlockGainedEntry>()
             .Where(b => b.Actor == me.Creature && b.CardPlay == null)
             .Sum(b => b.Amount);
-        var predictedBlock = w.Predicted.Where(t => t.Kind == "block").Sum(t => t.Amount);
+        var predictedBlock = w.Predicted.Where(t => t.Kind == "block").Sum(t => t.Amount) + (w.Facts?.OrbBlock ?? 0);
         if (procBlock != predictedBlock) issues.Add($"block: predicted {predictedBlock}, actual {procBlock}");
 
         // ---- damage from procs (no card source), against each tab's range
@@ -507,6 +536,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var own = OwnPowerTypes(w.Card);
         var foreign = entries.OfType<PowerReceivedEntry>()
             .Where(p => p.Amount > 0 && !own.Contains(p.Power.GetType()) && p.Power is not ITemporaryPower)
+            .Where(p => !(p.Actor.IsEnemy && p.Applier is { IsEnemy: true })) // enemies acting on each other (Heist)
             .Select(p => p.Power.GetType().Name)
             .Distinct()
             .ToList();

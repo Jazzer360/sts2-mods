@@ -124,7 +124,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var actualBlockGain = endOfTurn.OfType<BlockGainedEntry>().Where(b => b.Actor == me.Creature).Sum(b => b.Amount);
 
         var issues = new List<string>();
-        if (actualTaken != f.Taken) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
+        // Less than forecast is expected when random-target end-of-turn damage was left out: it may
+        // have killed an attacker (the forecast stays on the safe side on purpose).
+        if (actualTaken != f.Taken && !(f.RandomLeftOut && actualTaken < f.Taken)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
         if (actualOsty != f.OstyTaken) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
 

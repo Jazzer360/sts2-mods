@@ -153,6 +153,13 @@ public sealed class PlayFacts
     public int OrbDamageMin { get; init; }
     public int OrbDamageMax { get; init; }
 
+    /// <summary>Block you gain from Frost orbs this play evokes (EvokeVal, Unpowered).</summary>
+    public int OrbBlock { get; init; }
+
+    /// <summary>Damage that gets past the enemy's block, counting orbs this play evokes.</summary>
+    public int UnblockedWithOrbs(Creature enemy)
+        => Math.Max(0, (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) - enemy.Block);
+
     public int OrbDamageOn(Creature enemy) => OrbDamage.TryGetValue(enemy, out var d) ? d : 0;
 
     // ------------------------------------------------------------------ building
@@ -164,7 +171,8 @@ public sealed class PlayFacts
         var draws = CardsDrawn(card, hand.Count) * Math.Max(1, plays);
         var drawPile = Sts2State.DrawPileCount(me);
         var name = card.GetType().Name;
-        var orbs = OrbDamageFor(EvokedOrbs(card, name, me, cs, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays)), me, cs);
+        var evoked = EvokedOrbs(card, name, me, cs, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
+        var orbs = OrbDamageFor(evoked, me, cs);
 
         return new PlayFacts
         {
@@ -198,6 +206,7 @@ public sealed class PlayFacts
             OrbDamage = orbs.Exact,
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
+            OrbBlock = OrbBlockFor(evoked, me, cs),
         };
     }
 
@@ -240,6 +249,24 @@ public sealed class PlayFacts
             }
         }
         return result;
+    }
+
+    private static int OrbBlockFor(List<OrbModel> evoked, Player me, ICombatState cs)
+    {
+        var total = 0;
+        foreach (var orb in evoked)
+        {
+            if (orb is not FrostOrb || orb.EvokeVal <= 0) continue;
+            try
+            {
+                total += Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(cs, me.Creature, orb.EvokeVal, MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered, null, null, out _));
+            }
+            catch
+            {
+                total += (int)orb.EvokeVal;
+            }
+        }
+        return total;
     }
 
     private static (Dictionary<Creature, int> Exact, int Min, int Max) OrbDamageFor(List<OrbModel> evoked, Player me, ICombatState cs)
