@@ -374,4 +374,5 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [ ] Kill-reactive tabs (Gremlin Horn, enemy death effects) still use the immediate kill check, not the simulator.
 - [x] Logic review of the simulator against the decompile (2026-11-09): fixed Beating Remnant carry-over and Buffer order, Ethereal exhaust before hand damage, Glass evoke shrinking, Gold-Plated Cables by position, Infused Core on new Lightning, Tempest+, lethal = dead before acting, powers before relics, Disintegration after Parrying Shield, Imbalanced full-block rule, Hardened Shell and wake counts. Regression tests in `SimReviewTests.cs`.
 - [ ] Remaining approximations: poison TriggerCount, a card's procs timing relative to its hits, block remainder across gains.
+- [x] 0.24.1: Glass orb decays its base (`GlassOrb._passiveVal`), not the Focus-included value (tests in `SimReviewTests`).
 

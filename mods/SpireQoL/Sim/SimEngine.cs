@@ -486,12 +486,15 @@ public static class SimEngine
                             orb.Evoke += orb.Passive;
                             return new[] { s };
                         case OrbKind.Glass:
+                            // GlassOrb.Passive: if PassiveVal (base + Focus) > 0, the base drops by 1
+                            // (not below 0) and every enemy takes the value from before the drop.
                             if (orb.Passive > 0)
                             {
                                 var v = orb.Passive;
                                 if (s.Log) s.EndOfTurnDamage.Add(("Glass (all)", v));
                                 HitAll(s, _ => v);
-                                orb.Passive = Math.Max(0, orb.Passive - 1);
+                                orb.GlassBase = Math.Max(0, orb.GlassBase - 1);
+                                orb.Passive = Math.Max(0, orb.GlassBase + orb.GlassBonus);
                                 orb.Evoke = orb.Passive * 2; // GlassOrb.EvokeVal => PassiveVal * 2
                             }
                             return new[] { s };

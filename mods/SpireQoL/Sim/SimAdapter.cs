@@ -216,7 +216,14 @@ public static class SimAdapter
         };
         var triggers = 1;
         try { triggers = Hook.ModifyOrbPassiveTriggerCount(cs, orb, 1, out _); } catch { /* 1 */ }
-        return new SimOrb { Kind = kind, Passive = (int)orb.PassiveVal, Evoke = (int)orb.EvokeVal, Triggers = triggers };
+        var sim = new SimOrb { Kind = kind, Passive = (int)orb.PassiveVal, Evoke = (int)orb.EvokeVal, Triggers = triggers };
+        if (orb is GlassOrb)
+        {
+            // Base and bonus separately: the base decays, the bonus (Focus) doesn't.
+            sim.GlassBase = (int)Sts2State.Private(orb, "_passiveVal", 4m);
+            sim.GlassBonus = sim.Passive - sim.GlassBase;
+        }
+        return sim;
     }
 
     /// <summary>
@@ -231,7 +238,7 @@ public static class SimAdapter
             OrbKind.Lightning => new SimOrb { Kind = kind, Passive = F(3) + lightningBonus, Evoke = F(8) + lightningBonus },
             OrbKind.Frost => new SimOrb { Kind = kind, Passive = F(2), Evoke = F(5) },
             OrbKind.Dark => new SimOrb { Kind = kind, Passive = F(6), Evoke = 6 },
-            OrbKind.Glass => new SimOrb { Kind = kind, Passive = F(4), Evoke = F(4) * 2 },
+            OrbKind.Glass => new SimOrb { Kind = kind, Passive = F(4), Evoke = F(4) * 2, GlassBase = 4, GlassBonus = focus },
             _ => new SimOrb { Kind = kind },
         };
     }

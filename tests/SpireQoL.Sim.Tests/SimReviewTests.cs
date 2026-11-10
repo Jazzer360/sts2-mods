@@ -50,12 +50,39 @@ public class SimReviewTests
         // GlassOrb.EvokeVal => PassiveVal * 2; the passive loses 1 per trigger. Consuming Shadow evokes
         // after the passives (AfterSideTurnEnd): Glass 4 → passive 4, then evoke (3*2)=6, total 10.
         var s = new SimState { Enemies = { Enemy(1, 11) } };
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 4, Evoke = 8 } };
+        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 4, Evoke = 8, GlassBase = 4 } };
         s.P.OrbCapacity = 3;
         s.P.ConsumingShadow = 1;
         var o = SimEngine.Run(s);
         Assert.Equal(1, o.Worst.Enemy(1)!.Hp);
         Assert.False(o.DeadInAll(1));
+    }
+
+    [Fact]
+    public void ADecayedGlassOrbStillDealsYourFocus()
+    {
+        // GlassOrb: PassiveVal = base + Focus; only the base decays (to 0). Base 0 with Focus 2 keeps
+        // dealing 2 to every enemy each time it fires, and its evoke stays 4.
+        var glass = new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, GlassBase = 0, GlassBonus = 2, Triggers = 2 };
+        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 4 } } };
+        s.P.Orbs = new() { glass };
+        s.P.OrbCapacity = 3;
+        var o = SimEngine.Run(s);
+        Assert.True(o.DeadInAll(1)); // 2 + 2
+        Assert.Equal(4, o.Worst.P.Orbs[0].Evoke);
+    }
+
+    [Fact]
+    public void GlassDecaysItsBaseNotItsFocusIncludedValue()
+    {
+        // Base 3 with Focus 2: fires for 5, then 4 (base 2 + 2).
+        var glass = new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, GlassBase = 3, GlassBonus = 2, Triggers = 2 };
+        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 20 } } };
+        s.P.Orbs = new() { glass };
+        s.P.OrbCapacity = 3;
+        var o = SimEngine.Run(s);
+        Assert.Equal(11, o.Worst.Enemy(1)!.Hp); // 20 - 5 - 4
+        Assert.Equal(6, o.Worst.P.Orbs[0].Evoke); // base 1 + Focus 2 = 3, x2
     }
 
     [Fact]

@@ -10,7 +10,7 @@ public class SimEngineTests
 
     private static SimOrb Lightning(int passive = 3, int evoke = 8) => new() { Kind = OrbKind.Lightning, Passive = passive, Evoke = evoke };
     private static SimOrb Frost(int passive = 2, int evoke = 5) => new() { Kind = OrbKind.Frost, Passive = passive, Evoke = evoke };
-    private static SimOrb Glass(int passive = 4) => new() { Kind = OrbKind.Glass, Passive = passive, Evoke = passive * 2 };
+    private static SimOrb Glass(int passive = 4, int focus = 0) => new() { Kind = OrbKind.Glass, Passive = passive, Evoke = passive * 2, GlassBase = passive - focus, GlassBonus = focus };
 
     [Fact]
     public void TwoLightningOrbsKillBothThreeHpEnemiesWhateverTheTargets()

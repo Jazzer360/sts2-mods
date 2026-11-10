@@ -16,6 +16,14 @@ public sealed class SimOrb
     /// <summary>Passive triggers at end of turn (Hook.ModifyOrbPassiveTriggerCount).</summary>
     public int Triggers = 1;
 
+    /// <summary>
+    /// Glass only: the stored base value (GlassOrb._passiveVal, starts at 4) and what Focus adds to it.
+    /// Passive = max(0, base + bonus); each passive firing lowers the BASE by 1 (not below 0), so a fully
+    /// decayed Glass orb still deals your Focus. Evoke = 2 x passive.
+    /// </summary>
+    public int GlassBase;
+    public int GlassBonus;
+
     public SimOrb Clone() => (SimOrb)MemberwiseClone();
 }
 
