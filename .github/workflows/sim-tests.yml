@@ -1,0 +1,19 @@
+name: Simulator tests
+
+# The outcome simulator (mods/SpireQoL/Sim) has no game types, so its tests run without the game.
+on:
+  push:
+    branches: [main]
+    paths: ["mods/SpireQoL/Sim/**", "tests/**", ".github/workflows/sim-tests.yml"]
+  pull_request:
+    paths: ["mods/SpireQoL/Sim/**", "tests/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - run: dotnet test tests/SpireQoL.Sim.Tests

@@ -31,6 +31,7 @@ Everything needed to pick this repo up on a new machine, or after a long break. 
 ## Day-to-day loop
 
 - **Change → build → check in game.** `dotnet build` with the game closed, launch, look. `scripts/game.ps1` drives the game for checks: it focuses the window, sends F8/F9/F10/Esc or a click (window-relative, full-resolution pixels), and saves a half-size screenshot. Don't start or play runs on the owner's profile just to test; use the main menu, the settings menu, or ask the owner to set up a fight.
+- **Simulator tests:** `dotnet test tests/SpireQoL.Sim.Tests` runs the outcome simulator's scenarios without the game (also on GitHub for every push that touches it). Every change to the simulator comes with tests in the same commit (CLAUDE.md "Tests"); a bug the simulator could reproduce gets a failing test first.
 - **Logs:** `%APPDATA%\SlayTheSpire2\logs\godot*.log` (newest is `godot.log`). Mod lines start with `[SpireQoL]`. Audit lines: `[SpireQoL] [audit]`, with a `combat summary` line per fight. Read these first for any in-game report (see CLAUDE.md "Logs first").
 - **Release every change** (CLAUDE.md "Releasing"): bump the version in `SpireQoL.json` and `SpireQoL.csproj`, add the CHANGELOG section, commit, push, `./scripts/release.ps1`. The release script works while the game is running (it doesn't install); install afterwards with `dotnet build` once the game is closed. The "Release check" workflow on GitHub goes red if a release is missing.
 
@@ -49,6 +50,7 @@ Working a report:
 ## Repo layout
 
 - `core/`: shared code compiled into each mod (feature host, overlay, widgets, game-state helpers, error reporter).
-- `mods/SpireQoL/`: the mod. `Features/` (one per feature), `Procs/PlayFacts.cs` (what playing a card does), `Combat/TurnEndModel.cs` (Incoming Damage simulation), `Diagnostics/` (audits, snapshots), `Menu/` (settings menu and catalog), `Cards/` (on-card tab rendering).
+- `mods/SpireQoL/`: the mod. `Features/` (one per feature), `Procs/PlayFacts.cs` (what playing a card does), `Sim/` (the outcome simulator: `SimState`/`SimEngine` are pure C#, `SimAdapter` reads the game), `Combat/TurnEndModel.cs` (Incoming Damage view over the simulator), `Diagnostics/` (audits, snapshots), `Menu/` (settings menu and catalog), `Cards/` (on-card tab rendering).
 - `docs/`: FEATURES (complete list of what the mod does and touches), TRACKER (work log and open items), MODDING_NOTES (loader facts), ROADMAP, this file.
 - `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`.
+- `tests/SpireQoL.Sim.Tests/`: simulator tests (no game needed).

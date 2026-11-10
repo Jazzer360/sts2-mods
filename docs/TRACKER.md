@@ -361,3 +361,17 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 2026-11-09: docs/DEVELOPMENT.md (setup on a new machine, day-to-day loop, error reports), `scripts/decompile.ps1` (recreates ~/git/sts2-decompiled), `scripts/game.ps1` (in-game test helper); working rules for auto-reports in CLAUDE.md.
 - [~] 0.23.20: Juggernaut from end-of-turn block gains in the end-of-turn model (random target: counted with one enemy).
 - [~] 0.23.21: potion effects out of play windows (#67: Power Potion's free Creative AI counted as a created card). `PotionModel` writes `PotionUsedEntry` after `OnUse`, so the 0.23.10 cut at the entry left the potion's effects in the previous window; the gap before the next play now stops at the entry and the previous window's end is a best fit before it (`ProcAudit.PotionCut`).
+
+---
+
+## 13. Outcome simulator (2026-11-09) → 0.24.0
+
+- [x] Pure simulator (`Sim/SimState.cs`, `Sim/SimEngine.cs`) with branching over random targets, merging, worst case / guarantees; offline tests (`tests/SpireQoL.Sim.Tests`, CI workflow "Simulator tests").
+- [x] Adapter from the game (`Sim/SimAdapter.cs`); Incoming Damage (`TurnEndModel`) and the forecast audit on it.
+- [x] Lethal tab (skull emote icon), Imbalanced and Asleep/Slumber tabs on it.
+- [ ] Check in game: Stone Armor + Juggernaut, Juggernaut card + Orichalcum, two Lightning orbs vs two low-HP enemies, a Defect fight's Incoming Damage.
+- [ ] Lethal isn't audited yet (a play can be followed by others before the kill); consider checking at the enemy turn that predicted kills happened when no other card was played.
+- [ ] Kill-reactive tabs (Gremlin Horn, enemy death effects) still use the immediate kill check, not the simulator.
+- [x] Logic review of the simulator against the decompile (2026-11-09): fixed Beating Remnant carry-over and Buffer order, Ethereal exhaust before hand damage, Glass evoke shrinking, Gold-Plated Cables by position, Infused Core on new Lightning, Tempest+, lethal = dead before acting, powers before relics, Disintegration after Parrying Shield, Imbalanced full-block rule, Hardened Shell and wake counts. Regression tests in `SimReviewTests.cs`.
+- [ ] Remaining approximations: poison TriggerCount, a card's procs timing relative to its hits, block remainder across gains.
+

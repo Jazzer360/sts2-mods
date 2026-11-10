@@ -582,6 +582,7 @@ public sealed class SettingsMenu
                 case "retain": tex = Cards.GameIcons.Enchantment<MegaCrit.Sts2.Core.Models.Enchantments.Steady>(); break;
                 case "sly": tex = Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.MasterPlannerPower>(); break;
                 case "shuffle": tex = Cards.GameIcons.DiscardPile(); break;
+                case "lethal": tex = Cards.GameIcons.Skull(); break;
                 case "replay":
                     var l = Label("2×", 22, Text);
                     l.CustomMinimumSize = new Vector2(IconSize, IconSize);

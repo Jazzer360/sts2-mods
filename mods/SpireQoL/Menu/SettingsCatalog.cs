@@ -32,6 +32,7 @@ public static class SettingsCatalog
         new TabEntry("retain", "Retain", "Cards that stay in your hand at end of turn (permanently or this turn only). Steady icon."),
         new TabEntry("sly", "Sly", "Cards with Sly (permanently or this turn only). Master Planner icon."),
         new TabEntry("replay", "Replay", "Cards that replay themselves (Hidden Gem, Transfigure, Sword Sage, enchantments): a \"2×\" tab with the total plays."),
+        new TabEntry("lethal", "Lethal", "Skull on cards that kill an enemy for certain before it acts: the card's hits, orbs it evokes, procs it sets off, and your end of turn (Juggernaut, orb passives, poison...). Random targets only count when every outcome kills."),
         new TabEntry("shuffle", "Reshuffle", "Discard pile icon on cards whose draw would shuffle your discard pile back into your draw pile."),
     };
 
@@ -178,7 +179,7 @@ public static class SettingsCatalog
         new("TheGambitPower", SourceGroup.EnemyPower, "Attacks that deal it unblocked damage: it dies"),
         new("EnragePower", SourceGroup.EnemyPower, Crossed + "skills: it gains Strength"),
         new("SneakyPower", SourceGroup.EnemyPower, Crossed + "attacks"),
-        new("ImbalancedPower", SourceGroup.EnemyPower, "The card whose block takes you to fully blocking its first hit (it's stunned)"),
+        new("ImbalancedPower", SourceGroup.EnemyPower, "Cards after which its first hit is fully blocked in every outcome, when it isn't now (it's stunned)"),
         new("SkittishPower", SourceGroup.EnemyPower, Crossed + "attacks (first unblocked hit): it gains block"),
         new("ImitationLearningPower", SourceGroup.EnemyPower, Crossed + "powers"),
         new("WitheringPresencePower", SourceGroup.EnemyPower, Crossed + "the card that completes its count: Wither in your hand", "Your cards, toward the next Wither (red)"),
@@ -187,8 +188,8 @@ public static class SettingsCatalog
         new("ThornsPower", SourceGroup.EnemyPower, Crossed + "attacks that hit it: damage to you"),
         new("CurlUpPower", SourceGroup.EnemyPower, Crossed + "attacks that hit it: it gains block"),
         new("PersonalHivePower", SourceGroup.EnemyPower, Crossed + "attacks that hit it: Dazed in your draw pile"),
-        new("AsleepPower", SourceGroup.EnemyPower, Crossed + "cards that get damage through its block by the end of your turn (with procs and end-of-turn damage): wakes it"),
-        new("SlumberPower", SourceGroup.EnemyPower, Crossed + "cards that get enough damage instances through its block by the end of your turn: wakes it"),
+        new("AsleepPower", SourceGroup.EnemyPower, Crossed + "cards after which damage could get through its block by the end of your turn (procs and end-of-turn damage included): wakes it"),
+        new("SlumberPower", SourceGroup.EnemyPower, Crossed + "cards after which enough damage instances could get through its block by the end of your turn: wakes it"),
         new("SlipperyPower", SourceGroup.EnemyPower, Crossed + "attacks that hit it: HP loss capped at 1"),
         new("InfestedPower", SourceGroup.EnemyPower, Crossed + "attacks that kill it"),
         new("SteamEruptionPower", SourceGroup.EnemyPower, Crossed + "attacks that kill it"),

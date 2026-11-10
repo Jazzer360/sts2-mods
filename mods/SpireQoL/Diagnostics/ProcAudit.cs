@@ -61,6 +61,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public required IReadOnlyList<TabSpec> Predicted;
         public required PlayFacts? Facts;
         public required int From { get; set; }
+        /// <summary>Another play finished after this card's tabs were last computed (played quickly): not checked.</summary>
+        public string? StaleBecause;
         /// <summary>Earliest possible start; when below From, Close picks the best fit in between.</summary>
         public int FromMin = -1;
         /// <summary>History index of this play's own CardPlayStartedEntry.</summary>
@@ -176,10 +178,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                     From = from, FromMin = fromMin, Start = i, Split = split,
                     Lag = _ctx.Decor.LastSeenFrame.TryGetValue(play.Card, out var seen) ? _ctx.Decor.Frame - seen : -1,
                     Before = CaptureBefore(),
+                    StaleBecause = StaleBecause(list, play.Card, i, me),
                 };
             }
         }
         _seen = count;
+        _countAtFrame[_ctx.Decor.Frame] = count;
+        if (_countAtFrame.Count > 600) _countAtFrame.Remove(_countAtFrame.Keys.Min());
 
         if (_open != null && !Sts2State.IsPlayerTurn)
         {
@@ -208,6 +213,24 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         {
             ModEntry.Log.Warn($"[audit] end-turn close failed: {ex.Message}");
         }
+    }
+
+    // History size at each frame, to tell when a card's tabs were computed relative to other plays.
+    private readonly Dictionary<long, int> _countAtFrame = new();
+
+    /// <summary>
+    /// The card's tabs were last computed before another of your plays finished (you played quickly,
+    /// so this card's prediction didn't see that play's effects): returns that play's card, else null.
+    /// </summary>
+    private string? StaleBecause(List<CombatHistoryEntry> hist, CardModel card, int start, Player me)
+    {
+        if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var frame) || !_countAtFrame.TryGetValue(frame, out var then)) return null;
+        for (var k = Math.Max(0, then); k < start && k < hist.Count; k++)
+        {
+            if (hist[k] is CardPlayFinishedEntry { CardPlay: var p } && p.Card.Owner == me && !ReferenceEquals(p.Card, card))
+                return SafeTitle(p.Card);
+        }
+        return null;
     }
 
     private void OnRelicFlashed(RelicModel relic, IEnumerable<Creature> _) => Flash(relic);
@@ -509,6 +532,19 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var entries = hist.GetRange(w.From, Math.Max(0, to - w.From));
             w.To = to;
             var issues = Compare(w, me, entries, FlashesIn(w.From, to), out var model);
+            if (w.StaleBecause != null && issues.Count > 0)
+            {
+                // Played before the previous card finished: its tabs didn't see that card's effects.
+                model.Add($"not checked: its tabs were computed before {w.StaleBecause} finished ({string.Join("; ", issues)})");
+                issues.Clear();
+            }
+            if (w.Facts?.SimPending == true)
+            {
+                // The simulator hadn't reached it yet: its simulator tabs may be missing.
+                var simOnly = issues.Where(x => x.Contains("ImbalancedPower") || x.Contains("AsleepPower") || x.Contains("SlumberPower")).ToList();
+                foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
+                issues.RemoveAll(simOnly.Contains);
+            }
             _checked++;
             if (issues.Count == 0) _matched++;
             foreach (var issue in issues)

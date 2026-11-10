@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.24.0
+#### Added
+- **Lethal tab** (skull): on cards that kill an enemy for certain before it acts, counting the card's hits, orbs it evokes, procs it sets off, and everything your end of turn does (Juggernaut from Plating or Orichalcum block, orb passives, poison...). Stone Armor with Juggernaut and the Juggernaut card with Orichalcum show it. Switchable in the settings menu.
+#### Changed
+- New outcome simulator behind Incoming Damage and the lethal, Imbalanced and wake tabs: your end of turn and the enemy turn played out in the game's order, after each card. Random targets are explored as branches instead of being left out, so a result that's the same whatever the target counts (two Lightning orbs and two enemies they each kill: no damage incoming). Incoming Damage shows the worst branch for you; good outcomes (lethal, Imbalanced) need every branch, warnings (waking an enemy) need only one. Simulations are cached and get a small time budget per frame, so they never stall the game.
+- Proc audit: a card played while the previous one was still resolving isn't checked (its tabs couldn't see that play's effects).
+
 ### Spire QoL 0.23.21
 #### Fixed
 - Proc audit false alarm (logs and error reports only): a potion's effects (the card a Power Potion adds, Lucky Tonic's Buffer) were blamed on the card played before or after it. The game records a potion after its effects, so the split between plays now ends before them.

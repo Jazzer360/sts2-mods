@@ -14,6 +14,7 @@ using MegaCrit.Sts2.Core.ValueProps;
 using SpireQoL.Cards;
 using SpireQoL.Combat;
 using SpireQoL.Procs;
+using SpireQoL.Sim;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -62,7 +63,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// <param name="Min">Damage procs: least total damage actually dealt (all targets, their modifiers).</param>
     /// <param name="Max">Damage procs: most total damage actually dealt.</param>
     private readonly record struct Hit(Kind Kind, int Amount, bool Harmful = false, int Count = 1, int Min = 0, int Max = 0,
-        IReadOnlyDictionary<Creature, List<int>>? OnEnemies = null, bool Random = false)
+        IReadOnlyDictionary<Creature, List<int>>? OnEnemies = null, bool Random = false,
+        IReadOnlyList<(IReadOnlyDictionary<Creature, int> PerEnemy, int Times)>? RandomHits = null)
     {
         public static Hit Trig(bool harmful = false) => new(Kind.Trigger, 0, harmful);
     }
@@ -71,9 +73,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     // Procs that other procs can set off; evaluated in a second pass with these extras.
     // Waking reads the first pass's proc damage on each enemy (Kusarigama etc.), so it runs second.
-    private static readonly HashSet<string> SecondOrder = new() { "JuggernautPower", "Metronome", "BlackHolePower", "AsleepPower", "SlumberPower" };
+    private static readonly HashSet<string> SecondOrder = new() { "JuggernautPower", "Metronome", "BlackHolePower" };
     private int _xBlockGains, _xChannels, _xStarGains;
-    private readonly Dictionary<Creature, List<int>> _xEnemyHits = new();
 
     private static bool CanEverPlayNow(CardModel card)
     {
@@ -119,6 +120,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var me = Sts2State.Me;
         var cs = Sts2State.Combat;
         if (me == null || cs == null || !Sts2State.IsPlayerTurn) return;
+        _simBudget.Restart();
         var hand = Sts2State.Hand(me);
         if (hand.Count == 0) return;
 
@@ -180,6 +182,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                             Min = prev.Hit.Min + h.Min, Max = prev.Hit.Max + h.Max,
                             OnEnemies = MergeHits(prev.Hit.OnEnemies, h.OnEnemies),
                             Random = prev.Hit.Random || h.Random,
+                            RandomHits = prev.Hit.RandomHits == null ? h.RandomHits : h.RandomHits == null ? prev.Hit.RandomHits : prev.Hit.RandomHits.Concat(h.RandomHits).ToList(),
                         })
                         : (src, h);
                 }
@@ -188,18 +191,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             // First-order procs, then the procs they set off (procs of procs): block gains feed
             // Juggernaut, Storm's lightning feeds Metronome, The Sealed Throne's stars feed Black Hole.
             _xBlockGains = _xChannels = _xStarGains = 0;
-            _xEnemyHits.Clear();
             Run(secondOrder: false);
             _xBlockGains = merged.Values.Where(m => m.Hit.Kind == Kind.Block).Sum(m => m.Hit.Count);
-            foreach (var (_, h) in merged.Values)
-            {
-                if (h.Kind != Kind.Damage || h.Harmful || h.OnEnemies == null) continue;
-                foreach (var (e, hits) in h.OnEnemies)
-                {
-                    if (!_xEnemyHits.TryGetValue(e, out var l)) _xEnemyHits[e] = l = new List<int>();
-                    l.AddRange(hits);
-                }
-            }
             foreach (var (src, h) in merged.Values)
             {
                 if (src is PowerModel { } sp && sp.GetType().Name == "StormPower") _xChannels += sp.Amount * f.Plays;
@@ -208,6 +201,20 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             Run(secondOrder: true);
 
             if (merged.Values.Any(m => m.Hit.Random)) f.RandomOutcome = true;
+
+            var lethal = false;
+            try
+            {
+                lethal = SimTabs(card, f, merged);
+            }
+            catch (Exception ex)
+            {
+                if (_warned.Add("sim:" + card.GetType().Name))
+                {
+                    ModEntry.Log.Warn($"outcome simulation failed for {card.GetType().Name}: {ex.Message}");
+                    Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:" + card.GetType().Name);
+                }
+            }
 
             foreach (var (key, (src, h)) in merged)
             {
@@ -221,7 +228,111 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 var kind = h.Kind switch { Kind.Block => "block", Kind.Damage => "damage", Kind.Summon => "summon", _ => null };
                 d.AddTab(key, icon, crossed: h.Harmful, number: number, kind: kind, amount: h.Amount, auditMin: h.Min, auditMax: h.Max);
             }
+            if (lethal) d.AddTab("lethal", GameIcons.Skull());
         }
+    }
+
+    // ------------------------------------------------------------------ outcome simulation
+
+    // Simulations for this game state, per card and target (the state rarely changes between frames).
+    private long _simKey;
+
+    // Card simulations get a time budget per frame, so a branch-heavy fight never stalls a frame:
+    // cards not reached are simulated over the next frames (results are cached until the state changes).
+    private const double SimBudgetMs = 4;
+    private readonly System.Diagnostics.Stopwatch _simBudget = new();
+    private readonly Dictionary<string, List<SimOutcome>> _simCache = new();
+
+    /// <summary>
+    /// Runs the outcome simulator for this card (once per possible target for single-target cards)
+    /// against "end your turn now", and adds what only the simulation can tell:
+    ///  - Imbalanced (good for you, so only when guaranteed): its first hit fully blocked in every branch.
+    ///  - Asleep / Slumber (bad, so whenever possible): enough damage instances through its block by the
+    ///    end of your turn in some branch, when that isn't possible without this card.
+    /// Returns whether the card is lethal: some aim leaves an enemy dead before it acts in every branch,
+    /// which ending the turn now doesn't.
+    /// </summary>
+    private bool SimTabs(CardModel card, PlayFacts f, Dictionary<string, (AbstractModel Src, Hit Hit)> merged)
+    {
+        var te = TurnEnd();
+        if (te == null) return false;
+
+        // Damage and block procs the rules predicted (the simulator models Juggernaut itself).
+        var procs = new List<ProcHit>();
+        var procBlock = new List<int>();
+        foreach (var (src, h) in merged.Values)
+        {
+            if (src.GetType().Name == "JuggernautPower" || h.Harmful) continue;
+            if (h.Kind == Kind.Damage)
+            {
+                if (h.OnEnemies != null)
+                {
+                    foreach (var (e, amounts) in h.OnEnemies)
+                    {
+                        if (!te.Ids.TryGetValue(e, out var id)) continue;
+                        foreach (var amount in amounts) procs.Add(new ProcHit { Spread = SimPlay.Target.Single, TargetId = id, Damage = { [id] = amount } });
+                    }
+                }
+                if (h.RandomHits != null)
+                {
+                    foreach (var (perEnemy, times) in h.RandomHits)
+                    {
+                        var map = new Dictionary<int, int>();
+                        foreach (var (e, amount) in perEnemy)
+                            if (te.Ids.TryGetValue(e, out var id)) map[id] = amount;
+                        procs.Add(new ProcHit { Spread = SimPlay.Target.Random, Damage = map, Times = times });
+                    }
+                }
+            }
+            else if (h.Kind == Kind.Block && h.Count > 0)
+            {
+                for (var i = 0; i < h.Count; i++) procBlock.Add(h.Amount / h.Count);
+            }
+        }
+
+        var targets = card.TargetType == TargetType.AnyEnemy
+            ? te.Ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => kv.Value).ToList()
+            : new List<int> { -1 };
+        if (targets.Count == 0) targets.Add(-1);
+
+        var stateKey = te.State.Key();
+        if (stateKey != _simKey)
+        {
+            _simKey = stateKey;
+            _simCache.Clear();
+        }
+        var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|" +
+                       string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock);
+        if (!_simCache.TryGetValue(cacheKey, out var outcomes))
+        {
+            if (_simBudget.Elapsed.TotalMilliseconds > SimBudgetMs)
+            {
+                f.SimPending = true;
+                return false;
+            }
+            outcomes = targets.Select(t => SimEngine.Run(te.State, SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock))).ToList();
+            _simCache[cacheKey] = outcomes;
+        }
+        var baseline = te.Outcome;
+
+        foreach (var (enemy, id) in te.Ids)
+        {
+            if (!enemy.IsAlive) continue;
+            foreach (var p in enemy.Powers)
+            {
+                var name = p.GetType().Name;
+                Hit? hit = name switch
+                {
+                    "ImbalancedPower" when outcomes.Any(o => o.FirstHitBlockedInAll(id)) && !baseline.FirstHitBlockedInAll(id) => Hit.Trig(),
+                    "AsleepPower" when outcomes.Any(o => o.UnblockedMax(id) >= 1) && baseline.UnblockedMax(id) < 1 => Hit.Trig(harmful: true),
+                    "SlumberPower" when outcomes.Any(o => o.UnblockedMax(id) >= p.Amount) && baseline.UnblockedMax(id) < p.Amount => Hit.Trig(harmful: true),
+                    _ => null,
+                };
+                if (hit is { } h) merged["proc:" + name] = (p, h);
+            }
+        }
+
+        return outcomes.Any(o => te.Ids.Values.Any(id => o.DeadInAll(id) && !baseline.DeadInAll(id)));
     }
 
     // ------------------------------------------------------------------ rules
@@ -334,7 +445,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "ImitationLearningPower" when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
                     // Fully blocking its hit stuns it (Bowlbug: knocks it off balance). Plain tab on the
                     // card whose own block takes your end-of-turn block over that line.
-                    case "ImbalancedPower" when onEnemy && CrossesFullBlock(e, card, f): return Hit.Trig();
                     case "SkittishPower" when onEnemy && type == CardType.Attack && !Sts2State.Private(p, "HasGainedBlockThisTurn", true):
                         return Hit.Trig(harmful: true);
                     case "WitheringPresencePower" when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
@@ -359,8 +469,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // Each damage instance that gets through its block counts (Asleep wakes on the first,
                     // Slumber after Amount of them). Judged by the end of your turn: this play's hits,
                     // procs and orb evokes strip block that your end-of-turn damage then gets through.
-                    case "AsleepPower" when onEnemy && WakesBy(e, f, 1): return Hit.Trig(harmful: true);
-                    case "SlumberPower" when onEnemy && WakesBy(e, f, a): return Hit.Trig(harmful: true);
                     case "BurrowedPower" when onEnemy && f.BreaksBlock(e): return Hit.Trig();                // stuns it
                     case "FlutterPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(); // stuns it
                     case "PlowPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
@@ -499,10 +607,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private TurnEndModel? _turnEnd;
     private long _turnEndFrame = -1;
 
-    /// <summary>
-    /// This card's own block (its Block value, through the game's block math, times its plays)
-    /// takes your expected end-of-turn block from below the enemy's FullBlockNeeded to at or above it.
-    /// </summary>
     /// <summary>The Incoming Damage simulation for this frame (computed once, shared by rules).</summary>
     private TurnEndModel? TurnEnd()
     {
@@ -512,33 +616,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             _turnEndFrame = _ctx.Decor.Frame;
         }
         return _turnEnd;
-    }
-
-    private bool CrossesFullBlock(Creature enemy, CardModel card, PlayFacts f)
-    {
-        var te = TurnEnd();
-        if (te == null || !te.FullBlockNeeded.TryGetValue(enemy, out var needed)) return false;
-        var have = te.ExpectedBlock;
-        if (have >= needed) return false;
-        return have + CardBlock(card) + f.OrbBlock >= needed; // its own block, plus Frost orbs it evokes
-    }
-
-    private int CardBlock(CardModel card)
-    {
-        try
-        {
-            decimal raw;
-            if (card.DynamicVars.TryGetValue("CalculatedBlock", out var cv) && cv is CalculatedVar calc) raw = calc.Calculate(null);
-            else if (card.DynamicVars.TryGetValue("Block", out var bv)) raw = bv.BaseValue;
-            else return 0;
-            if (raw <= 0) return 0;
-            var each = Math.Max(0, (int)Hook.ModifyBlock(_cs, _me.Creature, raw, ValueProp.Move, card, null, out _));
-            return each * Math.Max(1, CardIndicatorsFeature.PlayCount(card));
-        }
-        catch
-        {
-            return 0;
-        }
     }
 
     private int BlockOf(int raw, ValueProp props = ValueProp.Unpowered)
@@ -633,8 +710,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             case Spread.All: foreach (var e in enemies) On(e); break;
             case Spread.Random when enemies.Count == 1: On(enemies[0]); break;
         }
+        var random = spread == Spread.Random && enemies.Count > 1;
+        var randomHits = random
+            ? new List<(IReadOnlyDictionary<Creature, int>, int)> { (enemies.ToDictionary(e => e, e => Mod(e)), times) }
+            : null;
         return new Hit(Kind.Damage, shown, harmful, Count: times, Min: min, Max: max, OnEnemies: on,
-            Random: spread == Spread.Random && enemies.Count > 1);
+            Random: random, RandomHits: randomHits);
     }
 
     private static IReadOnlyDictionary<Creature, List<int>>? MergeHits(IReadOnlyDictionary<Creature, List<int>>? a, IReadOnlyDictionary<Creature, List<int>>? b)
@@ -648,41 +729,5 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             x.AddRange(l);
         }
         return m;
-    }
-
-    /// <summary>
-    /// Playing this card makes at least <paramref name="needed"/> damage instances get through the
-    /// enemy's block by the end of your turn, when your end-of-turn damage alone wouldn't. In order:
-    /// the card's own hits, orbs it evokes, the procs it sets off, then your end-of-turn damage.
-    /// The enemy's block stays up until its own turn starts.
-    /// </summary>
-    private bool WakesBy(Creature enemy, PlayFacts f, int needed)
-    {
-        if (needed <= 0 || !enemy.IsAlive) return false;
-        var play = new List<int>();
-        if (f.CanHit(enemy))
-        {
-            var per = f.DamagePerHit(enemy);
-            for (var i = 0; i < f.HitsOn(enemy); i++) play.Add(per);
-        }
-        if (f.OrbDamageOn(enemy) is var orb and > 0) play.Add(orb);
-        if (_xEnemyHits.TryGetValue(enemy, out var procs)) play.AddRange(procs);
-        if (play.Count == 0) return false;
-
-        var eot = TurnEnd() is { } te && te.EndOfTurnHitsOn.TryGetValue(enemy, out var l) ? l : new List<int>();
-
-        int Through(IEnumerable<int> hits)
-        {
-            var block = enemy.Block;
-            var n = 0;
-            foreach (var h in hits)
-            {
-                if (h <= 0) continue;
-                if (h > block) n++;
-                block = Math.Max(0, block - h);
-            }
-            return n;
-        }
-        return Through(play.Concat(eot)) >= needed && Through(eot) < needed;
     }
 }

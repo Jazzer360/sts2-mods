@@ -126,8 +126,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var issues = new List<string>();
         // Less than forecast is expected when random-target end-of-turn damage was left out: it may
         // have killed an attacker (the forecast stays on the safe side on purpose).
-        if (actualTaken != f.Taken && !(f.RandomLeftOut && actualTaken < f.Taken)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
-        if (actualOsty != f.OstyTaken && !(f.RandomLeftOut && actualOsty < f.OstyTaken)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
+        // The forecast is the worst branch; a random target can make it come in lower (down to TakenMin).
+        if ((actualTaken > f.Taken || actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
+        if ((actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
 
         _checked++;

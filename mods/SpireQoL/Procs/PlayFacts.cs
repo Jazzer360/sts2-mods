@@ -166,6 +166,12 @@ public sealed class PlayFacts
     /// </summary>
     public bool RandomOutcome { get; set; }
 
+    /// <summary>
+    /// The simulator hadn't reached this card yet when its tabs were taken (per-frame budget), so its
+    /// lethal, Imbalanced and wake tabs may be missing. The audit doesn't report those.
+    /// </summary>
+    public bool SimPending { get; set; }
+
     /// <summary>Damage that gets past the enemy's block, counting orbs this play evokes.</summary>
     public int UnblockedWithOrbs(Creature enemy)
         => Math.Max(0, (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) - enemy.Block);

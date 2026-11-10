@@ -23,6 +23,10 @@ Spire QoL shows nothing a player couldn't know. Assume a player with perfect mem
 
 Before working on in-game feedback, read the game logs, starting with the `[audit] combat summary` lines (`%APPDATA%\SlayTheSpire2\logs\godot*.log`, newest first): `[SpireQoL]` errors, and `[SpireQoL] [audit]` lines (forecast and proc mismatches). Fix or note what they show, then clear the old log files once they're addressed.
 
+## Outcome simulator
+
+Incoming Damage, the lethal tab, and the Imbalanced and wake tabs come from one simulator (`mods/SpireQoL/Sim/`): pure C# (no game types), fed by `SimAdapter`. New end-of-turn effects, enemy reactions or card effects that change what happens by the enemy turn belong there, with a test in `tests/SpireQoL.Sim.Tests` (run `dotnet test tests/SpireQoL.Sim.Tests`; no game needed). Random targets are branches, never rolls: good outcomes need every branch, warnings need one, damage to you is the worst branch.
+
 ## Automatic bug reports
 
 Crashes and audit mismatches from players' games become GitHub issues labelled `auto-report` (via Sentry and the Sentry issues workflow). When adding a feature that can fail or predict something, make sure failures reach `ErrorReporter` (the frame loop does this for exceptions) and that predictions are checked by an audit.
@@ -43,6 +47,14 @@ Any change to mod behavior updates all three in the same commit:
 1. `docs/FEATURES.md`: what the player sees, the settings, the game UI touched, and **every Harmony patch target** (Class.Method). It must stay a complete list of everything the mod changes.
 2. `CHANGELOG.md`: a line under **Unreleased** for the affected mod (Added / Changed / Fixed / Removed).
 3. `docs/TRACKER.md`: check off finished items, and add newly found relics, modifiers or sources.
+
+## Tests (required with every prediction change)
+
+The outcome simulator is the core of every prediction, and its tests are what keep it right as rules are added. `dotnet test tests/SpireQoL.Sim.Tests` (no game needed; also runs on GitHub for every push that touches it).
+- Any change to `mods/SpireQoL/Sim/` adds or updates tests in `tests/SpireQoL.Sim.Tests` in the same commit: one scenario per rule (the game behavior it models, from the decompile), including the edge cases (random targets, kills changing later targets, caps, ordering).
+- A bug found in game or in an auto-report that the simulator could reproduce gets a failing test first, then the fix.
+- Keep the performance tests passing: a single simulation must stay well inside the per-frame budget (`SimBudgetMs` in ProcIndicatorsFeature).
+- Logic that can't run outside the game (the adapter, proc rules reading game objects) is checked by the in-game audits instead; keep those audits covering every prediction.
 
 ## Releasing (required with every mod update)
 

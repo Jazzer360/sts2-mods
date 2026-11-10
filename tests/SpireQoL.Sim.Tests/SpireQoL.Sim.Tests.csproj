@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests for the outcome simulator (mods/SpireQoL/Sim). The simulator has no game types, so these
+       run without the game installed: `dotnet test tests/SpireQoL.Sim.Tests`. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\mods\SpireQoL\Sim\SimState.cs" Link="Sim\SimState.cs" />
+    <Compile Include="..\..\mods\SpireQoL\Sim\SimEngine.cs" Link="Sim\SimEngine.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>

@@ -56,6 +56,16 @@ public static class GameIcons
         return _drawPile;
     }
 
+    /// <summary>The skull from the game's emote wheel (the lethal tab).</summary>
+    public static Texture2D? Skull()
+    {
+        if (Valid(_skull)) return _skull;
+        _skull = LoadTexture("res://images/ui/emote/skull.png");
+        return _skull;
+    }
+
+    private static Texture2D? _skull;
+
     private static Texture2D? _discardPile;
 
     /// <summary>The discard pile art outside combat (the game's own path, NetScreenTypeExtensions CardPile).</summary>
