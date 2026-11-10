@@ -371,10 +371,26 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     nameof(ImbalancedPower) when outcomes.Any(o => o.FirstHitBlockedInAll(id)) && !baseline.FirstHitBlockedInAll(id) => Hit.Trig(),
                     nameof(AsleepPower) when outcomes.Any(o => o.UnblockedMax(id) >= 1) && baseline.UnblockedMax(id) < 1 => Hit.Trig(harmful: true),
                     nameof(SlumberPower) when outcomes.Any(o => o.UnblockedMax(id) >= p.Amount) && baseline.UnblockedMax(id) < p.Amount => Hit.Trig(harmful: true),
+                    // Its death sets something off (warnings: in any branch, for any aim).
+                    nameof(InfestedPower) or nameof(SteamEruptionPower) or nameof(SurprisePower)
+                        when outcomes.Any(o => o.KilledByPlayInAny.Contains(id)) => Hit.Trig(harmful: true),
+                    // Another enemy's death makes it stronger.
+                    nameof(CrabRagePower) or nameof(RavenousPower)
+                        when outcomes.Any(o => o.KilledByPlayInAny.Any(k => k != id)) => Hit.Trig(harmful: true),
+                    // It gains block because of this play (Curl Up after a card's attack hits it, Skittish
+                    // when one gets through), in some branch.
+                    nameof(CurlUpPower) or nameof(SkittishPower)
+                        when outcomes.Any(o => o.BlockReactionInAny.Contains(id)) => Hit.Trig(harmful: true),
                     _ => null,
                 };
                 if (hit is { } h) merged["proc:" + name] = (p, h);
             }
+        }
+        // Gremlin Horn (energy and a draw when an enemy dies): good, so only when some aim kills an
+        // enemy in every branch of the play.
+        foreach (var r in _me.Relics.OfType<GremlinHorn>())
+        {
+            if (outcomes.Any(o => o.PlayKillsInEveryBranch)) merged["proc:" + nameof(GremlinHorn)] = (r, Hit.Trig());
         }
 
         return outcomes.Any(o => te.Ids.Values.Any(id => o.DeadInAll(id) && !baseline.DeadInAll(id)));
@@ -488,10 +504,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(EnragePower) when onEnemy && type == CardType.Skill: return Hit.Trig(harmful: true);
                     case nameof(SneakyPower) when onEnemy && type == CardType.Attack: return Hit.Trig(harmful: true);
                     case nameof(ImitationLearningPower) when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
-                    // Fully blocking its hit stuns it (Bowlbug: knocks it off balance). Plain tab on the
-                    // card whose own block takes your end-of-turn block over that line.
-                    case nameof(SkittishPower) when onEnemy && type == CardType.Attack && !Sts2State.Private(p, "HasGainedBlockThisTurn", true):
-                        return Hit.Trig(harmful: true);
                     case nameof(WitheringPresencePower) when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
                     case nameof(GalvanicPower) when card.Affliction is Galvanized:
                         return Damage(a, plays, Spread.Me, props: ValueProp.Unpowered | ValueProp.Move, harmful: true);
@@ -509,7 +521,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         var mayMiss = !f.HitsAllEnemies && _cs.HittableEnemies.Any(o => o != e && !o.HasPower<ThornsPower>());
                         return mayMiss ? thorns with { Min = 0 } : thorns;
                     }
-                    case nameof(CurlUpPower) when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);          // it gains block
+                    // Curl Up and Skittish (it gains block): from the simulator's branches, see FinishSim.
                     case nameof(PersonalHivePower) when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);    // Dazed into your draw pile
                     // Each damage instance that gets through its block counts (Asleep wakes on the first,
                     // Slumber after Amount of them). Judged by the end of your turn: this play's hits,
@@ -522,8 +534,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(SlipperyPower) when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true); // HP loss capped at 1
 
                     // ---- powers on enemies: killing one
-                    case nameof(InfestedPower) or nameof(SteamEruptionPower) or nameof(SurprisePower) when onEnemy && f.Kills(e): return Hit.Trig(harmful: true);
-                    case nameof(CrabRagePower) or nameof(RavenousPower) when onEnemy && _cs.HittableEnemies.Any(o => o != e && f.Kills(o)): return Hit.Trig(harmful: true);
+                    // Killing one (Infested, Steam Eruption, Surprise, Crab Rage, Ravenous): from the
+                    // simulator's branches, see FinishSim.
                 }
                 return null;
             }
@@ -628,7 +640,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
                     // ---- your attack: breaking block, killing
                     case nameof(HandDrill) when _cs.HittableEnemies.Any(f.BreaksBlock): return Hit.Trig();
-                    case nameof(GremlinHorn) when _cs.HittableEnemies.Any(f.Kills): return Hit.Trig();
+                    // Gremlin Horn (an enemy dies): from the simulator's branches, see FinishSim.
 
                     // ---- losing HP from the card (your turn)
                     case nameof(CentennialPuzzle) when f.HpLoss > 0 && !Sts2State.Private(r, "UsedThisCombat", true): return Hit.Trig();

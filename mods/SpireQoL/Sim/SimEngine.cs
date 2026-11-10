@@ -77,6 +77,14 @@ public sealed class SimOutcome
     public int OstyTakenMin => Branches.Min(b => b.OstyTaken);
     public int OstyTakenMax => Math.Max(Branches.Max(b => b.OstyTaken), SafeWorst?.OstyTaken ?? 0);
 
+    /// <summary>Enemies the play itself kills (before your end of turn) in some branch / in every branch.</summary>
+    public HashSet<int> KilledByPlayInAny = new();
+    public HashSet<int> KilledByPlayInAll = new();
+    /// <summary>Enemies that gain block from Curl Up or Skittish because of the play, in some branch.</summary>
+    public HashSet<int> BlockReactionInAny = new();
+    /// <summary>The play kills some enemy in every branch (not always the same one).</summary>
+    public bool PlayKillsInEveryBranch;
+
     /// <summary>The enemy is dead before it acts in every branch.</summary>
     public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true });
     public bool DeadInAny(int id) => Branches.Any(b => b.Enemy(id) is { DiedBeforeActing: true });
@@ -121,9 +129,29 @@ public static class SimEngine
     {
         var b = new BranchSet(start.Clone());
         if (play != null) ApplyPlay(b, play);
+        // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
+        var aliveAtStart = start.Enemies.Where(e => e.Alive).Select(e => e.Id).ToList();
+        var killedPerBranch = b.States.Select(s => aliveAtStart.Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
+        // Enemies whose once-only block reaction (Curl Up, Skittish) the play set off, in some branch.
+        var reacted = b.States.SelectMany(s => s.Enemies.Where(e =>
+        {
+            var e0 = start.Enemy(e.Id);
+            return e0 != null && ((e0.CurlUp > 0 && e.CurlUp == 0) || (e0.Skittish > 0 && e.Skittish == 0));
+        }).Select(e => e.Id)).ToHashSet();
+        var playTruncated = b.Truncated;
         EndOfTurn(b);
         b.Do(EnemyTurn);
-        var outcome = new SimOutcome { Branches = b.States, Truncated = b.Truncated };
+        var outcome = new SimOutcome
+        {
+            Branches = b.States,
+            Truncated = b.Truncated,
+            KilledByPlayInAny = killedPerBranch.SelectMany(k => k).ToHashSet(),
+            KilledByPlayInAll = playTruncated || killedPerBranch.Count == 0
+                ? new HashSet<int>()
+                : killedPerBranch.Skip(1).Aggregate(new HashSet<int>(killedPerBranch[0]), (acc, k) => { acc.IntersectWith(k); return acc; }),
+            PlayKillsInEveryBranch = !playTruncated && killedPerBranch.Count > 0 && killedPerBranch.All(k => k.Count > 0),
+            BlockReactionInAny = reacted,
+        };
         if (b.Truncated)
         {
             // Too many branches to explore: nothing is guaranteed, and damage to you comes from a run

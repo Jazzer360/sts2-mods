@@ -54,6 +54,7 @@ The proc audit attributes every history entry, relic/power flash and shuffle to 
 ### 12. One model of a card play — in progress (2026-11-10)
 What a play does (draws, exhausts, block gains, shuffles, procs) is moving from two models (the proc rules in `ProcIndicatorsFeature`/`PlayFacts`, and the simulator's play step) toward one: pure, tested code computing the play's effects, which both the tabs and the simulator read. Started with draws (`Sim/DrawMath.cs`).
 *Why:* chained effects had to be written in both places, and a miss in one (Dark Embrace draws) went unnoticed.
+*Progress:* draws and shuffles (`Sim/PlayChain.cs`); kill-reactive tabs (Gremlin Horn, Infested, Steam Eruption, Surprise, Crab Rage, Ravenous) and Curl Up / Skittish tabs now read the simulator's branches instead of their own checks. Next: Juggernaut's tab from the simulator (the proc rules' second pass duplicates it), the remaining enemy reactions (Sneaky, Enrage), and moving proc damage/block amounts into pure rules the simulator applies itself.
 
 ### 13. Game types referenced by type, not by name — active (2026-11-10)
 Rules name game classes with `nameof(...)`/type patterns where the class is public, so a renamed or removed class in a game update is a build error instead of a silently dead rule. Settings keys stay strings (they're saved in players' settings).

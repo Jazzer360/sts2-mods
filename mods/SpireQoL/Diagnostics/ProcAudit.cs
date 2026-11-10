@@ -119,6 +119,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private static readonly HashSet<string> DrawReactive = new() { nameof(PagestormPower), nameof(IterationPower), nameof(HellraiserPower), nameof(ChainsOfBindingPower) };
 
+    /// <summary>Sources whose tabs come from the outcome simulator (missing while its run was pending).</summary>
+    private static readonly string[] SimTabSources =
+    {
+        nameof(ImbalancedPower), nameof(AsleepPower), nameof(SlumberPower), nameof(InfestedPower), nameof(SteamEruptionPower),
+        nameof(SurprisePower), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower),
+    };
+
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
     private static readonly HashSet<string> KillReactive = new() { nameof(GremlinHorn) };
 
@@ -492,7 +499,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (w.Facts?.SimPending == true)
             {
                 // Its simulation was still running when the frame stopped waiting: its simulator tabs may be missing.
-                var simOnly = issues.Where(x => x.Contains(nameof(ImbalancedPower)) || x.Contains(nameof(AsleepPower)) || x.Contains(nameof(SlumberPower))).ToList();
+                var simOnly = issues.Where(x => SimTabSources.Any(x.Contains)).ToList();
                 foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
                 issues.RemoveAll(simOnly.Contains);
             }

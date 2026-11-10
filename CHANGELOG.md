@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.27.0
+#### Changed
+- Kill tabs (Gremlin Horn; crossed for Infested, Steam Eruption, Surprise, Crab Rage, Ravenous) and the Curl Up and Skittish tabs come from the outcome simulator: random hits, orb evokes and procs count, and a random hit that might miss shows the warning without promising the reward.
+- The proc audit attributes everything to the game's own card-play action (history entries, relic and power flashes, shuffles), instead of splitting the history between plays by guesswork; potions and ending the turn no longer mix into a play. Shuffles are counted by observing the game's shuffle call (logs and error reports only).
+- A game update that renames something a rule reads is logged and reported instead of silently falling back.
+
 ### Spire QoL 0.26.0
 #### Added
 - Biiig Hug tab (crossed) on cards whose draws cause a shuffle: it puts a Soot into your draw pile.

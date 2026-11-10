@@ -371,7 +371,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Lethal tab (skull emote icon), Imbalanced and Asleep/Slumber tabs on it.
 - [ ] Check in game: Stone Armor + Juggernaut, Juggernaut card + Orichalcum, two Lightning orbs vs two low-HP enemies, a Defect fight's Incoming Damage.
 - [x] 0.25.0: outcome audit in the forecast audit (deaths before acting, HP and hits through block at turn end, Imbalanced), which also checks the lethal tab through the end-of-turn prediction.
-- [ ] Kill-reactive tabs (Gremlin Horn, enemy death effects) still use the immediate kill check, not the simulator.
+- [x] 0.27.0: kill-reactive tabs (Gremlin Horn, enemy death effects) from the simulator's kills during the play.
 - [x] Logic review of the simulator against the decompile (2026-11-09): fixed Beating Remnant carry-over and Buffer order, Ethereal exhaust before hand damage, Glass evoke shrinking, Gold-Plated Cables by position, Infused Core on new Lightning, Tempest+, lethal = dead before acting, powers before relics, Disintegration after Parrying Shield, Imbalanced full-block rule, Hardened Shell and wake counts. Regression tests in `SimReviewTests.cs`.
 - [ ] Remaining approximations: poison TriggerCount, a card's procs timing relative to its hits, block remainder across gains.
 - [x] 0.24.1: Glass orb decays its base (`GlassOrb._passiveVal`), not the Focus-included value (tests in `SimReviewTests`).
@@ -382,4 +382,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.26.0: audits: shuffle check (pile events), state after each play vs the simulator's prediction of it, forecast "no single branch" joint check.
 - [x] 0.26.0: simulator: Envenom, Snecko Skull, poison stacks/ticks, Weak and Enrage intent changes, Curl Up / Sneaky / Skittish block, Plasma values; full-state cache key (`SimState.FullKey`; the branch key missed intents and powers); parallel card simulations.
 - [ ] Not modelled yet (the after-play check will show them if they matter): enemy Strength from kill reactions (Crab Rage, Ravenous), Strength loss cards on enemies, random poison (Bouncing Flask), Soot's created-status chain (Smokestack, Trash to Treasure) from Biiig Hug, discards before draws refilling an empty discard pile.
+- [x] 0.27.0: proc audit by game action (`PlayCardAction` via `ActionExecutor.BeforeActionExecuted`, `CombatHistory.Changed`, `GameAction.AfterFinished`); removed the energy-spend split, 0-cost joint fit, potion cut and idle capture. Shuffle prefix on `CardPileCmd.Shuffle` (first observe-only patch, DECISIONS #10).
+- [x] 0.27.0: `Sim/PlayChain.cs` (draw chains, pure, tested); 340 game class names compile-checked (`nameof`); missing private members reported (`Sts2State.MissingMember`); docs/DECISIONS.md.
+- [ ] Check in game: the action-based audit windows (Burning Pact's choice pause, queued plays, potions mid-turn, Catastrophe auto-plays).
 
