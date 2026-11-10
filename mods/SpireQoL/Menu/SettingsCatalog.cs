@@ -177,6 +177,7 @@ public static class SettingsCatalog
         new("TheGambitPower", SourceGroup.EnemyPower, "Attacks that deal it unblocked damage: it dies"),
         new("EnragePower", SourceGroup.EnemyPower, Crossed + "skills: it gains Strength"),
         new("SneakyPower", SourceGroup.EnemyPower, Crossed + "attacks"),
+        new("ImbalancedPower", SourceGroup.EnemyPower, "The card whose block takes you to fully blocking its first hit (it's stunned)"),
         new("SkittishPower", SourceGroup.EnemyPower, Crossed + "attacks (first unblocked hit): it gains block"),
         new("ImitationLearningPower", SourceGroup.EnemyPower, Crossed + "powers"),
         new("WitheringPresencePower", SourceGroup.EnemyPower, Crossed + "the card that completes its count: Wither in your hand", "Your cards, toward the next Wither (red)"),

@@ -59,6 +59,16 @@ public sealed class TurnEndModel
 
     /// <summary>Necrobinder: Osty's HP now (0 if Osty isn't out), and how much of the enemy turn it absorbs.</summary>
     public int OstyHp { get; private set; }
+
+    /// <summary>
+    /// Imbalanced enemies (stunned, or knocked off balance, when one of their hits is fully blocked):
+    /// the total end-of-turn block needed for their first hit to be fully blocked. That's every
+    /// blockable amount landing before it, in order, plus the hit itself.
+    /// </summary>
+    public Dictionary<Creature, int> FullBlockNeeded { get; } = new();
+
+    /// <summary>Blockable damage landed so far this turn end, in order (for FullBlockNeeded).</summary>
+    private int _blockDemand;
     public int OstyTaken { get; private set; }
     public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
 
@@ -251,6 +261,8 @@ public sealed class TurnEndModel
                     // Thorns: before the hit lands. The hit still lands even if this kills.
                     if (thorns > 0) dead |= HitEnemy(Retaliate(me.Creature, enemy, thorns), ref hp, ref enemyBlock, ref shellLeft);
 
+                    if (hitsLanded == 0 && enemy.HasPower<ImbalancedPower>()) m.FullBlockNeeded[enemy] = m._blockDemand + perHit;
+                    m._blockDemand += perHit;
                     var blocked = Math.Min(block, perHit);
                     block -= blocked;
                     var through = perHit - blocked;
@@ -281,6 +293,7 @@ public sealed class TurnEndModel
     private void LandBlockable(string name, int amount, ref int block, HpLossEffects hpLoss)
     {
         if (amount <= 0) return;
+        _blockDemand += amount;
         Blockable.Add(new Source(name, amount));
         var blocked = Math.Min(block, amount);
         block -= blocked;

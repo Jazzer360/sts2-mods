@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using SpireQoL.Cards;
+using SpireQoL.Combat;
 using SpireQoL.Procs;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
@@ -305,6 +306,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "EnragePower" when onEnemy && type == CardType.Skill: return Hit.Trig(harmful: true);
                     case "SneakyPower" when onEnemy && type == CardType.Attack: return Hit.Trig(harmful: true);
                     case "ImitationLearningPower" when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
+                    // Fully blocking its hit stuns it (Bowlbug: knocks it off balance). Plain tab on the
+                    // card whose own block takes your end-of-turn block over that line.
+                    case "ImbalancedPower" when onEnemy && CrossesFullBlock(e, card): return Hit.Trig();
                     case "SkittishPower" when onEnemy && type == CardType.Attack && !Sts2State.Private(p, "HasGainedBlockThisTurn", true):
                         return Hit.Trig(harmful: true);
                     case "WitheringPresencePower" when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
@@ -459,6 +463,44 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     // ------------------------------------------------------------------ amounts
 
     /// <summary>Block you'd actually gain: the game's own block math (Dexterity/Frail only apply to powered block).</summary>
+    private TurnEndModel? _turnEnd;
+    private long _turnEndFrame = -1;
+
+    /// <summary>
+    /// This card's own block (its Block value, through the game's block math, times its plays)
+    /// takes your expected end-of-turn block from below the enemy's FullBlockNeeded to at or above it.
+    /// </summary>
+    private bool CrossesFullBlock(Creature enemy, CardModel card)
+    {
+        if (_turnEndFrame != _ctx.Decor.Frame)
+        {
+            _turnEnd = TurnEndModel.Compute();
+            _turnEndFrame = _ctx.Decor.Frame;
+        }
+        if (_turnEnd == null || !_turnEnd.FullBlockNeeded.TryGetValue(enemy, out var needed)) return false;
+        var have = _turnEnd.ExpectedBlock;
+        if (have >= needed) return false;
+        return have + CardBlock(card) >= needed;
+    }
+
+    private int CardBlock(CardModel card)
+    {
+        try
+        {
+            decimal raw;
+            if (card.DynamicVars.TryGetValue("CalculatedBlock", out var cv) && cv is CalculatedVar calc) raw = calc.Calculate(null);
+            else if (card.DynamicVars.TryGetValue("Block", out var bv)) raw = bv.BaseValue;
+            else return 0;
+            if (raw <= 0) return 0;
+            var each = Math.Max(0, (int)Hook.ModifyBlock(_cs, _me.Creature, raw, ValueProp.Move, card, null, out _));
+            return each * Math.Max(1, CardIndicatorsFeature.PlayCount(card));
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
     private int BlockOf(int raw, ValueProp props = ValueProp.Unpowered)
     {
         if (raw <= 0) return 0;

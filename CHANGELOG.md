@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.12
+#### Added
+- Imbalanced (Bowlbug): a tab on the card whose block takes you to fully blocking the enemy's first hit, which stuns it (or knocks the Bowlbug off balance). Only the card that crosses the line gets it.
+
 ### Spire QoL 0.23.11
 #### Fixed
 - Kill tabs (an enemy's death effect, Gremlin Horn...) now count damage from orbs the card evokes: channelling into full orb slots, Dualcast, Quadcast, Multicast, Shatter. Before, only the card's attack counted, so a Zap that evokes a lethal Glass orb had no tab.
