@@ -12,6 +12,60 @@ public class SimReviewTests
         => new() { Id = id, Name = $"E{id}", Hp = hp, Block = block, Hits = hits.ToList() };
 
     [Fact]
+    public void PoisonTicksOnAStunnedEnemyToo()
+    {
+        // PoisonPower.AfterSideTurnStart ticks for every enemy on its side's turn start, stunned or not.
+        var e = Enemy(1, 4, 0, 10);
+        e.Stunned = true;
+        e.Poison = 4;
+        var o = SimEngine.Run(new SimState { Enemies = { e } });
+        Assert.True(o.DeadInAll(1));
+        Assert.Equal(0, o.TakenMax); // stunned: it wouldn't have attacked anyway
+    }
+
+    [Fact]
+    public void HpAtTurnEndCoversEveryRandomOutcome()
+    {
+        // One Lightning bolt between two enemies: each ends your turn at 10 or 7.
+        var s = new SimState { Enemies = { Enemy(1, 10), Enemy(2, 10) } };
+        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        s.P.OrbCapacity = 3;
+        var o = SimEngine.Run(s);
+        Assert.Equal(7, o.HpAtTurnEndMin(1));
+        Assert.Equal(10, o.HpAtTurnEndMax(1));
+        Assert.Equal(0, o.UnblockedMin(1));
+        Assert.Equal(1, o.UnblockedMax(1));
+    }
+
+    [Fact]
+    public void HpAtTurnEndIsBeforeTheEnemyTurn()
+    {
+        // Poison and retaliation happen on its turn: not in HpAtTurnEnd.
+        var e = Enemy(1, 10, 0, 5);
+        e.Poison = 3;
+        var s = new SimState { Enemies = { e } };
+        s.P.Thorns = 2;
+        var o = SimEngine.Run(s);
+        Assert.Equal(10, o.HpAtTurnEndMax(1));
+        Assert.Equal(5, o.Worst.Enemy(1)!.Hp); // 10 - 3 poison - 2 Thorns
+    }
+
+    [Fact]
+    public void FullyBlockedFirstHitInSomeBranchesOnly()
+    {
+        // Juggernaut from Plating hits one of two enemies at random; if it kills the first attacker,
+        // the second enemy's hit is the first to land on your block.
+        var imbalanced = Enemy(2, 30, 0, 6);
+        imbalanced.Imbalanced = true;
+        var s = new SimState { Enemies = { Enemy(1, 3, 0, 4), imbalanced } };
+        s.P.Plating = 6;
+        s.P.Juggernaut = 3;
+        var o = SimEngine.Run(s);
+        Assert.True(o.FirstHitBlockedInAny(2));  // the 3 HP enemy died: 6 block covers the 6 hit
+        Assert.False(o.FirstHitBlockedInAll(2)); // it survived: its 4 hit used block first
+    }
+
+    [Fact]
     public void BeatingRemnantBudgetCarriesFromYourTurnIntoTheEnemyTurn()
     {
         // BeatingRemnant.BeforeSideTurnStart resets only at the start of YOUR turn.

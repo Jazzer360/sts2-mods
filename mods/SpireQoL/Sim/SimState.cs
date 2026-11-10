@@ -55,6 +55,8 @@ public sealed class SimEnemy
     public bool FirstHitFullyBlocked;
     /// <summary>Dead before it could act (your turn, your end of turn, or its poison tick).</summary>
     public bool DiedBeforeActing;
+    /// <summary>Its HP when your end of turn is over (before its turn), for the outcome audit.</summary>
+    public int HpAtTurnEnd;
     public bool Attacked;
 
     public bool Alive => Hp > 0;

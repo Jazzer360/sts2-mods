@@ -370,9 +370,10 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Adapter from the game (`Sim/SimAdapter.cs`); Incoming Damage (`TurnEndModel`) and the forecast audit on it.
 - [x] Lethal tab (skull emote icon), Imbalanced and Asleep/Slumber tabs on it.
 - [ ] Check in game: Stone Armor + Juggernaut, Juggernaut card + Orichalcum, two Lightning orbs vs two low-HP enemies, a Defect fight's Incoming Damage.
-- [ ] Lethal isn't audited yet (a play can be followed by others before the kill); consider checking at the enemy turn that predicted kills happened when no other card was played.
+- [x] 0.25.0: outcome audit in the forecast audit (deaths before acting, HP and hits through block at turn end, Imbalanced), which also checks the lethal tab through the end-of-turn prediction.
 - [ ] Kill-reactive tabs (Gremlin Horn, enemy death effects) still use the immediate kill check, not the simulator.
 - [x] Logic review of the simulator against the decompile (2026-11-09): fixed Beating Remnant carry-over and Buffer order, Ethereal exhaust before hand damage, Glass evoke shrinking, Gold-Plated Cables by position, Infused Core on new Lightning, Tempest+, lethal = dead before acting, powers before relics, Disintegration after Parrying Shield, Imbalanced full-block rule, Hardened Shell and wake counts. Regression tests in `SimReviewTests.cs`.
 - [ ] Remaining approximations: poison TriggerCount, a card's procs timing relative to its hits, block remainder across gains.
 - [x] 0.24.1: Glass orb decays its base (`GlassOrb._passiveVal`), not the Focus-included value (tests in `SimReviewTests`).
+- [x] 0.25.0: simulator poison ticks on stunned enemies (found while writing the outcome audit; test `PoisonTicksOnAStunnedEnemyToo`).
 

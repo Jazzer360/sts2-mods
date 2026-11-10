@@ -406,7 +406,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         return lines;
     }
 
-    private static string Describe(CombatHistoryEntry e, Player me)
+    internal static string Describe(CombatHistoryEntry e, Player me)
     {
         static string N(object? o) => o switch { null => "?", Creature c => c.Monster?.GetType().Name ?? c.Player?.Character?.GetType().Name ?? "creature", _ => o.GetType().Name };
         try

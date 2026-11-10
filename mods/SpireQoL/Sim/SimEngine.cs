@@ -78,6 +78,11 @@ public sealed class SimOutcome
     public int UnblockedMax(int id) => Branches.Max(b => b.Enemy(id)?.UnblockedInstances ?? 0);
 
     public bool FirstHitBlockedInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { FirstHitFullyBlocked: true });
+    public bool FirstHitBlockedInAny(int id) => Branches.Any(b => b.Enemy(id) is { FirstHitFullyBlocked: true });
+
+    /// <summary>Its HP when your end of turn is over: lowest and highest over branches.</summary>
+    public int HpAtTurnEndMin(int id) => Branches.Min(b => b.Enemy(id)?.HpAtTurnEnd ?? 0);
+    public int HpAtTurnEndMax(int id) => Branches.Max(b => b.Enemy(id)?.HpAtTurnEnd ?? 0);
 }
 
 /// <summary>
@@ -560,7 +565,11 @@ public static class SimEngine
             foreach (var (name, amount) in s.P.DebuffLateBlockable) LandBlockable(s, name, amount);
         });
 
-        b.Do(s => s.BlockAtEnemyTurn = s.P.Block);
+        b.Do(s =>
+        {
+            s.BlockAtEnemyTurn = s.P.Block;
+            foreach (var e in s.Enemies) e.HpAtTurnEnd = Math.Max(0, e.Hp);
+        });
     }
 
     // ------------------------------------------------------------------ enemy turn
@@ -578,9 +587,7 @@ public static class SimEngine
                 if (e.Hits.Count > 0) s.SkippedEndOfTurn++;
                 continue;
             }
-            if (e.Stunned) continue;
-
-            // Poison ticks at the start of its turn; Hardened Shell's budget resets then.
+            // Poison ticks at the start of its turn, stunned or not; Hardened Shell's budget resets then.
             e.ShellLeft = e.ShellPerTurn;
             var poison = Math.Min(e.Poison, e.ShellLeft);
             e.Hp -= poison;
@@ -591,7 +598,7 @@ public static class SimEngine
                 if (e.Hits.Count > 0) s.SkippedPoisoned++;
                 continue;
             }
-            if (e.Hits.Count == 0) continue;
+            if (e.Stunned || e.Hits.Count == 0) continue; // a stunned enemy skips its move
             var enemyBlock = e.Barricade ? e.Block : 0;
 
             var landed = 0;

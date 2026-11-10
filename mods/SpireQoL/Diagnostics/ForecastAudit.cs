@@ -2,6 +2,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using SpireQoL.Combat;
 using Sts2Mods.Core.Features;
@@ -20,6 +21,13 @@ namespace SpireQoL.Diagnostics;
 ///  - your end of turn (player side): block gained there vs the forecast's end-of-turn block;
 ///  - your end of turn + the enemy turn: HP you and Osty lost vs the forecast. Entries from your
 ///    next turn (Poison ticking on you at its start, etc.) are left out.
+/// It also checks the outcome simulator enemy by enemy (Sim/SimEngine; the forecast's own run):
+///  - dead before it acted: predicted in every branch but it acted, or in no branch but it died first;
+///  - its HP when your end of turn was over, against the branches' range;
+///  - damage instances that got through its block during your end of turn (what Slumber and Asleep
+///    count), against the branches' range;
+///  - Imbalanced: whether its first hit on you was fully blocked, when every branch agreed.
+/// Only what no branch allows is reported, so a random target never causes a report.
 /// A one-line summary per combat gives the match rate. Read-only: it only reads the history.
 /// </summary>
 public sealed class ForecastAudit : IFeature, IFrameFeature
@@ -130,6 +138,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if ((actualTaken > f.Taken || actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
         if ((actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
+        var enemyIssues = EnemyIssues(f, window, endOfTurn, me);
+        issues.AddRange(enemyIssues.Select(x => x.Issue));
 
         _checked++;
         if (issues.Count == 0)
@@ -159,13 +169,91 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var encounter = Sts2State.Combat?.Encounter?.GetType().Name ?? "unknown";
         var breakdown = $"block {f.CurrentBlock} + end of turn {List(f.EndOfTurnBlock)}\nblockable {List(f.Blockable)}\nunblockable {List(f.Unblockable)}\n" +
                         $"your end-of-turn damage {List(f.EndOfTurnDamage)}\nskipped: poison {f.SkippedPoisoned}, end of turn {f.SkippedEndOfTurn}; cancelled hits {f.CancelledHits}; Osty HP {f.OstyHp}";
+        var prediction = Prediction(f);
+        var fullWindow = string.Join("\n", window.Select((e, i) => $"#{from + i} {ProcAudit.Describe(e, me)}{(SideOf(e) == CombatSide.Enemy ? " (enemy turn)" : "")}"));
         foreach (var issue in issues)
         {
             var kind = issue.Split(':')[0];
-            reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", new[] { kind, encounter },
-                $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}",
-                new Dictionary<string, string> { ["audit_window"] = string.Join("\n", lines) });
+            // Enemy outcome issues group by the monster too; amounts are left out of the fingerprint.
+            var monster = enemyIssues.FirstOrDefault(x => x.Issue == issue).Monster;
+            var fp = monster != null ? new[] { kind, encounter, monster } : new[] { kind, encounter };
+            reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", fp,
+                $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}\n\nSimulator, per enemy (over {f.Outcome.Branches.Count} branch(es){(f.Outcome.Truncated ? ", truncated" : "")}):\n{prediction}",
+                new Dictionary<string, string> { ["audit_window"] = fullWindow });
         }
+    }
+
+    /// <summary>
+    /// The simulator's per-enemy predictions against what the history shows (see the class summary).
+    /// Returns each issue with the monster it's about.
+    /// </summary>
+    private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel f, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me)
+    {
+        var result = new List<(string, string?)>();
+        var o = f.Outcome;
+        if (o.Branches.Count == 0) return result;
+        foreach (var (creature, id) in f.Ids)
+        {
+            var start = f.State.Enemy(id);
+            if (start == null || start.Hp <= 0) continue;
+            var monster = creature.Monster?.GetType().Name ?? "enemy";
+            var name = start.Name;
+
+            // What happened: HP lost and instances through its block during your end of turn; whether it
+            // died before its move; its first hit on you.
+            var eot = endOfTurn.OfType<DamageReceivedEntry>().Where(d => d.Result.Receiver == creature).ToList();
+            var hpAtTurnEnd = Math.Max(0, start.Hp - eot.Sum(d => d.Result.UnblockedDamage));
+            var through = eot.Count(d => d.Result.UnblockedDamage > 0);
+            var killAt = window.FindIndex(e => e is DamageReceivedEntry d && d.Result.Receiver == creature && d.Result.WasTargetKilled);
+            var moveAt = window.FindIndex(e => e is MonsterPerformedMoveEntry m && ReferenceEquals(m.Monster, creature.Monster));
+            var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt);
+            var firstHit = window.OfType<DamageReceivedEntry>().FirstOrDefault(d => d.Result.Receiver == me.Creature && d.Dealer == creature);
+
+            if (o.DeadInAll(id) && !diedBeforeActing)
+                result.Add(($"enemy death: {name} predicted dead before acting, but it acted", monster));
+            if (!o.DeadInAny(id) && diedBeforeActing)
+                result.Add(($"enemy death: {name} predicted alive, but it died before acting", monster));
+
+            if (!o.Truncated)
+            {
+                int lo = o.HpAtTurnEndMin(id), hi = o.HpAtTurnEndMax(id);
+                if (hpAtTurnEnd < lo || hpAtTurnEnd > hi)
+                    result.Add(($"enemy HP at turn end: {name} predicted {(lo == hi ? $"{lo}" : $"{lo}-{hi}")}, actual {hpAtTurnEnd}", monster));
+                int ulo = o.UnblockedMin(id), uhi = o.UnblockedMax(id);
+                if (through < ulo || through > uhi)
+                    result.Add(($"hits through block: {name} predicted {(ulo == uhi ? $"{ulo}" : $"{ulo}-{uhi}")}, actual {through}", monster));
+            }
+
+            if (start.Imbalanced && firstHit != null)
+            {
+                var blocked = firstHit.Result.WasFullyBlocked;
+                if (o.FirstHitBlockedInAll(id) && !blocked)
+                    result.Add(($"Imbalanced: {name}'s first hit predicted fully blocked, but it wasn't", monster));
+                if (!o.FirstHitBlockedInAny(id) && blocked)
+                    result.Add(($"Imbalanced: {name}'s first hit predicted not fully blocked, but it was", monster));
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Per enemy: the simulator's start state and predicted outcomes, for reports.</summary>
+    private static string Prediction(TurnEndModel f)
+    {
+        var o = f.Outcome;
+        var lines = new List<string>();
+        foreach (var (_, id) in f.Ids)
+        {
+            var e = f.State.Enemy(id);
+            if (e == null) continue;
+            lines.Add($"{e.Name}: HP {e.Hp}, block {e.Block}, poison {e.Poison}, hits [{string.Join(", ", e.Hits)}]{(e.HitCap != int.MaxValue ? $", cap {e.HitCap}" : "")}" +
+                      $" → HP at turn end {o.HpAtTurnEndMin(id)}-{o.HpAtTurnEndMax(id)}, hits through block {o.UnblockedMin(id)}-{o.UnblockedMax(id)}, " +
+                      $"dead before acting {(o.DeadInAll(id) ? "always" : o.DeadInAny(id) ? "sometimes" : "never")}" +
+                      $"{(e.Imbalanced ? $", first hit fully blocked {(o.FirstHitBlockedInAll(id) ? "always" : o.FirstHitBlockedInAny(id) ? "sometimes" : "never")}" : "")}");
+        }
+        var p = f.State.P;
+        lines.Add($"you: block {p.Block}, orbs [{string.Join(", ", p.Orbs.Select(x => $"{x.Kind} {x.Passive}/{x.Evoke}"))}] (slots {p.OrbCapacity}), Juggernaut {p.Juggernaut}, Plating {p.Plating}, " +
+                  $"hand {p.HandCount}, Ethereal exhausting {p.Fading}");
+        return string.Join("\n", lines);
     }
 
     private static string List(IEnumerable<Source> sources)

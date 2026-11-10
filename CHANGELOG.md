@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.25.0
+#### Added
+- Outcome audit (logs and error reports only): after each enemy turn, the simulator's predictions are checked enemy by enemy against what happened: deaths before acting (this checks the lethal tab), HP and hits through block at the end of your turn, and Imbalanced full blocks. Only outcomes no random branch allows are reported.
+#### Fixed
+- Simulator: poison ticks on a stunned enemy too, so one poisoned to death while stunned counts as dead before acting.
+
 ### Spire QoL 0.24.1
 #### Fixed
 - Glass orbs in the simulator: only the orb's base value decays (by 1 each time its passive fires, not below 0); Focus adds on top, so a decayed Glass orb still deals your Focus every turn. Before, the Focus-included value decayed, so a long-lived Glass orb's damage was underestimated with Focus.
