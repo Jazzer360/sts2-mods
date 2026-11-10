@@ -346,3 +346,4 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [~] 0.23.5: tab icons centered in the visible part of the tab (they sat 4% of the tab length too high).
 - [x] Sentry sync: a brand-new issue whose event isn't indexed yet no longer fails the whole run (skipped, retried next hour).
 - [~] 0.23.7: tabs stay on a held (dragged or aimed) card; tab icon nudged a little lower.
+- [~] 0.23.8: Relic Counters beside Osty's HP bar at the default placement (`MovableWidget.AttachToWhenDefault`); bigger `2×` text. Check in a Necrobinder fight, including after Osty dies.

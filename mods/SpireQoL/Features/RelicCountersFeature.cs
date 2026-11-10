@@ -58,13 +58,16 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
     public void Attach(OverlayHost host)
     {
         // Right of the player's HP bar, bottom edges level, so it never sits on top of enemies.
+        // Necrobinder: Osty stands right of you, so at the default placement it goes right of
+        // Osty's HP bar instead (once moved by the player, it's always relative to yours).
         // Falls back to bottom-center above the hand when the HP bar isn't on screen.
         _widget = _ctx.Widget(Id, "Relic Counters", new WidgetLayout
         {
             FollowGame = true, OffsetX = 0, OffsetY = 0,
             Anchor = ScreenAnchor.Bottom,
         });
-        _widget.AttachTo(Sts2State.PlayerHpBarRect, AttachSide.RightOfBottom);
+        _widget.AttachToWhenDefault(Sts2State.OstyHpBarRect, AttachSide.RightOfBottom)
+               .AttachTo(Sts2State.PlayerHpBarRect, AttachSide.RightOfBottom);
     }
 
     public void OnFrame(OverlayHost host)

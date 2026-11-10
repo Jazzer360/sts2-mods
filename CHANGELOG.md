@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.8
+#### Changed
+- Relic Counters: with Osty out (Necrobinder), the tray sits right of Osty's HP bar instead of yours, so it doesn't cover Osty. Only at the default placement; a tray you've moved stays where you put it.
+- Card tabs: the replay tab's `2×` is bigger and fills the tab.
+
 ### Spire QoL 0.23.7
 #### Fixed
 - Card tabs stay on a card while you hold it to play it (they used to disappear as soon as you grabbed it).

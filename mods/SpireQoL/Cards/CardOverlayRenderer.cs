@@ -307,8 +307,22 @@ public sealed class CardOverlayRenderer
                 label.Visible = spec.Number != null || spec.Text != null;
                 if (spec.Text != null && tab.GetNodeOrNull<TextureRect>("Icon") is { } ti)
                 {
-                    // Text tab: the text sits where the icon would, upright.
-                    label.Text = spec.Text;
+                    // Text tab: the text fills the icon's slot, upright. The label is the game's
+                    // auto-sizing MegaLabel: give it the icon's box and a large max font size, and
+                    // it picks the biggest size that fits.
+                    RememberLabel(label);
+                    var box = ti.Size * IconScale;
+                    label.Size = new Vector2(box.Y, box.X); // upright after the -90° turn
+                    if (label is MegaCrit.Sts2.addons.mega_text.MegaLabel mega)
+                    {
+                        mega.AutoSizeEnabled = true;
+                        mega.MaxFontSize = Math.Max((int)label.GetMeta(MetaMaxFont), (int)(box.X * 0.8f));
+                        mega.SetTextAutoSize(spec.Text);
+                    }
+                    else
+                    {
+                        label.Text = spec.Text;
+                    }
                     label.HorizontalAlignment = HorizontalAlignment.Center;
                     label.VerticalAlignment = VerticalAlignment.Center;
                     label.PivotOffset = label.Size / 2f;
@@ -320,6 +334,7 @@ public sealed class CardOverlayRenderer
                     // Upright like the icon, centered on the icon's lower-right corner as the game
                     // places power amounts. In the tab's unrotated coordinates, screen-down is +x
                     // and screen-right is -y.
+                    RestoreLabel(label);
                     label.Text = n.ToString();
                     label.HorizontalAlignment = HorizontalAlignment.Center;
                     label.VerticalAlignment = VerticalAlignment.Center;
@@ -332,6 +347,25 @@ public sealed class CardOverlayRenderer
                 }
             }
         }
+    }
+
+    private const string MetaSize = "spireqol_label_size";
+    private const string MetaMaxFont = "spireqol_label_max_font";
+
+    /// <summary>Saves the tab label's own size and max font size once (tab nodes are reused).</summary>
+    private static void RememberLabel(Label label)
+    {
+        if (label.HasMeta(MetaSize)) return;
+        label.SetMeta(MetaSize, label.Size);
+        label.SetMeta(MetaMaxFont, label is MegaCrit.Sts2.addons.mega_text.MegaLabel m ? m.MaxFontSize : 0);
+    }
+
+    /// <summary>Puts back what a text tab changed, for a number tab on the same node.</summary>
+    private static void RestoreLabel(Label label)
+    {
+        if (!label.HasMeta(MetaSize)) return;
+        label.Size = (Vector2)label.GetMeta(MetaSize);
+        if (label is MegaCrit.Sts2.addons.mega_text.MegaLabel m) m.MaxFontSize = (int)label.GetMeta(MetaMaxFont);
     }
 
     private static Control MakeTab(Control template, Control overlay)

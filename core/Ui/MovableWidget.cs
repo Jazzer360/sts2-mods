@@ -34,7 +34,7 @@ public sealed class MovableWidget
     private readonly Button[] _pinButtons = new Button[9];
     private readonly Button _attachButton;
     private readonly OverlayHost _host;
-    private readonly List<(Func<Rect2?> Target, AttachSide Side)> _attach = new();
+    private readonly List<(Func<Rect2?> Target, AttachSide Side, bool DefaultOnly)> _attach = new();
 
     private bool _dragging;
     private Vector2 _dragGrab;
@@ -131,24 +131,45 @@ public sealed class MovableWidget
     /// </summary>
     public MovableWidget AttachTo(Func<Rect2?> target, AttachSide side)
     {
-        _attach.Add((target, side));
+        _attach.Add((target, side, false));
         return this;
     }
 
-    private bool Attached => _layout.FollowGame && _attach.Count > 0;
+    /// <summary>
+    /// An attach point tried only while the widget is at its default placement (Relic Counters
+    /// beside Osty's HP bar). Once the player moves or re-pins the widget, offsets are measured
+    /// from the regular attach points only: an offset chosen beside one element can't be
+    /// translated to another, so the player's choice is kept as is.
+    /// </summary>
+    public MovableWidget AttachToWhenDefault(Func<Rect2?> target, AttachSide side)
+    {
+        _attach.Add((target, side, true));
+        return this;
+    }
+
+    /// <summary>Placement untouched by the player (scale and opacity don't count).</summary>
+    private bool AtDefaultPlacement =>
+        _layout.FollowGame == _default.FollowGame && _layout.CustomPin == _default.CustomPin && _layout.Anchor == _default.Anchor
+        && Mathf.IsEqualApprox(_layout.OffsetX, _default.OffsetX) && Mathf.IsEqualApprox(_layout.OffsetY, _default.OffsetY);
+
+    private bool Attached => _layout.FollowGame && _attach.Any(a => !a.DefaultOnly);
 
     // ---------- placement ----------
 
     /// <summary>Reference point and pin for the current mode. Null reference = not placeable right now.</summary>
-    private (Vector2 Ref, ScreenAnchor Pin)? Placement(Vector2 size)
+    private (Vector2 Ref, ScreenAnchor Pin)? Placement(Vector2 size, bool forStoring = false)
     {
         var vp = _host.ViewportSize;
         if (Attached)
         {
             var offset = new Vector2(_layout.OffsetX, _layout.OffsetY);
             (Vector2, ScreenAnchor)? fallback = null;
-            foreach (var (target, side) in _attach)
+            // Storing a new offset (drag, re-pin) measures from the regular attach points, since
+            // the widget is leaving its default placement.
+            var useDefaultOnly = !forStoring && AtDefaultPlacement;
+            foreach (var (target, side, defaultOnly) in _attach)
             {
+                if (defaultOnly && !useDefaultOnly) continue;
                 if (target() is not { } rect) continue;
                 var (reference, natural) = AttachReference(rect, side);
                 var pin = _layout.CustomPin ? _layout.Anchor : natural;
@@ -230,7 +251,7 @@ public sealed class MovableWidget
     private void StoreCurrentPosition()
     {
         var size = Root.Size * Root.Scale;
-        if (Placement(size) is not { } p) return;
+        if (Placement(size, forStoring: true) is not { } p) return;
         var off = PinPoint(Root.Position, p.Pin, size) - p.Ref;
         _layout.OffsetX = off.X;
         _layout.OffsetY = off.Y;

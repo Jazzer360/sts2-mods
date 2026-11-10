@@ -182,12 +182,19 @@ public static class Sts2State
     /// stopped short of the visible bar in game (a widget placed at its right edge sat over the
     /// bar), so this measures NHealthBar's "%HpBarContainer" and the visible pieces inside it.
     /// </summary>
-    public static Godot.Rect2? PlayerHpBarRect()
+    public static Godot.Rect2? PlayerHpBarRect() => Me is { } me ? HpBarRect(me.Creature, log: true) : null;
+
+    /// <summary>
+    /// Screen rect of Osty's HP bar (Necrobinder), or null when Osty isn't out. The bar stays up
+    /// while Osty is dead (it reads "Dead"; NHealthBar.RefreshText), so this doesn't flicker.
+    /// </summary>
+    public static Godot.Rect2? OstyHpBarRect() => Me?.Osty is { } osty ? HpBarRect(osty, log: false) : null;
+
+    private static Godot.Rect2? HpBarRect(MegaCrit.Sts2.Core.Entities.Creatures.Creature who, bool log)
     {
-        var me = Me;
         var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
-        if (me == null || room == null) return null;
-        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == me.Creature);
+        if (room == null) return null;
+        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == who);
         var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
         if (display == null || !display.IsVisibleInTree()) return null;
         var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
@@ -204,7 +211,7 @@ public static class Sts2State
 
         // One log line per combat, so placement can be checked against the game log.
         var combatId = MegaCrit.Sts2.Core.Combat.CombatManager.Instance.CurrentCombatId;
-        if (combatId != null && !Equals(combatId, _loggedHpBarFor))
+        if (log && combatId != null && !Equals(combatId, _loggedHpBarFor))
         {
             _loggedHpBarFor = combatId;
             MegaCrit.Sts2.Core.Logging.Log.Info(
