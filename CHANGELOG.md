@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.23.7
+#### Fixed
+- Card tabs stay on a card while you hold it to play it (they used to disappear as soon as you grabbed it).
+#### Changed
+- Card tabs: the icon sits a little lower again.
+
 ### Spire QoL 0.23.6
 #### Fixed
 - Proc audit false alarms (logs and error reports only; nothing on screen changes):

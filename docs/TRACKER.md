@@ -345,3 +345,4 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 2026-11-09: "knowable information only" made a hard rule (CLAUDE.md). Audited the mod: no RNG or seed reads; random effects show amounts, never targets; enemy attacks come from the intent on screen; private reads are only counters and "already used" flags a player could track.
 - [~] 0.23.5: tab icons centered in the visible part of the tab (they sat 4% of the tab length too high).
 - [x] Sentry sync: a brand-new issue whose event isn't indexed yet no longer fails the whole run (skipped, retried next hour).
+- [~] 0.23.7: tabs stay on a held (dragged or aimed) card; tab icon nudged a little lower.

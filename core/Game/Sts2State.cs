@@ -49,14 +49,39 @@ public static class Sts2State
     {
         var hand = NPlayerHand.Instance;
         if (hand == null) yield break;
+        NCard? first = null;
         foreach (var holder in hand.ActiveHolders)
         {
             var node = holder.CardNode;
             var model = node?.Model;
             if (node != null && model != null && Godot.GodotObject.IsInstanceValid(node))
             {
+                first ??= node;
                 yield return (node, model);
             }
+        }
+
+        // The card you're holding (dragging or aiming): StartCardPlay reparents its holder from
+        // the holder container to the hand itself, so it isn't in ActiveHolders. Its model is
+        // still in the hand pile until the play starts.
+        var held = HeldCard(hand);
+        if (held is { } h && h.Node != first) yield return h;
+    }
+
+    private static (NCard Node, CardModel Card)? HeldCard(NPlayerHand hand)
+    {
+        try
+        {
+            var play = HarmonyLib.Traverse.Create(hand).Field("_currentCardPlay").GetValue<MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay>();
+            if (play == null || !Godot.GodotObject.IsInstanceValid(play)) return null;
+            var node = play.Holder?.CardNode;
+            var model = node?.Model;
+            if (node == null || model == null || !Godot.GodotObject.IsInstanceValid(node)) return null;
+            return (node, model);
+        }
+        catch
+        {
+            return null;
         }
     }
 
