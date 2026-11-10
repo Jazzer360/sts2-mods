@@ -52,9 +52,14 @@ public sealed class TurnEndModel
     public IReadOnlyDictionary<Creature, int> Ids { get; private set; } = new Dictionary<Creature, int>();
     public SimOutcome Outcome { get; private set; } = new();
 
+    /// <summary>The start state's full fingerprint (SimState.FullKey): card simulations are cached by it.</summary>
+    public long StateKey { get; private set; }
+
     // Incoming Damage, the forecast audit and the proc rules all ask every frame: simulate once per frame.
     private static ulong _frame = ulong.MaxValue;
     private static TurnEndModel? _cached;
+    private static long _lastKey;
+    private static SimOutcome? _lastOutcome;
 
     public static TurnEndModel? Compute()
     {
@@ -72,13 +77,26 @@ public sealed class TurnEndModel
         if (me?.PlayerCombatState == null || cs == null) return null;
 
         var state = SimAdapter.Build(me, cs, out var ids);
-        var logged = state.Clone();
-        logged.Log = true; // the display needs the breakdown; card simulations run without it
-        var outcome = SimEngine.Run(logged);
+        // The game state rarely changes between frames: rerun only when it did.
+        var key = state.FullKey();
+        SimOutcome outcome;
+        if (_lastOutcome != null && key == _lastKey)
+        {
+            outcome = _lastOutcome;
+        }
+        else
+        {
+            var logged = state.Clone();
+            logged.Log = true; // the display needs the breakdown; card simulations run without it
+            outcome = SimEngine.Run(logged);
+            _lastKey = key;
+            _lastOutcome = outcome;
+        }
         var w = outcome.Worst;
         var m = new TurnEndModel
         {
             State = state,
+            StateKey = key,
             Ids = ids,
             Outcome = outcome,
             CurrentBlock = state.P.Block,

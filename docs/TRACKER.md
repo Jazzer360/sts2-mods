@@ -378,4 +378,8 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.25.0: simulator poison ticks on stunned enemies (found while writing the outcome audit; test `PoisonTicksOnAStunnedEnemyToo`).
 - [x] 0.25.1: simulator start state (JSON) in forecast/outcome reports, replay harness (`ReplayTests`, `Cases/*.json`), `[audit] [outcome]` log line per enemy turn.
 - When a report is resolved, note here which layer it was: simulator rule / adapter / audit comparison.
+- [x] 0.26.0: chained draws (`PlayFacts.ChainedDraws`: Dark Embrace, Joss Paper, Game Piece, Iron Club, Vicious, Centennial Puzzle; hand limit; No Draw/Fiddle) for Shuffle Warning and draw procs; Biiig Hug shuffle tab. Suggested in game (Burning Pact + Dark Embrace).
+- [x] 0.26.0: audits: shuffle check (pile events), state after each play vs the simulator's prediction of it, forecast "no single branch" joint check.
+- [x] 0.26.0: simulator: Envenom, Snecko Skull, poison stacks/ticks, Weak and Enrage intent changes, Curl Up / Sneaky / Skittish block, Plasma values; full-state cache key (`SimState.FullKey`; the branch key missed intents and powers); parallel card simulations.
+- [ ] Not modelled yet (the after-play check will show them if they matter): enemy Strength from kill reactions (Crab Rage, Ravenous), Strength loss cards on enemies, random poison (Bouncing Flask), Soot's created-status chain (Smokestack, Trash to Treasure) from Biiig Hug, discards before draws refilling an empty discard pile.
 

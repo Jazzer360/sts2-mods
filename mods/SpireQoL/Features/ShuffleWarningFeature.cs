@@ -12,8 +12,8 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// A discard-pile tab on cards in hand whose draw would run past the end of your draw pile and
-/// reshuffle the discard pile mid-turn. Same on-card tab language as every other indicator.
+/// A discard-pile tab on cards in hand whose draws (their own, plus the draws they set off) would run
+/// past the end of your draw pile and reshuffle the discard pile mid-turn. Same on-card tab language as every other indicator.
 /// Spec: docs/FEATURES.md#shuffle-warning.
 /// </summary>
 public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
@@ -41,14 +41,23 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
         if (me == null || !Sts2State.IsPlayerTurn) return;
         if (Sts2State.DiscardPileCount(me) == 0) return;
 
-        var draw = Sts2State.DrawPileCount(me);
+        var cs = Sts2State.Combat;
+        if (cs == null) return;
         var hand = Sts2State.Hand(me);
         foreach (var c in hand)
         {
-            if (PlayFacts.CardsDrawn(c, hand.Count) * CardIndicatorsFeature.PlayCount(c) > draw)
+            // Every draw the play causes, including the ones it sets off (Dark Embrace per card
+            // exhausted, Game Piece, Iron Club...), up to a full hand: PlayFacts.Draws.
+            bool shuffles;
+            try
             {
-                _ctx.Decor.For(c).AddTab("shuffle", GameIcons.DiscardPile());
+                shuffles = PlayFacts.For(c, me, cs, CardIndicatorsFeature.PlayCount(c)).Shuffles;
             }
+            catch
+            {
+                shuffles = PlayFacts.CardsDrawn(c, hand.Count) * CardIndicatorsFeature.PlayCount(c) > Sts2State.DrawPileCount(me);
+            }
+            if (shuffles) _ctx.Decor.For(c).AddTab("shuffle", GameIcons.DiscardPile());
         }
     }
 

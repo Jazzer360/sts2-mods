@@ -12,6 +12,8 @@ using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
 using SpireQoL.Features;
 using SpireQoL.Procs;
+using SpireQoL.Sim;
+using MegaCrit.Sts2.Core.Runs;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -34,6 +36,14 @@ namespace SpireQoL.Diagnostics;
 ///    what the card itself does (PlayFacts) plus what predicted tabs can add. More than that with no
 ///    tab that explains it = "unexplained" (a missing tag). Less than the card's own = a "[model]"
 ///    line (our model of the card is off; often fine, e.g. an empty draw pile).
+///  - Shuffle: whether the play shuffled your discard pile into your draw pile (seen from the piles'
+///    events: the game keeps no history entry for it) against PlayFacts.Shuffles.
+///  - State after the play: once the play has fully resolved (the game's action queue is idle), the
+///    simulator's state is rebuilt from the game and compared with the simulator's own prediction
+///    of the play (the same start state and play behind the card's lethal, Imbalanced and wake
+///    tabs): enemy HP, block, poison and intents; your block, Plating, Juggernaut, Thorns, Flame
+///    Barrier, Feel No Pain, orbs and Osty. Random targets are branches: reported only when no
+///    branch matches. A mismatch means those tabs were computed from the wrong state.
 /// A one-line summary per combat gives the match rate. Read-only: events and history only.
 /// </summary>
 public sealed class ProcAudit : IFeature, IFrameFeature
@@ -75,6 +85,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public long Lag;
         /// <summary>How the window's start was chosen (for reports).</summary>
         public string Split = "";
+        /// <summary>The play's target (single-target cards).</summary>
+        public Creature? Target;
+        /// <summary>The simulator's state rebuilt from the game once the play had fully resolved.</summary>
+        public SimState? After;
+        public Dictionary<Creature, int>? AfterIds;
+        /// <summary>Why the after-play state wasn't captured (another play started first...).</summary>
+        public string? AfterSkipped;
     }
 
     private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
@@ -85,16 +102,23 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private static readonly HashSet<string> Modifiers = new() { "HardToKillPower", "HardenedShellPower", "IntangiblePower" };
 
+    /// <summary>
+    /// Your powers that react to which card is drawn (draw more, auto-play it): the draw order is
+    /// hidden, so they're never predicted. When they fire on a play that drew cards, noted, not reported.
+    /// </summary>
+    private static readonly HashSet<string> DrawReactive = new() { "PagestormPower", "IterationPower", "HellraiserPower", "ChainsOfBindingPower" };
+
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
     private static readonly HashSet<string> KillReactive = new() { "GremlinHorn" };
 
     /// <summary>What a trigger tab's source can add beyond the card itself (for the budget check).</summary>
     private static readonly Dictionary<string, Effect[]> SourceEffects = new()
     {
-        // draws
-        ["DarkEmbracePower"] = new[] { Effect.Draw }, ["GamePiece"] = new[] { Effect.Draw }, ["IronClub"] = new[] { Effect.Draw },
-        ["GremlinHorn"] = new[] { Effect.Draw }, ["CentennialPuzzle"] = new[] { Effect.Draw }, ["ViciousPower"] = new[] { Effect.Draw },
-        ["JossPaper"] = new[] { Effect.Draw }, ["UnceasingTop"] = new[] { Effect.Draw }, ["CorrosiveWavePower"] = new[] { Effect.Power },
+        // draws (Dark Embrace, Game Piece, Iron Club, Joss Paper, Vicious and Centennial Puzzle are
+        // counted in PlayFacts.Draws, so their tabs explain nothing beyond it)
+        ["GremlinHorn"] = new[] { Effect.Draw }, ["UnceasingTop"] = new[] { Effect.Draw }, ["CorrosiveWavePower"] = new[] { Effect.Power },
+        ["PagestormPower"] = new[] { Effect.Draw }, ["IterationPower"] = new[] { Effect.Draw },
+        ["BiiigHug"] = new[] { Effect.Generate },
         // created cards
         ["CalamityPower"] = new[] { Effect.Generate }, ["JugglingPower"] = new[] { Effect.Generate }, ["MusicBox"] = new[] { Effect.Generate },
         ["BurningSticks"] = new[] { Effect.Generate }, ["PersonalHivePower"] = new[] { Effect.Generate }, ["WitheringPresencePower"] = new[] { Effect.Generate },
@@ -178,12 +202,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                     From = from, FromMin = fromMin, Start = i, Split = split,
                     Lag = _ctx.Decor.LastSeenFrame.TryGetValue(play.Card, out var seen) ? _ctx.Decor.Frame - seen : -1,
                     Before = CaptureBefore(),
+                    Target = play.Target,
                     StaleBecause = StaleBecause(list, play.Card, i, me),
                 };
             }
         }
         _seen = count;
         _countAtFrame[_ctx.Decor.Frame] = count;
+        WatchPiles(me);
+        CaptureAfter(me, cs, list);
         if (_countAtFrame.Count > 600) _countAtFrame.Remove(_countAtFrame.Keys.Min());
 
         if (_open != null && !Sts2State.IsPlayerTurn)
@@ -472,6 +499,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         var w = _open;
         _open = null;
+        if (w is { After: null, AfterSkipped: null }) w.AfterSkipped = "another play or the end of turn came before the play had fully resolved";
         if (me == null || _history == null)
         {
             _pending = null;
@@ -532,6 +560,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var entries = hist.GetRange(w.From, Math.Max(0, to - w.From));
             w.To = to;
             var issues = Compare(w, me, entries, FlashesIn(w.From, to), out var model);
+            ShuffleIssues(w, me, entries, FlashesIn(w.From, to), w.From, to, issues, model);
+            AfterPlayIssues(w, entries, issues, model);
             if (w.StaleBecause != null && issues.Count > 0)
             {
                 // Played before the previous card finished: its tabs didn't see that card's effects.
@@ -618,6 +648,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 foreach (var key in new[] { "player", "player_powers", "relics", "orbs", "enemies", "hand" })
                     if (w.Before.TryGetValue(key, out var v)) extra["before_" + key] = v;
             }
+            if (kind.StartsWith("after play") && w.Facts?.Sim != null)
+            {
+                extra["sim_state"] = w.Facts.Sim.Start.ToJson();
+                if (w.After != null) extra["sim_state_after"] = w.After.ToJson();
+            }
             var lag = w.Lag < 0 ? "never seen in hand" : $"{w.Lag} frame(s)";
             reporter.Mismatch("proc", $"Proc audit: {issue} (played {card})", fp,
                 $"Played {w.CardName} ({card}).\nIssue: {issue}\nAll issues this play: {string.Join("; ", issues)}\nTabs before the play: {tabs}" +
@@ -690,6 +725,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (causedByRandom)
             {
                 modelLines.Add($"{m.GetType().Name} fired after a random hit or kill (not predictable)");
+                continue;
+            }
+            if (DrawReactive.Contains(m.GetType().Name) && entries.OfType<CardDrawnEntry>().Any(d => !d.FromHandDraw && d.Card.Owner == me))
+            {
+                modelLines.Add($"{m.GetType().Name} fired on a drawn card (the draw order is hidden: not predictable)");
+                sourceOf[m.GetType().Name] = new TabSpec("proc:" + m.GetType().Name, null);
                 continue;
             }
             issues.Add($"no tab: {m.GetType().Name} fired");
@@ -766,6 +807,207 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         else if (foreign.Count > 0 && !autoPlayed && !Explained(Effect.Power)) issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
 
         return issues;
+    }
+
+    // ------------------------------------------------------------------ shuffles
+
+    // The game keeps no history entry for a shuffle. CardPileCmd.Shuffle moves the discard pile into
+    // the empty draw pile with silent removals (no discard-pile event) and normal adds (draw-pile
+    // CardAdded). So a card added to the draw pile that was in the discard pile at its last event,
+    // and isn't there any more, came over silently: a shuffle. One per batch.
+    private CardPile? _drawPile, _discardPile;
+    private HashSet<CardModel> _discardSeen = new(ReferenceEqualityComparer.Instance);
+    private bool _inShuffle;
+    private readonly List<int> _shuffleAts = new();
+
+    private void WatchPiles(Player me)
+    {
+        var pcs = me.PlayerCombatState;
+        if (pcs == null) return;
+        if (!ReferenceEquals(pcs.DrawPile, _drawPile))
+        {
+            if (_drawPile != null) _drawPile.CardAdded -= OnDrawPileAdded;
+            _drawPile = pcs.DrawPile;
+            _drawPile.CardAdded += OnDrawPileAdded;
+            _shuffleAts.Clear();
+        }
+        if (!ReferenceEquals(pcs.DiscardPile, _discardPile))
+        {
+            if (_discardPile != null) _discardPile.ContentsChanged -= OnDiscardChanged;
+            _discardPile = pcs.DiscardPile;
+            _discardPile.ContentsChanged += OnDiscardChanged;
+            OnDiscardChanged();
+        }
+    }
+
+    private void OnDiscardChanged()
+    {
+        if (_discardPile == null) return;
+        _discardSeen = new HashSet<CardModel>(_discardPile.Cards, ReferenceEqualityComparer.Instance);
+        _inShuffle = false;
+    }
+
+    private void OnDrawPileAdded(CardModel card)
+    {
+        try
+        {
+            if (_discardPile == null || _history == null) return;
+            if (!_discardSeen.Contains(card) || _discardPile.Cards.Contains(card)) return;
+            _discardSeen.Remove(card);
+            if (_inShuffle) return;
+            _inShuffle = true;
+            _shuffleAts.Add(_history.Entries.Count());
+            if (_shuffleAts.Count > 200) _shuffleAts.RemoveRange(0, 100);
+        }
+        catch
+        {
+            // diagnostics only
+        }
+    }
+
+    /// <summary>Shuffles during the play against PlayFacts.Shuffles (the Shuffle Warning and shuffle procs).</summary>
+    private void ShuffleIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, int from, int to, List<string> issues, List<string> model)
+    {
+        var f = w.Facts;
+        if (f == null) return;
+        var shuffled = _shuffleAts.Any(a => a >= from && a < to);
+        if (shuffled == f.Shuffles) return;
+        var autoPlayed = entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me);
+        var drawReactive = flashed.Any(m => DrawReactive.Contains(m.GetType().Name) || m.GetType().Name is "GremlinHorn" or "UnceasingTop");
+        var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
+        var why = $"(draws: predicted {f.Draws} = own {f.OwnDraws} + set off {f.ChainedDraws}{(f.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
+        if (autoPlayed || (shuffled && drawReactive))
+        {
+            model.Add($"shuffle {(shuffled ? "happened" : "didn't happen")} after an unpredictable draw or auto-play {why}");
+            return;
+        }
+        issues.Add(shuffled
+            ? $"shuffle: not predicted, but the discard pile was shuffled {why}"
+            : $"shuffle: predicted, but no shuffle happened {why}");
+    }
+
+    // ------------------------------------------------------------------ state after the play
+
+    private static bool ActionsIdle()
+    {
+        try
+        {
+            var rm = RunManager.Instance;
+            return rm != null && !rm.ActionExecutor.IsRunning && rm.ActionQueueSet.IsEmpty;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The first frame where the open play has finished and the game has nothing left to do (its
+    /// after-play procs, the card moving to its pile, Dark Embrace draws...): rebuild the simulator's
+    /// state from the game, for the after-play check.
+    /// </summary>
+    private void CaptureAfter(Player me, ICombatState cs, List<CombatHistoryEntry>? list)
+    {
+        var w = _open;
+        if (w == null || w.After != null || w.AfterSkipped != null || !Sts2State.IsPlayerTurn || !ActionsIdle()) return;
+        var hist = list ?? _history?.Entries.ToList();
+        if (hist == null) return;
+        var finished = false;
+        for (var k = w.Start + 1; k < hist.Count; k++)
+        {
+            if (hist[k] is CardPlayFinishedEntry { CardPlay: var p } && ReferenceEquals(p.Card, w.Card)) finished = true;
+        }
+        if (!finished) return;
+        try
+        {
+            w.After = SimAdapter.Build(me, cs, out var ids);
+            w.AfterIds = ids;
+        }
+        catch (Exception ex)
+        {
+            w.AfterSkipped = $"couldn't read the state: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// The state the play left against the simulator's prediction of it (see the class summary).
+    /// Each difference from the closest branch is one issue.
+    /// </summary>
+    private static void AfterPlayIssues(Window w, List<CombatHistoryEntry> entries, List<string> issues, List<string> model)
+    {
+        var sim = w.Facts?.Sim;
+        if (sim == null)
+        {
+            model.Add("state after the play: not checked (no simulation for this card)");
+            return;
+        }
+        if (w.After == null || w.AfterIds == null)
+        {
+            model.Add($"state after the play: not checked ({w.AfterSkipped ?? "not captured"})");
+            return;
+        }
+        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay))
+        {
+            model.Add("state after the play: not checked (auto-played cards)");
+            return;
+        }
+        var targetId = w.Target != null && sim.Ids.TryGetValue(w.Target, out var tid) ? tid : -1;
+        if (!sim.PlayByTarget.TryGetValue(targetId, out var play) && !sim.PlayByTarget.TryGetValue(-1, out play))
+        {
+            model.Add("state after the play: not checked (no simulated play for its target)");
+            return;
+        }
+        SimEngine.ApplyPlayTo(sim.Start, play, out var branches, out var truncated);
+        if (truncated || branches.Count == 0)
+        {
+            model.Add("state after the play: not checked (too many branches)");
+            return;
+        }
+        var after = w.After;
+        var afterIds = w.AfterIds;
+        // Summoning raises Osty's HP in ways the simulator doesn't model: Osty isn't compared then.
+        var summoned = entries.OfType<SummonedEntry>().Any();
+
+        List<string> Diff(SimState pred)
+        {
+            var d = new List<string>();
+            foreach (var (creature, id) in sim.Ids)
+            {
+                var pe = pred.Enemy(id);
+                if (pe == null || !afterIds.TryGetValue(creature, out var aid) || after.Enemy(aid) is not { } ae) continue;
+                var name = pe.Name;
+                static int Hp(SimEnemy e) => Math.Max(0, e.Hp);
+                if (Hp(pe) != Hp(ae)) d.Add($"after play enemy HP: {name} predicted {Hp(pe)}, actual {Hp(ae)}");
+                if (ae.Hp <= 0 || pe.Hp <= 0) continue;
+                if (pe.Block != ae.Block) d.Add($"after play enemy block: {name} predicted {pe.Block}, actual {ae.Block}");
+                if (pe.Poison != ae.Poison) d.Add($"after play enemy poison: {name} predicted {pe.Poison}, actual {ae.Poison}");
+                if (!pe.Hits.SequenceEqual(ae.Hits)) d.Add($"after play enemy intent: {name} predicted [{string.Join(", ", pe.Hits)}], actual [{string.Join(", ", ae.Hits)}]");
+            }
+            var pp = pred.P;
+            var ap = after.P;
+            void Cmp(string what, int p, int a)
+            {
+                if (p != a) d.Add($"after play {what}: predicted {p}, actual {a}");
+            }
+            Cmp("your block", pp.Block, ap.Block);
+            Cmp("Plating", pp.Plating, ap.Plating);
+            Cmp("Juggernaut", pp.Juggernaut, ap.Juggernaut);
+            Cmp("Thorns", pp.Thorns, ap.Thorns);
+            Cmp("Flame Barrier", pp.FlameBarrier, ap.FlameBarrier);
+            Cmp("Feel No Pain", pp.FeelNoPain, ap.FeelNoPain);
+            if (!summoned) Cmp("Osty HP", pp.OstyHp, ap.OstyHp);
+            // A random orb (Chaos) is predicted as Unknown: any orb matches it.
+            static string Orb(SimOrb o) => $"{o.Kind} {o.Passive}/{o.Evoke}";
+            var orbsMatch = pp.Orbs.Count == ap.Orbs.Count
+                            && pp.Orbs.Zip(ap.Orbs).All(x => x.First.Kind == OrbKind.Unknown || Orb(x.First) == Orb(x.Second));
+            if (!orbsMatch) d.Add($"after play orbs: predicted [{string.Join(", ", pp.Orbs.Select(Orb))}], actual [{string.Join(", ", ap.Orbs.Select(Orb))}]");
+            return d;
+        }
+
+        var best = branches.Select(Diff).OrderBy(d => d.Count).First();
+        if (best.Count == 0) return;
+        var note = branches.Count > 1 ? $" (closest of {branches.Count} branches)" : "";
+        foreach (var x in best) issues.Add(x + note);
     }
 
     private static string Range(int min, int max) => min == max ? $"{min}" : $"{min}–{max}";

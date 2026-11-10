@@ -81,6 +81,11 @@ public static class SimAdapter
                 Barricade = e.HasPower<BarricadePower>(),
                 Imbalanced = e.HasPower<ImbalancedPower>(),
                 Poison = SafeInt(() => e.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0),
+                PoisonStacks = e.GetPower<PoisonPower>()?.Amount ?? 0,
+                PoisonTriggers = e.GetPower<PoisonPower>() is { } poison ? Math.Max(1, Sts2State.Private(poison, "TriggerCount", 1)) : 1,
+                CurlUp = e.GetPower<CurlUpPower>()?.Amount ?? 0,
+                Sneaky = e.GetPower<SneakyPower>()?.Amount ?? 0,
+                Skittish = e.GetPower<SkittishPower>() is { } sk && !Sts2State.Private(sk, "HasGainedBlockThisTurn", true) ? sk.Amount : 0,
             };
             if (!e.IsAlive) se.Hp = 0;
             if (e.GetPower<HardenedShellPower>() is { } shell)
@@ -132,6 +137,7 @@ public static class SimAdapter
                 case "FlameBarrierPower": p.FlameBarrier += pw.Amount; break;
                 case "ReflectPower": p.Reflect = true; break;
                 case "BufferPower": p.Buffer += pw.Amount; break;
+                case "EnvenomPower": p.Envenom += pw.Amount; break;
             }
             var type = pw.GetType().Name;
             if (pw.Amount > 0 && BlockableDebuffs.Contains(type)) p.DebuffBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), pw.Amount));
@@ -157,6 +163,7 @@ public static class SimAdapter
                     p.ParryingShieldDamage += Sts2State.Var(r, "Damage");
                     break;
                 case "TungstenRod": p.TungstenRod += Sts2State.Var(r, "HpLossReduction", 1); break;
+                case "SneckoSkull": p.PoisonBonus += Sts2State.Var(r, "PoisonPower", 1); break;
                 case "GoldPlatedCables": p.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
                 case "BeatingRemnant":
                 {
@@ -239,6 +246,7 @@ public static class SimAdapter
             OrbKind.Frost => new SimOrb { Kind = kind, Passive = F(2), Evoke = F(5) },
             OrbKind.Dark => new SimOrb { Kind = kind, Passive = F(6), Evoke = 6 },
             OrbKind.Glass => new SimOrb { Kind = kind, Passive = F(4), Evoke = F(4) * 2, GlassBase = 4, GlassBonus = focus },
+            OrbKind.Plasma => new SimOrb { Kind = kind, Passive = 1, Evoke = 2 }, // energy; Focus doesn't change it (PlasmaOrb)
             _ => new SimOrb { Kind = kind },
         };
     }
@@ -258,6 +266,7 @@ public static class SimAdapter
         {
             Name = name,
             IsAttack = card.Type == CardType.Attack,
+            Plays = plays,
             HandDelta = -1 + f.Draws + f.Generated,
             FadingDelta = IsFading(card, cs) ? -1 : 0,
             Procs = procs,
@@ -347,6 +356,8 @@ public static class SimAdapter
                 case "ThornsPower": play.AddThorns += amount; break;
                 case "FlameBarrierPower": play.AddFlameBarrier += amount; break;
                 case "PoisonPower":
+                    // Snecko Skull adds to every application (ModifyPowerAmountGivenAdditive).
+                    amount += plays * me.Relics.Where(r => r.GetType().Name == "SneckoSkull").Sum(r => Sts2State.Var(r, "PoisonPower", 1));
                     if (card.TargetType == TargetType.AnyEnemy)
                     {
                         play.Poison += amount;
@@ -360,7 +371,70 @@ public static class SimAdapter
             }
         }
         if (play.Poison > 0 && !play.PoisonAll) play.TargetId = targetId;
+
+        // Intents the play changes:
+        //  - Weak lowers the intent damage of an enemy that isn't Weak yet (WeakPower.ModifyDamageMultiplicative).
+        //    With Artifact a charge may take it instead (which debuff it takes depends on the order), so
+        //    that intent is left as it is.
+        //  - Enrage: every Skill you play gives it Strength (EnragePower.AfterCardPlayed).
+        var appliesWeak = card.DynamicVars.Values.Any(v => v.GetType() is { IsGenericType: true } t && t.GetGenericTypeDefinition() == typeof(PowerVar<>)
+                                                           && t.GetGenericArguments()[0] == typeof(WeakPower) && v.BaseValue > 0);
+        var weakened = !appliesWeak
+            ? new HashSet<Creature>()
+            : card.TargetType switch
+            {
+                TargetType.AnyEnemy => ids.Where(kv => kv.Value == targetId).Select(kv => kv.Key).ToHashSet(),
+                TargetType.AllEnemies => ids.Keys.Where(e => e.IsAlive && e.IsHittable).ToHashSet(),
+                _ => new HashSet<Creature>(),
+            };
+        foreach (var (e, id) in ids)
+        {
+            if (!e.IsAlive) continue;
+            var weak = weakened.Contains(e) && !e.HasPower<WeakPower>() && (e.GetPower<ArtifactPower>()?.Amount ?? 0) == 0;
+            var strength = card.Type == CardType.Skill ? (e.GetPower<EnragePower>()?.Amount ?? 0) * plays : 0;
+            if (!weak && strength == 0) continue;
+            if (AdjustedHits(e, me, cs, strength, weak) is { } hits) play.SetHits[id] = hits;
+        }
         return play;
+    }
+
+    /// <summary>
+    /// An enemy's intent hits with <paramref name="strength"/> more Strength and/or once it's Weak: the
+    /// game's damage math (Hook.ModifyDamage, before the int cast; Strength is additive, so it's added
+    /// to the base) times Weak's multiplier (0.75; Paper Krane on you takes 0.15 more off, Debilitate
+    /// on the enemy doubles the reduction), then any damage cap. Null when the intent can't be read.
+    /// </summary>
+    private static List<int>? AdjustedHits(Creature e, Player me, ICombatState cs, int strength, bool weak)
+    {
+        try
+        {
+            var m = 1m;
+            if (weak)
+            {
+                m = 0.75m;
+                if (me.Relics.Any(r => r.GetType().Name == "PaperKrane")) m -= 0.15m;
+                if (e.Powers.Any(p => p.GetType().Name == "DebilitatePower")) m -= 1m - m;
+            }
+            var hits = new List<int>();
+            foreach (var attack in e.Monster!.NextMove.Intents.OfType<AttackIntent>())
+            {
+                if (attack.DamageCalc == null) return null;
+                var raw = attack.DamageCalc() + strength;
+                var v = Hook.ModifyDamage(me.RunState, cs, me.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
+                    ModifyDamageHookType.Additive | ModifyDamageHookType.Multiplicative, CardPreviewMode.None, out _);
+                var capped = Hook.ModifyDamage(me.RunState, cs, me.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
+                    ModifyDamageHookType.All, CardPreviewMode.None, out _);
+                var adjusted = v * m;
+                if (capped < v) adjusted = Math.Min(adjusted, capped);
+                var perHit = Math.Max(0, (int)adjusted);
+                for (var i = 0; i < Math.Max(1, attack.Repeats); i++) hits.Add(perHit);
+            }
+            return hits;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     /// <summary>The card's own block per play (its Block value through the game's block math).</summary>

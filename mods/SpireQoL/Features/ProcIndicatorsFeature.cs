@@ -120,7 +120,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var me = Sts2State.Me;
         var cs = Sts2State.Combat;
         if (me == null || cs == null || !Sts2State.IsPlayerTurn) return;
-        _simBudget.Restart();
         var hand = Sts2State.Hand(me);
         if (hand.Count == 0) return;
 
@@ -135,6 +134,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // All living enemies: an untargetable one's powers still fire.
         foreach (var enemy in cs.Enemies.Where(e => e.IsAlive)) sources.AddRange(enemy.Powers);
 
+        var pending = new List<(CardModel Card, PlayFacts F, Dictionary<string, (AbstractModel Src, Hit Hit)> Merged, CardDecor D, Task<SimOutcome[]>? Sim)>();
         foreach (var card in hand)
         {
             _ctx.Decor.SeenInHand(card);
@@ -202,18 +202,38 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
             if (merged.Values.Any(m => m.Hit.Random)) f.RandomOutcome = true;
 
-            var lethal = false;
+            Task<SimOutcome[]>? sim = null;
             try
             {
-                lethal = SimTabs(card, f, merged);
+                sim = StartSim(card, f, merged);
             }
             catch (Exception ex)
             {
-                if (_warned.Add("sim:" + card.GetType().Name))
-                {
-                    ModEntry.Log.Warn($"outcome simulation failed for {card.GetType().Name}: {ex.Message}");
-                    Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:" + card.GetType().Name);
-                }
+                SimFailed(card, ex);
+            }
+            pending.Add((card, f, merged, d, sim));
+        }
+
+        // Every card's simulations (one per target) run in parallel across CPU cores; the frame waits
+        // for them, so the tabs appear on the frame they belong to. The wait is capped so a pathological
+        // state can't freeze the game: anything still running then shows a frame or two later (SimPending).
+        var running = pending.Select(x => x.Sim).Where(t => t is { IsCompleted: false }).Cast<Task>().ToArray();
+        if (running.Length > 0)
+        {
+            try { Task.WaitAll(running, SimWaitCapMs); }
+            catch { /* faulted tasks are reported per card below */ }
+        }
+
+        foreach (var (card, f, merged, d, sim) in pending)
+        {
+            var lethal = false;
+            try
+            {
+                lethal = sim != null && FinishSim(card, f, merged, sim);
+            }
+            catch (Exception ex)
+            {
+                SimFailed(card, ex);
             }
 
             foreach (var (key, (src, h)) in merged)
@@ -232,16 +252,25 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         }
     }
 
+    private void SimFailed(CardModel card, Exception ex)
+    {
+        if (!_warned.Add("sim:" + card.GetType().Name)) return;
+        ModEntry.Log.Warn($"outcome simulation failed for {card.GetType().Name}: {ex.Message}");
+        Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:" + card.GetType().Name);
+    }
+
     // ------------------------------------------------------------------ outcome simulation
 
     // Simulations for this game state, per card and target (the state rarely changes between frames).
     private long _simKey;
 
-    // Card simulations get a time budget per frame, so a branch-heavy fight never stalls a frame:
-    // cards not reached are simulated over the next frames (results are cached until the state changes).
+    // Card simulations run in parallel on worker threads (the simulator is plain C#, no game types):
+    // the frame reads the game and builds every card's inputs, starts all their simulations at once,
+    // and waits for them (capped at SimWaitCapMs). Results are cached until the state changes.
+    // SimBudgetMs is what one simulation must stay under on a dev machine (tests).
     private const double SimBudgetMs = 4;
-    private readonly System.Diagnostics.Stopwatch _simBudget = new();
-    private readonly Dictionary<string, List<SimOutcome>> _simCache = new();
+    private const int SimWaitCapMs = 250;
+    private readonly Dictionary<string, Task<SimOutcome[]>> _simCache = new();
 
     /// <summary>
     /// Runs the outcome simulator for this card (once per possible target for single-target cards)
@@ -252,10 +281,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// Returns whether the card is lethal: some aim leaves an enemy dead before it acts in every branch,
     /// which ending the turn now doesn't.
     /// </summary>
-    private bool SimTabs(CardModel card, PlayFacts f, Dictionary<string, (AbstractModel Src, Hit Hit)> merged)
+    private Task<SimOutcome[]>? StartSim(CardModel card, PlayFacts f, Dictionary<string, (AbstractModel Src, Hit Hit)> merged)
     {
         var te = TurnEnd();
-        if (te == null) return false;
+        if (te == null) return null;
 
         // Damage and block procs the rules predicted (the simulator models Juggernaut itself).
         var procs = new List<ProcHit>();
@@ -295,24 +324,39 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             : new List<int> { -1 };
         if (targets.Count == 0) targets.Add(-1);
 
-        var stateKey = te.State.Key();
+        var stateKey = te.StateKey;
         if (stateKey != _simKey)
         {
             _simKey = stateKey;
-            _simCache.Clear();
+            _simCache.Clear(); // running tasks finish on their own; their results are dropped
         }
         var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|" +
                        string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock);
-        if (!_simCache.TryGetValue(cacheKey, out var outcomes))
+        // The plays are built here (they read the game); only the simulation runs off the main thread.
+        var inputs = new SimInputs { Start = te.State, Ids = te.Ids };
+        foreach (var t in targets) inputs.PlayByTarget[t] = SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock);
+        f.Sim = inputs;
+        if (!_simCache.TryGetValue(cacheKey, out var task))
         {
-            if (_simBudget.Elapsed.TotalMilliseconds > SimBudgetMs)
-            {
-                f.SimPending = true;
-                return false;
-            }
-            outcomes = targets.Select(t => SimEngine.Run(te.State, SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock))).ToList();
-            _simCache[cacheKey] = outcomes;
+            var start = te.State;
+            task = Task.WhenAll(targets.Select(t => inputs.PlayByTarget[t]).Select(p => Task.Run(() => SimEngine.Run(start, p))));
+            _simCache[cacheKey] = task;
         }
+        return task;
+    }
+
+    /// <summary>Reads a card's finished simulations into its tabs (see StartSim); returns whether it's lethal.</summary>
+    private bool FinishSim(CardModel card, PlayFacts f, Dictionary<string, (AbstractModel Src, Hit Hit)> merged, Task<SimOutcome[]> task)
+    {
+        var te = TurnEnd();
+        if (te == null) return false;
+        if (!task.IsCompleted)
+        {
+            f.SimPending = true;
+            return false;
+        }
+        if (task.IsFaulted) throw task.Exception!.GetBaseException();
+        var outcomes = task.Result;
         var baseline = te.Outcome;
 
         foreach (var (enemy, id) in te.Ids)
@@ -569,6 +613,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
                     case "Regalite" when generated > 0 && !Sts2State.Private(r, "UsedThisTurn", true): return RelicBlock(r, 1);
                     case "TheAbacus" when shuffles: return RelicBlock(r, 1);
+                    // A Soot (Unplayable status) into your draw pile on every shuffle (BiiigHug.AfterShuffle).
+                    case "BiiigHug" when shuffles: return Hit.Trig(harmful: true);
                     case "Metronome":
                     {
                         var n = N("OrbCount", 7);

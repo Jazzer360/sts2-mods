@@ -6,6 +6,18 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.26.0
+#### Added
+- Biiig Hug tab (crossed) on cards whose draws cause a shuffle: it puts a Soot into your draw pile.
+#### Changed
+- Shuffle Warning and every draw-based tab count the draws a play sets off, not just the card's own: Dark Embrace per card exhausted (Burning Pact with Dark Embrace), Joss Paper, Game Piece, Iron Club, Vicious, Centennial Puzzle. Draws stop at a full hand, and No Draw or Fiddle blocks them.
+- The lethal, Imbalanced and wake tabs account for Envenom's poison, Snecko Skull, extra poison ticks, Weak and Enrage changing an enemy's attack, and Curl Up, Sneaky and Skittish block.
+- Card outcome simulations run in parallel across CPU cores (the frame still waits for them, so tabs appear on time), and the forecast reruns only when the game state changes.
+- Proc and forecast checks are stricter: shuffles, the state each play leaves (checked against the simulator's prediction), and whether one set of random targets explains a whole enemy turn (logs and error reports only).
+#### Fixed
+- Card simulations could be reused after an enemy's attack changed (Weak, Strength) or a power or relic value changed, leaving lethal, Imbalanced and wake tabs computed from the old state.
+- Newly channelled Plasma orbs had no values in the simulator.
+
 ### Spire QoL 0.25.1
 #### Changed
 - Forecast and outcome reports carry the simulator's exact start state, so a report can be replayed offline as a test. The game log gets one line per enemy turn comparing the simulator's prediction with what happened for each enemy (logs and error reports only).

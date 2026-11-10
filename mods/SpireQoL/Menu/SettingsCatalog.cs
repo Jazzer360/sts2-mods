@@ -89,6 +89,7 @@ public static class SettingsCatalog
         new("GalacticDust", SourceGroup.Relic, "Star-cost cards that complete its count: block", "Stars spent, toward the next block"),
         new("Regalite", SourceGroup.Relic, "Cards that create cards (first this turn): block"),
         new("TheAbacus", SourceGroup.Relic, "Cards whose draw causes a shuffle: block"),
+        new("BiiigHug", SourceGroup.Relic, "Cards whose draw causes a shuffle: a Soot into your draw pile (crossed)"),
         new("Metronome", SourceGroup.Relic, "Cards whose channels reach its orb count: damage to all", "Orbs channeled, toward the hit"),
         new("BoneFlute", SourceGroup.Relic, "Cards that make Osty attack: block"),
         new("UnceasingTop", SourceGroup.Relic, "Your last card in hand, if it draws nothing"),

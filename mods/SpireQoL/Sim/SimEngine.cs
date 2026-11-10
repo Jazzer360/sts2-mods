@@ -24,6 +24,14 @@ public sealed class SimPlay
     public int Poison;
     public bool PoisonAll;
 
+    /// <summary>
+    /// Enemies whose intent damage the play changes (Weak it applies): their hits afterwards, per enemy id.
+    /// </summary>
+    public Dictionary<int, List<int>> SetHits = new();
+
+    /// <summary>Times the card plays (Sneaky reacts to each).</summary>
+    public int Plays = 1;
+
     public int HandDelta = -1;
     public int FadingDelta;
     public bool IsAttack;
@@ -171,23 +179,43 @@ public static class SimEngine
     // ------------------------------------------------------------------ primitives
 
     /// <summary>Damage to an enemy during your turn: its block, then HP (Hardened Shell caps HP lost).</summary>
-    private static void Damage(SimEnemy e, int amount)
+    private static int Damage(SimEnemy e, int amount)
     {
-        if (amount <= 0 || !e.Alive) return;
+        if (amount <= 0 || !e.Alive) return 0;
         amount = Math.Min(amount, e.HitCap);
         var absorbed = Math.Min(e.Block, amount);
         e.Block -= absorbed;
         var through = amount - absorbed;
-        if (through <= 0) return;
+        if (through <= 0) return 0;
         var toHp = Math.Min(through, Math.Max(0, e.ShellLeft));
         if (e.ShellLeft != int.MaxValue) e.ShellLeft -= toHp;
         e.Hp -= toHp;
         if (toHp > 0) e.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
+        return toHp;
+    }
+
+    /// <summary>
+    /// One hit of your card's attack (a powered attack from a card): marks it for Curl Up and Skittish,
+    /// and Envenom poisons it when damage gets through (EnvenomPower.AfterDamageGiven; Snecko Skull adds).
+    /// </summary>
+    private static void CardHit(SimState s, SimEnemy e, int amount)
+    {
+        if (amount <= 0 || !e.Alive) return;
+        e.HitByCard = true;
+        var lost = Damage(e, amount);
+        if (lost <= 0) return;
+        e.ThroughByCard = true;
+        if (s.P.Envenom > 0 && e.Alive) e.AddPoison(s.P.Envenom + s.P.PoisonBonus);
     }
 
     /// <summary>One hit on a random living enemy: a branch per possible target.</summary>
-    private static IEnumerable<SimState> HitRandom(SimState s, Func<SimEnemy, int> amount)
+    private static IEnumerable<SimState> HitRandom(SimState s, Func<SimEnemy, int> amount, bool card = false)
     {
+        void Hit(SimState st, SimEnemy e)
+        {
+            if (card) CardHit(st, e, amount(e));
+            else Damage(e, amount(e));
+        }
         if (s.NoRandomHits)
         {
             yield return s;
@@ -201,22 +229,25 @@ public static class SimEngine
         }
         if (targets.Count == 1)
         {
-            Damage(s.Enemy(targets[0])!, amount(s.Enemy(targets[0])!));
+            Hit(s, s.Enemy(targets[0])!);
             yield return s;
             yield break;
         }
         foreach (var id in targets)
         {
             var c = s.Clone();
-            var e = c.Enemy(id)!;
-            Damage(e, amount(e));
+            Hit(c, c.Enemy(id)!);
             yield return c;
         }
     }
 
-    private static void HitAll(SimState s, Func<SimEnemy, int> amount)
+    private static void HitAll(SimState s, Func<SimEnemy, int> amount, bool card = false)
     {
-        foreach (var e in s.Targetable.ToList()) Damage(e, amount(e));
+        foreach (var e in s.Targetable.ToList())
+        {
+            if (card) CardHit(s, e, amount(e));
+            else Damage(e, amount(e));
+        }
     }
 
     /// <summary>Gaining block (amount &gt; 0) sets off Juggernaut on a random enemy.</summary>
@@ -308,17 +339,17 @@ public static class SimEngine
                 {
                     var e = s.Enemy(p.TargetId);
                     if (e == null) return;
-                    for (var i = 0; i < p.Hits; i++) Damage(e, Hit(e));
+                    for (var i = 0; i < p.Hits; i++) CardHit(s, e, Hit(e));
                 });
                 break;
             case SimPlay.Target.All:
                 b.Do(s =>
                 {
-                    for (var i = 0; i < p.Hits; i++) HitAll(s, Hit);
+                    for (var i = 0; i < p.Hits; i++) HitAll(s, Hit, card: true);
                 });
                 break;
             case SimPlay.Target.Random:
-                for (var i = 0; i < p.Hits; i++) b.Each(s => HitRandom(s, Hit));
+                for (var i = 0; i < p.Hits; i++) b.Each(s => HitRandom(s, Hit, card: true));
                 break;
         }
 
@@ -378,16 +409,41 @@ public static class SimEngine
             {
                 if (p.PoisonAll)
                 {
-                    foreach (var e in s.Targetable) e.Poison += p.Poison;
+                    foreach (var e in s.Targetable) e.AddPoison(p.Poison);
                 }
                 else if (s.Enemy(p.TargetId) is { Alive: true } t)
                 {
-                    t.Poison += p.Poison;
+                    t.AddPoison(p.Poison);
                 }
+            }
+            foreach (var (id, hits) in p.SetHits)
+            {
+                if (s.Enemy(id) is { Alive: true } e) e.Hits = hits; // shared, never changed in place
             }
             s.P.HandCount = Math.Max(0, s.P.HandCount + p.HandDelta);
             s.P.Fading = Math.Max(0, s.P.Fading + p.FadingDelta);
             if (p.IsAttack) s.P.AttacksThisTurn++;
+
+            // Enemy reactions once the card is played (AfterCardPlayed; powers fire before your relics,
+            // so this block is up before relic procs hit): Curl Up, Sneaky, Skittish.
+            foreach (var e in s.Enemies)
+            {
+                if (e.Alive)
+                {
+                    if (e.CurlUp > 0 && e.HitByCard)
+                    {
+                        e.Block += e.CurlUp;
+                        e.CurlUp = 0;
+                    }
+                    if (e.Sneaky > 0 && p.IsAttack) e.Block += e.Sneaky * Math.Max(1, p.Plays);
+                    if (e.Skittish > 0 && e.ThroughByCard)
+                    {
+                        e.Block += e.Skittish;
+                        e.Skittish = 0;
+                    }
+                }
+                e.HitByCard = e.ThroughByCard = false;
+            }
         });
 
         // Procs it sets off.

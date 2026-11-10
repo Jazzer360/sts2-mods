@@ -58,6 +58,39 @@ public sealed class SimEnemy
     public bool FirstHitFullyBlocked;
     /// <summary>Dead before it could act (your turn, your end of turn, or its poison tick).</summary>
     public bool DiedBeforeActing;
+
+    /// <summary>Poison stacks and how many times they tick (Accelerant): Poison above is their damage.</summary>
+    public int PoisonStacks;
+    public int PoisonTriggers = 1;
+
+    // Reactions to your card plays (block it gains during your turn; decompile v0.111.0).
+    /// <summary>Curl Up: block it gains after a card whose attack damaged it (once; the power goes).</summary>
+    public int CurlUp;
+    /// <summary>Sneaky: block it gains after each Attack you play.</summary>
+    public int Sneaky;
+    /// <summary>Skittish: block it gains after a card's attack gets damage through its block (once per turn; 0 once used).</summary>
+    public int Skittish;
+    // During one play: it was hit by the card's attack / damage got through.
+    public bool HitByCard;
+    public bool ThroughByCard;
+
+    /// <summary>
+    /// Adds poison stacks and raises the tick damage by what they add: each tick deals the stacks left,
+    /// for min(stacks, triggers) ticks (PoisonPower.CalculateTotalDamageNextTurn, without damage modifiers).
+    /// </summary>
+    public void AddPoison(int stacks)
+    {
+        if (stacks <= 0) return;
+        int Tick(int a)
+        {
+            var sum = 0;
+            for (var i = 0; i < Math.Min(a, Math.Max(1, PoisonTriggers)); i++) sum += a - i;
+            return sum;
+        }
+        Poison += Tick(PoisonStacks + stacks) - Tick(PoisonStacks);
+        PoisonStacks += stacks;
+    }
+
     /// <summary>Its HP when your end of turn is over (before its turn), for the outcome audit.</summary>
     public int HpAtTurnEnd;
     public bool Attacked;
@@ -121,6 +154,11 @@ public sealed class SimPlayer
 
     // What happens to damage reaching your HP.
     public int TungstenRod;
+
+    /// <summary>Envenom: poison on each enemy your attack gets damage through to (per hit).</summary>
+    public int Envenom;
+    /// <summary>Snecko Skull: extra poison on every application of yours.</summary>
+    public int PoisonBonus;
     /// <summary>Beating Remnant: HP you can still lose until the start of your next turn (it resets only then).</summary>
     public int RemnantLeftPlayerTurn = int.MaxValue;
     public int RemnantCap = int.MaxValue;
@@ -182,6 +220,26 @@ public sealed class SimState
 
     public static SimState FromJson(string json) => JsonSerializer.Deserialize<SimState>(json, JsonOptions)!;
 
+    /// <summary>
+    /// Fingerprint of everything in the state (every field, via its JSON), for caching simulations
+    /// between frames. Unlike Key (branch merging), it changes when anything the simulation reads
+    /// changes: intents, powers, relic values, hand cards.
+    /// </summary>
+    public long FullKey()
+    {
+        var json = ToJson();
+        var h = unchecked((long)14695981039346656037UL);
+        foreach (var ch in json)
+        {
+            unchecked
+            {
+                h ^= ch;
+                h *= 1099511628211L;
+            }
+        }
+        return h;
+    }
+
     public SimState Clone()
     {
         var c = (SimState)MemberwiseClone();
@@ -221,6 +279,7 @@ public sealed class SimState
         foreach (var e in Enemies)
         {
             Add(e.Id); Add(e.Hp); Add(e.Block); Add(e.ShellLeft); Add(e.UnblockedInstances); Add(e.FirstHitFullyBlocked ? 1 : 0); Add(e.Poison); Add(e.DiedBeforeActing ? 1 : 0);
+            Add(e.PoisonStacks); Add(e.CurlUp); Add(e.Skittish); Add(e.HitByCard ? 1 : 0); Add(e.ThroughByCard ? 1 : 0);
         }
         Add(P.Orbs.Count);
         foreach (var o in P.Orbs)

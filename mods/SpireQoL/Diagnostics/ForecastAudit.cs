@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using SpireQoL.Combat;
+using SpireQoL.Sim;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -138,8 +139,19 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if ((actualTaken > f.Taken || actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
         if ((actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
-        var enemyIssues = EnemyIssues(f, window, endOfTurn, me, out var outcomeLine);
+        var enemyIssues = EnemyIssues(f, window, endOfTurn, me, out var outcomeLine, out var actuals);
         issues.AddRange(enemyIssues.Select(x => x.Issue));
+        // Each number above is checked against its own range over the branches; together they must
+        // also come from one branch (one set of random targets explains everything that happened).
+        var o = f.Outcome;
+        if (issues.Count == 0 && !o.Truncated && o.Branches.Count > 1)
+        {
+            bool Explains(SimState b) =>
+                b.Taken == actualTaken && (osty == null || b.OstyTaken == actualOsty)
+                && actuals.All(kv => b.Enemy(kv.Key) is { } e && e.HpAtTurnEnd == kv.Value.Hp && e.UnblockedInstances == kv.Value.Through && e.DiedBeforeActing == kv.Value.Died);
+            if (!o.Branches.Any(Explains))
+                issues.Add($"no single branch: each result is possible on its own, but none of the {o.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
+        }
         // Every enemy turn, matched or not: predicted vs actual per enemy, so patterns show before they're reports.
         ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}");
 
@@ -189,9 +201,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// The simulator's per-enemy predictions against what the history shows (see the class summary).
     /// Returns each issue with the monster it's about.
     /// </summary>
-    private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel f, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me, out string summary)
+    private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel f, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me, out string summary,
+        out Dictionary<int, (int Hp, int Through, bool Died)> actuals)
     {
         var result = new List<(string, string?)>();
+        actuals = new Dictionary<int, (int Hp, int Through, bool Died)>();
         var parts = new List<string>();
         summary = "";
         var o = f.Outcome;
@@ -216,6 +230,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(o.HpAtTurnEndMin(id), o.HpAtTurnEndMax(id))}), through {through} (pred {Range(o.UnblockedMin(id), o.UnblockedMax(id))}), " +
                       $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(o.DeadInAll(id) ? "always" : o.DeadInAny(id) ? "sometimes" : "never")})");
 
+            actuals[id] = (hpAtTurnEnd, through, diedBeforeActing);
             if (o.DeadInAll(id) && !diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted dead before acting, but it acted", monster));
             if (!o.DeadInAny(id) && diedBeforeActing)

@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Orbs;
 using MegaCrit.Sts2.Core.Models.Powers;
+using SpireQoL.Sim;
 using Sts2Mods.Core.Game;
 
 namespace SpireQoL.Procs;
@@ -46,11 +47,39 @@ public sealed class PlayFacts
     /// <summary>Cards it discards (Prepared, Survivor, Storm of Steel...).</summary>
     public int Discards { get; init; }
 
-    /// <summary>Cards it draws.</summary>
-    public int Draws { get; init; }
+    /// <summary>
+    /// Cards the play draws: its own draws plus the draws it sets off (ChainedDraws), limited by the
+    /// room in your hand (draws stop at a full hand), and 0 while No Draw or Fiddle blocks draws.
+    /// </summary>
+    public int Draws { get; private set; }
 
-    /// <summary>Its draw runs past the draw pile, so the discard pile is shuffled in mid-play.</summary>
-    public bool Shuffles { get; init; }
+    /// <summary>Cards the card itself draws, across plays.</summary>
+    public int OwnDraws { get; init; }
+
+    /// <summary>
+    /// Draws your powers and relics add because of this play (CardPileCmd.Draw in their hooks):
+    /// Dark Embrace per card exhausted, Joss Paper on reaching its exhaust count, Game Piece on a
+    /// Power, Iron Club on completing its count, Vicious per Vulnerable you apply, Centennial Puzzle
+    /// on first HP loss. Draws that depend on which card is drawn (Pagestorm, Iteration) aren't
+    /// predictable (the draw order is hidden) and aren't counted.
+    /// </summary>
+    public int ChainedDraws { get; private set; }
+
+    /// <summary>Every draw is blocked this turn (No Draw, Fiddle).</summary>
+    public bool DrawsBlocked { get; private set; }
+
+    /// <summary>
+    /// The play's draws run past the draw pile while the discard pile has cards, so the discard pile
+    /// is shuffled in mid-play (CardPileCmd.ShuffleIfNecessary before each draw).
+    /// </summary>
+    public bool Shuffles { get; private set; }
+
+    /// <summary>
+    /// What the outcome simulator was given for this card on that frame (set by Proc Indicators): the
+    /// start state, its enemy ids, and the play per target id (-1 for untargeted cards). The audit
+    /// replays it against the state the play actually left.
+    /// </summary>
+    public SimInputs? Sim { get; set; }
 
     /// <summary>Separate times it gains you block (most block cards: 1; Second Wind: per card exhausted).</summary>
     public int BlockGains { get; init; }
@@ -190,7 +219,7 @@ public sealed class PlayFacts
         var evoked = EvokedOrbs(card, name, me, cs, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
         var orbs = OrbDamageFor(evoked, me, cs);
 
-        return new PlayFacts
+        var facts = new PlayFacts
         {
             Card = card,
             Me = me,
@@ -205,8 +234,7 @@ public sealed class PlayFacts
                                || (card.Type == CardType.Skill && me.Creature.Powers.Any(p => p is CorruptionPower))),
             ExhaustsOthers = ExhaustOthers(card, name, others, drawPile, plays),
             Discards = DiscardCount(card, name, others, draws),
-            Draws = draws,
-            Shuffles = draws > drawPile && Sts2State.DiscardPileCount(me) > 0,
+            OwnDraws = draws,
             BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
             Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays),
             GeneratedStatuses = statuses * Math.Max(1, plays),
@@ -227,6 +255,59 @@ public sealed class PlayFacts
             RandomOutcome = cs.HittableEnemies.Count(e => e.IsAlive) > 1
                             && (evoked.Any(o => o is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
         };
+        facts.ResolveDraws(hand.Count, name == "Cleanse" ? Math.Max(0, drawPile - facts.ExhaustsOthers) : drawPile);
+        return facts;
+    }
+
+    /// <summary>
+    /// Total draws (own + chained), the hand-size limit, draw blockers, and whether they shuffle.
+    /// Decompile v0.111.0: DarkEmbracePower/JossPaper.AfterCardExhausted, GamePiece/IronClub.AfterCardPlayed,
+    /// ViciousPower.AfterPowerAmountChanged, CentennialPuzzle.AfterDamageReceived; NoDrawPower and
+    /// Fiddle.ShouldDraw; CardPileCmd.DrawInternal (stops at MaxCardsInHand).
+    /// </summary>
+    private void ResolveDraws(int handCount, int drawPile)
+    {
+        var me = Me;
+        var plays = Math.Max(1, Plays);
+        DrawsBlocked = me.Creature.Powers.Any(p => p.GetType().Name == "NoDrawPower")
+                       || me.Relics.Any(r => r.GetType().Name == "Fiddle");
+        var chained = 0;
+        foreach (var p in me.Creature.Powers)
+        {
+            switch (p.GetType().Name)
+            {
+                case "DarkEmbracePower": chained += p.Amount * TotalExhausts; break;
+                case "ViciousPower": chained += p.Amount * DebuffsLandingTotal(t => t == typeof(VulnerablePower)); break;
+            }
+        }
+        foreach (var r in me.Relics)
+        {
+            switch (r.GetType().Name)
+            {
+                case "JossPaper" when TotalExhausts > 0:
+                {
+                    var n = Sts2State.Var(r, "ExhaustAmount", 5);
+                    if (n > 0) chained += (Sts2State.Private(r, "CardsExhausted", 0) + TotalExhausts) / n;
+                    break;
+                }
+                case "GamePiece" when Card.Type == CardType.Power: chained += Sts2State.Var(r, "Cards", 1) * plays; break;
+                case "IronClub":
+                {
+                    var n = Sts2State.Var(r, "Cards", 4);
+                    if (n > 0) chained += (r.DisplayAmount % n + plays) / n;
+                    break;
+                }
+                case "CentennialPuzzle" when HpLoss > 0 && !Sts2State.Private(r, "UsedThisCombat", true):
+                    chained += Sts2State.Var(r, "Cards", 3);
+                    break;
+            }
+        }
+        ChainedDraws = chained;
+        // Room in hand: the card itself has left it, and cards it exhausts from hand first make room
+        // (Burning Pact exhausts, then draws).
+        var room = Math.Max(0, CardPile.MaxCardsInHand - (handCount - 1 - (Card.GetType().Name == "Cleanse" ? 0 : ExhaustsOthers)));
+        Draws = DrawsBlocked ? 0 : Math.Min(OwnDraws + chained, room);
+        Shuffles = Draws > drawPile && Sts2State.DiscardPileCount(me) > 0;
     }
 
     /// <summary>
@@ -632,4 +713,12 @@ public sealed class PlayFacts
         }
         return HitsAllEnemies ? enemies.Sum(Landing) : enemies.Max(Landing);
     }
+}
+
+/// <summary>The outcome simulator's inputs for one card on one frame (see PlayFacts.Sim).</summary>
+public sealed class SimInputs
+{
+    public required SimState Start { get; init; }
+    public required IReadOnlyDictionary<Creature, int> Ids { get; init; }
+    public Dictionary<int, SimPlay> PlayByTarget { get; } = new();
 }
