@@ -61,7 +61,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// <param name="Count">Separate instances (block gains for Juggernaut).</param>
     /// <param name="Min">Damage procs: least total damage actually dealt (all targets, their modifiers).</param>
     /// <param name="Max">Damage procs: most total damage actually dealt.</param>
-    private readonly record struct Hit(Kind Kind, int Amount, bool Harmful = false, int Count = 1, int Min = 0, int Max = 0)
+    private readonly record struct Hit(Kind Kind, int Amount, bool Harmful = false, int Count = 1, int Min = 0, int Max = 0,
+        IReadOnlyDictionary<Creature, List<int>>? OnEnemies = null)
     {
         public static Hit Trig(bool harmful = false) => new(Kind.Trigger, 0, harmful);
     }
@@ -69,8 +70,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private readonly HashSet<string> _warned = new();
 
     // Procs that other procs can set off; evaluated in a second pass with these extras.
-    private static readonly HashSet<string> SecondOrder = new() { "JuggernautPower", "Metronome", "BlackHolePower" };
+    // Waking reads the first pass's proc damage on each enemy (Kusarigama etc.), so it runs second.
+    private static readonly HashSet<string> SecondOrder = new() { "JuggernautPower", "Metronome", "BlackHolePower", "AsleepPower", "SlumberPower" };
     private int _xBlockGains, _xChannels, _xStarGains;
+    private readonly Dictionary<Creature, List<int>> _xEnemyHits = new();
 
     private static bool CanEverPlayNow(CardModel card)
     {
@@ -175,6 +178,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         {
                             Amount = prev.Hit.Amount + h.Amount, Count = prev.Hit.Count + h.Count,
                             Min = prev.Hit.Min + h.Min, Max = prev.Hit.Max + h.Max,
+                            OnEnemies = MergeHits(prev.Hit.OnEnemies, h.OnEnemies),
                         })
                         : (src, h);
                 }
@@ -183,8 +187,18 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             // First-order procs, then the procs they set off (procs of procs): block gains feed
             // Juggernaut, Storm's lightning feeds Metronome, The Sealed Throne's stars feed Black Hole.
             _xBlockGains = _xChannels = _xStarGains = 0;
+            _xEnemyHits.Clear();
             Run(secondOrder: false);
             _xBlockGains = merged.Values.Where(m => m.Hit.Kind == Kind.Block).Sum(m => m.Hit.Count);
+            foreach (var (_, h) in merged.Values)
+            {
+                if (h.Kind != Kind.Damage || h.Harmful || h.OnEnemies == null) continue;
+                foreach (var (e, hits) in h.OnEnemies)
+                {
+                    if (!_xEnemyHits.TryGetValue(e, out var l)) _xEnemyHits[e] = l = new List<int>();
+                    l.AddRange(hits);
+                }
+            }
             foreach (var (src, h) in merged.Values)
             {
                 if (src is PowerModel { } sp && sp.GetType().Name == "StormPower") _xChannels += sp.Amount * f.Plays;
@@ -330,8 +344,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
                     case "CurlUpPower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);          // it gains block
                     case "PersonalHivePower" when onEnemy && f.CanHit(e): return Hit.Trig(harmful: true);    // Dazed into your draw pile
-                    case "AsleepPower" when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true);   // wakes it
-                    case "SlumberPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(harmful: true);
+                    // Each damage instance that gets through its block counts (Asleep wakes on the first,
+                    // Slumber after Amount of them). Judged by the end of your turn: this play's hits,
+                    // procs and orb evokes strip block that your end-of-turn damage then gets through.
+                    case "AsleepPower" when onEnemy && WakesBy(e, f, 1): return Hit.Trig(harmful: true);
+                    case "SlumberPower" when onEnemy && WakesBy(e, f, a): return Hit.Trig(harmful: true);
                     case "BurrowedPower" when onEnemy && f.BreaksBlock(e): return Hit.Trig();                // stuns it
                     case "FlutterPower" when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(); // stuns it
                     case "PlowPower" when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
@@ -470,15 +487,22 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// This card's own block (its Block value, through the game's block math, times its plays)
     /// takes your expected end-of-turn block from below the enemy's FullBlockNeeded to at or above it.
     /// </summary>
-    private bool CrossesFullBlock(Creature enemy, CardModel card)
+    /// <summary>The Incoming Damage simulation for this frame (computed once, shared by rules).</summary>
+    private TurnEndModel? TurnEnd()
     {
         if (_turnEndFrame != _ctx.Decor.Frame)
         {
             _turnEnd = TurnEndModel.Compute();
             _turnEndFrame = _ctx.Decor.Frame;
         }
-        if (_turnEnd == null || !_turnEnd.FullBlockNeeded.TryGetValue(enemy, out var needed)) return false;
-        var have = _turnEnd.ExpectedBlock;
+        return _turnEnd;
+    }
+
+    private bool CrossesFullBlock(Creature enemy, CardModel card)
+    {
+        var te = TurnEnd();
+        if (te == null || !te.FullBlockNeeded.TryGetValue(enemy, out var needed)) return false;
+        var have = te.ExpectedBlock;
         if (have >= needed) return false;
         return have + CardBlock(card) >= needed;
     }
@@ -575,6 +599,68 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 max = enemies.Count > 0 ? enemies.Max(Mod) * times : 0;
                 break;
         }
-        return new Hit(Kind.Damage, shown, harmful, Count: times, Min: min, Max: max);
+        Dictionary<Creature, List<int>>? on = null;
+        void On(Creature t)
+        {
+            on ??= new Dictionary<Creature, List<int>>();
+            var l = on.TryGetValue(t, out var x) ? x : on[t] = new List<int>();
+            for (var i = 0; i < times; i++) l.Add(Mod(t));
+        }
+        switch (spread)
+        {
+            case Spread.Specific when target != null: On(target); break;
+            case Spread.All: foreach (var e in enemies) On(e); break;
+            case Spread.Random when enemies.Count == 1: On(enemies[0]); break;
+        }
+        return new Hit(Kind.Damage, shown, harmful, Count: times, Min: min, Max: max, OnEnemies: on);
+    }
+
+    private static IReadOnlyDictionary<Creature, List<int>>? MergeHits(IReadOnlyDictionary<Creature, List<int>>? a, IReadOnlyDictionary<Creature, List<int>>? b)
+    {
+        if (a == null) return b;
+        if (b == null) return a;
+        var m = a.ToDictionary(kv => kv.Key, kv => kv.Value.ToList());
+        foreach (var (e, l) in b)
+        {
+            if (!m.TryGetValue(e, out var x)) m[e] = x = new List<int>();
+            x.AddRange(l);
+        }
+        return m;
+    }
+
+    /// <summary>
+    /// Playing this card makes at least <paramref name="needed"/> damage instances get through the
+    /// enemy's block by the end of your turn, when your end-of-turn damage alone wouldn't. In order:
+    /// the card's own hits, orbs it evokes, the procs it sets off, then your end-of-turn damage.
+    /// The enemy's block stays up until its own turn starts.
+    /// </summary>
+    private bool WakesBy(Creature enemy, PlayFacts f, int needed)
+    {
+        if (needed <= 0 || !enemy.IsAlive) return false;
+        var play = new List<int>();
+        if (f.CanHit(enemy))
+        {
+            var per = f.DamagePerHit(enemy);
+            for (var i = 0; i < f.HitsOn(enemy); i++) play.Add(per);
+        }
+        if (f.OrbDamageOn(enemy) is var orb and > 0) play.Add(orb);
+        if (_xEnemyHits.TryGetValue(enemy, out var procs)) play.AddRange(procs);
+        if (play.Count == 0) return false;
+
+        var eot = TurnEnd() is { } te && te.EndOfTurnHitsOn.TryGetValue(enemy, out var l) ? l : new List<int>();
+
+        int Through(IEnumerable<int> hits)
+        {
+            var block = enemy.Block;
+            var n = 0;
+            foreach (var h in hits)
+            {
+                if (h <= 0) continue;
+                if (h > block) n++;
+                block = Math.Max(0, block - h);
+            }
+            return n;
+        }
+        return Through(play.Concat(eot)) >= needed && Through(eot) < needed;
     }
 }

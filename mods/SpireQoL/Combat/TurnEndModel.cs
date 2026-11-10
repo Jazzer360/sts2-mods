@@ -67,6 +67,9 @@ public sealed class TurnEndModel
     /// </summary>
     public Dictionary<Creature, int> FullBlockNeeded { get; } = new();
 
+    /// <summary>Your end-of-turn damage instances on each enemy, when certain (before it acts).</summary>
+    public IReadOnlyDictionary<Creature, List<int>> EndOfTurnHitsOn { get; private set; } = new Dictionary<Creature, List<int>>();
+
     /// <summary>Blockable damage landed so far this turn end, in order (for FullBlockNeeded).</summary>
     private int _blockDemand;
     public int OstyTaken { get; private set; }
@@ -204,6 +207,7 @@ public sealed class TurnEndModel
 
         // Your end-of-turn damage to enemies lands before they act and can kill an attacker.
         var eot = EndOfTurnHits(m, me, cs, hand);
+        m.EndOfTurnHitsOn = eot;
         hpLoss = HpLossEffects.For(me.Creature, playerTurn: false); // Beating Remnant resets each turn
 
         foreach (var enemy in cs.Enemies)
