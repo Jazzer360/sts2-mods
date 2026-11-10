@@ -138,8 +138,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if ((actualTaken > f.Taken || actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
         if ((actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
-        var enemyIssues = EnemyIssues(f, window, endOfTurn, me);
+        var enemyIssues = EnemyIssues(f, window, endOfTurn, me, out var outcomeLine);
         issues.AddRange(enemyIssues.Select(x => x.Issue));
+        // Every enemy turn, matched or not: predicted vs actual per enemy, so patterns show before they're reports.
+        ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}");
 
         _checked++;
         if (issues.Count == 0)
@@ -179,7 +181,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var fp = monster != null ? new[] { kind, encounter, monster } : new[] { kind, encounter };
             reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", fp,
                 $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}\n\nSimulator, per enemy (over {f.Outcome.Branches.Count} branch(es){(f.Outcome.Truncated ? ", truncated" : "")}):\n{prediction}",
-                new Dictionary<string, string> { ["audit_window"] = fullWindow });
+                new Dictionary<string, string> { ["audit_window"] = fullWindow, ["sim_state"] = f.State.ToJson() });
         }
     }
 
@@ -187,9 +189,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// The simulator's per-enemy predictions against what the history shows (see the class summary).
     /// Returns each issue with the monster it's about.
     /// </summary>
-    private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel f, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me)
+    private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel f, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me, out string summary)
     {
         var result = new List<(string, string?)>();
+        var parts = new List<string>();
+        summary = "";
         var o = f.Outcome;
         if (o.Branches.Count == 0) return result;
         foreach (var (creature, id) in f.Ids)
@@ -208,6 +212,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var moveAt = window.FindIndex(e => e is MonsterPerformedMoveEntry m && ReferenceEquals(m.Monster, creature.Monster));
             var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt);
             var firstHit = window.OfType<DamageReceivedEntry>().FirstOrDefault(d => d.Result.Receiver == me.Creature && d.Dealer == creature);
+            string Range(int a, int b) => a == b ? $"{a}" : $"{a}-{b}";
+            parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(o.HpAtTurnEndMin(id), o.HpAtTurnEndMax(id))}), through {through} (pred {Range(o.UnblockedMin(id), o.UnblockedMax(id))}), " +
+                      $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(o.DeadInAll(id) ? "always" : o.DeadInAny(id) ? "sometimes" : "never")})");
 
             if (o.DeadInAll(id) && !diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted dead before acting, but it acted", monster));
@@ -233,6 +240,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                     result.Add(($"Imbalanced: {name}'s first hit predicted not fully blocked, but it was", monster));
             }
         }
+        summary = string.Join("; ", parts) + (o.Truncated ? " [truncated]" : "");
         return result;
     }
 

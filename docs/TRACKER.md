@@ -376,4 +376,6 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [ ] Remaining approximations: poison TriggerCount, a card's procs timing relative to its hits, block remainder across gains.
 - [x] 0.24.1: Glass orb decays its base (`GlassOrb._passiveVal`), not the Focus-included value (tests in `SimReviewTests`).
 - [x] 0.25.0: simulator poison ticks on stunned enemies (found while writing the outcome audit; test `PoisonTicksOnAStunnedEnemyToo`).
+- [x] 0.25.1: simulator start state (JSON) in forecast/outcome reports, replay harness (`ReplayTests`, `Cases/*.json`), `[audit] [outcome]` log line per enemy turn.
+- When a report is resolved, note here which layer it was: simulator rule / adapter / audit comparison.
 

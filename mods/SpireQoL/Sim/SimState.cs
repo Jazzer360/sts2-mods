@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace SpireQoL.Sim;
 
 /// <summary>
@@ -59,6 +62,7 @@ public sealed class SimEnemy
     public int HpAtTurnEnd;
     public bool Attacked;
 
+    [JsonIgnore]
     public bool Alive => Hp > 0;
 
     /// <summary>Copies the numbers; the attack list never changes during a run, so it's shared.</summary>
@@ -165,7 +169,18 @@ public sealed class SimState
 
     public SimEnemy? Enemy(int id) => Enemies.FirstOrDefault(e => e.Id == id);
 
+    [JsonIgnore]
     public IEnumerable<SimEnemy> Targetable => Enemies.Where(e => e.Hittable && e.Alive);
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { IncludeFields = true, WriteIndented = false };
+
+    /// <summary>
+    /// The state as JSON, for reports: a report's start state can be dropped into
+    /// tests/SpireQoL.Sim.Tests/Cases to replay it offline (see docs/DEVELOPMENT.md).
+    /// </summary>
+    public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
+
+    public static SimState FromJson(string json) => JsonSerializer.Deserialize<SimState>(json, JsonOptions)!;
 
     public SimState Clone()
     {

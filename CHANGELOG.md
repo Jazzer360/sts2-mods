@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.25.1
+#### Changed
+- Forecast and outcome reports carry the simulator's exact start state, so a report can be replayed offline as a test. The game log gets one line per enemy turn comparing the simulator's prediction with what happened for each enemy (logs and error reports only).
+
 ### Spire QoL 0.25.0
 #### Added
 - Outcome audit (logs and error reports only): after each enemy turn, the simulator's predictions are checked enemy by enemy against what happened: deaths before acting (this checks the lethal tab), HP and hits through block at the end of your turn, and Imbalanced full blocks. Only outcomes no random branch allows are reported.

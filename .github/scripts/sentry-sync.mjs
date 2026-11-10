@@ -98,6 +98,7 @@ function body(issue, event) {
   b += block("Details", extra.details, 4000);
   b += block("Stack trace", stackTrace(event), 8000);
   b += block("Plays this turn (tabs → result)", extra.turn_plays, 4000);
+  b += block("Simulator start state (JSON: replay it with tests/SpireQoL.Sim.Tests/Cases)", extra.sim_state, 12000);
   b += block("Audit window (combat history during the check)", extra.audit_window, 5000);
   for (const k of ["player", "player_powers", "relics", "orbs", "enemies", "hand"]) b += block("before the play: " + k.replace("_", " "), extra["before_" + k], 5000);
   for (const k of ["combat", "player", "player_powers", "relics", "orbs", "enemies", "hand"]) b += block((k === "combat" ? "" : "after: ") + k.replace("_", " "), extra[k], 5000);

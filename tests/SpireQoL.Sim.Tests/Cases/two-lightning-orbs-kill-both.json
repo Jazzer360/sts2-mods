@@ -1,0 +1,14 @@
+{
+  "name": "Two Lightning orbs kill both 3 HP enemies whatever the targets",
+  "source": "Design example: the first bolt kills whichever enemy it hits, so the second can only hit the other.",
+  "state": {
+    "P": { "Orbs": [ { "Kind": 0, "Passive": 3, "Evoke": 8 }, { "Kind": 0, "Passive": 3, "Evoke": 8 } ], "OrbCapacity": 3 },
+    "Enemies": [ { "Id": 0, "Name": "A", "Hp": 3, "Hits": [10] }, { "Id": 1, "Name": "B", "Hp": 3, "Hits": [10] } ]
+  },
+  "expect": {
+    "takenMin": 0,
+    "takenMax": 0,
+    "deadBeforeActing": [0, 1],
+    "hpAtTurnEnd": { "0": [0, 0], "1": [0, 0] }
+  }
+}
