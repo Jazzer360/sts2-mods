@@ -385,4 +385,5 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.27.0: proc audit by game action (`PlayCardAction` via `ActionExecutor.BeforeActionExecuted`, `CombatHistory.Changed`, `GameAction.AfterFinished`); removed the energy-spend split, 0-cost joint fit, potion cut and idle capture. Shuffle prefix on `CardPileCmd.Shuffle` (first observe-only patch, DECISIONS #10).
 - [x] 0.27.0: `Sim/PlayChain.cs` (draw chains, pure, tested); 340 game class names compile-checked (`nameof`); missing private members reported (`Sts2State.MissingMember`); docs/DECISIONS.md.
 - [ ] Check in game: the action-based audit windows (Burning Pact's choice pause, queued plays, potions mid-turn, Catastrophe auto-plays).
+- [x] 0.28.0: one model of a play finished (DECISIONS #12): being-hit enemy powers in the simulator (Burrowed, Flutter, Plow, Shriek, The Gambit, Slippery); Juggernaut, Sneaky, Enrage, Hand Drill and the being-hit tabs from the simulator; dead PlayFacts helpers removed (Unblocked, BreaksBlock, UnblockedWithOrbs, OrbBlockGains). Tests in `SimBeingHitTests`.
 

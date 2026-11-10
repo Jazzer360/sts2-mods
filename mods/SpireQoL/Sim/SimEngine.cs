@@ -80,8 +80,18 @@ public sealed class SimOutcome
     /// <summary>Enemies the play itself kills (before your end of turn) in some branch / in every branch.</summary>
     public HashSet<int> KilledByPlayInAny = new();
     public HashSet<int> KilledByPlayInAll = new();
-    /// <summary>Enemies that gain block from Curl Up or Skittish because of the play, in some branch.</summary>
+    /// <summary>Enemies that gain block from Curl Up, Sneaky or Skittish because of the play, in some branch.</summary>
     public HashSet<int> BlockReactionInAny = new();
+    /// <summary>The play breaks some enemy's block in every branch (Hand Drill).</summary>
+    public bool PlayBreaksBlockInEveryBranch;
+    /// <summary>Block gains during the play (each sets off Juggernaut): fewest and most over branches.</summary>
+    public int PlayBlockGainsMin, PlayBlockGainsMax;
+
+    /// <summary>Stunned during your turn (Burrowed, Flutter, Plow, Shriek) and alive when its turn comes, in every branch.</summary>
+    public bool StunnedInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { StunnedThisTurn: true, DiedBeforeActing: false });
+    public bool StunnedInAny(int id) => Branches.Any(b => b.Enemy(id) is { StunnedThisTurn: true, DiedBeforeActing: false });
+    public bool GambitInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { GambitTriggered: true });
+    public bool SlipperyInAny(int id) => Branches.Any(b => b.Enemy(id) is { SlipperyTriggered: true });
     /// <summary>The play kills some enemy in every branch (not always the same one).</summary>
     public bool PlayKillsInEveryBranch;
 
@@ -132,12 +142,12 @@ public static class SimEngine
         // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
         var aliveAtStart = start.Enemies.Where(e => e.Alive).Select(e => e.Id).ToList();
         var killedPerBranch = b.States.Select(s => aliveAtStart.Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
-        // Enemies whose once-only block reaction (Curl Up, Skittish) the play set off, in some branch.
-        var reacted = b.States.SelectMany(s => s.Enemies.Where(e =>
-        {
-            var e0 = start.Enemy(e.Id);
-            return e0 != null && ((e0.CurlUp > 0 && e.CurlUp == 0) || (e0.Skittish > 0 && e.Skittish == 0));
-        }).Select(e => e.Id)).ToHashSet();
+        // Enemies that gained block from Curl Up, Sneaky or Skittish because of the play, in some branch.
+        var reacted = b.States.SelectMany(s => s.Enemies.Where(e => e.ReactedWithBlock).Select(e => e.Id)).ToHashSet();
+        // Some enemy's block broken by the play, in every branch (Hand Drill).
+        var breaksBlock = !b.Truncated && b.States.All(s => s.Enemies.Any(e => e.BlockBroken && start.Enemy(e.Id) is { BlockBroken: false }));
+        // Block gains during the play (each sets off Juggernaut).
+        var gains = b.States.Select(s => s.P.BlockGains - start.P.BlockGains).ToList();
         var playTruncated = b.Truncated;
         EndOfTurn(b);
         b.Do(EnemyTurn);
@@ -151,6 +161,9 @@ public static class SimEngine
                 : killedPerBranch.Skip(1).Aggregate(new HashSet<int>(killedPerBranch[0]), (acc, k) => { acc.IntersectWith(k); return acc; }),
             PlayKillsInEveryBranch = !playTruncated && killedPerBranch.Count > 0 && killedPerBranch.All(k => k.Count > 0),
             BlockReactionInAny = reacted,
+            PlayBreaksBlockInEveryBranch = breaksBlock,
+            PlayBlockGainsMin = gains.Count > 0 ? gains.Min() : 0,
+            PlayBlockGainsMax = gains.Count > 0 ? gains.Max() : 0,
         };
         if (b.Truncated)
         {
@@ -207,19 +220,56 @@ public static class SimEngine
     // ------------------------------------------------------------------ primitives
 
     /// <summary>Damage to an enemy during your turn: its block, then HP (Hardened Shell caps HP lost).</summary>
-    private static int Damage(SimEnemy e, int amount)
+    /// <param name="powered">A powered attack (your card's hits): Flutter and The Gambit react only to those.</param>
+    private static int Damage(SimEnemy e, int amount, bool powered = false)
     {
         if (amount <= 0 || !e.Alive) return 0;
         amount = Math.Min(amount, e.HitCap);
+        var hadBlock = e.Block > 0;
         var absorbed = Math.Min(e.Block, amount);
         e.Block -= absorbed;
+        if (hadBlock && e.Block == 0) e.BlockBroken = true;
+        if (hadBlock && e.Block == 0 && e.Burrowed)
+        {
+            // BurrowedPower.AfterBlockBroken: stunned; the power goes and takes all its block (AfterRemoved).
+            e.Burrowed = false;
+            e.Barricade = false;
+            Stun(e);
+        }
         var through = amount - absorbed;
         if (through <= 0) return 0;
         var toHp = Math.Min(through, Math.Max(0, e.ShellLeft));
+        if (e.Slippery > 0 && toHp >= 1)
+        {
+            // SlipperyPower.ModifyHpLostAfterOsty: at most 1 HP per hit; one charge per hit.
+            toHp = 1;
+            e.Slippery--;
+            e.SlipperyTriggered = true;
+        }
         if (e.ShellLeft != int.MaxValue) e.ShellLeft -= toHp;
         e.Hp -= toHp;
-        if (toHp > 0) e.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
+        if (toHp <= 0) return 0;
+        e.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
+        if (e.Alive && e.StunAtHp > 0 && e.Hp <= e.StunAtHp)
+        {
+            // Plow / Shriek: any damage through that leaves it at or below the threshold.
+            e.StunAtHp = 0;
+            Stun(e);
+        }
+        if (powered && e.Alive && e.Flutter > 0 && --e.Flutter == 0) Stun(e);
+        if (powered && e.Alive && e.Gambit)
+        {
+            e.Gambit = false;
+            e.GambitTriggered = true;
+            e.Hp = 0; // TheGambitPower: it dies
+        }
         return toHp;
+    }
+
+    private static void Stun(SimEnemy e)
+    {
+        e.Stunned = true;
+        e.StunnedThisTurn = true;
     }
 
     /// <summary>
@@ -230,7 +280,7 @@ public static class SimEngine
     {
         if (amount <= 0 || !e.Alive) return;
         e.HitByCard = true;
-        var lost = Damage(e, amount);
+        var lost = Damage(e, amount, powered: true);
         if (lost <= 0) return;
         e.ThroughByCard = true;
         if (s.P.Envenom > 0 && e.Alive) e.AddPoison(s.P.Envenom + s.P.PoisonBonus);
@@ -283,6 +333,7 @@ public static class SimEngine
     {
         if (amount <= 0) return new[] { s };
         s.P.Block += amount;
+        s.P.BlockGains++;
         if (log != null) if (s.Log) s.EndOfTurnBlock.Add((log, amount));
         if (s.P.Juggernaut <= 0) return new[] { s };
         var j = s.P.Juggernaut;
@@ -462,12 +513,18 @@ public static class SimEngine
                     {
                         e.Block += e.CurlUp;
                         e.CurlUp = 0;
+                        e.ReactedWithBlock = true;
                     }
-                    if (e.Sneaky > 0 && p.IsAttack) e.Block += e.Sneaky * Math.Max(1, p.Plays);
+                    if (e.Sneaky > 0 && p.IsAttack)
+                    {
+                        e.Block += e.Sneaky * Math.Max(1, p.Plays);
+                        e.ReactedWithBlock = true;
+                    }
                     if (e.Skittish > 0 && e.ThroughByCard)
                     {
                         e.Block += e.Skittish;
                         e.Skittish = 0;
+                        e.ReactedWithBlock = true;
                     }
                 }
                 e.HitByCard = e.ThroughByCard = false;

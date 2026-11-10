@@ -88,7 +88,14 @@ public static class SimAdapter
                 CurlUp = e.GetPower<CurlUpPower>()?.Amount ?? 0,
                 Sneaky = e.GetPower<SneakyPower>()?.Amount ?? 0,
                 Skittish = e.GetPower<SkittishPower>() is { } sk && !Sts2State.Private(sk, "HasGainedBlockThisTurn", true) ? sk.Amount : 0,
+                Burrowed = e.HasPower<BurrowedPower>(),
+                Flutter = e.GetPower<FlutterPower>()?.Amount ?? 0,
+                StunAtHp = Math.Max(e.GetPower<PlowPower>()?.Amount ?? 0, e.GetPower<ShriekPower>()?.Amount ?? 0),
+                Gambit = e.HasPower<TheGambitPower>(),
+                Slippery = e.GetPower<SlipperyPower>()?.Amount ?? 0,
             };
+            // Burrowed keeps its block between turns (BurrowedPower.ShouldClearBlock), like Barricade.
+            if (se.Burrowed) se.Barricade = true;
             if (!e.IsAlive) se.Hp = 0;
             if (e.GetPower<HardenedShellPower>() is { } shell)
             {

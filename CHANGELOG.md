@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.28.0
+#### Changed
+- Incoming Damage, lethal and the other simulator tabs know what being hit does to enemies: Burrowed keeps its block and is stunned when it breaks, Flutter, Plow and Shriek stun, The Gambit dies to an attack getting through, Slippery loses at most 1 HP per hit. A stunned enemy no longer counts as attacking you.
+- The Burrowed, Flutter, Plow, Shriek, The Gambit, Slippery, Hand Drill, Juggernaut, Sneaky and Enrage tabs come from the outcome simulator, so procs, orbs, random targets and your end of turn count, and each rule lives in one place.
+- The state check after each play also compares whether enemies are stunned (logs and error reports only).
+#### Fixed
+- The lethal tab could promise a kill on a Slippery enemy (its HP loss per hit is capped at 1).
+
 ### Spire QoL 0.27.0
 #### Changed
 - Kill tabs (Gremlin Horn; crossed for Infested, Steam Eruption, Surprise, Crab Rage, Ravenous) and the Curl Up and Skittish tabs come from the outcome simulator: random hits, orb evokes and procs count, and a random hit that might miss shows the warning without promising the reward.

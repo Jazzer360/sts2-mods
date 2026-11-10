@@ -123,7 +123,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly string[] SimTabSources =
     {
         nameof(ImbalancedPower), nameof(AsleepPower), nameof(SlumberPower), nameof(InfestedPower), nameof(SteamEruptionPower),
-        nameof(SurprisePower), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower),
+        nameof(SurprisePower), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower), nameof(SneakyPower), nameof(EnragePower), nameof(JuggernautPower),
+        nameof(BurrowedPower), nameof(FlutterPower), nameof(PlowPower), nameof(ShriekPower), nameof(TheGambitPower), nameof(SlipperyPower), nameof(HandDrill),
     };
 
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
@@ -814,7 +815,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (ae.Hp <= 0 || pe.Hp <= 0) continue;
                 if (pe.Block != ae.Block) d.Add($"after play enemy block: {name} predicted {pe.Block}, actual {ae.Block}");
                 if (pe.Poison != ae.Poison) d.Add($"after play enemy poison: {name} predicted {pe.Poison}, actual {ae.Poison}");
-                if (!pe.Hits.SequenceEqual(ae.Hits)) d.Add($"after play enemy intent: {name} predicted [{string.Join(", ", pe.Hits)}], actual [{string.Join(", ", ae.Hits)}]");
+                if (pe.Stunned != ae.Stunned) d.Add($"after play enemy stunned: {name} predicted {(pe.Stunned ? "stunned" : "not stunned")}, actual {(ae.Stunned ? "stunned" : "not stunned")}");
+                // A stunned enemy's intent becomes the stun move; the simulator keeps its hits and skips them.
+                if (!pe.Stunned && !ae.Stunned && !pe.Hits.SequenceEqual(ae.Hits)) d.Add($"after play enemy intent: {name} predicted [{string.Join(", ", pe.Hits)}], actual [{string.Join(", ", ae.Hits)}]");
             }
             var pp = pred.P;
             var ap = after.P;

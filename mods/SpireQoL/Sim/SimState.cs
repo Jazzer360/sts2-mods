@@ -73,6 +73,26 @@ public sealed class SimEnemy
     // During one play: it was hit by the card's attack / damage got through.
     public bool HitByCard;
     public bool ThroughByCard;
+    /// <summary>It gained block from Curl Up, Sneaky or Skittish because of the play.</summary>
+    public bool ReactedWithBlock;
+
+    // Being hit (decompile v0.111.0):
+    /// <summary>Burrowed: keeps its block between turns; breaking that block stuns it (AfterBlockBroken), and the power and its block go.</summary>
+    public bool Burrowed;
+    /// <summary>Flutter: powered-attack hits with damage through its block left before it's stunned (0 = none).</summary>
+    public int Flutter;
+    /// <summary>Plow / Shriek: stunned when damage gets through and leaves it at or below this HP (0 = none).</summary>
+    public int StunAtHp;
+    /// <summary>The Gambit: dies when a powered attack gets damage through.</summary>
+    public bool Gambit;
+    public bool GambitTriggered;
+    /// <summary>Slippery: hits that lose it at most 1 HP each, left (0 = none).</summary>
+    public int Slippery;
+    public bool SlipperyTriggered;
+    /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
+    public bool BlockBroken;
+    /// <summary>Stunned by something during your turn (not at the start).</summary>
+    public bool StunnedThisTurn;
 
     /// <summary>
     /// Adds poison stacks and raises the tick damage by what they add: each tick deals the stacks left,
@@ -154,6 +174,9 @@ public sealed class SimPlayer
 
     // What happens to damage reaching your HP.
     public int TungstenRod;
+
+    /// <summary>Block gains so far (each sets off Juggernaut): counted for the Juggernaut tab.</summary>
+    public int BlockGains;
 
     /// <summary>Envenom: poison on each enemy your attack gets damage through to (per hit).</summary>
     public int Envenom;
@@ -280,6 +303,8 @@ public sealed class SimState
         {
             Add(e.Id); Add(e.Hp); Add(e.Block); Add(e.ShellLeft); Add(e.UnblockedInstances); Add(e.FirstHitFullyBlocked ? 1 : 0); Add(e.Poison); Add(e.DiedBeforeActing ? 1 : 0);
             Add(e.PoisonStacks); Add(e.CurlUp); Add(e.Skittish); Add(e.HitByCard ? 1 : 0); Add(e.ThroughByCard ? 1 : 0);
+            Add(e.Stunned ? 1 : 0); Add(e.Burrowed ? 1 : 0); Add(e.Flutter); Add(e.StunAtHp); Add(e.Gambit ? 1 : 0); Add(e.Slippery);
+            Add(e.ReactedWithBlock ? 1 : 0); Add(e.BlockBroken ? 1 : 0); Add(e.GambitTriggered ? 1 : 0); Add(e.SlipperyTriggered ? 1 : 0);
         }
         Add(P.Orbs.Count);
         foreach (var o in P.Orbs)

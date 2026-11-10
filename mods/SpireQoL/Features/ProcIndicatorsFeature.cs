@@ -74,8 +74,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     // Procs that other procs can set off; evaluated in a second pass with these extras.
     // Waking reads the first pass's proc damage on each enemy (Kusarigama etc.), so it runs second.
-    private static readonly HashSet<string> SecondOrder = new() { nameof(JuggernautPower), nameof(Metronome), nameof(BlackHolePower) };
-    private int _xBlockGains, _xChannels, _xStarGains;
+    // (Juggernaut is the simulator's: it counts every block gain the play makes, see FinishSim.)
+    private static readonly HashSet<string> SecondOrder = new() { nameof(Metronome), nameof(BlackHolePower) };
+    private int _xChannels, _xStarGains;
 
     private static bool CanEverPlayNow(CardModel card)
     {
@@ -191,9 +192,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
             // First-order procs, then the procs they set off (procs of procs): block gains feed
             // Juggernaut, Storm's lightning feeds Metronome, The Sealed Throne's stars feed Black Hole.
-            _xBlockGains = _xChannels = _xStarGains = 0;
+            _xChannels = _xStarGains = 0;
             Run(secondOrder: false);
-            _xBlockGains = merged.Values.Where(m => m.Hit.Kind == Kind.Block).Sum(m => m.Hit.Count);
             foreach (var (src, h) in merged.Values)
             {
                 if (src is PowerModel { } sp && sp.GetType().Name == nameof(StormPower)) _xChannels += sp.Amount * f.Plays;
@@ -346,6 +346,14 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         return task;
     }
 
+    /// <summary>The play makes this enemy's attack stronger (Enrage's Strength: SimPlay.SetHits above its current hits).</summary>
+    private static bool IntentRaised(PlayFacts f, int id)
+    {
+        if (f.Sim?.Start.Enemy(id) is not { } e) return false;
+        var now = e.Hits.Sum();
+        return f.Sim.PlayByTarget.Values.Any(p => p.SetHits.TryGetValue(id, out var h) && h.Sum() > now);
+    }
+
     /// <summary>Reads a card's finished simulations into its tabs (see StartSim); returns whether it's lethal.</summary>
     private bool FinishSim(CardModel card, PlayFacts f, Dictionary<string, (AbstractModel Src, Hit Hit)> merged, Task<SimOutcome[]> task)
     {
@@ -379,13 +387,39 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         when outcomes.Any(o => o.KilledByPlayInAny.Any(k => k != id)) => Hit.Trig(harmful: true),
                     // It gains block because of this play (Curl Up after a card's attack hits it, Skittish
                     // when one gets through), in some branch.
-                    nameof(CurlUpPower) or nameof(SkittishPower)
+                    nameof(CurlUpPower) or nameof(SkittishPower) or nameof(SneakyPower)
                         when outcomes.Any(o => o.BlockReactionInAny.Contains(id)) => Hit.Trig(harmful: true),
+                    // Its attack gets stronger (Enrage's Strength on a Skill).
+                    nameof(EnragePower) when IntentRaised(f, id) => Hit.Trig(harmful: true),
+                    // Stunned by your turn (block broken, enough hits through, HP threshold), in every
+                    // branch for some aim, and not already without this card.
+                    nameof(BurrowedPower) or nameof(FlutterPower) or nameof(PlowPower) or nameof(ShriekPower)
+                        when outcomes.Any(o => o.StunnedInAll(id)) && !baseline.StunnedInAll(id) => Hit.Trig(),
+                    nameof(TheGambitPower) when outcomes.Any(o => o.GambitInAll(id)) && !baseline.GambitInAll(id) => Hit.Trig(),
+                    nameof(SlipperyPower) when outcomes.Any(o => o.SlipperyInAny(id)) && !baseline.SlipperyInAny(id) => Hit.Trig(harmful: true),
                     _ => null,
                 };
                 if (hit is { } h) merged["proc:" + name] = (p, h);
             }
         }
+        // Juggernaut: a random hit per block gain the play makes (its own block, block procs, Frost
+        // evokes), as counted by the simulator; the amounts and audit range from the damage rules.
+        if (_me.Creature.GetPower<JuggernautPower>() is { Amount: > 0 } jug)
+        {
+            var gains = outcomes.Max(o => o.PlayBlockGainsMax);
+            if (gains > 0)
+            {
+                _curFacts = f;
+                merged["proc:" + nameof(JuggernautPower)] = (jug, Damage(jug.Amount, gains, Spread.Random));
+            }
+        }
+
+        // Hand Drill (Vulnerable on an enemy whose block you break): good, so every branch for some aim.
+        foreach (var r in _me.Relics.OfType<HandDrill>())
+        {
+            if (outcomes.Any(o => o.PlayBreaksBlockInEveryBranch)) merged["proc:" + nameof(HandDrill)] = (r, Hit.Trig());
+        }
+
         // Gremlin Horn (energy and a draw when an enemy dies): good, so only when some aim kills an
         // enemy in every branch of the play.
         foreach (var r in _me.Relics.OfType<GremlinHorn>())
@@ -487,10 +521,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                             : Damage(a, f.DebuffsLandingTotal(), Spread.Random);
                     case nameof(ViciousPower) when mine && f.DebuffsLandingTotal(t => t == typeof(VulnerablePower)) > 0: return Hit.Trig();
                     case nameof(ShroudPower) when mine: return BlockN(a, f.DebuffsLandingTotal(t => t == typeof(DoomPower)));
-                    // Every block gain sets it off, including block from other procs (Afterimage...).
-                    // Any block gain, including Frost orbs the card evokes.
-                    case nameof(JuggernautPower) when mine && f.BlockGains + f.OrbBlockGains + _xBlockGains > 0:
-                        return Damage(a, f.BlockGains + f.OrbBlockGains + _xBlockGains, Spread.Random);
+                    // Juggernaut (every block gain, including procs and Frost evokes): from the simulator, see FinishSim.
                     case nameof(EnvenomPower) when mine && type == CardType.Attack: return Hit.Trig();
                     case nameof(ConcoctPower) when mine && type == CardType.Attack: return Hit.Trig();
                     case nameof(ReaperFormPower) when mine && type == CardType.Attack: return Hit.Trig();
@@ -501,8 +532,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(TrashToTreasurePower) when mine && statuses > 0: return Hit.Trig();
 
                     // ---- powers on enemies: your plays
-                    case nameof(EnragePower) when onEnemy && type == CardType.Skill: return Hit.Trig(harmful: true);
-                    case nameof(SneakyPower) when onEnemy && type == CardType.Attack: return Hit.Trig(harmful: true);
+                    // Enrage (Strength on Skills) and Sneaky (block on Attacks): from the simulator, see FinishSim.
                     case nameof(ImitationLearningPower) when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
                     case nameof(WitheringPresencePower) when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
                     case nameof(GalvanicPower) when card.Affliction is Galvanized:
@@ -526,12 +556,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // Each damage instance that gets through its block counts (Asleep wakes on the first,
                     // Slumber after Amount of them). Judged by the end of your turn: this play's hits,
                     // procs and orb evokes strip block that your end-of-turn damage then gets through.
-                    case nameof(BurrowedPower) when onEnemy && f.BreaksBlock(e): return Hit.Trig();                // stuns it
-                    case nameof(FlutterPower) when onEnemy && f.Unblocked(e) > 0 && a <= f.HitsOn(e): return Hit.Trig(); // stuns it
-                    case nameof(PlowPower) when onEnemy && f.Unblocked(e) > 0 && e.CurrentHp - f.Unblocked(e) <= a: return Hit.Trig();
-                    case nameof(ShriekPower) when onEnemy && f.UnblockedWithOrbs(e) > 0 && e.CurrentHp - f.UnblockedWithOrbs(e) <= a: return Hit.Trig();
-                    case nameof(TheGambitPower) when onEnemy && f.Unblocked(e) > 0: return Hit.Trig();             // it dies
-                    case nameof(SlipperyPower) when onEnemy && f.Unblocked(e) > 0: return Hit.Trig(harmful: true); // HP loss capped at 1
+                    // Burrowed, Flutter, Plow, Shriek (stuns it), The Gambit (it dies), Slippery (HP loss
+                    // capped at 1): from the simulator, see FinishSim.
 
                     // ---- powers on enemies: killing one
                     // Killing one (Infested, Steam Eruption, Surprise, Crab Rage, Ravenous): from the
@@ -639,7 +665,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(UnceasingTop) when Sts2State.Hand(_me).Count == 1 && draws == 0 && generated == 0: return Hit.Trig();
 
                     // ---- your attack: breaking block, killing
-                    case nameof(HandDrill) when _cs.HittableEnemies.Any(f.BreaksBlock): return Hit.Trig();
+                    // Hand Drill (breaking an enemy's block): from the simulator, see FinishSim.
                     // Gremlin Horn (an enemy dies): from the simulator's branches, see FinishSim.
 
                     // ---- losing HP from the card (your turn)

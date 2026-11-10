@@ -159,13 +159,11 @@ public sealed class PlayFacts
     /// <summary>Total damage this card deals to the enemy across all its hits (before block).</summary>
     public int TotalDamage(Creature enemy) => DamagePerHit(enemy) * HitsOn(enemy);
 
-    /// <summary>Damage that gets past the enemy's current block.</summary>
-    public int Unblocked(Creature enemy) => Math.Max(0, TotalDamage(enemy) - enemy.Block);
-
-    /// <summary>Breaks the enemy's block (it has some, and the attack deals at least that much).</summary>
-    public bool BreaksBlock(Creature enemy) => CanHit(enemy) && enemy.Block > 0 && TotalDamage(enemy) >= enemy.Block;
-
-    /// <summary>Kills the enemy (damage ≥ block + HP; ignores per-turn caps like Hardened Shell).</summary>
+    /// <summary>
+    /// The card alone kills the enemy (its hits and orb evokes ≥ block + HP; ignores caps). Only a
+    /// pre-simulation estimate for where its random and all-enemy procs can land (the procs feed the
+    /// simulator, so they can't wait for it); kill tabs come from the simulator.
+    /// </summary>
     public bool Kills(Creature enemy)
         => enemy.IsAlive && enemy.IsHittable
            && (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) > 0
@@ -186,9 +184,6 @@ public sealed class PlayFacts
     /// <summary>Block you gain from Frost orbs this play evokes (EvokeVal, Unpowered).</summary>
     public int OrbBlock { get; init; }
 
-    /// <summary>Block gains from those Frost evokes (each sets off Juggernaut).</summary>
-    public int OrbBlockGains { get; init; }
-
     /// <summary>
     /// The play's outcome depends on a roll with more than one possible target: Lightning evokes or
     /// a random-target attack with several enemies, or (set by Proc Indicators) a random-target proc.
@@ -201,10 +196,6 @@ public sealed class PlayFacts
     /// lethal, Imbalanced and wake tabs may be missing. The audit doesn't report those.
     /// </summary>
     public bool SimPending { get; set; }
-
-    /// <summary>Damage that gets past the enemy's block, counting orbs this play evokes.</summary>
-    public int UnblockedWithOrbs(Creature enemy)
-        => Math.Max(0, (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) - enemy.Block);
 
     public int OrbDamageOn(Creature enemy) => OrbDamage.TryGetValue(enemy, out var d) ? d : 0;
 
@@ -252,7 +243,6 @@ public sealed class PlayFacts
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
             OrbBlock = OrbBlockFor(evoked, me, cs),
-            OrbBlockGains = evoked.Count(o => o is FrostOrb && o.EvokeVal > 0),
             RandomOutcome = cs.HittableEnemies.Count(e => e.IsAlive) > 1
                             && (evoked.Any(o => o is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
         };
