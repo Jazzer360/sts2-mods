@@ -431,3 +431,4 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [ ] First cases: Bing Bong (cards added to your deck are copied: on card rewards, shop cards, event cards), rest-site relics, relics that react to curses joining your deck, relics that change shop prices or rewards.
 - [x] 0.31.0: everything-snapshot per play (`PlaySnapshot`, `CodeIndex`), relic tracking review for all 163 fight-affecting relics (`RelicTracking`), no blanket skips for draws and auto-plays.
 - [x] 0.31.1: The Boot in the simulator (was a known gap; its hits would have caused after-play HP mismatches).
+- [x] 0.31.2: failures inside the audits and coverage check are reported (they were log-only).

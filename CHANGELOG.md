@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.2
+#### Changed
+- When one of the checks itself fails (the proc check, coverage check), the error is reported instead of only logged.
+
 ### Spire QoL 0.31.1
 #### Fixed
 - The lethal and wake tabs count The Boot: your attack hits that get through always lose the enemy at least its minimum.

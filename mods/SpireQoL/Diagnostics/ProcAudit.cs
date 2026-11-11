@@ -285,6 +285,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         catch (Exception ex)
         {
             ModEntry.Log.Warn($"[audit] couldn't track an action: {ex.Message}");
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "audit-track");
         }
     }
 
@@ -338,6 +339,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         catch (Exception ex)
         {
             ModEntry.Log.Warn($"[audit] couldn't finish an action: {ex.Message}");
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "audit-finish");
         }
     }
 
@@ -556,6 +558,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         catch (Exception ex)
         {
             ModEntry.Log.Warn($"[audit] couldn't check {w.CardName}: {ex.Message}");
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "audit-check");
         }
     }
 

@@ -414,6 +414,7 @@ internal static partial class CoverageLedger
         catch (Exception ex)
         {
             log.Warn($"[coverage] couldn't check coverage: {ex.Message}");
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "coverage-summary");
         }
     }
 
@@ -468,7 +469,11 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         if (!_summarized)
         {
             _summarized = true;
-            if (_building.IsFaulted) ModEntry.Log.Warn($"[coverage] couldn't build the ledger: {_building.Exception?.GetBaseException().Message}");
+            if (_building.IsFaulted && _building.Exception?.GetBaseException() is { } buildError)
+            {
+                ModEntry.Log.Warn($"[coverage] couldn't build the ledger: {buildError.Message}");
+                Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(buildError, "coverage-build");
+            }
             CoverageLedger.LogSummary(ModEntry.Log, Sts2Mods.Core.Diagnostics.ErrorReporter.Instance);
             foreach (var p in _catalogProblems ?? new List<string>())
             {
@@ -528,6 +533,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         catch (Exception ex)
         {
             ModEntry.Log.Warn($"[coverage] check failed for {t.Name}: {ex.Message}");
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "coverage-check");
         }
     }
 
