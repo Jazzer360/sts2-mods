@@ -81,3 +81,7 @@ Every relic that can affect a fight (any hook outside the out-of-combat list) ha
 *Why:* aim as close to 100% as the limits of evaluation allow; a few possible causes are a reason to name them, not to skip.
 *Safety:* predictions stay on the safe side for you: Incoming Damage is the worst branch (the safe fallback when branches run out never lets a random hit save you), good outcomes need every branch. Known gaps that could underestimate damage to you are listed first in the tracker.
 
+### 19. Shortfalls in effects that aren't a choice are reported — active (2026-11-11)
+The proc check reports a play that drew or channeled fewer than predicted, not only more. Excused only by what the history shows: the fight ended (nothing more runs), fewer exhausts than the upper bound (Dark Embrace and Joss Paper draw per exhaust), or no orb slots left (the channel fails). Exhausts, discards and created cards stay log-only below the prediction, since those are "up to" counts the player picks (Guards, Burning Pact's choice).
+*Why:* FTL drew 0 of a predicted 1 (its play limit) and only showed in the log; players' games never reported it. The simulator is the base for later features, so a model gap in either direction should surface.
+*Replaced:* shortfalls in every budgeted effect being log-only (never written down as a decision; part of #11's budget check).

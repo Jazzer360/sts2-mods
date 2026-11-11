@@ -138,4 +138,20 @@ public class PlayChainTests
         few.HandCount = 2;
         Assert.Equal(3, PlayChain.Resolve(few).Draws);
     }
+
+    [Fact]
+    public void DrawsStopWhenYouRunOutOfCards()
+    {
+        // CardPileCmd.Draw stops when both piles are empty: draw 3 with 1 card in the draw pile and
+        // 1 in the discard pile draws 2 (shuffling once).
+        var i = new PlayChain.DrawInputs { OwnDraws = 3, HandCount = 3, DrawPile = 1, DiscardPile = 1 };
+        var r = PlayChain.Resolve(i);
+        Assert.Equal(2, r.Draws);
+        Assert.True(r.Shuffles);
+
+        i.DiscardPile = 0;
+        r = PlayChain.Resolve(i);
+        Assert.Equal(1, r.Draws);
+        Assert.False(r.Shuffles);
+    }
 }

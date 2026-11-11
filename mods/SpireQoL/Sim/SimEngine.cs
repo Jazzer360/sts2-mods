@@ -497,6 +497,7 @@ public static class SimEngine
                     b.Each(s =>
                     {
                         IEnumerable<SimState> r = new[] { s };
+                        if (s.P.OrbCapacity == 0 && s.P.SlotOnFirstChannel) s.P.OrbCapacity = 1;
                         if (s.P.OrbCapacity > 0 && s.P.Orbs.Count >= s.P.OrbCapacity)
                         {
                             var front = s.P.Orbs[0];

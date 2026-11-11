@@ -786,6 +786,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var summons = entries.OfType<SummonedEntry>().Count();
         if (f != null)
         {
+            // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit),
+            // unless the fight ended (nothing more runs), fewer cards were exhausted than the upper bound
+            // (Dark Embrace and Joss Paper draw per exhaust), or you have no orb slots left (the channel fails).
+            if (draws < f.Draws && !w.FightEnded && exhausts >= f.TotalExhausts) issues.Add($"draws: predicted {f.Draws}, actual {draws}");
+            if (orbs < f.Channels && !w.FightEnded && w.After?.P.OrbCapacity != 0) issues.Add($"orbs channeled: predicted {f.Channels}, actual {orbs}");
             Budget(Effect.Draw, "draws", draws, f.Draws);
             Budget(Effect.Exhaust, "exhausts", exhausts, f.TotalExhausts);
             Budget(Effect.Discard, "discards", discards, f.Discards);

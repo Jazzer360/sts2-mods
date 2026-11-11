@@ -183,6 +183,11 @@ public sealed class SimPlayer
     // Orbs, front first.
     public List<SimOrb> Orbs = new();
     public int OrbCapacity;
+    /// <summary>
+    /// A character with no base orb slots: the first channel with no capacity adds a slot
+    /// (OrbCmd.Channel → AddSlots 1). A Defect whose slots are all gone channels nothing.
+    /// </summary>
+    public bool SlotOnFirstChannel;
     /// <summary>Extra passive triggers for whichever orb is in front when it fires (Gold-Plated Cables).</summary>
     public int FrontOrbBonusTriggers;
 

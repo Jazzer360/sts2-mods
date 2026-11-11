@@ -240,6 +240,7 @@ public static class SimAdapter
 
         p.Focus = c.GetPower<FocusPower>()?.Amount ?? 0;
         p.OrbCapacity = pcs.OrbQueue.Capacity;
+        p.SlotOnFirstChannel = SafeInt(() => me.Character.BaseOrbSlotCount) == 0;
         foreach (var orb in pcs.OrbQueue.Orbs) p.Orbs.Add(ToSim(orb, cs));
         // The game's trigger count includes Gold-Plated Cables' bonus on the current front orb; the
         // simulator gives that bonus to whichever orb is in front when passives fire.

@@ -66,4 +66,23 @@ public class SimOrbSlotTests
         SimEngine.ApplyPlayTo(s, big, out b, out _);
         Assert.Equal(10, b[0].P.OrbCapacity);
     }
+
+    [Fact]
+    public void ACharacterWithoutOrbSlotsGetsOneOnTheFirstChannel()
+    {
+        // OrbCmd.Channel: a character with no base orb slots (BaseOrbSlotCount 0) and no capacity gains
+        // a slot first, so the orb is channeled; a Defect whose slots are all gone doesn't.
+        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 20, Hits = { 5 } } } };
+        s.P.SlotOnFirstChannel = true;
+        var play = new SimPlay { Name = "Zap" };
+        play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Orb(OrbKind.Lightning, 3, 8) });
+        SimEngine.ApplyPlayTo(s, play, out var b, out _);
+        Assert.Equal(1, b[0].P.OrbCapacity);
+        Assert.Single(b[0].P.Orbs);
+
+        s.P.SlotOnFirstChannel = false;
+        SimEngine.ApplyPlayTo(s, play, out b, out _);
+        Assert.Equal(0, b[0].P.OrbCapacity);
+        Assert.Empty(b[0].P.Orbs);
+    }
 }

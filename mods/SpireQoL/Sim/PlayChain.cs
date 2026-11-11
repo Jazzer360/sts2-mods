@@ -80,8 +80,10 @@ public static class PlayChain
 
         // The card has left your hand; cards it exhausts from hand first make room.
         var room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand - i.DiscardedBeforeDraw));
-        var draws = i.Blocked ? 0 : Math.Min(i.OwnDraws + chained, room);
         var pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile);
+        // Drawing stops when both piles are empty (CardPileCmd.Draw).
+        var cards = pile + i.DiscardPile + i.DiscardedBeforeDraw;
+        var draws = i.Blocked ? 0 : Math.Min(Math.Min(i.OwnDraws + chained, room), cards);
         return new DrawResult(draws, chained, draws > pile && i.DiscardPile + i.DiscardedBeforeDraw > 0);
     }
 }

@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.12
+#### Fixed
+- The simulator channels orbs for characters without orb slots (the game gives them a slot on their first channel); it dropped those orbs, so a channeled Lightning or Frost didn't count toward kills, block or Incoming Damage.
+- Draw counts stop when you run out of cards in both piles (Shuffle Warning, draw procs).
+#### Changed
+- The proc check reports plays that drew or channeled fewer cards or orbs than predicted (logs and error reports only).
+
 ### Spire QoL 0.31.11
 #### Fixed
 - FTL only counts its draw while you've played fewer than 3 cards this turn (Shuffle Warning, draw procs).
