@@ -432,3 +432,16 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [x] 0.31.0: everything-snapshot per play (`PlaySnapshot`, `CodeIndex`), relic tracking review for all 163 fight-affecting relics (`RelicTracking`), no blanket skips for draws and auto-plays.
 - [x] 0.31.1: The Boot in the simulator (was a known gap; its hits would have caused after-play HP mismatches).
 - [x] 0.31.2: failures inside the audits and coverage check are reported (they were log-only).
+
+---
+
+## 16. Open concerns (2026-11-10, waiting on play testing)
+
+Recorded before the first runs with 0.26–0.31; revisit with real reports.
+
+- [ ] **Quick plays aren't audited (a gap to close).** A card played before the previous play finished resolving had its tabs computed without that play's effects (`ProcAudit.StaleBecause`), so its mismatches only go to the log as `[model]` lines. Now that plays are attributed to their `PlayCardAction`, look at recomputing the prediction at the moment its action starts (or comparing against the state the previous action left) so these get checked like any other play.
+- [ ] **Untested in game:** action-based audit attribution (choice pauses, queued plays, potions mid-turn, Catastrophe auto-plays), the shuffle prefix, the coverage and settings checks at load, the before/after snapshot check, the parallel card simulations, and the tabs moved onto the simulator (kills, Juggernaut, stuns, Curl Up, Sneaky, Enrage, Hand Drill). Expect the first reports to be a mix of real gaps and checks that need tuning; treat them as a to-do list.
+- [ ] **Review accuracy:** ~400 reviewed entries (coverage ledger, relic tracking) were written in one session from the hook bodies. Some "covered" notes rest on understanding of the mod's rules rather than a test; coverage reports and the snapshot check should expose any that are wrong.
+- [ ] **Simulator wait cap (DECISIONS #9):** if a card's simulations hit the 250 ms cap, its simulator tabs (warnings included) are missing for a frame or two. Watch for `SimPending` notes in the logs.
+- [ ] **Known gaps that could underestimate damage to you:** Queen and Kin Priest switching to a stronger move mid-turn when an ally dies; multiplayer Covered/Intercept.
+- [ ] **Balance of work:** after play testing, prefer closing reported gaps and building out-of-combat reminders (§15) over more diagnostics infrastructure.
