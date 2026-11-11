@@ -89,6 +89,13 @@ public sealed class PlayFacts
     public int Generated { get; private set; }
     public int GeneratedStatuses { get; private set; }
 
+    /// <summary>
+    /// Most cards it can transform (Begone, Charge, Guards...). The game's history logs each new card
+    /// as created, but nothing reacts to it as one (CardCmd.Transform doesn't call
+    /// AfterCardGeneratedForCombat), so it's kept out of Generated. The audit only.
+    /// </summary>
+    public int Transforms { get; init; }
+
     /// <summary>Debuff powers it applies to enemies (from its PowerVar&lt;T&gt; vars), e.g. Weak, Vulnerable, Doom.</summary>
     public IReadOnlyList<Type> EnemyDebuffs { get; init; } = Array.Empty<Type>();
 
@@ -228,8 +235,9 @@ public sealed class PlayFacts
             Discards = DiscardCount(card, name, others, draws),
             OwnDraws = draws,
             BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
-            Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays),
+            Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me),
             GeneratedStatuses = statuses * Math.Max(1, plays),
+            Transforms = TransformCount(card, name, others, drawPile) * Math.Max(1, plays),
             EnemyDebuffs = EnemyDebuffTypes(card),
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
             Channels = ChannelCount(card, name, me) * Math.Max(1, plays),
@@ -650,6 +658,52 @@ public sealed class PlayFacts
                 return 1;
         }
         return 0;
+    }
+
+    // Cards that Forge when played (ForgeCmd.Forge in OnPlay; decompile v0.111.0).
+    private static readonly HashSet<string> ForgeCards = new()
+    {
+        nameof(BeatIntoShape), nameof(BigBang), nameof(Bulwark), nameof(Conqueror), nameof(RefineBlade),
+        nameof(SeekingEdge), nameof(SpoilsOfBattle), nameof(SummonForth), nameof(TheSmith), nameof(WroughtInWar),
+    };
+
+    /// <summary>
+    /// Forging creates a Sovereign Blade in your hand when you have none outside your exhaust pile
+    /// (ForgeCmd.Forge, through AddGeneratedCardToCombat); later forges only add damage. Once per play
+    /// chain: a replay finds the blade the first play made.
+    /// </summary>
+    private static int ForgedBlade(string name, Player me)
+    {
+        if (!ForgeCards.Contains(name)) return 0;
+        try
+        {
+            var hasBlade = me.PlayerCombatState?.AllCards.Any(c => c is SovereignBlade && !c.IsDupe && c.Pile?.Type != PileType.Exhaust) ?? true;
+            return hasBlade ? 0 : 1;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>Most cards a play transforms (CardCmd.Transform / TransformTo in OnPlay; decompile v0.111.0).</summary>
+    private static int TransformCount(CardModel card, string name, List<CardModel> others, int drawPile)
+    {
+        int Var(string key, int fallback) => Sts2State.Var(card, key, fallback);
+        int Transformable(Func<CardModel, bool> filter)
+        {
+            try { return others.Count(c => c.IsTransformable && filter(c)); } catch { return others.Count(filter); }
+        }
+        return name switch
+        {
+            nameof(Begone) => Math.Min(1, Transformable(_ => true)),                        // 1 card in hand you pick
+            nameof(Guards) => Transformable(_ => true),                                     // any cards in hand you pick
+            nameof(Charge) => Math.Min(Var("Cards", 2), drawPile),                          // cards from your draw pile
+            nameof(Seance) => Math.Min(Var("Cards", 1), drawPile),                          // into Souls
+            nameof(Compact) => Transformable(c => c.Type == CardType.Status),               // every status in hand
+            nameof(PrimalForce) => Transformable(c => c.Type == CardType.Attack),           // every attack in hand
+            _ => 0,
+        };
     }
 
     // ------------------------------------------------------------------ debuffs

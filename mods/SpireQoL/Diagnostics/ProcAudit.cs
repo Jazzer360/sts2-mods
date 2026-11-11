@@ -775,7 +775,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Budget(Effect.Draw, "draws", draws, f.Draws);
             Budget(Effect.Exhaust, "exhausts", exhausts, f.TotalExhausts);
             Budget(Effect.Discard, "discards", discards, f.Discards);
-            Budget(Effect.Generate, "created cards", generated, f.Generated);
+            // Transformed cards are logged as created too (CardCmd.Transform), up to what the card can transform.
+            Budget(Effect.Generate, "created cards", generated, f.Generated + f.Transforms);
             Budget(Effect.Orb, "orbs channeled", orbs, f.Channels);
             Budget(Effect.Summon, "summons", summons, w.Card.DynamicVars.ContainsKey("Summon") ? f.Plays : 0);
         }

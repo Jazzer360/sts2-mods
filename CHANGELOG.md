@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.4
+#### Fixed
+- Cards that Forge (Big Bang, Bulwark, Conqueror, Refine Blade, Seeking Edge, The Smith...) count the Sovereign Blade they create when you don't have one, for the Pillar of Creation, Arsenal and Regalite tabs.
+- The proc check no longer reports the cards that Begone, Charge, Guards, Seance, Compact and Primal Force transform as unexplained created cards (logs and error reports only).
+
 ### Spire QoL 0.31.3
 #### Fixed
 - Tabs and predictions for Hyperbeam and other cards that change your Focus now account for your orbs' new values.
