@@ -5,6 +5,16 @@ The full design lives in the "StS2 Mod Suite — Design Notes" doc (https://clau
 - [TRACKER.md](TRACKER.md): the item-by-item work list (relics, card modifiers, damage and block sources).
 - [CHANGELOG.md](../CHANGELOG.md): patch notes.
 
+## Goals
+
+What Spire QoL is for, in order. Everything else serves these.
+
+1. **Every card that does something beyond its listed effects gets a tab**, plus a few hand-picked cases (Retain, Sly, replays, Ethereal fading). Good or bad, from a power or a relic, yours or an enemy's: if playing a card sets anything off, the card says so.
+2. **Every relic that affects a fight is tracked**: by a tab on the cards it reacts to, a tracker row for its count or timer, or (for always-on relics with nothing to decide) an explicit entry saying so.
+3. **Reminders for decisions outside combat**: wherever a relic changes what a choice does (resting, event options, card rewards, shops), an indicator on that choice, as Relic Reminders did in StS1 (Regal Pillow on resting, Omamori on events that add a curse). Bing Bong copying cards added to your deck is the first example.
+4. **Only knowable information** (CLAUDE.md, hard rule): what a player with perfect memory and full knowledge of the rules could know, never the RNG or hidden state.
+5. **Everything that happens is accounted for.** Every effect in a fight is either predicted (a tab, a tracker row, the simulator) or reported when it happens (audits, coverage check), so gaps surface from players' games instead of hiding. Defaults are tuned afterwards: what shows on cards by default is a settings question, not a coverage one.
+
 ## How the ideas are grouped
 
 - **Spire QoL** (`mods/SpireQoL`) shows information the game already has, in a clearer place. It never tells you what to pick. Each feature is a toggle.
@@ -21,6 +31,7 @@ The full design lives in the "StS2 Mod Suite — Design Notes" doc (https://clau
 | Incoming Damage | S | summed blockable damage incl. Burn/Decay/Constrict; health-bar preview |
 | Shuffle Warning | S | draws that force a reshuffle; which hand cards stay out |
 | Intent Forecast | M | upcoming enemy moves |
+| Out-of-combat Reminders | M | relic icons on rest options, event choices, card rewards and shop items whose outcome a relic changes (Bing Bong, Regal Pillow-style, Omamori-style) |
 
 ## Build order
 
@@ -31,7 +42,7 @@ The full design lives in the "StS2 Mod Suite — Design Notes" doc (https://clau
 5. ~~**Card Indicators**~~ (0.2.0: translucency, badges, blocked-card dimming): Ethereal translucency first, then badges, then markers.
 6. ~~**Relic Reminders**~~ (0.2.0), starting with the Pen Nib-ready glow, Art of War, Ripple Basin.
 7. ~~**Shuffle Warning.**~~ Built in 0.2.0.
-8. **Intent Forecast.**
+8. **Out-of-combat Reminders** (goal 3), then **Intent Forecast.**
 9. The advisory mods.
 
 ## Shared-infra principles

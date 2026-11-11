@@ -419,3 +419,13 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
   - [ ] KinPriest: AfterDeath of its last follower changes its move mid-turn (the simulator keeps the intent from the start of the play)
   - [ ] Queen: AfterDeath of the Amalgam switches her to the enraged move mid-turn (the simulator keeps the intent from the start of the play)
 
+---
+
+## 15. Out-of-combat reminders (planned; goal 3 in ROADMAP)
+
+An indicator on a choice outside combat when one of your relics changes what it does. Same language as on-card tabs (the relic's icon, crossed when it's against you), on the game's own choice buttons.
+
+- [ ] Find the choice screens in the decompile: rest site options, event options, card rewards, shop items, card removal, potion rewards.
+- [ ] Coverage for it: extend the coverage ledger to the out-of-combat hooks (`AfterCardChangedPiles` on the deck, `ShouldAddToDeck`, `ModifyRestSiteHealAmount`, `AfterRestSiteHeal`/`Smith`, `ModifyRewards`, `ModifyCardRewardCreationOptions`, `ModifyMerchantPrice`/`CardPool`/`CardRarity`, `ShouldAllowMerchantCardRemoval`, `ModifyGoldGained`, `AfterGoldGained`, `ShouldProcurePotion`...), so every relic that changes a choice is reviewed and listed.
+- [ ] First cases: Bing Bong (cards added to your deck are copied: on card rewards, shop cards, event cards), rest-site relics, relics that react to curses joining your deck, relics that change shop prices or rewards.
+

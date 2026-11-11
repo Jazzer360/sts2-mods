@@ -71,3 +71,7 @@ Every proc rule, tracker row, double-play source and feature has a settings row 
 ### 16. No dead code — active (2026-11-10)
 Code that isn't part of what the mod does is removed, not kept for later: unused members (compiler analyzers IDE0051/IDE0052/IDE0060 and `scripts/dead-code.mjs` for public and internal ones) and stub features. Intent Forecast's empty feature was removed; its plan stays in docs/TRACKER.md §7 and ROADMAP until it's built.
 
+### 17. Goals, and "everything is accounted for" — active (2026-11-10)
+Spire QoL's goals are listed in docs/ROADMAP.md: a tab whenever a card does anything beyond its text, every fight-affecting relic tracked, reminders for out-of-combat decisions a relic changes, only knowable information, and every effect either predicted or reported. The default is complete coverage; what shows by default is tuned afterwards in settings.
+*Added:* out-of-combat reminders (goal 3), as Relic Reminders did in StS1.
+
