@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.8
+#### Fixed
+- Incoming Damage and the lethal, Imbalanced and wake tabs count the block an enemy's Thorns takes from you when your card's attack hits it (before each hit).
+
 ### Spire QoL 0.31.7
 #### Fixed
 - The proc check no longer reports a card made free for the turn (Splash) going back to its cost after you play it (logs and error reports only).

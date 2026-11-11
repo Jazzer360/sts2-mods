@@ -108,6 +108,13 @@ public static class SimAdapter
                 Gambit = e.HasPower<TheGambitPower>(),
                 Slippery = e.GetPower<SlipperyPower>()?.Amount ?? 0,
             };
+            // Thorns hits you back (unpowered, blockable) before each of your card's attack hits on it.
+            if (e.GetPower<ThornsPower>() is { Amount: > 0 } thorns)
+            {
+                se.Thorns = SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, cs, me.Creature, e, thorns.Amount,
+                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered | MegaCrit.Sts2.Core.ValueProps.ValueProp.SkipHurtAnim, null, null,
+                    ModifyDamageHookType.All, CardPreviewMode.None, out _)));
+            }
             // Burrowed keeps its block between turns (BurrowedPower.ShouldClearBlock), like Barricade.
             if (se.Burrowed) se.Barricade = true;
             se.StartedAlive = e.IsAlive;

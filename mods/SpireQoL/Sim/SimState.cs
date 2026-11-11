@@ -77,6 +77,11 @@ public sealed class SimEnemy
     public bool ReactedWithBlock;
 
     // Being hit (decompile v0.111.0):
+    /// <summary>
+    /// Thorns: damage to you (blockable) before each hit of your card's attack on it
+    /// (ThornsPower.BeforeDamageReceived on powered attacks), after the game's damage math (0 = none).
+    /// </summary>
+    public int Thorns;
     /// <summary>Burrowed: keeps its block between turns; breaking that block stuns it (AfterBlockBroken), and the power and its block go.</summary>
     public bool Burrowed;
     /// <summary>Flutter: powered-attack hits with damage through its block left before it's stunned (0 = none).</summary>

@@ -279,7 +279,7 @@ internal static partial class CoverageLedger
         ["TheBombPower"] = "covered: BeforeSideTurnEnd damages all enemies on its last tick (simulator)",
         ["TheGambitPower"] = "covered: AfterDamageReceived dies to an attack through block (simulator)",
         ["TheSealedThronePower"] = "covered: BeforeCardPlayed stars per card (proc tab, Black Hole second pass)",
-        ["ThornsPower"] = "covered: BeforeDamageReceived damages attackers (crossed proc damage on enemies; simulator for yours)",
+        ["ThornsPower"] = "covered: BeforeDamageReceived damages attackers (crossed proc damage and simulator block loss for enemies' Thorns; simulator for yours)",
         ["ThunderPower"] = "gap: AfterOrbEvoked damages Lightning's targets again; not simulated",
         ["ToricToughnessPower"] = "ignore: AfterBlockCleared block at the start of its own turn",
         ["TrashToTreasurePower"] = "covered: AfterCardGeneratedForCombat channels a random orb per status (proc tab; simulator channels an unknown orb)",

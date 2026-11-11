@@ -284,6 +284,8 @@ public static class SimEngine
     private static void CardHit(SimState s, SimEnemy e, int amount)
     {
         if (amount <= 0 || !e.Alive) return;
+        // ThornsPower.BeforeDamageReceived: it hits you back before the hit lands (the hit still lands).
+        if (e.Thorns > 0) LandBlockable(s, e.Name + " Thorns", e.Thorns);
         e.HitByCard = true;
         var lost = Damage(e, amount, powered: true, minimumHpLoss: s.P.BootMinimum);
         if (lost <= 0) return;

@@ -145,4 +145,35 @@ public class SimBeingHitTests
         SimEngine.ApplyPlayTo(s, Strike(1, 12), out var b, out _);
         Assert.Equal(15, b[0].Enemy(1)!.Hp);
     }
+
+    [Fact]
+    public void EnemyThornsHitsYourBlockOnEachCardHit()
+    {
+        // ThornsPower.BeforeDamageReceived: each powered attack hit on it deals its Thorns to you
+        // first (unpowered, so your block takes it). Auto-report: FTL into Spiny Toad (Thorns 5) with
+        // 4 block left you with 0 block and 1 HP lost.
+        var s = new SimState { Enemies = { Enemy(1, 98, 0, 25) } };
+        s.P.Block = 4;
+        s.Enemies[0].Thorns = 5;
+        SimEngine.ApplyPlayTo(s, Strike(1, 6), out var b, out _);
+        Assert.Equal(0, b[0].P.Block);
+        Assert.Equal(1, b[0].Taken);
+        Assert.Equal(92, b[0].Enemy(1)!.Hp);
+
+        // Two hits: twice. The hit that kills it still sets Thorns off (before the damage lands).
+        s.P.Block = 20;
+        SimEngine.ApplyPlayTo(s, Strike(1, 6, hits: 2), out b, out _);
+        Assert.Equal(10, b[0].P.Block);
+        s.Enemies[0].Hp = 5;
+        SimEngine.ApplyPlayTo(s, Strike(1, 6), out b, out _);
+        Assert.Equal(15, b[0].P.Block);
+        Assert.False(b[0].Enemy(1)!.Alive);
+
+        // Proc damage and orb evokes aren't a card's attack: no Thorns.
+        s.Enemies[0].Hp = 98;
+        var proc = new SimPlay { Name = "Defend" };
+        proc.Procs.Add(new ProcHit { Spread = SimPlay.Target.Single, TargetId = 1, Damage = { [1] = 3 } });
+        SimEngine.ApplyPlayTo(s, proc, out b, out _);
+        Assert.Equal(20, b[0].P.Block);
+    }
 }
