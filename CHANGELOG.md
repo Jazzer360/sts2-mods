@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.6
+#### Fixed
+- The proc check no longer reports less damage or block than predicted when the play ends the fight: the game stops logging from the hit that ends it (Dualcast's second evoke killing the last enemy) (logs and error reports only).
+- The proc check no longer reports Flutter going down when your attack gets through as unexplained; the state after each play compares it with the simulator's prediction instead (logs and error reports only).
+
 ### Spire QoL 0.31.5
 #### Fixed
 - An un-upgraded Spinner no longer counts as channelling a Glass orb when played (only Spinner+ does; its power channels at the start of your turn), so its predicted front-orb evoke, kills and orb tabs are gone.

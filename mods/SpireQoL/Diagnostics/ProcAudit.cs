@@ -103,6 +103,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public Dictionary<Creature, int>? AfterIds;
         /// <summary>Why the after-play state wasn't captured.</summary>
         public string? AfterSkipped;
+        /// <summary>
+        /// The play ended the fight. The game stops logging history once it's ending (CreatureCmd.Damage
+        /// skips History.DamageReceived when CombatManager.IsEnding), so the killing hit and anything after
+        /// it are missing: shortfalls against the prediction aren't checked.
+        /// </summary>
+        public bool FightEnded;
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
         public PlaySnapshot? FullBefore, FullAfter;
     }
@@ -192,6 +198,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public SimState? After;
         public Dictionary<Creature, int>? AfterIds;
         public string? AfterSkipped;
+        public bool FightEnded;
         /// <summary>Every power on every creature when the play started and when it finished.</summary>
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
         /// <summary>Energy, stars, gold, HP, cards and relics when the play started and finished.</summary>
@@ -343,6 +350,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // The fight is ending: its cleanup (temporary powers expiring, Focus back) changes the
                 // state, so the state the play left can't be compared. The history checks still run.
                 rec.AfterSkipped = "the fight ended";
+                rec.FightEnded = true;
             }
             else if (me != null && cs != null)
             {
@@ -526,7 +534,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Flashes = rec.Flashes, Shuffles = rec.Shuffles,
             Lag = captured ? rec.Lag : _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
             Before = rec.Before, Target = rec.Target,
-            After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped,
+            After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded,
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
             FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
             StaleBecause = captured ? rec.StaleBecause : StaleBecause(hist, card, start, me),
@@ -736,7 +744,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Where(b => b.Actor == me.Creature && b.CardPlay == null)
             .Sum(b => b.Amount);
         var predictedBlock = w.Predicted.Where(t => t.Kind == "block").Sum(t => t.Amount) + (w.Facts?.OrbBlock ?? 0);
-        if (procBlock != predictedBlock) issues.Add($"block: predicted {predictedBlock}, actual {procBlock}");
+        // The play ended the fight: the history stops at the killing hit, so less than predicted is expected.
+        void Shortfall(string what, string predicted, int actual) =>
+            modelLines.Add($"{what}: predicted {predicted}, actual {actual} (the fight ended: the game logs nothing from the killing hit on)");
+        if (procBlock < predictedBlock && w.FightEnded) Shortfall("block", predictedBlock.ToString(), procBlock);
+        else if (procBlock != predictedBlock) issues.Add($"block: predicted {predictedBlock}, actual {procBlock}");
 
         // ---- damage from procs (no card source), against each tab's range
         var procDamage = entries.OfType<DamageReceivedEntry>().Where(d => d.CardSource == null).ToList();
@@ -750,8 +762,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         eMin += w.Facts?.OrbDamageMin ?? 0;
         eMax += w.Facts?.OrbDamageMax ?? 0;
         var (mMin, mMax) = (meTabs.Sum(t => t.AuditMin), meTabs.Sum(t => t.AuditMax));
-        if (toEnemies < eMin || toEnemies > eMax) issues.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}");
-        if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");
+        if (toEnemies < eMin && w.FightEnded) Shortfall("damage to enemies", Range(eMin, eMax), toEnemies);
+        else if (toEnemies < eMin || toEnemies > eMax) issues.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}");
+        if (toMe < mMin && w.FightEnded) Shortfall("damage to you", Range(mMin, mMax), toMe);
+        else if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");
 
         // ---- budget: everything else the play caused
         var autoPlayed = entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me);
@@ -803,12 +817,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> SimComparedPowers = new()
     {
         nameof(PoisonPower), nameof(PlatingPower), nameof(JuggernautPower), nameof(ThornsPower), nameof(FlameBarrierPower), nameof(FeelNoPainPower),
+        nameof(FlutterPower),
     };
 
     /// <summary>
     /// Every power on every creature, before the play against after it: a power that went down or
     /// away with nothing in the play to explain it. Explained: powers the card applies, powers that
-    /// flashed (they acted: Flutter, Slippery, Curl Up...), sources with a tab, Artifact when the card
+    /// flashed (they acted: Slippery, Curl Up...), sources with a tab, Artifact when the card
     /// applies debuffs, temporary powers, the simulator's own powers (compared already), and anything on
     /// a creature that died. Increases are the budget check's ("unexplained: powers applied").
     /// </summary>
@@ -954,6 +969,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (ae.Hp <= 0 || pe.Hp <= 0) continue;
                 if (pe.Block != ae.Block) d.Add($"after play enemy block: {name} predicted {pe.Block}, actual {ae.Block}");
                 if (pe.Poison != ae.Poison) d.Add($"after play enemy poison: {name} predicted {pe.Poison}, actual {ae.Poison}");
+                // FlutterPower.AfterDamageReceived: one stack per powered hit that gets through (no flash until it stuns).
+                if (pe.Flutter != ae.Flutter) d.Add($"after play enemy Flutter: {name} predicted {pe.Flutter}, actual {ae.Flutter}");
                 if (pe.Stunned != ae.Stunned) d.Add($"after play enemy stunned: {name} predicted {(pe.Stunned ? "stunned" : "not stunned")}, actual {(ae.Stunned ? "stunned" : "not stunned")}");
                 // A stunned enemy's intent becomes the stun move; the simulator keeps its hits and skips them.
                 if (!pe.Stunned && !ae.Stunned && !pe.Hits.SequenceEqual(ae.Hits)) d.Add($"after play enemy intent: {name} predicted [{string.Join(", ", pe.Hits)}], actual [{string.Join(", ", ae.Hits)}]");
