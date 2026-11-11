@@ -1050,6 +1050,14 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(MegaCrit.Sts2.Core.Localization.DynamicVars.PowerVar<>))
                 set.Add(t.GetGenericArguments()[0]);
         }
+        // A temporary stat power applies the stat itself (TemporaryStrengthPower.AfterApplied →
+        // PowerCmd.Apply<StrengthPower>): Dark Shackles' -9 Strength.
+        foreach (var t in set.ToList())
+        {
+            if (typeof(TemporaryStrengthPower).IsAssignableFrom(t)) set.Add(typeof(StrengthPower));
+            if (typeof(TemporaryDexterityPower).IsAssignableFrom(t)) set.Add(typeof(DexterityPower));
+            if (typeof(TemporaryFocusPower).IsAssignableFrom(t)) set.Add(typeof(FocusPower));
+        }
         return set;
     }
 

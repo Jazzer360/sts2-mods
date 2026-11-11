@@ -157,6 +157,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 - **Counters that carry across turns and combats sort first:** Pen Nib, Nunchaku, Tuning Fork, Iron Club, Galactic Dust, Joss Paper, Metronome.
 - **Then per-turn counters:** Kunai, Shuriken, Ornamental Fan, Kusarigama, Letter Opener, Brilliant Scarf.
 - **The row flashes when the next qualifying action fires the relic.** This uses the game's own "about to fire" state (`RelicModel.Status == Active`). Pen Nib flashes at 9/10. Stone Calendar flashes all of turn 7.
+- **A row goes away when the game hides the relic's counter** (`RelicModel.ShowCounter`): Metronome once it has fired this fight, Brilliant Scarf once it has fired this turn.
 - **Limits:**
   - Velvet Choker shows plays left and turns red at 1.
   - Pocketwatch shows green while you're within its card limit and red ("missed") once you go over.

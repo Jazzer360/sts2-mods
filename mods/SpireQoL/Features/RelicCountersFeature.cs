@@ -215,7 +215,9 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         {
             case CounterKind.Counter:
             {
-                if (!relic.ShowCounter && relic.DisplayAmount <= 0 && !active) return null;
+                // Hidden when the game hides the relic's counter: done for the fight (Metronome after it
+                // fires) or the turn (Brilliant Scarf), or not counting yet.
+                if (!relic.ShowCounter && !active) return null;
                 if (threshold <= 0) return null;
                 var n = Math.Clamp(relic.DisplayAmount, 0, threshold);
                 var oneEarly = _ctx.Settings.PulseOneStepEarly && n == threshold - 2;

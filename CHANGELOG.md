@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.10
+#### Changed
+- Relic Counters: Metronome's row goes away once it has fired this fight (and Brilliant Scarf's once it has fired this turn), as the game's own counter does.
+#### Fixed
+- The proc check no longer reports Dark Shackles' (and other temporary Strength, Dexterity and Focus cards') stat change as unexplained (logs and error reports only).
+
 ### Spire QoL 0.31.9
 #### Changed
 - The coverage check's card scan also checks cards that forge or transform cards, and checks each card's upgraded version too (logs and error reports only).
