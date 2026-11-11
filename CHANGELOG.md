@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.14
+#### Added
+- Update Notice: on the main menu, a note above "MODDED (n)" says how many Spire QoL versions behind you are, when a newer one is on GitHub; click it to open the releases page. Checked once each time you reach the main menu (switch: `update-notice`).
+
 ### Spire QoL 0.31.13
 #### Added
 - Thunder: a tab with its damage on cards that evoke a Lightning orb, and the simulator counts it (kills, the enemy turn).

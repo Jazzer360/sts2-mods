@@ -18,6 +18,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Incoming Damage](#incoming-damage) | `incoming-damage` | 🟡 | on |
 | [Proc Indicators](#proc-indicators) | `proc-indicators` | 🟡 | on |
 | [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | 🟡 | on |
+| [Update Notice](#update-notice) | `update-notice` | 🟡 | on |
 
 ## What the mod adds to the game, technically
 
@@ -370,6 +371,16 @@ One simulator behind Incoming Damage, the lethal tab, the Imbalanced and wake ta
 Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). Most draw their Cards amount; Dagger Throw, Escape Plan and Pillage draw one (Pillage at least one); Scrawl draws up to a full hand; Compile Driver draws one per distinct orb type (the card's own calculation); Restlessness draws only when it's the only card in hand; FTL draws only while you've played fewer than 3 cards this turn; Mad Science draws only with the Wisdom rider. A card that plays twice draws twice. The discard pile icon is read from the live discard pile button (`NCombatUi.DiscardPile` → `Icon`).
 
 **Not yet:** draw potions (potion slots have no tab yet).
+
+---
+
+## Update Notice
+
+**What you see:** on the main menu, when newer Spire QoL versions are out, a small green note just above the game's "MODDED (n)" text in the bottom-right corner: "Spire QoL: 3 versions behind (new version on GitHub)". Clicking it opens the Spire QoL releases page on GitHub. Nothing when you're up to date, and nothing during a run.
+
+**How it checks:** each time the main menu appears, one request on a worker thread to GitHub's public releases list for this repo (every page, 100 releases each), counting `spireqol-v<version>` releases (not drafts or prereleases) newer than the running DLL's version. It sends nothing about you; the User-Agent is the mod's id. If GitHub can't be reached, the note keeps its last answer (or stays hidden). Turn it off with the `update-notice` switch (settings menu, General).
+
+**Game UI touched:** adds one label as a child of the main menu's `%ModdedWarning` label (`NDebugInfoLabelManager`); the game's own label isn't changed. No Harmony patches.
 
 ---
 

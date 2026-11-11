@@ -85,3 +85,8 @@ Every relic that can affect a fight (any hook outside the out-of-combat list) ha
 The proc check reports a play that drew or channeled fewer than predicted, not only more. Excused only by what the history shows: the fight ended (nothing more runs), fewer exhausts than the upper bound (Dark Embrace and Joss Paper draw per exhaust), or no orb slots left (the channel fails). Exhausts, discards and created cards stay log-only below the prediction, since those are "up to" counts the player picks (Guards, Burning Pact's choice).
 *Why:* FTL drew 0 of a predicted 1 (its play limit) and only showed in the log; players' games never reported it. The simulator is the base for later features, so a model gap in either direction should surface.
 *Replaced:* shortfalls in every budgeted effect being log-only (never written down as a decision; part of #11's budget check).
+
+### 20. The mod checks GitHub for new versions on the main menu — active (2026-11-11)
+Spire QoL reads GitHub's public releases list once each time the main menu appears (never during a run) and shows how many versions behind you are above the game's "MODDED" note, linking to the releases page. One anonymous request (the mod's id as User-Agent), off the main thread; a switch turns it off. The game's own label is left alone (a label of ours is added above it).
+*Why:* releases come often, and players otherwise don't know a fix is out; reports from old builds cost review time.
+*Replaced:* no network access other than error reports (Sentry).

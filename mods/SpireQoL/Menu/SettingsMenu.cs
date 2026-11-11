@@ -50,6 +50,7 @@ public sealed class SettingsMenu
         ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar."),
         ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes)."),
         ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile."),
+        ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit)."),
         ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports)."),
         ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports)."),
         ("coverage-watch", "Coverage check", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports)."),
