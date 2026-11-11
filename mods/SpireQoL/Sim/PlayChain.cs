@@ -49,6 +49,11 @@ public static class PlayChain
         public int CentennialPuzzle;
         /// <summary>No Draw or Fiddle: no draws during your turn.</summary>
         public bool Blocked;
+        /// <summary>
+        /// It puts your hand into the draw pile and shuffles your discard pile in before drawing (Reboot:
+        /// CardPileCmd.Shuffle in its play, whatever the piles hold).
+        /// </summary>
+        public bool ShufflesFirst;
     }
 
     public readonly record struct DrawResult(int Draws, int Chained, bool Shuffles);
@@ -63,6 +68,15 @@ public static class PlayChain
         if (i.IronClubCount >= 0 && i.IronClubEvery > 0)
             chained += (i.IronClubCount % i.IronClubEvery + Math.Max(1, i.Plays)) / i.IronClubEvery;
         if (i.LosesHp) chained += i.CentennialPuzzle;
+
+        if (i.ShufflesFirst)
+        {
+            // Your hand is in the draw pile with everything else: a whole hand of room, and no second
+            // shuffle while the draws fit in the cards you have.
+            var all = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile) + i.DiscardPile + Math.Max(0, i.HandCount - 1 - i.ExhaustedFromHand);
+            var n = i.Blocked ? 0 : Math.Min(Math.Min(i.OwnDraws + chained, MaxHand), all);
+            return new DrawResult(n, chained, true);
+        }
 
         // The card has left your hand; cards it exhausts from hand first make room.
         var room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand - i.DiscardedBeforeDraw));

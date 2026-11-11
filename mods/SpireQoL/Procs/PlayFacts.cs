@@ -75,6 +75,12 @@ public sealed class PlayFacts
     /// </summary>
     public bool Shuffles { get; private set; }
 
+    /// <summary>Its own play shuffles your discard pile in (Reboot): the card text says so, so no Shuffle Warning tab.</summary>
+    public bool ShufflesItself { get; private set; }
+
+    // Cards whose play shuffles your discard pile into your draw pile (CardPileCmd.Shuffle in OnPlay; decompile v0.111.0).
+    internal static readonly HashSet<string> ShuffleCards = new() { nameof(Reboot) };
+
     /// <summary>
     /// What the outcome simulator was given for this card on that frame (set by Proc Indicators): the
     /// start state, its enemy ids, and the play per target id (-1 for untargeted cards). The audit
@@ -278,6 +284,7 @@ public sealed class PlayFacts
             DrawPile = drawPile,
             DiscardPile = Sts2State.DiscardPileCount(me),
             DiscardedBeforeDraw = Card is CalculatedGamble ? Discards : 0,
+            ShufflesFirst = ShuffleCards.Contains(Card.GetType().Name),
             VulnerableLandings = DebuffsLandingTotal(t => t == typeof(VulnerablePower)),
             LosesHp = HpLoss > 0,
             Blocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(r => r is Fiddle),
@@ -305,6 +312,7 @@ public sealed class PlayFacts
         ChainedDraws = result.Chained;
         Draws = result.Draws;
         Shuffles = result.Shuffles;
+        ShufflesItself = i.ShufflesFirst;
         // Biiig Hug puts a Soot (a status) into your draw pile on the shuffle: a created status.
         if (Shuffles && me.Relics.Any(r => r is BiiigHug))
         {
@@ -458,7 +466,7 @@ public sealed class PlayFacts
     {
         nameof(Acrobatics), nameof(Adrenaline), nameof(Backflip), nameof(BattleTrance), nameof(BigBang), nameof(BrightestFlame), nameof(BurningPact),
         nameof(Constellation), nameof(Coolheaded), nameof(DecisionsDecisions), nameof(DrumOfBattle), nameof(Expertise), nameof(Fetch), nameof(Finesse),
-        nameof(FlashOfSteel), nameof(Ftl), nameof(Glimmer), nameof(Glow), nameof(HuddleUp), nameof(Impatience), nameof(MasterOfStrategy), nameof(MinionStrike),
+        nameof(FlashOfSteel), nameof(Glimmer), nameof(Glow), nameof(HuddleUp), nameof(Impatience), nameof(MasterOfStrategy), nameof(MinionStrike),
         nameof(Modded), nameof(Neurosurge), nameof(Offering), nameof(Overclock), nameof(Parse), nameof(PhotonCut), nameof(PommelStrike), nameof(Prepared), nameof(Prophesize),
         nameof(Reboot), nameof(Reflex), nameof(RocketPunch), nameof(Scourge), nameof(Scrape), nameof(ShrugItOff), nameof(Skim), nameof(Slimed), nameof(Soul),
         nameof(SpoilsOfBattle), nameof(SweepingBeam), nameof(ThinkingAhead),
@@ -482,12 +490,21 @@ public sealed class PlayFacts
             // Draws one per distinct orb type channeled.
             case CompileDriver when c.DynamicVars.TryGetValue("CalculatedCards", out var v) && v is CalculatedVar cv:
                 return (int)cv.Calculate(null);
+            // Draws only while you've finished fewer than PlayMax plays this turn (Ftl.CanDrawCard; the
+            // game's template card, with no owner, counts as drawing).
+            case Ftl: return FtlCanDraw(c) ? Sts2State.Var(c, "Cards") : 0;
             // Only draws when it's the only card in hand.
             case Restlessness: return handCount == 1 ? Sts2State.Var(c, "Cards") : 0;
             // Mad Science with the Wisdom rider (Tinker Time).
             case MadScience m when m.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(c, "WisdomCards");
         }
         return 0;
+    }
+
+    private static bool FtlCanDraw(CardModel c)
+    {
+        try { return c.Owner == null || Sts2State.CountPlayedThisTurn(c.Owner) < Sts2State.Var(c, "PlayMax", 3); }
+        catch { return true; }
     }
 
     // ------------------------------------------------------------------ exhaust / discard

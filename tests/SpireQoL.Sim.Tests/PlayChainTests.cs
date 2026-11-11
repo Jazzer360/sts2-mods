@@ -103,4 +103,39 @@ public class PlayChainTests
         Assert.Equal(4, r.Draws);
         Assert.True(r.Shuffles);
     }
+
+    [Fact]
+    public void RebootShufflesEvenWhenItsDrawsFit()
+    {
+        // Reboot: your hand goes into the draw pile, CardPileCmd.Shuffle, then draw 4. The shuffle
+        // happens whatever the piles hold (play test: draw pile 10, discard 1, not predicted).
+        var i = new PlayChain.DrawInputs { OwnDraws = 4, HandCount = 6, DrawPile = 10, DiscardPile = 1, ShufflesFirst = true };
+        var r = PlayChain.Resolve(i);
+        Assert.True(r.Shuffles);
+        Assert.Equal(4, r.Draws);
+
+        // An empty discard pile still shuffles (the draw pile and your hand).
+        i.DiscardPile = 0;
+        Assert.True(PlayChain.Resolve(i).Shuffles);
+
+        // No Draw stops the draws, not the shuffle.
+        i.Blocked = true;
+        r = PlayChain.Resolve(i);
+        Assert.True(r.Shuffles);
+        Assert.Equal(0, r.Draws);
+    }
+
+    [Fact]
+    public void RebootDrawsFromEveryCardYouHaveWithAWholeHandOfRoom()
+    {
+        // Your hand is in the draw pile first: a hand of 10 still has room for all 4 draws.
+        var full = new PlayChain.DrawInputs { OwnDraws = 4, HandCount = 10, DrawPile = 5, DiscardPile = 5, ShufflesFirst = true };
+        Assert.Equal(4, PlayChain.Resolve(full).Draws);
+
+        // The draws can't exceed the cards there are: draw 1 + discard 1 + the other cards in hand.
+        var few = new PlayChain.DrawInputs { OwnDraws = 4, HandCount = 3, DrawPile = 1, DiscardPile = 1, ShufflesFirst = true };
+        Assert.Equal(4, PlayChain.Resolve(few).Draws);
+        few.HandCount = 2;
+        Assert.Equal(3, PlayChain.Resolve(few).Draws);
+    }
 }

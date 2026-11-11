@@ -837,6 +837,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var acted = flashed.Select(m => m.GetType().Name).ToHashSet();
         var tabbed = w.Predicted.Select(t => t.Key.Contains(':') ? t.Key[(t.Key.IndexOf(':') + 1)..] : t.Key).ToHashSet();
         var debuffs = w.Facts?.EnemyDebuffs.Count > 0;
+        var died = DiedInPlay(entries);
         foreach (var ((creature, type), before) in w.PowersBefore)
         {
             var after = w.PowersAfter.TryGetValue((creature, type), out var a) ? a : 0;
@@ -845,10 +846,19 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (own.Contains(type) || acted.Contains(type) || tabbed.Contains(type) || SimComparedPowers.Contains(type)) continue;
             if (type == nameof(ArtifactPower) && debuffs) continue;
             if (creature.Powers.FirstOrDefault(p => p.GetType().Name == type) is ITemporaryPower) continue;
+            // A death in the play: powers that react to it (Dampen comes off you when its caster dies).
+            if (died && PowerTypeNamed(type) is { } pt && CodeIndex.Does(pt, Array.Empty<string>(), DeathHooks)) continue;
             var who = creature == me.Creature ? "you" : creature.Monster?.GetType().Name ?? "creature";
             issues.Add($"power went down: {type} on {who} {before}→{after}, with nothing in the play to explain it");
         }
     }
+
+    private static readonly string[] DeathHooks = { "AfterDeath", "BeforeDeath" };
+
+    private static bool DiedInPlay(List<CombatHistoryEntry> entries) => entries.OfType<DamageReceivedEntry>().Any(d => d.Result.WasTargetKilled);
+
+    /// <summary>The game's power class with this name (powers are recorded by name before the play).</summary>
+    private static Type? PowerTypeNamed(string name) => typeof(ArtifactPower).Assembly.GetType(typeof(ArtifactPower).Namespace + "." + name);
 
     // ------------------------------------------------------------------ everything else
 
@@ -881,11 +891,18 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var drawn = entries.OfType<CardDrawnEntry>().Where(d => !d.FromHandDraw && d.Card.Owner == me).Select(d => d.Card).ToList();
         var drawReactors = drawn.Count == 0 ? Enumerable.Empty<AbstractModel>()
             : present.Where(m => CodeIndex.Does(m.GetType(), Array.Empty<string>(), new[] { "AfterCardDrawn", "AfterCardDrawnEarly" }));
+        // A death in the play runs death hooks, including those of powers gone by its end (Dampen comes
+        // off you when its caster dies and upgrades your cards back).
+        var deathReactors = !DiedInPlay(entries) ? Enumerable.Empty<Type>()
+            : present.Select(m => m.GetType())
+                .Concat(w.PowersBefore?.Keys.Select(k => PowerTypeNamed(k.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())
+                .Where(t => CodeIndex.Does(t, Array.Empty<string>(), DeathHooks));
         var explainers = present.Where(m => tabbed.Contains(m.GetType().Name)).Select(m => m.GetType())
             .Concat(flashed.Select(m => m.GetType())).Append(w.Card.GetType())
             .Concat(autoPlayed.Select(c => c.GetType()))
             .Concat(drawn.Select(c => c.GetType())).Concat(drawn.Where(c => c.Enchantment != null).Select(c => c.Enchantment!.GetType()))
             .Concat(drawReactors.Select(m => m.GetType()))
+            .Concat(deathReactors)
             .Distinct().ToList();
         var tracked = new HashSet<string>(tabbed);
         foreach (var s in RelicSpecs.All) tracked.Add(s.TypeName);

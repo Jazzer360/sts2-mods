@@ -50,7 +50,8 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
             bool shuffles;
             try
             {
-                shuffles = PlayFacts.For(c, me, cs, CardIndicatorsFeature.PlayCount(c)).Shuffles;
+                var f = PlayFacts.For(c, me, cs, CardIndicatorsFeature.PlayCount(c));
+                shuffles = f.Shuffles && !f.ShufflesItself; // Reboot's text already says it shuffles
             }
             catch
             {

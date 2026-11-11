@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.11
+#### Fixed
+- FTL only counts its draw while you've played fewer than 3 cards this turn (Shuffle Warning, draw procs).
+- Reboot's shuffle counts for shuffle procs (Biiig Hug's Soot).
+- The simulator models orb slots gained and lost: Bulk Up drops your back orb (it isn't evoked), and Capacitor and Modded make room so a later channel doesn't evoke. This changes the lethal, Incoming Damage, Imbalanced and wake predictions after those cards.
+- The proc check no longer reports Reboot's shuffle, Dampen coming off when the Magi Knight dies (and your cards upgrading back), or keyword changes that are part of a card's upgrade (logs and error reports only). The card scan reports cards that shuffle your discard pile or change your orb slots and aren't counted.
+
 ### Spire QoL 0.31.10
 #### Changed
 - Relic Counters: Metronome's row goes away once it has fired this fight (and Brilliant Scarf's once it has fired this turn), as the game's own counter does.

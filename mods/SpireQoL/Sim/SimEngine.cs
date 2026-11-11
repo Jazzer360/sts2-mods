@@ -56,13 +56,18 @@ public sealed class ProcHit
 
 public sealed class OrbOp
 {
-    public enum Kind { EvokeFront, EvokeAllTwice, Channel }
+    public enum Kind { EvokeFront, EvokeAllTwice, Channel, Slots }
 
     public Kind Op;
     /// <summary>EvokeFront: how many times the front orb is evoked (removed after the last).</summary>
     public int Times = 1;
     /// <summary>Channel: the new orb (values with your Focus).</summary>
     public SimOrb? Orb;
+    /// <summary>
+    /// Slots: orb slots gained (OrbCmd.AddSlots, up to 10) or lost (negative: OrbCmd.RemoveSlots, not
+    /// below 0; the orbs past the new capacity are dropped from the back, not evoked).
+    /// </summary>
+    public int Slots;
 }
 
 /// <summary>The branches still possible after the simulation, with helpers for guarantees and the worst case.</summary>
@@ -136,6 +141,9 @@ public sealed class SimOutcome
 /// </summary>
 public static class SimEngine
 {
+    /// <summary>OrbQueue.maxCapacity: OrbCmd.AddSlots stops here.</summary>
+    public const int MaxOrbSlots = 10;
+
     public const int MaxBranches = 128;
 
     public static SimOutcome Run(SimState start, SimPlay? play = null)
@@ -477,6 +485,13 @@ public static class SimEngine
                     break;
                 case OrbOp.Kind.EvokeAllTwice:
                     b.Each(s => EvokeAllTwice(s));
+                    break;
+                case OrbOp.Kind.Slots:
+                    b.Do(s =>
+                    {
+                        s.P.OrbCapacity = Math.Clamp(s.P.OrbCapacity + op.Slots, 0, Math.Max(MaxOrbSlots, s.P.OrbCapacity));
+                        while (s.P.Orbs.Count > s.P.OrbCapacity) s.P.Orbs.RemoveAt(s.P.Orbs.Count - 1);
+                    });
                     break;
                 case OrbOp.Kind.Channel:
                     b.Each(s =>

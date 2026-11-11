@@ -50,6 +50,17 @@ public static class SimAdapter
     };
 
     /// <summary>The simulator channels this card's orbs (for the coverage check).</summary>
+    /// <summary>
+    /// Orb slots a card's play adds or removes (OrbCmd.AddSlots / RemoveSlots in OnPlay; decompile
+    /// v0.111.0): Bulk Up loses its OrbSlots, Capacitor and Modded add their Repeat.
+    /// </summary>
+    internal static int SlotChange(CardModel card, string name) => name switch
+    {
+        nameof(BulkUp) => -Sts2State.Var(card, "OrbSlots", 1),
+        nameof(Capacitor) or nameof(Modded) => Sts2State.Var(card, "Repeat", 1),
+        _ => 0,
+    };
+
     internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card is nameof(Tempest) or nameof(Voltaic);
 
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
@@ -362,6 +373,9 @@ public static class SimAdapter
         var lightningBonus = me.Relics.Where(r => r.GetType().Name == nameof(InfusedCore)).Sum(r => Sts2State.Var(r, "ExtraDamage"));
         for (var i = 0; i < plays; i++)
         {
+            // Slot changes come first in these cards' plays.
+            var slots = SlotChange(card, name);
+            if (slots != 0) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = slots });
             switch (name)
             {
                 case nameof(Dualcast): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = 2 }); break;
