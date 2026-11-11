@@ -463,6 +463,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(DanseMacabrePower) when mine && f.Energy >= Sts2State.Var(p, "Energy", 2): return BlockN(a, plays);
                     case nameof(GravityPower) when mine: return Damage(a, plays, Spread.All);
                     case nameof(SerpentFormPower) when mine: return Damage(a, plays, Spread.Random);
+                    // Each Lightning evoke's target again (ThunderPower.AfterOrbEvoked): random target, and
+                    // nothing if the evoke killed it, so the audit range starts at 0.
+                    case nameof(ThunderPower) when mine && f.LightningEvokes > 0: return Damage(a, f.LightningEvokes, Spread.Random) with { Min = 0 };
                     case nameof(PanachePower) when mine && plays >= Sts2State.Var(p, "CardsLeft", 5): return Damage(a, 1, Spread.All);
                     // Second order: stars gained also set off Black Hole (The Sealed Throne gains
                     // stars on every card).

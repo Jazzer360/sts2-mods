@@ -280,7 +280,7 @@ internal static partial class CoverageLedger
         ["TheGambitPower"] = "covered: AfterDamageReceived dies to an attack through block (simulator)",
         ["TheSealedThronePower"] = "covered: BeforeCardPlayed stars per card (proc tab, Black Hole second pass)",
         ["ThornsPower"] = "covered: BeforeDamageReceived damages attackers (crossed proc damage and simulator block loss for enemies' Thorns; simulator for yours)",
-        ["ThunderPower"] = "gap: AfterOrbEvoked damages Lightning's targets again; not simulated",
+        ["ThunderPower"] = "covered: AfterOrbEvoked damages Lightning's living targets again (proc tab on cards that evoke Lightning; simulator)",
         ["ToricToughnessPower"] = "ignore: AfterBlockCleared block at the start of its own turn",
         ["TrashToTreasurePower"] = "covered: AfterCardGeneratedForCombat channels a random orb per status (proc tab; simulator channels an unknown orb)",
         ["UnderworldPower"] = "ignore: AfterDamageGiven Doom from other players' attacks (Doom kills after the enemy turn)",

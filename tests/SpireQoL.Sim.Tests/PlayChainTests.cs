@@ -154,4 +154,22 @@ public class PlayChainTests
         Assert.Equal(1, r.Draws);
         Assert.False(r.Shuffles);
     }
+
+    [Fact]
+    public void CardsYourPowersAddAfterThePlayFillTheHandBeforeIronClubDraws()
+    {
+        // Auto-reports: FTL with 10 cards in hand (9 after it leaves), Iron Club completing its count
+        // and Calamity 1. Hook order (CombatState.IterateHookListeners): your powers, then your relics.
+        // Calamity's attack makes 10, so Iron Club draws nothing.
+        var i = new PlayChain.DrawInputs { HandCount = 10, DrawPile = 6, DiscardPile = 30, IronClubCount = 3, IronClubEvery = 4, AddedToHandAfterPlay = 1 };
+        Assert.Equal(0, PlayChain.Resolve(i).Draws);
+
+        // Without Calamity, Iron Club draws into the last slot.
+        i.AddedToHandAfterPlay = 0;
+        Assert.Equal(1, PlayChain.Resolve(i).Draws);
+
+        // The card's own draws come first and still happen (during the play, before Calamity).
+        i = new PlayChain.DrawInputs { OwnDraws = 1, HandCount = 9, DrawPile = 6, DiscardPile = 30, IronClubCount = 3, IronClubEvery = 4, AddedToHandAfterPlay = 1 };
+        Assert.Equal(1, PlayChain.Resolve(i).Draws);
+    }
 }

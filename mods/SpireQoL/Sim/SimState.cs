@@ -188,6 +188,8 @@ public sealed class SimPlayer
     /// (OrbCmd.Channel → AddSlots 1). A Defect whose slots are all gone channels nothing.
     /// </summary>
     public bool SlotOnFirstChannel;
+    /// <summary>Thunder: damage (unpowered) to each Lightning evoke's target that's still alive (ThunderPower.AfterOrbEvoked; 0 = none).</summary>
+    public int Thunder;
     /// <summary>Extra passive triggers for whichever orb is in front when it fires (Gold-Plated Cables).</summary>
     public int FrontOrbBonusTriggers;
 

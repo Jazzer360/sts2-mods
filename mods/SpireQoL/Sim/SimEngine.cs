@@ -302,12 +302,13 @@ public static class SimEngine
     }
 
     /// <summary>One hit on a random living enemy: a branch per possible target.</summary>
-    private static IEnumerable<SimState> HitRandom(SimState s, Func<SimEnemy, int> amount, bool card = false)
+    private static IEnumerable<SimState> HitRandom(SimState s, Func<SimEnemy, int> amount, bool card = false, Action<SimState, SimEnemy>? then = null)
     {
         void Hit(SimState st, SimEnemy e)
         {
             if (card) CardHit(st, e, amount(e));
             else Damage(e, amount(e));
+            then?.Invoke(st, e);
         }
         if (s.NoRandomHits)
         {
@@ -378,7 +379,8 @@ public static class SimEngine
     {
         switch (orb.Kind)
         {
-            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke);
+            // Thunder hits the evoke's target again if it's still alive.
+            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { if (st.P.Thunder > 0 && e.Alive) Damage(e, st.P.Thunder); });
             case OrbKind.Frost: return GainBlock(s, orb.Evoke, null);
             case OrbKind.Dark:
             {

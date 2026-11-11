@@ -54,36 +54,52 @@ public static class PlayChain
         /// CardPileCmd.Shuffle in its play, whatever the piles hold).
         /// </summary>
         public bool ShufflesFirst;
+        /// <summary>
+        /// Cards your powers add to your hand after the play (CalamityPower.AfterCardPlayed): they run
+        /// before your relics' draws (Iron Club, Game Piece) and take hand room first.
+        /// </summary>
+        public int AddedToHandAfterPlay;
     }
 
     public readonly record struct DrawResult(int Draws, int Chained, bool Shuffles);
 
     public static DrawResult Resolve(DrawInputs i)
     {
-        var chained = i.DarkEmbrace * i.Exhausts
-                      + i.Vicious * i.VulnerableLandings;
+        // During the play: its own draws and what reacts to its exhausts, debuffs and HP loss.
+        var during = i.DarkEmbrace * i.Exhausts
+                     + i.Vicious * i.VulnerableLandings;
         if (i.JossPaperCount >= 0 && i.JossPaperEvery > 0 && i.Exhausts > 0)
-            chained += (i.JossPaperCount % i.JossPaperEvery + i.Exhausts) / i.JossPaperEvery;
-        if (i.IsPower) chained += i.GamePiece * Math.Max(1, i.Plays);
+            during += (i.JossPaperCount % i.JossPaperEvery + i.Exhausts) / i.JossPaperEvery;
+        if (i.LosesHp) during += i.CentennialPuzzle;
+        // After it (relics' AfterCardPlayed): they run after your powers', so cards your powers add to
+        // your hand then (Calamity) take room first.
+        var after = 0;
+        if (i.IsPower) after += i.GamePiece * Math.Max(1, i.Plays);
         if (i.IronClubCount >= 0 && i.IronClubEvery > 0)
-            chained += (i.IronClubCount % i.IronClubEvery + Math.Max(1, i.Plays)) / i.IronClubEvery;
-        if (i.LosesHp) chained += i.CentennialPuzzle;
+            after += (i.IronClubCount % i.IronClubEvery + Math.Max(1, i.Plays)) / i.IronClubEvery;
+        var chained = during + after;
 
+        int room, cards, pile;
         if (i.ShufflesFirst)
         {
-            // Your hand is in the draw pile with everything else: a whole hand of room, and no second
-            // shuffle while the draws fit in the cards you have.
-            var all = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile) + i.DiscardPile + Math.Max(0, i.HandCount - 1 - i.ExhaustedFromHand);
-            var n = i.Blocked ? 0 : Math.Min(Math.Min(i.OwnDraws + chained, MaxHand), all);
-            return new DrawResult(n, chained, true);
+            // Your hand is in the draw pile with everything else: a whole hand of room.
+            pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile) + i.DiscardPile + Math.Max(0, i.HandCount - 1 - i.ExhaustedFromHand);
+            cards = pile;
+            room = MaxHand;
         }
-
-        // The card has left your hand; cards it exhausts from hand first make room.
-        var room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand - i.DiscardedBeforeDraw));
-        var pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile);
-        // Drawing stops when both piles are empty (CardPileCmd.Draw).
-        var cards = pile + i.DiscardPile + i.DiscardedBeforeDraw;
-        var draws = i.Blocked ? 0 : Math.Min(Math.Min(i.OwnDraws + chained, room), cards);
-        return new DrawResult(draws, chained, draws > pile && i.DiscardPile + i.DiscardedBeforeDraw > 0);
+        else
+        {
+            // The card has left your hand; cards it exhausts from hand first make room.
+            room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand - i.DiscardedBeforeDraw));
+            pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile);
+            // Drawing stops when both piles are empty (CardPileCmd.Draw).
+            cards = pile + i.DiscardPile + i.DiscardedBeforeDraw;
+        }
+        if (i.Blocked) return new DrawResult(0, chained, i.ShufflesFirst);
+        var first = Math.Min(Math.Min(i.OwnDraws + during, room), cards);
+        var lateRoom = Math.Max(0, room - first - i.AddedToHandAfterPlay);
+        var draws = first + Math.Min(Math.Min(after, lateRoom), cards - first);
+        var shuffles = i.ShufflesFirst || (draws > pile && i.DiscardPile + i.DiscardedBeforeDraw > 0);
+        return new DrawResult(draws, chained, shuffles);
     }
 }

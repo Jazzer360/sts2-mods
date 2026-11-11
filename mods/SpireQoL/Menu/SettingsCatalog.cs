@@ -133,6 +133,7 @@ public static class SettingsCatalog
         new(nameof(PillarOfCreationPower), SourceGroup.YourPower, "Cards that create cards: block per card"),
         new(nameof(GravityPower), SourceGroup.YourPower, "Every card: damage to all"),
         new(nameof(SerpentFormPower), SourceGroup.YourPower, "Every card: damage to a random enemy"),
+        new(nameof(ThunderPower), SourceGroup.YourPower, "Cards that evoke Lightning: damage to its target again"),
         new(nameof(PanachePower), SourceGroup.YourPower, "The card that completes its count: damage to all", "Cards this turn, toward the next hit"),
         new(nameof(BlackHolePower), SourceGroup.YourPower, "Cards that spend or gain stars: damage to all"),
         new(nameof(HauntPower), SourceGroup.YourPower, "Soul: damage"),

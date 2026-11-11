@@ -194,6 +194,9 @@ public sealed class PlayFacts
     public int OrbDamageMin { get; init; }
     public int OrbDamageMax { get; init; }
 
+    /// <summary>Lightning orbs this play evokes (Thunder hits each one's target again).</summary>
+    public int LightningEvokes { get; init; }
+
     /// <summary>Block you gain from Frost orbs this play evokes (EvokeVal, Unpowered).</summary>
     public int OrbBlock { get; init; }
 
@@ -256,6 +259,7 @@ public sealed class PlayFacts
             OrbDamage = orbs.Exact,
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
+            LightningEvokes = evoked.Count(o => o is LightningOrb),
             OrbBlock = OrbBlockFor(evoked, me, cs),
             RandomOutcome = cs.HittableEnemies.Count(e => e.IsAlive) > 1
                             && (evoked.Any(o => o is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
@@ -285,6 +289,8 @@ public sealed class PlayFacts
             DiscardPile = Sts2State.DiscardPileCount(me),
             DiscardedBeforeDraw = Card is CalculatedGamble ? Discards : 0,
             ShufflesFirst = ShuffleCards.Contains(Card.GetType().Name),
+            // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
+            AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
             VulnerableLandings = DebuffsLandingTotal(t => t == typeof(VulnerablePower)),
             LosesHp = HpLoss > 0,
             Blocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(r => r is Fiddle),
@@ -753,14 +759,20 @@ public sealed class PlayFacts
         return list ?? (IReadOnlyList<Type>)Array.Empty<Type>();
     }
 
-    public static bool IsDebuff(Type powerType)
+    public static bool IsDebuff(Type powerType) => !typeof(ITemporaryPower).IsAssignableFrom(powerType) && IsDebuffType(powerType);
+
+    /// <summary>
+    /// The power is a debuff by type (PowerModel.Type), temporary ones included (Dark Shackles):
+    /// what Artifact blocks (ArtifactPower.TryModifyPowerAmountReceived).
+    /// </summary>
+    public static bool IsDebuffType(Type powerType)
     {
         if (DebuffCache.TryGetValue(powerType, out var d)) return d;
         d = false;
         try
         {
             var canonical = typeof(ModelDb).GetMethod(nameof(ModelDb.Power))!.MakeGenericMethod(powerType).Invoke(null, null) as PowerModel;
-            d = canonical?.Type == PowerType.Debuff && !typeof(ITemporaryPower).IsAssignableFrom(powerType);
+            d = canonical?.Type == PowerType.Debuff;
         }
         catch
         {

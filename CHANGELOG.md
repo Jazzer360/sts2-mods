@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.13
+#### Added
+- Thunder: a tab with its damage on cards that evoke a Lightning orb, and the simulator counts it (kills, the enemy turn).
+#### Fixed
+- Iron Club's and Game Piece's draws account for cards Calamity adds to your hand first (a full hand stops them).
+- The proc check no longer reports Artifact blocking Dark Shackles (logs and error reports only).
+
 ### Spire QoL 0.31.12
 #### Fixed
 - The simulator channels orbs for characters without orb slots (the game gives them a slot on their first channel); it dropped those orbs, so a channeled Lightning or Frost didn't count toward kills, block or Incoming Damage.

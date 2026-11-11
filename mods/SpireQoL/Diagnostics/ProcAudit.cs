@@ -841,7 +841,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             own.UnionWith(OwnPowerTypes(e.CardPlay.Card).Select(t => t.Name));
         var acted = flashed.Select(m => m.GetType().Name).ToHashSet();
         var tabbed = w.Predicted.Select(t => t.Key.Contains(':') ? t.Key[(t.Key.IndexOf(':') + 1)..] : t.Key).ToHashSet();
-        var debuffs = w.Facts?.EnemyDebuffs.Count > 0;
+        // Artifact blocks any debuff, temporary ones included (Dark Shackles).
+        var debuffs = w.Facts?.EnemyDebuffs.Count > 0 || own.Any(t => PowerTypeNamed(t) is { } pt && PlayFacts.IsDebuffType(pt));
         var died = DiedInPlay(entries);
         foreach (var ((creature, type), before) in w.PowersBefore)
         {
