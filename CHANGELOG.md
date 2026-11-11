@@ -6,6 +6,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.30.0
+#### Added
+- Coverage check (on by default, logs and error reports only): every game mechanic that can act during a fight is listed with how the mod handles it; a mechanic the mod hasn't reviewed, one that's new in a game update, or a card whose code does something the mod doesn't count is reported the first time it shows up in your fight. The settings are checked to cover every tab, tracker row and feature.
+#### Changed
+- The proc check also reports powers that went down or away during a play with nothing to explain it.
+- The outcome simulator knows Concoct's poison, Monarch's Gaze lowering enemy attacks, and the orbs Storm and Trash to Treasure channel (including the front orb they evoke when your slots are full).
+#### Removed
+- The Intent Forecast feature, which did nothing yet (it's still planned).
+
 ### Spire QoL 0.29.0
 #### Changed
 - The outcome simulator knows cards that change enemy Strength (Piercing Wail, Dark Shackles, Enfeebling Touch, Crush Under, Mangle, Dying Star, Shared Fate, Resonance, Fight Me), Bouncing Flask's random poison, and enemies reacting to an ally's death (Ravenous is stunned, Crab Rage hits harder and blocks), so Incoming Damage and the lethal and Imbalanced tabs account for them.

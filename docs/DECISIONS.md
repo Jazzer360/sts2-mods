@@ -59,3 +59,15 @@ What a play does (draws, exhausts, block gains, shuffles, procs) is moving from 
 
 ### 13. Game types referenced by type, not by name — active (2026-11-10)
 Rules name game classes with `nameof(...)`/type patterns where the class is public, so a renamed or removed class in a game update is a build error instead of a silently dead rule. Settings keys stay strings (they're saved in players' settings).
+
+### 14. Every combat mechanic is reviewed, and the unreviewed is reported — active (2026-11-10)
+Every game class that overrides a combat hook has an explicit entry in the coverage ledger (covered, ignore or gap), written from its hook bodies. The running game is compared with the ledger at load; anything new, changed or unreviewed is reported when it shows up in a fight, and card code is compared with the per-card tables the predictions use.
+*Why:* there are far more interactions than can be coded ahead; players' games must surface what the mod doesn't know, including after game updates, instead of it failing silently.
+*Replaced:* a first version that counted a class as covered whenever the mod's code named it (Doom was "covered" because one rule checked for it) and classified the rest from the commands they call (Bing Bong, a deck-only relic, was called a combat gap). Both were wrong; entries now come from reading the hooks.
+
+### 15. Settings stay complete, checked at load — active (2026-11-10)
+Every proc rule, tracker row, double-play source and feature has a settings row or switch, and every row something behind it; checked from the compiled mod and game when the mod loads (CatalogCheck), plus tab kinds shown in play that the settings don't describe.
+
+### 16. No dead code — active (2026-11-10)
+Code that isn't part of what the mod does is removed, not kept for later: unused members (compiler analyzers IDE0051/IDE0052/IDE0060 and `scripts/dead-code.mjs` for public and internal ones) and stub features. Intent Forecast's empty feature was removed; its plan stays in docs/TRACKER.md §7 and ROADMAP until it's built.
+

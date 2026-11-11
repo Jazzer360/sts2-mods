@@ -32,6 +32,10 @@ Before working on in-game feedback, read the game logs, starting with the `[audi
 
 Incoming Damage, the lethal tab, and the Imbalanced and wake tabs come from one simulator (`mods/SpireQoL/Sim/`): pure C# (no game types), fed by `SimAdapter`. New end-of-turn effects, enemy reactions or card effects that change what happens by the enemy turn belong there, with a test in `tests/SpireQoL.Sim.Tests` (run `dotnet test tests/SpireQoL.Sim.Tests`; no game needed). Random targets are branches, never rolls: good outcomes need every branch, warnings need one, damage to you is the worst branch.
 
+## Coverage (required with every game update and every new rule)
+
+Every game class with combat hooks has a reviewed entry in `mods/SpireQoL/Diagnostics/CoverageLedger.cs` (covered / ignore / gap), written from its hook bodies in the decompile, never from its name or a scan of the commands it calls. After `scripts/decompile.ps1`, run `node scripts/coverage-ledger.mjs` and review every class it lists. A new rule or simulator feature for a gap updates that class's entry to `covered:`. The coverage check reports unreviewed, new and changed classes from players' games: treat those reports as review tasks.
+
 ## Automatic bug reports
 
 Crashes and audit mismatches from players' games become GitHub issues labelled `auto-report` (via Sentry and the Sentry issues workflow). When adding a feature that can fail or predict something, make sure failures reach `ErrorReporter` (the frame loop does this for exceptions) and that predictions are checked by an audit.

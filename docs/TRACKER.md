@@ -386,3 +386,36 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.27.0: `Sim/PlayChain.cs` (draw chains, pure, tested); 340 game class names compile-checked (`nameof`); missing private members reported (`Sts2State.MissingMember`); docs/DECISIONS.md.
 - [ ] Check in game: the action-based audit windows (Burning Pact's choice pause, queued plays, potions mid-turn, Catastrophe auto-plays).
 - [x] 0.28.0: one model of a play finished (DECISIONS #12): being-hit enemy powers in the simulator (Burrowed, Flutter, Plow, Shriek, The Gambit, Slippery); Juggernaut, Sneaky, Enrage, Hand Drill and the being-hit tabs from the simulator; dead PlayFacts helpers removed (Unblocked, BreaksBlock, UnblockedWithOrbs, OrbBlockGains). Tests in `SimBeingHitTests`.
+
+---
+
+## 14. Coverage (2026-11-10) → 0.30.0
+
+- [x] Coverage ledger: every game class with combat hooks reviewed from its hook bodies (`Diagnostics/CoverageLedger.cs`, `scripts/coverage-ledger.mjs`), compared with the running game at load; unreviewed, new and changed classes reported on encounter. Card code checked against the per-card tables (`CardCoverage`). Settings checked at load (`CatalogCheck`).
+- [x] Every-power check after each play (powers that went down with nothing to explain it).
+- [x] Simulator: Concoct, Monarch's Gaze (single-target and all-enemy attacks), Storm and Trash to Treasure channels.
+- [x] Dead code removed (analyzers + `scripts/dead-code.mjs`): Intent Forecast stub, `UiKit.Badge`, `Sts2State.HasVar`, `TurnEndModel.Overblock`, `PlayFacts.DebuffsLanding`, `SimAdapter.SelfPowers`, unused parameters and usings.
+- Known gaps (from the ledger; each is logged when present in a fight):
+- [ ] LunarPastry: AfterSideTurnEnd gains stars at the end of your turn; Black Hole's end-of-turn damage from them isn't simulated
+  - [ ] PaelsEye: crossed tab covers giving up its extra turn; its BeforeSideTurnEndEarly exhaust of your hand (no cards played) isn't simulated (Feel No Pain, Charon's Ashes at end of turn)
+  - [ ] TheBoot: ModifyHpLostAfterOstyLate raises your attack hits below its minimum to it; the simulator's damage to enemies doesn't
+  - [ ] UnsettlingLamp: proc tab covers arming; ModifyPowerAmountGivenMultiplicative doubles the triggering card's powers, which the simulator's poison and Strength amounts don't
+  - [ ] AdaptablePower: AfterDeath/ShouldAllowHitting: Test Subject revives (a kill may not stick: lethal can be wrong)
+  - [ ] CoveredPower: multiplayer: a player covered by another has attacks on them taken by the interceptor (Incoming Damage assumes they hit you)
+  - [ ] IllusionPower: AfterDeath/ShouldAllowHitting revives (a kill may not stick: lethal can be wrong)
+  - [ ] InfernoPower: AfterDamageReceived damages all enemies when you lose HP on your turn; not in the proc rules or simulator
+  - [ ] InterceptPower: multiplayer: takes attacks aimed at a covered player (Incoming Damage assumes they hit you)
+  - [ ] MonarchsGazePower: AfterDamageGiven lowers Strength per hit (simulator intents for single-target and all-enemy attacks; not random-target ones)
+  - [ ] NecroMasteryPower: AfterCurrentHpChanged damages all enemies when Osty loses HP; not simulated
+  - [ ] ReattachPower: AfterDeath/ShouldAllowHitting segments revive (a kill may not stick: lethal can be wrong)
+  - [ ] SoulboundPower: AfterCardGeneratedForCombat adds Souls when you create Souls (created-card counts)
+  - [ ] StampedePower: AfterAutoPostPlayPhaseEntered auto-plays random Attacks at the end of your turn (end-of-turn damage not simulated)
+  - [ ] StockPower: AfterDeath spawns another Axebot (the fight isn't over when it dies)
+  - [ ] SurroundedPower: BeforeCardPlayed turns you to face the target before the hit (back-attack damage may change)
+  - [ ] ThunderPower: AfterOrbEvoked damages Lightning's targets again; not simulated
+  - [ ] HowlFromBeyond: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn damage not simulated)
+  - [ ] IAmInvincible: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn block not simulated)
+  - [ ] MakeItSo: AfterCardPlayedLate returns to your hand after enough plays (hand counts)
+  - [ ] KinPriest: AfterDeath of its last follower changes its move mid-turn (the simulator keeps the intent from the start of the play)
+  - [ ] Queen: AfterDeath of the Amalgam switches her to the enraged move mid-turn (the simulator keeps the intent from the start of the play)
+

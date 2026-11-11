@@ -25,8 +25,9 @@ Everything needed to pick this repo up on a new machine, or after a long break. 
 ## After a game patch
 
 1. `./scripts/decompile.ps1`, then `git -C ~/git/sts2-decompiled diff HEAD~1 --stat` to see what changed.
-2. Check `docs/MODDING_NOTES.md` (mod loader facts) and the classes the mod reads (`docs/FEATURES.md` lists every one).
-3. Rebuild. Fix what breaks, and update the "v0.111.0" references in the docs.
+2. `node scripts/coverage-ledger.mjs`: regenerates `Diagnostics/CoverageLedger.Data.cs` (every class with combat hooks, and its hooks) and lists classes without a reviewed entry and entries for classes that lost their hooks. For each new class, and each class whose hooks changed (`git diff` on the data file), read its hook bodies in the decompile and write its entry in `CoverageLedger.Reviewed`: `covered:` (hook → what handles it), `ignore:` (hook → why it can't change a prediction) or `gap:` (what isn't modelled). Never classify by a class's name or by which commands it calls; read what the hook does. Add rules or simulator support for gaps that matter, with tests.
+3. Check `docs/MODDING_NOTES.md` (mod loader facts) and the classes the mod reads (`docs/FEATURES.md` lists every one).
+4. Rebuild (missing classes the rules name are build errors), fix what breaks, and update the "v0.111.0" references in the docs. In game, the `[coverage]` summary line at load should show no new, changed or unreviewed classes.
 
 ## Day-to-day loop
 
@@ -57,5 +58,5 @@ Working a report:
 - `core/`: shared code compiled into each mod (feature host, overlay, widgets, game-state helpers, error reporter).
 - `mods/SpireQoL/`: the mod. `Features/` (one per feature), `Procs/PlayFacts.cs` (what playing a card does), `Sim/` (the outcome simulator: `SimState`/`SimEngine` are pure C#, `SimAdapter` reads the game), `Combat/TurnEndModel.cs` (Incoming Damage view over the simulator), `Diagnostics/` (audits, snapshots), `Menu/` (settings menu and catalog), `Cards/` (on-card tab rendering).
 - `docs/`: FEATURES (complete list of what the mod does and touches), TRACKER (work log and open items), MODDING_NOTES (loader facts), ROADMAP, this file.
-- `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`.
+- `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`, `coverage-ledger.mjs` (the coverage ledger from the decompile), `dead-code.mjs` (members nothing references; run it with the analyzers before a cleanup).
 - `tests/SpireQoL.Sim.Tests/`: simulator tests (no game needed).
