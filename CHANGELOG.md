@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.0
+#### Changed
+- The proc check accounts for everything a play changes: energy, stars, gold, HP, max HP, your cards (pile, cost, upgrades, keywords, afflictions, enchantments) and relic counters. A change nothing in the play explains is reported with the relics, powers or cards that could have caused it (logs and error reports only).
+- The coverage check confirms every relic that can affect a fight has a tab, a tracker row or a reviewed reason, and reports one that doesn't (including relics new in a game update).
+- Random draws and auto-played cards no longer exempt a play from these checks.
+
 ### Spire QoL 0.30.0
 #### Added
 - Coverage check (on by default, logs and error reports only): every game mechanic that can act during a fight is listed with how the mod handles it; a mechanic the mod hasn't reviewed, one that's new in a game update, or a card whose code does something the mod doesn't count is reported the first time it shows up in your fight. The settings are checked to cover every tab, tracker row and feature.

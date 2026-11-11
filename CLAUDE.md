@@ -34,7 +34,7 @@ Incoming Damage, the lethal tab, and the Imbalanced and wake tabs come from one 
 
 ## Coverage (required with every game update and every new rule)
 
-Every game class with combat hooks has a reviewed entry in `mods/SpireQoL/Diagnostics/CoverageLedger.cs` (covered / ignore / gap), written from its hook bodies in the decompile, never from its name or a scan of the commands it calls. After `scripts/decompile.ps1`, run `node scripts/coverage-ledger.mjs` and review every class it lists. A new rule or simulator feature for a gap updates that class's entry to `covered:`. The coverage check reports unreviewed, new and changed classes from players' games: treat those reports as review tasks.
+Every game class with combat hooks has a reviewed entry in `mods/SpireQoL/Diagnostics/CoverageLedger.cs` (covered / ignore / gap), written from its hook bodies in the decompile, never from its name or a scan of the commands it calls. Every relic that can affect a fight has a tab, a tracker row or a reviewed reason in `Diagnostics/RelicTracking.cs`, written the same way. After `scripts/decompile.ps1`, run `node scripts/coverage-ledger.mjs` and review every class and relic it lists. A new rule or simulator feature for a gap updates that class's entry to `covered:`. The coverage check reports unreviewed, new and changed classes from players' games: treat those reports as review tasks.
 
 ## Automatic bug reports
 

@@ -1,9 +1,11 @@
 // Generates mods/SpireQoL/Diagnostics/CoverageLedger.Data.cs from the decompiled game source:
-// every game model class (relics, powers, cards, monsters, orbs, potions, enchantments, afflictions)
-// with the combat hooks it overrides. Each needs a reviewed entry in CoverageLedger.cs (covered,
-// ignore or gap, written from its hook bodies); this script lists the ones missing one.
-// The mod compares this with the game it's running on (CoverageLedger.cs): a class that's new,
-// whose hooks changed, or that has no rule and no reviewed reason is reported when it shows up.
+//  - every game model class (relics, powers, cards, monsters, orbs, potions, enchantments,
+//    afflictions) with the combat hooks it overrides (Diagnostics/CoverageHooks.txt). Each needs a
+//    reviewed entry in CoverageLedger.cs (covered, ignore or gap, written from its hook bodies);
+//  - every relic that can affect a fight (any hook outside Diagnostics/OutOfCombatHooks.txt). Each
+//    needs a tab, a tracker row or a reviewed reason in RelicTracking.cs.
+// It lists what's missing a review. The mod compares the data with the game it's running on and
+// reports new, changed and unreviewed classes when they show up.
 //
 // Usage: node scripts/coverage-ledger.mjs   (after scripts/decompile.ps1 for a new game version)
 import fs from "node:fs";
@@ -11,16 +13,16 @@ import path from "node:path";
 import os from "node:os";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
+const diag = path.join(root, "mods", "SpireQoL", "Diagnostics");
 const decomp = path.join(os.homedir(), "git", "sts2-decompiled");
 const models = path.join(decomp, "MegaCrit", "sts2", "Core", "Models");
 const version = JSON.parse(fs.readFileSync(path.join(decomp, "VERSION.json"), "utf8")).version;
+const lines = file => fs.readFileSync(file, "utf8").split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"));
 
 // Hooks that can change what happens in a fight and aren't already covered by the game's own math
 // that the mod calls (Hook.ModifyDamage, ModifyBlock, ModifyCardPlayCount, ModifyXValue,
-// ModifyOrbPassiveTriggerCounts, ShouldEtherealTrigger). Keep in sync with CoverageLedger.Hooks.
-export const hooks = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Diagnostics", "CoverageHooks.txt"), "utf8")
-  .split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"));
-
+// ModifyOrbPassiveTriggerCounts, ShouldEtherealTrigger).
+const hooks = lines(path.join(diag, "CoverageHooks.txt"));
 const folders = ["Relics", "Powers", "Cards", "Monsters", "Orbs", "Potions", "Enchantments", "Afflictions"];
 
 const rows = [];
@@ -30,12 +32,22 @@ for (const folder of folders) {
   if (!fs.existsSync(dir)) continue;
   for (const f of fs.readdirSync(dir)) {
     if (!f.endsWith(".cs")) continue;
-    const type = f.slice(0, -3);
     const src = fs.readFileSync(path.join(dir, f), "utf8");
     const found = [...new Set([...src.matchAll(hookRe)].map(m => m[1]))].sort();
-    if (found.length === 0) continue;
-    rows.push({ folder, type, hooks: found });
+    if (found.length) rows.push({ folder, type: f.slice(0, -3), hooks: found });
   }
+}
+
+// Relics that affect fights: every hook they override except the out-of-combat ones.
+const allHooks = new Set([...fs.readFileSync(path.join(models, "AbstractModel.cs"), "utf8").matchAll(/public virtual [^(]*?\b(\w+)\(/g)].map(m => m[1]));
+const outOfCombat = new Set(lines(path.join(diag, "OutOfCombatHooks.txt")));
+const relicRows = [];
+for (const f of fs.readdirSync(path.join(models, "Relics"))) {
+  if (!f.endsWith(".cs")) continue;
+  const src = fs.readFileSync(path.join(models, "Relics", f), "utf8");
+  const ov = [...new Set([...src.matchAll(/public override [^(=]*?\b(\w+)\(/g)].map(m => m[1]))]
+    .filter(h => (allHooks.has(h) || h.startsWith("TryModify")) && !outOfCombat.has(h)).sort();
+  if (ov.length) relicRows.push({ type: f.slice(0, -3), hooks: ov });
 }
 
 const out = [];
@@ -54,13 +66,30 @@ out.push("    private static readonly (string Folder, string Type, string Hooks)
 out.push("    {");
 for (const r of rows) out.push(`        ("${r.folder}", "${r.type}", "${r.hooks.join(",")}"),`);
 out.push("    };");
+out.push("");
+out.push("    /// <summary>Relics that can affect a fight (any hook outside Diagnostics/OutOfCombatHooks.txt), with those hooks: each needs a tab, a tracker row or a reviewed reason (RelicTracking).</summary>");
+out.push("    public static readonly (string Type, string Hooks)[] RelicFightHooks =");
+out.push("    {");
+for (const r of relicRows) out.push(`        ("${r.type}", "${r.hooks.join(",")}"),`);
+out.push("    };");
+out.push("");
+out.push("    /// <summary>Hooks that only act outside fights (Diagnostics/OutOfCombatHooks.txt): a relic overriding only these doesn't affect fights.</summary>");
+out.push("    public static readonly string[] OutOfCombatHooks = { " + [...outOfCombat].map(h => `"${h}"`).join(", ") + " };");
 out.push("}");
-fs.writeFileSync(path.join(root, "mods", "SpireQoL", "Diagnostics", "CoverageLedger.Data.cs"), out.join("\n") + "\n");
+fs.writeFileSync(path.join(diag, "CoverageLedger.Data.cs"), out.join("\n") + "\n");
 
-const ledger = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Diagnostics", "CoverageLedger.cs"), "utf8");
-const reviewed = new Set([...ledger.matchAll(/^\s*\["(\w+)"\] = "/gm)].map(m => m[1]));
+const keys = file => new Set([...fs.readFileSync(file, "utf8").matchAll(/^\s*\["(\w+)"\] = "/gm)].map(m => m[1]));
+const reviewed = keys(path.join(diag, "CoverageLedger.cs"));
 const missing = rows.filter(r => !reviewed.has(r.type)).map(r => r.type);
 const stale = [...reviewed].filter(t => !rows.some(r => r.type === t));
 console.log(`game ${version}: ${rows.length} classes with combat hooks; ${reviewed.size} reviewed entries`);
 console.log(missing.length ? `no reviewed entry (review their hooks, add to CoverageLedger.Reviewed): ${missing.join(", ")}` : "every class has a reviewed entry");
 if (stale.length) console.log(`entries for classes without combat hooks now (remove): ${stale.join(", ")}`);
+
+const catalog = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Menu", "SettingsCatalog.cs"), "utf8");
+const specs = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Data", "RelicSpecs.cs"), "utf8");
+const shown = new Set([...(catalog + specs).matchAll(/nameof\((\w+)\)|new\("(\w+)"/g)].map(m => m[1] || m[2]));
+const reasons = keys(path.join(diag, "RelicTracking.cs"));
+const untracked = relicRows.filter(r => !shown.has(r.type) && !reasons.has(r.type));
+console.log(`${relicRows.length} relics affect fights; ${relicRows.filter(r => shown.has(r.type)).length} have a tab or tracker row, ${reasons.size} a reviewed reason`);
+console.log(untracked.length ? `relics with no tab, tracker row or reason (review, add to RelicTracking.Reasons):\n${untracked.map(r => `  ${r.type}: ${r.hooks.join(",")}`).join("\n")}` : "every relic that affects fights is tracked or reviewed");

@@ -75,3 +75,8 @@ Code that isn't part of what the mod does is removed, not kept for later: unused
 Spire QoL's goals are listed in docs/ROADMAP.md: a tab whenever a card does anything beyond its text, every fight-affecting relic tracked, reminders for out-of-combat decisions a relic changes, only knowable information, and every effect either predicted or reported. The default is complete coverage; what shows by default is tuned afterwards in settings.
 *Added:* out-of-combat reminders (goal 3), as Relic Reminders did in StS1.
 
+### 18. Every fight-affecting relic is tracked or reviewed; unexplained changes are reported, not waived — active (2026-11-10)
+Every relic that can affect a fight (any hook outside the out-of-combat list) has a tab, a tracker row or a reviewed reason (RelicTracking, from its hook bodies), checked when you have it. The proc audit snapshots everything a play can change (energy, stars, gold, HP, max HP, every card's state and pile, relics) and reports any change no code that ran explains, naming the possible sources. Random draws and auto-plays don't waive a check: the drawn and auto-played cards and the sources reacting to draws become explanations instead. Only comparisons that are impossible stay skipped (the simulator can't predict an auto-played random card).
+*Why:* aim as close to 100% as the limits of evaluation allow; a few possible causes are a reason to name them, not to skip.
+*Safety:* predictions stay on the safe side for you: Incoming Damage is the worst branch (the safe fallback when branches run out never lets a random hit save you), good outcomes need every branch. Known gaps that could underestimate damage to you are listed first in the tracker.
+

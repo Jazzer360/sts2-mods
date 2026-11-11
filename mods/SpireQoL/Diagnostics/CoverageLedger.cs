@@ -351,7 +351,7 @@ internal static partial class CoverageLedger
         var hookSet = Hooks.ToHashSet();
         var ledger = Generated.ToDictionary(g => g.Type, g => g);
         var result = new Dictionary<string, Entry>();
-        foreach (var t in GameTypes())
+        foreach (var t in ModelTypes())
         {
             string hooks;
             try
@@ -377,7 +377,8 @@ internal static partial class CoverageLedger
         return result;
     }
 
-    private static IEnumerable<Type> GameTypes()
+    /// <summary>The game's model classes the coverage check and the audits read (relics, powers, cards...).</summary>
+    public static IEnumerable<Type> ModelTypes()
     {
         Type[] all;
         try { all = typeof(AbstractModel).Assembly.GetTypes(); }
@@ -461,6 +462,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
             _ = CoverageLedger.ByType;
             _ = CardCoverage.Issues;
             _catalogProblems = CatalogCheck.Problems();
+            CodeIndex.Prewarm(CoverageLedger.ModelTypes());
         });
         if (!_building.IsCompleted) return;
         if (!_summarized)
@@ -519,6 +521,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
                         break;
                 }
             }
+            if (m is RelicModel) CheckRelicTracking(t);
             if (CardCoverage.Issues.TryGetValue(t.Name, out var issues))
                 Unexpected(t.Name, "card-code", $"its code does what the mod doesn't count: {string.Join("; ", issues)}.");
         }
@@ -526,6 +529,35 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         {
             ModEntry.Log.Warn($"[coverage] check failed for {t.Name}: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Goal 2: a relic that can affect a fight has a tab, a tracker row or a reviewed reason
+    /// (RelicTracking). A relic the ledger doesn't list is checked by its hooks (new in a game update).
+    /// </summary>
+    private static void CheckRelicTracking(Type t)
+    {
+        var name = t.Name;
+        var listed = CoverageLedger.RelicFightHooks.Any(r => r.Type == name);
+        if (!listed)
+        {
+            var outOfCombat = CoverageLedger.OutOfCombatHooks.ToHashSet();
+            var fight = t.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
+                .Where(m => m.IsVirtual && m.GetBaseDefinition().DeclaringType != t && m.GetBaseDefinition().DeclaringType?.Name is "AbstractModel" or "RelicModel"
+                            && !outOfCombat.Contains(m.Name))
+                .Select(m => m.Name).Distinct().ToList();
+            if (fight.Count == 0) return;
+            Unexpected(name, "relic-new", $"a relic the tracking review doesn't list (new in this game version?) with fight hooks: {string.Join(", ", fight)}.");
+            return;
+        }
+        if (SettingsCatalog.Sources.Any(s => s.Type == name && (s.Tag != null || s.Tracker != null))) return;
+        if (SpireQoL.Data.RelicSpecs.For(name) != null) return;
+        if (RelicTracking.Reasons.TryGetValue(name, out var why))
+        {
+            if (why.StartsWith("gap:")) ModEntry.Log.Info($"[coverage] known tracking gap in this fight: {name} ({why})");
+            return;
+        }
+        Unexpected(name, "relic-untracked", "a relic that can affect fights with no tab, no tracker row and no reviewed reason (RelicTracking).");
     }
 
     private static void Unexpected(string type, string kind, string details)

@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
+using SpireQoL.Data;
 using SpireQoL.Features;
 using SpireQoL.Procs;
 using SpireQoL.Sim;
@@ -103,6 +104,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         /// <summary>Why the after-play state wasn't captured.</summary>
         public string? AfterSkipped;
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
+        public PlaySnapshot? FullBefore, FullAfter;
     }
 
     private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
@@ -192,6 +194,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public string? AfterSkipped;
         /// <summary>Every power on every creature when the play started and when it finished.</summary>
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
+        /// <summary>Energy, stars, gold, HP, cards and relics when the play started and finished.</summary>
+        public PlaySnapshot? FullBefore, FullAfter;
     }
 
     /// <summary>Power amounts on every creature in the fight, by creature and power class.</summary>
@@ -269,7 +273,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             if (!_running.TryGetValue(action, out var rec))
             {
-                rec = new PlayRecord { Action = action, Target = play.Target, Before = CaptureBefore(), PowersBefore = PowerSnapshot() };
+                rec = new PlayRecord { Action = action, Target = play.Target, Before = CaptureBefore(), PowersBefore = PowerSnapshot(), FullBefore = PlaySnapshot.Take(play.Player) };
                 _running[action] = rec;
                 action.AfterFinished += OnActionFinished;
                 action.BeforeCancelled += OnActionCancelled;
@@ -318,6 +322,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (me != null && cs != null)
             {
                 rec.PowersAfter = PowerSnapshot();
+                rec.FullAfter = PlaySnapshot.Take(me);
                 try
                 {
                     rec.After = SimAdapter.Build(me, cs, out var ids);
@@ -493,6 +498,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Before = rec.Before, Target = rec.Target,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped,
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
+            FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
             StaleBecause = StaleBecause(hist, card, start, me),
         };
         Report(w, me, hist);
@@ -508,6 +514,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             ShuffleIssues(w, me, entries, flashed, issues, model);
             AfterPlayIssues(w, entries, issues, model);
             PowerChangeIssues(w, me, entries, flashed, issues, model);
+            EverythingIssues(w, me, entries, flashed, issues, model);
             if (w.StaleBecause != null && issues.Count > 0)
             {
                 // Played before the previous card finished: its tabs didn't see that card's effects.
@@ -583,6 +590,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             {
                 "no tab" or "didn't fire" => new[] { kind, rest.Split(' ')[0] },
                 "power went down" => new[] { kind, rest.Split(' ')[0] },
+                // Grouped by the sources that could have done it (amounts and cards left out).
+                _ when kind.StartsWith("untracked") => new[] { kind, rest.Contains("could be: ") ? rest[(rest.IndexOf("could be: ") + 10)..].TrimEnd(')') : card },
                 // Which powers, and which way an amount was off: different causes, different issues.
                 "unexplained" when effect == "powers" => new[] { kind, card, "powers", rest },
                 "unexplained" => new[] { kind, card, effect },
@@ -774,12 +783,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static void PowerChangeIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, List<string> model)
     {
         if (w.PowersBefore == null || w.PowersAfter == null) return;
-        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay))
-        {
-            model.Add("power changes: not checked (auto-played cards)");
-            return;
-        }
+        // The card's own powers, and those of cards it auto-played.
         var own = OwnPowerTypes(w.Card).Select(t => t.Name).ToHashSet();
+        foreach (var e in entries.OfType<CardPlayStartedEntry>().Where(e => e.CardPlay.IsAutoPlay))
+            own.UnionWith(OwnPowerTypes(e.CardPlay.Card).Select(t => t.Name));
         var acted = flashed.Select(m => m.GetType().Name).ToHashSet();
         var tabbed = w.Predicted.Select(t => t.Key.Contains(':') ? t.Key[(t.Key.IndexOf(':') + 1)..] : t.Key).ToHashSet();
         var debuffs = w.Facts?.EnemyDebuffs.Count > 0;
@@ -794,6 +801,48 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var who = creature == me.Creature ? "you" : creature.Monster?.GetType().Name ?? "creature";
             issues.Add($"power went down: {type} on {who} {before}→{after}, with nothing in the play to explain it");
         }
+    }
+
+    // ------------------------------------------------------------------ everything else
+
+    /// <summary>
+    /// Energy, stars, gold, HP, max HP, your cards and relics before and after the play (PlaySnapshot):
+    /// a change no code that ran explains is reported with the sources present that could have made it.
+    /// </summary>
+    private static void EverythingIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, List<string> model)
+    {
+        if (w.FullBefore == null || w.FullAfter == null) return;
+        var cs = Sts2State.Combat;
+        if (cs == null) return;
+        var present = new List<AbstractModel>();
+        present.AddRange(me.Relics);
+        foreach (var c in cs.Creatures)
+        {
+            present.AddRange(c.Powers);
+            if (c.Monster != null) present.Add(c.Monster);
+        }
+        foreach (var card in w.FullBefore.Cards.Keys)
+        {
+            present.Add(card);
+            if (card.Enchantment != null) present.Add(card.Enchantment);
+            if (card.Affliction != null) present.Add(card.Affliction);
+        }
+        var tabbed = w.Predicted.Select(t => t.Key.Contains(':') ? t.Key[(t.Key.IndexOf(':') + 1)..] : t.Key).ToHashSet();
+        // Code that ran: the card, sources with a tab, sources that flashed, cards it auto-played, cards
+        // it drew (and their enchantments), and sources that react to draws when it drew.
+        var autoPlayed = entries.OfType<CardPlayStartedEntry>().Where(e => e.CardPlay.IsAutoPlay).Select(e => e.CardPlay.Card).ToList();
+        var drawn = entries.OfType<CardDrawnEntry>().Where(d => !d.FromHandDraw && d.Card.Owner == me).Select(d => d.Card).ToList();
+        var drawReactors = drawn.Count == 0 ? Enumerable.Empty<AbstractModel>()
+            : present.Where(m => CodeIndex.Does(m.GetType(), Array.Empty<string>(), new[] { "AfterCardDrawn", "AfterCardDrawnEarly" }));
+        var explainers = present.Where(m => tabbed.Contains(m.GetType().Name)).Select(m => m.GetType())
+            .Concat(flashed.Select(m => m.GetType())).Append(w.Card.GetType())
+            .Concat(autoPlayed.Select(c => c.GetType()))
+            .Concat(drawn.Select(c => c.GetType())).Concat(drawn.Where(c => c.Enchantment != null).Select(c => c.Enchantment!.GetType()))
+            .Concat(drawReactors.Select(m => m.GetType()))
+            .Distinct().ToList();
+        var tracked = new HashSet<string>(tabbed);
+        foreach (var s in RelicSpecs.All) tracked.Add(s.TypeName);
+        issues.AddRange(PlaySnapshot.Unexplained(w.FullBefore, w.FullAfter, w.Card, entries, w.Shuffles, explainers, present, me, tracked));
     }
 
     // ------------------------------------------------------------------ shuffles

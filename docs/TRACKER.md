@@ -395,6 +395,8 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Every-power check after each play (powers that went down with nothing to explain it).
 - [x] Simulator: Concoct, Monarch's Gaze (single-target and all-enemy attacks), Storm and Trash to Treasure channels.
 - [x] Dead code removed (analyzers + `scripts/dead-code.mjs`): Intent Forecast stub, `UiKit.Badge`, `Sts2State.HasVar`, `TurnEndModel.Overblock`, `PlayFacts.DebuffsLanding`, `SimAdapter.SelfPowers`, unused parameters and usings.
+- Known gaps that could **underestimate damage to you** (fix first): Queen and Kin Priest switching to a stronger move mid-turn when an ally dies; multiplayer Covered/Intercept (attacks on a covered player go to the interceptor).
+- Relic tracking gaps (RelicTracking): Pael's Flesh (turn-timer row), Reptile Trinket and Belt Buckle (potion tabs), The Boot and Lunar Pastry (simulator).
 - Known gaps (from the ledger; each is logged when present in a fight):
 - [ ] LunarPastry: AfterSideTurnEnd gains stars at the end of your turn; Black Hole's end-of-turn damage from them isn't simulated
   - [ ] PaelsEye: crossed tab covers giving up its extra turn; its BeforeSideTurnEndEarly exhaust of your hand (no cards played) isn't simulated (Feel No Pain, Charon's Ashes at end of turn)
@@ -428,4 +430,4 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [ ] Find the choice screens in the decompile: rest site options, event options, card rewards, shop items, card removal, potion rewards.
 - [ ] Coverage for it: extend the coverage ledger to the out-of-combat hooks (`AfterCardChangedPiles` on the deck, `ShouldAddToDeck`, `ModifyRestSiteHealAmount`, `AfterRestSiteHeal`/`Smith`, `ModifyRewards`, `ModifyCardRewardCreationOptions`, `ModifyMerchantPrice`/`CardPool`/`CardRarity`, `ShouldAllowMerchantCardRemoval`, `ModifyGoldGained`, `AfterGoldGained`, `ShouldProcurePotion`...), so every relic that changes a choice is reviewed and listed.
 - [ ] First cases: Bing Bong (cards added to your deck are copied: on card rewards, shop cards, event cards), rest-site relics, relics that react to curses joining your deck, relics that change shop prices or rewards.
-
+- [x] 0.31.0: everything-snapshot per play (`PlaySnapshot`, `CodeIndex`), relic tracking review for all 163 fight-affecting relics (`RelicTracking`), no blanket skips for draws and auto-plays.
