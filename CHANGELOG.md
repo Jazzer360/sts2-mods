@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.9
+#### Changed
+- The coverage check's card scan also checks cards that forge or transform cards, and checks each card's upgraded version too (logs and error reports only).
+
 ### Spire QoL 0.31.8
 #### Fixed
 - Incoming Damage and the lethal, Imbalanced and wake tabs count the block an enemy's Thorns takes from you when your card's attack hits it (before each hit).

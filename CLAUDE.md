@@ -36,6 +36,8 @@ Incoming Damage, the lethal tab, and the Imbalanced and wake tabs come from one 
 
 Every game class with combat hooks has a reviewed entry in `mods/SpireQoL/Diagnostics/CoverageLedger.cs` (covered / ignore / gap), written from its hook bodies in the decompile, never from its name or a scan of the commands it calls. Every relic that can affect a fight has a tab, a tracker row or a reviewed reason in `Diagnostics/RelicTracking.cs`, written the same way. After `scripts/decompile.ps1`, run `node scripts/coverage-ledger.mjs` and review every class and relic it lists. A new rule or simulator feature for a gap updates that class's entry to `covered:`. The coverage check reports unreviewed, new and changed classes from players' games: treat those reports as review tasks.
 
+Card tables get a scan check. Any per-card rule (a list or switch keyed by card name in `Procs/PlayFacts.cs` or `Sim/SimAdapter.cs`) has a check in `Diagnostics/CardCoverage.cs` that flags a card whose code does that thing (the game command its OnPlay calls) but isn't counted, so cards added in a game update are caught before anyone plays them. Fixing one card means asking how the next card like it would be caught. Never quiet a scan or audit by naming a card in the check: fix the check (Spinner is tested on its upgraded copy), or add a `Reviewed` entry that says why.
+
 ## Automatic bug reports
 
 Crashes and audit mismatches from players' games become GitHub issues labelled `auto-report` (via Sentry and the Sentry issues workflow). When adding a feature that can fail or predict something, make sure failures reach `ErrorReporter` (the frame loop does this for exceptions) and that predictions are checked by an audit.

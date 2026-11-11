@@ -37,7 +37,7 @@ internal static class CardCoverage
         {
             try
             {
-                var issues = Check(card, others);
+                var issues = Check(card, others, cards);
                 if (issues.Count > 0) result[card.GetType().Name] = issues;
             }
             catch (Exception ex)
@@ -60,35 +60,66 @@ internal static class CardCoverage
         [nameof(DeprecatedCard)] = "a placeholder card the game keeps for old saves (draws 1, removes itself from the deck)",
     };
 
-    private static List<string> Check(CardModel card, List<CardModel> others)
+    /// <summary>
+    /// An upgraded copy of the game's template card, made the way the game makes its upgrade tooltips
+    /// (MutableClone, UpgradeInternal): some cards only do something when upgraded (Spinner+ channels Glass).
+    /// Null when the card can't be upgraded.
+    /// </summary>
+    private static CardModel? UpgradedCopy(CardModel card)
+    {
+        try
+        {
+            if (card.MaxUpgradeLevel < 1) return null;
+            var copy = (CardModel)card.MutableClone();
+            copy.UpgradeInternal();
+            copy.FinalizeUpgradeInternal();
+            return copy;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static List<string> Check(CardModel card, List<CardModel> others, List<CardModel> all)
     {
         var name = card.GetType().Name;
         if (Reviewed.ContainsKey(name) || Calculated.Contains(name)) return new List<string>();
         var calls = OnPlayCalls(card.GetType());
         var issues = new List<string>();
+        var upgraded = UpgradedCopy(card);
+        // Counted when the card or its upgrade counts it.
+        bool None(Func<CardModel, int> count) => count(card) == 0 && (upgraded == null || count(upgraded) == 0);
         bool Calls(string type, string method) => calls.Contains(type + "." + method);
         bool Applies<T>() => calls.Contains("PowerCmd.Apply<" + typeof(T).Name + ">");
         bool HasPowerVar<T>() => card.DynamicVars.Values.Any(v => v.GetType() is { IsGenericType: true } t
                                                                  && t.GetGenericTypeDefinition() == typeof(PowerVar<>) && t.GetGenericArguments()[0] == typeof(T));
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && PlayFacts.CardsDrawn(card, 5) == 0 && PlayFacts.CardsDrawn(card, 1) == 0)
+            && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         if (Calls("OrbCmd", "Channel") && !SimAdapter.HandlesChannel(name))
             issues.Add("channels orbs (the simulator doesn't add them)");
-        if (Calls("OrbCmd", "Channel") && PlayFacts.ChannelCount(card, name, null!) == 0 && name != nameof(Spinner)) // Spinner: only when upgraded
+        if (Calls("OrbCmd", "Channel") && None(c => PlayFacts.ChannelCount(c, name, null!)))
             issues.Add("channels orbs (not counted for Metronome)");
-        if (Calls("CreatureCmd", "GainBlock") && PlayFacts.BlockGainCount(card, name, others) == 0)
+        if (Calls("CreatureCmd", "GainBlock") && None(c => PlayFacts.BlockGainCount(c, name, others)))
             issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
-        if (Calls("CardCmd", "Exhaust") && PlayFacts.ExhaustOthers(card, name, others, 5, 1) == 0)
+        if (Calls("CardCmd", "Exhaust") && None(c => PlayFacts.ExhaustOthers(c, name, others, 5, 1)))
             issues.Add("exhausts cards (not counted: Feel No Pain, Dark Embrace...)");
-        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && PlayFacts.DiscardCount(card, name, others, PlayFacts.CardsDrawn(card, 5)) == 0)
+        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(c => PlayFacts.DiscardCount(c, name, others, PlayFacts.CardsDrawn(c, 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
-            && PlayFacts.GeneratedCount(card, name, others, null!, out _) == 0)
+            && None(c => PlayFacts.GeneratedCount(c, name, others, null!, out _)))
             issues.Add("creates cards (not counted: created-card procs)");
+        // Forging creates the Sovereign Blade through ForgeCmd, not in the card's own code.
+        if (Calls("ForgeCmd", "Forge") && !PlayFacts.ForgeCards.Contains(name))
+            issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");
+        // Every game card as the hand, so any filter (statuses, attacks) finds something to transform.
+        if ((Calls("CardCmd", "Transform") || Calls("CardCmd", "TransformTo") || Calls("CardCmd", "TransformToRandom"))
+            && None(c => PlayFacts.TransformCount(c, name, all, 5)))
+            issues.Add("transforms cards (not counted: the proc check's created-card budget)");
         if (Calls("PlayerCmd", "GainStars") && !PlayFacts.StarGainCards.Contains(name))
             issues.Add("gains stars (not counted for Black Hole)");
         return issues;

@@ -668,7 +668,7 @@ public sealed class PlayFacts
     }
 
     // Cards that Forge when played (ForgeCmd.Forge in OnPlay; decompile v0.111.0).
-    private static readonly HashSet<string> ForgeCards = new()
+    internal static readonly HashSet<string> ForgeCards = new()
     {
         nameof(BeatIntoShape), nameof(BigBang), nameof(Bulwark), nameof(Conqueror), nameof(RefineBlade),
         nameof(SeekingEdge), nameof(SpoilsOfBattle), nameof(SummonForth), nameof(TheSmith), nameof(WroughtInWar),
@@ -694,7 +694,7 @@ public sealed class PlayFacts
     }
 
     /// <summary>Most cards a play transforms (CardCmd.Transform / TransformTo in OnPlay; decompile v0.111.0).</summary>
-    private static int TransformCount(CardModel card, string name, List<CardModel> others, int drawPile)
+    internal static int TransformCount(CardModel card, string name, List<CardModel> others, int drawPile)
     {
         int Var(string key, int fallback) => Sts2State.Var(card, key, fallback);
         int Transformable(Func<CardModel, bool> filter)
