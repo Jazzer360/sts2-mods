@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.7
+#### Fixed
+- The proc check no longer reports a card made free for the turn (Splash) going back to its cost after you play it (logs and error reports only).
+- The outcome audit counts an enemy's hits through block only up to the hit that kills it, so the Waterfall Giant coming back with Steam Eruption no longer reports an extra hit (logs and error reports only).
+
 ### Spire QoL 0.31.6
 #### Fixed
 - The proc check no longer reports less damage or block than predicted when the play ends the fight: the game stops logging from the hit that ends it (Dualcast's second evoke killing the last enemy) (logs and error reports only).

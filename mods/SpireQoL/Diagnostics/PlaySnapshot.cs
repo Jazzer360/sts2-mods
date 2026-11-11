@@ -125,7 +125,10 @@ internal sealed class PlaySnapshot
             if (!after.Cards.TryGetValue(card, out var a)) continue; // gone (exhausted, removed): the budget's
             var own = card.GetType();
             var name = card.GetType().Name;
-            if (a.Cost != b.Cost && b.Cost != -99 && a.Cost != -99) Check(Cost, $"{name} {b.Cost}→{a.Cost}", own);
+            // The played card going back up is the game clearing its "this turn or until played" cost
+            // (CardModel → CardEnergyCost.AfterCardPlayedCleanup: Splash, Bullet Time, Bookmark...).
+            var playedCleanup = ReferenceEquals(card, played) && a.Cost > b.Cost;
+            if (a.Cost != b.Cost && b.Cost != -99 && a.Cost != -99 && !playedCleanup) Check(Cost, $"{name} {b.Cost}→{a.Cost}", own);
             if (a.Upgraded != b.Upgraded) Check(Upgrade, name, own);
             if (a.Keywords != b.Keywords) Check(Keyword, $"{name} [{b.Keywords}]→[{a.Keywords}]", own);
             if (a.Affliction != b.Affliction) Check(Affliction, $"{name} {(b.Affliction == "" ? "none" : b.Affliction)}→{(a.Affliction == "" ? "none" : a.Affliction)}", own);

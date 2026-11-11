@@ -218,7 +218,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
             // What happened: HP lost and instances through its block during your end of turn; whether it
             // died before its move; its first hit on you.
+            // Up to the hit that kills it: an enemy that comes back (Waterfall Giant with Steam Eruption, at
+            // 999999999 HP) takes later hits that aren't part of the simulated fight.
             var eot = endOfTurn.OfType<DamageReceivedEntry>().Where(d => d.Result.Receiver == creature).ToList();
+            var killHit = eot.FindIndex(d => d.Result.WasTargetKilled);
+            if (killHit >= 0) eot = eot.Take(killHit + 1).ToList();
             var hpAtTurnEnd = Math.Max(0, start.Hp - eot.Sum(d => d.Result.UnblockedDamage));
             var through = eot.Count(d => d.Result.UnblockedDamage > 0);
             var killAt = window.FindIndex(e => e is DamageReceivedEntry d && d.Result.Receiver == creature && d.Result.WasTargetKilled);
