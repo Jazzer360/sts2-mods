@@ -40,6 +40,7 @@ Not published to the Workshop unless the upload can run in CI. Releases stay on 
 Each frame builds every card's play on the main thread (it reads the game), runs all the simulations in parallel on worker threads, and waits for them (capped at 250 ms), so tabs appear on the frame they belong to. Results are cached by a fingerprint of the whole state.
 *Replaced:* a 4 ms per-frame budget that spread simulations over later frames (tabs could appear late), and an earlier non-blocking draft (tabs appeared when ready).
 *Why:* correctness on the frame matters more than the frame's length; the work is independent per card and target, so it parallelizes well.
+*Known exception to #3:* if the cap is hit, that card's simulator tabs are missing for a frame or two, warnings included. Accepted because the cap is only reached in pathological states; the audit notes it (SimPending).
 
 ### 10. Observe-only Harmony patches are allowed — active (2026-11-10)
 Spire QoL may patch game methods only to observe (a prefix that records a call and changes nothing). First use: `CardPileCmd.Shuffle`, which the game doesn't record in its history.
@@ -52,7 +53,7 @@ The proc audit attributes every history entry, relic/power flash and shuffle to 
 *Why:* most audit mismatches were the window split's own mistakes; the game already knows which action caused what.
 
 ### 12. One model of a card play — active (2026-11-10, finished in 0.28.0)
-What a play does (draws, exhausts, block gains, shuffles, procs) is moving from two models (the proc rules in `ProcIndicatorsFeature`/`PlayFacts`, and the simulator's play step) toward one: pure, tested code computing the play's effects, which both the tabs and the simulator read. Started with draws (`Sim/DrawMath.cs`).
+What a play does (draws, exhausts, block gains, shuffles, procs) was described by two models (the proc rules in `ProcIndicatorsFeature`/`PlayFacts`, and the simulator's play step); each rule now lives in exactly one of them, as below.
 *Why:* chained effects had to be written in both places, and a miss in one (Dark Embrace draws) went unnoticed.
 *Result:* the split is by kind of knowledge, with no rule in two places. **Proc rules** decide which sources fire and how much (they need game objects: counters, private flags, and the game's own damage and block math). **The simulator** decides every consequence: chains of draws and shuffles (`Sim/PlayChain.cs`), block gains and Juggernaut, kills (Gremlin Horn, enemy death effects), block breaks (Hand Drill, Burrowed), stuns (Flutter, Plow, Shriek), The Gambit, Slippery, enemy reactions (Curl Up, Sneaky, Skittish, Enrage), and the end of turn. Tabs for consequences read the simulator's branches.
 *Not moved, on purpose:* proc amounts stay in the proc rules: they come from the game's damage and block hooks, and a pure copy of that math would be a second model. Black Hole (stars) and Metronome (channels) stay as the rules' second pass: the simulator doesn't model stars or channel counts, so nothing is duplicated. `PlayFacts.Kills` stays as a pre-simulation estimate of where random and all-enemy procs can land (procs feed the simulator, so they can't wait for it).
