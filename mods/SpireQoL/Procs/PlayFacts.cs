@@ -598,8 +598,10 @@ public sealed class PlayFacts
 
     internal static int ChannelCount(CardModel card, string name, Player me) => name switch
     {
-        nameof(BallLightning) or nameof(Chill) or nameof(ColdSnap) or nameof(Coolheaded) or nameof(Fusion) or nameof(Glasswork) or nameof(Ignition)
-            or nameof(Null) or nameof(ShadowShield) or nameof(Spinner) or nameof(Zap) or nameof(Darkness) => 1,
+        nameof(BallLightning) or nameof(ColdSnap) or nameof(Coolheaded) or nameof(Fusion) or nameof(Glasswork) or nameof(Ignition)
+            or nameof(Null) or nameof(ShadowShield) or nameof(Zap) or nameof(Darkness) => 1,
+        nameof(Spinner) => card.IsUpgraded ? 1 : 0, // only Spinner+ channels on play; Spinner's power channels at turn start
+        nameof(Chill) => ChillChannels(card), // one Frost per hittable enemy
         nameof(Glacier) => 2,
         nameof(MeteorStrike) or nameof(Rainbow) => 3,
         nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) => Sts2State.Var(card, "Repeat", 1),
@@ -608,6 +610,11 @@ public sealed class PlayFacts
         nameof(Voltaic) => card.DynamicVars.TryGetValue("CalculatedChannels", out var vc) && vc is CalculatedVar calc ? (int)calc.Calculate(null) : 0,
         _ => 0,
     };
+
+    private static int ChillChannels(CardModel card)
+    {
+        try { return card.CombatState is { } cs ? cs.HittableEnemies.Count : 1; } catch { return 1; }
+    }
 
     // Cards that gain you stars when played (PlayerCmd.GainStars in OnPlay).
     internal static readonly HashSet<string> StarGainCards = new()

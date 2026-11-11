@@ -76,7 +76,7 @@ internal static class CardCoverage
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         if (Calls("OrbCmd", "Channel") && !SimAdapter.HandlesChannel(name))
             issues.Add("channels orbs (the simulator doesn't add them)");
-        if (Calls("OrbCmd", "Channel") && PlayFacts.ChannelCount(card, name, null!) == 0)
+        if (Calls("OrbCmd", "Channel") && PlayFacts.ChannelCount(card, name, null!) == 0 && name != nameof(Spinner)) // Spinner: only when upgraded
             issues.Add("channels orbs (not counted for Metronome)");
         if (Calls("CreatureCmd", "GainBlock") && PlayFacts.BlockGainCount(card, name, others) == 0)
             issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");

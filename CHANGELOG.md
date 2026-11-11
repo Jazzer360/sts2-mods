@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.5
+#### Fixed
+- An un-upgraded Spinner no longer counts as channelling a Glass orb when played (only Spinner+ does; its power channels at the start of your turn), so its predicted front-orb evoke, kills and orb tabs are gone.
+- Chill counts one Frost per enemy it can hit, not one, for orb evokes, kills and Metronome.
+
 ### Spire QoL 0.31.4
 #### Fixed
 - Cards that Forge (Big Bang, Bulwark, Conqueror, Refine Blade, Seeking Edge, The Smith...) count the Sovereign Blade they create when you don't have one, for the Pillar of Creation, Arsenal and Regalite tabs.

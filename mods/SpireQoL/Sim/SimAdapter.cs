@@ -369,7 +369,10 @@ public static class SimAdapter
             }
             if (Channels.TryGetValue(name, out var kinds))
             {
-                foreach (var k in kinds) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(k, focus, lightningBonus) });
+                // Spinner channels only when upgraded; Chill channels one Frost per hittable enemy.
+                var times = name is nameof(Spinner) or nameof(Chill) ? PlayFacts.ChannelCount(card, name, me) : 1;
+                for (var t = 0; t < times; t++)
+                    foreach (var k in kinds) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(k, focus, lightningBonus) });
             }
             else if (RepeatChannels.TryGetValue(name, out var rk))
             {
