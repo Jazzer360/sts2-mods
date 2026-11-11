@@ -43,7 +43,7 @@ public sealed class SettingsMenu
         (Page.EnemyPowers, "Enemy powers"),
     };
 
-    private static readonly (string Id, string Name, string Description)[] FeatureRows =
+    internal static readonly (string Id, string Name, string Description)[] FeatureRows =
     {
         ("card-indicators", "Card Indicators", "Retain, Sly, replay and double-play tabs; Ethereal cards fade."),
         ("proc-indicators", "Proc Indicators", "A tab for every relic or power a card would set off (the Relics and powers pages)."),
@@ -52,6 +52,7 @@ public sealed class SettingsMenu
         ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile."),
         ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports)."),
         ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports)."),
+        ("coverage-watch", "Coverage check", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports)."),
     };
 
     private readonly QolContext _ctx;

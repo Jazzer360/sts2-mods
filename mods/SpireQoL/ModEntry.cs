@@ -69,10 +69,9 @@ public static class ModEntry
             new ProcIndicatorsFeature(ctx),
             new IncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
-            new IntentForecastFeature(),
             new Diagnostics.ForecastAudit(),
             new Diagnostics.ProcAudit(ctx),
-            new Diagnostics.CoverageWatch(),
+            new Diagnostics.CoverageWatch(ctx),
         };
         foreach (var f in features) Features.Add(f);
 

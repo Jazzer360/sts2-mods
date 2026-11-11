@@ -86,12 +86,11 @@ public sealed class SimOutcome
     public HashSet<int> BlockReactionInAny = new();
     /// <summary>The play breaks some enemy's block in every branch (Hand Drill).</summary>
     public bool PlayBreaksBlockInEveryBranch;
-    /// <summary>Block gains during the play (each sets off Juggernaut): fewest and most over branches.</summary>
-    public int PlayBlockGainsMin, PlayBlockGainsMax;
+    /// <summary>Block gains during the play (each sets off Juggernaut): the most over branches.</summary>
+    public int PlayBlockGainsMax;
 
     /// <summary>Stunned during your turn (Burrowed, Flutter, Plow, Shriek) and alive when its turn comes, in every branch.</summary>
     public bool StunnedInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { StunnedThisTurn: true, DiedBeforeActing: false });
-    public bool StunnedInAny(int id) => Branches.Any(b => b.Enemy(id) is { StunnedThisTurn: true, DiedBeforeActing: false });
     public bool GambitInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { GambitTriggered: true });
     public bool SlipperyInAny(int id) => Branches.Any(b => b.Enemy(id) is { SlipperyTriggered: true });
     /// <summary>The play kills some enemy in every branch (not always the same one).</summary>
@@ -164,7 +163,6 @@ public static class SimEngine
             PlayKillsInEveryBranch = !playTruncated && killedPerBranch.Count > 0 && killedPerBranch.All(k => k.Count > 0),
             BlockReactionInAny = reacted,
             PlayBreaksBlockInEveryBranch = breaksBlock,
-            PlayBlockGainsMin = gains.Count > 0 ? gains.Min() : 0,
             PlayBlockGainsMax = gains.Count > 0 ? gains.Max() : 0,
         };
         if (b.Truncated)

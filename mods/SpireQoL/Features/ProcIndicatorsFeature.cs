@@ -230,7 +230,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             var lethal = false;
             try
             {
-                lethal = sim != null && FinishSim(card, f, merged, sim);
+                lethal = sim != null && FinishSim(f, merged, sim);
             }
             catch (Exception ex)
             {
@@ -268,8 +268,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     // Card simulations run in parallel on worker threads (the simulator is plain C#, no game types):
     // the frame reads the game and builds every card's inputs, starts all their simulations at once,
     // and waits for them (capped at SimWaitCapMs). Results are cached until the state changes.
-    // SimBudgetMs is what one simulation must stay under on a dev machine (tests).
-    private const double SimBudgetMs = 4;
+    // One simulation must stay under 4 ms on a dev machine (SimPerformanceTests).
     private const int SimWaitCapMs = 250;
     private readonly Dictionary<string, Task<SimOutcome[]>> _simCache = new();
 
@@ -355,7 +354,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     }
 
     /// <summary>Reads a card's finished simulations into its tabs (see StartSim); returns whether it's lethal.</summary>
-    private bool FinishSim(CardModel card, PlayFacts f, Dictionary<string, (AbstractModel Src, Hit Hit)> merged, Task<SimOutcome[]> task)
+    private bool FinishSim(PlayFacts f, Dictionary<string, (AbstractModel Src, Hit Hit)> merged, Task<SimOutcome[]> task)
     {
         var te = TurnEnd();
         if (te == null) return false;
@@ -578,7 +577,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     var n = N("Cards", 0);
                     return matches && n > 0 && r.DisplayAmount % n + plays >= n;
                 }
-                var armed = RelicCountersFeature.IsArmed(r, _me);
+                var armed = RelicCountersFeature.IsArmed(r);
                 switch (name)
                 {
                     // ---- uses or breaks a relic (formerly Relic Reminders)

@@ -1,6 +1,7 @@
 // Generates mods/SpireQoL/Diagnostics/CoverageLedger.Data.cs from the decompiled game source:
 // every game model class (relics, powers, cards, monsters, orbs, potions, enchantments, afflictions)
-// with the combat hooks it overrides, and whether the mod has a rule for it (it names the class).
+// with the combat hooks it overrides. Each needs a reviewed entry in CoverageLedger.cs (covered,
+// ignore or gap, written from its hook bodies); this script lists the ones missing one.
 // The mod compares this with the game it's running on (CoverageLedger.cs): a class that's new,
 // whose hooks changed, or that has no rule and no reviewed reason is reported when it shows up.
 //
@@ -22,22 +23,6 @@ export const hooks = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Diagno
 
 const folders = ["Relics", "Powers", "Cards", "Monsters", "Orbs", "Potions", "Enchantments", "Afflictions"];
 
-// Everything the mod names: nameof(X) and "X" in its sources.
-const modSrc = [];
-(function walk(d) {
-  for (const f of fs.readdirSync(d, { withFileTypes: true })) {
-    const p = path.join(d, f.name);
-    if (f.isDirectory()) { if (!["bin", "obj"].includes(f.name)) walk(p); }
-    else if (f.name.endsWith(".cs") && !f.name.startsWith("CoverageLedger") && !f.name.startsWith("CardCoverage")) modSrc.push(fs.readFileSync(p, "utf8"));
-  }
-})(path.join(root, "mods", "SpireQoL"));
-const named = new Set();
-for (const s of modSrc) {
-  for (const m of s.matchAll(/nameof\(([A-Za-z0-9_]+)\)/g)) named.add(m[1]);
-  for (const m of s.matchAll(/"([A-Z][A-Za-z0-9]+)"/g)) named.add(m[1]);
-  for (const m of s.matchAll(/\b(?:is|case|OfType<|GetPower<|HasPower<|typeof\()\s*([A-Z][A-Za-z0-9]+)/g)) named.add(m[1]);
-}
-
 const rows = [];
 const hookRe = new RegExp(`public override [^(=]*\\b(${hooks.join("|")})\\(`, "g");
 for (const folder of folders) {
@@ -49,7 +34,7 @@ for (const folder of folders) {
     const src = fs.readFileSync(path.join(dir, f), "utf8");
     const found = [...new Set([...src.matchAll(hookRe)].map(m => m[1]))].sort();
     if (found.length === 0) continue;
-    rows.push({ folder, type, hooks: found, rule: named.has(type) });
+    rows.push({ folder, type, hooks: found });
   }
 }
 
@@ -64,15 +49,18 @@ out.push("");
 out.push("    /// <summary>The hooks that need a rule or a reviewed reason (from Diagnostics/CoverageHooks.txt).</summary>");
 out.push("    private static readonly string[] Hooks = { " + hooks.map(h => `"${h}"`).join(", ") + " };");
 out.push("");
-out.push("    /// <summary>Game classes with combat hooks: folder, class, hooks it overrides, whether the mod has a rule for it.</summary>");
-out.push("    private static readonly (string Folder, string Type, string Hooks, bool Rule)[] Generated =");
+out.push("    /// <summary>Game classes with combat hooks: folder, class, hooks it overrides.</summary>");
+out.push("    private static readonly (string Folder, string Type, string Hooks)[] Generated =");
 out.push("    {");
-for (const r of rows) out.push(`        ("${r.folder}", "${r.type}", "${r.hooks.join(",")}", ${r.rule}),`);
+for (const r of rows) out.push(`        ("${r.folder}", "${r.type}", "${r.hooks.join(",")}"),`);
 out.push("    };");
 out.push("}");
 fs.writeFileSync(path.join(root, "mods", "SpireQoL", "Diagnostics", "CoverageLedger.Data.cs"), out.join("\n") + "\n");
 
-const byFolder = {};
-for (const r of rows) { const k = r.folder; byFolder[k] ??= { total: 0, rule: 0 }; byFolder[k].total++; if (r.rule) byFolder[k].rule++; }
-console.log(`game ${version}: ${rows.length} classes with combat hooks`);
-for (const [k, v] of Object.entries(byFolder)) console.log(`  ${k}: ${v.total} (${v.rule} with a rule)`);
+const ledger = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Diagnostics", "CoverageLedger.cs"), "utf8");
+const reviewed = new Set([...ledger.matchAll(/^\s*\["(\w+)"\] = "/gm)].map(m => m[1]));
+const missing = rows.filter(r => !reviewed.has(r.type)).map(r => r.type);
+const stale = [...reviewed].filter(t => !rows.some(r => r.type === t));
+console.log(`game ${version}: ${rows.length} classes with combat hooks; ${reviewed.size} reviewed entries`);
+console.log(missing.length ? `no reviewed entry (review their hooks, add to CoverageLedger.Reviewed): ${missing.join(", ")}` : "every class has a reviewed entry");
+if (stale.length) console.log(`entries for classes without combat hooks now (remove): ${stale.join(", ")}`);

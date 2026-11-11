@@ -243,7 +243,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             }
             case CounterKind.OneShot:
             {
-                var armed = IsArmed(relic, me);
+                var armed = IsArmed(relic);
                 return new RowState(armed ? 1 : 0, 1, false, armed ? Ok : Fill, armed ? "ready" : "used");
             }
             case CounterKind.KeepEnergy:
@@ -260,7 +260,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
     }
 
     /// <summary>Whether a one-shot relic is still unused. Most expose it as Status == Active.</summary>
-    public static bool IsArmed(RelicModel relic, Player me)
+    public static bool IsArmed(RelicModel relic)
     {
         return relic.GetType().Name switch
         {

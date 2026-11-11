@@ -26,15 +26,6 @@ public static class UiKit
         return sb;
     }
 
-    /// <summary>A small rounded tag with short text, e.g. "ETH".</summary>
-    public static PanelContainer Badge(string text, Color bg, Color fg, int fontSize = 15)
-    {
-        var p = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        p.AddThemeStyleboxOverride("panel", PanelStyle(bg, 5, 6));
-        p.AddChild(Label(text, fontSize, fg));
-        return p;
-    }
-
     public static HBoxContainer Row(int separation = 6)
     {
         var r = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };

@@ -312,6 +312,4 @@ public static class Sts2State
         };
         return vars != null && vars.TryGetValue(key, out var v) ? v.IntValue : fallback;
     }
-
-    public static bool HasVar(CardModel card, string key) => card.DynamicVars.ContainsKey(key);
 }

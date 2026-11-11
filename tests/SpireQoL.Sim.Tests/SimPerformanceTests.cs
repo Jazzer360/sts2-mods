@@ -58,11 +58,11 @@ public class SimPerformanceTests
         sw.Stop();
         _out.WriteLine($"{plays.Count + 1} simulations in {sw.Elapsed.TotalMilliseconds:0.0} ms, most branches {maxBranches}");
 
-        // In game, card simulations get 4 ms per frame (the rest continue next frame), so what matters
-        // is the cost of one simulation: it must fit the budget with room to spare. Generous for slow CI machines.
+        // In game, every card's simulations run in parallel and the frame waits for them, so what matters
+        // is the cost of one simulation. Generous for slow CI machines.
         var perSim = sw.Elapsed.TotalMilliseconds / (plays.Count + 1);
         _out.WriteLine($"{perSim:0.00} ms per simulation");
-        // On a dev machine: the per-frame budget card simulations get in game (SimBudgetMs), so one
+        // On a dev machine: 4 ms per simulation, so a hand of them stays well inside a frame; one
         // simulation never overruns a frame's budget. Shared CI runners are budget CPUs and noisy (about
         // 10 ms per simulation measured there): 30 ms (about one frame at 30 fps) still catches a real
         // slowdown with plenty of headroom.

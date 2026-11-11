@@ -2,7 +2,6 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
-using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using SpireQoL.Combat;
 using SpireQoL.Sim;
@@ -184,7 +183,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var breakdown = $"block {f.CurrentBlock} + end of turn {List(f.EndOfTurnBlock)}\nblockable {List(f.Blockable)}\nunblockable {List(f.Unblockable)}\n" +
                         $"your end-of-turn damage {List(f.EndOfTurnDamage)}\nskipped: poison {f.SkippedPoisoned}, end of turn {f.SkippedEndOfTurn}; cancelled hits {f.CancelledHits}; Osty HP {f.OstyHp}";
         var prediction = Prediction(f);
-        var fullWindow = string.Join("\n", window.Select((e, i) => $"#{from + i} {ProcAudit.Describe(e, me)}{(SideOf(e) == CombatSide.Enemy ? " (enemy turn)" : "")}"));
+        var fullWindow = string.Join("\n", window.Select((e, i) => $"#{from + i} {ProcAudit.Describe(e)}{(SideOf(e) == CombatSide.Enemy ? " (enemy turn)" : "")}"));
         foreach (var issue in issues)
         {
             var kind = issue.Split(':')[0];

@@ -1,8 +1,6 @@
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
-using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
-using SpireQoL.Cards;
 using SpireQoL.Features;
 using Sts2Mods.Core.Game;
 

@@ -73,9 +73,6 @@ public static class SimAdapter
         [nameof(FightMe)] = ("EnemyStrength", false, 1),
     };
 
-    /// <summary>Your powers a card can give itself that the simulator models (PowerVar&lt;T&gt; on the card).</summary>
-    private static readonly HashSet<string> SelfPowers = new() { nameof(PlatingPower), nameof(JuggernautPower), nameof(FeelNoPainPower), nameof(ThornsPower), nameof(FlameBarrierPower) };
-
     // ------------------------------------------------------------------ state
 
     public static SimState Build(Player me, ICombatState cs, out Dictionary<Creature, int> ids)
@@ -171,7 +168,8 @@ public static class SimAdapter
                 case nameof(FlameBarrierPower): p.FlameBarrier += pw.Amount; break;
                 case nameof(ReflectPower): p.Reflect = true; break;
                 case nameof(BufferPower): p.Buffer += pw.Amount; break;
-                case nameof(EnvenomPower): p.Envenom += pw.Amount; break;
+                // Envenom, and Concoct this turn: poison on each attack hit that gets through block (AfterDamageGiven).
+                case nameof(EnvenomPower) or nameof(ConcoctPower): p.Envenom += pw.Amount; break;
             }
             var type = pw.GetType().Name;
             if (pw.Amount > 0 && BlockableDebuffs.Contains(type)) p.DebuffBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), pw.Amount));
@@ -374,6 +372,15 @@ public static class SimAdapter
             }
         }
 
+        // Storm: Lightning per Power played (StormPower.AfterCardPlayed). Trash to Treasure: a random orb
+        // per status the play creates (its kind is a roll: Unknown, so only the evoke it causes and the
+        // slot it takes count).
+        var storm = me.Creature.Powers.Where(p => p is StormPower).Sum(p => p.Amount);
+        if (card.Type == CardType.Power)
+            for (var i = 0; i < storm * plays; i++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
+        var trash = me.Creature.Powers.Where(p => p is TrashToTreasurePower).Sum(p => p.Amount);
+        for (var i = 0; i < trash * f.GeneratedStatuses; i++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Unknown } });
+
         // Powers it gives you, and poison it applies.
         foreach (var (key, v) in card.DynamicVars)
         {
@@ -435,6 +442,7 @@ public static class SimAdapter
         //    Fate, Resonance) or gives (Fight Me). Losing Strength is a debuff Artifact may take, so an
         //    enemy with Artifact keeps its intent.
         EnemyStrengthCards.TryGetValue(name, out var str);
+        var gaze = me.Creature.Powers.Where(p => p is MonarchsGazePower).Sum(p => p.Amount);
         var strengthTarget = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
         foreach (var (e, id) in ids)
         {
@@ -444,6 +452,10 @@ public static class SimAdapter
             var strength = card.Type == CardType.Skill ? (e.GetPower<EnragePower>()?.Amount ?? 0) * plays : 0;
             if (str.Var != null && (str.All ? e.IsHittable : e == strengthTarget) && (str.Sign > 0 || !artifact))
                 strength += str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var)) * plays;
+            // Monarch's Gaze: each of your attack's hits takes Strength from the enemy it hits this turn
+            // (MonarchsGazeStrengthDownPower). Random-target attacks are left out (which enemy is a roll).
+            if (gaze > 0 && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))
+                strength -= gaze * f.HitsOn(e);
             if (!weak && strength == 0) continue;
             if (AdjustedHits(e, me, cs, strength, weak) is { } hits) play.SetHits[id] = hits;
         }

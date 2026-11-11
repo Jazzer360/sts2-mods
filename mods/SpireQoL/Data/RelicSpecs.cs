@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Models.Relics;
 namespace SpireQoL.Data;
 
 public enum CounterKind
@@ -30,13 +32,13 @@ public static class PowerSpecs
 {
     public static readonly IReadOnlyList<PowerCounterSpec> All = new[]
     {
-        new PowerCounterSpec("OrbitPower", 4, "energy", CrossTurn: true),       // every 4 energy spent: gain energy
-        new PowerCounterSpec("AutomationPower", 10, "draws", CrossTurn: true),  // every 10 cards drawn: gain energy
-        new PowerCounterSpec("CacophonyPower", 33, "draws", CrossTurn: true),   // every 33 cards drawn: damage an enemy
-        new PowerCounterSpec("PanachePower", 5, "cards"),                       // every 5 cards this turn: damage all enemies
+        new PowerCounterSpec(nameof(OrbitPower), 4, "energy", CrossTurn: true),       // every 4 energy spent: gain energy
+        new PowerCounterSpec(nameof(AutomationPower), 10, "draws", CrossTurn: true),  // every 10 cards drawn: gain energy
+        new PowerCounterSpec(nameof(CacophonyPower), 33, "draws", CrossTurn: true),   // every 33 cards drawn: damage an enemy
+        new PowerCounterSpec(nameof(PanachePower), 5, "cards"),                       // every 5 cards this turn: damage all enemies
         // Counts every card played this turn, despite the game's property being named "AttacksPlayedThisTurn".
-        new PowerCounterSpec("PaleBlueDotPower", 5, "cards"),                   // 5 cards this turn: draw next turn (once)
-        new PowerCounterSpec("WitheringPresencePower", 6, "cards", CrossTurn: true, OnEnemy: true), // every 6 cards: Wither in hand
+        new PowerCounterSpec(nameof(PaleBlueDotPower), 5, "cards"),                   // 5 cards this turn: draw next turn (once)
+        new PowerCounterSpec(nameof(WitheringPresencePower), 6, "cards", CrossTurn: true, OnEnemy: true), // every 6 cards: Wither in hand
     };
 
     private static readonly Dictionary<string, PowerCounterSpec> ByName = All.ToDictionary(s => s.TypeName);
@@ -69,46 +71,46 @@ public static class RelicSpecs
     public static readonly IReadOnlyList<RelicCounterSpec> All = new[]
     {
         // Counters that carry across turns and combats.
-        new RelicCounterSpec("PenNib", CounterKind.Counter, Fixed: 10, CrossTurn: true),
-        new RelicCounterSpec("Nunchaku", CounterKind.Counter, "Cards", CrossTurn: true),
-        new RelicCounterSpec("TuningFork", CounterKind.Counter, "Cards", CrossTurn: true),
-        new RelicCounterSpec("IronClub", CounterKind.Counter, "Cards", CrossTurn: true),
-        new RelicCounterSpec("GalacticDust", CounterKind.Counter, "Stars", CrossTurn: true),
-        new RelicCounterSpec("JossPaper", CounterKind.Counter, "ExhaustAmount", CrossTurn: true),
-        new RelicCounterSpec("StoneCalendar", CounterKind.Counter, "DamageTurn", CrossTurn: true, TurnTimer: true),
-        new RelicCounterSpec("HappyFlower", CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
-        new RelicCounterSpec("FakeHappyFlower", CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
-        new RelicCounterSpec("Pendulum", CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
-        new RelicCounterSpec("PollinousCore", CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
-        new RelicCounterSpec("Metronome", CounterKind.Counter, "OrbCount", CrossTurn: true),
+        new RelicCounterSpec(nameof(PenNib), CounterKind.Counter, Fixed: 10, CrossTurn: true),
+        new RelicCounterSpec(nameof(Nunchaku), CounterKind.Counter, "Cards", CrossTurn: true),
+        new RelicCounterSpec(nameof(TuningFork), CounterKind.Counter, "Cards", CrossTurn: true),
+        new RelicCounterSpec(nameof(IronClub), CounterKind.Counter, "Cards", CrossTurn: true),
+        new RelicCounterSpec(nameof(GalacticDust), CounterKind.Counter, "Stars", CrossTurn: true),
+        new RelicCounterSpec(nameof(JossPaper), CounterKind.Counter, "ExhaustAmount", CrossTurn: true),
+        new RelicCounterSpec(nameof(StoneCalendar), CounterKind.Counter, "DamageTurn", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec(nameof(HappyFlower), CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec(nameof(FakeHappyFlower), CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec(nameof(Pendulum), CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec(nameof(PollinousCore), CounterKind.Counter, "Turns", CrossTurn: true, TurnTimer: true),
+        new RelicCounterSpec(nameof(Metronome), CounterKind.Counter, "OrbCount", CrossTurn: true),
 
         // Per-turn counters.
-        new RelicCounterSpec("Kunai", CounterKind.Counter, "Cards"),
-        new RelicCounterSpec("Shuriken", CounterKind.Counter, "Cards"),
-        new RelicCounterSpec("OrnamentalFan", CounterKind.Counter, "Cards"),
-        new RelicCounterSpec("Kusarigama", CounterKind.Counter, "Cards"),
-        new RelicCounterSpec("LetterOpener", CounterKind.Counter, "Cards"),
-        new RelicCounterSpec("BrilliantScarf", CounterKind.Counter, "Cards"),
-        new RelicCounterSpec("VelvetChoker", CounterKind.Limit, "Cards"),
-        new RelicCounterSpec("PaelsTears", CounterKind.KeepEnergy, "Energy", InTray: false), // crossed tab on cards instead
-        new RelicCounterSpec("Pocketwatch", CounterKind.StayUnder, "CardThreshold"),
+        new RelicCounterSpec(nameof(Kunai), CounterKind.Counter, "Cards"),
+        new RelicCounterSpec(nameof(Shuriken), CounterKind.Counter, "Cards"),
+        new RelicCounterSpec(nameof(OrnamentalFan), CounterKind.Counter, "Cards"),
+        new RelicCounterSpec(nameof(Kusarigama), CounterKind.Counter, "Cards"),
+        new RelicCounterSpec(nameof(LetterOpener), CounterKind.Counter, "Cards"),
+        new RelicCounterSpec(nameof(BrilliantScarf), CounterKind.Counter, "Cards"),
+        new RelicCounterSpec(nameof(VelvetChoker), CounterKind.Limit, "Cards"),
+        new RelicCounterSpec(nameof(PaelsTears), CounterKind.KeepEnergy, "Energy", InTray: false), // crossed tab on cards instead
+        new RelicCounterSpec(nameof(Pocketwatch), CounterKind.StayUnder, "CardThreshold"),
 
         // Fire on a specific turn.
-        new RelicCounterSpec("HornCleat", CounterKind.OnTurn, Fixed: 2, TurnTimer: true),
-        new RelicCounterSpec("Candelabra", CounterKind.OnTurn, Fixed: 2, TurnTimer: true),
-        new RelicCounterSpec("CaptainsWheel", CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
-        new RelicCounterSpec("Chandelier", CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
-        new RelicCounterSpec("SparklingRouge", CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
+        new RelicCounterSpec(nameof(HornCleat), CounterKind.OnTurn, Fixed: 2, TurnTimer: true),
+        new RelicCounterSpec(nameof(Candelabra), CounterKind.OnTurn, Fixed: 2, TurnTimer: true),
+        new RelicCounterSpec(nameof(CaptainsWheel), CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
+        new RelicCounterSpec(nameof(Chandelier), CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
+        new RelicCounterSpec(nameof(SparklingRouge), CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
 
         // One-shot: armed until first use. Only Pael's Eye gets a tray row (it has no card to
         // mark); the rest are shown on the cards that would use them (Relic Reminders).
-        new RelicCounterSpec("Vambrace", CounterKind.OneShot, InTray: false),
-        new RelicCounterSpec("ThrowingAxe", CounterKind.OneShot, InTray: false),
-        new RelicCounterSpec("BurningSticks", CounterKind.OneShot, InTray: false),
-        new RelicCounterSpec("UnsettlingLamp", CounterKind.OneShot, InTray: false),
-        new RelicCounterSpec("PaelsEye", CounterKind.OneShot, InTray: false), // crossed tab on cards instead
-        new RelicCounterSpec("Permafrost", CounterKind.OneShot, InTray: false),
-        new RelicCounterSpec("MusicBox", CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec(nameof(Vambrace), CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec(nameof(ThrowingAxe), CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec(nameof(BurningSticks), CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec(nameof(UnsettlingLamp), CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec(nameof(PaelsEye), CounterKind.OneShot, InTray: false), // crossed tab on cards instead
+        new RelicCounterSpec(nameof(Permafrost), CounterKind.OneShot, InTray: false),
+        new RelicCounterSpec(nameof(MusicBox), CounterKind.OneShot, InTray: false),
         new RelicCounterSpec("PaelsLegion", CounterKind.OneShot, InTray: false), // the game shows its cooldown on the relic
     };
 

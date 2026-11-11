@@ -18,7 +18,6 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Incoming Damage](#incoming-damage) | `incoming-damage` | 🟡 | on |
 | [Proc Indicators](#proc-indicators) | `proc-indicators` | 🟡 | on |
 | [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | 🟡 | on |
-| [Intent Forecast](#intent-forecast) | `intent-forecast` | ⚪ | on (does nothing yet) |
 
 ## What the mod adds to the game, technically
 
@@ -356,7 +355,7 @@ One simulator behind Incoming Damage, the lethal tab, the Imbalanced and wake ta
 - **Good outcomes need every branch; bad ones need only one.** Lethal and Imbalanced show only when they happen in every branch; wake warnings show when they happen in any branch; Incoming Damage shows the worst branch.
 - **Lethal tab** (`lethal`, the skull): after playing this card (aimed at any one enemy, for single-target cards), some enemy is dead before it acts in every branch, and ending your turn now wouldn't kill it. That counts the card's hits, orbs, procs, and everything your end of turn does: Stone Armor with Juggernaut (Plating's block at end of turn sets off Juggernaut), the Juggernaut card with Orichalcum and no block, poison that kills it at the start of its turn.
 - **Knowable information only:** it reads what the game shows and the game's rules; random targets are branched, never read from the RNG.
-- **Speed:** simulations rerun only when something in the state changes (results are cached by a fingerprint of the whole state, intents and powers included). Each frame reads the game and builds every card's play on the main thread, then runs all the cards' simulations (one per target) in parallel across CPU cores and waits for them, so every tab appears on the frame it belongs to. A typical hand takes well under a millisecond; the wait is capped at 250 ms, and anything still running then shows a frame or two later. A single simulation stays under 4 ms (`SimBudgetMs`, tests). Branches are capped at 128; past that nothing is claimed as guaranteed, and damage to you comes from a run where random hits land on nobody (never an underestimate).
+- **Speed:** simulations rerun only when something in the state changes (results are cached by a fingerprint of the whole state, intents and powers included). Each frame reads the game and builds every card's play on the main thread, then runs all the cards' simulations (one per target) in parallel across CPU cores and waits for them, so every tab appears on the frame it belongs to. A typical hand takes well under a millisecond; the wait is capped at 250 ms, and anything still running then shows a frame or two later. A single simulation stays under 4 ms on a dev machine (performance tests). Branches are capped at 128; past that nothing is claimed as guaranteed, and damage to you comes from a run where random hits land on nobody (never an underestimate).
 - Approximations: orb values of newly channelled orbs use base values plus Focus and Infused Core; a card's procs all land after its hits; added poison ignores damage modifiers on its tick; Skittish reacts once to all of a replayed card's hits; a card's block split across several gains drops the remainder; random card draws and random orb types (Chaos) aren't simulated beyond their count.
 
 ## Shuffle Warning
@@ -371,6 +370,3 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ---
 
-## Intent Forecast
-
-⚪ Planned. Needs research into monster AI first (TRACKER §7). Registered but does nothing.

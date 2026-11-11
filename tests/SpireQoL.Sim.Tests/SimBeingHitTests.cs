@@ -104,7 +104,6 @@ public class SimBeingHitTests
         p.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront });
         var o = SimEngine.Run(s, p);
         Assert.Equal(3, o.PlayBlockGainsMax);
-        Assert.Equal(3, o.PlayBlockGainsMin);
     }
 
     [Fact]

@@ -226,7 +226,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 
 ---
 
-## 7. Intent forecast → `intent-forecast`
+## 7. Intent forecast (planned; no code yet)
 
 Knowable information only (CLAUDE.md): it may show the moves an enemy *can* make next and their odds, worked out from its move rules and what you've seen it do. Never the move it will actually pick, its RNG roll, or hidden state a player couldn't infer.
 

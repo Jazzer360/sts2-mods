@@ -192,7 +192,7 @@ public sealed class PlayFacts
     public bool RandomOutcome { get; set; }
 
     /// <summary>
-    /// The simulator hadn't reached this card yet when its tabs were taken (per-frame budget), so its
+    /// Its simulation was still running when the frame stopped waiting (the 250 ms cap), so its
     /// lethal, Imbalanced and wake tabs may be missing. The audit doesn't report those.
     /// </summary>
     public bool SimPending { get; set; }
@@ -681,15 +681,6 @@ public sealed class PlayFacts
         }
         DebuffCache[powerType] = d;
         return d;
-    }
-
-    /// <summary>Debuff applications that actually land on an enemy: Artifact cancels one each.</summary>
-    public int DebuffsLanding(Creature enemy)
-    {
-        var n = EnemyDebuffs.Count * Plays;
-        if (n == 0) return 0;
-        var artifact = enemy.Powers.OfType<ArtifactPower>().Sum(p => p.Amount);
-        return Math.Max(0, n - artifact);
     }
 
     /// <summary>

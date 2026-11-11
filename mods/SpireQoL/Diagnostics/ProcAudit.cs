@@ -7,7 +7,6 @@ using MegaCrit.Sts2.Core.Combat.History;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
 using SpireQoL.Features;
@@ -410,12 +409,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         {
             foreach (var fl in w.Flashes.Where(x => x.At == i)) lines.Add($"   ⚡ {fl.Model.GetType().Name} flashed");
             if (i >= to) break;
-            lines.Add($"{(mine.Contains(i) ? "" : "(not this play) ")}#{i} {Describe(hist[i], me)}");
+            lines.Add($"{(mine.Contains(i) ? "" : "(not this play) ")}#{i} {Describe(hist[i])}");
         }
         return lines;
     }
 
-    internal static string Describe(CombatHistoryEntry e, Player me)
+    internal static string Describe(CombatHistoryEntry e)
     {
         static string N(object? o) => o switch { null => "?", Creature c => c.Monster?.GetType().Name ?? c.Player?.Character?.GetType().Name ?? "creature", _ => o.GetType().Name };
         try

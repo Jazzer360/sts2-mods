@@ -45,7 +45,6 @@ public sealed class TurnEndModel
     public int BlockableTotal => Blockable.Sum(s => s.Amount);
     public int UnblockableTotal => Unblockable.Sum(s => s.Amount);
     public int ExpectedBlock => CurrentBlock + BlockGain;
-    public int Overblock => Math.Max(0, ExpectedBlock - BlockableTotal);
 
     /// <summary>The simulation behind these numbers (start state, enemy ids, outcome), for card tabs.</summary>
     public SimState State { get; private set; } = new();
