@@ -114,4 +114,35 @@ public class SimBeingHitTests
         Assert.Contains(1, SimEngine.Run(s, Strike(1, 3)).BlockReactionInAny);
         Assert.Empty(SimEngine.Run(s, new SimPlay { Name = "Defend", BlockAmount = 5, BlockGains = 1 }).BlockReactionInAny);
     }
+
+    [Fact]
+    public void TheBootRaisesSmallAttackHitsToItsMinimum()
+    {
+        // TheBoot.ModifyHpLostAfterOstyLate: a powered hit losing the enemy 1..4 HP loses it 5.
+        var s = new SimState { Enemies = { Enemy(1, 20, 0, 6) } };
+        s.P.BootMinimum = 5;
+        SimEngine.ApplyPlayTo(s, Strike(1, 2, hits: 3), out var b, out _);
+        Assert.Equal(5, b[0].Enemy(1)!.Hp); // 3 hits of 5, not 2
+        // A fully blocked hit loses no HP: unchanged.
+        var blocked = new SimState { Enemies = { Enemy(1, 20, 10, 6) } };
+        blocked.P.BootMinimum = 5;
+        SimEngine.ApplyPlayTo(blocked, Strike(1, 3), out var bb, out _);
+        Assert.Equal(20, bb[0].Enemy(1)!.Hp);
+        // Proc damage isn't a powered attack.
+        var proc = new SimPlay { Name = "Defend" };
+        proc.Procs.Add(new ProcHit { Spread = SimPlay.Target.Single, TargetId = 1, Damage = { [1] = 2 } });
+        SimEngine.ApplyPlayTo(s, proc, out var pb, out _);
+        Assert.Equal(18, pb[0].Enemy(1)!.Hp);
+    }
+
+    [Fact]
+    public void TheBootComesAfterSlipperysCap()
+    {
+        // Slippery caps HP lost at 1 (AfterOsty); The Boot then raises it to its minimum (AfterOstyLate).
+        var s = new SimState { Enemies = { Enemy(1, 20, 0, 6) } };
+        s.Enemies[0].Slippery = 3;
+        s.P.BootMinimum = 5;
+        SimEngine.ApplyPlayTo(s, Strike(1, 12), out var b, out _);
+        Assert.Equal(15, b[0].Enemy(1)!.Hp);
+    }
 }

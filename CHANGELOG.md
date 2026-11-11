@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.1
+#### Fixed
+- The lethal and wake tabs count The Boot: your attack hits that get through always lose the enemy at least its minimum.
+
 ### Spire QoL 0.31.0
 #### Changed
 - The proc check accounts for everything a play changes: energy, stars, gold, HP, max HP, your cards (pile, cost, upgrades, keywords, afflictions, enchantments) and relic counters. A change nothing in the play explains is reported with the relics, powers or cards that could have caused it (logs and error reports only).

@@ -191,6 +191,8 @@ public sealed class SimPlayer
     public int Envenom;
     /// <summary>Snecko Skull: extra poison on every application of yours.</summary>
     public int PoisonBonus;
+    /// <summary>The Boot: your attack hits that lose an enemy any HP lose it at least this much (0 = no relic).</summary>
+    public int BootMinimum;
     /// <summary>Beating Remnant: HP you can still lose until the start of your next turn (it resets only then).</summary>
     public int RemnantLeftPlayerTurn = int.MaxValue;
     public int RemnantCap = int.MaxValue;

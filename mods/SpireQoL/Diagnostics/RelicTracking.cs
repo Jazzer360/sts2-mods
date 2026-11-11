@@ -108,7 +108,7 @@ internal static class RelicTracking
         ["ScreamingFlagon"] = "none: end-of-turn damage with an empty hand (Incoming Damage)",
         ["TungstenRod"] = "none: HP loss reduced (Incoming Damage)",
         ["BeatingRemnant"] = "none: HP loss capped per turn (Incoming Damage)",
-        ["TheBoot"] = "gap: your attack hits below its minimum lose the enemy its minimum (not in the simulator yet)",
+        ["TheBoot"] = "none: your attack hits below its minimum lose the enemy its minimum (the simulator counts it: lethal, wake)",
         ["LunarPastry"] = "gap: stars at the end of your turn (Black Hole's end-of-turn damage isn't simulated yet)",
         ["SturdyClamp"] = "none: keeps up to 10 block into your next turn",
         ["RingingTriangle"] = "none: keeps your hand on turn 1",

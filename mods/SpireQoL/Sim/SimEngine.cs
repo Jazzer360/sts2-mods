@@ -221,7 +221,8 @@ public static class SimEngine
 
     /// <summary>Damage to an enemy during your turn: its block, then HP (Hardened Shell caps HP lost).</summary>
     /// <param name="powered">A powered attack (your card's hits): Flutter and The Gambit react only to those.</param>
-    private static int Damage(SimEnemy e, int amount, bool powered = false)
+    /// <param name="minimumHpLoss">The Boot: a powered hit that loses it at least 1 HP loses it at least this much.</param>
+    private static int Damage(SimEnemy e, int amount, bool powered = false, int minimumHpLoss = 0)
     {
         if (amount <= 0 || !e.Alive) return 0;
         amount = Math.Min(amount, e.HitCap);
@@ -246,6 +247,8 @@ public static class SimEngine
             e.Slippery--;
             e.SlipperyTriggered = true;
         }
+        // TheBoot.ModifyHpLostAfterOstyLate: last in the game's HP-loss order (after Hardened Shell and Slippery).
+        if (powered && toHp >= 1 && toHp < minimumHpLoss) toHp = minimumHpLoss;
         if (e.ShellLeft != int.MaxValue) e.ShellLeft -= toHp;
         e.Hp -= toHp;
         if (toHp <= 0) return 0;
@@ -280,7 +283,7 @@ public static class SimEngine
     {
         if (amount <= 0 || !e.Alive) return;
         e.HitByCard = true;
-        var lost = Damage(e, amount, powered: true);
+        var lost = Damage(e, amount, powered: true, minimumHpLoss: s.P.BootMinimum);
         if (lost <= 0) return;
         e.ThroughByCard = true;
         if (s.P.Envenom > 0 && e.Alive) e.AddPoison(s.P.Envenom + s.P.PoisonBonus);

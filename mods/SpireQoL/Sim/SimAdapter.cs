@@ -195,6 +195,7 @@ public static class SimAdapter
                     p.ParryingShieldDamage += Sts2State.Var(r, "Damage");
                     break;
                 case nameof(TungstenRod): p.TungstenRod += Sts2State.Var(r, "HpLossReduction", 1); break;
+                case nameof(TheBoot): p.BootMinimum = Math.Max(p.BootMinimum, Sts2State.Var(r, "DamageMinimum", 5)); break;
                 case nameof(SneckoSkull): p.PoisonBonus += Sts2State.Var(r, nameof(PoisonPower), 1); break;
                 case nameof(GoldPlatedCables): p.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
                 case nameof(BeatingRemnant):
