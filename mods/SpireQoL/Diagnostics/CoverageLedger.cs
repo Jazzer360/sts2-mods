@@ -341,16 +341,17 @@ internal static partial class CoverageLedger
 
     private static readonly string[] Folders = { "Relics", "Powers", "Cards", "Monsters", "Orbs", "Potions", "Enchantments", "Afflictions" };
 
-    private static Dictionary<string, Entry>? _byType;
+    private static Dictionary<Type, Entry>? _byType;
 
     /// <summary>The running game's classes against the ledger (built once).</summary>
-    public static IReadOnlyDictionary<string, Entry> ByType => _byType ??= Build();
+    /// <remarks>Keyed by type: two classes can share a name in different folders (Pael's Legion the relic and the monster).</remarks>
+    public static IReadOnlyDictionary<Type, Entry> ByType => _byType ??= Build();
 
-    private static Dictionary<string, Entry> Build()
+    private static Dictionary<Type, Entry> Build()
     {
         var hookSet = Hooks.ToHashSet();
-        var ledger = Generated.ToDictionary(g => g.Type, g => g);
-        var result = new Dictionary<string, Entry>();
+        var ledger = Generated.ToDictionary(g => (g.Folder, g.Type), g => g);
+        var result = new Dictionary<Type, Entry>();
         foreach (var t in ModelTypes())
         {
             string hooks;
@@ -364,7 +365,7 @@ internal static partial class CoverageLedger
             {
                 continue;
             }
-            var known = ledger.TryGetValue(t.Name, out var g);
+            var known = ledger.TryGetValue((t.Namespace?.Split('.').Last() ?? "", t.Name), out var g);
             if (!known && hooks.Length == 0) continue;
             Entry e;
             if (!known) e = new Entry(t.Name, Status.New, "not in the ledger (new in this game version?)", hooks);
@@ -372,7 +373,7 @@ internal static partial class CoverageLedger
             else if (Reviewed.TryGetValue(t.Name, out var why))
                 e = new Entry(t.Name, why.StartsWith("gap:") ? Status.Gap : why.StartsWith("covered:") ? Status.Covered : Status.Ignored, why, hooks);
             else e = new Entry(t.Name, Status.Unreviewed, "not reviewed", hooks);
-            result[t.Name] = e;
+            result[t] = e;
         }
         return result;
     }
@@ -514,7 +515,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         try
         {
             var log = ModEntry.Log;
-            if (CoverageLedger.ByType.TryGetValue(t.Name, out var e))
+            if (CoverageLedger.ByType.TryGetValue(t, out var e))
             {
                 switch (e.Status)
                 {
@@ -549,7 +550,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         {
             var outOfCombat = CoverageLedger.OutOfCombatHooks.ToHashSet();
             var fight = t.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
-                .Where(m => m.IsVirtual && m.GetBaseDefinition().DeclaringType != t && m.GetBaseDefinition().DeclaringType?.Name is "AbstractModel" or "RelicModel"
+                .Where(m => m.IsVirtual && !m.IsSpecialName && m.GetBaseDefinition().DeclaringType != t && m.GetBaseDefinition().DeclaringType?.Name == "AbstractModel"
                             && !outOfCombat.Contains(m.Name))
                 .Select(m => m.Name).Distinct().ToList();
             if (fight.Count == 0) return;

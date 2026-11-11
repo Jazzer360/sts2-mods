@@ -451,7 +451,7 @@ public sealed class PlayFacts
         nameof(Acrobatics), nameof(Adrenaline), nameof(Backflip), nameof(BattleTrance), nameof(BigBang), nameof(BrightestFlame), nameof(BurningPact),
         nameof(Constellation), nameof(Coolheaded), nameof(DecisionsDecisions), nameof(DrumOfBattle), nameof(Expertise), nameof(Fetch), nameof(Finesse),
         nameof(FlashOfSteel), nameof(Ftl), nameof(Glimmer), nameof(Glow), nameof(HuddleUp), nameof(Impatience), nameof(MasterOfStrategy), nameof(MinionStrike),
-        nameof(Neurosurge), nameof(Offering), nameof(Overclock), nameof(Parse), nameof(PhotonCut), nameof(PommelStrike), nameof(Prepared), nameof(Prophesize),
+        nameof(Modded), nameof(Neurosurge), nameof(Offering), nameof(Overclock), nameof(Parse), nameof(PhotonCut), nameof(PommelStrike), nameof(Prepared), nameof(Prophesize),
         nameof(Reboot), nameof(Reflex), nameof(RocketPunch), nameof(Scourge), nameof(Scrape), nameof(ShrugItOff), nameof(Skim), nameof(Slimed), nameof(Soul),
         nameof(SpoilsOfBattle), nameof(SweepingBeam), nameof(ThinkingAhead),
     };
@@ -516,6 +516,8 @@ public sealed class PlayFacts
             nameof(Survivor) => Math.Min(1, n),
             nameof(HiddenDaggers) => Math.Min(Sts2State.Var(card, "Cards"), n),
             nameof(CalculatedGamble) or nameof(ShadowStep) or nameof(StormOfSteel) => n,
+            // Discards the cards it drew that cost energy: at most all of them (which ones is a draw).
+            nameof(Scrape) => draws,
             _ => 0,
         };
     }
@@ -525,6 +527,8 @@ public sealed class PlayFacts
     internal static int BlockGainCount(CardModel card, string name, List<CardModel> others)
     {
         if (name == nameof(SecondWind)) return others.Count(c => c.Type != CardType.Attack);
+        // Block equal to the damage it dealt / to your current block: no Block value.
+        if (name is nameof(Fisticuffs) or nameof(Entrench)) return 1;
         return card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock") ? 1 : 0;
     }
 
@@ -592,6 +596,8 @@ public sealed class PlayFacts
         nameof(MeteorStrike) or nameof(Rainbow) => 3,
         nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) => Sts2State.Var(card, "Repeat", 1),
         nameof(Tempest) => me?.PlayerCombatState?.Energy ?? 1, // X lightning
+        // One Lightning per Lightning channeled this combat (its calculation reads the history).
+        nameof(Voltaic) => card.DynamicVars.TryGetValue("CalculatedChannels", out var vc) && vc is CalculatedVar calc ? (int)calc.Calculate(null) : 0,
         _ => 0,
     };
 
@@ -663,6 +669,9 @@ public sealed class PlayFacts
             if (!IsDebuff(powerType)) continue;
             (list ??= new()).Add(powerType);
         }
+        // Debuffs its code applies with a plain value (Uppercut, Putrefy, Shockwave use "Power").
+        foreach (var applied in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
+            if (IsDebuff(applied) && (list == null || !list.Contains(applied))) (list ??= new()).Add(applied);
         return list ?? (IReadOnlyList<Type>)Array.Empty<Type>();
     }
 

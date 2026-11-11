@@ -445,3 +445,15 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [ ] **Simulator wait cap (DECISIONS #9):** if a card's simulations hit the 250 ms cap, its simulator tabs (warnings included) are missing for a frame or two. Watch for `SimPending` notes in the logs.
 - [ ] **Known gaps that could underestimate damage to you:** Queen and Kin Priest switching to a stronger move mid-turn when an ally dies; multiplayer Covered/Intercept.
 - [ ] **Balance of work:** after play testing, prefer closing reported gaps and building out-of-combat reminders (§15) over more diagnostics infrastructure.
+
+---
+
+## 17. Open display decisions (2026-11-10, from play testing; not decided)
+
+- [ ] **Odds on random outcomes.** Example: Dualcast with two Corpse Slugs shows a crossed Ravenous tab because the Lightning evokes *might* kill one (the other is then stunned and gains Strength). Today a warning shows when it happens in any branch; here the kill was actually the right play, and you often want to choose when it happens. Options: keep "possible = warning"; show the chance (0–100%) on tabs whose outcome depends on a roll; or let the player pick the mode in settings (build all, choose a default). Facts for the decision:
+  - Odds are knowable information (CLAUDE.md allows odds), never the target or the roll.
+  - The simulator merges identical branches, so it would need to keep a weight per branch (each random target equally likely) to give a chance; that's a contained change in `SimEngine.BranchSet`.
+  - Targeted cards already get one simulation per aim, so odds can be shown per aim (or the best aim), and an attack you aim changes them.
+- [ ] **Showing deaths that happen anyway.** Example: Punch Construct at 2 HP with your orbs about to finish it at end of turn: no skull on your attacks, because the lethal tab means "this card makes the kill happen" and ending your turn already kills it. Option: a skull on the enemy's HP bar when it dies before acting if you end your turn now (from the simulator's baseline), with the chance when a roll decides it; keep the card tab for "this card changes it". Would be a new on-screen indicator (health-bar overlay, like Incoming Damage's preview), following the UI rules (game icons, no new colors).
+- [x] 0.31.3 (first play test of 0.31.2): audit uses the prediction captured when the play's action starts (Feral returned cards to hand before the check); Focus changes in the simulator (Hyperbeam, found by the after-play check); no after-play state check when the fight ends; coverage false alarms (Pael's Legion relic/monster name, "proc:" rule keys, relic property getters); card-code findings: debuffs read from card code (Uppercut, Putrefy, Shockwave, Malaise), Modded draws, Scrape discards, Voltaic channels, Fisticuffs and Entrench block. Open: Zap predicted an evoke (full slots) that didn't happen, right after FTL drew it; check the next report's before-state.
+

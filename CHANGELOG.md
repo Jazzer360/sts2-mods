@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.3
+#### Fixed
+- Tabs and predictions for Hyperbeam and other cards that change your Focus now account for your orbs' new values.
+- Uppercut, Putrefy, Shockwave and Malaise count as applying Weak and Vulnerable (for Unsettling Lamp, Vicious, Sleight of Flesh and the simulator's intents).
+- Modded's draw counts for the Shuffle Warning; Scrape's discards, Voltaic's Lightning, and Fisticuffs' and Entrench's block count in the simulator and procs.
+- The proc check compared cards that return to your hand (Feral) against the prediction made after the play; it now uses the one from when the play started. It no longer compares the state after a play that ends the fight, or reports false coverage problems (two classes sharing a name, rule names, relic properties) (logs and error reports only).
+
 ### Spire QoL 0.31.2
 #### Changed
 - When one of the checks itself fails (the proc check, coverage check), the error is reported instead of only logged.

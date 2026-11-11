@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Powers;
 using SpireQoL.Procs;
 using SpireQoL.Sim;
@@ -47,9 +48,22 @@ internal static class CardCoverage
         return result;
     }
 
+    /// <summary>
+    /// Cards whose counts are calculated from the fight (orbs, statuses, history): handled in PlayFacts,
+    /// but they read 0 on the game's template card, so the scan can't test them by value.
+    /// </summary>
+    private static readonly HashSet<string> Calculated = new() { nameof(CompileDriver), nameof(FlakCannon), nameof(Voltaic) };
+
+    /// <summary>Cards reviewed as not needing what the scan finds, and why.</summary>
+    private static readonly Dictionary<string, string> Reviewed = new()
+    {
+        [nameof(DeprecatedCard)] = "a placeholder card the game keeps for old saves (draws 1, removes itself from the deck)",
+    };
+
     private static List<string> Check(CardModel card, List<CardModel> others)
     {
         var name = card.GetType().Name;
+        if (Reviewed.ContainsKey(name) || Calculated.Contains(name)) return new List<string>();
         var calls = OnPlayCalls(card.GetType());
         var issues = new List<string>();
         bool Calls(string type, string method) => calls.Contains(type + "." + method);
@@ -68,11 +82,9 @@ internal static class CardCoverage
             issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
-        if (Applies<WeakPower>() && !HasPowerVar<WeakPower>())
-            issues.Add("applies Weak outside its power value (intent change not simulated)");
         if (Calls("CardCmd", "Exhaust") && PlayFacts.ExhaustOthers(card, name, others, 5, 1) == 0)
             issues.Add("exhausts cards (not counted: Feel No Pain, Dark Embrace...)");
-        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && PlayFacts.DiscardCount(card, name, others, 0) == 0)
+        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && PlayFacts.DiscardCount(card, name, others, PlayFacts.CardsDrawn(card, 5)) == 0)
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
             && PlayFacts.GeneratedCount(card, name, others, null!, out _) == 0)
@@ -84,17 +96,41 @@ internal static class CardCoverage
 
     private static readonly BindingFlags All = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
 
-    /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's OnPlay and its async state machine.</summary>
-    private static HashSet<string> OnPlayCalls(Type cardType)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, List<Type>> Applied = new();
+
+    /// <summary>The power types a card's OnPlay applies (PowerCmd.Apply&lt;T&gt;), read from its compiled code.</summary>
+    public static IReadOnlyList<Type> PowersApplied(Type cardType) => Applied.GetOrAdd(cardType, t =>
     {
-        var set = new HashSet<string>();
-        var methods = cardType.GetMethods(All).Where(m => m.Name == "OnPlay").Cast<MethodBase>()
+        var list = new List<Type>();
+        foreach (var m in OnPlayMethods(t))
+        {
+            try
+            {
+                foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                    if (ins.operand is MethodInfo { IsGenericMethod: true, Name: "Apply" } mi && mi.DeclaringType?.Name == "PowerCmd")
+                        list.Add(mi.GetGenericArguments()[0]);
+            }
+            catch
+            {
+                // unreadable: nothing found
+            }
+        }
+        return list;
+    });
+
+    private static IEnumerable<MethodBase> OnPlayMethods(Type cardType)
+        => cardType.GetMethods(All).Where(m => m.Name == "OnPlay").Cast<MethodBase>()
             .Concat(cardType.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public)
                 .Where(t => t.Name.Contains("<OnPlay>") && typeof(IAsyncStateMachine).IsAssignableFrom(t))
                 .Select(t => t.GetMethod("MoveNext", All))
                 .Where(m => m != null)
                 .Cast<MethodBase>());
-        foreach (var m in methods)
+
+    /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's OnPlay and its async state machine.</summary>
+    private static HashSet<string> OnPlayCalls(Type cardType)
+    {
+        var set = new HashSet<string>();
+        foreach (var m in OnPlayMethods(cardType))
         {
             try
             {

@@ -196,6 +196,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
         /// <summary>Energy, stars, gold, HP, cards and relics when the play started and finished.</summary>
         public PlaySnapshot? FullBefore, FullAfter;
+        /// <summary>
+        /// The card and what was predicted for it, taken when its action starts: a card that comes
+        /// back to your hand during its play (Feral) gets new tabs and facts before the check runs.
+        /// </summary>
+        public CardModel? Card;
+        public IReadOnlyList<TabSpec>? Predicted;
+        public PlayFacts? Facts;
+        public long Lag = -1;
+        public string? StaleBecause;
     }
 
     /// <summary>Power amounts on every creature in the fight, by creature and power class.</summary>
@@ -274,6 +283,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (!_running.TryGetValue(action, out var rec))
             {
                 rec = new PlayRecord { Action = action, Target = play.Target, Before = CaptureBefore(), PowersBefore = PowerSnapshot(), FullBefore = PlaySnapshot.Take(play.Player) };
+                var card = play.NetCombatCard.ToCardModelOrNull();
+                if (card != null)
+                {
+                    rec.Card = card;
+                    rec.Predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null;
+                    rec.Facts = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null;
+                    rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
+                    if (_history != null) rec.StaleBecause = StaleBecause(_history.Entries.ToList(), card, _history.Entries.Count(), play.Player);
+                }
                 _running[action] = rec;
                 action.AfterFinished += OnActionFinished;
                 action.BeforeCancelled += OnActionCancelled;
@@ -320,7 +338,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // The play has fully resolved and nothing else has run: the state it left.
             var me = Sts2State.Me;
             var cs = Sts2State.Combat;
-            if (me != null && cs != null)
+            if (CombatManager.Instance.IsOverOrEnding)
+            {
+                // The fight is ending: its cleanup (temporary powers expiring, Focus back) changes the
+                // state, so the state the play left can't be compared. The history checks still run.
+                rec.AfterSkipped = "the fight ended";
+            }
+            else if (me != null && cs != null)
             {
                 rec.PowersAfter = PowerSnapshot();
                 rec.FullAfter = PlaySnapshot.Take(me);
@@ -489,19 +513,23 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var start = indices.FirstOrDefault(i => hist[i] is CardPlayStartedEntry { CardPlay: var p } && p.Card.Owner == me && p.IsFirstInSeries && !p.IsAutoPlay, -1);
         if (start < 0) return; // nothing was played (the card couldn't be played after all)
         var card = ((CardPlayStartedEntry)hist[start]).CardPlay.Card;
-        var predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs : Array.Empty<TabSpec>();
-        ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts);
+        // What was predicted when the play's action started (fallback: now, for a card the action
+        // couldn't name up front).
+        var captured = ReferenceEquals(rec.Card, card);
+        var predicted = captured && rec.Predicted != null ? rec.Predicted
+            : _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs : Array.Empty<TabSpec>();
+        var facts = captured ? rec.Facts : ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var f0) ? f0 : null;
         var w = new Window
         {
             Card = card, CardName = SafeTitle(card), Predicted = predicted, Facts = facts,
             Start = start, From = indices.Min(), To = indices.Max() + 1, Indices = indices,
             Flashes = rec.Flashes, Shuffles = rec.Shuffles,
-            Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
+            Lag = captured ? rec.Lag : _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
             Before = rec.Before, Target = rec.Target,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped,
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
             FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
-            StaleBecause = StaleBecause(hist, card, start, me),
+            StaleBecause = captured ? rec.StaleBecause : StaleBecause(hist, card, start, me),
         };
         Report(w, me, hist);
     }

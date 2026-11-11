@@ -50,7 +50,7 @@ public static class SimAdapter
     };
 
     /// <summary>The simulator channels this card's orbs (for the coverage check).</summary>
-    internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card == nameof(Tempest);
+    internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card is nameof(Tempest) or nameof(Voltaic);
 
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
     private static readonly Dictionary<string, OrbKind> RepeatChannels = new()
@@ -220,6 +220,7 @@ public static class SimAdapter
             else if (type == nameof(Regret)) p.RegretCards++;
         }
 
+        p.Focus = c.GetPower<FocusPower>()?.Amount ?? 0;
         p.OrbCapacity = pcs.OrbQueue.Capacity;
         foreach (var orb in pcs.OrbQueue.Orbs) p.Orbs.Add(ToSim(orb, cs));
         // The game's trigger count includes Gold-Plated Cables' bonus on the current front orb; the
@@ -332,11 +333,19 @@ public static class SimAdapter
             }
         }
 
-        // Its own block: one gain per play.
+        // Its own block: one gain per play. Fisticuffs: the damage it dealt (overkill included);
+        // Entrench: your current block again.
         var blockGains = f.BlockGains;
         if (blockGains > 0)
         {
-            var total = CardBlock(card, cs, me) * plays;
+            var aimed = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
+            var each = name switch
+            {
+                nameof(Fisticuffs) => aimed != null ? f.TotalDamage(aimed) / Math.Max(1, plays) : 0,
+                nameof(Entrench) => me.Creature.Block,
+                _ => CardBlock(card, cs, me),
+            };
+            var total = each * plays;
             play.BlockGains = blockGains;
             play.BlockAmount = blockGains > 0 ? total / blockGains : 0;
         }
@@ -366,12 +375,18 @@ public static class SimAdapter
             {
                 for (var r = 0; r < Math.Max(1, Sts2State.Var(card, "Repeat", 1)); r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(rk, focus, lightningBonus) });
             }
+            else if (name == nameof(Voltaic))
+            {
+                for (var r = 0; r < PlayFacts.ChannelCount(card, name, me); r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
+            }
             else if (name == nameof(Tempest))
             {
                 var x = SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0); // Tempest+ channels one more
                 for (var r = 0; r < x; r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
             }
         }
+
+        play.FocusDelta = FocusChange(card) * plays;
 
         // Storm: Lightning per Power played (StormPower.AfterCardPlayed). Trash to Treasure: a random orb
         // per status the play creates (its kind is a roll: Unknown, so only the evoke it causes and the
@@ -429,8 +444,7 @@ public static class SimAdapter
         //    With Artifact a charge may take it instead (which debuff it takes depends on the order), so
         //    that intent is left as it is.
         //  - Enrage: every Skill you play gives it Strength (EnragePower.AfterCardPlayed).
-        var appliesWeak = card.DynamicVars.Values.Any(v => v.GetType() is { IsGenericType: true } t && t.GetGenericTypeDefinition() == typeof(PowerVar<>)
-                                                           && t.GetGenericArguments()[0] == typeof(WeakPower) && v.BaseValue > 0);
+        var appliesWeak = f.EnemyDebuffs.Contains(typeof(WeakPower));
         var weakened = !appliesWeak
             ? new HashSet<Creature>()
             : card.TargetType switch
@@ -500,6 +514,52 @@ public static class SimAdapter
         {
             return null;
         }
+    }
+
+    private static readonly Dictionary<Type, int> FocusSign = new();
+
+    /// <summary>
+    /// Focus the card gives (+) or takes (-) when played: it applies FocusPower or a temporary Focus
+    /// power (sign from TemporaryFocusPower.IsPositive: Hyperbeam's is negative), by its FocusPower
+    /// value or calculated focus (Synchronize). Read from the card's compiled code.
+    /// </summary>
+    private static int FocusChange(CardModel card)
+    {
+        var t = card.GetType();
+        if (!FocusSign.TryGetValue(t, out var sign))
+        {
+            sign = 0;
+            foreach (var applied in Diagnostics.CardCoverage.PowersApplied(t))
+            {
+                if (applied == typeof(FocusPower)) sign = 1;
+                else if (typeof(TemporaryFocusPower).IsAssignableFrom(applied))
+                {
+                    try
+                    {
+                        var instance = System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(applied);
+                        var positive = applied.GetProperty("IsPositive", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)?.GetValue(instance);
+                        sign = positive is false ? -1 : 1;
+                    }
+                    catch
+                    {
+                        sign = 1;
+                    }
+                }
+            }
+            FocusSign[t] = sign;
+        }
+        if (sign == 0) return 0;
+        decimal amount = 0;
+        try
+        {
+            if (card.DynamicVars.TryGetValue("FocusPower", out var v)) amount = v.BaseValue;
+            else if (card.DynamicVars.TryGetValue("CalculatedFocus", out var cv) && cv is CalculatedVar calc) amount = calc.Calculate(null);
+        }
+        catch
+        {
+            amount = 0;
+        }
+        return sign * (int)amount;
     }
 
     /// <summary>The card's own block per play (its Block value through the game's block math).</summary>

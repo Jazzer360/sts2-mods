@@ -33,6 +33,8 @@ public sealed class SimPlay
 
     /// <summary>Times the card plays (Sneaky reacts to each).</summary>
     public int Plays = 1;
+    /// <summary>Focus it gives or takes after its hits (Defragment, Hyperbeam...): your orbs' values change with it.</summary>
+    public int FocusDelta;
 
     public int HandDelta = -1;
     public int FadingDelta;
@@ -524,6 +526,7 @@ public static class SimEngine
             s.P.Fading = Math.Max(0, s.P.Fading + p.FadingDelta);
             if (p.IsAttack) s.P.AttacksThisTurn++;
             AllyDeaths(s); // deaths from the card's hits
+            if (p.FocusDelta != 0) ChangeFocus(s, p.FocusDelta);
 
             // Enemy reactions once the card is played (AfterCardPlayed; powers fire before your relics,
             // so this block is up before relic procs hit): Curl Up, Sneaky, Skittish.
@@ -746,6 +749,32 @@ public static class SimEngine
     /// Enemies react to an ally's death as it happens (AfterDeath): Ravenous is stunned (and gains
     /// Strength for later turns), Crab Rage gains Strength (its hits) and block, once.
     /// </summary>
+    /// <summary>
+    /// Your Focus changes: each orb's values move by what Focus does to its base value
+    /// (FocusPower.ModifyOrbValue: base + Focus, not below 0), so other modifiers on it stay.
+    /// Lightning 3/8, Frost 2/5, Dark's passive 6 (its evoke is what it stored), Glass from its base
+    /// (evoke twice the passive). Plasma doesn't use Focus.
+    /// </summary>
+    private static void ChangeFocus(SimState s, int delta)
+    {
+        int Shift(int value, int baseValue) => value + Math.Max(0, baseValue + s.P.Focus + delta) - Math.Max(0, baseValue + s.P.Focus);
+        foreach (var o in s.P.Orbs)
+        {
+            switch (o.Kind)
+            {
+                case OrbKind.Lightning: o.Passive = Shift(o.Passive, 3); o.Evoke = Shift(o.Evoke, 8); break;
+                case OrbKind.Frost: o.Passive = Shift(o.Passive, 2); o.Evoke = Shift(o.Evoke, 5); break;
+                case OrbKind.Dark: o.Passive = Shift(o.Passive, 6); break;
+                case OrbKind.Glass:
+                    o.Passive = Shift(o.Passive, o.GlassBase);
+                    o.GlassBonus += delta;
+                    o.Evoke = o.Passive * 2;
+                    break;
+            }
+        }
+        s.P.Focus += delta;
+    }
+
     private static void AllyDeaths(SimState s)
     {
         foreach (var e in s.Enemies)

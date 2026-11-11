@@ -193,6 +193,8 @@ public sealed class SimPlayer
     public int PoisonBonus;
     /// <summary>The Boot: your attack hits that lose an enemy any HP lose it at least this much (0 = no relic).</summary>
     public int BootMinimum;
+    /// <summary>Your Focus now (orb values already include it), for Focus changes during a play.</summary>
+    public int Focus;
     /// <summary>Beating Remnant: HP you can still lose until the start of your next turn (it resets only then).</summary>
     public int RemnantLeftPlayerTurn = int.MaxValue;
     public int RemnantCap = int.MaxValue;

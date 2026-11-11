@@ -187,4 +187,31 @@ public class SimReactionTests
         Assert.False(o.DeadInAll(1));
         Assert.True(o.DeadInAny(1));
     }
+
+    [Fact]
+    public void FocusLossFromHyperbeamLowersYourOrbs()
+    {
+        // From a real fight: Lightning 3/8 and Glass 2/4 at 0 Focus; Hyperbeam takes 3 Focus:
+        // the game showed Lightning 0/5 and Glass 0/0 afterwards.
+        var s = new SimState { Enemies = { Enemy(1, 60) } };
+        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, GlassBase = 2 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        s.P.OrbCapacity = 3;
+        SimEngine.ApplyPlayTo(s, new SimPlay { Name = "Hyperbeam", FocusDelta = -3 }, out var b, out _);
+        var orbs = b[0].P.Orbs;
+        Assert.Equal((0, 0), (orbs[0].Passive, orbs[0].Evoke));
+        Assert.Equal((0, 5), (orbs[1].Passive, orbs[1].Evoke));
+        Assert.Equal(-3, b[0].P.Focus);
+    }
+
+    [Fact]
+    public void FocusGainRaisesOrbsFromZero()
+    {
+        // Negative Focus floors values at 0; gaining Focus back counts from the base, not the floor.
+        var s = new SimState { Enemies = { Enemy(1, 60) } };
+        s.P.Focus = -4;
+        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 0, Evoke = 1 } };
+        s.P.OrbCapacity = 3;
+        SimEngine.ApplyPlayTo(s, new SimPlay { Name = "Defragment", FocusDelta = 3 }, out var b, out _);
+        Assert.Equal((1, 4), (b[0].P.Orbs[0].Passive, b[0].P.Orbs[0].Evoke));
+    }
 }

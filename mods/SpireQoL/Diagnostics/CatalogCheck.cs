@@ -29,7 +29,8 @@ internal static class CatalogCheck
 
         // Proc rules.
         var gameTypes = GameModelTypes();
-        var ruleNames = LiteralsIn(typeof(ProcIndicatorsFeature))
+        // Tab keys are built as "proc:" + nameof(X), which the compiler folds into one literal.
+        var ruleNames = LiteralsIn(typeof(ProcIndicatorsFeature)).Select(n => n.StartsWith("proc:") ? n[5..] : n)
             .Where(n => gameTypes.TryGetValue(n, out var t) && (typeof(RelicModel).IsAssignableFrom(t) || typeof(PowerModel).IsAssignableFrom(t)))
             .ToHashSet();
         var procRows = sources.Where(s => s.Tag != null && s.TagPrefix == "proc:").Select(s => s.Type).ToHashSet();
