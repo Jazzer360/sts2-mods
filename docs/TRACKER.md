@@ -484,6 +484,6 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [x] 0.31.23: Necrobinder findings: Sacrifice and Bone Shards kill Osty in the simulator (card scan reports other cards that kill a creature); summons explain Osty's HP and max HP in the proc check; the stale check counts potions and teammates' plays too.
 - [x] 0.31.24 (found by driving a test fight): a queued card ran itself in its own lead-in; the proc check now takes the tabs from the moment a play is queued (ActionQueueSet.ActionEnqueued), not its last frame in hand.
 - [ ] Lead-in ignores outcomes already visible mid-resolution: during Sword Boomerang, after the first hit went to the other Myte, the Death Skull still showed 12% (all three hits on it) instead of 0%. Account for the hits already resolved and branch only on the rest (needs how far the resolving play has got).
-- [ ] The test-build note didn't show for an incremental dirty build (the DLL had no GitDirty attribute): StampGitDirty likely runs but the generated assembly-info file isn't regenerated. Fix in Directory.Build.targets.
+- [x] Fixed (build only): the test-build note didn't show for an incremental dirty build (the DLL had no GitDirty attribute): StampGitDirty likely runs but the generated assembly-info file isn't regenerated. Fix in Directory.Build.targets.
 - [ ] Test the queued play's proc check end to end (needs a target that survives the first play so the second resolves; the combat summary's lead-in count).
 
