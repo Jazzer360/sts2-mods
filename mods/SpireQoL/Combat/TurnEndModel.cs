@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Sim;
@@ -50,6 +51,8 @@ public sealed class TurnEndModel
     public SimState State { get; private set; } = new();
     public IReadOnlyDictionary<Creature, int> Ids { get; private set; } = new Dictionary<Creature, int>();
     public SimOutcome Outcome { get; private set; } = new();
+    /// <summary>The players behind SimState.Teammates (multiplayer), in the same order, as of this forecast.</summary>
+    public IReadOnlyList<Player> Teammates { get; private set; } = Array.Empty<Player>();
 
     /// <summary>The start state's full fingerprint (SimState.FullKey): card simulations are cached by it.</summary>
     public long StateKey { get; private set; }
@@ -98,6 +101,7 @@ public sealed class TurnEndModel
             StateKey = key,
             Ids = ids,
             Outcome = outcome,
+            Teammates = SimAdapter.Teammates(me, cs),
             CurrentBlock = state.P.Block,
             SkippedPoisoned = w.SkippedPoisoned,
             SkippedEndOfTurn = w.SkippedEndOfTurn,

@@ -47,6 +47,11 @@ public sealed class SimEnemy
     public bool Stunned;
     /// <summary>Its attack this turn: damage of each hit on you (the intent's numbers).</summary>
     public List<int> Hits = new();
+    /// <summary>
+    /// Each hit's amount on teammate k (their own Vulnerable, Intangible, Tank...: the game's damage math per
+    /// target); missing: the same as yours.
+    /// </summary>
+    public List<List<int>> TeammateHits = new();
     public bool Imbalanced;
     /// <summary>Most damage one instance can deal it: Hard to Kill's cap, 1 while Intangible (int.MaxValue = none).</summary>
     public int HitCap = int.MaxValue;
@@ -212,6 +217,18 @@ public sealed class SimPlayer
     public int RemnantCap = int.MaxValue;
     public int Buffer;
     public int OstyHp;
+
+    // Teammates only (yours are on SimState: Taken, OstyTaken, DamageThrough).
+    /// <summary>A teammate's HP (hits on a teammate at 0 stop).</summary>
+    public int Hp = int.MaxValue;
+    /// <summary>A teammate's HP lost, through their block, and lost by their Osty this turn.</summary>
+    public int Taken, Through, OstyTaken;
+    /// <summary>
+    /// Beacon of Hope: half of each block this player gains on the players' side goes to every other
+    /// living player (BeaconOfHopePower.AfterBlockGained). BeaconGiving: held while it gives (the game's
+    /// guard against two Beacons trading block forever).
+    /// </summary>
+    public bool BeaconOfHope, BeaconGiving;
 
     // Branches share their orbs until one changes them (OwnOrbs): copying them for every candidate
     // branch, most of which merge away as duplicates, was most of a branch-heavy simulation's cost.

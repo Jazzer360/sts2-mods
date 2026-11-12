@@ -186,7 +186,51 @@ public static class SimAdapter
             s.Enemies.Add(se);
         }
 
-        var p = s.P;
+        FillPlayer(s.P, me, cs);
+        s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
+
+        // Teammates (multiplayer): built like you (FillPlayer), in player order. Decision #25: their hand is
+        // used too (it only changes their own HP in the simulator; nothing shown depends on it yet).
+        // Each enemy hit's amount on each teammate goes through the game's damage math for them.
+        var players = cs.Players.ToList();
+        var myIndex = players.IndexOf(me);
+        var teamCreatures = new List<Creature>();
+        for (var i = 0; i < players.Count; i++)
+        {
+            var other = players[i];
+            if (!IsTeammate(other, me)) continue;
+            var oc = other.Creature;
+            var t = new SimPlayer();
+            FillPlayer(t, other, cs);
+            t.Hp = oc.CurrentHp;
+            t.BeaconOfHope = oc.HasPower<BeaconOfHopePower>();
+            s.Teammates.Add(t);
+            teamCreatures.Add(oc);
+            if (i < myIndex) s.TeammatesBeforeMe++;
+        }
+        if (teamCreatures.Count > 0)
+        {
+            foreach (var (e, id) in ids)
+            {
+                if (!e.IsAlive || e.Monster == null || s.Enemy(id) is not { } se) continue;
+                foreach (var tc in teamCreatures) se.TeammateHits.Add(HitsOn(e, tc, me, cs) ?? se.Hits);
+            }
+        }
+        return s;
+    }
+
+    /// <summary>Another living player in the fight: a simulated teammate (SimState.Teammates, in this order).</summary>
+    internal static bool IsTeammate(Player p, Player me) => p != me && p.Creature is { IsAlive: true } && p.PlayerCombatState != null;
+
+    /// <summary>The simulated teammates, in player order (SimState.Teammates[k] is the k-th).</summary>
+    public static List<Player> Teammates(Player me, ICombatState cs) => cs.Players.Where(p => IsTeammate(p, me)).ToList();
+
+    /// <summary>
+    /// A player's state for the simulator: block, powers, relics, hand, orbs, Osty. The same for you and
+    /// for each teammate (multiplayer), so a teammate is modelled exactly like you.
+    /// </summary>
+    private static void FillPlayer(SimPlayer p, Player me, ICombatState cs)
+    {
         var c = me.Creature;
         var pcs = me.PlayerCombatState!;
         var hand = Sts2State.Hand(me);
@@ -273,54 +317,32 @@ public static class SimAdapter
 
         var osty = me.Osty;
         p.OstyHp = osty != null && osty.IsAlive && osty.HasPower<DieForYouPower>() ? osty.CurrentHp : 0;
+    }
 
-        // Teammates (multiplayer): what's on screen for them (orbs, powers, relics), for their effects on
-        // enemies at end of turn, in player order. Their hand isn't known (HandCount -1: effects that need it
-        // don't count), and their block only protects them.
-        var players = cs.Players.ToList();
-        var myIndex = players.IndexOf(me);
-        for (var i = 0; i < players.Count; i++)
+    /// <summary>
+    /// An enemy's attack hits on a player, through the game's damage math with that player as the target
+    /// (their Vulnerable, Intangible, Tank...), as AttackIntent.GetSingleDamage does for you. Null if the
+    /// intent can't be read.
+    /// </summary>
+    private static List<int>? HitsOn(Creature e, Creature target, Player me, ICombatState cs)
+    {
+        try
         {
-            var other = players[i];
-            if (other == me || other.Creature is not { IsAlive: true } oc || other.PlayerCombatState is not { } ocs) continue;
-            var t = new SimPlayer
+            var hits = new List<int>();
+            foreach (var attack in e.Monster!.NextMove.Intents.OfType<AttackIntent>())
             {
-                HandCount = -1,
-                OrbCapacity = ocs.OrbQueue.Capacity,
-                Thunder = oc.GetPower<ThunderPower>()?.Amount ?? 0,
-                Focus = oc.GetPower<FocusPower>()?.Amount ?? 0,
-            };
-            foreach (var pw in oc.Powers)
-            {
-                switch (pw.GetType().Name)
-                {
-                    case nameof(HailstormPower):
-                        t.Hailstorm += pw.Amount;
-                        t.HailstormFrostNeeded = Sts2State.Var(pw, "FrostOrbs", 1);
-                        break;
-                    case nameof(TheBombPower):
-                        if (pw.Amount <= 1) t.TheBombDamage += Sts2State.Var(pw, "Damage");
-                        break;
-                    case nameof(ConsumingShadowPower): t.ConsumingShadow += pw.Amount; break;
-                }
+                if (attack.DamageCalc == null) return null;
+                var v = Hook.ModifyDamage(me.RunState, cs, target, e, attack.DamageCalc(), MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
+                    ModifyDamageHookType.All, CardPreviewMode.None, out _);
+                var perHit = Math.Max(0, (int)v);
+                for (var i = 0; i < Math.Max(1, attack.Repeats); i++) hits.Add(perHit);
             }
-            foreach (var r in other.Relics)
-            {
-                switch (r.GetType().Name)
-                {
-                    case nameof(ScreamingFlagon): t.ScreamingFlagonDamage += Sts2State.Var(r, "Damage"); break;
-                    case nameof(StoneCalendar):
-                        if (ocs.TurnNumber == Sts2State.Var(r, "DamageTurn", 7)) t.StoneCalendarDamage += Sts2State.Var(r, "Damage");
-                        break;
-                    case nameof(GoldPlatedCables): t.FrontOrbBonusTriggers += 1; break;
-                }
-            }
-            foreach (var orb in ocs.OrbQueue.Orbs) t.Orbs.Add(ToSim(orb, cs));
-            if (t.Orbs.Count > 0) t.Orbs[0].Triggers = Math.Max(1, t.Orbs[0].Triggers - t.FrontOrbBonusTriggers);
-            s.Teammates.Add(t);
-            if (i < myIndex) s.TeammatesBeforeMe++;
+            return hits;
         }
-        return s;
+        catch
+        {
+            return null;
+        }
     }
 
     private static bool IsFading(CardModel card, ICombatState cs)
@@ -592,6 +614,17 @@ public static class SimAdapter
                 strength -= gaze * f.HitsOn(e);
             if (!weak && !halved && strength == 0) continue;
             if (AdjustedHits(e, me, cs, strength, weak, halved ? 0.5m : 1m) is { } hits) play.SetHits[id] = hits;
+            // Teammates (same order as Build): Weak and Strength change their hits too; Colossus only protects you.
+            if (!weak && strength == 0) continue;
+            var mates = Teammates(me, cs);
+            if (mates.Count == 0) continue;
+            var teamHits = new List<List<int>>();
+            foreach (var mate in mates)
+            {
+                if (AdjustedHits(e, me, cs, strength, weak, 1m, mate) is not { } th) { teamHits = null; break; }
+                teamHits.Add(th);
+            }
+            if (teamHits != null) play.SetTeammateHits[id] = teamHits;
         }
         return play;
     }
@@ -603,15 +636,17 @@ public static class SimAdapter
     /// on the enemy doubles the reduction) and <paramref name="multiplier"/> (Colossus: 0.5), then any damage
     /// cap. Null when the intent can't be read.
     /// </summary>
-    private static List<int>? AdjustedHits(Creature e, Player me, ICombatState cs, int strength, bool weak, decimal multiplier = 1m)
+    /// <param name="target">The player hit (a teammate); you when null.</param>
+    private static List<int>? AdjustedHits(Creature e, Player me, ICombatState cs, int strength, bool weak, decimal multiplier = 1m, Player? target = null)
     {
         try
         {
+            var who = target ?? me;
             var m = multiplier;
             if (weak)
             {
                 var w = 0.75m;
-                if (me.Relics.Any(r => r.GetType().Name == nameof(PaperKrane))) w -= 0.15m;
+                if (who.Relics.Any(r => r.GetType().Name == nameof(PaperKrane))) w -= 0.15m;
                 if (e.Powers.Any(p => p.GetType().Name == nameof(DebilitatePower))) w -= 1m - w;
                 m *= w;
             }
@@ -620,9 +655,9 @@ public static class SimAdapter
             {
                 if (attack.DamageCalc == null) return null;
                 var raw = attack.DamageCalc() + strength;
-                var v = Hook.ModifyDamage(me.RunState, cs, me.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
+                var v = Hook.ModifyDamage(me.RunState, cs, who.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
                     ModifyDamageHookType.Additive | ModifyDamageHookType.Multiplicative, CardPreviewMode.None, out _);
-                var capped = Hook.ModifyDamage(me.RunState, cs, me.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
+                var capped = Hook.ModifyDamage(me.RunState, cs, who.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
                     ModifyDamageHookType.All, CardPreviewMode.None, out _);
                 var adjusted = v * m;
                 if (capped < v) adjusted = Math.Min(adjusted, capped);

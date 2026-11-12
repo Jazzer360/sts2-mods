@@ -30,6 +30,8 @@ public sealed class SimPlay
     /// Enemies whose intent damage the play changes (Weak it applies): their hits afterwards, per enemy id.
     /// </summary>
     public Dictionary<int, List<int>> SetHits = new();
+    /// <summary>The same for teammates: enemy id → hits on each teammate (by teammate index) afterwards.</summary>
+    public Dictionary<int, List<List<int>>> SetTeammateHits = new();
 
     /// <summary>Times the card plays (Sneaky reacts to each).</summary>
     public int Plays = 1;
@@ -82,6 +84,9 @@ public sealed class SimOutcome
 
     public SimState Worst => SafeWorst ?? Branches.OrderByDescending(b => b.Taken).ThenByDescending(b => b.OstyTaken).First();
     public int TakenMin => Branches.Min(b => b.Taken);
+    /// <summary>Teammate k's HP lost: the worst branch (the safe run included) and the best.</summary>
+    public int TeammateTakenMax(int k) => Math.Max(Branches.Max(b => b.Teammates[k].Taken), SafeWorst?.Teammates[k].Taken ?? 0);
+    public int TeammateTakenMin(int k) => Branches.Min(b => b.Teammates[k].Taken);
     public int TakenMax => Math.Max(Branches.Max(b => b.Taken), SafeWorst?.Taken ?? 0);
     public int OstyTakenMin => Branches.Min(b => b.OstyTaken);
     public int OstyTakenMax => Math.Max(Branches.Max(b => b.OstyTaken), SafeWorst?.OstyTaken ?? 0);
@@ -396,27 +401,62 @@ public static class SimEngine
     }
 
     /// <summary>Gaining block (amount &gt; 0) sets off Juggernaut on a random enemy.</summary>
-    private static IEnumerable<SimState> GainBlock(SimState s, int amount, string? log)
+    /// <param name="who">-1: you; k: teammate k.</param>
+    private static IEnumerable<SimState> GainBlock(SimState s, int amount, string? log, int who = -1)
     {
         if (amount <= 0) return new[] { s };
-        s.P.Block += amount;
-        s.P.BlockGains++;
-        if (log != null) if (s.Log) s.EndOfTurnBlock.Add((log, amount));
-        if (s.P.Juggernaut <= 0) return new[] { s };
-        var j = s.P.Juggernaut;
-        if (log != null) if (s.Log) s.EndOfTurnDamage.Add(("Juggernaut", j));
-        return HitRandom(s, _ => j);
+        var p = who < 0 ? s.P : s.MutableTeammate(who);
+        p.Block += amount;
+        p.BlockGains++;
+        if (who < 0 && log != null) if (s.Log) s.EndOfTurnBlock.Add((log, amount));
+        IEnumerable<SimState> r = new[] { s };
+        if (p.Juggernaut > 0)
+        {
+            var j = p.Juggernaut;
+            if (who < 0 && log != null) if (s.Log) s.EndOfTurnDamage.Add(("Juggernaut", j));
+            r = HitRandom(s, _ => j);
+        }
+        // Beacon of Hope: half (whole block only) to every other living player; theirs can pass half of
+        // that on once (the giver's is held while it gives, and the giver still gets block back).
+        if (p.BeaconOfHope && !p.BeaconGiving && amount / 2 >= 1) r = r.SelectMany(x => ShareBlock(x, who, amount / 2)).ToList();
+        return r;
+    }
+
+    private static IEnumerable<SimState> ShareBlock(SimState s, int giver, int half)
+    {
+        (giver < 0 ? s.P : s.MutableTeammate(giver)).BeaconGiving = true;
+        IEnumerable<SimState> r = new[] { s };
+        foreach (var other in PlayerOrder(s))
+        {
+            if (other == giver || (other >= 0 && s.Teammates[other].Hp <= 0)) continue;
+            var o = other;
+            r = r.SelectMany(x => GainBlock(x, half, o < 0 ? "Beacon of Hope" : null, o)).ToList();
+        }
+        return r.Select(x =>
+        {
+            (giver < 0 ? x.P : x.MutableTeammate(giver)).BeaconGiving = false;
+            return x;
+        }).ToList();
+    }
+
+    /// <summary>Players in player order: teammate indexes, with -1 (you) at your place.</summary>
+    private static IEnumerable<int> PlayerOrder(SimState s)
+    {
+        var before = Math.Min(s.TeammatesBeforeMe, s.Teammates.Count);
+        for (var k = 0; k < before; k++) yield return k;
+        yield return -1;
+        for (var k = before; k < s.Teammates.Count; k++) yield return k;
     }
 
     /// <param name="thunder">The orb owner's Thunder (yours when null).</param>
     /// <param name="mine">Your orb: a teammate's Frost blocks for them, not you.</param>
-    private static IEnumerable<SimState> Evoke(SimState s, SimOrb orb, int? thunder = null, bool mine = true)
+    private static IEnumerable<SimState> Evoke(SimState s, SimOrb orb, int? thunder = null, int who = -1)
     {
         switch (orb.Kind)
         {
             // Thunder hits the evoke's target again if it's still alive.
             case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = thunder ?? st.P.Thunder; if (t > 0 && e.Alive) Damage(e, t); });
-            case OrbKind.Frost: return mine ? GainBlock(s, orb.Evoke, null) : new[] { s };
+            case OrbKind.Frost: return GainBlock(s, orb.Evoke, null, who);
             case OrbKind.Dark:
             {
                 var weakest = s.Targetable.OrderBy(e => e.Hp).FirstOrDefault();
@@ -431,23 +471,34 @@ public static class SimEngine
         }
     }
 
-    private static int HpLoss(SimState s, int amount, ref int remnantLeft)
+    private static int HpLoss(SimState s, int amount, ref int remnantLeft) => HpLoss(s.P, amount, ref remnantLeft);
+
+    private static int HpLoss(SimPlayer p, int amount, ref int remnantLeft)
     {
         if (amount <= 0) return 0;
-        amount = Math.Max(0, amount - s.P.TungstenRod);
+        amount = Math.Max(0, amount - p.TungstenRod);
         amount = Math.Min(amount, remnantLeft);
-        if (amount > 0 && s.P.Buffer > 0)
+        if (amount > 0 && p.Buffer > 0)
         {
-            s.P.Buffer--;
+            p.Buffer--;
             return 0; // a hit Buffer stops doesn't use Beating Remnant's budget (it counts UnblockedDamage)
         }
         if (remnantLeft != int.MaxValue) remnantLeft -= amount;
         return amount;
     }
 
-    private static void LandBlockable(SimState s, string name, int amount)
+    private static void LandBlockable(SimState s, string name, int amount, int who = -1)
     {
         if (amount <= 0) return;
+        if (who >= 0)
+        {
+            var t = s.MutableTeammate(who);
+            var tb = Math.Min(t.Block, amount);
+            t.Block -= tb;
+            t.Through += amount - tb;
+            TeammateHpLoss(t, amount - tb);
+            return;
+        }
         s.BlockDemand += amount;
         if (s.Log) s.Blockable.Add((name, amount));
         var blocked = Math.Min(s.P.Block, amount);
@@ -458,9 +509,24 @@ public static class SimEngine
         s.P.RemnantLeftPlayerTurn = left;
     }
 
-    private static void LandUnblockable(SimState s, string name, int amount)
+    /// <summary>A teammate losing HP (Tungsten Rod, Buffer, Beating Remnant like yours).</summary>
+    private static void TeammateHpLoss(SimPlayer t, int amount)
+    {
+        var left = t.RemnantLeftPlayerTurn;
+        var lost = Math.Min(HpLoss(t, amount, ref left), Math.Max(0, t.Hp)); // HP stops at 0
+        t.RemnantLeftPlayerTurn = left;
+        t.Taken += lost;
+        t.Hp -= lost;
+    }
+
+    private static void LandUnblockable(SimState s, string name, int amount, int who = -1)
     {
         if (amount <= 0) return;
+        if (who >= 0)
+        {
+            TeammateHpLoss(s.MutableTeammate(who), amount);
+            return;
+        }
         if (s.Log) s.Unblockable.Add((name, amount));
         var left = s.P.RemnantLeftPlayerTurn;
         s.Taken += HpLoss(s, amount, ref left);
@@ -577,6 +643,10 @@ public static class SimEngine
             {
                 if (s.Enemy(id) is { Alive: true } e) e.Hits = hits; // shared, never changed in place
             }
+            foreach (var (id, hits) in p.SetTeammateHits)
+            {
+                if (s.Enemy(id) is { Alive: true } e) e.TeammateHits = hits; // shared, never changed in place
+            }
             s.P.HandCount = Math.Max(0, s.P.HandCount + p.HandDelta);
             s.P.Fading = Math.Max(0, s.P.Fading + p.FadingDelta);
             if (p.IsAttack) s.P.AttacksThisTurn++;
@@ -673,7 +743,8 @@ public static class SimEngine
 
     /// <summary>One player's orb passives at end of turn, front first (yours, or a teammate's: their Frost blocks for them).</summary>
     /// <param name="mutable">The same player, to change (a teammate shared between branches is copied first).</param>
-    private static void OrbPassives(BranchSet b, Func<SimState, SimPlayer> who, bool mine, Func<SimState, SimPlayer>? mutable = null)
+    /// <param name="player">-1: you; k: teammate k.</param>
+    private static void OrbPassives(BranchSet b, Func<SimState, SimPlayer> who, int player, Func<SimState, SimPlayer>? mutable = null)
     {
         mutable ??= who;
         var maxOrbs = b.States.Max(s => who(s).Orbs.Count);
@@ -696,7 +767,7 @@ public static class SimEngine
                             if (s.Log) s.EndOfTurnDamage.Add(("Lightning", orb.Passive));
                             return HitRandom(s, _ => orb.Passive);
                         case OrbKind.Frost:
-                            return mine ? GainBlock(s, orb.Passive, "Frost") : new[] { s };
+                            return GainBlock(s, orb.Passive, player < 0 ? "Frost" : null, player);
                         case OrbKind.Dark:
                             mutable(s).OwnOrbs()[index].Evoke += orb.Passive;
                             return new[] { s };
@@ -753,6 +824,21 @@ public static class SimEngine
                 AllEnemies(s, "Stone Calendar (teammate)", t.StoneCalendarDamage);
             }
         });
+        // Teammates' block at BeforeSideTurnEnd: Plating, then Orichalcum when they had no block. It
+        // protects them, and their Beacon of Hope shares half of it (with you too).
+        var team = b.States.Count > 0 ? b.States[0].Teammates.Count : 0;
+        for (var k = 0; k < team; k++)
+        {
+            var tk = k;
+            b.Each(s =>
+            {
+                var t = s.Teammates[tk];
+                if (t.Hp <= 0) return new[] { s };
+                var armed = t.Block <= 0;
+                var r = GainBlock(s, t.Plating, null, tk);
+                return armed ? r.SelectMany(x => GainBlock(x, x.Teammates[tk].OrichalcumBlock, null, tk)).ToList() : r;
+            });
+        }
 
         // 2. Orb passives, each player in player order (CombatManager.DoTurnEnd), front first.
         var teammates = b.States.Count > 0 ? b.States[0].Teammates.Count : 0;
@@ -760,13 +846,13 @@ public static class SimEngine
         for (var k = 0; k < before; k++)
         {
             var tk = k;
-            OrbPassives(b, s => s.Teammates[tk], mine: false, mutable: s => s.MutableTeammate(tk));
+            OrbPassives(b, s => s.Teammates[tk], tk, mutable: s => s.MutableTeammate(tk));
         }
-        OrbPassives(b, s => s.P, mine: true);
+        OrbPassives(b, s => s.P, -1);
         for (var k = before; k < teammates; k++)
         {
             var tk = k;
-            OrbPassives(b, s => s.Teammates[tk], mine: false, mutable: s => s.MutableTeammate(tk));
+            OrbPassives(b, s => s.Teammates[tk], tk, mutable: s => s.MutableTeammate(tk));
         }
 
         // 3. Ethereal cards exhaust (CardCmd.Exhaust in DoTurnEnd), then cards in hand act (DoTurnEndCards).
@@ -803,6 +889,21 @@ public static class SimEngine
             foreach (var (name, amount) in s.P.DebuffBlockable) LandBlockable(s, name, amount);
             foreach (var (name, amount) in s.P.DebuffUnblockable) LandUnblockable(s, name, amount);
         });
+        // Teammates' cards in hand and debuffs, on them (decision #25: their hand is used here; it only
+        // changes their own HP, which nothing shown depends on yet).
+        b.Do(s =>
+        {
+            for (var k = 0; k < s.Teammates.Count; k++)
+            {
+                var t = s.Teammates[k];
+                if (t.Hp <= 0) continue;
+                foreach (var (name, amount) in t.HandBlockable) LandBlockable(s, name, amount, k);
+                foreach (var (name, amount) in t.HandUnblockable) LandUnblockable(s, name, amount, k);
+                for (var i = 0; i < t.RegretCards; i++) LandUnblockable(s, "Regret", Math.Max(0, t.HandCount), k);
+                foreach (var (name, amount) in t.DebuffBlockable) LandBlockable(s, name, amount, k);
+                foreach (var (name, amount) in t.DebuffUnblockable) LandUnblockable(s, name, amount, k);
+            }
+        });
 
         // 5. AfterSideTurnEnd: Consuming Shadow evokes (last orb first), then Parrying Shield.
         var maxShadow = b.States.Max(s => s.P.ConsumingShadow);
@@ -831,7 +932,7 @@ public static class SimEngine
                     if (n >= t.ConsumingShadow || t.Orbs.Count == 0) return new[] { s };
                     var orb = t.Orbs[^1];
                     t.OwnOrbs().RemoveAt(t.Orbs.Count - 1);
-                    return Evoke(s, orb, t.Thunder, mine: false);
+                    return Evoke(s, orb, t.Thunder, who: tk);
                 });
             }
         }
@@ -840,6 +941,11 @@ public static class SimEngine
         b.Do(s =>
         {
             foreach (var (name, amount) in s.P.DebuffLateBlockable) LandBlockable(s, name, amount);
+            for (var k = 0; k < s.Teammates.Count; k++)
+            {
+                if (s.Teammates[k].Hp <= 0) continue;
+                foreach (var (name, amount) in s.Teammates[k].DebuffLateBlockable) LandBlockable(s, name, amount, k);
+            }
         });
 
         b.Do(s =>
@@ -943,13 +1049,36 @@ public static class SimEngine
                 if (e.Hp <= 0) dead = true;
             }
 
+            // A teammate takes each hit in their turn order (CreatureCmd.Damage over every living player:
+            // a hit still reaches everyone even if one player's Thorns kills the attacker during it).
+            void TeammateTakesHit(int k, int h, int mine)
+            {
+                if (s.Teammates[k].Hp <= 0) return;
+                var t = s.MutableTeammate(k);
+                var amount = k < e.TeammateHits.Count && h < e.TeammateHits[k].Count ? e.TeammateHits[k][h] : mine;
+                if (t.Thorns > 0) Retaliate(t.Thorns);
+                var tBlocked = Math.Min(t.Block, amount);
+                t.Block -= tBlocked;
+                var tThrough = amount - tBlocked;
+                var tOsty = Math.Min(tThrough, t.OstyHp);
+                t.OstyHp -= tOsty;
+                t.OstyTaken += tOsty;
+                t.Through += tThrough - tOsty;
+                TeammateHpLoss(t, tThrough - tOsty);
+                if (!dead && t.FlameBarrier > 0) Retaliate(t.FlameBarrier);
+                if (!dead && t.Reflect && tBlocked > 0) Retaliate(tBlocked);
+            }
+            var before = Math.Min(s.TeammatesBeforeMe, s.Teammates.Count);
+            var hitIndex = -1;
             foreach (var perHit in e.Hits)
             {
+                hitIndex++;
                 if (dead)
                 {
                     s.CancelledHits++;
                     continue;
                 }
+                for (var k = 0; k < before; k++) TeammateTakesHit(k, hitIndex, perHit);
                 // Thorns: before the hit lands; the hit still lands even if this kills.
                 if (s.P.Thorns > 0) Retaliate(s.P.Thorns);
 
@@ -974,6 +1103,7 @@ public static class SimEngine
 
                 if (!dead && s.P.FlameBarrier > 0) Retaliate(s.P.FlameBarrier);
                 if (!dead && s.P.Reflect && blocked > 0) Retaliate(blocked);
+                for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, perHit);
             }
             e.Attacked = hitsLanded > 0;
             if (landed > 0) if (s.Log) s.Blockable.Add((hitsLanded > 1 ? $"{e.Name} ({hitsLanded} hits)" : e.Name, landed));

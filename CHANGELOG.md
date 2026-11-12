@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.21
+#### Changed
+- Multiplayer: teammates are simulated as full players: their block and HP, each enemy hit on every player with that player's own amount, their Thorns and Flame Barrier (which can kill an attacker before it finishes its hits on you), and Beacon of Hope sharing block with you at end of turn. Incoming Damage and the Death Skull account for them. Single-player results are unchanged (checked by a test of 600 single-player fights).
+- The forecast check compares each teammate's HP lost too (logs and error reports only).
+
 ### Spire QoL 0.31.20
 #### Changed
 - Error reports say how many players were in the fight and their characters, so multiplayer reports can be told apart (logs and error reports only).

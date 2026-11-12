@@ -110,6 +110,58 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// <summary>The side whose turn an entry happened on (CombatHistoryEntry.CurrentSide is private).</summary>
     private static CombatSide SideOf(CombatHistoryEntry e) => Sts2State.Private(e, "CurrentSide", CombatSide.Player);
 
+    /// <summary>
+    /// Each simulated teammate's HP lost this round against the forecast's range (worst branch to best).
+    /// Skipped for a teammate known to run Spire QoL (their own game checks them: only the host can tell,
+    /// from the handshake), and when a teammate auto-played a card at end of turn (Stampede: a random card).
+    /// </summary>
+    private static string TeammateIssues(TurnEndModel f, List<DamageReceivedEntry> damage, List<CombatHistoryEntry> endOfTurn, List<string> issues)
+    {
+        var o = f.Outcome;
+        var line = "";
+        for (var k = 0; k < f.Teammates.Count && o.Branches.Count > 0 && k < o.Branches[0].Teammates.Count; k++)
+        {
+            var mate = f.Teammates[k];
+            var name = SafeCharacter(mate);
+            var actual = damage.Where(d => d.Result.Receiver == mate.Creature).Sum(d => d.Result.UnblockedDamage);
+            var (min, max) = (o.TeammateTakenMin(k), o.TeammateTakenMax(k));
+            line += $"; teammate {name} HP lost {actual} (predicted {(min == max ? $"{max}" : $"{min}-{max}")})";
+            if (RunsSpireQoL(mate)) continue;
+            if (endOfTurn.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == mate))
+            {
+                line += " (auto-played a card: not checked)";
+                continue;
+            }
+            // Their HP can't go below 0: a teammate who died lost what they had.
+            if (actual > max || actual < min) issues.Add($"teammate {name} HP lost: forecast {(min == max ? $"{max}" : $"{min}-{max}")}, actual {actual}");
+        }
+        return line;
+    }
+
+    private static string SafeCharacter(Player p)
+    {
+        try { return p.Character.GetType().Name; } catch { return "?"; }
+    }
+
+    /// <summary>
+    /// The teammate runs Spire QoL too: known only to the host, which keeps every client's mod list from the
+    /// handshake (PeerVersionInfo: "SpireQoL-version"). A client never learns other clients' mods.
+    /// </summary>
+    private static bool RunsSpireQoL(Player p)
+    {
+        try
+        {
+            if (MegaCrit.Sts2.Core.Runs.RunManager.Instance?.NetService is not MegaCrit.Sts2.Core.Multiplayer.Game.INetHostGameService host) return false;
+            var info = host.GetVersionInfoForPeer(p.NetId);
+            var mods = (info?.otherMods ?? new List<string>()).Concat(info?.gameplayAffectingMods ?? new List<string>());
+            return mods.Any(m => m.StartsWith(ModEntry.Id + "-", StringComparison.OrdinalIgnoreCase));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private void Compare(TurnEndModel f, CombatHistory history, int from, Player me)
     {
         // Your end of turn (player side), then the enemy turn; stop at your next turn.
@@ -138,6 +190,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if ((actualTaken > f.Taken || actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
         if ((actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
+        // Teammates (multiplayer, decision #24): each one's HP lost against their range over the branches.
+        var teamLine = TeammateIssues(f, damage, endOfTurn, issues);
         var enemyIssues = EnemyIssues(f, window, endOfTurn, me, out var outcomeLine, out var actuals);
         issues.AddRange(enemyIssues.Select(x => x.Issue));
         // Each number above is checked against its own range over the branches; together they must
@@ -152,7 +206,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 issues.Add($"no single branch: each result is possible on its own, but none of the {o.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
         }
         // Every enemy turn, matched or not: predicted vs actual per enemy, so patterns show before they're reports.
-        ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}");
+        ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}{teamLine}");
 
         _checked++;
         if (issues.Count == 0)
