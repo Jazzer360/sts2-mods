@@ -49,6 +49,18 @@ public static class ModEntry
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Init(Diagnostics.ReportingConfig.Dsn, settings.ReportErrors, $"spireqol@{version}", Log);
         reporter.Tags["mod_version"] = version;
         try { reporter.Tags["game_version"] = MegaCrit.Sts2.Core.Nodes.NGame.GetGameVersion(); } catch { }
+        // Who's in the fight: tells multiplayer reports apart (players 2-4, every player's character, yours first).
+        reporter.TagProvider = () =>
+        {
+            var tags = new Dictionary<string, string>();
+            if (Sts2State.Combat is { } cs && Sts2State.Me is { } me)
+            {
+                var players = cs.Players.ToList();
+                tags["players"] = players.Count.ToString();
+                tags["characters"] = string.Join(", ", players.OrderBy(p => p == me ? 0 : 1).Select(p => p.Character.GetType().Name));
+            }
+            return tags;
+        };
         reporter.ContextProvider = () => Diagnostics.Snapshot.Capture(ctx);
         AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
         Sts2State.Init();

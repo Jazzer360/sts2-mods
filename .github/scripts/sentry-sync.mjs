@@ -149,6 +149,7 @@ function body(issue, event) {
   b += `| Mod / game | ${tags.mod_version || "?"} / ${tags.game_version || "?"} |\n`;
   if (newestRelease && cmpVersion(tags.mod_version, newestRelease) < 0)
     b += `| Note | from an older version (newest release ${newestRelease}): check whether it's already fixed |\n`;
+  if (tags.players) b += `| Players | ${tags.players}${tags.players !== "1" ? " (multiplayer)" : ""}: ${tags.characters || "?"} |\n`;
   if (tags.where) b += `| Where | \`${tags.where}\` |\n`;
   if (tags.audit) b += `| Audit | ${tags.audit} |\n`;
   b += `\n${kind === "mismatch" ? "A prediction didn't match what the game did." : "An exception was caught (the feature kept running or was turned off)."} Sections below are from the latest occurrence.\n`;

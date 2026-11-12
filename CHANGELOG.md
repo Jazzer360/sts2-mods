@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.20
+#### Changed
+- Error reports say how many players were in the fight and their characters, so multiplayer reports can be told apart (logs and error reports only).
+- Coverage: reviewed for multiplayer. Covered and Intercept are read correctly through the game's damage math; a teammate's Beacon of Hope giving you block at end of turn is a known gap (Incoming Damage reads high).
+
 ### Spire QoL 0.31.19
 #### Changed
 - Faster outcome simulations: branches share what they don't change, and a fight with too many random outcomes stops exploring them sooner (a branch-heavy single-player hand is about 2.5 times faster; four Defects with 40 Lightning orbs went from 47 ms to 2.4 ms per card).

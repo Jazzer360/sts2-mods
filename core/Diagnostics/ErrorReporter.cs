@@ -33,6 +33,9 @@ public sealed class ErrorReporter
     /// <summary>Tags added to every report (mod version, game version...).</summary>
     public Dictionary<string, string> Tags { get; } = new();
 
+    /// <summary>Tags read when a report is sent (who's in the fight: multiplayer or not, characters).</summary>
+    public Func<IReadOnlyDictionary<string, string>>? TagProvider { get; set; }
+
     /// <summary>Reports are being sent: a client exists and the player's switch is on.</summary>
     public bool Enabled => _client != null && Active;
 
@@ -130,6 +133,17 @@ public sealed class ErrorReporter
             var evt = ex != null ? new SentryEvent(ex) : new SentryEvent();
             evt.SetFingerprint(fingerprint);
             foreach (var (k, v) in Tags) evt.SetTag(k, v);
+            try
+            {
+                if (TagProvider?.Invoke() is { } live)
+                {
+                    foreach (var (k, v) in live) evt.SetTag(k, v);
+                }
+            }
+            catch (Exception tex)
+            {
+                evt.SetExtra("tag_error", tex.Message);
+            }
             fill(evt);
             try
             {
