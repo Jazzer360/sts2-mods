@@ -23,6 +23,7 @@ Spire QoL shows nothing a player couldn't know. Assume a player with perfect mem
 - **Allowed:** anything on screen or in the game's tooltips; counts and flags a player could keep track of themselves (cards played or exhausted this combat, "already triggered this turn"), even when we read them from a private field; and the game's rules applied to those (damage math, trigger conditions, odds).
 - **Random outcomes stay random.** Show the amount (or the range), never the target or the roll. When a prediction depends on a roll, leave it out (Lightning with several enemies isn't counted toward kills).
 - Diagnostics (logs, audits, error reports) may read anything, as long as none of it reaches the screen.
+- **Multiplayer (decision #25):** the simulator and the audits may use everything about teammates that isn't a roll, their hands included (perfect players would reveal them). What's shown uses only what a player knows without communication: a teammate's hand size, deck, powers, orbs and block, not the cards in their hand. A shown prediction must never depend on a teammate's hand; when one would (Stampede, cards acting in hand at end of turn), it's computed without it. The RNG and the seed stay off-limits everywhere.
 
 ## Logs first
 
