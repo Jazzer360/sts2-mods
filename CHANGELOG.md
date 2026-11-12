@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.17
+#### Fixed
+- The simulator counts Feel No Pain and Flame Barrier played this turn (their block on exhaust and damage back at enemies), and Colossus halving Vulnerable enemies' attacks (when you play it, or apply Vulnerable while you have it). This changes Incoming Damage and the lethal, Imbalanced and wake predictions after those cards.
+- The proc check no longer reports an X-cost card's cost changing when you spend energy (Whirlwind) (logs and error reports only).
+
 ### Spire QoL 0.31.16
 #### Added
 - Update Notice: a test build (a version that isn't released, or built with uncommitted changes) shows its version, commit, build time and the newest release on the main menu instead.

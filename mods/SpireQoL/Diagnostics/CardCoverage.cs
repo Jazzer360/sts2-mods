@@ -122,6 +122,9 @@ internal static class CardCoverage
             issues.Add("transforms cards (not counted: the proc check's created-card budget)");
         if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(c => Math.Abs(SimAdapter.SlotChange(c, name))))
             issues.Add("changes your orb slots (the simulator doesn't change them)");
+        foreach (var applied in PowersApplied(card.GetType()))
+            if (SimAdapter.PlainSelfPowerAmount(card, applied) == 0)
+                issues.Add($"applies {applied.Name} with no amount the simulator reads");
         if (Calls("CardPileCmd", "Shuffle") && !PlayFacts.ShuffleCards.Contains(name))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");
         if (Calls("PlayerCmd", "GainStars") && !PlayFacts.StarGainCards.Contains(name))

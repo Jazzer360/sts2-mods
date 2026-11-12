@@ -61,6 +61,30 @@ public static class SimAdapter
         _ => 0,
     };
 
+    /// <summary>Your powers the simulator tracks (Plating, Juggernaut, Feel No Pain, Thorns, Flame Barrier).</summary>
+    internal static readonly HashSet<string> SelfPowers = new()
+    {
+        nameof(PlatingPower), nameof(JuggernautPower), nameof(FeelNoPainPower), nameof(ThornsPower), nameof(FlameBarrierPower),
+    };
+
+    /// <summary>
+    /// A tracked power the card's code applies without a PowerVar for it: its plain value ("Power":
+    /// Feel No Pain; "DamageBack": Flame Barrier), 0 when it has neither (the card scan reports it), or
+    /// null (none, or it has a PowerVar, read with the others).
+    /// </summary>
+    private static readonly string[] PlainPowerVars = { "Power", "DamageBack" };
+
+    internal static int? PlainSelfPowerAmount(CardModel card, Type power)
+    {
+        if (!SelfPowers.Contains(power.Name)) return null;
+        var typed = card.DynamicVars.Values.Any(v => v.GetType() is { IsGenericType: true } t
+                                                     && t.GetGenericTypeDefinition() == typeof(PowerVar<>) && t.GetGenericArguments()[0] == power);
+        if (typed) return null;
+        foreach (var key in PlainPowerVars)
+            if (card.DynamicVars.TryGetValue(key, out var pv)) return (int)pv.BaseValue;
+        return 0;
+    }
+
     internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card is nameof(Tempest) or nameof(Voltaic);
 
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
@@ -463,6 +487,20 @@ public static class SimAdapter
                 }
             }
         }
+        // Your powers its code applies with a plain value (Feel No Pain, Flame Barrier).
+        foreach (var applied in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
+        {
+            if (PlainSelfPowerAmount(card, applied) is not { } each) continue;
+            var amount = each * plays;
+            switch (applied.Name)
+            {
+                case nameof(PlatingPower): play.AddPlating += amount; break;
+                case nameof(JuggernautPower): play.AddJuggernaut += amount; break;
+                case nameof(FeelNoPainPower): play.AddFeelNoPain += amount; break;
+                case nameof(ThornsPower): play.AddThorns += amount; break;
+                case nameof(FlameBarrierPower): play.AddFlameBarrier += amount; break;
+            }
+        }
         if (play.Poison > 0 && !play.PoisonAll) play.TargetId = targetId;
 
         // Intents the play changes:
@@ -470,8 +508,7 @@ public static class SimAdapter
         //    With Artifact a charge may take it instead (which debuff it takes depends on the order), so
         //    that intent is left as it is.
         //  - Enrage: every Skill you play gives it Strength (EnragePower.AfterCardPlayed).
-        var appliesWeak = f.EnemyDebuffs.Contains(typeof(WeakPower));
-        var weakened = !appliesWeak
+        HashSet<Creature> Debuffed(Type debuff) => !f.EnemyDebuffs.Contains(debuff)
             ? new HashSet<Creature>()
             : card.TargetType switch
             {
@@ -479,6 +516,13 @@ public static class SimAdapter
                 TargetType.AllEnemies => ids.Keys.Where(e => e.IsAlive && e.IsHittable).ToHashSet(),
                 _ => new HashSet<Creature>(),
             };
+        var weakened = Debuffed(typeof(WeakPower));
+        //  - Colossus halves powered attacks on you from Vulnerable enemies (ColossusPower.ModifyDamageMultiplicative,
+        //    not stacking): playing it halves the intents of enemies already Vulnerable; while you have it,
+        //    Vulnerable the card applies halves that enemy's.
+        var hasColossus = me.Creature.HasPower<ColossusPower>();
+        var gainsColossus = !hasColossus && name == nameof(Colossus);
+        var vulnerabled = hasColossus ? Debuffed(typeof(VulnerablePower)) : new HashSet<Creature>();
         //  - Strength the card takes away (this turn: Piercing Wail, Dark Shackles...; for good: Shared
         //    Fate, Resonance) or gives (Fight Me). Losing Strength is a debuff Artifact may take, so an
         //    enemy with Artifact keeps its intent.
@@ -490,6 +534,8 @@ public static class SimAdapter
             if (!e.IsAlive) continue;
             var artifact = (e.GetPower<ArtifactPower>()?.Amount ?? 0) > 0;
             var weak = weakened.Contains(e) && !e.HasPower<WeakPower>() && !artifact;
+            var halved = (gainsColossus && e.HasPower<VulnerablePower>())
+                         || (vulnerabled.Contains(e) && !e.HasPower<VulnerablePower>() && !artifact);
             var strength = card.Type == CardType.Skill ? (e.GetPower<EnragePower>()?.Amount ?? 0) * plays : 0;
             if (str.Var != null && (str.All ? e.IsHittable : e == strengthTarget) && (str.Sign > 0 || !artifact))
                 strength += str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var)) * plays;
@@ -497,8 +543,8 @@ public static class SimAdapter
             // (MonarchsGazeStrengthDownPower). Random-target attacks are left out (which enemy is a roll).
             if (gaze > 0 && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))
                 strength -= gaze * f.HitsOn(e);
-            if (!weak && strength == 0) continue;
-            if (AdjustedHits(e, me, cs, strength, weak) is { } hits) play.SetHits[id] = hits;
+            if (!weak && !halved && strength == 0) continue;
+            if (AdjustedHits(e, me, cs, strength, weak, halved ? 0.5m : 1m) is { } hits) play.SetHits[id] = hits;
         }
         return play;
     }
@@ -507,18 +553,20 @@ public static class SimAdapter
     /// An enemy's intent hits with <paramref name="strength"/> more Strength and/or once it's Weak: the
     /// game's damage math (Hook.ModifyDamage, before the int cast; Strength is additive, so it's added
     /// to the base) times Weak's multiplier (0.75; Paper Krane on you takes 0.15 more off, Debilitate
-    /// on the enemy doubles the reduction), then any damage cap. Null when the intent can't be read.
+    /// on the enemy doubles the reduction) and <paramref name="multiplier"/> (Colossus: 0.5), then any damage
+    /// cap. Null when the intent can't be read.
     /// </summary>
-    private static List<int>? AdjustedHits(Creature e, Player me, ICombatState cs, int strength, bool weak)
+    private static List<int>? AdjustedHits(Creature e, Player me, ICombatState cs, int strength, bool weak, decimal multiplier = 1m)
     {
         try
         {
-            var m = 1m;
+            var m = multiplier;
             if (weak)
             {
-                m = 0.75m;
-                if (me.Relics.Any(r => r.GetType().Name == nameof(PaperKrane))) m -= 0.15m;
-                if (e.Powers.Any(p => p.GetType().Name == nameof(DebilitatePower))) m -= 1m - m;
+                var w = 0.75m;
+                if (me.Relics.Any(r => r.GetType().Name == nameof(PaperKrane))) w -= 0.15m;
+                if (e.Powers.Any(p => p.GetType().Name == nameof(DebilitatePower))) w -= 1m - w;
+                m *= w;
             }
             var hits = new List<int>();
             foreach (var attack in e.Monster!.NextMove.Intents.OfType<AttackIntent>())

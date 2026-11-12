@@ -49,9 +49,11 @@ internal sealed class PlaySnapshot
         }
     }
 
+    // -99: not compared. An X cost resolves to the energy captured when it's played (CardEnergyCost.
+    // CapturedXValue), which the play itself sets and clears: Whirlwind "1→0".
     private static int SafeCost(CardModel c)
     {
-        try { return c.EnergyCost.GetResolved(); } catch { return -99; }
+        try { return c.EnergyCost.CostsX ? -99 : c.EnergyCost.GetResolved(); } catch { return -99; }
     }
 
     private static int SafeDisplay(RelicModel r)

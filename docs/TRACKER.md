@@ -471,3 +471,4 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [x] 0.31.14: Update Notice on the main menu (GitHub releases, once per main menu visit; decision #20).
 - [x] 0.31.15: Update Notice says "up to date" when GitHub confirms it.
 - [x] 0.31.16: Update Notice shows test-build diagnostics (version, commit, uncommitted changes, build time, newest release).
+- [x] 0.31.17 (Ironclad run): Feel No Pain and Flame Barrier powers from their plain values (card scan reports a tracked self power with no amount); Colossus in intent changes; X-cost cards left out of the card-cost check.
