@@ -51,6 +51,9 @@ public sealed class QolSettings
     /// </summary>
     public Dictionary<string, bool> Tabs { get; set; } = new();
 
+    /// <summary>Death Skull: also show it, with the chance, when a roll decides whether the enemy dies.</summary>
+    public bool DeathChance { get; set; } = true;
+
     /// <summary>Show the amount on block / damage / summon proc tabs (off = icon only).</summary>
     public bool ProcNumbers { get; set; } = true;
 

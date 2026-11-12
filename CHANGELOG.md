@@ -6,6 +6,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.18
+#### Added
+- Death Skull: during your turn, a skull beside an enemy's HP when it dies before acting if you end your turn now, with the chance when a roll decides it (Death chance setting).
+- Decisions, Decisions: while you choose the Skill it plays three times, each Skill's tabs show those three free plays (procs, Shuffle Warning, kills, a 3× replay tab), and the proc check compares the plays against them.
+- Multiplayer: the simulator counts teammates' end-of-turn effects on enemies from what's on screen (their orbs, Hailstorm, The Bomb, Stone Calendar, Consuming Shadow), so an enemy a teammate's orbs finish no longer counts as attacking you.
+#### Fixed
+- Multiplayer: hovering a teammate no longer moves Incoming Damage and Relic Counters off your character.
+- Orbit and Pael's Tears tabs don't show for auto-played cards (no energy is spent); Pael's Eye's doesn't either (auto-plays don't count for it).
+
 ### Spire QoL 0.31.17
 #### Fixed
 - The simulator counts Feel No Pain and Flame Barrier played this turn (their block on exhaust and damage back at enemies), and Colossus halving Vulnerable enemies' attacks (when you play it, or apply Vulnerable while you have it). This changes Incoming Damage and the lethal, Imbalanced and wake predictions after those cards.

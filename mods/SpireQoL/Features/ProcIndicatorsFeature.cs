@@ -511,7 +511,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(FeelNoPainPower) when mine && exhausts > 0: return BlockN(a, exhausts);
                     case nameof(DarkEmbracePower) when mine && exhausts > 0: return Hit.Trig();
                     case nameof(ChildOfTheStarsPower) when mine && f.Stars > 0: return BlockN(a * f.Stars, 1);
-                    case nameof(OrbitPower) when mine && f.Energy > 0 && f.Energy >= p.DisplayAmount: return Hit.Trig();
+                    case nameof(OrbitPower) when mine && f.EnergySpent > 0 && f.EnergySpent >= p.DisplayAmount: return Hit.Trig(); // OrbitPower: EnergySpent
                     case nameof(AutomationPower) when mine && draws > 0 && draws >= p.DisplayAmount: return Hit.Trig();
                     case nameof(CacophonyPower) when mine && draws > 0 && draws >= p.DisplayAmount: return Damage(a, 1, Spread.Random);
                     case nameof(SpeedsterPower) when mine && draws > 0: return Damage(a, draws, Spread.All);
@@ -592,11 +592,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         // Ending the turn with energy left gives energy next turn: cards that would
                         // spend your last energy (X-cost cards spend it all) give that up.
                         var energy = _me.PlayerCombatState?.Energy ?? 0;
-                        return energy > 0 && f.Energy >= energy ? Hit.Trig(harmful: true) : null;
+                        return energy > 0 && f.EnergySpent >= energy ? Hit.Trig(harmful: true) : null;
                     }
                     // Ending a turn without playing a card gives an extra turn (once per combat):
                     // while armed and nothing has been played, every card gives that up.
-                    case nameof(PaelsEye) when armed && Sts2State.CountPlayedThisTurn(_me) == 0: return Hit.Trig(harmful: true);
+                    case nameof(PaelsEye) when armed && !f.AutoPlayed && Sts2State.CountPlayedThisTurn(_me) == 0: return Hit.Trig(harmful: true); // auto-plays don't count
                     case nameof(Vambrace) when armed && f.BlockGains > 0: return Hit.Trig();
                     // Off cooldown, the next card that gains block gets double block, then it rests 2 turns.
                     case nameof(PaelsLegion) when armed && f.BlockGains > 0: return Hit.Trig();

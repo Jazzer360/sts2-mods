@@ -78,6 +78,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     private sealed class Window
     {
+        /// <summary>The card a hand choice auto-played (Decisions, Decisions' pick): its plays are predicted, not random.</summary>
+        public CardModel? Chosen;
         public required CardModel Card;
         public required string CardName;
         public required IReadOnlyList<TabSpec> Predicted;
@@ -204,6 +206,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         /// <summary>Energy, stars, gold, HP, cards and relics when the play started and finished.</summary>
         public PlaySnapshot? FullBefore, FullAfter;
         /// <summary>
+        /// A hand choice whose pick is auto-played (Decisions, Decisions): each card's tabs and facts on
+        /// the last frame of the choice, when they described the auto-plays.
+        /// </summary>
+        public Dictionary<CardModel, (IReadOnlyList<TabSpec> Tabs, PlayFacts? Facts)>? Choice;
+        /// <summary>
         /// The card and what was predicted for it, taken when its action starts: a card that comes
         /// back to your hand during its play (Feral) gets new tabs and facts before the check runs.
         /// </summary>
@@ -246,6 +253,18 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Summarize();
             DetachHistory();
             return;
+        }
+
+        // While a hand choice's pick will be auto-played, keep each hand card's tabs and facts on the play
+        // that opened it (they describe the auto-plays; once the choice closes they're back to one play).
+        if (CardIndicatorsFeature.ChoiceAutoPlays(me) > 0
+            && _running.Values.FirstOrDefault(r => r.Card is DecisionsDecisions) is { } choosing)
+        {
+            var hand = new Dictionary<CardModel, (IReadOnlyList<TabSpec>, PlayFacts?)>(ReferenceEqualityComparer.Instance);
+            foreach (var c in Sts2State.Hand(me))
+                hand[c] = (_ctx.Decor.LastInHand.TryGetValue(c, out var t) ? t.ToList() : new List<TabSpec>(),
+                           ProcIndicatorsFeature.LastFacts.TryGetValue(c, out var cf) ? cf : null);
+            choosing.Choice = hand;
         }
 
         var history = CombatManager.Instance.History;
@@ -527,13 +546,28 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var predicted = captured && rec.Predicted != null ? rec.Predicted
             : _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs : Array.Empty<TabSpec>();
         var facts = captured ? rec.Facts : ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var f0) ? f0 : null;
+        // A hand choice's pick, auto-played: its tabs and facts from the choice join the card's own.
+        var autoPlays = indices.Select(i => hist[i]).OfType<CardPlayStartedEntry>().Where(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me).ToList();
+        CardModel? chosen = null;
+        var target = rec.Target;
+        if (rec.Choice != null && autoPlays.Count > 0 && autoPlays.All(e => ReferenceEquals(e.CardPlay.Card, autoPlays[0].CardPlay.Card))
+            && rec.Choice.TryGetValue(autoPlays[0].CardPlay.Card, out var pick))
+        {
+            chosen = autoPlays[0].CardPlay.Card;
+            predicted = predicted.Concat(pick.Tabs).ToList();
+            facts = facts != null && pick.Facts != null ? facts.Then(pick.Facts) : pick.Facts ?? facts;
+            // Its simulated plays share one target; a single-target pick gets a random one each time.
+            var targets = autoPlays.Select(e => e.CardPlay.Target).Distinct().ToList();
+            target = targets.Count == 1 ? targets[0] : null;
+        }
         var w = new Window
         {
+            Chosen = chosen,
             Card = card, CardName = SafeTitle(card), Predicted = predicted, Facts = facts,
             Start = start, From = indices.Min(), To = indices.Max() + 1, Indices = indices,
             Flashes = rec.Flashes, Shuffles = rec.Shuffles,
             Lag = captured ? rec.Lag : _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
-            Before = rec.Before, Target = rec.Target,
+            Before = rec.Before, Target = target,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded,
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
             FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
@@ -768,7 +802,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         else if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");
 
         // ---- budget: everything else the play caused
-        var autoPlayed = entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me);
+        var autoPlayed = UnpredictedAutoPlay(w, entries, me);
         if (autoPlayed) modelLines.Add("auto-played cards (random, so not predicted): budget not checked");
         var f = autoPlayed ? null : w.Facts;
         bool Explained(Effect e) => sourceOf.Keys.Any(s => SourceEffects.TryGetValue(s, out var fx) && fx.Contains(e));
@@ -859,6 +893,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
+    /// <summary>Auto-plays other than a hand choice's pick (random ones: their effects aren't predicted).</summary>
+    private static bool UnpredictedAutoPlay(Window w, List<CombatHistoryEntry> entries, Player me)
+        => entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me && !ReferenceEquals(e.CardPlay.Card, w.Chosen));
+
     private static readonly string[] DeathHooks = { "AfterDeath", "BeforeDeath" };
 
     private static bool DiedInPlay(List<CombatHistoryEntry> entries) => entries.OfType<DamageReceivedEntry>().Any(d => d.Result.WasTargetKilled);
@@ -924,7 +962,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (f == null) return;
         var shuffled = w.Shuffles > 0;
         if (shuffled == f.Shuffles) return;
-        var autoPlayed = entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me);
+        var autoPlayed = UnpredictedAutoPlay(w, entries, me);
         var drawReactive = flashed.Any(m => DrawReactive.Contains(m.GetType().Name) || m.GetType().Name is nameof(GremlinHorn) or nameof(UnceasingTop));
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
         var why = $"(draws: predicted {f.Draws} = own {f.OwnDraws} + set off {f.ChainedDraws}{(f.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
@@ -957,9 +995,14 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Add($"state after the play: not checked ({w.AfterSkipped ?? "not captured"})");
             return;
         }
-        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay))
+        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && !ReferenceEquals(e.CardPlay.Card, w.Chosen)))
         {
             model.Add("state after the play: not checked (auto-played cards)");
+            return;
+        }
+        if (w.Chosen != null && w.Chosen.TargetType == TargetType.AnyEnemy && w.Target == null)
+        {
+            model.Add("state after the play: not checked (the pick's auto-plays hit different random enemies)");
             return;
         }
         var targetId = w.Target != null && sim.Ids.TryGetValue(w.Target, out var tid) ? tid : -1;

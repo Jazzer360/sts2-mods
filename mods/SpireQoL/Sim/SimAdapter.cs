@@ -273,6 +273,53 @@ public static class SimAdapter
 
         var osty = me.Osty;
         p.OstyHp = osty != null && osty.IsAlive && osty.HasPower<DieForYouPower>() ? osty.CurrentHp : 0;
+
+        // Teammates (multiplayer): what's on screen for them (orbs, powers, relics), for their effects on
+        // enemies at end of turn, in player order. Their hand isn't known (HandCount -1: effects that need it
+        // don't count), and their block only protects them.
+        var players = cs.Players.ToList();
+        var myIndex = players.IndexOf(me);
+        for (var i = 0; i < players.Count; i++)
+        {
+            var other = players[i];
+            if (other == me || other.Creature is not { IsAlive: true } oc || other.PlayerCombatState is not { } ocs) continue;
+            var t = new SimPlayer
+            {
+                HandCount = -1,
+                OrbCapacity = ocs.OrbQueue.Capacity,
+                Thunder = oc.GetPower<ThunderPower>()?.Amount ?? 0,
+                Focus = oc.GetPower<FocusPower>()?.Amount ?? 0,
+            };
+            foreach (var pw in oc.Powers)
+            {
+                switch (pw.GetType().Name)
+                {
+                    case nameof(HailstormPower):
+                        t.Hailstorm += pw.Amount;
+                        t.HailstormFrostNeeded = Sts2State.Var(pw, "FrostOrbs", 1);
+                        break;
+                    case nameof(TheBombPower):
+                        if (pw.Amount <= 1) t.TheBombDamage += Sts2State.Var(pw, "Damage");
+                        break;
+                    case nameof(ConsumingShadowPower): t.ConsumingShadow += pw.Amount; break;
+                }
+            }
+            foreach (var r in other.Relics)
+            {
+                switch (r.GetType().Name)
+                {
+                    case nameof(ScreamingFlagon): t.ScreamingFlagonDamage += Sts2State.Var(r, "Damage"); break;
+                    case nameof(StoneCalendar):
+                        if (ocs.TurnNumber == Sts2State.Var(r, "DamageTurn", 7)) t.StoneCalendarDamage += Sts2State.Var(r, "Damage");
+                        break;
+                    case nameof(GoldPlatedCables): t.FrontOrbBonusTriggers += 1; break;
+                }
+            }
+            foreach (var orb in ocs.OrbQueue.Orbs) t.Orbs.Add(ToSim(orb, cs));
+            if (t.Orbs.Count > 0) t.Orbs[0].Triggers = Math.Max(1, t.Orbs[0].Triggers - t.FrontOrbBonusTriggers);
+            s.Teammates.Add(t);
+            if (i < myIndex) s.TeammatesBeforeMe++;
+        }
         return s;
     }
 

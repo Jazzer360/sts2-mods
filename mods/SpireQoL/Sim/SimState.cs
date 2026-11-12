@@ -288,10 +288,26 @@ public sealed class SimState
         return h;
     }
 
+    /// <summary>
+    /// This branch's share of the rolls (1 at the start): each random target is equally likely, so a
+    /// split divides it evenly, and identical branches merged together add theirs. For chances.
+    /// </summary>
+    public double Weight = 1;
+
+    /// <summary>
+    /// Other players in multiplayer, from what's on screen (orbs, powers, relics): only their effects on
+    /// enemies at end of turn count; their block protects them, and their hand isn't known.
+    /// </summary>
+    public List<SimPlayer> Teammates = new();
+
+    /// <summary>How many teammates come before you in player order (their orbs fire before yours).</summary>
+    public int TeammatesBeforeMe;
+
     public SimState Clone()
     {
         var c = (SimState)MemberwiseClone();
         c.P = P.Clone();
+        if (Teammates.Count > 0) c.Teammates = Teammates.Select(t => t.Clone()).ToList();
         c.Enemies = new List<SimEnemy>(Enemies.Count);
         foreach (var e in Enemies) c.Enemies.Add(e.Clone());
         if (Log)

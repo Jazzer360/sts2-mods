@@ -50,6 +50,7 @@ public sealed class SettingsMenu
         ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar."),
         ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes)."),
         ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile."),
+        ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it)."),
         ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit)."),
         ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports)."),
         ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports)."),
@@ -331,6 +332,8 @@ public sealed class SettingsMenu
         Section("Options");
         Option("Amounts on proc tabs", "Show the block, damage or summon amount on proc tabs. Off: icon only.",
             S.ProcNumbers, v => S.ProcNumbers = v);
+        Option("Death chance", "Death Skull also shows when a roll decides whether an enemy dies before acting, with the chance (e.g. a random Lightning target).",
+            S.DeathChance, v => S.DeathChance = v);
         Option("Indirect procs", "Count procs one step removed: cards that exhaust or discard other cards, draw, or create cards.",
             S.ProcIndirect, v => S.ProcIndirect = v);
         Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
@@ -510,6 +513,7 @@ public sealed class SettingsMenu
         S.Relics.Clear();
         S.ProcNumbers = d.ProcNumbers;
         S.ProcIndirect = d.ProcIndirect;
+        S.DeathChance = d.DeathChance;
         S.PulseOneStepEarly = d.PulseOneStepEarly;
         S.EtherealOpacity = d.EtherealOpacity;
         S.FlashHz = d.FlashHz;

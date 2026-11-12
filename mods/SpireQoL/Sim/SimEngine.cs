@@ -106,6 +106,13 @@ public sealed class SimOutcome
     /// <summary>The enemy is dead before it acts in every branch.</summary>
     public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true });
     public bool DeadInAny(int id) => Branches.Any(b => b.Enemy(id) is { DiedBeforeActing: true });
+    /// <summary>The chance it dies before acting (NaN when branches ran out: unknown).</summary>
+    public double DeadChance(int id)
+    {
+        if (Truncated) return double.NaN;
+        var total = Branches.Sum(b => b.Weight);
+        return total <= 0 ? double.NaN : Branches.Where(b => b.Enemy(id) is { DiedBeforeActing: true }).Sum(b => b.Weight) / total;
+    }
 
     /// <summary>Damage instances through its block during your turn: fewest and most over branches.</summary>
     public int UnblockedMin(int id) => Branches.Min(b => b.Enemy(id)?.UnblockedInstances ?? 0);
@@ -203,12 +210,18 @@ public static class SimEngine
         public void Each(Func<SimState, IEnumerable<SimState>> step)
         {
             var next = new List<SimState>();
-            var seen = new HashSet<long>();
+            var seen = new Dictionary<long, SimState>();
             foreach (var s in States)
             {
                 foreach (var r in step(s))
                 {
-                    if (!seen.Add(r.Key())) continue;
+                    // An identical branch: one state, with both shares of the rolls.
+                    if (seen.TryGetValue(r.Key(), out var same))
+                    {
+                        same.Weight += r.Weight;
+                        continue;
+                    }
+                    seen[r.Key()] = r;
                     next.Add(r);
                     if (next.Count >= MaxBranches)
                     {
@@ -330,6 +343,7 @@ public static class SimEngine
         foreach (var id in targets)
         {
             var c = s.Clone();
+            c.Weight = s.Weight / targets.Count;
             Hit(c, c.Enemy(id)!);
             yield return c;
         }
@@ -348,6 +362,7 @@ public static class SimEngine
         foreach (var id in targets)
         {
             var c = s.Clone();
+            c.Weight = s.Weight / targets.Count;
             c.Enemy(id)!.AddPoison(amount);
             yield return c;
         }
@@ -375,13 +390,15 @@ public static class SimEngine
         return HitRandom(s, _ => j);
     }
 
-    private static IEnumerable<SimState> Evoke(SimState s, SimOrb orb)
+    /// <param name="thunder">The orb owner's Thunder (yours when null).</param>
+    /// <param name="mine">Your orb: a teammate's Frost blocks for them, not you.</param>
+    private static IEnumerable<SimState> Evoke(SimState s, SimOrb orb, int? thunder = null, bool mine = true)
     {
         switch (orb.Kind)
         {
             // Thunder hits the evoke's target again if it's still alive.
-            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { if (st.P.Thunder > 0 && e.Alive) Damage(e, st.P.Thunder); });
-            case OrbKind.Frost: return GainBlock(s, orb.Evoke, null);
+            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = thunder ?? st.P.Thunder; if (t > 0 && e.Alive) Damage(e, t); });
+            case OrbKind.Frost: return mine ? GainBlock(s, orb.Evoke, null) : new[] { s };
             case OrbKind.Dark:
             {
                 var weakest = s.Targetable.OrderBy(e => e.Hp).FirstOrDefault();
@@ -636,40 +653,22 @@ public static class SimEngine
         HitAll(s, _ => amount);
     }
 
-    private static void EndOfTurn(BranchSet b)
+    /// <summary>One player's orb passives at end of turn, front first (yours, or a teammate's: their Frost blocks for them).</summary>
+    private static void OrbPassives(BranchSet b, Func<SimState, SimPlayer> who, bool mine)
     {
-        // 1. BeforeSideTurnEnd. Orichalcum checks your block before any of this lands.
-        b.Do(s => s.P.OrichalcumArmed = s.P.Block <= 0);
-        b.Each(s => GainBlock(s, s.P.Plating, "Plating"));
-        // Hook listeners run your powers before your relics (CombatState.IterateHookListeners).
-        b.Do(s =>
-        {
-            if (s.P.Hailstorm > 0 && s.P.Orbs.Count(o => o.Kind == OrbKind.Frost) >= s.P.HailstormFrostNeeded) AllEnemies(s, "Hailstorm", s.P.Hailstorm);
-            AllEnemies(s, "The Bomb", s.P.TheBombDamage);
-        });
-        b.Each(s => s.P.OrichalcumArmed ? GainBlock(s, s.P.OrichalcumBlock, "Orichalcum") : new[] { s });
-        b.Each(s => s.P.HandCount > 0 ? GainBlock(s, s.P.HandCount * s.P.CloakClaspPerCard, s.P.CloakClaspPerCard > 0 ? $"Cloak Clasp ×{s.P.HandCount}" : null) : new[] { s });
-        b.Each(s => s.P.AttacksThisTurn == 0 ? GainBlock(s, s.P.RippleBasinBlock, "Ripple Basin") : new[] { s });
-        b.Do(s =>
-        {
-            if (s.P.HandCount == 0) AllEnemies(s, "Screaming Flagon", s.P.ScreamingFlagonDamage);
-            AllEnemies(s, "Stone Calendar", s.P.StoneCalendarDamage);
-        });
-
-        // 2. Orb passives, front first.
-        var maxOrbs = b.States.Max(s => s.P.Orbs.Count);
+        var maxOrbs = b.States.Max(s => who(s).Orbs.Count);
         for (var i = 0; i < maxOrbs; i++)
         {
             var index = i;
-            int Triggers(SimState s) => index < s.P.Orbs.Count ? s.P.Orbs[index].Triggers + (index == 0 ? s.P.FrontOrbBonusTriggers : 0) : 0;
+            int Triggers(SimState s) => index < who(s).Orbs.Count ? who(s).Orbs[index].Triggers + (index == 0 ? who(s).FrontOrbBonusTriggers : 0) : 0;
             var maxTriggers = b.States.Max(Triggers);
             for (var t = 0; t < maxTriggers; t++)
             {
                 var trigger = t;
                 b.Each(s =>
                 {
-                    if (index >= s.P.Orbs.Count) return new[] { s };
-                    var orb = s.P.Orbs[index];
+                    if (index >= who(s).Orbs.Count) return new[] { s };
+                    var orb = who(s).Orbs[index];
                     if (trigger >= Triggers(s)) return new[] { s };
                     switch (orb.Kind)
                     {
@@ -677,7 +676,7 @@ public static class SimEngine
                             if (s.Log) s.EndOfTurnDamage.Add(("Lightning", orb.Passive));
                             return HitRandom(s, _ => orb.Passive);
                         case OrbKind.Frost:
-                            return GainBlock(s, orb.Passive, "Frost");
+                            return mine ? GainBlock(s, orb.Passive, "Frost") : new[] { s };
                         case OrbKind.Dark:
                             orb.Evoke += orb.Passive;
                             return new[] { s };
@@ -699,6 +698,54 @@ public static class SimEngine
                     }
                 });
             }
+        }
+
+    }
+
+    private static void EndOfTurn(BranchSet b)
+    {
+        // 1. BeforeSideTurnEnd. Orichalcum checks your block before any of this lands.
+        b.Do(s => s.P.OrichalcumArmed = s.P.Block <= 0);
+        b.Each(s => GainBlock(s, s.P.Plating, "Plating"));
+        // Hook listeners run your powers before your relics (CombatState.IterateHookListeners).
+        b.Do(s =>
+        {
+            if (s.P.Hailstorm > 0 && s.P.Orbs.Count(o => o.Kind == OrbKind.Frost) >= s.P.HailstormFrostNeeded) AllEnemies(s, "Hailstorm", s.P.Hailstorm);
+            AllEnemies(s, "The Bomb", s.P.TheBombDamage);
+        });
+        b.Each(s => s.P.OrichalcumArmed ? GainBlock(s, s.P.OrichalcumBlock, "Orichalcum") : new[] { s });
+        b.Each(s => s.P.HandCount > 0 ? GainBlock(s, s.P.HandCount * s.P.CloakClaspPerCard, s.P.CloakClaspPerCard > 0 ? $"Cloak Clasp ×{s.P.HandCount}" : null) : new[] { s });
+        b.Each(s => s.P.AttacksThisTurn == 0 ? GainBlock(s, s.P.RippleBasinBlock, "Ripple Basin") : new[] { s });
+        b.Do(s =>
+        {
+            if (s.P.HandCount == 0) AllEnemies(s, "Screaming Flagon", s.P.ScreamingFlagonDamage);
+            AllEnemies(s, "Stone Calendar", s.P.StoneCalendarDamage);
+        });
+        // Teammates' BeforeSideTurnEnd damage to enemies (it hits every enemy, so their order doesn't matter).
+        b.Do(s =>
+        {
+            foreach (var t in s.Teammates)
+            {
+                if (t.Hailstorm > 0 && t.Orbs.Count(o => o.Kind == OrbKind.Frost) >= t.HailstormFrostNeeded) AllEnemies(s, "Hailstorm (teammate)", t.Hailstorm);
+                AllEnemies(s, "The Bomb (teammate)", t.TheBombDamage);
+                if (t.HandCount == 0) AllEnemies(s, "Screaming Flagon (teammate)", t.ScreamingFlagonDamage); // their hand: -1 (unknown) doesn't count
+                AllEnemies(s, "Stone Calendar (teammate)", t.StoneCalendarDamage);
+            }
+        });
+
+        // 2. Orb passives, each player in player order (CombatManager.DoTurnEnd), front first.
+        var teammates = b.States.Count > 0 ? b.States[0].Teammates.Count : 0;
+        var before = b.States.Count > 0 ? Math.Min(b.States[0].TeammatesBeforeMe, teammates) : 0;
+        for (var k = 0; k < before; k++)
+        {
+            var tk = k;
+            OrbPassives(b, s => s.Teammates[tk], mine: false);
+        }
+        OrbPassives(b, s => s.P, mine: true);
+        for (var k = before; k < teammates; k++)
+        {
+            var tk = k;
+            OrbPassives(b, s => s.Teammates[tk], mine: false);
         }
 
         // 3. Ethereal cards exhaust (CardCmd.Exhaust in DoTurnEnd), then cards in hand act (DoTurnEndCards).
@@ -748,6 +795,23 @@ public static class SimEngine
                 s.P.Orbs.RemoveAt(s.P.Orbs.Count - 1);
                 return orb.Kind == OrbKind.Frost ? GainBlock(s, orb.Evoke, "Consuming Shadow (Frost)") : Evoke(s, orb);
             });
+        }
+        for (var k = 0; k < teammates; k++)
+        {
+            var tk = k;
+            var maxTeamShadow = b.States.Max(s => s.Teammates[tk].ConsumingShadow);
+            for (var i = 0; i < maxTeamShadow; i++)
+            {
+                var n = i;
+                b.Each(s =>
+                {
+                    var t = s.Teammates[tk];
+                    if (n >= t.ConsumingShadow || t.Orbs.Count == 0) return new[] { s };
+                    var orb = t.Orbs[^1];
+                    t.Orbs.RemoveAt(t.Orbs.Count - 1);
+                    return Evoke(s, orb, t.Thunder, mine: false);
+                });
+            }
         }
         b.Each(s => s.P.ParryingShieldDamage > 0 && s.P.Block >= s.P.ParryingShieldBlock ? HitRandom(s, _ => s.P.ParryingShieldDamage) : new[] { s });
         // AfterSideTurnEndLate: Disintegration.

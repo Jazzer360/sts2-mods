@@ -69,6 +69,7 @@ public static class ModEntry
             new ProcIndicatorsFeature(ctx),
             new IncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
+            new DeathSkullFeature(ctx),
             new UpdateNoticeFeature(),
             new Diagnostics.ForecastAudit(),
             new Diagnostics.ProcAudit(ctx),

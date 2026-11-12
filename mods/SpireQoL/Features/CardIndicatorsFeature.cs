@@ -1,11 +1,15 @@
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Enchantments;
 using MegaCrit.Sts2.Core.Models.Powers;
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Nodes.Combat;
 using SpireQoL.Cards;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
@@ -105,10 +109,39 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
     /// also checked against each enemy and every source that applies to any of them is shown.
     /// </summary>
     /// <summary>How many times the card would play right now (best case over targets).</summary>
+    /// <summary>
+    /// While Decisions, Decisions asks you to pick a Skill from your hand (CardSelectCmd.FromHand: the
+    /// hand in select mode, the card in your play pile), the pick is auto-played Repeat times for free
+    /// (CardCmd.AutoPlay, each with its own replays). 0 when no such choice is open.
+    /// </summary>
+    public static int ChoiceAutoPlays(Player me)
+    {
+        try
+        {
+            if (NPlayerHand.Instance is not { IsInCardSelection: true }) return 0;
+            var source = me.PlayerCombatState?.PlayPile.Cards.OfType<DecisionsDecisions>().FirstOrDefault();
+            return source == null ? 0 : Math.Max(1, Sts2State.Var(source, "Repeat", 3));
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>The card would be auto-played by an open hand choice (it's in your hand while one is open).</summary>
+    public static bool ChoiceAutoPlayed(CardModel card)
+        => card.Owner is { } me && card.Pile?.Type == PileType.Hand && ChoiceAutoPlays(me) > 0;
+
     public static int PlayCount(CardModel card)
     {
         var cs = Sts2State.Combat;
         if (cs == null) return 1;
+        var auto = card.Owner is { } me && card.Pile?.Type == PileType.Hand ? ChoiceAutoPlays(me) : 0;
+        return OwnPlayCount(card, cs) * Math.Max(1, auto);
+    }
+
+    private static int OwnPlayCount(CardModel card, ICombatState cs)
+    {
         var baseCount = card.GetEnchantedReplayCount() + 1;
         var best = Hook.ModifyCardPlayCount(cs, card, baseCount, null, out _);
         if (card.TargetType == TargetType.AnyEnemy)

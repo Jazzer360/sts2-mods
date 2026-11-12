@@ -98,7 +98,7 @@ public static class Sts2State
 
         var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == me.Creature);
         var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
-        if (display == null || !display.IsVisibleInTree()) return null;
+        if (display == null || !BarShown(creature!, display)) return null;
 
         var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
         var rect = bar != null && bar.Size.X >= 1 ? ScreenRect(bar) : ScreenRect(display);
@@ -142,7 +142,7 @@ public static class Sts2State
 
         var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == me.Creature);
         var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
-        if (display == null || !display.IsVisibleInTree()) return null;
+        if (display == null || !BarShown(creature!, display)) return null;
 
         var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
         var block = bar?.GetNodeOrNull<Godot.Control>("%BlockContainer");
@@ -196,7 +196,7 @@ public static class Sts2State
         if (room == null) return null;
         var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == who);
         var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
-        if (display == null || !display.IsVisibleInTree()) return null;
+        if (display == null || !BarShown(creature!, display)) return null;
         var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
         if (bar == null) return ScreenRect(display);
 
@@ -219,6 +219,14 @@ public static class Sts2State
         }
         return rect;
     }
+
+    /// <summary>
+    /// The creature's HP bar is up, or only faded out while you hover another player in
+    /// multiplayer (NCreature.SetRemotePlayerFocused hides yours and shows theirs): its place is still
+    /// valid, so what is attached to your character stays there instead of moving.
+    /// </summary>
+    private static bool BarShown(Godot.Control creature, Godot.Control display)
+        => display.IsVisibleInTree() || creature.IsVisibleInTree();
 
     private static object? _loggedHpBarFor;
 

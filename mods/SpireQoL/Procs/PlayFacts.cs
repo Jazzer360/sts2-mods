@@ -36,6 +36,15 @@ public sealed class PlayFacts
     /// <summary>Energy spent to play it (X-cost: all your energy). The game's CardEnergyCost.GetAmountToSpend.</summary>
     public int Energy { get; init; }
 
+    /// <summary>
+    /// Auto-played by an open hand choice (Decisions, Decisions): no energy is spent (CardCmd.AutoPlay:
+    /// EnergySpent 0; the card's cost still counts as its value), and it isn't a card you played.
+    /// </summary>
+    public bool AutoPlayed { get; init; }
+
+    /// <summary>Energy the play spends (0 when auto-played).</summary>
+    public int EnergySpent => AutoPlayed ? 0 : Energy;
+
     /// <summary>Stars spent to play it (0 if it has no star cost).</summary>
     public int Stars { get; init; }
 
@@ -215,6 +224,51 @@ public sealed class PlayFacts
 
     public int OrbDamageOn(Creature enemy) => OrbDamage.TryGetValue(enemy, out var d) ? d : 0;
 
+    /// <summary>
+    /// This play followed by the plays of a card it auto-plays (Decisions, Decisions' pick, whose facts
+    /// were read during the choice): the counts the audit checks added together, and the pick's
+    /// simulation (its start state already includes everything this play did before the choice).
+    /// </summary>
+    internal PlayFacts Then(PlayFacts next)
+    {
+        var orbDamage = new Dictionary<Creature, int>(next.OrbDamage);
+        foreach (var (e, d) in OrbDamage) orbDamage[e] = (orbDamage.TryGetValue(e, out var x) ? x : 0) + d;
+        return new PlayFacts
+        {
+            Card = Card, Me = Me, Combat = Combat,
+            Plays = Plays, Energy = Energy, Stars = Stars,
+            ExhaustsSelf = ExhaustsSelf,
+            ExhaustsOthers = ExhaustsOthers + next.TotalExhausts,
+            Discards = Discards + next.Discards,
+            OwnDraws = OwnDraws + next.OwnDraws,
+            BlockGains = BlockGains + next.BlockGains,
+            Transforms = Transforms + next.Transforms,
+            EnemyDebuffs = EnemyDebuffs.Concat(next.EnemyDebuffs).Distinct().ToList(),
+            HitsAllEnemies = HitsAllEnemies || next.HitsAllEnemies,
+            Channels = Channels + next.Channels,
+            StarGains = StarGains + next.StarGains,
+            OstyAttacks = OstyAttacks + next.OstyAttacks,
+            LosesHp = LosesHp || next.LosesHp,
+            HpLoss = HpLoss + next.HpLoss,
+            AttackHits = AttackHits + next.AttackHits,
+            OrbDamage = orbDamage,
+            OrbDamageMin = OrbDamageMin + next.OrbDamageMin,
+            OrbDamageMax = OrbDamageMax + next.OrbDamageMax,
+            LightningEvokes = LightningEvokes + next.LightningEvokes,
+            OrbBlock = OrbBlock + next.OrbBlock,
+            Draws = Draws + next.Draws,
+            ChainedDraws = ChainedDraws + next.ChainedDraws,
+            DrawsBlocked = DrawsBlocked || next.DrawsBlocked,
+            Shuffles = Shuffles || next.Shuffles,
+            ShufflesItself = ShufflesItself || next.ShufflesItself,
+            Generated = Generated + next.Generated,
+            GeneratedStatuses = GeneratedStatuses + next.GeneratedStatuses,
+            Sim = next.Sim,
+            RandomOutcome = RandomOutcome || next.RandomOutcome,
+            SimPending = SimPending || next.SimPending,
+        };
+    }
+
     // ------------------------------------------------------------------ building
 
     public static PlayFacts For(CardModel card, Player me, ICombatState cs, int plays)
@@ -234,6 +288,7 @@ public sealed class PlayFacts
             Combat = cs,
             Plays = Math.Max(1, plays),
             Energy = SafeEnergy(card),
+            AutoPlayed = Features.CardIndicatorsFeature.ChoiceAutoPlayed(card),
             Stars = SafeStars(card),
             // Exhaust keyword (including added Exhaust), or Corruption sending a played skill to the
             // exhaust pile (CorruptionPower.ModifyCardPlayResultLocation).
