@@ -173,7 +173,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     // Per-combat tallies for the summary line.
     private int _checked;
-    private int _withLeadIn; // plays whose tabs ran plays still resolving first (decision #27)
+    private int _fromHand; // plays checked against the tabs last shown in hand (the prediction couldn't be rebuilt)
     private int _matched;
     private readonly Dictionary<string, int> _issueCounts = new();
 
@@ -284,46 +284,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             _executor = executor;
             _executor.BeforeActionExecuted += OnBeforeAction;
         }
-        var queueSet = RunManager.Instance?.ActionQueueSet;
-        if (queueSet != null && !ReferenceEquals(queueSet, _queueSet))
-        {
-            if (_queueSet != null) _queueSet.ActionEnqueued -= OnEnqueued;
-            _queueSet = queueSet;
-            _queueSet.ActionEnqueued += OnEnqueued;
-            _atEnqueue.Clear();
-        }
 
         Subscribe(me, cs);
         _countAtFrame[_ctx.Decor.Frame] = history.Entries.Count();
         if (_countAtFrame.Count > 600) _countAtFrame.Remove(_countAtFrame.Keys.Min());
 
         while (_finished.Count > 0) Check(_finished.Dequeue(), me);
-    }
-
-    private ActionQueueSet? _queueSet;
-
-    /// <summary>
-    /// The tabs and facts a play of yours had the moment it was queued (ActionQueueSet.ActionEnqueued): what
-    /// you saw when you played it. A queued card stays in your hand until it starts, and keeps being
-    /// recomputed there, so its tabs at the start can be from after the plays ahead of it resolved.
-    /// </summary>
-    private readonly Dictionary<GameAction, (List<TabSpec>? Tabs, PlayFacts? Facts)> _atEnqueue = new(ReferenceEqualityComparer.Instance);
-
-    private void OnEnqueued(GameAction action)
-    {
-        try
-        {
-            if (action is not PlayCardAction play || play.Player != Sts2State.Me) return;
-            var card = play.NetCombatCard.ToCardModelOrNull();
-            if (card == null) return;
-            _atEnqueue[action] = (_ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null,
-                                  ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null);
-            if (_atEnqueue.Count > 50) _atEnqueue.Remove(_atEnqueue.Keys.First());
-        }
-        catch (Exception ex)
-        {
-            ModEntry.Log.Warn($"[audit] couldn't record a queued play: {ex.Message}");
-        }
     }
 
     private void DetachHistory()
@@ -348,19 +314,23 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (card != null)
                 {
                     rec.Card = card;
-                    // What you saw when you played it: from the moment it was queued (else its last frame in hand).
-                    if (_atEnqueue.Remove(action, out var queued) && queued.Facts != null)
+                    // The prediction checked (decision #28): from the board as the play begins to resolve, through
+                    // the same code as the tabs, so nothing ahead of it is pending or unknown.
+                    if (ProcIndicatorsFeature.PredictNow(card) is { } now)
                     {
-                        rec.Predicted = queued.Tabs;
-                        rec.Facts = queued.Facts;
+                        rec.Predicted = now.Tabs;
+                        rec.Facts = now.Facts;
+                        rec.Lag = 0;
                     }
                     else
                     {
+                        // Couldn't be rebuilt: the tabs it last showed in hand, unless a play finished since.
+                        _fromHand++;
                         rec.Predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null;
                         rec.Facts = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null;
+                        rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
+                        if (_history != null) rec.StaleBecause = StaleBecause(_history.Entries.ToList(), card, _history.Entries.Count(), play.Player);
                     }
-                    rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
-                    if (_history != null) rec.StaleBecause = StaleBecause(_history.Entries.ToList(), card, _history.Entries.Count(), play.Player);
                 }
                 _running[action] = rec;
                 action.AfterFinished += OnActionFinished;
@@ -488,13 +458,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private string? StaleBecause(List<CombatHistoryEntry> hist, CardModel card, int start, Player me)
     {
         if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var frame) || !_countAtFrame.TryGetValue(frame, out var then)) return null;
-        // Plays its tabs already ran first (the lead-in, decision #27) don't make them stale.
-        var leadIn = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) && facts.Sim != null ? facts.Sim.LeadInCards : Array.Empty<CardModel>();
         for (var k = Math.Max(0, then); k < start && k < hist.Count; k++)
         {
-            // Any player's play (a teammate's too) or a potion that resolved in between, unless the tabs ran it first.
-            if (hist[k] is CardPlayFinishedEntry { CardPlay: var p } && !ReferenceEquals(p.Card, card)
-                && !leadIn.Any(c => ReferenceEquals(c, p.Card)))
+            // Any player's play (a teammate's too) or a potion that resolved in between.
+            if (hist[k] is CardPlayFinishedEntry { CardPlay: var p } && !ReferenceEquals(p.Card, card))
                 return SafeTitle(p.Card);
             if (hist[k] is PotionUsedEntry pu)
                 return SafePotion(pu);
@@ -652,7 +619,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             _checked++;
             if (issues.Count == 0) _matched++;
-            if (w.Facts?.Sim is { LeadIn.Count: > 0 }) _withLeadIn++;
             foreach (var issue in issues)
             {
                 var kind = issue.Split(':')[0];
@@ -762,8 +728,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"))})";
-        ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_withLeadIn} after plays still resolving), {_matched} matched{issues}.");
-        _checked = _matched = _withLeadIn = 0;
+        ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand), {_matched} matched{issues}.");
+        _checked = _matched = _fromHand = 0;
         _issueCounts.Clear();
     }
 
@@ -1062,7 +1028,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Add("state after the play: not checked (no simulated play for its target)");
             return;
         }
-        SimEngine.ApplyPlayTo(sim.Start, sim.LeadIn, play, out var branches, out var truncated);
+        SimEngine.ApplyPlayTo(sim.Start, play, out var branches, out var truncated);
         if (truncated || branches.Count == 0)
         {
             model.Add("state after the play: not checked (too many branches)");

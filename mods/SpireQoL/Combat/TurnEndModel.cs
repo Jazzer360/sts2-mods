@@ -51,10 +51,6 @@ public sealed class TurnEndModel
     public SimState State { get; private set; } = new();
     public IReadOnlyDictionary<Creature, int> Ids { get; private set; } = new Dictionary<Creature, int>();
     public SimOutcome Outcome { get; private set; } = new();
-    /// <summary>Plays run before anything else (still resolving or queued, decision #27), and their cards.</summary>
-    public IReadOnlyList<SimPlay> LeadIn { get; private set; } = Array.Empty<SimPlay>();
-    public IReadOnlyList<CardModel> LeadInCards { get; private set; } = Array.Empty<CardModel>();
-
     /// <summary>The players behind SimState.Teammates (multiplayer), in the same order, as of this forecast.</summary>
     public IReadOnlyList<Player> Teammates { get; private set; } = Array.Empty<Player>();
 
@@ -76,32 +72,19 @@ public sealed class TurnEndModel
         return _cached;
     }
 
+    /// <summary>The board right now, uncached (the audit's prediction as a play begins to resolve).</summary>
+    public static TurnEndModel? ComputeLive() => ComputeNow();
+
     private static TurnEndModel? ComputeNow()
     {
         var me = Sts2State.Me;
         var cs = Sts2State.Combat;
         if (me?.PlayerCombatState == null || cs == null) return null;
 
-        // Plays still resolving or queued (decision #27): start from the state before the one resolving now
-        // and run them first; otherwise the live state.
-        PlayQueue.Track();
-        var lead = PlayQueue.Current(me);
-        SimState state;
-        IReadOnlyDictionary<Creature, int> ids;
-        if (lead != null)
-        {
-            state = lead.Base;
-            ids = lead.Ids;
-        }
-        else
-        {
-            state = SimAdapter.Build(me, cs, out var built);
-            ids = built;
-        }
-        // The game state rarely changes between frames: rerun only when it did (or the lead-in did).
+        // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
+        var state = SimAdapter.Build(me, cs, out var ids);
+        // The game state rarely changes between frames: rerun only when it did.
         var key = state.FullKey();
-        if (lead != null)
-            foreach (var p in lead.Plays) key = key * 31 + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(p);
         SimOutcome outcome;
         if (_lastOutcome != null && key == _lastKey)
         {
@@ -111,7 +94,7 @@ public sealed class TurnEndModel
         {
             var logged = state.Clone();
             logged.Log = true; // the display needs the breakdown; card simulations run without it
-            outcome = SimEngine.Run(logged, lead?.Plays, null);
+            outcome = SimEngine.Run(logged);
             _lastKey = key;
             _lastOutcome = outcome;
         }
@@ -123,9 +106,7 @@ public sealed class TurnEndModel
             Ids = ids,
             Outcome = outcome,
             Teammates = SimAdapter.Teammates(me, cs),
-            LeadIn = lead?.Plays ?? Array.Empty<SimPlay>(),
-            LeadInCards = lead?.Cards ?? Array.Empty<CardModel>(),
-            CurrentBlock = lead != null ? me.Creature.Block : state.P.Block, // the board, not the snapshot
+            CurrentBlock = state.P.Block,
             SkippedPoisoned = w.SkippedPoisoned,
             SkippedEndOfTurn = w.SkippedEndOfTurn,
             CancelledHits = w.CancelledHits,

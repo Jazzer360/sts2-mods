@@ -40,7 +40,13 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 {
     private readonly QolContext _ctx;
 
-    public ProcIndicatorsFeature(QolContext ctx) => _ctx = ctx;
+    public ProcIndicatorsFeature(QolContext ctx)
+    {
+        _ctx = ctx;
+        _instance = this;
+    }
+
+    private static ProcIndicatorsFeature? _instance;
 
     public string Id => "proc-indicators";
     public string DisplayName => "Proc Indicators";
@@ -130,13 +136,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         _indirect = _ctx.Settings.ProcIndirect;
 
         // Sources: your powers, your relics, and powers on enemies (theirs, or ones you applied).
-        var sources = new List<AbstractModel>();
-        sources.AddRange(me.Creature.Powers);
-        sources.AddRange(me.Relics); // each relic's tab has its own switch (Tabs "proc:<Relic>")
-        // All living enemies: an untargetable one's powers still fire.
-        foreach (var enemy in cs.Enemies.Where(e => e.IsAlive)) sources.AddRange(enemy.Powers);
+        var sources = Sources(me, cs);
 
-        var pending = new List<(CardModel Card, PlayFacts F, Dictionary<string, (AbstractModel Src, Hit Hit)> Merged, CardDecor D, Task<SimOutcome[]>? Sim)>();
+        var pending = new List<(CardModel Card, Prepared P, CardDecor D)>();
         foreach (var card in hand)
         {
             _ctx.Decor.SeenInHand(card);
@@ -144,112 +146,182 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             // curses, blocked cards, cards whose own condition isn't met). Cards you just can't
             // afford yet still show, since energy can come mid-turn.
             if (!CanEverPlayNow(card)) continue;
-
-            PlayFacts f;
-            try
-            {
-                f = PlayFacts.For(card, me, cs, CardIndicatorsFeature.PlayCount(card));
-            }
-            catch (Exception ex)
-            {
-                if (_warned.Add(card.GetType().Name))
-                {
-                    ModEntry.Log.Warn($"proc facts failed for {card.GetType().Name}: {ex.Message}");
-                    Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "play-facts:" + card.GetType().Name);
-                }
-                continue;
-            }
-
-            _facts[card] = f;
-            _lastFacts[card] = f;
-            if (_lastFacts.Count > 300) _lastFacts.Clear();
-            var d = _ctx.Decor.For(card);
-            // Several enemies can carry the same power: one tab, amounts summed.
-            var merged = new Dictionary<string, (AbstractModel Src, Hit Hit)>();
-            void Run(bool secondOrder)
-            {
-                foreach (var src in sources)
-                {
-                    if (SecondOrder.Contains(src.GetType().Name) != secondOrder) continue;
-                    Hit? hit;
-                    try { hit = Evaluate(src, f); }
-                    catch { hit = null; }
-                    if (hit is not { } h) continue;
-                    if (h.Kind != Kind.Trigger && h.Amount <= 0) continue;
-                    var key = "proc:" + src.GetType().Name;
-                    merged[key] = merged.TryGetValue(key, out var prev)
-                        ? (prev.Src, prev.Hit with
-                        {
-                            Amount = prev.Hit.Amount + h.Amount, Count = prev.Hit.Count + h.Count,
-                            Min = prev.Hit.Min + h.Min, Max = prev.Hit.Max + h.Max,
-                            OnEnemies = MergeHits(prev.Hit.OnEnemies, h.OnEnemies),
-                            Random = prev.Hit.Random || h.Random,
-                            RandomHits = prev.Hit.RandomHits == null ? h.RandomHits : h.RandomHits == null ? prev.Hit.RandomHits : prev.Hit.RandomHits.Concat(h.RandomHits).ToList(),
-                        })
-                        : (src, h);
-                }
-            }
-
-            // First-order procs, then the procs they set off (procs of procs): block gains feed
-            // Juggernaut, Storm's lightning feeds Metronome, The Sealed Throne's stars feed Black Hole.
-            _xChannels = _xStarGains = 0;
-            Run(secondOrder: false);
-            foreach (var (src, h) in merged.Values)
-            {
-                if (src is PowerModel { } sp && sp.GetType().Name == nameof(StormPower)) _xChannels += sp.Amount * f.Plays;
-                if (src is PowerModel { } tp && tp.GetType().Name == nameof(TheSealedThronePower) && tp.Amount > 0) _xStarGains += f.Plays;
-            }
-            Run(secondOrder: true);
-
-            if (merged.Values.Any(m => m.Hit.Random)) f.RandomOutcome = true;
-
-            Task<SimOutcome[]>? sim = null;
-            try
-            {
-                sim = StartSim(card, f, merged);
-            }
-            catch (Exception ex)
-            {
-                SimFailed(card, ex);
-            }
-            pending.Add((card, f, merged, d, sim));
+            if (Prepare(card, sources, record: true) is not { } p) continue;
+            pending.Add((card, p, _ctx.Decor.For(card)));
         }
 
         // Every card's simulations (one per target) run in parallel across CPU cores; the frame waits
         // for them, so the tabs appear on the frame they belong to. The wait is capped so a pathological
         // state can't freeze the game: anything still running then shows a frame or two later (SimPending).
-        var running = pending.Select(x => x.Sim).Where(t => t is { IsCompleted: false }).Cast<Task>().ToArray();
+        var running = pending.Select(x => x.P.Sim).Where(t => t is { IsCompleted: false }).Cast<Task>().ToArray();
         if (running.Length > 0)
         {
             try { Task.WaitAll(running, SimWaitCapMs); }
             catch { /* faulted tasks are reported per card below */ }
         }
 
-        foreach (var (card, f, merged, d, sim) in pending)
-        {
-            var lethal = false;
-            try
-            {
-                lethal = sim != null && FinishSim(f, merged, sim);
-            }
-            catch (Exception ex)
-            {
-                SimFailed(card, ex);
-            }
+        foreach (var (card, p, d) in pending)
+            foreach (var t in Finish(card, p))
+                d.AddTab(t.Key, t.Icon, crossed: t.Crossed, number: t.Number, kind: t.Kind, amount: t.Amount, auditMin: t.AuditMin, auditMax: t.AuditMax);
+    }
 
-            foreach (var (key, (src, h)) in merged)
+    /// <summary>A card's facts, its merged proc hits, and its running simulations.</summary>
+    private sealed record Prepared(PlayFacts F, Dictionary<string, (AbstractModel Src, Hit Hit)> Merged, Task<SimOutcome[]>? Sim);
+
+    /// <summary>Your powers, your relics, and powers on every living enemy: the proc sources.</summary>
+    private static List<AbstractModel> Sources(Player me, ICombatState cs)
+    {
+        var sources = new List<AbstractModel>();
+        sources.AddRange(me.Creature.Powers);
+        sources.AddRange(me.Relics); // each relic's tab has its own switch (Tabs "proc:<Relic>")
+        // All living enemies: an untargetable one's powers still fire.
+        foreach (var enemy in cs.Enemies.Where(e => e.IsAlive)) sources.AddRange(enemy.Powers);
+        return sources;
+    }
+
+    /// <summary>
+    /// One card's prediction, up to its simulations (started, not awaited): the same code for the tabs on
+    /// screen and for the audit's prediction at resolution (PredictNow). record: keep its facts for the
+    /// audit and the play queue (the frame loop does; PredictNow doesn't).
+    /// </summary>
+    private Prepared? Prepare(CardModel card, List<AbstractModel> sources, bool record)
+    {
+        PlayFacts f;
+        try
+        {
+            f = PlayFacts.For(card, _me, _cs, CardIndicatorsFeature.PlayCount(card));
+        }
+        catch (Exception ex)
+        {
+            if (_warned.Add(card.GetType().Name))
             {
-                var icon = src switch
-                {
-                    RelicModel r => GameIcons.Relic(r),
-                    PowerModel p => GameIcons.Power(p),
-                    _ => null,
-                };
-                int? number = h.Kind != Kind.Trigger && _ctx.Settings.ProcNumbers ? h.Amount : null;
-                var kind = h.Kind switch { Kind.Block => "block", Kind.Damage => "damage", Kind.Summon => "summon", _ => null };
-                d.AddTab(key, icon, crossed: h.Harmful, number: number, kind: kind, amount: h.Amount, auditMin: h.Min, auditMax: h.Max);
+                ModEntry.Log.Warn($"proc facts failed for {card.GetType().Name}: {ex.Message}");
+                Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "play-facts:" + card.GetType().Name);
             }
-            if (lethal) d.AddTab("lethal", GameIcons.Skull());
+            return null;
+        }
+
+        if (record)
+        {
+            _facts[card] = f;
+            _lastFacts[card] = f;
+            if (_lastFacts.Count > 300) _lastFacts.Clear();
+        }
+        // Several enemies can carry the same power: one tab, amounts summed.
+        var merged = new Dictionary<string, (AbstractModel Src, Hit Hit)>();
+        void Run(bool secondOrder)
+        {
+            foreach (var src in sources)
+            {
+                if (SecondOrder.Contains(src.GetType().Name) != secondOrder) continue;
+                Hit? hit;
+                try { hit = Evaluate(src, f); }
+                catch { hit = null; }
+                if (hit is not { } h) continue;
+                if (h.Kind != Kind.Trigger && h.Amount <= 0) continue;
+                var key = "proc:" + src.GetType().Name;
+                merged[key] = merged.TryGetValue(key, out var prev)
+                    ? (prev.Src, prev.Hit with
+                    {
+                        Amount = prev.Hit.Amount + h.Amount, Count = prev.Hit.Count + h.Count,
+                        Min = prev.Hit.Min + h.Min, Max = prev.Hit.Max + h.Max,
+                        OnEnemies = MergeHits(prev.Hit.OnEnemies, h.OnEnemies),
+                        Random = prev.Hit.Random || h.Random,
+                        RandomHits = prev.Hit.RandomHits == null ? h.RandomHits : h.RandomHits == null ? prev.Hit.RandomHits : prev.Hit.RandomHits.Concat(h.RandomHits).ToList(),
+                    })
+                    : (src, h);
+            }
+        }
+
+        // First-order procs, then the procs they set off (procs of procs): block gains feed
+        // Juggernaut, Storm's lightning feeds Metronome, The Sealed Throne's stars feed Black Hole.
+        _xChannels = _xStarGains = 0;
+        Run(secondOrder: false);
+        foreach (var (src, h) in merged.Values)
+        {
+            if (src is PowerModel { } sp && sp.GetType().Name == nameof(StormPower)) _xChannels += sp.Amount * f.Plays;
+            if (src is PowerModel { } tp && tp.GetType().Name == nameof(TheSealedThronePower) && tp.Amount > 0) _xStarGains += f.Plays;
+        }
+        Run(secondOrder: true);
+
+        if (merged.Values.Any(m => m.Hit.Random)) f.RandomOutcome = true;
+
+        Task<SimOutcome[]>? sim = null;
+        try
+        {
+            sim = StartSim(card, f, merged);
+        }
+        catch (Exception ex)
+        {
+            SimFailed(card, ex);
+        }
+        return new Prepared(f, merged, sim);
+    }
+
+    /// <summary>A prepared card's tabs, once its simulations are done (simulator tabs included).</summary>
+    private List<TabSpec> Finish(CardModel card, Prepared p)
+    {
+        var (f, merged, sim) = p;
+        var lethal = false;
+        try
+        {
+            lethal = sim != null && FinishSim(f, merged, sim);
+        }
+        catch (Exception ex)
+        {
+            SimFailed(card, ex);
+        }
+        var tabs = new List<TabSpec>();
+        foreach (var (key, (src, h)) in merged)
+        {
+            var icon = src switch
+            {
+                RelicModel r => GameIcons.Relic(r),
+                PowerModel pw => GameIcons.Power(pw),
+                _ => null,
+            };
+            int? number = h.Kind != Kind.Trigger && _ctx.Settings.ProcNumbers ? h.Amount : null;
+            var kind = h.Kind switch { Kind.Block => "block", Kind.Damage => "damage", Kind.Summon => "summon", _ => null };
+            tabs.Add(new TabSpec(key, icon, h.Harmful, number, kind, h.Amount, h.Min, h.Max));
+        }
+        if (lethal) tabs.Add(new TabSpec("lethal", GameIcons.Skull()));
+        return tabs;
+    }
+
+    /// <summary>
+    /// The audit's prediction for a card as its play begins to resolve (decision #28): from the board right
+    /// now, with nothing pending ahead of it, through the same code as the tabs, simulations run inline.
+    /// Null when it can't be built (outside your turn, the card's facts failed).
+    /// </summary>
+    public static (List<TabSpec> Tabs, PlayFacts Facts)? PredictNow(CardModel card)
+    {
+        var self = _instance;
+        if (self == null) return null;
+        var me = Sts2State.Me;
+        var cs = Sts2State.Combat;
+        if (me == null || cs == null) return null;
+        var live = TurnEndModel.ComputeLive();
+        if (live == null) return null;
+        var (savedMe, savedCs, savedTe, savedFrame) = (self._me, self._cs, self._turnEnd, self._turnEndFrame);
+        self._me = me;
+        self._cs = cs;
+        self._indirect = self._ctx.Settings.ProcIndirect;
+        self._turnEnd = live;
+        self._turnEndFrame = self._ctx.Decor.Frame;
+        self._noCache = true;
+        try
+        {
+            if (self.Prepare(card, Sources(me, cs), record: false) is not { } p) return null;
+            if (p.Sim is { IsCompleted: false } t)
+            {
+                try { t.Wait(SimWaitCapMs); } catch { /* reported by Finish */ }
+            }
+            return (self.Finish(card, p), p.F);
+        }
+        finally
+        {
+            self._noCache = false;
+            (self._me, self._cs, self._turnEnd, self._turnEndFrame) = (savedMe, savedCs, savedTe, savedFrame);
         }
     }
 
@@ -325,28 +397,22 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         if (targets.Count == 0) targets.Add(-1);
 
         var stateKey = te.StateKey;
-        if (stateKey != _simKey)
+        if (!_noCache && stateKey != _simKey)
         {
             _simKey = stateKey;
             _simCache.Clear(); // running tasks finish on their own; their results are dropped
         }
         var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|" +
-                       string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock)
-                       + "|q" + te.LeadInCards.ToList().FindIndex(c => ReferenceEquals(c, card)); // its place in the queue changes its lead-in
+                       string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock);
         // The plays are built here (they read the game); only the simulation runs off the main thread.
-        // A card that is itself queued runs only the plays ahead of it (not itself, nor what's after it).
-        var queuedAt = te.LeadInCards.ToList().FindIndex(c => ReferenceEquals(c, card));
-        var leadInPlays = queuedAt >= 0 ? te.LeadIn.Take(queuedAt).ToList() : te.LeadIn;
-        var leadInCards = queuedAt >= 0 ? te.LeadInCards.Take(queuedAt).ToList() : te.LeadInCards;
-        var inputs = new SimInputs { Start = te.State, Ids = te.Ids, LeadIn = leadInPlays, LeadInCards = leadInCards };
+        var inputs = new SimInputs { Start = te.State, Ids = te.Ids };
         foreach (var t in targets) inputs.PlayByTarget[t] = SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock);
         f.Sim = inputs;
-        if (!_simCache.TryGetValue(cacheKey, out var task))
+        if (_noCache || !_simCache.TryGetValue(cacheKey, out var task))
         {
             var start = te.State;
-            var leadIn = leadInPlays;
-            task = Task.WhenAll(targets.Select(t => inputs.PlayByTarget[t]).Select(p => Task.Run(() => SimEngine.Run(start, leadIn, p))));
-            _simCache[cacheKey] = task;
+            task = Task.WhenAll(targets.Select(t => inputs.PlayByTarget[t]).Select(p => Task.Run(() => SimEngine.Run(start, p))));
+            if (!_noCache) _simCache[cacheKey] = task;
         }
         return task;
     }
@@ -697,6 +763,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     // ------------------------------------------------------------------ amounts
 
     /// <summary>Block you'd actually gain: the game's own block math (Dexterity/Frail only apply to powered block).</summary>
+    /// <summary>PredictNow is running: the simulation cache (keyed to this frame's state) is left alone.</summary>
+    private bool _noCache;
+
     private TurnEndModel? _turnEnd;
     private long _turnEndFrame = -1;
 

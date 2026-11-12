@@ -863,7 +863,4 @@ public sealed class SimInputs
     public required SimState Start { get; init; }
     public required IReadOnlyDictionary<Creature, int> Ids { get; init; }
     public Dictionary<int, SimPlay> PlayByTarget { get; } = new();
-    /// <summary>Plays run first (still resolving or queued when this was built, decision #27), and their cards.</summary>
-    public IReadOnlyList<SimPlay> LeadIn { get; init; } = Array.Empty<SimPlay>();
-    public IReadOnlyList<CardModel> LeadInCards { get; init; } = Array.Empty<CardModel>();
 }

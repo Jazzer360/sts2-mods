@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.25
+#### Changed
+- Cards played quickly, before the previous card finished: tabs, Incoming Damage and the Death Skull show the board as it is again, instead of running your queued plays first. The proc check now checks every play against a prediction made as it begins to resolve, so quick plays are fully checked (logs and error reports).
+
 ### Spire QoL 0.31.24
 #### Fixed
 - A card played while others were still resolving: its tabs ran only the plays ahead of it (it counted itself), and the proc check now compares a play with the tabs it had when you played it (a queued card is recomputed in your hand until it starts, so the check used to compare later tabs).
