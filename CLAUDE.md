@@ -49,7 +49,7 @@ Crashes and audit mismatches from players' games become GitHub issues labelled `
 - Most audit mismatches so far were the audit's own mistakes (window boundaries, effects it didn't model), not wrong tabs. Decide which it is from the history and the decompiled source before touching tab rules.
 - **Audits must not report what a random roll caused**, but must not be silenced broadly either: excuse an effect only when the history shows a random hit or kill caused it. Multi-enemy fights stay audited.
 - **When a closed report comes back, revisit the original fix.** First check it's really the same cause (several causes can share a report). If the fix didn't help, revert it before fixing properly; keep it only if it's a real improvement on its own. Don't leave speculative fixes in place for problems that don't exist.
-- After releasing a fix, close the issue with a short comment naming the fix and the version.
+- After releasing a fix, close the issue with a short comment naming the fix and the version, with the release link (`.../releases/tag/spireqol-vX.Y.Z`): the Sentry sync reads the fix version from it, so reports from older versions don't reopen the issue.
 - Keep repo text (docs, commits, changelogs, release notes, issue comments) about the mod and the game, not about how the repo is developed or maintained.
 
 ## Documentation rules (required with every change)

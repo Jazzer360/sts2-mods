@@ -38,7 +38,7 @@ Everything needed to pick this repo up on a new machine, or after a long break. 
 
 ## Error reports (Sentry → GitHub issues)
 
-Players' crashes and audit mismatches go to Sentry (`ErrorReporter`, DSN in `mods/SpireQoL/Diagnostics/ReportingConfig.cs`; a DSN is public by design). The "Sentry issues" workflow (`.github/workflows/sentry-issues.yml`, hourly, or `gh workflow run "Sentry issues"`) mirrors them as GitHub issues labelled `auto-report` plus `crash` or `mismatch`, resolves Sentry issues whose GitHub issue was closed, and reopens a GitHub issue if it happens again.
+Players' crashes and audit mismatches go to Sentry (`ErrorReporter`, DSN in `mods/SpireQoL/Diagnostics/ReportingConfig.cs`; a DSN is public by design). The "Sentry issues" workflow (`.github/workflows/sentry-issues.yml`, hourly, or `gh workflow run "Sentry issues"`) mirrors them as GitHub issues labelled `auto-report` plus `crash` or `mismatch`, resolves Sentry issues whose GitHub issue was closed (in the fixing release), and reopens a GitHub issue if it happens again on the fixing version or newer, replacing its body with the newest occurrence. Occurrences only from versions older than the fix (players who haven't updated) leave it closed. The fix version comes from the closing comment's release link (`spireqol-vX.Y.Z`); a new report from a version older than the newest release says so.
 
 It needs, in the GitHub repo settings: secret `SENTRY_AUTH_TOKEN` (a Sentry auth token with project read/write), variables `SENTRY_ORG` and `SENTRY_PROJECT` (and optionally `SENTRY_API`). Nothing local.
 

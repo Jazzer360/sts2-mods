@@ -90,3 +90,8 @@ The proc check reports a play that drew or channeled fewer than predicted, not o
 Spire QoL reads GitHub's public releases list once each time the main menu appears (never during a run) and shows how many versions behind you are above the game's "MODDED" note, linking to the releases page. One anonymous request (the mod's id as User-Agent), off the main thread; a switch turns it off. The game's own label is left alone (a label of ours is added above it).
 *Why:* releases come often, and players otherwise don't know a fix is out; reports from old builds cost review time.
 *Replaced:* no network access other than error reports (Sentry).
+
+### 21. Fixed reports from older versions don't reopen issues — active (2026-11-11)
+The Sentry sync reads the version that fixed a closed issue from its closing comment's release link. When the issue is seen again only from versions older than that (players who haven't updated), it stays closed and is resolved again in Sentry (in the fixing release); from the fixing version or newer, or with no fix version, it reopens with the newest occurrence as its report. New issues are created whatever the version, noting when the version is older than the newest release.
+*Why:* releases are frequent and many players won't update; old builds re-reporting fixed problems would bury the real regressions.
+*Replaced:* reopening on any occurrence after the close, with the original report left as the issue body.
