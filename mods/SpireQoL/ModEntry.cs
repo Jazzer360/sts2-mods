@@ -32,6 +32,7 @@ public static class ModEntry
         MigrateLayout(settings);
         MigrateTabs(settings);
         MigrateSettings(settings);
+        Sim.SimAdapter.IncludeTeammates = settings.MultiplayerPredictions;
 
         var host = new OverlayHost(Id, Log)
         {
@@ -49,6 +50,8 @@ public static class ModEntry
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Init(Diagnostics.ReportingConfig.Dsn, settings.ReportErrors, $"spireqol@{version}", Log);
         reporter.Tags["mod_version"] = version;
         try { reporter.Tags["game_version"] = MegaCrit.Sts2.Core.Nodes.NGame.GetGameVersion(); } catch { }
+        // Multiplayer reports have their own budget: a noisy co-op session can't crowd out single-player ones.
+        reporter.BudgetKey = () => Sts2State.Combat is { } c && c.Players.Count > 1 ? "multiplayer" : "single";
         // Who's in the fight: tells multiplayer reports apart (players 2-4, every player's character, yours first).
         reporter.TagProvider = () =>
         {

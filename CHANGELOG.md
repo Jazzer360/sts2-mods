@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.22
+#### Added
+- Setting: Multiplayer predictions (experimental, on). Off: teammates are left out of every prediction.
+#### Changed
+- Error reports from multiplayer fights have their own per-session budget, so a co-op session can't use up the reports a single-player fight would send (logs and error reports only).
+
 ### Spire QoL 0.31.21
 #### Changed
 - Multiplayer: teammates are simulated as full players: their block and HP, each enemy hit on every player with that player's own amount, their Thorns and Flame Barrier (which can kill an attacker before it finishes its hits on you), and Beacon of Hope sharing block with you at end of turn. Incoming Damage and the Death Skull account for them. Single-player results are unchanged (checked by a test of 600 single-player fights).

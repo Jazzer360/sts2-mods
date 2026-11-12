@@ -219,8 +219,14 @@ public static class SimAdapter
         return s;
     }
 
+    /// <summary>
+    /// Teammates are simulated (the "Multiplayer predictions (experimental)" setting, read each frame).
+    /// Off: none are, so every prediction is for you alone.
+    /// </summary>
+    public static bool IncludeTeammates = true;
+
     /// <summary>Another living player in the fight: a simulated teammate (SimState.Teammates, in this order).</summary>
-    internal static bool IsTeammate(Player p, Player me) => p != me && p.Creature is { IsAlive: true } && p.PlayerCombatState != null;
+    internal static bool IsTeammate(Player p, Player me) => IncludeTeammates && p != me && p.Creature is { IsAlive: true } && p.PlayerCombatState != null;
 
     /// <summary>The simulated teammates, in player order (SimState.Teammates[k] is the k-th).</summary>
     public static List<Player> Teammates(Player me, ICombatState cs) => cs.Players.Where(p => IsTeammate(p, me)).ToList();

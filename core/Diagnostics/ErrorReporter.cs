@@ -13,7 +13,9 @@ namespace Sts2Mods.Core.Diagnostics;
 /// exception handlers are installed. Nothing personal is sent: no server/machine name, no user.
 ///
 /// Every call is wrapped so reporting can never break the game. Within a session each
-/// fingerprint is sent once, and at most MaxPerSession events are sent in total.
+/// fingerprint is sent once, and at most MaxPerSession events are sent per kind of game (BudgetKey:
+/// single-player and multiplayer each have their own, so a noisy co-op session can't use up the reports
+/// a single-player fight would send).
 /// </summary>
 public sealed class ErrorReporter
 {
@@ -25,7 +27,10 @@ public sealed class ErrorReporter
     private readonly ModLog _log;
     private readonly HashSet<string> _sent = new();
     private readonly object _lock = new();
-    private int _count;
+    private readonly Dictionary<string, int> _counts = new();
+
+    /// <summary>Which budget a report counts against (e.g. "multiplayer"); one shared budget when null.</summary>
+    public Func<string>? BudgetKey { get; set; }
 
     /// <summary>Mod-specific snapshot of the game state (combat, hand, relics...), added to every report.</summary>
     public Func<IReadOnlyDictionary<string, string>>? ContextProvider { get; set; }
@@ -125,8 +130,11 @@ public sealed class ErrorReporter
         var key = string.Join("|", fingerprint);
         lock (_lock)
         {
-            if (_count >= MaxPerSession || !_sent.Add(key)) return;
-            _count++;
+            string budget;
+            try { budget = BudgetKey?.Invoke() ?? ""; } catch { budget = ""; }
+            var used = _counts.TryGetValue(budget, out var n) ? n : 0;
+            if (used >= MaxPerSession || !_sent.Add(key)) return;
+            _counts[budget] = used + 1;
         }
         try
         {

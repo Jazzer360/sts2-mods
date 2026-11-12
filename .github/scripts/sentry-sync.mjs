@@ -56,7 +56,7 @@ async function github(path, init = {}) {
 }
 
 async function ensureLabels() {
-  const want = { "auto-report": "d93f0b", crash: "b60205", mismatch: "fbca04" };
+  const want = { "auto-report": "d93f0b", crash: "b60205", mismatch: "fbca04", multiplayer: "5319e7" };
   for (const [name, color] of Object.entries(want)) {
     try { await github(`/repos/${REPO}/labels/${encodeURIComponent(name)}`); }
     catch { await github(`/repos/${REPO}/labels`, { method: "POST", body: JSON.stringify({ name, color }) }); }
@@ -183,9 +183,10 @@ for (const issue of issues) {
       continue;
     }
     const kind = (event.tags || []).find((t) => t.key === "kind")?.value || "crash";
+    const players = Number((event.tags || []).find((t) => t.key === "players")?.value || "1");
     const created = await github(`/repos/${REPO}/issues`, {
       method: "POST",
-      body: JSON.stringify({ title: clip(`[${kind}] ${issue.title}`, 240), body: body(issue, event), labels: ["auto-report", kind] }),
+      body: JSON.stringify({ title: clip(`[${kind}] ${issue.title}`, 240), body: body(issue, event), labels: ["auto-report", kind, ...(players > 1 ? ["multiplayer"] : [])] }),
     });
     console.log(`created #${created.number} for Sentry ${issue.id}: ${issue.title}`);
   } else if (gh.state === "closed") {

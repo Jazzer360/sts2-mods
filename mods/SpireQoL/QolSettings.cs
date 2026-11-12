@@ -51,6 +51,12 @@ public sealed class QolSettings
     /// </summary>
     public Dictionary<string, bool> Tabs { get; set; } = new();
 
+    /// <summary>
+    /// Multiplayer (experimental, decision #24): teammates are simulated as full players. Off: they're left
+    /// out of every prediction (an enemy a teammate would finish still counts as attacking you).
+    /// </summary>
+    public bool MultiplayerPredictions { get; set; } = true;
+
     /// <summary>Death Skull: also show it, with the chance, when a roll decides whether the enemy dies.</summary>
     public bool DeathChance { get; set; } = true;
 
