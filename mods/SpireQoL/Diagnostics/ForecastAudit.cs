@@ -111,9 +111,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private static CombatSide SideOf(CombatHistoryEntry e) => Sts2State.Private(e, "CurrentSide", CombatSide.Player);
 
     /// <summary>
-    /// Each simulated teammate's HP lost this round against the forecast's range (worst branch to best).
-    /// Skipped for a teammate known to run Spire QoL (their own game checks them: only the host can tell,
-    /// from the handshake), and when a teammate auto-played a card at end of turn (Stampede: a random card).
+    /// Each simulated teammate's HP lost this round against the forecast's range (worst branch to best),
+    /// on every game: a teammate is simulated through its own code path (not the one their game checks for
+    /// themselves), and Teammate Incoming Damage shows it. Skipped when a teammate auto-played a card at end
+    /// of turn (Stampede: a random card). What's shown leaves their hand out (decision #25); when that range
+    /// differs, the line says so, and an HP loss only the cards in their hand explain is logged, not reported.
     /// </summary>
     private static string TeammateIssues(TurnEndModel f, List<DamageReceivedEntry> damage, List<CombatHistoryEntry> endOfTurn, List<string> issues)
     {
@@ -126,7 +128,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var actual = damage.Where(d => d.Result.Receiver == mate.Creature).Sum(d => d.Result.UnblockedDamage);
             var (min, max) = (o.TeammateTakenMin(k), o.TeammateTakenMax(k));
             line += $"; teammate {name} HP lost {actual} (predicted {(min == max ? $"{max}" : $"{min}-{max}")})";
-            if (RunsSpireQoL(mate)) continue;
+            var shown = k < f.TeammateView.Count ? f.TeammateView[k] : null;
+            if (shown != null && (shown.TakenMin != min || shown.TakenMax != max))
+                line += $" (shown without their hand: {(shown.TakenMin == shown.TakenMax ? $"{shown.TakenMax}" : $"{shown.TakenMin}-{shown.TakenMax}")})";
             if (endOfTurn.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == mate))
             {
                 line += " (auto-played a card: not checked)";
@@ -134,6 +138,14 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             }
             // Their HP can't go below 0: a teammate who died lost what they had.
             if (actual > max || actual < min) issues.Add($"teammate {name} HP lost: forecast {(min == max ? $"{max}" : $"{min}-{max}")}, actual {actual}");
+            // Their Osty (Teammate Incoming Damage shows what he absorbs).
+            if (mate.Osty is { } osty)
+            {
+                var ostyActual = damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
+                var (oMin, oMax) = (o.TeammateOstyTakenMin(k), o.TeammateOstyTakenMax(k));
+                line += $", their Osty {ostyActual} (predicted {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")})";
+                if (ostyActual > oMax || ostyActual < oMin) issues.Add($"teammate {name} Osty HP lost: forecast {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")}, actual {ostyActual}");
+            }
         }
         return line;
     }
@@ -141,25 +153,6 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private static string SafeCharacter(Player p)
     {
         try { return p.Character.GetType().Name; } catch { return "?"; }
-    }
-
-    /// <summary>
-    /// The teammate runs Spire QoL too: known only to the host, which keeps every client's mod list from the
-    /// handshake (PeerVersionInfo: "SpireQoL-version"). A client never learns other clients' mods.
-    /// </summary>
-    private static bool RunsSpireQoL(Player p)
-    {
-        try
-        {
-            if (MegaCrit.Sts2.Core.Runs.RunManager.Instance?.NetService is not MegaCrit.Sts2.Core.Multiplayer.Game.INetHostGameService host) return false;
-            var info = host.GetVersionInfoForPeer(p.NetId);
-            var mods = (info?.otherMods ?? new List<string>()).Concat(info?.gameplayAffectingMods ?? new List<string>());
-            return mods.Any(m => m.StartsWith(ModEntry.Id + "-", StringComparison.OrdinalIgnoreCase));
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private void Compare(TurnEndModel f, CombatHistory history, int from, Player me)

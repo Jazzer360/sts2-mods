@@ -97,6 +97,7 @@ public static class SettingsCatalog
         new(nameof(BoneFlute), SourceGroup.Relic, "Cards that make Osty attack: block"),
         new(nameof(UnceasingTop), SourceGroup.Relic, "Your last card in hand, if it draws nothing"),
         new(nameof(HandDrill), SourceGroup.Relic, "Attacks that break an enemy's block"),
+        new(nameof(ParryingShield), SourceGroup.Relic, "Cards that make it fire at end of turn (your block reaches its threshold), crossed when they stop it"),
         new(nameof(GremlinHorn), SourceGroup.Relic, "Attacks that kill an enemy"),
         new(nameof(CentennialPuzzle), SourceGroup.Relic, "Cards that cost you HP (first time this combat)"),
         new(nameof(SelfFormingClay), SourceGroup.Relic, "Cards that cost you HP"),

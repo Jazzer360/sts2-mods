@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.27
+#### Added
+- Teammate Incoming Damage (multiplayer): hovering a teammate shows what they'll take at end of turn, after their block, the same sum as yours, from what you can see (not the cards in their hand).
+- Parrying Shield tab: on a card that makes it fire at end of turn, crossed on a card that stops it (Orichalcum no longer arming, Burns, Thorns).
+#### Fixed
+- Multiplayer: a teammate's Cloak Clasp, Ripple Basin and Parrying Shield count for them (their block, and Parrying Shield's damage toward lethal and the Death Skull).
+
 ### Spire QoL 0.31.26
 #### Changed
 - Multiplayer checks (logs and error reports): the state after your play now includes each teammate's block and HP; a play whose choice let a teammate's action run has its before/after checks logged instead of reported; cards aimed at a teammate or every player are flagged by the coverage check until the simulator models them.

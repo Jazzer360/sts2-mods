@@ -89,6 +89,18 @@ public sealed class SimOutcome
     /// <summary>Teammate k's HP lost: the worst branch (the safe run included) and the best.</summary>
     public int TeammateTakenMax(int k) => Math.Max(Branches.Max(b => b.Teammates[k].Taken), SafeWorst?.Teammates[k].Taken ?? 0);
     public int TeammateTakenMin(int k) => Branches.Min(b => b.Teammates[k].Taken);
+    /// <summary>What teammate k's Osty takes: the worst branch (the safe run included) and the best.</summary>
+    public int TeammateOstyTakenMax(int k) => Math.Max(Branches.Max(b => b.Teammates[k].OstyTaken), SafeWorst?.Teammates[k].OstyTaken ?? 0);
+    public int TeammateOstyTakenMin(int k) => Branches.Min(b => b.Teammates[k].OstyTaken);
+    /// <summary>Your Parrying Shield fires in every branch (none dropped) / in some branch (the safe run included).</summary>
+    public bool ParryingShieldInAll => !Truncated && Branches.All(b => b.ParryingShieldFired);
+    public bool ParryingShieldInAny => Branches.Any(b => b.ParryingShieldFired) || SafeWorst?.ParryingShieldFired == true;
+    /// <summary>Teammate k in the branch where they lose the most HP (the safe run included): their Incoming Damage.</summary>
+    public SimPlayer TeammateWorst(int k)
+    {
+        var worst = Branches.Select(b => b.Teammates[k]).OrderByDescending(t => t.Taken).First();
+        return SafeWorst?.Teammates[k] is { } safe && safe.Taken > worst.Taken ? safe : worst;
+    }
     public int TakenMax => Math.Max(Branches.Max(b => b.Taken), SafeWorst?.Taken ?? 0);
     public int OstyTakenMin => Branches.Min(b => b.OstyTaken);
     public int OstyTakenMax => Math.Max(Branches.Max(b => b.OstyTaken), SafeWorst?.OstyTaken ?? 0);
@@ -430,6 +442,7 @@ public static class SimEngine
         var p = who < 0 ? s.P : s.MutableTeammate(who);
         p.Block += amount;
         p.BlockGains++;
+        if (who >= 0) p.BlockGained += amount;
         if (who < 0 && log != null) if (s.Log) s.EndOfTurnBlock.Add((log, amount));
         IEnumerable<SimState> r = new[] { s };
         if (p.Juggernaut > 0)
@@ -515,6 +528,7 @@ public static class SimEngine
         if (who >= 0)
         {
             var t = s.MutableTeammate(who);
+            t.Incoming += amount;
             var tb = Math.Min(t.Block, amount);
             t.Block -= tb;
             t.Through += amount - tb;
@@ -546,7 +560,9 @@ public static class SimEngine
         if (amount <= 0) return;
         if (who >= 0)
         {
-            TeammateHpLoss(s.MutableTeammate(who), amount);
+            var t = s.MutableTeammate(who);
+            t.Incoming += amount;
+            TeammateHpLoss(t, amount);
             return;
         }
         if (s.Log) s.Unblockable.Add((name, amount));
@@ -863,7 +879,11 @@ public static class SimEngine
                 if (t.Hp <= 0) return new[] { s };
                 var armed = t.Block <= 0;
                 var r = GainBlock(s, t.Plating, null, tk);
-                return armed ? r.SelectMany(x => GainBlock(x, x.Teammates[tk].OrichalcumBlock, null, tk)).ToList() : r;
+                r = armed ? r.SelectMany(x => GainBlock(x, x.Teammates[tk].OrichalcumBlock, null, tk)).ToList() : r;
+                // Their relics, as yours: Cloak Clasp per card in their hand (its size is on screen), Ripple Basin
+                // when they played no attack this turn.
+                r = r.SelectMany(x => x.Teammates[tk].HandCount > 0 ? GainBlock(x, x.Teammates[tk].HandCount * x.Teammates[tk].CloakClaspPerCard, null, tk) : new[] { x }).ToList();
+                return r.SelectMany(x => x.Teammates[tk].AttacksThisTurn == 0 ? GainBlock(x, x.Teammates[tk].RippleBasinBlock, null, tk) : new[] { x }).ToList();
             });
         }
 
@@ -963,7 +983,19 @@ public static class SimEngine
                 });
             }
         }
-        b.Each(s => s.P.ParryingShieldDamage > 0 && s.P.Block >= s.P.ParryingShieldBlock ? HitRandom(s, _ => s.P.ParryingShieldDamage) : new[] { s });
+        // Parrying Shield (AfterSideTurnEnd): a random enemy, when your block is at least its threshold.
+        b.Each(s =>
+        {
+            if (s.P.ParryingShieldDamage <= 0 || s.P.Block < s.P.ParryingShieldBlock) return new[] { s };
+            s.ParryingShieldFired = true;
+            return HitRandom(s, _ => s.P.ParryingShieldDamage);
+        });
+        for (var k = 0; k < teammates; k++)
+        {
+            var tk = k;
+            b.Each(s => s.Teammates[tk] is { Hp: > 0, ParryingShieldDamage: > 0 } t && t.Block >= t.ParryingShieldBlock
+                ? HitRandom(s, _ => s.Teammates[tk].ParryingShieldDamage) : new[] { s });
+        }
         // AfterSideTurnEndLate: Disintegration.
         b.Do(s =>
         {
@@ -1083,6 +1115,7 @@ public static class SimEngine
                 if (s.Teammates[k].Hp <= 0) return;
                 var t = s.MutableTeammate(k);
                 var amount = k < e.TeammateHits.Count && h < e.TeammateHits[k].Count ? e.TeammateHits[k][h] : mine;
+                t.Incoming += amount;
                 if (t.Thorns > 0) Retaliate(t.Thorns);
                 var tBlocked = Math.Min(t.Block, amount);
                 t.Block -= tBlocked;

@@ -49,6 +49,7 @@ public sealed class SettingsMenu
         ("proc-indicators", "Proc Indicators", "A tab for every relic or power a card would set off (the Relics and powers pages)."),
         ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar."),
         ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes)."),
+        ("teammate-incoming-damage", "Teammate Incoming Damage", "Multiplayer: hovering a teammate shows what they'll take, after their block (from what you can see, not their hand)."),
         ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile."),
         ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it)."),
         ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit)."),

@@ -104,7 +104,6 @@ internal static class RelicTracking
         ["CloakClasp"] = "none: end-of-turn block (Incoming Damage)",
         ["Orichalcum"] = "none: end-of-turn block (Incoming Damage)",
         ["FakeOrichalcum"] = "none: end-of-turn block (Incoming Damage)",
-        ["ParryingShield"] = "none: end-of-turn damage (Incoming Damage)",
         ["ScreamingFlagon"] = "none: end-of-turn damage with an empty hand (Incoming Damage)",
         ["TungstenRod"] = "none: HP loss reduced (Incoming Damage)",
         ["BeatingRemnant"] = "none: HP loss capped per turn (Incoming Damage)",

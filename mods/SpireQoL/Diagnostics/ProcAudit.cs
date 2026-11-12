@@ -137,7 +137,14 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         nameof(ImbalancedPower), nameof(AsleepPower), nameof(SlumberPower), nameof(InfestedPower), nameof(SteamEruptionPower),
         nameof(SurprisePower), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower), nameof(SneakyPower), nameof(EnragePower), nameof(JuggernautPower),
         nameof(BurrowedPower), nameof(FlutterPower), nameof(PlowPower), nameof(ShriekPower), nameof(TheGambitPower), nameof(SlipperyPower), nameof(HandDrill),
+        nameof(ParryingShield),
     };
+
+    /// <summary>
+    /// Relic tabs about the end of your turn, not the play: they never fire during it (Parrying Shield doesn't
+    /// even flash). The forecast check covers what they do (enemy HP at the end of your turn).
+    /// </summary>
+    private static readonly HashSet<string> EndOfTurnRelicTabs = new() { nameof(ParryingShield) };
 
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
     private static readonly HashSet<string> KillReactive = new() { nameof(GremlinHorn) };
@@ -825,7 +832,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // ---- relic tabs whose relic didn't fire (crossed ones mean "this breaks it": no flash)
         foreach (var (name, t) in sourceOf)
         {
-            if (t.Crossed || !t.Key.StartsWith("proc:")) continue;
+            if (t.Crossed || !t.Key.StartsWith("proc:") || EndOfTurnRelicTabs.Contains(name)) continue;
             if (me.Relics.Any(r => r.GetType().Name == name) && !flashed.Any(f => f.GetType().Name == name))
                 issues.Add($"didn't fire: {name}");
         }

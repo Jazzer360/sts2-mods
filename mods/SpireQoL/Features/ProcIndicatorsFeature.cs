@@ -491,6 +491,15 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             if (outcomes.Any(o => o.PlayBreaksBlockInEveryBranch)) merged["proc:" + nameof(HandDrill)] = (r, Hit.Trig());
         }
 
+        // Parrying Shield (end of turn, block at least its threshold): plain when this play makes it fire in
+        // every branch and it wouldn't for sure now; crossed when it would for sure now and this play can stop
+        // it (less block: Orichalcum no longer arming, Thorns, a Burn landing first...).
+        foreach (var r in _me.Relics.OfType<ParryingShield>())
+        {
+            if (outcomes.Any(o => o.ParryingShieldInAll) && !baseline.ParryingShieldInAll) merged["proc:" + nameof(ParryingShield)] = (r, Hit.Trig());
+            else if (baseline.ParryingShieldInAll && outcomes.Any(o => !o.ParryingShieldInAll)) merged["proc:" + nameof(ParryingShield)] = (r, Hit.Trig(harmful: true));
+        }
+
         // Gremlin Horn (energy and a draw when an enemy dies): good, so only when some aim kills an
         // enemy in every branch of the play.
         foreach (var r in _me.Relics.OfType<GremlinHorn>())

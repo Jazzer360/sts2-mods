@@ -223,6 +223,8 @@ public sealed class SimPlayer
     public int Hp = int.MaxValue;
     /// <summary>A teammate's HP lost, through their block, and lost by their Osty this turn.</summary>
     public int Taken, Through, OstyTaken;
+    /// <summary>A teammate's damage landing on them (before block) and block they gained: their Incoming Damage.</summary>
+    public int Incoming, BlockGained;
     /// <summary>
     /// Beacon of Hope: half of each block this player gains on the players' side goes to every other
     /// living player (BeaconOfHopePower.AfterBlockGained). BeaconGiving: held while it gives (the game's
@@ -285,6 +287,8 @@ public sealed class SimState
     public int CancelledHits;
     /// <summary>Block you have when the enemy turn starts.</summary>
     public int BlockAtEnemyTurn;
+    /// <summary>Your Parrying Shield fired at the end of your turn (your block at least its threshold).</summary>
+    public bool ParryingShieldFired;
     public List<(string Name, int Amount)> EndOfTurnBlock = new();
     public List<(string Name, int Amount)> Blockable = new();
     public List<(string Name, int Amount)> Unblockable = new();
@@ -367,6 +371,24 @@ public sealed class SimState
         return Teammates[k];
     }
 
+    /// <summary>
+    /// A copy without the cards in teammates' hands (decision #25: what's shown uses only what you can see).
+    /// Their hand size stays (it's on screen: Cloak Clasp, Screaming Flagon, Regret's amount); the cards
+    /// that act from their hand at end of turn (Burn, Decay, Regret) are left out.
+    /// </summary>
+    public SimState WithoutTeammateHands()
+    {
+        var shown = Clone();
+        for (var k = 0; k < shown.Teammates.Count; k++)
+        {
+            var t = shown.MutableTeammate(k);
+            t.HandBlockable = new();
+            t.HandUnblockable = new();
+            t.RegretCards = 0;
+        }
+        return shown;
+    }
+
     public SimState Clone()
     {
         var c = (SimState)MemberwiseClone();
@@ -403,7 +425,7 @@ public sealed class SimState
                 h *= 1099511628211L;
             }
         }
-        Add(P.Block); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0);
+        Add(P.Block); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
         Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         foreach (var e in Enemies)
         {

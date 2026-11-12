@@ -83,6 +83,7 @@ public static class ModEntry
             new RelicCountersFeature(ctx),
             new ProcIndicatorsFeature(ctx),
             new IncomingDamageFeature(ctx),
+            new TeammateIncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
             new DeathSkullFeature(ctx),
             new UpdateNoticeFeature(),

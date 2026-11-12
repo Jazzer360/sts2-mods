@@ -51,6 +51,42 @@ public sealed class TurnEndModel
     public SimState State { get; private set; } = new();
     public IReadOnlyDictionary<Creature, int> Ids { get; private set; } = new Dictionary<Creature, int>();
     public SimOutcome Outcome { get; private set; } = new();
+    /// <summary>
+    /// A teammate's Incoming Damage as shown (decision #25: from what you can see, so without the cards in
+    /// their hand): damage landing on them, their block by the enemy turn, what their Osty absorbs (OstyHp 0:
+    /// not out), and HP lost (worst and best branch).
+    /// </summary>
+    public sealed record TeammateForecast(Player Player, int Incoming, int Block, int OstyHp, int OstyTaken, int TakenMin, int TakenMax)
+    {
+        public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
+    }
+
+    /// <summary>Each teammate's shown forecast, in SimState.Teammates order (a second run, built on first use).</summary>
+    public IReadOnlyList<TeammateForecast> TeammateView => _teammateView ??= BuildTeammateView();
+    private IReadOnlyList<TeammateForecast>? _teammateView;
+    private static long _lastViewKey;
+    private static IReadOnlyList<TeammateForecast>? _lastView;
+
+    private IReadOnlyList<TeammateForecast> BuildTeammateView()
+    {
+        if (State.Teammates.Count == 0 || Teammates.Count != State.Teammates.Count) return Array.Empty<TeammateForecast>();
+        if (_lastView != null && _lastViewKey == StateKey && _lastView.Count == Teammates.Count
+            && _lastView.Select(v => v.Player).SequenceEqual(Teammates)) return _lastView;
+        // Their hand isn't known to you: run again with the cards in it left out (what they hold only
+        // ever changes their own HP in the simulator).
+        var o = SimEngine.Run(State.WithoutTeammateHands());
+        var view = new List<TeammateForecast>();
+        for (var k = 0; k < Teammates.Count; k++)
+        {
+            var worst = o.TeammateWorst(k);
+            view.Add(new TeammateForecast(Teammates[k], worst.Incoming, State.Teammates[k].Block + worst.BlockGained,
+                State.Teammates[k].OstyHp, worst.OstyTaken, o.TeammateTakenMin(k), o.TeammateTakenMax(k)));
+        }
+        _lastViewKey = StateKey;
+        _lastView = view;
+        return view;
+    }
+
     /// <summary>The players behind SimState.Teammates (multiplayer), in the same order, as of this forecast.</summary>
     public IReadOnlyList<Player> Teammates { get; private set; } = Array.Empty<Player>();
 

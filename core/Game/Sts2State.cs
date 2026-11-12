@@ -134,13 +134,38 @@ public static class Sts2State
     /// of the HP bar), or the HP bar itself. The block icon hides at 0 block, but its node keeps
     /// its place, so the rect is stable either way.
     /// </summary>
-    public static Godot.Rect2? PlayerBlockRect()
+    public static Godot.Rect2? PlayerBlockRect() => Me is { } me ? BlockRect(me.Creature) : null;
+
+    /// <summary>
+    /// The teammate whose character you're hovering (multiplayer: the game then shows their HP bar,
+    /// NCreature.OnFocus), or null.
+    /// </summary>
+    public static Player? FocusedTeammate()
     {
         var me = Me;
         var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
         if (me == null || room == null) return null;
+        foreach (var n in room.CreatureNodes)
+        {
+            if (!Godot.GodotObject.IsInstanceValid(n) || !n.IsFocused) continue;
+            if (n.Entity?.Player is { } p && p != me && n.Entity == p.Creature) return p;
+        }
+        return null;
+    }
 
-        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == me.Creature);
+    /// <summary>Screen rect of the hovered teammate's block indicator (see BlockRect), or null.</summary>
+    public static Godot.Rect2? FocusedTeammateBlockRect() => FocusedTeammate() is { } p ? BlockRect(p.Creature) : null;
+
+    /// <summary>
+    /// Screen rect of a player's block indicator (NHealthBar "%BlockContainer", at the left end of the HP
+    /// bar), or the HP bar itself.
+    /// </summary>
+    public static Godot.Rect2? BlockRect(MegaCrit.Sts2.Core.Entities.Creatures.Creature who)
+    {
+        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
+        if (room == null) return null;
+
+        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == who);
         var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
         if (display == null || !BarShown(creature!, display)) return null;
 
