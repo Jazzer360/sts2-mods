@@ -1,0 +1,12 @@
+{
+  "id": "MainSaves",
+  "name": "Main Saves",
+  "author": "Derek Jass",
+  "description": "Keeps using your normal profiles while mods are installed. Without it the game switches to a separate set of modded profiles (copied from your normal ones only the first time you play modded), so your progress splits in two.",
+  "version": "1.0.0",
+  "has_dll": true,
+  "has_pck": false,
+  "affects_gameplay": false,
+  "dependencies": [],
+  "min_game_version": "v0.111.0"
+}

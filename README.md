@@ -19,9 +19,13 @@ Slay the Spire 2 mods. **Spire QoL** is display-only: it shows information the g
    If you get `mods/SpireQoL/SpireQoL/...` (one folder too deep), move the inner folder up a level.
 5. **Launch the game.** The first time it finds a mod, it asks whether to load mods. Choose to load them. The game then closes; start it again and the mod is active.
 
-The game keeps modded progress separate from your unmodded saves.
+The game keeps modded progress separate from your unmodded saves: the first time you play with mods it copies your profiles into a separate modded set, and from then on the two drift apart. To keep using your normal profiles with mods installed, also install **Main Saves** (below).
 
 **Using it:** press **F10** (or use the **Spire QoL settings** button on the Mods screen or the pause menu) for the settings menu, where every feature, card tab and tracker row can be switched on or off. In combat, press **F8** to unlock the layout and drag indicators around (F8 again to lock it), and **F9** to hide or show all overlays. Every feature and setting is described in the [feature reference](docs/FEATURES.md). Settings live in `mods/SpireQoL/SpireQoL.settings.cfg`, which is created on first run; edit it while the game is closed.
+
+### Main Saves (optional)
+
+A tiny separate mod that makes the game keep using your normal profiles while mods are installed, instead of its separate modded profiles. Install it the same way (`MainSaves-<version>.zip` from the Releases page, extracted into `mods`, giving `mods/MainSaves/MainSaves.dll`). Your modded runs then go into your normal profiles, so a mod that breaks a save breaks your real one: keep that in mind. Delete `mods/MainSaves` to go back to the game's separate modded profiles (they're kept as they were).
 
 **Updating:** download the new zip and extract it over the old one, replacing the files. Your settings file is kept.
 
@@ -41,6 +45,7 @@ A development monorepo: every mod shares one build setup and a small `core` libr
 
 | Mod | Folder | What it does | Status |
 | --- | --- | --- | --- |
+| **Main Saves** | [`mods/MainSaves`](mods/MainSaves) | Keeps using your normal profiles while mods are installed (the game otherwise switches to separate modded profiles). | [Releases](https://github.com/Jazzer360/sts2-mods/releases) |
 | **Spire QoL** | [`mods/SpireQoL`](mods/SpireQoL) | Display-only QoL: on-card indicators for card modifiers, relic and power counters, relic reminders, incoming damage, shuffle warning. Each feature can be toggled, and indicators can be placed anywhere. | [Latest release](https://github.com/Jazzer360/sts2-mods/releases/latest) |
 
 **Docs:** [Feature reference](docs/FEATURES.md) (everything the mods change) · [Tracker](docs/TRACKER.md) (work list) · [Changelog](CHANGELOG.md) (patch notes) · [Roadmap](docs/ROADMAP.md)

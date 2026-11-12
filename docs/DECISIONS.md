@@ -157,3 +157,8 @@ The performance tests count what a simulation does (state copies, branches stepp
 The mod is built against the newest game (v0.113.0, beta) and keeps working on the previous one (v0.111.0, stable): game values whose names changed are read by name with the old name as the fallback (a card's HitCount, then Repeat, then the fixed count its old code used), and hooks are called through the game's own static `Hook` methods that exist in both. The coverage ledger is generated from the newest decompile; on the older game the coverage check reports the version difference once.
 *Why:* players on Steam's beta branch get the new characters and cards first, while most stay on stable; one release serves both without a second build.
 *Replaced:* nothing (first game update with a beta branch).
+
+### 33. Main Saves is its own mod — active (2026-11-12)
+Using the normal profiles while modded is a separate mod (`mods/MainSaves`) with one prefix on `UserDataPathProvider.GetAccountDir`, not a Spire QoL setting.
+*Why:* it changes what the game does (which saves it reads and writes), and Spire QoL only observes (decision #10). As its own mod, only players who install it get it, and Spire QoL stays safe to install without touching anyone's saves. It patches only the current-mode answer, so the game's own first-time copy and its "running modded" state are unchanged.
+*Replaced:* nothing (before, a third-party mod did this as a side effect).

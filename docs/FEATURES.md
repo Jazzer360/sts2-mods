@@ -402,3 +402,10 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ---
 
+---
+
+## Main Saves (separate mod)
+
+**What it does:** while any mod is loaded, the game keeps its saves in a separate `modded` folder (`%APPDATA%\SlayTheSpire2\steam\<id>\modded\`: `profile.save` and every profile's progress, current run, prefs and run history), copied from the normal saves only the first time you play modded. Main Saves makes the game use the normal folder instead, so modded and unmodded play share one set of profiles. The game still knows it's running modded (run history and its own crash reporting behave as with any mod). No settings. Remove the mod to go back to the modded profiles, which are left as they were.
+
+**Harmony patch:** `UserDataPathProvider.GetAccountDir` (prefix): returns the normal folder (`""`) when the game asks for the current mode; calls that name a mode (`forceModState`, the game's first-time copy into `modded`) get the game's own answer. Unlike Spire QoL's, this patch changes what the game does (decision #33).

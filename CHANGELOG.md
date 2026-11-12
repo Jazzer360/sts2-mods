@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Main Saves 1.0.0
+#### Added
+- New mod: keeps using your normal profiles while mods are installed, instead of the game's separate modded profiles.
+
 ### Spire QoL 0.31.29
 #### Fixed
 - Game v0.113.0 (beta): multi-hit attacks whose hit count moved to a new card value (Fight Me, Gunk Up, Sovereign Blade, Spite, Celestial Might, Conflagration, Exterminate, Peck, Ricochet, Seven Stars, Sword Boomerang) counted one hit in lethal and proc tabs. Hits are read from the card's hit count on both game versions.
