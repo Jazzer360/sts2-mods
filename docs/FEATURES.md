@@ -376,9 +376,9 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ## Update Notice
 
-**What you see:** on the main menu, when newer Spire QoL versions are out, a small green note just above the game's "MODDED (n)" text in the bottom-right corner: "Spire QoL: 3 versions behind (new version on GitHub)". Clicking it opens the Spire QoL releases page on GitHub. Nothing when you're up to date, and nothing during a run.
+**What you see:** on the main menu, when newer Spire QoL versions are out, a small green note just above the game's "MODDED (n)" text in the bottom-right corner: "Spire QoL: 3 versions behind (new version on GitHub)". Clicking it opens the Spire QoL releases page on GitHub. When GitHub confirms you're on the newest version, a muted grey "Spire QoL up to date!" instead. Nothing when GitHub can't be reached, and nothing during a run.
 
-**How it checks:** each time the main menu appears, one request on a worker thread to GitHub's public releases list for this repo (every page, 100 releases each), counting `spireqol-v<version>` releases (not drafts or prereleases) newer than the running DLL's version. It sends nothing about you; the User-Agent is the mod's id. If GitHub can't be reached, the note keeps its last answer (or stays hidden). Turn it off with the `update-notice` switch (settings menu, General).
+**How it checks:** each time the main menu appears, one request on a worker thread to GitHub's public releases list for this repo (every page, 100 releases each), counting `spireqol-v<version>` releases (not drafts or prereleases) newer than the running DLL's version. It sends nothing about you; the User-Agent is the mod's id. If GitHub can't be reached, the note keeps its last answer (or stays hidden: it never says you're up to date without checking). Turn it off with the `update-notice` switch (settings menu, General).
 
 **Game UI touched:** adds one label as a child of the main menu's `%ModdedWarning` label (`NDebugInfoLabelManager`); the game's own label isn't changed. No Harmony patches.
 

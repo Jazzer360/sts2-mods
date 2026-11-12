@@ -469,3 +469,4 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [x] 0.31.12: draw and channel shortfalls are reported (decision #19; FTL's play limit only showed in the log); draws capped at the cards in both piles; a character without orb slots gets one on the first channel (OrbCmd.Channel), in the simulator.
 - [x] 0.31.13: Thunder (tab and simulator; was a known gap); relics' after-play draws (Iron Club, Game Piece) come after your powers' hand additions (Calamity) in PlayChain; Artifact blocking temporary debuffs (Dark Shackles) explained.
 - [x] 0.31.14: Update Notice on the main menu (GitHub releases, once per main menu visit; decision #20).
+- [x] 0.31.15: Update Notice says "up to date" when GitHub confirms it.

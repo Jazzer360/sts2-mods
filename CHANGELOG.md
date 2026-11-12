@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.15
+#### Changed
+- Update Notice: shows "Spire QoL up to date!" (muted grey) when GitHub confirms you're on the newest version.
+
 ### Spire QoL 0.31.14
 #### Added
 - Update Notice: on the main menu, a note above "MODDED (n)" says how many Spire QoL versions behind you are, when a newer one is on GitHub; click it to open the releases page. Checked once each time you reach the main menu (switch: `update-notice`).

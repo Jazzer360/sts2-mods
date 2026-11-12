@@ -10,7 +10,7 @@ namespace SpireQoL.Features;
 
 /// <summary>
 /// "Spire QoL: N versions behind" just above the game's "MODDED (n)" note on the main menu, when newer
-/// releases are on GitHub. Checked once each time the main menu appears (one request, off the main
+/// releases are on GitHub, or "Spire QoL up to date!" when GitHub says there are none. Checked once each time the main menu appears (one request, off the main
 /// thread), never during a run. Clicking it opens the releases page. Spec: docs/FEATURES.md#update-notice.
 /// </summary>
 public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
@@ -18,9 +18,12 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
     private const string Repo = "Jazzer360/sts2-mods";
     private const string TagPrefix = "spireqol-v";
 
+    private static readonly Color Behind = new(0.62f, 0.85f, 0.62f);
+    private static readonly Color UpToDate = new(0.75f, 0.75f, 0.72f, 0.8f);
+
     private bool _onMenu;
     private Task<int?>? _check;
-    private int _behind;
+    private int? _behind; // null: GitHub hasn't answered (nothing shown)
     private Label? _label;
     private Control? _warning;
     private int _searchCooldown;
@@ -61,7 +64,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             if (n != null)
             {
                 _behind = n.Value;
-                ModEntry.Log.Info(_behind > 0 ? $"update notice: {_behind} newer release(s) on GitHub" : "update notice: up to date");
+                ModEntry.Log.Info(n > 0 ? $"update notice: {_behind} newer release(s) on GitHub" : "update notice: up to date");
             }
         }
         Show(menu!);
@@ -69,7 +72,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
 
     private void Show(Node menu)
     {
-        if (_behind <= 0)
+        if (_behind is not { } behind)
         {
             if (_label != null && GodotObject.IsInstanceValid(_label)) _label.Visible = false;
             return;
@@ -87,7 +90,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
                 return;
             }
             var size = _warning.GetThemeFontSize("font_size");
-            _label = UiKit.Label("", size > 0 ? size : 18, new Color(0.62f, 0.85f, 0.62f));
+            _label = UiKit.Label("", size > 0 ? size : 18, Behind);
             _label.MouseFilter = Control.MouseFilterEnum.Stop;
             _label.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
             _label.TooltipText = "Open the Spire QoL releases on GitHub";
@@ -99,7 +102,8 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             _logged = false;
         }
         _label.Visible = true;
-        _label.Text = $"Spire QoL: {_behind} version{(_behind == 1 ? "" : "s")} behind (new version on GitHub)";
+        _label.Text = behind > 0 ? $"Spire QoL: {behind} version{(behind == 1 ? "" : "s")} behind (new version on GitHub)" : "Spire QoL up to date!";
+        _label.AddThemeColorOverride("font_color", behind > 0 ? Behind : UpToDate);
 
         // Just above the game's label, on the same side of the screen (it sits in a corner; beside it
         // could run off the edge).
