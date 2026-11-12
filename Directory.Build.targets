@@ -28,8 +28,9 @@
   <!--
     Marks a build made with uncommitted changes (AssemblyMetadata "GitDirty"), so the mod can tell a
     test build from a release. The commit itself is already in the informational version (SourceLink).
+    Runs before the SDK fingerprints the assembly-info inputs, so going clean <-> dirty regenerates it.
   -->
-  <Target Name="StampGitDirty" BeforeTargets="CoreGenerateAssemblyInfo" Condition="'$(IsSts2Mod)' == 'true'">
+  <Target Name="StampGitDirty" BeforeTargets="CreateGeneratedAssemblyInfoInputsCacheFile;CoreGenerateAssemblyInfo" Condition="'$(IsSts2Mod)' == 'true'">
     <Exec Command="git status --porcelain" WorkingDirectory="$(RepoRoot)" ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true" ContinueOnError="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="_GitStatus" />
     </Exec>
