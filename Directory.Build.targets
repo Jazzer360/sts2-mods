@@ -25,6 +25,22 @@
            Text="Couldn't find sts2.dll under '$(Sts2DataDir)'. Copy Sts2.local.props.example to Sts2.local.props and set Sts2Dir to your Slay the Spire 2 install folder." />
   </Target>
 
+  <!--
+    Marks a build made with uncommitted changes (AssemblyMetadata "GitDirty"), so the mod can tell a
+    test build from a release. The commit itself is already in the informational version (SourceLink).
+  -->
+  <Target Name="StampGitDirty" BeforeTargets="CoreGenerateAssemblyInfo" Condition="'$(IsSts2Mod)' == 'true'">
+    <Exec Command="git status --porcelain" WorkingDirectory="$(RepoRoot)" ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitStatus" />
+    </Exec>
+    <ItemGroup Condition="'$(_GitStatus)' != ''">
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>GitDirty</_Parameter1>
+        <_Parameter2>true</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
   <Target Name="InstallModToGame" AfterTargets="Build" Condition="'$(IsSts2Mod)' == 'true' And '$(InstallToGame)' == 'true'">
     <ItemGroup>
       <_ModFiles Include="$(OutDir)$(AssemblyName).dll;$(OutDir)$(AssemblyName).pdb;$(OutDir)$(AssemblyName).json" />

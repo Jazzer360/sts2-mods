@@ -10,8 +10,10 @@ namespace SpireQoL.Features;
 
 /// <summary>
 /// "Spire QoL: N versions behind" just above the game's "MODDED (n)" note on the main menu, when newer
-/// releases are on GitHub, or "Spire QoL up to date!" when GitHub says there are none. Checked once each time the main menu appears (one request, off the main
-/// thread), never during a run. Clicking it opens the releases page. Spec: docs/FEATURES.md#update-notice.
+/// releases are on GitHub, or "Spire QoL up to date!" when GitHub says there are none. A test build (its
+/// version isn't a release, or it was built with uncommitted changes) shows its version, commit and the
+/// newest release instead. Checked once each time the main menu appears (off the main thread), never
+/// during a run. Clicking it opens the releases page. Spec: docs/FEATURES.md#update-notice.
 /// </summary>
 public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
 {
@@ -20,10 +22,11 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
 
     private static readonly Color Behind = new(0.62f, 0.85f, 0.62f);
     private static readonly Color UpToDate = new(0.75f, 0.75f, 0.72f, 0.8f);
+    private static readonly Color TestBuild = new(0.95f, 0.7f, 0.45f);
 
     private bool _onMenu;
-    private Task<int?>? _check;
-    private int? _behind; // null: GitHub hasn't answered (nothing shown)
+    private Task<GitHubReleases.Status?>? _check;
+    private GitHubReleases.Status? _status; // null: GitHub hasn't answered (nothing shown)
     private Label? _label;
     private Control? _warning;
     private int _searchCooldown;
@@ -50,7 +53,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         {
             // Arrived at the main menu: ask once for this visit.
             var current = typeof(ModEntry).Assembly.GetName().Version ?? new Version(0, 0, 0);
-            _check = Task.Run(() => GitHubReleases.CountNewer(Repo, TagPrefix, current, ModEntry.Id));
+            _check = Task.Run(() => GitHubReleases.Check(Repo, TagPrefix, current, ModEntry.Id));
             _searchCooldown = 0;
             _loggedMissing = false;
         }
@@ -63,8 +66,8 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             var n = done.Status == TaskStatus.RanToCompletion ? done.Result : null;
             if (n != null)
             {
-                _behind = n.Value;
-                ModEntry.Log.Info(n > 0 ? $"update notice: {_behind} newer release(s) on GitHub" : "update notice: up to date");
+                _status = n;
+                ModEntry.Log.Info($"update notice: {Text(n)}");
             }
         }
         Show(menu!);
@@ -72,7 +75,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
 
     private void Show(Node menu)
     {
-        if (_behind is not { } behind)
+        if (_status is not { } status)
         {
             if (_label != null && GodotObject.IsInstanceValid(_label)) _label.Visible = false;
             return;
@@ -91,6 +94,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             }
             var size = _warning.GetThemeFontSize("font_size");
             _label = UiKit.Label("", size > 0 ? size : 18, Behind);
+            _label.HorizontalAlignment = HorizontalAlignment.Right;
             _label.MouseFilter = Control.MouseFilterEnum.Stop;
             _label.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
             _label.TooltipText = "Open the Spire QoL releases on GitHub";
@@ -102,8 +106,8 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             _logged = false;
         }
         _label.Visible = true;
-        _label.Text = behind > 0 ? $"Spire QoL: {behind} version{(behind == 1 ? "" : "s")} behind (new version on GitHub)" : "Spire QoL up to date!";
-        _label.AddThemeColorOverride("font_color", behind > 0 ? Behind : UpToDate);
+        _label.Text = Text(status);
+        _label.AddThemeColorOverride("font_color", IsTestBuild(status) ? TestBuild : status.Newer > 0 ? Behind : UpToDate);
 
         // Just above the game's label, on the same side of the screen (it sits in a corner; beside it
         // could run off the edge).
@@ -118,6 +122,36 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             _logged = true;
             ModEntry.Log.Info($"update notice: shown at {_label.GetGlobalRect()} above {_warning.GetPath()} at {rect} (screen {screen})");
         }
+    }
+
+    private static readonly System.Reflection.Assembly Me = typeof(ModEntry).Assembly;
+
+    /// <summary>Built with uncommitted changes (Directory.Build.targets stamps GitDirty).</summary>
+    private static bool Dirty => Me.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)
+        .OfType<System.Reflection.AssemblyMetadataAttribute>().Any(a => a.Key == "GitDirty" && a.Value == "true");
+
+    private static bool IsTestBuild(GitHubReleases.Status s) => !s.Released || Dirty;
+
+    private static string Text(GitHubReleases.Status s)
+    {
+        if (IsTestBuild(s))
+        {
+            // "0.31.16+a70db85…": the version, then the commit SourceLink stamps.
+            var info = Me.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "?";
+            var plus = info.IndexOf('+');
+            var version = plus >= 0 ? info[..plus] : info;
+            var commit = plus >= 0 ? info[(plus + 1)..] : "";
+            if (commit.Length > 7) commit = commit[..7];
+            var built = File.GetLastWriteTime(Me.Location).ToString("MMM d HH:mm");
+            var lines = new List<string>
+            {
+                $"Spire QoL {version} test build ({(commit == "" ? "no commit" : commit)}{(Dirty ? ", uncommitted changes" : "")}, built {built})",
+                $"version {version} {(s.Released ? "is already released" : "isn't released yet")}; newest release {s.Latest?.ToString() ?? "none"}{(s.Newer > 0 ? $", {s.Newer} newer" : "")}",
+            };
+            return string.Join('\n', lines);
+        }
+        return s.Newer > 0 ? $"Spire QoL: {s.Newer} version{(s.Newer == 1 ? "" : "s")} behind (new version on GitHub)" : "Spire QoL up to date!";
     }
 
     /// <summary>The game's "MODDED (n)" label in the main menu's info corner (NDebugInfoLabelManager).</summary>

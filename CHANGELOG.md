@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.16
+#### Added
+- Update Notice: a test build (a version that isn't released, or built with uncommitted changes) shows its version, commit, build time and the newest release on the main menu instead.
+
 ### Spire QoL 0.31.15
 #### Changed
 - Update Notice: shows "Spire QoL up to date!" (muted grey) when GitHub confirms you're on the newest version.
