@@ -348,6 +348,14 @@ public sealed class SimState
     // Shadow): copying them on every branch made multiplayer fights slow.
     private bool _teammatesShared;
 
+    /// <summary>
+    /// After a lead-in (plays still resolving or queued, decision #27): what this branch looked like when the
+    /// card itself starts, so its own kills, block breaks and block gains are measured from there.
+    /// </summary>
+    internal PlayBaseline? PlayBase;
+
+    internal sealed record PlayBaseline(HashSet<int> Alive, HashSet<int> Broken, int BlockGains);
+
     /// <summary>Teammate k, to change: copied for this branch first if it's shared.</summary>
     public SimPlayer MutableTeammate(int k)
     {

@@ -125,6 +125,8 @@ internal static class CardCoverage
         foreach (var applied in PowersApplied(card.GetType()))
             if (SimAdapter.PlainSelfPowerAmount(card, applied) == 0)
                 issues.Add($"applies {applied.Name} with no amount the simulator reads");
+        if (Calls("CreatureCmd", "Kill") && !SimAdapter.KillsOstyCards.Contains(name))
+            issues.Add("kills a creature (not in the simulator)");
         if (Calls("CardPileCmd", "Shuffle") && !PlayFacts.ShuffleCards.Contains(name))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");
         if (Calls("PlayerCmd", "GainStars") && !PlayFacts.StarGainCards.Contains(name))

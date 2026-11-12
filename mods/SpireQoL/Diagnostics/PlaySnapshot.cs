@@ -71,8 +71,8 @@ internal sealed class PlaySnapshot
     private static readonly Kind StarGain = new("stars gained", new[] { "PlayerCmd.GainStars" }, Array.Empty<string>());
     private static readonly Kind StarLoss = new("stars lost", new[] { "PlayerCmd.LoseStars" }, Array.Empty<string>());
     private static readonly Kind GoldChange = new("gold", new[] { "PlayerCmd.GainGold", "PlayerCmd.LoseGold" }, Array.Empty<string>());
-    private static readonly Kind Heal = new("HP gained", new[] { "CreatureCmd.Heal", "CreatureCmd.SetCurrentHp", "CreatureCmd.SetMaxAndCurrentHp" }, Array.Empty<string>());
-    private static readonly Kind MaxHp = new("max HP", new[] { "CreatureCmd.GainMaxHp", "CreatureCmd.LoseMaxHp", "CreatureCmd.SetMaxHp", "CreatureCmd.SetMaxAndCurrentHp" }, Array.Empty<string>());
+    private static readonly Kind Heal = new("HP gained", new[] { "CreatureCmd.Heal", "CreatureCmd.SetCurrentHp", "CreatureCmd.SetMaxAndCurrentHp", "OstyCmd.Summon*" }, Array.Empty<string>());
+    private static readonly Kind MaxHp = new("max HP", new[] { "CreatureCmd.GainMaxHp", "CreatureCmd.LoseMaxHp", "CreatureCmd.SetMaxHp", "CreatureCmd.SetMaxAndCurrentHp", "OstyCmd.Summon*" }, Array.Empty<string>());
     private static readonly Kind Cost = new("card cost", new[] { "CardEnergyCost.Set*", "CardEnergyCost.Add*" },
         new[] { "TryModifyEnergyCostInCombat", "TryModifyEnergyCostInCombatLate", "TryModifyStarCost" });
     private static readonly Kind Upgrade = new("card upgraded", new[] { "CardCmd.Upgrade", "CardCmd.Downgrade" }, Array.Empty<string>());

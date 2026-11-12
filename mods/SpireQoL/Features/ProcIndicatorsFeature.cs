@@ -333,13 +333,14 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|" +
                        string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock);
         // The plays are built here (they read the game); only the simulation runs off the main thread.
-        var inputs = new SimInputs { Start = te.State, Ids = te.Ids };
+        var inputs = new SimInputs { Start = te.State, Ids = te.Ids, LeadIn = te.LeadIn, LeadInCards = te.LeadInCards };
         foreach (var t in targets) inputs.PlayByTarget[t] = SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock);
         f.Sim = inputs;
         if (!_simCache.TryGetValue(cacheKey, out var task))
         {
             var start = te.State;
-            task = Task.WhenAll(targets.Select(t => inputs.PlayByTarget[t]).Select(p => Task.Run(() => SimEngine.Run(start, p))));
+            var leadIn = te.LeadIn;
+            task = Task.WhenAll(targets.Select(t => inputs.PlayByTarget[t]).Select(p => Task.Run(() => SimEngine.Run(start, leadIn, p))));
             _simCache[cacheKey] = task;
         }
         return task;

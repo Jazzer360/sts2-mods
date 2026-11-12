@@ -39,6 +39,8 @@ public sealed class SimPlay
     public int FocusDelta;
 
     public int HandDelta = -1;
+    /// <summary>It kills your Osty (Sacrifice, Bone Shards: CreatureCmd.Kill on Osty).</summary>
+    public bool KillsOsty;
     public int FadingDelta;
     public bool IsAttack;
 
@@ -161,19 +163,38 @@ public static class SimEngine
     /// <summary>Branches kept after running out (each then follows one outcome per step).</summary>
     public const int SampleAfterTruncation = 32;
 
-    public static SimOutcome Run(SimState start, SimPlay? play = null)
+    public static SimOutcome Run(SimState start, SimPlay? play = null) => Run(start, null, play);
+
+    /// <summary>
+    /// The plays still resolving or queued (leadIn, in resolution order) first, then this card, then the
+    /// end of the turn and the enemy turn (decision #27). The card's own results (kills, block breaks, block
+    /// gains, reactions) are measured from each branch's state after the lead-in.
+    /// </summary>
+    public static SimOutcome Run(SimState start, IReadOnlyList<SimPlay>? leadIn, SimPlay? play)
     {
         var b = new BranchSet(start.Clone());
+        if (leadIn is { Count: > 0 })
+        {
+            foreach (var queued in leadIn) ApplyPlay(b, queued);
+            b.Do(s =>
+            {
+                s.PlayBase = new SimState.PlayBaseline(
+                    s.Enemies.Where(e => e.Alive).Select(e => e.Id).ToHashSet(),
+                    s.Enemies.Where(e => e.BlockBroken).Select(e => e.Id).ToHashSet(),
+                    s.P.BlockGains);
+                foreach (var e in s.Enemies) e.ReactedWithBlock = false;
+            });
+        }
         if (play != null) ApplyPlay(b, play);
         // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
         var aliveAtStart = start.Enemies.Where(e => e.Alive).Select(e => e.Id).ToList();
-        var killedPerBranch = b.States.Select(s => aliveAtStart.Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
+        var killedPerBranch = b.States.Select(s => (s.PlayBase?.Alive ?? (IEnumerable<int>)aliveAtStart).Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
         // Enemies that gained block from Curl Up, Sneaky or Skittish because of the play, in some branch.
         var reacted = b.States.SelectMany(s => s.Enemies.Where(e => e.ReactedWithBlock).Select(e => e.Id)).ToHashSet();
         // Some enemy's block broken by the play, in every branch (Hand Drill).
-        var breaksBlock = !b.Truncated && b.States.All(s => s.Enemies.Any(e => e.BlockBroken && start.Enemy(e.Id) is { BlockBroken: false }));
+        var breaksBlock = !b.Truncated && b.States.All(s => s.Enemies.Any(e => e.BlockBroken && !(s.PlayBase?.Broken.Contains(e.Id) ?? start.Enemy(e.Id) is not { BlockBroken: false })));
         // Block gains during the play (each sets off Juggernaut).
-        var gains = b.States.Select(s => s.P.BlockGains - start.P.BlockGains).ToList();
+        var gains = b.States.Select(s => s.P.BlockGains - (s.PlayBase?.BlockGains ?? start.P.BlockGains)).ToList();
         var playTruncated = b.Truncated;
         EndOfTurn(b);
         b.Do(EnemyTurn);
@@ -197,6 +218,7 @@ public static class SimEngine
             var safeStart = start.Clone();
             safeStart.NoRandomHits = true;
             var safe = new BranchSet(safeStart);
+            if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(safe, queued);
             if (play != null) ApplyPlay(safe, play);
             EndOfTurn(safe);
             safe.Do(EnemyTurn);
@@ -535,9 +557,13 @@ public static class SimEngine
 
     // ------------------------------------------------------------------ card play
 
-    public static void ApplyPlayTo(SimState s, SimPlay play, out List<SimState> branches, out bool truncated)
+    public static void ApplyPlayTo(SimState s, SimPlay play, out List<SimState> branches, out bool truncated) => ApplyPlayTo(s, null, play, out branches, out truncated);
+
+    /// <summary>The lead-in plays, then this play (the state right after it resolves).</summary>
+    public static void ApplyPlayTo(SimState s, IReadOnlyList<SimPlay>? leadIn, SimPlay play, out List<SimState> branches, out bool truncated)
     {
         var b = new BranchSet(s.Clone());
+        if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(b, queued);
         ApplyPlay(b, play);
         branches = b.States;
         truncated = b.Truncated;
@@ -619,6 +645,7 @@ public static class SimEngine
 
         // Its own block: each gain sets off Juggernaut.
         for (var i = 0; i < p.BlockGains; i++) b.Each(s => GainBlock(s, p.BlockAmount, null));
+        if (p.KillsOsty) b.Do(s => s.P.OstyHp = 0);
 
         // Powers it gives, and poison.
         b.Do(s =>

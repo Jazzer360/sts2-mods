@@ -173,6 +173,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     // Per-combat tallies for the summary line.
     private int _checked;
+    private int _withLeadIn; // plays whose tabs ran plays still resolving first (decision #27)
     private int _matched;
     private readonly Dictionary<string, int> _issueCounts = new();
 
@@ -444,10 +445,16 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private string? StaleBecause(List<CombatHistoryEntry> hist, CardModel card, int start, Player me)
     {
         if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var frame) || !_countAtFrame.TryGetValue(frame, out var then)) return null;
+        // Plays its tabs already ran first (the lead-in, decision #27) don't make them stale.
+        var leadIn = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) && facts.Sim != null ? facts.Sim.LeadInCards : Array.Empty<CardModel>();
         for (var k = Math.Max(0, then); k < start && k < hist.Count; k++)
         {
-            if (hist[k] is CardPlayFinishedEntry { CardPlay: var p } && p.Card.Owner == me && !ReferenceEquals(p.Card, card))
+            // Any player's play (a teammate's too) or a potion that resolved in between, unless the tabs ran it first.
+            if (hist[k] is CardPlayFinishedEntry { CardPlay: var p } && !ReferenceEquals(p.Card, card)
+                && !leadIn.Any(c => ReferenceEquals(c, p.Card)))
                 return SafeTitle(p.Card);
+            if (hist[k] is PotionUsedEntry pu)
+                return SafePotion(pu);
         }
         return null;
     }
@@ -602,6 +609,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             _checked++;
             if (issues.Count == 0) _matched++;
+            if (w.Facts?.Sim is { LeadIn.Count: > 0 }) _withLeadIn++;
             foreach (var issue in issues)
             {
                 var kind = issue.Split(':')[0];
@@ -711,8 +719,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"))})";
-        ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked, {_matched} matched{issues}.");
-        _checked = _matched = 0;
+        ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_withLeadIn} after plays still resolving), {_matched} matched{issues}.");
+        _checked = _matched = _withLeadIn = 0;
         _issueCounts.Clear();
     }
 
@@ -1011,7 +1019,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Add("state after the play: not checked (no simulated play for its target)");
             return;
         }
-        SimEngine.ApplyPlayTo(sim.Start, play, out var branches, out var truncated);
+        SimEngine.ApplyPlayTo(sim.Start, sim.LeadIn, play, out var branches, out var truncated);
         if (truncated || branches.Count == 0)
         {
             model.Add("state after the play: not checked (too many branches)");
@@ -1125,6 +1133,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (typeof(TemporaryFocusPower).IsAssignableFrom(t)) set.Add(typeof(FocusPower));
         }
         return set;
+    }
+
+    private static string SafePotion(PotionUsedEntry e)
+    {
+        try { return e.Potion.GetType().Name; } catch { return "a potion"; }
     }
 
     private static string SafeTitle(CardModel c)

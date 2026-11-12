@@ -85,6 +85,9 @@ public static class SimAdapter
         return 0;
     }
 
+    /// <summary>Cards whose play kills your Osty (CreatureCmd.Kill on Owner.Osty; decompile v0.111.0).</summary>
+    internal static readonly HashSet<string> KillsOstyCards = new() { nameof(Sacrifice), nameof(BoneShards) };
+
     internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card is nameof(Tempest) or nameof(Voltaic);
 
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
@@ -468,6 +471,8 @@ public static class SimAdapter
             play.BlockGains = blockGains;
             play.BlockAmount = blockGains > 0 ? total / blockGains : 0;
         }
+
+        play.KillsOsty = KillsOstyCards.Contains(name);
 
         // Orbs: evoke cards, then channels.
         var focus = me.Creature.GetPower<FocusPower>()?.Amount ?? 0;

@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.23
+#### Changed
+- Cards played quickly, before the previous card finished: tabs, Incoming Damage and the Death Skull now describe the state once everything already played has resolved (your queued plays run first in the prediction), instead of the half-finished board. A queued card with random targets is treated like any random outcome. Those plays are now checked by the proc audit too.
+#### Fixed
+- Sacrifice and Bone Shards kill your Osty in the simulator, so the attacks he'd have taken count against you (Incoming Damage, lethal and wake tabs).
+- The proc check no longer reports Osty's HP from a summon (Bodyguard) as unexplained, treats a play as stale when a potion or a teammate's play resolved after its tabs were shown, and its combat summary counts the plays checked after plays still resolving (logs and error reports only).
+
 ### Spire QoL 0.31.22
 #### Added
 - Setting: Multiplayer predictions (experimental, on). Off: teammates are left out of every prediction.
