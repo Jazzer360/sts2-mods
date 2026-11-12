@@ -182,7 +182,10 @@ public sealed class PlayFacts
     /// Damage per hit on <paramref name="enemy"/>, through the game's own damage math
     /// (Hook.ModifyDamage with this card as the source: Strength, Vulnerable, caps...).
     /// </summary>
-    public int DamagePerHit(Creature enemy)
+    public int DamagePerHit(Creature enemy) => Math.Max(0, (int)RawDamagePerHit(enemy));
+
+    /// <summary>The game's damage for one hit before it's rounded down (Hook.ModifyDamage).</summary>
+    private decimal RawDamagePerHit(Creature enemy)
     {
         if (AttackHits == 0) return 0;
         try
@@ -204,7 +207,7 @@ public sealed class PlayFacts
             else return 0;
             var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, Me.Creature, raw, props,
                 Card, null, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, CardPreviewMode.None, out _);
-            return Math.Max(0, (int)v);
+            return Math.Max(0m, v);
         }
         catch
         {
@@ -213,7 +216,41 @@ public sealed class PlayFacts
     }
 
     /// <summary>Total damage this card deals to the enemy across all its hits (before block).</summary>
-    public int TotalDamage(Creature enemy) => DamagePerHit(enemy) * HitsOn(enemy);
+    public int TotalDamage(Creature enemy)
+    {
+        var hits = HitsOn(enemy);
+        if (LaterHitDamage(enemy) is not { } later) return DamagePerHit(enemy) * hits;
+        return DamagePerHit(enemy) * Math.Min(hits, later.After) + later.Damage * Math.Max(0, hits - later.After);
+    }
+
+    /// <summary>
+    /// Hits that get weaker partway through the play: an enemy only your arrows Impale loses Impaled with its last
+    /// arrow (ImpaledPower.AfterDamageReceived: the counter's hit, then one arrow per 3 more hits), and with it the
+    /// multipliers that need it: Serrated Arrows (SerratedArrowsPower, your powered hits on an Impaled enemy) and
+    /// Wah Hammer's ×2. After = the hits before that (the freeing hit included), Damage = each later hit (the
+    /// game's damage for this enemy without those multipliers). Null when nothing changes.
+    /// </summary>
+    public (int After, int Damage)? LaterHitDamage(Creature enemy)
+    {
+        try
+        {
+            if (Fool.ImpaledBy(enemy, Me.Creature) is not { } imp) return null;
+            if (enemy.Powers.Count(p => p.GetType().Name == "ImpaledPower") > 1) return null; // another player's arrows keep it Impaled
+            var factor = 1m;
+            foreach (var p in Me.Creature.Powers.Where(p => p.GetType().Name == "SerratedArrowsPower")) factor *= 1m + p.Amount / 100m;
+            if (Card.GetType().Name == "WahHammer") factor *= 2m;
+            if (factor == 1m) return null;
+            var arrows = Fool.ArrowsIn(imp);
+            if (arrows <= 0) return null;
+            var after = Fool.HitCounter(imp) + 3 * (arrows - 1);
+            if (HitsOn(enemy) <= after) return null;
+            return (after, Math.Max(0, (int)(RawDamagePerHit(enemy) / factor)));
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// The card alone kills the enemy (its hits and orb evokes ≥ block + HP; ignores caps). Only a
@@ -606,6 +643,18 @@ public sealed class PlayFacts
         }
         return 0;
     }
+
+    /// <summary>
+    /// Draws of one play aimed at <paramref name="target"/>, for cards whose draws depend on their target (Ki Hop:
+    /// an Impaled enemy; Wrest: one your arrow Impales). Null for other cards. The audit uses it with the play's
+    /// actual target; before the play, CardsDrawn counts them only when every possible target qualifies.
+    /// </summary>
+    public static int? TargetDraws(CardModel c, Creature target) => c.GetType().Name switch
+    {
+        "KiHop" => Fool.IsImpaled(target) ? Sts2State.Var(c, "Cards") : 0,
+        "Wrest" => c.Owner is { } o && Fool.ImpaledBy(target, o.Creature) != null ? Sts2State.Var(c, "Cards") : 0,
+        _ => null,
+    };
 
     /// <summary>Every enemy the card could target matches (none to target: false).</summary>
     private static bool AllTargets(CardModel c, Func<Creature, bool> match)

@@ -11,6 +11,17 @@ public sealed class SimPlay
     public int TargetId = -1;
     /// <summary>Damage of one hit on each enemy (after the game's damage math for that enemy).</summary>
     public Dictionary<int, int> HitDamage = new();
+    /// <summary>
+    /// Enemies whose hits get weaker partway through the play: after <c>After</c> of the card's hits on it, each
+    /// further hit deals <c>Damage</c> (the hit that knocks your last arrow out ends Impaled, and with it Serrated
+    /// Arrows' and Wah Hammer's bonus). Single and all-enemy attacks.
+    /// </summary>
+    public Dictionary<int, (int After, int Damage)> HitDamageLater = new();
+    /// <summary>
+    /// Rain Shot (v0.113.0): after its hit on the target, every other hittable enemy takes that hit's damage
+    /// (overkill included; only caps apply), as a powered hit of yours (their Thorns reacts).
+    /// </summary>
+    public bool SplashFromTarget;
     /// <summary>Hits per target (Single/All), or random hits in total (Random).</summary>
     public int Hits;
 
@@ -20,6 +31,11 @@ public sealed class SimPlay
     public List<OrbOp> OrbOps = new();
 
     public int AddPlating, AddJuggernaut, AddFeelNoPain, AddThorns, AddFlameBarrier;
+    /// <summary>
+    /// Damage to you once the card resolves (AfterCardPlayed procs: Galvanic's per Galvanized card), blockable, in
+    /// order. Enemy Thorns isn't here: the simulator lands it before each of the card's hits.
+    /// </summary>
+    public List<(string Name, int Amount)> DamageToYou = new();
     /// <summary>Poison applied to the target (Single) or to every enemy (All).</summary>
     public int Poison;
     public bool PoisonAll;
@@ -393,6 +409,12 @@ public static class SimEngine
         e.Hp -= toHp;
         if (toHp <= 0) return 0;
         e.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
+        if (e.Alive && e.Asleep)
+        {
+            // AsleepPower.AfterDamageReceived: damage through its block (any source) wakes it, stunned.
+            e.Asleep = false;
+            Stun(e);
+        }
         if (e.Alive && e.StunAtHp > 0 && e.Hp <= e.StunAtHp)
         {
             // Plow / Shriek: any damage through that leaves it at or below the threshold.
@@ -664,6 +686,8 @@ public static class SimEngine
     {
         // The card's hits.
         int Hit(SimEnemy e) => p.HitDamage.TryGetValue(e.Id, out var d) ? d : 0;
+        // The i-th hit (0-based) on an enemy: weaker from HitDamageLater's point on.
+        int HitAt(SimEnemy e, int i) => p.HitDamageLater.TryGetValue(e.Id, out var later) && i >= later.After ? later.Damage : Hit(e);
         switch (p.HitTarget)
         {
             case SimPlay.Target.Single:
@@ -671,13 +695,22 @@ public static class SimEngine
                 {
                     var e = s.Enemy(p.TargetId);
                     if (e == null) return;
-                    for (var i = 0; i < p.Hits; i++) CardHit(s, e, Hit(e));
+                    for (var i = 0; i < p.Hits; i++) CardHit(s, e, HitAt(e, i));
+                    if (p.SplashFromTarget && p.Hits > 0)
+                    {
+                        var dealt = Hit(e);
+                        foreach (var other in s.Targetable.Where(x => x.Id != e.Id).ToList()) CardHit(s, other, dealt);
+                    }
                 });
                 break;
             case SimPlay.Target.All:
                 b.Do(s =>
                 {
-                    for (var i = 0; i < p.Hits; i++) HitAll(s, Hit, card: true);
+                    for (var i = 0; i < p.Hits; i++)
+                    {
+                        var n = i;
+                        HitAll(s, x => HitAt(x, n), card: true);
+                    }
                 });
                 break;
             case SimPlay.Target.Random:
@@ -750,6 +783,9 @@ public static class SimEngine
         // Its own block: each gain sets off Juggernaut.
         for (var i = 0; i < p.BlockGains; i++) b.Each(s => GainBlock(s, p.BlockAmount, null));
         if (p.KillsOsty) b.Do(s => s.P.OstyHp = 0);
+
+        // Damage to you after it resolves (Galvanic): your block takes it first.
+        if (p.DamageToYou.Count > 0) b.Do(s => { foreach (var (n, a) in p.DamageToYou) LandBlockable(s, n, a); });
 
         // Powers it gives, and poison.
         b.Do(s =>

@@ -149,6 +149,18 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
     private static readonly HashSet<string> KillReactive = new() { nameof(GremlinHorn) };
 
+    /// <summary>
+    /// Relics that act without flashing, so "didn't fire" can't be checked by a flash (their effect still is: the
+    /// card cost check). Mummified Hand makes a card in your hand free (MummifiedHand.AfterCardPlayed: no Flash call).
+    /// </summary>
+    private static readonly HashSet<string> SilentRelics = new() { nameof(MummifiedHand) };
+
+    /// <summary>
+    /// Your powers a card play uses up whatever the card is (BeforeCardPlayed): Free Card makes your next card from
+    /// hand free and goes, and the costs it lowered go back up.
+    /// </summary>
+    private static readonly HashSet<string> SpentByAnyPlay = new() { "FreeCardPower" };
+
     /// <summary>What a trigger tab's source can add beyond the card itself (for the budget check).</summary>
     private static readonly Dictionary<string, Effect[]> SourceEffects = new()
     {
@@ -829,13 +841,20 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 sourceOf[m.GetType().Name] = new TabSpec("proc:" + m.GetType().Name, null);
                 continue;
             }
+            // The play ended the fight: a proc with a rule fires with nothing left to hit (Violent Chord after the
+            // killing blow), so its rule rightly showed no tab.
+            if (w.FightEnded && SpireQoL.Menu.SettingsCatalog.Sources.Any(x => x.Type == m.GetType().Name && x.Tag != null))
+            {
+                modelLines.Add($"{m.GetType().Name} fired as the play ended the fight (nothing left for it to act on)");
+                continue;
+            }
             issues.Add($"no tab: {m.GetType().Name} fired");
         }
 
         // ---- relic tabs whose relic didn't fire (crossed ones mean "this breaks it": no flash)
         foreach (var (name, t) in sourceOf)
         {
-            if (t.Crossed || !t.Key.StartsWith("proc:") || EndOfTurnRelicTabs.Contains(name)) continue;
+            if (t.Crossed || !t.Key.StartsWith("proc:") || EndOfTurnRelicTabs.Contains(name) || SilentRelics.Contains(name)) continue;
             if (me.Relics.Any(r => r.GetType().Name == name) && !flashed.Any(f => f.GetType().Name == name))
                 issues.Add($"didn't fire: {name}");
         }
@@ -863,7 +882,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         eMin += w.Facts?.OrbDamageMin ?? 0;
         eMax += w.Facts?.OrbDamageMax ?? 0;
         var (mMin, mMax) = (meTabs.Sum(t => t.AuditMin), meTabs.Sum(t => t.AuditMax));
-        if (toEnemies < eMin && w.FightEnded) Shortfall("damage to enemies", Range(eMin, eMax), toEnemies);
+        // A damage cap outside the game's damage math stopped some of it: Hardened Shell (HardenedShellPower caps HP
+        // lost per turn in ModifyHpLostBeforeOstyLate, which the damage hooks don't reach), seen by its flash.
+        var capped = flashed.Any(m => m is PowerModel { Owner.IsEnemy: true } && Modifiers.Contains(m.GetType().Name));
+        if (toEnemies < eMin && capped) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}, capped by {string.Join(", ", flashed.Where(m => Modifiers.Contains(m.GetType().Name)).Select(m => m.GetType().Name).Distinct())}");
+        else if (toEnemies < eMin && w.FightEnded) Shortfall("damage to enemies", Range(eMin, eMax), toEnemies);
         else if (toEnemies < eMin || toEnemies > eMax) issues.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}");
         if (toMe < mMin && w.FightEnded) Shortfall("damage to you", Range(mMin, mMax), toMe);
         else if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");
@@ -880,6 +903,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             else if (actual < own) modelLines.Add($"expected {own} {what}, saw {actual}");
         }
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
+        // A card whose draws depend on its target (Ki Hop, Wrest): what it draws at the target it was played at.
+        var expectedDraws = f == null ? 0 : f.Draws;
+        if (f != null && w.Target != null && PlayFacts.TargetDraws(w.Card, w.Target) is { } td)
+            expectedDraws = Math.Max(0, f.Draws - f.OwnDraws + td * f.Plays);
         var exhausts = entries.OfType<CardExhaustedEntry>().Count(d => d.Card.Owner == me);
         var discards = entries.OfType<CardDiscardedEntry>().Count(d => d.Card.Owner == me);
         var generated = entries.OfType<CardGeneratedEntry>().Count(d => d.Creator == me || d.Card.Owner == me);
@@ -890,9 +917,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit),
             // unless the fight ended (nothing more runs), fewer cards were exhausted than the upper bound
             // (Dark Embrace and Joss Paper draw per exhaust), or you have no orb slots left (the channel fails).
-            if (draws < f.Draws && !w.FightEnded && exhausts >= f.TotalExhausts) issues.Add($"draws: predicted {f.Draws}, actual {draws}");
+            if (draws < expectedDraws && !w.FightEnded && exhausts >= f.TotalExhausts) issues.Add($"draws: predicted {expectedDraws}, actual {draws}");
             if (orbs < f.Channels && !w.FightEnded && w.After?.P.OrbCapacity != 0) issues.Add($"orbs channeled: predicted {f.Channels}, actual {orbs}");
-            Budget(Effect.Draw, "draws", draws, f.Draws);
+            Budget(Effect.Draw, "draws", draws, expectedDraws);
             Budget(Effect.Exhaust, "exhausts", exhausts, f.TotalExhausts);
             Budget(Effect.Discard, "discards", discards, f.Discards);
             // Transformed cards are logged as created too (CardCmd.Transform), up to what the card can transform.
@@ -951,6 +978,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (after >= before) continue;
             if (!creature.IsAlive) continue;
             if (own.Contains(type) || acted.Contains(type) || tabbed.Contains(type) || SimComparedPowers.Contains(type)) continue;
+            if (creature == me.Creature && SpentByAnyPlay.Contains(type)) continue;
             if (type == nameof(ArtifactPower) && debuffs) continue;
             if (creature.Powers.FirstOrDefault(p => p.GetType().Name == type) is ITemporaryPower) continue;
             // A death in the play: powers that react to it (Dampen comes off you when its caster dies).
@@ -1014,6 +1042,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Concat(drawn.Select(c => c.GetType())).Concat(drawn.Where(c => c.Enchantment != null).Select(c => c.Enchantment!.GetType()))
             .Concat(drawReactors.Select(m => m.GetType()))
             .Concat(deathReactors)
+            // Your powers a play uses up (Free Card): the costs they lowered go back up.
+            .Concat(w.PowersBefore?.Keys.Where(k => k.Item1 == me.Creature && SpentByAnyPlay.Contains(k.Item2)).Select(k => PowerTypeNamed(k.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())
             .Distinct().ToList();
         var tracked = new HashSet<string>(tabbed);
         foreach (var s in RelicSpecs.All) tracked.Add(s.TypeName);
@@ -1033,6 +1063,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var drawReactive = flashed.Any(m => DrawReactive.Contains(m.GetType().Name) || m.GetType().Name is nameof(GremlinHorn) or nameof(UnceasingTop));
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
         var why = $"(draws: predicted {f.Draws} = own {f.OwnDraws} + set off {f.ChainedDraws}{(f.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
+        if (w.Target != null && PlayFacts.TargetDraws(w.Card, w.Target) is { } td && td * f.Plays != f.OwnDraws)
+        {
+            model.Add($"shuffle {(shuffled ? "happened" : "didn't happen")}: its draws depend on its target, and the prediction counted them for every target {why}");
+            return;
+        }
         if (autoPlayed || (shuffled && drawReactive))
         {
             model.Add($"shuffle {(shuffled ? "happened" : "didn't happen")} after an unpredictable draw or auto-play {why}");
@@ -1208,6 +1243,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (typeof(TemporaryStrengthPower).IsAssignableFrom(t)) set.Add(typeof(StrengthPower));
             if (typeof(TemporaryDexterityPower).IsAssignableFrom(t)) set.Add(typeof(DexterityPower));
             if (typeof(TemporaryFocusPower).IsAssignableFrom(t)) set.Add(typeof(FocusPower));
+            if (t.BaseType?.Name == "TemporaryThornsPower") set.Add(typeof(ThornsPower)); // Cho Barbs (v0.113.0)
         }
         return set;
     }

@@ -176,4 +176,24 @@ public class SimBeingHitTests
         SimEngine.ApplyPlayTo(s, proc, out b, out _);
         Assert.Equal(20, b[0].P.Block);
     }
+
+    [Fact]
+    public void AsleepWakesStunnedOnAnyDamageThroughItsBlock()
+    {
+        // AsleepPower.AfterDamageReceived: unblocked damage from anything (a proc too) wakes it, stunned: no attack.
+        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "Lagavulin", Hp = 200, Block = 7, Asleep = true, Hits = new() { 20 } } } };
+        var play = new SimPlay { Procs = { new ProcHit { Spread = SimPlay.Target.Single, TargetId = 1, Damage = { [1] = 12 } } } };
+        var o = SimEngine.Run(s, play);
+        Assert.True(o.StunnedInAll(1));
+        Assert.Equal(0, o.TakenMax);
+    }
+
+    [Fact]
+    public void AsleepStaysAsleepWhenItsBlockTakesEverything()
+    {
+        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "Lagavulin", Hp = 200, Block = 7, Asleep = true, Hits = new() { 20 } } } };
+        var play = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 2, HitDamage = { [1] = 2 } };
+        var o = SimEngine.Run(s, play);
+        Assert.False(o.StunnedInAll(1));
+    }
 }

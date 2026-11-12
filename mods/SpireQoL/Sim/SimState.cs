@@ -89,6 +89,8 @@ public sealed class SimEnemy
     public int Thorns;
     /// <summary>Burrowed: keeps its block between turns; breaking that block stuns it (AfterBlockBroken), and the power and its block go.</summary>
     public bool Burrowed;
+    /// <summary>Asleep (Lagavulin Matriarch): any damage through its block wakes and stuns it (AsleepPower.AfterDamageReceived).</summary>
+    public bool Asleep;
     /// <summary>Flutter: powered-attack hits with damage through its block left before it's stunned (0 = none).</summary>
     public int Flutter;
     /// <summary>Plow / Shriek: stunned when damage gets through and leaves it at or below this HP (0 = none).</summary>
@@ -440,7 +442,7 @@ public sealed class SimState
         {
             Add(e.Id); Add(e.Hp); Add(e.Block); Add(e.ShellLeft); Add(e.UnblockedInstances); Add(e.FirstHitFullyBlocked ? 1 : 0); Add(e.Poison); Add(e.DiedBeforeActing ? 1 : 0);
             Add(e.PoisonStacks); Add(e.CurlUp); Add(e.Skittish); Add(e.HitByCard ? 1 : 0); Add(e.ThroughByCard ? 1 : 0);
-            Add(e.Stunned ? 1 : 0); Add(e.Burrowed ? 1 : 0); Add(e.Flutter); Add(e.StunAtHp); Add(e.Gambit ? 1 : 0); Add(e.Slippery);
+            Add(e.Stunned ? 1 : 0); Add(e.Burrowed ? 1 : 0); Add(e.Asleep ? 1 : 0); Add(e.Flutter); Add(e.StunAtHp); Add(e.Gambit ? 1 : 0); Add(e.Slippery);
             Add(e.ReactedWithBlock ? 1 : 0); Add(e.BlockBroken ? 1 : 0);
             Add(e.HitsAfterAllyDies == null ? 0 : 1); Add(e.Hits.Count); foreach (var hit in e.Hits) Add(hit); Add(e.GambitTriggered ? 1 : 0); Add(e.SlipperyTriggered ? 1 : 0);
         }

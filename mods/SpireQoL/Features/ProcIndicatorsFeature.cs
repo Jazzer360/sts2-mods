@@ -361,8 +361,13 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // Damage and block procs the rules predicted (the simulator models Juggernaut itself).
         var procs = new List<ProcHit>();
         var procBlock = new List<int>();
+        var toYou = new List<(string, int)>();
         foreach (var (src, h) in merged.Values)
         {
+            // Damage procs on you (Galvanic): the simulator lands them once the card resolves. Enemy Thorns it
+            // models itself, before each hit.
+            if (h.Harmful && h.Kind == Kind.Damage && h.Amount > 0 && src.GetType().Name != nameof(ThornsPower))
+                toYou.Add((src.GetType().Name, h.Amount));
             if (src.GetType().Name == nameof(JuggernautPower) || h.Harmful) continue;
             if (h.Kind == Kind.Damage)
             {
@@ -403,10 +408,15 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             _simCache.Clear(); // running tasks finish on their own; their results are dropped
         }
         var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|" +
-                       string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock);
+                       string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock) + "|" + string.Join(",", toYou.Select(x => x.Item2));
         // The plays are built here (they read the game); only the simulation runs off the main thread.
         var inputs = new SimInputs { Start = te.State, Ids = te.Ids };
-        foreach (var t in targets) inputs.PlayByTarget[t] = SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock);
+        foreach (var t in targets)
+        {
+            var play = SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock);
+            play.DamageToYou.AddRange(toYou);
+            inputs.PlayByTarget[t] = play;
+        }
         f.Sim = inputs;
         if (_noCache || !_simCache.TryGetValue(cacheKey, out var task))
         {
@@ -881,7 +891,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var enemies = spread is Spread.Random or Spread.All && _curFacts is { } cf
             ? _cs.HittableEnemies.Where(e => !cf.Kills(e)).ToList()
             : _cs.HittableEnemies.ToList();
-        if (spread is Spread.Random or Spread.All && enemies.Count == 0) return new Hit(Kind.Damage, 0, harmful);
+        // A single-target card kills at most the enemy you aim it at: an all-enemy proc after it still hits
+        // every other enemy. Each one is in the proc (the simulator plays each aim and skips the dead), and the
+        // audit range runs from leaving out every enemy the card could kill to none of them.
+        var aimed = spread == Spread.All && _curFacts?.Card.TargetType == TargetType.AnyEnemy;
+        var reached = aimed ? _cs.HittableEnemies.ToList() : enemies;
+        if (spread is Spread.Random or Spread.All && reached.Count == 0) return new Hit(Kind.Damage, 0, harmful);
         int shown, min, max;
         switch (spread)
         {
@@ -893,7 +908,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 break;
             case Spread.All:
                 shown = Mod(null) * times;
-                min = max = enemies.Sum(Mod) * times;
+                min = enemies.Sum(Mod) * times;
+                max = reached.Sum(Mod) * times;
                 break;
             default: // Random (or no enemies)
                 shown = Mod(null) * times;
@@ -911,7 +927,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         switch (spread)
         {
             case Spread.Specific when target != null: On(target); break;
-            case Spread.All: foreach (var e in enemies) On(e); break;
+            case Spread.All: foreach (var e in reached) On(e); break;
             case Spread.Random when enemies.Count == 1: On(enemies[0]); break;
         }
         var random = spread == Spread.Random && enemies.Count > 1;

@@ -6,6 +6,18 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.32
+#### Fixed
+- Cards that gain block more than once (Cho Limbs, Cho Firm, Second Wind) had their block split across the gains in the simulator instead of each gain counting in full.
+- Cho Barbs' Thorns counts (a temporary Thorns power gives real Thorns until the end of the enemy turn).
+- Serrated Arrows and Wah Hammer: hits after the one that knocks your last arrow out of an enemy no longer get their bonus (Impaled is gone).
+- Rain Shot's damage to every other enemy counts toward lethal.
+- Vital Spark: playing a Tainted card raises the enemies' attacks on you (Incoming Damage, intents after the play).
+- Galvanic's damage to you comes off your block in the prediction after the play.
+- Lagavulin Matriarch: any damage through her block wakes her stunned (a proc's too), so she doesn't attack that turn.
+- Damage procs after a single-target card (Violent Chord after Wah Ki) still hit the other enemies, even ones the card could have killed had it been aimed at them.
+- The play check: Free Card being used up and the costs it lowered going back up, Mummified Hand's free card (it never flashes), Ki Hop's and Wrest's draws at the enemy actually targeted, a proc that fires as the play ends the fight, and Hardened Shell capping proc damage are no longer reported.
+
 ### Spire QoL 0.31.31
 #### Fixed
 - The Fool: the play check no longer reports a shot Impaling its target or spending Aim, an Impaled enemy losing its arrow to your hits, or a block card spending Stretch.

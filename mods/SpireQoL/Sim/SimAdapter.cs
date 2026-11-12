@@ -88,6 +88,12 @@ public static class SimAdapter
     /// <summary>Cards whose play kills your Osty (CreatureCmd.Kill on Owner.Osty; decompile v0.111.0).</summary>
     internal static readonly HashSet<string> KillsOstyCards = new() { nameof(Sacrifice), nameof(BoneShards) };
 
+    /// <summary>
+    /// The power the simulator models for a power type: a temporary Thorns power (Cho Barbs, v0.113.0) gives real
+    /// Thorns until the end of the enemy turn (TemporaryThornsPower.BeforeApplied applies ThornsPower), so it's Thorns.
+    /// </summary>
+    internal static string SimPowerName(Type power) => power.BaseType?.Name == "TemporaryThornsPower" ? nameof(ThornsPower) : power.Name;
+
     internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card is nameof(Tempest) or nameof(Voltaic);
 
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
@@ -141,6 +147,7 @@ public static class SimAdapter
                 Sneaky = e.GetPower<SneakyPower>()?.Amount ?? 0,
                 Skittish = e.GetPower<SkittishPower>() is { } sk && !Sts2State.Private(sk, "HasGainedBlockThisTurn", true) ? sk.Amount : 0,
                 Burrowed = e.HasPower<BurrowedPower>(),
+                Asleep = e.HasPower<AsleepPower>(),
                 Flutter = e.GetPower<FlutterPower>()?.Amount ?? 0,
                 StunAtHp = Math.Max(e.GetPower<PlowPower>()?.Amount ?? 0, e.GetPower<ShriekPower>()?.Amount ?? 0),
                 Gambit = e.HasPower<TheGambitPower>(),
@@ -436,6 +443,7 @@ public static class SimAdapter
             {
                 if (!f.CanHit(e)) continue;
                 play.HitDamage[id] = f.DamagePerHit(e);
+                if (f.LaterHitDamage(e) is { } later) play.HitDamageLater[id] = later;
             }
             switch (card.TargetType)
             {
@@ -444,6 +452,7 @@ public static class SimAdapter
                     play.TargetId = targetId;
                     var target = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
                     play.Hits = target != null ? f.HitsOn(target) : f.AttackHits;
+                    play.SplashFromTarget = name == "RainShot"; // RainShot.OnPlay: the target's damage to every other enemy
                     break;
                 case TargetType.AllEnemies:
                     play.HitTarget = SimPlay.Target.All;
@@ -456,8 +465,8 @@ public static class SimAdapter
             }
         }
 
-        // Its own block: one gain per play. Fisticuffs: the damage it dealt (overkill included);
-        // Entrench: your current block again.
+        // Its own block, each gain its full amount (Second Wind per card it exhausts, Cho Limbs and Cho Firm twice).
+        // Fisticuffs: the damage it dealt (overkill included); Entrench: your current block again.
         var blockGains = f.BlockGains;
         if (blockGains > 0)
         {
@@ -468,9 +477,8 @@ public static class SimAdapter
                 nameof(Entrench) => me.Creature.Block,
                 _ => CardBlock(card, cs, me),
             };
-            var total = each * plays;
             play.BlockGains = blockGains;
-            play.BlockAmount = blockGains > 0 ? total / blockGains : 0;
+            play.BlockAmount = each;
         }
 
         play.KillsOsty = KillsOstyCards.Contains(name);
@@ -533,7 +541,7 @@ public static class SimAdapter
         {
             var t = v.GetType();
             if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(PowerVar<>)) continue;
-            var power = t.GetGenericArguments()[0].Name;
+            var power = SimPowerName(t.GetGenericArguments()[0]);
             var amount = (int)v.BaseValue * plays;
             if (amount <= 0) continue;
             switch (power)
@@ -609,6 +617,12 @@ public static class SimAdapter
         //    enemy with Artifact keeps its intent.
         EnemyStrengthCards.TryGetValue(name, out var str);
         var gaze = me.Creature.Powers.Where(p => p is MonarchsGazePower).Sum(p => p.Amount);
+        //  - Vital Spark (enemy): playing a Tainted card gives you Tainted (VitalSparkPower.AfterCardPlayed), which adds
+        //    to every powered attack on you (TaintedPower.ModifyDamageAdditive): additive like the attacker's Strength,
+        //    so the game's math with that much more Strength gives your new hits. Not on teammates.
+        var tainted = card.Affliction is MegaCrit.Sts2.Core.Models.Afflictions.Tainted
+            ? cs.Enemies.Where(x => x.IsAlive).Sum(x => x.GetPower<VitalSparkPower>()?.Amount ?? 0) * plays
+            : 0;
         var strengthTarget = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
         foreach (var (e, id) in ids)
         {
@@ -624,8 +638,8 @@ public static class SimAdapter
             // (MonarchsGazeStrengthDownPower). Random-target attacks are left out (which enemy is a roll).
             if (gaze > 0 && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))
                 strength -= gaze * f.HitsOn(e);
-            if (!weak && !halved && strength == 0) continue;
-            if (AdjustedHits(e, me, cs, strength, weak, halved ? 0.5m : 1m) is { } hits) play.SetHits[id] = hits;
+            if (!weak && !halved && strength == 0 && tainted == 0) continue;
+            if (AdjustedHits(e, me, cs, strength + tainted, weak, halved ? 0.5m : 1m) is { } hits) play.SetHits[id] = hits;
             // Teammates (same order as Build): Weak and Strength change their hits too; Colossus only protects you.
             if (!weak && strength == 0) continue;
             var mates = Teammates(me, cs);
