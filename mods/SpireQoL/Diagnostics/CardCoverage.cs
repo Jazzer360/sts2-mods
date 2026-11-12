@@ -148,6 +148,12 @@ internal static class CardCoverage
             issues.Add("kills a creature (not in the simulator)");
         if (Calls("CardPileCmd", "Shuffle") && !PlayFacts.ShuffleCards.Contains(name))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");
+        // The Fool (v0.113.0): a shot does nothing without an arrow, which PlayFacts knows by the Shoot tag; arrows
+        // pulled out by the card itself count for Twine and Yah only for the cards listed.
+        if ((Calls("ArrowCmd", "ShootArrowAtTarget") || Calls("ArrowCmd", "TryShootArrow")) && !Procs.Fool.IsShot(card))
+            issues.Add("shoots an arrow without the Shoot tag (its damage is counted even with no arrow to shoot)");
+        if (Calls("ArrowCmd", "DislodgeArrow") && !Procs.Fool.DislodgeCards.Contains(name))
+            issues.Add("knocks arrows loose (not counted: Twine, Yah)");
         if (Calls("PlayerCmd", "GainStars") && !PlayFacts.StarGainCards.Contains(name))
             issues.Add("gains stars (not counted for Black Hole)");
         return issues;

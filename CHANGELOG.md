@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.30
+#### Added
+- The Fool (game v0.113.0 beta): tabs for Violent Chord (damage to every enemy) and Song Path (block) on your first Wah / Cho this turn, Lullaby (block) on the card that completes Wah, Cho and Ki, Motif and Lost Lute on your first melodies, Conductor's Baton on your third melody, Explosive Arrows on shots with an arrow to shoot, and Twine (block) and Yah (energy) on cards that knock your arrows loose. Ki Verse's replays show as a double-play tab.
+- Obsidian Vice's end-of-turn damage counts toward lethal and the Death Skull.
+#### Fixed
+- The Fool: a Shoot card with no arrow to shoot was counted as dealing its damage (it does nothing); Nail was counted against enemies that aren't Impaled; Wah Blast's second hit, Cho Limbs' and Cho Firm's second block, and Aim on arrow attacks weren't counted.
+- The Fool and tarot cards: draws and discards counted for the shuffle warning (Deep Stretch, Encore, Joy, Rummage, Steady Cadence, Wah Cho Ki, Ki Hop and Wrest on Impaled enemies, The High Priestess, The Sun, The Hermit, Wheel of Fortune).
+
 ### Main Saves 1.0.0
 #### Added
 - New mod: keeps using your normal profiles while mods are installed, instead of the game's separate modded profiles.

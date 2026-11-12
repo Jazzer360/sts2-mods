@@ -165,10 +165,21 @@ public sealed class PlayFacts
         try
         {
             decimal raw;
-            if (Card.DynamicVars.TryGetValue("CalculatedDamage", out var cv) && cv is CalculatedVar calc) raw = calc.Calculate(enemy);
-            else if (Card.DynamicVars.TryGetValue("Damage", out var dv)) raw = dv.BaseValue;
+            // The card's own damage props, as its preview uses them (DamageVar.Props): an arrow attack's
+            // FromArrow is what Aim, Heavy Shot's doubled Aim, Dislike You and Quietus check (v0.113.0).
+            var props = MegaCrit.Sts2.Core.ValueProps.ValueProp.Move;
+            if (Card.DynamicVars.TryGetValue("CalculatedDamage", out var cv) && cv is CalculatedVar calc)
+            {
+                raw = calc.Calculate(enemy);
+                if (cv is CalculatedDamageVar cdv) props = cdv.Props;
+            }
+            else if (Card.DynamicVars.TryGetValue("Damage", out var dv))
+            {
+                raw = dv.BaseValue;
+                if (dv is DamageVar d) props = d.Props;
+            }
             else return 0;
-            var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, Me.Creature, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move,
+            var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, Me.Creature, raw, props,
                 Card, null, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, CardPreviewMode.None, out _);
             return Math.Max(0, (int)v);
         }
@@ -531,6 +542,8 @@ public sealed class PlayFacts
         nameof(Modded), nameof(Neurosurge), nameof(Offering), nameof(Overclock), nameof(Parse), nameof(PhotonCut), nameof(PommelStrike), nameof(Prepared), nameof(Prophesize),
         nameof(Reboot), nameof(Reflex), nameof(RocketPunch), nameof(Scourge), nameof(Scrape), nameof(ShrugItOff), nameof(Skim), nameof(Slimed), nameof(Soul),
         nameof(SpoilsOfBattle), nameof(SweepingBeam), nameof(ThinkingAhead),
+        // v0.113.0 (names as strings: these cards don't exist before it)
+        "DeepStretch", "Encore", "Joy", "Rummage", "WahChoKi", "TheHighPriestess", "TheSun", "TheHermit", "WheelOfFortune",
     };
 
     // Cards that always draw exactly one (Pillage draws at least one).
@@ -556,10 +569,33 @@ public sealed class PlayFacts
             case Ftl: return FtlCanDraw(c) ? Sts2State.Var(c, "Cards") : 0;
             // Only draws when it's the only card in hand.
             case Restlessness: return handCount == 1 ? Sts2State.Var(c, "Cards") : 0;
+            // Draws one per melody played this turn (Steady Cadence).
+            case { } when c.GetType().Name == "SteadyCadence" && c.DynamicVars.TryGetValue("CalculatedCards", out var sv) && sv is CalculatedVar scv:
+                return (int)scv.Calculate(null);
+            // Draws only when its target is Impaled (Ki Hop: anyone's arrow; Wrest: yours): counted when every
+            // enemy you could aim at is, so whatever you aim at draws.
+            case { } when c.GetType().Name == "KiHop":
+                return AllTargets(c, Fool.IsImpaled) ? Sts2State.Var(c, "Cards") : 0;
+            case { } when c.GetType().Name == "Wrest":
+                return c.Owner is { } wo && AllTargets(c, e => Fool.ImpaledBy(e, wo.Creature) != null) ? Sts2State.Var(c, "Cards") : 0;
             // Mad Science with the Wisdom rider (Tinker Time).
             case MadScience m when m.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(c, "WisdomCards");
         }
         return 0;
+    }
+
+    /// <summary>Every enemy the card could target matches (none to target: false).</summary>
+    private static bool AllTargets(CardModel c, Func<Creature, bool> match)
+    {
+        try
+        {
+            var targets = c.CombatState?.HittableEnemies.Where(e => e.IsAlive).ToList();
+            return targets is { Count: > 0 } && targets.All(match);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static bool FtlCanDraw(CardModel c)
@@ -601,7 +637,9 @@ public sealed class PlayFacts
             nameof(Prepared) => Math.Min(Sts2State.Var(card, "Cards"), n + draws),
             nameof(Survivor) => Math.Min(1, n),
             nameof(HiddenDaggers) => Math.Min(Sts2State.Var(card, "Cards"), n),
-            nameof(CalculatedGamble) or nameof(ShadowStep) or nameof(StormOfSteel) => n,
+            nameof(CalculatedGamble) or nameof(ShadowStep) or nameof(StormOfSteel) or "WheelOfFortune" => n,
+            // Discards one card you choose (a Curse is exhausted instead).
+            "TheHermit" => Math.Min(1, n),
             // Discards the cards it drew that cost energy: at most all of them (which ones is a draw).
             nameof(Scrape) => draws,
             _ => 0,
@@ -615,6 +653,9 @@ public sealed class PlayFacts
         if (name == nameof(SecondWind)) return others.Count(c => c.Type != CardType.Attack);
         // Block equal to the damage it dealt / to your current block: no Block value.
         if (name is nameof(Fisticuffs) or nameof(Entrench)) return 1;
+        // Gains its Block twice (ChoLimbs); Cho Firm a second time while you have an arrow to shoot.
+        if (name == "ChoLimbs") return 2;
+        if (name == "ChoFirm") return card.Owner is { } p && Fool.ArrowsAvailable(p) > 0 ? 2 : 1;
         return card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock") ? 1 : 0;
     }
 
@@ -649,8 +690,17 @@ public sealed class PlayFacts
             : fixedBefore > 0 ? fixedBefore : Sts2State.Var(card, "Repeat", 1);
         try
         {
+            // A Shoot card with no arrow to shoot does nothing at all (ArrowCmd.ShootArrowAtTarget returns before
+            // its attack; the card glows red).
+            if (Fool.IsShot(card) && card.Owner is { } owner && Fool.ArrowsAvailable(owner) == 0) return 0;
             switch (name)
             {
+                // Nail attacks only an Impaled enemy (any player's arrow). Unknown target: it can hit if some enemy is.
+                case "Nail":
+                    return target != null ? (Fool.IsImpaled(target) ? 1 : 0) : (cs.HittableEnemies.Any(Fool.IsImpaled) ? 1 : 0);
+                // Twice once you've played a Cho or a Ki this turn (WahBlast.HitsTwice: the card glows gold).
+                case "WahBlast":
+                    return Sts2State.Private(card, "ShouldGlowGoldInternal", false) ? 2 : 1;
                 // v0.111.0 passed a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits).
                 case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
                     return Hits(2);

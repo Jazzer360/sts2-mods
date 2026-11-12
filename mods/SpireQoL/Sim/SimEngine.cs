@@ -905,6 +905,15 @@ public static class SimEngine
 
     }
 
+    /// <summary>Obsidian Vice: damage × cards in hand (a teammate's hand size is known; -1 unknown: none) to a random enemy.</summary>
+    private static IEnumerable<SimState> ObsidianVice(SimState s, SimPlayer p, int who)
+    {
+        if (p.ObsidianViceDamage <= 0 || p.HandCount <= 0 || (who >= 0 && p.Hp <= 0)) return new[] { s };
+        var amount = p.ObsidianViceDamage * p.HandCount;
+        if (who < 0 && s.Log) s.EndOfTurnDamage.Add(($"Obsidian Vice ×{p.HandCount}", amount));
+        return HitRandom(s, _ => amount);
+    }
+
     private static void EndOfTurn(BranchSet b)
     {
         // 1. BeforeSideTurnEnd. Orichalcum checks your block before any of this lands.
@@ -924,6 +933,8 @@ public static class SimEngine
             if (s.P.HandCount == 0) AllEnemies(s, "Screaming Flagon", s.P.ScreamingFlagonDamage);
             AllEnemies(s, "Stone Calendar", s.P.StoneCalendarDamage);
         });
+        // Obsidian Vice (BeforeSideTurnEnd): its damage per card in your hand, to a random enemy (one hit).
+        b.Each(s => ObsidianVice(s, s.P, -1));
         // Teammates' BeforeSideTurnEnd damage to enemies (it hits every enemy, so their order doesn't matter).
         b.Do(s =>
         {
@@ -935,6 +946,11 @@ public static class SimEngine
                 AllEnemies(s, "Stone Calendar (teammate)", t.StoneCalendarDamage);
             }
         });
+        for (var k = 0; k < (b.States.Count > 0 ? b.States[0].Teammates.Count : 0); k++)
+        {
+            var tk = k;
+            b.Each(s => ObsidianVice(s, s.Teammates[tk], tk));
+        }
         // Teammates' block at BeforeSideTurnEnd: Plating, then Orichalcum when they had no block. It
         // protects them, and their Beacon of Hope shares half of it (with you too).
         var team = b.States.Count > 0 ? b.States[0].Teammates.Count : 0;

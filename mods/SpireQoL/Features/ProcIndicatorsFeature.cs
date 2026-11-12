@@ -582,6 +582,26 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         return played < 5 && played + plays >= 5 ? Hit.Trig() : null;
                     }
 
+                    // ---- the Fool (v0.113.0): melodies (card tags Wah, Cho, Ki) and arrows; names as strings (Procs/Fool.cs)
+                    // The first Wah each turn: damage to every enemy (ViolentChordPower.AfterCardPlayed, MelodyCmd.IsFirstPlayThisTurn).
+                    case "ViolentChordPower" when mine && Fool.FirstMelodies(card, _me).Contains(Fool.Wah): return Damage(a, 1, Spread.All);
+                    // The first Cho each turn: block (SongPathPower).
+                    case "SongPathPower" when mine && Fool.FirstMelodies(card, _me).Contains(Fool.Cho): return BlockN(a, 1);
+                    // Once a turn, when you've played a Wah, a Cho and a Ki (LullabyPower: the card that completes the set).
+                    case "LullabyPower" when mine && !Sts2State.Private(p, "_proccdThisTurn", true)
+                                                  && Fool.MelodiesThisTurn(_me) < 3 && Fool.MelodiesAfter(card, _me) == 3:
+                        return BlockN(a, 1);
+                    // The first Wah, Cho and Ki each turn: draws (MotifPower) / plays the top of your draw pile (LostLutePower).
+                    case "MotifPower" when mine && Fool.FirstMelodies(card, _me).Any(): return Hit.Trig();
+                    case "LostLutePower" when mine && Fool.FirstMelodies(card, _me).Any(): return Hit.Trig();
+                    // A shot that has an arrow to shoot impales its target: damage to every enemy (ExplosiveArrowsPower.AfterArrowImpaled).
+                    case "ExplosiveArrowsPower" when mine && Fool.IsShot(card) && Fool.ArrowsAvailable(_me) > 0: return Damage(a, 1, Spread.All);
+                    // Energy the first time each turn one of your arrows comes loose (YahPower.AfterArrowDislodged): some aim does it.
+                    case "YahPower" when mine && Fool.Dislodged(f, _me, _cs).Max > 0
+                                         && Sts2State.Private<object?>(p, "_internalData", null) is { } yah
+                                         && !Sts2State.Private(yah, "triggeredThisTurn", true):
+                        return Hit.Trig();
+
                     // ---- Sovereign Blade's buffs (the card text lists them, but it's easy to miss)
                     case nameof(SeekingEdgePower) when mine && card is SovereignBlade: return Hit.Trig(); // hits all enemies
                     case nameof(ParryPower) when mine && card is SovereignBlade: return Hit.Trig();       // gains block
@@ -711,6 +731,19 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         bool All(HashSet<CardType> s) => s.Contains(CardType.Attack) && s.Contains(CardType.Skill) && s.Contains(CardType.Power);
                         return !All(before) && All(played) ? Hit.Trig() : null;
                     }
+
+                    // Block per arrow of yours this play dislodges (Twine.AfterArrowDislodged): its block when every aim
+                    // dislodges one (the fewest), else a plain tab when some aim does.
+                    case "Twine":
+                    {
+                        var (min, max) = Fool.Dislodged(f, _me, _cs);
+                        return min > 0 ? RelicBlock(r, min) : max > 0 ? Hit.Trig() : null;
+                    }
+                    // The card that brings you to three melodies this turn (Wah, Cho, Ki): Conductor's Baton, so powered
+                    // attacks on you deal 75% until your next turn (ConductorsBaton.AfterCardPlayed, once a turn).
+                    case "ConductorsBaton" when !Sts2State.Private(r, "_triggeredThisTurn", true)
+                                                && Fool.MelodiesThisTurn(_me) < 3 && Fool.MelodiesAfter(card, _me) >= 3:
+                        return Hit.Trig();
 
                     // ---- counters completed by this card
                     case nameof(Kunai) or nameof(Shuriken) or nameof(Nunchaku) when Completes(type == CardType.Attack): return Hit.Trig();

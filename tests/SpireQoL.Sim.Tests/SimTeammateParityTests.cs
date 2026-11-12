@@ -29,6 +29,7 @@ public class SimTeammateParityTests
         new object[] { "Juggernaut" },
         new object[] { "Consuming Shadow (Lightning)" },
         new object[] { "Consuming Shadow (Frost)" },
+        new object[] { "Obsidian Vice" },
     };
 
     private static void Setup(string name, SimPlayer p)
@@ -52,6 +53,7 @@ public class SimTeammateParityTests
             case "Juggernaut": p.Plating = 5; p.Juggernaut = 7; break;
             case "Consuming Shadow (Lightning)": p.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }); p.ConsumingShadow = 1; break;
             case "Consuming Shadow (Frost)": p.Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }); p.ConsumingShadow = 1; break;
+            case "Obsidian Vice": p.ObsidianViceDamage = 1; p.HandCount = 4; break;
             case "Thorns": p.Thorns = 3; break;
             case "Flame Barrier": p.FlameBarrier = 4; break;
             case "Reflect": p.Block = 6; p.Reflect = true; break;

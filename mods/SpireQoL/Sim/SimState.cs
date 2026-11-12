@@ -165,6 +165,8 @@ public sealed class SimPlayer
     public int RippleBasinBlock;
     public int ScreamingFlagonDamage;
     public int StoneCalendarDamage; // its turn, else 0
+    /// <summary>Obsidian Vice: damage per card in hand to a random enemy at end of turn (v0.113.0).</summary>
+    public int ObsidianViceDamage;
     public int CharonsAshesDamage;
     public int ForgottenSoulDamage;
     public int ParryingShieldBlock;

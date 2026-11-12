@@ -280,6 +280,7 @@ public static class SimAdapter
                 case nameof(CloakClasp): p.CloakClaspPerCard += Sts2State.Var(r, "Block"); break;
                 case nameof(RippleBasin): p.RippleBasinBlock += Sts2State.Var(r, "Block"); break;
                 case nameof(ScreamingFlagon): p.ScreamingFlagonDamage += Sts2State.Var(r, "Damage"); break;
+                case "ObsidianVice": p.ObsidianViceDamage += Sts2State.Var(r, "Damage", 1); break;
                 case nameof(StoneCalendar):
                     if (Sts2State.TurnNumber == Sts2State.Var(r, "DamageTurn", 7)) p.StoneCalendarDamage += Sts2State.Var(r, "Damage");
                     break;

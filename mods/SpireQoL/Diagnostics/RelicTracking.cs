@@ -112,10 +112,8 @@ internal static class RelicTracking
 
         ["Thumbscrew"] = "none: a hit more on your multi-hit attacks (in the card's hit count and the mod's)",
         ["Storyteller"] = "none: Aim at the start of combat and each end of turn (its power shows it)",
-        ["ConductorsBaton"] = "gap: the card that completes your third melody this turn makes powered attacks on you deal 75%: no tab",
         ["Fertilizer"] = "gap: Strength when you create a Sadness: no tab",
         ["MightyWings"] = "gap: 2 Strength when one of your hits deals 30 or more: no tab",
-        ["Twine"] = "gap: block when your arrow is dislodged: no tab",
         ["WhittlingKnife"] = "gap: Aim when you shuffle: no tab",
 
         // ---- your end of turn and the enemy turn (shown by Incoming Damage)
@@ -132,7 +130,7 @@ internal static class RelicTracking
         ["RunicPyramid"] = "none: keeps your hand",
         ["Bookmark"] = "none: a random retained card costs 1 less until played (shown on the card next turn)",
 
-        ["ObsidianVice"] = "gap: end of turn, 1 damage per card in your hand to a random enemy: not in the end-of-turn damage",
+        ["ObsidianVice"] = "none: end of turn, damage per card in hand to a random enemy (simulator: lethal, Death Skull)",
 
         // ---- other
         ["Fiddle"] = "none: blocks your draws during your turn (the Shuffle Warning and draw counts account for it)",

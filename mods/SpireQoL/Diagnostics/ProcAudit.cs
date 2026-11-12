@@ -156,6 +156,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // counted in PlayFacts.Draws, so their tabs explain nothing beyond it)
         [nameof(GremlinHorn)] = new[] { Effect.Draw }, [nameof(UnceasingTop)] = new[] { Effect.Draw }, [nameof(CorrosiveWavePower)] = new[] { Effect.Power },
         [nameof(PagestormPower)] = new[] { Effect.Draw }, [nameof(IterationPower)] = new[] { Effect.Draw },
+        ["MotifPower"] = new[] { Effect.Draw }, ["ConductorsBaton"] = new[] { Effect.Power },
+        // plays cards from the top of your draw pile: whatever those do
+        ["LostLutePower"] = new[] { Effect.Draw, Effect.Exhaust, Effect.Discard, Effect.Generate, Effect.Orb, Effect.Summon, Effect.Power },
         [nameof(BiiigHug)] = new[] { Effect.Generate },
         // created cards
         [nameof(CalamityPower)] = new[] { Effect.Generate }, [nameof(JugglingPower)] = new[] { Effect.Generate }, [nameof(MusicBox)] = new[] { Effect.Generate },
