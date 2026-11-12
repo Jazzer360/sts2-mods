@@ -31,6 +31,8 @@ Before working on in-game feedback, read the game logs, starting with the `[audi
 
 ## Outcome simulator
 
+**The simulator is the one model (decision #26), for single-player and multiplayer.** Every prediction shown comes from it, and every audit compares what the game did with it: a mismatch is fixed in the simulator (or in what the adapter reads), with a test. Rules live in the simulator; the adapter only reads state (counters, flags, amounts from the game's own math). The proc rules still in ProcIndicatorsFeature are moving into it; new rules go straight into the simulator.
+
 Incoming Damage, the lethal tab, and the Imbalanced and wake tabs come from one simulator (`mods/SpireQoL/Sim/`): pure C# (no game types), fed by `SimAdapter`. New end-of-turn effects, enemy reactions or card effects that change what happens by the enemy turn belong there, with a test in `tests/SpireQoL.Sim.Tests` (run `dotnet test tests/SpireQoL.Sim.Tests`; no game needed). Random targets are branches, never rolls: good outcomes need every branch, warnings need one, damage to you is the worst branch.
 
 ## Coverage (required with every game update and every new rule)
