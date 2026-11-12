@@ -1196,6 +1196,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(MegaCrit.Sts2.Core.Localization.DynamicVars.PowerVar<>))
                 set.Add(t.GetGenericArguments()[0]);
         }
+        // The Fool's powers the play touches outside PowerCmd.Apply in its code (Fool.PowersTouched): a shot Impales
+        // its target and spends Aim and Quietus, attacks count Impaled down (it goes when its last arrow comes
+        // loose), block cards spend Stretch.
+        foreach (var name in Procs.Fool.PowersTouched(card))
+            if (PowerTypeNamed(name) is { } pt) set.Add(pt);
         // A temporary stat power applies the stat itself (TemporaryStrengthPower.AfterApplied →
         // PowerCmd.Apply<StrengthPower>): Dark Shackles' -9 Strength.
         foreach (var t in set.ToList())

@@ -90,6 +90,29 @@ public sealed class PlayFacts
     // Cards whose play shuffles your discard pile into your draw pile (CardPileCmd.Shuffle in OnPlay; decompile v0.111.0).
     internal static readonly HashSet<string> ShuffleCards = new() { nameof(Reboot) };
 
+    /// <summary>Cards that shuffle your discard pile in first only when your draw pile is short (Ki Chant, v0.113.0).</summary>
+    internal static readonly HashSet<string> ShuffleWhenShortCards = new() { "KiChant" };
+
+    /// <summary>The play shuffles your discard pile into your draw pile before its draws (Reboot; Ki Chant when the draw pile is short).</summary>
+    internal static bool ShufflesFirst(CardModel card)
+    {
+        var name = card.GetType().Name;
+        if (ShuffleCards.Contains(name)) return true;
+        if (!ShuffleWhenShortCards.Contains(name) || card.Owner is not { } me) return false;
+        // KiChant.OnPlay: an empty draw pile shuffles if it must; a short one shuffles when the discard pile has cards.
+        var draw = Sts2State.DrawPileCount(me);
+        return draw < Sts2State.Var(card, "Cards", 3) && Sts2State.DiscardPileCount(me) > 0;
+    }
+
+    /// <summary>Cards Ki Chant looks at: its Cards from the top of your draw pile, after a shuffle when it's short.</summary>
+    private static int KiChantLooksAt(CardModel card)
+    {
+        var count = Sts2State.Var(card, "Cards", 3);
+        if (card.Owner is not { } me) return count; // the game's template card (the scan)
+        var available = Sts2State.DrawPileCount(me) + (ShufflesFirst(card) ? Sts2State.DiscardPileCount(me) : 0);
+        return Math.Min(count, available);
+    }
+
     /// <summary>
     /// What the outcome simulator was given for this card on that frame (set by Proc Indicators): the
     /// start state, its enemy ids, and the play per target id (-1 for untargeted cards). The audit
@@ -354,7 +377,7 @@ public sealed class PlayFacts
             DrawPile = drawPile,
             DiscardPile = Sts2State.DiscardPileCount(me),
             DiscardedBeforeDraw = Card is CalculatedGamble ? Discards : 0,
-            ShufflesFirst = ShuffleCards.Contains(Card.GetType().Name),
+            ShufflesFirst = ShufflesFirst(Card),
             // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
             AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
             VulnerableLandings = DebuffsLandingTotal(t => t == typeof(VulnerablePower)),
@@ -619,6 +642,13 @@ public sealed class PlayFacts
             // The whole rest of the hand (a second play finds the hand empty).
             nameof(FiendFire) or nameof(Stoke) => n,
             nameof(SecondWind) => others.Count(c => c.Type != CardType.Attack),
+            // v0.113.0: The Devil exhausts your hand; Growth every Sadness in it; Florescence every Shoot card
+            // you have outside your exhaust pile (any pile).
+            "TheDevil" => n,
+            "Growth" => others.Count(c => c.GetType().Name == "Sadness"),
+            "Florescence" => card.Owner?.PlayerCombatState is { } pcs
+                ? pcs.AllCards.Count(c => c != card && Fool.IsShot(c) && c.Pile?.Type != PileType.Exhaust)
+                : others.Count(Fool.IsShot),
             // Up to Cards chosen cards: counted as the most it can exhaust.
             nameof(Purity) => Math.Min(n, Sts2State.Var(card, "Cards") * p),
             // Every status card in your piles.
@@ -640,6 +670,8 @@ public sealed class PlayFacts
             nameof(CalculatedGamble) or nameof(ShadowStep) or nameof(StormOfSteel) or "WheelOfFortune" => n,
             // Discards one card you choose (a Curse is exhausted instead).
             "TheHermit" => Math.Min(1, n),
+            // Looks at the top Cards of your draw pile (shuffling first when it's short), takes one, discards the rest.
+            "KiChant" => Math.Max(0, KiChantLooksAt(card) - 1),
             // Discards the cards it drew that cost energy: at most all of them (which ones is a draw).
             nameof(Scrape) => draws,
             _ => 0,
@@ -813,6 +845,22 @@ public sealed class PlayFacts
             case nameof(InfernalBlade): case nameof(Largesse): case nameof(ManifestAuthority): case nameof(Outrage): case nameof(Quasar):
             case nameof(Splash): case nameof(Undeath): case nameof(WhiteNoise):
                 return 1;
+            // v0.113.0 (names as strings): the Fool's Sadness (a status) and Joy, The Shot, tarot and event cards.
+            case "BlotOutTheSky": case "Florescence": return 1;
+            case "MourningBlow": case "Vitriol": case "Rummage": statuses = 1; return 1; // Mourning Blow turns into a Sadness
+            case "Jest": case "SorrowfulStrike": statuses = Var("Cards"); return statuses;
+            case "BrightenUp": statuses = Var("Sadness", 2); return statuses + Var("Joy", 2);
+            case "SelfDeprecate":
+            {
+                // Sadness for you, Joy for every other living player (created by you).
+                var mates = me?.Creature?.CombatState?.Players.Count(p => p != me && p.Creature is { IsAlive: true }) ?? 0;
+                statuses = Var("Sadness", 1);
+                return statuses + Var("Joy", 2) * mates;
+            }
+            case "TheHierophant": return Var("Cards", 3);
+            case "TheLovers": return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
+            case "TheSun": statuses = 1; return 1; // a Soot into your discard pile
+            case "MightyShield": case "MightyWeapon": statuses = Var("Cards"); return statuses; // Dazed into your draw pile
         }
         return 0;
     }

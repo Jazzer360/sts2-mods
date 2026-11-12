@@ -146,7 +146,10 @@ internal static class CardCoverage
                 issues.Add($"applies {applied.Name} with no amount the simulator reads");
         if (Calls("CreatureCmd", "Kill") && !SimAdapter.KillsOstyCards.Contains(name))
             issues.Add("kills a creature (not in the simulator)");
-        if (Calls("CardPileCmd", "Shuffle") && !PlayFacts.ShuffleCards.Contains(name))
+        // A card that becomes another card once played (Mourning Blow into a Sadness): a created card.
+        if (Calls("CardModel", "set_TransformIntoAfterPlay") && None(c => PlayFacts.GeneratedCount(c, name, others, null!, out _)))
+            issues.Add("turns into another card after the play (not counted: created-card procs)");
+        if (Calls("CardPileCmd", "Shuffle") && !PlayFacts.ShuffleCards.Contains(name) && !PlayFacts.ShuffleWhenShortCards.Contains(name))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");
         // The Fool (v0.113.0): a shot does nothing without an arrow, which PlayFacts knows by the Shoot tag; arrows
         // pulled out by the card itself count for Twine and Yah only for the cards listed.

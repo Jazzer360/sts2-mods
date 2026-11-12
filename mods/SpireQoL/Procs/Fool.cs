@@ -111,6 +111,19 @@ internal static class Fool
         }
     }
 
+    /// <summary>
+    /// Fool powers a play changes outside its own PowerCmd.Apply calls: a shot Impales its target
+    /// (ArrowCmd.ImpaleTarget) and spends Aim (AimPower.AfterAttack) and Quietus; an attack's powered hits count
+    /// Impaled down, and it goes when its last arrow comes loose (ImpaledPower.AfterDamageReceived); Recall,
+    /// Uproot and Wrest pull arrows out; a block card spends Stretch (StretchPower.AfterCardPlayed).
+    /// </summary>
+    public static IEnumerable<string> PowersTouched(CardModel card)
+    {
+        if (IsShot(card)) { yield return "ImpaledPower"; yield return "AimPower"; yield return "QuietusPower"; }
+        if (card.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Attack || DislodgeCards.Contains(card.GetType().Name)) yield return "ImpaledPower";
+        if (Sts2State.Private(card, "GainsBlock", false)) yield return "StretchPower";
+    }
+
     /// <summary>You finished playing a card with this melody tag this turn (MelodyCmd.PlayedThisTurn).</summary>
     public static bool PlayedThisTurn(Player me, string tag) => Sts2State.CardsPlayedThisTurn(me).Any(c => HasTag(c, tag));
 

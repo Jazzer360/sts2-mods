@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.31
+#### Fixed
+- The Fool: the play check no longer reports a shot Impaling its target or spending Aim, an Impaled enemy losing its arrow to your hits, or a block card spending Stretch.
+- Cards created, exhausted and discarded by the Fool's, tarot and event cards are counted (Mourning Blow turning into a Sadness, Jest, Sorrowful Strike, Brighten Up, Vitriol, Rummage, Self Deprecate, Blot Out the Sky, Florescence and The Shot, Growth, Ki Chant's discards and its shuffle when your draw pile is short, The Devil, The Hierophant, The Lovers, The Sun, Mighty Shield, Mighty Weapon).
+
 ### Spire QoL 0.31.30
 #### Added
 - The Fool (game v0.113.0 beta): tabs for Violent Chord (damage to every enemy) and Song Path (block) on your first Wah / Cho this turn, Lullaby (block) on the card that completes Wah, Cho and Ki, Motif and Lost Lute on your first melodies, Conductor's Baton on your third melody, Explosive Arrows on shots with an arrow to shoot, and Twine (block) and Yah (energy) on cards that knock your arrows loose. Ki Verse's replays show as a double-play tab.
