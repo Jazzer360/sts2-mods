@@ -28,6 +28,10 @@ internal static class RelicTracking
         ["PhylacteryUnbound"] = "none: summons at the start of combat and each turn (Osty shows it)",
         ["GhostSeed"] = "none: cards entering combat become Ethereal (shown on the card)",
 
+        ["BathRobes"] = "none: BeforeCombatStart full heal in a boss fight (once)",
+        ["Byrdine"] = "none: BeforeCombatStart pet",
+        ["Wuppy"] = "gap: its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower); Incoming Damage still counts them on you",
+
         // ---- start of your turn (on screen before your decisions that turn)
         ["Akabeko"] = "none: Vigor on turn 1",
         ["BagOfMarbles"] = "none: Vulnerable to all enemies on turn 1",
@@ -68,6 +72,12 @@ internal static class RelicTracking
         ["VenerableTeaSet"] = "none: energy at the start of the next combat",
         ["FakeVenerableTeaSet"] = "none: energy at the start of the next combat",
 
+        ["BathTowel"] = "none: heals on turn 1",
+        ["BizarreLamp"] = "none: Joy and Sadness into your hand on turn 1",
+        ["ExerciseMat"] = "none: Stretch on turn 1 (its bonus is in the block the game shows)",
+        ["Ocarina"] = "none: a melody card into your hand on turn 1",
+        ["TormentousCollar"] = "none: Weak to all enemies on turn 1 of elite fights",
+
         // ---- hand draw and energy (the hand and energy you see)
         ["BagOfPreparation"] = "none: bigger turn-1 hand",
         ["BigMushroom"] = "none: smaller hand draw",
@@ -100,6 +110,14 @@ internal static class RelicTracking
         ["RuinedHelmet"] = "none: doubles your first Strength gain (the power shows it)",
         ["SneckoSkull"] = "none: +1 poison per application (poison shown on enemies; the simulator counts it)",
 
+        ["Thumbscrew"] = "none: a hit more on your multi-hit attacks (in the card's hit count and the mod's)",
+        ["Storyteller"] = "none: Aim at the start of combat and each end of turn (its power shows it)",
+        ["ConductorsBaton"] = "gap: the card that completes your third melody this turn makes powered attacks on you deal 75%: no tab",
+        ["Fertilizer"] = "gap: Strength when you create a Sadness: no tab",
+        ["MightyWings"] = "gap: 2 Strength when one of your hits deals 30 or more: no tab",
+        ["Twine"] = "gap: block when your arrow is dislodged: no tab",
+        ["WhittlingKnife"] = "gap: Aim when you shuffle: no tab",
+
         // ---- your end of turn and the enemy turn (shown by Incoming Damage)
         ["CloakClasp"] = "none: end-of-turn block (Incoming Damage)",
         ["Orichalcum"] = "none: end-of-turn block (Incoming Damage)",
@@ -110,9 +128,11 @@ internal static class RelicTracking
         ["TheBoot"] = "none: your attack hits below its minimum lose the enemy its minimum (the simulator counts it: lethal, wake)",
         ["LunarPastry"] = "gap: stars at the end of your turn (Black Hole's end-of-turn damage isn't simulated yet)",
         ["SturdyClamp"] = "none: keeps up to 10 block into your next turn",
-        ["RingingTriangle"] = "none: keeps your hand on turn 1",
+        ["RingingTriangle"] = "none: keeps your hand on turn 1 (v0.113.0: Retain Hand from AfterRoomEntered, a power)",
         ["RunicPyramid"] = "none: keeps your hand",
         ["Bookmark"] = "none: a random retained card costs 1 less until played (shown on the card next turn)",
+
+        ["ObsidianVice"] = "gap: end of turn, 1 damage per card in your hand to a random enemy: not in the end-of-turn damage",
 
         // ---- other
         ["Fiddle"] = "none: blocks your draws during your turn (the Shuffle Warning and draw counts account for it)",

@@ -1,6 +1,6 @@
 # How StS2 loads mods
 
-Notes from the decompiled `MegaCrit.Sts2.Core.Modding` namespace, game v0.111.0. Check these again after big patches.
+Notes from the decompiled `MegaCrit.Sts2.Core.Modding` namespace, game v0.111.0 (rechecked against v0.113.0 beta: the mod still loads with `min_game_version` v0.111.0). Check these again after big patches.
 
 ## Discovery
 

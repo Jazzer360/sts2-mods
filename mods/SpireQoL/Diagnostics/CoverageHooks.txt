@@ -74,3 +74,10 @@ ShouldGainStars
 ShouldPlay
 ShouldPowerBeRemovedOnDeath
 ShouldStopCombatFromEnding
+AfterArrowDislodged
+AfterArrowImpaled
+AfterArrowShot
+AfterTakingExtraTurn
+ModifyPreBlockDamageTarget
+ShouldTakeExtraTurn
+ShouldTakeExtraTurnEarly

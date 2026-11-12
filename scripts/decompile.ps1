@@ -40,7 +40,10 @@ $decompiler = (dotnet tool list -g | Select-String "ilspycmd" | ForEach-Object {
     main_assembly_hash  = $release.main_assembly_hash
     sts2_dll_sha256     = (Get-FileHash $dll -Algorithm SHA256).Hash.ToLower()
     decompiler          = "ilspycmd $decompiler"
-} | ConvertTo-Json | Set-Content (Join-Path $Out "VERSION.json") -Encoding utf8
+} | ConvertTo-Json | ForEach-Object {
+    # UTF-8 without a BOM (Windows PowerShell 5's -Encoding utf8 writes one; JSON readers reject it).
+    [System.IO.File]::WriteAllText((Join-Path $Out "VERSION.json"), $_, (New-Object System.Text.UTF8Encoding $false))
+}
 
 git -C $Out add -A
 git -C $Out commit -q -m "sts2 $($release.version) ($($release.commit), $($release.date))"

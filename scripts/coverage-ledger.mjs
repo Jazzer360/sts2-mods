@@ -15,8 +15,13 @@ import os from "node:os";
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1")), "..");
 const diag = path.join(root, "mods", "SpireQoL", "Diagnostics");
 const decomp = path.join(os.homedir(), "git", "sts2-decompiled");
-const models = path.join(decomp, "MegaCrit", "sts2", "Core", "Models");
-const version = JSON.parse(fs.readFileSync(path.join(decomp, "VERSION.json"), "utf8")).version;
+// A namespace folder: one folder per namespace (MegaCrit.Sts2.Core.Models.Cards, from v0.113.0) or
+// nested folders (MegaCrit/sts2/Core/Models/Cards, before).
+const modelsDir = sub => {
+  const flat = path.join(decomp, ["MegaCrit.Sts2.Core.Models", sub].filter(Boolean).join("."));
+  return fs.existsSync(flat) ? flat : path.join(decomp, "MegaCrit", "sts2", "Core", "Models", sub);
+};
+const version = JSON.parse(fs.readFileSync(path.join(decomp, "VERSION.json"), "utf8").replace(/^﻿/, "")).version;
 const lines = file => fs.readFileSync(file, "utf8").split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"));
 
 // Hooks that can change what happens in a fight and aren't already covered by the game's own math
@@ -28,7 +33,7 @@ const folders = ["Relics", "Powers", "Cards", "Monsters", "Orbs", "Potions", "En
 const rows = [];
 const hookRe = new RegExp(`public override [^(=]*\\b(${hooks.join("|")})\\(`, "g");
 for (const folder of folders) {
-  const dir = path.join(models, folder);
+  const dir = modelsDir(folder);
   if (!fs.existsSync(dir)) continue;
   for (const f of fs.readdirSync(dir)) {
     if (!f.endsWith(".cs")) continue;
@@ -39,12 +44,12 @@ for (const folder of folders) {
 }
 
 // Relics that affect fights: every hook they override except the out-of-combat ones.
-const allHooks = new Set([...fs.readFileSync(path.join(models, "AbstractModel.cs"), "utf8").matchAll(/public virtual [^(]*?\b(\w+)\(/g)].map(m => m[1]));
+const allHooks = new Set([...fs.readFileSync(path.join(modelsDir(""), "AbstractModel.cs"), "utf8").matchAll(/public virtual [^(]*?\b(\w+)\(/g)].map(m => m[1]));
 const outOfCombat = new Set(lines(path.join(diag, "OutOfCombatHooks.txt")));
 const relicRows = [];
-for (const f of fs.readdirSync(path.join(models, "Relics"))) {
+for (const f of fs.readdirSync(modelsDir("Relics"))) {
   if (!f.endsWith(".cs")) continue;
-  const src = fs.readFileSync(path.join(models, "Relics", f), "utf8");
+  const src = fs.readFileSync(path.join(modelsDir("Relics"), f), "utf8");
   const ov = [...new Set([...src.matchAll(/public override [^(=]*?\b(\w+)\(/g)].map(m => m[1]))]
     .filter(h => (allHooks.has(h) || h.startsWith("TryModify")) && !outOfCombat.has(h)).sort();
   if (ov.length) relicRows.push({ type: f.slice(0, -3), hooks: ov });

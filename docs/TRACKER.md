@@ -448,6 +448,24 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 
 ---
 
+## 18. Game v0.113.0 (beta, 2026-11-12)
+
+Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per version). New: a character (the Fool: arrows that impale enemies, melodies Wah/Cho/Ki, tarot cards), the Dread run mode (12 boss Dominions), Blitz merchants, 17 relics, 41 powers, 121 cards, 3 potions, 5 events. 744 existing classes changed; the ones the mod's rules read were reviewed from their diffs.
+
+- [x] 0.31.29: hit counts read from the card's HitCount (11 cards renamed Repeat to HitCount, 9 moved a fixed 2 into it); Thumbscrew's extra hit through Hook.ModifyAttackHitCount.
+- [x] 0.31.29: coverage ledger and relic tracking reviewed for every new class; new hooks AfterArrowShot/Impaled/Dislodged, ShouldTakeExtraTurn(Early), AfterTakingExtraTurn and ModifyPreBlockDamageTarget added to the checked hooks.
+- [x] Reviewed, no change needed: Thorns no longer triggers on Omnislice (the mod never modelled that exception); Juggling copies the third attack after it resolves; Brilliant Scarf counts 6 (read from the relic); Expertise retains the whole hand; Buffer ignores Brightest Flame's max HP loss; Imitation Learning only spends a charge on a playable copy; Swift and Sown act on every play of the card.
+- [ ] **The Fool's arrows:** a powered hit on an enemy your arrow impales counts toward dislodging it (every third, shown on the Impaled power); dislodging sets off Twine (block), Yah (energy), Epic Retrieval (energy); impaling sets off Explosive Arrows (damage to all enemies); shooting sets off Covering Fire (teammates' block). No proc tabs, not simulated.
+- [ ] **Melodies:** first Wah/Cho/Ki each turn: Violent Chord (damage to all enemies: lethal), Song Path (block), Motif (draws), Lost Lute (plays the top of your draw pile: hidden); all three: Lullaby (block), Conductor's Baton (incoming powered attacks ×0.75). No proc tabs, not simulated.
+- [ ] **Wuppy (event relic):** its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). Incoming Damage and the Death Skull count them on you (overstated, never under).
+- [ ] **Extra turns:** Extra Turn power (and Pael's Eye) give you another turn before the enemies act; the forecast still shows the enemy turn next.
+- [ ] **Enemy Explosive:** when it dies it damages every player (no crossed tab on the kill, not in Incoming Damage).
+- [ ] **End of turn not simulated:** Obsidian Vice (1 damage per card in hand to a random enemy), Insatiable Dominion (Dread: damage to you after your end of turn), Simpleton (auto-plays your cheapest card).
+- [ ] **No proc tab yet:** Fertilizer and All Is Well (on creating a Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Swift and Sown enchantment draws and energy aren't counted.
+- [ ] **Dread mode:** boss stats and moves change in Dread runs (read live from intents); Dominion powers reviewed in the ledger. Queen's Dread opening applies 99 Frail, Weak and Vulnerable.
+
+---
+
 ## 17. Open display decisions (2026-11-10, from play testing; not decided)
 
 - [ ] **Odds: deferred, still open (decision #22).** Chances are shown in one place only: beside an enemy's HP skull, for "dies before acting if you end your turn now" (Death Skull). Card tabs show certainties only: the lethal tab means this card (some aim of it) is needed for an enemy to be certainly dead before it acts; crossed tabs still warn when something is possible in any branch (Ravenous on Dualcast with two Corpse Slugs). Not doing for now: chances on tabs, enemy skulls following the hovered or dragged card, a kill-count spread. The odds depend on where the card is aimed and how the rolls fall, which quickly gets hard to read and to remember; certain outcomes are the common, simple case. Revisit only with a new reason.

@@ -6,7 +6,7 @@ Everything needed to pick this repo up on a new machine, or after a long break. 
 
 | What | Why | Version used |
 | --- | --- | --- |
-| Slay the Spire 2 (Steam) | the build compiles against the game's own assemblies and installs into its `mods` folder | game v0.111.0 |
+| Slay the Spire 2 (Steam) | the build compiles against the game's own assemblies and installs into its `mods` folder | game v0.111.0 (stable) or v0.113.0 (beta) |
 | .NET SDK 9 | `dotnet build` (net9.0) | 9.0.3xx |
 | Git | | |
 | GitHub CLI, logged in with push rights (`gh auth login`) | releases, issues, workflow runs | 2.10x |
@@ -24,10 +24,10 @@ Everything needed to pick this repo up on a new machine, or after a long break. 
 
 ## After a game patch
 
-1. `./scripts/decompile.ps1`, then `git -C ~/git/sts2-decompiled diff HEAD~1 --stat` to see what changed.
+1. `./scripts/decompile.ps1`, then `git -C ~/git/sts2-decompiled diff HEAD~1 --stat` to see what changed. From v0.113.0 the decompiler writes one folder per namespace (`MegaCrit.Sts2.Core.Models.Cards/`) instead of nested folders (`MegaCrit/sts2/Core/Models/Cards/`), so git shows most files of that version as renames; compare classes by namespace and name. Check `AbstractModel`'s virtual methods for new hooks too: a hook in neither `Diagnostics/CoverageHooks.txt` nor `OutOfCombatHooks.txt` hides the classes that only use it (unless the game's own math the mod calls covers it, like `ModifyDamage*`).
 2. `node scripts/coverage-ledger.mjs`: regenerates `Diagnostics/CoverageLedger.Data.cs` (every class with combat hooks, and its hooks) and lists classes without a reviewed entry and entries for classes that lost their hooks. For each new class, and each class whose hooks changed (`git diff` on the data file), read its hook bodies in the decompile and write its entry in `CoverageLedger.Reviewed`: `covered:` (hook → what handles it), `ignore:` (hook → why it can't change a prediction) or `gap:` (what isn't modelled). Never classify by a class's name or by which commands it calls; read what the hook does. Add rules or simulator support for gaps that matter, with tests.
 3. Check `docs/MODDING_NOTES.md` (mod loader facts) and the classes the mod reads (`docs/FEATURES.md` lists every one).
-4. Rebuild (missing classes the rules name are build errors), fix what breaks, and update the "v0.111.0" references in the docs. In game, the `[coverage]` summary line at load should show no new, changed or unreviewed classes.
+4. Rebuild (missing classes the rules name are build errors), fix what breaks, and update the "v0.111.0" references in the docs. While players are split between game versions (decision #32), compare the game members the new build calls with the last release's DLL (`ilspycmd --ilcode` on both, then diff the `[sts2]...::` references): a call whose signature changed (a new optional parameter) binds to the new one and is a missing method on the older game; call those by reflection. In game, the `[coverage]` summary line at load should show no new, changed or unreviewed classes.
 
 ## Day-to-day loop
 

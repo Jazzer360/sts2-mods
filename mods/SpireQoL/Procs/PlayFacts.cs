@@ -620,18 +620,40 @@ public sealed class PlayFacts
 
     /// <summary>An attack you deal yourself (a Damage value; Osty attacks use OstyDamage instead).</summary>
     /// <summary>
-    /// Hits per play of an attack card, matching each card's OnPlay (decompile v0.111.0): cards
-    /// that pass a fixed number, their X value or a calculation to WithHitCount instead of
-    /// using their Repeat value. Unknown target (null): target-dependent cards count their minimum.
+    /// Hits per play of an attack card, matching each card's OnPlay: from v0.113.0 a card's hit count is its
+    /// HitCount value (CalculatedHits when it's computed); before, Repeat, or a fixed number in OnPlay. The
+    /// names are read as strings so both game versions work. Cards that use their X value or a condition
+    /// are listed. Unknown target (null): target-dependent cards count their minimum.
     /// </summary>
     internal static int HitsPerPlay(CardModel card, string name, ICombatState cs, Creature? target, int energy, int stars, int otherCards)
     {
+        var hits = BaseHitsPerPlay(card, name, cs, target, energy, stars, otherCards);
+        // Then the game's hit-count modifiers (Thumbscrew: +1 on your multi-hit attacks), the way its card
+        // preview applies them (HitCountVar.GetPreviewValue; the attack itself in AttackCommand.Execute).
+        if (hits <= 0 || card.Type != CardType.Attack) return hits;
+        try
+        {
+            return Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyAttackHitCount(cs,
+                MegaCrit.Sts2.Core.Commands.DamageCmd.Attack(0m).FromCard(card, null), hits));
+        }
+        catch
+        {
+            return hits;
+        }
+    }
+
+    private static int BaseHitsPerPlay(CardModel card, string name, ICombatState cs, Creature? target, int energy, int stars, int otherCards)
+    {
+        // The card's hit count (v0.113.0: HitCount; v0.111.0: Repeat, or the fixed 2 in OnPlay).
+        int Hits(int fixedBefore) => card.DynamicVars.ContainsKey("HitCount") ? Sts2State.Var(card, "HitCount", fixedBefore)
+            : fixedBefore > 0 ? fixedBefore : Sts2State.Var(card, "Repeat", 1);
         try
         {
             switch (name)
             {
+                // v0.111.0 passed a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits).
                 case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
-                    return 2;
+                    return Hits(2);
                 case nameof(Eradicate) or nameof(Skewer) or nameof(Volley) or nameof(Whirlwind):
                     return XValue(cs, card, energy);
                 case nameof(HeavenlyDrill):
@@ -642,9 +664,9 @@ public sealed class PlayFacts
                 case nameof(Stardust):
                     return XValue(cs, card, stars);
                 case nameof(Dismantle):
-                    return target != null && target.HasPower<VulnerablePower>() ? 2 : 1;
-                case nameof(Spite): // the Repeat value only after you lost HP this turn (when the card glows gold)
-                    return Sts2State.Private(card, "ShouldGlowGoldInternal", false) ? Sts2State.Var(card, "Repeat", 2) : 1;
+                    return target != null && target.HasPower<VulnerablePower>() ? Hits(2) : 1;
+                case nameof(Spite): // its hit count only after you lost HP this turn (when the card glows gold)
+                    return Sts2State.Private(card, "ShouldGlowGoldInternal", false) ? Hits(0) : 1;
                 case nameof(FiendFire):
                     return otherCards;
                 case nameof(MadScience):
@@ -657,9 +679,9 @@ public sealed class PlayFacts
         }
         catch
         {
-            // fall through to the Repeat value
+            // fall through to the hit count
         }
-        return Math.Max(1, Sts2State.Var(card, "Repeat", 1));
+        return Math.Max(1, Hits(0));
     }
 
     private static int XValue(ICombatState cs, CardModel card, int spent)

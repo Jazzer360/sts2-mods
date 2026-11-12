@@ -178,7 +178,7 @@ public sealed class SettingsMenu
             if (block)
             {
                 hk.AddBlockingScreen(_root);
-                foreach (var k in closeKeys) hk.PushHotkeyPressedBinding(k, _closeAction);
+                foreach (var k in closeKeys) PushHotkey(hk, k, _closeAction);
             }
             else
             {
@@ -191,6 +191,19 @@ public sealed class SettingsMenu
         {
             ModEntry.Log.Warn($"settings menu: couldn't {(block ? "block" : "unblock")} game hotkeys: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// NHotkeyManager.PushHotkeyPressedBinding by reflection: v0.113.0 added an optional sequence parameter,
+    /// and a direct call compiled against one game version is a missing method on the other (decision #32).
+    /// </summary>
+    private static void PushHotkey(NHotkeyManager hk, string key, Action action)
+    {
+        var m = typeof(NHotkeyManager).GetMethods().FirstOrDefault(x => x.Name == nameof(NHotkeyManager.PushHotkeyPressedBinding)
+            && x.GetParameters() is { Length: >= 2 } p && p[0].ParameterType == typeof(string) && p[1].ParameterType == typeof(Action))
+            ?? throw new MissingMethodException(nameof(NHotkeyManager), nameof(NHotkeyManager.PushHotkeyPressedBinding));
+        var args = m.GetParameters().Select((p, i) => i == 0 ? key : i == 1 ? action : p.HasDefaultValue ? p.DefaultValue : null).ToArray();
+        m.Invoke(hk, args);
     }
 
     // ------------------------------------------------------------------ frame

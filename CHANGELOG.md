@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.29
+#### Fixed
+- Game v0.113.0 (beta): multi-hit attacks whose hit count moved to a new card value (Fight Me, Gunk Up, Sovereign Blade, Spite, Celestial Might, Conflagration, Exterminate, Peck, Ricochet, Seven Stars, Sword Boomerang) counted one hit in lethal and proc tabs. Hits are read from the card's hit count on both game versions.
+- Thumbscrew (v0.113.0): its extra hit on multi-hit attacks counts toward lethal and proc tabs.
+#### Changed
+- Coverage reviewed for game v0.113.0: every new relic, power, card and enchantment with combat hooks has a reviewed entry; arrow, extra-turn and damage-redirect hooks are checked.
+
 ### Spire QoL 0.31.28
 #### Fixed
 - The game could freeze with Shatter in hand and many orbs against several enemies (every orb's two evokes were explored at once; ten Lightning orbs against four enemies never finished).

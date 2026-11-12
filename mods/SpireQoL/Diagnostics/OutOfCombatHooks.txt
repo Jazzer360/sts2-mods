@@ -60,3 +60,5 @@ TryModifyRestSiteHealRewards
 TryModifyRestSiteOptions
 TryModifyRewards
 TryModifyRewardsLate
+ModifyExtraRestSiteMendText
+TryReplaceDefaultRoomRewards
