@@ -213,12 +213,30 @@ public sealed class SimPlayer
     public int Buffer;
     public int OstyHp;
 
+    // Branches share their orbs until one changes them (OwnOrbs): copying them for every candidate
+    // branch, most of which merge away as duplicates, was most of a branch-heavy simulation's cost.
+    private bool _orbsShared;
+
+    /// <summary>The orbs, to change (evoke, channel, Glass and Dark passives, Focus): copied for this branch first if shared.</summary>
+    public List<SimOrb> OwnOrbs()
+    {
+        if (_orbsShared)
+        {
+            var own = new List<SimOrb>(Orbs.Count);
+            foreach (var o in Orbs) own.Add(o.Clone());
+            Orbs = own;
+            _orbsShared = false;
+        }
+        return Orbs;
+    }
+
     public SimPlayer Clone()
     {
-        // Orbs change (evokes, Glass and Dark passives); the hand and debuff lists don't, so they're shared.
+        // The hand and debuff lists never change, so they're shared; the orbs until one branch changes them.
         var c = (SimPlayer)MemberwiseClone();
-        c.Orbs = new List<SimOrb>(Orbs.Count);
-        foreach (var o in Orbs) c.Orbs.Add(o.Clone());
+        // Both now point at one list: whichever changes it first copies it (an empty one too: a channel adds to it).
+        _orbsShared = true;
+        c._orbsShared = true;
         return c;
     }
 }
@@ -234,6 +252,12 @@ public sealed class SimState
 
     /// <summary>Random hits land on nobody: the safe fallback when there are too many branches.</summary>
     public bool NoRandomHits;
+
+    /// <summary>
+    /// Branches ran out: random hits and poison land on the first possible target in place, without
+    /// branching (this run only keeps "can happen" results; damage to you comes from the safe run).
+    /// </summary>
+    public bool FirstTargetOnly;
 
     // ---- results (per branch)
     public int Taken;
@@ -303,11 +327,27 @@ public sealed class SimState
     /// <summary>How many teammates come before you in player order (their orbs fire before yours).</summary>
     public int TeammatesBeforeMe;
 
+    // Branches share their teammates until one changes them (Glass and Dark passives, Consuming
+    // Shadow): copying them on every branch made multiplayer fights slow.
+    private bool _teammatesShared;
+
+    /// <summary>Teammate k, to change: copied for this branch first if it's shared.</summary>
+    public SimPlayer MutableTeammate(int k)
+    {
+        if (_teammatesShared)
+        {
+            Teammates = Teammates.Select(t => t.Clone()).ToList();
+            _teammatesShared = false;
+        }
+        return Teammates[k];
+    }
+
     public SimState Clone()
     {
         var c = (SimState)MemberwiseClone();
         c.P = P.Clone();
-        if (Teammates.Count > 0) c.Teammates = Teammates.Select(t => t.Clone()).ToList();
+        _teammatesShared = true;
+        c._teammatesShared = true;
         c.Enemies = new List<SimEnemy>(Enemies.Count);
         foreach (var e in Enemies) c.Enemies.Add(e.Clone());
         if (Log)

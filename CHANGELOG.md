@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.19
+#### Changed
+- Faster outcome simulations: branches share what they don't change, and a fight with too many random outcomes stops exploring them sooner (a branch-heavy single-player hand is about 2.5 times faster; four Defects with 40 Lightning orbs went from 47 ms to 2.4 ms per card).
+
 ### Spire QoL 0.31.18
 #### Added
 - Death Skull: during your turn, a skull beside an enemy's HP when it dies before acting if you end your turn now, with the chance when a roll decides it (Death chance setting).

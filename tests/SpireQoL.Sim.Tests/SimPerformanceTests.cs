@@ -71,6 +71,34 @@ public class SimPerformanceTests
     }
 
     [Fact]
+    public void FourDefectsWithFortyLightningOrbsStayInsideTheLimit()
+    {
+        // Multiplayer worst case: you and three teammates with 10 Lightning orbs each against four
+        // enemies (4^40 roll sequences). Merging identical branches and the 128-branch cap (then the
+        // safe fallback: random hits land on nobody) keep one simulation inside the same limit.
+        var s = new SimState();
+        for (var i = 0; i < 4; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 60 + i * 11, Block = 4, Hits = new() { 9, 9 } });
+        SimOrb L() => new() { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 };
+        s.P.OrbCapacity = 10;
+        s.P.Orbs = Enumerable.Range(0, 10).Select(_ => L()).ToList();
+        for (var t = 0; t < 3; t++)
+            s.Teammates.Add(new SimPlayer { OrbCapacity = 10, HandCount = -1, Orbs = Enumerable.Range(0, 10).Select(_ => L()).ToList() });
+        s.TeammatesBeforeMe = 1;
+        var plays = Enumerable.Range(0, 40).Select(t => new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = t % 4, Hits = 1, HitDamage = { [0] = 9, [1] = 9, [2] = 9, [3] = 9 } }).ToList();
+
+        SimEngine.Run(s);
+        foreach (var p in plays.Take(3)) SimEngine.Run(s, p);
+        var sw = Stopwatch.StartNew();
+        var truncated = SimEngine.Run(s).Truncated;
+        foreach (var p in plays) SimEngine.Run(s, p);
+        sw.Stop();
+        var perSim = sw.Elapsed.TotalMilliseconds / (plays.Count + 1);
+        _out.WriteLine($"40 Lightning orbs: {perSim:0.00} ms per simulation, truncated {truncated}");
+        var limit = Environment.GetEnvironmentVariable("CI") == "true" ? 30.0 : 4.0;
+        Assert.True(perSim < limit, $"{perSim:0.00} ms per simulation (limit {limit} ms)");
+    }
+
+    [Fact]
     public void ATypicalFightSimulatesAFullHandInWellUnderAFrame()
     {
         // Two enemies, two Lightning orbs, a Frost orb: a few random targets.

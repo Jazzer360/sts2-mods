@@ -153,6 +153,9 @@ public static class SimEngine
 
     public const int MaxBranches = 128;
 
+    /// <summary>Branches kept after running out (each then follows one outcome per step).</summary>
+    public const int SampleAfterTruncation = 32;
+
     public static SimOutcome Run(SimState start, SimPlay? play = null)
     {
         var b = new BranchSet(start.Clone());
@@ -209,6 +212,18 @@ public static class SimEngine
         /// <summary>Applies a step that may branch, merging identical results.</summary>
         public void Each(Func<SimState, IEnumerable<SimState>> step)
         {
+            // Out of branches: nothing is guaranteed any more (damage to you comes from the safe run), so
+            // each explored branch just follows one outcome of the step, without cloning the others
+            // (HitRandom yields lazily). Keeps a branch-heavy fight (four Defects' Lightning) cheap.
+            if (Truncated)
+            {
+                for (var i = 0; i < States.Count; i++)
+                {
+                    States[i].FirstTargetOnly = true;
+                    States[i] = step(States[i]).First();
+                }
+                return;
+            }
             var next = new List<SimState>();
             var seen = new Dictionary<long, SimState>();
             foreach (var s in States)
@@ -216,17 +231,20 @@ public static class SimEngine
                 foreach (var r in step(s))
                 {
                     // An identical branch: one state, with both shares of the rolls.
-                    if (seen.TryGetValue(r.Key(), out var same))
+                    var key = r.Key();
+                    if (seen.TryGetValue(key, out var same))
                     {
                         same.Weight += r.Weight;
                         continue;
                     }
-                    seen[r.Key()] = r;
+                    seen[key] = r;
                     next.Add(r);
                     if (next.Count >= MaxBranches)
                     {
+                        // Out of branches: keep a sample that follows one outcome per step from here
+                        // (see above). Its results only feed "can happen" checks.
                         Truncated = true;
-                        States = next;
+                        States = next.Take(SampleAfterTruncation).ToList();
                         return;
                     }
                 }
@@ -334,7 +352,7 @@ public static class SimEngine
             yield return s;
             yield break;
         }
-        if (targets.Count == 1)
+        if (targets.Count == 1 || s.FirstTargetOnly)
         {
             Hit(s, s.Enemy(targets[0])!);
             yield return s;
@@ -353,9 +371,9 @@ public static class SimEngine
     private static IEnumerable<SimState> PoisonRandom(SimState s, int amount)
     {
         var targets = s.NoRandomHits ? new List<int>() : s.Targetable.Select(e => e.Id).ToList();
-        if (targets.Count <= 1)
+        if (targets.Count <= 1 || s.FirstTargetOnly)
         {
-            if (targets.Count == 1) s.Enemy(targets[0])!.AddPoison(amount);
+            if (targets.Count >= 1) s.Enemy(targets[0])!.AddPoison(amount);
             yield return s;
             yield break;
         }
@@ -497,7 +515,7 @@ public static class SimEngine
                         {
                             if (s.P.Orbs.Count == 0) return new[] { s };
                             var orb = s.P.Orbs[0];
-                            if (last) s.P.Orbs.RemoveAt(0);
+                            if (last) s.P.OwnOrbs().RemoveAt(0);
                             return Evoke(s, orb);
                         });
                     }
@@ -509,7 +527,7 @@ public static class SimEngine
                     b.Do(s =>
                     {
                         s.P.OrbCapacity = Math.Clamp(s.P.OrbCapacity + op.Slots, 0, Math.Max(MaxOrbSlots, s.P.OrbCapacity));
-                        while (s.P.Orbs.Count > s.P.OrbCapacity) s.P.Orbs.RemoveAt(s.P.Orbs.Count - 1);
+                        while (s.P.Orbs.Count > s.P.OrbCapacity) s.P.OwnOrbs().RemoveAt(s.P.Orbs.Count - 1);
                     });
                     break;
                 case OrbOp.Kind.Channel:
@@ -520,12 +538,12 @@ public static class SimEngine
                         if (s.P.OrbCapacity > 0 && s.P.Orbs.Count >= s.P.OrbCapacity)
                         {
                             var front = s.P.Orbs[0];
-                            s.P.Orbs.RemoveAt(0);
+                            s.P.OwnOrbs().RemoveAt(0);
                             r = Evoke(s, front);
                         }
                         return r.Select(x =>
                         {
-                            if (x.P.OrbCapacity > 0) x.P.Orbs.Add(op.Orb!.Clone());
+                            if (x.P.OrbCapacity > 0) x.P.OwnOrbs().Add(op.Orb!.Clone());
                             return x;
                         }).ToList();
                     });
@@ -636,7 +654,7 @@ public static class SimEngine
                 var orb = x.P.Orbs[0];
                 return Evoke(x, orb).SelectMany(y =>
                 {
-                    y.P.Orbs.RemoveAt(0);
+                    y.P.OwnOrbs().RemoveAt(0);
                     return Evoke(y, orb);
                 }).ToList();
             }).ToList();
@@ -654,8 +672,10 @@ public static class SimEngine
     }
 
     /// <summary>One player's orb passives at end of turn, front first (yours, or a teammate's: their Frost blocks for them).</summary>
-    private static void OrbPassives(BranchSet b, Func<SimState, SimPlayer> who, bool mine)
+    /// <param name="mutable">The same player, to change (a teammate shared between branches is copied first).</param>
+    private static void OrbPassives(BranchSet b, Func<SimState, SimPlayer> who, bool mine, Func<SimState, SimPlayer>? mutable = null)
     {
+        mutable ??= who;
         var maxOrbs = b.States.Max(s => who(s).Orbs.Count);
         for (var i = 0; i < maxOrbs; i++)
         {
@@ -678,13 +698,14 @@ public static class SimEngine
                         case OrbKind.Frost:
                             return mine ? GainBlock(s, orb.Passive, "Frost") : new[] { s };
                         case OrbKind.Dark:
-                            orb.Evoke += orb.Passive;
+                            mutable(s).OwnOrbs()[index].Evoke += orb.Passive;
                             return new[] { s };
                         case OrbKind.Glass:
                             // GlassOrb.Passive: if PassiveVal (base + Focus) > 0, the base drops by 1
                             // (not below 0) and every enemy takes the value from before the drop.
                             if (orb.Passive > 0)
                             {
+                                orb = mutable(s).OwnOrbs()[index];
                                 var v = orb.Passive;
                                 if (s.Log) s.EndOfTurnDamage.Add(("Glass (all)", v));
                                 HitAll(s, _ => v);
@@ -739,13 +760,13 @@ public static class SimEngine
         for (var k = 0; k < before; k++)
         {
             var tk = k;
-            OrbPassives(b, s => s.Teammates[tk], mine: false);
+            OrbPassives(b, s => s.Teammates[tk], mine: false, mutable: s => s.MutableTeammate(tk));
         }
         OrbPassives(b, s => s.P, mine: true);
         for (var k = before; k < teammates; k++)
         {
             var tk = k;
-            OrbPassives(b, s => s.Teammates[tk], mine: false);
+            OrbPassives(b, s => s.Teammates[tk], mine: false, mutable: s => s.MutableTeammate(tk));
         }
 
         // 3. Ethereal cards exhaust (CardCmd.Exhaust in DoTurnEnd), then cards in hand act (DoTurnEndCards).
@@ -792,7 +813,7 @@ public static class SimEngine
             {
                 if (n >= s.P.ConsumingShadow || s.P.Orbs.Count == 0) return new[] { s };
                 var orb = s.P.Orbs[^1];
-                s.P.Orbs.RemoveAt(s.P.Orbs.Count - 1);
+                s.P.OwnOrbs().RemoveAt(s.P.Orbs.Count - 1);
                 return orb.Kind == OrbKind.Frost ? GainBlock(s, orb.Evoke, "Consuming Shadow (Frost)") : Evoke(s, orb);
             });
         }
@@ -805,10 +826,11 @@ public static class SimEngine
                 var n = i;
                 b.Each(s =>
                 {
-                    var t = s.Teammates[tk];
+                    if (n >= s.Teammates[tk].ConsumingShadow || s.Teammates[tk].Orbs.Count == 0) return new[] { s };
+                    var t = s.MutableTeammate(tk);
                     if (n >= t.ConsumingShadow || t.Orbs.Count == 0) return new[] { s };
                     var orb = t.Orbs[^1];
-                    t.Orbs.RemoveAt(t.Orbs.Count - 1);
+                    t.OwnOrbs().RemoveAt(t.Orbs.Count - 1);
                     return Evoke(s, orb, t.Thunder, mine: false);
                 });
             }
@@ -842,7 +864,7 @@ public static class SimEngine
     private static void ChangeFocus(SimState s, int delta)
     {
         int Shift(int value, int baseValue) => value + Math.Max(0, baseValue + s.P.Focus + delta) - Math.Max(0, baseValue + s.P.Focus);
-        foreach (var o in s.P.Orbs)
+        foreach (var o in s.P.OwnOrbs())
         {
             switch (o.Kind)
             {

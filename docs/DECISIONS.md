@@ -101,3 +101,8 @@ The only chance the mod shows is beside an enemy's HP skull (Death Skull): the c
 *Why:* a chance can't be checked against what happened, only the simulation behind it can (the audits do that, branch by branch). Odds that depend on where a card is aimed and how rolls fall get hard to read and to remember, while certain outcomes are the common case and simple to read. "Dies if I end my turn now" is one easy question.
 *Open:* the owner isn't settled on this; it's what's built for now, not a final answer (tracker §17).
 *Replaced:* the open question of odds on random outcomes (tracker §17), and a proposal for chances on tabs, hover-following enemy skulls and a kill-count spread.
+
+### 23. Running out of branches stops exploring; branches share what they don't change — active (2026-11-11)
+When a simulation reaches 128 branches, it keeps a sample of 32 and each follows one outcome per random step from there (random hits land on the first possible target, in place), instead of keeping on splitting and throwing the extra branches away. Branches share their orbs and their teammates until one changes them (copy on change). Identical branches still merge, adding their shares of the rolls.
+*Why:* multiplayer multiplies random hits (four Defects' Lightning: 4^40 roll sequences); the cap bounded the number of branches but not the work, which reached 47 ms for one simulation. Now 2.4 ms there, and single-player's worst case went from 2.8 to 1.0 ms.
+*Trade-off:* past the cap nothing was guaranteed already (damage to you comes from the safe run where random hits land on nobody); the "can happen" warnings now come from a 32-branch sample instead of a partial 128.
