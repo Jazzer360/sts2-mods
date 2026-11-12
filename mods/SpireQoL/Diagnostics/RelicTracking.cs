@@ -30,7 +30,7 @@ internal static class RelicTracking
 
         ["BathRobes"] = "none: BeforeCombatStart full heal in a boss fight (once)",
         ["Byrdine"] = "none: BeforeCombatStart pet",
-        ["Wuppy"] = "gap: its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower); Incoming Damage still counts them on you",
+        ["Wuppy"] = "none: its pet takes the powered attacks aimed at you while it lives (simulator: Incoming Damage leaves them out)",
 
         // ---- start of your turn (on screen before your decisions that turn)
         ["Akabeko"] = "none: Vigor on turn 1",

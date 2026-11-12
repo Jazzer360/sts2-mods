@@ -334,6 +334,7 @@ public static class SimAdapter
 
         var osty = me.Osty;
         p.OstyHp = osty != null && osty.IsAlive && osty.HasPower<DieForYouPower>() ? osty.CurrentHp : 0;
+        p.WuppyHp = SafeInt(() => me.Creature.Pets.Where(c => c.IsAlive && c.Powers.Any(x => x.GetType().Name == "WuppysLoyaltyPower")).Sum(c => c.CurrentHp));
     }
 
     /// <summary>
@@ -479,6 +480,16 @@ public static class SimAdapter
             };
             play.BlockGains = blockGains;
             play.BlockAmount = each;
+            // Stretch (v0.113.0) boosts one card play's block, then it's spent: a replay's later plays gain without it.
+            // Its bonus is additive, so the game's block math on (Block - Stretch) gives the block without it.
+            var stretch = me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
+            if (stretch > 0 && plays > 1 && name is not (nameof(Fisticuffs) or nameof(Entrench)) && card.DynamicVars.ContainsKey("Block"))
+            {
+                var perPlay = blockGains / plays;
+                var without = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, Sts2State.Var(card, "Block") - stretch,
+                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _)));
+                if (perPlay > 0 && without < each) play.BlockLater = (perPlay, without);
+            }
         }
 
         play.KillsOsty = KillsOstyCards.Contains(name);
@@ -598,6 +609,8 @@ public static class SimAdapter
         //    that intent is left as it is.
         //  - Enrage: every Skill you play gives it Strength (EnragePower.AfterCardPlayed).
         HashSet<Creature> Debuffed(Type debuff) => !f.EnemyDebuffs.Contains(debuff)
+                                                   // Nail does nothing to an enemy that isn't Impaled (Nail.OnPlay).
+                                                   || (name == "Nail" && ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } nt && !Procs.Fool.IsImpaled(nt))
             ? new HashSet<Creature>()
             : card.TargetType switch
             {

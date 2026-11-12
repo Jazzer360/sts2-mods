@@ -373,7 +373,8 @@ public sealed class PlayFacts
             Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me),
             GeneratedStatuses = statuses * Math.Max(1, plays),
             Transforms = TransformCount(card, name, others, drawPile) * Math.Max(1, plays),
-            EnemyDebuffs = EnemyDebuffTypes(card),
+            // A shot with no arrow to shoot does nothing at all (its debuffs neither: Hobbling Shot).
+            EnemyDebuffs = Fool.IsShot(card) && Fool.ArrowsAvailable(me) == 0 ? Array.Empty<Type>() : EnemyDebuffTypes(card),
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
             Channels = ChannelCount(card, name, me) * Math.Max(1, plays),
             StarGains = StarGainCards.Contains(name) ? Math.Max(1, plays) : 0,

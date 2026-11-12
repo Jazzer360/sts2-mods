@@ -27,6 +27,11 @@ public sealed class SimPlay
 
     public int BlockAmount;
     public int BlockGains;
+    /// <summary>
+    /// Block gains that get smaller partway through: after <c>After</c> gains, each gives <c>Amount</c> (Stretch
+    /// boosts one card play's block and is spent: a replayed block card's later plays don't get it).
+    /// </summary>
+    public (int After, int Amount)? BlockLater;
 
     public List<OrbOp> OrbOps = new();
 
@@ -781,7 +786,11 @@ public static class SimEngine
         }
 
         // Its own block: each gain sets off Juggernaut.
-        for (var i = 0; i < p.BlockGains; i++) b.Each(s => GainBlock(s, p.BlockAmount, null));
+        for (var i = 0; i < p.BlockGains; i++)
+        {
+            var amount = p.BlockLater is { } later && i >= later.After ? later.Amount : p.BlockAmount;
+            b.Each(s => GainBlock(s, amount, null));
+        }
         if (p.KillsOsty) b.Do(s => s.P.OstyHp = 0);
 
         // Damage to you after it resolves (Galvanic): your block takes it first.
@@ -1259,6 +1268,16 @@ public static class SimEngine
                     continue;
                 }
                 for (var k = 0; k < before; k++) TeammateTakesHit(k, hitIndex, perHit);
+                // Wuppy takes the whole hit instead while it lives (not you: your Thorns, block, Osty, Flame Barrier
+                // and Reflect don't come into it); once it's dead, hits come to you.
+                if (s.P.WuppyHp > 0 && perHit > 0)
+                {
+                    s.P.WuppyHp = Math.Max(0, s.P.WuppyHp - perHit);
+                    s.WuppyTaken += perHit; // not your Incoming Damage (landed): it never reaches you
+                    hitsLanded++;
+                    for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, perHit);
+                    continue;
+                }
                 // Thorns: before the hit lands; the hit still lands even if this kills.
                 if (s.P.Thorns > 0) Retaliate(s.P.Thorns);
 

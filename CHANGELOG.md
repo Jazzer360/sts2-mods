@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.33
+#### Fixed
+- Wuppy: while your pet lives it takes the attacks aimed at you, so Incoming Damage, the Death Skull and the forecast leave them out (your Thorns doesn't react to them).
+- Stretch boosts only the first play of a replayed block card.
+- Nail does nothing to an enemy that isn't Impaled, and a shot with no arrow applies nothing: their Weak no longer lowers the intents in the prediction.
+- The play check: Vigor and Gigantification used up by your attack, and Tender taking Strength and Dexterity per card, are no longer reported.
+
 ### Spire QoL 0.31.32
 #### Fixed
 - Cards that gain block more than once (Cho Limbs, Cho Firm, Second Wind) had their block split across the gains in the simulator instead of each gain counting in full.

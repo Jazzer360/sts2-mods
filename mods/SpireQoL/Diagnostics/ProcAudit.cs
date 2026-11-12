@@ -161,6 +161,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private static readonly HashSet<string> SpentByAnyPlay = new() { "FreeCardPower" };
 
+    /// <summary>
+    /// Your powers your next powered attack uses up (BeforeAttack marks the command, AfterAttack spends it): Vigor,
+    /// Gigantification.
+    /// </summary>
+    private static readonly HashSet<string> SpentByAttack = new() { nameof(VigorPower), nameof(GigantificationPower) };
+
+    /// <summary>Your stats a source that changes powers can take away (Tender: 1 Strength and Dexterity per card).</summary>
+    private static readonly HashSet<string> Stats = new() { nameof(StrengthPower), nameof(DexterityPower), nameof(FocusPower) };
+
     /// <summary>What a trigger tab's source can add beyond the card itself (for the budget check).</summary>
     private static readonly Dictionary<string, Effect[]> SourceEffects = new()
     {
@@ -979,6 +988,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (!creature.IsAlive) continue;
             if (own.Contains(type) || acted.Contains(type) || tabbed.Contains(type) || SimComparedPowers.Contains(type)) continue;
             if (creature == me.Creature && SpentByAnyPlay.Contains(type)) continue;
+            if (creature == me.Creature && SpentByAttack.Contains(type) && w.Card.Type == CardType.Attack) continue;
+            if (creature == me.Creature && Stats.Contains(type)
+                && acted.Concat(tabbed).Any(x => SourceEffects.TryGetValue(x, out var fx) && fx.Contains(Effect.Power))) continue;
             if (type == nameof(ArtifactPower) && debuffs) continue;
             if (creature.Powers.FirstOrDefault(p => p.GetType().Name == type) is ITemporaryPower) continue;
             // A death in the play: powers that react to it (Dampen comes off you when its caster dies).

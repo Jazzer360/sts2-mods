@@ -221,6 +221,11 @@ public sealed class SimPlayer
     public int RemnantCap = int.MaxValue;
     public int Buffer;
     public int OstyHp;
+    /// <summary>
+    /// Your pet Wuppy's HP (Wuppy relic, v0.113.0): while it lives, every powered attack aimed at you hits it instead,
+    /// whole, before your block (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). 0: none.
+    /// </summary>
+    public int WuppyHp;
 
     // Teammates only (yours are on SimState: Taken, OstyTaken, DamageThrough).
     /// <summary>A teammate's HP (hits on a teammate at 0 stop).</summary>
@@ -287,6 +292,8 @@ public sealed class SimState
 
     // ---- results (per branch)
     public int Taken;
+    /// <summary>Damage your pet Wuppy took for you (enemy attacks it redirected).</summary>
+    public int WuppyTaken;
     public int OstyTaken;
     public int DamageThrough;
     public int SkippedPoisoned;
@@ -436,7 +443,7 @@ public sealed class SimState
                 h *= 1099511628211L;
             }
         }
-        Add(P.Block); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
+        Add(P.Block); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
         Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         foreach (var e in Enemies)
         {

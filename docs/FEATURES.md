@@ -226,6 +226,8 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
   - Feel No Pain × Ethereal cards still in hand: they exhaust at end of turn (after Orichalcum checks your block), each giving Feel No Pain's block
   - Not counted: Horn Cleat and Captain's Wheel. They give block at the *start* of turn 2/3, after the enemy has attacked; Relic Counters shows their countdown.
 
+**Wuppy** (event relic): while your pet Wuppy lives it takes every attack aimed at you, whole, before your block, so those hits aren't in your Incoming Damage (and your Thorns, Flame Barrier and Reflect don't react to them); once it dies, the rest come to you. A teammate's Wuppy isn't modelled.
+
 **A teammate's (multiplayer, Teammate Incoming Damage, its own setting and widget):** hovering a teammate (the game then shows their HP bar, `NCreature.OnFocus`, read through `NCreature.IsFocused`) shows the same sum for them, just left of their block indicator. It comes from the same simulation as yours, run once more without the cards in their hand (decision #30): their hand size counts (Cloak Clasp), the cards in it (Burn, Regret) don't. Their block, powers, orbs, relics and Osty count as yours do. The forecast check compares their HP and their Osty's against it every enemy turn.
 
 **Game UI touched:** none; our own widget.

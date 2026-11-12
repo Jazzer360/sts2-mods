@@ -78,4 +78,39 @@ public class SimMidPlayTests
         Assert.False(branches[0].Enemy(1)!.Alive);
         Assert.Equal(8, branches[0].Enemy(2)!.Hp);
     }
+
+    [Fact]
+    public void WuppyTakesTheHitsAimedAtYouWhileItLives()
+    {
+        // WuppysLoyaltyPower.ModifyPreBlockDamageTarget: 7 then 5 go to Wuppy (10 HP: the second kills it,
+        // nothing carries over); the third hit (5) comes to you, through your 2 block.
+        var s = new SimState { Enemies = { E(1, 50, 0, 7, 5, 5) } };
+        s.P.Block = 2;
+        s.P.WuppyHp = 10;
+        var o = SimEngine.Run(s);
+        Assert.Equal(3, o.TakenMax);
+        Assert.Equal(0, o.Worst.P.WuppyHp);
+        Assert.Equal(12, o.Worst.WuppyTaken);
+    }
+
+    [Fact]
+    public void HitsOnWuppyDontSetOffYourThorns()
+    {
+        var s = new SimState { Enemies = { E(1, 50, 0, 7) } };
+        s.P.Thorns = 3;
+        s.P.WuppyHp = 20;
+        var o = SimEngine.Run(s);
+        Assert.Equal(0, o.TakenMax);
+        Assert.Equal(50, o.Worst.Enemy(1)!.Hp);
+    }
+
+    [Fact]
+    public void StretchBoostsOnlyTheFirstPlayOfAReplayedBlockCard()
+    {
+        // Defend+ played twice with Stretch 12: 20, then 8 (StretchPower is spent by the first play).
+        var s = new SimState { Enemies = { E(1, 50) } };
+        var play = new SimPlay { BlockGains = 2, BlockAmount = 20, BlockLater = (1, 8) };
+        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
+        Assert.Equal(28, branches[0].P.Block);
+    }
 }

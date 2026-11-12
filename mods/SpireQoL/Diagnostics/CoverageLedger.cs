@@ -130,7 +130,7 @@ internal static partial class CoverageLedger
         ["Thumbscrew"] = "covered: ModifyAttackHitCount adds a hit to your multi-hit attacks (applied through Hook.ModifyAttackHitCount in PlayFacts.HitsPerPlay, as the card preview does)",
         ["Twine"] = "covered: AfterArrowDislodged gains block per arrow of yours dislodged (proc tab: block when every aim dislodges, Fool.Dislodged)",
         ["WhittlingKnife"] = "gap: AfterShuffle gives Aim when you shuffle: no tab on cards that shuffle",
-        ["Wuppy"] = "gap: AfterCurrentHpChanged/BeforeCombatStart keep a pet Wuppy that takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower): Incoming Damage counts them on you (overstates)",
+        ["Wuppy"] = "covered: AfterCurrentHpChanged/BeforeCombatStart keep a pet Wuppy that takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower: simulator, your Wuppy; a teammate's isn't modelled)",
 
         // ======== powers
         ["AdaptablePower"] = "gap: AfterDeath/ShouldAllowHitting: Test Subject revives (a kill may not stick: lethal can be wrong)",
@@ -330,7 +330,7 @@ internal static partial class CoverageLedger
         ["TemporaryThornsPower"] = "covered: BeforeApplied/AfterPowerAmountChanged apply Thorns (read as Thorns: simulator); AfterSideTurnEnd removes it after the other side's turn",
         ["TunePower"] = "ignore: AfterSideTurnEnd gives a free card next turn when you played a Ki",
         ["ViolentChordPower"] = "covered: AfterCardPlayed damages every enemy on your first Wah each turn (proc damage: simulator)",
-        ["WuppysLoyaltyPower"] = "gap: ModifyPreBlockDamageTarget sends powered attacks on its pet owner to Wuppy while it lives; ShouldAllowHitting: Incoming Damage counts them on you (overstates)",
+        ["WuppysLoyaltyPower"] = "covered: ModifyPreBlockDamageTarget sends powered attacks on its pet owner to Wuppy while it lives, whole, before block (simulator: SimPlayer.WuppyHp, for you; a teammate's Wuppy isn't modelled)",
         ["YahPower"] = "covered: AfterArrowDislodged gives energy once per turn when your arrow is dislodged (proc tab when some aim dislodges, Fool.Dislodged)",
 
         // ======== cards
