@@ -331,15 +331,20 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             _simCache.Clear(); // running tasks finish on their own; their results are dropped
         }
         var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|" +
-                       string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock);
+                       string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock)
+                       + "|q" + te.LeadInCards.ToList().FindIndex(c => ReferenceEquals(c, card)); // its place in the queue changes its lead-in
         // The plays are built here (they read the game); only the simulation runs off the main thread.
-        var inputs = new SimInputs { Start = te.State, Ids = te.Ids, LeadIn = te.LeadIn, LeadInCards = te.LeadInCards };
+        // A card that is itself queued runs only the plays ahead of it (not itself, nor what's after it).
+        var queuedAt = te.LeadInCards.ToList().FindIndex(c => ReferenceEquals(c, card));
+        var leadInPlays = queuedAt >= 0 ? te.LeadIn.Take(queuedAt).ToList() : te.LeadIn;
+        var leadInCards = queuedAt >= 0 ? te.LeadInCards.Take(queuedAt).ToList() : te.LeadInCards;
+        var inputs = new SimInputs { Start = te.State, Ids = te.Ids, LeadIn = leadInPlays, LeadInCards = leadInCards };
         foreach (var t in targets) inputs.PlayByTarget[t] = SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock);
         f.Sim = inputs;
         if (!_simCache.TryGetValue(cacheKey, out var task))
         {
             var start = te.State;
-            var leadIn = te.LeadIn;
+            var leadIn = leadInPlays;
             task = Task.WhenAll(targets.Select(t => inputs.PlayByTarget[t]).Select(p => Task.Run(() => SimEngine.Run(start, leadIn, p))));
             _simCache[cacheKey] = task;
         }

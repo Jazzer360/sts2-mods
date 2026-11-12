@@ -284,12 +284,46 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             _executor = executor;
             _executor.BeforeActionExecuted += OnBeforeAction;
         }
+        var queueSet = RunManager.Instance?.ActionQueueSet;
+        if (queueSet != null && !ReferenceEquals(queueSet, _queueSet))
+        {
+            if (_queueSet != null) _queueSet.ActionEnqueued -= OnEnqueued;
+            _queueSet = queueSet;
+            _queueSet.ActionEnqueued += OnEnqueued;
+            _atEnqueue.Clear();
+        }
 
         Subscribe(me, cs);
         _countAtFrame[_ctx.Decor.Frame] = history.Entries.Count();
         if (_countAtFrame.Count > 600) _countAtFrame.Remove(_countAtFrame.Keys.Min());
 
         while (_finished.Count > 0) Check(_finished.Dequeue(), me);
+    }
+
+    private ActionQueueSet? _queueSet;
+
+    /// <summary>
+    /// The tabs and facts a play of yours had the moment it was queued (ActionQueueSet.ActionEnqueued): what
+    /// you saw when you played it. A queued card stays in your hand until it starts, and keeps being
+    /// recomputed there, so its tabs at the start can be from after the plays ahead of it resolved.
+    /// </summary>
+    private readonly Dictionary<GameAction, (List<TabSpec>? Tabs, PlayFacts? Facts)> _atEnqueue = new(ReferenceEqualityComparer.Instance);
+
+    private void OnEnqueued(GameAction action)
+    {
+        try
+        {
+            if (action is not PlayCardAction play || play.Player != Sts2State.Me) return;
+            var card = play.NetCombatCard.ToCardModelOrNull();
+            if (card == null) return;
+            _atEnqueue[action] = (_ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null,
+                                  ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null);
+            if (_atEnqueue.Count > 50) _atEnqueue.Remove(_atEnqueue.Keys.First());
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log.Warn($"[audit] couldn't record a queued play: {ex.Message}");
+        }
     }
 
     private void DetachHistory()
@@ -314,8 +348,17 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (card != null)
                 {
                     rec.Card = card;
-                    rec.Predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null;
-                    rec.Facts = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null;
+                    // What you saw when you played it: from the moment it was queued (else its last frame in hand).
+                    if (_atEnqueue.Remove(action, out var queued) && queued.Facts != null)
+                    {
+                        rec.Predicted = queued.Tabs;
+                        rec.Facts = queued.Facts;
+                    }
+                    else
+                    {
+                        rec.Predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null;
+                        rec.Facts = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null;
+                    }
                     rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
                     if (_history != null) rec.StaleBecause = StaleBecause(_history.Entries.ToList(), card, _history.Entries.Count(), play.Player);
                 }
