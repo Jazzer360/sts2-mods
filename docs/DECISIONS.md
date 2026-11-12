@@ -137,3 +137,8 @@ Tabs, Incoming Damage and the Death Skull come from the board on screen, includi
 - The shadow-mode plan for moving proc rules into the simulator (from #27) stays.
 *Why:* a prediction is reliable when nothing is resolving, and that is exactly the moment a play begins. Running the queue first in the tabs cost a play-queue reader, a snapshot, per-card queue prefixes and an extra audit capture. In multiplayer the queue isn't fully visible (a teammate's queued card, a client's unconfirmed card), so tabs built on it would rest on what the player can't see. The tabs are only off while a play resolves, under a second, and nobody decides a play in that window.
 *Replaced:* #27 (the lead-in: queued plays run first in every prediction, and the audit compared the tabs from when you played the card).
+
+### 29. Another action inside your play: its snapshot checks are logged, not reported — active (2026-11-11)
+While your play waits for your choice (Burning Pact's pick, Decisions, Decisions), the game runs other players' queued actions (`ActionQueueSet.GetReadyAction` skips a paused action). Their history entries and flashes are already kept out of your play, but the before/after snapshots (state after the play, every power, everything else) span the whole action and would include them. For such a play, those three checks are logged with the action that ran, and counted in the combat summary; the history-based checks still report. Single-player can't hit it: the paused play blocks your only queue.
+*Why:* nothing can separate a teammate's effects from yours inside one snapshot without a second snapshot model; a visible, counted skip is better than false reports or a check that could hide a mismatch.
+*Replaced:* nothing (the case wasn't handled).

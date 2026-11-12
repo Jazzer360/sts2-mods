@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.26
+#### Changed
+- Multiplayer checks (logs and error reports): the state after your play now includes each teammate's block and HP; a play whose choice let a teammate's action run has its before/after checks logged instead of reported; cards aimed at a teammate or every player are flagged by the coverage check until the simulator models them.
+
 ### Spire QoL 0.31.25
 #### Changed
 - Cards played quickly, before the previous card finished: tabs, Incoming Damage and the Death Skull show the board as it is again, instead of running your queued plays first. The proc check now checks every play against a prediction made as it begins to resolve, so quick plays are fully checked (logs and error reports).

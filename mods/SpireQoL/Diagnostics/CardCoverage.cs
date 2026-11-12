@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -54,6 +55,18 @@ internal static class CardCoverage
     /// </summary>
     private static readonly HashSet<string> Calculated = new() { nameof(CompileDriver), nameof(FlakCannon), nameof(Voltaic) };
 
+    /// <summary>
+    /// Prefix of issues that only matter with teammates (multiplayer): CoverageWatch reports them only in a
+    /// fight with other players, since alone the card acts on you, as the simulator models it.
+    /// </summary>
+    public const string TeammatesOnly = "with teammates: ";
+
+    /// <summary>
+    /// Cards aimed at players (TargetType AnyAlly or AllAllies) whose effect on teammates the simulator models.
+    /// None yet: the simulator takes no player target, so a card's block, powers or HP go to you.
+    /// </summary>
+    private static readonly HashSet<string> TeammateTargetModelled = new();
+
     /// <summary>Cards reviewed as not needing what the scan finds, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
@@ -94,6 +107,12 @@ internal static class CardCoverage
         bool Applies<T>() => calls.Contains("PowerCmd.Apply<" + typeof(T).Name + ">");
         bool HasPowerVar<T>() => card.DynamicVars.Values.Any(v => v.GetType() is { IsGenericType: true } t
                                                                  && t.GetGenericTypeDefinition() == typeof(PowerVar<>) && t.GetGenericArguments()[0] == typeof(T));
+
+        // Cards aimed at a teammate or at every player: the simulator applies the card's effects to you only.
+        if (card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.Contains(name))
+            issues.Add(TeammatesOnly + "targets a teammate (the simulator applies its effects to you)");
+        if (card.TargetType == TargetType.AllAllies && !TeammateTargetModelled.Contains(name))
+            issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
             && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)))

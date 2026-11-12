@@ -528,8 +528,14 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
                 }
             }
             if (m is RelicModel) CheckRelicTracking(t);
-            if (CardCoverage.Issues.TryGetValue(t.Name, out var issues))
-                Unexpected(t.Name, "card-code", $"its code does what the mod doesn't count: {string.Join("; ", issues)}.");
+            if (CardCoverage.Issues.TryGetValue(t.Name, out var all))
+            {
+                // Issues about teammates only count in a fight with other players.
+                var withTeammates = Sts2State.Combat?.Players.Count > 1;
+                var issues = all.Where(x => withTeammates || !x.StartsWith(CardCoverage.TeammatesOnly)).ToList();
+                if (issues.Count > 0)
+                    Unexpected(t.Name, "card-code", $"its code does what the mod doesn't count: {string.Join("; ", issues)}.");
+            }
         }
         catch (Exception ex)
         {

@@ -111,6 +111,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         /// it are missing: shortfalls against the prediction aren't checked.
         /// </summary>
         public bool FightEnded;
+        /// <summary>See PlayRecord.RanDuringPause.</summary>
+        public string? RanDuringPause;
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
         public PlaySnapshot? FullBefore, FullAfter;
     }
@@ -174,6 +176,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     // Per-combat tallies for the summary line.
     private int _checked;
     private int _fromHand; // plays checked against the tabs last shown in hand (the prediction couldn't be rebuilt)
+    private int _interleaved; // plays whose snapshot checks were logged only: another action ran during their choice
     private int _matched;
     private readonly Dictionary<string, int> _issueCounts = new();
 
@@ -202,6 +205,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public Dictionary<Creature, int>? AfterIds;
         public string? AfterSkipped;
         public bool FightEnded;
+        /// <summary>Waiting for your choice (Burning Pact's pick): other players' actions can run meanwhile.</summary>
+        public bool Paused;
+        /// <summary>
+        /// Another action ran while this play waited for your choice (ActionQueueSet.GetReadyAction skips a paused
+        /// action, so a teammate's queued play runs): its effects are inside this play's before/after snapshots.
+        /// </summary>
+        public string? RanDuringPause;
         /// <summary>Every power on every creature when the play started and when it finished.</summary>
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
         /// <summary>Energy, stars, gold, HP, cards and relics when the play started and finished.</summary>
@@ -302,6 +312,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         try
         {
+            // Another action starting while a play of yours waits for a choice (a teammate's play, in multiplayer).
+            foreach (var r in _running.Values)
+                if (r.Paused && !ReferenceEquals(r.Action, action))
+                    r.RanDuringPause ??= DescribeAction(action);
             if (action is not PlayCardAction play || play.Player != Sts2State.Me)
             {
                 _current = null; // potions, end of turn, other players: not a play of yours
@@ -338,6 +352,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 action.BeforePausedForPlayerChoice += OnActionPaused;
             }
             // Also called again when it resumes after a choice (Burning Pact's pick).
+            rec.Paused = false;
             _current = rec;
         }
         catch (Exception ex)
@@ -347,8 +362,23 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
+    private static string DescribeAction(GameAction action)
+    {
+        try
+        {
+            if (action is PlayCardAction p && p.NetCombatCard.ToCardModelOrNull() is { } c)
+                return $"{SafeTitle(c)} ({(p.Player == Sts2State.Me ? "yours" : "a teammate's")})";
+            return action.GetType().Name;
+        }
+        catch
+        {
+            return "another action";
+        }
+    }
+
     private void OnActionPaused(GameAction action)
     {
+        if (_running.TryGetValue(action, out var paused)) paused.Paused = true;
         OnHistoryChanged();
         if (_current != null && ReferenceEquals(_current.Action, action)) _current = null;
     }
@@ -585,7 +615,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Flashes = rec.Flashes, Shuffles = rec.Shuffles,
             Lag = captured ? rec.Lag : _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
             Before = rec.Before, Target = target,
-            After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded,
+            After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded, RanDuringPause = rec.RanDuringPause,
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
             FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
             StaleBecause = captured ? rec.StaleBecause : StaleBecause(hist, card, start, me),
@@ -601,9 +631,19 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var flashed = w.Flashes.Select(x => x.Model).ToList();
             var issues = Compare(w, me, entries, flashed, out var model);
             ShuffleIssues(w, me, entries, flashed, issues, model);
-            AfterPlayIssues(w, entries, issues, model);
-            PowerChangeIssues(w, me, entries, flashed, issues, model);
-            EverythingIssues(w, me, entries, flashed, issues, model);
+            // The before/after snapshot checks: they see everything between the play's start and its end.
+            var snapshot = new List<string>();
+            AfterPlayIssues(w, entries, snapshot, model);
+            PowerChangeIssues(w, me, entries, flashed, snapshot, model);
+            EverythingIssues(w, me, entries, flashed, snapshot, model);
+            if (w.RanDuringPause != null)
+            {
+                // Another action ran inside this play (during your choice): its effects are in the snapshots too.
+                // The history checks above still ran; these are logged, and counted in the combat summary.
+                _interleaved++;
+                foreach (var x in snapshot) model.Add($"not checked ({w.RanDuringPause} ran during your choice): {x}");
+            }
+            else issues.AddRange(snapshot);
             if (w.StaleBecause != null && issues.Count > 0)
             {
                 // Played before the previous card finished: its tabs didn't see that card's effects.
@@ -728,8 +768,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"))})";
-        ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand), {_matched} matched{issues}.");
-        _checked = _matched = _fromHand = 0;
+        ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand, {_interleaved} with another action during a choice), {_matched} matched{issues}.");
+        _checked = _matched = _fromHand = _interleaved = 0;
         _issueCounts.Clear();
     }
 
@@ -1076,6 +1116,19 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var orbsMatch = pp.Orbs.Count == ap.Orbs.Count
                             && pp.Orbs.Zip(ap.Orbs).All(x => x.First.Kind == OrbKind.Unknown || Orb(x.First) == Orb(x.Second));
             if (!orbsMatch) d.Add($"after play orbs: predicted [{string.Join(", ", pp.Orbs.Select(Orb))}], actual [{string.Join(", ", ap.Orbs.Select(Orb))}]");
+            // Teammates (multiplayer): the block and HP your play leaves them (Beacon of Hope's share, hits).
+            // The state after is read from the living ones only (SimAdapter.IsTeammate), in player order.
+            var living = pred.Teammates.Where(t => t.Hp > 0).ToList();
+            if (living.Count == after.Teammates.Count)
+            {
+                for (var k = 0; k < living.Count; k++)
+                {
+                    var (pt, at) = (living[k], after.Teammates[k]);
+                    Cmp($"teammate {k + 1} block", pt.Block, at.Block);
+                    Cmp($"teammate {k + 1} HP", pt.Hp, at.Hp);
+                }
+            }
+            else d.Add($"after play teammates alive: predicted {living.Count}, actual {after.Teammates.Count}");
             return d;
         }
 
