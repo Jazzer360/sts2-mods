@@ -84,6 +84,14 @@ public sealed class SimOutcome
     /// <summary>After truncation: the run where random hits land on nobody (an upper bound on damage to you).</summary>
     public SimState? SafeWorst;
 
+    /// <summary>
+    /// The simulator's work, the same on every machine (the performance tests limit these, not time):
+    /// steps applied to the branch set, branches stepped over all steps, and state copies (the safe run's included).
+    /// </summary>
+    public int Steps, Stepped, Copies;
+    /// <summary>The most copies one step made (at most about StepCopyBudget).</summary>
+    public int MaxStepCopies;
+
     public SimState Worst => SafeWorst ?? Branches.OrderByDescending(b => b.Taken).ThenByDescending(b => b.OstyTaken).First();
     public int TakenMin => Branches.Min(b => b.Taken);
     /// <summary>Teammate k's HP lost: the worst branch (the safe run included) and the best.</summary>
@@ -172,6 +180,14 @@ public static class SimEngine
 
     public const int MaxBranches = 128;
 
+    /// <summary>
+    /// State copies one step may make (each hit, orb, block gain: SimEngine steps). Past it, the step's
+    /// random choices follow their first target and the run is out of branches (damage to you then comes
+    /// from the safe run). Bounds one step whatever chains inside it (Beacon of Hope sharing block with
+    /// Juggernaut on every player, Shatter): a simulation costs at most about steps × this.
+    /// </summary>
+    public const int StepCopyBudget = 2048;
+
     /// <summary>Branches kept after running out (each then follows one outcome per step).</summary>
     public const int SampleAfterTruncation = 32;
 
@@ -184,7 +200,10 @@ public static class SimEngine
     /// </summary>
     public static SimOutcome Run(SimState start, IReadOnlyList<SimPlay>? leadIn, SimPlay? play)
     {
-        var b = new BranchSet(start.Clone());
+        var work = new SimWork();
+        var first = start.Clone();
+        first.Work = work;
+        var b = new BranchSet(first);
         if (leadIn is { Count: > 0 })
         {
             foreach (var queued in leadIn) ApplyPlay(b, queued);
@@ -228,6 +247,7 @@ public static class SimEngine
             // Too many branches to explore: nothing is guaranteed, and damage to you comes from a run
             // where random hits land on nobody, so no attacker is ever saved by one (never an underestimate).
             var safeStart = start.Clone();
+            safeStart.Work = work;
             safeStart.NoRandomHits = true;
             var safe = new BranchSet(safeStart);
             if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(safe, queued);
@@ -235,11 +255,45 @@ public static class SimEngine
             EndOfTurn(safe);
             safe.Do(EnemyTurn);
             outcome.SafeWorst = safe.States[0];
+
         }
+        work.EndStep();
+        outcome.Steps = work.Steps;
+        outcome.Stepped = work.Stepped;
+        outcome.Copies = work.Copies;
+        outcome.MaxStepCopies = work.MaxStepCopies;
         return outcome;
     }
 
     // ------------------------------------------------------------------ branching
+
+    /// <summary>
+    /// Chains a branching effect inside one step (Juggernaut on each block gain Beacon of Hope shares,
+    /// Forgotten Soul after Feel No Pain): identical results merge, as between steps. The step's copy
+    /// budget (Branch) bounds the rest; without both, Beacon of Hope with Juggernaut on four players ran
+    /// out of memory.
+    /// </summary>
+    private static List<SimState> Then(IEnumerable<SimState> states, Func<SimState, IEnumerable<SimState>> f)
+    {
+        var next = new List<SimState>();
+        var seen = new Dictionary<long, SimState>();
+        foreach (var x in states)
+        {
+            foreach (var r in f(x))
+            {
+                var key = r.Key();
+                if (seen.TryGetValue(key, out var same))
+                {
+                    same.Weight += r.Weight;
+                    same.OutOfBranches |= r.OutOfBranches;
+                    continue;
+                }
+                seen[key] = r;
+                next.Add(r);
+            }
+        }
+        return next;
+    }
 
     private sealed class BranchSet
     {
@@ -248,9 +302,15 @@ public static class SimEngine
 
         public BranchSet(SimState s) => States = new List<SimState> { s };
 
+        private void Count()
+        {
+            if (States.Count > 0 && States[0].Work is { } w) { w.StartStep(); w.Steps++; w.Stepped += States.Count; }
+        }
+
         /// <summary>Applies a step that may branch, merging identical results.</summary>
         public void Each(Func<SimState, IEnumerable<SimState>> step)
         {
+            Count();
             // Out of branches: nothing is guaranteed any more (damage to you comes from the safe run), so
             // each explored branch just follows one outcome of the step, without cloning the others
             // (HitRandom yields lazily). Keeps a branch-heavy fight (four Defects' Lightning) cheap.
@@ -271,14 +331,13 @@ public static class SimEngine
                 {
                     // An identical branch: one state, with both shares of the rolls.
                     var key = r.Key();
-                    if (seen.TryGetValue(key, out var same))
+                    if (seen.TryGetValue(key, out var same)) same.Weight += r.Weight;
+                    else
                     {
-                        same.Weight += r.Weight;
-                        continue;
+                        seen[key] = r;
+                        next.Add(r);
                     }
-                    seen[key] = r;
-                    next.Add(r);
-                    if (next.Count >= MaxBranches)
+                    if (next.Count >= MaxBranches || r.OutOfBranches)
                     {
                         // Out of branches: keep a sample that follows one outcome per step from here
                         // (see above). Its results only feed "can happen" checks.
@@ -293,6 +352,7 @@ public static class SimEngine
 
         public void Do(Action<SimState> step)
         {
+            Count();
             foreach (var s in States) step(s);
         }
     }
@@ -391,7 +451,7 @@ public static class SimEngine
             yield return s;
             yield break;
         }
-        if (targets.Count == 1 || s.FirstTargetOnly)
+        if (targets.Count == 1 || !Branch(s))
         {
             Hit(s, s.Enemy(targets[0])!);
             yield return s;
@@ -406,11 +466,24 @@ public static class SimEngine
         }
     }
 
+    /// <summary>
+    /// Whether a random choice may branch here: not once the run is out of branches, nor past this step's
+    /// copy budget (then the run is out of branches from here: BranchSet truncates after the step).
+    /// </summary>
+    private static bool Branch(SimState s)
+    {
+        if (s.FirstTargetOnly) return false;
+        if (s.Work is not { OverBudget: true }) return true;
+        s.FirstTargetOnly = true;
+        s.OutOfBranches = true;
+        return false;
+    }
+
     /// <summary>Poison on a random living enemy: a branch per possible target (none with NoRandomHits: never overstates).</summary>
     private static IEnumerable<SimState> PoisonRandom(SimState s, int amount)
     {
         var targets = s.NoRandomHits ? new List<int>() : s.Targetable.Select(e => e.Id).ToList();
-        if (targets.Count <= 1 || s.FirstTargetOnly)
+        if (targets.Count <= 1 || !Branch(s))
         {
             if (targets.Count >= 1) s.Enemy(targets[0])!.AddPoison(amount);
             yield return s;
@@ -453,7 +526,7 @@ public static class SimEngine
         }
         // Beacon of Hope: half (whole block only) to every other living player; theirs can pass half of
         // that on once (the giver's is held while it gives, and the giver still gets block back).
-        if (p.BeaconOfHope && !p.BeaconGiving && amount / 2 >= 1) r = r.SelectMany(x => ShareBlock(x, who, amount / 2)).ToList();
+        if (p.BeaconOfHope && !p.BeaconGiving && amount / 2 >= 1) r = Then(r, x => ShareBlock(x, who, amount / 2));
         return r;
     }
 
@@ -465,7 +538,7 @@ public static class SimEngine
         {
             if (other == giver || (other >= 0 && s.Teammates[other].Hp <= 0)) continue;
             var o = other;
-            r = r.SelectMany(x => GainBlock(x, half, o < 0 ? "Beacon of Hope" : null, o)).ToList();
+            r = Then(r, x => GainBlock(x, half, o < 0 ? "Beacon of Hope" : null, o));
         }
         return r.Select(x =>
         {
@@ -578,7 +651,9 @@ public static class SimEngine
     /// <summary>The lead-in plays, then this play (the state right after it resolves).</summary>
     public static void ApplyPlayTo(SimState s, IReadOnlyList<SimPlay>? leadIn, SimPlay play, out List<SimState> branches, out bool truncated)
     {
-        var b = new BranchSet(s.Clone());
+        var first = s.Clone();
+        first.Work = new SimWork();
+        var b = new BranchSet(first);
         if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(b, queued);
         ApplyPlay(b, play);
         branches = b.States;
@@ -629,7 +704,20 @@ public static class SimEngine
                     }
                     break;
                 case OrbOp.Kind.EvokeAllTwice:
-                    b.Each(s => EvokeAllTwice(s));
+                    // Front orb first, each evoked twice (then gone). One step per evoke, so identical
+                    // branches merge and the branch cap holds (one step for all of them was 4^16 copies
+                    // with 4 enemies and 8 Lightning orbs).
+                    for (var i = b.States.Max(s => s.P.Orbs.Count); i > 0; i--)
+                    {
+                        b.Each(s => s.P.Orbs.Count == 0 ? new[] { s } : Evoke(s, s.P.Orbs[0]));
+                        b.Each(s =>
+                        {
+                            if (s.P.Orbs.Count == 0) return new[] { s };
+                            var orb = s.P.Orbs[0];
+                            s.P.OwnOrbs().RemoveAt(0);
+                            return Evoke(s, orb);
+                        });
+                    }
                     break;
                 case OrbOp.Kind.Slots:
                     b.Do(s =>
@@ -755,26 +843,6 @@ public static class SimEngine
         b.Do(AllyDeaths); // deaths from its procs
     }
 
-    private static IEnumerable<SimState> EvokeAllTwice(SimState s)
-    {
-        IEnumerable<SimState> states = new[] { s };
-        var count = s.P.Orbs.Count;
-        for (var i = 0; i < count; i++)
-        {
-            states = states.SelectMany<SimState, SimState>(x =>
-            {
-                if (x.P.Orbs.Count == 0) return new[] { x };
-                var orb = x.P.Orbs[0];
-                return Evoke(x, orb).SelectMany(y =>
-                {
-                    y.P.OwnOrbs().RemoveAt(0);
-                    return Evoke(y, orb);
-                }).ToList();
-            }).ToList();
-        }
-        return states;
-    }
-
     // ------------------------------------------------------------------ end of turn
 
     private static void AllEnemies(SimState s, string name, int amount)
@@ -879,11 +947,11 @@ public static class SimEngine
                 if (t.Hp <= 0) return new[] { s };
                 var armed = t.Block <= 0;
                 var r = GainBlock(s, t.Plating, null, tk);
-                r = armed ? r.SelectMany(x => GainBlock(x, x.Teammates[tk].OrichalcumBlock, null, tk)).ToList() : r;
+                r = armed ? Then(r, x => GainBlock(x, x.Teammates[tk].OrichalcumBlock, null, tk)) : r;
                 // Their relics, as yours: Cloak Clasp per card in their hand (its size is on screen), Ripple Basin
                 // when they played no attack this turn.
-                r = r.SelectMany(x => x.Teammates[tk].HandCount > 0 ? GainBlock(x, x.Teammates[tk].HandCount * x.Teammates[tk].CloakClaspPerCard, null, tk) : new[] { x }).ToList();
-                return r.SelectMany(x => x.Teammates[tk].AttacksThisTurn == 0 ? GainBlock(x, x.Teammates[tk].RippleBasinBlock, null, tk) : new[] { x }).ToList();
+                r = Then(r, x => x.Teammates[tk].HandCount > 0 ? GainBlock(x, x.Teammates[tk].HandCount * x.Teammates[tk].CloakClaspPerCard, null, tk) : new[] { x });
+                return Then(r, x => x.Teammates[tk].AttacksThisTurn == 0 ? GainBlock(x, x.Teammates[tk].RippleBasinBlock, null, tk) : new[] { x });
             });
         }
 
@@ -920,7 +988,7 @@ public static class SimEngine
                     }
                     return x;
                 }).ToList();
-                return r.SelectMany(x => x.P.ForgottenSoulDamage > 0 ? HitRandom(x, _ => x.P.ForgottenSoulDamage) : new[] { x }).ToList();
+                return Then(r, x => x.P.ForgottenSoulDamage > 0 ? HitRandom(x, _ => x.P.ForgottenSoulDamage) : new[] { x });
             });
         }
         b.Do(s =>

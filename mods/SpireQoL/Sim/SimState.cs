@@ -278,6 +278,9 @@ public sealed class SimState
     /// </summary>
     public bool FirstTargetOnly;
 
+    /// <summary>A step ran out of branches inside itself (SimEngine.Then): the run is out of branches.</summary>
+    internal bool OutOfBranches;
+
     // ---- results (per branch)
     public int Taken;
     public int OstyTaken;
@@ -358,6 +361,9 @@ public sealed class SimState
     /// </summary>
     internal PlayBaseline? PlayBase;
 
+    /// <summary>The run's work counter (SimEngine.Run sets it; every copy of the state shares it).</summary>
+    internal SimWork? Work;
+
     internal sealed record PlayBaseline(HashSet<int> Alive, HashSet<int> Broken, int BlockGains);
 
     /// <summary>Teammate k, to change: copied for this branch first if it's shared.</summary>
@@ -391,6 +397,7 @@ public sealed class SimState
 
     public SimState Clone()
     {
+        if (Work != null) Work.Copies++;
         var c = (SimState)MemberwiseClone();
         c.P = P.Clone();
         _teammatesShared = true;
@@ -442,4 +449,33 @@ public sealed class SimState
         }
         return h;
     }
+}
+
+/// <summary>
+/// What one simulation costs, the same on every machine (the performance tests limit these, not time).
+/// One run is one thread: plain fields, never shared between runs.
+/// </summary>
+internal sealed class SimWork
+{
+    /// <summary>Steps applied to the branch set (each hit, orb, block gain, the enemy turn).</summary>
+    public int Steps;
+    /// <summary>Branches stepped, summed over steps.</summary>
+    public int Stepped;
+    /// <summary>State copies (most of the cost: every random outcome is a copy).</summary>
+    public int Copies;
+    /// <summary>The most copies one step made.</summary>
+    public int MaxStepCopies;
+    private int _stepStart;
+
+    /// <summary>A new step starts (BranchSet).</summary>
+    public void StartStep()
+    {
+        EndStep();
+        _stepStart = Copies;
+    }
+
+    public void EndStep() => MaxStepCopies = Math.Max(MaxStepCopies, Copies - _stepStart);
+
+    /// <summary>This step has made SimEngine.StepCopyBudget copies: random choices stop branching.</summary>
+    public bool OverBudget => Copies - _stepStart >= SimEngine.StepCopyBudget;
 }

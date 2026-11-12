@@ -340,7 +340,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     // Card simulations run in parallel on worker threads (the simulator is plain C#, no game types):
     // the frame reads the game and builds every card's inputs, starts all their simulations at once,
     // and waits for them (capped at SimWaitCapMs). Results are cached until the state changes.
-    // One simulation must stay under 4 ms on a dev machine (SimPerformanceTests).
+    // One simulation's work is bounded (SimEngine.StepCopyBudget per step) and counted by SimPerformanceTests.
     private const int SimWaitCapMs = 250;
     private readonly Dictionary<string, Task<SimOutcome[]>> _simCache = new();
 

@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.28
+#### Fixed
+- The game could freeze with Shatter in hand and many orbs against several enemies (every orb's two evokes were explored at once; ten Lightning orbs against four enemies never finished).
+- Multiplayer: Beacon of Hope with Juggernaut on several players could stall the game or run out of memory (each shared block gain's Juggernaut hit multiplied the outcomes). Every simulation step now has a fixed work limit; past it, nothing is claimed as guaranteed and damage to you is the worst case, as with too many random outcomes.
+
 ### Spire QoL 0.31.27
 #### Added
 - Teammate Incoming Damage (multiplayer): hovering a teammate shows what they'll take at end of turn, after their block, the same sum as yours, from what you can see (not the cards in their hand).
