@@ -856,6 +856,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 modelLines.Add($"{m.GetType().Name} fired after a random hit or kill (not predictable)");
                 continue;
             }
+            // A simulator tab shows only when the play changes the outcome; what your end of turn sets off anyway
+            // (a Lightning orb's hit stunning a Shriek enemy) gets no tab, though this play set it off first.
+            if (m is PowerModel { Owner.IsEnemy: true } sp && BaselineHasIt(w, sp.GetType().Name, sp.Owner))
+            {
+                modelLines.Add($"{m.GetType().Name} fired on this play, but your end of turn sets it off anyway (no tab by design)");
+                continue;
+            }
             // Cards the play auto-plays at random (The Fool: random cards from your hand) set off what their own
             // plays would: which cards is a roll.
             if (UnpredictedAutoPlay(w, entries, me))
@@ -1027,6 +1034,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (w.PowersBefore.Keys.Any(k => k.Item1 == creature && (acted.Contains(k.Item2) || tabbed.Contains(k.Item2))
                                              && PowerTypeNamed(k.Item2) is { } src
                                              && CodeIndex.Does(src, new[] { "PowerCmd.Remove" }, Array.Empty<string>()))) continue;
+            if (creature.IsEnemy && BaselineHasIt(w, type, creature)) continue;
             if (type == nameof(ArtifactPower) && debuffs) continue;
             if (creature.Powers.FirstOrDefault(p => p.GetType().Name == type) is ITemporaryPower) continue;
             // A death in the play: powers that react to it (Dampen comes off you when its caster dies).
@@ -1048,6 +1056,29 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (now == null || w.PowersBefore == null) return now;
         var impaled = w.PowersBefore.TryGetValue((w.Target, "ImpaledPower"), out var a) && a > 0;
         return impaled ? Sts2State.Var(w.Card, "Cards") : 0;
+    }
+
+    /// <summary>
+    /// The end-of-turn forecast without this play already has this simulator-tab power on <paramref name="enemy"/> going
+    /// off (stunned for Shriek, Plow, Burrowed, Flutter; woken for Asleep), so its tab rule rightly showed nothing.
+    /// </summary>
+    private static bool BaselineHasIt(Window w, string power, Creature enemy)
+    {
+        if (!SimTabSources.Contains(power) || w.Facts?.Sim is not { } sim || !sim.Ids.TryGetValue(enemy, out var id)) return false;
+        try
+        {
+            var baseline = SimEngine.Run(sim.Start);
+            return power switch
+            {
+                nameof(ShriekPower) or nameof(PlowPower) or nameof(BurrowedPower) or nameof(FlutterPower) => baseline.StunnedInAll(id),
+                nameof(AsleepPower) => baseline.UnblockedMax(id) >= 1,
+                _ => false,
+            };
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// <summary>Auto-plays other than a hand choice's pick (random ones: their effects aren't predicted).</summary>
@@ -1103,6 +1134,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Concat(autoPlayed.Select(c => c.GetType()))
             .Concat(drawn.Select(c => c.GetType())).Concat(drawn.Where(c => c.Enchantment != null).Select(c => c.Enchantment!.GetType()))
             .Concat(drawReactors.Select(m => m.GetType()))
+            // Orbs the play may have evoked (channelling into full slots, evoke cards): Plasma's energy.
+            .Concat(entries.OfType<OrbChanneledEntry>().Any() || CodeIndex.Does(w.Card.GetType(), new[] { "OrbCmd.Evoke*" }, Array.Empty<string>()) ? w.FullBefore.Orbs : Enumerable.Empty<Type>())
             .Concat(deathReactors)
             // Your powers a play uses up (Free Card): the costs they lowered go back up.
             .Concat(w.PowersBefore?.Keys.Where(k => k.Item1 == me.Creature && SpentByAnyPlay.Contains(k.Item2)).Select(k => PowerTypeNamed(k.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())

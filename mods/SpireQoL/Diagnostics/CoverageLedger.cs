@@ -382,7 +382,7 @@ internal static partial class CoverageLedger
         ["Vigorous"] = "ignore: AfterCardPlayed disables it after the first play (its bonus is read through the game)",
         // v0.113.0: OnPlay acts on every play of the card (replays too) until AfterCardPlayed disables it
         ["Sown"] = "gap: OnPlay energy, on each play of the card until it finishes (AfterCardPlayed): enchantment energy isn't counted (the play check explains it)",
-        ["Swift"] = "gap: OnPlay draws, on each play of the card until it finishes (AfterCardPlayed): enchantment draws aren't counted (shuffle warning)",
+        ["Swift"] = "covered: OnPlay draws its amount the first time the card is played (AfterCardPlayed disables it): counted in the card's own draws",
         ["Hexed"] = "ignore: clears itself",
     };
 

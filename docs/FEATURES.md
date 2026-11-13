@@ -393,7 +393,7 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ## Death Skull
 
-**What you see:** during your turn, the game's skull (emote wheel) just left of an enemy's HP numbers when it dies before acting if you end your turn now: poison, end-of-turn damage, your orbs and your teammates' (see [Outcome simulator](#outcome-simulator)). When a roll decides it (a random Lightning target with several enemies), the skull carries the chance, e.g. `50%`: each random target equally likely, from the simulator's branches weighted by their share of the rolls. Nothing when the branches run out (the chance is unknown). The card's lethal tab still means "this card is needed for the kill"; this shows the deaths that happen anyway (decision #22).
+**What you see:** during your turn, the game's skull (emote wheel) just left of an enemy's HP numbers (a small gap between them, scaled to the numbers) when it dies before acting if you end your turn now: poison, end-of-turn damage, your orbs and your teammates' (see [Outcome simulator](#outcome-simulator)). When a roll decides it (a random Lightning target with several enemies), the skull carries the chance, e.g. `50%`: each random target equally likely, from the simulator's branches weighted by their share of the rolls. Nothing when the branches run out (the chance is unknown). The card's lethal tab still means "this card is needed for the kill"; this shows the deaths that happen anyway (decision #22).
 
 **Settings:** the `death-skull` switch; **Death chance** (General, on by default) shows or hides the chance (off: only certain deaths).
 

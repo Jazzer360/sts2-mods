@@ -116,7 +116,9 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
         var textLeft = label.HorizontalAlignment == HorizontalAlignment.Center ? (label.Size.X - textWidth) / 2 : 0;
         var min = mark.Root.GetCombinedMinimumSize();
         mark.Root.Size = min;
-        mark.Root.Position = new Vector2(textLeft - min.X - 4, (label.Size.Y - min.Y) / 2);
+        // A gap that scales with the numbers (the label's outline reaches past the measured text).
+        var gap = Math.Max(6f, h * 0.4f);
+        mark.Root.Position = new Vector2(textLeft - min.X - gap, (label.Size.Y - min.Y) / 2);
     }
 
     /// <summary>The HP numbers on a creature's health bar (NHealthBar %HpLabel).</summary>

@@ -464,13 +464,14 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] **Replays and spent bonuses:** Vigor and Gigantification boost one attack; a replayed attack's later plays don't get them (damage is predicted with them for every play), like Stretch for block (fixed in 0.31.33). The other way too, fixed in 0.31.36: a replayed single-target card's later plays get the Vulnerable its first play applied (Break replayed on the Queen: 15, then 23). Still open: Impaled the first play applies (Rapid Shot ×4 with Serrated Arrows hits 2, then 3).
 - [x] 0.31.37: tabs greyed out like a disabled enchantment (the copied tab kept the game's disabled tint on its label and backdrop).
 - [x] 0.31.37 (Fool play test 4): Sown's energy, Cho Ki keeping Stretch on replays, Surrounded facing, The Moon, The Magician, Wheel of Fortune, Ki Chant replays, Wrest's draws, Stock spawns, The Fool's random plays, extra turns in the forecast check; report tags.
+- [x] 0.31.38 (Defect play test): Swift's draws, evokes of orbs channeled in the same play (Voltaic), Plasma energy and end-of-turn-anyway enemy powers in the play check; Death Skull spacing.
 - [ ] **Forecast, unexplained:** Kaiser Crab, Crusher alone after Rocket died: Thrash predicted 22, hit for 18 (turn 11 after Hidden Gem ×2, Second Wind, Wah Symphony). Needs a report with the simulator state.
 - [ ] **The Fool, still open:** Timber's damage to every enemy on a kill aren't counted (lethal can only miss a kill, never claim one); Blossom Shot's Stretch; Epic Retrieval's energy; Motif's draws for the shuffle warning; what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
 - [x] ~~**Wuppy (event relic):** its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). Incoming Damage and the Death Skull count them on you (overstated, never under).~~ (0.31.33)
 - [ ] **Extra turns:** Extra Turn power (and Pael's Eye) give you another turn before the enemies act; the forecast still shows the enemy turn next.
 - [ ] **Enemy Explosive:** when it dies it damages every player (no crossed tab on the kill, not in Incoming Damage).
 - [ ] **End of turn not simulated:** Insatiable Dominion (Dread: damage to you after your end of turn), Simpleton (auto-plays your cheapest card).
-- [ ] **No proc tab yet:** Fertilizer and All Is Well (on creating a Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Swift and Sown enchantment draws and energy aren't counted.
+- [ ] **No proc tab yet:** Fertilizer and All Is Well (on creating a Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Sown's energy isn't counted (Swift's draws are, since 0.31.38).
 - [ ] **Dread mode:** boss stats and moves change in Dread runs (read live from intents); Dominion powers reviewed in the ledger. Queen's Dread opening applies 99 Frail, Weak and Vulnerable.
 
 ---

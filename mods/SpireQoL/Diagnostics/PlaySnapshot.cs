@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Orbs;
 using SpireQoL.Data;
 using Sts2Mods.Core.Game;
 
@@ -25,6 +26,8 @@ internal sealed class PlaySnapshot
     public readonly Dictionary<Creature, (int Hp, int MaxHp)> Creatures = new();
     public readonly Dictionary<CardModel, (PileType Pile, int Cost, bool Upgraded, string Keywords, string Affliction, string Enchantment)> Cards = new(ReferenceEqualityComparer.Instance);
     public readonly Dictionary<RelicModel, (int Display, RelicStatus Status)> Relics = new(ReferenceEqualityComparer.Instance);
+    /// <summary>Your orbs' classes (an orb a play evokes is gone by its end, but its evoke ran: Plasma's energy).</summary>
+    public readonly List<Type> Orbs = new();
 
     public static PlaySnapshot? Take(Player me)
     {
@@ -41,6 +44,7 @@ internal sealed class PlaySnapshot
                 s.Cards[card] = (pile.Type, SafeCost(card), card.IsUpgraded, string.Join(",", card.Keywords.OrderBy(k => k)),
                     card.Affliction?.GetType().Name ?? "", card.Enchantment?.GetType().Name ?? "");
             foreach (var r in me.Relics) s.Relics[r] = (SafeDisplay(r), r.Status);
+            foreach (var o in pcs.OrbQueue?.Orbs ?? Enumerable.Empty<OrbModel>()) s.Orbs.Add(o.GetType());
             return s;
         }
         catch

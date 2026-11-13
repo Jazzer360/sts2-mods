@@ -394,6 +394,9 @@ public sealed class PlayFacts
         var hand = Sts2State.Hand(me);
         var others = hand.Where(c => !ReferenceEquals(c, card)).ToList();
         var draws = CardsDrawn(card, hand.Count) * Math.Max(1, plays);
+        // Swift (enchantment): draws its amount when the card is played, once (Swift.AfterCardPlayed disables it).
+        if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Swift { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } swift)
+            draws += swift.Amount;
         var drawPile = Sts2State.DrawPileCount(me);
         var name = card.GetType().Name;
         var evoked = EvokedOrbs(card, name, me, cs, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
@@ -521,6 +524,15 @@ public sealed class PlayFacts
         if (q == null) return result;
         var queue = q.Orbs.Cast<OrbModel?>().ToList();
         var cap = q.Capacity;
+        // A new orb pushed out by a later channel (Voltaic's Lightning filling every slot) evokes too: one of yours
+        // of the same kind stands in for it when its evoke doesn't depend on the orb itself (Lightning, Frost).
+        var kind = SpireQoL.Sim.SimAdapter.ChannelKind(name);
+        OrbModel? template = kind switch
+        {
+            SpireQoL.Sim.OrbKind.Lightning => q.Orbs.OfType<LightningOrb>().FirstOrDefault(),
+            SpireQoL.Sim.OrbKind.Frost => q.Orbs.OfType<FrostOrb>().FirstOrDefault(),
+            _ => null,
+        };
         void EvokeFront(int times, bool remove)
         {
             if (queue.Count == 0) return;
@@ -543,7 +555,7 @@ public sealed class PlayFacts
             {
                 if (cap <= 0) break;
                 if (queue.Count >= cap) EvokeFront(1, true);
-                queue.Add(null); // the new orb
+                queue.Add(template); // the new orb (null: its evoke isn't counted)
             }
         }
         return result;

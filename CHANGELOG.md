@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.38
+#### Changed
+- The Death Skull sits a little further from the HP numbers.
+#### Fixed
+- Swift's draws count (the Shuffle Warning, draw procs) the first time its card is played.
+- Orbs you channel that get pushed out by later channels in the same play count their evoke (Voltaic filling your slots with Lightning).
+- The play check: a Plasma orb evoked by a channel gives energy; an enemy power your end of turn sets off anyway (a Lightning orb waking the Lagavulin Matriarch or stunning a Shriek enemy) firing on a play with no tab is expected (logs and error reports only).
+
 ### Spire QoL 0.31.37
 #### Added
 - Mismatch and coverage reports are tagged with the card played, the check, the relic or power involved and the encounter, so related reports can be found together.

@@ -100,6 +100,13 @@ public static class SimAdapter
     /// </summary>
     internal static string SimPowerName(Type power) => power.BaseType?.Name == "TemporaryThornsPower" ? nameof(ThornsPower) : power.Name;
 
+    /// <summary>The kind of orb every channel of this card makes, when it's one kind (null: mixed, random or none).</summary>
+    internal static OrbKind? ChannelKind(string card) =>
+        card is nameof(Tempest) or nameof(Voltaic) ? OrbKind.Lightning
+        : Channels.TryGetValue(card, out var kinds) && kinds.Distinct().Count() == 1 ? kinds[0]
+        : RepeatChannels.TryGetValue(card, out var k) && k != OrbKind.Unknown ? k
+        : null;
+
     internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card is nameof(Tempest) or nameof(Voltaic);
 
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
