@@ -4,7 +4,7 @@ namespace SpireQoL.Sim;
 /// What a card play sets off in chains, on plain numbers (no game types, so it's tested offline):
 /// cards exhausted → draws (Dark Embrace, Joss Paper), a Power played → draws (Game Piece), the
 /// play count → draws (Iron Club), Vulnerable applied → draws (Vicious), HP lost → draws (Centennial
-/// Puzzle); then the hand limit, draw blockers, and whether the draws shuffle the discard pile in.
+/// Puzzle), a first melody of the turn → draws (Motif); then the hand limit, draw blockers, and whether the draws shuffle the discard pile in.
 /// PlayFacts fills the inputs from the game; the Shuffle Warning, draw procs and the audit read the
 /// result. Decompile v0.111.0: the sources' hooks, CardPileCmd.DrawInternal and ShuffleIfNecessary.
 /// </summary>
@@ -59,6 +59,11 @@ public static class PlayChain
         /// before your relics' draws (Iron Club, Game Piece) and take hand room first.
         /// </summary>
         public int AddedToHandAfterPlay;
+        /// <summary>
+        /// Cards your powers draw after the play (MotifPower.AfterCardPlayed: its amount per melody the card
+        /// plays first this turn). Counted after the cards your powers add (Calamity), with your relics' draws.
+        /// </summary>
+        public int PowerDrawsAfterPlay;
     }
 
     public readonly record struct DrawResult(int Draws, int Chained, bool Shuffles);
@@ -73,7 +78,7 @@ public static class PlayChain
         if (i.LosesHp) during += i.CentennialPuzzle;
         // After it (relics' AfterCardPlayed): they run after your powers', so cards your powers add to
         // your hand then (Calamity) take room first.
-        var after = 0;
+        var after = i.PowerDrawsAfterPlay;
         if (i.IsPower) after += i.GamePiece * Math.Max(1, i.Plays);
         if (i.IronClubCount >= 0 && i.IronClubEvery > 0)
             after += (i.IronClubCount % i.IronClubEvery + Math.Max(1, i.Plays)) / i.IronClubEvery;
@@ -101,5 +106,24 @@ public static class PlayChain
         var draws = first + Math.Min(Math.Min(after, lateRoom), cards - first);
         var shuffles = i.ShufflesFirst || (draws > pile && i.DiscardPile + i.DiscardedBeforeDraw > 0);
         return new DrawResult(draws, chained, shuffles);
+    }
+
+    /// <summary>
+    /// A card that looks at the top <paramref name="looksAt"/> cards of your draw pile, takes one and discards the rest
+    /// (Ki Chant), shuffling first when the pile is short and the discard pile has cards (KiChant.OnPlay): whether a
+    /// later play of a replay finds the pile short. The first play's own shuffle is PlayFacts.ShufflesFirst.
+    /// </summary>
+    public static bool ShortPileShufflesOnLaterPlay(int drawPile, int discardPile, int looksAt, int plays)
+    {
+        if (plays < 2 || looksAt <= 0) return false;
+        if (drawPile < looksAt && discardPile > 0) return false; // the first play shuffles
+        for (var k = 0; k < plays; k++)
+        {
+            if (k > 0 && drawPile < looksAt && discardPile > 0) return true;
+            var looked = Math.Min(looksAt, drawPile);
+            drawPile -= looked;
+            discardPile += Math.Max(0, looked - 1);
+        }
+        return false;
     }
 }

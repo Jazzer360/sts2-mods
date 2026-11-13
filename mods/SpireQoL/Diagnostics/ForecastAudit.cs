@@ -179,7 +179,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
         var osty = me.Osty;
         var damage = window.OfType<DamageReceivedEntry>().ToList();
-        var actualTaken = damage.Where(d => d.Result.Receiver == me.Creature).Sum(d => d.Result.UnblockedDamage);
+        // A hit that kills you (Fairy in a Bottle, Lizard Tail bring you back) takes only the HP you had left; the
+        // forecast isn't capped by your HP, so the overkill counts too (Creature.LoseHpInternal: OverkillDamage).
+        var actualTaken = damage.Where(d => d.Result.Receiver == me.Creature).Sum(d => d.Result.UnblockedDamage + d.Result.OverkillDamage);
         var actualOsty = osty == null ? 0 : damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
         var actualBlockGain = endOfTurn.OfType<BlockGainedEntry>().Where(b => b.Actor == me.Creature).Sum(b => b.Amount);
 

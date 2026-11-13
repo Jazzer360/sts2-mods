@@ -172,4 +172,56 @@ public class PlayChainTests
         i = new PlayChain.DrawInputs { OwnDraws = 1, HandCount = 9, DrawPile = 6, DiscardPile = 30, IronClubCount = 3, IronClubEvery = 4, AddedToHandAfterPlay = 1 };
         Assert.Equal(1, PlayChain.Resolve(i).Draws);
     }
+
+    [Fact]
+    public void MotifDrawsAfterTheFirstMelodyOfEachKindAndCanShuffle()
+    {
+        // MotifPower.AfterCardPlayed: Amount cards per melody (Wah, Cho, Ki) the card plays first this turn.
+        // Auto-report: Cho Firm (first Cho, Motif 1) with an empty draw pile and 11 in discard: 1 draw, shuffled in.
+        var i = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 0, DiscardPile = 11, PowerDrawsAfterPlay = 1 };
+        var r = PlayChain.Resolve(i);
+        Assert.Equal(1, r.Draws);
+        Assert.Equal(1, r.Chained);
+        Assert.True(r.Shuffles);
+
+        // Wah Cho Ki after a Cho this turn: its own 2 draws, then Motif's 2 (Wah, Ki) run past a draw pile of 3.
+        i = new PlayChain.DrawInputs { OwnDraws = 2, HandCount = 5, DrawPile = 3, DiscardPile = 11, PowerDrawsAfterPlay = 2 };
+        r = PlayChain.Resolve(i);
+        Assert.Equal(4, r.Draws);
+        Assert.True(r.Shuffles);
+
+        // Wah Ki with a full hand: it leaves one slot, so Motif's 2 draws stop at 1 (still shuffling the empty pile in).
+        i = new PlayChain.DrawInputs { HandCount = 10, DrawPile = 0, DiscardPile = 17, PowerDrawsAfterPlay = 2 };
+        r = PlayChain.Resolve(i);
+        Assert.Equal(1, r.Draws);
+        Assert.True(r.Shuffles);
+
+        // Enough cards in the draw pile: no shuffle.
+        i = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 2, DiscardPile = 11, PowerDrawsAfterPlay = 2 };
+        Assert.Equal(2, PlayChain.Resolve(i).Draws);
+        Assert.False(PlayChain.Resolve(i).Shuffles);
+
+        // No Draw blocks them.
+        i.Blocked = true;
+        Assert.Equal(0, PlayChain.Resolve(i).Draws);
+    }
+
+    [Fact]
+    public void KiChantReplayedShufflesWhenALaterPlayFindsTheDrawPileShort()
+    {
+        // KiChant.OnPlay: looks at the top 4, takes 1, discards the rest; a draw pile short of 4 is shuffled
+        // (with the discard pile holding cards). Auto-report: Ki Chant+ played 4 times (draw pile 14, discard 2):
+        // 14 → 10 → 6 → 2, so the fourth play shuffles.
+        Assert.True(PlayChain.ShortPileShufflesOnLaterPlay(drawPile: 14, discardPile: 2, looksAt: 4, plays: 4));
+        // Three plays leave 2 behind without shuffling.
+        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(14, 2, 4, 3));
+        // One play: only the first play's check (ShufflesFirst) applies.
+        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(3, 5, 4, 1));
+        // The first play shuffles already: not a later play's shuffle.
+        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(3, 5, 4, 2));
+        // Empty discard pile: the first play's 3 discards fill it, so the second play still shuffles.
+        Assert.True(PlayChain.ShortPileShufflesOnLaterPlay(6, 0, 4, 2));
+        // Looking at a single card discards nothing: with no discard pile, nothing to shuffle in.
+        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(1, 0, 1, 3));
+    }
 }

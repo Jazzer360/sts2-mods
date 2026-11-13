@@ -36,6 +36,19 @@ public class SimMidPlayTests
     }
 
     [Fact]
+    public void AReplayedShotHitsHarderOnceItsFirstPlayImpaledTheTarget()
+    {
+        // Auto-report: Rapid Shot played 4 times (3 hits each) at a Rocket at 82 that isn't Impaled, with Serrated
+        // Arrows 50 and Weak. The first play hits for 2 and then impales it (ArrowCmd.ShootArrowAtTarget: the attack,
+        // then ImpaleTarget), so the later plays' hits get SerratedArrowsPower's +50%: 3. 82 - 6 - 27 = 49.
+        var s = new SimState { Enemies = { E(1, 82) } };
+        var play = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Plays = 4, Hits = 12, HitDamage = { [1] = 2 }, HitDamageLater = { [1] = (3, 3) } };
+        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
+        Assert.Single(branches);
+        Assert.Equal(49, branches[0].Enemy(1)!.Hp);
+    }
+
+    [Fact]
     public void AnAllEnemyAttackCountsEachEnemyOnItsOwn()
     {
         var s = new SimState { Enemies = { E(1, 50), E(2, 50) } };

@@ -321,7 +321,7 @@ internal static partial class CoverageLedger
         ["LagavulinMatriarchDominionPower"] = "ignore: AfterSideTurnEnd lowers its owner's Strength and Dexterity after your end of turn (block already gained) and goes",
         ["LostLutePower"] = "gap: AfterCardPlayed auto-plays cards from the top of your draw pile on your first Wah, Cho and Ki each turn: proc tab; what those cards do is hidden (not simulated)",
         ["LullabyPower"] = "covered: AfterCardPlayed gains block once per turn on the card that completes Wah, Cho and Ki (proc block: simulator)",
-        ["MotifPower"] = "gap: AfterCardPlayed draws on your first Wah, Cho and Ki each turn: proc tab; the draws aren't counted for the shuffle warning",
+        ["MotifPower"] = "covered: AfterCardPlayed draws its amount per melody (Wah, Cho, Ki) the card plays first this turn: proc tab; the draws count for the Shuffle Warning and draw procs (PlayChain)",
         ["QuietusPower"] = "ignore: ModifyDamageMultiplicative multiplies your next arrow attack (read through the game's damage hooks); AfterArrowShot breaks shot arrows on impact; BeforeAttack/AfterAttack/AfterSideTurnEnd remove it",
         ["ShowOffPower"] = "ignore: AfterDeath raises Show Off's Aim when an enemy dies (read from the card on its next play); AfterSideTurnEnd removes it",
         ["SimpletonPower"] = "gap: AfterAutoPostPlayPhaseEntered auto-plays your cheapest card(s) at the end of your turn (a random one among ties): not simulated",

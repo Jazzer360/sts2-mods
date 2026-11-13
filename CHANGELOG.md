@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.40
+#### Fixed
+- Motif's draws (your first Wah, Cho and Ki each turn) count for the Shuffle Warning and draw procs, so a melody card that draws past your draw pile is marked.
+- Ki Chant played several times shuffles when a later play finds your draw pile short; that shuffle counts for shuffle procs.
+- A replayed shot at an enemy that isn't Impaled hits harder on its later plays with Serrated Arrows (its first play impales it): Rapid Shot played 4 times now counts 2, then 3 a hit (lethal tab, kills, Incoming Damage).
+- The forecast check counts the full hit when an enemy's attack kills you and Fairy in a Bottle brings you back (logs and error reports only).
+
 ### Spire QoL 0.31.39
 #### Fixed
 - Repeat Shot hits once per energy (X): with no energy it deals nothing, so it no longer shows lethal (its Nunchaku, Kunai and Shuriken tabs still count it as an attack played).

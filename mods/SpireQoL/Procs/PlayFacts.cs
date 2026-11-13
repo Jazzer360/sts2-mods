@@ -70,7 +70,7 @@ public sealed class PlayFacts
     /// Draws your powers and relics add because of this play (CardPileCmd.Draw in their hooks):
     /// Dark Embrace per card exhausted, Joss Paper on reaching its exhaust count, Game Piece on a
     /// Power, Iron Club on completing its count, Vicious per Vulnerable you apply, Centennial Puzzle
-    /// on first HP loss. Draws that depend on which card is drawn (Pagestorm, Iteration) aren't
+    /// on first HP loss, Motif on your first Wah, Cho and Ki each turn. Draws that depend on which card is drawn (Pagestorm, Iteration) aren't
     /// predictable (the draw order is hidden) and aren't counted.
     /// </summary>
     public int ChainedDraws { get; private set; }
@@ -237,7 +237,39 @@ public sealed class PlayFacts
     /// Hits whose damage changes partway through the play (After = the hits before the change, Damage = each
     /// later hit); null when nothing changes. See ImpaledLaterHitDamage and VulnerableLaterHitDamage.
     /// </summary>
-    public (int After, int Damage)? LaterHitDamage(Creature enemy) => ImpaledLaterHitDamage(enemy) ?? VulnerableLaterHitDamage(enemy);
+    public (int After, int Damage)? LaterHitDamage(Creature enemy)
+        => ImpaledLaterHitDamage(enemy) ?? ImpaledByReplayHitDamage(enemy) ?? VulnerableLaterHitDamage(enemy);
+
+    /// <summary>
+    /// A replayed shot at an enemy that isn't Impaled hits harder on its later plays: the first play's attack lands,
+    /// then its arrow impales the target (ArrowCmd.ImpaleTarget), so Serrated Arrows (SerratedArrowsPower, your powered
+    /// hits on an Impaled enemy) counts from the second play on. Only with an arrow for each of those plays, at most 3
+    /// hits a play (each play's new arrow keeps it Impaled while the counter frees older ones: ImpaledPower), and no
+    /// Quietus (its arrows are destroyed once they impale).
+    /// </summary>
+    private (int After, int Damage)? ImpaledByReplayHitDamage(Creature enemy)
+    {
+        try
+        {
+            if (Plays < 2 || Card.TargetType != TargetType.AnyEnemy || !Fool.IsShot(Card) || Fool.IsImpaled(enemy)) return null;
+            if (Fool.ArrowsAvailable(Me) < Plays || Me.Creature.Powers.Any(p => p.GetType().Name == "QuietusPower")) return null;
+            var factor = 1m;
+            foreach (var p in Me.Creature.Powers.Where(p => p.GetType().Name == "SerratedArrowsPower")) factor *= 1m + p.Amount / 100m;
+            if (factor == 1m) return null;
+            var perPlay = HitsOn(enemy) / Plays;
+            if (perPlay <= 0 || perPlay > 3) return null;
+            var v = RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.Additive | MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.Multiplicative, out var props);
+            if (!MegaCrit.Sts2.Core.ValueProps.ValuePropExtensions.IsPoweredAttack(props)) return null;
+            var capped = RawDamagePerHit(enemy);
+            var adjusted = v * factor;
+            if (capped < v) adjusted = Math.Min(adjusted, capped);
+            return (perPlay, Math.Max(0, (int)adjusted));
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// A replayed single-target card that makes its target Vulnerable (Break with Glam: it hits, then applies
@@ -455,7 +487,7 @@ public sealed class PlayFacts
     /// <summary>
     /// Total draws (own + chained), the hand limit, draw blockers, and whether they shuffle: the
     /// game's numbers for PlayChain.Resolve (pure, tested offline). Sources read here: Dark Embrace,
-    /// Vicious, Joss Paper, Game Piece, Iron Club, Centennial Puzzle; No Draw and Fiddle block draws.
+    /// Vicious, Joss Paper, Game Piece, Iron Club, Centennial Puzzle, Motif; No Draw and Fiddle block draws.
     /// </summary>
     private void ResolveDraws(int handCount, int drawPile, bool fromDrawPile)
     {
@@ -475,6 +507,10 @@ public sealed class PlayFacts
             ShufflesFirst = ShufflesFirst(Card),
             // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
             AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
+            // Motif draws its amount per melody (Wah, Cho, Ki) this card plays first this turn, once (a replay's
+            // later plays aren't first).
+            PowerDrawsAfterPlay = (me.Creature.Powers.FirstOrDefault(p => p.GetType().Name == "MotifPower")?.Amount ?? 0)
+                                  * Fool.FirstMelodies(Card, me).Count(),
             VulnerableLandings = DebuffsLandingTotal(t => t == typeof(VulnerablePower)),
             LosesHp = HpLoss > 0,
             Blocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(r => r is Fiddle),
@@ -501,8 +537,11 @@ public sealed class PlayFacts
         DrawsBlocked = i.Blocked;
         ChainedDraws = result.Chained;
         Draws = result.Draws;
-        Shuffles = result.Shuffles;
-        ShufflesItself = i.ShufflesFirst;
+        // Ki Chant replayed: a later play can find the draw pile short and shuffle (its own text, like its first play's).
+        var laterShuffle = ShuffleWhenShortCards.Contains(Card.GetType().Name)
+                           && PlayChain.ShortPileShufflesOnLaterPlay(drawPile, i.DiscardPile, Sts2State.Var(Card, "Cards", 3), Math.Max(1, Plays));
+        Shuffles = result.Shuffles || laterShuffle;
+        ShufflesItself = i.ShufflesFirst || laterShuffle;
         // Biiig Hug puts a Soot (a status) into your draw pile on the shuffle: a created status.
         if (Shuffles && me.Relics.Any(r => r is BiiigHug))
         {
