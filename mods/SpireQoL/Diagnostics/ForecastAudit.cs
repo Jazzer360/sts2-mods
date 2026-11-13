@@ -170,6 +170,13 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (!sawEnemy) endOfTurn.Add(e);
         }
 
+        // No enemy turn came (an extra turn: The Hanged Man's ExtraTurnPower.ShouldTakeExtraTurn): nothing to compare.
+        if (!sawEnemy)
+        {
+            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (no enemy turn followed: an extra turn)");
+            return;
+        }
+
         var osty = me.Osty;
         var damage = window.OfType<DamageReceivedEntry>().ToList();
         var actualTaken = damage.Where(d => d.Result.Receiver == me.Creature).Sum(d => d.Result.UnblockedDamage);
@@ -247,7 +254,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var fp = monster != null ? new[] { kind, encounter, monster } : new[] { kind, encounter };
             reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", fp,
                 $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}\n\nSimulator, per enemy (over {f.Outcome.Branches.Count} branch(es){(f.Outcome.Truncated ? ", truncated" : "")}):\n{prediction}",
-                new Dictionary<string, string> { ["audit_window"] = fullWindow, ["sim_state"] = f.State.ToJson() });
+                new Dictionary<string, string> { ["audit_window"] = fullWindow, ["sim_state"] = f.State.ToJson() },
+                new Dictionary<string, string> { ["check"] = kind, ["encounter"] = encounter, ["monster"] = monster ?? "" });
         }
     }
 

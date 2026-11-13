@@ -123,6 +123,11 @@ internal static class CardCoverage
             issues.Add("channels orbs (not counted for Metronome)");
         if (Calls("CreatureCmd", "GainBlock") && None(c => PlayFacts.BlockGainCount(c, name, others)))
             issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");
+        // A block card that applies Stretch keeps it for a replay's later plays (Cho Ki); the simulator spends it otherwise.
+        if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !SimAdapter.KeepsStretchCards.Contains(name))
+            issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
+        if (Calls("CardCmd", "DiscardAndDraw") && !PlayFacts.DiscardThenDrawCards.Contains(name))
+            issues.Add("discards your hand, then draws (the hand limit isn't counted after the discard)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
         // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.

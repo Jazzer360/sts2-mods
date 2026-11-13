@@ -116,7 +116,10 @@ public sealed class ErrorReporter
     /// A prediction that didn't match what the game did (an audit mismatch). The fingerprint
     /// groups repeats into one issue; keep it free of amounts so the same bug groups together.
     /// </summary>
-    public void Mismatch(string audit, string title, IEnumerable<string> fingerprint, string details, IReadOnlyDictionary<string, string>? extra = null)
+    /// <param name="tags">Searchable tags (what was played, which check, which source, the encounter): one issue
+    /// groups by its fingerprint, and tags find every issue about the same card or source across groups.</param>
+    public void Mismatch(string audit, string title, IEnumerable<string> fingerprint, string details, IReadOnlyDictionary<string, string>? extra = null,
+        IReadOnlyDictionary<string, string>? tags = null)
     {
         Send(new[] { "mismatch", audit }.Concat(fingerprint).ToArray(), evt =>
         {
@@ -125,6 +128,11 @@ public sealed class ErrorReporter
             evt.SetTag("kind", "mismatch");
             evt.SetTag("audit", audit);
             evt.SetExtra("details", details);
+            if (tags != null)
+            {
+                foreach (var (k, v) in tags)
+                    if (!string.IsNullOrWhiteSpace(v)) evt.SetTag(k, v.Length <= 200 ? v : v[..197] + "...");
+            }
             if (extra != null)
             {
                 foreach (var (k, v) in extra) evt.SetExtra(k, v);

@@ -412,7 +412,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
   - [ ] SoulboundPower: AfterCardGeneratedForCombat adds Souls when you create Souls (created-card counts)
   - [ ] StampedePower: AfterAutoPostPlayPhaseEntered auto-plays random Attacks at the end of your turn (end-of-turn damage not simulated; since 0.31.35 the forecast check skips a turn where yours fired)
   - [ ] StockPower: AfterDeath spawns another Axebot (the fight isn't over when it dies)
-  - [ ] SurroundedPower: BeforeCardPlayed turns you to face the target before the hit (back-attack damage may change)
+  - [x] SurroundedPower: covered in 0.31.36 (intents after a targeted play)
   - [ ] ThunderPower: AfterOrbEvoked damages Lightning's targets again; not simulated
   - [ ] HowlFromBeyond: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn damage not simulated)
   - [ ] IAmInvincible: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn block not simulated)
@@ -461,8 +461,10 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.31.33 (third Fool play test): Wuppy in the simulator (yours), Stretch on a replay's first play only, Nail's and arrowless shots' debuffs, play-check fixes for Vigor, Gigantification and Tender.
 - [x] 0.31.34: forecast check counts an enemy your Thorns kills mid-attack as having acted; card scan fixed for the game's template cards (Wrest, Cho Firm, Ki Chant, Florescence), target-dependent draws (Ki Hop, Wrest) and exhausts by kind (Florescence, Growth); relic check ignores model-copy methods (Yummy Cookie).
 - [x] 0.31.36: a replayed single-target card that makes its target Vulnerable (Break) hits harder on its later plays (HitDamageLater); the play check reads Razor Tooth from the played card's upgrade (the relic never flashes).
-- [ ] **Replays and spent bonuses:** Vigor and Gigantification boost one attack; a replayed attack's later plays don't get them (damage is predicted with them for every play), like Stretch for block (fixed in 0.31.33). The other way too, fixed in 0.31.36: a replayed single-target card's later plays get the Vulnerable its first play applied (Break replayed on the Queen: 15, then 23).
+- [ ] **Replays and spent bonuses:** Vigor and Gigantification boost one attack; a replayed attack's later plays don't get them (damage is predicted with them for every play), like Stretch for block (fixed in 0.31.33). The other way too, fixed in 0.31.36: a replayed single-target card's later plays get the Vulnerable its first play applied (Break replayed on the Queen: 15, then 23). Still open: Impaled the first play applies (Rapid Shot ×4 with Serrated Arrows hits 2, then 3).
 - [x] 0.31.37: tabs greyed out like a disabled enchantment (the copied tab kept the game's disabled tint on its label and backdrop).
+- [x] 0.31.37 (Fool play test 4): Sown's energy, Cho Ki keeping Stretch on replays, Surrounded facing, The Moon, The Magician, Wheel of Fortune, Ki Chant replays, Wrest's draws, Stock spawns, The Fool's random plays, extra turns in the forecast check; report tags.
+- [ ] **Forecast, unexplained:** Kaiser Crab, Crusher alone after Rocket died: Thrash predicted 22, hit for 18 (turn 11 after Hidden Gem ×2, Second Wind, Wah Symphony). Needs a report with the simulator state.
 - [ ] **The Fool, still open:** Timber's damage to every enemy on a kill aren't counted (lethal can only miss a kill, never claim one); Blossom Shot's Stretch; Epic Retrieval's energy; Motif's draws for the shuffle warning; what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
 - [x] ~~**Wuppy (event relic):** its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). Incoming Damage and the Death Skull count them on you (overstated, never under).~~ (0.31.33)
 - [ ] **Extra turns:** Extra Turn power (and Pael's Eye) give you another turn before the enemies act; the forecast still shows the enemy turn next.

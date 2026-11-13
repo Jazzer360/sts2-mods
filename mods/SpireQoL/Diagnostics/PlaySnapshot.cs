@@ -101,12 +101,14 @@ internal sealed class PlaySnapshot
         // Energy and stars: what the history shows spent is the card's cost.
         var spent = entries.OfType<EnergySpentEntry>().Where(e => e.Actor == me.Creature).Sum(e => e.Amount);
         var energy = after.Energy - before.Energy + spent;
-        if (energy > 0) Check(EnergyGain, $"+{energy}");
-        if (energy < 0) Check(EnergyLoss, $"{energy}");
+        // The played card's own enchantment acts in its play (Sown: energy on each play until the card finishes).
+        var enchantment = played.Enchantment?.GetType();
+        if (energy > 0) Check(EnergyGain, $"+{energy}", enchantment);
+        if (energy < 0) Check(EnergyLoss, $"{energy}", enchantment);
         var starsSpent = entries.OfType<StarsModifiedEntry>().Where(e => e.Actor == me.Creature && e.Amount < 0).Sum(e => -e.Amount);
         var stars = after.Stars - before.Stars + starsSpent;
-        if (stars > 0) Check(StarGain, $"+{stars}");
-        if (stars < 0) Check(StarLoss, $"{stars}");
+        if (stars > 0) Check(StarGain, $"+{stars}", enchantment);
+        if (stars < 0) Check(StarLoss, $"{stars}", enchantment);
         if (after.Gold != before.Gold) Check(GoldChange, $"{after.Gold - before.Gold:+#;-#;0}");
 
         // HP gained and max HP, on any creature alive before and after.

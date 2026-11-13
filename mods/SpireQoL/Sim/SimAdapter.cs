@@ -57,7 +57,7 @@ public static class SimAdapter
     internal static int SlotChange(CardModel card, string name) => name switch
     {
         nameof(BulkUp) => -Sts2State.Var(card, "OrbSlots", 1),
-        nameof(Capacitor) or nameof(Modded) => Sts2State.Var(card, "Repeat", 1),
+        nameof(Capacitor) or nameof(Modded) or "TheMagician" => Sts2State.Var(card, "Repeat", 1),
         _ => 0,
     };
 
@@ -85,6 +85,12 @@ public static class SimAdapter
         return 0;
     }
 
+    /// <summary>
+    /// Block cards that put back the Stretch they use (Cho Ki: applies the Stretch it had when played, before the play
+    /// spends it), so a replay's later plays get Stretch too (v0.113.0). The card scan flags a new one.
+    /// </summary>
+    internal static readonly HashSet<string> KeepsStretchCards = new() { "ChoKi" };
+
     /// <summary>Cards whose play kills your Osty (CreatureCmd.Kill on Owner.Osty; decompile v0.111.0).</summary>
     internal static readonly HashSet<string> KillsOstyCards = new() { nameof(Sacrifice), nameof(BoneShards) };
 
@@ -101,6 +107,8 @@ public static class SimAdapter
     {
         [nameof(ConsumingShadow)] = OrbKind.Dark, [nameof(Hibernate)] = OrbKind.Frost, [nameof(IceLance)] = OrbKind.Frost,
         [nameof(Refract)] = OrbKind.Glass, [nameof(Chaos)] = OrbKind.Unknown,
+        ["TheMagician"] = OrbKind.Unknown, // random orbs (v0.113.0), after adding as many slots
+
     };
 
     /// <summary>
@@ -484,7 +492,7 @@ public static class SimAdapter
             // Stretch (v0.113.0) boosts one card play's block, then it's spent: a replay's later plays gain without it.
             // Its bonus is additive, so the game's block math on (Block - Stretch) gives the block without it.
             var stretch = me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
-            if (stretch > 0 && plays > 1 && name is not (nameof(Fisticuffs) or nameof(Entrench)) && card.DynamicVars.ContainsKey("Block"))
+            if (stretch > 0 && plays > 1 && name is not (nameof(Fisticuffs) or nameof(Entrench)) && !KeepsStretchCards.Contains(name) && card.DynamicVars.ContainsKey("Block"))
             {
                 var perPlay = blockGains / plays;
                 var without = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, Sts2State.Var(card, "Block") - stretch,
@@ -638,6 +646,18 @@ public static class SimAdapter
             ? cs.Enemies.Where(x => x.IsAlive).Sum(x => x.GetPower<VitalSparkPower>()?.Amount ?? 0) * plays
             : 0;
         var strengthTarget = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
+        //  - Surrounded (Kaiser Crab): a card aimed at the crab behind you turns you to face it
+        //    (SurroundedPower.BeforeCardPlayed), and the one now behind you hits 50% harder
+        //    (ModifyDamageMultiplicative, on you only).
+        var surrounded = me.Creature.GetPower<SurroundedPower>();
+        var facing = surrounded?.Facing;
+        if (surrounded != null && strengthTarget != null)
+        {
+            if (facing == SurroundedPower.Direction.Right && strengthTarget.HasPower<BackAttackLeftPower>()) facing = SurroundedPower.Direction.Left;
+            else if (facing == SurroundedPower.Direction.Left && strengthTarget.HasPower<BackAttackRightPower>()) facing = SurroundedPower.Direction.Right;
+        }
+        bool Behind(Creature e, SurroundedPower.Direction? d) => d == SurroundedPower.Direction.Right ? e.HasPower<BackAttackLeftPower>()
+            : d == SurroundedPower.Direction.Left && e.HasPower<BackAttackRightPower>();
         foreach (var (e, id) in ids)
         {
             if (!e.IsAlive) continue;
@@ -652,8 +672,11 @@ public static class SimAdapter
             // (MonarchsGazeStrengthDownPower). Random-target attacks are left out (which enemy is a roll).
             if (gaze > 0 && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))
                 strength -= gaze * f.HitsOn(e);
-            if (!weak && !halved && strength == 0 && tainted == 0) continue;
-            if (AdjustedHits(e, me, cs, strength + tainted, weak, halved ? 0.5m : 1m) is { } hits) play.SetHits[id] = hits;
+            var wasBehind = surrounded != null && Behind(e, surrounded.Facing);
+            var nowBehind = surrounded != null && Behind(e, facing);
+            if (!weak && !halved && strength == 0 && tainted == 0 && wasBehind == nowBehind) continue;
+            var turn = (halved ? 0.5m : 1m) * (nowBehind && !wasBehind ? 1.5m : 1m);
+            if (AdjustedHits(e, me, cs, strength + tainted, weak, turn, divisor: wasBehind && !nowBehind ? 1.5m : 1m) is { } hits) play.SetHits[id] = hits;
             // Teammates (same order as Build): Weak and Strength change their hits too; Colossus only protects you.
             if (!weak && strength == 0) continue;
             var mates = Teammates(me, cs);
@@ -677,7 +700,8 @@ public static class SimAdapter
     /// cap. Null when the intent can't be read.
     /// </summary>
     /// <param name="target">The player hit (a teammate); you when null.</param>
-    private static List<int>? AdjustedHits(Creature e, Player me, ICombatState cs, int strength, bool weak, decimal multiplier = 1m, Player? target = null)
+    /// <param name="divisor">Divides the game's current math (Surrounded: no longer behind you takes its 1.5 back out, exactly).</param>
+    private static List<int>? AdjustedHits(Creature e, Player me, ICombatState cs, int strength, bool weak, decimal multiplier = 1m, Player? target = null, decimal divisor = 1m)
     {
         try
         {
@@ -699,7 +723,7 @@ public static class SimAdapter
                     ModifyDamageHookType.Additive | ModifyDamageHookType.Multiplicative, CardPreviewMode.None, out _);
                 var capped = Hook.ModifyDamage(me.RunState, cs, who.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
                     ModifyDamageHookType.All, CardPreviewMode.None, out _);
-                var adjusted = v * m;
+                var adjusted = v / divisor * m;
                 if (capped < v) adjusted = Math.Min(adjusted, capped);
                 var perHit = Math.Max(0, (int)adjusted);
                 for (var i = 0; i < Math.Max(1, attack.Repeats); i++) hits.Add(perHit);

@@ -276,7 +276,7 @@ internal static partial class CoverageLedger
         ["SubroutinePower"] = "covered: AfterCardPlayed energy on Powers (proc tab)",
         ["SuckPower"] = "ignore: AfterAttack Strength after its own attack (later attacks)",
         ["SurprisePower"] = "covered: AfterDeath effect (crossed kill tab from the simulator)",
-        ["SurroundedPower"] = "gap: BeforeCardPlayed turns you to face the target before the hit (back-attack damage may change)",
+        ["SurroundedPower"] = "covered: BeforeCardPlayed turns you to face a back-attacking target; ModifyDamageMultiplicative: the one behind you hits 50% harder (intents after your targeted play; potions and deaths aren't predicted)",
         ["SwipePower"] = "ignore: BeforeDeath returns a stolen card",
         ["SwordSagePower"] = "covered: Sovereign Blade replays (double-play row, Sovereign Blade tab)",
         ["TaintedPower"] = "ignore: AfterSideTurnEnd removes itself",
@@ -381,7 +381,7 @@ internal static partial class CoverageLedger
         ["Slither"] = "ignore: AfterCardDrawn random cost on draw (costs read live)",
         ["Vigorous"] = "ignore: AfterCardPlayed disables it after the first play (its bonus is read through the game)",
         // v0.113.0: OnPlay acts on every play of the card (replays too) until AfterCardPlayed disables it
-        ["Sown"] = "gap: OnPlay energy, on each play of the card until it finishes (AfterCardPlayed): enchantment energy isn't counted",
+        ["Sown"] = "gap: OnPlay energy, on each play of the card until it finishes (AfterCardPlayed): enchantment energy isn't counted (the play check explains it)",
         ["Swift"] = "gap: OnPlay draws, on each play of the card until it finishes (AfterCardPlayed): enchantment draws aren't counted (shuffle warning)",
         ["Hexed"] = "ignore: clears itself",
     };
@@ -627,6 +627,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         ModEntry.Log.Warn($"[coverage] unexpected in this fight: {type} ({kind}): {details}");
         Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("coverage", $"Coverage: {type} ({kind})", new[] { "coverage", kind, type },
             $"{type} showed up in a fight. {details}\nGame {CoverageLedger.SafeGameVersion()}, ledger {CoverageLedger.LedgerGameVersion}. " +
-            "Review it against the decompile: add a rule, or a reason in CoverageLedger.Reviewed.");
+            "Review it against the decompile: add a rule, or a reason in CoverageLedger.Reviewed.",
+            tags: new Dictionary<string, string> { ["check"] = kind, ["source"] = type });
     }
 }

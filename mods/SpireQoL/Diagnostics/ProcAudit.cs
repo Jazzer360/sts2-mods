@@ -776,13 +776,20 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (w.After != null) extra["sim_state_after"] = w.After.ToJson();
             }
             var lag = w.Lag < 0 ? "never seen in hand" : $"{w.Lag} frame(s)";
+            // Tags: the card, the check, and the source the issue names (a relic or power, or the candidates).
+            var source = fp.Length > 1 && fp[1] != card ? fp[1] : "";
+            var tags = new Dictionary<string, string>
+            {
+                ["card"] = card, ["check"] = kind, ["source"] = source, ["effect"] = kind == "unexplained" ? effect : "",
+                ["encounter"] = Sts2State.Combat?.Encounter?.GetType().Name ?? "",
+            };
             reporter.Mismatch("proc", $"Proc audit: {issue} (played {card})", fp,
                 $"Played {w.CardName} ({card}).\nIssue: {issue}\nAll issues this play: {string.Join("; ", issues)}\nTabs before the play: {tabs}" +
                 $"\nFrom the card's last frame in hand to its play starting: {lag}" +
                 $"\nExpected from the card itself: {(w.Facts != null ? Snapshot.FactsLine(w.Facts) : "no facts")}" +
                 $"\nTabs hidden by settings: {Hidden(w)}" +
                 $"\nPlay: {windowSize} history entries from its action (span {w.From}..{w.To}), play started at {w.Start}; shuffles {w.Shuffles}",
-                extra);
+                extra, tags);
         }
     }
 
@@ -847,6 +854,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (causedByRandom)
             {
                 modelLines.Add($"{m.GetType().Name} fired after a random hit or kill (not predictable)");
+                continue;
+            }
+            // Cards the play auto-plays at random (The Fool: random cards from your hand) set off what their own
+            // plays would: which cards is a roll.
+            if (UnpredictedAutoPlay(w, entries, me))
+            {
+                modelLines.Add($"{m.GetType().Name} fired during a random auto-play (not predictable)");
                 continue;
             }
             if (DrawReactive.Contains(m.GetType().Name) && entries.OfType<CardDrawnEntry>().Any(d => !d.FromHandDraw && d.Card.Owner == me))
@@ -927,7 +941,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
         // A card whose draws depend on its target (Ki Hop, Wrest): what it draws at the target it was played at.
         var expectedDraws = f == null ? 0 : f.Draws;
-        if (f != null && w.Target != null && PlayFacts.TargetDraws(w.Card, w.Target) is { } td)
+        if (f != null && w.Target != null && TargetDrawsBefore(w) is { } td)
             expectedDraws = Math.Max(0, f.Draws - f.OwnDraws + td * f.Plays);
         var exhausts = entries.OfType<CardExhaustedEntry>().Count(d => d.Card.Owner == me);
         var discards = entries.OfType<CardDiscardedEntry>().Count(d => d.Card.Owner == me);
@@ -957,6 +971,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var foreign = entries.OfType<PowerReceivedEntry>()
             .Where(p => p.Amount > 0 && !own.Contains(p.Power.GetType()) && p.Power is not ITemporaryPower)
             .Where(p => !(p.Actor.IsEnemy && p.Applier is { IsEnemy: true })) // enemies acting on each other (Heist)
+            // An enemy that comes in as another dies, set up with its powers by no one (StockPower.AfterDeath spawns the
+            // next Axebot and gives it Stock).
+            .Where(p => !(p.Actor.IsEnemy && p.Applier == null && DiedInPlay(entries)))
             .Select(p => p.Power.GetType().Name)
             .Distinct()
             .ToList();
@@ -1019,6 +1036,20 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
+    /// <summary>
+    /// What a target-dependent draw card (Ki Hop, Wrest) draws at its target, judged from the target's powers before
+    /// the play: Wrest pulls every arrow out before it draws, so after the play the target is never Impaled.
+    /// (Wrest needs your own arrow; before the play only "Impaled" is recorded, so a teammate's arrow counts too.)
+    /// </summary>
+    private static int? TargetDrawsBefore(Window w)
+    {
+        if (w.Target == null) return null;
+        var now = PlayFacts.TargetDraws(w.Card, w.Target);
+        if (now == null || w.PowersBefore == null) return now;
+        var impaled = w.PowersBefore.TryGetValue((w.Target, "ImpaledPower"), out var a) && a > 0;
+        return impaled ? Sts2State.Var(w.Card, "Cards") : 0;
+    }
+
     /// <summary>Auto-plays other than a hand choice's pick (random ones: their effects aren't predicted).</summary>
     private static bool UnpredictedAutoPlay(Window w, List<CombatHistoryEntry> entries, Player me)
         => entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me && !ReferenceEquals(e.CardPlay.Card, w.Chosen));
@@ -1078,6 +1109,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Distinct().ToList();
         var tracked = new HashSet<string>(tabbed);
         foreach (var s in RelicSpecs.All) tracked.Add(s.TypeName);
+        // Random auto-plays (The Fool) can change any relic's state the way their own plays would (Ripple Basin
+        // armed until an attack is played): which cards they were is a roll.
+        if (UnpredictedAutoPlay(w, entries, me)) foreach (var r in me.Relics) tracked.Add(r.GetType().Name);
         issues.AddRange(PlaySnapshot.Unexplained(w.FullBefore, w.FullAfter, w.Card, entries, w.Shuffles, explainers, present, me, tracked));
     }
 
@@ -1094,7 +1128,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var drawReactive = flashed.Any(m => DrawReactive.Contains(m.GetType().Name) || m.GetType().Name is nameof(GremlinHorn) or nameof(UnceasingTop));
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
         var why = $"(draws: predicted {f.Draws} = own {f.OwnDraws} + set off {f.ChainedDraws}{(f.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
-        if (w.Target != null && PlayFacts.TargetDraws(w.Card, w.Target) is { } td && td * f.Plays != f.OwnDraws)
+        if (w.Target != null && TargetDrawsBefore(w) is { } td && td * f.Plays != f.OwnDraws)
         {
             model.Add($"shuffle {(shuffled ? "happened" : "didn't happen")}: its draws depend on its target, and the prediction counted them for every target {why}");
             return;

@@ -7,7 +7,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 ## [Unreleased]
 
 ### Spire QoL 0.31.37
+#### Added
+- Mismatch and coverage reports are tagged with the card played, the check, the relic or power involved and the encounter, so related reports can be found together.
 #### Fixed
+- Surrounded (Kaiser Crab): a card aimed at the crab behind you turns you to face it, so after the play the other crab's attack is the one 50% stronger (intents and Incoming Damage after the play).
+- Cho Ki keeps your Stretch for every play of a replay (it puts back the Stretch it uses).
+- The Moon counts the Shivs it creates, The Magician the orbs it channels and the slots it adds, and Wheel of Fortune's draws count your hand after it's discarded; Ki Chant's discards count on every play of a replay.
+- The play check: Sown's energy, Wrest's draws at an enemy it un-Impales, a new Axebot coming in with Stock, and procs set off by The Fool's random plays are no longer reported (logs and error reports only).
+- The forecast check skips a turn followed by an extra turn instead of the enemy turn (logs and error reports only).
 - A tab could show greyed out (its text and backdrop dimmed, like a disabled enchantment) when the card it hangs on had shown a disabled enchantment; tabs now always show at full color.
 
 ### Spire QoL 0.31.36
@@ -23,6 +30,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 #### Fixed
 - The forecast check skips a turn where Stampede auto-played an attack at the end of your turn (a random card at a random target) (logs and error reports only).
 - The play check: One-Two Punch being used up by the attack it replays, and Plow taking the Ceremonial Beast's Strength when it stuns her, are no longer reported (logs and error reports only).
+
+### Main Saves 1.0.2
+#### Changed
+- Rebuilt with the shared code update (no change in what it does).
 
 ### Main Saves 1.0.1
 #### Changed

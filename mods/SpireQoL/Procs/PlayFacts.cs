@@ -414,7 +414,8 @@ public sealed class PlayFacts
                            && (card.Keywords.Contains(CardKeyword.Exhaust)
                                || (card.Type == CardType.Skill && me.Creature.Powers.Any(p => p is CorruptionPower))),
             ExhaustsOthers = ExhaustOthers(card, name, others, drawPile, plays),
-            Discards = DiscardCount(card, name, others, draws),
+            // Ki Chant looks at your draw pile, so each play discards its share; the others depend on the hand.
+            Discards = DiscardCount(card, name, others, draws) * (name == "KiChant" ? Math.Max(1, plays) : 1),
             OwnDraws = draws,
             BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
             Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me),
@@ -443,6 +444,12 @@ public sealed class PlayFacts
     }
 
     /// <summary>
+    /// Cards that discard your hand, then draw (CardCmd.DiscardAndDraw): the hand limit counts the hand after the
+    /// discard. The card scan flags a new one.
+    /// </summary>
+    internal static readonly HashSet<string> DiscardThenDrawCards = new() { nameof(CalculatedGamble), "WheelOfFortune" };
+
+    /// <summary>
     /// Total draws (own + chained), the hand limit, draw blockers, and whether they shuffle: the
     /// game's numbers for PlayChain.Resolve (pure, tested offline). Sources read here: Dark Embrace,
     /// Vicious, Joss Paper, Game Piece, Iron Club, Centennial Puzzle; No Draw and Fiddle block draws.
@@ -461,7 +468,7 @@ public sealed class PlayFacts
             HandCount = handCount,
             DrawPile = drawPile,
             DiscardPile = Sts2State.DiscardPileCount(me),
-            DiscardedBeforeDraw = Card is CalculatedGamble ? Discards : 0,
+            DiscardedBeforeDraw = DiscardThenDrawCards.Contains(Card.GetType().Name) ? Discards : 0,
             ShufflesFirst = ShufflesFirst(Card),
             // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
             AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
@@ -889,7 +896,7 @@ public sealed class PlayFacts
         nameof(Chill) => ChillChannels(card), // one Frost per hittable enemy
         nameof(Glacier) => 2,
         nameof(MeteorStrike) or nameof(Rainbow) => 3,
-        nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) => Sts2State.Var(card, "Repeat", 1),
+        nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) or "TheMagician" => Sts2State.Var(card, "Repeat", 1),
         nameof(Tempest) => me?.PlayerCombatState?.Energy ?? 1, // X lightning
         // One Lightning per Lightning channeled this combat (its calculation reads the history).
         nameof(Voltaic) => card.DynamicVars.TryGetValue("CalculatedChannels", out var vc) && vc is CalculatedVar calc ? (int)calc.Calculate(null) : 0,
@@ -962,6 +969,8 @@ public sealed class PlayFacts
             }
             case "TheHierophant": return Var("Cards", 3);
             case "TheLovers": return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
+            // Shivs until your hand is full (TheMoon.OnPlay: MaxCardsInHand - hand, once it has left your hand).
+            case "TheMoon": return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
             case "TheSun": statuses = 1; return 1; // a Soot into your discard pile
             case "MightyShield": case "MightyWeapon": statuses = Var("Cards"); return statuses; // Dazed into your draw pile
         }
