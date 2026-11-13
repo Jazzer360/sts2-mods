@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.37
+#### Fixed
+- A tab could show greyed out (its text and backdrop dimmed, like a disabled enchantment) when the card it hangs on had shown a disabled enchantment; tabs now always show at full color.
+
 ### Spire QoL 0.31.36
 #### Fixed
 - A replayed attack that makes its target Vulnerable (Break played twice) now counts the extra damage of its later plays in the lethal tab, kills and Incoming Damage.

@@ -273,9 +273,19 @@ public sealed class CardOverlayRenderer
             tab.Rotation = Mathf.Pi / 2f;
             tab.Scale = scale;
             tab.Position = new Vector2(left + visualWidth, top);
-            // Not the template's tint: the game greys its tab for a disabled enchantment.
+            // Not the template's tint: the game greys its tab for a disabled enchantment
+            // (NCard.SetEnchantmentStatus: the tab's alpha, its shader's saturation, the label's
+            // SelfModulate). A tab copied from a card showing a disabled enchantment keeps all three,
+            // so every layout puts back the enabled look (the material is the tab's own, MakeTab).
             tab.Modulate = Colors.White;
             tab.SelfModulate = Colors.White;
+            if (tab.Material is ShaderMaterial own)
+            {
+                own.SetShaderParameter("h", 0.25);
+                own.SetShaderParameter("s", 0.4);
+                own.SetShaderParameter("v", 0.6);
+            }
+            if (tab.GetNodeOrNull<Label>("Label") is { } tint) tint.SelfModulate = Colors.White;
 
             if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
             {
