@@ -47,6 +47,14 @@ public sealed class ErrorReporter
     /// <summary>The player's on/off switch (ReportErrors). Can be flipped while the game runs.</summary>
     public bool Active { get; set; }
 
+    /// <summary>
+    /// Why nothing may be sent from this game (null: nothing stops it), read before each report: another mod
+    /// that changes the game is loaded, so a mismatch or crash may be its doing. Said once in the log.
+    /// </summary>
+    public Func<string?>? SkipReason { get; set; }
+
+    private bool _skipLogged;
+
     private ErrorReporter(SentryClient? client, ModLog log)
     {
         _client = client;
@@ -127,6 +135,14 @@ public sealed class ErrorReporter
     private void Send(string[] fingerprint, Action<SentryEvent> fill, Exception? ex)
     {
         if (_client == null || !Active) return;
+        string? skip;
+        try { skip = SkipReason?.Invoke(); } catch { skip = null; }
+        if (skip != null)
+        {
+            if (!_skipLogged) _log.Info($"error reports not sent: {skip}");
+            _skipLogged = true;
+            return;
+        }
         var key = string.Join("|", fingerprint);
         lock (_lock)
         {

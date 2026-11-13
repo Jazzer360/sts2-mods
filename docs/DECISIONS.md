@@ -162,3 +162,8 @@ The mod is built against the newest game (v0.113.0, beta) and keeps working on t
 Using the normal profiles while modded is a separate mod (`mods/MainSaves`) with one prefix on `UserDataPathProvider.GetAccountDir`, not a Spire QoL setting.
 *Why:* it changes what the game does (which saves it reads and writes), and Spire QoL only observes (decision #10). As its own mod, only players who install it get it, and Spire QoL stays safe to install without touching anyone's saves. It patches only the current-mode answer, so the game's own first-time copy and its "running modded" state are unchanged.
 *Replaced:* nothing (before, a third-party mod did this as a side effect).
+
+### 34. No error reports while a mod that changes the game is loaded — active (2026-11-12)
+Spire QoL sends nothing (crashes or mismatches) while another loaded mod changes the game: its manifest's `affects_gameplay` is true or missing (the game's default), or its assemblies define game models (cards, relics, powers, monsters). The audits still run and log. Every report sent lists the other loaded mods (`other_mods` tag).
+*Why:* the predictions model the unmodded game, so another mod's mechanics would turn up as our mismatches, and its content as our crashes; those reports can't be fixed here. A crash of ours that only happens alongside another mod is lost, which is the price of not chasing other mods' content. Display-only mods (affects_gameplay false, no models) don't stop reports, and the tag shows them in case one interferes.
+*Replaced:* nothing (reports were sent whatever else was loaded).

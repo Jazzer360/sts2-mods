@@ -269,6 +269,7 @@ public static class SimAdapter
                 case nameof(ThornsPower): p.Thorns += pw.Amount; break;
                 case nameof(FlameBarrierPower): p.FlameBarrier += pw.Amount; break;
                 case nameof(ReflectPower): p.Reflect = true; break;
+                case nameof(InfernoPower): p.Inferno += pw.Amount; break; // only yours is simulated (SimEngine.Inferno)
                 case nameof(BufferPower): p.Buffer += pw.Amount; break;
                 // Envenom, and Concoct this turn: poison on each attack hit that gets through block (AfterDamageGiven).
                 case nameof(EnvenomPower) or nameof(ConcoctPower): p.Envenom += pw.Amount; break;

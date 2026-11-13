@@ -165,7 +165,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// Your powers your next powered attack uses up (BeforeAttack marks the command, AfterAttack spends it): Vigor,
     /// Gigantification.
     /// </summary>
-    private static readonly HashSet<string> SpentByAttack = new() { nameof(VigorPower), nameof(GigantificationPower) };
+    private static readonly HashSet<string> SpentByAttack = new() { nameof(VigorPower), nameof(GigantificationPower), nameof(OneTwoPunchPower) };
 
     /// <summary>Your stats a source that changes powers can take away (Tender: 1 Strength and Dexterity per card).</summary>
     private static readonly HashSet<string> Stats = new() { nameof(StrengthPower), nameof(DexterityPower), nameof(FocusPower) };
@@ -991,6 +991,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (creature == me.Creature && SpentByAttack.Contains(type) && w.Card.Type == CardType.Attack) continue;
             if (creature == me.Creature && Stats.Contains(type)
                 && acted.Concat(tabbed).Any(x => SourceEffects.TryGetValue(x, out var fx) && fx.Contains(Effect.Power))) continue;
+            // A tabbed or flashed power on that creature removes it (Plow takes the Ceremonial Beast's Strength
+            // as it stuns her: PowerCmd.Remove; the index has no type arguments).
+            // (Read from the powers before the play: Plow removes itself too.)
+            if (w.PowersBefore.Keys.Any(k => k.Item1 == creature && (acted.Contains(k.Item2) || tabbed.Contains(k.Item2))
+                                             && PowerTypeNamed(k.Item2) is { } src
+                                             && CodeIndex.Does(src, new[] { "PowerCmd.Remove" }, Array.Empty<string>()))) continue;
             if (type == nameof(ArtifactPower) && debuffs) continue;
             if (creature.Powers.FirstOrDefault(p => p.GetType().Name == type) is ITemporaryPower) continue;
             // A death in the play: powers that react to it (Dampen comes off you when its caster dies).

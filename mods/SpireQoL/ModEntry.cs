@@ -56,6 +56,10 @@ public static class ModEntry
         reporter.TagProvider = () =>
         {
             var tags = new Dictionary<string, string>();
+            // Every other loaded mod (none that change the game: those stop reports, see SkipReason).
+            var mods = Sts2Mods.Core.Game.OtherMods.Loaded(typeof(ModEntry).Assembly);
+            var list = mods.Count == 0 ? "none" : string.Join(", ", mods);
+            tags["other_mods"] = list.Length <= 200 ? list : list[..197] + "...";
             if (Sts2State.Combat is { } cs && Sts2State.Me is { } me)
             {
                 var players = cs.Players.ToList();
@@ -65,6 +69,11 @@ public static class ModEntry
             return tags;
         };
         reporter.ContextProvider = () => Diagnostics.Snapshot.Capture(ctx);
+        // Predictions model the unmodded game: with another mod that changes it (affects_gameplay, or adds cards,
+        // relics, powers or monsters), its mechanics would show up as our mismatches, so nothing is sent.
+        reporter.SkipReason = () => Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly) is { Count: > 0 } other
+            ? "other mods that change the game are loaded (" + string.Join(", ", other) + ")"
+            : null;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
         Sts2State.Init();
         // A private member a rule reads is gone (a game update renamed it): the rule silently uses its

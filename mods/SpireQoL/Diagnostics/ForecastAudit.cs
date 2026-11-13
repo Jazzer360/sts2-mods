@@ -176,6 +176,14 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var actualOsty = osty == null ? 0 : damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
         var actualBlockGain = endOfTurn.OfType<BlockGainedEntry>().Where(b => b.Actor == me.Creature).Sum(b => b.Amount);
 
+        // A card of yours auto-played at end of turn (Stampede: a random Attack in your hand, at a random target)
+        // isn't simulated: what it hits, kills and leaves in your hand (Regret) is a roll, so the turn isn't checked.
+        if (endOfTurn.OfType<CardPlayStartedEntry>().FirstOrDefault(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me) is { } auto)
+        {
+            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {auto.CardPlay.Card.GetType().Name} at end of turn); HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})");
+            return;
+        }
+
         var issues = new List<string>();
         // Less than forecast is expected when random-target end-of-turn damage was left out: it may
         // have killed an attacker (the forecast stays on the safe side on purpose).

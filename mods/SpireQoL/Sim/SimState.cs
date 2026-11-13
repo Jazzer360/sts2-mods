@@ -158,6 +158,11 @@ public sealed class SimPlayer
     public int Thorns;
     public int FlameBarrier;
     public bool Reflect;
+    /// <summary>
+    /// Inferno: each time you lose HP on your turn, this much damage to every enemy (InfernoPower.AfterDamageReceived:
+    /// UnblockedDamage &gt; 0 while it's your side's turn; unpowered). Yours only: a teammate's isn't modelled.
+    /// </summary>
+    public int Inferno;
 
     // Relics.
     public int OrichalcumBlock;

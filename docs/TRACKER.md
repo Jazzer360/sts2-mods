@@ -404,13 +404,13 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
   - [ ] AdaptablePower: AfterDeath/ShouldAllowHitting: Test Subject revives (a kill may not stick: lethal can be wrong)
   - [ ] CoveredPower: multiplayer: a player covered by another has attacks on them taken by the interceptor (Incoming Damage assumes they hit you)
   - [ ] IllusionPower: AfterDeath/ShouldAllowHitting revives (a kill may not stick: lethal can be wrong)
-  - [ ] InfernoPower: AfterDamageReceived damages all enemies when you lose HP on your turn; not in the proc rules or simulator
+  - [x] InfernoPower: covered in 0.31.35 (proc tab on cards that cost HP; simulator on end-of-turn and in-play HP loss, yours)
   - [ ] InterceptPower: multiplayer: takes attacks aimed at a covered player (Incoming Damage assumes they hit you)
   - [ ] MonarchsGazePower: AfterDamageGiven lowers Strength per hit (simulator intents for single-target and all-enemy attacks; not random-target ones)
   - [ ] NecroMasteryPower: AfterCurrentHpChanged damages all enemies when Osty loses HP; not simulated
   - [ ] ReattachPower: AfterDeath/ShouldAllowHitting segments revive (a kill may not stick: lethal can be wrong)
   - [ ] SoulboundPower: AfterCardGeneratedForCombat adds Souls when you create Souls (created-card counts)
-  - [ ] StampedePower: AfterAutoPostPlayPhaseEntered auto-plays random Attacks at the end of your turn (end-of-turn damage not simulated)
+  - [ ] StampedePower: AfterAutoPostPlayPhaseEntered auto-plays random Attacks at the end of your turn (end-of-turn damage not simulated; since 0.31.35 the forecast check skips a turn where yours fired)
   - [ ] StockPower: AfterDeath spawns another Axebot (the fight isn't over when it dies)
   - [ ] SurroundedPower: BeforeCardPlayed turns you to face the target before the hit (back-attack damage may change)
   - [ ] ThunderPower: AfterOrbEvoked damages Lightning's targets again; not simulated
@@ -460,7 +460,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.31.32 (second Fool play test): block gains counted in full (Cho Limbs, Cho Firm, Second Wind), temporary Thorns (Cho Barbs), Serrated Arrows / Wah Hammer losing their bonus once the last arrow is out (HitDamageLater), Rain Shot's spread (SplashFromTarget), Vital Spark's Tainted on your incoming hits, Galvanic's damage to you after the play (DamageToYou), Asleep waking stunned on any damage through block; all-enemy procs after a single-target card reach every enemy; play-check fixes for Free Card, Mummified Hand, target-dependent draws (Ki Hop, Wrest), procs at the fight's end and Hardened Shell caps.
 - [x] 0.31.33 (third Fool play test): Wuppy in the simulator (yours), Stretch on a replay's first play only, Nail's and arrowless shots' debuffs, play-check fixes for Vigor, Gigantification and Tender.
 - [x] 0.31.34: forecast check counts an enemy your Thorns kills mid-attack as having acted; card scan fixed for the game's template cards (Wrest, Cho Firm, Ki Chant, Florescence), target-dependent draws (Ki Hop, Wrest) and exhausts by kind (Florescence, Growth); relic check ignores model-copy methods (Yummy Cookie).
-- [ ] **Replays and spent bonuses:** Vigor and Gigantification boost one attack; a replayed attack's later plays don't get them (damage is predicted with them for every play), like Stretch for block (fixed in 0.31.33).
+- [ ] **Replays and spent bonuses:** Vigor and Gigantification boost one attack; a replayed attack's later plays don't get them (damage is predicted with them for every play), like Stretch for block (fixed in 0.31.33). The other way too: a replayed card's later plays get the Vulnerable its first play applied (Break replayed by Juggling on the Queen: 15, then 23; predicted 15 twice).
 - [ ] **The Fool, still open:** Timber's damage to every enemy on a kill aren't counted (lethal can only miss a kill, never claim one); Blossom Shot's Stretch; Epic Retrieval's energy; Motif's draws for the shuffle warning; what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
 - [x] ~~**Wuppy (event relic):** its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). Incoming Damage and the Death Skull count them on you (overstated, never under).~~ (0.31.33)
 - [ ] **Extra turns:** Extra Turn power (and Pael's Eye) give you another turn before the enemies act; the forecast still shows the enemy turn next.

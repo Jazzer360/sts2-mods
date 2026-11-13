@@ -641,8 +641,21 @@ public static class SimEngine
         s.P.Block -= blocked;
         s.DamageThrough += amount - blocked;
         var left = s.P.RemnantLeftPlayerTurn;
-        s.Taken += HpLoss(s, amount - blocked, ref left);
+        var lost = HpLoss(s, amount - blocked, ref left);
+        s.Taken += lost;
         s.P.RemnantLeftPlayerTurn = left;
+        Inferno(s, lost);
+    }
+
+    /// <summary>
+    /// Inferno: you lost HP on your turn (these helpers only run on your side's turn: end of turn, your card
+    /// plays), so every enemy takes its damage (unpowered: block first, no Thorns).
+    /// </summary>
+    private static void Inferno(SimState s, int lost)
+    {
+        if (lost <= 0 || s.P.Inferno <= 0) return;
+        if (s.Log) s.EndOfTurnDamage.Add(("Inferno (all)", s.P.Inferno));
+        HitAll(s, _ => s.P.Inferno);
     }
 
     /// <summary>A teammate losing HP (Tungsten Rod, Buffer, Beating Remnant like yours).</summary>
@@ -667,8 +680,10 @@ public static class SimEngine
         }
         if (s.Log) s.Unblockable.Add((name, amount));
         var left = s.P.RemnantLeftPlayerTurn;
-        s.Taken += HpLoss(s, amount, ref left);
+        var lost = HpLoss(s, amount, ref left);
+        s.Taken += lost;
         s.P.RemnantLeftPlayerTurn = left;
+        Inferno(s, lost);
     }
 
     // ------------------------------------------------------------------ card play

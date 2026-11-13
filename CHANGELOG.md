@@ -6,6 +6,19 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.35
+#### Added
+- Inferno: cards that cost you HP get a tab for its damage to every enemy, and its damage from losing HP at the end of your turn (Regret, Burn, Decay) or during a play (Galvanic, enemy Thorns) counts in Incoming Damage, kills before enemies act and the lethal tab.
+#### Changed
+- Error reports aren't sent while another mod that changes the game is loaded (its manifest says it affects gameplay, or it adds cards, relics, powers or monsters); the log says so once. Every report lists the other mods loaded.
+#### Fixed
+- The forecast check skips a turn where Stampede auto-played an attack at the end of your turn (a random card at a random target) (logs and error reports only).
+- The play check: One-Two Punch being used up by the attack it replays, and Plow taking the Ceremonial Beast's Strength when it stuns her, are no longer reported (logs and error reports only).
+
+### Main Saves 1.0.1
+#### Changed
+- Rebuilt with the shared code update (no change in what it does).
+
 ### Spire QoL 0.31.34
 #### Fixed
 - The forecast check no longer reports an enemy your Thorns kills during its own attack as dying before it acted (its hit still lands) (logs and error reports only).

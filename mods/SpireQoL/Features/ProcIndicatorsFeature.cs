@@ -566,6 +566,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         return times > 0 ? Damage(a, times, Spread.All) : null;
                     }
                     case nameof(RupturePower) when mine && f.LosesHp: return Hit.Trig();
+                    // Losing HP on your turn: damage to every enemy (InfernoPower.AfterDamageReceived), once per play.
+                    case nameof(InfernoPower) when mine && f.LosesHp: return Damage(a, plays, Spread.All);
                     case nameof(DevourLifePower) when mine && card is Soul: return new Hit(Kind.Summon, a * plays);
                     case nameof(HauntPower) when mine && card is Soul: return Damage(a, plays, Spread.Random, props: ValueProp.Unblockable | ValueProp.Unpowered);
                     case nameof(StormPower) when mine && type == CardType.Power: return Hit.Trig();
