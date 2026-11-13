@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.33.2
+#### Fixed
+- The play check no longer reports Throwing Axe firing on the first card of each fight: its double-play tab comes from the game's own play count (logs and error reports only).
+
 ### Spire QoL 0.33.1
 #### Fixed
 - Double-play tabs (Throwing Axe, Echo Form...) and the replay tab no longer show on cards that can't be played, such as curses.

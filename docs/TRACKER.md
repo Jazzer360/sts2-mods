@@ -470,6 +470,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] ~~**Forecast, unexplained:** Kaiser Crab, Crusher alone after Rocket died: Thrash predicted 22, hit for 18.~~ (0.31.40: the hit killed you, 18 HP left, and Fairy in a Bottle revived you; the check now counts the overkill.)
 - [x] 0.33.0: a Stretch tab on block cards that spend it (the play check compares it with your Stretch after the play; a scan check flags block cards whose block value it can't read).
 - [x] 0.33.1: no double-play or replay tabs on unplayable cards (Throwing Axe on a curse).
+- [x] 0.33.2: the play check accepts a double-play source firing (Throwing Axe) when the card played more than once.
 - [ ] **The Fool, still open:** Timber's damage to every enemy on a kill aren't counted (lethal can only miss a kill, never claim one); Blossom Shot's Stretch; Epic Retrieval's energy; ~~Motif's draws for the shuffle warning~~ (0.31.40); what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
 - [x] 0.32.0: your HP in the simulator; lethal skull on Incoming Damage; Fairy in a Bottle and Lizard Tail revives (icon and HP after).
 - [ ] **Teammates' revives:** a teammate's Lizard Tail (their potions aren't known) isn't modelled.

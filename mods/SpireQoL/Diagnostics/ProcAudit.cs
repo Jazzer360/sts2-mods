@@ -844,6 +844,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         foreach (var m in flashed.Distinct())
         {
             if (sourceOf.ContainsKey(m.GetType().Name) || Modifiers.Contains(m.GetType().Name)) continue;
+            // A double-play source (Throwing Axe flashes in AfterModifyingCardPlayCount) when the card did play more
+            // than once: its tab is Card Indicators' (the game's own play-count query), not a proc rule.
+            if (CodeIndex.Does(m.GetType(), Array.Empty<string>(), new[] { "ModifyCardPlayCount" })
+                && entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.Card == w.Card && e.CardPlay.PlayCount > 1)) continue;
             // A random-target hit or kill (several enemies) can set off enemy powers and kill relics
             // we can't predict: noted, not reported.
             var causedByRandom = m switch
