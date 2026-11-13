@@ -36,4 +36,16 @@ public class SimExecuteTests
         SimEngine.ApplyPlayTo(s, Judgement(2, 30), out var branches, out _);
         Assert.All(branches, b => { Assert.True(b.Enemy(1)!.Alive); Assert.False(b.Enemy(2)!.Alive); });
     }
+
+    [Fact]
+    public void ItsKillIsWhatTheLethalTabReads()
+    {
+        // The lethal tab: the target dead before it acts in every branch, and not without the card.
+        var s = new SimState { Enemies = { E(1, 21, 48) } };
+        Assert.False(SimEngine.Run(s).DeadInAll(1));
+        var o = SimEngine.Run(s, Judgement(1, 30));
+        Assert.True(o.DeadInAll(1));
+        Assert.True(o.PlayKillsInEveryBranch);
+        Assert.False(SimEngine.Run(s, Judgement(1, 20)).DeadInAll(1));
+    }
 }
