@@ -56,6 +56,11 @@ public static class GameIcons
         return _drawPile;
     }
 
+    public static Texture2D? Potion(PotionModel potion)
+    {
+        try { return potion.Image; } catch { return null; }
+    }
+
     /// <summary>The skull from the game's emote wheel (the lethal tab).</summary>
     public static Texture2D? Skull()
     {

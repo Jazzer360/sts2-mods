@@ -237,9 +237,18 @@ public sealed class SimPlayer
     /// </summary>
     public int WuppyHp;
 
-    // Teammates only (yours are on SimState: Taken, OstyTaken, DamageThrough).
-    /// <summary>A teammate's HP (hits on a teammate at 0 stop).</summary>
+    /// <summary>
+    /// HP (int.MaxValue: not tracked). A teammate's hits stop at 0. Yours: reaching 0 uses up what prevents
+    /// death (Fairy in a Bottle, then Lizard Tail), each healing you from 0; with none left, you die (SimState.Died).
+    /// </summary>
     public int Hp = int.MaxValue;
+    /// <summary>
+    /// Fairy in a Bottle potions you hold (FairyInABottle.ShouldDie, checked before ShouldDieLate) and the HP each heals
+    /// you to (30% of max HP, at least 1); then Lizard Tail's (50%, once: LizardTail.ShouldDieLate), 0 when used or none.
+    /// </summary>
+    public int Fairies, FairyHeal, LizardTailHeal;
+
+    // Teammates only (yours are on SimState: Taken, OstyTaken, DamageThrough).
     /// <summary>A teammate's HP lost, through their block, and lost by their Osty this turn.</summary>
     public int Taken, Through, OstyTaken;
     /// <summary>A teammate's damage landing on them (before block) and block they gained: their Incoming Damage.</summary>
@@ -302,6 +311,12 @@ public sealed class SimState
 
     // ---- results (per branch)
     public int Taken;
+    /// <summary>You reach 0 HP with nothing left to prevent death (your HP tracked: SimPlayer.Hp).</summary>
+    public bool Died;
+    /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
+    public int FairiesUsed;
+    public bool LizardTailUsed;
+
     /// <summary>Damage your pet Wuppy took for you (enemy attacks it redirected).</summary>
     public int WuppyTaken;
     public int OstyTaken;
@@ -453,7 +468,7 @@ public sealed class SimState
                 h *= 1099511628211L;
             }
         }
-        Add(P.Block); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
+        Add(P.Block); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
         Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         foreach (var e in Enemies)
         {

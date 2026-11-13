@@ -214,6 +214,15 @@ public static class SimAdapter
 
         FillPlayer(s.P, me, cs);
         s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
+        // Your HP, and what keeps you alive at 0 (the Death Skull on Incoming Damage, Fairy and Lizard Tail): the heal
+        // brings you from 0 to that much (CreatureCmd.Heal; the HP setter drops the fraction).
+        s.P.Hp = me.Creature.CurrentHp;
+        var maxHp = me.Creature.MaxHp;
+        s.P.Fairies = SafeInt(() => me.Potions.Count(x => x.GetType().Name == "FairyInABottle"));
+        s.P.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
+        s.P.LizardTailHeal = me.Relics.FirstOrDefault(r => r.GetType().Name == "LizardTail") is { IsUsedUp: false } tail
+            ? Math.Max(1, (int)(maxHp * (Sts2State.Var(tail, "Heal", 50) / 100m)))
+            : 0;
 
         // Teammates (multiplayer): built like you (FillPlayer), in player order. Decision #25: their hand is
         // used too (it only changes their own HP in the simulator; nothing shown depends on it yet).

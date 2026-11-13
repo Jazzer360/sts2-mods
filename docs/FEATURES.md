@@ -194,8 +194,11 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 [defend] − 5     your block at end of turn
 [osty]   − 4     what Osty absorbs (Necrobinder, only while Osty is out; red if it dies)
 ──────────
-      =   9     what you'll lose (red), or 0 in green
+      =   9     what you'll lose (red), or 0 in green; a skull beside it when this kills you
+[fairy]  31 HP  only when Fairy in a Bottle or Lizard Tail keeps you alive: its icon, and your HP after the enemy turn
 ```
+
+**Death and what prevents it:** the simulator tracks your HP. At 0, Fairy in a Bottle is used first (the game asks `ShouldDie` before `ShouldDieLate`), healing you from 0 to 30% of your max HP; then Lizard Tail (50%, once a run). The rest of the hit that took you to 0 is lost, and later hits still land. With nothing left, you die: the skull. All from the worst branch. A teammate's revives aren't modelled.
 
 **Placement:** it sits just left of your block indicator, at the left end of your HP bar, and follows your character. If that doesn't fit on screen (your character stands near the left edge), it drops below the HP bar and every row of power icons instead; wrapped rows are measured. Move it with F8, or middle-click to pin it to the screen instead.
 

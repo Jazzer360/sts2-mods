@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.32.0
+#### Added
+- Incoming Damage shows a skull beside what you'll lose when the enemy turn kills you.
+- When Fairy in a Bottle or Lizard Tail would keep you alive, Incoming Damage adds a row with its icon and your HP after the enemy turn (the Fairy is used first, as the game does; each heals you from 0).
+
 ### Spire QoL 0.31.40
 #### Fixed
 - Motif's draws (your first Wah, Cho and Ki each turn) count for the Shuffle Warning and draw procs, so a melody card that draws past your draw pile is marked.

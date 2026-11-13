@@ -77,7 +77,7 @@ internal static partial class CoverageLedger
         ["Kusarigama"] = "covered: AfterCardPlayed damages a random enemy every N attacks (proc damage, tracker)",
         ["LavaLamp"] = "ignore: AfterDamageReceived only notes you took damage (end-of-combat upgrades)",
         ["LetterOpener"] = "covered: AfterCardPlayed damages all enemies every N skills (proc damage, tracker)",
-        ["LizardTail"] = "ignore: ShouldDieLate/AfterPreventingDeath saves you from dying (death isn't predicted)",
+        ["LizardTail"] = "covered: ShouldDieLate/AfterPreventingDeath heals you from 0 to 50% of max HP once (simulator: SimPlayer.LizardTailHeal; Incoming Damage's revive row)",
         ["LostWisp"] = "covered: AfterCardPlayed damages all enemies on a Power (proc damage)",
         ["LuckyFysh"] = "ignore: AfterCardChangedPiles gold when cards join your deck (deck, not combat)",
         ["LunarPastry"] = "gap: AfterSideTurnEnd gains stars at the end of your turn; Black Hole's end-of-turn damage from them isn't simulated",
@@ -374,7 +374,7 @@ internal static partial class CoverageLedger
         ["WaterfallGiant"] = "ignore: hook only changes music",
 
         // ======== potions, enchantments, afflictions
-        ["FairyInABottle"] = "ignore: ShouldDie/AfterPreventingDeath saves you from dying",
+        ["FairyInABottle"] = "covered: ShouldDie (before Lizard Tail's ShouldDieLate)/AfterPreventingDeath heals you from 0 to 30% of max HP, used up (simulator: SimPlayer.Fairies; Incoming Damage's revive row)",
         ["Glam"] = "ignore: AfterCardPlayed only marks it used (its replay is read through the game: replay tab)",
         ["Goopy"] = "ignore: AfterCardPlayed grows its amount (its bonus is read through the game)",
         ["Imbued"] = "ignore: auto-plays at the start of your turn",

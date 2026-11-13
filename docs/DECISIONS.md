@@ -167,3 +167,8 @@ Using the normal profiles while modded is a separate mod (`mods/MainSaves`) with
 Spire QoL sends nothing (crashes or mismatches) while another loaded mod changes the game: its manifest's `affects_gameplay` is true or missing (the game's default), or its assemblies define game models (cards, relics, powers, monsters). The audits still run and log. Every report sent lists the other loaded mods (`other_mods` tag).
 *Why:* the predictions model the unmodded game, so another mod's mechanics would turn up as our mismatches, and its content as our crashes; those reports can't be fixed here. A crash of ours that only happens alongside another mod is lost, which is the price of not chasing other mods' content. Display-only mods (affects_gameplay false, no models) don't stop reports, and the tag shows them in case one interferes.
 *Replaced:* nothing (reports were sent whatever else was loaded).
+
+### 35. Your HP in the simulator, only when it's given — active (2026-11-13)
+The simulator tracks your HP when the adapter sets it (SimPlayer.Hp), with what prevents death in the game's order (Fairy in a Bottle, then Lizard Tail, each healing you from 0). Taken stays the full damage, overkill included (what Incoming Damage shows, and what the forecast check compares: it adds each hit's OverkillDamage). States that don't set your HP (the generated single-player fights, older replay cases) never die, so their results are unchanged.
+*Why:* a lethal enemy turn and a revive are what matter most on that screen, and the simulator already has every hit in order; doing it in the display instead would miss revives partway through the enemy turn.
+*Replaced:* nothing (death wasn't predicted; Lizard Tail and Fairy in a Bottle were reviewed as "ignore").

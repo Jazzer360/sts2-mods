@@ -40,6 +40,13 @@ public sealed class TurnEndModel
     public int OstyHp { get; private set; }
     public int OstyTaken { get; private set; }
     public int OstyTakenMin { get; private set; }
+    /// <summary>The worst branch kills you: nothing left to prevent death (Fairy in a Bottle, Lizard Tail).</summary>
+    public bool Dies { get; private set; }
+    /// <summary>In the worst branch you'd die, but Fairy in a Bottle (potions used) or Lizard Tail heals you instead.</summary>
+    public int FairiesUsed { get; private set; }
+    public bool LizardTailUsed { get; private set; }
+    /// <summary>Your HP once the enemy turn is over (worst branch).</summary>
+    public int HpAfter { get; private set; }
     public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
 
     public int BlockGain => EndOfTurnBlock.Sum(s => s.Amount);
@@ -152,6 +159,10 @@ public sealed class TurnEndModel
             OstyHp = state.P.OstyHp,
             OstyTaken = outcome.OstyTakenMax,
             OstyTakenMin = outcome.OstyTakenMin,
+            Dies = w.Died,
+            FairiesUsed = w.FairiesUsed,
+            LizardTailUsed = w.LizardTailUsed,
+            HpAfter = w.P.Hp == int.MaxValue ? me.Creature.CurrentHp : w.P.Hp,
         };
         // Same-name entries (one per Frost trigger, per Feel No Pain exhaust...) are summed for display.
         foreach (var g in w.EndOfTurnBlock.GroupBy(x => x.Name)) m.EndOfTurnBlock.Add(new Source(g.Key, g.Sum(x => x.Amount)));

@@ -134,7 +134,7 @@ internal static class RelicTracking
 
         // ---- other
         ["Fiddle"] = "none: blocks your draws during your turn (the Shuffle Warning and draw counts account for it)",
-        ["LizardTail"] = "none: saves you from dying once (its status shows it)",
+        ["LizardTail"] = "none: saves you from dying once (simulator; Incoming Damage shows it when it will)",
         ["LavaLamp"] = "none: notes damage taken for its end-of-combat upgrade",
         ["BookRepairKnife"] = "none: heals when enemies die to Doom",
         ["ReptileTrinket"] = "gap: Strength when you use a potion (potions have no tabs yet)",

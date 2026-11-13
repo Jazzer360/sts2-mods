@@ -469,6 +469,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.31.40: Motif's draws (Shuffle Warning, draw procs), Ki Chant replays shuffling on a later play, replayed shots impaling for Serrated Arrows' bonus; the forecast check counts the overkill of a hit that kills you (Fairy in a Bottle).
 - [x] ~~**Forecast, unexplained:** Kaiser Crab, Crusher alone after Rocket died: Thrash predicted 22, hit for 18.~~ (0.31.40: the hit killed you, 18 HP left, and Fairy in a Bottle revived you; the check now counts the overkill.)
 - [ ] **The Fool, still open:** Timber's damage to every enemy on a kill aren't counted (lethal can only miss a kill, never claim one); Blossom Shot's Stretch; Epic Retrieval's energy; ~~Motif's draws for the shuffle warning~~ (0.31.40); what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
+- [x] 0.32.0: your HP in the simulator; lethal skull on Incoming Damage; Fairy in a Bottle and Lizard Tail revives (icon and HP after).
+- [ ] **Teammates' revives:** a teammate's Lizard Tail (their potions aren't known) isn't modelled.
 - [x] ~~**Wuppy (event relic):** its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). Incoming Damage and the Death Skull count them on you (overstated, never under).~~ (0.31.33)
 - [ ] **Extra turns:** Extra Turn power (and Pael's Eye) give you another turn before the enemies act; the forecast still shows the enemy turn next.
 - [ ] **Enemy Explosive:** when it dies it damages every player (no crossed tab on the kill, not in Incoming Damage).

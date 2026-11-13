@@ -57,7 +57,18 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         }
 
         _widget!.HasContent = true;
+        // A lethal enemy turn: the skull. One something keeps you alive through (Fairy in a Bottle first, then
+        // Lizard Tail, the order the game asks them): its icon and your HP after.
+        (Godot.Texture2D? Icon, int HpAfter)? revive = null;
+        if (m.FairiesUsed > 0 || m.LizardTailUsed)
+        {
+            var me = Sts2State.Me;
+            var icon = m.FairiesUsed > 0
+                ? me?.Potions.FirstOrDefault(x => x.GetType().Name == "FairyInABottle") is { } fairy ? Cards.GameIcons.Potion(fairy) : null
+                : me?.Relics.FirstOrDefault(x => x.GetType().Name == "LizardTail") is { } tail ? Cards.GameIcons.Relic(tail) : null;
+            revive = (icon, m.HpAfter);
+        }
         _panel!.Show(m.BlockableTotal + m.UnblockableTotal, m.ExpectedBlock,
-            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken);
+            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken, m.Dies, revive);
     }
 }

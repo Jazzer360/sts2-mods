@@ -14,7 +14,8 @@ namespace SpireQoL.Features;
 ///   [defend] − 5
 ///   [osty]   − 3   (only while Osty is out)
 ///   ───────────
-///          =  9
+///          =  9      (a skull beside it when this kills you)
+///   [fairy]  31 HP   (only when Fairy in a Bottle or Lizard Tail keeps you alive: your HP after)
 /// </summary>
 internal sealed class DamageMathPanel
 {
@@ -29,6 +30,9 @@ internal sealed class DamageMathPanel
     private readonly Label _incoming;
     private readonly Label _block;
     private readonly Label _result;
+    private readonly TextureRect _skull;
+    private readonly TextureRect _reviveIcon;
+    private readonly Label _revive;
     private readonly TextureRect _attackIcon;
     private readonly TextureRect _ostyIcon;
     private readonly Label _osty;
@@ -66,15 +70,40 @@ internal sealed class DamageMathPanel
         eq.HorizontalAlignment = HorizontalAlignment.Center;
         eq.CustomMinimumSize = new Vector2(IconSize, 0);
         grid.AddChild(eq);
+        // The result, with the skull just left of it when the enemy turn kills you.
+        var resultRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        resultRow.AddThemeConstantOverride("separation", 4);
+        _skull = UiKit.Icon(GameIcons.Skull(), IconSize * 0.8f);
+        _skull.Visible = false;
+        resultRow.AddChild(_skull);
         _result = Number(TakeColor);
-        grid.AddChild(_result);
+        resultRow.AddChild(_result);
+        grid.AddChild(resultRow);
+
+        // What keeps you alive (Fairy in a Bottle's or Lizard Tail's icon) and your HP after it heals you.
+        _reviveIcon = UiKit.Icon(null, IconSize);
+        _reviveIcon.Visible = false;
+        grid.AddChild(_reviveIcon);
+        _revive = Number(SafeColor);
+        _revive.Visible = false;
+        grid.AddChild(_revive);
 
         parent.AddChild(grid);
     }
 
     /// <param name="osty">What Osty takes and whether that kills him; null when Osty isn't out.</param>
-    public void Show(int incoming, int block, (int Taken, bool Dies)? osty, int take)
+    /// <param name="dies">The enemy turn kills you (the skull).</param>
+    /// <param name="revive">What keeps you alive at 0 HP (its icon) and your HP after the enemy turn; null when nothing does.</param>
+    public void Show(int incoming, int block, (int Taken, bool Dies)? osty, int take, bool dies = false, (Texture2D? Icon, int HpAfter)? revive = null)
     {
+        _skull.Visible = dies;
+        _reviveIcon.Visible = revive != null && !dies;
+        _revive.Visible = revive != null && !dies;
+        if (revive is { } r)
+        {
+            _reviveIcon.Texture = r.Icon;
+            _revive.Text = $"{r.HpAfter} HP";
+        }
         _attackIcon.Texture = _attackTiers[AttackTier(incoming) - 1] ?? _attackTiers.FirstOrDefault(t => t != null);
         _incoming.Text = $"{incoming}";
         _block.Text = $"− {block}";

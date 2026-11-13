@@ -652,7 +652,7 @@ public static class SimEngine
         s.DamageThrough += amount - blocked;
         var left = s.P.RemnantLeftPlayerTurn;
         var lost = HpLoss(s, amount - blocked, ref left);
-        s.Taken += lost;
+        YouLose(s, lost);
         s.P.RemnantLeftPlayerTurn = left;
         Inferno(s, lost);
     }
@@ -666,6 +666,37 @@ public static class SimEngine
         if (lost <= 0 || s.P.Inferno <= 0) return;
         if (s.Log) s.EndOfTurnDamage.Add(("Inferno (all)", s.P.Inferno));
         HitAll(s, _ => s.P.Inferno);
+    }
+
+    /// <summary>
+    /// You lose HP (after block and the HP-loss modifiers). Taken counts it all; your HP, when tracked, goes down, and
+    /// at 0 something prevents death if it can (CreatureCmd.Kill → Hook.ShouldDie: Fairy in a Bottle first, then
+    /// ShouldDieLate: Lizard Tail), healing you from 0; the rest of that hit is lost. With nothing left, you die.
+    /// </summary>
+    private static void YouLose(SimState s, int lost)
+    {
+        s.Taken += lost;
+        var p = s.P;
+        if (lost <= 0 || p.Hp == int.MaxValue || s.Died) return;
+        p.Hp -= lost;
+        if (p.Hp > 0) return;
+        if (p.Fairies > 0)
+        {
+            p.Fairies--;
+            s.FairiesUsed++;
+            p.Hp = p.FairyHeal;
+        }
+        else if (p.LizardTailHeal > 0)
+        {
+            p.Hp = p.LizardTailHeal;
+            p.LizardTailHeal = 0;
+            s.LizardTailUsed = true;
+        }
+        else
+        {
+            p.Hp = 0;
+            s.Died = true;
+        }
     }
 
     /// <summary>A teammate losing HP (Tungsten Rod, Buffer, Beating Remnant like yours).</summary>
@@ -691,7 +722,7 @@ public static class SimEngine
         if (s.Log) s.Unblockable.Add((name, amount));
         var left = s.P.RemnantLeftPlayerTurn;
         var lost = HpLoss(s, amount, ref left);
-        s.Taken += lost;
+        YouLose(s, lost);
         s.P.RemnantLeftPlayerTurn = left;
         Inferno(s, lost);
     }
@@ -1318,7 +1349,7 @@ public static class SimEngine
                 s.OstyTaken += toOsty;
                 s.DamageThrough += through - toOsty;
                 var lost = HpLoss(s, through - toOsty, ref remnant);
-                s.Taken += lost;
+                YouLose(s, lost);
                 // DamageResult.WasFullyBlocked: you had block and no damage got through after the
                 // AfterOsty modifiers (Tungsten Rod, Buffer...). Block only drops during an attack, so
                 // the first hit decides it.
