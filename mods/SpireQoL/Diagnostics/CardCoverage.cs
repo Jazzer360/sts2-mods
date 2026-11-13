@@ -129,6 +129,12 @@ internal static class CardCoverage
         // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
         if (Sts2Mods.Core.Game.Sts2State.Private(card, "GainsBlock", false) && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
             issues.Add("gains block without a Block value (whether it spends Stretch isn't known: Stretch tab)");
+        // A card that sets an enemy's HP (Judgement kills at or below a threshold): the simulator models the ones it knows.
+        if (Calls("CreatureCmd", "SetCurrentHp") && !SimAdapter.ExecuteCards.Contains(name))
+            issues.Add("sets a creature's HP (not in the simulator: kills, lethal)");
+        // A card that discards and draws: which comes first decides the room in your hand (The Hermit discards first).
+        if (Calls("CardCmd", "Discard") && Calls("CardPileCmd", "Draw") && !PlayFacts.DiscardThenDrawCards.Contains(name) && !PlayFacts.DrawThenDiscardCards.Contains(name))
+            issues.Add("discards and draws (which comes first isn't known: the hand limit)");
         if (Calls("CardCmd", "DiscardAndDraw") && !PlayFacts.DiscardThenDrawCards.Contains(name))
             issues.Add("discards your hand, then draws (the hand limit isn't counted after the discard)");
         // An X-cost attack: its hits are X (unless its count is one of the named exceptions).

@@ -523,6 +523,22 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     // ------------------------------------------------------------------ rules
 
     private PlayFacts? _curFacts;
+    /// <summary>Your attack and skill plays started this turn (each play of a replay counts), as Nostalgia counts them.</summary>
+    private int AttacksAndSkillsStartedThisTurn()
+    {
+        var cs = Sts2State.Combat;
+        if (cs == null) return 0;
+        try
+        {
+            return CombatManager.Instance.History.CardPlaysStarted
+                .Count(e => e.HappenedThisTurn(cs) && e.CardPlay.Player == _me && e.CardPlay.Card.Type is CardType.Attack or CardType.Skill);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
 
     private Hit? Evaluate(AbstractModel src, PlayFacts f)
     {
@@ -583,6 +599,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // An Attack that spends 0 energy returns to your hand while Feral has charges left
                     // this turn (DisplayAmount; FeralPower.ModifyCardPlayResultLocation). Not copies.
                     case nameof(FeralPower) when mine && type == CardType.Attack && f.Energy == 0 && !card.IsDupe && p.DisplayAmount > 0:
+                        return Hit.Trig();
+                    // Your first Amount attacks and skills each turn go on top of your draw pile instead of your discard pile
+                    // (NostalgiaPower.ModifyCardPlayResultLocation; it counts plays started before this one).
+                    case "NostalgiaPower" when mine && type is (CardType.Attack or CardType.Skill) && !f.ExhaustsSelf
+                                               && AttacksAndSkillsStartedThisTurn() < a:
                         return Hit.Trig();
                     case nameof(TheSealedThronePower) when mine: return Hit.Trig();
                     case nameof(TenderPower) when mine: return Hit.Trig(harmful: true);
@@ -719,8 +740,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(BurningSticks) when armed && type == CardType.Skill && f.ExhaustsSelf: return Hit.Trig();
                     // It arms on a debuff to an enemy without Artifact (checked before Artifact uses a
                     // charge), so an enemy whose charges cover every debuff this play applies doesn't count.
-                    case nameof(UnsettlingLamp) when armed && f.EnemyDebuffs.Count > 0
-                                               && _cs.HittableEnemies.Any(e => (e.GetPower<ArtifactPower>()?.Amount ?? 0) < f.EnemyDebuffs.Count * Math.Max(1, plays)):
+                    // Temporary debuffs count too (Dark Shackles: UnsettlingLamp.BeforePowerAmountChanged checks the power's type).
+                    case nameof(UnsettlingLamp) when armed && f.EnemyDebuffs.Count + f.EnemyTemporaryDebuffs.Count > 0
+                                               && _cs.HittableEnemies.Any(e => (e.GetPower<ArtifactPower>()?.Amount ?? 0) < (f.EnemyDebuffs.Count + f.EnemyTemporaryDebuffs.Count) * Math.Max(1, plays)):
                         return Hit.Trig();
                     case nameof(MusicBox) when armed && type == CardType.Attack: return Hit.Trig();
 

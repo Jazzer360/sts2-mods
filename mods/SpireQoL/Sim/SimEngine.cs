@@ -65,6 +65,10 @@ public sealed class SimPlay
     public int FocusDelta;
 
     public int HandDelta = -1;
+    /// <summary>
+    /// Judgement (v0.113.0): the target dies if it's alive at or below this HP (CreatureCmd.SetCurrentHp to 0). 0: none.
+    /// </summary>
+    public int ExecuteAtOrBelow;
     /// <summary>It kills your Osty (Sacrifice, Bone Shards: CreatureCmd.Kill on Osty).</summary>
     public bool KillsOsty;
     public int FadingDelta;
@@ -778,6 +782,10 @@ public static class SimEngine
                 for (var i = 0; i < p.Hits; i++) b.Each(s => HitRandom(s, Hit, card: true));
                 break;
         }
+
+        // Judgement: the target dies at or below the threshold (after any hits; it has none).
+        if (p.ExecuteAtOrBelow > 0)
+            b.Do(s => { if (s.Enemy(p.TargetId) is { Alive: true } e && e.Hp <= p.ExecuteAtOrBelow) e.Hp = 0; });
 
         // Orbs it evokes and channels (channelling into full slots evokes the front orb first).
         foreach (var op in p.OrbOps)

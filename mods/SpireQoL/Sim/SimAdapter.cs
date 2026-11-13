@@ -94,6 +94,9 @@ public static class SimAdapter
     /// <summary>Cards whose play kills your Osty (CreatureCmd.Kill on Owner.Osty; decompile v0.111.0).</summary>
     internal static readonly HashSet<string> KillsOstyCards = new() { nameof(Sacrifice), nameof(BoneShards) };
 
+    /// <summary>Cards that kill an enemy at or below a threshold (Judgement: SetCurrentHp to 0). The card scan flags a new one.</summary>
+    internal static readonly HashSet<string> ExecuteCards = new() { "Judgement" };
+
     /// <summary>
     /// The power the simulator models for a power type: a temporary Thorns power (Cho Barbs, v0.113.0) gives real
     /// Thorns until the end of the enemy turn (TemporaryThornsPower.BeforeApplied applies ThornsPower), so it's Thorns.
@@ -526,7 +529,19 @@ public static class SimAdapter
             }
         }
 
+        // Unsettling Lamp, unused this combat: the first card that debuffs an enemy without Artifact has its debuffs doubled
+        // (UnsettlingLamp.ModifyPowerAmountGivenMultiplicative) until that play ends: one play's worth more Strength loss and poison.
+        var lampDoubles = me.Relics.Any(r => r.GetType().Name == nameof(UnsettlingLamp) && Features.RelicCountersFeature.IsArmed(r))
+                          && f.EnemyDebuffs.Count + f.EnemyTemporaryDebuffs.Count > 0
+                          && (card.TargetType == TargetType.AnyEnemy
+                              ? ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } lt && !lt.HasPower<ArtifactPower>()
+                              : cs.HittableEnemies.Any(x => x.IsAlive && !x.HasPower<ArtifactPower>()));
         play.KillsOsty = KillsOstyCards.Contains(name);
+        if (ExecuteCards.Contains(name) && targetId >= 0)
+        {
+            play.TargetId = targetId;
+            play.ExecuteAtOrBelow = Sts2State.Var(card, "Threshold");
+        }
 
         // Orbs: evoke cards, then channels.
         var focus = me.Creature.GetPower<FocusPower>()?.Amount ?? 0;
@@ -608,6 +623,7 @@ public static class SimAdapter
                         break;
                     }
                     amount += plays * skull;
+                    if (lampDoubles) amount += (int)v.BaseValue + skull; // the first play's poison doubled
                     if (card.TargetType == TargetType.AnyEnemy)
                     {
                         play.Poison += amount;
@@ -692,7 +708,7 @@ public static class SimAdapter
                          || (vulnerabled.Contains(e) && !e.HasPower<VulnerablePower>() && !artifact);
             var strength = card.Type == CardType.Skill ? (e.GetPower<EnragePower>()?.Amount ?? 0) * plays : 0;
             if (str.Var != null && (str.All ? e.IsHittable : e == strengthTarget) && (str.Sign > 0 || !artifact))
-                strength += str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var)) * plays;
+                strength += str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var)) * (plays + (lampDoubles && str.Sign < 0 ? 1 : 0));
             // Monarch's Gaze: each of your attack's hits takes Strength from the enemy it hits this turn
             // (MonarchsGazeStrengthDownPower). Random-target attacks are left out (which enemy is a roll).
             if (gaze > 0 && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))

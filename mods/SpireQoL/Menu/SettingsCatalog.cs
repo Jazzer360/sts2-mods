@@ -165,6 +165,7 @@ public static class SettingsCatalog
         new(nameof(JugglingPower), SourceGroup.YourPower, "Your 3rd attack this turn"),
         new(nameof(MasterPlannerPower), SourceGroup.YourPower, "Skills: gain Sly"),
         new(nameof(FeralPower), SourceGroup.YourPower, "0-cost Attacks, while it has charges this turn: back to your hand"),
+        new("NostalgiaPower", SourceGroup.YourPower, "Your first Attacks and Skills this turn: onto your draw pile"),
         new(nameof(MonologuePower), SourceGroup.YourPower, "Every card"),
         new(nameof(TheSealedThronePower), SourceGroup.YourPower, "Every card: gain stars"),
         new(nameof(PaleBlueDotPower), SourceGroup.YourPower, "Your 5th card this turn", "Cards this turn, toward 5 (\"done\" once it fired)"),

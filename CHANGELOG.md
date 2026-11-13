@@ -6,6 +6,16 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.34.0
+#### Added
+- A Nostalgia tab on the Attacks and Skills it will put on top of your draw pile.
+#### Fixed
+- Judgement kills its target at or below its threshold in the predictions (lethal, Incoming Damage, the enemy turn).
+- A replayed attack's later plays hit without the Vigor (and Gigantification) its first play used: Wah Touch played twice with 8 Vigor hits 12, then 6.
+- Unsettling Lamp: its tab shows on cards whose debuff is temporary (Dark Shackles), and the Strength loss and poison it doubles count in the predictions.
+- The Hermit's discard makes room before it draws, so a full hand draws as many as the game does; a Curse it exhausts counts as an exhaust.
+- The Magician's new orb slots come before its channels, so it no longer predicts evoking your orbs.
+
 ### Spire QoL 0.33.2
 #### Fixed
 - The play check no longer reports Throwing Axe firing on the first card of each fight: its double-play tab comes from the game's own play count (logs and error reports only).

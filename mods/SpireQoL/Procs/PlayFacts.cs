@@ -143,6 +143,9 @@ public sealed class PlayFacts
     /// <summary>Debuff powers it applies to enemies (from its PowerVar&lt;T&gt; vars), e.g. Weak, Vulnerable, Doom.</summary>
     public IReadOnlyList<Type> EnemyDebuffs { get; init; } = Array.Empty<Type>();
 
+    /// <summary>Temporary debuffs it applies to enemies (Dark Shackles, Piercing Wail: Strength back at the end of the turn).</summary>
+    public IReadOnlyList<Type> EnemyTemporaryDebuffs { get; init; } = Array.Empty<Type>();
+
     /// <summary>Enemies its debuffs can land on: every enemy for all-enemy cards, else each possible target.</summary>
     public bool HitsAllEnemies { get; init; }
 
@@ -195,7 +198,7 @@ public sealed class PlayFacts
         => RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out _);
 
     /// <summary>The game's damage for one hit through the given damage hooks, and the card's damage props.</summary>
-    private decimal RawDamagePerHit(Creature enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType hooks, out MegaCrit.Sts2.Core.ValueProps.ValueProp props)
+    private decimal RawDamagePerHit(Creature enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType hooks, out MegaCrit.Sts2.Core.ValueProps.ValueProp props, decimal baseDelta = 0m)
     {
         props = MegaCrit.Sts2.Core.ValueProps.ValueProp.Move;
         if (AttackHits == 0) return 0;
@@ -215,7 +218,7 @@ public sealed class PlayFacts
                 if (dv is DamageVar d) props = d.Props;
             }
             else return 0;
-            var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, Me.Creature, raw, props,
+            var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, Me.Creature, raw + baseDelta, props,
                 Card, null, hooks, CardPreviewMode.None, out _);
             return Math.Max(0m, v);
         }
@@ -238,7 +241,7 @@ public sealed class PlayFacts
     /// later hit); null when nothing changes. See ImpaledLaterHitDamage and VulnerableLaterHitDamage.
     /// </summary>
     public (int After, int Damage)? LaterHitDamage(Creature enemy)
-        => ImpaledLaterHitDamage(enemy) ?? ImpaledByReplayHitDamage(enemy) ?? VulnerableLaterHitDamage(enemy);
+        => ImpaledLaterHitDamage(enemy) ?? ImpaledByReplayHitDamage(enemy) ?? VulnerableLaterHitDamage(enemy) ?? SpentBonusLaterHitDamage(enemy);
 
     /// <summary>
     /// A replayed shot at an enemy that isn't Impaled hits harder on its later plays: the first play's attack lands,
@@ -264,6 +267,38 @@ public sealed class PlayFacts
             var adjusted = v * factor;
             if (capped < v) adjusted = Math.Min(adjusted, capped);
             return (perPlay, Math.Max(0, (int)adjusted));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// A replayed attack loses what its first play spent: Vigor adds to one attack's powered hits and is taken
+    /// away after it (VigorPower.AfterAttack), Gigantification triples one attack and loses a stack
+    /// (GigantificationPower.AfterAttack). Later plays hit without them: Vigor after the first play; Gigantification
+    /// once its stacks run out. Single-target and all-enemy attacks (random targets aren't split by play).
+    /// </summary>
+    private (int After, int Damage)? SpentBonusLaterHitDamage(Creature enemy)
+    {
+        try
+        {
+            if (Plays < 2 || Card.Type != CardType.Attack || Card.TargetType is not (TargetType.AnyEnemy or TargetType.AllEnemies)) return null;
+            var vigor = Me.Creature.Powers.Where(p => p is VigorPower).Sum(p => p.Amount);
+            var giga = Me.Creature.Powers.Where(p => p is GigantificationPower).Sum(p => p.Amount);
+            if (vigor <= 0 && giga <= 0) return null;
+            var perPlay = HitsOn(enemy) / Plays;
+            if (perPlay <= 0) return null;
+            RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out var props);
+            if (!MegaCrit.Sts2.Core.ValueProps.ValuePropExtensions.IsPoweredAttack(props)) return null;
+            // Gigantification lasting past the first play while Vigor goes after it: two change points, not modelled.
+            if (vigor > 0 && giga > 1) return null;
+            var boostedPlays = vigor > 0 ? 1 : giga;
+            if (boostedPlays >= Plays) return null;
+            var later = RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out _, -vigor);
+            if (giga > 0 && giga <= boostedPlays) later /= 3m;
+            return (perPlay * boostedPlays, Math.Max(0, (int)later));
         }
         catch
         {
@@ -394,6 +429,7 @@ public sealed class PlayFacts
             BlockGains = BlockGains + next.BlockGains,
             Transforms = Transforms + next.Transforms,
             EnemyDebuffs = EnemyDebuffs.Concat(next.EnemyDebuffs).Distinct().ToList(),
+            EnemyTemporaryDebuffs = EnemyTemporaryDebuffs.Concat(next.EnemyTemporaryDebuffs).Distinct().ToList(),
             HitsAllEnemies = HitsAllEnemies || next.HitsAllEnemies,
             Channels = Channels + next.Channels,
             StarGains = StarGains + next.StarGains,
@@ -458,6 +494,7 @@ public sealed class PlayFacts
             Transforms = TransformCount(card, name, others, drawPile) * Math.Max(1, plays),
             // A shot with no arrow to shoot does nothing at all (its debuffs neither: Hobbling Shot).
             EnemyDebuffs = Fool.IsShot(card) && Fool.ArrowsAvailable(me) == 0 ? Array.Empty<Type>() : EnemyDebuffTypes(card),
+            EnemyTemporaryDebuffs = Fool.IsShot(card) && Fool.ArrowsAvailable(me) == 0 ? Array.Empty<Type>() : EnemyDebuffTypes(card, temporary: true),
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
             Channels = ChannelCount(card, name, me) * Math.Max(1, plays),
             StarGains = StarGainCards.Contains(name) ? Math.Max(1, plays) : 0,
@@ -482,7 +519,10 @@ public sealed class PlayFacts
     /// Cards that discard your hand, then draw (CardCmd.DiscardAndDraw): the hand limit counts the hand after the
     /// discard. The card scan flags a new one.
     /// </summary>
-    internal static readonly HashSet<string> DiscardThenDrawCards = new() { nameof(CalculatedGamble), "WheelOfFortune" };
+    internal static readonly HashSet<string> DiscardThenDrawCards = new() { nameof(CalculatedGamble), "WheelOfFortune", "TheHermit" };
+
+    /// <summary>Cards that draw, then discard (Acrobatics: the hand limit counts the hand before the discard).</summary>
+    internal static readonly HashSet<string> DrawThenDiscardCards = new() { nameof(Acrobatics), nameof(DaggerThrow), nameof(Prepared), nameof(Scrape) };
 
     /// <summary>
     /// Total draws (own + chained), the hand limit, draw blockers, and whether they shuffle: the
@@ -503,7 +543,9 @@ public sealed class PlayFacts
             HandCount = handCount,
             DrawPile = drawPile,
             DiscardPile = Sts2State.DiscardPileCount(me),
-            DiscardedBeforeDraw = DiscardThenDrawCards.Contains(Card.GetType().Name) ? Discards : 0,
+            // The Hermit discards one card or, if it's a Curse, exhausts it (counted in ExhaustedFromHand already).
+            DiscardedBeforeDraw = !DiscardThenDrawCards.Contains(Card.GetType().Name) ? 0
+                : Card.GetType().Name == "TheHermit" ? Math.Max(0, Math.Min(1, OtherHandCards) - ExhaustsOthers) : Discards,
             ShufflesFirst = ShufflesFirst(Card),
             // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
             AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
@@ -590,6 +632,9 @@ public sealed class PlayFacts
                     while (queue.Count > 0) EvokeFront(2, true);
                     break;
             }
+            // Slots the card adds before it channels (The Magician: OrbCmd.AddSlots, up to 10).
+            var added = SpireQoL.Sim.SimAdapter.SlotChange(card, name);
+            if (added > 0) cap = Math.Min(10, cap + added);
             for (var c = 0; c < channels / Math.Max(1, plays); c++)
             {
                 if (cap <= 0) break;
@@ -812,6 +857,8 @@ public sealed class PlayFacts
                 : others.Count(Fool.IsShot),
             // Up to Cards chosen cards: counted as the most it can exhaust.
             nameof(Purity) => Math.Min(n, Sts2State.Var(card, "Cards") * p),
+            // The Hermit: the card you pick is exhausted instead of discarded when it's a Curse (counted as the most it can do).
+            "TheHermit" => Math.Min(p, others.Count(c => c.Type == CardType.Curse)),
             // Every status card in your piles.
             nameof(FlakCannon) => card.DynamicVars.TryGetValue("CalculatedHits", out var v) && v is CalculatedVar cv ? (int)cv.Calculate(null) : 0,
             _ => 0,
@@ -1081,7 +1128,7 @@ public sealed class PlayFacts
 
     private static readonly Dictionary<Type, bool> DebuffCache = new();
 
-    private static IReadOnlyList<Type> EnemyDebuffTypes(CardModel card)
+    private static IReadOnlyList<Type> EnemyDebuffTypes(CardModel card, bool temporary = false)
     {
         if (card.TargetType is not (TargetType.AnyEnemy or TargetType.AllEnemies or TargetType.RandomEnemy)) return Array.Empty<Type>();
         List<Type>? list = null;
@@ -1091,16 +1138,18 @@ public sealed class PlayFacts
             if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(PowerVar<>)) continue;
             if (v.BaseValue <= 0) continue;
             var powerType = t.GetGenericArguments()[0];
-            if (!IsDebuff(powerType)) continue;
+            if (!(temporary ? IsTemporaryDebuff(powerType) : IsDebuff(powerType))) continue;
             (list ??= new()).Add(powerType);
         }
         // Debuffs its code applies with a plain value (Uppercut, Putrefy, Shockwave use "Power").
         foreach (var applied in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
-            if (IsDebuff(applied) && (list == null || !list.Contains(applied))) (list ??= new()).Add(applied);
+            if ((temporary ? IsTemporaryDebuff(applied) : IsDebuff(applied)) && (list == null || !list.Contains(applied))) (list ??= new()).Add(applied);
         return list ?? (IReadOnlyList<Type>)Array.Empty<Type>();
     }
 
     public static bool IsDebuff(Type powerType) => !typeof(ITemporaryPower).IsAssignableFrom(powerType) && IsDebuffType(powerType);
+
+    public static bool IsTemporaryDebuff(Type powerType) => typeof(ITemporaryPower).IsAssignableFrom(powerType) && IsDebuffType(powerType);
 
     /// <summary>
     /// The power is a debuff by type (PowerModel.Type), temporary ones included (Dark Shackles):
