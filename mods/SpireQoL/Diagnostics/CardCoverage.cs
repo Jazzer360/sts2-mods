@@ -126,6 +126,9 @@ internal static class CardCoverage
         // A block card that applies Stretch keeps it for a replay's later plays (Cho Ki); the simulator spends it otherwise.
         if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !SimAdapter.KeepsStretchCards.Contains(name))
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
+        // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
+        if (Sts2Mods.Core.Game.Sts2State.Private(card, "GainsBlock", false) && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
+            issues.Add("gains block without a Block value (whether it spends Stretch isn't known: Stretch tab)");
         if (Calls("CardCmd", "DiscardAndDraw") && !PlayFacts.DiscardThenDrawCards.Contains(name))
             issues.Add("discards your hand, then draws (the hand limit isn't counted after the discard)");
         // An X-cost attack: its hits are X (unless its count is one of the named exceptions).

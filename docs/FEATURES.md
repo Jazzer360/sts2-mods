@@ -340,6 +340,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 | Explosive Arrows (the Fool) | Shoot cards, when you have an arrow to shoot | damage to every enemy |
 | Twine | cards that knock your arrows loose (every third of your hits on an enemy your arrow Impales, killing it, Recall, Uproot, Wrest) | block per arrow when every aim does it; else a plain tab |
 | Yah (the Fool) | cards that knock one of your arrows loose, when some aim does it (first time this turn) | trigger (energy) |
+| Stretch (the Fool) | block cards whose powered block spends your Stretch (not Cho Ki, which puts it back; not Entrench, unpowered) | trigger |
 | Charon's Ashes, Forgotten Soul | cards that exhaust | damage × exhausts |
 | Tingsha | cards that discard | damage × discards |
 | Kunai, Shuriken, Nunchaku, Iron Club | completing card | trigger |

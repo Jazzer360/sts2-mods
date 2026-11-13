@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.33.0
+#### Added
+- A Stretch tab (the Fool) on block cards that will spend your Stretch. Cho Ki keeps it (it puts back what it had), and Entrench's block doesn't use it.
+
 ### Spire QoL 0.32.0
 #### Added
 - Incoming Damage shows a skull beside what you'll lose when the enemy turn kills you.

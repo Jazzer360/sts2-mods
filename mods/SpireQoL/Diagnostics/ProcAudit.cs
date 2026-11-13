@@ -902,6 +902,18 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 issues.Add($"didn't fire: {name}");
         }
 
+        // ---- Stretch: spent without flashing (StretchPower.AfterCardPlayed), so its tab is checked against the amount.
+        // Cards the play auto-played (Lost Lute) can spend it too.
+        if (w.PowersBefore != null && w.PowersAfter != null && !w.FightEnded
+            && w.PowersBefore.TryGetValue((me.Creature, "StretchPower"), out var stretchBefore) && stretchBefore > 0
+            && !entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay))
+        {
+            var stretchAfter = w.PowersAfter.TryGetValue((me.Creature, "StretchPower"), out var sa) ? sa : 0;
+            var tabbed = sourceOf.ContainsKey("StretchPower");
+            if (tabbed && stretchAfter >= stretchBefore) issues.Add($"didn't fire: StretchPower (still {stretchAfter})");
+            if (!tabbed && stretchAfter < stretchBefore) issues.Add($"no tab: StretchPower spent ({stretchBefore}→{stretchAfter})");
+        }
+
         // ---- block from procs (exact)
         var procBlock = entries.OfType<BlockGainedEntry>()
             .Where(b => b.Actor == me.Creature && b.CardPlay == null)

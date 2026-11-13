@@ -124,6 +124,38 @@ internal static class Fool
         if (Sts2State.Private(card, "GainsBlock", false)) yield return "StretchPower";
     }
 
+    /// <summary>
+    /// Block cards with no Block value, and whether their block is powered (a Move without Unpowered): Fisticuffs
+    /// gains the damage it dealt (ValueProp.Move), Entrench doubles your block (Unpowered). The card scan flags a new one.
+    /// </summary>
+    internal static readonly Dictionary<string, bool> BlockWithoutVar = new() { ["Fisticuffs"] = true, ["Entrench"] = false };
+
+    /// <summary>
+    /// Playing this spends your Stretch (StretchPower: a card that GainsBlock starts the play; its powered block gets
+    /// the bonus, and AfterCardPlayed takes away what you had). Cho Ki puts back what it had (SimAdapter.KeepsStretchCards):
+    /// nothing is lost. A replay's later plays gain without it.
+    /// </summary>
+    public static bool SpendsStretch(CardModel card, int blockGains)
+    {
+        if (blockGains <= 0 || !Sts2State.Private(card, "GainsBlock", false)) return false;
+        var name = card.GetType().Name;
+        if (SpireQoL.Sim.SimAdapter.KeepsStretchCards.Contains(name)) return false;
+        if (BlockProps(card) is { } props)
+            return props.HasFlag(MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) && !props.HasFlag(MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered);
+        return BlockWithoutVar.TryGetValue(name, out var powered) && powered;
+    }
+
+    /// <summary>The props of the card's block value (a BlockVar, or a CalculatedBlockVar: Stack, Mimic), or null without one.</summary>
+    public static MegaCrit.Sts2.Core.ValueProps.ValueProp? BlockProps(CardModel card)
+    {
+        foreach (var v in card.DynamicVars.Values)
+        {
+            if (v is MegaCrit.Sts2.Core.Localization.DynamicVars.BlockVar b) return b.Props;
+            if (v is MegaCrit.Sts2.Core.Localization.DynamicVars.CalculatedBlockVar c) return c.Props;
+        }
+        return null;
+    }
+
     /// <summary>You finished playing a card with this melody tag this turn (MelodyCmd.PlayedThisTurn).</summary>
     public static bool PlayedThisTurn(Player me, string tag) => Sts2State.CardsPlayedThisTurn(me).Any(c => HasTag(c, tag));
 

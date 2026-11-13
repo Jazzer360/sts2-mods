@@ -326,7 +326,7 @@ internal static partial class CoverageLedger
         ["ShowOffPower"] = "ignore: AfterDeath raises Show Off's Aim when an enemy dies (read from the card on its next play); AfterSideTurnEnd removes it",
         ["SimpletonPower"] = "gap: AfterAutoPostPlayPhaseEntered auto-plays your cheapest card(s) at the end of your turn (a random one among ties): not simulated",
         ["SongPathPower"] = "covered: AfterCardPlayed gains block on your first Cho each turn (proc block: simulator)",
-        ["StretchPower"] = "ignore: ModifyBlockAdditive adds to your next block card's block (read through the game's block hooks); BeforeCardPlayed/AfterCardPlayed spend it",
+        ["StretchPower"] = "covered: ModifyBlockAdditive adds to your next powered block card's block (read through the game's block hooks; a replay's later plays without it in the simulator); BeforeCardPlayed/AfterCardPlayed spend it (Stretch tab on block cards that spend it, checked against the amount after the play)",
         ["TemporaryThornsPower"] = "covered: BeforeApplied/AfterPowerAmountChanged apply Thorns (read as Thorns: simulator); AfterSideTurnEnd removes it after the other side's turn",
         ["TunePower"] = "ignore: AfterSideTurnEnd gives a free card next turn when you played a Ki",
         ["ViolentChordPower"] = "covered: AfterCardPlayed damages every enemy on your first Wah each turn (proc damage: simulator)",

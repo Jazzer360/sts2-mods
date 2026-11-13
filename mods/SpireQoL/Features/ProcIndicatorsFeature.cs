@@ -614,6 +614,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                                          && !Sts2State.Private(yah, "triggeredThisTurn", true):
                         return Hit.Trig();
 
+                    // A block card spends your Stretch (StretchPower.AfterCardPlayed); its block already shows the bonus.
+                    case "StretchPower" when mine && Fool.SpendsStretch(card, f.BlockGains): return Hit.Trig();
+
                     // ---- Sovereign Blade's buffs (the card text lists them, but it's easy to miss)
                     case nameof(SeekingEdgePower) when mine && card is SovereignBlade: return Hit.Trig(); // hits all enemies
                     case nameof(ParryPower) when mine && card is SovereignBlade: return Hit.Trig();       // gains block
