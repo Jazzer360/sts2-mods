@@ -192,14 +192,18 @@ public sealed class PlayFacts
 
     /// <summary>The game's damage for one hit before it's rounded down (Hook.ModifyDamage).</summary>
     private decimal RawDamagePerHit(Creature enemy)
+        => RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out _);
+
+    /// <summary>The game's damage for one hit through the given damage hooks, and the card's damage props.</summary>
+    private decimal RawDamagePerHit(Creature enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType hooks, out MegaCrit.Sts2.Core.ValueProps.ValueProp props)
     {
+        props = MegaCrit.Sts2.Core.ValueProps.ValueProp.Move;
         if (AttackHits == 0) return 0;
         try
         {
             decimal raw;
             // The card's own damage props, as its preview uses them (DamageVar.Props): an arrow attack's
             // FromArrow is what Aim, Heavy Shot's doubled Aim, Dislike You and Quietus check (v0.113.0).
-            var props = MegaCrit.Sts2.Core.ValueProps.ValueProp.Move;
             if (Card.DynamicVars.TryGetValue("CalculatedDamage", out var cv) && cv is CalculatedVar calc)
             {
                 raw = calc.Calculate(enemy);
@@ -212,7 +216,7 @@ public sealed class PlayFacts
             }
             else return 0;
             var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, Me.Creature, raw, props,
-                Card, null, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, CardPreviewMode.None, out _);
+                Card, null, hooks, CardPreviewMode.None, out _);
             return Math.Max(0m, v);
         }
         catch
@@ -230,13 +234,50 @@ public sealed class PlayFacts
     }
 
     /// <summary>
+    /// Hits whose damage changes partway through the play (After = the hits before the change, Damage = each
+    /// later hit); null when nothing changes. See ImpaledLaterHitDamage and VulnerableLaterHitDamage.
+    /// </summary>
+    public (int After, int Damage)? LaterHitDamage(Creature enemy) => ImpaledLaterHitDamage(enemy) ?? VulnerableLaterHitDamage(enemy);
+
+    /// <summary>
+    /// A replayed single-target card that makes its target Vulnerable (Break with Glam: it hits, then applies
+    /// Vulnerable) hits harder on its later plays: VulnerablePower.ModifyDamageMultiplicative (1.5, plus Paper
+    /// Phrog's and Cruelty's bonus, Debilitate's doubling) on every powered hit after the first play's. Only when
+    /// the target isn't Vulnerable yet and has no Artifact to take the first application.
+    /// </summary>
+    private (int After, int Damage)? VulnerableLaterHitDamage(Creature enemy)
+    {
+        try
+        {
+            if (Plays < 2 || Card.TargetType != TargetType.AnyEnemy || !EnemyDebuffs.Contains(typeof(VulnerablePower))) return null;
+            if (enemy.HasPower<VulnerablePower>() || enemy.Powers.OfType<ArtifactPower>().Sum(p => p.Amount) > 0) return null;
+            var perPlay = HitsOn(enemy) / Plays;
+            if (perPlay <= 0) return null;
+            var v = RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.Additive | MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.Multiplicative, out var props);
+            if (!MegaCrit.Sts2.Core.ValueProps.ValuePropExtensions.IsPoweredAttack(props)) return null;
+            var capped = RawDamagePerHit(enemy);
+            var m = ModelDb.Power<VulnerablePower>().DynamicVars["DamageIncrease"].BaseValue;
+            if (Me.GetRelic<PaperPhrog>() is { } phrog) m = phrog.ModifyVulnerableMultiplier(enemy, m, props, Me.Creature, Card);
+            if (Me.Creature.GetPower<CrueltyPower>() is { } cruelty) m = cruelty.ModifyVulnerableMultiplier(enemy, m, props, Me.Creature, Card);
+            if (enemy.GetPower<DebilitatePower>() is { } debilitate) m = debilitate.ModifyVulnerableMultiplier(enemy, m, props, Me.Creature, Card);
+            var adjusted = v * m;
+            if (capped < v) adjusted = Math.Min(adjusted, capped);
+            return (perPlay, Math.Max(0, (int)adjusted));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Hits that get weaker partway through the play: an enemy only your arrows Impale loses Impaled with its last
     /// arrow (ImpaledPower.AfterDamageReceived: the counter's hit, then one arrow per 3 more hits), and with it the
     /// multipliers that need it: Serrated Arrows (SerratedArrowsPower, your powered hits on an Impaled enemy) and
     /// Wah Hammer's ×2. After = the hits before that (the freeing hit included), Damage = each later hit (the
     /// game's damage for this enemy without those multipliers). Null when nothing changes.
     /// </summary>
-    public (int After, int Damage)? LaterHitDamage(Creature enemy)
+    private (int After, int Damage)? ImpaledLaterHitDamage(Creature enemy)
     {
         try
         {

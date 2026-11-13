@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.36
+#### Fixed
+- A replayed attack that makes its target Vulnerable (Break played twice) now counts the extra damage of its later plays in the lethal tab, kills and Incoming Damage.
+- The play check no longer reports Razor Tooth as not firing: it never flashes, so the check now looks at whether the played card was upgraded (logs and error reports only).
+
 ### Spire QoL 0.31.35
 #### Added
 - Inferno: cards that cost you HP get a tab for its damage to every enemy, and its damage from losing HP at the end of your turn (Regret, Burn, Decay) or during a play (Galvanic, enemy Thorns) counts in Incoming Damage, kills before enemies act and the lethal tab.

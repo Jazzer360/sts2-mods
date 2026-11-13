@@ -80,6 +80,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         /// <summary>The card a hand choice auto-played (Decisions, Decisions' pick): its plays are predicted, not random.</summary>
         public CardModel? Chosen;
+        /// <summary>The played card's upgrade level as the play began; -1 when not captured.</summary>
+        public int UpgradeBefore = -1;
         public required CardModel Card;
         public required string CardName;
         public required IReadOnlyList<TabSpec> Predicted;
@@ -257,6 +259,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         /// back to your hand during its play (Feral) gets new tabs and facts before the check runs.
         /// </summary>
         public CardModel? Card;
+        /// <summary>The played card's upgrade level as the play began (Razor Tooth's check).</summary>
+        public int UpgradeBefore = -1;
         public IReadOnlyList<TabSpec>? Predicted;
         public PlayFacts? Facts;
         public long Lag = -1;
@@ -359,6 +363,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (card != null)
                 {
                     rec.Card = card;
+                    rec.UpgradeBefore = card.CurrentUpgradeLevel;
                     // The prediction checked (decision #28): from the board as the play begins to resolve, through
                     // the same code as the tabs, so nothing ahead of it is pending or unknown.
                     if (ProcIndicatorsFeature.PredictNow(card) is { } now)
@@ -645,7 +650,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Start = start, From = indices.Min(), To = indices.Max() + 1, Indices = indices,
             Flashes = rec.Flashes, Shuffles = rec.Shuffles,
             Lag = captured ? rec.Lag : _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
-            Before = rec.Before, Target = target,
+            Before = rec.Before, Target = target, UpgradeBefore = captured ? rec.UpgradeBefore : -1,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded, RanDuringPause = rec.RanDuringPause,
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
             FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
@@ -864,6 +869,14 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         foreach (var (name, t) in sourceOf)
         {
             if (t.Crossed || !t.Key.StartsWith("proc:") || EndOfTurnRelicTabs.Contains(name) || SilentRelics.Contains(name)) continue;
+            // Razor Tooth upgrades the played card without flashing (RazorTooth.AfterCardPlayed: no Flash call): its
+            // effect is checked instead (CardCmd.Upgrade does nothing once the fight is ending).
+            if (name == nameof(RazorTooth))
+            {
+                if (w.UpgradeBefore < 0 || w.FightEnded) continue;
+                if (w.Card.CurrentUpgradeLevel <= w.UpgradeBefore) issues.Add($"didn't fire: {name} (the card wasn't upgraded)");
+                continue;
+            }
             if (me.Relics.Any(r => r.GetType().Name == name) && !flashed.Any(f => f.GetType().Name == name))
                 issues.Add($"didn't fire: {name}");
         }

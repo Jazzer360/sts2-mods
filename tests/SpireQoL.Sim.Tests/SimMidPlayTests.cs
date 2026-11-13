@@ -23,6 +23,19 @@ public class SimMidPlayTests
     }
 
     [Fact]
+    public void AReplayHitsHarderOnceItsFirstPlayMadeTheTargetVulnerable()
+    {
+        // Break played twice (Glam) on a Queen at 362 that isn't Vulnerable: the first play hits for 15 and applies
+        // Vulnerable (Break.OnPlay: the hit, then PowerCmd.Apply<VulnerablePower>), so the replay hits for 23
+        // (15.75 × 1.5, rounded down): 362 → 324.
+        var s = new SimState { Enemies = { E(1, 362) } };
+        var play = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Plays = 2, Hits = 2, HitDamage = { [1] = 15 }, HitDamageLater = { [1] = (1, 23) } };
+        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
+        Assert.Single(branches);
+        Assert.Equal(324, branches[0].Enemy(1)!.Hp);
+    }
+
+    [Fact]
     public void AnAllEnemyAttackCountsEachEnemyOnItsOwn()
     {
         var s = new SimState { Enemies = { E(1, 50), E(2, 50) } };
