@@ -76,6 +76,8 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 
             // Replay on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, or
             // an enchantment): no power or relic to show, so the tab reads "2×" (total plays).
+            // A card that can't be played (curses, Unplayable statuses, blocked cards) plays nothing twice.
+            if (!ProcIndicatorsFeature.CanEverPlayNow(card)) continue;
             var replays = card.GetEnchantedReplayCount();
             if (replays > 0) d.AddTab("replay", null, text: $"{replays + 1}×");
 

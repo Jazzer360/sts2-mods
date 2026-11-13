@@ -84,7 +84,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private static readonly HashSet<string> SecondOrder = new() { nameof(Metronome), nameof(BlackHolePower) };
     private int _xChannels, _xStarGains;
 
-    private static bool CanEverPlayNow(CardModel card)
+    internal static bool CanEverPlayNow(CardModel card)
     {
         try
         {
