@@ -260,7 +260,7 @@ internal static partial class CoverageLedger
         ["SlipperyPower"] = "covered: ModifyHpLostAfterOsty 1 HP per hit while it has charges (simulator)",
         ["SlothPower"] = "ignore: ShouldPlay limits cards per turn (playability read live)",
         ["SlowPower"] = "covered: counts cards for the damage math (proc tab)",
-        ["SlumberPower"] = "covered: AfterDamageReceived wakes it after enough hits (wake tab from the simulator)",
+        ["SlumberPower"] = "covered: AfterDamageReceived takes a stack per hit through block and wakes it stunned on the last (simulator: SimEnemy.Slumber; wake tab)",
         ["SmoggyPower"] = "covered: Smog makes Skills unplayable after one (crossed proc tab)",
         ["SmokestackPower"] = "covered: AfterCardGeneratedForCombat damages all enemies per status (proc damage)",
         ["SneakyPower"] = "covered: AfterCardPlayed block on your attacks (simulator; crossed tab)",

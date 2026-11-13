@@ -1035,6 +1035,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                                              && PowerTypeNamed(k.Item2) is { } src
                                              && CodeIndex.Does(src, new[] { "PowerCmd.Remove" }, Array.Empty<string>()))) continue;
             if (creature.IsEnemy && BaselineHasIt(w, type, creature)) continue;
+            // A power that counts down on each hit through its owner's block (Slumber, Flutter: AfterDamageReceived →
+            // PowerCmd.Decrement), and this play got damage through to it.
+            if (entries.OfType<DamageReceivedEntry>().Any(d => d.Result.Receiver == creature && d.Result.UnblockedDamage > 0)
+                && PowerTypeNamed(type) is { } counted
+                && CodeIndex.Does(counted, new[] { "PowerCmd.Decrement" }, Array.Empty<string>())
+                && CodeIndex.Does(counted, Array.Empty<string>(), new[] { "AfterDamageReceived" })) continue;
             if (type == nameof(ArtifactPower) && debuffs) continue;
             if (creature.Powers.FirstOrDefault(p => p.GetType().Name == type) is ITemporaryPower) continue;
             // A death in the play: powers that react to it (Dampen comes off you when its caster dies).
@@ -1295,12 +1301,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (AppliedInCode.TryGetValue(cardType, out var cached)) return cached;
         var set = new HashSet<Type>();
         const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        // Every nested type, at any depth: a local async function (Blossom Shot's ActionToPerform) lives in a
+        // closure class with its own state machine inside it.
         var methods = cardType.GetMethods(all).Cast<MethodBase>()
-            .Concat(cardType.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public)
-                .Where(t => typeof(IAsyncStateMachine).IsAssignableFrom(t))
-                .Select(t => t.GetMethod("MoveNext", all))
-                .Where(m => m != null)
-                .Cast<MethodBase>());
+            .Concat(CardCoverage.NestedTypes(cardType).SelectMany(t => t.GetMethods(all)));
         foreach (var m in methods)
         {
             try

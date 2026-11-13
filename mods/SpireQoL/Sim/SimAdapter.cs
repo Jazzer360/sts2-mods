@@ -163,6 +163,7 @@ public static class SimAdapter
                 Skittish = e.GetPower<SkittishPower>() is { } sk && !Sts2State.Private(sk, "HasGainedBlockThisTurn", true) ? sk.Amount : 0,
                 Burrowed = e.HasPower<BurrowedPower>(),
                 Asleep = e.HasPower<AsleepPower>(),
+                Slumber = e.GetPower<SlumberPower>()?.Amount ?? 0,
                 Flutter = e.GetPower<FlutterPower>()?.Amount ?? 0,
                 StunAtHp = Math.Max(e.GetPower<PlowPower>()?.Amount ?? 0, e.GetPower<ShriekPower>()?.Amount ?? 0),
                 Gambit = e.HasPower<TheGambitPower>(),
@@ -480,6 +481,14 @@ public static class SimAdapter
                     play.Hits = f.AttackHits;
                     break;
             }
+        }
+
+        // Adroit (enchantment): block on every play of its card, through the game's block math (Move: Dexterity, Frail).
+        if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
+        {
+            var amount = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, adroit.DynamicVars.Block.BaseValue,
+                MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _)));
+            if (amount > 0) play.EnchantmentBlock = (Math.Max(1, plays), amount);
         }
 
         // Its own block, each gain its full amount (Second Wind per card it exhausts, Cho Limbs and Cho Firm twice).

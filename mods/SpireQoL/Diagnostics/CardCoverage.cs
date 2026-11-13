@@ -128,6 +128,9 @@ internal static class CardCoverage
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
         if (Calls("CardCmd", "DiscardAndDraw") && !PlayFacts.DiscardThenDrawCards.Contains(name))
             issues.Add("discards your hand, then draws (the hand limit isn't counted after the discard)");
+        // An X-cost attack: its hits are X (unless its count is one of the named exceptions).
+        if (card.Type == CardType.Attack && card.EnergyCost.CostsX && !PlayFacts.XHitCards.Contains(name) && name is not (nameof(HeavenlyDrill) or nameof(Stardust)))
+            issues.Add("an X-cost attack whose hits aren't counted as X (damage, lethal)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
         // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.
@@ -192,13 +195,31 @@ internal static class CardCoverage
         return list;
     });
 
+    /// <summary>Every type nested in <paramref name="type"/>, at any depth (closures hold local functions' state machines).</summary>
+    internal static IEnumerable<Type> NestedTypes(Type type)
+    {
+        foreach (var t in type.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public))
+        {
+            yield return t;
+            foreach (var inner in NestedTypes(t)) yield return inner;
+        }
+    }
+
+    /// <summary>
+    /// OnPlay, its state machine, and the local functions it declares (named "&lt;OnPlay&gt;g__...", in the card or a
+    /// closure class, with their own state machines): Blossom Shot applies its Stretch from one.
+    /// </summary>
     private static IEnumerable<MethodBase> OnPlayMethods(Type cardType)
-        => cardType.GetMethods(All).Where(m => m.Name == "OnPlay").Cast<MethodBase>()
-            .Concat(cardType.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public)
+    {
+        var nested = NestedTypes(cardType).ToList();
+        return cardType.GetMethods(All).Where(m => m.Name == "OnPlay" || m.Name.StartsWith("<OnPlay>")).Cast<MethodBase>()
+            .Concat(nested.SelectMany(t => t.GetMethods(All)).Where(m => m.Name.StartsWith("<OnPlay>")))
+            .Concat(nested
                 .Where(t => t.Name.Contains("<OnPlay>") && typeof(IAsyncStateMachine).IsAssignableFrom(t))
                 .Select(t => t.GetMethod("MoveNext", All))
                 .Where(m => m != null)
                 .Cast<MethodBase>());
+    }
 
     /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's OnPlay and its async state machine.</summary>
     private static HashSet<string> OnPlayCalls(Type cardType)

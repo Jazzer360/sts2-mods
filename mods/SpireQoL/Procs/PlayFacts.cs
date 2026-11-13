@@ -837,6 +837,9 @@ public sealed class PlayFacts
         }
     }
 
+    /// <summary>X-cost attacks that hit X times (WithHitCount(X)); Repeat Shot is a shot (v0.113.0). The card scan flags a new one.</summary>
+    internal static readonly HashSet<string> XHitCards = new() { nameof(Eradicate), nameof(Skewer), nameof(Volley), nameof(Whirlwind), "RepeatShot" };
+
     private static int BaseHitsPerPlay(CardModel card, string name, ICombatState cs, Creature? target, int energy, int stars, int otherCards)
     {
         // The card's hit count (v0.113.0: HitCount; v0.111.0: Repeat, or the fixed 2 in OnPlay).
@@ -858,7 +861,7 @@ public sealed class PlayFacts
                 // v0.111.0 passed a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits).
                 case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
                     return Hits(2);
-                case nameof(Eradicate) or nameof(Skewer) or nameof(Volley) or nameof(Whirlwind):
+                case var _ when XHitCards.Contains(name):
                     return XValue(cs, card, energy);
                 case nameof(HeavenlyDrill):
                 {

@@ -32,6 +32,11 @@ public sealed class SimPlay
     /// boosts one card play's block and is spent: a replayed block card's later plays don't get it).
     /// </summary>
     public (int After, int Amount)? BlockLater;
+    /// <summary>
+    /// Block its enchantment gains on each play, after the card's own (Adroit: EnchantmentModel.OnPlay →
+    /// CreatureCmd.GainBlock): this many gains of this amount.
+    /// </summary>
+    public (int Gains, int Amount) EnchantmentBlock;
 
     public List<OrbOp> OrbOps = new();
 
@@ -420,6 +425,11 @@ public static class SimEngine
             e.Asleep = false;
             Stun(e);
         }
+        if (e.Alive && e.Slumber > 0 && --e.Slumber == 0)
+        {
+            // SlumberPower.AfterDamageReceived: one stack per instance through its block (any source); the last wakes it, stunned.
+            Stun(e);
+        }
         if (e.Alive && e.StunAtHp > 0 && e.Hp <= e.StunAtHp)
         {
             // Plow / Shriek: any damage through that leaves it at or below the threshold.
@@ -806,6 +816,7 @@ public static class SimEngine
             var amount = p.BlockLater is { } later && i >= later.After ? later.Amount : p.BlockAmount;
             b.Each(s => GainBlock(s, amount, null));
         }
+        for (var i = 0; i < p.EnchantmentBlock.Gains; i++) b.Each(s => GainBlock(s, p.EnchantmentBlock.Amount, null));
         if (p.KillsOsty) b.Do(s => s.P.OstyHp = 0);
 
         // Damage to you after it resolves (Galvanic): your block takes it first.

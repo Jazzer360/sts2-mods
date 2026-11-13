@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.39
+#### Fixed
+- Repeat Shot hits once per energy (X): with no energy it deals nothing, so it no longer shows lethal (its Nunchaku, Kunai and Shuriken tabs still count it as an attack played).
+- Slumbering Beetle: each hit through its block takes a Slumber stack, and the last wakes it stunned, so the prediction after the play and the forecast know it won't act.
+- Adroit (enchantment): its block on every play of the card counts (block after the play, Incoming Damage, Juggernaut).
+- The play check: Blossom Shot's Stretch, and Slumber counting down on a hit, are no longer reported (logs and error reports only).
+
 ### Spire QoL 0.31.38
 #### Changed
 - The Death Skull sits a little further from the HP numbers.

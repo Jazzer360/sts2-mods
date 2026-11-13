@@ -196,4 +196,25 @@ public class SimBeingHitTests
         var o = SimEngine.Run(s, play);
         Assert.False(o.StunnedInAll(1));
     }
+
+    [Fact]
+    public void SlumberWakesStunnedWhenItsLastStackGoes()
+    {
+        // SlumberPower.AfterDamageReceived: one stack per instance through block; the last wakes it, stunned.
+        var s = new SimState { Enemies = { Enemy(1, 60, 0, 12) } };
+        s.Enemies[0].Slumber = 3;
+        Assert.False(SimEngine.Run(s, Strike(1, 5, hits: 2)).StunnedInAll(1));
+        var o = SimEngine.Run(s, Strike(1, 5, hits: 3));
+        Assert.True(o.StunnedInAll(1));
+        Assert.Equal(0, o.TakenMax);
+    }
+
+    [Fact]
+    public void SlumberIgnoresHitsItsBlockStops()
+    {
+        var s = new SimState { Enemies = { Enemy(1, 60, 20, 12) } };
+        s.Enemies[0].Slumber = 1;
+        Assert.False(SimEngine.Run(s, Strike(1, 6, hits: 3)).StunnedInAll(1)); // 18 into 20 block
+        Assert.True(SimEngine.Run(s, Strike(1, 6, hits: 4)).StunnedInAll(1));
+    }
 }

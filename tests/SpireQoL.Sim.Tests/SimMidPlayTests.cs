@@ -126,4 +126,15 @@ public class SimMidPlayTests
         SimEngine.ApplyPlayTo(s, play, out var branches, out _);
         Assert.Equal(28, branches[0].P.Block);
     }
+
+    [Fact]
+    public void AnEnchantmentsBlockComesOnEveryPlayAfterTheCardsOwn()
+    {
+        // Adroit 3 on a card played twice that gains 5: 5 + 3 + 5 + 3 (EnchantmentModel.OnPlay on each play).
+        var s = new SimState { Enemies = { E(1, 50) } };
+        var play = new SimPlay { BlockGains = 2, BlockAmount = 5, EnchantmentBlock = (2, 3) };
+        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
+        Assert.Equal(16, branches[0].P.Block);
+        Assert.Equal(4, branches[0].P.BlockGains);
+    }
 }
