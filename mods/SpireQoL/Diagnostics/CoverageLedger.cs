@@ -602,8 +602,10 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         if (!listed)
         {
             var outOfCombat = CoverageLedger.OutOfCombatHooks.ToHashSet();
+            // Hooks are AbstractModel's public virtuals, as scripts/coverage-ledger.mjs reads them; its protected ones
+            // (DeepCloneFields, AfterCloned) are model copying, not hooks (Yummy Cookie only changes its icon there).
             var fight = t.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
-                .Where(m => m.IsVirtual && !m.IsSpecialName && m.GetBaseDefinition().DeclaringType != t && m.GetBaseDefinition().DeclaringType?.Name == "AbstractModel"
+                .Where(m => m.IsVirtual && !m.IsSpecialName && m.GetBaseDefinition() is { IsPublic: true } b && b.DeclaringType != t && b.DeclaringType?.Name == "AbstractModel"
                             && !outOfCombat.Contains(m.Name))
                 .Select(m => m.Name).Distinct().ToList();
             if (fight.Count == 0) return;

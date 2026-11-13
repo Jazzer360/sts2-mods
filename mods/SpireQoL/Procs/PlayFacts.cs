@@ -87,6 +87,12 @@ public sealed class PlayFacts
     /// <summary>Its own play shuffles your discard pile in (Reboot): the card text says so, so no Shuffle Warning tab.</summary>
     public bool ShufflesItself { get; private set; }
 
+    /// <summary>
+    /// The card's owner; null for the game's template card (ModelDb, read by the coverage scan), whose Owner
+    /// throws (CardModel.Owner asserts a mutable model).
+    /// </summary>
+    private static Player? OwnerOf(CardModel card) => card.IsCanonical ? null : card.Owner;
+
     // Cards whose play shuffles your discard pile into your draw pile (CardPileCmd.Shuffle in OnPlay; decompile v0.111.0).
     internal static readonly HashSet<string> ShuffleCards = new() { nameof(Reboot) };
 
@@ -98,7 +104,7 @@ public sealed class PlayFacts
     {
         var name = card.GetType().Name;
         if (ShuffleCards.Contains(name)) return true;
-        if (!ShuffleWhenShortCards.Contains(name) || card.Owner is not { } me) return false;
+        if (!ShuffleWhenShortCards.Contains(name) || OwnerOf(card) is not { } me) return false;
         // KiChant.OnPlay: an empty draw pile shuffles if it must; a short one shuffles when the discard pile has cards.
         var draw = Sts2State.DrawPileCount(me);
         return draw < Sts2State.Var(card, "Cards", 3) && Sts2State.DiscardPileCount(me) > 0;
@@ -108,7 +114,7 @@ public sealed class PlayFacts
     private static int KiChantLooksAt(CardModel card)
     {
         var count = Sts2State.Var(card, "Cards", 3);
-        if (card.Owner is not { } me) return count; // the game's template card (the scan)
+        if (OwnerOf(card) is not { } me) return count; // the game's template card (the scan)
         var available = Sts2State.DrawPileCount(me) + (ShufflesFirst(card) ? Sts2State.DiscardPileCount(me) : 0);
         return Math.Min(count, available);
     }
@@ -638,12 +644,18 @@ public sealed class PlayFacts
             case { } when c.GetType().Name == "KiHop":
                 return AllTargets(c, Fool.IsImpaled) ? Sts2State.Var(c, "Cards") : 0;
             case { } when c.GetType().Name == "Wrest":
-                return c.Owner is { } wo && AllTargets(c, e => Fool.ImpaledBy(e, wo.Creature) != null) ? Sts2State.Var(c, "Cards") : 0;
+                return OwnerOf(c) is { } wo && AllTargets(c, e => Fool.ImpaledBy(e, wo.Creature) != null) ? Sts2State.Var(c, "Cards") : 0;
             // Mad Science with the Wisdom rider (Tinker Time).
             case MadScience m when m.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(c, "WisdomCards");
         }
         return 0;
     }
+
+    /// <summary>
+    /// Cards whose draws depend on their target (TargetDraws). The game's template card has no fight to aim at,
+    /// so the coverage scan counts these as drawing by this list.
+    /// </summary>
+    internal static readonly HashSet<string> TargetDrawCards = new() { "KiHop", "Wrest" };
 
     /// <summary>
     /// Draws of one play aimed at <paramref name="target"/>, for cards whose draws depend on their target (Ki Hop:
@@ -653,7 +665,7 @@ public sealed class PlayFacts
     public static int? TargetDraws(CardModel c, Creature target) => c.GetType().Name switch
     {
         "KiHop" => Fool.IsImpaled(target) ? Sts2State.Var(c, "Cards") : 0,
-        "Wrest" => c.Owner is { } o && Fool.ImpaledBy(target, o.Creature) != null ? Sts2State.Var(c, "Cards") : 0,
+        "Wrest" => OwnerOf(c) is { } o && Fool.ImpaledBy(target, o.Creature) != null ? Sts2State.Var(c, "Cards") : 0,
         _ => null,
     };
 
@@ -696,7 +708,7 @@ public sealed class PlayFacts
             // you have outside your exhaust pile (any pile).
             "TheDevil" => n,
             "Growth" => others.Count(c => c.GetType().Name == "Sadness"),
-            "Florescence" => card.Owner?.PlayerCombatState is { } pcs
+            "Florescence" => OwnerOf(card)?.PlayerCombatState is { } pcs
                 ? pcs.AllCards.Count(c => c != card && Fool.IsShot(c) && c.Pile?.Type != PileType.Exhaust)
                 : others.Count(Fool.IsShot),
             // Up to Cards chosen cards: counted as the most it can exhaust.
@@ -737,7 +749,7 @@ public sealed class PlayFacts
         if (name is nameof(Fisticuffs) or nameof(Entrench)) return 1;
         // Gains its Block twice (ChoLimbs); Cho Firm a second time while you have an arrow to shoot.
         if (name == "ChoLimbs") return 2;
-        if (name == "ChoFirm") return card.Owner is { } p && Fool.ArrowsAvailable(p) > 0 ? 2 : 1;
+        if (name == "ChoFirm") return OwnerOf(card) is { } p && Fool.ArrowsAvailable(p) > 0 ? 2 : 1;
         return card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock") ? 1 : 0;
     }
 
@@ -774,7 +786,7 @@ public sealed class PlayFacts
         {
             // A Shoot card with no arrow to shoot does nothing at all (ArrowCmd.ShootArrowAtTarget returns before
             // its attack; the card glows red).
-            if (Fool.IsShot(card) && card.Owner is { } owner && Fool.ArrowsAvailable(owner) == 0) return 0;
+            if (Fool.IsShot(card) && OwnerOf(card) is { } owner && Fool.ArrowsAvailable(owner) == 0) return 0;
             switch (name)
             {
                 // Nail attacks only an Impaled enemy (any player's arrow). Unknown target: it can hit if some enemy is.

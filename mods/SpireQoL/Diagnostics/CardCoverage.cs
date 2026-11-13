@@ -115,7 +115,7 @@ internal static class CardCoverage
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)))
+            && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)) && !PlayFacts.TargetDrawCards.Contains(name))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         if (Calls("OrbCmd", "Channel") && !SimAdapter.HandlesChannel(name))
             issues.Add("channels orbs (the simulator doesn't add them)");
@@ -125,7 +125,8 @@ internal static class CardCoverage
             issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
-        if (Calls("CardCmd", "Exhaust") && None(c => PlayFacts.ExhaustOthers(c, name, others, 5, 1)))
+        // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.
+        if (Calls("CardCmd", "Exhaust") && None(c => PlayFacts.ExhaustOthers(c, name, all, 5, 1)))
             issues.Add("exhausts cards (not counted: Feel No Pain, Dark Embrace...)");
         if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(c => PlayFacts.DiscardCount(c, name, others, PlayFacts.CardsDrawn(c, 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");

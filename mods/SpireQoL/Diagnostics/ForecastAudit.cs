@@ -274,7 +274,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var through = eot.Count(d => d.Result.UnblockedDamage > 0);
             var killAt = window.FindIndex(e => e is DamageReceivedEntry d && d.Result.Receiver == creature && d.Result.WasTargetKilled);
             var moveAt = window.FindIndex(e => e is MonsterPerformedMoveEntry m && ReferenceEquals(m.Monster, creature.Monster));
-            var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt);
+            // Killed during its own attack (your Thorns hits back before each hit lands, ThornsPower.BeforeDamageReceived;
+            // the move is logged once it ends): its hit still lands, so it acted.
+            var hitAfterKill = killAt >= 0 && window.Skip(killAt + 1).Take(moveAt > killAt ? moveAt - killAt - 1 : int.MaxValue)
+                .Any(e => e is DamageReceivedEntry d && d.Dealer == creature);
+            var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt) && !hitAfterKill;
             var firstHit = window.OfType<DamageReceivedEntry>().FirstOrDefault(d => d.Result.Receiver == me.Creature && d.Dealer == creature);
             string Range(int a, int b) => a == b ? $"{a}" : $"{a}-{b}";
             parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(o.HpAtTurnEndMin(id), o.HpAtTurnEndMax(id))}), through {through} (pred {Range(o.UnblockedMin(id), o.UnblockedMax(id))}), " +

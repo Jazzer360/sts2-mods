@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.31.34
+#### Fixed
+- The forecast check no longer reports an enemy your Thorns kills during its own attack as dying before it acted (its hit still lands) (logs and error reports only).
+- The coverage check: the card scan read the owner of the game's template cards, which fails, so Wrest, Cho Firm, Ki Chant and Florescence were reported as unchecked; Ki Hop's and Wrest's draws at an Impaled target, and exhausts that pick cards by kind (Florescence's Shoot cards, Growth's Sadness), are now recognized; Yummy Cookie (it only changes its icon when copied) is no longer reported as a new relic with fight hooks (logs and error reports only).
+
 ### Spire QoL 0.31.33
 #### Fixed
 - Wuppy: while your pet lives it takes the attacks aimed at you, so Incoming Damage, the Death Skull and the forecast leave them out (your Thorns doesn't react to them).
