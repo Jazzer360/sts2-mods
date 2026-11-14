@@ -150,4 +150,16 @@ public class SimMidPlayTests
         Assert.Equal(16, branches[0].P.Block);
         Assert.Equal(4, branches[0].P.BlockGains);
     }
+
+    [Fact]
+    public void StretchBoostsAnAdroitBlockOnlyOnTheFirstPlay()
+    {
+        // An Adroit 3 attack played twice with Stretch 4 (v0.113.1: StretchPower counts the enchantment's block):
+        // 7 on the first play, which spends the Stretch, then 3.
+        var s = new SimState { Enemies = { E(1, 50) } };
+        var play = new SimPlay { EnchantmentBlock = (2, 7), EnchantmentBlockLater = 3 };
+        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
+        Assert.Equal(10, branches[0].P.Block);
+        Assert.Equal(2, branches[0].P.BlockGains);
+    }
 }

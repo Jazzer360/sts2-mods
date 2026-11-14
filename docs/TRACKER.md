@@ -453,6 +453,14 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 
 ---
 
+## 19. Game v0.113.1 (beta, 2026-11-14)
+
+Decompiled and diffed against v0.113.0. Rule changes: Stretch now counts a card whose enchantment gains block (EnchantmentModel.GainsBlock, set by Adroit), so an Adroit card gets and spends Stretch; Show Off's upgrade no longer touches Aim (no effect). The rest is hover tips, visuals, the compendium and cloud saves (`.pre-repair` files stay local; run history counts only `.run` files), none of which the mods read.
+
+- [x] 0.36.2: Adroit's block gets Stretch on any card (simulator, Pael's Legion and Vambrace tabs), Adroit cards get the Stretch tab and spend it in the play check, and a replayed Adroit card's later plays gain without the Stretch, Pael's Legion or Vambrace the first play spent. Reverses 0.35.3.
+
+---
+
 ## 18. Game v0.113.0 (beta, 2026-11-12)
 
 Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per version). New: a character (the Fool: arrows that impale enemies, melodies Wah/Cho/Ki, tarot cards), the Dread run mode (12 boss Dominions), Blitz merchants, 17 relics, 41 powers, 121 cards, 3 potions, 5 events. 744 existing classes changed; the ones the mod's rules read were reviewed from their diffs.
@@ -483,7 +491,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.35.1 (reports #232–#239): Timber in the simulator (scan check for a second damage value), Pael's Legion and Vambrace need block above 0 (No Block) and double only a replay's first play, Burst and Duplication used by their replay, card costs compared without relic and power cost effects (Brilliant Scarf), discards shuffled back.
 - [x] 0.35.2: Pael's Legion and Vambrace tabs off cards without a block value when nothing lands (Fisticuffs under No Block, Entrench with no block).
 - [x] 0.35.3 (report #240): Adroit on an attack doesn't get Stretch (StretchPower.BeforeCardPlayed only registers block cards).
-- [x] 0.35.4: Pael's Legion and Vambrace tabs count Adroit's block (an Adroit attack uses them up). Not modelled: a replayed Adroit card's later plays still predicted with the doubled block.
+- [x] 0.35.4: Pael's Legion and Vambrace tabs count Adroit's block (an Adroit attack uses them up). ~~Not modelled: a replayed Adroit card's later plays still predicted with the doubled block.~~ (0.36.2)
 - [x] 0.35.5 (report #241): Swift draws after the card's play, behind the cards it put in your hand. Which cards create into a pile instead of your hand is a list (PlayFacts.GeneratedToPileCards, from the decompile); the code scan can't read the pile, so a new one shows up only through the draw check.
 - [x] 0.35.6: Capture Spirit's unblockable damage in the simulator (Slippery tab, kills), with a scan check for non-attack cards that damage an enemy. Found in game.
 - [x] 0.35.7 (report #242): Yah tab from the simulator's kills: a proc (Violent Chord) killing an enemy your arrows Impale dislodges them all, or a shot's target it just impaled. Not modelled: Twine's block count still uses only the card's own kills.

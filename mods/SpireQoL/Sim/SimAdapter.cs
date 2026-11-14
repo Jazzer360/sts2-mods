@@ -502,14 +502,21 @@ public static class SimAdapter
         }
 
         // Adroit (enchantment): block on every play of its card, through the game's block math (Move: Dexterity, Frail).
-        // Stretch only boosts block from a card that GainsBlock (StretchPower.BeforeCardPlayed registers the play; otherwise
-        // ModifyBlockAdditive gives 0 during it), though the preview math adds it: take it back out for other cards.
+        // Stretch boosts it on any card (StretchPower.GainsBlock counts the enchantment's, v0.113.1; the preview math has it).
+        // The first play spends Stretch, Pael's Legion and Vambrace, so a replay's later plays gain without them.
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
         {
-            var noStretch = Sts2State.Private(card, "GainsBlock", false) ? 0 : me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
-            var amount = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, adroit.DynamicVars.Block.BaseValue - noStretch,
+            var amount = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, adroit.DynamicVars.Block.BaseValue,
                 MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _)));
             if (amount > 0) play.EnchantmentBlock = (Math.Max(1, plays), amount);
+            var stretch = KeepsStretchCards.Contains(name) ? 0 : me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
+            var doublers = me.Relics.Count(r => r.GetType().Name is (nameof(PaelsLegion) or nameof(Vambrace)) && Features.RelicCountersFeature.IsArmed(r));
+            if (amount > 0 && plays > 1 && (stretch > 0 || doublers > 0))
+            {
+                var without = SafeInt(() => Math.Max(0, (int)(Hook.ModifyBlock(cs, me.Creature, adroit.DynamicVars.Block.BaseValue - stretch,
+                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _) / (decimal)Math.Pow(2, doublers))));
+                if (without < amount) play.EnchantmentBlockLater = without;
+            }
         }
 
         // Its own block, each gain its full amount (Second Wind per card it exhausts, Cho Limbs and Cho Firm twice).

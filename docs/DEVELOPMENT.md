@@ -6,7 +6,7 @@ Everything needed to pick this repo up on a new machine, or after a long break. 
 
 | What | Why | Version used |
 | --- | --- | --- |
-| Slay the Spire 2 (Steam) | the build compiles against the game's own assemblies and installs into its `mods` folder | game v0.111.0 (stable) or v0.113.0 (beta) |
+| Slay the Spire 2 (Steam) | the build compiles against the game's own assemblies and installs into its `mods` folder | game v0.111.0 (stable) or v0.113.1 (beta) |
 | .NET SDK 9 | `dotnet build` (net9.0) | 9.0.3xx |
 | Git | | |
 | GitHub CLI, logged in with push rights (`gh auth login`) | releases, issues, workflow runs | 2.10x |

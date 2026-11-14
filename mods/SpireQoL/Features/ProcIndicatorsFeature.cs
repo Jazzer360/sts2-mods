@@ -571,16 +571,15 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     /// <summary>
     /// The card's Adroit enchantment gains block that lands (Adroit.OnPlay → CreatureCmd.GainBlock, card-sourced Move
-    /// block): Pael's Legion and Vambrace double it and are used up, even on an attack. Stretch only boosts it on a block
-    /// card (StretchPower.BeforeCardPlayed), so it's taken out of the preview math otherwise.
+    /// block): Pael's Legion and Vambrace double it and are used up, even on an attack. Stretch boosts it on any card
+    /// (StretchPower.GainsBlock counts the enchantment, v0.113.1), as the preview math does.
     /// </summary>
     private bool AdroitLands(CardModel card)
     {
         if (card.Enchantment is not MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit) return false;
         try
         {
-            var stretch = Sts2State.Private(card, "GainsBlock", false) ? 0 : _me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
-            return Hook.ModifyBlock(_cs, _me.Creature, adroit.DynamicVars.Block.BaseValue - stretch, ValueProp.Move, card, null, out _) >= 1;
+            return Hook.ModifyBlock(_cs, _me.Creature, adroit.DynamicVars.Block.BaseValue, ValueProp.Move, card, null, out _) >= 1;
         }
         catch
         {

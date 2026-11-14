@@ -121,8 +121,19 @@ internal static class Fool
     {
         if (IsShot(card)) { yield return "ImpaledPower"; yield return "AimPower"; yield return "QuietusPower"; }
         if (card.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Attack || DislodgeCards.Contains(card.GetType().Name)) yield return "ImpaledPower";
-        if (Sts2State.Private(card, "GainsBlock", false)) yield return "StretchPower";
+        if (StretchCard(card)) yield return "StretchPower";
     }
+
+    /// <summary>
+    /// Stretch counts this card's play (StretchPower.GainsBlock, v0.113.1): the card gains block, or its enchantment
+    /// does (EnchantmentModel.GainsBlock: Adroit).
+    /// </summary>
+    public static bool StretchCard(CardModel card) => Sts2State.Private(card, "GainsBlock", false) || EnchantmentGainsBlock(card);
+
+    /// <summary>The card's enchantment gains block on play (Adroit's powered Move block), so the play gets and spends Stretch.
+    /// Read by name, so a game without the flag still runs.</summary>
+    public static bool EnchantmentGainsBlock(CardModel card) =>
+        card.Enchantment is { } e && Sts2State.Private(e, "GainsBlock", false);
 
     /// <summary>
     /// Block cards with no Block value, and whether their block is powered (a Move without Unpowered): Fisticuffs
@@ -131,15 +142,17 @@ internal static class Fool
     internal static readonly Dictionary<string, bool> BlockWithoutVar = new() { ["Fisticuffs"] = true, ["Entrench"] = false };
 
     /// <summary>
-    /// Playing this spends your Stretch (StretchPower: a card that GainsBlock starts the play; its powered block gets
-    /// the bonus, and AfterCardPlayed takes away what you had). Cho Ki puts back what it had (SimAdapter.KeepsStretchCards):
-    /// nothing is lost. A replay's later plays gain without it.
+    /// Playing this spends your Stretch (StretchPower: a card that GainsBlock, or whose enchantment does, starts the play;
+    /// its powered block gets the bonus, and AfterCardPlayed takes away what you had). Adroit's block is powered, so an
+    /// Adroit card always spends it (v0.113.1). Cho Ki puts back what it had (SimAdapter.KeepsStretchCards): nothing is
+    /// lost. A replay's later plays gain without it.
     /// </summary>
     public static bool SpendsStretch(CardModel card, int blockGains)
     {
-        if (blockGains <= 0 || !Sts2State.Private(card, "GainsBlock", false)) return false;
         var name = card.GetType().Name;
         if (SpireQoL.Sim.SimAdapter.KeepsStretchCards.Contains(name)) return false;
+        if (EnchantmentGainsBlock(card)) return true;
+        if (blockGains <= 0 || !Sts2State.Private(card, "GainsBlock", false)) return false;
         if (BlockProps(card) is { } props)
             return props.HasFlag(MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) && !props.HasFlag(MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered);
         return BlockWithoutVar.TryGetValue(name, out var powered) && powered;

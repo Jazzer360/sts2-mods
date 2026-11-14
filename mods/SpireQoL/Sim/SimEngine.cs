@@ -37,6 +37,11 @@ public sealed class SimPlay
     /// CreatureCmd.GainBlock): this many gains of this amount.
     /// </summary>
     public (int Gains, int Amount) EnchantmentBlock;
+    /// <summary>
+    /// The enchantment's block on a replay's later plays, when the first play spent a bonus (Stretch, Pael's Legion,
+    /// Vambrace); null when every play gains the same.
+    /// </summary>
+    public int? EnchantmentBlockLater;
 
     public List<OrbOp> OrbOps = new();
 
@@ -904,7 +909,11 @@ public static class SimEngine
             var amount = p.BlockLater is { } later && i >= later.After ? later.Amount : p.BlockAmount;
             b.Each(s => GainBlock(s, amount, null));
         }
-        for (var i = 0; i < p.EnchantmentBlock.Gains; i++) b.Each(s => GainBlock(s, p.EnchantmentBlock.Amount, null));
+        for (var i = 0; i < p.EnchantmentBlock.Gains; i++)
+        {
+            var amount = i > 0 && p.EnchantmentBlockLater is { } later ? later : p.EnchantmentBlock.Amount;
+            b.Each(s => GainBlock(s, amount, null));
+        }
         if (p.KillsOsty) b.Do(s => s.P.OstyHp = 0);
 
         // Damage to you after it resolves (Galvanic): your block takes it first.

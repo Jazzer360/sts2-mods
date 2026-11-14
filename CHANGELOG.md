@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.36.2
+#### Changed
+- Game v0.113.1: Stretch now boosts an Adroit card's block even when the card gains no block itself (an Adroit attack), and the card spends it. The Stretch tab, the predictions and the Pael's Legion and Vambrace tabs follow.
+#### Fixed
+- A replayed Adroit card's later plays are predicted without the Stretch, Pael's Legion or Vambrace bonus its first play used up.
+
 ### Spire QoL 0.36.1
 #### Added
 - Error reports check Run Reminders: what an event option did against what its icons said (cards, curses, gold, HP loss, potions, and relics that should have reacted), and the card reward panel against your pick (cards added, Lucky Fysh's gold, Book of Five Rings's heal).
