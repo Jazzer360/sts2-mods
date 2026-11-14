@@ -499,9 +499,12 @@ public static class SimAdapter
         }
 
         // Adroit (enchantment): block on every play of its card, through the game's block math (Move: Dexterity, Frail).
+        // Stretch only boosts block from a card that GainsBlock (StretchPower.BeforeCardPlayed registers the play; otherwise
+        // ModifyBlockAdditive gives 0 during it), though the preview math adds it: take it back out for other cards.
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
         {
-            var amount = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, adroit.DynamicVars.Block.BaseValue,
+            var noStretch = Sts2State.Private(card, "GainsBlock", false) ? 0 : me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
+            var amount = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, adroit.DynamicVars.Block.BaseValue - noStretch,
                 MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _)));
             if (amount > 0) play.EnchantmentBlock = (Math.Max(1, plays), amount);
         }

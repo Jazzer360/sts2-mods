@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.3
+#### Fixed
+- Adroit's block on a card that isn't a block card (an attack) no longer counts your Stretch, which only boosts block cards (block after the play, Incoming Damage).
+
 ### Spire QoL 0.35.2
 #### Fixed
 - Pael's Legion and Vambrace tabs also stay off cards without a block number when nothing would land: Fisticuffs under No Block, Entrench with no block.
