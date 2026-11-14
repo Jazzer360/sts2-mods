@@ -476,6 +476,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.34.2 (reports #227–#231, #128 again): Slippery as a damage cap in the play check (#128's first cause, Hardened Shell, stays fixed), random auto-plays' block and damage, played cards' random cost cleared, Punch of Joy's transform; the mod's own slow frames reported (over 50 ms, from a feature's second), the game's logged only.
 - [x] 0.35.0: Vigor and Gigantification tabs on attacks that spend them (Akabeko had no tab), checked against the amount after the play like Stretch.
 - [x] 0.35.1 (reports #232–#239): Timber in the simulator (scan check for a second damage value), Pael's Legion and Vambrace need block above 0 (No Block) and double only a replay's first play, Burst and Duplication used by their replay, card costs compared without relic and power cost effects (Brilliant Scarf), discards shuffled back.
+- [x] 0.35.2: Pael's Legion and Vambrace tabs off cards without a block value when nothing lands (Fisticuffs under No Block, Entrench with no block).
 - [ ] **The Fool, still open:** ~~Timber's damage to every enemy on a kill~~ (0.35.1); Blossom Shot's Stretch; Epic Retrieval's energy; ~~Motif's draws for the shuffle warning~~ (0.31.40); what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
 - [x] 0.32.0: your HP in the simulator; lethal skull on Incoming Damage; Fairy in a Bottle and Lizard Tail revives (icon and HP after).
 - [ ] **Teammates' revives:** a teammate's Lizard Tail (their potions aren't known) isn't modelled.

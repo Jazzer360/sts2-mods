@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.2
+#### Fixed
+- Pael's Legion and Vambrace tabs also stay off cards without a block number when nothing would land: Fisticuffs under No Block, Entrench with no block.
+
 ### Spire QoL 0.35.1
 #### Fixed
 - Timber's hit on every enemy after its kill counts in the predictions (lethal, kills, Incoming Damage).

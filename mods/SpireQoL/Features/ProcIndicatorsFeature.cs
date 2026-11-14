@@ -524,12 +524,24 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     private PlayFacts? _curFacts;
     /// <summary>
-    /// The card's block is above 0 after the game's block math (No Block makes it 0): Pael's Legion and Vambrace only
-    /// take a play whose block lands (AfterModifyingBlockAmount: modifiedAmount above 0). Cards without a block value
-    /// (Fisticuffs) count as landing.
+    /// The card's block is above 0 after the game's block math (No Block, Panic Button's, makes it 0; so can negative
+    /// Dexterity or Frail): Pael's Legion and Vambrace only take a play whose block lands (AfterModifyingBlockAmount:
+    /// modifiedAmount above 0), so their tabs need it. Cards without a block value: Entrench gains your current block
+    /// (none: nothing lands), the rest (Fisticuffs) land unless the game's math zeroes any block from the card.
     /// </summary>
     private bool BlockLands(CardModel card)
-        => !(card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock")) || SimAdapter.CardBlock(card, _cs, _me) > 0;
+    {
+        if (card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock")) return SimAdapter.CardBlock(card, _cs, _me) > 0;
+        if (card is Entrench && _me.Creature.Block <= 0) return false;
+        try
+        {
+            return Hook.ModifyBlock(_cs, _me.Creature, 10m, ValueProp.Move, card, null, out _) > 0;
+        }
+        catch
+        {
+            return true;
+        }
+    }
 
     /// <summary>Your attack and skill plays started this turn (each play of a replay counts), as Nostalgia counts them.</summary>
     private int AttacksAndSkillsStartedThisTurn()
