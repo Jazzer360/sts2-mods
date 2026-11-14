@@ -1120,6 +1120,7 @@ public sealed class PlayFacts
             nameof(Seance) => Math.Min(Var("Cards", 1), drawPile),                          // into Souls
             nameof(Compact) => Transformable(c => c.Type == CardType.Status),               // every status in hand
             nameof(PrimalForce) => Transformable(c => c.Type == CardType.Attack),           // every attack in hand
+            "PunchOfJoy" => Math.Min(1, others.Count(c => c.GetType().Name == "Sadness")),  // a Sadness in hand into Joy (v0.113.0)
             _ => 0,
         };
     }

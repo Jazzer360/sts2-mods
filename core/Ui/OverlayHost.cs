@@ -142,16 +142,39 @@ public sealed class OverlayHost
         _log.Info($"overlay ready ({_features.Count} frame features). {UnlockLayoutKey}: unlock layout, {HideAllKey}: hide all");
     }
 
-    // ---- slow-frame log: the mod's own time per frame, and frames the game itself stalled on.
-    /// <summary>The mod's work in one frame above this is logged (about 30 fps).</summary>
+    // ---- slow frames: the mod's own time per frame (logged, and reported when it's ours), and frames the game
+    // itself stalled on (logged only: a slow PC or the game's own work is nothing for us to fix).
+    /// <summary>The mod's work in one frame above this is logged, every time (about 30 fps).</summary>
     private const double SlowModFrameMs = 30;
-    /// <summary>A whole frame (the gap between two frames) above this is logged with the mod's share.</summary>
-    private const double SlowGameFrameMs = 100;
-    private const ulong PerfLogIntervalMs = 2000;
+    /// <summary>
+    /// The mod's work in one frame above this is reported (a stutter on its own, 20 fps): grouped by the slowest
+    /// feature, from that feature's second such frame this session (the first can be its code's warm-up).
+    /// </summary>
+    private const double ReportModFrameMs = 50;
+    /// <summary>A whole frame (the gap between two frames) above this, with the mod's share small, is logged (the
+    /// game caps its frame rate at 30 in the background, so lower would log every frame there).</summary>
+    private const double SlowGameFrameMs = 50;
+    /// <summary>The game's own slow frames are logged at most this often, with a count of the ones in between.</summary>
+    private const ulong GameStallLogIntervalMs = 2000;
     private readonly List<(string Id, double Ms)> _featureMs = new();
-    private ulong _lastFrameStartUs, _lastPerfLogMs;
+    private readonly Dictionary<string, int> _slowByFeature = new();
+    private ulong _lastFrameStartUs, _lastStallLogMs;
     private double _lastModMs;
-    private int _perfSkipped;
+    private int _stallsSkipped;
+
+    /// <summary>A slow frame of the mod's own: logged, and reported from a feature's second one this session.</summary>
+    private void ModFrameSlow(double modMs, double gapMs)
+    {
+        var times = FeatureTimes();
+        _log.Warn($"[perf] slow frame: the mod took {modMs:0} ms ({times})");
+        if (modMs <= ReportModFrameMs) return;
+        var top = _featureMs.OrderByDescending(x => x.Ms).FirstOrDefault().Id ?? "?";
+        var n = _slowByFeature[top] = (_slowByFeature.TryGetValue(top, out var prev) ? prev : 0) + 1;
+        if (n < 2) return;
+        Diagnostics.ErrorReporter.Instance?.Mismatch("perf", $"Slow frame: {top}", new[] { "slow-frame", top },
+            $"The mod's own work took {modMs:0} ms in one frame ({times}); {gapMs:0} ms since the frame before. Slow frame {n} from {top} this session.",
+            tags: new Dictionary<string, string> { ["source"] = top, ["check"] = "slow-frame" });
+    }
 
     private void OnFrame()
     {
@@ -165,18 +188,19 @@ public sealed class OverlayHost
         _lastModMs = modMs;
         try
         {
-            string? line = null;
             if (modMs > SlowModFrameMs)
-                line = $"[perf] slow frame: the mod took {modMs:0} ms ({FeatureTimes()})";
-            else if (gapMs > SlowGameFrameMs && prevModMs < SlowModFrameMs)
-                line = $"[perf] slow frame: {gapMs:0} ms since the last frame, the mod's share {prevModMs:0.0} ms (the game's own work)";
-            if (line == null) return;
+            {
+                ModFrameSlow(modMs, gapMs);
+                return;
+            }
+            if (gapMs <= SlowGameFrameMs || prevModMs >= SlowModFrameMs) return;
             var now = Godot.Time.GetTicksMsec();
-            if (now - _lastPerfLogMs < PerfLogIntervalMs) { _perfSkipped++; return; }
-            if (_perfSkipped > 0) line += $"; {_perfSkipped} more slow frames since the last line";
-            _perfSkipped = 0;
-            _lastPerfLogMs = now;
-            if (modMs > SlowModFrameMs) _log.Warn(line); else _log.Info(line);
+            if (now - _lastStallLogMs < GameStallLogIntervalMs) { _stallsSkipped++; return; }
+            var line = $"[perf] slow frame: {gapMs:0} ms since the last frame, the mod's share {prevModMs:0.0} ms (the game's own work)";
+            if (_stallsSkipped > 0) line += $"; {_stallsSkipped} more since the last line";
+            _stallsSkipped = 0;
+            _lastStallLogMs = now;
+            _log.Info(line);
         }
         catch
         {

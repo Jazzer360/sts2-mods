@@ -6,6 +6,19 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.34.2
+#### Added
+- The mod's own slow frames (over 50 ms) are sent as error reports, grouped by which part of the mod took the time. Slow frames that aren't the mod's (a slower PC, loading) are only logged; every slow frame of the mod's is logged.
+#### Fixed
+- Error reports no longer count Violent Chord's damage short when Slippery (Vantom) took it down to 1 (logs and error reports only).
+- Block and damage from cards Lost Lute plays at random are no longer reported as unpredicted (logs and error reports only).
+- A played card's random cost going back to normal is no longer reported as an untracked cost change (logs and error reports only).
+- Punch of Joy turning a Sadness into Joy counts as its own created card (logs and error reports only).
+
+### Main Saves 1.0.4
+#### Changed
+- Rebuilt with the shared code update (no change in what it does).
+
 ### Spire QoL 0.34.1
 #### Added
 - A slow-frame line in the game log: when the mod's work in one frame takes over 30 ms, which part took the time; when a frame stalls with the mod's share small, that it was the game's own work (logs only).

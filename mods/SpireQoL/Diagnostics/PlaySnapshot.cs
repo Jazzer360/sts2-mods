@@ -133,9 +133,9 @@ internal sealed class PlaySnapshot
             if (!after.Cards.TryGetValue(card, out var a)) continue; // gone (exhausted, removed): the budget's
             var own = card.GetType();
             var name = card.GetType().Name;
-            // The played card going back up is the game clearing its "this turn or until played" cost
-            // (CardModel → CardEnergyCost.AfterCardPlayedCleanup: Splash, Bullet Time, Bookmark...).
-            var playedCleanup = ReferenceEquals(card, played) && a.Cost > b.Cost;
+            // The played card's cost changing is the game clearing its "this turn or until played" cost, either way
+            // (CardModel → CardEnergyCost.AfterCardPlayedCleanup: Splash, Bullet Time, Bookmark lowered it; a random cost raised it).
+            var playedCleanup = ReferenceEquals(card, played) && a.Cost != b.Cost;
             // An upgrade or downgrade changes the card's cost and keywords itself (OnUpgrade: Big Bang+
             // gains Innate): those are the upgrade's, checked as one change.
             var upgradeChanged = a.Upgraded != b.Upgraded;

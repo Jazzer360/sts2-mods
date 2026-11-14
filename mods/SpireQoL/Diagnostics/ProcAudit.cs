@@ -927,6 +927,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         void Shortfall(string what, string predicted, int actual) =>
             modelLines.Add($"{what}: predicted {predicted}, actual {actual} (the fight ended: the game logs nothing from the killing hit on)");
         if (procBlock < predictedBlock && w.FightEnded) Shortfall("block", predictedBlock.ToString(), procBlock);
+        // Cards auto-played at random (Lost Lute, The Fool) set off block procs of their own (Song Path on a Cho it played).
+        else if (procBlock > predictedBlock && UnpredictedAutoPlay(w, entries, me)) modelLines.Add($"block: predicted {predictedBlock}, actual {procBlock} (random auto-plays: not predictable)");
         else if (procBlock != predictedBlock) issues.Add($"block: predicted {predictedBlock}, actual {procBlock}");
 
         // ---- damage from procs (no card source), against each tab's range
@@ -941,11 +943,14 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         eMin += w.Facts?.OrbDamageMin ?? 0;
         eMax += w.Facts?.OrbDamageMax ?? 0;
         var (mMin, mMax) = (meTabs.Sum(t => t.AuditMin), meTabs.Sum(t => t.AuditMax));
-        // A damage cap outside the game's damage math stopped some of it: Hardened Shell (HardenedShellPower caps HP
-        // lost per turn in ModifyHpLostBeforeOstyLate, which the damage hooks don't reach), seen by its flash.
-        var capped = flashed.Any(m => m is PowerModel { Owner.IsEnemy: true } && Modifiers.Contains(m.GetType().Name));
-        if (toEnemies < eMin && capped) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}, capped by {string.Join(", ", flashed.Where(m => Modifiers.Contains(m.GetType().Name)).Select(m => m.GetType().Name).Distinct())}");
+        // A damage cap outside the game's damage math stopped some of it, seen by its flash: Hardened Shell (HardenedShellPower caps HP
+        // lost per turn in ModifyHpLostBeforeOstyLate, which the damage hooks don't reach), Slippery (SlipperyPower.ModifyHpLostAfterOsty: at
+        // most 1 HP a hit; Vantom).
+        static bool Caps(AbstractModel m) => m is PowerModel { Owner.IsEnemy: true } && (Modifiers.Contains(m.GetType().Name) || m.GetType().Name == nameof(SlipperyPower));
+        var capped = flashed.Any(Caps);
+        if (toEnemies < eMin && capped) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}, capped by {string.Join(", ", flashed.Where(Caps).Select(m => m.GetType().Name).Distinct())}");
         else if (toEnemies < eMin && w.FightEnded) Shortfall("damage to enemies", Range(eMin, eMax), toEnemies);
+        else if (toEnemies > eMax && UnpredictedAutoPlay(w, entries, me)) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies} (random auto-plays: not predictable)");
         else if (toEnemies < eMin || toEnemies > eMax) issues.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}");
         if (toMe < mMin && w.FightEnded) Shortfall("damage to you", Range(mMin, mMax), toMe);
         else if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");

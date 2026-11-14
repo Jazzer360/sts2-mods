@@ -172,3 +172,8 @@ Spire QoL sends nothing (crashes or mismatches) while another loaded mod changes
 The simulator tracks your HP when the adapter sets it (SimPlayer.Hp), with what prevents death in the game's order (Fairy in a Bottle, then Lizard Tail, each healing you from 0). Taken stays the full damage, overkill included (what Incoming Damage shows, and what the forecast check compares: it adds each hit's OverkillDamage). States that don't set your HP (the generated single-player fights, older replay cases) never die, so their results are unchanged.
 *Why:* a lethal enemy turn and a revive are what matter most on that screen, and the simulator already has every hit in order; doing it in the display instead would miss revives partway through the enemy turn.
 *Replaced:* nothing (death wasn't predicted; Lizard Tail and Fairy in a Bottle were reviewed as "ignore").
+
+### 36. Slow frames: report the mod's own, log everything — active (2026-11-14)
+The frame loop times the mod's own work each frame, per feature. Over 30 ms it's logged every time; over 50 ms it's also an error report (`perf`, grouped by the slowest feature), from that feature's second such frame in a session. A slow frame where the mod's share stayed small is the game's own work and is only logged (rate-limited), never reported.
+*Why:* a stutter from our work is a bug we can fix, and the report carries the game state that caused it. A slow PC or the game's loading would otherwise send reports from every player on weaker hardware, none of them ours to fix. The first slow frame per feature is often its code warming up in the first fight, so it isn't sent.
+*Replaced:* nothing (slow frames weren't measured).
