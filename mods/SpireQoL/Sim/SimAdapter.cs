@@ -547,7 +547,11 @@ public static class SimAdapter
                           && (card.TargetType == TargetType.AnyEnemy
                               ? ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } lt && !lt.HasPower<ArtifactPower>()
                               : cs.HittableEnemies.Any(x => x.IsAlive && !x.HasPower<ArtifactPower>()));
+        play.ByOsty = f.ByOsty;
         play.KillsOsty = KillsOstyCards.Contains(name);
+        // Necro Mastery: Osty losing HP (here: all of it, killed by the card) hits every enemy for that much times its amount.
+        if (play.KillsOsty && me.IsOstyAlive && me.Osty is { } dying && me.Creature.Powers.FirstOrDefault(x => x.GetType().Name == nameof(NecroMasteryPower)) is { Amount: > 0 } mastery)
+            play.AllEnemiesUnblockable = dying.CurrentHp * mastery.Amount;
         // Timber: a kill with its hit sets off a second attack on every enemy (OnKillDamage), after the first attack has
         // spent your Vigor (VigorPower.AfterAttack) and a stack of Gigantification. The card scan flags a new damage value.
         if (OnKillHitAllCards.Contains(name) && card.DynamicVars.TryGetValue("OnKillDamage", out var killVar) && killVar is DamageVar kdv)
@@ -753,7 +757,7 @@ public static class SimAdapter
                 strength += str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var)) * (plays + (lampDoubles && str.Sign < 0 ? 1 : 0));
             // Monarch's Gaze: each of your attack's hits takes Strength from the enemy it hits this turn
             // (MonarchsGazeStrengthDownPower). Random-target attacks are left out (which enemy is a roll).
-            if (gaze > 0 && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))
+            if (gaze > 0 && !f.ByOsty && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))
                 strength -= gaze * f.HitsOn(e);
             var wasBehind = surrounded != null && Behind(e, surrounded.Facing);
             var nowBehind = surrounded != null && Behind(e, facing);

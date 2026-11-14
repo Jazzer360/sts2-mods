@@ -181,6 +181,7 @@ public static class SettingsCatalog
         new(nameof(TrashToTreasurePower), SourceGroup.YourPower, "Cards that create statuses"),
         new(nameof(RupturePower), SourceGroup.YourPower, "Cards that cost you HP: Strength"),
         new(nameof(InfernoPower), SourceGroup.YourPower, "Cards that cost you HP: damage to all"),
+        new(nameof(NecroMasteryPower), SourceGroup.YourPower, "Cards that kill Osty: damage to all (Osty's HP times its amount)"),
         new(nameof(SeekingEdgePower), SourceGroup.YourPower, "Sovereign Blade: hits all enemies"),
         new(nameof(ParryPower), SourceGroup.YourPower, "Sovereign Blade: block"),
         new(nameof(SwordSagePower), SourceGroup.YourPower, "Sovereign Blade: replays"),

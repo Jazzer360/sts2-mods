@@ -322,6 +322,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 | Vital Spark (enemy) | Tainted cards | **crossed** trigger |
 | Rupture | cards that cost you HP (Bloodletting-style HP loss) | trigger |
 | Inferno | cards that cost you HP (once per play) | damage to all |
+| Necro Mastery | cards that kill Osty (Bone Shards, Sacrifice) | damage to every enemy (Osty's HP times its amount, through block) |
 | Metronome | cards whose channels reach its orb count (including Storm's lightning from a power) | damage |
 | Bone Flute | cards that make Osty attack, while Osty is out | block |
 | Intimidating Helmet | cards spending ≥ 2 energy (energy actually spent: X-cost counts your energy) | block |

@@ -79,6 +79,16 @@ public sealed class SimPlay
     /// enemy id through the game's damage math. Not a hit of yours: Curl Up, Flutter and the like don't react.
     /// </summary>
     public Dictionary<int, int> TargetDamage = new();
+    /// <summary>
+    /// Osty makes the attack (Bone Shards, Poke, Squeeze...): enemy Thorns hits Osty, not you (ThornsPower: the dealer), and
+    /// your Envenom and The Boot don't apply (they need you as the dealer). Curl Up, Slippery and the like react as to any hit.
+    /// </summary>
+    public bool ByOsty;
+    /// <summary>
+    /// Unblockable damage to every enemy after the card's hits: Necro Mastery when the card kills Osty (NecroMasteryPower.
+    /// AfterCurrentHpChanged: the HP Osty loses times its amount).
+    /// </summary>
+    public int AllEnemiesUnblockable;
     /// <summary>It kills your Osty (Sacrifice, Bone Shards: CreatureCmd.Kill on Osty).</summary>
     public bool KillsOsty;
     public int FadingDelta;
@@ -467,6 +477,22 @@ public static class SimEngine
         e.StunnedThisTurn = true;
     }
 
+    /// <summary>One hit of an attack Osty makes for your card: as CardHit, but Thorns hits Osty, and your Envenom and The Boot don't apply.</summary>
+    private static void OstyHit(SimState s, SimEnemy e, int amount)
+    {
+        if (amount <= 0 || !e.Alive) return;
+        if (e.Thorns > 0 && s.P.OstyHp > 0) s.P.OstyHp = Math.Max(0, s.P.OstyHp - e.Thorns);
+        e.HitByCard = true;
+        if (Damage(e, amount, powered: true) > 0) e.ThroughByCard = true;
+    }
+
+    /// <summary>A hit of the play's attack: Osty's or yours.</summary>
+    private static void PlayHit(SimState s, SimEnemy e, int amount, bool osty)
+    {
+        if (osty) OstyHit(s, e, amount);
+        else CardHit(s, e, amount);
+    }
+
     /// <summary>
     /// One hit of your card's attack (a powered attack from a card): marks it for Curl Up and Skittish,
     /// and Envenom poisons it when damage gets through (EnvenomPower.AfterDamageGiven; Snecko Skull adds).
@@ -484,11 +510,11 @@ public static class SimEngine
     }
 
     /// <summary>One hit on a random living enemy: a branch per possible target.</summary>
-    private static IEnumerable<SimState> HitRandom(SimState s, Func<SimEnemy, int> amount, bool card = false, Action<SimState, SimEnemy>? then = null)
+    private static IEnumerable<SimState> HitRandom(SimState s, Func<SimEnemy, int> amount, bool card = false, Action<SimState, SimEnemy>? then = null, bool osty = false)
     {
         void Hit(SimState st, SimEnemy e)
         {
-            if (card) CardHit(st, e, amount(e));
+            if (card) PlayHit(st, e, amount(e), osty);
             else Damage(e, amount(e));
             then?.Invoke(st, e);
         }
@@ -550,11 +576,11 @@ public static class SimEngine
         }
     }
 
-    private static void HitAll(SimState s, Func<SimEnemy, int> amount, bool card = false)
+    private static void HitAll(SimState s, Func<SimEnemy, int> amount, bool card = false, bool osty = false)
     {
         foreach (var e in s.Targetable.ToList())
         {
-            if (card) CardHit(s, e, amount(e));
+            if (card) PlayHit(s, e, amount(e), osty);
             else Damage(e, amount(e));
         }
     }
@@ -772,7 +798,7 @@ public static class SimEngine
                     var e = s.Enemy(p.TargetId);
                     if (e == null) return;
                     var aliveBefore = e.Alive;
-                    for (var i = 0; i < p.Hits; i++) CardHit(s, e, HitAt(e, i));
+                    for (var i = 0; i < p.Hits; i++) PlayHit(s, e, HitAt(e, i), p.ByOsty);
                     // Timber: its kill sets off a hit on every enemy (a second attack of the card's).
                     if (p.OnKillHitAll.Count > 0 && aliveBefore && !e.Alive)
                         HitAll(s, x => p.OnKillHitAll.TryGetValue(x.Id, out var d) ? d : 0, card: true);
@@ -789,14 +815,18 @@ public static class SimEngine
                     for (var i = 0; i < p.Hits; i++)
                     {
                         var n = i;
-                        HitAll(s, x => HitAt(x, n), card: true);
+                        HitAll(s, x => HitAt(x, n), card: true, osty: p.ByOsty);
                     }
                 });
                 break;
             case SimPlay.Target.Random:
-                for (var i = 0; i < p.Hits; i++) b.Each(s => HitRandom(s, Hit, card: true));
+                for (var i = 0; i < p.Hits; i++) b.Each(s => HitRandom(s, Hit, card: true, osty: p.ByOsty));
                 break;
         }
+
+        // Necro Mastery: Osty's death (Bone Shards, Sacrifice) hits every enemy.
+        if (p.AllEnemiesUnblockable > 0)
+            b.Do(s => { foreach (var e in s.Targetable.ToList()) Damage(e, p.AllEnemiesUnblockable, unblockable: true); });
 
         // Capture Spirit: unblockable damage to the target.
         if (p.TargetDamage.TryGetValue(p.TargetId, out var direct) && direct > 0)

@@ -161,6 +161,12 @@ public sealed class PlayFacts
     /// <summary>Times Osty attacks because of it (for Bone Flute).</summary>
     public int OstyAttacks { get; init; }
 
+    /// <summary>
+    /// Osty makes the card's attack (DamageCmd.Attack(...).FromOsty: Bone Shards, Poke, Squeeze...): its hits are Osty's, through the
+    /// game's damage math with Osty as the dealer, and only while Osty is alive (Osty.CheckMissingWithAnim).
+    /// </summary>
+    public bool ByOsty { get; init; }
+
     /// <summary>It makes you lose HP (HpLoss value), for Rupture.</summary>
     public bool LosesHp { get; init; }
 
@@ -230,13 +236,14 @@ public sealed class PlayFacts
                 raw = calc.Calculate(enemy);
                 if (cv is CalculatedDamageVar cdv) props = cdv.Props;
             }
-            else if (Card.DynamicVars.TryGetValue("Damage", out var dv))
+            else if (Card.DynamicVars.TryGetValue("Damage", out var dv) || Card.DynamicVars.TryGetValue("OstyDamage", out dv))
             {
                 raw = dv.BaseValue;
                 if (dv is DamageVar d) props = d.Props;
             }
             else return 0;
-            var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, Me.Creature, raw + baseDelta, props,
+            var dealer = ByOsty && Me.Osty is { } osty ? osty : Me.Creature;
+            var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, dealer, raw + baseDelta, props,
                 Card, null, hooks, CardPreviewMode.None, out _);
             return Math.Max(0m, v);
         }
@@ -259,7 +266,8 @@ public sealed class PlayFacts
     /// later hit); null when nothing changes. See ImpaledLaterHitDamage and VulnerableLaterHitDamage.
     /// </summary>
     public (int After, int Damage)? LaterHitDamage(Creature enemy)
-        => ImpaledLaterHitDamage(enemy) ?? ImpaledByReplayHitDamage(enemy) ?? VulnerableLaterHitDamage(enemy) ?? SpentBonusLaterHitDamage(enemy);
+        => ImpaledLaterHitDamage(enemy) ?? ImpaledByReplayHitDamage(enemy) ?? VulnerableLaterHitDamage(enemy) ?? SpentBonusLaterHitDamage(enemy)
+           ?? SlowLaterHitDamage(enemy);
 
     /// <summary>
     /// A replayed shot at an enemy that isn't Impaled hits harder on its later plays: the first play's attack lands,
@@ -303,7 +311,7 @@ public sealed class PlayFacts
         try
         {
             if (Plays < 2 || Card.Type != CardType.Attack || Card.TargetType is not (TargetType.AnyEnemy or TargetType.AllEnemies)) return null;
-            var vigor = Me.Creature.Powers.Where(p => p is VigorPower).Sum(p => p.Amount);
+            var vigor = ByOsty ? 0 : Me.Creature.Powers.Where(p => p is VigorPower).Sum(p => p.Amount); // Vigor is yours, not Osty's
             var giga = Me.Creature.Powers.Where(p => p is GigantificationPower).Sum(p => p.Amount);
             if (vigor <= 0 && giga <= 0) return null;
             var perPlay = HitsOn(enemy) / Plays;
@@ -317,6 +325,33 @@ public sealed class PlayFacts
             var later = RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out _, -vigor);
             if (giga > 0 && giga <= boostedPlays) later /= 3m;
             return (perPlay * boostedPlays, Math.Max(0, (int)later));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// A replayed attack on a Slow enemy hits harder on its later plays: Slow adds 10% to powered attacks on it per card
+    /// played this turn (SlowPower.ModifyDamageMultiplicative), and each play counts (AfterCardPlayed). The second play's
+    /// damage is used for every later play (a third play would be 10% more again; not modelled).
+    /// </summary>
+    private (int After, int Damage)? SlowLaterHitDamage(Creature enemy)
+    {
+        try
+        {
+            if (Plays < 2 || Card.Type != CardType.Attack || Card.TargetType is not (TargetType.AnyEnemy or TargetType.AllEnemies)) return null;
+            if (enemy.Powers.FirstOrDefault(p => p is SlowPower) is not { } slow) return null;
+            var perPlay = HitsOn(enemy) / Plays;
+            if (perPlay <= 0) return null;
+            var v = RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.Additive | MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.Multiplicative, out var props);
+            if (!MegaCrit.Sts2.Core.ValueProps.ValuePropExtensions.IsPoweredAttack(props)) return null;
+            var amount = slow.DynamicVars["SlowAmount"].BaseValue;
+            var adjusted = v / (1m + 0.1m * amount) * (1m + 0.1m * (amount + 1));
+            var capped = RawDamagePerHit(enemy);
+            if (capped < v) adjusted = Math.Min(adjusted, capped);
+            return (perPlay, Math.Max(0, (int)adjusted));
         }
         catch
         {
@@ -523,7 +558,8 @@ public sealed class PlayFacts
             LosesHp = card.DynamicVars.ContainsKey("HpLoss"),
             HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
             OtherHandCards = others.Count,
-            AttackHits = IsPlayerAttack(card) ? HitsPerPlay(card, name, cs, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
+            ByOsty = OstyAttackCards.Contains(name),
+            AttackHits = (OstyAttackCards.Contains(name) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, name, cs, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
             OrbDamage = orbs.Exact,
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
@@ -1016,6 +1052,10 @@ public sealed class PlayFacts
     {
         try { return Math.Max(0, MegaCrit.Sts2.Core.Hooks.Hook.ModifyXValue(cs, card, spent)); } catch { return Math.Max(0, spent); }
     }
+
+    /// <summary>An attack card aimed at enemies (Osty's attacks use OstyDamage or CalculatedDamage).</summary>
+    private static bool IsAttackOnEnemies(CardModel card)
+        => card.Type == CardType.Attack && card.TargetType is TargetType.AnyEnemy or TargetType.AllEnemies or TargetType.RandomEnemy;
 
     private static bool IsPlayerAttack(CardModel card)
         => card.Type == CardType.Attack

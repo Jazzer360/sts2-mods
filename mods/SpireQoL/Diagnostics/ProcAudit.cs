@@ -894,6 +894,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         foreach (var (name, t) in sourceOf)
         {
             if (t.Crossed || !t.Key.StartsWith("proc:") || EndOfTurnRelicTabs.Contains(name) || SilentRelics.Contains(name)) continue;
+            // The play ended the fight: the game stops at the killing hit, so a relic that acts after it (Bone Flute after
+            // Osty's attack) never gets to.
+            if (w.FightEnded) continue;
             // Razor Tooth upgrades the played card without flashing (RazorTooth.AfterCardPlayed: no Flash call): its
             // effect is checked instead (CardCmd.Upgrade does nothing once the fight is ending).
             if (name == nameof(RazorTooth))
@@ -1269,7 +1272,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (pe == null || !afterIds.TryGetValue(creature, out var aid) || after.Enemy(aid) is not { } ae) continue;
                 var name = pe.Name;
                 static int Hp(SimEnemy e) => Math.Max(0, e.Hp);
-                if (Hp(pe) != Hp(ae)) d.Add($"after play enemy HP: {name} predicted {Hp(pe)}, actual {Hp(ae)}");
+                // The Waterfall Giant doesn't leave at 0 HP: Steam Eruption puts it about to blow at 999999999 HP (WaterfallGiant.
+                // TriggerAboutToBlowState), stunned this turn, as good as dead until it explodes.
+                var aboutToBlow = pe.Hp <= 0 && creature.Monster != null && Sts2State.Private(creature.Monster, "IsAboutToBlow", false);
+                if (Hp(pe) != Hp(ae) && !aboutToBlow) d.Add($"after play enemy HP: {name} predicted {Hp(pe)}, actual {Hp(ae)}");
                 if (ae.Hp <= 0 || pe.Hp <= 0) continue;
                 if (pe.Block != ae.Block) d.Add($"after play enemy block: {name} predicted {pe.Block}, actual {ae.Block}");
                 if (pe.Poison != ae.Poison) d.Add($"after play enemy poison: {name} predicted {pe.Poison}, actual {ae.Poison}");

@@ -407,7 +407,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
   - [x] InfernoPower: covered in 0.31.35 (proc tab on cards that cost HP; simulator on end-of-turn and in-play HP loss, yours)
   - [ ] InterceptPower: multiplayer: takes attacks aimed at a covered player (Incoming Damage assumes they hit you)
   - [ ] MonarchsGazePower: AfterDamageGiven lowers Strength per hit (simulator intents for single-target and all-enemy attacks; not random-target ones)
-  - [ ] NecroMasteryPower: AfterCurrentHpChanged damages all enemies when Osty loses HP; not simulated
+  - [x] NecroMasteryPower: AfterCurrentHpChanged damages all enemies when Osty loses HP: cards that kill Osty, 0.35.8 (not yet: Osty losing HP to Thorns or attacks)
   - [ ] ReattachPower: AfterDeath/ShouldAllowHitting segments revive (a kill may not stick: lethal can be wrong)
   - [ ] SoulboundPower: AfterCardGeneratedForCombat adds Souls when you create Souls (created-card counts)
   - [ ] StampedePower: AfterAutoPostPlayPhaseEntered auto-plays random Attacks at the end of your turn (end-of-turn damage not simulated; since 0.31.35 the forecast check skips a turn where yours fired)
@@ -482,6 +482,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.35.5 (report #241): Swift draws after the card's play, behind the cards it put in your hand. Which cards create into a pile instead of your hand is a list (PlayFacts.GeneratedToPileCards, from the decompile); the code scan can't read the pile, so a new one shows up only through the draw check.
 - [x] 0.35.6: Capture Spirit's unblockable damage in the simulator (Slippery tab, kills), with a scan check for non-attack cards that damage an enemy. Found in game.
 - [x] 0.35.7 (report #242): Yah tab from the simulator's kills: a proc (Violent Chord) killing an enemy your arrows Impale dislodges them all, or a shot's target it just impaled. Not modelled: Twine's block count still uses only the card's own kills.
+- [x] 0.35.8 (reports #243–#260, Necrobinder): Osty's attacks in the simulator (Osty as the dealer; Thorns hits Osty; no Envenom or The Boot), Necro Mastery on Osty's death (tab and simulator), Slow on replays (the second play's damage for every later play), the Waterfall Giant about to blow, relic tabs on a fight-ending play. Capture Spirit (#254, #257) was fixed in 0.35.6.
 - [ ] **The Fool, still open:** ~~Timber's damage to every enemy on a kill~~ (0.35.1); Blossom Shot's Stretch; Epic Retrieval's energy; ~~Motif's draws for the shuffle warning~~ (0.31.40); what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
 - [x] 0.32.0: your HP in the simulator; lethal skull on Incoming Damage; Fairy in a Bottle and Lizard Tail revives (icon and HP after).
 - [ ] **Teammates' revives:** a teammate's Lizard Tail (their potions aren't known) isn't modelled.

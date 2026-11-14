@@ -216,7 +216,7 @@ internal static partial class CoverageLedger
         ["MayhemPower"] = "ignore: AfterAutoPrePlayPhaseEntered auto-plays at the start of your turn",
         ["MonarchsGazePower"] = "gap: AfterDamageGiven lowers Strength per hit (simulator intents for single-target and all-enemy attacks; not random-target ones)",
         ["MonologuePower"] = "covered: AfterCardPlayed Strength per card (proc tab)",
-        ["NecroMasteryPower"] = "gap: AfterCurrentHpChanged damages all enemies when Osty loses HP; not simulated",
+        ["NecroMasteryPower"] = "covered: AfterCurrentHpChanged damages all enemies when Osty loses HP: a card that kills Osty (proc tab; simulator). Not modelled: Osty losing HP to an enemy's Thorns or attacks",
         ["NemesisPower"] = "ignore: AfterSideTurnEnd Intangible at the end of its own turn (your next turn)",
         ["NoBlockPower"] = "ignore: AfterSideTurnEnd ticks down (block math)",
         ["NoDrawPower"] = "covered: ShouldDraw blocks draws (PlayChain)",

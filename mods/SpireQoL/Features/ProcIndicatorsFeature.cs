@@ -368,7 +368,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             // models itself, before each hit.
             if (h.Harmful && h.Kind == Kind.Damage && h.Amount > 0 && src.GetType().Name != nameof(ThornsPower))
                 toYou.Add((src.GetType().Name, h.Amount));
-            if (src.GetType().Name == nameof(JuggernautPower) || h.Harmful) continue;
+            if (src.GetType().Name is nameof(JuggernautPower) or nameof(NecroMasteryPower) || h.Harmful) continue; // modelled by the simulator itself
             if (h.Kind == Kind.Damage)
             {
                 if (h.OnEnemies != null)
@@ -649,6 +649,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(RupturePower) when mine && f.LosesHp: return Hit.Trig();
                     // Losing HP on your turn: damage to every enemy (InfernoPower.AfterDamageReceived), once per play.
                     case nameof(InfernoPower) when mine && f.LosesHp: return Damage(a, plays, Spread.All);
+                    // Osty losing HP hits every enemy for that much times its amount (NecroMasteryPower.AfterCurrentHpChanged): a card
+                    // that kills Osty (Bone Shards, Sacrifice) takes all of it. Unblockable; the simulator models it itself.
+                    case nameof(NecroMasteryPower) when mine && SimAdapter.KillsOstyCards.Contains(card.GetType().Name) && _me.IsOstyAlive && _me.Osty is { } dying:
+                        return Damage(dying.CurrentHp * a, 1, Spread.All, props: ValueProp.Unblockable | ValueProp.Unpowered);
                     case nameof(DevourLifePower) when mine && card is Soul: return new Hit(Kind.Summon, a * plays);
                     case nameof(HauntPower) when mine && card is Soul: return Damage(a, plays, Spread.Random, props: ValueProp.Unblockable | ValueProp.Unpowered);
                     case nameof(StormPower) when mine && type == CardType.Power: return Hit.Trig();

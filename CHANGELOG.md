@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.8
+#### Added
+- A Necro Mastery tab on cards that kill Osty (Bone Shards, Sacrifice): Osty's HP times its amount, to every enemy, through block.
+#### Fixed
+- Osty's attacks (Bone Shards, Poke, Sweeping Gaze, Flatten, High Five, Rattle, Snap, Sic 'Em, Right Hand Hand, Squeeze, Unleash, Protector) count in the predictions, with Osty's own damage: lethal, kills, Incoming Damage, and the tabs that depend on them (Slippery, Curl Up, Crab Rage...). Enemy Thorns hits Osty, not you.
+- A replayed attack on a Slow enemy hits harder on its later plays (Slow counts each play).
+- Error reports no longer flag the Waterfall Giant's 999999999 HP once it's about to blow, or a relic that acts after a fight-ending hit (logs and error reports only).
+
 ### Spire QoL 0.35.7
 #### Fixed
 - The Yah tab shows when the card's procs (Violent Chord after a Wah) finish off an enemy holding your arrows: its death knocks them loose.
