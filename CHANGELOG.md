@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.7
+#### Fixed
+- The Yah tab shows when the card's procs (Violent Chord after a Wah) finish off an enemy holding your arrows: its death knocks them loose.
+
 ### Spire QoL 0.35.6
 #### Fixed
 - Capture Spirit's damage counts in the predictions: it can kill (lethal), and it gets the crossed Slippery tab when it would spend a Slippery charge.

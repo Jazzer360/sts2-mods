@@ -331,7 +331,7 @@ internal static partial class CoverageLedger
         ["TunePower"] = "ignore: AfterSideTurnEnd gives a free card next turn when you played a Ki",
         ["ViolentChordPower"] = "covered: AfterCardPlayed damages every enemy on your first Wah each turn (proc damage: simulator)",
         ["WuppysLoyaltyPower"] = "covered: ModifyPreBlockDamageTarget sends powered attacks on its pet owner to Wuppy while it lives, whole, before block (simulator: SimPlayer.WuppyHp, for you; a teammate's Wuppy isn't modelled)",
-        ["YahPower"] = "covered: AfterArrowDislodged gives energy once per turn when your arrow is dislodged (proc tab when some aim dislodges, Fool.Dislodged)",
+        ["YahPower"] = "covered: AfterArrowDislodged gives energy once per turn when your arrow is dislodged (proc tab when some aim dislodges, Fool.Dislodged, or the simulator has the play kill an enemy holding your arrows in every branch)",
 
         // ======== cards
         ["BansheesCry"] = "ignore: its own cost (read from the card)",

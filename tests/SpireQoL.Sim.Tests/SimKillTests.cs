@@ -56,6 +56,24 @@ public class SimKillTests
     }
 
     [Fact]
+    public void AllEnemyProcFinishesWhatTheCardStarted()
+    {
+        // Wah Cho (3) leaves an 11-HP enemy alive; Violent Chord's 9 to every enemy after the play kills it
+        // (the Yah tab reads this kill: the dead enemy's arrows come loose). The 40-HP enemy survives.
+        var s = new SimState { Enemies = { Enemy(1, 11, 0), Enemy(2, 40, 8) } };
+        var p = new SimPlay { Name = "Wah Cho", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 3 }, Hits = 1, BlockAmount = 3, BlockGains = 1 };
+        p.Procs.Add(new ProcHit { Spread = SimPlay.Target.Single, TargetId = 1, Damage = { [1] = 9 } });
+        p.Procs.Add(new ProcHit { Spread = SimPlay.Target.Single, TargetId = 2, Damage = { [2] = 9 } });
+        var o = SimEngine.Run(s, p);
+        Assert.Equal(new HashSet<int> { 1 }, o.KilledByPlayInAll);
+        Assert.True(o.PlayKillsInEveryBranch);
+
+        // Without the proc the card alone doesn't kill it.
+        var alone = new SimPlay { Name = "Wah Cho", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 3 }, Hits = 1, BlockAmount = 3, BlockGains = 1 };
+        Assert.Empty(SimEngine.Run(s, alone).KilledByPlayInAny);
+    }
+
+    [Fact]
     public void EndOfTurnKillsAreNotPlayKills()
     {
         // Juggernaut from end-of-turn Plating kills it, but not during the play.

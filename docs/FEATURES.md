@@ -342,7 +342,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 | Conductor's Baton | the card that brings you to three melodies this turn | trigger (powered attacks on you deal 75% until your next turn) |
 | Explosive Arrows (the Fool) | Shoot cards, when you have an arrow to shoot | damage to every enemy |
 | Twine | cards that knock your arrows loose (every third of your hits on an enemy your arrow Impales, killing it, Recall, Uproot, Wrest) | block per arrow when every aim does it; else a plain tab |
-| Yah (the Fool) | cards that knock one of your arrows loose, when some aim does it (first time this turn) | trigger (energy) |
+| Yah (the Fool) | cards that knock one of your arrows loose, when some aim does it (first time this turn), including kills its procs finish (Violent Chord) on an enemy holding your arrows | trigger (energy) |
 | Stretch (the Fool) | block cards whose powered block spends your Stretch (not Cho Ki, which puts it back; not Entrench, unpowered) | trigger |
 | Vigor | attacks that spend your Vigor (your powered attacks; not Osty's): Akabeko's on turn 1 | trigger |
 | Gigantification | attacks that spend a stack of Gigantification (Osty's too) | trigger |
