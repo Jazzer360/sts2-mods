@@ -94,6 +94,18 @@ public class PlayChainTests
         Assert.True(r.Shuffles);
     }
 
+
+    [Fact]
+    public void SwiftDrawsAfterTheCardsItsCardPutInYourHand()
+    {
+        // Vitriol with Swift from a full hand: Vitriol leaves (9), its Sadness goes into your hand (10), then Swift's
+        // draw (EnchantmentModel.OnPlay runs after the card's play) finds no room.
+        var full = new PlayChain.DrawInputs { HandCount = 10, DrawPile = 7, EnchantmentDraws = 1, AddedToHandBeforeEnchantment = 1 };
+        Assert.Equal(0, PlayChain.Resolve(full).Draws);
+        // One card less in hand: room for it.
+        var nine = new PlayChain.DrawInputs { HandCount = 9, DrawPile = 7, EnchantmentDraws = 1, AddedToHandBeforeEnchantment = 1 };
+        Assert.Equal(1, PlayChain.Resolve(nine).Draws);
+    }
     [Fact]
     public void CalculatedGambleRefillsAnEmptyDiscardPileBeforeDrawing()
     {

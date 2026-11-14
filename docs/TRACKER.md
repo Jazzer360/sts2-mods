@@ -479,6 +479,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.35.2: Pael's Legion and Vambrace tabs off cards without a block value when nothing lands (Fisticuffs under No Block, Entrench with no block).
 - [x] 0.35.3 (report #240): Adroit on an attack doesn't get Stretch (StretchPower.BeforeCardPlayed only registers block cards).
 - [x] 0.35.4: Pael's Legion and Vambrace tabs count Adroit's block (an Adroit attack uses them up). Not modelled: a replayed Adroit card's later plays still predicted with the doubled block.
+- [x] 0.35.5 (report #241): Swift draws after the card's play, behind the cards it put in your hand. Which cards create into a pile instead of your hand is a list (PlayFacts.GeneratedToPileCards, from the decompile); the code scan can't read the pile, so a new one shows up only through the draw check.
 - [ ] **The Fool, still open:** ~~Timber's damage to every enemy on a kill~~ (0.35.1); Blossom Shot's Stretch; Epic Retrieval's energy; ~~Motif's draws for the shuffle warning~~ (0.31.40); what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
 - [x] 0.32.0: your HP in the simulator; lethal skull on Incoming Damage; Fairy in a Bottle and Lizard Tail revives (icon and HP after).
 - [ ] **Teammates' revives:** a teammate's Lizard Tail (their potions aren't known) isn't modelled.

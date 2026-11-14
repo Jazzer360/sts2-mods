@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.5
+#### Fixed
+- Swift's draw comes after the card's own effects, so cards that card puts in your hand (Vitriol's Sadness) take room first: from a full hand it draws nothing (Shuffle Warning, draw procs).
+
 ### Spire QoL 0.35.4
 #### Fixed
 - Pael's Legion and Vambrace tabs show on cards whose Adroit enchantment gains block, attacks included: its block is doubled and uses them up.

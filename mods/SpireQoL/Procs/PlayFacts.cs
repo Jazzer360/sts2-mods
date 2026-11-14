@@ -66,6 +66,9 @@ public sealed class PlayFacts
     /// <summary>Cards the card itself draws, across plays.</summary>
     public int OwnDraws { get; init; }
 
+    /// <summary>Of those, the card's enchantment's (Swift): drawn after the card's own play.</summary>
+    public int EnchantmentDraws { get; init; }
+
     /// <summary>
     /// Draws your powers and relics add because of this play (CardPileCmd.Draw in their hooks):
     /// Dark Embrace per card exhausted, Joss Paper on reaching its exhaust count, Game Piece on a
@@ -441,6 +444,7 @@ public sealed class PlayFacts
             ExhaustsOthers = ExhaustsOthers + next.TotalExhausts,
             Discards = Discards + next.Discards,
             OwnDraws = OwnDraws + next.OwnDraws,
+            EnchantmentDraws = EnchantmentDraws + next.EnchantmentDraws,
             BlockGains = BlockGains + next.BlockGains,
             Transforms = Transforms + next.Transforms,
             EnemyDebuffs = EnemyDebuffs.Concat(next.EnemyDebuffs).Distinct().ToList(),
@@ -477,9 +481,10 @@ public sealed class PlayFacts
         var hand = Sts2State.Hand(me);
         var others = hand.Where(c => !ReferenceEquals(c, card)).ToList();
         var draws = CardsDrawn(card, hand.Count) * Math.Max(1, plays);
+        var swiftDraws = 0;
         // Swift (enchantment): draws its amount when the card is played, once (Swift.AfterCardPlayed disables it).
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Swift { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } swift)
-            draws += swift.Amount;
+            swiftDraws = swift.Amount;
         var drawPile = Sts2State.DrawPileCount(me);
         var name = card.GetType().Name;
         var evoked = EvokedOrbs(card, name, me, cs, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
@@ -502,7 +507,8 @@ public sealed class PlayFacts
             ExhaustsOthers = ExhaustOthers(card, name, others, drawPile, plays),
             // Ki Chant looks at your draw pile, so each play discards its share; the others depend on the hand.
             Discards = DiscardCount(card, name, others, draws) * (name == "KiChant" ? Math.Max(1, plays) : 1),
-            OwnDraws = draws,
+            OwnDraws = draws + swiftDraws,
+            EnchantmentDraws = swiftDraws,
             BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
             Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me),
             GeneratedStatuses = statuses * Math.Max(1, plays),
@@ -536,6 +542,17 @@ public sealed class PlayFacts
     /// </summary>
     internal static readonly HashSet<string> DiscardThenDrawCards = new() { nameof(CalculatedGamble), "WheelOfFortune", "TheHermit" };
 
+    /// <summary>
+    /// Cards whose created cards go to your draw or discard pile, not your hand (AddGeneratedCardToCombat with
+    /// PileType.Draw or Discard; decompile v0.113.0). Every other card's created cards are counted as going to your hand.
+    /// </summary>
+    internal static readonly HashSet<string> GeneratedToPileCards = new()
+    {
+        nameof(AdaptiveStrike), nameof(Anger), nameof(BoostAway), nameof(CaptureSpirit), nameof(Dirge), nameof(FightThrough),
+        nameof(GlimpseBeyond), nameof(GraveWarden), nameof(GunkUp), nameof(Metamorphosis), nameof(MightyShield), nameof(MightyWeapon),
+        nameof(Outrage), nameof(Overclock), nameof(Reave), nameof(Turbo), nameof(Undeath),
+    };
+
     /// <summary>Cards that draw, then discard (Acrobatics: the hand limit counts the hand before the discard).</summary>
     internal static readonly HashSet<string> DrawThenDiscardCards = new() { nameof(Acrobatics), nameof(DaggerThrow), nameof(Prepared), nameof(Scrape) };
 
@@ -549,7 +566,10 @@ public sealed class PlayFacts
         var me = Me;
         var i = new PlayChain.DrawInputs
         {
-            OwnDraws = OwnDraws,
+            OwnDraws = OwnDraws - EnchantmentDraws,
+            EnchantmentDraws = EnchantmentDraws,
+            // Cards the card itself puts into your hand, before its enchantment draws.
+            AddedToHandBeforeEnchantment = EnchantmentDraws > 0 && !GeneratedToPileCards.Contains(Card.GetType().Name) ? Generated : 0,
             Plays = Math.Max(1, Plays),
             IsPower = Card.Type == CardType.Power,
             Exhausts = TotalExhausts,

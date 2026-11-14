@@ -64,6 +64,12 @@ public static class PlayChain
         /// plays first this turn). Counted after the cards your powers add (Calamity), with your relics' draws.
         /// </summary>
         public int PowerDrawsAfterPlay;
+        /// <summary>
+        /// Draws of the card's enchantment (Swift): EnchantmentModel.OnPlay runs after the card's own play, so the cards that
+        /// play put into your hand (AddedToHandBeforeEnchantment) take room first.
+        /// </summary>
+        public int EnchantmentDraws;
+        public int AddedToHandBeforeEnchantment;
     }
 
     public readonly record struct DrawResult(int Draws, int Chained, bool Shuffles);
@@ -102,6 +108,8 @@ public static class PlayChain
         }
         if (i.Blocked) return new DrawResult(0, chained, i.ShufflesFirst);
         var first = Math.Min(Math.Min(i.OwnDraws + during, room), cards);
+        if (i.EnchantmentDraws > 0)
+            first += Math.Min(Math.Min(i.EnchantmentDraws, Math.Max(0, room - first - i.AddedToHandBeforeEnchantment)), cards - first);
         var lateRoom = Math.Max(0, room - first - i.AddedToHandAfterPlay);
         var draws = first + Math.Min(Math.Min(after, lateRoom), cards - first);
         var shuffles = i.ShufflesFirst || (draws > pile && i.DiscardPile + i.DiscardedBeforeDraw > 0);
