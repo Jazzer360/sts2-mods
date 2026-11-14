@@ -428,6 +428,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 
 - [x] 0.36.0: card reward panel (Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing) and event option icons (cards, curses, HP loss, gold, potions, resting), read from each option's code; the event-option check; `docs/RELICS.md` generated with every relic.
 - [x] Coverage: `Diagnostics/ChoiceHooks.txt`, every relic overriding one has a rule or a reviewed reason (`RelicChoiceTracking`), checked by the script and in game.
+- [x] 0.36.1: checks on what each event option did (deck, gold, HP, potions, relics that always react) and on the card reward panel after a pick.
 - [ ] Play test: event icon placement (left of the option) on every event layout, ancients included; the card reward panel's default spot.
 - [ ] Shops: Maw Bank (crossed on items: buying turns off its gold), Bing Bong / Lucky Fysh / Book of Five Rings on shop cards, Membership Card and The Courier are already in the prices.
 - [ ] Card removal (shop, events): no relic reacts today (`BeforeCardRemoved` has no relic); recheck each game update.

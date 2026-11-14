@@ -25,7 +25,10 @@ public enum ChoiceEffect
 /// <param name="On">Choices it reacts to: its icon goes next to those event options.</param>
 /// <param name="CrossedOn">Choices where it works against you (red slash).</param>
 /// <param name="OnCardReward">It has a row in the card reward panel.</param>
-public sealed record ReminderRule(string Relic, ChoiceEffect On, ChoiceEffect CrossedOn = ChoiceEffect.None, bool OnCardReward = false);
+/// <param name="Expect">Effects that always make it flash when they happen (the check reports an icon
+/// whose effect happened without the relic reacting). Relics that react without flashing leave it empty.</param>
+public sealed record ReminderRule(string Relic, ChoiceEffect On, ChoiceEffect CrossedOn = ChoiceEffect.None, bool OnCardReward = false,
+    ChoiceEffect Expect = ChoiceEffect.None);
 
 /// <summary>
 /// Out-of-combat reminders (docs/FEATURES.md "Run Reminders"): which relics change what a choice
@@ -39,10 +42,10 @@ public static class ChoiceReminders
     public static readonly IReadOnlyList<ReminderRule> Rules = new ReminderRule[]
     {
         // AfterCardChangedPiles into your deck (transforms included, clones not for Bing Bong).
-        new(nameof(BingBong), AnyCard, CrossedOn: ChoiceEffect.CurseToDeck, OnCardReward: true),
+        new(nameof(BingBong), AnyCard, CrossedOn: ChoiceEffect.CurseToDeck, OnCardReward: true, Expect: AnyCard),
         new(nameof(BookOfFiveRings), AnyCard, OnCardReward: true),
-        new(nameof(LuckyFysh), AnyCard, OnCardReward: true),
-        new(nameof(DarkstonePeriapt), ChoiceEffect.CurseToDeck),
+        new(nameof(LuckyFysh), AnyCard, OnCardReward: true, Expect: AnyCard),
+        new(nameof(DarkstonePeriapt), ChoiceEffect.CurseToDeck, Expect: ChoiceEffect.CurseToDeck),
         // TryModifyCardRewardAlternatives: the sacrifice button, counting toward a relic.
         new(nameof(PaelsWing), ChoiceEffect.None, OnCardReward: true),
         // TryModifyCardBeingAddedToDeck: cards joining your deck from an event are upgraded or
@@ -52,10 +55,10 @@ public static class ChoiceReminders
         new(nameof(ToxicEgg), ChoiceEffect.CardToDeck),
         new(nameof(FresnelLens), ChoiceEffect.CardToDeck),
         // HP loss outside combat (ModifyHpLostAfterOsty; Beating Remnant only caps in combat).
-        new(nameof(TungstenRod), ChoiceEffect.HpLoss),
+        new(nameof(TungstenRod), ChoiceEffect.HpLoss, Expect: ChoiceEffect.HpLoss),
         // Gold (ModifyGoldGained, AfterGoldGained).
-        new(nameof(BowlerHat), ChoiceEffect.GoldGain),
-        new(nameof(DragonFruit), ChoiceEffect.GoldGain),
+        new(nameof(BowlerHat), ChoiceEffect.GoldGain, Expect: ChoiceEffect.GoldGain),
+        new(nameof(DragonFruit), ChoiceEffect.GoldGain, Expect: ChoiceEffect.GoldGain),
         new(nameof(Ectoplasm), ChoiceEffect.GoldGain, CrossedOn: ChoiceEffect.GoldGain),
         // Potions (ShouldProcurePotion; Belt Buckle's Dexterity needs no potions at combat start).
         new(nameof(Sozu), ChoiceEffect.Potion, CrossedOn: ChoiceEffect.Potion),

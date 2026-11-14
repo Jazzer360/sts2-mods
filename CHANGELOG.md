@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.36.1
+#### Added
+- Error reports check Run Reminders: what an event option did against what its icons said (cards, curses, gold, HP loss, potions, and relics that should have reacted), and the card reward panel against your pick (cards added, Lucky Fysh's gold, Book of Five Rings's heal).
+#### Fixed
+- Lucky Fysh's gold on the card reward panel counts every gold modifier the game applies, not only relics.
+
 ### Spire QoL 0.36.0
 #### Added
 - Run Reminders: on the card reward screen, a panel with your relics that react to the card you take and their counters (Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing). On events, the icons of your relics that change what an option does, beside it: Tungsten Rod on HP loss, Bing Bong, Book of Five Rings, Lucky Fysh and the eggs on cards (Bing Bong crossed on curses), Darkstone Periapt on curses, Bowler Hat and Dragon Fruit on gold (Ectoplasm crossed), Sozu and Belt Buckle crossed on potions, the rest-site relics on options that rest. Each has a switch in the settings menu.
