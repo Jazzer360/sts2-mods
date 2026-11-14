@@ -472,6 +472,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.33.1: no double-play or replay tabs on unplayable cards (Throwing Axe on a curse).
 - [x] 0.33.2: the play check accepts a double-play source firing (Throwing Axe) when the card played more than once.
 - [x] 0.34.0 (reports #217–#226): The Hermit discards before it draws (hand limit) and exhausts a Curse (scan check for cards that discard and draw), Nostalgia tab, The Magician's slots before its channels, Judgement in the simulator (scan check for cards that set HP), Unsettling Lamp with temporary debuffs and its doubling in the predictions, Vigor and Gigantification on replays.
+- [x] 0.34.1: slow-frame log (the mod's time per feature over 30 ms; game stalls over 100 ms with the mod's share). Asked for after a stutter on a lethal Wah Blast that the log couldn't place.
 - [ ] **The Fool, still open:** Timber's damage to every enemy on a kill aren't counted (lethal can only miss a kill, never claim one); Blossom Shot's Stretch; Epic Retrieval's energy; ~~Motif's draws for the shuffle warning~~ (0.31.40); what Lost Lute plays (hidden); Covering Fire and Compost (teammates).
 - [x] 0.32.0: your HP in the simulator; lethal skull on Incoming Damage; Fairy in a Bottle and Lizard Tail revives (icon and HP after).
 - [ ] **Teammates' revives:** a teammate's Lizard Tail (their potions aren't known) isn't modelled.

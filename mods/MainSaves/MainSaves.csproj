@@ -4,6 +4,6 @@
     <!-- Must match "id" in MainSaves.json: the game loads <id>.dll. -->
     <AssemblyName>MainSaves</AssemblyName>
     <RootNamespace>MainSaves</RootNamespace>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
   </PropertyGroup>
 </Project>

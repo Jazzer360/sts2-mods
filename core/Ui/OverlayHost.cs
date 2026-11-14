@@ -142,7 +142,52 @@ public sealed class OverlayHost
         _log.Info($"overlay ready ({_features.Count} frame features). {UnlockLayoutKey}: unlock layout, {HideAllKey}: hide all");
     }
 
+    // ---- slow-frame log: the mod's own time per frame, and frames the game itself stalled on.
+    /// <summary>The mod's work in one frame above this is logged (about 30 fps).</summary>
+    private const double SlowModFrameMs = 30;
+    /// <summary>A whole frame (the gap between two frames) above this is logged with the mod's share.</summary>
+    private const double SlowGameFrameMs = 100;
+    private const ulong PerfLogIntervalMs = 2000;
+    private readonly List<(string Id, double Ms)> _featureMs = new();
+    private ulong _lastFrameStartUs, _lastPerfLogMs;
+    private double _lastModMs;
+    private int _perfSkipped;
+
     private void OnFrame()
+    {
+        var start = Godot.Time.GetTicksUsec();
+        var gapMs = _lastFrameStartUs == 0 ? 0 : (start - _lastFrameStartUs) / 1000.0;
+        var prevModMs = _lastModMs;
+        _lastFrameStartUs = start;
+        _featureMs.Clear();
+        RunFrame();
+        var modMs = (Godot.Time.GetTicksUsec() - start) / 1000.0;
+        _lastModMs = modMs;
+        try
+        {
+            string? line = null;
+            if (modMs > SlowModFrameMs)
+                line = $"[perf] slow frame: the mod took {modMs:0} ms ({FeatureTimes()})";
+            else if (gapMs > SlowGameFrameMs && prevModMs < SlowModFrameMs)
+                line = $"[perf] slow frame: {gapMs:0} ms since the last frame, the mod's share {prevModMs:0.0} ms (the game's own work)";
+            if (line == null) return;
+            var now = Godot.Time.GetTicksMsec();
+            if (now - _lastPerfLogMs < PerfLogIntervalMs) { _perfSkipped++; return; }
+            if (_perfSkipped > 0) line += $"; {_perfSkipped} more slow frames since the last line";
+            _perfSkipped = 0;
+            _lastPerfLogMs = now;
+            if (modMs > SlowModFrameMs) _log.Warn(line); else _log.Info(line);
+        }
+        catch
+        {
+            // diagnostics only
+        }
+    }
+
+    private string FeatureTimes()
+        => string.Join(", ", _featureMs.Where(x => x.Ms >= 1).OrderByDescending(x => x.Ms).Select(x => $"{x.Id} {x.Ms:0} ms")) is { Length: > 0 } s ? s : "spread thin";
+
+    private void RunFrame()
     {
         HandleHotkeys();
 
@@ -169,6 +214,7 @@ public sealed class OverlayHost
             }
             if (!IsOn(id)) continue;
             _running = id;
+            var featureStart = Godot.Time.GetTicksUsec();
             try
             {
                 feature.OnFrame(this);
@@ -183,9 +229,11 @@ public sealed class OverlayHost
                     _log.Error($"[{id}] turned off after repeated errors");
                 }
             }
+            _featureMs.Add((id, (Godot.Time.GetTicksUsec() - featureStart) / 1000.0));
         }
 
         _running = null;
+        var lateStart = Godot.Time.GetTicksUsec();
 
         foreach (var late in _lateFrame)
         {
@@ -205,6 +253,8 @@ public sealed class OverlayHost
             }
         }
 
+        _featureMs.Add(("late frame", (Godot.Time.GetTicksUsec() - lateStart) / 1000.0));
+        var layoutStart = Godot.Time.GetTicksUsec();
         if (WidgetRoot != null)
         {
             foreach (var w in _widgets)
@@ -217,6 +267,7 @@ public sealed class OverlayHost
         {
             _toast.Visible = Godot.Time.GetTicksMsec() < _toastUntilMs;
         }
+        _featureMs.Add(("widgets", (Godot.Time.GetTicksUsec() - layoutStart) / 1000.0));
     }
 
     /// <summary>

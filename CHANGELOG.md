@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.34.1
+#### Added
+- A slow-frame line in the game log: when the mod's work in one frame takes over 30 ms, which part took the time; when a frame stalls with the mod's share small, that it was the game's own work (logs only).
+
+### Main Saves 1.0.3
+#### Changed
+- Rebuilt with the shared code update (no change in what it does).
+
 ### Spire QoL 0.34.0
 #### Added
 - A Nostalgia tab on the Attacks and Skills it will put on top of your draw pile.
