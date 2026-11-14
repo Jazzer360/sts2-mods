@@ -1082,6 +1082,38 @@ public static class SimEngine
         return HitRandom(s, _ => amount);
     }
 
+    /// <summary>
+    /// A player's Ethereal cards exhausting at end of turn (CombatManager.DoTurnEnd → CardCmd.Exhaust): each one sets off
+    /// their Feel No Pain (block), Charon's Ashes (every enemy) and Forgotten Soul (a random enemy). who: -1 you, else a teammate.
+    /// </summary>
+    private static void EtherealExhausts(BranchSet b, int who)
+    {
+        SimPlayer Of(SimState s) => who < 0 ? s.P : s.Teammates[who];
+        var tag = who < 0 ? "" : " (teammate)";
+        var max = b.States.Count > 0 ? b.States.Max(s => Of(s).Hp > 0 || who < 0 ? Of(s).Fading : 0) : 0;
+        for (var i = 0; i < max; i++)
+        {
+            var n = i;
+            b.Each(s =>
+            {
+                var p = Of(s);
+                if (n >= p.Fading || (who >= 0 && p.Hp <= 0)) return new[] { s };
+                IEnumerable<SimState> r = GainBlock(s, p.FeelNoPain, p.FeelNoPain > 0 && who < 0 ? "Feel No Pain" : null, who);
+                r = r.Select(x =>
+                {
+                    var damage = Of(x).CharonsAshesDamage;
+                    if (damage > 0)
+                    {
+                        if (x.Log) x.EndOfTurnDamage.Add(($"Charon's Ashes{tag} (all)", damage));
+                        HitAll(x, _ => damage);
+                    }
+                    return x;
+                }).ToList();
+                return Then(r, x => Of(x).ForgottenSoulDamage is var soul and > 0 ? HitRandom(x, _ => soul) : new[] { x });
+            });
+        }
+    }
+
     private static void EndOfTurn(BranchSet b)
     {
         // 1. BeforeSideTurnEnd. Orichalcum checks your block before any of this lands.
@@ -1154,27 +1186,11 @@ public static class SimEngine
             OrbPassives(b, s => s.Teammates[tk], tk, mutable: s => s.MutableTeammate(tk));
         }
 
-        // 3. Ethereal cards exhaust (CardCmd.Exhaust in DoTurnEnd), then cards in hand act (DoTurnEndCards).
-        var maxFading = b.States.Max(s => s.P.Fading);
-        for (var i = 0; i < maxFading; i++)
-        {
-            var n = i;
-            b.Each(s =>
-            {
-                if (n >= s.P.Fading) return new[] { s };
-                IEnumerable<SimState> r = GainBlock(s, s.P.FeelNoPain, s.P.FeelNoPain > 0 ? "Feel No Pain" : null);
-                r = r.Select(x =>
-                {
-                    if (x.P.CharonsAshesDamage > 0)
-                    {
-                        if (x.Log) x.EndOfTurnDamage.Add(("Charon's Ashes (all)", x.P.CharonsAshesDamage));
-                        HitAll(x, _ => x.P.CharonsAshesDamage);
-                    }
-                    return x;
-                }).ToList();
-                return Then(r, x => x.P.ForgottenSoulDamage > 0 ? HitRandom(x, _ => x.P.ForgottenSoulDamage) : new[] { x });
-            });
-        }
+        // 3. Ethereal cards exhaust (CardCmd.Exhaust in DoTurnEnd), each player in player order (teammates' too:
+        // their Feel No Pain, Charon's Ashes, Forgotten Soul), then cards in hand act (DoTurnEndCards).
+        for (var k = 0; k < before; k++) EtherealExhausts(b, k);
+        EtherealExhausts(b, -1);
+        for (var k = before; k < teammates; k++) EtherealExhausts(b, k);
         b.Do(s =>
         {
             foreach (var (name, amount) in s.P.HandBlockable) LandBlockable(s, name, amount);
@@ -1189,7 +1205,7 @@ public static class SimEngine
             foreach (var (name, amount) in s.P.DebuffUnblockable) LandUnblockable(s, name, amount);
         });
         // Teammates' cards in hand and debuffs, on them (decision #25: their hand is used here; it only
-        // changes their own HP, which nothing shown depends on yet).
+        // changes their own HP; what's shown runs without it unless the setting counts it).
         b.Do(s =>
         {
             for (var k = 0; k < s.Teammates.Count; k++)

@@ -30,6 +30,9 @@ public class SimTeammateParityTests
         new object[] { "Consuming Shadow (Lightning)" },
         new object[] { "Consuming Shadow (Frost)" },
         new object[] { "Obsidian Vice" },
+        new object[] { "Ethereal and Feel No Pain" },
+        new object[] { "Ethereal and Charon's Ashes" },
+        new object[] { "Ethereal and Forgotten Soul" },
     };
 
     private static void Setup(string name, SimPlayer p)
@@ -54,6 +57,10 @@ public class SimTeammateParityTests
             case "Consuming Shadow (Lightning)": p.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }); p.ConsumingShadow = 1; break;
             case "Consuming Shadow (Frost)": p.Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }); p.ConsumingShadow = 1; break;
             case "Obsidian Vice": p.ObsidianViceDamage = 1; p.HandCount = 4; break;
+            // Ethereal cards exhausting at end of turn (CombatManager.DoTurnEnd): each one sets off the exhaust effects.
+            case "Ethereal and Feel No Pain": p.Fading = 2; p.FeelNoPain = 3; p.HandCount = 2; break;
+            case "Ethereal and Charon's Ashes": p.Fading = 2; p.CharonsAshesDamage = 3; p.HandCount = 2; break;
+            case "Ethereal and Forgotten Soul": p.Fading = 2; p.ForgottenSoulDamage = 1; p.HandCount = 2; break;
             case "Thorns": p.Thorns = 3; break;
             case "Flame Barrier": p.FlameBarrier = 4; break;
             case "Reflect": p.Block = 6; p.Reflect = true; break;
@@ -126,5 +133,22 @@ public class SimTeammateParityTests
         Assert.Equal(7, shown.TeammateTakenMax(0));                  // 10 - 3
         Assert.Equal(10, shown.TeammateWorst(0).Incoming);
         Assert.Single(s.Teammates[0].HandBlockable);                 // the original is untouched
+    }
+
+    [Fact]
+    public void ATeammatesEtherealExhaustsCountForTheChecksNotForWhatsShown()
+    {
+        // Two Ethereal cards in their hand with Charon's Ashes 3: 6 to every enemy as they exhaust, killing the
+        // 6 HP enemy before its 10 on you. Which cards are in their hand isn't known, so the shown run has it attack.
+        var s = new SimState { Enemies = { Target(6, 10) } };
+        s.Teammates.Add(new SimPlayer { Hp = 60, HandCount = 2, Fading = 2, CharonsAshesDamage = 3 });
+
+        var full = SimEngine.Run(s);
+        Assert.True(full.DeadInAll(1));
+        Assert.Equal(0, full.TakenMax);
+        var shown = SimEngine.Run(s.WithoutTeammateHands());
+        Assert.False(shown.DeadInAny(1));
+        Assert.Equal(10, shown.TakenMax);
+        Assert.Equal(2, s.Teammates[0].Fading);                       // the original is untouched
     }
 }

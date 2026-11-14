@@ -93,7 +93,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         else if (_wasPlayerTurn && _last != null)
         {
             // Ending the turn just started: freeze the last forecast.
-            _frozen = _last;
+            _frozen = _last.Full; // teammates' hands included (decision #25: the check uses everything that isn't a roll)
             _frozenAt = _lastHistoryCount;
             _frozenTurn = _lastTurn;
         }

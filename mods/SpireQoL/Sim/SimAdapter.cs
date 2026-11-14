@@ -234,7 +234,7 @@ public static class SimAdapter
             : 0;
 
         // Teammates (multiplayer): built like you (FillPlayer), in player order. Decision #25: their hand is
-        // used too (it only changes their own HP in the simulator; nothing shown depends on it yet).
+        // used too (their Ethereal exhausts can kill enemies); what's shown runs without it (SimState.WithoutTeammateHands).
         // Each enemy hit's amount on each teammate goes through the game's damage math for them.
         var players = cs.Players.ToList();
         var myIndex = players.IndexOf(me);

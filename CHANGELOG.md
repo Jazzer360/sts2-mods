@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.37.0
+#### Added
+- Setting **Count teammates' hands** (multiplayer, off by default): predictions also use the cards in teammates' hands, which you only know if they tell you: Ethereal cards exhausting at end of turn (Feel No Pain block, Charon's Ashes and Forgotten Soul damage), Burn, Decay and Regret.
+#### Fixed
+- Multiplayer: a teammate's Ethereal cards exhausting at end of turn are simulated (their Feel No Pain block, and Charon's Ashes or Forgotten Soul damage, which can kill an enemy before it acts). The enemy-turn check counts them; what's shown leaves them out unless the new setting is on, since you can't see their hand.
+
 ### Spire QoL 0.36.2
 #### Changed
 - Game v0.113.1: Stretch now boosts an Adroit card's block even when the card gains no block itself (an Adroit attack), and the card spends it. The Stretch tab, the predictions and the Pael's Legion and Vambrace tabs follow.

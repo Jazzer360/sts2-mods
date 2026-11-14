@@ -349,6 +349,8 @@ public sealed class SettingsMenu
             S.ProcNumbers, v => S.ProcNumbers = v);
         Option("Multiplayer predictions (experimental)", "Count teammates in predictions: their orbs and end-of-turn effects, their block and Beacon of Hope, and each enemy hit on every player. Still being checked against real co-op games.",
             S.MultiplayerPredictions, v => { S.MultiplayerPredictions = v; Sim.SimAdapter.IncludeTeammates = v; });
+        Option("Count teammates' hands", "Multiplayer: predictions also use the cards in teammates' hands, which you can't see unless they tell you: Ethereal cards exhausting at end of turn (Feel No Pain block, Charon's Ashes and Forgotten Soul damage), Burn, Decay and Regret. Off: only their hand size counts.",
+            S.TeammateHands, v => { S.TeammateHands = v; Combat.TurnEndModel.CountTeammateHands = v; });
         Option("Death chance", "Death Skull also shows when a roll decides whether an enemy dies before acting, with the chance (e.g. a random Lightning target).",
             S.DeathChance, v => S.DeathChance = v);
         Option("Indirect procs", "Count procs one step removed: cards that exhaust or discard other cards, draw, or create cards.",
@@ -539,6 +541,8 @@ public sealed class SettingsMenu
         S.DeathChance = d.DeathChance;
         S.MultiplayerPredictions = d.MultiplayerPredictions;
         Sim.SimAdapter.IncludeTeammates = d.MultiplayerPredictions;
+        S.TeammateHands = d.TeammateHands;
+        Combat.TurnEndModel.CountTeammateHands = d.TeammateHands;
         S.PulseOneStepEarly = d.PulseOneStepEarly;
         S.EtherealOpacity = d.EtherealOpacity;
         S.FlashHz = d.FlashHz;

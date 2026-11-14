@@ -33,6 +33,7 @@ public static class ModEntry
         MigrateTabs(settings);
         MigrateSettings(settings);
         Sim.SimAdapter.IncludeTeammates = settings.MultiplayerPredictions;
+        Combat.TurnEndModel.CountTeammateHands = settings.TeammateHands;
 
         var host = new OverlayHost(Id, Log)
         {

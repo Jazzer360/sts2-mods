@@ -57,6 +57,13 @@ public sealed class QolSettings
     /// </summary>
     public bool MultiplayerPredictions { get; set; } = true;
 
+    /// <summary>
+    /// Multiplayer: predictions also use the cards in teammates' hands (decision #38), as if they'd told you: their
+    /// Ethereal cards exhausting (Feel No Pain, Charon's Ashes, Forgotten Soul), Burn, Decay, Regret. Off: only what
+    /// you can see (their hand size). The checks always use them.
+    /// </summary>
+    public bool TeammateHands { get; set; } = false;
+
     /// <summary>Death Skull: also show it, with the chance, when a roll decides whether the enemy dies.</summary>
     public bool DeathChance { get; set; } = true;
 

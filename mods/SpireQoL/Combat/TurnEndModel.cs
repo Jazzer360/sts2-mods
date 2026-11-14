@@ -54,13 +54,61 @@ public sealed class TurnEndModel
     public int UnblockableTotal => Unblockable.Sum(s => s.Amount);
     public int ExpectedBlock => CurrentBlock + BlockGain;
 
-    /// <summary>The simulation behind these numbers (start state, enemy ids, outcome), for card tabs.</summary>
+    /// <summary>
+    /// Settings "Count teammates' hands" (decision #38): what's shown also uses the cards in teammates' hands.
+    /// Off (the default, decision #25): what's shown leaves them out; the checks use them either way.
+    /// </summary>
+    public static volatile bool CountTeammateHands;
+
+    /// <summary>
+    /// The simulation behind what's shown (start state, enemy ids, outcome): Incoming Damage, the Death Skull, card
+    /// tabs. Without the cards in teammates' hands unless CountTeammateHands (decision #25); in single-player it's the
+    /// whole state.
+    /// </summary>
     public SimState State { get; private set; } = new();
     public IReadOnlyDictionary<Creature, int> Ids { get; private set; } = new Dictionary<Creature, int>();
     public SimOutcome Outcome { get; private set; } = new();
+
+    /// <summary>The whole state, teammates' hands included (decision #25: the checks use everything that isn't a roll).</summary>
+    public SimState FullState { get; private set; } = new();
+
     /// <summary>
-    /// A teammate's Incoming Damage as shown (decision #25: from what you can see, so without the cards in
-    /// their hand): damage landing on them, their block by the enemy turn, what their Osty absorbs (OstyHp 0:
+    /// The same forecast from FullState, for the enemy-turn check (this one when they're the same: single-player, or
+    /// the setting on). Its TeammateView stays the shown one, so the check can say when what's shown differs.
+    /// </summary>
+    public TurnEndModel Full => _full ??= BuildFull();
+    private TurnEndModel? _full;
+    private long _fullKey;
+    private int _myHp;
+    private static long _lastFullKey;
+    private static SimOutcome? _lastFullOutcome;
+
+    private TurnEndModel BuildFull()
+    {
+        SimOutcome o;
+        if (_lastFullOutcome != null && _lastFullKey == _fullKey)
+        {
+            o = _lastFullOutcome;
+        }
+        else
+        {
+            var logged = FullState.Clone();
+            logged.Log = true;
+            o = SimEngine.Run(logged);
+            _lastFullKey = _fullKey;
+            _lastFullOutcome = o;
+        }
+        var m = From(FullState, _fullKey, o, Ids, Teammates, _myHp);
+        m.FullState = FullState;
+        m._fullKey = _fullKey;
+        m._full = m;
+        m._teammateView = TeammateView;
+        return m;
+    }
+
+    /// <summary>
+    /// A teammate's Incoming Damage as shown (from the shown outcome: without the cards in their hand unless
+    /// CountTeammateHands): damage landing on them, their block by the enemy turn, what their Osty absorbs (OstyHp 0:
     /// not out), and HP lost (worst and best branch).
     /// </summary>
     public sealed record TeammateForecast(Player Player, int Incoming, int Block, int OstyHp, int OstyTaken, int TakenMin, int TakenMax)
@@ -68,20 +116,14 @@ public sealed class TurnEndModel
         public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
     }
 
-    /// <summary>Each teammate's shown forecast, in SimState.Teammates order (a second run, built on first use).</summary>
+    /// <summary>Each teammate's shown forecast, in SimState.Teammates order.</summary>
     public IReadOnlyList<TeammateForecast> TeammateView => _teammateView ??= BuildTeammateView();
     private IReadOnlyList<TeammateForecast>? _teammateView;
-    private static long _lastViewKey;
-    private static IReadOnlyList<TeammateForecast>? _lastView;
 
     private IReadOnlyList<TeammateForecast> BuildTeammateView()
     {
         if (State.Teammates.Count == 0 || Teammates.Count != State.Teammates.Count) return Array.Empty<TeammateForecast>();
-        if (_lastView != null && _lastViewKey == StateKey && _lastView.Count == Teammates.Count
-            && _lastView.Select(v => v.Player).SequenceEqual(Teammates)) return _lastView;
-        // Their hand isn't known to you: run again with the cards in it left out (what they hold only
-        // ever changes their own HP in the simulator).
-        var o = SimEngine.Run(State.WithoutTeammateHands());
+        var o = Outcome;
         var view = new List<TeammateForecast>();
         for (var k = 0; k < Teammates.Count; k++)
         {
@@ -89,8 +131,6 @@ public sealed class TurnEndModel
             view.Add(new TeammateForecast(Teammates[k], worst.Incoming, State.Teammates[k].Block + worst.BlockGained,
                 State.Teammates[k].OstyHp, worst.OstyTaken, o.TeammateTakenMin(k), o.TeammateTakenMax(k)));
         }
-        _lastViewKey = StateKey;
-        _lastView = view;
         return view;
     }
 
@@ -125,9 +165,12 @@ public sealed class TurnEndModel
         if (me?.PlayerCombatState == null || cs == null) return null;
 
         // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
-        var state = SimAdapter.Build(me, cs, out var ids);
+        var full = SimAdapter.Build(me, cs, out var ids);
+        var fullKey = full.FullKey();
+        // What's shown: without the cards in teammates' hands (decision #25), unless the setting counts them.
+        var state = CountTeammateHands || full.Teammates.Count == 0 ? full : full.WithoutTeammateHands();
         // The game state rarely changes between frames: rerun only when it did.
-        var key = state.FullKey();
+        var key = ReferenceEquals(state, full) ? fullKey : state.FullKey();
         SimOutcome outcome;
         if (_lastOutcome != null && key == _lastKey)
         {
@@ -141,6 +184,16 @@ public sealed class TurnEndModel
             _lastKey = key;
             _lastOutcome = outcome;
         }
+        var m = From(state, key, outcome, ids, SimAdapter.Teammates(me, cs), me.Creature.CurrentHp);
+        m.FullState = full;
+        m._fullKey = fullKey;
+        if (ReferenceEquals(state, full)) m._full = m;
+        return m;
+    }
+
+    private static TurnEndModel From(SimState state, long key, SimOutcome outcome, IReadOnlyDictionary<Creature, int> ids,
+        IReadOnlyList<Player> teammates, int myHp)
+    {
         var w = outcome.Worst;
         var m = new TurnEndModel
         {
@@ -148,7 +201,8 @@ public sealed class TurnEndModel
             StateKey = key,
             Ids = ids,
             Outcome = outcome,
-            Teammates = SimAdapter.Teammates(me, cs),
+            Teammates = teammates,
+            _myHp = myHp,
             CurrentBlock = state.P.Block,
             SkippedPoisoned = w.SkippedPoisoned,
             SkippedEndOfTurn = w.SkippedEndOfTurn,
@@ -162,7 +216,7 @@ public sealed class TurnEndModel
             Dies = w.Died,
             FairiesUsed = w.FairiesUsed,
             LizardTailUsed = w.LizardTailUsed,
-            HpAfter = w.P.Hp == int.MaxValue ? me.Creature.CurrentHp : w.P.Hp,
+            HpAfter = w.P.Hp == int.MaxValue ? myHp : w.P.Hp,
         };
         // Same-name entries (one per Frost trigger, per Feel No Pain exhaust...) are summed for display.
         foreach (var g in w.EndOfTurnBlock.GroupBy(x => x.Name)) m.EndOfTurnBlock.Add(new Source(g.Key, g.Sum(x => x.Amount)));

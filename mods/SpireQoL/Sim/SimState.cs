@@ -416,7 +416,8 @@ public sealed class SimState
     /// <summary>
     /// A copy without the cards in teammates' hands (decision #25: what's shown uses only what you can see).
     /// Their hand size stays (it's on screen: Cloak Clasp, Screaming Flagon, Regret's amount); the cards
-    /// that act from their hand at end of turn (Burn, Decay, Regret) are left out.
+    /// that act from their hand at end of turn (Burn, Decay, Regret) and their Ethereal cards (which exhaust: Feel No
+    /// Pain, Charon's Ashes, Forgotten Soul) are left out.
     /// </summary>
     public SimState WithoutTeammateHands()
     {
@@ -427,6 +428,7 @@ public sealed class SimState
             t.HandBlockable = new();
             t.HandUnblockable = new();
             t.RegretCards = 0;
+            t.Fading = 0;
         }
         return shown;
     }
