@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.0
+#### Added
+- Vigor and Gigantification tabs on the attacks that will spend them (Akabeko's Vigor on turn 1, for example).
+
 ### Spire QoL 0.34.2
 #### Added
 - The mod's own slow frames (over 50 ms) are sent as error reports, grouped by which part of the mod took the time. Slow frames that aren't the mod's (a slower PC, loading) are only logged; every slow frame of the mod's is logged.

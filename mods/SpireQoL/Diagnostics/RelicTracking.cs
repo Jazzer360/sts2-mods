@@ -33,7 +33,7 @@ internal static class RelicTracking
         ["Wuppy"] = "none: its pet takes the powered attacks aimed at you while it lives (simulator: Incoming Damage leaves them out)",
 
         // ---- start of your turn (on screen before your decisions that turn)
-        ["Akabeko"] = "none: Vigor on turn 1",
+        ["Akabeko"] = "none: Vigor on turn 1 (the Vigor tab marks the attack that spends it)",
         ["BagOfMarbles"] = "none: Vulnerable to all enemies on turn 1",
         ["Bellows"] = "none: upgrades your hand from turn 2",
         ["BigHat"] = "none: cards into your hand on turn 1",

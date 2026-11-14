@@ -906,16 +906,22 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 issues.Add($"didn't fire: {name}");
         }
 
-        // ---- Stretch: spent without flashing (StretchPower.AfterCardPlayed), so its tab is checked against the amount.
-        // Cards the play auto-played (Lost Lute) can spend it too.
+        // ---- Powers a play spends without flashing, so their tabs are checked against the amount: Stretch (block cards,
+        // StretchPower.AfterCardPlayed), Vigor and Gigantification (attacks, AfterAttack). Cards the play auto-played (Lost
+        // Lute) can spend them too; a card that gives you the same power itself can leave it where it was.
         if (w.PowersBefore != null && w.PowersAfter != null && !w.FightEnded
-            && w.PowersBefore.TryGetValue((me.Creature, "StretchPower"), out var stretchBefore) && stretchBefore > 0
             && !entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay))
         {
-            var stretchAfter = w.PowersAfter.TryGetValue((me.Creature, "StretchPower"), out var sa) ? sa : 0;
-            var tabbed = sourceOf.ContainsKey("StretchPower");
-            if (tabbed && stretchAfter >= stretchBefore) issues.Add($"didn't fire: StretchPower (still {stretchAfter})");
-            if (!tabbed && stretchAfter < stretchBefore) issues.Add($"no tab: StretchPower spent ({stretchBefore}→{stretchAfter})");
+            var ownTypes = OwnPowerTypes(w.Card).Select(t => t.Name).ToHashSet();
+            foreach (var spent in new[] { "StretchPower", nameof(VigorPower), nameof(GigantificationPower) })
+            {
+                if (!w.PowersBefore.TryGetValue((me.Creature, spent), out var before) || before <= 0) continue;
+                if (spent != "StretchPower" && ownTypes.Contains(spent)) continue;
+                var after = w.PowersAfter.TryGetValue((me.Creature, spent), out var sa) ? sa : 0;
+                var tabbed = sourceOf.ContainsKey(spent);
+                if (tabbed && after >= before) issues.Add($"didn't fire: {spent} (still {after})");
+                if (!tabbed && after < before) issues.Add($"no tab: {spent} spent ({before}→{after})");
+            }
         }
 
         // ---- block from procs (exact)

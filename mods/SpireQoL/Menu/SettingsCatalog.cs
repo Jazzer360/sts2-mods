@@ -135,6 +135,8 @@ public static class SettingsCatalog
         new("ExplosiveArrowsPower", SourceGroup.YourPower, "Shots with an arrow to shoot: damage to every enemy"),
         new("YahPower", SourceGroup.YourPower, "Cards that knock one of your arrows loose (first time this turn): energy"),
         new("StretchPower", SourceGroup.YourPower, "Block cards that spend your Stretch"),
+        new(nameof(VigorPower), SourceGroup.YourPower, "Attacks that spend your Vigor (Akabeko's on turn 1)"),
+        new(nameof(GigantificationPower), SourceGroup.YourPower, "Attacks that spend a stack of Gigantification"),
         new(nameof(AfterimagePower), SourceGroup.YourPower, "Every card: block per play"),
         new(nameof(RagePower), SourceGroup.YourPower, "Attacks: block"),
         new(nameof(SpiritOfAshPower), SourceGroup.YourPower, "Ethereal cards: block"),

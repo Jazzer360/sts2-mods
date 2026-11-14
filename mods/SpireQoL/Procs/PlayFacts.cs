@@ -193,6 +193,21 @@ public sealed class PlayFacts
     /// </summary>
     public int DamagePerHit(Creature enemy) => Math.Max(0, (int)RawDamagePerHit(enemy));
 
+    /// <summary>
+    /// The play makes a powered attack of yours from this card, which spends Vigor (VigorPower.BeforeAttack: you're
+    /// the attacker) and a stack of Gigantification (GigantificationPower.BeforeAttack: your card, an Attack). Osty's
+    /// attacks spend Gigantification but not Vigor (Osty is the attacker).
+    /// </summary>
+    public bool SpendsAttackBonus(bool vigor)
+    {
+        if (AttackHits <= 0 || Card.Type != CardType.Attack) return false;
+        if (vigor && OstyAttacks > 0) return false;
+        var props = MegaCrit.Sts2.Core.ValueProps.ValueProp.Move;
+        if (Card.DynamicVars.TryGetValue("CalculatedDamage", out var cv) && cv is CalculatedDamageVar cdv) props = cdv.Props;
+        else if (Card.DynamicVars.TryGetValue("Damage", out var dv) && dv is DamageVar d) props = d.Props;
+        return MegaCrit.Sts2.Core.ValueProps.ValuePropExtensions.IsPoweredAttack(props);
+    }
+
     /// <summary>The game's damage for one hit before it's rounded down (Hook.ModifyDamage).</summary>
     private decimal RawDamagePerHit(Creature enemy)
         => RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out _);

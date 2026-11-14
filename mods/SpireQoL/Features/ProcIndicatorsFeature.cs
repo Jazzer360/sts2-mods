@@ -635,6 +635,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                                          && !Sts2State.Private(yah, "triggeredThisTurn", true):
                         return Hit.Trig();
 
+                    // Spent by your next attack: Vigor (all of it, VigorPower.AfterAttack: Akabeko's on turn 1) and a stack of Gigantification;
+                    // the damage the card shows already has them.
+                    case nameof(VigorPower) when mine && f.SpendsAttackBonus(vigor: true): return Hit.Trig();
+                    case nameof(GigantificationPower) when mine && f.SpendsAttackBonus(vigor: false): return Hit.Trig();
                     // A block card spends your Stretch (StretchPower.AfterCardPlayed); its block already shows the bonus.
                     case "StretchPower" when mine && Fool.SpendsStretch(card, f.BlockGains): return Hit.Trig();
 
