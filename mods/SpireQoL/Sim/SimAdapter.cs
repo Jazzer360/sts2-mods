@@ -97,6 +97,9 @@ public static class SimAdapter
     /// <summary>Cards that kill an enemy at or below a threshold (Judgement: SetCurrentHp to 0). The card scan flags a new one.</summary>
     internal static readonly HashSet<string> ExecuteCards = new() { "Judgement" };
 
+    /// <summary>Cards whose kill sets off a hit on every enemy (Timber: OnKillDamage). The card scan flags a new damage value.</summary>
+    internal static readonly HashSet<string> OnKillHitAllCards = new() { "Timber" };
+
     /// <summary>
     /// The power the simulator models for a power type: a temporary Thorns power (Cho Barbs, v0.113.0) gives real
     /// Thorns until the end of the enemy turn (TemporaryThornsPower.BeforeApplied applies ThornsPower), so it's Thorns.
@@ -517,14 +520,16 @@ public static class SimAdapter
             };
             play.BlockGains = blockGains;
             play.BlockAmount = each;
-            // Stretch (v0.113.0) boosts one card play's block, then it's spent: a replay's later plays gain without it.
-            // Its bonus is additive, so the game's block math on (Block - Stretch) gives the block without it.
-            var stretch = me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
-            if (stretch > 0 && plays > 1 && name is not (nameof(Fisticuffs) or nameof(Entrench)) && !KeepsStretchCards.Contains(name) && card.DynamicVars.ContainsKey("Block"))
+            // Bonuses that boost one card play's block, then are spent, so a replay's later plays gain without them:
+            // Stretch (v0.113.0; additive, so the game's block math on Block - Stretch), Pael's Legion and Vambrace (×2 on the
+            // first play whose block is above 0: AffectedCardPlay, TriggeringCard).
+            var stretch = KeepsStretchCards.Contains(name) ? 0 : me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
+            var doublers = me.Relics.Count(r => r.GetType().Name is (nameof(PaelsLegion) or nameof(Vambrace)) && Features.RelicCountersFeature.IsArmed(r));
+            if ((stretch > 0 || doublers > 0) && plays > 1 && name is not (nameof(Fisticuffs) or nameof(Entrench)) && card.DynamicVars.ContainsKey("Block"))
             {
                 var perPlay = blockGains / plays;
-                var without = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, Sts2State.Var(card, "Block") - stretch,
-                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _)));
+                var without = SafeInt(() => Math.Max(0, (int)(Hook.ModifyBlock(cs, me.Creature, Sts2State.Var(card, "Block") - stretch,
+                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _) / (decimal)Math.Pow(2, doublers))));
                 if (perPlay > 0 && without < each) play.BlockLater = (perPlay, without);
             }
         }
@@ -537,6 +542,25 @@ public static class SimAdapter
                               ? ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } lt && !lt.HasPower<ArtifactPower>()
                               : cs.HittableEnemies.Any(x => x.IsAlive && !x.HasPower<ArtifactPower>()));
         play.KillsOsty = KillsOstyCards.Contains(name);
+        // Timber: a kill with its hit sets off a second attack on every enemy (OnKillDamage), after the first attack has
+        // spent your Vigor (VigorPower.AfterAttack) and a stack of Gigantification. The card scan flags a new damage value.
+        if (OnKillHitAllCards.Contains(name) && card.DynamicVars.TryGetValue("OnKillDamage", out var killVar) && killVar is DamageVar kdv)
+        {
+            var vigor = me.Creature.Powers.Where(x => x is VigorPower).Sum(x => x.Amount);
+            var giga = me.Creature.Powers.Where(x => x is GigantificationPower).Sum(x => x.Amount);
+            foreach (var (e, id) in ids)
+            {
+                if (!e.IsAlive || !e.IsHittable) continue;
+                var d = SafeInt(() =>
+                {
+                    var v = Hook.ModifyDamage(me.RunState, cs, e, me.Creature, kdv.BaseValue - vigor, kdv.Props, card, null,
+                        ModifyDamageHookType.All, CardPreviewMode.None, out _);
+                    if (giga == 1) v /= 3m;
+                    return Math.Max(0, (int)v);
+                });
+                play.OnKillHitAll[id] = d;
+            }
+        }
         if (ExecuteCards.Contains(name) && targetId >= 0)
         {
             play.TargetId = targetId;

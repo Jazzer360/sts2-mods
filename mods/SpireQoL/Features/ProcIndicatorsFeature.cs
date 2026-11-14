@@ -523,6 +523,14 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     // ------------------------------------------------------------------ rules
 
     private PlayFacts? _curFacts;
+    /// <summary>
+    /// The card's block is above 0 after the game's block math (No Block makes it 0): Pael's Legion and Vambrace only
+    /// take a play whose block lands (AfterModifyingBlockAmount: modifiedAmount above 0). Cards without a block value
+    /// (Fisticuffs) count as landing.
+    /// </summary>
+    private bool BlockLands(CardModel card)
+        => !(card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock")) || SimAdapter.CardBlock(card, _cs, _me) > 0;
+
     /// <summary>Your attack and skill plays started this turn (each play of a replay counts), as Nostalgia counts them.</summary>
     private int AttacksAndSkillsStartedThisTurn()
     {
@@ -738,9 +746,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // Ending a turn without playing a card gives an extra turn (once per combat):
                     // while armed and nothing has been played, every card gives that up.
                     case nameof(PaelsEye) when armed && !f.AutoPlayed && Sts2State.CountPlayedThisTurn(_me) == 0: return Hit.Trig(harmful: true); // auto-plays don't count
-                    case nameof(Vambrace) when armed && f.BlockGains > 0: return Hit.Trig();
+                    case nameof(Vambrace) when armed && f.BlockGains > 0 && BlockLands(card): return Hit.Trig();
                     // Off cooldown, the next card that gains block gets double block, then it rests 2 turns.
-                    case nameof(PaelsLegion) when armed && f.BlockGains > 0: return Hit.Trig();
+                    case nameof(PaelsLegion) when armed && f.BlockGains > 0 && BlockLands(card): return Hit.Trig();
                     case nameof(BurningSticks) when armed && type == CardType.Skill && f.ExhaustsSelf: return Hit.Trig();
                     // It arms on a debuff to an enemy without Artifact (checked before Artifact uses a
                     // charge), so an enemy whose charges cover every debuff this play applies doesn't count.

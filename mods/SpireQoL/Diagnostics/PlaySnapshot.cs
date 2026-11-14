@@ -57,7 +57,7 @@ internal sealed class PlaySnapshot
     // CapturedXValue), which the play itself sets and clears: Whirlwind "1→0".
     private static int SafeCost(CardModel c)
     {
-        try { return c.EnergyCost.CostsX ? -99 : c.EnergyCost.GetResolved(); } catch { return -99; }
+        try { return c.EnergyCost.CostsX ? -99 : c.EnergyCost.GetWithModifiers(CostModifiers.Local); } catch { return -99; }
     }
 
     private static int SafeDisplay(RelicModel r)
@@ -148,7 +148,7 @@ internal sealed class PlaySnapshot
             {
                 var recorded = (a.Pile == PileType.Hand && drawn.Contains(card)) || (a.Pile == PileType.Discard && discarded.Contains(card))
                                || (a.Pile == PileType.Exhaust && exhausted.Contains(card))
-                               || (shuffles > 0 && b.Pile == PileType.Discard && a.Pile == PileType.Draw);
+                               || (shuffles > 0 && a.Pile == PileType.Draw && (b.Pile == PileType.Discard || discarded.Contains(card)));
                 if (!recorded) Check(Move, $"{name} {b.Pile}→{a.Pile}", own);
             }
         }

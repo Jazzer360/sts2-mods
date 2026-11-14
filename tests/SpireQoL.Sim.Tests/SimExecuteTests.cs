@@ -48,4 +48,30 @@ public class SimExecuteTests
         Assert.True(o.PlayKillsInEveryBranch);
         Assert.False(SimEngine.Run(s, Judgement(1, 20)).DeadInAll(1));
     }
+
+    [Fact]
+    public void TimbersKillHitsEveryEnemy()
+    {
+        // Timber: its hit kills the target, then a second attack hits every enemy (30 each).
+        var s = new SimState { Enemies = { E(1, 8, 5), E(2, 36, 5), E(3, 13, 5) } };
+        var timber = new SimPlay { Name = "Timber", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1,
+            HitDamage = { [1] = 20, [2] = 20, [3] = 20 }, OnKillHitAll = { [1] = 30, [2] = 30, [3] = 30 } };
+        SimEngine.ApplyPlayTo(s, timber, out var branches, out _);
+        Assert.All(branches, b =>
+        {
+            Assert.False(b.Enemy(1)!.Alive);
+            Assert.Equal(6, b.Enemy(2)!.Hp);
+            Assert.False(b.Enemy(3)!.Alive);
+        });
+    }
+
+    [Fact]
+    public void TimberWithoutAKillHitsOnlyItsTarget()
+    {
+        var s = new SimState { Enemies = { E(1, 50, 5), E(2, 36, 5) } };
+        var timber = new SimPlay { Name = "Timber", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1,
+            HitDamage = { [1] = 20, [2] = 20 }, OnKillHitAll = { [1] = 30, [2] = 30 } };
+        SimEngine.ApplyPlayTo(s, timber, out var branches, out _);
+        Assert.All(branches, b => { Assert.Equal(30, b.Enemy(1)!.Hp); Assert.Equal(36, b.Enemy(2)!.Hp); });
+    }
 }

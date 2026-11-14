@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.1
+#### Fixed
+- Timber's hit on every enemy after its kill counts in the predictions (lethal, kills, Incoming Damage).
+- Pael's Legion and Vambrace tabs no longer show on block cards under No Block (nothing to double), and a replayed block card's later plays get normal block in the predictions.
+- Error reports no longer flag Burst or Duplication being used up by the card they replay, cost changes from Brilliant Scarf (and other cost effects that aren't on the card), or discarded cards shuffled back into the draw pile (logs and error reports only).
+
 ### Spire QoL 0.35.0
 #### Added
 - Vigor and Gigantification tabs on the attacks that will spend them (Akabeko's Vigor on turn 1, for example).

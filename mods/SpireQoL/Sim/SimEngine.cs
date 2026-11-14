@@ -69,6 +69,11 @@ public sealed class SimPlay
     /// Judgement (v0.113.0): the target dies if it's alive at or below this HP (CreatureCmd.SetCurrentHp to 0). 0: none.
     /// </summary>
     public int ExecuteAtOrBelow;
+    /// <summary>
+    /// Timber (v0.113.0): when its hit kills the target, a second attack hits every enemy for this much each (per enemy id,
+    /// through the game's damage math). Empty: none.
+    /// </summary>
+    public Dictionary<int, int> OnKillHitAll = new();
     /// <summary>It kills your Osty (Sacrifice, Bone Shards: CreatureCmd.Kill on Osty).</summary>
     public bool KillsOsty;
     public int FadingDelta;
@@ -760,7 +765,11 @@ public static class SimEngine
                 {
                     var e = s.Enemy(p.TargetId);
                     if (e == null) return;
+                    var aliveBefore = e.Alive;
                     for (var i = 0; i < p.Hits; i++) CardHit(s, e, HitAt(e, i));
+                    // Timber: its kill sets off a hit on every enemy (a second attack of the card's).
+                    if (p.OnKillHitAll.Count > 0 && aliveBefore && !e.Alive)
+                        HitAll(s, x => p.OnKillHitAll.TryGetValue(x.Id, out var d) ? d : 0, card: true);
                     if (p.SplashFromTarget && p.Hits > 0)
                     {
                         var dealt = Hit(e);

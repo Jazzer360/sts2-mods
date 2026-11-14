@@ -1053,6 +1053,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (own.Contains(type) || acted.Contains(type) || tabbed.Contains(type) || SimComparedPowers.Contains(type)) continue;
             if (creature == me.Creature && SpentByAnyPlay.Contains(type)) continue;
             if (creature == me.Creature && SpentByAttack.Contains(type) && w.Card.Type == CardType.Attack) continue;
+            // A double-play source this play used (Burst, Duplication: ModifyCardPlayCount, then a stack goes) when the card
+            // played more than once: its tab is Card Indicators' (the game's own play-count query), not a proc rule.
+            if (creature == me.Creature && PowerTypeNamed(type) is { } countSource
+                && CodeIndex.Does(countSource, Array.Empty<string>(), new[] { "ModifyCardPlayCount" })
+                && entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.Card == w.Card && e.CardPlay.PlayCount > 1)) continue;
             if (creature == me.Creature && Stats.Contains(type)
                 && acted.Concat(tabbed).Any(x => SourceEffects.TryGetValue(x, out var fx) && fx.Contains(Effect.Power))) continue;
             // A tabbed or flashed power on that creature removes it (Plow takes the Ceremonial Beast's Strength
