@@ -52,6 +52,12 @@ internal static class CatalogCheck
         foreach (var n in replayers.Except(doubleRows).OrderBy(n => n)) problems.Add($"source of extra plays without a double-play row: {n}");
         foreach (var n in doubleRows.Except(replayers).OrderBy(n => n)) problems.Add($"double-play row for a class that doesn't add plays: {n}");
 
+        // Run reminders: every rule has a settings row, every row a rule.
+        var reminderRules = ChoiceReminders.Rules.Select(r => r.Relic).ToHashSet();
+        var reminderRows = sources.Where(s => s.Reminder != null).Select(s => s.Type).ToHashSet();
+        foreach (var n in reminderRules.Except(reminderRows).OrderBy(n => n)) problems.Add($"reminder rule without a settings row: {n}");
+        foreach (var n in reminderRows.Except(reminderRules).OrderBy(n => n)) problems.Add($"settings row (reminder) without a rule: {n}");
+
         // Features: each one registered has an on/off switch in the menu, and each switch a feature.
         var registered = ModEntry.Features.States.Keys.ToHashSet();
         var switches = SettingsMenu.FeatureRows.Select(r => r.Id).ToHashSet();

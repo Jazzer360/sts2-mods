@@ -13,10 +13,12 @@ public enum SourceGroup { Relic, YourPower, EnemyPower }
 /// <param name="Tracker">What its Relic Counters row shows; null = no tray row.</param>
 /// <param name="TagPrefix">"proc:" (Proc Indicators) or "double-play:" (Card Indicators).</param>
 /// <param name="TrackerDefault">Tray row on by default (turn timers are off).</param>
+/// <param name="Reminder">What its Run Reminders icon or panel row marks outside fights (Data/ChoiceReminders); null = none.</param>
 public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, string? Tracker = null,
-    string TagPrefix = "proc:", bool TrackerDefault = true)
+    string TagPrefix = "proc:", bool TrackerDefault = true, string? Reminder = null)
 {
     public string? TagKey => Tag == null ? null : TagPrefix + Type;
+    public string? ReminderKey => Reminder == null ? null : "reminder:" + Type;
 }
 
 /// <summary>An on-card tab that isn't tied to one relic or power.</summary>
@@ -119,6 +121,27 @@ public static class SettingsCatalog
         new(nameof(CaptainsWheel), SourceGroup.Relic, null, "Turn timer: block on turn 3", TrackerDefault: false),
         new(nameof(Chandelier), SourceGroup.Relic, null, "Turn timer: energy on turn 3", TrackerDefault: false),
         new(nameof(SparklingRouge), SourceGroup.Relic, null, "Turn timer: Strength and Dexterity on turn 3", TrackerDefault: false),
+
+        // Outside fights (Run Reminders): card reward panel and event options.
+        new(nameof(BingBong), SourceGroup.Relic, null, Reminder: "Card rewards: the card you take is copied. Events: options that add a card (crossed when it adds a curse)"),
+        new(nameof(BookOfFiveRings), SourceGroup.Relic, null, Reminder: "Card rewards: cards toward the next heal. Events: options that add a card"),
+        new(nameof(LuckyFysh), SourceGroup.Relic, null, Reminder: "Card rewards: the gold a card brings. Events: options that add a card"),
+        new(nameof(PaelsWing), SourceGroup.Relic, null, Reminder: "Card rewards: sacrifices toward the next relic"),
+        new(nameof(DarkstonePeriapt), SourceGroup.Relic, null, Reminder: "Events: options that add a curse (max HP)"),
+        new(nameof(MoltenEgg), SourceGroup.Relic, null, Reminder: "Events: options that add a card (attacks are upgraded)"),
+        new(nameof(FrozenEgg), SourceGroup.Relic, null, Reminder: "Events: options that add a card (powers are upgraded)"),
+        new(nameof(ToxicEgg), SourceGroup.Relic, null, Reminder: "Events: options that add a card (skills are upgraded)"),
+        new(nameof(FresnelLens), SourceGroup.Relic, null, Reminder: "Events: options that add a card (enchanted with Nimble)"),
+        new(nameof(TungstenRod), SourceGroup.Relic, null, Reminder: "Events: options that cost HP (1 less)"),
+        new(nameof(BowlerHat), SourceGroup.Relic, null, Reminder: "Events: options that give gold (more gold)"),
+        new(nameof(DragonFruit), SourceGroup.Relic, null, Reminder: "Events: options that give gold (max HP)"),
+        new(nameof(Ectoplasm), SourceGroup.Relic, null, Reminder: "Crossed. Events: options that give gold (you get none)"),
+        new(nameof(Sozu), SourceGroup.Relic, null, Reminder: "Crossed. Events: options that give a potion (you get none)"),
+        new(nameof(BeltBuckle), SourceGroup.Relic, null, Reminder: "Crossed. Events: options that give a potion (no Dexterity while you hold it)"),
+        new(nameof(RegalPillow), SourceGroup.Relic, null, Reminder: "Events: options that rest (heals more)"),
+        new(nameof(StoneHumidifier), SourceGroup.Relic, null, Reminder: "Events: options that rest (max HP)"),
+        new(nameof(DreamCatcher), SourceGroup.Relic, null, Reminder: "Events: options that rest (a card reward)"),
+        new(nameof(TinyMailbox), SourceGroup.Relic, null, Reminder: "Events: options that rest (potions)"),
 
         // ------------------------------------------------------------------ your powers
         new(nameof(EchoFormPower), SourceGroup.YourPower, "Cards it will play twice", TagPrefix: "double-play:"),

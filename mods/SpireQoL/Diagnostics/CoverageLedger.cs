@@ -597,6 +597,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     /// </summary>
     private static void CheckRelicTracking(Type t)
     {
+        CheckRelicChoices(t);
         var name = t.Name;
         var listed = CoverageLedger.RelicFightHooks.Any(r => r.Type == name);
         if (!listed)
@@ -620,6 +621,23 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
             return;
         }
         Unexpected(name, "relic-untracked", "a relic that can affect fights with no tab, no tracker row and no reviewed reason (RelicTracking).");
+    }
+
+    /// <summary>
+    /// Goal 3: a relic that changes a choice outside combat (a hook in Diagnostics/ChoiceHooks.txt) has a
+    /// Run Reminders rule (Data/ChoiceReminders) or a reviewed reason (RelicChoiceTracking). Read from the
+    /// relic's own overrides, so relics new in a game update are caught too.
+    /// </summary>
+    private static void CheckRelicChoices(Type t)
+    {
+        var name = t.Name;
+        if (SpireQoL.Data.ChoiceReminders.For(name) != null || RelicChoiceTracking.Reasons.ContainsKey(name)) return;
+        var choice = CoverageLedger.ChoiceHooks.ToHashSet();
+        var hooks = t.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(m => m.IsVirtual && m.GetBaseDefinition().DeclaringType != t && choice.Contains(m.Name))
+            .Select(m => m.Name).Distinct().ToList();
+        if (hooks.Count == 0) return;
+        Unexpected(name, "relic-choice-unreviewed", $"a relic that changes choices outside combat with no reminder rule and no reviewed reason (RelicChoiceTracking): {string.Join(", ", hooks)}.");
     }
 
     private static void Unexpected(string type, string kind, string details)

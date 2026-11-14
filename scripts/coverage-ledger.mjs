@@ -80,6 +80,9 @@ out.push("    };");
 out.push("");
 out.push("    /// <summary>Hooks that only act outside fights (Diagnostics/OutOfCombatHooks.txt): a relic overriding only these doesn't affect fights.</summary>");
 out.push("    public static readonly string[] OutOfCombatHooks = { " + [...outOfCombat].map(h => `"${h}"`).join(", ") + " };");
+out.push("");
+out.push("    /// <summary>Hooks through which a relic changes a choice outside combat (Diagnostics/ChoiceHooks.txt): each such relic needs a reminder rule or a reviewed reason (RelicChoiceTracking).</summary>");
+out.push("    public static readonly string[] ChoiceHooks = { " + lines(path.join(diag, "ChoiceHooks.txt")).map(h => `"${h}"`).join(", ") + " };");
 out.push("}");
 fs.writeFileSync(path.join(diag, "CoverageLedger.Data.cs"), out.join("\n") + "\n");
 
@@ -93,8 +96,84 @@ if (stale.length) console.log(`entries for classes without combat hooks now (rem
 
 const catalog = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Menu", "SettingsCatalog.cs"), "utf8");
 const specs = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Data", "RelicSpecs.cs"), "utf8");
-const shown = new Set([...(catalog + specs).matchAll(/nameof\((\w+)\)|new\("(\w+)"/g)].map(m => m[1] || m[2]));
+// Reminder-only rows (no tab, no tracker) don't count as shown in fights.
+const fightCatalog = catalog.split(/\r?\n/).filter(l => !l.includes(", null, Reminder:")).join("\n");
+const shown = new Set([...(fightCatalog + specs).matchAll(/nameof\((\w+)\)|new\("(\w+)"/g)].map(m => m[1] || m[2]));
 const reasons = keys(path.join(diag, "RelicTracking.cs"));
 const untracked = relicRows.filter(r => !shown.has(r.type) && !reasons.has(r.type));
 console.log(`${relicRows.length} relics affect fights; ${relicRows.filter(r => shown.has(r.type)).length} have a tab or tracker row, ${reasons.size} a reviewed reason`);
 console.log(untracked.length ? `relics with no tab, tracker row or reason (review, add to RelicTracking.Reasons):\n${untracked.map(r => `  ${r.type}: ${r.hooks.join(",")}`).join("\n")}` : "every relic that affects fights is tracked or reviewed");
+
+// ---------------------------------------------------------------- goal 3 and docs/RELICS.md
+// Relics that change a choice outside combat (a hook in Diagnostics/ChoiceHooks.txt): each needs a
+// Run Reminders rule (Data/ChoiceReminders.cs) or a reviewed reason (RelicChoiceTracking.cs).
+const choiceHooks = new Set(lines(path.join(diag, "ChoiceHooks.txt")));
+const strRe = String.raw`"((?:[^"\\]|\\.)*)"`;
+const unq = s => s == null ? null : s.replace(/\\"/g, '"');
+const dict = file => new Map([...fs.readFileSync(file, "utf8").matchAll(new RegExp(String.raw`^\s*\["(\w+)"\] = ${strRe}`, "gm"))].map(m => [m[1], unq(m[2])]));
+const fightReasons = dict(path.join(diag, "RelicTracking.cs"));
+const choiceReasons = dict(path.join(diag, "RelicChoiceTracking.cs"));
+const reminderRules = new Set([...fs.readFileSync(path.join(root, "mods", "SpireQoL", "Data", "ChoiceReminders.cs"), "utf8").matchAll(/^\s*new\(nameof\((\w+)\),/gm)].map(m => m[1]));
+
+// Settings catalog rows for relics: tab (crossed ones are `Crossed + "..."`), tracker and reminder text.
+const rowsByRelic = new Map();
+for (const m of catalog.matchAll(new RegExp(String.raw`new\((?:nameof\((\w+)\)|"(\w+)"), SourceGroup\.Relic, (?:null|(Crossed \+ )?${strRe})(?:, (?:null|${strRe}))?([^\n]*)`, "g"))) {
+  const rest = m[6] || "";
+  const rem = rest.match(new RegExp(`Reminder: ${strRe}`));
+  rowsByRelic.set(m[1] || m[2], {
+    tag: m[4] == null ? null : (m[3] ? "crossed: " : "") + unq(m[4]), tracker: unq(m[5]),
+    doublePlay: rest.includes('TagPrefix: "double-play:"'),
+    reminder: rem ? unq(rem[1]) : null,
+  });
+}
+
+const relicDir = modelsDir("Relics");
+const allRelics = [];
+for (const f of fs.readdirSync(relicDir).filter(f => f.endsWith(".cs")).sort()) {
+  const src = fs.readFileSync(path.join(relicDir, f), "utf8");
+  if (!/class \w+ : \w*RelicModel\b/.test(src) && !/override RelicRarity Rarity/.test(src)) continue;
+  if (/\babstract class\b/.test(src)) continue;
+  const type = f.slice(0, -3);
+  const rarity = (src.match(/RelicRarity Rarity => RelicRarity\.(\w+)/) || [])[1] || "?";
+  const ov = [...new Set([...src.matchAll(/public override [^(=]*?\b(\w+)\(/g)].map(m => m[1]))];
+  allRelics.push({ type, rarity, choice: ov.filter(h => choiceHooks.has(h)).sort(), fight: (relicRows.find(r => r.type === type) || {}).hooks || [] });
+}
+const unreviewedChoice = allRelics.filter(r => r.choice.length && !reminderRules.has(r.type) && !choiceReasons.has(r.type));
+console.log(`${allRelics.filter(r => r.choice.length).length} relics change choices outside combat; ${reminderRules.size} have a reminder, ${choiceReasons.size} a reviewed reason`);
+console.log(unreviewedChoice.length ? `relics with no reminder or reason (review, add to RelicChoiceTracking.Reasons):\n${unreviewedChoice.map(r => `  ${r.type}: ${r.choice.join(",")}`).join("\n")}` : "every relic that changes a choice outside combat is covered or reviewed");
+
+const esc = s => s.replace(/\|/g, "\\|");
+const reason = r => r.startsWith("gap:") ? `**Gap:** ${r.slice(4).trim()}` : r.startsWith("none:") ? `Nothing shown: ${r.slice(5).trim()}` : r;
+const display = t => t.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/([A-Z])([A-Z][a-z])/g, "$1 $2").replace(/ (Of|The|And|To|A) /g, (_, w) => ` ${w.toLowerCase()} `);
+const md = [];
+md.push("# Relics");
+md.push("");
+md.push(`Every relic in the game (${version}) and what Spire QoL does for it. Generated by \`scripts/coverage-ledger.mjs\` from the decompiled game, the settings catalog (\`Menu/SettingsCatalog.cs\`), the reminder rules (\`Data/ChoiceReminders.cs\`) and the reviewed reasons (\`Diagnostics/RelicTracking.cs\`, \`Diagnostics/RelicChoiceTracking.cs\`); don't edit it, rerun the script.`);
+md.push("");
+md.push("- **In fights:** the on-card tab it gets (crossed = a red slash), its Relic Counters row, or why nothing is shown. A dash: it has no hook that acts in a fight.");
+md.push("- **Outside fights:** its Run Reminders icon or card-reward row, or why nothing is shown. A dash: it changes no choice outside fights (pickup-only effects, run counters).");
+md.push("- **Gap** marks something worth showing that isn't yet; **unreviewed** marks a relic whose hooks haven't been reviewed (a new game version).");
+md.push("");
+const counts = { fight: 0, fightGap: 0, choice: 0, choiceGap: 0 };
+md.push("| Relic | Rarity | In fights | Outside fights |");
+md.push("|---|---|---|---|");
+for (const r of allRelics.sort((a, b) => display(a.type).localeCompare(display(b.type)))) {
+  const row = rowsByRelic.get(r.type);
+  const fight = [];
+  if (row?.tag) fight.push(row.tag.startsWith("crossed: ") ? `Crossed tab: ${row.tag.slice(9)}` : `${row.doublePlay ? "Double-play tab" : "Tab"}: ${row.tag}`);
+  if (row?.tracker) fight.push(`Tracker: ${row.tracker}`);
+  if (!fight.length && r.fight.length) fight.push(fightReasons.has(r.type) ? reason(fightReasons.get(r.type)) : "**unreviewed**");
+  if (fight.length) counts.fight++;
+  if (fight.some(x => x.startsWith("**"))) counts.fightGap++;
+  const out = [];
+  if (row?.reminder) out.push(`Reminder: ${row.reminder.replace(/^Crossed\. /, "crossed. ")}`);
+  if (choiceReasons.has(r.type) && !(row?.reminder && choiceReasons.get(r.type).startsWith("none:"))) out.push(reason(choiceReasons.get(r.type)));
+  if (!out.length && r.choice.length) out.push("**unreviewed**");
+  if (out.length) counts.choice++;
+  if (out.some(x => x.startsWith("**"))) counts.choiceGap++;
+  md.push(`| ${display(r.type)} | ${r.rarity} | ${esc(fight.join("; ") || "—")} | ${esc(out.join("; ") || "—")} |`);
+}
+md.splice(md.indexOf("| Relic | Rarity | In fights | Outside fights |"), 0,
+  `${allRelics.length} relics: ${counts.fight} matter in fights (${counts.fightGap} with a gap or unreviewed), ${counts.choice} change a choice outside fights (${counts.choiceGap} with a gap or unreviewed).`, "");
+fs.writeFileSync(path.join(root, "docs", "RELICS.md"), md.join("\n") + "\n");
+console.log(`wrote docs/RELICS.md (${allRelics.length} relics)`);

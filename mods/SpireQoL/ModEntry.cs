@@ -94,6 +94,7 @@ public static class ModEntry
             new IncomingDamageFeature(ctx),
             new TeammateIncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
+            new RunRemindersFeature(ctx),
             new DeathSkullFeature(ctx),
             new UpdateNoticeFeature(),
             new Diagnostics.ForecastAudit(),

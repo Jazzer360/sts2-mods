@@ -52,6 +52,7 @@ public sealed class SettingsMenu
         ("teammate-incoming-damage", "Teammate Incoming Damage", "Multiplayer: hovering a teammate shows what they'll take, after their block (from what you can see, not their hand)."),
         ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile."),
         ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it)."),
+        ("run-reminders", "Run Reminders", "Outside fights: your relics that react to a card reward, next to the screen, and to an event option, beside it."),
         ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit)."),
         ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports)."),
         ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports)."),
@@ -402,7 +403,7 @@ public sealed class SettingsMenu
         var shown = entries
             .Where(e => here == null || here.Contains(e.Type))
             .Select(e => (Entry: e, Name: DisplayName(e.Type)))
-            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Tag, x.Entry.Tracker))
+            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Tag, x.Entry.Tracker, x.Entry.Reminder))
             .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
@@ -462,7 +463,13 @@ public sealed class SettingsMenu
                 var (_, c) = Check(S.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
                 tagCell.AddChild(c);
             }
-            else
+            if (e.ReminderKey is { } rkey)
+            {
+                // Outside fights (Run Reminders): same switch store as the tabs ("reminder:<Type>").
+                var (_, c) = Check(S.TabOwn(rkey), on => SetTab(rkey, on), e.Reminder!, null, expand: true);
+                tagCell.AddChild(c);
+            }
+            if (e.TagKey == null && e.ReminderKey == null)
             {
                 tagCell.AddChild(Label("no card tab", 17, Muted));
             }

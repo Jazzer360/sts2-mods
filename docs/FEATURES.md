@@ -8,7 +8,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 **Only knowable information.** Spire QoL shows only what a player with perfect memory and full knowledge of the game's rules could work out. It never reads the RNG or the seed, the draw pile's order, or an enemy's move beyond the intent on screen. Random effects show their amount, never their target or roll, and predictions that would depend on a roll leave it out.
 
-**Harmony patches: observe-only.** Every feature works by reading live game state once per frame and drawing its own nodes. Nothing in the game's code is replaced or changed. One prefix only records a call: `CardPileCmd.Shuffle` (the proc audit counts shuffles; the game keeps no record of them). The coverage check reads the game's compiled code (reflection, `PatchProcessor.GetOriginalInstructions`), which changes nothing.
+**Harmony patches: observe-only.** Every feature works by reading live game state once per frame and drawing its own nodes. Nothing in the game's code is replaced or changed. Two prefixes only record a call: `CardPileCmd.Shuffle` (the proc audit counts shuffles; the game keeps no record of them) and `EventOption.Chosen` (Run Reminders checks which relics react to the option you chose; a postfix keeps the option's task to know when it ends). The coverage check reads the game's compiled code (reflection, `PatchProcessor.GetOriginalInstructions`), which changes nothing.
 
 | Feature | Id | Status | Default |
 | --- | --- | --- | --- |
@@ -19,6 +19,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Proc Indicators](#proc-indicators) | `proc-indicators` | 🟡 | on |
 | [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | 🟡 | on |
 | [Death Skull](#death-skull) | `death-skull` | 🟡 | on |
+| [Run Reminders](#run-reminders) | `run-reminders` | 🟡 | on |
 | [Update Notice](#update-notice) | `update-notice` | 🟡 | on |
 
 ## What the mod adds to the game, technically
@@ -43,7 +44,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 - **Error reporting** (setting `ReportErrors`, on): crashes caught anywhere in the mod (feature errors, frame errors, tag layout, play facts) and every audit mismatch are sent to the mod's own Sentry project. Every report is tagged with the mod and game versions, and how many players were in the fight and their characters (yours first), so multiplayer reports can be told apart; they get a `multiplayer` label and their own per-session budget (at most 40 each, single-player and multiplayer), so a co-op session can't use up the reports a single-player fight would send. Proc audit reports also carry the full window: every history entry from just before to just after it, numbered by position and described in our own words (the game's text for a draw says "discarded"), with relic and power flashes at their positions and markers for the window and the play's start; what the card itself was expected to do (draws, exhausts, orbs, hits, orb evokes, random outcome); tabs hidden by settings; every play this turn so far (card, its tabs, matched or what didn't), the state just before the play started (player, powers, relics with their counters, orbs, enemies, hand with tabs), how many frames passed between the card's last frame in hand and its play starting, and the history entries of the play's action. Each report carries the game state from `Diagnostics/Snapshot.cs`: combat, player, powers, relics, orbs (front first, with passive and evoke values and slot capacity), enemies with intents, the hand with each card's tabs and play facts, the last 40 combat history entries, the audit window, and the last 80 mod log lines. It uses the game's own Sentry .NET (`Sentry.dll`) through a separate `SentryClient` with our DSN. `SentrySdk.Init` is never called, so the game's own reporting is untouched and no global handlers are installed. There's no machine name, user or personal data. Each fingerprint is sent once per session, at most 40 events. Mismatch fingerprints leave out amounts, so the same bug groups into one issue. Mismatch reports also carry searchable tags: `card` (the card played), `check` (which check failed), `source` (the relic or power the issue names), `effect`, `encounter` and, for the forecast check, `monster`. Every report is also tagged `other_mods` with the other mods loaded (id and version). Nothing is sent while another loaded mod changes the game: its manifest says `affects_gameplay` (or leaves it out, the game's default), or its code adds game content (any card, relic, power, monster or other model); the log says so once (`core/Game/OtherMods.cs`, decision #34). An hourly GitHub Action mirrors new Sentry issues to GitHub issues (`auto-report`).
 - **Error logging is capped:** a failure that repeats every frame is logged in full once, then as a count every ~600 repeats.
 - **Slow frames:** the mod times its own work each frame (each feature, the post-frame callbacks, widget layout). Every frame where that took over 30 ms logs a `[perf] slow frame` warning with the time per feature. Over 50 ms it's also reported as an error report (`perf`, grouped by the slowest feature, with the usual game state), from that feature's second such frame in a session (the first can be its code warming up). A frame over 50 ms where the mod's share stayed under 30 ms is the game's own work (a slower PC, loading, room changes): logged as an info line, at most one every 2 seconds with a count of the ones in between, and never reported.
-- **Observe-only patches.** One prefix (`CardPileCmd.Shuffle`, proc audit) records the call and changes nothing; everything else is read from live game state each frame; the game's hook queries it calls (`Hook.ModifyCardPlayCount`, `ModifyBlock`, `ModifyDamage`, `ShouldEtherealTrigger`, `ModifyOrbPassiveTriggerCount`) are pure queries with no side effects.
+- **Observe-only patches.** Two prefixes record the call and change nothing: `CardPileCmd.Shuffle` (proc audit) and `EventOption.Chosen` (Run Reminders check), plus a postfix on `EventOption.Chosen` that keeps the option's task to know when it ends; everything else is read from live game state each frame; the game's hook queries it calls (`Hook.ModifyCardPlayCount`, `ModifyBlock`, `ModifyDamage`, `ShouldEtherealTrigger`, `ModifyOrbPassiveTriggerCount`) are pure queries with no side effects.
 
 ---
 
@@ -408,6 +409,40 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 **Settings:** the `death-skull` switch; **Death chance** (General, on by default) shows or hides the chance (off: only certain deaths).
 
 **Game UI touched:** adds a skull (and the chance) as a child of each enemy's HP label (`NHealthBar` `%HpLabel`); the game's label isn't changed. No Harmony patches.
+
+---
+
+## Run Reminders
+
+Like StS1's Relic Reminders: outside fights, your relics that change what a choice does are shown on that choice. Every relic and how the mod covers it, in and out of fights: [RELICS.md](RELICS.md).
+
+**Card rewards:** while the card reward screen is open, a panel (a movable widget, by default left of the cards) lists your relics that react to the card you take, with their counters. A row flashes when taking a card now sets the relic off.
+- **Bing Bong:** the card you take is copied.
+- **Book of Five Rings:** cards added toward the next heal (`3/5: heal 20 at 5`). With Bing Bong a pick adds two cards, so it flashes one card earlier.
+- **Lucky Fysh:** the gold taking a card brings, after Bowler Hat or Ectoplasm (doubled with Bing Bong: the copy counts too).
+- **Pael's Wing:** rewards sacrificed toward its next relic.
+- Relics that change the offered cards (eggs, Fresnel Lens, Glitter, Wing Charm, Silken Tress, Lava Lamp, Silver Crucible, Lasting Candy, Prismatic Gem, Dingy Rug) aren't listed: the offered cards already show it.
+
+**Events:** beside each event option (to its left), the icons of your relics that change what it does; crossed (red slash) when the relic works against you. What an option does is read from the option's own code, the game commands it runs (`EventOption`'s OnChosen, following the event's own methods but not the options it opens next; for an ancient's relic option, also that relic's `AfterObtained`). That's the option's rule, never a roll.
+
+| The option... | Relics shown |
+| --- | --- |
+| adds a card to your deck (added, transformed into, or a card reward) | Bing Bong, Book of Five Rings, Lucky Fysh; Molten, Frozen and Toxic Egg and Fresnel Lens (the card is upgraded or enchanted when it qualifies) |
+| adds a curse | Bing Bong crossed (two curses), Book of Five Rings, Lucky Fysh, Darkstone Periapt |
+| costs HP | Tungsten Rod (1 less) |
+| gives gold (directly or as a reward) | Bowler Hat, Dragon Fruit; Ectoplasm crossed |
+| gives a potion (directly or as a reward) | Sozu crossed, Belt Buckle crossed (no Dexterity at the start of a fight while you hold one) |
+| lets you rest (a rest-site heal) | Regal Pillow, Stone Humidifier, Dream Catcher, Tiny Mailbox |
+
+Each relic has a switch in the settings menu (Relics page, the "Outside fights" line; key `reminder:<Relic>`), and the feature has its own on/off switch.
+
+**Check:** when you choose an event option, every relic with a reminder rule that flashes while the option runs is compared with the icons shown. A relic that reacted with no icon is reported (`reminders`: an option command the reader doesn't map, or a missing rule); one with an icon that didn't react is only logged (an option can skip its effect: an empty card choice, a reward you leave). The window ends when the option's task does, or when a fight starts. Each choice writes an `[audit] [reminders]` line to the log.
+
+**Coverage:** every relic that overrides a hook in `Diagnostics/ChoiceHooks.txt` (deck changes, gold, potions, HP loss, rest sites, card rewards, rewards, shops, the map) has a reminder rule (`Data/ChoiceReminders.cs`) or a reviewed reason (`Diagnostics/RelicChoiceTracking.cs`); `scripts/coverage-ledger.mjs` lists any missing, and the coverage check reports one when you have it in a fight.
+
+**Not yet:** shops (Maw Bank on purchases), the map, rest-site options themselves (the game already adds rest-site relics to the option's text).
+
+**Game UI touched:** a `SpireQoL_Reminders` row of icons added as a child of each `NEventOptionButton` that has one (removed when the option has none); the card reward panel is our own overlay. Read: `NEventRoom.Instance.Layout.OptionButtons`, `NOverlayStack.Instance.Peek()` (is it `NCardRewardSelectionScreen`), `RunManager`'s run state (the local player outside fights). **Patches:** `EventOption.Chosen` (observe-only prefix and postfix: the check).
 
 ---
 

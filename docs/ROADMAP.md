@@ -31,7 +31,7 @@ What Spire QoL is for, in order. Everything else serves these.
 | Incoming Damage | S | summed blockable damage incl. Burn/Decay/Constrict; health-bar preview |
 | Shuffle Warning | S | draws that force a reshuffle; which hand cards stay out |
 | Intent Forecast | M | upcoming enemy moves |
-| Out-of-combat Reminders | M | relic icons on rest options, event choices, card rewards and shop items whose outcome a relic changes (Bing Bong, Regal Pillow-style, Omamori-style) |
+| Out-of-combat Reminders | M | relic icons on event choices and a card reward panel (0.36.0: Run Reminders); shops next |
 
 ## Build order
 

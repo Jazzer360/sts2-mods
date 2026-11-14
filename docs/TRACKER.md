@@ -422,13 +422,17 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 
 ---
 
-## 15. Out-of-combat reminders (planned; goal 3 in ROADMAP)
+## 15. Out-of-combat reminders (Run Reminders; goal 3 in ROADMAP)
 
-An indicator on a choice outside combat when one of your relics changes what it does. Same language as on-card tabs (the relic's icon, crossed when it's against you), on the game's own choice buttons.
+An indicator on a choice outside combat when one of your relics changes what it does. Same language as on-card tabs (the relic's icon, crossed when it's against you).
 
-- [ ] Find the choice screens in the decompile: rest site options, event options, card rewards, shop items, card removal, potion rewards.
-- [ ] Coverage for it: extend the coverage ledger to the out-of-combat hooks (`AfterCardChangedPiles` on the deck, `ShouldAddToDeck`, `ModifyRestSiteHealAmount`, `AfterRestSiteHeal`/`Smith`, `ModifyRewards`, `ModifyCardRewardCreationOptions`, `ModifyMerchantPrice`/`CardPool`/`CardRarity`, `ShouldAllowMerchantCardRemoval`, `ModifyGoldGained`, `AfterGoldGained`, `ShouldProcurePotion`...), so every relic that changes a choice is reviewed and listed.
-- [ ] First cases: Bing Bong (cards added to your deck are copied: on card rewards, shop cards, event cards), rest-site relics, relics that react to curses joining your deck, relics that change shop prices or rewards.
+- [x] 0.36.0: card reward panel (Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing) and event option icons (cards, curses, HP loss, gold, potions, resting), read from each option's code; the event-option check; `docs/RELICS.md` generated with every relic.
+- [x] Coverage: `Diagnostics/ChoiceHooks.txt`, every relic overriding one has a rule or a reviewed reason (`RelicChoiceTracking`), checked by the script and in game.
+- [ ] Play test: event icon placement (left of the option) on every event layout, ancients included; the card reward panel's default spot.
+- [ ] Shops: Maw Bank (crossed on items: buying turns off its gold), Bing Bong / Lucky Fysh / Book of Five Rings on shop cards, Membership Card and The Courier are already in the prices.
+- [ ] Card removal (shop, events): no relic reacts today (`BeforeCardRemoved` has no relic); recheck each game update.
+- [ ] Ancient options: relics whose `AfterObtained` adds cards or gold are covered through the relic's code; check what other ancient pickups do in play.
+- [ ] Event options whose effect runs through a delegate the reader doesn't follow (a lambda passed to a card choice): the check reports a relic that reacts without its icon.
 - [x] 0.31.0: everything-snapshot per play (`PlaySnapshot`, `CodeIndex`), relic tracking review for all 163 fight-affecting relics (`RelicTracking`), no blanket skips for draws and auto-plays.
 - [x] 0.31.1: The Boot in the simulator (was a known gap; its hits would have caused after-play HP mismatches).
 - [x] 0.31.2: failures inside the audits and coverage check are reported (they were log-only).

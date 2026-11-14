@@ -1,0 +1,51 @@
+# Game hooks through which a relic changes what a choice outside combat does: card rewards, events,
+# rest sites, shops, rewards and the map. Every relic overriding one needs a Run Reminders rule
+# (Data/ChoiceReminders.cs) or a reviewed reason (Diagnostics/RelicChoiceTracking.cs), written from
+# its hook bodies. Used by scripts/coverage-ledger.mjs (goal 3 in docs/ROADMAP.md).
+AfterCardChangedPiles
+TryModifyCardBeingAddedToDeck
+TryModifyCardBeingAddedToDeckLate
+ShouldAddToDeck
+AfterAddToDeckPrevented
+BeforeCardRemoved
+ModifyGoldGained
+AfterGoldGained
+ShouldProcurePotion
+AfterPotionProcured
+ModifyHpLostBeforeOsty
+ModifyHpLostBeforeOstyLate
+ModifyHpLostAfterOsty
+ModifyHpLostAfterOstyLate
+AfterRestSiteHeal
+AfterRestSiteSmith
+ModifyRestSiteHealAmount
+TryModifyRestSiteHealRewards
+TryModifyRestSiteOptions
+ShouldDisableRemainingRestSiteOptions
+ModifyCardRewardCreationOptions
+ModifyCardRewardCreationOptionsLate
+ModifyCardRewardUpgradeOdds
+TryModifyCardRewardOptions
+TryModifyCardRewardOptionsLate
+TryModifyCardRewardAlternatives
+ShouldAllowSelectingMoreCardRewards
+ModifyRewards
+TryModifyRewards
+TryModifyRewardsLate
+TryReplaceDefaultRoomRewards
+ShouldForcePotionReward
+ModifyMerchantCardCreationResults
+ModifyMerchantCardPool
+ModifyMerchantCardRarity
+ModifyMerchantPrice
+ShouldAllowMerchantCardRemoval
+ShouldRefillMerchantEntry
+AfterItemPurchased
+ModifyGeneratedMap
+ModifyGeneratedMapLate
+ModifyUnknownMapPointRoomTypes
+ModifyOddsIncreaseForUnrolledRoomType
+ShouldAllowFreeTravel
+ShouldGenerateTreasure
+ModifyNextEvent
+ShouldAllowAncient
