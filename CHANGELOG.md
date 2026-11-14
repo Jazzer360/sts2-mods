@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.4
+#### Fixed
+- Pael's Legion and Vambrace tabs show on cards whose Adroit enchantment gains block, attacks included: its block is doubled and uses them up.
+
 ### Spire QoL 0.35.3
 #### Fixed
 - Adroit's block on a card that isn't a block card (an attack) no longer counts your Stretch, which only boosts block cards (block after the play, Incoming Damage).

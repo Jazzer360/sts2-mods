@@ -543,6 +543,25 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         }
     }
 
+    /// <summary>
+    /// The card's Adroit enchantment gains block that lands (Adroit.OnPlay → CreatureCmd.GainBlock, card-sourced Move
+    /// block): Pael's Legion and Vambrace double it and are used up, even on an attack. Stretch only boosts it on a block
+    /// card (StretchPower.BeforeCardPlayed), so it's taken out of the preview math otherwise.
+    /// </summary>
+    private bool AdroitLands(CardModel card)
+    {
+        if (card.Enchantment is not MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit) return false;
+        try
+        {
+            var stretch = Sts2State.Private(card, "GainsBlock", false) ? 0 : _me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
+            return Hook.ModifyBlock(_cs, _me.Creature, adroit.DynamicVars.Block.BaseValue - stretch, ValueProp.Move, card, null, out _) >= 1;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     /// <summary>Your attack and skill plays started this turn (each play of a replay counts), as Nostalgia counts them.</summary>
     private int AttacksAndSkillsStartedThisTurn()
     {
@@ -758,9 +777,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // Ending a turn without playing a card gives an extra turn (once per combat):
                     // while armed and nothing has been played, every card gives that up.
                     case nameof(PaelsEye) when armed && !f.AutoPlayed && Sts2State.CountPlayedThisTurn(_me) == 0: return Hit.Trig(harmful: true); // auto-plays don't count
-                    case nameof(Vambrace) when armed && f.BlockGains > 0 && BlockLands(card): return Hit.Trig();
+                    case nameof(Vambrace) when armed && ((f.BlockGains > 0 && BlockLands(card)) || AdroitLands(card)): return Hit.Trig();
                     // Off cooldown, the next card that gains block gets double block, then it rests 2 turns.
-                    case nameof(PaelsLegion) when armed && f.BlockGains > 0 && BlockLands(card): return Hit.Trig();
+                    case nameof(PaelsLegion) when armed && ((f.BlockGains > 0 && BlockLands(card)) || AdroitLands(card)): return Hit.Trig();
                     case nameof(BurningSticks) when armed && type == CardType.Skill && f.ExhaustsSelf: return Hit.Trig();
                     // It arms on a debuff to an enemy without Artifact (checked before Artifact uses a
                     // charge), so an enemy whose charges cover every debuff this play applies doesn't count.
