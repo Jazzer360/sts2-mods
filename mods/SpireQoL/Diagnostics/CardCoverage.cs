@@ -129,6 +129,9 @@ internal static class CardCoverage
         // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
         if (Sts2Mods.Core.Game.Sts2State.Private(card, "GainsBlock", false) && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
             issues.Add("gains block without a Block value (whether it spends Stretch isn't known: Stretch tab)");
+        // A card that isn't an attack but damages its target (Capture Spirit): the simulator models the ones it knows.
+        if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !SimAdapter.TargetDamageCards.Contains(name))
+            issues.Add("damages an enemy without attacking (not in the simulator: kills, lethal, Slippery)");
         // A second damage value (Timber's hit on every enemy after a kill): the simulator models the ones it knows.
         if (card.DynamicVars.Any(kv => kv.Key != "Damage" && kv.Value is DamageVar) && !SimAdapter.OnKillHitAllCards.Contains(name))
             issues.Add("has a second damage value (not in the simulator: kills, lethal)");

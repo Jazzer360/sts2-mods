@@ -100,6 +100,9 @@ public static class SimAdapter
     /// <summary>Cards whose kill sets off a hit on every enemy (Timber: OnKillDamage). The card scan flags a new damage value.</summary>
     internal static readonly HashSet<string> OnKillHitAllCards = new() { "Timber" };
 
+    /// <summary>Cards that aren't attacks but damage their target (Capture Spirit: CreatureCmd.Damage). The card scan flags a new one.</summary>
+    internal static readonly HashSet<string> TargetDamageCards = new() { nameof(CaptureSpirit) };
+
     /// <summary>
     /// The power the simulator models for a power type: a temporary Thorns power (Cho Barbs, v0.113.0) gives real
     /// Thorns until the end of the enemy turn (TemporaryThornsPower.BeforeApplied applies ThornsPower), so it's Thorns.
@@ -562,6 +565,18 @@ public static class SimAdapter
                     return Math.Max(0, (int)v);
                 });
                 play.OnKillHitAll[id] = d;
+            }
+        }
+        // Capture Spirit: unblockable, unpowered damage to its target through the game's damage math (Vulnerable doesn't
+        // apply to unpowered damage; the hooks decide).
+        if (TargetDamageCards.Contains(name) && targetId >= 0 && card.DynamicVars.TryGetValue("Damage", out var tdVar) && tdVar is DamageVar tdv)
+        {
+            var target = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
+            if (target != null)
+            {
+                play.TargetId = targetId;
+                play.TargetDamage[targetId] = SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, cs, target, me.Creature, tdv.BaseValue, tdv.Props,
+                    card, null, ModifyDamageHookType.All, CardPreviewMode.None, out _)));
             }
         }
         if (ExecuteCards.Contains(name) && targetId >= 0)

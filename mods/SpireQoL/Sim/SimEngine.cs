@@ -74,6 +74,11 @@ public sealed class SimPlay
     /// through the game's damage math). Empty: none.
     /// </summary>
     public Dictionary<int, int> OnKillHitAll = new();
+    /// <summary>
+    /// Unblockable, unpowered damage to the target from a card that isn't an attack (Capture Spirit: CreatureCmd.Damage), per
+    /// enemy id through the game's damage math. Not a hit of yours: Curl Up, Flutter and the like don't react.
+    /// </summary>
+    public Dictionary<int, int> TargetDamage = new();
     /// <summary>It kills your Osty (Sacrifice, Bone Shards: CreatureCmd.Kill on Osty).</summary>
     public bool KillsOsty;
     public int FadingDelta;
@@ -397,12 +402,13 @@ public static class SimEngine
     /// <summary>Damage to an enemy during your turn: its block, then HP (Hardened Shell caps HP lost).</summary>
     /// <param name="powered">A powered attack (your card's hits): Flutter and The Gambit react only to those.</param>
     /// <param name="minimumHpLoss">The Boot: a powered hit that loses it at least 1 HP loses it at least this much.</param>
-    private static int Damage(SimEnemy e, int amount, bool powered = false, int minimumHpLoss = 0)
+    /// <param name="unblockable">Unblockable damage (Capture Spirit): its block takes none of it.</param>
+    private static int Damage(SimEnemy e, int amount, bool powered = false, int minimumHpLoss = 0, bool unblockable = false)
     {
         if (amount <= 0 || !e.Alive) return 0;
         amount = Math.Min(amount, e.HitCap);
         var hadBlock = e.Block > 0;
-        var absorbed = Math.Min(e.Block, amount);
+        var absorbed = unblockable ? 0 : Math.Min(e.Block, amount);
         e.Block -= absorbed;
         if (hadBlock && e.Block == 0) e.BlockBroken = true;
         if (hadBlock && e.Block == 0 && e.Burrowed)
@@ -791,6 +797,10 @@ public static class SimEngine
                 for (var i = 0; i < p.Hits; i++) b.Each(s => HitRandom(s, Hit, card: true));
                 break;
         }
+
+        // Capture Spirit: unblockable damage to the target.
+        if (p.TargetDamage.TryGetValue(p.TargetId, out var direct) && direct > 0)
+            b.Do(s => { if (s.Enemy(p.TargetId) is { Alive: true } e) Damage(e, direct, unblockable: true); });
 
         // Judgement: the target dies at or below the threshold (after any hits; it has none).
         if (p.ExecuteAtOrBelow > 0)

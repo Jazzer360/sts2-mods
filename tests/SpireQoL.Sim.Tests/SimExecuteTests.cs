@@ -74,4 +74,30 @@ public class SimExecuteTests
         SimEngine.ApplyPlayTo(s, timber, out var branches, out _);
         Assert.All(branches, b => { Assert.Equal(30, b.Enemy(1)!.Hp); Assert.Equal(36, b.Enemy(2)!.Hp); });
     }
+
+    [Fact]
+    public void CaptureSpiritsDamageIgnoresBlockAndSpendsSlippery()
+    {
+        // Capture Spirit: 3 unblockable damage to its target. Slippery takes it down to 1 HP and loses a charge, so the
+        // crossed Slippery tab shows.
+        var s = new SimState { Enemies = { E(1, 20, 5) } };
+        s.Enemies[0].Block = 10;
+        s.Enemies[0].Slippery = 2;
+        var play = new SimPlay { Name = "CaptureSpirit", TargetId = 1, TargetDamage = { [1] = 3 } };
+        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
+        Assert.All(branches, b =>
+        {
+            Assert.Equal(10, b.Enemy(1)!.Block);
+            Assert.Equal(19, b.Enemy(1)!.Hp);
+            Assert.Equal(1, b.Enemy(1)!.Slippery);
+        });
+        Assert.True(SimEngine.Run(s, play).SlipperyInAny(1));
+    }
+
+    [Fact]
+    public void CaptureSpiritCanKill()
+    {
+        var s = new SimState { Enemies = { E(1, 3, 20) } };
+        Assert.True(SimEngine.Run(s, new SimPlay { Name = "CaptureSpirit", TargetId = 1, TargetDamage = { [1] = 3 } }).DeadInAll(1));
+    }
 }

@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.35.6
+#### Fixed
+- Capture Spirit's damage counts in the predictions: it can kill (lethal), and it gets the crossed Slippery tab when it would spend a Slippery charge.
+
 ### Spire QoL 0.35.5
 #### Fixed
 - Swift's draw comes after the card's own effects, so cards that card puts in your hand (Vitriol's Sadness) take room first: from a full hand it draws nothing (Shuffle Warning, draw procs).
