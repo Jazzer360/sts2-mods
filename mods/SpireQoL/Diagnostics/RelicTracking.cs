@@ -20,7 +20,7 @@ internal static class RelicTracking
         ["SneckoEye"] = "none: BeforeCombatStart Confused, bigger hand draw",
         ["FurCoat"] = "none: enemies in marked rooms start at 1 HP",
         ["MeatOnTheBone"] = "none: heals after combat when low (its status shows it)",
-        ["Pantograph"] = "none: BeforeCombatStart heal in boss fights",
+        ["Pantograph"] = "none: BeforeCombatStart heal in boss fights (Rest Preview shows the HP the boss fight starts with at the last rest site)",
         ["PetrifiedToad"] = "none: BeforeCombatStartLate potion",
         ["PhilosophersStone"] = "none: max energy; Strength to enemies as they enter (intents show it)",
         ["TeaOfDiscourtesy"] = "none: BeforeCombatStart Dazed into your draw pile (its counter shows combats left)",
@@ -28,7 +28,7 @@ internal static class RelicTracking
         ["PhylacteryUnbound"] = "none: summons at the start of combat and each turn (Osty shows it)",
         ["GhostSeed"] = "none: cards entering combat become Ethereal (shown on the card)",
 
-        ["BathRobes"] = "none: BeforeCombatStart full heal in a boss fight (once)",
+        ["BathRobes"] = "none: BeforeCombatStart full heal in a boss fight, once (Rest Preview shows it at the last rest site)",
         ["Byrdine"] = "none: BeforeCombatStart pet",
         ["Wuppy"] = "none: its pet takes the powered attacks aimed at you while it lives (simulator: Incoming Damage leaves them out)",
 

@@ -8,7 +8,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 **Only knowable information.** Spire QoL shows only what a player with perfect memory and full knowledge of the game's rules could work out. It never reads the RNG or the seed, the draw pile's order, or an enemy's move beyond the intent on screen. Random effects show their amount, never their target or roll, and predictions that would depend on a roll leave it out.
 
-**Harmony patches: observe-only.** Every feature works by reading live game state once per frame and drawing its own nodes. Nothing in the game's code is replaced or changed. Two prefixes only record a call: `CardPileCmd.Shuffle` (the proc audit counts shuffles; the game keeps no record of them) and `EventOption.Chosen` (Run Reminders checks which relics react to the option you chose; a postfix keeps the option's task to know when it ends). The coverage check reads the game's compiled code (reflection, `PatchProcessor.GetOriginalInstructions`), which changes nothing.
+**Harmony patches: observe-only.** Every feature works by reading live game state once per frame and drawing its own nodes. Nothing in the game's code is replaced or changed. Three prefixes only record a call: `CardPileCmd.Shuffle` (the proc audit counts shuffles; the game keeps no record of them), `EventOption.Chosen` (Run Reminders checks which relics react to the option you chose; a postfix keeps the option's task to know when it ends) and `HealRestSiteOption.OnSelect` (Rest Preview checks your HP after resting). The coverage check reads the game's compiled code (reflection, `PatchProcessor.GetOriginalInstructions`), which changes nothing.
 
 | Feature | Id | Status | Default |
 | --- | --- | --- | --- |
@@ -21,6 +21,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Death Skull](#death-skull) | `death-skull` | 🟡 | on |
 | [Potion Tabs](#potion-tabs) | `potion-tabs` | 🟡 | on |
 | [Run Reminders](#run-reminders) | `run-reminders` | 🟡 | on |
+| [Rest Preview](#rest-preview) | `rest-preview` | 🟡 | on |
 | [Update Notice](#update-notice) | `update-notice` | 🟡 | on |
 
 ## What the mod adds to the game, technically
@@ -117,7 +118,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 
 - **Look:** each tag is a copy of the card's own enchantment tab (the game's banner art), always at full color (never the grey the game gives a disabled enchantment), rotated a quarter turn so it hangs off the top edge the way an enchantment tab hangs off the side. **It draws beneath the card art but above the card's glow**, tucked about 17% under the top edge, so the card itself covers the tucked part. The icon is drawn slightly smaller (85%) and sits just below the middle of the part of the tag that shows above the card. Tags stay on a card while you hold it to play it (dragging or aiming): the game moves a held card out of the hand's holder container (`NPlayerHand.StartCardPlay`), so the held card is found through the hand's current card play (`NPlayerHand._currentCardPlay`, read only). Each tag carries the icon of whatever is affecting the card: a relic, power or enchantment, or the draw pile.
 - **Text instead of an icon only for replay:** replay on the card itself has no power or relic to show, so its tab reads `2×` (total plays). The text fills the icon's slot (the tab's own auto-sizing label gets the icon's box and a larger maximum font size).
-- **Numbers only for amounts:** a tab shows a number only when the proc gains you block, deals damage or summons, and the amount is the point (e.g. Feel No Pain on True Grit: `3`). It sits at the icon's lower-right corner, like a power amount. Everything else is icon only.
+- **Numbers only for amounts:** a tab shows a number only when the proc gains you block, deals damage or summons, and the amount is the point (e.g. Feel No Pain on True Grit: `3`). Free-card tabs show the energy the free card saves, or `?` when Snecko Eye hides the card's cost (decision #44). It sits at the icon's lower-right corner, like a power amount. Everything else is icon only.
 - **Plain vs crossed:** a plain tab means playing this card does something extra. A crossed tab (red slash) is a warning: playing it might be bad for you, because it helps the enemy (Enrage, Curl Up), hurts you (Thorns, Galvanized) or gives up a relic's bonus (Art of War, Pael's Tears).
 - **One per source:** each source shows at most one tab per card. Tabs keep their size and spacing; if a row would be wider than the card, only the gaps shrink (tabs overlap, later ones on top), so a row never spills past the card's edges.
 - **Not tabs:** the only on-card effect that isn't a tab is **Ethereal translucency**.
@@ -133,6 +134,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 | Skull (the game's emote wheel skull) | playing this kills an enemy for certain before it acts (see [Outcome simulator](#outcome-simulator)) | Proc Indicators |
 | A power or relic (+ amount for block / damage / summon) | playing this sets it off: see [Proc Indicators](#proc-indicators) | Proc Indicators |
 | A tiny card (the run history's card icon: frame color, type, rarity banner; decision #42) | playing this brings that card back to your hand: Make It So (the Skill that makes your Skills this turn a multiple of 3; from any pile but your hand), Right Hand Hand (cards costing 2 or more) and Whistling Arrows (shots that shoot an arrow: one ready, and not Repeat Shot at X 0), both from your discard pile; none when your hand would be full (it goes to your discard pile then). Keys `return:<Card>`, group `return:*` | Proc Indicators |
+| Free Card (Tune), Free Attack (Unrelenting), Free Skill (Pounce) (+ energy saved, or `?`) | playing this from your hand uses up the free card: the energy it saves, `?` when Snecko Eye re-rolled the card's cost (the free card shows it as 0, so you can't see it); **crossed** on 0-cost and X-cost cards, which use it up for nothing (never crossed when the cost is hidden). Keys `free:<Power>`, group `free:*` | Proc Indicators |
 | A power or relic, **crossed** (+ amount for damage to you) | playing this helps the enemy, hurts you, or gives up a relic (Enrage, Thorns, Curl Up, Galvanized, Art of War, Pael's Tears, Pael's Eye...) | Proc Indicators |
 
 **Game UI touched:** card nodes in the hand. Tag copies live in a `SpireQoL_TagLayer` node inserted directly after the card's glow (`NCard.CardHighlight`) in the glow's parent, so they draw above the glow and beneath the card art. It mirrors the card frame's transform each frame, and is hidden when the node stops showing a decorated hand card. The game's own enchantment tab is only read as a template.
@@ -475,9 +477,23 @@ Each relic has a switch per place it shows in the settings menu (Relics page, Ou
 
 **Shops:** while the shop is open, beside each item's price (to its left), the icons of your relics that buying it sets off; crossed when the relic works against you. Cards: Bing Bong (copied), Book of Five Rings (toward its heal), Lucky Fysh (gold back: the price after its gold, after Bowler Hat or Ectoplasm and doubled with Bing Bong, under the game's price in green). Potions: Sozu and Belt Buckle crossed. Every item: Maw Bank crossed while it still gives gold (buying anything ends that). The eggs and Fresnel Lens already show on the shop's cards, so they get no icon. Check: after you buy a card with Lucky Fysh, what you paid in the end (your gold before against after, once it settles) against the net price shown; reported (`reminders`, `reminder-shop`) when they differ. Game UI touched: adds a child to each shop slot's price label (`NMerchantSlot._costLabel`); nothing of the game's is changed.
 
-**Not yet:** the map, rest-site options themselves (the game already adds rest-site relics to the option's text).
+**Not yet:** the map. Rest-site options: the game already adds rest-site relics to the option's text; the HP you'll have is [Rest Preview](#rest-preview)'s.
 
 **Game UI touched:** a `SpireQoL_Reminders` row of icons added as a child of each `NEventOptionButton` that has one (removed when the option has none); the card reward panel is our own overlay. Read: `NEventRoom.Instance.Layout.OptionButtons`, `NOverlayStack.Instance.Peek()` (is it `NCardRewardSelectionScreen`), `RunManager`'s run state (the local player outside fights). **Patches:** `EventOption.Chosen` (observe-only prefix and postfix: the check).
+
+---
+
+## Rest Preview
+
+**What you see:** at a rest site, under the **Rest** option, the HP resting leaves you with (`HP 45 → 68/80`) and, in orange, how much of the heal is wasted over your max HP (`(4 over)`). At the last rest site before the boss (the boss's map point is next), with **Pantograph** or an unused **Bath Robes** (the game marks them active there), a line with the relic's icon and the HP the boss fight will start with: under Rest if you rest (and how much of the rest heal doesn't carry into the fight, `(24 over)`), and under every other option if you don't (`Boss: 70/80`).
+
+**Rules** (decompile v0.113.1): the heal is the game's own (`HealRestSiteOption.GetHealAmount`: 30% of max HP through `ModifyRestSiteHealAmount`: Regal Pillow +15, Night Terrors to full), and HP becomes the whole part of HP + heal, capped at max. After it, Stone Humidifier adds 5 max HP (and HP), Night Terrors takes 5 max HP. At the boss fight's start (`BeforeCombatStart`), Pantograph heals 25 and Bath Robes heals to full, once.
+
+**Check:** after you rest, your HP and max HP against the preview (`[audit] [rest]`, reported as `rest-heal`); at the boss fight's start, your HP against the preview for how you left the last rest site (`rest-boss`).
+
+**Settings:** the `rest-preview` switch (General page).
+
+**Game UI touched:** a `SpireQoL_RestPreview` box added under each `NRestSiteButton` that has a line (`NRestSiteRoom.Instance`, `%ChoicesContainer`); the game's nodes aren't changed. **Patches:** `HealRestSiteOption.OnSelect` (observe-only prefix: the check records the preview you chose from).
 
 ---
 

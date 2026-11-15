@@ -174,10 +174,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> SilentRelics = new() { nameof(MummifiedHand) };
 
     /// <summary>
-    /// Your powers a card play uses up whatever the card is (BeforeCardPlayed): Free Card makes your next card from
-    /// hand free and goes, and the costs it lowered go back up.
+    /// Your powers a card play uses up whatever the card costs (BeforeCardPlayed): Free Card, Free Attack and Free Skill make
+    /// your next card (Attack, Skill) from hand free and go, and the costs they lowered go back up. The free-card check
+    /// compares their charges with the "free:" tabs.
     /// </summary>
-    private static readonly HashSet<string> SpentByAnyPlay = new() { "FreeCardPower" };
+    private static readonly HashSet<string> SpentByAnyPlay = new() { "FreeCardPower", "FreeAttackPower", "FreeSkillPower" };
 
     /// <summary>
     /// Your powers your next powered attack uses up (BeforeAttack marks the command, AfterAttack spends it): Vigor,
@@ -950,6 +951,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 var tabbed = sourceOf.ContainsKey(spent);
                 if (tabbed && after >= before) issues.Add($"didn't fire: {spent} (still {after})");
                 if (!tabbed && after < before) issues.Add($"no tab: {spent} spent ({before}→{after})");
+            }
+            // Free card powers: a "free:" tab (plain or crossed) exactly when the play takes a charge.
+            foreach (var spent in SpireQoL.Procs.FreeCards.Powers)
+            {
+                if (!w.PowersBefore.TryGetValue((me.Creature, spent), out var before) || before <= 0) continue;
+                var after = w.PowersAfter.TryGetValue((me.Creature, spent), out var sa) ? sa : 0;
+                var tabbed = w.Predicted.Any(t => t.Key == SpireQoL.Procs.FreeCards.Prefix + spent);
+                if (tabbed && after >= before) issues.Add($"didn't fire: {spent} (still {after})");
+                if (!tabbed && after < before && !ownTypes.Contains(spent)) issues.Add($"no tab: {spent} spent ({before}→{after})");
             }
         }
 

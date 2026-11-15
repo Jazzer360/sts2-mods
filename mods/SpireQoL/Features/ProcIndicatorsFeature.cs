@@ -298,6 +298,14 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // with the returning card as the icon.
         foreach (var back in f.CardsBack.GroupBy(c => c.GetType().Name))
             tabs.Add(new TabSpec("return:" + back.Key, null, Card: back.First()));
+        // Free Card, Free Attack, Free Skill: the energy this play saves (or "?" when Snecko Eye hides the cost); crossed when
+        // the card already costs 0 or is X-cost, so playing it throws the free card away.
+        foreach (var use in FreeCards.Uses(card, _me))
+        {
+            var numbers = _ctx.Settings.ProcNumbers;
+            tabs.Add(new TabSpec(FreeCards.Prefix + use.Power.GetType().Name, GameIcons.Power(use.Power), Crossed: use.Wasted,
+                Number: numbers ? use.Saved : null, Kind: "energy", Amount: use.Saved ?? 0, NumberText: numbers && use.Hidden ? "?" : null));
+        }
         return tabs;
     }
 

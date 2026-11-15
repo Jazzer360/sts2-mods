@@ -97,6 +97,7 @@ public static class ModEntry
             new ShuffleWarningFeature(ctx),
             new RunRemindersFeature(ctx),
             new PotionTabsFeature(ctx),
+            new RestPreviewFeature(ctx),
             new DeathSkullFeature(ctx),
             new UpdateNoticeFeature(),
             new Diagnostics.ForecastAudit(),

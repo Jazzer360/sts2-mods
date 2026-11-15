@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.46.0
+#### Added
+- Free-card tabs: with Tune's free card (or Unrelenting's free Attack, Pounce's free Skill), each card in your hand that would use it up shows the energy it saves. It shows ? when Snecko Eye has re-rolled the card's cost, because the free card shows that cost as 0. 0-cost and X-cost cards get a crossed tab, since they use the free card up for nothing.
+- Rest Preview: at rest sites, the HP resting leaves you with and how much of the heal is wasted. At the last rest site before the boss, with Pantograph or an unused Bath Robes, the HP the boss fight will start with, under every option, and how much of the rest heal doesn't carry into the fight.
+
 ### Spire QoL 0.45.0
 #### Changed
 - HP-loss tabs show only when the play really sets the relic off. Your block, Tungsten Rod, Beating Remnant and Buffer now count, and so does enemy Thorns hitting you back past your block. Tungsten Rod's tab needs some HP loss to get past your block. Self-Forming Clay, Emotion Chip, Centennial Puzzle, Demon Tongue, Rupture and Inferno need HP actually lost (a 1-HP cost with Tungsten Rod sets none of them off). Red Skull needs the real loss to reach its threshold. The crossed Thorns tab still shows on every attack that can hit a Thorns enemy.

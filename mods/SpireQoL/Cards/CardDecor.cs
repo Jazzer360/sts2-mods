@@ -16,7 +16,7 @@ namespace SpireQoL.Cards;
 /// Text: shown instead of an icon (replay count, e.g. "2×"); null for icon tabs.
 /// Card: a card drawn as the icon (the game's tiny card, decision #42: a card that comes back to your hand); null for the rest.
 public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null, string? Kind = null, int Amount = 0,
-    int AuditMin = 0, int AuditMax = 0, string? Text = null, CardModel? Card = null);
+    int AuditMin = 0, int AuditMax = 0, string? Text = null, CardModel? Card = null, string? NumberText = null);
 
 /// <summary>
 /// What should be drawn on one card this frame. Features fill it in; CardOverlayRenderer draws it.

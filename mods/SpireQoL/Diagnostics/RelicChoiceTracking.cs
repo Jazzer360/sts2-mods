@@ -20,7 +20,7 @@ internal static class RelicChoiceTracking
         ["LastingCandy"] = "none: an extra card on every other reward (shown on the reward; its counter shows the count)",
         ["SilverCrucible"] = "none: upgrades offered reward cards (shown on them) and skips the first treasure chest (its counter shows uses left)",
         ["RegalPillow"] = "none: rest heals more (the game adds it to the rest option's text); events that rest get its icon (ChoiceReminders)",
-        ["StoneHumidifier"] = "none: max HP when you rest (the game adds it to the rest option's text); events that rest get its icon",
+        ["StoneHumidifier"] = "none: max HP when you rest (the game adds it to the rest option's text; Rest Preview counts it); events that rest get its icon",
         ["DreamCatcher"] = "none: a card reward when you rest (the game adds it to the rest option's text); events that rest get its icon",
         ["TinyMailbox"] = "none: potions when you rest (the game adds it to the rest option's text); events that rest get its icon",
         ["Byrdpip"] = "none: adds a rest-site option (shown as the option)",

@@ -312,10 +312,10 @@ public sealed class CardOverlayRenderer
                     if (spec.Crossed) LayoutSlash(slash, icon.Size);
                 }
             }
-            // The tab's number label shows only on quantified proc tabs (block / damage / summon).
+            // The tab's number label shows only on quantified tabs (block / damage / summon procs, energy a free card saves or "?").
             if (tab.GetNodeOrNull<Label>("Label") is { } label)
             {
-                label.Visible = spec.Number != null || spec.Text != null;
+                label.Visible = spec.Number != null || spec.Text != null || spec.NumberText != null;
                 if (spec.Text != null && tab.GetNodeOrNull<TextureRect>("Icon") is { } ti)
                 {
                     // Text tab: the text fills the icon's slot, upright. The label is the game's
@@ -340,13 +340,13 @@ public sealed class CardOverlayRenderer
                     label.Rotation = -Mathf.Pi / 2f;
                     label.Position = ti.Position + ti.Size / 2f - label.Size / 2f;
                 }
-                else if (spec.Number is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic)
+                else if ((spec.Number?.ToString() ?? spec.NumberText) is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic)
                 {
                     // Upright like the icon, centered on the icon's lower-right corner as the game
                     // places power amounts. In the tab's unrotated coordinates, screen-down is +x
                     // and screen-right is -y.
                     RestoreLabel(label);
-                    label.Text = n.ToString();
+                    label.Text = n;
                     label.HorizontalAlignment = HorizontalAlignment.Center;
                     label.VerticalAlignment = VerticalAlignment.Center;
                     label.PivotOffset = label.Size / 2f;
