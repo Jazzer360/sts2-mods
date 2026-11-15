@@ -19,6 +19,8 @@ public enum ChoiceEffect
     Potion = 16,
     /// <summary>A rest-site heal (events that let you rest: the rest-site relics fire).</summary>
     RestHeal = 32,
+    /// <summary>You buy something in a shop (AfterItemPurchased). Shops only: no event call maps to it.</summary>
+    Purchase = 64,
 }
 
 /// <param name="Relic">The relic's class name.</param>
@@ -63,6 +65,8 @@ public static class ChoiceReminders
         // Potions (ShouldProcurePotion; Belt Buckle's Dexterity needs no potions at combat start).
         new(nameof(Sozu), ChoiceEffect.Potion, CrossedOn: ChoiceEffect.Potion),
         new(nameof(BeltBuckle), ChoiceEffect.Potion, CrossedOn: ChoiceEffect.Potion),
+        // Shops: buying anything ends Maw Bank's gold per room (AfterItemPurchased sets HasItemBeenBought).
+        new(nameof(MawBank), ChoiceEffect.Purchase, CrossedOn: ChoiceEffect.Purchase),
         // Rest-site heals, mimicked ones included (none of these check isMimicked).
         new(nameof(RegalPillow), ChoiceEffect.RestHeal),
         new(nameof(StoneHumidifier), ChoiceEffect.RestHeal),

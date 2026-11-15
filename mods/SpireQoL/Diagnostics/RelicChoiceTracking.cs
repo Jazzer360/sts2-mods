@@ -51,6 +51,5 @@ internal static class RelicChoiceTracking
         ["TheBoot"] = "none: raises your attacks' damage on enemies (combat only)",
 
         // ---- gaps
-        ["MawBank"] = "gap: buying anything in a shop turns off its gold per room: a crossed icon on shop items",
     };
 }

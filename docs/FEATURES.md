@@ -168,7 +168,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 - **Limits:**
   - Velvet Choker shows plays left and turns red at 1.
   - Pocketwatch shows green while you're within its card limit and red ("missed") once you go over.
-- **Turn timers** (off by default; switch each on in the settings menu, Relics page, Tracker column): Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3), shown with progress and "next turn" the turn before; Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core as counters.
+- **Turn timers** (off by default; switch each on in the settings menu, Relics page, Tracker column): Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3), Pael's Flesh (1 more energy from turn 3), shown with progress and "next turn" the turn before; Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core as counters.
 - **Countdown powers** (sorted after relics; the game's `PowerModel.DisplayAmount` is "steps left"). The bar fills toward the next trigger and flashes when one step is left:
   - Across turns: Orbit (every 4 energy spent), Automation (every 10 cards drawn), Cacophony (every 33 cards drawn, number only).
   - Per turn: Panache (every 5 cards played), Pale Blue Dot (5 cards played, any type; shows `done` once it has fired this turn).
@@ -194,6 +194,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 **What you see**, during your turn: a small stacked sum, read like a math problem. It uses the game's own intent icons: defend, and the attack icon tier that matches the incoming total (the same thresholds enemies use: under 5, 10, 20, 40, and 40+):
 
 ```
+[eye]   +1 turn  only when ending your turn now gives you another turn first (Pael's Eye, Extra Turn): its icon
 [attack]  14     incoming damage
 [defend] − 5     your block at end of turn
 [osty]   − 4     what Osty absorbs (Necrobinder, only while Osty is out; red if it dies)
@@ -201,6 +202,8 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
       =   9     what you'll lose (red), or 0 in green; a skull beside it when this kills you
 [fairy]  31 HP  only when Fairy in a Bottle or Lizard Tail keeps you alive: its icon, and your HP after the enemy turn
 ```
+
+**Extra turns** (decision #40): when ending your turn now gives you another turn before the enemies act (the game's own `Hook.ShouldTakeExtraTurn`: Pael's Eye with nothing played this turn, Extra Turn), the top row shows the source's icon and `+1 turn`. The sum below is still the enemies' next turn, which comes after that one, and the block you gain at the end of this turn will be gone by then.
 
 **Death and what prevents it:** the simulator tracks your HP. At 0, Fairy in a Bottle is used first (the game asks `ShouldDie` before `ShouldDieLate`), healing you from 0 to 30% of your max HP; then Lizard Tail (50%, once a run). The rest of the hit that took you to 0 is lost, and later hits still land. With nothing left, you die: the skull. All from the worst branch. A teammate's revives aren't modelled.
 
@@ -449,7 +452,9 @@ Each relic has a switch in the settings menu (Relics page, the "Outside fights" 
 
 **Coverage:** every relic that overrides a hook in `Diagnostics/ChoiceHooks.txt` (deck changes, gold, potions, HP loss, rest sites, card rewards, rewards, shops, the map) has a reminder rule (`Data/ChoiceReminders.cs`) or a reviewed reason (`Diagnostics/RelicChoiceTracking.cs`); `scripts/coverage-ledger.mjs` lists any missing, and the coverage check reports one when you have it in a fight.
 
-**Not yet:** shops (Maw Bank on purchases), the map, rest-site options themselves (the game already adds rest-site relics to the option's text).
+**Shops:** while the shop is open, beside each item's price (to its left), the icons of your relics that buying it sets off; crossed when the relic works against you. Cards: Bing Bong (copied), Book of Five Rings (toward its heal), Lucky Fysh (gold back: the price after its gold, after Bowler Hat or Ectoplasm and doubled with Bing Bong, under the game's price in green). Potions: Sozu and Belt Buckle crossed. Every item: Maw Bank crossed while it still gives gold (buying anything ends that). The eggs and Fresnel Lens already show on the shop's cards, so they get no icon. Check: after you buy a card with Lucky Fysh, what you paid in the end (your gold before against after, once it settles) against the net price shown; reported (`reminders`, `reminder-shop`) when they differ. Game UI touched: adds a child to each shop slot's price label (`NMerchantSlot._costLabel`); nothing of the game's is changed.
+
+**Not yet:** the map, rest-site options themselves (the game already adds rest-site relics to the option's text).
 
 **Game UI touched:** a `SpireQoL_Reminders` row of icons added as a child of each `NEventOptionButton` that has one (removed when the option has none); the card reward panel is our own overlay. Read: `NEventRoom.Instance.Layout.OptionButtons`, `NOverlayStack.Instance.Peek()` (is it `NCardRewardSelectionScreen`), `RunManager`'s run state (the local player outside fights). **Patches:** `EventOption.Chosen` (observe-only prefix and postfix: the check).
 

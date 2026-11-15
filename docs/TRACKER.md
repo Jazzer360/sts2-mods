@@ -397,13 +397,9 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Dead code removed (analyzers + `scripts/dead-code.mjs`): Intent Forecast stub, `UiKit.Badge`, `Sts2State.HasVar`, `TurnEndModel.Overblock`, `PlayFacts.DebuffsLanding`, `SimAdapter.SelfPowers`, unused parameters and usings.
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
-- Known gaps (6; each is logged when present in a fight):
-  - [ ] ExtraTurnPower (ledger): ShouldTakeExtraTurn gives you another turn before the enemies act (AfterTakingExtraTurn counts it down): the forecast still shows the enemy turn next
-  - [ ] PaelsEye (ledger): crossed tab covers giving up its extra turn (ShouldTakeExtraTurnEarly, AfterTakingExtraTurn); the simulator exhausts your hand at BeforeSideTurnEndEarly (Feel No Pain, Charon's Ashes, Forgotten Soul; nothing left in hand to act); the extra turn itself isn't (the forecast still shows the enemy turn next)
+- Known gaps (2; each is logged when present in a fight):
   - [ ] BeltBuckle (relic tracking): reacts to having no potions (potions have no tabs yet)
-  - [ ] PaelsFlesh (relic tracking): extra energy from turn 3 (its counter shows the turn); a turn-timer row would show when it starts
   - [ ] ReptileTrinket (relic tracking): Strength when you use a potion (potions have no tabs yet)
-  - [ ] MawBank (outside fights): buying anything in a shop turns off its gold per room: a crossed icon on shop items
 <!-- gaps:end -->
 
 ---
@@ -416,7 +412,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [x] Coverage: `Diagnostics/ChoiceHooks.txt`, every relic overriding one has a rule or a reviewed reason (`RelicChoiceTracking`), checked by the script and in game.
 - [x] 0.36.1: checks on what each event option did (deck, gold, HP, potions, relics that always react) and on the card reward panel after a pick.
 - [ ] Play test: event icon placement (left of the option) on every event layout, ancients included; the card reward panel's default spot.
-- [ ] Shops: Maw Bank (crossed on items: buying turns off its gold), Bing Bong / Lucky Fysh / Book of Five Rings on shop cards, Membership Card and The Courier are already in the prices.
+- [x] Shops (0.40.0): Maw Bank (crossed on items: buying turns off its gold), Bing Bong / Lucky Fysh / Book of Five Rings on shop cards, Membership Card and The Courier are already in the prices.
 - [ ] Card removal (shop, events): no relic reacts today (`BeforeCardRemoved` has no relic); recheck each game update.
 - [ ] Ancient options: relics whose `AfterObtained` adds cards or gold are covered through the relic's code; check what other ancient pickups do in play.
 - [ ] Event options whose effect runs through a delegate the reader doesn't follow (a lambda passed to a card choice): the check reports a relic that reacts without its icon.
@@ -491,7 +487,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.37.0: a teammate's Ethereal cards exhausting at end of turn are simulated (Feel No Pain, Charon's Ashes, Forgotten Soul; parity cases); setting **Count teammates' hands** (off by default, decision #38) shows predictions with their hand; the enemy-turn check always uses it. Not counted even with it on: Stampede (a random card).
 - [ ] **Teammates' revives:** a teammate's Lizard Tail (their potions aren't known) isn't modelled.
 - [x] ~~**Wuppy (event relic):** its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). Incoming Damage and the Death Skull count them on you (overstated, never under).~~ (0.31.33)
-- [ ] **Extra turns:** Extra Turn power (and Pael's Eye) give you another turn before the enemies act; the forecast still shows the enemy turn next.
+- [x] **Extra turns** (0.40.0, decision #40): Incoming Damage shows the source's icon and +1 turn; the forecast stays the enemies' next turn.
 - [x] **Enemy Explosive** (0.38.0): its death damages every player in the simulator (wherever it dies), with a crossed kill tab; Stock's replacement Axebot gets one too.
 - [x] **End of turn** (0.38.0): Insatiable Dominion, Lunar Pastry with Black Hole, Pael's Eye's hand exhaust, and the auto-play phase (Stampede, Simpleton, Howl from Beyond, I Am Invincible; decision #39).
 - [x] **Proc tabs** (0.39.0): Fertilizer and All Is Well (Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Sown's energy for Pael's Tears; transformed cards count as created.

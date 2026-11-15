@@ -97,7 +97,6 @@ internal static class RelicTracking
         ["SpikedGauntlets"] = "none: max energy; costs are shown on the cards",
         ["Toolbox"] = "none: a card choice on turn 1",
         ["IceCream"] = "none: unspent energy carries over (your energy shows it)",
-        ["PaelsFlesh"] = "gap: extra energy from turn 3 (its counter shows the turn); a turn-timer row would show when it starts",
 
         // ---- in the numbers the game shows (card damage and block, orb values, power amounts)
         ["FakeStrikeDummy"] = "none: Strike damage on the cards",

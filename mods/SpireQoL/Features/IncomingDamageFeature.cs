@@ -69,6 +69,30 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
             revive = (icon, m.HpAfter);
         }
         _panel!.Show(m.BlockableTotal + m.UnblockableTotal, m.ExpectedBlock,
-            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken, m.Dies, revive);
+            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken, m.Dies, revive, ExtraTurnIcon());
+    }
+
+    /// <summary>
+    /// Ending your turn now gives you another turn before the enemies act (Hook.ShouldTakeExtraTurn, a pure query:
+    /// Pael's Eye when you've played nothing, Extra Turn): its source's icon. The forecast is still the enemies' next
+    /// turn, which comes after that one (your end-of-turn block will be gone by then).
+    /// </summary>
+    private static Godot.Texture2D? ExtraTurnIcon()
+    {
+        try
+        {
+            if (Sts2State.Me is not { } me || Sts2State.Combat is not { } cs) return null;
+            if (!MegaCrit.Sts2.Core.Hooks.Hook.ShouldTakeExtraTurn(cs, me, out var source) || source == null) return null;
+            return source switch
+            {
+                MegaCrit.Sts2.Core.Models.RelicModel r => Cards.GameIcons.Relic(r),
+                MegaCrit.Sts2.Core.Models.PowerModel p => Cards.GameIcons.Power(p),
+                _ => null,
+            };
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.40.0
+#### Added
+- Run Reminders in shops: the icons of relics that buying an item sets off, left of its price (Bing Bong, Book of Five Rings and Lucky Fysh on cards, with the price after Lucky Fysh's gold in green under it; Sozu and Belt Buckle crossed on potions; Maw Bank crossed on everything while it still gives gold).
+- Incoming Damage: when ending your turn now gives you another turn first (Pael's Eye, Extra Turn), its icon and "+1 turn" above the sum, which is still the enemies' next turn.
+- Relic tracker: Pael's Flesh as a turn timer (1 more energy from turn 3), off by default like the others.
+
 ### Spire QoL 0.39.0
 #### Added
 - Tabs: Fertilizer and All Is Well (its block) on cards that create a Sadness; Whittling Knife on cards whose draws shuffle; Mighty Wings on attacks with a hit of 30 or more in every branch (block it takes counts, overkill doesn't); Compost (yours or a teammate's) on attacks that kill in every branch.

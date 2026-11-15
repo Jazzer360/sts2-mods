@@ -101,6 +101,8 @@ public static class RelicSpecs
         new RelicCounterSpec(nameof(CaptainsWheel), CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
         new RelicCounterSpec(nameof(Chandelier), CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
         new RelicCounterSpec(nameof(SparklingRouge), CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
+        // Pael's Flesh: 1 more max energy from turn 3 on (ModifyMaxEnergy while TurnNumber >= 3).
+        new RelicCounterSpec(nameof(PaelsFlesh), CounterKind.OnTurn, Fixed: 3, TurnTimer: true),
 
         // One-shot: armed until first use. Only Pael's Eye gets a tray row (it has no card to
         // mark); the rest are shown on the cards that would use them (Relic Reminders).

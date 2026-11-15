@@ -16,6 +16,9 @@ namespace SpireQoL.Features;
 ///   ───────────
 ///          =  9      (a skull beside it when this kills you)
 ///   [fairy]  31 HP   (only when Fairy in a Bottle or Lizard Tail keeps you alive: your HP after)
+///
+/// Above it, [eye] +1 turn when ending your turn now gives you another turn first (Pael's Eye, Extra Turn): the
+/// enemies' turn shown comes after that one.
 /// </summary>
 internal sealed class DamageMathPanel
 {
@@ -37,6 +40,8 @@ internal sealed class DamageMathPanel
     private readonly TextureRect _ostyIcon;
     private readonly Label _osty;
     private readonly Texture2D?[] _attackTiers = new Texture2D?[5];
+    private readonly TextureRect _extraTurnIcon;
+    private readonly Label _extraTurn;
 
     public DamageMathPanel(Control parent)
     {
@@ -48,6 +53,14 @@ internal sealed class DamageMathPanel
         {
             _attackTiers[tier - 1] = LoadIntentIcon($"attack/intent_attack_{tier}");
         }
+        // An extra turn comes before the enemies act: its source's icon (the relic or power).
+        _extraTurnIcon = UiKit.Icon(null, IconSize);
+        _extraTurnIcon.Visible = false;
+        grid.AddChild(_extraTurnIcon);
+        _extraTurn = Number(SafeColor);
+        _extraTurn.Text = "+1 turn";
+        _extraTurn.Visible = false;
+        grid.AddChild(_extraTurn);
         _attackIcon = UiKit.Icon(_attackTiers[0], IconSize);
         grid.AddChild(_attackIcon);
         _incoming = Number(IncomingColor);
@@ -94,8 +107,13 @@ internal sealed class DamageMathPanel
     /// <param name="osty">What Osty takes and whether that kills him; null when Osty isn't out.</param>
     /// <param name="dies">The enemy turn kills you (the skull).</param>
     /// <param name="revive">What keeps you alive at 0 HP (its icon) and your HP after the enemy turn; null when nothing does.</param>
-    public void Show(int incoming, int block, (int Taken, bool Dies)? osty, int take, bool dies = false, (Texture2D? Icon, int HpAfter)? revive = null)
+    /// <param name="extraTurn">Ending your turn now gives you another turn before the enemies act: its source's icon.</param>
+    public void Show(int incoming, int block, (int Taken, bool Dies)? osty, int take, bool dies = false, (Texture2D? Icon, int HpAfter)? revive = null,
+        Texture2D? extraTurn = null)
     {
+        _extraTurnIcon.Visible = extraTurn != null;
+        _extraTurn.Visible = extraTurn != null;
+        _extraTurnIcon.Texture = extraTurn;
         _skull.Visible = dies;
         _reviveIcon.Visible = revive != null && !dies;
         _revive.Visible = revive != null && !dies;

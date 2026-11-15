@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Context;
+using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Events;
@@ -13,6 +14,7 @@ using MegaCrit.Sts2.Core.Nodes.Events;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.Runs;
 using SpireQoL.Data;
 using Sts2Mods.Core.Features;
@@ -217,8 +219,13 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
     {
         TickWindow();
         RewardPanel(host);
-        // Event options change only when the page changes: every few frames is plenty.
-        if (++_frame % 6 == 0) EventOptions();
+        // Event options and shop items change only when the page does: every few frames is plenty.
+        if (++_frame % 6 == 0)
+        {
+            EventOptions();
+            ShopSlots();
+        }
+        TickShopWatch();
     }
 
     // ------------------------------------------------------------------ card reward panel
@@ -481,6 +488,156 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
         }
         var width = icons.Count * (EventIcon + 4) - 4;
         box.Position = new Vector2(-width - 10, (button.Size.Y - EventIcon) / 2);
+    }
+
+    // ------------------------------------------------------------------ shops
+
+    private const string ShopNodeName = "SpireQoL_ShopReminders";
+    private static readonly Color NetColor = new(0.5f, 0.95f, 0.6f);
+    /// <summary>Stocked card entries' net price after Lucky Fysh, to check a purchase (TickShopWatch).</summary>
+    private readonly Dictionary<MerchantEntry, int> _shopNet = new();
+    private (MerchantEntry Entry, int GoldBefore, int Net, int Frames)? _shopWatch;
+    private int _shopGold;
+
+    /// <summary>
+    /// Shop items (the open merchant inventory): the icons of your relics that buying it sets off, left of its price, and
+    /// with Lucky Fysh the net price (after the gold it gives back) under it in green. A card joins your deck (Bing Bong,
+    /// Book of Five Rings, Lucky Fysh), a potion is one you'd hold (Sozu and Belt Buckle crossed), and any purchase ends
+    /// Maw Bank's gold (crossed). Cards the eggs or Fresnel Lens change already show it on the shop's own card.
+    /// </summary>
+    private void ShopSlots()
+    {
+        var inv = NMerchantRoom.Instance?.Inventory;
+        if (inv == null || !GodotObject.IsInstanceValid(inv) || !inv.IsOpen) return;
+        var me = RunMe();
+        var on = _ctx.Settings.TabEnabled("reminder:*");
+        foreach (var slot in inv.GetAllSlots())
+        {
+            if (!GodotObject.IsInstanceValid(slot)) continue;
+            var icons = new List<(RelicModel Relic, bool Crossed)>();
+            int? net = null;
+            MerchantEntry? entry = null;
+            try { entry = slot.Entry; } catch { /* not set up yet */ }
+            if (on && me != null && entry is { IsStocked: true })
+            {
+                var effects = ChoiceEffect.Purchase | entry switch
+                {
+                    MerchantCardEntry => ChoiceEffect.CardToDeck,
+                    MerchantPotionEntry => ChoiceEffect.Potion,
+                    _ => ChoiceEffect.None,
+                };
+                foreach (var relic in me.Relics)
+                {
+                    var name = relic.GetType().Name;
+                    if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0 || !_ctx.Settings.TabEnabled("reminder:" + name)) continue;
+                    if (relic is MawBank { IsUsedUp: true }) continue;
+                    // Eggs and Fresnel Lens: the shop's card already shows the upgrade or enchantment.
+                    if (relic is MoltenEgg or FrozenEgg or ToxicEgg or FresnelLens) continue;
+                    icons.Add((relic, (rule.CrossedOn & effects) != 0));
+                    if (relic is LuckyFysh fysh && (effects & ChoiceEffect.CardToDeck) != 0)
+                    {
+                        // Bing Bong's copy joins your deck too, so Lucky Fysh pays twice.
+                        var perPick = me.Relics.Any(r => r is BingBong) ? 2 : 1;
+                        net = entry.Cost - GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", 15)) * perPick;
+                    }
+                }
+            }
+            if (entry != null && me != null)
+            {
+                if (entry.IsStocked)
+                {
+                    if (net is { } n) _shopNet[entry] = n;
+                    else _shopNet.Remove(entry);
+                }
+                else if (_shopNet.Remove(entry, out var predicted))
+                {
+                    // Just bought: your gold before was what you had on the last look (before the price came off).
+                    _shopWatch = (entry, _shopGold, predicted, 0);
+                }
+            }
+            ShowShop(slot, icons, net);
+        }
+        if (me != null) _shopGold = me.Gold;
+    }
+
+    /// <summary>A row of relic icons left of the item's price, and the net price under it; removed when empty.</summary>
+    private static void ShowShop(NMerchantSlot slot, List<(RelicModel Relic, bool Crossed)> icons, int? net)
+    {
+        var price = Sts2State.Private<Control?>(slot, "_costLabel", null);
+        if (price == null || !GodotObject.IsInstanceValid(price)) return;
+        var box = price.GetNodeOrNull<Control>(ShopNodeName);
+        var key = string.Join(",", icons.Select(i => i.Relic.GetType().Name + (i.Crossed ? "x" : ""))) + "|" + net;
+        if (icons.Count == 0)
+        {
+            box?.QueueFree();
+            return;
+        }
+        var size = Math.Clamp(price.Size.Y, 20f, 36f);
+        if (box == null || (string)box.GetMeta("key", "") != key)
+        {
+            box?.QueueFree();
+            box = new Control { Name = ShopNodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
+            box.SetMeta("key", key);
+            var row = new HBoxContainer { Name = "Icons", MouseFilter = Control.MouseFilterEnum.Ignore };
+            row.AddThemeConstantOverride("separation", 2);
+            foreach (var (relic, crossed) in icons) row.AddChild(Crossable(IconOf(relic), size, crossed));
+            box.AddChild(row);
+            if (net is { } n)
+            {
+                var label = UiKit.Label($"{n}", (int)Math.Round(size * 0.75f), NetColor);
+                label.Name = "Net";
+                label.MouseFilter = Control.MouseFilterEnum.Ignore;
+                box.AddChild(label);
+            }
+            price.AddChild(box);
+        }
+        var width = icons.Count * (size + 2) - 2;
+        if (box.GetNodeOrNull<Control>("Icons") is { } row2) row2.Position = new Vector2(-width - 6, (price.Size.Y - size) / 2);
+        if (box.GetNodeOrNull<Control>("Net") is { } netLabel) netLabel.Position = new Vector2(0, price.Size.Y);
+    }
+
+    /// <summary>A relic icon, with the red slash when it works against you.</summary>
+    private static TextureRect Crossable(Texture2D? tex, float size, bool crossed)
+    {
+        var icon = UiKit.Icon(tex, size);
+        icon.MouseFilter = Control.MouseFilterEnum.Ignore;
+        if (!crossed) return icon;
+        var len = size * 1.414f * 0.9f;
+        var thick = Math.Max(3f, size * 0.12f);
+        icon.AddChild(new ColorRect
+        {
+            Color = SlashColor,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            Size = new Vector2(len, thick),
+            Position = new Vector2(size / 2 - len / 2, size / 2 - thick / 2),
+            PivotOffset = new Vector2(len / 2, thick / 2),
+            Rotation = -Mathf.Pi / 4,
+        });
+        return icon;
+    }
+
+    /// <summary>
+    /// After you buy a card with Lucky Fysh: what the purchase cost you in the end against the net price shown, once the
+    /// gold has settled (about a second and a half); a newer purchase replaces the watch.
+    /// </summary>
+    private void TickShopWatch()
+    {
+        if (_shopWatch is not { } w) return;
+        if (w.Frames < 90)
+        {
+            _shopWatch = w with { Frames = w.Frames + 1 };
+            return;
+        }
+        _shopWatch = null;
+        if (RunMe() is not { } me) return;
+        var paid = w.GoldBefore - me.Gold;
+        var what = $"shop: bought {w.Entry.GetType().Name}, gold {w.GoldBefore}→{me.Gold}, predicted net {w.Net}";
+        ModEntry.Log.Info($"[audit] [reminders] {what}{(paid == w.Net ? ", matched" : "")}");
+        if (paid != w.Net)
+        {
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", "Shop net price after Lucky Fysh was wrong",
+                new[] { "reminder-shop", "LuckyFysh" }, what);
+        }
     }
 
     private static readonly PropertyInfo? OnChosenProp = AccessTools.Property(typeof(EventOption), "OnChosen");
