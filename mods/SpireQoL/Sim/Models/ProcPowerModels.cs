@@ -44,12 +44,12 @@ public sealed class SerpentFormPower : BoundPower
     protected override IEnumerable<SimState> Act(SimState s, int owner, SimCardPlay play, int amount) => amount > 0 ? DamageRandom(s, owner, amount) : One(s);
 }
 
-/// <summary>StormPower: each Power card its owner plays channels Lightning (the channels are the play's orbs).</summary>
+/// <summary>StormPower: each Power card its owner plays channels its amount of Lightning (bound at BeforeCardPlayed).</summary>
 public sealed class StormPower : BoundPower
 {
     public override string Name => "StormPower";
     protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Power;
-    protected override IEnumerable<SimState> Act(SimState s, int owner, SimCardPlay play, int amount) => amount > 0 ? Fire(s, owner) : One(s);
+    protected override IEnumerable<SimState> Act(SimState s, int owner, SimCardPlay play, int amount) => Channel(Fire(s, owner), owner, OrbKind.Lightning, amount);
 }
 
 /// <summary>SubroutinePower: each Power card its owner plays gives energy.</summary>
@@ -530,12 +530,12 @@ public sealed class SmokestackPower : ProcModel
         ev == CardEvent.GeneratedStatus && player == owner ? DamageAll(s, owner, Amount(s, owner)) : One(s);
 }
 
-/// <summary>TrashToTreasurePower.AfterCardGeneratedForCombat: an orb for each status its owner creates (the channels are the play's orbs).</summary>
+/// <summary>TrashToTreasurePower.AfterCardGeneratedForCombat: its amount of random orbs for each status its owner creates.</summary>
 public sealed class TrashToTreasurePower : ProcModel
 {
     public override string Name => "TrashToTreasurePower";
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
-        ev == CardEvent.GeneratedStatus && player == owner ? Fire(s, owner) : One(s);
+        ev == CardEvent.GeneratedStatus && player == owner ? Channel(Fire(s, owner), owner, OrbKind.Unknown, Amount(s, owner)) : One(s);
 }
 
 // ---- powers landing

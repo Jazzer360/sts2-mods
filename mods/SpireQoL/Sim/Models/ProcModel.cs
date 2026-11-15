@@ -55,6 +55,14 @@ public abstract class ProcModel : SimModel
     protected static IEnumerable<SimState> Then(IEnumerable<SimState> states, CardEvent ev, int count, int player) =>
         states.SelectMany(x => SimEngine.ProcCardEvent(x, ev, count, player)).ToList();
 
+    /// <summary>Channels <paramref name="times"/> orbs of a kind for a player, one after another (OrbCmd.Channel).</summary>
+    protected static IEnumerable<SimState> Channel(IEnumerable<SimState> states, int player, OrbKind kind, int times)
+    {
+        var r = states;
+        for (var i = 0; i < times; i++) r = r.SelectMany(x => SimEngine.ChannelOrb(x, SimEngine.FreshOrb(x, kind, player), player)).ToList();
+        return r;
+    }
+
     /// <summary>Any card created for combat (AfterCardGeneratedForCombat), statuses and Sadness included.</summary>
     protected static bool Generated(CardEvent ev) => ev is CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness;
 }

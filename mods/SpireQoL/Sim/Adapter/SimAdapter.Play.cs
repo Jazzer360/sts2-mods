@@ -64,6 +64,7 @@ public static partial class SimAdapter
             play.Body.Add(new GainBlockAction(1, b, SimProps.Move) { Captured = SimReaders.Block(cs, card, me.Creature, b, ValueProp.Move) });
         }
         play.Body.AddRange(PowersOf(card, f, me, ids, targetId, name, allyId));
+        play.Body.AddRange(OrbsOf(card, me, cs, name, play.ChannelToAlly ? allyId : Who.You));
         AddCardEvents(play, card, f, me, cs, ids, targetId, plays);
 
         // ---- summary fields (not actions yet)
@@ -85,8 +86,6 @@ public static partial class SimAdapter
             play.TargetId = targetId;
             play.ExecuteAtOrBelow = Sts2State.Var(card, "Threshold");
         }
-        AddOrbs(play, card, f, me, cs, plays, name);
-        play.FocusDelta = FocusChange(card) * plays;
         // Bouncing Flask: poison on a random enemy, Repeat times (Snecko Skull adds to each).
         if (card.TargetType == TargetType.RandomEnemy && card.DynamicVars.Values.FirstOrDefault(IsPowerVar<PoisonPower>) is { } flask)
         {
@@ -303,52 +302,40 @@ public static partial class SimAdapter
         return actions;
     }
 
-    /// <summary>Orbs: evoke cards, then channels (per play), Storm's Lightning, Trash to Treasure's orbs (summary fields).</summary>
-    private static void AddOrbs(SimPlay play, CardModel card, PlayFacts f, Player me, ICombatState cs, int plays, string name)
+    /// <summary>
+    /// What each play does to orbs, in order: slots it adds or removes, orbs it evokes, orbs it channels (into the targeted
+    /// teammate's for Ignition; none when there's no teammate to aim at), then the Focus it gives or takes. Channelled orbs get
+    /// their values when they're channelled. Storm and Trash to Treasure channel from their models.
+    /// </summary>
+    private static IEnumerable<SimAction> OrbsOf(CardModel card, Player me, ICombatState cs, string name, int channelTo)
     {
-        var focus = me.Creature.GetPower<FocusPower>()?.Amount ?? 0;
-        var lightningBonus = me.Relics.Where(r => r.GetType().Name == nameof(InfusedCore)).Sum(r => Sts2State.Var(r, "ExtraDamage"));
-        for (var i = 0; i < plays; i++)
+        var actions = new List<SimAction>();
+        var slots = SlotChange(card, name);
+        if (slots != 0) actions.Add(new OrbAction(OrbAction.Op.Slots) { Slots = slots });
+        int X() => SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0);
+        switch (name)
         {
-            var slots = SlotChange(card, name);
-            if (slots != 0) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = slots });
-            switch (name)
-            {
-                case nameof(Dualcast): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = 2 }); break;
-                case nameof(Quadcast): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 4)) }); break;
-                case nameof(MultiCast):
-                {
-                    var x = SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0);
-                    if (x > 0) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = x });
-                    break;
-                }
-                case nameof(Shatter): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeAllTwice }); break;
-            }
-            if (Channels.TryGetValue(name, out var kinds))
-            {
-                var times = name is nameof(Spinner) or nameof(Chill) ? PlayFacts.ChannelCount(card, name, me) : 1;
-                for (var t = 0; t < times; t++)
-                    foreach (var k in kinds) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(k, focus, lightningBonus) });
-            }
-            else if (RepeatChannels.TryGetValue(name, out var rk))
-            {
-                for (var r = 0; r < Math.Max(1, Sts2State.Var(card, "Repeat", 1)); r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(rk, focus, lightningBonus) });
-            }
-            else if (name == nameof(Voltaic))
-            {
-                for (var r = 0; r < PlayFacts.ChannelCount(card, name, me); r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
-            }
-            else if (name == nameof(Tempest))
-            {
-                var x = SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0);
-                for (var r = 0; r < x; r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
-            }
+            case nameof(Dualcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = 2 }); break;
+            case nameof(Quadcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = Math.Max(1, Sts2State.Var(card, "Repeat", 4)) }); break;
+            case nameof(MultiCast) when X() is var x and > 0: actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = x }); break;
+            case nameof(Shatter): actions.Add(new OrbAction(OrbAction.Op.EvokeAllTwice)); break;
         }
-        var storm = me.Creature.Powers.Where(p => p is StormPower).Sum(p => p.Amount);
-        if (card.Type == CardType.Power)
-            for (var i = 0; i < storm * plays; i++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
-        var trash = me.Creature.Powers.Where(p => p is TrashToTreasurePower).Sum(p => p.Amount);
-        for (var i = 0; i < trash * f.GeneratedStatuses; i++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Unknown } });
+        if (channelTo == -1 && ChannelToAllyCards.Contains(name)) channelTo = int.MinValue; // aimed at no teammate: nothing channelled
+        void Channel(OrbKind kind, int times)
+        {
+            if (times > 0 && channelTo != int.MinValue) actions.Add(new OrbAction(OrbAction.Op.Channel) { Orb = kind, Times = times, To = channelTo });
+        }
+        if (Channels.TryGetValue(name, out var kinds))
+        {
+            var times = name is nameof(Spinner) or nameof(Chill) ? PlayFacts.ChannelCount(card, name, me) : 1;
+            for (var t = 0; t < times; t++) foreach (var k in kinds) Channel(k, 1);
+        }
+        else if (RepeatChannels.TryGetValue(name, out var rk)) Channel(rk, Math.Max(1, Sts2State.Var(card, "Repeat", 1)));
+        else if (name == nameof(Voltaic)) Channel(OrbKind.Lightning, PlayFacts.ChannelCount(card, name, me));
+        else if (name == nameof(Tempest)) Channel(OrbKind.Lightning, X());
+        var focus = FocusChange(card);
+        if (focus != 0) actions.Add(new FocusAction(focus));
+        return actions;
     }
 
     private static decimal SafeDecimal(Func<decimal> f)

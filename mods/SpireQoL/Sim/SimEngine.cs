@@ -957,6 +957,8 @@ public static partial class SimEngine
         switch (a)
         {
             case LegacyPart lp: RunLegacy(b, lp.Play, lp.Part); break;
+            case OrbAction oa: RunOrb(b, oa); break;
+            case FocusAction fa: b.Do(s => ChangeFocus(s, fa.Delta)); break;
             case CardPlayAction pc: RunCardPlay(b, pc); break;
             case AttackAction at: RunAttack(b, at); break;
             case GainBlockAction gb: RunBlock(b, gb); break;
@@ -1062,94 +1064,7 @@ public static partial class SimEngine
 
         return;
         case LegacyPart.Kind.Orbs:
-        // Orbs it evokes and channels (channelling into full slots evokes the front orb first).
-        foreach (var op in p.OrbOps)
-        {
-            switch (op.Op)
-            {
-                case OrbOp.Kind.EvokeFront:
-                    for (var t = 0; t < op.Times; t++)
-                    {
-                        var last = t == op.Times - 1;
-                        b.Each(s =>
-                        {
-                            if (s.P.Orbs.Count == 0) return new[] { s };
-                            var orb = s.P.Orbs[0];
-                            if (last) s.P.OwnOrbs().RemoveAt(0);
-                            return Evoke(s, orb);
-                        });
-                    }
-                    break;
-                case OrbOp.Kind.EvokeAllTwice:
-                    // Front orb first, each evoked twice (then gone). One step per evoke, so identical
-                    // branches merge and the branch cap holds (one step for all of them was 4^16 copies
-                    // with 4 enemies and 8 Lightning orbs).
-                    for (var i = b.States.Max(s => s.P.Orbs.Count); i > 0; i--)
-                    {
-                        b.Each(s => s.P.Orbs.Count == 0 ? new[] { s } : Evoke(s, s.P.Orbs[0]));
-                        b.Each(s =>
-                        {
-                            if (s.P.Orbs.Count == 0) return new[] { s };
-                            var orb = s.P.Orbs[0];
-                            s.P.OwnOrbs().RemoveAt(0);
-                            return Evoke(s, orb);
-                        });
-                    }
-                    break;
-                case OrbOp.Kind.Slots:
-                    b.Do(s =>
-                    {
-                        s.P.OrbCapacity = Math.Clamp(s.P.OrbCapacity + op.Slots, 0, Math.Max(MaxOrbSlots, s.P.OrbCapacity));
-                        while (s.P.Orbs.Count > s.P.OrbCapacity) s.P.OwnOrbs().RemoveAt(s.P.Orbs.Count - 1);
-                    });
-                    break;
-                case OrbOp.Kind.Channel when p.ChannelToAlly:
-                {
-                    // Into the targeted teammate's orbs: full slots evoke their front orb (their Thunder, their block).
-                    var k = p.AllyTarget;
-                    b.Each(s =>
-                    {
-                        if (k < 0 || k >= s.Teammates.Count || s.Teammates[k].Hp <= 0) return new[] { s };
-                        var t = s.MutableTeammate(k);
-                        IEnumerable<SimState> r = new[] { s };
-                        if (t.OrbCapacity == 0 && t.SlotOnFirstChannel) t.OrbCapacity = 1;
-                        if (t.OrbCapacity > 0 && t.Orbs.Count >= t.OrbCapacity)
-                        {
-                            var front = t.Orbs[0];
-                            t.OwnOrbs().RemoveAt(0);
-                            r = Evoke(s, front, t.Thunder, k);
-                        }
-                        return r.Select(x =>
-                        {
-                            var tx = x.MutableTeammate(k);
-                            if (tx.OrbCapacity > 0) tx.OwnOrbs().Add(op.Orb!.Clone());
-                            return x;
-                        }).ToList();
-                    });
-                    break;
-                }
-                case OrbOp.Kind.Channel:
-                    b.Each(s =>
-                    {
-                        IEnumerable<SimState> r = new[] { s };
-                        if (s.P.OrbCapacity == 0 && s.P.SlotOnFirstChannel) s.P.OrbCapacity = 1;
-                        if (s.P.OrbCapacity > 0 && s.P.Orbs.Count >= s.P.OrbCapacity)
-                        {
-                            var front = s.P.Orbs[0];
-                            s.P.OwnOrbs().RemoveAt(0);
-                            r = Evoke(s, front);
-                        }
-                        return Then(r.ToList(), x =>
-                        {
-                            if (x.P.OrbCapacity <= 0) return new[] { x };
-                            x.P.OwnOrbs().Add(op.Orb!.Clone());
-                            return Hook(x, (m, o, y) => m.AfterOrbChanneled(y, o, Who.You));
-                        });
-                    });
-                    break;
-            }
-        }
-
+        RunOrbOps(b, p);
         return;
         case LegacyPart.Kind.Block:
         // Its own block: each gain sets off Juggernaut (the targeted teammate's, when it goes to them).

@@ -520,24 +520,6 @@ public static partial class SimAdapter
         return sim;
     }
 
-    /// <summary>
-    /// A newly channelled orb's values: the base values plus your Focus (FocusPower.ModifyOrbValue, not
-    /// below 0), plus Infused Core's bonus on Lightning (InfusedCore.ModifyOrbValue).
-    /// </summary>
-    private static SimOrb Fresh(OrbKind kind, int focus, int lightningBonus)
-    {
-        int F(int v) => Math.Max(0, v + focus);
-        return kind switch
-        {
-            OrbKind.Lightning => new SimOrb { Kind = kind, Passive = F(3) + lightningBonus, Evoke = F(8) + lightningBonus },
-            OrbKind.Frost => new SimOrb { Kind = kind, Passive = F(2), Evoke = F(5) },
-            OrbKind.Dark => new SimOrb { Kind = kind, Passive = F(6), Evoke = 6 },
-            OrbKind.Glass => new SimOrb { Kind = kind, Passive = F(4), Evoke = F(4) * 2, GlassBase = 4, GlassBonus = focus },
-            OrbKind.Plasma => new SimOrb { Kind = kind, Passive = 1, Evoke = 2 }, // energy; Focus doesn't change it (PlasmaOrb)
-            _ => new SimOrb { Kind = kind },
-        };
-    }
-
     // ------------------------------------------------------------------ card plays
 
     private static readonly Dictionary<Type, int> FocusSign = new();
