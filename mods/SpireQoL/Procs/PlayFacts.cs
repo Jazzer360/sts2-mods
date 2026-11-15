@@ -273,6 +273,8 @@ public sealed class PlayFacts
     public int TotalDamage(Creature enemy)
     {
         var hits = HitsOn(enemy);
+        if (ByPlayHitDamage(enemy) is { } byPlay)
+            return Enumerable.Range(0, hits).Sum(i => byPlay.Damage[Math.Min(i / byPlay.PerPlay, byPlay.Damage.Length - 1)]);
         if (LaterHitDamage(enemy) is not { } later) return DamagePerHit(enemy) * hits;
         return DamagePerHit(enemy) * Math.Min(hits, later.After) + later.Damage * Math.Max(0, hits - later.After);
     }
@@ -284,6 +286,39 @@ public sealed class PlayFacts
     public (int After, int Damage)? LaterHitDamage(Creature enemy)
         => ImpaledLaterHitDamage(enemy) ?? ImpaledByReplayHitDamage(enemy) ?? VulnerableLaterHitDamage(enemy) ?? SpentBonusLaterHitDamage(enemy)
            ?? SlowLaterHitDamage(enemy);
+
+    /// <summary>The Strength or Dexterity you lose after each play of yours: Tender (TenderPower.AfterCardPlayed: -1 of each, per play).</summary>
+    public static int StatLossPerPlay(Player me) => me.Creature.Powers.Any(p => p is TenderPower) ? 1 : 0;
+
+    /// <summary>
+    /// A replayed attack that hits weaker on each later play: Tender takes 1 Strength after every play of yours (each play of a
+    /// replay is one, AfterCardPlayed), so play k hits for the damage with k less Strength (additive, before the multipliers:
+    /// the game's damage math on Damage - k). Your powered hits only (Osty's attacks use his Strength). Not combined with a
+    /// change partway through the play (LaterHitDamage): that one is used then.
+    /// </summary>
+    public (int PerPlay, int[] Damage)? ByPlayHitDamage(Creature enemy)
+    {
+        try
+        {
+            var loss = StatLossPerPlay(Me);
+            if (loss == 0 || Plays < 2 || ByOsty || Card.Type != CardType.Attack) return null;
+            if (Card.TargetType is not (TargetType.AnyEnemy or TargetType.AllEnemies)) return null;
+            if (LaterHitDamage(enemy) != null) return null;
+            var perPlay = HitsOn(enemy) / Plays;
+            if (perPlay <= 0) return null;
+            var first = RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out var props);
+            if (!MegaCrit.Sts2.Core.ValueProps.ValuePropExtensions.IsPoweredAttack(props)) return null;
+            var damage = new int[Plays];
+            damage[0] = DamagePerHit(enemy);
+            for (var k = 1; k < Plays; k++)
+                damage[k] = Math.Max(0, damage[0] + (int)RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out _, -k * loss) - (int)first);
+            return (perPlay, damage);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// A replayed shot at an enemy that isn't Impaled hits harder on its later plays: the first play's attack lands,

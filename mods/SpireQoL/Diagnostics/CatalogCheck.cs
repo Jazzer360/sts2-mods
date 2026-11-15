@@ -38,7 +38,9 @@ internal static class CatalogCheck
         foreach (var n in procRows.Except(ruleNames).OrderBy(n => n)) problems.Add($"settings row (proc tab) without a rule: {n}");
 
         // Tracker rows.
-        var specs = RelicSpecs.All.Where(s => s.InTray).Select(s => s.TypeName).Concat(PowerSpecs.All.Select(s => s.TypeName)).ToHashSet();
+        // Cards with a tray row of their own (Make It So's Skill count: RelicCountersFeature, Procs/ReturnToHand).
+        var specs = RelicSpecs.All.Where(s => s.InTray).Select(s => s.TypeName).Concat(PowerSpecs.All.Select(s => s.TypeName))
+            .Append(Procs.ReturnToHand.MakeItSo).ToHashSet();
         var trackerRows = sources.Where(s => s.Tracker != null).Select(s => s.Type).ToHashSet();
         foreach (var n in specs.Except(trackerRows).OrderBy(n => n)) problems.Add($"tracker row without a settings row: {n}");
         foreach (var n in trackerRows.Except(specs).OrderBy(n => n)) problems.Add($"settings row (tracker) without a tracker spec: {n}");

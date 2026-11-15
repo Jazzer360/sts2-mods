@@ -568,21 +568,23 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var lostHp = outcomes.Select(o => o.PlayHpLostMin).DefaultIfEmpty().Max();
         foreach (var r in _me.Relics)
         {
-            var hit = r switch
+            // Keys by nameof, so the settings check (CatalogCheck reads this class's string literals) sees each rule.
+            var key = r switch
             {
                 // ModifyHpLostAfterOsty: flashes whenever it takes 1 off (some got past your block).
-                TungstenRod when reached > 0 => Hit.Trig(),
+                TungstenRod when reached > 0 => nameof(TungstenRod),
                 // AfterDamageReceived with UnblockedDamage > 0: HP actually lost, after Tungsten Rod.
-                SelfFormingClay or EmotionChip when losses > 0 => Hit.Trig(),
-                CentennialPuzzle when losses > 0 && !Sts2State.Private(r, "UsedThisCombat", true) => Hit.Trig(),
-                DemonTongue when losses > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true) => Hit.Trig(),
+                SelfFormingClay when losses > 0 => nameof(SelfFormingClay),
+                EmotionChip when losses > 0 => nameof(EmotionChip),
+                CentennialPuzzle when losses > 0 && !Sts2State.Private(r, "UsedThisCombat", true) => nameof(CentennialPuzzle),
+                DemonTongue when losses > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true) => nameof(DemonTongue),
                 // AfterCurrentHpChanged: Strength once your HP is at or below its threshold.
                 RedSkull when lostHp > 0 && _me.Creature is var c
                     && c.CurrentHp > c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m
-                    && c.CurrentHp - lostHp <= c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m => Hit.Trig(),
-                _ => (Hit?)null,
+                    && c.CurrentHp - lostHp <= c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m => nameof(RedSkull),
+                _ => null,
             };
-            if (hit is { } h) merged["proc:" + r.GetType().Name] = (r, h);
+            if (key != null) merged["proc:" + key] = (r, Hit.Trig());
         }
         if (losses > 0)
         {

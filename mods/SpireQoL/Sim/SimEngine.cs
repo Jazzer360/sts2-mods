@@ -29,6 +29,11 @@ public sealed class SimPlay
     /// </summary>
     public Dictionary<int, (int After, int Damage)> HitDamageLater = new();
     /// <summary>
+    /// Hit damage on an enemy that changes with every play of a replayed card (Tender: -1 Strength after each play): PerPlay
+    /// hits a play, Damage[k] each hit of play k (the last value for any further play). Overrides HitDamage and HitDamageLater.
+    /// </summary>
+    public Dictionary<int, (int PerPlay, int[] Damage)> HitDamageByPlay = new();
+    /// <summary>
     /// Rain Shot (v0.113.0): after its hit on the target, every other hittable enemy takes that hit's damage
     /// (overkill included; only caps apply), as a powered hit of yours (their Thorns reacts).
     /// </summary>
@@ -43,6 +48,8 @@ public sealed class SimPlay
     /// boosts one card play's block and is spent: a replayed block card's later plays don't get it).
     /// </summary>
     public (int After, int Amount)? BlockLater;
+    /// <summary>Its own block with every play of a replayed card (Tender: -1 Dexterity after each play): PerPlay gains a play, Amount[k] each gain of play k. Overrides BlockAmount and BlockLater.</summary>
+    public (int PerPlay, int[] Amount)? BlockByPlay;
     /// <summary>
     /// Block its enchantment gains on each play, after the card's own (Adroit: EnchantmentModel.OnPlay →
     /// CreatureCmd.GainBlock): this many gains of this amount.
@@ -908,7 +915,12 @@ public static class SimEngine
         // The card's hits.
         int Hit(SimEnemy e) => p.HitDamage.TryGetValue(e.Id, out var d) ? d : 0;
         // The i-th hit (0-based) on an enemy: weaker from HitDamageLater's point on.
-        int HitAt(SimEnemy e, int i) => p.HitDamageLater.TryGetValue(e.Id, out var later) && i >= later.After ? later.Damage : Hit(e);
+        int HitAt(SimEnemy e, int i)
+        {
+            if (p.HitDamageByPlay.TryGetValue(e.Id, out var byPlay) && byPlay.PerPlay > 0 && byPlay.Damage.Length > 0)
+                return byPlay.Damage[Math.Min(i / byPlay.PerPlay, byPlay.Damage.Length - 1)];
+            return p.HitDamageLater.TryGetValue(e.Id, out var later) && i >= later.After ? later.Damage : Hit(e);
+        }
         switch (p.HitTarget)
         {
             case SimPlay.Target.Single:
@@ -1050,7 +1062,9 @@ public static class SimEngine
         bool Lands(SimState s) => !p.BlockToAlly || (blockTo >= 0 && blockTo < s.Teammates.Count && s.Teammates[blockTo].Hp > 0);
         for (var i = 0; i < p.BlockGains; i++)
         {
-            var amount = p.BlockLater is { } later && i >= later.After ? later.Amount : p.BlockAmount;
+            var amount = p.BlockByPlay is { PerPlay: > 0 } byPlay && byPlay.Amount.Length > 0
+                ? byPlay.Amount[Math.Min(i / byPlay.PerPlay, byPlay.Amount.Length - 1)]
+                : p.BlockLater is { } later && i >= later.After ? later.Amount : p.BlockAmount;
             b.Each(s => Lands(s) ? GainBlock(s, amount, null, blockTo) : new[] { s });
         }
         for (var i = 0; i < p.EnchantmentBlock.Gains; i++)

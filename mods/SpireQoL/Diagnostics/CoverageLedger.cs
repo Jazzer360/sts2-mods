@@ -284,7 +284,7 @@ internal static partial class CoverageLedger
         ["TemporaryDexterityPower"] = "ignore: expires at the end of the turn, after your end-of-turn block",
         ["TemporaryFocusPower"] = "ignore: expires at the end of the turn, after your orbs' passives",
         ["TemporaryStrengthPower"] = "ignore: expires at the end of the turn (Strength-loss cards: simulator intents)",
-        ["TenderPower"] = "covered: AfterCardPlayed Strength and Dexterity down per card (crossed proc tab)",
+        ["TenderPower"] = "covered: AfterCardPlayed Strength and Dexterity down per card (crossed proc tab; a replay's later plays hit and block 1 less each in the simulator)",
         ["TerritorialPower"] = "ignore: AfterSideTurnEnd Strength at the end of its own turn (later attacks)",
         ["TheBombPower"] = "covered: BeforeSideTurnEnd damages all enemies on its last tick (simulator)",
         ["TheGambitPower"] = "covered: AfterDamageReceived dies to an attack through block (simulator)",

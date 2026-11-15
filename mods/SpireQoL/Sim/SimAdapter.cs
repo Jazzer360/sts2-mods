@@ -601,6 +601,7 @@ public static class SimAdapter
                 if (!f.CanHit(e)) continue;
                 play.HitDamage[id] = f.DamagePerHit(e);
                 if (f.LaterHitDamage(e) is { } later) play.HitDamageLater[id] = later;
+                if (f.ByPlayHitDamage(e) is { } byPlay) play.HitDamageByPlay[id] = byPlay;
             }
             switch (card.TargetType)
             {
@@ -669,6 +670,18 @@ public static class SimAdapter
                 var without = SafeInt(() => Math.Max(0, (int)(Hook.ModifyBlock(cs, me.Creature, Sts2State.Var(card, "Block") - stretch,
                     MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _) / (decimal)Math.Pow(2, doublers))));
                 if (perPlay > 0 && without < each) play.BlockLater = (perPlay, without);
+            }
+            // Tender: 1 Dexterity less after each play of yours, so a replay's play k gains the block with k less Dexterity
+            // (additive on Move block: the game's block math on Block - k). Not combined with the bonuses above.
+            else if (PlayFacts.StatLossPerPlay(me) is var loss && loss > 0 && plays > 1 && !play.BlockToAlly
+                     && name is not (nameof(Fisticuffs) or nameof(Entrench)) && card.DynamicVars.ContainsKey("Block"))
+            {
+                var perPlay = blockGains / plays;
+                int BlockWith(int delta) => SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, Sts2State.Var(card, "Block") + delta,
+                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _)));
+                var baseBlock = BlockWith(0);
+                var amounts = Enumerable.Range(0, plays).Select(k => Math.Max(0, each + BlockWith(-k * loss) - baseBlock)).ToArray();
+                if (perPlay > 0 && amounts.Distinct().Count() > 1) play.BlockByPlay = (perPlay, amounts);
             }
         }
 

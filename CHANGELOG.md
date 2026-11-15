@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.46.1
+#### Fixed
+- Tender: a card that plays more than once hits for 1 less (and blocks 1 less) on each later play, since Tender takes 1 Strength and Dexterity after every play. Kills, lethal and Incoming Damage now count that.
+- The settings check no longer reports the HP-loss relic tabs (Tungsten Rod, Self-Forming Clay, Emotion Chip, Centennial Puzzle, Demon Tongue, Red Skull) as rows without a rule, or Make It So's tracker row as a row without a tracker.
+
 ### Spire QoL 0.46.0
 #### Added
 - Free-card tabs: with Tune's free card (or Unrelenting's free Attack, Pounce's free Skill), each card in your hand that would use it up shows the energy it saves. It shows ? when Snecko Eye has re-rolled the card's cost, because the free card shows that cost as 0. 0-cost and X-cost cards get a crossed tab, since they use the free card up for nothing.
