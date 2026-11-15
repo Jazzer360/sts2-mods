@@ -440,16 +440,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // Rupture (Strength when you lose HP on your turn).
         if (losses > 0 && _me.Creature.Powers.FirstOrDefault(p => p is RupturePower) is { } rupture) Add(rupture, false);
 
-        // Yah (energy the first time each turn one of your arrows comes loose): a kill the card's own damage doesn't make alone
-        // still dislodges every arrow of yours in the enemy (ImpaledPower.AfterDeath), and a shot's own arrow in the target it just
-        // impaled. Good, so the kill has to happen in every branch for some aim.
-        if (!tabs.ContainsKey("proc:YahPower")
-            && _me.Creature.Powers.FirstOrDefault(p => p.GetType().Name == "YahPower") is { } yahPower
-            && Sts2State.Private<object?>(yahPower, "_internalData", null) is { } yahData
-            && !Sts2State.Private(yahData, "triggeredThisTurn", true)
-            && KillDislodges(f, te.Ids, outcomes))
-            Add(yahPower, false);
-
         return outcomes.Any(o => te.Ids.Values.Any(id => o.DeadInAll(id) && !baseline.DeadInAll(id)));
     }
 
@@ -501,20 +491,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, kindName, amount, min, max);
     }
 
-    /// <summary>
-    /// Some aim kills, in every branch, an enemy holding your arrows (ImpaledPower.AfterDeath dislodges them), or
-    /// the target of a shot that has an arrow to shoot (impaled by the shot, then dislodged off the dead target).
-    /// The outcomes are in the order of the card's simulated targets (StartSim).
-    /// </summary>
-    private bool KillDislodges(PlayFacts f, IReadOnlyDictionary<Creature, int> ids, SimOutcome[] outcomes)
-    {
-        var impaled = ids.Where(kv => kv.Key.IsAlive && Fool.ImpaledBy(kv.Key, _me.Creature) is { } imp && Fool.ArrowsIn(imp) > 0)
-            .Select(kv => kv.Value).ToHashSet();
-        if (outcomes.Any(o => o.KilledByPlayInAll.Overlaps(impaled))) return true;
-        if (!Fool.Shoots(f.Card, _me) || f.Sim == null) return false;
-        var targets = f.Sim.PlayByTarget.Keys.ToList();
-        return targets.Count == outcomes.Length && targets.Where((t, i) => t >= 0 && outcomes[i].KilledByPlayInAll.Contains(t)).Any();
-    }
 
     /// <summary>PredictNow is running: the simulation cache (keyed to this frame's state) is left alone.</summary>
     private bool _noCache;

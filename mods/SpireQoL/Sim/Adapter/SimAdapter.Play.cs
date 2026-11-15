@@ -44,9 +44,6 @@ public static partial class SimAdapter
             if (k < allies.Count) { play.AllyTarget = k; ally = allies[k].Creature; allyId = Who.Teammate(k); }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
-        // Covering Fire: block for every teammate on each shot you try (one per play of a Shoot card, arrow or not; none from an X shot at X 0).
-        if (Fool.TriesShot(card) && me.Creature.Powers.FirstOrDefault(x => x is CoveringFirePower) is { Amount: > 0 } coveringFire)
-            play.TeammateBlock = (coveringFire.Amount, plays);
         play.Draws = f.Draws;
         play.BlockToAlly = BlockToAllyCards.Contains(name);
         play.ChannelToAlly = ChannelToAllyCards.Contains(name);
@@ -55,7 +52,14 @@ public static partial class SimAdapter
         var target = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
         play.Card = new SimCardPlay(SimReaders.Card(card, f, me), Who.You, target, 0, plays, f.AutoPlayed);
         if (f.LosesHp) play.Body.Add(new LoseHpAction(Sts2State.Var(card, "HpLoss")));
+        // A shot (ArrowCmd.ShootArrowAtTarget): the arrow leaves before the attack and impales the target after it. None from an X
+        // shot at X 0.
+        var shot = Fool.TriesShot(card);
+        if (shot) play.Body.Add(new ShootAction());
         if (f.AttackHits > 0 && AttackOf(card, f, me, cs, ids, targetId, plays, name) is { } attack) play.Body.Add(attack);
+        if (shot) play.Body.Add(new ImpaleAction());
+        // Recall, Uproot, Wrest: every arrow of yours out of the target.
+        if (Fool.DislodgeCards.Contains(name)) play.Body.Add(new DislodgeAllAction());
         if (f.BlockGains > 0 && BlockOf(card, f, me, cs, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
         // Adroit (enchantment): its block on every play, after the card's own (EnchantmentModel.OnPlay → CreatureCmd.GainBlock).
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
@@ -100,7 +104,7 @@ public static partial class SimAdapter
     /// <summary>
     /// The card events the play causes (PlayFacts' counts), for the models that react to them: the energy it spends and gives back
     /// (before the play), each play's draws, discards, other exhausts, created cards and star gains (indirect, but star gains), the
-    /// stars it spends (first play), its own exhaust and a shuffle (after), and the arrows it dislodges at this aim.
+    /// stars it spends (first play), its own exhaust and a shuffle (after).
     /// </summary>
     private static void AddCardEvents(SimPlay play, CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
         int targetId, int plays)
@@ -124,22 +128,6 @@ public static partial class SimAdapter
         if (f.Stars > 0) play.Body.Add(new CardEventAction(CardEvent.StarsSpent, 1) { FirstPlayOnly = true });
         if (f.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, 1) { Card = play.Card!.Card });
         if (f.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, 1) { Indirect = true });
-        // Arrows it pulls loose (Fool.DislodgesOn): at its target, or at every enemy for an all-enemy card.
-        int dislodged;
-        try
-        {
-            dislodged = card.TargetType switch
-            {
-                TargetType.AnyEnemy => ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } aimed ? Fool.DislodgesOn(f, aimed, me) : 0,
-                TargetType.AllEnemies => cs.HittableEnemies.Where(x => x.IsAlive).Sum(x => Fool.DislodgesOn(f, x, me)),
-                _ => 0,
-            };
-        }
-        catch
-        {
-            dislodged = 0;
-        }
-        Each(play.After, CardEvent.ArrowDislodged, dislodged, false, perPlay: false);
     }
 
     private static bool IsPowerVar<T>(DynamicVar v) where T : PowerModel =>

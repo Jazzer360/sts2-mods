@@ -57,8 +57,6 @@ public sealed record SimCard(string Name, SimCardType Type)
     public bool Dupe { get; init; }
     /// <summary>It can still be upgraded (Razor Tooth).</summary>
     public bool Upgradable { get; init; }
-    /// <summary>It shoots an arrow you have (a Shoot card with an arrow available): Explosive Arrows.</summary>
-    public bool Shoots { get; init; }
     /// <summary>Another card in your hand still costs energy or stars (Mummified Hand has something to make free).</summary>
     public bool OthersInHandCost { get; init; }
     /// <summary>Which card in hand it is (SimHandCard.Id), 0 = none.</summary>
@@ -161,6 +159,10 @@ public abstract class SimModel
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     /// <summary>A card event (one per card or star): draws, exhausts, discards, created cards, stars, shuffles. Player: who it happened to.</summary>
     public virtual IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) => One(s);
+    /// <summary>A player tried a shot (AfterArrowShot: with or without an arrow): Covering Fire.</summary>
+    public virtual IEnumerable<SimState> AfterArrowShot(SimState s, int owner, int shooter) => One(s);
+    /// <summary>A shooter's arrow impaled an enemy (AfterArrowImpaled): Explosive Arrows.</summary>
+    public virtual IEnumerable<SimState> AfterArrowImpaled(SimState s, int owner, int target, int shooter) => One(s);
     /// <summary>An orb was channeled for a player (AfterOrbChanneled): Metronome.</summary>
     public virtual IEnumerable<SimState> AfterOrbChanneled(SimState s, int owner, int player) => One(s);
     /// <summary>A power landed on a creature (after Artifact): Sleight of Flesh, Vicious, Shroud.</summary>

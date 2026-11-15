@@ -85,56 +85,6 @@ internal static class Fool
         => Sts2State.Private<System.Collections.IEnumerable?>(impaled, "Arrows", null)?.Cast<object>().Count() ?? 0;
 
     /// <summary>
-    /// Arrows a play's powered hits on an Impaled enemy dislodge (ImpaledPower.AfterDamageReceived): the first
-    /// when the counter runs out, then one per 3 more hits, at most the arrows it holds.
-    /// </summary>
-    public static int Dislodges(int hits, int counter, int arrows)
-        => hits < counter || arrows <= 0 ? 0 : Math.Min(arrows, 1 + (hits - counter) / 3);
-
-    /// <summary>
-    /// Your arrows this play dislodges from <paramref name="e"/>: its powered hits on an enemy your arrows Impale
-    /// (ImpaledPower.AfterDamageReceived), all of them if the play kills it (ImpaledPower.AfterDeath), and a shot's
-    /// own arrow when its attack kills the target (ArrowCmd.ImpaleTarget: impaled, then dislodged off the dead
-    /// target). Recall, Uproot and Wrest pull out every arrow of yours in their target (ArrowCmd.DislodgeArrow).
-    /// The kill is PlayFacts' pre-simulation estimate.
-    /// </summary>
-    public static int DislodgesOn(PlayFacts f, Creature e, Player me)
-    {
-        var imp = ImpaledBy(e, me.Creature);
-        var arrows = imp == null ? 0 : ArrowsIn(imp);
-        if (DislodgeCards.Contains(f.Card.GetType().Name)) return arrows;
-        var kills = f.Kills(e);
-        var d = kills ? arrows : imp == null || !f.CanHit(e) ? 0 : Dislodges(f.HitsOn(e), HitCounter(imp), arrows);
-        if (kills && Shoots(f.Card, me)) d++;
-        return d;
-    }
-
-    /// <summary>
-    /// Arrows the play dislodges, fewest and most over where you can aim it: a single-target card at each enemy
-    /// you could pick; an all-enemy card everywhere at once. Random targets and targetless cards: none counted.
-    /// </summary>
-    public static (int Min, int Max) Dislodged(PlayFacts f, Player me, ICombatState cs)
-    {
-        var enemies = cs.HittableEnemies.Where(x => x.IsAlive).ToList();
-        if (enemies.Count == 0) return (0, 0);
-        switch (f.Card.TargetType)
-        {
-            case MegaCrit.Sts2.Core.Entities.Cards.TargetType.AnyEnemy:
-            {
-                var each = enemies.Select(x => DislodgesOn(f, x, me)).ToList();
-                return (each.Min(), each.Max());
-            }
-            case MegaCrit.Sts2.Core.Entities.Cards.TargetType.AllEnemies:
-            {
-                var all = enemies.Sum(x => DislodgesOn(f, x, me));
-                return (all, all);
-            }
-            default:
-                return (0, 0);
-        }
-    }
-
-    /// <summary>
     /// Fool powers a play changes outside its own PowerCmd.Apply calls: a shot Impales its target
     /// (ArrowCmd.ImpaleTarget) and spends Aim (AimPower.AfterAttack) and Quietus; an attack's powered hits count
     /// Impaled down, and it goes when its last arrow comes loose (ImpaledPower.AfterDamageReceived); Recall,

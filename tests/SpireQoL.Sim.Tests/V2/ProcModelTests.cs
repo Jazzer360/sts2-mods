@@ -184,17 +184,55 @@ public class ProcModelTests
     [Fact]
     public void ExplosiveArrowsNeedsAnArrowAndYahAndTwineReactToDislodges()
     {
-        var shot = new SimCard("Shoot", SimCardType.Attack) { Shoots = true };
-        Assert.Equal(96, One(Power(State(), "ExplosiveArrowsPower", 4), Play(shot, 0, 1)).Enemy(0)!.Hp);
-        Assert.Equal(100, One(Power(State(), "ExplosiveArrowsPower", 4), Play(shot with { Shoots = false }, 0, 1)).Enemy(0)!.Hp);
+        // Explosive Arrows on the impale (after the attack), only with an arrow to shoot.
+        var s = Power(State(), "ExplosiveArrowsPower", 4);
+        s.P.Arrows = 1;
+        var shot = Play(Card("QuickShot"), 0, 1, new ShootAction(), Attack(5), new ImpaleAction());
+        var after = One(s, shot);
+        Assert.Equal(100 - 5 - 4, after.Enemy(0)!.Hp);
+        Assert.Equal((1, 3), (after.Enemy(0)!.Powers["ImpaledPower"], after.Enemy(0)!.Powers.DataOf("ImpaledPower")));
+        Assert.Equal(0, after.P.Arrows);
+        s.P.Arrows = 0;
+        Assert.Equal(95, One(s, shot).Enemy(0)!.Hp);
 
-        var s = Power(State(), "YahPower", 1);
-        Relic(s, "Twine", vars: ("Block", 2));
-        var script = Play(Card("Recall", SimCardType.Skill), -1, 1);
-        script.Actions.Add(new CardEventAction(CardEvent.ArrowDislodged, 2));
-        var after = One(s, script);
-        Assert.Equal(1, after.Fired["YahPower"]); // once a turn
-        Assert.Equal(4, after.P.Block);
+        // Recall pulls both arrows out: Yah once a turn, Twine per arrow; the arrows come back.
+        var r = Power(State(), "YahPower", 1);
+        Relic(r, "Twine", vars: ("Block", 2));
+        r.Enemies[0].Powers = PowerSet.Empty.With("ImpaledPower", 2, 3);
+        var recalled = One(r, Play(Card("Recall", SimCardType.Skill), 0, 1, new DislodgeAllAction()));
+        Assert.Equal(1, recalled.Fired["YahPower"]);
+        Assert.Equal(4, recalled.P.Block);
+        Assert.Equal(2, recalled.P.Arrows);
+        Assert.False(recalled.Enemy(0)!.Powers.Has("ImpaledPower"));
+    }
+
+    [Fact]
+    public void EveryThirdPoweredHitKnocksAnArrowOutAndADeathLetsThemAllGo()
+    {
+        var s = Relic(State(hp: 100), "Twine", vars: ("Block", 2));
+        s.Enemies[0].Powers = PowerSet.Empty.With("ImpaledPower", 2, 2);
+        var after = One(s, Play(Card("Flurry"), 0, 1, Attack(1, hits: 4)));
+        // Hit 2 knocks one out (counter 2 -> 0, back to 3); hits 3 and 4 count it down to 1.
+        Assert.Equal((1, 1), (after.Enemy(0)!.Powers["ImpaledPower"], after.Enemy(0)!.Powers.DataOf("ImpaledPower")));
+        Assert.Equal(2, after.P.Block);
+        Assert.Equal(1, after.P.Arrows);
+        // A kill lets every arrow go.
+        var kill = State(hp: 5);
+        Relic(kill, "Twine", vars: ("Block", 2));
+        kill.Enemies[0].Powers = PowerSet.Empty.With("ImpaledPower", 2, 3);
+        var killed = One(kill, Play(Card("Strike"), 0, 1, Attack(9)));
+        Assert.Equal(4, killed.P.Block);
+        Assert.Equal(2, killed.P.Arrows);
+    }
+
+    [Fact]
+    public void CoveringFireBlocksTeammatesOnEveryShotTried()
+    {
+        var s = Power(State(), "CoveringFirePower", 3);
+        s.Teammates.Add(new SimPlayer { Hp = 50 });
+        var after = One(s, Play(Card("QuickShot"), 0, 2, new ShootAction(), new ImpaleAction()));
+        Assert.Equal(6, after.Teammates[0].Block);
+        Assert.Equal(0, after.P.Block);
     }
 
     // ---- card events
@@ -399,7 +437,7 @@ public class ProcModelTests
         foreach (var name in SimModels.Names)
         {
             var m = SimModels.Get(name)!;
-            if (m is Models.ProcModel) Assert.NotNull(m.Tab);
+            if (m is Models.ProcModel && name != "CoveringFirePower") Assert.NotNull(m.Tab); // Covering Fire: no tab by design (decision #25)
         }
     }
 }

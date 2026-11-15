@@ -959,6 +959,9 @@ public static partial class SimEngine
             case LegacyPart lp: RunLegacy(b, lp.Play, lp.Part); break;
             case OrbAction oa: RunOrb(b, oa); break;
             case FocusAction fa: b.Do(s => ChangeFocus(s, fa.Delta)); break;
+            case ShootAction: RunShoot(b); break;
+            case ImpaleAction: RunImpale(b); break;
+            case DislodgeAllAction: RunDislodgeAll(b); break;
             case CardPlayAction pc: RunCardPlay(b, pc); break;
             case AttackAction at: RunAttack(b, at); break;
             case GainBlockAction gb: RunBlock(b, gb); break;
@@ -967,6 +970,8 @@ public static partial class SimEngine
             case LoseHpAction lh: b.Do(s => LandUnblockable(s, s.CurrentPlay?.Card.Name ?? "HP cost", lh.Amount)); break;
             default: throw new NotSupportedException($"No runner for {a.GetType().Name}");
         }
+        // Events raised inside its hits or deaths (an arrow knocked loose) run once the action is over.
+        if (b.States.Any(s => s.Pending.Count > 0)) b.Each(DrainPending);
     }
 
     /// <summary>One part of a play given as a SimPlay summary (SimScript.Of): the play's precomputed numbers, in order.</summary>

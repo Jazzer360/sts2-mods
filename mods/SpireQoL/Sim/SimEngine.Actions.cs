@@ -117,7 +117,8 @@ public static partial class SimEngine
         if (s.Enemy(target) is { Alive: true } e) Damage(s, e, amount, dealer, spec.Props, card);
         // Rain Shot: the target's damage to every other hittable enemy (only caps apply).
         if (at.Splash) foreach (var other in s.Targetable.Where(x => x.Id != target).ToList()) Damage(s, other, amount, dealer, spec.Props, card);
-        return new[] { s };
+        AllyDeaths(s); // a death runs its hooks as it happens (AfterDeath: Impaled lets its arrows go, Crab Rage, Explosive)
+        return DrainPending(s); // what the hit set off where hooks can't branch (an arrow knocked loose: Yah, Twine)
     }
 
     // ------------------------------------------------------------------ block, powers, HP

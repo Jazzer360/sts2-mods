@@ -435,6 +435,7 @@ public static partial class SimAdapter
 
         p.HandCount = hand.Count;
         p.Energy = pcs.Energy;
+        p.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
         p.Fading = hand.Count(card => IsFading(card, cs));
         p.AttacksThisTurn = Sts2State.CountPlayedThisTurn(me, CardType.Attack);
         foreach (var card in hand)

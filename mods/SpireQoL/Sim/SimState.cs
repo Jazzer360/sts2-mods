@@ -253,6 +253,8 @@ public sealed class SimPlayer
 
     // Hand and turn counters.
     public int HandCount;
+    /// <summary>Arrows they can shoot now (PlayerCombatState.AvailableArrowCount; the Fool).</summary>
+    public int Arrows;
     /// <summary>Energy now (PlayerCombatState.Energy): Pael's Tears.</summary>
     public int Energy;
     /// <summary>Ethereal cards in hand that exhaust at end of turn.</summary>
@@ -556,6 +558,10 @@ public sealed class SimState
     internal PowerSet Bound = PowerSet.Empty;
     /// <summary>The first hit of a card's attack on each enemy (enemy id → damage), for the damage-formula audit.</summary>
     internal PowerSet FirstHits = PowerSet.Empty;
+    /// <summary>Card events raised inside a hit or a death, run once it's over (SimEngine.Raise, DrainPending).</summary>
+    internal PowerSet Pending = PowerSet.Empty;
+    /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
+    internal int ArrowAwayAt = -1;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
     internal SimCard? EventCard;
     /// <summary>Card events during the current card play, by CardEvent name (Unceasing Top: nothing drawn or created).</summary>
@@ -683,7 +689,7 @@ public sealed class SimState
             }
         }
         Add(BigHits);
-        Add(P.Block); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
+        Add(P.Block); Add(P.Arrows); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
         Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         foreach (var e in Enemies)
         {

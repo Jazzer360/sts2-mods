@@ -359,13 +359,62 @@ public sealed class LostLutePower : ProcModel
         Mine(play, owner) && Melodies.AnyFirst(s, play) ? Fire(s, owner) : One(s);
 }
 
-/// <summary>ExplosiveArrowsPower.AfterArrowImpaled: a shot that has an arrow impales its target: its amount to every hittable enemy.</summary>
+/// <summary>ExplosiveArrowsPower.AfterArrowImpaled: its owner's arrow impales an enemy: its amount to every hittable enemy (unpowered).</summary>
 public sealed class ExplosiveArrowsPower : ProcModel
 {
     public override string Name => "ExplosiveArrowsPower";
     public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Shoots ? DamageAll(s, owner, Amount(s, owner)) : One(s);
+    public override IEnumerable<SimState> AfterArrowImpaled(SimState s, int owner, int target, int shooter) =>
+        shooter == owner ? DamageAll(s, owner, Amount(s, owner)) : One(s);
+}
+
+/// <summary>CoveringFirePower.AfterArrowShot: each shot its owner tries from a card (arrow or not) gives every other living player its amount of block (unpowered). No tab.</summary>
+public sealed class CoveringFirePower : ProcModel
+{
+    public override string Name => "CoveringFirePower";
+    public override TabKind? Tab => null; // no tab: the block is your teammates' (decision #25)
+    public override IEnumerable<SimState> AfterArrowShot(SimState s, int owner, int shooter)
+    {
+        if (shooter != owner || s.CurrentPlay == null) return One(s);
+        IEnumerable<SimState> r = One(s);
+        var amount = Amount(s, owner);
+        for (var k = 0; k < s.Teammates.Count; k++)
+        {
+            var mate = Who.Teammate(k);
+            if (mate == owner) continue;
+            r = r.SelectMany(x => SimEngine.ProcBlockFor(x, owner, Name, mate, amount, Unpowered)).ToList();
+        }
+        if (owner != Who.You) r = r.SelectMany(x => SimEngine.ProcBlockFor(x, owner, Name, Who.You, amount, Unpowered)).ToList();
+        return r;
+    }
+}
+
+/// <summary>
+/// ImpaledPower (yours, on an enemy: Amount = your arrows in it, Data = its HitCounter): every third powered hit of yours knocks an
+/// arrow out (AfterDamageReceived: the counter starts over at 3), and its death lets all of them go (AfterDeath). Each comes back to
+/// you and sets off AfterArrowDislodged, once the hit is over.
+/// </summary>
+public sealed class ImpaledPower : SimModel
+{
+    public override string Name => SimEngine.Impaled;
+    public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
+    {
+        if (e.Target != owner || e.Dealer != Who.You || !e.Props.IsPoweredAttack()) return;
+        var p = SimEngine.PowersOf(s, owner);
+        if (p[Name] <= 0) return;
+        var counter = p.DataOf(Name) - 1;
+        if (counter > 0) { SimEngine.SetPowers(s, owner, p.With(Name, p[Name], counter)); return; }
+        SimEngine.SetPowers(s, owner, p.With(Name, p[Name], 3));
+        SimEngine.TakeArrows(s, owner, 1);
+        SimEngine.Raise(s, CardEvent.ArrowDislodged, Who.You);
+    }
+    public override void AfterDeath(SimState s, int owner, int dead)
+    {
+        var arrows = SimEngine.PowerOn(s, owner, Name);
+        if (dead != owner || arrows <= 0) return;
+        SimEngine.TakeArrows(s, owner, arrows);
+        SimEngine.Raise(s, CardEvent.ArrowDislodged, Who.You, arrows);
+    }
 }
 
 /// <summary>YahPower.AfterArrowDislodged: energy the first time each turn (Data 1: already) one of your arrows comes loose.</summary>

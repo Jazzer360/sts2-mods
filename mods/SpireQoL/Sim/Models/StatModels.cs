@@ -269,7 +269,7 @@ public sealed class SerratedArrowsPower : SimModel
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (!d.Props.IsPoweredAttack() || !(d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty))) return 1m;
-        return d.Target >= 0 && SimEngine.PowersOf(s, d.Target).Has("ImpaledPower") ? 1m + SimEngine.PowerOn(s, owner, Name) / 100m : 1m;
+        return d.Target >= 0 && SimEngine.IsImpaled(s, d.Target) ? 1m + SimEngine.PowerOn(s, owner, Name) / 100m : 1m;
     }
 }
 

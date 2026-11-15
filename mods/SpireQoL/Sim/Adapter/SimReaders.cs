@@ -32,6 +32,12 @@ public static class SimReaders
             int amount = pw.Amount, data = 0;
             switch (name)
             {
+                // Your arrows in it (Amount) and its hit counter (Data); a teammate's Impaled only makes it Impaled.
+                case "ImpaledPower" when pw.Applier is { } ia && idOf(ia) == Who.You:
+                    amount = SpireQoL.Procs.Fool.ArrowsIn(pw);
+                    data = SpireQoL.Procs.Fool.HitCounter(pw);
+                    break;
+                case "ImpaledPower": name = "ImpaledPowerOther"; amount = 1; break;
                 case "SlowPower": data = Sts2State.Var(pw, "SlowAmount", 0); break;
                 case "SkittishPower": data = Sts2State.Private(pw, "HasGainedBlockThisTurn", false) ? 1 : 0; break;
                 case "HardenedShellPower": data = Math.Max(0, pw.DisplayAmount); break;
@@ -202,7 +208,6 @@ public static class SimReaders
             ExhaustsSelf = f.ExhaustsSelf,
             Dupe = Safe(() => card.IsDupe),
             Upgradable = Safe(() => card.IsUpgradable),
-            Shoots = Safe(() => SpireQoL.Procs.Fool.Shoots(card, me)),
             OthersInHandCost = Safe(() => Sts2State.Hand(me).Any(x => x != card && x.CostsEnergyOrStars(includeGlobalModifiers: true))),
         };
     }

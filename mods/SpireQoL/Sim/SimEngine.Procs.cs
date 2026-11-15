@@ -11,20 +11,24 @@ public static partial class SimEngine
     /// each through the block pipeline (Dexterity and Frail only for powered block), then the gain (Juggernaut, Beacon of Hope)
     /// and AfterBlockGained. Logged with the block gained.
     /// </summary>
-    public static IEnumerable<SimState> ProcBlock(SimState s, int owner, string name, decimal baseBlock, SimProps props, int times = 1)
+    public static IEnumerable<SimState> ProcBlock(SimState s, int owner, string name, decimal baseBlock, SimProps props, int times = 1) =>
+        ProcBlockFor(s, owner, name, owner, baseBlock, props, times);
+
+    /// <summary>The same, gained by another player (Covering Fire's block for your teammates), logged under its owner.</summary>
+    public static IEnumerable<SimState> ProcBlockFor(SimState s, int owner, string name, int gainer, decimal baseBlock, SimProps props, int times = 1)
     {
         IEnumerable<SimState> r = new[] { s };
-        if (!Who.IsPlayer(owner)) return r;
+        if (!Who.IsPlayer(gainer)) return r;
         for (var i = 0; i < times; i++)
         {
             r = Then(r, x =>
             {
-                var amount = CalcBlock(x, baseBlock, new BlockCtx(owner, props, null, null));
+                var who = gainer == Who.You ? -1 : Who.TeammateIndex(gainer);
+                if (who >= 0 && (who >= x.Teammates.Count || x.Teammates[who].Hp <= 0)) return new[] { x };
+                var amount = CalcBlock(x, baseBlock, new BlockCtx(gainer, props, null, null));
                 x.LogFired(name, amount, owner);
                 if (amount <= 0) return new[] { x };
-                var who = owner == Who.You ? -1 : Who.TeammateIndex(owner);
-                if (who >= 0 && (who >= x.Teammates.Count || x.Teammates[who].Hp <= 0)) return new[] { x };
-                return Then(GainBlock(x, amount, null, who), y => Hook(y, (m, o, z) => m.AfterBlockGained(z, o, owner, amount, null)));
+                return Then(GainBlock(x, amount, null, who), y => Hook(y, (m, o, z) => m.AfterBlockGained(z, o, gainer, amount, null)));
             });
         }
         return r;
@@ -97,7 +101,7 @@ public static partial class SimEngine
     }
 
     /// <summary>Card events a proc causes (Dark Embrace's draw...): each through every listener, as an indirect event.</summary>
-    public static IEnumerable<SimState> ProcCardEvent(SimState s, CardEvent ev, int count, int player)
+    public static IEnumerable<SimState> ProcCardEvent(SimState s, CardEvent ev, int count, int player, bool indirect = true)
     {
         IEnumerable<SimState> r = new[] { s };
         for (var i = 0; i < count; i++)
@@ -105,7 +109,7 @@ public static partial class SimEngine
             {
                 CountEvent(x, ev, player);
                 var was = x.IndirectNow;
-                x.IndirectNow = true;
+                x.IndirectNow = indirect || was;
                 var after = Hook(x, (m, o, y) => m.AfterCardEvent(y, o, ev, player)).ToList();
                 foreach (var y in after) y.IndirectNow = was;
                 return after;

@@ -260,15 +260,6 @@ public sealed class PlayFacts
     /// </summary>
     public int TotalDamage(Creature enemy) => DamagePerHit(enemy) * HitsOn(enemy);
 
-    /// <summary>
-    /// The card alone kills the enemy (its hits and orb evokes ≥ block + HP; ignores caps): a pre-simulation estimate, for the
-    /// arrows a kill dislodges (Fool.DislodgesOn); kill tabs come from the simulator.
-    /// </summary>
-    public bool Kills(Creature enemy)
-        => enemy.IsAlive && enemy.IsHittable
-           && (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) > 0
-           && (CanHit(enemy) ? TotalDamage(enemy) : 0) + OrbDamageOn(enemy) >= enemy.Block + enemy.CurrentHp;
-
     // ------------------------------------------------------------------ orbs evoked by the play
 
     /// <summary>
