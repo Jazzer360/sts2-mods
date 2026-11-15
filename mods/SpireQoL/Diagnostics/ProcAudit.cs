@@ -140,6 +140,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         nameof(SurprisePower), nameof(ExplosivePower), nameof(StockPower), nameof(CompostPower), nameof(MightyWings), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower), nameof(SneakyPower), nameof(EnragePower), nameof(JuggernautPower),
         nameof(BurrowedPower), nameof(FlutterPower), nameof(PlowPower), nameof(ShriekPower), nameof(TheGambitPower), nameof(SlipperyPower), nameof(HandDrill),
         nameof(ParryingShield),
+        // HP you lose during the play (SimOutcome.PlayHpReachedMin...).
+        nameof(TungstenRod), nameof(SelfFormingClay), nameof(EmotionChip), nameof(CentennialPuzzle), nameof(DemonTongue), nameof(RedSkull),
+        nameof(InfernoPower), nameof(RupturePower),
     };
 
     /// <summary>
@@ -150,6 +153,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
     private static readonly HashSet<string> KillReactive = new() { nameof(GremlinHorn), nameof(CompostPower), nameof(MightyWings) };
+
+    /// <summary>Your relics and powers that react to HP you lose (enemy Thorns hitting you back, from a random hit too).</summary>
+    private static readonly HashSet<string> HpLossReactive = new()
+    {
+        nameof(TungstenRod), nameof(SelfFormingClay), nameof(EmotionChip), nameof(CentennialPuzzle), nameof(DemonTongue), nameof(RedSkull),
+        nameof(InfernoPower), nameof(RupturePower),
+    };
 
     /// <summary>
     /// Your powers that act only on teammates when you play (Covering Fire: their block on your shots): simulated, with no
@@ -866,6 +876,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var causedByRandom = m switch
             {
                 PowerModel { Owner.IsEnemy: true } ep => RandomlyHit(ep.Owner) || randomKill,
+                // HP lost to an enemy's Thorns that a random hit set off.
+                _ when HpLossReactive.Contains(m.GetType().Name) => entries.OfType<DamageReceivedEntry>()
+                    .Any(d => d.Result.Receiver == me.Creature && d.Dealer is { IsEnemy: true } dealer && RandomlyHit(dealer)),
                 _ => KillReactive.Contains(m.GetType().Name) && randomKill,
             };
             if (causedByRandom)

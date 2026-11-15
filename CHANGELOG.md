@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.45.0
+#### Changed
+- HP-loss tabs show only when the play really sets the relic off. Your block, Tungsten Rod, Beating Remnant and Buffer now count, and so does enemy Thorns hitting you back past your block. Tungsten Rod's tab needs some HP loss to get past your block. Self-Forming Clay, Emotion Chip, Centennial Puzzle, Demon Tongue, Rupture and Inferno need HP actually lost (a 1-HP cost with Tungsten Rod sets none of them off). Red Skull needs the real loss to reach its threshold. The crossed Thorns tab still shows on every attack that can hit a Thorns enemy.
+#### Fixed
+- Incoming Damage and the other predictions count a card's own HP cost: Buffer it uses up is gone for the enemy turn, Beating Remnant's budget shrinks, and Inferno fires only when HP is really lost.
+
 ### Spire QoL 0.44.0
 #### Added
 - Tungsten Rod: a tab on cards that cost you HP (it takes 1 off), like Self-Forming Clay and Emotion Chip. It now also has a row in the settings menu's In fights section.

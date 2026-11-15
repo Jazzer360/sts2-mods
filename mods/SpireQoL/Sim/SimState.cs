@@ -375,6 +375,12 @@ public sealed class SimState
     public int AutoPlayed;
     /// <summary>The biggest powered hit (blocked plus HP lost) of the play so far (Mighty Wings).</summary>
     public int PlayBiggestHit;
+    /// <summary>
+    /// HP loss of yours during the play so far: times some got past your block to the HP-loss modifiers (Tungsten Rod
+    /// flashes when it takes 1 off), times you lost HP (UnblockedDamage > 0: Self-Forming Clay, Emotion Chip, Centennial
+    /// Puzzle, Demon Tongue, Inferno, Rupture), and the HP lost (Red Skull). Not in the branch key: merged as the smallest.
+    /// </summary>
+    public int PlayHpReached, PlayHpLosses, PlayHpLost;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
     public int FairiesUsed;
     public bool LizardTailUsed;
@@ -497,6 +503,14 @@ public sealed class SimState
             t.InvincibleBlock = t.InvincibleDrawPile = 0;
         }
         return shown;
+    }
+
+    /// <summary>An identical branch merged into this one: the play's HP-loss counts keep the smallest (the guarantee).</summary>
+    public void MergePlayHp(SimState r)
+    {
+        PlayHpReached = Math.Min(PlayHpReached, r.PlayHpReached);
+        PlayHpLosses = Math.Min(PlayHpLosses, r.PlayHpLosses);
+        PlayHpLost = Math.Min(PlayHpLost, r.PlayHpLost);
     }
 
     public SimState Clone()

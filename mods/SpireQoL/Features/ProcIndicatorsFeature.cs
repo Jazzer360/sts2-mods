@@ -552,6 +552,38 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             if (outcomes.Any(o => o.PlayBiggestHitMin >= threshold)) merged["proc:" + nameof(MightyWings)] = (r, Hit.Trig());
         }
 
+        // HP you lose during the play (the card's own HP cost, enemy Thorns before each hit), through your block, Tungsten
+        // Rod, Beating Remnant and Buffer: from the simulator. Good, so every branch for some aim. Thorns itself keeps its
+        // crossed tab on every attack that can hit it (a reminder that attacking it costs you).
+        var reached = outcomes.Select(o => o.PlayHpReachedMin).DefaultIfEmpty().Max();
+        var losses = outcomes.Select(o => o.PlayHpLossesMin).DefaultIfEmpty().Max();
+        var lostHp = outcomes.Select(o => o.PlayHpLostMin).DefaultIfEmpty().Max();
+        foreach (var r in _me.Relics)
+        {
+            var hit = r switch
+            {
+                // ModifyHpLostAfterOsty: flashes whenever it takes 1 off (some got past your block).
+                TungstenRod when reached > 0 => Hit.Trig(),
+                // AfterDamageReceived with UnblockedDamage > 0: HP actually lost, after Tungsten Rod.
+                SelfFormingClay or EmotionChip when losses > 0 => Hit.Trig(),
+                CentennialPuzzle when losses > 0 && !Sts2State.Private(r, "UsedThisCombat", true) => Hit.Trig(),
+                DemonTongue when losses > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true) => Hit.Trig(),
+                // AfterCurrentHpChanged: Strength once your HP is at or below its threshold.
+                RedSkull when lostHp > 0 && _me.Creature is var c
+                    && c.CurrentHp > c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m
+                    && c.CurrentHp - lostHp <= c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m => Hit.Trig(),
+                _ => (Hit?)null,
+            };
+            if (hit is { } h) merged["proc:" + r.GetType().Name] = (r, h);
+        }
+        if (losses > 0)
+        {
+            // Rupture (Strength) and Inferno (its amount to every enemy, each time; the simulator lands it itself).
+            if (_me.Creature.Powers.FirstOrDefault(p => p is RupturePower) is { } rupture) merged["proc:" + nameof(RupturePower)] = (rupture, Hit.Trig());
+            if (_me.Creature.Powers.FirstOrDefault(p => p is InfernoPower) is { Amount: > 0 } inferno)
+                merged["proc:" + nameof(InfernoPower)] = (inferno, Damage(inferno.Amount, losses, Spread.All));
+        }
+
         // Yah (energy the first time each turn one of your arrows comes loose): a kill the card's own damage doesn't
         // make alone (Violent Chord after a Wah, other damage procs) still dislodges every arrow of yours in the
         // enemy (ImpaledPower.AfterDeath), and a shot's own arrow in the target it just impaled. Good, so the kill
@@ -682,9 +714,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                         var times = (f.Stars > 0 ? 1 : 0) + f.StarGains + _xStarGains;
                         return times > 0 ? Damage(a, times, Spread.All) : null;
                     }
-                    case nameof(RupturePower) when mine && f.LosesHp: return Hit.Trig();
-                    // Losing HP on your turn: damage to every enemy (InfernoPower.AfterDamageReceived), once per play.
-                    case nameof(InfernoPower) when mine && f.LosesHp: return Damage(a, plays, Spread.All);
+                    // Rupture and Inferno (losing HP on your turn): from the simulator's HP loss during the play, see FinishSim.
                     // Osty losing HP hits every enemy for that much times its amount (NecroMasteryPower.AfterCurrentHpChanged): a card
                     // that kills Osty (Bone Shards, Sacrifice) takes all of it. Unblockable; the simulator models it itself.
                     case nameof(NecroMasteryPower) when mine && SimAdapter.KillsOstyCards.Contains(card.GetType().Name) && _me.IsOstyAlive && _me.Osty is { } dying:
@@ -939,19 +969,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     // Hand Drill (breaking an enemy's block): from the simulator, see FinishSim.
                     // Gremlin Horn (an enemy dies): from the simulator's branches, see FinishSim.
 
-                    // ---- losing HP from the card (your turn)
-                    case nameof(CentennialPuzzle) when f.HpLoss > 0 && !Sts2State.Private(r, "UsedThisCombat", true): return Hit.Trig();
-                    case nameof(SelfFormingClay) when f.HpLoss > 0: return Hit.Trig();
-                    case nameof(DemonTongue) when f.HpLoss > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true): return Hit.Trig();
-                    case nameof(EmotionChip) when f.HpLoss > 0: return Hit.Trig();
-                    // Tungsten Rod (ModifyHpLostAfterOsty): 1 less HP lost; it flashes whenever that changes the loss.
-                    case nameof(TungstenRod) when f.HpLoss > 0: return Hit.Trig();
-                    case nameof(RedSkull) when f.HpLoss > 0:
-                    {
-                        var c = _me.Creature;
-                        var threshold = c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m;
-                        return c.CurrentHp > threshold && c.CurrentHp - f.HpLoss <= threshold ? Hit.Trig() : null;
-                    }
+                    // ---- losing HP during the play (the card's cost, enemy Thorns): Centennial Puzzle, Self-Forming Clay, Demon
+                    // Tongue, Emotion Chip, Tungsten Rod, Red Skull: from the simulator, see FinishSim.
                 }
                 return null;
             }

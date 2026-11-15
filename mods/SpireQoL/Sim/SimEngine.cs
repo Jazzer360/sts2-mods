@@ -72,6 +72,12 @@ public sealed class SimPlay
     /// order. Enemy Thorns isn't here: the simulator lands it before each of the card's hits.
     /// </summary>
     public List<(string Name, int Amount)> DamageToYou = new();
+    /// <summary>
+    /// HP the card costs you, per play (its HpLoss value: CreatureCmd.Damage on you, Unblockable and Unpowered), HpCostTimes
+    /// times, before its hits (Bloodletting, Offering, Hemokinesis lose it first). Through Tungsten Rod, Beating Remnant,
+    /// Buffer; sets off Inferno when HP is lost.
+    /// </summary>
+    public int HpCost, HpCostTimes;
     /// <summary>Poison applied to the target (Single) or to every enemy (All).</summary>
     public int Poison;
     public bool PoisonAll;
@@ -214,6 +220,8 @@ public sealed class SimOutcome
     public bool PlayKillsInEveryBranch;
     /// <summary>The play's biggest powered hit (blocked plus HP lost), in the branch where it's smallest (Mighty Wings).</summary>
     public int PlayBiggestHitMin;
+    /// <summary>The play's HP loss of yours, in the branch where it's smallest (SimState.PlayHpReached, PlayHpLosses, PlayHpLost).</summary>
+    public int PlayHpReachedMin, PlayHpLossesMin, PlayHpLostMin;
 
     /// <summary>The enemy is dead before it acts in every branch.</summary>
     public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true });
@@ -300,6 +308,7 @@ public static class SimEngine
                     s.P.BlockGains);
                 foreach (var e in s.Enemies) e.ReactedWithBlock = false;
                 s.PlayBiggestHit = 0;
+                s.PlayHpReached = s.PlayHpLosses = s.PlayHpLost = 0;
             });
         }
         if (play != null) ApplyPlay(b, play);
@@ -314,6 +323,10 @@ public static class SimEngine
         var gains = b.States.Select(s => s.P.BlockGains - (s.PlayBase?.BlockGains ?? start.P.BlockGains)).ToList();
         var playTruncated = b.Truncated;
         var biggestHitMin = b.Truncated || b.States.Count == 0 ? 0 : b.States.Min(s => s.PlayBiggestHit);
+        int PlayMin(Func<SimState, int> f) => b.Truncated || b.States.Count == 0 ? 0 : b.States.Min(f);
+        var hpReached = PlayMin(s => s.PlayHpReached);
+        var hpLosses = PlayMin(s => s.PlayHpLosses);
+        var hpLost = PlayMin(s => s.PlayHpLost);
         AutoPostPlay(b);
         EndOfTurn(b);
         b.Do(EnemyTurn);
@@ -330,6 +343,9 @@ public static class SimEngine
             PlayBreaksBlockInEveryBranch = breaksBlock,
             PlayBlockGainsMax = gains.Count > 0 ? gains.Max() : 0,
             PlayBiggestHitMin = biggestHitMin,
+            PlayHpReachedMin = hpReached,
+            PlayHpLossesMin = hpLosses,
+            PlayHpLostMin = hpLost,
         };
         if (b.Truncated)
         {
@@ -376,6 +392,7 @@ public static class SimEngine
                 {
                     same.Weight += r.Weight;
                     same.PlayBiggestHit = Math.Min(same.PlayBiggestHit, r.PlayBiggestHit); // not in the key: the guarantee is the smallest
+                    same.MergePlayHp(r);
                     same.OutOfBranches |= r.OutOfBranches;
                     continue;
                 }
@@ -422,7 +439,7 @@ public static class SimEngine
                 {
                     // An identical branch: one state, with both shares of the rolls.
                     var key = r.Key();
-                    if (seen.TryGetValue(key, out var same)) { same.Weight += r.Weight; same.PlayBiggestHit = Math.Min(same.PlayBiggestHit, r.PlayBiggestHit); }
+                    if (seen.TryGetValue(key, out var same)) { same.Weight += r.Weight; same.PlayBiggestHit = Math.Min(same.PlayBiggestHit, r.PlayBiggestHit); same.MergePlayHp(r); }
                     else
                     {
                         seen[key] = r;
@@ -731,6 +748,16 @@ public static class SimEngine
         return amount;
     }
 
+    /// <summary>Counts HP loss of yours for the play's HP-loss tabs (SimState.PlayHpReached...): <paramref name="reaching"/> got
+    /// past your block to the HP-loss modifiers, <paramref name="lost"/> is what you lost after them.</summary>
+    private static void PlayHp(SimState s, int reaching, int lost)
+    {
+        if (reaching > 0) s.PlayHpReached++;
+        if (lost <= 0) return;
+        s.PlayHpLosses++;
+        s.PlayHpLost += lost;
+    }
+
     /// <param name="yourTurn">Your side's turn (Inferno reacts only then); false for damage during the enemy turn.</param>
     private static void LandBlockable(SimState s, string name, int amount, int who = -1, bool yourTurn = true)
     {
@@ -753,6 +780,7 @@ public static class SimEngine
         var left = s.P.RemnantLeftPlayerTurn;
         var lost = HpLoss(s, amount - blocked, ref left);
         YouLose(s, lost);
+        PlayHp(s, amount - blocked, lost);
         s.P.RemnantLeftPlayerTurn = left;
         if (yourTurn) Inferno(s, lost);
     }
@@ -850,6 +878,7 @@ public static class SimEngine
         var left = s.P.RemnantLeftPlayerTurn;
         var lost = HpLoss(s, amount, ref left);
         YouLose(s, lost);
+        PlayHp(s, amount, lost);
         s.P.RemnantLeftPlayerTurn = left;
         Inferno(s, lost);
     }
@@ -872,6 +901,10 @@ public static class SimEngine
 
     private static void ApplyPlay(BranchSet b, SimPlay p)
     {
+        // The card's own HP cost, before its hits.
+        if (p.HpCost > 0 && p.HpCostTimes > 0)
+            b.Do(s => { for (var i = 0; i < p.HpCostTimes; i++) LandUnblockable(s, p.Name, p.HpCost); });
+
         // The card's hits.
         int Hit(SimEnemy e) => p.HitDamage.TryGetValue(e.Id, out var d) ? d : 0;
         // The i-th hit (0-based) on an enemy: weaker from HitDamageLater's point on.

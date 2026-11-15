@@ -588,6 +588,8 @@ public static class SimAdapter
         // Covering Fire: block for every teammate on each shot you try (one per play of a Shoot card, arrow or not; none from an X shot at X 0).
         if (Fool.TriesShot(card) && me.Creature.Powers.FirstOrDefault(x => x is CoveringFirePower) is { Amount: > 0 } coveringFire)
             play.TeammateBlock = (coveringFire.Amount, plays);
+        // Its own HP cost (HpLossVar "HpLoss": CreatureCmd.Damage on you, Unblockable | Unpowered), each play, before its hits.
+        if (f.LosesHp) { play.HpCost = Sts2State.Var(card, "HpLoss"); play.HpCostTimes = plays; }
         play.Draws = f.Draws;
         play.BlockToAlly = BlockToAllyCards.Contains(name);
         play.ChannelToAlly = ChannelToAllyCards.Contains(name);
