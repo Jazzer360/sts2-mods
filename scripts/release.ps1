@@ -12,7 +12,7 @@
     1. Reads the version from <ModId>.json and checks <ModId>.csproj matches.
     2. Skips it if release "<modid>-v<version>" already exists.
     3. Takes the release notes from the "### <Mod Name> <version>" section of CHANGELOG.md.
-    4. Builds Release (without installing to the game) and zips dist/<ModId>-<version>.zip,
+    4. Runs the mod's tests (tests/<ModId>.*), then builds Release (without installing to the game) and zips dist/<ModId>-<version>.zip,
        holding a <ModId>/ folder with the dll, pdb and manifest.
     5. Creates the GitHub release with the zip attached (tag on the current main commit).
 
@@ -81,6 +81,14 @@ foreach ($m in $mods) {
     $match = [regex]::Match($changelog, $pattern)
     if (-not $match.Success) { Fail "CHANGELOG.md has no '### $name $version' section." }
     $notes = $match.Groups[1].Value.Trim()
+
+    # The mod's tests first (tests/<ModId>.*.Tests): the simulator's, and the checks that need the game's
+    # assemblies (the settings catalog), which can't run on GitHub. A failing test stops the release.
+    foreach ($t in Get-ChildItem tests -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "$id.*" }) {
+        Write-Host "Testing $($t.Name)..." -ForegroundColor Cyan
+        dotnet test $t.FullName -v quiet -nologo
+        if ($LASTEXITCODE -ne 0) { Fail "Tests failed in $($t.Name): fix them before releasing." }
+    }
 
     Write-Host "Building $name $version..." -ForegroundColor Cyan
     dotnet build (Join-Path $m.FullName "$id.csproj") -c Release -p:InstallToGame=false -v quiet -nologo

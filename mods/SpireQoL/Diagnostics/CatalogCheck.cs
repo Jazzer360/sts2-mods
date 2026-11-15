@@ -22,7 +22,11 @@ namespace SpireQoL.Diagnostics;
 /// </summary>
 internal static class CatalogCheck
 {
-    public static List<string> Problems()
+    /// <summary>
+    /// Every problem found. <paramref name="featureIds"/>: the features registered in game; by default the mod's feature classes
+    /// (what tests/SpireQoL.Catalog.Tests checks before every release, without the game running).
+    /// </summary>
+    public static List<string> Problems(IEnumerable<string>? featureIds = null)
     {
         var problems = new List<string>();
         var sources = SettingsCatalog.Sources;
@@ -71,11 +75,22 @@ internal static class CatalogCheck
         }
 
         // Features: each one registered has an on/off switch in the menu, and each switch a feature.
-        var registered = ModEntry.Features.States.Keys.ToHashSet();
+        var registered = (featureIds ?? FeatureIds()).ToHashSet();
         var switches = SettingsMenu.FeatureRows.Select(r => r.Id).ToHashSet();
         foreach (var n in registered.Except(switches).OrderBy(n => n)) problems.Add($"feature without a settings switch: {n}");
         foreach (var n in switches.Except(registered).OrderBy(n => n)) problems.Add($"settings switch without a feature: {n}");
         return problems;
+    }
+
+    /// <summary>The id of every feature class in the mod (Id is a constant on each: read from an instance made without its constructor).</summary>
+    public static IEnumerable<string> FeatureIds()
+    {
+        foreach (var t in typeof(CatalogCheck).Assembly.GetTypes())
+        {
+            if (t is not { IsAbstract: false, IsClass: true } || !typeof(Sts2Mods.Core.Features.IFeature).IsAssignableFrom(t)) continue;
+            var f = (Sts2Mods.Core.Features.IFeature)RuntimeHelpers.GetUninitializedObject(t);
+            yield return f.Id;
+        }
     }
 
     private static Dictionary<string, Type> GameModelTypes()

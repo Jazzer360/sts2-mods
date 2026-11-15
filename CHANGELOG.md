@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.46.2
+#### Changed
+- Rest Preview is one panel at the right edge of the screen instead of lines under the options, which covered the option names and the game's descriptions. Before the boss with Pantograph or Bath Robes it shows Boss fight HP: Rest 30 → 53 → 77/77 (with what the two heals waste past your max) against Don't rest 30 → 55/77. It's a movable widget.
+- The settings check now runs as a test before every release instead of reporting from players' games. In game it only logs.
+
 ### Spire QoL 0.46.1
 #### Fixed
 - Tender: a card that plays more than once hits for 1 less (and blocks 1 less) on each later play, since Tender takes 1 Strength and Dexterity after every play. Kills, lethal and Incoming Damage now count that.

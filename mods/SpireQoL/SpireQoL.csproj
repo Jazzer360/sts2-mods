@@ -4,6 +4,10 @@
     <!-- Must match "id" in SpireQoL.json: the game loads <id>.dll. -->
     <AssemblyName>SpireQoL</AssemblyName>
     <RootNamespace>SpireQoL</RootNamespace>
-    <Version>0.46.1</Version>
+    <Version>0.46.2</Version>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- The settings check runs as a test before every release (tests/SpireQoL.Catalog.Tests). -->
+    <InternalsVisibleTo Include="SpireQoL.Catalog.Tests" />
+  </ItemGroup>
 </Project>

@@ -510,7 +510,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         {
             _ = CoverageLedger.ByType;
             _ = CardCoverage.Issues;
-            _catalogProblems = CatalogCheck.Problems();
+            _catalogProblems = CatalogCheck.Problems(ModEntry.Features.States.Keys);
             CodeIndex.Prewarm(CoverageLedger.ModelTypes());
         });
         if (!_building.IsCompleted) return;
@@ -525,9 +525,8 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
             CoverageLedger.LogSummary(ModEntry.Log, Sts2Mods.Core.Diagnostics.ErrorReporter.Instance);
             foreach (var p in _catalogProblems ?? new List<string>())
             {
+                // Logged only: tests/SpireQoL.Catalog.Tests runs the same check before every release (decision #46).
                 ModEntry.Log.Warn($"[coverage] settings: {p}");
-                Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("coverage", $"Settings catalog: {p}", new[] { "coverage", "catalog", p },
-                    $"{p}. Every tab and tracker row needs a row in Menu/SettingsCatalog.cs, and every row something behind it.");
             }
         }
         // Tab kinds shown in play that the catalog doesn't describe (the menu lists them under "Other").

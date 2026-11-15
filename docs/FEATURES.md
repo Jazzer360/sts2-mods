@@ -485,7 +485,7 @@ Each relic has a switch per place it shows in the settings menu (Relics page, Ou
 
 ## Rest Preview
 
-**What you see:** at a rest site, under the **Rest** option, the HP resting leaves you with (`HP 45 → 68/80`) and, in orange, how much of the heal is wasted over your max HP (`(4 over)`). At the last rest site before the boss (the boss's map point is next), with **Pantograph** or an unused **Bath Robes** (the game marks them active there), a line with the relic's icon and the HP the boss fight will start with: under Rest if you rest (and how much of the rest heal doesn't carry into the fight, `(24 over)`), and under every other option if you don't (`Boss: 70/80`).
+**What you see:** at a rest site, one panel at the right edge of the screen, vertically centered, clear of the options, the description the game shows under a hovered option, and your character (a movable widget: drag it when the layout is unlocked). Normally: `Rest HP 30 → 53/77`, with how much of the heal is wasted over your max HP in orange (`(4 over)`). At the last rest site before the boss (the boss's map point is next), with **Pantograph** or an unused **Bath Robes** (the game marks them active there), the relic's icon and **Boss fight HP**: `Rest: 30 → 53 → 77/77 (1 over)` (the rest heal, then the relic's; "over" is what the two add up to past your max) and `Don't rest: 30 → 55/77`. Shown while Rest is on offer, or before the boss with one of those relics; nothing on the option buttons themselves.
 
 **Rules** (decompile v0.113.1): the heal is the game's own (`HealRestSiteOption.GetHealAmount`: 30% of max HP through `ModifyRestSiteHealAmount`: Regal Pillow +15, Night Terrors to full), and HP becomes the whole part of HP + heal, capped at max. After it, Stone Humidifier adds 5 max HP (and HP), Night Terrors takes 5 max HP. At the boss fight's start (`BeforeCombatStart`), Pantograph heals 25 and Bath Robes heals to full, once.
 
@@ -493,7 +493,7 @@ Each relic has a switch per place it shows in the settings menu (Relics page, Ou
 
 **Settings:** the `rest-preview` switch (General page).
 
-**Game UI touched:** a `SpireQoL_RestPreview` box added under each `NRestSiteButton` that has a line (`NRestSiteRoom.Instance`, `%ChoicesContainer`); the game's nodes aren't changed. **Patches:** `HealRestSiteOption.OnSelect` (observe-only prefix: the check records the preview you chose from).
+**Game UI touched:** nothing of the game's: the panel is our own widget (id `rest-preview`); read: `NRestSiteRoom.Instance` and its `%ChoicesContainer` (is Rest on offer). **Patches:** `HealRestSiteOption.OnSelect` (observe-only prefix: the check records the preview you chose from).
 
 ---
 

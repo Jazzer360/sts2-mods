@@ -222,3 +222,8 @@ Free Card (Tune), Free Attack (Unrelenting) and Free Skill (Pounce) get a tab on
 A new feature: under Rest, the HP you'll have and the heal wasted over max; at the last rest site before the boss with Pantograph or an unused Bath Robes, the HP the boss fight starts with under every option (rested or not), and how much of the rest heal doesn't carry into it. From the game's own heal amount and the relics' own "active before the boss" status; checked after resting and at the boss fight's start.
 *Why:* the owner asked for an overview of what resting does, and a reminder of Pantograph when it makes resting partly wasted.
 *Replaced:* nothing (the game's rest text shows the heal amount only).
+
+### 46. The settings check is a test before every release, not a report from players' games — active (2026-11-15)
+`Diagnostics/CatalogCheck.cs` (every rule, tracker row, double-play source, reminder rule and feature has its settings row, and every row something behind it) runs as `tests/SpireQoL.Catalog.Tests`, which `scripts/release.ps1` runs (with the simulator tests) before building a release: a failure stops the release. It reads the feature list from the mod's own classes. It needs the game's assemblies, so it runs on the machine that releases, not on GitHub. In game the check still runs and logs, but no longer sends reports.
+*Why:* its problems are the mod's own, fixed before release or never: as player reports they arrived only after a release went out (Potion Tabs' switch in 0.41.0, the HP-loss rules in 0.45.0), and a player's game was the wrong place to find them.
+*Replaced:* the coverage check's "Settings catalog" mismatch reports.

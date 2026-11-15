@@ -25,15 +25,16 @@ namespace SpireQoL.Features;
 ///    AfterRestSiteHeal: Stone Humidifier +5 max HP (and HP), Night Terrors -5 max HP (HP capped).
 ///  - At the last rest site before the boss (the boss map point's parent: what Pantograph and Bath Robes mark Active), the
 ///    boss fight starts with Pantograph's heal (BeforeCombatStart: 25) and an unused Bath Robes' (to full).
-/// Under Rest: the HP you'll have, and how much of the heal is wasted (over your max, or, before the boss, not carried into
-/// the fight). With Pantograph or an unused Bath Robes: the HP you'll start the boss fight with, under every option.
+/// One panel at the right edge of the screen (a movable widget, not a line per option): resting's HP and the heal wasted over your max; with
+/// Pantograph or an unused Bath Robes, the boss fight's HP if you rest (rest heal, then the relic's: what's wasted) and if not.
 /// Checked: HP after resting, and HP when the boss fight starts.
 /// </summary>
 public sealed class RestPreviewFeature : IFeature, IFrameFeature
 {
-    private const string NodeName = "SpireQoL_RestPreview";
     private static readonly Color Over = new(1f, 0.55f, 0.25f);
     private static readonly Color Plain = new(0.95f, 0.92f, 0.85f);
+    private static readonly Color Accent = new(1f, 0.55f, 0.1f);
+    private static readonly Color Muted = new(0.68f, 0.66f, 0.62f);
 
     private readonly QolContext _ctx;
 
@@ -65,8 +66,13 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         }
     }
 
+    private MovableWidget? _widget;
+
     public void Attach(OverlayHost host)
     {
+        // The right edge, vertically centered: clear of the options, the description the game shows under a hovered option,
+        // and your character (bottom left). Movable like every panel.
+        _widget = _ctx.Widget(Id, "Rest Preview", new WidgetLayout { Anchor = ScreenAnchor.Right, OffsetX = -40, OffsetY = 0 });
     }
 
     /// <summary>What resting now leaves you with, and the boss fight's start with or without resting.</summary>
@@ -122,72 +128,82 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
+        var w = _widget!;
         var room = NRestSiteRoom.Instance;
         var me = RunMe();
         Check(me);
-        if (room == null || !GodotObject.IsInstanceValid(room) || me == null) return;
-        var preview = host.HideAll ? null : Compute(me);
-        var choices = room.GetNodeOrNull<Control>("%ChoicesContainer");
-        if (choices == null) return;
-        var key = preview == null ? "" : $"{preview}|{string.Join(",", preview.BossRelics.Select(r => r.GetType().Name))}";
+        var preview = room != null && GodotObject.IsInstanceValid(room) && room.IsVisibleInTree() && me != null ? Compute(me) : null;
+        // Rest is on offer (not used yet, not disabled): its lines show; otherwise only what you'll have anyway.
+        var canRest = preview != null && RestOption(room!) is { IsEnabled: true };
+        var show = preview != null && (canRest || preview.BossRelics.Count > 0);
+        w.HasContent = show;
+        if (!show)
+        {
+            _shownKey = "";
+            return;
+        }
+        var key = $"{preview}|{canRest}|{string.Join(",", preview!.BossRelics.Select(r => r.GetType().Name))}";
+        if (key == _shownKey) return;
+        _shownKey = key;
+        foreach (var child in w.Content.GetChildren()) child.QueueFree();
+        Fill(w.Content, preview, canRest);
+    }
+
+    private string _shownKey = "";
+
+    /// <summary>The Rest option on offer, if any (HealRestSiteOption).</summary>
+    private static RestSiteOption? RestOption(NRestSiteRoom room)
+    {
+        if (room.GetNodeOrNull<Control>("%ChoicesContainer") is not { } choices) return null;
         foreach (var button in choices.GetChildren().OfType<NRestSiteButton>())
         {
             if (!GodotObject.IsInstanceValid(button)) continue;
-            RestSiteOption? option;
-            try { option = button.Option; } catch { continue; }
-            var box = button.GetNodeOrNull<Control>(NodeName);
-            var heal = option is HealRestSiteOption;
-            var wanted = preview != null && (heal || preview.BossRelics.Count > 0) && option.IsEnabled;
-            if (!wanted)
-            {
-                box?.QueueFree();
-                continue;
-            }
-            var boxKey = key + "|" + heal;
-            if (box == null || (string)box.GetMeta("key", "") != boxKey)
-            {
-                box?.QueueFree();
-                box = Build(preview!, heal);
-                box.SetMeta("key", boxKey);
-                button.AddChild(box);
-            }
-            box.Position = new Vector2((button.Size.X - box.Size.X) / 2f, button.Size.Y + 4);
+            try { if (button.Option is HealRestSiteOption heal) return heal; } catch { }
         }
+        return null;
     }
 
-    private static Control Build(Preview p, bool rest)
+    /// <summary>
+    /// One panel for the whole rest site (not a line per option): resting's HP and what's wasted; before the boss, the boss
+    /// fight's HP if you rest (rest heal, then the relic's) and if you don't.
+    /// </summary>
+    private static void Fill(VBoxContainer content, Preview p, bool canRest)
     {
-        var col = new VBoxContainer { Name = NodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
-        col.AddThemeConstantOverride("separation", 2);
-        if (rest)
+        if (p.BossRelics.Count == 0)
         {
             var line = Row();
+            line.AddChild(Text("Rest", Accent));
             line.AddChild(Text($"HP {p.Hp} → {p.RestedHp}/{p.RestedMax}", Plain));
-            if (p.BossRelics.Count == 0 && p.Over > 0) line.AddChild(Text($"({p.Over} over)", Over));
-            col.AddChild(line);
+            if (p.Over > 0) line.AddChild(Text($"({p.Over} over)", Over));
+            content.AddChild(line);
+            return;
         }
-        if (p.BossRelics.Count > 0)
+        var head = Row();
+        foreach (var r in p.BossRelics)
         {
-            var line = Row();
-            foreach (var r in p.BossRelics)
-            {
-                var icon = UiKit.Icon(GameIcons.Relic(r), 26);
-                icon.MouseFilter = Control.MouseFilterEnum.Ignore;
-                line.AddChild(icon);
-            }
-            var boss = rest ? p.BossIfRested : p.BossIfNot;
-            var top = rest ? p.RestedMax : p.MaxHp;
-            line.AddChild(Text($"Boss: {boss}/{top}", Plain));
-            if (rest && p.BossOver > 0) line.AddChild(Text($"({p.BossOver} over)", Over));
-            col.AddChild(line);
+            var icon = UiKit.Icon(GameIcons.Relic(r), 30);
+            icon.MouseFilter = Control.MouseFilterEnum.Ignore;
+            head.AddChild(icon);
         }
-        col.ResetSize();
-        return col;
+        head.AddChild(Text("Boss fight HP", Accent));
+        content.AddChild(head);
+        if (canRest)
+        {
+            var rest = Row();
+            rest.AddChild(Text("Rest:", Muted));
+            rest.AddChild(Text($"{p.Hp} → {p.RestedHp} → {p.BossIfRested}/{p.RestedMax}", Plain));
+            if (p.BossOver > 0) rest.AddChild(Text($"({p.BossOver} over)", Over));
+            content.AddChild(rest);
+        }
+        var skip = Row();
+        skip.AddChild(Text(canRest ? "Don't rest:" : "Boss:", Muted));
+        skip.AddChild(Text($"{p.Hp} → {p.BossIfNot}/{p.MaxHp}", Plain));
+        content.AddChild(skip);
     }
 
     private static HBoxContainer Row()
     {
-        var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+        var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         row.AddThemeConstantOverride("separation", 6);
         return row;
     }
@@ -196,8 +212,6 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     {
         var l = UiKit.Label(text, 20, color);
         l.MouseFilter = Control.MouseFilterEnum.Ignore;
-        l.AddThemeConstantOverride("outline_size", 6);
-        l.AddThemeColorOverride("font_outline_color", Colors.Black);
         return l;
     }
 

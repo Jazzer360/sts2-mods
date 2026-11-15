@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Checks of the mod that need the game's assemblies (read from your install, like the mods), so they run
+       only where the game is installed, not on GitHub: `dotnet test tests/SpireQoL.Catalog.Tests`.
+       scripts/release.ps1 runs them before every Spire QoL release. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Built without installing to the game (so it works while the game is running). -->
+    <ProjectReference Include="..\..\mods\SpireQoL\SpireQoL.csproj" AdditionalProperties="InstallToGame=false" />
+    <!-- The game's assemblies, copied next to the tests so they load (never committed: bin/ is ignored). -->
+    <Reference Include="sts2" HintPath="$(Sts2DataDir)\sts2.dll" Private="true" />
+    <Reference Include="GodotSharp" HintPath="$(Sts2DataDir)\GodotSharp.dll" Private="true" />
+    <Reference Include="0Harmony" HintPath="$(Sts2DataDir)\0Harmony.dll" Private="true" />
+    <Reference Include="Sentry" HintPath="$(Sts2DataDir)\Sentry.dll" Private="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>
