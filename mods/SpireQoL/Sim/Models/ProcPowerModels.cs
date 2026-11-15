@@ -668,3 +668,18 @@ public sealed class PersonalHivePower : ProcModel
         if (e.Target == owner && e.Dealer is { } d && Who.IsPlayer(d) && e.Props.IsPoweredAttack()) s.LogFired(Name, 0, owner);
     }
 }
+
+/// <summary>
+/// NecroMasteryPower.AfterCurrentHpChanged: when its owner's Osty loses HP (a hit for them, Thorns on his attack, his death), every
+/// hittable enemy takes that much times its amount (unblockable, unpowered).
+/// </summary>
+public sealed class NecroMasteryPower : ProcModel
+{
+    public override string Name => "NecroMasteryPower";
+    public override TabKind? Tab => TabKind.Damage;
+    public override void AfterOstyHpLost(SimState s, int owner, int player, int lost)
+    {
+        if (player != owner || lost <= 0) return;
+        SimEngine.ProcDamageAll(s, owner, Name, lost * Amount(s, owner), SimProps.Unblockable | Unpowered);
+    }
+}

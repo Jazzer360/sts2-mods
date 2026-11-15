@@ -73,30 +73,17 @@ public static partial class SimAdapter
 
         // ---- summary fields (not actions yet)
         play.ByOsty = f.ByOsty;
-        play.KillsOsty = KillsOstyCards.Contains(name);
-        // Necro Mastery: Osty losing HP (here: all of it, killed by the card) hits every enemy for that much times its amount.
-        if (play.KillsOsty && me.IsOstyAlive && me.Osty is { } dying && me.Creature.Powers.FirstOrDefault(x => x.GetType().Name == nameof(NecroMasteryPower)) is { Amount: > 0 } mastery)
-            play.AllEnemiesUnblockable = dying.CurrentHp * mastery.Amount;
-        // Capture Spirit: unblockable, unpowered damage to its target through the game's damage math.
-        if (TargetDamageCards.Contains(name) && targetId >= 0 && card.DynamicVars.TryGetValue("Damage", out var tdVar) && tdVar is DamageVar tdv
-            && ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } capt)
-        {
-            play.TargetId = targetId;
-            play.TargetDamage[targetId] = SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, cs, capt, me.Creature, tdv.BaseValue, tdv.Props,
-                card, null, ModifyDamageHookType.All, CardPreviewMode.None, out _)));
-        }
-        if (ExecuteCards.Contains(name) && targetId >= 0)
-        {
-            play.TargetId = targetId;
-            play.ExecuteAtOrBelow = Sts2State.Var(card, "Threshold");
-        }
-        // Bouncing Flask: poison on a random enemy, Repeat times (Snecko Skull adds to each).
+        // The rest of what each play does, after the card's own actions above: Capture Spirit's damage, Judgement, Bouncing Flask's
+        // poison on random enemies, Osty's death (Sacrifice, Bone Shards; Necro Mastery reacts).
+        var target2 = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
+        if (TargetDamageCards.Contains(name) && target2 != null && card.DynamicVars.TryGetValue("Damage", out var tdVar) && tdVar is DamageVar tdv)
+            play.Body.Add(new DamageAction(new DamageSpec(tdv.BaseValue, SimReaders.Props(tdv.Props))
+                { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(me.RunState, cs, card, me.Creature, target2, tdv.BaseValue, tdv.Props) } }));
+        if (ExecuteCards.Contains(name)) play.Body.Add(new ExecuteAction(Sts2State.Var(card, "Threshold")));
         if (card.TargetType == TargetType.RandomEnemy && card.DynamicVars.Values.FirstOrDefault(IsPowerVar<PoisonPower>) is { } flask)
-        {
-            var skull = me.Relics.Where(r => r is SneckoSkull).Sum(r => Sts2State.Var(r, nameof(PoisonPower), 1));
-            play.RandomPoison = (int)flask.BaseValue + skull;
-            play.RandomPoisonTimes = Math.Max(1, Sts2State.Var(card, "Repeat", 1)) * plays;
-        }
+            play.Body.Add(new ApplyPowerAction(nameof(PoisonPower), (int)flask.BaseValue)
+                { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 1)), Debuff = true });
+        if (KillsOstyCards.Contains(name)) play.Body.Add(new KillOstyAction());
         if (play.Poison > 0 && !play.PoisonAll) play.TargetId = targetId;
         return play;
     }

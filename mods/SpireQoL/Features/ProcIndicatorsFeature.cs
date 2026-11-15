@@ -358,9 +358,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             }
             LogTab(src, enemyId, outcomes, tabs);
         }
-        // Effects the simulator keeps as numbers (Juggernaut on every block gain, Thunder on Lightning evokes, Necro Mastery on
-        // Osty's death): logged under their power's name.
-        foreach (var src in _me.Creature.Powers.Where(x => x.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower) or nameof(NecroMasteryPower)))
+        // Effects the engine logs itself (Juggernaut on every block gain, Thunder on Lightning evokes): logged under their power's
+        // name.
+        foreach (var src in _me.Creature.Powers.Where(x => x.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
             LogTab(src, null, outcomes, tabs, TabKind.Damage);
 
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act
@@ -470,7 +470,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         if ((kindOverride ?? model?.Tab) is not { } kind) return;
         var harmful = model?.Harmful ?? false;
         var key = enemyId is { } id ? $"{name}@{id}" : name;
-        bool Fired(PowerSet log) => log.Has(key) && (_indirect || log[key] > log["~" + name]);
+        bool Fired(PowerSet log) => log.Has(key) && (_indirect || log[key] > log["~" + key]);
         var shown = harmful ? outcomes.Any(o => Fired(o.PlayFiredAny)) : outcomes.Any(o => Fired(o.PlayFiredEvery));
         if (!shown) return;
         var amount = harmful

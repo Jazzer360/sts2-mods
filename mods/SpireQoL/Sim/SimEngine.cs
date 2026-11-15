@@ -962,6 +962,9 @@ public static partial class SimEngine
             case ShootAction: RunShoot(b); break;
             case ImpaleAction: RunImpale(b); break;
             case DislodgeAllAction: RunDislodgeAll(b); break;
+            case DamageAction da: RunDamage(b, da); break;
+            case ExecuteAction ex: RunExecute(b, ex); break;
+            case KillOstyAction: b.Do(s => OstyLoses(s, Who.You, s.P.OstyHp)); break;
             case CardPlayAction pc: RunCardPlay(b, pc); break;
             case AttackAction at: RunAttack(b, at); break;
             case GainBlockAction gb: RunBlock(b, gb); break;
@@ -1722,8 +1725,8 @@ public static partial class SimEngine
                 var tBlocked = Math.Min(t.Block, amount);
                 t.Block -= tBlocked;
                 var tThrough = amount - tBlocked;
-                var tOsty = Math.Min(tThrough, t.OstyHp);
-                t.OstyHp -= tOsty;
+                var tOsty = t.OstyShields ? OstyLoses(s, Who.Teammate(k), tThrough) : 0;
+                t = s.Teammates[k];
                 t.OstyTaken += tOsty;
                 t.Through += tThrough - tOsty;
                 TeammateHpLoss(s, k, tThrough - tOsty, tBlocked, e.Id, SimProps.Move);
@@ -1762,8 +1765,7 @@ public static partial class SimEngine
                 var blocked = Math.Min(s.P.Block, perHit);
                 s.P.Block -= blocked;
                 var through = perHit - blocked;
-                var toOsty = Math.Min(through, s.P.OstyHp);
-                s.P.OstyHp -= toOsty;
+                var toOsty = s.P.OstyShields ? OstyLoses(s, Who.You, through) : 0;
                 s.OstyTaken += toOsty;
                 s.DamageThrough += through - toOsty;
                 var lost = HpLoss(s, -1, through - toOsty, e.Id, SimProps.Move);

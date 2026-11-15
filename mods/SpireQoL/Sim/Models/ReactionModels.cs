@@ -22,7 +22,7 @@ public sealed class ThornsPower : SimModel
         s.LogFired(Name, hit, owner);
         if (dealer == Who.YourOsty)
         {
-            if (s.P.OstyHp > 0) s.P.OstyHp = Math.Max(0, s.P.OstyHp - hit);
+            SimEngine.OstyLoses(s, Who.You, hit);
         }
         else if (dealer == Who.You) SimEngine.LandOnYou(s, name, hit);
         else if (dealer <= -2) SimEngine.LandOnTeammate(s, name, hit, Who.TeammateIndex(dealer));

@@ -52,12 +52,14 @@ public sealed record GainBlockAction(int Times, decimal Base, SimProps Props) : 
 /// <summary>Applies a power (PowerCmd.Apply): to the play's target, every enemy, or one creature. Artifact takes a debuff.</summary>
 public sealed record ApplyPowerAction(string Power, int Amount) : SimAction
 {
-    public enum Where { Target, AllEnemies, You, Creature }
+    public enum Where { Target, AllEnemies, You, Creature, RandomEnemy }
     public Where To { get; init; } = Where.Target;
     public int Creature { get; init; }
     public bool Debuff { get; init; }
     /// <summary>The amount is what the applier has of that power when it lands (Cho Ki: PowerCmd.Apply of your Stretch amount).</summary>
     public bool CopiesOwn { get; init; }
+    /// <summary>Applications (RandomEnemy: each to a random hittable enemy, a branch per target: Bouncing Flask).</summary>
+    public int Times { get; init; } = 1;
 }
 
 /// <summary>HP the card costs you (CreatureCmd.Damage on you, Unblockable and Unpowered), through the HP-loss pipeline.</summary>
@@ -75,3 +77,15 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
     /// <summary>The card the event is about, when known (the played card exhausting itself: Burning Sticks reads its type).</summary>
     public SimCard? Card { get; init; }
 }
+
+/// <summary>
+/// Damage from a card that isn't an attack (CreatureCmd.Damage: Capture Spirit) to the play's target, through the damage pipeline
+/// with the card as its source. No BeforeAttack or AfterAttack: Curl Up, Flutter and the like don't react.
+/// </summary>
+public sealed record DamageAction(DamageSpec Damage) : SimAction;
+
+/// <summary>The play's target dies if it's alive at or below this HP (Judgement: CreatureCmd.SetCurrentHp to 0).</summary>
+public sealed record ExecuteAction(int Threshold) : SimAction;
+
+/// <summary>Your Osty dies (CreatureCmd.Kill: Sacrifice, Bone Shards), losing all his HP (Necro Mastery reacts).</summary>
+public sealed record KillOstyAction : SimAction;

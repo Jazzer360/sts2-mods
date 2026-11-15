@@ -456,7 +456,8 @@ public static partial class SimAdapter
         if (p.Orbs.Count > 0) p.Orbs[0].Triggers = Math.Max(1, p.Orbs[0].Triggers - p.FrontOrbBonusTriggers);
 
         var osty = me.Osty;
-        p.OstyHp = osty != null && osty.IsAlive && osty.HasPower<DieForYouPower>() ? osty.CurrentHp : 0;
+        p.OstyHp = osty != null && osty.IsAlive ? osty.CurrentHp : 0;
+        p.OstyShields = osty != null && osty.HasPower<DieForYouPower>();
         p.WuppyHp = SafeInt(() => me.Creature.Pets.Where(c => c.IsAlive && c.Powers.Any(x => x.GetType().Name == "WuppysLoyaltyPower")).Sum(c => c.CurrentHp));
     }
 

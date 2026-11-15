@@ -317,6 +317,8 @@ public sealed class SimPlayer
     }
     [JsonIgnore] public int Buffer { get => Powers["BufferPower"]; set => Set("BufferPower", value); }
     public int OstyHp;
+    /// <summary>Osty takes the hits aimed at his owner first (DieForYouPower).</summary>
+    public bool OstyShields = true;
     /// <summary>
     /// Your pet Wuppy's HP (Wuppy relic, v0.113.0): while it lives, every powered attack aimed at you hits it instead,
     /// whole, before your block (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). 0: none.
@@ -642,9 +644,10 @@ public sealed class SimState
         Log1(source, amount);
         if (owner is >= 0) Log1($"{source}@{owner}", amount);
         if (IndirectNow) Log1("~" + source, amount);
+        if (IndirectNow && owner is >= 0) Log1($"~{source}@{owner}", amount);
     }
 
-    /// <summary>An indirect firing (from a card event) is also logged as "~Name".</summary>
+    /// <summary>An indirect firing (from a card event) is also logged as "~Name" (and "~Name@id" for an enemy's).</summary>
     private void Log1(string key, int amount)
     {
         Fired = Fired.With(key, Fired[key] + 1, Fired.DataOf(key) + amount);

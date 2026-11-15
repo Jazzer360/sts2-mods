@@ -173,6 +173,15 @@ public static partial class SimEngine
     /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>
     private static void RunApplyPower(BranchSet b, ApplyPowerAction ap)
     {
+        IEnumerable<SimState> Apply(SimState x, int applier, int t) =>
+            ApplyPower(x, applier, t, ap.Power, ap.CopiesOwn ? PowerOn(x, applier, ap.Power) : ap.Amount, ap.Debuff)
+                ? Hook(x, (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t, ap.Debuff)) : new[] { x };
+        if (ap.To == ApplyPowerAction.Where.RandomEnemy)
+        {
+            // Each application to a random hittable enemy: a branch per target, one step each (the branch budget holds).
+            for (var i = 0; i < ap.Times; i++) b.Each(s => RandomTarget(s, (x, id) => Apply(x, s.CurrentPlay?.Owner ?? Who.You, id)));
+            return;
+        }
         b.Each(s =>
         {
             var applier = s.CurrentPlay?.Owner ?? Who.You;
@@ -187,8 +196,7 @@ public static partial class SimEngine
             foreach (var target in targets)
             {
                 var t = target;
-                r = Then(r, x => ApplyPower(x, applier, t, ap.Power, ap.CopiesOwn ? PowerOn(x, applier, ap.Power) : ap.Amount, ap.Debuff)
-                    ? Hook(x, (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t, ap.Debuff)) : new[] { x });
+                r = Then(r, x => Apply(x, applier, t));
             }
             return r;
         });
