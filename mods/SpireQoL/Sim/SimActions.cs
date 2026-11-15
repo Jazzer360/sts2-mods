@@ -56,6 +56,8 @@ public sealed record ApplyPowerAction(string Power, int Amount) : SimAction
     public Where To { get; init; } = Where.Target;
     public int Creature { get; init; }
     public bool Debuff { get; init; }
+    /// <summary>The amount is what the applier has of that power when it lands (Cho Ki: PowerCmd.Apply of your Stretch amount).</summary>
+    public bool CopiesOwn { get; init; }
 }
 
 /// <summary>HP the card costs you (CreatureCmd.Damage on you, Unblockable and Unpowered), through the HP-loss pipeline.</summary>

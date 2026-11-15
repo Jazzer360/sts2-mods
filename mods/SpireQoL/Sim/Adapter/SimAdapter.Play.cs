@@ -283,6 +283,11 @@ public static partial class SimAdapter
             {
                 actions.Add(new ApplyPowerAction(n, AmountOf(t)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
             }
+            else if (n == "StretchPower" && KeepsStretchCards.Contains(name))
+            {
+                // Cho Ki: your Stretch again, as much as you have (so the play keeps it).
+                actions.Add(new ApplyPowerAction(n, 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });
+            }
             else
             {
                 actions.Add(new ApplyPowerAction(n, AmountOf(t)) { To = ApplyPowerAction.Where.You });

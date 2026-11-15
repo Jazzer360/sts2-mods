@@ -383,9 +383,6 @@ public static partial class SimAdapter
         {
             switch (pw.GetType().Name)
             {
-                case nameof(JuggernautPower): p.Juggernaut += pw.Amount; break;
-                case nameof(PlatingPower): p.Plating += pw.Amount; break;
-                case nameof(FeelNoPainPower): p.FeelNoPain += pw.Amount; break;
                 case nameof(HailstormPower):
                     p.Hailstorm += pw.Amount;
                     p.HailstormFrostNeeded = Sts2State.Var(pw, "FrostOrbs", 1);
@@ -394,7 +391,6 @@ public static partial class SimAdapter
                     if (pw.Amount <= 1) p.TheBombDamage += Sts2State.Var(pw, "Damage");
                     break;
                 case nameof(ConsumingShadowPower): p.ConsumingShadow += pw.Amount; break;
-                case nameof(FlameBarrierPower): p.FlameBarrier += pw.Amount; break;
                 case nameof(ReflectPower): p.Reflect = true; break;
                 // Insatiable Dominion (Dread): 2 + your turn number to you at AfterSideTurnEndLate (its Damage var, unpowered, blockable).
                 case nameof(InsatiableDominionPower): p.DebuffLateBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), Sts2State.Var(pw, "Damage"))); break;

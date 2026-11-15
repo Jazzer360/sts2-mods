@@ -242,6 +242,8 @@ public sealed class SimOutcome
     public int PlayHpReachedMin, PlayHpLossesMin, PlayHpLostMin;
     /// <summary>What fired during the play (its log): the counts in every branch (smallest), and in some branch (largest).</summary>
     public PowerSet PlayFiredEvery = PowerSet.Empty, PlayFiredAny = PowerSet.Empty;
+    /// <summary>The first hit of the card's attack on each enemy (name: the enemy id), the same in every branch; empty when it isn't.</summary>
+    public PowerSet PlayFirstHits = PowerSet.Empty;
 
     /// <summary>The enemy is dead before it acts in every branch.</summary>
     public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true });
@@ -335,6 +337,7 @@ public static partial class SimEngine
                 s.PlayBiggestHit = 0;
                 s.PlayHpReached = s.PlayHpLosses = s.PlayHpLost = 0;
                 s.Fired = s.FiredAny = PowerSet.Empty;
+                s.FirstHits = PowerSet.Empty;
             });
         }
         if (play != null) RunScript(b, play);
@@ -357,6 +360,8 @@ public static partial class SimEngine
         var firedEvery = b.Truncated || b.States.Count == 0 ? PowerSet.Empty
             : b.States.Skip(1).Aggregate(b.States[0].Fired, (acc, x) => SimState.MergeLog(acc, x.Fired, every: true));
         var firedAny = b.States.Aggregate(PowerSet.Empty, (acc, x) => SimState.MergeLog(acc, x.FiredAny, every: false));
+        // The first hit of the card's attack on each enemy, when nothing random came before it (the damage-formula audit).
+        var firstHits = b.States.Count > 0 && b.States.All(x => ReferenceEquals(x.FirstHits, b.States[0].FirstHits) || x.FirstHits.Items.AsSpan().SequenceEqual(b.States[0].FirstHits.Items)) ? b.States[0].FirstHits : PowerSet.Empty;
         AutoPostPlay(b);
         EndOfTurn(b);
         b.Do(EnemyTurn);
@@ -378,6 +383,7 @@ public static partial class SimEngine
             PlayHpLostMin = hpLost,
             PlayFiredEvery = firedEvery,
             PlayFiredAny = firedAny,
+            PlayFirstHits = firstHits,
         };
         if (b.Truncated)
         {

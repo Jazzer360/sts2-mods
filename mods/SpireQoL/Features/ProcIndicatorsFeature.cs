@@ -345,6 +345,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var outcomes = task.Result;
         var baseline = te.Outcome;
         if (outcomes.Any(o => o.Truncated || o.Branches.Count > 1)) f.RandomOutcome = true;
+        if (!_noCache) Diagnostics.DamageFormulaAudit.Check(f.Card, f, te.Ids, outcomes);
 
         // ---- the play log: each source whose model fired during the play
         foreach (var src in sources)

@@ -112,6 +112,7 @@ public static partial class SimEngine
         var mods = spec.Fixed ? null : new List<(SimModel Model, int Owner)>();
         var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target)) : CalcDamage(s, spec.BaseFor(target), ctx, spec.TermsFor(target), mods);
         if (mods != null) foreach (var (m, o) in mods) m.AfterModifyingDamageAmount(s, o, card);
+        if (card != null && !at.ByOsty && !s.FirstHits.Has(target.ToString())) s.FirstHits = s.FirstHits.With(target.ToString(), amount);
         if (amount <= 0) return new[] { s };
         if (s.Enemy(target) is { Alive: true } e) Damage(s, e, amount, dealer, spec.Props, card);
         // Rain Shot: the target's damage to every other hittable enemy (only caps apply).
@@ -144,7 +145,7 @@ public static partial class SimEngine
 
     /// <summary>
     /// PowerCmd.Apply: the amount through ModifyPowerAmountGiven (Snecko Skull...), then Artifact takes a debuff (a charge
-    /// each), else the power goes on. Poison and the powers the simulator keeps as numbers go there.
+    /// each), else the power goes on (poison into the enemy's poison).
     /// </summary>
     internal static bool ApplyPower(SimState s, int applier, int target, string power, int amount, bool debuff)
     {
@@ -161,17 +162,6 @@ public static partial class SimEngine
         {
             s.Enemy(target)?.AddPoison(amount);
             return true;
-        }
-        if (target == Who.You)
-        {
-            switch (power)
-            {
-                case "PlatingPower": s.P.Plating += amount; return true;
-                case "JuggernautPower": s.P.Juggernaut += amount; return true;
-                case "FeelNoPainPower": s.P.FeelNoPain += amount; return true;
-                case "ThornsPower": s.P.Thorns += amount; return true;
-                case "FlameBarrierPower": s.P.FlameBarrier += amount; return true;
-            }
         }
         var had = powers.Has(power);
         SetPowers(s, target, powers.Add(power, amount));
@@ -196,7 +186,7 @@ public static partial class SimEngine
             foreach (var target in targets)
             {
                 var t = target;
-                r = Then(r, x => ApplyPower(x, applier, t, ap.Power, ap.Amount, ap.Debuff)
+                r = Then(r, x => ApplyPower(x, applier, t, ap.Power, ap.CopiesOwn ? PowerOn(x, applier, ap.Power) : ap.Amount, ap.Debuff)
                     ? Hook(x, (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t, ap.Debuff)) : new[] { x });
             }
             return r;

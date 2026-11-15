@@ -209,15 +209,15 @@ public sealed class SimPlayer
     public PowerSet Turn = PowerSet.Empty;
 
     // Powers that react or act at end of turn.
-    public int Juggernaut;
-    public int Plating;
-    public int FeelNoPain;
+    [JsonIgnore] public int Juggernaut { get => Powers["JuggernautPower"]; set => Set("JuggernautPower", value); }
+    [JsonIgnore] public int Plating { get => Powers["PlatingPower"]; set => Set("PlatingPower", value); }
+    [JsonIgnore] public int FeelNoPain { get => Powers["FeelNoPainPower"]; set => Set("FeelNoPainPower", value); }
     public int Hailstorm;
     public int HailstormFrostNeeded = 1;
     public int TheBombDamage; // fires this turn end (last tick), else 0
     public int ConsumingShadow;
     [JsonIgnore] public int Thorns { get => Powers["ThornsPower"]; set => Set("ThornsPower", value); }
-    public int FlameBarrier;
+    [JsonIgnore] public int FlameBarrier { get => Powers["FlameBarrierPower"]; set => Set("FlameBarrierPower", value); }
     public bool Reflect;
     /// <summary>
     /// Inferno: each time you lose HP on your turn, this much damage to every enemy (InfernoPower.AfterDamageReceived:
@@ -554,6 +554,8 @@ public sealed class SimState
     /// "Name@owner" → amount; taken at AfterCardPlayed. A power the play itself applies isn't bound, so it doesn't fire on it.
     /// </summary>
     internal PowerSet Bound = PowerSet.Empty;
+    /// <summary>The first hit of a card's attack on each enemy (enemy id → damage), for the damage-formula audit.</summary>
+    internal PowerSet FirstHits = PowerSet.Empty;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
     internal SimCard? EventCard;
     /// <summary>Card events during the current card play, by CardEvent name (Unceasing Top: nothing drawn or created).</summary>

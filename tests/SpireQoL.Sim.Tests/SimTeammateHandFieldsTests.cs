@@ -29,9 +29,9 @@ public class SimTeammateHandFieldsTests
     /// <summary>On screen (their powers, relics, orbs, block, HP, hand size, cards they played) or the simulation's own bookkeeping.</summary>
     private static readonly HashSet<string> Known = new()
     {
-        nameof(SimPlayer.Block), nameof(SimPlayer.Juggernaut), nameof(SimPlayer.Plating), nameof(SimPlayer.FeelNoPain),
+        nameof(SimPlayer.Block),
         nameof(SimPlayer.Hailstorm), nameof(SimPlayer.HailstormFrostNeeded), nameof(SimPlayer.TheBombDamage),
-        nameof(SimPlayer.ConsumingShadow), nameof(SimPlayer.FlameBarrier), nameof(SimPlayer.Reflect),
+        nameof(SimPlayer.ConsumingShadow), nameof(SimPlayer.Reflect),
        
         nameof(SimPlayer.OrichalcumBlock), nameof(SimPlayer.OrichalcumArmed), nameof(SimPlayer.CloakClaspPerCard),
         nameof(SimPlayer.RippleBasinBlock), nameof(SimPlayer.ScreamingFlagonDamage), nameof(SimPlayer.StoneCalendarDamage),

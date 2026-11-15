@@ -164,23 +164,6 @@ internal static class Fool
     /// </summary>
     internal static readonly Dictionary<string, bool> BlockWithoutVar = new() { ["Fisticuffs"] = true, ["Entrench"] = false };
 
-    /// <summary>
-    /// Playing this spends your Stretch (StretchPower: a card that GainsBlock, or whose enchantment does, starts the play;
-    /// its powered block gets the bonus, and AfterCardPlayed takes away what you had). Adroit's block is powered, so an
-    /// Adroit card always spends it (v0.113.1). Cho Ki puts back what it had (SimAdapter.KeepsStretchCards): nothing is
-    /// lost. A replay's later plays gain without it.
-    /// </summary>
-    public static bool SpendsStretch(CardModel card, int blockGains)
-    {
-        var name = card.GetType().Name;
-        if (SpireQoL.Sim.SimAdapter.KeepsStretchCards.Contains(name)) return false;
-        if (EnchantmentGainsBlock(card)) return true;
-        if (blockGains <= 0 || !Sts2State.Private(card, "GainsBlock", false)) return false;
-        if (BlockProps(card) is { } props)
-            return props.HasFlag(MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) && !props.HasFlag(MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered);
-        return BlockWithoutVar.TryGetValue(name, out var powered) && powered;
-    }
-
     /// <summary>The props of the card's block value (a BlockVar, or a CalculatedBlockVar: Stack, Mimic), or null without one.</summary>
     public static MegaCrit.Sts2.Core.ValueProps.ValueProp? BlockProps(CardModel card)
     {

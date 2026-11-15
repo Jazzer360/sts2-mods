@@ -141,11 +141,11 @@ public class SimReactionTests
 [Fact]
     public void FullKeyChangesWithAnythingTheBranchKeyLeavesOut()
     {
-        // Card simulations are cached by FullKey: a change in Plating (or relic values, hand cards...)
-        // must invalidate them, though branches never differ in it (the branch key leaves it out).
+        // Card simulations are cached by FullKey: a change in relic values (or hand cards...) must invalidate them,
+        // though branches never differ in them (the branch key leaves them out).
         var a = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
         var b = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
-        b.P.Plating = 4;
+        b.P.CloakClaspPerCard = 4;
         Assert.Equal(a.Key(), b.Key());
         Assert.NotEqual(a.FullKey(), b.FullKey());
         // Intents are in both (Crab Rage can change them in one branch).

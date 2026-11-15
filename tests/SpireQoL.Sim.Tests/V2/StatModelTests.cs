@@ -139,3 +139,39 @@ public class StatModelTests
         Assert.Equal(9, o.TakenMax); // 12 × 0.75
     }
 }
+
+/// <summary>The first hit of a card's attack on each enemy (the damage-formula audit compares it with the game's preview).</summary>
+public class FirstHitTests
+{
+    [Fact]
+    public void FirstHitIsRecordedPerEnemyAndOnlyWhenEveryBranchAgrees()
+    {
+        var s = new SimState { Enemies = { V2Script.Enemy(0, 100), V2Script.Enemy(1, 100) } };
+        s.P.Powers = s.P.Powers.With("StrengthPower", 2);
+        var all = SimEngine.Run(s, V2Script.Play(V2Script.Card("Cleave"), -1, 1, V2Script.Attack(8, hits: 2, mode: SimPlay.Target.All)));
+        Assert.Equal(10, all.PlayFirstHits["0"]);
+        Assert.Equal(10, all.PlayFirstHits["1"]);
+        // Random targets: the branches disagree on who was hit first, so nothing is recorded.
+        var random = SimEngine.Run(s, V2Script.Play(V2Script.Card("SwordBoomerang"), -1, 1, V2Script.Attack(3, hits: 1, mode: SimPlay.Target.Random)));
+        Assert.Equal(0, random.PlayFirstHits.Count);
+    }
+}
+
+/// <summary>Cho Ki puts your Stretch back (ChoKi.OnPlay: PowerCmd.Apply of the Stretch you have), so playing it keeps it.</summary>
+public class ChoKiTests
+{
+    [Fact]
+    public void ChoKiKeepsYourStretch()
+    {
+        var s = new SimState { Enemies = { V2Script.Enemy(0, 100) } };
+        s.P.Powers = s.P.Powers.With("StretchPower", 3);
+        var choKi = new SimCard("ChoKi", SimCardType.Skill) { GainsBlock = true };
+        var after = Assert.Single(V2Script.After(s, V2Script.Play(choKi, -1, 1, V2Script.Block(5),
+            new ApplyPowerAction("StretchPower", 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true })));
+        Assert.Equal(8, after.P.Block);
+        Assert.Equal(3, after.P.Powers["StretchPower"]);
+        // Any other block card spends it.
+        var other = Assert.Single(V2Script.After(s, V2Script.Play(new SimCard("Defend", SimCardType.Skill) { GainsBlock = true }, -1, 1, V2Script.Block(5))));
+        Assert.False(other.P.Powers.Has("StretchPower"));
+    }
+}
