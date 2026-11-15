@@ -191,8 +191,8 @@ Built on `main` without intermediate releases; 1.0.0 ships when every step is do
 
 ## Progress
 - [x] 1. Interpreter core (power sets, models, hook dispatch in listener order, pipelines, play log, scripts)
-- [ ] 2. Effects as models
-- [ ] 3. Dynamic damage and block
+- [~] 2. Effects as models: damage (enemy reactions, HP-loss modifiers, players' HP loss, Inferno), deaths (Crab Rage, Ravenous), enemy intents (Enrage, Monarch's Gaze, Vital Spark). Left: end of turn (Plating, Orichalcum... Parrying Shield, Consuming Shadow, debuffs on you), Juggernaut, Beacon of Hope, Thunder and orbs, Explosive, Flame Barrier / Reflect / your Thorns in the enemy turn.
+- [x] 3. Dynamic damage and block: models for every source that changes during a turn; the adapter builds real plays (captured terms, per-target bases), intents are pipeline inputs. Known regression until step 5: Unsettling Lamp's doubling isn't applied.
 - [ ] 4. Card scripts
 - [ ] 5. Rules into models
 - [ ] 6. Audits
