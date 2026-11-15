@@ -235,9 +235,9 @@ public static class SettingsCatalog
         new(nameof(ArsenalPower), SourceGroup.YourPower, "Cards that create cards"),
         new(nameof(TrashToTreasurePower), SourceGroup.YourPower, "Cards that create statuses"),
         // Free card powers (Procs/FreeCards.cs): playing a card from your hand uses one up, whatever it costs.
-        new(nameof(FreeCardPower), SourceGroup.YourPower, "Your cards (Tune): the energy it saves, ? when Snecko Eye hides the cost. Crossed on 0-cost and X-cost cards (they use it up for nothing)", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
-        new(nameof(FreeAttackPower), SourceGroup.YourPower, "Your Attacks (Unrelenting): the energy it saves, ? when Snecko Eye hides the cost. Crossed on 0-cost and X-cost Attacks", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
-        new(nameof(FreeSkillPower), SourceGroup.YourPower, "Your Skills (Pounce): the energy it saves, ? when Snecko Eye hides the cost. Crossed on 0-cost and X-cost Skills", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
+        new(nameof(FreeCardPower), SourceGroup.YourPower, "Your cards (Tune): the energy it saves, ? when the cost changed this combat (Snecko Eye, Frantic Escape). Crossed on 0-cost and X-cost cards (they use it up for nothing)", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
+        new(nameof(FreeAttackPower), SourceGroup.YourPower, "Your Attacks (Unrelenting): the energy it saves, ? when the cost changed this combat (Snecko Eye, Frantic Escape). Crossed on 0-cost and X-cost Attacks", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
+        new(nameof(FreeSkillPower), SourceGroup.YourPower, "Your Skills (Pounce): the energy it saves, ? when the cost changed this combat (Snecko Eye, Frantic Escape). Crossed on 0-cost and X-cost Skills", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
         new(nameof(RupturePower), SourceGroup.YourPower, "Plays that make you lose HP (their cost, or enemy Thorns past your block): Strength"),
         new(nameof(InfernoPower), SourceGroup.YourPower, "Plays that make you lose HP (their cost, or enemy Thorns past your block): damage to all, each time"),
         new(nameof(NecroMasteryPower), SourceGroup.YourPower, "Cards that kill Osty: damage to all (Osty's HP times its amount)"),

@@ -13,8 +13,9 @@ namespace SpireQoL.Procs;
 ///  - Free Card (Tune: TunePower.AfterSideTurnEnd after a turn you played a Ki), any card;
 ///  - Free Attack (Unrelenting), Attacks; Free Skill (Pounce), Skills.
 /// So a card that already costs 0, or an X-cost card (its X is your energy, never 0 from these), wastes the charge.
-/// Under Snecko Eye (ConfusedPower.AfterCardDrawn: EnergyCost.SetThisCombat with a random 0–3), the free power shows
-/// the re-rolled cost as 0, so what it saves is hidden: the tab says "?" and is never crossed.
+/// A copy whose cost changed for the rest of the combat (Snecko Eye's re-roll: ConfusedPower.AfterCardDrawn, SetThisCombat to a
+/// random 0–3; Frantic Escape's +1 per play: AddThisCombat) shows 0 under the free power, so what it saves is hidden: the
+/// tab says "?" and is never crossed.
 /// </summary>
 internal static class FreeCards
 {
@@ -57,16 +58,17 @@ internal static class FreeCards
     }
 
     /// <summary>
-    /// Snecko Eye re-rolled this card's cost (Confused on you, and an absolute this-combat cost on the card), so with a free
-    /// power showing it as 0 you can't see it.
+    /// This copy's cost was changed for the rest of the combat (a this-combat cost on the card: Snecko Eye's re-roll,
+    /// ConfusedPower.AfterCardDrawn: SetThisCombat; Frantic Escape's +1 each time it's played, FranticEscape.OnPlay:
+    /// AddThisCombat). With a free power showing it as 0 you can't see it, and copies look alike, so what this one would
+    /// cost is hidden.
     /// </summary>
     public static bool CostHidden(CardModel card, Player me)
     {
-        if (!me.Creature.Powers.Any(p => p is ConfusedPower)) return false;
         var mods = Sts2State.Private<List<LocalCostModifier>?>(card.EnergyCost, "_localModifiers", null);
         // Unknown (a game change): hide it rather than risk showing what the player can't know.
         if (mods == null) return true;
-        return mods.Any(m => m.Type == LocalCostType.Absolute && m.Expiration == LocalCostModifierExpiration.EndOfCombat);
+        return mods.Any(m => m.Expiration == LocalCostModifierExpiration.EndOfCombat);
     }
 
     /// <summary>

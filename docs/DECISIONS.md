@@ -227,3 +227,8 @@ A new feature: under Rest, the HP you'll have and the heal wasted over max; at t
 `Diagnostics/CatalogCheck.cs` (every rule, tracker row, double-play source, reminder rule and feature has its settings row, and every row something behind it) runs as `tests/SpireQoL.Catalog.Tests`, which `scripts/release.ps1` runs (with the simulator tests) before building a release: a failure stops the release. It reads the feature list from the mod's own classes. It needs the game's assemblies, so it runs on the machine that releases, not on GitHub. In game the check still runs and logs, but no longer sends reports.
 *Why:* its problems are the mod's own, fixed before release or never: as player reports they arrived only after a release went out (Potion Tabs' switch in 0.41.0, the HP-loss rules in 0.45.0), and a player's game was the wrong place to find them.
 *Replaced:* the coverage check's "Settings catalog" mismatch reports.
+
+### 47. Free-card `?` for any cost changed this combat, not only Snecko Eye — active (2026-11-15)
+Extends #44: a free-card tab says `?` for any card in your hand with a this-combat cost of its own (`LocalCostModifierExpiration.EndOfCombat`), whatever set it: Snecko Eye's re-roll, Frantic Escape's +1 each time it's played (`FranticEscape.OnPlay`: `AddThisCombat`). Under a free card every copy shows 0 and copies look alike, so what this one would save isn't something you can see.
+*Why:* the owner's call, in line with Snecko Eye: you can't tell which Frantic Escape you're holding. One rule on the card's own cost catches the next card that changes its cost for the combat.
+*Replaced:* #44's Snecko-only check (Confused on you and an absolute this-combat cost).
