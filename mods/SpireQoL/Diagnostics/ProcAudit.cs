@@ -137,7 +137,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly string[] SimTabSources =
     {
         nameof(ImbalancedPower), nameof(AsleepPower), nameof(SlumberPower), nameof(InfestedPower), nameof(SteamEruptionPower),
-        nameof(SurprisePower), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower), nameof(SneakyPower), nameof(EnragePower), nameof(JuggernautPower),
+        nameof(SurprisePower), nameof(ExplosivePower), nameof(StockPower), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower), nameof(SneakyPower), nameof(EnragePower), nameof(JuggernautPower),
         nameof(BurrowedPower), nameof(FlutterPower), nameof(PlowPower), nameof(ShriekPower), nameof(TheGambitPower), nameof(SlipperyPower), nameof(HandDrill),
         nameof(ParryingShield),
     };

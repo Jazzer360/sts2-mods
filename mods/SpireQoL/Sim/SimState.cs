@@ -114,6 +114,15 @@ public sealed class SimEnemy
     public List<int>? HitsAfterAllyDies;
     /// <summary>Crab Rage: block it gains when an ally dies.</summary>
     public int CrabRageBlock;
+    /// <summary>
+    /// Explosive: when it dies, this much damage to you (unpowered, blockable: ExplosivePower.AfterDeath hits every
+    /// living player), after the game's damage math for you; 0 = none.
+    /// </summary>
+    public int Explosive;
+    /// <summary>Explosive's damage on teammate k (their own damage math); missing: the same as yours.</summary>
+    public List<int>? ExplosiveOnTeammates;
+    /// <summary>Its Explosive has gone off (it died during the simulation).</summary>
+    public bool Exploded;
 
     /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
     public bool BlockBroken;
@@ -183,6 +192,17 @@ public sealed class SimPlayer
     public int ForgottenSoulDamage;
     public int ParryingShieldBlock;
     public int ParryingShieldDamage;
+    /// <summary>
+    /// Lunar Pastry gives you stars at AfterSideTurnEnd, so Black Hole (AfterStarsGained) deals this to every hittable enemy
+    /// (unpowered); 0 = no Lunar Pastry or no Black Hole. LunarBeforeParrying: Lunar Pastry comes first in your relics.
+    /// </summary>
+    public int LunarBlackHole;
+    public bool LunarBeforeParrying = true;
+    /// <summary>
+    /// Pael's Eye is armed (unused this combat, no card played this turn): BeforeSideTurnEndEarly exhausts your whole hand.
+    /// A card you play disarms it (BeforeCardPlayed); auto-plays don't.
+    /// </summary>
+    public bool PaelsEyeExhaust;
 
     // Hand and turn counters.
     public int HandCount;
@@ -260,6 +280,23 @@ public sealed class SimPlayer
     /// </summary>
     public bool BeaconOfHope, BeaconGiving;
 
+    // The auto-play phase (PlayerTurnPhase.AutoPostPlay: Hook.AfterAutoPostPlayPhaseEntered, before BeforeSideTurnEnd). Yours only.
+    /// <summary>Stampede: auto-plays this many random Attacks from your hand (StampedePower; 0 = none).</summary>
+    public int Stampede;
+    /// <summary>Simpleton: auto-plays this many of your cheapest cards (a random one among ties; SimpletonPower; 0 = none).</summary>
+    public int Simpleton;
+    /// <summary>Your playable cards in hand, for Stampede and Simpleton to pick from (null when you have neither).</summary>
+    public List<SimHandCard>? AutoHand;
+    /// <summary>Howl from Beyond copies in your exhaust pile: each auto-plays (its play, one per copy).</summary>
+    public List<SimPlay> ExhaustAutoPlays = new();
+    /// <summary>
+    /// I Am Invincible: its block when it's certainly the top of your draw pile (every card there is a copy of it: the
+    /// order stays hidden otherwise); 0 = not certain. It auto-plays from the top (AutoPlayFromDrawPile).
+    /// </summary>
+    public int InvincibleBlock;
+    /// <summary>Cards in your draw pile then (all I Am Invincible): a play that draws them all leaves it uncertain.</summary>
+    public int InvincibleDrawPile;
+
     // Branches share their orbs until one changes them (OwnOrbs): copying them for every candidate
     // branch, most of which merge away as duplicates, was most of a branch-heavy simulation's cost.
     private bool _orbsShared;
@@ -288,6 +325,23 @@ public sealed class SimPlayer
     }
 }
 
+/// <summary>A card in your hand that Stampede or Simpleton could auto-play.</summary>
+public sealed class SimHandCard
+{
+    /// <summary>Which card (SimPlay.HandCard of its own play, so playing it takes it out of the hand).</summary>
+    public int Id;
+    public string Name = "";
+    public bool IsAttack;
+    /// <summary>Its cost now (X costs: 999999999, as SimpletonPower orders them).</summary>
+    public int Cost;
+    /// <summary>
+    /// Its play when auto-played: one per hittable enemy for a card aimed at one (CardCmd.AutoPlay picks a random
+    /// target), else one. Empty: its play can't be simulated (it changes the hand: draws, generates); nothing is
+    /// predicted past it.
+    /// </summary>
+    public List<SimPlay> Plays = new();
+}
+
 /// <summary>One branch of the simulation: the state plus what happened so far.</summary>
 public sealed class SimState
 {
@@ -313,6 +367,10 @@ public sealed class SimState
     public int Taken;
     /// <summary>You reach 0 HP with nothing left to prevent death (your HP tracked: SimPlayer.Hp).</summary>
     public bool Died;
+    /// <summary>An auto-play at the end of your turn couldn't be simulated in this branch (Stampede or Simpleton picked a card that changes your hand): later auto-plays aren't either.</summary>
+    public bool AutoPlaysUnknown;
+    /// <summary>Cards auto-played at the end of your turn in this branch (Stampede, Simpleton, I Am Invincible, Howl from Beyond).</summary>
+    public int AutoPlayed;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
     public int FairiesUsed;
     public bool LizardTailUsed;
@@ -429,6 +487,10 @@ public sealed class SimState
             t.HandUnblockable = new();
             t.RegretCards = 0;
             t.Fading = 0;
+            t.Stampede = t.Simpleton = 0;
+            t.AutoHand = null;
+            t.ExhaustAutoPlays = new();
+            t.InvincibleBlock = t.InvincibleDrawPile = 0;
         }
         return shown;
     }
@@ -480,6 +542,13 @@ public sealed class SimState
             Add(e.ReactedWithBlock ? 1 : 0); Add(e.BlockBroken ? 1 : 0);
             Add(e.HitsAfterAllyDies == null ? 0 : 1); Add(e.Hits.Count); foreach (var hit in e.Hits) Add(hit); Add(e.GambitTriggered ? 1 : 0); Add(e.SlipperyTriggered ? 1 : 0);
         }
+        if (P.AutoHand != null)
+        {
+            Add(P.AutoHand.Count);
+            foreach (var c in P.AutoHand) Add(c.Id);
+        }
+        Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed);
+        foreach (var e in Enemies) Add(e.Exploded ? 1 : 0);
         Add(P.Orbs.Count);
         foreach (var o in P.Orbs)
         {

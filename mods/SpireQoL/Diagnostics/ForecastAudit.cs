@@ -185,9 +185,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var actualOsty = osty == null ? 0 : damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
         var actualBlockGain = endOfTurn.OfType<BlockGainedEntry>().Where(b => b.Actor == me.Creature).Sum(b => b.Amount);
 
-        // A card of yours auto-played at end of turn (Stampede: a random Attack in your hand, at a random target)
-        // isn't simulated: what it hits, kills and leaves in your hand (Regret) is a roll, so the turn isn't checked.
-        if (endOfTurn.OfType<CardPlayStartedEntry>().FirstOrDefault(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me) is { } auto)
+        // Cards of yours auto-played at end of turn: the simulator plays Stampede's, Simpleton's, Howl from Beyond and
+        // I Am Invincible (SimEngine.AutoPostPlay). When one it couldn't simulate came up (a card that changes your hand) or
+        // the count matches no branch (another source), the turn isn't checked.
+        var autoPlays = endOfTurn.OfType<CardPlayStartedEntry>().Where(e => e.CardPlay.IsAutoPlay && e.CardPlay.IsFirstInSeries && e.CardPlay.Card.Owner == me).ToList();
+        if (autoPlays.Count > 0 && autoPlays[0] is var auto
+            && (f.Outcome.Branches.Any(b => b.AutoPlaysUnknown) || !f.Outcome.Branches.Any(b => b.AutoPlayed == autoPlays.Count)))
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {auto.CardPlay.Card.GetType().Name} at end of turn); HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})");
             return;
@@ -210,7 +213,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (issues.Count == 0 && !o.Truncated && o.Branches.Count > 1)
         {
             bool Explains(SimState b) =>
-                b.Taken == actualTaken && (osty == null || b.OstyTaken == actualOsty)
+                b.Taken == actualTaken && (osty == null || b.OstyTaken == actualOsty) && b.AutoPlayed == autoPlays.Count
                 && actuals.All(kv => b.Enemy(kv.Key) is { } e && e.HpAtTurnEnd == kv.Value.Hp && e.UnblockedInstances == kv.Value.Through && e.DiedBeforeActing == kv.Value.Died);
             if (!o.Branches.Any(Explains))
                 issues.Add($"no single branch: each result is possible on its own, but none of the {o.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");

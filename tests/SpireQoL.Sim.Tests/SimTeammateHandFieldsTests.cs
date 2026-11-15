@@ -20,6 +20,10 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.HandBlockable),   // Burn, Decay...
         nameof(SimPlayer.HandUnblockable), // Bad Luck...
         nameof(SimPlayer.RegretCards),
+        // End-of-turn auto-plays: picked from the hand (Stampede, Simpleton), and yours only in the engine (SimEngine.AutoPostPlay
+        // reads s.P); cleared for teammates all the same.
+        nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand), nameof(SimPlayer.ExhaustAutoPlays),
+        nameof(SimPlayer.InvincibleBlock), nameof(SimPlayer.InvincibleDrawPile),
     };
 
     /// <summary>On screen (their powers, relics, orbs, block, HP, hand size, cards they played) or the simulation's own bookkeeping.</summary>
@@ -32,7 +36,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.OrichalcumBlock), nameof(SimPlayer.OrichalcumArmed), nameof(SimPlayer.CloakClaspPerCard),
         nameof(SimPlayer.RippleBasinBlock), nameof(SimPlayer.ScreamingFlagonDamage), nameof(SimPlayer.StoneCalendarDamage),
         nameof(SimPlayer.ObsidianViceDamage), nameof(SimPlayer.CharonsAshesDamage), nameof(SimPlayer.ForgottenSoulDamage),
-        nameof(SimPlayer.ParryingShieldBlock), nameof(SimPlayer.ParryingShieldDamage),
+        nameof(SimPlayer.ParryingShieldBlock), nameof(SimPlayer.ParryingShieldDamage), nameof(SimPlayer.LunarBlackHole), nameof(SimPlayer.LunarBeforeParrying), nameof(SimPlayer.PaelsEyeExhaust),
         nameof(SimPlayer.HandCount),       // the size is on screen (Cloak Clasp, Screaming Flagon, Obsidian Vice, Regret's amount)
         nameof(SimPlayer.AttacksThisTurn), // you watch them play
         nameof(SimPlayer.DebuffBlockable), nameof(SimPlayer.DebuffLateBlockable), nameof(SimPlayer.DebuffUnblockable),
@@ -89,6 +93,8 @@ public class SimTeammateHandFieldsTests
         if (t == typeof(int)) f.SetValue(p, 7);
         else if (t == typeof(bool)) f.SetValue(p, true);
         else if (t == typeof(List<(string, int)>)) f.SetValue(p, new List<(string, int)> { ("X", 3) });
+        else if (t == typeof(List<SimHandCard>)) f.SetValue(p, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
+        else if (t == typeof(List<SimPlay>)) f.SetValue(p, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
         else if (t == typeof(List<SimOrb>)) f.SetValue(p, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
         else Assert.Fail($"SimPlayer.{f.Name}: type {t.Name} isn't handled by this test's Fill: add it");
     }

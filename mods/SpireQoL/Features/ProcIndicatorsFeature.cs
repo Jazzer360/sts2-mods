@@ -476,8 +476,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     nameof(AsleepPower) when outcomes.Any(o => o.UnblockedMax(id) >= 1) && baseline.UnblockedMax(id) < 1 => Hit.Trig(harmful: true),
                     nameof(SlumberPower) when outcomes.Any(o => o.UnblockedMax(id) >= p.Amount) && baseline.UnblockedMax(id) < p.Amount => Hit.Trig(harmful: true),
                     // Its death sets something off (warnings: in any branch, for any aim).
-                    nameof(InfestedPower) or nameof(SteamEruptionPower) or nameof(SurprisePower)
+                    nameof(InfestedPower) or nameof(SteamEruptionPower) or nameof(SurprisePower) or nameof(ExplosivePower)
                         when outcomes.Any(o => o.KilledByPlayInAny.Contains(id)) => Hit.Trig(harmful: true),
+                    // Stock: a new Axebot takes its place (it attacks this enemy turn) while stock is left.
+                    nameof(StockPower) when p.Amount > 0 && outcomes.Any(o => o.KilledByPlayInAny.Contains(id)) => Hit.Trig(harmful: true),
                     // Another enemy's death makes it stronger.
                     nameof(CrabRagePower) or nameof(RavenousPower)
                         when outcomes.Any(o => o.KilledByPlayInAny.Any(k => k != id)) => Hit.Trig(harmful: true),

@@ -6,6 +6,16 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.38.0
+#### Added
+- End-of-turn auto-plays count in Incoming Damage, the Death Skull and card tabs: Stampede and Simpleton (a random card from your hand: every card they could pick, and every target, is explored), Howl from Beyond in your exhaust pile, and I Am Invincible when it's certainly on top of your draw pile (every card there is a copy).
+- Explosive enemies: the damage their death deals every player counts in Incoming Damage and the Death Skull, and attacks that kill one get a crossed tab. Axebots with stock left get a crossed tab too (a new one takes its place and attacks).
+- Lunar Pastry with Black Hole: Black Hole's end-of-turn damage to every enemy counts (lethal, Death Skull).
+- Pael's Eye: ending a turn without playing a card exhausts your hand first, so Feel No Pain, Charon's Ashes and Forgotten Soul go off for every card and Burn or Regret in your hand don't.
+- Insatiable Dominion (Dread): its end-of-turn damage to you is in Incoming Damage.
+#### Changed
+- Error reports: the end-of-turn check now checks turns with auto-plays it predicts (it skipped every turn with one); Queen, Kin Priest and enemies that revive are reviewed as not changing what's predicted.
+
 ### Spire QoL 0.37.4
 #### Fixed
 - Multiplayer: Intercept's predictions move the attacks on the teammate it covers onto you (they take nothing from attacks, yours are multiplied by the players you cover + 1). Before, playing it was predicted with the hits as they were, so its tabs understated the damage coming to you.

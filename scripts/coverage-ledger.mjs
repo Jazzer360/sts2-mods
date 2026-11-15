@@ -177,3 +177,19 @@ md.splice(md.indexOf("| Relic | Rarity | In fights | Outside fights |"), 0,
   `${allRelics.length} relics: ${counts.fight} matter in fights (${counts.fightGap} with a gap or unreviewed), ${counts.choice} change a choice outside fights (${counts.choiceGap} with a gap or unreviewed).`, "");
 fs.writeFileSync(path.join(root, "docs", "RELICS.md"), md.join("\n") + "\n");
 console.log(`wrote docs/RELICS.md (${allRelics.length} relics)`);
+
+// ---------------------------------------------------------------- docs/TRACKER.md known gaps
+// The open gaps of all three review files, between the markers in TRACKER.md, so the list never drifts from them.
+const trackerPath = path.join(root, "docs", "TRACKER.md");
+const tracker = fs.readFileSync(trackerPath, "utf8");
+const nl = tracker.includes("\r\n") ? "\r\n" : "\n";
+const gapsOf = (file, label) => [...dict(path.join(diag, file))].filter(([, r]) => r.startsWith("gap:"))
+  .sort(([a], [b]) => a.localeCompare(b)).map(([k, r]) => `  - [ ] ${k} (${label}): ${r.slice(4).trim()}`);
+const gapLines = [...gapsOf("CoverageLedger.cs", "ledger"), ...gapsOf("RelicTracking.cs", "relic tracking"), ...gapsOf("RelicChoiceTracking.cs", "outside fights")];
+const block = ["<!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->",
+  `- Known gaps (${gapLines.length}; each is logged when present in a fight):`, ...gapLines, "<!-- gaps:end -->"].join(nl);
+const marked = /<!-- gaps:start[^\n]*-->[\s\S]*?<!-- gaps:end -->/;
+if (marked.test(tracker)) {
+  fs.writeFileSync(trackerPath, tracker.replace(marked, block));
+  console.log(`wrote docs/TRACKER.md known gaps (${gapLines.length})`);
+} else console.log("docs/TRACKER.md has no gaps markers: known gaps not written");

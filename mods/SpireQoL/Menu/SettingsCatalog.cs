@@ -239,6 +239,8 @@ public static class SettingsCatalog
         new(nameof(InfestedPower), SourceGroup.EnemyPower, Crossed + "attacks that kill it"),
         new(nameof(SteamEruptionPower), SourceGroup.EnemyPower, Crossed + "attacks that kill it"),
         new(nameof(SurprisePower), SourceGroup.EnemyPower, Crossed + "attacks that kill it"),
+        new(nameof(ExplosivePower), SourceGroup.EnemyPower, Crossed + "attacks that kill it (its death damages every player)"),
+        new(nameof(StockPower), SourceGroup.EnemyPower, Crossed + "attacks that kill it while it has stock left (a new Axebot takes its place)"),
         new(nameof(CrabRagePower), SourceGroup.EnemyPower, Crossed + "attacks that kill another enemy"),
         new(nameof(RavenousPower), SourceGroup.EnemyPower, Crossed + "attacks that kill another enemy"),
     };

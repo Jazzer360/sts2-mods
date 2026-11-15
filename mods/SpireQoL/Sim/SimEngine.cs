@@ -6,6 +6,12 @@ public sealed class SimPlay
     public enum Target { None, Single, All, Random }
 
     public string Name = "";
+    /// <summary>The card in your hand this play is (SimHandCard.Id): playing it takes it out of SimPlayer.AutoHand. 0 = none.</summary>
+    public int HandCard;
+    /// <summary>Cards it draws (the draw pile it leaves: I Am Invincible on top).</summary>
+    public int Draws;
+    /// <summary>An auto-play (CardPlay.IsAutoPlay): Pael's Eye doesn't count it as a card you played.</summary>
+    public bool AutoPlay;
     public Target HitTarget = Target.None;
     /// <summary>For Target.Single: the enemy aimed at.</summary>
     public int TargetId = -1;
@@ -292,6 +298,7 @@ public static class SimEngine
         // Block gains during the play (each sets off Juggernaut).
         var gains = b.States.Select(s => s.P.BlockGains - (s.PlayBase?.BlockGains ?? start.P.BlockGains)).ToList();
         var playTruncated = b.Truncated;
+        AutoPostPlay(b);
         EndOfTurn(b);
         b.Do(EnemyTurn);
         var outcome = new SimOutcome
@@ -317,6 +324,7 @@ public static class SimEngine
             var safe = new BranchSet(safeStart);
             if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(safe, queued);
             if (play != null) ApplyPlay(safe, play);
+            AutoPostPlay(safe);
             EndOfTurn(safe);
             safe.Do(EnemyTurn);
             outcome.SafeWorst = safe.States[0];
@@ -688,7 +696,8 @@ public static class SimEngine
         return amount;
     }
 
-    private static void LandBlockable(SimState s, string name, int amount, int who = -1)
+    /// <param name="yourTurn">Your side's turn (Inferno reacts only then); false for damage during the enemy turn.</param>
+    private static void LandBlockable(SimState s, string name, int amount, int who = -1, bool yourTurn = true)
     {
         if (amount <= 0) return;
         if (who >= 0)
@@ -710,7 +719,34 @@ public static class SimEngine
         var lost = HpLoss(s, amount - blocked, ref left);
         YouLose(s, lost);
         s.P.RemnantLeftPlayerTurn = left;
-        Inferno(s, lost);
+        if (yourTurn) Inferno(s, lost);
+    }
+
+    /// <summary>
+    /// Explosive (ExplosivePower.AfterDeath): an enemy holding it that died since the last check damages every living
+    /// player, blocked by the block they have then. Runs where deaths are handled (AllyDeaths) and after each
+    /// end-of-turn step, so the block it meets is the block at that point.
+    /// </summary>
+    /// <summary>An end-of-turn step's explosions, only in fights with an Explosive enemy (no extra step otherwise).</summary>
+    private static void ExplosionCheck(BranchSet b)
+    {
+        if (b.States.Any(s => s.Enemies.Any(e => !e.Exploded && (e.Explosive > 0 || e.ExplosiveOnTeammates != null)))) b.Do(s => Explosions(s));
+    }
+
+    private static void Explosions(SimState s, bool yourTurn = true)
+    {
+        foreach (var e in s.Enemies)
+        {
+            if (e.Alive || e.Exploded || !e.StartedAlive || (e.Explosive <= 0 && e.ExplosiveOnTeammates == null)) continue;
+            e.Exploded = true;
+            if (s.P.Hp > 0) LandBlockable(s, e.Name + " Explosive", e.Explosive, yourTurn: yourTurn);
+            for (var k = 0; k < s.Teammates.Count; k++)
+            {
+                if (s.Teammates[k].Hp <= 0) continue;
+                var amount = e.ExplosiveOnTeammates is { } on && k < on.Count ? on[k] : e.Explosive;
+                LandBlockable(s, e.Name + " Explosive", amount, k, yourTurn);
+            }
+        }
     }
 
     /// <summary>
@@ -985,6 +1021,19 @@ public static class SimEngine
                 if (s.Enemy(id) is { Alive: true } e) e.TeammateHits = hits; // shared, never changed in place
             }
             s.P.HandCount = Math.Max(0, s.P.HandCount + p.HandDelta);
+            if (!p.AutoPlay) s.P.PaelsEyeExhaust = false; // a card you play (not an auto-play) disarms Pael's Eye
+            if (s.P.AutoHand != null)
+            {
+                // Stampede and Simpleton pick from what's left; cards it draws or makes aren't known.
+                if (p.HandCard != 0) s.P.AutoHand = s.P.AutoHand.Where(c => c.Id != p.HandCard).ToList();
+                if (p.HandDelta > -1) s.AutoPlaysUnknown = true;
+            }
+            if (p.Draws > 0 && s.P.InvincibleBlock > 0)
+            {
+                // Drawing the whole pile shuffles your discard pile in: the top isn't known any more.
+                s.P.InvincibleDrawPile -= p.Draws;
+                if (s.P.InvincibleDrawPile <= 0) s.P.InvincibleBlock = 0;
+            }
             s.P.Fading = Math.Max(0, s.P.Fading + p.FadingDelta);
             if (p.IsAttack) s.P.AttacksThisTurn++;
             AllyDeaths(s); // deaths from the card's hits
@@ -1124,18 +1173,20 @@ public static class SimEngine
     /// A player's Ethereal cards exhausting at end of turn (CombatManager.DoTurnEnd → CardCmd.Exhaust): each one sets off
     /// their Feel No Pain (block), Charon's Ashes (every enemy) and Forgotten Soul (a random enemy). who: -1 you, else a teammate.
     /// </summary>
-    private static void EtherealExhausts(BranchSet b, int who)
+    /// <param name="count">Cards exhausted (default: the Ethereal ones; Pael's Eye: the whole hand).</param>
+    private static void EtherealExhausts(BranchSet b, int who, Func<SimPlayer, int>? count = null)
     {
         SimPlayer Of(SimState s) => who < 0 ? s.P : s.Teammates[who];
+        int N(SimPlayer p) => count?.Invoke(p) ?? p.Fading;
         var tag = who < 0 ? "" : " (teammate)";
-        var max = b.States.Count > 0 ? b.States.Max(s => Of(s).Hp > 0 || who < 0 ? Of(s).Fading : 0) : 0;
+        var max = b.States.Count > 0 ? b.States.Max(s => Of(s).Hp > 0 || who < 0 ? N(Of(s)) : 0) : 0;
         for (var i = 0; i < max; i++)
         {
             var n = i;
             b.Each(s =>
             {
                 var p = Of(s);
-                if (n >= p.Fading || (who >= 0 && p.Hp <= 0)) return new[] { s };
+                if (n >= N(p) || (who >= 0 && p.Hp <= 0)) return new[] { s };
                 IEnumerable<SimState> r = GainBlock(s, p.FeelNoPain, p.FeelNoPain > 0 && who < 0 ? "Feel No Pain" : null, who);
                 r = r.Select(x =>
                 {
@@ -1152,8 +1203,123 @@ public static class SimEngine
         }
     }
 
+    /// <summary>
+    /// The auto-play phase of your end of turn (CombatManager.EndPlayerTurnPhaseOneInternal: PlayerTurnPhase.AutoPostPlay,
+    /// Hook.AfterAutoPostPlayPhaseEntered), before BeforeSideTurnEnd. Hook listeners run your powers first (Stampede,
+    /// Simpleton), then the cards in your piles (I Am Invincible on top of your draw pile, Howl from Beyond in your
+    /// exhaust pile). Auto-played cards cost nothing (CardCmd.AutoPlay); one aimed at an enemy takes a random hittable one.
+    /// Yours only: a teammate's come from their hand (decision #25).
+    /// </summary>
+    private static void AutoPostPlay(BranchSet b)
+    {
+        if (!b.States.Any(s => s.P.Stampede > 0 || s.P.Simpleton > 0 || s.P.ExhaustAutoPlays.Count > 0 || s.P.InvincibleBlock > 0)) return;
+        // Stampede: a random Attack from your hand (unplayable cards aren't in AutoHand), each time.
+        var stampede = b.States.Max(s => s.P.Stampede);
+        for (var i = 0; i < stampede; i++)
+        {
+            var n = i;
+            b.Each(s => n < s.P.Stampede ? AutoPlayFromHand(b, s, hand => hand.Where(c => c.IsAttack).ToList()) : new[] { s });
+        }
+        // Simpleton: a random card among your cheapest, each time.
+        var simpleton = b.States.Max(s => s.P.Simpleton);
+        for (var i = 0; i < simpleton; i++)
+        {
+            var n = i;
+            b.Each(s => n < s.P.Simpleton
+                ? AutoPlayFromHand(b, s, hand => hand.Count == 0 ? hand : hand.Where(c => c.Cost == hand.Min(x => x.Cost)).ToList())
+                : new[] { s });
+        }
+        // I Am Invincible on top of your draw pile: its block.
+        b.Each(s =>
+        {
+            if (s.P.InvincibleBlock <= 0) return new[] { s };
+            s.AutoPlayed++;
+            return GainBlock(s, s.P.InvincibleBlock, "I Am Invincible");
+        });
+        // Howl from Beyond in your exhaust pile: each copy plays (an attack on every enemy).
+        var howls = b.States.Max(s => s.P.ExhaustAutoPlays.Count);
+        for (var i = 0; i < howls; i++)
+        {
+            var play = b.States.Select(s => s.P.ExhaustAutoPlays).First(l => l.Count > i)[i];
+            b.Do(s => s.AutoPlayed++);
+            ApplyPlay(b, play);
+        }
+    }
+
+    /// <summary>
+    /// One auto-play from your hand: a branch per card <paramref name="pick"/> allows (CombatCardSelection.NextItem: each
+    /// equally likely), and per hittable target for a card aimed at one. A card whose play isn't simulated (it changes
+    /// your hand) ends what's predicted for later auto-plays in that branch.
+    /// </summary>
+    private static IEnumerable<SimState> AutoPlayFromHand(BranchSet outer, SimState s, Func<List<SimHandCard>, List<SimHandCard>> pick)
+    {
+        if (s.AutoPlaysUnknown || s.P.AutoHand == null) return new[] { s };
+        var cards = pick(s.P.AutoHand);
+        if (cards.Count == 0) return new[] { s };
+        var result = new List<SimState>();
+        foreach (var card in cards)
+        {
+            var c = s.Clone();
+            c.Weight = s.Weight / cards.Count;
+            c.AutoPlayed++;
+            c.P.AutoHand = c.P.AutoHand!.Where(x => x.Id != card.Id).ToList();
+            if (card.Plays.Count == 0)
+            {
+                c.AutoPlaysUnknown = true;
+                result.Add(c);
+                continue;
+            }
+            var plays = card.Plays.Count == 1 && card.Plays[0].TargetId < 0
+                ? card.Plays
+                : card.Plays.Where(p => c.Enemy(p.TargetId) is { Alive: true, Hittable: true }).ToList();
+            if (plays.Count == 0)
+            {
+                result.Add(c); // no target: it goes to the discard pile unplayed (CardCmd.AutoPlay)
+                continue;
+            }
+            foreach (var play in plays)
+            {
+                var t = plays.Count == 1 ? c : c.Clone();
+                t.Weight = c.Weight / plays.Count;
+                var sub = new BranchSet(t);
+                ApplyPlay(sub, play);
+                if (sub.Truncated) outer.Truncated = true;
+                result.AddRange(sub.States);
+            }
+        }
+        return result;
+    }
+
     private static void EndOfTurn(BranchSet b)
     {
+        // 0. BeforeSideTurnEndEarly: Pael's Eye exhausts your hand when you played no card this turn (auto-plays don't
+        // count): each card sets off Feel No Pain, Charon's Ashes and Forgotten Soul, and none is left to act in hand
+        // at end of turn (Burn, Regret) or to exhaust as Ethereal.
+        // Each player's in player order (a teammate's: their hand size is on screen).
+        if (b.States.Any(s => (s.P.PaelsEyeExhaust && s.P.HandCount > 0) || s.Teammates.Any(t => t.PaelsEyeExhaust && t.HandCount > 0)))
+        {
+            var mates = b.States[0].Teammates.Count;
+            var first = Math.Min(b.States[0].TeammatesBeforeMe, mates);
+            void Exhaust(int who)
+            {
+                EtherealExhausts(b, who, p => p.PaelsEyeExhaust ? Math.Max(0, p.HandCount) : 0);
+                b.Do(s =>
+                {
+                    if (who >= 0 && !s.Teammates[who].PaelsEyeExhaust) return;
+                    var p = who < 0 ? s.P : s.MutableTeammate(who);
+                    if (!p.PaelsEyeExhaust) return;
+                    p.HandCount = 0;
+                    p.Fading = 0;
+                    p.HandBlockable = new();
+                    p.HandUnblockable = new();
+                    p.RegretCards = 0;
+                });
+            }
+            for (var k = 0; k < first; k++) Exhaust(k);
+            Exhaust(-1);
+            for (var k = first; k < mates; k++) Exhaust(k);
+            ExplosionCheck(b);
+        }
         // 1. BeforeSideTurnEnd. Orichalcum checks your block before any of this lands.
         b.Do(s => s.P.OrichalcumArmed = s.P.Block <= 0);
         b.Each(s => GainBlock(s, s.P.Plating, "Plating"));
@@ -1173,6 +1339,7 @@ public static class SimEngine
         });
         // Obsidian Vice (BeforeSideTurnEnd): its damage per card in your hand, to a random enemy (one hit).
         b.Each(s => ObsidianVice(s, s.P, -1));
+        ExplosionCheck(b);
         // Teammates' BeforeSideTurnEnd damage to enemies (it hits every enemy, so their order doesn't matter).
         b.Do(s =>
         {
@@ -1224,6 +1391,8 @@ public static class SimEngine
             OrbPassives(b, s => s.Teammates[tk], tk, mutable: s => s.MutableTeammate(tk));
         }
 
+        ExplosionCheck(b); // kills by orb passives
+
         // 3. Ethereal cards exhaust (CardCmd.Exhaust in DoTurnEnd), each player in player order (teammates' too:
         // their Feel No Pain, Charon's Ashes, Forgotten Soul), then cards in hand act (DoTurnEndCards).
         for (var k = 0; k < before; k++) EtherealExhausts(b, k);
@@ -1235,6 +1404,8 @@ public static class SimEngine
             foreach (var (name, amount) in s.P.HandUnblockable) LandUnblockable(s, name, amount);
             for (var i = 0; i < s.P.RegretCards; i++) LandUnblockable(s, s.P.RegretCards > 1 ? $"Regret {i + 1}" : "Regret", s.P.HandCount);
         });
+
+        ExplosionCheck(b);
 
         // 4. Debuffs on you.
         b.Do(s =>
@@ -1289,19 +1460,31 @@ public static class SimEngine
                 });
             }
         }
-        // Parrying Shield (AfterSideTurnEnd): a random enemy, when your block is at least its threshold.
+        ExplosionCheck(b); // kills by Consuming Shadow's evokes
+        // Your relics at AfterSideTurnEnd, in relic order: Lunar Pastry's stars set off Black Hole (every enemy), and
+        // Parrying Shield (a random enemy, when your block is at least its threshold).
+        void Lunar()
+        {
+            if (b.States.Any(s => s.P.LunarBlackHole > 0)) b.Do(s => AllEnemies(s, "Black Hole (Lunar Pastry)", s.P.LunarBlackHole));
+        }
+        if (b.States.Count > 0 && b.States[0].P.LunarBeforeParrying) Lunar();
         b.Each(s =>
         {
             if (s.P.ParryingShieldDamage <= 0 || s.P.Block < s.P.ParryingShieldBlock) return new[] { s };
             s.ParryingShieldFired = true;
             return HitRandom(s, _ => s.P.ParryingShieldDamage);
         });
+        if (b.States.Count > 0 && !b.States[0].P.LunarBeforeParrying) Lunar();
+        // Teammates' Lunar Pastry with their Black Hole.
+        if (b.States.Any(s => s.Teammates.Any(t => t.LunarBlackHole > 0)))
+            b.Do(s => { foreach (var t in s.Teammates) if (t.Hp > 0) AllEnemies(s, "Black Hole (teammate's Lunar Pastry)", t.LunarBlackHole); });
         for (var k = 0; k < teammates; k++)
         {
             var tk = k;
             b.Each(s => s.Teammates[tk] is { Hp: > 0, ParryingShieldDamage: > 0 } t && t.Block >= t.ParryingShieldBlock
                 ? HitRandom(s, _ => s.Teammates[tk].ParryingShieldDamage) : new[] { s });
         }
+        ExplosionCheck(b); // kills by Parrying Shield
         // AfterSideTurnEndLate: Disintegration.
         b.Do(s =>
         {
@@ -1354,6 +1537,7 @@ public static class SimEngine
 
     private static void AllyDeaths(SimState s)
     {
+        Explosions(s);
         foreach (var e in s.Enemies)
         {
             if (!e.Alive || !s.Enemies.Any(o => o != e && o.StartedAlive && !o.Alive)) continue;
@@ -1394,6 +1578,7 @@ public static class SimEngine
             {
                 e.DiedBeforeActing = true;
                 if (e.Hits.Count > 0) s.SkippedPoisoned++;
+                Explosions(s, yourTurn: false);
                 continue;
             }
             if (e.Stunned || e.Hits.Count == 0) continue; // a stunned enemy skips its move

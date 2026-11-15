@@ -395,44 +395,32 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Every-power check after each play (powers that went down with nothing to explain it).
 - [x] Simulator: Concoct, Monarch's Gaze (single-target and all-enemy attacks), Storm and Trash to Treasure channels.
 - [x] Dead code removed (analyzers + `scripts/dead-code.mjs`): Intent Forecast stub, `UiKit.Badge`, `Sts2State.HasVar`, `TurnEndModel.Overblock`, `PlayFacts.DebuffsLanding`, `SimAdapter.SelfPowers`, unused parameters and usings.
-- Known gaps that could **underestimate damage to you** (fix first): Queen and Kin Priest switching to a stronger move mid-turn when an ally dies. ~~Multiplayer Covered/Intercept~~ (0.37.4).
-- Relic tracking gaps (RelicTracking): Pael's Flesh (turn-timer row), Reptile Trinket and Belt Buckle (potion tabs), Lunar Pastry (simulator).
-- Known gaps (from the ledger; each is logged when present in a fight):
-  - [ ] AdaptablePower: AfterDeath/ShouldAllowHitting: Test Subject revives (a kill may not stick: lethal can be wrong)
-  - [ ] AllIsWellPower: AfterCardGeneratedForCombat gains block when you create a Sadness: no proc tab, not simulated
-  - [ ] BeaconOfHopePower: multiplayer: AfterBlockGained gives teammates half of each block its owner gains on the players' side; a teammate's gives you block from their end-of-turn block (Plating, Frost, Orichalcum), not simulated (Incoming Damage errs high); yours changes nothing for you
-  - [ ] CompostPower: AfterDeath gives your side's players energy when an enemy dies: no proc tab on kills
-  - [x] CoveredPower: covered in 0.37.4 (read through the game's damage math; playing Intercept moves the attacks on its target onto you)
-  - [ ] CoveringFirePower: AfterArrowShot gives your teammates block when you shoot an arrow from a card: no proc tab; their block isn't simulated before the enemy turn
-  - [ ] EpicRetrieval: AfterArrowDislodged gains energy when its own hit dislodges your arrow (the card glows gold then): no proc tab
-  - [ ] ExplosivePower: AfterDeath damages every living player when its owner dies: no crossed tab on the kill, not in Incoming Damage
-  - [ ] ExtraTurnPower: ShouldTakeExtraTurn gives you another turn before the enemies act (AfterTakingExtraTurn counts it down): the forecast still shows the enemy turn next
-  - [ ] Fertilizer: AfterCardGeneratedForCombat gives Strength when you create a Sadness: no proc tab on the cards that create one
-  - [ ] HowlFromBeyond: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn damage not simulated)
-  - [ ] IAmInvincible: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn block not simulated)
-  - [ ] IllusionPower: AfterDeath/ShouldAllowHitting revives (a kill may not stick: lethal can be wrong)
-  - [x] InfernoPower: covered in 0.31.35 (proc tab on cards that cost HP; simulator on end-of-turn and in-play HP loss, yours)
-  - [ ] InsatiableDominionPower: AfterSideTurnEndLate deals 2 + turn number to its owner (you, in a Dread run) after your end of turn: not in Incoming Damage
-  - [x] InterceptPower: covered in 0.37.4 (playing Intercept multiplies the attacks on you by covered players + 1)
-  - [ ] KinPriest: AfterDeath of its last follower changes its move mid-turn (the simulator keeps the intent from the start of the play)
-  - [ ] LostLutePower: AfterCardPlayed auto-plays cards from the top of your draw pile on your first Wah, Cho and Ki each turn: proc tab; what those cards do is hidden (not simulated)
-  - [ ] LunarPastry: AfterSideTurnEnd gains stars at the end of your turn; Black Hole's end-of-turn damage from them isn't simulated
-  - [ ] MakeItSo: AfterCardPlayedLate returns to your hand after enough plays (hand counts)
-  - [ ] MightyWings: AfterDamageGiven gives 2 Strength when your (or Osty's) powered attack deals 30 or more in one hit: no proc tab
-  - [ ] MonarchsGazePower: AfterDamageGiven lowers Strength per hit (simulator intents for single-target and all-enemy attacks; not random-target ones)
-  - [x] NecroMasteryPower: AfterCurrentHpChanged damages all enemies when Osty loses HP: cards that kill Osty, 0.35.8 (not yet: Osty losing HP to Thorns or attacks)
-  - [ ] PaelsEye: crossed tab covers giving up its extra turn; its BeforeSideTurnEndEarly exhaust of your hand (no cards played) isn't simulated (Feel No Pain, Charon's Ashes at end of turn)
-  - [ ] Queen: AfterDeath of the Amalgam switches her to the enraged move mid-turn (the simulator keeps the intent from the start of the play)
-  - [ ] ReattachPower: AfterDeath/ShouldAllowHitting segments revive (a kill may not stick: lethal can be wrong)
-  - [ ] SimpletonPower: AfterAutoPostPlayPhaseEntered auto-plays your cheapest card(s) at the end of your turn (a random one among ties): not simulated
-  - [ ] SoulboundPower: AfterCardGeneratedForCombat adds Souls when you create Souls (created-card counts)
-  - [ ] Sown: OnPlay energy, on each play of the card until it finishes (AfterCardPlayed): enchantment energy isn't counted (the play check explains it)
-  - [ ] StampedePower: AfterAutoPostPlayPhaseEntered auto-plays random Attacks at the end of your turn (end-of-turn damage not simulated; since 0.31.35 the forecast check skips a turn where yours fired)
-  - [ ] StockPower: AfterDeath spawns another Axebot (the fight isn't over when it dies)
-  - [x] SurroundedPower: covered in 0.31.36 (intents after a targeted play)
-  - [x] ThunderPower: covered in 0.31.13 (proc tab and simulator; counted once since 0.37.1)
-  - [x] UnsettlingLamp: covered in 0.34.0 (the Strength loss and poison it doubles count in the predictions)
-  - [ ] WhittlingKnife: AfterShuffle gives Aim when you shuffle: no tab on cards that shuffle
+- Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
+<!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
+- Known gaps (22; each is logged when present in a fight):
+  - [ ] AllIsWellPower (ledger): AfterCardGeneratedForCombat gains block when you create a Sadness: no proc tab, not simulated
+  - [ ] BeaconOfHopePower (ledger): multiplayer: AfterBlockGained gives teammates half of each block its owner gains on the players' side; a teammate's gives you block from their end-of-turn block (Plating, Frost, Orichalcum), not simulated (Incoming Damage errs high); yours changes nothing for you
+  - [ ] CompostPower (ledger): AfterDeath gives your side's players energy when an enemy dies: no proc tab on kills
+  - [ ] CoveringFirePower (ledger): AfterArrowShot gives your teammates block when you shoot an arrow from a card: no proc tab; their block isn't simulated before the enemy turn
+  - [ ] EpicRetrieval (ledger): AfterArrowDislodged gains energy when its own hit dislodges your arrow (the card glows gold then): no proc tab
+  - [ ] ExtraTurnPower (ledger): ShouldTakeExtraTurn gives you another turn before the enemies act (AfterTakingExtraTurn counts it down): the forecast still shows the enemy turn next
+  - [ ] Fertilizer (ledger): AfterCardGeneratedForCombat gives Strength when you create a Sadness: no proc tab on the cards that create one
+  - [ ] LostLutePower (ledger): AfterCardPlayed auto-plays cards from the top of your draw pile on your first Wah, Cho and Ki each turn: proc tab; what those cards do is hidden (not simulated)
+  - [ ] MakeItSo (ledger): AfterCardPlayedLate returns to your hand after enough plays (hand counts)
+  - [ ] MightyWings (ledger): AfterDamageGiven gives 2 Strength when your (or Osty's) powered attack deals 30 or more in one hit: no proc tab
+  - [ ] MonarchsGazePower (ledger): AfterDamageGiven lowers Strength per hit (simulator intents for single-target and all-enemy attacks; not random-target ones)
+  - [ ] PaelsEye (ledger): crossed tab covers giving up its extra turn (ShouldTakeExtraTurnEarly, AfterTakingExtraTurn); the simulator exhausts your hand at BeforeSideTurnEndEarly (Feel No Pain, Charon's Ashes, Forgotten Soul; nothing left in hand to act); the extra turn itself isn't (the forecast still shows the enemy turn next)
+  - [ ] SoulboundPower (ledger): AfterCardGeneratedForCombat adds Souls when you create Souls (created-card counts)
+  - [ ] Sown (ledger): OnPlay energy, on each play of the card until it finishes (AfterCardPlayed): enchantment energy isn't counted (the play check explains it)
+  - [ ] WhittlingKnife (ledger): AfterShuffle gives Aim when you shuffle: no tab on cards that shuffle
+  - [ ] BeltBuckle (relic tracking): reacts to having no potions (potions have no tabs yet)
+  - [ ] Fertilizer (relic tracking): Strength when you create a Sadness: no tab
+  - [ ] MightyWings (relic tracking): 2 Strength when one of your hits deals 30 or more: no tab
+  - [ ] PaelsFlesh (relic tracking): extra energy from turn 3 (its counter shows the turn); a turn-timer row would show when it starts
+  - [ ] ReptileTrinket (relic tracking): Strength when you use a potion (potions have no tabs yet)
+  - [ ] WhittlingKnife (relic tracking): Aim when you shuffle: no tab
+  - [ ] MawBank (outside fights): buying anything in a shop turns off its gold per room: a crossed icon on shop items
+<!-- gaps:end -->
 
 ---
 
@@ -520,8 +508,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] **Teammates' revives:** a teammate's Lizard Tail (their potions aren't known) isn't modelled.
 - [x] ~~**Wuppy (event relic):** its pet takes the powered attacks aimed at you while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). Incoming Damage and the Death Skull count them on you (overstated, never under).~~ (0.31.33)
 - [ ] **Extra turns:** Extra Turn power (and Pael's Eye) give you another turn before the enemies act; the forecast still shows the enemy turn next.
-- [ ] **Enemy Explosive:** when it dies it damages every player (no crossed tab on the kill, not in Incoming Damage).
-- [ ] **End of turn not simulated:** Insatiable Dominion (Dread: damage to you after your end of turn), Simpleton (auto-plays your cheapest card).
+- [x] **Enemy Explosive** (0.38.0): its death damages every player in the simulator (wherever it dies), with a crossed kill tab; Stock's replacement Axebot gets one too.
+- [x] **End of turn** (0.38.0): Insatiable Dominion, Lunar Pastry with Black Hole, Pael's Eye's hand exhaust, and the auto-play phase (Stampede, Simpleton, Howl from Beyond, I Am Invincible; decision #39).
 - [ ] **No proc tab yet:** Fertilizer and All Is Well (on creating a Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Sown's energy isn't counted (Swift's draws are, since 0.31.38).
 - [ ] **Dread mode:** boss stats and moves change in Dread runs (read live from intents); Dominion powers reviewed in the ledger. Queen's Dread opening applies 99 Frail, Weak and Vulnerable.
 

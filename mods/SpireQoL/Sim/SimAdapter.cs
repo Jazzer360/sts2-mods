@@ -198,6 +198,8 @@ public static class SimAdapter
                     MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered | MegaCrit.Sts2.Core.ValueProps.ValueProp.SkipHurtAnim, null, null,
                     ModifyDamageHookType.All, CardPreviewMode.None, out _)));
             }
+            // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
+            if (e.IsAlive && e.GetPower<ExplosivePower>() is { Amount: > 0 } explosive) se.Explosive = ExplosiveOn(e, me.Creature, explosive.Amount, me, cs);
             // Burrowed keeps its block between turns (BurrowedPower.ShouldClearBlock), like Barricade.
             if (se.Burrowed) se.Barricade = true;
             se.StartedAlive = e.IsAlive;
@@ -235,6 +237,7 @@ public static class SimAdapter
         }
 
         FillPlayer(s.P, me, cs);
+        FillAutoPlays(s.P, me, cs, ids);
         s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
         // Your HP, and what keeps you alive at 0 (the Death Skull on Incoming Damage, Fairy and Lizard Tail): the heal
         // brings you from 0 to that much (CreatureCmd.Heal; the HP setter drops the fraction).
@@ -271,10 +274,86 @@ public static class SimAdapter
             {
                 if (!e.IsAlive || e.Monster == null || s.Enemy(id) is not { } se) continue;
                 foreach (var tc in teamCreatures) se.TeammateHits.Add(HitsOn(e, tc, me, cs) ?? se.Hits);
+                if (e.GetPower<ExplosivePower>() is { Amount: > 0 } explosive)
+                    se.ExplosiveOnTeammates = teamCreatures.Select(tc => ExplosiveOn(e, tc, explosive.Amount, me, cs)).ToList();
             }
         }
         return s;
     }
+
+    /// <summary>
+    /// Your end-of-turn auto-plays (the auto-play phase, before BeforeSideTurnEnd): Stampede and Simpleton pick from your
+    /// hand, Howl from Beyond plays from your exhaust pile, and I Am Invincible from the top of your draw pile when that's
+    /// certain (every card there is a copy of it). Auto-plays get no procs from the rules (ProcIndicatorsFeature).
+    /// </summary>
+    private static void FillAutoPlays(SimPlayer p, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids)
+    {
+        try
+        {
+            p.Stampede = me.Creature.GetPower<StampedePower>()?.Amount ?? 0;
+            p.Simpleton = me.Creature.GetPower<SimpletonPower>()?.Amount ?? 0;
+            if (p.Stampede > 0 || p.Simpleton > 0)
+            {
+                p.AutoHand = new List<SimHandCard>();
+                foreach (var card in Sts2State.Hand(me))
+                {
+                    if (card.Keywords.Contains(CardKeyword.Unplayable)) continue;
+                    p.AutoHand.Add(new SimHandCard
+                    {
+                        Id = HandId(card),
+                        Name = card.GetType().Name,
+                        IsAttack = card.Type == CardType.Attack,
+                        Cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved(),
+                        Plays = AutoPlays(card, me, cs, ids),
+                    });
+                }
+            }
+            foreach (var card in PileType.Exhaust.GetPile(me).Cards)
+            {
+                if (card is HowlFromBeyond) p.ExhaustAutoPlays.Add(AutoPlay(card, me, cs, ids, -1));
+            }
+            var drawPile = PileType.Draw.GetPile(me).Cards;
+            if (drawPile.Count > 0 && drawPile.All(c => c is IAmInvincible))
+            {
+                p.InvincibleBlock = CardBlock(drawPile[0], cs, me);
+                p.InvincibleDrawPile = drawPile.Count;
+            }
+        }
+        catch
+        {
+            // unreadable: no auto-plays predicted (the forecast check skips a turn with unpredicted auto-plays)
+            p.AutoHand = null;
+            p.Stampede = p.Simpleton = 0;
+        }
+    }
+
+    /// <summary>Which card in your hand a play is (SimPlay.HandCard, SimHandCard.Id): its object identity.</summary>
+    public static int HandId(CardModel card) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(card) | 1;
+
+    /// <summary>
+    /// A hand card's auto-plays: one per hittable enemy for a card aimed at one (CardCmd.AutoPlay picks one at random),
+    /// else one. None when what it does to your hand isn't known (draws, creates cards) or it aims at a teammate.
+    /// </summary>
+    private static List<SimPlay> AutoPlays(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids)
+    {
+        var f = PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card));
+        if (f.Draws > 0 || f.Generated > 0 || card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
+        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, cs, ids, -1, f) };
+        return ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => AutoPlay(card, me, cs, ids, kv.Value, f)).ToList();
+    }
+
+    private static SimPlay AutoPlay(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? f = null)
+    {
+        var play = Play(card, f ?? PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card)), me, cs, ids, target, new List<ProcHit>(), new List<int>());
+        play.AutoPlay = true;
+        return play;
+    }
+
+    /// <summary>Explosive's damage on a player (ExplosivePower.AfterDeath: CreatureCmd.Damage, Unpowered | SkipHurtAnim, no dealer card).</summary>
+    private static int ExplosiveOn(Creature enemy, Creature target, int amount, Player me, ICombatState cs)
+        => SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, cs, target, enemy, amount,
+            MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered | MegaCrit.Sts2.Core.ValueProps.ValueProp.SkipHurtAnim, null, null,
+            ModifyDamageHookType.All, CardPreviewMode.None, out _)), amount);
 
     /// <summary>
     /// Teammates are simulated (the "Multiplayer predictions (experimental)" setting, read each frame).
@@ -318,6 +397,8 @@ public static class SimAdapter
                 case nameof(ReflectPower): p.Reflect = true; break;
                 case nameof(InfernoPower): p.Inferno += pw.Amount; break; // only yours is simulated (SimEngine.Inferno)
                 case nameof(BufferPower): p.Buffer += pw.Amount; break;
+                // Insatiable Dominion (Dread): 2 + your turn number to you at AfterSideTurnEndLate (its Damage var, unpowered, blockable).
+                case nameof(InsatiableDominionPower): p.DebuffLateBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), Sts2State.Var(pw, "Damage"))); break;
                 // Envenom, and Concoct this turn: poison on each attack hit that gets through block (AfterDamageGiven).
                 case nameof(EnvenomPower) or nameof(ConcoctPower): p.Envenom += pw.Amount; break;
             }
@@ -344,6 +425,16 @@ public static class SimAdapter
                 case nameof(ParryingShield):
                     p.ParryingShieldBlock = Sts2State.Var(r, "Block");
                     p.ParryingShieldDamage += Sts2State.Var(r, "Damage");
+                    break;
+                case nameof(PaelsEye):
+                    // Status Active: unused, and no card played this turn (BeforeCardPlayed sets it back); Whispering
+                    // Earring's turn 1 counts as played (PaelsEye.AnyCardsPlayedThisTurn).
+                    p.PaelsEyeExhaust = r.Status == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active
+                        && !(Sts2State.TurnNumber == 1 && me.Relics.Any(x => x.GetType().Name == "WhisperingEarring"));
+                    break;
+                case nameof(LunarPastry):
+                    p.LunarBlackHole = c.GetPower<BlackHolePower>()?.Amount ?? 0;
+                    p.LunarBeforeParrying = !me.Relics.TakeWhile(x => x != r).Any(x => x is ParryingShield);
                     break;
                 case nameof(TungstenRod): p.TungstenRod += Sts2State.Var(r, "HpLossReduction", 1); break;
                 case nameof(TheBoot): p.BootMinimum = Math.Max(p.BootMinimum, Sts2State.Var(r, "DamageMinimum", 5)); break;
@@ -493,6 +584,8 @@ public static class SimAdapter
             var k = -2 - targetId;
             if (k < allies.Count) { play.AllyTarget = k; ally = allies[k].Creature; }
         }
+        play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
+        play.Draws = f.Draws;
         play.BlockToAlly = BlockToAllyCards.Contains(name);
         play.ChannelToAlly = ChannelToAllyCards.Contains(name);
 
@@ -936,6 +1029,11 @@ public static class SimAdapter
     private static int SafeInt(Func<int> f)
     {
         try { return f(); } catch { return 0; }
+    }
+
+    private static int SafeInt(Func<int> f, int fallback)
+    {
+        try { return f(); } catch { return fallback; }
     }
 
     private static string SafeCardTitle(CardModel c)
