@@ -45,6 +45,7 @@ public static class SettingsCatalog
     public static readonly IReadOnlyList<TabEntry> TabGroups = new[]
     {
         new TabEntry("proc:*", "All proc tabs", "Every relic and power tab below (Relics, Your powers, Enemy powers)."),
+        new TabEntry("potion:*", "All potion tabs", "Tabs under your potions (Reptile Trinket, Belt Buckle, White Beast Statue)."),
         new TabEntry("double-play:*", "All double-play tabs", "Tabs on cards that will play more than once (Echo Form, Burst, Duplication...)."),
     };
 
@@ -141,7 +142,9 @@ public static class SettingsCatalog
         new(nameof(DragonFruit), SourceGroup.Relic, null, Reminder: "Events: options that give gold (max HP)"),
         new(nameof(Ectoplasm), SourceGroup.Relic, null, Reminder: "Crossed. Events: options that give gold (you get none)"),
         new(nameof(Sozu), SourceGroup.Relic, null, Reminder: "Crossed. Events: options that give a potion (you get none). Shops: potions"),
-        new(nameof(BeltBuckle), SourceGroup.Relic, null, Reminder: "Crossed. Events: options that give a potion (no Dexterity while you hold it). Shops: potions"),
+        new(nameof(BeltBuckle), SourceGroup.Relic, "Potion tab on your last potion: drinking it gives Dexterity", TagPrefix: "potion:", Reminder: "Crossed. Events: options that give a potion (no Dexterity while you hold it). Shops: potions"),
+        new(nameof(ReptileTrinket), SourceGroup.Relic, "Potion tab on every potion: drinking one gives Strength this turn", TagPrefix: "potion:"),
+        new(nameof(WhiteBeastStatue), SourceGroup.Relic, "Potion tab on every potion while your slots are full: a potion reward comes after this fight", TagPrefix: "potion:"),
         new(nameof(MawBank), SourceGroup.Relic, null, Reminder: "Crossed. Shops: every item (buying anything ends its gold per room)"),
         new(nameof(RegalPillow), SourceGroup.Relic, null, Reminder: "Events: options that rest (heals more)"),
         new(nameof(StoneHumidifier), SourceGroup.Relic, null, Reminder: "Events: options that rest (max HP)"),

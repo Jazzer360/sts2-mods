@@ -222,7 +222,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [~] Discard pile tab on draw cards in hand whose draw would exceed the draw pile (forcing a reshuffle).
 - ~~KEPT marker on other hand cards~~: dropped in 0.12.0 (the draw-pile tab is enough).
 - [x] Every draw card: all `CardPileCmd.Draw` callers, including Prepared, Dagger Throw, Escape Plan, Pillage, Scrawl, Compile Driver, Restlessness, Huddle Up, Mad Science (Wisdom).
-- [ ] Draw potions (need a potion-slot tab).
+- [ ] Draw potions: a shuffle tab under potions whose draws reshuffle (potion tabs exist since 0.41.0).
 
 ---
 
@@ -397,9 +397,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Dead code removed (analyzers + `scripts/dead-code.mjs`): Intent Forecast stub, `UiKit.Badge`, `Sts2State.HasVar`, `TurnEndModel.Overblock`, `PlayFacts.DebuffsLanding`, `SimAdapter.SelfPowers`, unused parameters and usings.
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
-- Known gaps (2; each is logged when present in a fight):
-  - [ ] BeltBuckle (relic tracking): reacts to having no potions (potions have no tabs yet)
-  - [ ] ReptileTrinket (relic tracking): Strength when you use a potion (potions have no tabs yet)
+- Known gaps (0; each is logged when present in a fight):
 <!-- gaps:end -->
 
 ---

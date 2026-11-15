@@ -133,7 +133,5 @@ internal static class RelicTracking
         ["LizardTail"] = "none: saves you from dying once (simulator; Incoming Damage shows it when it will)",
         ["LavaLamp"] = "none: notes damage taken for its end-of-combat upgrade",
         ["BookRepairKnife"] = "none: heals when enemies die to Doom",
-        ["ReptileTrinket"] = "gap: Strength when you use a potion (potions have no tabs yet)",
-        ["BeltBuckle"] = "gap: reacts to having no potions (potions have no tabs yet)",
     };
 }

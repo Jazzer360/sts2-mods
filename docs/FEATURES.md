@@ -19,6 +19,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Proc Indicators](#proc-indicators) | `proc-indicators` | 🟡 | on |
 | [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | 🟡 | on |
 | [Death Skull](#death-skull) | `death-skull` | 🟡 | on |
+| [Potion Tabs](#potion-tabs) | `potion-tabs` | 🟡 | on |
 | [Run Reminders](#run-reminders) | `run-reminders` | 🟡 | on |
 | [Update Notice](#update-notice) | `update-notice` | 🟡 | on |
 
@@ -409,6 +410,24 @@ One simulator behind Incoming Damage, the lethal tab, the Imbalanced and wake ta
 Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). Most draw their Cards amount; Dagger Throw, Escape Plan and Pillage draw one (Pillage at least one); Scrawl draws up to a full hand; Compile Driver draws one per distinct orb type (the card's own calculation); Restlessness draws only when it's the only card in hand; FTL draws only while you've played fewer than 3 cards this turn; Mad Science draws only with the Wisdom rider. A card that plays twice draws twice. The discard pile icon is read from the live discard pile button (`NCombatUi.DiscardPile` → `Icon`).
 
 **Not yet:** draw potions (potion slots have no tab yet).
+
+---
+
+## Potion Tabs
+
+**What you see**, in fights: the on-card tab's design hanging under each potion in the top bar, point down like a banner, with the icon of a relic that drinking that potion sets off. One tab per relic, side by side under the potion.
+
+| Relic | Potions | Why |
+| --- | --- | --- |
+| Reptile Trinket | every potion | drinking one gives 3 Strength this turn |
+| Belt Buckle | your last potion, while its Dexterity isn't up | holding no potions gives 2 Dexterity |
+| White Beast Statue | every potion while your potion slots are full | a potion reward comes after every fight; with no room it's lost, so drink one |
+
+**Settings:** the `potion-tabs` switch, the "All potion tabs" group (`potion:*`) and one key per relic (`potion:<Relic>`, Relics page, Tab column).
+
+**Check:** after you drink a potion, Reptile Trinket's Strength and Belt Buckle's Dexterity against the tabs it had on its last frame; reported (`potion`) when they differ. Each potion writes an `[audit] [potion]` line to the log.
+
+**Game UI touched:** each tab is a copy of a hand card's enchantment tab, added as the first child of the potion's `NPotionHolder` (so the potion draws over its tucked end); the game's nodes aren't changed. No Harmony patches.
 
 ---
 

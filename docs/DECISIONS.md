@@ -197,3 +197,8 @@ The simulator plays your end-of-turn auto-plays (the game's auto-play phase, bef
 When ending your turn now gives you another turn first (Pael's Eye with nothing played, Extra Turn), Incoming Damage keeps forecasting the enemies' next turn as if it came next, and shows the source's icon with "+1 turn" (the game's own `Hook.ShouldTakeExtraTurn`, a pure query).
 *Why:* the owner's choice among three: this one, the enemy hits without your end-of-turn block (it decays when the extra turn starts), or only what your end of turn does. Keeping the forecast leaves every other check and tab unchanged; the icon says the enemies aren't next, and that your end-of-turn block won't be there when they act.
 *Replaced:* the coverage gap for Extra Turn and Pael's Eye's extra turn (no sign of it at all).
+
+### 41. Potion tabs: the card tab's art, hanging point down under each potion — active (2026-11-14)
+Relics that react to drinking a potion get a tab under that potion in the top bar: a copy of a hand card's enchantment tab (the card tabs' art), turned the other way so its point hangs down like a banner, with the relic's icon. Same language as the card tabs (one per source, plain or crossed), keys `potion:<Relic>`. First sources: Reptile Trinket, Belt Buckle (your last potion), White Beast Statue (while your slots are full: its reward would be lost).
+*Why:* the owner's call: these reminders belong on the potions, and a banner reads better hanging under a potion than a tab pointing up into it.
+*Replaced:* the coverage gaps for Reptile Trinket and Belt Buckle ("potions have no tabs yet").

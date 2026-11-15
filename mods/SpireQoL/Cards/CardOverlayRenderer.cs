@@ -410,7 +410,7 @@ public sealed class CardOverlayRenderer
     }
 
     /// <summary>A diagonal red bar across the icon (bottom-left to top-right).</summary>
-    private static void LayoutSlash(ColorRect slash, Vector2 iconSize)
+    internal static void LayoutSlash(ColorRect slash, Vector2 iconSize)
     {
         var len = iconSize.Length() * 0.9f;
         var thick = Math.Max(3f, iconSize.Y * 0.12f);

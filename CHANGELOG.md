@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.41.0
+#### Added
+- Potion tabs: in fights, a tab hanging under each potion (point down) with the relic that drinking it sets off: Reptile Trinket on every potion, Belt Buckle on your last one, and White Beast Statue on every potion while your slots are full (its potion reward would be lost).
+
 ### Spire QoL 0.40.0
 #### Added
 - Run Reminders in shops: the icons of relics that buying an item sets off, left of its price (Bing Bong, Book of Five Rings and Lucky Fysh on cards, with the price after Lucky Fysh's gold in green under it; Sozu and Belt Buckle crossed on potions; Maw Bank crossed on everything while it still gives gold).
