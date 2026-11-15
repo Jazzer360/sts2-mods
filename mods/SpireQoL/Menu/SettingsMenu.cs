@@ -54,6 +54,7 @@ public sealed class SettingsMenu
         ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile."),
         ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it)."),
         ("run-reminders", "Run Reminders", "Outside fights: your relics that react to a card reward, next to the screen, and to an event option, beside it."),
+        ("potion-tabs", "Potion Tabs", "Tabs under your potions for the relics that drinking one sets off (the Relics page)."),
         ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit)."),
         ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports)."),
         ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports)."),

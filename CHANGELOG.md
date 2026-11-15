@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.42.2
+#### Fixed
+- Settings: Potion Tabs has its own on/off switch on the Features page, like every other feature.
+
 ### Spire QoL 0.42.1
 #### Fixed
 - Multiplayer: the coverage check no longer reports Self Deprecate. What it does for teammates (Joy cards into their hands, created by you) doesn't change the turn's outcome; your Sadness and created-card procs were already counted.
