@@ -39,6 +39,9 @@ public sealed record SimCard(string Name, SimCardType Type)
     /// <summary>Which card in hand it is (SimHandCard.Id), 0 = none.</summary>
     public int HandId { get; init; }
 
+    /// <summary>Its dynamic values a model reads (Heavy Shot's AimMultiplier...), by the game's var name.</summary>
+    public IReadOnlyDictionary<string, decimal> Vars { get; init; } = new Dictionary<string, decimal>();
+
     public bool Is(string tag) => Tags.Contains(tag);
 }
 
@@ -50,6 +53,9 @@ public sealed record DamageCtx(int? Dealer, int Target, SimProps Props, SimCard?
 
 /// <summary>A block calculation's inputs (Hook.ModifyBlock): who gains it, its props, and the card it's from.</summary>
 public sealed record BlockCtx(int Target, SimProps Props, SimCard? Card, SimCardPlay? Play);
+
+/// <summary>An attack (AttackCommand) for BeforeAttack and AfterAttack: its id in this simulation, who makes it, its props and card.</summary>
+public sealed record AttackInfo(int Id, int Dealer, SimProps Props, SimCard? Card);
 
 /// <summary>A damage event (DamageResult) for the hooks around it.</summary>
 public sealed record DamageEvent(int? Dealer, int Target, SimProps Props, SimCard? Card, int Total, int Blocked, int Unblocked, bool Killed);
@@ -63,7 +69,9 @@ public static class Who
     public const int You = -1;
     public static int Teammate(int k) => -2 - k;
     public static bool IsEnemy(int id) => id >= 0;
-    public static bool IsPlayer(int id) => id < 0;
+    public static bool IsPlayer(int id) => id < 0 && id > YourOsty;
+    /// <summary>Your Osty, as a dealer (his own powers aren't simulated: his damage is captured).</summary>
+    public const int YourOsty = -100;
     /// <summary>The teammate index of a player id (-1 for you).</summary>
     public static int TeammateIndex(int id) => id <= -2 ? -2 - id : -1;
 }
@@ -79,6 +87,9 @@ public abstract class SimModel
     /// <summary>The game's class name (StrengthPower, PenNib...).</summary>
     public abstract string Name { get; }
 
+    /// <summary>It flashes when it changes a damage amount (the game's AfterModifyingDamageAmount: Slow, Hard to Kill...).</summary>
+    public virtual bool FlashesOnDamageModified => false;
+
     protected static IEnumerable<SimState> One(SimState s) => new[] { s };
 
     // ---- pipelines (pure: read the state, change nothing)
@@ -89,6 +100,8 @@ public abstract class SimModel
     public virtual decimal ModifyDamageCap(SimState s, int owner, DamageCtx d) => decimal.MaxValue;
     public virtual decimal ModifyBlockAdditive(SimState s, int owner, BlockCtx b) => 0m;
     public virtual decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b) => 1m;
+    /// <summary>Hook.ModifyPowerAmountGiven: a power's amount as <paramref name="applier"/> gives it to <paramref name="target"/> (Snecko Skull).</summary>
+    public virtual int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target) => amount;
 
     // ---- hooks (may branch)
 
@@ -97,7 +110,8 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> BeforeDamageReceived(SimState s, int owner, DamageCtx d, int amount) => One(s);
     public virtual IEnumerable<SimState> AfterDamageGiven(SimState s, int owner, DamageEvent e) => One(s);
     public virtual IEnumerable<SimState> AfterDamageReceived(SimState s, int owner, DamageEvent e) => One(s);
-    public virtual IEnumerable<SimState> AfterAttack(SimState s, int owner, SimCardPlay? play, int dealer) => One(s);
+    public virtual IEnumerable<SimState> BeforeAttack(SimState s, int owner, AttackInfo attack) => One(s);
+    public virtual IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack) => One(s);
     public virtual IEnumerable<SimState> AfterBlockGained(SimState s, int owner, int gainer, int amount, SimCard? card) => One(s);
 }
 

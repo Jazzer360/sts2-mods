@@ -48,6 +48,11 @@ public sealed class SimEnemy
     /// <summary>Its attack this turn: damage of each hit on you (the intent's numbers).</summary>
     public List<int> Hits = new();
     /// <summary>
+    /// Its attack as pipeline inputs (docs/SIMULATOR_V2.md): each hit's base and the captured terms of unmodelled sources on each
+    /// player, so Weak, Strength and the rest are applied as the hit lands. Null: Hits holds the final numbers.
+    /// </summary>
+    public List<IntentHit>? Intent;
+    /// <summary>
     /// Each hit's amount on teammate k (their own Vulnerable, Intangible, Tank...: the game's damage math per
     /// target); missing: the same as yours.
     /// </summary>
@@ -170,6 +175,11 @@ public sealed class SimPlayer
     public PowerSet Powers = PowerSet.Empty;
     /// <summary>Their relics the simulator models, in relic order, with each one's counter (Amount) and flag (Data).</summary>
     public PowerSet Relics = PowerSet.Empty;
+    /// <summary>
+    /// What they played this turn, as the hooks count it (the game's CardPlaysStarted and CardPlaysFinished): "Started", "Finished",
+    /// "Started:Attack", "Finished:Skill", "Finished#Shiv" (by tag)... Each play of a replay counts.
+    /// </summary>
+    public PowerSet Turn = PowerSet.Empty;
 
     // Powers that react or act at end of turn.
     public int Juggernaut;
@@ -481,6 +491,10 @@ public sealed class SimState
     /// </summary>
     internal PlayBaseline? PlayBase;
 
+    /// <summary>The card play being resolved (its hooks and actions read it), and the attack in progress (Vigor, Aim...).</summary>
+    internal SimCardPlay? CurrentPlay;
+    internal int AttackSerial, CurrentAttack;
+
     /// <summary>The run's work counter (SimEngine.Run sets it; every copy of the state shares it).</summary>
     internal SimWork? Work;
 
@@ -647,4 +661,11 @@ internal sealed class SimWork
 
     /// <summary>This step has made SimEngine.StepCopyBudget copies: random choices stop branching.</summary>
     public bool OverBudget => Copies - _stepStart >= SimEngine.StepCopyBudget;
+}
+
+/// <summary>One hit of an enemy's attack intent: its base damage (AttackIntent.DamageCalc) and, per player id, the captured terms.</summary>
+public sealed record IntentHit(decimal Base)
+{
+    public IReadOnlyDictionary<int, CapturedTerms>? Captured { get; init; }
+    public CapturedTerms TermsOn(int player) => Captured != null && Captured.TryGetValue(player, out var c) ? c : CapturedTerms.None;
 }

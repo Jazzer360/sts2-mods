@@ -296,12 +296,17 @@ public static partial class SimEngine
 
     public static SimOutcome Run(SimState start, SimPlay? play = null) => Run(start, null, play);
 
+    public static SimOutcome Run(SimState start, SimScript play) => Run(start, (IReadOnlyList<SimScript>?)null, play);
+
+    public static SimOutcome Run(SimState start, IReadOnlyList<SimPlay>? leadIn, SimPlay? play) =>
+        Run(start, leadIn?.Select(SimScript.Of).ToList(), play == null ? null : SimScript.Of(play));
+
     /// <summary>
     /// The plays still resolving or queued (leadIn, in resolution order) first, then this card, then the
     /// end of the turn and the enemy turn (decision #27). The card's own results (kills, block breaks, block
     /// gains, reactions) are measured from each branch's state after the lead-in.
     /// </summary>
-    public static SimOutcome Run(SimState start, IReadOnlyList<SimPlay>? leadIn, SimPlay? play)
+    public static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play)
     {
         var work = new SimWork();
         var first = start.Clone();
@@ -309,7 +314,7 @@ public static partial class SimEngine
         var b = new BranchSet(first);
         if (leadIn is { Count: > 0 })
         {
-            foreach (var queued in leadIn) ApplyPlay(b, queued);
+            foreach (var queued in leadIn) RunScript(b, queued);
             b.Do(s =>
             {
                 s.PlayBase = new SimState.PlayBaseline(
@@ -322,7 +327,7 @@ public static partial class SimEngine
                 s.Fired = s.FiredAny = PowerSet.Empty;
             });
         }
-        if (play != null) ApplyPlay(b, play);
+        if (play != null) RunScript(b, play);
         // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
         var aliveAtStart = start.Enemies.Where(e => e.Alive).Select(e => e.Id).ToList();
         var killedPerBranch = b.States.Select(s => (s.PlayBase?.Alive ?? (IEnumerable<int>)aliveAtStart).Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
@@ -366,8 +371,8 @@ public static partial class SimEngine
             safeStart.Work = work;
             safeStart.NoRandomHits = true;
             var safe = new BranchSet(safeStart);
-            if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(safe, queued);
-            if (play != null) ApplyPlay(safe, play);
+            if (leadIn != null) foreach (var queued in leadIn) RunScript(safe, queued);
+            if (play != null) RunScript(safe, play);
             AutoPostPlay(safe);
             EndOfTurn(safe);
             safe.Do(EnemyTurn);
@@ -897,6 +902,17 @@ public static partial class SimEngine
 
     // ------------------------------------------------------------------ card play
 
+    /// <summary>A script on its own (the state right after it), for tests of v2 plays.</summary>
+    public static void RunScriptTo(SimState s, SimScript script, out List<SimState> branches, out bool truncated)
+    {
+        var first = s.Clone();
+        first.Work = new SimWork();
+        var b = new BranchSet(first);
+        RunScript(b, script);
+        branches = b.States;
+        truncated = b.Truncated;
+    }
+
     public static void ApplyPlayTo(SimState s, SimPlay play, out List<SimState> branches, out bool truncated) => ApplyPlayTo(s, null, play, out branches, out truncated);
 
     /// <summary>The lead-in plays, then this play (the state right after it resolves).</summary>
@@ -924,6 +940,11 @@ public static partial class SimEngine
         switch (a)
         {
             case LegacyPart lp: RunLegacy(b, lp.Play, lp.Part); break;
+            case PlayCardAction pc: RunPlayCard(b, pc); break;
+            case AttackAction at: RunAttack(b, at); break;
+            case GainBlockAction gb: RunBlock(b, gb); break;
+            case ApplyPowerAction ap: RunApplyPower(b, ap); break;
+            case LoseHpAction lh: b.Do(s => LandUnblockable(s, s.CurrentPlay?.Card.Name ?? "HP cost", lh.Amount)); break;
             default: throw new NotSupportedException($"No runner for {a.GetType().Name}");
         }
     }
@@ -1721,7 +1742,7 @@ public static partial class SimEngine
             if (!e.Alive)
             {
                 e.DiedBeforeActing = true;
-                if (e.Hits.Count > 0) s.SkippedEndOfTurn++;
+                if (HitCount(e) > 0) s.SkippedEndOfTurn++;
                 continue;
             }
             // Poison ticks at the start of its turn, stunned or not; Hardened Shell's budget resets then.
@@ -1732,11 +1753,11 @@ public static partial class SimEngine
             if (!e.Alive)
             {
                 e.DiedBeforeActing = true;
-                if (e.Hits.Count > 0) s.SkippedPoisoned++;
+                if (HitCount(e) > 0) s.SkippedPoisoned++;
                 Explosions(s, yourTurn: false);
                 continue;
             }
-            if (e.Stunned || e.Hits.Count == 0) continue; // a stunned enemy skips its move
+            if (e.Stunned || HitCount(e) == 0) continue; // a stunned enemy skips its move
             var enemyBlock = e.Barricade ? e.Block : 0;
 
             var landed = 0;
@@ -1760,7 +1781,8 @@ public static partial class SimEngine
             {
                 if (s.Teammates[k].Hp <= 0) return;
                 var t = s.MutableTeammate(k);
-                var amount = k < e.TeammateHits.Count && h < e.TeammateHits[k].Count ? e.TeammateHits[k][h] : mine;
+                var amount = e.Intent != null ? IntentDamage(s, e, h, Who.Teammate(k))
+                    : k < e.TeammateHits.Count && h < e.TeammateHits[k].Count ? e.TeammateHits[k][h] : mine;
                 t.Incoming += amount;
                 if (t.Thorns > 0) Retaliate(t.Thorns);
                 var tBlocked = Math.Min(t.Block, amount);
@@ -1776,9 +1798,11 @@ public static partial class SimEngine
             }
             var before = Math.Min(s.TeammatesBeforeMe, s.Teammates.Count);
             var hitIndex = -1;
-            foreach (var perHit in e.Hits)
+            for (var hit = 0; hit < HitCount(e); hit++)
             {
                 hitIndex++;
+                // The hit on you: the intent through the damage pipeline as it lands, or the final number.
+                var perHit = e.Intent != null ? IntentDamage(s, e, hit, Who.You) : e.Hits[hit];
                 if (dead)
                 {
                     s.CancelledHits++;
