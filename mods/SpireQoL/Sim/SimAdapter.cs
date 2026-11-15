@@ -585,6 +585,8 @@ public static class SimAdapter
             if (k < allies.Count) { play.AllyTarget = k; ally = allies[k].Creature; }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
+        // Mighty Wings: the simulator counts your 30+ hits, for the Strength they give the attack's later hits.
+        play.BigHitThreshold = PlayFacts.MightyWings(me).Threshold;
         // Covering Fire: block for every teammate on each shot you try (one per play of a Shoot card, arrow or not; none from an X shot at X 0).
         if (Fool.TriesShot(card) && me.Creature.Powers.FirstOrDefault(x => x is CoveringFirePower) is { Amount: > 0 } coveringFire)
             play.TeammateBlock = (coveringFire.Amount, plays);

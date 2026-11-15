@@ -29,10 +29,13 @@ public sealed class SimPlay
     /// </summary>
     public Dictionary<int, (int After, int Damage)> HitDamageLater = new();
     /// <summary>
-    /// Hit damage on an enemy that changes with every play of a replayed card (Tender: -1 Strength after each play): PerPlay
-    /// hits a play, Damage[k] each hit of play k (the last value for any further play). Overrides HitDamage and HitDamageLater.
+    /// Hit damage on an enemy that changes during the card's plays: PerPlay hits a play; Damage[k][g] each hit of play k after
+    /// g Mighty Wings triggers this fight (SimState.BigHits; the last entry covers more). Play k: Tender's -1 Strength after
+    /// each play, Pen Nib doubling only the play that brings its count to 10. Overrides HitDamage and HitDamageLater.
     /// </summary>
-    public Dictionary<int, (int PerPlay, int[] Damage)> HitDamageByPlay = new();
+    public Dictionary<int, (int PerPlay, int[][] Damage)> HitDamageByPlay = new();
+    /// <summary>Mighty Wings: a powered hit of yours dealing at least this much (blocked plus HP lost) gains you Strength. 0 = none.</summary>
+    public int BigHitThreshold;
     /// <summary>
     /// Rain Shot (v0.113.0): after its hit on the target, every other hittable enemy takes that hit's damage
     /// (overkill included; only caps apply), as a powered hit of yours (their Thorns reacts).
@@ -589,6 +592,8 @@ public static class SimEngine
     {
         var total = Math.Max(0, blocked) + Math.Min(lost, Math.Max(0, hpBefore));
         if (total > s.PlayBiggestHit) s.PlayBiggestHit = total;
+        // MightyWings.AfterDamageGiven: Strength right away, so the attack's next hits are stronger (SimPlay.HitDamageByPlay).
+        if (s.BigHitThreshold > 0 && total >= s.BigHitThreshold) s.BigHits++;
     }
 
     /// <summary>One hit on a random living enemy: a branch per possible target.</summary>
@@ -908,6 +913,7 @@ public static class SimEngine
 
     private static void ApplyPlay(BranchSet b, SimPlay p)
     {
+        b.Do(s => s.BigHitThreshold = p.BigHitThreshold);
         // The card's own HP cost, before its hits.
         if (p.HpCost > 0 && p.HpCostTimes > 0)
             b.Do(s => { for (var i = 0; i < p.HpCostTimes; i++) LandUnblockable(s, p.Name, p.HpCost); });
@@ -915,10 +921,13 @@ public static class SimEngine
         // The card's hits.
         int Hit(SimEnemy e) => p.HitDamage.TryGetValue(e.Id, out var d) ? d : 0;
         // The i-th hit (0-based) on an enemy: weaker from HitDamageLater's point on.
-        int HitAt(SimEnemy e, int i)
+        int HitAt(SimState s, SimEnemy e, int i)
         {
             if (p.HitDamageByPlay.TryGetValue(e.Id, out var byPlay) && byPlay.PerPlay > 0 && byPlay.Damage.Length > 0)
-                return byPlay.Damage[Math.Min(i / byPlay.PerPlay, byPlay.Damage.Length - 1)];
+            {
+                var play = byPlay.Damage[Math.Min(i / byPlay.PerPlay, byPlay.Damage.Length - 1)];
+                return play.Length == 0 ? 0 : play[Math.Min(s.BigHits, play.Length - 1)];
+            }
             return p.HitDamageLater.TryGetValue(e.Id, out var later) && i >= later.After ? later.Damage : Hit(e);
         }
         switch (p.HitTarget)
@@ -929,7 +938,7 @@ public static class SimEngine
                     var e = s.Enemy(p.TargetId);
                     if (e == null) return;
                     var aliveBefore = e.Alive;
-                    for (var i = 0; i < p.Hits; i++) PlayHit(s, e, HitAt(e, i), p.ByOsty);
+                    for (var i = 0; i < p.Hits; i++) PlayHit(s, e, HitAt(s, e, i), p.ByOsty);
                     // Timber: its kill sets off a hit on every enemy (a second attack of the card's).
                     if (p.OnKillHitAll.Count > 0 && aliveBefore && !e.Alive)
                         HitAll(s, x => p.OnKillHitAll.TryGetValue(x.Id, out var d) ? d : 0, card: true);
@@ -946,7 +955,7 @@ public static class SimEngine
                     for (var i = 0; i < p.Hits; i++)
                     {
                         var n = i;
-                        HitAll(s, x => HitAt(x, n), card: true, osty: p.ByOsty);
+                        HitAll(s, x => HitAt(s, x, n), card: true, osty: p.ByOsty);
                     }
                 });
                 break;

@@ -156,6 +156,13 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
         _window = null;
         foreach (var r in w.Subscribed) r.Flashed -= OnFlashed;
         var observed = Observed(w, out var state);
+        // The run ended (a win's last Proceed, or dying): the game sets your HP to 0 as it closes the run (RunState.IsGameOver is
+        // every player dead), which isn't the option's doing. Logged, not checked.
+        if (w.Me.Creature.IsDead)
+        {
+            ModEntry.Log.Info($"[audit] [reminders] {w.Option.TextKey}: the run ended, not checked ({state})");
+            return;
+        }
         var rule = (RelicModel r) => ChoiceReminders.For(r.GetType().Name)!;
         var shown = w.Subscribed.Where(r => (rule(r).On & w.Effects) != 0).ToList();
         var missed = w.Flashed.Where(r => !shown.Contains(r)).Select(r => r.GetType().Name).ToList();

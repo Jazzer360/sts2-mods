@@ -274,7 +274,7 @@ public sealed class PlayFacts
     {
         var hits = HitsOn(enemy);
         if (ByPlayHitDamage(enemy) is { } byPlay)
-            return Enumerable.Range(0, hits).Sum(i => byPlay.Damage[Math.Min(i / byPlay.PerPlay, byPlay.Damage.Length - 1)]);
+            return Enumerable.Range(0, hits).Sum(i => byPlay.Damage[Math.Min(i / byPlay.PerPlay, byPlay.Damage.Length - 1)][0]);
         if (LaterHitDamage(enemy) is not { } later) return DamagePerHit(enemy) * hits;
         return DamagePerHit(enemy) * Math.Min(hits, later.After) + later.Damage * Math.Max(0, hits - later.After);
     }
@@ -291,33 +291,75 @@ public sealed class PlayFacts
     public static int StatLossPerPlay(Player me) => me.Creature.Powers.Any(p => p is TenderPower) ? 1 : 0;
 
     /// <summary>
-    /// A replayed attack that hits weaker on each later play: Tender takes 1 Strength after every play of yours (each play of a
-    /// replay is one, AfterCardPlayed), so play k hits for the damage with k less Strength (additive, before the multipliers:
-    /// the game's damage math on Damage - k). Your powered hits only (Osty's attacks use his Strength). Not combined with a
-    /// change partway through the play (LaterHitDamage): that one is used then.
+    /// An attack whose damage changes during its own plays (decompile v0.113.1), as each hit's damage by play and by Mighty
+    /// Wings triggers so far (SimPlay.HitDamageByPlay: Damage[play][triggers]), through the game's damage math:
+    ///  - Tender takes 1 Strength after every play of yours (each play of a replay is one, AfterCardPlayed): play k has k less.
+    ///  - Pen Nib (ModifyDamageMultiplicative) doubles only the play whose BeforeCardPlayed brings its count to 10: with the
+    ///    count at c, play k is doubled when c + k + 1 is 10 (the damage read now has it when c is 9).
+    ///  - Mighty Wings (AfterDamageGiven) gives its Strength on each of your powered hits of 30 or more, before the next hit:
+    ///    after g triggers, g × its Strength more.
+    /// Strength is additive, before the multipliers: the game's damage math on Damage + the change. Your powered hits only
+    /// (Osty's use his own Strength). Not combined with a change partway through the play (LaterHitDamage): that one is used.
+    /// Null when none of these changes anything.
     /// </summary>
-    public (int PerPlay, int[] Damage)? ByPlayHitDamage(Creature enemy)
+    public (int PerPlay, int[][] Damage)? ByPlayHitDamage(Creature enemy)
     {
         try
         {
-            var loss = StatLossPerPlay(Me);
-            if (loss == 0 || Plays < 2 || ByOsty || Card.Type != CardType.Attack) return null;
+            if (ByOsty || Card.Type != CardType.Attack || AttackHits == 0) return null;
             if (Card.TargetType is not (TargetType.AnyEnemy or TargetType.AllEnemies)) return null;
-            if (LaterHitDamage(enemy) != null) return null;
-            var perPlay = HitsOn(enemy) / Plays;
+            var hits = HitsOn(enemy);
+            var plays = Math.Max(1, Plays);
+            var perPlay = hits / plays;
             if (perPlay <= 0) return null;
-            var first = RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out var props);
+            var loss = plays > 1 ? StatLossPerPlay(Me) : 0;
+            var (penCount, penFactor) = PenNibByPlay(plays);
+            var (wingsStrength, _) = MightyWings(Me);
+            var triggers = wingsStrength > 0 && hits > 1 ? hits : 1;
+            if (loss == 0 && penCount < 0 && triggers == 1) return null;
+            if (LaterHitDamage(enemy) != null) return null;
+            RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out var props);
             if (!MegaCrit.Sts2.Core.ValueProps.ValuePropExtensions.IsPoweredAttack(props)) return null;
-            var damage = new int[Plays];
-            damage[0] = DamagePerHit(enemy);
-            for (var k = 1; k < Plays; k++)
-                damage[k] = Math.Max(0, damage[0] + (int)RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out _, -k * loss) - (int)first);
+            var damage = new int[plays][];
+            for (var k = 0; k < plays; k++)
+            {
+                damage[k] = new int[triggers];
+                for (var g = 0; g < triggers; g++)
+                {
+                    var raw = RawDamagePerHit(enemy, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, out _, -k * loss + g * wingsStrength);
+                    damage[k][g] = Math.Max(0, (int)(raw * penFactor(k)));
+                }
+            }
             return (perPlay, damage);
         }
         catch
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Pen Nib across a replay's plays: its count now (-1 when it doesn't change anything between plays) and, for play k, the
+    /// factor on the damage read now (it has Pen Nib's ×2 when the count is 9 and the card isn't being played yet).
+    /// </summary>
+    private (int Count, Func<int, decimal> Factor) PenNibByPlay(int plays)
+    {
+        if (plays < 2 || Me.Relics.FirstOrDefault(r => r is PenNib) is not { } nib) return (-1, _ => 1m);
+        if (Sts2State.Private<CardModel?>(nib, "_attackToDouble", null) != null) return (-1, _ => 1m);
+        var count = Sts2State.Private(nib, "AttacksPlayed", -1);
+        if (count < 0) return (-1, _ => 1m);
+        var doubledNow = count == 9;
+        bool Doubled(int k) => (count + k + 1) % 10 == 0;
+        if (Enumerable.Range(0, plays).All(k => Doubled(k) == doubledNow)) return (-1, _ => 1m);
+        return (count, k => (Doubled(k) ? 2m : 1m) / (doubledNow ? 2m : 1m));
+    }
+
+    /// <summary>Mighty Wings: the Strength one trigger gives (every copy) and the smallest hit that sets it off; (0, 0) without it.</summary>
+    public static (int Strength, int Threshold) MightyWings(Player me)
+    {
+        var wings = me.Relics.Where(r => r is MegaCrit.Sts2.Core.Models.Relics.MightyWings).ToList();
+        if (wings.Count == 0) return (0, 0);
+        return (wings.Sum(r => Sts2State.Var(r, "StrengthPower", 2)), wings.Min(r => Sts2State.Var(r, "DamageThreshold", 30)));
     }
 
     /// <summary>

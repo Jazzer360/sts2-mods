@@ -381,6 +381,8 @@ public sealed class SimState
     /// Puzzle, Demon Tongue, Inferno, Rupture), and the HP lost (Red Skull). Not in the branch key: merged as the smallest.
     /// </summary>
     public int PlayHpReached, PlayHpLosses, PlayHpLost;
+    /// <summary>Mighty Wings triggers this simulation (your powered hits of BigHitThreshold or more), and the play's threshold.</summary>
+    public int BigHits, BigHitThreshold;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
     public int FairiesUsed;
     public bool LizardTailUsed;
@@ -550,6 +552,7 @@ public sealed class SimState
                 h *= 1099511628211L;
             }
         }
+        Add(BigHits);
         Add(P.Block); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
         Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         foreach (var e in Enemies)

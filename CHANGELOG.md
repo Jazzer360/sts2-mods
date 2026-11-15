@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.46.4
+#### Fixed
+- Pen Nib on a card that plays more than once: only the play that brings its count to 10 is doubled, not every play. At a count of 8, the replay's second play is the doubled one.
+- Mighty Wings: the Strength from a hit of 30 or more now counts for the same attack's later hits, so Repeat Shot and other multi-hit attacks deal what the game deals.
+- The event check no longer reports the HP the game sets to 0 when a run ends (the last Proceed after a win).
+
 ### Spire QoL 0.46.3
 #### Changed
 - Free-card tabs show ? on Frantic Escape. Each play raises that copy's cost for the rest of the combat, and under a free card every copy shows 0, so you can't tell what this one would save. The rule covers any card whose cost changed for the rest of the combat (Snecko Eye's re-roll too).
