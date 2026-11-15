@@ -67,10 +67,19 @@ internal static class CardCoverage
     /// </summary>
     private static readonly HashSet<string> TeammateTargetModelled = new();
 
+    /// <summary>
+    /// A card aimed at a teammate whose effect there the simulator doesn't model (it applies the card to you):
+    /// the play check can't compare it. The coverage check reports the card.
+    /// </summary>
+    internal static bool TeammateTargetUnmodelled(CardModel card) =>
+        card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.Contains(card.GetType().Name);
+
     /// <summary>Cards reviewed as not needing what the scan finds, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
         [nameof(DeprecatedCard)] = "a placeholder card the game keeps for old saves (draws 1, removes itself from the deck)",
+        // EnergySurge.OnPlay: PlayerCmd.GainEnergy for every living player (GetTeammatesOf includes you), nothing else.
+        [nameof(EnergySurge)] = "gives every player energy, which the simulator doesn't model for anyone (it predicts the turn's outcome, not what's played next)",
     };
 
     /// <summary>

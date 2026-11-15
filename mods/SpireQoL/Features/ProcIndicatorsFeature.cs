@@ -368,7 +368,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             // models itself, before each hit.
             if (h.Harmful && h.Kind == Kind.Damage && h.Amount > 0 && src.GetType().Name != nameof(ThornsPower))
                 toYou.Add((src.GetType().Name, h.Amount));
-            if (src.GetType().Name is nameof(JuggernautPower) or nameof(NecroMasteryPower) || h.Harmful) continue; // modelled by the simulator itself
+            // Modelled by the simulator itself (Thunder: each Lightning evoke's target is hit again in SimEngine.Evoke).
+            if (src.GetType().Name is nameof(JuggernautPower) or nameof(NecroMasteryPower) or nameof(ThunderPower) || h.Harmful) continue;
             if (h.Kind == Kind.Damage)
             {
                 if (h.OnEnemies != null)

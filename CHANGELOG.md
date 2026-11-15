@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.37.1
+#### Fixed
+- Thunder counted once: a card that evokes Lightning (Dualcast, Zap or Ball Lightning into full slots) no longer gets an extra Thunder hit on a random enemy in its predictions (lethal, kills, the stun and wake tabs).
+- Multiplayer: while the game waits for every player to finish ending the turn, your end-of-turn effects have already run; Incoming Damage, the Death Skull and the forecast check no longer use a forecast made then, which counted your orb passives and end-of-turn block a second time.
+- Error reports: Run Reminders reads the cards Blitz's Neow option gives; the play check no longer reports plays aimed at a teammate that the simulator still applies to you (Ignition), and no longer looks for the Waterfall Giant's about-to-blow state on other enemies; Energy Surge's card check is reviewed (energy for every player).
+
 ### Spire QoL 0.37.0
 #### Added
 - Setting **Count teammates' hands** (multiplayer, off by default): predictions also use the cards in teammates' hands, which you only know if they tell you: Ethereal cards exhausting at end of turn (Feel No Pain block, Charon's Ashes and Forgotten Soul damage), Burn, Decay and Regret.

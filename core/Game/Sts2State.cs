@@ -34,7 +34,11 @@ public static class Sts2State
     public static Player? Me => Combat is { } cs ? LocalContext.GetMe(cs) : null;
 
     public static bool IsPlayerTurn => Combat is { } cs && cs.CurrentSide == CombatSide.Player
-        && !CombatManager.Instance.EndingPlayerTurnPhaseOne && !CombatManager.Instance.EndingPlayerTurnPhaseTwo;
+        && !CombatManager.Instance.EndingPlayerTurnPhaseOne && !CombatManager.Instance.EndingPlayerTurnPhaseTwo
+        // Between the two end-of-turn phases (multiplayer waits for every player's ReadyToBeginEnemyTurnAction)
+        // neither flag is set, but the end-of-turn effects have run: the player stays in the End phase until the
+        // enemy turn starts (PlayerTurnPhase.End).
+        && Me?.PlayerCombatState?.Phase is not (PlayerTurnPhase.AutoPostPlay or PlayerTurnPhase.End);
 
     public static int TurnNumber => Me?.PlayerCombatState?.TurnNumber ?? 0;
 

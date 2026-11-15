@@ -680,6 +680,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 foreach (var x in snapshot) model.Add($"not checked ({w.RanDuringPause} ran during your choice): {x}");
             }
             else issues.AddRange(snapshot);
+            if (issues.Count > 0 && w.Target is { IsPlayer: true } ally && ally != me.Creature
+                && CardCoverage.TeammateTargetUnmodelled(w.Chosen ?? w.Card))
+            {
+                // Aimed at a teammate (Ignition's Plasma goes to their orbs): the simulator applies the card to you.
+                model.Add($"not checked (aimed at a teammate; the simulator applies it to you): {string.Join("; ", issues)}");
+                issues.Clear();
+            }
             if (w.StaleBecause != null && issues.Count > 0)
             {
                 // Played before the previous card finished: its tabs didn't see that card's effects.
@@ -1274,7 +1281,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 static int Hp(SimEnemy e) => Math.Max(0, e.Hp);
                 // The Waterfall Giant doesn't leave at 0 HP: Steam Eruption puts it about to blow at 999999999 HP (WaterfallGiant.
                 // TriggerAboutToBlowState), stunned this turn, as good as dead until it explodes.
-                var aboutToBlow = pe.Hp <= 0 && creature.Monster != null && Sts2State.Private(creature.Monster, "IsAboutToBlow", false);
+                var aboutToBlow = pe.Hp <= 0 && creature.Monster is MegaCrit.Sts2.Core.Models.Monsters.WaterfallGiant giant
+                    && Sts2State.Private(giant, "IsAboutToBlow", false);
                 if (Hp(pe) != Hp(ae) && !aboutToBlow) d.Add($"after play enemy HP: {name} predicted {Hp(pe)}, actual {Hp(ae)}");
                 if (ae.Hp <= 0 || pe.Hp <= 0) continue;
                 if (pe.Block != ae.Block) d.Add($"after play enemy block: {name} predicted {pe.Block}, actual {ae.Block}");

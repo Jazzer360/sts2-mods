@@ -50,6 +50,21 @@ public class SimThunderTests
     }
 
     [Fact]
+    public void DualcastOnTwoEnemiesHitsEachEvokesTargetOnce()
+    {
+        // Auto-report (two Toadpoles at 28 and 48, Thunder 8, one Lightning 3/8): Dualcast's evokes went to
+        // different Toadpoles, each followed by its Thunder: 28 → 12 and 48 → 32. The play alone covers
+        // Thunder; no extra hit lands anywhere (32 damage in total in every branch).
+        var s = State(new SimEnemy { Id = 0, Name = "Toadpole", Hp = 28, Hits = { 3, 3, 3 } }, new SimEnemy { Id = 1, Name = "Toadpole", Hp = 48 });
+        s.P.Thunder = 8;
+        SimEngine.ApplyPlayTo(s, Dualcast(), out var b, out _);
+        Assert.Contains(b, x => x.Enemy(0)!.Hp == 12 && x.Enemy(1)!.Hp == 32);
+        Assert.Contains(b, x => !x.Enemy(0)!.Alive && x.Enemy(1)!.Hp == 48);
+        Assert.Contains(b, x => x.Enemy(0)!.Hp == 28 && x.Enemy(1)!.Hp == 16);
+        Assert.Equal(3, b.Count);
+    }
+
+    [Fact]
     public void FrostEvokesAndNoThunderDontHit()
     {
         var s = State(new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 5 } });

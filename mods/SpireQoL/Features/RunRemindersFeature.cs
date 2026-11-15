@@ -511,7 +511,8 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
 
     /// <summary>
     /// The calls a method makes, following calls (not delegates: those are the next page's options)
-    /// into its own class and the classes nested in it (lambdas, async state machines).
+    /// into its own class and the classes nested in it (lambdas, async state machines), and into a
+    /// game mode's static methods (Blitz's Neow rewards).
     /// </summary>
     private static void Walk(MethodBase method, Type? owner, HashSet<string> calls, HashSet<MethodBase> seen, int depth)
     {
@@ -533,6 +534,8 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
             if (ins.opcode != OpCodes.Call && ins.opcode != OpCodes.Callvirt && ins.opcode != OpCodes.Newobj) continue;
             calls.Add(mb.DeclaringType.Name + "." + mb.Name);
             if (owner != null && IsWithin(mb.DeclaringType, owner)) Walk(mb, owner, calls, seen, depth + 1);
+            // A game mode's own rewards (Blitz's Neow option runs BlitzRunModel.GiveNeowRewards).
+            else if (mb.IsStatic && typeof(RunModel).IsAssignableFrom(mb.DeclaringType)) Walk(mb, mb.DeclaringType, calls, seen, depth + 1);
         }
     }
 
