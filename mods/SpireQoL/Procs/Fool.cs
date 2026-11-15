@@ -35,6 +35,29 @@ internal static class Fool
     /// <summary>A Shoot card: its attack needs an available arrow (none: the card does nothing).</summary>
     public static bool IsShot(CardModel card) => HasTag(card, "Shoot");
 
+    /// <summary>
+    /// Playing it now tries a shot (ArrowCmd.TryShootArrow, which calls AfterArrowShot even with no arrow: Covering Fire).
+    /// An X-cost shot at X 0 doesn't (Repeat Shot: no hits, no shot).
+    /// </summary>
+    public static bool TriesShot(CardModel card)
+    {
+        if (!IsShot(card)) return false;
+        try
+        {
+            if (!card.EnergyCost.CostsX) return true;
+            var cs = card.CombatState;
+            var spent = card.EnergyCost.GetAmountToSpend();
+            return (cs == null ? spent : MegaCrit.Sts2.Core.Hooks.Hook.ModifyXValue(cs, card, spent)) > 0;
+        }
+        catch { return true; }
+    }
+
+    /// <summary>
+    /// Playing it now shoots an actual arrow: it tries a shot and you have an arrow to shoot (Whistling Arrows, Quietus,
+    /// Impaled and Explosive Arrows need one; with none the card does nothing at all).
+    /// </summary>
+    public static bool Shoots(CardModel card, Player me) => TriesShot(card) && ArrowsAvailable(me) > 0;
+
     /// <summary>Cards that pull every arrow of yours out of their target (ArrowCmd.DislodgeArrow in OnPlay).</summary>
     public static readonly HashSet<string> DislodgeCards = new() { "Recall", "Uproot", "Wrest" };
 
@@ -82,7 +105,7 @@ internal static class Fool
         if (DislodgeCards.Contains(f.Card.GetType().Name)) return arrows;
         var kills = f.Kills(e);
         var d = kills ? arrows : imp == null || !f.CanHit(e) ? 0 : Dislodges(f.HitsOn(e), HitCounter(imp), arrows);
-        if (kills && IsShot(f.Card) && ArrowsAvailable(me) > 0) d++;
+        if (kills && Shoots(f.Card, me)) d++;
         return d;
     }
 

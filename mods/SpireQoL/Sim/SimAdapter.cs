@@ -585,8 +585,8 @@ public static class SimAdapter
             if (k < allies.Count) { play.AllyTarget = k; ally = allies[k].Creature; }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
-        // Covering Fire: block for every teammate on each of your shots (one per play of a Shoot card).
-        if (Fool.IsShot(card) && me.Creature.Powers.FirstOrDefault(x => x is CoveringFirePower) is { Amount: > 0 } coveringFire)
+        // Covering Fire: block for every teammate on each shot you try (one per play of a Shoot card, arrow or not; none from an X shot at X 0).
+        if (Fool.TriesShot(card) && me.Creature.Powers.FirstOrDefault(x => x is CoveringFirePower) is { Amount: > 0 } coveringFire)
             play.TeammateBlock = (coveringFire.Amount, plays);
         play.Draws = f.Draws;
         play.BlockToAlly = BlockToAllyCards.Contains(name);

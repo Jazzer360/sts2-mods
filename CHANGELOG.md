@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.42.3
+#### Fixed
+- Repeat Shot at X 0 shoots no arrow, so it no longer gets the Whistling Arrows return tab, a kill or arrow-dislodge count from the shot, or Covering Fire's teammate block. Every arrow rule now asks the same question: does this play really shoot?
+
 ### Spire QoL 0.42.2
 #### Fixed
 - Settings: Potion Tabs has its own on/off switch on the Features page, like every other feature.

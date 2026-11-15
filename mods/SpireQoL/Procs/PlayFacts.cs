@@ -568,12 +568,12 @@ public sealed class PlayFacts
             GeneratedStatuses = statuses * Math.Max(1, plays),
             SadnessCreated = SadnessCards.Contains(name) ? statuses * Math.Max(1, plays) : 0,
             CardsBack = ReturnToHand.Returning(card, me, plays, hand.Count - 1 + draws + swiftDraws,
-                Fool.IsShot(card) && Fool.ArrowsAvailable(me) > 0 ? Math.Max(1, plays) : 0),
+                Fool.Shoots(card, me) ? Math.Max(1, plays) : 0),
             EnergyBack = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Sown { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } sown ? sown.Amount : 0,
             Transforms = TransformCount(card, name, others, drawPile) * Math.Max(1, plays),
             // A shot with no arrow to shoot does nothing at all (its debuffs neither: Hobbling Shot).
-            EnemyDebuffs = Fool.IsShot(card) && Fool.ArrowsAvailable(me) == 0 ? Array.Empty<Type>() : EnemyDebuffTypes(card),
-            EnemyTemporaryDebuffs = Fool.IsShot(card) && Fool.ArrowsAvailable(me) == 0 ? Array.Empty<Type>() : EnemyDebuffTypes(card, temporary: true),
+            EnemyDebuffs = Fool.IsShot(card) && !Fool.Shoots(card, me) ? Array.Empty<Type>() : EnemyDebuffTypes(card),
+            EnemyTemporaryDebuffs = Fool.IsShot(card) && !Fool.Shoots(card, me) ? Array.Empty<Type>() : EnemyDebuffTypes(card, temporary: true),
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
             Channels = ChannelCount(card, name, me) * Math.Max(1, plays),
             StarGains = StarGainCards.Contains(name) ? Math.Max(1, plays) : 0,
@@ -1038,7 +1038,7 @@ public sealed class PlayFacts
         {
             // A Shoot card with no arrow to shoot does nothing at all (ArrowCmd.ShootArrowAtTarget returns before
             // its attack; the card glows red).
-            if (Fool.IsShot(card) && OwnerOf(card) is { } owner && Fool.ArrowsAvailable(owner) == 0) return 0;
+            if (Fool.IsShot(card) && OwnerOf(card) is { } owner && !Fool.Shoots(card, owner)) return 0;
             switch (name)
             {
                 // Nail attacks only an Impaled enemy (any player's arrow). Unknown target: it can hit if some enemy is.

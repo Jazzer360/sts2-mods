@@ -576,7 +576,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var impaled = ids.Where(kv => kv.Key.IsAlive && Fool.ImpaledBy(kv.Key, _me.Creature) is { } imp && Fool.ArrowsIn(imp) > 0)
             .Select(kv => kv.Value).ToHashSet();
         if (outcomes.Any(o => o.KilledByPlayInAll.Overlaps(impaled))) return true;
-        if (!Fool.IsShot(f.Card) || Fool.ArrowsAvailable(_me) <= 0 || f.Sim == null) return false;
+        if (!Fool.Shoots(f.Card, _me) || f.Sim == null) return false;
         var targets = f.Sim.PlayByTarget.Keys.ToList();
         return targets.Count == outcomes.Length && targets.Where((t, i) => t >= 0 && outcomes[i].KilledByPlayInAll.Contains(t)).Any();
     }
@@ -733,7 +733,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case "MotifPower" when mine && Fool.FirstMelodies(card, _me).Any(): return Hit.Trig();
                     case "LostLutePower" when mine && Fool.FirstMelodies(card, _me).Any(): return Hit.Trig();
                     // A shot that has an arrow to shoot impales its target: damage to every enemy (ExplosiveArrowsPower.AfterArrowImpaled).
-                    case "ExplosiveArrowsPower" when mine && Fool.IsShot(card) && Fool.ArrowsAvailable(_me) > 0: return Damage(a, 1, Spread.All);
+                    case "ExplosiveArrowsPower" when mine && Fool.Shoots(card, _me): return Damage(a, 1, Spread.All);
                     // Energy the first time each turn one of your arrows comes loose (YahPower.AfterArrowDislodged): some aim does it.
                     case "YahPower" when mine && Fool.Dislodged(f, _me, _cs).Max > 0
                                          && Sts2State.Private<object?>(p, "_internalData", null) is { } yah
