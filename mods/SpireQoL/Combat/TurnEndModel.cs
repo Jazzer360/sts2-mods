@@ -129,7 +129,7 @@ public sealed class TurnEndModel
         {
             var worst = o.TeammateWorst(k);
             view.Add(new TeammateForecast(Teammates[k], worst.Incoming, State.Teammates[k].Block + worst.BlockGained,
-                State.Teammates[k].OstyHp, worst.OstyTaken, o.TeammateTakenMin(k), o.TeammateTakenMax(k)));
+                State.Teammates[k].OstyShields ? State.Teammates[k].OstyHp : 0, worst.OstyTaken, o.TeammateTakenMin(k), o.TeammateTakenMax(k)));
         }
         return view;
     }
@@ -210,7 +210,7 @@ public sealed class TurnEndModel
             DamageThrough = w.DamageThrough,
             Taken = outcome.TakenMax,
             TakenMin = outcome.TakenMin,
-            OstyHp = state.P.OstyHp,
+            OstyHp = state.P.OstyShields ? state.P.OstyHp : 0, // shown only while he takes your hits
             OstyTaken = outcome.OstyTakenMax,
             OstyTakenMin = outcome.OstyTakenMin,
             Dies = w.Died,

@@ -336,7 +336,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 | Vital Spark (enemy) | Tainted cards | **crossed** trigger |
 | Rupture | cards that cost you HP (Bloodletting-style HP loss) | trigger |
 | Inferno | plays that make you lose HP (their cost, enemy Thorns past your block; each time) | damage to all |
-| Necro Mastery | cards that kill Osty (Bone Shards, Sacrifice) | damage to every enemy (Osty's HP times its amount, through block) |
+| Necro Mastery | cards that make Osty lose HP: killing him (Bone Shards, Sacrifice), or his attack hitting Thorns | damage to every enemy (the HP he loses times its amount, through block); also in the enemy turn when he takes a hit for you |
 | Metronome | cards whose channels reach its orb count (including Storm's lightning from a power) | damage |
 | Bone Flute | cards that make Osty attack, while Osty is out | block |
 | Intimidating Helmet | cards spending ≥ 2 energy (energy actually spent: X-cost counts your energy) | block |
@@ -359,8 +359,8 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 | Motif, Lost Lute (the Fool) | your first Wah, Cho or Ki this turn | trigger (draws / plays the top of your draw pile) |
 | Conductor's Baton | the card that brings you to three melodies this turn | trigger (powered attacks on you deal 75% until your next turn) |
 | Explosive Arrows (the Fool) | Shoot cards, when you have an arrow to shoot | damage to every enemy |
-| Twine | cards that knock your arrows loose (every third of your hits on an enemy your arrow Impales, killing it, Recall, Uproot, Wrest) | block per arrow when every aim does it; else a plain tab |
-| Yah (the Fool) | cards that knock one of your arrows loose, when some aim does it (first time this turn), including kills its procs finish (Violent Chord) on an enemy holding your arrows | trigger (energy) |
+| Twine | cards that knock your arrows loose (every third of your hits on an enemy your arrow Impales, killing it, Recall, Uproot, Wrest) | block per arrow, from the simulated play (the shot impales after its attack; every third powered hit of yours knocks one loose; a dying enemy drops them all) |
+| Yah (the Fool) | cards that knock one of your arrows loose (first time this turn), from the simulated play, kills included | trigger (energy) |
 | Stretch (the Fool) | block cards whose powered block spends your Stretch, and any Adroit card (its block gets Stretch too; not Cho Ki, which puts it back; not Entrench, unpowered) | trigger |
 | Imitation Learning (a teammate's, aimed at you; multiplayer) | your Power cards: they play a copy of it (once per play, even if yours is replayed) | trigger |
 | Vigor | attacks that spend your Vigor (your powered attacks; not Osty's): Akabeko's on turn 1 | trigger |
@@ -381,7 +381,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 
 **Game UI touched:** on-card tabs only (see above). **Game code read (not changed):** `Hook.ModifyCardPlayCount`, `Hook.ModifyBlock`, `Hook.ModifyDamage`, `CardEnergyCost.GetAmountToSpend`, `CardModel.GetStarCostWithModifiers`, and a few relics' and powers' private counters (read by reflection).
 
-**Procs of procs:** a second pass runs the procs that other procs feed: Storm's lightning toward Metronome, and The Sealed Throne's stars toward Black Hole. Everything a play's procs lead to after that is the [outcome simulator](#outcome-simulator)'s: Juggernaut counts every block gain it makes (its own block, block procs, Frost evokes), and its hits count toward kills, block breaks and stuns.
+**Procs of procs:** the simulated play runs every proc through the game's hooks, so one sets off the next as in the game: Storm's Lightning and Trash to Treasure's orbs toward Metronome, The Sealed Throne's stars toward Black Hole, Dark Embrace's draws toward Speedster, an arrow knocked loose toward Yah and Twine. Juggernaut counts every block gain the play makes (its own block, block procs, Frost evokes), and its hits count toward kills, block breaks and stuns.
 
 **Not shown on purpose:** procs that fire on *drawing* a card (Pagestorm, Iteration, Automation, Speedster on draw...) happen when the card is drawn, not when you play it, so there's no choice to inform.
 

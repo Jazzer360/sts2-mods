@@ -6,6 +6,16 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.1.0
+#### Changed
+- The Fool's arrows are simulated: a shot spends an arrow before its attack and impales after it, every third powered hit of yours knocks an arrow loose, and a dying enemy drops them all. Yah and Twine come from the simulated play, so kills from procs count, and arrows that come back can be shot again in the same play.
+- Orbs are channelled with your Focus at that moment, so a Focus change earlier in the play counts. Storm and Trash to Treasure channel through the same rules, and every channel counts toward Metronome.
+- Necro Mastery fires whenever Osty loses HP: killing him, his attack hitting Thorns, and the hits he takes for you in the enemy turn.
+- Bouncing Flask's poison: each bounce picks its own random enemy, and Snecko Skull adds to each.
+- The Indirect procs setting judges each enemy's power on its own.
+#### Fixed
+- Bone Flute: block from Osty's attacks even when he isn't shielding you.
+
 ### Spire QoL 1.0.0
 #### Changed
 - The outcome simulator is rebuilt on the game's own rules: a card's play runs step by step, and every power, relic and enemy effect reacts through the same hooks the game uses, in the game's order. Each hit's damage and each block gain are worked out when they land, so anything that changes mid-play counts: Strength, Vigor, Vulnerable from the card itself, Pen Nib, Tender, Mighty Wings, Stretch.

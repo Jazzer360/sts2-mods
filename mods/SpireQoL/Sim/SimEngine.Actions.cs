@@ -112,7 +112,9 @@ public static partial class SimEngine
         var mods = spec.Fixed ? null : new List<(SimModel Model, int Owner)>();
         var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target)) : CalcDamage(s, spec.BaseFor(target), ctx, spec.TermsFor(target), mods);
         if (mods != null) foreach (var (m, o) in mods) m.AfterModifyingDamageAmount(s, o, card);
-        if (card != null && !at.ByOsty && !s.FirstHits.Has(target.ToString())) s.FirstHits = s.FirstHits.With(target.ToString(), amount);
+        // The first hit on each enemy, for the damage-formula audit (not after Mighty Wings gave Strength mid-attack: the preview
+        // can't know that).
+        if (card != null && !at.ByOsty && !s.FirstHits.Has(target.ToString()) && !s.Fired.Has("MightyWings")) s.FirstHits = s.FirstHits.With(target.ToString(), amount);
         if (amount <= 0) return new[] { s };
         if (s.Enemy(target) is { Alive: true } e) Damage(s, e, amount, dealer, spec.Props, card);
         // Rain Shot: the target's damage to every other hittable enemy (only caps apply).
