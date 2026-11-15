@@ -263,4 +263,20 @@ public class SimTeammateTests
         Assert.True(o.DeadInAll(1));
         Assert.Equal(0, o.TakenMax);
     }
+    [Fact]
+    public void InterceptMovesTheAttacksOntoYou()
+    {
+        // Intercept on the teammate (the adapter's SetHits from the game's damage math): Covered zeroes the powered
+        // attacks on them, your InterceptPower doubles those on you (covered players + 1). The enemy hits 10 each.
+        var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        s.Enemies[0].TeammateHits = new() { new() { 10 } };
+        s.Teammates.Add(Mate());
+        var play = new SimPlay { AllyTarget = 0 };
+        play.SetHits[1] = new() { 20 };
+        play.SetTeammateHits[1] = new() { new() { 0 } };
+        var o = SimEngine.Run(s, play);
+        Assert.Equal(20, o.TakenMax);
+        Assert.Equal(0, o.TeammateTakenMax(0));
+        Assert.Equal(new[] { 10 }, s.Enemies[0].Hits); // the start state is untouched
+    }
 }

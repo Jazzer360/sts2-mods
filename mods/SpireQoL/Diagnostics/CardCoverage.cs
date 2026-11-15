@@ -85,10 +85,9 @@ internal static class CardCoverage
         [nameof(Largesse)] = "a random colorless card for the teammate (a roll)",
         [nameof(Soulbound)] = "SoulboundPower on the teammate: acts on cards generated later",
         [nameof(Tutor)] = "the teammate picks a card from their draw pile into their hand",
-        // Known gap: Covered zeroes powered attacks on the teammate and your InterceptPower multiplies those on you by
-        // covered players + 1 (both read through the game's damage math once played), but this play's own forecast
-        // keeps the hits as they are now. Block to you is modelled.
-        [nameof(Intercept)] = "gap: the hits it moves onto you this turn aren't in its play's forecast (read from the board once played)",
+        // Modelled: Covered zeroes powered attacks on the teammate and your InterceptPower multiplies those on you by covered players
+        // + 1: the play sets both players' hits from the game's damage math (SimAdapter.Play). Block to you is modelled.
+        [nameof(Intercept)] = "block to you; the teammate's powered attacks move onto you: theirs × 0, yours × (covered + 2) / (covered + 1)",
     };
 
     /// <summary>

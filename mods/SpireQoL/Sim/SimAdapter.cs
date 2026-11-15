@@ -489,9 +489,9 @@ public static class SimAdapter
         Creature? ally = null;
         if (card.TargetType == TargetType.AnyAlly && targetId <= -2)
         {
-            var mates = Teammates(me, cs);
+            var allies = Teammates(me, cs);
             var k = -2 - targetId;
-            if (k < mates.Count) { play.AllyTarget = k; ally = mates[k].Creature; }
+            if (k < allies.Count) { play.AllyTarget = k; ally = allies[k].Creature; }
         }
         play.BlockToAlly = BlockToAllyCards.Contains(name);
         play.ChannelToAlly = ChannelToAllyCards.Contains(name);
@@ -779,6 +779,13 @@ public static class SimAdapter
         }
         bool Behind(Creature e, SurroundedPower.Direction? d) => d == SurroundedPower.Direction.Right ? e.HasPower<BackAttackLeftPower>()
             : d == SurroundedPower.Direction.Left && e.HasPower<BackAttackRightPower>();
+        //  - Intercept on a teammate you don't cover yet: Covered on them zeroes powered attacks on them
+        //    (CoveredPower.ModifyDamageMultiplicative), and your InterceptPower multiplies those on you by the players
+        //    you cover + 1 (InterceptPower.ModifyDamageMultiplicative): × (covered + 2) / (covered + 1) of your hits now.
+        var mates = Teammates(me, cs);
+        var covers = name == nameof(Intercept) && ally != null
+                     && !ally.GetPowerInstances<CoveredPower>().Any(c => c.Applier == me.Creature);
+        var coveredNow = covers ? mates.Count(m => m.Creature.GetPowerInstances<CoveredPower>().Any(c => c.Applier == me.Creature)) : 0;
         foreach (var (e, id) in ids)
         {
             if (!e.IsAlive) continue;
@@ -795,17 +802,18 @@ public static class SimAdapter
                 strength -= gaze * f.HitsOn(e);
             var wasBehind = surrounded != null && Behind(e, surrounded.Facing);
             var nowBehind = surrounded != null && Behind(e, facing);
-            if (!weak && !halved && strength == 0 && tainted == 0 && wasBehind == nowBehind) continue;
-            var turn = (halved ? 0.5m : 1m) * (nowBehind && !wasBehind ? 1.5m : 1m);
-            if (AdjustedHits(e, me, cs, strength + tainted, weak, turn, divisor: wasBehind && !nowBehind ? 1.5m : 1m) is { } hits) play.SetHits[id] = hits;
-            // Teammates (same order as Build): Weak and Strength change their hits too; Colossus only protects you.
-            if (!weak && strength == 0) continue;
-            var mates = Teammates(me, cs);
+            if (!weak && !halved && strength == 0 && tainted == 0 && wasBehind == nowBehind && !covers) continue;
+            var turn = (halved ? 0.5m : 1m) * (nowBehind && !wasBehind ? 1.5m : 1m) * (covers ? coveredNow + 2 : 1);
+            var divisor = (wasBehind && !nowBehind ? 1.5m : 1m) * (covers ? coveredNow + 1 : 1);
+            if (AdjustedHits(e, me, cs, strength + tainted, weak, turn, divisor: divisor) is { } hits) play.SetHits[id] = hits;
+            // Teammates (same order as Build): Weak and Strength change their hits too; Colossus only protects you; the
+            // teammate Intercept covers takes nothing from powered attacks.
+            if (!weak && strength == 0 && !covers) continue;
             if (mates.Count == 0) continue;
             var teamHits = new List<List<int>>();
             foreach (var mate in mates)
             {
-                if (AdjustedHits(e, me, cs, strength, weak, 1m, mate) is not { } th) { teamHits = null; break; }
+                if (AdjustedHits(e, me, cs, strength, weak, covers && mate.Creature == ally ? 0m : 1m, mate) is not { } th) { teamHits = null; break; }
                 teamHits.Add(th);
             }
             if (teamHits != null) play.SetTeammateHits[id] = teamHits;
@@ -844,7 +852,7 @@ public static class SimAdapter
                     ModifyDamageHookType.Additive | ModifyDamageHookType.Multiplicative, CardPreviewMode.None, out _);
                 var capped = Hook.ModifyDamage(me.RunState, cs, who.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
                     ModifyDamageHookType.All, CardPreviewMode.None, out _);
-                var adjusted = v / divisor * m;
+                var adjusted = v * m / divisor; // multiply first: exact when the result is (v / 3 * 4 could truncate 40 to 39)
                 if (capped < v) adjusted = Math.Min(adjusted, capped);
                 var perHit = Math.Max(0, (int)adjusted);
                 for (var i = 0; i < Math.Max(1, attack.Repeats); i++) hits.Add(perHit);

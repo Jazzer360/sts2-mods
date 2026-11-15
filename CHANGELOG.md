@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.37.4
+#### Fixed
+- Multiplayer: Intercept's predictions move the attacks on the teammate it covers onto you (they take nothing from attacks, yours are multiplied by the players you cover + 1). Before, playing it was predicted with the hits as they were, so its tabs understated the damage coming to you.
+
 ### Spire QoL 0.37.3
 #### Added
 - Multiplayer: a tab on your Power cards when a teammate's Imitation Learning is aimed at you (they'll play a copy).
