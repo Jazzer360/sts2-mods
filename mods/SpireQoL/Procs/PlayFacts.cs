@@ -144,10 +144,11 @@ public sealed class PlayFacts
     /// </summary>
     public int TransformsCertain => Card.GetType().Name == nameof(Guards) ? 0 : Transforms;
     /// <summary>
-    /// Make It So cards outside your hand that this Skill brings back (MakeItSo.AfterCardPlayedLate: every Nth Skill
-    /// you play in a turn): cards in your hand after the play.
+    /// Cards outside your hand this play brings back (Make It So, Right Hand Hand, Whistling Arrows: ReturnToHand), in your
+    /// hand after it; their tabs.
     /// </summary>
-    public int ReturnsToHand { get; init; }
+    public IReadOnlyList<CardModel> CardsBack { get; init; } = Array.Empty<CardModel>();
+    public int ReturnsToHand => CardsBack.Count;
     /// <summary>Energy the play certainly gives back (Sown, on the card's first play: Sown.OnPlay while Normal).</summary>
     public int EnergyBack { get; init; }
 
@@ -519,7 +520,7 @@ public sealed class PlayFacts
             Generated = Generated + next.Generated,
             GeneratedStatuses = GeneratedStatuses + next.GeneratedStatuses,
             SadnessCreated = SadnessCreated + next.SadnessCreated,
-            ReturnsToHand = ReturnsToHand + next.ReturnsToHand,
+            CardsBack = CardsBack.Concat(next.CardsBack).ToList(),
             EnergyBack = EnergyBack + next.EnergyBack,
             Sim = next.Sim,
             RandomOutcome = RandomOutcome || next.RandomOutcome,
@@ -566,7 +567,8 @@ public sealed class PlayFacts
             Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me),
             GeneratedStatuses = statuses * Math.Max(1, plays),
             SadnessCreated = SadnessCards.Contains(name) ? statuses * Math.Max(1, plays) : 0,
-            ReturnsToHand = card.Type == CardType.Skill ? MakeItSoReturns(me, plays) : 0,
+            CardsBack = ReturnToHand.Returning(card, me, plays, hand.Count - 1 + draws + swiftDraws,
+                Fool.IsShot(card) && Fool.ArrowsAvailable(me) > 0 ? Math.Max(1, plays) : 0),
             EnergyBack = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Sown { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } sown ? sown.Amount : 0,
             Transforms = TransformCount(card, name, others, drawPile) * Math.Max(1, plays),
             // A shot with no arrow to shoot does nothing at all (its debuffs neither: Hobbling Shot).
@@ -1136,31 +1138,6 @@ public sealed class PlayFacts
     /// </summary>
     internal static readonly HashSet<string> SadnessCards = new() { "BrightenUp", "Jest", "MourningBlow", "Rummage", "SelfDeprecate", "SorrowfulStrike", "Vitriol" };
 
-    /// <summary>
-    /// Make It So cards outside your hand that come back when a Skill is played <paramref name="plays"/> times: each comes
-    /// back (once) when a play makes your Skills played this turn a multiple of its Cards value.
-    /// </summary>
-    private static int MakeItSoReturns(Player me, int plays)
-    {
-        try
-        {
-            var skills = Sts2State.CountPlayedThisTurn(me, CardType.Skill);
-            var back = 0;
-            foreach (var pile in new[] { PileType.Draw, PileType.Discard, PileType.Exhaust })
-            {
-                foreach (var c in pile.GetPile(me).Cards.Where(c => c.GetType().Name == "MakeItSo"))
-                {
-                    var n = Math.Max(1, Sts2State.Var(c, "Cards", 3));
-                    if (Enumerable.Range(1, Math.Max(1, plays)).Any(i => (skills + i) % n == 0)) back++;
-                }
-            }
-            return back;
-        }
-        catch
-        {
-            return 0;
-        }
-    }
 
     internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses)
     {

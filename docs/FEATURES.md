@@ -132,6 +132,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 | Discard pile | its draw would reshuffle your discard pile into the draw pile | Shuffle Warning |
 | Skull (the game's emote wheel skull) | playing this kills an enemy for certain before it acts (see [Outcome simulator](#outcome-simulator)) | Proc Indicators |
 | A power or relic (+ amount for block / damage / summon) | playing this sets it off: see [Proc Indicators](#proc-indicators) | Proc Indicators |
+| A tiny card (the run history's card icon: frame color, type, rarity banner; decision #42) | playing this brings that card back to your hand: Make It So (the Skill that makes your Skills this turn a multiple of 3; from any pile but your hand), Right Hand Hand (cards costing 2 or more) and Whistling Arrows (shots with an arrow ready), both from your discard pile; none when your hand would be full (it goes to your discard pile then). Keys `return:<Card>`, group `return:*` | Proc Indicators |
 | A power or relic, **crossed** (+ amount for damage to you) | playing this helps the enemy, hurts you, or gives up a relic (Enrage, Thorns, Curl Up, Galvanized, Art of War, Pael's Tears, Pael's Eye...) | Proc Indicators |
 
 **Game UI touched:** card nodes in the hand. Tag copies live in a `SpireQoL_TagLayer` node inserted directly after the card's glow (`NCard.CardHighlight`) in the glow's parent, so they draw above the glow and beneath the card art. It mirrors the card frame's transform each frame, and is hidden when the node stops showing a decorated hand card. The game's own enchantment tab is only read as a template.
@@ -169,6 +170,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
 - **Limits:**
   - Velvet Choker shows plays left and turns red at 1.
   - Pocketwatch shows green while you're within its card limit and red ("missed") once you go over.
+- **Make It So** (a card, shown with its tiny card while a copy is in your fight's piles, an Attack Potion's too): your Skills played this turn toward its next return (every 3rd; each play of a replay and auto-played Skills count), "back on the next" and flashing when your next Skill brings a copy back, "(in hand)" when every copy is in your hand. Settings: Cards page, Tracker column.
 - **Turn timers** (off by default; switch each on in the settings menu, Relics page, Tracker column): Horn Cleat, Candelabra (turn 2); Captain's Wheel, Chandelier, Sparkling Rouge (turn 3), Pael's Flesh (1 more energy from turn 3), shown with progress and "next turn" the turn before; Stone Calendar, Happy Flower, Fake Happy Flower, Pendulum, Pollinous Core as counters.
 - **Countdown powers** (sorted after relics; the game's `PowerModel.DisplayAmount` is "steps left"). The bar fills toward the next trigger and flashes when one step is left:
   - Across turns: Orbit (every 4 energy spent), Automation (every 10 cards drawn), Cacophony (every 33 cards drawn, number only).

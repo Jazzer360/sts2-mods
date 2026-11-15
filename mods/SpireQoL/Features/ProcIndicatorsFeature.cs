@@ -162,7 +162,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
         foreach (var (card, p, d) in pending)
             foreach (var t in Finish(card, p))
-                d.AddTab(t.Key, t.Icon, crossed: t.Crossed, number: t.Number, kind: t.Kind, amount: t.Amount, auditMin: t.AuditMin, auditMax: t.AuditMax);
+                d.AddTab(t.Key, t.Icon, crossed: t.Crossed, number: t.Number, kind: t.Kind, amount: t.Amount, auditMin: t.AuditMin, auditMax: t.AuditMax, card: t.Card);
     }
 
     /// <summary>A card's facts, its merged proc hits, and its running simulations.</summary>
@@ -294,6 +294,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             tabs.Add(new TabSpec(key, icon, h.Harmful, number, kind, h.Amount, h.Min, h.Max));
         }
         if (lethal) tabs.Add(new TabSpec("lethal", GameIcons.Skull()));
+        // Cards this play brings back to your hand (Make It So, Right Hand Hand, Whistling Arrows): plain, one per card name,
+        // with the returning card as the icon.
+        foreach (var back in f.CardsBack.GroupBy(c => c.GetType().Name))
+            tabs.Add(new TabSpec("return:" + back.Key, null, Card: back.First()));
         return tabs;
     }
 

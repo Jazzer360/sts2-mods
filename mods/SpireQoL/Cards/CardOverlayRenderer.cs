@@ -300,7 +300,8 @@ public sealed class CardOverlayRenderer
                 icon.Scale = new Vector2(IconScale, IconScale);
                 icon.Position = visibleCenter - icon.Size / 2f;
                 // Text tabs (replay "2×") have no icon.
-                icon.Texture = spec.Text == null && GameIcons.Valid(spec.Icon) ? spec.Icon : null;
+                icon.Texture = spec.Text == null && spec.Card == null && GameIcons.Valid(spec.Icon) ? spec.Icon : null;
+                CardIcon(icon, spec.Card);
                 // The game sets this on its own icon for a disabled enchantment, which runs the icon
                 // through the backdrop's green colorize shader; Duplicate() copies whatever it was.
                 icon.UseParentMaterial = false;
@@ -357,6 +358,31 @@ public sealed class CardOverlayRenderer
                 }
             }
         }
+    }
+
+    private static readonly Dictionary<ulong, (string Name, TinyCardIcon Icon)> TinyCards = new();
+
+    /// <summary>A tab whose icon is a card (TabSpec.Card): the game's tiny card in the icon's slot; removed for other tabs.</summary>
+    internal static void CardIcon(TextureRect icon, MegaCrit.Sts2.Core.Models.CardModel? card)
+    {
+        var id = icon.GetInstanceId();
+        var name = card?.GetType().Name;
+        if (TinyCards.TryGetValue(id, out var have) && (have.Name != name || !GodotObject.IsInstanceValid(have.Icon.Root)))
+        {
+            if (GodotObject.IsInstanceValid(have.Icon.Root)) have.Icon.Root.QueueFree();
+            TinyCards.Remove(id);
+        }
+        if (card == null) return;
+        if (!TinyCards.TryGetValue(id, out have))
+        {
+            var tiny = new TinyCardIcon(card, Math.Min(icon.Size.X, icon.Size.Y));
+            icon.AddChild(tiny.Root);
+            have = (name!, tiny);
+            TinyCards[id] = have;
+        }
+        var side = Math.Min(icon.Size.X, icon.Size.Y);
+        have.Icon.Root.Position = (icon.Size - new Vector2(side, side)) / 2f;
+        have.Icon.Fit();
     }
 
     private const string MetaSize = "spireqol_label_size";

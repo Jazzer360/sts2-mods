@@ -32,7 +32,7 @@ public sealed class SettingsMenu
     private static readonly Color RowA = new(1, 1, 1, 0.035f);
     private static readonly Color RowB = new(1, 1, 1, 0f);
 
-    private enum Page { General, CardTabs, Relics, YourPowers, EnemyPowers }
+    private enum Page { General, CardTabs, Relics, YourPowers, EnemyPowers, Cards }
 
     private static readonly (Page Page, string Title)[] Pages =
     {
@@ -41,6 +41,7 @@ public sealed class SettingsMenu
         (Page.Relics, "Relics"),
         (Page.YourPowers, "Your powers"),
         (Page.EnemyPowers, "Enemy powers"),
+        (Page.Cards, "Cards"),
     };
 
     internal static readonly (string Id, string Name, string Description)[] FeatureRows =
@@ -72,6 +73,7 @@ public sealed class SettingsMenu
     private Button? _onlyHere;
     private readonly Dictionary<Page, Button> _pageButtons = new();
     private Page _page = Page.General;
+    private readonly List<Cards.TinyCardIcon> _tinyIcons = new();
     private Action? _closeAction;
     private bool _blocking;
 
@@ -118,6 +120,8 @@ public sealed class SettingsMenu
     public void OnFrame()
     {
         if (IsOpen && _root != null) FitPanel();
+        _tinyIcons.RemoveAll(t => !GodotObject.IsInstanceValid(t.Root));
+        foreach (var t in _tinyIcons) t.Fit();
         if (++_frame % 10 != 0) return;
         _modsButton = KeepButton(_modsButton, ModsScreenAnchor());
         _pauseButton = KeepButton(_pauseButton, PauseMenuAnchor());
@@ -324,6 +328,7 @@ public sealed class SettingsMenu
                 case Page.Relics: BuildSources(SourceGroup.Relic); break;
                 case Page.YourPowers: BuildSources(SourceGroup.YourPower); break;
                 case Page.EnemyPowers: BuildSources(SourceGroup.EnemyPower); break;
+                case Page.Cards: BuildSources(SourceGroup.Card); break;
             }
         }
         catch (Exception ex)
@@ -452,6 +457,13 @@ public sealed class SettingsMenu
             icon.TooltipText = GameDescription(e.Type);
             if (crossed) AddSlash(icon);
             row.AddChild(icon);
+            // A card: the game's tiny card as its icon (decision #42).
+            if (Model(e.Type) is CardModel card)
+            {
+                var tiny = new Cards.TinyCardIcon(card, IconSize);
+                icon.AddChild(tiny.Root);
+                _tinyIcons.Add(tiny);
+            }
             var nameLabel = Label(name, 20, Text, NameWidth);
             nameLabel.MouseFilter = Control.MouseFilterEnum.Pass;
             nameLabel.TooltipText = GameDescription(e.Type);
@@ -830,6 +842,8 @@ public sealed class SettingsMenu
         foreach (var r in me.Relics) set.Add(r.GetType().Name);
         foreach (var p in me.Creature.Powers) set.Add(p.GetType().Name);
         foreach (var e in cs.Enemies) foreach (var p in e.Powers) set.Add(p.GetType().Name);
+        foreach (var name in Procs.ReturnToHand.Modelled)
+            if (Procs.ReturnToHand.Copies(me, name).Any()) set.Add(name);
         return set;
     }
 
@@ -840,6 +854,7 @@ public sealed class SettingsMenu
             _models = new Dictionary<string, AbstractModel>();
             try { foreach (var r in ModelDb.AllRelics) _models.TryAdd(r.GetType().Name, r); } catch (Exception ex) { ModEntry.Log.Warn($"settings menu: relic list: {ex.Message}"); }
             try { foreach (var p in ModelDb.AllPowers) _models.TryAdd(p.GetType().Name, p); } catch (Exception ex) { ModEntry.Log.Warn($"settings menu: power list: {ex.Message}"); }
+            try { foreach (var c in ModelDb.AllCards) _models.TryAdd(c.GetType().Name, c); } catch (Exception ex) { ModEntry.Log.Warn($"settings menu: card list: {ex.Message}"); }
         }
         return _models.TryGetValue(type, out var m) ? m : null;
     }
@@ -854,6 +869,7 @@ public sealed class SettingsMenu
             {
                 RelicModel r => r.Title.GetFormattedText(),
                 PowerModel p => p.Title.GetFormattedText(),
+                CardModel c => c.Title,
                 _ => null,
             };
             if (!string.IsNullOrWhiteSpace(title)) return Tags.Replace(title, "");
@@ -876,6 +892,7 @@ public sealed class SettingsMenu
                 // Raw text: formatting a power's description without its owner's amount makes the
                 // game log a localization error. Fill the placeholders by hand instead.
                 PowerModel p => Placeholders(p.Description.GetRawText()),
+                CardModel c => Placeholders(c.Description.GetRawText()),
                 _ => null,
             };
             return text == null ? "" : Tags.Replace(text, "");

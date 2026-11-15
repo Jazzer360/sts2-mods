@@ -1,5 +1,6 @@
 using Godot;
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
@@ -52,6 +53,8 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         public required TickBar Bar;
         public required Label Text;
         public bool Seen;
+        /// <summary>A card's row (Make It So): the game's tiny card as its icon, fitted each frame.</summary>
+        public Cards.TinyCardIcon? Tiny;
     }
 
     private readonly record struct RowState(int Filled, int Total, bool Flash, Color Color, string Label);
@@ -102,6 +105,9 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             entries.Add((power, spec.CrossTurn ? 1 : 3, EvaluatePower(power, spec)));
         }
 
+        // Make It So (a card, decision #42): your Skills this turn toward its next return.
+        if (Sts2State.InCombat && _ctx.Settings.TrackerEnabled(Procs.ReturnToHand.MakeItSo) && MakeItSo(me) is { } mis) entries.Add((mis.Card, 3, mis.State));
+
         var index = 0;
         foreach (var (model, _, state) in entries.OrderBy(e => e.Sort))
         {
@@ -113,6 +119,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             }
             row.Seen = true;
             row.Root.Visible = true;
+            row.Tiny?.Fit();
             w.Content.MoveChild(row.Root, index++);
 
             var fill = state.Color;
@@ -180,9 +187,35 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         return new RowState(filled, spec.Threshold, left == 1, color, $"{left} {spec.Unit} left");
     }
 
+    /// <summary>
+    /// Make It So in your fight's piles (an Attack Potion's copy too): Skills played this turn toward the next multiple
+    /// of its count (MakeItSo.AfterCardPlayedLate, Procs.ReturnToHand). Flashes when your next Skill brings a copy back.
+    /// </summary>
+    private static (CardModel Card, RowState State)? MakeItSo(Player me)
+    {
+        var copies = Procs.ReturnToHand.Copies(me, Procs.ReturnToHand.MakeItSo).ToList();
+        if (copies.Count == 0) return null;
+        var n = Procs.ReturnToHand.Every(copies[0].Card);
+        var filled = Procs.ReturnToHand.SkillsThisTurn(me) % n;
+        var outside = copies.Count(c => c.Pile != PileType.Hand);
+        var next = filled == n - 1;
+        var label = outside == 0 ? $"{filled}/{n} Skills (in hand)" : next ? $"{filled}/{n} Skills: back on the next" : $"{filled}/{n} Skills";
+        return (copies[0].Card, new RowState(filled, n, outside > 0 && next, PowerFill, label));
+    }
+
     private static Row MakeRow(AbstractModel model)
     {
         var root = UiKit.Row(6);
+        if (model is CardModel card)
+        {
+            var tiny = new Cards.TinyCardIcon(card, 28);
+            root.AddChild(tiny.Root);
+            var cardBar = new TickBar(9, 12);
+            root.AddChild(cardBar.Root);
+            var cardText = UiKit.Label("", 15, Colors.White);
+            root.AddChild(cardText);
+            return new Row { Root = root, Bar = cardBar, Text = cardText, Tiny = tiny };
+        }
         Texture2D? icon = null;
         try
         {

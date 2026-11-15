@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.42.0
+#### Added
+- Relic tracker: Make It So's count (your Skills this turn toward its next return), shown with the game's tiny card while it's in your fight, including a copy from an Attack Potion; it flashes when your next Skill brings it back.
+- Return tabs: the play that brings a card back to your hand gets a tab with that card as its icon (Make It So on the Skill that completes the count; Right Hand Hand on cards costing 2 or more, and Whistling Arrows on shots, while they're in your discard pile). None when your hand would be full.
+- Settings: a Cards page for these cards (their tabs and the tracker row).
+#### Fixed
+- Make It So, Right Hand Hand and Whistling Arrows coming back count in your hand size after a play only when your hand has room (a full hand sends them to the discard pile).
+
 ### Spire QoL 0.41.0
 #### Added
 - Potion tabs: in fights, a tab hanging under each potion (point down) with the relic that drinking it sets off: Reptile Trinket on every potion, Belt Buckle on your last one, and White Beast Statue on every potion while your slots are full (its potion reward would be lost).

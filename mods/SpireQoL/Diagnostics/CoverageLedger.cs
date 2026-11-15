@@ -343,13 +343,13 @@ internal static partial class CoverageLedger
         ["IAmInvincible"] = "covered: AfterAutoPostPlayPhaseEntered auto-plays it from the top of your draw pile: the simulator gains its block when every card in your draw pile is a copy of it (otherwise the top is hidden draw order); a play that draws the whole pile leaves it uncertain",
         ["KinglyKick"] = "ignore: its own cost on draw (read from the card)",
         ["KinglyPunch"] = "ignore: its own cost on draw (read from the card)",
-        ["MakeItSo"] = "covered: AfterCardPlayedLate returns it to your hand on every Nth Skill played this turn: the Skill's play counts it in your hand after (PlayFacts.ReturnsToHand: Cloak Clasp, Screaming Flagon, Regret)",
+        ["MakeItSo"] = "covered: AfterCardPlayedLate returns it to your hand (from any pile but your hand) when your Skills played this turn reach a multiple of 3: a return tab on the Skill that does it, its count in the relic tracker, and your hand size after (Procs.ReturnToHand; a full hand sends it to the discard pile)",
         ["Melancholy"] = "ignore: its own cost when an enemy dies (read from the card)",
         ["Midnight"] = "ignore: its own cost (read from the card)",
         ["Normality"] = "ignore: playability (CanPlay)",
         ["Pinpoint"] = "ignore: its own cost (read from the card)",
         ["Regret"] = "covered: BeforeSideTurnEnd HP loss per card in hand (simulator)",
-        ["RightHandHand"] = "ignore: AfterCardPlayedLate returns itself to your hand (hand read live)",
+        ["RightHandHand"] = "covered: AfterCardPlayedLate returns it from your discard pile when you play a card whose energy value is 2 or more: a return tab on those cards and your hand size after (Procs.ReturnToHand)",
         ["RocketPunch"] = "ignore: its own cost when statuses are created (read from the card)",
         ["SovereignBlade"] = "ignore: AfterCardChangedPiles forge visuals",
         ["Stomp"] = "ignore: its own cost (read from the card)",
@@ -357,7 +357,7 @@ internal static partial class CoverageLedger
         // v0.113.0
         ["EpicRetrieval"] = "ignore: AfterArrowDislodged gains energy when its own hit dislodges your arrow; the game glows it gold then (ShouldGlowGoldInternal), and energy isn't predicted beyond Pael's Tears",
         ["SpoilsMap"] = "ignore: AfterCardChangedPiles keeps its map quest (out of combat)",
-        ["WhistlingArrows"] = "ignore: AfterArrowShot returns it from your discard pile to your hand (hand read live)",
+        ["WhistlingArrows"] = "covered: AfterArrowShot returns it from your discard pile when you shoot an arrow: a return tab on shots with an arrow ready and your hand size after (Procs.ReturnToHand)",
 
         // ======== monsters
         ["Aeonglass"] = "ignore: hooks set music and match created Withers to its upgrades",

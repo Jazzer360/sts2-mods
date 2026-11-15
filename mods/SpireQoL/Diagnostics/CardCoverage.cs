@@ -194,6 +194,10 @@ internal static class CardCoverage
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
             && None(c => PlayFacts.GeneratedCount(c, name, others, null!, out _)))
             issues.Add("creates cards (not counted: created-card procs)");
+        // A card whose hooks (not its play) move a card (itself: Make It So, Right Hand Hand...) to a pile: it comes back to
+        // your hand on something you do, which only ReturnToHand models (the return tabs, your hand size after).
+        if (HookCalls(card.GetType()).Contains("CardPileCmd.Add") && !ReturnToHand.Modelled.Contains(name) && !ReturnToHand.NextTurn.Contains(name))
+            issues.Add("moves a card from its own hooks (comes back to your hand? not counted: return tabs, hand size)");
         // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
         if (calls.Any(c => c.EndsWith(".CreateCard<Sadness>")) && !PlayFacts.SadnessCards.Contains(name))
             issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");
@@ -275,6 +279,30 @@ internal static class CardCoverage
                 .Select(t => t.GetMethod("MoveNext", All))
                 .Where(m => m != null)
                 .Cast<MethodBase>());
+    }
+
+    /// <summary>"Type.Method" for every call in the card's own hook overrides (After*, Before*) and their async state machines.</summary>
+    private static HashSet<string> HookCalls(Type cardType)
+    {
+        var set = new HashSet<string>();
+        bool IsHook(string n) => n.StartsWith("After") || n.StartsWith("Before");
+        var methods = cardType.GetMethods(All).Where(m => m.DeclaringType == cardType && IsHook(m.Name)).Cast<MethodBase>()
+            .Concat(NestedTypes(cardType)
+                .Where(t => typeof(IAsyncStateMachine).IsAssignableFrom(t) && t.Name.StartsWith("<") && IsHook(t.Name[1..]))
+                .Select(t => t.GetMethod("MoveNext", All)).Where(m => m != null).Cast<MethodBase>());
+        foreach (var m in methods)
+        {
+            try
+            {
+                foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                    if (ins.operand is MethodInfo mi && mi.DeclaringType != null) set.Add(mi.DeclaringType.Name + "." + mi.Name);
+            }
+            catch
+            {
+                // unreadable method: nothing found
+            }
+        }
+        return set;
     }
 
     /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's OnPlay and its async state machine.</summary>

@@ -1200,6 +1200,26 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // armed until an attack is played): which cards they were is a roll.
         if (UnpredictedAutoPlay(w, entries, me)) foreach (var r in me.Relics) tracked.Add(r.GetType().Name);
         issues.AddRange(PlaySnapshot.Unexplained(w.FullBefore, w.FullAfter, w.Card, entries, w.Shuffles, explainers, present, me, tracked));
+
+        // ---- Cards that come back to your hand (Procs.ReturnToHand): what moved back during the play against the return
+        // tabs. A card moving itself always explains its own move, so this is the only check on those tabs.
+        if (w.FullBefore != null && w.FullAfter != null && !w.FightEnded)
+        {
+            var drawnNow = entries.OfType<CardDrawnEntry>().Select(e => e.Card).ToHashSet(ReferenceEqualityComparer.Instance);
+            var cameBack = w.FullAfter.Cards
+                .Where(kv => ReturnToHand.Modelled.Contains(kv.Key.GetType().Name) && kv.Value.Pile == PileType.Hand && !ReferenceEquals(kv.Key, w.Card)
+                             && w.FullBefore.Cards.TryGetValue(kv.Key, out var was) && was.Pile != PileType.Hand && !drawnNow.Contains(kv.Key))
+                .Select(kv => kv.Key.GetType().Name).ToHashSet();
+            var tabbedBack = w.Predicted.Where(t => t.Key.StartsWith("return:")).Select(t => t.Key["return:".Length..]).ToHashSet();
+            var randomPlays = UnpredictedAutoPlay(w, entries, me);
+            foreach (var name in cameBack.Except(tabbedBack))
+            {
+                if (randomPlays) model.Add($"{name} came back to your hand after random auto-plays (not predictable)");
+                else issues.Add($"no tab: {name} came back to your hand");
+            }
+            foreach (var name in tabbedBack.Except(cameBack))
+                issues.Add($"didn't fire: {name} didn't come back to your hand");
+        }
     }
 
     // ------------------------------------------------------------------ shuffles
