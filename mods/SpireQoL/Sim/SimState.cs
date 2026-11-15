@@ -533,6 +533,15 @@ public sealed class SimState
     /// </summary>
     internal PlayBaseline? PlayBase;
 
+    /// <summary>
+    /// The values of relics and powers (their DynamicVars), read from the game: "owner:Name:Var" → value. Shared by every branch
+    /// and never changed; models read them with SimEngine.Var.
+    /// </summary>
+    public Dictionary<string, int> Vars = new();
+
+    /// <summary>A card event is being dispatched (draw, exhaust, discard...): what fires then is an indirect proc (the Indirect procs setting).</summary>
+    internal bool IndirectNow;
+
     /// <summary>The card play being resolved (its hooks and actions read it), and the attack in progress (Vigor, Aim...).</summary>
     internal SimCardPlay? CurrentPlay;
     internal int AttackSerial, CurrentAttack;
@@ -613,8 +622,10 @@ public sealed class SimState
     {
         Log1(source, amount);
         if (owner is >= 0) Log1($"{source}@{owner}", amount);
+        if (IndirectNow) Log1("~" + source, amount);
     }
 
+    /// <summary>An indirect firing (from a card event) is also logged as "~Name".</summary>
     private void Log1(string key, int amount)
     {
         Fired = Fired.With(key, Fired[key] + 1, Fired.DataOf(key) + amount);

@@ -1,5 +1,14 @@
 namespace SpireQoL.Sim;
 
+/// <summary>What a model's tab shows: a plain trigger, or the block, damage or summon it adds (docs/FEATURES.md "On-card tabs").</summary>
+public enum TabKind { Trigger, Block, Damage, Summon }
+
+/// <summary>
+/// A card event the hooks see (AfterCardDrawn, AfterCardExhausted, AfterCardDiscarded, AfterCardGeneratedForCombat, AfterStarsGained,
+/// AfterShuffle), one per card (or star).
+/// </summary>
+public enum CardEvent { Drawn, Exhausted, Discarded, Generated, GeneratedStatus, GeneratedSadness, StarsGained, StarsSpent, Shuffled, EnergySpent }
+
 /// <summary>The game's ValueProp flags (MegaCrit.Sts2.Core.ValueProps), same values.</summary>
 [Flags]
 public enum SimProps
@@ -92,6 +101,11 @@ public abstract class SimModel
     /// <summary>It flashes when it changes a damage amount (the game's AfterModifyingDamageAmount: Slow, Hard to Kill...).</summary>
     public virtual bool FlashesOnDamageModified => false;
 
+    /// <summary>What its tab shows (the amount comes from the play log).</summary>
+    public virtual TabKind Tab => TabKind.Trigger;
+    /// <summary>Its tab is crossed (a warning: it helps the enemy, hurts you, or gives up a bonus), shown when it fires in some branch.</summary>
+    public virtual bool Harmful => false;
+
     protected static IEnumerable<SimState> One(SimState s) => new[] { s };
 
     // ---- pipelines (pure: read the state, change nothing)
@@ -128,6 +142,10 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack) => One(s);
     public virtual IEnumerable<SimState> AfterBlockGained(SimState s, int owner, int gainer, int amount, SimCard? card) => One(s);
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
+    /// <summary>A card event (one per card or star): draws, exhausts, discards, created cards, stars, shuffles. Player: who it happened to.</summary>
+    public virtual IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) => One(s);
+    /// <summary>A power landed on a creature (after Artifact): Sleight of Flesh, Vicious, Shroud.</summary>
+    public virtual IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, string power, int amount, int applier, int target) => One(s);
     /// <summary>A creature died (AfterDeath; once per death): Crab Rage, Ravenous.</summary>
     public virtual void AfterDeath(SimState s, int owner, int dead) { }
     /// <summary>After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier.</summary>

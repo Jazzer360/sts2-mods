@@ -146,60 +146,81 @@ public static partial class SimEngine
     /// PowerCmd.Apply: the amount through ModifyPowerAmountGiven (Snecko Skull...), then Artifact takes a debuff (a charge
     /// each), else the power goes on. Poison and the powers the simulator keeps as numbers go there.
     /// </summary>
-    internal static void ApplyPower(SimState s, int applier, int target, string power, int amount, bool debuff)
+    internal static bool ApplyPower(SimState s, int applier, int target, string power, int amount, bool debuff)
     {
-        if (amount == 0) return;
+        if (amount == 0) return false;
         foreach (var (m, o) in Listeners(s)) amount = m.ModifyPowerAmountGiven(s, o, power, amount, applier, target);
-        if (amount == 0) return;
+        if (amount == 0) return false;
         var powers = PowersOf(s, target);
         if (debuff && powers["ArtifactPower"] > 0)
         {
             SetPowers(s, target, powers["ArtifactPower"] > 1 ? powers.Add("ArtifactPower", -1) : powers.Without("ArtifactPower"));
-            return;
+            return false;
         }
         if (target >= 0 && power == "PoisonPower")
         {
             s.Enemy(target)?.AddPoison(amount);
-            return;
+            return true;
         }
         if (target == Who.You)
         {
             switch (power)
             {
-                case "PlatingPower": s.P.Plating += amount; return;
-                case "JuggernautPower": s.P.Juggernaut += amount; return;
-                case "FeelNoPainPower": s.P.FeelNoPain += amount; return;
-                case "ThornsPower": s.P.Thorns += amount; return;
-                case "FlameBarrierPower": s.P.FlameBarrier += amount; return;
+                case "PlatingPower": s.P.Plating += amount; return true;
+                case "JuggernautPower": s.P.Juggernaut += amount; return true;
+                case "FeelNoPainPower": s.P.FeelNoPain += amount; return true;
+                case "ThornsPower": s.P.Thorns += amount; return true;
+                case "FlameBarrierPower": s.P.FlameBarrier += amount; return true;
             }
         }
         var had = powers.Has(power);
         SetPowers(s, target, powers.Add(power, amount));
         if (!had) SimModels.Get(power)?.AfterApplied(s, target, applier, amount);
+        return true;
     }
 
+    /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>
     private static void RunApplyPower(BranchSet b, ApplyPowerAction ap)
     {
-        b.Do(s =>
+        b.Each(s =>
         {
             var applier = s.CurrentPlay?.Owner ?? Who.You;
-            switch (ap.To)
+            var targets = ap.To switch
             {
-                case ApplyPowerAction.Where.Target:
-                    if (s.CurrentPlay?.Target is { } t && (t < 0 || s.Enemy(t) is { Alive: true })) ApplyPower(s, applier, t, ap.Power, ap.Amount, ap.Debuff);
-                    break;
-                case ApplyPowerAction.Where.AllEnemies:
-                    foreach (var e in s.Targetable.ToList()) ApplyPower(s, applier, e.Id, ap.Power, ap.Amount, ap.Debuff);
-                    break;
-                case ApplyPowerAction.Where.You:
-                    ApplyPower(s, applier, applier, ap.Power, ap.Amount, ap.Debuff);
-                    break;
-                case ApplyPowerAction.Where.Creature:
-                    ApplyPower(s, applier, ap.Creature, ap.Power, ap.Amount, ap.Debuff);
-                    break;
+                ApplyPowerAction.Where.Target => s.CurrentPlay?.Target is { } t && (t < 0 || s.Enemy(t) is { Alive: true }) ? new List<int> { t } : new List<int>(),
+                ApplyPowerAction.Where.AllEnemies => s.Targetable.Select(e => e.Id).ToList(),
+                ApplyPowerAction.Where.You => new List<int> { applier },
+                _ => new List<int> { ap.Creature },
+            };
+            IEnumerable<SimState> r = new[] { s };
+            foreach (var target in targets)
+            {
+                var t = target;
+                r = Then(r, x => ApplyPower(x, applier, t, ap.Power, ap.Amount, ap.Debuff)
+                    ? Hook(x, (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t)) : new[] { x });
             }
+            return r;
         });
     }
+
+    /// <summary>Card events, one card at a time, each through every listener's AfterCardEvent (indirect ones marked in the log).</summary>
+    private static void RunCardEvent(BranchSet b, CardEventAction ce)
+    {
+        for (var i = 0; i < ce.Count; i++)
+        {
+            HookStep(b, (m, o, x) =>
+            {
+                x.IndirectNow = ce.Indirect;
+                var r = m.AfterCardEvent(x, o, ce.Event, x.CurrentPlay?.Owner ?? Who.You).ToList();
+                foreach (var y in r) y.IndirectNow = false;
+                return r;
+            });
+        }
+    }
+
+    /// <summary>A relic's or power's value (its DynamicVar) as the adapter read it (SimState.Vars), or the fallback.</summary>
+    public static int Var(SimState s, int owner, string model, string var, int fallback) =>
+        s.Vars.TryGetValue($"{owner}:{model}:{var}", out var v) ? v : fallback;
 }
 
 public static partial class SimEngine

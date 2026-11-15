@@ -60,3 +60,12 @@ public sealed record ApplyPowerAction(string Power, int Amount) : SimAction
 
 /// <summary>HP the card costs you (CreatureCmd.Damage on you, Unblockable and Unpowered), through the HP-loss pipeline.</summary>
 public sealed record LoseHpAction(int Amount) : SimAction;
+
+/// <summary>
+/// Card events of a play (from what the card does: PlayFacts' counts), each card's hooks in turn. Indirect: an exhaust, discard,
+/// draw, creation or shuffle the card causes (the Indirect procs setting shows their tabs); the card's own exhaust is direct.
+/// </summary>
+public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
+{
+    public bool Indirect { get; init; }
+}
