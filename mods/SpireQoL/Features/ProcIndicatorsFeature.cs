@@ -169,6 +169,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private sealed record Prepared(PlayFacts F, Dictionary<string, (AbstractModel Src, Hit Hit)> Merged, Task<SimOutcome[]>? Sim);
 
     /// <summary>Your powers, your relics, and powers on every living enemy: the proc sources.</summary>
+    /// <summary>The player whose Power cards a teammate's Imitation Learning copies (ImitationLearningPower.PlayerTarget).</summary>
+    private static Player? CopiesFrom(ImitationLearningPower p)
+    {
+        try { return p.PlayerTarget; } catch { return null; }
+    }
+
     private static List<AbstractModel> Sources(Player me, ICombatState cs)
     {
         var sources = new List<AbstractModel>();
@@ -176,6 +182,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         sources.AddRange(me.Relics); // each relic's tab has its own switch (Tabs "proc:<Relic>")
         // All living enemies: an untargetable one's powers still fire.
         foreach (var enemy in cs.Enemies.Where(e => e.IsAlive)) sources.AddRange(enemy.Powers);
+        // Teammates' powers that act on your plays (only these: the other rules read your powers and enemies').
+        foreach (var mate in SimAdapter.Teammates(me, cs))
+            sources.AddRange(mate.Creature.Powers.OfType<ImitationLearningPower>().Where(p => CopiesFrom(p) == me));
         return sources;
     }
 
@@ -397,9 +406,14 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             }
         }
 
-        var targets = card.TargetType == TargetType.AnyEnemy
-            ? te.Ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => kv.Value).ToList()
-            : new List<int> { -1 };
+        // A card aimed at any enemy, or at any teammate (AnyAlly: one simulation per living teammate, SimAdapter.AllyKey),
+        // is simulated once per target; a tab that needs some aim shows when one target gives it.
+        var targets = card.TargetType switch
+        {
+            TargetType.AnyEnemy => te.Ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => kv.Value).ToList(),
+            TargetType.AnyAlly => Enumerable.Range(0, te.Teammates.Count).Select(SimAdapter.AllyKey).ToList(),
+            _ => new List<int> { -1 },
+        };
         if (targets.Count == 0) targets.Add(-1);
 
         var stateKey = te.StateKey;
@@ -411,7 +425,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|" +
                        string.Join(",", procs.Select(p => $"{p.Spread}{p.TargetId}x{p.Times}:{string.Join("/", p.Damage.Values)}")) + "|" + string.Join(",", procBlock) + "|" + string.Join(",", toYou.Select(x => x.Item2));
         // The plays are built here (they read the game); only the simulation runs off the main thread.
-        var inputs = new SimInputs { Start = te.State, Ids = te.Ids };
+        var inputs = new SimInputs { Start = te.State, Ids = te.Ids, Allies = te.Teammates.Select(p => p.Creature).ToList() };
         foreach (var t in targets)
         {
             var play = SimAdapter.Play(card, f, _me, _cs, te.Ids, t, procs, procBlock);
@@ -745,7 +759,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
                     // ---- powers on enemies: your plays
                     // Enrage (Strength on Skills) and Sneaky (block on Attacks): from the simulator, see FinishSim.
-                    case nameof(ImitationLearningPower) when onEnemy && type == CardType.Power: return Hit.Trig(harmful: true);
+                    // A teammate's Imitation Learning aimed at you plays a copy of your Power card for them (ImitationLearningPower.
+                    // BeforeCardPlayed clones it once per play series, AfterCardPlayed auto-plays the clone): good for the team, plain.
+                    case nameof(ImitationLearningPower) when p.Owner.IsPlayer && !mine && type == CardType.Power && CopiesFrom((ImitationLearningPower)p) == _me: return Hit.Trig();
                     case nameof(WitheringPresencePower) when onEnemy && plays >= p.DisplayAmount: return Hit.Trig(harmful: true);
                     case nameof(GalvanicPower) when card.Affliction is Galvanized:
                         return Damage(a, plays, Spread.Me, props: ValueProp.Unpowered | ValueProp.Move, harmful: true);

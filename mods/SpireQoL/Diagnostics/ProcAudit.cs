@@ -1259,7 +1259,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Add("state after the play: not checked (the pick's auto-plays hit different random enemies)");
             return;
         }
-        var targetId = w.Target != null && sim.Ids.TryGetValue(w.Target, out var tid) ? tid : -1;
+        var targetId = sim.KeyFor(w.Target);
         if (!sim.PlayByTarget.TryGetValue(targetId, out var play) && !sim.PlayByTarget.TryGetValue(-1, out play))
         {
             model.Add("state after the play: not checked (no simulated play for its target)");
@@ -1327,6 +1327,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                     var (pt, at) = (living[k], after.Teammates[k]);
                     Cmp($"teammate {k + 1} block", pt.Block, at.Block);
                     Cmp($"teammate {k + 1} HP", pt.Hp, at.Hp);
+                    // Their orbs (Ignition channels into them; full slots evoke their front orb): kinds, front first.
+                    if (!pt.Orbs.Select(o => o.Kind).SequenceEqual(at.Orbs.Select(o => o.Kind))
+                        && !pt.Orbs.Any(o => o.Kind == OrbKind.Unknown))
+                        d.Add($"after play teammate {k + 1} orbs: predicted [{string.Join(", ", pt.Orbs.Select(o => o.Kind))}], actual [{string.Join(", ", at.Orbs.Select(o => o.Kind))}]");
                 }
             }
             else d.Add($"after play teammates alive: predicted {living.Count}, actual {after.Teammates.Count}");

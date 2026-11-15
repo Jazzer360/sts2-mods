@@ -819,7 +819,7 @@ public sealed class PlayFacts
     private static readonly HashSet<string> DrawCards = new()
     {
         nameof(Acrobatics), nameof(Adrenaline), nameof(Backflip), nameof(BattleTrance), nameof(BigBang), nameof(BrightestFlame), nameof(BurningPact),
-        nameof(Constellation), nameof(Coolheaded), nameof(DecisionsDecisions), nameof(DrumOfBattle), nameof(Expertise), nameof(Fetch), nameof(Finesse),
+        nameof(Coolheaded), nameof(DecisionsDecisions), nameof(DrumOfBattle), nameof(Expertise), nameof(Fetch), nameof(Finesse),
         nameof(FlashOfSteel), nameof(Glimmer), nameof(Glow), nameof(HuddleUp), nameof(Impatience), nameof(MasterOfStrategy), nameof(MinionStrike),
         nameof(Modded), nameof(Neurosurge), nameof(Offering), nameof(Overclock), nameof(Parse), nameof(PhotonCut), nameof(PommelStrike), nameof(Prepared), nameof(Prophesize),
         nameof(Reboot), nameof(Reflex), nameof(RocketPunch), nameof(Scourge), nameof(Scrape), nameof(ShrugItOff), nameof(Skim), nameof(Slimed), nameof(Soul),
@@ -871,6 +871,9 @@ public sealed class PlayFacts
     /// so the coverage scan counts these as drawing by this list.
     /// </summary>
     internal static readonly HashSet<string> TargetDrawCards = new() { "KiHop", "Wrest" };
+
+    /// <summary>Cards aimed at a teammate that make them draw, not you (Constellation: CardPileCmd.Draw for the target's player).</summary>
+    internal static readonly HashSet<string> AllyDrawCards = new() { nameof(Constellation) };
 
     /// <summary>
     /// Draws of one play aimed at <paramref name="target"/>, for cards whose draws depend on their target (Ki Hop:
@@ -1281,5 +1284,13 @@ public sealed class SimInputs
 {
     public required SimState Start { get; init; }
     public required IReadOnlyDictionary<Creature, int> Ids { get; init; }
+    /// <summary>The teammates behind Start.Teammates, in order: a play aimed at one is keyed SimAdapter.AllyKey(index).</summary>
+    public IReadOnlyList<Creature> Allies { get; init; } = Array.Empty<Creature>();
+
+    /// <summary>The simulation key for a play aimed at this creature: an enemy id, a teammate's AllyKey, or -1.</summary>
+    public int KeyFor(Creature? target) =>
+        target == null ? -1
+        : Ids.TryGetValue(target, out var id) ? id
+        : Allies.ToList().IndexOf(target) is var k and >= 0 ? SpireQoL.Sim.SimAdapter.AllyKey(k) : -1;
     public Dictionary<int, SimPlay> PlayByTarget { get; } = new();
 }

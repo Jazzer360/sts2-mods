@@ -62,17 +62,41 @@ internal static class CardCoverage
     public const string TeammatesOnly = "with teammates: ";
 
     /// <summary>
-    /// Cards aimed at players (TargetType AnyAlly or AllAllies) whose effect on teammates the simulator models.
-    /// None yet: the simulator takes no player target, so a card's block, powers or HP go to you.
+    /// Cards aimed at players (TargetType AnyAlly or AllAllies), reviewed from their OnPlay: how the simulator handles
+    /// what lands on the teammate (one simulation per teammate, SimAdapter.AllyKey), or why it doesn't change this
+    /// turn's outcome. A new ally card is reported until it has an entry.
     /// </summary>
-    private static readonly HashSet<string> TeammateTargetModelled = new();
+    private static readonly Dictionary<string, string> TeammateTargetModelled = new()
+    {
+        // Modelled: what lands on the teammate goes to them.
+        [nameof(Lift)] = "block to the teammate (SimAdapter.BlockToAllyCards)",
+        [nameof(Constellation)] = "block to the teammate (BlockToAllyCards); its draws and energy are theirs (PlayFacts.AllyDrawCards)",
+        [nameof(DemonicShield)] = "HP loss to you, block (worked out on the teammate) to them (BlockToAllyCards)",
+        [nameof(Ignition)] = "a Plasma orb into the teammate's orbs, evoking their front orb when full (SimAdapter.ChannelToAllyCards)",
+        [nameof(Mimic)] = "block to you equal to the teammate's block (CalculatedBlock on the target)",
+        // Reviewed: nothing in this turn's outcome (the end of turn and the enemy turn).
+        [nameof(BelieveInYou)] = "energy for the teammate",
+        [nameof(Blaze)] = "Strength for the teammate: their attacks, not your end of turn",
+        [nameof(Concoct)] = "ConcoctPower on the teammate: poison from their attacks this turn (AfterDamageGiven), removed at end of turn",
+        [nameof(Coordinate)] = "temporary Strength for the teammate (CoordinatePower: TemporaryStrengthPower)",
+        [nameof(Enrapture)] = "Vigor and Stretch for the teammate: their next attack and block card",
+        [nameof(Fade)] = "temporary Dexterity for the teammate (FadePower: TemporaryDexterityPower)",
+        [nameof(ImitationLearning)] = "ImitationLearningPower on you, aimed at the teammate: copies their Power cards (their plays)",
+        [nameof(Largesse)] = "a random colorless card for the teammate (a roll)",
+        [nameof(Soulbound)] = "SoulboundPower on the teammate: acts on cards generated later",
+        [nameof(Tutor)] = "the teammate picks a card from their draw pile into their hand",
+        // Known gap: Covered zeroes powered attacks on the teammate and your InterceptPower multiplies those on you by
+        // covered players + 1 (both read through the game's damage math once played), but this play's own forecast
+        // keeps the hits as they are now. Block to you is modelled.
+        [nameof(Intercept)] = "gap: the hits it moves onto you this turn aren't in its play's forecast (read from the board once played)",
+    };
 
     /// <summary>
-    /// A card aimed at a teammate whose effect there the simulator doesn't model (it applies the card to you):
-    /// the play check can't compare it. The coverage check reports the card.
+    /// A card aimed at a teammate whose effect there the simulator doesn't model: the play check can't compare it.
+    /// The coverage check reports the card.
     /// </summary>
     internal static bool TeammateTargetUnmodelled(CardModel card) =>
-        card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.Contains(card.GetType().Name);
+        card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.ContainsKey(card.GetType().Name);
 
     /// <summary>Cards reviewed as not needing what the scan finds, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
@@ -118,13 +142,13 @@ internal static class CardCoverage
                                                                  && t.GetGenericTypeDefinition() == typeof(PowerVar<>) && t.GetGenericArguments()[0] == typeof(T));
 
         // Cards aimed at a teammate or at every player: the simulator applies the card's effects to you only.
-        if (card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.Contains(name))
+        if (card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.ContainsKey(name))
             issues.Add(TeammatesOnly + "targets a teammate (the simulator applies its effects to you)");
-        if (card.TargetType == TargetType.AllAllies && !TeammateTargetModelled.Contains(name))
+        if (card.TargetType == TargetType.AllAllies && !TeammateTargetModelled.ContainsKey(name))
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)) && !PlayFacts.TargetDrawCards.Contains(name))
+            && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         if (Calls("OrbCmd", "Channel") && !SimAdapter.HandlesChannel(name))
             issues.Add("channels orbs (the simulator doesn't add them)");

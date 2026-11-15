@@ -100,6 +100,19 @@ public static class SimAdapter
     /// <summary>Cards whose kill sets off a hit on every enemy (Timber: OnKillDamage). The card scan flags a new damage value.</summary>
     internal static readonly HashSet<string> OnKillHitAllCards = new() { "Timber" };
 
+    /// <summary>
+    /// Cards aimed at a teammate (AnyAlly) whose block goes to that teammate (CreatureCmd.GainBlock on cardPlay.Target: Lift,
+    /// Constellation, Demonic Shield). Your Dexterity and doublers count (they key on the card's owner), their Frail too
+    /// (it keys on the target): the game's block math with them as the target. The card scan flags a new ally card.
+    /// </summary>
+    internal static readonly HashSet<string> BlockToAllyCards = new() { nameof(Lift), nameof(Constellation), nameof(DemonicShield) };
+
+    /// <summary>Cards aimed at a teammate whose channels go into that teammate's orbs (Ignition: OrbCmd.Channel on the target's player).</summary>
+    internal static readonly HashSet<string> ChannelToAllyCards = new() { nameof(Ignition) };
+
+    /// <summary>The simulation key of a play aimed at teammate k (SimState.Teammates order). Enemy ids are 0 and up; -1 is no target.</summary>
+    public static int AllyKey(int k) => -2 - k;
+
     /// <summary>Cards that aren't attacks but damage their target (Capture Spirit: CreatureCmd.Damage). The card scan flags a new one.</summary>
     internal static readonly HashSet<string> TargetDamageCards = new() { nameof(CaptureSpirit) };
 
@@ -472,6 +485,16 @@ public static class SimAdapter
             Procs = procs,
             ProcBlock = procBlock,
         };
+        // Aimed at a teammate: what lands on them goes to them (never to you, even with no teammate to aim at).
+        Creature? ally = null;
+        if (card.TargetType == TargetType.AnyAlly && targetId <= -2)
+        {
+            var mates = Teammates(me, cs);
+            var k = -2 - targetId;
+            if (k < mates.Count) { play.AllyTarget = k; ally = mates[k].Creature; }
+        }
+        play.BlockToAlly = BlockToAllyCards.Contains(name);
+        play.ChannelToAlly = ChannelToAllyCards.Contains(name);
 
         if (f.AttackHits > 0)
         {
@@ -529,6 +552,10 @@ public static class SimAdapter
             {
                 nameof(Fisticuffs) => aimed != null ? f.TotalDamage(aimed) / Math.Max(1, plays) : 0,
                 nameof(Entrench) => me.Creature.Block,
+                // Block for the targeted teammate (their Frail counts), from a value worked out on them (Demonic Shield).
+                _ when play.BlockToAlly => ally != null ? CardBlock(card, cs, me, ally, ally) : 0,
+                // Mimic: block to you equal to the targeted teammate's block (CalculatedBlock on the target).
+                nameof(Mimic) when ally != null => CardBlock(card, cs, me, me.Creature, ally),
                 _ => CardBlock(card, cs, me),
             };
             play.BlockGains = blockGains;
@@ -877,16 +904,20 @@ public static class SimAdapter
     }
 
     /// <summary>The card's own block per play (its Block value through the game's block math).</summary>
-    public static int CardBlock(CardModel card, ICombatState cs, Player me)
+    /// <summary>
+    /// The card's block through the game's block math. gainer: who gets it (you by default; a targeted teammate for
+    /// Lift); calcTarget: the target a calculated value is worked out on (Mimic, Demonic Shield aimed at a teammate).
+    /// </summary>
+    public static int CardBlock(CardModel card, ICombatState cs, Player me, Creature? gainer = null, Creature? calcTarget = null)
     {
         try
         {
             decimal raw;
-            if (card.DynamicVars.TryGetValue("CalculatedBlock", out var cv) && cv is CalculatedVar calc) raw = calc.Calculate(null);
+            if (card.DynamicVars.TryGetValue("CalculatedBlock", out var cv) && cv is CalculatedVar calc) raw = calc.Calculate(calcTarget);
             else if (card.DynamicVars.TryGetValue("Block", out var bv)) raw = bv.BaseValue;
             else return 0;
             if (raw <= 0) return 0;
-            return Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _));
+            return Math.Max(0, (int)Hook.ModifyBlock(cs, gainer ?? me.Creature, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _));
         }
         catch
         {

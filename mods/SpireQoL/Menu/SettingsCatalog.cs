@@ -226,7 +226,7 @@ public static class SettingsCatalog
         new(nameof(SneakyPower), SourceGroup.EnemyPower, Crossed + "attacks"),
         new(nameof(ImbalancedPower), SourceGroup.EnemyPower, "Cards after which its first hit is fully blocked in every outcome, when it isn't now (it's stunned)"),
         new(nameof(SkittishPower), SourceGroup.EnemyPower, Crossed + "attacks (first unblocked hit): it gains block"),
-        new(nameof(ImitationLearningPower), SourceGroup.EnemyPower, Crossed + "powers"),
+        new(nameof(ImitationLearningPower), SourceGroup.YourPower, "your Power cards a teammate's Imitation Learning will copy"),
         new(nameof(WitheringPresencePower), SourceGroup.EnemyPower, Crossed + "the card that completes its count: Wither in your hand", "Your cards, toward the next Wither (red)"),
         new(nameof(GalvanicPower), SourceGroup.EnemyPower, Crossed + "Galvanized cards: damage to you"),
         new(nameof(VitalSparkPower), SourceGroup.EnemyPower, Crossed + "Tainted cards"),

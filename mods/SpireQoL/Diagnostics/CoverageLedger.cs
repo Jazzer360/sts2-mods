@@ -202,7 +202,7 @@ internal static partial class CoverageLedger
         ["HighVoltagePower"] = "ignore: AfterSideTurnEnd Strength at the end of its own turn (later attacks)",
         ["IllusionPower"] = "gap: AfterDeath/ShouldAllowHitting revives (a kill may not stick: lethal can be wrong)",
         ["ImbalancedPower"] = "covered: AfterDamageGiven stuns on a fully blocked hit (Imbalanced tab from the simulator)",
-        ["ImitationLearningPower"] = "covered: copies your Powers (crossed proc tab)",
+        ["ImitationLearningPower"] = "covered: on a teammate aimed at you, BeforeCardPlayed clones your Power card (once per play series) and AfterCardPlayed auto-plays it for them (plain proc tab on your Power cards)",
         ["InfernoPower"] = "covered: AfterDamageReceived damages all enemies (unpowered) each time you lose HP on your turn (proc tab on cards that cost HP; simulator: end-of-turn and in-play HP loss, yours; a teammate's isn't modelled). AfterPlayerTurnStart's self-damage is next turn",
         ["InfestedPower"] = "covered: AfterDeath spawns Wrigglers (crossed kill tab from the simulator)",
         ["IntangiblePower"] = "covered: ModifyHpLostAfterOsty caps hits at 1 (simulator HitCap); AfterSideTurnEnd ticks down",

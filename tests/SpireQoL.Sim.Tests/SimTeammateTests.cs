@@ -204,4 +204,63 @@ public class SimTeammateTests
         Assert.Equal(7, o.TakenMax);
         Assert.Equal(11, o.TeammateTakenMax(0));
     }
+    // ---- Cards aimed at a teammate (TargetType AnyAlly): one simulation per teammate, what lands on them goes to them.
+
+    [Fact]
+    public void AllyBlockGoesToTheTargetedTeammateNotYou()
+    {
+        // Lift (8 block) on the teammate: the enemy hits each of you for 10. They lose 2, you lose 10.
+        var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        s.Enemies[0].TeammateHits = new() { new() { 10 } };
+        s.Teammates.Add(Mate());
+        var play = new SimPlay { BlockGains = 1, BlockAmount = 8, BlockToAlly = true, AllyTarget = 0 };
+        var o = SimEngine.Run(s, play);
+        Assert.Equal(10, o.TakenMax);
+        Assert.Equal(2, o.TeammateTakenMax(0));
+    }
+
+    [Fact]
+    public void AllyBlockWithNoTeammateToAimAtGoesToNoOne()
+    {
+        // No living teammate to target: the block must never land on you instead.
+        var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        var play = new SimPlay { BlockGains = 1, BlockAmount = 8, BlockToAlly = true, AllyTarget = -1 };
+        Assert.Equal(10, SimEngine.Run(s, play).TakenMax);
+    }
+
+    [Fact]
+    public void AllyChannelGoesIntoTheTeammatesOrbsAndEvokesTheirFrontOrb()
+    {
+        // Ignition on a teammate with one full slot of Frost (evoke 5): their Frost evokes for 5 block on them,
+        // then the Plasma takes the slot. Your orbs are untouched.
+        var s = new SimState { Enemies = { Enemy(1, 50) } };
+        var mate = new SimPlayer { Hp = 60, OrbCapacity = 1 };
+        mate.Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 });
+        s.Teammates.Add(mate);
+        s.P.OrbCapacity = 3;
+        var play = new SimPlay { ChannelToAlly = true, AllyTarget = 0 };
+        play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Plasma, Passive = 1, Evoke = 2 } });
+        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
+        var after = Assert.Single(branches);
+        Assert.Equal(5, after.Teammates[0].Block);
+        Assert.Equal(OrbKind.Plasma, Assert.Single(after.Teammates[0].Orbs).Kind);
+        Assert.Empty(after.P.Orbs);
+        Assert.Single(s.Teammates[0].Orbs); // the start state is untouched
+        Assert.Equal(OrbKind.Frost, s.Teammates[0].Orbs[0].Kind);
+    }
+
+    [Fact]
+    public void AllyChannelEvokingTheirLightningHitsAnEnemy()
+    {
+        // The teammate's full slot holds a Lightning (evoke 8): channelling into it evokes it at the enemy (6 HP).
+        var s = new SimState { Enemies = { Enemy(1, 6, 10) } };
+        var mate = new SimPlayer { Hp = 60, OrbCapacity = 1 };
+        mate.Orbs.Add(Lightning());
+        s.Teammates.Add(mate);
+        var play = new SimPlay { ChannelToAlly = true, AllyTarget = 0 };
+        play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Plasma, Passive = 1, Evoke = 2 } });
+        var o = SimEngine.Run(s, play);
+        Assert.True(o.DeadInAll(1));
+        Assert.Equal(0, o.TakenMax);
+    }
 }

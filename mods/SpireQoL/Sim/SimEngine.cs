@@ -42,6 +42,16 @@ public sealed class SimPlay
     /// Vambrace); null when every play gains the same.
     /// </summary>
     public int? EnchantmentBlockLater;
+    /// <summary>
+    /// A card aimed at a teammate (TargetType AnyAlly): their index in SimState.Teammates, -1 none. One simulation per
+    /// teammate, like an attack aimed at any enemy (SimAdapter.AllyKey). What lands on them is routed by BlockToAlly and
+    /// ChannelToAlly; the rest of the play is yours.
+    /// </summary>
+    public int AllyTarget = -1;
+    /// <summary>The card's own block goes to the targeted teammate (Lift, Constellation, Demonic Shield).</summary>
+    public bool BlockToAlly;
+    /// <summary>The card's channels go into the targeted teammate's orbs (Ignition: OrbCmd.Channel on cardPlay.Target.Player).</summary>
+    public bool ChannelToAlly;
 
     public List<OrbOp> OrbOps = new();
 
@@ -882,6 +892,31 @@ public static class SimEngine
                         while (s.P.Orbs.Count > s.P.OrbCapacity) s.P.OwnOrbs().RemoveAt(s.P.Orbs.Count - 1);
                     });
                     break;
+                case OrbOp.Kind.Channel when p.ChannelToAlly:
+                {
+                    // Into the targeted teammate's orbs: full slots evoke their front orb (their Thunder, their block).
+                    var k = p.AllyTarget;
+                    b.Each(s =>
+                    {
+                        if (k < 0 || k >= s.Teammates.Count || s.Teammates[k].Hp <= 0) return new[] { s };
+                        var t = s.MutableTeammate(k);
+                        IEnumerable<SimState> r = new[] { s };
+                        if (t.OrbCapacity == 0 && t.SlotOnFirstChannel) t.OrbCapacity = 1;
+                        if (t.OrbCapacity > 0 && t.Orbs.Count >= t.OrbCapacity)
+                        {
+                            var front = t.Orbs[0];
+                            t.OwnOrbs().RemoveAt(0);
+                            r = Evoke(s, front, t.Thunder, k);
+                        }
+                        return r.Select(x =>
+                        {
+                            var tx = x.MutableTeammate(k);
+                            if (tx.OrbCapacity > 0) tx.OwnOrbs().Add(op.Orb!.Clone());
+                            return x;
+                        }).ToList();
+                    });
+                    break;
+                }
                 case OrbOp.Kind.Channel:
                     b.Each(s =>
                     {
@@ -903,11 +938,14 @@ public static class SimEngine
             }
         }
 
-        // Its own block: each gain sets off Juggernaut.
+        // Its own block: each gain sets off Juggernaut (the targeted teammate's, when it goes to them).
+        // No teammate targeted (none alive): the block goes to no one, never to you.
+        var blockTo = p.BlockToAlly ? p.AllyTarget : -1;
+        bool Lands(SimState s) => !p.BlockToAlly || (blockTo >= 0 && blockTo < s.Teammates.Count && s.Teammates[blockTo].Hp > 0);
         for (var i = 0; i < p.BlockGains; i++)
         {
             var amount = p.BlockLater is { } later && i >= later.After ? later.Amount : p.BlockAmount;
-            b.Each(s => GainBlock(s, amount, null));
+            b.Each(s => Lands(s) ? GainBlock(s, amount, null, blockTo) : new[] { s });
         }
         for (var i = 0; i < p.EnchantmentBlock.Gains; i++)
         {

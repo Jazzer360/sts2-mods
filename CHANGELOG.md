@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.37.3
+#### Added
+- Multiplayer: a tab on your Power cards when a teammate's Imitation Learning is aimed at you (they'll play a copy).
+#### Fixed
+- Multiplayer: cards aimed at a teammate (Lift, Constellation, Demonic Shield, Ignition) are predicted once per teammate, with their block or orb going to that teammate. Before, the simulator applied them to you: a Lift on a teammate lowered your own Incoming Damage in that card's predictions, and Ignition's Plasma went into your orbs. Mimic's block comes from the targeted teammate's block, and Constellation's draws are theirs, not yours.
+
 ### Spire QoL 0.37.2
 #### Fixed
 - Ice Lance hits once: its 3 is the Frost it channels, not hits. Its damage, kills and lethal were counted three times, which also hid the Thunder tab when it evokes a Lightning (Thunder only hits an enemy the card doesn't kill).
