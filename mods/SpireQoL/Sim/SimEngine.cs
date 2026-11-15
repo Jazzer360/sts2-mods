@@ -745,20 +745,27 @@ public static partial class SimEngine
         }
     }
 
-    private static int HpLoss(SimState s, int amount, ref int remnantLeft) => HpLoss(s.P, amount, ref remnantLeft);
-
-    private static int HpLoss(SimPlayer p, int amount, ref int remnantLeft)
+    /// <summary>
+    /// HP a player loses from <paramref name="amount"/> past their block (who: -1 you, k teammate k): the HP-loss pipeline
+    /// (Tungsten Rod, Beating Remnant, Buffer, Intangible...). Apply it, then call PlayerDamaged.
+    /// </summary>
+    private static int HpLoss(SimState s, int who, int amount, int? dealer, SimProps props)
     {
         if (amount <= 0) return 0;
-        amount = Math.Max(0, amount - p.TungstenRod);
-        amount = Math.Min(amount, remnantLeft);
-        if (amount > 0 && p.Buffer > 0)
-        {
-            p.Buffer--;
-            return 0; // a hit Buffer stops doesn't use Beating Remnant's budget (it counts UnblockedDamage)
-        }
-        if (remnantLeft != int.MaxValue) remnantLeft -= amount;
-        return amount;
+        var id = who < 0 ? Who.You : Who.Teammate(who);
+        if (Listeners(s).Count == 0) return amount;
+        return Math.Max(0, (int)HpLossPipeline(s, new DamageCtx(dealer, id, props, s.CurrentPlay?.Card, s.CurrentPlay), amount));
+    }
+
+    /// <summary>After a player took damage (their HP already lower): AfterDamageGiven and AfterDamageReceived (Beating Remnant counts, Inferno...).</summary>
+    private static void PlayerDamaged(SimState s, int who, int? dealer, SimProps props, int blocked, int lost)
+    {
+        if (blocked <= 0 && lost <= 0) return;
+        var listeners = Listeners(s);
+        if (listeners.Count == 0) return;
+        var ev = new DamageEvent(dealer, who < 0 ? Who.You : Who.Teammate(who), props, s.CurrentPlay?.Card, blocked + lost, blocked, lost, false);
+        foreach (var (m, o) in listeners) m.AfterDamageGiven(s, o, ev);
+        foreach (var (m, o) in Listeners(s)) m.AfterDamageReceived(s, o, ev);
     }
 
     /// <summary>Counts HP loss of yours for the play's HP-loss tabs (SimState.PlayHpReached...): <paramref name="reaching"/> got
@@ -771,8 +778,8 @@ public static partial class SimEngine
         s.PlayHpLost += lost;
     }
 
-    /// <param name="yourTurn">Your side's turn (Inferno reacts only then); false for damage during the enemy turn.</param>
-    private static void LandBlockable(SimState s, string name, int amount, int who = -1, bool yourTurn = true)
+    /// <summary>Blockable damage to a player (who: -1 you, k teammate k): their block, then HP loss; Unpowered unless said.</summary>
+    private static void LandBlockable(SimState s, string name, int amount, int who = -1, int? dealer = null, SimProps props = SimProps.Unpowered)
     {
         if (amount <= 0) return;
         if (who >= 0)
@@ -782,7 +789,7 @@ public static partial class SimEngine
             var tb = Math.Min(t.Block, amount);
             t.Block -= tb;
             t.Through += amount - tb;
-            TeammateHpLoss(t, amount - tb);
+            TeammateHpLoss(s, who, amount - tb, tb, dealer, props);
             return;
         }
         s.BlockDemand += amount;
@@ -790,12 +797,10 @@ public static partial class SimEngine
         var blocked = Math.Min(s.P.Block, amount);
         s.P.Block -= blocked;
         s.DamageThrough += amount - blocked;
-        var left = s.P.RemnantLeftPlayerTurn;
-        var lost = HpLoss(s, amount - blocked, ref left);
+        var lost = HpLoss(s, -1, amount - blocked, dealer, props);
         YouLose(s, lost);
         PlayHp(s, amount - blocked, lost);
-        s.P.RemnantLeftPlayerTurn = left;
-        if (yourTurn) Inferno(s, lost);
+        PlayerDamaged(s, -1, dealer, props, blocked, lost);
     }
 
     /// <summary>
@@ -809,31 +814,26 @@ public static partial class SimEngine
         if (b.States.Any(s => s.Enemies.Any(e => !e.Exploded && (e.Explosive > 0 || e.ExplosiveOnTeammates != null)))) b.Do(s => Explosions(s));
     }
 
-    private static void Explosions(SimState s, bool yourTurn = true)
+    private static void Explosions(SimState s)
     {
         foreach (var e in s.Enemies)
         {
             if (e.Alive || e.Exploded || !e.StartedAlive || (e.Explosive <= 0 && e.ExplosiveOnTeammates == null)) continue;
             e.Exploded = true;
-            if (s.P.Hp > 0) LandBlockable(s, e.Name + " Explosive", e.Explosive, yourTurn: yourTurn);
+            if (s.P.Hp > 0) LandBlockable(s, e.Name + " Explosive", e.Explosive, dealer: e.Id);
             for (var k = 0; k < s.Teammates.Count; k++)
             {
                 if (s.Teammates[k].Hp <= 0) continue;
                 var amount = e.ExplosiveOnTeammates is { } on && k < on.Count ? on[k] : e.Explosive;
-                LandBlockable(s, e.Name + " Explosive", amount, k, yourTurn);
+                LandBlockable(s, e.Name + " Explosive", amount, k, e.Id);
             }
         }
     }
 
-    /// <summary>
-    /// Inferno: you lost HP on your turn (these helpers only run on your side's turn: end of turn, your card
-    /// plays), so every enemy takes its damage (unpowered: block first, no Thorns).
-    /// </summary>
-    private static void Inferno(SimState s, int lost)
+    /// <summary>Damage to every hittable enemy (Inferno and the like: Unpowered, their block first), dealt by <paramref name="dealer"/>.</summary>
+    internal static void DamageAllEnemies(SimState s, int amount, int dealer)
     {
-        if (lost <= 0 || s.P.Inferno <= 0) return;
-        if (s.Log) s.EndOfTurnDamage.Add(("Inferno (all)", s.P.Inferno));
-        HitAll(s, _ => s.P.Inferno);
+        foreach (var e in s.Targetable.ToList()) Damage(s, e, amount, dealer);
     }
 
     /// <summary>
@@ -867,14 +867,14 @@ public static partial class SimEngine
         }
     }
 
-    /// <summary>A teammate losing HP (Tungsten Rod, Buffer, Beating Remnant like yours).</summary>
-    private static void TeammateHpLoss(SimPlayer t, int amount)
+    /// <summary>Teammate k losing HP past their block (Tungsten Rod, Buffer, Beating Remnant like yours); their HP stops at 0.</summary>
+    private static void TeammateHpLoss(SimState s, int k, int amount, int blocked, int? dealer, SimProps props)
     {
-        var left = t.RemnantLeftPlayerTurn;
-        var lost = Math.Min(HpLoss(t, amount, ref left), Math.Max(0, t.Hp)); // HP stops at 0
-        t.RemnantLeftPlayerTurn = left;
+        var lost = Math.Min(HpLoss(s, k, amount, dealer, props), Math.Max(0, s.Teammates[k].Hp));
+        var t = s.MutableTeammate(k);
         t.Taken += lost;
         t.Hp -= lost;
+        PlayerDamaged(s, k, dealer, props, blocked, lost);
     }
 
     private static void LandUnblockable(SimState s, string name, int amount, int who = -1)
@@ -884,16 +884,14 @@ public static partial class SimEngine
         {
             var t = s.MutableTeammate(who);
             t.Incoming += amount;
-            TeammateHpLoss(t, amount);
+            TeammateHpLoss(s, who, amount, 0, null, SimProps.Unblockable | SimProps.Unpowered);
             return;
         }
         if (s.Log) s.Unblockable.Add((name, amount));
-        var left = s.P.RemnantLeftPlayerTurn;
-        var lost = HpLoss(s, amount, ref left);
+        var lost = HpLoss(s, -1, amount, null, SimProps.Unblockable | SimProps.Unpowered);
         YouLose(s, lost);
         PlayHp(s, amount, lost);
-        s.P.RemnantLeftPlayerTurn = left;
-        Inferno(s, lost);
+        PlayerDamaged(s, -1, null, SimProps.Unblockable | SimProps.Unpowered, 0, lost);
     }
 
     // ------------------------------------------------------------------ card play
@@ -1725,8 +1723,7 @@ public static partial class SimEngine
     {
         AllyDeaths(s); // deaths at your end of turn
         s.FullBlockNeeded = new Dictionary<int, int>(); // per branch (shared until now)
-        // Beating Remnant's budget carries over from your turn (it resets only when your turn starts).
-        var remnant = s.P.RemnantLeftPlayerTurn;
+        s.EnemyTurnNow = true; // Inferno and the like react only on their owner's side's turn
         foreach (var e in s.Enemies)
         {
             if (!e.Alive)
@@ -1744,7 +1741,7 @@ public static partial class SimEngine
             {
                 e.DiedBeforeActing = true;
                 if (HitCount(e) > 0) s.SkippedPoisoned++;
-                Explosions(s, yourTurn: false);
+                Explosions(s);
                 continue;
             }
             if (e.Stunned || HitCount(e) == 0) continue; // a stunned enemy skips its move
@@ -1782,7 +1779,7 @@ public static partial class SimEngine
                 t.OstyHp -= tOsty;
                 t.OstyTaken += tOsty;
                 t.Through += tThrough - tOsty;
-                TeammateHpLoss(t, tThrough - tOsty);
+                TeammateHpLoss(s, k, tThrough - tOsty, tBlocked, e.Id, SimProps.Move);
                 if (!dead && t.FlameBarrier > 0) Retaliate(t.FlameBarrier);
                 if (!dead && t.Reflect && tBlocked > 0) Retaliate(tBlocked);
             }
@@ -1822,8 +1819,9 @@ public static partial class SimEngine
                 s.P.OstyHp -= toOsty;
                 s.OstyTaken += toOsty;
                 s.DamageThrough += through - toOsty;
-                var lost = HpLoss(s, through - toOsty, ref remnant);
+                var lost = HpLoss(s, -1, through - toOsty, e.Id, SimProps.Move);
                 YouLose(s, lost);
+                PlayerDamaged(s, -1, e.Id, SimProps.Move, blocked, lost);
                 // DamageResult.WasFullyBlocked: you had block and no damage got through after the
                 // AfterOsty modifiers (Tungsten Rod, Buffer...). Block only drops during an attack, so
                 // the first hit decides it.

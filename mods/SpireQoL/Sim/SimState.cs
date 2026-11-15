@@ -42,7 +42,11 @@ public sealed class SimEnemy
     [JsonIgnore] public int ShellLeft
     {
         get => Powers.Has("HardenedShellPower") ? Powers.DataOf("HardenedShellPower") : int.MaxValue;
-        set => Powers = Powers.With("HardenedShellPower", Powers.Has("HardenedShellPower") ? Powers["HardenedShellPower"] : int.MaxValue, value);
+        set
+        {
+            if (!Powers.Has("HardenedShellPower") && value == int.MaxValue) return; // no shell: nothing to keep
+            Powers = Powers.With("HardenedShellPower", Powers.Has("HardenedShellPower") ? Powers["HardenedShellPower"] : int.MaxValue, value);
+        }
     }
     [JsonIgnore] public int ShellPerTurn
     {
@@ -216,7 +220,7 @@ public sealed class SimPlayer
     /// Inferno: each time you lose HP on your turn, this much damage to every enemy (InfernoPower.AfterDamageReceived:
     /// UnblockedDamage &gt; 0 while it's your side's turn; unpowered). Yours only: a teammate's isn't modelled.
     /// </summary>
-    public int Inferno;
+    [JsonIgnore] public int Inferno { get => Powers["InfernoPower"]; set => Set("InfernoPower", value); }
 
     // Relics.
     public int OrichalcumBlock;
@@ -273,7 +277,8 @@ public sealed class SimPlayer
     public int FrontOrbBonusTriggers;
 
     // What happens to damage reaching your HP.
-    public int TungstenRod;
+    /// <summary>Tungsten Rod (relic, amount = HpLossReduction).</summary>
+    [JsonIgnore] public int TungstenRod { get => Relics["TungstenRod"]; set => SetRelic("TungstenRod", value); }
 
     /// <summary>Block gains so far (each sets off Juggernaut): counted for the Juggernaut tab.</summary>
     public int BlockGains;
@@ -287,9 +292,23 @@ public sealed class SimPlayer
     /// <summary>Your Focus now (orb values already include it), for Focus changes during a play.</summary>
     public int Focus;
     /// <summary>Beating Remnant: HP you can still lose until the start of your next turn (it resets only then).</summary>
-    public int RemnantLeftPlayerTurn = int.MaxValue;
-    public int RemnantCap = int.MaxValue;
-    public int Buffer;
+    /// <summary>Beating Remnant (relic: amount = MaxHpLoss, Data = HP lost since your turn started).</summary>
+    [JsonIgnore] public int RemnantLeftPlayerTurn
+    {
+        get => Relics.Has("BeatingRemnant") ? Math.Max(0, Relics["BeatingRemnant"] - Relics.DataOf("BeatingRemnant")) : int.MaxValue;
+        set { if (value != int.MaxValue) Relics = Relics.With("BeatingRemnant", Relics.Has("BeatingRemnant") ? Relics["BeatingRemnant"] : value, (Relics.Has("BeatingRemnant") ? Relics["BeatingRemnant"] : value) - value); }
+    }
+    [JsonIgnore] public int RemnantCap
+    {
+        get => Relics.Has("BeatingRemnant") ? Relics["BeatingRemnant"] : int.MaxValue;
+        set
+        {
+            if (value == int.MaxValue) { Relics = Relics.Without("BeatingRemnant"); return; }
+            var left = RemnantLeftPlayerTurn;
+            Relics = Relics.With("BeatingRemnant", value, left == int.MaxValue ? 0 : Math.Max(0, value - left));
+        }
+    }
+    [JsonIgnore] public int Buffer { get => Powers["BufferPower"]; set => Set("BufferPower", value); }
     public int OstyHp;
     /// <summary>
     /// Your pet Wuppy's HP (Wuppy relic, v0.113.0): while it lives, every powered attack aimed at you hits it instead,
@@ -514,6 +533,8 @@ public sealed class SimState
     /// <summary>The card play being resolved (its hooks and actions read it), and the attack in progress (Vigor, Aim...).</summary>
     internal SimCardPlay? CurrentPlay;
     internal int AttackSerial, CurrentAttack;
+    /// <summary>The enemy turn is under way (the players' side's turn is over: Inferno doesn't react).</summary>
+    internal bool EnemyTurnNow;
     /// <summary>Block gains from the current card play (Unmovable doesn't count them).</summary>
     internal int PlayCardBlockGains;
 
