@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Main Saves 1.0.5
+#### Changed
+- Rebuilt with the shared code update (no change in what it does).
+
 ### Spire QoL 0.37.1
 #### Fixed
 - Thunder counted once: a card that evokes Lightning (Dualcast, Zap or Ball Lightning into full slots) no longer gets an extra Thunder hit on a random enemy in its predictions (lethal, kills, the stun and wake tabs).
