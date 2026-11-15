@@ -253,6 +253,8 @@ public sealed class SimPlayer
 
     // Hand and turn counters.
     public int HandCount;
+    /// <summary>Energy now (PlayerCombatState.Energy): Pael's Tears.</summary>
+    public int Energy;
     /// <summary>Ethereal cards in hand that exhaust at end of turn.</summary>
     public int Fading;
     public int AttacksThisTurn;
@@ -547,6 +549,15 @@ public sealed class SimState
     internal int AttackSerial, CurrentAttack;
     /// <summary>The enemy turn is under way (the players' side's turn is over: Inferno doesn't react).</summary>
     internal bool EnemyTurnNow;
+    /// <summary>
+    /// What models bound to a card play at BeforeCardPlayed (the game's amountsForPlayedCards: Afterimage, Gravity, Strangle...),
+    /// "Name@owner" → amount; taken at AfterCardPlayed. A power the play itself applies isn't bound, so it doesn't fire on it.
+    /// </summary>
+    internal PowerSet Bound = PowerSet.Empty;
+    /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
+    internal SimCard? EventCard;
+    /// <summary>Card events during the current card play, by CardEvent name (Unceasing Top: nothing drawn or created).</summary>
+    internal PowerSet PlayEvents = PowerSet.Empty;
     /// <summary>Block gains from the current card play (Unmovable doesn't count them).</summary>
     internal int PlayCardBlockGains;
 

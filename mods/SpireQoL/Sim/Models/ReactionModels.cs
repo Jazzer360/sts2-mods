@@ -10,14 +10,16 @@ namespace SpireQoL.Sim.Models;
 public sealed class ThornsPower : SimModel
 {
     public override string Name => "ThornsPower";
+    public override TabKind? Tab => TabKind.Damage;
+    public override bool Harmful => true;
     public override void BeforeDamageReceived(SimState s, int owner, DamageCtx d, int amount)
     {
         if (d.Target != owner || owner < 0 || d.Dealer is not { } dealer || !d.Props.IsPoweredAttack()) return;
         var thorns = SimEngine.PowerOn(s, owner, Name);
         if (thorns <= 0) return;
-        s.LogFired(Name, 0, owner);
         var name = (s.Enemy(owner)?.Name ?? "Enemy") + " Thorns";
         var hit = SimEngine.CalcDamage(s, thorns, new DamageCtx(owner, dealer == Who.YourOsty ? Who.You : dealer, SimProps.Unpowered | SimProps.SkipHurtAnim, null, null));
+        s.LogFired(Name, hit, owner);
         if (dealer == Who.YourOsty)
         {
             if (s.P.OstyHp > 0) s.P.OstyHp = Math.Max(0, s.P.OstyHp - hit);
@@ -31,6 +33,7 @@ public sealed class ThornsPower : SimModel
 public sealed class EnvenomPower : SimModel
 {
     public override string Name => "EnvenomPower";
+    public override TabKind? Tab => TabKind.Trigger;
     public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {
         if (e.Dealer != owner || !e.Props.IsPoweredAttack() || e.Unblocked <= 0) return;
@@ -42,6 +45,7 @@ public sealed class EnvenomPower : SimModel
 public sealed class ConcoctPower : SimModel
 {
     public override string Name => "ConcoctPower";
+    public override TabKind? Tab => TabKind.Trigger;
     public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {
         if (e.Dealer != owner || !e.Props.IsPoweredAttack() || e.Unblocked <= 0) return;
@@ -54,7 +58,7 @@ public sealed class ConcoctPower : SimModel
 public sealed class SneckoSkull : SimModel
 {
     public override string Name => "SneckoSkull";
-    public override int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target)
+    public override int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target, bool debuff)
     {
         if (power != "PoisonPower" || applier != owner) return amount;
         s.LogFired(Name, 0, owner);
@@ -199,6 +203,8 @@ public sealed class TheGambitPower : SimModel
 public sealed class CurlUpPower : SimModel
 {
     public override string Name => "CurlUpPower";
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || !e.Props.IsPoweredAttack() || e.Card == null || s.CurrentPlay == null) return;
@@ -223,6 +229,8 @@ public sealed class CurlUpPower : SimModel
 public sealed class SkittishPower : SimModel
 {
     public override string Name => "SkittishPower";
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
     public override IEnumerable<SimState> BeforeAttack(SimState s, int owner, AttackInfo attack)
     {
         var p = SimEngine.PowersOf(s, owner);
@@ -254,6 +262,8 @@ public sealed class SkittishPower : SimModel
 public sealed class SneakyPower : SimModel
 {
     public override string Name => "SneakyPower";
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (play.Card.Type != SimCardType.Attack || play.Owner == owner || s.Enemy(owner) is not { Alive: true } en) return One(s);

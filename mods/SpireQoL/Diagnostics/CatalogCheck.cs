@@ -11,7 +11,7 @@ namespace SpireQoL.Diagnostics;
 /// <summary>
 /// Everything the mod tracks has a row in the settings menu, and every row still has something
 /// behind it (SettingsCatalog). Checked once at load, from the compiled mod and game:
-///  - proc rules: the relic and power classes Proc Indicators names in its rules (nameof compiles
+///  - proc rules: the simulator's models with a tab, and the relic and power classes Proc Indicators names (nameof compiles
 ///    to string literals, read from ProcIndicatorsFeature's code) against the catalog's proc rows;
 ///  - tracker rows: RelicSpecs (in the tray) and PowerSpecs against the catalog's tracker rows;
 ///  - double plays: every game class that changes how many times a card plays
@@ -33,8 +33,10 @@ internal static class CatalogCheck
 
         // Proc rules.
         var gameTypes = GameModelTypes();
-        // Tab keys are built as "proc:" + nameof(X), which the compiler folds into one literal.
+        // The simulator's models with a tab (the play log's tabs), and the outcome comparisons Proc Indicators names (tab keys are
+        // built as "proc:" + nameof(X), which the compiler folds into one literal).
         var ruleNames = LiteralsIn(typeof(ProcIndicatorsFeature)).Select(n => n.StartsWith("proc:") ? n[5..] : n)
+            .Concat(Sim.SimModels.Names.Where(n => Sim.SimModels.Get(n)!.Tab != null))
             .Where(n => gameTypes.TryGetValue(n, out var t) && (typeof(RelicModel).IsAssignableFrom(t) || typeof(PowerModel).IsAssignableFrom(t)))
             .ToHashSet();
         var procRows = sources.Where(s => s.Tag != null && s.TagPrefix == "proc:").Select(s => s.Type).ToHashSet();

@@ -6,6 +6,7 @@ namespace SpireQoL.Sim.Models;
 public sealed class TungstenRod : SimModel
 {
     public override string Name => "TungstenRod";
+    public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount) =>
         d.Target != owner ? amount : Math.Max(0m, amount - SimEngine.RelicsOf(s, owner)[Name]);
 }
@@ -55,12 +56,13 @@ public sealed class BufferPower : SimModel
 public sealed class InfernoPower : SimModel
 {
     public override string Name => "InfernoPower";
+    public override TabKind? Tab => TabKind.Damage;
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked <= 0 || s.EnemyTurnNow) return;
         var amount = SimEngine.PowerOn(s, owner, Name);
         if (amount <= 0) return;
-        s.LogFired(Name, amount, owner);
+        s.LogFired(Name, amount * s.Targetable.Count(), owner);
         if (s.Log) s.EndOfTurnDamage.Add(("Inferno (all)", amount));
         SimEngine.DamageAllEnemies(s, amount, owner);
     }

@@ -22,7 +22,7 @@ public static partial class SimAdapter
     /// values, the models and the captured terms; plus, as summary fields, what isn't an action yet (orbs, procs, hand changes).
     /// </summary>
     public static SimPlay Play(CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
-        int targetId, List<ProcHit> procs, List<int> procBlock)
+        int targetId)
     {
         var name = card.GetType().Name;
         var plays = Math.Max(1, f.Plays);
@@ -33,8 +33,6 @@ public static partial class SimAdapter
             Plays = plays,
             HandDelta = -1 + f.Draws + f.Generated + f.ReturnsToHand,
             FadingDelta = IsFading(card, cs) ? -1 : 0,
-            Procs = procs,
-            ProcBlock = procBlock,
         };
         // Aimed at a teammate: what lands on them goes to them (never to you, even with no teammate to aim at).
         Creature? ally = null;
@@ -55,7 +53,7 @@ public static partial class SimAdapter
 
         // ---- v2: the card play and what each play does
         var target = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
-        play.Card = new SimCardPlay(SimReaders.Card(card, f.Energy), Who.You, target, 0, plays, false);
+        play.Card = new SimCardPlay(SimReaders.Card(card, f, me), Who.You, target, 0, plays, f.AutoPlayed);
         if (f.LosesHp) play.Body.Add(new LoseHpAction(Sts2State.Var(card, "HpLoss")));
         if (f.AttackHits > 0 && AttackOf(card, f, me, cs, ids, targetId, plays, name) is { } attack) play.Body.Add(attack);
         if (f.BlockGains > 0 && BlockOf(card, f, me, cs, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
@@ -66,6 +64,7 @@ public static partial class SimAdapter
             play.Body.Add(new GainBlockAction(1, b, SimProps.Move) { Captured = SimReaders.Block(cs, card, me.Creature, b, ValueProp.Move) });
         }
         play.Body.AddRange(PowersOf(card, f, me, ids, targetId, name, allyId));
+        AddCardEvents(play, card, f, me, cs, ids, targetId, plays);
 
         // ---- summary fields (not actions yet)
         play.ByOsty = f.ByOsty;
@@ -97,6 +96,51 @@ public static partial class SimAdapter
         }
         if (play.Poison > 0 && !play.PoisonAll) play.TargetId = targetId;
         return play;
+    }
+
+    /// <summary>
+    /// The card events the play causes (PlayFacts' counts), for the models that react to them: the energy it spends and gives back
+    /// (before the play), each play's draws, discards, other exhausts, created cards and star gains (indirect, but star gains), the
+    /// stars it spends (first play), its own exhaust and a shuffle (after), and the arrows it dislodges at this aim.
+    /// </summary>
+    private static void AddCardEvents(SimPlay play, CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
+        int targetId, int plays)
+    {
+        void Each(List<SimAction> to, CardEvent ev, int total, bool indirect, bool perPlay = true)
+        {
+            var n = perPlay ? total / plays : total;
+            if (n > 0) to.Add(new CardEventAction(ev, n) { Indirect = indirect });
+        }
+        Each(play.Before, CardEvent.EnergyGained, f.EnergyBack, false, perPlay: false);
+        Each(play.Before, CardEvent.EnergySpent, f.EnergySpent, false, perPlay: false);
+        Each(play.Body, CardEvent.Drawn, Math.Min(f.OwnDraws, f.Draws), true);
+        Each(play.Body, CardEvent.Discarded, f.Discards, true);
+        Each(play.Body, CardEvent.Exhausted, f.ExhaustsOthers, true);
+        var sadness = f.SadnessCreated;
+        var statuses = Math.Max(0, f.GeneratedStatuses - sadness);
+        Each(play.Body, CardEvent.Generated, Math.Max(0, f.Generated + f.TransformsCertain - statuses - sadness), true);
+        Each(play.Body, CardEvent.GeneratedStatus, statuses, true);
+        Each(play.Body, CardEvent.GeneratedSadness, sadness, true);
+        Each(play.Body, CardEvent.StarsGained, f.StarGains, false);
+        if (f.Stars > 0) play.Body.Add(new CardEventAction(CardEvent.StarsSpent, 1) { FirstPlayOnly = true });
+        if (f.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, 1) { Card = play.Card!.Card });
+        if (f.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, 1) { Indirect = true });
+        // Arrows it pulls loose (Fool.DislodgesOn): at its target, or at every enemy for an all-enemy card.
+        int dislodged;
+        try
+        {
+            dislodged = card.TargetType switch
+            {
+                TargetType.AnyEnemy => ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } aimed ? Fool.DislodgesOn(f, aimed, me) : 0,
+                TargetType.AllEnemies => cs.HittableEnemies.Where(x => x.IsAlive).Sum(x => Fool.DislodgesOn(f, x, me)),
+                _ => 0,
+            };
+        }
+        catch
+        {
+            dislodged = 0;
+        }
+        Each(play.After, CardEvent.ArrowDislodged, dislodged, false, perPlay: false);
     }
 
     private static bool IsPowerVar<T>(DynamicVar v) where T : PowerModel =>
@@ -228,7 +272,7 @@ public static partial class SimAdapter
         foreach (var t in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
         {
             var n = SimPowerName(t);
-            if (!Simulated(n)) continue;
+            if (!Simulated(n) && !(PlayFacts.IsDebuffType(t) && debuffs.Contains(t))) continue;
             if (n == nameof(PoisonPower) && card.TargetType == TargetType.RandomEnemy) continue; // Bouncing Flask: random, a summary field
             if (PlayFacts.IsDebuffType(t))
             {

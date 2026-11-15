@@ -38,6 +38,20 @@ public static class SimReaders
                 case "FlutterPower": data = Sts2State.Var(pw, "DamageDecrease", 50); break;
                 case "SurroundedPower": data = Sts2State.Private<object?>(pw, "Facing", null)?.ToString() == "Left" ? 1 : 0; break;
                 case "CoveredPower": data = pw.Applier is { } ap && idOf(ap) is { } apId ? apId + 100 : 0; break;
+                // Counters the proc models count down (the power's own number: DisplayAmount, or its CardsLeft value).
+                case "FeralPower" or "OrbitPower" or "AutomationPower" or "CacophonyPower": data = Math.Max(0, pw.DisplayAmount); break;
+                case "PanachePower" or "WitheringPresencePower": data = Math.Max(1, Sts2State.Var(pw, "CardsLeft", 5)); break;
+                // Once a turn (Data 1: already this turn).
+                case "PaleBlueDotPower": data = Internal(pw, "alreadyActivatedThisTurn") ? 1 : 0; break;
+                case "LullabyPower": data = Sts2State.Private(pw, "_proccdThisTurn", true) ? 1 : 0; break;
+                case "YahPower": data = Internal(pw, "triggeredThisTurn") ? 1 : 0; break;
+                case "JugglingPower": data = Sts2State.Private<object?>(pw, "_internalData", null) is { } jd ? Sts2State.Private(jd, "attacksPlayedThisTurn", 0) : 0; break;
+                // Whose plays it acts on (+ 100, so 0 stays "nobody").
+                case "StranglePower" or "OblivionPower": data = pw.Applier is { } sa && idOf(sa) is { } saId ? saId + 100 : 0; break;
+                case "ImitationLearningPower":
+                    data = pw is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower il
+                           && Features.ProcIndicatorsFeature.CopiesFrom(il)?.Creature is { } copied && idOf(copied) is { } cId ? cId + 100 : 0;
+                    break;
                 case "InterceptPower":
                 {
                     // The players it covers (InterceptPower's internal coveredCreatures): Intercept multiplies by count + 1.
@@ -50,6 +64,34 @@ public static class SimReaders
             set = set.Has(name) ? set.With(name, set[name] + amount, data) : set.With(name, amount, data);
         }
         return set;
+    }
+
+    /// <summary>A flag in a power's internal data (PowerModel._internalData), true when unreadable (so a once-a-turn proc isn't promised).</summary>
+    private static bool Internal(PowerModel pw, string field) =>
+        Sts2State.Private<object?>(pw, "_internalData", null) is not { } d || Sts2State.Private(d, field, true);
+
+    /// <summary>
+    /// The values of every relic and power of these creatures and players (their DynamicVars) for SimState.Vars: "id:Name:Var",
+    /// with a BlockVar's or DamageVar's props as "id:Name:Var.Props".
+    /// </summary>
+    public static void AddVars(Dictionary<string, int> vars, int id, AbstractModel model)
+    {
+        var name = ModelName(model);
+        try
+        {
+            var dv0 = model switch { RelicModel r => r.DynamicVars, PowerModel p => p.DynamicVars, _ => null };
+            if (dv0 == null) return;
+            foreach (var (key, v) in dv0)
+            {
+                vars[$"{id}:{name}:{key}"] = v.IntValue;
+                if (v is MegaCrit.Sts2.Core.Localization.DynamicVars.BlockVar bv) vars[$"{id}:{name}:{key}.Props"] = (int)bv.Props;
+                else if (v is MegaCrit.Sts2.Core.Localization.DynamicVars.DamageVar dv) vars[$"{id}:{name}:{key}.Props"] = (int)dv.Props;
+            }
+        }
+        catch
+        {
+            // no values readable: the models' fallbacks
+        }
     }
 
     /// <summary>A player's relics in relic order (melted ones don't listen), each with the numbers its model keeps.</summary>
@@ -82,7 +124,21 @@ public static class SimReaders
                     break;
                 case "TheBoot": amount = Sts2State.Var(r, "DamageMinimum", 5); break;
                 case "SneckoSkull": amount = Sts2State.Var(r, "PoisonPower", 1); break;
-                default: amount = Math.Max(0, r.DisplayAmount); break;
+                // Counters the models keep counting (their tray number, or the private count behind it).
+                case "JossPaper": amount = Sts2State.Private(r, "CardsExhausted", 0); break;
+                case "GalacticDust": amount = Sts2State.Private(r, "StarsSpent", 0); break;
+                case "Metronome": amount = Sts2State.Private(r, "OrbsChanneled", int.MaxValue / 2); break;
+                // Once a turn: armed until used (bit 1), done this turn (bit 2).
+                case "MiniRegent" or "Regalite": data = Sts2State.Private(r, "UsedThisTurn", true) ? 0 : 1; break;
+                case "RainbowRing": data = Sts2State.Private(r, "ActivationCountThisTurn", 0) >= 1 ? 2 : 0; break;
+                case "ConductorsBaton": data = Sts2State.Private(r, "_triggeredThisTurn", true) ? 2 : 0; break;
+                case "UnsettlingLamp":
+                    data = Sts2State.Private<object?>(r, "TriggeringCard", null) == null && !Sts2State.Private(r, "IsFinishedTriggering", true) ? 1 : 0;
+                    break;
+                default:
+                    amount = Math.Max(0, r.DisplayAmount);
+                    data = Features.RelicCountersFeature.IsArmed(r) ? 1 : 0;
+                    break;
             }
             set = set.With(name, amount, data);
         }
@@ -133,6 +189,23 @@ public static class SimReaders
         CardType.Curse => SimCardType.Curse,
         _ => SimCardType.None,
     };
+
+    /// <summary>The card as models see it, with what its play does that models ask about (stars, exhaust, a shot with an arrow, the rest of your hand).</summary>
+    public static SimCard Card(CardModel card, SpireQoL.Procs.PlayFacts f, Player me)
+    {
+        var c = Card(card, f.Energy);
+        bool Safe(Func<bool> q) { try { return q(); } catch { return false; } }
+        return c with
+        {
+            Stars = f.Stars,
+            StarCostX = Safe(() => card.HasStarCostX),
+            ExhaustsSelf = f.ExhaustsSelf,
+            Dupe = Safe(() => card.IsDupe),
+            Upgradable = Safe(() => card.IsUpgradable),
+            Shoots = Safe(() => SpireQoL.Procs.Fool.Shoots(card, me)),
+            OthersInHandCost = Safe(() => Sts2State.Hand(me).Any(x => x != card && x.CostsEnergyOrStars(includeGlobalModifiers: true))),
+        };
+    }
 
     /// <summary>The card as models see it: its class name, type, tags, values, and flags.</summary>
     public static SimCard Card(CardModel card, int energy)

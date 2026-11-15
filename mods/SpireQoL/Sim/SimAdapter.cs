@@ -188,6 +188,7 @@ public static partial class SimAdapter
             // Every power, with the numbers its model keeps (Curl Up, Sneaky, Skittish, Thorns, Burrowed, Asleep, Slumber, Flutter,
             // Plow, Shriek, The Gambit, Slippery, Hard to Kill, Intangible, Hardened Shell, Barricade, Strength, Weak...).
             se.Powers = SimReaders.Powers(e, IdOf);
+            foreach (var pw in e.Powers) SimReaders.AddVars(s.Vars, id, pw);
             // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
             if (e.IsAlive && e.GetPower<ExplosivePower>() is { Amount: > 0 } explosive) se.Explosive = ExplosiveOn(e, me.Creature, explosive.Amount, me, cs);
             se.StartedAlive = e.IsAlive;
@@ -228,6 +229,8 @@ public static partial class SimAdapter
         }
 
         FillPlayer(s.P, me, cs, IdOf);
+        foreach (var pw in me.Creature.Powers) SimReaders.AddVars(s.Vars, Who.You, pw);
+        foreach (var r in me.Relics) SimReaders.AddVars(s.Vars, Who.You, r);
         FillAutoPlays(s.P, me, cs, ids);
         s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
         // Your HP, and what keeps you alive at 0 (the Death Skull on Incoming Damage, Fairy and Lizard Tail): the heal
@@ -253,6 +256,9 @@ public static partial class SimAdapter
             var oc = other.Creature;
             var t = new SimPlayer();
             FillPlayer(t, other, cs, IdOf);
+            var mateId = Who.Teammate(s.Teammates.Count);
+            foreach (var pw in oc.Powers) SimReaders.AddVars(s.Vars, mateId, pw);
+            foreach (var r in other.Relics) SimReaders.AddVars(s.Vars, mateId, r);
             t.Hp = oc.CurrentHp;
             t.BeaconOfHope = oc.HasPower<BeaconOfHopePower>();
             s.Teammates.Add(t);
@@ -335,8 +341,9 @@ public static partial class SimAdapter
 
     private static SimPlay AutoPlay(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? f = null)
     {
-        var play = Play(card, f ?? PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card)), me, cs, ids, target, new List<ProcHit>(), new List<int>());
+        var play = Play(card, f ?? PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card)), me, cs, ids, target);
         play.AutoPlay = true;
+        if (play.Card != null) play.Card = play.Card with { AutoPlay = true };
         return play;
     }
 
@@ -431,6 +438,7 @@ public static partial class SimAdapter
         }
 
         p.HandCount = hand.Count;
+        p.Energy = pcs.Energy;
         p.Fading = hand.Count(card => IsFading(card, cs));
         p.AttacksThisTurn = Sts2State.CountPlayedThisTurn(me, CardType.Attack);
         foreach (var card in hand)

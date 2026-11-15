@@ -7,6 +7,8 @@ namespace SpireQoL.Sim.Models;
 public sealed class EnragePower : SimModel
 {
     public override string Name => "EnragePower";
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (play.Card.Type != SimCardType.Skill || s.Enemy(owner) is not { Alive: true }) return One(s);
@@ -23,6 +25,7 @@ public sealed class EnragePower : SimModel
 public sealed class MonarchsGazePower : SimModel
 {
     public override string Name => "MonarchsGazePower";
+    public override TabKind? Tab => TabKind.Trigger;
     public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {
         if (e.Dealer != owner || !e.Props.IsPoweredAttack() || e.Target < 0) return;
@@ -35,6 +38,8 @@ public sealed class MonarchsGazePower : SimModel
 public sealed class VitalSparkPower : SimModel
 {
     public override string Name => "VitalSparkPower";
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (!play.Card.Is("Tainted")) return One(s);

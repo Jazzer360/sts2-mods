@@ -104,6 +104,7 @@ public abstract class AttackBoundPower : SimModel
 public sealed class VigorPower : AttackBoundPower
 {
     public override string Name => "VigorPower";
+    public override TabKind? Tab => TabKind.Trigger;
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) => a.Dealer == owner && a.Props.IsPoweredAttack();
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d) =>
         d.Dealer == owner && d.Props.IsPoweredAttack() && AppliesNow(s, owner, Name) ? SimEngine.PowerOn(s, owner, Name) : 0m;
@@ -172,6 +173,7 @@ public sealed class QuietusPower : AttackBoundPower
 public sealed class GigantificationPower : AttackBoundPower
 {
     public override string Name => "GigantificationPower";
+    public override TabKind? Tab => TabKind.Trigger;
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) =>
         a.Card is { Type: SimCardType.Attack } && s.CurrentPlay?.Owner == owner && a.Props.IsPoweredAttack();
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
@@ -202,13 +204,16 @@ public sealed class DoubleDamagePower : SimModel
 public sealed class SlowPower : SimModel
 {
     public override string Name => "SlowPower";
+    public override TabKind? Tab => TabKind.Trigger;
     public override bool FlashesOnDamageModified => true;
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
         d.Target == owner && d.Props.IsPoweredAttack() ? 1m + 0.1m * SimEngine.PowersOf(s, owner).DataOf(Name) : 1m;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         var powers = SimEngine.PowersOf(s, owner);
-        if (powers.Has(Name)) SimEngine.SetPowers(s, owner, powers.With(Name, powers[Name], powers.DataOf(Name) + 1));
+        if (!powers.Has(Name)) return One(s);
+        SimEngine.SetPowers(s, owner, powers.With(Name, powers[Name], powers.DataOf(Name) + 1));
+        s.LogFired(Name, 0, owner);
         return One(s);
     }
 }
@@ -217,6 +222,8 @@ public sealed class SlowPower : SimModel
 public sealed class TenderPower : SimModel
 {
     public override string Name => "TenderPower";
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (play.Owner != owner) return One(s);
@@ -274,6 +281,7 @@ public sealed class SerratedArrowsPower : SimModel
 public sealed class PenNib : SimModel
 {
     public override string Name => "PenNib";
+    public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null) return 1m;
@@ -306,6 +314,7 @@ public sealed class PenNib : SimModel
 public sealed class MightyWings : SimModel
 {
     public override string Name => "MightyWings";
+    public override TabKind? Tab => TabKind.Trigger;
     public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {
         if (!e.Props.IsPoweredAttack() || !(e.Dealer == owner || (owner == Who.You && e.Dealer == Who.YourOsty))) return;

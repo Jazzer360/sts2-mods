@@ -10,6 +10,7 @@ namespace SpireQoL.Sim.Models;
 public sealed class StretchPower : SimModel
 {
     public override string Name => "StretchPower";
+    public override TabKind? Tab => TabKind.Trigger;
     private const int Bound = 1, Gave = 2;
 
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
@@ -58,6 +59,7 @@ public sealed class StretchPower : SimModel
 public sealed class PaelsLegion : SimModel
 {
     public override string Name => "PaelsLegion";
+    public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b)
     {
         if (!b.Props.IsCardOrMonsterMove() || b.Card == null || b.Play?.Owner != owner) return 1m;
@@ -87,6 +89,7 @@ public sealed class PaelsLegion : SimModel
 public sealed class Vambrace : SimModel
 {
     public override string Name => "Vambrace";
+    public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b)
     {
         if (!b.Props.IsCardOrMonsterMove() || b.Card == null || b.Play?.Owner != owner) return 1m;

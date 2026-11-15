@@ -7,7 +7,7 @@ public enum TabKind { Trigger, Block, Damage, Summon }
 /// A card event the hooks see (AfterCardDrawn, AfterCardExhausted, AfterCardDiscarded, AfterCardGeneratedForCombat, AfterStarsGained,
 /// AfterShuffle), one per card (or star).
 /// </summary>
-public enum CardEvent { Drawn, Exhausted, Discarded, Generated, GeneratedStatus, GeneratedSadness, StarsGained, StarsSpent, Shuffled, EnergySpent }
+public enum CardEvent { Drawn, Exhausted, Discarded, Generated, GeneratedStatus, GeneratedSadness, StarsGained, StarsSpent, Shuffled, EnergySpent, EnergyGained, ArrowDislodged }
 
 /// <summary>The game's ValueProp flags (MegaCrit.Sts2.Core.ValueProps), same values.</summary>
 [Flags]
@@ -47,6 +47,20 @@ public sealed record SimCard(string Name, SimCardType Type)
     /// <summary>Its cost when played (X costs: the energy spent), and its energy value (CardPlay.Resources.EnergyValue).</summary>
     public int Energy { get; init; }
     public bool CostsX { get; init; }
+    /// <summary>Stars it spends when played (CardPlay.Resources.StarsSpent).</summary>
+    public int Stars { get; init; }
+    /// <summary>Its star cost is X (Chemical X boosts it too).</summary>
+    public bool StarCostX { get; init; }
+    /// <summary>It exhausts itself once played (the Exhaust keyword, added ones included).</summary>
+    public bool ExhaustsSelf { get; init; }
+    /// <summary>A copy made by a replay (CardModel.IsDupe): Feral doesn't return it.</summary>
+    public bool Dupe { get; init; }
+    /// <summary>It can still be upgraded (Razor Tooth).</summary>
+    public bool Upgradable { get; init; }
+    /// <summary>It shoots an arrow you have (a Shoot card with an arrow available): Explosive Arrows.</summary>
+    public bool Shoots { get; init; }
+    /// <summary>Another card in your hand still costs energy or stars (Mummified Hand has something to make free).</summary>
+    public bool OthersInHandCost { get; init; }
     /// <summary>Which card in hand it is (SimHandCard.Id), 0 = none.</summary>
     public int HandId { get; init; }
 
@@ -101,8 +115,11 @@ public abstract class SimModel
     /// <summary>It flashes when it changes a damage amount (the game's AfterModifyingDamageAmount: Slow, Hard to Kill...).</summary>
     public virtual bool FlashesOnDamageModified => false;
 
-    /// <summary>What its tab shows (the amount comes from the play log).</summary>
-    public virtual TabKind Tab => TabKind.Trigger;
+    /// <summary>
+    /// Its tab on a card whose play makes it fire (from the play log; the amount from what it logged): a trigger, or the block,
+    /// damage or summon it adds. Null: no tab from the log (its tab, if any, comes from the outcome comparisons).
+    /// </summary>
+    public virtual TabKind? Tab => null;
     /// <summary>Its tab is crossed (a warning: it helps the enemy, hurts you, or gives up a bonus), shown when it fires in some branch.</summary>
     public virtual bool Harmful => false;
 
@@ -117,7 +134,7 @@ public abstract class SimModel
     public virtual decimal ModifyBlockAdditive(SimState s, int owner, BlockCtx b) => 0m;
     public virtual decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b) => 1m;
     /// <summary>Hook.ModifyPowerAmountGiven: a power's amount as <paramref name="applier"/> gives it to <paramref name="target"/> (Snecko Skull).</summary>
-    public virtual int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target) => amount;
+    public virtual int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target, bool debuff) => amount;
 
     // ---- hooks (may branch)
 
@@ -144,8 +161,10 @@ public abstract class SimModel
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     /// <summary>A card event (one per card or star): draws, exhausts, discards, created cards, stars, shuffles. Player: who it happened to.</summary>
     public virtual IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) => One(s);
+    /// <summary>An orb was channeled for a player (AfterOrbChanneled): Metronome.</summary>
+    public virtual IEnumerable<SimState> AfterOrbChanneled(SimState s, int owner, int player) => One(s);
     /// <summary>A power landed on a creature (after Artifact): Sleight of Flesh, Vicious, Shroud.</summary>
-    public virtual IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, string power, int amount, int applier, int target) => One(s);
+    public virtual IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, string power, int amount, int applier, int target, bool debuff) => One(s);
     /// <summary>A creature died (AfterDeath; once per death): Crab Rage, Ravenous.</summary>
     public virtual void AfterDeath(SimState s, int owner, int dead) { }
     /// <summary>After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier.</summary>

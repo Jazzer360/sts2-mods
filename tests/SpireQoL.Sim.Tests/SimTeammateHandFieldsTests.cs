@@ -38,6 +38,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.ObsidianViceDamage), nameof(SimPlayer.CharonsAshesDamage), nameof(SimPlayer.ForgottenSoulDamage),
         nameof(SimPlayer.ParryingShieldBlock), nameof(SimPlayer.ParryingShieldDamage), nameof(SimPlayer.LunarBlackHole), nameof(SimPlayer.LunarBeforeParrying), nameof(SimPlayer.PaelsEyeExhaust),
         nameof(SimPlayer.HandCount),       // the size is on screen (Cloak Clasp, Screaming Flagon, Obsidian Vice, Regret's amount)
+        nameof(SimPlayer.Energy),          // on screen for every player (Pael's Tears, Orbit)
         nameof(SimPlayer.AttacksThisTurn), // you watch them play
         nameof(SimPlayer.DebuffBlockable), nameof(SimPlayer.DebuffLateBlockable), nameof(SimPlayer.DebuffUnblockable),
         nameof(SimPlayer.Orbs), nameof(SimPlayer.OrbCapacity), nameof(SimPlayer.SlotOnFirstChannel), nameof(SimPlayer.Thunder),

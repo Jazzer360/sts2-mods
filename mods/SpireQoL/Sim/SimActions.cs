@@ -68,4 +68,8 @@ public sealed record LoseHpAction(int Amount) : SimAction;
 public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
 {
     public bool Indirect { get; init; }
+    /// <summary>Only on a card play's first play (stars a card spends: a replay doesn't spend them again).</summary>
+    public bool FirstPlayOnly { get; init; }
+    /// <summary>The card the event is about, when known (the played card exhausting itself: Burning Sticks reads its type).</summary>
+    public SimCard? Card { get; init; }
 }

@@ -14,7 +14,7 @@ public static partial class SimEngine
         for (var i = 0; i < Math.Max(1, pc.Play.PlayCount); i++)
         {
             var play = pc.Play with { PlayIndex = i };
-            b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; });
+            b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; s.PlayEvents = PowerSet.Empty; });
             HookStep(b, (m, o, x) => m.BeforeCardPlayed(x, o, play));
             b.Do(s => Count(s, play, "Started"));
             foreach (var a in pc.Body) Run(b, a);
@@ -149,7 +149,7 @@ public static partial class SimEngine
     internal static bool ApplyPower(SimState s, int applier, int target, string power, int amount, bool debuff)
     {
         if (amount == 0) return false;
-        foreach (var (m, o) in Listeners(s)) amount = m.ModifyPowerAmountGiven(s, o, power, amount, applier, target);
+        foreach (var (m, o) in Listeners(s)) amount = m.ModifyPowerAmountGiven(s, o, power, amount, applier, target, debuff);
         if (amount == 0) return false;
         var powers = PowersOf(s, target);
         if (debuff && powers["ArtifactPower"] > 0)
@@ -197,7 +197,7 @@ public static partial class SimEngine
             {
                 var t = target;
                 r = Then(r, x => ApplyPower(x, applier, t, ap.Power, ap.Amount, ap.Debuff)
-                    ? Hook(x, (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t)) : new[] { x });
+                    ? Hook(x, (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t, ap.Debuff)) : new[] { x });
             }
             return r;
         });
@@ -206,8 +206,10 @@ public static partial class SimEngine
     /// <summary>Card events, one card at a time, each through every listener's AfterCardEvent (indirect ones marked in the log).</summary>
     private static void RunCardEvent(BranchSet b, CardEventAction ce)
     {
+        if (ce.FirstPlayOnly && b.States.Count > 0 && b.States[0].CurrentPlay is { PlayIndex: > 0 }) return;
         for (var i = 0; i < ce.Count; i++)
         {
+            b.Do(s => { CountEvent(s, ce.Event, s.CurrentPlay?.Owner ?? Who.You); s.EventCard = ce.Card; });
             HookStep(b, (m, o, x) =>
             {
                 x.IndirectNow = ce.Indirect;
@@ -215,6 +217,7 @@ public static partial class SimEngine
                 foreach (var y in r) y.IndirectNow = false;
                 return r;
             });
+            b.Do(s => s.EventCard = null);
         }
     }
 

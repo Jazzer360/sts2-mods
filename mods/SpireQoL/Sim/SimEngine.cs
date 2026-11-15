@@ -12,6 +12,8 @@ public sealed class SimPlay
     /// </summary>
     public SimCardPlay? Card;
     public List<SimAction> Body = new();
+    /// <summary>Actions before the card play (the energy it spends) and after it (its own exhaust, events of the whole play).</summary>
+    public List<SimAction> Before = new(), After = new();
     /// <summary>The card in your hand this play is (SimHandCard.Id): playing it takes it out of SimPlayer.AutoHand. 0 = none.</summary>
     public int HandCard;
     /// <summary>Cards it draws (the draw pile it leaves: I Am Invincible on top).</summary>
@@ -702,7 +704,8 @@ public static partial class SimEngine
         {
             var j = p.Juggernaut;
             if (who < 0 && log != null) if (s.Log) s.EndOfTurnDamage.Add(("Juggernaut", j));
-            r = HitRandom(s, _ => j);
+            var jOwner = who < 0 ? Who.You : Who.Teammate(who);
+            r = HitRandom(s, _ => j, then: (st, _) => st.LogFired("JuggernautPower", j, jOwner));
         }
         // Beacon of Hope: half (whole block only) to every other living player; theirs can pass half of
         // that on once (the giver's is held while it gives, and the giver still gets block back).
@@ -743,7 +746,7 @@ public static partial class SimEngine
         switch (orb.Kind)
         {
             // Thunder hits the evoke's target again if it's still alive.
-            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = thunder ?? st.P.Thunder; if (t > 0 && e.Alive) Damage(st, e, t); });
+            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = thunder ?? st.P.Thunder; if (t > 0 && e.Alive) { Damage(st, e, t); st.LogFired("ThunderPower", t, who < 0 ? Who.You : Who.Teammate(who)); } });
             case OrbKind.Frost: return GainBlock(s, orb.Evoke, null, who);
             case OrbKind.Dark:
             {
@@ -1041,7 +1044,7 @@ public static partial class SimEngine
         case LegacyPart.Kind.AfterHits:
         // Necro Mastery: Osty's death (Bone Shards, Sacrifice) hits every enemy.
         if (p.AllEnemiesUnblockable > 0)
-            b.Do(s => { foreach (var e in s.Targetable.ToList()) Damage(s, e, p.AllEnemiesUnblockable, props: SimProps.Unblockable | SimProps.Unpowered); });
+            b.Do(s => { var total = 0; foreach (var e in s.Targetable.ToList()) { Damage(s, e, p.AllEnemiesUnblockable, props: SimProps.Unblockable | SimProps.Unpowered); total += p.AllEnemiesUnblockable; } s.LogFired("NecroMasteryPower", total, Who.You); });
 
         // Capture Spirit: unblockable damage to the target.
         if (p.TargetDamage.TryGetValue(p.TargetId, out var direct) && direct > 0)
@@ -1130,11 +1133,12 @@ public static partial class SimEngine
                             s.P.OwnOrbs().RemoveAt(0);
                             r = Evoke(s, front);
                         }
-                        return r.Select(x =>
+                        return Then(r.ToList(), x =>
                         {
-                            if (x.P.OrbCapacity > 0) x.P.OwnOrbs().Add(op.Orb!.Clone());
-                            return x;
-                        }).ToList();
+                            if (x.P.OrbCapacity <= 0) return new[] { x };
+                            x.P.OwnOrbs().Add(op.Orb!.Clone());
+                            return Hook(x, (m, o, y) => m.AfterOrbChanneled(y, o, Who.You));
+                        });
                     });
                     break;
             }
