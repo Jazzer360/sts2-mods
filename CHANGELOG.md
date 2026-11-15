@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.43.1
+#### Fixed
+- Tiny card icons (Make It So, Right Hand Hand, Whistling Arrows in the tracker, on tabs and in the settings menu) are centred on the card's art; they sat a little high.
+
 ### Spire QoL 0.43.0
 #### Changed
 - Settings: the Relics page has two sections. In fights keeps the On cards and Tracker columns. Outside fights lists the Run Reminders relics with a column per place they show (Card rewards, Events, Shops), each with its own switch and All on / All off. A note says when Run Reminders is off on the General page. Relics you switched off before stay off everywhere.
