@@ -306,13 +306,12 @@ public sealed class PenNib : SimModel
 public sealed class MightyWings : SimModel
 {
     public override string Name => "MightyWings";
-    public override IEnumerable<SimState> AfterDamageGiven(SimState s, int owner, DamageEvent e)
+    public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {
-        if (!e.Props.IsPoweredAttack() || !(e.Dealer == owner || (owner == Who.You && e.Dealer == Who.YourOsty))) return One(s);
+        if (!e.Props.IsPoweredAttack() || !(e.Dealer == owner || (owner == Who.You && e.Dealer == Who.YourOsty))) return;
         var r = SimEngine.RelicsOf(s, owner);
-        if (e.Total < r.DataOf(Name)) return One(s);
+        if (e.Total < r.DataOf(Name)) return;
         s.LogFired(Name);
         SimEngine.ApplyPower(s, owner, owner, "StrengthPower", r[Name], debuff: false);
-        return One(s);
     }
 }

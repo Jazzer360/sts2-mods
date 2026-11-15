@@ -482,122 +482,118 @@ public static partial class SimEngine
 
     // ------------------------------------------------------------------ primitives
 
-    /// <summary>Damage to an enemy during your turn: its block, then HP (Hardened Shell caps HP lost).</summary>
-    /// <param name="powered">A powered attack (your card's hits): Flutter and The Gambit react only to those.</param>
-    /// <param name="minimumHpLoss">The Boot: a powered hit that loses it at least 1 HP loses it at least this much.</param>
-    /// <param name="unblockable">Unblockable damage (Capture Spirit): its block takes none of it.</param>
-    private static int Damage(SimEnemy e, int amount, bool powered = false, int minimumHpLoss = 0, bool unblockable = false)
+    /// <summary>
+    /// Damage to an enemy (CreatureCmd.Damage), in the game's order: the damage caps (Hard to Kill, Intangible: the damage math
+    /// applies them, amounts given as final numbers get them here), BeforeDamageReceived (Thorns hits the dealer back), its
+    /// block (AfterBlockBroken when it breaks: Burrowed), the HP-loss pipeline (Hardened Shell, Slippery, The Boot...), its HP,
+    /// then AfterDamageGiven and AfterDamageReceived (Envenom, Mighty Wings, Asleep, Slumber, Plow, Shriek, Flutter, The
+    /// Gambit...), even when its block took it all. Returns the HP it lost (overkill included).
+    /// </summary>
+    /// <param name="dealer">Who deals it (you by default; Who.YourOsty for Osty's hits).</param>
+    /// <param name="props">The damage's props: a card's hit is a powered Move; procs, orbs and the like are Unpowered.</param>
+    internal static int Damage(SimState s, SimEnemy e, int amount, int? dealer = Who.You, SimProps props = SimProps.Unpowered, SimCard? card = null)
     {
         if (amount <= 0 || !e.Alive) return 0;
-        amount = Math.Min(amount, e.HitCap);
+        var listeners = Listeners(s);
+        if (listeners.Count == 0) return PlainDamage(s, e, amount, dealer, props, card);
+        var ctx = new DamageCtx(dealer, e.Id, props, card, s.CurrentPlay);
+        foreach (var (m, o) in listeners) amount = (int)Math.Min(amount, m.ModifyDamageCap(s, o, ctx));
+        foreach (var (m, o) in listeners) m.BeforeDamageReceived(s, o, ctx, amount);
+        if (!e.Alive) return 0;
+        if (card != null) e.HitByCard = true;
         var hadBlock = e.Block > 0;
-        var absorbed = unblockable ? 0 : Math.Min(e.Block, amount);
+        var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(e.Block, amount);
         e.Block -= absorbed;
-        if (hadBlock && e.Block == 0) e.BlockBroken = true;
-        if (hadBlock && e.Block == 0 && e.Burrowed)
+        if (hadBlock && e.Block == 0)
         {
-            // BurrowedPower.AfterBlockBroken: stunned; the power goes and takes all its block (AfterRemoved).
-            e.Burrowed = false;
-            e.Barricade = false;
-            Stun(e);
+            e.BlockBroken = true;
+            foreach (var (m, o) in Listeners(s)) m.AfterBlockBroken(s, o, e.Id);
         }
-        var through = amount - absorbed;
-        if (through <= 0) return 0;
-        var toHp = Math.Min(through, Math.Max(0, e.ShellLeft));
-        if (e.Slippery > 0 && toHp >= 1)
+        var hpBefore = e.Hp;
+        var toHp = 0;
+        if (amount - absorbed > 0)
         {
-            // SlipperyPower.ModifyHpLostAfterOsty: at most 1 HP per hit; one charge per hit.
-            toHp = 1;
-            e.Slippery--;
-            e.SlipperyTriggered = true;
+            toHp = Math.Max(0, (int)HpLossPipeline(s, ctx, amount - absorbed));
+            e.Hp -= toHp;
+            if (toHp > 0)
+            {
+                e.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
+                if (card != null) e.ThroughByCard = true;
+            }
         }
-        // TheBoot.ModifyHpLostAfterOstyLate: last in the game's HP-loss order (after Hardened Shell and Slippery).
-        if (powered && toHp >= 1 && toHp < minimumHpLoss) toHp = minimumHpLoss;
-        if (e.ShellLeft != int.MaxValue) e.ShellLeft -= toHp;
-        e.Hp -= toHp;
-        if (toHp <= 0) return 0;
-        e.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
-        if (e.Alive && e.Asleep)
-        {
-            // AsleepPower.AfterDamageReceived: damage through its block (any source) wakes it, stunned.
-            e.Asleep = false;
-            Stun(e);
-        }
-        if (e.Alive && e.Slumber > 0 && --e.Slumber == 0)
-        {
-            // SlumberPower.AfterDamageReceived: one stack per instance through its block (any source); the last wakes it, stunned.
-            Stun(e);
-        }
-        if (e.Alive && e.StunAtHp > 0 && e.Hp <= e.StunAtHp)
-        {
-            // Plow / Shriek: any damage through that leaves it at or below the threshold.
-            e.StunAtHp = 0;
-            Stun(e);
-        }
-        if (powered && e.Alive && e.Flutter > 0 && --e.Flutter == 0) Stun(e);
-        if (powered && e.Alive && e.Gambit)
-        {
-            e.Gambit = false;
-            e.GambitTriggered = true;
-            e.Hp = 0; // TheGambitPower: it dies
-        }
+        var ev = new DamageEvent(dealer, e.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && e.Hp <= 0);
+        if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(s, ev.Total);
+        foreach (var (m, o) in Listeners(s)) m.AfterDamageGiven(s, o, ev);
+        foreach (var (m, o) in Listeners(s)) m.AfterDamageReceived(s, o, ev);
         return toHp;
     }
 
-    private static void Stun(SimEnemy e)
+    /// <summary>Damage with no models listening (most fights): block, then HP; nothing else can react.</summary>
+    private static int PlainDamage(SimState s, SimEnemy e, int amount, int? dealer, SimProps props, SimCard? card)
+    {
+        if (card != null) e.HitByCard = true;
+        var hadBlock = e.Block > 0;
+        var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(e.Block, amount);
+        e.Block -= absorbed;
+        if (hadBlock && e.Block == 0) e.BlockBroken = true;
+        var hpBefore = e.Hp;
+        var toHp = amount - absorbed;
+        if (toHp > 0)
+        {
+            e.Hp -= toHp;
+            e.UnblockedInstances++;
+            if (card != null) e.ThroughByCard = true;
+        }
+        else toHp = 0;
+        if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(s, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)));
+        return toHp;
+    }
+
+    /// <summary>
+    /// Hook.ModifyHpLost*: every listener's BeforeOsty, BeforeOstyLate, AfterOsty, then AfterOstyLate term; a listener that
+    /// changes the (whole-number) amount gets AfterModifyingHpLost (it flashes).
+    /// </summary>
+    internal static decimal HpLossPipeline(SimState s, DamageCtx ctx, decimal amount)
+    {
+        var listeners = Listeners(s);
+        var changed = new List<(SimModel Model, int Owner)>();
+        void Phase(Func<SimModel, int, decimal, decimal> f)
+        {
+            foreach (var (m, o) in listeners)
+            {
+                var before = amount;
+                amount = f(m, o, amount);
+                if (decimal.Truncate(before) != decimal.Truncate(amount)) changed.Add((m, o));
+            }
+        }
+        Phase((m, o, a) => m.ModifyHpLostBeforeOsty(s, o, ctx, a));
+        Phase((m, o, a) => m.ModifyHpLostBeforeOstyLate(s, o, ctx, a));
+        Phase((m, o, a) => m.ModifyHpLostAfterOsty(s, o, ctx, a));
+        Phase((m, o, a) => m.ModifyHpLostAfterOstyLate(s, o, ctx, a));
+        foreach (var (m, o) in changed) m.AfterModifyingHpLost(s, o);
+        return amount;
+    }
+
+    internal static void Stun(SimEnemy e)
     {
         e.Stunned = true;
         e.StunnedThisTurn = true;
     }
 
-    /// <summary>One hit of an attack Osty makes for your card: as CardHit, but Thorns hits Osty, and your Envenom and The Boot don't apply.</summary>
-    private static void OstyHit(SimState s, SimEnemy e, int amount)
-    {
-        if (amount <= 0 || !e.Alive) return;
-        if (e.Thorns > 0 && s.P.OstyHp > 0) s.P.OstyHp = Math.Max(0, s.P.OstyHp - e.Thorns);
-        e.HitByCard = true;
-        var block = e.Block;
-        var hp = e.Hp;
-        var lost = Damage(e, amount, powered: true);
-        if (lost > 0) e.ThroughByCard = true;
-        BiggestHit(s, block - e.Block, lost, hp);
-    }
+    /// <summary>A hit of the play's attack given as a final number: Osty's or yours (a powered Move from the play's card).</summary>
+    private static void PlayHit(SimState s, SimEnemy e, int amount, bool osty) =>
+        Damage(s, e, amount, osty ? Who.YourOsty : Who.You, SimProps.Move, s.CurrentPlay?.Card);
 
-    /// <summary>A hit of the play's attack: Osty's or yours.</summary>
-    private static void PlayHit(SimState s, SimEnemy e, int amount, bool osty)
-    {
-        if (osty) OstyHit(s, e, amount);
-        else CardHit(s, e, amount);
-    }
+    /// <summary>One hit of your card's attack given as a final number (Rain Shot's splash).</summary>
+    private static void CardHit(SimState s, SimEnemy e, int amount) => Damage(s, e, amount, Who.You, SimProps.Move, s.CurrentPlay?.Card);
 
     /// <summary>
-    /// One hit of your card's attack (a powered attack from a card): marks it for Curl Up and Skittish,
-    /// and Envenom poisons it when damage gets through (EnvenomPower.AfterDamageGiven; Snecko Skull adds).
+    /// A powered hit of yours or Osty's: its DamageResult.TotalDamage (blocked plus unblocked, which stops at the HP it had: the
+    /// rest is overkill) for the Mighty Wings tab, and the legacy count of 30+ hits (SimPlay.BigHitThreshold).
     /// </summary>
-    private static void CardHit(SimState s, SimEnemy e, int amount)
+    private static void BiggestHit(SimState s, int total)
     {
-        if (amount <= 0 || !e.Alive) return;
-        // ThornsPower.BeforeDamageReceived: it hits you back before the hit lands (the hit still lands).
-        if (e.Thorns > 0) LandBlockable(s, e.Name + " Thorns", e.Thorns);
-        e.HitByCard = true;
-        var block = e.Block;
-        var hp = e.Hp;
-        var lost = Damage(e, amount, powered: true, minimumHpLoss: s.P.BootMinimum);
-        BiggestHit(s, block - e.Block, lost, hp);
-        if (lost <= 0) return;
-        e.ThroughByCard = true;
-        if (s.P.Envenom > 0 && e.Alive) e.AddPoison(s.P.Envenom + s.P.PoisonBonus);
-    }
-
-    /// <summary>
-    /// A powered hit of your play's attack: its DamageResult.TotalDamage (blocked plus unblocked, which stops at the HP it
-    /// had: the rest is overkill) for Mighty Wings.
-    /// </summary>
-    private static void BiggestHit(SimState s, int blocked, int lost, int hpBefore)
-    {
-        var total = Math.Max(0, blocked) + Math.Min(lost, Math.Max(0, hpBefore));
         if (total > s.PlayBiggestHit) s.PlayBiggestHit = total;
-        // MightyWings.AfterDamageGiven: Strength right away, so the attack's next hits are stronger (SimPlay.HitDamageByPlay).
         if (s.BigHitThreshold > 0 && total >= s.BigHitThreshold) s.BigHits++;
     }
 
@@ -607,7 +603,7 @@ public static partial class SimEngine
         void Hit(SimState st, SimEnemy e)
         {
             if (card) PlayHit(st, e, amount(e), osty);
-            else Damage(e, amount(e));
+            else Damage(st, e, amount(e));
             then?.Invoke(st, e);
         }
         if (s.NoRandomHits)
@@ -673,7 +669,7 @@ public static partial class SimEngine
         foreach (var e in s.Targetable.ToList())
         {
             if (card) PlayHit(s, e, amount(e), osty);
-            else Damage(e, amount(e));
+            else Damage(s, e, amount(e));
         }
     }
 
@@ -733,12 +729,12 @@ public static partial class SimEngine
         switch (orb.Kind)
         {
             // Thunder hits the evoke's target again if it's still alive.
-            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = thunder ?? st.P.Thunder; if (t > 0 && e.Alive) Damage(e, t); });
+            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = thunder ?? st.P.Thunder; if (t > 0 && e.Alive) Damage(st, e, t); });
             case OrbKind.Frost: return GainBlock(s, orb.Evoke, null, who);
             case OrbKind.Dark:
             {
                 var weakest = s.Targetable.OrderBy(e => e.Hp).FirstOrDefault();
-                if (weakest != null) Damage(weakest, orb.Evoke);
+                if (weakest != null) Damage(s, weakest, orb.Evoke);
                 return new[] { s };
             }
             case OrbKind.Glass:
@@ -955,7 +951,11 @@ public static partial class SimEngine
         switch (part)
         {
         case LegacyPart.Kind.Setup:
-        b.Do(s => s.BigHitThreshold = p.BigHitThreshold);
+        {
+            // The play in progress, for hooks and the hits' card (Curl Up keys on it).
+            var play = new SimCardPlay(new SimCard(p.Name, p.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, p.TargetId, 0, Math.Max(1, p.Plays), p.AutoPlay);
+            b.Do(s => { s.BigHitThreshold = p.BigHitThreshold; s.CurrentPlay = play; });
+        }
         return;
         case LegacyPart.Kind.HpCost:
         // The card's own HP cost, before its hits.
@@ -975,6 +975,13 @@ public static partial class SimEngine
                 return play.Length == 0 ? 0 : play[Math.Min(s.BigHits, play.Length - 1)];
             }
             return p.HitDamageLater.TryGetValue(e.Id, out var later) && i >= later.After ? later.Damage : Hit(e);
+        }
+        var attacks = p.Hits > 0 && p.HitTarget != SimPlay.Target.None;
+        AttackInfo Info(SimState s) => new(s.CurrentAttack, p.ByOsty ? Who.YourOsty : Who.You, SimProps.Move, s.CurrentPlay?.Card);
+        if (attacks)
+        {
+            b.Do(s => { s.AttackSerial++; s.CurrentAttack = s.AttackSerial; });
+            HookStep(b, (m, o, x) => m.BeforeAttack(x, o, Info(x)));
         }
         switch (p.HitTarget)
         {
@@ -1011,16 +1018,21 @@ public static partial class SimEngine
                     b.Each(s => HitRandom(s, Hit, card: true, osty: p.ByOsty, then: p.GazeHits.Count > 0 ? (_, e) => e.GazeTaken++ : null));
                 break;
         }
+        if (attacks)
+        {
+            HookStep(b, (m, o, x) => m.AfterAttack(x, o, Info(x)));
+            b.Do(s => s.CurrentAttack = 0);
+        }
 
         return;
         case LegacyPart.Kind.AfterHits:
         // Necro Mastery: Osty's death (Bone Shards, Sacrifice) hits every enemy.
         if (p.AllEnemiesUnblockable > 0)
-            b.Do(s => { foreach (var e in s.Targetable.ToList()) Damage(e, p.AllEnemiesUnblockable, unblockable: true); });
+            b.Do(s => { foreach (var e in s.Targetable.ToList()) Damage(s, e, p.AllEnemiesUnblockable, props: SimProps.Unblockable | SimProps.Unpowered); });
 
         // Capture Spirit: unblockable damage to the target.
         if (p.TargetDamage.TryGetValue(p.TargetId, out var direct) && direct > 0)
-            b.Do(s => { if (s.Enemy(p.TargetId) is { Alive: true } e) Damage(e, direct, unblockable: true); });
+            b.Do(s => { if (s.Enemy(p.TargetId) is { Alive: true } e) Damage(s, e, direct, props: SimProps.Unblockable | SimProps.Unpowered); });
 
         // Judgement: the target dies at or below the threshold (after any hits; it has none).
         if (p.ExecuteAtOrBelow > 0)
@@ -1196,33 +1208,11 @@ public static partial class SimEngine
             AllyDeaths(s); // deaths from the card's hits
             if (p.FocusDelta != 0) ChangeFocus(s, p.FocusDelta);
 
-            // Enemy reactions once the card is played (AfterCardPlayed; powers fire before your relics,
-            // so this block is up before relic procs hit): Curl Up, Sneaky, Skittish.
-            foreach (var e in s.Enemies)
-            {
-                if (e.Alive)
-                {
-                    if (e.CurlUp > 0 && e.HitByCard)
-                    {
-                        e.Block += e.CurlUp;
-                        e.CurlUp = 0;
-                        e.ReactedWithBlock = true;
-                    }
-                    if (e.Sneaky > 0 && p.IsAttack)
-                    {
-                        e.Block += e.Sneaky * Math.Max(1, p.Plays);
-                        e.ReactedWithBlock = true;
-                    }
-                    if (e.Skittish > 0 && e.ThroughByCard)
-                    {
-                        e.Block += e.Skittish;
-                        e.Skittish = 0;
-                        e.ReactedWithBlock = true;
-                    }
-                }
-                e.HitByCard = e.ThroughByCard = false;
-            }
+            foreach (var e in s.Enemies) e.HitByCard = e.ThroughByCard = false;
         });
+        // AfterCardPlayed, once per play (powers fire before your relics, so Curl Up and Sneaky's block is up before relic
+        // procs hit).
+        for (var i = 0; i < Math.Max(1, p.Plays); i++) HookStep(b, (m, o, x) => m.AfterCardPlayed(x, o, x.CurrentPlay!));
 
         return;
         case LegacyPart.Kind.RandomPoison:
@@ -1242,7 +1232,7 @@ public static partial class SimEngine
                     case SimPlay.Target.Single:
                         b.Do(s =>
                         {
-                            if (s.Enemy(proc.TargetId) is { } e) Damage(e, Dmg(e));
+                            if (s.Enemy(proc.TargetId) is { } e) Damage(s, e, Dmg(e));
                         });
                         break;
                     case SimPlay.Target.All:
@@ -1269,7 +1259,7 @@ public static partial class SimEngine
 
         return;
         case LegacyPart.Kind.Deaths:
-        b.Do(AllyDeaths); // deaths from its procs
+        b.Do(s => { AllyDeaths(s); s.CurrentPlay = null; }); // deaths from its procs
         return;
         }
     }

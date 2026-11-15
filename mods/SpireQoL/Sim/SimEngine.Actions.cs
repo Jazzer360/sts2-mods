@@ -14,12 +14,12 @@ public static partial class SimEngine
         for (var i = 0; i < Math.Max(1, pc.Play.PlayCount); i++)
         {
             var play = pc.Play with { PlayIndex = i };
-            b.Do(s => s.CurrentPlay = play);
-            b.Each(s => Hook(s, (m, o, x) => m.BeforeCardPlayed(x, o, play)));
+            b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; });
+            HookStep(b, (m, o, x) => m.BeforeCardPlayed(x, o, play));
             b.Do(s => Count(s, play, "Started"));
             foreach (var a in pc.Body) Run(b, a);
             b.Do(s => Count(s, play, "Finished"));
-            b.Each(s => Hook(s, (m, o, x) => m.AfterCardPlayed(x, o, play)));
+            HookStep(b, (m, o, x) => m.AfterCardPlayed(x, o, play));
         }
         b.Do(s => s.CurrentPlay = null);
     }
@@ -45,7 +45,7 @@ public static partial class SimEngine
             s.CurrentAttack = s.AttackSerial;
         });
         AttackInfo Info(SimState s) => new(s.CurrentAttack, s.CurrentPlay?.Owner is { } o && !at.ByOsty ? o : dealer, at.Damage.Props, s.CurrentPlay?.Card);
-        b.Each(s => Hook(s, (m, o, x) => m.BeforeAttack(x, o, Info(x))));
+        HookStep(b, (m, o, x) => m.BeforeAttack(x, o, Info(x)));
         for (var i = 0; i < at.Hits; i++)
         {
             switch (at.Mode)
@@ -74,7 +74,7 @@ public static partial class SimEngine
                     break;
             }
         }
-        b.Each(s => Hook(s, (m, o, x) => m.AfterAttack(x, o, Info(x))));
+        HookStep(b, (m, o, x) => m.AfterAttack(x, o, Info(x)));
         b.Do(s => s.CurrentAttack = 0);
     }
 
@@ -96,33 +96,20 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// One hit of an attack on an enemy: its damage from the pipeline now, BeforeDamageReceived (Thorns hits back), the damage
-    /// (block, then HP), then AfterDamageGiven and AfterDamageReceived.
+    /// One hit of an attack on an enemy: its damage from the pipeline now (the modelled sources' terms and the captured ones), then
+    /// the damage itself (SimEngine.Damage: Thorns, block, HP loss, the hooks).
     /// </summary>
     private static IEnumerable<SimState> HitOnce(SimState s, int dealer, int target, AttackAction at)
     {
         var spec = at.Damage;
         var card = s.CurrentPlay?.Card;
         var ctx = new DamageCtx(dealer, target, spec.Props, card, s.CurrentPlay);
-        var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target)) : CalcDamage(s, spec.BaseFor(target), ctx, spec.TermsFor(target));
+        var mods = spec.Fixed ? null : new List<(SimModel Model, int Owner)>();
+        var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target)) : CalcDamage(s, spec.BaseFor(target), ctx, spec.TermsFor(target), mods);
+        if (mods != null) foreach (var (m, o) in mods) m.AfterModifyingDamageAmount(s, o, card);
         if (amount <= 0) return new[] { s };
-        var before = Hook(s, (m, o, x) => m.BeforeDamageReceived(x, o, ctx, amount));
-        return Then(before, x =>
-        {
-            if (x.Enemy(target) is not { Alive: true } e) return new[] { x };
-            var powered = spec.Props.IsPoweredAttack();
-            e.HitByCard = true;
-            var block = e.Block;
-            var hp = e.Hp;
-            var lost = Damage(e, amount, powered: powered, minimumHpLoss: dealer == Who.You ? x.P.BootMinimum : 0,
-                unblockable: spec.Props.HasFlag(SimProps.Unblockable));
-            var blocked = block - e.Block;
-            if (powered) BiggestHit(x, blocked, lost, hp);
-            if (lost > 0) e.ThroughByCard = true;
-            var ev = new DamageEvent(dealer, target, spec.Props, card, Math.Max(0, blocked) + Math.Min(lost, Math.Max(0, hp)), Math.Max(0, blocked), lost, !e.Alive);
-            var given = Hook(x, (m, o, y) => m.AfterDamageGiven(y, o, ev));
-            return Then(given, y => Hook(y, (m, o, z) => m.AfterDamageReceived(z, o, ev)));
-        });
+        if (s.Enemy(target) is { Alive: true } e) Damage(s, e, amount, dealer, spec.Props, card);
+        return new[] { s };
     }
 
     // ------------------------------------------------------------------ block, powers, HP
@@ -134,10 +121,15 @@ public static partial class SimEngine
             b.Each(s =>
             {
                 if (gb.To <= -2 && (Who.TeammateIndex(gb.To) >= s.Teammates.Count || s.Teammates[Who.TeammateIndex(gb.To)].Hp <= 0)) return new[] { s };
+                var mods = gb.Fixed ? null : new List<(SimModel Model, int Owner)>();
                 var amount = gb.Fixed ? Math.Max(0, (int)gb.Base)
-                    : CalcBlock(s, gb.Base, new BlockCtx(gb.To, gb.Props, s.CurrentPlay?.Card, s.CurrentPlay), gb.Captured);
+                    : CalcBlock(s, gb.Base, new BlockCtx(gb.To, gb.Props, s.CurrentPlay?.Card, s.CurrentPlay), gb.Captured, mods);
                 var who = gb.To == Who.You ? -1 : Who.TeammateIndex(gb.To);
                 var r = GainBlock(s, amount, null, who);
+                // Block from a card play this turn (Unmovable counts the ones from earlier plays).
+                if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
+                    r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add("CardBlock", 1); return x; }).ToList();
+                if (mods != null && amount > 0) r = r.Select(x => { foreach (var (m, o) in mods) m.AfterModifyingBlockAmount(x, o, amount, x.CurrentPlay); return x; }).ToList();
                 return Then(r, x => Hook(x, (m, o, y) => m.AfterBlockGained(y, o, gb.To, amount, y.CurrentPlay?.Card)));
             });
         }
@@ -174,7 +166,9 @@ public static partial class SimEngine
                 case "FlameBarrierPower": s.P.FlameBarrier += amount; return;
             }
         }
+        var had = powers.Has(power);
         SetPowers(s, target, powers.Add(power, amount));
+        if (!had) SimModels.Get(power)?.AfterApplied(s, target, applier, amount);
     }
 
     private static void RunApplyPower(BranchSet b, ApplyPowerAction ap)
@@ -215,4 +209,13 @@ public static partial class SimEngine
         var h = e.Intent![hit];
         return CalcDamage(s, h.Base, new DamageCtx(e.Id, player, SimProps.Move, null, null), h.TermsOn(player));
     }
+}
+
+public static partial class SimEngine
+{
+    /// <summary>Blockable damage to you during your turn (Thorns hitting back...): your block, the HP-loss modifiers, Inferno.</summary>
+    internal static void LandOnYou(SimState s, string name, int amount) => LandBlockable(s, name, amount);
+
+    /// <summary>Blockable damage to teammate k.</summary>
+    internal static void LandOnTeammate(SimState s, string name, int amount, int k) => LandBlockable(s, name, amount, k);
 }

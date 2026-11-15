@@ -38,12 +38,22 @@ public sealed class SimEnemy
     public int Block;
     /// <summary>Can be targeted and hit (alive and hittable when the simulation starts).</summary>
     public bool Hittable = true;
-    /// <summary>Hardened Shell: HP it can still lose this turn, and per turn (int.MaxValue = none).</summary>
-    public int ShellLeft = int.MaxValue;
-    public int ShellPerTurn = int.MaxValue;
+    /// <summary>Hardened Shell (HardenedShellPower: amount per turn, Data what's left this turn): HP it can still lose this turn, and per turn (int.MaxValue = none).</summary>
+    [JsonIgnore] public int ShellLeft
+    {
+        get => Powers.Has("HardenedShellPower") ? Powers.DataOf("HardenedShellPower") : int.MaxValue;
+        set => Powers = Powers.With("HardenedShellPower", Powers.Has("HardenedShellPower") ? Powers["HardenedShellPower"] : int.MaxValue, value);
+    }
+    [JsonIgnore] public int ShellPerTurn
+    {
+        get => Powers.Has("HardenedShellPower") ? Powers["HardenedShellPower"] : int.MaxValue;
+        set => Powers = value == int.MaxValue ? Powers.Without("HardenedShellPower")
+            : Powers.With("HardenedShellPower", value, Powers.Has("HardenedShellPower") ? Powers.DataOf("HardenedShellPower") : value);
+    }
     /// <summary>Damage of its poison tick at the start of its turn.</summary>
     public int Poison;
-    public bool Barricade;
+    /// <summary>Keeps its block between turns (BarricadePower, or BurrowedPower.ShouldClearBlock).</summary>
+    [JsonIgnore] public bool Barricade { get => Powers.Has("BarricadePower") || Powers.Has("BurrowedPower"); set => Set("BarricadePower", value ? 1 : 0); }
     public bool Stunned;
     /// <summary>Its attack this turn: damage of each hit on you (the intent's numbers).</summary>
     public List<int> Hits = new();
@@ -58,8 +68,12 @@ public sealed class SimEnemy
     /// </summary>
     public List<List<int>> TeammateHits = new();
     public bool Imbalanced;
-    /// <summary>Most damage one instance can deal it: Hard to Kill's cap, 1 while Intangible (int.MaxValue = none).</summary>
-    public int HitCap = int.MaxValue;
+    /// <summary>Most damage one instance can deal it: Hard to Kill's cap, 1 while Intangible (int.MaxValue = none). Setting it sets Hard to Kill.</summary>
+    [JsonIgnore] public int HitCap
+    {
+        get => Powers.Has("IntangiblePower") ? 1 : Powers.Has("HardToKillPower") ? Powers["HardToKillPower"] : int.MaxValue;
+        set => Set("HardToKillPower", value == int.MaxValue ? 0 : value);
+    }
 
     // ---- per-branch results
     /// <summary>Damage instances that got through its block during your turn (incl. end of turn).</summary>
@@ -75,11 +89,11 @@ public sealed class SimEnemy
 
     // Reactions to your card plays (block it gains during your turn; decompile v0.111.0).
     /// <summary>Curl Up: block it gains after a card whose attack damaged it (once; the power goes).</summary>
-    public int CurlUp;
+    [JsonIgnore] public int CurlUp { get => Powers["CurlUpPower"]; set => Set("CurlUpPower", value); }
     /// <summary>Sneaky: block it gains after each Attack you play.</summary>
-    public int Sneaky;
+    [JsonIgnore] public int Sneaky { get => Powers["SneakyPower"]; set => Set("SneakyPower", value); }
     /// <summary>Skittish: block it gains after a card's attack gets damage through its block (once per turn; 0 once used).</summary>
-    public int Skittish;
+    [JsonIgnore] public int Skittish { get => Powers["SkittishPower"]; set => Set("SkittishPower", value); }
     // During one play: it was hit by the card's attack / damage got through.
     public bool HitByCard;
     public bool ThroughByCard;
@@ -91,25 +105,25 @@ public sealed class SimEnemy
     /// Thorns: damage to you (blockable) before each hit of your card's attack on it
     /// (ThornsPower.BeforeDamageReceived on powered attacks), after the game's damage math (0 = none).
     /// </summary>
-    public int Thorns;
+    [JsonIgnore] public int Thorns { get => Powers["ThornsPower"]; set => Set("ThornsPower", value); }
     /// <summary>Burrowed: keeps its block between turns; breaking that block stuns it (AfterBlockBroken), and the power and its block go.</summary>
-    public bool Burrowed;
+    [JsonIgnore] public bool Burrowed { get => Powers.Has("BurrowedPower"); set => Set("BurrowedPower", value ? 1 : 0); }
     /// <summary>Asleep (Lagavulin Matriarch): any damage through its block wakes and stuns it (AsleepPower.AfterDamageReceived).</summary>
-    public bool Asleep;
+    [JsonIgnore] public bool Asleep { get => Powers.Has("AsleepPower"); set => Set("AsleepPower", value ? 1 : 0); }
     /// <summary>
     /// Slumber (Slumbering Beetle): each damage instance through its block takes a stack; the last one wakes it, stunned
     /// (SlumberPower.AfterDamageReceived). 0: none.
     /// </summary>
-    public int Slumber;
+    [JsonIgnore] public int Slumber { get => Powers["SlumberPower"]; set => Set("SlumberPower", value); }
     /// <summary>Flutter: powered-attack hits with damage through its block left before it's stunned (0 = none).</summary>
-    public int Flutter;
+    [JsonIgnore] public int Flutter { get => Powers["FlutterPower"]; set => Set("FlutterPower", value); }
     /// <summary>Plow / Shriek: stunned when damage gets through and leaves it at or below this HP (0 = none).</summary>
-    public int StunAtHp;
+    [JsonIgnore] public int StunAtHp { get => Math.Max(Powers["PlowPower"], Powers["ShriekPower"]); set => Set("PlowPower", value); }
     /// <summary>The Gambit: dies when a powered attack gets damage through.</summary>
-    public bool Gambit;
+    [JsonIgnore] public bool Gambit { get => Powers.Has("TheGambitPower"); set => Set("TheGambitPower", value ? 1 : 0); }
     public bool GambitTriggered;
     /// <summary>Slippery: hits that lose it at most 1 HP each, left (0 = none).</summary>
-    public int Slippery;
+    [JsonIgnore] public int Slippery { get => Powers["SlipperyPower"]; set => Set("SlipperyPower", value); }
     public bool SlipperyTriggered;
     /// <summary>Alive when the simulation starts (deaths after that set off Crab Rage and Ravenous).</summary>
     public bool StartedAlive = true;
@@ -134,6 +148,9 @@ public sealed class SimEnemy
     /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
     /// <summary>Its powers the simulator reads or changes (docs/SIMULATOR_V2.md), in the order they were applied.</summary>
     public PowerSet Powers = PowerSet.Empty;
+
+    /// <summary>Sets a power's amount (0 removes it).</summary>
+    private void Set(string power, int amount) => Powers = amount == 0 ? Powers.Without(power) : Powers.With(power, amount);
 
     public bool BlockBroken;
     /// <summary>Stunned by something during your turn (not at the start).</summary>
@@ -171,6 +188,9 @@ public sealed class SimPlayer
 {
     public int Block;
 
+    private void Set(string power, int amount) => Powers = amount == 0 ? Powers.Without(power) : Powers.With(power, amount);
+    private void SetRelic(string relic, int amount) => Relics = amount == 0 ? Relics.Without(relic) : Relics.With(relic, amount);
+
     /// <summary>Their powers the simulator reads or changes, in the order they were applied (docs/SIMULATOR_V2.md).</summary>
     public PowerSet Powers = PowerSet.Empty;
     /// <summary>Their relics the simulator models, in relic order, with each one's counter (Amount) and flag (Data).</summary>
@@ -189,7 +209,7 @@ public sealed class SimPlayer
     public int HailstormFrostNeeded = 1;
     public int TheBombDamage; // fires this turn end (last tick), else 0
     public int ConsumingShadow;
-    public int Thorns;
+    [JsonIgnore] public int Thorns { get => Powers["ThornsPower"]; set => Set("ThornsPower", value); }
     public int FlameBarrier;
     public bool Reflect;
     /// <summary>
@@ -258,12 +278,12 @@ public sealed class SimPlayer
     /// <summary>Block gains so far (each sets off Juggernaut): counted for the Juggernaut tab.</summary>
     public int BlockGains;
 
-    /// <summary>Envenom: poison on each enemy your attack gets damage through to (per hit).</summary>
-    public int Envenom;
-    /// <summary>Snecko Skull: extra poison on every application of yours.</summary>
-    public int PoisonBonus;
-    /// <summary>The Boot: your attack hits that lose an enemy any HP lose it at least this much (0 = no relic).</summary>
-    public int BootMinimum;
+    /// <summary>Envenom (EnvenomPower): poison on each enemy your attack gets damage through to (per hit).</summary>
+    [JsonIgnore] public int Envenom { get => Powers["EnvenomPower"]; set => Set("EnvenomPower", value); }
+    /// <summary>Snecko Skull (relic, its amount): extra poison on every application of yours.</summary>
+    [JsonIgnore] public int PoisonBonus { get => Relics["SneckoSkull"]; set => SetRelic("SneckoSkull", value); }
+    /// <summary>The Boot (relic, its amount): your attack hits that lose an enemy any HP lose it at least this much (0 = no relic).</summary>
+    [JsonIgnore] public int BootMinimum { get => Relics["TheBoot"]; set => SetRelic("TheBoot", value); }
     /// <summary>Your Focus now (orb values already include it), for Focus changes during a play.</summary>
     public int Focus;
     /// <summary>Beating Remnant: HP you can still lose until the start of your next turn (it resets only then).</summary>
@@ -494,6 +514,8 @@ public sealed class SimState
     /// <summary>The card play being resolved (its hooks and actions read it), and the attack in progress (Vigor, Aim...).</summary>
     internal SimCardPlay? CurrentPlay;
     internal int AttackSerial, CurrentAttack;
+    /// <summary>Block gains from the current card play (Unmovable doesn't count them).</summary>
+    internal int PlayCardBlockGains;
 
     /// <summary>The run's work counter (SimEngine.Run sets it; every copy of the state shares it).</summary>
     internal SimWork? Work;

@@ -31,7 +31,7 @@ public class SimTeammateHandFieldsTests
     {
         nameof(SimPlayer.Block), nameof(SimPlayer.Juggernaut), nameof(SimPlayer.Plating), nameof(SimPlayer.FeelNoPain),
         nameof(SimPlayer.Hailstorm), nameof(SimPlayer.HailstormFrostNeeded), nameof(SimPlayer.TheBombDamage),
-        nameof(SimPlayer.ConsumingShadow), nameof(SimPlayer.Thorns), nameof(SimPlayer.FlameBarrier), nameof(SimPlayer.Reflect),
+        nameof(SimPlayer.ConsumingShadow), nameof(SimPlayer.FlameBarrier), nameof(SimPlayer.Reflect),
         nameof(SimPlayer.Inferno),
         nameof(SimPlayer.OrichalcumBlock), nameof(SimPlayer.OrichalcumArmed), nameof(SimPlayer.CloakClaspPerCard),
         nameof(SimPlayer.RippleBasinBlock), nameof(SimPlayer.ScreamingFlagonDamage), nameof(SimPlayer.StoneCalendarDamage),
@@ -42,8 +42,8 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.DebuffBlockable), nameof(SimPlayer.DebuffLateBlockable), nameof(SimPlayer.DebuffUnblockable),
         nameof(SimPlayer.Orbs), nameof(SimPlayer.OrbCapacity), nameof(SimPlayer.SlotOnFirstChannel), nameof(SimPlayer.Thunder),
         nameof(SimPlayer.FrontOrbBonusTriggers),
-        nameof(SimPlayer.TungstenRod), nameof(SimPlayer.BlockGains), nameof(SimPlayer.Envenom), nameof(SimPlayer.PoisonBonus),
-        nameof(SimPlayer.BootMinimum), nameof(SimPlayer.Focus), nameof(SimPlayer.RemnantLeftPlayerTurn), nameof(SimPlayer.RemnantCap),
+        nameof(SimPlayer.TungstenRod), nameof(SimPlayer.BlockGains), 
+        nameof(SimPlayer.Focus), nameof(SimPlayer.RemnantLeftPlayerTurn), nameof(SimPlayer.RemnantCap),
         nameof(SimPlayer.Buffer), nameof(SimPlayer.OstyHp), nameof(SimPlayer.WuppyHp), nameof(SimPlayer.Hp),
         nameof(SimPlayer.Fairies), nameof(SimPlayer.FairyHeal), nameof(SimPlayer.LizardTailHeal), // their potions and relics are on screen
         nameof(SimPlayer.Taken), nameof(SimPlayer.Through), nameof(SimPlayer.OstyTaken), nameof(SimPlayer.Incoming),

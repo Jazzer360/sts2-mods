@@ -33,6 +33,8 @@ public sealed record SimCard(string Name, SimCardType Type)
     public bool Upgraded { get; init; }
     public bool Enchanted { get; init; }
     public bool Ethereal { get; init; }
+    /// <summary>It gains block (CardModel.GainsBlock, or its enchantment's): Stretch binds to such a play.</summary>
+    public bool GainsBlock { get; init; }
     /// <summary>Its cost when played (X costs: the energy spent), and its energy value (CardPlay.Resources.EnergyValue).</summary>
     public int Energy { get; init; }
     public bool CostsX { get; init; }
@@ -107,12 +109,30 @@ public abstract class SimModel
 
     public virtual IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play) => One(s);
     public virtual IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) => One(s);
-    public virtual IEnumerable<SimState> BeforeDamageReceived(SimState s, int owner, DamageCtx d, int amount) => One(s);
-    public virtual IEnumerable<SimState> AfterDamageGiven(SimState s, int owner, DamageEvent e) => One(s);
-    public virtual IEnumerable<SimState> AfterDamageReceived(SimState s, int owner, DamageEvent e) => One(s);
+    // ---- damage-time hooks: deterministic, run inside the damage itself (SimEngine.Damage), so every source of damage
+    // (hits, procs, orbs, end of turn) gets them
+
+    public virtual void BeforeDamageReceived(SimState s, int owner, DamageCtx d, int amount) { }
+    public virtual void AfterDamageGiven(SimState s, int owner, DamageEvent e) { }
+    public virtual void AfterDamageReceived(SimState s, int owner, DamageEvent e) { }
+    /// <summary>A creature's block went from above 0 to 0 (AfterBlockBroken: Burrowed).</summary>
+    public virtual void AfterBlockBroken(SimState s, int owner, int target) { }
+    /// <summary>The HP-loss pipeline (Hook.ModifyHpLost*): BeforeOsty, BeforeOstyLate, AfterOsty, AfterOstyLate.</summary>
+    public virtual decimal ModifyHpLostBeforeOsty(SimState s, int owner, DamageCtx d, decimal amount) => amount;
+    public virtual decimal ModifyHpLostBeforeOstyLate(SimState s, int owner, DamageCtx d, decimal amount) => amount;
+    public virtual decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount) => amount;
+    public virtual decimal ModifyHpLostAfterOstyLate(SimState s, int owner, DamageCtx d, decimal amount) => amount;
+    /// <summary>It changed an HP loss (the game's AfterModifyingHpLost*): most flash.</summary>
+    public virtual void AfterModifyingHpLost(SimState s, int owner) => s.LogFired(Name);
     public virtual IEnumerable<SimState> BeforeAttack(SimState s, int owner, AttackInfo attack) => One(s);
     public virtual IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack) => One(s);
     public virtual IEnumerable<SimState> AfterBlockGained(SimState s, int owner, int gainer, int amount, SimCard? card) => One(s);
+    /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
+    /// <summary>After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier.</summary>
+    public virtual void AfterApplied(SimState s, int owner, int applier, int amount) { }
+    public virtual void AfterModifyingBlockAmount(SimState s, int owner, int amount, SimCardPlay? play) { }
+    /// <summary>After a damage amount it changed (the game's AfterModifyingDamageAmount): most only flash (FlashesOnDamageModified).</summary>
+    public virtual void AfterModifyingDamageAmount(SimState s, int owner, SimCard? card) { if (FlashesOnDamageModified) s.LogFired(Name); }
 }
 
 /// <summary>The models the simulator knows, by the game's class name. A name not here isn't modelled.</summary>

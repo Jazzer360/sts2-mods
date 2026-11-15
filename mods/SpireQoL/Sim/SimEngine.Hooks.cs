@@ -27,6 +27,7 @@ public static partial class SimEngine
     /// </summary>
     internal static List<(SimModel Model, int Owner)> Listeners(SimState s)
     {
+        if (!AnyModelled(s)) return NoListeners;
         var list = new List<(SimModel, int)>();
         void Add(PowerSet set, int owner)
         {
@@ -46,6 +47,22 @@ public static partial class SimEngine
         for (var k = before; k < s.Teammates.Count; k++) Player(k);
         foreach (var e in s.Enemies) Add(e.Powers, e.Id);
         return list;
+    }
+
+    private static readonly List<(SimModel Model, int Owner)> NoListeners = new();
+
+    /// <summary>Whether any creature or player holds a modelled power or relic (most fights' cheap path: nothing to call).</summary>
+    private static bool AnyModelled(SimState s)
+    {
+        static bool Any(PowerSet set)
+        {
+            foreach (var e in set.Items) if (SimModels.Has(e.Name)) return true;
+            return false;
+        }
+        if (Any(s.P.Powers) || Any(s.P.Relics)) return true;
+        foreach (var t in s.Teammates) if (Any(t.Powers) || Any(t.Relics)) return true;
+        foreach (var e in s.Enemies) if (Any(e.Powers)) return true;
+        return false;
     }
 
     /// <summary>
@@ -70,36 +87,42 @@ public static partial class SimEngine
     /// Hook.ModifyDamage for one hit: the base, the enchantment, every listener's additive term, then multipliers, late
     /// multipliers and the smallest cap, with the captured terms of unmodelled sources in their places; the game's int cast.
     /// </summary>
-    public static int CalcDamage(SimState s, decimal baseDamage, DamageCtx d, CapturedTerms? captured = null)
+    public static int CalcDamage(SimState s, decimal baseDamage, DamageCtx d, CapturedTerms? captured = null) => CalcDamage(s, baseDamage, d, captured, null);
+
+    /// <param name="modifiers">Gets the modelled sources whose term changed the amount (the game's modifiers list), when given.</param>
+    public static int CalcDamage(SimState s, decimal baseDamage, DamageCtx d, CapturedTerms? captured, List<(SimModel Model, int Owner)>? modifiers)
     {
         var c = captured ?? CapturedTerms.None;
         var num = baseDamage;
         num += c.EnchantAdd;
         num *= c.EnchantMul;
         var listeners = Listeners(s);
-        foreach (var (m, o) in listeners) num += m.ModifyDamageAdditive(s, o, d);
+        foreach (var (m, o) in listeners) { var t = m.ModifyDamageAdditive(s, o, d); num += t; if (t != 0m) modifiers?.Add((m, o)); }
         num += c.Add;
-        foreach (var (m, o) in listeners) num *= m.ModifyDamageMultiplicative(s, o, d);
+        foreach (var (m, o) in listeners) { var t = m.ModifyDamageMultiplicative(s, o, d); num *= t; if (t != 1m) modifiers?.Add((m, o)); }
         num *= c.Mul;
-        foreach (var (m, o) in listeners) num *= m.ModifyDamageMultiplicativeLate(s, o, d);
+        foreach (var (m, o) in listeners) { var t = m.ModifyDamageMultiplicativeLate(s, o, d); num *= t; if (t != 1m) modifiers?.Add((m, o)); }
         num *= c.Late;
         var cap = c.Cap;
-        foreach (var (m, o) in listeners) cap = Math.Min(cap, m.ModifyDamageCap(s, o, d));
-        num = Math.Min(num, cap);
+        (SimModel, int)? capper = null;
+        foreach (var (m, o) in listeners) { var t = m.ModifyDamageCap(s, o, d); if (t < cap) { cap = t; capper = (m, o); } }
+        if (num > cap) { num = cap; if (capper is { } cm) modifiers?.Add(cm); }
         return Math.Max(0, (int)num);
     }
 
     /// <summary>Hook.ModifyBlock: the base, the enchantment, additive terms, then multipliers; the game's int cast.</summary>
-    public static int CalcBlock(SimState s, decimal baseBlock, BlockCtx b, CapturedTerms? captured = null)
+    public static int CalcBlock(SimState s, decimal baseBlock, BlockCtx b, CapturedTerms? captured = null) => CalcBlock(s, baseBlock, b, captured, null);
+
+    public static int CalcBlock(SimState s, decimal baseBlock, BlockCtx b, CapturedTerms? captured, List<(SimModel Model, int Owner)>? modifiers)
     {
         var c = captured ?? CapturedTerms.None;
         var num = baseBlock;
         num += c.EnchantAdd;
         num *= c.EnchantMul;
         var listeners = Listeners(s);
-        foreach (var (m, o) in listeners) num += m.ModifyBlockAdditive(s, o, b);
+        foreach (var (m, o) in listeners) { var t = m.ModifyBlockAdditive(s, o, b); num += t; if (t != 0m) modifiers?.Add((m, o)); }
         num += c.Add;
-        foreach (var (m, o) in listeners) num *= m.ModifyBlockMultiplicative(s, o, b);
+        foreach (var (m, o) in listeners) { var t = m.ModifyBlockMultiplicative(s, o, b); num *= t; if (t != 1m) modifiers?.Add((m, o)); }
         num *= c.Mul;
         return Math.Max(0, (int)Math.Max(0m, num));
     }
@@ -129,4 +152,14 @@ public static partial class SimEngine
     }
 
     public static int PowerOn(SimState s, int id, string power) => PowersOf(s, id)[power];
+}
+
+public static partial class SimEngine
+{
+    /// <summary>A hook on every branch as one step, or nothing when no branch has a listener (so fights without models cost the same).</summary>
+    private static void HookStep(BranchSet b, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
+    {
+        if (!b.States.Any(s => Listeners(s).Count > 0)) return;
+        b.Each(s => Hook(s, call));
+    }
 }

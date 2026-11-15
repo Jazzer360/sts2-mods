@@ -111,7 +111,8 @@ public class SimReactionTests
         Assert.Equal(4, AfterPlay(s, Strike(1, 6)).Enemy(1)!.Block); // fully blocked: 10 - 6 = 4, no gain
         var through = AfterPlay(s, Strike(1, 12));
         Assert.Equal(4, through.Enemy(1)!.Block); // 0 left + 4
-        Assert.Equal(0, through.Enemy(1)!.Skittish);
+        // Once per turn: the power stays (HasGainedBlockThisTurn), and a second attack that gets through gains nothing.
+        Assert.Equal(0, AfterPlay(through, Strike(1, 12)).Enemy(1)!.Block);
     }
 
     [Fact]
