@@ -123,16 +123,18 @@ public abstract class SimModel
     public virtual decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount) => amount;
     public virtual decimal ModifyHpLostAfterOstyLate(SimState s, int owner, DamageCtx d, decimal amount) => amount;
     /// <summary>It changed an HP loss (the game's AfterModifyingHpLost*): most flash.</summary>
-    public virtual void AfterModifyingHpLost(SimState s, int owner) => s.LogFired(Name);
+    public virtual void AfterModifyingHpLost(SimState s, int owner) => s.LogFired(Name, 0, owner);
     public virtual IEnumerable<SimState> BeforeAttack(SimState s, int owner, AttackInfo attack) => One(s);
     public virtual IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack) => One(s);
     public virtual IEnumerable<SimState> AfterBlockGained(SimState s, int owner, int gainer, int amount, SimCard? card) => One(s);
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
+    /// <summary>A creature died (AfterDeath; once per death): Crab Rage, Ravenous.</summary>
+    public virtual void AfterDeath(SimState s, int owner, int dead) { }
     /// <summary>After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier.</summary>
     public virtual void AfterApplied(SimState s, int owner, int applier, int amount) { }
     public virtual void AfterModifyingBlockAmount(SimState s, int owner, int amount, SimCardPlay? play) { }
     /// <summary>After a damage amount it changed (the game's AfterModifyingDamageAmount): most only flash (FlashesOnDamageModified).</summary>
-    public virtual void AfterModifyingDamageAmount(SimState s, int owner, SimCard? card) { if (FlashesOnDamageModified) s.LogFired(Name); }
+    public virtual void AfterModifyingDamageAmount(SimState s, int owner, SimCard? card) { if (FlashesOnDamageModified) s.LogFired(Name, 0, owner); }
 }
 
 /// <summary>The models the simulator knows, by the game's class name. A name not here isn't modelled.</summary>

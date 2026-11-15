@@ -74,8 +74,8 @@ don't change. Added:
 - `Powers` on each creature: power name → amount plus a small per-power data slot (counters a model keeps), for every
   power a model reads or changes (Strength, Dexterity, Vigor, Vulnerable, Weak, Frail, Slow, Impaled, Aim...).
 - `Models` on each player: the relic models with their counters (Pen Nib's count, Kunai's count, Pael's Legion armed...).
-- A per-state **work stack** of pending actions (an immutable linked list, shared between branches until one pushes or
-  pops), and an **event log** for the current play (which model flashed, damage and block it caused).
+- The play and attack in progress, players' turn counters (cards started and finished this turn, by type and tag), and an
+  **event log** for the current play (which model flashed, damage and block it caused).
 
 ### Models (`Sim/Models/`)
 `SimModel` has virtual methods with the game's names and meaning: the pipeline terms (`ModifyDamageAdditive`,
@@ -89,11 +89,13 @@ interpreter's back) and may `Flash()`. Each model is written from its decompiled
 are stateless code; their numbers live in the state (`Powers`, relic counters), so branches copy only numbers.
 
 ### The interpreter (`Sim/SimEngine.cs`)
-Each state carries a stack of actions. Running an action may push more (hooks, follow-ups) and may fork the state (a
-random target: one branch per possible target, as now). The engine runs every branch until its stack is empty, merging
-identical branches at **checkpoints** (each hit, each evoke, each block gain, each top-level step, as the current steps
-do) so the copy budget, truncation and the safe run (decisions #29, #31) work as today. Actions are immutable values, so
-two branches with the same numbers and the same pending actions merge.
+A script's actions run in order on the branch set; each action is a step (or a few), and a hook that may branch (a random
+target) returns its branches, chained with the existing merging step (`SimEngine.Then`), so identical branches merge after
+every step and the copy budget, truncation and the safe run (decisions #29, #31) work as before. Hooks that run inside
+damage (BeforeDamageReceived, the HP-loss pipeline, AfterDamageGiven, AfterDamageReceived, AfterBlockBroken) are
+deterministic and run synchronously inside `SimEngine.Damage`, so every source of damage (hits, procs, orbs, end of turn)
+gets them. (The first draft had an explicit per-branch work stack; composing over branch sets did the same with no new
+machinery.)
 
 ### Pipelines
 - **Damage on a hit** = the game's formula over: the base (the card's value, or a calculated value worked out by the
@@ -181,14 +183,14 @@ Built on `main` without intermediate releases; 1.0.0 ships when every step is do
 - **Regressions in what's shown.** Accepted during the build (the owner's call); the golden and the ported tests guard the
   engine, and the in-game checks report what's left after release.
 - **Performance.** The interpreter does more work per hit (pipelines from state). Guarded by the copy/step budgets and the
-  performance tests; models hold no per-branch objects beyond numbers; the work stack is shared between branches.
+  performance tests; models hold no per-branch objects beyond numbers; power sets are immutable and shared between branches.
 - **Captured terms that really change mid-turn.** The classification makes this a reviewed list; a wrong "captured" shows
   up as a report naming the source, and the fix is a model.
 - **Scripts for unusual cards.** Cards with choices, random picks or odd code keep explicit scripts or are reported by the
   card coverage check, as today.
 
 ## Progress
-- [ ] 1. Interpreter core
+- [x] 1. Interpreter core (power sets, models, hook dispatch in listener order, pipelines, play log, scripts)
 - [ ] 2. Effects as models
 - [ ] 3. Dynamic damage and block
 - [ ] 4. Card scripts

@@ -11,7 +11,7 @@ internal static class V2Script
     public static SimScript Play(SimCard card, int target, int plays, params SimAction[] body) => new()
     {
         Name = card.Name,
-        Actions = { new PlayCardAction(new SimCardPlay(card, Who.You, target, 0, plays, false), body) },
+        Actions = { new CardPlayAction(new SimCardPlay(card, Who.You, target, 0, plays, false), body) },
     };
 
     public static AttackAction Attack(decimal baseDamage, int hits = 1, SimPlay.Target mode = SimPlay.Target.Single, SimProps props = SimProps.Move,

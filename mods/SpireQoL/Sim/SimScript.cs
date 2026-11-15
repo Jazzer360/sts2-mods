@@ -27,6 +27,8 @@ public sealed class SimScript
     public static SimScript Of(SimPlay p)
     {
         var s = new SimScript { Name = p.Name };
+        // v2: the card play first (each play's body with its hooks), then the summary's remaining parts.
+        if (p.Card != null) s.Actions.Add(new CardPlayAction(p.Card, p.Body));
         foreach (var part in Enum.GetValues<LegacyPart.Kind>()) s.Actions.Add(new LegacyPart(p, part));
         return s;
     }

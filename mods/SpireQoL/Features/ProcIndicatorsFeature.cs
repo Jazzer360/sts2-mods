@@ -454,14 +454,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         return task;
     }
 
-    /// <summary>The play makes this enemy's attack stronger (Enrage's Strength: SimPlay.SetHits above its current hits).</summary>
-    private static bool IntentRaised(PlayFacts f, int id)
-    {
-        if (f.Sim?.Start.Enemy(id) is not { } e) return false;
-        var now = e.Hits.Sum();
-        return f.Sim.PlayByTarget.Values.Any(p => p.SetHits.TryGetValue(id, out var h) && h.Sum() > now);
-    }
-
     /// <summary>Reads a card's finished simulations into its tabs (see StartSim); returns whether it's lethal.</summary>
     private bool FinishSim(PlayFacts f, Dictionary<string, (AbstractModel Src, Hit Hit)> merged, Task<SimOutcome[]> task)
     {
@@ -500,7 +492,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     nameof(CurlUpPower) or nameof(SkittishPower) or nameof(SneakyPower)
                         when outcomes.Any(o => o.BlockReactionInAny.Contains(id)) => Hit.Trig(harmful: true),
                     // Its attack gets stronger (Enrage's Strength on a Skill).
-                    nameof(EnragePower) when IntentRaised(f, id) => Hit.Trig(harmful: true),
+                    nameof(EnragePower) when outcomes.Any(o => o.PlayFiredAny.Has($"EnragePower@{id}")) => Hit.Trig(harmful: true),
                     // Stunned by your turn (block broken, enough hits through, HP threshold), in every
                     // branch for some aim, and not already without this card.
                     nameof(BurrowedPower) or nameof(FlutterPower) or nameof(PlowPower) or nameof(ShriekPower)

@@ -6,7 +6,7 @@ namespace SpireQoL.Sim;
 /// </summary>
 /// <param name="Play">The play (its PlayIndex is set for each play).</param>
 /// <param name="Body">The card's own actions (OnPlay), then its enchantment's and affliction's.</param>
-public sealed record PlayCardAction(SimCardPlay Play, IReadOnlyList<SimAction> Body) : SimAction;
+public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> Body) : SimAction;
 
 /// <summary>
 /// The damage of one attack, worked out at each hit from the state (docs/SIMULATOR_V2.md "Pipelines"): the card's base value
@@ -33,6 +33,10 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
     public int TargetId { get; init; } = -1;
     /// <summary>Osty makes the attack (his hits: Thorns hits him; your Envenom and The Boot don't apply).</summary>
     public bool ByOsty { get; init; }
+    /// <summary>Timber: when a hit kills the target, a second attack hits every enemy with this damage (OnKillDamage).</summary>
+    public DamageSpec? OnKill { get; init; }
+    /// <summary>Rain Shot: after a hit on the target, every other hittable enemy takes that hit's damage (overkill included).</summary>
+    public bool Splash { get; init; }
 }
 
 /// <summary>Block (CreatureCmd.GainBlock) through the block pipeline, Times times; to you or the play's targeted teammate.</summary>

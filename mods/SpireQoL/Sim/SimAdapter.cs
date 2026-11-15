@@ -20,7 +20,7 @@ namespace SpireQoL.Sim;
 /// <see cref="SimPlay"/>. Only knowable information goes in (CLAUDE.md): what's on screen, counters
 /// a player could track, and the game's rules. Random targets stay random (the simulator branches).
 /// </summary>
-public static class SimAdapter
+public static partial class SimAdapter
 {
     // Blockable end-of-turn damage from cards in hand (DamageVar "Damage").
     private static readonly HashSet<string> BlockableHandCards = new() { nameof(Burn), nameof(Decay), nameof(Infection), nameof(Toxic), nameof(Wither) };
@@ -158,15 +158,20 @@ public static class SimAdapter
 
     public static SimState Build(Player me, ICombatState cs, out Dictionary<Creature, int> ids)
     {
-        ids = new Dictionary<Creature, int>();
+        var idMap = new Dictionary<Creature, int>();
+        ids = idMap;
         var s = new SimState();
+        var mates = Teammates(me, cs);
+        // Any creature's simulator id: an enemy's, you (-1), or teammate k (-2 - k).
+        int? IdOf(Creature c) => idMap.TryGetValue(c, out var i) ? i : c == me.Creature ? Who.You
+            : mates.FindIndex(m => m.Creature == c) is var k and >= 0 ? Who.Teammate(k) : null;
         var targets = cs.Players.Select(p => p.Creature).ToList();
 
         var n = 0;
         foreach (var e in cs.Enemies)
         {
             var id = n++;
-            ids[e] = id;
+            idMap[e] = id;
             var se = new SimEnemy
             {
                 Id = id,
@@ -175,58 +180,44 @@ public static class SimAdapter
                 Block = e.Block,
                 Hittable = e.IsAlive && e.IsHittable,
                 Stunned = e.IsStunned,
-                Barricade = e.HasPower<BarricadePower>(),
                 Imbalanced = e.HasPower<ImbalancedPower>(),
                 Poison = SafeInt(() => e.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0),
                 PoisonStacks = e.GetPower<PoisonPower>()?.Amount ?? 0,
                 PoisonTriggers = e.GetPower<PoisonPower>() is { } poison ? Math.Max(1, Sts2State.Private(poison, "TriggerCount", 1)) : 1,
-                CurlUp = e.GetPower<CurlUpPower>()?.Amount ?? 0,
-                Sneaky = e.GetPower<SneakyPower>()?.Amount ?? 0,
-                Skittish = e.GetPower<SkittishPower>() is { } sk && !Sts2State.Private(sk, "HasGainedBlockThisTurn", true) ? sk.Amount : 0,
-                Burrowed = e.HasPower<BurrowedPower>(),
-                Asleep = e.HasPower<AsleepPower>(),
-                Slumber = e.GetPower<SlumberPower>()?.Amount ?? 0,
-                Flutter = e.GetPower<FlutterPower>()?.Amount ?? 0,
-                StunAtHp = Math.Max(e.GetPower<PlowPower>()?.Amount ?? 0, e.GetPower<ShriekPower>()?.Amount ?? 0),
-                Gambit = e.HasPower<TheGambitPower>(),
-                Slippery = e.GetPower<SlipperyPower>()?.Amount ?? 0,
             };
-            // Thorns hits you back (unpowered, blockable) before each of your card's attack hits on it.
-            if (e.GetPower<ThornsPower>() is { Amount: > 0 } thorns)
-            {
-                se.Thorns = SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, cs, me.Creature, e, thorns.Amount,
-                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered | MegaCrit.Sts2.Core.ValueProps.ValueProp.SkipHurtAnim, null, null,
-                    ModifyDamageHookType.All, CardPreviewMode.None, out _)));
-            }
+            // Every power, with the numbers its model keeps (Curl Up, Sneaky, Skittish, Thorns, Burrowed, Asleep, Slumber, Flutter,
+            // Plow, Shriek, The Gambit, Slippery, Hard to Kill, Intangible, Hardened Shell, Barricade, Strength, Weak...).
+            se.Powers = SimReaders.Powers(e, IdOf);
             // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
             if (e.IsAlive && e.GetPower<ExplosivePower>() is { Amount: > 0 } explosive) se.Explosive = ExplosiveOn(e, me.Creature, explosive.Amount, me, cs);
-            // Burrowed keeps its block between turns (BurrowedPower.ShouldClearBlock), like Barricade.
-            if (se.Burrowed) se.Barricade = true;
             se.StartedAlive = e.IsAlive;
             // An ally dying: Ravenous stuns it (and gives Strength for later); Crab Rage gives it Strength once.
-            se.Ravenous = e.HasPower<RavenousPower>();
-            if (e.GetPower<CrabRagePower>() is { } crab && AdjustedHits(e, me, cs, Sts2State.Var(crab, "StrengthPower"), false) is { } enraged)
+            // Crab Rage: its Strength and block when an ally dies (CrabRagePower model: Strength as its amount, block here).
+            if (e.GetPower<CrabRagePower>() is { } crab)
             {
-                se.HitsAfterAllyDies = enraged;
+                se.Powers = se.Powers.With("CrabRagePower", Sts2State.Var(crab, "StrengthPower"));
                 se.CrabRageBlock = Sts2State.Var(crab, "Block");
             }
             if (!e.IsAlive) se.Hp = 0;
-            if (e.GetPower<HardenedShellPower>() is { } shell)
-            {
-                se.ShellPerTurn = shell.Amount;
-                se.ShellLeft = Math.Max(0, shell.DisplayAmount);
-            }
-            if (e.GetPower<HardToKillPower>() is { } htk) se.HitCap = Math.Min(se.HitCap, htk.Amount);
-            if (e.HasPower<IntangiblePower>()) se.HitCap = 1;
             if (e.IsAlive && e.Monster != null)
             {
                 try
                 {
+                    var intent = new List<IntentHit>();
                     foreach (var attack in e.Monster.NextMove.Intents.OfType<AttackIntent>())
                     {
                         var perHit = attack.GetSingleDamage(targets, e);
                         for (var i = 0; i < Math.Max(1, attack.Repeats); i++) se.Hits.Add(perHit);
+                        // v2: the hit's base and the captured terms on each player; the models (its Strength and Weak, your Vulnerable,
+                        // Intangible...) apply as it lands, so what your cards change shows.
+                        if (intent == null || attack.DamageCalc == null) { intent = null; continue; }
+                        var b = attack.DamageCalc();
+                        var terms = new Dictionary<int, CapturedTerms> { [Who.You] = SimReaders.Damage(me.RunState, cs, null, e, me.Creature, b, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) };
+                        for (var k = 0; k < mates.Count; k++)
+                            terms[Who.Teammate(k)] = SimReaders.Damage(me.RunState, cs, null, e, mates[k].Creature, b, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
+                        for (var i = 0; i < Math.Max(1, attack.Repeats); i++) intent.Add(new IntentHit(b) { Captured = terms });
                     }
+                    if (intent is { Count: > 0 }) se.Intent = intent;
                 }
                 catch
                 {
@@ -236,7 +227,7 @@ public static class SimAdapter
             s.Enemies.Add(se);
         }
 
-        FillPlayer(s.P, me, cs);
+        FillPlayer(s.P, me, cs, IdOf);
         FillAutoPlays(s.P, me, cs, ids);
         s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
         // Your HP, and what keeps you alive at 0 (the Death Skull on Incoming Damage, Fairy and Lizard Tail): the heal
@@ -261,7 +252,7 @@ public static class SimAdapter
             if (!IsTeammate(other, me)) continue;
             var oc = other.Creature;
             var t = new SimPlayer();
-            FillPlayer(t, other, cs);
+            FillPlayer(t, other, cs, IdOf);
             t.Hp = oc.CurrentHp;
             t.BeaconOfHope = oc.HasPower<BeaconOfHopePower>();
             s.Teammates.Add(t);
@@ -371,12 +362,16 @@ public static class SimAdapter
     /// A player's state for the simulator: block, powers, relics, hand, orbs, Osty. The same for you and
     /// for each teammate (multiplayer), so a teammate is modelled exactly like you.
     /// </summary>
-    private static void FillPlayer(SimPlayer p, Player me, ICombatState cs)
+    private static void FillPlayer(SimPlayer p, Player me, ICombatState cs, Func<Creature, int?> idOf)
     {
         var c = me.Creature;
         var pcs = me.PlayerCombatState!;
         var hand = Sts2State.Hand(me);
         p.Block = c.Block;
+        // v2: every power and relic with the numbers its model keeps, and the turn's card plays (docs/SIMULATOR_V2.md).
+        p.Powers = SimReaders.Powers(c, idOf);
+        p.Relics = SimReaders.Relics(me);
+        p.Turn = SimReaders.Turn(me, cs);
         foreach (var pw in c.Powers)
         {
             switch (pw.GetType().Name)
@@ -392,15 +387,10 @@ public static class SimAdapter
                     if (pw.Amount <= 1) p.TheBombDamage += Sts2State.Var(pw, "Damage");
                     break;
                 case nameof(ConsumingShadowPower): p.ConsumingShadow += pw.Amount; break;
-                case nameof(ThornsPower): p.Thorns += pw.Amount; break;
                 case nameof(FlameBarrierPower): p.FlameBarrier += pw.Amount; break;
                 case nameof(ReflectPower): p.Reflect = true; break;
-                case nameof(InfernoPower): p.Inferno += pw.Amount; break; // only yours is simulated (SimEngine.Inferno)
-                case nameof(BufferPower): p.Buffer += pw.Amount; break;
                 // Insatiable Dominion (Dread): 2 + your turn number to you at AfterSideTurnEndLate (its Damage var, unpowered, blockable).
                 case nameof(InsatiableDominionPower): p.DebuffLateBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), Sts2State.Var(pw, "Damage"))); break;
-                // Envenom, and Concoct this turn: poison on each attack hit that gets through block (AfterDamageGiven).
-                case nameof(EnvenomPower) or nameof(ConcoctPower): p.Envenom += pw.Amount; break;
             }
             var type = pw.GetType().Name;
             if (pw.Amount > 0 && BlockableDebuffs.Contains(type)) p.DebuffBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), pw.Amount));
@@ -436,18 +426,7 @@ public static class SimAdapter
                     p.LunarBlackHole = c.GetPower<BlackHolePower>()?.Amount ?? 0;
                     p.LunarBeforeParrying = !me.Relics.TakeWhile(x => x != r).Any(x => x is ParryingShield);
                     break;
-                case nameof(TungstenRod): p.TungstenRod += Sts2State.Var(r, "HpLossReduction", 1); break;
-                case nameof(TheBoot): p.BootMinimum = Math.Max(p.BootMinimum, Sts2State.Var(r, "DamageMinimum", 5)); break;
-                case nameof(SneckoSkull): p.PoisonBonus += Sts2State.Var(r, nameof(PoisonPower), 1); break;
                 case nameof(GoldPlatedCables): p.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
-                case nameof(BeatingRemnant):
-                {
-                    var cap = Sts2State.Var(r, "MaxHpLoss", int.MaxValue);
-                    var used = (int)Sts2State.Private(r, "DamageReceivedThisTurn", 0m);
-                    p.RemnantCap = cap;
-                    p.RemnantLeftPlayerTurn = Math.Max(0, cap - used);
-                    break;
-                }
             }
         }
 
@@ -556,450 +535,6 @@ public static class SimAdapter
     }
 
     // ------------------------------------------------------------------ card plays
-
-    /// <summary>
-    /// The play of <paramref name="card"/> aimed at <paramref name="targetId"/> (for single-target cards),
-    /// from its PlayFacts, plus the damage and block procs the proc rules predicted for it.
-    /// </summary>
-    public static SimPlay Play(CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
-        int targetId, List<ProcHit> procs, List<int> procBlock)
-    {
-        var name = card.GetType().Name;
-        var plays = Math.Max(1, f.Plays);
-        var play = new SimPlay
-        {
-            Name = name,
-            IsAttack = card.Type == CardType.Attack,
-            Plays = plays,
-            HandDelta = -1 + f.Draws + f.Generated + f.ReturnsToHand,
-            FadingDelta = IsFading(card, cs) ? -1 : 0,
-            Procs = procs,
-            ProcBlock = procBlock,
-        };
-        // Aimed at a teammate: what lands on them goes to them (never to you, even with no teammate to aim at).
-        Creature? ally = null;
-        if (card.TargetType == TargetType.AnyAlly && targetId <= -2)
-        {
-            var allies = Teammates(me, cs);
-            var k = -2 - targetId;
-            if (k < allies.Count) { play.AllyTarget = k; ally = allies[k].Creature; }
-        }
-        play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
-        // Mighty Wings: the simulator counts your 30+ hits, for the Strength they give the attack's later hits.
-        play.BigHitThreshold = PlayFacts.MightyWings(me).Threshold;
-        // Covering Fire: block for every teammate on each shot you try (one per play of a Shoot card, arrow or not; none from an X shot at X 0).
-        if (Fool.TriesShot(card) && me.Creature.Powers.FirstOrDefault(x => x is CoveringFirePower) is { Amount: > 0 } coveringFire)
-            play.TeammateBlock = (coveringFire.Amount, plays);
-        // Its own HP cost (HpLossVar "HpLoss": CreatureCmd.Damage on you, Unblockable | Unpowered), each play, before its hits.
-        if (f.LosesHp) { play.HpCost = Sts2State.Var(card, "HpLoss"); play.HpCostTimes = plays; }
-        play.Draws = f.Draws;
-        play.BlockToAlly = BlockToAllyCards.Contains(name);
-        play.ChannelToAlly = ChannelToAllyCards.Contains(name);
-
-        if (f.AttackHits > 0)
-        {
-            foreach (var (e, id) in ids)
-            {
-                if (!f.CanHit(e)) continue;
-                play.HitDamage[id] = f.DamagePerHit(e);
-                if (f.LaterHitDamage(e) is { } later) play.HitDamageLater[id] = later;
-                if (f.ByPlayHitDamage(e) is { } byPlay) play.HitDamageByPlay[id] = byPlay;
-            }
-            switch (card.TargetType)
-            {
-                case TargetType.AnyEnemy:
-                    play.HitTarget = SimPlay.Target.Single;
-                    play.TargetId = targetId;
-                    var target = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
-                    play.Hits = target != null ? f.HitsOn(target) : f.AttackHits;
-                    play.SplashFromTarget = name == "RainShot"; // RainShot.OnPlay: the target's damage to every other enemy
-                    break;
-                case TargetType.AllEnemies:
-                    play.HitTarget = SimPlay.Target.All;
-                    play.Hits = f.AttackHits;
-                    break;
-                case TargetType.RandomEnemy:
-                    play.HitTarget = SimPlay.Target.Random;
-                    play.Hits = f.AttackHits;
-                    break;
-            }
-        }
-
-        // Adroit (enchantment): block on every play of its card, through the game's block math (Move: Dexterity, Frail).
-        // Stretch boosts it on any card (StretchPower.GainsBlock counts the enchantment's, v0.113.1; the preview math has it).
-        // The first play spends Stretch, Pael's Legion and Vambrace, so a replay's later plays gain without them.
-        if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
-        {
-            var amount = SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, adroit.DynamicVars.Block.BaseValue,
-                MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _)));
-            if (amount > 0) play.EnchantmentBlock = (Math.Max(1, plays), amount);
-            var stretch = KeepsStretchCards.Contains(name) ? 0 : me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
-            var doublers = me.Relics.Count(r => r.GetType().Name is (nameof(PaelsLegion) or nameof(Vambrace)) && Features.RelicCountersFeature.IsArmed(r));
-            if (amount > 0 && plays > 1 && (stretch > 0 || doublers > 0))
-            {
-                var without = SafeInt(() => Math.Max(0, (int)(Hook.ModifyBlock(cs, me.Creature, adroit.DynamicVars.Block.BaseValue - stretch,
-                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _) / (decimal)Math.Pow(2, doublers))));
-                if (without < amount) play.EnchantmentBlockLater = without;
-            }
-        }
-
-        // Its own block, each gain its full amount (Second Wind per card it exhausts, Cho Limbs and Cho Firm twice).
-        // Fisticuffs: the damage it dealt (overkill included); Entrench: your current block again.
-        var blockGains = f.BlockGains;
-        if (blockGains > 0)
-        {
-            var aimed = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
-            var each = name switch
-            {
-                nameof(Fisticuffs) => aimed != null ? f.TotalDamage(aimed) / Math.Max(1, plays) : 0,
-                nameof(Entrench) => me.Creature.Block,
-                // Block for the targeted teammate (their Frail counts), from a value worked out on them (Demonic Shield).
-                _ when play.BlockToAlly => ally != null ? CardBlock(card, cs, me, ally, ally) : 0,
-                // Mimic: block to you equal to the targeted teammate's block (CalculatedBlock on the target).
-                nameof(Mimic) when ally != null => CardBlock(card, cs, me, me.Creature, ally),
-                _ => CardBlock(card, cs, me),
-            };
-            play.BlockGains = blockGains;
-            play.BlockAmount = each;
-            // Bonuses that boost one card play's block, then are spent, so a replay's later plays gain without them:
-            // Stretch (v0.113.0; additive, so the game's block math on Block - Stretch), Pael's Legion and Vambrace (×2 on the
-            // first play whose block is above 0: AffectedCardPlay, TriggeringCard).
-            var stretch = KeepsStretchCards.Contains(name) ? 0 : me.Creature.Powers.Where(x => x.GetType().Name == "StretchPower").Sum(x => x.Amount);
-            var doublers = me.Relics.Count(r => r.GetType().Name is (nameof(PaelsLegion) or nameof(Vambrace)) && Features.RelicCountersFeature.IsArmed(r));
-            if ((stretch > 0 || doublers > 0) && plays > 1 && name is not (nameof(Fisticuffs) or nameof(Entrench)) && card.DynamicVars.ContainsKey("Block"))
-            {
-                var perPlay = blockGains / plays;
-                var without = SafeInt(() => Math.Max(0, (int)(Hook.ModifyBlock(cs, me.Creature, Sts2State.Var(card, "Block") - stretch,
-                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _) / (decimal)Math.Pow(2, doublers))));
-                if (perPlay > 0 && without < each) play.BlockLater = (perPlay, without);
-            }
-            // Tender: 1 Dexterity less after each play of yours, so a replay's play k gains the block with k less Dexterity
-            // (additive on Move block: the game's block math on Block - k). Not combined with the bonuses above.
-            else if (PlayFacts.StatLossPerPlay(me) is var loss && loss > 0 && plays > 1 && !play.BlockToAlly
-                     && name is not (nameof(Fisticuffs) or nameof(Entrench)) && card.DynamicVars.ContainsKey("Block"))
-            {
-                var perPlay = blockGains / plays;
-                int BlockWith(int delta) => SafeInt(() => Math.Max(0, (int)Hook.ModifyBlock(cs, me.Creature, Sts2State.Var(card, "Block") + delta,
-                    MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _)));
-                var baseBlock = BlockWith(0);
-                var amounts = Enumerable.Range(0, plays).Select(k => Math.Max(0, each + BlockWith(-k * loss) - baseBlock)).ToArray();
-                if (perPlay > 0 && amounts.Distinct().Count() > 1) play.BlockByPlay = (perPlay, amounts);
-            }
-        }
-
-        // Unsettling Lamp, unused this combat: the first card that debuffs an enemy without Artifact has its debuffs doubled
-        // (UnsettlingLamp.ModifyPowerAmountGivenMultiplicative) until that play ends: one play's worth more Strength loss and poison.
-        var lampDoubles = me.Relics.Any(r => r.GetType().Name == nameof(UnsettlingLamp) && Features.RelicCountersFeature.IsArmed(r))
-                          && f.EnemyDebuffs.Count + f.EnemyTemporaryDebuffs.Count > 0
-                          && (card.TargetType == TargetType.AnyEnemy
-                              ? ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } lt && !lt.HasPower<ArtifactPower>()
-                              : cs.HittableEnemies.Any(x => x.IsAlive && !x.HasPower<ArtifactPower>()));
-        play.ByOsty = f.ByOsty;
-        play.KillsOsty = KillsOstyCards.Contains(name);
-        // Necro Mastery: Osty losing HP (here: all of it, killed by the card) hits every enemy for that much times its amount.
-        if (play.KillsOsty && me.IsOstyAlive && me.Osty is { } dying && me.Creature.Powers.FirstOrDefault(x => x.GetType().Name == nameof(NecroMasteryPower)) is { Amount: > 0 } mastery)
-            play.AllEnemiesUnblockable = dying.CurrentHp * mastery.Amount;
-        // Timber: a kill with its hit sets off a second attack on every enemy (OnKillDamage), after the first attack has
-        // spent your Vigor (VigorPower.AfterAttack) and a stack of Gigantification. The card scan flags a new damage value.
-        if (OnKillHitAllCards.Contains(name) && card.DynamicVars.TryGetValue("OnKillDamage", out var killVar) && killVar is DamageVar kdv)
-        {
-            var vigor = me.Creature.Powers.Where(x => x is VigorPower).Sum(x => x.Amount);
-            var giga = me.Creature.Powers.Where(x => x is GigantificationPower).Sum(x => x.Amount);
-            foreach (var (e, id) in ids)
-            {
-                if (!e.IsAlive || !e.IsHittable) continue;
-                var d = SafeInt(() =>
-                {
-                    var v = Hook.ModifyDamage(me.RunState, cs, e, me.Creature, kdv.BaseValue - vigor, kdv.Props, card, null,
-                        ModifyDamageHookType.All, CardPreviewMode.None, out _);
-                    if (giga == 1) v /= 3m;
-                    return Math.Max(0, (int)v);
-                });
-                play.OnKillHitAll[id] = d;
-            }
-        }
-        // Capture Spirit: unblockable, unpowered damage to its target through the game's damage math (Vulnerable doesn't
-        // apply to unpowered damage; the hooks decide).
-        if (TargetDamageCards.Contains(name) && targetId >= 0 && card.DynamicVars.TryGetValue("Damage", out var tdVar) && tdVar is DamageVar tdv)
-        {
-            var target = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
-            if (target != null)
-            {
-                play.TargetId = targetId;
-                play.TargetDamage[targetId] = SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, cs, target, me.Creature, tdv.BaseValue, tdv.Props,
-                    card, null, ModifyDamageHookType.All, CardPreviewMode.None, out _)));
-            }
-        }
-        if (ExecuteCards.Contains(name) && targetId >= 0)
-        {
-            play.TargetId = targetId;
-            play.ExecuteAtOrBelow = Sts2State.Var(card, "Threshold");
-        }
-
-        // Orbs: evoke cards, then channels.
-        var focus = me.Creature.GetPower<FocusPower>()?.Amount ?? 0;
-        var lightningBonus = me.Relics.Where(r => r.GetType().Name == nameof(InfusedCore)).Sum(r => Sts2State.Var(r, "ExtraDamage"));
-        for (var i = 0; i < plays; i++)
-        {
-            // Slot changes come first in these cards' plays.
-            var slots = SlotChange(card, name);
-            if (slots != 0) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = slots });
-            switch (name)
-            {
-                case nameof(Dualcast): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = 2 }); break;
-                case nameof(Quadcast): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 4)) }); break;
-                case nameof(MultiCast):
-                {
-                    var x = SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0);
-                    if (x > 0) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = x });
-                    break;
-                }
-                case nameof(Shatter): play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeAllTwice }); break;
-            }
-            if (Channels.TryGetValue(name, out var kinds))
-            {
-                // Spinner channels only when upgraded; Chill channels one Frost per hittable enemy.
-                var times = name is nameof(Spinner) or nameof(Chill) ? PlayFacts.ChannelCount(card, name, me) : 1;
-                for (var t = 0; t < times; t++)
-                    foreach (var k in kinds) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(k, focus, lightningBonus) });
-            }
-            else if (RepeatChannels.TryGetValue(name, out var rk))
-            {
-                for (var r = 0; r < Math.Max(1, Sts2State.Var(card, "Repeat", 1)); r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(rk, focus, lightningBonus) });
-            }
-            else if (name == nameof(Voltaic))
-            {
-                for (var r = 0; r < PlayFacts.ChannelCount(card, name, me); r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
-            }
-            else if (name == nameof(Tempest))
-            {
-                var x = SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0); // Tempest+ channels one more
-                for (var r = 0; r < x; r++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
-            }
-        }
-
-        play.FocusDelta = FocusChange(card) * plays;
-
-        // Storm: Lightning per Power played (StormPower.AfterCardPlayed). Trash to Treasure: a random orb
-        // per status the play creates (its kind is a roll: Unknown, so only the evoke it causes and the
-        // slot it takes count).
-        var storm = me.Creature.Powers.Where(p => p is StormPower).Sum(p => p.Amount);
-        if (card.Type == CardType.Power)
-            for (var i = 0; i < storm * plays; i++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Fresh(OrbKind.Lightning, focus, lightningBonus) });
-        var trash = me.Creature.Powers.Where(p => p is TrashToTreasurePower).Sum(p => p.Amount);
-        for (var i = 0; i < trash * f.GeneratedStatuses; i++) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Unknown } });
-
-        // Powers it gives you, and poison it applies.
-        foreach (var (key, v) in card.DynamicVars)
-        {
-            var t = v.GetType();
-            if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(PowerVar<>)) continue;
-            var power = SimPowerName(t.GetGenericArguments()[0]);
-            var amount = (int)v.BaseValue * plays;
-            if (amount <= 0) continue;
-            switch (power)
-            {
-                case nameof(PlatingPower): play.AddPlating += amount; break;
-                case nameof(JuggernautPower): play.AddJuggernaut += amount; break;
-                case nameof(FeelNoPainPower): play.AddFeelNoPain += amount; break;
-                case nameof(ThornsPower): play.AddThorns += amount; break;
-                case nameof(FlameBarrierPower): play.AddFlameBarrier += amount; break;
-                case nameof(PoisonPower):
-                {
-                    // Snecko Skull adds to every application (ModifyPowerAmountGivenAdditive).
-                    var skull = me.Relics.Where(r => r.GetType().Name == nameof(SneckoSkull)).Sum(r => Sts2State.Var(r, nameof(PoisonPower), 1));
-                    if (card.TargetType == TargetType.RandomEnemy)
-                    {
-                        // A random enemy each time, Repeat times (Bouncing Flask).
-                        play.RandomPoison = (int)v.BaseValue + skull;
-                        play.RandomPoisonTimes += Math.Max(1, Sts2State.Var(card, "Repeat", 1)) * plays;
-                        break;
-                    }
-                    amount += plays * skull;
-                    if (lampDoubles) amount += (int)v.BaseValue + skull; // the first play's poison doubled
-                    if (card.TargetType == TargetType.AnyEnemy)
-                    {
-                        play.Poison += amount;
-                    }
-                    else if (card.TargetType == TargetType.AllEnemies)
-                    {
-                        play.Poison += amount;
-                        play.PoisonAll = true;
-                    }
-                    break;
-                }
-            }
-        }
-        // Your powers its code applies with a plain value (Feel No Pain, Flame Barrier).
-        foreach (var applied in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
-        {
-            if (PlainSelfPowerAmount(card, applied) is not { } each) continue;
-            var amount = each * plays;
-            switch (applied.Name)
-            {
-                case nameof(PlatingPower): play.AddPlating += amount; break;
-                case nameof(JuggernautPower): play.AddJuggernaut += amount; break;
-                case nameof(FeelNoPainPower): play.AddFeelNoPain += amount; break;
-                case nameof(ThornsPower): play.AddThorns += amount; break;
-                case nameof(FlameBarrierPower): play.AddFlameBarrier += amount; break;
-            }
-        }
-        if (play.Poison > 0 && !play.PoisonAll) play.TargetId = targetId;
-
-        // Intents the play changes:
-        //  - Weak lowers the intent damage of an enemy that isn't Weak yet (WeakPower.ModifyDamageMultiplicative).
-        //    With Artifact a charge may take it instead (which debuff it takes depends on the order), so
-        //    that intent is left as it is.
-        //  - Enrage: every Skill you play gives it Strength (EnragePower.AfterCardPlayed).
-        HashSet<Creature> Debuffed(Type debuff) => !f.EnemyDebuffs.Contains(debuff)
-                                                   // Nail does nothing to an enemy that isn't Impaled (Nail.OnPlay).
-                                                   || (name == "Nail" && ids.FirstOrDefault(kv => kv.Value == targetId).Key is { } nt && !Procs.Fool.IsImpaled(nt))
-            ? new HashSet<Creature>()
-            : card.TargetType switch
-            {
-                TargetType.AnyEnemy => ids.Where(kv => kv.Value == targetId).Select(kv => kv.Key).ToHashSet(),
-                TargetType.AllEnemies => ids.Keys.Where(e => e.IsAlive && e.IsHittable).ToHashSet(),
-                _ => new HashSet<Creature>(),
-            };
-        var weakened = Debuffed(typeof(WeakPower));
-        //  - Colossus halves powered attacks on you from Vulnerable enemies (ColossusPower.ModifyDamageMultiplicative,
-        //    not stacking): playing it halves the intents of enemies already Vulnerable; while you have it,
-        //    Vulnerable the card applies halves that enemy's.
-        var hasColossus = me.Creature.HasPower<ColossusPower>();
-        var gainsColossus = !hasColossus && name == nameof(Colossus);
-        var vulnerabled = hasColossus ? Debuffed(typeof(VulnerablePower)) : new HashSet<Creature>();
-        //  - Strength the card takes away (this turn: Piercing Wail, Dark Shackles...; for good: Shared
-        //    Fate, Resonance) or gives (Fight Me). Losing Strength is a debuff Artifact may take, so an
-        //    enemy with Artifact keeps its intent.
-        EnemyStrengthCards.TryGetValue(name, out var str);
-        var gaze = me.Creature.Powers.Where(p => p is MonarchsGazePower).Sum(p => p.Amount);
-        //  - Vital Spark (enemy): playing a Tainted card gives you Tainted (VitalSparkPower.AfterCardPlayed), which adds
-        //    to every powered attack on you (TaintedPower.ModifyDamageAdditive): additive like the attacker's Strength,
-        //    so the game's math with that much more Strength gives your new hits. Not on teammates.
-        var tainted = card.Affliction is MegaCrit.Sts2.Core.Models.Afflictions.Tainted
-            ? cs.Enemies.Where(x => x.IsAlive).Sum(x => x.GetPower<VitalSparkPower>()?.Amount ?? 0) * plays
-            : 0;
-        var strengthTarget = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
-        //  - Surrounded (Kaiser Crab): a card aimed at the crab behind you turns you to face it
-        //    (SurroundedPower.BeforeCardPlayed), and the one now behind you hits 50% harder
-        //    (ModifyDamageMultiplicative, on you only).
-        var surrounded = me.Creature.GetPower<SurroundedPower>();
-        var facing = surrounded?.Facing;
-        if (surrounded != null && strengthTarget != null)
-        {
-            if (facing == SurroundedPower.Direction.Right && strengthTarget.HasPower<BackAttackLeftPower>()) facing = SurroundedPower.Direction.Left;
-            else if (facing == SurroundedPower.Direction.Left && strengthTarget.HasPower<BackAttackRightPower>()) facing = SurroundedPower.Direction.Right;
-        }
-        bool Behind(Creature e, SurroundedPower.Direction? d) => d == SurroundedPower.Direction.Right ? e.HasPower<BackAttackLeftPower>()
-            : d == SurroundedPower.Direction.Left && e.HasPower<BackAttackRightPower>();
-        //  - Intercept on a teammate you don't cover yet: Covered on them zeroes powered attacks on them
-        //    (CoveredPower.ModifyDamageMultiplicative), and your InterceptPower multiplies those on you by the players
-        //    you cover + 1 (InterceptPower.ModifyDamageMultiplicative): × (covered + 2) / (covered + 1) of your hits now.
-        var mates = Teammates(me, cs);
-        var covers = name == nameof(Intercept) && ally != null
-                     && !ally.GetPowerInstances<CoveredPower>().Any(c => c.Applier == me.Creature);
-        var coveredNow = covers ? mates.Count(m => m.Creature.GetPowerInstances<CoveredPower>().Any(c => c.Applier == me.Creature)) : 0;
-        foreach (var (e, id) in ids)
-        {
-            if (!e.IsAlive) continue;
-            var artifact = (e.GetPower<ArtifactPower>()?.Amount ?? 0) > 0;
-            var weak = weakened.Contains(e) && !e.HasPower<WeakPower>() && !artifact;
-            var halved = (gainsColossus && e.HasPower<VulnerablePower>())
-                         || (vulnerabled.Contains(e) && !e.HasPower<VulnerablePower>() && !artifact);
-            var strength = card.Type == CardType.Skill ? (e.GetPower<EnragePower>()?.Amount ?? 0) * plays : 0;
-            if (str.Var != null && (str.All ? e.IsHittable : e == strengthTarget) && (str.Sign > 0 || !artifact))
-                strength += str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var)) * (plays + (lampDoubles && str.Sign < 0 ? 1 : 0));
-            // Monarch's Gaze: each of your attack's hits takes Strength from the enemy it hits this turn
-            // (MonarchsGazeStrengthDownPower). Random-target attacks are left out (which enemy is a roll).
-            if (gaze > 0 && !f.ByOsty && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))
-                strength -= gaze * f.HitsOn(e);
-            // A random-target attack: which enemy each hit takes Strength from is a branch, so the simulator picks the
-            // hits by how many landed (SimPlay.GazeHits). Artifact takes the first applications.
-            if (gaze > 0 && !f.ByOsty && f.CanHit(e) && card.TargetType == TargetType.RandomEnemy && play.Hits > 0)
-            {
-                var stacks = e.GetPower<ArtifactPower>()?.Amount ?? 0;
-                var byCount = new List<List<int>>();
-                var teamByCount = new List<List<List<int>>>();
-                for (var k = 1; k <= play.Hits; k++)
-                {
-                    var loss = gaze * Math.Max(0, k - stacks);
-                    if (AdjustedHits(e, me, cs, strength - loss, weak) is not { } h) { byCount = null; break; }
-                    byCount.Add(h);
-                    if (mates.Count == 0) continue;
-                    var team = new List<List<int>>();
-                    foreach (var mate in mates) team.Add(AdjustedHits(e, me, cs, strength - loss, weak, 1m, mate) ?? h);
-                    teamByCount.Add(team);
-                }
-                if (byCount != null && byCount.Any(h => h.Count > 0))
-                {
-                    play.GazeHits[id] = byCount;
-                    if (teamByCount.Count > 0) play.GazeTeammateHits[id] = teamByCount;
-                }
-            }
-            var wasBehind = surrounded != null && Behind(e, surrounded.Facing);
-            var nowBehind = surrounded != null && Behind(e, facing);
-            if (!weak && !halved && strength == 0 && tainted == 0 && wasBehind == nowBehind && !covers) continue;
-            var turn = (halved ? 0.5m : 1m) * (nowBehind && !wasBehind ? 1.5m : 1m) * (covers ? coveredNow + 2 : 1);
-            var divisor = (wasBehind && !nowBehind ? 1.5m : 1m) * (covers ? coveredNow + 1 : 1);
-            if (AdjustedHits(e, me, cs, strength + tainted, weak, turn, divisor: divisor) is { } hits) play.SetHits[id] = hits;
-            // Teammates (same order as Build): Weak and Strength change their hits too; Colossus only protects you; the
-            // teammate Intercept covers takes nothing from powered attacks.
-            if (!weak && strength == 0 && !covers) continue;
-            if (mates.Count == 0) continue;
-            var teamHits = new List<List<int>>();
-            foreach (var mate in mates)
-            {
-                if (AdjustedHits(e, me, cs, strength, weak, covers && mate.Creature == ally ? 0m : 1m, mate) is not { } th) { teamHits = null; break; }
-                teamHits.Add(th);
-            }
-            if (teamHits != null) play.SetTeammateHits[id] = teamHits;
-        }
-        return play;
-    }
-
-    /// <summary>
-    /// An enemy's intent hits with <paramref name="strength"/> more Strength and/or once it's Weak: the
-    /// game's damage math (Hook.ModifyDamage, before the int cast; Strength is additive, so it's added
-    /// to the base) times Weak's multiplier (0.75; Paper Krane on you takes 0.15 more off, Debilitate
-    /// on the enemy doubles the reduction) and <paramref name="multiplier"/> (Colossus: 0.5), then any damage
-    /// cap. Null when the intent can't be read.
-    /// </summary>
-    /// <param name="target">The player hit (a teammate); you when null.</param>
-    /// <param name="divisor">Divides the game's current math (Surrounded: no longer behind you takes its 1.5 back out, exactly).</param>
-    private static List<int>? AdjustedHits(Creature e, Player me, ICombatState cs, int strength, bool weak, decimal multiplier = 1m, Player? target = null, decimal divisor = 1m)
-    {
-        try
-        {
-            var who = target ?? me;
-            var m = multiplier;
-            if (weak)
-            {
-                var w = 0.75m;
-                if (who.Relics.Any(r => r.GetType().Name == nameof(PaperKrane))) w -= 0.15m;
-                if (e.Powers.Any(p => p.GetType().Name == nameof(DebilitatePower))) w -= 1m - w;
-                m *= w;
-            }
-            var hits = new List<int>();
-            foreach (var attack in e.Monster!.NextMove.Intents.OfType<AttackIntent>())
-            {
-                if (attack.DamageCalc == null) return null;
-                var raw = attack.DamageCalc() + strength;
-                var v = Hook.ModifyDamage(me.RunState, cs, who.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
-                    ModifyDamageHookType.Additive | ModifyDamageHookType.Multiplicative, CardPreviewMode.None, out _);
-                var capped = Hook.ModifyDamage(me.RunState, cs, who.Creature, e, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
-                    ModifyDamageHookType.All, CardPreviewMode.None, out _);
-                var adjusted = v * m / divisor; // multiply first: exact when the result is (v / 3 * 4 could truncate 40 to 39)
-                if (capped < v) adjusted = Math.Min(adjusted, capped);
-                var perHit = Math.Max(0, (int)adjusted);
-                for (var i = 0; i < Math.Max(1, attack.Repeats); i++) hits.Add(perHit);
-            }
-            return hits;
-        }
-        catch
-        {
-            return null;
-        }
-    }
 
     private static readonly Dictionary<Type, int> FocusSign = new();
 

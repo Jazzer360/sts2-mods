@@ -44,7 +44,7 @@ public sealed class BufferPower : SimModel
     {
         var p = SimEngine.PowersOf(s, owner);
         SimEngine.SetPowers(s, owner, p[Name] <= 1 ? p.Without(Name) : p.With(Name, p[Name] - 1));
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
     }
 }
 
@@ -60,7 +60,7 @@ public sealed class InfernoPower : SimModel
         if (e.Target != owner || e.Unblocked <= 0 || s.EnemyTurnNow) return;
         var amount = SimEngine.PowerOn(s, owner, Name);
         if (amount <= 0) return;
-        s.LogFired(Name, amount);
+        s.LogFired(Name, amount, owner);
         if (s.Log) s.EndOfTurnDamage.Add(("Inferno (all)", amount));
         SimEngine.DamageAllEnemies(s, amount, owner);
     }

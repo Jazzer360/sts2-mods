@@ -132,7 +132,7 @@ public sealed class SimEnemy
     /// <summary>Alive when the simulation starts (deaths after that set off Crab Rage and Ravenous).</summary>
     public bool StartedAlive = true;
     /// <summary>Ravenous: an ally dying stuns it (RavenousPower.AfterDeath).</summary>
-    public bool Ravenous;
+    [JsonIgnore] public bool Ravenous { get => Powers.Has("RavenousPower"); set => Set("RavenousPower", value ? 1 : 0); }
     /// <summary>Crab Rage: its hits once an ally has died (its Strength; null = no Crab Rage).</summary>
     public List<int>? HitsAfterAllyDies;
     /// <summary>Crab Rage: block it gains when an ally dies.</summary>
@@ -148,6 +148,9 @@ public sealed class SimEnemy
     public List<int>? ExplosiveOnTeammates;
     /// <summary>Its Explosive has gone off (it died during the simulation).</summary>
     public bool Exploded;
+
+    /// <summary>Its death has been handled (AfterDeath dispatched once).</summary>
+    public bool DeathHandled;
 
     /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
     /// <summary>Its powers the simulator reads or changes (docs/SIMULATOR_V2.md), in the order they were applied.</summary>
@@ -590,7 +593,7 @@ public sealed class SimState
     }
 
     /// <summary>Two play logs as one: every (the smaller of each, gone when either lacks it) or any (the larger).</summary>
-    private static PowerSet MergeLog(PowerSet a, PowerSet b, bool every)
+    internal static PowerSet MergeLog(PowerSet a, PowerSet b, bool every)
     {
         if (ReferenceEquals(a, b)) return a;
         var r = every ? PowerSet.Empty : a;
@@ -605,10 +608,17 @@ public sealed class SimState
     }
 
     /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
-    public void LogFired(string source, int amount = 0)
+    /// <param name="owner">Whose source it is: an enemy's is also logged as "Name@id", so two enemies' powers stay apart.</param>
+    public void LogFired(string source, int amount = 0, int? owner = null)
     {
-        Fired = Fired.With(source, Fired[source] + 1, Fired.DataOf(source) + amount);
-        FiredAny = FiredAny.With(source, FiredAny[source] + 1, FiredAny.DataOf(source) + amount);
+        Log1(source, amount);
+        if (owner is >= 0) Log1($"{source}@{owner}", amount);
+    }
+
+    private void Log1(string key, int amount)
+    {
+        Fired = Fired.With(key, Fired[key] + 1, Fired.DataOf(key) + amount);
+        FiredAny = FiredAny.With(key, FiredAny[key] + 1, FiredAny.DataOf(key) + amount);
     }
 
     public SimState Clone()

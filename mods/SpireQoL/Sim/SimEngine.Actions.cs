@@ -9,7 +9,7 @@ public static partial class SimEngine
     /// enchantment's and affliction's), the play finished, AfterCardPlayed. The turn counters follow the game's history
     /// entries (CardPlayStarted after BeforeCardPlayed; CardPlayFinished before AfterCardPlayed).
     /// </summary>
-    private static void RunPlayCard(BranchSet b, PlayCardAction pc)
+    private static void RunCardPlay(BranchSet b, CardPlayAction pc)
     {
         for (var i = 0; i < Math.Max(1, pc.Play.PlayCount); i++)
         {
@@ -54,7 +54,12 @@ public static partial class SimEngine
                     b.Each(s =>
                     {
                         var target = at.TargetId >= 0 ? at.TargetId : s.CurrentPlay?.Target ?? -1;
-                        return s.Enemy(target) is { Alive: true } ? HitOnce(s, Info(s).Dealer, target, at) : new[] { s };
+                        if (s.Enemy(target) is not { Alive: true }) return new[] { s };
+                        var r = HitOnce(s, Info(s).Dealer, target, at);
+                        // Timber: the kill sets off a second attack on every enemy.
+                        if (at.OnKill is { } onKill) r = Then(r, x => x.Enemy(target) is { Alive: false }
+                            ? HitEveryEnemy(x, Info(x).Dealer, onKill) : new[] { x });
+                        return r;
                     });
                     break;
                 case SimPlay.Target.All:
@@ -109,6 +114,8 @@ public static partial class SimEngine
         if (mods != null) foreach (var (m, o) in mods) m.AfterModifyingDamageAmount(s, o, card);
         if (amount <= 0) return new[] { s };
         if (s.Enemy(target) is { Alive: true } e) Damage(s, e, amount, dealer, spec.Props, card);
+        // Rain Shot: the target's damage to every other hittable enemy (only caps apply).
+        if (at.Splash) foreach (var other in s.Targetable.Where(x => x.Id != target).ToList()) Damage(s, other, amount, dealer, spec.Props, card);
         return new[] { s };
     }
 
@@ -218,4 +225,20 @@ public static partial class SimEngine
 
     /// <summary>Blockable damage to teammate k.</summary>
     internal static void LandOnTeammate(SimState s, string name, int amount, int k) => LandBlockable(s, name, amount, k);
+}
+
+public static partial class SimEngine
+{
+    /// <summary>One hit on every hittable enemy with this damage (Timber's second attack), each through the pipeline.</summary>
+    private static IEnumerable<SimState> HitEveryEnemy(SimState s, int dealer, DamageSpec spec)
+    {
+        var at = new AttackAction(1, SimPlay.Target.All, spec);
+        IEnumerable<SimState> r = new[] { s };
+        foreach (var id in s.Targetable.Select(e => e.Id).ToList())
+        {
+            var t = id;
+            r = Then(r, x => x.Enemy(t) is { Alive: true } ? HitOnce(x, dealer, t, at) : new[] { x });
+        }
+        return r;
+    }
 }

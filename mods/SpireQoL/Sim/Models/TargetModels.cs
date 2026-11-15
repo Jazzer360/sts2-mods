@@ -54,7 +54,7 @@ public sealed class FlutterPower : SimModel
         {
             en.Stunned = true;
             en.StunnedThisTurn = true;
-            s.LogFired(Name);
+            s.LogFired(Name, 0, owner);
         }
     }
 }

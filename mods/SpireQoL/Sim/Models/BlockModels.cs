@@ -45,7 +45,7 @@ public sealed class StretchPower : SimModel
         }
         var left = p[Name] - (data >> 4);
         SimEngine.SetPowers(s, owner, left <= 0 ? p.Without(Name) : p.With(Name, left, 0));
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
         return One(s);
     }
 }
@@ -73,7 +73,7 @@ public sealed class PaelsLegion : SimModel
     {
         var r = SimEngine.RelicsOf(s, owner);
         if (r.DataOf(Name) != 1) return One(s);
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
         SimEngine.SetRelics(s, owner, r.With(Name, 2, 0)); // Turns: 2 (PaelsLegion.CanonicalVars)
         return One(s);
     }
@@ -96,7 +96,7 @@ public sealed class Vambrace : SimModel
     {
         var r = SimEngine.RelicsOf(s, owner);
         if (amount <= 0 || play == null) return;
-        if ((r.DataOf(Name) & 1) == 0) s.LogFired(Name);
+        if ((r.DataOf(Name) & 1) == 0) s.LogFired(Name, 0, owner);
         SimEngine.SetRelics(s, owner, r.With(Name, r[Name], r.DataOf(Name) | 1));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)

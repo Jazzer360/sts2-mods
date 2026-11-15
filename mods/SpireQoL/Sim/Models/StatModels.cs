@@ -114,7 +114,7 @@ public sealed class VigorPower : AttackBoundPower
         if (!powers.Has(Name) || BoundAttack(data) != attack.Id) return One(s);
         var left = powers[Name] - AmountAtStart(data);
         SimEngine.SetPowers(s, owner, left == 0 ? powers.Without(Name) : powers.With(Name, left, 0));
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
         return One(s);
     }
 }
@@ -141,7 +141,7 @@ public sealed class AimPower : AttackBoundPower
         if (!powers.Has(Name) || BoundAttack(data) != attack.Id) return One(s);
         var left = powers[Name] - AmountAtStart(data);
         SimEngine.SetPowers(s, owner, left == 0 ? powers.Without(Name) : powers.With(Name, left, 0));
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
         return One(s);
     }
 }
@@ -160,7 +160,7 @@ public sealed class QuietusPower : AttackBoundPower
         var powers = SimEngine.PowersOf(s, owner);
         if (!powers.Has(Name) || BoundAttack(powers.DataOf(Name)) != attack.Id) return One(s);
         SimEngine.SetPowers(s, owner, powers.Without(Name));
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
         return One(s);
     }
 }
@@ -182,7 +182,7 @@ public sealed class GigantificationPower : AttackBoundPower
         if (!powers.Has(Name) || BoundAttack(powers.DataOf(Name)) != attack.Id) return One(s);
         var left = powers[Name] - 1;
         SimEngine.SetPowers(s, owner, left <= 0 ? powers.Without(Name) : powers.With(Name, left, 0));
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
         return One(s);
     }
 }
@@ -220,7 +220,7 @@ public sealed class TenderPower : SimModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (play.Owner != owner) return One(s);
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
         SimEngine.ApplyPower(s, owner, owner, "StrengthPower", -1, debuff: true);
         SimEngine.ApplyPower(s, owner, owner, "DexterityPower", -1, debuff: true);
         return One(s);
@@ -288,7 +288,7 @@ public sealed class PenNib : SimModel
         var r = SimEngine.RelicsOf(s, owner);
         var count = (r[Name] + 1) % 10;
         SimEngine.SetRelics(s, owner, r.With(Name, count, count == 0 ? 1 : r.DataOf(Name)));
-        if (count == 0) s.LogFired(Name);
+        if (count == 0) s.LogFired(Name, 0, owner);
         return One(s);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
@@ -311,7 +311,7 @@ public sealed class MightyWings : SimModel
         if (!e.Props.IsPoweredAttack() || !(e.Dealer == owner || (owner == Who.You && e.Dealer == Who.YourOsty))) return;
         var r = SimEngine.RelicsOf(s, owner);
         if (e.Total < r.DataOf(Name)) return;
-        s.LogFired(Name);
+        s.LogFired(Name, 0, owner);
         SimEngine.ApplyPower(s, owner, owner, "StrengthPower", r[Name], debuff: false);
     }
 }

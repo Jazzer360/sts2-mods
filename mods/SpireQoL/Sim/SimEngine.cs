@@ -6,6 +6,12 @@ public sealed class SimPlay
     public enum Target { None, Single, All, Random }
 
     public string Name = "";
+    /// <summary>
+    /// v2 (docs/SIMULATOR_V2.md): the card play (its hooks run around each play) and the actions each play runs (attack, block,
+    /// powers, HP cost). When set, the summary fields below carry only what isn't an action yet (orbs, procs, hand changes).
+    /// </summary>
+    public SimCardPlay? Card;
+    public List<SimAction> Body = new();
     /// <summary>The card in your hand this play is (SimHandCard.Id): playing it takes it out of SimPlayer.AutoHand. 0 = none.</summary>
     public int HandCard;
     /// <summary>Cards it draws (the draw pile it leaves: I Am Invincible on top).</summary>
@@ -232,6 +238,8 @@ public sealed class SimOutcome
     public int PlayBiggestHitMin;
     /// <summary>The play's HP loss of yours, in the branch where it's smallest (SimState.PlayHpReached, PlayHpLosses, PlayHpLost).</summary>
     public int PlayHpReachedMin, PlayHpLossesMin, PlayHpLostMin;
+    /// <summary>What fired during the play (its log): the counts in every branch (smallest), and in some branch (largest).</summary>
+    public PowerSet PlayFiredEvery = PowerSet.Empty, PlayFiredAny = PowerSet.Empty;
 
     /// <summary>The enemy is dead before it acts in every branch.</summary>
     public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true });
@@ -343,6 +351,10 @@ public static partial class SimEngine
         var hpReached = PlayMin(s => s.PlayHpReached);
         var hpLosses = PlayMin(s => s.PlayHpLosses);
         var hpLost = PlayMin(s => s.PlayHpLost);
+        // The play's log over its branches: in every branch (each merged one keeps its smallest), and in some branch.
+        var firedEvery = b.Truncated || b.States.Count == 0 ? PowerSet.Empty
+            : b.States.Skip(1).Aggregate(b.States[0].Fired, (acc, x) => SimState.MergeLog(acc, x.Fired, every: true));
+        var firedAny = b.States.Aggregate(PowerSet.Empty, (acc, x) => SimState.MergeLog(acc, x.FiredAny, every: false));
         AutoPostPlay(b);
         EndOfTurn(b);
         b.Do(EnemyTurn);
@@ -362,6 +374,8 @@ public static partial class SimEngine
             PlayHpReachedMin = hpReached,
             PlayHpLossesMin = hpLosses,
             PlayHpLostMin = hpLost,
+            PlayFiredEvery = firedEvery,
+            PlayFiredAny = firedAny,
         };
         if (b.Truncated)
         {
@@ -934,7 +948,7 @@ public static partial class SimEngine
         switch (a)
         {
             case LegacyPart lp: RunLegacy(b, lp.Play, lp.Part); break;
-            case PlayCardAction pc: RunPlayCard(b, pc); break;
+            case CardPlayAction pc: RunCardPlay(b, pc); break;
             case AttackAction at: RunAttack(b, at); break;
             case GainBlockAction gb: RunBlock(b, gb); break;
             case ApplyPowerAction ap: RunApplyPower(b, ap); break;
@@ -951,7 +965,7 @@ public static partial class SimEngine
         case LegacyPart.Kind.Setup:
         {
             // The play in progress, for hooks and the hits' card (Curl Up keys on it).
-            var play = new SimCardPlay(new SimCard(p.Name, p.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, p.TargetId, 0, Math.Max(1, p.Plays), p.AutoPlay);
+            var play = p.Card ?? new SimCardPlay(new SimCard(p.Name, p.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, p.TargetId, 0, Math.Max(1, p.Plays), p.AutoPlay);
             b.Do(s => { s.BigHitThreshold = p.BigHitThreshold; s.CurrentPlay = play; });
         }
         return;
@@ -1210,7 +1224,7 @@ public static partial class SimEngine
         });
         // AfterCardPlayed, once per play (powers fire before your relics, so Curl Up and Sneaky's block is up before relic
         // procs hit).
-        for (var i = 0; i < Math.Max(1, p.Plays); i++) HookStep(b, (m, o, x) => m.AfterCardPlayed(x, o, x.CurrentPlay!));
+        if (p.Card == null) for (var i = 0; i < Math.Max(1, p.Plays); i++) HookStep(b, (m, o, x) => m.AfterCardPlayed(x, o, x.CurrentPlay!));
 
         return;
         case LegacyPart.Kind.RandomPoison:
@@ -1702,14 +1716,16 @@ public static partial class SimEngine
     private static void AllyDeaths(SimState s)
     {
         Explosions(s);
+        // AfterDeath, once for each enemy that has died (Crab Rage, Ravenous as models).
+        foreach (var dead in s.Enemies)
+        {
+            if (dead.Alive || dead.DeathHandled || !dead.StartedAlive) continue;
+            dead.DeathHandled = true;
+            foreach (var (m, o) in Listeners(s)) m.AfterDeath(s, o, dead.Id);
+        }
         foreach (var e in s.Enemies)
         {
             if (!e.Alive || !s.Enemies.Any(o => o != e && o.StartedAlive && !o.Alive)) continue;
-            if (e.Ravenous && !e.Stunned)
-            {
-                e.Stunned = true;
-                e.StunnedThisTurn = true;
-            }
             if (e.HitsAfterAllyDies != null)
             {
                 e.Hits = e.HitsAfterAllyDies;
