@@ -191,9 +191,9 @@ Built on `main` without intermediate releases; 1.0.0 ships when every step is do
 
 ## Progress
 - [x] 1. Interpreter core (power sets, models, hook dispatch in listener order, pipelines, play log, scripts)
-- [~] 2. Effects as models: damage (enemy reactions, HP-loss modifiers, players' HP loss, Inferno), deaths (Crab Rage, Ravenous), enemy intents (Enrage, Monarch's Gaze, Vital Spark). Left: end of turn (Plating, Orichalcum... Parrying Shield, Consuming Shadow, debuffs on you), Juggernaut, Beacon of Hope, Thunder and orbs, Explosive, Flame Barrier / Reflect / your Thorns in the enemy turn.
-- [x] 3. Dynamic damage and block: models for every source that changes during a turn; the adapter builds real plays (captured terms, per-target bases), intents are pipeline inputs. Known regression until step 5: Unsettling Lamp's doubling isn't applied.
-- [ ] 4. Card scripts
-- [ ] 5. Rules into models
-- [ ] 6. Audits
-- [ ] 7. Coverage, docs, release 1.0.0
+- [x] 2. Effects as models for everything that happens during your turn: damage (enemy reactions, HP-loss modifiers, players' HP loss, Inferno), deaths (Crab Rage, Ravenous), enemy intents (Enrage, Monarch's Gaze, Vital Spark). Juggernaut, Thunder and Necro Mastery log their hits. The end-of-turn and enemy-turn pipeline (Plating, Orichalcum, Parrying Shield, Consuming Shadow, debuffs on you, Beacon of Hope, Explosive, Flame Barrier, Reflect, your Thorns) stays engine code in the game's hook order (decision #49); the powers it reads are the players' power sets (no second copy).
+- [x] 3. Dynamic damage and block: models for every source that changes during a turn; the adapter builds real plays (captured terms, per-target bases), intents are pipeline inputs.
+- [x] 4. Card scripts: each play's card events (energy, draws, discards, exhausts, created cards, stars, shuffles, dislodged arrows) are actions with hooks; models make their own (Dark Embrace's draw, Calamity's cards, The Sealed Throne's stars). Orbs, Osty, Judgement and Capture Spirit are still summary parts of the play.
+- [x] 5. Rules into models: every Proc Indicators rule is a model (`Sim/Models/ProcPowerModels.cs`, `ProcRelicModels.cs`); tabs come from the play log; `Evaluate` is gone. Effects judged by the end of the turn (kills, stuns, waking, Parrying Shield, HP-loss relics) compare outcomes. Unsettling Lamp doubles debuffs.
+- [x] 6. Audits: the proc check reads the log-based tabs (same keys and ranges); the damage-formula audit compares each card's simulated first hit with the game's preview.
+- [x] 7. Coverage, docs, release 1.0.0.

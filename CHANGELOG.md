@@ -6,6 +6,17 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.0.0
+#### Changed
+- The outcome simulator is rebuilt on the game's own rules: a card's play runs step by step, and every power, relic and enemy effect reacts through the same hooks the game uses, in the game's order. Each hit's damage and each block gain are worked out when they land, so anything that changes mid-play counts: Strength, Vigor, Vulnerable from the card itself, Pen Nib, Tender, Mighty Wings, Stretch.
+- Proc tabs come from the simulated play: a tab shows when its power or relic fires in the simulation (plain: in every outcome for some aim; crossed: in any outcome). Procs set each other off as in the game: a draw from Dark Embrace sets off Speedster, The Sealed Throne's stars set off Black Hole, Kunai's Dexterity counts for the block after it.
+- Damage numbers on proc tabs are the total the proc deals (every enemy it hits, each with its own modifiers), not the damage per enemy before modifiers.
+#### Added
+- Unsettling Lamp's doubled debuffs count in every prediction.
+- A check that the simulator's damage for each card's first hit matches the game's own number (reported when it doesn't).
+#### Fixed
+- Cho Ki keeps your Stretch (it gives back what it spends).
+
 ### Spire QoL 0.46.4
 #### Fixed
 - Pen Nib on a card that plays more than once: only the play that brings its count to 10 is doubled, not every play. At a count of 8, the replay's second play is the doubled one.

@@ -163,7 +163,7 @@ These relics are "armed" until their first use, then go quiet. The game marks th
 | [~] | **Vambrace** | cards that grant block | the first card that grants you block this combat gives double block. Only block from that one card is doubled |
 | [~] | **Throwing Axe** | every card in hand | the first card you play this combat is played twice. Any type, so the marker should help you choose the card |
 | [~] | **Burning Sticks** | skills that will exhaust: Exhaust skills (including added Exhaust), plus Ethereal skills at end of turn | the first skill exhausted this combat returns a copy to your hand. Exhaust from Ethereal counts too (`causedByEthereal` is accepted) |
-| [~] | Unsettling Lamp | cards that apply a debuff to an enemy | the first card that debuffs an enemy this combat applies double the debuff. Doesn't trigger or get spent against a target with Artifact. Note that on the card |
+| [x] | Unsettling Lamp | cards that apply a debuff to an enemy | the first card that debuffs an enemy this combat applies double the debuff. Doesn't trigger or get spent against a target with Artifact. Note that on the card |
 | [x] | Permafrost | powers | the first power played this combat gives block |
 | [~] | Pael's Eye | (hand-wide) | once per combat, ending a turn with no cards played exhausts your hand and gives an extra turn. While armed, show "end turn now = extra turn" if you haven't played a card yet |
 
@@ -301,7 +301,7 @@ Before the decision, one tab per effect had the source's icon and **no numbers**
 | [x] | **Full sweep** (2026-11-09) | | Every power and relic overriding the play, exhaust, discard, draw, stars, energy, debuff, block, damage, card-created and shuffle hooks. The resulting source list is in FEATURES.md "Proc Indicators". |
 | [~] | Procs of procs, Metronome, Bone Flute, Rupture, Black Hole on star gain | | 0.20.0. Juggernaut counts block from every proc; Metronome counts Storm's lightning; Black Hole counts The Sealed Throne's stars. |
 | — | On-draw procs (Pagestorm, Iteration, Automation...) | | Not shown by design: they fire on draw, not on play (decided 2026-11-09). |
-| [ ] | Not yet | | Deeper chains (a proc's damage setting off another proc), Beacon of Hope / Hammer Time (multiplayer). |
+| [x] | Chains | | 1.0.0: procs are simulator models, so chains follow from the hooks (a draw from Dark Embrace sets off Speedster, The Sealed Throne's stars set off Black Hole, Kunai's Dexterity counts for later block). Not yet: Hammer Time (multiplayer). |
 | [~] | **Audits** | | 0.20.0: forecast and proc audits log mismatches to godot.log. Read the log before each round of work. |
 
 ---
@@ -535,7 +535,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] Multiplayer: confirm in a co-op game that the end-of-turn check compares the last frame after every player has ended.
 - [ ] Multiplayer step 2 leftovers: cards you play that change damage to players (Tank on you; ~~Intercept on a teammate~~, 0.37.4); a teammate's Osty and their Fading/Feel No Pain block (from their hand: not in what's shown, decision #25); per-teammate checks of block and Osty.
 - [ ] Multiplayer: plays resolve one at a time through a shared queue. A teammate's queued, unresolved play can change what yours does (Beacon of Hope → their Juggernaut on your block card), and latency widens the gap between what's on screen and what resolves. Tabs for effects through teammates (their Juggernaut from your Beacon), and treating teammates' queued plays like your own quick plays (logged, not reported, unless the history shows otherwise).
-- [ ] **Move the proc rules into the simulator (decision #26).** About 100 trigger rules in ProcIndicatorsFeature become simulator rules, family by family (on-play counters, energy/cost triggers, exhaust/discard reactions, HP-loss, block...), each with tests; first extend the single-player golden test to cover tabs so no move changes them unnoticed. Then teammates' triggers through chains (Beacon of Hope → their Juggernaut) come for free.
+- [x] **Move the proc rules into the simulator (decision #26).** Done in 1.0.0 (decisions #48, #49): every rule is a model, tabs come from the play log. About 100 trigger rules in ProcIndicatorsFeature become simulator rules, family by family (on-play counters, energy/cost triggers, exhaust/discard reactions, HP-loss, block...), each with tests; first extend the single-player golden test to cover tabs so no move changes them unnoticed. Then teammates' triggers through chains (Beacon of Hope → their Juggernaut) come for free.
 - [x] **Multiplayer guardrails (0.31.22):** separate per-session report budget for multiplayer (a noisy co-op session must not use up single-player reports), a `multiplayer` label on those issues, and a "Multiplayer predictions (experimental)" setting (on) for step 3 and later.
 - [x] Dropped with the lead-in (0.31.25, decision #28): a teammate's queued card and a client's unconfirmed card in the lead-in. Tabs show the board; the audit predicts each play as it starts.
 - [x] 0.31.23: Necrobinder findings: Sacrifice and Bone Shards kill Osty in the simulator (card scan reports other cards that kill a creature); summons explain Osty's HP and max HP in the proc check; the stale check counts potions and teammates' plays too.
