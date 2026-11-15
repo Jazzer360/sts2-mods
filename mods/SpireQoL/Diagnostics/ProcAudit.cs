@@ -1214,6 +1214,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Add($"shuffle {(shuffled ? "happened" : "didn't happen")}: its draws depend on its target, and the prediction counted them for every target {why}");
             return;
         }
+        if (!shuffled && w.FightEnded)
+        {
+            // The play's hit ended the fight (Compile Driver on the last enemy): its draws, and their shuffle, never came.
+            model.Add($"shuffle didn't happen: the fight ended during the play {why}");
+            return;
+        }
         if (autoPlayed || (shuffled && drawReactive))
         {
             model.Add($"shuffle {(shuffled ? "happened" : "didn't happen")} after an unpredictable draw or auto-play {why}");

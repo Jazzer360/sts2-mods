@@ -994,6 +994,12 @@ public sealed class PlayFacts
         }
     }
 
+    /// <summary>
+    /// Attacks with a Repeat value that isn't their hit count: one attack, then Repeat of something else (Ice Lance
+    /// channels Repeat Frost, Heirloom Hammer makes Repeat copies; decompile v0.113.1). The card scan flags a new one.
+    /// </summary>
+    internal static readonly HashSet<string> SingleHitRepeatCards = new() { nameof(IceLance), nameof(HeirloomHammer) };
+
     /// <summary>X-cost attacks that hit X times (WithHitCount(X)); Repeat Shot is a shot (v0.113.0). The card scan flags a new one.</summary>
     internal static readonly HashSet<string> XHitCards = new() { nameof(Eradicate), nameof(Skewer), nameof(Volley), nameof(Whirlwind), "RepeatShot" };
 
@@ -1020,6 +1026,8 @@ public sealed class PlayFacts
                     return Hits(2);
                 case var _ when XHitCards.Contains(name):
                     return XValue(cs, card, energy);
+                case var _ when SingleHitRepeatCards.Contains(name):
+                    return 1;
                 case nameof(HeavenlyDrill):
                 {
                     var x = XValue(cs, card, energy);

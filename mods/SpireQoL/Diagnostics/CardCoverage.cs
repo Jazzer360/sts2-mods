@@ -155,6 +155,12 @@ internal static class CardCoverage
         // An X-cost attack: its hits are X (unless its count is one of the named exceptions).
         if (card.Type == CardType.Attack && card.EnergyCost.CostsX && !PlayFacts.XHitCards.Contains(name) && name is not (nameof(HeavenlyDrill) or nameof(Stardust)))
             issues.Add("an X-cost attack whose hits aren't counted as X (damage, lethal)");
+        // An attack whose code sets no hit count but has a Repeat value: its hits would be read from Repeat (Ice Lance's
+        // Repeat is its Frost channels). A card that really attacks Repeat times in a loop goes in Reviewed.
+        if (card.Type == CardType.Attack && !Calls("AttackCommand", "WithHitCount") && !card.DynamicVars.ContainsKey("HitCount")
+            && !PlayFacts.SingleHitRepeatCards.Contains(name)
+            && (Sts2Mods.Core.Game.Sts2State.Var(card, "Repeat", 1) > 1 || (upgraded != null && Sts2Mods.Core.Game.Sts2State.Var(upgraded, "Repeat", 1) > 1)))
+            issues.Add("an attack with a Repeat value and no hit count in its code (its hits would be read as Repeat: damage, lethal)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
         // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.
