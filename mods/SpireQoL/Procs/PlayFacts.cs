@@ -135,11 +135,26 @@ public sealed class PlayFacts
     /// <summary>Cards it creates (Shivs, Souls, clones, statuses...), and how many of those are statuses.</summary>
     public int Generated { get; private set; }
     public int GeneratedStatuses { get; private set; }
+    /// <summary>Of those, Sadness cards you create (Fertilizer, All Is Well react: AfterCardGeneratedForCombat).</summary>
+    public int SadnessCreated { get; private set; }
+    /// <summary>
+    /// Cards it certainly transforms: each transformed card is a created card (CardCmd.Transform calls
+    /// AfterCardGeneratedForCombat when the new card lands in a combat pile), so created-card procs react. Not Guards:
+    /// you pick how many (0 or more).
+    /// </summary>
+    public int TransformsCertain => Card.GetType().Name == nameof(Guards) ? 0 : Transforms;
+    /// <summary>
+    /// Make It So cards outside your hand that this Skill brings back (MakeItSo.AfterCardPlayedLate: every Nth Skill
+    /// you play in a turn): cards in your hand after the play.
+    /// </summary>
+    public int ReturnsToHand { get; init; }
+    /// <summary>Energy the play certainly gives back (Sown, on the card's first play: Sown.OnPlay while Normal).</summary>
+    public int EnergyBack { get; init; }
 
     /// <summary>
-    /// Most cards it can transform (Begone, Charge, Guards...). The game's history logs each new card
-    /// as created, but nothing reacts to it as one (CardCmd.Transform doesn't call
-    /// AfterCardGeneratedForCombat), so it's kept out of Generated. The audit only.
+    /// Most cards it can transform (Begone, Charge, Guards...). Each new card is a created card (CardCmd.Transform
+    /// calls AfterCardGeneratedForCombat when it lands in a combat pile), but it doesn't change your hand size, so it's
+    /// kept out of Generated: created-card procs count TransformsCertain, the audit's budget this.
     /// </summary>
     public int Transforms { get; init; }
 
@@ -503,6 +518,9 @@ public sealed class PlayFacts
             ShufflesItself = ShufflesItself || next.ShufflesItself,
             Generated = Generated + next.Generated,
             GeneratedStatuses = GeneratedStatuses + next.GeneratedStatuses,
+            SadnessCreated = SadnessCreated + next.SadnessCreated,
+            ReturnsToHand = ReturnsToHand + next.ReturnsToHand,
+            EnergyBack = EnergyBack + next.EnergyBack,
             Sim = next.Sim,
             RandomOutcome = RandomOutcome || next.RandomOutcome,
             SimPending = SimPending || next.SimPending,
@@ -547,6 +565,9 @@ public sealed class PlayFacts
             BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
             Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me),
             GeneratedStatuses = statuses * Math.Max(1, plays),
+            SadnessCreated = SadnessCards.Contains(name) ? statuses * Math.Max(1, plays) : 0,
+            ReturnsToHand = card.Type == CardType.Skill ? MakeItSoReturns(me, plays) : 0,
+            EnergyBack = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Sown { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } sown ? sown.Amount : 0,
             Transforms = TransformCount(card, name, others, drawPile) * Math.Max(1, plays),
             // A shot with no arrow to shoot does nothing at all (its debuffs neither: Hobbling Shot).
             EnemyDebuffs = Fool.IsShot(card) && Fool.ArrowsAvailable(me) == 0 ? Array.Empty<Type>() : EnemyDebuffTypes(card),
@@ -1108,6 +1129,38 @@ public sealed class PlayFacts
     };
 
     // ------------------------------------------------------------------ generated cards
+
+    /// <summary>
+    /// Cards that create Sadness when played (CreateCard&lt;Sadness&gt; in OnPlay, or Mourning Blow turning into one after
+    /// it; v0.113.1): their created statuses are all Sadness (GeneratedCount), so that count is the Sadness made.
+    /// </summary>
+    internal static readonly HashSet<string> SadnessCards = new() { "BrightenUp", "Jest", "MourningBlow", "Rummage", "SelfDeprecate", "SorrowfulStrike", "Vitriol" };
+
+    /// <summary>
+    /// Make It So cards outside your hand that come back when a Skill is played <paramref name="plays"/> times: each comes
+    /// back (once) when a play makes your Skills played this turn a multiple of its Cards value.
+    /// </summary>
+    private static int MakeItSoReturns(Player me, int plays)
+    {
+        try
+        {
+            var skills = Sts2State.CountPlayedThisTurn(me, CardType.Skill);
+            var back = 0;
+            foreach (var pile in new[] { PileType.Draw, PileType.Discard, PileType.Exhaust })
+            {
+                foreach (var c in pile.GetPile(me).Cards.Where(c => c.GetType().Name == "MakeItSo"))
+                {
+                    var n = Math.Max(1, Sts2State.Var(c, "Cards", 3));
+                    if (Enumerable.Range(1, Math.Max(1, plays)).Any(i => (skills + i) % n == 0)) back++;
+                }
+            }
+            return back;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
 
     internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses)
     {

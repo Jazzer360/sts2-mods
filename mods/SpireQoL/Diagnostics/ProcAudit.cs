@@ -137,7 +137,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly string[] SimTabSources =
     {
         nameof(ImbalancedPower), nameof(AsleepPower), nameof(SlumberPower), nameof(InfestedPower), nameof(SteamEruptionPower),
-        nameof(SurprisePower), nameof(ExplosivePower), nameof(StockPower), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower), nameof(SneakyPower), nameof(EnragePower), nameof(JuggernautPower),
+        nameof(SurprisePower), nameof(ExplosivePower), nameof(StockPower), nameof(CompostPower), nameof(MightyWings), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower), nameof(SneakyPower), nameof(EnragePower), nameof(JuggernautPower),
         nameof(BurrowedPower), nameof(FlutterPower), nameof(PlowPower), nameof(ShriekPower), nameof(TheGambitPower), nameof(SlipperyPower), nameof(HandDrill),
         nameof(ParryingShield),
     };
@@ -149,7 +149,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> EndOfTurnRelicTabs = new() { nameof(ParryingShield) };
 
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
-    private static readonly HashSet<string> KillReactive = new() { nameof(GremlinHorn) };
+    private static readonly HashSet<string> KillReactive = new() { nameof(GremlinHorn), nameof(CompostPower), nameof(MightyWings) };
+
+    /// <summary>
+    /// Your powers that act only on teammates when you play (Covering Fire: their block on your shots): simulated, with no
+    /// tab by design (a teammate-only effect: what they get shows on their Incoming Damage), so their flash isn't a missing rule.
+    /// </summary>
+    private static readonly HashSet<string> TeammateOnly = new() { nameof(CoveringFirePower) };
 
     /// <summary>
     /// Relics that act without flashing, so "didn't fire" can't be checked by a flash (their effect still is: the
@@ -197,7 +203,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         [nameof(ArsenalPower)] = new[] { Effect.Power }, [nameof(RupturePower)] = new[] { Effect.Power }, [nameof(EnvenomPower)] = new[] { Effect.Power },
         [nameof(ConcoctPower)] = new[] { Effect.Power }, [nameof(ReaperFormPower)] = new[] { Effect.Power }, [nameof(MonarchsGazePower)] = new[] { Effect.Power },
         [nameof(OblivionPower)] = new[] { Effect.Power }, [nameof(TenderPower)] = new[] { Effect.Power }, [nameof(EnragePower)] = new[] { Effect.Power },
-        [nameof(HandDrill)] = new[] { Effect.Power }, [nameof(UnsettlingLamp)] = new[] { Effect.Power }, [nameof(SelfFormingClay)] = new[] { Effect.Power },
+        [nameof(HandDrill)] = new[] { Effect.Power }, [nameof(Fertilizer)] = new[] { Effect.Power }, [nameof(WhittlingKnife)] = new[] { Effect.Power }, [nameof(MightyWings)] = new[] { Effect.Power }, [nameof(UnsettlingLamp)] = new[] { Effect.Power }, [nameof(SelfFormingClay)] = new[] { Effect.Power },
         [nameof(RedSkull)] = new[] { Effect.Power }, [nameof(CrabRagePower)] = new[] { Effect.Power }, [nameof(RavenousPower)] = new[] { Effect.Power },
         [nameof(SlowPower)] = new[] { Effect.Power }, [nameof(SmoggyPower)] = new[] { Effect.Power }, [nameof(VitalSparkPower)] = new[] { Effect.Power },
         [nameof(SleightOfFleshPower)] = new[] { Effect.Power }, [nameof(MasterPlannerPower)] = new[] { Effect.Power }, [nameof(PaleBlueDotPower)] = new[] { Effect.Power },
@@ -850,7 +856,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // ---- sources that fired with no tab (missing rules)
         foreach (var m in flashed.Distinct())
         {
-            if (sourceOf.ContainsKey(m.GetType().Name) || Modifiers.Contains(m.GetType().Name)) continue;
+            if (sourceOf.ContainsKey(m.GetType().Name) || Modifiers.Contains(m.GetType().Name) || TeammateOnly.Contains(m.GetType().Name)) continue;
             // A double-play source (Throwing Axe flashes in AfterModifyingCardPlayCount) when the card did play more
             // than once: its tab is Card Indicators' (the game's own play-count query), not a proc rule.
             if (CodeIndex.Does(m.GetType(), Array.Empty<string>(), new[] { "ModifyCardPlayCount" })

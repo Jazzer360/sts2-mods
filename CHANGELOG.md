@@ -6,6 +6,16 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.39.0
+#### Added
+- Tabs: Fertilizer and All Is Well (its block) on cards that create a Sadness; Whittling Knife on cards whose draws shuffle; Mighty Wings on attacks with a hit of 30 or more in every branch (block it takes counts, overkill doesn't); Compost (yours or a teammate's) on attacks that kill in every branch.
+- Monarch's Gaze on random-target attacks: each enemy's attack drops by the hits it takes, branch by branch.
+- Multiplayer: Covering Fire's block for your teammates on each of your shots counts in their Incoming Damage (no tab: it's theirs).
+#### Fixed
+- Cards that transform cards (Begone, Charge, Seance, Compact, Primal Force, Punch of Joy) count those as created cards for Regalite, Pillar of Creation, Arsenal and other created-card tabs: the game treats a transformed card as created.
+- Pael's Tears isn't crossed on a card whose Sown enchantment gives back the energy it spends.
+- A Skill that brings Make It So back to your hand counts it there for end-of-turn effects (Cloak Clasp, Screaming Flagon, Regret).
+
 ### Spire QoL 0.38.0
 #### Added
 - End-of-turn auto-plays count in Incoming Damage, the Death Skull and card tabs: Stampede and Simpleton (a random card from your hand: every card they could pick, and every target, is explored), Howl from Beyond in your exhaust pile, and I Am Invincible when it's certainly on top of your draw pile (every card there is a copy).

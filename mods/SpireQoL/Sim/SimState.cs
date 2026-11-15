@@ -114,6 +114,8 @@ public sealed class SimEnemy
     public List<int>? HitsAfterAllyDies;
     /// <summary>Crab Rage: block it gains when an ally dies.</summary>
     public int CrabRageBlock;
+    /// <summary>Hits of the current random-target play that landed on it (Monarch's Gaze: SimPlay.GazeHits).</summary>
+    public int GazeTaken;
     /// <summary>
     /// Explosive: when it dies, this much damage to you (unpowered, blockable: ExplosivePower.AfterDeath hits every
     /// living player), after the game's damage math for you; 0 = none.
@@ -371,6 +373,8 @@ public sealed class SimState
     public bool AutoPlaysUnknown;
     /// <summary>Cards auto-played at the end of your turn in this branch (Stampede, Simpleton, I Am Invincible, Howl from Beyond).</summary>
     public int AutoPlayed;
+    /// <summary>The biggest powered hit (blocked plus HP lost) of the play so far (Mighty Wings).</summary>
+    public int PlayBiggestHit;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
     public int FairiesUsed;
     public bool LizardTailUsed;
@@ -548,7 +552,7 @@ public sealed class SimState
             foreach (var c in P.AutoHand) Add(c.Id);
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed);
-        foreach (var e in Enemies) Add(e.Exploded ? 1 : 0);
+        foreach (var e in Enemies) { Add(e.Exploded ? 1 : 0); Add(e.GazeTaken); }
         Add(P.Orbs.Count);
         foreach (var o in P.Orbs)
         {

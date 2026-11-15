@@ -397,28 +397,12 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Dead code removed (analyzers + `scripts/dead-code.mjs`): Intent Forecast stub, `UiKit.Badge`, `Sts2State.HasVar`, `TurnEndModel.Overblock`, `PlayFacts.DebuffsLanding`, `SimAdapter.SelfPowers`, unused parameters and usings.
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
-- Known gaps (22; each is logged when present in a fight):
-  - [ ] AllIsWellPower (ledger): AfterCardGeneratedForCombat gains block when you create a Sadness: no proc tab, not simulated
-  - [ ] BeaconOfHopePower (ledger): multiplayer: AfterBlockGained gives teammates half of each block its owner gains on the players' side; a teammate's gives you block from their end-of-turn block (Plating, Frost, Orichalcum), not simulated (Incoming Damage errs high); yours changes nothing for you
-  - [ ] CompostPower (ledger): AfterDeath gives your side's players energy when an enemy dies: no proc tab on kills
-  - [ ] CoveringFirePower (ledger): AfterArrowShot gives your teammates block when you shoot an arrow from a card: no proc tab; their block isn't simulated before the enemy turn
-  - [ ] EpicRetrieval (ledger): AfterArrowDislodged gains energy when its own hit dislodges your arrow (the card glows gold then): no proc tab
+- Known gaps (6; each is logged when present in a fight):
   - [ ] ExtraTurnPower (ledger): ShouldTakeExtraTurn gives you another turn before the enemies act (AfterTakingExtraTurn counts it down): the forecast still shows the enemy turn next
-  - [ ] Fertilizer (ledger): AfterCardGeneratedForCombat gives Strength when you create a Sadness: no proc tab on the cards that create one
-  - [ ] LostLutePower (ledger): AfterCardPlayed auto-plays cards from the top of your draw pile on your first Wah, Cho and Ki each turn: proc tab; what those cards do is hidden (not simulated)
-  - [ ] MakeItSo (ledger): AfterCardPlayedLate returns to your hand after enough plays (hand counts)
-  - [ ] MightyWings (ledger): AfterDamageGiven gives 2 Strength when your (or Osty's) powered attack deals 30 or more in one hit: no proc tab
-  - [ ] MonarchsGazePower (ledger): AfterDamageGiven lowers Strength per hit (simulator intents for single-target and all-enemy attacks; not random-target ones)
   - [ ] PaelsEye (ledger): crossed tab covers giving up its extra turn (ShouldTakeExtraTurnEarly, AfterTakingExtraTurn); the simulator exhausts your hand at BeforeSideTurnEndEarly (Feel No Pain, Charon's Ashes, Forgotten Soul; nothing left in hand to act); the extra turn itself isn't (the forecast still shows the enemy turn next)
-  - [ ] SoulboundPower (ledger): AfterCardGeneratedForCombat adds Souls when you create Souls (created-card counts)
-  - [ ] Sown (ledger): OnPlay energy, on each play of the card until it finishes (AfterCardPlayed): enchantment energy isn't counted (the play check explains it)
-  - [ ] WhittlingKnife (ledger): AfterShuffle gives Aim when you shuffle: no tab on cards that shuffle
   - [ ] BeltBuckle (relic tracking): reacts to having no potions (potions have no tabs yet)
-  - [ ] Fertilizer (relic tracking): Strength when you create a Sadness: no tab
-  - [ ] MightyWings (relic tracking): 2 Strength when one of your hits deals 30 or more: no tab
   - [ ] PaelsFlesh (relic tracking): extra energy from turn 3 (its counter shows the turn); a turn-timer row would show when it starts
   - [ ] ReptileTrinket (relic tracking): Strength when you use a potion (potions have no tabs yet)
-  - [ ] WhittlingKnife (relic tracking): Aim when you shuffle: no tab
   - [ ] MawBank (outside fights): buying anything in a shop turns off its gold per room: a crossed icon on shop items
 <!-- gaps:end -->
 
@@ -510,7 +494,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] **Extra turns:** Extra Turn power (and Pael's Eye) give you another turn before the enemies act; the forecast still shows the enemy turn next.
 - [x] **Enemy Explosive** (0.38.0): its death damages every player in the simulator (wherever it dies), with a crossed kill tab; Stock's replacement Axebot gets one too.
 - [x] **End of turn** (0.38.0): Insatiable Dominion, Lunar Pastry with Black Hole, Pael's Eye's hand exhaust, and the auto-play phase (Stampede, Simpleton, Howl from Beyond, I Am Invincible; decision #39).
-- [ ] **No proc tab yet:** Fertilizer and All Is Well (on creating a Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Sown's energy isn't counted (Swift's draws are, since 0.31.38).
+- [x] **Proc tabs** (0.39.0): Fertilizer and All Is Well (Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Sown's energy for Pael's Tears; transformed cards count as created.
 - [ ] **Dread mode:** boss stats and moves change in Dread runs (read live from intents); Dominion powers reviewed in the ledger. Queen's Dread opening applies 99 Frail, Weak and Vulnerable.
 
 ---

@@ -12,6 +12,11 @@ public sealed class SimPlay
     public int Draws;
     /// <summary>An auto-play (CardPlay.IsAutoPlay): Pael's Eye doesn't count it as a card you played.</summary>
     public bool AutoPlay;
+    /// <summary>
+    /// Block every living teammate gains, this many times (Covering Fire: each shot of yours from a card,
+    /// CoveringFirePower.AfterArrowShot, unpowered; it fires with no arrow left too).
+    /// </summary>
+    public (int Amount, int Times) TeammateBlock;
     public Target HitTarget = Target.None;
     /// <summary>For Target.Single: the enemy aimed at.</summary>
     public int TargetId = -1;
@@ -79,6 +84,13 @@ public sealed class SimPlay
     public Dictionary<int, List<int>> SetHits = new();
     /// <summary>The same for teammates: enemy id → hits on each teammate (by teammate index) afterwards.</summary>
     public Dictionary<int, List<List<int>>> SetTeammateHits = new();
+    /// <summary>
+    /// Monarch's Gaze on a random-target attack: each hit takes Strength from the enemy it lands on, so its hits afterwards
+    /// depend on how many of the card's hits it took (enemy id → hits after 1, 2... of them; the last entry for more).
+    /// </summary>
+    public Dictionary<int, List<List<int>>> GazeHits = new();
+    /// <summary>The same on teammates: enemy id → [hits taken - 1] → hits on each teammate.</summary>
+    public Dictionary<int, List<List<List<int>>>> GazeTeammateHits = new();
 
     /// <summary>Times the card plays (Sneaky reacts to each).</summary>
     public int Plays = 1;
@@ -200,6 +212,8 @@ public sealed class SimOutcome
     public bool SlipperyInAny(int id) => Branches.Any(b => b.Enemy(id) is { SlipperyTriggered: true });
     /// <summary>The play kills some enemy in every branch (not always the same one).</summary>
     public bool PlayKillsInEveryBranch;
+    /// <summary>The play's biggest powered hit (blocked plus HP lost), in the branch where it's smallest (Mighty Wings).</summary>
+    public int PlayBiggestHitMin;
 
     /// <summary>The enemy is dead before it acts in every branch.</summary>
     public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true });
@@ -285,6 +299,7 @@ public static class SimEngine
                     s.Enemies.Where(e => e.BlockBroken).Select(e => e.Id).ToHashSet(),
                     s.P.BlockGains);
                 foreach (var e in s.Enemies) e.ReactedWithBlock = false;
+                s.PlayBiggestHit = 0;
             });
         }
         if (play != null) ApplyPlay(b, play);
@@ -298,6 +313,7 @@ public static class SimEngine
         // Block gains during the play (each sets off Juggernaut).
         var gains = b.States.Select(s => s.P.BlockGains - (s.PlayBase?.BlockGains ?? start.P.BlockGains)).ToList();
         var playTruncated = b.Truncated;
+        var biggestHitMin = b.Truncated || b.States.Count == 0 ? 0 : b.States.Min(s => s.PlayBiggestHit);
         AutoPostPlay(b);
         EndOfTurn(b);
         b.Do(EnemyTurn);
@@ -313,6 +329,7 @@ public static class SimEngine
             BlockReactionInAny = reacted,
             PlayBreaksBlockInEveryBranch = breaksBlock,
             PlayBlockGainsMax = gains.Count > 0 ? gains.Max() : 0,
+            PlayBiggestHitMin = biggestHitMin,
         };
         if (b.Truncated)
         {
@@ -358,6 +375,7 @@ public static class SimEngine
                 if (seen.TryGetValue(key, out var same))
                 {
                     same.Weight += r.Weight;
+                    same.PlayBiggestHit = Math.Min(same.PlayBiggestHit, r.PlayBiggestHit); // not in the key: the guarantee is the smallest
                     same.OutOfBranches |= r.OutOfBranches;
                     continue;
                 }
@@ -404,7 +422,7 @@ public static class SimEngine
                 {
                     // An identical branch: one state, with both shares of the rolls.
                     var key = r.Key();
-                    if (seen.TryGetValue(key, out var same)) same.Weight += r.Weight;
+                    if (seen.TryGetValue(key, out var same)) { same.Weight += r.Weight; same.PlayBiggestHit = Math.Min(same.PlayBiggestHit, r.PlayBiggestHit); }
                     else
                     {
                         seen[key] = r;
@@ -506,7 +524,11 @@ public static class SimEngine
         if (amount <= 0 || !e.Alive) return;
         if (e.Thorns > 0 && s.P.OstyHp > 0) s.P.OstyHp = Math.Max(0, s.P.OstyHp - e.Thorns);
         e.HitByCard = true;
-        if (Damage(e, amount, powered: true) > 0) e.ThroughByCard = true;
+        var block = e.Block;
+        var hp = e.Hp;
+        var lost = Damage(e, amount, powered: true);
+        if (lost > 0) e.ThroughByCard = true;
+        BiggestHit(s, block - e.Block, lost, hp);
     }
 
     /// <summary>A hit of the play's attack: Osty's or yours.</summary>
@@ -526,10 +548,23 @@ public static class SimEngine
         // ThornsPower.BeforeDamageReceived: it hits you back before the hit lands (the hit still lands).
         if (e.Thorns > 0) LandBlockable(s, e.Name + " Thorns", e.Thorns);
         e.HitByCard = true;
+        var block = e.Block;
+        var hp = e.Hp;
         var lost = Damage(e, amount, powered: true, minimumHpLoss: s.P.BootMinimum);
+        BiggestHit(s, block - e.Block, lost, hp);
         if (lost <= 0) return;
         e.ThroughByCard = true;
         if (s.P.Envenom > 0 && e.Alive) e.AddPoison(s.P.Envenom + s.P.PoisonBonus);
+    }
+
+    /// <summary>
+    /// A powered hit of your play's attack: its DamageResult.TotalDamage (blocked plus unblocked, which stops at the HP it
+    /// had: the rest is overkill) for Mighty Wings.
+    /// </summary>
+    private static void BiggestHit(SimState s, int blocked, int lost, int hpBefore)
+    {
+        var total = Math.Max(0, blocked) + Math.Min(lost, Math.Max(0, hpBefore));
+        if (total > s.PlayBiggestHit) s.PlayBiggestHit = total;
     }
 
     /// <summary>One hit on a random living enemy: a branch per possible target.</summary>
@@ -871,7 +906,9 @@ public static class SimEngine
                 });
                 break;
             case SimPlay.Target.Random:
-                for (var i = 0; i < p.Hits; i++) b.Each(s => HitRandom(s, Hit, card: true, osty: p.ByOsty));
+                if (p.GazeHits.Count > 0) b.Do(s => { foreach (var e in s.Enemies) e.GazeTaken = 0; });
+                for (var i = 0; i < p.Hits; i++)
+                    b.Each(s => HitRandom(s, Hit, card: true, osty: p.ByOsty, then: p.GazeHits.Count > 0 ? (_, e) => e.GazeTaken++ : null));
                 break;
         }
 
@@ -1020,6 +1057,14 @@ public static class SimEngine
             {
                 if (s.Enemy(id) is { Alive: true } e) e.TeammateHits = hits; // shared, never changed in place
             }
+            // Monarch's Gaze on a random-target attack: the Strength each enemy lost is the hits it took in this branch.
+            foreach (var (id, byCount) in p.GazeHits)
+            {
+                if (s.Enemy(id) is not { Alive: true, GazeTaken: > 0 } e || byCount.Count == 0) continue;
+                var k = Math.Min(e.GazeTaken, byCount.Count) - 1;
+                e.Hits = byCount[k];
+                if (p.GazeTeammateHits.TryGetValue(id, out var team) && team.Count > 0) e.TeammateHits = team[Math.Min(k, team.Count - 1)];
+            }
             s.P.HandCount = Math.Max(0, s.P.HandCount + p.HandDelta);
             if (!p.AutoPlay) s.P.PaelsEyeExhaust = false; // a card you play (not an auto-play) disarms Pael's Eye
             if (s.P.AutoHand != null)
@@ -1094,6 +1139,17 @@ public static class SimEngine
             }
         }
         foreach (var amount in p.ProcBlock) b.Each(s => GainBlock(s, amount, null));
+        if (p.TeammateBlock.Amount > 0 && b.States.Count > 0)
+        {
+            for (var i = 0; i < p.TeammateBlock.Times; i++)
+            {
+                for (var k = 0; k < b.States[0].Teammates.Count; k++)
+                {
+                    var tk = k;
+                    b.Each(s => s.Teammates[tk].Hp > 0 ? GainBlock(s, p.TeammateBlock.Amount, null, tk) : new[] { s });
+                }
+            }
+        }
 
         b.Do(AllyDeaths); // deaths from its procs
     }

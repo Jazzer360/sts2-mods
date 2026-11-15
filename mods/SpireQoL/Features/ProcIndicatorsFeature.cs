@@ -533,6 +533,20 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         {
             if (outcomes.Any(o => o.PlayKillsInEveryBranch)) merged["proc:" + nameof(GremlinHorn)] = (r, Hit.Trig());
         }
+        // Compost (yours or a teammate's: energy for every player on your side when an enemy dies): good, so the kill has
+        // to happen in every branch for some aim.
+        if (outcomes.Any(o => o.PlayKillsInEveryBranch))
+        {
+            var compost = _cs.Players.Select(p => p.Creature).Where(c => c is { IsAlive: true }).SelectMany(c => c.Powers).FirstOrDefault(p => p is CompostPower);
+            if (compost != null) merged["proc:" + nameof(CompostPower)] = (compost, Hit.Trig());
+        }
+        // Mighty Wings (2 Strength when one of your powered attack hits deals 30 or more, block included): good, so every
+        // branch for some aim, from the simulator's biggest hit of the play.
+        foreach (var r in _me.Relics.OfType<MightyWings>())
+        {
+            var threshold = Sts2State.Var(r, "DamageThreshold", 30);
+            if (outcomes.Any(o => o.PlayBiggestHitMin >= threshold)) merged["proc:" + nameof(MightyWings)] = (r, Hit.Trig());
+        }
 
         // Yah (energy the first time each turn one of your arrows comes loose): a kill the card's own damage doesn't
         // make alone (Violent Chord after a Wah, other damage procs) still dislodges every arrow of yours in the
@@ -631,8 +645,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var discards = _indirect ? f.Discards : 0;
         var draws = _indirect ? f.Draws : 0;
         var shuffles = _indirect && f.Shuffles;
-        var generated = _indirect ? f.Generated : 0;
+        // Transformed cards are created cards too (CardCmd.Transform calls AfterCardGeneratedForCombat).
+        var generated = _indirect ? f.Generated + f.TransformsCertain : 0;
         var statuses = _indirect ? f.GeneratedStatuses : 0;
+        var sadness = _indirect ? f.SadnessCreated : 0;
 
         switch (src)
         {
@@ -756,6 +772,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(MonarchsGazePower) when mine && type == CardType.Attack: return Hit.Trig();
                     case nameof(ArsenalPower) when mine && generated > 0: return Hit.Trig();
                     case nameof(PillarOfCreationPower) when mine && generated > 0: return BlockN(a, generated);
+                    // All Is Well: block for each Sadness you create (unpowered).
+                    case nameof(AllIsWellPower) when mine && sadness > 0: return BlockN(a, sadness);
                     case nameof(SmokestackPower) when mine && statuses > 0: return Damage(a, statuses, Spread.All);
                     case nameof(TrashToTreasurePower) when mine && statuses > 0: return Hit.Trig();
 
@@ -819,8 +837,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     {
                         // Ending the turn with energy left gives energy next turn: cards that would
                         // spend your last energy (X-cost cards spend it all) give that up.
+                        // Energy the card gives back (Sown) leaves you some.
                         var energy = _me.PlayerCombatState?.Energy ?? 0;
-                        return energy > 0 && f.EnergySpent >= energy ? Hit.Trig(harmful: true) : null;
+                        return energy > 0 && f.EnergySpent >= energy + f.EnergyBack ? Hit.Trig(harmful: true) : null;
                     }
                     // Ending a turn without playing a card gives an extra turn (once per combat):
                     // while armed and nothing has been played, every card gives that up.
@@ -896,6 +915,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     }
                     case nameof(Regalite) when generated > 0 && !Sts2State.Private(r, "UsedThisTurn", true): return RelicBlock(r, 1);
                     case nameof(TheAbacus) when shuffles: return RelicBlock(r, 1);
+                    // Whittling Knife: Aim on every shuffle (AfterShuffle).
+                    case nameof(WhittlingKnife) when shuffles: return Hit.Trig();
+                    // Fertilizer: Strength when you create a Sadness.
+                    case nameof(Fertilizer) when sadness > 0: return Hit.Trig();
                     // A Soot (Unplayable status) into your draw pile on every shuffle (BiiigHug.AfterShuffle).
                     case nameof(BiiigHug) when shuffles: return Hit.Trig(harmful: true);
                     case nameof(Metronome):

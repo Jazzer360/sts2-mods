@@ -194,6 +194,9 @@ internal static class CardCoverage
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
             && None(c => PlayFacts.GeneratedCount(c, name, others, null!, out _)))
             issues.Add("creates cards (not counted: created-card procs)");
+        // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
+        if (calls.Any(c => c.EndsWith(".CreateCard<Sadness>")) && !PlayFacts.SadnessCards.Contains(name))
+            issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");
         // Forging creates the Sovereign Blade through ForgeCmd, not in the card's own code.
         if (Calls("ForgeCmd", "Forge") && !PlayFacts.ForgeCards.Contains(name))
             issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");

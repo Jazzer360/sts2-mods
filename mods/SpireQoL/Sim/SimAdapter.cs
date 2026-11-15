@@ -571,7 +571,7 @@ public static class SimAdapter
             Name = name,
             IsAttack = card.Type == CardType.Attack,
             Plays = plays,
-            HandDelta = -1 + f.Draws + f.Generated,
+            HandDelta = -1 + f.Draws + f.Generated + f.ReturnsToHand,
             FadingDelta = IsFading(card, cs) ? -1 : 0,
             Procs = procs,
             ProcBlock = procBlock,
@@ -585,6 +585,9 @@ public static class SimAdapter
             if (k < allies.Count) { play.AllyTarget = k; ally = allies[k].Creature; }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
+        // Covering Fire: block for every teammate on each of your shots (one per play of a Shoot card).
+        if (Fool.IsShot(card) && me.Creature.Powers.FirstOrDefault(x => x is CoveringFirePower) is { Amount: > 0 } coveringFire)
+            play.TeammateBlock = (coveringFire.Amount, plays);
         play.Draws = f.Draws;
         play.BlockToAlly = BlockToAllyCards.Contains(name);
         play.ChannelToAlly = ChannelToAllyCards.Contains(name);
@@ -893,6 +896,29 @@ public static class SimAdapter
             // (MonarchsGazeStrengthDownPower). Random-target attacks are left out (which enemy is a roll).
             if (gaze > 0 && !f.ByOsty && !artifact && f.CanHit(e) && (card.TargetType == TargetType.AllEnemies || (card.TargetType == TargetType.AnyEnemy && e == strengthTarget)))
                 strength -= gaze * f.HitsOn(e);
+            // A random-target attack: which enemy each hit takes Strength from is a branch, so the simulator picks the
+            // hits by how many landed (SimPlay.GazeHits). Artifact takes the first applications.
+            if (gaze > 0 && !f.ByOsty && f.CanHit(e) && card.TargetType == TargetType.RandomEnemy && play.Hits > 0)
+            {
+                var stacks = e.GetPower<ArtifactPower>()?.Amount ?? 0;
+                var byCount = new List<List<int>>();
+                var teamByCount = new List<List<List<int>>>();
+                for (var k = 1; k <= play.Hits; k++)
+                {
+                    var loss = gaze * Math.Max(0, k - stacks);
+                    if (AdjustedHits(e, me, cs, strength - loss, weak) is not { } h) { byCount = null; break; }
+                    byCount.Add(h);
+                    if (mates.Count == 0) continue;
+                    var team = new List<List<int>>();
+                    foreach (var mate in mates) team.Add(AdjustedHits(e, me, cs, strength - loss, weak, 1m, mate) ?? h);
+                    teamByCount.Add(team);
+                }
+                if (byCount != null && byCount.Any(h => h.Count > 0))
+                {
+                    play.GazeHits[id] = byCount;
+                    if (teamByCount.Count > 0) play.GazeTeammateHits[id] = teamByCount;
+                }
+            }
             var wasBehind = surrounded != null && Behind(e, surrounded.Facing);
             var nowBehind = surrounded != null && Behind(e, facing);
             if (!weak && !halved && strength == 0 && tainted == 0 && wasBehind == nowBehind && !covers) continue;

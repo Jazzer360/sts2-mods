@@ -112,9 +112,6 @@ internal static class RelicTracking
 
         ["Thumbscrew"] = "none: a hit more on your multi-hit attacks (in the card's hit count and the mod's)",
         ["Storyteller"] = "none: Aim at the start of combat and each end of turn (its power shows it)",
-        ["Fertilizer"] = "gap: Strength when you create a Sadness: no tab",
-        ["MightyWings"] = "gap: 2 Strength when one of your hits deals 30 or more: no tab",
-        ["WhittlingKnife"] = "gap: Aim when you shuffle: no tab",
 
         // ---- your end of turn and the enemy turn (shown by Incoming Damage)
         ["CloakClasp"] = "none: end-of-turn block (Incoming Damage)",
