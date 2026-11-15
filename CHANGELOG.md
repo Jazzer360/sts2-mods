@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.42.1
+#### Fixed
+- Multiplayer: the coverage check no longer reports Self Deprecate. What it does for teammates (Joy cards into their hands, created by you) doesn't change the turn's outcome; your Sadness and created-card procs were already counted.
+
 ### Spire QoL 0.42.0
 #### Added
 - Relic tracker: Make It So's count (your Skills this turn toward its next return), shown with the game's tiny card while it's in your fight, including a copy from an Attack Potion; it flashes when your next Skill brings it back.

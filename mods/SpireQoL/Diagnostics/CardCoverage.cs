@@ -85,6 +85,10 @@ internal static class CardCoverage
         [nameof(Largesse)] = "a random colorless card for the teammate (a roll)",
         [nameof(Soulbound)] = "SoulboundPower on the teammate: acts on cards generated later",
         [nameof(Tutor)] = "the teammate picks a card from their draw pile into their hand",
+        // SelfDeprecate.OnPlay (AllAllies): Sadness into your hand, Joy into every other living player's hand, all created by
+        // you (AddGeneratedCardsToCombat creator = you: your created-card procs, counted in PlayFacts.GeneratedCount).
+        // Joy has no hooks (energy and a draw when they play it), and the generated-card hooks only react to their creator.
+        [nameof(SelfDeprecate)] = "Joy cards into each teammate's hand, created by you: their plays (energy and a draw); your Sadness and created-card procs are counted",
         // Modelled: Covered zeroes powered attacks on the teammate and your InterceptPower multiplies those on you by covered players
         // + 1: the play sets both players' hits from the game's damage math (SimAdapter.Play). Block to you is modelled.
         [nameof(Intercept)] = "block to you; the teammate's powered attacks move onto you: theirs × 0, yours × (covered + 2) / (covered + 1)",
