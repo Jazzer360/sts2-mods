@@ -398,27 +398,41 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - Known gaps that could **underestimate damage to you** (fix first): Queen and Kin Priest switching to a stronger move mid-turn when an ally dies. ~~Multiplayer Covered/Intercept~~ (0.37.4).
 - Relic tracking gaps (RelicTracking): Pael's Flesh (turn-timer row), Reptile Trinket and Belt Buckle (potion tabs), Lunar Pastry (simulator).
 - Known gaps (from the ledger; each is logged when present in a fight):
-- [ ] LunarPastry: AfterSideTurnEnd gains stars at the end of your turn; Black Hole's end-of-turn damage from them isn't simulated
-  - [ ] PaelsEye: crossed tab covers giving up its extra turn; its BeforeSideTurnEndEarly exhaust of your hand (no cards played) isn't simulated (Feel No Pain, Charon's Ashes at end of turn)
-  - [ ] UnsettlingLamp: proc tab covers arming; ModifyPowerAmountGivenMultiplicative doubles the triggering card's powers, which the simulator's poison and Strength amounts don't
   - [ ] AdaptablePower: AfterDeath/ShouldAllowHitting: Test Subject revives (a kill may not stick: lethal can be wrong)
-  - [ ] CoveredPower: multiplayer: a player covered by another has attacks on them taken by the interceptor (Incoming Damage assumes they hit you)
+  - [ ] AllIsWellPower: AfterCardGeneratedForCombat gains block when you create a Sadness: no proc tab, not simulated
+  - [ ] BeaconOfHopePower: multiplayer: AfterBlockGained gives teammates half of each block its owner gains on the players' side; a teammate's gives you block from their end-of-turn block (Plating, Frost, Orichalcum), not simulated (Incoming Damage errs high); yours changes nothing for you
+  - [ ] CompostPower: AfterDeath gives your side's players energy when an enemy dies: no proc tab on kills
+  - [x] CoveredPower: covered in 0.37.4 (read through the game's damage math; playing Intercept moves the attacks on its target onto you)
+  - [ ] CoveringFirePower: AfterArrowShot gives your teammates block when you shoot an arrow from a card: no proc tab; their block isn't simulated before the enemy turn
+  - [ ] EpicRetrieval: AfterArrowDislodged gains energy when its own hit dislodges your arrow (the card glows gold then): no proc tab
+  - [ ] ExplosivePower: AfterDeath damages every living player when its owner dies: no crossed tab on the kill, not in Incoming Damage
+  - [ ] ExtraTurnPower: ShouldTakeExtraTurn gives you another turn before the enemies act (AfterTakingExtraTurn counts it down): the forecast still shows the enemy turn next
+  - [ ] Fertilizer: AfterCardGeneratedForCombat gives Strength when you create a Sadness: no proc tab on the cards that create one
+  - [ ] HowlFromBeyond: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn damage not simulated)
+  - [ ] IAmInvincible: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn block not simulated)
   - [ ] IllusionPower: AfterDeath/ShouldAllowHitting revives (a kill may not stick: lethal can be wrong)
   - [x] InfernoPower: covered in 0.31.35 (proc tab on cards that cost HP; simulator on end-of-turn and in-play HP loss, yours)
-  - [ ] InterceptPower: multiplayer: takes attacks aimed at a covered player (Incoming Damage assumes they hit you)
+  - [ ] InsatiableDominionPower: AfterSideTurnEndLate deals 2 + turn number to its owner (you, in a Dread run) after your end of turn: not in Incoming Damage
+  - [x] InterceptPower: covered in 0.37.4 (playing Intercept multiplies the attacks on you by covered players + 1)
+  - [ ] KinPriest: AfterDeath of its last follower changes its move mid-turn (the simulator keeps the intent from the start of the play)
+  - [ ] LostLutePower: AfterCardPlayed auto-plays cards from the top of your draw pile on your first Wah, Cho and Ki each turn: proc tab; what those cards do is hidden (not simulated)
+  - [ ] LunarPastry: AfterSideTurnEnd gains stars at the end of your turn; Black Hole's end-of-turn damage from them isn't simulated
+  - [ ] MakeItSo: AfterCardPlayedLate returns to your hand after enough plays (hand counts)
+  - [ ] MightyWings: AfterDamageGiven gives 2 Strength when your (or Osty's) powered attack deals 30 or more in one hit: no proc tab
   - [ ] MonarchsGazePower: AfterDamageGiven lowers Strength per hit (simulator intents for single-target and all-enemy attacks; not random-target ones)
   - [x] NecroMasteryPower: AfterCurrentHpChanged damages all enemies when Osty loses HP: cards that kill Osty, 0.35.8 (not yet: Osty losing HP to Thorns or attacks)
+  - [ ] PaelsEye: crossed tab covers giving up its extra turn; its BeforeSideTurnEndEarly exhaust of your hand (no cards played) isn't simulated (Feel No Pain, Charon's Ashes at end of turn)
+  - [ ] Queen: AfterDeath of the Amalgam switches her to the enraged move mid-turn (the simulator keeps the intent from the start of the play)
   - [ ] ReattachPower: AfterDeath/ShouldAllowHitting segments revive (a kill may not stick: lethal can be wrong)
+  - [ ] SimpletonPower: AfterAutoPostPlayPhaseEntered auto-plays your cheapest card(s) at the end of your turn (a random one among ties): not simulated
   - [ ] SoulboundPower: AfterCardGeneratedForCombat adds Souls when you create Souls (created-card counts)
+  - [ ] Sown: OnPlay energy, on each play of the card until it finishes (AfterCardPlayed): enchantment energy isn't counted (the play check explains it)
   - [ ] StampedePower: AfterAutoPostPlayPhaseEntered auto-plays random Attacks at the end of your turn (end-of-turn damage not simulated; since 0.31.35 the forecast check skips a turn where yours fired)
   - [ ] StockPower: AfterDeath spawns another Axebot (the fight isn't over when it dies)
   - [x] SurroundedPower: covered in 0.31.36 (intents after a targeted play)
-  - [ ] ThunderPower: AfterOrbEvoked damages Lightning's targets again; not simulated
-  - [ ] HowlFromBeyond: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn damage not simulated)
-  - [ ] IAmInvincible: AfterAutoPostPlayPhaseEntered auto-plays at the end of your turn (end-of-turn block not simulated)
-  - [ ] MakeItSo: AfterCardPlayedLate returns to your hand after enough plays (hand counts)
-  - [ ] KinPriest: AfterDeath of its last follower changes its move mid-turn (the simulator keeps the intent from the start of the play)
-  - [ ] Queen: AfterDeath of the Amalgam switches her to the enraged move mid-turn (the simulator keeps the intent from the start of the play)
+  - [x] ThunderPower: covered in 0.31.13 (proc tab and simulator; counted once since 0.37.1)
+  - [x] UnsettlingLamp: covered in 0.34.0 (the Strength loss and poison it doubles count in the predictions)
+  - [ ] WhittlingKnife: AfterShuffle gives Aim when you shuffle: no tab on cards that shuffle
 
 ---
 
@@ -545,13 +559,13 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.31.28 (decision #31): performance tests count work (copies, steps, bytes), not time; a per-step copy budget. Fixed Shatter (4^20 copies in one step) and Beacon of Hope with Juggernaut (out of memory with four players).
 - [ ] Multiplayer: a teammate's Ethereal cards (Feel No Pain, Charon's Ashes, Forgotten Soul at end of turn) aren't simulated for them; it depends on their hand (checks only, never shown).
 - [x] 0.31.26 multiplayer audit review: a teammate's action during your choice (decision #29, logged and counted); teammates' block and HP in the state after your play; coverage scan flags ally-targeted cards (AnyAlly: Believe in You, Blaze, Concoct, Constellation, Coordinate, Demonic Shield, Fade, Ignition, Imitation Learning, Intercept, Largesse, Lift, Mimic, Soulbound, Tutor; AllAllies: Blade Symphony, Energy Surge, Glimpse Beyond, Huddle Up, Legion of Bone, One for All, Plot, Rally).
-- [ ] Multiplayer: model ally-targeted cards in the simulator (a player target on SimPlay), one card family at a time, each moved to CardCoverage.TeammateTargetModelled with a test.
+- [x] Multiplayer: ally-targeted cards in the simulator (0.37.3, 0.37.4): Lift, Constellation, Demonic Shield, Ignition, Mimic and Intercept are modelled; every other AnyAlly card has a reviewed reason in CardCoverage.TeammateTargetModelled.
 - [x] Multiplayer: the enemy-turn check compares a teammate's Osty too (0.31.27); their block counts through their HP.
 - [ ] Multiplayer: confirm in a co-op game that the end-of-turn check compares the last frame after every player has ended.
-- [ ] Multiplayer step 2 leftovers: cards you play that change damage to players (Tank on you, Intercept/Covered on a teammate: the per-aim simulations don't aim at teammates yet); a teammate's Osty and their Fading/Feel No Pain block (from their hand: not in what's shown, decision #25); per-teammate checks of block and Osty.
+- [ ] Multiplayer step 2 leftovers: cards you play that change damage to players (Tank on you; ~~Intercept on a teammate~~, 0.37.4); a teammate's Osty and their Fading/Feel No Pain block (from their hand: not in what's shown, decision #25); per-teammate checks of block and Osty.
 - [ ] Multiplayer: plays resolve one at a time through a shared queue. A teammate's queued, unresolved play can change what yours does (Beacon of Hope → their Juggernaut on your block card), and latency widens the gap between what's on screen and what resolves. Tabs for effects through teammates (their Juggernaut from your Beacon), and treating teammates' queued plays like your own quick plays (logged, not reported, unless the history shows otherwise).
 - [ ] **Move the proc rules into the simulator (decision #26).** About 100 trigger rules in ProcIndicatorsFeature become simulator rules, family by family (on-play counters, energy/cost triggers, exhaust/discard reactions, HP-loss, block...), each with tests; first extend the single-player golden test to cover tabs so no move changes them unnoticed. Then teammates' triggers through chains (Beacon of Hope → their Juggernaut) come for free.
-- [x] **Multiplayer guardrails (0.31.22):** separate per-session report budget for multiplayer (a noisy co-op session must not use up single-player reports), a `multiplayer` label on those issues, the scheduled fixer working single-player issues first, and a "Multiplayer predictions (experimental)" setting (on) for step 3 and later.
+- [x] **Multiplayer guardrails (0.31.22):** separate per-session report budget for multiplayer (a noisy co-op session must not use up single-player reports), a `multiplayer` label on those issues, and a "Multiplayer predictions (experimental)" setting (on) for step 3 and later.
 - [x] Dropped with the lead-in (0.31.25, decision #28): a teammate's queued card and a client's unconfirmed card in the lead-in. Tabs show the board; the audit predicts each play as it starts.
 - [x] 0.31.23: Necrobinder findings: Sacrifice and Bone Shards kill Osty in the simulator (card scan reports other cards that kill a creature); summons explain Osty's HP and max HP in the proc check; the stale check counts potions and teammates' plays too.
 - [x] 0.31.24 (found by driving a test fight): a queued card ran itself in its own lead-in; the proc check now takes the tabs from the moment a play is queued (ActionQueueSet.ActionEnqueued), not its last frame in hand.
