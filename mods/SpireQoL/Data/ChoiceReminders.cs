@@ -29,8 +29,26 @@ public enum ChoiceEffect
 /// <param name="OnCardReward">It has a row in the card reward panel.</param>
 /// <param name="Expect">Effects that always make it flash when they happen (the check reports an icon
 /// whose effect happened without the relic reacting). Relics that react without flashing leave it empty.</param>
+/// <param name="ShopIcon">Its icon goes beside shop items it reacts to; false when the shop already shows the effect on the item
+/// (the eggs and Fresnel Lens change the offered card itself).</param>
 public sealed record ReminderRule(string Relic, ChoiceEffect On, ChoiceEffect CrossedOn = ChoiceEffect.None, bool OnCardReward = false,
-    ChoiceEffect Expect = ChoiceEffect.None);
+    ChoiceEffect Expect = ChoiceEffect.None, bool ShopIcon = true)
+{
+    /// <summary>Effects a shop item can have: buying it, and a card or a potion joining you.</summary>
+    public const ChoiceEffect ShopEffects = ChoiceEffect.Purchase | ChoiceEffect.CardToDeck | ChoiceEffect.Potion;
+
+    /// <summary>Where its reminder shows (each place has its own switch).</summary>
+    public bool In(ReminderPlace place) => place switch
+    {
+        ReminderPlace.Reward => OnCardReward,
+        ReminderPlace.Event => (On & ~ChoiceEffect.Purchase) != 0,
+        ReminderPlace.Shop => ShopIcon && (On & ShopEffects) != 0,
+        _ => false,
+    };
+}
+
+/// <summary>Where a Run Reminders icon or row shows outside fights.</summary>
+public enum ReminderPlace { Reward, Event, Shop }
 
 /// <summary>
 /// Out-of-combat reminders (docs/FEATURES.md "Run Reminders"): which relics change what a choice
@@ -52,10 +70,10 @@ public static class ChoiceReminders
         new(nameof(PaelsWing), ChoiceEffect.None, OnCardReward: true),
         // TryModifyCardBeingAddedToDeck: cards joining your deck from an event are upgraded or
         // enchanted when they qualify (rewards and shops already show it on the offered cards).
-        new(nameof(MoltenEgg), ChoiceEffect.CardToDeck),
-        new(nameof(FrozenEgg), ChoiceEffect.CardToDeck),
-        new(nameof(ToxicEgg), ChoiceEffect.CardToDeck),
-        new(nameof(FresnelLens), ChoiceEffect.CardToDeck),
+        new(nameof(MoltenEgg), ChoiceEffect.CardToDeck, ShopIcon: false),
+        new(nameof(FrozenEgg), ChoiceEffect.CardToDeck, ShopIcon: false),
+        new(nameof(ToxicEgg), ChoiceEffect.CardToDeck, ShopIcon: false),
+        new(nameof(FresnelLens), ChoiceEffect.CardToDeck, ShopIcon: false),
         // HP loss outside combat (ModifyHpLostAfterOsty; Beating Remnant only caps in combat).
         new(nameof(TungstenRod), ChoiceEffect.HpLoss, Expect: ChoiceEffect.HpLoss),
         // Gold (ModifyGoldGained, AfterGoldGained).
@@ -77,6 +95,14 @@ public static class ChoiceReminders
     private static readonly Dictionary<string, ReminderRule> ByRelic = Rules.ToDictionary(r => r.Relic);
 
     public static ReminderRule? For(string relic) => ByRelic.GetValueOrDefault(relic);
+
+    /// <summary>The settings key for a relic's reminder at one place ("reminder-shop:MawBank").</summary>
+    public static string Key(ReminderPlace place, string relic) => place switch
+    {
+        ReminderPlace.Reward => "reminder-reward:",
+        ReminderPlace.Event => "reminder-event:",
+        _ => "reminder-shop:",
+    } + relic;
 
     /// <summary>
     /// Game calls ("Type.Method", "Type.Prefix*", constructors as "Type..ctor") and what they mean.

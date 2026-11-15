@@ -411,6 +411,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [x] 0.36.1: checks on what each event option did (deck, gold, HP, potions, relics that always react) and on the card reward panel after a pick.
 - [ ] Play test: event icon placement (left of the option) on every event layout, ancients included; the card reward panel's default spot.
 - [x] Shops (0.40.0): Maw Bank (crossed on items: buying turns off its gold), Bing Bong / Lucky Fysh / Book of Five Rings on shop cards, Membership Card and The Courier are already in the prices.
+- [x] Settings (0.43.0, decision #43): the Relics page has an Outside fights section, with a switch per place (card rewards, events, shops) for each reminder relic.
 - [ ] Card removal (shop, events): no relic reacts today (`BeforeCardRemoved` has no relic); recheck each game update.
 - [ ] Ancient options: relics whose `AfterObtained` adds cards or gold are covered through the relic's code; check what other ancient pickups do in play.
 - [ ] Event options whose effect runs through a delegate the reader doesn't follow (a lambda passed to a card choice): the check reports a relic that reacts without its icon.

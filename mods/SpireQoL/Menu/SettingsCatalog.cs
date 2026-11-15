@@ -13,12 +13,27 @@ public enum SourceGroup { Relic, YourPower, EnemyPower, Card }
 /// <param name="Tracker">What its Relic Counters row shows; null = no tray row.</param>
 /// <param name="TagPrefix">"proc:" (Proc Indicators) or "double-play:" (Card Indicators).</param>
 /// <param name="TrackerDefault">Tray row on by default (turn timers are off).</param>
-/// <param name="Reminder">What its Run Reminders icon or panel row marks outside fights (Data/ChoiceReminders); null = none.</param>
+/// <param name="Reward">Outside fights (Run Reminders, Data/ChoiceReminders): what its row in the card reward panel shows; null = none.</param>
+/// <param name="Event">What its icon beside event options marks; null = none.</param>
+/// <param name="Shop">What its icon beside shop prices marks; null = none.</param>
 public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, string? Tracker = null,
-    string TagPrefix = "proc:", bool TrackerDefault = true, string? Reminder = null)
+    string TagPrefix = "proc:", bool TrackerDefault = true, string? Reward = null, string? Event = null, string? Shop = null)
 {
     public string? TagKey => Tag == null ? null : TagPrefix + Type;
-    public string? ReminderKey => Reminder == null ? null : "reminder:" + Type;
+
+    /// <summary>In fights: an on-card (or potion) tab or a tracker row.</summary>
+    public bool InFights => Tag != null || Tracker != null;
+
+    /// <summary>Outside fights: a Run Reminders icon or row somewhere.</summary>
+    public bool OutsideFights => Reward != null || Event != null || Shop != null;
+
+    /// <summary>What its reminder marks at one place; null = it shows nothing there.</summary>
+    public string? Reminder(SpireQoL.Data.ReminderPlace place) => place switch
+    {
+        SpireQoL.Data.ReminderPlace.Reward => Reward,
+        SpireQoL.Data.ReminderPlace.Event => Event,
+        _ => Shop,
+    };
 }
 
 /// <summary>An on-card tab that isn't tied to one relic or power.</summary>
@@ -128,33 +143,34 @@ public static class SettingsCatalog
         new(nameof(Chandelier), SourceGroup.Relic, null, "Turn timer: energy on turn 3", TrackerDefault: false),
         new(nameof(SparklingRouge), SourceGroup.Relic, null, "Turn timer: Strength and Dexterity on turn 3", TrackerDefault: false),
 
-        // Outside fights (Run Reminders): card reward panel and event options.
-        new(nameof(BingBong), SourceGroup.Relic, null, Reminder: "Card rewards: the card you take is copied. Events: options that add a card (crossed when it adds a curse). Shops: cards"),
-        new(nameof(BookOfFiveRings), SourceGroup.Relic, null, Reminder: "Card rewards: cards toward the next heal. Events: options that add a card. Shops: cards"),
-        new(nameof(LuckyFysh), SourceGroup.Relic, null, Reminder: "Card rewards: the gold a card brings. Events: options that add a card. Shops: cards, with the price after its gold"),
-        new(nameof(PaelsWing), SourceGroup.Relic, null, Reminder: "Card rewards: sacrifices toward the next relic"),
-        new(nameof(DarkstonePeriapt), SourceGroup.Relic, null, Reminder: "Events: options that add a curse (max HP)"),
-        new(nameof(MoltenEgg), SourceGroup.Relic, null, Reminder: "Events: options that add a card (attacks are upgraded)"),
-        new(nameof(FrozenEgg), SourceGroup.Relic, null, Reminder: "Events: options that add a card (powers are upgraded)"),
-        new(nameof(ToxicEgg), SourceGroup.Relic, null, Reminder: "Events: options that add a card (skills are upgraded)"),
-        new(nameof(FresnelLens), SourceGroup.Relic, null, Reminder: "Events: options that add a card (enchanted with Nimble)"),
-        new(nameof(TungstenRod), SourceGroup.Relic, null, Reminder: "Events: options that cost HP (1 less)"),
-        new(nameof(BowlerHat), SourceGroup.Relic, null, Reminder: "Events: options that give gold (more gold)"),
-        new(nameof(DragonFruit), SourceGroup.Relic, null, Reminder: "Events: options that give gold (max HP)"),
-        new(nameof(Ectoplasm), SourceGroup.Relic, null, Reminder: "Crossed. Events: options that give gold (you get none)"),
-        new(nameof(Sozu), SourceGroup.Relic, null, Reminder: "Crossed. Events: options that give a potion (you get none). Shops: potions"),
-        new(nameof(BeltBuckle), SourceGroup.Relic, "Potion tab on your last potion: drinking it gives Dexterity", TagPrefix: "potion:", Reminder: "Crossed. Events: options that give a potion (no Dexterity while you hold it). Shops: potions"),
+        // Outside fights (Run Reminders): the card reward panel, event options and shop prices (a column each).
+        new(nameof(BingBong), SourceGroup.Relic, null, Reward: "The card you take is copied", Event: "Options that add a card (crossed when it adds a curse)", Shop: "Cards (copied)"),
+        new(nameof(BookOfFiveRings), SourceGroup.Relic, null, Reward: "Cards toward the next heal", Event: "Options that add a card", Shop: "Cards (toward the heal)"),
+        new(nameof(LuckyFysh), SourceGroup.Relic, null, Reward: "The gold a card brings", Event: "Options that add a card", Shop: "Cards, with the price after its gold"),
+        new(nameof(PaelsWing), SourceGroup.Relic, null, Reward: "Sacrifices toward the next relic"),
+        new(nameof(DarkstonePeriapt), SourceGroup.Relic, null, Event: "Options that add a curse (max HP)"),
+        new(nameof(MoltenEgg), SourceGroup.Relic, null, Event: "Options that add a card (attacks are upgraded)"),
+        new(nameof(FrozenEgg), SourceGroup.Relic, null, Event: "Options that add a card (powers are upgraded)"),
+        new(nameof(ToxicEgg), SourceGroup.Relic, null, Event: "Options that add a card (skills are upgraded)"),
+        new(nameof(FresnelLens), SourceGroup.Relic, null, Event: "Options that add a card (enchanted with Nimble)"),
+        new(nameof(TungstenRod), SourceGroup.Relic, null, Event: "Options that cost HP (1 less)"),
+        new(nameof(BowlerHat), SourceGroup.Relic, null, Event: "Options that give gold (more gold)"),
+        new(nameof(DragonFruit), SourceGroup.Relic, null, Event: "Options that give gold (max HP)"),
+        new(nameof(Ectoplasm), SourceGroup.Relic, null, Event: "Crossed. Options that give gold (you get none)"),
+        new(nameof(Sozu), SourceGroup.Relic, null, Event: "Crossed. Options that give a potion (you get none)", Shop: "Crossed. Potions (you get none)"),
+        new(nameof(BeltBuckle), SourceGroup.Relic, "Potion tab on your last potion: drinking it gives Dexterity", TagPrefix: "potion:",
+            Event: "Crossed. Options that give a potion (no Dexterity while you hold it)", Shop: "Crossed. Potions (no Dexterity while you hold it)"),
         // Cards that come back to your hand (decision #42): tabs on the play that brings them back, with the card as the icon.
         new("MakeItSo", SourceGroup.Card, "Skills that bring it back to your hand (every 3rd Skill this turn)", "Skills played this turn toward its next return", TagPrefix: "return:"),
         new("RightHandHand", SourceGroup.Card, "Cards costing 2 or more while it's in your discard pile", TagPrefix: "return:"),
         new("WhistlingArrows", SourceGroup.Card, "Cards that shoot an arrow while it's in your discard pile", TagPrefix: "return:"),
         new(nameof(ReptileTrinket), SourceGroup.Relic, "Potion tab on every potion: drinking one gives Strength this turn", TagPrefix: "potion:"),
         new(nameof(WhiteBeastStatue), SourceGroup.Relic, "Potion tab on every potion while your slots are full: a potion reward comes after this fight", TagPrefix: "potion:"),
-        new(nameof(MawBank), SourceGroup.Relic, null, Reminder: "Crossed. Shops: every item (buying anything ends its gold per room)"),
-        new(nameof(RegalPillow), SourceGroup.Relic, null, Reminder: "Events: options that rest (heals more)"),
-        new(nameof(StoneHumidifier), SourceGroup.Relic, null, Reminder: "Events: options that rest (max HP)"),
-        new(nameof(DreamCatcher), SourceGroup.Relic, null, Reminder: "Events: options that rest (a card reward)"),
-        new(nameof(TinyMailbox), SourceGroup.Relic, null, Reminder: "Events: options that rest (potions)"),
+        new(nameof(MawBank), SourceGroup.Relic, null, Shop: "Crossed. Every item (buying anything ends its gold per room)"),
+        new(nameof(RegalPillow), SourceGroup.Relic, null, Event: "Options that rest (heals more)"),
+        new(nameof(StoneHumidifier), SourceGroup.Relic, null, Event: "Options that rest (max HP)"),
+        new(nameof(DreamCatcher), SourceGroup.Relic, null, Event: "Options that rest (a card reward)"),
+        new(nameof(TinyMailbox), SourceGroup.Relic, null, Event: "Options that rest (potions)"),
 
         // ------------------------------------------------------------------ your powers
         new(nameof(EchoFormPower), SourceGroup.YourPower, "Cards it will play twice", TagPrefix: "double-play:"),
@@ -268,6 +284,9 @@ public static class SettingsCatalog
         _knownKeys ??= CardTabs.Select(t => t.Key)
             .Concat(TabGroups.Select(t => t.Key))
             .Concat(Sources.Where(s => s.TagKey != null).Select(s => s.TagKey!))
+            // Run Reminders keep their switches in the same store (one per place); not card tabs, so not under "Other".
+            .Concat(Sources.SelectMany(s => Enum.GetValues<SpireQoL.Data.ReminderPlace>()
+                .Where(p => s.Reminder(p) != null).Select(p => SpireQoL.Data.ChoiceReminders.Key(p, s.Type))))
             .ToHashSet();
         return _knownKeys.Contains(key);
     }

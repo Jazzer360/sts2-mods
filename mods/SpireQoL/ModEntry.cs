@@ -208,6 +208,18 @@ public static class ModEntry
                 foreach (var spec in Data.RelicSpecs.All.Where(s => s.TurnTimer)) settings.Relics.TryAdd(spec.TypeName, true);
             }
         }
+        if (settings.SettingsVersion < 2)
+        {
+            // 0.43.0: a Run Reminders relic has a switch per place (card rewards, events, shops) instead of one.
+            foreach (var (key, on) in settings.Tabs.Where(kv => kv.Key.StartsWith("reminder:")).ToList())
+            {
+                settings.Tabs.Remove(key);
+                if (on) continue;
+                if (key == "reminder:*") { settings.Features["run-reminders"] = false; continue; }
+                foreach (var place in Enum.GetValues<Data.ReminderPlace>())
+                    settings.Tabs[Data.ChoiceReminders.Key(place, key["reminder:".Length..])] = false;
+            }
+        }
         settings.ShowTurnTimers = null;
         settings.SettingsVersion = QolSettings.CurrentSettingsVersion;
     }

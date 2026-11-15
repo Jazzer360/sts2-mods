@@ -245,7 +245,7 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
             foreach (var relic in me.Relics)
             {
                 var name = relic.GetType().Name;
-                if (ChoiceReminders.For(name) is not { OnCardReward: true } || !_ctx.Settings.TabEnabled("reminder:" + name)) continue;
+                if (ChoiceReminders.For(name) is not { OnCardReward: true } || !_ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Reward, name))) continue;
                 if (RewardRow(relic, me, perPick) is not { } state) continue;
                 if (!_rows.TryGetValue(name, out var row))
                 {
@@ -425,12 +425,11 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
         var layout = NEventRoom.Instance?.Layout;
         if (layout == null || !GodotObject.IsInstanceValid(layout)) return;
         var me = RunMe();
-        var on = _ctx.Settings.TabEnabled("reminder:*");
         foreach (var button in layout.OptionButtons)
         {
             if (!GodotObject.IsInstanceValid(button)) continue;
             var icons = new List<(RelicModel Relic, bool Crossed)>();
-            if (on && me != null && button.Option is { IsLocked: false, IsProceed: false } option)
+            if (me != null && button.Option is { IsLocked: false, IsProceed: false } option)
             {
                 var effects = EffectsOf(option);
                 if (effects != ChoiceEffect.None)
@@ -438,7 +437,7 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
                     foreach (var relic in me.Relics)
                     {
                         var name = relic.GetType().Name;
-                        if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0 || !_ctx.Settings.TabEnabled("reminder:" + name)) continue;
+                        if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0 || !_ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, name))) continue;
                         icons.Add((relic, (rule.CrossedOn & effects) != 0));
                     }
                 }
@@ -510,7 +509,6 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
         var inv = NMerchantRoom.Instance?.Inventory;
         if (inv == null || !GodotObject.IsInstanceValid(inv) || !inv.IsOpen) return;
         var me = RunMe();
-        var on = _ctx.Settings.TabEnabled("reminder:*");
         foreach (var slot in inv.GetAllSlots())
         {
             if (!GodotObject.IsInstanceValid(slot)) continue;
@@ -518,7 +516,7 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
             int? net = null;
             MerchantEntry? entry = null;
             try { entry = slot.Entry; } catch { /* not set up yet */ }
-            if (on && me != null && entry is { IsStocked: true })
+            if (me != null && entry is { IsStocked: true })
             {
                 var effects = ChoiceEffect.Purchase | entry switch
                 {
@@ -529,10 +527,9 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
                 foreach (var relic in me.Relics)
                 {
                     var name = relic.GetType().Name;
-                    if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0 || !_ctx.Settings.TabEnabled("reminder:" + name)) continue;
+                    if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0 || !rule.ShopIcon
+                        || !_ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Shop, name))) continue;
                     if (relic is MawBank { IsUsedUp: true }) continue;
-                    // Eggs and Fresnel Lens: the shop's card already shows the upgrade or enchantment.
-                    if (relic is MoltenEgg or FrozenEgg or ToxicEgg or FresnelLens) continue;
                     icons.Add((relic, (rule.CrossedOn & effects) != 0));
                     if (relic is LuckyFysh fysh && (effects & ChoiceEffect.CardToDeck) != 0)
                     {

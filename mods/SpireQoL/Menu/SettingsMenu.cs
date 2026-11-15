@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.Capstones;
 using MegaCrit.Sts2.Core.Nodes.Screens.ModdingScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.PauseMenu;
+using SpireQoL.Data;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -411,14 +412,47 @@ public sealed class SettingsMenu
         var shown = entries
             .Where(e => here == null || here.Contains(e.Type))
             .Select(e => (Entry: e, Name: DisplayName(e.Type)))
-            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Tag, x.Entry.Tracker, x.Entry.Reminder))
+            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Tag, x.Entry.Tracker, x.Entry.Reward, x.Entry.Event, x.Entry.Shop))
             .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
+        if (shown.Count == 0)
+        {
+            _rows!.AddChild(Label(here != null ? "Nothing from this page is in this fight." : "No matches.", 20, Muted));
+            return;
+        }
+
+        // Relics: what they do in fights (tabs, tracker) and outside them (Run Reminders) are different
+        // switches, so each gets its own section with its own columns. A relic can be in both (Belt Buckle).
+        if (group != SourceGroup.Relic)
+        {
+            FightRows(entries, shown, _columnHeader!);
+            return;
+        }
+        var fights = shown.Where(x => x.Entry.InFights).ToList();
+        var outside = shown.Where(x => x.Entry.OutsideFights).ToList();
+        if (fights.Count > 0)
+        {
+            Section("In fights");
+            var head = UiKit.Row(12);
+            head.MouseFilter = Control.MouseFilterEnum.Pass;
+            _rows!.AddChild(head);
+            FightRows(entries.Where(e => e.InFights).ToList(), fights, head);
+        }
+        if (outside.Count > 0)
+        {
+            Section("Outside fights");
+            ReminderRows(outside);
+        }
+    }
+
+    /// <summary>On-card tabs and tracker rows, with their column headers in <paramref name="header"/>.</summary>
+    private void FightRows(List<SourceEntry> entries, List<(SourceEntry Entry, string Name)> shown, HBoxContainer header)
+    {
         var anyTracker = entries.Any(e => e.Tracker != null);
 
         // Column headers with all-on / all-off for what's listed.
-        _columnHeader!.AddChild(new Control { CustomMinimumSize = new Vector2(IconSize + NameWidth + 12, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        header.AddChild(new Control { CustomMinimumSize = new Vector2(IconSize + NameWidth + 12, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
         var tagHead = UiKit.Row(8);
         tagHead.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         tagHead.AddChild(Label("On cards", 20, Accent));
@@ -429,7 +463,7 @@ public sealed class SettingsMenu
         var groupKeys = shown.Where(x => x.Entry.TagKey != null).Select(x => x.Entry.TagPrefix + "*").Distinct();
         var groupOff = groupKeys.Where(k => !S.TabOwn(k)).ToList();
         if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off on the Card tabs page)", 16, Colors.OrangeRed));
-        _columnHeader.AddChild(tagHead);
+        header.AddChild(tagHead);
         if (anyTracker)
         {
             var trackHead = UiKit.Row(8);
@@ -439,36 +473,14 @@ public sealed class SettingsMenu
             {
                 foreach (var (e, _) in shown) if (e.Tracker != null) S.Relics[e.Type] = on;
             });
-            _columnHeader.AddChild(trackHead);
-        }
-
-        if (shown.Count == 0)
-        {
-            _rows!.AddChild(Label(here != null ? "Nothing from this page is in this fight." : "No matches.", 20, Muted));
-            return;
+            header.AddChild(trackHead);
         }
 
         foreach (var (e, name) in shown)
         {
-            var row = RowBox();
             // The icon as the tab shows it: crossed tabs get the same red slash as on cards.
             var crossed = e.Tag?.StartsWith(SettingsCatalog.CrossedPrefix) == true;
-            var icon = UiKit.Icon(Icon(e.Type), IconSize);
-            icon.MouseFilter = Control.MouseFilterEnum.Pass;
-            icon.TooltipText = GameDescription(e.Type);
-            if (crossed) AddSlash(icon);
-            row.AddChild(icon);
-            // A card: the game's tiny card as its icon (decision #42).
-            if (Model(e.Type) is CardModel card)
-            {
-                var tiny = new Cards.TinyCardIcon(card, IconSize);
-                icon.AddChild(tiny.Root);
-                _tinyIcons.Add(tiny);
-            }
-            var nameLabel = Label(name, 20, Text, NameWidth);
-            nameLabel.MouseFilter = Control.MouseFilterEnum.Pass;
-            nameLabel.TooltipText = GameDescription(e.Type);
-            row.AddChild(nameLabel);
+            var row = SourceRow(e, name, crossed);
 
             var tagCell = UiKit.Row(10);
             tagCell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -478,13 +490,7 @@ public sealed class SettingsMenu
                 var (_, c) = Check(S.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
                 tagCell.AddChild(c);
             }
-            if (e.ReminderKey is { } rkey)
-            {
-                // Outside fights (Run Reminders): same switch store as the tabs ("reminder:<Type>").
-                var (_, c) = Check(S.TabOwn(rkey), on => SetTab(rkey, on), e.Reminder!, null, expand: true);
-                tagCell.AddChild(c);
-            }
-            if (e.TagKey == null && e.ReminderKey == null)
+            else
             {
                 tagCell.AddChild(Label("no card tab", 17, Muted));
             }
@@ -503,6 +509,82 @@ public sealed class SettingsMenu
             }
             AddRow(row);
         }
+    }
+
+    private static readonly (ReminderPlace Place, string Title)[] ReminderColumns =
+    {
+        (ReminderPlace.Reward, "Card rewards"),
+        (ReminderPlace.Event, "Events"),
+        (ReminderPlace.Shop, "Shops"),
+    };
+
+    /// <summary>Run Reminders: a column per place they show (card reward panel, event options, shop prices), each its own switch.</summary>
+    private void ReminderRows(List<(SourceEntry Entry, string Name)> shown)
+    {
+        if (!FeatureOn("run-reminders"))
+            _rows!.AddChild(Label("Run Reminders is off (General page): none of these show.", 16, Colors.OrangeRed));
+        var head = UiKit.Row(12);
+        head.MouseFilter = Control.MouseFilterEnum.Pass;
+        head.AddChild(new Control { CustomMinimumSize = new Vector2(IconSize + NameWidth + 12, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        foreach (var (place, title) in ReminderColumns)
+        {
+            var cell = UiKit.Row(8);
+            cell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            cell.SizeFlagsStretchRatio = 1;
+            cell.AddChild(Label(title, 20, Accent));
+            AllButtons(cell, on =>
+            {
+                foreach (var (e, _) in shown)
+                    if (e.Reminder(place) != null) S.Tabs[ChoiceReminders.Key(place, e.Type)] = on;
+            });
+            head.AddChild(cell);
+        }
+        _rows!.AddChild(head);
+
+        foreach (var (e, name) in shown)
+        {
+            var row = SourceRow(e, name, crossed: false);
+            foreach (var (place, _) in ReminderColumns)
+            {
+                var cell = UiKit.Row(10);
+                cell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                cell.SizeFlagsStretchRatio = 1;
+                if (e.Reminder(place) is { } text)
+                {
+                    var key = ChoiceReminders.Key(place, e.Type);
+                    var (_, c) = Check(S.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
+                    cell.AddChild(c);
+                }
+                else
+                {
+                    cell.AddChild(Label("—", 17, Muted));
+                }
+                row.AddChild(cell);
+            }
+            AddRow(row);
+        }
+    }
+
+    /// <summary>A row with the source's icon (a tiny card for cards, decision #42) and name.</summary>
+    private HBoxContainer SourceRow(SourceEntry e, string name, bool crossed)
+    {
+        var row = RowBox();
+        var icon = UiKit.Icon(Icon(e.Type), IconSize);
+        icon.MouseFilter = Control.MouseFilterEnum.Pass;
+        icon.TooltipText = GameDescription(e.Type);
+        if (crossed) AddSlash(icon);
+        row.AddChild(icon);
+        if (Model(e.Type) is CardModel card)
+        {
+            var tiny = new Cards.TinyCardIcon(card, IconSize);
+            icon.AddChild(tiny.Root);
+            _tinyIcons.Add(tiny);
+        }
+        var nameLabel = Label(name, 20, Text, NameWidth);
+        nameLabel.MouseFilter = Control.MouseFilterEnum.Pass;
+        nameLabel.TooltipText = GameDescription(e.Type);
+        row.AddChild(nameLabel);
+        return row;
     }
 
     // ------------------------------------------------------------------ changes

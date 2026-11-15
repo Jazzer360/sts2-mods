@@ -26,7 +26,7 @@ public sealed class QolSettings
     /// <summary>Bumped when default widget positions change; older saved positions get reset.</summary>
     public int LayoutVersion { get; set; }
 
-    public const int CurrentSettingsVersion = 1;
+    public const int CurrentSettingsVersion = 2;
 
     /// <summary>Bumped when a setting's meaning changes; older files are migrated once (ModEntry.Migrate).</summary>
     public int SettingsVersion { get; set; }

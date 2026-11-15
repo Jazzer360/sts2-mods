@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.43.0
+#### Changed
+- Settings: the Relics page has two sections. In fights keeps the On cards and Tracker columns. Outside fights lists the Run Reminders relics with a column per place they show (Card rewards, Events, Shops), each with its own switch and All on / All off. A note says when Run Reminders is off on the General page. Relics you switched off before stay off everywhere.
+#### Fixed
+- Settings: Run Reminders switches no longer show up under Other on the Card tabs page.
+
 ### Spire QoL 0.42.3
 #### Fixed
 - Repeat Shot at X 0 shoots no arrow, so it no longer gets the Whistling Arrows return tab, a kill or arrow-dislodge count from the shot, or Covering Fire's teammate block. Every arrow rule now asks the same question: does this play really shoot?

@@ -54,9 +54,19 @@ internal static class CatalogCheck
 
         // Run reminders: every rule has a settings row, every row a rule.
         var reminderRules = ChoiceReminders.Rules.Select(r => r.Relic).ToHashSet();
-        var reminderRows = sources.Where(s => s.Reminder != null).Select(s => s.Type).ToHashSet();
+        var reminderRows = sources.Where(s => s.OutsideFights).Select(s => s.Type).ToHashSet();
         foreach (var n in reminderRules.Except(reminderRows).OrderBy(n => n)) problems.Add($"reminder rule without a settings row: {n}");
         foreach (var n in reminderRows.Except(reminderRules).OrderBy(n => n)) problems.Add($"settings row (reminder) without a rule: {n}");
+        // Each place (card rewards, events, shops) has its text exactly where the rule shows there.
+        foreach (var r in ChoiceReminders.Rules)
+        {
+            if (sources.FirstOrDefault(s => s.Type == r.Relic && s.OutsideFights) is not { } row) continue;
+            foreach (var place in Enum.GetValues<ReminderPlace>())
+            {
+                if (r.In(place) && row.Reminder(place) == null) problems.Add($"reminder shown at {place} without a settings switch there: {r.Relic}");
+                if (!r.In(place) && row.Reminder(place) != null) problems.Add($"settings switch at {place} where the reminder never shows: {r.Relic}");
+            }
+        }
 
         // Features: each one registered has an on/off switch in the menu, and each switch a feature.
         var registered = ModEntry.Features.States.Keys.ToHashSet();
