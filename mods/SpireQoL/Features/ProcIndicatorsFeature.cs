@@ -944,6 +944,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                     case nameof(SelfFormingClay) when f.HpLoss > 0: return Hit.Trig();
                     case nameof(DemonTongue) when f.HpLoss > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true): return Hit.Trig();
                     case nameof(EmotionChip) when f.HpLoss > 0: return Hit.Trig();
+                    // Tungsten Rod (ModifyHpLostAfterOsty): 1 less HP lost; it flashes whenever that changes the loss.
+                    case nameof(TungstenRod) when f.HpLoss > 0: return Hit.Trig();
                     case nameof(RedSkull) when f.HpLoss > 0:
                     {
                         var c = _me.Creature;

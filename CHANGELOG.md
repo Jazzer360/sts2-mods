@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 0.44.0
+#### Added
+- Tungsten Rod: a tab on cards that cost you HP (it takes 1 off), like Self-Forming Clay and Emotion Chip. It now also has a row in the settings menu's In fights section.
+
 ### Spire QoL 0.43.1
 #### Fixed
 - Tiny card icons (Make It So, Right Hand Hand, Whistling Arrows in the tracker, on tabs and in the settings menu) are centred on the card's art; they sat a little high.

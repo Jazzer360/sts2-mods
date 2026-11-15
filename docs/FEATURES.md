@@ -280,7 +280,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 - Breaking block: Hand Drill (Vulnerable), when the simulator says the play breaks some enemy's block in every branch for some aim (its hits, orbs, procs, Juggernaut).
 - Parrying Shield (end of turn: 6 damage to a random enemy when your block is at least 10), from the [outcome simulator](#outcome-simulator) before and after the play: plain when the play makes it fire in every branch and it wouldn't for sure now; crossed when it would for sure now and the play can stop it (Orichalcum no longer arming, less block after a Burn, Thorns). With Gorget's Plating 4 and Orichalcum 6 on turn one, one Defend crosses it and a second makes it plain again. It fires after the play, so the proc check doesn't expect it during the play (it never flashes); the forecast check covers its damage.
 
-**Losing HP from the card** (Bloodletting-style): Centennial Puzzle (first time each combat), Self-Forming Clay, Demon Tongue (first time each turn), Emotion Chip, Red Skull (when it takes you to its threshold), plus Rupture and Inferno (damage to every enemy).
+**Losing HP from the card** (Bloodletting-style): Centennial Puzzle (first time each combat), Self-Forming Clay, Demon Tongue (first time each turn), Emotion Chip, Tungsten Rod (1 less), Red Skull (when it takes you to its threshold), plus Rupture and Inferno (damage to every enemy).
 
 **Sovereign Blade:** the powers buffing it show as tabs on the Blade: Seeking Edge (hits all enemies), Parry (gains block), Sword Sage (replays), Conqueror on an enemy (more Blade damage to it).
 

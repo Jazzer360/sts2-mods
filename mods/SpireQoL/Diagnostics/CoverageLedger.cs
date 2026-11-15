@@ -113,7 +113,7 @@ internal static partial class CoverageLedger
         ["TheBoot"] = "covered: ModifyHpLostAfterOstyLate raises your attack hits below its minimum to it (simulator BootMinimum, after Hardened Shell and Slippery)",
         ["Tingsha"] = "covered: AfterCardDiscarded damages a random enemy on your turn (proc damage)",
         ["ToughBandages"] = "covered: AfterCardDiscarded block on your turn (proc block)",
-        ["TungstenRod"] = "covered: ModifyHpLostAfterOsty reduces HP lost (simulator)",
+        ["TungstenRod"] = "covered: ModifyHpLostAfterOsty reduces HP lost (simulator; proc tab on cards that cost you HP, where it flashes)",
         ["TuningFork"] = "covered: AfterCardPlayed block every N skills (proc block, tracker)",
         ["UnceasingTop"] = "covered: AfterHandEmptied draws (proc tab)",
         ["UnsettlingLamp"] = "covered: proc tab on the card that arms it (temporary debuffs too); ModifyPowerAmountGivenMultiplicative doubles that card's first play's debuffs: the adapter doubles its Strength loss and poison (random poison, Bouncing Flask, isn't doubled)",

@@ -153,7 +153,7 @@ public static class SettingsCatalog
         new(nameof(FrozenEgg), SourceGroup.Relic, null, Event: "Options that add a card (powers are upgraded)"),
         new(nameof(ToxicEgg), SourceGroup.Relic, null, Event: "Options that add a card (skills are upgraded)"),
         new(nameof(FresnelLens), SourceGroup.Relic, null, Event: "Options that add a card (enchanted with Nimble)"),
-        new(nameof(TungstenRod), SourceGroup.Relic, null, Event: "Options that cost HP (1 less)"),
+        new(nameof(TungstenRod), SourceGroup.Relic, "Cards that cost you HP: 1 less", Event: "Options that cost HP (1 less)"),
         new(nameof(BowlerHat), SourceGroup.Relic, null, Event: "Options that give gold (more gold)"),
         new(nameof(DragonFruit), SourceGroup.Relic, null, Event: "Options that give gold (max HP)"),
         new(nameof(Ectoplasm), SourceGroup.Relic, null, Event: "Crossed. Options that give gold (you get none)"),

@@ -117,7 +117,6 @@ internal static class RelicTracking
         ["Orichalcum"] = "none: end-of-turn block (Incoming Damage)",
         ["FakeOrichalcum"] = "none: end-of-turn block (Incoming Damage)",
         ["ScreamingFlagon"] = "none: end-of-turn damage with an empty hand (Incoming Damage)",
-        ["TungstenRod"] = "none: HP loss reduced (Incoming Damage)",
         ["BeatingRemnant"] = "none: HP loss capped per turn (Incoming Damage)",
         ["TheBoot"] = "none: your attack hits below its minimum lose the enemy its minimum (the simulator counts it: lethal, wake)",
         ["LunarPastry"] = "none: its end-of-turn stars set off Black Hole, which the simulator counts (lethal, Death Skull, Incoming Damage)",
