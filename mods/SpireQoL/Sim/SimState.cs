@@ -127,6 +127,9 @@ public sealed class SimEnemy
     public bool Exploded;
 
     /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
+    /// <summary>Its powers the simulator reads or changes (docs/SIMULATOR_V2.md), in the order they were applied.</summary>
+    public PowerSet Powers = PowerSet.Empty;
+
     public bool BlockBroken;
     /// <summary>Stunned by something during your turn (not at the start).</summary>
     public bool StunnedThisTurn;
@@ -162,6 +165,11 @@ public sealed class SimEnemy
 public sealed class SimPlayer
 {
     public int Block;
+
+    /// <summary>Their powers the simulator reads or changes, in the order they were applied (docs/SIMULATOR_V2.md).</summary>
+    public PowerSet Powers = PowerSet.Empty;
+    /// <summary>Their relics the simulator models, in relic order, with each one's counter (Amount) and flag (Data).</summary>
+    public PowerSet Relics = PowerSet.Empty;
 
     // Powers that react or act at end of turn.
     public int Juggernaut;
@@ -381,6 +389,12 @@ public sealed class SimState
     /// Puzzle, Demon Tongue, Inferno, Rupture), and the HP lost (Red Skull). Not in the branch key: merged as the smallest.
     /// </summary>
     public int PlayHpReached, PlayHpLosses, PlayHpLost;
+    /// <summary>
+    /// What fired during the play (the play log, docs/SIMULATOR_V2.md): source name → times (Amount) and the damage or block it
+    /// caused (Data). Fired is the smallest over branches merged into this one (it happens in every one of them); FiredAny
+    /// the largest (in some). Not in the branch key.
+    /// </summary>
+    public PowerSet Fired = PowerSet.Empty, FiredAny = PowerSet.Empty;
     /// <summary>Mighty Wings triggers this simulation (your powered hits of BigHitThreshold or more), and the play's threshold.</summary>
     public int BigHits, BigHitThreshold;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
@@ -507,12 +521,37 @@ public sealed class SimState
         return shown;
     }
 
-    /// <summary>An identical branch merged into this one: the play's HP-loss counts keep the smallest (the guarantee).</summary>
-    public void MergePlayHp(SimState r)
+    /// <summary>An identical branch merged into this one: per-play results keep the guarantee (smallest) and the possibility (largest).</summary>
+    public void MergeResults(SimState r)
     {
         PlayHpReached = Math.Min(PlayHpReached, r.PlayHpReached);
         PlayHpLosses = Math.Min(PlayHpLosses, r.PlayHpLosses);
         PlayHpLost = Math.Min(PlayHpLost, r.PlayHpLost);
+        PlayBiggestHit = Math.Min(PlayBiggestHit, r.PlayBiggestHit);
+        Fired = MergeLog(Fired, r.Fired, every: true);
+        FiredAny = MergeLog(FiredAny, r.FiredAny, every: false);
+    }
+
+    /// <summary>Two play logs as one: every (the smaller of each, gone when either lacks it) or any (the larger).</summary>
+    private static PowerSet MergeLog(PowerSet a, PowerSet b, bool every)
+    {
+        if (ReferenceEquals(a, b)) return a;
+        var r = every ? PowerSet.Empty : a;
+        if (every)
+        {
+            foreach (var e in a.Items)
+                if (b.Has(e.Name)) r = r.With(e.Name, Math.Min(e.Amount, b[e.Name]), Math.Min(e.Data, b.DataOf(e.Name)));
+            return r;
+        }
+        foreach (var e in b.Items) r = r.With(e.Name, Math.Max(e.Amount, a[e.Name]), Math.Max(e.Data, a.DataOf(e.Name)));
+        return r;
+    }
+
+    /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
+    public void LogFired(string source, int amount = 0)
+    {
+        Fired = Fired.With(source, Fired[source] + 1, Fired.DataOf(source) + amount);
+        FiredAny = FiredAny.With(source, FiredAny[source] + 1, FiredAny.DataOf(source) + amount);
     }
 
     public SimState Clone()
@@ -561,6 +600,7 @@ public sealed class SimState
             Add(e.PoisonStacks); Add(e.CurlUp); Add(e.Skittish); Add(e.HitByCard ? 1 : 0); Add(e.ThroughByCard ? 1 : 0);
             Add(e.Stunned ? 1 : 0); Add(e.Burrowed ? 1 : 0); Add(e.Asleep ? 1 : 0); Add(e.Slumber); Add(e.Flutter); Add(e.StunAtHp); Add(e.Gambit ? 1 : 0); Add(e.Slippery);
             Add(e.ReactedWithBlock ? 1 : 0); Add(e.BlockBroken ? 1 : 0);
+            e.Powers.Hash(Add);
             Add(e.HitsAfterAllyDies == null ? 0 : 1); Add(e.Hits.Count); foreach (var hit in e.Hits) Add(hit); Add(e.GambitTriggered ? 1 : 0); Add(e.SlipperyTriggered ? 1 : 0);
         }
         if (P.AutoHand != null)
@@ -570,6 +610,7 @@ public sealed class SimState
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed);
         foreach (var e in Enemies) { Add(e.Exploded ? 1 : 0); Add(e.GazeTaken); }
+        P.Powers.Hash(Add); P.Relics.Hash(Add);
         Add(P.Orbs.Count);
         foreach (var o in P.Orbs)
         {

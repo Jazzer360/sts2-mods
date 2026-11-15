@@ -8,9 +8,8 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\mods\SpireQoL\Sim\SimState.cs" Link="Sim\SimState.cs" />
-    <Compile Include="..\..\mods\SpireQoL\Sim\SimEngine.cs" Link="Sim\SimEngine.cs" />
-    <Compile Include="..\..\mods\SpireQoL\Sim\PlayChain.cs" Link="Sim\PlayChain.cs" />
+    <!-- Every pure simulator file (no game types); the game-facing adapter (SimAdapter.cs, Adapter/) is left out. -->
+    <Compile Include="..\..\mods\SpireQoL\Sim\**\*.cs" Exclude="..\..\mods\SpireQoL\Sim\SimAdapter.cs;..\..\mods\SpireQoL\Sim\Adapter\**\*.cs" LinkBase="Sim" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Cases/*.json" CopyToOutputDirectory="PreserveNewest" />

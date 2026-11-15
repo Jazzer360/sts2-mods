@@ -1,0 +1,132 @@
+namespace SpireQoL.Sim;
+
+/// <summary>
+/// The terms of the damage or block math that the simulator doesn't model (docs/SIMULATOR_V2.md "Pipelines"): every other
+/// source's term, read from the game for one card and target (fixed for the turn), plus the card's enchantment's. Applied
+/// in the game's order with the modelled sources' terms (Hook.ModifyDamage, Hook.ModifyBlock).
+/// </summary>
+public sealed record CapturedTerms
+{
+    public static readonly CapturedTerms None = new();
+
+    /// <summary>The card's enchantment (applied to the base first: EnchantDamageAdditive, then EnchantDamageMultiplicative).</summary>
+    public decimal EnchantAdd { get; init; }
+    public decimal EnchantMul { get; init; } = 1m;
+    /// <summary>Unmodelled sources: the sum of their additive terms, the products of their multipliers, the smallest cap.</summary>
+    public decimal Add { get; init; }
+    public decimal Mul { get; init; } = 1m;
+    public decimal Late { get; init; } = 1m;
+    public decimal Cap { get; init; } = decimal.MaxValue;
+}
+
+public static partial class SimEngine
+{
+    /// <summary>
+    /// The models listening for hooks, in the game's order (CombatState.IterateHookListeners): each player in player order
+    /// (their powers, then their relics), then each enemy (its powers). Only modelled names; with each one's owner.
+    /// </summary>
+    internal static List<(SimModel Model, int Owner)> Listeners(SimState s)
+    {
+        var list = new List<(SimModel, int)>();
+        void Add(PowerSet set, int owner)
+        {
+            foreach (var e in set.Items)
+                if (SimModels.Get(e.Name) is { } m) list.Add((m, owner));
+        }
+        var before = Math.Min(s.TeammatesBeforeMe, s.Teammates.Count);
+        void Player(int k)
+        {
+            var p = k < 0 ? s.P : s.Teammates[k];
+            var id = k < 0 ? Who.You : Who.Teammate(k);
+            Add(p.Powers, id);
+            Add(p.Relics, id);
+        }
+        for (var k = 0; k < before; k++) Player(k);
+        Player(-1);
+        for (var k = before; k < s.Teammates.Count; k++) Player(k);
+        foreach (var e in s.Enemies) Add(e.Powers, e.Id);
+        return list;
+    }
+
+    /// <summary>
+    /// Runs a hook on every listener, in order, on each branch (a listener's random effect branches; identical results
+    /// merge). The listeners are the ones present when the hook starts (the game builds the list first).
+    /// </summary>
+    internal static IEnumerable<SimState> Hook(SimState s, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
+    {
+        IEnumerable<SimState> states = new[] { s };
+        foreach (var (m, owner) in Listeners(s))
+        {
+            var model = m;
+            var o = owner;
+            states = Then(states, x => call(model, o, x));
+        }
+        return states;
+    }
+
+    // ------------------------------------------------------------------ pipelines
+
+    /// <summary>
+    /// Hook.ModifyDamage for one hit: the base, the enchantment, every listener's additive term, then multipliers, late
+    /// multipliers and the smallest cap, with the captured terms of unmodelled sources in their places; the game's int cast.
+    /// </summary>
+    public static int CalcDamage(SimState s, decimal baseDamage, DamageCtx d, CapturedTerms? captured = null)
+    {
+        var c = captured ?? CapturedTerms.None;
+        var num = baseDamage;
+        num += c.EnchantAdd;
+        num *= c.EnchantMul;
+        var listeners = Listeners(s);
+        foreach (var (m, o) in listeners) num += m.ModifyDamageAdditive(s, o, d);
+        num += c.Add;
+        foreach (var (m, o) in listeners) num *= m.ModifyDamageMultiplicative(s, o, d);
+        num *= c.Mul;
+        foreach (var (m, o) in listeners) num *= m.ModifyDamageMultiplicativeLate(s, o, d);
+        num *= c.Late;
+        var cap = c.Cap;
+        foreach (var (m, o) in listeners) cap = Math.Min(cap, m.ModifyDamageCap(s, o, d));
+        num = Math.Min(num, cap);
+        return Math.Max(0, (int)num);
+    }
+
+    /// <summary>Hook.ModifyBlock: the base, the enchantment, additive terms, then multipliers; the game's int cast.</summary>
+    public static int CalcBlock(SimState s, decimal baseBlock, BlockCtx b, CapturedTerms? captured = null)
+    {
+        var c = captured ?? CapturedTerms.None;
+        var num = baseBlock;
+        num += c.EnchantAdd;
+        num *= c.EnchantMul;
+        var listeners = Listeners(s);
+        foreach (var (m, o) in listeners) num += m.ModifyBlockAdditive(s, o, b);
+        num += c.Add;
+        foreach (var (m, o) in listeners) num *= m.ModifyBlockMultiplicative(s, o, b);
+        num *= c.Mul;
+        return Math.Max(0, (int)Math.Max(0m, num));
+    }
+
+    // ------------------------------------------------------------------ creature access
+
+    /// <summary>A creature's powers by id (enemy id, You, Teammate(k)).</summary>
+    public static PowerSet PowersOf(SimState s, int id) => id >= 0
+        ? s.Enemy(id)?.Powers ?? PowerSet.Empty
+        : id == Who.You ? s.P.Powers : s.Teammates[Who.TeammateIndex(id)].Powers;
+
+    /// <summary>Sets a creature's powers (a teammate shared between branches is copied first).</summary>
+    public static void SetPowers(SimState s, int id, PowerSet powers)
+    {
+        if (id >= 0) { if (s.Enemy(id) is { } e) e.Powers = powers; }
+        else if (id == Who.You) s.P.Powers = powers;
+        else s.MutableTeammate(Who.TeammateIndex(id)).Powers = powers;
+    }
+
+    /// <summary>A player's relic counters by id.</summary>
+    public static PowerSet RelicsOf(SimState s, int id) => id == Who.You ? s.P.Relics : id <= -2 ? s.Teammates[Who.TeammateIndex(id)].Relics : PowerSet.Empty;
+
+    public static void SetRelics(SimState s, int id, PowerSet relics)
+    {
+        if (id == Who.You) s.P.Relics = relics;
+        else if (id <= -2) s.MutableTeammate(Who.TeammateIndex(id)).Relics = relics;
+    }
+
+    public static int PowerOn(SimState s, int id, string power) => PowersOf(s, id)[power];
+}

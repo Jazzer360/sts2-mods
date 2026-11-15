@@ -276,7 +276,7 @@ public sealed class SimOutcome
 ///     your Thorns before it, your block, Osty, HP-loss effects, then Flame Barrier and Reflect.
 /// Every block gain sets off Juggernaut on a random enemy.
 /// </summary>
-public static class SimEngine
+public static partial class SimEngine
 {
     /// <summary>OrbQueue.maxCapacity: OrbCmd.AddSlots stops here.</summary>
     public const int MaxOrbSlots = 10;
@@ -319,6 +319,7 @@ public static class SimEngine
                 foreach (var e in s.Enemies) e.ReactedWithBlock = false;
                 s.PlayBiggestHit = 0;
                 s.PlayHpReached = s.PlayHpLosses = s.PlayHpLost = 0;
+                s.Fired = s.FiredAny = PowerSet.Empty;
             });
         }
         if (play != null) ApplyPlay(b, play);
@@ -401,8 +402,7 @@ public static class SimEngine
                 if (seen.TryGetValue(key, out var same))
                 {
                     same.Weight += r.Weight;
-                    same.PlayBiggestHit = Math.Min(same.PlayBiggestHit, r.PlayBiggestHit); // not in the key: the guarantee is the smallest
-                    same.MergePlayHp(r);
+                    same.MergeResults(r); // not in the key: the guarantee is the smallest
                     same.OutOfBranches |= r.OutOfBranches;
                     continue;
                 }
@@ -449,7 +449,7 @@ public static class SimEngine
                 {
                     // An identical branch: one state, with both shares of the rolls.
                     var key = r.Key();
-                    if (seen.TryGetValue(key, out var same)) { same.Weight += r.Weight; same.PlayBiggestHit = Math.Min(same.PlayBiggestHit, r.PlayBiggestHit); same.MergePlayHp(r); }
+                    if (seen.TryGetValue(key, out var same)) { same.Weight += r.Weight; same.MergeResults(r); }
                     else
                     {
                         seen[key] = r;
@@ -911,13 +911,38 @@ public static class SimEngine
         truncated = b.Truncated;
     }
 
-    private static void ApplyPlay(BranchSet b, SimPlay p)
+    private static void ApplyPlay(BranchSet b, SimPlay p) => RunScript(b, SimScript.Of(p));
+
+    /// <summary>Runs a script's actions in order on the branch set.</summary>
+    private static void RunScript(BranchSet b, SimScript script)
     {
+        foreach (var a in script.Actions) Run(b, a);
+    }
+
+    private static void Run(BranchSet b, SimAction a)
+    {
+        switch (a)
+        {
+            case LegacyPart lp: RunLegacy(b, lp.Play, lp.Part); break;
+            default: throw new NotSupportedException($"No runner for {a.GetType().Name}");
+        }
+    }
+
+    /// <summary>One part of a play given as a SimPlay summary (SimScript.Of): the play's precomputed numbers, in order.</summary>
+    private static void RunLegacy(BranchSet b, SimPlay p, LegacyPart.Kind part)
+    {
+        switch (part)
+        {
+        case LegacyPart.Kind.Setup:
         b.Do(s => s.BigHitThreshold = p.BigHitThreshold);
+        return;
+        case LegacyPart.Kind.HpCost:
         // The card's own HP cost, before its hits.
         if (p.HpCost > 0 && p.HpCostTimes > 0)
             b.Do(s => { for (var i = 0; i < p.HpCostTimes; i++) LandUnblockable(s, p.Name, p.HpCost); });
 
+        return;
+        case LegacyPart.Kind.Hits:
         // The card's hits.
         int Hit(SimEnemy e) => p.HitDamage.TryGetValue(e.Id, out var d) ? d : 0;
         // The i-th hit (0-based) on an enemy: weaker from HitDamageLater's point on.
@@ -966,6 +991,8 @@ public static class SimEngine
                 break;
         }
 
+        return;
+        case LegacyPart.Kind.AfterHits:
         // Necro Mastery: Osty's death (Bone Shards, Sacrifice) hits every enemy.
         if (p.AllEnemiesUnblockable > 0)
             b.Do(s => { foreach (var e in s.Targetable.ToList()) Damage(e, p.AllEnemiesUnblockable, unblockable: true); });
@@ -978,6 +1005,8 @@ public static class SimEngine
         if (p.ExecuteAtOrBelow > 0)
             b.Do(s => { if (s.Enemy(p.TargetId) is { Alive: true } e && e.Hp <= p.ExecuteAtOrBelow) e.Hp = 0; });
 
+        return;
+        case LegacyPart.Kind.Orbs:
         // Orbs it evokes and channels (channelling into full slots evokes the front orb first).
         foreach (var op in p.OrbOps)
         {
@@ -1065,6 +1094,8 @@ public static class SimEngine
             }
         }
 
+        return;
+        case LegacyPart.Kind.Block:
         // Its own block: each gain sets off Juggernaut (the targeted teammate's, when it goes to them).
         // No teammate targeted (none alive): the block goes to no one, never to you.
         var blockTo = p.BlockToAlly ? p.AllyTarget : -1;
@@ -1081,11 +1112,15 @@ public static class SimEngine
             var amount = i > 0 && p.EnchantmentBlockLater is { } later ? later : p.EnchantmentBlock.Amount;
             b.Each(s => GainBlock(s, amount, null));
         }
+        return;
+        case LegacyPart.Kind.AfterBlock:
         if (p.KillsOsty) b.Do(s => s.P.OstyHp = 0);
 
         // Damage to you after it resolves (Galvanic): your block takes it first.
         if (p.DamageToYou.Count > 0) b.Do(s => { foreach (var (n, a) in p.DamageToYou) LandBlockable(s, n, a); });
 
+        return;
+        case LegacyPart.Kind.Resolve:
         // Powers it gives, and poison.
         b.Do(s =>
         {
@@ -1168,9 +1203,13 @@ public static class SimEngine
             }
         });
 
+        return;
+        case LegacyPart.Kind.RandomPoison:
         // Poison on random enemies (one branch per target each time).
         for (var i = 0; i < p.RandomPoisonTimes && p.RandomPoison > 0; i++) b.Each(s => PoisonRandom(s, p.RandomPoison));
 
+        return;
+        case LegacyPart.Kind.Procs:
         // Procs it sets off.
         foreach (var proc in p.Procs)
         {
@@ -1207,7 +1246,11 @@ public static class SimEngine
             }
         }
 
+        return;
+        case LegacyPart.Kind.Deaths:
         b.Do(AllyDeaths); // deaths from its procs
+        return;
+        }
     }
 
     // ------------------------------------------------------------------ end of turn

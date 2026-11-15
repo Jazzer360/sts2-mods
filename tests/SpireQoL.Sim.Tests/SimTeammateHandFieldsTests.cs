@@ -48,6 +48,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.Fairies), nameof(SimPlayer.FairyHeal), nameof(SimPlayer.LizardTailHeal), // their potions and relics are on screen
         nameof(SimPlayer.Taken), nameof(SimPlayer.Through), nameof(SimPlayer.OstyTaken), nameof(SimPlayer.Incoming),
         nameof(SimPlayer.BlockGained), nameof(SimPlayer.BeaconOfHope), nameof(SimPlayer.BeaconGiving),
+        nameof(SimPlayer.Powers), nameof(SimPlayer.Relics), // their powers and relics are on screen
         "_orbsShared",
     };
 
@@ -95,6 +96,7 @@ public class SimTeammateHandFieldsTests
         else if (t == typeof(List<(string, int)>)) f.SetValue(p, new List<(string, int)> { ("X", 3) });
         else if (t == typeof(List<SimHandCard>)) f.SetValue(p, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
         else if (t == typeof(List<SimPlay>)) f.SetValue(p, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
+        else if (t == typeof(PowerSet)) f.SetValue(p, PowerSet.Empty.With("StrengthPower", 2));
         else if (t == typeof(List<SimOrb>)) f.SetValue(p, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
         else Assert.Fail($"SimPlayer.{f.Name}: type {t.Name} isn't handled by this test's Fill: add it");
     }
