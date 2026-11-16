@@ -1033,6 +1033,9 @@ public static partial class SimEngine
             }
         });
 
+        // Deaths at the end of your turn run their hooks before the enemies act (arrows coming back: Twine's block).
+        b.Do(AllyDeaths);
+        if (b.States.Any(s => s.Pending.Count > 0)) b.Each(DrainPending);
         b.Do(s =>
         {
             s.EndOfTurnNow = false;

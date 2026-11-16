@@ -37,7 +37,13 @@ public static class SimReaders
                     amount = SpireQoL.Procs.Fool.ArrowsIn(pw);
                     data = SpireQoL.Procs.Fool.HitCounter(pw);
                     break;
-                case "ImpaledPower": name = "ImpaledPowerOther"; amount = 1; break;
+                // A teammate's arrows in it: 4 bits of Data per teammate (index from their id); amount: arrows in all (it stays Impaled).
+                case "ImpaledPower":
+                    name = "ImpaledPowerOther";
+                    amount = SpireQoL.Procs.Fool.ArrowsIn(pw);
+                    data = pw.Applier is { } ta && idOf(ta) is { } taId && Who.TeammateIndex(taId) is var tk and >= 0 and < 7 ? Math.Min(15, amount) << (4 * tk) : 0;
+                    amount = Math.Max(1, amount);
+                    break;
                 case "HailstormPower": data = Sts2State.Var(pw, "FrostOrbs", 1); break;
                 case "TheBombPower": data = Sts2State.Var(pw, "Damage"); break;
                 case "SlowPower": data = Sts2State.Var(pw, "SlowAmount", 0); break;
@@ -69,7 +75,7 @@ public static class SimReaders
                     break;
                 }
             }
-            set = set.Has(name) ? set.With(name, set[name] + amount, data) : set.With(name, amount, data);
+            set = set.Has(name) ? set.With(name, set[name] + amount, name == "ImpaledPowerOther" ? set.DataOf(name) | data : data) : set.With(name, amount, data);
         }
         return set;
     }

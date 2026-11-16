@@ -683,3 +683,27 @@ public sealed class NecroMasteryPower : ProcModel
         SimEngine.ProcDamageAll(s, owner, Name, lost * Amount(s, owner), SimProps.Unblockable | Unpowered);
     }
 }
+
+/// <summary>
+/// Teammates' Impaled on an enemy ("ImpaledPowerOther": Data holds each teammate's arrows in it, 4 bits per teammate index). Your
+/// hits don't count it down (ImpaledPower.AfterDamageReceived: only its applier's hits), but the enemy's death lets every arrow go
+/// (AfterDeath): back to each teammate, each through AfterArrowDislodged (their Twine, their Yah).
+/// </summary>
+public sealed class TeammatesImpaledPower : SimModel
+{
+    public override string Name => "ImpaledPowerOther";
+    public override void AfterDeath(SimState s, int owner, int dead)
+    {
+        if (dead != owner) return;
+        var p = SimEngine.PowersOf(s, owner);
+        var bits = p.DataOf(Name);
+        SimEngine.SetPowers(s, owner, p.Without(Name));
+        for (var k = 0; k < s.Teammates.Count && bits != 0; k++, bits >>= 4)
+        {
+            var arrows = bits & 15;
+            if (arrows == 0 || s.Teammates[k].Hp <= 0) continue;
+            s.MutableTeammate(k).Arrows += arrows;
+            SimEngine.Raise(s, CardEvent.ArrowDislodged, Who.Teammate(k), arrows);
+        }
+    }
+}

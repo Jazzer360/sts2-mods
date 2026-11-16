@@ -442,3 +442,26 @@ public class ProcModelTests
         }
     }
 }
+
+/// <summary>Teammates' arrows (ImpaledPowerOther): your hits don't knock them loose, but a kill gives them back (their Twine).</summary>
+public class TeammateArrowTests
+{
+    [Fact]
+    public void AKillGivesATeammatesArrowsBackAndTheirTwineBlocks()
+    {
+        var s = new SimState { Enemies = { Enemy(0, 5), new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = new() { 10 } } } };
+        s.Enemies[0].Powers = PowerSet.Empty.With("ImpaledPowerOther", 2, 2); // teammate 0: 2 arrows
+        var mate = new SimPlayer { Hp = 40 };
+        mate.Relics = mate.Relics.With("Twine", 0, 1);
+        s.Teammates.Add(mate);
+        s.Vars[$"{Who.Teammate(0)}:Twine:Block"] = 3;
+        // A hit that doesn't kill: nothing comes back.
+        var hit = Assert.Single(After(s, Play(Card("Strike"), 0, 1, Attack(2, hits: 2))));
+        Assert.Equal(0, hit.Teammates[0].Block);
+        // The kill: both arrows come back, Twine blocks for each.
+        var kill = Assert.Single(After(s, Play(Card("Strike"), 0, 1, Attack(6))));
+        Assert.Equal(6, kill.Teammates[0].Block);
+        Assert.Equal(2, kill.Teammates[0].Arrows);
+        Assert.False(kill.Enemy(0)!.Powers.Has("ImpaledPowerOther"));
+    }
+}
