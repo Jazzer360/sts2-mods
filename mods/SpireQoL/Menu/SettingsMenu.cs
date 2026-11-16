@@ -25,7 +25,7 @@ namespace SpireQoL.Menu;
 /// hotkeys are blocked (NHotkeyManager.AddBlockingScreen, the same thing the game does for its
 /// own popups) and Esc closes it. Nothing is patched.
 /// </summary>
-public sealed class SettingsMenu
+public sealed partial class SettingsMenu
 {
     private static readonly Color Accent = new(1f, 0.55f, 0.1f);
     private static readonly Color Text = new(0.92f, 0.9f, 0.85f);
@@ -33,7 +33,7 @@ public sealed class SettingsMenu
     private static readonly Color RowA = new(1, 1, 1, 0.035f);
     private static readonly Color RowB = new(1, 1, 1, 0f);
 
-    private enum Page { General, CardTabs, Relics, YourPowers, EnemyPowers, Cards }
+    private enum Page { General, CardTabs, Relics, YourPowers, EnemyPowers, Cards, Guide }
 
     private static readonly (Page Page, string Title)[] Pages =
     {
@@ -43,6 +43,7 @@ public sealed class SettingsMenu
         (Page.YourPowers, "Your powers"),
         (Page.EnemyPowers, "Enemy powers"),
         (Page.Cards, "Cards"),
+        (Page.Guide, "Guide"),
     };
 
     internal static readonly (string Id, string Name, string Description)[] FeatureRows =
@@ -125,6 +126,7 @@ public sealed class SettingsMenu
         if (IsOpen && _root != null) FitPanel();
         _tinyIcons.RemoveAll(t => !GodotObject.IsInstanceValid(t.Root));
         foreach (var t in _tinyIcons) t.Fit();
+        if (IsOpen && _page == Page.Guide) foreach (var tick in _guideTicks) tick(_host.Time, S.FlashHz);
         if (++_frame % 10 != 0) return;
         _modsButton = KeepButton(_modsButton, ModsScreenAnchor());
         _pauseButton = KeepButton(_pauseButton, PauseMenuAnchor());
@@ -319,6 +321,7 @@ public sealed class SettingsMenu
         if (_rows == null || _columnHeader == null) return;
         UiKit.Clear(_rows);
         UiKit.Clear(_columnHeader);
+        _guideTicks.Clear();
         foreach (var (page, b) in _pageButtons) b.ButtonPressed = page == _page;
         _onlyHere!.Disabled = Sts2State.Me == null;
         _row = 0;
@@ -332,6 +335,7 @@ public sealed class SettingsMenu
                 case Page.YourPowers: BuildSources(SourceGroup.YourPower); break;
                 case Page.EnemyPowers: BuildSources(SourceGroup.EnemyPower); break;
                 case Page.Cards: BuildSources(SourceGroup.Card); break;
+                case Page.Guide: BuildGuide(); break;
             }
         }
         catch (Exception ex)

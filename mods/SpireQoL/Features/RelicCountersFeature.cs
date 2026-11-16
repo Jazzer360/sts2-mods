@@ -122,23 +122,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             row.Tiny?.Fit();
             w.Content.MoveChild(row.Root, index++);
 
-            var fill = state.Color;
-            if (state.Flash)
-            {
-                var p = UiKit.Pulse(host.Time, _ctx.Settings.FlashHz);
-                fill = fill.Lerp(Ready, p);
-                row.Root.Modulate = new Color(1, 1, 1, 0.65f + 0.35f * p);
-            }
-            else
-            {
-                row.Root.Modulate = Colors.White;
-            }
-            // Long counters (Cacophony's 33) read better as just the countdown number.
-            var showBar = state.Total <= MaxBarSteps;
-            row.Bar.Root.Visible = showBar;
-            if (showBar) row.Bar.Set(state.Filled, state.Total, fill, Empty);
-            row.Text.Text = state.Label;
-            if (!showBar) row.Text.AddThemeColorOverride("font_color", fill);
+            Paint(row, state, host.Time, _ctx.Settings.FlashHz);
         }
 
         foreach (var (model, row) in _rows.ToList())
@@ -150,6 +134,49 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         }
 
         w.HasContent = index > 0;
+    }
+
+    private static void Paint(Row row, RowState state, float time, float hz)
+    {
+        var fill = state.Color;
+        if (state.Flash)
+        {
+            var p = UiKit.Pulse(time, hz);
+            fill = fill.Lerp(Ready, p);
+            row.Root.Modulate = new Color(1, 1, 1, 0.65f + 0.35f * p);
+        }
+        else
+        {
+            row.Root.Modulate = Colors.White;
+        }
+        // Long counters (Cacophony's 33) read better as just the countdown number.
+        var showBar = state.Total <= MaxBarSteps;
+        row.Bar.Root.Visible = showBar;
+        if (showBar) row.Bar.Set(state.Filled, state.Total, fill, Empty);
+        row.Text.Text = state.Label;
+        if (!showBar) row.Text.AddThemeColorOverride("font_color", fill);
+    }
+
+    /// <summary>The bar colors, by what a row counts (the Guide page names them).</summary>
+    internal enum Shade { Relic, Power, Warning, Good }
+
+    /// <summary>
+    /// A tray row as it looks in a fight, for the settings menu's Guide page: <paramref name="paint"/> redraws it (call it every
+    /// frame, so a flashing row flashes at the tray's speed).
+    /// </summary>
+    internal static Control ExampleRow(AbstractModel model, int filled, int total, Shade shade, string label, bool flash, out Action<float, float> paint)
+    {
+        var row = MakeRow(model);
+        var color = shade switch { Shade.Power => PowerFill, Shade.Warning => Warn, Shade.Good => Ok, _ => Fill };
+        var state = new RowState(filled, total, flash, color, label);
+        paint = (time, hz) =>
+        {
+            if (!GodotObject.IsInstanceValid(row.Root)) return;
+            row.Tiny?.Fit();
+            Paint(row, state, time, hz);
+        };
+        paint(0, 1);
+        return row.Root;
     }
 
     /// <summary>Countdown powers on you, plus ones on enemies that count your plays.</summary>

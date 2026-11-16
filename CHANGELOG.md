@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.4.0
+#### Added
+- Settings menu: a Guide page that shows how to read the mod, with example cards carrying every kind of tab, example Relic Counters rows and example Incoming Damage sums, drawn by the same code as in a fight.
+
 ### Spire QoL 1.3.0
 #### Added
 - Aim marker: a tab that happens only at some of the targets you could aim at (lethal, Mighty Wings, Curl Up, Asleep...) shows the head of the game's targeting arrow in its icon's corner.

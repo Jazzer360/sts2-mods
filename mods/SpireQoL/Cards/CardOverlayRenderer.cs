@@ -120,7 +120,31 @@ public sealed class CardOverlayRenderer
         return entry;
     }
 
-    private void Apply(Entry e, CardDecor d)
+    /// <summary>
+    /// A card outside the hand drawn with tabs exactly as in the hand (the settings menu's Guide page). The card is ours,
+    /// not one of the game's pooled nodes, so nothing needs undoing. Call <see cref="Draw"/> every frame: the card's layout
+    /// settles a frame or two after it enters the tree.
+    /// </summary>
+    internal sealed class Example
+    {
+        private readonly Entry _entry;
+
+        public Example(NCard card)
+        {
+            var container = card.GetNodeOrNull<Control>("%CardContainer") ?? card;
+            var overlay = new Control { Name = OverlayName, MouseFilter = Control.MouseFilterEnum.Ignore };
+            container.AddChild(overlay);
+            _entry = new Entry { Card = card, Container = container, Overlay = overlay };
+        }
+
+        public void Draw(CardDecor d)
+        {
+            if (!GodotObject.IsInstanceValid(_entry.Card) || !GodotObject.IsInstanceValid(_entry.Overlay)) return;
+            Apply(_entry, d);
+        }
+    }
+
+    private static void Apply(Entry e, CardDecor d)
     {
         // Follow the card frame's transform inside the container.
         var frame = e.Card.GetNodeOrNull<Control>("%Frame");
@@ -198,7 +222,7 @@ public sealed class CardOverlayRenderer
         return layer;
     }
 
-    private void ApplyTabs(Entry e, List<TabSpec> tabs, Control layer)
+    private static void ApplyTabs(Entry e, List<TabSpec> tabs, Control layer)
     {
         var template = e.Card.EnchantmentTab;
         if (template == null || !GodotObject.IsInstanceValid(template))
@@ -262,7 +286,7 @@ public sealed class CardOverlayRenderer
         }
     }
 
-    private int _tabErrors;
+    private static int _tabErrors;
 
     private static void LayoutTab(Control tab, TabSpec spec, float left, float top, float visualWidth, Vector2 scale)
     {
