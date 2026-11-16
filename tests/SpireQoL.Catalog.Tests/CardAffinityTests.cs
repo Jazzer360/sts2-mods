@@ -36,6 +36,14 @@ public class CardAffinityTests
     }
 
     [Fact]
+    public void BegoneMakesAMinionStrike()
+    {
+        // Strike Dummy and Vitruvian Minion count the cards a card makes: Begone! makes a Minion Strike (a Strike and a Minion).
+        var begone = typeof(CardModel).Assembly.GetTypes().Single(t => t.Name == "Begone" && typeof(CardModel).IsAssignableFrom(t));
+        Assert.Contains(CardAffinity.MadeTypes(begone), t => t.Name == "MinionStrike");
+    }
+
+    [Fact]
     public void EveryRuleNamesARelic()
     {
         var names = Relics().Select(t => t.Name).ToHashSet();

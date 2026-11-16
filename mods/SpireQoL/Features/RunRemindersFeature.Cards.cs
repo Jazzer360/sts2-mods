@@ -1,12 +1,16 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Godot;
 using HarmonyLib;
+using Sts2Mods.Core.Ui;
+using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
 using SpireQoL.Data;
+using LocalBuilder = System.Reflection.Emit.LocalBuilder;
 using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace SpireQoL.Features;
@@ -34,8 +38,57 @@ public sealed partial class RunRemindersFeature
     private static bool CanGet(EventOption option, Player me, CardAffinityRule rule)
     {
         var cards = CardsOf(option, me);
-        return cards == null || cards.Any(c => CardAffinity.AppliesTo(rule, c));
+        var held = Held(me);
+        return cards == null || cards.Any(c => CardAffinity.AppliesWith(rule, c, held));
     }
+
+    private static readonly ConditionalWeakTable<EventOption, Dictionary<string, string?>> OddsCache = new();
+
+    /// <summary>
+    /// The chance under a relic's icon (docs/CARD_ODDS.md): "43%", or "10–14%" for a transform over your deck's cards; null when
+    /// it's sure or can't be told. Cached per option and relic.
+    /// </summary>
+    private static string? OddsText(EventOption option, Player me, CardAffinityRule rule)
+    {
+        var cache = OddsCache.GetValue(option, _ => new Dictionary<string, string?>());
+        if (cache.TryGetValue(rule.Relic, out var text)) return text;
+        text = null;
+        try
+        {
+            if (CardsRead.TryGetValue(option, out var read))
+            {
+                var held = Held(me);
+                if (read.Chance(me, c => CardAffinity.AppliesWith(rule, c, held)) is { } chance && chance.Low < 1)
+                {
+                    text = Percent(chance.Low) == Percent(chance.High) ? Percent(chance.Low) + "%" : $"{Percent(chance.Low)}–{Percent(chance.High)}%";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-odds:" + option.TextKey);
+        }
+        cache[rule.Relic] = text;
+        return text;
+    }
+
+    /// <summary>A chance as a whole percent: never 0 when it can happen, never 100 when it might not.</summary>
+    private static string Percent(double p) => p <= 0 ? "0" : p < 0.01 ? "<1" : Math.Min(99, (int)Math.Round(p * 100)).ToString();
+
+    /// <summary>The chance, small, along an icon's bottom edge (like the amount on a tab).</summary>
+    private static Label OddsLabel(string text, float iconSize)
+    {
+        var l = UiKit.Label(text, Math.Max(12, (int)(iconSize * 0.36f)), Colors.White);
+        l.HorizontalAlignment = HorizontalAlignment.Center;
+        l.Size = new Vector2(iconSize + 16, 0);
+        l.Position = new Vector2(-8, iconSize * 0.62f);
+        l.MouseFilter = Control.MouseFilterEnum.Ignore;
+        return l;
+    }
+
+    /// <summary>Your relics' card rules (the modifiers a boost can count on).</summary>
+    private static List<CardAffinityRule> Held(Player me) =>
+        me.Relics.Select(r => CardAffinity.For(r.GetType().Name)).OfType<CardAffinityRule>().ToList();
 
     /// <summary>The cards (canonical) an option can give you, or null when they can't be read. Cached per option.</summary>
     internal static List<CardModel>? CardsOf(EventOption option, Player me)
@@ -67,7 +120,22 @@ public sealed partial class RunRemindersFeature
         /// <summary>A card pool in the code, and the call that gave the character whose pool it is (null: not a character's).</summary>
         private sealed record PoolSource(MethodBase Method, MethodBase? Character);
         private readonly HashSet<Type> _fixed = new();
-        private readonly List<(List<PoolSource> Pools, MethodInfo? Filter)> _rewards = new();
+        /// <summary>
+        /// A number in the code: a constant, a dynamic var of the object running it (<c>DynamicVars.Cards.IntValue</c>), or one
+        /// divided by a constant (Sea Glass's <c>Cards / 3</c>).
+        /// </summary>
+        private sealed record IntExpr(int? Const, string? Var, int Divisor = 1);
+
+        /// <summary>A card reward or random card: its pools and filter, its rarity odds (CardRarityOddsType), and how many cards.</summary>
+        private sealed class RewardSource
+        {
+            public required List<PoolSource> Pools;
+            public MethodInfo? Filter;
+            public int? OddsType;
+            public IntExpr? Count;
+        }
+
+        private readonly List<RewardSource> _rewards = new();
         private readonly List<PoolSource> _loosePools = new();
         private bool _transformRandom;
 
@@ -77,8 +145,22 @@ public sealed partial class RunRemindersFeature
             var pools = new List<PoolSource>();
             MethodInfo? filter = null;
             MethodBase? character = null;
+            // The last number pushed (for a reward's count and a constructor's odds), the one before it (for a division), the
+            // dynamic var named last, and numbers stored in locals or fields (an async method's locals are fields).
+            IntExpr? last = null, before = null;
+            string? lastString = null, varName = null;
+            var stored = new Dictionary<string, IntExpr>();
+            CodeInstruction? previous = null;
+            void Push(IntExpr e) { before = last; last = e; }
             foreach (var ins in code)
             {
+                var producedInt = previous != null && ProducesInt(previous);
+                previous = ins;
+                if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var k)) { Push(new IntExpr(k, null)); continue; }
+                if (ins.opcode == OpCodes.Ldstr) { lastString = ins.operand as string; continue; }
+                if (ins.opcode == OpCodes.Div && last is { Const: { } d } && before is { Var: { } v } && d != 0) { last = before with { Divisor = before.Divisor * d }; continue; }
+                if (SlotKey(ins, store: true) is { } st) { if (producedInt && last != null) stored[st] = last; continue; }
+                if (SlotKey(ins, store: false) is { } ld) { if (stored.TryGetValue(ld, out var val)) Push(val); continue; }
                 if (ins.opcode == OpCodes.Ldftn && ins.operand is MethodInfo fn && IsCardFilter(fn))
                 {
                     filter = fn;
@@ -87,6 +169,14 @@ public sealed partial class RunRemindersFeature
                 if (ins.operand is not MethodBase mb || mb.DeclaringType == null) continue;
                 if (ins.opcode != OpCodes.Call && ins.opcode != OpCodes.Callvirt && ins.opcode != OpCodes.Newobj) continue;
                 var type = mb.DeclaringType;
+                if (type.Name == "DynamicVarSet" && mb.Name.StartsWith("get_")) varName = mb.Name == "get_Item" ? lastString : mb.Name[4..];
+                else if (mb.Name == "get_IntValue" && type.Name.EndsWith("Var") && varName != null) Push(new IntExpr(null, varName));
+                else if (IsRewardMaker(mb))
+                {
+                    // CardReward(options, count, player) / CardFactory.CreateForReward(player, count, options): the count is the
+                    // last number pushed; it goes to the first reward still without one.
+                    if (_rewards.FirstOrDefault(r => r.Count == null) is { } open) open.Count = last;
+                }
                 if (mb.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(new PoolSource(mb, character));
                 else if (type == typeof(ModelDb) && mb is MethodInfo { IsGenericMethod: true } g && g.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(mb, null));
                 else if (mb is MethodInfo { IsGenericMethod: true } gc && (gc.Name is "Card" or "CreateCard" or "TransformTo")
@@ -96,7 +186,19 @@ public sealed partial class RunRemindersFeature
                 {
                     // No pool loaded here: it's passed in (Colorful Philosophers' option for one character's pool), so it's
                     // the CardPoolModel the option's delegate holds.
-                    _rewards.Add((pools.Count == 0 ? new List<PoolSource> { FromOption } : pools.ToList(), filter));
+                    _rewards.Add(new RewardSource
+                    {
+                        Pools = pools.Count == 0 ? new List<PoolSource> { FromOption } : pools.ToList(),
+                        Filter = filter,
+                        // The factories name their odds; the constructor takes them as its third argument, the last number
+                        // pushed before it (the filter isn't a number).
+                        OddsType = mb.Name switch
+                        {
+                            nameof(CardCreationOptions.ForNonCombatWithDefaultOdds) => (int)CardRarityOddsType.RegularEncounter,
+                            nameof(CardCreationOptions.ForNonCombatWithUniformOdds) => (int)CardRarityOddsType.Uniform,
+                            _ => mb.IsConstructor && last is { Const: { } odds } ? odds : null,
+                        },
+                    });
                     pools.Clear();
                     filter = null;
                 }
@@ -115,6 +217,53 @@ public sealed partial class RunRemindersFeature
             (_fixed.Count, _rewards.Count, _rewards.Count(r => r.Filter != null), _transformRandom, _rewards.Count(r => r.Pools.Contains(FromOption)),
              _rewards.SelectMany(r => r.Pools).Count(p => p.Character != null && !typeof(Player).IsAssignableFrom(p.Character.DeclaringType)));
 
+        /// <summary>For the tests: each reward's odds type and count as read ("Cards", "Cards/3", "3", or "?").</summary>
+        internal List<(int? Odds, string Count)> RewardsRead =>
+            _rewards.Select(r => (r.OddsType, r.Count is { } c ? (c.Const?.ToString() ?? c.Var!) + (c.Divisor != 1 ? "/" + c.Divisor : "") : "?")).ToList();
+
+        private static bool IsRewardMaker(MethodBase mb) =>
+            (mb.IsConstructor && mb.DeclaringType?.Name == "CardReward" && mb.GetParameters().Any(p => p.ParameterType == typeof(CardCreationOptions)))
+            || (mb.DeclaringType == typeof(CardFactory) && mb.Name == nameof(CardFactory.CreateForReward) && mb.GetParameters().Length == 3);
+
+        private static bool TryConst(CodeInstruction ins, out int value)
+        {
+            value = 0;
+            if (ins.opcode == OpCodes.Ldc_I4_M1) { value = -1; return true; }
+            if (ins.opcode == OpCodes.Ldc_I4_0) return true;
+            if (ins.opcode == OpCodes.Ldc_I4_1) { value = 1; return true; }
+            if (ins.opcode == OpCodes.Ldc_I4_2) { value = 2; return true; }
+            if (ins.opcode == OpCodes.Ldc_I4_3) { value = 3; return true; }
+            if (ins.opcode == OpCodes.Ldc_I4_4) { value = 4; return true; }
+            if (ins.opcode == OpCodes.Ldc_I4_5) { value = 5; return true; }
+            if (ins.opcode == OpCodes.Ldc_I4_6) { value = 6; return true; }
+            if (ins.opcode == OpCodes.Ldc_I4_7) { value = 7; return true; }
+            if (ins.opcode == OpCodes.Ldc_I4_8) { value = 8; return true; }
+            if ((ins.opcode == OpCodes.Ldc_I4 || ins.opcode == OpCodes.Ldc_I4_S) && ins.operand != null) { value = Convert.ToInt32(ins.operand); return true; }
+            return false;
+        }
+
+        private static bool ProducesInt(CodeInstruction ins) =>
+            TryConst(ins, out _) || ins.opcode == OpCodes.Div || (ins.operand is MethodBase { Name: "get_IntValue" });
+
+        /// <summary>A local or field an instruction stores to (store) or loads from: "loc:3", "fld:&lt;cardCount&gt;5__2".</summary>
+        private static string? SlotKey(CodeInstruction ins, bool store)
+        {
+            if (store ? ins.IsStloc() : ins.IsLdloc())
+            {
+                var idx = ins.operand switch { LocalBuilder lb => lb.LocalIndex, int i => i, byte b => b, _ => LocalIndex(ins) };
+                return idx < 0 ? null : "loc:" + idx;
+            }
+            if (ins.opcode == (store ? OpCodes.Stfld : OpCodes.Ldfld) && ins.operand is FieldInfo f && f.FieldType == typeof(int)) return "fld:" + f.Name;
+            return null;
+        }
+
+        private static int LocalIndex(CodeInstruction ins)
+        {
+            var name = ins.opcode.Name ?? "";
+            var dot = name.LastIndexOf('.');
+            return dot >= 0 && int.TryParse(name[(dot + 1)..], out var i) ? i : -1;
+        }
+
         private static bool IsCardFilter(MethodInfo m) =>
             m.ReturnType == typeof(bool) && m.GetParameters() is { Length: 1 } p && typeof(CardModel).IsAssignableFrom(p[0].ParameterType);
 
@@ -127,14 +276,10 @@ public sealed partial class RunRemindersFeature
                 var card = ModelDb.AllCards.FirstOrDefault(c => c.GetType() == t);
                 if (card != null) set.Add(card);
             }
-            foreach (var (pools, filter) in _rewards)
+            foreach (var reward in _rewards)
             {
-                if (pools.Contains(FromOption) && OptionPool() == null) return null;
-                // A pool whose character can't be told: the cards are unknown, so the icons stay.
-                if (pools.Any(p => p.Method.Name == "get_CardPool" && CharacterOf(p.Character, me) == null)) return null;
-                var keep = Filter(filter);
-                var possible = pools.SelectMany(p => Unlocked(Pool(p, me), me)).Where(keep);
-                foreach (var c in ForRun(me, possible)) set.Add(c);
+                if (Possible(reward, me) is not { } possible) return null;
+                foreach (var c in possible) set.Add(c);
             }
             foreach (var p in _loosePools)
             foreach (var c in Unlocked(Pool(p, me), me)) set.Add(c);
@@ -149,6 +294,113 @@ public sealed partial class RunRemindersFeature
                 }
             }
             return set.Count == 0 ? null : set.ToList();
+        }
+
+        /// <summary>A reward's possible cards (GetPossibleCards, FilterForRun), or null when its pool can't be told.</summary>
+        private List<CardModel>? Possible(RewardSource reward, Player me)
+        {
+            if (reward.Pools.Contains(FromOption) && OptionPool() == null) return null;
+            // A pool whose character can't be told: the cards are unknown, so the icons stay.
+            if (reward.Pools.Any(p => p.Method.Name == "get_CardPool" && CharacterOf(p.Character, me) == null)) return null;
+            var keep = Filter(reward.Filter);
+            return ForRun(me, reward.Pools.SelectMany(p => Unlocked(Pool(p, me), me)).Where(keep)).Distinct().ToList();
+        }
+
+        /// <summary>
+        /// The chance that what this option gives includes a card <paramref name="applies"/> accepts (docs/CARD_ODDS.md): 1 for a
+        /// fixed card it accepts; for rewards, the chance at least one offered card is accepted (CardOdds, several rewards
+        /// combined); for a random transform, the chance a transformed card is (lowest and highest over your deck's cards).
+        /// Null when it can't be told (a count or odds the code doesn't show, a pool used directly, rewards mixed with transforms).
+        /// The rewards' upgrade roll isn't counted (events turn it off, except Colorful Philosophers'), nor relics that change the pools.
+        /// </summary>
+        public (double Low, double High)? Chance(Player me, Func<CardModel, bool> applies)
+        {
+            foreach (var t in _fixed)
+            {
+                if (ModelDb.AllCards.FirstOrDefault(c => c.GetType() == t) is { } card && applies(card)) return (1, 1);
+            }
+            foreach (var p in _loosePools)
+            {
+                if (Unlocked(Pool(p, me), me).Any(applies)) return null;
+            }
+            var chances = new List<double>();
+            foreach (var reward in _rewards)
+            {
+                if (Possible(reward, me) is not { } possible) return null;
+                if (!possible.Any(applies)) continue;
+                if (reward.Count is not { } countExpr || Evaluate(countExpr) is not { } count || reward.OddsType is not { } oddsType) return null;
+                chances.Add(RewardChance(possible, applies, (CardRarityOddsType)oddsType, count) ?? double.NaN);
+                if (double.IsNaN(chances[^1])) return null;
+            }
+            if (_transformRandom)
+            {
+                if (chances.Count > 0) return null;
+                double lo = 1, hi = 0;
+                foreach (var original in me.Deck.Cards)
+                {
+                    List<CardModel> options;
+                    try { options = CardFactory.GetDefaultTransformationOptions(original, false).ToList(); }
+                    catch { continue; }
+                    if (options.Count == 0) continue;
+                    var p = (double)options.Count(c => applies(c.IsCanonical ? c : c.CanonicalInstance)) / options.Count;
+                    lo = Math.Min(lo, p);
+                    hi = Math.Max(hi, p);
+                }
+                return hi < lo ? null : (lo, hi);
+            }
+            var any = SpireQoL.Sim.CardOdds.AnyOf(chances);
+            return (any, any);
+        }
+
+        /// <summary>One reward: the game's draw over the possible cards (CreateForReward), as CardOdds counts it.</summary>
+        private static double? RewardChance(List<CardModel> possible, Func<CardModel, bool> applies, CardRarityOddsType odds, int count)
+        {
+            if (odds == CardRarityOddsType.Uniform)
+            {
+                // Uniform: every card but Basic and Ancient ones, equally likely.
+                var pool = possible.Where(c => c.Rarity != CardRarity.Basic && c.Rarity != CardRarity.Ancient).ToList();
+                return SpireQoL.Sim.CardOdds.AtLeastOneUniform(pool.Count, pool.Count(applies), count);
+            }
+            if (BaseOdds(odds) is not { } baseOdds) return null;
+            var groups = new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare }
+                .Select(r => possible.Where(c => c.Rarity == r).ToList())
+                .Select(g => new SpireQoL.Sim.RarityGroup(g.Count, g.Count(applies))).ToList();
+            return SpireQoL.Sim.CardOdds.AtLeastOne(groups, baseOdds.Rare, baseOdds.Uncommon, count);
+        }
+
+        private static readonly MethodInfo? GetBaseOdds = AccessTools.Method(typeof(MegaCrit.Sts2.Core.Odds.CardRarityOdds), "GetBaseOdds");
+
+        /// <summary>The game's base rarity odds (CardRarityOdds.GetBaseOdds: events roll with these, no rarity offset).</summary>
+        private static (double Rare, double Uncommon)? BaseOdds(CardRarityOddsType odds)
+        {
+            try
+            {
+                var rare = Convert.ToDouble(GetBaseOdds!.Invoke(null, new object[] { odds, CardRarity.Rare }));
+                var uncommon = Convert.ToDouble(GetBaseOdds.Invoke(null, new object[] { odds, CardRarity.Uncommon }));
+                return (rare, uncommon);
+            }
+            catch { return null; }
+        }
+
+        /// <summary>A number read from the code, on the objects running it (their DynamicVars).</summary>
+        private int? Evaluate(IntExpr e)
+        {
+            int? value = e.Const;
+            if (e.Var != null)
+            {
+                foreach (var holder in Holders())
+                {
+                    // Events, relics, cards: each model type has its own DynamicVars.
+                    if (holder.GetType().GetProperty("DynamicVars")?.GetValue(holder) is not MegaCrit.Sts2.Core.Localization.DynamicVars.DynamicVarSet vars) continue;
+                    try
+                    {
+                        value = (int)vars[e.Var].IntValue;
+                        break;
+                    }
+                    catch { /* not this one */ }
+                }
+            }
+            return value is { } v && e.Divisor != 0 ? v / e.Divisor : null;
         }
 
         /// <summary>Stands for "the pool the option passes in" in a reward's pools.</summary>

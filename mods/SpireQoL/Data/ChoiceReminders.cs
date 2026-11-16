@@ -21,6 +21,10 @@ public enum ChoiceEffect
     RestHeal = 32,
     /// <summary>You buy something in a shop (AfterItemPurchased). Shops only: no event call maps to it.</summary>
     Purchase = 64,
+    /// <summary>A card in your deck is enchanted (CardCmd.Enchant, an enchantment pick from your deck).</summary>
+    EnchantCard = 128,
+    /// <summary>A card in your deck is upgraded (CardCmd.Upgrade, an upgrade pick from your deck).</summary>
+    UpgradeCard = 256,
 }
 
 /// <param name="Relic">The relic's class name.</param>
@@ -74,6 +78,13 @@ public static class ChoiceReminders
         new(nameof(FrozenEgg), ChoiceEffect.CardToDeck, ShopIcon: false),
         new(nameof(ToxicEgg), ChoiceEffect.CardToDeck, ShopIcon: false),
         new(nameof(FresnelLens), ChoiceEffect.CardToDeck, ShopIcon: false),
+        // Cards that are stronger in fights in a way their text doesn't show (Data/CardAffinity): options that give one, or
+        // that make the change they look for (Miniature Cannon: an upgrade; Mystic Lighter: an enchantment, Tezcatara's soup).
+        new(nameof(StrikeDummy), ChoiceEffect.CardToDeck, ShopIcon: false),
+        new(nameof(FakeStrikeDummy), ChoiceEffect.CardToDeck, ShopIcon: false),
+        new(nameof(MiniatureCannon), ChoiceEffect.CardToDeck | ChoiceEffect.UpgradeCard, ShopIcon: false),
+        new(nameof(MysticLighter), ChoiceEffect.CardToDeck | ChoiceEffect.EnchantCard, ShopIcon: false),
+        new(nameof(VitruvianMinion), ChoiceEffect.CardToDeck, ShopIcon: false),
         // HP loss outside combat (ModifyHpLostAfterOsty; Beating Remnant only caps in combat).
         new(nameof(TungstenRod), ChoiceEffect.HpLoss, Expect: ChoiceEffect.HpLoss),
         // Gold (ModifyGoldGained, AfterGoldGained).
@@ -124,6 +135,10 @@ public static class ChoiceReminders
         ("PotionCmd.TryToProcure", ChoiceEffect.Potion),
         ("PotionReward..ctor", ChoiceEffect.Potion),
         ("PlayerCmd.MimicRestSiteHeal", ChoiceEffect.RestHeal),
+        ("CardCmd.Enchant*", ChoiceEffect.EnchantCard),
+        ("CardSelectCmd.FromDeckForEnchantment", ChoiceEffect.EnchantCard),
+        ("CardCmd.Upgrade*", ChoiceEffect.UpgradeCard),
+        ("CardSelectCmd.FromDeckForUpgrade", ChoiceEffect.UpgradeCard),
     };
 
     public static ChoiceEffect EffectsOf(IEnumerable<string> calls)

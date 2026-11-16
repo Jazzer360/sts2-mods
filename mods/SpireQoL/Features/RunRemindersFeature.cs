@@ -364,10 +364,15 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     }
 
     /// <summary>An event option's relic icons for the Guide page, as left of an option button.</summary>
-    internal static Control ExampleEventIcons(IEnumerable<(RelicModel Relic, bool Crossed)> icons)
+    internal static Control ExampleEventIcons(IEnumerable<(RelicModel Relic, bool Crossed, string? Odds)> icons)
     {
         var row = UiKit.Row(4);
-        foreach (var (relic, crossed) in icons) row.AddChild(Crossable(IconOf(relic), EventIcon, crossed));
+        foreach (var (relic, crossed, odds) in icons)
+        {
+            var icon = Crossable(IconOf(relic), EventIcon, crossed);
+            if (odds != null) icon.AddChild(OddsLabel(odds, EventIcon));
+            row.AddChild(icon);
+        }
         return row;
     }
 
@@ -482,7 +487,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         foreach (var button in layout.OptionButtons)
         {
             if (!GodotObject.IsInstanceValid(button)) continue;
-            var icons = new List<(RelicModel Relic, bool Crossed)>();
+            var icons = new List<(RelicModel Relic, bool Crossed, string? Odds)>();
             if (me != null && button.Option is { IsLocked: false, IsProceed: false } option)
             {
                 var effects = EffectsOf(option);
@@ -492,9 +497,16 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                     {
                         var name = relic.GetType().Name;
                         if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0 || !_ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, name))) continue;
-                        // A relic that changes only certain cards: only when one of them can come from this option.
-                        if (CardAffinity.For(name) is { Kind: AffinityKind.Modifies } affinity && !CanGet(option, me, affinity)) continue;
-                        icons.Add((relic, (rule.CrossedOn & effects) != 0));
+                        // A relic that cares about certain cards: only when one of them can come from this option (as your other
+                        // relics would change it), or the option makes the change it looks for (an upgrade, an enchantment).
+                        string? odds = null;
+                        if (CardAffinity.For(name) is { } affinity && (effects & CardAffinity.ChangeEffect(affinity)) == 0)
+                        {
+                            if ((effects & ChoiceEffect.CardToDeck) == 0 || !CanGet(option, me, affinity)) continue;
+                            // Under the icon: the chance one of its cards comes up (none when it's sure or can't be told).
+                            odds = OddsText(option, me, affinity);
+                        }
+                        icons.Add((relic, (rule.CrossedOn & effects) != 0, odds));
                     }
                 }
             }
@@ -503,10 +515,10 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     }
 
     /// <summary>A row of relic icons left of the option button, vertically centered; removed when empty.</summary>
-    private static void Show(NEventOptionButton button, List<(RelicModel Relic, bool Crossed)> icons)
+    private static void Show(NEventOptionButton button, List<(RelicModel Relic, bool Crossed, string? Odds)> icons)
     {
         var box = button.GetNodeOrNull<HBoxContainer>(NodeName);
-        var key = string.Join(",", icons.Select(i => i.Relic.GetType().Name + (i.Crossed ? "x" : "")));
+        var key = string.Join(",", icons.Select(i => i.Relic.GetType().Name + (i.Crossed ? "x" : "") + i.Odds));
         if (icons.Count == 0)
         {
             box?.QueueFree();
@@ -518,9 +530,10 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             box = new HBoxContainer { Name = NodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
             box.AddThemeConstantOverride("separation", 4);
             box.SetMeta("key", key);
-            foreach (var (relic, crossed) in icons)
+            foreach (var (relic, crossed, odds) in icons)
             {
                 var icon = UiKit.Icon(IconOf(relic), EventIcon);
+                if (odds != null) icon.AddChild(OddsLabel(odds, EventIcon));
                 icon.MouseFilter = Control.MouseFilterEnum.Ignore;
                 if (crossed)
                 {

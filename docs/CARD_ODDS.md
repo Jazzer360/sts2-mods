@@ -1,6 +1,6 @@
 # Card odds for relics outside fights (plan)
 
-Status: phase 1 done (1.6.2, decision #58); phases 2 to 4 and Inspect planned.
+Status: phases 1 and 2 done (1.6.2 and 1.7.0, decisions #58 and #59); phases 3 and 4 and Inspect planned.
 
 ## The problem
 
@@ -87,6 +87,14 @@ For an option whose cards come from a known pool at random (Colorful Philosopher
 It never reads the RNG: the list is every card the rules allow, and the odds are counts.
 
 **Build after phase 2** (it needs the card sources and `CardOdds`): the panel (a new screen of ours, not a widget, opened from the button and closed with Esc like the settings menu), marking and the odds, then remembering marks. It's added to the Guide page and gets its own setting.
+
+## Interactions reviewed (1.7.0)
+
+- **Mystic Lighter + Tezcatara's Nutritious Soup** (and any option that enchants your cards): Lighter's icon beside the option. Same for Miniature Cannon and options that upgrade a card.
+- **Relic + relic**: an egg upgrades an Attack you get, so Miniature Cannon applies to it; Fresnel Lens enchants an Attack that gains block, so Mystic Lighter applies. A boost's rule names the change it looks for, a modifier's the change it makes, so a new pair is covered by its rules.
+- **Cards that make cards**: Begone! makes a Minion Strike (a Strike and a Minion), so Strike Dummy and Vitruvian Minion apply to it. Read from the card's code (`CreateCard<T>`, `ModelDb.Card<T>`).
+- **Attack only**: Miniature Cannon and Mystic Lighter add to powered attack damage; read as the card being an Attack.
+- **Not yet**: the odds don't count Colorful Philosophers' upgrade roll (Miniature Cannon there is a little more likely than shown) or relics that change a reward's pools; an egg still shows when the option upgrades the cards it gives itself.
 
 ## Ancients (owner, 2026-11-16)
 

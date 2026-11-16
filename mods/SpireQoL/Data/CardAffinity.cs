@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Reflection;
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Enchantments;
@@ -14,10 +17,25 @@ public enum AffinityKind
     Boosts,
 }
 
+/// <summary>A change to a card that a relic gives (a modifier) or looks for (a boost).</summary>
+public enum CardChange
+{
+    None,
+    /// <summary>Upgraded: the eggs give it, Miniature Cannon looks for it.</summary>
+    Upgrade,
+    /// <summary>Enchanted: Fresnel Lens gives it, Mystic Lighter looks for it.</summary>
+    Enchant,
+}
+
 /// <param name="Relic">The relic's class name.</param>
 /// <param name="Applies">Whether it applies to a card as you'd get it (a canonical card: not upgraded, no enchantment).</param>
 /// <param name="What">What it does to those cards, for the docs and the settings menu.</param>
-public sealed record CardAffinityRule(string Relic, AffinityKind Kind, Func<CardModel, bool> Applies, string What);
+/// <param name="Change">A modifier: the change it makes to the cards it applies to. A boost: the change it looks for, so it also
+/// applies to a card a held modifier would change that way (an egg's upgraded Attack for Miniature Cannon), and to options
+/// that make that change to your cards (an upgrade, an enchantment).</param>
+/// <param name="Base">A boost: what the card must be besides the change (Miniature Cannon: an Attack).</param>
+public sealed record CardAffinityRule(string Relic, AffinityKind Kind, Func<CardModel, bool> Applies, string What,
+    CardChange Change = CardChange.None, Func<CardModel, bool>? Base = null);
 
 /// <summary>
 /// Relics that care about certain cards, each with the test its own hook makes (decompile v0.113.1), written from the hook
@@ -30,16 +48,16 @@ public static class CardAffinity
     public static readonly IReadOnlyList<CardAffinityRule> Rules = new CardAffinityRule[]
     {
         // EggRelicHelper.UpgradeValidCards / TryModifyCardBeingAddedToDeck: the type, upgradable, not upgraded yet.
-        new(nameof(MoltenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Attack), "upgrades Attacks you get"),
-        new(nameof(FrozenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Power), "upgrades Powers you get"),
-        new(nameof(ToxicEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Skill), "upgrades Skills you get"),
+        new(nameof(MoltenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Attack), "upgrades Attacks you get", CardChange.Upgrade),
+        new(nameof(FrozenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Power), "upgrades Powers you get", CardChange.Upgrade),
+        new(nameof(ToxicEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Skill), "upgrades Skills you get", CardChange.Upgrade),
         // EnchantValidCards / TryModifyCardBeingAddedToDeck: Nimble.CanEnchant (a card that gains block, not a status or curse).
-        new(nameof(FresnelLens), AffinityKind.Modifies, c => ModelDb.Enchantment<Nimble>().CanEnchant(c), "enchants cards that gain block with Nimble"),
-        // ModifyDamageAdditive on the card's powered attacks.
+        new(nameof(FresnelLens), AffinityKind.Modifies, c => ModelDb.Enchantment<Nimble>().CanEnchant(c), "enchants cards that gain block with Nimble", CardChange.Enchant),
+        // ModifyDamageAdditive on the card's powered attacks (IsPoweredAttack: an Attack's damage; read here as the card being an Attack).
         new(nameof(StrikeDummy), AffinityKind.Boosts, c => c.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
         new(nameof(FakeStrikeDummy), AffinityKind.Boosts, c => c.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
-        new(nameof(MiniatureCannon), AffinityKind.Boosts, c => c.IsUpgraded, "upgraded cards deal more damage"),
-        new(nameof(MysticLighter), AffinityKind.Boosts, c => c.Enchantment != null, "enchanted cards deal more damage"),
+        new(nameof(MiniatureCannon), AffinityKind.Boosts, c => IsAttack(c) && c.IsUpgraded, "upgraded Attacks deal more damage", CardChange.Upgrade, IsAttack),
+        new(nameof(MysticLighter), AffinityKind.Boosts, c => IsAttack(c) && c.Enchantment != null, "enchanted Attacks deal more damage", CardChange.Enchant, IsAttack),
         // ModifyDamageMultiplicative / ModifyBlockMultiplicative: double for Minion cards.
         new(nameof(VitruvianMinion), AffinityKind.Boosts, c => c.Tags.Contains(CardTag.Minion), "Minion cards deal double damage and give double block"),
     };
@@ -63,6 +81,73 @@ public static class CardAffinity
     public static CardAffinityRule? For(string relic) => ByRelic.GetValueOrDefault(relic);
 
     private static bool Upgrades(CardModel c, CardType type) => c.Type == type && c.IsUpgradable && c.CurrentUpgradeLevel < 1;
+
+    private static bool IsAttack(CardModel c) => c.Type == CardType.Attack;
+
+    /// <summary>
+    /// Whether a rule applies to a card as you'd get it with your relics: the card itself, or (a boost looking for a change)
+    /// the card after a held modifier makes that change (Molten Egg upgrades an Attack, so Miniature Cannon boosts it).
+    /// </summary>
+    public static bool AppliesWith(CardAffinityRule rule, CardModel card, IEnumerable<CardAffinityRule> held)
+    {
+        if (AppliesTo(rule, card)) return true;
+        // A boost also counts the cards this card makes when played (Begone!'s Minion Strike: a Strike and a Minion).
+        if (rule.Kind == AffinityKind.Boosts && Made(card).Any(m => AppliesTo(rule, m))) return true;
+        if (rule.Kind != AffinityKind.Boosts || rule.Change == CardChange.None) return false;
+        if (rule.Base != null && !Safe(rule.Base, card)) return false;
+        return held.Any(m => m.Kind == AffinityKind.Modifies && m.Change == rule.Change && AppliesTo(m, card));
+    }
+
+    /// <summary>The option effect that makes a boost's change to your cards (an upgrade for Miniature Cannon).</summary>
+    public static ChoiceEffect ChangeEffect(CardAffinityRule rule) => rule.Kind != AffinityKind.Boosts ? ChoiceEffect.None : rule.Change switch
+    {
+        CardChange.Upgrade => ChoiceEffect.UpgradeCard,
+        CardChange.Enchant => ChoiceEffect.EnchantCard,
+        _ => ChoiceEffect.None,
+    };
+
+    private static readonly ConcurrentDictionary<Type, List<CardModel>> MadeCache = new();
+
+    /// <summary>
+    /// The cards a card makes (canonical), read from its own code: the card types it names in <c>CreateCard&lt;T&gt;</c> or
+    /// <c>ModelDb.Card&lt;T&gt;</c>, in its methods and their lambdas and state machines. Cached per card type.
+    /// </summary>
+    public static List<CardModel> Made(CardModel card) => MadeCache.GetOrAdd(card.GetType(), t =>
+    {
+        var list = new List<CardModel>();
+        foreach (var made in MadeTypes(t))
+        {
+            try { if (ModelDb.AllCards.FirstOrDefault(c => c.GetType() == made) is { } canonical) list.Add(canonical); }
+            catch { /* not in the database */ }
+        }
+        return list;
+    });
+
+    /// <summary>The card types a card class makes (see <see cref="Made"/>).</summary>
+    internal static HashSet<Type> MadeTypes(Type t)
+    {
+        var types = new HashSet<Type>();
+        foreach (var type in new[] { t }.Concat(t.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)))
+        foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+        {
+            if (m.IsAbstract) continue;
+            List<CodeInstruction> code;
+            try { code = PatchProcessor.GetOriginalInstructions(m); } catch { continue; }
+            foreach (var ins in code)
+            {
+                if (ins.operand is MethodInfo { IsGenericMethod: true } g && g.Name is "CreateCard" or "Card"
+                    && g.GetGenericArguments()[0] is { } made && typeof(CardModel).IsAssignableFrom(made) && !made.IsAbstract && made != t)
+                    types.Add(made);
+            }
+        }
+        return types;
+    }
+
+    private static bool Safe(Func<CardModel, bool> f, CardModel c)
+    {
+        try { return f(c); }
+        catch { return true; }
+    }
 
     /// <summary>Whether a rule applies to a card, safely (a check that throws on an odd card counts as applying: the icon stays).</summary>
     public static bool AppliesTo(CardAffinityRule rule, CardModel card)

@@ -300,19 +300,22 @@ public sealed partial class SettingsMenu
         ev.AddChild(Label("Events", 20, Accent));
         ev.AddChild(ExampleBox(inner =>
         {
-            var row = UiKit.Row(10);
-            var icons = new List<(RelicModel, bool)>();
-            if (RelicOf<BingBong>() is { } bing) icons.Add((bing, true));
-            if (RelicOf<DarkstonePeriapt>() is { } periapt) icons.Add((periapt, false));
-            row.AddChild(RunRemindersFeature.ExampleEventIcons(icons));
-            var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-            option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), 6, 12));
-            option.AddChild(UiKit.Label("Accept: gain a relic, add a curse", 18, Colors.White));
-            row.AddChild(option);
-            inner.AddChild(row);
+            void Option(string text, params (RelicModel?, bool, string?)[] relics)
+            {
+                var row = UiKit.Row(10);
+                row.AddChild(RunRemindersFeature.ExampleEventIcons(relics.Where(r => r.Item1 != null).Select(r => (r.Item1!, r.Item2, r.Item3))));
+                var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+                option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), 6, 12));
+                option.AddChild(UiKit.Label(text, 18, Colors.White));
+                row.AddChild(option);
+                inner.AddChild(row);
+            }
+            Option("Accept: gain a relic, add a curse", (RelicOf<BingBong>(), true, null), (RelicOf<DarkstonePeriapt>(), false, null));
+            Option("Study: choose a card", (RelicOf<FresnelLens>(), false, "43%"));
         }));
-        ev.AddChild(CellText("Left of an option: here it adds a curse, so Bing Bong (crossed) copies the curse and Darkstone Periapt "
-            + "gives you max HP."));
+        ev.AddChild(CellText("Left of an option: the first adds a curse, so Bing Bong (crossed) copies the curse and Darkstone Periapt "
+            + "gives you max HP. A relic that changes only some cards shows only when one of them can come up, with the chance it "
+            + "does: here 43% that a card Fresnel Lens enchants is among the ones you're offered."));
         flow.AddChild(ev);
         _rows!.AddChild(flow);
     }

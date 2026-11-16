@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.7.0
+#### Added
+- Run Reminders: under an egg's or Fresnel Lens' icon beside an event option, the chance that a card it changes is among the cards you're offered (or, for a random transform, that the new card is one), worked out from the option's own pool, filter, rarity odds and card count.
+- Run Reminders: Strike Dummy, Miniature Cannon, Mystic Lighter and Vitruvian Minion beside event options. Strike Dummy and Vitruvian Minion where a Strike or a Minion card can come up (Begone! counts: it makes a Minion Strike); Miniature Cannon where a card is upgraded, or an egg would upgrade an Attack you get; Mystic Lighter where a card is enchanted (Tezcatara's Nutritious Soup, enchant picks), or Fresnel Lens would enchant an Attack you get. Each with its chance, as above.
+- Guide page: an event option with a chance under its icon.
+
 ### Spire QoL 1.6.3
 #### Fixed
 - Run Reminders: an ancient's Sea Glass option is read as cards from Sea Glass's character's pool, not yours, so the eggs and Fresnel Lens show by that pool's cards. A reward filter that can't be worked out before you choose (Glass Eye's per-rarity rewards) counts every card of its pool, so no icon is left out.
