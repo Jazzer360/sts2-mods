@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.6.1
+#### Fixed
+- Guide page: the red slash sits across Sozu's icon in the shop example, and the Retain and Sly example card shows both keywords in its text, as it would in your hand.
+- Run Reminders: a crossed relic icon keeps its slash centred even where its row is taller than the icon.
+
 ### Spire QoL 1.6.0
 #### Changed
 - Rest Preview is now a sum beside your character, like Incoming Damage: your HP, the rest heal, a line for each relic that changes it (Regal Pillow, Stone Humidifier, Night Terrors) or heals you when the boss fight starts (Pantograph, Bath Robes), and the HP you'll have, with what's wasted in orange.

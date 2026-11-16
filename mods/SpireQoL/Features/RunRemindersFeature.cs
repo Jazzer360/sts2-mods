@@ -652,6 +652,9 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
     {
         var icon = UiKit.Icon(tex, size);
         icon.MouseFilter = Control.MouseFilterEnum.Ignore;
+        // Keep the icon its own size in any container, so the slash (placed for that size) stays across it.
+        icon.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+        icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         if (!crossed) return icon;
         var len = size * 1.414f * 0.9f;
         var thick = Math.Max(3f, size * 0.12f);

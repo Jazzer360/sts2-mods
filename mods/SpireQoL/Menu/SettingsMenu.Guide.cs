@@ -103,9 +103,9 @@ public sealed partial class SettingsMenu
             "Playing this brings that card back to your hand: here Patter is your third Skill this turn, so Make It So comes back from your discard pile. "
             + "Also Right Hand Hand and Whistling Arrows.",
             new TabSpec("return:MakeItSo", null, Card: Card<MakeItSo>()));
-        GuideCardCell(flow, Card<Backflip>(), "Retain and Sly",
-            "Steady: the card stays in your hand at end of turn. Master Planner: it's Sly. "
-            + "These are about the card, not about playing it, and they show even when it's only for this turn.",
+        GuideCardCell(flow, Card<Backflip>(CardKeyword.Retain, CardKeyword.Sly), "Retain and Sly",
+            "The card stays in your hand at end of turn (Retain), or is Sly (Hand Trick, Master Planner). The card's text says so too; "
+            + "the tabs are there because they're about the card, not about playing it, and they show even when it's only for this turn.",
             Tab("retain", Enchantment<Steady>()), Tab("sly", Power<MasterPlannerPower>()));
         GuideCardCell(flow, Card<Acrobatics>(), "Discard pile: a reshuffle",
             "It draws more cards than your draw pile has, so playing it shuffles your discard pile back into your draw pile.",
@@ -384,6 +384,7 @@ public sealed partial class SettingsMenu
         private CardOverlayRenderer.Example? _example;
         private bool _visuals;
         private bool _failed;
+        private CardModel? _fallback;
 
         /// <summary>Show the cost as a free card makes it in your hand: the game's green 0 (NCard.UpdateEnergyCostColor).</summary>
         public bool FreeCost { get; set; }
@@ -404,6 +405,7 @@ public sealed partial class SettingsMenu
                 var scene = ResourceLoader.Load<PackedScene>("res://scenes/cards/card.tscn");
                 _card = scene.Instantiate<NCard>();
                 _card.Model = model;
+                if (model.IsMutable) _fallback = ModelDb.GetById<CardModel>(model.Id);
                 _card.Scale = new Vector2(scale, scale);
                 Root.AddChild(_card);
             }
@@ -437,6 +439,14 @@ public sealed partial class SettingsMenu
             }
             catch (Exception ex)
             {
+                // A copy with keywords that won't draw outside a fight: fall back to the plain card.
+                if (_fallback != null)
+                {
+                    _card.Model = _fallback;
+                    _fallback = null;
+                    _visuals = false;
+                    return;
+                }
                 _failed = true; // once: not every frame
                 ModEntry.Log.Warn($"guide: card example failed: {ex.Message}");
                 _card.Visible = false;
@@ -471,9 +481,22 @@ public sealed partial class SettingsMenu
         bool aimed = false, string? text = null) =>
         new(key, icon, crossed, number, Text: text, NumberText: numberText, Aimed: aimed);
 
-    private static CardModel? Card<T>() where T : CardModel
+    /// <param name="keywords">Keywords the example has picked up (Retain, Sly): a copy of the card carries them, so its text shows them.</param>
+    private static CardModel? Card<T>(params CardKeyword[] keywords) where T : CardModel
     {
-        try { return ModelDb.Card<T>(); } catch { return null; }
+        CardModel canonical;
+        try { canonical = ModelDb.Card<T>(); } catch { return null; }
+        if (keywords.Length == 0) return canonical;
+        try
+        {
+            var copy = canonical.ToMutable();
+            foreach (var k in keywords) copy.AddKeyword(k);
+            return copy;
+        }
+        catch
+        {
+            return canonical;
+        }
     }
 
     private static Texture2D? Relic<T>() where T : RelicModel
