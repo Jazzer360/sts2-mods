@@ -240,7 +240,10 @@ public sealed class RainbowRing : RelicProc
     }
 }
 
-/// <summary>ConductorsBaton.AfterCardPlayed: once a turn (Data 2: done), the play that completes Wah, Cho and Ki.</summary>
+/// <summary>
+/// ConductorsBaton.AfterCardPlayed: once a turn (Data 2: done), the play that completes Wah, Cho and Ki applies
+/// ConductorsBatonPower (1) to its owner.
+/// </summary>
 public sealed class ConductorsBaton : RelicProc
 {
     public override string Name => "ConductorsBaton";
@@ -250,8 +253,20 @@ public sealed class ConductorsBaton : RelicProc
         var (before, after) = Melodies.Finished(s, play);
         if (before >= 3 || after < 3) return One(s);
         Set(s, owner, Amount(s, owner), Data(s, owner) | 2);
+        SimEngine.ApplyPower(s, owner, owner, "ConductorsBatonPower", 1, debuff: false);
         return Fire(s, owner);
     }
+}
+
+/// <summary>
+/// ConductorsBatonPower.ModifyDamageMultiplicative: its DamageDecrease (0.75) on powered attacks on its owner; it goes at the
+/// start of the owner's next turn (AfterSideTurnStart), so it lasts through the enemy turn.
+/// </summary>
+public sealed class ConductorsBatonPower : SimModel
+{
+    public override string Name => "ConductorsBatonPower";
+    public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
+        d.Target == owner && d.Props.IsPoweredAttack() ? 0.75m : 1m;
 }
 
 /// <summary>Twine.AfterArrowDislodged: block for each of your arrows that comes loose.</summary>

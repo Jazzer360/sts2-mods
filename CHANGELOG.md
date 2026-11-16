@@ -6,6 +6,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.2.1
+#### Fixed
+- Conductor's Baton: the play that completes three melodies now lowers the enemies' attacks in Incoming Damage (75% until your next turn).
+- Cho Barbs' Thorns counted once, not twice, so Incoming Damage no longer doubles the damage it deals back to attackers; one Thorns tab instead of a second Cho Barbs tab.
+- While an attack is under way, the other cards in hand no longer count the Vigor, Aim, Quietus or Gigantification it has already taken for itself.
+- Run Reminders: Crystal Sphere's options show the icons for what its minigame can give (card rewards, a curse, gold, potions); options that add a curse card through the plain add-card command (Wuppy in Trouble's Injury, Museum of Torture) show the curse icons.
+- Potion tabs check: Reptile Trinket and Belt Buckle are compared with the tabs the potion had, not with none.
+- Checks: the enemy intent after a play is compared as the play leaves it (Weak, Tainted, Conductor's Baton); Show Off's flash on a kill and Strength that Possess Strength gives back on its owner's death are no longer reported; Steady Cadence's draws are known to the card scan.
+
 ### Spire QoL 1.2.0
 #### Changed
 - The end of your turn follows the game's order exactly: each player's effects in player order (a teammate before you acts first), Orichalcum checking your block before Pael's Eye exhausts your hand, then each player's orbs, Ethereal cards and cards in hand in turn.

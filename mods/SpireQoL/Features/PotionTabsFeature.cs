@@ -35,7 +35,10 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     /// <summary>A copy of a card's enchantment tab, kept to make potion tabs from (null until a card is seen).</summary>
     private Control? _proto;
     private readonly Dictionary<ulong, List<Control>> _tabs = new();
-    /// <summary>Each potion's tabs on the last frame (the check reads them once it's drunk).</summary>
+    /// <summary>
+    /// Each potion's tabs on the last frame it was on the belt (the check reads them once it's drunk). Kept after it leaves the
+    /// belt: it does before the game logs it as used. Cleared out of combat.
+    /// </summary>
     private readonly Dictionary<PotionModel, List<string>> _last = new(ReferenceEqualityComparer.Instance);
     private int _historySeen = -1;
     private Pending? _pending;
@@ -73,7 +76,6 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             var potions = me.Potions.ToList();
             var full = !me.HasOpenPotionSlots;
             var buckleReady = me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } buckle && !Sts2State.Private(buckle, "_dexterityApplied", true);
-            _last.Clear();
             foreach (var holder in holders)
             {
                 if (!GodotObject.IsInstanceValid(holder) || holder.Potion is not { } node || !GodotObject.IsInstanceValid(node)) continue;
@@ -231,6 +233,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         if (me == null || entries == null || !Sts2State.InCombat)
         {
             _historySeen = -1;
+            _last.Clear();
             return;
         }
         var list = entries.ToList();
@@ -238,7 +241,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         for (var i = _historySeen; i < list.Count; i++)
         {
             if (list[i] is not PotionUsedEntry used || used.Actor != me.Creature) continue;
-            var tabs = _last.TryGetValue(used.Potion, out var t) ? t : new List<string>();
+            var tabs = _last.Remove(used.Potion, out var t) ? t : new List<string>();
             _pending = new Pending(used.Potion, tabs, _prevStrength, _prevBuckle, 0);
         }
         _historySeen = list.Count;

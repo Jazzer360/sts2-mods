@@ -28,6 +28,9 @@ public static class SimReaders
         var set = PowerSet.Empty;
         foreach (var pw in c.Powers)
         {
+            // A temporary Thorns power (Cho Barbs) only tracks how much Thorns to take back after the enemy turn: the Thorns
+            // itself is already in the owner's ThornsPower (TemporaryThornsPower.BeforeApplied applies it).
+            if (SimAdapter.IsTemporaryThorns(pw.GetType())) continue;
             var name = SimAdapter.SimPowerName(pw.GetType());
             int amount = pw.Amount, data = 0;
             switch (name)
@@ -59,6 +62,11 @@ public static class SimReaders
                 case "PaleBlueDotPower": data = Internal(pw, "alreadyActivatedThisTurn") ? 1 : 0; break;
                 case "LullabyPower": data = Sts2State.Private(pw, "_proccdThisTurn", true) ? 1 : 0; break;
                 case "YahPower": data = Internal(pw, "triggeredThisTurn") ? 1 : 0; break;
+                // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
+                case "VigorPower" or "AimPower" or "QuietusPower" or "GigantificationPower":
+                    data = Sts2State.Private<object?>(pw, "_internalData", null) is { } bd && Sts2State.Private<object?>(bd, "commandToModify", null) != null
+                        ? Models.AttackBoundPower.BoundOutside : 0;
+                    break;
                 case "JugglingPower": data = Sts2State.Private<object?>(pw, "_internalData", null) is { } jd ? Sts2State.Private(jd, "attacksPlayedThisTurn", 0) : 0; break;
                 // Whose plays it acts on (+ 100, so 0 stays "nobody").
                 case "StranglePower" or "OblivionPower": data = pw.Applier is { } sa && idOf(sa) is { } saId ? saId + 100 : 0; break;

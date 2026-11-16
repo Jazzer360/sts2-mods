@@ -78,6 +78,12 @@ public sealed class WeakPower : SimModel
 /// </summary>
 public abstract class AttackBoundPower : SimModel
 {
+    /// <summary>
+    /// Bound to an attack outside the simulation: one under way when the state was read (the game's commandToModify is set), so
+    /// it adds nothing to any simulated attack, and no simulated attack spends it.
+    /// </summary>
+    public const int BoundOutside = 0x7FFF << 16;
+
     protected static int BoundAttack(int data) => data >> 16;
     protected static int AmountAtStart(int data) => data & 0xFFFF;
 

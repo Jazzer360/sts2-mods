@@ -120,7 +120,13 @@ public static partial class SimAdapter
     /// The power the simulator models for a power type: a temporary Thorns power (Cho Barbs, v0.113.0) gives real
     /// Thorns until the end of the enemy turn (TemporaryThornsPower.BeforeApplied applies ThornsPower), so it's Thorns.
     /// </summary>
-    internal static string SimPowerName(Type power) => power.BaseType?.Name == "TemporaryThornsPower" ? nameof(ThornsPower) : power.Name;
+    internal static string SimPowerName(Type power) => IsTemporaryThorns(power) ? nameof(ThornsPower) : power.Name;
+
+    /// <summary>
+    /// A temporary Thorns power (Cho Barbs): what it gives is already in the owner's ThornsPower, so reading the state and the
+    /// proc tabs leave it out (Thorns has the one tab).
+    /// </summary>
+    internal static bool IsTemporaryThorns(Type power) => power.BaseType?.Name == "TemporaryThornsPower";
 
     /// <summary>The kind of orb every channel of this card makes, when it's one kind (null: mixed, random or none).</summary>
     internal static OrbKind? ChannelKind(string card) =>

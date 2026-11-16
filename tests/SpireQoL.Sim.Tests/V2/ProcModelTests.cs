@@ -182,6 +182,32 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void ConductorsBatonPowerCutsTheEnemyTurnsAttacks()
+    {
+        // ConductorsBaton.AfterCardPlayed applies ConductorsBatonPower (1); its ModifyDamageMultiplicative is 0.75 on powered
+        // attacks on its owner until the owner's next turn: Aeonglass' 22 becomes 16, 18 × 2 becomes 13 × 2.
+        var ki = Card("KiStep", SimCardType.Skill, "Ki");
+        var s = State();
+        Relic(s, "ConductorsBaton", data: 0);
+        s.Enemies[0].Intent = new List<IntentHit> { new(22m) };
+        s.P.Turn = s.P.Turn.Add("Finished#Wah", 1).Add("Finished#Cho", 1);
+        var o = SimEngine.Run(s, Events(ki, 1));
+        Assert.Equal(16, o.TakenMax);
+        Assert.True(One(s, Events(ki, 1)).P.Powers.Has("ConductorsBatonPower"));
+        s.Enemies[0].Intent = new List<IntentHit> { new(18m), new(18m) };
+        Assert.Equal(26, SimEngine.Run(s, Events(ki, 1)).TakenMax);
+
+        // Already on you (applied by an earlier play): read as a power, it cuts the intent the same way.
+        var on = State();
+        on.P.Powers = on.P.Powers.With("ConductorsBatonPower", 1);
+        on.Enemies[0].Intent = new List<IntentHit> { new(22m) };
+        Assert.Equal(16, SimEngine.Run(on, Events(Card("Defend", SimCardType.Skill), 1)).TakenMax);
+        // Not yet three melodies: no power, the full intent.
+        s.P.Turn = PowerSet.Empty.Add("Finished#Wah", 1);
+        Assert.Equal(36, SimEngine.Run(s, Events(ki, 1)).TakenMax);
+    }
+
+    [Fact]
     public void ExplosiveArrowsNeedsAnArrowAndYahAndTwineReactToDislodges()
     {
         // Explosive Arrows on the impale (after the attack), only with an arrow to shoot.

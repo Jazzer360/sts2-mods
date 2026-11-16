@@ -168,6 +168,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> TeammateOnly = new() { nameof(CoveringFirePower) };
 
     /// <summary>
+    /// Your powers whose flash only changes a card for a later play, so nothing happens in this one (no tab by design: the coverage
+    /// ledger's "ignore"). Show Off: an enemy's death raises the Show Off card's Aim and the power goes (ShowOffPower.AfterDeath →
+    /// ShowOff.IncreaseAim).
+    /// </summary>
+    private static readonly HashSet<string> LaterPlayOnly = new() { nameof(ShowOffPower) };
+
+    /// <summary>
     /// Relics that act without flashing, so "didn't fire" can't be checked by a flash (their effect still is: the
     /// card cost check). Mummified Hand makes a card in your hand free (MummifiedHand.AfterCardPlayed: no Flash call).
     /// </summary>
@@ -868,6 +875,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         foreach (var m in flashed.Distinct())
         {
             if (sourceOf.ContainsKey(m.GetType().Name) || Modifiers.Contains(m.GetType().Name) || TeammateOnly.Contains(m.GetType().Name)) continue;
+            if (LaterPlayOnly.Contains(m.GetType().Name))
+            {
+                modelLines.Add($"{m.GetType().Name} fired (it changes a card for a later play: no tab by design)");
+                continue;
+            }
             // A double-play source (Throwing Axe flashes in AfterModifyingCardPlayCount) when the card did play more
             // than once: its tab is Card Indicators' (the game's own play-count query), not a proc rule.
             if (CodeIndex.Does(m.GetType(), Array.Empty<string>(), new[] { "ModifyCardPlayCount" })
@@ -1047,6 +1059,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // An enemy that comes in as another dies, set up with its powers by no one (StockPower.AfterDeath spawns the
             // next Axebot and gives it Stock).
             .Where(p => !(p.Actor.IsEnemy && p.Applier == null && DiedInPlay(entries)))
+            // A death in the play giving back what a power on the dead creature took, applied by no one
+            // (PossessStrengthPower.AfterDeath: the stolen Strength back to each player).
+            .Where(p => !(p.Applier == null && DeathGivesPowers(w, entries)))
             .Select(p => p.Power.GetType().Name)
             .Distinct()
             .ToList();
@@ -1165,6 +1180,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly string[] DeathHooks = { "AfterDeath", "BeforeDeath" };
 
     private static bool DiedInPlay(List<CombatHistoryEntry> entries) => entries.OfType<DamageReceivedEntry>().Any(d => d.Result.WasTargetKilled);
+
+    /// <summary>A creature killed in the play had a power (before it) whose death hook applies powers (Possess Strength).</summary>
+    private static bool DeathGivesPowers(Window w, List<CombatHistoryEntry> entries)
+    {
+        if (w.PowersBefore == null) return false;
+        var killed = entries.OfType<DamageReceivedEntry>().Where(d => d.Result.WasTargetKilled).Select(d => d.Result.Receiver).ToHashSet();
+        return killed.Count > 0 && w.PowersBefore.Keys.Any(k => killed.Contains(k.Item1) && PowerTypeNamed(k.Item2) is { } t
+            && CodeIndex.Does(t, Array.Empty<string>(), DeathHooks) && CodeIndex.Does(t, new[] { "PowerCmd.Apply*" }, Array.Empty<string>()));
+    }
 
     /// <summary>The game's power class with this name (powers are recorded by name before the play).</summary>
     private static Type? PowerTypeNamed(string name) => typeof(ArtifactPower).Assembly.GetType(typeof(ArtifactPower).Namespace + "." + name);
@@ -1345,8 +1369,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // FlutterPower.AfterDamageReceived: one stack per powered hit that gets through (no flash until it stuns).
                 if (pe.Flutter != ae.Flutter) d.Add($"after play enemy Flutter: {name} predicted {pe.Flutter}, actual {ae.Flutter}");
                 if (pe.Stunned != ae.Stunned) d.Add($"after play enemy stunned: {name} predicted {(pe.Stunned ? "stunned" : "not stunned")}, actual {(ae.Stunned ? "stunned" : "not stunned")}");
-                // A stunned enemy's intent becomes the stun move; the simulator keeps its hits and skips them.
-                if (!pe.Stunned && !ae.Stunned && !pe.Hits.SequenceEqual(ae.Hits)) d.Add($"after play enemy intent: {name} predicted [{string.Join(", ", pe.Hits)}], actual [{string.Join(", ", ae.Hits)}]");
+                // A stunned enemy's intent becomes the stun move; the simulator keeps its hits and skips them. The predicted intent is
+                // its hits as they'd land on you in the predicted state (what the play gave or took: Weak, Tainted, Conductor's
+                // Baton...); Hits is only the intent as it was read before the play.
+                var predHits = pe.Intent is { Count: > 0 } intent
+                    ? Enumerable.Range(0, intent.Count).Select(h => SimEngine.IntentDamage(pred, pe, h, Who.You)).ToList()
+                    : pe.Hits;
+                if (!pe.Stunned && !ae.Stunned && !predHits.SequenceEqual(ae.Hits)) d.Add($"after play enemy intent: {name} predicted [{string.Join(", ", predHits)}], actual [{string.Join(", ", ae.Hits)}]");
             }
             var pp = pred.P;
             var ap = after.P;

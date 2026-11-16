@@ -694,10 +694,31 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
             if (ins.operand is not MethodBase mb || mb.DeclaringType == null) continue;
             if (ins.opcode != OpCodes.Call && ins.opcode != OpCodes.Callvirt && ins.opcode != OpCodes.Newobj) continue;
             calls.Add(mb.DeclaringType.Name + "." + mb.Name);
+            // The card it makes is a curse (Wuppy's Injury: ModelDb.Card<Injury>; the Museum's pick from the curse pool): whatever
+            // command adds it, a curse joins the deck.
+            if (MakesCurse(mb)) calls.Add(ChoiceReminders.CurseMade);
             if (owner != null && IsWithin(mb.DeclaringType, owner)) Walk(mb, owner, calls, seen, depth + 1);
+            // An event's own part it creates (the Crystal Sphere's minigame, and the items it hides: card rewards, a curse, gold,
+            // potions): everything that class does is something the option can do.
+            else if (ins.opcode == OpCodes.Newobj && mb.DeclaringType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Events.Custom") == true)
+            {
+                foreach (var m in mb.DeclaringType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                    Walk(m, mb.DeclaringType, calls, seen, depth + 1);
+            }
             // A game mode's own rewards (Blitz's Neow option runs BlitzRunModel.GiveNeowRewards).
             else if (mb.IsStatic && typeof(RunModel).IsAssignableFrom(mb.DeclaringType)) Walk(mb, mb.DeclaringType, calls, seen, depth + 1);
         }
+    }
+
+    /// <summary>ModelDb.Card&lt;T&gt; of a curse card, or ModelDb.CardPool&lt;CurseCardPool&gt;.</summary>
+    private static bool MakesCurse(MethodBase mb)
+    {
+        if (mb is not MethodInfo { IsGenericMethod: true } gm || gm.DeclaringType?.Name != nameof(ModelDb)) return false;
+        var arg = gm.GetGenericArguments()[0];
+        if (gm.Name == nameof(ModelDb.CardPool)) return arg.Name == "CurseCardPool";
+        if (gm.Name != nameof(ModelDb.Card)) return false;
+        try { return ModelDb.AllCards.FirstOrDefault(c => c.GetType() == arg)?.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse; }
+        catch { return false; }
     }
 
     private static bool IsWithin(Type t, Type owner)

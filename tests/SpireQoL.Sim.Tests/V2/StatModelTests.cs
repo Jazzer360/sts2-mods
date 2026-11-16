@@ -1,4 +1,5 @@
 using SpireQoL.Sim;
+using SpireQoL.Sim.Models;
 using Xunit;
 using static SpireQoL.Sim.Tests.V2.V2Script;
 
@@ -94,6 +95,45 @@ public class StatModelTests
         var after = After(s, Play(Card("Strike"), 0, 2, Attack(6))).Single();
         Assert.Equal(83, after.Enemy(0)!.Hp); // 11, then 6
         Assert.False(after.P.Powers.Has("VigorPower"));
+    }
+
+    [Fact]
+    public void VigorReservedForAnAttackUnderWayAddsNothing()
+    {
+        // VigorPower.BeforeAttack binds the first attack (commandToModify); until that attack spends it, ModifyDamageAdditive gives
+        // every other card's damage 0. The adapter reads that as bound outside the simulation (a card mid-play).
+        var s = WithPowers();
+        s.P.Powers = s.P.Powers.With("VigorPower", 6, AttackBoundPower.BoundOutside);
+        var after = After(s, Play(Card("Strike"), 0, 1, Attack(9))).Single();
+        Assert.Equal(91, after.Enemy(0)!.Hp); // 9, not 15
+        Assert.Equal(6, after.P.Powers["VigorPower"]); // the attack under way spends it, not this one
+    }
+
+    [Fact]
+    public void AimQuietusAndGigantificationReservedForAnAttackUnderWayAddNothing()
+    {
+        var arrow = SimProps.Move | SimProps.FromArrow;
+        foreach (var name in new[] { "AimPower", "QuietusPower", "GigantificationPower" })
+        {
+            var s = WithPowers();
+            s.P.Powers = s.P.Powers.With(name, 3, AttackBoundPower.BoundOutside);
+            var after = After(s, Play(Card("Strike"), 0, 1, Attack(10, props: arrow))).Single();
+            Assert.Equal(90, after.Enemy(0)!.Hp);
+            Assert.True(after.P.Powers.Has(name), name);
+        }
+    }
+
+    [Fact]
+    public void FlutterHalvesHitsOnlyUntilItsLastStackGoes()
+    {
+        // Wah Ki (2 × 2) on a Thieving Hopper with Flutter 1: the first hit is halved to 1 and takes the last stack
+        // (FlutterPower.AfterDamageReceived stuns it), so the second hit deals its full 2.
+        var s = WithPowers();
+        s.Enemies[0].Powers = PowerSet.Empty.With("FlutterPower", 1);
+        var after = After(s, Play(Card("WahKi"), 0, 1, Attack(2, hits: 2))).Single();
+        Assert.Equal(97, after.Enemy(0)!.Hp);
+        Assert.True(after.Enemy(0)!.Stunned);
+        Assert.False(after.Enemy(0)!.Powers.Has("FlutterPower"));
     }
 
     [Fact]

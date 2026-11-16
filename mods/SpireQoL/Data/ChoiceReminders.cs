@@ -104,6 +104,9 @@ public static class ChoiceReminders
         _ => "reminder-shop:",
     } + relic;
 
+    /// <summary>Recorded with the calls when the option makes a curse card (ModelDb.Card of a curse, the curse pool).</summary>
+    public const string CurseMade = "(curse card)";
+
     /// <summary>
     /// Game calls ("Type.Method", "Type.Prefix*", constructors as "Type..ctor") and what they mean.
     /// Events only (combat never shows event options).
@@ -114,6 +117,7 @@ public static class ChoiceReminders
         ("CardCmd.Transform*", ChoiceEffect.CardToDeck),
         ("CardReward..ctor", ChoiceEffect.CardToDeck),
         ("CardPileCmd.AddCurse*", ChoiceEffect.CurseToDeck),
+        (CurseMade, ChoiceEffect.CurseToDeck),
         ("CreatureCmd.Damage", ChoiceEffect.HpLoss),
         ("PlayerCmd.GainGold", ChoiceEffect.GoldGain),
         ("GoldReward..ctor", ChoiceEffect.GoldGain),

@@ -465,6 +465,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// </summary>
     private void LogTab(AbstractModel src, int? enemyId, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs, TabKind? kindOverride = null)
     {
+        if (src is PowerModel && SimAdapter.IsTemporaryThorns(src.GetType())) return; // its Thorns has the ThornsPower tab
         var name = SimReaders.ModelName(src);
         var model = SimModels.Get(name);
         if ((kindOverride ?? model?.Tab) is not { } kind) return;

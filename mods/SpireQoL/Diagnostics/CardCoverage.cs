@@ -52,8 +52,9 @@ internal static class CardCoverage
     /// <summary>
     /// Cards whose counts are calculated from the fight (orbs, statuses, history): handled in PlayFacts,
     /// but they read 0 on the game's template card, so the scan can't test them by value.
+    /// Steady Cadence draws one per melody played this turn (MelodyCmd.MelodiesThisTurn of its owner).
     /// </summary>
-    private static readonly HashSet<string> Calculated = new() { nameof(CompileDriver), nameof(FlakCannon), nameof(Voltaic) };
+    private static readonly HashSet<string> Calculated = new() { nameof(CompileDriver), nameof(FlakCannon), nameof(Voltaic), "SteadyCadence" };
 
     /// <summary>
     /// Prefix of issues that only matter with teammates (multiplayer): CoverageWatch reports them only in a
