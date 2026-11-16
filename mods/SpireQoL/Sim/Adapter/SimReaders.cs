@@ -38,6 +38,8 @@ public static class SimReaders
                     data = SpireQoL.Procs.Fool.HitCounter(pw);
                     break;
                 case "ImpaledPower": name = "ImpaledPowerOther"; amount = 1; break;
+                case "HailstormPower": data = Sts2State.Var(pw, "FrostOrbs", 1); break;
+                case "TheBombPower": data = Sts2State.Var(pw, "Damage"); break;
                 case "SlowPower": data = Sts2State.Var(pw, "SlowAmount", 0); break;
                 case "SkittishPower": data = Sts2State.Private(pw, "HasGainedBlockThisTurn", false) ? 1 : 0; break;
                 case "HardenedShellPower": data = Math.Max(0, pw.DisplayAmount); break;
@@ -78,11 +80,14 @@ public static class SimReaders
 
     /// <summary>
     /// The values of every relic and power of these creatures and players (their DynamicVars) for SimState.Vars: "id:Name:Var",
+    /// and its name as the game shows it (SimState.Titles),
     /// with a BlockVar's or DamageVar's props as "id:Name:Var.Props".
     /// </summary>
-    public static void AddVars(Dictionary<string, int> vars, int id, AbstractModel model)
+    public static void AddVars(SimState s, int id, AbstractModel model)
     {
+        var vars = s.Vars;
         var name = ModelName(model);
+        try { s.Titles[$"{id}:{name}"] = Combat.TurnEndModel.SafeTitle(model); } catch { /* no title: its class name */ }
         try
         {
             var dv0 = model switch { RelicModel r => r.DynamicVars, PowerModel p => p.DynamicVars, _ => null };
@@ -138,6 +143,17 @@ public static class SimReaders
                 case "MiniRegent" or "Regalite": data = Sts2State.Private(r, "UsedThisTurn", true) ? 0 : 1; break;
                 case "RainbowRing": data = Sts2State.Private(r, "ActivationCountThisTurn", 0) >= 1 ? 2 : 0; break;
                 case "ConductorsBaton": data = Sts2State.Private(r, "_triggeredThisTurn", true) ? 2 : 0; break;
+                // End-of-turn relics: their block or damage (amount), and what they wait for (Data).
+                case "Orichalcum" or "FakeOrichalcum" or "CloakClasp" or "RippleBasin": amount = Sts2State.Var(r, "Block"); break;
+                case "ScreamingFlagon" or "CharonsAshes" or "ForgottenSoul": amount = Sts2State.Var(r, "Damage"); break;
+                case "ObsidianVice": amount = Sts2State.Var(r, "Damage", 1); break;
+                case "StoneCalendar":
+                    amount = Sts2State.Var(r, "Damage");
+                    data = Math.Max(0, Sts2State.Var(r, "DamageTurn", 7) - Sts2State.TurnNumber); // turns until it fires (0: this one)
+                    if (Sts2State.TurnNumber > Sts2State.Var(r, "DamageTurn", 7)) amount = 0; // its turn has passed
+                    break;
+                case "ParryingShield": amount = Sts2State.Var(r, "Damage"); data = Sts2State.Var(r, "Block"); break;
+                case "LunarPastry": amount = Sts2State.Var(r, "Stars", 1); break;
                 case "UnsettlingLamp":
                     data = Sts2State.Private<object?>(r, "TriggeringCard", null) == null && !Sts2State.Private(r, "IsFinishedTriggering", true) ? 1 : 0;
                     break;

@@ -1,0 +1,145 @@
+namespace SpireQoL.Sim.Models;
+
+// What acts when your side's turn ends (decompile v0.113.1: Hook.BeforeSideTurnEnd runs every listener's VeryEarly, then Early,
+// then BeforeSideTurnEnd; Hook.AfterSideTurnEnd after the hands are flushed). Each model acts for its own player, in the game's
+// listener order (players in player order, their powers then their relics), so teammates' come in their place. No card tabs:
+// these show in Incoming Damage's breakdown.
+
+/// <summary>An end-of-turn power or relic: no tab on cards; it acts only while its player takes part (alive).</summary>
+public abstract class EndOfTurnModel : ProcModel
+{
+    public override TabKind? Tab => null;
+}
+
+/// <inheritdoc cref="EndOfTurnModel"/>
+public abstract class EndOfTurnRelic : RelicProc
+{
+    public override TabKind? Tab => null;
+}
+
+/// <summary>PlatingPower.BeforeSideTurnEndEarly: its amount of block (unpowered).</summary>
+public sealed class PlatingPower : EndOfTurnModel
+{
+    public override string Name => "PlatingPower";
+    public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) && Amount(s, owner) > 0 ? Block(s, owner, Amount(s, owner)) : One(s);
+}
+
+/// <summary>HailstormPower.BeforeSideTurnEnd: its amount to every hittable enemy when its owner has its FrostOrbs (Data) Frost orbs.</summary>
+public sealed class HailstormPower : EndOfTurnModel
+{
+    public override string Name => "HailstormPower";
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
+    {
+        if (!SimEngine.TakesPart(s, owner) || SimEngine.PlayerOf(s, owner) is not { } p || Amount(s, owner) <= 0) return One(s);
+        return p.Orbs.Count(o => o.Kind == OrbKind.Frost) >= Data(s, owner) ? DamageAll(s, owner, Amount(s, owner)) : One(s);
+    }
+}
+
+/// <summary>TheBombPower.BeforeSideTurnEnd: ticks down (amount: turns left); on its last its Damage (Data) to every hittable enemy, then it goes.</summary>
+public sealed class TheBombPower : EndOfTurnModel
+{
+    public override string Name => "TheBombPower";
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
+    {
+        if (!SimEngine.TakesPart(s, owner)) return One(s);
+        var turns = Amount(s, owner);
+        var damage = Data(s, owner);
+        if (turns > 1) { Set(s, owner, turns - 1, damage); return One(s); }
+        SimEngine.SetPowers(s, owner, SimEngine.PowersOf(s, owner).Without(Name));
+        return damage > 0 ? DamageAll(s, owner, damage) : One(s);
+    }
+}
+
+/// <summary>ConsumingShadowPower.AfterSideTurnEnd: its owner's last orb is evoked, its amount of times (OrbCmd.EvokeLast).</summary>
+public sealed class ConsumingShadowPower : EndOfTurnModel
+{
+    public override string Name => "ConsumingShadowPower";
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner)
+    {
+        if (!SimEngine.TakesPart(s, owner)) return One(s);
+        IEnumerable<SimState> r = One(s);
+        for (var i = 0; i < Amount(s, owner); i++) r = r.SelectMany(x => SimEngine.EvokeLast(x, owner)).ToList();
+        return r;
+    }
+}
+
+/// <summary>
+/// Orichalcum (and its fake): BeforeSideTurnEndVeryEarly arms it when its owner has no block (Data 1); BeforeSideTurnEnd then
+/// gives its block (amount, unpowered).
+/// </summary>
+public abstract class OrichalcumBase : EndOfTurnRelic
+{
+    public override IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState s, int owner)
+    {
+        if (SimEngine.TakesPart(s, owner) && SimEngine.PlayerOf(s, owner) is { Block: <= 0 }) Set(s, owner, Amount(s, owner), 1);
+        return One(s);
+    }
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
+    {
+        if (Data(s, owner) != 1) return One(s);
+        Set(s, owner, Amount(s, owner), 0);
+        return Block(s, owner, Amount(s, owner));
+    }
+}
+
+public sealed class Orichalcum : OrichalcumBase { public override string Name => "Orichalcum"; }
+public sealed class FakeOrichalcum : OrichalcumBase { public override string Name => "FakeOrichalcum"; }
+
+/// <summary>CloakClasp.BeforeSideTurnEnd: its block (amount) per card in its owner's hand (unpowered).</summary>
+public sealed class CloakClasp : EndOfTurnRelic
+{
+    public override string Name => "CloakClasp";
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
+    {
+        if (!SimEngine.TakesPart(s, owner) || SimEngine.PlayerOf(s, owner) is not { HandCount: > 0 } p) return One(s);
+        return SimEngine.ProcBlock(s, owner, Name, p.HandCount * Amount(s, owner), Unpowered, label: $"{SimEngine.Title(s, owner, Name)} ×{p.HandCount}");
+    }
+}
+
+/// <summary>ScreamingFlagon.BeforeSideTurnEnd: its damage (amount) to every hittable enemy when its owner's hand is empty.</summary>
+public sealed class ScreamingFlagon : EndOfTurnRelic
+{
+    public override string Name => "ScreamingFlagon";
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) && SimEngine.PlayerOf(s, owner) is { HandCount: 0 } ? DamageAll(s, owner, Amount(s, owner)) : One(s);
+}
+
+/// <summary>StoneCalendar.BeforeSideTurnEnd: its damage (amount) to every hittable enemy on its DamageTurn (Data: turns until then).</summary>
+public sealed class StoneCalendar : EndOfTurnRelic
+{
+    public override string Name => "StoneCalendar";
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) && Data(s, owner) == 0 && Amount(s, owner) > 0 ? DamageAll(s, owner, Amount(s, owner)) : One(s);
+}
+
+/// <summary>ObsidianVice.BeforeSideTurnEnd: its damage (amount) per card in its owner's hand, to one random hittable enemy (unpowered).</summary>
+public sealed class ObsidianVice : EndOfTurnRelic
+{
+    public override string Name => "ObsidianVice";
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
+    {
+        if (!SimEngine.TakesPart(s, owner) || SimEngine.PlayerOf(s, owner) is not { HandCount: > 0 } p || Amount(s, owner) <= 0) return One(s);
+        return SimEngine.ProcDamageRandom(s, owner, Name, Amount(s, owner) * p.HandCount, Unpowered, label: $"{SimEngine.Title(s, owner, Name)} ×{p.HandCount}");
+    }
+}
+
+/// <summary>ParryingShield.AfterSideTurnEnd: its damage (amount) to a random hittable enemy when its owner has at least its Block (Data).</summary>
+public sealed class ParryingShield : EndOfTurnRelic
+{
+    public override string Name => "ParryingShield";
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner)
+    {
+        if (!SimEngine.TakesPart(s, owner) || Amount(s, owner) <= 0 || SimEngine.PlayerOf(s, owner) is not { } p || p.Block < Data(s, owner)) return One(s);
+        if (owner == Who.You) s.ParryingShieldFired = true;
+        return DamageRandom(s, owner, Amount(s, owner));
+    }
+}
+
+/// <summary>LunarPastry.AfterSideTurnEnd: its owner gains stars (Black Hole reacts: AfterStarsGained).</summary>
+public sealed class LunarPastry : EndOfTurnRelic
+{
+    public override string Name => "LunarPastry";
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) ? SimEngine.ProcCardEvent(s, CardEvent.StarsGained, 1, owner, indirect: false) : One(s);
+}

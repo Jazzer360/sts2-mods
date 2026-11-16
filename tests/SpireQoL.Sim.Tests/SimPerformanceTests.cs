@@ -131,7 +131,7 @@ public class SimPerformanceTests
     public static IEnumerable<object[]> Scenarios() => new[]
     {
         // Measured (2026-11-12): copies, stepped, steps, bytes.
-        new object[] { "branch-heavy hand", 1160, 830, 65, 32_000_000L },              // 926, 659, 52, 21.3 MB
+        new object[] { "branch-heavy hand", 1160, 830, 65, 37_000_000L },              // 926, 659, 52, 21.3 MB; 34.3 MB with the end of turn as models (decision #51: their hook steps and listener cache on every branch; time per run halved)
         new object[] { "four Defects", 1490, 3100, 183, 141_000_000L },                // 1192, 2483, 146, 94.1 MB
         new object[] { "Beacon of Hope and Juggernaut", 2600, 95, 95, 80_000_000L },   // 2056 (the step budget), 76, 76, 46.9 MB; 71.3 MB with v2's powers, relics and play log on every state (decision #48)
         new object[] { "typical fight", 10, 48, 27, 460_000L },                        // 6, 38, 21, 0.26 MB; 0.40 MB with v2's scripts and play log (decision #48)

@@ -27,7 +27,38 @@ public static partial class SimEngine
     /// </summary>
     internal static List<(SimModel Model, int Owner)> Listeners(SimState s)
     {
-        if (!AnyModelled(s)) return NoListeners;
+        // Cached on the state until one of the sets it was built from changes (they're immutable: a change is a new set).
+        if (s.ListenerCache != null && SameSets(s, s.ListenerSets!)) return s.ListenerCache;
+        var sets = CurrentSets(s);
+        var result = AnyModelled(s) ? BuildListeners(s) : NoListeners;
+        s.ListenerCache = result;
+        s.ListenerSets = sets;
+        return result;
+    }
+
+    /// <summary>Every power and relic set listeners come from, in listener order.</summary>
+    private static PowerSet[] CurrentSets(SimState s)
+    {
+        var sets = new PowerSet[2 + 2 * s.Teammates.Count + s.Enemies.Count];
+        var i = 0;
+        sets[i++] = s.P.Powers; sets[i++] = s.P.Relics;
+        foreach (var t in s.Teammates) { sets[i++] = t.Powers; sets[i++] = t.Relics; }
+        foreach (var e in s.Enemies) sets[i++] = e.Powers;
+        return sets;
+    }
+
+    private static bool SameSets(SimState s, PowerSet[] sets)
+    {
+        if (sets.Length != 2 + 2 * s.Teammates.Count + s.Enemies.Count) return false;
+        var i = 0;
+        if (!ReferenceEquals(sets[i++], s.P.Powers) || !ReferenceEquals(sets[i++], s.P.Relics)) return false;
+        foreach (var t in s.Teammates) if (!ReferenceEquals(sets[i++], t.Powers) || !ReferenceEquals(sets[i++], t.Relics)) return false;
+        foreach (var e in s.Enemies) if (!ReferenceEquals(sets[i++], e.Powers)) return false;
+        return true;
+    }
+
+    private static List<(SimModel Model, int Owner)> BuildListeners(SimState s)
+    {
         var list = new List<(SimModel, int)>();
         void Add(PowerSet set, int owner)
         {
@@ -69,11 +100,12 @@ public static partial class SimEngine
     /// Runs a hook on every listener, in order, on each branch (a listener's random effect branches; identical results
     /// merge). The listeners are the ones present when the hook starts (the game builds the list first).
     /// </summary>
-    internal static IEnumerable<SimState> Hook(SimState s, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
+    internal static IEnumerable<SimState> Hook(SimState s, string hook, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
     {
         IEnumerable<SimState> states = new[] { s };
         foreach (var (m, owner) in Listeners(s))
         {
+            if (!m.Overrides(hook)) continue;
             var model = m;
             var o = owner;
             states = Then(states, x => call(model, o, x));
@@ -157,9 +189,16 @@ public static partial class SimEngine
 public static partial class SimEngine
 {
     /// <summary>A hook on every branch as one step, or nothing when no branch has a listener (so fights without models cost the same).</summary>
-    private static void HookStep(BranchSet b, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
+    private static void HookStep(BranchSet b, string hook, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
     {
-        if (!b.States.Any(s => Listeners(s).Count > 0)) return;
-        b.Each(s => Hook(s, call));
+        if (!b.States.Any(s => Listens(s, hook))) return;
+        b.Each(s => Hook(s, hook, call));
+    }
+
+    /// <summary>Some listener in this state overrides the hook.</summary>
+    private static bool Listens(SimState s, string hook)
+    {
+        foreach (var (m, _) in Listeners(s)) if (m.Overrides(hook)) return true;
+        return false;
     }
 }

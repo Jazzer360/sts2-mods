@@ -15,11 +15,11 @@ public static partial class SimEngine
         {
             var play = pc.Play with { PlayIndex = i };
             b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; s.PlayEvents = PowerSet.Empty; });
-            HookStep(b, (m, o, x) => m.BeforeCardPlayed(x, o, play));
+            HookStep(b, nameof(SimModel.BeforeCardPlayed), (m, o, x) => m.BeforeCardPlayed(x, o, play));
             b.Do(s => Count(s, play, "Started"));
             foreach (var a in pc.Body) Run(b, a);
             b.Do(s => Count(s, play, "Finished"));
-            HookStep(b, (m, o, x) => m.AfterCardPlayed(x, o, play));
+            HookStep(b, nameof(SimModel.AfterCardPlayed), (m, o, x) => m.AfterCardPlayed(x, o, play));
         }
         b.Do(s => s.CurrentPlay = null);
     }
@@ -47,7 +47,7 @@ public static partial class SimEngine
             s.CurrentAttack = s.AttackSerial;
         });
         AttackInfo Info(SimState s) => new(s.CurrentAttack, s.CurrentPlay?.Owner is { } o && !at.ByOsty ? o : dealer, at.Damage.Props, s.CurrentPlay?.Card);
-        HookStep(b, (m, o, x) => m.BeforeAttack(x, o, Info(x)));
+        HookStep(b, nameof(SimModel.BeforeAttack), (m, o, x) => m.BeforeAttack(x, o, Info(x)));
         for (var i = 0; i < at.Hits; i++)
         {
             switch (at.Mode)
@@ -81,7 +81,7 @@ public static partial class SimEngine
                     break;
             }
         }
-        HookStep(b, (m, o, x) => m.AfterAttack(x, o, Info(x)));
+        HookStep(b, nameof(SimModel.AfterAttack), (m, o, x) => m.AfterAttack(x, o, Info(x)));
         b.Do(s => s.CurrentAttack = 0);
     }
 
@@ -144,7 +144,7 @@ public static partial class SimEngine
                 if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
                     r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add("CardBlock", 1); return x; }).ToList();
                 if (mods != null && amount > 0) r = r.Select(x => { foreach (var (m, o) in mods) m.AfterModifyingBlockAmount(x, o, amount, x.CurrentPlay); return x; }).ToList();
-                return Then(r, x => Hook(x, (m, o, y) => m.AfterBlockGained(y, o, gb.To, amount, y.CurrentPlay?.Card)));
+                return Then(r, x => Hook(x, nameof(SimModel.AfterBlockGained), (m, o, y) => m.AfterBlockGained(y, o, gb.To, amount, y.CurrentPlay?.Card)));
             });
         }
     }
@@ -180,7 +180,7 @@ public static partial class SimEngine
     {
         IEnumerable<SimState> Apply(SimState x, int applier, int t) =>
             ApplyPower(x, applier, t, ap.Power, ap.CopiesOwn ? PowerOn(x, applier, ap.Power) : ap.Amount, ap.Debuff)
-                ? Hook(x, (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t, ap.Debuff)) : new[] { x };
+                ? Hook(x, nameof(SimModel.AfterPowerApplied), (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t, ap.Debuff)) : new[] { x };
         if (ap.To == ApplyPowerAction.Where.RandomEnemy)
         {
             // Each application to a random hittable enemy: a branch per target, one step each (the branch budget holds).
@@ -214,7 +214,7 @@ public static partial class SimEngine
         for (var i = 0; i < ce.Count; i++)
         {
             b.Do(s => { CountEvent(s, ce.Event, s.CurrentPlay?.Owner ?? Who.You); s.EventCard = ce.Card; });
-            HookStep(b, (m, o, x) =>
+            HookStep(b, nameof(SimModel.AfterCardEvent), (m, o, x) =>
             {
                 x.IndirectNow = ce.Indirect;
                 var r = m.AfterCardEvent(x, o, ce.Event, x.CurrentPlay?.Owner ?? Who.You).ToList();

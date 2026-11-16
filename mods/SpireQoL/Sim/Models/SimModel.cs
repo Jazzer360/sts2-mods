@@ -123,6 +123,30 @@ public abstract class SimModel
 
     protected static IEnumerable<SimState> One(SimState s) => new[] { s };
 
+    private readonly HashSet<string> _overrides;
+
+    protected SimModel()
+    {
+        // The hooks this model overrides (here or in a base class of its own): the engine calls only those.
+        _overrides = GetType().GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .Where(m => m.IsVirtual && m.DeclaringType != typeof(SimModel) && m.GetBaseDefinition().DeclaringType == typeof(SimModel))
+            .Select(m => m.Name).ToHashSet();
+        ListensToDamage = DamageHooks.Any(_overrides.Contains);
+    }
+
+    private static readonly string[] DamageHooks =
+    {
+        nameof(ModifyDamageCap), nameof(BeforeDamageReceived), nameof(AfterBlockBroken), nameof(ModifyHpLostBeforeOsty),
+        nameof(ModifyHpLostBeforeOstyLate), nameof(ModifyHpLostAfterOsty), nameof(ModifyHpLostAfterOstyLate),
+        nameof(AfterModifyingHpLost), nameof(AfterDamageGiven), nameof(AfterDamageReceived),
+    };
+
+    /// <summary>It overrides this hook (by name): the engine skips models that don't listen to a hook.</summary>
+    public bool Overrides(string hook) => _overrides.Contains(hook);
+
+    /// <summary>It acts inside damage (SimEngine.Damage): without such a model, damage takes the plain path.</summary>
+    public bool ListensToDamage { get; }
+
     // ---- pipelines (pure: read the state, change nothing)
 
     public virtual decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d) => 0m;
@@ -159,6 +183,13 @@ public abstract class SimModel
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     /// <summary>A card event (one per card or star): draws, exhausts, discards, created cards, stars, shuffles. Player: who it happened to.</summary>
     public virtual IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) => One(s);
+    // ---- end of your side's turn (Hook.BeforeSideTurnEnd: every listener's VeryEarly, then Early, then BeforeSideTurnEnd;
+    // Hook.AfterSideTurnEnd: AfterSideTurnEnd, then Late). Only for players' models whose owner takes part (SimEngine.TakesPart).
+
+    public virtual IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState s, int owner) => One(s);
+    public virtual IEnumerable<SimState> BeforeSideTurnEndEarly(SimState s, int owner) => One(s);
+    public virtual IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) => One(s);
+    public virtual IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) => One(s);
     /// <summary>A player's Osty lost HP (AfterCurrentHpChanged with a loss on Osty): Necro Mastery. Runs inside the damage.</summary>
     public virtual void AfterOstyHpLost(SimState s, int owner, int player, int lost) { }
     /// <summary>A player tried a shot (AfterArrowShot: with or without an arrow): Covering Fire.</summary>

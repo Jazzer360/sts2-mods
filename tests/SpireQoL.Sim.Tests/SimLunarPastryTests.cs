@@ -12,11 +12,18 @@ public class SimLunarPastryTests
 {
     private static SimEnemy Enemy(int id, int hp, params int[] hits) => new() { Id = id, Name = $"E{id}", Hp = hp, Hits = hits.ToList() };
 
+    /// <summary>Lunar Pastry (its stars: 1) with Black Hole at this amount.</summary>
+    private static void Lunar(SimPlayer p, int blackHole)
+    {
+        p.Relics = p.Relics.With("LunarPastry", 1);
+        p.Powers = p.Powers.With("BlackHolePower", blackHole);
+    }
+
     [Fact]
     public void BlackHoleHitsEveryEnemyAtTheEndOfYourTurn()
     {
         var s = new SimState { Enemies = { Enemy(1, 4, 9), Enemy(2, 10, 3) } };
-        s.P.LunarBlackHole = 4;
+        Lunar(s.P, 4);
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(1));
         Assert.Equal(3, o.TakenMax);
@@ -28,13 +35,16 @@ public class SimLunarPastryTests
     {
         // Lunar Pastry first: Black Hole kills E1, so Parrying Shield's 6 can only hit E2 (10 - 4 - 6 = 0).
         var s = new SimState { Enemies = { Enemy(1, 4, 9), Enemy(2, 10, 3) } };
-        s.P.LunarBlackHole = 4;
+        Lunar(s.P, 4);
         s.P.ParryingShieldDamage = 6;
         s.P.ParryingShieldBlock = 0;
         Assert.True(SimEngine.Run(s).DeadInAll(2));
-        // Parrying Shield first: its hit lands on either enemy at random.
-        s.P.LunarBeforeParrying = false;
-        var o = SimEngine.Run(s);
+        // Parrying Shield first in your relics: its hit lands on either enemy at random.
+        var t = new SimState { Enemies = { Enemy(1, 4, 9), Enemy(2, 10, 3) } };
+        t.P.ParryingShieldDamage = 6;
+        t.P.ParryingShieldBlock = 0;
+        Lunar(t.P, 4);
+        var o = SimEngine.Run(t);
         Assert.True(o.DeadInAny(2));
         Assert.False(o.DeadInAll(2));
     }
@@ -43,7 +53,9 @@ public class SimLunarPastryTests
     public void ATeammatesCountsToo()
     {
         var s = new SimState { Enemies = { Enemy(1, 4, 9) } };
-        s.Teammates.Add(new SimPlayer { Hp = 30, LunarBlackHole = 4 });
+        var mate = new SimPlayer { Hp = 30 };
+        Lunar(mate, 4);
+        s.Teammates.Add(mate);
         Assert.True(SimEngine.Run(s).DeadInAll(1));
     }
 

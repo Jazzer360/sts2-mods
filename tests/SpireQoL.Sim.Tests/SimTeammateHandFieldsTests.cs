@@ -29,14 +29,7 @@ public class SimTeammateHandFieldsTests
     /// <summary>On screen (their powers, relics, orbs, block, HP, hand size, cards they played) or the simulation's own bookkeeping.</summary>
     private static readonly HashSet<string> Known = new()
     {
-        nameof(SimPlayer.Block),
-        nameof(SimPlayer.Hailstorm), nameof(SimPlayer.HailstormFrostNeeded), nameof(SimPlayer.TheBombDamage),
-        nameof(SimPlayer.ConsumingShadow), nameof(SimPlayer.Reflect),
-       
-        nameof(SimPlayer.OrichalcumBlock), nameof(SimPlayer.OrichalcumArmed), nameof(SimPlayer.CloakClaspPerCard),
-        nameof(SimPlayer.RippleBasinBlock), nameof(SimPlayer.ScreamingFlagonDamage), nameof(SimPlayer.StoneCalendarDamage),
-        nameof(SimPlayer.ObsidianViceDamage), nameof(SimPlayer.CharonsAshesDamage), nameof(SimPlayer.ForgottenSoulDamage),
-        nameof(SimPlayer.ParryingShieldBlock), nameof(SimPlayer.ParryingShieldDamage), nameof(SimPlayer.LunarBlackHole), nameof(SimPlayer.LunarBeforeParrying), nameof(SimPlayer.PaelsEyeExhaust),
+        nameof(SimPlayer.Block), nameof(SimPlayer.Reflect),
         nameof(SimPlayer.HandCount),       // the size is on screen (Cloak Clasp, Screaming Flagon, Obsidian Vice, Regret's amount)
         nameof(SimPlayer.Energy),          // on screen for every player (Pael's Tears, Orbit)
         nameof(SimPlayer.Arrows),          // on screen (the Fool's arrows)

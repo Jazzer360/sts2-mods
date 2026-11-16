@@ -11,11 +11,11 @@ public static partial class SimEngine
     /// each through the block pipeline (Dexterity and Frail only for powered block), then the gain (Juggernaut, Beacon of Hope)
     /// and AfterBlockGained. Logged with the block gained.
     /// </summary>
-    public static IEnumerable<SimState> ProcBlock(SimState s, int owner, string name, decimal baseBlock, SimProps props, int times = 1) =>
-        ProcBlockFor(s, owner, name, owner, baseBlock, props, times);
+    public static IEnumerable<SimState> ProcBlock(SimState s, int owner, string name, decimal baseBlock, SimProps props, int times = 1, string? label = null) =>
+        ProcBlockFor(s, owner, name, owner, baseBlock, props, times, label);
 
     /// <summary>The same, gained by another player (Covering Fire's block for your teammates), logged under its owner.</summary>
-    public static IEnumerable<SimState> ProcBlockFor(SimState s, int owner, string name, int gainer, decimal baseBlock, SimProps props, int times = 1)
+    public static IEnumerable<SimState> ProcBlockFor(SimState s, int owner, string name, int gainer, decimal baseBlock, SimProps props, int times = 1, string? label = null)
     {
         IEnumerable<SimState> r = new[] { s };
         if (!Who.IsPlayer(gainer)) return r;
@@ -28,10 +28,35 @@ public static partial class SimEngine
                 var amount = CalcBlock(x, baseBlock, new BlockCtx(gainer, props, null, null));
                 x.LogFired(name, amount, owner);
                 if (amount <= 0) return new[] { x };
-                return Then(GainBlock(x, amount, null, who), y => Hook(y, (m, o, z) => m.AfterBlockGained(z, o, gainer, amount, null)));
+                return Then(GainBlock(x, amount, gainer == Who.You ? Breakdown(x, owner, name, label) : null, who), y => Hook(y, nameof(SimModel.AfterBlockGained), (m, o, z) => m.AfterBlockGained(z, o, gainer, amount, null)));
             });
         }
         return r;
+    }
+
+    /// <summary>
+    /// The name a source's block or damage gets in Incoming Damage's breakdown (SimState.EndOfTurnBlock, EndOfTurnDamage): your end of
+    /// turn only, when the simulation keeps one; the game's name for it (or the label given).
+    /// </summary>
+    private static string? Breakdown(SimState s, int owner, string name, string? label) =>
+        s.Log && s.EndOfTurnNow && owner == Who.You ? label ?? Title(s, owner, name) : null;
+
+    /// <summary>A relic's or power's name as the game shows it (SimState.Titles), or its class name.</summary>
+    public static string Title(SimState s, int owner, string name) => s.Titles.TryGetValue($"{owner}:{name}", out var t) ? t : name;
+
+    /// <summary>A player takes part in their side's turn end (alive; you always).</summary>
+    public static bool TakesPart(SimState s, int owner) =>
+        owner == Who.You || (owner <= -2 && Who.TeammateIndex(owner) < s.Teammates.Count && s.Teammates[Who.TeammateIndex(owner)].Hp > 0);
+
+    /// <summary>A player's last orb is evoked and goes (OrbCmd.EvokeLast: Consuming Shadow).</summary>
+    public static IEnumerable<SimState> EvokeLast(SimState s, int player)
+    {
+        var k = player == Who.You ? -1 : Who.TeammateIndex(player);
+        var p = k < 0 ? s.P : s.MutableTeammate(k);
+        if (p.Orbs.Count == 0) return new[] { s };
+        var orb = p.Orbs[^1];
+        p.OwnOrbs().RemoveAt(p.Orbs.Count - 1);
+        return k < 0 ? Evoke(s, orb) : Evoke(s, orb, p.Thunder, k);
     }
 
     /// <summary>One proc hit on an enemy from <paramref name="dealer"/>: the damage pipeline (no card), then the damage. Returns the damage.</summary>
@@ -44,8 +69,9 @@ public static partial class SimEngine
     }
 
     /// <summary>Damage to every hittable enemy, <paramref name="times"/> times (Gravity, Letter Opener...). Logged with the total.</summary>
-    public static IEnumerable<SimState> ProcDamageAll(SimState s, int owner, string name, decimal baseDamage, SimProps props, int times = 1, bool noDealer = false)
+    public static IEnumerable<SimState> ProcDamageAll(SimState s, int owner, string name, decimal baseDamage, SimProps props, int times = 1, bool noDealer = false, string? label = null)
     {
+        if (Breakdown(s, owner, name, label) is { } shown && baseDamage > 0 && s.Targetable.Any()) for (var i = 0; i < times; i++) s.EndOfTurnDamage.Add((shown + " (all)", (int)baseDamage));
         for (var i = 0; i < times; i++)
         {
             var total = 0;
@@ -62,8 +88,9 @@ public static partial class SimEngine
     }
 
     /// <summary>Damage to a random hittable enemy, <paramref name="times"/> times: a branch per target each time. Logged per hit.</summary>
-    public static IEnumerable<SimState> ProcDamageRandom(SimState s, int owner, string name, decimal baseDamage, SimProps props, int times = 1, bool noDealer = false)
+    public static IEnumerable<SimState> ProcDamageRandom(SimState s, int owner, string name, decimal baseDamage, SimProps props, int times = 1, bool noDealer = false, string? label = null)
     {
+        if (Breakdown(s, owner, name, label) is { } shown && baseDamage > 0) for (var i = 0; i < times; i++) s.EndOfTurnDamage.Add((shown, (int)baseDamage));
         IEnumerable<SimState> r = new[] { s };
         for (var i = 0; i < times; i++)
             r = Then(r, x => RandomTarget(x, (y, id) =>
@@ -110,7 +137,7 @@ public static partial class SimEngine
                 CountEvent(x, ev, player);
                 var was = x.IndirectNow;
                 x.IndirectNow = indirect || was;
-                var after = Hook(x, (m, o, y) => m.AfterCardEvent(y, o, ev, player)).ToList();
+                var after = Hook(x, nameof(SimModel.AfterCardEvent), (m, o, y) => m.AfterCardEvent(y, o, ev, player)).ToList();
                 foreach (var y in after) y.IndirectNow = was;
                 return after;
             });

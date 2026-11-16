@@ -14,7 +14,13 @@ public abstract class FirstAttackGivesUp : RelicProc
 }
 
 public sealed class ArtOfWar : FirstAttackGivesUp { public override string Name => "ArtOfWar"; }
-public sealed class RippleBasin : FirstAttackGivesUp { public override string Name => "RippleBasin"; }
+/// <summary>RippleBasin: also BeforeSideTurnEnd: its block (amount) when its owner played no Attack this turn.</summary>
+public sealed class RippleBasin : FirstAttackGivesUp
+{
+    public override string Name => "RippleBasin";
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) && SimEngine.PlayerOf(s, owner) is { AttacksThisTurn: 0 } && Amount(s, owner) > 0 ? Block(s, owner, Amount(s, owner)) : One(s);
+}
 
 /// <summary>PaelsTears (BeforeSideTurnEnd: energy left gives energy next turn): spending your last energy gives that up (bad for you).</summary>
 public sealed class PaelsTears : RelicProc
@@ -30,6 +36,25 @@ public sealed class PaelsEye : RelicProc
 {
     public override string Name => "PaelsEye";
     public override bool Harmful => true;
+    /// <summary>
+    /// BeforeSideTurnEndEarly: still armed (no card played this turn: SimPlayer.PaelsEyeExhaust), its owner's whole hand is
+    /// exhausted (Feel No Pain, Charon's Ashes... react to each card); nothing is left to act in hand or exhaust as Ethereal.
+    /// </summary>
+    public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState s, int owner)
+    {
+        if (!SimEngine.TakesPart(s, owner) || SimEngine.PlayerOf(s, owner) is not { PaelsEyeExhaust: true, HandCount: > 0 } p) return One(s);
+        var cards = p.HandCount;
+        return SimEngine.ProcCardEvent(s, CardEvent.Exhausted, cards, owner, indirect: false).Select(x =>
+        {
+            var px = owner == Who.You ? x.P : x.MutableTeammate(Who.TeammateIndex(owner));
+            px.HandCount = 0;
+            px.Fading = 0;
+            px.HandBlockable = new();
+            px.HandUnblockable = new();
+            px.RegretCards = 0;
+            return x;
+        }).ToList();
+    }
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner) || play.AutoPlay || !Armed(s, owner) || SimEngine.TurnOf(s, owner)["Started"] != 0) return One(s);
@@ -326,7 +351,7 @@ public sealed class CharonsAshes : RelicProc
     public override string Name => "CharonsAshes";
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
-        ev == CardEvent.Exhausted && player == owner ? RelicDamageAll(s, owner) : One(s);
+        ev == CardEvent.Exhausted && player == owner ? DamageAll(s, owner, Amount(s, owner), PropsOf(s, owner, "Damage")) : One(s);
 }
 
 /// <summary>ForgottenSoul.AfterCardExhausted: damage to a random hittable enemy for each card you exhaust.</summary>
@@ -335,7 +360,7 @@ public sealed class ForgottenSoul : RelicProc
     public override string Name => "ForgottenSoul";
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
-        ev == CardEvent.Exhausted && player == owner ? RelicDamageRandom(s, owner) : One(s);
+        ev == CardEvent.Exhausted && player == owner ? DamageRandom(s, owner, Amount(s, owner), PropsOf(s, owner, "Damage")) : One(s);
 }
 
 /// <summary>JossPaper.AfterCardExhausted: a draw once its ExhaustAmount cards are exhausted (Amount: CardsExhausted).</summary>

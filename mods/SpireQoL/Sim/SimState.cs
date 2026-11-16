@@ -207,10 +207,13 @@ public sealed class SimPlayer
     [JsonIgnore] public int Juggernaut { get => Powers["JuggernautPower"]; set => Set("JuggernautPower", value); }
     [JsonIgnore] public int Plating { get => Powers["PlatingPower"]; set => Set("PlatingPower", value); }
     [JsonIgnore] public int FeelNoPain { get => Powers["FeelNoPainPower"]; set => Set("FeelNoPainPower", value); }
-    public int Hailstorm;
-    public int HailstormFrostNeeded = 1;
-    public int TheBombDamage; // fires this turn end (last tick), else 0
-    public int ConsumingShadow;
+    // End-of-turn powers and relics, as views onto their entries (the models read the entries: Sim/Models/EndOfTurnModels.cs).
+    /// <summary>Hailstorm (amount; Data = the Frost orbs it needs).</summary>
+    [JsonIgnore] public int Hailstorm { get => Powers["HailstormPower"]; set => Powers = value == 0 ? Powers.Without("HailstormPower") : Powers.With("HailstormPower", value, Powers.Has("HailstormPower") ? Powers.DataOf("HailstormPower") : 1); }
+    [JsonIgnore] public int HailstormFrostNeeded { get => Powers.Has("HailstormPower") ? Powers.DataOf("HailstormPower") : 1; set => Powers = Powers.With("HailstormPower", Powers["HailstormPower"], value); }
+    /// <summary>The Bomb's damage when it goes off this turn end (its last tick: amount 1; Data = its damage), else 0.</summary>
+    [JsonIgnore] public int TheBombDamage { get => Powers.Has("TheBombPower") && Powers["TheBombPower"] <= 1 ? Powers.DataOf("TheBombPower") : 0; set => Powers = value == 0 ? Powers.Without("TheBombPower") : Powers.With("TheBombPower", 1, value); }
+    [JsonIgnore] public int ConsumingShadow { get => Powers["ConsumingShadowPower"]; set => Set("ConsumingShadowPower", value); }
     [JsonIgnore] public int Thorns { get => Powers["ThornsPower"]; set => Set("ThornsPower", value); }
     [JsonIgnore] public int FlameBarrier { get => Powers["FlameBarrierPower"]; set => Set("FlameBarrierPower", value); }
     public bool Reflect;
@@ -220,31 +223,33 @@ public sealed class SimPlayer
     /// </summary>
     [JsonIgnore] public int Inferno { get => Powers["InfernoPower"]; set => Set("InfernoPower", value); }
 
-    // Relics.
-    public int OrichalcumBlock;
-    /// <summary>Set when end of turn starts: you had no block then (Orichalcum's condition).</summary>
-    public bool OrichalcumArmed;
-    public int CloakClaspPerCard;
-    public int RippleBasinBlock;
-    public int ScreamingFlagonDamage;
-    public int StoneCalendarDamage; // its turn, else 0
+    // Relics (amount: their block or damage; Data where said).
+    [JsonIgnore] public int OrichalcumBlock { get => Relics["Orichalcum"]; set => SetRelic("Orichalcum", value); }
+    [JsonIgnore] public int CloakClaspPerCard { get => Relics["CloakClasp"]; set => SetRelic("CloakClasp", value); }
+    [JsonIgnore] public int RippleBasinBlock { get => Relics["RippleBasin"]; set => SetRelic("RippleBasin", value); }
+    [JsonIgnore] public int ScreamingFlagonDamage { get => Relics["ScreamingFlagon"]; set => SetRelic("ScreamingFlagon", value); }
+    /// <summary>Stone Calendar's damage when this is its turn (Data: turns until then), else 0.</summary>
+    [JsonIgnore] public int StoneCalendarDamage { get => Relics.DataOf("StoneCalendar") == 0 ? Relics["StoneCalendar"] : 0; set => SetRelic("StoneCalendar", value); }
     /// <summary>Obsidian Vice: damage per card in hand to a random enemy at end of turn (v0.113.0).</summary>
-    public int ObsidianViceDamage;
-    public int CharonsAshesDamage;
-    public int ForgottenSoulDamage;
-    public int ParryingShieldBlock;
-    public int ParryingShieldDamage;
-    /// <summary>
-    /// Lunar Pastry gives you stars at AfterSideTurnEnd, so Black Hole (AfterStarsGained) deals this to every hittable enemy
-    /// (unpowered); 0 = no Lunar Pastry or no Black Hole. LunarBeforeParrying: Lunar Pastry comes first in your relics.
-    /// </summary>
-    public int LunarBlackHole;
-    public bool LunarBeforeParrying = true;
+    [JsonIgnore] public int ObsidianViceDamage { get => Relics["ObsidianVice"]; set => SetRelic("ObsidianVice", value); }
+    [JsonIgnore] public int CharonsAshesDamage { get => Relics["CharonsAshes"]; set => SetRelic("CharonsAshes", value); }
+    [JsonIgnore] public int ForgottenSoulDamage { get => Relics["ForgottenSoul"]; set => SetRelic("ForgottenSoul", value); }
+    /// <summary>Parrying Shield (amount: its damage; Data: the block it needs).</summary>
+    [JsonIgnore] public int ParryingShieldDamage { get => Relics["ParryingShield"]; set => Relics = Relics.With("ParryingShield", value, Relics.DataOf("ParryingShield")); }
+    [JsonIgnore] public int ParryingShieldBlock { get => Relics.DataOf("ParryingShield"); set => Relics = Relics.With("ParryingShield", Relics["ParryingShield"], value); }
     /// <summary>
     /// Pael's Eye is armed (unused this combat, no card played this turn): BeforeSideTurnEndEarly exhausts your whole hand.
     /// A card you play disarms it (BeforeCardPlayed); auto-plays don't.
     /// </summary>
-    public bool PaelsEyeExhaust;
+    [JsonIgnore] public bool PaelsEyeExhaust
+    {
+        get => Relics.Has("PaelsEye") && (Relics.DataOf("PaelsEye") & 1) != 0;
+        set
+        {
+            if (!value && !Relics.Has("PaelsEye")) return;
+            Relics = Relics.With("PaelsEye", Relics["PaelsEye"], value ? Relics.DataOf("PaelsEye") | 1 : Relics.DataOf("PaelsEye") & ~1);
+        }
+    }
 
     // Hand and turn counters.
     public int HandCount;
@@ -546,6 +551,10 @@ public sealed class SimState
     internal int AttackSerial, CurrentAttack;
     /// <summary>The enemy turn is under way (the players' side's turn is over: Inferno doesn't react).</summary>
     internal bool EnemyTurnNow;
+    /// <summary>Your side's turn is ending (EndOfTurn): block and damage from models go into the Incoming Damage breakdown.</summary>
+    internal bool EndOfTurnNow;
+    /// <summary>Relics' and powers' names as the game shows them ("id:Name"), for the Incoming Damage breakdown. Shared, never changed.</summary>
+    public Dictionary<string, string> Titles = new();
     /// <summary>
     /// What models bound to a card play at BeforeCardPlayed (the game's amountsForPlayedCards: Afterimage, Gravity, Strangle...),
     /// "Name@owner" → amount; taken at AfterCardPlayed. A power the play itself applies isn't bound, so it doesn't fire on it.
@@ -563,6 +572,10 @@ public sealed class SimState
     internal PowerSet PlayEvents = PowerSet.Empty;
     /// <summary>Block gains from the current card play (Unmovable doesn't count them).</summary>
     internal int PlayCardBlockGains;
+
+    /// <summary>The listeners (SimEngine.Listeners) and the power and relic sets they were built from: rebuilt when one changes.</summary>
+    internal List<(SimModel Model, int Owner)>? ListenerCache;
+    internal PowerSet[]? ListenerSets;
 
     /// <summary>The run's work counter (SimEngine.Run sets it; every copy of the state shares it).</summary>
     internal SimWork? Work;
@@ -685,7 +698,7 @@ public sealed class SimState
             }
         }
 
-        Add(P.Block); Add(P.Arrows); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
+        Add(P.Block); Add(P.Arrows); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(ParryingShieldFired ? 1 : 0);
         Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         foreach (var e in Enemies)
         {

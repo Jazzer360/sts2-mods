@@ -188,7 +188,7 @@ public static partial class SimAdapter
             // Every power, with the numbers its model keeps (Curl Up, Sneaky, Skittish, Thorns, Burrowed, Asleep, Slumber, Flutter,
             // Plow, Shriek, The Gambit, Slippery, Hard to Kill, Intangible, Hardened Shell, Barricade, Strength, Weak...).
             se.Powers = SimReaders.Powers(e, IdOf);
-            foreach (var pw in e.Powers) SimReaders.AddVars(s.Vars, id, pw);
+            foreach (var pw in e.Powers) SimReaders.AddVars(s, id, pw);
             // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
             if (e.IsAlive && e.GetPower<ExplosivePower>() is { Amount: > 0 } explosive) se.Explosive = ExplosiveOn(e, me.Creature, explosive.Amount, me, cs);
             se.StartedAlive = e.IsAlive;
@@ -229,8 +229,8 @@ public static partial class SimAdapter
         }
 
         FillPlayer(s.P, me, cs, IdOf);
-        foreach (var pw in me.Creature.Powers) SimReaders.AddVars(s.Vars, Who.You, pw);
-        foreach (var r in me.Relics) SimReaders.AddVars(s.Vars, Who.You, r);
+        foreach (var pw in me.Creature.Powers) SimReaders.AddVars(s, Who.You, pw);
+        foreach (var r in me.Relics) SimReaders.AddVars(s, Who.You, r);
         FillAutoPlays(s.P, me, cs, ids);
         s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
         // Your HP, and what keeps you alive at 0 (the Death Skull on Incoming Damage, Fairy and Lizard Tail): the heal
@@ -257,8 +257,8 @@ public static partial class SimAdapter
             var t = new SimPlayer();
             FillPlayer(t, other, cs, IdOf);
             var mateId = Who.Teammate(s.Teammates.Count);
-            foreach (var pw in oc.Powers) SimReaders.AddVars(s.Vars, mateId, pw);
-            foreach (var r in other.Relics) SimReaders.AddVars(s.Vars, mateId, r);
+            foreach (var pw in oc.Powers) SimReaders.AddVars(s, mateId, pw);
+            foreach (var r in other.Relics) SimReaders.AddVars(s, mateId, r);
             t.Hp = oc.CurrentHp;
             t.BeaconOfHope = oc.HasPower<BeaconOfHopePower>();
             s.Teammates.Add(t);
@@ -383,14 +383,6 @@ public static partial class SimAdapter
         {
             switch (pw.GetType().Name)
             {
-                case nameof(HailstormPower):
-                    p.Hailstorm += pw.Amount;
-                    p.HailstormFrostNeeded = Sts2State.Var(pw, "FrostOrbs", 1);
-                    break;
-                case nameof(TheBombPower):
-                    if (pw.Amount <= 1) p.TheBombDamage += Sts2State.Var(pw, "Damage");
-                    break;
-                case nameof(ConsumingShadowPower): p.ConsumingShadow += pw.Amount; break;
                 case nameof(ReflectPower): p.Reflect = true; break;
                 // Insatiable Dominion (Dread): 2 + your turn number to you at AfterSideTurnEndLate (its Damage var, unpowered, blockable).
                 case nameof(InsatiableDominionPower): p.DebuffLateBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), Sts2State.Var(pw, "Damage"))); break;
@@ -404,30 +396,11 @@ public static partial class SimAdapter
         {
             switch (r.GetType().Name)
             {
-                case nameof(Orichalcum):
-                case nameof(FakeOrichalcum): p.OrichalcumBlock += Sts2State.Var(r, "Block"); break;
-                case nameof(CloakClasp): p.CloakClaspPerCard += Sts2State.Var(r, "Block"); break;
-                case nameof(RippleBasin): p.RippleBasinBlock += Sts2State.Var(r, "Block"); break;
-                case nameof(ScreamingFlagon): p.ScreamingFlagonDamage += Sts2State.Var(r, "Damage"); break;
-                case "ObsidianVice": p.ObsidianViceDamage += Sts2State.Var(r, "Damage", 1); break;
-                case nameof(StoneCalendar):
-                    if (Sts2State.TurnNumber == Sts2State.Var(r, "DamageTurn", 7)) p.StoneCalendarDamage += Sts2State.Var(r, "Damage");
-                    break;
-                case nameof(CharonsAshes): p.CharonsAshesDamage += Sts2State.Var(r, "Damage"); break;
-                case nameof(ForgottenSoul): p.ForgottenSoulDamage += Sts2State.Var(r, "Damage"); break;
-                case nameof(ParryingShield):
-                    p.ParryingShieldBlock = Sts2State.Var(r, "Block");
-                    p.ParryingShieldDamage += Sts2State.Var(r, "Damage");
-                    break;
                 case nameof(PaelsEye):
                     // Status Active: unused, and no card played this turn (BeforeCardPlayed sets it back); Whispering
                     // Earring's turn 1 counts as played (PaelsEye.AnyCardsPlayedThisTurn).
                     p.PaelsEyeExhaust = r.Status == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active
                         && !(Sts2State.TurnNumber == 1 && me.Relics.Any(x => x.GetType().Name == "WhisperingEarring"));
-                    break;
-                case nameof(LunarPastry):
-                    p.LunarBlackHole = c.GetPower<BlackHolePower>()?.Amount ?? 0;
-                    p.LunarBeforeParrying = !me.Relics.TakeWhile(x => x != r).Any(x => x is ParryingShield);
                     break;
                 case nameof(GoldPlatedCables): p.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
             }

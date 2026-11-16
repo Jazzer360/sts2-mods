@@ -46,12 +46,14 @@ public class SimPaelsEyeTests
     }
 
     [Fact]
-    public void ItsBlockComesBeforeOrichalcumLooks()
+    public void OrichalcumLooksBeforeItsBlock()
     {
+        // Orichalcum checks your block in BeforeSideTurnEndVeryEarly, before Pael's Eye exhausts your hand (Early): with no block
+        // then, it arms, and gives its 6 on top of Feel No Pain's 9.
         var s = Armed();
         s.P.HandBlockable.Clear();
         s.P.OrichalcumBlock = 6;
-        Assert.Equal(1, SimEngine.Run(s).TakenMax); // 9 block, so Orichalcum doesn't arm
+        Assert.Equal(0, SimEngine.Run(s).TakenMax);
     }
 
     [Fact]

@@ -336,7 +336,7 @@ public static partial class SimEngine
     {
         if (amount <= 0 || !e.Alive) return 0;
         var listeners = Listeners(s);
-        if (listeners.Count == 0) return PlainDamage(s, e, amount, dealer, props, card);
+        if (!AnyListensToDamage(listeners)) return PlainDamage(s, e, amount, dealer, props, card);
         var ctx = new DamageCtx(dealer, e.Id, props, card, s.CurrentPlay);
         foreach (var (m, o) in listeners) amount = (int)Math.Min(amount, m.ModifyDamageCap(s, o, ctx));
         foreach (var (m, o) in listeners) m.BeforeDamageReceived(s, o, ctx, amount);
@@ -365,6 +365,12 @@ public static partial class SimEngine
         foreach (var (m, o) in Listeners(s)) m.AfterDamageGiven(s, o, ev);
         foreach (var (m, o) in Listeners(s)) m.AfterDamageReceived(s, o, ev);
         return toHp;
+    }
+
+    private static bool AnyListensToDamage(List<(SimModel Model, int Owner)> listeners)
+    {
+        foreach (var (m, _) in listeners) if (m.ListensToDamage) return true;
+        return false;
     }
 
     /// <summary>Damage with no models listening (most fights): block, then HP; nothing else can react.</summary>
@@ -956,202 +962,67 @@ public static partial class SimEngine
         return result;
     }
 
+    /// <summary>
+    /// Your side's turn ends (CombatManager.EndPlayerTurnPhaseOne/Two, decompile v0.113.1):
+    ///  1. Hook.BeforeSideTurnEnd: every listener's VeryEarly (Orichalcum checks your block), then Early (Plating, Pael's Eye
+    ///     exhausting your hand), then BeforeSideTurnEnd (Hailstorm, The Bomb, Cloak Clasp, Ripple Basin, Screaming Flagon, Stone
+    ///     Calendar, Obsidian Vice...), in listener order: players in player order, their powers then their relics.
+    ///  2. DoTurnEnd, each player in player order: orb passives (front first), Ethereal cards exhaust (Feel No Pain, Charon's
+    ///     Ashes, Forgotten Soul, Dark Embrace react to each), then cards in hand act (Burn, Decay, Regret).
+    ///  3. Debuffs on players.
+    ///  4. Hook.AfterSideTurnEnd (Consuming Shadow, Parrying Shield, Lunar Pastry), then AfterSideTurnEndLate (Disintegration).
+    /// </summary>
     private static void EndOfTurn(BranchSet b)
     {
-        // 0. BeforeSideTurnEndEarly: Pael's Eye exhausts your hand when you played no card this turn (auto-plays don't
-        // count): each card sets off Feel No Pain, Charon's Ashes and Forgotten Soul, and none is left to act in hand
-        // at end of turn (Burn, Regret) or to exhaust as Ethereal.
-        // Each player's in player order (a teammate's: their hand size is on screen).
-        if (b.States.Any(s => (s.P.PaelsEyeExhaust && s.P.HandCount > 0) || s.Teammates.Any(t => t.PaelsEyeExhaust && t.HandCount > 0)))
-        {
-            var mates = b.States[0].Teammates.Count;
-            var first = Math.Min(b.States[0].TeammatesBeforeMe, mates);
-            void Exhaust(int who)
-            {
-                EtherealExhausts(b, who, p => p.PaelsEyeExhaust ? Math.Max(0, p.HandCount) : 0);
-                b.Do(s =>
-                {
-                    if (who >= 0 && !s.Teammates[who].PaelsEyeExhaust) return;
-                    var p = who < 0 ? s.P : s.MutableTeammate(who);
-                    if (!p.PaelsEyeExhaust) return;
-                    p.HandCount = 0;
-                    p.Fading = 0;
-                    p.HandBlockable = new();
-                    p.HandUnblockable = new();
-                    p.RegretCards = 0;
-                });
-            }
-            for (var k = 0; k < first; k++) Exhaust(k);
-            Exhaust(-1);
-            for (var k = first; k < mates; k++) Exhaust(k);
-            ExplosionCheck(b);
-        }
-        // 1. BeforeSideTurnEnd. Orichalcum checks your block before any of this lands.
-        b.Do(s => s.P.OrichalcumArmed = s.P.Block <= 0);
-        b.Each(s => GainBlock(s, s.P.Plating, "Plating"));
-        // Hook listeners run your powers before your relics (CombatState.IterateHookListeners).
-        b.Do(s =>
-        {
-            if (s.P.Hailstorm > 0 && s.P.Orbs.Count(o => o.Kind == OrbKind.Frost) >= s.P.HailstormFrostNeeded) AllEnemies(s, "Hailstorm", s.P.Hailstorm);
-            AllEnemies(s, "The Bomb", s.P.TheBombDamage);
-        });
-        b.Each(s => s.P.OrichalcumArmed ? GainBlock(s, s.P.OrichalcumBlock, "Orichalcum") : new[] { s });
-        b.Each(s => s.P.HandCount > 0 ? GainBlock(s, s.P.HandCount * s.P.CloakClaspPerCard, s.P.CloakClaspPerCard > 0 ? $"Cloak Clasp ×{s.P.HandCount}" : null) : new[] { s });
-        b.Each(s => s.P.AttacksThisTurn == 0 ? GainBlock(s, s.P.RippleBasinBlock, "Ripple Basin") : new[] { s });
-        b.Do(s =>
-        {
-            if (s.P.HandCount == 0) AllEnemies(s, "Screaming Flagon", s.P.ScreamingFlagonDamage);
-            AllEnemies(s, "Stone Calendar", s.P.StoneCalendarDamage);
-        });
-        // Obsidian Vice (BeforeSideTurnEnd): its damage per card in your hand, to a random enemy (one hit).
-        b.Each(s => ObsidianVice(s, s.P, -1));
+        b.Do(s => s.EndOfTurnNow = true);
+        HookStep(b, nameof(SimModel.BeforeSideTurnEndVeryEarly), (m, o, x) => Who.IsPlayer(o) ? m.BeforeSideTurnEndVeryEarly(x, o) : new[] { x });
+        HookStep(b, nameof(SimModel.BeforeSideTurnEndEarly), (m, o, x) => Who.IsPlayer(o) ? m.BeforeSideTurnEndEarly(x, o) : new[] { x });
         ExplosionCheck(b);
-        // Teammates' BeforeSideTurnEnd damage to enemies (it hits every enemy, so their order doesn't matter).
-        b.Do(s =>
-        {
-            foreach (var t in s.Teammates)
-            {
-                if (t.Hailstorm > 0 && t.Orbs.Count(o => o.Kind == OrbKind.Frost) >= t.HailstormFrostNeeded) AllEnemies(s, "Hailstorm (teammate)", t.Hailstorm);
-                AllEnemies(s, "The Bomb (teammate)", t.TheBombDamage);
-                if (t.HandCount == 0) AllEnemies(s, "Screaming Flagon (teammate)", t.ScreamingFlagonDamage); // their hand: -1 (unknown) doesn't count
-                AllEnemies(s, "Stone Calendar (teammate)", t.StoneCalendarDamage);
-            }
-        });
-        for (var k = 0; k < (b.States.Count > 0 ? b.States[0].Teammates.Count : 0); k++)
-        {
-            var tk = k;
-            b.Each(s => ObsidianVice(s, s.Teammates[tk], tk));
-        }
-        // Teammates' block at BeforeSideTurnEnd: Plating, then Orichalcum when they had no block. It
-        // protects them, and their Beacon of Hope shares half of it (with you too).
-        var team = b.States.Count > 0 ? b.States[0].Teammates.Count : 0;
-        for (var k = 0; k < team; k++)
-        {
-            var tk = k;
-            b.Each(s =>
-            {
-                var t = s.Teammates[tk];
-                if (t.Hp <= 0) return new[] { s };
-                var armed = t.Block <= 0;
-                var r = GainBlock(s, t.Plating, null, tk);
-                r = armed ? Then(r, x => GainBlock(x, x.Teammates[tk].OrichalcumBlock, null, tk)) : r;
-                // Their relics, as yours: Cloak Clasp per card in their hand (its size is on screen), Ripple Basin
-                // when they played no attack this turn.
-                r = Then(r, x => x.Teammates[tk].HandCount > 0 ? GainBlock(x, x.Teammates[tk].HandCount * x.Teammates[tk].CloakClaspPerCard, null, tk) : new[] { x });
-                return Then(r, x => x.Teammates[tk].AttacksThisTurn == 0 ? GainBlock(x, x.Teammates[tk].RippleBasinBlock, null, tk) : new[] { x });
-            });
-        }
+        HookStep(b, nameof(SimModel.BeforeSideTurnEnd), (m, o, x) => Who.IsPlayer(o) ? m.BeforeSideTurnEnd(x, o) : new[] { x });
+        ExplosionCheck(b);
 
-        // 2. Orb passives, each player in player order (CombatManager.DoTurnEnd), front first.
+        // 2. Each player's DoTurnEnd, in player order.
         var teammates = b.States.Count > 0 ? b.States[0].Teammates.Count : 0;
         var before = b.States.Count > 0 ? Math.Min(b.States[0].TeammatesBeforeMe, teammates) : 0;
-        for (var k = 0; k < before; k++)
+        void TurnEnd(int k)
         {
-            var tk = k;
-            OrbPassives(b, s => s.Teammates[tk], tk, mutable: s => s.MutableTeammate(tk));
+            if (k < 0) OrbPassives(b, s => s.P, -1);
+            else OrbPassives(b, s => s.Teammates[k], k, mutable: s => s.MutableTeammate(k));
+            ExplosionCheck(b); // kills by orb passives
+            var player = k < 0 ? Who.You : Who.Teammate(k);
+            b.Each(s => PlayerOf(s, player) is { Fading: > 0 } p && TakesPart(s, player) ? ProcCardEvent(s, CardEvent.Exhausted, p.Fading, player, indirect: false) : new[] { s });
+            b.Do(s =>
+            {
+                if (!TakesPart(s, player) || PlayerOf(s, player) is not { } p) return;
+                var who = k < 0 ? -1 : k;
+                foreach (var (name, amount) in p.HandBlockable) LandBlockable(s, name, amount, who);
+                foreach (var (name, amount) in p.HandUnblockable) LandUnblockable(s, name, amount, who);
+                for (var i = 0; i < p.RegretCards; i++)
+                    LandUnblockable(s, k < 0 && p.RegretCards > 1 ? $"Regret {i + 1}" : "Regret", Math.Max(0, p.HandCount), who);
+            });
+            ExplosionCheck(b);
         }
-        OrbPassives(b, s => s.P, -1);
-        for (var k = before; k < teammates; k++)
-        {
-            var tk = k;
-            OrbPassives(b, s => s.Teammates[tk], tk, mutable: s => s.MutableTeammate(tk));
-        }
+        for (var k = 0; k < before; k++) TurnEnd(k);
+        TurnEnd(-1);
+        for (var k = before; k < teammates; k++) TurnEnd(k);
 
-        ExplosionCheck(b); // kills by orb passives
-
-        // 3. Ethereal cards exhaust (CardCmd.Exhaust in DoTurnEnd), each player in player order (teammates' too:
-        // their Feel No Pain, Charon's Ashes, Forgotten Soul), then cards in hand act (DoTurnEndCards).
-        for (var k = 0; k < before; k++) EtherealExhausts(b, k);
-        EtherealExhausts(b, -1);
-        for (var k = before; k < teammates; k++) EtherealExhausts(b, k);
-        b.Do(s =>
-        {
-            foreach (var (name, amount) in s.P.HandBlockable) LandBlockable(s, name, amount);
-            foreach (var (name, amount) in s.P.HandUnblockable) LandUnblockable(s, name, amount);
-            for (var i = 0; i < s.P.RegretCards; i++) LandUnblockable(s, s.P.RegretCards > 1 ? $"Regret {i + 1}" : "Regret", s.P.HandCount);
-        });
-
-        ExplosionCheck(b);
-
-        // 4. Debuffs on you.
+        // 3. Debuffs on players.
         b.Do(s =>
         {
             foreach (var (name, amount) in s.P.DebuffBlockable) LandBlockable(s, name, amount);
             foreach (var (name, amount) in s.P.DebuffUnblockable) LandUnblockable(s, name, amount);
-        });
-        // Teammates' cards in hand and debuffs, on them (decision #25: their hand is used here; it only
-        // changes their own HP; what's shown runs without it unless the setting counts it).
-        b.Do(s =>
-        {
             for (var k = 0; k < s.Teammates.Count; k++)
             {
                 var t = s.Teammates[k];
                 if (t.Hp <= 0) continue;
-                foreach (var (name, amount) in t.HandBlockable) LandBlockable(s, name, amount, k);
-                foreach (var (name, amount) in t.HandUnblockable) LandUnblockable(s, name, amount, k);
-                for (var i = 0; i < t.RegretCards; i++) LandUnblockable(s, "Regret", Math.Max(0, t.HandCount), k);
                 foreach (var (name, amount) in t.DebuffBlockable) LandBlockable(s, name, amount, k);
                 foreach (var (name, amount) in t.DebuffUnblockable) LandUnblockable(s, name, amount, k);
             }
         });
 
-        // 5. AfterSideTurnEnd: Consuming Shadow evokes (last orb first), then Parrying Shield.
-        var maxShadow = b.States.Max(s => s.P.ConsumingShadow);
-        for (var i = 0; i < maxShadow; i++)
-        {
-            var n = i;
-            b.Each(s =>
-            {
-                if (n >= s.P.ConsumingShadow || s.P.Orbs.Count == 0) return new[] { s };
-                var orb = s.P.Orbs[^1];
-                s.P.OwnOrbs().RemoveAt(s.P.Orbs.Count - 1);
-                return orb.Kind == OrbKind.Frost ? GainBlock(s, orb.Evoke, "Consuming Shadow (Frost)") : Evoke(s, orb);
-            });
-        }
-        for (var k = 0; k < teammates; k++)
-        {
-            var tk = k;
-            var maxTeamShadow = b.States.Max(s => s.Teammates[tk].ConsumingShadow);
-            for (var i = 0; i < maxTeamShadow; i++)
-            {
-                var n = i;
-                b.Each(s =>
-                {
-                    if (n >= s.Teammates[tk].ConsumingShadow || s.Teammates[tk].Orbs.Count == 0) return new[] { s };
-                    var t = s.MutableTeammate(tk);
-                    if (n >= t.ConsumingShadow || t.Orbs.Count == 0) return new[] { s };
-                    var orb = t.Orbs[^1];
-                    t.OwnOrbs().RemoveAt(t.Orbs.Count - 1);
-                    return Evoke(s, orb, t.Thunder, who: tk);
-                });
-            }
-        }
-        ExplosionCheck(b); // kills by Consuming Shadow's evokes
-        // Your relics at AfterSideTurnEnd, in relic order: Lunar Pastry's stars set off Black Hole (every enemy), and
-        // Parrying Shield (a random enemy, when your block is at least its threshold).
-        void Lunar()
-        {
-            if (b.States.Any(s => s.P.LunarBlackHole > 0)) b.Do(s => AllEnemies(s, "Black Hole (Lunar Pastry)", s.P.LunarBlackHole));
-        }
-        if (b.States.Count > 0 && b.States[0].P.LunarBeforeParrying) Lunar();
-        b.Each(s =>
-        {
-            if (s.P.ParryingShieldDamage <= 0 || s.P.Block < s.P.ParryingShieldBlock) return new[] { s };
-            s.ParryingShieldFired = true;
-            return HitRandom(s, _ => s.P.ParryingShieldDamage);
-        });
-        if (b.States.Count > 0 && !b.States[0].P.LunarBeforeParrying) Lunar();
-        // Teammates' Lunar Pastry with their Black Hole.
-        if (b.States.Any(s => s.Teammates.Any(t => t.LunarBlackHole > 0)))
-            b.Do(s => { foreach (var t in s.Teammates) if (t.Hp > 0) AllEnemies(s, "Black Hole (teammate's Lunar Pastry)", t.LunarBlackHole); });
-        for (var k = 0; k < teammates; k++)
-        {
-            var tk = k;
-            b.Each(s => s.Teammates[tk] is { Hp: > 0, ParryingShieldDamage: > 0 } t && t.Block >= t.ParryingShieldBlock
-                ? HitRandom(s, _ => s.Teammates[tk].ParryingShieldDamage) : new[] { s });
-        }
-        ExplosionCheck(b); // kills by Parrying Shield
-        // AfterSideTurnEndLate: Disintegration.
+        // 4. AfterSideTurnEnd, then AfterSideTurnEndLate: Disintegration.
+        HookStep(b, nameof(SimModel.AfterSideTurnEnd), (m, o, x) => Who.IsPlayer(o) ? m.AfterSideTurnEnd(x, o) : new[] { x });
+        ExplosionCheck(b); // kills by Consuming Shadow's evokes, Parrying Shield, Black Hole
         b.Do(s =>
         {
             foreach (var (name, amount) in s.P.DebuffLateBlockable) LandBlockable(s, name, amount);
@@ -1164,6 +1035,7 @@ public static partial class SimEngine
 
         b.Do(s =>
         {
+            s.EndOfTurnNow = false;
             s.BlockAtEnemyTurn = s.P.Block;
             foreach (var e in s.Enemies) e.HpAtTurnEnd = Math.Max(0, e.Hp);
         });

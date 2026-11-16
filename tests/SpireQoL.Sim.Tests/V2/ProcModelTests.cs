@@ -408,7 +408,7 @@ public class ProcModelTests
     [Fact]
     public void ExhaustDiscardAndShuffleRelics()
     {
-        var s = Relic(Relic(Relic(State(), "CharonsAshes", vars: ("Damage", 3)), "ToughBandages", vars: ("Block", 3)), "TheAbacus", vars: ("Block", 6));
+        var s = Relic(Relic(Relic(State(), "CharonsAshes", amount: 3), "ToughBandages", vars: ("Block", 3)), "TheAbacus", vars: ("Block", 6));
         Relic(s, "BurningSticks");
         var after = One(s, Events(Card("Burn", SimCardType.Skill), 1,
             new CardEventAction(CardEvent.Exhausted, 1) { Card = Card("Burn", SimCardType.Skill) },
@@ -437,7 +437,8 @@ public class ProcModelTests
         foreach (var name in SimModels.Names)
         {
             var m = SimModels.Get(name)!;
-            if (m is Models.ProcModel && name != "CoveringFirePower") Assert.NotNull(m.Tab); // Covering Fire: no tab by design (decision #25)
+            // Covering Fire: no tab by design (decision #25); end-of-turn models show in Incoming Damage, not on cards.
+            if (m is Models.ProcModel and not Models.EndOfTurnModel and not Models.EndOfTurnRelic && name != "CoveringFirePower") Assert.NotNull(m.Tab);
         }
     }
 }

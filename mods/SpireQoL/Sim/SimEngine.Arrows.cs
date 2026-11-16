@@ -39,7 +39,7 @@ public static partial class SimEngine
                 s.P.Arrows--;
                 s.ArrowAwayAt = target;
             }
-            return Hook(s, (m, o, x) => m.AfterArrowShot(x, o, Who.You));
+            return Hook(s, nameof(SimModel.AfterArrowShot), (m, o, x) => m.AfterArrowShot(x, o, Who.You));
         });
     }
 
@@ -52,7 +52,7 @@ public static partial class SimEngine
             if (s.Enemy(target) is not { } e) return new[] { s };
             var p = e.Powers;
             e.Powers = p.Has(Impaled) ? p.With(Impaled, p[Impaled] + 1) : p.With(Impaled, 1, 3);
-            var r = Hook(s, (m, o, x) => m.AfterArrowImpaled(x, o, target, Who.You));
+            var r = Hook(s, nameof(SimModel.AfterArrowImpaled), (m, o, x) => m.AfterArrowImpaled(x, o, target, Who.You));
             // Killed by the shot's own attack: the arrow comes straight out.
             return Then(r.ToList(), x => x.Enemy(target) is { Alive: false } ? Dislodge(x, target, 1) : new[] { x });
         });

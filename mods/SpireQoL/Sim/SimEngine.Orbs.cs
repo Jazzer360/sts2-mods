@@ -70,7 +70,7 @@ public static partial class SimEngine
             var px = k < 0 ? x.P : x.MutableTeammate(k);
             if (px.OrbCapacity <= 0) return new[] { x };
             px.OwnOrbs().Add(orb.Clone());
-            return Hook(x, (m, o, y) => m.AfterOrbChanneled(y, o, player));
+            return Hook(x, nameof(SimModel.AfterOrbChanneled), (m, o, y) => m.AfterOrbChanneled(y, o, player));
         });
     }
 
