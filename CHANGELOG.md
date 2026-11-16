@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.6.3
+#### Fixed
+- Run Reminders: an ancient's Sea Glass option is read as cards from Sea Glass's character's pool, not yours, so the eggs and Fresnel Lens show by that pool's cards. A reward filter that can't be worked out before you choose (Glass Eye's per-rarity rewards) counts every card of its pool, so no icon is left out.
+
 ### Spire QoL 1.6.2
 #### Fixed
 - Run Reminders: Fresnel Lens and the eggs show beside an event option only when a card they change can come from it, read from the option's own code (its reward's pool and filter, its fixed cards, a transform's pool). A curse no longer gets Fresnel Lens, and "choose a Power" no longer gets Molten Egg.

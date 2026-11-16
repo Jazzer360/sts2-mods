@@ -715,7 +715,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             // An ancient's relic: what it does when you take it.
             if (option.Relic is { } relic && relic.GetType().GetMethod(nameof(RelicModel.AfterObtained)) is { } obtained && obtained.DeclaringType == relic.GetType())
             {
-                cards.Target ??= relic;
+                cards.Relic = relic;
                 Walk(obtained, relic.GetType(), calls, new HashSet<MethodBase>(), 0, cards);
             }
         }

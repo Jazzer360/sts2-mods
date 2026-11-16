@@ -88,6 +88,10 @@ It never reads the RNG: the list is every card the rules allow, and the odds are
 
 **Build after phase 2** (it needs the card sources and `CardOdds`): the panel (a new screen of ours, not a widget, opened from the button and closed with Esc like the settings menu), marking and the odds, then remembering marks. It's added to the Guide page and gets its own setting.
 
+## Ancients (owner, 2026-11-16)
+
+Ancients' card options are read through the relic's `AfterObtained`: Sea Glass (three rewards from its own character's pool), Glass Eye (a reward per rarity from yours), Pandora's Box (your Strikes and Defends transformed). Still to do: an egg shouldn't show when the option's code upgrades the cards it gives (`CardCmd.Upgrade` on them) or when none of its cards can be upgraded, and Glass Eye's per-rarity filter (a value captured in a loop) should be read per reward rather than kept whole, for its odds.
+
 ## Answers (owner, 2026-11-16)
 
 - **The number:** the chance at least one card you're offered matches. A distribution (the chance of 0, 1, 2... matching) is possible later work.

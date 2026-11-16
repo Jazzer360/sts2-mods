@@ -57,4 +57,21 @@ public class OptionCardsTests
         // Some event transforms a card at random.
         Assert.Contains(Events(), t => Read(t).Summary.Transform);
     }
+
+    [Fact]
+    public void AncientRelicsAreReadAsTheyAre()
+    {
+        // An ancient's relic option is read through its AfterObtained (and the lambdas it uses).
+        var relics = typeof(RelicModel).Assembly.GetTypes().Where(t => !t.IsAbstract && typeof(RelicModel).IsAssignableFrom(t)).ToDictionary(t => t.Name);
+        // Pandora's Box: your Strikes and Defends transformed at random (CreateRandomCardForTransform in a lambda).
+        Assert.True(Read(relics["PandorasBox"]).Summary.Transform);
+        // Sea Glass: commons, uncommons and rares of another character's pool (its own Character, not yours).
+        var seaGlass = Read(relics["SeaGlass"]).Summary;
+        Assert.Equal(3, seaGlass.Rewards);
+        Assert.Equal(3, seaGlass.OtherCharacterPools);
+        // Glass Eye: a reward per rarity from your pool, the rarity captured in a closure (kept whole: it can't be filled in).
+        var glassEye = Read(relics["GlassEye"]).Summary;
+        Assert.True(glassEye.Rewards >= 1);
+        Assert.Equal(0, glassEye.OtherCharacterPools);
+    }
 }

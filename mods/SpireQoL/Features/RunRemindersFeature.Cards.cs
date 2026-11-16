@@ -59,18 +59,24 @@ public sealed partial class RunRemindersFeature
     /// <summary>What an option's code says about the cards it makes (filled while walking it).</summary>
     internal sealed class OptionCards
     {
-        /// <summary>The event (or relic) running the code: the filter lambdas' <c>this</c>.</summary>
+        /// <summary>The option's delegate target (the event, or a closure over it): the filter lambdas' <c>this</c>.</summary>
         public object? Target;
+        /// <summary>An ancient's relic the option gives (its AfterObtained is read too): Sea Glass's character, say.</summary>
+        public object? Relic;
+
+        /// <summary>A card pool in the code, and the call that gave the character whose pool it is (null: not a character's).</summary>
+        private sealed record PoolSource(MethodBase Method, MethodBase? Character);
         private readonly HashSet<Type> _fixed = new();
-        private readonly List<(List<MethodBase> Pools, MethodInfo? Filter)> _rewards = new();
-        private readonly List<MethodBase> _loosePools = new();
+        private readonly List<(List<PoolSource> Pools, MethodInfo? Filter)> _rewards = new();
+        private readonly List<PoolSource> _loosePools = new();
         private bool _transformRandom;
 
         /// <summary>One method body: pools and a filter are paired with the CardCreationOptions call that follows them.</summary>
         public void Read(List<CodeInstruction> code)
         {
-            var pools = new List<MethodBase>();
+            var pools = new List<PoolSource>();
             MethodInfo? filter = null;
+            MethodBase? character = null;
             foreach (var ins in code)
             {
                 if (ins.opcode == OpCodes.Ldftn && ins.operand is MethodInfo fn && IsCardFilter(fn))
@@ -81,8 +87,8 @@ public sealed partial class RunRemindersFeature
                 if (ins.operand is not MethodBase mb || mb.DeclaringType == null) continue;
                 if (ins.opcode != OpCodes.Call && ins.opcode != OpCodes.Callvirt && ins.opcode != OpCodes.Newobj) continue;
                 var type = mb.DeclaringType;
-                if (mb.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(mb);
-                else if (type == typeof(ModelDb) && mb is MethodInfo { IsGenericMethod: true } g && g.Name == nameof(ModelDb.CardPool)) pools.Add(mb);
+                if (mb.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(new PoolSource(mb, character));
+                else if (type == typeof(ModelDb) && mb is MethodInfo { IsGenericMethod: true } g && g.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(mb, null));
                 else if (mb is MethodInfo { IsGenericMethod: true } gc && (gc.Name is "Card" or "CreateCard" or "TransformTo")
                     && gc.GetGenericArguments()[0] is { } t && typeof(CardModel).IsAssignableFrom(t) && !t.IsAbstract)
                     _fixed.Add(t);
@@ -90,20 +96,24 @@ public sealed partial class RunRemindersFeature
                 {
                     // No pool loaded here: it's passed in (Colorful Philosophers' option for one character's pool), so it's
                     // the CardPoolModel the option's delegate holds.
-                    _rewards.Add((pools.Count == 0 ? new List<MethodBase> { FromOption } : pools.ToList(), filter));
+                    _rewards.Add((pools.Count == 0 ? new List<PoolSource> { FromOption } : pools.ToList(), filter));
                     pools.Clear();
                     filter = null;
                 }
-                else if (type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && (mb.Name == "TransformToRandom"
-                    || (mb.Name == "Transform" && mb.GetParameters().Any(p => p.ParameterType.Name == "Rng"))))
+                else if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && (mb.Name == "TransformToRandom"
+                        || (mb.Name == "Transform" && mb.GetParameters().Any(p => p.ParameterType.Name == "Rng"))))
+                    || (type == typeof(CardFactory) && mb.Name == nameof(CardFactory.CreateRandomCardForTransform)))
                     _transformRandom = true;
+                // Whose character a pool belongs to: the last call that returned one (Owner.Character, or Sea Glass's Character).
+                if (mb is MethodInfo { ReturnType: var rt } && typeof(CharacterModel).IsAssignableFrom(rt)) character = mb;
             }
             _loosePools.AddRange(pools);
         }
 
-        /// <summary>For the tests: what was read (fixed cards, rewards, rewards with a filter, transform, rewards whose pool the option passes in).</summary>
-        internal (int Fixed, int Rewards, int Filters, bool Transform, int PoolFromOption) Summary =>
-            (_fixed.Count, _rewards.Count, _rewards.Count(r => r.Filter != null), _transformRandom, _rewards.Count(r => r.Pools.Contains(FromOption)));
+        /// <summary>For the tests: what was read (fixed cards, rewards, rewards with a filter, transform, rewards whose pool the option passes in, pools of a character other than yours).</summary>
+        internal (int Fixed, int Rewards, int Filters, bool Transform, int PoolFromOption, int OtherCharacterPools) Summary =>
+            (_fixed.Count, _rewards.Count, _rewards.Count(r => r.Filter != null), _transformRandom, _rewards.Count(r => r.Pools.Contains(FromOption)),
+             _rewards.SelectMany(r => r.Pools).Count(p => p.Character != null && !typeof(Player).IsAssignableFrom(p.Character.DeclaringType)));
 
         private static bool IsCardFilter(MethodInfo m) =>
             m.ReturnType == typeof(bool) && m.GetParameters() is { Length: 1 } p && typeof(CardModel).IsAssignableFrom(p[0].ParameterType);
@@ -120,6 +130,8 @@ public sealed partial class RunRemindersFeature
             foreach (var (pools, filter) in _rewards)
             {
                 if (pools.Contains(FromOption) && OptionPool() == null) return null;
+                // A pool whose character can't be told: the cards are unknown, so the icons stay.
+                if (pools.Any(p => p.Method.Name == "get_CardPool" && CharacterOf(p.Character, me) == null)) return null;
                 var keep = Filter(filter);
                 var possible = pools.SelectMany(p => Unlocked(Pool(p, me), me)).Where(keep);
                 foreach (var c in ForRun(me, possible)) set.Add(c);
@@ -140,14 +152,44 @@ public sealed partial class RunRemindersFeature
         }
 
         /// <summary>Stands for "the pool the option passes in" in a reward's pools.</summary>
-        private static readonly MethodBase FromOption = AccessTools.Method(typeof(OptionCards), nameof(Candidates));
+        private static readonly PoolSource FromOption = new(AccessTools.Method(typeof(OptionCards), nameof(Candidates)), null);
 
-        private CardPoolModel? Pool(MethodBase source, Player me)
+        private CardPoolModel? Pool(PoolSource source, Player me)
         {
             if (source == FromOption) return OptionPool();
-            if (source.Name == "get_CardPool") return me.Character.CardPool;
-            try { return ((MethodInfo)source).Invoke(null, null) as CardPoolModel; }
+            if (source.Method.Name == "get_CardPool") return CharacterOf(source.Character, me)?.CardPool;
+            try { return ((MethodInfo)source.Method).Invoke(null, null) as CardPoolModel; }
             catch { return null; }
+        }
+
+        /// <summary>
+        /// The character a pool belongs to: yours (a Player's Character, or no call seen), or what the call gives on the object
+        /// running the code (the relic, the event, a closure); null when it can't be told.
+        /// </summary>
+        private CharacterModel? CharacterOf(MethodBase? getter, Player me)
+        {
+            if (getter == null || typeof(Player).IsAssignableFrom(getter.DeclaringType)) return me.Character;
+            try
+            {
+                if (getter.IsStatic) return getter.Invoke(null, null) as CharacterModel;
+                foreach (var on in Holders())
+                {
+                    if (getter.DeclaringType!.IsInstanceOfType(on)) return getter.Invoke(on, null) as CharacterModel;
+                }
+            }
+            catch { /* unknown */ }
+            return null;
+        }
+
+        /// <summary>The objects the option's code runs on: its delegate target, the event a closure holds, the relic it gives.</summary>
+        private IEnumerable<object> Holders()
+        {
+            if (Target != null)
+            {
+                yield return Target;
+                if (ThisField(Target.GetType())?.GetValue(Target) is { } outer) yield return outer;
+            }
+            if (Relic != null) yield return Relic;
         }
 
         private static FieldInfo? ThisField(Type t) =>
@@ -182,15 +224,18 @@ public sealed partial class RunRemindersFeature
             if (!m.IsStatic)
             {
                 var dt = m.DeclaringType!;
-                // The delegate may be a closure (Colorful Philosophers' per-pool option): the event is its <>4__this.
-                var owner = Target != null && ThisField(Target.GetType()) is { } outer && outer.GetValue(Target) is { } ev ? ev : Target;
-                if (Target != null && dt.IsInstanceOfType(Target)) inst = Target;
-                else if (owner != null && dt.IsInstanceOfType(owner)) inst = owner;
-                else if (dt.GetField("<>9", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is { } nine) inst = nine.GetValue(null);
-                else
+                inst = Holders().FirstOrDefault(dt.IsInstanceOfType);
+                if (inst == null && dt.GetField("<>9", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is { } nine) inst = nine.GetValue(null);
+                if (inst == null)
                 {
+                    // A closure: only its "this" can be filled in. One that also captures a value (Glass Eye's rarity, set per
+                    // reward in a loop) can't be evaluated, so it keeps every card of the pool.
+                    var fields = dt.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    var self = ThisField(dt);
+                    if (fields.Any(f => f != self)) return _ => true;
                     inst = RuntimeHelpers.GetUninitializedObject(dt);
-                    if (ThisField(dt) is { } self && owner != null && self.FieldType.IsInstanceOfType(owner)) self.SetValue(inst, owner);
+                    var owner = Holders().FirstOrDefault(h => self != null && self.FieldType.IsInstanceOfType(h));
+                    if (self != null && owner != null) self.SetValue(inst, owner);
                 }
             }
             return c =>
