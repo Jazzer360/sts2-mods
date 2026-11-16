@@ -81,7 +81,7 @@ public sealed class IntangiblePower : SimModel
 /// <summary>
 /// SurroundedPower (you, Kaiser Crab): Data is the way you face (0 right, 1 left). A dealer behind you (BackAttackLeftPower
 /// while you face right, BackAttackRightPower while you face left) deals 1.5×. A card of yours aimed at the crab behind you
-/// turns you to face it (BeforeCardPlayed).
+/// turns you to face it (BeforeCardPlayed), and so does a death that leaves every enemy on one side (AfterDeath).
 /// </summary>
 public sealed class SurroundedPower : SimModel
 {
@@ -101,6 +101,21 @@ public sealed class SurroundedPower : SimModel
         var facing = p.DataOf(Name);
         if (SimEngine.PowersOf(s, play.Target).Has(BehindPower(facing))) SimEngine.SetPowers(s, owner, p.With(Name, p[Name], 1 - facing));
         return One(s);
+    }
+
+    /// <summary>
+    /// AfterDeath of an enemy: when every hittable enemy left is on one side (all BackAttackLeftPower or all
+    /// BackAttackRightPower), you turn to face the first of them if it's behind you.
+    /// </summary>
+    public override void AfterDeath(SimState s, int owner, int dead)
+    {
+        if (s.Enemy(dead) == null || !SimEngine.PowersOf(s, owner).Has(Name)) return;
+        var left = s.Targetable.ToList();
+        if (left.Count == 0) return;
+        if (!left.All(e => e.Powers.Has("BackAttackLeftPower")) && !left.All(e => e.Powers.Has("BackAttackRightPower"))) return;
+        var p = SimEngine.PowersOf(s, owner);
+        var facing = p.DataOf(Name);
+        if (left[0].Powers.Has(BehindPower(facing))) SimEngine.SetPowers(s, owner, p.With(Name, p[Name], 1 - facing));
     }
 }
 

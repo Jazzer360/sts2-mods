@@ -276,7 +276,7 @@ internal static partial class CoverageLedger
         ["SubroutinePower"] = "covered: AfterCardPlayed energy on Powers (proc tab)",
         ["SuckPower"] = "ignore: AfterAttack Strength after its own attack (later attacks)",
         ["SurprisePower"] = "covered: AfterDeath effect (crossed kill tab from the simulator)",
-        ["SurroundedPower"] = "covered: BeforeCardPlayed turns you to face a back-attacking target; ModifyDamageMultiplicative: the one behind you hits 50% harder (intents after your targeted play; potions and deaths aren't predicted)",
+        ["SurroundedPower"] = "covered: BeforeCardPlayed turns you to face a back-attacking target; AfterDeath turns you to face the first enemy left when all are on one side; ModifyDamageMultiplicative: the one behind you hits 50% harder (intents after your targeted play or a kill; potions aren't predicted)",
         ["SwipePower"] = "ignore: BeforeDeath returns a stolen card",
         ["SwordSagePower"] = "covered: Sovereign Blade replays (double-play row, Sovereign Blade tab)",
         ["TaintedPower"] = "ignore: AfterSideTurnEnd removes itself",

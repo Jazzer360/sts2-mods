@@ -468,6 +468,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 0.31.39 (Fool play test 5): Repeat Shot's X hits (scan check for X-cost attacks), Slumber in the simulator, Adroit's block, the code scans read local functions (Blossom Shot's Stretch).
 - [x] 0.31.40: Motif's draws (Shuffle Warning, draw procs), Ki Chant replays shuffling on a later play, replayed shots impaling for Serrated Arrows' bonus; the forecast check counts the overkill of a hit that kills you (Fairy in a Bottle).
 - [x] ~~**Forecast, unexplained:** Kaiser Crab, Crusher alone after Rocket died: Thrash predicted 22, hit for 18.~~ (0.31.40: the hit killed you, 18 HP left, and Fairy in a Bottle revived you; the check now counts the overkill.)
+- [x] 1.2.3 (#336, simulator): Kaiser Crab, Crusher killed by Repeat Shot: Rocket's intent predicted 16, game 11. SurroundedPower.AfterDeath turns you to face the crab left; the simulator only turned you on a targeted play.
 - [x] 0.33.0: a Stretch tab on block cards that spend it (the play check compares it with your Stretch after the play; a scan check flags block cards whose block value it can't read).
 - [x] 0.33.1: no double-play or replay tabs on unplayable cards (Throwing Axe on a curse).
 - [x] 0.33.2: the play check accepts a double-play source firing (Throwing Axe) when the card played more than once.

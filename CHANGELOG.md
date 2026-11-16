@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.2.3
+#### Fixed
+- Kaiser Crab: killing one crab turns you to face the one left, as the game does, so Incoming Damage no longer counts its attack as a 50% stronger back attack.
+
 ### Spire QoL 1.2.2
 #### Fixed
 - Wuppy: a hit bigger than Wuppy's HP now carries its overflow on to your block and you, as the game does, so Incoming Damage no longer says 0 when that hit gets through; your Thorns now hits back on attacks Wuppy takes.
