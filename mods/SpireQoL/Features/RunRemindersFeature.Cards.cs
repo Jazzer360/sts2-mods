@@ -18,14 +18,17 @@ namespace SpireQoL.Features;
 /// <summary>
 /// Which cards an event option can give you (docs/CARD_ODDS.md), read from the same code walk as its effects, through the game
 /// calls that make cards, so no event needs code of its own:
-///  - a card reward or a random card from <c>CardCreationOptions</c>: its pools (your character's, or <c>ModelDb.CardPool&lt;T&gt;</c>)
-///    and its filter (the lambda passed with them, run on each card of the pool), as <c>GetPossibleCards</c> and the factory's
-///    <c>FilterForRun</c> would;
+///  - a card reward or a random card from <c>CardCreationOptions</c>: its pools (a character's, <c>ModelDb.CardPool&lt;T&gt;</c>, or
+///    the one the option passes in), its filter (the lambda passed with them; one captured in a loop over a constant array, as
+///    Glass Eye's rarity, once per value), its odds, flags and card count. The options are then built by the game's own code
+///    and passed through <c>Hook.ModifyCardRewardCreationOptions</c> (Dingy Rug's colorless cards, Prismatic Gem's other
+///    characters' cards), so <c>GetPossibleCards</c> and <c>FilterForRun</c> give exactly the cards the reward can offer;
 ///  - a fixed card: <c>ModelDb.Card&lt;T&gt;</c>, <c>CreateCard&lt;T&gt;</c>, <c>CardCmd.TransformTo&lt;T&gt;</c>;
 ///  - a transform to a random card: <c>CardFactory.GetDefaultTransformationOptions</c> of each card in your deck;
 ///  - a pool used without the factory (the Museum's curse pool): every card in it.
-/// A reward whose pool isn't loaded in the code takes the pool the option passes in (a closure field); when there is none,
-/// the option's cards are unknown (null) and its relics keep their icon.
+/// Also what it does to cards: whether it upgrades the cards it gives (Astrolabe), which enchantments it applies to your cards
+/// (Tezcatara's soup), whether it upgrades cards of your deck. When something can't be read, the cards are unknown (null) and
+/// the relics keep their icon.
 /// </summary>
 public sealed partial class RunRemindersFeature
 {
@@ -39,13 +42,21 @@ public sealed partial class RunRemindersFeature
     {
         var cards = CardsOf(option, me);
         var held = Held(me);
-        return cards == null || cards.Any(c => CardAffinity.AppliesWith(rule, c, held));
+        var upgraded = CardsRead.TryGetValue(option, out var read) && read.GivesUpgraded;
+        return cards == null || cards.Any(c => CardAffinity.AppliesWith(rule, c, held, upgraded));
+    }
+
+    /// <summary>Whether the change this option makes to your cards (an upgrade, an enchantment) can reach one the rule applies to.</summary>
+    private static bool ChangeReaches(EventOption option, Player me, CardAffinityRule rule)
+    {
+        EffectsOf(option);
+        return !CardsRead.TryGetValue(option, out var read) || read.ChangeReaches(me, rule);
     }
 
     private static readonly ConditionalWeakTable<EventOption, Dictionary<string, string?>> OddsCache = new();
 
     /// <summary>
-    /// The chance under a relic's icon (docs/CARD_ODDS.md): "43%", or "10–14%" for a transform over your deck's cards; null when
+    /// The chance under a relic's icon (docs/CARD_ODDS.md): "43%", or a range for a transform whose cards differ in pool; null when
     /// it's sure or can't be told. Cached per option and relic.
     /// </summary>
     private static string? OddsText(EventOption option, Player me, CardAffinityRule rule)
@@ -58,7 +69,7 @@ public sealed partial class RunRemindersFeature
             if (CardsRead.TryGetValue(option, out var read))
             {
                 var held = Held(me);
-                if (read.Chance(me, c => CardAffinity.AppliesWith(rule, c, held)) is { } chance && chance.Low < 1)
+                if (read.Chance(me, c => CardAffinity.AppliesWith(rule, c, held, read.GivesUpgraded)) is { } chance && chance.Low < 1)
                 {
                     text = Percent(chance.Low) == Percent(chance.High) ? Percent(chance.Low) + "%" : $"{Percent(chance.Low)}–{Percent(chance.High)}%";
                 }
@@ -119,25 +130,40 @@ public sealed partial class RunRemindersFeature
 
         /// <summary>A card pool in the code, and the call that gave the character whose pool it is (null: not a character's).</summary>
         private sealed record PoolSource(MethodBase Method, MethodBase? Character);
-        private readonly HashSet<Type> _fixed = new();
+
         /// <summary>
         /// A number in the code: a constant, a dynamic var of the object running it (<c>DynamicVars.Cards.IntValue</c>), or one
         /// divided by a constant (Sea Glass's <c>Cards / 3</c>).
         /// </summary>
         private sealed record IntExpr(int? Const, string? Var, int Divisor = 1);
 
-        /// <summary>A card reward or random card: its pools and filter, its rarity odds (CardRarityOddsType), and how many cards.</summary>
+        /// <summary>A card reward or random card, as its code builds it.</summary>
         private sealed class RewardSource
         {
             public required List<PoolSource> Pools;
+            /// <summary>The CardCreationOptions factory or constructor the code calls.</summary>
+            public required MethodBase Maker;
             public MethodInfo? Filter;
-            public int? OddsType;
+            /// <summary>The constructor's source and odds (CardCreationSource, CardRarityOddsType), read as numbers.</summary>
+            public int? Source, Odds;
+            /// <summary>Flags added with WithFlags; IsCardReward when a CardReward takes it.</summary>
+            public int Flags;
             public IntExpr? Count;
+            /// <summary>A filter closure's captured value set per pass of a loop over a constant array (Glass Eye's rarities).</summary>
+            public FieldInfo? LoopField;
+            public object[]? LoopValues;
         }
 
+        private readonly HashSet<Type> _fixed = new();
+        private readonly HashSet<Type> _enchantments = new();
         private readonly List<RewardSource> _rewards = new();
         private readonly List<PoolSource> _loosePools = new();
         private bool _transformRandom;
+        private bool _upgradesDeck;
+        private bool _enchantsDeck;
+
+        /// <summary>The option upgrades the cards it gives (Astrolabe: CardCmd.Upgrade on its new cards, not a pick from your deck).</summary>
+        public bool GivesUpgraded { get; private set; }
 
         /// <summary>One method body: pools and a filter are paired with the CardCreationOptions call that follows them.</summary>
         public void Read(List<CodeInstruction> code)
@@ -145,20 +171,39 @@ public sealed partial class RunRemindersFeature
             var pools = new List<PoolSource>();
             MethodInfo? filter = null;
             MethodBase? character = null;
-            // The last number pushed (for a reward's count and a constructor's odds), the one before it (for a division), the
-            // dynamic var named last, and numbers stored in locals or fields (an async method's locals are fields).
+            // The last number pushed (for a reward's count, flags and a constructor's odds), the one before it (a division, the
+            // constructor's source), the dynamic var named last, and numbers stored in locals or fields (an async method's
+            // locals are fields).
             IntExpr? last = null, before = null;
             string? lastString = null, varName = null;
             var stored = new Dictionary<string, IntExpr>();
             CodeInstruction? previous = null;
+            // Constant arrays of an enum (Glass Eye's rarities): built element by element, or from a data field.
+            var arrays = new Dictionary<Type, object[]>();
+            (Type Element, int Length, List<object> Values)? building = null;
+            FieldInfo? arrayData = null;
+            var upgrades = false;
+            var picksUpgrade = false;
             void Push(IntExpr e) { before = last; last = e; }
             foreach (var ins in code)
             {
                 var producedInt = previous != null && ProducesInt(previous);
                 previous = ins;
+                if (ins.opcode == OpCodes.Newarr && ins.operand is Type { IsEnum: true } element && last is { Const: { } length })
+                {
+                    building = (element, length, new List<object>());
+                    continue;
+                }
+                if (ins.opcode == OpCodes.Ldtoken && ins.operand is FieldInfo data) { arrayData = data; continue; }
+                if (building is { } b && ins.opcode.Name?.StartsWith("stelem") == true && last is { Const: { } value })
+                {
+                    b.Values.Add(Enum.ToObject(b.Element, value));
+                    if (b.Values.Count == b.Length) { arrays[b.Element] = b.Values.ToArray(); building = null; }
+                    continue;
+                }
                 if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var k)) { Push(new IntExpr(k, null)); continue; }
                 if (ins.opcode == OpCodes.Ldstr) { lastString = ins.operand as string; continue; }
-                if (ins.opcode == OpCodes.Div && last is { Const: { } d } && before is { Var: { } v } && d != 0) { last = before with { Divisor = before.Divisor * d }; continue; }
+                if (ins.opcode == OpCodes.Div && last is { Const: { } d } && before is { Var: not null } && d != 0) { last = before with { Divisor = before.Divisor * d }; continue; }
                 if (SlotKey(ins, store: true) is { } st) { if (producedInt && last != null) stored[st] = last; continue; }
                 if (SlotKey(ins, store: false) is { } ld) { if (stored.TryGetValue(ld, out var val)) Push(val); continue; }
                 if (ins.opcode == OpCodes.Ldftn && ins.operand is MethodInfo fn && IsCardFilter(fn))
@@ -169,36 +214,62 @@ public sealed partial class RunRemindersFeature
                 if (ins.operand is not MethodBase mb || mb.DeclaringType == null) continue;
                 if (ins.opcode != OpCodes.Call && ins.opcode != OpCodes.Callvirt && ins.opcode != OpCodes.Newobj) continue;
                 var type = mb.DeclaringType;
+                if (mb.Name == "InitializeArray" && type == typeof(RuntimeHelpers) && building is { } init && arrayData != null)
+                {
+                    try
+                    {
+                        var array = Array.CreateInstance(init.Element, init.Length);
+                        RuntimeHelpers.InitializeArray(array, arrayData.FieldHandle);
+                        arrays[init.Element] = array.Cast<object>().ToArray();
+                    }
+                    catch { /* not a constant array we can read */ }
+                    building = null;
+                    continue;
+                }
                 if (type.Name == "DynamicVarSet" && mb.Name.StartsWith("get_")) varName = mb.Name == "get_Item" ? lastString : mb.Name[4..];
                 else if (mb.Name == "get_IntValue" && type.Name.EndsWith("Var") && varName != null) Push(new IntExpr(null, varName));
                 else if (IsRewardMaker(mb))
                 {
                     // CardReward(options, count, player) / CardFactory.CreateForReward(player, count, options): the count is the
                     // last number pushed; it goes to the first reward still without one.
-                    if (_rewards.FirstOrDefault(r => r.Count == null) is { } open) open.Count = last;
+                    if (_rewards.FirstOrDefault(r => r.Count == null) is { } open)
+                    {
+                        open.Count = last;
+                        if (mb.IsConstructor) open.Flags |= (int)CardCreationFlags.IsCardReward;
+                    }
                 }
+                else if (type == typeof(CardCreationOptions) && mb.Name == nameof(CardCreationOptions.WithFlags) && _rewards.Count > 0 && last is { Const: { } flags })
+                    _rewards[^1].Flags |= flags;
                 if (mb.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(new PoolSource(mb, character));
                 else if (type == typeof(ModelDb) && mb is MethodInfo { IsGenericMethod: true } g && g.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(mb, null));
                 else if (mb is MethodInfo { IsGenericMethod: true } gc && (gc.Name is "Card" or "CreateCard" or "TransformTo")
                     && gc.GetGenericArguments()[0] is { } t && typeof(CardModel).IsAssignableFrom(t) && !t.IsAbstract)
                     _fixed.Add(t);
+                else if (mb is MethodInfo { IsGenericMethod: true } ge && (ge.Name is "Enchantment" or "Enchant")
+                    && ge.GetGenericArguments()[0] is { } e && typeof(EnchantmentModel).IsAssignableFrom(e) && !e.IsAbstract)
+                    _enchantments.Add(e);
                 else if (type == typeof(CardCreationOptions) && (mb.IsConstructor || (mb is MethodInfo f && f.IsStatic && f.ReturnType == typeof(CardCreationOptions))))
                 {
-                    // No pool loaded here: it's passed in (Colorful Philosophers' option for one character's pool), so it's
-                    // the CardPoolModel the option's delegate holds.
-                    _rewards.Add(new RewardSource
+                    var reward = new RewardSource
                     {
+                        // No pool loaded here: it's passed in (Colorful Philosophers' option for one character's pool), so it's
+                        // the CardPoolModel the option's delegate holds.
                         Pools = pools.Count == 0 ? new List<PoolSource> { FromOption } : pools.ToList(),
+                        Maker = mb,
                         Filter = filter,
-                        // The factories name their odds; the constructor takes them as its third argument, the last number
-                        // pushed before it (the filter isn't a number).
-                        OddsType = mb.Name switch
-                        {
-                            nameof(CardCreationOptions.ForNonCombatWithDefaultOdds) => (int)CardRarityOddsType.RegularEncounter,
-                            nameof(CardCreationOptions.ForNonCombatWithUniformOdds) => (int)CardRarityOddsType.Uniform,
-                            _ => mb.IsConstructor && last is { Const: { } odds } ? odds : null,
-                        },
-                    });
+                        // The constructor takes (pools, source, odds, filter): its odds are the last number pushed, its source the one before.
+                        Odds = mb.IsConstructor ? last?.Const : null,
+                        Source = mb.IsConstructor ? before?.Const : null,
+                    };
+                    // A closure capturing one value of an enum we saw a constant array of: the loop's values (Glass Eye).
+                    if (filter is { IsStatic: false } && filter.DeclaringType is { } closure && ThisField(closure) is var self
+                        && closure.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(x => x != self).ToList() is { Count: 1 } captured
+                        && arrays.TryGetValue(captured[0].FieldType, out var values))
+                    {
+                        reward.LoopField = captured[0];
+                        reward.LoopValues = values;
+                    }
+                    _rewards.Add(reward);
                     pools.Clear();
                     filter = null;
                 }
@@ -206,10 +277,18 @@ public sealed partial class RunRemindersFeature
                         || (mb.Name == "Transform" && mb.GetParameters().Any(p => p.ParameterType.Name == "Rng"))))
                     || (type == typeof(CardFactory) && mb.Name == nameof(CardFactory.CreateRandomCardForTransform)))
                     _transformRandom = true;
+                if (type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && mb.Name.StartsWith("Upgrade")) upgrades = true;
+                if (type.Name == "CardSelectCmd" && mb.Name == "FromDeckForUpgrade") picksUpgrade = true;
+                if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && mb.Name.StartsWith("Enchant")) || (type.Name == "CardSelectCmd" && mb.Name == "FromDeckForEnchantment"))
+                    _enchantsDeck = true;
                 // Whose character a pool belongs to: the last call that returned one (Owner.Character, or Sea Glass's Character).
                 if (mb is MethodInfo { ReturnType: var rt } && typeof(CharacterModel).IsAssignableFrom(rt)) character = mb;
             }
             _loosePools.AddRange(pools);
+            // An upgrade with no pick from your deck in the same code is of the cards it makes (Astrolabe's new cards); with a
+            // pick, it's of your cards.
+            if (upgrades && !picksUpgrade && (_fixed.Count > 0 || _transformRandom || _rewards.Count > 0)) GivesUpgraded = true;
+            else if (upgrades || picksUpgrade) _upgradesDeck = true;
         }
 
         /// <summary>For the tests: what was read (fixed cards, rewards, rewards with a filter, transform, rewards whose pool the option passes in, pools of a character other than yours).</summary>
@@ -217,9 +296,15 @@ public sealed partial class RunRemindersFeature
             (_fixed.Count, _rewards.Count, _rewards.Count(r => r.Filter != null), _transformRandom, _rewards.Count(r => r.Pools.Contains(FromOption)),
              _rewards.SelectMany(r => r.Pools).Count(p => p.Character != null && !typeof(Player).IsAssignableFrom(p.Character.DeclaringType)));
 
-        /// <summary>For the tests: each reward's odds type and count as read ("Cards", "Cards/3", "3", or "?").</summary>
-        internal List<(int? Odds, string Count)> RewardsRead =>
-            _rewards.Select(r => (r.OddsType, r.Count is { } c ? (c.Const?.ToString() ?? c.Var!) + (c.Divisor != 1 ? "/" + c.Divisor : "") : "?")).ToList();
+        /// <summary>For the tests: each reward's odds (null: the factory's own), count ("Cards", "Cards/3", "3", or "?") and loop values.</summary>
+        internal List<(string Maker, string Count, string Loop)> RewardsRead =>
+            _rewards.Select(r => (r.Maker.IsConstructor ? "new:" + r.Odds : r.Maker.Name,
+                r.Count is { } c ? (c.Const?.ToString() ?? c.Var!) + (c.Divisor != 1 ? "/" + c.Divisor : "") : "?",
+                r.LoopValues is { } v ? string.Join(",", v) : "")).ToList();
+
+        /// <summary>For the tests: the enchantments the code applies, and how it upgrades.</summary>
+        internal (string Enchantments, bool GivesUpgraded, bool UpgradesDeck) ChangesRead =>
+            (string.Join(",", _enchantments.Select(e => e.Name).OrderBy(n => n)), GivesUpgraded, _upgradesDeck);
 
         private static bool IsRewardMaker(MethodBase mb) =>
             (mb.IsConstructor && mb.DeclaringType?.Name == "CardReward" && mb.GetParameters().Any(p => p.ParameterType == typeof(CardCreationOptions)))
@@ -278,7 +363,8 @@ public sealed partial class RunRemindersFeature
             }
             foreach (var reward in _rewards)
             {
-                if (Possible(reward, me) is not { } possible) return null;
+                if (Built(reward, me) is not { } built) return null;
+                foreach (var (_, possible) in built)
                 foreach (var c in possible) set.Add(c);
             }
             foreach (var p in _loosePools)
@@ -296,22 +382,48 @@ public sealed partial class RunRemindersFeature
             return set.Count == 0 ? null : set.ToList();
         }
 
-        /// <summary>A reward's possible cards (GetPossibleCards, FilterForRun), or null when its pool can't be told.</summary>
-        private List<CardModel>? Possible(RewardSource reward, Player me)
+        /// <summary>
+        /// A reward as the game would build it: its CardCreationOptions made by the same factory or constructor, with its flags,
+        /// through Hook.ModifyCardRewardCreationOptions (your relics and the run's modifiers: a pure query that only edits the
+        /// options it's given), and its possible cards (GetPossibleCards, FilterForRun). One per loop value (Glass Eye). Null
+        /// when its pool or its construction can't be told.
+        /// </summary>
+        private List<(CardCreationOptions Options, List<CardModel> Possible)>? Built(RewardSource reward, Player me)
         {
             if (reward.Pools.Contains(FromOption) && OptionPool() == null) return null;
             // A pool whose character can't be told: the cards are unknown, so the icons stay.
             if (reward.Pools.Any(p => p.Method.Name == "get_CardPool" && CharacterOf(p.Character, me) == null)) return null;
-            var keep = Filter(reward.Filter);
-            return ForRun(me, reward.Pools.SelectMany(p => Unlocked(Pool(p, me), me)).Where(keep)).Distinct().ToList();
+            var pools = reward.Pools.Select(p => Pool(p, me)).OfType<CardPoolModel>().Distinct().ToList();
+            var built = new List<(CardCreationOptions, List<CardModel>)>();
+            foreach (var value in reward.LoopValues ?? new object?[] { null })
+            {
+                var keep = Filter(reward.Filter, reward.LoopField, value);
+                CardCreationOptions? options;
+                try
+                {
+                    options = reward.Maker switch
+                    {
+                        ConstructorInfo when reward.Odds is { } odds => new CardCreationOptions(pools,
+                            (CardCreationSource)(reward.Source ?? (int)CardCreationSource.Other), (CardRarityOddsType)odds, keep),
+                        MethodInfo { IsStatic: true } factory when factory.GetParameters().Length == 2 => factory.Invoke(null, new object[] { pools, keep }) as CardCreationOptions,
+                        _ => null,
+                    };
+                }
+                catch { options = null; }
+                if (options == null) return null;
+                options = options.WithFlags((CardCreationFlags)reward.Flags);
+                options = MegaCrit.Sts2.Core.Hooks.Hook.ModifyCardRewardCreationOptions(me.RunState, me, options);
+                built.Add((options, ForRun(me, options.GetPossibleCards(me)).Distinct().ToList()));
+            }
+            return built;
         }
 
         /// <summary>
         /// The chance that what this option gives includes a card <paramref name="applies"/> accepts (docs/CARD_ODDS.md): 1 for a
         /// fixed card it accepts; for rewards, the chance at least one offered card is accepted (CardOdds, several rewards
-        /// combined); for a random transform, the chance a transformed card is (lowest and highest over your deck's cards).
-        /// Null when it can't be told (a count or odds the code doesn't show, a pool used directly, rewards mixed with transforms).
-        /// The rewards' upgrade roll isn't counted (events turn it off, except Colorful Philosophers'), nor relics that change the pools.
+        /// combined); for a random transform, the chance the new card is accepted. Null when it can't be told (a count or odds
+        /// the code doesn't show, a pool used directly, rewards mixed with transforms). The upgrade roll a reward may make
+        /// (Colorful Philosophers' rewards don't turn it off) isn't counted.
         /// </summary>
         public (double Low, double High)? Chance(Player me, Func<CardModel, bool> applies)
         {
@@ -326,30 +438,72 @@ public sealed partial class RunRemindersFeature
             var chances = new List<double>();
             foreach (var reward in _rewards)
             {
-                if (Possible(reward, me) is not { } possible) return null;
-                if (!possible.Any(applies)) continue;
-                if (reward.Count is not { } countExpr || Evaluate(countExpr) is not { } count || reward.OddsType is not { } oddsType) return null;
-                chances.Add(RewardChance(possible, applies, (CardRarityOddsType)oddsType, count) ?? double.NaN);
-                if (double.IsNaN(chances[^1])) return null;
+                if (Built(reward, me) is not { } built) return null;
+                foreach (var (options, possible) in built)
+                {
+                    if (!possible.Any(applies)) continue;
+                    if (reward.Count is not { } countExpr || Evaluate(countExpr) is not { } count) return null;
+                    if (RewardChance(possible, applies, options.RarityOdds, count) is not { } p) return null;
+                    chances.Add(p);
+                }
             }
             if (_transformRandom)
             {
                 if (chances.Count > 0) return null;
-                double lo = 1, hi = 0;
-                foreach (var original in me.Deck.Cards)
-                {
-                    List<CardModel> options;
-                    try { options = CardFactory.GetDefaultTransformationOptions(original, false).ToList(); }
-                    catch { continue; }
-                    if (options.Count == 0) continue;
-                    var p = (double)options.Count(c => applies(c.IsCanonical ? c : c.CanonicalInstance)) / options.Count;
-                    lo = Math.Min(lo, p);
-                    hi = Math.Max(hi, p);
-                }
-                return hi < lo ? null : (lo, hi);
+                return TransformChance(me, applies);
             }
             var any = SpireQoL.Sim.CardOdds.AnyOf(chances);
             return (any, any);
+        }
+
+        /// <summary>
+        /// A random transform: the chance the new card is accepted. It's the same for every card you could transform, apart from
+        /// two things in CardFactory.GetDefaultTransformationOptions: a card can't become itself (one card fewer when it's one of
+        /// the results), and the pool depends on the card (yours; colorless for event, ancient, token and quest cards; every
+        /// rarity for a curse or status). So one value per pool, from the card with the most results (nothing left out), and a
+        /// range only when your deck's cards transform from different pools.
+        /// </summary>
+        private static (double Low, double High)? TransformChance(Player me, Func<CardModel, bool> applies)
+        {
+            var byPool = new Dictionary<string, (int Count, double Chance)>();
+            foreach (var original in me.Deck.Cards)
+            {
+                List<CardModel> options;
+                try { options = CardFactory.GetDefaultTransformationOptions(original, false).Select(c => c.IsCanonical ? c : c.CanonicalInstance).ToList(); }
+                catch { continue; }
+                if (options.Count == 0) continue;
+                var colorless = original.Type == CardType.Quest || original.Rarity is CardRarity.Event or CardRarity.Ancient or CardRarity.Token;
+                var anyRarity = original.Rarity is CardRarity.Status or CardRarity.Curse;
+                var key = (colorless ? "colorless" : original.Pool?.Id.ToString() ?? "?") + (anyRarity ? "/all" : "");
+                if (!byPool.TryGetValue(key, out var seen) || options.Count > seen.Count)
+                    byPool[key] = (options.Count, (double)options.Count(applies) / options.Count);
+            }
+            if (byPool.Count == 0) return null;
+            return (byPool.Values.Min(v => v.Chance), byPool.Values.Max(v => v.Chance));
+        }
+
+        /// <summary>
+        /// Whether the change this option makes to your deck reaches a card the rule applies to: Mystic Lighter when one of its
+        /// enchantments can go on an Attack in your deck (any Attack when the enchantment isn't named), Miniature Cannon when an
+        /// Attack in your deck can be upgraded. A change it makes to the cards it gives is counted with those cards instead.
+        /// </summary>
+        public bool ChangeReaches(Player me, CardAffinityRule rule)
+        {
+            var deck = me.Deck.Cards.ToList();
+            bool Base(CardModel c) => rule.Base == null || rule.Base(c);
+            return rule.Change switch
+            {
+                CardChange.Upgrade => _upgradesDeck && deck.Any(c => Base(c) && c.IsUpgradable),
+                CardChange.Enchant => _enchantsDeck && deck.Any(c => Base(c) && (_enchantments.Count == 0
+                    || _enchantments.Any(e => EnchantmentOf(e)?.CanEnchant(c) ?? true))),
+                _ => false,
+            };
+        }
+
+        private static EnchantmentModel? EnchantmentOf(Type t)
+        {
+            try { return typeof(ModelDb).GetMethod(nameof(ModelDb.Enchantment))!.MakeGenericMethod(t).Invoke(null, null) as EnchantmentModel; }
+            catch { return null; }
         }
 
         /// <summary>One reward: the game's draw over the possible cards (CreateForReward), as CardOdds counts it.</summary>
@@ -467,9 +621,10 @@ public sealed partial class RunRemindersFeature
 
         /// <summary>
         /// The filter as a predicate: a static lambda, a lambda on the compiler's singleton (<c>&lt;&gt;9</c>), a method of the
-        /// event itself, or a closure over the event (<c>&lt;&gt;4__this</c>). A filter that throws keeps the card.
+        /// event itself, or a closure over the event (<c>&lt;&gt;4__this</c>) and, for a loop, the value of this pass. A closure
+        /// holding another value it can't be given keeps every card; a filter that throws keeps the card.
         /// </summary>
-        private Func<CardModel, bool> Filter(MethodInfo? m)
+        private Func<CardModel, bool> Filter(MethodInfo? m, FieldInfo? loopField = null, object? loopValue = null)
         {
             if (m == null) return _ => true;
             object? inst = null;
@@ -480,14 +635,13 @@ public sealed partial class RunRemindersFeature
                 if (inst == null && dt.GetField("<>9", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is { } nine) inst = nine.GetValue(null);
                 if (inst == null)
                 {
-                    // A closure: only its "this" can be filled in. One that also captures a value (Glass Eye's rarity, set per
-                    // reward in a loop) can't be evaluated, so it keeps every card of the pool.
                     var fields = dt.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     var self = ThisField(dt);
-                    if (fields.Any(f => f != self)) return _ => true;
+                    if (fields.Any(f => f != self && f != loopField)) return _ => true;
                     inst = RuntimeHelpers.GetUninitializedObject(dt);
                     var owner = Holders().FirstOrDefault(h => self != null && self.FieldType.IsInstanceOfType(h));
                     if (self != null && owner != null) self.SetValue(inst, owner);
+                    if (loopField != null && loopValue != null) loopField.SetValue(inst, loopValue);
                 }
             }
             return c =>

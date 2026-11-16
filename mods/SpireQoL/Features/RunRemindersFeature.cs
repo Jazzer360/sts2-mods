@@ -500,11 +500,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                         // A relic that cares about certain cards: only when one of them can come from this option (as your other
                         // relics would change it), or the option makes the change it looks for (an upgrade, an enchantment).
                         string? odds = null;
-                        if (CardAffinity.For(name) is { } affinity && (effects & CardAffinity.ChangeEffect(affinity)) == 0)
+                        if (CardAffinity.For(name) is { } affinity)
                         {
-                            if ((effects & ChoiceEffect.CardToDeck) == 0 || !CanGet(option, me, affinity)) continue;
-                            // Under the icon: the chance one of its cards comes up (none when it's sure or can't be told).
-                            odds = OddsText(option, me, affinity);
+                            // The option makes the change it looks for to a card of yours it applies to (Mystic Lighter: an
+                            // enchantment an Attack of yours can take, Tezcatara's soup); or one of its cards can come up, with
+                            // the chance it does under the icon (none when it's sure or can't be told).
+                            if ((effects & CardAffinity.ChangeEffect(affinity)) != 0 && ChangeReaches(option, me, affinity)) { }
+                            else if ((effects & ChoiceEffect.CardToDeck) != 0 && CanGet(option, me, affinity)) odds = OddsText(option, me, affinity);
+                            else continue;
                         }
                         icons.Add((relic, (rule.CrossedOn & effects) != 0, odds));
                     }

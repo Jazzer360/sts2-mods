@@ -510,6 +510,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 1.6.2 (decision #58): eggs and Fresnel Lens beside an event option only when a card they change can come from it (CardAffinity, option cards read from the code; scan in the catalog tests).
 - [x] 1.6.3: Sea Glass read as its own character's pool; filters holding a per-option value (Glass Eye) keep the whole pool.
 - [x] 1.7.0 (decision #59): card odds under event icons; Strike Dummy, Miniature Cannon, Mystic Lighter, Vitruvian Minion beside event options (made cards, modifier interactions, upgrade and enchant options).
+- [x] 1.7.1 (decisions #60, #61): rewards built by the game (pool relics counted), Glass Eye per rarity, Astrolabe upgraded, Lighter and Cannon by eligible Attacks, one transform number.
 - [ ] Test in game: the chance under event icons (Colorful Philosophers, Infested Automaton, Room Full of Cheese, Sea Glass); Mystic Lighter beside Tezcatara's soup.
 - [ ] Card odds phase 3: Strike Dummy, Miniature Cannon, Mystic Lighter, Vitruvian Minion tabs on reward and shop cards (and Begone!'s Minion Strike). Then the Inspect panel.
 - [ ] Test in game: the Guide page's Rest Preview, Run Reminders examples and the green 0 on the free-card examples.

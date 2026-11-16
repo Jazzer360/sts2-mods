@@ -1,6 +1,8 @@
 # Card odds for relics outside fights (plan)
 
-Status: phases 1 and 2 done (1.6.2 and 1.7.0, decisions #58 and #59); phases 3 and 4 and Inspect planned.
+Status: phases 1 and 2 done (1.6.2 to 1.7.1, decisions #58, #59, #61); phases 3 and 4 and Inspect planned.
+
+**Purpose (owner, decision #60):** a relic's icon beside an event option is a reminder that you hold a relic that makes this choice unusually good (or, crossed, unusually bad); the number under it says how likely. The Inspect dialog is how a player understands the odds of a favorable outcome.
 
 ## The problem
 
@@ -94,11 +96,15 @@ It never reads the RNG: the list is every card the rules allow, and the odds are
 - **Relic + relic**: an egg upgrades an Attack you get, so Miniature Cannon applies to it; Fresnel Lens enchants an Attack that gains block, so Mystic Lighter applies. A boost's rule names the change it looks for, a modifier's the change it makes, so a new pair is covered by its rules.
 - **Cards that make cards**: Begone! makes a Minion Strike (a Strike and a Minion), so Strike Dummy and Vitruvian Minion apply to it. Read from the card's code (`CreateCard<T>`, `ModelDb.Card<T>`).
 - **Attack only**: Miniature Cannon and Mystic Lighter add to powered attack damage; read as the card being an Attack.
-- **Not yet**: the odds don't count Colorful Philosophers' upgrade roll (Miniature Cannon there is a little more likely than shown) or relics that change a reward's pools; an egg still shows when the option upgrades the cards it gives itself.
+- **Enchantment eligibility** (1.7.1): Mystic Lighter beside an enchanting option only when an Attack of yours can take one of its enchantments (some can't go on Attacks; Nimble only on cards that gain block, such as Iron Wave). Miniature Cannon beside an upgrade only when an Attack of yours is upgradable.
+- **Pools** (1.7.1): the reward's options go through the game's `Hook.ModifyCardRewardCreationOptions`, so Dingy Rug (colorless cards in card rewards) and Prismatic Gem (every character's cards) are counted.
+- **Cards that arrive upgraded** (1.7.1): Astrolabe upgrades the cards it transforms into, so no egg icon; Miniature Cannon counts them.
+- **Glass Eye** (1.7.1): read as five rewards, 2 commons, 2 uncommons, a rare, 3 cards each.
+- **Not yet**: Colorful Philosophers' rewards keep the game's upgrade roll (the others turn it off); it isn't counted, so Miniature Cannon there is a little more likely than shown.
 
 ## Ancients (owner, 2026-11-16)
 
-Ancients' card options are read through the relic's `AfterObtained`: Sea Glass (three rewards from its own character's pool), Glass Eye (a reward per rarity from yours), Pandora's Box (your Strikes and Defends transformed). Still to do: an egg shouldn't show when the option's code upgrades the cards it gives (`CardCmd.Upgrade` on them) or when none of its cards can be upgraded, and Glass Eye's per-rarity filter (a value captured in a loop) should be read per reward rather than kept whole, for its odds.
+Ancients' card options are read through the relic's `AfterObtained`: Sea Glass (three rewards from its own character's pool), Glass Eye (a reward per rarity from yours), Pandora's Box (your Strikes and Defends transformed). Both done in 1.7.1: an option that upgrades the cards it gives counts them as upgraded, and Glass Eye's per-rarity filter is read per value.
 
 ## Answers (owner, 2026-11-16)
 

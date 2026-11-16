@@ -87,9 +87,16 @@ public static class CardAffinity
     /// <summary>
     /// Whether a rule applies to a card as you'd get it with your relics: the card itself, or (a boost looking for a change)
     /// the card after a held modifier makes that change (Molten Egg upgrades an Attack, so Miniature Cannon boosts it).
+    /// <paramref name="upgraded"/>: the option upgrades the card it gives (Astrolabe), so an egg has nothing to do and
+    /// Miniature Cannon applies to an upgradable Attack.
     /// </summary>
-    public static bool AppliesWith(CardAffinityRule rule, CardModel card, IEnumerable<CardAffinityRule> held)
+    public static bool AppliesWith(CardAffinityRule rule, CardModel card, IEnumerable<CardAffinityRule> held, bool upgraded = false)
     {
+        if (upgraded && rule.Change == CardChange.Upgrade)
+        {
+            if (rule.Kind == AffinityKind.Modifies) return false;
+            if ((rule.Base == null || Safe(rule.Base, card)) && card.IsUpgradable) return true;
+        }
         if (AppliesTo(rule, card)) return true;
         // A boost also counts the cards this card makes when played (Begone!'s Minion Strike: a Strike and a Minion).
         if (rule.Kind == AffinityKind.Boosts && Made(card).Any(m => AppliesTo(rule, m))) return true;

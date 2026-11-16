@@ -61,16 +61,28 @@ public class OptionCardsTests
     [Fact]
     public void RewardCountsAndOddsAreRead()
     {
-        // What the odds need: each reward's rarity odds and how many cards it offers, read from the code.
+        // What the odds need: how each reward's options are built and how many cards it offers, read from the code.
         var byName = Events().ToDictionary(t => t.Name);
         var relics = typeof(RelicModel).Assembly.GetTypes().Where(t => !t.IsAbstract && typeof(RelicModel).IsAssignableFrom(t)).ToDictionary(t => t.Name);
-        int Uniform = (int)MegaCrit.Sts2.Core.Runs.CardRarityOddsType.Uniform, Regular = (int)MegaCrit.Sts2.Core.Runs.CardRarityOddsType.RegularEncounter;
-        Assert.Equal(new[] { (Uniform, "Cards"), (Uniform, "Cards"), (Uniform, "Cards") },
-            Read(byName["ColorfulPhilosophers"]).RewardsRead.Select(r => (r.Odds ?? -1, r.Count)));
-        Assert.All(Read(byName["InfestedAutomaton"]).RewardsRead, r => Assert.Equal((Regular, "1"), (r.Odds ?? -1, r.Count)));
-        Assert.Equal(new[] { (Uniform, "8") }, Read(byName["RoomFullOfCheese"]).RewardsRead.Select(r => (r.Odds ?? -1, r.Count)));
-        Assert.All(Read(relics["SeaGlass"]).RewardsRead, r => Assert.Equal((Uniform, "Cards/3"), (r.Odds ?? -1, r.Count)));
-        Assert.All(Read(relics["GlassEye"]).RewardsRead, r => Assert.Equal((Uniform, "3"), (r.Odds ?? -1, r.Count)));
+        var uniform = "new:" + (int)MegaCrit.Sts2.Core.Runs.CardRarityOddsType.Uniform;
+        Assert.Equal(new[] { (uniform, "Cards", ""), (uniform, "Cards", ""), (uniform, "Cards", "") }, Read(byName["ColorfulPhilosophers"]).RewardsRead);
+        Assert.All(Read(byName["InfestedAutomaton"]).RewardsRead, r => Assert.Equal(("ForNonCombatWithDefaultOdds", "1", ""), r));
+        Assert.Equal(new[] { ("ForNonCombatWithUniformOdds", "8", "") }, Read(byName["RoomFullOfCheese"]).RewardsRead);
+        Assert.All(Read(relics["SeaGlass"]).RewardsRead, r => Assert.Equal(("ForNonCombatWithUniformOdds", "Cards/3", ""), r));
+        // Glass Eye: one reward in a loop over its rarities, a pass per value.
+        Assert.Equal(new[] { ("ForNonCombatWithUniformOdds", "3", "Common,Common,Uncommon,Uncommon,Rare") }, Read(relics["GlassEye"]).RewardsRead);
+    }
+
+    [Fact]
+    public void ChangesToCardsAreRead()
+    {
+        var relics = typeof(RelicModel).Assembly.GetTypes().Where(t => !t.IsAbstract && typeof(RelicModel).IsAssignableFrom(t)).ToDictionary(t => t.Name);
+        // Tezcatara's Nutritious Soup enchants your Strikes with Tezcatara's Ember (Mystic Lighter).
+        Assert.Equal("TezcatarasEmber", Read(relics["NutritiousSoup"]).ChangesRead.Enchantments);
+        // Astrolabe upgrades the cards it transforms into: the eggs have nothing to do, Miniature Cannon applies.
+        var astrolabe = Read(relics["Astrolabe"]).ChangesRead;
+        Assert.True(astrolabe.GivesUpgraded);
+        Assert.False(astrolabe.UpgradesDeck);
     }
 
     [Fact]

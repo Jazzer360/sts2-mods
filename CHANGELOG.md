@@ -6,6 +6,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.7.1
+#### Changed
+- Run Reminders: a reward's cards are worked out by the game's own code, your relics and the run's modifiers included (Dingy Rug's colorless cards, Prismatic Gem's other characters' cards), so the chance under an icon counts them.
+- Run Reminders: a random transform's chance is one number; a range shows only when your deck has cards that transform from a different pool (colorless or curse).
+#### Fixed
+- Run Reminders: Mystic Lighter beside an option that enchants your cards only when an Attack of yours can take that enchantment (Tezcatara's soup: your Strikes), and Miniature Cannon beside an upgrade only when an Attack of yours can be upgraded.
+- Run Reminders: the eggs no longer show beside an option that upgrades the cards it gives (Astrolabe); Miniature Cannon does.
+- Run Reminders: Glass Eye's rewards are read rarity by rarity (2 commons, 2 uncommons, a rare), for the right chance.
+
 ### Spire QoL 1.7.0
 #### Added
 - Run Reminders: under an egg's or Fresnel Lens' icon beside an event option, the chance that a card it changes is among the cards you're offered (or, for a random transform, that the new card is one), worked out from the option's own pool, filter, rarity odds and card count.
