@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.2.0
+#### Changed
+- The end of your turn follows the game's order exactly: each player's effects in player order (a teammate before you acts first), Orichalcum checking your block before Pael's Eye exhausts your hand, then each player's orbs, Ethereal cards and cards in hand in turn.
+- Ethereal cards exhausting at the end of your turn set off every exhaust effect, as during your turn: Dark Embrace's draws now count, and what those draws set off.
+- Incoming Damage's breakdown names each end-of-turn source as the game does.
+- A shot with no arrow does nothing (no attack), so a replayed shot that runs out of arrows deals only what its arrows allow.
+- A teammate's arrows in an enemy you kill go back to them, with their Twine's block.
+
 ### Spire QoL 1.1.0
 #### Changed
 - The Fool's arrows are simulated: a shot spends an arrow before its attack and impales after it, every third powered hit of yours knocks an arrow loose, and a dying enemy drops them all. Yah and Twine come from the simulated play, so kills from procs count, and arrows that come back can be shot again in the same play.

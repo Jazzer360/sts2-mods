@@ -197,3 +197,4 @@ Built on `main` without intermediate releases; 1.0.0 ships when every step is do
 - [x] 5. Rules into models: every Proc Indicators rule is a model (`Sim/Models/ProcPowerModels.cs`, `ProcRelicModels.cs`); tabs come from the play log; `Evaluate` is gone. Effects judged by the end of the turn (kills, stuns, waking, Parrying Shield, HP-loss relics) compare outcomes. Unsettling Lamp doubles debuffs.
 - [x] 6. Audits: the proc check reads the log-based tabs (same keys and ranges); the damage-formula audit compares each card's simulated first hit with the game's preview.
 - [x] 7. Coverage, docs, release 1.0.0.
+- [x] After 1.0.0: orbs, arrows, Osty and the remaining card effects as actions (decision #50); the end of turn as models and the old play format retired (decision #51).

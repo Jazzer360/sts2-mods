@@ -235,10 +235,11 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
   - Plating
   - Frost orb passives (times the game's passive trigger count, so trigger-boosting effects are included)
   - Frost orbs evoked by Consuming Shadow (their evoke block)
-  - Orichalcum / Fake Orichalcum (only if you currently have 0 block, like the game checks)
+  - Orichalcum / Fake Orichalcum (only if you have 0 block when your turn starts ending: BeforeSideTurnEndVeryEarly, before Pael's Eye exhausts your hand)
   - Cloak Clasp (block × cards in hand)
   - Ripple Basin (only if you haven't played an attack this turn)
-  - Feel No Pain × Ethereal cards still in hand: they exhaust at end of turn (after Orichalcum checks your block), each giving Feel No Pain's block
+  - Feel No Pain × Ethereal cards still in hand: they exhaust at end of turn (after Orichalcum checks your block), each giving Feel No Pain's block (and setting off every other exhaust effect: Charon's Ashes, Forgotten Soul, Dark Embrace's draws and what they set off)
+  - Each player's end-of-turn effects come in player order (a teammate before you acts first), and each source shows under the game's own name
   - Not counted: Horn Cleat and Captain's Wheel. They give block at the *start* of turn 2/3, after the enemy has attacked; Relic Counters shows their countdown.
 
 **Wuppy** (event relic): while your pet Wuppy lives it takes every attack aimed at you, whole, before your block, so those hits aren't in your Incoming Damage (and your Thorns, Flame Barrier and Reflect don't react to them); once it dies, the rest come to you. A teammate's Wuppy isn't modelled.
