@@ -311,6 +311,14 @@ public sealed class CardOverlayRenderer
                     slash.Visible = spec.Crossed;
                     if (spec.Crossed) LayoutSlash(slash, icon.Size);
                 }
+                // Aim marker (decision #55): it happens only at some targets. The targeting arrow's head in the icon's top-left
+                // corner, clear of the slash (bottom-left to top-right) and the number (bottom-right).
+                if (icon.GetNodeOrNull<TextureRect>("SpireQoL_Aim") is { } aim)
+                {
+                    var arrow = spec.Aimed ? GameIcons.TargetArrow() : null;
+                    aim.Visible = GameIcons.Valid(arrow);
+                    if (aim.Visible) LayoutAim(aim, arrow!, icon.Size);
+                }
             }
             // The tab's number label shows only on quantified tabs (block / damage / summon procs, energy a free card saves or "?").
             if (tab.GetNodeOrNull<Label>("Label") is { } label)
@@ -430,9 +438,27 @@ public sealed class CardOverlayRenderer
                 MouseFilter = Control.MouseFilterEnum.Ignore,
                 Visible = false,
             });
+            icon.AddChild(new TextureRect
+            {
+                Name = "SpireQoL_Aim",
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                Visible = false,
+            });
         }
         overlay.AddChild(tab);
         return tab;
+    }
+
+    /// <summary>The aim marker: about 45% of the icon, its centre on the icon's top-left corner, like the number on the bottom-right.</summary>
+    internal static void LayoutAim(TextureRect aim, Texture2D arrow, Vector2 iconSize)
+    {
+        aim.Texture = arrow;
+        var side = Math.Min(iconSize.X, iconSize.Y) * 0.45f;
+        aim.Size = new Vector2(side, side);
+        aim.PivotOffset = aim.Size / 2f;
+        aim.Position = new Vector2(iconSize.X * 0.1f, iconSize.Y * 0.1f) - aim.Size / 2f;
     }
 
     /// <summary>A diagonal red bar across the icon (bottom-left to top-right).</summary>

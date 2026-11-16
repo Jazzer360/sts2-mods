@@ -471,6 +471,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 1.2.3 (#336, simulator): Kaiser Crab, Crusher killed by Repeat Shot: Rocket's intent predicted 16, game 11. SurroundedPower.AfterDeath turns you to face the crab left; the simulator only turned you on a targeted play.
 - [x] 1.2.4 (#331, draw rule): Ki Hop+ with Glam at an enemy with one arrow, 1 hit left: predicted 6 draws, game 3. The first play's hit loosened the arrow, so the replay wasn't Impaled (KiHop.OnPlay checks wasImpaled per play); Wrest's replay draws nothing either. Draws are counted per play from the arrow counter (SimEngine.PlaysStartingImpaled); the audit takes them as the play starts.
 - [x] 1.2.4 (#337, audit): Cho Ki "didn't fire: StretchPower": Cho Ki spends Stretch and then applies the same amount, so before and after were equal. The spent-power check reads the decrease from the history.
+- [x] 1.3.0 (settings review): Synthesis's Free Power had no tab (ledger said ignore); free-card `?` never rendered; free-card amounts told Frantic Escape copies apart (decision #54); aim marker for target-dependent tabs (decision #55); menu wording for Indirect procs, Mighty Wings, Envenom, Concoct, Conqueror.
+- [ ] Test in game: the aim marker's look (size, corner, arrow direction) on a lethal skull and a crossed tab; a free-card `?` on Snecko Eye and Frantic Escape.
 - [x] 0.33.0: a Stretch tab on block cards that spend it (the play check compares it with your Stretch after the play; a scan check flags block cards whose block value it can't read).
 - [x] 0.33.1: no double-play or replay tabs on unplayable cards (Throwing Axe on a curse).
 - [x] 0.33.2: the play check accepts a double-play source firing (Throwing Axe) when the card played more than once.

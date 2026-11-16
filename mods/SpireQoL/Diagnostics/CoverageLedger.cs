@@ -186,7 +186,7 @@ internal static partial class CoverageLedger
         ["FocusPower"] = "covered: ModifyOrbValue (live orbs through the game; new orbs in SimAdapter.Fresh)",
         ["FrailPower"] = "ignore: AfterSideTurnEnd ticks down (block math)",
         ["FreeAttackPower"] = "covered: BeforeCardPlayed uses a charge on any Attack from hand (free: tab with the energy saved; crossed when wasted)",
-        ["FreePowerPower"] = "ignore: BeforeCardPlayed uses a charge (costs read live)",
+        ["FreePowerPower"] = "covered: BeforeCardPlayed uses a charge on any Power from hand (free: tab with the energy saved; crossed when wasted)",
         ["FreeSkillPower"] = "covered: BeforeCardPlayed uses a charge on any Skill from hand (free: tab with the energy saved; crossed when wasted)",
         ["GalvanicPower"] = "covered: AfterCardPlayed damages you for Galvanized cards (crossed proc damage)",
         ["GigantificationPower"] = "covered: triples one attack through ModifyDamageMultiplicative (in the card's damage preview); AfterAttack takes a stack (tab on attacks that spend it; a replay's later plays without it once it runs out)",

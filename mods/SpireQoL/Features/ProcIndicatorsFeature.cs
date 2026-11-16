@@ -82,6 +82,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private ICombatState _cs = null!;
     private bool _indirect;
 
+    /// <summary>The card being finished: for each proc tab, which of its targets (simulations) give it (the aim marker).</summary>
+    private readonly Dictionary<string, bool[]> _firesAt = new();
+
     /// <summary>Each hand card's PlayFacts on the previous frame (what ProcAudit expects a play to do).</summary>
     /// <summary>Each card's facts from the last frame it was in hand (kept after it leaves; ProcAudit).</summary>
     public static IReadOnlyDictionary<CardModel, PlayFacts> LastFacts => _lastFacts;
@@ -107,6 +110,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var cs = Sts2State.Combat;
         if (me == null || cs == null || !Sts2State.IsPlayerTurn) return;
         var hand = Sts2State.Hand(me);
+        FreeCards.Observe(me, hand);
         if (hand.Count == 0) return;
 
         _me = me;
@@ -140,7 +144,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
         foreach (var (card, p, d) in pending)
             foreach (var t in Finish(card, p))
-                d.AddTab(t.Key, t.Icon, crossed: t.Crossed, number: t.Number, kind: t.Kind, amount: t.Amount, auditMin: t.AuditMin, auditMax: t.AuditMax, card: t.Card);
+                d.AddTab(t);
     }
 
     /// <summary>A card's facts, the proc sources this frame, and its running simulations.</summary>
@@ -210,21 +214,22 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     {
         var tabs = new Dictionary<string, TabSpec>();
         var lethal = false;
+        var lethalAimed = false;
         try
         {
-            lethal = p.Sim != null && FinishSim(p.F, p.Sources, p.Sim, tabs);
+            lethal = p.Sim != null && FinishSim(p.F, p.Sources, p.Sim, tabs, out lethalAimed);
         }
         catch (Exception ex)
         {
             SimFailed(card, ex);
         }
         var list = tabs.Values.ToList();
-        if (lethal) list.Add(new TabSpec("lethal", GameIcons.Skull()));
+        if (lethal) list.Add(new TabSpec("lethal", GameIcons.Skull(), Aimed: lethalAimed));
         // Cards this play brings back to your hand (Make It So, Right Hand Hand, Whistling Arrows): plain, one per card name,
         // with the returning card as the icon.
         foreach (var back in p.F.CardsBack.GroupBy(c => c.GetType().Name))
             list.Add(new TabSpec("return:" + back.Key, null, Card: back.First()));
-        // Free Card, Free Attack, Free Skill: the energy this play saves (or "?" when Snecko Eye hides the cost); crossed when
+        // Free Card, Free Attack, Free Skill, Free Power: the energy this play saves (or "?" when you couldn't know the cost); crossed when
         // the card already costs 0 or is X-cost, so playing it throws the free card away.
         foreach (var use in FreeCards.Uses(card, _me))
         {
@@ -330,10 +335,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     /// <summary>
     /// Reads a card's finished simulations into its tabs; returns whether it's lethal (some aim leaves an enemy dead before it
-    /// acts in every branch, which ending the turn now doesn't).
+    /// acts in every branch, which ending the turn now doesn't), and in <paramref name="lethalAimed"/> whether only some aims are.
     /// </summary>
-    private bool FinishSim(PlayFacts f, List<AbstractModel> sources, Task<SimOutcome[]> task, Dictionary<string, TabSpec> tabs)
+    private bool FinishSim(PlayFacts f, List<AbstractModel> sources, Task<SimOutcome[]> task, Dictionary<string, TabSpec> tabs, out bool lethalAimed)
     {
+        lethalAimed = false;
         var te = TurnEnd();
         if (te == null) return false;
         if (!task.IsCompleted)
@@ -343,6 +349,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         }
         if (task.IsFaulted) throw task.Exception!.GetBaseException();
         var outcomes = task.Result;
+        _firesAt.Clear();
         var baseline = te.Outcome;
         if (outcomes.Any(o => o.Truncated || o.Branches.Count > 1)) f.RandomOutcome = true;
         if (!_noCache) Diagnostics.DamageFormulaAudit.Check(f.Card, f, te.Ids, outcomes);
@@ -364,33 +371,44 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             LogTab(src, null, outcomes, tabs, TabKind.Damage);
 
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act
-        void Add(AbstractModel src, bool harmful) => tabs["proc:" + src.GetType().Name] = new TabSpec("proc:" + src.GetType().Name, IconOf(src), harmful);
+        // Each rule is a test per target (one simulation each): the tab shows when some target passes it, with the aim marker
+        // when not every target does (several enemies with the same power: when no target passes any of them).
+        void Add(AbstractModel src, bool harmful, Func<SimOutcome, bool> at)
+        {
+            var key = "proc:" + src.GetType().Name;
+            var firesAt = outcomes.Select(at).ToArray();
+            if (!firesAt.Any(x => x)) return;
+            if (_firesAt.TryGetValue(key, out var prev) && prev.Length == firesAt.Length)
+                for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prev[i];
+            _firesAt[key] = firesAt;
+            tabs[key] = new TabSpec(key, IconOf(src), harmful, Aimed: firesAt.Length > 1 && !firesAt.All(x => x));
+        }
         foreach (var (enemy, id) in te.Ids)
         {
             if (!enemy.IsAlive) continue;
             foreach (var p in enemy.Powers)
             {
-                bool? hit = p.GetType().Name switch
+                (bool Harmful, Func<SimOutcome, bool> At)? rule = p.GetType().Name switch
                 {
-                    nameof(ImbalancedPower) when outcomes.Any(o => o.FirstHitBlockedInAll(id)) && !baseline.FirstHitBlockedInAll(id) => false,
-                    nameof(AsleepPower) when outcomes.Any(o => o.UnblockedMax(id) >= 1) && baseline.UnblockedMax(id) < 1 => true,
-                    nameof(SlumberPower) when outcomes.Any(o => o.UnblockedMax(id) >= p.Amount) && baseline.UnblockedMax(id) < p.Amount => true,
+                    nameof(ImbalancedPower) when !baseline.FirstHitBlockedInAll(id) => (false, o => o.FirstHitBlockedInAll(id)),
+                    nameof(AsleepPower) when baseline.UnblockedMax(id) < 1 => (true, o => o.UnblockedMax(id) >= 1),
+                    nameof(SlumberPower) when baseline.UnblockedMax(id) < p.Amount => (true, o => o.UnblockedMax(id) >= p.Amount),
                     // Its death sets something off (warnings: in any branch, for any aim).
                     nameof(InfestedPower) or nameof(SteamEruptionPower) or nameof(SurprisePower) or nameof(ExplosivePower)
-                        when outcomes.Any(o => o.KilledByPlayInAny.Contains(id)) => true,
+                        => (true, o => o.KilledByPlayInAny.Contains(id)),
                     // Stock: a new Axebot takes its place (it attacks this enemy turn) while stock is left.
-                    nameof(StockPower) when p.Amount > 0 && outcomes.Any(o => o.KilledByPlayInAny.Contains(id)) => true,
+                    nameof(StockPower) when p.Amount > 0 => (true, o => o.KilledByPlayInAny.Contains(id)),
                     // Another enemy's death makes it stronger.
-                    nameof(CrabRagePower) or nameof(RavenousPower) when outcomes.Any(o => o.KilledByPlayInAny.Any(k => k != id)) => true,
+                    nameof(CrabRagePower) or nameof(RavenousPower) => (true, o => o.KilledByPlayInAny.Any(k => k != id)),
                     // Stunned by your turn (block broken, enough hits through, HP threshold), in every branch for some aim, and not
                     // already without this card.
                     nameof(BurrowedPower) or nameof(FlutterPower) or nameof(PlowPower) or nameof(ShriekPower)
-                        when outcomes.Any(o => o.StunnedInAll(id)) && !baseline.StunnedInAll(id) => false,
-                    nameof(TheGambitPower) when outcomes.Any(o => o.GambitInAll(id)) && !baseline.GambitInAll(id) => false,
-                    nameof(SlipperyPower) when outcomes.Any(o => o.SlipperyInAny(id)) && !baseline.SlipperyInAny(id) => true,
+                        when !baseline.StunnedInAll(id) => (false, o => o.StunnedInAll(id)),
+                    nameof(TheGambitPower) when !baseline.GambitInAll(id) => (false, o => o.GambitInAll(id)),
+                    nameof(SlipperyPower) when !baseline.SlipperyInAny(id) => (true, o => o.SlipperyInAny(id)),
                     _ => null,
                 };
-                if (hit is { } harmful) Add(p, harmful);
+                if (rule is { } r) Add(p, r.Harmful, r.At);
             }
         }
 
@@ -399,48 +417,45 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             switch (r)
             {
                 // Hand Drill (Vulnerable on an enemy whose block you break): good, so every branch for some aim.
-                case HandDrill when outcomes.Any(o => o.PlayBreaksBlockInEveryBranch): Add(r, false); break;
+                case HandDrill: Add(r, false, o => o.PlayBreaksBlockInEveryBranch); break;
                 // Parrying Shield (end of turn, block at least its threshold): plain when this play makes it fire in every branch and
                 // it wouldn't for sure now; crossed when it would for sure now and this play can stop it.
-                case ParryingShield when outcomes.Any(o => o.ParryingShieldInAll) && !baseline.ParryingShieldInAll: Add(r, false); break;
-                case ParryingShield when baseline.ParryingShieldInAll && outcomes.Any(o => !o.ParryingShieldInAll): Add(r, true); break;
+                case ParryingShield when !baseline.ParryingShieldInAll: Add(r, false, o => o.ParryingShieldInAll); break;
+                case ParryingShield: Add(r, true, o => !o.ParryingShieldInAll); break;
                 // Gremlin Horn (energy and a draw when an enemy dies): some aim kills an enemy in every branch.
-                case GremlinHorn when outcomes.Any(o => o.PlayKillsInEveryBranch): Add(r, false); break;
+                case GremlinHorn: Add(r, false, o => o.PlayKillsInEveryBranch); break;
             }
         }
         // Compost (yours or a teammate's: energy for every player on your side when an enemy dies): every branch for some aim.
-        if (outcomes.Any(o => o.PlayKillsInEveryBranch))
-        {
-            var compost = _cs.Players.Select(p => p.Creature).Where(c => c is { IsAlive: true }).SelectMany(c => c.Powers).FirstOrDefault(p => p is CompostPower);
-            if (compost != null) Add(compost, false);
-        }
+        var compost = _cs.Players.Select(p => p.Creature).Where(c => c is { IsAlive: true }).SelectMany(c => c.Powers).FirstOrDefault(p => p is CompostPower);
+        if (compost != null) Add(compost, false, o => o.PlayKillsInEveryBranch);
 
         // HP you lose during the play (the card's own HP cost, enemy Thorns before each hit), through your block, Tungsten Rod,
         // Beating Remnant and Buffer: good, so every branch for some aim.
-        var losses = outcomes.Select(o => o.PlayHpLossesMin).DefaultIfEmpty().Max();
-        var lostHp = outcomes.Select(o => o.PlayHpLostMin).DefaultIfEmpty().Max();
+        Func<SimOutcome, bool> losesHp = o => o.PlayHpLossesMin > 0;
         foreach (var r in _me.Relics)
         {
             // Keys by nameof, so the settings check (CatalogCheck reads this class's string literals) sees each rule.
-            var key = r switch
+            Func<SimOutcome, bool>? at = r switch
             {
                 // AfterDamageReceived with UnblockedDamage > 0: HP actually lost, after Tungsten Rod.
-                SelfFormingClay when losses > 0 => nameof(SelfFormingClay),
-                EmotionChip when losses > 0 => nameof(EmotionChip),
-                CentennialPuzzle when losses > 0 && !Sts2State.Private(r, "UsedThisCombat", true) => nameof(CentennialPuzzle),
-                DemonTongue when losses > 0 && !Sts2State.Private(r, "_triggeredThisTurn", true) => nameof(DemonTongue),
+                SelfFormingClay => losesHp,
+                EmotionChip => losesHp,
+                CentennialPuzzle when !Sts2State.Private(r, "UsedThisCombat", true) => losesHp,
+                DemonTongue when !Sts2State.Private(r, "_triggeredThisTurn", true) => losesHp,
                 // AfterCurrentHpChanged: Strength once your HP is at or below its threshold.
-                RedSkull when lostHp > 0 && _me.Creature is var c
-                    && c.CurrentHp > c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m
-                    && c.CurrentHp - lostHp <= c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m => nameof(RedSkull),
+                RedSkull when _me.Creature is var c && c.CurrentHp > c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m
+                    => o => o.PlayHpLostMin > 0 && c.CurrentHp - o.PlayHpLostMin <= c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m,
                 _ => null,
             };
-            if (key != null) Add(r, false);
+            if (at != null) Add(r, false, at);
         }
         // Rupture (Strength when you lose HP on your turn).
-        if (losses > 0 && _me.Creature.Powers.FirstOrDefault(p => p is RupturePower) is { } rupture) Add(rupture, false);
+        if (_me.Creature.Powers.FirstOrDefault(p => p is RupturePower) is { } rupture) Add(rupture, false, losesHp);
 
-        return outcomes.Any(o => te.Ids.Values.Any(id => o.DeadInAll(id) && !baseline.DeadInAll(id)));
+        Func<SimOutcome, bool> kills = o => te.Ids.Values.Any(id => o.DeadInAll(id) && !baseline.DeadInAll(id));
+        lethalAimed = Aimed(outcomes, kills);
+        return outcomes.Any(kills);
     }
 
     /// <summary>
@@ -450,6 +465,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     internal static readonly string[] OutcomeTabs =
     {
         nameof(HandDrill), nameof(ParryingShield), nameof(GremlinHorn), nameof(CompostPower), nameof(RupturePower),
+        nameof(SelfFormingClay), nameof(EmotionChip), nameof(CentennialPuzzle), nameof(DemonTongue), nameof(RedSkull),
     };
 
     private static Godot.Texture2D? IconOf(AbstractModel src) => src switch
@@ -475,8 +491,16 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var harmful = model?.Harmful ?? false;
         var key = enemyId is { } id ? $"{name}@{id}" : name;
         bool Fired(PowerSet log) => log.Has(key) && (_indirect || log[key] > log["~" + key]);
-        var shown = harmful ? outcomes.Any(o => Fired(o.PlayFiredAny)) : outcomes.Any(o => Fired(o.PlayFiredEvery));
+        Func<SimOutcome, bool> at = harmful ? o => Fired(o.PlayFiredAny) : o => Fired(o.PlayFiredEvery);
+        var shown = outcomes.Any(at);
         if (!shown) return;
+        // Which targets give the tab, across every source sharing it (several enemies with the same power).
+        var tabKeyAt = "proc:" + src.GetType().Name;
+        var firesAt = outcomes.Select(at).ToArray();
+        if (_firesAt.TryGetValue(tabKeyAt, out var prevAt) && prevAt.Length == firesAt.Length)
+            for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prevAt[i];
+        _firesAt[tabKeyAt] = firesAt;
+        var aimed = firesAt.Length > 1 && !firesAt.All(x => x);
         var amount = harmful
             ? outcomes.Max(o => o.PlayFiredAny.DataOf(key))
             : outcomes.Where(o => Fired(o.PlayFiredEvery)).Max(o => o.PlayFiredEvery.DataOf(key));
@@ -492,8 +516,14 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         }
         int? number = kind != TabKind.Trigger && _ctx.Settings.ProcNumbers ? amount : null;
         var kindName = kind switch { TabKind.Block => "block", TabKind.Damage => "damage", TabKind.Summon => "summon", _ => null };
-        tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, kindName, amount, min, max);
+        tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, kindName, amount, min, max, Aimed: aimed);
     }
+
+    /// <summary>
+    /// A tab shown because of some targets but not all of them (decision #55): the card is aimed at several enemies or teammates
+    /// (one simulation each) and at least one of them doesn't give it. It gets the aim marker.
+    /// </summary>
+    private static bool Aimed(SimOutcome[] outcomes, Func<SimOutcome, bool> at) => outcomes.Length > 1 && !outcomes.All(at);
 
 
     /// <summary>PredictNow is running: the simulation cache (keyed to this frame's state) is left alone.</summary>

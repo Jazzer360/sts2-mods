@@ -11,15 +11,18 @@ namespace SpireQoL.Procs;
 /// TryModifyEnergyCostInCombatLate sets the cost of your cards in your hand (or being played) to 0, and its
 /// BeforeCardPlayed takes a charge for any such card, whatever it cost:
 ///  - Free Card (Tune: TunePower.AfterSideTurnEnd after a turn you played a Ki), any card;
-///  - Free Attack (Unrelenting), Attacks; Free Skill (Pounce), Skills.
+///  - Free Attack (Unrelenting), Attacks; Free Skill (Pounce), Skills; Free Power (Synthesis), Powers.
 /// So a card that already costs 0, or an X-cost card (its X is your energy, never 0 from these), wastes the charge.
-/// A copy whose cost changed for the rest of the combat (Snecko Eye's re-roll: ConfusedPower.AfterCardDrawn, SetThisCombat to a
-/// random 0–3; Frantic Escape's +1 per play: AddThisCombat) shows 0 under the free power, so what it saves is hidden: the
+///
+/// Under a free power the card shows 0, so what it saves is only shown when a player could know the cost anyway
+/// (decision #54): they saw it in hand, with no free power on it, and it hasn't left the hand or changed since; or no copy
+/// that looks the same has had its cost changed for the rest of the combat (Snecko Eye's re-roll: ConfusedPower.AfterCardDrawn,
+/// SetThisCombat; Frantic Escape's +1 per play: AddThisCombat), so every such copy costs what the card says. Otherwise the
 /// tab says "?" and is never crossed.
 /// </summary>
 internal static class FreeCards
 {
-    public static readonly string[] Powers = { nameof(FreeCardPower), nameof(FreeAttackPower), nameof(FreeSkillPower) };
+    public static readonly string[] Powers = { nameof(FreeCardPower), nameof(FreeAttackPower), nameof(FreeSkillPower), nameof(FreePowerPower) };
 
     public const string Prefix = "free:";
 
@@ -32,6 +35,7 @@ internal static class FreeCards
         FreeCardPower => true,
         FreeAttackPower => card.Type == CardType.Attack,
         FreeSkillPower => card.Type == CardType.Skill,
+        FreePowerPower => card.Type == CardType.Power,
         _ => false,
     };
 
@@ -40,7 +44,7 @@ internal static class FreeCards
     {
         var uses = new List<Use>();
         if (card.Pile?.Type != PileType.Hand || card.EnergyCost.Canonical < 0) return uses;
-        var powers = me.Creature.Powers.Where(p => p.Amount > 0 && Powers.Contains(p.GetType().Name) && Applies(p, card)).ToList();
+        var powers = ActiveOn(card, me);
         if (powers.Count == 0) return uses;
         var x = card.EnergyCost.CostsX;
         var hidden = !x && CostHidden(card, me);
@@ -57,18 +61,63 @@ internal static class FreeCards
         return uses;
     }
 
+    private static List<PowerModel> ActiveOn(CardModel card, Player me) =>
+        me.Creature.Powers.Where(p => p.Amount > 0 && Powers.Contains(p.GetType().Name) && Applies(p, card)).ToList();
+
+    // ------------------------------------------------------------------ what the player could know
+
+    /// <summary>Cards in your hand whose cost you saw with no free power on them: the local cost modifiers they had then.</summary>
+    private static readonly Dictionary<CardModel, int> Seen = new(ReferenceEqualityComparer.Instance);
+
     /// <summary>
-    /// This copy's cost was changed for the rest of the combat (a this-combat cost on the card: Snecko Eye's re-roll,
-    /// ConfusedPower.AfterCardDrawn: SetThisCombat; Frantic Escape's +1 each time it's played, FranticEscape.OnPlay:
-    /// AddThisCombat). With a free power showing it as 0 you can't see it, and copies look alike, so what this one would
-    /// cost is hidden.
+    /// Each frame: remembers the cards in your hand whose cost is on screen (no free power applies to them), and forgets the
+    /// ones that left your hand.
+    /// </summary>
+    public static void Observe(Player me, IReadOnlyList<CardModel> hand)
+    {
+        try
+        {
+            var inHand = new HashSet<CardModel>(hand, ReferenceEqualityComparer.Instance);
+            foreach (var gone in Seen.Keys.Where(c => !inHand.Contains(c)).ToList()) Seen.Remove(gone);
+            foreach (var card in hand)
+                if (ActiveOn(card, me).Count == 0 && LocalModifiers(card) is { } mods) Seen[card] = mods.Count;
+        }
+        catch
+        {
+            Seen.Clear(); // unsure what was on screen: show nothing as known
+        }
+    }
+
+    /// <summary>
+    /// What this copy costs is something you couldn't know while a free power shows it as 0: you haven't seen it unchanged
+    /// in your hand, and it or a copy that looks the same had its cost changed for the rest of the combat.
     /// </summary>
     public static bool CostHidden(CardModel card, Player me)
     {
-        var mods = Sts2State.Private<List<LocalCostModifier>?>(card.EnergyCost, "_localModifiers", null);
+        var mods = LocalModifiers(card);
         // Unknown (a game change): hide it rather than risk showing what the player can't know.
         if (mods == null) return true;
-        return mods.Any(m => m.Expiration == LocalCostModifierExpiration.EndOfCombat);
+        if (Seen.TryGetValue(card, out var seenMods) && seenMods == mods.Count) return false;
+        return LookAlikes(card, me).Any(c => LocalModifiers(c) is not { } m || m.Any(x => x.Expiration == LocalCostModifierExpiration.EndOfCombat));
+    }
+
+    private static List<LocalCostModifier>? LocalModifiers(CardModel card) =>
+        Sts2State.Private<List<LocalCostModifier>?>(card.EnergyCost, "_localModifiers", null);
+
+    /// <summary>The card and every copy of yours this fight you can't tell apart from it (same card, upgrade and enchantment).</summary>
+    private static IEnumerable<CardModel> LookAlikes(CardModel card, Player me)
+    {
+        yield return card;
+        foreach (var pile in new[] { PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust, PileType.Play })
+        {
+            IReadOnlyList<CardModel> cards;
+            try { cards = pile.GetPile(me).Cards.ToList(); }
+            catch { continue; }
+            foreach (var c in cards)
+                if (!ReferenceEquals(c, card) && c.GetType() == card.GetType() && c.CurrentUpgradeLevel == card.CurrentUpgradeLevel
+                    && c.Enchantment?.GetType() == card.Enchantment?.GetType())
+                    yield return c;
+        }
     }
 
     /// <summary>

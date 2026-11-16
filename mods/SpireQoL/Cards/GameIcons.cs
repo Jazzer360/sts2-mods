@@ -71,6 +71,16 @@ public static class GameIcons
 
     private static Texture2D? _skull;
 
+    /// <summary>The head of the game's targeting arrow (NTargetingArrow: ui/combat/targeting_arrow_head.png): the aim marker.</summary>
+    public static Texture2D? TargetArrow()
+    {
+        if (Valid(_targetArrow)) return _targetArrow;
+        _targetArrow = LoadTexture("res://images/ui/combat/targeting_arrow_head.png");
+        return _targetArrow;
+    }
+
+    private static Texture2D? _targetArrow;
+
     private static Texture2D? _discardPile;
 
     /// <summary>The discard pile art outside combat (the game's own path, NetScreenTypeExtensions CardPile).</summary>

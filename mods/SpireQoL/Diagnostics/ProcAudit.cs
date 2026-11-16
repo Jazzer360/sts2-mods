@@ -183,11 +183,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> SilentRelics = new() { nameof(MummifiedHand) };
 
     /// <summary>
-    /// Your powers a card play uses up whatever the card costs (BeforeCardPlayed): Free Card, Free Attack and Free Skill make
-    /// your next card (Attack, Skill) from hand free and go, and the costs they lowered go back up. The free-card check
+    /// Your powers a card play uses up whatever the card costs (BeforeCardPlayed): Free Card, Free Attack, Free Skill and Free Power make
+    /// your next card (Attack, Skill, Power) from hand free and go, and the costs they lowered go back up. The free-card check
     /// compares their charges with the "free:" tabs.
     /// </summary>
-    private static readonly HashSet<string> SpentByAnyPlay = new() { "FreeCardPower", "FreeAttackPower", "FreeSkillPower" };
+    private static readonly HashSet<string> SpentByAnyPlay = new(SpireQoL.Procs.FreeCards.Powers);
 
     /// <summary>
     /// Your powers your next powered attack uses up (BeforeAttack marks the command, AfterAttack spends it): Vigor,

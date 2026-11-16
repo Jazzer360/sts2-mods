@@ -228,7 +228,7 @@ A new feature: under Rest, the HP you'll have and the heal wasted over max; at t
 *Why:* its problems are the mod's own, fixed before release or never: as player reports they arrived only after a release went out (Potion Tabs' switch in 0.41.0, the HP-loss rules in 0.45.0), and a player's game was the wrong place to find them.
 *Replaced:* the coverage check's "Settings catalog" mismatch reports.
 
-### 47. Free-card `?` for any cost changed this combat, not only Snecko Eye — active (2026-11-15)
+### 47. Free-card `?` for any cost changed this combat, not only Snecko Eye — revisited by #54 (2026-11-15)
 Extends #44: a free-card tab says `?` for any card in your hand with a this-combat cost of its own (`LocalCostModifierExpiration.EndOfCombat`), whatever set it: Snecko Eye's re-roll, Frantic Escape's +1 each time it's played (`FranticEscape.OnPlay`: `AddThisCombat`). Under a free card every copy shows 0 and copies look alike, so what this one would save isn't something you can see.
 *Why:* the owner's call, in line with Snecko Eye: you can't tell which Frantic Escape you're holding. One rule on the card's own cost catches the next card that changes its cost for the combat.
 *Replaced:* #44's Snecko-only check (Confused on you and an absolute this-combat cost).
@@ -263,3 +263,13 @@ Completes #51. Constrict, Magic Bomb, Demise (`AfterSideTurnEnd`), Disintegratio
 After publishing, `release.ps1` copies the released files (dll, pdb, manifest) into `<game>/mods/<ModId>/`. When the game has them locked it warns and carries on; the release itself is already out.
 *Why:* the build `dotnet build` installs during work is made before the commit, so it's stamped as a test build (GitDirty, the previous commit), and the release's clean Release build never reached the game. The game showed "test build, uncommitted changes" for a version that matched the release, and its error reports carried the wrong commit.
 *Replaced:* the release build's "without installing to the game".
+
+### 54. A free card's saving shows only when you could know the cost — active (2026-11-15)
+Revisits #47. A free-card tab shows the energy saved only when a player could know what the card costs: they saw this copy's cost in their hand with no free power on it and it hasn't left the hand or had its cost modifiers change since, or no copy that looks the same (same card, upgrade, enchantment, in any pile) had its cost changed for the rest of the combat. Otherwise `?`. Synthesis's Free Power joins the free powers.
+*Why:* #47 looked at the copy alone. With two Frantic Escapes, one played (costs 2) and one not (costs 1), the free power shows both at 0 and the mod tagged one "1" and the other "?": it told you which copy is which, which you can't see in the game. A cost you saw before the free power came is fine to show, since you knew it. The `?` itself never reached the screen (the tab was rebuilt without it); fixed with an `AddTab` that takes the whole tab.
+*Replaced:* #47's "a this-combat cost of its own".
+
+### 55. The aim marker — active (2026-11-15)
+A tab that happens only at some of the targets you could aim at (each target is its own simulation) gets the head of the game's targeting arrow (`ui/combat/targeting_arrow_head.png`, from `NTargetingArrow`) in its icon's top-left corner. It applies to every simulated tab: play-log procs, end-of-turn comparisons (Imbalanced, wake, stun, death warnings, Hand Drill, Gremlin Horn, the HP-loss relics) and lethal. Several enemies sharing a tab get it only when some target sets off none of them.
+*Why:* tabs already meant "possible with the right aim" (good tabs: every branch of some aim), with no way to tell a sure thing from a choice of target. The owner wanted the condition visible but not explained: a neutral game icon the player already reads as "pick a target", unused elsewhere by the mod, in the one corner free of the slash and the number.
+*Replaced:* nothing; extends the tab language (UI rules in CLAUDE.md).

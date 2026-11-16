@@ -361,7 +361,7 @@ public sealed class SettingsMenu
             S.TeammateHands, v => { S.TeammateHands = v; Combat.TurnEndModel.CountTeammateHands = v; });
         Option("Death chance", "Death Skull also shows when a roll decides whether an enemy dies before acting, with the chance (e.g. a random Lightning target).",
             S.DeathChance, v => S.DeathChance = v);
-        Option("Indirect procs", "Count procs one step removed: cards that exhaust or discard other cards, draw, or create cards.",
+        Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
             S.ProcIndirect, v => S.ProcIndirect = v);
         Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
             S.PulseOneStepEarly, v => S.PulseOneStepEarly = v);

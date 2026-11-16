@@ -6,6 +6,18 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.3.0
+#### Added
+- Aim marker: a tab that happens only at some of the targets you could aim at (lethal, Mighty Wings, Curl Up, Asleep...) shows the head of the game's targeting arrow in its icon's corner.
+- Synthesis: its free Power gets a free-card tab with the energy it saves, and a settings row.
+
+#### Fixed
+- Free-card tabs now show `?` when the cost is hidden (it was dropped before reaching the card).
+- Free-card tabs no longer tell copies apart: the saving shows only when you saw that card's cost in your hand before the free card came, or no copy that looks the same has had its cost changed this combat (Frantic Escape).
+
+#### Changed
+- Settings wording: Indirect procs (the whole chain, not one step), Mighty Wings (at the right target), Envenom and Concoct (hits that get through block), Conqueror (anyone's, double damage).
+
 ### Spire QoL 1.2.4
 #### Fixed
 - Ki Hop played twice (Glam) no longer counts the second play's draws when its first hit knocks the target's last arrow loose; Wrest played twice draws only on its first play. Shuffle Warning and draw procs count the right draws.
