@@ -128,6 +128,7 @@ public static class ModEntry
         }
 
         var menu = new Menu.SettingsMenu(ctx, Features, host);
+        foreach (var notice in features.OfType<UpdateNoticeFeature>()) notice.OpenSettings = menu.Open;
         host.AddHotkey(ParseKey(settings.SettingsKey, Key.F10), menu.Toggle);
         host.AddLateFrame(menu.OnFrame);
         Menu.SettingsCatalog.Check(Log);

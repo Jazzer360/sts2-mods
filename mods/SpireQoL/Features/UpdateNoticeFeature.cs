@@ -13,7 +13,8 @@ namespace SpireQoL.Features;
 /// releases are on GitHub, or "Spire QoL up to date!" when GitHub says there are none. A test build (its
 /// version isn't a release, or it was built with uncommitted changes) shows its version, commit and the
 /// newest release instead. Checked once each time the main menu appears (off the main thread), never
-/// during a run. Clicking it opens the releases page. Spec: docs/FEATURES.md#update-notice.
+/// during a run. Clicking it opens the releases page. To its right, the game's settings gear opens the Spire QoL settings menu
+/// (shown even before GitHub answers). Spec: docs/FEATURES.md#update-notice.
 /// </summary>
 public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
 {
@@ -73,55 +74,91 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         Show(menu!);
     }
 
+    /// <summary>Opens the settings menu (set by ModEntry once the menu exists): the gear beside the notice.</summary>
+    public Action? OpenSettings { get; set; }
+
+    private TextureRect? _gear;
+    private int _fontSize = 18;
+    private const string GearPath = "res://images/packed/common_ui/top_bar/top_bar_settings.png";
+
     private void Show(Node menu)
     {
-        if (_status is not { } status)
-        {
-            if (_label != null && GodotObject.IsInstanceValid(_label)) _label.Visible = false;
-            return;
-        }
-        if (_label == null || !GodotObject.IsInstanceValid(_label) || _warning == null || !GodotObject.IsInstanceValid(_warning))
-        {
-            // The game's label can appear a few frames after the menu: look again every half second.
-            if (_searchCooldown-- > 0) return;
-            _searchCooldown = 30;
-            _warning = ModdedWarning(menu);
-            if (_warning == null)
-            {
-                if (!_loggedMissing) ModEntry.Log.Warn("update notice: the main menu's MODDED label wasn't found yet");
-                _loggedMissing = true;
-                return;
-            }
-            var size = _warning.GetThemeFontSize("font_size");
-            _label = UiKit.Label("", size > 0 ? size : 18, Behind);
-            _label.HorizontalAlignment = HorizontalAlignment.Right;
-            _label.MouseFilter = Control.MouseFilterEnum.Stop;
-            _label.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
-            _label.TooltipText = "Open the Spire QoL releases on GitHub";
-            _label.GuiInput += e =>
-            {
-                if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OS.ShellOpen(GitHubReleases.PageUrl(Repo));
-            };
-            _warning.AddChild(_label);
-            _logged = false;
-        }
-        _label.Visible = true;
-        _label.Text = Text(status);
-        _label.AddThemeColorOverride("font_color", IsTestBuild(status) ? TestBuild : status.Newer > 0 ? Behind : UpToDate);
+        if (!EnsureNodes(menu)) return;
+        var label = _label!;
+        var gear = _gear!;
+        var warning = _warning!;
 
-        // Just above the game's label, on the same side of the screen (it sits in a corner; beside it
-        // could run off the edge).
-        var min = _label.GetMinimumSize();
-        _label.Size = min;
-        var screen = _warning.GetViewportRect().Size;
-        var rect = _warning.GetGlobalRect();
+        label.Visible = _status != null;
+        if (_status is { } status)
+        {
+            label.Text = Text(status);
+            label.AddThemeColorOverride("font_color", IsTestBuild(status) ? TestBuild : status.Newer > 0 ? Behind : UpToDate);
+        }
+        gear.Visible = OpenSettings != null && Cards.GameIcons.Valid(gear.Texture);
+        gear.Modulate = gear.GetGlobalRect().HasPoint(gear.GetGlobalMousePosition()) ? Colors.White : new Color(0.85f, 0.85f, 0.85f, 0.85f);
+
+        // Just above the game's label, on the same side of the screen (it sits in a corner; beside it could run off the
+        // edge), with the gear to the right of the notice (or alone while GitHub hasn't answered).
+        var min = label.Visible ? label.GetMinimumSize() : Vector2.Zero;
+        label.Size = min;
+        var gearSize = gear.Visible ? Math.Max(24f, _fontSize * 1.6f) : 0f;
+        gear.Size = new Vector2(gearSize, gearSize);
+        const float gap = 8;
+        var height = Math.Max(min.Y, gearSize);
+        var width = min.X + (label.Visible && gear.Visible ? gap : 0) + gearSize;
+        var screen = warning.GetViewportRect().Size;
+        var rect = warning.GetGlobalRect();
         var rightSide = rect.GetCenter().X > screen.X / 2;
-        _label.Position = new Vector2(rightSide ? _warning.Size.X - min.X : 0, -min.Y - 2);
+        var x0 = rightSide ? warning.Size.X - width : 0;
+        var top = -height - 2;
+        label.Position = new Vector2(x0, top + (height - min.Y) / 2);
+        gear.Position = new Vector2(x0 + width - gearSize, top + (height - gearSize) / 2);
         if (!_logged)
         {
             _logged = true;
-            ModEntry.Log.Info($"update notice: shown at {_label.GetGlobalRect()} above {_warning.GetPath()} at {rect} (screen {screen})");
+            ModEntry.Log.Info($"update notice: shown at {label.GetGlobalRect()}, gear at {gear.GetGlobalRect()}, above {warning.GetPath()} at {rect} (screen {screen})");
         }
+    }
+
+    /// <summary>Finds the game's MODDED label and adds the notice and the gear to it (it can appear a few frames after the menu).</summary>
+    private bool EnsureNodes(Node menu)
+    {
+        if (_label != null && GodotObject.IsInstanceValid(_label) && _gear != null && GodotObject.IsInstanceValid(_gear)
+            && _warning != null && GodotObject.IsInstanceValid(_warning)) return true;
+        if (_searchCooldown-- > 0) return false;
+        _searchCooldown = 30;
+        _warning = ModdedWarning(menu);
+        if (_warning == null)
+        {
+            if (!_loggedMissing) ModEntry.Log.Warn("update notice: the main menu's MODDED label wasn't found yet");
+            _loggedMissing = true;
+            return false;
+        }
+        var size = _warning.GetThemeFontSize("font_size");
+        _fontSize = size > 0 ? size : 18;
+        _label = UiKit.Label("", _fontSize, Behind);
+        _label.HorizontalAlignment = HorizontalAlignment.Right;
+        _label.MouseFilter = Control.MouseFilterEnum.Stop;
+        _label.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+        _label.TooltipText = "Open the Spire QoL releases on GitHub";
+        _label.GuiInput += e =>
+        {
+            if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OS.ShellOpen(GitHubReleases.PageUrl(Repo));
+        };
+        _warning.AddChild(_label);
+
+        // The game's own gear (the in-run top bar's settings button art).
+        _gear = UiKit.Icon(ResourceLoader.Exists(GearPath) ? ResourceLoader.Load<Texture2D>(GearPath) : null, 24);
+        _gear.MouseFilter = Control.MouseFilterEnum.Stop;
+        _gear.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
+        _gear.TooltipText = "Spire QoL settings";
+        _gear.GuiInput += e =>
+        {
+            if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OpenSettings?.Invoke();
+        };
+        _warning.AddChild(_gear);
+        _logged = false;
+        return true;
     }
 
     private static readonly System.Reflection.Assembly Me = typeof(ModEntry).Assembly;

@@ -56,7 +56,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 
 ### Settings menu
 
-Opens with **F10** (setting `SettingsKey`), the **Spire QoL settings** button on the Mods screen (Settings → Mod Settings → select Spire QoL) or the same button on the pause menu. Every change applies right away and is saved. Esc or Close closes it; game hotkeys are blocked while it's open.
+Opens with **F10** (setting `SettingsKey`), the gear beside the version note on the main menu (Update Notice), the **Spire QoL settings** button on the Mods screen (Settings → Mod Settings → select Spire QoL) or the same button on the pause menu. Every change applies right away and is saved. Esc or Close closes it; game hotkeys are blocked while it's open.
 
 - **Pages:** General (features and options), Card tabs, Relics, Your powers, Enemy powers, Cards, Guide.
 - **General:** each feature on/off, live (a feature switched off is skipped each frame and its widgets hide; no restart): Card Indicators, Proc Indicators, Relic Counters, Incoming Damage, Shuffle Warning (with the discard pile icon), the two prediction checks, and the coverage check. Options: multiplayer predictions (`MultiplayerPredictions`, experimental, on: teammates counted in every prediction), count teammates' hands (`TeammateHands`, off: what's shown leaves out the cards in teammates' hands, which you can't see; on: their Ethereal cards exhausting, Burn, Decay and Regret count, for yours and their predictions alike; the checks always count them), amounts on proc tabs (`ProcNumbers`), indirect procs (`ProcIndirect`), tracker flashes early (`PulseOneStepEarly`), send error reports (`ReportErrors`, live), and sliders for Ethereal opacity and tracker flash speed.
@@ -506,11 +506,13 @@ Each relic has a switch per place it shows in the settings menu (Relics page, Ou
 
 **What you see:** on the main menu, when newer Spire QoL versions are out, a small green note just above the game's "MODDED (n)" text in the bottom-right corner: "Spire QoL: 3 versions behind (new version on GitHub)". Clicking it opens the Spire QoL releases page on GitHub. When GitHub confirms you're on the newest version, a muted grey "Spire QoL up to date!" instead. Nothing when GitHub can't be reached, and nothing during a run.
 
+**Settings gear:** to the right of the note, the game's own top-bar settings gear (`images/packed/common_ui/top_bar/top_bar_settings.png`); clicking it opens the Spire QoL settings menu. It shows on the main menu even while GitHub hasn't answered or can't be reached (alone, where the note would be), and goes with the `update-notice` switch.
+
 **Test builds:** a build whose version isn't one of the releases, or that was built with uncommitted changes, shows two orange lines there instead: its version, the commit it was built from (stamped by the SDK), whether it has uncommitted changes (`GitDirty`, stamped by `Directory.Build.targets` from `git status`) and when it was built; then whether its version number is already released, the newest release, and how many are newer. Release builds are made from a clean commit, so players never see this.
 
 **How it checks:** each time the main menu appears, one request on a worker thread to GitHub's public releases list for this repo (every page, 100 releases each), counting `spireqol-v<version>` releases (not drafts or prereleases) newer than the running DLL's version. It sends nothing about you; the User-Agent is the mod's id. If GitHub can't be reached, the note keeps its last answer (or stays hidden: it never says you're up to date without checking). Turn it off with the `update-notice` switch (settings menu, General).
 
-**Game UI touched:** adds one label as a child of the main menu's `%ModdedWarning` label (`NDebugInfoLabelManager`); the game's own label isn't changed. No Harmony patches.
+**Game UI touched:** adds a label and the gear as children of the main menu's `%ModdedWarning` label (`NDebugInfoLabelManager`); the game's own label isn't changed. No Harmony patches.
 
 ---
 

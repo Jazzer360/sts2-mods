@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.5.0
+#### Added
+- Main menu: the game's settings gear to the right of the Spire QoL version note opens the Spire QoL settings menu.
+
 ### Spire QoL 1.4.0
 #### Added
 - Settings menu: a Guide page that shows how to read the mod, with example cards carrying every kind of tab, example Relic Counters rows and example Incoming Damage sums, drawn by the same code as in a fight.
