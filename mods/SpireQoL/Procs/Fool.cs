@@ -149,7 +149,4 @@ internal static class Fool
 
     /// <summary>Melodies this card plays first this turn (no play with that tag has started yet).</summary>
     public static IEnumerable<string> FirstMelodies(CardModel card, Player me) => Melodies(card).Where(t => !StartedThisTurn(me, t));
-
-    /// <summary>Melodies played this turn once this card is played too.</summary>
-    public static int MelodiesAfter(CardModel card, Player me) => MelodyTags.Count(t => PlayedThisTurn(me, t) || HasTag(card, t));
 }

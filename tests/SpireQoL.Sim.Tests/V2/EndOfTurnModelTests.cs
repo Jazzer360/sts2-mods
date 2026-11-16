@@ -74,4 +74,54 @@ public class EndOfTurnModelTests
         Assert.Equal(3, o.TakenMax);
         Assert.All(o.Branches, b => Assert.Equal(OrbKind.Dark, Assert.Single(b.P.Orbs).Kind));
     }
+
+    [Fact]
+    public void ConstrictAndMagicBombGoWithTheirApplier()
+    {
+        // ConstrictPower.AfterDeath and MagicBombPower.AfterSideTurnEnd: once the enemy that applied them is dead (here Screaming
+        // Flagon kills it at BeforeSideTurnEnd), neither hurts you. Data: the applier's id + 100.
+        var s = new SimState { Enemies = { Attacker(0, 5), Attacker(1, 50) } };
+        s.P.HandCount = 0;
+        s.P.ScreamingFlagonDamage = 5;
+        s.P.Powers = s.P.Powers.With("ConstrictPower", 4, 100).With("MagicBombPower", 6, 100);
+        Assert.Equal(0, SimEngine.Run(s).TakenMax);
+
+        // Applied by the enemy that lives: 4 + 6.
+        s.P.Powers = s.P.Powers.With("ConstrictPower", 4, 101).With("MagicBombPower", 6, 101);
+        var o = SimEngine.Run(s);
+        Assert.Equal(10, o.TakenMax);
+        Assert.False(o.Worst.P.Powers.Has("MagicBombPower")); // it goes once it has gone off
+        Assert.True(o.Worst.P.Powers.Has("ConstrictPower"));
+    }
+
+    [Fact]
+    public void DemiseIgnoresYourBlockAndConstrictUsesIt()
+    {
+        var s = new SimState { Enemies = { Attacker(0, 50) } };
+        s.P.Block = 10;
+        s.P.Powers = s.P.Powers.With("DemisePower", 3).With("ConstrictPower", 4);
+        var o = SimEngine.Run(s);
+        Assert.Equal(3, o.TakenMax);
+        Assert.Equal(6, o.Worst.BlockAtEnemyTurn);
+    }
+
+    [Fact]
+    public void CardsInHandHitThroughTheDamagePipeline()
+    {
+        // Burn's 5 under Intangible is 1 (IntangiblePower.ModifyDamageCap), so it takes 1 block, not 5; Regret counts the hand.
+        var s = new SimState { Enemies = { Attacker(0, 50) } };
+        s.P.Block = 10;
+        s.P.HandCount = 3;
+        s.P.Powers = s.P.Powers.With("IntangiblePower", 1);
+        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn+", 5));
+        s.P.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        var o = SimEngine.Run(s);
+        Assert.Equal(9, o.Worst.BlockAtEnemyTurn);
+        Assert.Equal(1, o.TakenMax); // Regret's 3, capped at 1 HP too
+
+        s.P.Powers = PowerSet.Empty;
+        o = SimEngine.Run(s);
+        Assert.Equal(5, o.Worst.BlockAtEnemyTurn);
+        Assert.Equal(3, o.TakenMax);
+    }
 }

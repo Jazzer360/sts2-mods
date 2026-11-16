@@ -71,7 +71,7 @@ public class ReplayTests
         s.P.OrbCapacity = 3;
         s.P.Juggernaut = 2;
         s.P.Plating = 4;
-        s.P.HandBlockable.Add(("Burn", 2));
+        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         s.P.RemnantCap = 10;
         s.P.RemnantLeftPlayerTurn = 6;
 

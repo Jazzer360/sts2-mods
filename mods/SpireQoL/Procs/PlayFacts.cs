@@ -66,6 +66,18 @@ public sealed class PlayFacts
     /// <summary>Cards the card itself draws, across plays.</summary>
     public int OwnDraws { get; init; }
 
+    private PlayChain.DrawInputs? _drawInputs;
+
+    /// <summary>
+    /// The play's draws (Draws) had the card itself drawn <paramref name="own"/> instead, across plays: a card whose draws depend on
+    /// its target (Ki Hop, Wrest) at the target it was played at, still stopping at a full hand. Null when not worked out here.
+    /// </summary>
+    public int? DrawsWithOwn(int own)
+    {
+        if (_drawInputs is not { } i) return null;
+        return PlayChain.Resolve(i.WithOwnDraws(own)).Draws;
+    }
+
     /// <summary>Of those, the card's enchantment's (Swift): drawn after the card's own play.</summary>
     public int EnchantmentDraws { get; init; }
 
@@ -291,8 +303,6 @@ public sealed class PlayFacts
     /// </summary>
     public bool SimPending { get; set; }
 
-    public int OrbDamageOn(Creature enemy) => OrbDamage.TryGetValue(enemy, out var d) ? d : 0;
-
     /// <summary>
     /// This play followed by the plays of a card it auto-plays (Decisions, Decisions' pick, whose facts
     /// were read during the choice): the counts the audit checks added together, and the pick's
@@ -484,6 +494,7 @@ public sealed class PlayFacts
                 case CentennialPuzzle when !Sts2State.Private(r, "UsedThisCombat", true): i.CentennialPuzzle += Sts2State.Var(r, "Cards", 3); break;
             }
         }
+        _drawInputs = i;
         var result = PlayChain.Resolve(i);
         DrawsBlocked = i.Blocked;
         ChainedDraws = result.Chained;

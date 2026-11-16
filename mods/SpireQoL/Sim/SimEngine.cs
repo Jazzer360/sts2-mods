@@ -336,7 +336,7 @@ public static partial class SimEngine
     {
         if (amount <= 0 || !e.Alive) return 0;
         var listeners = Listeners(s);
-        if (!AnyListensToDamage(listeners)) return PlainDamage(s, e, amount, dealer, props, card);
+        if (!AnyListensToDamage(listeners)) return PlainDamage(s, e, amount, dealer, props);
         var ctx = new DamageCtx(dealer, e.Id, props, card, s.CurrentPlay);
         foreach (var (m, o) in listeners) amount = (int)Math.Min(amount, m.ModifyDamageCap(s, o, ctx));
         foreach (var (m, o) in listeners) m.BeforeDamageReceived(s, o, ctx, amount);
@@ -374,7 +374,7 @@ public static partial class SimEngine
     }
 
     /// <summary>Damage with no models listening (most fights): block, then HP; nothing else can react.</summary>
-    private static int PlainDamage(SimState s, SimEnemy e, int amount, int? dealer, SimProps props, SimCard? card)
+    private static int PlainDamage(SimState s, SimEnemy e, int amount, int? dealer, SimProps props)
     {
         var hadBlock = e.Block > 0;
         var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(e.Block, amount);
@@ -690,21 +690,21 @@ public static partial class SimEngine
         PlayerDamaged(s, k, dealer, props, blocked, lost);
     }
 
-    private static void LandUnblockable(SimState s, string name, int amount, int who = -1)
+    private static void LandUnblockable(SimState s, string name, int amount, int who = -1, int? dealer = null, SimProps props = SimProps.Unblockable | SimProps.Unpowered)
     {
         if (amount <= 0) return;
         if (who >= 0)
         {
             var t = s.MutableTeammate(who);
             t.Incoming += amount;
-            TeammateHpLoss(s, who, amount, 0, null, SimProps.Unblockable | SimProps.Unpowered);
+            TeammateHpLoss(s, who, amount, 0, dealer, props);
             return;
         }
         if (s.Log) s.Unblockable.Add((name, amount));
-        var lost = HpLoss(s, -1, amount, null, SimProps.Unblockable | SimProps.Unpowered);
+        var lost = HpLoss(s, -1, amount, dealer, props);
         YouLose(s, lost);
         PlayHp(s, amount, lost);
-        PlayerDamaged(s, -1, null, SimProps.Unblockable | SimProps.Unpowered, 0, lost);
+        PlayerDamaged(s, -1, dealer, props, 0, lost);
     }
 
     // ------------------------------------------------------------------ card play
@@ -832,49 +832,6 @@ public static partial class SimEngine
 
     }
 
-    /// <summary>Obsidian Vice: damage × cards in hand (a teammate's hand size is known; -1 unknown: none) to a random enemy.</summary>
-    private static IEnumerable<SimState> ObsidianVice(SimState s, SimPlayer p, int who)
-    {
-        if (p.ObsidianViceDamage <= 0 || p.HandCount <= 0 || (who >= 0 && p.Hp <= 0)) return new[] { s };
-        var amount = p.ObsidianViceDamage * p.HandCount;
-        if (who < 0 && s.Log) s.EndOfTurnDamage.Add(($"Obsidian Vice ×{p.HandCount}", amount));
-        return HitRandom(s, _ => amount);
-    }
-
-    /// <summary>
-    /// A player's Ethereal cards exhausting at end of turn (CombatManager.DoTurnEnd → CardCmd.Exhaust): each one sets off
-    /// their Feel No Pain (block), Charon's Ashes (every enemy) and Forgotten Soul (a random enemy). who: -1 you, else a teammate.
-    /// </summary>
-    /// <param name="count">Cards exhausted (default: the Ethereal ones; Pael's Eye: the whole hand).</param>
-    private static void EtherealExhausts(BranchSet b, int who, Func<SimPlayer, int>? count = null)
-    {
-        SimPlayer Of(SimState s) => who < 0 ? s.P : s.Teammates[who];
-        int N(SimPlayer p) => count?.Invoke(p) ?? p.Fading;
-        var tag = who < 0 ? "" : " (teammate)";
-        var max = b.States.Count > 0 ? b.States.Max(s => Of(s).Hp > 0 || who < 0 ? N(Of(s)) : 0) : 0;
-        for (var i = 0; i < max; i++)
-        {
-            var n = i;
-            b.Each(s =>
-            {
-                var p = Of(s);
-                if (n >= N(p) || (who >= 0 && p.Hp <= 0)) return new[] { s };
-                IEnumerable<SimState> r = GainBlock(s, p.FeelNoPain, p.FeelNoPain > 0 && who < 0 ? "Feel No Pain" : null, who);
-                r = r.Select(x =>
-                {
-                    var damage = Of(x).CharonsAshesDamage;
-                    if (damage > 0)
-                    {
-                        if (x.Log) x.EndOfTurnDamage.Add(($"Charon's Ashes{tag} (all)", damage));
-                        HitAll(x, _ => damage);
-                    }
-                    return x;
-                }).ToList();
-                return Then(r, x => Of(x).ForgottenSoulDamage is var soul and > 0 ? HitRandom(x, _ => soul) : new[] { x });
-            });
-        }
-    }
-
     /// <summary>
     /// The auto-play phase of your end of turn (CombatManager.EndPlayerTurnPhaseOneInternal: PlayerTurnPhase.AutoPostPlay,
     /// Hook.AfterAutoPostPlayPhaseEntered), before BeforeSideTurnEnd. Hook listeners run your powers first (Stampede,
@@ -969,8 +926,8 @@ public static partial class SimEngine
     ///     Calendar, Obsidian Vice...), in listener order: players in player order, their powers then their relics.
     ///  2. DoTurnEnd, each player in player order: orb passives (front first), Ethereal cards exhaust (Feel No Pain, Charon's
     ///     Ashes, Forgotten Soul, Dark Embrace react to each), then cards in hand act (Burn, Decay, Regret).
-    ///  3. Debuffs on players.
-    ///  4. Hook.AfterSideTurnEnd (Consuming Shadow, Parrying Shield, Lunar Pastry), then AfterSideTurnEndLate (Disintegration).
+    ///  3. Hook.AfterSideTurnEnd (Constrict, Magic Bomb, Demise, Consuming Shadow, Parrying Shield, Lunar Pastry), then
+    ///     AfterSideTurnEndLate (Disintegration, Insatiable Dominion).
     /// </summary>
     private static void EndOfTurn(BranchSet b)
     {
@@ -991,47 +948,18 @@ public static partial class SimEngine
             ExplosionCheck(b); // kills by orb passives
             var player = k < 0 ? Who.You : Who.Teammate(k);
             b.Each(s => PlayerOf(s, player) is { Fading: > 0 } p && TakesPart(s, player) ? ProcCardEvent(s, CardEvent.Exhausted, p.Fading, player, indirect: false) : new[] { s });
-            b.Do(s =>
-            {
-                if (!TakesPart(s, player) || PlayerOf(s, player) is not { } p) return;
-                var who = k < 0 ? -1 : k;
-                foreach (var (name, amount) in p.HandBlockable) LandBlockable(s, name, amount, who);
-                foreach (var (name, amount) in p.HandUnblockable) LandUnblockable(s, name, amount, who);
-                for (var i = 0; i < p.RegretCards; i++)
-                    LandUnblockable(s, k < 0 && p.RegretCards > 1 ? $"Regret {i + 1}" : "Regret", Math.Max(0, p.HandCount), who);
-            });
+            b.Do(s => CardsActInHand(s, player));
             ExplosionCheck(b);
         }
         for (var k = 0; k < before; k++) TurnEnd(k);
         TurnEnd(-1);
         for (var k = before; k < teammates; k++) TurnEnd(k);
 
-        // 3. Debuffs on players.
-        b.Do(s =>
-        {
-            foreach (var (name, amount) in s.P.DebuffBlockable) LandBlockable(s, name, amount);
-            foreach (var (name, amount) in s.P.DebuffUnblockable) LandUnblockable(s, name, amount);
-            for (var k = 0; k < s.Teammates.Count; k++)
-            {
-                var t = s.Teammates[k];
-                if (t.Hp <= 0) continue;
-                foreach (var (name, amount) in t.DebuffBlockable) LandBlockable(s, name, amount, k);
-                foreach (var (name, amount) in t.DebuffUnblockable) LandUnblockable(s, name, amount, k);
-            }
-        });
-
-        // 4. AfterSideTurnEnd, then AfterSideTurnEndLate: Disintegration.
+        // 3. AfterSideTurnEnd (Constrict, Magic Bomb, Demise, Consuming Shadow, Parrying Shield, Lunar Pastry), then
+        // AfterSideTurnEndLate (Disintegration, Insatiable Dominion).
         HookStep(b, nameof(SimModel.AfterSideTurnEnd), (m, o, x) => Who.IsPlayer(o) ? m.AfterSideTurnEnd(x, o) : new[] { x });
         ExplosionCheck(b); // kills by Consuming Shadow's evokes, Parrying Shield, Black Hole
-        b.Do(s =>
-        {
-            foreach (var (name, amount) in s.P.DebuffLateBlockable) LandBlockable(s, name, amount);
-            for (var k = 0; k < s.Teammates.Count; k++)
-            {
-                if (s.Teammates[k].Hp <= 0) continue;
-                foreach (var (name, amount) in s.Teammates[k].DebuffLateBlockable) LandBlockable(s, name, amount, k);
-            }
-        });
+        HookStep(b, nameof(SimModel.AfterSideTurnEndLate), (m, o, x) => Who.IsPlayer(o) ? m.AfterSideTurnEndLate(x, o) : new[] { x });
 
         // Deaths at the end of your turn run their hooks before the enemies act (arrows coming back: Twine's block).
         b.Do(AllyDeaths);
@@ -1175,18 +1103,27 @@ public static partial class SimEngine
                     continue;
                 }
                 for (var k = 0; k < before; k++) TeammateTakesHit(k, hitIndex, perHit);
-                // Wuppy takes the whole hit instead while it lives (not you: your Thorns, block, Osty, Flame Barrier
-                // and Reflect don't come into it); once it's dead, hits come to you.
+                var fullHit = perHit;
+                // Thorns: before the hit lands (BeforeDamageReceived: you're still its target with Wuppy out); the hit
+                // still lands even if this kills.
+                if (s.P.Thorns > 0) Retaliate(s.P.Thorns);
+                // Wuppy takes the hit first while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget: before your block);
+                // only what's left over when the hit kills it (OverkillDamage) goes on to your block and you.
                 if (s.P.WuppyHp > 0 && perHit > 0)
                 {
-                    s.P.WuppyHp = Math.Max(0, s.P.WuppyHp - perHit);
-                    s.WuppyTaken += perHit; // not your Incoming Damage (landed): it never reaches you
-                    hitsLanded++;
-                    for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, perHit);
-                    continue;
+                    var toWuppy = Math.Min(s.P.WuppyHp, perHit);
+                    s.P.WuppyHp -= toWuppy;
+                    s.WuppyTaken += toWuppy; // not your Incoming Damage (landed): it never reaches you
+                    perHit -= toWuppy;
+                    if (perHit == 0)
+                    {
+                        // DamageResult.WasFullyBlocked: no HP lost and you had block (untouched).
+                        if (hitsLanded == 0) e.FirstHitFullyBlocked = s.P.Block > 0;
+                        hitsLanded++;
+                        for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, fullHit);
+                        continue;
+                    }
                 }
-                // Thorns: before the hit lands; the hit still lands even if this kills.
-                if (s.P.Thorns > 0) Retaliate(s.P.Thorns);
 
                 if (hitsLanded == 0 && e.Imbalanced) s.FullBlockNeeded[e.Id] = s.BlockDemand + perHit;
                 s.BlockDemand += perHit;
@@ -1209,9 +1146,8 @@ public static partial class SimEngine
 
                 if (!dead && s.P.FlameBarrier > 0) Retaliate(s.P.FlameBarrier);
                 if (!dead && s.P.Reflect && blocked > 0) Retaliate(blocked);
-                for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, perHit);
+                for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, fullHit);
             }
-            e.Attacked = hitsLanded > 0;
             if (landed > 0) if (s.Log) s.Blockable.Add((hitsLanded > 1 ? $"{e.Name} ({hitsLanded} hits)" : e.Name, landed));
         }
     }

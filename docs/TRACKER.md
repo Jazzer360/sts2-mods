@@ -205,9 +205,9 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 - [x] **Infection**: blockable.
 - [~] **Toxic**: blockable.
 - [~] **Wither**: blockable.
-- [~] **Constrict** (debuff, after your turn ends): blockable (`Unpowered`).
-- [~] **Magic Bomb** (debuff): blockable.
-- [~] **Disintegration** (debuff, late end of turn): blockable.
+- [x] **Constrict** (debuff, AfterSideTurnEnd): blockable (`Unpowered`), gone when its applier dies; a model (1.2.2).
+- [x] **Magic Bomb** (debuff, AfterSideTurnEnd): blockable, only while its applier lives, then removed; a model (1.2.2).
+- [x] **Disintegration** (debuff, AfterSideTurnEndLate): blockable; a model (1.2.2).
 - [~] Unblockable, listed separately: Regret (HP loss = cards in hand), Bad Luck, Beckon, Demise. Poison is already previewed by the game.
 - [ ] Not damage, but worth a reminder: Doubt (Weak), Shame (Frail), Debt (lose gold).
 - [~] **Doesn't count enemies Poison kills before they act** (with Hard To Kill per-hit cap and Hardened Shell per-turn cap). Doom does NOT prevent attacks.
@@ -379,7 +379,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.25.1: simulator start state (JSON) in forecast/outcome reports, replay harness (`ReplayTests`, `Cases/*.json`), `[audit] [outcome]` log line per enemy turn.
 - When a report is resolved, note here which layer it was: simulator rule / adapter / audit comparison.
 - [x] 1.2.1: Conductor's Baton's power (simulator rule: the relic didn't apply it); Vigor, Aim, Quietus and Gigantification reserved for an attack under way (adapter: read as bound outside the simulation); Cho Barbs' temporary Thorns read twice (adapter); the after-play intent compared from the start state's hits, not the predicted state (audit: Weak, Tainted, Conductor's Baton); Possess Strength's Strength returned on death and Show Off's flash (audit); Reptile Trinket's potion tabs lost before the potion was logged (audit); Crystal Sphere's minigame and curse cards added with the plain add-card command (Run Reminders' code reading); Steady Cadence (card scan). Flutter's last stack on Wah Ki's first hit is already right since 1.0.0 (test added).
-- [ ] Wuppy: a hit bigger than Wuppy's HP carries its overkill on to your block and HP (`CreatureCmd.Damage`: `damageRemaining = OverkillDamage`), which three reports show (Knowledge Demon 19 → Wuppy 8, you 11); the simulator and `WuppyTakesTheHitsAimedAtYouWhileItLives` say nothing carries over. Also: Thorns' `BeforeDamageReceived` gets the original target (you), so it may react to hits Wuppy takes.
+- [x] Wuppy: a hit bigger than Wuppy's HP carries its overkill on to your block and HP (`CreatureCmd.Damage`: `damageRemaining = OverkillDamage`), and your Thorns reacts to hits Wuppy takes (`ThornsPower.BeforeDamageReceived` sees you as the target) (1.2.2).
 - [x] 0.26.0: chained draws (`PlayFacts.ChainedDraws`: Dark Embrace, Joss Paper, Game Piece, Iron Club, Vicious, Centennial Puzzle; hand limit; No Draw/Fiddle) for Shuffle Warning and draw procs; Biiig Hug shuffle tab. Suggested in game (Burning Pact + Dark Embrace).
 - [x] 0.26.0: audits: shuffle check (pile events), state after each play vs the simulator's prediction of it, forecast "no single branch" joint check.
 - [x] 0.26.0: simulator: Envenom, Snecko Skull, poison stacks/ticks, Weak and Enrage intent changes, Curl Up / Sneaky / Skittish block, Plasma values; full-state cache key (`SimState.FullKey`; the branch key missed intents and powers); parallel card simulations.

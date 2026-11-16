@@ -1027,7 +1027,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // A card whose draws depend on its target (Ki Hop, Wrest): what it draws at the target it was played at.
         var expectedDraws = f == null ? 0 : f.Draws;
         if (f != null && w.Target != null && TargetDrawsBefore(w) is { } td)
-            expectedDraws = Math.Max(0, f.Draws - f.OwnDraws + td * f.Plays);
+            expectedDraws = f.DrawsWithOwn(td * f.Plays) ?? Math.Max(0, f.Draws - f.OwnDraws + td * f.Plays);
         var exhausts = entries.OfType<CardExhaustedEntry>().Count(d => d.Card.Owner == me);
         var discards = entries.OfType<CardDiscardedEntry>().Count(d => d.Card.Owner == me);
         var generated = entries.OfType<CardGeneratedEntry>().Count(d => d.Creator == me || d.Card.Owner == me);

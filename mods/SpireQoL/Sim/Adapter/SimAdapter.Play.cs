@@ -67,9 +67,9 @@ public static partial class SimAdapter
             var b = adroit.DynamicVars.Block.BaseValue;
             play.Body.Add(new GainBlockAction(1, b, SimProps.Move) { Captured = SimReaders.Block(cs, card, me.Creature, b, ValueProp.Move) });
         }
-        play.Body.AddRange(PowersOf(card, f, me, ids, targetId, name, allyId));
+        play.Body.AddRange(PowersOf(card, f, name, allyId));
         play.Body.AddRange(OrbsOf(card, me, cs, name, play.ChannelToAlly ? allyId : Who.You));
-        AddCardEvents(play, card, f, me, cs, ids, targetId, plays);
+        AddCardEvents(play, f, plays);
 
         // ---- summary fields (not actions yet)
         play.ByOsty = f.ByOsty;
@@ -93,8 +93,7 @@ public static partial class SimAdapter
     /// (before the play), each play's draws, discards, other exhausts, created cards and star gains (indirect, but star gains), the
     /// stars it spends (first play), its own exhaust and a shuffle (after).
     /// </summary>
-    private static void AddCardEvents(SimPlay play, CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
-        int targetId, int plays)
+    private static void AddCardEvents(SimPlay play, PlayFacts f, int plays)
     {
         void Each(List<SimAction> to, CardEvent ev, int total, bool indirect, bool perPlay = true)
         {
@@ -222,8 +221,7 @@ public static partial class SimAdapter
     /// takes or gives (EnemyStrengthCards). Amounts from the card's PowerVar, its plain value, or 1. Only powers the simulator
     /// reads: modelled ones, the ones it keeps as numbers, and poison.
     /// </summary>
-    private static IEnumerable<SimAction> PowersOf(CardModel card, PlayFacts f, Player me, IReadOnlyDictionary<Creature, int> ids, int targetId,
-        string name, int allyId)
+    private static IEnumerable<SimAction> PowersOf(CardModel card, PlayFacts f, string name, int allyId)
     {
         var actions = new List<SimAction>();
         int AmountOf(Type t)

@@ -6,6 +6,16 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.2.2
+#### Fixed
+- Wuppy: a hit bigger than Wuppy's HP now carries its overflow on to your block and you, as the game does, so Incoming Damage no longer says 0 when that hit gets through; your Thorns now hits back on attacks Wuppy takes.
+- The play check expected Ki Hop's and Wrest's draws even with a full hand; it now stops at 10 cards like the draw does.
+- Constrict and Magic Bomb no longer count toward Incoming Damage once the enemy that applied them dies during your end of turn.
+- Cards in hand and debuffs that hurt you at the end of your turn go through the game's damage math (Intangible makes each 1).
+
+#### Changed
+- Constrict, Magic Bomb, Demise, Disintegration and Insatiable Dominion act in the game's hook order with your other powers; cards in hand act in hand order.
+
 ### Spire QoL 1.2.1
 #### Fixed
 - Conductor's Baton: the play that completes three melodies now lowers the enemies' attacks in Incoming Damage (75% until your next turn).

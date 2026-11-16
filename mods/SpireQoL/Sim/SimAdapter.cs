@@ -22,20 +22,6 @@ namespace SpireQoL.Sim;
 /// </summary>
 public static partial class SimAdapter
 {
-    // Blockable end-of-turn damage from cards in hand (DamageVar "Damage").
-    private static readonly HashSet<string> BlockableHandCards = new() { nameof(Burn), nameof(Decay), nameof(Infection), nameof(Toxic), nameof(Wither) };
-
-    // Unblockable HP loss from cards in hand (HpLossVar "HpLoss"; Regret = cards in hand).
-    private static readonly HashSet<string> UnblockableHandCards = new() { nameof(BadLuck), nameof(Beckon) };
-
-    // Debuffs on you that deal blockable damage after your turn ends, before block clears.
-    private static readonly HashSet<string> BlockableDebuffs = new() { nameof(ConstrictPower), nameof(MagicBombPower) };
-
-    // Debuffs that land after Parrying Shield (AfterSideTurnEndLate).
-    private static readonly HashSet<string> LateBlockableDebuffs = new() { nameof(DisintegrationPower) };
-
-    private static readonly HashSet<string> UnblockableDebuffs = new() { nameof(DemisePower) };
-
     /// <summary>Orbs each card channels (OrbCmd.Channel&lt;T&gt; in its OnPlay; decompile v0.111.0). Chaos is random.</summary>
     private static readonly Dictionary<string, OrbKind[]> Channels = new()
     {
@@ -385,19 +371,7 @@ public static partial class SimAdapter
         p.Powers = SimReaders.Powers(c, idOf);
         p.Relics = SimReaders.Relics(me);
         p.Turn = SimReaders.Turn(me, cs);
-        foreach (var pw in c.Powers)
-        {
-            switch (pw.GetType().Name)
-            {
-                case nameof(ReflectPower): p.Reflect = true; break;
-                // Insatiable Dominion (Dread): 2 + your turn number to you at AfterSideTurnEndLate (its Damage var, unpowered, blockable).
-                case nameof(InsatiableDominionPower): p.DebuffLateBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), Sts2State.Var(pw, "Damage"))); break;
-            }
-            var type = pw.GetType().Name;
-            if (pw.Amount > 0 && BlockableDebuffs.Contains(type)) p.DebuffBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), pw.Amount));
-            else if (pw.Amount > 0 && LateBlockableDebuffs.Contains(type)) p.DebuffLateBlockable.Add((Combat.TurnEndModel.SafeTitle(pw), pw.Amount));
-            else if (pw.Amount > 0 && UnblockableDebuffs.Contains(type)) p.DebuffUnblockable.Add((Combat.TurnEndModel.SafeTitle(pw), pw.Amount));
-        }
+        p.Reflect = c.Powers.Any(pw => pw is ReflectPower);
         foreach (var r in me.Relics)
         {
             switch (r.GetType().Name)
@@ -417,12 +391,12 @@ public static partial class SimAdapter
         p.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
         p.Fading = hand.Count(card => IsFading(card, cs));
         p.AttacksThisTurn = Sts2State.CountPlayedThisTurn(me, CardType.Attack);
+        // Cards that act in hand at the end of the turn (the simulator's list): their Damage or HpLoss as the card shows it.
         foreach (var card in hand)
         {
-            var type = card.GetType().Name;
-            if (BlockableHandCards.Contains(type)) p.HandBlockable.Add((SafeCardTitle(card), Sts2State.Var(card, "Damage")));
-            else if (UnblockableHandCards.Contains(type)) p.HandUnblockable.Add((SafeCardTitle(card), Sts2State.Var(card, "HpLoss")));
-            else if (type == nameof(Regret)) p.RegretCards++;
+            if (!SimEngine.HandAtTurnEnd.TryGetValue(card.GetType().Name, out var kind)) continue;
+            var amount = kind switch { SimEngine.InHand.Damage => Sts2State.Var(card, "Damage"), SimEngine.InHand.HpLoss => Sts2State.Var(card, "HpLoss"), _ => 0 };
+            p.TurnEndCards.Add(new TurnEndCard(card.GetType().Name, SafeCardTitle(card), amount));
         }
 
         p.Focus = c.GetPower<FocusPower>()?.Amount ?? 0;

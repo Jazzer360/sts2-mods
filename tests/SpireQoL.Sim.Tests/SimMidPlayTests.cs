@@ -119,26 +119,39 @@ public class SimMidPlayTests
     [Fact]
     public void WuppyTakesTheHitsAimedAtYouWhileItLives()
     {
-        // WuppysLoyaltyPower.ModifyPreBlockDamageTarget: 7 then 5 go to Wuppy (10 HP: the second kills it,
-        // nothing carries over); the third hit (5) comes to you, through your 2 block.
+        // WuppysLoyaltyPower.ModifyPreBlockDamageTarget: 7 then 5 go to Wuppy (10 HP). The second kills it with 2 to spare
+        // (Creature.LoseHpInternal's OverkillDamage), which goes on to your 2 block; the third hit (5) is all yours.
         var s = new SimState { Enemies = { E(1, 50, 0, 7, 5, 5) } };
         s.P.Block = 2;
         s.P.WuppyHp = 10;
         var o = SimEngine.Run(s);
-        Assert.Equal(3, o.TakenMax);
+        Assert.Equal(5, o.TakenMax);
         Assert.Equal(0, o.Worst.P.WuppyHp);
-        Assert.Equal(12, o.Worst.WuppyTaken);
+        Assert.Equal(10, o.Worst.WuppyTaken);
     }
 
     [Fact]
-    public void HitsOnWuppyDontSetOffYourThorns()
+    public void WhatKillsWuppyGoesOnToYourBlockAndYou()
     {
+        // Knowledge Demon's 19 into Wuppy at 8 HP with 6 block: 8 to Wuppy, 11 on, 6 blocked, 5 lost (a 1.0.0 report forecast 0).
+        var s = new SimState { Enemies = { E(1, 116, 0, 19) } };
+        s.P.Block = 6;
+        s.P.WuppyHp = 8;
+        var o = SimEngine.Run(s);
+        Assert.Equal(5, o.TakenMax);
+        Assert.Equal(8, o.Worst.WuppyTaken);
+    }
+
+    [Fact]
+    public void HitsOnWuppySetOffYourThorns()
+    {
+        // ThornsPower.BeforeDamageReceived: you're still the hit's target (Wuppy takes it later, before block).
         var s = new SimState { Enemies = { E(1, 50, 0, 7) } };
         s.P.Thorns = 3;
         s.P.WuppyHp = 20;
         var o = SimEngine.Run(s);
         Assert.Equal(0, o.TakenMax);
-        Assert.Equal(50, o.Worst.Enemy(1)!.Hp);
+        Assert.Equal(47, o.Worst.Enemy(1)!.Hp);
     }
 
     [Fact]

@@ -94,7 +94,7 @@ public class SimReviewTests
         var s = new SimState { Enemies = { Enemy(1, 50) } };
         s.P.FeelNoPain = 3;
         s.P.Fading = 1;
-        s.P.HandBlockable.Add(("Burn", 2));
+        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         Assert.Equal(0, SimEngine.Run(s).TakenMax);
     }
 
@@ -187,7 +187,7 @@ public class SimReviewTests
         s.P.Block = 10;
         s.P.ParryingShieldBlock = 10;
         s.P.ParryingShieldDamage = 5;
-        s.P.DebuffLateBlockable.Add(("Disintegration", 4));
+        s.P.Powers = s.P.Powers.With("DisintegrationPower", 4);
         Assert.True(SimEngine.Run(s).DeadInAll(1));
     }
 

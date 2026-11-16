@@ -17,9 +17,7 @@ public class SimTeammateHandFieldsTests
     private static readonly HashSet<string> FromTheirHand = new()
     {
         nameof(SimPlayer.Fading),          // Ethereal cards that exhaust (Feel No Pain, Charon's Ashes, Forgotten Soul)
-        nameof(SimPlayer.HandBlockable),   // Burn, Decay...
-        nameof(SimPlayer.HandUnblockable), // Bad Luck...
-        nameof(SimPlayer.RegretCards),
+        nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...
         // End-of-turn auto-plays: picked from the hand (Stampede, Simpleton), and yours only in the engine (SimEngine.AutoPostPlay
         // reads s.P); cleared for teammates all the same.
         nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand), nameof(SimPlayer.ExhaustAutoPlays),
@@ -34,7 +32,6 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.Energy),          // on screen for every player (Pael's Tears, Orbit)
         nameof(SimPlayer.Arrows),          // on screen (the Fool's arrows)
         nameof(SimPlayer.AttacksThisTurn), // you watch them play
-        nameof(SimPlayer.DebuffBlockable), nameof(SimPlayer.DebuffLateBlockable), nameof(SimPlayer.DebuffUnblockable),
         nameof(SimPlayer.Orbs), nameof(SimPlayer.OrbCapacity), nameof(SimPlayer.SlotOnFirstChannel), nameof(SimPlayer.Thunder),
         nameof(SimPlayer.FrontOrbBonusTriggers),
         nameof(SimPlayer.BlockGains), 
@@ -90,6 +87,7 @@ public class SimTeammateHandFieldsTests
         if (t == typeof(int)) f.SetValue(p, 7);
         else if (t == typeof(bool)) f.SetValue(p, true);
         else if (t == typeof(List<(string, int)>)) f.SetValue(p, new List<(string, int)> { ("X", 3) });
+        else if (t == typeof(List<TurnEndCard>)) f.SetValue(p, new List<TurnEndCard> { new("Burn", "Burn", 2) });
         else if (t == typeof(List<SimHandCard>)) f.SetValue(p, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
         else if (t == typeof(List<SimPlay>)) f.SetValue(p, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
         else if (t == typeof(PowerSet)) f.SetValue(p, PowerSet.Empty.With("StrengthPower", 2));

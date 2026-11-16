@@ -69,6 +69,8 @@ public static class SimReaders
                     break;
                 case "JugglingPower": data = Sts2State.Private<object?>(pw, "_internalData", null) is { } jd ? Sts2State.Private(jd, "attacksPlayedThisTurn", 0) : 0; break;
                 // Whose plays it acts on (+ 100, so 0 stays "nobody").
+                // Gone with their applier (AfterDeath), Magic Bomb only while it lives: its id + 100.
+                case "ConstrictPower" or "MagicBombPower": data = pw.Applier is { } ca && idOf(ca) is { } caId ? caId + 100 : 0; break;
                 case "StranglePower" or "OblivionPower": data = pw.Applier is { } sa && idOf(sa) is { } saId ? saId + 100 : 0; break;
                 case "ImitationLearningPower":
                     data = pw is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower il

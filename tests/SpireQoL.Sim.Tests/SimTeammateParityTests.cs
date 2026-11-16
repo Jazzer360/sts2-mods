@@ -125,14 +125,14 @@ public class SimTeammateParityTests
         // size still counts (Cloak Clasp).
         var s = new SimState { Enemies = { Target(50, 10) } };
         var mate = new SimPlayer { Hp = 60, CloakClaspPerCard = 1, HandCount = 3 };
-        mate.HandBlockable.Add(("Burn", 2));
+        mate.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         s.Teammates.Add(mate);
 
         Assert.Equal(9, SimEngine.Run(s).TeammateTakenMax(0));     // 10 + 2 - 3
         var shown = SimEngine.Run(s.WithoutTeammateHands());
         Assert.Equal(7, shown.TeammateTakenMax(0));                  // 10 - 3
         Assert.Equal(10, shown.TeammateWorst(0).Incoming);
-        Assert.Single(s.Teammates[0].HandBlockable);                 // the original is untouched
+        Assert.Single(s.Teammates[0].TurnEndCards);                 // the original is untouched
     }
 
     [Fact]

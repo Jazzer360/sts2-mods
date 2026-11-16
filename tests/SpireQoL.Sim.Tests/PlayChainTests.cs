@@ -236,4 +236,15 @@ public class PlayChainTests
         // Looking at a single card discards nothing: with no discard pile, nothing to shuffle in.
         Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(1, 0, 1, 3));
     }
+
+    [Fact]
+    public void TargetDrawsStillStopAtAFullHand()
+    {
+        // Ki Hop at an impaled enemy draws 2, from a hand of 10 with it: 9 once it's played, so 1 fits (a 1.0.0 report
+        // expected 2). Worked out with the target's draws in place of the card's own.
+        var i = new PlayChain.DrawInputs { OwnDraws = 0, HandCount = 10, DrawPile = 20, DiscardPile = 1 };
+        Assert.Equal(0, PlayChain.Resolve(i).Draws);
+        Assert.Equal(1, PlayChain.Resolve(i.WithOwnDraws(2)).Draws);
+        Assert.Equal(0, i.OwnDraws); // a copy
+    }
 }

@@ -443,7 +443,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         return outcomes.Any(o => te.Ids.Values.Any(id => o.DeadInAll(id) && !baseline.DeadInAll(id)));
     }
 
-    /// <summary>The sources whose tabs come from the end-of-turn comparisons by type (the settings check reads these names).</summary>
+    /// <summary>
+    /// The sources whose tabs come from the end-of-turn comparisons by type. Not referenced in code: the settings check
+    /// (CatalogCheck) reads the string literals compiled into this class, and these names are how it finds those rules.
+    /// </summary>
     internal static readonly string[] OutcomeTabs =
     {
         nameof(HandDrill), nameof(ParryingShield), nameof(GremlinHorn), nameof(CompostPower), nameof(RupturePower),

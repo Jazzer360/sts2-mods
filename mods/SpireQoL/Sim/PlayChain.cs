@@ -14,6 +14,14 @@ public static class PlayChain
 
     public sealed class DrawInputs
     {
+        /// <summary>A copy with the card's own draws changed.</summary>
+        public DrawInputs WithOwnDraws(int own)
+        {
+            var c = (DrawInputs)MemberwiseClone();
+            c.OwnDraws = own;
+            return c;
+        }
+
         /// <summary>Cards the card itself draws, across plays.</summary>
         public int OwnDraws;
         public int Plays = 1;

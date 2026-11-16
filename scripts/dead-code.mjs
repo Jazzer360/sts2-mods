@@ -18,7 +18,9 @@ const src = Object.fromEntries(files.map(f => [f, fs.readFileSync(f, "utf8")]));
 const all = Object.values(src).join("\n");
 
 // Interface members, overrides and entry points the game or the framework calls.
-const external = new Set(["Id", "DisplayName", "EnabledByDefault", "Apply", "Attach", "OnFrame", "Main", "Initialize", "ToString", "Equals", "GetHashCode", "Dispose"]);
+const external = new Set(["Id", "DisplayName", "EnabledByDefault", "Apply", "Attach", "OnFrame", "Main", "Initialize", "ToString", "Equals", "GetHashCode", "Dispose",
+  // Read as string literals by the settings check (CatalogCheck reads ProcIndicatorsFeature's literals).
+  "OutcomeTabs"]);
 const decl = /^\s*(?:\[[^\]]*\]\s*)*(?:public|internal|protected|private)\s+(?:static\s+|readonly\s+|sealed\s+|partial\s+|abstract\s+|virtual\s+|const\s+|required\s+|override\s+|async\s+|unsafe\s+|new\s+)*(?:class|record|struct|enum|interface\s+)?[\w<>\[\],.?() ]*?\b([A-Z]\w*)\s*(?:\(|\{|=|;|<[\w, ]*>\s*\(|$)/gm;
 
 const findings = [];

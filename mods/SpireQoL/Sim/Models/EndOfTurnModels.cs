@@ -143,3 +143,65 @@ public sealed class LunarPastry : EndOfTurnRelic
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) ? SimEngine.ProcCardEvent(s, CardEvent.StarsGained, 1, owner, indirect: false) : One(s);
 }
+
+// ---- debuffs on a player that hurt them when their side's turn ends (AfterSideTurnEnd, AfterSideTurnEndLate), in listener order
+// with that player's other powers.
+
+/// <summary>A debuff that hurts its owner at the end of their turn: its damage through the pipeline on them, named as the game names it.</summary>
+public abstract class TurnEndDebuff : EndOfTurnModel
+{
+    /// <summary>The applier is gone (Data: the applier's id + 100; 0: unknown, taken as alive).</summary>
+    protected static bool ApplierDead(SimState s, int owner, string name)
+    {
+        var data = SimEngine.PowersOf(s, owner).DataOf(name);
+        return data >= 100 && s.Enemy(data - 100) is not { Alive: true };
+    }
+
+    protected IEnumerable<SimState> Hurt(SimState s, int owner, int amount, SimProps props, bool selfDealt) =>
+        amount <= 0 ? One(s) : SimEngine.ProcDamagePlayer(s, owner, Name, owner, amount, props, noDealer: !selfDealt, label: SimEngine.Title(s, owner, Name));
+}
+
+/// <summary>ConstrictPower.AfterSideTurnEnd: its amount to its owner (unpowered, dealt by its owner); it goes when its applier dies (AfterDeath).</summary>
+public sealed class ConstrictPower : TurnEndDebuff
+{
+    public override string Name => "ConstrictPower";
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) && !ApplierDead(s, owner, Name) ? Hurt(s, owner, Amount(s, owner), Unpowered, selfDealt: true) : One(s);
+}
+
+/// <summary>MagicBombPower.AfterSideTurnEnd: while its applier lives, its amount to its owner (unpowered, dealt by its owner), then it goes.</summary>
+public sealed class MagicBombPower : TurnEndDebuff
+{
+    public override string Name => "MagicBombPower";
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner)
+    {
+        if (!SimEngine.TakesPart(s, owner) || ApplierDead(s, owner, Name)) return One(s);
+        var amount = Amount(s, owner);
+        SimEngine.SetPowers(s, owner, SimEngine.PowersOf(s, owner).Without(Name));
+        return Hurt(s, owner, amount, Unpowered, selfDealt: true);
+    }
+}
+
+/// <summary>DemisePower.AfterSideTurnEnd: its amount to its owner, unblockable (no dealer).</summary>
+public sealed class DemisePower : TurnEndDebuff
+{
+    public override string Name => "DemisePower";
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) ? Hurt(s, owner, Amount(s, owner), SimProps.Unblockable | Unpowered, selfDealt: false) : One(s);
+}
+
+/// <summary>DisintegrationPower.AfterSideTurnEndLate: its amount to its owner (unpowered, dealt by its owner).</summary>
+public sealed class DisintegrationPower : TurnEndDebuff
+{
+    public override string Name => "DisintegrationPower";
+    public override IEnumerable<SimState> AfterSideTurnEndLate(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) ? Hurt(s, owner, Amount(s, owner), Unpowered, selfDealt: true) : One(s);
+}
+
+/// <summary>InsatiableDominionPower.AfterSideTurnEndLate: its Damage (2 + its owner's turn number, unpowered, no dealer) to its owner.</summary>
+public sealed class InsatiableDominionPower : TurnEndDebuff
+{
+    public override string Name => "InsatiableDominionPower";
+    public override IEnumerable<SimState> AfterSideTurnEndLate(SimState s, int owner) =>
+        SimEngine.TakesPart(s, owner) ? Hurt(s, owner, SimEngine.Var(s, owner, Name, "Damage", 0), Unpowered, selfDealt: false) : One(s);
+}

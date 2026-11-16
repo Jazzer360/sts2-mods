@@ -62,12 +62,13 @@ public class SimLunarPastryTests
     [Fact]
     public void InsatiableDominionLandsAfterParryingShield()
     {
-        // Its damage is an AfterSideTurnEndLate hit on you (read as a late debuff): Parrying Shield still sees your block.
+        // Its damage is an AfterSideTurnEndLate hit on you (its model): Parrying Shield still sees your block.
         var s = new SimState { Enemies = { Enemy(1, 6, 0) } };
         s.P.Block = 5;
         s.P.ParryingShieldBlock = 5;
         s.P.ParryingShieldDamage = 6;
-        s.P.DebuffLateBlockable.Add(("Insatiable Dominion", 7));
+        s.P.Powers = s.P.Powers.With("InsatiableDominionPower", 1);
+        s.Vars["-1:InsatiableDominionPower:Damage"] = 7;
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(1));
         Assert.Equal(2, o.TakenMax);

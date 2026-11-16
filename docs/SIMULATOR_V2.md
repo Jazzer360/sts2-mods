@@ -63,7 +63,8 @@ Non-goals:
   pipeline, `AfterDamageGiven`, `AfterDamageReceived`, deaths; after the last hit `AfterAttack` (Vigor, Gigantification,
   Quietus are spent here).
 - **End of turn** (`CombatManager.DoTurnEnd`): auto-play phase; `BeforeSideTurnEndEarly`; `BeforeSideTurnEnd`; orb passives
-  per player; Ethereal exhausts and cards acting in hand; debuffs on you; `AfterSideTurnEnd`; `AfterSideTurnEndLate`; then
+  per player; Ethereal exhausts and cards acting in hand; `AfterSideTurnEnd` (Constrict, Magic Bomb, Demise with the other
+  powers and relics); `AfterSideTurnEndLate` (Disintegration, Insatiable Dominion); then
   the enemy turn (poison tick, block cleared, each enemy's move, hit by hit).
 
 ## Architecture

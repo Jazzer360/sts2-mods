@@ -16,7 +16,7 @@ public class SimInfernoTests
     {
         // Regret with 2 cards in hand: 2 HP lost on your turn, so 6 to each enemy (E2's 4 block takes some).
         var s = new SimState { Enemies = { E(1, 30), E(2, 30, 4) } };
-        s.P.RegretCards = 1;
+        s.P.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
         s.P.HandCount = 2;
         s.P.Inferno = 6;
         var o = SimEngine.Run(s);
@@ -31,8 +31,8 @@ public class SimInfernoTests
         // Two Burns of 2 with 3 block: the first is blocked (no HP lost), the second loses 1 HP: one Inferno.
         var s = new SimState { Enemies = { E(1, 30) } };
         s.P.Block = 3;
-        s.P.HandBlockable.Add(("Burn", 2));
-        s.P.HandBlockable.Add(("Burn", 2));
+        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         s.P.Inferno = 6;
         var o = SimEngine.Run(s);
         Assert.Equal(24, o.Worst.Enemy(1)!.HpAtTurnEnd);
@@ -42,7 +42,7 @@ public class SimInfernoTests
     public void InfernoCanKillBeforeTheEnemyActs()
     {
         var s = new SimState { Enemies = { E(1, 5, 0, 10) } };
-        s.P.RegretCards = 1;
+        s.P.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
         s.P.HandCount = 1;
         s.P.Inferno = 6;
         var o = SimEngine.Run(s);
@@ -66,7 +66,7 @@ public class SimInfernoTests
     {
         var s = new SimState { Enemies = { E(1, 30) } };
         s.P.Block = 10;
-        s.P.HandBlockable.Add(("Burn", 2));
+        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         s.P.Inferno = 6;
         var o = SimEngine.Run(s);
         Assert.Equal(30, o.Worst.Enemy(1)!.HpAtTurnEnd);

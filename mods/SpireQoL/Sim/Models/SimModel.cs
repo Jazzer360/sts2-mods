@@ -190,6 +190,7 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> BeforeSideTurnEndEarly(SimState s, int owner) => One(s);
     public virtual IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) => One(s);
     public virtual IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) => One(s);
+    public virtual IEnumerable<SimState> AfterSideTurnEndLate(SimState s, int owner) => One(s);
     /// <summary>A player's Osty lost HP (AfterCurrentHpChanged with a loss on Osty): Necro Mastery. Runs inside the damage.</summary>
     public virtual void AfterOstyHpLost(SimState s, int owner, int player, int lost) { }
     /// <summary>A player tried a shot (AfterArrowShot: with or without an arrow): Covering Fire.</summary>

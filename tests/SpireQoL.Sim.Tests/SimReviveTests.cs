@@ -82,8 +82,8 @@ public class SimReviveTests
     {
         var s = new SimState { Enemies = { E(1, 50) } };
         s.P.Hp = 3;
-        s.P.HandUnblockable.Add(("Decay", 2));
-        s.P.RegretCards = 1;
+        s.P.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 2));
+        s.P.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
         s.P.HandCount = 2;
         Assert.True(SimEngine.Run(s).Worst.Died);
     }

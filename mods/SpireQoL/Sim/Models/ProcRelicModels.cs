@@ -49,9 +49,7 @@ public sealed class PaelsEye : RelicProc
             var px = owner == Who.You ? x.P : x.MutableTeammate(Who.TeammateIndex(owner));
             px.HandCount = 0;
             px.Fading = 0;
-            px.HandBlockable = new();
-            px.HandUnblockable = new();
-            px.RegretCards = 0;
+            px.TurnEndCards = new();
             return x;
         }).ToList();
     }

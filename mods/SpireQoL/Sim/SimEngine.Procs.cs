@@ -115,15 +115,19 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// Damage to a player from a creature's proc (Galvanic: the enemy's power hits you), blockable, through the damage pipeline on
-    /// that player. Logged with the damage.
+    /// Damage to a player from a creature's proc (Galvanic: the enemy's power hits you; Constrict: a debuff on you hits you), through
+    /// the damage pipeline on that player, blocked unless Unblockable. Logged with the damage; <paramref name="label"/> names it
+    /// in Incoming Damage's breakdown (default: the source's class name).
     /// </summary>
-    public static IEnumerable<SimState> ProcDamagePlayer(SimState s, int owner, string name, int player, decimal baseDamage, SimProps props, bool noDealer = false)
+    public static IEnumerable<SimState> ProcDamagePlayer(SimState s, int owner, string name, int player, decimal baseDamage, SimProps props, bool noDealer = false, string? label = null)
     {
         var dealer = noDealer ? null : (int?)owner;
         var amount = CalcDamage(s, baseDamage, new DamageCtx(dealer, player, props, null, null));
         s.LogFired(name, amount, owner);
-        if (amount > 0) LandBlockable(s, name, amount, player == Who.You ? -1 : Who.TeammateIndex(player), dealer, props);
+        var who = player == Who.You ? -1 : Who.TeammateIndex(player);
+        if (amount <= 0) return new[] { s };
+        if (props.HasFlag(SimProps.Unblockable)) LandUnblockable(s, label ?? name, amount, who, dealer, props);
+        else LandBlockable(s, label ?? name, amount, who, dealer, props);
         return new[] { s };
     }
 

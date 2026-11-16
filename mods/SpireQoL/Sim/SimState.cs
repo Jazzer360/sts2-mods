@@ -177,7 +177,6 @@ public sealed class SimEnemy
 
     /// <summary>Its HP when your end of turn is over (before its turn), for the outcome audit.</summary>
     public int HpAtTurnEnd;
-    public bool Attacked;
 
     [JsonIgnore]
     public bool Alive => Hp > 0;
@@ -185,6 +184,9 @@ public sealed class SimEnemy
     /// <summary>Copies the numbers; the attack list never changes during a run, so it's shared.</summary>
     public SimEnemy Clone() => (SimEnemy)MemberwiseClone();
 }
+
+/// <summary>A card in hand that acts when its owner's turn ends: its class name, its title, and its Damage or HpLoss value.</summary>
+public sealed record TurnEndCard(string Card, string Title, int Amount);
 
 public sealed class SimPlayer
 {
@@ -260,15 +262,11 @@ public sealed class SimPlayer
     /// <summary>Ethereal cards in hand that exhaust at end of turn.</summary>
     public int Fading;
     public int AttacksThisTurn;
-    /// <summary>End-of-turn damage from cards in hand (Burn, Decay...), blockable, in hand order.</summary>
-    public List<(string Name, int Amount)> HandBlockable = new();
-    /// <summary>End-of-turn HP loss from cards in hand (Bad Luck...).</summary>
-    public List<(string Name, int Amount)> HandUnblockable = new();
-    public int RegretCards;
-    public List<(string Name, int Amount)> DebuffBlockable = new();
-    /// <summary>Debuffs that land after Parrying Shield (AfterSideTurnEndLate: Disintegration).</summary>
-    public List<(string Name, int Amount)> DebuffLateBlockable = new();
-    public List<(string Name, int Amount)> DebuffUnblockable = new();
+    /// <summary>
+    /// Cards in hand that act when the turn ends (CardModel.OnTurnEndInHand), in hand order: what each does is the simulator's
+    /// (SimEngine.HandAtTurnEnd). Never changed in place (shared between clones).
+    /// </summary>
+    public List<TurnEndCard> TurnEndCards = new();
 
     // Orbs, front first.
     public List<SimOrb> Orbs = new();
@@ -605,9 +603,7 @@ public sealed class SimState
         for (var k = 0; k < shown.Teammates.Count; k++)
         {
             var t = shown.MutableTeammate(k);
-            t.HandBlockable = new();
-            t.HandUnblockable = new();
-            t.RegretCards = 0;
+            t.TurnEndCards = new();
             t.Fading = 0;
             t.Stampede = t.Simpleton = 0;
             t.AutoHand = null;

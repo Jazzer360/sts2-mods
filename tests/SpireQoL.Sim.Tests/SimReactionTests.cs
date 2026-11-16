@@ -145,7 +145,7 @@ public class SimReactionTests
         // though branches never differ in them (the branch key leaves them out).
         var a = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
         var b = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
-        b.P.HandBlockable.Add(("Burn", 2));
+        b.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         Assert.Equal(a.Key(), b.Key());
         Assert.NotEqual(a.FullKey(), b.FullKey());
         // Intents are in both (Crab Rage can change them in one branch).

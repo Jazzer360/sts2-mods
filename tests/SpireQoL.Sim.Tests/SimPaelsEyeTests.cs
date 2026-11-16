@@ -18,7 +18,7 @@ public class SimPaelsEyeTests
         s.P.PaelsEyeExhaust = true;
         s.P.HandCount = 3;
         s.P.FeelNoPain = 3;
-        s.P.HandBlockable.Add(("Burn", 2));
+        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         return s;
     }
 
@@ -51,7 +51,7 @@ public class SimPaelsEyeTests
         // Orichalcum checks your block in BeforeSideTurnEndVeryEarly, before Pael's Eye exhausts your hand (Early): with no block
         // then, it arms, and gives its 6 on top of Feel No Pain's 9.
         var s = Armed();
-        s.P.HandBlockable.Clear();
+        s.P.TurnEndCards.Clear();
         s.P.OrichalcumBlock = 6;
         Assert.Equal(0, SimEngine.Run(s).TakenMax);
     }
