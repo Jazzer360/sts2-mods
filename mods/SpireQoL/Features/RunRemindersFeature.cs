@@ -233,6 +233,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             ShopSlots();
         }
         TickShopWatch();
+        OfferedCardTabs();
     }
 
     // ------------------------------------------------------------------ card reward panel

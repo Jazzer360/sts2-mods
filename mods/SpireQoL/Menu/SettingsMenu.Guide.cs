@@ -317,6 +317,13 @@ public sealed partial class SettingsMenu
             + "gives you max HP. A relic that changes only some cards shows only when one of them can come up, with the chance it "
             + "does: here 43% that a card Fresnel Lens enchants is among the ones you're offered."));
         flow.AddChild(ev);
+
+        // Offered cards: a tab per relic that makes the card stronger in fights in a way it doesn't show (decision #62).
+        GuideCardCell(flow, Card<Begone>(), "Cards you're offered",
+            "On card rewards, an event's choice of cards and in the shop: a tab for each of your relics that makes the card stronger "
+            + "in fights in a way the card doesn't show. Begone! makes a Minion Strike, so Strike Dummy and Vitruvian Minion both apply. "
+            + "Also Miniature Cannon on upgraded Attacks and Mystic Lighter on enchanted ones.",
+            Tab(RunRemindersFeature.BoostPrefix + "StrikeDummy", Relic<StrikeDummy>()), Tab(RunRemindersFeature.BoostPrefix + "VitruvianMinion", Relic<VitruvianMinion>()));
         _rows!.AddChild(flow);
     }
 

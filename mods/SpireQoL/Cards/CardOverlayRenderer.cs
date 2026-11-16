@@ -59,6 +59,13 @@ public sealed class CardOverlayRenderer
         public Control? TagLayer;
     }
 
+    /// <summary>
+    /// Cards outside your hand to decorate this frame (cards you're offered on a reward, shop or event screen: decision #62),
+    /// filled by their feature before the frame's render and cleared by it. They get the same tabs, lifecycle and cleanup as
+    /// hand cards: the game's pooled nodes are put back as they were when they stop being listed.
+    /// </summary>
+    internal static readonly List<(NCard Node, CardDecor Decor)> Outside = new();
+
     public void Render()
     {
         foreach (var e in _entries.Values) e.Seen = false;
@@ -75,6 +82,19 @@ public sealed class CardOverlayRenderer
                 Apply(entry, decor);
             }
         }
+
+        if (!_host.HideAll)
+        {
+            foreach (var (node, decor) in Outside)
+            {
+                if (!GodotObject.IsInstanceValid(node) || decor.IsEmpty || !node.IsVisibleInTree()) continue;
+                var entry = GetOrCreate(node);
+                if (entry == null) continue;
+                entry.Seen = true;
+                Apply(entry, decor);
+            }
+        }
+        Outside.Clear();
 
         // Undo anything on nodes that are no longer decorated hand cards.
         var dead = new List<ulong>();

@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.8.0
+#### Added
+- Tabs on cards you're offered outside fights (card rewards, an event's choice of cards, the shop): Strike Dummy and Fake Strike Dummy on Strikes and cards that make one (Begone!), Miniature Cannon on upgraded Attacks, Mystic Lighter on enchanted Attacks, Vitruvian Minion on Minion cards and cards that make one. Each has its own switch (Relics page).
+- Guide page: an offered card with these tabs.
+
 ### Spire QoL 1.7.1
 #### Changed
 - Run Reminders: a reward's cards are worked out by the game's own code, your relics and the run's modifiers included (Dingy Rug's colorless cards, Prismatic Gem's other characters' cards), so the chance under an icon counts them.
