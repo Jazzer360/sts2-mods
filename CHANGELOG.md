@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.5.1
+#### Changed
+- The aim marker on tabs is a third larger, growing up and to the left over the tab icon's corner, so it's easier to see.
+
 ### Spire QoL 1.5.0
 #### Added
 - Main menu: the game's settings gear to the right of the Spire QoL version note opens the Spire QoL settings menu.

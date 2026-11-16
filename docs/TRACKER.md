@@ -476,6 +476,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 1.4.0: Guide page in the settings menu (decision #56).
 - [ ] Test in game: the Guide page (cards placed with room for their tabs, tabs drawn, flashing rows, the sums).
 - [x] 1.5.0: settings gear beside the version note on the main menu.
+- [x] 1.5.1: larger aim marker (60% of the tab icon, grown up and to the left from its bottom-right).
 - [x] 0.33.0: a Stretch tab on block cards that spend it (the play check compares it with your Stretch after the play; a scan check flags block cards whose block value it can't read).
 - [x] 0.33.1: no double-play or replay tabs on unplayable cards (Throwing Axe on a curse).
 - [x] 0.33.2: the play check accepts a double-play source firing (Throwing Axe) when the card played more than once.

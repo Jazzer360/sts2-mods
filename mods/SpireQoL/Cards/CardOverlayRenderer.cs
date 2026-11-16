@@ -475,14 +475,16 @@ public sealed class CardOverlayRenderer
         return tab;
     }
 
-    /// <summary>The aim marker: about 45% of the icon, its centre on the icon's top-left corner, like the number on the bottom-right.</summary>
+    /// <summary>The aim marker: 60% of the icon over its top-left corner, its bottom-right a third of the way into the icon
+    /// (clear of the slash and the number); it grows up and to the left, past the icon's edge.</summary>
     internal static void LayoutAim(TextureRect aim, Texture2D arrow, Vector2 iconSize)
     {
         aim.Texture = arrow;
-        var side = Math.Min(iconSize.X, iconSize.Y) * 0.45f;
+        var side = Math.Min(iconSize.X, iconSize.Y) * 0.6f;
         aim.Size = new Vector2(side, side);
         aim.PivotOffset = aim.Size / 2f;
-        aim.Position = new Vector2(iconSize.X * 0.1f, iconSize.Y * 0.1f) - aim.Size / 2f;
+        var bottomRight = Math.Min(iconSize.X, iconSize.Y) * 0.325f;
+        aim.Position = new Vector2(bottomRight, bottomRight) - aim.Size;
     }
 
     /// <summary>A diagonal red bar across the icon (bottom-left to top-right).</summary>
