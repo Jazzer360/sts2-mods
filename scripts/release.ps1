@@ -15,6 +15,8 @@
     4. Runs the mod's tests (tests/<ModId>.*), then builds Release (without installing to the game) and zips dist/<ModId>-<version>.zip,
        holding a <ModId>/ folder with the dll, pdb and manifest.
     5. Creates the GitHub release with the zip attached (tag on the current main commit).
+    6. Installs the released files into <game>/mods/<ModId>/, replacing the build made before the commit
+       (stamped as a test build). Skipped with a warning when the game has them locked.
 
 .PARAMETER Mod
   Mod ids to release (default: every mod under mods/).
@@ -115,10 +117,12 @@ foreach ($m in $mods) {
             [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, "$id/$($file.Name)", [IO.Compression.CompressionLevel]::Optimal)
         }
     } finally { $archive.Dispose() }
-    Remove-Item -Recurse -Force (Join-Path $dist 'stage')
     Write-Host "Packaged $zip"
 
-    if ($DryRun) { Write-Host "Dry run: not publishing $tag. Release notes would be:`n$notes"; continue }
+    if ($DryRun) {
+        Remove-Item -Recurse -Force (Join-Path $dist 'stage')
+        Write-Host "Dry run: not publishing $tag. Release notes would be:`n$notes"; continue
+    }
 
     $install = @"
 **Install:** download ``$id-$version.zip`` below and extract it into your game's ``mods`` folder, so you end up with ``Slay the Spire 2/mods/$id/$id.dll``. Full steps: [README](https://github.com/Jazzer360/sts2-mods#installing).
@@ -131,6 +135,23 @@ foreach ($m in $mods) {
     Remove-Item $notesFile
     Write-Host "Released $name $version ($tag)." -ForegroundColor Green
     $released++
+
+    # Put the released files into the game too, so it runs exactly what was released: the build that
+    # `dotnet build` installed earlier was made before the commit and is stamped as a test build.
+    $gameDir = (dotnet msbuild (Join-Path $m.FullName "$id.csproj") -getProperty:Sts2ModsDir -nologo | Select-Object -Last 1).Trim()
+    if ($gameDir -and (Test-Path $gameDir)) {
+        $dest = Join-Path $gameDir $id
+        try {
+            New-Item -ItemType Directory -Force $dest | Out-Null
+            Copy-Item (Join-Path $stage '*') $dest -Force -ErrorAction Stop
+            Write-Host "Installed the released $id into $dest."
+        } catch {
+            Write-Host "warning: couldn't install the released $id into $dest (is the game running?): $($_.Exception.Message). Close the game and run 'dotnet build' to update it." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "warning: game mods folder not found; the released $id wasn't installed." -ForegroundColor Yellow
+    }
+    Remove-Item -Recurse -Force (Join-Path $dist 'stage')
 }
 
 if (-not $DryRun -and $released -eq 0) { Write-Host 'Nothing to release: every mod version already has a release.' }
