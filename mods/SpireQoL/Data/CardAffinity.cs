@@ -34,8 +34,9 @@ public enum CardChange
 /// applies to a card a held modifier would change that way (an egg's upgraded Attack for Miniature Cannon), and to options
 /// that make that change to your cards (an upgrade, an enchantment).</param>
 /// <param name="Base">A boost: what the card must be besides the change (Miniature Cannon: an Attack).</param>
+/// <param name="Shows">A modifier: whether a card shows its change (the check: an egg's card is upgraded, Fresnel Lens' has Nimble).</param>
 public sealed record CardAffinityRule(string Relic, AffinityKind Kind, Func<CardModel, bool> Applies, string What,
-    CardChange Change = CardChange.None, Func<CardModel, bool>? Base = null);
+    CardChange Change = CardChange.None, Func<CardModel, bool>? Base = null, Func<CardModel, bool>? Shows = null);
 
 /// <summary>
 /// Relics that care about certain cards, each with the test its own hook makes (decompile v0.113.1), written from the hook
@@ -48,11 +49,11 @@ public static class CardAffinity
     public static readonly IReadOnlyList<CardAffinityRule> Rules = new CardAffinityRule[]
     {
         // EggRelicHelper.UpgradeValidCards / TryModifyCardBeingAddedToDeck: the type, upgradable, not upgraded yet.
-        new(nameof(MoltenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Attack), "upgrades Attacks you get", CardChange.Upgrade),
-        new(nameof(FrozenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Power), "upgrades Powers you get", CardChange.Upgrade),
-        new(nameof(ToxicEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Skill), "upgrades Skills you get", CardChange.Upgrade),
+        new(nameof(MoltenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Attack), "upgrades Attacks you get", CardChange.Upgrade, Shows: c => c.IsUpgraded),
+        new(nameof(FrozenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Power), "upgrades Powers you get", CardChange.Upgrade, Shows: c => c.IsUpgraded),
+        new(nameof(ToxicEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Skill), "upgrades Skills you get", CardChange.Upgrade, Shows: c => c.IsUpgraded),
         // EnchantValidCards / TryModifyCardBeingAddedToDeck: Nimble.CanEnchant (a card that gains block, not a status or curse).
-        new(nameof(FresnelLens), AffinityKind.Modifies, c => ModelDb.Enchantment<Nimble>().CanEnchant(c), "enchants cards that gain block with Nimble", CardChange.Enchant),
+        new(nameof(FresnelLens), AffinityKind.Modifies, c => ModelDb.Enchantment<Nimble>().CanEnchant(c), "enchants cards that gain block with Nimble", CardChange.Enchant, Shows: c => c.Enchantment is Nimble),
         // ModifyDamageAdditive on the card's powered attacks (IsPoweredAttack: an Attack's damage; read here as the card being an Attack).
         new(nameof(StrikeDummy), AffinityKind.Boosts, c => c.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
         new(nameof(FakeStrikeDummy), AffinityKind.Boosts, c => c.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),

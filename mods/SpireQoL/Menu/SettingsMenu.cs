@@ -367,6 +367,8 @@ public sealed partial class SettingsMenu
             S.DeathChance, v => S.DeathChance = v);
         Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
             S.ProcIndirect, v => S.ProcIndirect = v);
+        Option("Chance under event icons", "Run Reminders: under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
+            S.EventOdds, v => S.EventOdds = v);
         Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
             S.PulseOneStepEarly, v => S.PulseOneStepEarly = v);
         Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time (nothing personal), so they can be fixed.",
@@ -644,6 +646,7 @@ public sealed partial class SettingsMenu
         S.TeammateHands = d.TeammateHands;
         Combat.TurnEndModel.CountTeammateHands = d.TeammateHands;
         S.PulseOneStepEarly = d.PulseOneStepEarly;
+        S.EventOdds = d.EventOdds;
         S.EtherealOpacity = d.EtherealOpacity;
         S.FlashHz = d.FlashHz;
         foreach (var (id, _, _) in FeatureRows)

@@ -81,6 +81,10 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         public required Before Start;
         public readonly List<RelicModel> Flashed = new();
         public readonly List<RelicModel> Subscribed = new();
+        /// <summary>The relics whose icon the option had (IconsFor, before the settings switches).</summary>
+        public HashSet<RelicModel> Shown = new();
+        /// <summary>The cards you were offered while it ran (reward and choice screens), for the odds log.</summary>
+        public readonly HashSet<CardModel> Offered = new();
         public Task? Task;
         public int Frames;
         public int DoneFrames;
@@ -95,6 +99,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             Close();
             if (__instance.IsLocked || __instance.WasChosen || RunMe() is not { } me) return;
             var w = new Window { Option = __instance, Effects = EffectsOf(__instance), Me = me, Start = Before.Of(me) };
+            w.Shown = IconsFor(__instance, me).Select(i => i.Relic).ToHashSet();
             foreach (var r in me.Relics)
             {
                 if (ChoiceReminders.For(r.GetType().Name) is not { On: not ChoiceEffect.None }) continue;
@@ -164,7 +169,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             return;
         }
         var rule = (RelicModel r) => ChoiceReminders.For(r.GetType().Name)!;
-        var shown = w.Subscribed.Where(r => (rule(r).On & w.Effects) != 0).ToList();
+        var shown = w.Subscribed.Where(w.Shown.Contains).ToList();
         var missed = w.Flashed.Where(r => !shown.Contains(r)).Select(r => r.GetType().Name).ToList();
         var quiet = shown.Where(r => !w.Flashed.Contains(r)).ToList();
         var silent = quiet.Where(r => (rule(r).Expect & observed) != 0).Select(r => r.GetType().Name).ToList();
@@ -193,6 +198,9 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             reporter?.Mismatch("reminders", $"Reminder icon's effect happened but the relic didn't react: {string.Join(", ", silent)}",
                 new[] { "reminder-silent" }.Concat(silent).Append(evt), what);
         }
+        var added = w.Me.Deck.Cards.Where(c => !w.Start.Deck.Contains(c)).ToList();
+        CheckCardRules(w.Me, added, CardsRead.TryGetValue(w.Option, out var read) && read.GivesUpgraded, w.Shown, w.Option.TextKey);
+        LogOdds(w, added);
     }
 
     private static void TickWindow()
@@ -469,6 +477,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                 if (healed != heals) problems.Add(("BookOfFiveRings", $"Book of Five Rings: {(healed ? "healed" : "didn't heal")} ({w.BookAdded}→{now} cards), predicted {(heals ? "a heal" : "no heal")}"));
             }
         }
+        CheckCardRules(me, me.Deck.Cards.Where(c => !w.Start.Deck.Contains(c)).ToList(), false, null, "card reward");
         var what = $"card reward: {added} added (predicted {w.PerPick}), gold {w.Start.Gold}→{me.Gold}";
         ModEntry.Log.Info($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(p => p.Text)))}");
         if (problems.Count > 0)
@@ -488,34 +497,39 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         foreach (var button in layout.OptionButtons)
         {
             if (!GodotObject.IsInstanceValid(button)) continue;
-            var icons = new List<(RelicModel Relic, bool Crossed, string? Odds)>();
-            if (me != null && button.Option is { IsLocked: false, IsProceed: false } option)
-            {
-                var effects = EffectsOf(option);
-                if (effects != ChoiceEffect.None)
-                {
-                    foreach (var relic in me.Relics)
-                    {
-                        var name = relic.GetType().Name;
-                        if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0 || !_ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, name))) continue;
-                        // A relic that cares about certain cards: only when one of them can come from this option (as your other
-                        // relics would change it), or the option makes the change it looks for (an upgrade, an enchantment).
-                        string? odds = null;
-                        if (CardAffinity.For(name) is { } affinity)
-                        {
-                            // The option makes the change it looks for to a card of yours it applies to (Mystic Lighter: an
-                            // enchantment an Attack of yours can take, Tezcatara's soup); or one of its cards can come up, with
-                            // the chance it does under the icon (none when it's sure or can't be told).
-                            if ((effects & CardAffinity.ChangeEffect(affinity)) != 0 && ChangeReaches(option, me, affinity)) { }
-                            else if ((effects & ChoiceEffect.CardToDeck) != 0 && CanGet(option, me, affinity)) odds = OddsText(option, me, affinity);
-                            else continue;
-                        }
-                        icons.Add((relic, (rule.CrossedOn & effects) != 0, odds));
-                    }
-                }
-            }
+            var icons = me != null && button.Option is { IsLocked: false, IsProceed: false } option
+                ? IconsFor(option, me).Where(i => _ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, i.Relic.GetType().Name)))
+                    .Select(i => (i.Relic, i.Crossed, _ctx.Settings.EventOdds ? i.Odds : null)).ToList()
+                : new List<(RelicModel Relic, bool Crossed, string? Odds)>();
             Show(button, icons);
         }
+    }
+
+    /// <summary>
+    /// The icons an option gets (before the settings switches, which the check ignores): each relic with a reminder rule for
+    /// what the option does. A relic that cares about certain cards only when the option makes the change it looks for to a
+    /// card of yours it applies to (Mystic Lighter: an enchantment an Attack of yours can take, Tezcatara's soup), or one of
+    /// its cards can come up (as your other relics would change it), with the chance it does (none when sure or unknown).
+    /// </summary>
+    private static List<(RelicModel Relic, bool Crossed, string? Odds)> IconsFor(EventOption option, Player me)
+    {
+        var icons = new List<(RelicModel, bool, string?)>();
+        var effects = EffectsOf(option);
+        if (effects == ChoiceEffect.None) return icons;
+        foreach (var relic in me.Relics)
+        {
+            var name = relic.GetType().Name;
+            if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0) continue;
+            string? odds = null;
+            if (CardAffinity.For(name) is { } affinity)
+            {
+                if ((effects & CardAffinity.ChangeEffect(affinity)) != 0 && ChangeReaches(option, me, affinity)) { }
+                else if ((effects & ChoiceEffect.CardToDeck) != 0 && CanGet(option, me, affinity)) odds = OddsText(option, me, affinity);
+                else continue;
+            }
+            icons.Add((relic, (rule.CrossedOn & effects) != 0, odds));
+        }
+        return icons;
     }
 
     /// <summary>A row of relic icons left of the option button, vertically centered; removed when empty.</summary>

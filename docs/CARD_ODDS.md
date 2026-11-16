@@ -1,6 +1,6 @@
 # Card odds for relics outside fights (plan)
 
-Status: phases 1 to 3 done (1.6.2 to 1.8.0, decisions #58, #59, #61, #62); phase 4 (checks) and Inspect planned.
+Status: phases 1 to 4 done (1.6.2 to 1.9.0, decisions #58 to #63); Inspect planned.
 
 **Purpose (owner, decision #60):** a relic's icon beside an event option is a reminder that you hold a relic that makes this choice unusually good (or, crossed, unusually bad); the number under it says how likely. The Inspect dialog is how a player understands the odds of a favorable outcome.
 

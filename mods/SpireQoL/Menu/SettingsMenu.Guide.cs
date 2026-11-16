@@ -323,7 +323,7 @@ public sealed partial class SettingsMenu
             "On card rewards, an event's choice of cards and in the shop: a tab for each of your relics that makes the card stronger "
             + "in fights in a way the card doesn't show. Begone! makes a Minion Strike, so Strike Dummy and Vitruvian Minion both apply. "
             + "Also Miniature Cannon on upgraded Attacks and Mystic Lighter on enchanted ones.",
-            Tab(RunRemindersFeature.BoostPrefix + "StrikeDummy", Relic<StrikeDummy>()), Tab(RunRemindersFeature.BoostPrefix + "VitruvianMinion", Relic<VitruvianMinion>()));
+            Tab("reminder-reward:StrikeDummy", Relic<StrikeDummy>()), Tab("reminder-reward:VitruvianMinion", Relic<VitruvianMinion>()));
         _rows!.AddChild(flow);
     }
 

@@ -73,6 +73,9 @@ public sealed class QolSettings
     /// <summary>Count procs one step removed (a card that exhausts or discards other cards, or draws into a shuffle).</summary>
     public bool ProcIndirect { get; set; } = true;
 
+    /// <summary>Run Reminders: the chance under a card relic's icon beside an event option (off = icon only).</summary>
+    public bool EventOdds { get; set; } = true;
+
     // Card Indicators
     public float EtherealOpacity { get; set; } = 0.8f;
 

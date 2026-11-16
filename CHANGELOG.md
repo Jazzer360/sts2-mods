@@ -6,6 +6,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.9.0
+#### Added
+- Settings: **Chance under event icons** (General page) turns the number under card relics' event icons off.
+- Checks: after an event option or a card reward pick, each new card is compared with the egg and Fresnel Lens rules (reported when a rule said the relic changes a card that arrived unchanged), and each chance under an event icon is logged with whether one of its cards came up.
+#### Changed
+- Settings: the tabs on offered cards (Strike Dummy, Miniature Cannon, Mystic Lighter, Vitruvian Minion) moved to the Relics page's Outside fights section, with a switch each for card rewards, events and shops, like the other reminders. Settings from 1.8.0 for them start on again.
+#### Fixed
+- The event check now knows exactly which icons an option showed: a card relic reacting where its icon was left out (no card it changes could come up) is reported.
+
 ### Spire QoL 1.8.0
 #### Added
 - Tabs on cards you're offered outside fights (card rewards, an event's choice of cards, the shop): Strike Dummy and Fake Strike Dummy on Strikes and cards that make one (Begone!), Miniature Cannon on upgraded Attacks, Mystic Lighter on enchanted Attacks, Vitruvian Minion on Minion cards and cards that make one. Each has its own switch (Relics page).

@@ -35,8 +35,10 @@ public enum ChoiceEffect
 /// whose effect happened without the relic reacting). Relics that react without flashing leave it empty.</param>
 /// <param name="ShopIcon">Its icon goes beside shop items it reacts to; false when the shop already shows the effect on the item
 /// (the eggs and Fresnel Lens change the offered card itself).</param>
+/// <param name="CardTab">It shows as a tab on the cards you're offered that it applies to (decision #62): on card rewards, an
+/// event's choice of cards and shop cards, each place with its own switch (the same keys as the other reminders).</param>
 public sealed record ReminderRule(string Relic, ChoiceEffect On, ChoiceEffect CrossedOn = ChoiceEffect.None, bool OnCardReward = false,
-    ChoiceEffect Expect = ChoiceEffect.None, bool ShopIcon = true)
+    ChoiceEffect Expect = ChoiceEffect.None, bool ShopIcon = true, bool CardTab = false)
 {
     /// <summary>Effects a shop item can have: buying it, and a card or a potion joining you.</summary>
     public const ChoiceEffect ShopEffects = ChoiceEffect.Purchase | ChoiceEffect.CardToDeck | ChoiceEffect.Potion;
@@ -44,9 +46,9 @@ public sealed record ReminderRule(string Relic, ChoiceEffect On, ChoiceEffect Cr
     /// <summary>Where its reminder shows (each place has its own switch).</summary>
     public bool In(ReminderPlace place) => place switch
     {
-        ReminderPlace.Reward => OnCardReward,
-        ReminderPlace.Event => (On & ~ChoiceEffect.Purchase) != 0,
-        ReminderPlace.Shop => ShopIcon && (On & ShopEffects) != 0,
+        ReminderPlace.Reward => OnCardReward || CardTab,
+        ReminderPlace.Event => (On & ~ChoiceEffect.Purchase) != 0 || CardTab,
+        ReminderPlace.Shop => (ShopIcon && (On & ShopEffects) != 0) || CardTab,
         _ => false,
     };
 }
@@ -80,11 +82,12 @@ public static class ChoiceReminders
         new(nameof(FresnelLens), ChoiceEffect.CardToDeck, ShopIcon: false),
         // Cards that are stronger in fights in a way their text doesn't show (Data/CardAffinity): options that give one, or
         // that make the change they look for (Miniature Cannon: an upgrade; Mystic Lighter: an enchantment, Tezcatara's soup).
-        new(nameof(StrikeDummy), ChoiceEffect.CardToDeck, ShopIcon: false),
-        new(nameof(FakeStrikeDummy), ChoiceEffect.CardToDeck, ShopIcon: false),
-        new(nameof(MiniatureCannon), ChoiceEffect.CardToDeck | ChoiceEffect.UpgradeCard, ShopIcon: false),
-        new(nameof(MysticLighter), ChoiceEffect.CardToDeck | ChoiceEffect.EnchantCard, ShopIcon: false),
-        new(nameof(VitruvianMinion), ChoiceEffect.CardToDeck, ShopIcon: false),
+        // On cards you're offered (rewards, event choices, the shop), a tab on the ones they apply to.
+        new(nameof(StrikeDummy), ChoiceEffect.CardToDeck, ShopIcon: false, CardTab: true),
+        new(nameof(FakeStrikeDummy), ChoiceEffect.CardToDeck, ShopIcon: false, CardTab: true),
+        new(nameof(MiniatureCannon), ChoiceEffect.CardToDeck | ChoiceEffect.UpgradeCard, ShopIcon: false, CardTab: true),
+        new(nameof(MysticLighter), ChoiceEffect.CardToDeck | ChoiceEffect.EnchantCard, ShopIcon: false, CardTab: true),
+        new(nameof(VitruvianMinion), ChoiceEffect.CardToDeck, ShopIcon: false, CardTab: true),
         // HP loss outside combat (ModifyHpLostAfterOsty; Beating Remnant only caps in combat).
         new(nameof(TungstenRod), ChoiceEffect.HpLoss, Expect: ChoiceEffect.HpLoss),
         // Gold (ModifyGoldGained, AfterGoldGained).

@@ -22,9 +22,6 @@ namespace SpireQoL.Features;
 /// </summary>
 public sealed partial class RunRemindersFeature
 {
-    /// <summary>Settings key prefix of these tabs ("boost:StrikeDummy").</summary>
-    public const string BoostPrefix = "boost:";
-
     private readonly Dictionary<ulong, (CardModel Model, CardDecor Decor)> _offeredTabs = new();
     private int _offeredFrame;
 
@@ -40,16 +37,18 @@ public sealed partial class RunRemindersFeature
         // Relics and settings change rarely: the tabs are worked out again a few times a second, drawn every frame.
         var recompute = ++_offeredFrame % 10 == 0;
         var seen = new HashSet<ulong>();
-        foreach (var node in nodes)
+        foreach (var (node, place) in nodes)
         {
             CardModel? model;
             try { model = node.Model; } catch { continue; }
             if (model == null || model.Pile != null) continue;
             var id = node.GetInstanceId();
             seen.Add(id);
+            // While an event option runs, what it offers (the odds log).
+            if (_window is { } w) w.Offered.Add(model);
             if (recompute || !_offeredTabs.TryGetValue(id, out var have) || have.Model != model)
             {
-                have = (model, Boosts(model, me));
+                have = (model, Boosts(model, me, place));
                 _offeredTabs[id] = have;
             }
             if (!have.Decor.IsEmpty) CardOverlayRenderer.Outside.Add((node, have.Decor));
@@ -57,17 +56,18 @@ public sealed partial class RunRemindersFeature
         foreach (var gone in _offeredTabs.Keys.Where(k => !seen.Contains(k)).ToList()) _offeredTabs.Remove(gone);
     }
 
-    /// <summary>A tab per relic of yours that boosts this card (or a card it makes), each with its own setting.</summary>
-    private CardDecor Boosts(CardModel card, Player me)
+    /// <summary>A tab per relic of yours that boosts this card (or a card it makes), with the relic's switch for this place.</summary>
+    private CardDecor Boosts(CardModel card, Player me, ReminderPlace place)
     {
         var decor = new CardDecor();
         foreach (var relic in me.Relics)
         {
             var name = relic.GetType().Name;
             if (CardAffinity.For(name) is not { Kind: AffinityKind.Boosts } rule) continue;
-            if (!_ctx.Settings.TabEnabled(BoostPrefix + name)) continue;
+            var key = ChoiceReminders.Key(place, name);
+            if (ChoiceReminders.For(name) is not { CardTab: true } || !_ctx.Settings.TabEnabled(key)) continue;
             if (!CardAffinity.AppliesTo(rule, card) && !CardAffinity.Made(card).Any(m => CardAffinity.AppliesTo(rule, m))) continue;
-            decor.AddTab(BoostPrefix + name, GameIcons.Relic(relic));
+            decor.AddTab(key, GameIcons.Relic(relic));
         }
         return decor;
     }
@@ -76,22 +76,24 @@ public sealed partial class RunRemindersFeature
     /// The card nodes on screen that you're being offered: the card reward screen, an event's choice of cards out of combat
     /// (choose a card, a bundle, a grid of cards), and the open shop.
     /// </summary>
-    private static List<NCard> OfferedCards()
+    private static List<(NCard Node, ReminderPlace Place)> OfferedCards()
     {
-        var found = new List<NCard>();
+        var found = new List<(NCard, ReminderPlace)>();
         try
         {
             var top = NOverlayStack.Instance?.Peek();
             var offer = top is NCardRewardSelectionScreen
                 || (!Sts2State.InCombat && top is NChooseACardSelectionScreen or NChooseABundleSelectionScreen or NSimpleCardSelectScreen);
-            if (offer && top is CanvasItem screen && GodotObject.IsInstanceValid(screen) && screen.IsVisibleInTree()) Collect(screen, found, 0);
-            if (NMerchantRoom.Instance?.Inventory is { } inv && GodotObject.IsInstanceValid(inv) && inv.IsOpen) Collect(inv, found, 0);
+            // A card reward (after a fight, or one an event gives) is the Card rewards column; an event's own choice of cards the Events one.
+            var place = top is NCardRewardSelectionScreen ? ReminderPlace.Reward : ReminderPlace.Event;
+            if (offer && top is CanvasItem screen && GodotObject.IsInstanceValid(screen) && screen.IsVisibleInTree()) Collect(screen, found, place, 0);
+            if (NMerchantRoom.Instance?.Inventory is { } inv && GodotObject.IsInstanceValid(inv) && inv.IsOpen) Collect(inv, found, ReminderPlace.Shop, 0);
         }
         catch { /* a screen closing under us */ }
         return found;
     }
 
-    private static void Collect(Node node, List<NCard> into, int depth)
+    private static void Collect(Node node, List<(NCard, ReminderPlace)> into, ReminderPlace place, int depth)
     {
         if (depth > 14) return;
         foreach (var child in node.GetChildren())
@@ -99,10 +101,10 @@ public sealed partial class RunRemindersFeature
             if (!GodotObject.IsInstanceValid(child)) continue;
             if (child is NCard card)
             {
-                if (card.IsVisibleInTree()) into.Add(card);
+                if (card.IsVisibleInTree()) into.Add((card, place));
                 continue;
             }
-            Collect(child, into, depth + 1);
+            Collect(child, into, place, depth + 1);
         }
     }
 }
