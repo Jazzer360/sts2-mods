@@ -55,7 +55,7 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
             }
             catch
             {
-                shuffles = PlayFacts.CardsDrawn(c, hand.Count) * CardIndicatorsFeature.PlayCount(c) > Sts2State.DrawPileCount(me);
+                shuffles = PlayFacts.CardsDrawnTotal(c, hand.Count, CardIndicatorsFeature.PlayCount(c)) > Sts2State.DrawPileCount(me);
             }
             if (shuffles) _ctx.Decor.For(c).AddTab("shuffle", GameIcons.DiscardPile());
         }

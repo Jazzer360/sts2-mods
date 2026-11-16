@@ -116,6 +116,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         /// <summary>See PlayRecord.RanDuringPause.</summary>
         public string? RanDuringPause;
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
+        /// <summary>See PlayRecord.TargetDraws.</summary>
+        public int? TargetDraws;
         public PlaySnapshot? FullBefore, FullAfter;
     }
 
@@ -269,6 +271,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         /// action, so a teammate's queued play runs): its effects are inside this play's before/after snapshots.
         /// </summary>
         public string? RanDuringPause;
+        /// <summary>What a target-dependent draw card's plays draw at this target, from the board as it started (PlayFacts.TargetDraws).</summary>
+        public int? TargetDraws;
         /// <summary>Every power on every creature when the play started and when it finished.</summary>
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
         /// <summary>Energy, stars, gold, HP, cards and relics when the play started and finished.</summary>
@@ -404,6 +408,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                         rec.Facts = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null;
                         rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
                         if (_history != null) rec.StaleBecause = StaleBecause(_history.Entries.ToList(), card, _history.Entries.Count(), play.Player);
+                    }
+                    // A card whose draws depend on its target (Ki Hop, Wrest): what its plays draw at this target, from the
+                    // board as it starts (its own hits and Wrest's pull change the target's Impaled during the play).
+                    if (play.Target != null)
+                    {
+                        try { rec.TargetDraws = PlayFacts.TargetDraws(card, play.Target, rec.Facts?.Plays ?? CardIndicatorsFeature.PlayCount(card)); }
+                        catch (Exception e) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(e, "audit-target-draws"); }
                     }
                 }
                 _running[action] = rec;
@@ -676,7 +687,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Lag = captured ? rec.Lag : _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
             Before = rec.Before, Target = target, UpgradeBefore = captured ? rec.UpgradeBefore : -1,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded, RanDuringPause = rec.RanDuringPause,
-            PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
+            PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter, TargetDraws = captured ? rec.TargetDraws : null,
             FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
             StaleBecause = captured ? rec.StaleBecause : StaleBecause(hist, card, start, me),
         };
@@ -961,8 +972,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (spent != "StretchPower" && ownTypes.Contains(spent)) continue;
                 var after = w.PowersAfter.TryGetValue((me.Creature, spent), out var sa) ? sa : 0;
                 var tabbed = sourceOf.ContainsKey(spent);
-                if (tabbed && after >= before) issues.Add($"didn't fire: {spent} (still {after})");
-                if (!tabbed && after < before) issues.Add($"no tab: {spent} spent ({before}→{after})");
+                // Spent: the history shows it going down, even when the card gives it back (Cho Ki re-applies the
+                // Stretch it had, so the amount ends where it started).
+                var wasSpent = after < before || entries.OfType<PowerReceivedEntry>()
+                    .Any(p => p.Actor == me.Creature && p.Power.GetType().Name == spent && p.Amount < 0);
+                if (tabbed && !wasSpent) issues.Add($"didn't fire: {spent} (still {after})");
+                if (!tabbed && wasSpent) issues.Add($"no tab: {spent} spent ({before}→{after})");
             }
             // Free card powers: a "free:" tab (plain or crossed) exactly when the play takes a charge.
             foreach (var spent in SpireQoL.Procs.FreeCards.Powers)
@@ -1026,8 +1041,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
         // A card whose draws depend on its target (Ki Hop, Wrest): what it draws at the target it was played at.
         var expectedDraws = f == null ? 0 : f.Draws;
-        if (f != null && w.Target != null && TargetDrawsBefore(w) is { } td)
-            expectedDraws = f.DrawsWithOwn(td * f.Plays) ?? Math.Max(0, f.Draws - f.OwnDraws + td * f.Plays);
+        if (f != null && w.TargetDraws is { } td)
+            expectedDraws = f.DrawsWithOwn(td) ?? Math.Max(0, f.Draws - (f.OwnDraws - f.EnchantmentDraws) + td);
         var exhausts = entries.OfType<CardExhaustedEntry>().Count(d => d.Card.Owner == me);
         var discards = entries.OfType<CardDiscardedEntry>().Count(d => d.Card.Owner == me);
         var generated = entries.OfType<CardGeneratedEntry>().Count(d => d.Creator == me || d.Card.Owner == me);
@@ -1134,20 +1149,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var who = creature == me.Creature ? "you" : creature.Monster?.GetType().Name ?? "creature";
             issues.Add($"power went down: {type} on {who} {before}→{after}, with nothing in the play to explain it");
         }
-    }
-
-    /// <summary>
-    /// What a target-dependent draw card (Ki Hop, Wrest) draws at its target, judged from the target's powers before
-    /// the play: Wrest pulls every arrow out before it draws, so after the play the target is never Impaled.
-    /// (Wrest needs your own arrow; before the play only "Impaled" is recorded, so a teammate's arrow counts too.)
-    /// </summary>
-    private static int? TargetDrawsBefore(Window w)
-    {
-        if (w.Target == null) return null;
-        var now = PlayFacts.TargetDraws(w.Card, w.Target);
-        if (now == null || w.PowersBefore == null) return now;
-        var impaled = w.PowersBefore.TryGetValue((w.Target, "ImpaledPower"), out var a) && a > 0;
-        return impaled ? Sts2State.Var(w.Card, "Cards") : 0;
     }
 
     /// <summary>
@@ -1282,7 +1283,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var drawReactive = flashed.Any(m => DrawReactive.Contains(m.GetType().Name) || m.GetType().Name is nameof(GremlinHorn) or nameof(UnceasingTop));
         var draws = entries.OfType<CardDrawnEntry>().Count(d => !d.FromHandDraw && d.Card.Owner == me);
         var why = $"(draws: predicted {f.Draws} = own {f.OwnDraws} + set off {f.ChainedDraws}{(f.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
-        if (w.Target != null && TargetDrawsBefore(w) is { } td && td * f.Plays != f.OwnDraws)
+        if (w.TargetDraws is { } td && td != f.OwnDraws - f.EnchantmentDraws)
         {
             model.Add($"shuffle {(shuffled ? "happened" : "didn't happen")}: its draws depend on its target, and the prediction counted them for every target {why}");
             return;

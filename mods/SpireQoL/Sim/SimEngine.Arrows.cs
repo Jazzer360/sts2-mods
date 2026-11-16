@@ -70,6 +70,31 @@ public static partial class SimEngine
         return ProcCardEvent(s, CardEvent.ArrowDislodged, count, Who.You, indirect: false);
     }
 
+    /// <summary>
+    /// How many of a card's plays, from the first, start with the target still Impaled while each play hits it
+    /// <paramref name="hitsPerPlay"/> times (Ki Hop: KiHop.OnPlay checks wasImpaled before its hit). Your powered hits count your
+    /// Impaled down from <paramref name="counter"/>; at 0 one of your arrows comes loose and it starts again at 3, and the power
+    /// goes with your last arrow (ImpaledPower.AfterDamageReceived). A teammate's arrow keeps it Impaled whatever you hit.
+    /// </summary>
+    public static int PlaysStartingImpaled(bool teammateArrow, int yourArrows, int counter, int hitsPerPlay, int plays)
+    {
+        if (teammateArrow) return plays;
+        if (yourArrows <= 0) return 0;
+        counter = Math.Max(1, counter);
+        var arrows = yourArrows;
+        for (var k = 0; k < plays; k++)
+        {
+            if (arrows <= 0) return k;
+            for (var h = 0; h < hitsPerPlay && arrows > 0; h++)
+            {
+                if (--counter > 0) continue;
+                counter = 3;
+                arrows--;
+            }
+        }
+        return plays;
+    }
+
     /// <summary>Takes arrows out of an enemy's Impaled (gone with the last) and gives them back to you.</summary>
     internal static void TakeArrows(SimState s, int enemy, int count)
     {

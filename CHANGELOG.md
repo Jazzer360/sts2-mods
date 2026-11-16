@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.2.4
+#### Fixed
+- Ki Hop played twice (Glam) no longer counts the second play's draws when its first hit knocks the target's last arrow loose; Wrest played twice draws only on its first play. Shuffle Warning and draw procs count the right draws.
+- The play check no longer reports Stretch as unused after Cho Ki, which spends it and then gives the same Stretch back.
+
 ### Spire QoL 1.2.3
 #### Fixed
 - Kaiser Crab: killing one crab turns you to face the one left, as the game does, so Incoming Damage no longer counts its attack as a 50% stronger back attack.

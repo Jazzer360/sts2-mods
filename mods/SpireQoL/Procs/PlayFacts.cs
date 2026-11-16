@@ -359,7 +359,7 @@ public sealed class PlayFacts
     {
         var hand = Sts2State.Hand(me);
         var others = hand.Where(c => !ReferenceEquals(c, card)).ToList();
-        var draws = CardsDrawn(card, hand.Count) * Math.Max(1, plays);
+        var draws = CardsDrawnTotal(card, hand.Count, plays);
         var swiftDraws = 0;
         // Swift (enchantment): draws its amount when the card is played, once (Swift.AfterCardPlayed disables it).
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Swift { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } swift)
@@ -725,16 +725,52 @@ public sealed class PlayFacts
     internal static readonly HashSet<string> AllyDrawCards = new() { nameof(Constellation) };
 
     /// <summary>
-    /// Draws of one play aimed at <paramref name="target"/>, for cards whose draws depend on their target (Ki Hop:
-    /// an Impaled enemy; Wrest: one your arrow Impales). Null for other cards. The audit uses it with the play's
-    /// actual target; before the play, CardsDrawn counts them only when every possible target qualifies.
+    /// Draws of all <paramref name="plays"/> plays aimed at <paramref name="target"/>, for cards whose draws depend on their
+    /// target, from the board before the first play. Null for other cards. Ki Hop draws on each play that starts with the target
+    /// Impaled, and its own hit can loosen the last arrow (SimEngine.PlaysStartingImpaled); Wrest pulls all your arrows out on
+    /// its first play, so only that one draws. The audit takes it with the play's actual target as the play starts; the
+    /// prediction counts what the worst target would draw (CardsDrawnTotal).
     /// </summary>
-    public static int? TargetDraws(CardModel c, Creature target) => c.GetType().Name switch
+    public static int? TargetDraws(CardModel c, Creature target, int plays)
     {
-        "KiHop" => Fool.IsImpaled(target) ? Sts2State.Var(c, "Cards") : 0,
-        "Wrest" => OwnerOf(c) is { } o && Fool.ImpaledBy(target, o.Creature) != null ? Sts2State.Var(c, "Cards") : 0,
-        _ => null,
-    };
+        plays = Math.Max(1, plays);
+        switch (c.GetType().Name)
+        {
+            case "KiHop":
+            {
+                var cards = Sts2State.Var(c, "Cards");
+                if (OwnerOf(c) is not { } o) return Fool.IsImpaled(target) ? cards * plays : 0;
+                var yours = Fool.ImpaledBy(target, o.Creature);
+                var teammate = target.Powers.Any(p => p.GetType().Name == "ImpaledPower" && p.Applier != o.Creature);
+                // One hit a play (KiHop.OnPlay: DamageCmd.Attack with no hit count).
+                return cards * SimEngine.PlaysStartingImpaled(teammate, yours == null ? 0 : Fool.ArrowsIn(yours),
+                    yours == null ? 3 : Fool.HitCounter(yours), 1, plays);
+            }
+            case "Wrest":
+                return OwnerOf(c) is { } wo && Fool.ImpaledBy(target, wo.Creature) != null ? Sts2State.Var(c, "Cards") : 0;
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// How many cards all <paramref name="plays"/> plays of this card draw right now. A card whose draws depend on its target
+    /// counts what the worst target it could be aimed at would draw.
+    /// </summary>
+    public static int CardsDrawnTotal(CardModel c, int handCount, int plays)
+    {
+        plays = Math.Max(1, plays);
+        if (!TargetDrawCards.Contains(c.GetType().Name)) return CardsDrawn(c, handCount) * plays;
+        try
+        {
+            var targets = c.CombatState?.HittableEnemies.Where(e => e.IsAlive).ToList();
+            return targets is { Count: > 0 } ? targets.Min(t => TargetDraws(c, t, plays) ?? 0) : 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
 
     /// <summary>Every enemy the card could target matches (none to target: false).</summary>
     private static bool AllTargets(CardModel c, Func<Creature, bool> match)
