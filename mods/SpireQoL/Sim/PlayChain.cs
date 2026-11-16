@@ -32,6 +32,13 @@ public static class PlayChain
         public int ExhaustedFromHand;
         /// <summary>Cards it exhausts from the draw pile (Cleanse): the pile is smaller when it draws.</summary>
         public int ExhaustedFromDrawPile;
+        /// <summary>
+        /// Cards the play takes off the top of your draw pile before the draws (Ki Chant looks at its Cards): one of
+        /// them goes to your hand (AddedToHandDuringPlay), the rest to your discard pile.
+        /// </summary>
+        public int TakenFromDrawPile;
+        /// <summary>Cards the play itself puts into your hand from the draw pile (Ki Chant's pick): they take hand room.</summary>
+        public int AddedToHandDuringPlay;
         /// <summary>Cards in hand before the play, this card included.</summary>
         public int HandCount;
         public int DrawPile;
@@ -58,10 +65,12 @@ public static class PlayChain
         /// <summary>No Draw or Fiddle: no draws during your turn.</summary>
         public bool Blocked;
         /// <summary>
-        /// It puts your hand into the draw pile and shuffles your discard pile in before drawing (Reboot:
-        /// CardPileCmd.Shuffle in its play, whatever the piles hold).
+        /// It shuffles your discard pile into your draw pile before drawing (Reboot: CardPileCmd.Shuffle in its play,
+        /// whatever the piles hold; Ki Chant when the draw pile is short).
         /// </summary>
         public bool ShufflesFirst;
+        /// <summary>It puts your hand into the draw pile before that shuffle (Reboot): a whole hand of room.</summary>
+        public bool HandShuffledIn;
         /// <summary>
         /// Cards your powers add to your hand after the play (CalamityPower.AfterCardPlayed): they run
         /// before your relics' draws (Iron Club, Game Piece) and take hand room first.
@@ -98,29 +107,35 @@ public static class PlayChain
             after += (i.IronClubCount % i.IronClubEvery + Math.Max(1, i.Plays)) / i.IronClubEvery;
         var chained = during + after;
 
-        int room, cards, pile;
-        if (i.ShufflesFirst)
+        int room, pile, discard;
+        if (i.HandShuffledIn)
         {
             // Your hand is in the draw pile with everything else: a whole hand of room.
             pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile) + i.DiscardPile + Math.Max(0, i.HandCount - 1 - i.ExhaustedFromHand);
-            cards = pile;
+            discard = 0;
             room = MaxHand;
         }
         else
         {
-            // The card has left your hand; cards it exhausts from hand first make room.
-            room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand - i.DiscardedBeforeDraw));
+            // The card has left your hand; cards it exhausts from hand first make room, cards it puts there take it.
+            room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand - i.DiscardedBeforeDraw) - i.AddedToHandDuringPlay);
             pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile);
-            // Drawing stops when both piles are empty (CardPileCmd.Draw).
-            cards = pile + i.DiscardPile + i.DiscardedBeforeDraw;
+            discard = i.DiscardPile + i.DiscardedBeforeDraw;
+            if (i.ShufflesFirst) { pile += discard; discard = 0; }
+            // Ki Chant: the cards it looks at leave the draw pile; the ones it doesn't take go to the discard pile.
+            var taken = Math.Min(i.TakenFromDrawPile, pile);
+            pile -= taken;
+            discard += Math.Max(0, taken - i.AddedToHandDuringPlay);
         }
+        // Drawing stops when both piles are empty (CardPileCmd.Draw).
+        var cards = pile + discard;
         if (i.Blocked) return new DrawResult(0, chained, i.ShufflesFirst);
         var first = Math.Min(Math.Min(i.OwnDraws + during, room), cards);
         if (i.EnchantmentDraws > 0)
             first += Math.Min(Math.Min(i.EnchantmentDraws, Math.Max(0, room - first - i.AddedToHandBeforeEnchantment)), cards - first);
         var lateRoom = Math.Max(0, room - first - i.AddedToHandAfterPlay);
         var draws = first + Math.Min(Math.Min(after, lateRoom), cards - first);
-        var shuffles = i.ShufflesFirst || (draws > pile && i.DiscardPile + i.DiscardedBeforeDraw > 0);
+        var shuffles = i.ShufflesFirst || (draws > pile && discard > 0);
         return new DrawResult(draws, chained, shuffles);
     }
 

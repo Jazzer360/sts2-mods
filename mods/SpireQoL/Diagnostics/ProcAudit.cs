@@ -1244,6 +1244,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Distinct().ToList();
         var tracked = new HashSet<string>(tabbed);
         foreach (var s in RelicSpecs.All) tracked.Add(s.TypeName);
+        tracked.UnionWith(RelicTracking.CountsForLater);
         // Random auto-plays (The Fool) can change any relic's state the way their own plays would (Ripple Basin
         // armed until an attack is played): which cards they were is a roll.
         if (UnpredictedAutoPlay(w, entries, me)) foreach (var r in me.Relics) tracked.Add(r.GetType().Name);

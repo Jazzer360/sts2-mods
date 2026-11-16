@@ -466,6 +466,7 @@ public sealed class PlayFacts
             DiscardedBeforeDraw = !DiscardThenDrawCards.Contains(Card.GetType().Name) ? 0
                 : Card.GetType().Name == "TheHermit" ? Math.Max(0, Math.Min(1, OtherHandCards) - ExhaustsOthers) : Discards,
             ShufflesFirst = ShufflesFirst(Card),
+            HandShuffledIn = ShuffleCards.Contains(Card.GetType().Name),
             // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
             AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
             // Motif draws its amount per melody (Wah, Cho, Ki) this card plays first this turn, once (a replay's
@@ -493,6 +494,14 @@ public sealed class PlayFacts
                     break;
                 case CentennialPuzzle when !Sts2State.Private(r, "UsedThisCombat", true): i.CentennialPuzzle += Sts2State.Var(r, "Cards", 3); break;
             }
+        }
+        if (ShuffleWhenShortCards.Contains(Card.GetType().Name))
+        {
+            // Ki Chant takes the top cards it looks at off the draw pile: one to your hand, the rest discarded.
+            var looked = KiChantLooksAt(Card);
+            var available = drawPile + (i.ShufflesFirst ? i.DiscardPile : 0);
+            i.TakenFromDrawPile = Math.Min(looked * Math.Max(1, Plays), available);
+            i.AddedToHandDuringPlay = looked > 0 ? Math.Min(Math.Max(1, Plays), i.TakenFromDrawPile) : 0;
         }
         _drawInputs = i;
         var result = PlayChain.Resolve(i);

@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.1
+#### Fixed
+- Draw counts after Ki Chant (Motif's draws, the Shuffle Warning): its shuffle when your draw pile is short no longer counts your hand as shuffled in (only Reboot does that), the card it puts into your hand takes hand room, and the cards it looks at leave the draw pile before anything draws.
+- Byrdpip's count of Byrd Swoop plays no longer reported as an untracked relic: it only matters at rest sites, and its counter shows it.
+
 ### Spire QoL 1.11.0
 #### Added
 - Map reminders: on the map, left of each row of the legend, your relics and quest cards that make that kind of room unusually good or bad: Black Star and Sling of Courage by Elite, Eternal Feather and Girya by Rest, Planisphere and Dowsing Rod's quest card by Unknown, Meal Ticket by Merchant, Maw Bank crossed by Merchant until you buy something, and more. Heals on entering and counts show under the icon. Hover one for its tooltip and to light up those rooms on the map. Each has a switch in the new Map column.

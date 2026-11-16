@@ -14,7 +14,7 @@ internal static class RelicTracking
         // ---- start of combat (effect on screen before your first decision)
         ["Anchor"] = "none: BeforeCombatStart block",
         ["FakeAnchor"] = "none: BeforeCombatStart block",
-        ["Byrdpip"] = "none: BeforeCombatStart pet",
+        ["Byrdpip"] = "none: BeforeCombatStart pet; counts Byrd Swoop plays toward its rest-site Evolve option (its counter shows them; CountsForLater)",
         ["DelicateFrond"] = "none: BeforeCombatStart potion",
         ["FakeSneckoEye"] = "none: BeforeCombatStart Confused",
         ["SneckoEye"] = "none: BeforeCombatStart Confused, bigger hand draw",
@@ -133,4 +133,10 @@ internal static class RelicTracking
         ["LavaLamp"] = "none: notes damage taken for its end-of-combat upgrade",
         ["BookRepairKnife"] = "none: heals when enemies die to Doom",
     };
+
+    /// <summary>
+    /// Relics whose counter changes with plays in a fight but pays off only outside it (Byrdpip counts Byrd Swoop plays
+    /// for its rest-site option): the counter is what shows it, so the proc audit doesn't ask for a tab or tracker row.
+    /// </summary>
+    public static readonly HashSet<string> CountsForLater = new() { "Byrdpip" };
 }

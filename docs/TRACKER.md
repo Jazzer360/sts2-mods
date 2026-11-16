@@ -217,6 +217,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 ---
 
 ## 6. Shuffle warning → `shuffle-warning`
+- [x] 1.11.1: Ki Chant's own shuffle keeps your hand out of the draw pile (only Reboot puts it in), its pick takes hand room, its looked-at cards leave the draw pile (auto-report: Motif's draws past a full hand).
 
 - ~~Draw-pile counter~~: dropped in 0.3.0 (the card badges are enough).
 - [~] Discard pile tab on draw cards in hand whose draw would exceed the draw pile (forcing a reshuffle).
