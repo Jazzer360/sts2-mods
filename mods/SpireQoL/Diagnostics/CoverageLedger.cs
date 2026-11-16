@@ -597,6 +597,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     private static void CheckRelicTracking(Type t)
     {
         CheckRelicChoices(t);
+        CheckRelicCards(t);
         var name = t.Name;
         var listed = CoverageLedger.RelicFightHooks.Any(r => r.Type == name);
         if (!listed)
@@ -637,6 +638,51 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
             .Select(m => m.Name).Distinct().ToList();
         if (hooks.Count == 0) return;
         Unexpected(name, "relic-choice-unreviewed", $"a relic that changes choices outside combat with no reminder rule and no reviewed reason (RelicChoiceTracking): {string.Join(", ", hooks)}.");
+    }
+
+    /// <summary>Hooks where a relic changes or boosts certain cards (docs/CARD_ODDS.md): read for a test of the card.</summary>
+    internal static readonly string[] CardHooks =
+    {
+        "TryModifyCardBeingAddedToDeck", "TryModifyCardBeingAddedToDeckLate", "TryModifyCardRewardOptions", "TryModifyCardRewardOptionsLate",
+        "ModifyMerchantCardCreationResults", "ModifyDamageAdditive", "ModifyDamageMultiplicative", "ModifyBlockAdditive", "ModifyBlockMultiplicative",
+    };
+
+    /// <summary>What a hook reads when it tests a card: its tags, type, upgrade, enchantment, rarity, keywords or cost, or an enchantment's own check.</summary>
+    private static readonly HashSet<string> CardTests = new()
+    {
+        "CardModel.get_Tags", "CardModel.get_Type", "CardModel.get_IsUpgraded", "CardModel.get_IsUpgradable", "CardModel.get_CurrentUpgradeLevel",
+        "CardModel.get_Enchantment", "CardModel.get_Rarity", "CardModel.get_Keywords", "CardModel.get_EnergyCost", "EnchantmentModel.CanEnchant",
+        "EggRelicHelper.UpgradeValidCards",
+    };
+
+    /// <summary>
+    /// A relic whose card hooks (<see cref="CardHooks"/>) test a card has a card rule (Data/CardAffinity) or a reviewed reason
+    /// (CardAffinity.Reviewed): Run Reminders shows it beside event options only when a card it applies to can come up.
+    /// Read from the relic's own overrides' code, so relics new in a game update are caught too.
+    /// </summary>
+    internal static List<string> CardTestingHooks(Type t)
+    {
+        var hooks = new List<string>();
+        foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+        {
+            if (!m.IsVirtual || m.GetBaseDefinition().DeclaringType == t || !CardHooks.Contains(m.Name)) continue;
+            List<CodeInstruction> code;
+            try { code = PatchProcessor.GetOriginalInstructions(m); } catch { continue; }
+            if (code.Any(i => i.operand is MethodBase mb && mb.DeclaringType != null
+                    && (CardTests.Contains(mb.DeclaringType.Name + "." + mb.Name)
+                        || (mb.Name == "CanEnchant" && typeof(EnchantmentModel).IsAssignableFrom(mb.DeclaringType)))))
+                hooks.Add(m.Name);
+        }
+        return hooks;
+    }
+
+    private static void CheckRelicCards(Type t)
+    {
+        var name = t.Name;
+        if (SpireQoL.Data.CardAffinity.For(name) != null || SpireQoL.Data.CardAffinity.Reviewed.ContainsKey(name)) return;
+        var hooks = CardTestingHooks(t);
+        if (hooks.Count == 0) return;
+        Unexpected(name, "relic-card-unreviewed", $"a relic whose hooks test a card, with no card rule and no reviewed reason (CardAffinity): {string.Join(", ", hooks)}.");
     }
 
     private static void Unexpected(string type, string kind, string details)

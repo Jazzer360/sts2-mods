@@ -507,6 +507,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 1.6.0 (decision #57): Rest Preview as a sum beside your character, with relic and boss-relic lines; Mend preview on a hovered teammate (checked as `rest-mend`); no second rest offered while the heal plays out.
 - [ ] Play test: Rest Preview's sum beside your character (and a teammate's with Mend); free-card `?` and crossed tabs.
 - [x] 1.6.1: Guide's Sozu slash centred; Retain and Sly example card with both keywords in its text.
+- [x] 1.6.2 (decision #58): eggs and Fresnel Lens beside an event option only when a card they change can come from it (CardAffinity, option cards read from the code; scan in the catalog tests).
+- [ ] Card odds phase 2 (docs/CARD_ODDS.md): the chance under event icons. Phase 3: Strike Dummy, Miniature Cannon, Mystic Lighter, Vitruvian Minion tabs on reward and shop cards (and Begone!'s Minion Strike). Then the Inspect panel.
 - [ ] Test in game: the Guide page's Rest Preview, Run Reminders examples and the green 0 on the free-card examples.
 - [ ] **Dread mode:** boss stats and moves change in Dread runs (read live from intents); Dominion powers reviewed in the ledger. Queen's Dread opening applies 99 Frail, Weak and Vulnerable.
 

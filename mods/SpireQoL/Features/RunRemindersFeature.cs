@@ -35,7 +35,7 @@ namespace SpireQoL.Features;
 ///    methods but not the options it opens next. That's the option's rule, not a roll.
 /// Rules: Data/ChoiceReminders.cs.
 /// </summary>
-public sealed class RunRemindersFeature : IFeature, IFrameFeature
+public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 {
     private const string NodeName = "SpireQoL_Reminders";
     private const float EventIcon = 40f;
@@ -492,6 +492,8 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
                     {
                         var name = relic.GetType().Name;
                         if (ChoiceReminders.For(name) is not { } rule || (rule.On & effects) == 0 || !_ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, name))) continue;
+                        // A relic that changes only certain cards: only when one of them can come from this option.
+                        if (CardAffinity.For(name) is { Kind: AffinityKind.Modifies } affinity && !CanGet(option, me, affinity)) continue;
                         icons.Add((relic, (rule.CrossedOn & effects) != 0));
                     }
                 }
@@ -702,13 +704,19 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
     {
         if (Effects.TryGetValue(option, out var box)) return box.Value;
         var calls = new HashSet<string>();
+        var cards = new OptionCards();
         try
         {
-            if (OnChosenProp?.GetValue(option) is Delegate d) Walk(d.Method, d.Method.DeclaringType, calls, new HashSet<MethodBase>(), 0);
+            if (OnChosenProp?.GetValue(option) is Delegate d)
+            {
+                cards.Target = d.Target;
+                Walk(d.Method, d.Method.DeclaringType, calls, new HashSet<MethodBase>(), 0, cards);
+            }
             // An ancient's relic: what it does when you take it.
             if (option.Relic is { } relic && relic.GetType().GetMethod(nameof(RelicModel.AfterObtained)) is { } obtained && obtained.DeclaringType == relic.GetType())
             {
-                Walk(obtained, relic.GetType(), calls, new HashSet<MethodBase>(), 0);
+                cards.Target ??= relic;
+                Walk(obtained, relic.GetType(), calls, new HashSet<MethodBase>(), 0, cards);
             }
         }
         catch (Exception ex)
@@ -717,6 +725,7 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
         }
         var effects = ChoiceReminders.EffectsOf(calls);
         Effects.AddOrUpdate(option, new StrongBox<ChoiceEffect>(effects));
+        CardsRead.AddOrUpdate(option, cards);
         return effects;
     }
 
@@ -725,7 +734,7 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
     /// into its own class and the classes nested in it (lambdas, async state machines), and into a
     /// game mode's static methods (Blitz's Neow rewards).
     /// </summary>
-    private static void Walk(MethodBase method, Type? owner, HashSet<string> calls, HashSet<MethodBase> seen, int depth)
+    private static void Walk(MethodBase method, Type? owner, HashSet<string> calls, HashSet<MethodBase> seen, int depth, OptionCards cards)
     {
         if (depth > 6 || !seen.Add(method)) return;
         var body = method.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType
@@ -739,6 +748,7 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
         {
             return; // unreadable
         }
+        cards.Read(code);
         foreach (var ins in code)
         {
             if (ins.operand is not MethodBase mb || mb.DeclaringType == null) continue;
@@ -747,16 +757,16 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
             // The card it makes is a curse (Wuppy's Injury: ModelDb.Card<Injury>; the Museum's pick from the curse pool): whatever
             // command adds it, a curse joins the deck.
             if (MakesCurse(mb)) calls.Add(ChoiceReminders.CurseMade);
-            if (owner != null && IsWithin(mb.DeclaringType, owner)) Walk(mb, owner, calls, seen, depth + 1);
+            if (owner != null && IsWithin(mb.DeclaringType, owner)) Walk(mb, owner, calls, seen, depth + 1, cards);
             // An event's own part it creates (the Crystal Sphere's minigame, and the items it hides: card rewards, a curse, gold,
             // potions): everything that class does is something the option can do.
             else if (ins.opcode == OpCodes.Newobj && mb.DeclaringType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Events.Custom") == true)
             {
                 foreach (var m in mb.DeclaringType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
-                    Walk(m, mb.DeclaringType, calls, seen, depth + 1);
+                    Walk(m, mb.DeclaringType, calls, seen, depth + 1, cards);
             }
             // A game mode's own rewards (Blitz's Neow option runs BlitzRunModel.GiveNeowRewards).
-            else if (mb.IsStatic && typeof(RunModel).IsAssignableFrom(mb.DeclaringType)) Walk(mb, mb.DeclaringType, calls, seen, depth + 1);
+            else if (mb.IsStatic && typeof(RunModel).IsAssignableFrom(mb.DeclaringType)) Walk(mb, mb.DeclaringType, calls, seen, depth + 1, cards);
         }
     }
 

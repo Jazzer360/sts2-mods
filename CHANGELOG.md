@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.6.2
+#### Fixed
+- Run Reminders: Fresnel Lens and the eggs show beside an event option only when a card they change can come from it, read from the option's own code (its reward's pool and filter, its fixed cards, a transform's pool). A curse no longer gets Fresnel Lens, and "choose a Power" no longer gets Molten Egg.
+
 ### Spire QoL 1.6.1
 #### Fixed
 - Guide page: the red slash sits across Sozu's icon in the shop example, and the Retain and Sly example card shows both keywords in its text, as it would in your hand.
