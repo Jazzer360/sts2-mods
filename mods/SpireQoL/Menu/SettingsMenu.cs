@@ -27,9 +27,9 @@ namespace SpireQoL.Menu;
 /// </summary>
 public sealed partial class SettingsMenu
 {
-    private static readonly Color Accent = new(1f, 0.55f, 0.1f);
-    private static readonly Color Text = new(0.92f, 0.9f, 0.85f);
-    private static readonly Color Muted = new(0.68f, 0.66f, 0.62f);
+    internal static readonly Color Accent = new(1f, 0.55f, 0.1f);
+    internal static readonly Color Text = new(0.92f, 0.9f, 0.85f);
+    internal static readonly Color Muted = new(0.68f, 0.66f, 0.62f);
     private static readonly Color RowA = new(1, 1, 1, 0.035f);
     private static readonly Color RowB = new(1, 1, 1, 0f);
 
@@ -207,7 +207,7 @@ public sealed partial class SettingsMenu
     /// NHotkeyManager.PushHotkeyPressedBinding by reflection: v0.113.0 added an optional sequence parameter,
     /// and a direct call compiled against one game version is a missing method on the other (decision #32).
     /// </summary>
-    private static void PushHotkey(NHotkeyManager hk, string key, Action action)
+    internal static void PushHotkey(NHotkeyManager hk, string key, Action action)
     {
         var m = typeof(NHotkeyManager).GetMethods().FirstOrDefault(x => x.Name == nameof(NHotkeyManager.PushHotkeyPressedBinding)
             && x.GetParameters() is { Length: >= 2 } p && p[0].ParameterType == typeof(string) && p[1].ParameterType == typeof(Action))
@@ -369,6 +369,8 @@ public sealed partial class SettingsMenu
             S.ProcIndirect, v => S.ProcIndirect = v);
         Option("Chance under event icons", "Run Reminders: under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
             S.EventOdds, v => S.EventOdds = v);
+        Option("Inspect event cards", "Run Reminders: a magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
+            S.EventInspect, v => S.EventInspect = v);
         Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
             S.PulseOneStepEarly, v => S.PulseOneStepEarly = v);
         Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time (nothing personal), so they can be fixed.",
@@ -647,6 +649,7 @@ public sealed partial class SettingsMenu
         Combat.TurnEndModel.CountTeammateHands = d.TeammateHands;
         S.PulseOneStepEarly = d.PulseOneStepEarly;
         S.EventOdds = d.EventOdds;
+        S.EventInspect = d.EventInspect;
         S.EtherealOpacity = d.EtherealOpacity;
         S.FlashHz = d.FlashHz;
         foreach (var (id, _, _) in FeatureRows)
@@ -874,7 +877,7 @@ public sealed partial class SettingsMenu
         return (b, row);
     }
 
-    private static Button MakeButton(string text, int size)
+    internal static Button MakeButton(string text, int size)
     {
         var b = new Button { Text = text, FocusMode = Control.FocusModeEnum.None };
         b.AddThemeFontSizeOverride("font_size", size);

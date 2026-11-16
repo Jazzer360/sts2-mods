@@ -159,6 +159,8 @@ public sealed partial class RunRemindersFeature
         private readonly List<RewardSource> _rewards = new();
         private readonly List<PoolSource> _loosePools = new();
         private bool _transformRandom;
+        /// <summary>You pick the card to transform (CardSelectCmd.FromDeckForTransformation), rather than all of a kind or one at random.</summary>
+        private bool _picksTransform;
         private bool _upgradesDeck;
         private bool _enchantsDeck;
 
@@ -279,6 +281,7 @@ public sealed partial class RunRemindersFeature
                     _transformRandom = true;
                 if (type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && mb.Name.StartsWith("Upgrade")) upgrades = true;
                 if (type.Name == "CardSelectCmd" && mb.Name == "FromDeckForUpgrade") picksUpgrade = true;
+                if (type.Name == "CardSelectCmd" && mb.Name == "FromDeckForTransformation") _picksTransform = true;
                 if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && mb.Name.StartsWith("Enchant")) || (type.Name == "CardSelectCmd" && mb.Name == "FromDeckForEnchantment"))
                     _enchantsDeck = true;
                 // Whose character a pool belongs to: the last call that returned one (Owner.Character, or Sea Glass's Character).
@@ -301,6 +304,9 @@ public sealed partial class RunRemindersFeature
             _rewards.Select(r => (r.Maker.IsConstructor ? "new:" + r.Odds : r.Maker.Name,
                 r.Count is { } c ? (c.Const?.ToString() ?? c.Var!) + (c.Divisor != 1 ? "/" + c.Divisor : "") : "?",
                 r.LoopValues is { } v ? string.Join(",", v) : "")).ToList();
+
+        /// <summary>For the tests: whether you pick the card a transform turns.</summary>
+        internal bool PicksTransform => _picksTransform;
 
         /// <summary>For the tests: the enchantments the code applies, and how it upgrades.</summary>
         internal (string Enchantments, bool GivesUpgraded, bool UpgradesDeck) ChangesRead =>
@@ -506,8 +512,73 @@ public sealed partial class RunRemindersFeature
             catch { return null; }
         }
 
+        /// <summary>
+        /// What the option draws from, for the Inspect screen (decision #64): one group per reward (per pass of a loop: Glass
+        /// Eye's five), its possible cards, odds and card count; one per pool a random transform draws from (a card each); the
+        /// cards it always gives; a pool used directly. Null when its cards can't be read.
+        /// </summary>
+        public List<DrawGroup>? Groups(Player me)
+        {
+            var groups = new List<DrawGroup>();
+            var fixedCards = _fixed.Select(t => ModelDb.AllCards.FirstOrDefault(c => c.GetType() == t)).OfType<CardModel>().ToList();
+            if (fixedCards.Count > 0) groups.Add(new DrawGroup(DrawKind.Certain, fixedCards, CardRarityOddsType.Uniform, null, GivesUpgraded));
+            foreach (var reward in _rewards)
+            {
+                if (Built(reward, me) is not { } built) return null;
+                var count = reward.Count is { } c ? Evaluate(c) : null;
+                foreach (var (options, possible) in built)
+                    groups.Add(new DrawGroup(DrawKind.Reward, OrderForShow(possible, options.RarityOdds), options.RarityOdds, count, GivesUpgraded));
+            }
+            foreach (var pool in _loosePools)
+            {
+                var cards = Unlocked(Pool(pool, me), me).ToList();
+                if (cards.Count > 0) groups.Add(new DrawGroup(DrawKind.Pool, OrderForShow(cards, CardRarityOddsType.Uniform), CardRarityOddsType.Uniform, null));
+            }
+            // A transform you don't choose (Pandora's Box's Strikes and Defends, a random card) draws from your whole pool:
+            // nothing to inspect there. One you choose can be explored by the card you'd pick.
+            if (_transformRandom && _picksTransform)
+            {
+                foreach (var cards in TransformPools(me))
+                    groups.Add(new DrawGroup(DrawKind.Transform, OrderForShow(cards, CardRarityOddsType.Uniform), CardRarityOddsType.Uniform, 1, GivesUpgraded));
+            }
+            return groups.Count == 0 ? null : groups;
+        }
+
+        /// <summary>Rarity, then name: the order the compendium uses.</summary>
+        private static List<CardModel> OrderForShow(IEnumerable<CardModel> cards, CardRarityOddsType odds)
+        {
+            var list = cards.Distinct();
+            // Uniform odds never offer Basic or Ancient cards (CreateForReward).
+            if (odds == CardRarityOddsType.Uniform) list = list.Where(c => c.Rarity != CardRarity.Basic && c.Rarity != CardRarity.Ancient);
+            return list.OrderBy(c => c.Rarity).ThenBy(c => c.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
+        }
+
+        /// <summary>What one card can transform into (CardFactory.GetDefaultTransformationOptions), as the Inspect screen lists it.</summary>
+        internal static List<CardModel> TransformResults(CardModel original)
+        {
+            try { return OrderForShow(CardFactory.GetDefaultTransformationOptions(original, false).Select(c => c.IsCanonical ? c : c.CanonicalInstance), CardRarityOddsType.None); }
+            catch { return new List<CardModel>(); }
+        }
+
+        /// <summary>The distinct pools your deck's cards transform from (see TransformChance), each as its full list of results.</summary>
+        private static List<List<CardModel>> TransformPools(Player me)
+        {
+            var byPool = new Dictionary<string, List<CardModel>>();
+            foreach (var original in me.Deck.Cards)
+            {
+                List<CardModel> options;
+                try { options = CardFactory.GetDefaultTransformationOptions(original, false).Select(c => c.IsCanonical ? c : c.CanonicalInstance).ToList(); }
+                catch { continue; }
+                if (options.Count == 0) continue;
+                var colorless = original.Type == CardType.Quest || original.Rarity is CardRarity.Event or CardRarity.Ancient or CardRarity.Token;
+                var key = (colorless ? "colorless" : original.Pool?.Id.ToString() ?? "?") + (original.Rarity is CardRarity.Status or CardRarity.Curse ? "/all" : "");
+                if (!byPool.TryGetValue(key, out var seen) || options.Count > seen.Count) byPool[key] = options;
+            }
+            return byPool.Values.ToList();
+        }
+
         /// <summary>One reward: the game's draw over the possible cards (CreateForReward), as CardOdds counts it.</summary>
-        private static double? RewardChance(List<CardModel> possible, Func<CardModel, bool> applies, CardRarityOddsType odds, int count)
+        internal static double? RewardChance(List<CardModel> possible, Func<CardModel, bool> applies, CardRarityOddsType odds, int count)
         {
             if (odds == CardRarityOddsType.Uniform)
             {
@@ -651,4 +722,34 @@ public sealed partial class RunRemindersFeature
             };
         }
     }
+}
+
+/// <summary>How a group of the Inspect screen is drawn from.</summary>
+internal enum DrawKind
+{
+    /// <summary>A card reward or random card: Count different cards, by its rarity odds.</summary>
+    Reward,
+    /// <summary>A random transform: each card you transform becomes one of these, equally likely.</summary>
+    Transform,
+    /// <summary>Cards the option always gives.</summary>
+    Certain,
+    /// <summary>A pool the code picks from some other way (no odds).</summary>
+    Pool,
+}
+
+/// <param name="Count">Cards drawn (a reward's offer, 1 for a transform); null when it can't be read or doesn't apply.</param>
+/// <param name="Upgraded">The option upgrades the cards it gives (Astrolabe): relic tabs are judged on them upgraded.</param>
+internal sealed record DrawGroup(DrawKind Kind, List<CardModel> Cards, CardRarityOddsType Odds, int? Count, bool Upgraded = false)
+{
+    /// <summary>The chance at least one card <paramref name="good"/> accepts comes up from this group (null: no odds for it).</summary>
+    public double? Chance(Func<CardModel, bool> good) => Kind switch
+    {
+        DrawKind.Certain => Cards.Any(good) ? 1 : 0,
+        DrawKind.Transform => Cards.Count == 0 ? null : (double)Cards.Count(good) / Cards.Count,
+        DrawKind.Reward when Count is { } n => RunRemindersFeature.OptionCards.RewardChance(Cards, good, Odds, n),
+        _ => null,
+    };
+
+    /// <summary>A random draw the player can't see beforehand (worth inspecting): more cards than it gives.</summary>
+    public bool IsRandom => Kind is DrawKind.Transform or DrawKind.Pool || (Kind == DrawKind.Reward && (Count is not { } n || Cards.Count > n));
 }

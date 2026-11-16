@@ -515,7 +515,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 1.8.0 (decision #62): tabs on offered cards (rewards, event choices, shop) for Strike Dummy, Fake Strike Dummy, Miniature Cannon, Mystic Lighter, Vitruvian Minion.
 - [ ] Test in game: boost tabs on a card reward, the shop and Sea Glass's grid; that they leave with the screen and never sit on deck-pick screens.
 - [x] 1.9.0 (decision #63): card relic checks (card-rule, odds log, exact icons in the event check); offered-card tab switches per place; Chance under event icons option.
-- [ ] Inspect panel (docs/CARD_ODDS.md).
+- [x] 1.10.0 (decision #64): the Inspect screen (groups, marks, chances, relic tabs and mark buttons, transform picker by card).
+- [ ] Test in game: Inspect at Colorful Philosophers, Room Full of Cheese, Glass Eye and a transform (Pandora's Box, an event transform); that Esc closes it and the game's keys are blocked while open.
 - [ ] Look across runs: `[audit] [odds]` lines (predicted chance against how often a card came up).
 - [ ] Test in game: the Guide page's Rest Preview, Run Reminders examples and the green 0 on the free-card examples.
 - [ ] **Dread mode:** boss stats and moves change in Dread runs (read live from intents); Dominion powers reviewed in the ledger. Queen's Dread opening applies 99 Frail, Weak and Vulnerable.

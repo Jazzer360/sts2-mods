@@ -22,7 +22,7 @@ namespace SpireQoL.Menu;
 public sealed partial class SettingsMenu
 {
     /// <summary>The example card added last (to adjust it: FreeCost).</summary>
-    private GuideCard? _lastGuideCard;
+    private ShownCard? _lastGuideCard;
 
     /// <summary>The last example card shows a free card's cost: the game's green 0.</summary>
     private void ShowLastCardFree()
@@ -318,6 +318,26 @@ public sealed partial class SettingsMenu
             + "does: here 43% that a card Fresnel Lens enchants is among the ones you're offered."));
         flow.AddChild(ev);
 
+        // Inspect: the magnifier beside an option with random cards (decision #64).
+        var inspect = Cell();
+        inspect.AddChild(Label("Inspect", 20, Accent));
+        inspect.AddChild(ExampleBox(inner =>
+        {
+            var row = UiKit.Row(10);
+            var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+            option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), 6, 12));
+            option.AddChild(UiKit.Label("Gorge: choose 2 of 8 commons", 18, Colors.White));
+            row.AddChild(option);
+            var icon = UiKit.Icon(RunRemindersFeature.InspectIcon(), 40);
+            icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            row.AddChild(icon);
+            inner.AddChild(row);
+        }));
+        inspect.AddChild(CellText("Right of an option that gives cards at random from a known pool (a reward, a transform). Click it to see "
+            + "every card it can give, grouped as it draws them; click the cards you'd be happy with to get your chance of being offered "
+            + "one. For a transform, pick the card you'd transform to see what it can become. Marks are kept for the run."));
+        flow.AddChild(inspect);
+
         // Offered cards: a tab per relic that makes the card stronger in fights in a way it doesn't show (decision #62).
         GuideCardCell(flow, Card<Begone>(), "Cards you're offered",
             "On card rewards, an event's choice of cards and in the shop: a tab for each of your relics that makes the card stronger "
@@ -369,7 +389,7 @@ public sealed partial class SettingsMenu
         var cell = Cell();
         if (card != null)
         {
-            var example = new GuideCard(card, GuideCardScale, tabs, opacity);
+            var example = new ShownCard(card, GuideCardScale, GuideCellWidth, tabs, opacity);
             _lastGuideCard = example;
             cell.AddChild(example.Root);
             _guideTicks.Add((_, _) => example.Tick());
@@ -377,112 +397,6 @@ public sealed partial class SettingsMenu
         cell.AddChild(Label(title, 20, Accent));
         cell.AddChild(CellText(text));
         flow.AddChild(cell);
-    }
-
-    /// <summary>
-    /// One of the game's cards (its own card scene, not a pooled hand card), with tabs drawn by the hand's renderer. It's
-    /// laid out once it's ready: the card frame is placed at the bottom of the box, leaving room above it for the tabs.
-    /// </summary>
-    private sealed class GuideCard
-    {
-        private const float TabRoom = 70; // above the card, in card units: the tabs stick up about this far
-
-        public Control Root { get; }
-        private readonly NCard? _card;
-        private readonly CardDecor _decor = new();
-        private readonly float _scale;
-        private CardOverlayRenderer.Example? _example;
-        private bool _visuals;
-        private bool _failed;
-        private CardModel? _fallback;
-
-        /// <summary>Show the cost as a free card makes it in your hand: the game's green 0 (NCard.UpdateEnergyCostColor).</summary>
-        public bool FreeCost { get; set; }
-
-        public GuideCard(CardModel model, float scale, IEnumerable<TabSpec> tabs, float? opacity)
-        {
-            _scale = scale;
-            var size = NCard.defaultSize * scale;
-            Root = new Control
-            {
-                CustomMinimumSize = new Vector2(GuideCellWidth, size.Y + TabRoom * scale),
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            foreach (var t in tabs) _decor.AddTab(t);
-            _decor.Opacity = opacity;
-            try
-            {
-                var scene = ResourceLoader.Load<PackedScene>("res://scenes/cards/card.tscn");
-                _card = scene.Instantiate<NCard>();
-                _card.Model = model;
-                if (model.IsMutable) _fallback = ModelDb.GetById<CardModel>(model.Id);
-                _card.Scale = new Vector2(scale, scale);
-                Root.AddChild(_card);
-            }
-            catch (Exception ex)
-            {
-                ModEntry.Log.Warn($"guide: card {model.GetType().Name} unavailable: {ex.Message}");
-                _card = null;
-            }
-        }
-
-        public void Tick()
-        {
-            if (_failed || _card == null || !GodotObject.IsInstanceValid(_card) || !_card.IsNodeReady()) return;
-            try
-            {
-                if (!_visuals)
-                {
-                    _visuals = true;
-                    _card.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
-                    if (FreeCost && _card.GetNodeOrNull<Label>("%EnergyLabel") is { } cost)
-                    {
-                        cost.Text = "0";
-                        cost.AddThemeColorOverride("font_color", StsColors.green);
-                        cost.AddThemeColorOverride("font_outline_color", StsColors.energyGreenOutline);
-                    }
-                    Quiet(_card);
-                }
-                Place();
-                _example ??= new CardOverlayRenderer.Example(_card);
-                _example.Draw(_decor);
-            }
-            catch (Exception ex)
-            {
-                // A copy with keywords that won't draw outside a fight: fall back to the plain card.
-                if (_fallback != null)
-                {
-                    _card.Model = _fallback;
-                    _fallback = null;
-                    _visuals = false;
-                    return;
-                }
-                _failed = true; // once: not every frame
-                ModEntry.Log.Warn($"guide: card example failed: {ex.Message}");
-                _card.Visible = false;
-            }
-        }
-
-        /// <summary>Moves the card so its frame sits centred at the bottom of the box (wherever the scene puts its origin).</summary>
-        private void Place()
-        {
-            if (_card!.GetNodeOrNull<Control>("%Frame") is not { } frame || frame.Size.X < 1) return;
-            var rel = Root.GetGlobalTransform().AffineInverse() * frame.GetGlobalTransform();
-            var shown = frame.Size * _scale;
-            var want = new Vector2((Root.Size.X - shown.X) / 2f, Root.Size.Y - shown.Y);
-            var delta = want - rel.Origin;
-            if (delta.LengthSquared() > 0.25f) _card.Position += delta;
-        }
-
-        private static void Quiet(Node node)
-        {
-            if (node is Control c)
-            {
-                c.MouseFilter = Control.MouseFilterEnum.Ignore;
-                c.FocusMode = Control.FocusModeEnum.None;
-            }
-            foreach (var child in node.GetChildren()) Quiet(child);
-        }
     }
 
     // ------------------------------------------------------------------ helpers

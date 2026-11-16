@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.10.0
+#### Added
+- Inspect: a magnifier (the game's inspect cursor) right of an event option that gives cards at random from a known pool. It opens a screen with every card the option can give, grouped as it draws them (Colorful Philosophers: its commons, uncommons and rares; Glass Eye: its five rewards; a transform's pool). Click the cards you'd be happy with to see the chance each reward offers one, and across the rewards. Your relics that apply to a card show their tab on it, with a button to mark all their cards. For a transform of a card you choose (Astrolabe, event transforms), pick the card you'd transform from your deck to see exactly what it can become; transforms you don't choose (Pandora's Box) draw from your whole pool and get no Inspect. Marks are kept for the run. Setting: **Inspect event cards** (General page).
+- Guide page: the Inspect button.
+
 ### Spire QoL 1.9.0
 #### Added
 - Settings: **Chance under event icons** (General page) turns the number under card relics' event icons off.

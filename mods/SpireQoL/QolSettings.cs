@@ -76,6 +76,9 @@ public sealed class QolSettings
     /// <summary>Run Reminders: the chance under a card relic's icon beside an event option (off = icon only).</summary>
     public bool EventOdds { get; set; } = true;
 
+    /// <summary>Run Reminders: the Inspect button beside event options whose cards are drawn at random from a known pool.</summary>
+    public bool EventInspect { get; set; } = true;
+
     // Card Indicators
     public float EtherealOpacity { get; set; } = 0.8f;
 

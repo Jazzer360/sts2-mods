@@ -83,6 +83,9 @@ public class OptionCardsTests
         var astrolabe = Read(relics["Astrolabe"]).ChangesRead;
         Assert.True(astrolabe.GivesUpgraded);
         Assert.False(astrolabe.UpgradesDeck);
+        // Inspect lists a transform's pool only when you pick the card: Astrolabe yes, Pandora's Box (all Strikes and Defends) no.
+        Assert.True(Read(relics["Astrolabe"]).PicksTransform);
+        Assert.False(Read(relics["PandorasBox"]).PicksTransform);
     }
 
     [Fact]

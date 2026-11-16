@@ -228,6 +228,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         {
             Anchor = ScreenAnchor.Left, OffsetX = 40, OffsetY = 0,
         });
+        _inspect = new SpireQoL.Menu.InspectScreen(_ctx.Host);
     }
 
     public void OnFrame(OverlayHost host)
@@ -242,6 +243,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         }
         TickShopWatch();
         OfferedCardTabs();
+        _inspect?.OnFrame();
     }
 
     // ------------------------------------------------------------------ card reward panel
@@ -502,6 +504,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                     .Select(i => (i.Relic, i.Crossed, _ctx.Settings.EventOdds ? i.Odds : null)).ToList()
                 : new List<(RelicModel Relic, bool Crossed, string? Odds)>();
             Show(button, icons);
+            ShowInspect(button, me);
         }
     }
 
