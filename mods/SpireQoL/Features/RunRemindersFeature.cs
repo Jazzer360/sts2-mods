@@ -324,6 +324,53 @@ public sealed class RunRemindersFeature : IFeature, IFrameFeature
     private static int GoldAfterRelics(Player me, int amount)
         => (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyGoldGained(me.RunState, null, amount, me, out _);
 
+    /// <summary>
+    /// A card reward panel row for the settings menu's Guide page (decision #56), drawn by the panel's own code; paint redraws
+    /// its flash (time, flash Hz).
+    /// </summary>
+    internal static Control ExampleRewardRow(RelicModel relic, int filled, int total, bool flash, string label, out Action<float, float> paint)
+    {
+        var row = MakeRow(relic);
+        row.Bar.Root.Visible = total > 0;
+        row.Text.Text = label;
+        paint = (time, hz) =>
+        {
+            var fill = Fill;
+            row.Root.Modulate = Colors.White;
+            if (flash)
+            {
+                var p = UiKit.Pulse(time, hz);
+                fill = fill.Lerp(Ready, p);
+                row.Root.Modulate = new Color(1, 1, 1, 0.65f + 0.35f * p);
+            }
+            if (total > 0) row.Bar.Set(filled, total, fill, Empty);
+        };
+        paint(0, 1);
+        return row.Root;
+    }
+
+    /// <summary>A shop price for the Guide page: the relic icons left of it and the net price under it, as on a shop slot.</summary>
+    internal static Control ExampleShopPrice(IEnumerable<(RelicModel Relic, bool Crossed)> icons, int price, int? net)
+    {
+        const float size = 30;
+        var row = UiKit.Row(6);
+        foreach (var (relic, crossed) in icons) row.AddChild(Crossable(IconOf(relic), size, crossed));
+        var col = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        col.AddThemeConstantOverride("separation", 0);
+        col.AddChild(UiKit.Label($"{price}", 26, new Color(1f, 0.85f, 0.3f)));
+        if (net is { } n) col.AddChild(UiKit.Label($"{n}", (int)Math.Round(size * 0.75f), NetColor));
+        row.AddChild(col);
+        return row;
+    }
+
+    /// <summary>An event option's relic icons for the Guide page, as left of an option button.</summary>
+    internal static Control ExampleEventIcons(IEnumerable<(RelicModel Relic, bool Crossed)> icons)
+    {
+        var row = UiKit.Row(4);
+        foreach (var (relic, crossed) in icons) row.AddChild(Crossable(IconOf(relic), EventIcon, crossed));
+        return row;
+    }
+
     private static Row MakeRow(RelicModel relic)
     {
         var root = UiKit.Row(6);

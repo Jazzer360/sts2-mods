@@ -24,11 +24,11 @@ internal sealed class DamageMathPanel
 {
     private static readonly Color IncomingColor = new(1f, 0.6f, 0.5f);
     private static readonly Color BlockColor = new(0.55f, 0.8f, 1f);
-    private static readonly Color TakeColor = new(1f, 0.35f, 0.3f);
-    private static readonly Color SafeColor = new(0.5f, 0.95f, 0.6f);
+    internal static readonly Color TakeColor = new(1f, 0.35f, 0.3f);
+    internal static readonly Color SafeColor = new(0.5f, 0.95f, 0.6f);
     private static readonly Color OstyColor = new(0.75f, 0.85f, 0.7f);
-    private const int FontSize = 22;
-    private const float IconSize = 30;
+    internal const int FontSize = 22;
+    internal const float IconSize = 30;
 
     private readonly Label _incoming;
     private readonly Label _block;
@@ -137,7 +137,7 @@ internal sealed class DamageMathPanel
         _result.AddThemeColorOverride("font_color", take > 0 ? TakeColor : SafeColor);
     }
 
-    private static Label Number(Color color)
+    internal static Label Number(Color color)
     {
         var l = UiKit.Label("", FontSize, color);
         l.HorizontalAlignment = HorizontalAlignment.Right;
@@ -146,7 +146,7 @@ internal sealed class DamageMathPanel
         return l;
     }
 
-    private static ColorRect Rule() => new()
+    internal static ColorRect Rule() => new()
     {
         Color = new Color(1, 1, 1, 0.6f),
         CustomMinimumSize = new Vector2(0, 2),

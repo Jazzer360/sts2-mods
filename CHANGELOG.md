@@ -6,6 +6,16 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.6.0
+#### Changed
+- Rest Preview is now a sum beside your character, like Incoming Damage: your HP, the rest heal, a line for each relic that changes it (Regal Pillow, Stone Humidifier, Night Terrors) or heals you when the boss fight starts (Pantograph, Bath Robes), and the HP you'll have, with what's wasted in orange.
+- Guide page: the example cards come from every character, and the free-card examples show the game's green 0 cost.
+#### Added
+- Rest Preview in multiplayer: hover a teammate while Mend is on offer to see what Mend would leave them with.
+- Guide page: Rest Preview sums, and Run Reminders' card reward rows, shop prices and event icons.
+#### Fixed
+- Rest Preview no longer shows a second rest while the first heal plays out.
+
 ### Spire QoL 1.5.1
 #### Changed
 - The aim marker on tabs is a third larger, growing up and to the left over the tab icon's corner, so it's easier to see.

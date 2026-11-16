@@ -1,5 +1,6 @@
 using Godot;
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Enchantments;
@@ -20,6 +21,15 @@ namespace SpireQoL.Menu;
 /// </summary>
 public sealed partial class SettingsMenu
 {
+    /// <summary>The example card added last (to adjust it: FreeCost).</summary>
+    private GuideCard? _lastGuideCard;
+
+    /// <summary>The last example card shows a free card's cost: the game's green 0.</summary>
+    private void ShowLastCardFree()
+    {
+        if (_lastGuideCard != null) _lastGuideCard.FreeCost = true;
+    }
+
     /// <summary>Per-frame redraws for the Guide page's examples (cards settling, flashing rows); cleared on every rebuild.</summary>
     private readonly List<Action<float, float>> _guideTicks = new();
 
@@ -37,6 +47,8 @@ public sealed partial class SettingsMenu
         BuildGuideTabs();
         BuildGuideCounters();
         BuildGuideIncoming();
+        BuildGuideRest();
+        BuildGuideReminders();
         BuildGuideElsewhere();
     }
 
@@ -50,17 +62,16 @@ public sealed partial class SettingsMenu
             + "Each kind of tab can be switched off on the Card tabs, Relics and powers pages.");
 
         var flow = Flow();
-        var strike = Card<StrikeIronclad>();
-        var defend = Card<DefendIronclad>();
+        // A mix of every character's cards, each one a card the example could really happen on.
 
-        GuideCardCell(flow, strike, "Plain: it sets something off",
-            "Playing this sets off what the icon shows. Here it's your third Attack this turn, so Kunai gives you Dexterity.",
+        GuideCardCell(flow, Card<DaggerThrow>(), "Plain: it sets something off",
+            "Playing this sets off what the icon shows. Here Dagger Throw is your third Attack this turn, so Kunai gives you Dexterity.",
             Tab("proc:Kunai", Relic<Kunai>()));
-        GuideCardCell(flow, strike, "A number: how much",
+        GuideCardCell(flow, Card<BallLightning>(), "A number: how much",
             "Block gained, damage dealt or the amount summoned, after everything that changes it. Only those tabs carry a number "
             + "(General: Amounts on proc tabs). Here Ornamental Fan gives 4 block.",
             Tab("proc:OrnamentalFan", Relic<OrnamentalFan>(), number: 4));
-        GuideCardCell(flow, strike, "Crossed: a warning",
+        GuideCardCell(flow, Card<KinglyPunch>(), "Crossed: a warning",
             "Playing this might be bad for you: it helps an enemy, hurts you, or gives up a relic's bonus. Often still the right play; "
             + "the slash makes sure you know. Here the enemy's Thorns hits you for 3.",
             Tab("proc:ThornsPower", Power<ThornsPower>(), crossed: true, number: 3));
@@ -68,32 +79,35 @@ public sealed partial class SettingsMenu
             "The game's targeting arrow in the corner means it happens only at some of the targets you could pick. "
             + "Here Bash kills an enemy before it acts (the skull), but only aimed at the right one. On a crossed tab, aim elsewhere to avoid it.",
             Tab("lethal", GameIcons.Skull(), aimed: true));
-        GuideCardCell(flow, strike, "Several at once",
+        GuideCardCell(flow, Card<Claw>(), "Several at once",
             "Each source gets its own tab, in a row. If the row is wider than the card, the tabs overlap. "
             + "Here: Pen Nib doubles it, Ornamental Fan gives 4 block, and the enemy curls up if you aim at it.",
             Tab("proc:PenNib", Relic<PenNib>()), Tab("proc:OrnamentalFan", Relic<OrnamentalFan>(), number: 4),
             Tab("proc:CurlUpPower", Power<CurlUpPower>(), crossed: true, aimed: true));
-        GuideCardCell(flow, strike, "Free cards: the energy saved",
+        GuideCardCell(flow, Card<SuckerPunch>(), "Free cards: the energy saved",
             "A free card (Free Attack here; also Free Skill, Free Power, Free Card) is used up by this play. The number is the energy it saves. "
             + "Crossed on a card that costs 0 or X: the free card would be wasted.",
             Tab("free:FreeAttackPower", Power<FreeAttackPower>(), number: 1));
-        GuideCardCell(flow, strike, "?: a cost you couldn't know",
+        ShowLastCardFree();
+        GuideCardCell(flow, Card<CrescentSpear>(), "?: a cost you couldn't know",
             "A free card shows every cost as 0. When nothing on screen tells you this copy's real cost (Snecko Eye re-rolled it, "
             + "Frantic Escape raised copies like it), the tab says ? instead of telling you.",
             Tab("free:FreeAttackPower", Power<FreeAttackPower>(), numberText: "?"));
-        GuideCardCell(flow, strike, "Text: played more than once",
-            "The total plays, when the card replays itself (Replay). Something else that doubles a play shows its own icon instead "
+        ShowLastCardFree();
+        GuideCardCell(flow, Card<Reave>(), "Text: played more than once",
+            "The total plays, when the card replays itself: here Transfigure gave Reave Replay, so it's played twice. "
+            + "Something else that doubles a play shows its own icon instead "
             + "(Echo Form, Burst, Duplication...).",
             Tab("replay", null, text: "2×"));
-        GuideCardCell(flow, defend, "A card: it comes back",
-            "Playing this brings that card back to your hand: here a Skill that makes Make It So return. "
+        GuideCardCell(flow, Card<Patter>(), "A card: it comes back",
+            "Playing this brings that card back to your hand: here Patter is your third Skill this turn, so Make It So comes back from your discard pile. "
             + "Also Right Hand Hand and Whistling Arrows.",
             new TabSpec("return:MakeItSo", null, Card: Card<MakeItSo>()));
-        GuideCardCell(flow, defend, "Retain and Sly",
+        GuideCardCell(flow, Card<Backflip>(), "Retain and Sly",
             "Steady: the card stays in your hand at end of turn. Master Planner: it's Sly. "
             + "These are about the card, not about playing it, and they show even when it's only for this turn.",
             Tab("retain", Enchantment<Steady>()), Tab("sly", Power<MasterPlannerPower>()));
-        GuideCardCell(flow, Card<PommelStrike>(), "Discard pile: a reshuffle",
+        GuideCardCell(flow, Card<Acrobatics>(), "Discard pile: a reshuffle",
             "It draws more cards than your draw pile has, so playing it shuffles your discard pile back into your draw pile.",
             Tab("shuffle", GameIcons.DiscardPile()));
         GuideCardCell(flow, Card<Apparition>(), "See-through: Ethereal",
@@ -187,14 +201,120 @@ public sealed partial class SettingsMenu
     {
         var cell = Cell();
         cell.AddChild(Label(title, 20, Accent));
+        cell.AddChild(ExampleBox(inner => show(new DamageMathPanel(inner))));
+        if (text.Length > 0) cell.AddChild(CellText(text));
+        flow.AddChild(cell);
+    }
+
+    // ------------------------------------------------------------------ rest sites
+
+    private void BuildGuideRest()
+    {
+        Section("Rest Preview");
+        Paragraph("At a rest site, beside your character, the same kind of sum: your HP, plus what resting heals, plus anything that changes it, "
+            + "equals the HP you'll have. In multiplayer, hover a teammate while Mend is on offer to see the sum for them.");
+
+        var heal = GameIcons.RestOption("heal");
+        var flow = Flow();
+        RestCell(flow, "Resting", "30% of your max HP, rounded down.",
+            p => p.Show(30, new[] { (heal, 23) }, 53, 77, 0));
+        RestCell(flow, "Some of it wasted", "Orange: the part of the heal past your max HP.",
+            p => p.Show(70, new[] { (heal, 7) }, 77, 77, 16));
+        RestCell(flow, "Relics change it", "A line each: Regal Pillow's +15, Stone Humidifier's max HP (the result shows the new max), Night Terrors.",
+            p => p.Show(30, new[] { (heal, 23), (Relic<RegalPillow>(), 15), (Relic<StoneHumidifier>(), 5) }, 73, 82, 0));
+        RestCell(flow, "Before the boss", "Pantograph and Bath Robes heal you when the boss fight starts: the result is the HP you start it with, "
+            + "and what they'd heal anyway counts as wasted.",
+            p => p.Show(40, new[] { (heal, 23), (Relic<Pantograph>(), 14) }, 77, 77, 11));
+        RestCell(flow, "Mending a teammate", "Hover them while Mend is on offer: Mend heals them as their own Rest would.",
+            p => p.Show(18, new[] { (GameIcons.RestOption("mend"), 21) }, 39, 70, 0));
+        _rows!.AddChild(flow);
+    }
+
+    private static void RestCell(HFlowContainer flow, string title, string text, Action<RestMathPanel> show)
+    {
+        var cell = Cell();
+        cell.AddChild(Label(title, 20, Accent));
+        cell.AddChild(ExampleBox(inner => show(new RestMathPanel(inner))));
+        cell.AddChild(CellText(text));
+        flow.AddChild(cell);
+    }
+
+    /// <summary>A dark box like a widget's, holding an example.</summary>
+    private static PanelContainer ExampleBox(Action<VBoxContainer> fill)
+    {
         var box = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin };
         box.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0, 0, 0, 0.35f), 6, 14));
         var inner = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         box.AddChild(inner);
-        show(new DamageMathPanel(inner));
-        cell.AddChild(box);
-        if (text.Length > 0) cell.AddChild(CellText(text));
-        flow.AddChild(cell);
+        fill(inner);
+        return box;
+    }
+
+    // ------------------------------------------------------------------ run reminders
+
+    private void BuildGuideReminders()
+    {
+        Section("Run Reminders");
+        Paragraph("Outside fights, your relics that change what a choice does show on the choice itself, "
+            + "with the same plain and crossed icons as the tabs on cards: crossed means the relic works against you there.");
+
+        var flow = Flow();
+
+        // Card rewards: the panel left of the cards, its rows built by the panel's own code.
+        var reward = Cell();
+        reward.AddChild(Label("Card rewards", 20, Accent));
+        reward.AddChild(ExampleBox(inner =>
+        {
+            void Add(RelicModel? relic, int filled, int total, bool flash, string label)
+            {
+                if (relic == null) return;
+                inner.AddChild(RunRemindersFeature.ExampleRewardRow(relic, filled, total, flash, label, out var paint));
+                _guideTicks.Add(paint);
+            }
+            Add(RelicOf<BookOfFiveRings>(), 4, 5, true, "4/5: heal 20 at 5");
+            Add(RelicOf<LuckyFysh>(), 0, 0, false, "+15 gold when you take a card");
+            Add(RelicOf<BingBong>(), 0, 0, false, "the card you take is copied");
+        }));
+        reward.AddChild(CellText("Left of the cards: your relics that react to the card you take. A row flashes when taking one sets it off: "
+            + "here Book of Five Rings heals you on this pick."));
+        flow.AddChild(reward);
+
+        // Shops: icons left of the price, the net price under it.
+        var shop = Cell();
+        shop.AddChild(Label("Shops", 20, Accent));
+        shop.AddChild(ExampleBox(inner =>
+        {
+            var pair = UiKit.Row(28);
+            if (RelicOf<LuckyFysh>() is { } fysh)
+                pair.AddChild(RunRemindersFeature.ExampleShopPrice(new[] { (fysh, false) }, 75, 60));
+            if (RelicOf<Sozu>() is { } sozu)
+                pair.AddChild(RunRemindersFeature.ExampleShopPrice(new[] { (sozu, true) }, 50, null));
+            inner.AddChild(pair);
+        }));
+        shop.AddChild(CellText("Beside each price: the relics buying it sets off. On a card with Lucky Fysh, the green number is what it "
+            + "really costs after the gold you get back. Crossed on a potion: with Sozu you can't get potions."));
+        flow.AddChild(shop);
+
+        // Events: icons left of the option.
+        var ev = Cell();
+        ev.AddChild(Label("Events", 20, Accent));
+        ev.AddChild(ExampleBox(inner =>
+        {
+            var row = UiKit.Row(10);
+            var icons = new List<(RelicModel, bool)>();
+            if (RelicOf<BingBong>() is { } bing) icons.Add((bing, true));
+            if (RelicOf<DarkstonePeriapt>() is { } periapt) icons.Add((periapt, false));
+            row.AddChild(RunRemindersFeature.ExampleEventIcons(icons));
+            var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+            option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), 6, 12));
+            option.AddChild(UiKit.Label("Accept: gain a relic, add a curse", 18, Colors.White));
+            row.AddChild(option);
+            inner.AddChild(row);
+        }));
+        ev.AddChild(CellText("Left of an option: here it adds a curse, so Bing Bong (crossed) copies the curse and Darkstone Periapt "
+            + "gives you max HP."));
+        flow.AddChild(ev);
+        _rows!.AddChild(flow);
     }
 
     // ------------------------------------------------------------------ the rest
@@ -210,10 +330,6 @@ public sealed partial class SettingsMenu
         GuideRow(example, "Death Skull",
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
             + "With a chance when a roll decides it (General: Death chance).");
-        GuideRow(null, "Run Reminders",
-            "Outside fights, your relics that change a choice: beside event options and shop prices (crossed when they work against you), "
-            + "and a panel next to card rewards.");
-        GuideRow(null, "Rest Preview", "At rest sites: the HP resting leaves you with and how much of the heal is wasted.");
         GuideRow(null, "Moving things",
             $"{S.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {S.HideAllKey} hides everything.");
     }
@@ -244,6 +360,7 @@ public sealed partial class SettingsMenu
         if (card != null)
         {
             var example = new GuideCard(card, GuideCardScale, tabs, opacity);
+            _lastGuideCard = example;
             cell.AddChild(example.Root);
             _guideTicks.Add((_, _) => example.Tick());
         }
@@ -267,6 +384,9 @@ public sealed partial class SettingsMenu
         private CardOverlayRenderer.Example? _example;
         private bool _visuals;
         private bool _failed;
+
+        /// <summary>Show the cost as a free card makes it in your hand: the game's green 0 (NCard.UpdateEnergyCostColor).</summary>
+        public bool FreeCost { get; set; }
 
         public GuideCard(CardModel model, float scale, IEnumerable<TabSpec> tabs, float? opacity)
         {
@@ -303,6 +423,12 @@ public sealed partial class SettingsMenu
                 {
                     _visuals = true;
                     _card.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
+                    if (FreeCost && _card.GetNodeOrNull<Label>("%EnergyLabel") is { } cost)
+                    {
+                        cost.Text = "0";
+                        cost.AddThemeColorOverride("font_color", StsColors.green);
+                        cost.AddThemeColorOverride("font_outline_color", StsColors.energyGreenOutline);
+                    }
                     Quiet(_card);
                 }
                 Place();

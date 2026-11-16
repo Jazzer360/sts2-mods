@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Context;
@@ -7,11 +8,11 @@ using MegaCrit.Sts2.Core.Entities.RestSite;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Modifiers;
 using MegaCrit.Sts2.Core.Models.Relics;
-using MegaCrit.Sts2.Core.Nodes.RestSite;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using SpireQoL.Cards;
+using SpireQoL.Sim;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -19,23 +20,20 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// Rest sites (docs/FEATURES.md "Rest Preview"), from the game's own rules (decompile v0.113.1):
-///  - Rest heals HealRestSiteOption.GetHealAmount (30% of max HP through ModifyRestSiteHealAmount: Regal Pillow +15, Night
-///    Terrors to full); HP becomes the whole part of HP + heal, capped at max (Creature.SetCurrentHpInternal). Then
-///    AfterRestSiteHeal: Stone Humidifier +5 max HP (and HP), Night Terrors -5 max HP (HP capped).
-///  - At the last rest site before the boss (the boss map point's parent: what Pantograph and Bath Robes mark Active), the
-///    boss fight starts with Pantograph's heal (BeforeCombatStart: 25) and an unused Bath Robes' (to full).
-/// One panel at the right edge of the screen (a movable widget, not a line per option): resting's HP and the heal wasted over your max; with
-/// Pantograph or an unused Bath Robes, the boss fight's HP if you rest (rest heal, then the relic's: what's wasted) and if not.
-/// Checked: HP after resting, and HP when the boss fight starts.
+/// Rest sites (docs/FEATURES.md "Rest Preview", decision #57): a sum beside your character, drawn like Incoming Damage's
+/// (RestMathPanel): your HP, the rest heal, a line per relic that changes it and per boss relic the boss fight starts with,
+/// and the result, with the part of the heal that's wasted. In multiplayer, hovering a teammate while Mend is on offer
+/// shows the same sum for them (Mend heals them as Rest would: MendRestSiteOption). The math is RestMath (tested).
+/// Rules (decompile v0.113.1):
+///  - Rest and Mend heal GetHealAmount (30% of max HP through ModifyRestSiteHealAmount: Regal Pillow +15, Night
+///    Terrors to full); then AfterRestSiteHeal: Stone Humidifier +5 max HP (and HP), Night Terrors −5 max HP.
+///  - At the last rest site before the boss (what Pantograph and Bath Robes mark Active), the boss fight starts with
+///    Pantograph's heal (BeforeCombatStart: 25) and an unused Bath Robes' (to full).
+/// The rest lines show only while the option is on offer (RestSiteSynchronizer's local options) and not already chosen.
+/// Checked: HP after resting, after a Mend (the teammate's), and when the boss fight starts.
 /// </summary>
 public sealed class RestPreviewFeature : IFeature, IFrameFeature
 {
-    private static readonly Color Over = new(1f, 0.55f, 0.25f);
-    private static readonly Color Plain = new(0.95f, 0.92f, 0.85f);
-    private static readonly Color Accent = new(1f, 0.55f, 0.1f);
-    private static readonly Color Muted = new(0.68f, 0.66f, 0.62f);
-
     private readonly QolContext _ctx;
 
     public RestPreviewFeature(QolContext ctx) => _ctx = ctx;
@@ -46,10 +44,17 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
 
     public void Apply(Harmony harmony)
     {
-        // Observe-only: the rest check (what resting left you with against the preview).
+        // Observe-only: the checks (what resting or mending left the player with against the preview), and which option
+        // is already being used (its heal is under way; it's no longer on offer).
         harmony.Patch(AccessTools.Method(typeof(HealRestSiteOption), nameof(HealRestSiteOption.OnSelect)),
             prefix: new HarmonyMethod(typeof(RestPreviewFeature), nameof(BeforeRest)));
+        harmony.Patch(AccessTools.Method(typeof(MendRestSiteOption), nameof(MendRestSiteOption.OnSelect)),
+            prefix: new HarmonyMethod(typeof(RestPreviewFeature), nameof(BeforeMend)),
+            postfix: new HarmonyMethod(typeof(RestPreviewFeature), nameof(AfterMend)));
     }
+
+    /// <summary>Options already chosen (their task is running or done): the preview stops offering them.</summary>
+    private static readonly ConditionalWeakTable<RestSiteOption, object> Used = new();
 
     private static (int Hp, int Max)? _pendingRest;
 
@@ -58,7 +63,8 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         try
         {
             if (Sts2State.Private<Player?>(__instance, "Owner", null) is not { } owner || RunMe() != owner) return;
-            if (Compute(owner) is { } p) _pendingRest = (p.RestedHp, p.RestedMax);
+            Used.AddOrUpdate(__instance, true);
+            if (Compute(owner, rest: true) is { } p) _pendingRest = (p.Outcome.RestedHp, p.Outcome.RestedMax);
         }
         catch (Exception ex)
         {
@@ -66,156 +72,162 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         }
     }
 
-    private MovableWidget? _widget;
+    /// <summary>A Mend you chose: each teammate's HP before and the preview, to check the one whose HP changes.</summary>
+    private static Dictionary<Player, (int Hp, int Max, int WantHp, int WantMax)>? _pendingMend;
+
+    private static void BeforeMend(MendRestSiteOption __instance)
+    {
+        try
+        {
+            if (Sts2State.Private<Player?>(__instance, "Owner", null) is not { } owner || RunMe() != owner) return;
+            Used.AddOrUpdate(__instance, true);
+            var pending = new Dictionary<Player, (int, int, int, int)>();
+            foreach (var mate in owner.RunState.Players)
+            {
+                if (mate == owner || Compute(mate, rest: true) is not { } p) continue;
+                pending[mate] = (mate.Creature.CurrentHp, mate.Creature.MaxHp, p.Outcome.RestedHp, p.Outcome.RestedMax);
+            }
+            _pendingMend = pending;
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log.Warn($"mend preview check: {ex.Message}");
+        }
+    }
+
+    /// <summary>Targeting cancelled (OnSelect returns false): Mend is on offer again, and there's nothing to check.</summary>
+    private static void AfterMend(MendRestSiteOption __instance, Task<bool> __result)
+    {
+        __result.ContinueWith(t =>
+        {
+            if (t.IsCompletedSuccessfully && t.Result) return;
+            Used.Remove(__instance);
+            _pendingMend = null;
+        });
+    }
+
+    private MovableWidget? _mine;
+    private MovableWidget? _mate;
+    private RestMathPanel? _minePanel;
+    private RestMathPanel? _matePanel;
+    private Player? _hoveredMate;
 
     public void Attach(OverlayHost host)
     {
-        // The right edge, vertically centered: clear of the options, the description the game shows under a hovered option,
-        // and your character (bottom left). Movable like every panel.
-        _widget = _ctx.Widget(Id, "Rest Preview", new WidgetLayout { Anchor = ScreenAnchor.Right, OffsetX = -40, OffsetY = 0 });
+        // Beside your character at the fire, like Incoming Damage beside you in a fight; the right edge when the character
+        // isn't found. Movable like every panel.
+        _mine = _ctx.Widget("rest-hp", "Rest Preview", new WidgetLayout { FollowGame = true, Anchor = ScreenAnchor.Right, OffsetX = 0, OffsetY = 0 });
+        _mine.AttachTo(() => CharacterRect(RunMe()), AttachSide.LeftOf)
+             .AttachTo(() => CharacterRect(RunMe()), AttachSide.RightOfBottom);
+        _minePanel = new RestMathPanel(_mine.Content);
+        _mate = _ctx.Widget("rest-mend", "Mend Preview", new WidgetLayout { FollowGame = true, Anchor = ScreenAnchor.Right, OffsetX = 0, OffsetY = 0 });
+        _mate.AttachTo(() => CharacterRect(_hoveredMate), AttachSide.LeftOf)
+             .AttachTo(() => CharacterRect(_hoveredMate), AttachSide.RightOfBottom);
+        _matePanel = new RestMathPanel(_mate.Content);
     }
 
-    /// <summary>What resting now leaves you with, and the boss fight's start with or without resting.</summary>
-    public sealed record Preview(int Hp, int MaxHp, decimal Heal, int RestedHp, int RestedMax, int Over,
-        List<RelicModel> BossRelics, int BossIfRested, int BossIfNot, int BossOver);
-
-    public static Preview? Compute(Player me)
+    /// <summary>A player's character at the fire (NRestSiteCharacter's hitbox), on screen.</summary>
+    private static Rect2? CharacterRect(Player? who)
     {
-        var c = me.Creature;
-        int hp = c.CurrentHp, max = c.MaxHp;
-        if (max <= 0) return null;
-        decimal heal;
-        try { heal = HealRestSiteOption.GetHealAmount(me); } catch { return null; }
-        // CreatureCmd.Heal: HealInternal → SetCurrentHpInternal((int)min(hp + heal, max)).
-        var rested = (int)Math.Min(hp + heal, max);
-        var over = (int)Math.Max(0, hp + heal - max);
-        var restedMax = max;
-        // AfterRestSiteHeal: Stone Humidifier gains max HP (GainMaxHp heals by what it adds); Night Terrors loses 5 (at least 1 left).
-        foreach (var r in me.Relics.OfType<StoneHumidifier>())
-        {
-            var gain = Sts2State.Var(r, "MaxHp", 5);
-            restedMax += gain;
-            rested = Math.Min(rested + gain, restedMax);
-        }
-        if (me.RunState.Modifiers.Any(m => m is NightTerrors))
-        {
-            restedMax -= Math.Min(5, restedMax - 1);
-            rested = Math.Min(rested, restedMax);
-        }
+        if (who == null || NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) return null;
+        var c = room.GetCharacterForPlayer(who);
+        if (c == null || !GodotObject.IsInstanceValid(c) || c.Hitbox is not { } hit || !hit.IsVisibleInTree()) return null;
+        var r = Sts2State.ScreenRect(hit);
+        return r.Size.X >= 1 ? r : null;
+    }
 
-        // The boss fight's start: the relics mark themselves Active at the boss's parent map point (AfterRoomEntered).
-        var bossRelics = me.Relics.Where(r => r.Status == RelicStatus.Active && r is Pantograph or BathRobes { IsUsedUp: false }).ToList();
-        int Boss(int from, int top)
+    /// <summary>A sum, and its icons (the game's own: the option, the relics, the modifier).</summary>
+    public sealed record Preview(RestOutcome Outcome, List<(Texture2D? Icon, int Hp)> Lines, List<RelicModel> BossRelics);
+
+    /// <summary>What Rest (or a Mend on <paramref name="who"/>) leaves them with; rest false: only the boss relics.</summary>
+    public static Preview? Compute(Player who, bool rest, bool mend = false)
+    {
+        var c = who.Creature;
+        if (c.MaxHp <= 0) return null;
+        decimal heal, baseHeal;
+        try
         {
-            var h = from;
-            foreach (var r in bossRelics)
-            {
-                if (r is BathRobes) h = top;
-                else if (r is Pantograph) h = Math.Min(top, h + Sts2State.Var(r, "Heal", 25));
-            }
-            return h;
+            heal = HealRestSiteOption.GetHealAmount(who);
+            baseHeal = HealRestSiteOption.GetBaseHealAmount(c);
         }
-        var bossIfRested = Boss(rested, restedMax);
-        var bossIfNot = Boss(hp, max);
-        // The rest heal that doesn't reach the boss fight: what it would heal, less what it adds to the fight's start.
-        var bossOver = bossRelics.Count == 0 ? 0 : Math.Max(0, (int)heal - (bossIfRested - bossIfNot));
-        return new Preview(hp, max, heal, rested, restedMax, over, bossRelics, bossIfRested, bossIfNot, bossOver);
+        catch { return null; }
+        var nightTerrors = who.RunState.Modifiers.FirstOrDefault(m => m is NightTerrors);
+        var pillow = who.Relics.OfType<RegalPillow>().FirstOrDefault();
+        var humidifiers = who.Relics.OfType<StoneHumidifier>().ToList();
+        // The boss fight's start: the relics mark themselves Active at the boss's parent map point (AfterRoomEntered).
+        var bossRelics = who.Relics.Where(r => r.Status == RelicStatus.Active && r is Pantograph or BathRobes { IsUsedUp: false }).ToList();
+        var boss = bossRelics.Select(r => r is BathRobes ? (RestStep.BathRobes, 0) : (RestStep.Pantograph, Sts2State.Var(r, "Heal", 25))).ToList();
+        var outcome = RestMath.Compute(c.CurrentHp, c.MaxHp, heal, pillow != null ? heal - baseHeal : 0,
+            humidifiers.Select(h => Sts2State.Var(h, "MaxHp", 5)).ToList(), nightTerrors != null, boss, rest);
+
+        var lines = new List<(Texture2D?, int)>();
+        int humid = 0, bossAt = 0;
+        foreach (var line in outcome.Lines)
+        {
+            Texture2D? icon = line.Step switch
+            {
+                RestStep.Rest => GameIcons.RestOption(mend ? "mend" : "heal"),
+                RestStep.RegalPillow => pillow != null ? GameIcons.Relic(pillow) : null,
+                RestStep.StoneHumidifier => GameIcons.Relic(humidifiers[Math.Min(humid++, humidifiers.Count - 1)]),
+                RestStep.NightTerrors => nightTerrors != null ? GameIcons.Modifier(nightTerrors) : null,
+                _ => GameIcons.Relic(bossRelics[Math.Min(bossAt++, bossRelics.Count - 1)]),
+            };
+            lines.Add((icon, line.Hp));
+        }
+        return new Preview(outcome, lines, bossRelics);
     }
 
     private int _restCheckFrames;
     private int? _bossPredicted;
     private int _bossFrames;
+    private int _mendFrames;
 
     public void OnFrame(OverlayHost host)
     {
-        var w = _widget!;
         var room = NRestSiteRoom.Instance;
         var me = RunMe();
         Check(me);
-        var preview = room != null && GodotObject.IsInstanceValid(room) && room.IsVisibleInTree() && me != null ? Compute(me) : null;
-        // Rest is on offer (not used yet, not disabled): its lines show; otherwise only what you'll have anyway.
-        var canRest = preview != null && RestOption(room!) is { IsEnabled: true };
-        var show = preview != null && (canRest || preview.BossRelics.Count > 0);
-        w.HasContent = show;
-        if (!show)
-        {
-            _shownKey = "";
-            return;
-        }
-        var key = $"{preview}|{canRest}|{string.Join(",", preview!.BossRelics.Select(r => r.GetType().Name))}";
-        if (key == _shownKey) return;
-        _shownKey = key;
-        foreach (var child in w.Content.GetChildren()) child.QueueFree();
-        Fill(w.Content, preview, canRest);
+        CheckMend();
+        var inRoom = room != null && GodotObject.IsInstanceValid(room) && room.IsVisibleInTree() && me != null;
+        var options = inRoom ? LocalOptions() : new List<RestSiteOption>();
+
+        // Yours: Rest on offer (not chosen yet, not disabled); otherwise only what the boss relics will do anyway.
+        var canRest = options.Any(o => o is HealRestSiteOption && o.IsEnabled && !Used.TryGetValue(o, out _));
+        var mine = inRoom ? Compute(me!, canRest) : null;
+        var showMine = mine != null && (canRest || mine.BossRelics.Count > 0);
+        _mine!.HasContent = showMine;
+        if (showMine) Show(_minePanel!, mine!, canRest);
+
+        // A teammate you hover while Mend is on offer: what Mend would leave them with.
+        var canMend = options.Any(o => o is MendRestSiteOption && o.IsEnabled && !Used.TryGetValue(o, out _));
+        _hoveredMate = inRoom && canMend ? HoveredMate(room!, me!) : null;
+        var theirs = _hoveredMate != null ? Compute(_hoveredMate, rest: true, mend: true) : null;
+        _mate!.HasContent = theirs != null;
+        if (theirs != null) Show(_matePanel!, theirs, true);
     }
 
-    private string _shownKey = "";
+    private static void Show(RestMathPanel panel, Preview p, bool rest) =>
+        panel.Show(p.Outcome.Hp, p.Lines, p.Outcome.ResultHp, p.Outcome.ResultMax, rest ? p.Outcome.Over : 0);
 
-    /// <summary>The Rest option on offer, if any (HealRestSiteOption).</summary>
-    private static RestSiteOption? RestOption(NRestSiteRoom room)
+    private static List<RestSiteOption> LocalOptions()
     {
-        if (room.GetNodeOrNull<Control>("%ChoicesContainer") is not { } choices) return null;
-        foreach (var button in choices.GetChildren().OfType<NRestSiteButton>())
+        try { return RunManager.Instance.RestSiteSynchronizer.GetLocalOptions().ToList(); }
+        catch { return new List<RestSiteOption>(); }
+    }
+
+    /// <summary>The teammate whose character at the fire is under the mouse (the game highlights it: NRestSiteCharacter.OnFocus).</summary>
+    private static Player? HoveredMate(NRestSiteRoom room, Player me)
+    {
+        var mouse = room.GetViewport().GetMousePosition();
+        foreach (var c in room.characterAnims)
         {
-            if (!GodotObject.IsInstanceValid(button)) continue;
-            try { if (button.Option is HealRestSiteOption heal) return heal; } catch { }
+            if (!GodotObject.IsInstanceValid(c) || c.Player == me || c.Hitbox is not { } hit || !hit.IsVisibleInTree()) continue;
+            if (Sts2State.ScreenRect(hit).HasPoint(mouse)) return c.Player;
         }
         return null;
     }
 
-    /// <summary>
-    /// One panel for the whole rest site (not a line per option): resting's HP and what's wasted; before the boss, the boss
-    /// fight's HP if you rest (rest heal, then the relic's) and if you don't.
-    /// </summary>
-    private static void Fill(VBoxContainer content, Preview p, bool canRest)
-    {
-        if (p.BossRelics.Count == 0)
-        {
-            var line = Row();
-            line.AddChild(Text("Rest", Accent));
-            line.AddChild(Text($"HP {p.Hp} → {p.RestedHp}/{p.RestedMax}", Plain));
-            if (p.Over > 0) line.AddChild(Text($"({p.Over} over)", Over));
-            content.AddChild(line);
-            return;
-        }
-        var head = Row();
-        foreach (var r in p.BossRelics)
-        {
-            var icon = UiKit.Icon(GameIcons.Relic(r), 30);
-            icon.MouseFilter = Control.MouseFilterEnum.Ignore;
-            head.AddChild(icon);
-        }
-        head.AddChild(Text("Boss fight HP", Accent));
-        content.AddChild(head);
-        if (canRest)
-        {
-            var rest = Row();
-            rest.AddChild(Text("Rest:", Muted));
-            rest.AddChild(Text($"{p.Hp} → {p.RestedHp} → {p.BossIfRested}/{p.RestedMax}", Plain));
-            if (p.BossOver > 0) rest.AddChild(Text($"({p.BossOver} over)", Over));
-            content.AddChild(rest);
-        }
-        var skip = Row();
-        skip.AddChild(Text(canRest ? "Don't rest:" : "Boss:", Muted));
-        skip.AddChild(Text($"{p.Hp} → {p.BossIfNot}/{p.MaxHp}", Plain));
-        content.AddChild(skip);
-    }
-
-    private static HBoxContainer Row()
-    {
-        var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        row.AddThemeConstantOverride("separation", 6);
-        return row;
-    }
-
-    private static Label Text(string text, Color color)
-    {
-        var l = UiKit.Label(text, 20, color);
-        l.MouseFilter = Control.MouseFilterEnum.Ignore;
-        return l;
-    }
-
-    // ------------------------------------------------------------------ check (audit)
+    // ------------------------------------------------------------------ checks (audit)
 
     /// <summary>
     /// After resting: HP and max HP against the preview (once the heal and AfterRestSiteHeal settle). At the boss: HP once the
@@ -238,8 +250,8 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         if (NRestSiteRoom.Instance is { } r && GodotObject.IsInstanceValid(r))
         {
             // How you leave the rest site (rested or not): with Pantograph or Bath Robes ready, the boss fight's start.
-            var p = Compute(me);
-            _bossPredicted = p is { BossRelics.Count: > 0 } ? p.BossIfNot : null;
+            var p = Compute(me, rest: false);
+            _bossPredicted = p is { BossRelics.Count: > 0 } ? p.Outcome.ResultHp : null;
             _bossFrames = 0;
             return;
         }
@@ -253,6 +265,26 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         if (c.CurrentHp != boss)
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "HP at the boss fight's start didn't match the rest preview", new[] { "rest-boss" }, line);
         _bossPredicted = null;
+    }
+
+    /// <summary>
+    /// After your Mend: the teammate whose HP or max HP changed first, once it settles (about a second and a half),
+    /// against the preview for them. Leaving the rest site ends the watch.
+    /// </summary>
+    private void CheckMend()
+    {
+        if (_pendingMend is not { } pending) { _mendFrames = 0; return; }
+        if (NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) { _pendingMend = null; return; }
+        var changed = pending.FirstOrDefault(kv => kv.Key.Creature.CurrentHp != kv.Value.Hp || kv.Key.Creature.MaxHp != kv.Value.Max);
+        if (changed.Key == null) { _mendFrames = 0; return; }
+        if (++_mendFrames < 90) return;
+        var c = changed.Key.Creature;
+        var want = changed.Value;
+        var what = $"mend: teammate HP {c.CurrentHp}/{c.MaxHp}, predicted {want.WantHp}/{want.WantMax}";
+        var ok = c.CurrentHp == want.WantHp && c.MaxHp == want.WantMax;
+        ModEntry.Log.Info($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
+        if (!ok) Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "A teammate's HP after Mend didn't match the preview", new[] { "rest-mend" }, what);
+        _pendingMend = null;
     }
 
     private static Player? RunMe()

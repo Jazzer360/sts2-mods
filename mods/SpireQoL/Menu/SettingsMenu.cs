@@ -57,7 +57,7 @@ public sealed partial class SettingsMenu
         ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it)."),
         ("run-reminders", "Run Reminders", "Outside fights: your relics that react to a card reward, next to the screen, and to an event option, beside it."),
         ("potion-tabs", "Potion Tabs", "Tabs under your potions for the relics that drinking one sets off (the Relics page)."),
-        ("rest-preview", "Rest Preview", "At rest sites: the HP resting leaves you with and how much is wasted; before the boss, with Pantograph or Bath Robes, the HP the boss fight starts with."),
+        ("rest-preview", "Rest Preview", "At rest sites, a sum beside your character: your HP, the rest heal and each relic that changes it, and the HP you end with (and how much is wasted). Before the boss, Pantograph and Bath Robes are lines too. In multiplayer, hover a teammate while Mend is on offer for theirs."),
         ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit), with a gear beside it that opens this menu."),
         ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports)."),
         ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports)."),

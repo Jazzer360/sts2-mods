@@ -81,6 +81,26 @@ public static class GameIcons
 
     private static Texture2D? _targetArrow;
 
+    /// <summary>The heart from the top bar's HP display (packed/common_ui/top_bar/top_bar_heart.png): HP in the rest sum.</summary>
+    public static Texture2D? Heart()
+    {
+        if (Valid(_heart)) return _heart;
+        _heart = LoadTexture("res://images/packed/common_ui/top_bar/top_bar_heart.png");
+        return _heart;
+    }
+
+    private static Texture2D? _heart;
+
+    /// <summary>A rest-site option's own icon (RestSiteOption.Icon's path: ui/rest_site/option_&lt;id&gt;.png), e.g. "heal", "mend".</summary>
+    public static Texture2D? RestOption(string id) =>
+        LoadTexture(MegaCrit.Sts2.Core.Helpers.ImageHelper.GetImagePath($"ui/rest_site/option_{id}.png"));
+
+    /// <summary>A run modifier's icon (Night Terrors), or null.</summary>
+    public static Texture2D? Modifier(ModifierModel modifier)
+    {
+        try { return modifier.Icon; } catch { return null; }
+    }
+
     private static Texture2D? _discardPile;
 
     /// <summary>The discard pile art outside combat (the game's own path, NetScreenTypeExtensions CardPile).</summary>
