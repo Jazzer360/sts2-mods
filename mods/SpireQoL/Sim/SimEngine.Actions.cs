@@ -38,6 +38,8 @@ public static partial class SimEngine
 
     private static void RunAttack(BranchSet b, AttackAction at)
     {
+        // A shot with no arrow does nothing: no attack, so no hooks either.
+        if (at.NeedsArrow && b.States.All(s => s.ArrowAwayAt < 0)) return;
         var dealer = at.ByOsty ? Who.YourOsty : Who.You;
         b.Do(s =>
         {
@@ -106,6 +108,7 @@ public static partial class SimEngine
     /// </summary>
     private static IEnumerable<SimState> HitOnce(SimState s, int dealer, int target, AttackAction at)
     {
+        if (at.NeedsArrow && s.ArrowAwayAt < 0) return new[] { s };
         var spec = at.Damage;
         var card = s.CurrentPlay?.Card;
         var ctx = new DamageCtx(dealer, target, spec.Props, card, s.CurrentPlay);

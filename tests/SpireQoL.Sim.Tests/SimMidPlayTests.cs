@@ -15,47 +15,58 @@ public class SimMidPlayTests
     [Fact]
     public void HitsAfterTheLastArrowComesOutLoseTheBonus()
     {
-        // Three hits of 6 (4 with Serrated Arrows' +50%); the second hit frees the last arrow: 6, 6, 4.
+        // Three hits of 4 with Serrated Arrows 50 (6) on an enemy holding your last arrow, its counter at 2: the second hit
+        // knocks the arrow out (ImpaledPower.AfterDamageReceived) and with it Impaled, so the third hit loses the bonus: 6, 6, 4.
         var s = new SimState { Enemies = { E(1, 100) } };
-        var play = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 3, HitDamage = { [1] = 6 }, HitDamageLater = { [1] = (2, 4) } };
-        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
-        Assert.Equal(84, branches[0].Enemy(1)!.Hp);
+        s.P.Powers = s.P.Powers.With("SerratedArrowsPower", 50);
+        s.Enemies[0].Powers = PowerSet.Empty.With("ImpaledPower", 1, 2);
+        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Flurry"), 1, 1, V2.V2Script.Attack(4, hits: 3))));
+        Assert.Equal(84, after.Enemy(1)!.Hp);
+        Assert.Equal(1, after.P.Arrows);
+
     }
 
     [Fact]
     public void AReplayHitsHarderOnceItsFirstPlayMadeTheTargetVulnerable()
     {
-        // Break played twice (Glam) on a Queen at 362 that isn't Vulnerable: the first play hits for 15 and applies
-        // Vulnerable (Break.OnPlay: the hit, then PowerCmd.Apply<VulnerablePower>), so the replay hits for 23
-        // (15.75 × 1.5, rounded down): 362 → 324.
+        // Break played twice (Glam) on a Queen at 362 that isn't Vulnerable: the first play hits for 15 (15.75) and applies
+        // Vulnerable (Break.OnPlay: the hit, then PowerCmd.Apply<VulnerablePower>), so the replay hits for 23 (15.75 × 1.5,
+        // rounded down): 362 → 324.
         var s = new SimState { Enemies = { E(1, 362) } };
-        var play = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Plays = 2, Hits = 2, HitDamage = { [1] = 15 }, HitDamageLater = { [1] = (1, 23) } };
-        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
-        Assert.Single(branches);
-        Assert.Equal(324, branches[0].Enemy(1)!.Hp);
+        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Break"), 1, 2,
+            V2.V2Script.Attack(15, terms: new CapturedTerms { Mul = 1.05m }), new ApplyPowerAction("VulnerablePower", 2) { Debuff = true })));
+        Assert.Equal(324, after.Enemy(1)!.Hp);
+
     }
 
     [Fact]
     public void AReplayedShotHitsHarderOnceItsFirstPlayImpaledTheTarget()
     {
-        // Auto-report: Rapid Shot played 4 times (3 hits each) at a Rocket at 82 that isn't Impaled, with Serrated
-        // Arrows 50 and Weak. The first play hits for 2 and then impales it (ArrowCmd.ShootArrowAtTarget: the attack,
-        // then ImpaleTarget), so the later plays' hits get SerratedArrowsPower's +50%: 3. 82 - 6 - 27 = 49.
+        // Auto-report: Rapid Shot played 4 times (3 hits each) at a Rocket at 82 that isn't Impaled, with Serrated Arrows 50,
+        // Weak and two arrows. The first play hits for 2 and then impales it (ArrowCmd.ShootArrowAtTarget: the attack, then
+        // ImpaleTarget); each later play's third hit knocks an arrow out and its shot impales again, so their hits get +50%:
+        // 3. 82 - 6 - 27 = 49.
         var s = new SimState { Enemies = { E(1, 82) } };
-        var play = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Plays = 4, Hits = 12, HitDamage = { [1] = 2 }, HitDamageLater = { [1] = (3, 3) } };
-        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
-        Assert.Single(branches);
-        Assert.Equal(49, branches[0].Enemy(1)!.Hp);
+        s.P.Arrows = 2;
+        s.P.Powers = s.P.Powers.With("SerratedArrowsPower", 50).With("WeakPower", 1);
+        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("RapidShot"), 1, 4,
+            new ShootAction(), V2.V2Script.Attack(3, hits: 3) with { NeedsArrow = true }, new ImpaleAction())));
+        Assert.Equal(49, after.Enemy(1)!.Hp);
+
     }
 
     [Fact]
     public void AnAllEnemyAttackCountsEachEnemyOnItsOwn()
     {
+        // Two hits of 5 on every enemy with Serrated Arrows 100: the one holding your last arrow (counter at 1) takes 10, loses
+        // the arrow, then 5; the other takes 5 twice.
         var s = new SimState { Enemies = { E(1, 50), E(2, 50) } };
-        var play = new SimPlay { HitTarget = SimPlay.Target.All, Hits = 2, HitDamage = { [1] = 10, [2] = 10 }, HitDamageLater = { [2] = (1, 5) } };
-        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
-        Assert.Equal(30, branches[0].Enemy(1)!.Hp);
-        Assert.Equal(35, branches[0].Enemy(2)!.Hp);
+        s.P.Powers = s.P.Powers.With("SerratedArrowsPower", 100);
+        s.Enemies[1].Powers = PowerSet.Empty.With("ImpaledPower", 1, 1);
+        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Cleave"), -1, 1, V2.V2Script.Attack(5, hits: 2, mode: SimPlay.Target.All))));
+        Assert.Equal(40, after.Enemy(1)!.Hp);
+        Assert.Equal(35, after.Enemy(2)!.Hp);
+
     }
 
     [Fact]
@@ -133,11 +144,12 @@ public class SimMidPlayTests
     [Fact]
     public void StretchBoostsOnlyTheFirstPlayOfAReplayedBlockCard()
     {
-        // Defend+ played twice with Stretch 12: 20, then 8 (StretchPower is spent by the first play).
+        // Defend+ (8) played twice with Stretch 12: 20, then 8 (StretchPower is spent by the first play).
         var s = new SimState { Enemies = { E(1, 50) } };
-        var play = new SimPlay { BlockGains = 2, BlockAmount = 20, BlockLater = (1, 8) };
-        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
-        Assert.Equal(28, branches[0].P.Block);
+        s.P.Powers = s.P.Powers.With("StretchPower", 12);
+        var defend = new SimCard("Defend", SimCardType.Skill) { GainsBlock = true };
+        Assert.Equal(28, Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(defend, -1, 2, V2.V2Script.Block(8)))).P.Block);
+
     }
 
     [Fact]
@@ -154,12 +166,14 @@ public class SimMidPlayTests
     [Fact]
     public void StretchBoostsAnAdroitBlockOnlyOnTheFirstPlay()
     {
-        // An Adroit 3 attack played twice with Stretch 4 (v0.113.1: StretchPower counts the enchantment's block):
-        // 7 on the first play, which spends the Stretch, then 3.
+        // An Adroit 3 attack played twice with Stretch 4 (v0.113.1: StretchPower counts the enchantment's block): 7 on the
+        // first play, which spends the Stretch, then 3.
         var s = new SimState { Enemies = { E(1, 50) } };
-        var play = new SimPlay { EnchantmentBlock = (2, 7), EnchantmentBlockLater = 3 };
-        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
-        Assert.Equal(10, branches[0].P.Block);
-        Assert.Equal(2, branches[0].P.BlockGains);
+        s.P.Powers = s.P.Powers.With("StretchPower", 4);
+        var adroit = new SimCard("Strike", SimCardType.Attack) { GainsBlock = true, Enchanted = true };
+        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(adroit, -1, 2, V2.V2Script.Block(3))));
+        Assert.Equal(10, after.P.Block);
+        Assert.Equal(2, after.P.BlockGains);
+
     }
 }

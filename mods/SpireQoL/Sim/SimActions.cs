@@ -1,6 +1,12 @@
 namespace SpireQoL.Sim;
 
 /// <summary>
+/// One step of a card's script (docs/SIMULATOR_V2.md "Card scripts"). The engine runs a script's actions in order on every
+/// branch; an action may run hooks and branch. Actions are immutable values shared by every branch.
+/// </summary>
+public abstract record SimAction;
+
+/// <summary>
 /// A card play (CardModel.OnPlayWrapper): its body runs once per play (PlayCount, from the game's ModifyCardPlayCount), with
 /// BeforeCardPlayed before each play and AfterCardPlayed after it (docs/SIMULATOR_V2.md "The game model").
 /// </summary>
@@ -37,6 +43,8 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
     public DamageSpec? OnKill { get; init; }
     /// <summary>Rain Shot: after a hit on the target, every other hittable enemy takes that hit's damage (overkill included).</summary>
     public bool Splash { get; init; }
+    /// <summary>A shot's attack: it only happens when the shot had an arrow (ArrowCmd.ShootArrowAtTarget runs the attack inside ImpaleTarget).</summary>
+    public bool NeedsArrow { get; init; }
 }
 
 /// <summary>Block (CreatureCmd.GainBlock) through the block pipeline, Times times; to you or the play's targeted teammate.</summary>

@@ -118,10 +118,10 @@ public class SimReactionTests
     [Fact]
     public void IntentChangedByThePlayIsWhatTheEnemyAttacksWith()
     {
-        // Weak (or Enrage's Strength) changes the enemy's hits; the adapter computes them with the
-        // game's damage math and the play sets them.
+        // Weak from the card changes the enemy's intent: its hits go through the damage pipeline as they land.
         var s = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
-        var weak = new SimPlay { Name = "Neutralize", SetHits = { [1] = new List<int> { 9 } } };
+        s.Enemies[0].Intent = new List<IntentHit> { new(12) };
+        var weak = V2.V2Script.Play(V2.V2Script.Card("Neutralize", SimCardType.Skill), 1, 1, new ApplyPowerAction("WeakPower", 1) { Debuff = true });
         Assert.Equal(12, SimEngine.Run(s).TakenMax);
         Assert.Equal(9, SimEngine.Run(s, weak).TakenMax);
     }

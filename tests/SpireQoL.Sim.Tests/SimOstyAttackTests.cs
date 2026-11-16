@@ -58,7 +58,9 @@ public class SimOstyAttackTests
         // Bone Shards kills Osty at 4 HP with Necro Mastery 2: 8 unblockable damage to every enemy.
         var s = new SimState { Enemies = { E(1, 30), E(2, 5) } };
         s.Enemies[0].Block = 20;
-        var play = new SimPlay { Name = "BoneShards", KillsOsty = true, AllEnemiesUnblockable = 8 };
+        s.P.OstyHp = 4;
+        s.P.Powers = s.P.Powers.With("NecroMasteryPower", 2);
+        var play = new SimPlay { Name = "BoneShards", KillsOsty = true };
         SimEngine.ApplyPlayTo(s, play, out var branches, out _);
         Assert.All(branches, b =>
         {

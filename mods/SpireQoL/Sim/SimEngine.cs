@@ -1,186 +1,5 @@
 namespace SpireQoL.Sim;
 
-/// <summary>A card play, as the simulator applies it (built by SimAdapter from PlayFacts and the proc rules).</summary>
-public sealed class SimPlay
-{
-    public enum Target { None, Single, All, Random }
-
-    public string Name = "";
-    /// <summary>
-    /// v2 (docs/SIMULATOR_V2.md): the card play (its hooks run around each play) and the actions each play runs (attack, block,
-    /// powers, HP cost). When set, the summary fields below carry only what isn't an action yet (orbs, procs, hand changes).
-    /// </summary>
-    public SimCardPlay? Card;
-    public List<SimAction> Body = new();
-    /// <summary>Actions before the card play (the energy it spends) and after it (its own exhaust, events of the whole play).</summary>
-    public List<SimAction> Before = new(), After = new();
-    /// <summary>The card in your hand this play is (SimHandCard.Id): playing it takes it out of SimPlayer.AutoHand. 0 = none.</summary>
-    public int HandCard;
-    /// <summary>Cards it draws (the draw pile it leaves: I Am Invincible on top).</summary>
-    public int Draws;
-    /// <summary>An auto-play (CardPlay.IsAutoPlay): Pael's Eye doesn't count it as a card you played.</summary>
-    public bool AutoPlay;
-    /// <summary>
-    /// Block every living teammate gains, this many times (Covering Fire: each shot of yours from a card,
-    /// CoveringFirePower.AfterArrowShot, unpowered; it fires with no arrow left too).
-    /// </summary>
-    public (int Amount, int Times) TeammateBlock;
-    public Target HitTarget = Target.None;
-    /// <summary>For Target.Single: the enemy aimed at.</summary>
-    public int TargetId = -1;
-    /// <summary>Damage of one hit on each enemy (after the game's damage math for that enemy).</summary>
-    public Dictionary<int, int> HitDamage = new();
-    /// <summary>
-    /// Enemies whose hits get weaker partway through the play: after <c>After</c> of the card's hits on it, each
-    /// further hit deals <c>Damage</c> (the hit that knocks your last arrow out ends Impaled, and with it Serrated
-    /// Arrows' and Wah Hammer's bonus). Single and all-enemy attacks.
-    /// </summary>
-    public Dictionary<int, (int After, int Damage)> HitDamageLater = new();
-    /// <summary>
-    /// Hit damage on an enemy that changes during the card's plays: PerPlay hits a play; Damage[k][g] each hit of play k after
-    /// g Mighty Wings triggers this fight (SimState.BigHits; the last entry covers more). Play k: Tender's -1 Strength after
-    /// each play, Pen Nib doubling only the play that brings its count to 10. Overrides HitDamage and HitDamageLater.
-    /// </summary>
-    public Dictionary<int, (int PerPlay, int[][] Damage)> HitDamageByPlay = new();
-    /// <summary>Mighty Wings: a powered hit of yours dealing at least this much (blocked plus HP lost) gains you Strength. 0 = none.</summary>
-    public int BigHitThreshold;
-    /// <summary>
-    /// Rain Shot (v0.113.0): after its hit on the target, every other hittable enemy takes that hit's damage
-    /// (overkill included; only caps apply), as a powered hit of yours (their Thorns reacts).
-    /// </summary>
-    public bool SplashFromTarget;
-    /// <summary>Hits per target (Single/All), or random hits in total (Random).</summary>
-    public int Hits;
-
-    public int BlockAmount;
-    public int BlockGains;
-    /// <summary>
-    /// Block gains that get smaller partway through: after <c>After</c> gains, each gives <c>Amount</c> (Stretch
-    /// boosts one card play's block and is spent: a replayed block card's later plays don't get it).
-    /// </summary>
-    public (int After, int Amount)? BlockLater;
-    /// <summary>Its own block with every play of a replayed card (Tender: -1 Dexterity after each play): PerPlay gains a play, Amount[k] each gain of play k. Overrides BlockAmount and BlockLater.</summary>
-    public (int PerPlay, int[] Amount)? BlockByPlay;
-    /// <summary>
-    /// Block its enchantment gains on each play, after the card's own (Adroit: EnchantmentModel.OnPlay →
-    /// CreatureCmd.GainBlock): this many gains of this amount.
-    /// </summary>
-    public (int Gains, int Amount) EnchantmentBlock;
-    /// <summary>
-    /// The enchantment's block on a replay's later plays, when the first play spent a bonus (Stretch, Pael's Legion,
-    /// Vambrace); null when every play gains the same.
-    /// </summary>
-    public int? EnchantmentBlockLater;
-    /// <summary>
-    /// A card aimed at a teammate (TargetType AnyAlly): their index in SimState.Teammates, -1 none. One simulation per
-    /// teammate, like an attack aimed at any enemy (SimAdapter.AllyKey). What lands on them is routed by BlockToAlly and
-    /// ChannelToAlly; the rest of the play is yours.
-    /// </summary>
-    public int AllyTarget = -1;
-    /// <summary>The card's own block goes to the targeted teammate (Lift, Constellation, Demonic Shield).</summary>
-    public bool BlockToAlly;
-    /// <summary>The card's channels go into the targeted teammate's orbs (Ignition: OrbCmd.Channel on cardPlay.Target.Player).</summary>
-    public bool ChannelToAlly;
-
-    public List<OrbOp> OrbOps = new();
-
-    public int AddPlating, AddJuggernaut, AddFeelNoPain, AddThorns, AddFlameBarrier;
-    /// <summary>
-    /// Damage to you once the card resolves (AfterCardPlayed procs: Galvanic's per Galvanized card), blockable, in
-    /// order. Enemy Thorns isn't here: the simulator lands it before each of the card's hits.
-    /// </summary>
-    public List<(string Name, int Amount)> DamageToYou = new();
-    /// <summary>
-    /// HP the card costs you, per play (its HpLoss value: CreatureCmd.Damage on you, Unblockable and Unpowered), HpCostTimes
-    /// times, before its hits (Bloodletting, Offering, Hemokinesis lose it first). Through Tungsten Rod, Beating Remnant,
-    /// Buffer; sets off Inferno when HP is lost.
-    /// </summary>
-    public int HpCost, HpCostTimes;
-    /// <summary>Poison applied to the target (Single) or to every enemy (All).</summary>
-    public int Poison;
-    public bool PoisonAll;
-    /// <summary>Poison applied to a random enemy, RandomPoisonTimes times (Bouncing Flask).</summary>
-    public int RandomPoison, RandomPoisonTimes;
-
-    /// <summary>
-    /// Enemies whose intent damage the play changes (Weak it applies): their hits afterwards, per enemy id.
-    /// </summary>
-    public Dictionary<int, List<int>> SetHits = new();
-    /// <summary>The same for teammates: enemy id → hits on each teammate (by teammate index) afterwards.</summary>
-    public Dictionary<int, List<List<int>>> SetTeammateHits = new();
-    /// <summary>
-    /// Monarch's Gaze on a random-target attack: each hit takes Strength from the enemy it lands on, so its hits afterwards
-    /// depend on how many of the card's hits it took (enemy id → hits after 1, 2... of them; the last entry for more).
-    /// </summary>
-    public Dictionary<int, List<List<int>>> GazeHits = new();
-    /// <summary>The same on teammates: enemy id → [hits taken - 1] → hits on each teammate.</summary>
-    public Dictionary<int, List<List<List<int>>>> GazeTeammateHits = new();
-
-    /// <summary>Times the card plays (Sneaky reacts to each).</summary>
-    public int Plays = 1;
-    /// <summary>Focus it gives or takes after its hits (Defragment, Hyperbeam...): your orbs' values change with it.</summary>
-    public int FocusDelta;
-
-    public int HandDelta = -1;
-    /// <summary>
-    /// Judgement (v0.113.0): the target dies if it's alive at or below this HP (CreatureCmd.SetCurrentHp to 0). 0: none.
-    /// </summary>
-    public int ExecuteAtOrBelow;
-    /// <summary>
-    /// Timber (v0.113.0): when its hit kills the target, a second attack hits every enemy for this much each (per enemy id,
-    /// through the game's damage math). Empty: none.
-    /// </summary>
-    public Dictionary<int, int> OnKillHitAll = new();
-    /// <summary>
-    /// Unblockable, unpowered damage to the target from a card that isn't an attack (Capture Spirit: CreatureCmd.Damage), per
-    /// enemy id through the game's damage math. Not a hit of yours: Curl Up, Flutter and the like don't react.
-    /// </summary>
-    public Dictionary<int, int> TargetDamage = new();
-    /// <summary>
-    /// Osty makes the attack (Bone Shards, Poke, Squeeze...): enemy Thorns hits Osty, not you (ThornsPower: the dealer), and
-    /// your Envenom and The Boot don't apply (they need you as the dealer). Curl Up, Slippery and the like react as to any hit.
-    /// </summary>
-    public bool ByOsty;
-    /// <summary>
-    /// Unblockable damage to every enemy after the card's hits: Necro Mastery when the card kills Osty (NecroMasteryPower.
-    /// AfterCurrentHpChanged: the HP Osty loses times its amount).
-    /// </summary>
-    public int AllEnemiesUnblockable;
-    /// <summary>It kills your Osty (Sacrifice, Bone Shards: CreatureCmd.Kill on Osty).</summary>
-    public bool KillsOsty;
-    public int FadingDelta;
-    public bool IsAttack;
-
-    /// <summary>Damage procs it sets off (relics and powers), in order.</summary>
-    public List<ProcHit> Procs = new();
-    /// <summary>Block procs it sets off: one entry per block gain.</summary>
-    public List<int> ProcBlock = new();
-}
-
-public sealed class ProcHit
-{
-    public SimPlay.Target Spread;
-    public int TargetId = -1;
-    public Dictionary<int, int> Damage = new();
-    public int Times = 1;
-}
-
-public sealed class OrbOp
-{
-    public enum Kind { EvokeFront, EvokeAllTwice, Channel, Slots }
-
-    public Kind Op;
-    /// <summary>EvokeFront: how many times the front orb is evoked (removed after the last).</summary>
-    public int Times = 1;
-    /// <summary>Channel: the new orb (values with your Focus).</summary>
-    public SimOrb? Orb;
-    /// <summary>
-    /// Slots: orb slots gained (OrbCmd.AddSlots, up to 10) or lost (negative: OrbCmd.RemoveSlots, not
-    /// below 0; the orbs past the new capacity are dropped from the back, not evoked).
-    /// </summary>
-    public int Slots;
-}
-
 /// <summary>The branches still possible after the simulation, with helpers for guarantees and the worst case.</summary>
 public sealed class SimOutcome
 {
@@ -522,7 +341,6 @@ public static partial class SimEngine
         foreach (var (m, o) in listeners) amount = (int)Math.Min(amount, m.ModifyDamageCap(s, o, ctx));
         foreach (var (m, o) in listeners) m.BeforeDamageReceived(s, o, ctx, amount);
         if (!e.Alive) return 0;
-        if (card != null) e.HitByCard = true;
         var hadBlock = e.Block > 0;
         var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(e.Block, amount);
         e.Block -= absorbed;
@@ -540,7 +358,6 @@ public static partial class SimEngine
             if (toHp > 0)
             {
                 e.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
-                if (card != null) e.ThroughByCard = true;
             }
         }
         var ev = new DamageEvent(dealer, e.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && e.Hp <= 0);
@@ -553,7 +370,6 @@ public static partial class SimEngine
     /// <summary>Damage with no models listening (most fights): block, then HP; nothing else can react.</summary>
     private static int PlainDamage(SimState s, SimEnemy e, int amount, int? dealer, SimProps props, SimCard? card)
     {
-        if (card != null) e.HitByCard = true;
         var hadBlock = e.Block > 0;
         var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(e.Block, amount);
         e.Block -= absorbed;
@@ -564,7 +380,6 @@ public static partial class SimEngine
         {
             e.Hp -= toHp;
             e.UnblockedInstances++;
-            if (card != null) e.ThroughByCard = true;
         }
         else toHp = 0;
         if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(s, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)));
@@ -602,13 +417,6 @@ public static partial class SimEngine
         e.StunnedThisTurn = true;
     }
 
-    /// <summary>A hit of the play's attack given as a final number: Osty's or yours (a powered Move from the play's card).</summary>
-    private static void PlayHit(SimState s, SimEnemy e, int amount, bool osty) =>
-        Damage(s, e, amount, osty ? Who.YourOsty : Who.You, SimProps.Move, s.CurrentPlay?.Card);
-
-    /// <summary>One hit of your card's attack given as a final number (Rain Shot's splash).</summary>
-    private static void CardHit(SimState s, SimEnemy e, int amount) => Damage(s, e, amount, Who.You, SimProps.Move, s.CurrentPlay?.Card);
-
     /// <summary>
     /// A powered hit of yours or Osty's: its DamageResult.TotalDamage (blocked plus unblocked, which stops at the HP it had: the
     /// rest is overkill) for the Mighty Wings tab, and the legacy count of 30+ hits (SimPlay.BigHitThreshold).
@@ -616,16 +424,14 @@ public static partial class SimEngine
     private static void BiggestHit(SimState s, int total)
     {
         if (total > s.PlayBiggestHit) s.PlayBiggestHit = total;
-        if (s.BigHitThreshold > 0 && total >= s.BigHitThreshold) s.BigHits++;
     }
 
     /// <summary>One hit on a random living enemy: a branch per possible target.</summary>
-    private static IEnumerable<SimState> HitRandom(SimState s, Func<SimEnemy, int> amount, bool card = false, Action<SimState, SimEnemy>? then = null, bool osty = false)
+    private static IEnumerable<SimState> HitRandom(SimState s, Func<SimEnemy, int> amount, Action<SimState, SimEnemy>? then = null)
     {
         void Hit(SimState st, SimEnemy e)
         {
-            if (card) PlayHit(st, e, amount(e), osty);
-            else Damage(st, e, amount(e));
+            Damage(st, e, amount(e));
             then?.Invoke(st, e);
         }
         if (s.NoRandomHits)
@@ -667,32 +473,10 @@ public static partial class SimEngine
         return false;
     }
 
-    /// <summary>Poison on a random living enemy: a branch per possible target (none with NoRandomHits: never overstates).</summary>
-    private static IEnumerable<SimState> PoisonRandom(SimState s, int amount)
+    /// <summary>Unpowered damage from you to every hittable enemy (orbs, procs), each its own amount.</summary>
+    private static void HitAll(SimState s, Func<SimEnemy, int> amount)
     {
-        var targets = s.NoRandomHits ? new List<int>() : s.Targetable.Select(e => e.Id).ToList();
-        if (targets.Count <= 1 || !Branch(s))
-        {
-            if (targets.Count >= 1) s.Enemy(targets[0])!.AddPoison(amount);
-            yield return s;
-            yield break;
-        }
-        foreach (var id in targets)
-        {
-            var c = s.Clone();
-            c.Weight = s.Weight / targets.Count;
-            c.Enemy(id)!.AddPoison(amount);
-            yield return c;
-        }
-    }
-
-    private static void HitAll(SimState s, Func<SimEnemy, int> amount, bool card = false, bool osty = false)
-    {
-        foreach (var e in s.Targetable.ToList())
-        {
-            if (card) PlayHit(s, e, amount(e), osty);
-            else Damage(s, e, amount(e));
-        }
+        foreach (var e in s.Targetable.ToList()) Damage(s, e, amount(e));
     }
 
     /// <summary>Gaining block (amount &gt; 0) sets off Juggernaut on a random enemy.</summary>
@@ -956,7 +740,10 @@ public static partial class SimEngine
     {
         switch (a)
         {
-            case LegacyPart lp: RunLegacy(b, lp.Play, lp.Part); break;
+            case FixedHitsAction fh: RunFixedHits(b, fh); break;
+            case HitYouAction hy: b.Do(s => LandBlockable(s, hy.Name, hy.Amount)); break;
+            case FirstPlayOnly fp: if (b.States.Count > 0 && b.States[0].CurrentPlay is not { PlayIndex: > 0 }) foreach (var x in fp.Actions) Run(b, x); break;
+            case CardResolvedAction cr: b.Do(s => CardResolved(s, cr)); break;
             case OrbAction oa: RunOrb(b, oa); break;
             case FocusAction fa: b.Do(s => ChangeFocus(s, fa.Delta)); break;
             case ShootAction: RunShoot(b); break;
@@ -975,239 +762,6 @@ public static partial class SimEngine
         }
         // Events raised inside its hits or deaths (an arrow knocked loose) run once the action is over.
         if (b.States.Any(s => s.Pending.Count > 0)) b.Each(DrainPending);
-    }
-
-    /// <summary>One part of a play given as a SimPlay summary (SimScript.Of): the play's precomputed numbers, in order.</summary>
-    private static void RunLegacy(BranchSet b, SimPlay p, LegacyPart.Kind part)
-    {
-        switch (part)
-        {
-        case LegacyPart.Kind.Setup:
-        {
-            // The play in progress, for hooks and the hits' card (Curl Up keys on it).
-            var play = p.Card ?? new SimCardPlay(new SimCard(p.Name, p.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, p.TargetId, 0, Math.Max(1, p.Plays), p.AutoPlay);
-            b.Do(s => { s.BigHitThreshold = p.BigHitThreshold; s.CurrentPlay = play; });
-        }
-        return;
-        case LegacyPart.Kind.HpCost:
-        // The card's own HP cost, before its hits.
-        if (p.HpCost > 0 && p.HpCostTimes > 0)
-            b.Do(s => { for (var i = 0; i < p.HpCostTimes; i++) LandUnblockable(s, p.Name, p.HpCost); });
-
-        return;
-        case LegacyPart.Kind.Hits:
-        // The card's hits.
-        int Hit(SimEnemy e) => p.HitDamage.TryGetValue(e.Id, out var d) ? d : 0;
-        // The i-th hit (0-based) on an enemy: weaker from HitDamageLater's point on.
-        int HitAt(SimState s, SimEnemy e, int i)
-        {
-            if (p.HitDamageByPlay.TryGetValue(e.Id, out var byPlay) && byPlay.PerPlay > 0 && byPlay.Damage.Length > 0)
-            {
-                var play = byPlay.Damage[Math.Min(i / byPlay.PerPlay, byPlay.Damage.Length - 1)];
-                return play.Length == 0 ? 0 : play[Math.Min(s.BigHits, play.Length - 1)];
-            }
-            return p.HitDamageLater.TryGetValue(e.Id, out var later) && i >= later.After ? later.Damage : Hit(e);
-        }
-        var attacks = p.Hits > 0 && p.HitTarget != SimPlay.Target.None;
-        AttackInfo Info(SimState s) => new(s.CurrentAttack, p.ByOsty ? Who.YourOsty : Who.You, SimProps.Move, s.CurrentPlay?.Card);
-        if (attacks)
-        {
-            b.Do(s => { s.AttackSerial++; s.CurrentAttack = s.AttackSerial; });
-            HookStep(b, (m, o, x) => m.BeforeAttack(x, o, Info(x)));
-        }
-        switch (p.HitTarget)
-        {
-            case SimPlay.Target.Single:
-                b.Do(s =>
-                {
-                    var e = s.Enemy(p.TargetId);
-                    if (e == null) return;
-                    var aliveBefore = e.Alive;
-                    for (var i = 0; i < p.Hits; i++) PlayHit(s, e, HitAt(s, e, i), p.ByOsty);
-                    // Timber: its kill sets off a hit on every enemy (a second attack of the card's).
-                    if (p.OnKillHitAll.Count > 0 && aliveBefore && !e.Alive)
-                        HitAll(s, x => p.OnKillHitAll.TryGetValue(x.Id, out var d) ? d : 0, card: true);
-                    if (p.SplashFromTarget && p.Hits > 0)
-                    {
-                        var dealt = Hit(e);
-                        foreach (var other in s.Targetable.Where(x => x.Id != e.Id).ToList()) CardHit(s, other, dealt);
-                    }
-                });
-                break;
-            case SimPlay.Target.All:
-                b.Do(s =>
-                {
-                    for (var i = 0; i < p.Hits; i++)
-                    {
-                        var n = i;
-                        HitAll(s, x => HitAt(s, x, n), card: true, osty: p.ByOsty);
-                    }
-                });
-                break;
-            case SimPlay.Target.Random:
-                if (p.GazeHits.Count > 0) b.Do(s => { foreach (var e in s.Enemies) e.GazeTaken = 0; });
-                for (var i = 0; i < p.Hits; i++)
-                    b.Each(s => HitRandom(s, Hit, card: true, osty: p.ByOsty, then: p.GazeHits.Count > 0 ? (_, e) => e.GazeTaken++ : null));
-                break;
-        }
-        if (attacks)
-        {
-            HookStep(b, (m, o, x) => m.AfterAttack(x, o, Info(x)));
-            b.Do(s => s.CurrentAttack = 0);
-        }
-
-        return;
-        case LegacyPart.Kind.AfterHits:
-        // Necro Mastery: Osty's death (Bone Shards, Sacrifice) hits every enemy.
-        if (p.AllEnemiesUnblockable > 0)
-            b.Do(s => { var total = 0; foreach (var e in s.Targetable.ToList()) { Damage(s, e, p.AllEnemiesUnblockable, props: SimProps.Unblockable | SimProps.Unpowered); total += p.AllEnemiesUnblockable; } s.LogFired("NecroMasteryPower", total, Who.You); });
-
-        // Capture Spirit: unblockable damage to the target.
-        if (p.TargetDamage.TryGetValue(p.TargetId, out var direct) && direct > 0)
-            b.Do(s => { if (s.Enemy(p.TargetId) is { Alive: true } e) Damage(s, e, direct, props: SimProps.Unblockable | SimProps.Unpowered); });
-
-        // Judgement: the target dies at or below the threshold (after any hits; it has none).
-        if (p.ExecuteAtOrBelow > 0)
-            b.Do(s => { if (s.Enemy(p.TargetId) is { Alive: true } e && e.Hp <= p.ExecuteAtOrBelow) e.Hp = 0; });
-
-        return;
-        case LegacyPart.Kind.Orbs:
-        RunOrbOps(b, p);
-        return;
-        case LegacyPart.Kind.Block:
-        // Its own block: each gain sets off Juggernaut (the targeted teammate's, when it goes to them).
-        // No teammate targeted (none alive): the block goes to no one, never to you.
-        var blockTo = p.BlockToAlly ? p.AllyTarget : -1;
-        bool Lands(SimState s) => !p.BlockToAlly || (blockTo >= 0 && blockTo < s.Teammates.Count && s.Teammates[blockTo].Hp > 0);
-        for (var i = 0; i < p.BlockGains; i++)
-        {
-            var amount = p.BlockByPlay is { PerPlay: > 0 } byPlay && byPlay.Amount.Length > 0
-                ? byPlay.Amount[Math.Min(i / byPlay.PerPlay, byPlay.Amount.Length - 1)]
-                : p.BlockLater is { } later && i >= later.After ? later.Amount : p.BlockAmount;
-            b.Each(s => Lands(s) ? GainBlock(s, amount, null, blockTo) : new[] { s });
-        }
-        for (var i = 0; i < p.EnchantmentBlock.Gains; i++)
-        {
-            var amount = i > 0 && p.EnchantmentBlockLater is { } later ? later : p.EnchantmentBlock.Amount;
-            b.Each(s => GainBlock(s, amount, null));
-        }
-        return;
-        case LegacyPart.Kind.AfterBlock:
-        if (p.KillsOsty) b.Do(s => s.P.OstyHp = 0);
-
-        // Damage to you after it resolves (Galvanic): your block takes it first.
-        if (p.DamageToYou.Count > 0) b.Do(s => { foreach (var (n, a) in p.DamageToYou) LandBlockable(s, n, a); });
-
-        return;
-        case LegacyPart.Kind.Resolve:
-        // Powers it gives, and poison.
-        b.Do(s =>
-        {
-            s.P.Plating += p.AddPlating;
-            s.P.Juggernaut += p.AddJuggernaut;
-            s.P.FeelNoPain += p.AddFeelNoPain;
-            s.P.Thorns += p.AddThorns;
-            s.P.FlameBarrier += p.AddFlameBarrier;
-            if (p.Poison > 0)
-            {
-                if (p.PoisonAll)
-                {
-                    foreach (var e in s.Targetable) e.AddPoison(p.Poison);
-                }
-                else if (s.Enemy(p.TargetId) is { Alive: true } t)
-                {
-                    t.AddPoison(p.Poison);
-                }
-            }
-            foreach (var (id, hits) in p.SetHits)
-            {
-                if (s.Enemy(id) is { Alive: true } e) e.Hits = hits; // shared, never changed in place
-            }
-            foreach (var (id, hits) in p.SetTeammateHits)
-            {
-                if (s.Enemy(id) is { Alive: true } e) e.TeammateHits = hits; // shared, never changed in place
-            }
-            // Monarch's Gaze on a random-target attack: the Strength each enemy lost is the hits it took in this branch.
-            foreach (var (id, byCount) in p.GazeHits)
-            {
-                if (s.Enemy(id) is not { Alive: true, GazeTaken: > 0 } e || byCount.Count == 0) continue;
-                var k = Math.Min(e.GazeTaken, byCount.Count) - 1;
-                e.Hits = byCount[k];
-                if (p.GazeTeammateHits.TryGetValue(id, out var team) && team.Count > 0) e.TeammateHits = team[Math.Min(k, team.Count - 1)];
-            }
-            s.P.HandCount = Math.Max(0, s.P.HandCount + p.HandDelta);
-            if (!p.AutoPlay) s.P.PaelsEyeExhaust = false; // a card you play (not an auto-play) disarms Pael's Eye
-            if (s.P.AutoHand != null)
-            {
-                // Stampede and Simpleton pick from what's left; cards it draws or makes aren't known.
-                if (p.HandCard != 0) s.P.AutoHand = s.P.AutoHand.Where(c => c.Id != p.HandCard).ToList();
-                if (p.HandDelta > -1) s.AutoPlaysUnknown = true;
-            }
-            if (p.Draws > 0 && s.P.InvincibleBlock > 0)
-            {
-                // Drawing the whole pile shuffles your discard pile in: the top isn't known any more.
-                s.P.InvincibleDrawPile -= p.Draws;
-                if (s.P.InvincibleDrawPile <= 0) s.P.InvincibleBlock = 0;
-            }
-            s.P.Fading = Math.Max(0, s.P.Fading + p.FadingDelta);
-            if (p.IsAttack) s.P.AttacksThisTurn++;
-            AllyDeaths(s); // deaths from the card's hits
-            if (p.FocusDelta != 0) ChangeFocus(s, p.FocusDelta);
-
-            foreach (var e in s.Enemies) e.HitByCard = e.ThroughByCard = false;
-        });
-        // AfterCardPlayed, once per play (powers fire before your relics, so Curl Up and Sneaky's block is up before relic
-        // procs hit).
-        if (p.Card == null) for (var i = 0; i < Math.Max(1, p.Plays); i++) HookStep(b, (m, o, x) => m.AfterCardPlayed(x, o, x.CurrentPlay!));
-
-        return;
-        case LegacyPart.Kind.RandomPoison:
-        // Poison on random enemies (one branch per target each time).
-        for (var i = 0; i < p.RandomPoisonTimes && p.RandomPoison > 0; i++) b.Each(s => PoisonRandom(s, p.RandomPoison));
-
-        return;
-        case LegacyPart.Kind.Procs:
-        // Procs it sets off.
-        foreach (var proc in p.Procs)
-        {
-            int Dmg(SimEnemy e) => proc.Damage.TryGetValue(e.Id, out var d) ? d : 0;
-            for (var t = 0; t < proc.Times; t++)
-            {
-                switch (proc.Spread)
-                {
-                    case SimPlay.Target.Single:
-                        b.Do(s =>
-                        {
-                            if (s.Enemy(proc.TargetId) is { } e) Damage(s, e, Dmg(e));
-                        });
-                        break;
-                    case SimPlay.Target.All:
-                        b.Do(s => HitAll(s, Dmg));
-                        break;
-                    case SimPlay.Target.Random:
-                        b.Each(s => HitRandom(s, Dmg));
-                        break;
-                }
-            }
-        }
-        foreach (var amount in p.ProcBlock) b.Each(s => GainBlock(s, amount, null));
-        if (p.TeammateBlock.Amount > 0 && b.States.Count > 0)
-        {
-            for (var i = 0; i < p.TeammateBlock.Times; i++)
-            {
-                for (var k = 0; k < b.States[0].Teammates.Count; k++)
-                {
-                    var tk = k;
-                    b.Each(s => s.Teammates[tk].Hp > 0 ? GainBlock(s, p.TeammateBlock.Amount, null, tk) : new[] { s });
-                }
-            }
-        }
-
-        return;
-        case LegacyPart.Kind.Deaths:
-        b.Do(s => { AllyDeaths(s); s.CurrentPlay = null; }); // deaths from its procs
-        return;
-        }
     }
 
     // ------------------------------------------------------------------ end of turn

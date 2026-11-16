@@ -98,9 +98,6 @@ public sealed class SimEnemy
     [JsonIgnore] public int Sneaky { get => Powers["SneakyPower"]; set => Set("SneakyPower", value); }
     /// <summary>Skittish: block it gains after a card's attack gets damage through its block (once per turn; 0 once used).</summary>
     [JsonIgnore] public int Skittish { get => Powers["SkittishPower"]; set => Set("SkittishPower", value); }
-    // During one play: it was hit by the card's attack / damage got through.
-    public bool HitByCard;
-    public bool ThroughByCard;
     /// <summary>It gained block from Curl Up, Sneaky or Skittish because of the play.</summary>
     public bool ReactedWithBlock;
 
@@ -137,8 +134,6 @@ public sealed class SimEnemy
     public List<int>? HitsAfterAllyDies;
     /// <summary>Crab Rage: block it gains when an ally dies.</summary>
     public int CrabRageBlock;
-    /// <summary>Hits of the current random-target play that landed on it (Monarch's Gaze: SimPlay.GazeHits).</summary>
-    public int GazeTaken;
     /// <summary>
     /// Explosive: when it dies, this much damage to you (unpowered, blockable: ExplosivePower.AfterDeath hits every
     /// living player), after the game's damage math for you; 0 = none.
@@ -453,8 +448,6 @@ public sealed class SimState
     /// the largest (in some). Not in the branch key.
     /// </summary>
     public PowerSet Fired = PowerSet.Empty, FiredAny = PowerSet.Empty;
-    /// <summary>Mighty Wings triggers this simulation (your powered hits of BigHitThreshold or more), and the play's threshold.</summary>
-    public int BigHits, BigHitThreshold;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
     public int FairiesUsed;
     public bool LizardTailUsed;
@@ -691,13 +684,13 @@ public sealed class SimState
                 h *= 1099511628211L;
             }
         }
-        Add(BigHits);
+
         Add(P.Block); Add(P.Arrows); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(P.OrichalcumArmed ? 1 : 0); Add(ParryingShieldFired ? 1 : 0);
         Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         foreach (var e in Enemies)
         {
             Add(e.Id); Add(e.Hp); Add(e.Block); Add(e.ShellLeft); Add(e.UnblockedInstances); Add(e.FirstHitFullyBlocked ? 1 : 0); Add(e.Poison); Add(e.DiedBeforeActing ? 1 : 0);
-            Add(e.PoisonStacks); Add(e.CurlUp); Add(e.Skittish); Add(e.HitByCard ? 1 : 0); Add(e.ThroughByCard ? 1 : 0);
+            Add(e.PoisonStacks); Add(e.CurlUp); Add(e.Skittish);
             Add(e.Stunned ? 1 : 0); Add(e.Burrowed ? 1 : 0); Add(e.Asleep ? 1 : 0); Add(e.Slumber); Add(e.Flutter); Add(e.StunAtHp); Add(e.Gambit ? 1 : 0); Add(e.Slippery);
             Add(e.ReactedWithBlock ? 1 : 0); Add(e.BlockBroken ? 1 : 0);
             e.Powers.Hash(Add);
@@ -709,7 +702,7 @@ public sealed class SimState
             foreach (var c in P.AutoHand) Add(c.Id);
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed);
-        foreach (var e in Enemies) { Add(e.Exploded ? 1 : 0); Add(e.GazeTaken); }
+        foreach (var e in Enemies) Add(e.Exploded ? 1 : 0);
         P.Powers.Hash(Add); P.Relics.Hash(Add);
         Add(P.Orbs.Count);
         foreach (var o in P.Orbs)

@@ -82,3 +82,23 @@ public class PlayLogTests
         Assert.Equal(1, s.Fired["SlowPower@1"]);
     }
 }
+
+/// <summary>ArrowCmd.ShootArrowAtTarget runs a shot's attack inside ImpaleTarget: with no arrow, the shot does nothing.</summary>
+public class ShotTests
+{
+    [Fact]
+    public void AShotWithoutAnArrowDoesNothingNotEvenSpendVigor()
+    {
+        var s = new SimState { Enemies = { Enemy(0, 50) } };
+        s.P.Powers = s.P.Powers.With("VigorPower", 5);
+        var shot = Play(Card("QuickShot"), 0, 2, new ShootAction(), Attack(6) with { NeedsArrow = true }, new ImpaleAction());
+        var none = Assert.Single(After(s, shot));
+        Assert.Equal(50, none.Enemy(0)!.Hp);
+        Assert.Equal(5, none.P.Powers["VigorPower"]);
+        // One arrow: the first play shoots (6 + Vigor 5), the second has none left.
+        s.P.Arrows = 1;
+        var one = Assert.Single(After(s, shot));
+        Assert.Equal(39, one.Enemy(0)!.Hp);
+        Assert.Equal(1, one.Enemy(0)!.Powers["ImpaledPower"]);
+    }
+}

@@ -195,11 +195,12 @@ public class SimTeammateTests
     [Fact]
     public void ACardThatChangesIntentsChangesTeammatesHitsToo()
     {
-        // A Weak-applying play: hits on you 10 → 7, on the teammate 15 → 11.
+        // A Weak-applying play: hits on you 10 → 7, on the teammate (an unmodelled ×1.5 on them) 15 → 11.
         var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
         s.Enemies[0].TeammateHits = new() { new() { 15 } };
+        s.Enemies[0].Intent = new List<IntentHit> { new(10) { Captured = new Dictionary<int, CapturedTerms> { [Who.Teammate(0)] = new() { Mul = 1.5m } } } };
         s.Teammates.Add(Mate());
-        var play = new SimPlay { Name = "Neutralize", SetHits = { [1] = new() { 7 } }, SetTeammateHits = { [1] = new() { new() { 11 } } } };
+        var play = V2.V2Script.Play(V2.V2Script.Card("Neutralize", SimCardType.Skill), 1, 1, new ApplyPowerAction("WeakPower", 1) { Debuff = true });
         var o = SimEngine.Run(s, play);
         Assert.Equal(7, o.TakenMax);
         Assert.Equal(11, o.TeammateTakenMax(0));
@@ -266,14 +267,14 @@ public class SimTeammateTests
     [Fact]
     public void InterceptMovesTheAttacksOntoYou()
     {
-        // Intercept on the teammate (the adapter's SetHits from the game's damage math): Covered zeroes the powered
-        // attacks on them, your InterceptPower doubles those on you (covered players + 1). The enemy hits 10 each.
+        // Intercept on the teammate: Covered (CoveredPower.AfterApplied gives you Intercept) zeroes the powered attacks on them, your
+        // InterceptPower doubles those on you (covered players + 1). The enemy hits 10 each.
         var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
         s.Enemies[0].TeammateHits = new() { new() { 10 } };
+        s.Enemies[0].Intent = new List<IntentHit> { new(10) };
         s.Teammates.Add(Mate());
-        var play = new SimPlay { AllyTarget = 0 };
-        play.SetHits[1] = new() { 20 };
-        play.SetTeammateHits[1] = new() { new() { 0 } };
+        var play = V2.V2Script.Play(V2.V2Script.Card("Intercept", SimCardType.Skill), Who.Teammate(0), 1,
+            new ApplyPowerAction("CoveredPower", 1) { To = ApplyPowerAction.Where.Creature, Creature = Who.Teammate(0) });
         var o = SimEngine.Run(s, play);
         Assert.Equal(20, o.TakenMax);
         Assert.Equal(0, o.TeammateTakenMax(0));

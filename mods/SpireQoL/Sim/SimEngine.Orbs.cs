@@ -120,19 +120,4 @@ public static partial class SimEngine
         }
     }
 
-    /// <summary>A play built as a summary (SimPlay.OrbOps): each op as its orb action.</summary>
-    private static void RunOrbOps(BranchSet b, SimPlay p)
-    {
-        foreach (var op in p.OrbOps)
-        {
-            if (op.Op == OrbOp.Kind.Channel && p.ChannelToAlly && p.AllyTarget < 0) continue; // no teammate to channel into
-            RunOrb(b, op.Op switch
-            {
-                OrbOp.Kind.Channel => new OrbAction(OrbAction.Op.Channel) { Values = op.Orb, To = p.ChannelToAlly ? Who.Teammate(p.AllyTarget) : Who.You },
-                OrbOp.Kind.EvokeFront => new OrbAction(OrbAction.Op.EvokeFront) { Times = op.Times },
-                OrbOp.Kind.EvokeAllTwice => new OrbAction(OrbAction.Op.EvokeAllTwice),
-                _ => new OrbAction(OrbAction.Op.Slots) { Slots = op.Slots },
-            });
-        }
-    }
 }

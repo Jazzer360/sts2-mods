@@ -15,8 +15,9 @@ public class SimCoveringFireTests
         var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = new() { 10 } } } };
         s.Teammates.Add(new SimPlayer { Hp = 40 });
         s.Teammates.Add(new SimPlayer { Hp = 0 });
-        var shot = new SimPlay { Name = "QuickShot", IsAttack = true, TeammateBlock = (3, 2) };
-        var o = SimEngine.Run(s, shot);
+        s.P.Powers = s.P.Powers.With("CoveringFirePower", 3);
+        // Played twice, with no arrow: each shot it tries still counts (TryShootArrow calls AfterArrowShot).
+        var o = SimEngine.Run(s, V2.V2Script.Play(V2.V2Script.Card("QuickShot"), 1, 2, new ShootAction(), new ImpaleAction()));
         Assert.All(o.Branches, b => Assert.Equal(6, b.Teammates[0].BlockGained));
         Assert.All(o.Branches, b => Assert.Equal(0, b.Teammates[1].BlockGained));
         Assert.Equal(10, o.TakenMax); // none for you
