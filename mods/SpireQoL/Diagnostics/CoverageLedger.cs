@@ -598,6 +598,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     {
         CheckRelicChoices(t);
         CheckRelicCards(t);
+        CheckRelicRooms(t);
         var name = t.Name;
         var listed = CoverageLedger.RelicFightHooks.Any(r => r.Type == name);
         if (!listed)
@@ -674,6 +675,71 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
                 hooks.Add(m.Name);
         }
         return hooks;
+    }
+
+    /// <summary>Hooks that change the map or a kind of room by themselves (docs/PATHING.md): overriding one is a room test.</summary>
+    internal static readonly HashSet<string> MapHooks = new()
+    {
+        "ModifyUnknownMapPointRoomTypes", "ModifyGeneratedMap", "ModifyGeneratedMapLate", "ShouldAllowFreeTravel", "ShouldGenerateTreasure",
+        "ModifyNextEvent", "ModifyOddsIncreaseForUnrolledRoomType", "TryModifyRestSiteOptions", "ShouldDisableRemainingRestSiteOptions",
+        "ModifyRestSiteHealAmount", "TryModifyRestSiteHealRewards", "AfterRestSiteHeal", "AfterRestSiteSmith",
+    };
+
+    /// <summary>
+    /// Pathing (docs/PATHING.md, decision #65): the hooks of a relic or card that act on a kind of room. A map hook it overrides, or an
+    /// override whose code (async bodies and lambdas included) reads a room's type (AbstractRoom.RoomType, an encounter's RoomType,
+    /// MapPoint.PointType) or tests a room's class (`room is MerchantRoom`). Each is "Hook: what it reads", for the review in
+    /// Data/ChoiceReminders (a Map rule) or ChoiceReminders.MapReviewed. Read from the compiled code, so new ones are caught.
+    /// </summary>
+    internal static List<string> RoomTestingHooks(Type t)
+    {
+        var found = new List<string>();
+        foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+        {
+            if (!m.IsVirtual || m.GetBaseDefinition().DeclaringType == t || m.IsSpecialName) continue;
+            if (MapHooks.Contains(m.Name)) { found.Add(m.Name + ": map hook"); continue; }
+            var reads = new SortedSet<string>();
+            foreach (var code in BodiesOf(m, t))
+            {
+                foreach (var i in code)
+                {
+                    if (i.operand is MethodBase mb && mb.DeclaringType != null
+                        && ((mb.Name == "get_RoomType" && (typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom).IsAssignableFrom(mb.DeclaringType) || typeof(EncounterModel).IsAssignableFrom(mb.DeclaringType)))
+                            || (mb.Name == "get_PointType" && mb.DeclaringType.Name == "MapPoint")))
+                        reads.Add(mb.DeclaringType.Name + "." + mb.Name[4..]);
+                    if ((i.opcode == System.Reflection.Emit.OpCodes.Isinst || i.opcode == System.Reflection.Emit.OpCodes.Castclass) && i.operand is Type rt
+                        && typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom).IsAssignableFrom(rt) && rt != typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom))
+                        reads.Add("is " + rt.Name);
+                }
+            }
+            if (reads.Count > 0) found.Add(m.Name + ": " + string.Join(", ", reads));
+        }
+        return found;
+    }
+
+    /// <summary>A method's code, its async state machine's and the lambdas it points at (one level), as Harmony reads them.</summary>
+    private static IEnumerable<List<CodeInstruction>> BodiesOf(MethodInfo m, Type owner)
+    {
+        var bodies = new List<List<CodeInstruction>>();
+        void Add(MethodBase b) { try { bodies.Add(PatchProcessor.GetOriginalInstructions(b)); } catch { } }
+        Add(m);
+        if (m.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()?.StateMachineType is { } sm
+            && sm.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is { } moveNext)
+            Add(moveNext);
+        foreach (var lambda in bodies.ToList().SelectMany(c => c).Where(i => i.opcode == System.Reflection.Emit.OpCodes.Ldftn).Select(i => i.operand)
+                     .OfType<MethodInfo>().Where(l => l.DeclaringType == owner || l.DeclaringType?.DeclaringType == owner).Distinct())
+            Add(lambda);
+        return bodies;
+    }
+
+    /// <summary>Pathing (decision #65): a relic whose hooks act on a kind of room has a Map rule or a reason (ChoiceReminders.MapReviewed).</summary>
+    private static void CheckRelicRooms(Type t)
+    {
+        var name = t.Name;
+        if (SpireQoL.Data.ChoiceReminders.For(name) is { Map: not SpireQoL.Data.PathRoom.None } || SpireQoL.Data.ChoiceReminders.MapReviewed.ContainsKey(name)) return;
+        var hooks = RoomTestingHooks(t);
+        if (hooks.Count == 0) return;
+        Unexpected(name, "relic-room-unreviewed", $"a relic whose hooks act on a kind of room, with no map rule and no reviewed reason (ChoiceReminders.MapReviewed): {string.Join("; ", hooks)}.");
     }
 
     private static void CheckRelicCards(Type t)

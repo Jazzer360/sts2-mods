@@ -338,6 +338,30 @@ public sealed partial class SettingsMenu
             + "one. For a transform, pick the card you'd transform to see what it can become. Marks are kept for the run."));
         flow.AddChild(inspect);
 
+        // Map: icons left of the legend's rows (decision #65).
+        var map = Cell();
+        map.AddChild(Label("Map", 20, Accent));
+        map.AddChild(ExampleBox(inner =>
+        {
+            void Legend(string room, params (RelicModel?, bool, string?)[] relics)
+            {
+                var row = UiKit.Row(10);
+                row.AddChild(RunRemindersFeature.ExamplePathIcons(relics.Where(r => r.Item1 != null).Select(r => (r.Item1!, r.Item2, r.Item3))));
+                var name = UiKit.Label(room, 20, Colors.White);
+                name.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+                row.AddChild(name);
+                row.Alignment = BoxContainer.AlignmentMode.End;
+                inner.AddChild(row);
+            }
+            Legend("Elite", (RelicOf<BlackStar>(), false, null), (RelicOf<SlingOfCourage>(), false, null));
+            Legend("Rest", (RelicOf<EternalFeather>(), false, "+9"), (RelicOf<Girya>(), false, null));
+            Legend("Merchant", (RelicOf<MawBank>(), true, null), (RelicOf<MealTicket>(), false, "+15"));
+        }));
+        map.AddChild(CellText("Left of the map legend's rows: your relics (and quest cards, like Dowsing Rod's) that make that kind of room "
+            + "unusually good or bad, with the heal or count they have now. Crossed: Maw Bank stops paying once you buy in a shop. Hover "
+            + "one for its text and to light up those rooms on the map."));
+        flow.AddChild(map);
+
         // Offered cards: a tab per relic that makes the card stronger in fights in a way it doesn't show (decision #62).
         GuideCardCell(flow, Card<Begone>(), "Cards you're offered",
             "On card rewards, an event's choice of cards and in the shop: a tab for each of your relics that makes the card stronger "

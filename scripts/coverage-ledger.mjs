@@ -118,12 +118,15 @@ const reminderRules = new Set([...fs.readFileSync(path.join(root, "mods", "Spire
 // Settings catalog rows for relics: tab (crossed ones are `Crossed + "..."`), tracker and reminder text.
 const rowsByRelic = new Map();
 for (const m of catalog.matchAll(new RegExp(String.raw`new\((?:nameof\((\w+)\)|"(\w+)"), SourceGroup\.Relic, (?:null|(Crossed \+ )?${strRe})(?:, (?:null|${strRe}))?([^\n]*)`, "g"))) {
-  const rest = m[6] || "";
-  const rem = rest.match(new RegExp(`Reminder: ${strRe}`));
+  // The row's text up to the next row (a row can span lines), with its text for each place a reminder shows.
+  const end = catalog.indexOf("\n        new(", m.index + 1);
+  const rest = catalog.slice(m.index, end < 0 ? undefined : end);
+  const placeName = { Reward: "card rewards", Event: "events", Shop: "shops", Map: "map" };
+  const places = [...rest.matchAll(new RegExp(String.raw`\b(Reward|Event|Shop|Map): ${strRe}`, "g"))].map(x => `${placeName[x[1]]}: ${unq(x[2])}`);
   rowsByRelic.set(m[1] || m[2], {
     tag: m[4] == null ? null : (m[3] ? "crossed: " : "") + unq(m[4]), tracker: unq(m[5]),
     doublePlay: rest.includes('TagPrefix: "double-play:"'),
-    reminder: rem ? unq(rem[1]) : null,
+    reminder: places.length ? places.join("; ") : null,
   });
 }
 

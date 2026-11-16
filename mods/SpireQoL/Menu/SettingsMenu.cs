@@ -33,35 +33,42 @@ public sealed partial class SettingsMenu
     private static readonly Color RowA = new(1, 1, 1, 0.035f);
     private static readonly Color RowB = new(1, 1, 1, 0f);
 
-    private enum Page { General, CardTabs, Relics, YourPowers, EnemyPowers, Cards, Guide }
+    // Pages (decision #66): what shows in fights (its features and options, then the tab kinds and every relic, power and card's
+    // switches), what shows outside fights (its features and options, then every reminder's switches), and the rest.
+    private enum Page { Fights, CardTabs, Relics, YourPowers, EnemyPowers, Cards, Outside, General, Guide }
 
     private static readonly (Page Page, string Title)[] Pages =
     {
-        (Page.General, "General"),
+        (Page.Fights, "In fights"),
         (Page.CardTabs, "Card tabs"),
         (Page.Relics, "Relics"),
         (Page.YourPowers, "Your powers"),
         (Page.EnemyPowers, "Enemy powers"),
         (Page.Cards, "Cards"),
+        (Page.Outside, "Outside fights"),
+        (Page.General, "General"),
         (Page.Guide, "Guide"),
     };
 
-    internal static readonly (string Id, string Name, string Description)[] FeatureRows =
+    /// <summary>The page a feature's switch is on.</summary>
+    internal enum FeaturePage { Fights, Outside, General }
+
+    internal static readonly (string Id, string Name, string Description, FeaturePage Where)[] FeatureRows =
     {
-        ("card-indicators", "Card Indicators", "Retain, Sly, replay and double-play tabs; Ethereal cards fade."),
-        ("proc-indicators", "Proc Indicators", "A tab for every relic or power a card would set off (the Relics and powers pages)."),
-        ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar."),
-        ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes)."),
-        ("teammate-incoming-damage", "Teammate Incoming Damage", "Multiplayer: hovering a teammate shows what they'll take, after their block (from what you can see, not their hand)."),
-        ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile."),
-        ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it)."),
-        ("run-reminders", "Run Reminders", "Outside fights: your relics that react to a card reward, next to the screen, and to an event option, beside it."),
-        ("potion-tabs", "Potion Tabs", "Tabs under your potions for the relics that drinking one sets off (the Relics page)."),
-        ("rest-preview", "Rest Preview", "At rest sites, a sum beside your character: your HP, the rest heal and each relic that changes it, and the HP you end with (and how much is wasted). Before the boss, Pantograph and Bath Robes are lines too. In multiplayer, hover a teammate while Mend is on offer for theirs."),
-        ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit), with a gear beside it that opens this menu."),
-        ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports)."),
-        ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports)."),
-        ("coverage-watch", "Coverage check", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports)."),
+        ("card-indicators", "Card Indicators", "Retain, Sly, replay and double-play tabs; Ethereal cards fade.", FeaturePage.Fights),
+        ("proc-indicators", "Proc Indicators", "A tab for every relic or power a card would set off (the Relics, powers and Cards pages).", FeaturePage.Fights),
+        ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar.", FeaturePage.Fights),
+        ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes).", FeaturePage.Fights),
+        ("teammate-incoming-damage", "Teammate Incoming Damage", "Multiplayer: hovering a teammate shows what they'll take, after their block (from what you can see, not their hand).", FeaturePage.Fights),
+        ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile.", FeaturePage.Fights),
+        ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it).", FeaturePage.Fights),
+        ("potion-tabs", "Potion Tabs", "Tabs under your potions for the relics that drinking one sets off (the Relics page).", FeaturePage.Fights),
+        ("run-reminders", "Run Reminders", "Your relics that change a choice, on the choice: the card reward panel, icons beside event options and shop prices, tabs on cards you're offered, and on the map beside the legend's rows.", FeaturePage.Outside),
+        ("rest-preview", "Rest Preview", "At rest sites, a sum beside your character: your HP, the rest heal and each relic that changes it, and the HP you end with (and how much is wasted). Before the boss, Pantograph and Bath Robes are lines too. In multiplayer, hover a teammate while Mend is on offer for theirs.", FeaturePage.Outside),
+        ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit), with a gear beside it that opens this menu.", FeaturePage.General),
+        ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports).", FeaturePage.General),
+        ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports).", FeaturePage.General),
+        ("coverage-watch", "Coverage check", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports).", FeaturePage.General),
     };
 
     private readonly QolContext _ctx;
@@ -76,7 +83,7 @@ public sealed partial class SettingsMenu
     private LineEdit? _search;
     private Button? _onlyHere;
     private readonly Dictionary<Page, Button> _pageButtons = new();
-    private Page _page = Page.General;
+    private Page _page = Page.Fights;
     private readonly List<Cards.TinyCardIcon> _tinyIcons = new();
     private Action? _closeAction;
     private bool _blocking;
@@ -256,7 +263,7 @@ public sealed partial class SettingsMenu
         _search.AddThemeFontSizeOverride("font_size", 20);
         _search.TextChanged += _ => Rebuild();
         header.AddChild(_search);
-        var (only, onlyBox) = Check(false, _ => Rebuild(), "Only what's in this fight", "Show only relics and powers you or the enemies have right now (in combat).");
+        var (only, onlyBox) = Check(false, _ => Rebuild(), "Only what I have", "Show only what you have right now: your relics, the cards in your deck and, in a fight, the powers on you and the enemies.");
         _onlyHere = only;
         header.AddChild(onlyBox);
         var reset = MakeButton("Reset defaults", 20);
@@ -329,6 +336,8 @@ public sealed partial class SettingsMenu
         {
             switch (_page)
             {
+                case Page.Fights: BuildFights(); break;
+                case Page.Outside: BuildOutside(); break;
                 case Page.General: BuildGeneral(); break;
                 case Page.CardTabs: BuildCardTabs(); break;
                 case Page.Relics: BuildSources(SourceGroup.Relic); break;
@@ -346,43 +355,87 @@ public sealed partial class SettingsMenu
         }
     }
 
-    private void BuildGeneral()
+    /// <summary>The feature switches on one page.</summary>
+    private void FeatureSwitches(FeaturePage where)
     {
         Section("Features");
-        foreach (var (id, name, desc) in FeatureRows)
+        foreach (var (id, name, desc, page) in FeatureRows)
         {
-            if (!Matches(name, desc)) continue;
+            if (page != where || !Matches(name, desc)) continue;
             var failed = _features.States.TryGetValue(id, out var st) && st == FeatureState.Failed;
             SimpleRow(name, failed ? desc + " (turned off after an error; restart the game)" : desc, FeatureOn(id), on => SetFeature(id, on), FeatureIcon(id));
         }
+    }
 
-        Section("Options");
+    /// <summary>In fights: its features, then each one's options under its name (the tabs and rows themselves are on the next pages).</summary>
+    private void BuildFights()
+    {
+        FeatureSwitches(FeaturePage.Fights);
+
+        Section("Card Indicators");
+        Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", S.EtherealOpacity, 0.25, 1, 0.05,
+            v => S.EtherealOpacity = (float)v, v => $"{v:0.00}");
+
+        Section("Proc Indicators");
         Option("Amounts on proc tabs", "Show the block, damage or summon amount on proc tabs. Off: icon only.",
             S.ProcNumbers, v => S.ProcNumbers = v);
+        Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
+            S.ProcIndirect, v => S.ProcIndirect = v);
+
+        Section("Relic Counters");
+        Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
+            S.PulseOneStepEarly, v => S.PulseOneStepEarly = v);
+        Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", S.FlashHz, 0.5, 6, 0.5,
+            v => S.FlashHz = (float)v, v => $"{v:0.0}/s");
+
+        Section("Predictions (Incoming Damage, Death Skull, lethal tabs)");
+        Option("Death chance", "Death Skull also shows when a roll decides whether an enemy dies before acting, with the chance (e.g. a random Lightning target).",
+            S.DeathChance, v => S.DeathChance = v);
         Option("Multiplayer predictions (experimental)", "Count teammates in predictions: their orbs and end-of-turn effects, their block and Beacon of Hope, and each enemy hit on every player. Still being checked against real co-op games.",
             S.MultiplayerPredictions, v => { S.MultiplayerPredictions = v; Sim.SimAdapter.IncludeTeammates = v; });
         Option("Count teammates' hands", "Multiplayer: predictions also use the cards in teammates' hands, which you can't see unless they tell you: Ethereal cards exhausting at end of turn (Feel No Pain block, Charon's Ashes and Forgotten Soul damage), Burn, Decay and Regret. Off: only their hand size counts.",
             S.TeammateHands, v => { S.TeammateHands = v; Combat.TurnEndModel.CountTeammateHands = v; });
-        Option("Death chance", "Death Skull also shows when a roll decides whether an enemy dies before acting, with the chance (e.g. a random Lightning target).",
-            S.DeathChance, v => S.DeathChance = v);
-        Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
-            S.ProcIndirect, v => S.ProcIndirect = v);
-        Option("Chance under event icons", "Run Reminders: under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
+    }
+
+    /// <summary>Outside fights: its features and options, then a switch per relic or card for each place its reminder shows.</summary>
+    private void BuildOutside()
+    {
+        FeatureSwitches(FeaturePage.Outside);
+
+        Section("Events");
+        Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
             S.EventOdds, v => S.EventOdds = v);
-        Option("Inspect event cards", "Run Reminders: a magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
+        Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
             S.EventInspect, v => S.EventInspect = v);
-        Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
-            S.PulseOneStepEarly, v => S.PulseOneStepEarly = v);
+
+        var here = _onlyHere!.ButtonPressed ? PresentTypes() : null;
+        var shown = SettingsCatalog.Sources.Where(s => s.OutsideFights)
+            .Where(e => here == null || here.Contains(e.Type))
+            .Select(e => (Entry: e, Name: DisplayName(e.Type)))
+            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Reward, x.Entry.Event, x.Entry.Shop, x.Entry.Map))
+            .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        Section("Reminders");
+        if (shown.Count == 0)
+        {
+            _rows!.AddChild(Label(here != null ? "You have none of these." : "No matches.", 20, Muted));
+            return;
+        }
+        ReminderRows(shown);
+    }
+
+    /// <summary>The rest: the main menu notice, the checks and error reports.</summary>
+    private void BuildGeneral()
+    {
+        FeatureSwitches(FeaturePage.General);
+
+        Section("Error reports");
         Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time (nothing personal), so they can be fixed.",
             S.ReportErrors, v =>
             {
                 S.ReportErrors = v;
                 if (Sts2Mods.Core.Diagnostics.ErrorReporter.Instance is { } r) r.Active = v;
             });
-        Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", S.EtherealOpacity, 0.25, 1, 0.05,
-            v => S.EtherealOpacity = (float)v, v => $"{v:0.00}");
-        Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", S.FlashHz, 0.5, 6, 0.5,
-            v => S.FlashHz = (float)v, v => $"{v:0.0}/s");
     }
 
     private void BuildCardTabs()
@@ -416,43 +469,22 @@ public sealed partial class SettingsMenu
 
     private void BuildSources(SourceGroup group)
     {
-        var entries = SettingsCatalog.Sources.Where(s => s.Group == group).ToList();
+        var entries = SettingsCatalog.Sources.Where(s => s.Group == group && s.InFights).ToList();
         var here = _onlyHere!.ButtonPressed ? PresentTypes() : null;
         var shown = entries
             .Where(e => here == null || here.Contains(e.Type))
             .Select(e => (Entry: e, Name: DisplayName(e.Type)))
-            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Tag, x.Entry.Tracker, x.Entry.Reward, x.Entry.Event, x.Entry.Shop))
+            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Tag, x.Entry.Tracker, x.Entry.Reward, x.Entry.Event, x.Entry.Shop, x.Entry.Map))
             .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
         if (shown.Count == 0)
         {
-            _rows!.AddChild(Label(here != null ? "Nothing from this page is in this fight." : "No matches.", 20, Muted));
+            _rows!.AddChild(Label(here != null ? "You have none of these right now." : "No matches.", 20, Muted));
             return;
         }
-
-        // Relics: what they do in fights (tabs, tracker) and outside them (Run Reminders) are different
-        // switches, so each gets its own section with its own columns. A relic can be in both (Belt Buckle).
-        if (group != SourceGroup.Relic)
-        {
-            FightRows(entries, shown, _columnHeader!);
-            return;
-        }
-        var fights = shown.Where(x => x.Entry.InFights).ToList();
-        var outside = shown.Where(x => x.Entry.OutsideFights).ToList();
-        if (fights.Count > 0)
-        {
-            Section("In fights");
-            var head = UiKit.Row(12);
-            head.MouseFilter = Control.MouseFilterEnum.Pass;
-            _rows!.AddChild(head);
-            FightRows(entries.Where(e => e.InFights).ToList(), fights, head);
-        }
-        if (outside.Count > 0)
-        {
-            Section("Outside fights");
-            ReminderRows(outside);
-        }
+        // What they do outside fights (Run Reminders) is on the Outside fights page.
+        FightRows(entries, shown, _columnHeader!);
     }
 
     /// <summary>On-card tabs and tracker rows, with their column headers in <paramref name="header"/>.</summary>
@@ -525,13 +557,14 @@ public sealed partial class SettingsMenu
         (ReminderPlace.Reward, "Card rewards"),
         (ReminderPlace.Event, "Events"),
         (ReminderPlace.Shop, "Shops"),
+        (ReminderPlace.Map, "Map"),
     };
 
     /// <summary>Run Reminders: a column per place they show (card reward panel, event options, shop prices), each its own switch.</summary>
     private void ReminderRows(List<(SourceEntry Entry, string Name)> shown)
     {
         if (!FeatureOn("run-reminders"))
-            _rows!.AddChild(Label("Run Reminders is off (General page): none of these show.", 16, Colors.OrangeRed));
+            _rows!.AddChild(Label("Run Reminders is off (above): none of these show.", 16, Colors.OrangeRed));
         var head = UiKit.Row(12);
         head.MouseFilter = Control.MouseFilterEnum.Pass;
         head.AddChild(new Control { CustomMinimumSize = new Vector2(IconSize + NameWidth + 12, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
@@ -652,7 +685,7 @@ public sealed partial class SettingsMenu
         S.EventInspect = d.EventInspect;
         S.EtherealOpacity = d.EtherealOpacity;
         S.FlashHz = d.FlashHz;
-        foreach (var (id, _, _) in FeatureRows)
+        foreach (var (id, _, _, _) in FeatureRows)
             if (FeatureOn(id)) _features.EnableLate(id);
         Saved();
         Rebuild();
@@ -932,8 +965,10 @@ public sealed partial class SettingsMenu
         var set = new HashSet<string>();
         var me = Sts2State.Me;
         var cs = Sts2State.Combat;
-        if (me == null || cs == null) return set;
+        if (me == null) return set;
         foreach (var r in me.Relics) set.Add(r.GetType().Name);
+        foreach (var c in me.Deck.Cards) set.Add(c.GetType().Name);
+        if (cs == null) return set;
         foreach (var p in me.Creature.Powers) set.Add(p.GetType().Name);
         foreach (var e in cs.Enemies) foreach (var p in e.Powers) set.Add(p.GetType().Name);
         foreach (var name in Procs.ReturnToHand.Modelled)

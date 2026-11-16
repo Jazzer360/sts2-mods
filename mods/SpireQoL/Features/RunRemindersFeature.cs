@@ -240,6 +240,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         {
             EventOptions();
             ShopSlots();
+            MapLegend();
         }
         TickShopWatch();
         OfferedCardTabs();

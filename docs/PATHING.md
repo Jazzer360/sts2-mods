@@ -1,6 +1,6 @@
 # Pathing reminders (idea phase)
 
-Status: idea logged 2026-11-16 (decision #65, proposed). Nothing built yet.
+Status: built in Spire QoL 1.11.0 (decision #65): icons beside the legend rows, hover highlights the room type, heals and counts under the icons, boss relics left out. The sections below are the plan as written; docs/FEATURES.md "Run Reminders" describes what shipped.
 
 ## The idea
 

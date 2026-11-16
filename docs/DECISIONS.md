@@ -321,7 +321,14 @@ Built as decision #60 set it: a magnifier (the game's inspect cursor art) right 
 *Why:* the owner's design: event icons remind, Inspect explains the odds of a favorable outcome, without opening the compendium; which cards are favorable is the player's call, so the player marks them.
 *Replaced:* nothing.
 
-### 65. Pathing reminders: relics that change a room type, in one panel on the map — proposed (2026-11-16)
+### 65. Pathing reminders: relics that change a room type, in one panel on the map — active (2026-11-16)
 Idea logged for later (docs/PATHING.md), the owner's: relics and quest cards that make a kind of room unusually good or bad (Black Star on elites, Meal Ticket on shops, Planisphere and Dowsing on `?` rooms, anything that changes rest sites) are reminders on the map, like the event icons (decision #60). They're gathered in one panel beside the map legend, a row per room type, rather than icons on every node of that type. Coverage reads the room-type comparison from each relic's hook IL, so a new pathing relic is caught without naming it.
 *Why:* the path is where a player forgets these relics; icons on dozens of nodes would be noise, one grouped panel reads like the legend.
 *Replaced:* nothing (the map was reviewed out as "the map shows it" for relics that mark it, which stays).
+
+Built in 1.11.0 as planned: icons left of each legend row (not on nodes), hovering one highlights that room type with the game's own legend highlight, the heal on entering or the relic's counter under it, boss-only relics left out (every path ends there), Maw Bank and Silver Crucible crossed. A `?` changer (Juzu Bracelet, Golden Compass, Lantern Key) shows only while its own hook changes what a `?` can be.
+
+### 66. Settings pages grouped by where things show — active (2026-11-16)
+The menu's pages are **In fights** (its feature switches, then each feature's options under its name), the fight detail pages (Card tabs, Relics, Your powers, Enemy powers, Cards: in-fight switches only), **Outside fights** (Run Reminders and Rest Preview, the event options, and every reminder relic and quest card with a column per place: card rewards, events, shops, map), **General** (update notice, checks, error reports) and the Guide.
+*Why:* the owner asked for more logical groups. One General page mixed fight, out-of-fight and diagnostic switches, and options sat far from the features they change; reminders were a second section at the bottom of the Relics page, with no place for quest cards.
+*Replaced:* the General page with every feature and option (and the Relics page's Outside fights section, decision #43's place for reminder switches; the switches and their keys are unchanged).

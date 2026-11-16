@@ -416,7 +416,8 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [x] Settings (0.43.0, decision #43): the Relics page has an Outside fights section, with a switch per place (card rewards, events, shops) for each reminder relic.
 - [ ] Card removal (shop, events): no relic reacts today (`BeforeCardRemoved` has no relic); recheck each game update.
 - [ ] Ancient options: relics whose `AfterObtained` adds cards or gold are covered through the relic's code; check what other ancient pickups do in play.
-- [ ] Pathing reminders (idea, docs/PATHING.md, decision #65): relics and quest cards that change a room type, in a panel beside the map legend.
+- [x] 1.11.0 (decision #65): pathing reminders beside the map legend, with an IL scan of room tests (`CoverageWatch.RoomTestingHooks`, `ChoiceReminders.MapReviewed`).
+- [ ] Test in game: map legend icons (placement left of the legend, hover tooltip and room highlight, hidden with the legend), Dowsing and Byrdonis Egg as tiny cards, the regrouped settings pages.
 - [ ] Event options whose effect runs through a delegate the reader doesn't follow (a lambda passed to a card choice): the check reports a relic that reacts without its icon.
 - [x] 0.31.0: everything-snapshot per play (`PlaySnapshot`, `CodeIndex`), relic tracking review for all 163 fight-affecting relics (`RelicTracking`), no blanket skips for draws and auto-plays.
 - [x] 0.31.1: The Boot in the simulator (was a known gap; its hits would have caused after-play HP mismatches).

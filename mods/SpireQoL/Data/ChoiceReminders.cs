@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Relics;
 
 namespace SpireQoL.Data;
@@ -37,8 +38,11 @@ public enum ChoiceEffect
 /// (the eggs and Fresnel Lens change the offered card itself).</param>
 /// <param name="CardTab">It shows as a tab on the cards you're offered that it applies to (decision #62): on card rewards, an
 /// event's choice of cards and shop cards, each place with its own switch (the same keys as the other reminders).</param>
+/// <param name="Map">Pathing (decision #65, docs/PATHING.md): the kinds of room it makes unusually good or bad; its icon goes beside
+/// those rows of the map legend. A quest card in your deck can have one too (Dowsing).</param>
+/// <param name="MapCrossed">Of those, the rooms where it works against you (red slash: Maw Bank on shops).</param>
 public sealed record ReminderRule(string Relic, ChoiceEffect On, ChoiceEffect CrossedOn = ChoiceEffect.None, bool OnCardReward = false,
-    ChoiceEffect Expect = ChoiceEffect.None, bool ShopIcon = true, bool CardTab = false)
+    ChoiceEffect Expect = ChoiceEffect.None, bool ShopIcon = true, bool CardTab = false, PathRoom Map = PathRoom.None, PathRoom MapCrossed = PathRoom.None)
 {
     /// <summary>Effects a shop item can have: buying it, and a card or a potion joining you.</summary>
     public const ChoiceEffect ShopEffects = ChoiceEffect.Purchase | ChoiceEffect.CardToDeck | ChoiceEffect.Potion;
@@ -49,12 +53,26 @@ public sealed record ReminderRule(string Relic, ChoiceEffect On, ChoiceEffect Cr
         ReminderPlace.Reward => OnCardReward || CardTab,
         ReminderPlace.Event => (On & ~ChoiceEffect.Purchase) != 0 || CardTab,
         ReminderPlace.Shop => (ShopIcon && (On & ShopEffects) != 0) || CardTab,
+        ReminderPlace.Map => Map != PathRoom.None,
         _ => false,
     };
 }
 
 /// <summary>Where a Run Reminders icon or row shows outside fights.</summary>
-public enum ReminderPlace { Reward, Event, Shop }
+public enum ReminderPlace { Reward, Event, Shop, Map }
+
+/// <summary>The kinds of room on the map legend (MapPointType), as flags for a pathing rule.</summary>
+[Flags]
+public enum PathRoom
+{
+    None = 0,
+    Monster = 1,
+    Elite = 2,
+    RestSite = 4,
+    Unknown = 8,
+    Shop = 16,
+    Treasure = 32,
+}
 
 /// <summary>
 /// Out-of-combat reminders (docs/FEATURES.md "Run Reminders"): which relics change what a choice
@@ -98,12 +116,77 @@ public static class ChoiceReminders
         new(nameof(Sozu), ChoiceEffect.Potion, CrossedOn: ChoiceEffect.Potion),
         new(nameof(BeltBuckle), ChoiceEffect.Potion, CrossedOn: ChoiceEffect.Potion),
         // Shops: buying anything ends Maw Bank's gold per room (AfterItemPurchased sets HasItemBeenBought).
-        new(nameof(MawBank), ChoiceEffect.Purchase, CrossedOn: ChoiceEffect.Purchase),
-        // Rest-site heals, mimicked ones included (none of these check isMimicked).
-        new(nameof(RegalPillow), ChoiceEffect.RestHeal),
-        new(nameof(StoneHumidifier), ChoiceEffect.RestHeal),
-        new(nameof(DreamCatcher), ChoiceEffect.RestHeal),
-        new(nameof(TinyMailbox), ChoiceEffect.RestHeal),
+        // On the map, Maw Bank's gold per room ends at the first shop you buy in.
+        new(nameof(MawBank), ChoiceEffect.Purchase, CrossedOn: ChoiceEffect.Purchase, Map: PathRoom.Shop, MapCrossed: PathRoom.Shop),
+        // Rest-site heals, mimicked ones included (none of these check isMimicked); on the map, they make campfires better.
+        new(nameof(RegalPillow), ChoiceEffect.RestHeal, Map: PathRoom.RestSite),
+        new(nameof(StoneHumidifier), ChoiceEffect.RestHeal, Map: PathRoom.RestSite),
+        new(nameof(DreamCatcher), ChoiceEffect.RestHeal, Map: PathRoom.RestSite),
+        new(nameof(TinyMailbox), ChoiceEffect.RestHeal, Map: PathRoom.RestSite),
+
+        // ---- Pathing (decision #65): relics and quest cards that make a kind of room unusually good or bad, beside the map
+        // legend's rows. Read from each one's hooks (CoverageWatch.RoomTestingHooks); the rest are in MapReviewed.
+        // Elites: TryModifyRewards / AfterRoomEntered / turn hooks / AfterCombatVictory on RoomType.Elite.
+        new(nameof(BlackStar), ChoiceEffect.None, Map: PathRoom.Elite),
+        new(nameof(WhiteStar), ChoiceEffect.None, Map: PathRoom.Elite),
+        new(nameof(SlingOfCourage), ChoiceEffect.None, Map: PathRoom.Elite),
+        new(nameof(BoomingConch), ChoiceEffect.None, Map: PathRoom.Elite),
+        new(nameof(TormentousCollar), ChoiceEffect.None, Map: PathRoom.Elite),
+        new(nameof(SwordOfStone), ChoiceEffect.None, Map: PathRoom.Elite),
+        new(nameof(WarHammer), ChoiceEffect.None, Map: PathRoom.Elite),
+        // Monsters: an extra card reward (Prayer Wheel), an upgrade every few monster fights (Fishing Rod, AfterCombatEnd).
+        new(nameof(PrayerWheel), ChoiceEffect.None, Map: PathRoom.Monster),
+        new(nameof(FishingRod), ChoiceEffect.None, Map: PathRoom.Monster),
+        // Rest sites: a heal on entering (Eternal Feather), energy next fight (the tea sets), rest-site options (TryModifyRestSiteOptions),
+        // Miniature Tent (ShouldDisableRemainingRestSiteOptions).
+        new(nameof(EternalFeather), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(VenerableTeaSet), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(FakeVenerableTeaSet), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(Girya), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(Shovel), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(MeatCleaver), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(PaelsGrowth), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(PumpkinCandle), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(Wuppy), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(Byrdpip), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(MiniatureTent), ChoiceEffect.None, Map: PathRoom.RestSite),
+        new(nameof(ByrdonisEgg), ChoiceEffect.None, Map: PathRoom.RestSite),
+        // ? rooms: a heal on entering one (Planisphere), Dowsing Rod's quest (4 of them), what a ? can be (ModifyUnknownMapPointRoomTypes:
+        // shown only while it changes it, Golden Compass's act and Lantern Key's act 3).
+        new(nameof(Planisphere), ChoiceEffect.None, Map: PathRoom.Unknown),
+        new(nameof(Dowsing), ChoiceEffect.None, Map: PathRoom.Unknown),
+        new(nameof(JuzuBracelet), ChoiceEffect.None, Map: PathRoom.Unknown),
+        new(nameof(GoldenCompass), ChoiceEffect.None, Map: PathRoom.Unknown),
+        new(nameof(LanternKey), ChoiceEffect.None, Map: PathRoom.Unknown),
+        // Shops: a heal on entering (Meal Ticket), buys everything on entering (Lord's Parasol).
+        new(nameof(MealTicket), ChoiceEffect.None, Map: PathRoom.Shop),
+        new(nameof(LordsParasol), ChoiceEffect.None, Map: PathRoom.Shop),
+        // Treasure: the first treasure room has no chest (ShouldGenerateTreasure), crossed until it's passed.
+        new(nameof(SilverCrucible), ChoiceEffect.None, Map: PathRoom.Treasure, MapCrossed: PathRoom.Treasure),
+    };
+
+    /// <summary>
+    /// Relics and cards whose hooks act on a kind of room (CoverageWatch.RoomTestingHooks) with no pathing rule, and why: read from
+    /// their hook bodies. Checked against the installed game by the catalog tests.
+    /// </summary>
+    public static readonly Dictionary<string, string> MapReviewed = new()
+    {
+        // Every fight alike: they make fights easier or better in general, not one kind of room.
+        ["BronzeScales"] = "every combat", ["BurningSticks"] = "every combat", ["DataDisk"] = "every combat", ["DivineRight"] = "every combat",
+        ["EmberTea"] = "every combat (its first few)", ["GhostSeed"] = "every combat", ["Gorget"] = "every combat", ["Metronome"] = "every combat",
+        ["OddlySmoothStone"] = "every combat", ["Permafrost"] = "every combat", ["PhilosophersStone"] = "every combat", ["RedSkull"] = "every combat",
+        ["RingingTriangle"] = "every combat", ["SongBow"] = "every combat", ["StoneCalendar"] = "every combat", ["StoneCracker"] = "every combat",
+        ["Storyteller"] = "every combat", ["SwordOfJade"] = "every combat", ["ThrowingAxe"] = "every combat", ["Vajra"] = "every combat",
+        ["VelvetChoker"] = "every combat", ["LavaLamp"] = "every combat (an upgraded reward after a fight without damage)",
+        ["WongosMysteryTicket"] = "every combat counts toward its relic",
+        // The boss: every path ends there, so it never changes a route.
+        ["AmethystAubergine"] = "boss rewards (every path ends at the boss)", ["LavaRock"] = "boss rewards (every path ends at the boss)",
+        ["BathRobes"] = "boss fight (every path ends at the boss)", ["Pantograph"] = "boss fight (every path ends at the boss)",
+        // The map shows it.
+        ["FurCoat"] = "marks rooms on the map (the map shows the marks)", ["WingedBoots"] = "travel off the path (the map offers it)",
+        ["SpoilsMap"] = "changes the map (the map shows it)",
+        // In a fight.
+        ["TheHunt"] = "a card's effect in a fight",
     };
 
     private static readonly Dictionary<string, ReminderRule> ByRelic = Rules.ToDictionary(r => r.Relic);
@@ -115,6 +198,7 @@ public static class ChoiceReminders
     {
         ReminderPlace.Reward => "reminder-reward:",
         ReminderPlace.Event => "reminder-event:",
+        ReminderPlace.Map => "reminder-map:",
         _ => "reminder-shop:",
     } + relic;
 

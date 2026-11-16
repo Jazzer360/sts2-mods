@@ -16,8 +16,9 @@ public enum SourceGroup { Relic, YourPower, EnemyPower, Card }
 /// <param name="Reward">Outside fights (Run Reminders, Data/ChoiceReminders): what its row in the card reward panel shows; null = none.</param>
 /// <param name="Event">What its icon beside event options marks; null = none.</param>
 /// <param name="Shop">What its icon beside shop prices marks; null = none.</param>
+/// <param name="Map">What its icon beside the map legend marks (pathing, decision #65); null = none.</param>
 public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, string? Tracker = null,
-    string TagPrefix = "proc:", bool TrackerDefault = true, string? Reward = null, string? Event = null, string? Shop = null)
+    string TagPrefix = "proc:", bool TrackerDefault = true, string? Reward = null, string? Event = null, string? Shop = null, string? Map = null)
 {
     public string? TagKey => Tag == null ? null : TagPrefix + Type;
 
@@ -25,13 +26,14 @@ public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, st
     public bool InFights => Tag != null || Tracker != null;
 
     /// <summary>Outside fights: a Run Reminders icon or row somewhere.</summary>
-    public bool OutsideFights => Reward != null || Event != null || Shop != null;
+    public bool OutsideFights => Reward != null || Event != null || Shop != null || Map != null;
 
     /// <summary>What its reminder marks at one place; null = it shows nothing there.</summary>
     public string? Reminder(SpireQoL.Data.ReminderPlace place) => place switch
     {
         SpireQoL.Data.ReminderPlace.Reward => Reward,
         SpireQoL.Data.ReminderPlace.Event => Event,
+        SpireQoL.Data.ReminderPlace.Map => Map,
         _ => Shop,
     };
 }
@@ -178,11 +180,42 @@ public static class SettingsCatalog
         new("WhistlingArrows", SourceGroup.Card, "Cards that shoot an arrow while it's in your discard pile", TagPrefix: "return:"),
         new(nameof(ReptileTrinket), SourceGroup.Relic, "Potion tab on every potion: drinking one gives Strength this turn", TagPrefix: "potion:"),
         new(nameof(WhiteBeastStatue), SourceGroup.Relic, "Potion tab on every potion while your slots are full: a potion reward comes after this fight", TagPrefix: "potion:"),
-        new(nameof(MawBank), SourceGroup.Relic, null, Shop: "Crossed. Every item (buying anything ends its gold per room)"),
-        new(nameof(RegalPillow), SourceGroup.Relic, null, Event: "Options that rest (heals more)"),
-        new(nameof(StoneHumidifier), SourceGroup.Relic, null, Event: "Options that rest (max HP)"),
-        new(nameof(DreamCatcher), SourceGroup.Relic, null, Event: "Options that rest (a card reward)"),
-        new(nameof(TinyMailbox), SourceGroup.Relic, null, Event: "Options that rest (potions)"),
+        new(nameof(MawBank), SourceGroup.Relic, null, Shop: "Crossed. Every item (buying anything ends its gold per room)",
+            Map: "Crossed, beside Merchant until you buy something"),
+        new(nameof(RegalPillow), SourceGroup.Relic, null, Event: "Options that rest (heals more)", Map: "Beside Rest (heals more)"),
+        new(nameof(StoneHumidifier), SourceGroup.Relic, null, Event: "Options that rest (max HP)", Map: "Beside Rest (max HP)"),
+        new(nameof(DreamCatcher), SourceGroup.Relic, null, Event: "Options that rest (a card reward)", Map: "Beside Rest (a card reward)"),
+        new(nameof(TinyMailbox), SourceGroup.Relic, null, Event: "Options that rest (potions)", Map: "Beside Rest (potions)"),
+        // Pathing (decision #65): beside the map legend's row for the kind of room they make unusually good or bad.
+        new(nameof(BlackStar), SourceGroup.Relic, null, Map: "Beside Elite (a second relic)"),
+        new(nameof(WhiteStar), SourceGroup.Relic, null, Map: "Beside Elite (a boss card reward)"),
+        new(nameof(SlingOfCourage), SourceGroup.Relic, null, Map: "Beside Elite (Strength)"),
+        new(nameof(BoomingConch), SourceGroup.Relic, null, Map: "Beside Elite (draw and energy)"),
+        new(nameof(TormentousCollar), SourceGroup.Relic, null, Map: "Beside Elite (Weak)"),
+        new(nameof(SwordOfStone), SourceGroup.Relic, null, Map: "Beside Elite, with its count"),
+        new(nameof(WarHammer), SourceGroup.Relic, null, Map: "Beside Elite (upgrades)"),
+        new(nameof(PrayerWheel), SourceGroup.Relic, null, Map: "Beside Enemy (a second card reward)"),
+        new(nameof(FishingRod), SourceGroup.Relic, null, Map: "Beside Enemy, with its count"),
+        new(nameof(EternalFeather), SourceGroup.Relic, null, Map: "Beside Rest, with the heal for your deck's size"),
+        new(nameof(VenerableTeaSet), SourceGroup.Relic, null, Map: "Beside Rest (energy next fight)"),
+        new(nameof(FakeVenerableTeaSet), SourceGroup.Relic, null, Map: "Beside Rest (energy next fight)"),
+        new(nameof(Girya), SourceGroup.Relic, null, Map: "Beside Rest (Lift)"),
+        new(nameof(Shovel), SourceGroup.Relic, null, Map: "Beside Rest (Dig)"),
+        new(nameof(MeatCleaver), SourceGroup.Relic, null, Map: "Beside Rest (Cook)"),
+        new(nameof(PaelsGrowth), SourceGroup.Relic, null, Map: "Beside Rest (Clone)"),
+        new(nameof(PumpkinCandle), SourceGroup.Relic, null, Map: "Beside Rest (Kindle)"),
+        new(nameof(Wuppy), SourceGroup.Relic, null, Map: "Beside Rest (Restore)"),
+        new(nameof(Byrdpip), SourceGroup.Relic, null, Map: "Beside Rest (Evolve)"),
+        new(nameof(MiniatureTent), SourceGroup.Relic, null, Map: "Beside Rest (more than one option)"),
+        new(nameof(Planisphere), SourceGroup.Relic, null, Map: "Beside Unknown, with its heal"),
+        new(nameof(JuzuBracelet), SourceGroup.Relic, null, Map: "Beside Unknown (never a fight)"),
+        new(nameof(GoldenCompass), SourceGroup.Relic, null, Map: "Beside Unknown in its act (always an event)"),
+        new(nameof(MealTicket), SourceGroup.Relic, null, Map: "Beside Merchant, with its heal"),
+        new(nameof(LordsParasol), SourceGroup.Relic, null, Map: "Beside Merchant (buys everything)"),
+        new(nameof(SilverCrucible), SourceGroup.Relic, null, Map: "Crossed, beside Treasure until its chestless one"),
+        new("Dowsing", SourceGroup.Card, null, Map: "Beside Unknown while in your deck, with the rooms left"),
+        new("ByrdonisEgg", SourceGroup.Card, null, Map: "Beside Rest while in your deck (Hatch)"),
+        new("LanternKey", SourceGroup.Card, null, Map: "Beside Unknown in act 3 while in your deck (always an event)"),
 
         // ------------------------------------------------------------------ your powers
         new(nameof(EchoFormPower), SourceGroup.YourPower, "Cards it will play twice", TagPrefix: "double-play:"),

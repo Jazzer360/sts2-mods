@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.0
+#### Added
+- Map reminders: on the map, left of each row of the legend, your relics and quest cards that make that kind of room unusually good or bad: Black Star and Sling of Courage by Elite, Eternal Feather and Girya by Rest, Planisphere and Dowsing Rod's quest card by Unknown, Meal Ticket by Merchant, Maw Bank crossed by Merchant until you buy something, and more. Heals on entering and counts show under the icon. Hover one for its tooltip and to light up those rooms on the map. Each has a switch in the new Map column.
+#### Changed
+- Settings menu regrouped: **In fights** (its features, with each one's options under its name), its detail pages (Card tabs, Relics, powers, Cards), **Outside fights** (Run Reminders and Rest Preview, the event options, and every reminder with its Card rewards, Events, Shops and Map switches), **General** (update notice, checks, error reports) and the Guide. "Only what I have" now also works outside fights (your relics and deck).
+- Guide page: the map reminders.
+
 ### Spire QoL 1.10.0
 #### Added
 - Inspect: a magnifier (the game's inspect cursor) right of an event option that gives cards at random from a known pool. It opens a screen with every card the option can give, grouped as it draws them (Colorful Philosophers: its commons, uncommons and rares; Glass Eye: its five rewards; a transform's pool). Click the cards you'd be happy with to see the chance each reward offers one, and across the rewards. Your relics that apply to a card show their tab on it, with a button to mark all their cards. For a transform of a card you choose (Astrolabe, event transforms), pick the card you'd transform from your deck to see exactly what it can become; transforms you don't choose (Pandora's Box) draw from your whole pool and get no Inspect. Marks are kept for the run. Setting: **Inspect event cards** (General page).
