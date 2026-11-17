@@ -77,6 +77,19 @@ public class StatModelTests
     }
 
     [Fact]
+    public void PenNibBoundToTheCardMidPlayDoublesNoCardInHand()
+    {
+        // Reports from 1.11.4 (Regent): Jackpot was the 10th attack and mid-play when the hand was simulated; the game
+        // doubles only Jackpot (AttackToDouble), so Sovereign Blade dealt 60, not 120. Its next attack counts 1.
+        var s = new SimState { Enemies = { Enemy(0, 200) } };
+        s.P.Relics = PowerSet.Empty.With("PenNib", 0, 1);
+        var after = After(s, Play(Card("SovereignBlade"), 0, 1, Attack(60))).Single();
+        Assert.Equal(140, after.Enemy(0)!.Hp);
+        Assert.Equal(1, after.P.Relics["PenNib"]);
+        Assert.False(after.Fired.Has("PenNib"));
+    }
+
+    [Fact]
     public void MightyWingsStrengthLandsBeforeTheNextHit()
     {
         // A report from 0.46.2: Repeat Shot+ into a 70-HP Soul Nexus dealt 33 (30 or more: +2 Strength), then 36.

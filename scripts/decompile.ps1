@@ -1,14 +1,20 @@
-# Decompiles the installed game into ~/git/sts2-decompiled (read-only reference for writing
-# patches and rules; never committed to this repo). That folder is its own local git repo with one
-# commit per game version, so `git diff` there shows what a game patch changed.
+# Decompiles the installed game (read-only reference for writing patches and rules; never committed to
+# this repo) into a local git repo with one commit per game version, so `git diff` there shows what a
+# game patch changed. Two Steam branches are kept (decision #78), one git branch each:
+#   beta (default): ~/git/sts2-decompiled, the version the mod is developed on.
+#   main:           ~/git/sts2-decompiled-main (a worktree of the same repo), Steam's default branch.
+# Switch the game's Steam branch first, then pass the matching -Branch.
+# `git -C ~/git/sts2-decompiled diff main beta --stat` shows what differs between them.
 #
-# Usage: ./scripts/decompile.ps1 [-GameDir <Slay the Spire 2 folder>]
+# Usage: ./scripts/decompile.ps1 [-Branch beta|main] [-GameDir <Slay the Spire 2 folder>]
 # Needs: ilspycmd (dotnet tool install -g ilspycmd --version 9.1.0.7988), git.
 param(
+    [ValidateSet("beta", "main")][string]$Branch = "beta",
     [string]$GameDir = "C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2",
-    [string]$Out = (Join-Path $HOME "git\sts2-decompiled")
+    [string]$Repo = (Join-Path $HOME "git\sts2-decompiled")
 )
 $ErrorActionPreference = "Stop"
+$Out = if ($Branch -eq "beta") { $Repo } else { "$Repo-main" }
 
 $dll = Join-Path $GameDir "data_sts2_windows_x86_64\sts2.dll"
 $info = Join-Path $GameDir "release_info.json"
@@ -16,9 +22,20 @@ if (-not (Test-Path $dll)) { throw "sts2.dll not found at $dll (pass -GameDir)" 
 if (-not (Get-Command ilspycmd -ErrorAction SilentlyContinue)) { throw "ilspycmd not installed: dotnet tool install -g ilspycmd --version 9.1.0.7988" }
 
 $release = Get-Content $info -Raw | ConvertFrom-Json
-New-Item -ItemType Directory -Force $Out | Out-Null
-if (-not (Test-Path (Join-Path $Out ".git"))) { git -C $Out init -q }
-git -C $Out config core.longpaths true # some generated file names are very long
+New-Item -ItemType Directory -Force $Repo | Out-Null
+if (-not (Test-Path (Join-Path $Repo ".git"))) { git -C $Repo init -q -b beta }
+git -C $Repo config core.longpaths true # some generated file names are very long
+# Before two branches were kept, the one branch (beta) was called main.
+$branches = @(git -C $Repo branch --format "%(refname:short)")
+if ($branches -notcontains "beta" -and (git -C $Repo branch --show-current) -eq "main") {
+    git -C $Repo branch -m main beta
+    $branches = @(git -C $Repo branch --format "%(refname:short)")
+}
+if ($Branch -eq "main" -and -not (Test-Path (Join-Path $Out ".git"))) {
+    if ($branches -contains "main") { git -C $Repo worktree add -q $Out main }
+    else { git -C $Repo worktree add -q --orphan -b main $Out }
+}
+if ((git -C $Out branch --show-current) -ne $Branch) { throw "$Out is on branch $(git -C $Out branch --show-current), not $Branch" }
 
 # Replace everything except the git history.
 # (.NET with the \\?\ prefix: Remove-Item fails on the very long generated file names.)
@@ -47,4 +64,4 @@ $decompiler = (dotnet tool list -g | Select-String "ilspycmd" | ForEach-Object {
 
 git -C $Out add -A
 git -C $Out commit -q -m "sts2 $($release.version) ($($release.commit), $($release.date))"
-"Decompiled sts2 $($release.version) to $Out"
+"Decompiled sts2 $($release.version) ($Branch) to $Out"

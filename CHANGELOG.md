@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.12.1
+#### Fixed
+- Pen Nib: while the attack it doubles was being played, every other attack in hand was predicted to deal double too, which could show a lethal tab on a card that doesn't kill. Only the attack it's bound to is doubled.
+- Impatience and Fetch were still counted as drawing when they don't (an Attack in hand; Osty dead or Fetch already played this turn): the earlier fixes for them never took effect.
+- Block on play follows the game's own rule for each card: Sovereign Blade gains block only while you have Parry, and Pillar of Creation and Shroud gain none when played.
+- Make It So's return tab counts the cards the play puts in your hand (Bundle of Joy): when they fill it, Make It So goes to your discard pile instead, and the tab is gone.
+
 ### Spire QoL 1.12.0
 #### Added
 - Intent Forecast: hover an enemy to see its next moves after the intent on screen. Every turn its rules make certain is shown, then each move a random pick can make, with its chance. It's worked out from the enemy's move rules and the moves it has made this fight, never from a roll.

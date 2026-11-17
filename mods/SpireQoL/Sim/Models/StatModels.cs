@@ -280,9 +280,10 @@ public sealed class SerratedArrowsPower : SimModel
 }
 
 /// <summary>
-/// Pen Nib (relic): Amount is AttacksPlayed (0-9), Data 1 while a play is bound to be doubled. BeforeCardPlayed counts your
-/// Attack plays (each play of a replay); the one that brings it to 0 binds itself (and flashes); its powered hits from that
-/// play deal double (ModifyDamageMultiplicative); AfterCardPlayed of that play unbinds.
+/// Pen Nib (relic): Amount is AttacksPlayed (0-9). Data 1 while a card the game is playing right now is bound to be doubled
+/// (AttackToDouble, read mid-play: no card simulated here is that card, so none is doubled), 2 while a play simulated here is.
+/// BeforeCardPlayed counts your Attack plays (each play of a replay); the one that brings it to 0 binds itself (and flashes);
+/// its powered hits from that play deal double (ModifyDamageMultiplicative); AfterCardPlayed of that play unbinds.
 /// </summary>
 public sealed class PenNib : SimModel
 {
@@ -293,7 +294,8 @@ public sealed class PenNib : SimModel
         if (!d.Props.IsPoweredAttack() || d.Card == null) return 1m;
         if (!(d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty))) return 1m;
         var r = SimEngine.RelicsOf(s, owner);
-        if (r.DataOf(Name) == 1) return d.Play != null ? 2m : 1m;
+        if (r.DataOf(Name) == 2) return d.Play != null ? 2m : 1m;
+        if (r.DataOf(Name) == 1) return 1m; // the game's card mid-play is the doubled one
         return d.Play == null && r[Name] == 9 ? 2m : 1m; // not being played (a preview): the next attack is the 10th
     }
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
@@ -301,14 +303,14 @@ public sealed class PenNib : SimModel
         if (play.Card.Type != SimCardType.Attack || play.Owner != owner) return One(s);
         var r = SimEngine.RelicsOf(s, owner);
         var count = (r[Name] + 1) % 10;
-        SimEngine.SetRelics(s, owner, r.With(Name, count, count == 0 ? 1 : r.DataOf(Name)));
+        SimEngine.SetRelics(s, owner, r.With(Name, count, count == 0 ? 2 : r.DataOf(Name)));
         if (count == 0) s.LogFired(Name, 0, owner);
         return One(s);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         var r = SimEngine.RelicsOf(s, owner);
-        if (r.DataOf(Name) == 1 && play.Owner == owner) SimEngine.SetRelics(s, owner, r.With(Name, r[Name], 0));
+        if (r.DataOf(Name) == 2 && play.Owner == owner) SimEngine.SetRelics(s, owner, r.With(Name, r[Name], 0));
         return One(s);
     }
 }

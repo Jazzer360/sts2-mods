@@ -26,7 +26,7 @@ Legend: `[ ]` to do · `[~]` built, needs an in-game check · `[x]` done · **(v
 
 ## 1. Card modifiers → `card-indicators`
 
-- [ ] **Decide: keep the Sly tab?** (2026-11-09) It doesn't fit "happens when you play this card". It helped when choosing cards to retain before Well Laid Plans changed; the game already makes Sly cards glow when you pick cards to discard. Stays for now.
+- [x] **Decide: keep the Sly tab?** (2026-11-09) Kept, on by default (decision #77). It doesn't fit "happens when you play this card". It helped when choosing cards to retain before Well Laid Plans changed; the game already makes Sly cards glow when you pick cards to discard. Stays for now.
 
 ### Keywords
 The game shows these only as card text. `CardModel.Keywords` merges local keywords (on the card) with global ones (granted by powers), so a single read catches both.

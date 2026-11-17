@@ -368,6 +368,9 @@ public sealed class PlayFacts
         var name = card.GetType().Name;
         var evoked = EvokedOrbs(card, name, me, cs, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
         var orbs = OrbDamageFor(evoked, me, cs);
+        var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me);
+        // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
+        var createdInHand = GeneratedToPileCards.Contains(name) ? 0 : generated;
 
         var facts = new PlayFacts
         {
@@ -389,10 +392,10 @@ public sealed class PlayFacts
             OwnDraws = draws + swiftDraws,
             EnchantmentDraws = swiftDraws,
             BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
-            Generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me),
+            Generated = generated,
             GeneratedStatuses = statuses * Math.Max(1, plays),
             SadnessCreated = SadnessCards.Contains(name) ? statuses * Math.Max(1, plays) : 0,
-            CardsBack = ReturnToHand.Returning(card, me, plays, hand.Count - 1 + draws + swiftDraws,
+            CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,
                 Fool.Shoots(card, me) ? Math.Max(1, plays) : 0),
             EnergyBack = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Sown { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } sown ? sown.Amount : 0,
             Transforms = TransformCount(card, name, others, drawPile) * Math.Max(1, plays),
@@ -693,8 +696,7 @@ public sealed class PlayFacts
     public static int CardsDrawn(CardModel c, int handCount)
     {
         var name = c.GetType().Name;
-        if (DrawCards.Contains(name)) return Sts2State.Var(c, "Cards");
-        if (DrawOne.Contains(name)) return 1;
+        // A card's condition first: Impatience and Fetch are in DrawCards too (for the coverage scan) but don't always draw.
         switch (c)
         {
             // Draws up to a full hand; Scrawl itself has left the hand by then.
@@ -726,6 +728,8 @@ public sealed class PlayFacts
             // Mad Science with the Wisdom rider (Tinker Time).
             case MadScience m when m.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(c, "WisdomCards");
         }
+        if (DrawCards.Contains(name)) return Sts2State.Var(c, "Cards");
+        if (DrawOne.Contains(name)) return 1;
         return 0;
     }
 
@@ -895,10 +899,15 @@ public sealed class PlayFacts
         // Gains its Block twice (ChoLimbs); Cho Firm a second time while you have an arrow to shoot.
         if (name == "ChoLimbs") return 2;
         if (name == "ChoFirm") return OwnerOf(card) is { } p && Fool.ArrowsAvailable(p) > 0 ? 2 : 1;
-        return card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock") ? 1 : 0;
+        // The game's own answer (CardModel.GainsBlock, v0.113.0): Sovereign Blade only while you have Parry, Mad Science only as a
+        // Skill, and no block on play from a Power whose Block value is for later (Pillar of Creation, Shroud). Read by name, so
+        // a game without it falls back to the card having a Block value. PlayFactsTests checks it against every card.
+        // The game's template card (no owner, for the coverage scan) counts by its value: it can gain block.
+        var hasValue = card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock");
+        if (OwnerOf(card) == null) return hasValue ? 1 : 0;
+        return Sts2State.Private(card, "GainsBlock", hasValue) ? 1 : 0;
     }
 
-    /// <summary>An attack you deal yourself (a Damage value; Osty attacks use OstyDamage instead).</summary>
     /// <summary>
     /// Hits per play of an attack card, matching each card's OnPlay: from v0.113.0 a card's hit count is its
     /// HitCount value (CalculatedHits when it's computed); before, Repeat, or a fixed number in OnPlay. The

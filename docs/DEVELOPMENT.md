@@ -18,7 +18,7 @@ Everything needed to pick this repo up on a new machine, or after a long break. 
 
 1. `gh repo clone Jazzer360/sts2-mods ~/git/sts2-mods`
 2. If the game isn't at `C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2`, copy `Sts2.local.props.example` to `Sts2.local.props` (gitignored) and set `Sts2Dir`. For development, also uncomment `ResetModSettingsOnInstall` there: every install then starts the mod from default settings.
-3. Decompile the game: `./scripts/decompile.ps1` (add `-GameDir <path>` if needed). It writes the game's C# source to `~/git/sts2-decompiled` (a separate local git repo, one commit per game version, never pushed anywhere) with a `VERSION.json`. Every Harmony target and every game rule the mod models is looked up there.
+3. Decompile the game: `./scripts/decompile.ps1` (add `-GameDir <path>` if needed; `-Branch main` when the game is on Steam's main branch, decision #78). It writes the game's C# source to `~/git/sts2-decompiled` (beta; `~/git/sts2-decompiled-main` for main) (a separate local git repo, one commit per game version, never pushed anywhere) with a `VERSION.json`. Every Harmony target and every game rule the mod models is looked up there.
 4. `dotnet build` builds every mod and installs it into `<game>/mods/<ModId>/`. The game must be closed for the install step (it locks the DLL); `dotnet build -p:InstallToGame=false` just compiles.
 5. Launch the game (`Start-Process "steam://rungameid/2868840"`). The first time it finds mods it asks to load them; accept, and it restarts.
 
