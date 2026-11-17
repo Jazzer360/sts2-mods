@@ -758,6 +758,7 @@ public static partial class SimEngine
             case DamageAction da: RunDamage(b, da); break;
             case ExecuteAction ex: RunExecute(b, ex); break;
             case StripBlockAction sb: b.Do(x => StripBlock(x, sb)); break;
+            case TriggerPoisonAction: b.Each(TriggerPoison); break;
             case KillOstyAction: b.Do(s => OstyLoses(s, Who.You, s.P.OstyHp)); break;
             case CardPlayAction pc: RunCardPlay(b, pc); break;
             case AttackAction at: RunAttack(b, at); break;

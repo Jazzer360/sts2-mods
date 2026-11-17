@@ -51,14 +51,25 @@ public static partial class SimAdapter
     internal static readonly HashSet<string> SelfPowers = new()
     {
         nameof(PlatingPower), nameof(JuggernautPower), nameof(FeelNoPainPower), nameof(ThornsPower), nameof(FlameBarrierPower),
+        nameof(AccelerantPower),
     };
 
     /// <summary>
     /// A tracked power the card's code applies without a PowerVar for it: its plain value ("Power":
-    /// Feel No Pain; "DamageBack": Flame Barrier), 0 when it has neither (the card scan reports it), or
+    /// Feel No Pain; "DamageBack": Flame Barrier; "Accelerant"), 0 when it has neither (the card scan reports it), or
     /// null (none, or it has a PowerVar, read with the others).
     /// </summary>
-    private static readonly string[] PlainPowerVars = { "Power", "DamageBack" };
+    private static readonly string[] PlainPowerVars = { "Power", "DamageBack", "Accelerant" };
+
+    /// <summary>
+    /// How many times an enemy's poison ticks: 1 plus the Accelerant of every living opponent of it, so every player's
+    /// (PoisonPower.TriggerCount). Not capped at its stacks, as the game's count is: stacks added later tick that many times.
+    /// </summary>
+    private static int PoisonTriggers(Creature enemy, ICombatState cs)
+    {
+        try { return 1 + cs.GetOpponentsOf(enemy).Where(c => c.IsAlive).Sum(c => c.GetPowerAmount<AccelerantPower>()); }
+        catch { return 1; }
+    }
 
     internal static int? PlainSelfPowerAmount(CardModel card, Type power)
     {
@@ -88,6 +99,9 @@ public static partial class SimAdapter
 
     /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
     internal static readonly HashSet<string> RepeatPerKillCards = new() { "EchoingSlash" };
+
+    /// <summary>Cards that set off every enemy's poison during the play (Outbreak: PoisonPower.Trigger on each).</summary>
+    internal static readonly HashSet<string> TriggerPoisonCards = new() { "Outbreak" };
 
     /// <summary>Cards that take all of their target's block, then its Artifact (Expose: CreatureCmd.LoseBlock, PowerCmd.Remove).</summary>
     internal static readonly HashSet<string> StripBlockCards = new() { "Expose" };
@@ -181,7 +195,7 @@ public static partial class SimAdapter
                 Imbalanced = e.HasPower<ImbalancedPower>(),
                 Poison = SafeInt(() => e.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0),
                 PoisonStacks = e.GetPower<PoisonPower>()?.Amount ?? 0,
-                PoisonTriggers = e.GetPower<PoisonPower>() is { } poison ? Math.Max(1, Sts2State.Private(poison, "TriggerCount", 1)) : 1,
+                PoisonTriggers = PoisonTriggers(e, cs),
             };
             // Every power, with the numbers its model keeps (Curl Up, Sneaky, Skittish, Thorns, Burrowed, Asleep, Slumber, Flutter,
             // Plow, Shriek, The Gambit, Slippery, Hard to Kill, Intangible, Hardened Shell, Barricade, Strength, Weak...).

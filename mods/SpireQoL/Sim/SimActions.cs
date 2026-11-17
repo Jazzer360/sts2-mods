@@ -98,6 +98,12 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
 public sealed record DamageAction(DamageSpec Damage) : SimAction;
 
 /// <summary>
+/// Outbreak: every hittable enemy's poison triggers now (PoisonPower.Trigger), one enemy after another: a hit per trigger
+/// (Accelerant adds triggers) for its stacks then, unblockable, the stacks going down by 1 after each hit it survives.
+/// </summary>
+public sealed record TriggerPoisonAction : SimAction;
+
+/// <summary>
 /// Expose: the play's target loses all its block (CreatureCmd.LoseBlock: AfterBlockBroken when it had some, Burrowed), then its
 /// Artifact (PowerCmd.Remove), so the Vulnerable that follows lands.
 /// </summary>

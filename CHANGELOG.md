@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.7
+#### Fixed
+- Outbreak's poison damage during the play is predicted: every enemy's poison ticks right away, as many times as Accelerant allows.
+- Accelerant's extra poison ticks count every player's Accelerant, also on an enemy that had no poison yet, and playing Accelerant raises the ticks in the same prediction.
+
 ### Spire QoL 1.11.6
 #### Fixed
 - Tabs and the lethal skull follow a card upgraded in your hand (Blessing of the Forge, Armaments): its simulation was kept from before the upgrade.

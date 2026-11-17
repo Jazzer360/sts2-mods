@@ -32,6 +32,33 @@ public static partial class SimEngine
         return DrainPending(s);
     });
 
+    private static IEnumerable<SimState> TriggerPoison(SimState s)
+    {
+        foreach (var e in s.Targetable.ToList())
+        {
+            if (e.PoisonStacks <= 0) continue;
+            var before = e.PoisonStacks;
+            var ticks = Math.Min(e.PoisonStacks, Math.Max(1, e.PoisonTriggers));
+            for (var i = 0; i < ticks && e.Alive; i++)
+            {
+                Damage(s, e, e.PoisonStacks, dealer: null, SimProps.Unblockable | SimProps.Unpowered);
+                if (e.Alive) e.PoisonStacks--;
+            }
+            // The next tick's damage (Poison, the game's preview) drops by what the spent stacks dealt.
+            e.Poison = Math.Max(0, e.Poison - (PoisonTick(before, e.PoisonTriggers) - PoisonTick(e.PoisonStacks, e.PoisonTriggers)));
+            AllyDeaths(s);
+        }
+        return DrainPending(s);
+    }
+
+    /// <summary>A poison tick's damage before modifiers: the stacks, then one less, for min(stacks, triggers) hits.</summary>
+    internal static int PoisonTick(int stacks, int triggers)
+    {
+        var sum = 0;
+        for (var i = 0; i < Math.Min(stacks, Math.Max(1, triggers)); i++) sum += stacks - i;
+        return sum;
+    }
+
     private static void RunExecute(BranchSet b, ExecuteAction ex) => b.Do(s =>
     {
         if (s.Enemy(s.CurrentPlay?.Target ?? -1) is { Alive: true } e && e.Hp <= ex.Threshold) e.Hp = 0;

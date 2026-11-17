@@ -163,6 +163,9 @@ internal static class CardCoverage
         // A card that takes block away (Expose): the simulator models the ones it knows.
         if (Calls("CreatureCmd", "LoseBlock") && !SimAdapter.StripBlockCards.Contains(name))
             issues.Add("takes block away (the simulator doesn't remove it)");
+        // A card that sets off poison during the play (Outbreak).
+        if (Calls("PoisonPower", "Trigger") && !SimAdapter.TriggerPoisonCards.Contains(name))
+            issues.Add("sets off poison now (the simulator only ticks it at the start of the enemies' turn)");
         // A card that reacts to its own kills: more damage (Timber's hit on every enemy, Echoing Slash's repeats) is simulated;
         // a reward for the kill (energy, stars, gold, max HP, a power) changes nothing the turn's outcome shows.
         if (Calls("DamageResult", "get_WasTargetKilled") && !SimAdapter.OnKillHitAllCards.Contains(name)

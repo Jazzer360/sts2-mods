@@ -174,6 +174,15 @@ public static partial class SimEngine
             s.Enemy(target)?.AddPoison(amount);
             return true;
         }
+        // Accelerant on any player: every enemy's poison ticks that many more times (PoisonPower.TriggerCount sums every
+        // living player's), and its next tick deals that much more.
+        if (Who.IsPlayer(target) && power == "AccelerantPower")
+            foreach (var e in s.Enemies)
+            {
+                var more = e.PoisonTriggers + amount;
+                e.Poison += PoisonTick(e.PoisonStacks, more) - PoisonTick(e.PoisonStacks, e.PoisonTriggers);
+                e.PoisonTriggers = more;
+            }
         var had = powers.Has(power);
         SetPowers(s, target, powers.Add(power, amount));
         if (!had) SimModels.Get(power)?.AfterApplied(s, target, applier, amount);

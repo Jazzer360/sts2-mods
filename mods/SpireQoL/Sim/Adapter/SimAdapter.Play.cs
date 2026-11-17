@@ -69,6 +69,7 @@ public static partial class SimAdapter
         }
         if (StripBlockCards.Contains(name)) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
         play.Body.AddRange(PowersOf(card, f, name, allyId));
+        if (TriggerPoisonCards.Contains(name)) play.Body.Add(new TriggerPoisonAction());
         play.Body.AddRange(OrbsOf(card, me, cs, name, play.ChannelToAlly ? allyId : Who.You));
         AddCardEvents(play, f, plays);
 
