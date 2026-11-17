@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.2
+#### Fixed
+- Shop reminders: relic icons beside a price (Book of Five Rings, Bing Bong, Lucky Fysh...) now sit left of the game's coin instead of covering it.
+
 ### Spire QoL 1.11.1
 #### Fixed
 - Draw counts after Ki Chant (Motif's draws, the Shuffle Warning): its shuffle when your draw pile is short no longer counts your hand as shuffled in (only Reboot does that), the card it puts into your hand takes hand room, and the cards it looks at leave the draw pile before anything draws.

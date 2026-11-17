@@ -680,8 +680,38 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             price.AddChild(box);
         }
         var width = icons.Count * (size + 2) - 2;
-        if (box.GetNodeOrNull<Control>("Icons") is { } row2) row2.Position = new Vector2(-width - 6, (price.Size.Y - size) / 2);
+        // Left of the game's coin, which sits beside the label, not over it.
+        var left = PriceLeft(slot, price) - price.GlobalPosition.X;
+        if (box.GetNodeOrNull<Control>("Icons") is { } row2) row2.Position = new Vector2(left - width - 6, (price.Size.Y - size) / 2);
         if (box.GetNodeOrNull<Control>("Net") is { } netLabel) netLabel.Position = new Vector2(0, price.Size.Y);
+    }
+
+    /// <summary>
+    /// The left edge (global x) of a shop price with its coin: the label's, or that of a visible picture beside it (the
+    /// game's coin icon, anywhere in the slot) that sits level with it and ends at or near the label's left edge.
+    /// </summary>
+    private static float PriceLeft(Node slot, Control price)
+    {
+        var rect = price.GetGlobalRect();
+        var left = rect.Position.X;
+        foreach (var pic in Pictures(slot))
+        {
+            if (price.GetNodeOrNull(ShopNodeName) is { } ours && ours.IsAncestorOf(pic) || !pic.IsVisibleInTree()) continue;
+            var r = pic.GetGlobalRect();
+            var level = r.End.Y > rect.Position.Y && r.Position.Y < rect.End.Y;
+            var beside = r.End.X <= rect.Position.X + rect.Size.Y && r.End.X >= rect.Position.X - rect.Size.Y;
+            if (level && beside) left = Math.Min(left, r.Position.X);
+        }
+        return left;
+    }
+
+    private static IEnumerable<TextureRect> Pictures(Node n)
+    {
+        foreach (var c in n.GetChildren())
+        {
+            if (c is TextureRect t) yield return t;
+            foreach (var d in Pictures(c)) yield return d;
+        }
     }
 
     /// <summary>A relic icon, with the red slash when it works against you.</summary>
