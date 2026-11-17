@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.6
+#### Fixed
+- Intent Forecast's intents line up with the intent on screen: the power icons and chances beside them no longer push them off centre.
+
 ### Spire QoL 1.14.5
 #### Changed
 - The Guide covers every feature: Teammate Incoming Damage, teammates' tabs on your cards and the Update Notice are explained there too.

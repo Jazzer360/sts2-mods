@@ -30,6 +30,9 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     private string _key = "";
     /// <summary>The labels and power chips, each in a holder, moved every frame with the intents' bob.</summary>
     private readonly List<Control> _bobbing = new();
+    /// <summary>Each row's left spacer and the holders right of its intents: the spacer matches them, so the intents are centred.</summary>
+    private readonly List<(Control Spacer, List<Control> Extras)> _balance = new();
+    private const int RowGap = 6;
     private float _bob;
 
     public IntentForecastFeature(QolContext ctx) => _ctx = ctx;
@@ -82,6 +85,14 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         // NIntent._Process's bob, so the labels and chips move with the intents.
         // NIntent._Process's bob, for rows with no intent icon to follow.
         var y = -(Mathf.Sin(Time.GetTicksMsec() * 0.001f * Mathf.Pi + _bob) * 10f + 8f);
+        // As wide on the left as the chips and chances on the right: each row's intents sit centred, over the intent on screen.
+        foreach (var (spacer, extras) in _balance)
+        {
+            if (!GodotObject.IsInstanceValid(spacer)) continue;
+            var width = extras.Where(GodotObject.IsInstanceValid).Sum(x => x.CustomMinimumSize.X + RowGap);
+            spacer.Visible = extras.Count > 0; // a hidden child takes no gap
+            if (extras.Count > 0 && !Mathf.IsEqualApprox(spacer.CustomMinimumSize.X, width - RowGap)) spacer.CustomMinimumSize = new Vector2(width - RowGap, 0);
+        }
         foreach (var c in _bobbing)
         {
             if (!GodotObject.IsInstanceValid(c) || c.GetParent() is not Control holder) continue;
@@ -125,6 +136,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     {
         UiKit.Clear(_rows!);
         _bobbing.Clear();
+        _balance.Clear();
         var targets = enemy.CombatState?.PlayerCreatures.ToList() ?? new List<Creature>();
         // The game's intents bob (NIntent._Process: a sine from _timeOffset); ours start in step with the intent on screen.
         var bob = _bob = BobOffset(enemy);
@@ -134,7 +146,12 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             for (var i = 0; i < turn.Moves.Count; i++)
             {
                 var (moveId, chance) = turn.Moves[i];
-                var row = UiKit.Row(6);
+                var row = UiKit.Row(RowGap);
+                row.Alignment = BoxContainer.AlignmentMode.Center;
+                var spacer = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+                row.AddChild(spacer);
+                var extras = new List<Control>();
+                _balance.Add((spacer, extras));
                 row.MouseFilter = Control.MouseFilterEnum.Ignore;
                 // In the tree first: NIntent finds its parts in _Ready, and UpdateIntent before that throws. Each row goes on top,
                 // so the forecast reads upward from the intent: +1 just above it.
@@ -153,13 +170,19 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                     // The powers the move applies (Frail 2), from its code: a reminder of what a buff or debuff intent is.
                     if (enemy.Monster is { } monster)
                         foreach (var applied in MovePowers.Of(monster, move))
-                            row.AddChild(Bobbing(PowerChip(applied)));
+                        {
+                            var chip = Bobbing(PowerChip(applied));
+                            extras.Add(chip);
+                            row.AddChild(chip);
+                        }
                 }
                 if (!turn.Certain)
                 {
                     var pct = Outlined(UiKit.Label($"{Math.Round(chance * 100)}%", 18, ChanceColor));
                     pct.VerticalAlignment = VerticalAlignment.Center;
-                    row.AddChild(Bobbing(pct));
+                    var holder = Bobbing(pct);
+                    extras.Add(holder);
+                    row.AddChild(holder);
                 }
             }
         }
