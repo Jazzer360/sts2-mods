@@ -231,7 +231,8 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 
 Knowable information only (decision #72): an enemy's next moves where its move rules decide them (a fixed pattern), and the odds of each possible next intent when the pick is random, worked out from its move rules and the moves you've seen it make. Never the result of a random pick before the game shows it, a later move the game rolled ahead of time, or the RNG.
 
-- [ ] Confirm monster AI structure in `MonsterMoves/` (state machine vs. scripted).
+Design (decision #72): on hover only; looks ahead until a roll (every certain turn, then the first random pick with each move's chance).
+- [x] Monster AI structure: `MonsterMoveStateMachine` of `MoveState` (fixed follow-up), `RandomBranchState` (weights, `MoveRepeatType`, `maxTimes`, `cooldown`) and `ConditionalBranchState`; the next move is picked when the current one ends.
 - [ ] Deterministic next moves.
 - [ ] Random branches with odds.
 - [ ] Conditional moves.
