@@ -433,6 +433,12 @@ public static partial class SimAdapter
         p.Energy = pcs.Energy;
         p.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
         p.Fading = hand.Count(card => IsFading(card, cs));
+        // Hex (decision #85): its cards' Ethereal goes when its caster dies.
+        if (c.GetPower<HexPower>() is { Applier: { } hexer } && idOf(hexer) is { } hexId && hexId >= 0)
+        {
+            p.HexFrom = hexId;
+            p.HexFading = hand.Count(card => IsFading(card, cs) && EtherealOnlyFromHex(card));
+        }
         p.AttacksThisTurn = Sts2State.CountPlayedThisTurn(me, CardType.Attack);
         // Cards that act in hand at the end of the turn (the simulator's list): their Damage or HpLoss as the card shows it.
         foreach (var card in hand)
@@ -480,6 +486,20 @@ public static partial class SimAdapter
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>Ethereal only through Hex: Hexed, and not Ethereal on its own (its own or Music Box's, KeywordSources.Local).</summary>
+    internal static bool EtherealOnlyFromHex(CardModel card)
+    {
+        try
+        {
+            return card.Affliction is MegaCrit.Sts2.Core.Models.Afflictions.Hexed
+                   && !card.GetKeywordsWithSources(KeywordSources.Local).Contains(CardKeyword.Ethereal);
+        }
+        catch
+        {
+            return false;
         }
     }
 

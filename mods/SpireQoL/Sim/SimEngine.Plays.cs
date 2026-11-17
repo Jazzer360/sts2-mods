@@ -49,6 +49,7 @@ public static partial class SimEngine
             if (p.InvincibleDrawPile <= 0) p.InvincibleBlock = 0;
         }
         p.Fading = Math.Max(0, p.Fading + cr.FadingDelta);
+        p.HexFading = Math.Max(0, p.HexFading + cr.HexFadingDelta);
         if (cr.IsAttack) p.AttacksThisTurn++;
         AllyDeaths(s);
     }

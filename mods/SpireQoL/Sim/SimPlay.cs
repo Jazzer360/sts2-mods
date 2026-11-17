@@ -37,6 +37,8 @@ public sealed class SimPlay
     public int HandDelta = -1;
     /// <summary>Ethereal cards in hand it plays (one less to exhaust at the end of the turn).</summary>
     public int FadingDelta;
+    /// <summary>Of those, Ethereal only through Hex (SimPlayer.HexFading).</summary>
+    public int HexFadingDelta;
     public bool IsAttack;
 
     // ---- the shorthand (tests): each compiles to an action, numbers fixed
@@ -123,6 +125,7 @@ public sealed record FirstPlayOnly(IReadOnlyList<SimAction> Actions) : SimAction
 public sealed record CardResolvedAction(int HandDelta, int HandCard, bool AutoPlay, int Draws, int FadingDelta, bool IsAttack) : SimAction
 {
     public int Owner { get; init; } = Who.You;
+    public int HexFadingDelta { get; init; }
 }
 
 /// <summary>A script: the actions a play (or an auto-play, or a lead-in play) runs.</summary>
@@ -146,7 +149,7 @@ public sealed class SimScript
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
         s.Actions.Add(new CardPlayAction(play, body));
         s.Actions.AddRange(p.After);
-        s.Actions.Add(new CardResolvedAction(p.HandDelta, p.HandCard, p.AutoPlay, p.Draws, p.FadingDelta, p.IsAttack) { Owner = play.Owner });
+        s.Actions.Add(new CardResolvedAction(p.HandDelta, p.HandCard, p.AutoPlay, p.Draws, p.FadingDelta, p.IsAttack) { Owner = play.Owner, HexFadingDelta = p.HexFadingDelta });
         if (p.RandomPoison > 0 && p.RandomPoisonTimes > 0)
             s.Actions.Add(new ApplyPowerAction("PoisonPower", p.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = p.RandomPoisonTimes, Debuff = true });
         foreach (var proc in p.Procs) s.Actions.Add(new FixedHitsAction(proc.Spread, proc.TargetId, proc.Damage, proc.Times));

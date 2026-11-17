@@ -60,6 +60,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
+        // You died before your next turn: the fight ends without one, so check the turn now, with what happened up to your death.
+        if (_frozen != null && _history != null && me?.Creature is { IsDead: true })
+        {
+            Compare(_frozen, _history, _frozenAt, me, youDied: true);
+            _frozen = null;
+        }
         if (me == null || !Sts2State.InCombat)
         {
             Summarize();
@@ -155,7 +161,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         try { return p.Character.GetType().Name; } catch { return "?"; }
     }
 
-    private void Compare(TurnEndModel f, CombatHistory history, int from, Player me)
+    /// <param name="youDied">You died before your next turn (the fight ended): the enemy turn stopped there, so your HP lost is
+    /// checked as a death against the forecast's, and the enemies left to act didn't.</param>
+    private void Compare(TurnEndModel f, CombatHistory history, int from, Player me, bool youDied = false)
     {
         // Your end of turn (player side), then the enemy turn; stop at your next turn.
         var window = new List<CombatHistoryEntry>();
@@ -171,7 +179,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         }
 
         // No enemy turn came (an extra turn: The Hanged Man's ExtraTurnPower.ShouldTakeExtraTurn): nothing to compare.
-        if (!sawEnemy)
+        if (!sawEnemy && !youDied)
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (no enemy turn followed: an extra turn)");
             return;
@@ -200,7 +208,13 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // Less than forecast is expected when random-target end-of-turn damage was left out: it may
         // have killed an attacker (the forecast stays on the safe side on purpose).
         // The forecast is the worst branch; a random target can make it come in lower (down to TakenMin).
-        if ((actualTaken > f.Taken || actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
+        // Your death ends the enemy turn: hits after it never come, so it's the death that's checked (the forecast's worst
+        // branch, or any branch when a roll decides it).
+        if (youDied)
+        {
+            if (!f.Dies && !f.Outcome.Branches.Any(b => b.Died)) issues.Add($"your death: forecast you survive (HP lost {f.Taken}), but you died (HP lost {actualTaken})");
+        }
+        else if ((actualTaken > f.Taken || actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
         if ((actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
         // Teammates (multiplayer, decision #24): each one's HP lost against their range over the branches.
@@ -210,7 +224,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // Each number above is checked against its own range over the branches; together they must
         // also come from one branch (one set of random targets explains everything that happened).
         var o = f.Outcome;
-        if (issues.Count == 0 && !o.Truncated && o.Branches.Count > 1)
+        if (issues.Count == 0 && !youDied && !o.Truncated && o.Branches.Count > 1)
         {
             bool Explains(SimState b) =>
                 b.Taken == actualTaken && (osty == null || b.OstyTaken == actualOsty) && b.AutoPlayed == autoPlays.Count
@@ -219,7 +233,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 issues.Add($"no single branch: each result is possible on its own, but none of the {o.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
         }
         // Every enemy turn, matched or not: predicted vs actual per enemy, so patterns show before they're reports.
-        ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}{teamLine}");
+        ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}{teamLine}");
 
         _checked++;
         if (issues.Count == 0)
@@ -307,7 +321,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
             actuals[id] = (hpAtTurnEnd, through, diedBeforeActing);
             if (o.DeadInAll(id) && !diedBeforeActing)
-                result.Add(($"enemy death: {name} predicted dead before acting, but it acted", monster));
+                result.Add(($"enemy death: {name} predicted dead before acting, but it lived to act (or outlived you)", monster));
             if (!o.DeadInAny(id) && diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted alive, but it died before acting", monster));
 

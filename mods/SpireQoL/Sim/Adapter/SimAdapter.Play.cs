@@ -36,6 +36,7 @@ public static partial class SimAdapter
             // A card played from elsewhere (Howl from Beyond from the exhaust pile) doesn't leave the hand.
             HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + f.Draws + f.Generated + f.ReturnsToHand,
             FadingDelta = IsFading(card, cs) ? -1 : 0,
+            HexFadingDelta = IsFading(card, cs) && EtherealOnlyFromHex(card) ? -1 : 0,
         };
         // Aimed at a teammate: what lands on them goes to them (never to you, even with no teammate to aim at).
         Creature? ally = null;

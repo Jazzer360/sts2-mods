@@ -935,6 +935,13 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// A player's Ethereal cards that exhaust at their turn end: without the ones Ethereal only through Hex once its caster is
+    /// dead (HexPower.AfterDeath removes it, and its Ethereal goes with it; decision #85).
+    /// </summary>
+    private static int Exhausting(SimState s, SimPlayer p)
+        => p.HexFading > 0 && p.HexFrom >= 0 && s.Enemy(p.HexFrom) is { Alive: false } ? Math.Max(0, p.Fading - p.HexFading) : p.Fading;
+
+    /// <summary>
     /// Your side's turn ends (CombatManager.EndPlayerTurnPhaseOne/Two, decompile v0.113.1):
     ///  1. Hook.BeforeSideTurnEnd: every listener's VeryEarly (Orichalcum checks your block), then Early (Plating, Pael's Eye
     ///     exhausting your hand), then BeforeSideTurnEnd (Hailstorm, The Bomb, Cloak Clasp, Ripple Basin, Screaming Flagon, Stone
@@ -962,7 +969,7 @@ public static partial class SimEngine
             else OrbPassives(b, s => s.Teammates[k], k, mutable: s => s.MutableTeammate(k));
             ExplosionCheck(b); // kills by orb passives
             var player = k < 0 ? Who.You : Who.Teammate(k);
-            b.Each(s => PlayerOf(s, player) is { Fading: > 0 } p && TakesPart(s, player) ? ProcCardEvent(s, CardEvent.Exhausted, p.Fading, player, indirect: false) : new[] { s });
+            b.Each(s => PlayerOf(s, player) is { } p && Exhausting(s, p) is > 0 and var n && TakesPart(s, player) ? ProcCardEvent(s, CardEvent.Exhausted, n, player, indirect: false) : new[] { s });
             b.Do(s => CardsActInHand(s, player));
             ExplosionCheck(b);
         }

@@ -529,6 +529,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] **End of turn** (0.38.0): Insatiable Dominion, Lunar Pastry with Black Hole, Pael's Eye's hand exhaust, and the auto-play phase (Stampede, Simpleton, Howl from Beyond, I Am Invincible; decision #39).
 - [x] 1.16.1: Stampede's picks are aimed at each enemy (the adapter's plays carry their target on the card play), and a pick that draws still lands its hit.
 - [x] 1.16.2: a play's target is kept in one place, SimPlay.TargetId (decision #84).
+- [x] 1.16.2: Hex's Ethereal ends with its caster (decision #85); the forecast check runs on a turn that ends in your death.
 - [x] **Proc tabs** (0.39.0): Fertilizer and All Is Well (Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Sown's energy for Pael's Tears; transformed cards count as created.
 - [x] **HP loss during a play** (0.45.0): the card's HP cost in the simulator; Tungsten Rod, Self-Forming Clay, Emotion Chip, Centennial Puzzle, Demon Tongue, Red Skull, Rupture and Inferno tabs from the HP you really lose (enemy Thorns past your block included, after Tungsten Rod and Buffer).
 - [x] **Free cards** (0.46.0, decision #44): Free Card (Tune), Free Attack, Free Skill tabs with the energy saved, `?` under Snecko Eye, crossed when wasted.

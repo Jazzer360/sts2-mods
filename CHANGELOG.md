@@ -7,6 +7,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 ## [Unreleased]
 
 ### Spire QoL 1.16.2
+#### Fixed
+- Hex (Spectral Knight): killing the enemy that cast it before your turn ends (with a card, or Stampede's end-of-turn pick) ends its Ethereal, so those cards stay in hand instead of exhausting. Predictions no longer count their exhaust (Charon's Ashes, Feel No Pain, Forgotten Soul) once the caster is dead.
+- Forecast check: a turn that ends in your death is now checked (it was skipped, since no next turn came), so a death the forecast missed, or an enemy it showed dying that didn't, gets reported.
 #### Changed
 - Predictions: a card's target is kept in one place for every prediction, so the end-of-turn auto-plays (Stampede, Simpleton) and the card's own hits always agree on what it's aimed at. No change to what's shown.
 

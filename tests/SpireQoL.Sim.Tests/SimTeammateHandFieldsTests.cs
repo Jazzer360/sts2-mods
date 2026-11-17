@@ -17,6 +17,7 @@ public class SimTeammateHandFieldsTests
     private static readonly HashSet<string> FromTheirHand = new()
     {
         nameof(SimPlayer.Fading),          // Ethereal cards that exhaust (Feel No Pain, Charon's Ashes, Forgotten Soul)
+        nameof(SimPlayer.HexFading),       // of those, Ethereal only through Hex
         nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...
         // End-of-turn auto-plays picked from the hand (Stampede, Simpleton; never filled for a teammate today, decision #80).
         nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand),
@@ -26,6 +27,7 @@ public class SimTeammateHandFieldsTests
     private static readonly HashSet<string> Known = new()
     {
         nameof(SimPlayer.Block), nameof(SimPlayer.Reflect),
+        nameof(SimPlayer.HexFrom),         // who cast Hex on them (its power is on screen)
         nameof(SimPlayer.HandCount),       // the size is on screen (Cloak Clasp, Screaming Flagon, Obsidian Vice, Regret's amount)
         nameof(SimPlayer.Energy),          // on screen for every player (Pael's Tears, Orbit)
         nameof(SimPlayer.Arrows),          // on screen (the Fool's arrows)

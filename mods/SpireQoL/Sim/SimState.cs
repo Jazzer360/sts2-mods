@@ -261,6 +261,13 @@ public sealed class SimPlayer
     public int Energy;
     /// <summary>Ethereal cards in hand that exhaust at end of turn.</summary>
     public int Fading;
+    /// <summary>
+    /// Of those, the ones Ethereal only through Hex (HexPower.TryModifyKeywordsInCombat on its Hexed cards), and the enemy that
+    /// cast it (-1: none). Hex is removed when its caster dies (HexPower.AfterDeath), and those cards stop being Ethereal: they
+    /// stay in hand at end of turn (decision #85).
+    /// </summary>
+    public int HexFading;
+    public int HexFrom = -1;
     public int AttacksThisTurn;
     /// <summary>
     /// Cards in hand that act when the turn ends (CardModel.OnTurnEndInHand), in hand order: what each does is the simulator's
@@ -605,7 +612,7 @@ public sealed class SimState
         {
             var t = shown.MutableTeammate(k);
             t.TurnEndCards = new();
-            t.Fading = 0;
+            t.Fading = t.HexFading = 0;
             t.Stampede = t.Simpleton = 0;
             t.AutoHand = null;
         }

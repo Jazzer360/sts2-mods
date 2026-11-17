@@ -198,7 +198,7 @@ internal static partial class CoverageLedger
         ["HauntPower"] = "covered: AfterCardPlayed damages a random enemy on Souls (proc damage)",
         ["HeistPower"] = "ignore: BeforeDeath returns stolen gold",
         ["HellraiserPower"] = "covered: auto-plays drawn Strikes (draw-reactive and auto-play: noted by the audit, not predicted)",
-        ["HexPower"] = "ignore: afflicts cards (read from the card)",
+        ["HexPower"] = "covered: afflicts cards (read from the card); AfterDeath removes it with its caster, and its cards' Ethereal goes: the simulator skips their end-of-turn exhaust once the caster is dead (decision #85)",
         ["HighVoltagePower"] = "ignore: AfterSideTurnEnd Strength at the end of its own turn (later attacks)",
         ["IllusionPower"] = "ignore: AfterDeath sets its Revive move (heal, no attack) and ShouldAllowHitting keeps it out of hits until it revives, so its kill holds for the turn; the simulator never ends the fight early",
         ["ImbalancedPower"] = "covered: AfterDamageGiven stuns on a fully blocked hit (Imbalanced tab from the simulator)",
