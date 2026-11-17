@@ -10,6 +10,9 @@
 //                                         reopened with a comment, and its body replaced with the newest
 //                                         occurrence. The fix version is the newest "spireqol-vX.Y.Z" (or
 //                                         "Spire QoL X.Y.Z") in the latest closing comment that names one.
+//  - Reports from mod versions older than OLDEST_SUPPORTED are never mirrored or reopened: the issue
+//                                         is resolved in Sentry (it comes back on its own if a supported
+//                                         version hits it, and is mirrored then).
 // A hidden marker in each issue body (<!-- sentry-issue: ID -->) links the two.
 //
 // Env: SENTRY_AUTH_TOKEN (secret), SENTRY_ORG, SENTRY_PROJECT, SENTRY_API (default https://sentry.io),
@@ -76,6 +79,11 @@ async function mirroredIssues() {
   return map;
 }
 
+// Reports from mod versions older than this are dropped (docs/DECISIONS.md #79). 1.0.0 rebuilt every
+// prediction and audit on the simulator, so an older report says nothing about today's code. Raise it
+// when a later release makes older reports meaningless the same way.
+const OLDEST_SUPPORTED = "1.0.0";
+
 // ---- versions: "0.31.17" style, compared numerically
 const parseVersion = (v) => (/^(\d+)\.(\d+)\.(\d+)/.exec(String(v || "")) || []).slice(1).map(Number);
 const cmpVersion = (a, b) => {
@@ -85,6 +93,11 @@ const cmpVersion = (a, b) => {
   return 0;
 };
 const tagOf = (event, key) => (event.tags || []).find((t) => t.key === key)?.value;
+// An event from a supported version (an unknown version counts as supported: better looked at than lost).
+const supported = (event) => {
+  const v = tagOf(event, "mod_version");
+  return !parseVersion(v).length || !(cmpVersion(v, OLDEST_SUPPORTED) < 0);
+};
 
 // The version that fixed a closed issue: the newest version named in the latest comment that names one.
 async function fixedIn(number) {
@@ -177,9 +190,16 @@ for (const issue of issues) {
  try {
   const gh = mirrored.get(issue.id);
   if (!gh) {
-    const event = await latestEvent(issue.id);
-    if (!event) {
+    const latest = await latestEvent(issue.id);
+    if (!latest) {
       console.log(`Sentry ${issue.id} has no event available yet; will retry next run.`);
+      continue;
+    }
+    // The newest occurrence from a supported version; none: resolved in Sentry, not mirrored.
+    const event = supported(latest) ? latest : (await eventsSince(issue.id, 0)).find(supported);
+    if (!event) {
+      await resolve(issue.id, null);
+      console.log(`Sentry ${issue.id} skipped: only from mod versions older than ${OLDEST_SUPPORTED} (${tagOf(latest, "mod_version") || "?"}): ${issue.title}`);
       continue;
     }
     const kind = (event.tags || []).find((t) => t.key === "kind")?.value || "crash";
@@ -193,13 +213,13 @@ for (const issue of issues) {
     const fix = await fixedIn(gh.number);
     if (new Date(issue.lastSeen) > new Date(gh.closed_at)) {
       // Again after the fix: from which versions?
-      const again = await eventsSince(issue.id, gh.closed_at);
-      const versions = [...new Set(again.map((e) => tagOf(e, "mod_version") || "?"))];
+      const since = await eventsSince(issue.id, gh.closed_at);
+      const again = since.filter(supported);
       const current = again.filter((e) => !fix || !(cmpVersion(tagOf(e, "mod_version"), fix) < 0));
-      if (again.length > 0 && current.length === 0) {
-        // Only players on versions older than the fix: nothing new to look at.
+      if (since.length > 0 && current.length === 0) {
+        // Only players on versions older than the fix (or than OLDEST_SUPPORTED): nothing new to look at.
         await resolve(issue.id, fix);
-        console.log(`#${gh.number} stays closed: seen again only from ${versions.join(", ")} (fixed in ${fix})`);
+        console.log(`#${gh.number} stays closed: seen again only from ${[...new Set(since.map((e) => tagOf(e, "mod_version") || "?"))].join(", ")}${fix ? ` (fixed in ${fix})` : ""}`);
         continue;
       }
       const latest = current[0] ?? (await latestEvent(issue.id));

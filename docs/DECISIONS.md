@@ -394,3 +394,8 @@ Extends #32. The mod is developed and released against Steam's beta branch (the 
 *Why:* the owner plays and tests on beta, while most players are on main; one build serves both, and the reports show where main breaks.
 *Replaced:* #32's single decompile (the newest version only).
 
+### 79. Reports from before 1.0.0 are dropped — active (2026-11-17)
+The Sentry mirror (`.github/scripts/sentry-sync.mjs`, `OLDEST_SUPPORTED`) never mirrors or reopens a report whose occurrences all come from a mod version older than 1.0.0: it resolves the Sentry issue instead, and the issue is mirrored if a supported version hits it later (an occurrence with no version counts as supported). The floor is a version picked on purpose, raised only when a release makes older reports meaningless the same way.
+*Why:* 1.0.0 rebuilt every prediction and audit on the simulator, so a report from 0.x says nothing about today's code; players who never updated kept filing them. Sentry's own release filter (dropping them before they arrive) needs a paid plan.
+*Replaced:* mirroring every report, with a note when it came from a version older than the newest release (that note stays for 1.0.0 and newer).
+
