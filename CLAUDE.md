@@ -74,11 +74,20 @@ The outcome simulator is the core of every prediction, and its tests are what ke
 ## Releasing (required with every mod update)
 
 Every change to a mod ships as a release:
-1. Bump the version in **both** `mods/<ModId>/<ModId>.json` and `<ModId>.csproj`, and put the changelog lines under a `### <Mod Name> <version>` heading.
+1. Pick the version by the rules below, bump it in **both** `mods/<ModId>/<ModId>.json` and `<ModId>.csproj`, and put the changelog lines under a `### <Mod Name> <version>` heading.
 2. Commit and push to `main`.
 3. Run `./scripts/release.ps1` (needs the game installed and `gh` logged in). It builds, zips `dist/<ModId>-<version>.zip` and creates the GitHub release `<modid>-v<version>`.
 
 The "Release check" workflow waits up to 20 minutes after a push to `main` for the current version's release (with its zip), so release right after pushing. It fails immediately on a version mismatch, a missing changelog section, or mod code changed since the last release without a version bump. Don't leave it red: if you can't run the script (game running, no `gh`), tell the user the release is still pending.
+
+### Version numbers (decision #69)
+
+The changelog's section headings decide the bump; with several kinds in one release, the largest wins.
+- **Patch** (x.y.**Z**): `Fixed` and small `Changed` only. Wrong or missing predictions, crashes, audit mismatches, performance, a new game version's coverage, and **coverage gaps**: a card, relic, power or enemy that an existing feature should already handle, even when that gives an existing kind of tab a new icon.
+- **Minor** (x.**Y**.0): anything under `Added` or `Removed`: a new feature, panel, page, setting or settings switch, a new kind of tab or mark, a new screen the mod shows up on, or one taken away. Also a `Changed` that redesigns how a feature looks or works (not just its placement or size).
+- **Major** (**X**.0.0): rare, and never for the number of features. A change to what the whole mod rests on that players notice everywhere (1.0.0: every prediction from the simulator on the game's own rules), or one that breaks what players keep: saved settings or layouts reset, a supported game version dropped.
+
+A patch release can't have `Added` or `Removed` sections: the release check fails a new patch version that does. Shared-code rebuilds (Main Saves after a `core/` change) are patches.
 
 ## UI rules
 

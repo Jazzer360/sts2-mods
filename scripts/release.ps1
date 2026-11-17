@@ -48,7 +48,9 @@ if (-not $DryRun) {
     if (git status --porcelain) { Fail 'Working tree has uncommitted changes. Commit (with docs + changelog) first.' }
     $branch = (git rev-parse --abbrev-ref HEAD).Trim()
     if ($branch -ne 'main') { Fail "Releases are made from main (on '$branch')." }
-    git fetch --quiet origin main
+    # Tags too: the build reads the release dates for the About page from the spireqol-v* tags, and
+    # releases create their tags on GitHub, not here.
+    git fetch --quiet --tags origin main
     if ((git rev-parse HEAD).Trim() -ne (git rev-parse origin/main).Trim()) { Fail 'main is not in sync with origin/main. Push (or pull) first.' }
 }
 
