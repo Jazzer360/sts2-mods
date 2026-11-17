@@ -113,10 +113,13 @@ public sealed record HitYouAction(string Name, int Amount) : SimAction;
 public sealed record FirstPlayOnly(IReadOnlyList<SimAction> Actions) : SimAction;
 
 /// <summary>
-/// The card has left your hand: your hand's size, the hand Stampede and Simpleton pick from, I Am Invincible's draw pile, Fading,
-/// attacks this turn, and Pael's Eye (a card you play, not an auto-play, disarms it).
+/// The card has left its owner's hand (Owner: you, or a teammate's auto-play): their hand's size, the hand Stampede and Simpleton
+/// pick from, I Am Invincible's draw pile, Fading, attacks this turn, and Pael's Eye (a card played, not an auto-play, disarms it).
 /// </summary>
-public sealed record CardResolvedAction(int HandDelta, int HandCard, bool AutoPlay, int Draws, int FadingDelta, bool IsAttack) : SimAction;
+public sealed record CardResolvedAction(int HandDelta, int HandCard, bool AutoPlay, int Draws, int FadingDelta, bool IsAttack) : SimAction
+{
+    public int Owner { get; init; } = Who.You;
+}
 
 /// <summary>A script: the actions a play (or an auto-play, or a lead-in play) runs.</summary>
 public sealed class SimScript
@@ -139,7 +142,7 @@ public sealed class SimScript
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
         s.Actions.Add(new CardPlayAction(play, body));
         s.Actions.AddRange(p.After);
-        s.Actions.Add(new CardResolvedAction(p.HandDelta, p.HandCard, p.AutoPlay, p.Draws, p.FadingDelta, p.IsAttack));
+        s.Actions.Add(new CardResolvedAction(p.HandDelta, p.HandCard, p.AutoPlay, p.Draws, p.FadingDelta, p.IsAttack) { Owner = play.Owner });
         if (p.RandomPoison > 0 && p.RandomPoisonTimes > 0)
             s.Actions.Add(new ApplyPowerAction("PoisonPower", p.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = p.RandomPoisonTimes, Debuff = true });
         foreach (var proc in p.Procs) s.Actions.Add(new FixedHitsAction(proc.Spread, proc.TargetId, proc.Damage, proc.Times));

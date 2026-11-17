@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.10
+#### Fixed
+- With teammates: a teammate's Wuppy takes the attacks aimed at them, and a teammate's Howl from Beyond and I Am Invincible play at the end of the turn (their attack can kill an enemy before it acts), in Incoming Damage and the lethal tab.
+- With teammates: against the Aeonglass, Withering Presence counts only your cards toward your next Wither (it has one per player).
+- Howl from Beyond played from your exhaust pile no longer takes a card off your hand for Cloak Clasp's end-of-turn block.
+
 ### Spire QoL 1.14.9
 #### Fixed
 - Huddle Up no longer counts as drawing you cards, and Blade Symphony no longer counts as creating one: both act only on your teammates.

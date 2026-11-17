@@ -192,4 +192,71 @@ public class SimAutoPlayTests
         var o = SimEngine.Run(s, Strike(1, 5));
         Assert.All(o.Branches, b => Assert.Equal(30, b.Enemy(2)!.HpAtTurnEnd));
     }
+
+    /// <summary>Teammate 0's Howl from Beyond: their card (the play's owner), with its damage as final numbers.</summary>
+    private static SimPlay TeammatesHowl(int damage, params int[] ids)
+    {
+        var p = AllEnemies("HowlFromBeyond", damage, ids);
+        p.HandDelta = 0; // from their exhaust pile
+        p.AutoPlay = true;
+        p.Card = new SimCardPlay(new SimCard("HowlFromBeyond", SimCardType.Attack), Who.Teammate(0), -1, 0, 1, true);
+        return p;
+    }
+
+    [Fact]
+    public void ATeammatesHowlFromBeyondKillsBeforeTheEnemyActs()
+    {
+        // Hook.AfterAutoPostPlayPhaseEntered runs for every player ending the turn: their Howl from Beyond in their exhaust
+        // pile (you can see it) plays too. It isn't your auto-play (the outcome audit counts yours).
+        var s = new SimState { Enemies = { Enemy(1, 10, 5) } };
+        var mate = new SimPlayer { Hp = 50 };
+        mate.ExhaustAutoPlays.Add(TeammatesHowl(10, 1));
+        s.Teammates.Add(mate);
+        var o = SimEngine.Run(s);
+        Assert.True(o.DeadInAll(1));
+        Assert.Equal(0, o.TakenMax);
+        Assert.All(o.Branches, b => Assert.Equal(0, b.AutoPlayed));
+    }
+
+    [Fact]
+    public void ATeammatesAutoPlayedAttackIsTheirsNotYours()
+    {
+        // Their Howl counts as their Attack this turn: your Ripple Basin still gives its block, and your hand keeps its size.
+        var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        s.P.RippleBasinBlock = 4;
+        s.P.HandCount = 3;
+        var mate = new SimPlayer { Hp = 50 };
+        mate.ExhaustAutoPlays.Add(TeammatesHowl(3, 1));
+        s.Teammates.Add(mate);
+        var o = SimEngine.Run(s);
+        Assert.Equal(6, o.TakenMax);
+        Assert.All(o.Branches, b => Assert.Equal(3, b.P.HandCount));
+        Assert.All(o.Branches, b => Assert.Equal(1, b.Teammates[0].AttacksThisTurn));
+    }
+
+    [Fact]
+    public void ATeammatesIAmInvincibleBlocksForThemNotYou()
+    {
+        var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        var mate = new SimPlayer { Hp = 50, InvincibleBlock = 8, InvincibleDrawPile = 1 };
+        s.Teammates.Add(mate);
+        var o = SimEngine.Run(s);
+        Assert.Equal(10, o.TakenMax);
+        Assert.Equal(2, o.TeammateTakenMax(0));
+    }
+
+    [Fact]
+    public void YourHowlFromBeyondDoesntLeaveYourHand()
+    {
+        // It plays from your exhaust pile: Cloak Clasp (block per card in hand, BeforeSideTurnEnd, after the auto-plays) counts
+        // the hand as it was. The adapter builds it with HandDelta 0 (SimAdapter.Play: the card isn't in your hand).
+        var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        s.P.HandCount = 3;
+        s.P.CloakClaspPerCard = 1;
+        var howl = AllEnemies("HowlFromBeyond", 3, 1);
+        howl.HandDelta = 0;
+        howl.AutoPlay = true;
+        s.P.ExhaustAutoPlays.Add(howl);
+        Assert.Equal(7, SimEngine.Run(s).TakenMax);
+    }
 }

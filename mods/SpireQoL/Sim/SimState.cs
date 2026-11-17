@@ -221,7 +221,7 @@ public sealed class SimPlayer
     public bool Reflect;
     /// <summary>
     /// Inferno: each time you lose HP on your turn, this much damage to every enemy (InfernoPower.AfterDamageReceived:
-    /// UnblockedDamage &gt; 0 while it's your side's turn; unpowered). Yours only: a teammate's isn't modelled.
+    /// UnblockedDamage &gt; 0 while it's their side's turn; unpowered). Any player's (the model is the owner's).
     /// </summary>
     [JsonIgnore] public int Inferno { get => Powers["InfernoPower"]; set => Set("InfernoPower", value); }
 
@@ -346,7 +346,8 @@ public sealed class SimPlayer
     /// </summary>
     public bool BeaconOfHope, BeaconGiving;
 
-    // The auto-play phase (PlayerTurnPhase.AutoPostPlay: Hook.AfterAutoPostPlayPhaseEntered, before BeforeSideTurnEnd). Yours only.
+    // The auto-play phase (PlayerTurnPhase.AutoPostPlay: Hook.AfterAutoPostPlayPhaseEntered, before BeforeSideTurnEnd), every
+    // player's. A teammate's Stampede and Simpleton aren't filled (their hand; decision #80); their piles' auto-plays are.
     /// <summary>Stampede: auto-plays this many random Attacks from your hand (StampedePower; 0 = none).</summary>
     public int Stampede;
     /// <summary>Simpleton: auto-plays this many of your cheapest cards (a random one among ties; SimpletonPower; 0 = none).</summary>
@@ -607,8 +608,6 @@ public sealed class SimState
             t.Fading = 0;
             t.Stampede = t.Simpleton = 0;
             t.AutoHand = null;
-            t.ExhaustAutoPlays = new();
-            t.InvincibleBlock = t.InvincibleDrawPile = 0;
         }
         return shown;
     }

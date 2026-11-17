@@ -289,6 +289,7 @@ public static partial class SimAdapter
             var mateId = Who.Teammate(s.Teammates.Count);
             foreach (var pw in oc.Powers) SimReaders.AddVars(s, mateId, pw);
             foreach (var r in other.Relics) SimReaders.AddVars(s, mateId, r);
+            FillAutoPlays(t, other, cs, ids, mateId);
             t.Hp = oc.CurrentHp;
             t.BeaconOfHope = oc.HasPower<BeaconOfHopePower>();
             s.Teammates.Add(t);
@@ -309,16 +310,18 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// Your end-of-turn auto-plays (the auto-play phase, before BeforeSideTurnEnd): Stampede and Simpleton pick from your
-    /// hand, Howl from Beyond plays from your exhaust pile, and I Am Invincible from the top of your draw pile when that's
-    /// certain (every card there is a copy of it). Auto-plays get no procs from the rules (ProcIndicatorsFeature).
+    /// A player's end-of-turn auto-plays (the auto-play phase, before BeforeSideTurnEnd): Stampede and Simpleton pick from
+    /// their hand, Howl from Beyond plays from their exhaust pile, and I Am Invincible from the top of their draw pile when
+    /// that's certain (every card there is a copy of it). Auto-plays get no procs from the rules (ProcIndicatorsFeature).
+    /// For a teammate (<paramref name="owner"/>), the piles only: Stampede never counts (a random card), and Simpleton's pick
+    /// would need their card plays built as theirs, which only Howl from Beyond's is (reviewed: decision #80).
     /// </summary>
-    private static void FillAutoPlays(SimPlayer p, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids)
+    private static void FillAutoPlays(SimPlayer p, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids, int owner = Who.You)
     {
         try
         {
-            p.Stampede = me.Creature.GetPower<StampedePower>()?.Amount ?? 0;
-            p.Simpleton = me.Creature.GetPower<SimpletonPower>()?.Amount ?? 0;
+            p.Stampede = owner == Who.You ? me.Creature.GetPower<StampedePower>()?.Amount ?? 0 : 0;
+            p.Simpleton = owner == Who.You ? me.Creature.GetPower<SimpletonPower>()?.Amount ?? 0 : 0;
             if (p.Stampede > 0 || p.Simpleton > 0)
             {
                 p.AutoHand = new List<SimHandCard>();
@@ -337,7 +340,7 @@ public static partial class SimAdapter
             }
             foreach (var card in PileType.Exhaust.GetPile(me).Cards)
             {
-                if (card is HowlFromBeyond) p.ExhaustAutoPlays.Add(AutoPlay(card, me, cs, ids, -1));
+                if (card is HowlFromBeyond) p.ExhaustAutoPlays.Add(AutoPlay(card, me, cs, ids, -1, owner: owner));
             }
             var drawPile = PileType.Draw.GetPile(me).Cards;
             if (drawPile.Count > 0 && drawPile.All(c => c is IAmInvincible))
@@ -369,9 +372,10 @@ public static partial class SimAdapter
         return ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => AutoPlay(card, me, cs, ids, kv.Value, f)).ToList();
     }
 
-    private static SimPlay AutoPlay(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? f = null)
+    private static SimPlay AutoPlay(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? f = null,
+        int owner = Who.You)
     {
-        var play = Play(card, f ?? PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card)), me, cs, ids, target);
+        var play = Play(card, f ?? PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card)), me, cs, ids, target, owner);
         play.AutoPlay = true;
         if (play.Card != null) play.Card = play.Card with { AutoPlay = true };
         return play;

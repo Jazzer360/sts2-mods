@@ -20,9 +20,11 @@ public static partial class SimAdapter
     /// The play of <paramref name="card"/> aimed at <paramref name="targetId"/> (docs/SIMULATOR_V2.md "Card scripts"): the card
     /// play with what each play does as actions (HP cost, attack, block, powers), worked out by the simulator from the card's
     /// values, the models and the captured terms; plus, as summary fields, what isn't an action yet (orbs, procs, hand changes).
+    /// <paramref name="owner"/>: whose card it is (a teammate's auto-play: their Howl from Beyond); <paramref name="me"/> is then
+    /// that teammate, and what the play gives its player goes to them.
     /// </summary>
     public static SimPlay Play(CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
-        int targetId)
+        int targetId, int owner = Who.You)
     {
         var name = card.GetType().Name;
         var plays = Math.Max(1, f.Plays);
@@ -31,7 +33,8 @@ public static partial class SimAdapter
             Name = name,
             IsAttack = card.Type == CardType.Attack,
             Plays = plays,
-            HandDelta = -1 + f.Draws + f.Generated + f.ReturnsToHand,
+            // A card played from elsewhere (Howl from Beyond from the exhaust pile) doesn't leave the hand.
+            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + f.Draws + f.Generated + f.ReturnsToHand,
             FadingDelta = IsFading(card, cs) ? -1 : 0,
         };
         // Aimed at a teammate: what lands on them goes to them (never to you, even with no teammate to aim at).
@@ -50,7 +53,7 @@ public static partial class SimAdapter
 
         // ---- v2: the card play and what each play does
         var target = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
-        play.Card = new SimCardPlay(SimReaders.Card(card, f, me), Who.You, target, 0, plays, f.AutoPlayed);
+        play.Card = new SimCardPlay(SimReaders.Card(card, f, me), owner, target, 0, plays, f.AutoPlayed);
         if (f.LosesHp) play.Body.Add(new LoseHpAction(Sts2State.Var(card, "HpLoss")));
         // A shot (ArrowCmd.ShootArrowAtTarget): the arrow leaves before the attack and impales the target after it. None from an X
         // shot at X 0.
@@ -106,7 +109,7 @@ public static partial class SimAdapter
         if (StripBlockCards.Contains(name)) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
         play.Body.AddRange(PowersOf(card, f, name, allyId));
         if (TriggerPoisonCards.Contains(name)) play.Body.Add(new TriggerPoisonAction());
-        play.Body.AddRange(OrbsOf(card, me, cs, name, play.ChannelToAlly ? allyId : Who.You));
+        play.Body.AddRange(OrbsOf(card, me, cs, name, play.ChannelToAlly ? allyId : owner));
         AddCardEvents(play, f, plays);
 
         // ---- summary fields (not actions yet)
@@ -123,6 +126,10 @@ public static partial class SimAdapter
                 { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 1)), Debuff = true });
         if (KillsOstyCards.Contains(name)) play.Body.Add(new KillOstyAction());
         if (play.Poison > 0 && !play.PoisonAll) play.TargetId = targetId;
+        // A teammate's card: the block it gives its player is theirs.
+        if (owner != Who.You)
+            for (var i = 0; i < play.Body.Count; i++)
+                if (play.Body[i] is GainBlockAction { To: Who.You } g) play.Body[i] = g with { To = owner };
         return play;
     }
 

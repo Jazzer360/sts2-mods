@@ -32,6 +32,9 @@ public static class SimReaders
             // itself is already in the owner's ThornsPower (TemporaryThornsPower.BeforeApplied applies it).
             if (SimAdapter.IsTemporaryThorns(pw.GetType())) continue;
             var name = SimAdapter.SimPowerName(pw.GetType());
+            // Withering Presence: Aeonglass has one per player, each counting its Target's cards (AfterCardPlayed:
+            // cardPlay.Card.Owner == Target.Player). Only yours reacts to your plays; a teammate's would mix in their count.
+            if (name == "WitheringPresencePower" && pw.Target is { } wt && idOf(wt) != Who.You) continue;
             int amount = pw.Amount, data = 0;
             switch (name)
             {

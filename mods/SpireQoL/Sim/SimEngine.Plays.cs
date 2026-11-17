@@ -26,27 +26,30 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// The card has left your hand: your hand's size; the hand Stampede and Simpleton pick from (cards it draws or makes aren't
-    /// known); I Am Invincible stops being certain once its pile is drawn through; Fading; attacks this turn; Pael's Eye disarmed by
-    /// a card you play (not an auto-play).
+    /// The card has left its owner's hand (yours, or a teammate's for their auto-play): their hand's size; the hand Stampede and
+    /// Simpleton pick from (cards it draws or makes aren't known); I Am Invincible stops being certain once its pile is drawn
+    /// through; Fading; attacks this turn; Pael's Eye disarmed by a card played (not an auto-play).
     /// </summary>
     private static void CardResolved(SimState s, CardResolvedAction cr)
     {
-        s.P.HandCount = Math.Max(0, s.P.HandCount + cr.HandDelta);
-        if (!cr.AutoPlay) s.P.PaelsEyeExhaust = false;
-        if (s.P.AutoHand != null)
+        var k = cr.Owner == Who.You ? -1 : Who.TeammateIndex(cr.Owner);
+        if (k >= s.Teammates.Count) { AllyDeaths(s); return; }
+        var p = k < 0 ? s.P : s.MutableTeammate(k);
+        p.HandCount = Math.Max(0, p.HandCount + cr.HandDelta);
+        if (!cr.AutoPlay) p.PaelsEyeExhaust = false;
+        if (p.AutoHand != null)
         {
-            if (cr.HandCard != 0) s.P.AutoHand = s.P.AutoHand.Where(c => c.Id != cr.HandCard).ToList();
+            if (cr.HandCard != 0) p.AutoHand = p.AutoHand.Where(c => c.Id != cr.HandCard).ToList();
             if (cr.HandDelta > -1) s.AutoPlaysUnknown = true;
         }
-        if (cr.Draws > 0 && s.P.InvincibleBlock > 0)
+        if (cr.Draws > 0 && p.InvincibleBlock > 0)
         {
-            // Drawing the whole pile shuffles your discard pile in: the top isn't known any more.
-            s.P.InvincibleDrawPile -= cr.Draws;
-            if (s.P.InvincibleDrawPile <= 0) s.P.InvincibleBlock = 0;
+            // Drawing the whole pile shuffles the discard pile in: the top isn't known any more.
+            p.InvincibleDrawPile -= cr.Draws;
+            if (p.InvincibleDrawPile <= 0) p.InvincibleBlock = 0;
         }
-        s.P.Fading = Math.Max(0, s.P.Fading + cr.FadingDelta);
-        if (cr.IsAttack) s.P.AttacksThisTurn++;
+        p.Fading = Math.Max(0, p.Fading + cr.FadingDelta);
+        if (cr.IsAttack) p.AttacksThisTurn++;
         AllyDeaths(s);
     }
 }

@@ -835,65 +835,78 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// The auto-play phase of your end of turn (CombatManager.EndPlayerTurnPhaseOneInternal: PlayerTurnPhase.AutoPostPlay,
-    /// Hook.AfterAutoPostPlayPhaseEntered), before BeforeSideTurnEnd. Hook listeners run your powers first (Stampede,
-    /// Simpleton), then the cards in your piles (I Am Invincible on top of your draw pile, Howl from Beyond in your
-    /// exhaust pile). Auto-played cards cost nothing (CardCmd.AutoPlay); one aimed at an enemy takes a random hittable one.
-    /// Yours only: a teammate's come from their hand (decision #25).
+    /// The auto-play phase of the players' end of turn (CombatManager.EndPlayerTurnPhaseOneInternal: PlayerTurnPhase.AutoPostPlay,
+    /// Hook.AfterAutoPostPlayPhaseEntered for each player ending the turn, in player order), before BeforeSideTurnEnd. For each
+    /// player, hook listeners run their powers first (Stampede, Simpleton), then the cards in their piles (I Am Invincible on
+    /// top of their draw pile, Howl from Beyond in their exhaust pile). Auto-played cards cost nothing (CardCmd.AutoPlay); one
+    /// aimed at an enemy takes a random hittable one. A teammate's Stampede and Simpleton pick from their hand: only with
+    /// their hand (SimState.WithoutTeammateHands clears them; decision #25), and Stampede is never filled for them.
     /// </summary>
     private static void AutoPostPlay(BranchSet b)
     {
-        if (!b.States.Any(s => s.P.Stampede > 0 || s.P.Simpleton > 0 || s.P.ExhaustAutoPlays.Count > 0 || s.P.InvincibleBlock > 0)) return;
-        // Stampede: a random Attack from your hand (unplayable cards aren't in AutoHand), each time.
-        var stampede = b.States.Max(s => s.P.Stampede);
+        static bool Any(SimPlayer p) => p.Stampede > 0 || p.Simpleton > 0 || p.ExhaustAutoPlays.Count > 0 || p.InvincibleBlock > 0;
+        if (!b.States.Any(s => Any(s.P) || s.Teammates.Any(Any))) return;
+        foreach (var k in PlayerOrder(b.States[0]).ToList()) AutoPostPlayOf(b, k);
+    }
+
+    /// <summary>One player's auto-plays (k: -1 you, else teammate k).</summary>
+    private static void AutoPostPlayOf(BranchSet b, int k)
+    {
+        SimPlayer P(SimState s) => k < 0 ? s.P : s.Teammates[k];
+        bool Alive(SimState s) => k < 0 || s.Teammates[k].Hp > 0;
+        // Stampede: a random Attack from their hand (unplayable cards aren't in AutoHand), each time.
+        var stampede = b.States.Max(s => P(s).Stampede);
         for (var i = 0; i < stampede; i++)
         {
             var n = i;
-            b.Each(s => n < s.P.Stampede ? AutoPlayFromHand(b, s, hand => hand.Where(c => c.IsAttack).ToList()) : new[] { s });
+            b.Each(s => n < P(s).Stampede && Alive(s) ? AutoPlayFromHand(b, s, k, hand => hand.Where(c => c.IsAttack).ToList()) : new[] { s });
         }
-        // Simpleton: a random card among your cheapest, each time.
-        var simpleton = b.States.Max(s => s.P.Simpleton);
+        // Simpleton: a random card among their cheapest, each time.
+        var simpleton = b.States.Max(s => P(s).Simpleton);
         for (var i = 0; i < simpleton; i++)
         {
             var n = i;
-            b.Each(s => n < s.P.Simpleton
-                ? AutoPlayFromHand(b, s, hand => hand.Count == 0 ? hand : hand.Where(c => c.Cost == hand.Min(x => x.Cost)).ToList())
+            b.Each(s => n < P(s).Simpleton && Alive(s)
+                ? AutoPlayFromHand(b, s, k, hand => hand.Count == 0 ? hand : hand.Where(c => c.Cost == hand.Min(x => x.Cost)).ToList())
                 : new[] { s });
         }
-        // I Am Invincible on top of your draw pile: its block.
+        // I Am Invincible on top of their draw pile: its block.
         b.Each(s =>
         {
-            if (s.P.InvincibleBlock <= 0) return new[] { s };
-            s.AutoPlayed++;
-            return GainBlock(s, s.P.InvincibleBlock, "I Am Invincible");
+            if (P(s).InvincibleBlock <= 0 || !Alive(s)) return new[] { s };
+            if (k < 0) s.AutoPlayed++; // yours (the outcome audit counts your auto-plays)
+            return GainBlock(s, P(s).InvincibleBlock, "I Am Invincible", k);
         });
-        // Howl from Beyond in your exhaust pile: each copy plays (an attack on every enemy).
-        var howls = b.States.Max(s => s.P.ExhaustAutoPlays.Count);
+        // Howl from Beyond in their exhaust pile: each copy plays (an attack on every enemy).
+        var howls = b.States.Max(s => P(s).ExhaustAutoPlays.Count);
         for (var i = 0; i < howls; i++)
         {
-            var play = b.States.Select(s => s.P.ExhaustAutoPlays).First(l => l.Count > i)[i];
-            b.Do(s => s.AutoPlayed++);
+            var play = b.States.Select(s => P(s).ExhaustAutoPlays).First(l => l.Count > i)[i];
+            if (!b.States.Any(Alive)) break;
+            if (k < 0) b.Do(s => s.AutoPlayed++);
             ApplyPlay(b, play);
         }
     }
 
     /// <summary>
-    /// One auto-play from your hand: a branch per card <paramref name="pick"/> allows (CombatCardSelection.NextItem: each
-    /// equally likely), and per hittable target for a card aimed at one. A card whose play isn't simulated (it changes
-    /// your hand) ends what's predicted for later auto-plays in that branch.
+    /// One auto-play from a player's hand (k: -1 you, else teammate k): a branch per card <paramref name="pick"/> allows
+    /// (CombatCardSelection.NextItem: each equally likely), and per hittable target for a card aimed at one. A card whose play
+    /// isn't simulated (it changes the hand) ends what's predicted for later auto-plays in that branch.
     /// </summary>
-    private static IEnumerable<SimState> AutoPlayFromHand(BranchSet outer, SimState s, Func<List<SimHandCard>, List<SimHandCard>> pick)
+    private static IEnumerable<SimState> AutoPlayFromHand(BranchSet outer, SimState s, int k, Func<List<SimHandCard>, List<SimHandCard>> pick)
     {
-        if (s.AutoPlaysUnknown || s.P.AutoHand == null) return new[] { s };
-        var cards = pick(s.P.AutoHand);
+        var hand = k < 0 ? s.P.AutoHand : s.Teammates[k].AutoHand;
+        if (s.AutoPlaysUnknown || hand == null) return new[] { s };
+        var cards = pick(hand);
         if (cards.Count == 0) return new[] { s };
         var result = new List<SimState>();
         foreach (var card in cards)
         {
             var c = s.Clone();
             c.Weight = s.Weight / cards.Count;
-            c.AutoPlayed++;
-            c.P.AutoHand = c.P.AutoHand!.Where(x => x.Id != card.Id).ToList();
+            if (k < 0) c.AutoPlayed++;
+            var cp = k < 0 ? c.P : c.MutableTeammate(k);
+            cp.AutoHand = cp.AutoHand!.Where(x => x.Id != card.Id).ToList();
             if (card.Plays.Count == 0)
             {
                 c.AutoPlaysUnknown = true;
@@ -1098,8 +1111,16 @@ public static partial class SimEngine
                 var t = s.MutableTeammate(k);
                 var amount = e.Intent != null ? IntentDamage(s, e, h, Who.Teammate(k))
                     : k < e.TeammateHits.Count && h < e.TeammateHits[k].Count ? e.TeammateHits[k][h] : mine;
-                t.Incoming += amount;
                 if (t.Thorns > 0) Retaliate(t.Thorns);
+                // Their Wuppy takes the hit first while it lives, as yours does (WuppysLoyaltyPower: before block).
+                if (t.WuppyHp > 0 && amount > 0)
+                {
+                    var toWuppy = Math.Min(t.WuppyHp, amount);
+                    t.WuppyHp -= toWuppy;
+                    amount -= toWuppy;
+                    if (amount == 0) return;
+                }
+                t.Incoming += amount;
                 var tBlocked = Math.Min(t.Block, amount);
                 t.Block -= tBlocked;
                 var tThrough = amount - tBlocked;

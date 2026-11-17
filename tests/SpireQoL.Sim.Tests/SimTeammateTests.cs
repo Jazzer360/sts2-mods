@@ -280,4 +280,31 @@ public class SimTeammateTests
         Assert.Equal(0, o.TeammateTakenMax(0));
         Assert.Equal(new[] { 10 }, s.Enemies[0].Hits); // the start state is untouched
     }
+
+    [Fact]
+    public void ATeammatesWuppyTakesTheHitsAimedAtThemFirst()
+    {
+        // WuppysLoyaltyPower.ModifyPreBlockDamageTarget on a teammate's pet, as on yours: 7 into their Wuppy at 5 HP, the 2 left
+        // over goes on to their 1 block and them. Their Thorns still hits back (BeforeDamageReceived: they're still the target).
+        var s = new SimState { Enemies = { Enemy(1, 50, 7) } };
+        var mate = new SimPlayer { Hp = 30, Block = 1, WuppyHp = 5 };
+        mate.Thorns = 3;
+        s.Teammates.Add(mate);
+        var o = SimEngine.Run(s);
+        Assert.Equal(1, o.TeammateTakenMax(0));
+        Assert.Equal(0, o.Worst.Teammates[0].WuppyHp);
+        Assert.Equal(2, o.Worst.Teammates[0].Incoming); // what reached them past Wuppy
+        Assert.Equal(47, o.Worst.Enemy(1)!.Hp);
+    }
+
+    [Fact]
+    public void ATeammatesWuppyThatTakesTheWholeHitLeavesThemUntouched()
+    {
+        var s = new SimState { Enemies = { Enemy(1, 50, 4) } };
+        s.Teammates.Add(new SimPlayer { Hp = 30, Block = 3, WuppyHp = 10 });
+        var o = SimEngine.Run(s);
+        Assert.Equal(0, o.TeammateTakenMax(0));
+        Assert.Equal(3, o.Worst.Teammates[0].Block);
+        Assert.Equal(6, o.Worst.Teammates[0].WuppyHp);
+    }
 }

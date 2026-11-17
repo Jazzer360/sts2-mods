@@ -7,7 +7,8 @@ namespace SpireQoL.Sim;
 /// Impaled on an enemy ("ImpaledPower": Amount = your arrows in it, Data = its HitCounter) loses an arrow every third powered hit
 /// of yours (ImpaledPower.AfterDamageReceived) and all of them when it dies (AfterDeath); Recall, Uproot and Wrest pull every one
 /// out. Each arrow that comes loose is yours to shoot again (RetrieveArrow) and sets off AfterArrowDislodged (Yah, Twine).
-/// Teammates' arrows in an enemy are "ImpaledPowerOther" (they make it Impaled; their arrows aren't simulated).
+/// Teammates' arrows in an enemy are "ImpaledPowerOther": they make it Impaled and go back to them when it dies (their hit counter
+/// isn't kept).
 /// </summary>
 public sealed record ShootAction : SimAction;
 

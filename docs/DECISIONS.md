@@ -399,3 +399,7 @@ The Sentry mirror (`.github/scripts/sentry-sync.mjs`, `OLDEST_SUPPORTED`) never 
 *Why:* 1.0.0 rebuilt every prediction and audit on the simulator, so a report from 0.x says nothing about today's code; players who never updated kept filing them. Sentry's own release filter (dropping them before they arrive) needs a paid plan.
 *Replaced:* mirroring every report, with a note when it came from a version older than the newest release (that note stays for 1.0.0 and newer).
 
+### 80. Simulator models run for their owner, checked by a scan — active (2026-11-17)
+Part of #75. Every relic and power model acts for its owner, you or a teammate, and every player's end of turn runs in player order, the auto-play phase included (a teammate's Howl from Beyond and I Am Invincible, from piles you can see). `SimModelOwnerScanTests` fails on any model line that names your player directly (`Who.You`, `s.P`) unless it's reviewed there with why, so a new model can't quietly work for you only. A teammate's Stampede and Simpleton stay out: they pick from their hand, and building any card's play as a teammate's (block to them, not you) is only done for Howl from Beyond so far.
+*Why:* the sweep of relics and powers for multiplayer found the gaps sat in yours-only engine paths (Wuppy, the auto-play phase) and in a reader merging per-player copies of a power (Withering Presence), not in the models; a scan keeps it that way.
+*Replaced:* the auto-play phase for you only.

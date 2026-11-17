@@ -1,0 +1,68 @@
+using System.Text.RegularExpressions;
+using Xunit;
+
+namespace SpireQoL.Sim.Tests;
+
+/// <summary>
+/// Every model runs for its owner, you or a teammate (decision #75: the team is one evaluation). A model line that names your
+/// player directly (Who.You, or your SimPlayer through s.P) would make a teammate's copy of that relic or power act as yours or
+/// not at all, so each one is reviewed here with why it's right (decision #80). A new one fails until it's reviewed: use the
+/// owner (SimEngine.PlayerOf, PowersOf, the hook's owner) instead, or add it with its reason.
+/// </summary>
+public class SimModelOwnerScanTests
+{
+    /// <summary>A fragment of each reviewed line, and why naming you there is right.</summary>
+    private static readonly Dictionary<string, string> Reviewed = new()
+    {
+        ["owner == Who.You ? s.P.Turn"] = "picks the owner's player (you or the teammate)",
+        ["owner == Who.You ? x.P : x.MutableTeammate"] = "picks the owner's player",
+        ["owner == Who.You ? s.P : s.Teammates"] = "picks the owner's player",
+        ["owner == Who.You ? s.P : Who.IsPlayer(owner)"] = "picks the owner's player",
+        ["if (owner == Who.You) s.ParryingShieldFired = true;"] = "the forecast audit's flag for your Parrying Shield; a teammate's still deals its damage",
+        ["ProcBlockFor(x, owner, Name, Who.You, amount, Unpowered)"] = "a teammate's power giving you block (Covering Fire gives every other player its block)",
+        ["e.Dealer != Who.You || !e.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",
+        ["CardEvent.ArrowDislodged, Who.You"] = "ImpaledPower is your arrows: they come back to you",
+        ["play.Owner != Who.You"] = "Withering Presence counts its Target's cards; the adapter loads only the one aimed at you (SimReaders.Powers)",
+        ["owner == Who.You && attack.Dealer == Who.YourOsty && s.P.OstyHp"] = "your Osty's attacks (a teammate's Osty doesn't attack in your turn)",
+        ["dealer == Who.YourOsty ? Who.You : dealer"] = "your Osty's damage counts as yours",
+        ["OstyLoses(s, Who.You, hit)"] = "Thorns hitting back at your Osty",
+        ["else if (dealer == Who.You) SimEngine.LandOnYou"] = "Thorns hitting back at you; a teammate dealer is the next line",
+        ["(owner == Who.You && d.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
+        ["(owner == Who.You && e.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
+    };
+
+    private static string ModelsDir()
+    {
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
+        {
+            var models = Path.Combine(d.FullName, "mods", "SpireQoL", "Sim", "Models");
+            if (Directory.Exists(models)) return models;
+        }
+        throw new DirectoryNotFoundException("mods/SpireQoL/Sim/Models not found above the test's folder");
+    }
+
+    private static readonly Regex NamesYou = new(@"Who\.You\b|\b[a-z]\.P\b");
+
+    [Fact]
+    public void EveryModelLineThatNamesYouIsReviewed()
+    {
+        var used = new HashSet<string>();
+        var unreviewed = new List<string>();
+        foreach (var file in Directory.GetFiles(ModelsDir(), "*.cs"))
+        {
+            var lines = File.ReadAllLines(file);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i].Trim();
+                if (line.StartsWith("//") || !NamesYou.IsMatch(line)) continue;
+                var key = Reviewed.Keys.FirstOrDefault(line.Contains);
+                if (key == null) unreviewed.Add($"{Path.GetFileName(file)}:{i + 1}: {line}");
+                else used.Add(key);
+            }
+        }
+        Assert.True(unreviewed.Count == 0,
+            "Model lines that name your player (a teammate's copy wouldn't act as theirs): use the owner, or review them here:\n" + string.Join("\n", unreviewed));
+        var stale = Reviewed.Keys.Except(used).ToList();
+        Assert.True(stale.Count == 0, "Reviewed entries no longer in the models: " + string.Join(", ", stale));
+    }
+}

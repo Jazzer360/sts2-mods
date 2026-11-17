@@ -18,10 +18,8 @@ public class SimTeammateHandFieldsTests
     {
         nameof(SimPlayer.Fading),          // Ethereal cards that exhaust (Feel No Pain, Charon's Ashes, Forgotten Soul)
         nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...
-        // End-of-turn auto-plays: picked from the hand (Stampede, Simpleton), and yours only in the engine (SimEngine.AutoPostPlay
-        // reads s.P); cleared for teammates all the same.
-        nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand), nameof(SimPlayer.ExhaustAutoPlays),
-        nameof(SimPlayer.InvincibleBlock), nameof(SimPlayer.InvincibleDrawPile),
+        // End-of-turn auto-plays picked from the hand (Stampede, Simpleton; never filled for a teammate today, decision #80).
+        nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand),
     };
 
     /// <summary>On screen (their powers, relics, orbs, block, HP, hand size, cards they played) or the simulation's own bookkeeping.</summary>
@@ -32,6 +30,9 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.Energy),          // on screen for every player (Pael's Tears, Orbit)
         nameof(SimPlayer.Arrows),          // on screen (the Fool's arrows)
         nameof(SimPlayer.AttacksThisTurn), // you watch them play
+        // Auto-plays from their piles: Howl from Beyond in their exhaust pile (you can view it), I Am Invincible when every card
+        // in their draw pile is one (its count and contents are viewable; the order doesn't matter then).
+        nameof(SimPlayer.ExhaustAutoPlays), nameof(SimPlayer.InvincibleBlock), nameof(SimPlayer.InvincibleDrawPile),
         nameof(SimPlayer.Orbs), nameof(SimPlayer.OrbCapacity), nameof(SimPlayer.SlotOnFirstChannel), nameof(SimPlayer.Thunder),
         nameof(SimPlayer.FrontOrbBonusTriggers),
         nameof(SimPlayer.BlockGains), 
