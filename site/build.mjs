@@ -126,7 +126,7 @@ function layout({ title, page, body, latest }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
-<meta name="description" content="Spire QoL: a display-only Slay the Spire 2 mod that shows what your cards, relics and enemies will do, using only what a player could know.">
+<meta name="description" content="Spire QoL: a quality-of-life mod for Slay the Spire 2 that tracks relic counters, card interactions, incoming damage and enemy moves for you, using only what a player could know.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -198,14 +198,15 @@ function indexPage(features, shots, haveFiles, latest, manifest) {
   const toc = features.sections.map((sec) => `<li><a href="#${sec.id}">${esc(sec.title)}</a><ul>${sec.features.map((f) => `<li><a href="#${f.id}">${esc(f.title)}</a></li>`).join("")}</ul></li>`).join("");
 
   return layout({
-    title: "Spire QoL: a Slay the Spire 2 mod",
+    title: "Spire QoL: quality of life for Slay the Spire 2",
     page: "index.html",
     latest,
     body: `
 <section class="hero">
   <div class="pitch">
-    <h1>See what your cards will do before you play them.</h1>
-    <p>Spire QoL is a display-only mod for Slay the Spire 2. It marks every card with what playing it sets off, sums up the damage coming your way, forecasts enemy moves and reminds you what your relics do with each choice.</p>
+    <h1>Quality of life for Slay the Spire 2.</h1>
+    <p>Spire QoL keeps track of the things you'd otherwise have to hold in your head: relic counters, which of your powers and relics a card sets off, the damage coming your way after block, what an enemy does next, what your relics do with a reward, an event or a shop. So you can play fast and still make sharp decisions, without doing the math in your head.</p>
+    <p>It does make the game easier. Not by breaking any rules or showing anything hidden, but by putting in front of you what an attentive player could already work out, and what a busy one would miss.</p>
     <p class="actions">
       <a class="btn" data-download href="${latest?.zip ?? `${REPO_URL}/releases`}">Download${latest ? ` ${esc(latest.version)}` : ""}</a>
       <a class="btn ghost" href="install.html">How to install</a>
@@ -218,7 +219,7 @@ function indexPage(features, shots, haveFiles, latest, manifest) {
 <section class="principles">
   <div><h3>Only what you could know</h3><p>It shows what a player with perfect memory and full knowledge of the rules could work out. It never reads the RNG or the seed, the draw pile's order, or an enemy's move beyond the intent on screen. Random effects show their amount or odds, never the roll.</p></div>
   <div><h3>The game's own rules</h3><p>Every prediction comes from one simulator that plays out your turn and the enemy turn with the game's damage, block and hook order. In-game checks compare each prediction with what really happened.</p></div>
-  <div><h3>Changes nothing</h3><p>It only reads the game and draws its own marks. Your cards, damage and saves are untouched, and it works in multiplayer lobbies whose other players don't have it.</p></div>
+  <div><h3>Display only</h3><p>It only reads the game and draws its own marks. Your cards, damage and saves are untouched, and it works in multiplayer lobbies whose other players don't have it.</p></div>
 </section>
 
 <nav class="toc"><h2>Features</h2><ul>${toc}</ul></nav>
