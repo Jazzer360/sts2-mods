@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.3
+#### Changed
+- Card reward panel (Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing): now centered above the offered cards, under the "Choose a card" banner, its relics side by side and a little bigger; left of the cards when there's no room above. It used to sit at the screen's left edge, easy to miss. A panel you moved stays where you put it.
+
 ### Spire QoL 1.11.2
 #### Fixed
 - Shop reminders: relic icons beside a price (Book of Five Rings, Bing Bong, Lucky Fysh...) now sit left of the game's coin instead of covering it.

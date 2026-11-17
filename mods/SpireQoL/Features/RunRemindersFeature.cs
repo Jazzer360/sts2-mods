@@ -10,6 +10,7 @@ using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Events;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
@@ -46,6 +47,8 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     private readonly QolContext _ctx;
     private MovableWidget? _widget;
+    /// <summary>The panel's rows side by side: one short strip (at most four relics: Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing).</summary>
+    private HBoxContainer? _strip;
     private readonly Dictionary<string, Row> _rows = new();
     private int _frame;
 
@@ -223,11 +226,23 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     public void Attach(OverlayHost host)
     {
-        // Left of the card row, vertically centered: clear of the cards, the banner and the skip button.
-        _widget = _ctx.Widget(Id, "Run Reminders", new WidgetLayout
+        // Centered above the offered cards (and the tabs hanging off them), under the banner; left of the cards when
+        // there's no room there. Before 1.11.3 the default was the screen's left edge, easy to miss: a layout still at
+        // that old default moves to the new one (a layout the player moved is kept).
+        var defaults = new WidgetLayout { FollowGame = true, Anchor = ScreenAnchor.Top, OffsetX = 0, OffsetY = 0 };
+        var saved = _ctx.Settings.Widget(Id, defaults);
+        if (!saved.FollowGame && !saved.CustomPin && saved.Anchor == ScreenAnchor.Left
+            && Mathf.IsEqualApprox(saved.OffsetX, 40) && Mathf.IsEqualApprox(saved.OffsetY, 0))
         {
-            Anchor = ScreenAnchor.Left, OffsetX = 40, OffsetY = 0,
-        });
+            saved.FollowGame = true;
+            saved.Anchor = ScreenAnchor.Top;
+            saved.OffsetX = 0;
+        }
+        _widget = _ctx.Widget(Id, "Run Reminders", defaults);
+        _widget.AttachTo(() => RewardCardsRect(roomAbove: true), AttachSide.Below)
+               .AttachTo(() => RewardCardsRect(roomAbove: false), AttachSide.LeftOf);
+        _strip = UiKit.Row(28);
+        _widget.Content.AddChild(_strip);
         _inspect = new SpireQoL.Menu.InspectScreen(_ctx.Host);
     }
 
@@ -248,6 +263,63 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     }
 
     // ------------------------------------------------------------------ card reward panel
+
+    /// <summary>Room left above the offered cards for the reminder tabs hanging off their top edge.</summary>
+    private const float TabRoom = 60f;
+
+    /// <summary>
+    /// Where the card reward panel attaches: the offered cards' frames on screen (with the tabs above them when
+    /// <paramref name="roomAbove"/>), or null when the screen isn't open. With <paramref name="roomAbove"/>, null too
+    /// when the panel wouldn't fit between the game's banner ("Choose a card") and the tabs, so it goes left of the cards.
+    /// </summary>
+    private Rect2? RewardCardsRect(bool roomAbove)
+    {
+        try
+        {
+            if (NOverlayStack.Instance?.Peek() is not NCardRewardSelectionScreen screen || !GodotObject.IsInstanceValid(screen)
+                || !screen.IsVisibleInTree()) return null;
+            var row = Sts2State.Private<Control?>(screen, "_cardRow", null);
+            if (row == null || !GodotObject.IsInstanceValid(row)) return null;
+            Rect2? cards = null;
+            foreach (var frame in CardFrames(row, 0))
+            {
+                var r = frame.GetGlobalRect();
+                cards = cards is { } c ? c.Merge(r) : r;
+            }
+            if (cards is not { } rect) return null;
+            if (!roomAbove) return rect;
+            var top = rect.Position.Y - TabRoom;
+            var banner = Sts2State.Private<Control?>(screen, "_banner", null);
+            var label = banner == null ? null : Sts2State.Private<Control?>(banner, "label", null);
+            // The banner's art reaches a little below its label.
+            var bannerBottom = label != null && GodotObject.IsInstanceValid(label) ? label.GetGlobalRect().End.Y + 24 : 0f;
+            var need = _widget == null ? 0f : _widget.Root.Size.Y * _widget.Root.Scale.Y + 6;
+            if (top - need < bannerBottom) return null;
+            // Attached Below this line: a thin rect across the cards that ends where the panel's top goes, so the
+            // panel's bottom sits just over the tabs.
+            return new Rect2(rect.Position.X, top - need - 1, rect.Size.X, 1);
+        }
+        catch
+        {
+            return null; // the screen closing under us
+        }
+    }
+
+    /// <summary>The visible offered cards' frames (NCard's %Frame) under the card row.</summary>
+    private static IEnumerable<Control> CardFrames(Node node, int depth)
+    {
+        if (depth > 6) yield break;
+        foreach (var child in node.GetChildren())
+        {
+            if (!GodotObject.IsInstanceValid(child)) continue;
+            if (child is NCard card)
+            {
+                if (card.IsVisibleInTree() && card.GetNodeOrNull<Control>("%Frame") is { } frame && frame.Size.X > 1) yield return frame;
+                continue;
+            }
+            foreach (var f in CardFrames(child, depth + 1)) yield return f;
+        }
+    }
 
     private void RewardPanel(OverlayHost host)
     {
@@ -270,10 +342,10 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                 {
                     row = MakeRow(relic);
                     _rows[name] = row;
-                    w.Content.AddChild(row.Root);
+                    _strip!.AddChild(row.Root);
                 }
                 row.Seen = true;
-                w.Content.MoveChild(row.Root, index++);
+                _strip!.MoveChild(row.Root, index++);
                 row.Bar.Root.Visible = state.Total > 0;
                 var fill = Fill;
                 row.Root.Modulate = Colors.White;
@@ -391,10 +463,10 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     private static Row MakeRow(RelicModel relic)
     {
         var root = UiKit.Row(6);
-        root.AddChild(UiKit.Icon(IconOf(relic), 28));
+        root.AddChild(UiKit.Icon(IconOf(relic), 34));
         var bar = new TickBar(9, 12);
         root.AddChild(bar.Root);
-        var text = UiKit.Label("", 15, Colors.White);
+        var text = UiKit.Label("", 17, Colors.White);
         root.AddChild(text);
         return new Row { Root = root, Bar = bar, Text = text };
     }

@@ -459,7 +459,7 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 Like StS1's Relic Reminders: outside fights, your relics that change what a choice does are shown on that choice. Every relic and how the mod covers it, in and out of fights: [RELICS.md](RELICS.md).
 
-**Card rewards:** while the card reward screen is open, a panel (a movable widget, by default left of the cards) lists your relics that react to the card you take, with their counters. A row flashes when taking a card now sets the relic off.
+**Card rewards:** while the card reward screen is open, a panel (a movable widget) lists your relics that react to the card you take, with their counters, side by side in one strip (at most four: Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing). By default it's centered above the offered cards, clear of the tabs hanging off them and under the game's "Choose a card" banner; when it wouldn't fit there, left of the cards (decision #67). A panel moved before 1.11.3 stays where it was put. A row flashes when taking a card now sets the relic off.
 - **Bing Bong:** the card you take is copied.
 - **Book of Five Rings:** cards added toward the next heal (`3/5: heal 20 at 5`). With Bing Bong a pick adds two cards, so it flashes one card earlier.
 - **Lucky Fysh:** the gold taking a card brings, after Bowler Hat or Ectoplasm (doubled with Bing Bong: the copy counts too).
@@ -503,7 +503,7 @@ Each relic has a switch per place it shows in the settings menu (Outside fights 
 
 **Not yet:** rest-site options: the game already adds rest-site relics to the option's text; the HP you'll have is [Rest Preview](#rest-preview)'s.
 
-**Game UI touched:** a `SpireQoL_Reminders` row of icons added as a child of each `NEventOptionButton` that has one (removed when the option has none), and a `SpireQoL_Inspect` button (a plain `TextureButton`) to its right when the option has random cards; a `SpireQoL_Path` row of icons as a child of each `NMapLegendItem` that has one (read: `NMapScreen._legendItems`, `NMapLegendItem._pointType`; hidden with the legend); the card reward panel is our own overlay. Read: `NEventRoom.Instance.Layout.OptionButtons`, `NOverlayStack.Instance.Peek()` (is it `NCardRewardSelectionScreen`), `RunManager`'s run state (the local player outside fights). **Patches:** `EventOption.Chosen` (observe-only prefix and postfix: the check).
+**Game UI touched:** a `SpireQoL_Reminders` row of icons added as a child of each `NEventOptionButton` that has one (removed when the option has none), and a `SpireQoL_Inspect` button (a plain `TextureButton`) to its right when the option has random cards; a `SpireQoL_Path` row of icons as a child of each `NMapLegendItem` that has one (read: `NMapScreen._legendItems`, `NMapLegendItem._pointType`; hidden with the legend); the card reward panel is our own overlay. Read: `NEventRoom.Instance.Layout.OptionButtons`, `NOverlayStack.Instance.Peek()` (is it `NCardRewardSelectionScreen`; its `_cardRow` cards' `%Frame` and `_banner.label` rects place the panel), `RunManager`'s run state (the local player outside fights). **Patches:** `EventOption.Chosen` (observe-only prefix and postfix: the check).
 
 ---
 
