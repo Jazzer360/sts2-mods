@@ -50,6 +50,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     public void Attach(OverlayHost host)
     {
         _widget = _ctx.Widget(Id, "Intent Forecast", DefaultLayout);
+        _widget.Frameless = true;
         // Above the intent, the later turns higher up; beside it when there's no room above (an enemy near the top).
         _widget.AttachTo(() => IntentRect(_enemy), AttachSide.Above)
                .AttachTo(() => IntentRect(_enemy), AttachSide.RightOfBottom);
@@ -80,16 +81,27 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         }
         _widget!.HasContent = true;
         // NIntent._Process's bob, so the labels and chips move with the intents.
+        // NIntent._Process's bob, for rows with no intent icon to follow.
         var y = -(Mathf.Sin(Time.GetTicksMsec() * 0.001f * Mathf.Pi + _bob) * 10f + 8f);
         foreach (var c in _bobbing)
         {
-            if (!GodotObject.IsInstanceValid(c)) continue;
+            if (!GodotObject.IsInstanceValid(c) || c.GetParent() is not Control holder) continue;
             // Its size, known once it's on screen (a label's font): the holder takes it, so the row lays out around it.
             var size = c.GetCombinedMinimumSize();
-            if (c.GetParent() is Control holder && holder.CustomMinimumSize != size) holder.CustomMinimumSize = size;
+            if (holder.CustomMinimumSize != size) holder.CustomMinimumSize = size;
             c.Size = size;
-            c.Position = new Vector2(0, y);
+            // Level with the intent icon in its row as it is drawn this frame (bob included); else centred, then the bob.
+            var top = IconCentre(holder) is { } centre ? centre - size.Y / 2 : (holder.Size.Y - size.Y) / 2 + y;
+            c.Position = new Vector2(0, top);
         }
+    }
+
+    /// <summary>The y, in the holder's own coordinates, of the centre of the intent icon drawn in its row (the NIntent's sprite).</summary>
+    private static float? IconCentre(Control holder)
+    {
+        if (holder.GetParent()?.GetChildren().OfType<NIntent>().FirstOrDefault() is not { } intent) return null;
+        if (intent.GetNodeOrNull<Node2D>("%Intent") is not { } sprite) return null;
+        return (holder.GetGlobalTransform().AffineInverse() * sprite.GlobalPosition).Y;
     }
 
     /// <summary>A control in a plain holder of its size (rows are containers, which would undo the bob), added to the bobbing list.</summary>

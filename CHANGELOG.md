@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.3
+#### Fixed
+- Intent Forecast: no backdrop at all, and the turn numbers, chances and power icons sit level with their intents.
+
+### Main Saves 1.0.7
+#### Changed
+- Rebuilt with the shared code update (no change in what it does).
+
 ### Spire QoL 1.14.2
 #### Changed
 - Intent Forecast has no backdrop, and its turn numbers, chances and power icons bob with the intents.
