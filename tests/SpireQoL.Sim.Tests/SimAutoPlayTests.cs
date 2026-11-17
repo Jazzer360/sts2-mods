@@ -259,4 +259,54 @@ public class SimAutoPlayTests
         s.P.ExhaustAutoPlays.Add(howl);
         Assert.Equal(7, SimEngine.Run(s).TakenMax);
     }
+
+    /// <summary>
+    /// A hand card's play as the adapter builds it (SimAdapter.AutoPlay): the target is on the card play and its attack, not
+    /// on the shorthand's TargetId.
+    /// </summary>
+    private static SimPlay AdapterStrike(int target, int damage, int hand, int draws = 0) => new()
+    {
+        Name = "Strike", IsAttack = true, AutoPlay = true, HandCard = hand, HandDelta = -1 + draws, Draws = draws,
+        Card = new SimCardPlay(new SimCard("Strike", SimCardType.Attack), Who.You, target, 0, 1, true),
+        Body =
+        {
+            new AttackAction(1, SimPlay.Target.Single, new DamageSpec(0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [target] = damage }, Fixed = true })
+                { TargetId = target },
+        },
+    };
+
+    [Fact]
+    public void StampedeAimsTheAdaptersPlaysAtEachEnemy()
+    {
+        // In game (two Exoskeletons at 10 and 6, Strike+ and Perfected Strike in hand, Stampede 1): the plays' target is on
+        // the card play, so each one is a possible target. Either card kills whichever it hits: one dies, 50% each.
+        var s = new SimState { Enemies = { Enemy(1, 10, 3, 3, 3, 3), Enemy(2, 6) } };
+        s.P.Stampede = 1;
+        s.P.AutoHand = new()
+        {
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 13, 11), AdapterStrike(2, 13, 11) } },
+            new SimHandCard { Id = 13, Name = "PerfectedStrike", IsAttack = true, Cost = 2, Plays = { AdapterStrike(1, 34, 13), AdapterStrike(2, 34, 13) } },
+        };
+        var o = SimEngine.Run(s);
+        Assert.Equal(0.5, o.DeadChance(1), 3);
+        Assert.Equal(0.5, o.DeadChance(2), 3);
+        Assert.All(o.Branches, b => Assert.Equal(1, b.AutoPlayed));
+    }
+
+    [Fact]
+    public void AStampedePickThatDrawsStillHits()
+    {
+        // In game (one Exoskeleton at 7, Strike+ and Pommel Strike in hand, Stampede 1): Pommel Strike draws a card, but its hit
+        // lands first, so the enemy dies either way. Only later picks, from the changed hand, aren't predicted.
+        var s = new SimState { Enemies = { Enemy(1, 7, 11) } };
+        s.P.Stampede = 2;
+        s.P.AutoHand = new()
+        {
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 9, 11) } },
+            new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 9, 15, draws: 1) } },
+        };
+        var o = SimEngine.Run(s);
+        Assert.True(o.DeadInAll(1));
+        Assert.Contains(o.Branches, b => b.AutoPlaysUnknown); // Pommel Strike first: the second pick is from a changed hand
+    }
 }

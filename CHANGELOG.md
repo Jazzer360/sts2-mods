@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.16.1
+#### Fixed
+- Stampede: with more than one enemy, its end-of-turn Attack wasn't predicted at all (no Death Skull or chance, no damage); now each card it can pick and each enemy it can hit count.
+- Stampede: a pick that draws a card (Pommel Strike) now counts its hit, so an enemy every pick kills shows certain death instead of a chance.
+
 ### Spire QoL 1.16.0
 #### Changed
 - Card rewards: Book of Five Rings' tab is on every offered card. On the pick that heals you, a heart sits in the tab's corner, and the tab is crossed when part of that heal would be wasted (you're missing less HP than it heals).

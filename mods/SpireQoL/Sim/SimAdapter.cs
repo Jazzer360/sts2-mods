@@ -362,12 +362,13 @@ public static partial class SimAdapter
 
     /// <summary>
     /// A hand card's auto-plays: one per hittable enemy for a card aimed at one (CardCmd.AutoPlay picks one at random),
-    /// else one. None when what it does to your hand isn't known (draws, creates cards) or it aims at a teammate.
+    /// else one. A card that draws or makes cards plays too (its hits land; the simulator stops predicting later auto-plays,
+    /// whose hand it changed). None when it aims at a teammate.
     /// </summary>
     private static List<SimPlay> AutoPlays(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids)
     {
         var f = PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card));
-        if (f.Draws > 0 || f.Generated > 0 || card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
+        if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
         if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, cs, ids, -1, f) };
         return ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => AutoPlay(card, me, cs, ids, kv.Value, f)).ToList();
     }

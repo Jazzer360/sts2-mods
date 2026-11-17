@@ -527,6 +527,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] **Extra turns** (0.40.0, decision #40): Incoming Damage shows the source's icon and +1 turn; the forecast stays the enemies' next turn.
 - [x] **Enemy Explosive** (0.38.0): its death damages every player in the simulator (wherever it dies), with a crossed kill tab; Stock's replacement Axebot gets one too.
 - [x] **End of turn** (0.38.0): Insatiable Dominion, Lunar Pastry with Black Hole, Pael's Eye's hand exhaust, and the auto-play phase (Stampede, Simpleton, Howl from Beyond, I Am Invincible; decision #39).
+- [x] 1.16.1: Stampede's picks are aimed at each enemy (the adapter's plays carry their target on the card play), and a pick that draws still lands its hit.
 - [x] **Proc tabs** (0.39.0): Fertilizer and All Is Well (Sadness), Mighty Wings (a 30+ hit), Whittling Knife (shuffles), Compost (kills); Sown's energy for Pael's Tears; transformed cards count as created.
 - [x] **HP loss during a play** (0.45.0): the card's HP cost in the simulator; Tungsten Rod, Self-Forming Clay, Emotion Chip, Centennial Puzzle, Demon Tongue, Red Skull, Rupture and Inferno tabs from the HP you really lose (enemy Thorns past your block included, after Tungsten Rod and Buffer).
 - [x] **Free cards** (0.46.0, decision #44): Free Card (Tune), Free Attack, Free Skill tabs with the energy saved, `?` under Snecko Eye, crossed when wasted.
