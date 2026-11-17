@@ -233,9 +233,10 @@ Knowable information only (decision #72): an enemy's next moves where its move r
 
 Design (decision #72): on hover only; looks ahead until a roll (every certain turn, then the first random pick with each move's chance).
 - [x] Monster AI structure: `MonsterMoveStateMachine` of `MoveState` (fixed follow-up), `RandomBranchState` (weights, `MoveRepeatType`, `maxTimes`, `cooldown`) and `ConditionalBranchState`; the next move is picked when the current one ends.
-- [ ] Deterministic next moves.
-- [ ] Random branches with odds.
-- [ ] Conditional moves.
+- [x] Deterministic next moves (1.12.0).
+- [x] Random branches with odds (1.12.0).
+- [x] Conditional moves, as things stand (1.12.0).
+- [ ] Test in game: the hover panel (placement beside the intent, NIntent nodes' size and animation, the chance labels), a stunned enemy, a hidden intent.
 
 ---
 

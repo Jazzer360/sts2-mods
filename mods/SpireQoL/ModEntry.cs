@@ -99,6 +99,7 @@ public static class ModEntry
             new PotionTabsFeature(ctx),
             new RestPreviewFeature(ctx),
             new DeathSkullFeature(ctx),
+            new IntentForecastFeature(ctx),
             new UpdateNoticeFeature(),
             new Diagnostics.ForecastAudit(),
             new Diagnostics.ProcAudit(ctx),

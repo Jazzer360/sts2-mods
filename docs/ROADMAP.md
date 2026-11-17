@@ -38,7 +38,7 @@ What Spire QoL is for, in order. Everything else serves these.
 | Run Reminders | built | relic icons on events, card rewards, shops and the map; tabs on offered cards; card odds and the Inspect screen |
 | Rest Preview | built | HP after resting, Mend, the boss fight's start |
 | Update Notice | built | versions behind, on the main menu |
-| Intent Forecast | planned | an enemy's next moves where its rules decide them, the odds when a roll does (decision #72, tracker §7) |
+| Intent Forecast | built (1.12.0) | an enemy's next moves where its rules decide them, the odds when a roll does (decision #72, tracker §7) |
 
 ## Build order
 
@@ -46,7 +46,7 @@ What Spire QoL is for, in order. Everything else serves these.
 2. ~~The outcome simulator~~ (0.24), rebuilt on the game's own hooks and pipelines in 1.0.0 (decisions #48 to #52).
 3. ~~Out-of-combat reminders~~ (Run Reminders, 0.36.0 onward; Rest Preview; pathing).
 4. **Multiplayer as one team** (decision #75): cards that act on every player or on a teammate, and everything they set off for the team.
-5. **Intent Forecast** (decision #72).
+5. ~~Intent Forecast~~ (decision #72, 1.12.0).
 6. The advisory mods.
 
 ## Shared-infra principles
@@ -60,7 +60,7 @@ What Spire QoL is for, in order. Everything else serves these.
 ## Open questions
 
 - [ ] Which Mintyspire features do you actually miss?
-- [ ] Intent Forecast: where it shows (beside each enemy's intent, always or on hover) and how far ahead.
+- [x] ~~Intent Forecast: where it shows and how far ahead.~~ On hover, until a roll (decision #72).
 - [ ] Try STS2 Card Advisor before building Synergy Helper.
 - [ ] Workshop release: polish, localization (decision #8: only through CI).
 - [x] ~~Does the game have a mod-settings hook, or do we add our own menu button?~~ Our own: the settings gear on the main menu (1.5.0) and the in-fight hotkey.

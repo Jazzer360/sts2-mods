@@ -14,7 +14,7 @@ Display-only quality-of-life tweaks for Slay the Spire 2. The mod doesn't change
 | Run Reminders | Outside fights: relic icons beside event options, card rewards, shop prices and the map legend; tabs on cards you're offered; the Inspect screen for an option's possible cards |
 | Rest Preview | At a rest site, the HP you'll have after resting and the heal wasted |
 | Update Notice | On the main menu, how many versions behind you are, and the settings gear |
-| Intent Forecast | Planned: an enemy's next moves where its rules decide them, and the odds when a roll does |
+| Intent Forecast | Hover an enemy: its next moves where its rules decide them, and each move's chance when a roll does |
 
 The settings menu's Guide page shows how to read every tab and counter. See [docs/FEATURES.md](../../docs/FEATURES.md) for the full description of each feature, [docs/TRACKER.md](../../docs/TRACKER.md) for progress, and [CHANGELOG.md](../../CHANGELOG.md) for patch notes.
 

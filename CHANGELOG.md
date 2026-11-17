@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.12.0
+#### Added
+- Intent Forecast: hover an enemy to see its next moves after the intent on screen. Every turn its rules make certain is shown, then each move a random pick can make, with its chance. It's worked out from the enemy's move rules and the moves it has made this fight, never from a roll.
+
 ### Spire QoL 1.11.8
 #### Changed
 - About page: the philosophy now says what the mod will show about enemies' next moves (the move when the enemy's rules decide it, the odds when a roll does) and where it shows chances.
