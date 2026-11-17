@@ -144,6 +144,19 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void PaleBlueDotFiresOnItsOwnPlayAsTheFifthCard()
+    {
+        // The power lands during the card's play and hears that play's AfterCardPlayed: played as your 5th card this turn, it
+        // draws next turn at once (a report: DrawCardsNextTurnPower +2 right after Pale Blue Dot+ finished, 6th card).
+        var s = State();
+        s.P.Turn = s.P.Turn.Add("Finished", 4);
+        var dot = Events(Card("PaleBlueDot", SimCardType.Power), 1, new ApplyPowerAction("PaleBlueDotPower", 2) { To = ApplyPowerAction.Where.You });
+        Assert.True(One(s, dot).Fired.Has("PaleBlueDotPower"));
+        s.P.Turn = s.P.Turn.Add("Finished", -1);
+        Assert.False(One(s, dot).Fired.Has("PaleBlueDotPower"));
+    }
+
+    [Fact]
     public void TenderAndSmoggyAreWarnings()
     {
         Assert.True(SimModels.Get("TenderPower")!.Harmful);

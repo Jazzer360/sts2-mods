@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.8
+#### Fixed
+- A power a card gives you gets its tab on that card when it fires on the same play: Pale Blue Dot played as your 5th card this turn draws next turn at once.
+- The proc audit no longer reports an enemy's debuffs coming off when the play killed it and it stayed in the fight (the Waterfall Giant's eruption).
+
 ### Spire QoL 1.14.7
 #### Changed
 - Intent Forecast: a random pick shows its moves side by side on one row, each with its chance above it, so every row is one turn and a roll stands apart from the turns its rules make certain (those stay lined up with the intent on screen).

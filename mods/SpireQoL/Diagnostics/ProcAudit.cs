@@ -1127,6 +1127,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var after = w.PowersAfter.TryGetValue((creature, type), out var a) ? a : 0;
             if (after >= before) continue;
             if (!creature.IsAlive) continue;
+            // Killed in the play but kept in the fight (the Waterfall Giant erupts): its powers come off at death
+            // (ShouldPowerBeRemovedAfterOwnerDeath), all but the one keeping it there.
+            if (entries.OfType<DamageReceivedEntry>().Any(d => d.Result.WasTargetKilled && d.Result.Receiver == creature)) continue;
             if (own.Contains(type) || acted.Contains(type) || tabbed.Contains(type) || SimComparedPowers.Contains(type)) continue;
             if (creature == me.Creature && SpentByAnyPlay.Contains(type)) continue;
             if (creature == me.Creature && SpentByAttack.Contains(type) && w.Card.Type == CardType.Attack) continue;

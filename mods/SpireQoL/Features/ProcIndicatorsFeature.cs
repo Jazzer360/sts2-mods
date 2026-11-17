@@ -226,7 +226,26 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         {
             SimFailed(card, ex);
         }
-        return new Prepared(f, sources, sim);
+        return new Prepared(f, WithOwnPowers(card, sources), sim);
+    }
+
+    /// <summary>
+    /// The sources plus each power the card gives you that you don't have yet and that has a tab: it lands during the play and
+    /// can fire on that same play (Pale Blue Dot played as your 5th card draws next turn at once). The power's canonical model
+    /// stands in for it (its icon and name; no owner, so it reads as yours).
+    /// </summary>
+    private static List<AbstractModel> WithOwnPowers(CardModel card, List<AbstractModel> sources)
+    {
+        List<AbstractModel>? result = null;
+        foreach (var t in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
+        {
+            if (!typeof(PowerModel).IsAssignableFrom(t) || PlayFacts.IsDebuffType(t)) continue;
+            if (SimModels.Get(SimAdapter.SimPowerName(t))?.Tab == null) continue;
+            if (card.Owner?.Creature.Powers.Any(p => p.GetType() == t) != false) continue;
+            if (ModelDb.GetById<PowerModel>(ModelDb.GetId(t)) is not { } canon) continue;
+            (result ??= new List<AbstractModel>(sources)).Add(canon);
+        }
+        return result ?? sources;
     }
 
     /// <summary>A prepared card's tabs, once its simulations are done.</summary>
