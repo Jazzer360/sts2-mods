@@ -6,4 +6,4 @@ wait combat-started
 hover intent 1
 wait 1
 caption Hover an enemy's intent to see the moves its rules make certain, turn by turn.
-shot intent-slugs widget intent-forecast + enemy 1 pad 30
+shot intent-slugs widget intent-forecast pad 20 below 50

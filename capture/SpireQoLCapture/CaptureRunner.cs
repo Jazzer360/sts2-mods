@@ -445,6 +445,14 @@ public sealed class CaptureRunner
             pad = float.Parse(rest[padAt + 1], System.Globalization.CultureInfo.InvariantCulture);
             rest.RemoveRange(padAt, 2);
         }
+        // below N: extends the crop downward by N pixels at 1080p (to take in what sits under a widget).
+        var below = 0f;
+        var belowAt = rest.FindIndex(a => a.Equals("below", StringComparison.OrdinalIgnoreCase));
+        if (belowAt >= 0)
+        {
+            below = float.Parse(rest[belowAt + 1], System.Globalization.CultureInfo.InvariantCulture);
+            rest.RemoveRange(belowAt, 2);
+        }
 
         await Seconds(0.6);
         var capture = await ViewportCapture.GrabAsync();
@@ -463,6 +471,7 @@ public sealed class CaptureRunner
         }
         var scale = size.Y / 1080f;
         var rect = (crop ?? new Rect2(Vector2.Zero, size)).Grow(crop == null ? 0 : pad * scale);
+        rect = rect.GrowSide(Side.Bottom, below * scale);
         rect = rect.Intersection(new Rect2(Vector2.Zero, size));
         var ri = new Rect2I((int)rect.Position.X, (int)rect.Position.Y, (int)rect.Size.X, (int)rect.Size.Y);
         var cropped = image.GetRegion(ri);

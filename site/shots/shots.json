@@ -108,32 +108,6 @@
                       "frameHeight":  1440
                   },
                   {
-                      "name":  "intent-slugs",
-                      "scene":  "09-intent-slugs",
-                      "title":  "Intent Forecast: Corpse Slugs",
-                      "section":  "In fights",
-                      "caption":  "Hover an enemy\u0027s intent to see the moves its rules make certain, turn by turn.",
-                      "x":  1323,
-                      "y":  362,
-                      "width":  422,
-                      "height":  664,
-                      "frameWidth":  2560,
-                      "frameHeight":  1440
-                  },
-                  {
-                      "name":  "intent-exoskeletons",
-                      "scene":  "10-intent-exoskeletons",
-                      "title":  "Intent Forecast: Exoskeletons",
-                      "section":  "In fights",
-                      "caption":  "When it picks at random, each possible move with its chance, worked out from its rules and the moves you\u0027ve seen.",
-                      "x":  1311,
-                      "y":  286,
-                      "width":  323,
-                      "height":  693,
-                      "frameWidth":  2560,
-                      "frameHeight":  1440
-                  },
-                  {
                       "name":  "card-indicators",
                       "scene":  "11-card-indicators",
                       "title":  "Card Indicators",
@@ -299,6 +273,32 @@
                       "y":  1180,
                       "width":  1152,
                       "height":  259,
+                      "frameWidth":  2560,
+                      "frameHeight":  1440
+                  },
+                  {
+                      "name":  "intent-slugs",
+                      "scene":  "09-intent-slugs",
+                      "title":  "Intent Forecast: Corpse Slugs",
+                      "section":  "In fights",
+                      "caption":  "Hover an enemy\u0027s intent to see the moves its rules make certain, turn by turn.",
+                      "x":  1401,
+                      "y":  376,
+                      "width":  266,
+                      "height":  398,
+                      "frameWidth":  2560,
+                      "frameHeight":  1440
+                  },
+                  {
+                      "name":  "intent-exoskeletons",
+                      "scene":  "10-intent-exoskeletons",
+                      "title":  "Intent Forecast: Exoskeletons",
+                      "section":  "In fights",
+                      "caption":  "When it picks at random, each possible move with its chance, worked out from its rules and the moves you\u0027ve seen.",
+                      "x":  1340,
+                      "y":  289,
+                      "width":  266,
+                      "height":  426,
                       "frameWidth":  2560,
                       "frameHeight":  1440
                   }

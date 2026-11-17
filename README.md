@@ -85,7 +85,7 @@ Directives (everything else goes to the game's dev console as the local player: 
 | `hover <region>`, `click <region>`, `key <Godot key name>` | real input: `hover intent 1`, `click text Guide`, `key F10` |
 | `close-modals` | closes popups |
 | `caption <text>` | the caption for the next shot |
-| `shot <name> [region] [+ region...] [pad N]` | saves a screenshot cropped around the regions (the whole frame when none); pad is pixels at 1080p |
+| `shot <name> [region] [+ region...] [pad N] [below N]` | saves a screenshot cropped around the regions (the whole frame when none); pad (all sides) and below (extra at the bottom) are pixels at 1080p |
 
 Regions come from the game's own nodes, so crops hold at any resolution: `full`, `hand`, `card N`, `enemy N`, `enemies`, `intent N`, `player`, `widget <Spire QoL feature id>` (`incoming-damage`, `intent-forecast`, `relic-counters`, `rest-hp`, `run-reminders`), `node <node name>`, `text "<label>"`, and `rect x y w h` (fractions of the window).
 

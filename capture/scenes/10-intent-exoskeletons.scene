@@ -7,4 +7,4 @@ wait combat-started
 hover intent 1
 wait 1
 caption When it picks at random, each possible move with its chance, worked out from its rules and the moves you've seen.
-shot intent-exoskeletons widget intent-forecast + enemy 1 pad 30
+shot intent-exoskeletons widget intent-forecast pad 20 below 50
