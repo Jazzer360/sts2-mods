@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.12.3
+#### Fixed
+- Intent Forecast showed nothing when hovering an enemy: its panel failed while drawing the intents (each game intent icon is now set up once it's on screen).
+
 ### Spire QoL 1.12.2
 #### Fixed
 - Rally's block goes to every living teammate in the predictions too, not just you, worked out on each (their Dexterity and Frail): it counts toward their Incoming Damage and sets off what reacts to their block (a teammate's Juggernaut can kill an enemy, which changes your lethal tab).

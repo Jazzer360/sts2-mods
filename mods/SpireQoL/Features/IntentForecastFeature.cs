@@ -94,6 +94,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 label.CustomMinimumSize = new Vector2(24, 0);
                 label.VerticalAlignment = VerticalAlignment.Center;
                 row.AddChild(label);
+                // In the tree first: NIntent finds its parts in _Ready, and UpdateIntent before that throws.
+                _rows!.AddChild(row);
                 if (view.Move(moveId) is { } move)
                 {
                     foreach (var intent in move.Intents)
@@ -101,7 +103,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                         var node = NIntent.Create(0f);
                         node.MouseFilter = Control.MouseFilterEnum.Ignore;
                         row.AddChild(node);
-                        node.UpdateIntent(intent, targets, enemy);
+                        if (node.IsNodeReady()) node.UpdateIntent(intent, targets, enemy);
+                        else node.Ready += () => node.UpdateIntent(intent, targets, enemy);
                     }
                 }
                 if (!turn.Certain)
@@ -110,7 +113,6 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                     pct.VerticalAlignment = VerticalAlignment.Center;
                     row.AddChild(pct);
                 }
-                _rows!.AddChild(row);
             }
         }
     }
