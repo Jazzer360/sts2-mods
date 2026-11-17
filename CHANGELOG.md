@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.13.0
+#### Added
+- Teammates' powers and relics get tabs on your cards: when a card you play sets off something of a teammate's (Rally's block setting off their Juggernaut, for example), it shows with that source's icon, like your own, plain or crossed by the same rule. A source you both have shares one tab, the amounts added. Their effects already counted toward lethal and Incoming Damage; now you can see them.
+#### Fixed
+- A teammate's power or relic firing no longer lights up your tab for the same power or relic.
+
 ### Spire QoL 1.12.3
 #### Fixed
 - Intent Forecast showed nothing when hovering an enemy: its panel failed while drawing the intents (each game intent icon is now set up once it's on screen).

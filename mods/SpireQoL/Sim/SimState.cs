@@ -641,15 +641,32 @@ public sealed class SimState
 
     /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
     /// <param name="owner">Whose source it is: an enemy's is also logged as "Name@id", so two enemies' powers stay apart.</param>
+    /// <summary>Log keys for a teammate's firings ("Name@id", "~Name@id"), made once per name and id: strings only, read by every thread.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string, int, bool), string> OwnedKeys = new();
+
+    private static string OwnedKey(string source, int owner, bool indirect) =>
+        OwnedKeys.GetOrAdd((source, owner, indirect), k => (k.Item3 ? "~" : "") + k.Item1 + "@" + k.Item2);
+
     public void LogFired(string source, int amount = 0, int? owner = null)
     {
+        // A teammate's firing is logged under them only (Name@id): its tab is theirs (decision #75), and the plain name stays
+        // yours (and enemies'). An enemy's is logged under both.
+        if (owner is { } t && Who.IsPlayer(t) && t != Who.You)
+        {
+            Log1(OwnedKey(source, t, false), amount);
+            if (IndirectNow) Log1(OwnedKey(source, t, true), amount);
+            return;
+        }
         Log1(source, amount);
         if (owner is >= 0) Log1($"{source}@{owner}", amount);
         if (IndirectNow) Log1("~" + source, amount);
         if (IndirectNow && owner is >= 0) Log1($"~{source}@{owner}", amount);
     }
 
-    /// <summary>An indirect firing (from a card event) is also logged as "~Name" (and "~Name@id" for an enemy's).</summary>
+    /// <summary>
+    /// An indirect firing (from a card event) is also logged as "~Name" (and "~Name@id" for an enemy's or a teammate's). A
+    /// teammate's firings are only under Name@id (ProcIndicatorsFeature.LogTab reads them there).
+    /// </summary>
     private void Log1(string key, int amount)
     {
         Fired = Fired.With(key, Fired[key] + 1, Fired.DataOf(key) + amount);

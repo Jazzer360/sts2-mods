@@ -156,7 +156,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         try { return p.PlayerTarget; } catch { return null; }
     }
 
-    /// <summary>Your powers, your relics, and powers on every living enemy: the proc sources (each with a tab when its model fires).</summary>
+    /// <summary>
+    /// The proc sources (each with a tab when its model fires): your powers and relics, powers on every living enemy, and every
+    /// living teammate's powers and relics (decision #75: what your card sets off for a teammate gets a tab like your own).
+    /// </summary>
     private static List<AbstractModel> Sources(Player me, ICombatState cs)
     {
         var sources = new List<AbstractModel>();
@@ -164,10 +167,27 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         sources.AddRange(me.Relics); // each relic's tab has its own switch (Tabs "proc:<Relic>")
         // All living enemies: an untargetable one's powers still fire.
         foreach (var enemy in cs.Enemies.Where(e => e.IsAlive)) sources.AddRange(enemy.Powers);
-        // Teammates' powers that act on your plays (only these: the other rules read your powers and enemies').
         foreach (var mate in SimAdapter.Teammates(me, cs))
-            sources.AddRange(mate.Creature.Powers.OfType<ImitationLearningPower>().Where(p => CopiesFrom(p) == me));
+        {
+            if (!mate.Creature.IsAlive) continue;
+            sources.AddRange(mate.Creature.Powers);
+            sources.AddRange(mate.Relics.Where(r => !r.IsMelted));
+        }
         return sources;
+    }
+
+    /// <summary>The simulator's id of the teammate a source belongs to (their power or relic), or null for yours and enemies'.</summary>
+    private static int? TeammateOf(AbstractModel src, Player me, ICombatState cs)
+    {
+        var owner = src switch
+        {
+            PowerModel { Owner: { IsPlayer: true } c } => c.Player,
+            RelicModel r => r.Owner,
+            _ => null,
+        };
+        if (owner == null || owner == me) return null;
+        var k = SimAdapter.Teammates(me, cs).IndexOf(owner);
+        return k < 0 ? null : Who.Teammate(k);
     }
 
     /// <summary>
@@ -375,18 +395,18 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // ---- the play log: each source whose model fired during the play
         foreach (var src in sources)
         {
-            int? enemyId = null;
+            int? ownerId = TeammateOf(src, _me, _cs);
             if (src is PowerModel { Owner.IsEnemy: true } ep)
             {
                 if (!te.Ids.TryGetValue(ep.Owner, out var eid)) continue;
-                enemyId = eid;
+                ownerId = eid;
             }
-            LogTab(src, enemyId, outcomes, tabs);
+            LogTab(src, ownerId, outcomes, tabs);
         }
         // Effects the engine logs itself (Juggernaut on every block gain, Thunder on Lightning evokes): logged under their power's
-        // name.
-        foreach (var src in _me.Creature.Powers.Where(x => x.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
-            LogTab(src, null, outcomes, tabs, TabKind.Damage);
+        // name, yours and every teammate's.
+        foreach (var src in sources.OfType<PowerModel>().Where(x => x.Owner is { IsPlayer: true } && x.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
+            LogTab(src, TeammateOf(src, _me, _cs), outcomes, tabs, TabKind.Damage);
 
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act
         // Each rule is a test per target (one simulation each): the tab shows when some target passes it, with the aim marker
@@ -500,14 +520,17 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// (the most any aim guarantees) and the audit's range (the least any aim guarantees to the most any branch gives). Several
     /// enemies with the same power share one tab, their amounts added.
     /// </summary>
-    private void LogTab(AbstractModel src, int? enemyId, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs, TabKind? kindOverride = null)
+    private void LogTab(AbstractModel src, int? ownerId, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs, TabKind? kindOverride = null)
     {
         if (src is PowerModel && SimAdapter.IsTemporaryThorns(src.GetType())) return; // its Thorns has the ThornsPower tab
         var name = SimReaders.ModelName(src);
         var model = SimModels.Get(name);
         if ((kindOverride ?? model?.Tab) is not { } kind) return;
         var harmful = model?.Harmful ?? false;
-        var key = enemyId is { } id ? $"{name}@{id}" : name;
+        // An enemy's or a teammate's source reads its own key (SimState.LogFired: a teammate's firings are only there); yours, the
+        // plain name.
+        var key = ownerId is { } id ? $"{name}@{id}" : name;
+        static int Data(PowerSet log, string k) => log.DataOf(k);
         bool Fired(PowerSet log) => log.Has(key) && (_indirect || log[key] > log["~" + key]);
         Func<SimOutcome, bool> at = harmful ? o => Fired(o.PlayFiredAny) : o => Fired(o.PlayFiredEvery);
         var shown = outcomes.Any(at);
@@ -520,10 +543,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         _firesAt[tabKeyAt] = firesAt;
         var aimed = firesAt.Length > 1 && !firesAt.All(x => x);
         var amount = harmful
-            ? outcomes.Max(o => o.PlayFiredAny.DataOf(key))
-            : outcomes.Where(o => Fired(o.PlayFiredEvery)).Max(o => o.PlayFiredEvery.DataOf(key));
-        var min = outcomes.Min(o => o.PlayFiredEvery.DataOf(key));
-        var max = outcomes.Max(o => o.PlayFiredAny.DataOf(key));
+            ? outcomes.Max(o => Data(o.PlayFiredAny, key))
+            : outcomes.Where(o => Fired(o.PlayFiredEvery)).Max(o => Data(o.PlayFiredEvery, key));
+        var min = outcomes.Min(o => Data(o.PlayFiredEvery, key));
+        var max = outcomes.Max(o => Data(o.PlayFiredAny, key));
         if (kind != TabKind.Trigger && max <= 0) return;
         var tabKey = "proc:" + src.GetType().Name;
         if (tabs.TryGetValue(tabKey, out var prev))

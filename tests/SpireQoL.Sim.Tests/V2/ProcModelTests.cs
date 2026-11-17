@@ -275,6 +275,8 @@ public class ProcModelTests
         Assert.Equal(12, after.P.Block);
         Assert.Equal(12, after.Teammates[0].Block);
         Assert.True(after.Enemy(0) is null or { Hp: <= 0 });
+        // Logged under the teammate (decision #75): the tab on your card is theirs, not your Juggernaut's.
+        Assert.Equal(1, after.Fired[$"JuggernautPower@{Who.Teammate(0)}"]);
     }
 
     // ---- card events

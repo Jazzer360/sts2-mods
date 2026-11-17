@@ -4,7 +4,7 @@ Display-only quality-of-life tweaks for Slay the Spire 2. The mod doesn't change
 
 | Feature | What you'll see |
 | --- | --- |
-| Proc Indicators | A tab on each card in your hand for every relic or power that playing it would set off right now (plain), or that would work against you (crossed); lethal, kill and replay tabs |
+| Proc Indicators | A tab on each card in your hand for every relic or power (yours or a teammate's) that playing it would set off right now (plain), or that would work against you (crossed); lethal, kill and replay tabs |
 | Card Indicators | Retain and Sly tabs, Ethereal cards translucent |
 | Relic Counters | A tracker beside your HP bar for counter relics, countdown powers and cards that come back (Pen Nib, Kunai, Stone Calendar, Make It So...) |
 | Incoming Damage | A sum by your HP bar: incoming damage minus your end-of-turn block, the HP you'll lose, and a skull when it's lethal; a teammate's on hover |

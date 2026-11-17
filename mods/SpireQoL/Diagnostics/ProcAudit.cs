@@ -636,7 +636,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     private void Subscribe(Player me, ICombatState cs)
     {
-        foreach (var r in me.Relics)
+        // Every player's relics: a teammate's relic your card sets off has a tab too (decision #75).
+        foreach (var r in cs.Players.SelectMany(p => p.Relics))
         {
             if (_subscribed.Add(r)) r.Flashed += OnRelicFlashed;
         }
@@ -957,7 +958,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (w.Card.CurrentUpgradeLevel <= w.UpgradeBefore) issues.Add($"didn't fire: {name} (the card wasn't upgraded)");
                 continue;
             }
-            if (me.Relics.Any(r => r.GetType().Name == name) && !flashed.Any(f => f.GetType().Name == name))
+            var players = me.Creature.CombatState?.Players ?? (IReadOnlyList<Player>)new[] { me };
+            if (players.Any(p => p.Relics.Any(r => r.GetType().Name == name)) && !flashed.Any(f => f.GetType().Name == name))
                 issues.Add($"didn't fire: {name}");
         }
 
