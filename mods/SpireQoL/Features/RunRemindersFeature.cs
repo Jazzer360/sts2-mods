@@ -273,11 +273,18 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     {
         const float size = 30;
         var row = UiKit.Row(6);
-        foreach (var (relic, crossed) in icons) row.AddChild(Crossable(IconOf(relic), size, crossed));
+        foreach (var (relic, crossed) in icons) row.AddChild(Backed(Crossable(IconOf(relic), size, crossed), size));
         var col = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         col.AddThemeConstantOverride("separation", 0);
-        col.AddChild(UiKit.Label($"{price}", 26, new Color(1f, 0.85f, 0.3f)));
-        if (net is { } n) col.AddChild(UiKit.Label($"{n}", (int)Math.Round(size * 0.75f), NetColor));
+        var priceLabel = UiKit.Label($"{price}", 26, new Color(1f, 0.85f, 0.3f));
+        priceLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        col.AddChild(priceLabel);
+        if (net is { } n)
+        {
+            var netLabel = UiKit.Label($"{n}", (int)Math.Round(size * NetScale), NetColor);
+            netLabel.HorizontalAlignment = HorizontalAlignment.Center;
+            col.AddChild(netLabel);
+        }
         row.AddChild(col);
         return row;
     }
@@ -569,23 +576,57 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             box = new Control { Name = ShopNodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
             box.SetMeta("key", key);
             var row = new HBoxContainer { Name = "Icons", MouseFilter = Control.MouseFilterEnum.Ignore };
-            row.AddThemeConstantOverride("separation", 2);
-            foreach (var (relic, crossed) in icons) row.AddChild(Crossable(IconOf(relic), size, crossed));
+            row.AddThemeConstantOverride("separation", (int)Math.Round(size * ShopIconGap));
+            foreach (var (relic, crossed) in icons) row.AddChild(Backed(Crossable(IconOf(relic), size, crossed), size));
             box.AddChild(row);
             if (net is { } n)
             {
-                var label = UiKit.Label($"{n}", (int)Math.Round(size * 0.75f), NetColor);
+                var label = UiKit.Label($"{n}", (int)Math.Round(size * NetScale), NetColor);
                 label.Name = "Net";
                 label.MouseFilter = Control.MouseFilterEnum.Ignore;
+                label.HorizontalAlignment = HorizontalAlignment.Center;
                 box.AddChild(label);
             }
             price.AddChild(box);
         }
-        var width = icons.Count * (size + 2) - 2;
-        // Left of the game's coin, which sits beside the label, not over it.
+        var gap = (int)Math.Round(size * ShopIconGap);
+        var width = icons.Count * (size + gap) - gap;
+        // Left of the game's coin, which sits beside the label, not over it, with room for the icons' backdrops.
         var left = PriceLeft(slot, price) - price.GlobalPosition.X;
-        if (box.GetNodeOrNull<Control>("Icons") is { } row2) row2.Position = new Vector2(left - width - 6, (price.Size.Y - size) / 2);
-        if (box.GetNodeOrNull<Control>("Net") is { } netLabel) netLabel.Position = new Vector2(0, price.Size.Y);
+        if (box.GetNodeOrNull<Control>("Icons") is { } row2) row2.Position = new Vector2(left - width - size * BackdropPad - 4, (price.Size.Y - size) / 2);
+        // Under the price's number, centered on it.
+        if (box.GetNodeOrNull<Control>("Net") is { } netLabel)
+        {
+            var (textLeft, textWidth) = TextSpan(price);
+            netLabel.Size = new Vector2(NetWidth, netLabel.Size.Y);
+            netLabel.Position = new Vector2(textLeft + textWidth / 2 - NetWidth / 2, price.Size.Y - 2);
+        }
+    }
+
+    /// <summary>The net price under a shop price (Lucky Fysh): this much of the price's height, in a box this wide to center in.</summary>
+    private const float NetScale = 0.9f, NetWidth = 160f;
+    /// <summary>Space between a shop price's relic icons, as a share of their size.</summary>
+    private const float ShopIconGap = 0.2f;
+
+    /// <summary>Where a label's text sits within it (left edge, width), from its font and alignment; the whole label when unreadable.</summary>
+    private static (float Left, float Width) TextSpan(Control control)
+    {
+        try
+        {
+            if (control is Label l && l.GetThemeFont("font") is { } font)
+            {
+                var w = font.GetStringSize(l.Text, HorizontalAlignment.Left, -1, l.GetThemeFontSize("font_size")).X;
+                var x = l.HorizontalAlignment switch
+                {
+                    HorizontalAlignment.Center => (l.Size.X - w) / 2,
+                    HorizontalAlignment.Right => l.Size.X - w,
+                    _ => 0f,
+                };
+                return (x, w);
+            }
+        }
+        catch { /* unreadable font: the whole label */ }
+        return (0, control.Size.X);
     }
 
     /// <summary>
@@ -614,6 +655,57 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             if (c is TextureRect t) yield return t;
             foreach (var d in Pictures(c)) yield return d;
         }
+    }
+
+    /// <summary>How far an icon's backdrop reaches past the icon, as a share of its size.</summary>
+    private const float BackdropPad = 0.28f;
+    private static GradientTexture2D? _backdrop;
+
+    /// <summary>
+    /// An icon on a soft dark disc (fading out at its edge), so it reads on any background: the shop's cloth, the map legend's
+    /// paper. The holder is the icon's size; the disc reaches a little past it.
+    /// </summary>
+    internal static Control Backed(Control icon, float size)
+    {
+        var holder = new Control
+        {
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            CustomMinimumSize = new Vector2(size, size),
+            Size = new Vector2(size, size),
+            SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
+            SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
+        };
+        var pad = size * BackdropPad;
+        holder.AddChild(new TextureRect
+        {
+            Texture = Backdrop(),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.Scale,
+            Position = new Vector2(-pad, -pad),
+            Size = new Vector2(size + 2 * pad, size + 2 * pad),
+        });
+        holder.AddChild(icon);
+        return holder;
+    }
+
+    private static Texture2D Backdrop()
+    {
+        if (_backdrop != null) return _backdrop;
+        var gradient = new Gradient
+        {
+            Offsets = new[] { 0f, 0.6f, 1f },
+            Colors = new[] { new Color(0, 0, 0, 0.72f), new Color(0, 0, 0, 0.55f), new Color(0, 0, 0, 0) },
+        };
+        return _backdrop = new GradientTexture2D
+        {
+            Gradient = gradient,
+            Fill = GradientTexture2D.FillEnum.Radial,
+            FillFrom = new Vector2(0.5f, 0.5f),
+            FillTo = new Vector2(1f, 0.5f),
+            Width = 64,
+            Height = 64,
+        };
     }
 
     /// <summary>A relic icon, with the red slash when it works against you.</summary>

@@ -54,10 +54,27 @@ public sealed partial class RunRemindersFeature
                 }
             }
             if (row == null) continue;
-            // Left of the legend row, vertically centered on it; grows to the left (the legend sits at the map's right edge).
+            // Left of the legend row, centered on the row's own icon (on the row when it can't be found); grows to the left (the
+            // legend sits at the map's right edge), clear of the icons' backdrops.
             var width = row.GetCombinedMinimumSize().X;
-            row.Position = new Vector2(-width - 10, (item.Size.Y - PathIcon) / 2);
+            row.Position = new Vector2(-width - 10 - PathIcon * BackdropPad, LegendIconMiddle(item) - PathIcon / 2);
         }
+    }
+
+    /// <summary>The middle (local y) of a legend row's own icon, the game's picture in it; the row's middle when there's none.</summary>
+    private static float LegendIconMiddle(Control item)
+    {
+        try
+        {
+            var scale = item.GetGlobalTransform().Scale.Y;
+            foreach (var pic in Pictures(item))
+            {
+                if (item.GetNodeOrNull(PathNodeName) is { } ours && ours.IsAncestorOf(pic) || !pic.IsVisibleInTree() || pic.Size.Y < 2) continue;
+                return (pic.GetGlobalRect().GetCenter().Y - item.GlobalPosition.Y) / (scale == 0 ? 1 : scale);
+            }
+        }
+        catch { /* the row's middle */ }
+        return item.Size.Y / 2;
     }
 
     private static bool IsUnder(Node node, Node parent)
@@ -194,7 +211,7 @@ public sealed partial class RunRemindersFeature
                 NMapScreen.Instance?.HighlightPointType(MapPointType.Unassigned);
             };
             if (mark.Note != null) icon.AddChild(OddsLabel(mark.Note, PathIcon));
-            row.AddChild(icon);
+            row.AddChild(Backed(icon, PathIcon));
         }
         return row;
     }
@@ -207,7 +224,7 @@ public sealed partial class RunRemindersFeature
         {
             var icon = Crossable(IconOf(relic), PathIcon, crossed);
             if (note != null) icon.AddChild(OddsLabel(note, PathIcon));
-            row.AddChild(icon);
+            row.AddChild(Backed(icon, PathIcon));
         }
         return row;
     }

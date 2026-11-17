@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.15.1
+#### Changed
+- Shop: the relic icons beside a price sit further from the gold coin, each on a soft dark backdrop, and Lucky Fysh's net price is larger and centered under the price.
+- Map: the relic icons beside the legend sit on the same soft dark backdrop, level with the legend's own icons.
+
 ### Spire QoL 1.15.0
 #### Changed
 - Card rewards: Bing Bong, Lucky Fysh and Book of Five Rings are tabs on the offered cards, like Strike Dummy's: Bing Bong and Lucky Fysh on every card, Book of Five Rings when taking one heals you.
