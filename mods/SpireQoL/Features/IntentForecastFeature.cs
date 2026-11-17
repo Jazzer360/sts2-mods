@@ -11,7 +11,8 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// Intent Forecast (decision #72): while you hover an enemy, its next moves after the intent on screen, beside that intent.
+/// Intent Forecast (decision #72): while you hover an enemy's intent, its next moves after that intent, stacked upward above it
+/// (+1 nearest the intent).
 /// Every turn its move rules make certain, then the first random pick with each move it can make and its chance; drawn with
 /// the game's own intent nodes (NIntent: icon, animation, damage as things stand). Worked out from its move rules and the
 /// moves it has made (IntentReader, IntentForecast); never from a roll. Nothing when its intent on screen is hidden.
@@ -45,19 +46,20 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     public void Attach(OverlayHost host)
     {
         _widget = _ctx.Widget(Id, "Intent Forecast", DefaultLayout);
-        _widget.AttachTo(() => IntentRect(_enemy), AttachSide.RightOfBottom)
-               .AttachTo(() => IntentRect(_enemy), AttachSide.LeftOf);
+        // Above the intent, the later turns higher up; beside it when there's no room above (an enemy near the top).
+        _widget.AttachTo(() => IntentRect(_enemy), AttachSide.Above)
+               .AttachTo(() => IntentRect(_enemy), AttachSide.RightOfBottom);
         var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        panel.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.05f, 0.05f, 0.08f, 0.85f), radius: 6, margin: 8));
+        panel.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.05f, 0.05f, 0.08f, 0.6f), radius: 6, margin: 6));
         _rows = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        _rows.AddThemeConstantOverride("separation", 4);
+        _rows.AddThemeConstantOverride("separation", 2);
         panel.AddChild(_rows);
         _widget.Content.AddChild(panel);
     }
 
     public void OnFrame(OverlayHost host)
     {
-        var enemy = Sts2State.IsPlayerTurn ? FocusedEnemy() : null;
+        var enemy = Sts2State.IsPlayerTurn ? HoveredIntentEnemy() : null;
         var forecast = enemy != null ? IntentReader.Forecast(enemy) : null;
         if (enemy == null || forecast == null)
         {
@@ -94,8 +96,10 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 label.CustomMinimumSize = new Vector2(24, 0);
                 label.VerticalAlignment = VerticalAlignment.Center;
                 row.AddChild(label);
-                // In the tree first: NIntent finds its parts in _Ready, and UpdateIntent before that throws.
+                // In the tree first: NIntent finds its parts in _Ready, and UpdateIntent before that throws. Each row goes on top,
+                // so the forecast reads upward from the intent: +1 just above it.
                 _rows!.AddChild(row);
+                _rows.MoveChild(row, 0);
                 if (view.Move(moveId) is { } move)
                 {
                     foreach (var intent in move.Intents)
@@ -117,26 +121,37 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         }
     }
 
-    /// <summary>The enemy under the mouse (the game's hover focus on its creature node), alive.</summary>
-    private static Creature? FocusedEnemy()
+    /// <summary>The living enemy whose intent is under the mouse.</summary>
+    private static Creature? HoveredIntentEnemy()
     {
-        var room = NCombatRoom.Instance;
-        if (room == null) return null;
+        if (NCombatRoom.Instance is not { } room) return null;
+        var mouse = room.GetViewport().GetMousePosition();
         foreach (var n in room.CreatureNodes)
         {
-            if (!GodotObject.IsInstanceValid(n) || !n.IsFocused) continue;
-            if (n.Entity is { IsEnemy: true, IsAlive: true } e) return e;
+            if (!GodotObject.IsInstanceValid(n) || n.Entity is not { IsEnemy: true, IsAlive: true } e) continue;
+            if (IntentRect(e) is { } r && r.Grow(6).HasPoint(mouse)) return e;
         }
         return null;
     }
 
-    /// <summary>Screen rect of an enemy's intents on screen, or null.</summary>
+    /// <summary>
+    /// Screen rect of an enemy's intents on screen (the intent icons themselves, joined: the container doesn't always size to
+    /// them), or null.
+    /// </summary>
     private static Rect2? IntentRect(Creature? enemy)
     {
         if (enemy == null || NCombatRoom.Instance is not { } room) return null;
         var node = room.CreatureNodes.FirstOrDefault(n => GodotObject.IsInstanceValid(n) && n.Entity == enemy);
         var intents = node?.IntentContainer;
-        if (intents == null || !GodotObject.IsInstanceValid(intents) || intents.Size.X < 1) return null;
-        return Sts2State.ScreenRect(intents);
+        if (intents == null || !GodotObject.IsInstanceValid(intents) || !intents.IsVisibleInTree()) return null;
+        Rect2? rect = null;
+        foreach (var i in intents.GetChildren().OfType<NIntent>())
+        {
+            if (!i.IsVisibleInTree() || i.Size.X < 1) continue;
+            var r = Sts2State.ScreenRect(i);
+            rect = rect is { } u ? u.Merge(r) : r;
+        }
+        if (rect == null && intents.Size.X >= 1) rect = Sts2State.ScreenRect(intents);
+        return rect;
     }
 }

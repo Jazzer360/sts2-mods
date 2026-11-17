@@ -459,7 +459,7 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ## Intent Forecast
 
-**What you see** (decisions #72, #73), during your turn, while you hover an enemy: a small panel beside its intent (right of it, or left when there's no room; a movable widget) with its next moves after the intent on screen, a row per move, each drawn with the game's own intent node (`NIntent`: the icon, its animation and its damage number, worked out as things stand now):
+**What you see** (decisions #72, #73), during your turn, while you hover an enemy's intent (the intent icons, not the enemy): a small panel right above the intent (beside it, to the right, when there's no room above; a movable widget) with its next moves after the intent on screen, a row per move stacked upward (`+1` nearest the intent, later turns higher; a random pick's moves at the top), each drawn with the game's own intent node (`NIntent`: the icon, its animation and its damage number, worked out as things stand now):
 - `+1` is the turn after the intent on screen, `+2` the one after. Every turn its move rules make certain is shown, up to three turns ahead.
 - The first random pick ends the forecast: one row per move it can make, each with its chance (`45%`).
 - Nothing while its intent on screen is hidden (`HiddenIntent`, `UnknownIntent`): its rules would give the hidden move away. A future move whose intent is hidden shows hidden, as the game would.

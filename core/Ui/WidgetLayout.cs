@@ -7,6 +7,8 @@ public enum AttachSide
     LeftOf,
     /// <summary>To the right, with the widget's bottom edge level with the target's bottom.</summary>
     RightOfBottom,
+    /// <summary>Above, centred, with the widget's bottom edge just over the target's top.</summary>
+    Above,
 }
 
 /// <summary>

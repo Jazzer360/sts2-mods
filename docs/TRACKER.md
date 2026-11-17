@@ -236,7 +236,7 @@ Design (decision #72): on hover only; looks ahead until a roll (every certain tu
 - [x] Deterministic next moves (1.12.0).
 - [x] Random branches with odds (1.12.0).
 - [x] Conditional moves, as things stand (1.12.0).
-- [ ] Test in game: the hover panel (placement beside the intent, NIntent nodes' size and animation, the chance labels), a stunned enemy, a hidden intent.
+- [ ] Test in game: the hover panel (shown on hovering the intent, stacked above it (1.13.1), NIntent nodes' size and animation, the chance labels), a stunned enemy, a hidden intent.
 
 ---
 

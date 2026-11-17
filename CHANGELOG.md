@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.13.1
+#### Changed
+- Intent Forecast shows while you hover an enemy's intent (not the enemy), stacked upward right above it: `+1` just over the intent, later turns higher (beside it when there's no room above).
+
+### Main Saves 1.0.6
+#### Changed
+- Rebuilt with the shared code update (no change in what it does).
+
 ### Spire QoL 1.13.0
 #### Added
 - Teammates' powers and relics get tabs on your cards: when a card you play sets off something of a teammate's (Rally's block setting off their Juggernaut, for example), it shows with that source's icon, like your own, plain or crossed by the same rule. A source you both have shares one tab, the amounts added. Their effects already counted toward lethal and Incoming Damage; now you can see them.

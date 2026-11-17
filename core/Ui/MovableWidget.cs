@@ -189,6 +189,7 @@ public sealed class MovableWidget
     {
         AttachSide.LeftOf => (new Vector2(target.Position.X - 6, target.Position.Y + target.Size.Y / 2), ScreenAnchor.Right),
         AttachSide.RightOfBottom => (new Vector2(target.End.X + 12, target.End.Y), ScreenAnchor.BottomLeft),
+        AttachSide.Above => (new Vector2(target.Position.X + target.Size.X / 2, target.Position.Y - 4), ScreenAnchor.Bottom),
         _ => (new Vector2(target.Position.X + target.Size.X / 2, target.End.Y), ScreenAnchor.Top),
     };
 
