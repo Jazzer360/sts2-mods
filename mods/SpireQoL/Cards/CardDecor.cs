@@ -18,8 +18,11 @@ namespace SpireQoL.Cards;
 /// NumberText: shown where the number goes when the amount is hidden (a free card's "?").
 /// Aimed: it happens only at some of the targets you could aim at (decision #55): the game's targeting arrow head in the
 /// icon's top-left corner.
+/// Marker: another picture in that corner instead (decision #83: the heart on the card reward pick that makes Book of Five Rings
+/// heal); null for none.
 public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null, string? Kind = null, int Amount = 0,
-    int AuditMin = 0, int AuditMax = 0, string? Text = null, CardModel? Card = null, string? NumberText = null, bool Aimed = false);
+    int AuditMin = 0, int AuditMax = 0, string? Text = null, CardModel? Card = null, string? NumberText = null, bool Aimed = false,
+    Texture2D? Marker = null);
 
 /// <summary>
 /// What should be drawn on one card this frame. Features fill it in; CardOverlayRenderer draws it.

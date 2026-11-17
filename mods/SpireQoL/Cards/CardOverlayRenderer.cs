@@ -356,10 +356,11 @@ public sealed class CardOverlayRenderer
                     if (spec.Crossed) LayoutSlash(slash, icon.Size);
                 }
                 // Aim marker (decision #55): it happens only at some targets. The targeting arrow's head in the icon's top-left
-                // corner, clear of the slash (bottom-left to top-right) and the number (bottom-right).
+                // corner, clear of the slash (bottom-left to top-right) and the number (bottom-right). A tab's own marker (the heart:
+                // decision #83) goes in the same corner.
                 if (icon.GetNodeOrNull<TextureRect>("SpireQoL_Aim") is { } aim)
                 {
-                    var arrow = spec.Aimed ? GameIcons.TargetArrow() : null;
+                    var arrow = spec.Marker ?? (spec.Aimed ? GameIcons.TargetArrow() : null);
                     aim.Visible = GameIcons.Valid(arrow);
                     if (aim.Visible) LayoutAim(aim, arrow!, icon.Size);
                 }

@@ -148,7 +148,7 @@ public static class SettingsCatalog
 
         // Outside fights (Run Reminders): tabs on card reward cards, event options and shop prices (a column each).
         new(nameof(BingBong), SourceGroup.Relic, null, Reward: "Tab on every card: the card you take is copied", Event: "Options that add a card (crossed when it adds a curse)", Shop: "Cards (copied)"),
-        new(nameof(BookOfFiveRings), SourceGroup.Relic, null, Reward: "Tab on every card when taking it heals you (the pick that reaches its count)", Event: "Options that add a card", Shop: "Cards (toward the heal)"),
+        new(nameof(BookOfFiveRings), SourceGroup.Relic, null, Reward: "Tab on every card (toward its heal); a heart in its corner on the pick that heals, crossed when part of the heal is wasted", Event: "Options that add a card", Shop: "Cards (toward the heal)"),
         new(nameof(LuckyFysh), SourceGroup.Relic, null, Reward: "Tab on every card: taking one gives gold (none with Ectoplasm)", Event: "Options that add a card", Shop: "Cards, with the price after its gold"),
         new(nameof(DarkstonePeriapt), SourceGroup.Relic, null, Event: "Options that add a curse (max HP)"),
         new(nameof(MoltenEgg), SourceGroup.Relic, null, Event: "Options that can add an Attack it upgrades"),

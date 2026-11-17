@@ -19,8 +19,8 @@ namespace SpireQoL.Features;
 /// judged as it's offered (already upgraded or enchanted by an egg, Fresnel Lens, the shop), and with the cards it makes
 /// when played (Begone!'s Minion Strike). Relics whose change already shows on the card (the eggs, Fresnel Lens) get none.
 /// Only cards that aren't in your deck: picking a card of yours to remove, upgrade or transform isn't an offer.
-/// On a card reward, also a tab for each relic that taking the card sets off (Bing Bong, Lucky Fysh, Book of Five Rings on the
-/// pick that heals): in events and the shop those show beside the option or the price instead.
+/// On a card reward, also a tab for each relic that taking the card sets off (Bing Bong, Lucky Fysh, Book of Five Rings: decision
+/// #83): in events and the shop those show beside the option or the price instead.
 /// </summary>
 public sealed partial class RunRemindersFeature
 {
@@ -68,7 +68,7 @@ public sealed partial class RunRemindersFeature
             if (place == ReminderPlace.Reward && ChoiceReminders.For(name) is { OnCardReward: true })
             {
                 var rewardKey = ChoiceReminders.Key(place, name);
-                if (_ctx.Settings.TabEnabled(rewardKey) && SetOffByTaking(relic, me) == true) decor.AddTab(rewardKey, GameIcons.Relic(relic));
+                if (_ctx.Settings.TabEnabled(rewardKey) && RewardTab(relic, me, rewardKey) is { } tab) decor.AddTab(tab);
                 continue;
             }
             if (CardAffinity.For(name) is not { Kind: AffinityKind.Boosts } rule) continue;

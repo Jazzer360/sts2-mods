@@ -17,6 +17,7 @@ using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using MegaCrit.Sts2.Core.Runs;
+using SpireQoL.Cards;
 using SpireQoL.Data;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
@@ -230,6 +231,23 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     }
 
     // ------------------------------------------------------------------ card reward tabs
+
+    /// <summary>
+    /// A relic's tab on a card a reward offers (decision #83), or null for none. Book of Five Rings is on every card (taking one
+    /// counts toward its heal), with the heart in its corner on the pick that heals, crossed when part of that heal would be
+    /// wasted (it heals more than the HP you're missing).
+    /// </summary>
+    internal static TabSpec? RewardTab(RelicModel relic, Player me, string key)
+    {
+        if (relic is BookOfFiveRings)
+        {
+            if (SetOffByTaking(relic, me) != true) return new TabSpec(key, GameIcons.Relic(relic));
+            var heal = Sts2State.Var(relic, "Heal", 20);
+            var missing = me.Creature.MaxHp - me.Creature.CurrentHp;
+            return new TabSpec(key, GameIcons.Relic(relic), Crossed: heal > missing, Marker: GameIcons.Heart());
+        }
+        return SetOffByTaking(relic, me) == true ? new TabSpec(key, GameIcons.Relic(relic)) : null;
+    }
 
     /// <summary>
     /// Whether taking a card offered by a card reward sets this relic off (its AfterCardChangedPiles on a card joining your deck):

@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.16.0
+#### Changed
+- Card rewards: Book of Five Rings' tab is on every offered card. On the pick that heals you, a heart sits in the tab's corner, and the tab is crossed when part of that heal would be wasted (you're missing less HP than it heals).
+
 ### Main Saves 1.0.9
 #### Changed
 - Rebuilt with the shared code update (no change in what it does).
