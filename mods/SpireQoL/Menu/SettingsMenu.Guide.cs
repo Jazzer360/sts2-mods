@@ -118,6 +118,8 @@ public sealed partial class SettingsMenu
 
         Paragraph("Potion tabs: the same tab hangs under a potion in the top bar when drinking it sets off a relic "
             + "(Reptile Trinket, Belt Buckle, White Beast Statue).");
+        Paragraph("Teammates' tabs: in multiplayer, a teammate's power or relic that your card sets off gets a tab like your own, "
+            + "with their icon (Rally's block setting off their Juggernaut). One you both have shares a tab, the amounts added.");
     }
 
     // ------------------------------------------------------------------ relic counters
@@ -195,6 +197,8 @@ public sealed partial class SettingsMenu
         IncomingCell(flow, "Another turn first", "Ending your turn now gives you another one before the enemies act (Pael's Eye, Extra Turn).",
             p => p.Show(12, 0, null, 12, extraTurn: Relic<PaelsEye>()));
         _rows!.AddChild(flow);
+        Paragraph("Teammate Incoming Damage: in multiplayer, hover a teammate to see theirs beside their HP bar, worked out the same way "
+            + "from what you can see of them (their block, powers, orbs and relics; not the cards in their hand).");
     }
 
     private static void IncomingCell(HFlowContainer flow, string title, string text, Action<DamageMathPanel> show)
@@ -387,6 +391,8 @@ public sealed partial class SettingsMenu
         GuideRow(null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
             + "then each move a random pick can make, with its chance. Worked out from its move rules and the moves it has made, never a roll.");
+        GuideRow(null, "Update Notice",
+            "On the main menu, above the game's MODDED note: how many Spire QoL versions behind you are, or that you're up to date.");
         GuideRow(null, "Moving things",
             $"{S.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {S.HideAllKey} hides everything.");
     }

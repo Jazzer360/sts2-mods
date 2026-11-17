@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.5
+#### Changed
+- The Guide covers every feature: Teammate Incoming Damage, teammates' tabs on your cards and the Update Notice are explained there too.
+
 ### Spire QoL 1.14.4
 #### Changed
 - Intent Forecast drops its turn numbers: the row just above the intent is next turn, and each row up is a turn later.
