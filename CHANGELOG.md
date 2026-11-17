@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.16.2
+#### Changed
+- Predictions: a card's target is kept in one place for every prediction, so the end-of-turn auto-plays (Stampede, Simpleton) and the card's own hits always agree on what it's aimed at. No change to what's shown.
+
 ### Spire QoL 1.16.1
 #### Fixed
 - Stampede: with more than one enemy, its end-of-turn Attack wasn't predicted at all (no Death Skull or chance, no damage); now each card it can pick and each enemy it can hit count.

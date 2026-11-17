@@ -890,8 +890,7 @@ public static partial class SimEngine
 
     /// <summary>
     /// One auto-play from a player's hand (k: -1 you, else teammate k): a branch per card <paramref name="pick"/> allows
-    /// (CombatCardSelection.NextItem: each equally likely), and per hittable target for a card aimed at one (the card play's
-    /// target, as the adapter sets it). A card that changes the hand (it draws or makes cards) still plays; later auto-plays in
+    /// (CombatCardSelection.NextItem: each equally likely), and per hittable target for a card aimed at one (SimPlay.TargetId). A card that changes the hand (it draws or makes cards) still plays; later auto-plays in
     /// that branch aren't predicted (CardResolved). One with no play built ends them too.
     /// </summary>
     private static IEnumerable<SimState> AutoPlayFromHand(BranchSet outer, SimState s, int k, Func<List<SimHandCard>, List<SimHandCard>> pick)
@@ -914,9 +913,9 @@ public static partial class SimEngine
                 result.Add(c);
                 continue;
             }
-            var plays = card.Plays.Count == 1 && AimedAt(card.Plays[0]) < 0
+            var plays = card.Plays.Count == 1 && card.Plays[0].TargetId < 0
                 ? card.Plays
-                : card.Plays.Where(p => c.Enemy(AimedAt(p)) is { Alive: true, Hittable: true }).ToList();
+                : card.Plays.Where(p => c.Enemy(p.TargetId) is { Alive: true, Hittable: true }).ToList();
             if (plays.Count == 0)
             {
                 result.Add(c); // no target: it goes to the discard pile unplayed (CardCmd.AutoPlay)
@@ -934,9 +933,6 @@ public static partial class SimEngine
         }
         return result;
     }
-
-    /// <summary>The enemy a play is aimed at: its card play's target (the adapter's plays), else the shorthand's TargetId.</summary>
-    private static int AimedAt(SimPlay p) => p.Card?.Target ?? p.TargetId;
 
     /// <summary>
     /// Your side's turn ends (CombatManager.EndPlayerTurnPhaseOne/Two, decompile v0.113.1):

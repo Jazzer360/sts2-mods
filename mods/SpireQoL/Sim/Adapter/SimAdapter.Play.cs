@@ -52,8 +52,8 @@ public static partial class SimAdapter
         play.ChannelToAlly = ChannelToAllyCards.Contains(name);
 
         // ---- v2: the card play and what each play does
-        var target = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
-        play.Card = new SimCardPlay(SimReaders.Card(card, f, me), owner, target, 0, plays, f.AutoPlayed);
+        play.TargetId = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
+        play.Card = new SimCardPlay(SimReaders.Card(card, f, me), owner, play.TargetId, 0, plays, f.AutoPlayed);
         if (f.LosesHp) play.Body.Add(new LoseHpAction(Sts2State.Var(card, "HpLoss")));
         // A shot (ArrowCmd.ShootArrowAtTarget): the arrow leaves before the attack and impales the target after it. None from an X
         // shot at X 0.
@@ -125,7 +125,6 @@ public static partial class SimAdapter
             play.Body.Add(new ApplyPowerAction(nameof(PoisonPower), (int)flask.BaseValue)
                 { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 1)), Debuff = true });
         if (KillsOstyCards.Contains(name)) play.Body.Add(new KillOstyAction());
-        if (play.Poison > 0 && !play.PoisonAll) play.TargetId = targetId;
         // A teammate's card: the block it gives its player is theirs.
         if (owner != Who.You)
             for (var i = 0; i < play.Body.Count; i++)
@@ -222,8 +221,7 @@ public static partial class SimAdapter
         }
         return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props)) { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers })
         {
-            TargetId = mode == SimPlay.Target.Single ? targetId : -1,
-            ByOsty = f.ByOsty,
+            ByOsty = f.ByOsty, // a single target: the play's (SimPlay.TargetId)
             OnKill = onKill,
             Splash = name == "RainShot", // RainShot.OnPlay: the target's damage to every other enemy
             RepeatPerKill = RepeatPerKillCards.Contains(name),

@@ -261,19 +261,27 @@ public class SimAutoPlayTests
     }
 
     /// <summary>
-    /// A hand card's play as the adapter builds it (SimAdapter.AutoPlay): the target is on the card play and its attack, not
-    /// on the shorthand's TargetId.
+    /// A hand card's play as the adapter builds it (SimAdapter.AutoPlay): a card play and its attack, aimed at the play's
+    /// TargetId (decision #84: the one place a play's target is kept).
     /// </summary>
     private static SimPlay AdapterStrike(int target, int damage, int hand, int draws = 0) => new()
     {
-        Name = "Strike", IsAttack = true, AutoPlay = true, HandCard = hand, HandDelta = -1 + draws, Draws = draws,
+        Name = "Strike", IsAttack = true, AutoPlay = true, HandCard = hand, HandDelta = -1 + draws, Draws = draws, TargetId = target,
         Card = new SimCardPlay(new SimCard("Strike", SimCardType.Attack), Who.You, target, 0, 1, true),
-        Body =
-        {
-            new AttackAction(1, SimPlay.Target.Single, new DamageSpec(0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [target] = damage }, Fixed = true })
-                { TargetId = target },
-        },
+        Body = { new AttackAction(1, SimPlay.Target.Single, new DamageSpec(0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [target] = damage }, Fixed = true }) },
     };
+
+    [Fact]
+    public void APlaysTargetIsItsTargetIdEvenWhenItsCardPlaySaysOtherwise()
+    {
+        // One place for the target (decision #84): the card play takes the play's TargetId when the script is built.
+        var s = new SimState { Enemies = { Enemy(1, 5), Enemy(2, 5) } };
+        var play = AdapterStrike(2, 6, 0);
+        play.Card = play.Card! with { Target = 1 };
+        var o = SimEngine.Run(s, play);
+        Assert.True(o.DeadInAll(2));
+        Assert.False(o.DeadInAny(1));
+    }
 
     [Fact]
     public void StampedeAimsTheAdaptersPlaysAtEachEnemy()

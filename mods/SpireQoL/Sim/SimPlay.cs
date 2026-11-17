@@ -13,7 +13,13 @@ public sealed class SimPlay
     public enum Target { None, Single, All, Random }
 
     public string Name = "";
-    /// <summary>The card play (its hooks run around each play); null: a card named Name, Attack when IsAttack, aimed at TargetId.</summary>
+    /// <summary>
+    /// What the play is aimed at: an enemy's id, a teammate (Who.Teammate), or -1 for none. The one place a play's target is kept
+    /// (decision #84): the card play takes it when the script is built (SimScript.Of), and actions aimed at "the play's target"
+    /// read it from there. Single hits, poison on the target, Capture Spirit, Judgement, and auto-plays picking a target.
+    /// </summary>
+    public int TargetId = -1;
+    /// <summary>The card play (its hooks run around each play); null: a card named Name, Attack when IsAttack. Its Target is set from TargetId.</summary>
     public SimCardPlay? Card;
     /// <summary>What each play does (OnPlay, then the enchantment's), in order.</summary>
     public List<SimAction> Body = new();
@@ -36,8 +42,6 @@ public sealed class SimPlay
     // ---- the shorthand (tests): each compiles to an action, numbers fixed
 
     public Target HitTarget = Target.None;
-    /// <summary>The enemy aimed at (Single hits, poison on the target, Capture Spirit, Judgement).</summary>
-    public int TargetId = -1;
     /// <summary>Damage of one hit on each enemy (final numbers).</summary>
     public Dictionary<int, int> HitDamage = new();
     /// <summary>Hits per target (Single/All), or random hits in total (Random).</summary>
@@ -135,7 +139,7 @@ public sealed class SimScript
     {
         var s = new SimScript { Name = p.Name };
         s.Actions.AddRange(p.Before);
-        var play = p.Card ?? new SimCardPlay(new SimCard(p.Name, p.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, p.TargetId, 0,
+        var play = p.Card is { } card ? card with { Target = p.TargetId } : new SimCardPlay(new SimCard(p.Name, p.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, p.TargetId, 0,
             Math.Max(1, p.Plays), p.AutoPlay);
         var body = new List<SimAction>(p.Body);
         var shorthand = Shorthand(p);
