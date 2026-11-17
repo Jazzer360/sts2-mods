@@ -35,3 +35,17 @@ public class ReportFloorTests
         Assert.Equal(new Version(1, 2, 3), ReportFloor.Parse("{\"oldestReported\":{\"SpireQoL\":\"1.2.3\"}}", "SpireQoL"));
     }
 }
+
+/// <summary>The releases links (Update Notice, About page) open Spire QoL's releases, not the repo's other mods'.</summary>
+public class ReleasesLinkTests
+{
+    [Fact]
+    public void LinksAreSpireQoLsOwn()
+    {
+        Assert.Equal("https://github.com/Jazzer360/sts2-mods/releases?q=spireqol", SpireQoL.Features.UpdateNoticeFeature.ReleasesLink(null));
+        var behind = new Sts2Mods.Core.Game.GitHubReleases.Status(2, new Version(1, 15, 3), true);
+        Assert.Equal("https://github.com/Jazzer360/sts2-mods/releases/tag/spireqol-v1.15.3", SpireQoL.Features.UpdateNoticeFeature.ReleasesLink(behind));
+        var current = new Sts2Mods.Core.Game.GitHubReleases.Status(0, new Version(1, 15, 3), true);
+        Assert.Equal("https://github.com/Jazzer360/sts2-mods/releases?q=spireqol", SpireQoL.Features.UpdateNoticeFeature.ReleasesLink(current));
+    }
+}

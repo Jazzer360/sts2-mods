@@ -12,8 +12,14 @@ public static class GitHubReleases
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(8) };
 
-    /// <summary>The releases page, to send the player to.</summary>
-    public static string PageUrl(string repo) => $"https://github.com/{repo}/releases";
+    /// <summary>
+    /// The releases page for one mod, to send the player to: the repo holds several mods, so the list is searched for the mod's
+    /// tag (<paramref name="tagPrefix"/> without its "-v": "spireqol"), which leaves out the other mods' releases.
+    /// </summary>
+    public static string PageUrl(string repo, string tagPrefix) => $"https://github.com/{repo}/releases?q={Uri.EscapeDataString(tagPrefix.TrimEnd('v').TrimEnd('-'))}";
+
+    /// <summary>One release's page (its notes and download), by its tag: <paramref name="tagPrefix"/> and the version.</summary>
+    public static string ReleaseUrl(string repo, string tagPrefix, Version version) => $"https://github.com/{repo}/releases/tag/{tagPrefix}{version.ToString(3)}";
 
     /// <summary>What GitHub's releases say about the running version.</summary>
     /// <param name="Newer">Releases newer than it.</param>

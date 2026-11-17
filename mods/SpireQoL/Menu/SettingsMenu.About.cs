@@ -21,7 +21,7 @@ public sealed partial class SettingsMenu
         if (author.Length > 0) Paragraph($"Made by {author}.");
         var links = UiKit.Row(10);
         links.AddChild(LinkButton("Project on GitHub", $"https://github.com/{UpdateNoticeFeature.Repo}"));
-        links.AddChild(LinkButton("All releases", $"https://github.com/{UpdateNoticeFeature.Repo}/releases"));
+        links.AddChild(LinkButton("All releases", UpdateNoticeFeature.ReleasesLink(null)));
         links.AddChild(LinkButton("Report a problem", $"https://github.com/{UpdateNoticeFeature.Repo}/issues"));
         _rows!.AddChild(Indented(links, bottom: 8));
 

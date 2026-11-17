@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Main Saves 1.0.9
+#### Changed
+- Rebuilt with the shared code update (no change in what it does).
+
+### Spire QoL 1.15.4
+#### Fixed
+- The update notice and the About page's releases button open Spire QoL's own releases, not every mod's in the repo; when you're behind, the update notice opens the newest Spire QoL release.
+
 ### Spire QoL 1.15.3
 #### Fixed
 - Map: Membership Card and The Courier show beside Merchant in the legend (cheaper shops). The coverage check now counts a relic that changes shop prices or stock as one that changes shops; the eggs and Fresnel Lens, which change every card you get, stay off the map.

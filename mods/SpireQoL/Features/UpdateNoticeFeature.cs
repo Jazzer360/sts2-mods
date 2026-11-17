@@ -140,10 +140,10 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         _label.HorizontalAlignment = HorizontalAlignment.Right;
         _label.MouseFilter = Control.MouseFilterEnum.Stop;
         _label.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
-        _label.TooltipText = "Open the Spire QoL releases on GitHub";
+        _label.TooltipText = "Open Spire QoL's releases on GitHub (the newest one when you're behind)";
         _label.GuiInput += e =>
         {
-            if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OS.ShellOpen(GitHubReleases.PageUrl(Repo));
+            if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OS.ShellOpen(ReleasesLink(_status));
         };
         _warning.AddChild(_label);
 
@@ -166,6 +166,10 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
     /// <summary>Built with uncommitted changes (Directory.Build.targets stamps GitDirty).</summary>
     private static bool Dirty => Me.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)
         .OfType<System.Reflection.AssemblyMetadataAttribute>().Any(a => a.Key == "GitDirty" && a.Value == "true");
+
+    /// <summary>The newest Spire QoL release when you're behind (its download), else Spire QoL's releases (not the repo's other mods').</summary>
+    internal static string ReleasesLink(GitHubReleases.Status? s) =>
+        s is { Newer: > 0, Latest: { } latest } ? GitHubReleases.ReleaseUrl(Repo, TagPrefix, latest) : GitHubReleases.PageUrl(Repo, TagPrefix);
 
     private static bool IsTestBuild(GitHubReleases.Status s) => !s.Released || Dirty;
 
