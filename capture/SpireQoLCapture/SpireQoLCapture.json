@@ -1,0 +1,12 @@
+{
+  "id": "SpireQoLCapture",
+  "name": "Spire QoL Capture",
+  "author": "Derek Jass",
+  "description": "Screenshot helper for the Spire QoL site. Sets up example fights from scene files and saves screenshots. Does nothing unless the game is started with --spireqol-capture.",
+  "version": "1.0.0",
+  "has_dll": true,
+  "has_pck": false,
+  "affects_gameplay": true,
+  "dependencies": [],
+  "min_game_version": "v0.113.0"
+}

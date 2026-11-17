@@ -1,0 +1,11 @@
+title Shuffle Warning
+section In fights
+character Silent
+fight CULTISTS_NORMAL 3
+wait combat-started
+move-pile Draw Discard
+add Draw STRIKE_SILENT
+hand ACROBATICS BACKFLIP STRIKE_SILENT DEFEND_SILENT NEUTRALIZE
+wait 1.5
+caption The discard pile tab: this card's draws would reshuffle your discard pile mid-turn.
+shot shuffle-warning hand pad 30

@@ -1,0 +1,13 @@
+title Incoming Damage
+section In fights
+character Ironclad
+relic add ORICHALCUM
+fight CULTISTS_NORMAL 3
+wait combat-started
+endturn
+wait turn-started
+block 5 0
+hand STRIKE_IRONCLAD DEFEND_IRONCLAD STRIKE_IRONCLAD BASH DEFEND_IRONCLAD
+wait 1.5
+caption What the enemies' next turn costs you: incoming damage, your block at end of turn, and what you'll lose.
+shot incoming-damage widget incoming-damage + player pad 40

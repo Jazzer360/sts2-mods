@@ -1,0 +1,13 @@
+title Proc Indicators
+section In fights
+character Ironclad
+relic add LETTER_OPENER
+fight SLIMES_NORMAL 5
+wait combat-started
+power FEEL_NO_PAIN_POWER 3 0
+power RAGE_POWER 3 0
+power JUGGERNAUT_POWER 4 0
+hand STRIKE_IRONCLAD TRUE_GRIT DEFEND_IRONCLAD POMMEL_STRIKE SHRUG_IT_OFF
+wait 1.5
+caption Each tab is a power or relic that playing the card sets off right now, with the block or damage it adds.
+shot proc-tabs hand pad 30

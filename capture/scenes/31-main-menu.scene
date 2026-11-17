@@ -1,0 +1,6 @@
+title Update Notice
+section General
+no-run
+wait 4
+caption On the main menu: a note when a newer Spire QoL is out (or that you're up to date), and a gear for the settings.
+shot update-notice rect 0.55 0.82 0.45 0.18 pad 0

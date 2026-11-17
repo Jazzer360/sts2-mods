@@ -1,0 +1,11 @@
+title Run Reminders: events
+section Outside fights
+character Ironclad
+relic add BING_BONG
+relic add BOWLER_HAT
+relic add TUNGSTEN_ROD
+event COLORFUL_PHILOSOPHERS
+wait room
+wait 2
+caption Beside event options: the relics that change what each option does, with the chance a card relic applies.
+shot event full

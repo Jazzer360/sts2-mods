@@ -1,0 +1,11 @@
+title Crossed tabs: warnings
+section In fights
+character Ironclad
+relic add ART_OF_WAR
+fight CULTISTS_NORMAL 3
+wait combat-started
+power THORNS_POWER 3 1
+hand STRIKE_IRONCLAD ANGER DEFEND_IRONCLAD BASH SHRUG_IT_OFF
+wait 1.5
+caption A red slash means playing the card might cost you: Thorns hitting back, or giving up Art of War's energy.
+shot warnings hand + enemy 1 pad 30

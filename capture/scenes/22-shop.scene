@@ -1,0 +1,11 @@
+title Run Reminders: shops
+section Outside fights
+character Ironclad
+relic add BING_BONG
+relic add LUCKY_FYSH
+relic add SOZU
+room Shop
+wait room
+wait 2
+caption In the shop: the relics that buying each item sets off, beside its price.
+shot shop full

@@ -1,0 +1,14 @@
+title Relic Counters
+section In fights
+character Ironclad
+relic add PEN_NIB
+relic add KUNAI
+relic add SHURIKEN
+relic add NUNCHAKU
+relic add ORNAMENTAL_FAN
+fight SLIMES_NORMAL 5
+wait combat-started
+hand STRIKE_IRONCLAD DEFEND_IRONCLAD ANGER POMMEL_STRIKE SHRUG_IT_OFF
+wait 1.5
+caption One row per counter relic: progress, and a flash when the next card fires it.
+shot relic-counters widget relic-counters + player pad 40

@@ -1,0 +1,14 @@
+title Settings and Guide
+section Settings
+character Ironclad
+fight CULTISTS_NORMAL 3
+wait combat-started
+key F10
+wait 1
+caption Every feature, tab and tracker row can be switched on or off (F10).
+shot settings full
+click text Guide
+wait 1
+caption The in-game Guide explains every mark with live examples.
+shot guide full
+key Escape

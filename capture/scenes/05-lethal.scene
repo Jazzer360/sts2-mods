@@ -1,0 +1,10 @@
+title Lethal
+section In fights
+character Silent
+fight CULTISTS_NORMAL 3
+wait combat-started
+hp enemy 1 9
+hand STRIKE_SILENT NEUTRALIZE DEFEND_SILENT SURVIVOR STRIKE_SILENT
+wait 1.5
+caption The skull: playing this card kills that enemy before it acts, in every outcome. The arrow means it depends on where you aim.
+shot lethal hand + enemies pad 30

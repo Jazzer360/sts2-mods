@@ -1,0 +1,10 @@
+title Rest Preview
+section Outside fights
+character Ironclad
+relic add REGAL_PILLOW
+hp player 31
+room RestSite
+wait room
+wait 2
+caption At a rest site: what resting heals with your relics, and how much of it would be wasted.
+shot rest-preview widget rest-hp + player pad 60

@@ -1,0 +1,10 @@
+bin/
+obj/
+site/dist/
+capture/out/
+*.user
+# Never commit game files or decompiled game code.
+*.pck
+sts2.dll
+GodotSharp.dll
+0Harmony.dll

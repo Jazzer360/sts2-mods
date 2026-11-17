@@ -1,0 +1,9 @@
+title Run Reminders: map
+section Outside fights
+character Ironclad
+relic add MEMBERSHIP_CARD
+relic add REGAL_PILLOW
+key M
+wait 2
+caption On the map legend: your relics that make a kind of room unusually good or bad.
+shot map full

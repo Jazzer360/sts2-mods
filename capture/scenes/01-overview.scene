@@ -1,0 +1,16 @@
+# A typical early fight: starter cards, a few relics, two enemies. The hero image.
+title Overview
+section In fights
+character Ironclad
+relic add PEN_NIB
+relic add KUNAI
+relic add LETTER_OPENER
+potion FIRE_POTION
+potion BLOCK_POTION
+fight CULTISTS_NORMAL 3
+wait combat-started
+power FEEL_NO_PAIN_POWER 3 0
+hand STRIKE_IRONCLAD BASH TRUE_GRIT DEFEND_IRONCLAD SHRUG_IT_OFF
+wait 1.5
+caption Tabs on your cards, what you'll take this turn, and your relic counters, all at a glance.
+shot overview full
