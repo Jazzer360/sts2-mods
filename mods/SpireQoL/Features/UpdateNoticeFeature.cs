@@ -18,7 +18,7 @@ namespace SpireQoL.Features;
 /// </summary>
 public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
 {
-    private const string Repo = "Jazzer360/sts2-mods";
+    internal const string Repo = "Jazzer360/sts2-mods";
     private const string TagPrefix = "spireqol-v";
 
     private static readonly Color Behind = new(0.62f, 0.85f, 0.62f);

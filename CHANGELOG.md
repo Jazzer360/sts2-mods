@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.4
+#### Added
+- About page in the settings menu: the version and author, links to the project on GitHub, its releases and its issues, the mod's philosophy, and every release's patch notes with their dates (paged; search finds a line in any release). It's read from the changelog and the README built into the mod.
+
 ### Spire QoL 1.11.3
 #### Changed
 - Card reward panel (Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing): now centered above the offered cards, under the "Choose a card" banner, its relics side by side and a little bigger; left of the cards when there's no room above. It used to sit at the screen's left edge, easy to miss. A panel you moved stays where you put it.

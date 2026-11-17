@@ -35,7 +35,7 @@ public sealed partial class SettingsMenu
 
     // Pages (decision #66): what shows in fights (its features and options, then the tab kinds and every relic, power and card's
     // switches), what shows outside fights (its features and options, then every reminder's switches), and the rest.
-    private enum Page { Fights, CardTabs, Relics, YourPowers, EnemyPowers, Cards, Outside, General, Guide }
+    private enum Page { Fights, CardTabs, Relics, YourPowers, EnemyPowers, Cards, Outside, General, Guide, About }
 
     private static readonly (Page Page, string Title)[] Pages =
     {
@@ -48,6 +48,7 @@ public sealed partial class SettingsMenu
         (Page.Outside, "Outside fights"),
         (Page.General, "General"),
         (Page.Guide, "Guide"),
+        (Page.About, "About"),
     };
 
     /// <summary>The page a feature's switch is on.</summary>
@@ -345,6 +346,7 @@ public sealed partial class SettingsMenu
                 case Page.EnemyPowers: BuildSources(SourceGroup.EnemyPower); break;
                 case Page.Cards: BuildSources(SourceGroup.Card); break;
                 case Page.Guide: BuildGuide(); break;
+                case Page.About: BuildAbout(); break;
             }
         }
         catch (Exception ex)

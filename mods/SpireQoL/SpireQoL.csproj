@@ -4,10 +4,31 @@
     <!-- Must match "id" in SpireQoL.json: the game loads <id>.dll. -->
     <AssemblyName>SpireQoL</AssemblyName>
     <RootNamespace>SpireQoL</RootNamespace>
-    <Version>1.11.3</Version>
+    <Version>1.11.4</Version>
   </PropertyGroup>
   <ItemGroup>
     <!-- The settings check runs as a test before every release (tests/SpireQoL.Catalog.Tests). -->
     <InternalsVisibleTo Include="SpireQoL.Catalog.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The settings menu's About page (Menu/ReleaseNotes.cs, decision #68): read from these, never written by hand. -->
+    <EmbeddedResource Include="../../CHANGELOG.md" LogicalName="SpireQoL.CHANGELOG.md" Link="About/CHANGELOG.md" />
+    <EmbeddedResource Include="README.md" LogicalName="SpireQoL.README.md" />
+    <EmbeddedResource Include="SpireQoL.json" LogicalName="SpireQoL.manifest.json" />
+  </ItemGroup>
+  <!-- Release dates for the About page's patch notes: each release tag's date (empty without git). -->
+  <Target Name="SpireQoLReleaseDates" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <_SqPct Condition="'$(OS)' == 'Windows_NT'">%25%25</_SqPct>
+      <_SqPct Condition="'$(OS)' != 'Windows_NT'">%25</_SqPct>
+    </PropertyGroup>
+    <Exec Command="git for-each-ref --format=&quot;$(_SqPct)(refname:short) $(_SqPct)(creatordate:short)&quot; refs/tags/spireqol-v*" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" StandardOutputImportance="low" IgnoreExitCode="true" ContinueOnError="true">
+      <Output TaskParameter="ConsoleOutput" ItemName="_SqReleaseDates" />
+    </Exec>
+    <WriteLinesToFile File="$(IntermediateOutputPath)release-dates.txt" Lines="@(_SqReleaseDates)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <EmbeddedResource Include="$(IntermediateOutputPath)release-dates.txt" LogicalName="SpireQoL.release-dates.txt" />
+      <FileWrites Include="$(IntermediateOutputPath)release-dates.txt" />
+    </ItemGroup>
+  </Target>
 </Project>
