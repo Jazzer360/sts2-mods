@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.1
+#### Fixed
+- Intent Forecast's intents bob in step with the enemy's intent on screen instead of each on its own.
+
 ### Spire QoL 1.14.0
 #### Added
 - Intent Forecast shows what each buff or debuff move applies: the power's icon and amount beside its intent (Corpse Slug's Goop: Frail 2), read from the move itself.

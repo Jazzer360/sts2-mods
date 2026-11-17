@@ -84,6 +84,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     {
         UiKit.Clear(_rows!);
         var targets = enemy.CombatState?.PlayerCreatures.ToList() ?? new List<Creature>();
+        // The game's intents bob (NIntent._Process: a sine from _timeOffset); ours start in step with the intent on screen.
+        var bob = BobOffset(enemy);
         for (var t = 0; t < turns.Count; t++)
         {
             var turn = turns[t];
@@ -105,7 +107,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 {
                     foreach (var intent in move.Intents)
                     {
-                        var node = NIntent.Create(0f);
+                        var node = NIntent.Create(bob);
                         node.MouseFilter = Control.MouseFilterEnum.Ignore;
                         row.AddChild(node);
                         if (node.IsNodeReady()) node.UpdateIntent(intent, targets, enemy);
@@ -141,6 +143,14 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             chip.AddChild(amount);
         }
         return chip;
+    }
+
+    /// <summary>The bob timing (NIntent._timeOffset) of the enemy's first intent on screen, or 0.</summary>
+    private static float BobOffset(Creature enemy)
+    {
+        var node = NCombatRoom.Instance?.CreatureNodes.FirstOrDefault(n => GodotObject.IsInstanceValid(n) && n.Entity == enemy);
+        var first = node?.IntentContainer?.GetChildren().OfType<NIntent>().FirstOrDefault();
+        return first != null ? Sts2State.Private(first, "_timeOffset", 0f) : 0f;
     }
 
     /// <summary>The living enemy whose intent is under the mouse.</summary>
