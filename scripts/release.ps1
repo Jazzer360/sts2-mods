@@ -157,3 +157,11 @@ foreach ($m in $mods) {
 }
 
 if (-not $DryRun -and $released -eq 0) { Write-Host 'Nothing to release: every mod version already has a release.' }
+
+# The site (gh-pages branch) builds its changelog and download link from main and the releases, but only when its own
+# branch changes: start its build so a release shows there right away. Nothing to do without the branch or its workflow.
+if (-not $DryRun -and $released -gt 0) {
+    gh workflow run pages.yml --ref gh-pages 2>$null | Out-Null
+    if ($LASTEXITCODE -eq 0) { Write-Host 'Started the site build (gh-pages) for the new release.' }
+    else { Write-Host 'warning: couldn''t start the site build; run: gh workflow run pages.yml --ref gh-pages' -ForegroundColor Yellow }
+}
