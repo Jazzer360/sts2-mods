@@ -30,9 +30,16 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     private string _key = "";
     /// <summary>The labels and power chips, each in a holder, moved every frame with the intents' bob.</summary>
     private readonly List<Control> _bobbing = new();
-    /// <summary>Each row's left spacer and the holders right of its intents: the spacer matches them, so the intents are centred.</summary>
-    private readonly List<(Control Spacer, List<Control> Extras)> _balance = new();
+    /// <summary>
+    /// Each row's spacers and what sits either side of its intents (the chance left, the power icons right): the narrower side
+    /// gets a spacer, so the intents are centred over the intent on screen.
+    /// </summary>
+    private readonly List<(Control LeftSpacer, List<Control> Left, List<Control> Right, Control RightSpacer)> _balance = new();
     private const int RowGap = 6;
+    /// <summary>Between a random pick's moves, side by side.</summary>
+    private const int OptionGap = 20;
+    /// <summary>Holders that only bob (a chance above its move), rather than sitting level with the intent icon beside them.</summary>
+    private readonly HashSet<Control> _bobOnly = new();
     private float _bob;
 
     public IntentForecastFeature(QolContext ctx) => _ctx = ctx;
@@ -82,16 +89,16 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             Build(enemy, turns, view);
         }
         _widget!.HasContent = true;
-        // NIntent._Process's bob, so the labels and chips move with the intents.
         // NIntent._Process's bob, for rows with no intent icon to follow.
         var y = -(Mathf.Sin(Time.GetTicksMsec() * 0.001f * Mathf.Pi + _bob) * 10f + 8f);
-        // As wide on the left as the chips and chances on the right: each row's intents sit centred, over the intent on screen.
-        foreach (var (spacer, extras) in _balance)
+        // The narrower side of each row's intents gets a spacer (each shown child adds its width and a gap): the intents sit centred.
+        foreach (var (leftSpacer, left, right, rightSpacer) in _balance)
         {
-            if (!GodotObject.IsInstanceValid(spacer)) continue;
-            var width = extras.Where(GodotObject.IsInstanceValid).Sum(x => x.CustomMinimumSize.X + RowGap);
-            spacer.Visible = extras.Count > 0; // a hidden child takes no gap
-            if (extras.Count > 0 && !Mathf.IsEqualApprox(spacer.CustomMinimumSize.X, width - RowGap)) spacer.CustomMinimumSize = new Vector2(width - RowGap, 0);
+            if (!GodotObject.IsInstanceValid(leftSpacer) || !GodotObject.IsInstanceValid(rightSpacer)) continue;
+            float Side(List<Control> xs) => xs.Where(GodotObject.IsInstanceValid).Sum(x => x.CustomMinimumSize.X + RowGap);
+            var d = Side(right) - Side(left);
+            Pad(leftSpacer, d);
+            Pad(rightSpacer, -d);
         }
         foreach (var c in _bobbing)
         {
@@ -101,9 +108,17 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             if (holder.CustomMinimumSize != size) holder.CustomMinimumSize = size;
             c.Size = size;
             // Level with the intent icon in its row as it is drawn this frame (bob included); else centred, then the bob.
-            var top = IconCentre(holder) is { } centre ? centre - size.Y / 2 : (holder.Size.Y - size.Y) / 2 + y;
+            var top = !_bobOnly.Contains(c) && IconCentre(holder) is { } centre ? centre - size.Y / 2 : (holder.Size.Y - size.Y) / 2 + y + 8f;
             c.Position = new Vector2(0, top);
         }
+    }
+
+    /// <summary>A spacer shown only when its side is short by <paramref name="by"/>, as wide as that less its own gap.</summary>
+    private static void Pad(Control spacer, float by)
+    {
+        spacer.Visible = by > 0.5f; // a hidden child takes no gap
+        var width = Math.Max(0, by - RowGap);
+        if (spacer.Visible && !Mathf.IsEqualApprox(spacer.CustomMinimumSize.X, width)) spacer.CustomMinimumSize = new Vector2(width, 0);
     }
 
     /// <summary>The y, in the holder's own coordinates, of the centre of the intent icon drawn in its row (the NIntent's sprite).</summary>
@@ -115,8 +130,9 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     }
 
     /// <summary>A control in a plain holder of its size (rows are containers, which would undo the bob), added to the bobbing list.</summary>
-    private Control Bobbing(Control inner)
+    private Control Bobbing(Control inner, bool followIcon = true)
     {
+        if (!followIcon) _bobOnly.Add(inner);
         inner.MouseFilter = Control.MouseFilterEnum.Ignore;
         var holder = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, CustomMinimumSize = inner.GetCombinedMinimumSize() };
         holder.AddChild(inner);
@@ -136,6 +152,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     {
         UiKit.Clear(_rows!);
         _bobbing.Clear();
+        _bobOnly.Clear();
         _balance.Clear();
         var targets = enemy.CombatState?.PlayerCreatures.ToList() ?? new List<Creature>();
         // The game's intents bob (NIntent._Process: a sine from _timeOffset); ours start in step with the intent on screen.
@@ -143,48 +160,64 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         for (var t = 0; t < turns.Count; t++)
         {
             var turn = turns[t];
-            for (var i = 0; i < turn.Moves.Count; i++)
+            // One row per turn, each on top of the last, so the forecast reads upward from the intent (next turn just above it).
+            var row = UiKit.Row(turn.Certain ? RowGap : OptionGap);
+            row.Alignment = BoxContainer.AlignmentMode.Center;
+            row.MouseFilter = Control.MouseFilterEnum.Ignore;
+            // In the tree first: NIntent finds its parts in _Ready, and UpdateIntent before that throws.
+            _rows!.AddChild(row);
+            _rows.MoveChild(row, 0);
+            if (turn.Certain)
             {
-                var (moveId, chance) = turn.Moves[i];
-                var row = UiKit.Row(RowGap);
-                row.Alignment = BoxContainer.AlignmentMode.Center;
-                var spacer = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
-                row.AddChild(spacer);
-                var extras = new List<Control>();
-                _balance.Add((spacer, extras));
-                row.MouseFilter = Control.MouseFilterEnum.Ignore;
-                // In the tree first: NIntent finds its parts in _Ready, and UpdateIntent before that throws. Each row goes on top,
-                // so the forecast reads upward from the intent: +1 just above it.
-                _rows!.AddChild(row);
-                _rows.MoveChild(row, 0);
-                if (view.Move(moveId) is { } move)
-                {
-                    foreach (var intent in move.Intents)
-                    {
-                        var node = NIntent.Create(bob);
-                        node.MouseFilter = Control.MouseFilterEnum.Ignore;
-                        row.AddChild(node);
-                        if (node.IsNodeReady()) node.UpdateIntent(intent, targets, enemy);
-                        else node.Ready += () => node.UpdateIntent(intent, targets, enemy);
-                    }
-                    // The powers the move applies (Frail 2), from its code: a reminder of what a buff or debuff intent is.
-                    if (enemy.Monster is { } monster)
-                        foreach (var applied in MovePowers.Of(monster, move))
-                        {
-                            var chip = Bobbing(PowerChip(applied));
-                            extras.Add(chip);
-                            row.AddChild(chip);
-                        }
-                }
-                if (!turn.Certain)
-                {
-                    var pct = Outlined(UiKit.Label($"{Math.Round(chance * 100)}%", 18, ChanceColor));
-                    pct.VerticalAlignment = VerticalAlignment.Center;
-                    var holder = Bobbing(pct);
-                    extras.Add(holder);
-                    row.AddChild(holder);
-                }
+                // Its intents centred over the intent on screen, the power icons to their right (a spacer on the left balances them).
+                var leftSpacer = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+                var rightSpacer = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+                row.AddChild(leftSpacer);
+                var right = new List<Control>();
+                AddMove(row, enemy, targets, bob, view, turn.Moves[0].Move, right);
+                row.AddChild(rightSpacer);
+                _balance.Add((leftSpacer, new List<Control>(), right, rightSpacer));
+                continue;
             }
+            // A random pick: its moves side by side, each with its chance above it.
+            foreach (var (moveId, chance) in turn.Moves)
+            {
+                var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
+                column.AddThemeConstantOverride("separation", 0);
+                row.AddChild(column);
+                var pct = Outlined(UiKit.Label($"{Math.Round(chance * 100)}%", 18, ChanceColor));
+                pct.HorizontalAlignment = HorizontalAlignment.Center;
+                var holder = Bobbing(pct, followIcon: false);
+                holder.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+                column.AddChild(holder);
+                var line = UiKit.Row(RowGap);
+                line.Alignment = BoxContainer.AlignmentMode.Center;
+                line.MouseFilter = Control.MouseFilterEnum.Ignore;
+                column.AddChild(line);
+                AddMove(line, enemy, targets, bob, view, moveId, new List<Control>());
+            }
+        }
+    }
+
+    /// <summary>A move's intents (the game's own nodes, bobbing in step with the intent on screen) and the powers it applies.</summary>
+    private void AddMove(HBoxContainer line, Creature enemy, List<Creature> targets, float bob, MoveStateMachineView view, string moveId, List<Control> right)
+    {
+        if (view.Move(moveId) is not { } move) return;
+        foreach (var intent in move.Intents)
+        {
+            var node = NIntent.Create(bob);
+            node.MouseFilter = Control.MouseFilterEnum.Ignore;
+            line.AddChild(node);
+            if (node.IsNodeReady()) node.UpdateIntent(intent, targets, enemy);
+            else node.Ready += () => node.UpdateIntent(intent, targets, enemy);
+        }
+        // The powers the move applies (Frail 2), from its code: a reminder of what a buff or debuff intent is.
+        if (enemy.Monster is not { } monster) return;
+        foreach (var applied in MovePowers.Of(monster, move))
+        {
+            var chip = Bobbing(PowerChip(applied));
+            right.Add(chip);
+            line.AddChild(chip);
         }
     }
 

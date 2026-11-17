@@ -390,7 +390,7 @@ public sealed partial class SettingsMenu
             + "With a chance when a roll decides it (General: Death chance).");
         GuideRow(null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
-            + "then each move a random pick can make, with its chance. Worked out from its move rules and the moves it has made, never a roll.");
+            + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");
         GuideRow(null, "Update Notice",
             "On the main menu, above the game's MODDED note: how many Spire QoL versions behind you are, or that you're up to date.");
         GuideRow(null, "Moving things",

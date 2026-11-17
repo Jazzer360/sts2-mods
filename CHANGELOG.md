@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.7
+#### Changed
+- Intent Forecast: a random pick shows its moves side by side on one row, each with its chance above it, so every row is one turn and a roll stands apart from the turns its rules make certain (those stay lined up with the intent on screen).
+
 ### Spire QoL 1.14.6
 #### Fixed
 - Intent Forecast's intents line up with the intent on screen: the power icons and chances beside them no longer push them off centre.
