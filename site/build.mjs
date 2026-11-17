@@ -175,7 +175,9 @@ function shotFigure(name, shots, haveFiles) {
     return `<figure class="shot missing"><div>Screenshot not captured yet</div></figure>`;
   }
   const dims = s ? ` width="${s.width}" height="${s.height}"` : "";
-  return `<figure class="shot"><img src="shots/${name}.webp" alt="${esc(s?.caption || name)}" loading="lazy"${dims}>${s?.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`;
+  // Narrow crops (a widget beside a character) are shown smaller, near their size in the game.
+  const compact = s && s.frameWidth && s.width / s.frameWidth < 0.45;
+  return `<figure class="shot${compact ? " compact" : ""}"><img src="shots/${name}.webp" alt="${esc(s?.caption || name)}" loading="lazy"${dims}>${s?.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`;
 }
 
 function indexPage(features, shots, haveFiles, latest, manifest) {

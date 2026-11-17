@@ -1,0 +1,16 @@
+# Three Lightning orbs at end of turn, each hitting a random enemy: the wounded cultist dies to two of them.
+title Death Skull
+section In fights
+character Defect
+fight CULTISTS_NORMAL 3
+wait combat-started
+hand ZAP BALL_LIGHTNING DEFEND_DEFECT STRIKE_DEFECT DUALCAST
+play BALL_LIGHTNING enemy 1
+play ZAP
+endturn
+wait turn-started
+hp enemy 1 6
+hand STRIKE_DEFECT DEFEND_DEFECT ZAP STRIKE_DEFECT DEFEND_DEFECT
+wait 1.5
+caption The skull beside an enemy's HP: it dies before it acts if you end your turn now. When your random Lightning decides it, with the chance.
+shot death-skull enemies + player pad 110

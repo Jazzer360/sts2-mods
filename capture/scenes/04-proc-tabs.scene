@@ -1,0 +1,18 @@
+# Feel No Pain from turn 1; two Skills already played this turn, so Letter Opener's third is next.
+title Proc Indicators
+section In fights
+character Ironclad
+relic add LETTER_OPENER
+fight SLIMES_NORMAL 5
+wait combat-started
+hand FEEL_NO_PAIN STRIKE_IRONCLAD DEFEND_IRONCLAD BASH DEFEND_IRONCLAD
+play FEEL_NO_PAIN
+play STRIKE_IRONCLAD enemy 2
+endturn
+wait turn-started
+hand DEFEND_IRONCLAD SHRUG_IT_OFF TRUE_GRIT POMMEL_STRIKE BURNING_PACT
+play DEFEND_IRONCLAD
+play SHRUG_IT_OFF
+wait 1.5
+caption Feel No Pain on the cards that exhaust, with the block they'd give, and Letter Opener on your next Skill.
+shot proc-tabs hand pad 30

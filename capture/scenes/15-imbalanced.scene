@@ -1,9 +1,9 @@
 title Stuns and wake-ups
 section In fights
-character Ironclad
+character Necrobinder
 fight BOWLBUGS_NORMAL 2
 wait combat-started
-hand DEFEND_IRONCLAD SHRUG_IT_OFF STRIKE_IRONCLAD DEFEND_IRONCLAD BASH
+hand DEFEND_NECROBINDER STRIKE_NECROBINDER DEFEND_NECROBINDER BODYGUARD STRIKE_NECROBINDER
 wait 1.5
 caption Imbalanced, Burrowed, Flutter and Asleep: the tab shows when your card stuns the enemy or wakes it up.
 shot imbalanced hand + enemies pad 30

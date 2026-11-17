@@ -108,6 +108,9 @@ public sealed class CaptureRunner
     {
         SaveManager.Instance.PrefsSave.FastMode = FastModeType.Fast;
         SaveManager.Instance.SetFtuesEnabled(enabled: false);
+        // The main menu shows the Early Access note as a popup until it's been seen, and it stays up over the next run.
+        SaveManager.Instance.SettingsSave.SeenEaDisclaimer = true;
+        SaveManager.Instance.SaveSettings();
         _console = new DevConsole(shouldAllowDebugCommands: true);
         var unlock = _console.ProcessCommand("unlock all");
         Log($"unlock all: {unlock.success} {unlock.msg}");
@@ -177,6 +180,7 @@ public sealed class CaptureRunner
             Array.Empty<ModifierModel>(), seed, GameMode.Standard, isCustomGame: true).WaitAsync(TimeSpan.FromSeconds(120));
         await Until(() => runState.CurrentRoom != null && runState.CurrentRoom.RoomType != RoomType.Unassigned, "room assigned");
         await Frames(10);
+        NModalContainer.Instance?.Clear();
         await ParkMouse();
         Log($"  run started: {character.Id.Entry}, seed {seed}");
     }
@@ -201,6 +205,7 @@ public sealed class CaptureRunner
             case "card-reward": await CardRewardScreen(t.Skip(1)); break;
             case "hp": await SetHp(t); break;
             case "endturn": await EndTurn(); break;
+            case "play": await Play(t); break;
             case "close-modals": NModalContainer.Instance?.Clear(); await Frames(5); break;
             case "shot": await Shot(scene, t.Skip(1).ToArray()); break;
             default: await Console(line.Text); break;
@@ -242,6 +247,23 @@ public sealed class CaptureRunner
                 await Seconds(double.Parse(what, System.Globalization.CultureInfo.InvariantCulture));
                 break;
         }
+    }
+
+    /// <summary>
+    /// play &lt;CARD_ID&gt; [enemy N]: plays the leftmost copy in your hand the way the game does when you drop it
+    /// (CardModel.TryManualPlay: energy, targeting and every hook), then waits for it to resolve.
+    /// </summary>
+    private static async Task Play(string[] t)
+    {
+        var id = t[1].ToUpperInvariant();
+        var card = PileType.Hand.GetPile(Me).Cards.FirstOrDefault(c => c.Id.Entry == id) ?? throw new Exception($"no {id} in hand");
+        MegaCrit.Sts2.Core.Entities.Creatures.Creature? target = null;
+        if (t.Length >= 4 && t[2].Equals("enemy", StringComparison.OrdinalIgnoreCase))
+            target = Regions.EnemyNodes().ElementAtOrDefault(int.Parse(t[3]) - 1)?.Entity ?? throw new Exception($"no enemy {t[3]}");
+        if (!card.TryManualPlay(target)) throw new Exception($"{id} can't be played{(target == null ? " (needs a target?)" : "")}");
+        await Until(() => !PileType.Hand.GetPile(Me).Cards.Contains(card), $"{id} to leave the hand");
+        await Until(() => !RunManager.Instance.ActionExecutor.IsRunning, $"{id} to resolve");
+        await Seconds(1.0);
     }
 
     private static int _endTurnFrom;

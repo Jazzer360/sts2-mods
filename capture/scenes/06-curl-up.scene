@@ -1,0 +1,9 @@
+title Crossed tabs: Curl Up
+section In fights
+character Defect
+fight LOUSE_PROGENITOR_NORMAL 2
+wait combat-started
+hand STRIKE_DEFECT ZAP DEFEND_DEFECT STRIKE_DEFECT DUALCAST
+wait 1.5
+caption Curl Up: hitting it makes it gain block, so your attacks carry a warning.
+shot curl-up hand + enemy 1 pad 30

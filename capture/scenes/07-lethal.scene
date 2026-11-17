@@ -1,10 +1,13 @@
 title Lethal
 section In fights
-character Silent
+character Regent
 fight CULTISTS_NORMAL 3
 wait combat-started
+play STRIKE_REGENT enemy 1
+endturn
+wait turn-started
 hp enemy 1 5
-hand STRIKE_SILENT NEUTRALIZE DEFEND_SILENT SURVIVOR STRIKE_SILENT
+hand STRIKE_REGENT DEFEND_REGENT FALLING_STAR VENERATE STRIKE_REGENT
 wait 1.5
 caption The skull: playing this card kills that enemy before it acts, in every outcome. The arrow means it depends on where you aim.
 shot lethal hand + enemies pad 30

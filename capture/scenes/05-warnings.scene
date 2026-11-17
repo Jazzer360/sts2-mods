@@ -1,0 +1,14 @@
+# The Spiny Toad grows its spikes on its first turn (Thorns 5).
+title Crossed tabs: warnings
+section In fights
+character Silent
+relic add ART_OF_WAR
+fight SPINY_TOAD_NORMAL 2
+wait combat-started
+play DEFEND_SILENT
+endturn
+wait turn-started
+hand STRIKE_SILENT DAGGER_THROW DEFEND_SILENT NEUTRALIZE SURVIVOR
+wait 1.5
+caption A red slash means playing the card might cost you: the toad's spikes hitting back, or giving up Art of War's energy.
+shot warnings hand + enemy 1 pad 30

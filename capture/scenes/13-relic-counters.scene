@@ -1,0 +1,16 @@
+# Two Strikes and a Defend into the turn: Kunai is one Attack away.
+title Relic Counters
+section In fights
+character Ironclad
+relic add PEN_NIB
+relic add KUNAI
+relic add LETTER_OPENER
+fight SLIMES_NORMAL 5
+wait combat-started
+hand STRIKE_IRONCLAD DEFEND_IRONCLAD STRIKE_IRONCLAD BASH DEFEND_IRONCLAD
+play STRIKE_IRONCLAD enemy 2
+play DEFEND_IRONCLAD
+play STRIKE_IRONCLAD enemy 2
+wait 1.5
+caption One row per counter relic, with its progress; it flashes when the next card fires it (here Kunai).
+shot relic-counters widget relic-counters + player pad 40

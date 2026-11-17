@@ -1,0 +1,14 @@
+title Incoming Damage with Fairy in a Bottle
+section In fights
+character Silent
+potion FAIRY_IN_A_BOTTLE
+fight CULTISTS_NORMAL 3
+wait combat-started
+play DEFEND_SILENT
+endturn
+wait turn-started
+hp player 8
+hand STRIKE_SILENT NEUTRALIZE STRIKE_SILENT DEFEND_SILENT SURVIVOR
+wait 1.5
+caption Low on HP: this hit would kill you, so Fairy in a Bottle saves you, and the sum shows the HP you'd be left with.
+shot incoming-fairy widget incoming-damage + player pad 40

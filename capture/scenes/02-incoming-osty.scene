@@ -1,0 +1,15 @@
+title Incoming Damage with Osty
+section In fights
+character Necrobinder
+fight CULTISTS_NORMAL 3
+wait combat-started
+hand BODYGUARD STRIKE_NECROBINDER DEFEND_NECROBINDER STRIKE_NECROBINDER DEFEND_NECROBINDER
+play BODYGUARD
+play STRIKE_NECROBINDER enemy 1
+endturn
+wait turn-started
+hand STRIKE_NECROBINDER DEFEND_NECROBINDER UNLEASH DEFEND_NECROBINDER STRIKE_NECROBINDER
+play DEFEND_NECROBINDER
+wait 1.5
+caption The Necrobinder's sum: incoming damage, your block, what Osty takes for you, and what's left for you.
+shot incoming-osty widget incoming-damage + player pad 40

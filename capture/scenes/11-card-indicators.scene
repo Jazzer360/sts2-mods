@@ -3,9 +3,10 @@ section In fights
 character Silent
 fight SLIMES_NORMAL 5
 wait combat-started
-power BURST_POWER 1 0
+hand BURST STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR
+play BURST
 hand APPARITION BACKFLIP REFLEX ACROBATICS STRIKE_SILENT
 enchant STEADY 1 4
 wait 1.5
-caption Retain, Sly, double plays (here Burst on Skills) and Ethereal cards, readable on the top edge of the card.
+caption Retain, Sly, double plays (here Burst on your next Skill) and Ethereal cards, readable on the top edge of the card.
 shot card-indicators hand pad 30

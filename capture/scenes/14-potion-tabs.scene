@@ -1,12 +1,11 @@
 title Potion Tabs
 section In fights
-character Ironclad
+character Regent
 relic add REPTILE_TRINKET
 potion FIRE_POTION
 potion STRENGTH_POTION
 fight CULTISTS_NORMAL 3
 wait combat-started
-hand STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_IRONCLAD DEFEND_IRONCLAD
 wait 1.5
 caption Tabs under your potions for the relics that drinking them sets off.
 shot potion-tabs rect 0 0 0.6 0.16 pad 0

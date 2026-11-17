@@ -11,7 +11,9 @@
         {
           "id": "on-card-tabs",
           "title": "On-card tabs",
-          "doc": ["On-card tabs: one language for everything on a card"],
+          "doc": [
+            "On-card tabs: one language for everything on a card"
+          ],
           "summary": "Everything Spire QoL has to say about a card hangs off its top edge as a small tab, so you can read a fanned hand without hovering. Every tab answers one question: does something happen the moment I play this card, right now?",
           "points": [
             "Each tab carries the icon of what causes it: a relic, a power, an enchantment or a pile.",
@@ -20,12 +22,17 @@
             "The aim marker (the game's targeting arrow in the corner) means it happens only at some targets, so aim matters.",
             "Never covers a card's cost, title or enchantment, and never reuses the game's own glow colors."
           ],
-          "shots": ["warnings"]
+          "shots": [
+            "warnings",
+            "curl-up"
+          ]
         },
         {
           "id": "proc-indicators",
           "title": "Proc Indicators",
-          "doc": ["Proc Indicators"],
+          "doc": [
+            "Proc Indicators"
+          ],
           "summary": "A tab for every relic and power that playing the card would set off right now: Feel No Pain on an exhaust, Rage on an attack, Letter Opener on your third skill, Pen Nib's tenth attack, and hundreds more.",
           "points": [
             "Amounts come from the game's own block and damage math, Dexterity, Frail and Vulnerable included.",
@@ -35,24 +42,33 @@
             "Relics you'd use up or give up: Pen Nib ready, Art of War and Pael's Tears crossed.",
             "In multiplayer, your teammates' relics and powers that your card sets off get tabs too."
           ],
-          "shots": ["proc-tabs", "imbalanced"]
+          "shots": [
+            "proc-tabs",
+            "imbalanced"
+          ]
         },
         {
           "id": "lethal",
           "title": "Lethal tab",
-          "doc": ["Outcome simulator"],
+          "doc": [
+            "Outcome simulator"
+          ],
           "summary": "A skull on a card means playing it kills an enemy before that enemy acts, in every possible outcome: the card's hits, the orbs it evokes, the procs it sets off and everything your end of turn does.",
           "points": [
             "With the aim marker when only some targets die, so you know where to aim.",
             "Random targets (Lightning, Juggernaut, Forgotten Soul...) are worked through branch by branch. A good outcome needs every branch, a warning needs only one.",
             "Comes from the same simulator as every other prediction, which plays out your turn and the enemy turn with the game's own rules."
           ],
-          "shots": ["lethal"]
+          "shots": [
+            "lethal"
+          ]
         },
         {
           "id": "incoming-damage",
           "title": "Incoming Damage",
-          "doc": ["Incoming Damage"],
+          "doc": [
+            "Incoming Damage"
+          ],
           "summary": "A small sum beside your HP bar, read like a math problem: incoming damage, minus your block at end of turn, minus what Osty absorbs, equals what you'll lose. A skull when it kills you.",
           "points": [
             "Plays out the enemy turn hit by hit, in turn order: Thorns, Flame Barrier and Reflect stopping multi-hits, poison killing an enemy before it acts, end-of-turn block and damage.",
@@ -60,69 +76,97 @@
             "Shows +1 turn when ending your turn now gives you another turn first (Pael's Eye, Extra Turn).",
             "Multiplayer: hover a teammate to see the same sum for them (Teammate Incoming Damage)."
           ],
-          "shots": ["incoming-damage"]
+          "shots": [
+            "incoming-osty",
+            "incoming-fairy"
+          ]
         },
         {
           "id": "death-skull",
           "title": "Death Skull",
-          "doc": ["Death Skull"],
+          "doc": [
+            "Death Skull"
+          ],
           "summary": "The game's skull beside an enemy's HP when it dies before acting if you end your turn now: to poison, your orbs, end-of-turn damage, or your teammates.",
           "points": [
-            "When a roll decides it (a random Lightning target), the skull carries the chance, such as 50%."
+            "When a roll decides it, such as Lightning orbs hitting a random enemy at the end of your turn, the skull carries the chance."
           ],
-          "shots": ["death-skull"]
+          "shots": [
+            "death-skull"
+          ]
         },
         {
           "id": "intent-forecast",
           "title": "Intent Forecast",
-          "doc": ["Intent Forecast"],
+          "doc": [
+            "Intent Forecast"
+          ],
           "summary": "Hover an enemy's intent to see its next moves: every turn its move rules make certain, up to three ahead, and the odds of each move when it picks at random.",
           "points": [
             "Each move shows the powers it applies, with amounts (Frail 2).",
             "Worked out from the enemy's own move rules and the moves you've seen it make. Hidden intents stay hidden."
           ],
-          "shots": ["intent-forecast"]
+          "shots": [
+            "intent-slugs",
+            "intent-exoskeletons"
+          ]
         },
         {
           "id": "card-indicators",
           "title": "Card Indicators",
-          "doc": ["Card Indicators"],
+          "doc": [
+            "Card Indicators"
+          ],
           "summary": "Changes to a card that the game only shows as text: Retain and Sly tabs, a tab for each double-play source (Echo Form, Burst, Duplication, Throwing Axe...), a 2× tab for Replay, and translucent Ethereal cards.",
           "points": [
             "Double plays come from the game's own play-count query, so new sources are picked up automatically.",
             "Ethereal opacity is adjustable."
           ],
-          "shots": ["card-indicators"]
+          "shots": [
+            "card-indicators"
+          ]
         },
         {
           "id": "shuffle-warning",
           "title": "Shuffle Warning",
-          "doc": ["Shuffle Warning"],
+          "doc": [
+            "Shuffle Warning"
+          ],
           "summary": "A discard-pile tab on cards whose draws would run past your draw pile and reshuffle your discard pile mid-turn.",
           "points": [
             "Counts every draw the play sets off, not just the card's own."
           ],
-          "shots": ["shuffle-warning"]
+          "shots": [
+            "shuffle-warning"
+          ]
         },
         {
           "id": "relic-counters",
           "title": "Relic Counters",
-          "doc": ["Relic Counters"],
+          "doc": [
+            "Relic Counters"
+          ],
           "summary": "A compact tray beside your HP bar with one row per counter relic or countdown power: Pen Nib, Kunai, Shuriken, Nunchaku, Ornamental Fan, Orbit, Panache and more.",
           "points": [
             "Each row flashes when the next qualifying card fires it.",
             "Limits too: Velvet Choker's plays left, Pocketwatch's card limit.",
             "Turn timers (Horn Cleat, Captain's Wheel, Stone Calendar...) can be switched on per relic."
           ],
-          "shots": ["relic-counters"]
+          "shots": [
+            "relic-counters"
+          ]
         },
         {
           "id": "potion-tabs",
           "title": "Potion Tabs",
-          "doc": ["Potion Tabs"],
+          "doc": [
+            "Potion Tabs"
+          ],
           "summary": "Tabs under the potions in your top bar for the relics that drinking them sets off: Reptile Trinket, Belt Buckle, White Beast Statue.",
           "points": [],
-          "shots": ["potion-tabs"]
+          "shots": [
+            "potion-tabs"
+          ]
         }
       ]
     },
@@ -133,7 +177,9 @@
         {
           "id": "run-reminders",
           "title": "Run Reminders",
-          "doc": ["Run Reminders"],
+          "doc": [
+            "Run Reminders"
+          ],
           "summary": "Your relics that change what a choice does, shown on that choice: on card rewards, beside event options, beside shop prices and on the map legend.",
           "points": [
             "Card rewards: Bing Bong copying the card, Book of Five Rings toward its heal, Lucky Fysh's gold, Pael's Wing.",
@@ -142,18 +188,27 @@
             "Shops: Bing Bong, Lucky Fysh, Sozu and the rest beside each price.",
             "Map: relics and quest cards that make a kind of room unusually good or bad."
           ],
-          "shots": ["card-reward", "event", "shop", "map"]
+          "shots": [
+            "card-reward",
+            "event",
+            "shop",
+            "map"
+          ]
         },
         {
           "id": "rest-preview",
           "title": "Rest Preview",
-          "doc": ["Rest Preview"],
+          "doc": [
+            "Rest Preview"
+          ],
           "summary": "At a rest site, a sum beside your character: your HP now, what resting heals with your relics (Regal Pillow, Stone Humidifier, Night Terrors), and how much of it would be wasted.",
           "points": [
             "Before the boss, Pantograph and Bath Robes too, so you see the HP you'll start the boss fight with.",
             "Multiplayer: hover a teammate while Mend is on offer to see what it does for them."
           ],
-          "shots": ["rest-preview"]
+          "shots": [
+            "rest-preview"
+          ]
         }
       ]
     },
@@ -164,27 +219,38 @@
         {
           "id": "settings",
           "title": "Settings, layout and the Guide",
-          "doc": ["Settings and layout"],
+          "doc": [
+            "Settings and layout"
+          ],
           "summary": "Every feature, card tab and tracker row can be switched on or off in the settings menu (F10, or the button on the pause menu and the Mods screen). The Guide page explains every mark with live examples.",
           "points": [
             "F8 unlocks the layout: drag, scale and pin every floating indicator, or attach it to your character.",
             "F9 hides or shows every overlay.",
             "Search, and Only what I have to list just your relics, deck and the powers in this fight."
           ],
-          "shots": ["settings", "guide"]
+          "shots": [
+            "settings",
+            "guide"
+          ]
         },
         {
           "id": "update-notice",
           "title": "Update Notice",
-          "doc": ["Update Notice"],
+          "doc": [
+            "Update Notice"
+          ],
           "summary": "A small note on the main menu when a newer Spire QoL is out, linking to the download. It asks GitHub's public release list and sends nothing about you.",
           "points": [],
-          "shots": ["update-notice"]
+          "shots": [
+            "update-notice"
+          ]
         },
         {
           "id": "main-saves",
           "title": "Main Saves (separate mod)",
-          "doc": ["Main Saves (separate mod)"],
+          "doc": [
+            "Main Saves (separate mod)"
+          ],
           "summary": "While any mod is installed, the game keeps a separate set of modded profiles. Main Saves, a tiny optional mod, makes it use your normal profiles instead, so modded and unmodded play share one set of progress.",
           "points": [
             "Remove it to go back to the modded profiles, which are kept as they were."
