@@ -399,6 +399,9 @@ public sealed class SimPlayer
     }
 }
 
+/// <summary>An auto-play from your hand in one branch: the card (SimHandCard.Id) and the enemy it was aimed at (-1: none).</summary>
+public sealed record SimPick(int Card, int Target);
+
 /// <summary>A card in your hand that Stampede or Simpleton could auto-play.</summary>
 public sealed class SimHandCard
 {
@@ -445,6 +448,12 @@ public sealed class SimState
     public bool AutoPlaysUnknown;
     /// <summary>Cards auto-played at the end of your turn in this branch (Stampede, Simpleton, I Am Invincible, Howl from Beyond).</summary>
     public int AutoPlayed;
+    /// <summary>
+    /// Your auto-plays from your hand in this branch (Stampede, Simpleton), in order: the card and the enemy it was aimed at (-1:
+    /// none). The forecast check keeps the branches whose picks are the ones the game made (decision #86). Never changed in place
+    /// (shared between clones).
+    /// </summary>
+    public List<SimPick> AutoPicks = new();
     /// <summary>The biggest powered hit (blocked plus HP lost) of the play so far (Mighty Wings).</summary>
     public int PlayBiggestHit;
     /// <summary>
@@ -734,6 +743,7 @@ public sealed class SimState
             foreach (var c in P.AutoHand) Add(c.Id);
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed);
+        foreach (var pick in AutoPicks) { Add(pick.Card); Add(pick.Target); } // branches that picked differently stay apart (the check tells them apart)
         foreach (var e in Enemies) Add(e.Exploded ? 1 : 0);
         P.Powers.Hash(Add); P.Relics.Hash(Add);
         Add(P.Orbs.Count);

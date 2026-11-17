@@ -83,6 +83,24 @@ public sealed class TurnEndModel
     private static long _lastFullKey;
     private static SimOutcome? _lastFullOutcome;
 
+    /// <summary>
+    /// The same forecast over only the branches <paramref name="keep"/> allows: the check, once the game's history shows how
+    /// some of the rolls went (Stampede's picks: decision #86). Null when none is left.
+    /// </summary>
+    internal TurnEndModel? Narrowed(Func<SimState, bool> keep)
+    {
+        var branches = Outcome.Branches.Where(keep).ToList();
+        if (branches.Count == 0) return null;
+        if (branches.Count == Outcome.Branches.Count) return this;
+        var o = new SimOutcome { Branches = branches, Truncated = Outcome.Truncated, SafeWorst = Outcome.SafeWorst };
+        var m = From(State, StateKey, o, Ids, Teammates, _myHp);
+        m.FullState = FullState;
+        m._fullKey = _fullKey;
+        m._full = m;
+        m._teammateView = _teammateView;
+        return m;
+    }
+
     private TurnEndModel BuildFull()
     {
         SimOutcome o;

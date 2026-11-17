@@ -317,4 +317,36 @@ public class SimAutoPlayTests
         Assert.True(o.DeadInAll(1));
         Assert.Contains(o.Branches, b => b.AutoPlaysUnknown); // Pommel Strike first: the second pick is from a changed hand
     }
+
+    [Fact]
+    public void EachBranchRecordsItsPicks()
+    {
+        // The forecast check keeps the branches whose picks are the game's (decision #86): one per card and target.
+        var s = new SimState { Enemies = { Enemy(1, 50, 4), Enemy(2, 50, 4) } };
+        s.P.Stampede = 1;
+        s.P.AutoHand = new()
+        {
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 6, 11), AdapterStrike(2, 6, 11) } },
+            new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 9, 15, draws: 1), AdapterStrike(2, 9, 15, draws: 1) } },
+        };
+        var o = SimEngine.Run(s);
+        var picks = o.Branches.Select(b => string.Join(",", b.AutoPicks.Select(p => $"{p.Card}@{p.Target}"))).OrderBy(x => x).ToList();
+        Assert.Equal(new[] { "11@1", "11@2", "15@1", "15@2" }, picks);
+        // Only Pommel Strike's branches changed the hand: a turn where Strike was picked can still be checked.
+        Assert.All(o.Branches, b => Assert.Equal(b.AutoPicks[0].Card == 15, b.AutoPlaysUnknown));
+    }
+
+    [Fact]
+    public void BranchesThatPickedDifferentlyDontMerge()
+    {
+        // Same result either way (no kill, same damage), but the check has to tell the picks apart.
+        var s = new SimState { Enemies = { Enemy(1, 50, 4) } };
+        s.P.Stampede = 1;
+        s.P.AutoHand = new()
+        {
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 6, 11) } },
+            new SimHandCard { Id = 12, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 6, 12) } },
+        };
+        Assert.Equal(2, SimEngine.Run(s).Branches.Count);
+    }
 }

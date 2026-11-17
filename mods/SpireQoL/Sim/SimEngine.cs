@@ -910,6 +910,7 @@ public static partial class SimEngine
             if (card.Plays.Count == 0)
             {
                 c.AutoPlaysUnknown = true;
+                if (k < 0) c.AutoPicks = [..c.AutoPicks, new SimPick(card.Id, -1)];
                 result.Add(c);
                 continue;
             }
@@ -925,6 +926,7 @@ public static partial class SimEngine
             {
                 var t = plays.Count == 1 ? c : c.Clone();
                 t.Weight = c.Weight / plays.Count;
+                if (k < 0) t.AutoPicks = [..t.AutoPicks, new SimPick(card.Id, play.TargetId)];
                 var sub = new BranchSet(t);
                 ApplyPlay(sub, play);
                 if (sub.Truncated) outer.Truncated = true;

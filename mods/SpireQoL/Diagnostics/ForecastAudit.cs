@@ -194,17 +194,47 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var actualBlockGain = endOfTurn.OfType<BlockGainedEntry>().Where(b => b.Actor == me.Creature).Sum(b => b.Amount);
 
         // Cards of yours auto-played at end of turn: the simulator plays Stampede's, Simpleton's, Howl from Beyond and
-        // I Am Invincible (SimEngine.AutoPostPlay). When one it couldn't simulate came up (a card that changes your hand) or
-        // the count matches no branch (another source), the turn isn't checked.
+        // I Am Invincible (SimEngine.AutoPostPlay), Stampede's and Simpleton's picks a branch each. The history shows which
+        // cards were picked and what they hit, so only the branches that picked the same are checked (decision #86). The turn
+        // isn't checked when the pick that happened changed your hand (it drew or made cards: what came after isn't
+        // simulated), or when the count matches no branch (another source).
+        var issues = new List<string>();
         var autoPlays = endOfTurn.OfType<CardPlayStartedEntry>().Where(e => e.CardPlay.IsAutoPlay && e.CardPlay.IsFirstInSeries && e.CardPlay.Card.Owner == me).ToList();
-        if (autoPlays.Count > 0 && autoPlays[0] is var auto
-            && (f.Outcome.Branches.Any(b => b.AutoPlaysUnknown) || !f.Outcome.Branches.Any(b => b.AutoPlayed == autoPlays.Count)))
+        if (autoPlays.Count > 0 && autoPlays[0] is var auto)
         {
-            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {auto.CardPlay.Card.GetType().Name} at end of turn); HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})");
-            return;
+            var hand = f.State.P.AutoHand?.Select(c => c.Id).ToHashSet();
+            var picks = hand == null ? new List<SimPick>() : autoPlays.Where(e => hand.Contains(SimAdapter.HandId(e.CardPlay.Card)))
+                .Select(e => new SimPick(SimAdapter.HandId(e.CardPlay.Card), e.CardPlay.Target is { } t && f.Ids.TryGetValue(t, out var tid) ? tid : -1)).ToList();
+            bool Picked(SimState b) => b.AutoPlaysUnknown
+                ? b.AutoPlayed <= autoPlays.Count && picks.Count >= b.AutoPicks.Count && picks.Take(b.AutoPicks.Count).SequenceEqual(b.AutoPicks)
+                : b.AutoPlayed == autoPlays.Count && picks.SequenceEqual(b.AutoPicks);
+            string Predicted() => $"HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})";
+            var narrowed = f.Narrowed(Picked);
+            if (narrowed == null && hand != null && picks.Count == autoPlays.Count && f.State.P.Stampede + f.State.P.Simpleton > 0)
+            {
+                // Every auto-play was a pick from your hand, and no branch made those picks: the simulator's picks are wrong.
+                var names = string.Join(", ", autoPlays.Select(e => $"{e.CardPlay.Card.GetType().Name}{(e.CardPlay.Target is { } t ? $" at {t.Monster?.GetType().Name ?? "you"}" : "")}"));
+                issues.Add($"auto-play: you auto-played {names}, and no branch picked that");
+            }
+            else if (narrowed == null)
+            {
+                ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {auto.CardPlay.Card.GetType().Name} at end of turn, which no branch did); {Predicted()}");
+                return;
+            }
+            else if (narrowed.Outcome.Branches.Any(b => b.AutoPlaysUnknown))
+            {
+                // The pick it stopped at (the last one in that branch).
+                var last = narrowed.Outcome.Branches.First(b => b.AutoPlaysUnknown).AutoPicks.LastOrDefault();
+                var changer = autoPlays.FirstOrDefault(e => last != null && SimAdapter.HandId(e.CardPlay.Card) == last.Card)?.CardPlay.Card ?? auto.CardPlay.Card;
+                ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {changer.GetType().Name} at end of turn, which changed your hand); {Predicted()}");
+                return;
+            }
+            else
+            {
+                f = narrowed;
+            }
         }
 
-        var issues = new List<string>();
         // Less than forecast is expected when random-target end-of-turn damage was left out: it may
         // have killed an attacker (the forecast stays on the safe side on purpose).
         // The forecast is the worst branch; a random target can make it come in lower (down to TakenMin).
