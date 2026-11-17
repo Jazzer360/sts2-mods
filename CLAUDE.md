@@ -4,7 +4,7 @@ Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). **Setup on a new 
 
 - Build: `dotnet build` (also installs to `<game>/mods/<ModId>/`; `-p:InstallToGame=false` to skip).
 - Game assemblies are referenced from the install via Directory.Build.props/targets. Never commit game DLLs or decompiled code.
-- Decompiled game source (read-only reference): `~/git/sts2-decompiled` for Steam's beta branch, which the mod is developed on, and `~/git/sts2-decompiled-main` for the main branch, which it also supports (decision #78; same paths on every machine; local-only, never pushed; see each VERSION.json). If it's missing or older than the installed game, run `./scripts/decompile.ps1`. Look up real class/method names there before writing a Harmony patch or modelling a game rule; don't guess.
+- Decompiled game source (read-only reference): `~/git/sts2-decompiled` for Steam's beta branch, which the mod is developed on, and `~/git/sts2-decompiled-main` for the main branch, which it also supports (decision #78; layout and how to make each: docs/DEVELOPMENT.md "Decompiled game source"; same paths on every machine; local-only, never pushed; see each VERSION.json). If it's missing or older than the installed game, run `./scripts/decompile.ps1`. Look up real class/method names there before writing a Harmony patch or modelling a game rule; don't guess.
 - `core/` is compiled into each mod via a linked `<Compile Include>`; it is not a separate DLL.
 - Mod AssemblyName == manifest `id` == `<ModId>.json` filename.
 - Every feature implements `IFeature` and is applied through `FeatureHost`, so one broken patch can't crash the game. Spire QoL only uses observe-only patches (docs/DECISIONS.md #10).
