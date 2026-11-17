@@ -707,6 +707,11 @@ public sealed class PlayFacts
             // Draws only while you've finished fewer than PlayMax plays this turn (Ftl.CanDrawCard; the
             // game's template card, with no owner, counts as drawing).
             case Ftl: return FtlCanDraw(c) ? Sts2State.Var(c, "Cards") : 0;
+            // Draws only when no Attack is in your hand (Impatience.OnPlay; it's a Skill itself).
+            case Impatience: return HandHasAttack(c) ? 0 : Sts2State.Var(c, "Cards");
+            // Draws only while Osty is alive (Osty.CheckMissingWithAnim) and on this copy's first finished play this turn
+            // (Fetch.HasBeenPlayedThisTurn); CardsDrawnTotal counts it once for a replay.
+            case Fetch: return FetchCanDraw(c) ? Sts2State.Var(c, "Cards") : 0;
             // Only draws when it's the only card in hand.
             case Restlessness: return handCount == 1 ? Sts2State.Var(c, "Cards") : 0;
             // Draws one per melody played this turn (Steady Cadence).
@@ -769,6 +774,7 @@ public sealed class PlayFacts
     public static int CardsDrawnTotal(CardModel c, int handCount, int plays)
     {
         plays = Math.Max(1, plays);
+        if (c is Fetch) return CardsDrawn(c, handCount); // only the first play draws (its replay has finished a play)
         if (!TargetDrawCards.Contains(c.GetType().Name)) return CardsDrawn(c, handCount) * plays;
         try
         {
@@ -794,6 +800,31 @@ public sealed class PlayFacts
             return false;
         }
     }
+
+    private static bool HandHasAttack(CardModel c)
+    {
+        try { return OwnerOf(c) is { } me && PileType.Hand.GetPile(me).Cards.Any(h => !ReferenceEquals(h, c) && h.Type == CardType.Attack); }
+        catch { return false; }
+    }
+
+    private static bool FetchCanDraw(CardModel c)
+    {
+        try
+        {
+            if (OwnerOf(c) is not { } me) return true; // the game's template card counts as drawing
+            if (!me.IsOstyAlive) return false;
+            var cs = c.CombatState;
+            return cs == null || !CombatManager.Instance.History.CardPlaysFinished.Any(e => ReferenceEquals(e.CardPlay.Card, c) && e.HappenedThisTurn(cs));
+        }
+        catch { return true; }
+    }
+
+    /// <summary>
+    /// Drawing cards whose draw has a condition, which the game shows by glowing them gold (ShouldGlowGoldInternal), all
+    /// checked in CardsDrawn or TargetDraws. The card scan flags a drawing card that glows gold and isn't here.
+    /// </summary>
+    internal static readonly HashSet<string> ConditionalDrawCards = new()
+        { nameof(Impatience), nameof(Fetch), nameof(Ftl), nameof(Restlessness), "KiHop", "Wrest" };
 
     private static bool FtlCanDraw(CardModel c)
     {

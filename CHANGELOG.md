@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.5
+#### Fixed
+- Impatience no longer counts its draws when you have an Attack in hand, so a full-hand prediction no longer hides the Make It So return tab on it.
+- Fetch counts its draw only on its first play each turn, and only while Osty is alive.
+- Fisticuffs' block includes Dexterity and Frail.
+- Fasten adding block to a Defend is no longer reported as a missing tab.
+
 ### Spire QoL 1.11.4
 #### Added
 - About page in the settings menu: the version and author, links to the project on GitHub, its releases and its issues, the mod's philosophy, and every release's patch notes with their dates (paged; search finds a line in any release). It's read from the changelog and the README built into the mod.

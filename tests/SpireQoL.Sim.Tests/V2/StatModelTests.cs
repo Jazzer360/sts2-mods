@@ -170,6 +170,18 @@ public class StatModelTests
     }
 
     [Fact]
+    public void FisticuffsBlockFromDamageGetsDexterity()
+    {
+        // Fisticuffs.OnPlay: GainBlock(the damage dealt, ValueProp.Move), a powered block: 7 dealt with 1 Dexterity is 8.
+        var s = WithPowers(("DexterityPower", 1));
+        var after = After(s, Play(Card("Fisticuffs"), 0, 1, Attack(7), Block(7))).Single();
+        Assert.Equal(93, after.Enemy(0)!.Hp);
+        Assert.Equal(8, after.P.Block);
+        s.P.Powers = s.P.Powers.With("FrailPower", 1);
+        Assert.Equal(6, After(s, Play(Card("Fisticuffs"), 0, 1, Attack(7), Block(7))).Single().P.Block); // (7 + 1) × 0.75
+    }
+
+    [Fact]
     public void WeakAppliedByTheCardLowersTheIntent()
     {
         var s = new SimState { Enemies = { Enemy(0, 50) } };

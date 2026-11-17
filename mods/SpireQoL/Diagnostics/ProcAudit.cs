@@ -886,6 +886,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         foreach (var m in flashed.Distinct())
         {
             if (sourceOf.ContainsKey(m.GetType().Name) || Modifiers.Contains(m.GetType().Name) || TeammateOnly.Contains(m.GetType().Name)) continue;
+            // A power that only changes numbers (Fasten's block on Defends): the play's block and damage checks cover it.
+            if (m is PowerModel && CodeIndex.OnlyModifies(m.GetType())) continue;
             if (LaterPlayOnly.Contains(m.GetType().Name))
             {
                 modelLines.Add($"{m.GetType().Name} fired (it changes a card for a later play: no tab by design)");

@@ -154,6 +154,12 @@ internal static class CardCoverage
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
             && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
+        // A drawing card that glows gold has a condition on what it does (Impatience: no Attack in hand): its draw count
+        // must check it.
+        if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
+            && card.GetType().GetProperty("ShouldGlowGoldInternal", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly) != null
+            && !PlayFacts.ConditionalDrawCards.Contains(name))
+            issues.Add("draws only on a condition (it glows gold; not checked in PlayFacts.CardsDrawn)");
         if (Calls("OrbCmd", "Channel") && !SimAdapter.HandlesChannel(name))
             issues.Add("channels orbs (the simulator doesn't add them)");
         if (Calls("OrbCmd", "Channel") && None(c => PlayFacts.ChannelCount(c, name, null!)))

@@ -186,8 +186,9 @@ public static partial class SimAdapter
 
     /// <summary>
     /// The card's own block, each play: its block value through the block pipeline (models and captured terms), to you or the
-    /// targeted teammate. Cards whose block isn't a value (Fisticuffs: the damage dealt; Entrench: your block; Mimic and a
-    /// calculated block aimed at a teammate) keep the game's number.
+    /// targeted teammate. Fisticuffs' block is the damage it dealt, a powered Move through the pipeline (Dexterity, Frail).
+    /// Other cards whose block isn't a value (Entrench: your block; Mimic and a calculated block aimed at a teammate) keep the
+    /// game's number.
     /// </summary>
     private static GainBlockAction? BlockOf(CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
         int targetId, int plays, string name, Creature? ally, int allyId)
@@ -198,9 +199,14 @@ public static partial class SimAdapter
         var to = toAlly ? allyId : Who.You;
         if (toAlly && allyId == -1) return null; // no teammate to aim at: the block goes to no one
         var aimed = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
+        if (name == nameof(Fisticuffs))
+        {
+            // Fisticuffs.OnPlay: CreatureCmd.GainBlock(the damage dealt, ValueProp.Move), so Dexterity and Frail apply.
+            var dealt = aimed != null ? f.TotalDamage(aimed) / plays : 0;
+            return new GainBlockAction(gains, dealt, SimProps.Move) { Captured = SimReaders.Block(cs, card, me.Creature, dealt, ValueProp.Move), To = to };
+        }
         int? fixedEach = name switch
         {
-            nameof(Fisticuffs) => aimed != null ? f.TotalDamage(aimed) / plays : 0,
             nameof(Entrench) => me.Creature.Block,
             _ when toAlly && card.DynamicVars.ContainsKey("CalculatedBlock") => ally != null ? CardBlock(card, cs, me, ally, ally) : 0,
             nameof(Mimic) when ally != null => CardBlock(card, cs, me, me.Creature, ally),

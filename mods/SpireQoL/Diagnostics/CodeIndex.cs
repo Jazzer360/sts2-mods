@@ -33,6 +33,23 @@ internal static class CodeIndex
         return false;
     }
 
+    /// <summary>
+    /// A power whose only hooks change a block or damage amount as the game works it out (Modify*, and
+    /// AfterModifyingBlockAmount or AfterModifyingDamageAmount, where it flashes): Fasten adds to a Defend's block, Hard to
+    /// Kill caps damage. The card's own number already shows it, so its flash is no proc. Play-count and pile modifiers
+    /// (Signal Boost, Nostalgia) are procs with tabs and don't count.
+    /// </summary>
+    public static bool OnlyModifies(Type type)
+    {
+        var hooks = new List<string>();
+        for (var t = type; t != null && t.Assembly == type.Assembly && t.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; t = t.BaseType)
+            hooks.AddRange(For(t).Overrides.Where(n => !n.StartsWith("get_") && !n.StartsWith("set_")));
+        string[] amounts = { "AfterModifyingBlockAmount", "AfterModifyingDamageAmount" };
+        return hooks.Any(amounts.Contains)
+               && hooks.All(n => amounts.Contains(n) || n is "ModifyBlockAdditive" or "ModifyBlockMultiplicative"
+                   || (n.StartsWith("ModifyDamage") && n != "ModifyDamageGiven"));
+    }
+
     private static Info For(Type type)
     {
         if (Cache.TryGetValue(type, out var info)) return info;
