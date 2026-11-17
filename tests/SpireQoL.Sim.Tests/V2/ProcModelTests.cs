@@ -261,6 +261,22 @@ public class ProcModelTests
         Assert.Equal(0, after.P.Block);
     }
 
+    [Fact]
+    public void BlockForEveryPlayerSetsOffATeammatesJuggernaut()
+    {
+        // Rally (decision #75): block to you, then to each living teammate (SimAdapter.AllPlayersBlockCards). A teammate's
+        // Juggernaut hits a random enemy for its amount when they gain block: the only enemy (5 HP) dies.
+        var s = State(hp: 5);
+        var mate = new SimPlayer { Hp = 50 };
+        mate.Powers = mate.Powers.With("JuggernautPower", 6);
+        s.Teammates.Add(mate);
+        var after = One(s, Events(Card("Rally", SimCardType.Skill), 1,
+            new GainBlockAction(1, 12, SimProps.Move), new GainBlockAction(1, 12, SimProps.Move) { To = Who.Teammate(0) }));
+        Assert.Equal(12, after.P.Block);
+        Assert.Equal(12, after.Teammates[0].Block);
+        Assert.True(after.Enemy(0) is null or { Hp: <= 0 });
+    }
+
     // ---- card events
 
     [Fact]

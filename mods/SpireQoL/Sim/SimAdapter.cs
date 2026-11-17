@@ -113,6 +113,12 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly HashSet<string> BlockToAllyCards = new() { nameof(Lift), nameof(Constellation), nameof(DemonicShield) };
 
+    /// <summary>
+    /// Cards that give their block to every living player (Rally.OnPlay: CreatureCmd.GainBlock for each player on your side): you
+    /// first, then each teammate (decision #75: what it does for teammates counts).
+    /// </summary>
+    internal static readonly HashSet<string> AllPlayersBlockCards = new() { nameof(Rally) };
+
     /// <summary>Cards aimed at a teammate whose channels go into that teammate's orbs (Ignition: OrbCmd.Channel on the target's player).</summary>
     internal static readonly HashSet<string> ChannelToAllyCards = new() { nameof(Ignition) };
 

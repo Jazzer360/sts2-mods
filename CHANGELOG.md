@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.12.2
+#### Fixed
+- Rally's block goes to every living teammate in the predictions too, not just you, worked out on each (their Dexterity and Frail): it counts toward their Incoming Damage and sets off what reacts to their block (a teammate's Juggernaut can kill an enemy, which changes your lethal tab).
+
 ### Spire QoL 1.12.1
 #### Fixed
 - Pen Nib: while the attack it doubles was being played, every other attack in hand was predicted to deal double too, which could show a lethal tab on a card that doesn't kill. Only the attack it's bound to is doubled.

@@ -61,6 +61,17 @@ public static partial class SimAdapter
         // Recall, Uproot, Wrest: every arrow of yours out of the target.
         if (Fool.DislodgeCards.Contains(name)) play.Body.Add(new DislodgeAllAction());
         if (f.BlockGains > 0 && BlockOf(card, f, me, cs, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
+        // Block for every player (Rally): the same value to each living teammate too, worked out on them (their Dexterity, Frail).
+        if (f.BlockGains > 0 && AllPlayersBlockCards.Contains(name) && card.DynamicVars.TryGetValue("Block", out var allBlock))
+        {
+            var mates = Teammates(me, cs);
+            for (var k = 0; k < mates.Count; k++)
+            {
+                if (mates[k].Creature is not { IsAlive: true } mate) continue;
+                play.Body.Add(new GainBlockAction(f.BlockGains / plays, allBlock.BaseValue, SimProps.Move)
+                    { Captured = SimReaders.Block(cs, card, mate, allBlock.BaseValue, ValueProp.Move), To = Who.Teammate(k) });
+            }
+        }
         // Adroit (enchantment): its block on every play, after the card's own (EnchantmentModel.OnPlay → CreatureCmd.GainBlock).
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
         {

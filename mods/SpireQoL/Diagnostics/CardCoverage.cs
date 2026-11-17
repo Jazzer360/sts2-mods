@@ -75,9 +75,14 @@ internal static class CardCoverage
         [nameof(DemonicShield)] = "HP loss to you, block (worked out on the teammate) to them (BlockToAllyCards)",
         [nameof(Ignition)] = "a Plasma orb into the teammate's orbs, evoking their front orb when full (SimAdapter.ChannelToAllyCards)",
         [nameof(Mimic)] = "block to you equal to the teammate's block (CalculatedBlock on the target)",
+        [nameof(Rally)] = "its block to you and to every living teammate, worked out on each (SimAdapter.AllPlayersBlockCards)",
         // Reviewed: nothing in this turn's outcome (the end of turn and the enemy turn).
         [nameof(BelieveInYou)] = "energy for the teammate",
         [nameof(Blaze)] = "Strength for the teammate: their attacks, not your end of turn",
+        // Cards for every player whose effect on teammates is on their own later plays (not simulated: their hands, #25).
+        [nameof(OneForAll)] = "OneForAllPower on every player: damage on each one's own 0-cost attacks (ModifyDamageAdditive), yours counted",
+        [nameof(Yoga)] = "Stretch on every player: each one's next block card (yours counted)",
+        [nameof(Plot)] = "DrawCardsNextTurnPower on each teammate: their next turn's draw (ModifyHandDraw)",
         [nameof(Concoct)] = "ConcoctPower on the teammate: poison from their attacks this turn (AfterDamageGiven), removed at end of turn",
         [nameof(Coordinate)] = "temporary Strength for the teammate (CoordinatePower: TemporaryStrengthPower)",
         [nameof(Enrapture)] = "Vigor and Stretch for the teammate: their next attack and block card",
