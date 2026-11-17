@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using SpireQoL.Sim;
+using SpireQoL.Cards;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -110,6 +111,10 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                         if (node.IsNodeReady()) node.UpdateIntent(intent, targets, enemy);
                         else node.Ready += () => node.UpdateIntent(intent, targets, enemy);
                     }
+                    // The powers the move applies (Frail 2), from its code: a reminder of what a buff or debuff intent is.
+                    if (enemy.Monster is { } monster)
+                        foreach (var applied in MovePowers.Of(monster, move))
+                            row.AddChild(PowerChip(applied));
                 }
                 if (!turn.Certain)
                 {
@@ -119,6 +124,23 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 }
             }
         }
+    }
+
+    /// <summary>A power's icon with its amount beside it (none when the amount isn't a number the move keeps).</summary>
+    private static Control PowerChip(MovePowers.Applied applied)
+    {
+        var chip = UiKit.Row(1);
+        chip.MouseFilter = Control.MouseFilterEnum.Ignore;
+        var icon = UiKit.Icon(GameIcons.Power(applied.Power), 30);
+        icon.MouseFilter = Control.MouseFilterEnum.Ignore;
+        chip.AddChild(icon);
+        if (applied.Amount is { } a)
+        {
+            var amount = UiKit.Label(a.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), 18, Colors.White);
+            amount.VerticalAlignment = VerticalAlignment.Center;
+            chip.AddChild(amount);
+        }
+        return chip;
     }
 
     /// <summary>The living enemy whose intent is under the mouse.</summary>

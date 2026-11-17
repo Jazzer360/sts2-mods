@@ -32,4 +32,51 @@ public class IntentRulesTests
         }
         Assert.True(unread.Count == 0, "Enemies whose move rules the forecast can't read:\n" + string.Join("\n", unread));
     }
+
+    /// <summary>Every enemy's moves, each with its monster (a fight copy, so amounts read as in a fight).</summary>
+    private static IEnumerable<(MonsterModel Monster, MoveState Move)> EveryMove()
+    {
+        GameModels.EnsureLoaded();
+        foreach (var canon in ModelDb.All.OfType<MonsterModel>())
+        {
+            var m = canon.ToMutable();
+            MonsterMoveStateMachine machine;
+            try { machine = (MonsterMoveStateMachine)Generate.Invoke(m, null)!; } catch { continue; }
+            foreach (var move in machine.States.Values.OfType<MoveState>()) yield return ((MonsterModel)m, move);
+        }
+    }
+
+    [Fact]
+    public void AMovesPowersAreReadFromItsCode()
+    {
+        // Corpse Slug's Goop: PowerCmd.Apply<FrailPower>(..., GoopFrailAmt) with GoopFrailAmt 2.
+        var goop = EveryMove().Single(x => x.Monster.GetType().Name == "CorpseSlug" && x.Move.Id == "GOOP_MOVE");
+        var applied = MovePowers.Of(goop.Monster, goop.Move);
+        Assert.Equal("FrailPower 2", string.Join(", ", applied.Select(a => $"{a.Power.Name} {a.Amount}")));
+    }
+
+    [Fact]
+    public void EveryBuffAndDebuffMoveNamesItsPowers()
+    {
+        // A buff or debuff intent whose move applies no power the reader finds (a power applied another way): listed, so a
+        // new pattern is seen. Moves whose amount isn't readable show the icon alone and aren't listed.
+        var missing = new List<string>();
+        var counted = 0;
+        foreach (var (monster, move) in EveryMove())
+        {
+            var kinds = move.Intents.Select(i => i.GetType().Name).ToList();
+            if (!kinds.Any(k => k.Contains("Buff") || k.Contains("Debuff"))) continue;
+            counted++;
+            var id = $"{monster.GetType().Name}.{move.Id}";
+            if (MovePowers.Of(monster, move).Count == 0 && !WithoutPowers.ContainsKey(id)) missing.Add($"{monster.GetType().Name}.{move.Id} ({string.Join(", ", kinds)})");
+        }
+        Assert.True(counted > 50, $"only {counted} buff or debuff moves found");
+        Assert.True(missing.Count == 0, $"{missing.Count} buff/debuff moves with no power read:\n" + string.Join("\n", missing));
+    }
+
+    /// <summary>Buff and debuff moves that apply no power, reviewed from their code.</summary>
+    private static readonly Dictionary<string, string> WithoutPowers = new()
+    {
+        ["KnowledgeDemon.CURSE_OF_KNOWLEDGE_MOVE"] = "a choice of curse cards for each player, not a power",
+    };
 }

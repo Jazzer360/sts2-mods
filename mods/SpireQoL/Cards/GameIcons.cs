@@ -23,6 +23,10 @@ public static class GameIcons
         try { return power.Icon; } catch { return null; }
     }
 
+    /// <summary>A power's icon by its type, from its canonical model (an enemy move's power: Intent Forecast).</summary>
+    public static Texture2D? Power(Type powerType)
+        => Cached(powerType, () => ModelDb.GetById<PowerModel>(ModelDb.GetId(powerType)).Icon);
+
     public static Texture2D? Enchantment(EnchantmentModel enchantment)
     {
         try { return enchantment.Icon; } catch { return null; }

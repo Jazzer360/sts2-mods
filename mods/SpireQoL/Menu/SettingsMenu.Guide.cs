@@ -385,7 +385,7 @@ public sealed partial class SettingsMenu
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
             + "With a chance when a roll decides it (General: Death chance).");
         GuideRow(null, "Intent Forecast",
-            "Hover an enemy's intent: above it, its next moves after the one on screen (+1 is next turn, just above it). Every turn its rules make certain, "
+            "Hover an enemy's intent: above it, its next moves after the one on screen (+1 is next turn, just above it), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
             + "then each move a random pick can make, with its chance. Worked out from its move rules and the moves it has made, never a roll.");
         GuideRow(null, "Moving things",
             $"{S.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {S.HideAllKey} hides everything.");
