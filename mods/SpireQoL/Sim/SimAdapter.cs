@@ -98,13 +98,13 @@ public static partial class SimAdapter
     internal static readonly HashSet<string> OnKillHitAllCards = new() { "Timber" };
 
     /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
-    internal static readonly HashSet<string> RepeatPerKillCards = new() { "EchoingSlash" };
+    internal static readonly HashSet<string> RepeatPerKillCards = new() { nameof(EchoingSlash) };
 
     /// <summary>Cards that set off every enemy's poison during the play (Outbreak: PoisonPower.Trigger on each).</summary>
-    internal static readonly HashSet<string> TriggerPoisonCards = new() { "Outbreak" };
+    internal static readonly HashSet<string> TriggerPoisonCards = new() { nameof(Outbreak) };
 
     /// <summary>Cards that take all of their target's block, then its Artifact (Expose: CreatureCmd.LoseBlock, PowerCmd.Remove).</summary>
-    internal static readonly HashSet<string> StripBlockCards = new() { "Expose" };
+    internal static readonly HashSet<string> StripBlockCards = new() { nameof(Expose) };
 
     /// <summary>
     /// Cards aimed at a teammate (AnyAlly) whose block goes to that teammate (CreatureCmd.GainBlock on cardPlay.Target: Lift,

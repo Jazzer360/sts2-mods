@@ -14,36 +14,40 @@ What Spire QoL is for, in order. Everything else serves these.
 3. **Reminders for decisions outside combat**: wherever a relic changes what a choice does (resting, event options, card rewards, shops), an indicator on that choice, as Relic Reminders did in StS1 (Regal Pillow on resting, Omamori on events that add a curse). Bing Bong copying cards added to your deck is the first example.
 4. **Only knowable information** (CLAUDE.md, hard rule): what a player with perfect memory and full knowledge of the rules could know, never the RNG or hidden state.
 5. **Everything that happens is accounted for.** Every effect in a fight is either predicted (a tab, a tracker row, the simulator) or reported when it happens (audits, coverage check), so gaps surface from players' games instead of hiding. Defaults are tuned afterwards: what shows on cards by default is a settings question, not a coverage one.
+6. **Multiplayer is the whole team, evaluated in order** (decision #75). Plays resolve one after another, and every player's powers, relics, orbs and Osty are evaluated together, deterministically: what your card sets off for a teammate (block into their Juggernaut) counts toward its predictions like what it does for you.
+
+**What the simulator is for** (the owner's requirements): it checks the mod's understanding of the game's rules against what the game does, and it tells the mod what a card play leads to, so tabs show exactly when they should. How it's built is secondary to two things: it's written around the game's rules (the code a card runs, the hooks a relic overrides), not the words on each card, and it's ready for game updates (every per-card list has a scan that flags a new card doing the same thing).
 
 ## How the ideas are grouped
 
 - **Spire QoL** (`mods/SpireQoL`) shows information the game already has, in a clearer place. It never tells you what to pick. Each feature is a toggle.
+- **Main Saves** (`mods/MainSaves`): your normal profiles while modded (decision #33).
 - **Advisory mods** (later, separate) judge your choices: Synergy Helper and Deck Metrics.
 - **Existing mods we use instead of building:** Relic Stats for StS2, Display the Spire.
 
-| Spire QoL feature | Size | Covers |
+| Spire QoL feature | Status | Covers |
 | --- | --- | --- |
-| Settings and layout (core) | M | toggles, draggable/anchored indicators, lock/unlock, reset |
-| Card Indicators | M | Ethereal translucency, keyword badges, cost/replay duration markers, affliction states |
-| Relic Counters | M | condensed tick-bar tray above hand; Pen Nib and Stone Calendar get attention effects |
-| Relic Reminders | M | relic icons on affected cards; Pen Nib-ready attack glow |
-| ~~Block Forecast~~ | | removed in 0.13.0; folded into Incoming Damage |
-| Incoming Damage | S | summed blockable damage incl. Burn/Decay/Constrict; health-bar preview |
-| Shuffle Warning | S | draws that force a reshuffle; which hand cards stay out |
-| Intent Forecast | M | upcoming enemy moves |
-| Out-of-combat Reminders | M | relic icons on event choices and a card reward panel (0.36.0: Run Reminders); shops next |
+| Settings and layout | built | the settings menu (Guide and About pages), movable and anchored widgets, lock and reset |
+| Proc Indicators | built | a tab on each card for what playing it sets off: procs, lethal, kills, replays, returns, free cards (from the outcome simulator) |
+| Card Indicators | built | Retain and Sly tabs, Ethereal translucency |
+| Relic Counters | built | the tracker beside your HP bar: counters, countdowns, Make It So |
+| Incoming Damage | built | the end-of-turn sum, lethal and revives, teammates' on hover |
+| Death Skull | built | an enemy that dies before acting if you end your turn now, with its chance |
+| Shuffle Warning | built | plays whose draws reshuffle your discard pile |
+| Potion Tabs | built | relics that drinking a potion sets off |
+| Run Reminders | built | relic icons on events, card rewards, shops and the map; tabs on offered cards; card odds and the Inspect screen |
+| Rest Preview | built | HP after resting, Mend, the boss fight's start |
+| Update Notice | built | versions behind, on the main menu |
+| Intent Forecast | planned | an enemy's next moves where its rules decide them, the odds when a roll does (decision #72, tracker §7) |
 
 ## Build order
 
-1. ~~Decompile and repo scaffold.~~ Done.
-2. ~~**Core settings and layout.**~~ Built in 0.2.0 (settings file + draggable widgets; in-game menu still to do).
-3. ~~**Relic Counters**~~ built in 0.2.0, starting with Pen Nib, Stone Calendar, Kunai/Shuriken. Highest value; it's generic over `RelicModel.ShowCounter/DisplayAmount/Status`, so most relics come almost free.
-4. ~~**Block Forecast** and **Incoming Damage**.~~ Built in 0.2.0. They share the "what happens at end of turn" model.
-5. ~~**Card Indicators**~~ (0.2.0: translucency, badges, blocked-card dimming): Ethereal translucency first, then badges, then markers.
-6. ~~**Relic Reminders**~~ (0.2.0), starting with the Pen Nib-ready glow, Art of War, Ripple Basin.
-7. ~~**Shuffle Warning.**~~ Built in 0.2.0.
-8. **Out-of-combat Reminders** (goal 3), then **Intent Forecast.**
-9. The advisory mods.
+1. ~~Decompile and repo scaffold, core settings and layout, Relic Counters, Incoming Damage, Card Indicators, proc tabs, Shuffle Warning~~ (0.2.0 to 0.23).
+2. ~~The outcome simulator~~ (0.24), rebuilt on the game's own hooks and pipelines in 1.0.0 (decisions #48 to #52).
+3. ~~Out-of-combat reminders~~ (Run Reminders, 0.36.0 onward; Rest Preview; pathing).
+4. **Multiplayer as one team** (decision #75): cards that act on every player or on a teammate, and everything they set off for the team.
+5. **Intent Forecast** (decision #72).
+6. The advisory mods.
 
 ## Shared-infra principles
 
@@ -56,7 +60,7 @@ What Spire QoL is for, in order. Everything else serves these.
 ## Open questions
 
 - [ ] Which Mintyspire features do you actually miss?
-- [ ] Intent Forecast default: always-on mini row, or hover?
-- [ ] Does the game have a mod-settings hook, or do we add our own menu button?
+- [ ] Intent Forecast: where it shows (beside each enemy's intent, always or on hover) and how far ahead.
 - [ ] Try STS2 Card Advisor before building Synergy Helper.
-- [ ] Workshop release: polish, localization, settings UI.
+- [ ] Workshop release: polish, localization (decision #8: only through CI).
+- [x] ~~Does the game have a mod-settings hook, or do we add our own menu button?~~ Our own: the settings gear on the main menu (1.5.0) and the in-fight hotkey.

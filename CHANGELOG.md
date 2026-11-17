@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.8
+#### Changed
+- About page: the philosophy now says what the mod will show about enemies' next moves (the move when the enemy's rules decide it, the odds when a roll does) and where it shows chances.
+
 ### Spire QoL 1.11.7
 #### Fixed
 - Outbreak's poison damage during the play is predicted: every enemy's poison ticks right away, as many times as Accelerant allows.

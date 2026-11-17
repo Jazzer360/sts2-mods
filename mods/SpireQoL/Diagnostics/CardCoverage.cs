@@ -106,7 +106,7 @@ internal static class CardCoverage
     /// Cards whose kill only gives a reward that changes nothing in the turn's outcome: Feed (max HP), Hand of Greed (gold),
     /// Knockout Blow (stars), Sunder (energy), The Hunt (a power for the fight's rewards).
     /// </summary>
-    private static readonly HashSet<string> KillRewardCards = new() { "Feed", "HandOfGreed", "KnockoutBlow", "Sunder", "TheHunt" };
+    private static readonly HashSet<string> KillRewardCards = new() { nameof(Feed), nameof(HandOfGreed), nameof(KnockoutBlow), nameof(Sunder), nameof(TheHunt) };
 
     /// <summary>Cards reviewed as not needing what the scan finds, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()

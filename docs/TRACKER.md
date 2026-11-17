@@ -229,7 +229,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 
 ## 7. Intent forecast (planned; no code yet)
 
-Knowable information only (CLAUDE.md): it may show the moves an enemy *can* make next and their odds, worked out from its move rules and what you've seen it do. Never the move it will actually pick, its RNG roll, or hidden state a player couldn't infer.
+Knowable information only (decision #72): an enemy's next moves where its move rules decide them (a fixed pattern), and the odds of each possible next intent when the pick is random, worked out from its move rules and the moves you've seen it make. Never the result of a random pick before the game shows it, a later move the game rolled ahead of time, or the RNG.
 
 - [ ] Confirm monster AI structure in `MonsterMoves/` (state machine vs. scripted).
 - [ ] Deterministic next moves.
@@ -426,6 +426,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [x] 1.11.7: Outbreak's poison trigger (TriggerPoisonAction), poison trigger count from every player's Accelerant (uncapped, so new stacks tick fully), Accelerant played mid-turn in the simulator. The card scan flags cards that set off poison.
 - [x] Card scan in the catalog tests (decision #70): CardScanTests runs Diagnostics/CardCoverage on every card of the installed game.
 - [ ] Multiplayer gap: cards that act on every player are simulated for you only: Blade Symphony, Glimpse Beyond, Huddle Up, Legion of Bone, One for All, Plot, Rally, Yoga (pinned in CardScanTests).
+- [x] 1.11.8: decisions reconciled with the goals (#72 intents, #73 chances, #74 option delegates, #75 multiplayer as one team; superseded decisions struck through); README and ROADMAP refreshed; card lists by nameof.
 - [ ] Test in game: About page (links open the browser, paging, search, long notes wrap); card reward panel above the cards (clear of the banner and the offered-card tabs, 3 and 4 cards with Lasting Candy); shop price icons clear of the coin (Book of Five Rings on a card); map legend icons (placement left of the legend, hover tooltip and room highlight, hidden with the legend), Dowsing and Byrdonis Egg as tiny cards, the regrouped settings pages.
 - [ ] Event options whose effect runs through a delegate the reader doesn't follow (a lambda passed to a card choice): the check reports a relic that reacts without its icon.
 - [x] 0.31.0: everything-snapshot per play (`PlaySnapshot`, `CodeIndex`), relic tracking review for all 163 fight-affecting relics (`RelicTracking`), no blanket skips for draws and auto-plays.
