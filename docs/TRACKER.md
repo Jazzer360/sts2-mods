@@ -435,6 +435,8 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [x] 1.15.0 (decision #82): card reward relics (Bing Bong, Lucky Fysh, Book of Five Rings) are tabs on the offered cards; the card reward panel is gone.
 - [ ] Test in game: the card reward tabs (Bing Bong, Lucky Fysh, Book of Five Rings on the healing pick) beside Strike Dummy's.
 - [ ] Test in game (1.15.1): shop icons clear of the coin with their backdrops, Lucky Fysh's net price centered under the price; map legend icons level with the legend's own.
+- [x] 1.15.2: the Inspect button's icon (the game's cursor_inspect.png is imported as an image, not a texture: `GameIcons.LoadTexture` makes one); a missing icon is reported.
+- [ ] Test in game (1.15.2): the Inspect button right of Colorful Philosophers' options opens the Inspect screen.
 - [ ] A teammate's Simpleton (with their hand, for the audits and Count teammates' hands): needs any card's play built as theirs (SimAdapter.Play with an owner; only Howl from Beyond is today).
 - [x] 1.11.8: decisions reconciled with the goals (#72 intents, #73 chances, #74 option delegates, #75 multiplayer as one team; superseded decisions struck through); README and ROADMAP refreshed; card lists by nameof.
 - [ ] Test in game: About page (links open the browser, paging, search, long notes wrap); card reward panel above the cards (clear of the banner and the offered-card tabs, 3 and 4 cards with Lasting Candy); shop price icons clear of the coin (Book of Five Rings on a card); map legend icons (placement left of the legend, hover tooltip and room highlight, hidden with the legend), Dowsing and Byrdonis Egg as tiny cards, the regrouped settings pages.

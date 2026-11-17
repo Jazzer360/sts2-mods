@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.15.2
+#### Fixed
+- Events: the Inspect button beside options that give cards from a known pool (Colorful Philosophers, card rewards, transforms) was invisible: the game keeps its magnifier art as a plain image, which is now made into the button's icon. If that art is ever missing, it's reported.
+
 ### Spire QoL 1.15.1
 #### Changed
 - Shop: the relic icons beside a price sit further from the gold coin, each on a soft dark backdrop, and Lucky Fysh's net price is larger and centered under the price.

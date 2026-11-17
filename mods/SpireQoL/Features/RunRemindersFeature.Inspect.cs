@@ -74,12 +74,25 @@ public sealed partial class RunRemindersFeature
 
     private static Texture2D? _inspectIcon;
 
-    /// <summary>The game's inspect cursor (packed/common_ui/cursor_inspect.png): a magnifier.</summary>
+    private static bool _inspectIconMissing;
+
+    /// <summary>
+    /// The game's inspect cursor (packed/common_ui/cursor_inspect.png): a magnifier. The game imports it as a plain image, not a
+    /// texture (GameIcons.LoadTexture makes one). Without it the button would be there but invisible, so a missing icon is said
+    /// once, in the log and as a report.
+    /// </summary>
     internal static Texture2D? InspectIcon()
     {
         if (_inspectIcon != null && GodotObject.IsInstanceValid(_inspectIcon)) return _inspectIcon;
         const string path = "res://images/packed/common_ui/cursor_inspect.png";
-        try { _inspectIcon = ResourceLoader.Exists(path) ? ResourceLoader.Load<Texture2D>(path) : null; } catch { _inspectIcon = null; }
+        _inspectIcon = SpireQoL.Cards.GameIcons.LoadTexture(path);
+        if (_inspectIcon == null && !_inspectIconMissing)
+        {
+            _inspectIconMissing = true;
+            ModEntry.Log.Warn($"game art not found: {path} (the Inspect button has no icon)");
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("api", $"Game art not found: {path}", new[] { "missing-art", path },
+                "The Inspect button's icon couldn't be loaded; a game update probably moved or re-imported it.");
+        }
         return _inspectIcon;
     }
 }

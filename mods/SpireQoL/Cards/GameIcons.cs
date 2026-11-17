@@ -110,11 +110,21 @@ public static class GameIcons
     /// <summary>The discard pile art outside combat (the game's own path, NetScreenTypeExtensions CardPile).</summary>
     private const string DiscardPilePath = "res://images/packed/combat_ui/discard_pile.png";
 
-    private static Texture2D? LoadTexture(string path)
+    /// <summary>
+    /// The game's art at a path as a texture, or null. Some of it is imported as a plain image rather than a texture (the
+    /// cursors: cursor_inspect.png is an .image resource), which is made into a texture here.
+    /// </summary>
+    internal static Texture2D? LoadTexture(string path)
     {
         try
         {
-            return ResourceLoader.Exists(path) ? ResourceLoader.Load<Texture2D>(path) : null;
+            if (!ResourceLoader.Exists(path)) return null;
+            return ResourceLoader.Load(path) switch
+            {
+                Texture2D texture => texture,
+                Image image => ImageTexture.CreateFromImage(image),
+                _ => null,
+            };
         }
         catch
         {
