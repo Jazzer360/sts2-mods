@@ -72,9 +72,12 @@ public static class ModEntry
         reporter.ContextProvider = () => Diagnostics.Snapshot.Capture(ctx);
         // Predictions model the unmodded game: with another mod that changes it (affects_gameplay, or adds cards,
         // relics, powers or monsters), its mechanics would show up as our mismatches, so nothing is sent.
+        // A build older than reporting.json's floor sends nothing: its reports are about code rewritten since (decision #81).
+        var floor = Sts2Mods.Core.Diagnostics.ReportFloor.Start(SpireQoL.Features.UpdateNoticeFeature.Repo, Id,
+            typeof(ModEntry).Assembly.GetName().Version ?? new Version(0, 0, 0), Log);
         reporter.SkipReason = () => Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly) is { Count: > 0 } other
             ? "other mods that change the game are loaded (" + string.Join(", ", other) + ")"
-            : null;
+            : floor.SkipReason();
         AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
         Sts2State.Init();
         // A private member a rule reads is gone (a game update renamed it): the rule silently uses its

@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.11
+#### Changed
+- Error reporting: a build older than the oldest version reports are still taken from (read from the mod's GitHub repo at startup) no longer sends reports, since they would be about code that has been rewritten since.
+
 ### Spire QoL 1.14.10
 #### Fixed
 - With teammates: a teammate's Wuppy takes the attacks aimed at them, and a teammate's Howl from Beyond and I Am Invincible play at the end of the turn (their attack can kill an enemy before it acts), in Incoming Damage and the lethal tab.

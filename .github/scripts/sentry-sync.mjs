@@ -10,13 +10,15 @@
 //                                         reopened with a comment, and its body replaced with the newest
 //                                         occurrence. The fix version is the newest "spireqol-vX.Y.Z" (or
 //                                         "Spire QoL X.Y.Z") in the latest closing comment that names one.
-//  - Reports from mod versions older than OLDEST_SUPPORTED are never mirrored or reopened: the issue
+//  - Reports from mod versions older than OLDEST_SUPPORTED (reporting.json) are never mirrored or reopened: the issue
 //                                         is resolved in Sentry (it comes back on its own if a supported
 //                                         version hits it, and is mirrored then).
 // A hidden marker in each issue body (<!-- sentry-issue: ID -->) links the two.
 //
 // Env: SENTRY_AUTH_TOKEN (secret), SENTRY_ORG, SENTRY_PROJECT, SENTRY_API (default https://sentry.io),
 //      GITHUB_TOKEN, GITHUB_REPOSITORY (owner/repo).
+
+import { readFileSync } from "node:fs";
 
 const env = (k, d) => process.env[k] || d;
 const SENTRY = env("SENTRY_API", "https://sentry.io").replace(/\/$/, "");
@@ -79,10 +81,10 @@ async function mirroredIssues() {
   return map;
 }
 
-// Reports from mod versions older than this are dropped (docs/DECISIONS.md #79). 1.0.0 rebuilt every
-// prediction and audit on the simulator, so an older report says nothing about today's code. Raise it
-// when a later release makes older reports meaningless the same way.
-const OLDEST_SUPPORTED = "1.0.0";
+// Reports from mod versions older than this are dropped (docs/DECISIONS.md #79, #81). It lives in reporting.json at
+// the repo root, which the mod reads too (builds below it stop sending). Raise it there when a release makes older
+// reports meaningless (1.0.0 rebuilt every prediction and audit on the simulator).
+const OLDEST_SUPPORTED = JSON.parse(readFileSync(new URL("../../reporting.json", import.meta.url), "utf8")).oldestReported.SpireQoL;
 
 // ---- versions: "0.31.17" style, compared numerically
 const parseVersion = (v) => (/^(\d+)\.(\d+)\.(\d+)/.exec(String(v || "")) || []).slice(1).map(Number);
