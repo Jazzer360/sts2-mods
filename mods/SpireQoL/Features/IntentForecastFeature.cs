@@ -21,7 +21,6 @@ namespace SpireQoL.Features;
 /// </summary>
 public sealed class IntentForecastFeature : IFeature, IFrameFeature
 {
-    private static readonly Color TurnColor = new(0.75f, 0.75f, 0.8f);
     private static readonly Color ChanceColor = new(1f, 0.9f, 0.6f);
 
     private readonly QolContext _ctx;
@@ -137,11 +136,6 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 var (moveId, chance) = turn.Moves[i];
                 var row = UiKit.Row(6);
                 row.MouseFilter = Control.MouseFilterEnum.Ignore;
-                // The turn it's for, on its first row: +1 is the turn after the intent on screen.
-                var label = Outlined(UiKit.Label(i == 0 ? $"+{t + 1}" : "", 16, TurnColor));
-                label.CustomMinimumSize = new Vector2(24, 0);
-                label.VerticalAlignment = VerticalAlignment.Center;
-                row.AddChild(Bobbing(label));
                 // In the tree first: NIntent finds its parts in _Ready, and UpdateIntent before that throws. Each row goes on top,
                 // so the forecast reads upward from the intent: +1 just above it.
                 _rows!.AddChild(row);

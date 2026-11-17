@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.4
+#### Changed
+- Intent Forecast drops its turn numbers: the row just above the intent is next turn, and each row up is a turn later.
+
 ### Spire QoL 1.14.3
 #### Fixed
 - Intent Forecast: no backdrop at all, and the turn numbers, chances and power icons sit level with their intents.
