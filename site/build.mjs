@@ -133,7 +133,7 @@ function layout({ title, page, body, latest }) {
 <header class="top">
   <a class="brand" href="index.html">Spire QoL</a>
   <nav>${nav}<a href="${REPO_URL}">GitHub</a></nav>
-  <a class="btn small" data-download href="${latest?.zip ?? `${REPO_URL}/releases`}">Download${latest ? ` ${esc(latest.version)}` : ""}</a>
+  <a class="btn small" data-download href="${latest?.zip ?? `${REPO_URL}/releases?q=spireqol`}">Download${latest ? ` ${esc(latest.version)}` : ""}</a>
 </header>
 <main>
 ${body}
@@ -208,7 +208,7 @@ function indexPage(features, shots, haveFiles, latest, manifest) {
     <p>Spire QoL keeps track of the things you'd otherwise have to hold in your head: relic counters, which of your powers and relics a card sets off, the damage coming your way after block, what an enemy does next, what your relics do with a reward, an event or a shop. So you can play fast and still make sharp decisions, without doing the math in your head.</p>
     <p>It does make the game easier. Not by breaking any rules or showing anything hidden, but by putting in front of you what an attentive player could already work out, and what a busy one would miss.</p>
     <p class="actions">
-      <a class="btn" data-download href="${latest?.zip ?? `${REPO_URL}/releases`}">Download${latest ? ` ${esc(latest.version)}` : ""}</a>
+      <a class="btn" data-download href="${latest?.zip ?? `${REPO_URL}/releases?q=spireqol`}">Download${latest ? ` ${esc(latest.version)}` : ""}</a>
       <a class="btn ghost" href="install.html">How to install</a>
     </p>
     ${latest ? `<p class="meta">Released ${esc(latest.date)} · <a href="changelog.html">What's new</a></p>` : ""}
@@ -230,7 +230,7 @@ ${manifest ? `<p class="meta center">Screenshots: Spire QoL ${esc(manifest.modVe
 }
 
 function installPage(latest) {
-  const dl = latest?.zip ?? `${REPO_URL}/releases`;
+  const dl = latest?.zip ?? `${REPO_URL}/releases?q=spireqol`;
   return layout({
     title: "Install Spire QoL",
     page: "install.html",
@@ -240,7 +240,7 @@ function installPage(latest) {
 <h1>Install</h1>
 <p class="actions"><a class="btn" data-download data-label="Download Spire QoL" href="${dl}">Download Spire QoL${latest ? ` ${esc(latest.version)}` : ""}</a>
 ${latest ? `<a class="btn ghost" href="${latest.url}">Release notes</a>` : ""}</p>
-${latest ? `<p class="meta">Released ${esc(latest.date)}. Every release: <a href="${REPO_URL}/releases">GitHub releases</a>.</p>` : ""}
+${latest ? `<p class="meta">Released ${esc(latest.date)}. Every release: <a href="${REPO_URL}/releases?q=spireqol">GitHub releases</a>.</p>` : ""}
 <ol class="steps">
   <li><strong>Download</strong> the zip above (from a release page, take <code>SpireQoL-&lt;version&gt;.zip</code> under Assets, not "Source code").</li>
   <li><strong>Open your game folder.</strong> In Steam, right-click <em>Slay the Spire 2</em> → <em>Manage</em> → <em>Browse local files</em>.</li>
@@ -264,7 +264,7 @@ ${latest ? `<p class="meta">Released ${esc(latest.date)}. Every release: <a href
 </ul>
 
 <h2>Your saves</h2>
-<p>While any mod is installed, the game keeps a separate set of modded profiles: the first time you play with mods it copies your profiles, and from then on the two drift apart. To keep using your normal profiles, also install <strong>Main Saves</strong> the same way (<code>MainSaves-&lt;version&gt;.zip</code> from the <a href="${REPO_URL}/releases">releases page</a>, giving <code>mods/MainSaves/MainSaves.dll</code>). Delete <code>mods/MainSaves</code> to go back to the modded profiles, which are kept as they were.</p>
+<p>While any mod is installed, the game keeps a separate set of modded profiles: the first time you play with mods it copies your profiles, and from then on the two drift apart. To keep using your normal profiles, also install <strong>Main Saves</strong> the same way (<code>MainSaves-&lt;version&gt;.zip</code> from the <a href="${REPO_URL}/releases?q=mainsaves">releases page</a>, giving <code>mods/MainSaves/MainSaves.dll</code>). Delete <code>mods/MainSaves</code> to go back to the modded profiles, which are kept as they were.</p>
 
 <h2>Updating and uninstalling</h2>
 <p><strong>Update:</strong> extract the new zip over the old one, replacing the files. Your settings are kept. The main menu tells you when a newer version is out.</p>
