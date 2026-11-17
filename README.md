@@ -6,6 +6,7 @@ This branch holds the Spire QoL website and the tooling that screenshots it from
 site/
   features.json     every feature: its text and which screenshots show it
   build.mjs         builds site/dist (Node 18+, no dependencies)
+  changelog.mjs     the changelog parser and markup, used by build.mjs and by the changelog page in the browser
   serve.mjs         serves site/dist on http://localhost:8123
   style.css
   shots/            screenshots + shots.json, written by capture.ps1 (committed)
@@ -23,7 +24,7 @@ capture/
 - **Install** (`install.html`): install, update and uninstall steps, Main Saves, multiplayer, error reporting, and a download button for the newest release's zip.
 - **Changelog** (`changelog.html`): every `### Spire QoL x.y.z` section of `CHANGELOG.md` on `main`, newest first, with each release's date and link, and a search box.
 
-The changelog and the feature reference are read from `main` when the site builds, and releases from GitHub's API. The download buttons also ask GitHub for the newest release when the page loads, so they stay current between builds. The changelog updates the next time the site builds: after a capture, or by hand (`gh workflow run pages.yml --ref gh-pages`).
+The changelog and the feature reference are read from `main` when the site builds, and releases from GitHub's API. The download buttons also ask GitHub for the newest release when the page loads, so they stay current between builds. The changelog page also loads `CHANGELOG.md` from `main` in the browser and renders it with the same code (`site/changelog.mjs`, shared with the build), with release dates from GitHub's API; it keeps the built copy when that fails, or when the fetched file is missing a version the built copy has (raw.githubusercontent.com can serve a stale copy for a few minutes). The site is also rebuilt after every Spire QoL release (the release script runs `gh workflow run pages.yml --ref gh-pages`), after a capture, or by hand with that command.
 
 ## Taking screenshots
 

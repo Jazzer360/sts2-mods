@@ -5,7 +5,7 @@ import { join, extname, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "dist");
-const types = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".png": "image/png", ".webp": "image/webp", ".json": "application/json", ".js": "text/javascript" };
+const types = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".png": "image/png", ".webp": "image/webp", ".json": "application/json", ".js": "text/javascript", ".mjs": "text/javascript" };
 const port = Number(process.env.PORT || 8123);
 
 createServer(async (req, res) => {

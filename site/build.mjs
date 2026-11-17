@@ -11,9 +11,8 @@ import { readFile, writeFile, mkdir, cp, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { REPO, REPO_URL, RELEASES_API, cmpVersion, esc, parseChangelog, spireQolReleases, newestRelease, renderReleases, versionCount } from "./changelog.mjs";
 
-const REPO = "Jazzer360/sts2-mods";
-const REPO_URL = `https://github.com/${REPO}`;
 const RAW = `https://raw.githubusercontent.com/${REPO}/main`;
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, "dist");
@@ -37,82 +36,13 @@ async function releases() {
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const all = [];
   for (let page = 1; page < 50; page++) {
-    const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100&page=${page}`, { headers });
+    const res = await fetch(`${RELEASES_API}?per_page=100&page=${page}`, { headers });
     if (!res.ok) { warn(`releases: HTTP ${res.status}; building without release dates or download link`); return []; }
     const batch = await res.json();
     all.push(...batch);
     if (batch.length < 100) break;
   }
-  return all
-    .filter((r) => r.tag_name.startsWith("spireqol-v") && !r.draft && !r.prerelease)
-    .map((r) => ({
-      version: r.tag_name.slice("spireqol-v".length),
-      date: (r.published_at || r.created_at || "").slice(0, 10),
-      url: r.html_url,
-      zip: (r.assets || []).find((a) => a.name.endsWith(".zip"))?.browser_download_url ?? null,
-    }));
-}
-
-const cmpVersion = (a, b) => {
-  const pa = a.split(".").map(Number), pb = b.split(".").map(Number);
-  for (let i = 0; i < 3; i++) if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pa[i] ?? 0) - (pb[i] ?? 0);
-  return 0;
-};
-
-// ---- a small Markdown subset (what CHANGELOG.md uses) ---------------------------------------------
-
-const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-function inline(s) {
-  const codes = [];
-  s = s.replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(c) - 1}\u0000`);
-  s = esc(s);
-  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, href) => {
-    if (!/^https?:/.test(href)) href = `${REPO_URL}/blob/main/${href.replace(/^\.?\//, "").replace(/^docs\//, "docs/")}`;
-    return `<a href="${href}">${label}</a>`;
-  });
-  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
-  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${esc(codes[i])}</code>`);
-}
-
-function markdownList(lines) {
-  // Nested "- item" lists by indent; continuation lines join the item above.
-  let html = "", depth = -1;
-  for (const raw of lines) {
-    const m = raw.match(/^(\s*)[-*] (.*)$/);
-    if (!m) {
-      if (html.endsWith("</li>")) html = html.slice(0, -5) + " " + inline(raw.trim()) + "</li>";
-      else html += `<p>${inline(raw.trim())}</p>`;
-      continue;
-    }
-    const indent = Math.floor(m[1].length / 2);
-    while (depth < indent) { html += "<ul>"; depth++; }
-    while (depth > indent) { html += "</ul></li>"; depth--; }
-    html += `<li>${inline(m[2])}</li>`;
-  }
-  while (depth-- > 0) html += "</ul></li>";
-  if (html.includes("<ul>")) html += "</ul>";
-  // A nested list opens inside the item above it.
-  return html.replace(/<\/li><ul>/g, "<ul>");
-}
-
-// ---- changelog -----------------------------------------------------------------------------------
-
-function parseChangelog(md) {
-  const entries = [];
-  let cur = null, kind = null;
-  for (const line of md.split(/\r?\n/)) {
-    const v = line.match(/^### Spire QoL (\d+\.\d+\.\d+)/);
-    if (v) { cur = { version: v[1], groups: [] }; entries.push(cur); kind = null; continue; }
-    if (/^###? /.test(line)) { cur = null; continue; }
-    if (!cur) continue;
-    const k = line.match(/^#### (.+)$/);
-    if (k) { kind = { name: k[1].trim(), lines: [] }; cur.groups.push(kind); continue; }
-    if (!line.trim()) continue;
-    if (!kind) { kind = { name: "", lines: [] }; cur.groups.push(kind); }
-    kind.lines.push(line);
-  }
-  return entries;
+  return spireQolReleases(all);
 }
 
 // ---- pages ---------------------------------------------------------------------------------------
@@ -283,14 +213,9 @@ ${latest ? `<p class="meta">Released ${esc(latest.date)}. Every release: <a href
 }
 
 function changelogPage(entries, released, latest) {
-  const items = entries.map((e) => {
-    const rel = released.get(e.version);
-    // Early versions predate GitHub releases; only a version past the newest release is "unreleased".
-    const pending = !rel && latest && cmpVersion(e.version, latest.version) > 0;
-    const date = rel ? `<time>${esc(rel.date)}</time>` : pending ? `<span class="tag">unreleased</span>` : "";
-    const groups = e.groups.map((g) => `${g.name ? `<h4 class="kind ${esc(g.name.toLowerCase())}">${esc(g.name)}</h4>` : ""}${markdownList(g.lines)}`).join("");
-    return `<section class="release" id="v${e.version}"><h2><a href="#v${e.version}">${esc(e.version)}</a> ${date}${rel ? ` <a class="small" href="${rel.url}">release</a>` : ""}</h2>${groups}</section>`;
-  }).join("");
+  // The release dates and links this copy was built with, for the live copy when GitHub's API can't be reached.
+  const builtReleases = JSON.stringify(Object.fromEntries([...released].map(([v, r]) => [v, { date: r.date, url: r.url, zip: r.zip }])))
+    .replace(/</g, "\\u003c");
   return layout({
     title: "Spire QoL changelog",
     page: "changelog.html",
@@ -298,13 +223,14 @@ function changelogPage(entries, released, latest) {
     body: `
 <article class="prose changelog">
 <h1>Changelog</h1>
-<p>Every Spire QoL release, newest first (${entries.length} versions).</p>
+<p id="count">${versionCount(entries.length)}</p>
 <input type="search" id="filter" placeholder="Search the changelog (a card, relic, feature...)" aria-label="Search the changelog">
-${items}
+<div id="releases" data-versions="${entries.map((e) => e.version).join(",")}">${renderReleases(entries, released, latest?.version)}</div>
 </article>
+<script type="application/json" id="built-releases">${builtReleases}</script>
 <script>
 const box = document.getElementById("filter");
-box.addEventListener("input", () => {
+function applyFilter() {
   const q = box.value.trim().toLowerCase();
   for (const sec of document.querySelectorAll(".release")) {
     let any = !q;
@@ -315,7 +241,47 @@ box.addEventListener("input", () => {
     }
     sec.style.display = any ? "" : "none";
   }
-});
+}
+box.addEventListener("input", applyFilter);
+</script>
+<script type="module">
+// The copy above was built with the site. Load CHANGELOG.md from main and show that instead, so the page is
+// current without a rebuild; keep the built copy when the fetch fails, or when the fetched file is older
+// (raw.githubusercontent.com can serve a stale copy for a few minutes).
+import { RAW_CHANGELOG, RELEASES_API, parseChangelog, spireQolReleases, newestRelease, renderReleases, versionCount } from "./changelog.mjs";
+const holder = document.getElementById("releases");
+const built = holder.dataset.versions.split(",").filter(Boolean);
+async function releaseMap() {
+  const map = new Map(Object.entries(JSON.parse(document.getElementById("built-releases").textContent)));
+  try {
+    const items = [];
+    for (let page = 1; page <= 5; page++) {
+      const res = await fetch(\`\${RELEASES_API}?per_page=100&page=\${page}\`);
+      if (!res.ok) return map;
+      const batch = await res.json();
+      items.push(...batch);
+      if (batch.length < 100) break;
+    }
+    for (const r of spireQolReleases(items)) map.set(r.version, r);
+  } catch {}
+  return map;
+}
+try {
+  const [res, released] = await Promise.all([fetch(RAW_CHANGELOG, { cache: "no-cache" }), releaseMap()]);
+  if (res.ok) {
+    const entries = parseChangelog(await res.text());
+    const have = new Set(entries.map((e) => e.version));
+    if (entries.length >= built.length && built.every((v) => have.has(v))) {
+      const latest = newestRelease([...released].map(([version, r]) => ({ version, ...r })));
+      const anchor = location.hash;
+      holder.innerHTML = renderReleases(entries, released, latest?.version);
+      holder.dataset.versions = entries.map((e) => e.version).join(",");
+      document.getElementById("count").textContent = versionCount(entries.length);
+      applyFilter();
+      if (anchor) document.getElementById(anchor.slice(1))?.scrollIntoView();
+    }
+  }
+} catch {}
 </script>`,
   });
 }
@@ -343,14 +309,15 @@ for (const f of features.sections.flatMap((s) => s.features)) for (const n of f.
 const [changelogMd, featuresMd, rels] = await Promise.all([text("CHANGELOG_PATH", "CHANGELOG.md"), text("FEATURES_PATH", "docs/FEATURES.md"), releases()]);
 checkCoverage(features, featuresMd);
 const released = new Map(rels.map((r) => [r.version, r]));
-const latest = rels.filter((r) => r.zip).sort((a, b) => cmpVersion(b.version, a.version))[0] ?? null;
-const entries = parseChangelog(changelogMd).sort((a, b) => cmpVersion(b.version, a.version));
+const latest = newestRelease(rels);
+const entries = parseChangelog(changelogMd);
 
 await mkdir(dist, { recursive: true });
 await writeFile(join(dist, "index.html"), indexPage(features, shots, haveFiles, latest, manifest));
 await writeFile(join(dist, "install.html"), installPage(latest));
 await writeFile(join(dist, "changelog.html"), changelogPage(entries, released, latest));
 await cp(join(here, "style.css"), join(dist, "style.css"));
+await cp(join(here, "changelog.mjs"), join(dist, "changelog.mjs"));
 if (existsSync(shotsDir)) await cp(shotsDir, join(dist, "shots"), { recursive: true });
 await writeFile(join(dist, ".nojekyll"), "");
 
