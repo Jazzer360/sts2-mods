@@ -31,8 +31,6 @@ internal static class RelicChoiceTracking
         ["Shovel"] = "none: adds a rest-site option (shown as the option)",
         ["Wuppy"] = "none: adds a rest-site option (shown as the option)",
         ["MiniatureTent"] = "none: keeps the other rest-site options open after one (the options stay clickable)",
-        ["MembershipCard"] = "none: cheaper shop prices (the shop shows the prices)",
-        ["TheCourier"] = "none: cheaper shop prices and restocked items (the shop shows them)",
         ["AmethystAubergine"] = "none: adds a reward (shown on the rewards screen)",
         ["BlackStar"] = "none: adds a relic reward after elites (shown on the rewards screen)",
         ["Driftwood"] = "none: changes the rewards (shown on the rewards screen)",

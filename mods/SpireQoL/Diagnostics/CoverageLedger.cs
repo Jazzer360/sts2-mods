@@ -683,6 +683,9 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         "ModifyUnknownMapPointRoomTypes", "ModifyGeneratedMap", "ModifyGeneratedMapLate", "ShouldAllowFreeTravel", "ShouldGenerateTreasure",
         "ModifyNextEvent", "ModifyOddsIncreaseForUnrolledRoomType", "TryModifyRestSiteOptions", "ShouldDisableRemainingRestSiteOptions",
         "ModifyRestSiteHealAmount", "TryModifyRestSiteHealRewards", "AfterRestSiteHeal", "AfterRestSiteSmith",
+        // What a shop offers and charges: they change what a Merchant is worth (Membership Card's prices).
+        "ModifyMerchantPrice", "ShouldRefillMerchantEntry", "ModifyMerchantCardPool", "ModifyMerchantCardRarity",
+        "ShouldAllowMerchantCardRemoval", "ModifyMerchantCardCreationResults", "AfterItemPurchased",
     };
 
     /// <summary>

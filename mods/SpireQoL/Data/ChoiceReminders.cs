@@ -157,9 +157,12 @@ public static class ChoiceReminders
         new(nameof(JuzuBracelet), ChoiceEffect.None, Map: PathRoom.Unknown),
         new(nameof(GoldenCompass), ChoiceEffect.None, Map: PathRoom.Unknown),
         new(nameof(LanternKey), ChoiceEffect.None, Map: PathRoom.Unknown),
-        // Shops: a heal on entering (Meal Ticket), buys everything on entering (Lord's Parasol).
+        // Shops: a heal on entering (Meal Ticket), buys everything on entering (Lord's Parasol), cheaper prices (ModifyMerchantPrice:
+        // Membership Card, The Courier, which also restocks what you buy).
         new(nameof(MealTicket), ChoiceEffect.None, Map: PathRoom.Shop),
         new(nameof(LordsParasol), ChoiceEffect.None, Map: PathRoom.Shop),
+        new(nameof(MembershipCard), ChoiceEffect.None, Map: PathRoom.Shop),
+        new(nameof(TheCourier), ChoiceEffect.None, Map: PathRoom.Shop),
         // Treasure: the first treasure room has no chest (ShouldGenerateTreasure), crossed until it's passed.
         new(nameof(SilverCrucible), ChoiceEffect.None, Map: PathRoom.Treasure, MapCrossed: PathRoom.Treasure),
     };
@@ -186,6 +189,9 @@ public static class ChoiceReminders
         ["SpoilsMap"] = "changes the map (the map shows it)",
         // In a fight.
         ["TheHunt"] = "a card's effect in a fight",
+        // Shop cards changed like every card you get (ModifyMerchantCardCreationResults): rewards and events too, not shops in particular.
+        ["MoltenEgg"] = "upgrades shop cards like every card you get", ["FrozenEgg"] = "upgrades shop cards like every card you get",
+        ["ToxicEgg"] = "upgrades shop cards like every card you get", ["FresnelLens"] = "enchants shop cards like every card you get",
     };
 
     private static readonly Dictionary<string, ReminderRule> ByRelic = Rules.ToDictionary(r => r.Relic);

@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.15.3
+#### Fixed
+- Map: Membership Card and The Courier show beside Merchant in the legend (cheaper shops). The coverage check now counts a relic that changes shop prices or stock as one that changes shops; the eggs and Fresnel Lens, which change every card you get, stay off the map.
+
 ### Spire QoL 1.15.2
 #### Fixed
 - Events: the Inspect button beside options that give cards from a known pool (Colorful Philosophers, card rewards, transforms) was invisible: the game keeps its magnifier art as a plain image, which is now made into the button's icon. If that art is ever missing, it's reported.

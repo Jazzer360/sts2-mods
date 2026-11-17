@@ -30,7 +30,7 @@ public class PathingTests
     {
         // An empty scan would pass silently: the rules came from these, each read a different way.
         var byName = Models().ToDictionary(t => t.Name);
-        foreach (var name in new[] { "BlackStar", "MealTicket", "Planisphere", "EternalFeather", "FishingRod", "Girya", "JuzuBracelet", "Dowsing", "ByrdonisEgg" })
+        foreach (var name in new[] { "BlackStar", "MealTicket", "Planisphere", "EternalFeather", "FishingRod", "Girya", "JuzuBracelet", "Dowsing", "ByrdonisEgg", "MembershipCard" })
             Assert.NotEmpty(SpireQoL.Diagnostics.CoverageWatch.RoomTestingHooks(byName[name]));
     }
 

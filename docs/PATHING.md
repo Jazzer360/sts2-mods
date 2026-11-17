@@ -60,6 +60,8 @@ Each entry is read from the relic's hook body, not its name. "Map shows it" entr
 | Shop | Meal Ticket | heals on entering | `AfterRoomEntered` (MerchantRoom) |
 | Shop | Maw Bank (crossed) | gold per room until you buy | `AfterRoomEntered`, `AfterItemPurchased` |
 | Shop | Lord's Parasol | buys everything on entering | `AfterRoomEntered` (MerchantRoom) |
+| Shop | Membership Card | half price | `ModifyMerchantPrice` |
+| Shop | The Courier | cheaper, and what you buy restocks | `ModifyMerchantPrice`, `ShouldRefillMerchantEntry` |
 | Treasure | Silver Crucible | changes treasure rooms | `ShouldGenerateTreasure` |
 | Boss | Pantograph, Bath Robes | heal / effect at the boss | `AfterRoomEntered` (Boss) |
 | (map shows it) | Fur Coat, Golden Compass's map, Winged Boots, Spoils Map | mark or change the map | `ModifyGeneratedMap*`, `ShouldAllowFreeTravel` |
@@ -74,7 +76,7 @@ Notes:
 
 - A `PathingRules` table (like `Data/ChoiceReminders.cs`): relic → room type(s), plain or crossed.
 - A coverage check, so a game update can't add a pathing relic silently. Every relic or card that overrides a map hook needs a rule or a reviewed reason:
-  - `ModifyGeneratedMap*`, `ModifyUnknownMapPointRoomTypes`, `ShouldAllowFreeTravel`, `ShouldGenerateTreasure`, `ModifyNextEvent`, rest site hooks.
+  - `ModifyGeneratedMap*`, `ModifyUnknownMapPointRoomTypes`, `ShouldAllowFreeTravel`, `ShouldGenerateTreasure`, `ModifyNextEvent`, rest site hooks, shop hooks (`ModifyMerchantPrice`, `ShouldRefillMerchantEntry`, the merchant card hooks, `AfterItemPurchased`; 1.15.3).
   - Or one whose `AfterRoomEntered` / `BeforeRoomEntered` / `AfterCombatVictory` / `AfterCombatEnd` / `TryModifyRewards` / `BeforeSideTurnStart` body compares `RoomType`, `MapPointType` or a room class (`RestSiteRoom`, `MerchantRoom`).
   - The room-type comparison can be read from the IL, as `OptionCards` reads event options. That gives the row for free and catches new relics like Black Star without naming them.
 - Quest cards in the deck (Dowsing, Byrdonis Egg, Lantern Key) are covered the same way, from the card's hooks.
