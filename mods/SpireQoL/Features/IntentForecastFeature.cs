@@ -29,6 +29,9 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     private VBoxContainer? _rows;
     private Creature? _enemy;
     private string _key = "";
+    /// <summary>The labels and power chips, each in a holder, moved every frame with the intents' bob.</summary>
+    private readonly List<Control> _bobbing = new();
+    private float _bob;
 
     public IntentForecastFeature(QolContext ctx) => _ctx = ctx;
 
@@ -50,12 +53,10 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         // Above the intent, the later turns higher up; beside it when there's no room above (an enemy near the top).
         _widget.AttachTo(() => IntentRect(_enemy), AttachSide.Above)
                .AttachTo(() => IntentRect(_enemy), AttachSide.RightOfBottom);
-        var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        panel.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.05f, 0.05f, 0.08f, 0.6f), radius: 6, margin: 6));
+        // No backdrop: the intents float like the game's own (the labels carry an outline instead).
         _rows = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         _rows.AddThemeConstantOverride("separation", 2);
-        panel.AddChild(_rows);
-        _widget.Content.AddChild(panel);
+        _widget.Content.AddChild(_rows);
     }
 
     public void OnFrame(OverlayHost host)
@@ -78,14 +79,44 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             Build(enemy, turns, view);
         }
         _widget!.HasContent = true;
+        // NIntent._Process's bob, so the labels and chips move with the intents.
+        var y = -(Mathf.Sin(Time.GetTicksMsec() * 0.001f * Mathf.Pi + _bob) * 10f + 8f);
+        foreach (var c in _bobbing)
+        {
+            if (!GodotObject.IsInstanceValid(c)) continue;
+            // Its size, known once it's on screen (a label's font): the holder takes it, so the row lays out around it.
+            var size = c.GetCombinedMinimumSize();
+            if (c.GetParent() is Control holder && holder.CustomMinimumSize != size) holder.CustomMinimumSize = size;
+            c.Size = size;
+            c.Position = new Vector2(0, y);
+        }
+    }
+
+    /// <summary>A control in a plain holder of its size (rows are containers, which would undo the bob), added to the bobbing list.</summary>
+    private Control Bobbing(Control inner)
+    {
+        inner.MouseFilter = Control.MouseFilterEnum.Ignore;
+        var holder = new Control { MouseFilter = Control.MouseFilterEnum.Ignore, CustomMinimumSize = inner.GetCombinedMinimumSize() };
+        holder.AddChild(inner);
+        inner.Size = holder.CustomMinimumSize;
+        _bobbing.Add(inner);
+        return holder;
+    }
+
+    private static Label Outlined(Label l)
+    {
+        l.AddThemeConstantOverride("outline_size", 6);
+        l.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
+        return l;
     }
 
     private void Build(Creature enemy, List<ForecastTurn> turns, MoveStateMachineView view)
     {
         UiKit.Clear(_rows!);
+        _bobbing.Clear();
         var targets = enemy.CombatState?.PlayerCreatures.ToList() ?? new List<Creature>();
         // The game's intents bob (NIntent._Process: a sine from _timeOffset); ours start in step with the intent on screen.
-        var bob = BobOffset(enemy);
+        var bob = _bob = BobOffset(enemy);
         for (var t = 0; t < turns.Count; t++)
         {
             var turn = turns[t];
@@ -95,10 +126,10 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 var row = UiKit.Row(6);
                 row.MouseFilter = Control.MouseFilterEnum.Ignore;
                 // The turn it's for, on its first row: +1 is the turn after the intent on screen.
-                var label = UiKit.Label(i == 0 ? $"+{t + 1}" : "", 16, TurnColor);
+                var label = Outlined(UiKit.Label(i == 0 ? $"+{t + 1}" : "", 16, TurnColor));
                 label.CustomMinimumSize = new Vector2(24, 0);
                 label.VerticalAlignment = VerticalAlignment.Center;
-                row.AddChild(label);
+                row.AddChild(Bobbing(label));
                 // In the tree first: NIntent finds its parts in _Ready, and UpdateIntent before that throws. Each row goes on top,
                 // so the forecast reads upward from the intent: +1 just above it.
                 _rows!.AddChild(row);
@@ -116,13 +147,13 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                     // The powers the move applies (Frail 2), from its code: a reminder of what a buff or debuff intent is.
                     if (enemy.Monster is { } monster)
                         foreach (var applied in MovePowers.Of(monster, move))
-                            row.AddChild(PowerChip(applied));
+                            row.AddChild(Bobbing(PowerChip(applied)));
                 }
                 if (!turn.Certain)
                 {
-                    var pct = UiKit.Label($"{Math.Round(chance * 100)}%", 18, ChanceColor);
+                    var pct = Outlined(UiKit.Label($"{Math.Round(chance * 100)}%", 18, ChanceColor));
                     pct.VerticalAlignment = VerticalAlignment.Center;
-                    row.AddChild(pct);
+                    row.AddChild(Bobbing(pct));
                 }
             }
         }
@@ -138,7 +169,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         chip.AddChild(icon);
         if (applied.Amount is { } a)
         {
-            var amount = UiKit.Label(a.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), 18, Colors.White);
+            var amount = Outlined(UiKit.Label(a.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), 18, Colors.White));
             amount.VerticalAlignment = VerticalAlignment.Center;
             chip.AddChild(amount);
         }
