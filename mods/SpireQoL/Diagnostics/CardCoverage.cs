@@ -268,7 +268,7 @@ internal static class CardCoverage
         {
             try
             {
-                foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
                     if (ins.operand is MethodInfo { IsGenericMethod: true, Name: "Apply" } mi && mi.DeclaringType?.Name == "PowerCmd")
                         list.Add(mi.GetGenericArguments()[0]);
             }
@@ -319,7 +319,7 @@ internal static class CardCoverage
         {
             try
             {
-                foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
                     if (ins.operand is MethodInfo mi && mi.DeclaringType != null) set.Add(mi.DeclaringType.Name + "." + mi.Name);
             }
             catch
@@ -338,7 +338,7 @@ internal static class CardCoverage
         {
             try
             {
-                foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
                 {
                     if (ins.operand is not MethodInfo mi || mi.DeclaringType == null) continue;
                     set.Add(mi.DeclaringType.Name + "." + mi.Name);

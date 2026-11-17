@@ -20,7 +20,7 @@ public class OptionCardsTests
         foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
         {
             if (m.IsAbstract) continue;
-            try { cards.Read(PatchProcessor.GetOriginalInstructions(m)); } catch { /* no body */ }
+            try { cards.Read(SpireQoL.Diagnostics.GameCode.Instructions(m)); } catch { /* no body */ }
         }
         return cards;
     }

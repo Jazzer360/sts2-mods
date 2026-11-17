@@ -62,7 +62,7 @@ internal static class CodeIndex
             {
                 try
                 {
-                    foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                    foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
                         if (ins.operand is MethodBase mb && mb.DeclaringType != null) calls.Add(mb.DeclaringType.Name + "." + mb.Name);
                 }
                 catch

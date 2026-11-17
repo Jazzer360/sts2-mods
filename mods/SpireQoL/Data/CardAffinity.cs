@@ -140,7 +140,7 @@ public static class CardAffinity
         {
             if (m.IsAbstract) continue;
             List<CodeInstruction> code;
-            try { code = PatchProcessor.GetOriginalInstructions(m); } catch { continue; }
+            try { code = SpireQoL.Diagnostics.GameCode.Instructions(m); } catch { continue; }
             foreach (var ins in code)
             {
                 if (ins.operand is MethodInfo { IsGenericMethod: true } g && g.Name is "CreateCard" or "Card"

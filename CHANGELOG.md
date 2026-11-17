@@ -13,6 +13,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Expose takes its target's block (and Artifact) in predictions.
 - An enemy's poison death at the start of the enemies' turn stuns a Ravenous Corpse Slug before it attacks, so Incoming Damage no longer counts its hit.
 - The Endless Conveyor's dishes show relic icons for what the dish does (Fried Eel adds a card).
+- Event option icons and the mod's checks no longer sometimes miss what the game's code does: reading it on two threads at once (the coverage check runs while the game loads) could fail silently.
 
 ### Spire QoL 1.11.5
 #### Fixed

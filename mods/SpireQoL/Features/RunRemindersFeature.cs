@@ -879,7 +879,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         List<CodeInstruction> code;
         try
         {
-            code = PatchProcessor.GetOriginalInstructions(body);
+            code = SpireQoL.Diagnostics.GameCode.Instructions(body);
         }
         catch
         {

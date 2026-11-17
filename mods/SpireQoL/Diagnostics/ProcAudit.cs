@@ -1447,7 +1447,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         {
             try
             {
-                foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
                 {
                     if (ins.operand is MethodInfo { IsGenericMethod: true, Name: "Apply" } mi && mi.DeclaringType?.Name == "PowerCmd")
                         set.Add(mi.GetGenericArguments()[0]);

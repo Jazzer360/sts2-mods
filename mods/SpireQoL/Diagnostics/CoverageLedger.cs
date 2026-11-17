@@ -668,7 +668,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         {
             if (!m.IsVirtual || m.GetBaseDefinition().DeclaringType == t || !CardHooks.Contains(m.Name)) continue;
             List<CodeInstruction> code;
-            try { code = PatchProcessor.GetOriginalInstructions(m); } catch { continue; }
+            try { code = SpireQoL.Diagnostics.GameCode.Instructions(m); } catch { continue; }
             if (code.Any(i => i.operand is MethodBase mb && mb.DeclaringType != null
                     && (CardTests.Contains(mb.DeclaringType.Name + "." + mb.Name)
                         || (mb.Name == "CanEnchant" && typeof(EnchantmentModel).IsAssignableFrom(mb.DeclaringType)))))
@@ -721,7 +721,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     private static IEnumerable<List<CodeInstruction>> BodiesOf(MethodInfo m, Type owner)
     {
         var bodies = new List<List<CodeInstruction>>();
-        void Add(MethodBase b) { try { bodies.Add(PatchProcessor.GetOriginalInstructions(b)); } catch { } }
+        void Add(MethodBase b) { try { bodies.Add(SpireQoL.Diagnostics.GameCode.Instructions(b)); } catch { } }
         Add(m);
         if (m.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()?.StateMachineType is { } sm
             && sm.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is { } moveNext)

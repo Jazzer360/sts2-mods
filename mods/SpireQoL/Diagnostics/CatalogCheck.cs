@@ -119,7 +119,7 @@ internal static class CatalogCheck
             {
                 try
                 {
-                    foreach (var ins in PatchProcessor.GetOriginalInstructions(m))
+                    foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
                         if (ins.operand is string s) set.Add(s);
                 }
                 catch
