@@ -895,6 +895,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             // command adds it, a curse joins the deck.
             if (MakesCurse(mb)) calls.Add(ChoiceReminders.CurseMade);
             if (owner != null && IsWithin(mb.DeclaringType, owner)) Walk(mb, owner, calls, seen, depth + 1, cards);
+            // A delegate the event keeps in its state, called by the option (the Endless Conveyor's dish:
+            // GrabSomethingOffTheBelt runs CurrentDish.action): read the ones the event holds now.
+            else if (mb.Name == "Invoke" && typeof(Delegate).IsAssignableFrom(mb.DeclaringType) && owner != null && cards.Target != null)
+            {
+                foreach (var held in HeldDelegates(cards.Target))
+                    if (held.Method.DeclaringType != null && IsWithin(held.Method.DeclaringType, owner)) Walk(held.Method, owner, calls, seen, depth + 1, cards);
+            }
             // An event's own part it creates (the Crystal Sphere's minigame, and the items it hides: card rewards, a curse, gold,
             // potions): everything that class does is something the option can do.
             else if (ins.opcode == OpCodes.Newobj && mb.DeclaringType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Events.Custom") == true)
@@ -916,6 +923,31 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         if (gm.Name != nameof(ModelDb.Card)) return false;
         try { return ModelDb.AllCards.FirstOrDefault(c => c.GetType() == arg)?.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse; }
         catch { return false; }
+    }
+
+    /// <summary>
+    /// Delegates in an event's (or closure's) instance fields, and in the fields of struct values it holds (the Endless
+    /// Conveyor's current Dish record struct).
+    /// </summary>
+    private static IEnumerable<Delegate> HeldDelegates(object target)
+    {
+        const BindingFlags f = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        var found = new List<Delegate>();
+        for (var t = target.GetType(); t != null && t != typeof(object); t = t.BaseType)
+        {
+            foreach (var field in t.GetFields(f))
+            {
+                object? v;
+                try { v = field.GetValue(target); } catch { continue; }
+                if (v is Delegate d) found.AddRange(d.GetInvocationList());
+                else if (v != null && field.FieldType.IsValueType && !field.FieldType.IsPrimitive && !field.FieldType.IsEnum)
+                    foreach (var inner in field.FieldType.GetFields(f))
+                    {
+                        try { if (inner.GetValue(v) is Delegate d2) found.AddRange(d2.GetInvocationList()); } catch { }
+                    }
+            }
+        }
+        return found;
     }
 
     private static bool IsWithin(Type t, Type owner)

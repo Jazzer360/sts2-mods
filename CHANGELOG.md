@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.11.6
+#### Fixed
+- Tabs and the lethal skull follow a card upgraded in your hand (Blessing of the Forge, Armaments): its simulation was kept from before the upgrade.
+- Echoing Slash hits every enemy again for each enemy it kills.
+- Expose takes its target's block (and Artifact) in predictions.
+- An enemy's poison death at the start of the enemies' turn stuns a Ravenous Corpse Slug before it attacks, so Incoming Damage no longer counts its hit.
+- The Endless Conveyor's dishes show relic icons for what the dish does (Fried Eel adds a card).
+
 ### Spire QoL 1.11.5
 #### Fixed
 - Impatience no longer counts its draws when you have an Attack in hand, so a full-hand prediction no longer hides the Make It So return tab on it.

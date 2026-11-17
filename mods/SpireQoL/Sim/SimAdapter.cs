@@ -86,6 +86,12 @@ public static partial class SimAdapter
     /// <summary>Cards whose kill sets off a hit on every enemy (Timber: OnKillDamage). The card scan flags a new damage value.</summary>
     internal static readonly HashSet<string> OnKillHitAllCards = new() { "Timber" };
 
+    /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
+    internal static readonly HashSet<string> RepeatPerKillCards = new() { "EchoingSlash" };
+
+    /// <summary>Cards that take all of their target's block, then its Artifact (Expose: CreatureCmd.LoseBlock, PowerCmd.Remove).</summary>
+    internal static readonly HashSet<string> StripBlockCards = new() { "Expose" };
+
     /// <summary>
     /// Cards aimed at a teammate (AnyAlly) whose block goes to that teammate (CreatureCmd.GainBlock on cardPlay.Target: Lift,
     /// Constellation, Demonic Shield). Your Dexterity and doublers count (they key on the card's owner), their Frail too

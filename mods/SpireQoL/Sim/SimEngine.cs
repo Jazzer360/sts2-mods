@@ -757,6 +757,7 @@ public static partial class SimEngine
             case DislodgeAllAction: RunDislodgeAll(b); break;
             case DamageAction da: RunDamage(b, da); break;
             case ExecuteAction ex: RunExecute(b, ex); break;
+            case StripBlockAction sb: b.Do(x => StripBlock(x, sb)); break;
             case KillOstyAction: b.Do(s => OstyLoses(s, Who.You, s.P.OstyHp)); break;
             case CardPlayAction pc: RunCardPlay(b, pc); break;
             case AttackAction at: RunAttack(b, at); break;
@@ -1004,6 +1005,18 @@ public static partial class SimEngine
         s.P.Focus += delta;
     }
 
+    private static void StripBlock(SimState s, StripBlockAction sb)
+    {
+        if (s.Enemy(s.CurrentPlay?.Target ?? -1) is not { Alive: true } e) return;
+        if (e.Block > 0)
+        {
+            e.Block = 0;
+            e.BlockBroken = true;
+            foreach (var (m, o) in Listeners(s)) m.AfterBlockBroken(s, o, e.Id);
+        }
+        if (sb.RemoveArtifact && PowersOf(s, e.Id).Has("ArtifactPower")) SetPowers(s, e.Id, PowersOf(s, e.Id).Without("ArtifactPower"));
+    }
+
     private static void AllyDeaths(SimState s)
     {
         Explosions(s);
@@ -1031,24 +1044,31 @@ public static partial class SimEngine
         AllyDeaths(s); // deaths at your end of turn
         s.FullBlockNeeded = new Dictionary<int, int>(); // per branch (shared until now)
         s.EnemyTurnNow = true; // Inferno and the like react only on their owner's side's turn
+        // Every enemy's poison ticks as the enemies' turn starts (PoisonPower.AfterSideTurnStart, before ExecuteEnemyTurn), stunned
+        // or not, and Hardened Shell's budget resets then. Its deaths run their hooks before any enemy moves (Ravenous stuns the
+        // other Corpse Slug; Crab Rage).
+        var poisoned = new HashSet<int>();
         foreach (var e in s.Enemies)
         {
-            if (!e.Alive)
-            {
-                e.DiedBeforeActing = true;
-                if (HitCount(e) > 0) s.SkippedEndOfTurn++;
-                continue;
-            }
-            // Poison ticks at the start of its turn, stunned or not; Hardened Shell's budget resets then.
+            if (!e.Alive) continue;
             e.ShellLeft = e.ShellPerTurn;
             var poison = Math.Min(e.Poison, e.ShellLeft);
             e.Hp -= poison;
             if (e.ShellLeft != int.MaxValue) e.ShellLeft -= poison;
+            if (e.Alive) continue;
+            poisoned.Add(e.Id);
+            e.DiedBeforeActing = true;
+            if (HitCount(e) > 0) s.SkippedPoisoned++;
+            Explosions(s);
+        }
+        if (poisoned.Count > 0) AllyDeaths(s);
+        foreach (var e in s.Enemies)
+        {
+            if (poisoned.Contains(e.Id)) continue;
             if (!e.Alive)
             {
                 e.DiedBeforeActing = true;
-                if (HitCount(e) > 0) s.SkippedPoisoned++;
-                Explosions(s);
+                if (HitCount(e) > 0) s.SkippedEndOfTurn++;
                 continue;
             }
             if (e.Stunned || HitCount(e) == 0) continue; // a stunned enemy skips its move

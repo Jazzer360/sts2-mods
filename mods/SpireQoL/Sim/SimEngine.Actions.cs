@@ -65,16 +65,7 @@ public static partial class SimEngine
                     });
                     break;
                 case SimPlay.Target.All:
-                    b.Each(s =>
-                    {
-                        IEnumerable<SimState> r = new[] { s };
-                        foreach (var id in s.Targetable.Select(e => e.Id).ToList())
-                        {
-                            var t = id;
-                            r = Then(r, x => x.Enemy(t) is { Alive: true } ? HitOnce(x, Info(x).Dealer, t, at) : new[] { x });
-                        }
-                        return r;
-                    });
+                    b.Each(s => HitAllRound(s, 1));
                     break;
                 case SimPlay.Target.Random:
                     b.Each(s => RandomTarget(s, (x, id) => HitOnce(x, Info(x).Dealer, id, at)));
@@ -83,6 +74,20 @@ public static partial class SimEngine
         }
         HookStep(b, nameof(SimModel.AfterAttack), (m, o, x) => m.AfterAttack(x, o, Info(x)));
         b.Do(s => s.CurrentAttack = 0);
+
+        // One hit on every hittable enemy; with RepeatPerKill (Echoing Slash), one more round per enemy it killed.
+        IEnumerable<SimState> HitAllRound(SimState s, int rounds)
+        {
+            if (rounds <= 0) return new[] { s };
+            var ids = s.Targetable.Select(e => e.Id).ToList();
+            IEnumerable<SimState> r = new[] { s };
+            foreach (var id in ids)
+            {
+                var t = id;
+                r = Then(r, x => x.Enemy(t) is { Alive: true } ? HitOnce(x, Info(x).Dealer, t, at) : new[] { x });
+            }
+            return Then(r, x => HitAllRound(x, rounds - 1 + (at.RepeatPerKill ? ids.Count(id => x.Enemy(id) is { Alive: false }) : 0)));
+        }
     }
 
     /// <summary>One random living enemy: a branch per possible target (none with NoRandomHits; one past the budget).</summary>

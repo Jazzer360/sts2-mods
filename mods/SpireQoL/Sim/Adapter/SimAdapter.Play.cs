@@ -67,6 +67,7 @@ public static partial class SimAdapter
             var b = adroit.DynamicVars.Block.BaseValue;
             play.Body.Add(new GainBlockAction(1, b, SimProps.Move) { Captured = SimReaders.Block(cs, card, me.Creature, b, ValueProp.Move) });
         }
+        if (StripBlockCards.Contains(name)) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
         play.Body.AddRange(PowersOf(card, f, name, allyId));
         play.Body.AddRange(OrbsOf(card, me, cs, name, play.ChannelToAlly ? allyId : Who.You));
         AddCardEvents(play, f, plays);
@@ -181,6 +182,7 @@ public static partial class SimAdapter
             ByOsty = f.ByOsty,
             OnKill = onKill,
             Splash = name == "RainShot", // RainShot.OnPlay: the target's damage to every other enemy
+            RepeatPerKill = RepeatPerKillCards.Contains(name),
         };
     }
 

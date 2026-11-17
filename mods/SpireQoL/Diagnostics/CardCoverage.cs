@@ -102,6 +102,12 @@ internal static class CardCoverage
     internal static bool TeammateTargetUnmodelled(CardModel card) =>
         card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.ContainsKey(card.GetType().Name);
 
+    /// <summary>
+    /// Cards whose kill only gives a reward that changes nothing in the turn's outcome: Feed (max HP), Hand of Greed (gold),
+    /// Knockout Blow (stars), Sunder (energy), The Hunt (a power for the fight's rewards).
+    /// </summary>
+    private static readonly HashSet<string> KillRewardCards = new() { "Feed", "HandOfGreed", "KnockoutBlow", "Sunder", "TheHunt" };
+
     /// <summary>Cards reviewed as not needing what the scan finds, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
@@ -154,6 +160,14 @@ internal static class CardCoverage
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
             && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
+        // A card that takes block away (Expose): the simulator models the ones it knows.
+        if (Calls("CreatureCmd", "LoseBlock") && !SimAdapter.StripBlockCards.Contains(name))
+            issues.Add("takes block away (the simulator doesn't remove it)");
+        // A card that reacts to its own kills: more damage (Timber's hit on every enemy, Echoing Slash's repeats) is simulated;
+        // a reward for the kill (energy, stars, gold, max HP, a power) changes nothing the turn's outcome shows.
+        if (Calls("DamageResult", "get_WasTargetKilled") && !SimAdapter.OnKillHitAllCards.Contains(name)
+            && !SimAdapter.RepeatPerKillCards.Contains(name) && !KillRewardCards.Contains(name))
+            issues.Add("reacts to its own kills (not simulated)");
         // A drawing card that glows gold has a condition on what it does (Impatience: no Attack in hand): its draw count
         // must check it.
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))

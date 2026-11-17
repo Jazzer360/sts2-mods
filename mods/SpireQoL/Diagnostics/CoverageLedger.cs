@@ -237,7 +237,7 @@ internal static partial class CoverageLedger
         ["PossessSpeedPower"] = "ignore: returns stolen Dexterity when it dies",
         ["PossessStrengthPower"] = "ignore: returns stolen Strength when it dies",
         ["RagePower"] = "covered: AfterCardPlayed block on attacks (proc block)",
-        ["RavenousPower"] = "covered: AfterDeath of an ally stuns it (simulator; crossed kill tab)",
+        ["RavenousPower"] = "covered: AfterDeath of an ally stuns it (simulator; crossed kill tab), a poison death at the start of the enemies' turn included",
         ["ReaperFormPower"] = "covered: AfterDamageGiven Doom on attack damage (proc tab; Doom kills after the enemy turn)",
         ["ReattachPower"] = "ignore: AfterDeath sends a segment to its dead move (reattaching at the end of its turn, no attack) and ShouldAllowHitting keeps it out of hits, so its kill holds for the turn; the simulator never ends the fight early",
         ["ReboundPower"] = "ignore: ModifyCardPlayResultLocation puts played cards on your draw pile after their effects (later plays read piles live)",

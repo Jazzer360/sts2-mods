@@ -319,7 +319,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             _simKey = stateKey;
             _simCache.Clear(); // running tasks finish on their own; their results are dropped
         }
-        var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}";
+        // The card's own numbers too: upgrading it in hand (Blessing of the Forge, Armaments) or a value that grows (Claw)
+        // changes its play without changing the board.
+        var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|{CardNumbers(card)}";
         // The plays are built here (they read the game); only the simulation runs off the main thread.
         var inputs = new SimInputs { Start = te.State, Ids = te.Ids, Allies = te.Teammates.Select(p => p.Creature).ToList() };
         foreach (var t in targets) inputs.PlayByTarget[t] = SimAdapter.Play(card, f, _me, _cs, te.Ids, t);
@@ -331,6 +333,22 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             if (!_noCache) _simCache[cacheKey] = task;
         }
         return task;
+    }
+
+    /// <summary>The card's upgrade level, enchantment and every dynamic value, for the simulation cache.</summary>
+    private static string CardNumbers(CardModel card)
+    {
+        try
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append(card.CurrentUpgradeLevel).Append('|').Append(card.Enchantment?.GetType().Name).Append(card.Enchantment?.Amount);
+            foreach (var kv in card.DynamicVars) sb.Append('|').Append(kv.Key).Append('=').Append(kv.Value.BaseValue);
+            return sb.ToString();
+        }
+        catch
+        {
+            return "?";
+        }
     }
 
     /// <summary>

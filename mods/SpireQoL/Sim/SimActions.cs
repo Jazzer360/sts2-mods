@@ -43,6 +43,11 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
     public DamageSpec? OnKill { get; init; }
     /// <summary>Rain Shot: after a hit on the target, every other hittable enemy takes that hit's damage (overkill included).</summary>
     public bool Splash { get; init; }
+    /// <summary>
+    /// Echoing Slash: the hit on every enemy (Mode All) runs once more for each enemy a round killed (attackCount +=
+    /// WasTargetKilled), until a round kills none.
+    /// </summary>
+    public bool RepeatPerKill { get; init; }
     /// <summary>A shot's attack: it only happens when the shot had an arrow (ArrowCmd.ShootArrowAtTarget runs the attack inside ImpaleTarget).</summary>
     public bool NeedsArrow { get; init; }
 }
@@ -91,6 +96,12 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
 /// with the card as its source. No BeforeAttack or AfterAttack: Curl Up, Flutter and the like don't react.
 /// </summary>
 public sealed record DamageAction(DamageSpec Damage) : SimAction;
+
+/// <summary>
+/// Expose: the play's target loses all its block (CreatureCmd.LoseBlock: AfterBlockBroken when it had some, Burrowed), then its
+/// Artifact (PowerCmd.Remove), so the Vulnerable that follows lands.
+/// </summary>
+public sealed record StripBlockAction(bool RemoveArtifact) : SimAction;
 
 /// <summary>The play's target dies if it's alive at or below this HP (Judgement: CreatureCmd.SetCurrentHp to 0).</summary>
 public sealed record ExecuteAction(int Threshold) : SimAction;
