@@ -151,7 +151,9 @@ public static partial class SimEngine
     /// <summary>Bookkeeping of one card event: the play's event counts, and the player's energy.</summary>
     internal static void CountEvent(SimState s, CardEvent ev, int player)
     {
-        s.PlayEvents = s.PlayEvents.Add(ev.ToString(), 1);
+        // The play's own events (Unceasing Top: a play that draws or creates nothing for its player); a teammate's draws and
+        // cards (Huddle Up, Blade Symphony) aren't the player's.
+        if (player == (s.CurrentPlay?.Owner ?? Who.You)) s.PlayEvents = s.PlayEvents.Add(ev.ToString(), 1);
         if (!Who.IsPlayer(player)) return;
         var p = player == Who.You ? s.P : s.MutableTeammate(Who.TeammateIndex(player));
         if (ev == CardEvent.EnergySpent) p.Energy--;

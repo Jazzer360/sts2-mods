@@ -227,11 +227,11 @@ public static partial class SimEngine
         if (ce.FirstPlayOnly && b.States.Count > 0 && b.States[0].CurrentPlay is { PlayIndex: > 0 }) return;
         for (var i = 0; i < ce.Count; i++)
         {
-            b.Do(s => { CountEvent(s, ce.Event, s.CurrentPlay?.Owner ?? Who.You); s.EventCard = ce.Card; });
+            b.Do(s => { CountEvent(s, ce.Event, ce.Player ?? s.CurrentPlay?.Owner ?? Who.You); s.EventCard = ce.Card; });
             HookStep(b, nameof(SimModel.AfterCardEvent), (m, o, x) =>
             {
                 x.IndirectNow = ce.Indirect;
-                var r = m.AfterCardEvent(x, o, ce.Event, x.CurrentPlay?.Owner ?? Who.You).ToList();
+                var r = m.AfterCardEvent(x, o, ce.Event, ce.Player ?? x.CurrentPlay?.Owner ?? Who.You).ToList();
                 foreach (var y in r) y.IndirectNow = false;
                 return r;
             });

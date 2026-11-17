@@ -119,6 +119,18 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly HashSet<string> AllPlayersBlockCards = new() { nameof(Rally) };
 
+    /// <summary>
+    /// Cards that make every living teammate draw (HuddleUp.OnPlay: CardPileCmd.DrawWithoutBlockingOnOtherPlayers for each),
+    /// not you: their draws are their card events (their draw procs), as many as their hand has room for and their piles hold.
+    /// </summary>
+    internal static readonly HashSet<string> TeammatesDrawCards = new() { nameof(HuddleUp) };
+
+    /// <summary>
+    /// Cards that put Shivs into every living teammate's hand, not yours (BladeSymphony.OnPlay: Shiv.CreateInHand(teammate),
+    /// so the teammate is the creator: their created-card procs, Arsenal, Pillar of Creation, Regalite).
+    /// </summary>
+    internal static readonly HashSet<string> TeammatesShivCards = new() { nameof(BladeSymphony) };
+
     /// <summary>Cards aimed at a teammate whose channels go into that teammate's orbs (Ignition: OrbCmd.Channel on the target's player).</summary>
     internal static readonly HashSet<string> ChannelToAllyCards = new() { nameof(Ignition) };
 

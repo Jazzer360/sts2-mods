@@ -72,6 +72,31 @@ public static partial class SimAdapter
                     { Captured = SimReaders.Block(cs, card, mate, allBlock.BaseValue, ValueProp.Move), To = Who.Teammate(k) });
             }
         }
+        // Teammates' draws and created cards (Huddle Up, Blade Symphony, Constellation's draws for its target): their card
+        // events, for their procs. Indirect, like your own draws and created cards.
+        if (TeammatesDrawCards.Contains(name) || TeammatesShivCards.Contains(name) || (PlayFacts.AllyDrawCards.Contains(name) && ally != null))
+        {
+            var mates = Teammates(me, cs);
+            var cards = Sts2State.Var(card, "Cards");
+            for (var k = 0; k < mates.Count; k++)
+            {
+                if (mates[k].Creature is not { IsAlive: true } mate) continue;
+                if (PlayFacts.AllyDrawCards.Contains(name) && mate != ally) continue;
+                var who = Who.Teammate(k);
+                if (TeammatesShivCards.Contains(name))
+                {
+                    play.Body.Add(new CardEventAction(CardEvent.Generated, cards) { Player = who, Indirect = true });
+                    continue;
+                }
+                // Their draws: as many as their hand has room for and their piles hold; a shuffle when the draw pile runs out.
+                var hand = PileType.Hand.GetPile(mates[k]).Cards.Count;
+                var drawPile = PileType.Draw.GetPile(mates[k]).Cards.Count;
+                var discard = PileType.Discard.GetPile(mates[k]).Cards.Count;
+                var n = Math.Min(cards, Math.Min(Math.Max(0, CardPile.MaxCardsInHand - hand), drawPile + discard));
+                if (n > drawPile) play.Body.Add(new CardEventAction(CardEvent.Shuffled, 1) { Player = who, Indirect = true });
+                if (n > 0) play.Body.Add(new CardEventAction(CardEvent.Drawn, n) { Player = who, Indirect = true });
+            }
+        }
         // Adroit (enchantment): its block on every play, after the card's own (EnchantmentModel.OnPlay → CreatureCmd.GainBlock).
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
         {

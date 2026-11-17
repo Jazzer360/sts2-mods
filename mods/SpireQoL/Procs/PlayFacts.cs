@@ -681,7 +681,7 @@ public sealed class PlayFacts
     {
         nameof(Acrobatics), nameof(Adrenaline), nameof(Backflip), nameof(BattleTrance), nameof(BigBang), nameof(BrightestFlame), nameof(BurningPact),
         nameof(Coolheaded), nameof(DecisionsDecisions), nameof(DrumOfBattle), nameof(Expertise), nameof(Fetch), nameof(Finesse),
-        nameof(FlashOfSteel), nameof(Glimmer), nameof(Glow), nameof(HuddleUp), nameof(Impatience), nameof(MasterOfStrategy), nameof(MinionStrike),
+        nameof(FlashOfSteel), nameof(Glimmer), nameof(Glow), nameof(Impatience), nameof(MasterOfStrategy), nameof(MinionStrike),
         nameof(Modded), nameof(Neurosurge), nameof(Offering), nameof(Overclock), nameof(Parse), nameof(PhotonCut), nameof(PommelStrike), nameof(Prepared), nameof(Prophesize),
         nameof(Reboot), nameof(Reflex), nameof(RocketPunch), nameof(Scourge), nameof(Scrape), nameof(ShrugItOff), nameof(Skim), nameof(Slimed), nameof(Soul),
         nameof(SpoilsOfBattle), nameof(SweepingBeam), nameof(ThinkingAhead),
@@ -1069,10 +1069,14 @@ public sealed class PlayFacts
             // Shivs.
             case nameof(BladeDance): case nameof(BladeOfInk): case nameof(CloakAndDagger): case nameof(UpMySleeve): return Var("Cards");
             case nameof(FanOfKnives): case nameof(HiddenDaggers): return Var("Shivs");
-            case nameof(LeadingStrike): case nameof(BladeSymphony): return 1;
+            case nameof(LeadingStrike): return 1;
             case nameof(StormOfSteel): return others.Count;
             // Souls.
-            case nameof(CaptureSpirit): case nameof(GlimpseBeyond): case nameof(GraveWarden): case nameof(Reave): return Var("Cards");
+            case nameof(CaptureSpirit): case nameof(GraveWarden): case nameof(Reave): return Var("Cards");
+            // Souls into every living teammate's draw pile, created by you (GlimpseBeyond.OnPlay: AddGeneratedCardsToCombat with
+            // creator = you): your created-card procs, once per Soul. The template card (no owner) counts one teammate.
+            case nameof(GlimpseBeyond):
+                return Var("Cards") * (me == null ? 1 : me.Creature?.CombatState?.Players.Count(p => p != me && p.Creature is { IsAlive: true }) ?? 0);
             case nameof(Severance): return 3;
             case nameof(Dirge): return me?.PlayerCombatState?.Energy ?? 1; // X souls
             // Other cards.

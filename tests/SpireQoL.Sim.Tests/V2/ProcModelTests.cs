@@ -275,6 +275,54 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void ATeammatesDrawsSetOffTheirDrawProcsNotYours()
+    {
+        // Huddle Up: every teammate draws 2, you don't (SimAdapter.TeammatesDrawCards). Their Speedster hits every enemy for each
+        // card they draw; yours doesn't hear their draws.
+        var s = State(hp: 100);
+        s.P.Powers = s.P.Powers.With("SpeedsterPower", 3);
+        var mate = new SimPlayer { Hp = 50 };
+        mate.Powers = mate.Powers.With("SpeedsterPower", 2);
+        s.Teammates.Add(mate);
+        var after = One(s, Events(Card("HuddleUp", SimCardType.Skill), 1,
+            new CardEventAction(CardEvent.Drawn, 2) { Player = Who.Teammate(0), Indirect = true }));
+        Assert.Equal(100 - 2 * 2, after.Enemy(0)!.Hp);
+        Assert.Equal(2, after.Fired[$"SpeedsterPower@{Who.Teammate(0)}"]);
+        Assert.False(after.Fired.Has("SpeedsterPower"));
+    }
+
+    [Fact]
+    public void ShivsATeammateCreatesAreTheirsAndSoulsYouCreateAreYours()
+    {
+        // Blade Symphony: Shivs into the teammate's hand, created by them (their Arsenal, not yours). Glimpse Beyond: Souls into
+        // their draw pile, created by you (your Arsenal, not theirs).
+        var s = State();
+        s.P.Powers = s.P.Powers.With("ArsenalPower", 1);
+        var mate = new SimPlayer { Hp = 50 };
+        mate.Powers = mate.Powers.With("ArsenalPower", 1);
+        s.Teammates.Add(mate);
+        var shivs = One(s, Events(Card("BladeSymphony", SimCardType.Skill), 1,
+            new CardEventAction(CardEvent.Generated, 2) { Player = Who.Teammate(0), Indirect = true }));
+        Assert.Equal(2, shivs.Fired[$"ArsenalPower@{Who.Teammate(0)}"]);
+        Assert.False(shivs.Fired.Has("ArsenalPower"));
+        var souls = One(s, Events(Card("GlimpseBeyond", SimCardType.Skill), 1, new CardEventAction(CardEvent.Generated, 3) { Indirect = true }));
+        Assert.Equal(3, souls.Fired["ArsenalPower"]);
+        Assert.False(souls.Fired.Has($"ArsenalPower@{Who.Teammate(0)}"));
+    }
+
+    [Fact]
+    public void ATeammatesDrawsDontStopYourUnceasingTop()
+    {
+        // Your last card is Huddle Up: you draw and create nothing, so Unceasing Top draws, whatever your teammates draw.
+        var s = Relic(State(), "UnceasingTop");
+        s.P.HandCount = 1;
+        s.Teammates.Add(new SimPlayer { Hp = 50 });
+        var after = One(s, Events(Card("HuddleUp", SimCardType.Skill), 1,
+            new CardEventAction(CardEvent.Drawn, 2) { Player = Who.Teammate(0), Indirect = true }));
+        Assert.True(after.Fired.Has("UnceasingTop"));
+    }
+
+    [Fact]
     public void BlockForEveryPlayerSetsOffATeammatesJuggernaut()
     {
         // Rally (decision #75): block to you, then to each living teammate (SimAdapter.AllPlayersBlockCards). A teammate's

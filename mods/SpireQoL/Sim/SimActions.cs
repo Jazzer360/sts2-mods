@@ -89,6 +89,11 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
     public bool FirstPlayOnly { get; init; }
     /// <summary>The card the event is about, when known (the played card exhausting itself: Burning Sticks reads its type).</summary>
     public SimCard? Card { get; init; }
+    /// <summary>
+    /// The player it happens to (who draws, who created the card: Who.Teammate(k) for Huddle Up's draws and Blade Symphony's
+    /// Shivs); null: the play's owner.
+    /// </summary>
+    public int? Player { get; init; }
 }
 
 /// <summary>

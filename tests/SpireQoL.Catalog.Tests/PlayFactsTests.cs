@@ -70,6 +70,18 @@ public class PlayFactsTests
     }
 
     [Fact]
+    public void CardsForTeammatesDoNothingForYouAlone()
+    {
+        // Huddle Up draws for teammates, Blade Symphony gives them Shivs, Glimpse Beyond gives them Souls: alone, none of it is
+        // yours (the counts once had Huddle Up drawing for you and Blade Symphony creating a card).
+        var f = new GameFight();
+        var huddle = PlayFacts.For(f.Add<HuddleUp>(), f.Me, f.Combat, 1);
+        Assert.Equal(0, huddle.Draws);
+        Assert.Equal(0, PlayFacts.For(f.Add<BladeSymphony>(), f.Me, f.Combat, 1).Generated);
+        Assert.Equal(0, PlayFacts.For(f.Add<GlimpseBeyond>(), f.Me, f.Combat, 1).Generated);
+    }
+
+    [Fact]
     public void RestlessnessDrawsOnlyAsTheLastCardInHand()
     {
         var f = new GameFight();

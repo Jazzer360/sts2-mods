@@ -71,11 +71,17 @@ internal static class CardCoverage
     {
         // Modelled: what lands on the teammate goes to them.
         [nameof(Lift)] = "block to the teammate (SimAdapter.BlockToAllyCards)",
-        [nameof(Constellation)] = "block to the teammate (BlockToAllyCards); its draws and energy are theirs (PlayFacts.AllyDrawCards)",
+        [nameof(Constellation)] = "block to the teammate (BlockToAllyCards); its draws and energy are theirs (PlayFacts.AllyDrawCards): their draws are their card events, for their draw procs",
         [nameof(DemonicShield)] = "HP loss to you, block (worked out on the teammate) to them (BlockToAllyCards)",
         [nameof(Ignition)] = "a Plasma orb into the teammate's orbs, evoking their front orb when full (SimAdapter.ChannelToAllyCards)",
         [nameof(Mimic)] = "block to you equal to the teammate's block (CalculatedBlock on the target)",
         [nameof(Rally)] = "its block to you and to every living teammate, worked out on each (SimAdapter.AllPlayersBlockCards)",
+        [nameof(HuddleUp)] = "every living teammate draws, not you: their draws (as many as their hand and piles allow) are their card events (SimAdapter.TeammatesDrawCards)",
+        [nameof(BladeSymphony)] = "Shivs into every living teammate's hand, created by them: their created-card events (SimAdapter.TeammatesShivCards)",
+        [nameof(GlimpseBeyond)] = "Souls into every living teammate's draw pile, created by you: your created-card events, per Soul (PlayFacts.GeneratedCount)",
+        // LegionOfBone.OnPlay: OstyCmd.Summon for every living player. Nothing reacts to a summon (no model overrides AfterSummon
+        // or ModifySummonAmount, v0.113.1); it only raises each player's Osty, which is read from the game after the play.
+        [nameof(LegionOfBone)] = "summons every player's Osty: nothing reacts to a summon, and each Osty's HP is read after the play",
         // Reviewed: nothing in this turn's outcome (the end of turn and the enemy turn).
         [nameof(BelieveInYou)] = "energy for the teammate",
         [nameof(Blaze)] = "Strength for the teammate: their attacks, not your end of turn",

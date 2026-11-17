@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.14.9
+#### Fixed
+- Huddle Up no longer counts as drawing you cards, and Blade Symphony no longer counts as creating one: both act only on your teammates.
+- With teammates: Huddle Up's draws and Blade Symphony's Shivs set off your teammates' own powers and relics (their Speedster, Arsenal, Pillar of Creation...), shown as their tabs on your card; Constellation's draws do the same for the teammate you aim it at. Glimpse Beyond's Souls count as created by you, once per Soul for each teammate.
+
 ### Spire QoL 1.14.8
 #### Fixed
 - A power a card gives you gets its tab on that card when it fires on the same play: Pale Blue Dot played as your 5th card this turn draws next turn at once.

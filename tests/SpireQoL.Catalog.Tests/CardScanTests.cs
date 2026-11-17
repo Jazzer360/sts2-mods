@@ -17,7 +17,7 @@ public class CardScanTests
     /// in game only with teammates. A card leaving this list (now simulated) or joining it fails the test, so the list stays true.
     /// </summary>
     private static readonly string[] KnownMultiplayerGaps =
-        { "BladeSymphony", "GlimpseBeyond", "HuddleUp", "LegionOfBone" };
+        { };
 
     private static IReadOnlyDictionary<string, List<string>> Issues()
     {
