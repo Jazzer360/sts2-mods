@@ -37,6 +37,7 @@ internal static class RelicChoiceTracking
         ["BlackStar"] = "none: adds a relic reward after elites (shown on the rewards screen)",
         ["Driftwood"] = "none: changes the rewards (shown on the rewards screen)",
         ["LavaRock"] = "none: adds a relic reward (shown on the rewards screen)",
+        ["PaelsWing"] = "none: adds a Sacrifice choice to card rewards (the game's own button); its counter shows sacrifices toward the next relic",
         ["PrayerWheel"] = "none: adds a card reward (shown on the rewards screen)",
         ["WhiteStar"] = "none: adds a reward (shown on the rewards screen)",
         ["WongosMysteryTicket"] = "none: adds rewards (shown on the rewards screen)",

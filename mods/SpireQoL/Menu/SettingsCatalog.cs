@@ -13,7 +13,7 @@ public enum SourceGroup { Relic, YourPower, EnemyPower, Card }
 /// <param name="Tracker">What its Relic Counters row shows; null = no tray row.</param>
 /// <param name="TagPrefix">"proc:" (Proc Indicators) or "double-play:" (Card Indicators).</param>
 /// <param name="TrackerDefault">Tray row on by default (turn timers are off).</param>
-/// <param name="Reward">Outside fights (Run Reminders, Data/ChoiceReminders): what its row in the card reward panel shows; null = none.</param>
+/// <param name="Reward">Outside fights (Run Reminders, Data/ChoiceReminders): what its tab on cards a card reward offers marks; null = none.</param>
 /// <param name="Event">What its icon beside event options marks; null = none.</param>
 /// <param name="Shop">What its icon beside shop prices marks; null = none.</param>
 /// <param name="Map">What its icon beside the map legend marks (pathing, decision #65); null = none.</param>
@@ -146,11 +146,10 @@ public static class SettingsCatalog
         new(nameof(Chandelier), SourceGroup.Relic, null, "Turn timer: energy on turn 3", TrackerDefault: false),
         new(nameof(SparklingRouge), SourceGroup.Relic, null, "Turn timer: Strength and Dexterity on turn 3", TrackerDefault: false),
 
-        // Outside fights (Run Reminders): the card reward panel, event options and shop prices (a column each).
-        new(nameof(BingBong), SourceGroup.Relic, null, Reward: "The card you take is copied", Event: "Options that add a card (crossed when it adds a curse)", Shop: "Cards (copied)"),
-        new(nameof(BookOfFiveRings), SourceGroup.Relic, null, Reward: "Cards toward the next heal", Event: "Options that add a card", Shop: "Cards (toward the heal)"),
-        new(nameof(LuckyFysh), SourceGroup.Relic, null, Reward: "The gold a card brings", Event: "Options that add a card", Shop: "Cards, with the price after its gold"),
-        new(nameof(PaelsWing), SourceGroup.Relic, null, Reward: "Sacrifices toward the next relic"),
+        // Outside fights (Run Reminders): tabs on card reward cards, event options and shop prices (a column each).
+        new(nameof(BingBong), SourceGroup.Relic, null, Reward: "Tab on every card: the card you take is copied", Event: "Options that add a card (crossed when it adds a curse)", Shop: "Cards (copied)"),
+        new(nameof(BookOfFiveRings), SourceGroup.Relic, null, Reward: "Tab on every card when taking it heals you (the pick that reaches its count)", Event: "Options that add a card", Shop: "Cards (toward the heal)"),
+        new(nameof(LuckyFysh), SourceGroup.Relic, null, Reward: "Tab on every card: taking one gives gold (none with Ectoplasm)", Event: "Options that add a card", Shop: "Cards, with the price after its gold"),
         new(nameof(DarkstonePeriapt), SourceGroup.Relic, null, Event: "Options that add a curse (max HP)"),
         new(nameof(MoltenEgg), SourceGroup.Relic, null, Event: "Options that can add an Attack it upgrades"),
         new(nameof(FrozenEgg), SourceGroup.Relic, null, Event: "Options that can add a Power it upgrades"),

@@ -264,24 +264,12 @@ public sealed partial class SettingsMenu
 
         var flow = Flow();
 
-        // Card rewards: the panel left of the cards, its rows built by the panel's own code.
-        var reward = Cell();
-        reward.AddChild(Label("Card rewards", 20, Accent));
-        reward.AddChild(ExampleBox(inner =>
-        {
-            void Add(RelicModel? relic, int filled, int total, bool flash, string label)
-            {
-                if (relic == null) return;
-                inner.AddChild(RunRemindersFeature.ExampleRewardRow(relic, filled, total, flash, label, out var paint));
-                _guideTicks.Add(paint);
-            }
-            Add(RelicOf<BookOfFiveRings>(), 4, 5, true, "4/5: heal 20 at 5");
-            Add(RelicOf<LuckyFysh>(), 0, 0, false, "+15 gold when you take a card");
-            Add(RelicOf<BingBong>(), 0, 0, false, "the card you take is copied");
-        }));
-        reward.AddChild(CellText("Left of the cards: your relics that react to the card you take. A row flashes when taking one sets it off: "
-            + "here Book of Five Rings heals you on this pick."));
-        flow.AddChild(reward);
+        // Card rewards: a tab on each offered card for every relic that taking it sets off.
+        GuideCardCell(flow, Card<PommelStrike>(), "Card rewards",
+            "On each card a reward offers: your relics that taking it sets off. Bing Bong copies the card, Lucky Fysh gives gold, and "
+            + "Book of Five Rings shows only on the pick that heals you.",
+            Tab("reminder-reward:BingBong", Relic<BingBong>()), Tab("reminder-reward:LuckyFysh", Relic<LuckyFysh>()),
+            Tab("reminder-reward:BookOfFiveRings", Relic<BookOfFiveRings>()));
 
         // Shops: icons left of the price, the net price under it.
         var shop = Cell();

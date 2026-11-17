@@ -31,7 +31,7 @@ public enum ChoiceEffect
 /// <param name="Relic">The relic's class name.</param>
 /// <param name="On">Choices it reacts to: its icon goes next to those event options.</param>
 /// <param name="CrossedOn">Choices where it works against you (red slash).</param>
-/// <param name="OnCardReward">It has a row in the card reward panel.</param>
+/// <param name="OnCardReward">It shows as a tab on every card a card reward offers when taking that card sets it off (RunRemindersFeature.SetOffByTaking).</param>
 /// <param name="Expect">Effects that always make it flash when they happen (the check reports an icon
 /// whose effect happened without the relic reacting). Relics that react without flashing leave it empty.</param>
 /// <param name="ShopIcon">Its icon goes beside shop items it reacts to; false when the shop already shows the effect on the item
@@ -91,7 +91,6 @@ public static class ChoiceReminders
         new(nameof(LuckyFysh), AnyCard, OnCardReward: true, Expect: AnyCard),
         new(nameof(DarkstonePeriapt), ChoiceEffect.CurseToDeck, Expect: ChoiceEffect.CurseToDeck),
         // TryModifyCardRewardAlternatives: the sacrifice button, counting toward a relic.
-        new(nameof(PaelsWing), ChoiceEffect.None, OnCardReward: true),
         // TryModifyCardBeingAddedToDeck: cards joining your deck from an event are upgraded or
         // enchanted when they qualify (rewards and shops already show it on the offered cards).
         new(nameof(MoltenEgg), ChoiceEffect.CardToDeck, ShopIcon: false),

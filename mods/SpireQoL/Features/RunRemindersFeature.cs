@@ -27,9 +27,8 @@ namespace SpireQoL.Features;
 /// <summary>
 /// Out-of-combat reminders (docs/FEATURES.md "Run Reminders", decision #37), like StS1's Relic
 /// Reminders:
-///  - Card rewards: a panel next to the card reward screen with every relic that reacts to a card
-///    joining your deck (Bing Bong, Book of Five Rings, Lucky Fysh) or to skipping (Pael's Wing),
-///    with its counter.
+///  - Card rewards: a tab on each offered card for every relic that taking it sets off (Bing Bong,
+///    Lucky Fysh, Book of Five Rings on the pick that heals), with the offered-card tabs (CardTabs).
 ///  - Events: the icons of your relics that change what an option does, beside that option (Tungsten
 ///    Rod on HP loss, Bing Bong on a card or curse, Ectoplasm crossed on gold...). What an option does
 ///    is read from its own code: the game commands its OnChosen calls, following the event's own
@@ -41,15 +40,8 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     private const string NodeName = "SpireQoL_Reminders";
     private const float EventIcon = 40f;
     private static readonly Color SlashColor = new(1f, 0.15f, 0.1f, 0.95f);
-    private static readonly Color Fill = new(0.95f, 0.75f, 0.35f);
-    private static readonly Color Empty = new(1f, 1f, 1f, 0.15f);
-    private static readonly Color Ready = new(1f, 0.35f, 0.9f);
 
     private readonly QolContext _ctx;
-    private MovableWidget? _widget;
-    /// <summary>The panel's rows side by side: one short strip (at most four relics: Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing).</summary>
-    private HBoxContainer? _strip;
-    private readonly Dictionary<string, Row> _rows = new();
     private int _frame;
 
     public RunRemindersFeature(QolContext ctx) => _ctx = ctx;
@@ -216,40 +208,15 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         else if (++w.Frames > 100_000) Close();
     }
 
-    private sealed class Row
-    {
-        public required HBoxContainer Root;
-        public required TickBar Bar;
-        public required Label Text;
-        public bool Seen;
-    }
-
     public void Attach(OverlayHost host)
     {
-        // Centered above the offered cards (and the tabs hanging off them), under the banner; left of the cards when
-        // there's no room there. Before 1.11.3 the default was the screen's left edge, easy to miss: a layout still at
-        // that old default moves to the new one (a layout the player moved is kept).
-        var defaults = new WidgetLayout { FollowGame = true, Anchor = ScreenAnchor.Top, OffsetX = 0, OffsetY = 0 };
-        var saved = _ctx.Settings.Widget(Id, defaults);
-        if (!saved.FollowGame && !saved.CustomPin && saved.Anchor == ScreenAnchor.Left
-            && Mathf.IsEqualApprox(saved.OffsetX, 40) && Mathf.IsEqualApprox(saved.OffsetY, 0))
-        {
-            saved.FollowGame = true;
-            saved.Anchor = ScreenAnchor.Top;
-            saved.OffsetX = 0;
-        }
-        _widget = _ctx.Widget(Id, "Run Reminders", defaults);
-        _widget.AttachTo(() => RewardCardsRect(roomAbove: true), AttachSide.Below)
-               .AttachTo(() => RewardCardsRect(roomAbove: false), AttachSide.LeftOf);
-        _strip = UiKit.Row(28);
-        _widget.Content.AddChild(_strip);
         _inspect = new SpireQoL.Menu.InspectScreen(_ctx.Host);
     }
 
     public void OnFrame(OverlayHost host)
     {
         TickWindow();
-        RewardPanel(host);
+        WatchReward();
         // Event options and shop items change only when the page does: every few frames is plenty.
         if (++_frame % 6 == 0)
         {
@@ -262,143 +229,36 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         _inspect?.OnFrame();
     }
 
-    // ------------------------------------------------------------------ card reward panel
-
-    /// <summary>Room left above the offered cards for the reminder tabs hanging off their top edge.</summary>
-    private const float TabRoom = 60f;
+    // ------------------------------------------------------------------ card reward tabs
 
     /// <summary>
-    /// Where the card reward panel attaches: the offered cards' frames on screen (with the tabs above them when
-    /// <paramref name="roomAbove"/>), or null when the screen isn't open. With <paramref name="roomAbove"/>, null too
-    /// when the panel wouldn't fit between the game's banner ("Choose a card") and the tabs, so it goes left of the cards.
+    /// Whether taking a card offered by a card reward sets this relic off (its AfterCardChangedPiles on a card joining your deck):
+    /// Bing Bong copies it, Lucky Fysh gives gold, Book of Five Rings heals on the pick that reaches its count (a pick adds two
+    /// cards with Bing Bong, the copy counting too). Null for a relic that has no card reward tab.
     /// </summary>
-    private Rect2? RewardCardsRect(bool roomAbove)
-    {
-        try
-        {
-            if (NOverlayStack.Instance?.Peek() is not NCardRewardSelectionScreen screen || !GodotObject.IsInstanceValid(screen)
-                || !screen.IsVisibleInTree()) return null;
-            var row = Sts2State.Private<Control?>(screen, "_cardRow", null);
-            if (row == null || !GodotObject.IsInstanceValid(row)) return null;
-            Rect2? cards = null;
-            foreach (var frame in CardFrames(row, 0))
-            {
-                var r = frame.GetGlobalRect();
-                cards = cards is { } c ? c.Merge(r) : r;
-            }
-            if (cards is not { } rect) return null;
-            if (!roomAbove) return rect;
-            var top = rect.Position.Y - TabRoom;
-            var banner = Sts2State.Private<Control?>(screen, "_banner", null);
-            var label = banner == null ? null : Sts2State.Private<Control?>(banner, "label", null);
-            // The banner's art reaches a little below its label.
-            var bannerBottom = label != null && GodotObject.IsInstanceValid(label) ? label.GetGlobalRect().End.Y + 24 : 0f;
-            var need = _widget == null ? 0f : _widget.Root.Size.Y * _widget.Root.Scale.Y + 6;
-            if (top - need < bannerBottom) return null;
-            // Attached Below this line: a thin rect across the cards that ends where the panel's top goes, so the
-            // panel's bottom sits just over the tabs.
-            return new Rect2(rect.Position.X, top - need - 1, rect.Size.X, 1);
-        }
-        catch
-        {
-            return null; // the screen closing under us
-        }
-    }
-
-    /// <summary>The visible offered cards' frames (NCard's %Frame) under the card row.</summary>
-    private static IEnumerable<Control> CardFrames(Node node, int depth)
-    {
-        if (depth > 6) yield break;
-        foreach (var child in node.GetChildren())
-        {
-            if (!GodotObject.IsInstanceValid(child)) continue;
-            if (child is NCard card)
-            {
-                if (card.IsVisibleInTree() && card.GetNodeOrNull<Control>("%Frame") is { } frame && frame.Size.X > 1) yield return frame;
-                continue;
-            }
-            foreach (var f in CardFrames(child, depth + 1)) yield return f;
-        }
-    }
-
-    private void RewardPanel(OverlayHost host)
-    {
-        var w = _widget!;
-        var screen = NOverlayStack.Instance?.Peek() as NCardRewardSelectionScreen;
-        var me = screen != null && GodotObject.IsInstanceValid(screen) && screen.IsVisibleInTree() ? RunMe() : null;
-        WatchReward(me, me != null);
-        foreach (var r in _rows.Values) r.Seen = false;
-        var index = 0;
-        if (me != null)
-        {
-            // A pick adds two cards with Bing Bong (its copy fires the deck hooks too).
-            var perPick = me.Relics.Any(r => r is BingBong) ? 2 : 1;
-            foreach (var relic in me.Relics)
-            {
-                var name = relic.GetType().Name;
-                if (ChoiceReminders.For(name) is not { OnCardReward: true } || !_ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Reward, name))) continue;
-                if (RewardRow(relic, me, perPick) is not { } state) continue;
-                if (!_rows.TryGetValue(name, out var row))
-                {
-                    row = MakeRow(relic);
-                    _rows[name] = row;
-                    _strip!.AddChild(row.Root);
-                }
-                row.Seen = true;
-                _strip!.MoveChild(row.Root, index++);
-                row.Bar.Root.Visible = state.Total > 0;
-                var fill = Fill;
-                row.Root.Modulate = Colors.White;
-                if (state.Flash)
-                {
-                    var p = UiKit.Pulse(host.Time, _ctx.Settings.FlashHz);
-                    fill = fill.Lerp(Ready, p);
-                    row.Root.Modulate = new Color(1, 1, 1, 0.65f + 0.35f * p);
-                }
-                if (state.Total > 0) row.Bar.Set(state.Filled, state.Total, fill, Empty);
-                row.Text.Text = state.Label;
-            }
-        }
-        foreach (var (name, row) in _rows.ToList())
-        {
-            if (row.Seen) continue;
-            row.Root.QueueFree();
-            _rows.Remove(name);
-        }
-        w.HasContent = index > 0;
-    }
-
-    private readonly record struct RowState(int Filled, int Total, bool Flash, string Label);
-
-    private static RowState? RewardRow(RelicModel relic, Player me, int perPick)
+    internal static bool? SetOffByTaking(RelicModel relic, Player me)
     {
         switch (relic)
         {
             case BingBong:
-                return new RowState(0, 0, false, "the card you take is copied");
+                return true;
+            case LuckyFysh:
+                // None with Ectoplasm (ModifyGoldGained to 0): then taking a card brings nothing.
+                return GoldAfterRelics(me, Sts2State.Var(relic, "Gold", 15)) > 0;
             case BookOfFiveRings:
             {
                 var every = Sts2State.Var(relic, "Cards", 5);
-                var heal = Sts2State.Var(relic, "Heal", 20);
-                if (every <= 0) return null;
-                var n = Math.Clamp(relic.DisplayAmount, 0, every - 1);
-                return new RowState(n, every, n + perPick >= every, $"{n}/{every}: heal {heal} at {every}");
-            }
-            case LuckyFysh:
-            {
-                var gold = GoldAfterRelics(me, Sts2State.Var(relic, "Gold", 15)) * perPick;
-                return new RowState(0, 0, false, $"+{gold} gold when you take a card");
-            }
-            case PaelsWing:
-            {
-                var every = Sts2State.Var(relic, "Sacrifices", 2);
-                if (every <= 0) return null;
-                var n = Math.Clamp(relic.DisplayAmount, 0, every - 1);
-                return new RowState(n, every, n + 1 >= every, $"{n}/{every} sacrificed: a relic at {every}");
+                if (every <= 0) return false;
+                var added = Sts2State.Private(relic, "CardsAdded", -1);
+                if (added < 0) return false;
+                return added % every + PerPick(me) >= every;
             }
         }
         return null;
     }
+
+    /// <summary>Cards a pick adds to your deck: two with Bing Bong (its copy fires the deck hooks too).</summary>
+    private static int PerPick(Player me) => me.Relics.Any(r => r is BingBong) ? 2 : 1;
 
     /// <summary>
     /// Gold after Bowler Hat, Ectoplasm and anything else that modifies it, through the game's own query
@@ -407,31 +267,6 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// </summary>
     private static int GoldAfterRelics(Player me, int amount)
         => (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyGoldGained(me.RunState, null, amount, me, out _);
-
-    /// <summary>
-    /// A card reward panel row for the settings menu's Guide page (decision #56), drawn by the panel's own code; paint redraws
-    /// its flash (time, flash Hz).
-    /// </summary>
-    internal static Control ExampleRewardRow(RelicModel relic, int filled, int total, bool flash, string label, out Action<float, float> paint)
-    {
-        var row = MakeRow(relic);
-        row.Bar.Root.Visible = total > 0;
-        row.Text.Text = label;
-        paint = (time, hz) =>
-        {
-            var fill = Fill;
-            row.Root.Modulate = Colors.White;
-            if (flash)
-            {
-                var p = UiKit.Pulse(time, hz);
-                fill = fill.Lerp(Ready, p);
-                row.Root.Modulate = new Color(1, 1, 1, 0.65f + 0.35f * p);
-            }
-            if (total > 0) row.Bar.Set(filled, total, fill, Empty);
-        };
-        paint(0, 1);
-        return row.Root;
-    }
 
     /// <summary>A shop price for the Guide page: the relic icons left of it and the net price under it, as on a shop slot.</summary>
     internal static Control ExampleShopPrice(IEnumerable<(RelicModel Relic, bool Crossed)> icons, int price, int? net)
@@ -460,17 +295,6 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         return row;
     }
 
-    private static Row MakeRow(RelicModel relic)
-    {
-        var root = UiKit.Row(6);
-        root.AddChild(UiKit.Icon(IconOf(relic), 34));
-        var bar = new TickBar(9, 12);
-        root.AddChild(bar.Root);
-        var text = UiKit.Label("", 17, Colors.White);
-        root.AddChild(text);
-        return new Row { Root = root, Bar = bar, Text = text };
-    }
-
     private static Texture2D? IconOf(RelicModel relic)
     {
         try
@@ -485,7 +309,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     // ------------------------------------------------------------------ card reward check
 
-    /// <summary>What the panel showed while the card reward screen was open, to check after a pick.</summary>
+    /// <summary>What the card reward tabs showed while the screen was open, to check after a pick.</summary>
     private sealed class RewardWatch
     {
         public required Player Me;
@@ -501,26 +325,32 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     private RewardWatch? _reward;
 
     /// <summary>
-    /// While the screen is open, keeps what the panel predicts; once it closes and the pick has settled
+    /// While the card reward screen is open, keeps what its tabs predict; once it closes and the pick has settled
     /// (Bing Bong's copy comes after), checks it when a card was taken: the cards added (two with Bing
-    /// Bong), Lucky Fysh's gold, and whether Book of Five Rings healed exactly when its row flashed.
+    /// Bong), Lucky Fysh's gold, and whether Book of Five Rings healed exactly when its tab showed.
     /// Skipping or sacrificing adds no card and isn't checked.
     /// </summary>
-    private void WatchReward(Player? me, bool open)
+    private void WatchReward()
     {
-        if (open && me != null)
+        Player? me = null;
+        try
+        {
+            if (NOverlayStack.Instance?.Peek() is NCardRewardSelectionScreen screen && GodotObject.IsInstanceValid(screen) && screen.IsVisibleInTree()) me = RunMe();
+        }
+        catch { /* the screen closing under us */ }
+        if (me != null)
         {
             if (_reward == null || _reward.ClosedFrames >= 0)
             {
                 CheckReward();
-                var perPick = me.Relics.Any(r => r is BingBong) ? 2 : 1;
+                var perPick = PerPick(me);
                 var w = new RewardWatch { Me = me, Start = Before.Of(me), PerPick = perPick };
                 if (me.Relics.OfType<LuckyFysh>().FirstOrDefault() is { } fysh) w.FyshGold = GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", 15)) * perPick;
                 if (me.Relics.OfType<BookOfFiveRings>().FirstOrDefault() is { } book)
                 {
                     w.BookEvery = Sts2State.Var(book, "Cards", 5);
                     w.BookAdded = Sts2State.Private(book, "CardsAdded", -1);
-                    if (w.BookEvery > 0 && w.BookAdded >= 0) w.BookHeals = w.BookAdded % w.BookEvery + perPick >= w.BookEvery;
+                    if (w.BookEvery > 0 && w.BookAdded >= 0) w.BookHeals = SetOffByTaking(book, me);
                 }
                 _reward = w;
             }
@@ -557,7 +387,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         ModEntry.Log.Info($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(p => p.Text)))}");
         if (problems.Count > 0)
         {
-            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", $"Card reward panel was wrong: {string.Join(", ", problems.Select(p => p.Key))}",
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", $"Card reward tabs were wrong: {string.Join(", ", problems.Select(p => p.Key))}",
                 new[] { "reminder-reward" }.Concat(problems.Select(p => p.Key)), what + "\n" + string.Join("\n", problems.Select(p => p.Text)));
         }
     }

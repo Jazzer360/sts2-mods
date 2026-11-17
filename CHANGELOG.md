@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.15.0
+#### Changed
+- Card rewards: Bing Bong, Lucky Fysh and Book of Five Rings are tabs on the offered cards, like Strike Dummy's: Bing Bong and Lucky Fysh on every card, Book of Five Rings when taking one heals you.
+#### Removed
+- The card reward panel above the offered cards, and its Pael's Wing row (the relic's counter shows its sacrifices).
+
 ### Main Saves 1.0.8
 #### Changed
 - Rebuilt with the shared code update (no change in what it does).
