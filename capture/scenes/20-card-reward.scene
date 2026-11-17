@@ -12,5 +12,5 @@ kill all
 wait 4
 card-reward POMMEL_STRIKE SHRUG_IT_OFF TWIN_STRIKE
 wait 2
-caption On a card reward: a tab on each offered card one of your relics makes stronger in fights (here Strike Dummy on the Strikes).
+caption On a card reward: a tab on each offered card for the relics taking it sets off (Bing Bong copies it, Lucky Fysh gives gold) and for relics that make it stronger in fights (Strike Dummy on the Strikes).
 shot card-reward full

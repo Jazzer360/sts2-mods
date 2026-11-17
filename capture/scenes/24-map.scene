@@ -3,8 +3,9 @@ section Outside fights
 character Ironclad
 hp player 59
 relic add MEMBERSHIP_CARD
+relic add THE_COURIER
 relic add REGAL_PILLOW
 key M
 wait 2
-caption On the map legend: your relics that make a kind of room unusually good or bad.
+caption On the map legend: your relics that make a kind of room unusually good or bad (here Membership Card and The Courier for shops, Regal Pillow for rest sites).
 shot map full

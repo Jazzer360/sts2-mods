@@ -180,13 +180,13 @@
           "doc": [
             "Run Reminders"
           ],
-          "summary": "Your relics that change what a choice does, shown on that choice: on card rewards, beside event options, beside shop prices and on the map legend.",
+          "summary": "Your relics that change what a choice does, shown on that choice: on the cards a reward offers, beside event options, beside shop prices and on the map legend.",
           "points": [
-            "Card rewards: Bing Bong copying the card, Book of Five Rings toward its heal, Lucky Fysh's gold, Pael's Wing.",
-            "Offered cards get a tab when one of your relics makes them stronger in fights (Strike Dummy on Strikes, Miniature Cannon on upgraded Attacks...).",
+            "Card rewards: a tab on each offered card for the relics taking it sets off: Bing Bong copies it, Lucky Fysh gives gold, Book of Five Rings heals on the pick that reaches its count.",
+            "Offered cards also get a tab when one of your relics makes them stronger in fights (Strike Dummy on Strikes, Miniature Cannon on upgraded Attacks...).",
             "Events: read from each option's own code, with the chance that a card relic applies, and an Inspect button for options that give random cards from a known pool.",
-            "Shops: Bing Bong, Lucky Fysh, Sozu and the rest beside each price.",
-            "Map: relics and quest cards that make a kind of room unusually good or bad."
+            "Shops: Bing Bong, Lucky Fysh, Sozu and the rest beside each price, with the price after their gold under it.",
+            "Map: relics and quest cards that make a kind of room unusually good or bad, such as Membership Card and The Courier for shops."
           ],
           "shots": [
             "card-reward",
