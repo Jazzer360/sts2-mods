@@ -148,9 +148,22 @@ public sealed class CaptureRunner
     private static async Task LeaveRun()
     {
         if (!RunManager.Instance.IsInProgress) return;
+        // Leave the way a player does, through the pause menu: while a screen covers combat, Spire QoL takes
+        // its widgets back out of the combat UI, which is freed with the run.
+        NModalContainer.Instance?.Clear();
+        await Key("Escape");
+        await Seconds(0.5);
         // Leaving through the main menu ends nothing: the run was never saved, so no history entry is made.
         await NGame.Instance!.ReturnToMainMenu();
         await Frames(10);
+    }
+
+    /// <summary>Moves the pointer to empty background (below the top bar, between the fighters), so nothing is hovered.</summary>
+    private static async Task ParkMouse()
+    {
+        var size = (Vector2)DisplayServer.WindowGetSize();
+        MoveMouse(new Vector2(size.X * 0.5f, size.Y * 0.2f));
+        await Frames(3);
     }
 
     private async Task StartRun(Scene scene)
@@ -164,6 +177,7 @@ public sealed class CaptureRunner
             Array.Empty<ModifierModel>(), seed, GameMode.Standard, isCustomGame: true).WaitAsync(TimeSpan.FromSeconds(120));
         await Until(() => runState.CurrentRoom != null && runState.CurrentRoom.RoomType != RoomType.Unassigned, "room assigned");
         await Frames(10);
+        await ParkMouse();
         Log($"  run started: {character.Id.Entry}, seed {seed}");
     }
 
@@ -273,6 +287,7 @@ public sealed class CaptureRunner
     {
         await ClearPile(PileType.Hand);
         await AddCards(PileType.Hand, cards);
+        await ParkMouse();
         await Seconds(1.0);
     }
 
@@ -301,8 +316,9 @@ public sealed class CaptureRunner
     {
         var cards = pile.GetPile(Me).Cards.ToList();
         if (cards.Count == 0) return;
-        await CardPileCmd.RemoveFromCombat(cards, skipVisuals: true);
-        await Frames(5);
+        // With visuals: skipping them leaves the cards' nodes on screen.
+        await CardPileCmd.RemoveFromCombat(cards);
+        await Seconds(0.5);
     }
 
     private static async Task MovePile(PileType from, PileType to)
@@ -428,7 +444,13 @@ public sealed class CaptureRunner
         rect = rect.Intersection(new Rect2(Vector2.Zero, size));
         var ri = new Rect2I((int)rect.Position.X, (int)rect.Position.Y, (int)rect.Size.X, (int)rect.Size.Y);
         var cropped = image.GetRegion(ri);
-        cropped.SavePng(GodotPath.Combine(_outDir, name + ".png"));
+        // The site's images: at most 1600 px wide, as WebP.
+        const int maxWidth = 1600;
+        if (cropped.GetWidth() > maxWidth)
+            cropped.Resize(maxWidth, (int)Math.Round(cropped.GetHeight() * (double)maxWidth / cropped.GetWidth()), Image.Interpolation.Lanczos);
+        var err = cropped.SaveWebp(GodotPath.Combine(_outDir, name + ".webp"), true, 0.88f);
+        if (err != Error.Ok) throw new Exception($"saving {name}.webp: {err}");
+        ri = new Rect2I(ri.Position, new Vector2I(cropped.GetWidth(), cropped.GetHeight()));
 
         _shots.Add(new ShotResult(name, scene.Name, scene.Title, scene.Section, _caption, ri.Position.X, ri.Position.Y, ri.Size.X, ri.Size.Y, (int)size.X, (int)size.Y));
         Log($"  shot {name}: {ri.Size.X}x{ri.Size.Y} at {ri.Position.X},{ri.Position.Y} of {size.X}x{size.Y}");

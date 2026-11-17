@@ -153,7 +153,11 @@ document.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelector(".lightbox").hidden = true; });
 // The page is rebuilt only when the site changes, so the download buttons ask GitHub for the newest release.
 fetch("https://api.github.com/repos/${REPO}/releases?per_page=30").then((r) => r.ok ? r.json() : []).then((list) => {
-  const rel = list.find((r) => r.tag_name.startsWith("spireqol-v") && !r.draft && !r.prerelease && r.assets.some((a) => a.name.endsWith(".zip")));
+  const num = (r) => r.tag_name.slice("spireqol-v".length).split(".").map(Number);
+  const newer = (a, b) => { const x = num(a), y = num(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i]; return false; };
+  // The API lists by creation date, not version: take the highest version.
+  const rel = list.filter((r) => r.tag_name.startsWith("spireqol-v") && !r.draft && !r.prerelease && r.assets.some((a) => a.name.endsWith(".zip")))
+    .reduce((best, r) => (!best || newer(r, best) ? r : best), null);
   if (!rel) return;
   const version = rel.tag_name.slice("spireqol-v".length);
   const zip = rel.assets.find((a) => a.name.endsWith(".zip")).browser_download_url;
@@ -167,11 +171,11 @@ fetch("https://api.github.com/repos/${REPO}/releases?per_page=30").then((r) => r
 
 function shotFigure(name, shots, haveFiles) {
   const s = shots.get(name);
-  if (!haveFiles.has(`${name}.png`)) {
+  if (!haveFiles.has(`${name}.webp`)) {
     return `<figure class="shot missing"><div>Screenshot not captured yet</div></figure>`;
   }
   const dims = s ? ` width="${s.width}" height="${s.height}"` : "";
-  return `<figure class="shot"><img src="shots/${name}.png" alt="${esc(s?.caption || name)}" loading="lazy"${dims}>${s?.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`;
+  return `<figure class="shot"><img src="shots/${name}.webp" alt="${esc(s?.caption || name)}" loading="lazy"${dims}>${s?.caption ? `<figcaption>${esc(s.caption)}</figcaption>` : ""}</figure>`;
 }
 
 function indexPage(features, shots, haveFiles, latest, manifest) {
@@ -330,8 +334,8 @@ const shotsDir = join(here, "shots");
 const manifest = existsSync(join(shotsDir, "shots.json")) ? JSON.parse((await readFile(join(shotsDir, "shots.json"), "utf8")).replace(/^﻿/, "")) : null;
 const shots = new Map((manifest?.shots ?? []).map((s) => [s.name, s]));
 const haveFiles = new Set(existsSync(shotsDir) ? await readdir(shotsDir) : []);
-if (!haveFiles.has("overview.png")) warn(`no screenshot for "overview" (the front page) yet`);
-for (const f of features.sections.flatMap((s) => s.features)) for (const n of f.shots) if (!haveFiles.has(`${n}.png`)) warn(`no screenshot for "${n}" (${f.title}) yet`);
+if (!haveFiles.has("overview.webp")) warn(`no screenshot for "overview" (the front page) yet`);
+for (const f of features.sections.flatMap((s) => s.features)) for (const n of f.shots) if (!haveFiles.has(`${n}.webp`)) warn(`no screenshot for "${n}" (${f.title}) yet`);
 
 const [changelogMd, featuresMd, rels] = await Promise.all([text("CHANGELOG_PATH", "CHANGELOG.md"), text("FEATURES_PATH", "docs/FEATURES.md"), releases()]);
 checkCoverage(features, featuresMd);

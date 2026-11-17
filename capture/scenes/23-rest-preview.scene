@@ -7,4 +7,4 @@ room RestSite
 wait room
 wait 2
 caption At a rest site: what resting heals with your relics, and how much of it would be wasted.
-shot rest-preview widget rest-hp + player pad 60
+shot rest-preview widget rest-hp pad 220

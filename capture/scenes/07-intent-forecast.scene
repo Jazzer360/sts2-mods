@@ -7,4 +7,4 @@ hand STRIKE_IRONCLAD DEFEND_IRONCLAD BASH STRIKE_IRONCLAD DEFEND_IRONCLAD
 hover intent 1
 wait 1
 caption Hover an enemy's intent to see the moves its rules make certain, and the odds when it picks at random.
-shot intent-forecast widget intent-forecast + intent 1 pad 40
+shot intent-forecast widget intent-forecast + enemy 1 pad 40

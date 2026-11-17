@@ -9,6 +9,8 @@ potion FIRE_POTION
 potion BLOCK_POTION
 fight CULTISTS_NORMAL 3
 wait combat-started
+endturn
+wait turn-started
 power FEEL_NO_PAIN_POWER 3 0
 hand STRIKE_IRONCLAD BASH TRUE_GRIT DEFEND_IRONCLAD SHRUG_IT_OFF
 wait 1.5

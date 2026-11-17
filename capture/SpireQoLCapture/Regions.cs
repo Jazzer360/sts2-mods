@@ -39,9 +39,9 @@ public static class Regions
             case "player":
                 return NCombatRoom.Instance?.CreatureNodes.FirstOrDefault(c => c.Entity.IsPlayer) is { } p ? Window(p.Hitbox) : null;
             case "widget":
-                return Find(Root, n => n.Name == "Widget_" + t[1]) is Control w ? Visual(w) : null;
+                return Find(Root, n => n.Name.ToString() == "Widget_" + t[1]) is Control w ? Visual(w) : null;
             case "node":
-                return Find(Root, n => n.Name == t[1]) is Control c ? Visual(c) : null;
+                return Find(Root, n => n.Name.ToString() == t[1]) is Control c ? Visual(c) : null;
             case "text":
                 return Find(Root, n => n is Control { Visible: true } ctl && ctl.IsVisibleInTree() && ShowsText(n, t[1])) is Control l ? Window(l) : null;
             default:
@@ -103,7 +103,7 @@ public static class Regions
     private static IEnumerable<Node> Descendants(Node n, int depth)
     {
         if (depth <= 0) yield break;
-        foreach (var child in n.GetChildren())
+        foreach (var child in n.GetChildren(true))
         {
             yield return child;
             foreach (var d in Descendants(child, depth - 1)) yield return d;
@@ -112,7 +112,7 @@ public static class Regions
 
     private static Node? Find(Node n, Func<Node, bool> match)
     {
-        foreach (var child in n.GetChildren())
+        foreach (var child in n.GetChildren(true))
         {
             if (match(child)) return child;
             if (Find(child, match) is { } found) return found;

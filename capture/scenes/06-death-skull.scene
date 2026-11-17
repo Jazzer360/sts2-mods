@@ -3,8 +3,8 @@ section In fights
 character Silent
 fight CULTISTS_NORMAL 3
 wait combat-started
-power POISON_POWER 30 2
+power POISON_POWER 60 2
 hand STRIKE_SILENT DEADLY_POISON DEFEND_SILENT NEUTRALIZE FOOTWORK
 wait 1.5
 caption The skull beside an enemy's HP: it dies before it acts if you end your turn now.
-shot death-skull enemies pad 50
+shot death-skull enemies pad 110

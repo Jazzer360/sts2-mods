@@ -7,5 +7,7 @@ relic add SOZU
 room Shop
 wait room
 wait 2
+click rect 0.64 0.45 0.1 0.25
+wait 2
 caption In the shop: the relics that buying each item sets off, beside its price.
 shot shop full

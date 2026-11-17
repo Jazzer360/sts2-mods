@@ -91,14 +91,21 @@ try {
         "`"--spireqol-capture-out=$outDir`""
     )
     if ($Only) { $gameArgs += "`"--spireqol-capture-only=$Only`"" }
-    Write-Host "Launching the game (separate saves, no Steam). Hands off the mouse and keyboard until it closes..."
-    $proc = Start-Process -FilePath $exe -ArgumentList $gameArgs -WorkingDirectory $GameDir -PassThru
-    if (-not $proc.WaitForExit($TimeoutMinutes * 60 * 1000)) {
-        Write-Host "capture: timed out after $TimeoutMinutes minutes; closing the game" -ForegroundColor Yellow
-        $proc.Kill()
-        $proc.WaitForExit()
+    for ($launch = 1; $launch -le 2; $launch++) {
+        Write-Host "Launching the game (separate saves, no Steam). Hands off the mouse and keyboard until it closes..."
+        $proc = Start-Process -FilePath $exe -ArgumentList $gameArgs -WorkingDirectory $GameDir -PassThru
+        if (-not $proc.WaitForExit($TimeoutMinutes * 60 * 1000)) {
+            Write-Host "capture: timed out after $TimeoutMinutes minutes; closing the game" -ForegroundColor Yellow
+            $proc.Kill()
+            $proc.WaitForExit()
+        }
+        $exitCode = $proc.ExitCode
+        # The first launch on a fresh capture profile asks whether to load mods, then closes to restart.
+        $log = Join-Path $outDir "godot.log"
+        $skipped = (Test-Path $log) -and (Select-String -Path $log -SimpleMatch "has not yet seen the mods warning" -Quiet)
+        if ((Test-Path (Join-Path $outDir "results.json")) -or -not $skipped) { break }
+        Write-Host "The capture profile had to confirm loading mods (choose Load if asked); starting the game again..." -ForegroundColor Yellow
     }
-    $exitCode = $proc.ExitCode
 }
 finally {
     if (Test-Path $helperInstall) { Remove-Item $helperInstall -Recurse -Force }
@@ -125,7 +132,7 @@ if ($Only -and (Test-Path $manifestPath)) {
     $existing = @($old.shots | Where-Object { $newNames -notcontains $_.name })
 }
 foreach ($shot in $results.shots) {
-    Copy-Item (Join-Path $outDir "$($shot.name).png") (Join-Path $shotsDir "$($shot.name).png") -Force
+    Copy-Item (Join-Path $outDir "$($shot.name).webp") (Join-Path $shotsDir "$($shot.name).webp") -Force
 }
 $manifest = [ordered]@{
     modVersion  = $qolVersion

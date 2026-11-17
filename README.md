@@ -43,7 +43,7 @@ What it does:
 1. Builds `capture/SpireQoLCapture` against your installed game.
 2. Copies the helper into `<game>/mods/SpireQoLCapture`, and swaps Spire QoL's `SpireQoL.settings.cfg` for `capture-settings.json` (defaults, error reporting off), so the screenshots show the defaults and capture fights never send reports. Both are put back when it finishes, even after an error. If the script itself is killed partway, the next run stops and tells you where your settings backup is.
 3. Starts `SlayTheSpire2.exe --force-steam=off`. Without Steam the game keeps its saves under `%APPDATA%\SlayTheSpire2\default\`, a separate tree from your Steam profile (`...\steam\<id>\`), and nothing syncs to Steam Cloud. The capture profile unlocks everything there; your own progress is untouched. Every scene starts a run with saving off, so no run is saved and nothing reaches run history, progress, achievements or stats. The game's log for the capture goes to `capture/out/godot.log`, not your normal logs.
-4. The helper runs each scene and saves the full frame (`capture/out/full/`) and the crop (`capture/out/<name>.png`), logging to `capture/out/capture.log`, then quits the game.
+4. The helper runs each scene and saves the full frame (`capture/out/full/`) and the crop as WebP, at most 1600 px wide (`capture/out/<name>.webp`), logging to `capture/out/capture.log`, then quits the game.
 5. Copies the crops and `shots.json` (shot sizes, captions, mod and game versions) into `site/shots`, commits "Screenshots: Spire QoL x on game y" and pushes. The push publishes the site.
 
 A failed scene is listed in red at the end with its line and reason; the others still update.
