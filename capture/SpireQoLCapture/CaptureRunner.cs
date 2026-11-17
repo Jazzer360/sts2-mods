@@ -206,6 +206,9 @@ public sealed class CaptureRunner
             case "hp": await SetHp(t); break;
             case "endturn": await EndTurn(); break;
             case "play": await Play(t); break;
+            case "floor": await SetFloor(int.Parse(t[1])); break;
+            case "relics-only": await RelicsOnly(t.Skip(1)); break;
+            case "relic-counter": await RelicCounter(t[1], t[2], int.Parse(t[3])); break;
             case "close-modals": NModalContainer.Instance?.Clear(); await Frames(5); break;
             case "shot": await Shot(scene, t.Skip(1).ToArray()); break;
             default: await Console(line.Text); break;
@@ -264,6 +267,54 @@ public sealed class CaptureRunner
         await Until(() => !PileType.Hand.GetPile(Me).Cards.Contains(card), $"{id} to leave the hand");
         await Until(() => !RunManager.Instance.ActionExecutor.IsRunning, $"{id} to resolve");
         await Seconds(1.0);
+    }
+
+    /// <summary>
+    /// floor N: the floor the top bar shows (the run's map history, which the game counts), as if the run had
+    /// come that far. Use it after the room is entered: the top bar refreshes here.
+    /// </summary>
+    private static async Task SetFloor(int floor)
+    {
+        var run = RunManager.Instance.DebugOnlyGetState() ?? throw new Exception("no run");
+        var field = typeof(RunState).GetField("_mapPointHistory", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    ?? throw new Exception("RunState._mapPointHistory not found");
+        var history = (List<List<MegaCrit.Sts2.Core.Runs.History.MapPointHistoryEntry>>)field.GetValue(run)!;
+        if (history.Count == 0) history.Add(new());
+        var act = history[^1];
+        var others = history.Take(history.Count - 1).Sum(h => h.Count);
+        while (others + act.Count < floor) act.Insert(0, new MegaCrit.Sts2.Core.Runs.History.MapPointHistoryEntry(MegaCrit.Sts2.Core.Map.MapPointType.Monster, run));
+        while (others + act.Count > floor && act.Count > 1) act.RemoveAt(0);
+        foreach (var icon in FindAll<MegaCrit.sts2.Core.Nodes.TopBar.NTopBarFloorIcon>(Tree.Root))
+            icon.GetType().GetMethod("UpdateIcon", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.Invoke(icon, null);
+        await Frames(3);
+    }
+
+    /// <summary>relics-only A B...: removes every relic you have that isn't listed (a Neow relic's random picks, say).</summary>
+    private static async Task RelicsOnly(IEnumerable<string> keep)
+    {
+        var ids = keep.Select(k => k.ToUpperInvariant()).ToHashSet();
+        foreach (var relic in Me.Relics.ToList())
+            if (!ids.Contains(relic.Id.Entry)) await RelicCmd.Remove(relic);
+        await Frames(5);
+    }
+
+    /// <summary>relic-counter &lt;RELIC_ID&gt; &lt;Property&gt; &lt;value&gt;: sets a relic's own count (Pen Nib's AttacksPlayed), which carries between fights.</summary>
+    private static async Task RelicCounter(string id, string property, int value)
+    {
+        var relic = Me.Relics.FirstOrDefault(r => r.Id.Entry == id.ToUpperInvariant()) ?? throw new Exception($"no relic {id}");
+        var prop = relic.GetType().GetProperty(property, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+                   ?? throw new Exception($"{id} has no {property}");
+        prop.SetValue(relic, value);
+        await Frames(3);
+    }
+
+    private static IEnumerable<T> FindAll<T>(Node n) where T : Node
+    {
+        foreach (var child in n.GetChildren(true))
+        {
+            if (child is T t) yield return t;
+            foreach (var d in FindAll<T>(child)) yield return d;
+        }
     }
 
     private static int _endTurnFrom;

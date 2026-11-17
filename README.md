@@ -66,7 +66,7 @@ caption Each tab is a power or relic that playing the card sets off right now.
 shot proc-tabs hand pad 30
 ```
 
-Ids are the game's model ids (class names in SCREAMING_SNAKE_CASE: `TrueGrit` is `TRUE_GRIT`). Keep examples realistic: a character's starter cards mixed with the cards that show the feature, set up with real plays over a turn or two, against enemies that really have the mechanic (the Spiny Toad's thorns, the Louse Progenitor's Curl Up).
+Ids are the game's model ids (class names in SCREAMING_SNAKE_CASE: `TrueGrit` is `TRUE_GRIT`). Keep examples realistic, as a run could really be: a Neow relic, relics, cards, gold and potions that fit the floor; the fight's own act (`act OVERGROWTH`/`UNDERDOCKS` for act 1, `HIVE` for act 2, `GLORY` for act 3) so the background matches; HP missing on both sides (set `hp player` after `wait combat-started`: changing the act heals you); a turn or two of real plays so counters, powers and orbs stand partway; and enemies that really have the mechanic (the Spiny Toad's thorns, the Louse Progenitor's Curl Up). Cropped shots can be looser than full-screen ones.
 
 Directives (everything else goes to the game's dev console as the local player: `fight`, `relic add`, `power`, `potion`, `energy`, `block`, `damage`, `enchant <id> <amount> <hand index>`, `event`, `room Shop|RestSite|...`, `kill`, `heal`...):
 
@@ -80,6 +80,9 @@ Directives (everything else goes to the game's dev console as the local player: 
 | `clear-hand`, `clear-pile <Pile>`, `move-pile <From> <To>` | empties or moves a pile |
 | `hp player <n>`, `hp enemy <i> <n>` | sets HP |
 | `play <CARD_ID> [enemy N]` | plays that card from your hand the way the game does when you drop it (energy, targeting, every hook), and waits for it to resolve. Set up states this way so counters, powers and orbs come from real plays |
+| `floor N` | the floor the top bar shows (after the room is entered) |
+| `relics-only A B...` | removes every relic not listed (a Neow relic's random picks) |
+| `relic-counter <RELIC_ID> <Property> <value>` | sets a relic's own count that carries between fights (`PEN_NIB AttacksPlayed 6`) |
 | `endturn` | ends your turn (follow with `wait turn-started`) |
 | `card-reward [A B C]` | opens a card reward with these cards (or three random ones) |
 | `hover <region>`, `click <region>`, `key <Godot key name>` | real input: `hover intent 1`, `click text Guide`, `key F10` |

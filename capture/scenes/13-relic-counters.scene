@@ -1,16 +1,25 @@
-# Two Strikes and a Defend into the turn: Kunai is one Attack away.
+# Turn 3: Stone Calendar counts to turn 7, Pen Nib carries its count between fights, Ornamental Fan counts this turn's Attacks.
 title Relic Counters
 section In fights
 character Ironclad
 relic add PEN_NIB
-relic add KUNAI
-relic add LETTER_OPENER
+relic add ORNAMENTAL_FAN
+relic add STONE_CALENDAR
+relic-counter PEN_NIB AttacksPlayed 3
+act OVERGROWTH
 fight SLIMES_NORMAL 5
 wait combat-started
-hand STRIKE_IRONCLAD DEFEND_IRONCLAD STRIKE_IRONCLAD BASH DEFEND_IRONCLAD
+hp player 54
+floor 11
 play STRIKE_IRONCLAD enemy 2
+endturn
+wait turn-started
 play DEFEND_IRONCLAD
+endturn
+wait turn-started
+hand STRIKE_IRONCLAD STRIKE_IRONCLAD DEFEND_IRONCLAD BASH DEFEND_IRONCLAD
 play STRIKE_IRONCLAD enemy 2
+play STRIKE_IRONCLAD enemy 3
 wait 1.5
-caption One row per counter relic, with its progress; it flashes when the next card fires it (here Kunai).
+caption One row per counter relic, with its progress; it flashes when the next card fires it.
 shot relic-counters widget relic-counters + player pad 40

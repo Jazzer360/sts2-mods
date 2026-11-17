@@ -1,8 +1,20 @@
+# Turn 3: most of the deck is in the discard pile.
 title Shuffle Warning
 section In fights
 character Silent
+act UNDERDOCKS
 fight CULTISTS_NORMAL 3
 wait combat-started
+hp player 38
+floor 5
+play STRIKE_SILENT enemy 1
+play STRIKE_SILENT enemy 1
+endturn
+wait turn-started
+play STRIKE_SILENT enemy 2
+play DEFEND_SILENT
+endturn
+wait turn-started
 move-pile Draw Discard
 add Draw STRIKE_SILENT
 hand ACROBATICS BACKFLIP STRIKE_SILENT DEFEND_SILENT NEUTRALIZE

@@ -1,8 +1,13 @@
 title Lethal
 section In fights
 character Regent
+act UNDERDOCKS
 fight CULTISTS_NORMAL 3
 wait combat-started
+hp player 58
+floor 6
+hand STRIKE_REGENT STRIKE_REGENT DEFEND_REGENT DEFEND_REGENT VENERATE
+play STRIKE_REGENT enemy 1
 play STRIKE_REGENT enemy 1
 endturn
 wait turn-started

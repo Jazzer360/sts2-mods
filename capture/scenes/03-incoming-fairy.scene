@@ -2,8 +2,12 @@ title Incoming Damage with Fairy in a Bottle
 section In fights
 character Silent
 potion FAIRY_IN_A_BOTTLE
+act UNDERDOCKS
 fight CULTISTS_NORMAL 3
 wait combat-started
+hp player 23
+floor 9
+play STRIKE_SILENT enemy 1
 play DEFEND_SILENT
 endturn
 wait turn-started

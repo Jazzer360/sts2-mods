@@ -1,8 +1,11 @@
 title Incoming Damage with Osty
 section In fights
 character Necrobinder
+act UNDERDOCKS
 fight CULTISTS_NORMAL 3
 wait combat-started
+hp player 49
+floor 4
 hand BODYGUARD STRIKE_NECROBINDER DEFEND_NECROBINDER STRIKE_NECROBINDER DEFEND_NECROBINDER
 play BODYGUARD
 play STRIKE_NECROBINDER enemy 1

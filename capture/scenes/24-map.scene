@@ -1,6 +1,7 @@
 title Run Reminders: map
 section Outside fights
 character Ironclad
+hp player 59
 relic add MEMBERSHIP_CARD
 relic add REGAL_PILLOW
 key M

@@ -1,12 +1,17 @@
+# Burst+ played, one charge spent on Defend (10 block, enough for the slimes); one charge left for the next Skill.
 title Card Indicators
 section In fights
 character Silent
+act OVERGROWTH
 fight SLIMES_NORMAL 5
 wait combat-started
-hand BURST STRIKE_SILENT DEFEND_SILENT NEUTRALIZE SURVIVOR
+hp player 41
+floor 12
+hand BURST+ DEFEND_SILENT STRIKE_SILENT NEUTRALIZE SURVIVOR
 play BURST
-hand APPARITION BACKFLIP REFLEX ACROBATICS STRIKE_SILENT
-enchant STEADY 1 4
+play DEFEND_SILENT
+hand BACKFLIP REFLEX ACROBATICS STRIKE_SILENT NEUTRALIZE
+enchant STEADY 1 3
 wait 1.5
-caption Retain, Sly, double plays (here Burst on your next Skill) and Ethereal cards, readable on the top edge of the card.
+caption Retain, Sly and double plays (here Burst on your next Skill), readable on the top edge of the card.
 shot card-indicators hand pad 30

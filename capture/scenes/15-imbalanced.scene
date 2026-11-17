@@ -1,9 +1,15 @@
+# Two Defends played: one more covers the Bowlbug's hit, which knocks it off balance.
 title Stuns and wake-ups
 section In fights
 character Necrobinder
+act HIVE
 fight BOWLBUGS_NORMAL 2
 wait combat-started
-hand DEFEND_NECROBINDER STRIKE_NECROBINDER DEFEND_NECROBINDER BODYGUARD STRIKE_NECROBINDER
+hp player 47
+floor 18
+hand DEFEND_NECROBINDER DEFEND_NECROBINDER DEFEND_NECROBINDER STRIKE_NECROBINDER BODYGUARD
+play DEFEND_NECROBINDER
+play DEFEND_NECROBINDER
 wait 1.5
 caption Imbalanced, Burrowed, Flutter and Asleep: the tab shows when your card stuns the enemy or wakes it up.
 shot imbalanced hand + enemies pad 30

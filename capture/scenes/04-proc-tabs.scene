@@ -3,8 +3,11 @@ title Proc Indicators
 section In fights
 character Ironclad
 relic add LETTER_OPENER
+act OVERGROWTH
 fight SLIMES_NORMAL 5
 wait combat-started
+hp player 62
+floor 5
 hand FEEL_NO_PAIN STRIKE_IRONCLAD DEFEND_IRONCLAD BASH DEFEND_IRONCLAD
 play FEEL_NO_PAIN
 play STRIKE_IRONCLAD enemy 2

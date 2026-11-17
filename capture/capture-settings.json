@@ -1,3 +1,4 @@
 {
-  "ReportErrors": false
+  "ReportErrors": false,
+  "Relics": { "StoneCalendar": true }
 }

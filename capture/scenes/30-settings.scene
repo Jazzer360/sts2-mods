@@ -1,8 +1,10 @@
 title Settings and Guide
 section Settings
 character Ironclad
+act UNDERDOCKS
 fight CULTISTS_NORMAL 3
 wait combat-started
+hp player 52
 key F10
 wait 1
 caption Every feature, tab and tracker row can be switched on or off (F10).

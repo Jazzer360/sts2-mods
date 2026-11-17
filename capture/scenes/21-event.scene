@@ -1,6 +1,7 @@
 title Run Reminders: events
 section Outside fights
 character Ironclad
+hp player 63
 relic add BING_BONG
 relic add BOWLER_HAT
 relic add TUNGSTEN_ROD

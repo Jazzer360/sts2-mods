@@ -1,16 +1,27 @@
-# Three Lightning orbs at end of turn, each hitting a random enemy: the wounded cultist dies to two of them.
+# Turn 3: Zap on turn 1 and Ball Lightning on turn 2 (with Cracked Core's orb) left three Lightning orbs;
+# the cultists have been buffing up. Each orb hits a random enemy at the end of the turn.
 title Death Skull
 section In fights
 character Defect
+act UNDERDOCKS
 fight CULTISTS_NORMAL 3
 wait combat-started
-hand ZAP BALL_LIGHTNING DEFEND_DEFECT STRIKE_DEFECT DUALCAST
-play BALL_LIGHTNING enemy 1
+hp player 61
+floor 8
+hand ZAP STRIKE_DEFECT DEFEND_DEFECT STRIKE_DEFECT DUALCAST
 play ZAP
+play STRIKE_DEFECT enemy 1
+play DEFEND_DEFECT
+endturn
+wait turn-started
+hand BALL_LIGHTNING STRIKE_DEFECT DEFEND_DEFECT STRIKE_DEFECT DEFEND_DEFECT
+play BALL_LIGHTNING enemy 1
+play STRIKE_DEFECT enemy 2
+play DEFEND_DEFECT
 endturn
 wait turn-started
 hp enemy 1 6
-hand STRIKE_DEFECT DEFEND_DEFECT ZAP STRIKE_DEFECT DEFEND_DEFECT
+hand STRIKE_DEFECT DEFEND_DEFECT DUALCAST STRIKE_DEFECT DEFEND_DEFECT
 wait 1.5
 caption The skull beside an enemy's HP: it dies before it acts if you end your turn now. When your random Lightning decides it, with the chance.
 shot death-skull enemies + player pad 110

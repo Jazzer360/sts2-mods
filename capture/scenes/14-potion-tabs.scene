@@ -2,10 +2,12 @@ title Potion Tabs
 section In fights
 character Regent
 relic add REPTILE_TRINKET
-potion FIRE_POTION
 potion STRENGTH_POTION
+act UNDERDOCKS
 fight CULTISTS_NORMAL 3
 wait combat-started
+hp player 60
+floor 6
 wait 1.5
 caption Tabs under your potions for the relics that drinking them sets off.
 shot potion-tabs rect 0 0 0.6 0.16 pad 0

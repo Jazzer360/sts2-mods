@@ -1,9 +1,11 @@
 title Intent Forecast: Exoskeletons
 section In fights
 character Defect
-act 2
+act HIVE
 fight EXOSKELETONS_NORMAL 6
 wait combat-started
+hp player 49
+floor 20
 hover intent 1
 wait 1
 caption When it picks at random, each possible move with its chance, worked out from its rules and the moves you've seen.

@@ -1,9 +1,15 @@
 title Crossed tabs: Curl Up
 section In fights
 character Defect
+act HIVE
 fight LOUSE_PROGENITOR_NORMAL 2
 wait combat-started
-hand STRIKE_DEFECT ZAP DEFEND_DEFECT STRIKE_DEFECT DUALCAST
+hp player 52
+floor 19
+play DEFEND_DEFECT
+endturn
+wait turn-started
+hand STRIKE_DEFECT ZAP+ DEFEND_DEFECT BALL_LIGHTNING DUALCAST
 wait 1.5
 caption Curl Up: hitting it makes it gain block, so your attacks carry a warning.
 shot curl-up hand + enemy 1 pad 30

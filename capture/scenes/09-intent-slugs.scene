@@ -1,8 +1,11 @@
 title Intent Forecast: Corpse Slugs
 section In fights
 character Necrobinder
+act UNDERDOCKS
 fight CORPSE_SLUGS_NORMAL 4
 wait combat-started
+hp player 44
+floor 10
 hover intent 1
 wait 1
 caption Hover an enemy's intent to see the moves its rules make certain, turn by turn.

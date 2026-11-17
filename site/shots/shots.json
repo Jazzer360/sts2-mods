@@ -1,5 +1,5 @@
 ﻿{
-    "modVersion":  "1.14.11",
+    "modVersion":  "1.15.2",
     "gameVersion":  "v0.113.1",
     "captured":  "2026-11-17",
     "shots":  [
@@ -82,19 +82,6 @@
                       "frameHeight":  1440
                   },
                   {
-                      "name":  "lethal",
-                      "scene":  "07-lethal",
-                      "title":  "Lethal",
-                      "section":  "In fights",
-                      "caption":  "The skull: playing this card kills that enemy before it acts, in every outcome. The arrow means it depends on where you aim.",
-                      "x":  313,
-                      "y":  540,
-                      "width":  1600,
-                      "height":  713,
-                      "frameWidth":  2560,
-                      "frameHeight":  1440
-                  },
-                  {
                       "name":  "death-skull",
                       "scene":  "08-death-skull",
                       "title":  "Death Skull",
@@ -108,11 +95,37 @@
                       "frameHeight":  1440
                   },
                   {
+                      "name":  "intent-slugs",
+                      "scene":  "09-intent-slugs",
+                      "title":  "Intent Forecast: Corpse Slugs",
+                      "section":  "In fights",
+                      "caption":  "Hover an enemy\u0027s intent to see the moves its rules make certain, turn by turn.",
+                      "x":  1401,
+                      "y":  370,
+                      "width":  266,
+                      "height":  405,
+                      "frameWidth":  2560,
+                      "frameHeight":  1440
+                  },
+                  {
+                      "name":  "intent-exoskeletons",
+                      "scene":  "10-intent-exoskeletons",
+                      "title":  "Intent Forecast: Exoskeletons",
+                      "section":  "In fights",
+                      "caption":  "When it picks at random, each possible move with its chance, worked out from its rules and the moves you\u0027ve seen.",
+                      "x":  1340,
+                      "y":  280,
+                      "width":  266,
+                      "height":  417,
+                      "frameWidth":  2560,
+                      "frameHeight":  1440
+                  },
+                  {
                       "name":  "card-indicators",
                       "scene":  "11-card-indicators",
                       "title":  "Card Indicators",
                       "section":  "In fights",
-                      "caption":  "Retain, Sly, double plays (here Burst on your next Skill) and Ethereal cards, readable on the top edge of the card.",
+                      "caption":  "Retain, Sly and double plays (here Burst on your next Skill), readable on the top edge of the card.",
                       "x":  313,
                       "y":  826,
                       "width":  1600,
@@ -138,7 +151,7 @@
                       "scene":  "13-relic-counters",
                       "title":  "Relic Counters",
                       "section":  "In fights",
-                      "caption":  "One row per counter relic, with its progress; it flashes when the next card fires it (here Kunai).",
+                      "caption":  "One row per counter relic, with its progress; it flashes when the next card fires it.",
                       "x":  447,
                       "y":  640,
                       "width":  666,
@@ -165,10 +178,10 @@
                       "title":  "Stuns and wake-ups",
                       "section":  "In fights",
                       "caption":  "Imbalanced, Burrowed, Flutter and Asleep: the tab shows when your card stuns the enemy or wakes it up.",
-                      "x":  313,
+                      "x":  567,
                       "y":  657,
                       "width":  1600,
-                      "height":  604,
+                      "height":  689,
                       "frameWidth":  2560,
                       "frameHeight":  1440
                   },
@@ -277,28 +290,15 @@
                       "frameHeight":  1440
                   },
                   {
-                      "name":  "intent-slugs",
-                      "scene":  "09-intent-slugs",
-                      "title":  "Intent Forecast: Corpse Slugs",
+                      "name":  "lethal",
+                      "scene":  "07-lethal",
+                      "title":  "Lethal",
                       "section":  "In fights",
-                      "caption":  "Hover an enemy\u0027s intent to see the moves its rules make certain, turn by turn.",
-                      "x":  1401,
-                      "y":  376,
-                      "width":  266,
-                      "height":  398,
-                      "frameWidth":  2560,
-                      "frameHeight":  1440
-                  },
-                  {
-                      "name":  "intent-exoskeletons",
-                      "scene":  "10-intent-exoskeletons",
-                      "title":  "Intent Forecast: Exoskeletons",
-                      "section":  "In fights",
-                      "caption":  "When it picks at random, each possible move with its chance, worked out from its rules and the moves you\u0027ve seen.",
-                      "x":  1340,
-                      "y":  289,
-                      "width":  266,
-                      "height":  426,
+                      "caption":  "The skull: playing this card kills that enemy before it acts, in every outcome. The arrow means it depends on where you aim.",
+                      "x":  313,
+                      "y":  540,
+                      "width":  1600,
+                      "height":  713,
                       "frameWidth":  2560,
                       "frameHeight":  1440
                   }

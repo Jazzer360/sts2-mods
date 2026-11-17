@@ -1,6 +1,7 @@
 title Run Reminders: shops
 section Outside fights
 character Ironclad
+hp player 48
 relic add BING_BONG
 relic add LUCKY_FYSH
 relic add SOZU
