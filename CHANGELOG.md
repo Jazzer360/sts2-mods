@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.16.3
+#### Changed
+- Predictions explore every outcome. A fight with too many random outcomes used to stop at the first 128 and claim nothing past them (no certain kills, no lethal tabs); now the rest are explored in the background, and the tabs, Death Skull and Incoming Damage update when it's done. The first result shows as fast as before.
+
 ### Spire QoL 1.16.2
 #### Fixed
 - Hex (Spectral Knight): killing the enemy that cast it before your turn ends (with a card, or Stampede's end-of-turn pick) ends its Ethereal, so those cards stay in hand instead of exhausting. Predictions no longer count their exhaust (Charon's Ashes, Feel No Pain, Forgotten Soul) once the caster is dead.

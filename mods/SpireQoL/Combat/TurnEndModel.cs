@@ -81,7 +81,42 @@ public sealed class TurnEndModel
     private long _fullKey;
     private int _myHp;
     private static long _lastFullKey;
-    private static SimOutcome? _lastFullOutcome;
+    private static SimJob? _lastFullJob;
+
+    /// <summary>The exploration behind Outcome (decision #87): it may still be going; Refreshed takes its latest snapshot.</summary>
+    internal SimJob? Job { get; private set; }
+
+    /// <summary>
+    /// The exploration for this board, kept while the board stays the same: started on a worker, the first pass waited for
+    /// (bounded by SimJob.FirstBudget), then each frame takes its latest snapshot. A new board cancels the old one, unless the
+    /// forecast check pinned it (it compares against the finished result).
+    /// </summary>
+    private static SimJob Explore(ref long lastKey, ref SimJob? job, long key, SimState state, string label)
+    {
+        if (job == null || key != lastKey)
+        {
+            if (job is { Pinned: false }) job.Cancel();
+            var logged = state.Clone();
+            logged.Log = true; // the display needs the breakdown; card simulations run without it
+            job = SimJob.Start(SimExploration.Of(logged), label);
+            lastKey = key;
+        }
+        job.Ready.GetAwaiter().GetResult();
+        return job;
+    }
+
+    /// <summary>The same forecast from its exploration's latest snapshot (the forecast check, once the enemy turn is over).</summary>
+    internal TurnEndModel Refreshed()
+    {
+        if (Job?.Latest is not { } latest || ReferenceEquals(latest, Outcome)) return this;
+        var m = From(State, StateKey, latest, Ids, Teammates, _myHp);
+        m.Job = Job;
+        m.FullState = FullState;
+        m._fullKey = _fullKey;
+        if (ReferenceEquals(_full, this)) m._full = m;
+        m._teammateView = _teammateView;
+        return m;
+    }
 
     /// <summary>
     /// The same forecast over only the branches <paramref name="keep"/> allows: the check, once the game's history shows how
@@ -103,20 +138,9 @@ public sealed class TurnEndModel
 
     private TurnEndModel BuildFull()
     {
-        SimOutcome o;
-        if (_lastFullOutcome != null && _lastFullKey == _fullKey)
-        {
-            o = _lastFullOutcome;
-        }
-        else
-        {
-            var logged = FullState.Clone();
-            logged.Log = true;
-            o = SimEngine.Run(logged);
-            _lastFullKey = _fullKey;
-            _lastFullOutcome = o;
-        }
-        var m = From(FullState, _fullKey, o, Ids, Teammates, _myHp);
+        var job = Explore(ref _lastFullKey, ref _lastFullJob, _fullKey, FullState, "the turn forecast with teammates' hands");
+        var m = From(FullState, _fullKey, job.Latest!, Ids, Teammates, _myHp);
+        m.Job = job;
         m.FullState = FullState;
         m._fullKey = _fullKey;
         m._full = m;
@@ -162,13 +186,14 @@ public sealed class TurnEndModel
     private static ulong _frame = ulong.MaxValue;
     private static TurnEndModel? _cached;
     private static long _lastKey;
-    private static SimOutcome? _lastOutcome;
+    private static SimJob? _lastJob;
 
     public static TurnEndModel? Compute()
     {
         var frame = Godot.Engine.GetProcessFrames();
         if (frame == _frame) return _cached;
         _frame = frame;
+        SimJob.FlushLog(line => ModEntry.Log.Info(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"));
         _cached = ComputeNow();
         return _cached;
     }
@@ -189,20 +214,9 @@ public sealed class TurnEndModel
         var state = CountTeammateHands || full.Teammates.Count == 0 ? full : full.WithoutTeammateHands();
         // The game state rarely changes between frames: rerun only when it did.
         var key = ReferenceEquals(state, full) ? fullKey : state.FullKey();
-        SimOutcome outcome;
-        if (_lastOutcome != null && key == _lastKey)
-        {
-            outcome = _lastOutcome;
-        }
-        else
-        {
-            var logged = state.Clone();
-            logged.Log = true; // the display needs the breakdown; card simulations run without it
-            outcome = SimEngine.Run(logged);
-            _lastKey = key;
-            _lastOutcome = outcome;
-        }
-        var m = From(state, key, outcome, ids, SimAdapter.Teammates(me, cs), me.Creature.CurrentHp);
+        var job = Explore(ref _lastKey, ref _lastJob, key, state, "the turn forecast");
+        var m = From(state, key, job.Latest!, ids, SimAdapter.Teammates(me, cs), me.Creature.CurrentHp);
+        m.Job = job;
         m.FullState = full;
         m._fullKey = fullKey;
         if (ReferenceEquals(state, full)) m._full = m;

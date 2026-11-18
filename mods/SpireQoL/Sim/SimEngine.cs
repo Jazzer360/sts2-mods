@@ -137,9 +137,16 @@ public static partial class SimEngine
     /// end of the turn and the enemy turn (decision #27). The card's own results (kills, block breaks, block
     /// gains, reactions) are measured from each branch's state after the lead-in.
     /// </summary>
-    public static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play)
+    public static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play) => Run(start, leadIn, play, null);
+
+    /// <summary>
+    /// One run. With <paramref name="slices"/> (SimExploration, decision #87), a step that makes more than MaxBranches branches
+    /// keeps the slice the cursor asks for and follows it to the end; other slices are other runs. Without, it keeps a sample
+    /// that follows one outcome per step, and damage to you comes from the safe run.
+    /// </summary>
+    internal static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play, SliceCursor? slices)
     {
-        var work = new SimWork();
+        var work = new SimWork { Slices = slices };
         var first = start.Clone();
         first.Work = work;
         var b = new BranchSet(first);
@@ -204,28 +211,33 @@ public static partial class SimEngine
             PlayFiredAny = firedAny,
             PlayFirstHits = firstHits,
         };
-        if (b.Truncated)
-        {
-            // Too many branches to explore: nothing is guaranteed, and damage to you comes from a run
-            // where random hits land on nobody, so no attacker is ever saved by one (never an underestimate).
-            var safeStart = start.Clone();
-            safeStart.Work = work;
-            safeStart.NoRandomHits = true;
-            var safe = new BranchSet(safeStart);
-            if (leadIn != null) foreach (var queued in leadIn) RunScript(safe, queued);
-            if (play != null) RunScript(safe, play);
-            AutoPostPlay(safe);
-            EndOfTurn(safe);
-            safe.Do(EnemyTurn);
-            outcome.SafeWorst = safe.States[0];
-
-        }
+        // Too many branches to explore: nothing is guaranteed, and damage to you comes from the safe run. Exploring in slices,
+        // SimExploration runs it once for the whole exploration.
+        if (b.Truncated && slices == null) outcome.SafeWorst = SafeRun(start, leadIn, play, work);
         work.EndStep();
         outcome.Steps = work.Steps;
         outcome.Stepped = work.Stepped;
         outcome.Copies = work.Copies;
         outcome.MaxStepCopies = work.MaxStepCopies;
         return outcome;
+    }
+
+    /// <summary>
+    /// The run where random hits land on nobody, so no attacker is ever saved by one: an upper bound on damage to you (never an
+    /// underestimate), for when not every branch was explored.
+    /// </summary>
+    internal static SimState SafeRun(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play, SimWork? work = null)
+    {
+        var safeStart = start.Clone();
+        safeStart.Work = work ?? new SimWork();
+        safeStart.NoRandomHits = true;
+        var safe = new BranchSet(safeStart);
+        if (leadIn != null) foreach (var queued in leadIn) RunScript(safe, queued);
+        if (play != null) RunScript(safe, play);
+        AutoPostPlay(safe);
+        EndOfTurn(safe);
+        safe.Do(EnemyTurn);
+        return safe.States[0];
     }
 
     // ------------------------------------------------------------------ branching
@@ -289,6 +301,9 @@ public static partial class SimEngine
             }
             var next = new List<SimState>();
             var seen = new Dictionary<long, SimState>();
+            // Exploring in slices (decision #87): every branch of the step is kept (the step's copy budget bounds them), then the
+            // cursor picks the slice this run follows.
+            var slices = States.Count > 0 ? States[0].Work?.Slices : null;
             foreach (var s in States)
             {
                 foreach (var r in step(s))
@@ -301,7 +316,7 @@ public static partial class SimEngine
                         seen[key] = r;
                         next.Add(r);
                     }
-                    if (next.Count >= MaxBranches || r.OutOfBranches)
+                    if ((slices == null && next.Count >= MaxBranches) || r.OutOfBranches)
                     {
                         // Out of branches: keep a sample that follows one outcome per step from here
                         // (see above). Its results only feed "can happen" checks.
@@ -311,7 +326,7 @@ public static partial class SimEngine
                     }
                 }
             }
-            States = next;
+            States = slices != null && next.Count > slices.Size ? slices.Take(next) : next;
         }
 
         public void Do(Action<SimState> step)

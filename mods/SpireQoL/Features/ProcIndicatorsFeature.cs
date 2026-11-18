@@ -135,7 +135,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // Every card's simulations (one per target) run in parallel across CPU cores; the frame waits
         // for them, so the tabs appear on the frame they belong to. The wait is capped so a pathological
         // state can't freeze the game: anything still running then shows a frame or two later (SimPending).
-        var running = pending.Select(x => x.P.Sim).Where(t => t is { IsCompleted: false }).Cast<Task>().ToArray();
+        var running = pending.Select(x => x.P.Sim).Where(t => t is { IsCompleted: false }).Select(t => t!.Ready).ToArray();
         if (running.Length > 0)
         {
             try { Task.WaitAll(running, SimWaitCapMs); }
@@ -148,7 +148,27 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     }
 
     /// <summary>A card's facts, the proc sources this frame, and its running simulations.</summary>
-    private sealed record Prepared(PlayFacts F, List<AbstractModel> Sources, Task<SimOutcome[]>? Sim);
+    private sealed record Prepared(PlayFacts F, List<AbstractModel> Sources, SimBatch? Sim);
+
+    /// <summary>
+    /// A card's simulations, one per target (decision #87): each explores on a worker; Ready once every first pass has a result
+    /// (what the frame waits for), and Latest is their newest snapshots, so the tabs update as exploration goes on.
+    /// </summary>
+    private sealed class SimBatch
+    {
+        public SimBatch(SimJob[] jobs)
+        {
+            Jobs = jobs;
+            Ready = Task.WhenAll(jobs.Select(j => j.Ready));
+        }
+
+        public SimJob[] Jobs { get; }
+        public Task Ready { get; }
+        public bool IsCompleted => Ready.IsCompleted;
+        public SimOutcome[] Latest => Jobs.Select(j => j.Latest!).ToArray();
+        public bool Finished => Jobs.All(j => j.Finished);
+        public void Cancel() { foreach (var j in Jobs) j.Cancel(); }
+    }
 
     /// <summary>The player whose Power cards a teammate's Imitation Learning copies (ImitationLearningPower.PlayerTarget).</summary>
     internal static Player? CopiesFrom(ImitationLearningPower p)
@@ -217,7 +237,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             _lastFacts[card] = f;
             if (_lastFacts.Count > 300) _lastFacts.Clear();
         }
-        Task<SimOutcome[]>? sim = null;
+        SimBatch? sim = null;
         try
         {
             sim = StartSim(card, f);
@@ -305,12 +325,15 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             if (self.Prepare(card, Sources(me, cs), record: false) is not { } p) return null;
             if (p.Sim is { IsCompleted: false } t)
             {
-                try { t.Wait(SimWaitCapMs); } catch { /* reported by Finish */ }
+                try { t.Ready.Wait(SimWaitCapMs); } catch { /* reported by Finish */ }
             }
             return (self.Finish(card, p), p.F);
         }
         finally
         {
+            // Uncached: nothing reads these simulations again.
+            self._uncached.ForEach(b => b.Cancel());
+            self._uncached.Clear();
             self._noCache = false;
             (self._me, self._cs, self._turnEnd, self._turnEndFrame) = (savedMe, savedCs, savedTe, savedFrame);
         }
@@ -334,10 +357,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     // cached until the state changes. One simulation's work is bounded (SimEngine.StepCopyBudget per step) and counted by
     // SimPerformanceTests.
     private const int SimWaitCapMs = 250;
-    private readonly Dictionary<string, Task<SimOutcome[]>> _simCache = new();
+    private readonly Dictionary<string, SimBatch> _simCache = new();
+    /// <summary>Simulations made without the cache (the play audit's), cancelled once read.</summary>
+    private readonly List<SimBatch> _uncached = new();
 
     /// <summary>Runs the outcome simulator for this card (once per possible target for single-target cards) against "end your turn now".</summary>
-    private Task<SimOutcome[]>? StartSim(CardModel card, PlayFacts f)
+    private SimBatch? StartSim(CardModel card, PlayFacts f)
     {
         var te = TurnEnd();
         if (te == null) return null;
@@ -356,7 +381,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         if (!_noCache && stateKey != _simKey)
         {
             _simKey = stateKey;
-            _simCache.Clear(); // running tasks finish on their own; their results are dropped
+            foreach (var old in _simCache.Values) old.Cancel(); // the board changed: their explorations stop
+            _simCache.Clear();
         }
         // The card's own numbers too: upgrading it in hand (Blessing of the Forge, Armaments) or a value that grows (Claw)
         // changes its play without changing the board.
@@ -368,8 +394,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         if (_noCache || !_simCache.TryGetValue(cacheKey, out var task))
         {
             var start = te.State;
-            task = Task.WhenAll(targets.Select(t => inputs.PlayByTarget[t]).Select(p => Task.Run(() => SimEngine.Run(start, p))));
+            var name = card.GetType().Name;
+            task = new SimBatch(targets.Select(t => SimJob.Start(SimExploration.Of(start, inputs.PlayByTarget[t]), $"{name} (target {t})")).ToArray());
             if (!_noCache) _simCache[cacheKey] = task;
+            else _uncached.Add(task);
         }
         return task;
     }
@@ -394,7 +422,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// Reads a card's finished simulations into its tabs; returns whether it's lethal (some aim leaves an enemy dead before it
     /// acts in every branch, which ending the turn now doesn't), and in <paramref name="lethalAimed"/> whether only some aims are.
     /// </summary>
-    private bool FinishSim(PlayFacts f, List<AbstractModel> sources, Task<SimOutcome[]> task, Dictionary<string, TabSpec> tabs, out bool lethalAimed)
+    private bool FinishSim(PlayFacts f, List<AbstractModel> sources, SimBatch task, Dictionary<string, TabSpec> tabs, out bool lethalAimed)
     {
         lethalAimed = false;
         var te = TurnEnd();
@@ -404,8 +432,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             f.SimPending = true;
             return false;
         }
-        if (task.IsFaulted) throw task.Exception!.GetBaseException();
-        var outcomes = task.Result;
+        if (task.Ready.IsFaulted) throw task.Ready.Exception!.GetBaseException();
+        var outcomes = task.Latest;
         _firesAt.Clear();
         var baseline = te.Outcome;
         if (outcomes.Any(o => o.Truncated || o.Branches.Count > 1)) f.RandomOutcome = true;

@@ -69,6 +69,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (me == null || !Sts2State.InCombat)
         {
             Summarize();
+            _frozen?.Job?.Cancel();
             _frozen = null;
             _wasPlayerTurn = false;
             _history = null;
@@ -80,6 +81,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             Summarize();
             _history = history;
+            _frozen?.Job?.Cancel();
             _frozen = null;
         }
 
@@ -100,6 +102,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             // Ending the turn just started: freeze the last forecast.
             _frozen = _last.Full; // teammates' hands included (decision #25: the check uses everything that isn't a roll)
+            // Its exploration goes on after the board changes (decision #87): the check compares against all of it.
+            if (_frozen.Job is { } frozenJob) frozenJob.Pinned = true;
             _frozenAt = _lastHistoryCount;
             _frozenTurn = _lastTurn;
         }
@@ -165,6 +169,14 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// checked as a death against the forecast's, and the enemies left to act didn't.</param>
     private void Compare(TurnEndModel f, CombatHistory history, int from, Player me, bool youDied = false)
     {
+        // The frozen forecast's latest exploration (decision #87); it isn't needed after this.
+        f = f.Refreshed();
+        if (f.Job is { } job)
+        {
+            job.Pinned = false;
+            job.Cancel();
+            if (!job.Finished) ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: the forecast's exploration hadn't finished; compared with {f.Outcome.Branches.Count} branches explored so far");
+        }
         // Your end of turn (player side), then the enemy turn; stop at your next turn.
         var window = new List<CombatHistoryEntry>();
         var endOfTurn = new List<CombatHistoryEntry>();

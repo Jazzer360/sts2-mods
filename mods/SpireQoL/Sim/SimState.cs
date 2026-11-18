@@ -780,6 +780,9 @@ internal sealed class SimWork
 
     public void EndStep() => MaxStepCopies = Math.Max(MaxStepCopies, Copies - _stepStart);
 
+    /// <summary>Exploring in slices (SimExploration, decision #87): which slice of each overflowing step this run follows.</summary>
+    public SliceCursor? Slices;
+
     /// <summary>This step has made SimEngine.StepCopyBudget copies: random choices stop branching.</summary>
     public bool OverBudget => Copies - _stepStart >= SimEngine.StepCopyBudget;
 }
