@@ -262,6 +262,7 @@ public static partial class SimAdapter
         foreach (var pw in me.Creature.Powers) SimReaders.AddVars(s, Who.You, pw);
         foreach (var r in me.Relics) SimReaders.AddVars(s, Who.You, r);
         FillAutoPlays(s.P, me, cs, ids);
+        FillDrawPile(s.P, me, cs, ids);
         s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
         // Your HP, and what keeps you alive at 0 (the Death Skull on Incoming Damage, Fairy and Lizard Tail): the heal
         // brings you from 0 to that much (CreatureCmd.Heal; the HP setter drops the fraction).
@@ -357,6 +358,75 @@ public static partial class SimAdapter
         }
     }
 
+    /// <summary>
+    /// Your draw and discard piles by profile (decision #90): what about each card matters if you draw it on this board, never
+    /// their order (hidden; only the cards known to be on top would be: none yet). What matters: acting in hand at end of
+    /// turn (always), exhausting as Ethereal (always), a Status with Iteration, Ethereal with Pagestorm, a Strike with
+    /// Hellraiser, and with Stampede or Simpleton the card itself (how it plays). Everything else is one plain profile.
+    /// </summary>
+    private static void FillDrawPile(SimPlayer p, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids)
+    {
+        try
+        {
+            var iteration = me.Creature.HasPower<IterationPower>();
+            var pagestorm = me.Creature.HasPower<PagestormPower>();
+            var hellraiser = me.Creature.HasPower<HellraiserPower>();
+            var picks = p.AutoHand != null;
+            var autoByKey = new Dictionary<string, SimHandCard?>();
+            SimDrawCard Profile(CardModel card)
+            {
+                var turnEnd = TurnEndOf(card);
+                var fading = IsFading(card, cs);
+                var hexFading = fading && EtherealOnlyFromHex(card);
+                var status = iteration && card.Type == CardType.Status;
+                var ethereal = pagestorm && card.Keywords.Contains(CardKeyword.Ethereal);
+                var strike = hellraiser && card.Tags.Contains(CardTag.Strike);
+                var pickable = picks && !card.Keywords.Contains(CardKeyword.Unplayable) && (p.Simpleton > 0 || card.Type == CardType.Attack);
+                var cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved();
+                var who = pickable ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
+                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}";
+                SimHandCard? auto = null;
+                if (pickable && !autoByKey.TryGetValue(key, out auto))
+                {
+                    // How it plays once in your hand: as the adapter builds a hand card's auto-plays. A card in the draw pile counts as
+                    // not in your hand there (its hand delta 0): one less, as for a card played from hand.
+                    var plays = AutoPlays(card, me, cs, ids);
+                    if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) play.HandDelta -= 1;
+                    auto = new SimHandCard { Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, Plays = plays };
+                    autoByKey[key] = auto;
+                }
+                return new SimDrawCard(key)
+                {
+                    TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
+                    Pickable = pickable, Auto = auto,
+                };
+            }
+            List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Profile).GroupBy(c => c.Key)
+                .Select(g => new SimDrawGroup(g.First(), g.Count())).OrderBy(g => g.Card.Key, StringComparer.Ordinal).ToList();
+            p.Draw = new SimDrawPile
+            {
+                Rest = Groups(PileType.Draw.GetPile(me).Cards),
+                Discard = Groups(PileType.Discard.GetPile(me).Cards),
+            };
+            // Iteration counts the Status cards drawn this turn (CardDrawnEntry: you watched them come).
+            if (iteration)
+                p.StatusDrawn = CombatManager.Instance.History.Entries.OfType<MegaCrit.Sts2.Core.Combat.History.Entries.CardDrawnEntry>()
+                    .Count(e => e.HappenedThisTurn(cs) && e.Actor == me.Creature && e.Card.Type == CardType.Status);
+        }
+        catch
+        {
+            p.Draw = null; // unreadable: draws are only counted, as before
+        }
+    }
+
+    /// <summary>A card that acts in hand at the end of your turn (SimEngine.HandAtTurnEnd), with its amount; null otherwise.</summary>
+    private static TurnEndCard? TurnEndOf(CardModel card)
+    {
+        if (!SimEngine.HandAtTurnEnd.TryGetValue(card.GetType().Name, out var kind)) return null;
+        var amount = kind switch { SimEngine.InHand.Damage => Sts2State.Var(card, "Damage"), SimEngine.InHand.HpLoss => Sts2State.Var(card, "HpLoss"), _ => 0 };
+        return new TurnEndCard(card.GetType().Name, SafeCardTitle(card), amount);
+    }
+
     /// <summary>Which card in your hand a play is (SimPlay.HandCard, SimHandCard.Id): its object identity.</summary>
     public static int HandId(CardModel card) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(card) | 1;
 
@@ -442,11 +512,7 @@ public static partial class SimAdapter
         p.AttacksThisTurn = Sts2State.CountPlayedThisTurn(me, CardType.Attack);
         // Cards that act in hand at the end of the turn (the simulator's list): their Damage or HpLoss as the card shows it.
         foreach (var card in hand)
-        {
-            if (!SimEngine.HandAtTurnEnd.TryGetValue(card.GetType().Name, out var kind)) continue;
-            var amount = kind switch { SimEngine.InHand.Damage => Sts2State.Var(card, "Damage"), SimEngine.InHand.HpLoss => Sts2State.Var(card, "HpLoss"), _ => 0 };
-            p.TurnEndCards.Add(new TurnEndCard(card.GetType().Name, SafeCardTitle(card), amount));
-        }
+            if (TurnEndOf(card) is { } turnEnd) p.TurnEndCards.Add(turnEnd);
 
         p.Focus = c.GetPower<FocusPower>()?.Amount ?? 0;
         p.OrbCapacity = pcs.OrbQueue.Capacity;

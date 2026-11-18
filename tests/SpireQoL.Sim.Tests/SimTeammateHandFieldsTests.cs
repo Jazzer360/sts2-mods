@@ -18,6 +18,7 @@ public class SimTeammateHandFieldsTests
     {
         nameof(SimPlayer.Fading),          // Ethereal cards that exhaust (Feel No Pain, Charon's Ashes, Forgotten Soul)
         nameof(SimPlayer.HexFading),       // of those, Ethereal only through Hex
+        nameof(SimPlayer.Draw),            // their draw pile: never filled for a teammate (decision #90), cleared all the same
         nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...
         // End-of-turn auto-plays picked from the hand (Stampede, Simpleton; never filled for a teammate today, decision #80).
         nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand),
@@ -28,6 +29,7 @@ public class SimTeammateHandFieldsTests
     {
         nameof(SimPlayer.Block), nameof(SimPlayer.Reflect),
         nameof(SimPlayer.HexFrom),         // who cast Hex on them (its power is on screen)
+        nameof(SimPlayer.Drawn), nameof(SimPlayer.StatusDrawn), // cards drawn: you watch them draw (the simulation's own count)
         nameof(SimPlayer.HandCount),       // the size is on screen (Cloak Clasp, Screaming Flagon, Obsidian Vice, Regret's amount)
         nameof(SimPlayer.Energy),          // on screen for every player (Pael's Tears, Orbit)
         nameof(SimPlayer.Arrows),          // on screen (the Fool's arrows)
@@ -95,6 +97,7 @@ public class SimTeammateHandFieldsTests
         else if (t == typeof(List<SimPlay>)) f.SetValue(p, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
         else if (t == typeof(PowerSet)) f.SetValue(p, PowerSet.Empty.With("StrengthPower", 2));
         else if (t == typeof(List<SimOrb>)) f.SetValue(p, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
+        else if (t == typeof(SimDrawPile)) f.SetValue(p, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), 2) } });
         else Assert.Fail($"SimPlayer.{f.Name}: type {t.Name} isn't handled by this test's Fill: add it");
     }
 

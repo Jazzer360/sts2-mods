@@ -12,7 +12,11 @@ public abstract record SimAction;
 /// </summary>
 /// <param name="Play">The play (its PlayIndex is set for each play).</param>
 /// <param name="Body">The card's own actions (OnPlay), then its enchantment's and affliction's.</param>
-public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> Body) : SimAction;
+public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> Body) : SimAction
+{
+    /// <summary>The card is played from its owner's hand (it has left it, though HandCount drops only at CardResolved).</summary>
+    public bool FromHand { get; init; }
+}
 
 /// <summary>
 /// The damage of one attack, worked out at each hit from the state (docs/SIMULATOR_V2.md "Pipelines"): the card's base value

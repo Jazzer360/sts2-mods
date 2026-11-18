@@ -134,18 +134,22 @@ public static partial class SimEngine
     /// <summary>Card events a proc causes (Dark Embrace's draw...): each through every listener, as an indirect event.</summary>
     public static IEnumerable<SimState> ProcCardEvent(SimState s, CardEvent ev, int count, int player, bool indirect = true)
     {
+        // Your draws come from your draw pile (decision #90): which card matters.
+        if (ev == CardEvent.Drawn && DrawsFromPile(s, player)) return DrawCards(s, player, count, indirect);
         IEnumerable<SimState> r = new[] { s };
-        for (var i = 0; i < count; i++)
-            r = Then(r, x =>
-            {
-                CountEvent(x, ev, player);
-                var was = x.IndirectNow;
-                x.IndirectNow = indirect || was;
-                var after = Hook(x, nameof(SimModel.AfterCardEvent), (m, o, y) => m.AfterCardEvent(y, o, ev, player)).ToList();
-                foreach (var y in after) y.IndirectNow = was;
-                return after;
-            });
+        for (var i = 0; i < count; i++) r = Then(r, x => FireCardEvent(x, ev, player, indirect));
         return r;
+    }
+
+    /// <summary>One card event's bookkeeping and its listeners (AfterCardEvent).</summary>
+    internal static IEnumerable<SimState> FireCardEvent(SimState x, CardEvent ev, int player, bool indirect)
+    {
+        CountEvent(x, ev, player);
+        var was = x.IndirectNow;
+        x.IndirectNow = indirect || was;
+        var after = Hook(x, nameof(SimModel.AfterCardEvent), (m, o, y) => m.AfterCardEvent(y, o, ev, player)).ToList();
+        foreach (var y in after) y.IndirectNow = was;
+        return after;
     }
 
     /// <summary>Bookkeeping of one card event: the play's event counts, and the player's energy.</summary>

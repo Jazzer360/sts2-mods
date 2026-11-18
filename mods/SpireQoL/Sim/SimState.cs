@@ -262,6 +262,15 @@ public sealed class SimPlayer
     /// <summary>Ethereal cards in hand that exhaust at end of turn.</summary>
     public int Fading;
     /// <summary>
+    /// Your draw pile and discard pile by profile (decision #90): draws come from it, and what's drawn joins the hand. Null: draws
+    /// are only counted (a teammate's; tests that don't set it).
+    /// </summary>
+    public SimDrawPile? Draw;
+    /// <summary>Cards drawn in this simulation (each drawn card's id in AutoHand).</summary>
+    public int Drawn;
+    /// <summary>Status cards drawn this turn, the simulation's included (Iteration draws on the first).</summary>
+    public int StatusDrawn;
+    /// <summary>
     /// Of those, the ones Ethereal only through Hex (HexPower.TryModifyKeywordsInCombat on its Hexed cards), and the enemy that
     /// cast it (-1: none). Hex is removed when its caster dies (HexPower.AfterDeath), and those cards stop being Ethereal: they
     /// stay in hand at end of turn (decision #85).
@@ -564,6 +573,8 @@ public sealed class SimState
     /// <summary>The card play being resolved (its hooks and actions read it), and the attack in progress (Vigor, Aim...).</summary>
     internal SimCardPlay? CurrentPlay;
     internal int AttackSerial, CurrentAttack;
+    /// <summary>The card being played was played from its owner's hand (a draw then has its slot: SimEngine.DrawOne).</summary>
+    internal bool PlayFromHand;
     /// <summary>The enemy turn is under way (the players' side's turn is over: Inferno doesn't react).</summary>
     internal bool EnemyTurnNow;
     /// <summary>Your side's turn is ending (EndOfTurn): block and damage from models go into the Incoming Damage breakdown.</summary>
@@ -622,6 +633,7 @@ public sealed class SimState
             var t = shown.MutableTeammate(k);
             t.TurnEndCards = new();
             t.Fading = t.HexFading = 0;
+            t.Draw = null;
             t.Stampede = t.Simpleton = 0;
             t.AutoHand = null;
         }
@@ -744,6 +756,14 @@ public sealed class SimState
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed);
         foreach (var pick in AutoPicks) { Add(pick.Card); Add(pick.Target); } // branches that picked differently stay apart (the check tells them apart)
+        // What's been drawn (decision #90): the pile left, and what joined the hand.
+        if (P.Draw != null)
+        {
+            P.Draw.Hash(Add);
+            Add(P.HandCount); Add(P.Fading); Add(P.HexFading); Add(P.StatusDrawn); Add(P.Drawn);
+            Add(P.TurnEndCards.Count);
+            foreach (var c in P.TurnEndCards) { Add(c.Card.GetHashCode()); Add(c.Amount); }
+        }
         foreach (var e in Enemies) Add(e.Exploded ? 1 : 0);
         P.Powers.Hash(Add); P.Relics.Hash(Add);
         Add(P.Orbs.Count);

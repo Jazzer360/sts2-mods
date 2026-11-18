@@ -35,12 +35,15 @@ public static partial class SimEngine
         var k = cr.Owner == Who.You ? -1 : Who.TeammateIndex(cr.Owner);
         if (k >= s.Teammates.Count) { AllyDeaths(s); return; }
         var p = k < 0 ? s.P : s.MutableTeammate(k);
-        p.HandCount = Math.Max(0, p.HandCount + cr.HandDelta);
+        // With a draw pile (decision #90), the cards it drew are already in hand, as drawn: only what it made or brought back is
+        // unknown.
+        var handDelta = cr.HandDelta - (p.Draw != null ? cr.Draws : 0);
+        p.HandCount = Math.Max(0, p.HandCount + handDelta);
         if (!cr.AutoPlay) p.PaelsEyeExhaust = false;
         if (p.AutoHand != null)
         {
             if (cr.HandCard != 0) p.AutoHand = p.AutoHand.Where(c => c.Id != cr.HandCard).ToList();
-            if (cr.HandDelta > -1) s.AutoPlaysUnknown = true;
+            if (handDelta > -1) s.AutoPlaysUnknown = true;
         }
         if (cr.Draws > 0 && p.InvincibleBlock > 0)
         {

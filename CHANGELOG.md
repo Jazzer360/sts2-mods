@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.18.1
+#### Fixed
+- Predictions count what you'd draw. A card that draws (and Stampede picking one) draws from your draw pile as it is: a Burn or Regret you might draw acts at the end of your turn, an Ethereal card exhausts (Feel No Pain, Charon's Ashes), and Stampede can pick a drawn Attack, each with its chance. A full hand stops the draw, an empty pile shuffles your discard pile in, and Iteration and Pagestorm draw more, in the game's order.
+#### Changed
+- Exploration Progress: the clock is the run timer's, from the top bar.
+
 ### Spire QoL 1.18.0
 #### Added
 - Exploration Progress: a small clock and progress bar under the End Turn button while predictions are still working through every outcome (rare), so you know the ? marks will resolve.

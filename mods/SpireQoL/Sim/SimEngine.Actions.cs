@@ -14,14 +14,14 @@ public static partial class SimEngine
         for (var i = 0; i < Math.Max(1, pc.Play.PlayCount); i++)
         {
             var play = pc.Play with { PlayIndex = i };
-            b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; s.PlayEvents = PowerSet.Empty; });
+            b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; s.PlayEvents = PowerSet.Empty; s.PlayFromHand = pc.FromHand; });
             HookStep(b, nameof(SimModel.BeforeCardPlayed), (m, o, x) => m.BeforeCardPlayed(x, o, play));
             b.Do(s => Count(s, play, "Started"));
             foreach (var a in pc.Body) Run(b, a);
             b.Do(s => Count(s, play, "Finished"));
             HookStep(b, nameof(SimModel.AfterCardPlayed), (m, o, x) => m.AfterCardPlayed(x, o, play));
         }
-        b.Do(s => s.CurrentPlay = null);
+        b.Do(s => { s.CurrentPlay = null; s.PlayFromHand = false; });
     }
 
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>
@@ -227,6 +227,12 @@ public static partial class SimEngine
         if (ce.FirstPlayOnly && b.States.Count > 0 && b.States[0].CurrentPlay is { PlayIndex: > 0 }) return;
         for (var i = 0; i < ce.Count; i++)
         {
+            // A draw from your draw pile (decision #90): a branch per card that matters, with its reactions.
+            if (ce.Event == CardEvent.Drawn && b.States.Count > 0 && DrawsFromPile(b.States[0], ce.Player ?? b.States[0].CurrentPlay?.Owner ?? Who.You))
+            {
+                b.Each(s => DrawCards(s, ce.Player ?? s.CurrentPlay?.Owner ?? Who.You, 1, ce.Indirect));
+                continue;
+            }
             b.Do(s => { CountEvent(s, ce.Event, ce.Player ?? s.CurrentPlay?.Owner ?? Who.You); s.EventCard = ce.Card; });
             HookStep(b, nameof(SimModel.AfterCardEvent), (m, o, x) =>
             {
