@@ -29,5 +29,6 @@ public class SkipReasonTests
     [InlineData("damage to you: predicted 0, actual 2", true)]
     [InlineData("after play enemy HP: Cultist predicted 10, actual 4", false)]
     [InlineData("draws: predicted 2, actual 1", false)]
+    [InlineData("lethal: E1 predicted to die before acting in every outcome of this play, but after it: 50%", true)]
     public void TabIssuesDependOnTheSimulation(string issue, bool fromSim) => Assert.Equal(fromSim, ProcAudit.SimDependent(issue));
 }

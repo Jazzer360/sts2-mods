@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.19.2
+#### Fixed
+- The audits now check the lethal tab against the board each play leaves, report tabs of powers (and crossed tabs) that every outcome predicted but that didn't fire, and total the death chances shown against what happened, reporting a large drift.
+- A proc set off by a random hit or a drawn card is only excused when the simulator predicted it in some outcome; otherwise it's reported.
+
 ### Spire QoL 1.19.1
 #### Fixed
 - Teammate predictions use the same simulation as yours: their Fairy in a Bottle and Lizard Tail now keep them alive in the forecast, and a hit that kills them counts in full, as yours does.

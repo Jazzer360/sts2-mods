@@ -85,6 +85,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     /// <summary>The card being finished: for each proc tab, which of its targets (simulations) give it (the aim marker).</summary>
     private readonly Dictionary<string, bool[]> _firesAt = new();
+    /// <summary>Per tabbed source this frame's card: whether each aim sets it off in every outcome and in some (PlayFacts.FiresEveryByAim).</summary>
+    private readonly Dictionary<string, (Type T, bool[] Every, bool[] Any)> _firesBy = new();
 
     /// <summary>Each hand card's PlayFacts on the previous frame (what ProcAudit expects a play to do).</summary>
     /// <summary>Each card's facts from the last frame it was in hand (kept after it leaves; ProcAudit).</summary>
@@ -444,6 +446,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         if (task.Ready.IsFaulted) throw task.Ready.Exception!.GetBaseException();
         var outcomes = task.Latest;
         _firesAt.Clear();
+        _firesBy.Clear();
         var baseline = te.Outcome;
         if (outcomes.Any(o => o.Truncated || o.Branches.Count > 1)) f.RandomOutcome = true;
         f.SimIncomplete = outcomes.Any(o => o.Truncated);
@@ -465,6 +468,19 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // name, yours and every teammate's.
         foreach (var src in sources.OfType<PowerModel>().Where(x => x.Owner is { IsPlayer: true } && x.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
             LogTab(src, TeammateOf(src, _me, _cs), outcomes, tabs, TabKind.Damage);
+
+        // What the audits hold the play to, per aim (decisions #87, #95): the tabbed sources it sets off in every outcome and in
+        // some, and each enemy's chance of dying before it acts.
+        if (f.Sim?.PlayByTarget.Keys.ToList() is { } aims && aims.Count == outcomes.Length)
+        {
+            IReadOnlyDictionary<int, IReadOnlyCollection<Type>> By(Func<(Type T, bool[] Every, bool[] Any), bool[]> at) =>
+                aims.Select((a, i) => (a, i)).ToDictionary(x => x.a, x => (IReadOnlyCollection<Type>)_firesBy.Values.Where(v => at(v)[x.i]).Select(v => v.T).Distinct().ToList());
+            f.FiresEveryByAim = By(v => v.Every);
+            f.FiresAnyByAim = By(v => v.Any);
+            var enemies = te.Ids.Values.Distinct().ToList();
+            f.DeathByAim = aims.Select((a, i) => (a, i)).ToDictionary(x => x.a,
+                x => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[x.i].DeadChanceRange(id)));
+        }
 
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act
         // Each rule is a test per target (one simulation each): the tab shows when some target passes it, with the aim marker
@@ -608,6 +624,15 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var key = ownerId is { } id ? $"{name}@{id}" : name;
         static int Data(PowerSet log, string k) => log.DataOf(k);
         bool Fired(PowerSet log) => log.Has(key) && (_indirect || log[key] > log["~" + key]);
+        {
+            // For the audits, direct or not (the game flashes either way), whether or not a tab shows.
+            var srcName = src.GetType().Name;
+            var every = outcomes.Select(o => o.PlayFiredEvery.Has(key)).ToArray();
+            var any = outcomes.Select(o => o.PlayFiredAny.Has(key)).ToArray();
+            if (_firesBy.TryGetValue(srcName, out var had) && had.Every.Length == every.Length)
+                for (var i = 0; i < every.Length; i++) { every[i] |= had.Every[i]; any[i] |= had.Any[i]; }
+            _firesBy[srcName] = (src.GetType(), every, any);
+        }
         Func<SimOutcome, bool> at = harmful ? o => Fired(o.PlayFiredAny) : o => Fired(o.PlayFiredEvery);
         var shown = outcomes.Any(at);
         if (!shown) return;

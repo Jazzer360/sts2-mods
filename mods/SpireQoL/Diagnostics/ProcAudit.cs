@@ -37,7 +37,9 @@ namespace SpireQoL.Diagnostics;
 /// CardPileCmd.Shuffle). Potions and ending the turn are other actions, so they never mix in. When the
 /// action finishes (GameAction.AfterFinished) the play has fully resolved and is checked. Compared:
 ///  - Fired with no tab: a relic or power that flashed (RelicModel/PowerModel.Flashed).
-///  - Relic tab that didn't fire: a predicted, uncrossed relic tab whose relic never flashed.
+///  - Relic tab that didn't fire: a predicted, uncrossed relic tab whose relic never flashed; any tabbed source (powers, crossed
+///    tabs) every outcome of the play's aim sets off, whose code flashes, that didn't (decision #95).
+///  - Lethal: each enemy's death chance over the card's outcomes against the end of turn from the board the play left.
 ///  - Proc block: block you gained from anything but the card itself vs the block tabs (exact).
 ///  - Proc damage: damage with no card source vs the damage tabs' audit range (each target's own
 ///    modifiers applied), separately for damage to enemies and to you.
@@ -140,7 +142,27 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     internal static bool SimDependent(string issue) =>
         issue.StartsWith("no tab:", StringComparison.Ordinal) || issue.StartsWith("didn't fire:", StringComparison.Ordinal)
         || issue.StartsWith("block:", StringComparison.Ordinal) || issue.StartsWith("damage to enemies:", StringComparison.Ordinal)
-        || issue.StartsWith("damage to you:", StringComparison.Ordinal) || SimTabSources.Any(issue.Contains);
+        || issue.StartsWith("damage to you:", StringComparison.Ordinal) || issue.StartsWith("lethal:", StringComparison.Ordinal)
+        || SimTabSources.Any(issue.Contains);
+
+    /// <summary>The aim the play took (its simulation key), when its simulations were complete and fully modelled; null otherwise.</summary>
+    private static int? CheckedAim(Window w)
+    {
+        if (w.Facts is not { Sim: { } sim } f || f.SimIncomplete || f.SimPending || f.Unmodelled.Count > 0) return null;
+        var key = sim.KeyFor(w.Target);
+        return sim.PlayByTarget.ContainsKey(key) ? key : sim.PlayByTarget.ContainsKey(-1) ? -1 : null;
+    }
+
+    /// <summary>
+    /// Whether some explored outcome of the play set this source off (a roll decided it): true or false when the simulator models
+    /// it with a tab and the play's simulations were complete; null when that can't be told (then the old excuses stand).
+    /// </summary>
+    private static bool? SimHadIt(Window w, AbstractModel m)
+    {
+        if (CheckedAim(w) is not { } aim || w.Facts?.FiresAnyByAim?.TryGetValue(aim, out var any) != true) return null;
+        if (SimModels.Get(SimReaders.ModelName(m))?.Tab == null) return null;
+        return any!.Contains(m.GetType());
+    }
 
     private static readonly string[] SimTabSources =
     {
@@ -729,6 +751,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // The before/after snapshot checks: they see everything between the play's start and its end.
             var snapshot = new List<string>();
             AfterPlayIssues(w, entries, snapshot, model);
+            LethalIssues(w, entries, snapshot, model);
             PowerChangeIssues(w, me, entries, flashed, snapshot, model);
             EverythingIssues(w, me, entries, flashed, snapshot, model);
             if (w.RanDuringPause != null)
@@ -965,7 +988,16 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             };
             if (causedByRandom)
             {
-                modelLines.Add($"{m.GetType().Name} fired after a random hit or kill (not predictable)");
+                // Random targets are branches (decision #87): excused when some explored outcome set it off; reported when none did.
+                var had = SimHadIt(w, m);
+                if (had != false)
+                {
+                    modelLines.Add(had == true
+                        ? $"{m.GetType().Name} fired after a random hit or kill (some outcomes set it off: a roll decided it)"
+                        : $"{m.GetType().Name} fired after a random hit or kill (not predictable)");
+                    continue;
+                }
+                issues.Add($"no tab: {m.GetType().Name} fired (after a random hit or kill, but no outcome of the simulation set it off)");
                 continue;
             }
             // A simulator tab shows only when the play changes the outcome; what your end of turn sets off anyway
@@ -984,7 +1016,16 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             if (DrawReactive.Contains(m.GetType().Name) && entries.OfType<CardDrawnEntry>().Any(d => !d.FromHandDraw && d.Card.Owner == me))
             {
-                modelLines.Add($"{m.GetType().Name} fired on a drawn card (the draw order is hidden: not predictable)");
+                // Draws are branches (decision #90): excused when some explored outcome set it off; reported when none did.
+                var had = SimHadIt(w, m);
+                if (had == false)
+                {
+                    issues.Add($"no tab: {m.GetType().Name} fired (on a drawn card, but no outcome of the simulation set it off)");
+                    continue;
+                }
+                modelLines.Add(had == true
+                    ? $"{m.GetType().Name} fired on a drawn card (some outcomes set it off: the draw decided it)"
+                    : $"{m.GetType().Name} fired on a drawn card (the draw order is hidden: not predictable)");
                 sourceOf[m.GetType().Name] = new TabSpec("proc:" + m.GetType().Name, null);
                 continue;
             }
@@ -1016,6 +1057,19 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var players = me.Creature.CombatState?.Players ?? (IReadOnlyList<Player>)new[] { me };
             if (players.Any(p => p.Relics.Any(r => r.GetType().Name == name)) && !flashed.Any(f => f.GetType().Name == name))
                 issues.Add($"didn't fire: {name}");
+        }
+
+        // ---- Tabbed sources every outcome of the play sets off (decision #95): powers included, crossed or not, when their code
+        // flashes. Relics are checked above (their plain tabs); a source that changes nothing visible doesn't flash.
+        if (!w.FightEnded && CheckedAim(w) is { } everyAim && w.Facts?.FiresEveryByAim?.TryGetValue(everyAim, out var every) == true)
+        {
+            foreach (var t in every!)
+            {
+                if (!typeof(PowerModel).IsAssignableFrom(t) || LaterPlayOnly.Contains(t.Name)) continue;
+                if (!CodeIndex.Does(t, new[] { "PowerModel.Flash", "AbstractModel.Flash" }, Array.Empty<string>())) continue;
+                if (flashed.Any(f => f.GetType() == t)) continue;
+                issues.Add($"didn't fire: {t.Name} (every outcome of this play sets it off)");
+            }
         }
 
         // ---- Powers a play spends without flashing, so their tabs are checked against the amount: Stretch (block cards,
@@ -1377,6 +1431,43 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// The state the play left against the simulator's prediction of it (see the class summary).
     /// Each difference from the closest branch is one issue.
     /// </summary>
+    /// <summary>
+    /// The lethal tab's inputs (decision #95): each enemy's chance of dying before it acts, over every outcome of the play, against
+    /// the end of turn simulated from the board the play left (the game's, read back). An enemy dead in every outcome must be
+    /// certain to die then; one that lives in every outcome must not die then. A chance in between can't be judged on one play:
+    /// the end-of-turn check totals the chances it shows (ForecastAudit), and the forecast from this board is itself checked
+    /// against the enemy turn, so every link is paired.
+    /// </summary>
+    private static void LethalIssues(Window w, List<CombatHistoryEntry> entries, List<string> issues, List<string> model)
+    {
+        var sim = w.Facts?.Sim;
+        var deaths = w.Facts?.DeathByAim;
+        if (sim == null || deaths == null || w.After == null || w.AfterIds == null || w.FightEnded) return;
+        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && !ReferenceEquals(e.CardPlay.Card, w.Chosen)))
+        {
+            model.Add("lethal: not checked (auto-played cards)");
+            return;
+        }
+        if (!deaths.TryGetValue(sim.KeyFor(w.Target), out var card) && !deaths.TryGetValue(-1, out card)) return;
+        // What's shown leaves teammates' hands out when the setting is off (decisions #25, #94): the same here.
+        var post = SimEngine.Run(sim.FullStart != null ? w.After.WithoutTeammateHands() : w.After);
+        if (post.Truncated || post.AnyUnmodelled || post.Branches.Count == 0)
+        {
+            model.Add("lethal: not checked (the board after the play has outcomes not all explored or not modelled)");
+            return;
+        }
+        foreach (var (creature, id) in sim.Ids)
+        {
+            if (!card.TryGetValue(id, out var c) || sim.Start.Enemy(id) is not { Hp: > 0 } start) continue;
+            // Gone from the board after the play: dead.
+            var d = w.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(1, 1, true);
+            if (c.Certain && !d.Certain)
+                issues.Add($"lethal: {start.Name} predicted to die before acting in every outcome of this play, but after it: {d.Text()}");
+            else if (!c.Possible && d.Low > 0)
+                issues.Add($"lethal: {start.Name} predicted to live in every outcome of this play, but after it dies before acting ({d.Text()})");
+        }
+    }
+
     private static void AfterPlayIssues(Window w, List<CombatHistoryEntry> entries, List<string> issues, List<string> model)
     {
         var sim = w.Facts?.Sim;

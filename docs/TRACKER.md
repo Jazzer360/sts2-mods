@@ -537,6 +537,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 1.18.1: draws come from your draw pile by profile (decision #90, stage 3 part 1).
 - [x] **Decision #94 (accepted, not a gap):** with Count teammates' hands off, predictions can be off or a tab missing where a teammate's hand changes the end of turn. By design; never reported as a mismatch.
 - [ ] **Decision #93: what a teammate doesn't get yet from the one engine:** their end-of-turn auto-plays (Simpleton's pick: their card plays built as theirs, decision #80) and their draw pile (`SimAdapter.FillDrawPile`, DrawPileMemory for their pile); the Death Skull on Teammate Incoming Damage (their `Died` is now tracked).
+- [ ] **Decision #95 follow-ups:** total Intent Forecast's odds (logged per roll, not totalled) and the lethal tab's own chances; events' odds and Run Reminders' "logged only" lines (after combat).
 - [ ] **Decision #92: the gaps.** Each of these is a check skipped (rule 1) or an outcome not modelled (rule 2); the combat summaries count them, and each is closed by modelling it, until none is left:
   - Not modelled: Hellraiser auto-playing a drawn Strike; an end-of-turn auto-play from a hand that changed in a way not simulated (cards made or brought back; a drawn card whose play isn't built); an auto-played card whose play isn't built (aimed at a teammate).
   - Not checked (enemy turn): an extra turn (no enemy turn follows); an end-of-turn auto-play that changed your hand; an auto-play no branch made (another source); a teammate's end-of-turn auto-play.

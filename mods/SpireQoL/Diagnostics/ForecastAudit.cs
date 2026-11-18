@@ -62,6 +62,44 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// </summary>
     private static readonly Dictionary<string, int> Skips = new(), Gaps = new();
 
+    /// <summary>Chances shown (strictly between 0 and 100%) and what happened: this fight's and the session's (decision #95).</summary>
+    private sealed class OddsTally
+    {
+        public int Count, Happened;
+        public double Low, High, Variance;
+        public void Add(SimChance c, bool happened)
+        {
+            Count++;
+            if (happened) Happened++;
+            Low += c.Low;
+            High += c.High;
+            var p = (c.Low + c.High) / 2;
+            Variance += p * (1 - p);
+        }
+        public string Text() => $"{Count} shown, {Happened} happened, expected {Low:0.#}{(High - Low > 0.05 ? $"–{High:0.#}" : "")}";
+        /// <summary>
+        /// What happened is far outside what the chances allow: below their lowest or above their highest by more than 4 standard
+        /// deviations (about 1 in 30,000 by chance), over at least 30 of them.
+        /// </summary>
+        public bool Drifted => Count >= 30 && (Happened < Low - 4 * Math.Sqrt(Variance) || Happened > High + 4 * Math.Sqrt(Variance));
+    }
+    private static readonly OddsTally FightOdds = new();
+    private static OddsTally _sessionOdds = new();
+    private static bool _driftReported;
+
+    private void Odds(string what, SimChance c, bool happened)
+    {
+        if (c.High <= 0 || c.Low >= 1) return; // certain either way: the checks above hold those
+        ModEntry.Log.Info($"[audit] [odds] turn {_frozenTurn}: {what}: predicted {c.Text()}, {(happened ? "happened" : "didn't")}");
+        FightOdds.Add(c, happened);
+        _sessionOdds.Add(c, happened);
+        if (!_sessionOdds.Drifted || _driftReported) return;
+        _driftReported = true;
+        Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("odds", $"Forecast odds: what happened is far from the chances shown ({_sessionOdds.Text()})",
+            new[] { "odds-drift" }, $"Over this session, the death chances shown (yours and enemies' before they act) don't match what happened: {_sessionOdds.Text()}. " +
+            "Each chance is logged as [audit] [odds] in the game log.", new Dictionary<string, string>(), new Dictionary<string, string> { ["check"] = "odds" });
+    }
+
     private static void CountIn(Dictionary<string, int> counts, string reason) => counts[reason] = (counts.TryGetValue(reason, out var n) ? n : 0) + 1;
 
     public void OnFrame(OverlayHost host)
@@ -123,6 +161,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (_checked > 0) ModEntry.Log.Info($"[audit] combat summary: {_checked} enemy turns forecast, {_matched} matched.");
         if (Skips.Count > 0) ModEntry.Log.Info($"[audit] combat summary: enemy turns not checked: {List(Skips)}.");
         if (Gaps.Count > 0) ModEntry.Log.Info($"[audit] combat summary: not modelled in the forecast: {List(Gaps)}.");
+        if (FightOdds.Count > 0) ModEntry.Log.Info($"[audit] combat summary: chances: {FightOdds.Text()} (this session: {_sessionOdds.Text()}).");
+        FightOdds.Count = FightOdds.Happened = 0;
+        FightOdds.Low = FightOdds.High = FightOdds.Variance = 0;
         _checked = _matched = 0;
         Skips.Clear();
         Gaps.Clear();
@@ -183,6 +224,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     {
         // The frozen forecast's latest exploration (decision #87); it isn't needed after this.
         f = f.Refreshed();
+        var shownChances = f.Outcome; // the chances as they stood when you ended your turn, before the history narrows them
         // What it didn't model (rule 2): logged and counted, whatever the check finds.
         foreach (var reason in f.Outcome.UnmodelledReasons) CountIn(Gaps, reason);
         if (f.Outcome.AnyUnmodelled) ModEntry.Log.Info($"[audit] [gaps] turn {_frozenTurn}: the forecast didn't model: {string.Join("; ", f.Outcome.UnmodelledReasons)}");
@@ -306,6 +348,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (!o.Branches.Any(Explains))
                 issues.Add($"no single branch: each result is possible on its own, but none of the {o.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
         }
+        // The chances (decision #95): each one between 0 and 100% with what happened, totalled per fight and over the session.
+        foreach (var (creature, id) in f.Ids)
+            if (f.State.Enemy(id) is { Hp: > 0 } st && actuals.TryGetValue(id, out var act))
+                Odds($"{st.Name} dies before acting", shownChances.DeadChanceRange(id), act.Died);
+        Odds("you die", shownChances.YouDieChance(), youDied);
+
         // Every enemy turn, matched or not: predicted vs actual per enemy, so patterns show before they're reports.
         ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}{teamLine}");
 
