@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.18.2
+#### Fixed
+- Predictions remember cards placed on top of your draw pile (Headbutt, Thinking Ahead, Recall, Glimmer, Ki Chant...) and draw them first; a shuffle forgets them, and Perfect Fit's card is on top after one.
+- I Am Invincible: counted as a chance when copies of it are somewhere in your draw pile (it was only counted when every card there was one), and for certain when it's known to be on top.
+
 ### Spire QoL 1.18.1
 #### Fixed
 - Predictions count what you'd draw. A card that draws (and Stampede picking one) draws from your draw pile as it is: a Burn or Regret you might draw acts at the end of your turn, an Ethereal card exhausts (Feel No Pain, Charon's Ashes), and Stampede can pick a drawn Attack, each with its chance. A full hand stops the draw, an empty pile shuffles your discard pile in, and Iteration and Pagestorm draw more, in the game's order.

@@ -23,6 +23,10 @@ public sealed record SimDrawCard(string Key)
     /// <summary>Stampede or Simpleton could pick it once it's in your hand; Auto is how it plays (null: not simulated).</summary>
     public bool Pickable { get; init; }
     public SimHandCard? Auto { get; init; }
+    /// <summary>Enchanted with Perfect Fit: a shuffle puts it on top (PerfectFit.ModifyShuffleOrder).</summary>
+    public bool PerfectFit { get; init; }
+    /// <summary>I Am Invincible: its block when it's the top card as your turn ends (it plays itself from there).</summary>
+    public int InvincibleBlock { get; init; }
 }
 
 /// <summary>Cards of one profile in a pile, and how many.</summary>
@@ -54,8 +58,28 @@ public sealed class SimDrawPile
         Discard = Discard,
     };
 
-    /// <summary>The discard pile shuffled in (CardPileCmd.ShuffleIfNecessary): all of it, order unknown.</summary>
-    internal SimDrawPile Shuffled() => new() { Top = new(), Rest = Discard.ToList(), Discard = new() };
+    /// <summary>Some I Am Invincible in the pile.</summary>
+    public bool HasInvincible => Top.Any(c => c.InvincibleBlock > 0) || Rest.Any(g => g.Card.InvincibleBlock > 0);
+
+    /// <summary>A card played from the top goes to the discard pile.</summary>
+    internal SimDrawPile WithDiscarded(SimDrawCard card) => new()
+    {
+        Top = Top, Rest = Rest,
+        Discard = Discard.Any(g => g.Card.Key == card.Key)
+            ? Discard.Select(g => g.Card.Key == card.Key ? g with { Count = g.Count + 1 } : g).ToList()
+            : new List<SimDrawGroup>(Discard) { new(card, 1) },
+    };
+
+    /// <summary>
+    /// The discard pile shuffled in (CardPileCmd.ShuffleIfNecessary, the draw pile being empty): all of it, order unknown, except
+    /// that a single card enchanted with Perfect Fit goes on top (with several, their order isn't known: none is).
+    /// </summary>
+    internal SimDrawPile Shuffled()
+    {
+        var fits = Discard.Where(g => g.Card.PerfectFit).ToList();
+        if (fits.Count != 1 || fits[0].Count != 1) return new() { Top = new(), Rest = Discard.ToList(), Discard = new() };
+        return new() { Top = new() { fits[0].Card }, Rest = Discard.Where(g => !g.Card.PerfectFit).ToList(), Discard = new() };
+    }
 
     /// <summary>For the branch key: what's left, by profile.</summary>
     internal void Hash(Action<long> add)

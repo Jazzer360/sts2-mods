@@ -33,7 +33,8 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 
     public void Apply(Harmony harmony)
     {
-        // Frame-driven; no patches.
+        // Frame-driven. The predictions remember the cards placed on top of your draw pile (observe-only; patched once).
+        DrawPileMemory.Patch(harmony);
     }
 
     public void Attach(OverlayHost host)

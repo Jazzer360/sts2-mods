@@ -384,7 +384,10 @@ public static partial class SimAdapter
                 var pickable = picks && !card.Keywords.Contains(CardKeyword.Unplayable) && (p.Simpleton > 0 || card.Type == CardType.Attack);
                 var cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved();
                 var who = pickable ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
-                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}";
+                // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
+                var invincible = card is IAmInvincible ? CardBlock(card, cs, me) : 0;
+                var perfectFit = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit;
+                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}";
                 SimHandCard? auto = null;
                 if (pickable && !autoByKey.TryGetValue(key, out auto))
                 {
@@ -398,14 +401,17 @@ public static partial class SimAdapter
                 return new SimDrawCard(key)
                 {
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
-                    Pickable = pickable, Auto = auto,
+                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit,
                 };
             }
             List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Profile).GroupBy(c => c.Key)
                 .Select(g => new SimDrawGroup(g.First(), g.Count())).OrderBy(g => g.Card.Key, StringComparer.Ordinal).ToList();
+            // The cards known to be on top (placed there: decision #91), in order; the rest as a set.
+            var known = SpireQoL.Combat.DrawPileMemory.KnownTop.Where(c => c.Pile?.Type == PileType.Draw && c.Owner == me).ToList();
             p.Draw = new SimDrawPile
             {
-                Rest = Groups(PileType.Draw.GetPile(me).Cards),
+                Top = known.Select(Profile).ToList(),
+                Rest = Groups(PileType.Draw.GetPile(me).Cards.Where(c => !known.Contains(c))),
                 Discard = Groups(PileType.Discard.GetPile(me).Cards),
             };
             // Iteration counts the Status cards drawn this turn (CardDrawnEntry: you watched them come).
@@ -418,6 +424,29 @@ public static partial class SimAdapter
             p.Draw = null; // unreadable: draws are only counted, as before
         }
     }
+
+    /// <summary>
+    /// Every game class that reacts to a card being drawn (AfterCardDrawn, AfterCardDrawnEarly), reviewed for the draw profile
+    /// (decision #90): what about the drawn card it reads, and how the simulator covers it. DrawScanTests (catalog tests) fails a
+    /// class that isn't here, so a new draw reaction can't merge cards the profile should keep apart.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string> DrawReactions = new Dictionary<string, string>
+    {
+        ["AutomationPower"] = "any card: a count (CardEvent.Drawn)",
+        ["CacophonyPower"] = "any card: a count (CardEvent.Drawn)",
+        ["SpeedsterPower"] = "any card: a count (CardEvent.Drawn)",
+        ["CorrosiveWavePower"] = "any card: a count (CardEvent.Drawn)",
+        ["IterationPower"] = "a Status (the profile's Status, with Iteration): draws more",
+        ["PagestormPower"] = "Ethereal (the profile's Ethereal, with Pagestorm): draws more",
+        ["HellraiserPower"] = "a Strike (the profile's Strike, with Hellraiser): its auto-play isn't simulated; later auto-plays aren't predicted",
+        ["ChainsOfBindingPower"] = "afflicts drawn cards Bound (playability, read live; nothing at end of turn)",
+        ["ConfusedPower"] = "a random cost (costs matter to Simpleton only: read live in hand; a drawn card keeps the cost it had)",
+        ["KinglyKick"] = "its own cost on draw (Simpleton: the cost it had in the pile)",
+        ["KinglyPunch"] = "its own cost on draw (Simpleton: the cost it had in the pile)",
+        ["Void"] = "loses energy when drawn (not simulated: energy only matters at end of turn to Pael's Tears)",
+        ["Slither"] = "a random cost on draw (Simpleton: the cost it had in the pile)",
+        ["MockRemoveDrawnCardsFromCombatPower"] = "the game's test mock: never in a real fight",
+    };
 
     /// <summary>A card that acts in hand at the end of your turn (SimEngine.HandAtTurnEnd), with its amount; null otherwise.</summary>
     private static TurnEndCard? TurnEndOf(CardModel card)

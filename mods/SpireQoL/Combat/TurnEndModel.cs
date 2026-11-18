@@ -216,6 +216,7 @@ public sealed class TurnEndModel
         if (me?.PlayerCombatState == null || cs == null) return null;
 
         // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
+        DrawPileMemory.Update(me, cs);
         var full = SimAdapter.Build(me, cs, out var ids);
         var fullKey = full.FullKey();
         // What's shown: without the cards in teammates' hands (decision #25), unless the setting counts them.

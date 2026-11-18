@@ -198,4 +198,78 @@ public class SimDrawTests
         Assert.Equal(unlimited.TakenMax, sliced.TakenMax);
         Assert.Equal(unlimited.YouDieChance().Low, sliced.YouDieChance().Low, 9);
     }
+
+    private static readonly SimDrawCard Invincible = new("invincible") { InvincibleBlock = 10 };
+
+    [Fact]
+    public void IAmInvincibleKnownOnTopPlaysItself()
+    {
+        // Known on top (placed there): its 10 block, for certain, and it goes to the discard pile.
+        var s = You();
+        s.Enemies[0].Hits = new() { 12 };
+        s.P.Draw = new SimDrawPile { Top = { Invincible }, Rest = { new SimDrawGroup(Plain, 5) } };
+        var o = SimEngine.Run(s);
+        var b = Assert.Single(o.Branches);
+        Assert.Equal(2, b.Taken);
+        Assert.Equal(1, b.AutoPlayed);
+        Assert.Equal(1, b.P.Draw!.DiscardCount);
+        Assert.Empty(b.P.Draw.Top);
+    }
+
+    [Fact]
+    public void IAmInvincibleSomewhereInThePileIsAChance()
+    {
+        // Two copies among ten, order unknown: a 20% chance one is on top.
+        var s = You();
+        s.Enemies[0].Hits = new() { 12 };
+        s.P.Draw = Pile((Invincible, 2), (Plain, 8));
+        var o = SimEngine.Run(s);
+        Assert.Equal(0.2, o.Branches.Where(b => b.Taken == 2).Sum(b => b.Weight), 9);
+        Assert.Equal(0.8, o.Branches.Where(b => b.Taken == 12).Sum(b => b.Weight), 9);
+    }
+
+    [Fact]
+    public void ACardKnownOnTopKeepsIAmInvincibleBelow()
+    {
+        var s = You();
+        s.Enemies[0].Hits = new() { 12 };
+        s.P.Draw = new SimDrawPile { Top = { Plain }, Rest = { new SimDrawGroup(Invincible, 3) } };
+        var b = Assert.Single(SimEngine.Run(s).Branches);
+        Assert.Equal(12, b.Taken);
+        Assert.Equal(0, b.AutoPlayed);
+    }
+
+    [Fact]
+    public void DrawingTheKnownTopFirstRevealsWhatsBelow()
+    {
+        // Draw 1 with I Am Invincible known on top: it's drawn, so the new top is random again (no block for certain).
+        var s = You();
+        s.Enemies[0].Hits = new() { 12 };
+        s.P.Draw = new SimDrawPile { Top = { Invincible }, Rest = { new SimDrawGroup(Plain, 4) } };
+        var b = Assert.Single(SimEngine.Run(s, Draws(1)).Branches);
+        Assert.Equal(12, b.Taken);
+    }
+
+    [Fact]
+    public void AShuffleBringsTheOnePerfectFitCardToTheTop()
+    {
+        // The draw pile is empty: the discard pile shuffles in, and the card enchanted with Perfect Fit goes on top.
+        var fit = new SimDrawCard("fit burn") { TurnEnd = new TurnEndCard("Burn", "Burn", 2), PerfectFit = true };
+        var s = You();
+        s.P.Draw = new SimDrawPile { Discard = { new SimDrawGroup(fit, 1), new SimDrawGroup(Plain, 9) } };
+        var b = Assert.Single(SimEngine.Run(s, Draws(1)).Branches);
+        Assert.Single(b.P.TurnEndCards); // drew it for certain
+        Assert.Equal(2, b.Taken);
+    }
+
+    [Fact]
+    public void TwoPerfectFitCardsLeaveTheTopUnknown()
+    {
+        var fit = new SimDrawCard("fit burn") { TurnEnd = new TurnEndCard("Burn", "Burn", 2), PerfectFit = true };
+        var s = You();
+        s.P.Draw = new SimDrawPile { Discard = { new SimDrawGroup(fit, 2), new SimDrawGroup(Plain, 8) } };
+        var o = SimEngine.Run(s, Draws(1));
+        Assert.Equal(0.2, o.Branches.Where(b => b.Taken == 2).Sum(b => b.Weight), 9);
+    }
 }
+

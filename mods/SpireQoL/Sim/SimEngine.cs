@@ -891,7 +891,7 @@ public static partial class SimEngine
     /// </summary>
     private static void AutoPostPlay(BranchSet b)
     {
-        static bool Any(SimPlayer p) => p.Stampede > 0 || p.Simpleton > 0 || p.ExhaustAutoPlays.Count > 0 || p.InvincibleBlock > 0;
+        static bool Any(SimPlayer p) => p.Stampede > 0 || p.Simpleton > 0 || p.ExhaustAutoPlays.Count > 0 || p.InvincibleBlock > 0 || p.Draw?.HasInvincible == true;
         if (!b.States.Any(s => Any(s.P) || s.Teammates.Any(Any))) return;
         foreach (var k in PlayerOrder(b.States[0]).ToList()) AutoPostPlayOf(b, k);
     }
@@ -917,9 +917,11 @@ public static partial class SimEngine
                 ? AutoPlayFromHand(b, s, k, hand => hand.Count == 0 ? hand : hand.Where(c => c.Cost == hand.Min(x => x.Cost)).ToList())
                 : new[] { s });
         }
-        // I Am Invincible on top of their draw pile: its block.
+        // I Am Invincible on top of their draw pile: its block. With your draw pile (decision #91): certain when it's known to be
+        // on top, else a chance (how many of the unordered rest are copies of it).
         b.Each(s =>
         {
+            if (P(s).Draw is { } pile && Alive(s)) return InvincibleFromPile(s, k, pile);
             if (P(s).InvincibleBlock <= 0 || !Alive(s)) return new[] { s };
             if (k < 0) s.AutoPlayed++; // yours (the outcome audit counts your auto-plays)
             return GainBlock(s, P(s).InvincibleBlock, "I Am Invincible", k);
@@ -933,6 +935,42 @@ public static partial class SimEngine
             if (k < 0) b.Do(s => s.AutoPlayed++);
             ApplyPlay(b, play);
         }
+    }
+
+    /// <summary>
+    /// I Am Invincible (IAmInvincible.AfterAutoPostPlayPhaseEntered): a copy that's the top card of your draw pile plays itself,
+    /// gaining its block, then goes to the discard pile. The known top decides it; else the top is any card of the rest, each
+    /// equally likely: a branch where it's a copy (their share), and one where it isn't (nothing happens; which card it is
+    /// stays unknown, close enough for the rest of the turn).
+    /// </summary>
+    private static IEnumerable<SimState> InvincibleFromPile(SimState s, int k, SimDrawPile pile)
+    {
+        IEnumerable<SimState> Play(SimState x, SimDrawCard card, SimDrawPile after)
+        {
+            MutablePlayer(x, k < 0 ? Who.You : Who.Teammate(k)).Draw = after.WithDiscarded(card);
+            if (k < 0) x.AutoPlayed++;
+            return GainBlock(x, card.InvincibleBlock, "I Am Invincible", k);
+        }
+        if (pile.Top.Count > 0)
+            return pile.Top[0].InvincibleBlock > 0 ? Play(s, pile.Top[0], pile.WithoutTop()) : new[] { s };
+        var total = pile.RestCount;
+        var copies = pile.Rest.Select((g, i) => (g, i)).Where(x => x.g.Card.InvincibleBlock > 0).ToList();
+        if (total == 0 || copies.Count == 0) return new[] { s };
+        var result = new List<SimState>();
+        var other = total - copies.Sum(x => x.g.Count);
+        foreach (var (g, i) in copies)
+        {
+            var c = s.Clone();
+            c.Weight = s.Weight * g.Count / total;
+            result.AddRange(Play(c, g.Card, pile.WithoutOneOf(i)));
+        }
+        if (other > 0)
+        {
+            var c = s.Clone();
+            c.Weight = s.Weight * other / total;
+            result.Add(c);
+        }
+        return result;
     }
 
     /// <summary>
