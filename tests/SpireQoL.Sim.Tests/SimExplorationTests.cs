@@ -125,4 +125,62 @@ public class SimExplorationTests
         }
         Assert.Equal(new[] { "0,0", "0,1", "1,0", "1,1", "2,0", "2,1" }, seen);
     }
+
+    [Fact]
+    public void ChancesNarrowToTheExactOne()
+    {
+        // While exploring, each chance is a range that holds the exact one; complete, it's exact (decision #87, stage 2).
+        var exact = SimExploration.Of(Heavy(), null, int.MaxValue).ExploreAll();
+        var ex = SimExploration.Of(Heavy(), null, 8);
+        ex.Explore(1);
+        var partial = ex.Snapshot();
+        for (var id = 0; id < 3; id++)
+        {
+            var p = exact.DeadChance(id);
+            var r = partial.DeadChanceRange(id);
+            Assert.False(r.Exact);
+            Assert.InRange(p, r.Low - 1e-9, r.High + 1e-9);
+            var done = ex.ExploreAll().DeadChanceRange(id);
+            Assert.True(done.Exact);
+            Assert.Equal(p, done.Low, 9);
+            ex = SimExploration.Of(Heavy(), null, 8);
+            ex.Explore(1);
+        }
+    }
+
+    [Fact]
+    public void YouCantDieInWhatsUnexploredWhenTheSafeRunLives()
+    {
+        // The safe run (random hits on nobody) bounds damage to you: when it doesn't kill you, nothing unexplored does.
+        var ex = SimExploration.Of(Heavy(), null, 8);
+        ex.Explore(1);
+        var partial = ex.Snapshot();
+        Assert.False(partial.SafeWorst!.Died);
+        Assert.Equal(0, partial.YouDieChance().High);
+    }
+
+    [Fact]
+    public void YouMightDieWhileUnexplored()
+    {
+        // Low HP: the safe run kills you, so the unexplored outcomes might: the skull shows with a range.
+        var s = Heavy();
+        s.P.Hp = 3;
+        var ex = SimExploration.Of(s, null, 8);
+        ex.Explore(1);
+        var c = ex.Snapshot().YouDieChance();
+        Assert.True(c.Possible);
+        Assert.True(c.High > c.Low);
+    }
+
+    [Theory]
+    [InlineData(0.4, 0.4, "40%", "40%")]
+    [InlineData(0.4, 0.55, "40–55%", "40%?")]
+    [InlineData(0.004, 0.004, "<1%", "<1%")]
+    [InlineData(0.996, 0.996, "99%", "99%")]
+    public void ChanceText(double low, double high, string text, string shortText)
+    {
+        var c = new SimChance(low, high, true);
+        Assert.Equal(text, c.Text());
+        Assert.Equal(shortText, c.ShortText());
+    }
 }

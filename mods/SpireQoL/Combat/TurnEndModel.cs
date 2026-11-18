@@ -42,6 +42,14 @@ public sealed class TurnEndModel
     public int OstyTakenMin { get; private set; }
     /// <summary>The worst branch kills you: nothing left to prevent death (Fairy in a Bottle, Lizard Tail).</summary>
     public bool Dies { get; private set; }
+    /// <summary>The chance the enemy turn kills you (decision #87): the skull shows whenever it's possible, with this.</summary>
+    public SimChance DeathChance { get; private set; }
+    /// <summary>Its exploration is still going (decision #87): what's shown may still change.</summary>
+    public bool Exploring => Job is { Finished: false };
+    /// <summary>Exploration stopped short (a cap, or a step out of its own copies): what's shown stays partial.</summary>
+    public bool Incomplete => Outcome.Truncated && !Exploring;
+    /// <summary>The mark for a forecast that isn't complete, still exploring or stopped short: "?" (the owner's call); null once complete.</summary>
+    public string? ProgressMark => Outcome.Truncated ? "?" : null;
     /// <summary>In the worst branch you'd die, but Fairy in a Bottle (potions used) or Lizard Tail heals you instead.</summary>
     public int FairiesUsed { get; private set; }
     public bool LizardTailUsed { get; private set; }
@@ -246,6 +254,7 @@ public sealed class TurnEndModel
             OstyTaken = outcome.OstyTakenMax,
             OstyTakenMin = outcome.OstyTakenMin,
             Dies = w.Died,
+            DeathChance = outcome.YouDieChance(),
             FairiesUsed = w.FairiesUsed,
             LizardTailUsed = w.LizardTailUsed,
             HpAfter = w.P.Hp == int.MaxValue ? myHp : w.P.Hp,

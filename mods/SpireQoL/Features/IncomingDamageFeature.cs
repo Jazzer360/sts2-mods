@@ -68,8 +68,12 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
                 : me?.Relics.FirstOrDefault(x => x.GetType().Name == "LizardTail") is { } tail ? Cards.GameIcons.Relic(tail) : null;
             revive = (icon, m.HpAfter);
         }
+        // The skull whenever an outcome might kill you (decision #87), with the chance unless it's certain or chances are off.
+        var death = m.DeathChance;
+        var dies = death.Possible || m.Dies;
+        var chance = dies && !death.Certain && _ctx.Settings.DeathChance ? death.Text() : null;
         _panel!.Show(m.BlockableTotal + m.UnblockableTotal, m.ExpectedBlock,
-            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken, m.Dies, revive, ExtraTurnIcon());
+            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken, dies, revive, ExtraTurnIcon(), chance, m.ProgressMark);
     }
 
     /// <summary>

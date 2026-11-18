@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.17.0
+#### Added
+- Chances where a roll decides a death: your skull on Incoming Damage shows whenever an outcome might kill you, with the chance; lethal tabs carry the chance when the card makes a kill more likely without making it certain.
+- A `?` beside Incoming Damage's result and the Death Skull's chance while not every outcome is explored, with chances as a range (40–55%) until they're exact.
+#### Changed
+- Death Skull: shows as soon as an explored outcome kills the enemy, with the range, instead of nothing until every outcome is known.
+
 ### Spire QoL 1.16.3
 #### Changed
 - Predictions explore every outcome. A fight with too many random outcomes used to stop at the first 128 and claim nothing past them (no certain kills, no lethal tabs); now the rest are explored in the background, and the tabs, Death Skull and Incoming Damage update when it's done. The first result shows as fast as before.

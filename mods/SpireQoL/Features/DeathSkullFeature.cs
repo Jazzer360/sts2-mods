@@ -46,20 +46,21 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        // Enemy → chance it dies before acting (1 = certain).
-        var show = new Dictionary<Creature, double>(ReferenceEqualityComparer.Instance);
+        // Enemy → the chance shown beside the skull (null: certain). Decision #87: once some explored outcome kills it, with the
+        // range while the exploration goes on (and its mark), exact once every outcome is in.
+        var show = new Dictionary<Creature, string?>(ReferenceEqualityComparer.Instance);
         if (Sts2State.IsPlayerTurn && TurnEndModel.Compute() is { } model)
         {
             foreach (var (enemy, id) in model.Ids)
             {
                 if (!enemy.IsAlive || !enemy.IsEnemy) continue;
-                if (model.Outcome.DeadInAll(id))
+                var chance = model.Outcome.DeadChanceRange(id);
+                if (chance.Certain)
                 {
-                    show[enemy] = 1;
+                    show[enemy] = null;
                     continue;
                 }
-                var p = model.Outcome.DeadChance(id);
-                if (_ctx.Settings.DeathChance && !double.IsNaN(p) && p > 0) show[enemy] = Math.Min(p, 0.99);
+                if (_ctx.Settings.DeathChance && chance.Seen) show[enemy] = chance.Text() + (model.ProgressMark ?? "");
             }
         }
 
@@ -69,7 +70,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
             if (GodotObject.IsInstanceValid(mark.Root)) mark.Root.QueueFree();
             _marks.Remove(creature);
         }
-        foreach (var (creature, p) in show)
+        foreach (var (creature, text) in show)
         {
             if (!_marks.TryGetValue(creature, out var mark))
             {
@@ -77,7 +78,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
                 mark = Create(label);
                 _marks[creature] = mark;
             }
-            Place(mark, p);
+            Place(mark, text);
         }
     }
 
@@ -102,12 +103,11 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
     }
 
     /// <summary>Just left of the HP numbers, centred on them (the label is centred in its bar).</summary>
-    private static void Place(Mark mark, double p)
+    private static void Place(Mark mark, string? chance)
     {
         if (mark.Root.GetParent() is not Label label) return;
-        var certain = p >= 1;
-        mark.Chance.Visible = !certain;
-        mark.Chance.Text = certain ? "" : $"{Math.Max(1, (int)Math.Round(p * 100))}%";
+        mark.Chance.Visible = chance != null;
+        mark.Chance.Text = chance ?? "";
         var h = Math.Max(12f, label.Size.Y * 0.9f);
         mark.Icon.CustomMinimumSize = new Vector2(h, h);
         var font = label.GetThemeFont("font");

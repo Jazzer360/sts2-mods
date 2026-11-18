@@ -11,6 +11,37 @@ public sealed class SimOutcome
     public SimState? SafeWorst;
 
     /// <summary>
+    /// The share of the rolls Branches cover (decision #87): 1 when complete; less while an exploration is going on; NaN when
+    /// it can't be known (a step ran out of its own copies and a sample carried on).
+    /// </summary>
+    public double Explored = 1;
+
+    /// <summary>
+    /// The chance something happens (decision #87, stage 2): exact when every outcome is explored; otherwise from what's explored
+    /// (Low) up to that plus every unexplored outcome (High), or Low when <paramref name="unexploredCan"/> rules them out.
+    /// </summary>
+    public SimChance Chance(Func<SimState, bool> happens, bool unexploredCan = true)
+    {
+        if (Branches.Count == 0) return new SimChance(0, unexploredCan && Truncated ? 1 : 0, false);
+        var seen = Branches.Any(happens);
+        if (!Truncated)
+        {
+            var total = Branches.Sum(b => b.Weight);
+            var p = total <= 0 ? 0 : Branches.Where(happens).Sum(b => b.Weight) / total;
+            return new SimChance(p, p, seen);
+        }
+        if (double.IsNaN(Explored)) return new SimChance(0, seen || unexploredCan ? 1 : 0, seen); // a sample: no shares
+        var low = Math.Min(1, Branches.Where(happens).Sum(b => b.Weight));
+        return new SimChance(low, unexploredCan ? Math.Min(1, low + Math.Max(0, 1 - Explored)) : low, seen);
+    }
+
+    /// <summary>The chance the enemy dies before it acts.</summary>
+    public SimChance DeadChanceRange(int id) => Chance(b => b.Enemy(id) is { DiedBeforeActing: true });
+
+    /// <summary>The chance the enemy turn kills you (nothing left to save you). An unexplored outcome can only if the safe run does.</summary>
+    public SimChance YouDieChance() => Chance(b => b.Died, unexploredCan: SafeWorst?.Died ?? true);
+
+    /// <summary>
     /// The simulator's work, the same on every machine (the performance tests limit these, not time):
     /// steps applied to the branch set, branches stepped over all steps, and state copies (the safe run's included).
     /// </summary>
@@ -195,6 +226,7 @@ public static partial class SimEngine
         {
             Branches = b.States,
             Truncated = b.Truncated,
+            Explored = b.Truncated && slices == null ? double.NaN : 1,
             KilledByPlayInAny = killedPerBranch.SelectMany(k => k).ToHashSet(),
             KilledByPlayInAll = playTruncated || killedPerBranch.Count == 0
                 ? new HashSet<int>()

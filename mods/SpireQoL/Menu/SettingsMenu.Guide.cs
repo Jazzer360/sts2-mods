@@ -75,6 +75,10 @@ public sealed partial class SettingsMenu
             "Playing this might be bad for you: it helps an enemy, hurts you, or gives up a relic's bonus. Often still the right play; "
             + "the slash makes sure you know. Here the enemy's Thorns hits you for 3.",
             Tab("proc:ThornsPower", Power<ThornsPower>(), crossed: true, number: 3));
+        GuideCardCell(flow, Card<BallLightning>(), "A chance on the skull",
+            "When a roll decides the kill (here, which enemy the Lightning orb hits), the lethal tab carries the chance. "
+            + "Shown only when the card surely makes a death more likely than ending your turn now.",
+            Tab("lethal", GameIcons.Skull(), numberText: "50%"));
         GuideCardCell(flow, Card<Bash>(), "The arrow: only at some targets",
             "The game's targeting arrow in the corner means it happens only at some of the targets you could pick. "
             + "Here Bash kills an enemy before it acts (the skull), but only aimed at the right one. On a crossed tab, aim elsewhere to avoid it.",
@@ -190,6 +194,9 @@ public sealed partial class SettingsMenu
         IncomingCell(flow, "All blocked", "", p => p.Show(8, 12, null, 0));
         IncomingCell(flow, "This kills you", "The skull: the enemy turn takes you to 0 with nothing to save you.",
             p => p.Show(46, 6, null, 40, dies: true));
+        IncomingCell(flow, "This might kill you", "When a roll decides it (which enemy a Lightning orb hits first), the skull carries the chance. "
+            + "The numbers are the worst case. ? means not every outcome is explored yet: the chance is a range (40\u201355%) until it is.",
+            p => p.Show(46, 6, null, 40, dies: true, deathChance: "40\u201355%", progress: "?"));
         IncomingCell(flow, "Something saves you", "Fairy in a Bottle (or Lizard Tail) brings you back: your HP after the enemy turn.",
             p => p.Show(46, 6, null, 40, revive: (Potion<FairyInABottle>(), 23)));
         IncomingCell(flow, "Osty takes some", "Necrobinder: what Osty absorbs for you (red if it kills Osty).",
@@ -376,7 +383,7 @@ public sealed partial class SettingsMenu
         example.AddChild(UiKit.Label("  12/40", 20, Colors.White));
         GuideRow(example, "Death Skull",
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
-            + "With a chance when a roll decides it (General: Death chance).");
+            + "With a chance when a roll decides it (General: Death chance), and a range with ? while not every outcome is explored yet.");
         GuideRow(null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");

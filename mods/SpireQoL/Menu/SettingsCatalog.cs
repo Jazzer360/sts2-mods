@@ -54,7 +54,7 @@ public static class SettingsCatalog
         new TabEntry("retain", "Retain", "Cards that stay in your hand at end of turn (permanently or this turn only). Steady icon."),
         new TabEntry("sly", "Sly", "Cards with Sly (permanently or this turn only). Master Planner icon."),
         new TabEntry("replay", "Replay", "Cards that replay themselves (Hidden Gem, Transfigure, Sword Sage, enchantments): a \"2×\" tab with the total plays."),
-        new TabEntry("lethal", "Lethal", "Skull on cards that kill an enemy for certain before it acts: the card's hits, orbs it evokes, procs it sets off, and your end of turn (Juggernaut, orb passives, poison...). Random targets only count when every outcome kills. The aim marker (the targeting arrow head in the corner) means only some targets are lethal."),
+        new TabEntry("lethal", "Lethal", "Skull on cards that kill an enemy before it acts, or make it surely more likely than ending your turn now: the card's hits, orbs it evokes, procs it sets off, and your end of turn (Juggernaut, orb passives, poison...). When a roll decides it, the tab carries the chance (Death chance setting; a range while the outcomes are still being explored). The aim marker (the targeting arrow head in the corner) means only some targets give it."),
         new TabEntry("shuffle", "Reshuffle", "Discard pile icon on cards whose draw would shuffle your discard pile back into your draw pile."),
     };
 

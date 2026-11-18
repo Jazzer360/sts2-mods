@@ -445,3 +445,13 @@ Plan (the owner's direction):
 4. Later: Incoming Damage's distribution on hover.
 *Why:* a fight past 128 outcomes claimed nothing (no certain kill, no lethal tab), and stage 3's draws will make many more. Re-running at larger limits would redo everything each time; continuing in slices does each outcome once, keeps the engine and its rules as they are, and fits the simulator, which already runs on worker threads with no shared state.
 *Replaced:* the 128-branch truncation in game (kept inside SimEngine.Run), and card simulations' tasks waited for once.
+
+### 88. Chances while exploring: a range and a ?, lethal tabs when a card surely raises a death's chance — active (2026-11-18)
+Decision #87's stage 2. A chance from the simulator () is exact once every outcome is explored; until then it's a range: the explored outcomes that have it (low), up to that plus every unexplored one (high). For your death the unexplored part counts only if the safe run (random hits on nobody) kills you.
+- **Your skull** on Incoming Damage shows whenever an outcome might kill you (the range's high end above 0, or the worst branch), with the chance left of it when a roll decides it. It clears only once every outcome is explored and none kills you. The numbers stay the worst case.
+- **The Death Skull** shows once an explored outcome kills the enemy, with the range; certain only when complete.
+- **Lethal tabs** show when the card surely makes an enemy's death before it acts more likely than ending the turn now (its low end above the turn-end forecast's high end), with the card's chance in the tab's number corner ("50%"; the explored chance and a ? while not exact: "40%?"). Certain kills have no number, as before. The aim marker stays when only some aims give it (or not as surely); no hint about where to aim.
+- **One mark, ?**, beside Incoming Damage's result and after the Death Skull's range while not every outcome is explored, still going or stopped short (the owner's call: no separate progress indicator).
+- The **Death chance** setting covers every chance (off: certain deaths only; your skull still shows whenever you might die).
+*Why:* the owner wants a death that might happen shown, with the odds, rather than hidden until certain or dropped when outcomes ran out: a run was lost when the tracker said they'd live. Chances are fine across the board where they're intuitive.
+*Replaced:* your skull from the worst branch only; the Death Skull's chance hidden when branches ran out; lethal tabs only for certain kills.

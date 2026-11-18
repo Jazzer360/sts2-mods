@@ -392,7 +392,7 @@ public sealed partial class SettingsMenu
             v => S.FlashHz = (float)v, v => $"{v:0.0}/s");
 
         Section("Predictions (Incoming Damage, Death Skull, lethal tabs)");
-        Option("Death chance", "Death Skull also shows when a roll decides whether an enemy dies before acting, with the chance (e.g. a random Lightning target).",
+        Option("Death chance", "Show chances when a roll decides a death (e.g. a random Lightning target): on the Death Skull, on your skull on Incoming Damage, and on lethal tabs. A range (40–55%) while the outcomes are still being explored. Off: only certain deaths (your skull still shows whenever you might die).",
             S.DeathChance, v => S.DeathChance = v);
         Option("Multiplayer predictions (experimental)", "Count teammates in predictions: their orbs and end-of-turn effects, their block and Beacon of Hope, and each enemy hit on every player. Still being checked against real co-op games.",
             S.MultiplayerPredictions, v => { S.MultiplayerPredictions = v; Sim.SimAdapter.IncludeTeammates = v; });

@@ -34,6 +34,8 @@ internal sealed class DamageMathPanel
     private readonly Label _block;
     private readonly Label _result;
     private readonly TextureRect _skull;
+    private readonly Label _deathChance;
+    private readonly Label _progress;
     private readonly TextureRect _reviveIcon;
     private readonly Label _revive;
     private readonly TextureRect _attackIcon;
@@ -86,11 +88,19 @@ internal sealed class DamageMathPanel
         // The result, with the skull just left of it when the enemy turn kills you.
         var resultRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         resultRow.AddThemeConstantOverride("separation", 4);
+        // The chance it kills you, left of the skull, when a roll decides (decision #87).
+        _deathChance = UiKit.Label("", (int)(FontSize * 0.75f), Colors.White);
+        _deathChance.Visible = false;
+        resultRow.AddChild(_deathChance);
         _skull = UiKit.Icon(GameIcons.Skull(), IconSize * 0.8f);
         _skull.Visible = false;
         resultRow.AddChild(_skull);
         _result = Number(TakeColor);
         resultRow.AddChild(_result);
+        // Not every outcome explored yet (or ever): "?", the numbers may not be the whole picture.
+        _progress = UiKit.Label("", (int)(FontSize * 0.75f), Colors.White);
+        _progress.Visible = false;
+        resultRow.AddChild(_progress);
         grid.AddChild(resultRow);
 
         // What keeps you alive (Fairy in a Bottle's or Lizard Tail's icon) and your HP after it heals you.
@@ -108,9 +118,15 @@ internal sealed class DamageMathPanel
     /// <param name="dies">The enemy turn kills you (the skull).</param>
     /// <param name="revive">What keeps you alive at 0 HP (its icon) and your HP after the enemy turn; null when nothing does.</param>
     /// <param name="extraTurn">Ending your turn now gives you another turn before the enemies act: its source's icon.</param>
+    /// <param name="deathChance">The chance it kills you ("40%", "40–55%"), when a roll decides; null when certain or not shown.</param>
+    /// <param name="progress">"?" while not every outcome is explored; null when complete.</param>
     public void Show(int incoming, int block, (int Taken, bool Dies)? osty, int take, bool dies = false, (Texture2D? Icon, int HpAfter)? revive = null,
-        Texture2D? extraTurn = null)
+        Texture2D? extraTurn = null, string? deathChance = null, string? progress = null)
     {
+        _deathChance.Visible = dies && deathChance != null;
+        _deathChance.Text = deathChance ?? "";
+        _progress.Visible = progress != null;
+        _progress.Text = progress ?? "";
         _extraTurnIcon.Visible = extraTurn != null;
         _extraTurn.Visible = extraTurn != null;
         _extraTurnIcon.Texture = extraTurn;

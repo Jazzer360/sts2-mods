@@ -161,6 +161,7 @@ public sealed class SimExploration
         {
             Branches = new List<SimState>(_branches),
             Truncated = !complete,
+            Explored = complete ? 1 : _outOfBranches ? double.NaN : ExploredWeight,
             SafeWorst = complete ? null : _safe,
             KilledByPlayInAny = new HashSet<int>(_killedAny),
             KilledByPlayInAll = complete ? new HashSet<int>(_killedAll) : new HashSet<int>(),

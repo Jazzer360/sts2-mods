@@ -274,16 +274,17 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var tabs = new Dictionary<string, TabSpec>();
         var lethal = false;
         var lethalAimed = false;
+        string? lethalChance = null;
         try
         {
-            lethal = p.Sim != null && FinishSim(p.F, p.Sources, p.Sim, tabs, out lethalAimed);
+            lethal = p.Sim != null && FinishSim(p.F, p.Sources, p.Sim, tabs, out lethalAimed, out lethalChance);
         }
         catch (Exception ex)
         {
             SimFailed(card, ex);
         }
         var list = tabs.Values.ToList();
-        if (lethal) list.Add(new TabSpec("lethal", GameIcons.Skull(), Aimed: lethalAimed));
+        if (lethal) list.Add(new TabSpec("lethal", GameIcons.Skull(), Aimed: lethalAimed, NumberText: lethalChance));
         // Cards this play brings back to your hand (Make It So, Right Hand Hand, Whistling Arrows): plain, one per card name,
         // with the returning card as the icon.
         foreach (var back in p.F.CardsBack.GroupBy(c => c.GetType().Name))
@@ -419,12 +420,15 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     }
 
     /// <summary>
-    /// Reads a card's finished simulations into its tabs; returns whether it's lethal (some aim leaves an enemy dead before it
-    /// acts in every branch, which ending the turn now doesn't), and in <paramref name="lethalAimed"/> whether only some aims are.
+    /// Reads a card's simulations into its tabs; returns whether it's lethal (some aim makes an enemy surely more likely to die
+    /// before it acts than ending the turn now does: decision #87), in <paramref name="lethalAimed"/> whether only some aims are,
+    /// and in <paramref name="lethalChance"/> the chance ("40%", "40–55%" while exploring; null when certain).
     /// </summary>
-    private bool FinishSim(PlayFacts f, List<AbstractModel> sources, SimBatch task, Dictionary<string, TabSpec> tabs, out bool lethalAimed)
+    private bool FinishSim(PlayFacts f, List<AbstractModel> sources, SimBatch task, Dictionary<string, TabSpec> tabs, out bool lethalAimed,
+        out string? lethalChance)
     {
         lethalAimed = false;
+        lethalChance = null;
         var te = TurnEnd();
         if (te == null) return false;
         if (!task.IsCompleted)
@@ -538,9 +542,27 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // Rupture (Strength when you lose HP on your turn).
         if (_me.Creature.Powers.FirstOrDefault(p => p is RupturePower) is { } rupture) Add(rupture, false, losesHp);
 
-        Func<SimOutcome, bool> kills = o => te.Ids.Values.Any(id => o.DeadInAll(id) && !baseline.DeadInAll(id));
-        lethalAimed = Aimed(outcomes, kills);
-        return outcomes.Any(kills);
+        // Lethal (decision #87): the card raises an enemy's chance of dying before it acts, for sure: its explored deaths (Low)
+        // beat everything ending the turn now could give (High). Certain kills always count; a chance only with chances on.
+        var chances = _ctx.Settings.DeathChance;
+        SimChance? Lethal(SimOutcome o)
+        {
+            SimChance? best = null;
+            foreach (var id in te.Ids.Values)
+            {
+                var c = o.DeadChanceRange(id);
+                if (!(c.Certain || chances) || c.Low <= 0 || c.Low <= baseline.DeadChanceRange(id).High) continue;
+                if (best == null || c.Low > best.Value.Low) best = c;
+            }
+            return best;
+        }
+        var perAim = outcomes.Select(Lethal).ToList();
+        if (perAim.All(c => c == null)) return false;
+        var top = perAim.Where(c => c != null).Select(c => c!.Value).OrderByDescending(c => c.Low).First();
+        lethalChance = top.Certain ? null : top.ShortText();
+        // Aimed: some aim doesn't give it (or not as surely as the best one).
+        lethalAimed = outcomes.Length > 1 && perAim.Any(c => c == null || c.Value.Low < top.Low);
+        return true;
     }
 
     /// <summary>
