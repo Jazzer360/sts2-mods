@@ -447,7 +447,7 @@ Plan (the owner's direction):
 *Replaced:* the 128-branch truncation in game (kept inside SimEngine.Run), and card simulations' tasks waited for once.
 
 ### 88. Chances while exploring: a range and a ?, lethal tabs when a card surely raises a death's chance — active (2026-11-18)
-Decision #87's stage 2. A chance from the simulator () is exact once every outcome is explored; until then it's a range: the explored outcomes that have it (low), up to that plus every unexplored one (high). For your death the unexplored part counts only if the safe run (random hits on nobody) kills you.
+Decision #87's stage 2. A chance from the simulator (`SimChance`) is exact once every outcome is explored; until then it's a range: the explored outcomes that have it (low), up to that plus every unexplored one (high). For your death the unexplored part counts only if the safe run (random hits on nobody) kills you.
 - **Your skull** on Incoming Damage shows whenever an outcome might kill you (the range's high end above 0, or the worst branch), with the chance left of it when a roll decides it. It clears only once every outcome is explored and none kills you. The numbers stay the worst case.
 - **The Death Skull** shows once an explored outcome kills the enemy, with the range; certain only when complete.
 - **Lethal tabs** show when the card surely makes an enemy's death before it acts more likely than ending the turn now (its low end above the turn-end forecast's high end), with the card's chance in the tab's number corner ("50%"; the explored chance and a ? while not exact: "40%?"). Certain kills have no number, as before. The aim marker stays when only some aims give it (or not as surely); no hint about where to aim.
