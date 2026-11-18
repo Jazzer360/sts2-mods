@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.18.4
+#### Changed
+- Where part of an outcome isn't simulated yet (Hellraiser playing a drawn Strike, an end-of-turn auto-play from a hand that changed), chances show as a range with a ? instead of an exact number.
+- The fight's audit summary counts every check it skipped and every outcome it couldn't simulate, by reason.
+
 ### Spire QoL 1.18.3
 #### Fixed
 - Predictions: a card made into a full hand goes to your discard pile, so your hand size never counts past 10 (Cloak Clasp, Screaming Flagon, Obsidian Vice).

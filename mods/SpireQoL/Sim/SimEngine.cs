@@ -20,23 +20,34 @@ public sealed class SimOutcome
     /// The chance something happens (decision #87, stage 2): exact when every outcome is explored; otherwise from what's explored
     /// (Low) up to that plus every unexplored outcome (High), or Low when <paramref name="unexploredCan"/> rules them out.
     /// </summary>
-    public SimChance Chance(Func<SimState, bool> happens, bool unexploredCan = true)
+    /// <param name="lasting">Once it happens nothing undoes it (an enemy's death): a branch not modelled past that point still counts it.</param>
+    public SimChance Chance(Func<SimState, bool> happens, bool unexploredCan = true, bool lasting = false)
     {
         if (Branches.Count == 0) return new SimChance(0, unexploredCan && Truncated ? 1 : 0, false);
-        var seen = Branches.Any(happens);
+        // A branch with something not modelled (decision #92) is unknown: it can go either way.
+        bool Known(SimState b) => b.Unmodelled == null || (lasting && happens(b));
+        var seen = Branches.Any(b => Known(b) && happens(b));
+        var unknown = Branches.Where(b => !Known(b)).Sum(b => b.Weight);
         if (!Truncated)
         {
             var total = Branches.Sum(b => b.Weight);
-            var p = total <= 0 ? 0 : Branches.Where(happens).Sum(b => b.Weight) / total;
-            return new SimChance(p, p, seen);
+            if (total <= 0) return new SimChance(0, 0, seen);
+            var p = Branches.Where(b => Known(b) && happens(b)).Sum(b => b.Weight) / total;
+            return new SimChance(p, Math.Min(1, p + unknown / total), seen);
         }
-        if (double.IsNaN(Explored)) return new SimChance(0, seen || unexploredCan ? 1 : 0, seen); // a sample: no shares
-        var low = Math.Min(1, Branches.Where(happens).Sum(b => b.Weight));
-        return new SimChance(low, unexploredCan ? Math.Min(1, low + Math.Max(0, 1 - Explored)) : low, seen);
+        if (double.IsNaN(Explored)) return new SimChance(0, seen || unexploredCan || unknown > 0 ? 1 : 0, seen); // a sample: no shares
+        var low = Math.Min(1, Branches.Where(b => Known(b) && happens(b)).Sum(b => b.Weight));
+        return new SimChance(low, Math.Min(1, low + unknown + (unexploredCan ? Math.Max(0, 1 - Explored) : 0)), seen);
     }
 
+    /// <summary>Some branch has something not modelled (decision #92): what's shown carries the ?.</summary>
+    public bool AnyUnmodelled => Branches.Any(b => b.Unmodelled != null);
+
+    /// <summary>Why, over the branches: the gaps to model.</summary>
+    public IReadOnlyList<string> UnmodelledReasons => Branches.Where(b => b.Unmodelled != null).Select(b => b.Unmodelled!).Distinct().ToList();
+
     /// <summary>The chance the enemy dies before it acts.</summary>
-    public SimChance DeadChanceRange(int id) => Chance(b => b.Enemy(id) is { DiedBeforeActing: true });
+    public SimChance DeadChanceRange(int id) => Chance(b => b.Enemy(id) is { DiedBeforeActing: true }, lasting: true);
 
     /// <summary>The chance the enemy turn kills you (nothing left to save you). An unexplored outcome can only if the safe run does.</summary>
     public SimChance YouDieChance() => Chance(b => b.Died, unexploredCan: SafeWorst?.Died ?? true);
@@ -96,7 +107,7 @@ public sealed class SimOutcome
     public PowerSet PlayFirstHits = PowerSet.Empty;
 
     /// <summary>The enemy is dead before it acts in every branch.</summary>
-    public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true });
+    public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true }); // a death that happened stands, modelled past it or not
     public bool DeadInAny(int id) => Branches.Any(b => b.Enemy(id) is { DiedBeforeActing: true });
     /// <summary>The chance it dies before acting (NaN when branches ran out: unknown).</summary>
     public double DeadChance(int id)
@@ -981,7 +992,13 @@ public static partial class SimEngine
     private static IEnumerable<SimState> AutoPlayFromHand(BranchSet outer, SimState s, int k, Func<List<SimHandCard>, List<SimHandCard>> pick)
     {
         var hand = k < 0 ? s.P.AutoHand : s.Teammates[k].AutoHand;
-        if (s.AutoPlaysUnknown || hand == null) return new[] { s };
+        if (hand == null) return new[] { s };
+        if (s.AutoPlaysUnknown)
+        {
+            // A pick is due from a hand the simulator lost track of (a card made or brought back cards, one drawn can't be played).
+            s.Unmodelled ??= "an end-of-turn auto-play from a hand that changed in a way not simulated";
+            return new[] { s };
+        }
         var cards = pick(hand);
         if (cards.Count == 0) return new[] { s };
         var result = new List<SimState>();
@@ -995,6 +1012,7 @@ public static partial class SimEngine
             if (card.Plays.Count == 0)
             {
                 c.AutoPlaysUnknown = true;
+                c.Unmodelled ??= $"{card.Name} auto-played at end of turn: its play isn't simulated";
                 if (k < 0) c.AutoPicks = [..c.AutoPicks, new SimPick(card.Id, -1)];
                 result.Add(c);
                 continue;

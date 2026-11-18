@@ -238,6 +238,23 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private int _interleaved; // plays whose snapshot checks were logged only: another action ran during their choice
     private int _matched;
     private readonly Dictionary<string, int> _issueCounts = new();
+    /// <summary>Decision #92: checks skipped, by reason (rule 1), and what the played card's simulations didn't model (rule 2).</summary>
+    private readonly Dictionary<string, int> _skipCounts = new(), _gapCounts = new();
+
+    /// <summary>A "not checked" line's reason, without its details: "state after the play: auto-played cards".</summary>
+    internal static string SkipReason(string line)
+    {
+        var i = line.IndexOf("not checked", StringComparison.Ordinal);
+        var what = line[..i].TrimEnd(' ', ':');
+        var rest = line[(i + "not checked".Length)..].TrimStart();
+        var why = rest.StartsWith('(') ? rest[1..Math.Max(1, rest.IndexOf(')'))] : rest.TrimStart(':', ' ').Split('(')[0].Trim();
+        // Card and source names vary: keep the shape (anything before " ran during" is an action's name).
+        var ran = why.IndexOf(" ran during", StringComparison.Ordinal);
+        if (ran > 0) why = "another action" + why[ran..];
+        var before = why.IndexOf("computed before ", StringComparison.Ordinal);
+        if (before >= 0) why = why[..(before + "computed before ".Length)] + "another play finished";
+        return what.Length > 0 ? $"{what}: {why}" : why;
+    }
 
     // Every play this turn (card, its tabs, result), sent with each report: the turn is the unit
     // that explains most mismatches (counters, "first this turn" relics, queued plays).
@@ -736,6 +753,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
                 issues.RemoveAll(simOnly.Contains);
             }
+            foreach (var line in model.Where(x => x.Contains("not checked", StringComparison.Ordinal)))
+            {
+                var reason = SkipReason(line);
+                _skipCounts[reason] = (_skipCounts.TryGetValue(reason, out var sn) ? sn : 0) + 1;
+            }
+            foreach (var reason in w.Facts?.Unmodelled ?? Array.Empty<string>())
+                _gapCounts[reason] = (_gapCounts.TryGetValue(reason, out var gn) ? gn : 0) + 1;
             _checked++;
             if (issues.Count == 0) _matched++;
             foreach (var issue in issues)
@@ -855,8 +879,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"))})";
         ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand, {_interleaved} with another action during a choice), {_matched} matched{issues}.");
+        static string List(Dictionary<string, int> c) => string.Join(", ", c.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"));
+        if (_skipCounts.Count > 0) ModEntry.Log.Info($"[audit] combat summary: card play checks skipped: {List(_skipCounts)}.");
+        if (_gapCounts.Count > 0) ModEntry.Log.Info($"[audit] combat summary: not modelled in played cards' simulations: {List(_gapCounts)}.");
         _checked = _matched = _fromHand = _interleaved = 0;
         _issueCounts.Clear();
+        _skipCounts.Clear();
+        _gapCounts.Clear();
     }
 
     private static List<string> Compare(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, out List<string> model)

@@ -302,6 +302,8 @@ public sealed class PlayFacts
     /// lethal, Imbalanced and wake tabs may be missing. The audit doesn't report those.
     /// </summary>
     public bool SimPending { get; set; }
+    /// <summary>What its simulations didn't model (decision #92, rule 2): gaps the play audit counts.</summary>
+    public IReadOnlyList<string> Unmodelled { get; set; } = Array.Empty<string>();
 
     /// <summary>
     /// This play followed by the plays of a card it auto-plays (Decisions, Decisions' pick, whose facts

@@ -455,6 +455,11 @@ public sealed class SimState
     public bool Died;
     /// <summary>An auto-play at the end of your turn couldn't be simulated in this branch (Stampede or Simpleton picked a card that changes your hand): later auto-plays aren't either.</summary>
     public bool AutoPlaysUnknown;
+    /// <summary>
+    /// Something in this branch the simulator doesn't model yet (decision #92, rule 2): why, or null. Such a branch counts as unknown
+    /// in every chance and guarantee (a range and a ?), and the reason is counted by the audits as a gap to model.
+    /// </summary>
+    public string? Unmodelled;
     /// <summary>Cards auto-played at the end of your turn in this branch (Stampede, Simpleton, I Am Invincible, Howl from Beyond).</summary>
     public int AutoPlayed;
     /// <summary>
@@ -754,7 +759,7 @@ public sealed class SimState
             Add(P.AutoHand.Count);
             foreach (var c in P.AutoHand) Add(c.Id);
         }
-        Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed);
+        Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
         foreach (var pick in AutoPicks) { Add(pick.Card); Add(pick.Target); } // branches that picked differently stay apart (the check tells them apart)
         // What's been drawn (decision #90): the pile left, and what joined the hand.
         if (P.Draw != null)

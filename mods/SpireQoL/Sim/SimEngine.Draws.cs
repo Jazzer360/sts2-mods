@@ -80,7 +80,11 @@ public static partial class SimEngine
             else s.AutoPlaysUnknown = true;
         }
         // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly): not simulated, so later auto-plays aren't either.
-        if (card.Strike && p.Powers["HellraiserPower"] > 0) s.AutoPlaysUnknown = true;
+        if (card.Strike && p.Powers["HellraiserPower"] > 0)
+        {
+            s.AutoPlaysUnknown = true;
+            s.Unmodelled ??= "Hellraiser auto-plays a drawn Strike";
+        }
 
         IEnumerable<SimState> r = FireCardEvent(s, CardEvent.Drawn, player, indirect);
         // Iteration (IterationPower.AfterCardDrawn): the first Status you draw this turn draws its amount more.

@@ -49,7 +49,7 @@ public sealed class TurnEndModel
     /// <summary>Exploration stopped short (a cap, or a step out of its own copies): what's shown stays partial.</summary>
     public bool Incomplete => Outcome.Truncated && !Exploring;
     /// <summary>The mark for a forecast that isn't complete, still exploring or stopped short: "?" (the owner's call); null once complete.</summary>
-    public string? ProgressMark => Outcome.Truncated ? "?" : null;
+    public string? ProgressMark => Outcome.Truncated || Outcome.AnyUnmodelled ? "?" : null;
     /// <summary>In the worst branch you'd die, but Fairy in a Bottle (potions used) or Lizard Tail heals you instead.</summary>
     public int FairiesUsed { get; private set; }
     public bool LizardTailUsed { get; private set; }

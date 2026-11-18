@@ -56,6 +56,13 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private CombatHistory? _history;
     private int _checked;
     private int _matched;
+    /// <summary>
+    /// Decision #92, rule 1: turns not checked, by reason (a gap, not a pass), and what the forecasts didn't model, by reason
+    /// (rule 2): both in the combat summary, so the logs show which gaps come up and how often.
+    /// </summary>
+    private static readonly Dictionary<string, int> Skips = new(), Gaps = new();
+
+    private static void CountIn(Dictionary<string, int> counts, string reason) => counts[reason] = (counts.TryGetValue(reason, out var n) ? n : 0) + 1;
 
     public void OnFrame(OverlayHost host)
     {
@@ -112,9 +119,13 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
     private void Summarize()
     {
-        if (_checked == 0) return;
-        ModEntry.Log.Info($"[audit] combat summary: {_checked} enemy turns forecast, {_matched} matched.");
+        static string List(Dictionary<string, int> c) => string.Join(", ", c.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"));
+        if (_checked > 0) ModEntry.Log.Info($"[audit] combat summary: {_checked} enemy turns forecast, {_matched} matched.");
+        if (Skips.Count > 0) ModEntry.Log.Info($"[audit] combat summary: enemy turns not checked: {List(Skips)}.");
+        if (Gaps.Count > 0) ModEntry.Log.Info($"[audit] combat summary: not modelled in the forecast: {List(Gaps)}.");
         _checked = _matched = 0;
+        Skips.Clear();
+        Gaps.Clear();
     }
 
     /// <summary>The side whose turn an entry happened on (CombatHistoryEntry.CurrentSide is private).</summary>
@@ -144,6 +155,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (endOfTurn.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == mate))
             {
                 line += " (auto-played a card: not checked)";
+                CountIn(Skips, "a teammate auto-played a card at end of turn");
                 continue;
             }
             // Their HP can't go below 0: a teammate who died lost what they had.
@@ -171,6 +183,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     {
         // The frozen forecast's latest exploration (decision #87); it isn't needed after this.
         f = f.Refreshed();
+        // What it didn't model (rule 2): logged and counted, whatever the check finds.
+        foreach (var reason in f.Outcome.UnmodelledReasons) CountIn(Gaps, reason);
+        if (f.Outcome.AnyUnmodelled) ModEntry.Log.Info($"[audit] [gaps] turn {_frozenTurn}: the forecast didn't model: {string.Join("; ", f.Outcome.UnmodelledReasons)}");
+        if (f.Outcome.Truncated) CountIn(Gaps, "the forecast's outcomes weren't all explored");
         if (f.Job is { } job)
         {
             job.Pinned = false;
@@ -194,6 +210,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (!sawEnemy && !youDied)
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (no enemy turn followed: an extra turn)");
+            CountIn(Skips, "an extra turn (no enemy turn to compare)");
             return;
         }
 
@@ -231,6 +248,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             else if (narrowed == null)
             {
                 ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {auto.CardPlay.Card.GetType().Name} at end of turn, which no branch did); {Predicted()}");
+                CountIn(Skips, "an end-of-turn auto-play no branch made (another source)");
                 return;
             }
             else if (narrowed.Outcome.Branches.Any(b => b.AutoPlaysUnknown))
@@ -239,6 +257,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 var last = narrowed.Outcome.Branches.First(b => b.AutoPlaysUnknown).AutoPicks.LastOrDefault();
                 var changer = autoPlays.FirstOrDefault(e => last != null && SimAdapter.HandId(e.CardPlay.Card) == last.Card)?.CardPlay.Card ?? auto.CardPlay.Card;
                 ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {changer.GetType().Name} at end of turn, which changed your hand); {Predicted()}");
+                CountIn(Skips, "an end-of-turn auto-play that changed your hand");
                 return;
             }
             else

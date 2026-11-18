@@ -11,9 +11,9 @@ Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). **Setup on a new 
 
 ## The contract (decision #92)
 
-What the mod shows for "if I play this card" or "if I end my turn now" is exactly what happens: the outcome, or the exact chance of each when a roll decides it, or a `?` where something isn't modelled. Never a certainty the game doesn't keep. Three rules follow, for every change:
+What the mod shows for "if I play this card" (each card in your hand, played now) or "if I end my turn now" is exactly what happens: the outcome, or the exact chance of each when a roll decides it, or a `?` where something isn't modelled. Never a certainty the game doesn't keep. Three rules follow, for every change:
 - **Every prediction is paired with its outcome** by an audit. A skipped check is a gap, not a pass: name the reason, count it, track it in docs/TRACKER.md.
-- **Not modelled means uncertain:** a branch the simulator can't follow counts as unknown (`?` and a range), never as exact.
+- **Not modelled means uncertain, and it's a gap to close:** a branch the simulator can't follow carries the reason (`SimState.Unmodelled`) and counts as unknown (`?` and a range), never as exact; the audits count the reasons, and each is a tracker item to model. Never a way around predicting.
 - **Effects, not cards:** model what the game's code does (hooks, commands, pipelines, in its order). A per-card table only where nothing else can read the effect, always with a scan that finds every card doing that thing.
 
 ## Raise concerns, track decisions
