@@ -19,6 +19,8 @@ namespace SpireQoL;
 public static class ModEntry
 {
     public const string Id = "SpireQoL";
+    /// <summary>reporting.json as read at startup: the report floor and the listed gameplay mods (decisions #81, #97).</summary>
+    private static Sts2Mods.Core.Diagnostics.ReportFloor? _floor;
 
     public static ModLog Log { get; } = new(Id);
     public static FeatureHost Features { get; } = new(Id, Log);
@@ -65,7 +67,7 @@ public static class ModEntry
                 return list.Length <= 200 ? list : list[..197] + "...";
             }
             tags["other_mods"] = Short(Sts2Mods.Core.Game.OtherMods.Loaded(typeof(ModEntry).Assembly));
-            tags["gameplay_mods"] = Short(Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly));
+            tags["gameplay_mods"] = Short(Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly, _floor?.GameplayMods));
             if (Sts2State.Combat is { } cs && Sts2State.Me is { } me)
             {
                 var players = cs.Players.ToList();
@@ -81,8 +83,9 @@ public static class ModEntry
         // A build older than reporting.json's floor sends nothing: its reports are about code rewritten since (decision #81).
         var floor = Sts2Mods.Core.Diagnostics.ReportFloor.Start(SpireQoL.Features.UpdateNoticeFeature.Repo, Id,
             typeof(ModEntry).Assembly.GetName().Version ?? new Version(0, 0, 0), Log);
+        _floor = floor;
         reporter.SkipReason = floor.SkipReason;
-        static string? GameplayMods() => Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly) is { Count: > 0 } other
+        static string? GameplayMods() => Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly, _floor?.GameplayMods) is { Count: > 0 } other
             ? "other mods that change the game are loaded (" + string.Join(", ", other) + ")"
             : null;
         reporter.MismatchSkipReason = GameplayMods;

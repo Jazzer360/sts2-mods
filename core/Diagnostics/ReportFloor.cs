@@ -15,6 +15,13 @@ public sealed class ReportFloor
 
     private readonly Version _current;
     private volatile string? _floor;
+    private volatile IReadOnlyCollection<string> _gameplayMods = Array.Empty<string>();
+
+    /// <summary>
+    /// Mod ids reporting.json lists as changing the game though their manifest says they don't (gameplayMods, decision #97):
+    /// treated like any mod that changes it (no mismatches sent with one loaded). Empty until GitHub answers.
+    /// </summary>
+    public IReadOnlyCollection<string> GameplayMods => _gameplayMods;
 
     private ReportFloor(Version current) => _current = current;
 
@@ -31,6 +38,7 @@ public sealed class ReportFloor
                 using var res = await Http.SendAsync(req).ConfigureAwait(false);
                 if (!res.IsSuccessStatusCode) return;
                 var text = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                f._gameplayMods = ParseGameplayMods(text);
                 var floor = Parse(text, modId);
                 if (floor == null) return;
                 f._floor = floor.ToString(3);
@@ -56,6 +64,21 @@ public sealed class ReportFloor
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>reporting.json's gameplayMods: mod ids (empty when it has none).</summary>
+    public static IReadOnlyCollection<string> ParseGameplayMods(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (!doc.RootElement.TryGetProperty("gameplayMods", out var list) || list.ValueKind != JsonValueKind.Array) return Array.Empty<string>();
+            return list.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToList();
+        }
+        catch
+        {
+            return Array.Empty<string>();
         }
     }
 

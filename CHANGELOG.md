@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.19.5
+#### Changed
+- Mods that say they don't change the game but do can be listed in the project's reporting settings, so their effects aren't reported as Spire QoL's mismatches.
+
+### Main Saves 1.0.12
+#### Fixed
+- Rebuilt with the shared error reporting update.
+
 ### Spire QoL 1.19.4
 #### Fixed
 - A few of the mod's reactions to the game's own events (combat history changes, relic and power flashes, choosing an event option, Mend) could let an error reach the game's code; they now catch it.

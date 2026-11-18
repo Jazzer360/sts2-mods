@@ -37,3 +37,13 @@ internal sealed class GameFight
         return card;
     }
 }
+
+/// <summary>
+/// Tests that build game fights (GameFight) share the game's static state (the run, its acts): they run one at a time, never
+/// in parallel ("No default act for index 3!" when two set it up at once).
+/// </summary>
+[Xunit.CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class GameFightCollection
+{
+    public const string Name = "game fights";
+}

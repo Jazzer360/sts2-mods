@@ -12,6 +12,7 @@ namespace SpireQoL.Catalog.Tests;
 /// one debuff, so one Artifact charge takes all of it. Its simulated play has exactly one Strength debuff per card, never the
 /// temporary power as well (Artifact took that one and the Strength still landed).
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class StrengthLossTests
 {
     [Fact]

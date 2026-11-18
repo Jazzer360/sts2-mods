@@ -12,24 +12,27 @@ namespace Sts2Mods.Core.Game;
 /// </summary>
 public static class OtherMods
 {
-    private static IReadOnlyList<string>? _gameplay;
+    private static IReadOnlyList<(string Id, string Name, bool Gameplay)>? _others;
 
     /// <summary>
-    /// "id-version" of each loaded mod (not ours) that changes the game, empty when there are none. Read once the
-    /// mods are loaded (not from a mod initializer: later mods aren't loaded yet), then kept.
+    /// "id-version" of each loaded mod (not ours) that changes the game, empty when there are none: its manifest or code says
+    /// so, or its id is in <paramref name="listed"/> (reporting.json's gameplayMods: mods that say they don't but do, decision
+    /// #97). The mods are read once they're loaded (not from a mod initializer: later mods aren't loaded yet), then kept.
     /// </summary>
-    public static IReadOnlyList<string> Gameplay(Assembly ours)
+    public static IReadOnlyList<string> Gameplay(Assembly ours, IReadOnlyCollection<string>? listed = null)
     {
-        if (_gameplay != null) return _gameplay;
-        var found = new List<string>();
-        foreach (var m in ModManager.GetLoadedMods())
+        if (_others == null)
         {
-            if (m.assemblies.Contains(ours) || m.manifest?.id == ours.GetName().Name) continue;
-            var name = $"{m.manifest?.id ?? "?"}-{m.manifest?.version ?? "?"}";
-            if ((m.manifest?.affectsGameplay ?? true) || m.assemblies.Any(AddsContent)) found.Add(name);
+            var found = new List<(string, string, bool)>();
+            foreach (var m in ModManager.GetLoadedMods())
+            {
+                if (m.assemblies.Contains(ours) || m.manifest?.id == ours.GetName().Name) continue;
+                var id = m.manifest?.id ?? "?";
+                found.Add((id, $"{id}-{m.manifest?.version ?? "?"}", (m.manifest?.affectsGameplay ?? true) || m.assemblies.Any(AddsContent)));
+            }
+            _others = found;
         }
-        _gameplay = found;
-        return found;
+        return _others.Where(o => o.Gameplay || (listed != null && listed.Contains(o.Id, StringComparer.OrdinalIgnoreCase))).Select(o => o.Name).ToList();
     }
 
     /// <summary>

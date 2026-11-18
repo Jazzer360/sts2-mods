@@ -11,6 +11,7 @@ namespace SpireQoL.Catalog.Tests;
 /// in a fight built outside the game (GameFight). The sweeps run every card in the game; the other tests are cards whose
 /// count depends on the state, from their decompiled OnPlay. A bug in step 1 reported from players' games gets a test here.
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class PlayFactsTests
 {
     /// <summary>Every card in the game, in a fresh fight with a Defend beside it in hand, with its facts.</summary>

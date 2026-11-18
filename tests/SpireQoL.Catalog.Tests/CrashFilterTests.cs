@@ -31,3 +31,29 @@ public class CrashFilterTests
     public void ItsCodeAsAnInnerExceptionCounts() =>
         Assert.Equal("OtherMod", OtherMods.InStack(new InvalidOperationException("wrapped", Caught(() => Assert.Fail("their code"))), Xunit, "SpireQoL."));
 }
+
+/// <summary>Decision #97: reporting.json's gameplayMods list.</summary>
+public class GameplayModsListTests
+{
+    [Fact]
+    public void TheListIsRead() =>
+        Assert.Equal(new[] { "SomeMod", "Other" }, Sts2Mods.Core.Diagnostics.ReportFloor.ParseGameplayMods("""{ "oldestReported": { "SpireQoL": "1.0.0" }, "gameplayMods": ["SomeMod", "Other"] }"""));
+
+    [Fact]
+    public void NoListIsEmpty()
+    {
+        Assert.Empty(Sts2Mods.Core.Diagnostics.ReportFloor.ParseGameplayMods("""{ "oldestReported": { "SpireQoL": "1.0.0" } }"""));
+        Assert.Empty(Sts2Mods.Core.Diagnostics.ReportFloor.ParseGameplayMods("not json"));
+    }
+
+    [Fact]
+    public void TheRepositorysFileHasTheList()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "reporting.json"))) dir = dir.Parent;
+        Assert.NotNull(dir);
+        var text = File.ReadAllText(Path.Combine(dir!.FullName, "reporting.json"));
+        Assert.Contains("\"gameplayMods\"", text);
+        Assert.NotNull(Sts2Mods.Core.Diagnostics.ReportFloor.Parse(text, "SpireQoL"));
+    }
+}

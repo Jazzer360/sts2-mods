@@ -507,3 +507,8 @@ Revisits #34. With another mod that changes the game loaded, mismatches still ar
 *Why:* the owner's goal is never to crash, whatever else is loaded. Players who try the mod often run others; a crash of ours on a modded game (another mod's card reaching our code) is ours to fix, while one inside another mod's code isn't. #34 dropped both to keep the first kind out; it didn't weigh telling them apart by the stack.
 *Replaced:* #34's rule for crashes (nothing sent at all with a gameplay mod loaded). Its rule for mismatches stands.
 
+### 97. A list of mods that change the game though they say they don't — active (2026-11-18)
+`reporting.json`'s `gameplayMods` (repo root, read at startup with the report floor: `ReportFloor.GameplayMods`) lists mod ids treated as changing the game whatever their manifest says, so no mismatch is sent with one loaded (crashes as #96). Empty today; an id goes in when a mod marked `affects_gameplay: false` turns out to change mechanics we model (its effects show up as our mismatches, with it in the reports' `other_mods`).
+*Why:* a manifest's flag is the mod author's word; most display-only mods are fine to report alongside (#34), and this catches the exceptions without a mod release.
+*Replaced:* nothing.
+
