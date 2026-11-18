@@ -271,5 +271,16 @@ public class SimDrawTests
         var o = SimEngine.Run(s, Draws(1));
         Assert.Equal(0.2, o.Branches.Where(b => b.Taken == 2).Sum(b => b.Weight), 9);
     }
+
+    [Fact]
+    public void ACardMadeIntoAFullHandGoesToTheDiscardPile()
+    {
+        // Nine cards and a play that makes three (Blade Dance-like): the hand stops at 10.
+        var s = You(hand: 9);
+        s.P.Draw = Pile((Plain, 5));
+        var make = new SimPlay { Name = "BladeDance", HandCard = 7, HandDelta = -1 + 3 };
+        var b = Assert.Single(SimEngine.Run(s, make).Branches);
+        Assert.Equal(10, b.P.HandCount);
+    }
 }
 

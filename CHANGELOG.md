@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.18.3
+#### Fixed
+- Predictions: a card made into a full hand goes to your discard pile, so your hand size never counts past 10 (Cloak Clasp, Screaming Flagon, Obsidian Vice).
+
 ### Spire QoL 1.18.2
 #### Fixed
 - Predictions remember cards placed on top of your draw pile (Headbutt, Thinking Ahead, Recall, Glimmer, Ki Chant...) and draw them first; a shuffle forgets them, and Perfect Fit's card is on top after one.

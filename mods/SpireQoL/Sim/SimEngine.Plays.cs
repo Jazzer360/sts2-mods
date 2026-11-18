@@ -38,7 +38,8 @@ public static partial class SimEngine
         // With a draw pile (decision #90), the cards it drew are already in hand, as drawn: only what it made or brought back is
         // unknown.
         var handDelta = cr.HandDelta - (p.Draw != null ? cr.Draws : 0);
-        p.HandCount = Math.Max(0, p.HandCount + handDelta);
+        // A card added to a full hand goes to the discard pile instead (CardPileCmd.Add): never more than 10 (decision #90).
+        p.HandCount = Math.Clamp(p.HandCount + handDelta, 0, p.Draw != null ? MaxHand : int.MaxValue);
         if (!cr.AutoPlay) p.PaelsEyeExhaust = false;
         if (p.AutoHand != null)
         {
