@@ -6,6 +6,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.19.1
+#### Fixed
+- Teammate predictions use the same simulation as yours: their Fairy in a Bottle and Lizard Tail now keep them alive in the forecast, and a hit that kills them counts in full, as yours does.
+- Teammate Incoming Damage shows HP loss no block stops (Regret, Beckon, Bad Luck) on its own line, as yours does.
+- The card play check no longer reports a mismatch that comes from a teammate's hand while Count teammates' hands is off.
+- The Guide no longer lists Demise among the HP loss that can hit you (only enemies get it, from Powdered Demise).
+
 ### Spire QoL 1.19.0
 #### Added
 - Incoming Damage shows HP loss no block stops (Regret, Beckon, Bad Luck, Demise) on its own line with a heart, under what gets through your block, instead of adding it to the incoming damage: it no longer looks like block you're short of.

@@ -132,7 +132,8 @@ public class SimTeammateTests
         var s = new SimState { Enemies = { Enemy(1, 50, 10, 10, 10) } };
         s.Teammates.Add(Mate(hp: 15));
         var o = SimEngine.Run(s);
-        Assert.Equal(15, o.TeammateTakenMax(0)); // 10, then 5 more to 0, then nothing
+        Assert.Equal(20, o.TeammateTakenMax(0)); // 10, then 10 more (5 of it overkill, counted like yours: decision #93), then nothing
+        Assert.True(o.Worst.Teammates[0].Died);
         Assert.Equal(30, o.TakenMax);
     }
 

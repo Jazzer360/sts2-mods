@@ -47,12 +47,13 @@ public sealed class TeammateIncomingDamageFeature : IFeature, IFrameFeature
     {
         var mate = Sts2State.IsPlayerTurn ? Sts2State.FocusedTeammate() : null;
         var view = mate != null ? TurnEndModel.Compute()?.TeammateView.FirstOrDefault(v => v.Player == mate) : null;
-        if (view == null || view.Incoming == 0)
+        if (view == null || (view.Incoming == 0 && view.Unblockable == 0))
         {
             _widget!.HasContent = false;
             return;
         }
         _widget!.HasContent = true;
-        _panel!.Show(view.Incoming, view.Block, view.OstyHp > 0 ? (view.OstyTaken, view.OstyDies) : null, view.TakenMax);
+        int? unblockable = view.Unblockable > 0 ? view.Unblockable : null;
+        _panel!.Show(view.Incoming, view.Block, view.OstyHp > 0 ? (view.OstyTaken, view.OstyDies) : null, view.TakenMax - (unblockable ?? 0), unblockable: unblockable);
     }
 }

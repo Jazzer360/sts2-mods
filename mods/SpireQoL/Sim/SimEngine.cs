@@ -649,29 +649,30 @@ public static partial class SimEngine
         s.PlayHpLost += lost;
     }
 
-    /// <summary>Blockable damage to a player (who: -1 you, k teammate k): their block, then HP loss; Unpowered unless said.</summary>
+    /// <summary>A player's state to change (who: -1 you, k teammate k).</summary>
+    private static SimPlayer Mutable(SimState s, int who) => who < 0 ? s.P : s.MutableTeammate(who);
+
+    /// <summary>
+    /// Blockable damage to a player (who: -1 you, k teammate k): their block, then HP loss; Unpowered unless said. The same for
+    /// every player (decision #93); yours also feeds the breakdown, Imbalanced's threshold and your play's HP-loss tabs.
+    /// </summary>
     private static void LandBlockable(SimState s, string name, int amount, int who = -1, int? dealer = null, SimProps props = SimProps.Unpowered)
     {
         if (amount <= 0) return;
-        if (who >= 0)
+        var p = Mutable(s, who);
+        p.Incoming += amount;
+        if (who < 0)
         {
-            var t = s.MutableTeammate(who);
-            t.Incoming += amount;
-            var tb = Math.Min(t.Block, amount);
-            t.Block -= tb;
-            t.Through += amount - tb;
-            TeammateHpLoss(s, who, amount - tb, tb, dealer, props);
-            return;
+            s.BlockDemand += amount;
+            if (s.Log) s.Blockable.Add((name, amount));
         }
-        s.BlockDemand += amount;
-        if (s.Log) s.Blockable.Add((name, amount));
-        var blocked = Math.Min(s.P.Block, amount);
-        s.P.Block -= blocked;
-        s.DamageThrough += amount - blocked;
-        var lost = HpLoss(s, -1, amount - blocked, dealer, props);
-        YouLose(s, lost);
-        PlayHp(s, amount - blocked, lost);
-        PlayerDamaged(s, -1, dealer, props, blocked, lost);
+        var blocked = Math.Min(p.Block, amount);
+        p.Block -= blocked;
+        p.Through += amount - blocked;
+        var lost = HpLoss(s, who, amount - blocked, dealer, props);
+        Lose(s, who, lost);
+        if (who < 0) PlayHp(s, amount - blocked, lost);
+        PlayerDamaged(s, who, dealer, props, blocked, lost);
     }
 
     /// <summary>
@@ -708,62 +709,46 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// You lose HP (after block and the HP-loss modifiers). Taken counts it all; your HP, when tracked, goes down, and
+    /// A player loses HP (after block and the HP-loss modifiers). Taken counts it all; their HP, when tracked, goes down, and
     /// at 0 something prevents death if it can (CreatureCmd.Kill → Hook.ShouldDie: Fairy in a Bottle first, then
-    /// ShouldDieLate: Lizard Tail), healing you from 0; the rest of that hit is lost. With nothing left, you die.
+    /// ShouldDieLate: Lizard Tail), healing them from 0; the rest of that hit is lost. With nothing left, they die. The same
+    /// for every player, with their own potions and relics (decision #93).
     /// </summary>
-    private static void YouLose(SimState s, int lost)
+    private static void Lose(SimState s, int who, int lost)
     {
-        s.Taken += lost;
-        var p = s.P;
-        if (lost <= 0 || p.Hp == int.MaxValue || s.Died) return;
+        var p = Mutable(s, who);
+        p.Taken += lost;
+        if (lost <= 0 || p.Hp == int.MaxValue || p.Died) return;
         p.Hp -= lost;
         if (p.Hp > 0) return;
         if (p.Fairies > 0)
         {
             p.Fairies--;
-            s.FairiesUsed++;
+            p.FairiesUsed++;
             p.Hp = p.FairyHeal;
         }
         else if (p.LizardTailHeal > 0)
         {
             p.Hp = p.LizardTailHeal;
             p.LizardTailHeal = 0;
-            s.LizardTailUsed = true;
+            p.LizardTailUsed = true;
         }
         else
         {
             p.Hp = 0;
-            s.Died = true;
+            p.Died = true;
         }
-    }
-
-    /// <summary>Teammate k losing HP past their block (Tungsten Rod, Buffer, Beating Remnant like yours); their HP stops at 0.</summary>
-    private static void TeammateHpLoss(SimState s, int k, int amount, int blocked, int? dealer, SimProps props)
-    {
-        var lost = Math.Min(HpLoss(s, k, amount, dealer, props), Math.Max(0, s.Teammates[k].Hp));
-        var t = s.MutableTeammate(k);
-        t.Taken += lost;
-        t.Hp -= lost;
-        PlayerDamaged(s, k, dealer, props, blocked, lost);
     }
 
     private static void LandUnblockable(SimState s, string name, int amount, int who = -1, int? dealer = null, SimProps props = SimProps.Unblockable | SimProps.Unpowered)
     {
         if (amount <= 0) return;
-        if (who >= 0)
-        {
-            var t = s.MutableTeammate(who);
-            t.Incoming += amount;
-            TeammateHpLoss(s, who, amount, 0, dealer, props);
-            return;
-        }
-        if (s.Log) s.Unblockable.Add((name, amount));
-        var lost = HpLoss(s, -1, amount, dealer, props);
-        YouLose(s, lost);
-        s.UnblockableTaken += lost;
-        PlayHp(s, amount, lost);
-        PlayerDamaged(s, -1, dealer, props, 0, lost);
+        if (who < 0 && s.Log) s.Unblockable.Add((name, amount));
+        var lost = HpLoss(s, who, amount, dealer, props);
+        Lose(s, who, lost);
+        Mutable(s, who).UnblockableTaken += lost;
+        if (who < 0) PlayHp(s, amount, lost);
+        PlayerDamaged(s, who, dealer, props, 0, lost);
     }
 
     // ------------------------------------------------------------------ card play
@@ -1216,34 +1201,66 @@ public static partial class SimEngine
                 if (e.Hp <= 0) dead = true;
             }
 
-            // A teammate takes each hit in their turn order (CreatureCmd.Damage over every living player:
-            // a hit still reaches everyone even if one player's Thorns kills the attacker during it).
+            // One player takes one hit (who: -1 you, k teammate k), the same for every player (decision #93): Thorns before it
+            // lands (BeforeDamageReceived; the hit still lands if that kills), Wuppy first while it lives (WuppysLoyaltyPower.
+            // ModifyPreBlockDamageTarget: before block; only the overkill goes on), block, Osty (Die For You), HP, then Flame
+            // Barrier and Reflect. Yours also decides Imbalanced and feeds the breakdown.
+            void TakesHit(int who, int amount)
+            {
+                var p = Mutable(s, who);
+                if (p.Thorns > 0) Retaliate(p.Thorns);
+                if (p.WuppyHp > 0 && amount > 0)
+                {
+                    var toWuppy = Math.Min(p.WuppyHp, amount);
+                    p.WuppyHp -= toWuppy;
+                    p.WuppyTaken += toWuppy; // not their Incoming Damage (landed): it never reaches them
+                    amount -= toWuppy;
+                    if (amount == 0)
+                    {
+                        if (who >= 0) return;
+                        // DamageResult.WasFullyBlocked: no HP lost and you had block (untouched).
+                        if (hitsLanded == 0) e.FirstHitFullyBlocked = s.P.Block > 0;
+                        hitsLanded++;
+                        return;
+                    }
+                }
+                if (who < 0)
+                {
+                    if (hitsLanded == 0 && e.Imbalanced) s.FullBlockNeeded[e.Id] = s.BlockDemand + amount;
+                    s.BlockDemand += amount;
+                }
+                var blockBefore = p.Block;
+                p.Incoming += amount;
+                var blocked = Math.Min(p.Block, amount);
+                p.Block -= blocked;
+                var through = amount - blocked;
+                var toOsty = p.OstyShields ? OstyLoses(s, who < 0 ? Who.You : Who.Teammate(who), through) : 0;
+                p = Mutable(s, who);
+                p.OstyTaken += toOsty;
+                p.Through += through - toOsty;
+                var lost = HpLoss(s, who, through - toOsty, e.Id, SimProps.Move);
+                Lose(s, who, lost);
+                PlayerDamaged(s, who, e.Id, SimProps.Move, blocked, lost);
+                if (who < 0)
+                {
+                    // DamageResult.WasFullyBlocked: you had block and no damage got through after the AfterOsty modifiers (Tungsten
+                    // Rod, Buffer...). Block only drops during an attack, so the first hit decides it.
+                    if (hitsLanded == 0) e.FirstHitFullyBlocked = amount > 0 && (blocked > 0 || blockBefore > 0) && toOsty == 0 && lost == 0;
+                    landed += amount;
+                    hitsLanded++;
+                }
+                p = Mutable(s, who);
+                if (!dead && p.FlameBarrier > 0) Retaliate(p.FlameBarrier);
+                if (!dead && p.Reflect && blocked > 0) Retaliate(blocked);
+            }
+            // A teammate takes each hit in their turn order (CreatureCmd.Damage over every living player: a hit still reaches
+            // everyone even if one player's Thorns kills the attacker during it), through the game's damage math for them.
             void TeammateTakesHit(int k, int h, int mine)
             {
                 if (s.Teammates[k].Hp <= 0) return;
-                var t = s.MutableTeammate(k);
                 var amount = e.Intent != null ? IntentDamage(s, e, h, Who.Teammate(k))
                     : k < e.TeammateHits.Count && h < e.TeammateHits[k].Count ? e.TeammateHits[k][h] : mine;
-                if (t.Thorns > 0) Retaliate(t.Thorns);
-                // Their Wuppy takes the hit first while it lives, as yours does (WuppysLoyaltyPower: before block).
-                if (t.WuppyHp > 0 && amount > 0)
-                {
-                    var toWuppy = Math.Min(t.WuppyHp, amount);
-                    t.WuppyHp -= toWuppy;
-                    amount -= toWuppy;
-                    if (amount == 0) return;
-                }
-                t.Incoming += amount;
-                var tBlocked = Math.Min(t.Block, amount);
-                t.Block -= tBlocked;
-                var tThrough = amount - tBlocked;
-                var tOsty = t.OstyShields ? OstyLoses(s, Who.Teammate(k), tThrough) : 0;
-                t = s.Teammates[k];
-                t.OstyTaken += tOsty;
-                t.Through += tThrough - tOsty;
-                TeammateHpLoss(s, k, tThrough - tOsty, tBlocked, e.Id, SimProps.Move);
-                if (!dead && t.FlameBarrier > 0) Retaliate(t.FlameBarrier);
-                if (!dead && t.Reflect && tBlocked > 0) Retaliate(tBlocked);
+                TakesHit(k, amount);
             }
             var before = Math.Min(s.TeammatesBeforeMe, s.Teammates.Count);
             var hitIndex = -1;
@@ -1258,50 +1275,8 @@ public static partial class SimEngine
                     continue;
                 }
                 for (var k = 0; k < before; k++) TeammateTakesHit(k, hitIndex, perHit);
-                var fullHit = perHit;
-                // Thorns: before the hit lands (BeforeDamageReceived: you're still its target with Wuppy out); the hit
-                // still lands even if this kills.
-                if (s.P.Thorns > 0) Retaliate(s.P.Thorns);
-                // Wuppy takes the hit first while it lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget: before your block);
-                // only what's left over when the hit kills it (OverkillDamage) goes on to your block and you.
-                if (s.P.WuppyHp > 0 && perHit > 0)
-                {
-                    var toWuppy = Math.Min(s.P.WuppyHp, perHit);
-                    s.P.WuppyHp -= toWuppy;
-                    s.WuppyTaken += toWuppy; // not your Incoming Damage (landed): it never reaches you
-                    perHit -= toWuppy;
-                    if (perHit == 0)
-                    {
-                        // DamageResult.WasFullyBlocked: no HP lost and you had block (untouched).
-                        if (hitsLanded == 0) e.FirstHitFullyBlocked = s.P.Block > 0;
-                        hitsLanded++;
-                        for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, fullHit);
-                        continue;
-                    }
-                }
-
-                if (hitsLanded == 0 && e.Imbalanced) s.FullBlockNeeded[e.Id] = s.BlockDemand + perHit;
-                s.BlockDemand += perHit;
-                var blockBefore = s.P.Block;
-                var blocked = Math.Min(s.P.Block, perHit);
-                s.P.Block -= blocked;
-                var through = perHit - blocked;
-                var toOsty = s.P.OstyShields ? OstyLoses(s, Who.You, through) : 0;
-                s.OstyTaken += toOsty;
-                s.DamageThrough += through - toOsty;
-                var lost = HpLoss(s, -1, through - toOsty, e.Id, SimProps.Move);
-                YouLose(s, lost);
-                PlayerDamaged(s, -1, e.Id, SimProps.Move, blocked, lost);
-                // DamageResult.WasFullyBlocked: you had block and no damage got through after the
-                // AfterOsty modifiers (Tungsten Rod, Buffer...). Block only drops during an attack, so
-                // the first hit decides it.
-                if (hitsLanded == 0) e.FirstHitFullyBlocked = perHit > 0 && (blocked > 0 || blockBefore > 0) && toOsty == 0 && lost == 0;
-                landed += perHit;
-                hitsLanded++;
-
-                if (!dead && s.P.FlameBarrier > 0) Retaliate(s.P.FlameBarrier);
-                if (!dead && s.P.Reflect && blocked > 0) Retaliate(blocked);
-                for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, fullHit);
+                TakesHit(-1, perHit);
+                for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, perHit);
             }
             if (landed > 0) if (s.Log) s.Blockable.Add((hitsLanded > 1 ? $"{e.Name} ({hitsLanded} hits)" : e.Name, landed));
         }

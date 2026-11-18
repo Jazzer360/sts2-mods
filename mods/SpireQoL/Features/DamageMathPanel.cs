@@ -15,7 +15,7 @@ namespace SpireQoL.Features;
 ///   [osty]   − 3   (only while Osty is out)
 ///   ───────────
 ///          =  9      (what gets through your block)
-///   [heart]  + 3     (only with HP loss no block stops: Regret, Beckon, Bad Luck, Demise)
+///   [heart]  + 3     (only with HP loss no block stops: Regret, Beckon, Bad Luck)
 ///   [fairy]  31 HP   (only when Fairy in a Bottle or Lizard Tail keeps you alive: your HP after)
 ///
 /// The skull (and the chance) sits beside the last number, when the enemy turn kills you. With nothing blockable coming,
@@ -117,7 +117,7 @@ internal sealed class DamageMathPanel
         grid.AddChild(resultRow);
         _math.AddRange(new Control[] { _attackIcon, _incoming, defend, _block, rule1, rule2, eq, resultRow });
 
-        // HP loss no block stops (Regret, Beckon, Bad Luck, Demise), under the result: added to it, never against your block.
+        // HP loss no block stops (Regret, Beckon, Bad Luck), under the result: added to it, never against your block.
         _heartIcon = UiKit.Icon(GameIcons.Heart(), IconSize);
         _heartIcon.Visible = false;
         grid.AddChild(_heartIcon);

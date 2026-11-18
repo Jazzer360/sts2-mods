@@ -180,7 +180,7 @@ public sealed partial class SettingsMenu
             ("Block icon", "Your block when the turn ends, including what you gain then (Plating, Frost orbs, Orichalcum...)."),
             ("=", "What gets through your block: red, or 0 in green. "
                 + "When random targets are involved, it's the worst case for you."),
-            ("Heart", "HP loss no block can stop (Regret, Beckon, Bad Luck, Demise), on its own line under the result: more block won't help with it."),
+            ("Heart", "HP loss no block can stop (Regret, Beckon, Bad Luck), on its own line under the result: more block won't help with it."),
         };
         foreach (var (name, detail) in legend)
         {

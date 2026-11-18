@@ -1237,6 +1237,26 @@ public sealed class PlayFacts
 public sealed class SimInputs
 {
     public required SimState Start { get; init; }
+    /// <summary>
+    /// The same board with teammates' hands (decision #25: the checks use everything that isn't a roll), when Start leaves them
+    /// out (Count teammates' hands off); null when they're the same.
+    /// </summary>
+    public SimState? FullStart { get; init; }
+
+    /// <summary>
+    /// Whether a teammate's hand changes the play itself (its branches, before your end of turn): then the tabs, worked out
+    /// without it, can't be held to what happened, and the play's checks that rest on them aren't reported (counted instead).
+    /// </summary>
+    public bool HandChangesThePlay(SimPlay play)
+    {
+        if (FullStart == null) return false;
+        SimEngine.ApplyPlayTo(Start, play, out var shown, out var t1);
+        SimEngine.ApplyPlayTo(FullStart, play, out var full, out var t2);
+        if (t1 || t2) return true;
+        // The shown run's teammates have their hand cleared: compare everything else.
+        static IEnumerable<long> Keys(IEnumerable<SimState> b) => b.Select(x => x.WithoutTeammateHands().Key()).Distinct().OrderBy(k => k);
+        return !Keys(shown).SequenceEqual(Keys(full));
+    }
     public required IReadOnlyDictionary<Creature, int> Ids { get; init; }
     /// <summary>The teammates behind Start.Teammates, in order: a play aimed at one is keyed SimAdapter.AllyKey(index).</summary>
     public IReadOnlyList<Creature> Allies { get; init; } = Array.Empty<Creature>();

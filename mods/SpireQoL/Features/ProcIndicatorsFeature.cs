@@ -390,7 +390,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // changes its play without changing the board.
         var cacheKey = $"{card.GetHashCode()}|{f.Plays}|{f.Energy}|{f.AttackHits}|{f.BlockGains}|{f.Draws}|{f.Generated}|{CardNumbers(card)}";
         // The plays are built here (they read the game); only the simulation runs off the main thread.
-        var inputs = new SimInputs { Start = te.State, Ids = te.Ids, Allies = te.Teammates.Select(p => p.Creature).ToList() };
+        var inputs = new SimInputs
+        {
+            Start = te.State, Ids = te.Ids, Allies = te.Teammates.Select(p => p.Creature).ToList(),
+            FullStart = ReferenceEquals(te.FullState, te.State) ? null : te.FullState,
+        };
         foreach (var t in targets) inputs.PlayByTarget[t] = SimAdapter.Play(card, f, _me, _cs, te.Ids, t);
         f.Sim = inputs;
         if (_noCache || !_simCache.TryGetValue(cacheKey, out var task))

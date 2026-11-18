@@ -146,7 +146,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             var mate = f.Teammates[k];
             var name = SafeCharacter(mate);
-            var actual = damage.Where(d => d.Result.Receiver == mate.Creature).Sum(d => d.Result.UnblockedDamage);
+            // Overkill counts, as yours does (decision #93: the forecast isn't capped by their HP).
+            var actual = damage.Where(d => d.Result.Receiver == mate.Creature).Sum(d => d.Result.UnblockedDamage + d.Result.OverkillDamage);
             var (min, max) = (o.TeammateTakenMin(k), o.TeammateTakenMax(k));
             line += $"; teammate {name} HP lost {actual} (predicted {(min == max ? $"{max}" : $"{min}-{max}")})";
             var shown = k < f.TeammateView.Count ? f.TeammateView[k] : null;
@@ -158,7 +159,6 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 CountIn(Skips, "a teammate auto-played a card at end of turn");
                 continue;
             }
-            // Their HP can't go below 0: a teammate who died lost what they had.
             if (actual > max || (!o.Truncated && actual < min)) issues.Add($"teammate {name} HP lost: forecast {(min == max ? $"{max}" : $"{min}-{max}")}, actual {actual}");
             // Their Osty (Teammate Incoming Damage shows what he absorbs).
             if (mate.Osty is { } osty)

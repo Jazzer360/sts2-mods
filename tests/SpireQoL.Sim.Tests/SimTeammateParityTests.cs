@@ -104,6 +104,82 @@ public class SimTeammateParityTests
         Assert.Equal(Hp(SimEngine.Run(asYou)), Hp(SimEngine.Run(asMate)));
     }
 
+    /// <summary>
+    /// Decision #93: one engine for every player. The same player taking the enemy turn as you or as a teammate ends with the same
+    /// results record: HP lost, through block, Incoming, the unblockable part, Wuppy's, Osty's, death and what prevented it.
+    /// </summary>
+    [Theory]
+    [InlineData("block")]
+    [InlineData("Wuppy")]
+    [InlineData("Osty")]
+    [InlineData("Tungsten Rod")]
+    [InlineData("Regret")]
+    [InlineData("Fairy in a Bottle")]
+    [InlineData("Lizard Tail")]
+    [InlineData("death")]
+    public void YouAndATeammateTakeTheEnemyTurnTheSame(string name)
+    {
+        static void Setup(string name, SimPlayer p)
+        {
+            p.Hp = 40;
+            switch (name)
+            {
+                case "block": p.Block = 12; break;
+                case "Wuppy": p.WuppyHp = 8; break;
+                case "Osty": p.OstyHp = 10; p.OstyShields = true; break;
+                case "Tungsten Rod": p.TungstenRod = 1; break;
+                case "Regret": p.HandCount = 3; p.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0)); break;
+                case "Fairy in a Bottle": p.Hp = 15; p.Fairies = 1; p.FairyHeal = 20; break;
+                case "Lizard Tail": p.Hp = 15; p.LizardTailHeal = 25; break;
+                case "death": p.Hp = 15; break;
+            }
+            if (name != "Osty") p.OstyShields = false;
+        }
+        var asYou = new SimState { Enemies = { Target(200, 10, 10) } };
+        Setup(name, asYou.P);
+        var asMate = new SimState { Enemies = { Target(200, 10, 10) } };
+        asMate.P.OstyShields = false;
+        var mate = new SimPlayer();
+        Setup(name, mate);
+        asMate.Teammates.Add(mate);
+
+        var you = SimEngine.Run(asYou).Worst.P;
+        var them = SimEngine.Run(asMate).Worst.Teammates[0];
+        Assert.Equal(
+            (you.Taken, you.Through, you.Incoming, you.UnblockableTaken, you.WuppyTaken, you.OstyTaken, you.Died, you.FairiesUsed, you.LizardTailUsed, you.Hp),
+            (them.Taken, them.Through, them.Incoming, them.UnblockableTaken, them.WuppyTaken, them.OstyTaken, them.Died, them.FairiesUsed, them.LizardTailUsed, them.Hp));
+    }
+
+    [Fact]
+    public void ATeammatesHandDoesntChangeYourPlay()
+    {
+        // Their hand acts at the end of turn (Regret, Ethereal cards), never during your play: the play gives the same branches
+        // with or without it (SimInputs.HandChangesThePlay: the card play check's tabs stand either way).
+        var s = new SimState { Enemies = { Target(50, 10) } };
+        var mate = new SimPlayer { Hp = 60, HandCount = 3, Fading = 2, FeelNoPain = 3 };
+        mate.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        s.Teammates.Add(mate);
+        var play = new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 6 }, Hits = 1, HandCard = 7, HandDelta = -1 };
+        SimEngine.ApplyPlayTo(s, play, out var full, out _);
+        SimEngine.ApplyPlayTo(s.WithoutTeammateHands(), play, out var shown, out _);
+        static long[] Keys(List<SimState> b) => b.Select(x => x.WithoutTeammateHands().Key()).OrderBy(k => k).ToArray();
+        Assert.Equal(Keys(shown), Keys(full));
+    }
+
+    [Fact]
+    public void ATeammatesRegretIsShownOnlyWithTheirHand()
+    {
+        // Regret in their hand (3 cards): 3 HP no block stops. The checks count it; what's shown leaves their hand out.
+        var s = new SimState { Enemies = { Target(50, 10) } };
+        var mate = new SimPlayer { Hp = 60, Block = 4, HandCount = 3 };
+        mate.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        s.Teammates.Add(mate);
+        var full = SimEngine.Run(s).TeammateWorst(0);
+        Assert.Equal((10, 3, 9), (full.Incoming, full.UnblockableTaken, full.Taken));
+        var shown = SimEngine.Run(s.WithoutTeammateHands()).TeammateWorst(0);
+        Assert.Equal((10, 0, 6), (shown.Incoming, shown.UnblockableTaken, shown.Taken));
+    }
+
     [Fact]
     public void CloakClaspCoversPartOfATeammatesShortfall()
     {

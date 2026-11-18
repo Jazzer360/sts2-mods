@@ -769,6 +769,16 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 foreach (var x in fromSim) model.Add($"not checked ({why}): {x}");
                 issues.RemoveAll(fromSim.Contains);
             }
+            if (issues.Count > 0 && w.Facts?.Sim is { FullStart: not null } handSim
+                && (handSim.PlayByTarget.TryGetValue(handSim.KeyFor(w.Target), out var handPlay) || handSim.PlayByTarget.TryGetValue(-1, out handPlay))
+                && handSim.HandChangesThePlay(handPlay))
+            {
+                // Count teammates' hands is off and their hand changes the play: its tabs were worked out without what decides it
+                // (decision #25), so they can't be held to what happened. The state after the play is checked with it.
+                var fromSim = issues.Where(SimDependent).ToList();
+                foreach (var x in fromSim) model.Add($"not checked (a teammate's hand changes it; Count teammates' hands is off): {x}");
+                issues.RemoveAll(fromSim.Contains);
+            }
             foreach (var line in model.Where(x => x.Contains("not checked", StringComparison.Ordinal)))
             {
                 var reason = SkipReason(line);
@@ -1396,7 +1406,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Add("state after the play: not checked (no simulated play for its target)");
             return;
         }
-        SimEngine.ApplyPlayTo(sim.Start, play, out var branches, out var truncated);
+        // Teammates' hands included (decision #25: the check uses everything that isn't a roll).
+        SimEngine.ApplyPlayTo(sim.FullStart ?? sim.Start, play, out var branches, out var truncated);
         if (truncated || branches.Count == 0)
         {
             model.Add("state after the play: not checked (too many branches)");

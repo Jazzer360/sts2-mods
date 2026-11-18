@@ -10,8 +10,8 @@ namespace SpireQoL.Features;
 /// A small stacked "math problem" just left of the player's block indicator (DamageMathPanel).
 /// Incoming is damage that will actually land: enemies Poison kills before acting are left out,
 /// and hits after retaliation (Thorns etc.) kills an attacker are cancelled (TurnEndModel).
-/// Block is your block at end of turn. The result is what gets through it; HP loss no block stops (Regret, Beckon, Bad Luck,
-/// Demise) is a line of its own under it, so it never reads as block you're short of. Spec: docs/FEATURES.md#incoming-damage.
+/// Block is your block at end of turn. The result is what gets through it; HP loss no block stops (Regret, Beckon, Bad Luck)
+/// is a line of its own under it, so it never reads as block you're short of. Spec: docs/FEATURES.md#incoming-damage.
 /// </summary>
 public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 {

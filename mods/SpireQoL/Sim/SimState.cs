@@ -340,8 +340,8 @@ public sealed class SimPlayer
     public int WuppyHp;
 
     /// <summary>
-    /// HP (int.MaxValue: not tracked). A teammate's hits stop at 0. Yours: reaching 0 uses up what prevents
-    /// death (Fairy in a Bottle, then Lizard Tail), each healing you from 0; with none left, you die (SimState.Died).
+    /// HP (int.MaxValue: not tracked). Reaching 0 uses up what prevents death (Fairy in a Bottle, then Lizard Tail), each
+    /// healing the player from 0; with none left, they die (Died). The same for every player (decision #93).
     /// </summary>
     public int Hp = int.MaxValue;
     /// <summary>
@@ -350,11 +350,18 @@ public sealed class SimPlayer
     /// </summary>
     public int Fairies, FairyHeal, LizardTailHeal;
 
-    // Teammates only (yours are on SimState: Taken, OstyTaken, DamageThrough).
-    /// <summary>A teammate's HP lost, through their block, and lost by their Osty this turn.</summary>
+    // ---- results, for every player (decision #93: one engine; yours are read through SimState too: Taken, Died...)
+    /// <summary>HP lost (after block and the HP-loss modifiers, overkill included), damage through block, and lost by Osty.</summary>
     public int Taken, Through, OstyTaken;
-    /// <summary>A teammate's damage landing on them (before block) and block they gained: their Incoming Damage.</summary>
+    /// <summary>The part of Taken no block could stop (Regret, Beckon, Bad Luck: SimEngine.LandUnblockable).</summary>
+    public int UnblockableTaken;
+    /// <summary>Blockable damage landing on the player (before block): their Incoming Damage. Block a teammate gained.</summary>
     public int Incoming, BlockGained;
+    /// <summary>Damage Wuppy took for the player (hits it redirected: never reaches them).</summary>
+    public int WuppyTaken;
+    /// <summary>Reached 0 HP with nothing left to prevent it; what kept them alive (Fairy in a Bottle potions used, Lizard Tail).</summary>
+    public bool Died, LizardTailUsed;
+    public int FairiesUsed;
     /// <summary>
     /// Beacon of Hope: half of each block this player gains on the players' side goes to every other
     /// living player (BeaconOfHopePower.AfterBlockGained). BeaconGiving: held while it gives (the game's
@@ -449,12 +456,12 @@ public sealed class SimState
     /// <summary>A step ran out of branches inside itself (SimEngine.Then): the run is out of branches.</summary>
     internal bool OutOfBranches;
 
-    // ---- results (per branch)
-    public int Taken;
-    /// <summary>The part of Taken that no block could stop (Regret, Beckon, Bad Luck, Demise: SimEngine.LandUnblockable), after the HP-loss modifiers.</summary>
-    public int UnblockableTaken;
+    // ---- results (per branch). Yours are on your SimPlayer like every player's (decision #93); these read them.
+    [JsonIgnore] public int Taken { get => P.Taken; set => P.Taken = value; }
+    /// <summary>The part of Taken that no block could stop (Regret, Beckon, Bad Luck: SimEngine.LandUnblockable), after the HP-loss modifiers.</summary>
+    [JsonIgnore] public int UnblockableTaken { get => P.UnblockableTaken; set => P.UnblockableTaken = value; }
     /// <summary>You reach 0 HP with nothing left to prevent death (your HP tracked: SimPlayer.Hp).</summary>
-    public bool Died;
+    [JsonIgnore] public bool Died { get => P.Died; set => P.Died = value; }
     /// <summary>An auto-play at the end of your turn couldn't be simulated in this branch (Stampede or Simpleton picked a card that changes your hand): later auto-plays aren't either.</summary>
     public bool AutoPlaysUnknown;
     /// <summary>
@@ -485,13 +492,13 @@ public sealed class SimState
     /// </summary>
     public PowerSet Fired = PowerSet.Empty, FiredAny = PowerSet.Empty;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
-    public int FairiesUsed;
-    public bool LizardTailUsed;
+    [JsonIgnore] public int FairiesUsed { get => P.FairiesUsed; set => P.FairiesUsed = value; }
+    [JsonIgnore] public bool LizardTailUsed { get => P.LizardTailUsed; set => P.LizardTailUsed = value; }
 
     /// <summary>Damage your pet Wuppy took for you (enemy attacks it redirected).</summary>
-    public int WuppyTaken;
-    public int OstyTaken;
-    public int DamageThrough;
+    [JsonIgnore] public int WuppyTaken { get => P.WuppyTaken; set => P.WuppyTaken = value; }
+    [JsonIgnore] public int OstyTaken { get => P.OstyTaken; set => P.OstyTaken = value; }
+    [JsonIgnore] public int DamageThrough { get => P.Through; set => P.Through = value; }
     public int SkippedPoisoned;
     public int SkippedEndOfTurn;
     public int CancelledHits;

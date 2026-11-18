@@ -215,11 +215,11 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 [osty]   − 4     what Osty absorbs (Necrobinder, only while Osty is out; red if it dies)
 ──────────
       =   9     what gets through your block (red), or 0 in green
-[heart]  + 3    only with HP loss no block stops (Regret, Beckon, Bad Luck, Demise): what it takes, on its own line so it never reads as block you're short of
+[heart]  + 3    only with HP loss no block stops (Regret, Beckon, Bad Luck): what it takes, on its own line so it never reads as block you're short of
 [fairy]  31 HP  only when Fairy in a Bottle or Lizard Tail keeps you alive: its icon, and your HP after the enemy turn
 ```
 
-Beside the last number (the heart line when there is one): a skull when this might kill you, with the chance when a roll decides it, and ? while not every outcome is explored. The skull and the chance come from the whole enemy turn, both lines together. With nothing blockable coming, only the heart line shows. Teammate Incoming Damage still adds HP loss no block stops into its sum.
+Beside the last number (the heart line when there is one): a skull when this might kill you, with the chance when a roll decides it, and ? while not every outcome is explored. The skull and the chance come from the whole enemy turn, both lines together. With nothing blockable coming, only the heart line shows. Teammate Incoming Damage shows it the same way.
 
 **Extra turns** (decision #40): when ending your turn now gives you another turn before the enemies act (the game's own `Hook.ShouldTakeExtraTurn`: Pael's Eye with nothing played this turn, Extra Turn), the top row shows the source's icon and `+1 turn`. The sum below is still the enemies' next turn, which comes after that one, and the block you gain at the end of this turn will be gone by then.
 
@@ -239,11 +239,11 @@ Beside the last number (the heart line when there is one): a skull when this mig
   - Flame Barrier hits after each blow.
   - Reflect, after each blow, deals the damage you blocked.
   - Retaliation damage goes through the game's damage hook, so the enemy's caps and Vulnerable apply. It hits the enemy's block first; enemy block is assumed cleared at its turn start unless it has Barricade.
-- **Unblockable HP loss** (Regret, Bad Luck, Beckon, Demise: anything the simulator lands as unblockable on you) is its own line under the result (the heart), not part of the incoming or the result: block does nothing to it. It's what you lose to it after the HP-loss effects (Tungsten Rod...), the worst outcome's.
+- **Unblockable HP loss** (Regret, Bad Luck, Beckon: anything the simulator lands as unblockable on you) is its own line under the result (the heart), not part of the incoming or the result: block does nothing to it. It's what you lose to it after the HP-loss effects (Tungsten Rod...), the worst outcome's.
 
 **Sources:**
 - **Blockable:** enemy attack intents (`AttackIntent.GetSingleDamage` × hits, the same numbers the game shows); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration and Insatiable Dominion debuffs (Constrict and Magic Bomb only while the enemy that applied them lives). Each goes through the game's damage math on you, so Intangible makes it 1.
-- **Unblockable:** Regret (HP loss = cards in hand), Bad Luck, Beckon, Demise.
+- **Unblockable:** Regret (HP loss = cards in hand), Bad Luck, Beckon; Demise on an enemy (Powdered Demise).
 - **End-of-turn block** (the "block" line = current block + these):
   - Plating
   - Frost orb passives (times the game's passive trigger count, so trigger-boosting effects are included)
@@ -257,7 +257,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
 
 **Wuppy** (event relic): while your pet Wuppy lives it takes every attack aimed at you, before your block, so those hits aren't in your Incoming Damage (your Flame Barrier and Reflect don't react to them; your Thorns still does, since you're still the attack's target). A hit bigger than Wuppy's HP kills it and the rest of that hit goes on to your block and you, as do the hits after it. A teammate's Wuppy does the same for them.
 
-**A teammate's (multiplayer, Teammate Incoming Damage, its own setting and widget):** hovering a teammate (the game then shows their HP bar, `NCreature.OnFocus`, read through `NCreature.IsFocused`) shows the same sum for them, just left of their block indicator. It comes from the same simulation as yours, which leaves out the cards in their hand (decisions #25, #38): their hand size counts (Cloak Clasp), the cards in it (Burn, Regret, Ethereal cards that exhaust) don't, unless **Count teammates' hands** is on. Their block, powers, orbs, relics and Osty count as yours do. The forecast check compares their HP and their Osty's against it every enemy turn.
+**A teammate's (multiplayer, Teammate Incoming Damage, its own setting and widget):** hovering a teammate (the game then shows their HP bar, `NCreature.OnFocus`, read through `NCreature.IsFocused`) shows the same sum for them, just left of their block indicator. It comes from the same simulation as yours, which leaves out the cards in their hand (decisions #25, #38): their hand size counts (Cloak Clasp), the cards in it (Burn, Regret, Ethereal cards that exhaust) don't, unless **Count teammates' hands** is on. Their block, powers, orbs, relics, potions (Fairy in a Bottle) and Osty count as yours do: every player takes the enemy turn through the same simulation (decision #93). HP loss no block stops is its own heart line, as on yours. The forecast check compares their HP (overkill included, as yours) and their Osty's against it every enemy turn, always with their hand.
 
 **Game UI touched:** none; our own widget.
 

@@ -60,7 +60,7 @@ public sealed class TurnEndModel
     public int BlockGain => EndOfTurnBlock.Sum(s => s.Amount);
     public int BlockableTotal => Blockable.Sum(s => s.Amount);
     /// <summary>
-    /// What you lose in the worst outcome that no block could stop (Regret, Beckon, Bad Luck, Demise), after the HP-loss modifiers:
+    /// What you lose in the worst outcome that no block could stop (Regret, Beckon, Bad Luck), after the HP-loss modifiers:
     /// Incoming Damage shows it on its own line, under what gets through your block (Taken − this).
     /// </summary>
     public int UnblockableTaken { get; private set; }
@@ -164,9 +164,9 @@ public sealed class TurnEndModel
     /// <summary>
     /// A teammate's Incoming Damage as shown (from the shown outcome: without the cards in their hand unless
     /// CountTeammateHands): damage landing on them, their block by the enemy turn, what their Osty absorbs (OstyHp 0:
-    /// not out), and HP lost (worst and best branch).
+    /// not out), HP lost (worst and best branch), and the part of it no block stops (on its own line, as yours: decision #93).
     /// </summary>
-    public sealed record TeammateForecast(Player Player, int Incoming, int Block, int OstyHp, int OstyTaken, int TakenMin, int TakenMax)
+    public sealed record TeammateForecast(Player Player, int Incoming, int Block, int OstyHp, int OstyTaken, int TakenMin, int TakenMax, int Unblockable = 0)
     {
         public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
     }
@@ -184,7 +184,8 @@ public sealed class TurnEndModel
         {
             var worst = o.TeammateWorst(k);
             view.Add(new TeammateForecast(Teammates[k], worst.Incoming, State.Teammates[k].Block + worst.BlockGained,
-                State.Teammates[k].OstyShields ? State.Teammates[k].OstyHp : 0, worst.OstyTaken, o.TeammateTakenMin(k), o.TeammateTakenMax(k)));
+                State.Teammates[k].OstyShields ? State.Teammates[k].OstyHp : 0, worst.OstyTaken, o.TeammateTakenMin(k), o.TeammateTakenMax(k),
+                Math.Min(worst.UnblockableTaken, o.TeammateTakenMax(k))));
         }
         return view;
     }

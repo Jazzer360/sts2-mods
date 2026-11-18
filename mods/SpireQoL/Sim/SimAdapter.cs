@@ -264,15 +264,7 @@ public static partial class SimAdapter
         FillAutoPlays(s.P, me, cs, ids);
         FillDrawPile(s.P, me, cs, ids);
         s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
-        // Your HP, and what keeps you alive at 0 (the Death Skull on Incoming Damage, Fairy and Lizard Tail): the heal
-        // brings you from 0 to that much (CreatureCmd.Heal; the HP setter drops the fraction).
-        s.P.Hp = me.Creature.CurrentHp;
-        var maxHp = me.Creature.MaxHp;
-        s.P.Fairies = SafeInt(() => me.Potions.Count(x => x.GetType().Name == "FairyInABottle"));
-        s.P.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
-        s.P.LizardTailHeal = me.Relics.FirstOrDefault(r => r.GetType().Name == "LizardTail") is { IsUsedUp: false } tail
-            ? Math.Max(1, (int)(maxHp * (Sts2State.Var(tail, "Heal", 50) / 100m)))
-            : 0;
+        FillSurvival(s.P, me);
 
         // Teammates (multiplayer): built like you (FillPlayer), in player order. Decision #25: their hand is
         // used too (their Ethereal exhausts can kill enemies); what's shown runs without it (SimState.WithoutTeammateHands).
@@ -291,7 +283,7 @@ public static partial class SimAdapter
             foreach (var pw in oc.Powers) SimReaders.AddVars(s, mateId, pw);
             foreach (var r in other.Relics) SimReaders.AddVars(s, mateId, r);
             FillAutoPlays(t, other, cs, ids, mateId);
-            t.Hp = oc.CurrentHp;
+            FillSurvival(t, other); // their potions show in the game's expanded player view, their relics on screen
             t.BeaconOfHope = oc.HasPower<BeaconOfHopePower>();
             s.Teammates.Add(t);
             teamCreatures.Add(oc);
@@ -308,6 +300,21 @@ public static partial class SimAdapter
             }
         }
         return s;
+    }
+
+    /// <summary>
+    /// A player's HP, and what keeps them alive at 0 (the Death Skull, Fairy in a Bottle and Lizard Tail), the same for every
+    /// player (decision #93): the heal brings them from 0 to that much (CreatureCmd.Heal; the HP setter drops the fraction).
+    /// </summary>
+    private static void FillSurvival(SimPlayer p, Player player)
+    {
+        p.Hp = player.Creature.CurrentHp;
+        var maxHp = player.Creature.MaxHp;
+        p.Fairies = SafeInt(() => player.Potions.Count(x => x.GetType().Name == "FairyInABottle"));
+        p.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
+        p.LizardTailHeal = player.Relics.FirstOrDefault(r => r.GetType().Name == "LizardTail") is { IsUsedUp: false } tail
+            ? Math.Max(1, (int)(maxHp * (Sts2State.Var(tail, "Heal", 50) / 100m)))
+            : 0;
     }
 
     /// <summary>
