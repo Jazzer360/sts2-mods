@@ -113,12 +113,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// <summary>The option's task: the window stays open until it ends (card choices can take a while).</summary>
     private static void AfterChosen(EventOption __instance, Task __result)
     {
-        if (_window is { } w && w.Option == __instance) w.Task = __result;
+        try { if (_window is { } w && w.Option == __instance) w.Task = __result; }
+        catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-chosen"); }
     }
 
     private static void OnFlashed(RelicModel relic, IEnumerable<MegaCrit.Sts2.Core.Entities.Creatures.Creature> _)
     {
-        if (_window is { } w && !w.Flashed.Contains(relic)) w.Flashed.Add(relic);
+        try { if (_window is { } w && !w.Flashed.Contains(relic)) w.Flashed.Add(relic); }
+        catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-flash"); }
     }
 
     /// <summary>

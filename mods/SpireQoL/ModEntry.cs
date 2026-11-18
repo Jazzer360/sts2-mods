@@ -57,10 +57,15 @@ public static class ModEntry
         reporter.TagProvider = () =>
         {
             var tags = new Dictionary<string, string>();
-            // Every other loaded mod (none that change the game: those stop reports, see SkipReason).
-            var mods = Sts2Mods.Core.Game.OtherMods.Loaded(typeof(ModEntry).Assembly);
-            var list = mods.Count == 0 ? "none" : string.Join(", ", mods);
-            tags["other_mods"] = list.Length <= 200 ? list : list[..197] + "...";
+            // Every other loaded mod, and the ones among them that change the game (a crash is sent with those loaded only when
+            // none of their code is in it: decision #96).
+            static string Short(IReadOnlyList<string> mods)
+            {
+                var list = mods.Count == 0 ? "none" : string.Join(", ", mods);
+                return list.Length <= 200 ? list : list[..197] + "...";
+            }
+            tags["other_mods"] = Short(Sts2Mods.Core.Game.OtherMods.Loaded(typeof(ModEntry).Assembly));
+            tags["gameplay_mods"] = Short(Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly));
             if (Sts2State.Combat is { } cs && Sts2State.Me is { } me)
             {
                 var players = cs.Players.ToList();
@@ -71,13 +76,20 @@ public static class ModEntry
         };
         reporter.ContextProvider = () => Diagnostics.Snapshot.Capture(ctx);
         // Predictions model the unmodded game: with another mod that changes it (affects_gameplay, or adds cards,
-        // relics, powers or monsters), its mechanics would show up as our mismatches, so nothing is sent.
+        // relics, powers or monsters), its mechanics would show up as our mismatches, so no mismatch is sent. A crash is still
+        // sent then, unless that mod's code is in its stack (decision #96): our code failing on a modded game is ours to fix.
         // A build older than reporting.json's floor sends nothing: its reports are about code rewritten since (decision #81).
         var floor = Sts2Mods.Core.Diagnostics.ReportFloor.Start(SpireQoL.Features.UpdateNoticeFeature.Repo, Id,
             typeof(ModEntry).Assembly.GetName().Version ?? new Version(0, 0, 0), Log);
-        reporter.SkipReason = () => Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly) is { Count: > 0 } other
+        reporter.SkipReason = floor.SkipReason;
+        static string? GameplayMods() => Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly) is { Count: > 0 } other
             ? "other mods that change the game are loaded (" + string.Join(", ", other) + ")"
-            : floor.SkipReason();
+            : null;
+        reporter.MismatchSkipReason = GameplayMods;
+        reporter.CrashSkipReason = ex => GameplayMods() is { } why
+            && Sts2Mods.Core.Game.OtherMods.InStack(ex, typeof(ModEntry).Assembly, Id + ".") is { } mod
+                ? $"{why}, and {mod}'s code is in the crash"
+                : null;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
         Sts2State.Init();
         // A private member a rule reads is gone (a game update renamed it): the rule silently uses its

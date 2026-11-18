@@ -98,12 +98,19 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     /// <summary>Targeting cancelled (OnSelect returns false): Mend is on offer again, and there's nothing to check.</summary>
     private static void AfterMend(MendRestSiteOption __instance, Task<bool> __result)
     {
-        __result.ContinueWith(t =>
+        try
         {
-            if (t.IsCompletedSuccessfully && t.Result) return;
-            Used.Remove(__instance);
-            _pendingMend = null;
-        });
+            __result?.ContinueWith(t =>
+            {
+                if (t.IsCompletedSuccessfully && t.Result) return;
+                Used.Remove(__instance);
+                _pendingMend = null;
+            });
+        }
+        catch (Exception ex)
+        {
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "rest-mend");
+        }
     }
 
     private MovableWidget? _mine;

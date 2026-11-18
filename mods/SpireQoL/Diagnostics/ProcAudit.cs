@@ -557,6 +557,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// <summary>New history entries belong to the play action running when they were added.</summary>
     private void OnHistoryChanged()
     {
+        // Called from the game's CombatHistory.Changed event: an exception here would surface in the game's code.
+        try { HistoryChanged(); }
+        catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "audit-history"); }
+    }
+
+    private void HistoryChanged()
+    {
         if (_history == null) return;
         var count = _history.Entries.Count();
         if (count < _attributed) _attributed = count; // cleared
@@ -571,9 +578,17 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     private void Flash(AbstractModel m)
     {
-        if (_history == null || _current == null) return;
-        OnHistoryChanged();
-        _current.Flashes.Add((_history.Entries.Count(), m));
+        // Called from the game's Flashed events.
+        try
+        {
+            if (_history == null || _current == null) return;
+            HistoryChanged();
+            _current.Flashes.Add((_history.Entries.Count(), m));
+        }
+        catch (Exception ex)
+        {
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "audit-flash");
+        }
     }
 
     /// <summary>

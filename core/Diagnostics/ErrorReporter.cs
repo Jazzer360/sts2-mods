@@ -53,7 +53,16 @@ public sealed class ErrorReporter
     /// </summary>
     public Func<string?>? SkipReason { get; set; }
 
-    private bool _skipLogged;
+    /// <summary>Why a mismatch may not be sent (null: nothing stops it): another mod that changes the game is loaded.</summary>
+    public Func<string?>? MismatchSkipReason { get; set; }
+
+    /// <summary>
+    /// Why a crash may not be sent (null: nothing stops it): another mod that changes the game is loaded and its code is in the
+    /// crash's stack. A crash only our code (and the game's) is in is sent whatever else is loaded.
+    /// </summary>
+    public Func<Exception, string?>? CrashSkipReason { get; set; }
+
+    private readonly HashSet<string> _skipsLogged = new();
 
     private ErrorReporter(SentryClient? client, ModLog log)
     {
@@ -108,7 +117,9 @@ public sealed class ErrorReporter
         // compile, wherever it's called from): one report per member, not one per caller.
         var missing = ex is MissingMemberException or TypeLoadException;
         var fingerprint = missing ? new[] { "crash", "missing-member", ex.Message } : new[] { "crash", where, ex.GetType().Name, top };
-        Send(fingerprint, evt =>
+        string? skip;
+        try { skip = CrashSkipReason?.Invoke(ex); } catch { skip = null; }
+        Send(fingerprint, skip, evt =>
         {
             evt.Level = SentryLevel.Error;
             evt.SetTag("kind", "crash");
@@ -125,7 +136,9 @@ public sealed class ErrorReporter
     public void Mismatch(string audit, string title, IEnumerable<string> fingerprint, string details, IReadOnlyDictionary<string, string>? extra = null,
         IReadOnlyDictionary<string, string>? tags = null)
     {
-        Send(new[] { "mismatch", audit }.Concat(fingerprint).ToArray(), evt =>
+        string? skip;
+        try { skip = MismatchSkipReason?.Invoke(); } catch { skip = null; }
+        Send(new[] { "mismatch", audit }.Concat(fingerprint).ToArray(), skip, evt =>
         {
             evt.Level = SentryLevel.Warning;
             evt.Message = new SentryMessage { Formatted = title };
@@ -144,15 +157,17 @@ public sealed class ErrorReporter
         }, null);
     }
 
-    private void Send(string[] fingerprint, Action<SentryEvent> fill, Exception? ex)
+    private void Send(string[] fingerprint, string? kindSkip, Action<SentryEvent> fill, Exception? ex)
     {
         if (_client == null || !Active) return;
         string? skip;
         try { skip = SkipReason?.Invoke(); } catch { skip = null; }
+        skip ??= kindSkip;
         if (skip != null)
         {
-            if (!_skipLogged) _log.Info($"error reports not sent: {skip}");
-            _skipLogged = true;
+            bool first;
+            lock (_lock) first = _skipsLogged.Add(skip);
+            if (first) _log.Info($"{fingerprint[0]} reports not sent: {skip}");
             return;
         }
         var key = string.Join("|", fingerprint);

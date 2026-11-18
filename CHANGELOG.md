@@ -6,6 +6,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.19.4
+#### Fixed
+- A few of the mod's reactions to the game's own events (combat history changes, relic and power flashes, choosing an event option, Mend) could let an error reach the game's code; they now catch it.
+- With a mod that changes the game loaded, a crash in Spire QoL's own code is reported again (mismatches still aren't); a crash with that mod's code in it isn't.
+
+### Main Saves 1.0.11
+#### Fixed
+- Rebuilt with the shared error reporting update.
+
 ### Spire QoL 1.19.3
 #### Fixed
 - On Steam's main branch (game v0.113.0), no card's tabs were simulated: the mod named a game member only the beta branch has. Proc tabs and lethal tabs work there again.
