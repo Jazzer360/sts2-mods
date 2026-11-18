@@ -451,11 +451,11 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ## Exploration Progress
 
-**What you see:** during your turn, while predictions are still working through every outcome in the background (decision #87: a fight with more random outcomes than the first pass covers, which is rare), a small clock (the game's time-limit power icon) and a thin progress bar just below the End Turn button: how far along those explorations are together (the mean share of the rolls each has explored). Hidden otherwise. Until they finish, whatever isn't certain carries a `?` (decision #88): Incoming Damage's result, the Death Skull's range, a lethal tab's chance.
+**What you see:** during your turn, while predictions are still working through every outcome in the background (decision #87: a fight with more random outcomes than the first pass covers, which is rare), a small clock (the run timer's, from the top bar) and a thin progress bar just below the End Turn button: how far along those explorations are together (the mean share of the rolls each has explored). Hidden otherwise. Until they finish, whatever isn't certain carries a `?` (decision #88): Incoming Damage's result, the Death Skull's range, a lethal tab's chance.
 
 **Settings:** the `exploration-progress` switch. A movable widget (attached below the End Turn button by default).
 
-**Game UI touched:** reads the End Turn button's place (`NCombatUi.EndTurnButton`); nothing of the game's is changed. No Harmony patches.
+**Game UI touched:** reads the End Turn button's place (`NCombatUi.EndTurnButton`) and the run timer's clock picture (`NTopBar.Timer`); nothing of the game's is changed. No Harmony patches.
 
 ---
 

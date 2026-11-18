@@ -385,7 +385,7 @@ public sealed partial class SettingsMenu
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
             + "With a chance when a roll decides it (General: Death chance), and a range with ? while not every outcome is explored yet.");
         var progress = UiKit.Row(6);
-        progress.AddChild(UiKit.Icon(GameIcons.Power(typeof(BattlewornDummyTimeLimitPower)), 22));
+        progress.AddChild(UiKit.Icon(GameIcons.Clock(), 22));
         progress.AddChild(new ProgressBar
         {
             MinValue = 0, MaxValue = 1, Value = 0.6, ShowPercentage = false, CustomMinimumSize = new Vector2(90, 8),

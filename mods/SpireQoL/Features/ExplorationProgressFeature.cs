@@ -11,7 +11,7 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// A small clock and progress bar under the End Turn button while predictions are still exploring their outcomes in the
+/// A small clock (the run timer's, from the top bar) and progress bar under the End Turn button while predictions are still exploring their outcomes in the
 /// background (decision #89): how far along they are together. Hidden the rest of the time, which is nearly always: most
 /// fights finish within the frame. Anything not yet certain carries a ? where it's shown (decision #88).
 /// Spec: docs/FEATURES.md#exploration-progress.
@@ -21,6 +21,7 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
     private readonly QolContext _ctx;
     private MovableWidget? _widget;
     private ProgressBar? _bar;
+    private TextureRect? _clock;
 
     public ExplorationProgressFeature(QolContext ctx) => _ctx = ctx;
 
@@ -44,7 +45,8 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
         _widget = _ctx.Widget(Id, "Exploration Progress", DefaultLayout);
         _widget.AttachTo(EndTurnRect, AttachSide.Below);
         var row = UiKit.Row(6);
-        row.AddChild(UiKit.Icon(GameIcons.Power(typeof(BattlewornDummyTimeLimitPower)), 22));
+        _clock = UiKit.Icon(GameIcons.Clock(), 22);
+        row.AddChild(_clock);
         _bar = Bar();
         row.AddChild(_bar);
         _widget.Content.AddChild(row);
@@ -54,7 +56,9 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
     {
         var (count, progress) = Sts2State.IsPlayerTurn ? SimJob.Progress() : (0, 1);
         _widget!.HasContent = count > 0;
-        if (count > 0) _bar!.Value = progress;
+        if (count == 0) return;
+        _bar!.Value = progress;
+        _clock!.Texture = GameIcons.Clock(); // the run timer's clock, once the top bar exists
     }
 
     /// <summary>The End Turn button (NCombatUi.EndTurnButton) on screen.</summary>
