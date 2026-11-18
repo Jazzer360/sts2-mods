@@ -761,6 +761,7 @@ public static partial class SimEngine
         if (s.Log) s.Unblockable.Add((name, amount));
         var lost = HpLoss(s, -1, amount, dealer, props);
         YouLose(s, lost);
+        s.UnblockableTaken += lost;
         PlayHp(s, amount, lost);
         PlayerDamaged(s, -1, dealer, props, 0, lost);
     }

@@ -451,6 +451,8 @@ public sealed class SimState
 
     // ---- results (per branch)
     public int Taken;
+    /// <summary>The part of Taken that no block could stop (Regret, Beckon, Bad Luck, Demise: SimEngine.LandUnblockable), after the HP-loss modifiers.</summary>
+    public int UnblockableTaken;
     /// <summary>You reach 0 HP with nothing left to prevent death (your HP tracked: SimPlayer.Hp).</summary>
     public bool Died;
     /// <summary>An auto-play at the end of your turn couldn't be simulated in this branch (Stampede or Simpleton picked a card that changes your hand): later auto-plays aren't either.</summary>
@@ -743,7 +745,7 @@ public sealed class SimState
             }
         }
 
-        Add(P.Block); Add(P.Arrows); Add(Taken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(ParryingShieldFired ? 1 : 0);
+        Add(P.Block); Add(P.Arrows); Add(Taken); Add(UnblockableTaken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(ParryingShieldFired ? 1 : 0);
         Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         foreach (var e in Enemies)
         {

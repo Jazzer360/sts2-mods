@@ -178,8 +178,9 @@ public sealed partial class SettingsMenu
             ("Attack icon", "What lands on you: the enemies' intents (its tier matches the game's), plus Burn, Decay, Constrict and the like. "
                 + "An enemy that dies first (Poison, your end-of-turn damage) doesn't attack, and retaliation can stop a multi-hit partway."),
             ("Block icon", "Your block when the turn ends, including what you gain then (Plating, Frost orbs, Orichalcum...)."),
-            ("=", "What you'll lose: red, or 0 in green. HP loss block can't stop (Regret...) is included. "
+            ("=", "What gets through your block: red, or 0 in green. "
                 + "When random targets are involved, it's the worst case for you."),
+            ("Heart", "HP loss no block can stop (Regret, Beckon, Bad Luck, Demise), on its own line under the result: more block won't help with it."),
         };
         foreach (var (name, detail) in legend)
         {
@@ -201,6 +202,8 @@ public sealed partial class SettingsMenu
             p => p.Show(46, 6, null, 40, revive: (Potion<FairyInABottle>(), 23)));
         IncomingCell(flow, "Osty takes some", "Necrobinder: what Osty absorbs for you (red if it kills Osty).",
             p => p.Show(18, 5, (6, false), 7));
+        IncomingCell(flow, "Unblockable too", "Regret in hand: 3 HP lost whatever your block. The skull sits beside the last line.",
+            p => p.Show(14, 11, null, 3, unblockable: 3));
         IncomingCell(flow, "Another turn first", "Ending your turn now gives you another one before the enemies act (Pael's Eye, Extra Turn).",
             p => p.Show(12, 0, null, 12, extraTurn: Relic<PaelsEye>()));
         _rows!.AddChild(flow);

@@ -214,9 +214,12 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 [defend] − 5     your block at end of turn
 [osty]   − 4     what Osty absorbs (Necrobinder, only while Osty is out; red if it dies)
 ──────────
-      =   9     what you'll lose (red), or 0 in green; a skull beside it when this might kill you, with the chance when a roll decides it; ? while not every outcome is explored
+      =   9     what gets through your block (red), or 0 in green
+[heart]  + 3    only with HP loss no block stops (Regret, Beckon, Bad Luck, Demise): what it takes, on its own line so it never reads as block you're short of
 [fairy]  31 HP  only when Fairy in a Bottle or Lizard Tail keeps you alive: its icon, and your HP after the enemy turn
 ```
+
+Beside the last number (the heart line when there is one): a skull when this might kill you, with the chance when a roll decides it, and ? while not every outcome is explored. The skull and the chance come from the whole enemy turn, both lines together. With nothing blockable coming, only the heart line shows. Teammate Incoming Damage still adds HP loss no block stops into its sum.
 
 **Extra turns** (decision #40): when ending your turn now gives you another turn before the enemies act (the game's own `Hook.ShouldTakeExtraTurn`: Pael's Eye with nothing played this turn, Extra Turn), the top row shows the source's icon and `+1 turn`. The sum below is still the enemies' next turn, which comes after that one, and the block you gain at the end of this turn will be gone by then.
 
@@ -236,7 +239,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
   - Flame Barrier hits after each blow.
   - Reflect, after each blow, deals the damage you blocked.
   - Retaliation damage goes through the game's damage hook, so the enemy's caps and Vulnerable apply. It hits the enemy's block first; enemy block is assumed cleared at its turn start unless it has Barricade.
-- **Unblockable HP loss** (Regret, Bad Luck, Beckon, Demise) is added to both the incoming and the result.
+- **Unblockable HP loss** (Regret, Bad Luck, Beckon, Demise: anything the simulator lands as unblockable on you) is its own line under the result (the heart), not part of the incoming or the result: block does nothing to it. It's what you lose to it after the HP-loss effects (Tungsten Rod...), the worst outcome's.
 
 **Sources:**
 - **Blockable:** enemy attack intents (`AttackIntent.GetSingleDamage` × hits, the same numbers the game shows); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration and Insatiable Dominion debuffs (Constrict and Magic Bomb only while the enemy that applied them lives). Each goes through the game's damage math on you, so Intangible makes it 1.

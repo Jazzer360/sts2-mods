@@ -14,8 +14,12 @@ namespace SpireQoL.Features;
 ///   [defend] − 5
 ///   [osty]   − 3   (only while Osty is out)
 ///   ───────────
-///          =  9      (a skull beside it when this kills you)
+///          =  9      (what gets through your block)
+///   [heart]  + 3     (only with HP loss no block stops: Regret, Beckon, Bad Luck, Demise)
 ///   [fairy]  31 HP   (only when Fairy in a Bottle or Lizard Tail keeps you alive: your HP after)
+///
+/// The skull (and the chance) sits beside the last number, when the enemy turn kills you. With nothing blockable coming,
+/// only the heart line shows.
 ///
 /// Above it, [eye] +1 turn when ending your turn now gives you another turn first (Pael's Eye, Extra Turn): the
 /// enemies' turn shown comes after that one.
@@ -44,6 +48,12 @@ internal sealed class DamageMathPanel
     private readonly Texture2D?[] _attackTiers = new Texture2D?[5];
     private readonly TextureRect _extraTurnIcon;
     private readonly Label _extraTurn;
+    private readonly HBoxContainer _resultRow;
+    private readonly TextureRect _heartIcon;
+    private readonly HBoxContainer _unblockableRow;
+    private readonly Label _unblockable;
+    /// <summary>The blockable math (attack, defend, Osty, the rule, the result): hidden when only unblockable HP loss is coming.</summary>
+    private readonly List<Control> _math = new();
 
     public DamageMathPanel(Control parent)
     {
@@ -68,7 +78,8 @@ internal sealed class DamageMathPanel
         _incoming = Number(IncomingColor);
         grid.AddChild(_incoming);
 
-        grid.AddChild(UiKit.Icon(LoadIntentIcon("intent_defend"), IconSize));
+        var defend = UiKit.Icon(LoadIntentIcon("intent_defend"), IconSize);
+        grid.AddChild(defend);
         _block = Number(BlockColor);
         grid.AddChild(_block);
 
@@ -78,15 +89,17 @@ internal sealed class DamageMathPanel
         _osty = Number(OstyColor);
         grid.AddChild(_osty);
 
-        grid.AddChild(Rule());
-        grid.AddChild(Rule());
+        var rule1 = Rule();
+        var rule2 = Rule();
+        grid.AddChild(rule1);
+        grid.AddChild(rule2);
 
         var eq = UiKit.Label("=", FontSize, Colors.White);
         eq.HorizontalAlignment = HorizontalAlignment.Center;
         eq.CustomMinimumSize = new Vector2(IconSize, 0);
         grid.AddChild(eq);
         // The result, with the skull just left of it when the enemy turn kills you.
-        var resultRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        var resultRow = _resultRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         resultRow.AddThemeConstantOverride("separation", 4);
         // The chance it kills you, left of the skull, when a roll decides (decision #87).
         _deathChance = UiKit.Label("", (int)(FontSize * 0.75f), Colors.White);
@@ -102,6 +115,17 @@ internal sealed class DamageMathPanel
         _progress.Visible = false;
         resultRow.AddChild(_progress);
         grid.AddChild(resultRow);
+        _math.AddRange(new Control[] { _attackIcon, _incoming, defend, _block, rule1, rule2, eq, resultRow });
+
+        // HP loss no block stops (Regret, Beckon, Bad Luck, Demise), under the result: added to it, never against your block.
+        _heartIcon = UiKit.Icon(GameIcons.Heart(), IconSize);
+        _heartIcon.Visible = false;
+        grid.AddChild(_heartIcon);
+        _unblockableRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, Visible = false };
+        _unblockableRow.AddThemeConstantOverride("separation", 4);
+        _unblockable = Number(TakeColor);
+        _unblockableRow.AddChild(_unblockable);
+        grid.AddChild(_unblockableRow);
 
         // What keeps you alive (Fairy in a Bottle's or Lizard Tail's icon) and your HP after it heals you.
         _reviveIcon = UiKit.Icon(null, IconSize);
@@ -120,9 +144,27 @@ internal sealed class DamageMathPanel
     /// <param name="extraTurn">Ending your turn now gives you another turn before the enemies act: its source's icon.</param>
     /// <param name="deathChance">The chance it kills you ("40%", "40–55%"), when a roll decides; null when certain or not shown.</param>
     /// <param name="progress">"?" while not every outcome is explored; null when complete.</param>
+    /// <param name="unblockable">HP you lose that no block stops, shown on its own line under <paramref name="take"/> (what gets
+    /// through your block); null when none is coming.</param>
     public void Show(int incoming, int block, (int Taken, bool Dies)? osty, int take, bool dies = false, (Texture2D? Icon, int HpAfter)? revive = null,
-        Texture2D? extraTurn = null, string? deathChance = null, string? progress = null)
+        Texture2D? extraTurn = null, string? deathChance = null, string? progress = null, int? unblockable = null)
     {
+        var mathShown = unblockable == null || incoming > 0;
+        foreach (var c in _math) c.Visible = mathShown;
+        _heartIcon.Visible = unblockable != null;
+        _unblockableRow.Visible = unblockable != null;
+        _unblockable.Text = mathShown ? $"+ {unblockable}" : $"{unblockable}";
+        // The skull, the chance and the ? go beside the last number shown.
+        var last = unblockable != null ? _unblockableRow : _resultRow;
+        if (_skull.GetParent() != last)
+        {
+            foreach (var n in new Control[] { _deathChance, _skull, _progress }) n.GetParent()?.RemoveChild(n);
+            last.AddChild(_deathChance);
+            last.AddChild(_skull);
+            last.AddChild(_progress);
+            last.MoveChild(_deathChance, 0);
+            last.MoveChild(_skull, 1);
+        }
         _deathChance.Visible = dies && deathChance != null;
         _deathChance.Text = deathChance ?? "";
         _progress.Visible = progress != null;
@@ -141,8 +183,8 @@ internal sealed class DamageMathPanel
         _attackIcon.Texture = _attackTiers[AttackTier(incoming) - 1] ?? _attackTiers.FirstOrDefault(t => t != null);
         _incoming.Text = $"{incoming}";
         _block.Text = $"− {block}";
-        _ostyIcon.Visible = osty != null;
-        _osty.Visible = osty != null;
+        _ostyIcon.Visible = osty != null && mathShown;
+        _osty.Visible = osty != null && mathShown;
         if (osty is { } o)
         {
             _osty.Text = $"− {o.Taken}";

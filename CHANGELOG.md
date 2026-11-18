@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.19.0
+#### Added
+- Incoming Damage shows HP loss no block stops (Regret, Beckon, Bad Luck, Demise) on its own line with a heart, under what gets through your block, instead of adding it to the incoming damage: it no longer looks like block you're short of.
+
 ### Spire QoL 1.18.5
 #### Fixed
 - The audits no longer report a mismatch when the outcome that happened was one the simulator hadn't explored yet, or a branch it doesn't model: those checks are skipped and counted in the fight's summary.

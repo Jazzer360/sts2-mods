@@ -10,8 +10,8 @@ namespace SpireQoL.Features;
 /// A small stacked "math problem" just left of the player's block indicator (DamageMathPanel).
 /// Incoming is damage that will actually land: enemies Poison kills before acting are left out,
 /// and hits after retaliation (Thorns etc.) kills an attacker are cancelled (TurnEndModel).
-/// Block is your block at end of turn. The result adds unblockable HP loss (Regret, Demise...),
-/// since that's what you actually lose. Spec: docs/FEATURES.md#incoming-damage.
+/// Block is your block at end of turn. The result is what gets through it; HP loss no block stops (Regret, Beckon, Bad Luck,
+/// Demise) is a line of its own under it, so it never reads as block you're short of. Spec: docs/FEATURES.md#incoming-damage.
 /// </summary>
 public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 {
@@ -73,8 +73,10 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         var death = m.DeathChance;
         var dies = death.Possible || m.Dies;
         var chance = dies && !death.Certain && _ctx.Settings.DeathChance ? death.Text() : null;
-        _panel!.Show(m.BlockableTotal + m.UnblockableTotal, m.ExpectedBlock,
-            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken, dies, revive, ExtraTurnIcon(), chance, m.ProgressMark);
+        // The skull and the chance come from the whole outcome (both lines): the split is only how it's shown.
+        int? unblockable = m.UnblockableTotal > 0 ? m.UnblockableTaken : null;
+        _panel!.Show(m.BlockableTotal, m.ExpectedBlock,
+            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken - (unblockable ?? 0), dies, revive, ExtraTurnIcon(), chance, m.ProgressMark, unblockable);
     }
 
     /// <summary>

@@ -59,6 +59,11 @@ public sealed class TurnEndModel
 
     public int BlockGain => EndOfTurnBlock.Sum(s => s.Amount);
     public int BlockableTotal => Blockable.Sum(s => s.Amount);
+    /// <summary>
+    /// What you lose in the worst outcome that no block could stop (Regret, Beckon, Bad Luck, Demise), after the HP-loss modifiers:
+    /// Incoming Damage shows it on its own line, under what gets through your block (Taken − this).
+    /// </summary>
+    public int UnblockableTaken { get; private set; }
     public int UnblockableTotal => Unblockable.Sum(s => s.Amount);
     public int ExpectedBlock => CurrentBlock + BlockGain;
 
@@ -255,6 +260,7 @@ public sealed class TurnEndModel
             OstyTaken = outcome.OstyTakenMax,
             OstyTakenMin = outcome.OstyTakenMin,
             Dies = w.Died,
+            UnblockableTaken = Math.Min(w.UnblockableTaken, outcome.TakenMax),
             DeathChance = outcome.YouDieChance(),
             FairiesUsed = w.FairiesUsed,
             LizardTailUsed = w.LizardTailUsed,
