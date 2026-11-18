@@ -890,6 +890,9 @@ public static partial class SimEngine
     {
         static bool Any(SimPlayer p) => p.Stampede > 0 || p.Simpleton > 0 || p.ExhaustAutoPlays.Count > 0 || p.InvincibleBlock > 0 || p.Draw?.HasInvincible == true;
         if (!b.States.Any(s => Any(s.P) || s.Teammates.Any(Any))) return;
+        // Your turn is over: block gained now (the auto-played card's, Daughter of the Wind's on it) is end-of-turn block in the
+        // Incoming Damage breakdown, as the forecast check counts it.
+        b.Do(s => s.EndOfTurnNow = true);
         foreach (var k in PlayerOrder(b.States[0]).ToList()) AutoPostPlayOf(b, k);
     }
 
@@ -1279,6 +1282,10 @@ public static partial class SimEngine
                 for (var k = before; k < s.Teammates.Count; k++) TeammateTakesHit(k, hitIndex, perHit);
             }
             if (landed > 0) if (s.Log) s.Blockable.Add((hitsLanded > 1 ? $"{e.Name} ({hitsLanded} hits)" : e.Name, landed));
+            // An enemy killed during the enemy turn (your Thorns, Flame Barrier or Reflect hitting back during its attack): its death
+            // hooks run before the next enemy moves (ExplosivePower and RavenousPower.AfterDeath: the other Corpse Slug is stunned,
+            // Crab Rage hits harder). Poison deaths run theirs at the turn's start, above.
+            if (s.Enemies.Any(o => o.StartedAlive && !o.Alive && !o.DeathHandled)) AllyDeaths(s);
         }
     }
 }

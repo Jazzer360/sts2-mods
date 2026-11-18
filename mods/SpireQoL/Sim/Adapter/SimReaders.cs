@@ -256,7 +256,9 @@ public static class SimReaders
         try { foreach (var t in card.Tags) tags.Add(t.ToString()); } catch { /* none */ }
         if (card.Affliction != null) tags.Add(card.Affliction.GetType().Name);
         bool gainsBlock;
-        try { gainsBlock = card.GainsBlock || (card.Enchantment?.GainsBlock ?? false); } catch { gainsBlock = false; }
+        // Read by name (Fool.StretchCard): EnchantmentModel.GainsBlock is beta-only (v0.113.1), and naming it here made this whole
+        // method fail to compile on main (MissingMethodException: no card simulated at all).
+        try { gainsBlock = SpireQoL.Procs.Fool.StretchCard(card); } catch { gainsBlock = false; }
         return new SimCard(card.GetType().Name, TypeOf(card))
         {
             Tags = tags,

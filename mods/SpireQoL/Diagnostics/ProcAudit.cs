@@ -782,6 +782,14 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
                 issues.RemoveAll(simOnly.Contains);
             }
+            if (w.Facts is { Sim: null, SimPending: false } && issues.Any(SimDependent))
+            {
+                // The card's simulation couldn't be built (it threw: reported as a crash on its own): every tab the simulator gives
+                // is missing, so those checks would only repeat that crash. Counted, not reported (decision #92).
+                var fromSim = issues.Where(SimDependent).ToList();
+                foreach (var x in fromSim) model.Add($"not checked (no simulation for this card): {x}");
+                issues.RemoveAll(fromSim.Contains);
+            }
             if (w.Facts is { } facts && (facts.SimIncomplete || facts.Unmodelled.Count > 0))
             {
                 // Its tabs came from simulations with outcomes not explored yet, or not modelled (decisions #87, #92): what's shown

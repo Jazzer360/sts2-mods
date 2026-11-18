@@ -6,6 +6,18 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.19.3
+#### Fixed
+- On Steam's main branch (game v0.113.0), no card's tabs were simulated: the mod named a game member only the beta branch has. Proc tabs and lethal tabs work there again.
+- A Corpse Slug killed by your Thorns during its attack now stuns the other one (Ravenous) before it moves, in Incoming Damage and the Death Skull; any enemy killed during the enemy turn sets off its death effects before the next one moves.
+- Block gained while cards are auto-played at the end of your turn (Daughter of the Wind on a Stampede attack) shows in Incoming Damage's block.
+- Piercing Wail (and other cards that take enemies' Strength this turn) against an enemy with Artifact: Artifact takes it, so the enemy's intent stays as it was.
+- The audits no longer report a card's missing simulator tabs when its simulation couldn't be built (that's reported once, as a crash); a missing game member is one report, not one per card.
+
+### Main Saves 1.0.10
+#### Fixed
+- Rebuilt with the shared error reporting update (a missing game member is one report).
+
 ### Spire QoL 1.19.2
 #### Fixed
 - The audits now check the lethal tab against the board each play leaves, report tabs of powers (and crossed tabs) that every outcome predicted but that didn't fire, and total the death chances shown against what happened, reporting a large drift.

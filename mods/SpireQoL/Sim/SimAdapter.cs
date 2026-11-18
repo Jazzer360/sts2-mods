@@ -175,7 +175,7 @@ public static partial class SimAdapter
     /// all enemies or the target, and the sign. The temporary ones (Piercing Wail, Dark Shackles...)
     /// apply TemporaryStrengthPower subclasses that take Strength away until the end of the turn.
     /// </summary>
-    private static readonly Dictionary<string, (string? Var, bool All, int Sign)> EnemyStrengthCards = new()
+    internal static readonly Dictionary<string, (string? Var, bool All, int Sign)> EnemyStrengthCards = new()
     {
         [nameof(PiercingWail)] = ("StrengthLoss", true, -1), [nameof(DarkShackles)] = ("StrengthLoss", false, -1),
         [nameof(EnfeeblingTouch)] = ("StrengthLoss", false, -1), [nameof(CrushUnder)] = ("StrengthLoss", true, -1),

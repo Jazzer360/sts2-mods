@@ -106,7 +106,11 @@ internal static class Fool
     /// <summary>The card's enchantment gains block on play (Adroit's powered Move block), so the play gets and spends Stretch.
     /// Read by name, so a game without the flag still runs.</summary>
     public static bool EnchantmentGainsBlock(CardModel card) =>
-        card.Enchantment is { } e && Sts2State.Private(e, "GainsBlock", false);
+        card.Enchantment is { } e && EnchantmentFlag != null && EnchantmentFlag.GetValue(e) is true;
+
+    /// <summary>EnchantmentModel.GainsBlock (v0.113.1, beta): null on a game without it (main v0.113.0), which then has no such enchantments.</summary>
+    private static readonly System.Reflection.PropertyInfo? EnchantmentFlag =
+        typeof(MegaCrit.Sts2.Core.Models.EnchantmentModel).GetProperty("GainsBlock", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
 
     /// <summary>
     /// Block cards with no Block value, and whether their block is powered (a Move without Unpowered): Fisticuffs

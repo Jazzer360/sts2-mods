@@ -297,6 +297,10 @@ public static partial class SimAdapter
             var n = SimPowerName(t);
             if (!Simulated(n) && !(PlayFacts.IsDebuffType(t) && debuffs.Contains(t))) continue;
             if (n == nameof(PoisonPower) && card.TargetType == TargetType.RandomEnemy) continue; // Bouncing Flask: random, a summary field
+            // A temporary Strength loss (Piercing Wail, Dark Shackles: TemporaryStrengthPower) is the Strength action below
+            // (EnemyStrengthCards): one debuff, so one Artifact charge takes all of it (issue #371: applied twice, Artifact took
+            // the first and the Strength still landed).
+            if (typeof(TemporaryStrengthPower).IsAssignableFrom(t) && EnemyStrengthCards.ContainsKey(name)) continue;
             if (PlayFacts.IsDebuffType(t))
             {
                 if (!debuffs.Contains(t) || whereEnemies is not { } w) continue;

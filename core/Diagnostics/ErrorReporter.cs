@@ -104,7 +104,11 @@ public sealed class ErrorReporter
     public void Exception(Exception ex, string where)
     {
         var top = ex.StackTrace?.Split('\n').FirstOrDefault(l => l.Contains(" at ") && !l.Contains("System."))?.Trim() ?? "";
-        Send(new[] { "crash", where, ex.GetType().Name, top }, evt =>
+        // A game member this build names isn't in the running game (another game version or branch: the code naming it fails to
+        // compile, wherever it's called from): one report per member, not one per caller.
+        var missing = ex is MissingMemberException or TypeLoadException;
+        var fingerprint = missing ? new[] { "crash", "missing-member", ex.Message } : new[] { "crash", where, ex.GetType().Name, top };
+        Send(fingerprint, evt =>
         {
             evt.Level = SentryLevel.Error;
             evt.SetTag("kind", "crash");

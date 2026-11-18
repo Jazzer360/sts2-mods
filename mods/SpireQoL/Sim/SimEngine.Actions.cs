@@ -144,7 +144,7 @@ public static partial class SimEngine
                 var amount = gb.Fixed ? Math.Max(0, (int)gb.Base)
                     : CalcBlock(s, gb.Base, new BlockCtx(gb.To, gb.Props, s.CurrentPlay?.Card, s.CurrentPlay), gb.Captured, mods);
                 var who = gb.To == Who.You ? -1 : Who.TeammateIndex(gb.To);
-                var r = GainBlock(s, amount, null, who);
+                var r = GainBlock(s, amount, s.EndOfTurnNow && who < 0 && s.Log ? s.CurrentPlay?.Card.Name ?? "block" : null, who);
                 // Block from a card play this turn (Unmovable counts the ones from earlier plays).
                 if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
                     r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add("CardBlock", 1); return x; }).ToList();

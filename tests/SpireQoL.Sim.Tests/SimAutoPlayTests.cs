@@ -32,6 +32,21 @@ public class SimAutoPlayTests
         => new() { Id = id, Name = "Defend", Cost = cost, Plays = { new SimPlay { Name = "Defend", BlockAmount = block, BlockGains = 1, HandCard = id, HandDelta = -1 } } };
 
     [Fact]
+    public void BlockAProcGivesAnAutoPlayIsEndOfTurnBlock()
+    {
+        // Issues #370, #392: Stampede plays a Strike, Daughter of the Wind gives 1 block. It lowers what you lose and shows in the
+        // breakdown's end-of-turn block (what the forecast check compares with the block the game gave).
+        var s = new SimState { Enemies = { Enemy(1, 50, 10) }, Log = true };
+        s.P.Relics = s.P.Relics.With("DaughterOfTheWind", 1, 0);
+        s.Vars["-1:DaughterOfTheWind:Block"] = 1;
+        s.P.Stampede = 1;
+        s.P.AutoHand = new() { StrikeCard(11, 6, 1, 1) };
+        var w = SimEngine.Run(s).Worst;
+        Assert.Equal(9, w.Taken);
+        Assert.Equal(1, w.EndOfTurnBlock.Sum(x => x.Amount));
+    }
+
+    [Fact]
     public void HowlFromBeyondInYourExhaustPileHitsEveryEnemy()
     {
         var s = new SimState { Enemies = { Enemy(1, 10, 5), Enemy(2, 12, 5) } };
