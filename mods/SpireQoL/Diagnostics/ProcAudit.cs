@@ -136,6 +136,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> DrawReactive = new() { nameof(PagestormPower), nameof(IterationPower), nameof(HellraiserPower), nameof(ChainsOfBindingPower) };
 
     /// <summary>Sources whose tabs come from the outcome simulator (missing while its run was pending).</summary>
+    /// <summary>An issue about the tabs the card's simulations gave (procs that fired or didn't, their block and damage).</summary>
+    internal static bool SimDependent(string issue) =>
+        issue.StartsWith("no tab:", StringComparison.Ordinal) || issue.StartsWith("didn't fire:", StringComparison.Ordinal)
+        || issue.StartsWith("block:", StringComparison.Ordinal) || issue.StartsWith("damage to enemies:", StringComparison.Ordinal)
+        || issue.StartsWith("damage to you:", StringComparison.Ordinal) || SimTabSources.Any(issue.Contains);
+
     private static readonly string[] SimTabSources =
     {
         nameof(ImbalancedPower), nameof(AsleepPower), nameof(SlumberPower), nameof(InfestedPower), nameof(SteamEruptionPower),
@@ -752,6 +758,16 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 var simOnly = issues.Where(x => SimTabSources.Any(x.Contains)).ToList();
                 foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
                 issues.RemoveAll(simOnly.Contains);
+            }
+            if (w.Facts is { } facts && (facts.SimIncomplete || facts.Unmodelled.Count > 0))
+            {
+                // Its tabs came from simulations with outcomes not explored yet, or not modelled (decisions #87, #92): what's shown
+                // carries the ?, and what happened may be one of those. Every proc tab can come from the simulator (each model's log),
+                // so their checks aren't reported; the snapshot checks run their own simulation and stay.
+                var why = facts.Unmodelled.Count > 0 ? "a branch of its simulation not modelled" : "its simulation's outcomes not all explored";
+                var fromSim = issues.Where(SimDependent).ToList();
+                foreach (var x in fromSim) model.Add($"not checked ({why}): {x}");
+                issues.RemoveAll(fromSim.Contains);
             }
             foreach (var line in model.Where(x => x.Contains("not checked", StringComparison.Ordinal)))
             {

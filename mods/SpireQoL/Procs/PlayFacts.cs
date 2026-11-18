@@ -302,6 +302,11 @@ public sealed class PlayFacts
     /// lethal, Imbalanced and wake tabs may be missing. The audit doesn't report those.
     /// </summary>
     public bool SimPending { get; set; }
+    /// <summary>
+    /// Its tabs came from simulations not every outcome of which was explored yet (decision #87): what's shown carries the ?, and
+    /// an unexplored outcome may be what happens. The audit doesn't report the simulator's tabs then; it counts the skip.
+    /// </summary>
+    public bool SimIncomplete { get; set; }
     /// <summary>What its simulations didn't model (decision #92, rule 2): gaps the play audit counts.</summary>
     public IReadOnlyList<string> Unmodelled { get; set; } = Array.Empty<string>();
 
@@ -352,6 +357,8 @@ public sealed class PlayFacts
             Sim = next.Sim,
             RandomOutcome = RandomOutcome || next.RandomOutcome,
             SimPending = SimPending || next.SimPending,
+            SimIncomplete = SimIncomplete || next.SimIncomplete,
+            Unmodelled = Unmodelled.Concat(next.Unmodelled).Distinct().ToList(),
         };
     }
 

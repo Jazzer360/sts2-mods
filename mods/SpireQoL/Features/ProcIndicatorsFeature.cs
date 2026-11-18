@@ -442,6 +442,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         _firesAt.Clear();
         var baseline = te.Outcome;
         if (outcomes.Any(o => o.Truncated || o.Branches.Count > 1)) f.RandomOutcome = true;
+        f.SimIncomplete = outcomes.Any(o => o.Truncated);
         f.Unmodelled = outcomes.SelectMany(o => o.UnmodelledReasons).Distinct().ToList();
         if (!_noCache) Diagnostics.DamageFormulaAudit.Check(f.Card, f, te.Ids, outcomes);
 

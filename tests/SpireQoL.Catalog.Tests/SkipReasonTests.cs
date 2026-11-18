@@ -16,5 +16,18 @@ public class SkipReasonTests
     [InlineData("not checked: its tabs were computed before Strike finished (proc X)", "its tabs were computed before another play finished")]
     [InlineData("not checked (simulation pending): proc Y", "simulation pending")]
     [InlineData("not checked (aimed at a teammate; the simulator applies it to you): proc Z", "aimed at a teammate; the simulator applies it to you")]
+    [InlineData("not checked (its simulation's outcomes not all explored): no tab: EnragePower fired", "its simulation's outcomes not all explored")]
+    [InlineData("not checked (a branch of its simulation not modelled): damage to enemies: predicted 3, actual 6", "a branch of its simulation not modelled")]
     public void ReasonsKeepTheirShape(string line, string reason) => Assert.Equal(reason, ProcAudit.SkipReason(line));
+
+    /// <summary>Decisions #87, #92: with outcomes not all explored, the issues about the simulator's tabs aren't reported; the others are.</summary>
+    [Theory]
+    [InlineData("no tab: EnragePower fired", true)]
+    [InlineData("didn't fire: Kunai", true)]
+    [InlineData("block: predicted 4, actual 0", true)]
+    [InlineData("damage to enemies: predicted 3, actual 6", true)]
+    [InlineData("damage to you: predicted 0, actual 2", true)]
+    [InlineData("after play enemy HP: Cultist predicted 10, actual 4", false)]
+    [InlineData("draws: predicted 2, actual 1", false)]
+    public void TabIssuesDependOnTheSimulation(string issue, bool fromSim) => Assert.Equal(fromSim, ProcAudit.SimDependent(issue));
 }

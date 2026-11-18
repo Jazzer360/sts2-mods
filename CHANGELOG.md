@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.18.5
+#### Fixed
+- The audits no longer report a mismatch when the outcome that happened was one the simulator hadn't explored yet, or a branch it doesn't model: those checks are skipped and counted in the fight's summary.
+
 ### Spire QoL 1.18.4
 #### Changed
 - Where part of an outcome isn't simulated yet (Hellraiser playing a drawn Strike, an end-of-turn auto-play from a hand that changed), chances show as a range with a ? instead of an exact number.

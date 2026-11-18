@@ -159,14 +159,14 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 continue;
             }
             // Their HP can't go below 0: a teammate who died lost what they had.
-            if (actual > max || actual < min) issues.Add($"teammate {name} HP lost: forecast {(min == max ? $"{max}" : $"{min}-{max}")}, actual {actual}");
+            if (actual > max || (!o.Truncated && actual < min)) issues.Add($"teammate {name} HP lost: forecast {(min == max ? $"{max}" : $"{min}-{max}")}, actual {actual}");
             // Their Osty (Teammate Incoming Damage shows what he absorbs).
             if (mate.Osty is { } osty)
             {
                 var ostyActual = damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
                 var (oMin, oMax) = (o.TeammateOstyTakenMin(k), o.TeammateOstyTakenMax(k));
                 line += $", their Osty {ostyActual} (predicted {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")})";
-                if (ostyActual > oMax || ostyActual < oMin) issues.Add($"teammate {name} Osty HP lost: forecast {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")}, actual {ostyActual}");
+                if (ostyActual > oMax || (!o.Truncated && ostyActual < oMin)) issues.Add($"teammate {name} Osty HP lost: forecast {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")}, actual {ostyActual}");
             }
         }
         return line;
@@ -266,6 +266,19 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             }
         }
 
+        // A branch the forecast didn't model (decision #92, rule 2) is unknown both ways: what happened may be that branch, so
+        // nothing can be called wrong. The gap is counted above; the check is skipped and counted too (rule 1).
+        if (f.Outcome.AnyUnmodelled)
+        {
+            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a branch the forecast didn't model: {string.Join("; ", f.Outcome.UnmodelledReasons)}); HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})");
+            CountIn(Skips, "a branch the forecast didn't model");
+            return;
+        }
+        // Not every outcome explored (decision #87: the exploration hadn't finished, or ran out of room): the worst case still holds
+        // (the safe run bounds it), but the best case and "never happens" come from the explored branches only, and an unexplored
+        // one may be what happened. Those are left unchecked, never reported.
+        var open = f.Outcome.Truncated;
+
         // Less than forecast is expected when random-target end-of-turn damage was left out: it may
         // have killed an attacker (the forecast stays on the safe side on purpose).
         // The forecast is the worst branch; a random target can make it come in lower (down to TakenMin).
@@ -275,8 +288,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             if (!f.Dies && !f.Outcome.Branches.Any(b => b.Died)) issues.Add($"your death: forecast you survive (HP lost {f.Taken}), but you died (HP lost {actualTaken})");
         }
-        else if ((actualTaken > f.Taken || actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
-        if ((actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
+        else if (actualTaken > f.Taken || (!open && actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
+        if (actualOsty > f.OstyTaken || (!open && actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
         // Teammates (multiplayer, decision #24): each one's HP lost against their range over the branches.
         var teamLine = TeammateIssues(f, damage, endOfTurn, issues);
@@ -383,7 +396,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             actuals[id] = (hpAtTurnEnd, through, diedBeforeActing);
             if (o.DeadInAll(id) && !diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted dead before acting, but it lived to act (or outlived you)", monster));
-            if (!o.DeadInAny(id) && diedBeforeActing)
+            // Not every outcome explored: an unexplored one may be where it dies (DeadInAll already needs them all).
+            if (!o.Truncated && !o.DeadInAny(id) && diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted alive, but it died before acting", monster));
 
             if (!o.Truncated)
@@ -401,7 +415,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 var blocked = firstHit.Result.WasFullyBlocked;
                 if (o.FirstHitBlockedInAll(id) && !blocked)
                     result.Add(($"Imbalanced: {name}'s first hit predicted fully blocked, but it wasn't", monster));
-                if (!o.FirstHitBlockedInAny(id) && blocked)
+                if (!o.Truncated && !o.FirstHitBlockedInAny(id) && blocked)
                     result.Add(($"Imbalanced: {name}'s first hit predicted not fully blocked, but it was", monster));
             }
         }
