@@ -9,6 +9,13 @@ Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). **Setup on a new 
 - Mod AssemblyName == manifest `id` == `<ModId>.json` filename.
 - Every feature implements `IFeature` and is applied through `FeatureHost`, so one broken patch can't crash the game. Spire QoL only uses observe-only patches (docs/DECISIONS.md #10).
 
+## The contract (decision #92)
+
+What the mod shows for "if I play this card" or "if I end my turn now" is exactly what happens: the outcome, or the exact chance of each when a roll decides it, or a `?` where something isn't modelled. Never a certainty the game doesn't keep. Three rules follow, for every change:
+- **Every prediction is paired with its outcome** by an audit. A skipped check is a gap, not a pass: name the reason, count it, track it in docs/TRACKER.md.
+- **Not modelled means uncertain:** a branch the simulator can't follow counts as unknown (`?` and a range), never as exact.
+- **Effects, not cards:** model what the game's code does (hooks, commands, pipelines, in its order). A per-card table only where nothing else can read the effect, always with a scan that finds every card doing that thing.
+
 ## Raise concerns, track decisions
 
 - **Raise concerns and ideas unprompted.** Whenever you notice something questionable (a direction that seems wrong, a fragile design, a gap in the audits, duplicated logic, a refactor that would pay off), say so with a concrete proposal, even when it would be a large or breaking change. Don't wait to be asked: the owner relies on this rather than reviewing every line. End a substantial piece of work with what you'd question or improve next.
