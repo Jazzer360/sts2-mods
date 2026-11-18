@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.18.0
+#### Added
+- Exploration Progress: a small clock and progress bar under the End Turn button while predictions are still working through every outcome (rare), so you know the ? marks will resolve.
+
 ### Spire QoL 1.17.0
 #### Added
 - Chances where a roll decides a death: your skull on Incoming Damage shows whenever an outcome might kill you, with the chance; lethal tabs carry the chance when the card makes a kill more likely without making it certain.

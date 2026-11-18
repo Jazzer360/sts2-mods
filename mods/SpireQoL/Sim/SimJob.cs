@@ -23,6 +23,21 @@ public sealed class SimJob
     /// </summary>
     private static readonly SemaphoreSlim Background = new(Math.Max(1, Environment.ProcessorCount / 2));
 
+    /// <summary>Jobs exploring in the background now (past their first pass): what the progress widget shows (decision #89).</summary>
+    private static readonly ConcurrentDictionary<SimJob, byte> Running = new();
+
+    /// <summary>
+    /// The explorations going on in the background now, and how far along they are together: the mean share of the rolls each has
+    /// explored (0 to 1). None: (0, 1).
+    /// </summary>
+    public static (int Count, double Progress) Progress()
+    {
+        var jobs = Running.Keys.ToList();
+        if (jobs.Count == 0) return (0, 1);
+        var shares = jobs.Select(j => j._latest?.Explored is { } e && !double.IsNaN(e) ? Math.Clamp(e, 0, 1) : 0).ToList();
+        return (jobs.Count, shares.Average());
+    }
+
     /// <summary>Log lines from worker threads, written out on the main thread (FlushLog).</summary>
     private static readonly ConcurrentQueue<(string Line, Exception? Error)> Pending = new();
 
@@ -71,6 +86,7 @@ public sealed class SimJob
             _ready.TrySetResult(true);
             if (!_ex.Finished)
             {
+                Running[this] = 0;
                 Background.Wait(_cts.Token);
                 try
                 {
@@ -90,13 +106,16 @@ public sealed class SimJob
         catch (OperationCanceledException)
         {
             // cancelled while waiting for a turn in the background
+            Running.TryRemove(this, out _);
         }
         catch (Exception ex)
         {
+            Running.TryRemove(this, out _);
             // Before the first result, the frame gets it (Ready faults); after, it goes to the log and the error reports.
             if (!_ready.TrySetException(ex)) Pending.Enqueue(($"[sim] exploring {_label} failed in the background: {ex.GetType().Name}: {ex.Message}", ex));
             return;
         }
+        Running.TryRemove(this, out _);
         // Only explorations that needed slicing are logged: the rest are one run, as before.
         if (_ex.Runs > 1)
         {

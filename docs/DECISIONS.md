@@ -455,3 +455,8 @@ Decision #87's stage 2. A chance from the simulator (`SimChance`) is exact once 
 - The **Death chance** setting covers every chance (off: certain deaths only; your skull still shows whenever you might die).
 *Why:* the owner wants a death that might happen shown, with the odds, rather than hidden until certain or dropped when outcomes ran out: a run was lost when the tracker said they'd live. Chances are fine across the board where they're intuitive.
 *Replaced:* your skull from the worst branch only; the Death Skull's chance hidden when branches ran out; lethal tabs only for certain kills.
+
+### 89. A progress bar under End Turn while predictions explore — active (2026-11-18)
+Amends #88 ("no separate progress indicator"). While any prediction is exploring in the background (past its first pass), a small clock (the game's time-limit power icon, `BattlewornDummyTimeLimitPower`) and a thin progress bar sit below the End Turn button, a movable widget like the others: how far along they are together, the mean of each exploration's explored share of the rolls (`SimJob.Progress`). Hidden the rest of the time. The `?` beside each uncertain result stays the per-element mark.
+*Why:* the owner's call: the `?` says a result isn't certain yet, but not whether it's still being worked on; a minimal element off to the side does, without adding to the cards or the skulls.
+*Replaced:* #88's "no separate progress indicator".

@@ -533,6 +533,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 1.16.2: the forecast check keeps the branches whose Stampede/Simpleton picks are the game's (decision #86).
 - [x] 1.16.3: every outcome explored, in slices, on worker threads, updating as it goes (decision #87, stage 1).
 - [x] Decision #87 stage 2 (1.17.0): what's shown while exploring. Chances (ranges: explored deaths to explored plus unexplored) on your Death Skull, the enemies' and lethal tabs (aim marker kept); tabs only appear or narrow; an in-progress mark on Incoming Damage and the skulls ("incomplete" when capped).
+- [x] 1.18.0: Exploration Progress, a clock and bar under End Turn while predictions explore (decision #89).
 - [ ] Decision #87 stage 3: draws. The draw pile as a known top stack (cards placed on top, in order) and a random rest; a draw branches only over what matters about the cards (acts in hand at end of turn, Ethereal with exhaust reactions, reacts to being drawn, a later Stampede/Simpleton pick); the rest is one plain group. A scan for draw-reactive cards and powers.
 - [ ] Decision #87 stage 4: Incoming Damage's distribution (each amount's chance) on hover.
 - [ ] Decision #87 stage 2 follow-up: whether lethal chance tabs are too many in roll-heavy fights (Lightning, Juggernaut): they show whenever the card surely raises a death's chance; a floor (say 25%) may be needed.

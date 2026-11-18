@@ -19,6 +19,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Proc Indicators](#proc-indicators) | `proc-indicators` | 🟡 | on |
 | [Shuffle Warning](#shuffle-warning) | `shuffle-warning` | 🟡 | on |
 | [Death Skull](#death-skull) | `death-skull` | 🟡 | on |
+| [Exploration Progress](#exploration-progress) | `exploration-progress` | 🟡 | on |
 | [Potion Tabs](#potion-tabs) | `potion-tabs` | 🟡 | on |
 | [Run Reminders](#run-reminders) | `run-reminders` | 🟡 | on |
 | [Rest Preview](#rest-preview) | `rest-preview` | 🟡 | on |
@@ -445,6 +446,16 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 **Check:** after you drink a potion, Reptile Trinket's Strength and Belt Buckle's Dexterity against the tabs it had on its last frame on the belt (kept after it leaves the belt, which it does before the game logs it as drunk); reported (`potion`) when they differ. Each potion writes an `[audit] [potion]` line to the log.
 
 **Game UI touched:** each tab is a copy of a hand card's enchantment tab, added as the first child of the potion's `NPotionHolder` (so the potion draws over its tucked end); the game's nodes aren't changed. No Harmony patches.
+
+---
+
+## Exploration Progress
+
+**What you see:** during your turn, while predictions are still working through every outcome in the background (decision #87: a fight with more random outcomes than the first pass covers, which is rare), a small clock (the game's time-limit power icon) and a thin progress bar just below the End Turn button: how far along those explorations are together (the mean share of the rolls each has explored). Hidden otherwise. Until they finish, whatever isn't certain carries a `?` (decision #88): Incoming Damage's result, the Death Skull's range, a lethal tab's chance.
+
+**Settings:** the `exploration-progress` switch. A movable widget (attached below the End Turn button by default).
+
+**Game UI touched:** reads the End Turn button's place (`NCombatUi.EndTurnButton`); nothing of the game's is changed. No Harmony patches.
 
 ---
 

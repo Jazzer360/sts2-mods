@@ -63,6 +63,7 @@ public sealed partial class SettingsMenu
         ("teammate-incoming-damage", "Teammate Incoming Damage", "Multiplayer: hovering a teammate shows what they'll take, after their block (from what you can see, not their hand).", FeaturePage.Fights),
         ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile.", FeaturePage.Fights),
         ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it).", FeaturePage.Fights),
+        ("exploration-progress", "Exploration Progress", "A clock and progress bar under the End Turn button while predictions are still working through every outcome (rare: most fights finish at once). Until then, what's uncertain carries a ?.", FeaturePage.Fights),
         ("intent-forecast", "Intent Forecast", "Hovering an enemy shows its next moves after the intent on screen: every turn its rules make certain, then each move a random pick can make, with its chance.", FeaturePage.Fights),
         ("potion-tabs", "Potion Tabs", "Tabs under your potions for the relics that drinking one sets off (the Relics page).", FeaturePage.Fights),
         ("run-reminders", "Run Reminders", "Your relics that change a choice, on the choice: tabs on cards you're offered (card rewards, event choices, the shop), icons beside event options and shop prices, and on the map beside the legend's rows.", FeaturePage.Outside),

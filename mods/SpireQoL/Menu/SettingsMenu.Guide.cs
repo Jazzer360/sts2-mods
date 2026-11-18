@@ -384,6 +384,16 @@ public sealed partial class SettingsMenu
         GuideRow(example, "Death Skull",
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
             + "With a chance when a roll decides it (General: Death chance), and a range with ? while not every outcome is explored yet.");
+        var progress = UiKit.Row(6);
+        progress.AddChild(UiKit.Icon(GameIcons.Power(typeof(BattlewornDummyTimeLimitPower)), 22));
+        progress.AddChild(new ProgressBar
+        {
+            MinValue = 0, MaxValue = 1, Value = 0.6, ShowPercentage = false, CustomMinimumSize = new Vector2(90, 8),
+            SizeFlagsVertical = Control.SizeFlags.ShrinkCenter, MouseFilter = Control.MouseFilterEnum.Ignore,
+        });
+        GuideRow(progress, "Exploration Progress",
+            "Under the End Turn button, rarely: predictions are still working through every outcome (a fight with a lot of random targets). "
+            + "Until they're done, what's uncertain carries a ? (a chance as a range, 40\u201355%); it all updates when the bar fills.");
         GuideRow(null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");
