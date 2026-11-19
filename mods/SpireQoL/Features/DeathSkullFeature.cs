@@ -61,7 +61,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
                     show[enemy] = null;
                     continue;
                 }
-                if (_ctx.Settings.DeathChance && chance.Seen) show[enemy] = chance.Text() + (model.ProgressMark ?? "");
+                if (_ctx.Settings.DeathChance && chance.Seen) show[enemy] = chance.Text() + (model.ShownMark ?? "");
             }
         }
 

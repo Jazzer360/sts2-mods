@@ -44,10 +44,15 @@ public sealed class TurnEndModel
     public bool Dies { get; private set; }
     /// <summary>The chance the enemy turn kills you (decision #87): the skull shows whenever it's possible, with this.</summary>
     public SimChance DeathChance { get; private set; }
-    /// <summary>Its exploration is still going (decision #87): what's shown may still change.</summary>
-    public bool Exploring => Job is { Finished: false };
-    /// <summary>The mark for a forecast that isn't complete, still exploring or stopped short: "?" (the owner's call); null once complete.</summary>
+    /// <summary>
+    /// The search stopped at its memory cap (decision #107): your damage is unknown, so Incoming Damage shows ? for it; enemy deaths
+    /// already settled still count (Chance's lasting).
+    /// </summary>
+    public bool Unknown => Outcome.Truncated;
+    /// <summary>The mark for a forecast that isn't certain (something not modelled, or the search stopped at its cap): "?"; null otherwise.</summary>
     public string? ProgressMark => Outcome.Truncated || Outcome.AnyUnmodelled ? "?" : null;
+    /// <summary>ProgressMark, or "?" while the shown forecast is a held one waiting on a newer result past ShownWaitMs (Shown).</summary>
+    public string? ShownMark => ProgressMark ?? (Waiting ? "?" : null);
     /// <summary>In the worst branch you'd die, but Fairy in a Bottle (potions used) or Lizard Tail heals you instead.</summary>
     public int FairiesUsed { get; private set; }
     public bool LizardTailUsed { get; private set; }
@@ -101,13 +106,13 @@ public sealed class TurnEndModel
     private static long _lastFullKey;
     private static SimJob? _lastFullJob;
 
-    /// <summary>The exploration behind Outcome (decision #87): it may still be going; Refreshed takes its latest snapshot.</summary>
+    /// <summary>The search behind Outcome (decision #107): it may still be going; Refreshed takes its result once it's over.</summary>
     internal SimJob? Job { get; private set; }
 
     /// <summary>
-    /// The exploration for this board, kept while the board stays the same: started on a worker, the first pass waited for
-    /// (bounded by SimJob.FirstBudget), then each frame takes its latest snapshot. A new board cancels the old one, unless the
-    /// forecast check pinned it (it compares against the finished result).
+    /// The search for this board, kept while the board stays the same: started on a worker, waited for a few milliseconds at
+    /// most (SimWait), then read once it's over. A new board cancels the old one, unless the forecast check pinned it (it compares
+    /// against the finished result).
     /// </summary>
     private static SimJob Explore(ref long lastKey, ref SimJob? job, long key, SimState state, string label)
     {
@@ -123,8 +128,8 @@ public sealed class TurnEndModel
     }
 
     /// <summary>
-    /// Waits for the job's first result within the frame's budget (SimWait, decision #104), or a budget of its own. False while it
-    /// has none; a first pass that failed throws here, as it always did.
+    /// Waits for the job's result within the frame's budget (SimWait, decision #104), or a budget of its own. False while it has
+    /// none; a search that failed throws here.
     /// </summary>
     private static bool Wait(SimJob job, bool ownBudget)
     {
@@ -133,7 +138,7 @@ public sealed class TurnEndModel
         return true;
     }
 
-    /// <summary>The same forecast from its exploration's latest snapshot (the forecast check, once the enemy turn is over).</summary>
+    /// <summary>The same forecast from its search's result (the forecast check, once the enemy turn is over).</summary>
     internal TurnEndModel Refreshed()
     {
         if (Job?.Latest is not { } latest || ReferenceEquals(latest, Outcome)) return this;
@@ -155,7 +160,7 @@ public sealed class TurnEndModel
         var branches = Outcome.Branches.Where(keep).ToList();
         if (branches.Count == 0) return null;
         if (branches.Count == Outcome.Branches.Count) return this;
-        var o = new SimOutcome { Branches = branches, Truncated = Outcome.Truncated, SafeWorst = Outcome.SafeWorst };
+        var o = new SimOutcome { Branches = branches, Truncated = Outcome.Truncated };
         var m = From(State, StateKey, o, Ids, Teammates, _myHp);
         m.FullState = FullState;
         m._fullKey = _fullKey;
@@ -246,6 +251,8 @@ public sealed class TurnEndModel
         if (Compute() is { } m)
         {
             _shown = (m, cs, Sts2State.TurnNumber);
+            _waitingSince = 0;
+            m.Waiting = false;
             return m;
         }
         if (_shown is { } s && cs != null && ReferenceEquals(s.Combat, cs) && s.Turn == Sts2State.TurnNumber)
@@ -256,10 +263,19 @@ public sealed class TurnEndModel
                 _heldFrame = frame;
                 _heldFrames++;
             }
+            // Held past ShownWaitMs: the ? beside it says a newer result is on its way (shorter waits go unseen, so it doesn't blink).
+            if (_waitingSince == 0) _waitingSince = System.Diagnostics.Stopwatch.GetTimestamp();
+            s.Model.Waiting = System.Diagnostics.Stopwatch.GetElapsedTime(_waitingSince).TotalMilliseconds >= ShownWaitMs;
             return s.Model;
         }
         return null;
     }
+
+    /// <summary>How long a held forecast shows before it carries the ? (decision #107).</summary>
+    public const int ShownWaitMs = 100;
+    private static long _waitingSince;
+    /// <summary>This is a held forecast (Shown) waiting on a newer result past ShownWaitMs.</summary>
+    public bool Waiting { get; private set; }
 
     private static (TurnEndModel Model, MegaCrit.Sts2.Core.Combat.ICombatState? Combat, int Turn)? _shown;
     private static ulong _heldFrame = ulong.MaxValue;
@@ -274,7 +290,7 @@ public sealed class TurnEndModel
     }
 
     /// <summary>
-    /// An exploration a cap stopped or cut short, to Sentry (decision #105: how often the caps bind, from players' fights), grouped by
+    /// A search the memory cap stopped (decision #107), to Sentry (decision #105: how often the caps bind, from players' fights), grouped by
     /// the cap and what was explored (the forecast, or any card's play: the card is a tag), with its start state to replay.
     /// </summary>
     private static void ReportCap(SimJob.CapHit c)

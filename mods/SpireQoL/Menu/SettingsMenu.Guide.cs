@@ -194,8 +194,10 @@ public sealed partial class SettingsMenu
         IncomingCell(flow, "This kills you", "The skull: the enemy turn takes you to 0 with nothing to save you.",
             p => p.Show(46, 6, null, 40, dies: true));
         IncomingCell(flow, "This might kill you", "When a roll decides it (which enemy a Lightning orb hits first), the skull carries the chance. "
-            + "The numbers are the worst case. ? means not every outcome is explored yet: the chance is a range (40\u201355%) until it is.",
-            p => p.Show(46, 6, null, 40, dies: true, deathChance: "40\u201355%", progress: "?"));
+            + "The numbers are the worst case. ? means they aren't certain: some outcome has something not modelled, or they're waiting on a newer result (a busy play).",
+            p => p.Show(46, 6, null, 40, dies: true, deathChance: "40%", progress: "?"));
+        IncomingCell(flow, "Too much to work out", "Rarely, a fight has too many outcomes to work out in time: a lone ?, with no number and no promise either way.",
+            p => p.ShowUnknown());
         IncomingCell(flow, "Something saves you", "Fairy in a Bottle (or Lizard Tail) brings you back: your HP after the enemy turn.",
             p => p.Show(46, 6, null, 40, revive: (Potion<FairyInABottle>(), 23)));
         IncomingCell(flow, "Osty takes some", "Necrobinder: what Osty absorbs for you (red if it kills Osty).",
@@ -384,7 +386,7 @@ public sealed partial class SettingsMenu
         example.AddChild(UiKit.Label("  12/40", 20, Colors.White));
         GuideRow(example, "Death Skull",
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
-            + "With a chance when a roll decides it (General: Death chance), and a range with ? while not every outcome is explored yet.");
+            + "With a chance when a roll decides it (General: Death chance). With a range and ? when the fight was too big to work out (from the kills already certain up).");
         var progress = UiKit.Row(6);
         progress.AddChild(UiKit.Icon(GameIcons.Clock(), 22));
         progress.AddChild(new ProgressBar
@@ -394,7 +396,7 @@ public sealed partial class SettingsMenu
         });
         GuideRow(progress, "Exploration Progress",
             "Under the End Turn button, rarely: predictions are still working through every outcome (a fight with a lot of random targets). "
-            + "Until they're done, what's uncertain carries a ? (a chance as a range, 40\u201355%); it all updates when the bar fills.");
+            + "Until they're done, the last results stay on screen, and Incoming Damage and the Death Skull carry a ? after a moment; it all updates when the bar fills.");
         GuideRow(null, "Intent Details",
             "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
             + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code. Nothing while the intent is hidden.");

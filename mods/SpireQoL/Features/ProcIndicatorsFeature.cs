@@ -181,8 +181,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private sealed record Prepared(PlayFacts F, List<AbstractModel> Sources, SimBatch? Sim);
 
     /// <summary>
-    /// A card's simulations, one per target (decision #87): each explores on a worker; Ready once every first pass has a result
-    /// (what the frame waits for), and Latest is their newest snapshots, so the tabs update as exploration goes on.
+    /// A card's simulations, one per target: each searches on a worker (decision #107); Ready once every one is over (what the frame
+    /// waits for), and Latest is their outcomes.
     /// </summary>
     private sealed class SimBatch
     {
@@ -388,8 +388,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     // Card simulations run in parallel on worker threads (the simulator is plain C#, no game types): the frame reads the game and
     // builds every card's inputs, starts all their simulations at once, and waits for them a few milliseconds at most (SimWait).
-    // Results are cached until the state changes. One simulation's work is bounded (SimEngine.StepCopyBudget per step) and counted
-    // by SimPerformanceTests.
+    // Results are cached until the state changes. One simulation's memory is bounded (SimWork.MaxHeldStates, shared: decision #107)
+    // and its work counted by SimPerformanceTests.
     private readonly Dictionary<string, SimBatch> _simCache = new();
     /// <summary>Simulations made without the cache (the play audit's), cancelled once read.</summary>
     private readonly List<SimBatch> _uncached = new();

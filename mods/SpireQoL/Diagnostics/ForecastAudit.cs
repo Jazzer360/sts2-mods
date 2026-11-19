@@ -302,18 +302,16 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// checked as a death against the forecast's, and the enemies left to act didn't.</param>
     private void Compare(TurnEndModel f, CombatHistory history, int from, Player me, bool youDied = false)
     {
-        // The frozen forecast's latest exploration (decision #87); it isn't needed after this.
+        // The frozen forecast's search result; it isn't needed after this.
         f = f.Refreshed();
         var shownChances = f.Outcome; // the chances as they stood when you ended your turn, before the history narrows them
         // What it didn't model (rule 2): logged and counted, whatever the check finds.
         foreach (var reason in f.Outcome.UnmodelledReasons) CountIn(Gaps, reason);
         if (f.Outcome.AnyUnmodelled) ModEntry.Log.Info($"[audit] [gaps] turn {_frozenTurn}: the forecast didn't model: {string.Join("; ", f.Outcome.UnmodelledReasons)}");
-        if (f.Outcome.Truncated) CountIn(Gaps, "the forecast's outcomes weren't all explored");
         if (f.Job is { } job)
         {
             job.Pinned = false;
             job.Cancel();
-            if (!job.Finished) ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: the forecast's exploration hadn't finished; compared with {f.Outcome.Branches.Count} branches explored so far");
         }
         // Your end of turn (player side), then the enemy turn; stop at your next turn.
         var window = new List<CombatHistoryEntry>();
@@ -406,10 +404,14 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             CountIn(Skips, "a branch the forecast didn't model");
             return;
         }
-        // Not every outcome explored (decision #87: the exploration hadn't finished, or ran out of room): the worst case still holds
-        // (the safe run bounds it), but the best case and "never happens" come from the explored branches only, and an unexplored
-        // one may be what happened. Those are left unchecked, never reported.
-        var open = f.Outcome.Truncated;
+        // The search stopped at its memory cap (decision #107): it showed ? for your damage and promised nothing past what was
+        // settled, so there's nothing to check it against. Skipped and counted (rule 1); the cap itself is reported by SimJob.
+        if (f.Outcome.Truncated)
+        {
+            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (the forecast's search stopped at its memory cap); HP lost {actualTaken}");
+            CountIn(Skips, "the forecast's search stopped at its memory cap");
+            return;
+        }
 
         // Less than forecast is expected when random-target end-of-turn damage was left out: it may
         // have killed an attacker (the forecast stays on the safe side on purpose).
@@ -420,8 +422,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             if (!f.Dies && !f.Outcome.Branches.Any(b => b.Died)) issues.Add($"your death: forecast you survive (HP lost {f.Taken}), but you died (HP lost {actualTaken})");
         }
-        else if (actualTaken > f.Taken || (!open && actualTaken < f.TakenMin)) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
-        if (actualOsty > f.OstyTaken || (!open && actualOsty < f.OstyTakenMin)) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
+        else if (actualTaken > f.Taken || actualTaken < f.TakenMin) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
+        if (actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
         if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
         // Teammates (multiplayer, decision #24): each one's HP lost against their range over the branches.
         var teamLine = TeammateIssues(f, damage, endOfTurn, issues);
@@ -535,7 +537,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             actuals[id] = (hpAtTurnEnd, through, diedBeforeActing);
             if (o.DeadInAll(id) && !diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted dead before acting, but it lived to act (or outlived you)", monster));
-            // Not every outcome explored: an unexplored one may be where it dies (DeadInAll already needs them all).
+            // The search stopped at its cap: an unfinished branch may be where it dies (DeadInAll already needs them all).
             if (!o.Truncated && !o.DeadInAny(id) && diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted alive, but it died before acting", monster));
 

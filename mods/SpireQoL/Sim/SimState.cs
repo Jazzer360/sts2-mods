@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace SpireQoL.Sim;
@@ -289,7 +289,7 @@ public sealed class SimPlayer
     public int OrbCapacity;
     /// <summary>
     /// A character with no base orb slots: the first channel with no capacity adds a slot
-    /// (OrbCmd.Channel → AddSlots 1). A Defect whose slots are all gone channels nothing.
+    /// (OrbCmd.Channel â†’ AddSlots 1). A Defect whose slots are all gone channels nothing.
     /// </summary>
     public bool SlotOnFirstChannel;
     /// <summary>Thunder: damage (unpowered) to each Lightning evoke's target that's still alive (ThunderPower.AfterOrbEvoked; 0 = none).</summary>
@@ -404,6 +404,25 @@ public sealed class SimPlayer
         return Orbs;
     }
 
+    /// <summary>
+    /// A teammate's numbers that can differ between branches of one run, for SimState.Key: two branches that differ only in a
+    /// teammate (their draws, block, HP, orbs, what fired for them) mustn't merge, or one of them takes the other's state.
+    /// </summary>
+    internal void HashAsTeammate(Action<long> add)
+    {
+        add(Block); add(Hp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
+        add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(FairiesUsed); add(Fairies);
+        add(BlockGains); add(Energy); add(HandCount); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(StatusDrawn);
+        add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0);
+        Draw?.Hash(add);
+        add(TurnEndCards.Count);
+        foreach (var c in TurnEndCards) { add(c.Card.GetHashCode()); add(c.Amount); }
+        if (AutoHand != null) { add(AutoHand.Count); foreach (var c in AutoHand) add(c.Id); }
+        Powers.Hash(add); Relics.Hash(add); Turn.Hash(add);
+        add(Orbs.Count);
+        foreach (var o in Orbs) { add((int)o.Kind); add(o.Passive); add(o.Evoke); add(o.Triggers); add(o.GlassBase); add(o.GlassBonus); }
+    }
+
     public SimPlayer Clone()
     {
         // The hand and debuff lists never change, so they're shared; the orbs until one branch changes them.
@@ -444,18 +463,6 @@ public sealed class SimState
     /// <summary>Keep the display logs (Incoming Damage's own run). Off for card simulations: faster.</summary>
     public bool Log;
 
-    /// <summary>Random hits land on nobody: the safe fallback when there are too many branches.</summary>
-    public bool NoRandomHits;
-
-    /// <summary>
-    /// Branches ran out: random hits and poison land on the first possible target in place, without
-    /// branching (this run only keeps "can happen" results; damage to you comes from the safe run).
-    /// </summary>
-    public bool FirstTargetOnly;
-
-    /// <summary>A step ran out of branches inside itself (SimEngine.Then): the run is out of branches.</summary>
-    internal bool OutOfBranches;
-
     // ---- results (per branch). Yours are on your SimPlayer like every player's (decision #93); these read them.
     [JsonIgnore] public int Taken { get => P.Taken; set => P.Taken = value; }
     /// <summary>The part of Taken that no block could stop (Regret, Beckon, Bad Luck: SimEngine.LandUnblockable), after the HP-loss modifiers.</summary>
@@ -486,7 +493,7 @@ public sealed class SimState
     /// </summary>
     public int PlayHpReached, PlayHpLosses, PlayHpLost;
     /// <summary>
-    /// What fired during the play (the play log, docs/SIMULATOR_V2.md): source name → times (Amount) and the damage or block it
+    /// What fired during the play (the play log, docs/SIMULATOR_V2.md): source name â†’ times (Amount) and the damage or block it
     /// caused (Data). Fired is the smallest over branches merged into this one (it happens in every one of them); FiredAny
     /// the largest (in some). Not in the branch key.
     /// </summary>
@@ -576,7 +583,7 @@ public sealed class SimState
     internal PlayBaseline? PlayBase;
 
     /// <summary>
-    /// The values of relics and powers (their DynamicVars), read from the game: "owner:Name:Var" → value. Shared by every branch
+    /// The values of relics and powers (their DynamicVars), read from the game: "owner:Name:Var" â†’ value. Shared by every branch
     /// and never changed; models read them with SimEngine.Var.
     /// </summary>
     public Dictionary<string, int> Vars = new();
@@ -597,10 +604,10 @@ public sealed class SimState
     public Dictionary<string, string> Titles = new();
     /// <summary>
     /// What models bound to a card play at BeforeCardPlayed (the game's amountsForPlayedCards: Afterimage, Gravity, Strangle...),
-    /// "Name@owner" → amount; taken at AfterCardPlayed. A power the play itself applies isn't bound, so it doesn't fire on it.
+    /// "Name@owner" â†’ amount; taken at AfterCardPlayed. A power the play itself applies isn't bound, so it doesn't fire on it.
     /// </summary>
     internal PowerSet Bound = PowerSet.Empty;
-    /// <summary>The first hit of a card's attack on each enemy (enemy id → damage), for the damage-formula audit.</summary>
+    /// <summary>The first hit of a card's attack on each enemy (enemy id â†’ damage), for the damage-formula audit.</summary>
     internal PowerSet FirstHits = PowerSet.Empty;
     /// <summary>Card events raised inside a hit or a death, run once it's over (SimEngine.Raise, DrainPending).</summary>
     internal PowerSet Pending = PowerSet.Empty;
@@ -716,7 +723,7 @@ public sealed class SimState
 
     public SimState Clone()
     {
-        if (Work != null) Work.Copies++;
+        if (Work != null && ++Work.Copies > Work.CopyCap) throw new SimEngine.SimCapped(); // the work cap (SimWork.MaxCopies)
         var c = (SimState)MemberwiseClone();
         c.P = P.Clone();
         _teammatesShared = true;
@@ -785,16 +792,42 @@ public sealed class SimState
         {
             Add((int)o.Kind); Add(o.Passive); Add(o.Evoke);
         }
+        // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
+        foreach (var t in Teammates) t.HashAsTeammate(Add);
         return h;
     }
 }
 
 /// <summary>
-/// What one simulation costs, the same on every machine (the performance tests limit these, not time).
-/// One run is one thread: plain fields, never shared between runs.
+/// What one simulation costs, the same on every machine (the performance tests limit these, not time), and what bounds it: the
+/// shared memory cap, cancellation, and the background gate (SimJob). One run is one thread: plain fields, apart from the
+/// shared count of states held.
 /// </summary>
 internal sealed class SimWork
 {
+    /// <summary>
+    /// States all searches may hold at once (decision #107): about 2 KB each, so a few hundred MB. Past it, a search holding at
+    /// least MinCapped stops where it is (SimOutcome.Truncated); smaller ones carry on (they're cheap, and a big one is the cause).
+    /// </summary>
+    public const long MaxHeldStates = 150_000;
+    public const long MinCapped = MaxHeldStates / 8;
+
+    /// <summary>
+    /// Copies one search may make (decision #107): a guard against a search that holds little but runs on and on (a chain inside
+    /// one step that branches on every branch: Beacon of Hope sharing block with Juggernaut on three or four players). About 15 s
+    /// of one core; past it the search stops where it is, as at the memory cap. The heaviest fights in the tests make well under a
+    /// million.
+    /// </summary>
+    public const long MaxCopies = 3_000_000;
+    /// <summary>This search's work cap (MaxCopies; tests set their own).</summary>
+    public long CopyCap = MaxCopies;
+    /// <summary>Which cap stopped the search ("the memory cap", "the work cap"), or null.</summary>
+    public string? CapHit;
+    private static long _heldEverywhere;
+
+    /// <summary>The states every search holds now (the cap's count).</summary>
+    public static long HeldEverywhere => Interlocked.Read(ref _heldEverywhere);
+
     /// <summary>Steps applied to the branch set (each hit, orb, block gain, the enemy turn).</summary>
     public int Steps;
     /// <summary>Branches stepped, summed over steps.</summary>
@@ -803,22 +836,54 @@ internal sealed class SimWork
     public int Copies;
     /// <summary>The most copies one step made.</summary>
     public int MaxStepCopies;
+    /// <summary>The most states this search held at once.</summary>
+    public int PeakHeld;
+    /// <summary>A cap of this search's own (tests): it stops once it holds more states than this.</summary>
+    public long? OwnCap;
     private int _stepStart;
+    private long _held;
+    /// <summary>The states this search holds now (0 once it's over).</summary>
+    public long Held => _held;
+
+    /// <summary>Cancelled when the board changes (SimJob): checked at every step.</summary>
+    public CancellationToken Cancel;
+    /// <summary>Called once, at the start of the first step after HeavyAt copies (SimJob: waits for a background turn).</summary>
+    public Action? OnHeavy;
+    public long HeavyAt = long.MaxValue;
 
     /// <summary>A new step starts (BranchSet).</summary>
     public void StartStep()
     {
+        Cancel.ThrowIfCancellationRequested();
+        if (OnHeavy != null && Copies >= HeavyAt)
+        {
+            var heavy = OnHeavy;
+            OnHeavy = null;
+            heavy();
+        }
         EndStep();
         _stepStart = Copies;
     }
 
     public void EndStep() => MaxStepCopies = Math.Max(MaxStepCopies, Copies - _stepStart);
 
-    /// <summary>Exploring in slices (SimExploration, decision #87): which slice of each overflowing step this run follows.</summary>
-    public SliceCursor? Slices;
+    /// <summary>This search holds <paramref name="states"/> states now; false when that's past the cap (the search stops).</summary>
+    public bool Hold(int states)
+    {
+        PeakHeld = Math.Max(PeakHeld, states);
+        var total = Interlocked.Add(ref _heldEverywhere, states - _held);
+        _held = states;
+        var ok = OwnCap is { } own ? states <= own : total <= MaxHeldStates || states < MinCapped;
+        if (!ok) CapHit ??= "the memory cap";
+        return ok;
+    }
 
-    /// <summary>This step has made SimEngine.StepCopyBudget copies: random choices stop branching.</summary>
-    public bool OverBudget => Copies - _stepStart >= SimEngine.StepCopyBudget;
+    /// <summary>The search is over: what it held is free for the others.</summary>
+    public void Release()
+    {
+        Interlocked.Add(ref _heldEverywhere, -_held);
+        _held = 0;
+    }
 }
 
 /// <summary>One hit of an enemy's attack intent: its base damage (AttackIntent.DamageCalc) and, per player id, the captured terms.</summary>

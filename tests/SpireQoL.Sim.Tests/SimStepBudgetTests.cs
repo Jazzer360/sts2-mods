@@ -3,9 +3,8 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// Shatter (every orb evoked twice, front first) as one step per evoke, and the copy budget per step
-/// (SimEngine.StepCopyBudget): past it the run is out of branches, so nothing is guaranteed and damage to
-/// you comes from the safe run.
+/// Shatter (every orb evoked twice, front first) as one step per evoke, and the heavy chains that once needed a copy budget per
+/// step: merging every step keeps them to their distinct states (decision #107).
 /// </summary>
 public class SimStepBudgetTests
 {
@@ -48,20 +47,25 @@ public class SimStepBudgetTests
     [Fact]
     public void ShatterWithFullOrbsAndManyEnemiesStaysBounded()
     {
-        // Was 4^20 copies in one step (ten Lightning orbs, four enemies): the game's frame never finished.
+        // Was 4^20 copies in one step (ten Lightning orbs, four enemies): the game's frame never finished. Merged, it's one branch
+        // per split of the 20 evokes among four enemies (1,771), and every outcome is found.
         var s = new SimState();
         for (var i = 0; i < 4; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 500, Hits = new() { 6 } });
         s.P.OrbCapacity = 10;
         s.P.Orbs = Enumerable.Range(0, 10).Select(_ => Lightning()).ToList();
         var o = SimEngine.Run(s, Shatter());
-        Assert.True(o.Copies < 4 * SimEngine.StepCopyBudget, $"{o.Copies} copies");
+        Assert.False(o.Truncated);
+        Assert.Equal(1771, o.Branches.Count);
+        Assert.Equal(1.0, o.Branches.Sum(b => b.Weight), 9);
+        Assert.True(o.Copies < 50_000, $"{o.Copies} copies");
     }
 
     [Fact]
-    public void PastTheBudgetNothingIsGuaranteedAndDamageComesFromTheSafeRun()
+    public void BeaconOfHopeWithJuggernautOnFourPlayersStopsAtTheWorkCap()
     {
-        // Four players with Beacon of Hope and Juggernaut: each block gain shares block with everyone, and
-        // every share hits a random enemy. One step makes more copies than the budget.
+        // Four players with Beacon of Hope and Juggernaut: each block gain shares block with everyone, and every share hits a random
+        // enemy, a chain inside one step that runs on every branch. It holds little but runs on: the work cap stops it (a small one
+        // here, to keep the test quick), and nothing is promised.
         var s = new SimState();
         for (var i = 0; i < 4; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 30, Hits = new() { 20 } });
         SimPlayer Setup(SimPlayer p)
@@ -73,14 +77,11 @@ public class SimStepBudgetTests
         }
         Setup(s.P);
         for (var t = 0; t < 3; t++) s.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
-        var o = SimEngine.Run(s);
-
+        var o = SimEngine.Run(s, null, null, new SimWork { CopyCap = 200_000 });
         Assert.True(o.Truncated);
-        Assert.NotNull(o.SafeWorst);
-        Assert.True(o.MaxStepCopies >= SimEngine.StepCopyBudget);
-        // Juggernaut can't be counted on to kill anyone, and you take every hit: the safe run's random hits
-        // land on nobody, so all four enemies attack.
+        Assert.Equal("the work cap", o.CapHit);
+        Assert.Equal(1.0, o.Branches.Sum(b => b.Weight), 9);
         Assert.All(Enumerable.Range(0, 4), id => Assert.False(o.DeadInAll(id)));
-        Assert.Equal(o.SafeWorst!.Taken, o.TakenMax);
+        Assert.Equal(1, o.YouDieChance().High);
     }
 }

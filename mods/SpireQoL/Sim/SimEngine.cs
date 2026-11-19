@@ -4,40 +4,29 @@ namespace SpireQoL.Sim;
 public sealed class SimOutcome
 {
     public List<SimState> Branches = new();
-    /// <summary>Too many branches: results are from the explored ones only, so no guarantees.</summary>
+    /// <summary>
+    /// The search stopped at its memory cap (decision #107): Branches are where it stopped, part-way through the turn, each with its
+    /// share of the rolls. What's settled in them stands (an enemy's death: Chance's lasting); everything else is unknown.
+    /// </summary>
     public bool Truncated;
-
-    /// <summary>After truncation: the run where random hits land on nobody (an upper bound on damage to you).</summary>
-    public SimState? SafeWorst;
-
-    /// <summary>
-    /// The share of the rolls Branches cover (decision #87): 1 when complete; less while an exploration is going on; NaN when
-    /// it can't be known (a step ran out of its own copies and a sample carried on).
-    /// </summary>
-    public double Explored = 1;
+    /// <summary>Which cap stopped it ("the memory cap", "the work cap"), or null.</summary>
+    public string? CapHit;
 
     /// <summary>
-    /// The chance something happens (decision #87, stage 2): exact when every outcome is explored; otherwise from what's explored
-    /// (Low) up to that plus every unexplored outcome (High), or Low when <paramref name="unexploredCan"/> rules them out.
+    /// The chance something happens: exact when the search finished; otherwise from what's settled (Low) up to that plus every
+    /// unknown branch (High). A branch with something not modelled (decision #92) is unknown too.
     /// </summary>
-    /// <param name="lasting">Once it happens nothing undoes it (an enemy's death): a branch not modelled past that point still counts it.</param>
-    public SimChance Chance(Func<SimState, bool> happens, bool unexploredCan = true, bool lasting = false)
+    /// <param name="lasting">Once it happens nothing undoes it (an enemy's death): a branch unknown past that point still counts it.</param>
+    public SimChance Chance(Func<SimState, bool> happens, bool lasting = false)
     {
-        if (Branches.Count == 0) return new SimChance(0, unexploredCan && Truncated ? 1 : 0, false);
-        // A branch with something not modelled (decision #92) is unknown: it can go either way.
-        bool Known(SimState b) => b.Unmodelled == null || (lasting && happens(b));
+        if (Branches.Count == 0) return new SimChance(0, Truncated ? 1 : 0, false);
+        bool Known(SimState b) => (b.Unmodelled == null && !Truncated) || (lasting && happens(b));
         var seen = Branches.Any(b => Known(b) && happens(b));
         var unknown = Branches.Where(b => !Known(b)).Sum(b => b.Weight);
-        if (!Truncated)
-        {
-            var total = Branches.Sum(b => b.Weight);
-            if (total <= 0) return new SimChance(0, 0, seen);
-            var p = Branches.Where(b => Known(b) && happens(b)).Sum(b => b.Weight) / total;
-            return new SimChance(p, Math.Min(1, p + unknown / total), seen);
-        }
-        if (double.IsNaN(Explored)) return new SimChance(0, seen || unexploredCan || unknown > 0 ? 1 : 0, seen); // a sample: no shares
-        var low = Math.Min(1, Branches.Where(b => Known(b) && happens(b)).Sum(b => b.Weight));
-        return new SimChance(low, Math.Min(1, low + unknown + (unexploredCan ? Math.Max(0, 1 - Explored) : 0)), seen);
+        var total = Branches.Sum(b => b.Weight);
+        if (total <= 0) return new SimChance(0, 0, seen);
+        var p = Branches.Where(b => Known(b) && happens(b)).Sum(b => b.Weight) / total;
+        return new SimChance(p, Math.Min(1, p + unknown / total), seen);
     }
 
     /// <summary>Some branch has something not modelled (decision #92): what's shown carries the ?.</summary>
@@ -47,39 +36,35 @@ public sealed class SimOutcome
     public IReadOnlyList<string> UnmodelledReasons => Branches.Where(b => b.Unmodelled != null).Select(b => b.Unmodelled!).Distinct().ToList();
 
     /// <summary>The chance the enemy dies before it acts.</summary>
-    public SimChance DeadChanceRange(int id) => Chance(b => b.Enemy(id) is { DiedBeforeActing: true }, lasting: true);
+    /// <remarks>A search stopped at a cap before the enemy turn (decision #107): an enemy already dead there counts (no revive comes
+    /// before it acts), so the range's floor is the deaths already settled.</remarks>
+    public SimChance DeadChanceRange(int id) => Chance(b => b.Enemy(id) is { DiedBeforeActing: true } || (Truncated && !b.EnemyTurnNow && b.Enemy(id) is { Alive: false, StartedAlive: true }), lasting: true);
 
     /// <summary>The chance the enemy turn kills you (nothing left to save you). An unexplored outcome can only if the safe run does.</summary>
-    public SimChance YouDieChance() => Chance(b => b.Died, unexploredCan: SafeWorst?.Died ?? true);
+    public SimChance YouDieChance() => Chance(b => b.Died);
 
     /// <summary>
-    /// The simulator's work, the same on every machine (the performance tests limit these, not time):
-    /// steps applied to the branch set, branches stepped over all steps, and state copies (the safe run's included).
+    /// The simulator's work, the same on every machine (the performance tests limit these, not time): steps applied to the
+    /// branch set, branches stepped over all steps, state copies, the most copies one step made, and the most states held at once.
     /// </summary>
-    public int Steps, Stepped, Copies;
-    /// <summary>The most copies one step made (at most about StepCopyBudget).</summary>
-    public int MaxStepCopies;
+    public int Steps, Stepped, Copies, MaxStepCopies, PeakHeld;
 
-    public SimState Worst => SafeWorst ?? Branches.OrderByDescending(b => b.Taken).ThenByDescending(b => b.OstyTaken).First();
+    public SimState Worst => Branches.OrderByDescending(b => b.Taken).ThenByDescending(b => b.OstyTaken).First();
     public int TakenMin => Branches.Min(b => b.Taken);
-    /// <summary>Teammate k's HP lost: the worst branch (the safe run included) and the best.</summary>
-    public int TeammateTakenMax(int k) => Math.Max(Branches.Max(b => b.Teammates[k].Taken), SafeWorst?.Teammates[k].Taken ?? 0);
+    /// <summary>Teammate k's HP lost: the worst branch and the best.</summary>
+    public int TeammateTakenMax(int k) => Branches.Max(b => b.Teammates[k].Taken);
     public int TeammateTakenMin(int k) => Branches.Min(b => b.Teammates[k].Taken);
-    /// <summary>What teammate k's Osty takes: the worst branch (the safe run included) and the best.</summary>
-    public int TeammateOstyTakenMax(int k) => Math.Max(Branches.Max(b => b.Teammates[k].OstyTaken), SafeWorst?.Teammates[k].OstyTaken ?? 0);
+    /// <summary>What teammate k's Osty takes: the worst branch and the best.</summary>
+    public int TeammateOstyTakenMax(int k) => Branches.Max(b => b.Teammates[k].OstyTaken);
     public int TeammateOstyTakenMin(int k) => Branches.Min(b => b.Teammates[k].OstyTaken);
-    /// <summary>Your Parrying Shield fires in every branch (none dropped) / in some branch (the safe run included).</summary>
+    /// <summary>Your Parrying Shield fires in every branch (the search finished) / in some branch.</summary>
     public bool ParryingShieldInAll => !Truncated && Branches.All(b => b.ParryingShieldFired);
-    public bool ParryingShieldInAny => Branches.Any(b => b.ParryingShieldFired) || SafeWorst?.ParryingShieldFired == true;
-    /// <summary>Teammate k in the branch where they lose the most HP (the safe run included): their Incoming Damage.</summary>
-    public SimPlayer TeammateWorst(int k)
-    {
-        var worst = Branches.Select(b => b.Teammates[k]).OrderByDescending(t => t.Taken).First();
-        return SafeWorst?.Teammates[k] is { } safe && safe.Taken > worst.Taken ? safe : worst;
-    }
-    public int TakenMax => Math.Max(Branches.Max(b => b.Taken), SafeWorst?.Taken ?? 0);
+    public bool ParryingShieldInAny => Branches.Any(b => b.ParryingShieldFired);
+    /// <summary>Teammate k in the branch where they lose the most HP: their Incoming Damage.</summary>
+    public SimPlayer TeammateWorst(int k) => Branches.Select(b => b.Teammates[k]).OrderByDescending(t => t.Taken).First();
+    public int TakenMax => Branches.Max(b => b.Taken);
     public int OstyTakenMin => Branches.Min(b => b.OstyTaken);
-    public int OstyTakenMax => Math.Max(Branches.Max(b => b.OstyTaken), SafeWorst?.OstyTaken ?? 0);
+    public int OstyTakenMax => Branches.Max(b => b.OstyTaken);
 
     /// <summary>Enemies the play itself kills (before your end of turn) in some branch / in every branch.</summary>
     public HashSet<int> KilledByPlayInAny = new();
@@ -109,7 +94,7 @@ public sealed class SimOutcome
     /// <summary>The enemy is dead before it acts in every branch.</summary>
     public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true }); // a death that happened stands, modelled past it or not
     public bool DeadInAny(int id) => Branches.Any(b => b.Enemy(id) is { DiedBeforeActing: true });
-    /// <summary>The chance it dies before acting (NaN when branches ran out: unknown).</summary>
+    /// <summary>The chance it dies before acting (NaN when the search stopped at its cap: unknown).</summary>
     public double DeadChance(int id)
     {
         if (Truncated) return double.NaN;
@@ -154,19 +139,6 @@ public static partial class SimEngine
     /// <summary>OrbQueue.maxCapacity: OrbCmd.AddSlots stops here.</summary>
     public const int MaxOrbSlots = 10;
 
-    public const int MaxBranches = 128;
-
-    /// <summary>
-    /// State copies one step may make (each hit, orb, block gain: SimEngine steps). Past it, the step's
-    /// random choices follow their first target and the run is out of branches (damage to you then comes
-    /// from the safe run). Bounds one step whatever chains inside it (Beacon of Hope sharing block with
-    /// Juggernaut on every player, Shatter): a simulation costs at most about steps × this.
-    /// </summary>
-    public const int StepCopyBudget = 2048;
-
-    /// <summary>Branches kept after running out (each then follows one outcome per step).</summary>
-    public const int SampleAfterTruncation = 32;
-
     public static SimOutcome Run(SimState start, SimPlay? play = null) => Run(start, null, play);
 
     public static SimOutcome Run(SimState start, SimScript play) => Run(start, (IReadOnlyList<SimScript>?)null, play);
@@ -182,194 +154,204 @@ public static partial class SimEngine
     public static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play) => Run(start, leadIn, play, null);
 
     /// <summary>
-    /// One run. With <paramref name="slices"/> (SimExploration, decision #87), a step that makes more than MaxBranches branches
-    /// keeps the slice the cursor asks for and follows it to the end; other slices are other runs. Without, it keeps a sample
-    /// that follows one outcome per step, and damage to you comes from the safe run.
+    /// One search (decision #107): every step advances all branches together, and branches that reach the same state merge
+    /// (adding their shares of the rolls), so the work grows with the distinct states, not the orders of random targets. Bounded by
+    /// the memory cap (SimWork.Hold): past it the search stops where it is, and the outcome is Truncated. <paramref name="work"/>
+    /// carries the cancellation and the background gate (SimJob).
     /// </summary>
-    internal static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play, SliceCursor? slices)
+    internal static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play, SimWork? work)
     {
-        var work = new SimWork { Slices = slices };
+        work ??= new SimWork();
         var first = start.Clone();
         first.Work = work;
         var b = new BranchSet(first);
-        if (leadIn is { Count: > 0 })
-        {
-            foreach (var queued in leadIn) RunScript(b, queued);
-            b.Do(s =>
-            {
-                s.PlayBase = new SimState.PlayBaseline(
-                    s.Enemies.Where(e => e.Alive).Select(e => e.Id).ToHashSet(),
-                    s.Enemies.Where(e => e.BlockBroken).Select(e => e.Id).ToHashSet(),
-                    s.P.BlockGains);
-                foreach (var e in s.Enemies) e.ReactedWithBlock = false;
-                s.PlayBiggestHit = 0;
-                s.PlayHpReached = s.PlayHpLosses = s.PlayHpLost = 0;
-                s.Fired = s.FiredAny = PowerSet.Empty;
-                s.FirstHits = PowerSet.Empty;
-            });
-        }
-        if (play != null) RunScript(b, play);
-        // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
         var aliveAtStart = start.Enemies.Where(e => e.Alive).Select(e => e.Id).ToList();
-        var killedPerBranch = b.States.Select(s => (s.PlayBase?.Alive ?? (IEnumerable<int>)aliveAtStart).Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
-        // Enemies that gained block from Curl Up, Sneaky or Skittish because of the play, in some branch.
-        var reacted = b.States.SelectMany(s => s.Enemies.Where(e => e.ReactedWithBlock).Select(e => e.Id)).ToHashSet();
-        // Some enemy's block broken by the play, in every branch (Hand Drill).
-        var breaksBlock = !b.Truncated && b.States.All(s => s.Enemies.Any(e => e.BlockBroken && !(s.PlayBase?.Broken.Contains(e.Id) ?? start.Enemy(e.Id) is not { BlockBroken: false })));
-        // Block gains during the play (each sets off Juggernaut).
-        var gains = b.States.Select(s => s.P.BlockGains - (s.PlayBase?.BlockGains ?? start.P.BlockGains)).ToList();
-        var playTruncated = b.Truncated;
-        var biggestHitMin = b.Truncated || b.States.Count == 0 ? 0 : b.States.Min(s => s.PlayBiggestHit);
-        int PlayMin(Func<SimState, int> f) => b.Truncated || b.States.Count == 0 ? 0 : b.States.Min(f);
-        var hpReached = PlayMin(s => s.PlayHpReached);
-        var hpLosses = PlayMin(s => s.PlayHpLosses);
-        var hpLost = PlayMin(s => s.PlayHpLost);
-        // The play's log over its branches: in every branch (each merged one keeps its smallest), and in some branch.
-        var firedEvery = b.Truncated || b.States.Count == 0 ? PowerSet.Empty
-            : b.States.Skip(1).Aggregate(b.States[0].Fired, (acc, x) => SimState.MergeLog(acc, x.Fired, every: true));
-        var firedAny = b.States.Aggregate(PowerSet.Empty, (acc, x) => SimState.MergeLog(acc, x.FiredAny, every: false));
-        // The first hit of the card's attack on each enemy, when nothing random came before it (the damage-formula audit).
-        var firstHits = b.States.Count > 0 && b.States.All(x => ReferenceEquals(x.FirstHits, b.States[0].FirstHits) || x.FirstHits.Items.AsSpan().SequenceEqual(b.States[0].FirstHits.Items)) ? b.States[0].FirstHits : PowerSet.Empty;
-        AutoPostPlay(b);
-        EndOfTurn(b);
-        b.Do(EnemyTurn);
-        var outcome = new SimOutcome
+        SimOutcome? outcome = null;
+        try
         {
-            Branches = b.States,
-            Truncated = b.Truncated,
-            Explored = b.Truncated && slices == null ? double.NaN : 1,
+            try
+            {
+                if (leadIn is { Count: > 0 })
+                {
+                    foreach (var queued in leadIn) RunScript(b, queued);
+                    b.Do(s =>
+                    {
+                        s.PlayBase = new SimState.PlayBaseline(
+                            s.Enemies.Where(e => e.Alive).Select(e => e.Id).ToHashSet(),
+                            s.Enemies.Where(e => e.BlockBroken).Select(e => e.Id).ToHashSet(),
+                            s.P.BlockGains);
+                        foreach (var e in s.Enemies) e.ReactedWithBlock = false;
+                        s.PlayBiggestHit = 0;
+                        s.PlayHpReached = s.PlayHpLosses = s.PlayHpLost = 0;
+                        s.Fired = s.FiredAny = PowerSet.Empty;
+                        s.FirstHits = PowerSet.Empty;
+                    });
+                }
+                if (play != null) RunScript(b, play);
+                // The play is over in every branch: its own results are exact from here, even if the end of turn hits the cap.
+                outcome = PlayResults(b.States, start, aliveAtStart, complete: true);
+                AutoPostPlay(b);
+                EndOfTurn(b);
+                b.Do(EnemyTurn);
+            }
+            catch (SimCapped)
+            {
+                // Stopped at a cap: the branches where it stopped, each part-way through (BranchSet keeps them whole).
+                outcome ??= PlayResults(b.States, start, aliveAtStart, complete: false);
+                outcome.Truncated = true;
+                outcome.CapHit = work.CapHit ?? "the work cap";
+            }
+            outcome.Branches = Detached(b.States);
+            work.EndStep();
+            outcome.Steps = work.Steps;
+            outcome.Stepped = work.Stepped;
+            outcome.Copies = work.Copies;
+            outcome.MaxStepCopies = work.MaxStepCopies;
+            outcome.PeakHeld = work.PeakHeld;
+            return outcome;
+        }
+        finally
+        {
+            work.Release();
+        }
+    }
+
+    /// <summary>
+    /// The play's own results over its branches (kills, block breaks and gains, reactions, its log). Not <paramref name="complete"/>
+    /// (the search stopped before the play was over): only what can happen in some branch, no guarantees.
+    /// </summary>
+    private static SimOutcome PlayResults(List<SimState> states, SimState start, List<int> aliveAtStart, bool complete)
+    {
+        // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
+        var killedPerBranch = states.Select(s => (s.PlayBase?.Alive ?? (IEnumerable<int>)aliveAtStart).Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
+        // Enemies that gained block from Curl Up, Sneaky or Skittish because of the play, in some branch.
+        var reacted = states.SelectMany(s => s.Enemies.Where(e => e.ReactedWithBlock).Select(e => e.Id)).ToHashSet();
+        // Some enemy's block broken by the play, in every branch (Hand Drill).
+        var breaksBlock = complete && states.All(s => s.Enemies.Any(e => e.BlockBroken && !(s.PlayBase?.Broken.Contains(e.Id) ?? start.Enemy(e.Id) is not { BlockBroken: false })));
+        // Block gains during the play (each sets off Juggernaut).
+        var gains = states.Select(s => s.P.BlockGains - (s.PlayBase?.BlockGains ?? start.P.BlockGains)).ToList();
+        int PlayMin(Func<SimState, int> f) => !complete || states.Count == 0 ? 0 : states.Min(f);
+        // The play's log over its branches: in every branch (each merged one keeps its smallest), and in some branch.
+        var firedEvery = !complete || states.Count == 0 ? PowerSet.Empty
+            : states.Skip(1).Aggregate(states[0].Fired, (acc, x) => SimState.MergeLog(acc, x.Fired, every: true));
+        var firedAny = states.Aggregate(PowerSet.Empty, (acc, x) => SimState.MergeLog(acc, x.FiredAny, every: false));
+        // The first hit of the card's attack on each enemy, when nothing random came before it (the damage-formula audit).
+        var firstHits = complete && states.Count > 0 && states.All(x => ReferenceEquals(x.FirstHits, states[0].FirstHits) || x.FirstHits.Items.AsSpan().SequenceEqual(states[0].FirstHits.Items)) ? states[0].FirstHits : PowerSet.Empty;
+        return new SimOutcome
+        {
             KilledByPlayInAny = killedPerBranch.SelectMany(k => k).ToHashSet(),
-            KilledByPlayInAll = playTruncated || killedPerBranch.Count == 0
+            KilledByPlayInAll = !complete || killedPerBranch.Count == 0
                 ? new HashSet<int>()
                 : killedPerBranch.Skip(1).Aggregate(new HashSet<int>(killedPerBranch[0]), (acc, k) => { acc.IntersectWith(k); return acc; }),
-            PlayKillsInEveryBranch = !playTruncated && killedPerBranch.Count > 0 && killedPerBranch.All(k => k.Count > 0),
+            PlayKillsInEveryBranch = complete && killedPerBranch.Count > 0 && killedPerBranch.All(k => k.Count > 0),
             BlockReactionInAny = reacted,
             PlayBreaksBlockInEveryBranch = breaksBlock,
             PlayBlockGainsMax = gains.Count > 0 ? gains.Max() : 0,
-            PlayBiggestHitMin = biggestHitMin,
-            PlayHpReachedMin = hpReached,
-            PlayHpLossesMin = hpLosses,
-            PlayHpLostMin = hpLost,
+            PlayBiggestHitMin = PlayMin(s => s.PlayBiggestHit),
+            PlayHpReachedMin = PlayMin(s => s.PlayHpReached),
+            PlayHpLossesMin = PlayMin(s => s.PlayHpLosses),
+            PlayHpLostMin = PlayMin(s => s.PlayHpLost),
             PlayFiredEvery = firedEvery,
             PlayFiredAny = firedAny,
             PlayFirstHits = firstHits,
         };
-        // Too many branches to explore: nothing is guaranteed, and damage to you comes from the safe run. Exploring in slices,
-        // SimExploration runs it once for the whole exploration.
-        if (b.Truncated && slices == null) outcome.SafeWorst = SafeRun(start, leadIn, play, work);
-        work.EndStep();
-        outcome.Steps = work.Steps;
-        outcome.Stepped = work.Stepped;
-        outcome.Copies = work.Copies;
-        outcome.MaxStepCopies = work.MaxStepCopies;
-        return outcome;
-    }
-
-    /// <summary>
-    /// The run where random hits land on nobody, so no attacker is ever saved by one: an upper bound on damage to you (never an
-    /// underestimate), for when not every branch was explored.
-    /// </summary>
-    internal static SimState SafeRun(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play, SimWork? work = null)
-    {
-        var safeStart = start.Clone();
-        safeStart.Work = work ?? new SimWork();
-        safeStart.NoRandomHits = true;
-        var safe = new BranchSet(safeStart);
-        if (leadIn != null) foreach (var queued in leadIn) RunScript(safe, queued);
-        if (play != null) RunScript(safe, play);
-        AutoPostPlay(safe);
-        EndOfTurn(safe);
-        safe.Do(EnemyTurn);
-        return safe.States[0];
     }
 
     // ------------------------------------------------------------------ branching
 
     /// <summary>
     /// Chains a branching effect inside one step (Juggernaut on each block gain Beacon of Hope shares,
-    /// Forgotten Soul after Feel No Pain): identical results merge, as between steps. The step's copy
-    /// budget (Branch) bounds the rest; without both, Beacon of Hope with Juggernaut on four players ran
-    /// out of memory.
+    /// Forgotten Soul after Feel No Pain): identical results merge, as between steps.
     /// </summary>
     private static List<SimState> Then(IEnumerable<SimState> states, Func<SimState, IEnumerable<SimState>> f)
     {
         var next = new List<SimState>();
         var seen = new Dictionary<long, SimState>();
         foreach (var x in states)
-        {
             foreach (var r in f(x))
-            {
-                var key = r.Key();
-                if (seen.TryGetValue(key, out var same))
-                {
-                    same.Weight += r.Weight;
-                    same.MergeResults(r); // not in the key: the guarantee is the smallest
-                    same.OutOfBranches |= r.OutOfBranches;
-                    continue;
-                }
-                seen[key] = r;
-                next.Add(r);
-            }
-        }
+                Merge(next, seen, r);
         return next;
+    }
+
+    /// <summary>Adds a branch to a step's results, or merges it into the identical one there (both shares of the rolls).</summary>
+    private static void Merge(List<SimState> next, Dictionary<long, SimState> seen, SimState r)
+    {
+        var key = r.Key();
+        if (seen.TryGetValue(key, out var same))
+        {
+            same.Weight += r.Weight;
+            same.MergeResults(r); // not in the key: the guarantee is the smallest
+            return;
+        }
+        seen[key] = r;
+        next.Add(r);
+    }
+
+    /// <summary>The search stopped at the memory cap (SimWork.Hold): Run keeps the branches where it stopped.</summary>
+    internal sealed class SimCapped : Exception
+    {
     }
 
     private sealed class BranchSet
     {
         public List<SimState> States;
-        public bool Truncated;
+        /// <summary>Inside another branch set's step (an auto-play's own play): the outer set counts what's held.</summary>
+        private readonly bool _nested;
 
-        public BranchSet(SimState s) => States = new List<SimState> { s };
+        public BranchSet(SimState s, bool nested = false)
+        {
+            States = new List<SimState> { s };
+            _nested = nested;
+        }
+
+        private SimWork? Work => States.Count > 0 ? States[0].Work : null;
 
         private void Count()
         {
-            if (States.Count > 0 && States[0].Work is { } w) { w.StartStep(); w.Steps++; w.Stepped += States.Count; }
+            if (Work is { } w) { w.StartStep(); w.Steps++; w.Stepped += States.Count; }
         }
 
-        /// <summary>Applies a step that may branch, merging identical results.</summary>
+        /// <summary>
+        /// Applies a step that may branch, merging identical results. The memory cap is checked between branches, the work cap at
+        /// every copy: when one is hit, the branches stepped so far and those not yet stepped are kept as they are (every share of
+        /// the rolls stays; a branch stopped part-way is kept as far as it got, with its own share), and the search stops (SimCapped).
+        /// </summary>
         public void Each(Func<SimState, IEnumerable<SimState>> step)
         {
             Count();
-            // Out of branches: nothing is guaranteed any more (damage to you comes from the safe run), so
-            // each explored branch just follows one outcome of the step, without cloning the others
-            // (HitRandom yields lazily). Keeps a branch-heavy fight (four Defects' Lightning) cheap.
-            if (Truncated)
-            {
-                for (var i = 0; i < States.Count; i++)
-                {
-                    States[i].FirstTargetOnly = true;
-                    States[i] = step(States[i]).First();
-                }
-                return;
-            }
+            var work = _nested ? null : Work;
             var next = new List<SimState>();
             var seen = new Dictionary<long, SimState>();
-            // Exploring in slices (decision #87): every branch of the step is kept (the step's copy budget bounds them), then the
-            // cursor picks the slice this run follows.
-            var slices = States.Count > 0 ? States[0].Work?.Slices : null;
-            foreach (var s in States)
+            var mine = new List<SimState>();
+            for (var i = 0; i < States.Count; i++)
             {
-                foreach (var r in step(s))
+                var parent = States[i];
+                var weight = parent.Weight;
+                mine.Clear();
+                try
                 {
-                    // An identical branch: one state, with both shares of the rolls.
-                    var key = r.Key();
-                    if (seen.TryGetValue(key, out var same)) { same.Weight += r.Weight; same.MergeResults(r); }
-                    else
-                    {
-                        seen[key] = r;
-                        next.Add(r);
-                    }
-                    if ((slices == null && next.Count >= MaxBranches) || r.OutOfBranches)
-                    {
-                        // Out of branches: keep a sample that follows one outcome per step from here
-                        // (see above). Its results only feed "can happen" checks.
-                        Truncated = true;
-                        States = next.Take(SampleAfterTruncation).ToList();
-                        return;
-                    }
+                    foreach (var r in step(parent)) mine.Add(r);
                 }
+                catch (SimCapped) when (!_nested)
+                {
+                    // The work cap, part-way through this branch: it stays as far as it got (what happened in it stands), its children go.
+                    parent.Weight = weight;
+                    Stop(next, i);
+                }
+                foreach (var r in mine) Merge(next, seen, r);
+                if (work != null && !work.Hold(next.Count + States.Count)) Stop(next, i + 1);
             }
-            States = slices != null && next.Count > slices.Size ? slices.Take(next) : next;
+            States = next;
+            work?.Hold(next.Count);
+        }
+
+        /// <summary>The search stops here: what's stepped and every branch from <paramref name="from"/> on not yet stepped.</summary>
+        private void Stop(List<SimState> next, int from)
+        {
+            if (Work is { } w) w.CapHit ??= "the work cap";
+            next.AddRange(States.Skip(from));
+            States = next;
+            throw new SimCapped();
         }
 
         public void Do(Action<SimState> step)
@@ -498,18 +480,13 @@ public static partial class SimEngine
             Damage(st, e, amount(e));
             then?.Invoke(st, e);
         }
-        if (s.NoRandomHits)
-        {
-            yield return s;
-            yield break;
-        }
         var targets = s.Targetable.Select(e => e.Id).ToList();
         if (targets.Count == 0)
         {
             yield return s;
             yield break;
         }
-        if (targets.Count == 1 || !Branch(s))
+        if (targets.Count == 1)
         {
             Hit(s, s.Enemy(targets[0])!);
             yield return s;
@@ -522,19 +499,6 @@ public static partial class SimEngine
             Hit(c, c.Enemy(id)!);
             yield return c;
         }
-    }
-
-    /// <summary>
-    /// Whether a random choice may branch here: not once the run is out of branches, nor past this step's
-    /// copy budget (then the run is out of branches from here: BranchSet truncates after the step).
-    /// </summary>
-    private static bool Branch(SimState s)
-    {
-        if (s.FirstTargetOnly) return false;
-        if (s.Work is not { OverBudget: true }) return true;
-        s.FirstTargetOnly = true;
-        s.OutOfBranches = true;
-        return false;
     }
 
     /// <summary>Unpowered damage from you to every hittable enemy (orbs, procs), each its own amount.</summary>
@@ -756,12 +720,9 @@ public static partial class SimEngine
     /// <summary>A script on its own (the state right after it), for tests of v2 plays.</summary>
     public static void RunScriptTo(SimState s, SimScript script, out List<SimState> branches, out bool truncated)
     {
-        var first = s.Clone();
-        first.Work = new SimWork();
-        var b = new BranchSet(first);
-        RunScript(b, script);
-        branches = b.States;
-        truncated = b.Truncated;
+        var b = Scratch(s, out var work);
+        truncated = Capped(work, () => RunScript(b, script));
+        branches = Detached(b.States);
     }
 
     public static void ApplyPlayTo(SimState s, SimPlay play, out List<SimState> branches, out bool truncated) => ApplyPlayTo(s, null, play, out branches, out truncated);
@@ -769,13 +730,49 @@ public static partial class SimEngine
     /// <summary>The lead-in plays, then this play (the state right after it resolves).</summary>
     public static void ApplyPlayTo(SimState s, IReadOnlyList<SimPlay>? leadIn, SimPlay play, out List<SimState> branches, out bool truncated)
     {
+        var b = Scratch(s, out var work);
+        truncated = Capped(work, () =>
+        {
+            if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(b, queued);
+            ApplyPlay(b, play);
+        });
+        branches = Detached(b.States);
+    }
+
+    /// <summary>
+    /// The search is over: its branches stop counting against its work (a copy made from them later, by a check or a test, is
+    /// nobody's, and never meets the search's caps).
+    /// </summary>
+    private static List<SimState> Detached(List<SimState> states)
+    {
+        foreach (var s in states) s.Work = null;
+        return states;
+    }
+
+    /// <summary>A branch set of its own for a script on its own (RunScriptTo, ApplyPlayTo).</summary>
+    private static BranchSet Scratch(SimState s, out SimWork work)
+    {
         var first = s.Clone();
-        first.Work = new SimWork();
-        var b = new BranchSet(first);
-        if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(b, queued);
-        ApplyPlay(b, play);
-        branches = b.States;
-        truncated = b.Truncated;
+        first.Work = work = new SimWork();
+        return new BranchSet(first);
+    }
+
+    /// <summary>Runs <paramref name="f"/> to the end or the memory cap (true), then frees what it held.</summary>
+    private static bool Capped(SimWork work, Action f)
+    {
+        try
+        {
+            f();
+            return false;
+        }
+        catch (SimCapped)
+        {
+            return true;
+        }
+        finally
+        {
+            work.Release();
+        }
     }
 
     private static void ApplyPlay(BranchSet b, SimPlay p) => RunScript(b, SimScript.Of(p));
@@ -906,7 +903,7 @@ public static partial class SimEngine
         for (var i = 0; i < stampede; i++)
         {
             var n = i;
-            b.Each(s => n < P(s).Stampede && Alive(s) ? AutoPlayFromHand(b, s, k, hand => hand.Where(c => c.IsAttack).ToList()) : new[] { s });
+            b.Each(s => n < P(s).Stampede && Alive(s) ? AutoPlayFromHand(s, k, hand => hand.Where(c => c.IsAttack).ToList()) : new[] { s });
         }
         // Simpleton: a random card among their cheapest, each time.
         var simpleton = b.States.Max(s => P(s).Simpleton);
@@ -914,7 +911,7 @@ public static partial class SimEngine
         {
             var n = i;
             b.Each(s => n < P(s).Simpleton && Alive(s)
-                ? AutoPlayFromHand(b, s, k, hand => hand.Count == 0 ? hand : hand.Where(c => c.Cost == hand.Min(x => x.Cost)).ToList())
+                ? AutoPlayFromHand(s, k, hand => hand.Count == 0 ? hand : hand.Where(c => c.Cost == hand.Min(x => x.Cost)).ToList())
                 : new[] { s });
         }
         // I Am Invincible on top of their draw pile: its block. With your draw pile (decision #91): certain when it's known to be
@@ -978,7 +975,7 @@ public static partial class SimEngine
     /// (CombatCardSelection.NextItem: each equally likely), and per hittable target for a card aimed at one (SimPlay.TargetId). A card that changes the hand (it draws or makes cards) still plays; later auto-plays in
     /// that branch aren't predicted (CardResolved). One with no play built ends them too.
     /// </summary>
-    private static IEnumerable<SimState> AutoPlayFromHand(BranchSet outer, SimState s, int k, Func<List<SimHandCard>, List<SimHandCard>> pick)
+    private static IEnumerable<SimState> AutoPlayFromHand(SimState s, int k, Func<List<SimHandCard>, List<SimHandCard>> pick)
     {
         var hand = k < 0 ? s.P.AutoHand : s.Teammates[k].AutoHand;
         if (hand == null) return new[] { s };
@@ -1019,9 +1016,8 @@ public static partial class SimEngine
                 var t = plays.Count == 1 ? c : c.Clone();
                 t.Weight = c.Weight / plays.Count;
                 if (k < 0) t.AutoPicks = [..t.AutoPicks, new SimPick(card.Id, play.TargetId)];
-                var sub = new BranchSet(t);
+                var sub = new BranchSet(t, nested: true);
                 ApplyPlay(sub, play);
-                if (sub.Truncated) outer.Truncated = true;
                 result.AddRange(sub.States);
             }
         }

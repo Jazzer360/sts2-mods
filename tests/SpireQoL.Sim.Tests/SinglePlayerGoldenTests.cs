@@ -116,7 +116,6 @@ public class SinglePlayerGoldenTests
         var sb = new StringBuilder();
         sb.Append($"T{o.Truncated} K[{string.Join(",", o.KilledByPlayInAll.OrderBy(x => x))}|{string.Join(",", o.KilledByPlayInAny.OrderBy(x => x))}] ");
         sb.Append($"B{o.PlayBlockGainsMax} {o.PlayKillsInEveryBranch} {o.PlayBreaksBlockInEveryBranch} R[{string.Join(",", o.BlockReactionInAny.OrderBy(x => x))}] ");
-        if (o.SafeWorst is { } w) sb.Append($"S{w.Taken}/{w.OstyTaken} ");
         var branches = o.Branches.Select(b =>
         {
             var e = string.Join(";", b.Enemies.OrderBy(x => x.Id).Select(x =>

@@ -51,13 +51,19 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var m = Sts2State.IsPlayerTurn ? TurnEndModel.Shown() : null;
-        if (m == null || (m.BlockableTotal == 0 && m.UnblockableTotal == 0))
+        if (m == null || (!m.Unknown && m.BlockableTotal == 0 && m.UnblockableTotal == 0))
         {
             _widget!.HasContent = false;
             return;
         }
 
         _widget!.HasContent = true;
+        // The search stopped at its memory cap (decision #107): ? in place of the damage, and no promise either way.
+        if (m.Unknown)
+        {
+            _panel!.ShowUnknown();
+            return;
+        }
         // A lethal enemy turn: the skull. One something keeps you alive through (Fairy in a Bottle first, then
         // Lizard Tail, the order the game asks them): its icon and your HP after.
         (Godot.Texture2D? Icon, int HpAfter)? revive = null;
@@ -76,7 +82,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         // The skull and the chance come from the whole outcome (both lines): the split is only how it's shown.
         int? unblockable = m.UnblockableTotal > 0 ? m.UnblockableTaken : null;
         _panel!.Show(m.BlockableTotal, m.ExpectedBlock,
-            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken - (unblockable ?? 0), dies, revive, ExtraTurnIcon(), chance, m.ProgressMark, unblockable);
+            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken - (unblockable ?? 0), dies, revive, ExtraTurnIcon(), chance, m.ShownMark, unblockable);
     }
 
     /// <summary>

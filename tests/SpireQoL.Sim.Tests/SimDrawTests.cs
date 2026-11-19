@@ -184,18 +184,17 @@ public class SimDrawTests
     }
 
     [Fact]
-    public void SlicesStillAddUpWithDraws()
+    public void DrawsInAnyOrderMergeAndKeepTheirShares()
     {
+        // Four draws from Ethereal Burns, Burns and plain cards: the same cards drawn in another order is the same hand, one branch.
         var s = You();
         s.P.FeelNoPain = 3;
         s.P.Draw = Pile((EtherealBurn, 2), (Burn, 2), (Plain, 6));
-        var play = Draws(4);
-        var unlimited = SimExploration.Of(s, play, int.MaxValue).ExploreAll();
-        var sliced = SimExploration.Of(s, play, 2).ExploreAll();
-        Assert.True(unlimited.Branches.Count > 2);
-        Assert.Equal(1.0, sliced.Branches.Sum(b => b.Weight), 9);
-        Assert.Equal(unlimited.TakenMax, sliced.TakenMax);
-        Assert.Equal(unlimited.YouDieChance().Low, sliced.YouDieChance().Low, 9);
+        var o = SimEngine.Run(s, Draws(4));
+        Assert.False(o.Truncated);
+        Assert.True(o.Branches.Count > 2);
+        Assert.Equal(1.0, o.Branches.Sum(b => b.Weight), 9);
+        Assert.Equal(o.Branches.Count, o.Branches.Select(b => b.Key()).Distinct().Count());
     }
 
     private static readonly SimDrawCard Invincible = new("invincible") { InvincibleBlock = 10 };

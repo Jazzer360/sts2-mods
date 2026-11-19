@@ -90,13 +90,12 @@ public static partial class SimEngine
         }
     }
 
-    /// <summary>One random living enemy: a branch per possible target (none with NoRandomHits; one past the budget).</summary>
+    /// <summary>One random living enemy: a branch per possible target.</summary>
     private static IEnumerable<SimState> RandomTarget(SimState s, Func<SimState, int, IEnumerable<SimState>> then)
     {
-        if (s.NoRandomHits) return new[] { s };
         var targets = s.Targetable.Select(e => e.Id).ToList();
         if (targets.Count == 0) return new[] { s };
-        if (targets.Count == 1 || !Branch(s)) return then(s, targets[0]);
+        if (targets.Count == 1) return then(s, targets[0]);
         var all = new List<SimState>();
         foreach (var id in targets)
         {

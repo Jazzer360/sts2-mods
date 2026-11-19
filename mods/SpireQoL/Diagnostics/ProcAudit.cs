@@ -877,10 +877,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             if (w.Facts is { } facts && (facts.SimIncomplete || facts.Unmodelled.Count > 0))
             {
-                // Its tabs came from simulations with outcomes not explored yet, or not modelled (decisions #87, #92): what's shown
+                // Its tabs came from simulations stopped at the memory cap, or not modelled (decisions #107, #92): what's shown
                 // carries the ?, and what happened may be one of those. Every proc tab can come from the simulator (each model's log),
                 // so their checks aren't reported; the snapshot checks run their own simulation and stay.
-                var why = facts.Unmodelled.Count > 0 ? "a branch of its simulation not modelled" : "its simulation's outcomes not all explored";
+                var why = facts.Unmodelled.Count > 0 ? "a branch of its simulation not modelled" : "its simulation stopped at the memory cap";
                 var fromSim = issues.Where(SimDependent).ToList();
                 foreach (var x in fromSim) model.Add($"not checked ({why}): {x}");
                 issues.RemoveAll(fromSim.Contains);
@@ -1032,7 +1032,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (Combat.SimWait.Summary() is { } waits) ModEntry.Log.Info($"[perf] combat summary: simulations: {waits}.");
         if (ProcIndicatorsFeature.TakeHeldFrames() is > 0 and var held) ModEntry.Log.Info($"[perf] combat summary: card frames shown with tabs held from an earlier board while simulations ran: {held}.");
         if (Combat.TurnEndModel.TakeHeldFrames() is > 0 and var heldForecast) ModEntry.Log.Info($"[perf] combat summary: frames showing the forecast held from an earlier board: {heldForecast}.");
-        if (SimJob.CapSummary() is { } caps) ModEntry.Log.Info($"[perf] combat summary: explorations stopped or cut short by a cap: {caps}.");
+        if (SimJob.CapSummary() is { } caps) ModEntry.Log.Info($"[perf] combat summary: searches stopped by {caps}.");
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"))})";
         ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand, {_interleaved} with another action during a choice), {_matched} matched{issues}.");

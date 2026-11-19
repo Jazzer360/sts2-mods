@@ -46,14 +46,22 @@ public sealed class TeammateIncomingDamageFeature : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var mate = Sts2State.IsPlayerTurn ? Sts2State.FocusedTeammate() : null;
-        var view = mate != null ? TurnEndModel.Shown()?.TeammateView.FirstOrDefault(v => v.Player == mate) : null;
-        if (view == null || (view.Incoming == 0 && view.Unblockable == 0))
+        var model = mate != null ? TurnEndModel.Shown() : null;
+        var view = model?.TeammateView.FirstOrDefault(v => v.Player == mate);
+        if (model == null || view == null || (!model.Unknown && view.Incoming == 0 && view.Unblockable == 0))
         {
             _widget!.HasContent = false;
             return;
         }
         _widget!.HasContent = true;
+        // As yours (decision #107): ? when the search stopped at its cap, and the ? mark while what's shown isn't certain.
+        if (model.Unknown)
+        {
+            _panel!.ShowUnknown();
+            return;
+        }
         int? unblockable = view.Unblockable > 0 ? view.Unblockable : null;
-        _panel!.Show(view.Incoming, view.Block, view.OstyHp > 0 ? (view.OstyTaken, view.OstyDies) : null, view.TakenMax - (unblockable ?? 0), unblockable: unblockable);
+        _panel!.Show(view.Incoming, view.Block, view.OstyHp > 0 ? (view.OstyTaken, view.OstyDies) : null, view.TakenMax - (unblockable ?? 0),
+            progress: model.ShownMark, unblockable: unblockable);
     }
 }

@@ -194,6 +194,23 @@ internal sealed class DamageMathPanel
         _result.AddThemeColorOverride("font_color", take > 0 ? TakeColor : SafeColor);
     }
 
+    /// <summary>
+    /// The damage isn't known (the search stopped at its memory cap: decision #107): only a ? in the result row, no math, no skull,
+    /// no promise either way.
+    /// </summary>
+    public void ShowUnknown()
+    {
+        foreach (var c in _math) c.Visible = false;
+        _resultRow.Visible = true;
+        _heartIcon.Visible = _unblockableRow.Visible = false;
+        _deathChance.Visible = _skull.Visible = _progress.Visible = false;
+        _extraTurnIcon.Visible = _extraTurn.Visible = false;
+        _reviveIcon.Visible = _revive.Visible = false;
+        _ostyIcon.Visible = _osty.Visible = false;
+        _result.Text = "?";
+        _result.AddThemeColorOverride("font_color", TakeColor);
+    }
+
     internal static Label Number(Color color)
     {
         var l = UiKit.Label("", FontSize, color);

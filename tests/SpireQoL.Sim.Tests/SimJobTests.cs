@@ -1,17 +1,16 @@
-using System.Diagnostics;
 using Xunit;
 
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// A simulation explored on a worker (decision #87), publishing its snapshots on a clock (decision #104): whatever the publishing
-/// does, the last snapshot is the whole outcome, the same as exploring it all at once.
+/// A search on a worker (decision #107): its result is the whole outcome, the same as searching it on the spot, whether it finished
+/// before its background turn or after; cancelled, it never has a result.
 /// </summary>
 public class SimJobTests
 {
     private static SimOrb Lightning(int passive) => new() { Kind = OrbKind.Lightning, Passive = passive, Evoke = 8 };
 
-    /// <summary>Three enemies near death, five Lightning orbs and Juggernaut on block gains: needs slicing at a small slice size.</summary>
+    /// <summary>Three enemies near death, five Lightning orbs and Juggernaut on block gains.</summary>
     private static SimState Heavy()
     {
         var s = new SimState();
@@ -29,21 +28,12 @@ public class SimJobTests
     [Fact]
     public async Task ABackgroundJobEndsWithTheWholeOutcome()
     {
-        var whole = SimExploration.Of(Heavy(), null, 4).ExploreAll();
-        // A first pass of one copy: everything after it is explored in the background, snapshots on the clock.
-        var job = SimJob.Start(SimExploration.Of(Heavy(), null, 4), "test", firstBudget: 1);
-
+        var whole = SimExploration.Of(Heavy()).ExploreAll();
+        // A first budget of one copy: it waits for a background turn at its second step, then finishes there.
+        var job = SimJob.Start(SimExploration.Of(Heavy()), "test", firstBudget: 1);
         await job.Ready.WaitAsync(TimeSpan.FromSeconds(30));
-        Assert.True(job.Latest!.Truncated, "the first pass must leave work for the background");
-        var clock = Stopwatch.StartNew();
-        while (!job.Finished && clock.Elapsed < TimeSpan.FromSeconds(30)) await Task.Delay(5);
-
         Assert.True(job.Finished);
-        // The final snapshot is published as it finishes, not at the next tick of the clock.
-        SimOutcome? latest = null;
-        for (var i = 0; i < 100 && (latest = job.Latest) is { Truncated: true }; i++) await Task.Delay(5);
-        Assert.NotNull(latest);
-        Assert.False(latest!.Truncated);
-        Assert.Equal(Describe(whole), Describe(latest));
+        Assert.False(job.Latest!.Truncated);
+        Assert.Equal(Describe(whole), Describe(job.Latest));
     }
 }

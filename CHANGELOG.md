@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.13
+#### Changed
+- Busy boards are worked out completely: random hits (Lightning, Juggernaut, random-target cards) that land the same way in a different order now count as one outcome, so a fight like four Defects with full Lightning orbs finishes in about a second instead of never, with exact chances. In multiplayer, outcomes that differ only in a teammate are no longer mixed up.
+- Incoming Damage, Teammate Incoming Damage and the Death Skull carry a ? while they wait more than a moment for a newer result. In the rare fight too big to work out, Incoming Damage shows ? instead of a number (nothing promised either way), and an enemy's death chance starts from the kills already certain.
+
 ### Spire QoL 1.20.12
 #### Changed
 - Code cleanup: the build has no warnings left (redundant null checks removed). No change in the game.
