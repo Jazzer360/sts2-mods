@@ -119,6 +119,7 @@ public static class ModEntry
             new DeathSkullFeature(ctx),
             new ExplorationProgressFeature(ctx),
             new IntentForecastFeature(ctx),
+            new IntentDetailsFeature(ctx),
             new UpdateNoticeFeature(),
             new Diagnostics.ForecastAudit(),
             new Diagnostics.ProcAudit(ctx),

@@ -100,6 +100,48 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             "Each chance is logged as [audit] [odds] in the game log.", new Dictionary<string, string>(), new Dictionary<string, string> { ["check"] = "odds" });
     }
 
+    private Dictionary<MegaCrit.Sts2.Core.Entities.Creatures.Creature, Features.IntentDetailsFeature.Shown> _intentsShown = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>
+    /// Intent Details against the enemy turn (decision #98): each enemy that made the move its intent showed, the block it gained
+    /// during that move and the powers it applied (the history entries between the enemy's previous move and its own move entry).
+    /// A power Artifact took leaves no entry: not reported.
+    /// </summary>
+    private List<string> IntentIssues(List<CombatHistoryEntry> window)
+    {
+        var issues = new List<string>();
+        var start = window.FindIndex(e => SideOf(e) == CombatSide.Enemy);
+        if (start < 0) return issues;
+        for (var i = start; i < window.Count; i++)
+        {
+            if (window[i] is not MonsterPerformedMoveEntry m || m.Monster.Creature is not { } c || !_intentsShown.TryGetValue(c, out var shown)) continue;
+            var span = window.Skip(start).Take(i - start + 1).ToList();
+            start = i + 1;
+            if (m.Move.Id != shown.MoveId) continue; // another move than the intent showed (stunned, changed): nothing to compare
+            var name = m.Monster.GetType().Name;
+            if (shown.Block is { } b)
+            {
+                var gained = span.OfType<BlockGainedEntry>().Where(x => x.Receiver == c).Sum(x => x.Amount);
+                if (gained != b) issues.Add($"intent block: {name}'s {shown.MoveId} showed {b}, it gained {gained}");
+            }
+            var applied = span.OfType<PowerReceivedEntry>().Where(x => x.Applier == c).ToList();
+            var artifact = span.OfType<PowerReceivedEntry>().Any(x => x.Power is MegaCrit.Sts2.Core.Models.Powers.ArtifactPower && x.Amount < 0);
+            foreach (var p in shown.Powers)
+            {
+                var same = applied.Where(x => x.Power.GetType() == p.Power).ToList();
+                if (same.Count == 0)
+                {
+                    if (!artifact) issues.Add($"intent power: {name}'s {shown.MoveId} showed {p.Power.Name}, it applied none");
+                }
+                else if (p.Amount is { } a && same.All(x => x.Amount != a))
+                    issues.Add($"intent power: {name}'s {shown.MoveId} showed {p.Power.Name} {a}, it applied {string.Join(", ", same.Select(x => x.Amount))}");
+            }
+            foreach (var t in applied.Select(x => x.Power.GetType()).Distinct().Where(t => shown.Powers.All(p => p.Power != t)))
+                issues.Add($"intent power: {name}'s {shown.MoveId} applied {t.Name}, not shown");
+        }
+        return issues;
+    }
+
     private static void CountIn(Dictionary<string, int> counts, string reason) => counts[reason] = (counts.TryGetValue(reason, out var n) ? n : 0) + 1;
 
     public void OnFrame(OverlayHost host)
@@ -147,6 +189,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             // Ending the turn just started: freeze the last forecast.
             _frozen = _last.Full; // teammates' hands included (decision #25: the check uses everything that isn't a roll)
+            // What each enemy's intent showed (Intent Details): its block and the powers its move applies (decision #98).
+            _intentsShown = _frozen.Ids.Keys.Select(c => (c, Features.IntentDetailsFeature.For(c))).Where(x => x.Item2 != null)
+                .ToDictionary(x => x.c, x => x.Item2!, (IEqualityComparer<MegaCrit.Sts2.Core.Entities.Creatures.Creature>)ReferenceEqualityComparer.Instance);
             // Its exploration goes on after the board changes (decision #87): the check compares against all of it.
             if (_frozen.Job is { } frozenJob) frozenJob.Pinned = true;
             _frozenAt = _lastHistoryCount;
@@ -337,6 +382,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var teamLine = TeammateIssues(f, damage, endOfTurn, issues);
         var enemyIssues = EnemyIssues(f, window, endOfTurn, me, out var outcomeLine, out var actuals);
         issues.AddRange(enemyIssues.Select(x => x.Issue));
+        issues.AddRange(IntentIssues(window));
         // Each number above is checked against its own range over the branches; together they must
         // also come from one branch (one set of random targets explains everything that happened).
         var o = f.Outcome;

@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.0
+#### Added
+- Intent Details: on each enemy's intent during your turn, the block its move gains (a number on its defend intent) and each buff or debuff it applies, with its icon and amount (Strength 3, Weak 2). On by default (In fights).
+
 ### Spire QoL 1.19.5
 #### Changed
 - Mods that say they don't change the game but do can be listed in the project's reporting settings, so their effects aren't reported as Spire QoL's mismatches.

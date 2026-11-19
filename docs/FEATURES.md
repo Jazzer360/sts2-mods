@@ -21,6 +21,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 | [Death Skull](#death-skull) | `death-skull` | 🟡 | on |
 | [Exploration Progress](#exploration-progress) | `exploration-progress` | 🟡 | on |
 | [Potion Tabs](#potion-tabs) | `potion-tabs` | 🟡 | on |
+| [Intent Details](#intent-details) | `intent-details` | 🟡 | on |
 | [Run Reminders](#run-reminders) | `run-reminders` | 🟡 | on |
 | [Rest Preview](#rest-preview) | `rest-preview` | 🟡 | on |
 | [Update Notice](#update-notice) | `update-notice` | 🟡 | on |
@@ -62,7 +63,7 @@ Spire QoL is **display-only**. It never changes game state, damage, cards or sav
 Opens with **F10** (setting `SettingsKey`), the gear beside the version note on the main menu (Update Notice), the **Spire QoL settings** button on the Mods screen (Settings → Mod Settings → select Spire QoL) or the same button on the pause menu. Every change applies right away and is saved. Esc or Close closes it; game hotkeys are blocked while it's open.
 
 - **Pages** (decision #66), grouped by where things show: **In fights**, then its details (**Card tabs**, **Relics**, **Your powers**, **Enemy powers**, **Cards**), **Outside fights**, **General**, **Guide**, **About**. Each feature's on/off switch (live: a feature switched off is skipped each frame and its widgets hide; no restart) is at the top of its page, with its options under its name below.
-- **In fights:** Card Indicators, Proc Indicators, Relic Counters, Incoming Damage, Teammate Incoming Damage, Shuffle Warning, Death Skull, Potion Tabs. Options, under the feature they change: **Card Indicators** (Ethereal opacity slider), **Proc Indicators** (amounts on proc tabs `ProcNumbers`, indirect procs `ProcIndirect`), **Relic Counters** (tracker flashes early `PulseOneStepEarly`, tracker flash speed slider), **Predictions** (death chance `DeathChance`; multiplayer predictions `MultiplayerPredictions`, experimental, on: teammates counted in every prediction; count teammates' hands `TeammateHands`, off: what's shown leaves out the cards in teammates' hands, which you can't see; on: their Ethereal cards exhausting, Burn, Decay and Regret count, for yours and their predictions alike; the checks always count them).
+- **In fights:** Card Indicators, Intent Details, Proc Indicators, Relic Counters, Incoming Damage, Teammate Incoming Damage, Shuffle Warning, Death Skull, Potion Tabs. Options, under the feature they change: **Card Indicators** (Ethereal opacity slider), **Proc Indicators** (amounts on proc tabs `ProcNumbers`, indirect procs `ProcIndirect`), **Relic Counters** (tracker flashes early `PulseOneStepEarly`, tracker flash speed slider), **Predictions** (death chance `DeathChance`; multiplayer predictions `MultiplayerPredictions`, experimental, on: teammates counted in every prediction; count teammates' hands `TeammateHands`, off: what's shown leaves out the cards in teammates' hands, which you can't see; on: their Ethereal cards exhausting, Burn, Decay and Regret count, for yours and their predictions alike; the checks always count them).
 - **Outside fights:** Run Reminders and Rest Preview; **Events** options (chance under event icons `EventOdds`, inspect event cards `EventInspect`); then **Reminders**, every relic and quest card with a Run Reminders rule, with a column per place it shows: **Card rewards** (its tab on the cards a reward offers), **Events** (its icon beside event options), **Shops** (its icon beside shop prices) and **Map** (its icon beside the map legend), each a switch of its own with what it marks there, and All on / All off. A note says when Run Reminders is off.
 - **General:** Update Notice, the two prediction checks and the coverage check, and send error reports (`ReportErrors`, live).
 - **Card tabs:** Retain, Sly, Replay, Reshuffle, each with its icon, plus the family switches (all proc tabs, all double-play tabs). Tab kinds seen in play that the catalog doesn't describe yet are listed under **Other**, so everything stays switchable.
@@ -490,6 +491,19 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 **Checked** (`IntentForecastAudit`): each time the game rolls an enemy's next move, the forecast for that roll is worked out from the state at that moment and compared with the move it picked: a certain forecast must match, a random one must have given it a chance above 0; every roll is logged with its odds (`[audit] [intent]`). The catalog tests read every enemy's move rules in the installed game (`IntentRulesTests`).
 
 **Settings:** the `intent-forecast` switch (In fights).
+
+## Intent Details
+
+**What you see** (decision #98), during your turn, on each enemy's intent on screen:
+- **Block:** on a defend intent, the block its move gains, as a blue number where an attack shows its damage (bottom right of the icon). It's the move's amount through the game's block math as things stand (`Hook.ModifyBlock`: Frail on it, Dexterity), summed when the move gains block more than once. Block it gives another creature (Guardbot's) isn't counted; no number when an amount isn't one the move's code keeps.
+- **Buffs and debuffs:** just right of its intents, each power its move applies, with the game's icon and the amount (Strength 3, Weak 2), read from the move's code as Intent Forecast reads later moves (`Sim/Adapter/MovePowers`). The icon alone when the amount isn't a number the move keeps.
+- **Status cards:** the game already prints the count on a status intent (`StatusIntent`: "3"). Card debuffs (afflictions, a stolen card) get nothing.
+- Nothing while the intent on screen is hidden (`HiddenIntent`, `UnknownIntent`).
+- **Game UI touched:** our own nodes added under each `NIntent`'s `%IntentHolder` (so they bob with the icon): a label over its `%Value` label, a row right of the last intent. The game's nodes are never changed.
+
+**Checked** (the end-of-turn check, `ForecastAudit.IntentIssues`): for each enemy that made the move its intent showed, the block it gained during that move and the powers it applied (`PowerReceivedEntry.Applier`) against what was shown: `intent block` and `intent power` issues. A power Artifact took isn't reported.
+
+**Settings:** the `intent-details` switch (In fights).
 
 ## Run Reminders
 

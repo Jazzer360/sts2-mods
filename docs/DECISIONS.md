@@ -512,3 +512,8 @@ Revisits #34. With another mod that changes the game loaded, mismatches still ar
 *Why:* a manifest's flag is the mod author's word; most display-only mods are fine to report alongside (#34), and this catches the exceptions without a mod release.
 *Replaced:* nothing.
 
+### 98. Intent Details: what the current move does that its intent doesn't say — active (2026-11-18)
+Each enemy's intent on screen gets, during your turn, the block its move gains (a number on its defend intent) and the powers it applies (icon and amount beside its intents), read from the move's code like Intent Forecast's later moves (decision #72, `MovePowers`; block: `CreatureCmd.GainBlock` on its own creature, through `Hook.ModifyBlock` as things stand). Its own feature and switch. Status counts are left to the game, which already prints them; card debuffs (afflictions) get nothing: they're learnt quickly, the numbers aren't.
+*Why:* the forecast showed what later moves apply, but not the move on screen now, and which debuff it is (Weak, Frail, Vulnerable) and how much block an enemy is about to gain are what players forget, and what lethal math next turn needs. Everything shown is checked against the move when it's made.
+*Replaced:* nothing.
+
