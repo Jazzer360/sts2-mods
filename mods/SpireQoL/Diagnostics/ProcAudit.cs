@@ -1499,8 +1499,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         foreach (var (creature, id) in sim.Ids)
         {
             if (!card.TryGetValue(id, out var c) || sim.Start.Enemy(id) is not { Hp: > 0 } start) continue;
-            // Gone from the board after the play: dead.
-            var d = w.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(1, 1, true);
+            // Gone from the board after the play: dead. So is a Waterfall Giant the play brought to 0: Steam Eruption keeps it at
+            // 999999999 HP, stunned until it blows (WaterfallGiant.TriggerAboutToBlowState), as good as dead (issue #428).
+            var aboutToBlow = creature.Monster is MegaCrit.Sts2.Core.Models.Monsters.WaterfallGiant giant && Sts2State.Private(giant, "IsAboutToBlow", false);
+            var d = !aboutToBlow && w.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(1, 1, true);
             if (c.Certain && !d.Certain)
                 issues.Add($"lethal: {start.Name} predicted to die before acting in every outcome of this play, but after it: {d.Text()}");
             else if (!c.Possible && d.Low > 0)

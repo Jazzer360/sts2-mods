@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.3
+#### Fixed
+- The lethal tab check counts a Waterfall Giant the play brought to 0 (about to blow) as dead, as it is.
+- In multiplayer, the enemy-turn check no longer reports enemy HP when a teammate's Stampede or Simpleton played a card at the end of the turn (that pick isn't predicted); the turn is counted as not checked.
+
 ### Spire QoL 1.20.2
 #### Changed
 - Rest Preview sits on the outer side of your character at the fire: to the right of a character sitting on the right (in multiplayer), as it sits left of one on the left.

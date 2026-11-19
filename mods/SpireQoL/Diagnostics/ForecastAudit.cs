@@ -293,6 +293,16 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (!sawEnemy) endOfTurn.Add(e);
         }
 
+        // A teammate's end-of-turn pick from their hand (Stampede, Simpleton) isn't predicted (a random card; decisions #25, #80): what
+        // it did to the enemies isn't in the forecast, so the enemies and your HP can't be held to it (issue #430). Counted, not reported.
+        var mates = f.Teammates.Where(t => t.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.StampedePower>() || t.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.SimpletonPower>()).ToList();
+        if (mates.Count > 0 && endOfTurn.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && mates.Contains(e.CardPlay.Card.Owner)))
+        {
+            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a teammate's Stampede or Simpleton played a card at end of turn, which isn't predicted)");
+            CountIn(Skips, "a teammate's end-of-turn pick from their hand (not predicted)");
+            return;
+        }
+
         // No enemy turn came (an extra turn: The Hanged Man's ExtraTurnPower.ShouldTakeExtraTurn): nothing to compare.
         if (!sawEnemy && !youDied)
         {
