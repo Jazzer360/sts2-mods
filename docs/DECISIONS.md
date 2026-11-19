@@ -517,3 +517,8 @@ Each enemy's intent on screen gets, during your turn, the block its move gains (
 *Why:* the forecast showed what later moves apply, but not the move on screen now, and which debuff it is (Weak, Frail, Vulnerable) and how much block an enemy is about to gain are what players forget, and what lethal math next turn needs. Everything shown is checked against the move when it's made.
 *Replaced:* nothing.
 
+### 99. A move's powers sit in the corner of their intent — active (2026-11-19)
+The powers a move applies (Intent Details on the intent on screen, Intent Forecast on later moves) are small chips in the bottom-right corner of the intent they belong to, where an attack shows its damage: a buff's on the move's buff intent, a debuff's on its debuff intent, else its last intent (`Features/IntentCorner`).
+*Why:* beside the intents, a chip read as another intent: Strength 1 next to a buff and a defend looked like an attack for 1. In the corner it reads as part of the intent it explains, as the block number does on a defend.
+*Replaced:* the chips in a row right of the move's intents (decisions #72, #98).
+

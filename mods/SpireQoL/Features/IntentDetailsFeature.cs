@@ -17,14 +17,13 @@ namespace SpireQoL.Features;
 /// <summary>
 /// Intent Details (decision #98): on each enemy's intent on screen, during your turn, what its move does that the intent doesn't
 /// say: the block it gains, as a number on its defend intent (like the damage on an attack), and each power it applies (icon and
-/// amount: Strength 3, Weak 2) just right of its intents, read from the move's code as Intent Forecast reads later moves
+/// amount: Strength 3, Weak 2) small in the corner of the buff or debuff intent it belongs to (IntentCorner), read from the move's code as Intent Forecast reads later moves
 /// (MovePowers). The game already shows a status intent's card count. Nothing while the intent is hidden. Checked against what the
 /// move did (ForecastAudit). Spec: docs/FEATURES.md#intent-details.
 /// </summary>
 public sealed class IntentDetailsFeature : IFeature, IFrameFeature
 {
     private const string BlockName = "SpireQoLIntentBlock";
-    private const string PowersName = "SpireQoLIntentPowers";
     internal static readonly Color BlockColor = new(0.55f, 0.8f, 1f);
 
     public IntentDetailsFeature(QolContext ctx) { }
@@ -59,13 +58,16 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             // As the intent on screen says: nothing while it's hidden there (its move would be given away).
             var hidden = intents.Any(i => Sts2State.Private<AbstractIntent?>(i, "_intent", null) is HiddenIntent or UnknownIntent);
             var shown = Sts2State.IsPlayerTurn && !hidden && node.Entity is { } e ? For(e) : null;
-            foreach (var intent in intents)
+            var onScreen = intents.Select(i => Sts2State.Private<AbstractIntent?>(i, "_intent", null)).ToList();
+            var corners = shown != null && onScreen.All(x => x != null) ? IntentCorner.Assign(onScreen!, shown.Powers) : new();
+            for (var k = 0; k < intents.Count; k++)
             {
+                var intent = intents[k];
                 var holder = intent.GetNodeOrNull<Control>("%IntentHolder");
                 if (holder == null) continue;
-                var isDefend = Sts2State.Private<AbstractIntent?>(intent, "_intent", null) is DefendIntent;
-                Block(holder, intent, isDefend && shown?.Block is > 0 ? shown.Block : null);
-                Powers(holder, intent, intent == intents[^1] && shown is { Powers.Count: > 0 } ? shown.Powers : null);
+                Block(holder, intent, onScreen[k] is DefendIntent && shown?.Block is > 0 ? shown.Block : null);
+                // Each power in the corner of the intent it belongs to (decision #99).
+                IntentCorner.Place(intent, corners.TryGetValue(k, out var mine) ? mine : null);
             }
         }
     }
@@ -103,55 +105,5 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             label.Position = new Vector2(0, holder.Size.Y - 28);
             label.Size = new Vector2(holder.Size.X, 28);
         }
-    }
-
-    /// <summary>The powers the move applies, just right of its last intent, level with its icon (in its holder: it bobs with it).</summary>
-    private static void Powers(Control holder, NIntent intent, IReadOnlyList<MovePowers.Applied>? powers)
-    {
-        var row = holder.GetNodeOrNull<HBoxContainer>(PowersName);
-        var key = powers == null ? "" : string.Join(",", powers.Select(p => $"{p.Power.Name}:{p.Amount}"));
-        if (powers == null)
-        {
-            row?.QueueFree();
-            return;
-        }
-        if (row != null && row.GetMeta("key", "").AsString() != key)
-        {
-            row.QueueFree();
-            row = null;
-        }
-        if (row == null)
-        {
-            row = UiKit.Row(4);
-            row.Name = PowersName;
-            row.MouseFilter = Control.MouseFilterEnum.Ignore;
-            row.SetMeta("key", key);
-            foreach (var p in powers) row.AddChild(Chip(p));
-            holder.AddChild(row);
-        }
-        var size = row.GetCombinedMinimumSize();
-        row.Size = size;
-        var centre = intent.GetNodeOrNull<Node2D>("%Intent") is { } sprite ? sprite.Position.Y : holder.Size.Y / 2;
-        row.Position = new Vector2(holder.Size.X + 2, centre - size.Y / 2);
-    }
-
-    /// <summary>A power's icon with its amount beside it (the icon alone when the amount isn't a number the move keeps).</summary>
-    private static Control Chip(MovePowers.Applied applied)
-    {
-        var chip = UiKit.Row(1);
-        chip.MouseFilter = Control.MouseFilterEnum.Ignore;
-        var icon = UiKit.Icon(GameIcons.Power(applied.Power), 30);
-        icon.MouseFilter = Control.MouseFilterEnum.Ignore;
-        chip.AddChild(icon);
-        if (applied.Amount is { } a)
-        {
-            var amount = UiKit.Label(a.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), 18, Colors.White);
-            amount.AddThemeConstantOverride("outline_size", 6);
-            amount.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
-            amount.VerticalAlignment = VerticalAlignment.Center;
-            amount.MouseFilter = Control.MouseFilterEnum.Ignore;
-            chip.AddChild(amount);
-        }
-        return chip;
     }
 }

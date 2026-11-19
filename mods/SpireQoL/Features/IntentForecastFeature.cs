@@ -41,6 +41,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     /// <summary>Holders that only bob (a chance above its move), rather than sitting level with the intent icon beside them.</summary>
     private readonly HashSet<Control> _bobOnly = new();
     private float _bob;
+    /// <summary>Each forecast intent with the powers in its corner, placed again every frame (its layout settles after it's ready).</summary>
+    private readonly List<(NIntent Node, List<MovePowers.Applied>? Powers)> _corners = new();
 
     public IntentForecastFeature(QolContext ctx) => _ctx = ctx;
 
@@ -89,6 +91,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             Build(enemy, turns, view);
         }
         _widget!.HasContent = true;
+        foreach (var (node, powers) in _corners)
+            if (GodotObject.IsInstanceValid(node) && node.IsNodeReady()) IntentCorner.Place(node, powers);
         // NIntent._Process's bob, for rows with no intent icon to follow.
         var y = -(Mathf.Sin(Time.GetTicksMsec() * 0.001f * Mathf.Pi + _bob) * 10f + 8f);
         // The narrower side of each row's intents gets a spacer (each shown child adds its width and a gap): the intents sit centred.
@@ -153,6 +157,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         UiKit.Clear(_rows!);
         _bobbing.Clear();
         _bobOnly.Clear();
+        _corners.Clear();
         _balance.Clear();
         var targets = enemy.CombatState?.PlayerCreatures.ToList() ?? new List<Creature>();
         // The game's intents bob (NIntent._Process: a sine from _timeOffset); ours start in step with the intent on screen.
@@ -203,39 +208,25 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     private void AddMove(HBoxContainer line, Creature enemy, List<Creature> targets, float bob, MoveStateMachineView view, string moveId, List<Control> right)
     {
         if (view.Move(moveId) is not { } move) return;
-        foreach (var intent in move.Intents)
+        // The powers the move applies (Frail 2), from its code, each in the corner of the buff or debuff intent it belongs to
+        // (IntentCorner, as on the intent on screen: decision #99).
+        var corners = enemy.Monster is { } monster ? IntentCorner.Assign(move.Intents, MovePowers.Of(monster, move)) : new();
+        for (var k = 0; k < move.Intents.Count; k++)
         {
+            var intent = move.Intents[k];
+            var powers = corners.TryGetValue(k, out var mine) ? mine : null;
             var node = NIntent.Create(bob);
             node.MouseFilter = Control.MouseFilterEnum.Ignore;
             line.AddChild(node);
-            if (node.IsNodeReady()) node.UpdateIntent(intent, targets, enemy);
-            else node.Ready += () => node.UpdateIntent(intent, targets, enemy);
+            if (powers != null) _corners.Add((node, powers));
+            void Show()
+            {
+                node.UpdateIntent(intent, targets, enemy);
+                IntentCorner.Place(node, powers);
+            }
+            if (node.IsNodeReady()) Show();
+            else node.Ready += Show;
         }
-        // The powers the move applies (Frail 2), from its code: a reminder of what a buff or debuff intent is.
-        if (enemy.Monster is not { } monster) return;
-        foreach (var applied in MovePowers.Of(monster, move))
-        {
-            var chip = Bobbing(PowerChip(applied));
-            right.Add(chip);
-            line.AddChild(chip);
-        }
-    }
-
-    /// <summary>A power's icon with its amount beside it (none when the amount isn't a number the move keeps).</summary>
-    private static Control PowerChip(MovePowers.Applied applied)
-    {
-        var chip = UiKit.Row(1);
-        chip.MouseFilter = Control.MouseFilterEnum.Ignore;
-        var icon = UiKit.Icon(GameIcons.Power(applied.Power), 30);
-        icon.MouseFilter = Control.MouseFilterEnum.Ignore;
-        chip.AddChild(icon);
-        if (applied.Amount is { } a)
-        {
-            var amount = Outlined(UiKit.Label(a.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), 18, Colors.White));
-            amount.VerticalAlignment = VerticalAlignment.Center;
-            chip.AddChild(amount);
-        }
-        return chip;
     }
 
     /// <summary>The bob timing (NIntent._timeOffset) of the enemy's first intent on screen, or 0.</summary>

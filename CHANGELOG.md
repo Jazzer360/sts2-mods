@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.2
+#### Changed
+- Intent Details and Intent Forecast: a move's buffs and debuffs (Strength 1, Weak 2) are small icons in the corner of the buff or debuff intent they belong to, like the block number on a defend, instead of a row beside the intents that read like another attack.
+
 ### Spire QoL 1.20.1
 #### Fixed
 - A card that gives you a power you don't have yet (Child of the Stars) lost all its tabs: its simulation failed reading that power.
