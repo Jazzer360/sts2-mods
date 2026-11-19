@@ -553,10 +553,7 @@ Since decision #104 the frame waits 8 ms at most, so on a busy board a new board
 *Replaced:* decision #104's pending display (no tab, Incoming Damage hidden) and its local-only cap logging.
 
 ### 106. A build warning fails the release — active (2026-11-19)
- builds each mod and its test projects from scratch (, so no warning hides behind an up-to-date build) with , and the simulator tests on GitHub run with it too. Day-to-day Possible reasons for this include:
-  * You misspelled a built-in dotnet command.
-  * You intended to execute a .NET program, but dotnet-build does not exist.
-  * You intended to run a global tool, but a dotnet-prefixed executable with this name could not be found on the PATH. is unchanged, so a work-in-progress warning doesn't stop installing to the game. Unused usings (IDE0005) aren't in the normal build;  lists them.
+`scripts/release.ps1` builds each mod and its test projects from scratch (`--no-incremental`, so no warning hides behind an up-to-date build) with `TreatWarningsAsErrors`, and the simulator tests on GitHub run with it too. Day-to-day `dotnet build` is unchanged, so a work-in-progress warning doesn't stop installing to the game. Unused usings (IDE0005) aren't in the normal build; `scripts/dead-code.mjs` lists them.
 *Why:* warnings had piled up unseen in the release output (three xUnit analyzer warnings, three nullable warnings in the mod, the latter from redundant null checks that hid whether a value could really be null). A nullable warning in mod code can be a crash. Failing the release keeps the count at zero, so a new one is seen when it appears. Cost: a game update that marks something the mod uses obsolete blocks releasing until it's fixed, which is when it should be.
 *Replaced:* warnings printed and ignored.
 
