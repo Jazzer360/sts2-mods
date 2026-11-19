@@ -98,6 +98,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public int Shuffles;
         /// <summary>Another play finished after this card's tabs were last computed (played quickly): not checked.</summary>
         public string? StaleBecause;
+        /// <summary>The proc tabs the card showed in hand that the prediction as the play began disagrees with (decision #103).</summary>
+        public List<string>? ShownDiff;
+        /// <summary>Why the tabs shown weren't held to that prediction; null when they were.</summary>
+        public string? ShownSkip;
         /// <summary>Game state when the play started (before its effects), for reports.</summary>
         public IReadOnlyDictionary<string, string>? Before;
         /// <summary>Frames between the card's last frame in hand and its play starting.</summary>
@@ -351,6 +355,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public PlayFacts? Facts;
         public long Lag = -1;
         public string? StaleBecause;
+        public List<string>? ShownDiff;
+        public string? ShownSkip;
     }
 
     /// <summary>Power amounts on every creature in the fight, by creature and power class.</summary>
@@ -457,11 +463,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                         rec.Predicted = now.Tabs;
                         rec.Facts = now.Facts;
                         rec.Lag = 0;
+                        (rec.ShownDiff, rec.ShownSkip) = ShownCheck(card, now.Tabs, now.Facts);
                     }
                     else
                     {
                         // Couldn't be rebuilt: the tabs it last showed in hand, unless a play finished since.
                         _fromHand++;
+                        rec.ShownSkip = "no prediction as the play began";
                         rec.Predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null;
                         rec.Facts = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null;
                         rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
@@ -622,6 +630,54 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
+    /// <summary>
+    /// The proc tabs the card last showed in hand against the prediction as its play began (decision #103), which the outcome is
+    /// checked against: with nothing between them (no history entry since the frame they were drawn, the card's own play start
+    /// aside) and both simulations fully explored, they come from the same board through the same code and must be the same. A
+    /// difference is a tab drawn stale (a cache keyed on too little, a frame that didn't refresh), which checking only the
+    /// outcome can't see. Returns the differences, or why the check was skipped.
+    /// </summary>
+    private (List<string>? Diff, string? Skip) ShownCheck(CardModel card, List<TabSpec> now, PlayFacts nowFacts)
+    {
+        if (!ProcIndicatorsFeature.LastTabs.TryGetValue(card, out var last) || !ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var shownFacts))
+            return (null, "none recorded in hand");
+        // Drawn on the last frame the card was in hand (not on an earlier one: this feature skipped a frame, or was switched off).
+        if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var seenAt) || last.Frame != seenAt) return (null, "not drawn on its last frame in hand");
+        var shown = last.Tabs;
+        if (shownFacts.SimPending || shownFacts.SimIncomplete || nowFacts.SimPending || nowFacts.SimIncomplete)
+            return (null, "simulation still exploring");
+        if (_history == null || !_ctx.Decor.LastSeenFrame.TryGetValue(card, out var frame) || !_countAtFrame.TryGetValue(frame, out var drawnAt))
+            return (null, "no history position for them");
+        var hist = _history.Entries.ToList();
+        for (var k = Math.Max(0, drawnAt); k < hist.Count; k++)
+        {
+            if (hist[k] is CardPlayStartedEntry own && ReferenceEquals(own.CardPlay.Card, card)) continue;
+            return (null, "the board changed since they were drawn");
+        }
+        var before = shown.GroupBy(t => t.Key).ToDictionary(g => g.Key, g => Look(g.First()));
+        var atPlay = now.GroupBy(t => t.Key).ToDictionary(g => g.Key, g => Look(g.First()));
+        var diff = new List<string>();
+        foreach (var (key, was) in before)
+        {
+            if (!atPlay.TryGetValue(key, out var then)) diff.Add($"tabs shown: {key} shown ({was}), not predicted as the play began");
+            else if (then != was) diff.Add($"tabs shown: {key} shown as {was}, predicted {then} as the play began");
+        }
+        foreach (var (key, then) in atPlay)
+            if (!before.ContainsKey(key)) diff.Add($"tabs shown: {key} not shown, predicted ({then}) as the play began");
+        return (diff.Count > 0 ? diff : null, null);
+
+        // What the player sees of a tab: crossed or plain, the aim marker, its number or text.
+        static string Look(TabSpec t)
+        {
+            var parts = new List<string> { t.Crossed ? "crossed" : "plain" };
+            if (t.Aimed) parts.Add("aimed");
+            if (t.Number is { } n) parts.Add(n.ToString());
+            if (t.NumberText != null) parts.Add(t.NumberText);
+            if (t.Text != null) parts.Add(t.Text);
+            return string.Join(" ", parts);
+        }
+    }
+
     // History size at each frame, to tell when a card's tabs were computed relative to other plays.
     private readonly Dictionary<long, int> _countAtFrame = new();
 
@@ -764,6 +820,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter, TargetDraws = captured ? rec.TargetDraws : null,
             FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
             StaleBecause = captured ? rec.StaleBecause : StaleBecause(hist, card, start, me),
+            ShownDiff = captured ? rec.ShownDiff : null, ShownSkip = captured ? rec.ShownSkip : "the play's start wasn't seen",
         };
         Report(w, me, hist);
     }
@@ -838,6 +895,14 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 foreach (var x in fromSim) model.Add($"not checked (a teammate's hand changes it; Count teammates' hands is off): {x}");
                 issues.RemoveAll(fromSim.Contains);
             }
+            // What the card showed in hand against the same prediction (decision #103): after the filters above, which are about
+            // what happened, not about what was shown; this check has its own (ShownCheck).
+            if (w.ShownDiff != null) issues.AddRange(w.ShownDiff);
+            if (w.ShownSkip != null)
+            {
+                var sk = "tabs shown: " + w.ShownSkip;
+                _skipCounts[sk] = (_skipCounts.TryGetValue(sk, out var skn) ? skn : 0) + 1;
+            }
             foreach (var line in model.Where(x => x.Contains("not checked", StringComparison.Ordinal)))
             {
                 var reason = SkipReason(line);
@@ -907,6 +972,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             string[] fp = kind switch
             {
                 "no tab" or "didn't fire" => new[] { kind, rest.Split(' ')[0] },
+                // Which tab on which card: a cache that missed something about this card, or a tab drawn from an old frame.
+                "tabs shown" => new[] { kind, card, rest.Split(' ')[0] },
                 "power went down" => new[] { kind, rest.Split(' ')[0] },
                 // Grouped by the sources that could have done it (amounts and cards left out).
                 _ when kind.StartsWith("untracked") => new[] { kind, rest.Contains("could be: ") ? rest[(rest.IndexOf("could be: ") + 10)..].TrimEnd(')') : card },

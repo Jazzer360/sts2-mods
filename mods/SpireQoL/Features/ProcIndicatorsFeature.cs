@@ -145,10 +145,23 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             catch { /* faulted tasks are reported per card below */ }
         }
 
+        foreach (var card in hand) _lastTabs.Remove(card);
         foreach (var (card, p, d) in pending)
-            foreach (var t in Finish(card, p))
-                d.AddTab(t);
+        {
+            var tabs = Finish(card, p);
+            _lastTabs[card] = (_ctx.Decor.Frame, tabs);
+            if (_lastTabs.Count > 300) _lastTabs.Clear();
+            foreach (var t in tabs) d.AddTab(t);
+        }
     }
+
+    /// <summary>
+    /// Each card's proc tabs from the last frame it was in hand, as this feature gave them to the card (every one, before the
+    /// settings hide any), with the frame: what ProcAudit holds against its prediction as the play begins (decision #103).
+    /// </summary>
+    public static IReadOnlyDictionary<CardModel, (long Frame, List<TabSpec> Tabs)> LastTabs => _lastTabs;
+
+    private static readonly Dictionary<CardModel, (long Frame, List<TabSpec> Tabs)> _lastTabs = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>A card's facts, the proc sources this frame, and its running simulations.</summary>
     private sealed record Prepared(PlayFacts F, List<AbstractModel> Sources, SimBatch? Sim);

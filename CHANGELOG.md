@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.8
+#### Changed
+- The card-play check now also compares the tabs a card showed in your hand with what the mod predicts as its play begins, when nothing happened in between, so a tab left showing from an older board is caught.
+
 ### Spire QoL 1.20.7
 #### Fixed
 - In co-op, a game over could take every floating panel (Incoming Damage, Relic Counters, Intent Forecast, Rest Preview...) down with the fight's screen, leaving them broken until a restart. The panels now step out of the game's fight screen as it closes.
