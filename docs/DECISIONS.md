@@ -522,3 +522,7 @@ The powers a move applies (Intent Details on the intent on screen, Intent Foreca
 *Why:* beside the intents, a chip read as another intent: Strength 1 next to a buff and a defend looked like an attack for 1. In the corner it reads as part of the intent it explains, as the block number does on a defend.
 *Replaced:* the chips in a row right of the move's intents (decisions #72, #98).
 
+### 100. Rest Preview on the character's outer side — active (2026-11-19)
+Rest Preview (yours, and a hovered teammate's) attaches on the outer side of that character at the fire: left of one sitting left of the screen's middle, right of one sitting right of it, then the other side when there's no room. Where it attached is logged once per character position.
+*Why:* in multiplayer players sit on both sides of the fire; always left of the character put a right-side player's panel over the fire and the options.
+*Replaced:* left of the character, else right.

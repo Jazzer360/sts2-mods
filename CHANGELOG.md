@@ -8,6 +8,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 1.20.2
 #### Changed
+- Rest Preview sits on the outer side of your character at the fire: to the right of a character sitting on the right (in multiplayer), as it sits left of one on the left.
 - Intent Details and Intent Forecast: a move's buffs and debuffs (Strength 1, Weak 2) are small icons in the corner of the buff or debuff intent they belong to, like the block number on a defend, instead of a row beside the intents that read like another attack.
 
 ### Spire QoL 1.20.1

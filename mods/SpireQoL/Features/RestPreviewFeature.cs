@@ -124,13 +124,35 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         // Beside your character at the fire, like Incoming Damage beside you in a fight; the right edge when the character
         // isn't found. Movable like every panel.
         _mine = _ctx.Widget("rest-hp", "Rest Preview", new WidgetLayout { FollowGame = true, Anchor = ScreenAnchor.Right, OffsetX = 0, OffsetY = 0 });
-        _mine.AttachTo(() => CharacterRect(RunMe()), AttachSide.LeftOf)
+        // On the outer side of the character (decision #100): left of one sitting left of the fire, right of one sitting right of
+        // it (in multiplayer the players sit on both sides); the other side when there's no room.
+        _mine.AttachTo(() => Side(CharacterRect(RunMe()), right: false), AttachSide.LeftOf)
+             .AttachTo(() => Side(CharacterRect(RunMe()), right: true), AttachSide.RightOfBottom)
+             .AttachTo(() => CharacterRect(RunMe()), AttachSide.LeftOf)
              .AttachTo(() => CharacterRect(RunMe()), AttachSide.RightOfBottom);
         _minePanel = new RestMathPanel(_mine.Content);
         _mate = _ctx.Widget("rest-mend", "Mend Preview", new WidgetLayout { FollowGame = true, Anchor = ScreenAnchor.Right, OffsetX = 0, OffsetY = 0 });
-        _mate.AttachTo(() => CharacterRect(_hoveredMate), AttachSide.LeftOf)
+        _mate.AttachTo(() => Side(CharacterRect(_hoveredMate), right: false), AttachSide.LeftOf)
+             .AttachTo(() => Side(CharacterRect(_hoveredMate), right: true), AttachSide.RightOfBottom)
+             .AttachTo(() => CharacterRect(_hoveredMate), AttachSide.LeftOf)
              .AttachTo(() => CharacterRect(_hoveredMate), AttachSide.RightOfBottom);
         _matePanel = new RestMathPanel(_mate.Content);
+    }
+
+    private static readonly HashSet<string> SidesLogged = new();
+
+    /// <summary>
+    /// The character's rect when it sits on that half of the screen (right: its centre right of the screen's middle), else null:
+    /// the panel goes on the character's outer side. Logged once per character and place.
+    /// </summary>
+    private static Rect2? Side(Rect2? character, bool right)
+    {
+        if (character is not { } r || NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) return null;
+        var middle = room.GetViewportRect().Size.X / 2;
+        var onRight = r.GetCenter().X > middle;
+        var key = $"{r.Position.X:0},{r.Position.Y:0}";
+        if (SidesLogged.Add(key)) ModEntry.Log.Info($"rest preview: character at {r.Position}, {r.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
+        return onRight == right ? r : null;
     }
 
     /// <summary>A player's character at the fire (NRestSiteCharacter's hitbox), on screen.</summary>

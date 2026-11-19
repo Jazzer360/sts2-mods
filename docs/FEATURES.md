@@ -559,7 +559,7 @@ Each relic has a switch per place it shows in the settings menu (Outside fights 
 
 ## Rest Preview
 
-**What you see:** at a rest site, a sum beside your character (a movable widget, attached left of your character at the fire, or right of it when there's no room; drag it when the layout is unlocked), drawn like [Incoming Damage](#incoming-damage)'s:
+**What you see:** at a rest site, a sum beside your character (a movable widget, attached on your character's outer side at the fire: left of it when it sits left of the screen's middle, right of it when it sits right (in multiplayer the players sit on both sides; decision #100), the other side when there's no room; a teammate's panel the same way; drag it when the layout is unlocked), drawn like [Incoming Damage](#incoming-damage)'s:
 - the top bar's heart and your HP now;
 - the Rest option's icon and what resting heals (30% of max HP, rounded down, capped at your max);
 - a line per relic or modifier that changes it, with its icon: Regal Pillow (+15, its own line), Stone Humidifier (+5 max HP, which also heals 5), Night Terrors (heals to full, then −5 max HP: a red line);
