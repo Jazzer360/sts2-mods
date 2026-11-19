@@ -250,7 +250,7 @@ public sealed class OverlayHost
             {
                 n = _errors[id] = (_errors.TryGetValue(id, out var prev) ? prev : 0) + 1;
                 _log.Error($"[{id}] frame error {n}/{MaxErrorsBeforeDisable}: {ex}");
-                Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".OnFrame");
+                if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".OnFrame");
                 if (n >= MaxErrorsBeforeDisable)
                 {
                     _log.Error($"[{id}] turned off after repeated errors");
@@ -274,7 +274,7 @@ public sealed class OverlayHost
                 if (n == 1)
                 {
                     _log.Error($"late frame error: {ex}");
-                    Diagnostics.ErrorReporter.Instance?.Exception(ex, "late-frame");
+                    if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, "late-frame");
                 }
                 else if (n % 600 == 0) _log.Error($"late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
             }
@@ -312,9 +312,11 @@ public sealed class OverlayHost
         if (WidgetRoot == null || Layer == null) return;
         if (!GodotObject.IsInstanceValid(WidgetRoot))
         {
-            // Freed along with a game node it was parked under. Shouldn't happen (see
-            // WidgetUnderlay), but if it does, say so once instead of erroring every frame.
-            _log.Error("widget container was freed with a game node; floating widgets are gone until restart");
+            // Freed along with a game node it was parked under, which LeaveParent below is there to prevent: say so once and
+            // report it (the features' errors on their freed widgets that follow aren't reported: WidgetsLost).
+            _log.Error($"widget container was freed with a game node ({_parkedUnder ?? "unknown"}); floating widgets are gone until restart");
+            WidgetsLost = true;
+            Diagnostics.ErrorReporter.Instance?.Exception(new InvalidOperationException($"widget container freed with {_parkedUnder ?? "a game node"}"), "widget-container");
             WidgetRoot = null;
             return;
         }
@@ -325,12 +327,15 @@ public sealed class OverlayHost
             try { target = WidgetUnderlay?.Invoke(); }
             catch { target = null; }
         }
+        // A game node that's about to be freed (it, or something above it, queued) is no place to stay (decision #102).
+        if (target is { } q && QueuedForDeletion(q.Parent)) target = null;
 
         if (target is { } t && GodotObject.IsInstanceValid(t.Parent))
         {
             if (WidgetRoot.GetParent() != t.Parent)
             {
                 WidgetRoot.Reparent(t.Parent, keepGlobalTransform: false);
+                Watch(t.Parent);
             }
             // Keep it directly before the target index (the hand), so the hand draws on top.
             var want = Math.Max(0, t.Index - (WidgetRoot.GetIndex() < t.Index ? 1 : 0));
@@ -338,12 +343,78 @@ public sealed class OverlayHost
         }
         else if (WidgetRoot.GetParent() != Layer)
         {
+            Unwatch();
             WidgetRoot.Reparent(Layer, keepGlobalTransform: false);
         }
 
         // Cancel the parent's offset so widget positions stay in screen coordinates.
         WidgetRoot.Scale = Vector2.One;
         WidgetRoot.GlobalPosition = Vector2.Zero;
+    }
+
+    /// <summary>The widget container was freed with a game node: features' errors on their freed widgets are its doing, not theirs.</summary>
+    internal bool WidgetsLost { get; private set; }
+
+    private Node? _watched;
+    private string? _parkedUnder;
+
+    /// <summary>
+    /// Listens for the game node the container is parked under leaving the tree (decision #102). Godot emits tree_exited on a
+    /// node once it and everything under it have left, before any of them is deleted and while the node itself is free to
+    /// change its children: the container steps out then and survives the node being freed. The game frees its combat UI
+    /// without combat ending first (a co-op game over: issues #431 to #435), so WidgetUnderlay alone can't be relied on.
+    /// </summary>
+    private void Watch(Node parent)
+    {
+        Unwatch();
+        try
+        {
+            parent.TreeExited += LeaveParent;
+            _watched = parent;
+            _parkedUnder = parent.Name;
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"couldn't watch the widget container's game parent: {ex.Message}");
+        }
+    }
+
+    private void Unwatch()
+    {
+        if (_watched != null && GodotObject.IsInstanceValid(_watched))
+        {
+            try { _watched.TreeExited -= LeaveParent; } catch { }
+        }
+        _watched = null;
+    }
+
+    private void LeaveParent()
+    {
+        try
+        {
+            var from = _watched;
+            Unwatch();
+            if (WidgetRoot == null || Layer == null || !GodotObject.IsInstanceValid(WidgetRoot)) return;
+            var parent = WidgetRoot.GetParent();
+            if (parent == null || parent == Layer || parent != from) return;
+            parent.RemoveChild(WidgetRoot);
+            Layer.AddChild(WidgetRoot);
+            _log.Info($"widget container moved out of {_parkedUnder} as it left the tree");
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"widget container couldn't leave its game parent: {ex.Message}");
+        }
+    }
+
+    /// <summary>The node or something above it is queued to be freed at the end of this frame.</summary>
+    private static bool QueuedForDeletion(Node node)
+    {
+        for (var n = node; n != null; n = n.GetParent())
+        {
+            if (!GodotObject.IsInstanceValid(n) || n.IsQueuedForDeletion()) return true;
+        }
+        return false;
     }
 
     public void Toast(string text, float seconds = 4f)

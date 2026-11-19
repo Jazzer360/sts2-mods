@@ -532,3 +532,8 @@ A report reads the game's state on the game's thread (it has to), then hands the
 *Why:* a forecast mismatch report froze a player's game for 10.7 s (her log: the forecast check's frame, the frame it sent its two reports), most likely Sentry capturing and symbolicating the game's stack on its thread. Reporting must never cost the player anything.
 *Replaced:* CaptureEvent on the game's thread with the current stack attached to every event.
 
+### 102. The widget container leaves a game node as it leaves the tree — active (2026-11-19)
+Floating widgets draw under the cards in hand by parking their container in the game's combat UI, just before NPlayerHand (`Sts2State.WidgetUnderlay`). The host now listens for that parent's `tree_exited` (emitted once it and everything under it have left the tree, before anything is deleted, while it can still change its children) and moves the container back to its own layer then; it also won't park under a node that is, or sits under one that is, queued for deletion. If the container is lost anyway, that's reported once (`widget-container`), and the disposed-node errors the features hit afterwards are logged, not reported.
+*Why:* a co-op game over freed the combat UI without combat ending or a screen opening first, which WidgetUnderlay relied on to move the container out in time, and five features crashed on their freed widgets (issues #431 to #435). Reacting to the node leaving the tree doesn't depend on guessing which game flows free it.
+*Replaced:* relying on WidgetUnderlay returning null (combat over, a screen open) a frame before the combat UI is freed.
+

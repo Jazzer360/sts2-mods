@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.7
+#### Fixed
+- In co-op, a game over could take every floating panel (Incoming Damage, Relic Counters, Intent Forecast, Rest Preview...) down with the fight's screen, leaving them broken until a restart. The panels now step out of the game's fight screen as it closes.
+
+### Main Saves 1.0.15
+#### Fixed
+- Shared code: panels survive the game freeing the screen they were drawn under.
+
 ### Spire QoL 1.20.6
 #### Changed
 - The buff and debuff icons in an enemy intent's corner (Intent Details, Intent Forecast) are half their earlier size, so they read as part of the intent.
