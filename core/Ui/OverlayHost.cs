@@ -151,6 +151,8 @@ public sealed class OverlayHost
     /// feature, from that feature's second such frame this session (the first can be its code's warm-up).
     /// </summary>
     private const double ReportModFrameMs = 50;
+    /// <summary>The mod's work in one frame above this is a freeze: reported the first time, warm-up or not.</summary>
+    private const double FreezeMs = 1000;
     /// <summary>A whole frame (the gap between two frames) above this, with the mod's share small, is logged (the
     /// game caps its frame rate at 30 in the background, so lower would log every frame there).</summary>
     private const double SlowGameFrameMs = 50;
@@ -170,7 +172,8 @@ public sealed class OverlayHost
         if (modMs <= ReportModFrameMs) return;
         var top = _featureMs.OrderByDescending(x => x.Ms).FirstOrDefault().Id ?? "?";
         var n = _slowByFeature[top] = (_slowByFeature.TryGetValue(top, out var prev) ? prev : 0) + 1;
-        if (n < 2) return;
+        // A freeze (a second or more) is reported the first time: no warm-up takes that long.
+        if (n < 2 && modMs < FreezeMs) return;
         Diagnostics.ErrorReporter.Instance?.Mismatch("perf", $"Slow frame: {top}", new[] { "slow-frame", top },
             $"The mod's own work took {modMs:0} ms in one frame ({times}); {gapMs:0} ms since the frame before. Slow frame {n} from {top} this session.",
             tags: new Dictionary<string, string> { ["source"] = top, ["check"] = "slow-frame" });

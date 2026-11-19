@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.4
+#### Fixed
+- A freeze of a second or more caused by the mod's own work is reported the first time it happens, not only from the second.
+
+### Main Saves 1.0.13
+#### Fixed
+- Rebuilt with the shared slow-frame reporting update.
+
 ### Spire QoL 1.20.3
 #### Fixed
 - The lethal tab check counts a Waterfall Giant the play brought to 0 (about to blow) as dead, as it is.
