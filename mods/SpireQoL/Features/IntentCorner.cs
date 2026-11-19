@@ -17,8 +17,8 @@ namespace SpireQoL.Features;
 internal static class IntentCorner
 {
     private const string PowersName = "SpireQoLIntentPowers";
-    private const int IconSize = 22;
-    private const int FontSize = 15;
+    private const int IconSize = 15;
+    private const int FontSize = 11;
 
     /// <summary>Each power with the index of the intent it goes on: the move's buff intent for a buff, its debuff intent for a debuff, else its last.</summary>
     public static Dictionary<int, List<MovePowers.Applied>> Assign(IReadOnlyList<AbstractIntent> intents, IReadOnlyList<MovePowers.Applied> powers)
@@ -88,7 +88,7 @@ internal static class IntentCorner
         if (applied.Amount is { } a)
         {
             var amount = UiKit.Label(a.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), FontSize, Colors.White);
-            amount.AddThemeConstantOverride("outline_size", 6);
+            amount.AddThemeConstantOverride("outline_size", 4);
             amount.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.95f));
             amount.VerticalAlignment = VerticalAlignment.Bottom;
             amount.MouseFilter = Control.MouseFilterEnum.Ignore;

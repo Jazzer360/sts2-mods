@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.6
+#### Changed
+- The buff and debuff icons in an enemy intent's corner (Intent Details, Intent Forecast) are half their earlier size, so they read as part of the intent.
+
 ### Spire QoL 1.20.5
 #### Fixed
 - Sending an error report could freeze the game for several seconds on some PCs (once, when a prediction check found a mismatch). Reports are now sent from a background thread, without capturing the game's call stack.
