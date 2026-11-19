@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.9
+#### Changed
+- Smoother frames on busy boards: the mod now waits at most 8 ms a frame for its predictions (it could wait up to a quarter of a second, and the Incoming Damage forecast had no limit). Anything not ready by then appears a moment later, as results come in from the background, which now update every quarter second.
+- The log's combat summary says how long predictions kept the game waiting, and how often an exploration hit one of its limits.
+
 ### Spire QoL 1.20.8
 #### Changed
 - The card-play check now also compares the tabs a card showed in your hand with what the mod predicts as its play begins, when nothing happened in between, so a tab left showing from an older board is caught.

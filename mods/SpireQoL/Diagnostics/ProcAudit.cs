@@ -1028,6 +1028,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     private void Summarize()
     {
+        // How the simulations did against the frame's wait and their caps (decision #104).
+        if (Combat.SimWait.Summary() is { } waits) ModEntry.Log.Info($"[perf] combat summary: simulations: {waits}.");
+        if (SimJob.CapSummary() is { } caps) ModEntry.Log.Info($"[perf] combat summary: explorations stopped or cut short by a cap: {caps}.");
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"))})";
         ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand, {_interleaved} with another action during a choice), {_matched} matched{issues}.");

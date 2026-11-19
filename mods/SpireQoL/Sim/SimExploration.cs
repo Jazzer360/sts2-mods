@@ -50,6 +50,10 @@ public sealed class SimExploration
     public bool Done => _next == null && !Capped;
     /// <summary>Stopped at MaxStoredBranches or MaxTotalCopies: what's known stays partial.</summary>
     public bool Capped { get; private set; }
+    /// <summary>Which cap stopped it ("50,000 stored branches"); null when none did.</summary>
+    public string? CapHit { get; private set; }
+    /// <summary>A step ran over its own copy budget (SimEngine.StepCopyBudget) in some slice: that step followed one target only.</summary>
+    public bool StepBudgetHit => _outOfBranches;
     /// <summary>Nothing more will be explored (Done or Capped).</summary>
     public bool Finished => _next == null || Capped;
 
@@ -81,7 +85,8 @@ public sealed class SimExploration
             MaxDepth = Math.Max(MaxDepth, cursor.Counts.Count);
             Add(o);
             _next = cursor.Next();
-            if (_branches.Count > MaxStoredBranches || Copies > MaxTotalCopies) Capped = true;
+            if (_branches.Count > MaxStoredBranches) (Capped, CapHit) = (true, $"{MaxStoredBranches:N0} stored branches");
+            else if (Copies > MaxTotalCopies) (Capped, CapHit) = (true, $"{MaxTotalCopies:N0} copies");
         }
         return Finished;
     }

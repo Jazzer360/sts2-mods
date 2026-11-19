@@ -89,7 +89,14 @@ public sealed class TurnEndModel
     /// The same forecast from FullState, for the enemy-turn check (this one when they're the same: single-player, or
     /// the setting on). Its TeammateView stays the shown one, so the check can say when what's shown differs.
     /// </summary>
-    public TurnEndModel Full => _full ??= BuildFull();
+    /// <summary>
+    /// The forecast with teammates' hands (the forecast check's), or null while its first result is still on its way past the
+    /// audit's wait: PendingFull is that exploration then, and FullFrom builds the model once it has one.
+    /// </summary>
+    public TurnEndModel? Full => _full ??= BuildFull();
+
+    /// <summary>The exploration behind Full (set once Full was asked for).</summary>
+    internal SimJob? PendingFull { get; private set; }
     private TurnEndModel? _full;
     private long _fullKey;
     private int _myHp;
@@ -114,8 +121,18 @@ public sealed class TurnEndModel
             job = SimJob.Start(SimExploration.Of(logged), label);
             lastKey = key;
         }
-        job.Ready.GetAwaiter().GetResult();
         return job;
+    }
+
+    /// <summary>
+    /// Waits for the job's first result within the frame's budget (SimWait, decision #104), or a budget of its own. False while it
+    /// has none; a first pass that failed throws here, as it always did.
+    /// </summary>
+    private static bool Wait(SimJob job, bool ownBudget)
+    {
+        if (!SimWait.Ready(job, ownBudget)) return false;
+        job.Ready.GetAwaiter().GetResult();
+        return true;
     }
 
     /// <summary>The same forecast from its exploration's latest snapshot (the forecast check, once the enemy turn is over).</summary>
@@ -149,10 +166,18 @@ public sealed class TurnEndModel
         return m;
     }
 
-    private TurnEndModel BuildFull()
+    private TurnEndModel? BuildFull()
     {
         var job = Explore(ref _lastFullKey, ref _lastFullJob, _fullKey, FullState, "the turn forecast with teammates' hands");
-        var m = From(FullState, _fullKey, job.Latest!, Ids, Teammates, _myHp);
+        PendingFull = job;
+        return Wait(job, ownBudget: true) ? FullFrom(job) : null;
+    }
+
+    /// <summary>The forecast with teammates' hands from this exploration's latest result; null while it has none.</summary>
+    internal TurnEndModel? FullFrom(SimJob job)
+    {
+        if (job.Latest is not { } latest) return null;
+        var m = From(FullState, _fullKey, latest, Ids, Teammates, _myHp);
         m.Job = job;
         m.FullState = FullState;
         m._fullKey = _fullKey;
@@ -212,10 +237,14 @@ public sealed class TurnEndModel
         return _cached;
     }
 
-    /// <summary>The board right now, uncached (the audit's prediction as a play begins to resolve).</summary>
-    public static TurnEndModel? ComputeLive() => ComputeNow();
+    /// <summary>The board right now, uncached (the audit's prediction as a play begins to resolve), on the audit's own wait.</summary>
+    public static TurnEndModel? ComputeLive() => ComputeNow(ownBudget: true);
 
-    private static TurnEndModel? ComputeNow()
+    /// <summary>
+    /// Null outside combat, and while the forecast's first result is still on its way past the frame's wait (decision #104): what
+    /// it feeds shows as pending until it comes, on a later frame.
+    /// </summary>
+    private static TurnEndModel? ComputeNow(bool ownBudget = false)
     {
         var me = Sts2State.Me;
         var cs = Sts2State.Combat;
@@ -230,6 +259,7 @@ public sealed class TurnEndModel
         // The game state rarely changes between frames: rerun only when it did.
         var key = ReferenceEquals(state, full) ? fullKey : state.FullKey();
         var job = Explore(ref _lastKey, ref _lastJob, key, state, "the turn forecast");
+        if (!Wait(job, ownBudget)) return null;
         var m = From(state, key, job.Latest!, ids, SimAdapter.Teammates(me, cs), me.Creature.CurrentHp);
         m.Job = job;
         m.FullState = full;

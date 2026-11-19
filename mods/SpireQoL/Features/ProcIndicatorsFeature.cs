@@ -135,15 +135,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             pending.Add((card, p, _ctx.Decor.For(card)));
         }
 
-        // Every card's simulations (one per target) run in parallel across CPU cores; the frame waits
-        // for them, so the tabs appear on the frame they belong to. The wait is capped so a pathological
-        // state can't freeze the game: anything still running then shows a frame or two later (SimPending).
-        var running = pending.Select(x => x.P.Sim).Where(t => t is { IsCompleted: false }).Select(t => t!.Ready).ToArray();
-        if (running.Length > 0)
-        {
-            try { Task.WaitAll(running, SimWaitCapMs); }
-            catch { /* faulted tasks are reported per card below */ }
-        }
+        // Every card's simulations (one per target) run in parallel across CPU cores; the frame waits for new ones within its few
+        // milliseconds (SimWait, decision #104), so tabs usually appear on the frame they belong to. What isn't ready by then shows
+        // when it is, a frame or a few later (SimPending); a simulation that missed its frame never makes a later one wait.
+        SimWait.All(pending.Where(x => x.P.Sim != null).SelectMany(x => x.P.Sim!.Jobs).ToList());
 
         foreach (var card in hand) _lastTabs.Remove(card);
         foreach (var (card, p, d) in pending)
@@ -346,10 +341,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         try
         {
             if (self.Prepare(card, Sources(me, cs), record: false) is not { } p) return null;
-            if (p.Sim is { IsCompleted: false } t)
-            {
-                try { t.Ready.Wait(SimWaitCapMs); } catch { /* reported by Finish */ }
-            }
+            if (p.Sim is { IsCompleted: false } t) SimWait.All(t.Jobs, ownBudget: true);
             return (self.Finish(card, p), p.F);
         }
         finally
@@ -376,10 +368,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     private long _simKey;
 
     // Card simulations run in parallel on worker threads (the simulator is plain C#, no game types): the frame reads the game and
-    // builds every card's inputs, starts all their simulations at once, and waits for them (capped at SimWaitCapMs). Results are
-    // cached until the state changes. One simulation's work is bounded (SimEngine.StepCopyBudget per step) and counted by
-    // SimPerformanceTests.
-    private const int SimWaitCapMs = 250;
+    // builds every card's inputs, starts all their simulations at once, and waits for them a few milliseconds at most (SimWait).
+    // Results are cached until the state changes. One simulation's work is bounded (SimEngine.StepCopyBudget per step) and counted
+    // by SimPerformanceTests.
     private readonly Dictionary<string, SimBatch> _simCache = new();
     /// <summary>Simulations made without the cache (the play audit's), cancelled once read.</summary>
     private readonly List<SimBatch> _uncached = new();

@@ -50,6 +50,40 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private bool _wasPlayerTurn;
 
     private TurnEndModel? _frozen;
+    /// <summary>
+    /// The forecast with teammates' hands had no result yet when your turn ended (decision #104: the audit waits a few milliseconds
+    /// at most): the shown forecast it belongs to and its exploration, pinned; the frozen forecast is built from it when the turn
+    /// is checked.
+    /// </summary>
+    private (TurnEndModel From, SimJob Job)? _frozenPending;
+
+    /// <summary>The frozen forecast to check: frozen as your turn ended, or built now from its exploration (null: it never had a result).</summary>
+    private TurnEndModel? Frozen() => _frozen ?? (_frozenPending is { } p ? p.From.FullFrom(p.Job) : null);
+
+    private bool HasFrozen => _frozen != null || _frozenPending != null;
+
+    private void Unfreeze(bool cancel)
+    {
+        if (cancel)
+        {
+            _frozen?.Job?.Cancel();
+            _frozenPending?.Job.Cancel();
+        }
+        _frozen = null;
+        _frozenPending = null;
+    }
+
+    /// <summary>Checks the frozen turn, or counts it as not checked when its forecast never had a result.</summary>
+    private void CheckFrozen(CombatHistory history, Player me, bool youDied = false)
+    {
+        if (Frozen() is { } f) Compare(f, history, _frozenAt, me, youDied);
+        else
+        {
+            CountIn(Skips, "the forecast had no result by the enemy turn");
+            _frozenPending?.Job.Cancel();
+        }
+        Unfreeze(cancel: false);
+    }
     private int _frozenAt;
     private int _frozenTurn;
 
@@ -148,16 +182,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     {
         var me = Sts2State.Me;
         // You died before your next turn: the fight ends without one, so check the turn now, with what happened up to your death.
-        if (_frozen != null && _history != null && me?.Creature is { IsDead: true })
-        {
-            Compare(_frozen, _history, _frozenAt, me, youDied: true);
-            _frozen = null;
-        }
+        if (HasFrozen && _history != null && me?.Creature is { IsDead: true }) CheckFrozen(_history, me, youDied: true);
         if (me == null || !Sts2State.InCombat)
         {
             Summarize();
-            _frozen?.Job?.Cancel();
-            _frozen = null;
+            Unfreeze(cancel: true);
             _wasPlayerTurn = false;
             _history = null;
             return;
@@ -168,32 +197,38 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             Summarize();
             _history = history;
-            _frozen?.Job?.Cancel();
-            _frozen = null;
+            Unfreeze(cancel: true);
         }
 
         var playerTurn = Sts2State.IsPlayerTurn;
         if (playerTurn)
         {
             // A frozen forecast from the previous turn: the enemy turn is over, compare.
-            if (_frozen != null && Sts2State.TurnNumber > _frozenTurn)
-            {
-                Compare(_frozen, history, _frozenAt, me);
-                _frozen = null;
-            }
+            if (HasFrozen && Sts2State.TurnNumber > _frozenTurn) CheckFrozen(history, me);
             _last = TurnEndModel.Compute();
             _lastHistoryCount = history.Entries.Count();
             _lastTurn = Sts2State.TurnNumber;
+        }
+        else if (_wasPlayerTurn && _last == null)
+        {
+            // The board changed on your turn's last frame and its forecast had no result yet (decision #104): nothing to hold.
+            CountIn(Skips, "the forecast was still on its way as the turn ended");
         }
         else if (_wasPlayerTurn && _last != null)
         {
             // Ending the turn just started: freeze the last forecast.
             _frozen = _last.Full; // teammates' hands included (decision #25: the check uses everything that isn't a roll)
+            if (_frozen == null && _last.PendingFull is { } pendingJob)
+            {
+                // Its first result is still on its way (decision #104): kept exploring, and built when the turn is checked.
+                _frozenPending = (_last, pendingJob);
+                pendingJob.Pinned = true;
+            }
             // What each enemy's intent showed (Intent Details): its block and the powers its move applies (decision #98).
-            _intentsShown = _frozen.Ids.Keys.Select(c => (c, Features.IntentDetailsFeature.For(c))).Where(x => x.Item2 != null)
+            _intentsShown = _last.Ids.Keys.Select(c => (c, Features.IntentDetailsFeature.For(c))).Where(x => x.Item2 != null)
                 .ToDictionary(x => x.c, x => x.Item2!, (IEqualityComparer<MegaCrit.Sts2.Core.Entities.Creatures.Creature>)ReferenceEqualityComparer.Instance);
             // Its exploration goes on after the board changes (decision #87): the check compares against all of it.
-            if (_frozen.Job is { } frozenJob) frozenJob.Pinned = true;
+            if (_frozen?.Job is { } frozenJob) frozenJob.Pinned = true;
             _frozenAt = _lastHistoryCount;
             _frozenTurn = _lastTurn;
         }
