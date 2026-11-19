@@ -528,7 +528,7 @@ Rest Preview (yours, and a hovered teammate's) attaches on the outer side of tha
 *Replaced:* left of the character, else right.
 
 ### 101. Error reports never stall the game — active (2026-11-19)
-A report reads the game's state on the game's thread (it has to), then hands the event to the Sentry client from a background thread. Events without an exception (mismatches) carry no captured stack (); crashes keep their exception's. Building one that takes 20 ms or more logs its stages' times.
+A report reads the game's state on the game's thread (it has to), then hands the event to the Sentry client from a background thread. Events without an exception (mismatches) carry no captured stack (`AttachStacktrace = false`); crashes keep their exception's. Building one that takes 20 ms or more logs its stages' times.
 *Why:* a forecast mismatch report froze a player's game for 10.7 s (her log: the forecast check's frame, the frame it sent its two reports), most likely Sentry capturing and symbolicating the game's stack on its thread. Reporting must never cost the player anything.
 *Replaced:* CaptureEvent on the game's thread with the current stack attached to every event.
 
