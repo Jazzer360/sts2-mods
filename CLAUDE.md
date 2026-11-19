@@ -85,7 +85,7 @@ The outcome simulator is the core of every prediction, and its tests are what ke
 Every change to a mod ships as a release:
 1. Pick the version by the rules below, bump it in **both** `mods/<ModId>/<ModId>.json` and `<ModId>.csproj`, and put the changelog lines under a `### <Mod Name> <version>` heading.
 2. Commit and push to `main`.
-3. Run `./scripts/release.ps1` (needs the game installed and `gh` logged in). It builds, zips `dist/<ModId>-<version>.zip` and creates the GitHub release `<modid>-v<version>`.
+3. Run `./scripts/release.ps1` (needs the game installed and `gh` logged in). It builds, zips `dist/<ModId>-<version>.zip` and creates the GitHub release `<modid>-v<version>`. **A build warning fails the release** (decision #106): the mod and its test projects are built from scratch with warnings as errors, and the simulator tests on GitHub too. Fix the warning; don't suppress it without a reason in the code.
 
 The "Release check" workflow waits up to 20 minutes after a push to `main` for the current version's release (with its zip), so release right after pushing. It fails immediately on a version mismatch, a missing changelog section, or mod code changed since the last release without a version bump. Don't leave it red: if you can't run the script (game running, no `gh`), tell the user the release is still pending.
 

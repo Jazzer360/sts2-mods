@@ -90,13 +90,17 @@ foreach ($m in $mods) {
     # assemblies (the settings catalog), which can't run on GitHub. A failing test stops the release.
     foreach ($t in Get-ChildItem tests -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "$id.*" }) {
         Write-Host "Testing $($t.Name)..." -ForegroundColor Cyan
-        dotnet test $t.FullName -v quiet -nologo
+        # Built from scratch with warnings as errors (an up-to-date build wouldn't recompile, so it wouldn't report them).
+        dotnet build $t.FullName -p:InstallToGame=false -p:TreatWarningsAsErrors=true --no-incremental -v quiet -nologo
+        if ($LASTEXITCODE -ne 0) { Fail "$($t.Name) has build warnings or errors: fix them before releasing (warnings fail the release)." }
+        dotnet test $t.FullName --no-build -v quiet -nologo
         if ($LASTEXITCODE -ne 0) { Fail "Tests failed in $($t.Name): fix them before releasing." }
     }
 
     Write-Host "Building $name $version..." -ForegroundColor Cyan
-    dotnet build (Join-Path $m.FullName "$id.csproj") -c Release -p:InstallToGame=false -v quiet -nologo
-    if ($LASTEXITCODE -ne 0) { Fail "Build failed for $id." }
+    # Warnings fail the release, like errors: built from scratch so none hides behind an up-to-date build.
+    dotnet build (Join-Path $m.FullName "$id.csproj") -c Release -p:InstallToGame=false -p:TreatWarningsAsErrors=true --no-incremental -v quiet -nologo
+    if ($LASTEXITCODE -ne 0) { Fail "Build failed for $id (warnings count as errors in a release)." }
 
     $out = Join-Path $m.FullName 'bin\Release'
     $stage = Join-Path $dist "stage\$id"
