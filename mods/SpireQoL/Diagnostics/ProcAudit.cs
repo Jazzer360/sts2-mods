@@ -275,13 +275,26 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var i = line.IndexOf("not checked", StringComparison.Ordinal);
         var what = line[..i].TrimEnd(' ', ':');
         var rest = line[(i + "not checked".Length)..].TrimStart();
-        var why = rest.StartsWith('(') ? rest[1..Math.Max(1, rest.IndexOf(')'))] : rest.TrimStart(':', ' ').Split('(')[0].Trim();
+        var why = rest.StartsWith('(') ? Bracketed(rest) : rest.TrimStart(':', ' ').Split('(')[0].Trim();
         // Card and source names vary: keep the shape (anything before " ran during" is an action's name).
         var ran = why.IndexOf(" ran during", StringComparison.Ordinal);
         if (ran > 0) why = "another action" + why[ran..];
         var before = why.IndexOf("computed before ", StringComparison.Ordinal);
         if (before >= 0) why = why[..(before + "computed before ".Length)] + "another play finished";
+        if (why.Length == 0) return what; // "budget not checked": the reason is what comes before
         return what.Length > 0 ? $"{what}: {why}" : why;
+    }
+
+    /// <summary>The text inside a leading parenthesis, nested ones included ("(Unleash (a teammate's) ran ...)").</summary>
+    private static string Bracketed(string s)
+    {
+        var depth = 0;
+        for (var k = 0; k < s.Length; k++)
+        {
+            if (s[k] == '(') depth++;
+            else if (s[k] == ')' && --depth == 0) return s[1..k];
+        }
+        return s.TrimStart('(');
     }
 
     // Every play this turn (card, its tabs, result), sent with each report: the turn is the unit
@@ -1121,8 +1134,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (!w.PowersBefore.TryGetValue((me.Creature, spent), out var before) || before <= 0) continue;
                 var after = w.PowersAfter.TryGetValue((me.Creature, spent), out var sa) ? sa : 0;
                 var tabbed = w.Predicted.Any(t => t.Key == SpireQoL.Procs.FreeCards.Prefix + spent);
-                if (tabbed && after >= before) issues.Add($"didn't fire: {spent} (still {after})");
-                if (!tabbed && after < before && !ownTypes.Contains(spent)) issues.Add($"no tab: {spent} spent ({before}→{after})");
+                // Spent: the history shows a charge going, even when the card gives one back (Unrelenting spends Free Attack and
+                // applies it again, so the amount ends where it started).
+                var wasSpent = after < before || entries.OfType<PowerReceivedEntry>()
+                    .Any(p => p.Actor == me.Creature && p.Power.GetType().Name == spent && p.Amount < 0);
+                if (tabbed && !wasSpent) issues.Add($"didn't fire: {spent} (still {after})");
+                if (!tabbed && wasSpent && !ownTypes.Contains(spent)) issues.Add($"no tab: {spent} spent ({before}→{after})");
             }
         }
 

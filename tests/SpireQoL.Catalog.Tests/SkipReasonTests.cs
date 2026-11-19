@@ -18,6 +18,8 @@ public class SkipReasonTests
     [InlineData("not checked (aimed at a teammate; the simulator applies it to you): proc Z", "aimed at a teammate; the simulator applies it to you")]
     [InlineData("not checked (its simulation's outcomes not all explored): no tab: EnragePower fired", "its simulation's outcomes not all explored")]
     [InlineData("not checked (a branch of its simulation not modelled): damage to enemies: predicted 3, actual 6", "a branch of its simulation not modelled")]
+    [InlineData("not checked (Unleash (a teammate's) ran during your choice): after play enemy HP: E predicted 42, actual 33", "another action ran during your choice")]
+    [InlineData("auto-played cards (random, so not predicted): budget not checked", "auto-played cards (random, so not predicted): budget")]
     public void ReasonsKeepTheirShape(string line, string reason) => Assert.Equal(reason, ProcAudit.SkipReason(line));
 
     /// <summary>Decisions #87, #92: with outcomes not all explored, the issues about the simulator's tabs aren't reported; the others are.</summary>
