@@ -83,7 +83,7 @@ public class SimDrawTests
         var s = You(hand: 10);
         s.P.Draw = Pile((Burn, 5));
         var o = SimEngine.Run(s, Draws(2));
-        Assert.All(o.Branches, b => Assert.Equal(1, b.P.TurnEndCards.Count));
+        Assert.All(o.Branches, b => Assert.Single(b.P.TurnEndCards));
         Assert.All(o.Branches, b => Assert.Equal(4, b.P.Draw!.RestCount)); // the second stays in the pile
     }
 

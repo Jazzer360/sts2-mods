@@ -154,7 +154,7 @@ public class SimReactionTests
     }
 
     [Fact]
-    public void ParallelRunsFromOneStartStateMatchSequentialRuns()
+    public async Task ParallelRunsFromOneStartStateMatchSequentialRuns()
     {
         // Card simulations share the start state across worker threads; runs never change it.
         var s = new SimState { Enemies = { Enemy(1, 9, 0, 6, 6), Enemy(2, 12, 2, 10), Enemy(3, 7, 0, 3) } };
@@ -164,7 +164,7 @@ public class SimReactionTests
         var plays = Enumerable.Range(0, 24).Select(i => new SimPlay { Name = "P" + i, BlockAmount = i % 5, BlockGains = i % 3, IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 4, [2] = 4, [3] = 4 }, Hits = 1 + i % 3 }).ToList();
         var before = s.ToJson();
         var sequential = plays.Select(p => SimEngine.Run(s, p)).ToList();
-        var parallel = Task.WhenAll(plays.Select(p => Task.Run(() => SimEngine.Run(s, p)))).Result;
+        var parallel = await Task.WhenAll(plays.Select(p => Task.Run(() => SimEngine.Run(s, p))));
         Assert.Equal(before, s.ToJson());
         for (var i = 0; i < plays.Count; i++)
         {

@@ -27,21 +27,21 @@ public class SimJobTests
         => string.Join("\n", o.Branches.Select(b => (b.Key(), b.Weight)).OrderBy(x => x.Item1).Select(x => $"{x.Item1}:{x.Weight:F9}"));
 
     [Fact]
-    public void ABackgroundJobEndsWithTheWholeOutcome()
+    public async Task ABackgroundJobEndsWithTheWholeOutcome()
     {
         var whole = SimExploration.Of(Heavy(), null, 4).ExploreAll();
         // A first pass of one copy: everything after it is explored in the background, snapshots on the clock.
         var job = SimJob.Start(SimExploration.Of(Heavy(), null, 4), "test", firstBudget: 1);
 
-        Assert.True(job.Ready.Wait(TimeSpan.FromSeconds(30)));
+        await job.Ready.WaitAsync(TimeSpan.FromSeconds(30));
         Assert.True(job.Latest!.Truncated, "the first pass must leave work for the background");
         var clock = Stopwatch.StartNew();
-        while (!job.Finished && clock.Elapsed < TimeSpan.FromSeconds(30)) Thread.Sleep(5);
+        while (!job.Finished && clock.Elapsed < TimeSpan.FromSeconds(30)) await Task.Delay(5);
 
         Assert.True(job.Finished);
         // The final snapshot is published as it finishes, not at the next tick of the clock.
         SimOutcome? latest = null;
-        for (var i = 0; i < 100 && (latest = job.Latest) is { Truncated: true }; i++) Thread.Sleep(5);
+        for (var i = 0; i < 100 && (latest = job.Latest) is { Truncated: true }; i++) await Task.Delay(5);
         Assert.NotNull(latest);
         Assert.False(latest!.Truncated);
         Assert.Equal(Describe(whole), Describe(latest));

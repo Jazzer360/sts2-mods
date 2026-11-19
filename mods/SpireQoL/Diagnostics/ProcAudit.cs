@@ -1232,7 +1232,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var procDamage = entries.OfType<DamageReceivedEntry>().Where(d => d.CardSource == null).ToList();
         // A card that sets off poison (Outbreak: PoisonPower.Trigger) deals it with no card and no dealer: the card's own effect,
         // checked by the enemies' HP after the play (the simulator), not a proc.
-        if (w.Card != null && Sim.SimAdapter.TriggerPoisonCards.Contains(w.Card.GetType().Name))
+        if (Sim.SimAdapter.TriggerPoisonCards.Contains(w.Card.GetType().Name))
             procDamage = procDamage.Where(d => !(d.Dealer == null && d.Result.Receiver.IsEnemy)).ToList();
         int Dealt(DamageReceivedEntry d) => d.Result.TotalDamage + d.Result.OverkillDamage;
         var toEnemies = procDamage.Where(d => d.Result.Receiver.IsEnemy).Sum(Dealt);

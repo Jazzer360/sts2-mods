@@ -742,13 +742,13 @@ public sealed class PlayFacts
             // Only draws when it's the only card in hand.
             case Restlessness: return handCount == 1 ? Sts2State.Var(c, "Cards") : 0;
             // Draws one per melody played this turn (Steady Cadence).
-            case { } when c.GetType().Name == "SteadyCadence" && c.DynamicVars.TryGetValue("CalculatedCards", out var sv) && sv is CalculatedVar scv:
+            case var _ when c.GetType().Name == "SteadyCadence" && c.DynamicVars.TryGetValue("CalculatedCards", out var sv) && sv is CalculatedVar scv:
                 return (int)scv.Calculate(null);
             // Draws only when its target is Impaled (Ki Hop: anyone's arrow; Wrest: yours): counted when every
             // enemy you could aim at is, so whatever you aim at draws.
-            case { } when c.GetType().Name == "KiHop":
+            case var _ when c.GetType().Name == "KiHop":
                 return AllTargets(c, Fool.IsImpaled) ? Sts2State.Var(c, "Cards") : 0;
-            case { } when c.GetType().Name == "Wrest":
+            case var _ when c.GetType().Name == "Wrest":
                 return OwnerOf(c) is { } wo && AllTargets(c, e => Fool.ImpaledBy(e, wo.Creature) != null) ? Sts2State.Var(c, "Cards") : 0;
             // Mad Science with the Wisdom rider (Tinker Time).
             case MadScience m when m.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(c, "WisdomCards");

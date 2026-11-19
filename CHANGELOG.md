@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.12
+#### Changed
+- Code cleanup: the build has no warnings left (redundant null checks removed). No change in the game.
+
 ### Spire QoL 1.20.11
 #### Changed
 - Code cleanup: unused imports and an unused forecast property removed. No change in the game.
