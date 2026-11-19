@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.5
+#### Fixed
+- Sending an error report could freeze the game for several seconds on some PCs (once, when a prediction check found a mismatch). Reports are now sent from a background thread, without capturing the game's call stack.
+
+### Main Saves 1.0.14
+#### Fixed
+- Rebuilt with the shared error reporting fix (reports never stall the game).
+
 ### Spire QoL 1.20.4
 #### Fixed
 - A freeze of a second or more caused by the mod's own work is reported the first time it happens, not only from the second.

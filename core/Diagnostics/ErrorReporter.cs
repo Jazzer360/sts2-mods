@@ -90,7 +90,9 @@ public sealed class ErrorReporter
                     ServerName = "player",          // never the machine name
                     SendDefaultPii = false,
                     AutoSessionTracking = false,
-                    AttachStacktrace = true,
+                    // No stack captured for an event without an exception (a mismatch): symbolicating the game's stack on its own
+                    // thread can stall it (a 10.7 s freeze in a forecast report, decision #101). Crashes keep their exception's.
+                    AttachStacktrace = false,
                     MaxBreadcrumbs = 0,
                     SendClientReports = false,
                 });
@@ -181,6 +183,14 @@ public sealed class ErrorReporter
         }
         try
         {
+            // Each stage timed: a report that takes long to build on the game's thread says where (decision #101).
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var stages = new List<string>();
+            void Stage(string name)
+            {
+                if (watch.ElapsedMilliseconds >= 20) stages.Add($"{name} {watch.ElapsedMilliseconds} ms");
+                watch.Restart();
+            }
             var evt = ex != null ? new SentryEvent(ex) : new SentryEvent();
             evt.SetFingerprint(fingerprint);
             foreach (var (k, v) in Tags) evt.SetTag(k, v);
@@ -195,7 +205,9 @@ public sealed class ErrorReporter
             {
                 evt.SetExtra("tag_error", tex.Message);
             }
+            Stage("tags");
             fill(evt);
+            Stage("details");
             try
             {
                 if (ContextProvider?.Invoke() is { } ctx)
@@ -207,8 +219,17 @@ public sealed class ErrorReporter
             {
                 evt.SetExtra("context_error", cex.Message);
             }
+            Stage("game state");
             evt.SetExtra("recent_log", string.Join("\n", _log.Recent()));
-            _client.CaptureEvent(evt);
+            if (stages.Count > 0) _log.Warn($"[perf] building a {fingerprint[0]} report took: {string.Join(", ", stages)}");
+            // Handed to Sentry off the game's thread (the game state is read above, on it): whatever the client does with the
+            // event (its stack trace, serializing, queueing) never stalls a frame.
+            var client = _client;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try { client.CaptureEvent(evt); }
+                catch (Exception sendEx) { _log.Warn($"error report couldn't be sent: {sendEx.Message}"); }
+            });
         }
         catch (Exception sendEx)
         {
