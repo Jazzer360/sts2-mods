@@ -140,23 +140,48 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // when it is, a frame or a few later (SimPending); a simulation that missed its frame never makes a later one wait.
         SimWait.All(pending.Where(x => x.P.Sim != null).SelectMany(x => x.P.Sim!.Jobs).ToList());
 
-        foreach (var card in hand) _lastTabs.Remove(card);
+        // Held (decision #105): a card whose simulation, or the turn forecast it compares with, has no result for this board yet keeps
+        // the tabs it showed this turn until it has one, instead of losing them for a few frames (flicker on every hit of a busy
+        // play). Each card switches as soon as its own result is in. A card with nothing to hold shows what it has.
+        var forecastPending = TurnEnd() == null;
+        foreach (var card in hand)
+            if (!pending.Any(x => ReferenceEquals(x.Card, card))) _lastTabs.Remove(card);
         foreach (var (card, p, d) in pending)
         {
+            if ((forecastPending || p.Sim is { IsCompleted: false }) && Held(card, cs) is { } held)
+            {
+                _heldFrames++;
+                foreach (var t in held) d.AddTab(t);
+                continue;
+            }
             var tabs = Finish(card, p);
-            _lastTabs[card] = (_ctx.Decor.Frame, tabs);
+            _lastTabs[card] = (_ctx.Decor.Frame, tabs, cs, Sts2State.TurnNumber);
             if (_lastTabs.Count > 300) _lastTabs.Clear();
             foreach (var t in tabs) d.AddTab(t);
         }
     }
 
-    /// <summary>
-    /// Each card's proc tabs from the last frame it was in hand, as this feature gave them to the card (every one, before the
-    /// settings hide any), with the frame: what ProcAudit holds against its prediction as the play begins (decision #103).
-    /// </summary>
-    public static IReadOnlyDictionary<CardModel, (long Frame, List<TabSpec> Tabs)> LastTabs => _lastTabs;
+    /// <summary>The tabs the card last showed from a result of its own, this turn of this fight; null when there are none to hold.</summary>
+    private static List<TabSpec>? Held(CardModel card, ICombatState cs)
+        => _lastTabs.TryGetValue(card, out var last) && ReferenceEquals(last.Combat, cs) && last.Turn == Sts2State.TurnNumber ? last.Tabs : null;
 
-    private static readonly Dictionary<CardModel, (long Frame, List<TabSpec> Tabs)> _lastTabs = new(ReferenceEqualityComparer.Instance);
+    /// <summary>Card frames shown with held tabs since the last call (the combat summary: decision #105).</summary>
+    internal static int TakeHeldFrames()
+    {
+        var n = _heldFrames;
+        _heldFrames = 0;
+        return n;
+    }
+
+    private static int _heldFrames;
+
+    /// <summary>
+    /// Each card's proc tabs from the last frame it was in hand with a result of its own (not held: decision #105), as this feature
+    /// gave them to the card (every one, before the settings hide any), with the frame, fight and turn: what ProcAudit holds against its prediction as the play begins (decision #103).
+    /// </summary>
+    public static IReadOnlyDictionary<CardModel, (long Frame, List<TabSpec> Tabs, ICombatState Combat, int Turn)> LastTabs => _lastTabs;
+
+    private static readonly Dictionary<CardModel, (long Frame, List<TabSpec> Tabs, ICombatState Combat, int Turn)> _lastTabs = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>A card's facts, the proc sources this frame, and its running simulations.</summary>
     private sealed record Prepared(PlayFacts F, List<AbstractModel> Sources, SimBatch? Sim);

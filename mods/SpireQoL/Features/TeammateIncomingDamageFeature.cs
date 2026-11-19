@@ -46,7 +46,7 @@ public sealed class TeammateIncomingDamageFeature : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var mate = Sts2State.IsPlayerTurn ? Sts2State.FocusedTeammate() : null;
-        var view = mate != null ? TurnEndModel.Compute()?.TeammateView.FirstOrDefault(v => v.Player == mate) : null;
+        var view = mate != null ? TurnEndModel.Shown()?.TeammateView.FirstOrDefault(v => v.Player == mate) : null;
         if (view == null || (view.Incoming == 0 && view.Unblockable == 0))
         {
             _widget!.HasContent = false;

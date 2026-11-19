@@ -232,9 +232,61 @@ public sealed class TurnEndModel
         var frame = Godot.Engine.GetProcessFrames();
         if (frame == _frame) return _cached;
         _frame = frame;
-        SimJob.FlushLog(line => ModEntry.Log.Info(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"));
+        SimJob.FlushLog(line => ModEntry.Log.Info(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"), ReportCap);
         _cached = ComputeNow();
         return _cached;
+    }
+
+    /// <summary>
+    /// What Incoming Damage, the Death Skull and Teammate Incoming Damage show (decision #105): the forecast for the board now, or,
+    /// while its first result is on its way, the last one this turn of this fight had (held), so they don't blink out for a few frames
+    /// on every hit of a busy play. The audits and the card tabs use Compute: never a held forecast.
+    /// </summary>
+    public static TurnEndModel? Shown()
+    {
+        var cs = Sts2State.Combat;
+        if (Compute() is { } m)
+        {
+            _shown = (m, cs, Sts2State.TurnNumber);
+            return m;
+        }
+        if (_shown is { } s && cs != null && ReferenceEquals(s.Combat, cs) && s.Turn == Sts2State.TurnNumber)
+        {
+            var frame = Godot.Engine.GetProcessFrames();
+            if (frame != _heldFrame)
+            {
+                _heldFrame = frame;
+                _heldFrames++;
+            }
+            return s.Model;
+        }
+        return null;
+    }
+
+    private static (TurnEndModel Model, MegaCrit.Sts2.Core.Combat.ICombatState? Combat, int Turn)? _shown;
+    private static ulong _heldFrame = ulong.MaxValue;
+    private static int _heldFrames;
+
+    /// <summary>Frames that showed a held forecast since the last call (the combat summary).</summary>
+    internal static int TakeHeldFrames()
+    {
+        var n = _heldFrames;
+        _heldFrames = 0;
+        return n;
+    }
+
+    /// <summary>
+    /// An exploration a cap stopped or cut short, to Sentry (decision #105: how often the caps bind, from players' fights), grouped by
+    /// the cap and what was explored (the forecast, or any card's play: the card is a tag), with its start state to replay.
+    /// </summary>
+    private static void ReportCap(SimJob.CapHit c)
+    {
+        var card = c.Label.Contains(" (target") ? c.Label[..c.Label.IndexOf(" (target", StringComparison.Ordinal)] : null;
+        var what = card == null ? c.Label : "a card's play";
+        var tags = new Dictionary<string, string> { ["sim_cap"] = c.Caps };
+        if (card != null) tags["card"] = card;
+        Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("sim-cap", $"Simulation cap: {c.Caps} exploring {what}",
+            new[] { "sim-cap", c.Caps, what }, c.Line, new Dictionary<string, string> { ["sim_state"] = c.Start.ToJson() }, tags);
     }
 
     /// <summary>The board right now, uncached (the audit's prediction as a play begins to resolve), on the audit's own wait.</summary>

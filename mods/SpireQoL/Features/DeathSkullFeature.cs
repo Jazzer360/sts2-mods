@@ -50,7 +50,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
         // Enemy → the chance shown beside the skull (null: certain). Decision #87: once some explored outcome kills it, with the
         // range while the exploration goes on (and its mark), exact once every outcome is in.
         var show = new Dictionary<Creature, string?>(ReferenceEqualityComparer.Instance);
-        if (Sts2State.IsPlayerTurn && TurnEndModel.Compute() is { } model)
+        if (Sts2State.IsPlayerTurn && TurnEndModel.Shown() is { } model)
         {
             foreach (var (enemy, id) in model.Ids)
             {

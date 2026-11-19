@@ -59,6 +59,11 @@ public sealed class SimJob
         return line;
     }
 
+    /// <summary>A cap hit, sent from the game's thread (FlushLog): what was explored, which caps, the log line, the start state.</summary>
+    public sealed record CapHit(string Label, string Caps, string Line, SimState Start);
+
+    private static readonly ConcurrentQueue<CapHit> CapsHit = new();
+
     /// <summary>Log lines from worker threads, written out on the main thread (FlushLog).</summary>
     private static readonly ConcurrentQueue<(string Line, Exception? Error)> Pending = new();
 
@@ -151,8 +156,12 @@ public sealed class SimJob
         if (_ex.StepBudgetHit) caps.Add($"a step's {SimEngine.StepCopyBudget:N0}-copy budget");
         foreach (var c in caps) Caps.AddOrUpdate(c, 1, (_, n) => n + 1);
         if (caps.Count > 0)
-            Pending.Enqueue(($"[sim] cap: exploring {_label} hit {string.Join(" and ", caps)}: {_ex.Runs} slices, depth {_ex.MaxDepth}, {_ex.Copies} copies, " +
-                            $"{_latest?.Branches.Count} branches, {_ex.ExploredWeight:P1} of the rolls, after {clock.Elapsed.TotalMilliseconds:F1} ms", null));
+        {
+            var line = $"[sim] cap: exploring {_label} hit {string.Join(" and ", caps)}: {_ex.Runs} slices, depth {_ex.MaxDepth}, {_ex.Copies} copies, " +
+                       $"{_latest?.Branches.Count} branches, {_ex.ExploredWeight:P1} of the rolls, after {clock.Elapsed.TotalMilliseconds:F1} ms";
+            Pending.Enqueue((line, null));
+            CapsHit.Enqueue(new CapHit(_label, string.Join(" and ", caps), line, _ex.Start));
+        }
         // Only explorations that needed slicing are logged: the rest are one run, as before.
         if (_ex.Runs > 1)
         {
@@ -163,12 +172,13 @@ public sealed class SimJob
     }
 
     /// <summary>Writes the workers' log lines, and reports their failures (call from the main thread).</summary>
-    public static void FlushLog(Action<string> log, Action<Exception>? report = null)
+    public static void FlushLog(Action<string> log, Action<Exception>? report = null, Action<CapHit>? cap = null)
     {
         while (Pending.TryDequeue(out var e))
         {
             log(e.Line);
             if (e.Error != null) report?.Invoke(e.Error);
         }
+        while (CapsHit.TryDequeue(out var c)) cap?.Invoke(c);
     }
 }

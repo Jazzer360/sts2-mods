@@ -50,7 +50,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        var m = Sts2State.IsPlayerTurn ? TurnEndModel.Compute() : null;
+        var m = Sts2State.IsPlayerTurn ? TurnEndModel.Shown() : null;
         if (m == null || (m.BlockableTotal == 0 && m.UnblockableTotal == 0))
         {
             _widget!.HasContent = false;

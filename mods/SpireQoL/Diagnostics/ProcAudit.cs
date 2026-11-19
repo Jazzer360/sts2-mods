@@ -641,8 +641,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         if (!ProcIndicatorsFeature.LastTabs.TryGetValue(card, out var last) || !ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var shownFacts))
             return (null, "none recorded in hand");
-        // Drawn on the last frame the card was in hand (not on an earlier one: this feature skipped a frame, or was switched off).
-        if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var seenAt) || last.Frame != seenAt) return (null, "not drawn on its last frame in hand");
+        // Drawn on the last frame the card was in hand: not held from an earlier board while its simulation ran (decision #105), nor
+        // from a frame the feature skipped.
+        if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var seenAt) || last.Frame != seenAt) return (null, "held from an earlier board, or not drawn on its last frame in hand");
         var shown = last.Tabs;
         if (shownFacts.SimPending || shownFacts.SimIncomplete || nowFacts.SimPending || nowFacts.SimIncomplete)
             return (null, "simulation still exploring");
@@ -1030,6 +1031,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         // How the simulations did against the frame's wait and their caps (decision #104).
         if (Combat.SimWait.Summary() is { } waits) ModEntry.Log.Info($"[perf] combat summary: simulations: {waits}.");
+        if (ProcIndicatorsFeature.TakeHeldFrames() is > 0 and var held) ModEntry.Log.Info($"[perf] combat summary: card frames shown with tabs held from an earlier board while simulations ran: {held}.");
+        if (Combat.TurnEndModel.TakeHeldFrames() is > 0 and var heldForecast) ModEntry.Log.Info($"[perf] combat summary: frames showing the forecast held from an earlier board: {heldForecast}.");
         if (SimJob.CapSummary() is { } caps) ModEntry.Log.Info($"[perf] combat summary: explorations stopped or cut short by a cap: {caps}.");
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"))})";

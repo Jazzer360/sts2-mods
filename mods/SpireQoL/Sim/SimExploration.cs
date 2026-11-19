@@ -50,6 +50,8 @@ public sealed class SimExploration
     public bool Done => _next == null && !Capped;
     /// <summary>Stopped at MaxStoredBranches or MaxTotalCopies: what's known stays partial.</summary>
     public bool Capped { get; private set; }
+    /// <summary>The state it explores from (cap reports carry it: decision #105).</summary>
+    public SimState Start => _start;
     /// <summary>Which cap stopped it ("50,000 stored branches"); null when none did.</summary>
     public string? CapHit { get; private set; }
     /// <summary>A step ran over its own copy budget (SimEngine.StepCopyBudget) in some slice: that step followed one target only.</summary>

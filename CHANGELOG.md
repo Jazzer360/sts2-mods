@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.10
+#### Changed
+- No more blinking: while a prediction catches up with the board (on each hit of a busy play), a card keeps the tabs it showed, and Incoming Damage and the Death Skull keep their last numbers, until the new result is in. Each card updates as soon as its own result arrives.
+- When a prediction hits one of its search limits, it's now sent with the error reports, so how often that happens in real fights can be seen.
+
 ### Spire QoL 1.20.9
 #### Changed
 - Smoother frames on busy boards: the mod now waits at most 8 ms a frame for its predictions (it could wait up to a quarter of a second, and the Incoming Damage forecast had no limit). Anything not ready by then appears a moment later, as results come in from the background, which now update every quarter second.
