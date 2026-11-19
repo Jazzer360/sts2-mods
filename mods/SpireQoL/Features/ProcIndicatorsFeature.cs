@@ -199,12 +199,18 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         return sources;
     }
 
+    /// <summary>
+    /// A power's creature, or null for a canonical stand-in (WithOwnPowers: a power the card gives you that you don't have yet,
+    /// which reads as yours). Reading Owner on a canonical model throws (AbstractModel.AssertMutable: issue #426).
+    /// </summary>
+    internal static Creature? OwnerOf(PowerModel p) => p.IsMutable ? p.Owner : null;
+
     /// <summary>The simulator's id of the teammate a source belongs to (their power or relic), or null for yours and enemies'.</summary>
     private static int? TeammateOf(AbstractModel src, Player me, ICombatState cs)
     {
         var owner = src switch
         {
-            PowerModel { Owner: { IsPlayer: true } c } => c.Player,
+            PowerModel p when OwnerOf(p) is { IsPlayer: true } c => c.Player,
             RelicModel r => r.Owner,
             _ => null,
         };
@@ -457,16 +463,16 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         foreach (var src in sources)
         {
             int? ownerId = TeammateOf(src, _me, _cs);
-            if (src is PowerModel { Owner.IsEnemy: true } ep)
+            if (src is PowerModel ep && OwnerOf(ep) is { IsEnemy: true } enemyOwner)
             {
-                if (!te.Ids.TryGetValue(ep.Owner, out var eid)) continue;
+                if (!te.Ids.TryGetValue(enemyOwner, out var eid)) continue;
                 ownerId = eid;
             }
             LogTab(src, ownerId, outcomes, tabs);
         }
         // Effects the engine logs itself (Juggernaut on every block gain, Thunder on Lightning evokes): logged under their power's
         // name, yours and every teammate's.
-        foreach (var src in sources.OfType<PowerModel>().Where(x => x.Owner is { IsPlayer: true } && x.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
+        foreach (var src in sources.OfType<PowerModel>().Where(x => OwnerOf(x) is { IsPlayer: true } && x.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
             LogTab(src, TeammateOf(src, _me, _cs), outcomes, tabs, TabKind.Damage);
 
         // What the audits hold the play to, per aim (decisions #87, #95): the tabbed sources it sets off in every outcome and in

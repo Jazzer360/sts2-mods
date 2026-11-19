@@ -33,6 +33,53 @@ internal static class CodeIndex
         return false;
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> FlashesOnItsOwn = new();
+
+    /// <summary>
+    /// The class (or a base below the game's model types) flashes in some method other than the hooks run after a damage or
+    /// block amount it changed (AfterModifyingDamageAmount, AfterModifyingBlockAmount: Slow flashes there only, not as it stacks
+    /// on each card played). A tabbed source every outcome sets off is held to its flash only then (issue #425); the play's
+    /// damage and block checks cover the amount hooks. Async bodies and lambdas count for the method they belong to.
+    /// </summary>
+    public static bool FlashesOutsideAmountHooks(Type type) => FlashesOnItsOwn.GetOrAdd(type, static t =>
+    {
+        string[] amountHooks = { "AfterModifyingDamageAmount", "AfterModifyingBlockAmount" };
+        for (var c = t; c != null && c.Assembly == t.Assembly && c.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; c = c.BaseType)
+        {
+            var types = new List<Type> { c };
+            for (var i = 0; i < types.Count; i++) types.AddRange(types[i].GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
+            foreach (var nt in types)
+            {
+                foreach (var m in nt.GetMethods(All).Cast<MethodBase>())
+                {
+                    bool flashes;
+                    try
+                    {
+                        flashes = SpireQoL.Diagnostics.GameCode.Instructions(m).Any(ins => ins.operand is MethodBase { Name: "Flash" } mb
+                            && mb.DeclaringType?.Name is "PowerModel" or "RelicModel" or "AbstractModel");
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    if (!flashes) continue;
+                    // A compiler-made body ("<AfterCardPlayed>d__5", "<AfterCardPlayed>b__5_0") belongs to the method in its brackets.
+                    var owner = m.Name.StartsWith('<') ? OwnerName(m.Name) : nt != c && nt.Name.StartsWith('<') ? OwnerName(nt.Name) : m.Name;
+                    if (!amountHooks.Contains(owner)) return true;
+                }
+            }
+        }
+        return false;
+    });
+
+    /// <summary>The method a compiler-made name belongs to: the part in its first brackets ("&lt;Name&gt;d__5" → "Name"), else the name.</summary>
+    private static string OwnerName(string name)
+    {
+        var i = name.IndexOf('<');
+        var j = i < 0 ? -1 : name.IndexOf('>', i);
+        return i >= 0 && j > i + 1 ? name[(i + 1)..j] : name;
+    }
+
     /// <summary>
     /// A power whose only hooks change a block or damage amount as the game works it out (Modify*, and
     /// AfterModifyingBlockAmount or AfterModifyingDamageAmount, where it flashes): Fasten adds to a Defend's block, Hard to

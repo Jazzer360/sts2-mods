@@ -1089,7 +1089,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             foreach (var t in every!)
             {
                 if (!typeof(PowerModel).IsAssignableFrom(t) || LaterPlayOnly.Contains(t.Name)) continue;
-                if (!CodeIndex.Does(t, new[] { "PowerModel.Flash", "AbstractModel.Flash" }, Array.Empty<string>())) continue;
+                if (!CodeIndex.FlashesOutsideAmountHooks(t)) continue;
                 if (flashed.Any(f => f.GetType() == t)) continue;
                 issues.Add($"didn't fire: {t.Name} (every outcome of this play sets it off)");
             }

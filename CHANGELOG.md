@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.1
+#### Fixed
+- A card that gives you a power you don't have yet (Child of the Stars) lost all its tabs: its simulation failed reading that power.
+- The play check no longer reports Slow as not firing when a card stacks it: Slow only flashes when it raises a hit.
+
 ### Spire QoL 1.20.0
 #### Added
 - Intent Details: on each enemy's intent during your turn, the block its move gains (a number on its defend intent) and each buff or debuff it applies, with its icon and amount (Strength 3, Weak 2). On by default (In fights).
