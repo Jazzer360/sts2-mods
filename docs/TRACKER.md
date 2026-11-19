@@ -400,6 +400,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Every-power check after each play (powers that went down with nothing to explain it).
 - [x] Simulator: Concoct, Monarch's Gaze (single-target and all-enemy attacks), Storm and Trash to Treasure channels.
 - [x] Dead code removed (analyzers + `scripts/dead-code.mjs`): Intent Forecast stub, `UiKit.Badge`, `Sts2State.HasVar`, `TurnEndModel.Overblock`, `PlayFacts.DebuffsLanding`, `SimAdapter.SelfPowers`, unused parameters and usings.
+- [x] 1.20.11: 94 unused usings removed (IDE0005, which the normal build doesn't check); `scripts/dead-code.mjs` now lists them too (`--fix-usings` removes them). `TurnEndModel.Incomplete` removed (replaced by ProgressMark in 1.17.0).
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
 - Known gaps (0; each is logged when present in a fight):

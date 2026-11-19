@@ -1,4 +1,3 @@
-using SpireQoL.Sim;
 using Xunit;
 
 namespace SpireQoL.Sim.Tests;

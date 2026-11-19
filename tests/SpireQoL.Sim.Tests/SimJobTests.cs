@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using SpireQoL.Sim;
 using Xunit;
 
 namespace SpireQoL.Sim.Tests;

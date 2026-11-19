@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Reflection;
-using SpireQoL.Sim;
 using Xunit;
 
 namespace SpireQoL.Sim.Tests;

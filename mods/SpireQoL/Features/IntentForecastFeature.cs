@@ -4,7 +4,6 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using SpireQoL.Sim;
-using SpireQoL.Cards;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;

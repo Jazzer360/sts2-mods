@@ -2,7 +2,6 @@ using Godot;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models.Powers;
 using SpireQoL.Cards;
-using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Features;

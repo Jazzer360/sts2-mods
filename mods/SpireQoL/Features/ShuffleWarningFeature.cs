@@ -1,7 +1,4 @@
 using HarmonyLib;
-using MegaCrit.Sts2.Core.Localization.DynamicVars;
-using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Cards;
 using SpireQoL.Cards;
 using SpireQoL.Procs;
 using Sts2Mods.Core.Features;

@@ -1,6 +1,5 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Game;
 

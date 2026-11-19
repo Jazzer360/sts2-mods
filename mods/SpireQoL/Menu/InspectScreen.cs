@@ -1,10 +1,8 @@
 using System.Runtime.CompilerServices;
 using Godot;
 using MegaCrit.Sts2.Core.ControllerInput;
-using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using SpireQoL.Cards;
 using SpireQoL.Data;

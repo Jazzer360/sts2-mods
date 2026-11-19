@@ -76,5 +76,5 @@ Working a report:
 - `core/`: shared code compiled into each mod (feature host, overlay, widgets, game-state helpers, error reporter).
 - `mods/SpireQoL/`: the mod. `Features/` (one per feature), `Procs/PlayFacts.cs` (what playing a card does), `Sim/` (the outcome simulator: `SimState`/`SimEngine` are pure C#, `SimAdapter` reads the game), `Combat/TurnEndModel.cs` (Incoming Damage view over the simulator), `Diagnostics/` (audits, snapshots), `Menu/` (settings menu and catalog), `Cards/` (on-card tab rendering).
 - `docs/`: FEATURES (complete list of what the mod does and touches), TRACKER (work log and open items), MODDING_NOTES (loader facts), ROADMAP, this file.
-- `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`, `coverage-ledger.mjs` (the coverage ledger from the decompile), `dead-code.mjs` (members nothing references; run it with the analyzers before a cleanup).
+- `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`, `coverage-ledger.mjs` (the coverage ledger from the decompile), `dead-code.mjs` (members nothing references, then unused usings from a build with IDE0005 on, which the normal build skips; `--fix-usings` removes them; run it with the analyzers before a cleanup).
 - `tests/SpireQoL.Sim.Tests/`: simulator tests (no game needed).

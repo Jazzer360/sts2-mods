@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace SpireQoL.Sim;
 
 /// <summary>

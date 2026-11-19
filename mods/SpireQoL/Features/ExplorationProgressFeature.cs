@@ -1,6 +1,5 @@
 using Godot;
 using HarmonyLib;
-using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using SpireQoL.Cards;
 using SpireQoL.Sim;

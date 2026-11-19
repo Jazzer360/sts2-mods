@@ -5,9 +5,6 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Orbs;
-using SpireQoL.Data;
-using Sts2Mods.Core.Game;
 
 namespace SpireQoL.Diagnostics;
 

@@ -1,5 +1,4 @@
 using System.Text.Json;
-using SpireQoL.Sim;
 using Xunit;
 
 namespace SpireQoL.Sim.Tests;

@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.20.11
+#### Changed
+- Code cleanup: unused imports and an unused forecast property removed. No change in the game.
+
+### Main Saves 1.0.16
+#### Changed
+- Shared code: unused imports removed. No change in the game.
+
 ### Spire QoL 1.20.10
 #### Changed
 - No more blinking: while a prediction catches up with the board (on each hit of a busy play), a card keeps the tabs it showed, and Incoming Damage and the Death Skull keep their last numbers, until the new result is in. Each card updates as soon as its own result arrives.

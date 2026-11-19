@@ -1,5 +1,3 @@
-using SpireQoL.Sim;
-
 namespace SpireQoL.Sim.Tests.V2;
 
 /// <summary>Builds v2 scripts for tests (docs/SIMULATOR_V2.md): a card play with its body actions.</summary>

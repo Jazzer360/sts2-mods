@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using SpireQoL.Sim;
 using Xunit;
 
 namespace SpireQoL.Sim.Tests;

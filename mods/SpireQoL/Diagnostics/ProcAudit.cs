@@ -1,6 +1,5 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History;

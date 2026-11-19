@@ -1,5 +1,4 @@
 using System.Reflection;
-using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Features;
 using Xunit;

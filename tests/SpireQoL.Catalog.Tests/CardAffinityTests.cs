@@ -1,6 +1,5 @@
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Data;
-using SpireQoL.Features;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
