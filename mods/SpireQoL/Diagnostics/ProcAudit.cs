@@ -898,20 +898,24 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // What the card showed in hand against the same prediction (decision #103): after the filters above, which are about
             // what happened, not about what was shown; this check has its own (ShownCheck).
             if (w.ShownDiff != null) issues.AddRange(w.ShownDiff);
+            var turn = Sts2State.TurnNumber;
             if (w.ShownSkip != null)
             {
                 var sk = "tabs shown: " + w.ShownSkip;
                 _skipCounts[sk] = (_skipCounts.TryGetValue(sk, out var skn) ? skn : 0) + 1;
+                Telemetry.DevEvents.Post(new Telemetry.CheckSkipped("play", turn, sk, w.CardName));
             }
             foreach (var line in model.Where(x => x.Contains("not checked", StringComparison.Ordinal)))
             {
                 var reason = SkipReason(line);
                 _skipCounts[reason] = (_skipCounts.TryGetValue(reason, out var sn) ? sn : 0) + 1;
+                Telemetry.DevEvents.Post(new Telemetry.CheckSkipped("play", turn, reason, w.CardName));
             }
             foreach (var reason in w.Facts?.Unmodelled ?? Array.Empty<string>())
                 _gapCounts[reason] = (_gapCounts.TryGetValue(reason, out var gn) ? gn : 0) + 1;
             _checked++;
             if (issues.Count == 0) _matched++;
+            Telemetry.DevEvents.Post(new Telemetry.CheckDone("play", turn, issues.Count == 0, issues.Count == 0 ? w.CardName : issues[0].Split(':')[0]));
             foreach (var issue in issues)
             {
                 var kind = issue.Split(':')[0];

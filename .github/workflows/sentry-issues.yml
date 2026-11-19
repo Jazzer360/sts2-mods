@@ -24,7 +24,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Mirror Sentry issues to GitHub
+      - name: Test the session metrics sums
+        run: node --test .github/scripts/session-metrics.test.mjs
+      - name: Mirror Sentry issues to GitHub, and add up session metrics
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}

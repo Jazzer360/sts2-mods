@@ -62,6 +62,13 @@ public sealed class SimJob
     private readonly string _label;
     private readonly long _firstBudget;
     private volatile SimOutcome? _latest;
+    private long _context;
+
+    /// <summary>
+    /// The fight and your turn the boards being searched now belong to (Telemetry.SearchDone.ContextOf; 0 outside your turn), set by
+    /// the game's thread each frame (SessionWatch). Each job keeps the value it started with, for the session's counts (decision #108).
+    /// </summary>
+    public static long Context;
 
     private SimJob(SimExploration ex, string label, long firstBudget)
     {
@@ -73,7 +80,7 @@ public sealed class SimJob
     /// <summary>Starts searching on a worker thread (waiting for a background turn after FirstBudget copies unless told otherwise: tests).</summary>
     public static SimJob Start(SimExploration ex, string label, long firstBudget = FirstBudget)
     {
-        var job = new SimJob(ex, label, firstBudget);
+        var job = new SimJob(ex, label, firstBudget) { _context = Interlocked.Read(ref Context) };
         if (Running.IsEmpty)
         {
             Interlocked.Exchange(ref _started, 0);
@@ -111,6 +118,8 @@ public sealed class SimJob
             var o = _ex.Run(work);
             _latest = o;
             _ready.TrySetResult(true);
+            Telemetry.DevEvents.Post(new Telemetry.SearchDone(_label, _context, o.Steps, o.Copies, o.PeakHeld, clock.Elapsed.TotalMilliseconds,
+                gated, o.Truncated ? o.CapHit ?? "a cap" : null, Cancelled: false));
             if (o.Truncated)
             {
                 var cap = o.CapHit ?? "a cap";
@@ -126,7 +135,9 @@ public sealed class SimJob
         }
         catch (OperationCanceledException)
         {
-            // the board changed
+            // The board changed: the work it had done is counted as thrown away.
+            Telemetry.DevEvents.Post(new Telemetry.SearchDone(_label, _context, work.Steps, work.Copies, work.PeakHeld, clock.Elapsed.TotalMilliseconds,
+                gated, null, Cancelled: true));
         }
         catch (Exception ex)
         {

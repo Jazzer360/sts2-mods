@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.0
+#### Added
+- Session summary (settings, General; on): with Send error reports on, one summary of counts is also sent per play session: how many turns the predictions were checked and matched, how often a calculation was too big, how long they took. Nothing personal and no game state; it shows how rare the reported problems are. Turn it off on its own with its switch.
+
+### Main Saves 1.0.17
+#### Changed
+- Shared code: the overlay reports each frame's timing to listeners. No change in the game.
+
 ### Spire QoL 1.20.13
 #### Changed
 - Busy boards are worked out completely: random hits (Lightning, Juggernaut, random-target cards) that land the same way in a different order now count as one outcome, so a fight like four Defects with full Lightning orbs finishes in about a second instead of never, with exact chances. In multiplayer, outcomes that differ only in a teammate are no longer mixed up.

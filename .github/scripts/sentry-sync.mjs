@@ -19,6 +19,7 @@
 //      GITHUB_TOKEN, GITHUB_REPOSITORY (owner/repo).
 
 import { readFileSync } from "node:fs";
+import { syncSessionMetrics } from "./session-metrics.mjs";
 
 const env = (k, d) => process.env[k] || d;
 const SENTRY = env("SENTRY_API", "https://sentry.io").replace(/\/$/, "");
@@ -40,6 +41,25 @@ async function sentry(path, init = {}) {
     throw err;
   }
   return r.status === 204 ? null : r.json();
+}
+
+// Every page of a Sentry list, following its Link header (rel="next"; results="true").
+async function* sentryPages(path) {
+  let url = `${SENTRY}/api/0${path}`;
+  while (url) {
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${STOKEN}` } });
+    if (!r.ok) throw new Error(`Sentry GET ${url}: ${r.status} ${await r.text()}`);
+    yield await r.json();
+    const next = (r.headers.get("link") || "").split(",").find((l) => /rel="next"/.test(l) && /results="true"/.test(l));
+    url = next ? /<([^>]+)>/.exec(next)?.[1] : null;
+  }
+}
+
+async function graphql(query, variables) {
+  const r = await fetch("https://api.github.com/graphql", { method: "POST", headers: { Authorization: `Bearer ${GTOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ query, variables }) });
+  const j = await r.json();
+  if (!r.ok || j.errors) throw new Error(JSON.stringify(j.errors || j));
+  return j.data;
 }
 
 // The newest event of an issue. A brand-new issue can 404 on "latest" for a few minutes while
@@ -184,7 +204,9 @@ function body(issue, event) {
 await ensureLabels();
 await loadNewestRelease();
 const mirrored = await mirroredIssues();
-const issues = await sentry(`/projects/${ORG}/${PROJECT}/issues/?query=${encodeURIComponent("is:unresolved")}&statsPeriod=14d&limit=100`);
+// Session summaries (kind:session, decision #108) aren't reports: they're added up in the session metrics issue below, never mirrored.
+const issues = (await sentry(`/projects/${ORG}/${PROJECT}/issues/?query=${encodeURIComponent("is:unresolved !kind:session")}&statsPeriod=14d&limit=100`))
+  .filter((i) => !String(i.title || "").startsWith("Session summary"));
 console.log(`${issues.length} unresolved Sentry issues, ${mirrored.size} mirrored.`);
 
 let failed = 0;
@@ -244,6 +266,12 @@ for (const issue of issues) {
   failed++;
   console.error(`Sentry ${issue.id}: ${e.message}`);
  }
+}
+try {
+  await syncSessionMetrics({ ORG, PROJECT, REPO, sentry, sentryPages, github, graphql });
+} catch (e) {
+  failed++;
+  console.error(`session metrics: ${e.message}`);
 }
 if (failed) {
   console.error(`${failed} issue(s) failed to sync.`);

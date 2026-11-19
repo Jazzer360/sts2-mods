@@ -2,6 +2,19 @@
 
 Everything needed to pick this repo up on a new machine, or after a long break. CLAUDE.md holds the rules; this file holds the setup and the day-to-day loop.
 
+## Coming back after a break
+
+Things rot while nobody looks. Work through this list before changing anything, top to bottom; each line says how to check and what to do.
+
+1. **The machine:** the prerequisites below are installed (`dotnet --version` 9.x, `gh auth status` logged in, `node --version`), the repo is up to date (`git pull`), and the game is installed and on Steam's beta branch (Properties → Betas).
+2. **The game moved on:** compare the game's version (main menu, bottom corner) with `~/git/sts2-decompiled/VERSION.json`. If it's newer, follow "After a game patch" below before anything else: renamed members are build errors or silent fallbacks, and new cards, relics and powers are coverage gaps.
+3. **The game's Sentry SDK:** the mod reports through the game's own `Sentry.dll` (`data_sts2_windows_x86_64`; 6.7.0 on 2026-11-19). If its version changed, build, then check after a play session that a report or a session summary arrived in Sentry.
+4. **A smoke test:** `dotnet build` (game closed), `dotnet test tests/SpireQoL.Sim.Tests`, `dotnet test tests/SpireQoL.Catalog.Tests`, `node --test .github/scripts/session-metrics.test.mjs`. All green before any change, so whatever breaks later is the change's.
+5. **The workflows:** `gh run list --limit 20`. A red "Sentry issues" run usually means the Sentry auth token expired: make a new one in Sentry (Settings → Auth Tokens; scopes project:read, event:read, event:write) and `gh secret set SENTRY_AUTH_TOKEN`. Warnings or failures about a retired Node or action version: bump `actions/checkout`, `actions/setup-node` and `node-version` in `.github/workflows/*.yml`.
+6. **What players saw meanwhile:** the pinned **Session metrics** issue (clean turns, caps and skipped checks per version: "Session metrics" below), then `gh issue list --label auto-report --state open` ("Error reports" below). Many reports from versions long replaced: consider raising the floor in `reporting.json` (CLAUDE.md "Working auto-reports").
+7. **The notes:** docs/TRACKER.md (open items, the newest decisions' follow-ups) and the last entries of docs/DECISIONS.md, so nothing decided is reopened by accident.
+8. **Dev mode is on in your game:** `<game>/mods/SpireQoL/SpireQoL.dev` exists after a `dotnet build` ("Dev mode" below), so your own sessions don't count as players'.
+
 ## Prerequisites (Windows)
 
 | What | Why | Version used |
@@ -54,6 +67,24 @@ The mod is developed on Steam's **beta** branch (the installed game) and also su
 - **Logs:** `%APPDATA%\SlayTheSpire2\logs\godot*.log` (newest is `godot.log`). Mod lines start with `[SpireQoL]`. Audit lines: `[SpireQoL] [audit]`, with a `combat summary` line per fight. Read these first for any in-game report (see CLAUDE.md "Logs first").
 - **Release every change** (CLAUDE.md "Releasing"): bump the version in `SpireQoL.json` and `SpireQoL.csproj`, add the CHANGELOG section, commit, push, `./scripts/release.ps1`. The release script works while the game is running (it doesn't install); install afterwards with `dotnet build` once the game is closed. The "Release check" workflow on GitHub goes red if a release is missing. After a release the script also starts the site's build (`gh workflow run pages.yml --ref gh-pages`), which reads the changelog and releases fresh; the site otherwise rebuilds only when its own branch changes.
 
+## Dev mode
+
+Your own game is told apart from players' (decision #108). `dotnet build`'s install step (`Directory.Build.targets`, `InstallModToGame`) and `scripts/release.ps1`'s install step write a marker file, `SpireQoL.dev`, beside the installed DLL; release zips never contain it. At load the mod reads it (`ModEntry.DevMode`; the log says `dev mode on`). The hidden setting `"DevMode"` in `<game>/mods/SpireQoL/SpireQoL.settings.cfg` overrides the marker: `true` or `false`, or leave it out (null) to follow the marker. Delete the marker, or set the setting to `false`, to play exactly as a player would.
+
+What dev mode does today: every report and session summary carries the tag `dev: true`, and the session metrics leave dev sessions out. The dev dashboard (phase 2 of decision #108, docs/TRACKER.md) is switched on by the same flag.
+
+## Session metrics
+
+How often things go right in players' games (decision #108), so a cap hit or a skipped check can be weighed against how often it could have happened.
+
+- **In the mod:** an event stream (`mods/SpireQoL/Telemetry/DevEvents.cs`, format `DevEvents.Version`) that the audits (`CheckDone`, `CheckSkipped`), the simulator's searches (`SimJob`: `SearchDone`), the frame's waits (`SimWait`: `FrameWait`) and the reporter (`ReportSent`) post to. `SessionWatch` (a frame feature, "Session Summary (log only)") finds the session's bounds (a run started or continued, until it's left or the game closes), the fights and your turns, the progress bar's spells (`Unsettled`) and every frame's time (`OverlayHost.FrameMeasured`), and feeds a `SessionStats`. At the session's end, with at least one fight turn, its `SessionSummary` goes to Sentry as one Info event (`ErrorReporter.Summary`: fingerprint `session`, tag `kind: session`, the counts as JSON in the `summary` extra, a one-line `summary_line`). The game log gets the same line (`[session] ended (...)`).
+- **Crashes:** the summary so far is rewritten at every turn and fight to `<game>/mods/SpireQoL/SpireQoL.session.json`. A session the mod never saw end is sent on the next launch, `ended: unseen`, with its own mod version.
+- **What a turn counts as**, worst first: *mismatched* (a play's check or the enemy turn's didn't match), *capped* (a search for its boards stopped at a cap), *unchecked* (a check was skipped, for the reason given; or no forecast check came though the fight went on, counted as "no check came for this turn's enemy turn", which is itself a gap to look into), *clean* (everything checked and matched; a fight's last turn has no enemy turn, so its plays decide). `SessionStatsTests` pins these rules.
+- **The other numbers:** searches (in the background, cancelled with the copies thrown away, caps by kind, the slowest and the most states held, time percentiles), frame waits (and how many left work to the background), how long the board took to settle when it didn't within its frame, the mod's time per frame (percentiles, frames over 30 ms) and the game's own stalls, garbage collections and allocation (the whole process), and reports sent. The format is `SessionSummary.V` (1 today): change what a field means and bump it; the sync skips formats it doesn't know.
+- **Where to read it:** the pinned GitHub issue labelled `session-metrics` ("Session metrics (from players' games)"). The hourly "Sentry issues" workflow runs `syncSessionMetrics` (`.github/scripts/session-metrics.mjs`) after mirroring reports: it reads the session events it hasn't counted yet (from two hours before the newest one it counted, skipping ids it remembers), adds them up per mod version, and rewrites the issue's table. The running totals are stored in the issue body itself (a hidden base64 block), so they outlast Sentry's retention. Delete the issue to start again from what Sentry still has (90 days at most): it's recreated and pinned on the next run (pin it by hand if the run's log says it couldn't). Session summaries are never mirrored as reports (the sync's query leaves out `kind:session`).
+- **Quota:** one event per session per player with reports on. If the Sentry plan's quota runs short, sample in `SessionWatch.Send` (send 1 in N, and multiply by N in the sync) or stop sending there.
+- **Tests:** `dotnet test tests/SpireQoL.Sim.Tests` (`SessionStatsTests`: classification, sums, the file format) and `node --test .github/scripts/session-metrics.test.mjs` (the sync's sums, the issue body, the state block; the workflow runs it before each sync).
+
 ## Error reports (Sentry → GitHub issues)
 
 Players' crashes and audit mismatches go to Sentry (`ErrorReporter`, DSN in `mods/SpireQoL/Diagnostics/ReportingConfig.cs`; a DSN is public by design). The "Sentry issues" workflow (`.github/workflows/sentry-issues.yml`, hourly, or `gh workflow run "Sentry issues"`) mirrors them as GitHub issues labelled `auto-report` plus `crash` or `mismatch`, resolves Sentry issues whose GitHub issue was closed (in the fixing release), and reopens a GitHub issue if it happens again on the fixing version or newer, replacing its body with the newest occurrence. Occurrences only from versions older than the fix (players who haven't updated) leave it closed. The fix version comes from the closing comment's release link (`spireqol-vX.Y.Z`); a new report from a version older than the newest release says so. Reports only from versions older than the floor in `reporting.json` at the repo root (1.0.0, decisions #79, #81) are never mirrored or reopened: the sync resolves them in Sentry. The mod reads the same file from GitHub at startup, and a build below it sends nothing. Raising the floor is a commit to that file alone: no mod release.
@@ -77,4 +108,6 @@ Working a report:
 - `mods/SpireQoL/`: the mod. `Features/` (one per feature), `Procs/PlayFacts.cs` (what playing a card does), `Sim/` (the outcome simulator: `SimState`/`SimEngine` are pure C#, `SimAdapter` reads the game), `Combat/TurnEndModel.cs` (Incoming Damage view over the simulator), `Diagnostics/` (audits, snapshots), `Menu/` (settings menu and catalog), `Cards/` (on-card tab rendering).
 - `docs/`: FEATURES (complete list of what the mod does and touches), TRACKER (work log and open items), MODDING_NOTES (loader facts), ROADMAP, this file.
 - `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`, `coverage-ledger.mjs` (the coverage ledger from the decompile), `dead-code.mjs` (members nothing references, then unused usings from a build with IDE0005 on, which the normal build skips; `--fix-usings` removes them; run it with the analyzers before a cleanup).
-- `tests/SpireQoL.Sim.Tests/`: simulator tests (no game needed).
+- `mods/SpireQoL/Telemetry/`: the event stream, the session counter and its summary (pure C#, tested with the simulator), and `SessionWatch` (reads the game).
+- `tests/SpireQoL.Sim.Tests/`: simulator tests, and the session counter's (no game needed).
+- `.github/scripts/`: `sentry-sync.mjs` (reports → issues), `session-metrics.mjs` (session summaries → the pinned metrics issue) and its tests.

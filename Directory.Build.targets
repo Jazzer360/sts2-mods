@@ -48,6 +48,8 @@
       <_ModFiles Include="$(OutDir)$(AssemblyName).pck" Condition="Exists('$(OutDir)$(AssemblyName).pck')" />
     </ItemGroup>
     <Copy SourceFiles="@(_ModFiles)" DestinationFolder="$(Sts2ModsDir)\$(AssemblyName)" SkipUnchangedFiles="true" />
+    <!-- This is a developer's game: the marker turns on the mod's dev mode (decision #108). Release zips never contain it. -->
+    <WriteLinesToFile File="$(Sts2ModsDir)\$(AssemblyName)\$(AssemblyName).dev" Lines="Developer install (dotnet build): dev mode on. Delete to play as a player would%3B see docs/DEVELOPMENT.md." Overwrite="true" WriteOnlyWhenDifferent="true" />
     <!-- Dev convenience (set in Sts2.local.props): start every installed build from default settings. -->
     <Delete Files="$(Sts2ModsDir)\$(AssemblyName)\$(AssemblyName).settings.cfg" Condition="'$(ResetModSettingsOnInstall)' == 'true'" />
     <Message Importance="high" Text="Reset $(AssemblyName) settings to defaults (ResetModSettingsOnInstall)" Condition="'$(ResetModSettingsOnInstall)' == 'true'" />

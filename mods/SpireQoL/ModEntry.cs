@@ -23,6 +23,15 @@ public static class ModEntry
     private static Sts2Mods.Core.Diagnostics.ReportFloor? _floor;
 
     public static ModLog Log { get; } = new(Id);
+
+    /// <summary>
+    /// Developer mode (QolSettings.DevMode, decision #108): the developer's own game. Set at load from the setting, or else from the
+    /// marker file their builds install beside the DLL.
+    /// </summary>
+    public static bool DevMode { get; private set; }
+
+    /// <summary>The marker file a developer's install leaves beside the DLL (Directory.Build.targets, scripts/release.ps1).</summary>
+    public const string DevMarker = Id + ".dev";
     public static FeatureHost Features { get; } = new(Id, Log);
 
     public static void Initialize()
@@ -36,6 +45,8 @@ public static class ModEntry
         MigrateSettings(settings);
         Sim.SimAdapter.IncludeTeammates = settings.MultiplayerPredictions;
         Combat.TurnEndModel.CountTeammateHands = settings.TeammateHands;
+        DevMode = settings.DevMode ?? File.Exists(Path.Combine(Path.GetDirectoryName(typeof(ModEntry).Assembly.Location) ?? "", DevMarker));
+        if (DevMode) Log.Info($"dev mode on ({(settings.DevMode == true ? "DevMode in the settings file" : DevMarker + " beside the DLL")})");
 
         var host = new OverlayHost(Id, Log)
         {
@@ -52,6 +63,8 @@ public static class ModEntry
         var version = typeof(ModEntry).Assembly.GetName().Version?.ToString(3) ?? "?";
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Init(Diagnostics.ReportingConfig.Dsn, settings.ReportErrors, $"spireqol@{version}", Log);
         reporter.Tags["mod_version"] = version;
+        // The developer's own game: its reports and session summaries are told apart from players' (the session metrics skip them).
+        if (DevMode) reporter.Tags["dev"] = "true";
         try { reporter.Tags["game_version"] = MegaCrit.Sts2.Core.Nodes.NGame.GetGameVersion(); } catch { }
         // Multiplayer reports have their own budget: a noisy co-op session can't crowd out single-player ones.
         reporter.BudgetKey = () => Sts2State.Combat is { } c && c.Players.Count > 1 ? "multiplayer" : "single";
@@ -124,6 +137,7 @@ public static class ModEntry
             new Diagnostics.ForecastAudit(),
             new Diagnostics.ProcAudit(ctx),
             new Diagnostics.CoverageWatch(ctx),
+            new Telemetry.SessionWatch(), // after the audits: a frame's checks are posted before its turn or fight changes
         };
         foreach (var f in features) Features.Add(f);
 

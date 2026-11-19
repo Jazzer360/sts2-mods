@@ -150,6 +150,8 @@ foreach ($m in $mods) {
         try {
             New-Item -ItemType Directory -Force $dest | Out-Null
             Copy-Item (Join-Path $stage '*') $dest -Force -ErrorAction Stop
+            # Still the developer's game (decision #108): the dev marker isn't in the zip, so it's written here.
+            Set-Content (Join-Path $dest "$id.dev") 'Developer install (release.ps1): dev mode on. Delete to play as a player would; see docs/DEVELOPMENT.md.'
             Write-Host "Installed the released $id into $dest."
         } catch {
             Write-Host "warning: couldn't install the released $id into $dest (is the game running?): $($_.Exception.Message). Close the game and run 'dotnet build' to update it." -ForegroundColor Yellow

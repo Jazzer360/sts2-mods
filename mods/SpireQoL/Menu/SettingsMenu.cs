@@ -73,6 +73,7 @@ public sealed partial class SettingsMenu
         ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports).", FeaturePage.General),
         ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports).", FeaturePage.General),
         ("coverage-watch", "Coverage check", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports).", FeaturePage.General),
+        ("session-summary", "Session summary", "Counts each play session's turns, checks and calculation times, and sends the totals with error reports when the session ends.", FeaturePage.General),
     };
 
     private readonly QolContext _ctx;
@@ -435,7 +436,7 @@ public sealed partial class SettingsMenu
         FeatureSwitches(FeaturePage.General);
 
         Section("Error reports");
-        Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time (nothing personal), so they can be fixed.",
+        Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time, and a summary of counts per play session (nothing personal), so they can be fixed.",
             S.ReportErrors, v =>
             {
                 S.ReportErrors = v;

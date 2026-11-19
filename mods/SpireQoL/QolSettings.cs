@@ -37,6 +37,13 @@ public sealed class QolSettings
     /// </summary>
     public bool ReportErrors { get; set; } = true;
 
+    /// <summary>
+    /// Developer mode (decision #108; not in the settings menu): null follows the marker file the developer's own builds install
+    /// (SpireQoL.dev beside the DLL, never in a release zip); true or false overrides it. On: reports and session summaries are
+    /// tagged dev, and the session metrics leave them out. See docs/DEVELOPMENT.md "Dev mode".
+    /// </summary>
+    public bool? DevMode { get; set; }
+
     public string UnlockLayoutKey { get; set; } = "F8";
     public string HideAllKey { get; set; } = "F9";
     public string SettingsKey { get; set; } = "F10";

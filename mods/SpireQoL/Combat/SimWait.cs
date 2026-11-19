@@ -47,7 +47,9 @@ internal static class SimWait
             _waits++;
             _totalMs += waited;
             _longestMs = Math.Max(_longestMs, waited);
-            if (fresh.Any(j => !j.Ready.IsCompleted)) _missed++;
+            var missed = fresh.Any(j => !j.Ready.IsCompleted);
+            if (missed) _missed++;
+            Telemetry.DevEvents.Post(new Telemetry.FrameWait(waited, missed));
         }
         return jobs.All(j => j.Ready.IsCompleted);
     }

@@ -64,6 +64,12 @@ public sealed class ErrorReporter
 
     private readonly HashSet<string> _skipsLogged = new();
 
+    /// <summary>
+    /// A report was handed to Sentry: its fingerprint and the event id Sentry gave it (decision #108: the session's counts, and the
+    /// dev dashboard's inbox later). Raised on a worker thread.
+    /// </summary>
+    public event Action<string[], string>? Sent;
+
     private ErrorReporter(SentryClient? client, ModLog log)
     {
         _client = client;
@@ -227,7 +233,11 @@ public sealed class ErrorReporter
             var client = _client;
             System.Threading.Tasks.Task.Run(() =>
             {
-                try { client.CaptureEvent(evt); }
+                try
+                {
+                    var id = client.CaptureEvent(evt);
+                    try { Sent?.Invoke(fingerprint, id.ToString()); } catch { /* a listener's problem is never the report's */ }
+                }
                 catch (Exception sendEx) { _log.Warn($"error report couldn't be sent: {sendEx.Message}"); }
             });
         }
@@ -235,6 +245,64 @@ public sealed class ErrorReporter
         {
             // Reporting must never break the game.
             _log.Warn($"error report couldn't be sent: {sendEx.Message}");
+        }
+    }
+
+    /// <summary>
+    /// A play session's counts (decision #108): one Info event, grouped into one Sentry issue with every other session's (the
+    /// fingerprint), outside the per-session limits (it's one per session). No game state and no log: the counts are in
+    /// <paramref name="extra"/>. Sent only while reports are on and nothing stops them (the version floor, SkipReason); with
+    /// <paramref name="flush"/> it waits for the send (the game is closing). True when it was handed to Sentry.
+    /// </summary>
+    public bool Summary(string title, string group, IReadOnlyDictionary<string, string> tags, IReadOnlyDictionary<string, string> extra, bool flush = false)
+    {
+        if (_client == null || !Active) return false;
+        string? skip;
+        try { skip = SkipReason?.Invoke(); } catch { skip = null; }
+        if (skip != null)
+        {
+            _log.Info($"{group} not sent: {skip}");
+            return false;
+        }
+        try
+        {
+            var evt = new SentryEvent { Level = SentryLevel.Info, Message = new SentryMessage { Formatted = title } };
+            evt.SetFingerprint(new[] { group });
+            foreach (var (k, v) in Tags) evt.SetTag(k, v);
+            try
+            {
+                if (TagProvider?.Invoke() is { } live)
+                {
+                    foreach (var (k, v) in live) evt.SetTag(k, v);
+                }
+            }
+            catch (Exception tex)
+            {
+                evt.SetExtra("tag_error", tex.Message);
+            }
+            evt.SetTag("kind", group);
+            foreach (var (k, v) in tags) if (!string.IsNullOrWhiteSpace(v)) evt.SetTag(k, v.Length <= 200 ? v : v[..197] + "...");
+            foreach (var (k, v) in extra) evt.SetExtra(k, v);
+            var client = _client;
+            if (flush)
+            {
+                client.CaptureEvent(evt);
+                Flush();
+            }
+            else
+            {
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try { client.CaptureEvent(evt); }
+                    catch (Exception sendEx) { _log.Warn($"{group} couldn't be sent: {sendEx.Message}"); }
+                });
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"{group} couldn't be sent: {ex.Message}");
+            return false;
         }
     }
 

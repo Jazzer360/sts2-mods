@@ -79,7 +79,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (Frozen() is { } f) Compare(f, history, _frozenAt, me, youDied);
         else
         {
-            CountIn(Skips, "the forecast had no result by the enemy turn");
+            Skip("the forecast had no result by the enemy turn");
             _frozenPending?.Job.Cancel();
         }
         Unfreeze(cancel: false);
@@ -178,6 +178,13 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
     private static void CountIn(Dictionary<string, int> counts, string reason) => counts[reason] = (counts.TryGetValue(reason, out var n) ? n : 0) + 1;
 
+    /// <summary>A turn (or part of one) not checked: counted for the combat summary, and in the session's counts (decision #108).</summary>
+    private void Skip(string reason, int? turn = null)
+    {
+        CountIn(Skips, reason);
+        Telemetry.DevEvents.Post(new Telemetry.CheckSkipped("forecast", turn ?? _frozenTurn, reason, null));
+    }
+
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
@@ -212,7 +219,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         else if (_wasPlayerTurn && _last == null)
         {
             // The board changed on your turn's last frame and its forecast had no result yet (decision #104): nothing to hold.
-            CountIn(Skips, "the forecast was still on its way as the turn ended");
+            Skip("the forecast was still on its way as the turn ended", _lastTurn);
         }
         else if (_wasPlayerTurn && _last != null)
         {
@@ -259,7 +266,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// of turn (Stampede: a random card). What's shown leaves their hand out (decision #25); when that range
     /// differs, the line says so, and an HP loss only the cards in their hand explain is logged, not reported.
     /// </summary>
-    private static string TeammateIssues(TurnEndModel f, List<DamageReceivedEntry> damage, List<CombatHistoryEntry> endOfTurn, List<string> issues)
+    private string TeammateIssues(TurnEndModel f, List<DamageReceivedEntry> damage, List<CombatHistoryEntry> endOfTurn, List<string> issues)
     {
         var o = f.Outcome;
         var line = "";
@@ -277,7 +284,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (endOfTurn.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == mate))
             {
                 line += " (auto-played a card: not checked)";
-                CountIn(Skips, "a teammate auto-played a card at end of turn");
+                Skip("a teammate auto-played a card at end of turn");
                 continue;
             }
             if (actual > max || (!o.Truncated && actual < min)) issues.Add($"teammate {name} HP lost: forecast {(min == max ? $"{max}" : $"{min}-{max}")}, actual {actual}");
@@ -332,7 +339,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (mates.Count > 0 && endOfTurn.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && mates.Contains(e.CardPlay.Card.Owner)))
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a teammate's Stampede or Simpleton played a card at end of turn, which isn't predicted)");
-            CountIn(Skips, "a teammate's end-of-turn pick from their hand (not predicted)");
+            Skip("a teammate's end-of-turn pick from their hand (not predicted)");
             return;
         }
 
@@ -340,7 +347,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (!sawEnemy && !youDied)
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (no enemy turn followed: an extra turn)");
-            CountIn(Skips, "an extra turn (no enemy turn to compare)");
+            Skip("an extra turn (no enemy turn to compare)");
             return;
         }
 
@@ -378,7 +385,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             else if (narrowed == null)
             {
                 ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {auto.CardPlay.Card.GetType().Name} at end of turn, which no branch did); {Predicted()}");
-                CountIn(Skips, "an end-of-turn auto-play no branch made (another source)");
+                Skip("an end-of-turn auto-play no branch made (another source)");
                 return;
             }
             else if (narrowed.Outcome.Branches.Any(b => b.AutoPlaysUnknown))
@@ -387,7 +394,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 var last = narrowed.Outcome.Branches.First(b => b.AutoPlaysUnknown).AutoPicks.LastOrDefault();
                 var changer = autoPlays.FirstOrDefault(e => last != null && SimAdapter.HandId(e.CardPlay.Card) == last.Card)?.CardPlay.Card ?? auto.CardPlay.Card;
                 ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {changer.GetType().Name} at end of turn, which changed your hand); {Predicted()}");
-                CountIn(Skips, "an end-of-turn auto-play that changed your hand");
+                Skip("an end-of-turn auto-play that changed your hand");
                 return;
             }
             else
@@ -401,7 +408,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (f.Outcome.AnyUnmodelled)
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a branch the forecast didn't model: {string.Join("; ", f.Outcome.UnmodelledReasons)}); HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})");
-            CountIn(Skips, "a branch the forecast didn't model");
+            Skip("a branch the forecast didn't model");
             return;
         }
         // The search stopped at its memory cap (decision #107): it showed ? for your damage and promised nothing past what was
@@ -409,7 +416,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (f.Outcome.Truncated)
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (the forecast's search stopped at its memory cap); HP lost {actualTaken}");
-            CountIn(Skips, "the forecast's search stopped at its memory cap");
+            Skip("the forecast's search stopped at its memory cap");
             return;
         }
 
@@ -451,6 +458,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}{teamLine}");
 
         _checked++;
+        Telemetry.DevEvents.Post(new Telemetry.CheckDone("forecast", _frozenTurn, issues.Count == 0, issues.Count == 0 ? null : issues[0].Split(':')[0]));
         if (issues.Count == 0)
         {
             _matched++;

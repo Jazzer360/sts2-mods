@@ -164,6 +164,12 @@ public sealed class OverlayHost
     private double _lastModMs;
     private int _stallsSkipped;
 
+    /// <summary>
+    /// Every frame: the mod's own time in it and the time since the frame before, in ms (decision #108: the session's frame-time
+    /// counts). Listeners run on the game's thread inside the frame, so they must be quick; if one throws, the frame goes on.
+    /// </summary>
+    public event Action<double, double>? FrameMeasured;
+
     /// <summary>A slow frame of the mod's own: logged, and reported from a feature's second one this session.</summary>
     private void ModFrameSlow(double modMs, double gapMs)
     {
@@ -189,6 +195,7 @@ public sealed class OverlayHost
         RunFrame();
         var modMs = (Godot.Time.GetTicksUsec() - start) / 1000.0;
         _lastModMs = modMs;
+        try { FrameMeasured?.Invoke(modMs, gapMs); } catch { /* diagnostics only */ }
         try
         {
             if (modMs > SlowModFrameMs)
