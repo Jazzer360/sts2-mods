@@ -119,6 +119,9 @@ public static class GameIcons
 
     private static Texture2D? _targetArrow;
 
+    /// <summary>A heal: Regen's green plus (RegenPower, the Regen Potion's buff). Book of Five Rings' marker on the pick that heals.</summary>
+    public static Texture2D? Heal() => Power<MegaCrit.Sts2.Core.Models.Powers.RegenPower>();
+
     /// <summary>The heart from the top bar's HP display (packed/common_ui/top_bar/top_bar_heart.png): HP in the rest sum.</summary>
     public static Texture2D? Heart()
     {

@@ -23,6 +23,16 @@ internal sealed class ShownCard
     private bool _visuals;
     private bool _failed;
     private CardModel? _fallback;
+    /// <summary>Frames in a row it hasn't moved or changed; at SettleFrames it stops redrawing until its tabs change.</summary>
+    private int _still;
+    private int _lastKey;
+    private bool _settled;
+
+    /// <summary>
+    /// Long enough for the faded copy to draw (FlatFade: a few frames) and the layout to settle. A shown card doesn't change once
+    /// drawn, and redrawing every frame (about 17 on the Guide page) made garbage the game collected in 30 ms stalls.
+    /// </summary>
+    private const int SettleFrames = 30;
 
     /// <summary>Show the cost as a free card makes it in your hand: the game's green 0 (NCard.UpdateEnergyCostColor).</summary>
     public bool FreeCost { get; set; }
@@ -63,6 +73,9 @@ internal sealed class ShownCard
     public void Tick()
     {
         if (_failed || _card == null || !GodotObject.IsInstanceValid(_card) || !_card.IsNodeReady()) return;
+        var key = DecorKey();
+        if (_settled && key == _lastKey) return;
+        _settled = false;
         try
         {
             if (!_visuals)
@@ -77,9 +90,12 @@ internal sealed class ShownCard
                 }
                 Quiet(_card);
             }
-            Place();
+            var moved = Place();
             _example ??= new CardOverlayRenderer.Example(_card);
             _example.Draw(_decor);
+            _still = moved || key != _lastKey ? 0 : _still + 1;
+            _lastKey = key;
+            _settled = _still >= SettleFrames;
         }
         catch (Exception ex)
         {
@@ -97,15 +113,27 @@ internal sealed class ShownCard
         }
     }
 
-    /// <summary>Moves the card so its frame sits centred at the bottom of the box (wherever the scene puts its origin).</summary>
-    private void Place()
+    /// <summary>What's drawn on it: its tabs and fade (no allocation: it runs every frame).</summary>
+    private int DecorKey()
     {
-        if (_card!.GetNodeOrNull<Control>("%Frame") is not { } frame || frame.Size.X < 1) return;
+        var h = new HashCode();
+        foreach (var t in _decor.Tabs) h.Add(t);
+        h.Add(_decor.Opacity);
+        h.Add(FreeCost);
+        return h.ToHashCode();
+    }
+
+    /// <summary>Moves the card so its frame sits centred at the bottom of the box (wherever the scene puts its origin). True if it moved.</summary>
+    private bool Place()
+    {
+        if (_card!.GetNodeOrNull<Control>("%Frame") is not { } frame || frame.Size.X < 1) return true;
         var rel = Root.GetGlobalTransform().AffineInverse() * frame.GetGlobalTransform();
         var shown = frame.Size * _scale;
         var want = new Vector2((Root.Size.X - shown.X) / 2f, Root.Size.Y - shown.Y);
         var delta = want - rel.Origin;
-        if (delta.LengthSquared() > 0.25f) _card.Position += delta;
+        if (delta.LengthSquared() <= 0.25f) return false;
+        _card.Position += delta;
+        return true;
     }
 
     private static void Quiet(Node node)

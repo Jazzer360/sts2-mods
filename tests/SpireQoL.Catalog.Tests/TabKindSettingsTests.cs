@@ -22,6 +22,16 @@ public class TabKindSettingsTests
     }
 
     [Fact]
+    public void TabsOnCardsOffHidesEveryKind()
+    {
+        var d = Decor(new QolSettings { CardTabs = false });
+        Assert.False(d.AddTab(new TabSpec("relic:PenNib", null)));
+        Assert.False(d.AddTab(new TabSpec("relic:ArtOfWar", null, Crossed: true)));
+        Assert.Empty(d.Tabs);
+        Assert.Equal(2, d.Predicted.Count);
+    }
+
+    [Fact]
     public void CrossedOffHidesWarnings()
     {
         var d = Decor(new QolSettings { CrossedTabs = false });

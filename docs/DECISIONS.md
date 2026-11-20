@@ -644,3 +644,8 @@ The owner asked for switches by sensible category on top of the per-tab ones, st
 *Why:* the owner's request; the per-tab switches are fine-grained, but a player's preference is often a whole category (no chances, warnings only, no map icons).
 *Replaced:* Death chance as a lone option under Predictions; options shown live whatever their feature's state.
 
+### 123. Every option sits under the switch it depends on; one switch for all tabs on cards — active (2026-11-20)
+Decision #122 indented options under section titles named for their feature, with the feature's switch at the top of the page: the owner found indented rows with no switch above them (Kinds of tab, Reminders by place, the error reports option) and asked for one switch over every tab on cards with each kind under it, and for Run Reminders' places under Run Reminders. Now each feature's switch is followed by its own options (`FeatureSwitches` takes them per feature), a lone option (Send error reports, Multiplayer predictions, Show chances) isn't indented, and the Card tabs page opens with **Tabs on cards** (`CardTabs`), with the kinds of tab, each tab and the families under it. Run Reminders' places and Inspect sit under Run Reminders.
+*Why:* the owner's notes from playing 1.23.0: an indented row reads as "this depends on the row above it", so it must.
+*Replaced:* #122's section-per-feature layout of options.
+

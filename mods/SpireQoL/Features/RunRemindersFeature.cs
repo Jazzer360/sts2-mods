@@ -238,7 +238,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     /// <summary>
     /// A relic's tab on a card a reward offers (decision #83), or null for none. Book of Five Rings is on every card (taking one
-    /// counts toward its heal), with the heart in its corner on the pick that heals, crossed when part of that heal would be
+    /// counts toward its heal), with Regen's green plus in its corner on the pick that heals, crossed when part of that heal would be
     /// wasted (it heals more than the HP you're missing).
     /// </summary>
     internal static TabSpec? RewardTab(RelicModel relic, Player me, string key)
@@ -248,7 +248,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             if (SetOffByTaking(relic, me) != true) return new TabSpec(key, GameIcons.Relic(relic));
             var heal = Sts2State.Var(relic, "Heal", 20);
             var missing = me.Creature.MaxHp - me.Creature.CurrentHp;
-            return new TabSpec(key, GameIcons.Relic(relic), Crossed: heal > missing, Marker: GameIcons.Heart());
+            return new TabSpec(key, GameIcons.Relic(relic), Crossed: heal > missing, Marker: GameIcons.Heal());
         }
         return SetOffByTaking(relic, me) == true ? new TabSpec(key, GameIcons.Relic(relic)) : null;
     }

@@ -89,6 +89,9 @@ public sealed class QolSettings
     /// <summary>Intent Forecast: the random pick after the certain turns, each move with its chance (off: the certain turns only).</summary>
     public bool IntentOdds { get; set; } = true;
 
+    /// <summary>Every tab on cards (decision #122): off hides them all; the kinds and each tab's own switch are under it.</summary>
+    public bool CardTabs { get; set; } = true;
+
     /// <summary>Card tabs by kind (decision #122): plain ones (something extra happens), crossed ones (warnings).</summary>
     public bool PlainTabs { get; set; } = true;
     public bool CrossedTabs { get; set; } = true;
@@ -109,7 +112,7 @@ public sealed class QolSettings
     /// </summary>
     public Cards.TabSpec? Shown(Cards.TabSpec t)
     {
-        if (t.Crossed ? !CrossedTabs : !PlainTabs) return null;
+        if (!CardTabs || (t.Crossed ? !CrossedTabs : !PlainTabs)) return null;
         if (t.Key == DrawChanceKey && !Chances) return null;
         return t.Aimed && !AimMarker ? t with { Aimed = false } : t;
     }

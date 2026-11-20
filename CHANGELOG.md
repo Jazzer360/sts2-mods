@@ -6,6 +6,16 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.24.0
+#### Added
+- **Tabs on cards**: one switch for every tab on cards, with the kinds of tab and each tab under it.
+#### Changed
+- Settings: every option sits directly under the switch it depends on (each feature's options under its own switch; Run Reminders' places and Inspect under Run Reminders).
+- Book of Five Rings' heal marker is Regen's green plus instead of the heart, so it stands out on the red relic.
+- Guide: the Exploration Progress entry describes what it shows today.
+#### Fixed
+- The settings menu's Guide page no longer stutters every couple of seconds: its example cards stop redrawing once they've settled.
+
 ### Spire QoL 1.23.0
 #### Added
 - Settings by category. **Show chances** turns every chance the mod shows on or off at once (off: only what's certain), with a switch for each under it: death chances, the draw chance tab, Intent Forecast's random moves (new) and the chance under event icons.

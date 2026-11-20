@@ -362,46 +362,53 @@ public sealed partial class SettingsMenu
     }
 
     /// <summary>The feature switches on one page.</summary>
-    private void FeatureSwitches(FeaturePage where)
+    /// <summary>
+    /// The feature switches on one page, each followed by its own options, indented under it (decision #122): every indented row
+    /// sits under the switch it depends on.
+    /// </summary>
+    private void FeatureSwitches(FeaturePage where, Dictionary<string, Action>? options = null)
     {
         Section("Features");
         foreach (var (id, name, desc, page) in FeatureRows)
         {
-            if (page != where || !Matches(name, desc)) continue;
-            var failed = _features.States.TryGetValue(id, out var st) && st == FeatureState.Failed;
-            SimpleRow(name, failed ? desc + " (turned off after an error; restart the game)" : desc, FeatureOn(id), on => SetFeature(id, on), FeatureIcon(id));
+            if (page != where) continue;
+            if (Matches(name, desc))
+            {
+                var failed = _features.States.TryGetValue(id, out var st) && st == FeatureState.Failed;
+                SimpleRow(name, failed ? desc + " (turned off after an error; restart the game)" : desc, FeatureOn(id), on => SetFeature(id, on), FeatureIcon(id));
+            }
+            if (options != null && options.TryGetValue(id, out var add)) add();
         }
     }
 
     /// <summary>In fights: its features, then each one's options under its name (the tabs and rows themselves are on the next pages).</summary>
     private void BuildFights()
     {
-        FeatureSwitches(FeaturePage.Fights);
+        FeatureSwitches(FeaturePage.Fights, new()
+        {
+            ["card-indicators"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", S.EtherealOpacity, 0.25, 1, 0.05,
+                v => S.EtherealOpacity = (float)v, v => $"{v:0.00}", Needs("card-indicators")),
+            ["proc-indicators"] = () =>
+            {
+                Option("Amounts on proc tabs", "Show the block, damage or summon amount on proc tabs. Off: icon only.",
+                    S.ProcNumbers, v => S.ProcNumbers = v, Needs("proc-indicators"));
+                Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
+                    S.ProcIndirect, v => S.ProcIndirect = v, Needs("proc-indicators"));
+            },
+            ["relic-counters"] = () =>
+            {
+                Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
+                    S.PulseOneStepEarly, v => S.PulseOneStepEarly = v, Needs("relic-counters"));
+                Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", S.FlashHz, 0.5, 6, 0.5,
+                    v => S.FlashHz = (float)v, v => $"{v:0.0}/s", Needs("relic-counters"));
+            },
+        });
 
         ChancesSection(fights: true);
 
-        Section("Card Indicators");
-        var cardIndicators = Needs("card-indicators");
-        Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", S.EtherealOpacity, 0.25, 1, 0.05,
-            v => S.EtherealOpacity = (float)v, v => $"{v:0.00}", cardIndicators);
-
-        Section("Proc Indicators");
-        var procs = Needs("proc-indicators");
-        Option("Amounts on proc tabs", "Show the block, damage or summon amount on proc tabs. Off: icon only.",
-            S.ProcNumbers, v => S.ProcNumbers = v, procs);
-        Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
-            S.ProcIndirect, v => S.ProcIndirect = v, procs);
-
-        Section("Relic Counters");
-        var counters = Needs("relic-counters");
-        Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
-            S.PulseOneStepEarly, v => S.PulseOneStepEarly = v, counters);
-        Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", S.FlashHz, 0.5, 6, 0.5,
-            v => S.FlashHz = (float)v, v => $"{v:0.0}/s", counters);
-
         Section("Multiplayer");
         Option("Multiplayer predictions (experimental)", "Count teammates in predictions: their orbs and end-of-turn effects, their block and Beacon of Hope, and each enemy hit on every player. Still being checked against real co-op games.",
-            S.MultiplayerPredictions, v => { S.MultiplayerPredictions = v; Sim.SimAdapter.IncludeTeammates = v; Refresh(); });
+            S.MultiplayerPredictions, v => { S.MultiplayerPredictions = v; Sim.SimAdapter.IncludeTeammates = v; Refresh(); }, indent: false);
         Option("Count teammates' hands", "Multiplayer: predictions also use the cards in teammates' hands, which you can't see unless they tell you: Ethereal cards exhausting at end of turn (Feel No Pain block, Charon's Ashes and Forgotten Soul damage), Burn, Decay and Regret. Off: only their hand size counts.",
             S.TeammateHands, v => { S.TeammateHands = v; Combat.TurnEndModel.CountTeammateHands = v; },
             S.MultiplayerPredictions ? null : "Multiplayer predictions");
@@ -444,21 +451,22 @@ public sealed partial class SettingsMenu
     /// <summary>Outside fights: its features and options, then a switch per relic or card for each place its reminder shows.</summary>
     private void BuildOutside()
     {
-        FeatureSwitches(FeaturePage.Outside);
+        FeatureSwitches(FeaturePage.Outside, new()
+        {
+            ["run-reminders"] = () =>
+            {
+                // Each place: one switch for every relic's reminder there (the per-relic columns below are under it).
+                foreach (var (place, name, desc) in ReminderPlaceRows)
+                {
+                    var key = SpireQoL.Data.ChoiceReminders.Key(place, "*");
+                    Option(name, desc, S.TabOwn(key), v => SetTab(key, v), Needs("run-reminders"));
+                }
+                Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
+                    S.EventInspect, v => S.EventInspect = v, Needs("run-reminders"));
+            },
+        });
 
         ChancesSection(fights: false);
-
-        Section("Events");
-        Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
-            S.EventInspect, v => S.EventInspect = v, Needs("run-reminders"));
-
-        Section("Reminders by place");
-        var reminders = Needs("run-reminders");
-        foreach (var (place, name, desc) in ReminderPlaceRows)
-        {
-            var key = SpireQoL.Data.ChoiceReminders.Key(place, "*");
-            Option(name, desc, S.TabOwn(key), v => SetTab(key, v), reminders);
-        }
 
         var here = _onlyHere!.ButtonPressed ? PresentTypes() : null;
         var shown = SettingsCatalog.Sources.Where(s => s.OutsideFights)
@@ -487,7 +495,7 @@ public sealed partial class SettingsMenu
             {
                 S.ReportErrors = v;
                 if (Sts2Mods.Core.Diagnostics.ErrorReporter.Instance is { } r) r.Active = v;
-            });
+            }, indent: false);
     }
 
     /// <summary>Run Reminders' places: one switch for every relic's reminder there (decision #122; the group key of their switches).</summary>
@@ -501,39 +509,35 @@ public sealed partial class SettingsMenu
 
     private void BuildCardTabs()
     {
-        Section("Kinds of tab");
-        var tabs = Needs("card-indicators", "proc-indicators", "shuffle-warning", "potion-tabs", "run-reminders");
-        Option("Plain tabs", "Tabs that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only.",
+        // One switch for every tab on cards, then everything under it (decision #122): the kinds, each tab, the families.
+        Section("Tabs on cards");
+        Option("Tabs on cards", "Every tab the mod hangs on cards: in your hand, and on the cards you're offered outside fights. Off: none (the features' other parts stay).",
+            S.CardTabs, v => { S.CardTabs = v; Refresh(); }, indent: false);
+        var tabs = S.CardTabs ? Needs("card-indicators", "proc-indicators", "shuffle-warning", "run-reminders") : "Tabs on cards";
+        Option("Plain tabs", "Tabs that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only. Potion tabs too.",
             S.PlainTabs, v => S.PlainTabs = v, tabs);
-        Option("Crossed tabs", "Tabs with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus).",
+        Option("Crossed tabs", "Tabs with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus). Potion tabs too.",
             S.CrossedTabs, v => S.CrossedTabs = v, tabs);
         Option("Aim marker", "The targeting arrow head in a tab's corner when it happens only at some targets. Off: the tab shows without it.",
             S.AimMarker, v => S.AimMarker = v, tabs);
-
-        Section("Card tabs");
         foreach (var t in SettingsCatalog.CardTabs)
         {
             if (!Matches(t.Name, t.Description, t.Key)) continue;
-            SimpleRow(t.Name, t.Description, S.TabOwn(t.Key), on => SetTab(t.Key, on), TabPreview(t.Key));
+            SimpleRow(t.Name, NeedsText(t.Description, tabs), S.TabOwn(t.Key), on => SetTab(t.Key, on), TabPreview(t.Key), tabs == null, indent: true);
         }
-        Section("Whole families");
         foreach (var t in SettingsCatalog.TabGroups)
         {
             if (!Matches(t.Name, t.Description, t.Key)) continue;
             var spacer = new Control { CustomMinimumSize = new Vector2(IconSize, IconSize), MouseFilter = Control.MouseFilterEnum.Ignore };
-            SimpleRow(t.Name, t.Description, S.TabOwn(t.Key), on => SetTab(t.Key, on), spacer);
+            SimpleRow(t.Name, NeedsText(t.Description, tabs), S.TabOwn(t.Key), on => SetTab(t.Key, on), spacer, tabs == null, indent: true);
         }
 
         // Tab kinds seen in play that the catalog doesn't know (a newer rule): still switchable.
-        var other = S.Tabs.Keys.Where(k => !k.EndsWith(":*") && !SettingsCatalog.IsKnownTabKey(k)).OrderBy(k => k).ToList();
-        if (other.Count > 0)
+        var other = S.Tabs.Keys.Where(k => !k.EndsWith(":*") && !k.StartsWith("reminder-") && !SettingsCatalog.IsKnownTabKey(k)).OrderBy(k => k).ToList();
+        foreach (var key in other)
         {
-            Section("Other");
-            foreach (var key in other)
-            {
-                if (!Matches(key)) continue;
-                SimpleRow(key, "A tab kind without a description yet.", S.TabOwn(key), on => SetTab(key, on));
-            }
+            if (!Matches(key)) continue;
+            SimpleRow(key, NeedsText("A tab kind without a description yet.", tabs), S.TabOwn(key), on => SetTab(key, on), IconSpacer(), tabs == null, indent: true);
         }
     }
 
@@ -773,6 +777,8 @@ public sealed partial class SettingsMenu
         S.Relics[type] = on;
         Saved();
     }
+
+    private static string NeedsText(string desc, string? needs) => needs == null ? desc : $"{desc} Needs {needs} on.";
 
     /// <summary>
     /// An option, indented under what it changes (decision #122). <paramref name="needs"/>: what has to be on first (a feature, or
