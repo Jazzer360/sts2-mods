@@ -86,6 +86,14 @@ public sealed class OverlayHost
 
     public void AddLateFrame(Action action) => _lateFrame.Add(action);
 
+    private readonly List<(string Id, double Ms)> _lateParts = new();
+
+    /// <summary>
+    /// Time a late-frame callback spent on one part of its work this frame, in ms: shown as its own entry in the frame's
+    /// feature times (the slow-frame log, the dev dashboard) and taken out of "late frame". Call it once per frame per part.
+    /// </summary>
+    public void AddLateTime(string id, double ms) => _lateParts.Add((id, ms));
+
     internal void RegisterWidget(MovableWidget widget)
     {
         _widgets.Add(widget);
@@ -290,7 +298,15 @@ public sealed class OverlayHost
             }
         }
 
-        _featureMs.Add(("late frame", (Godot.Time.GetTicksUsec() - lateStart) / 1000.0));
+        // Parts of the late frame's work timed on their own (AddLateTime) are their own entries, taken out of "late frame".
+        var lateMs = (Godot.Time.GetTicksUsec() - lateStart) / 1000.0;
+        foreach (var (id, ms) in _lateParts)
+        {
+            _featureMs.Add((id, ms));
+            lateMs -= ms;
+        }
+        _lateParts.Clear();
+        _featureMs.Add(("late frame", Math.Max(0, lateMs)));
         var layoutStart = Godot.Time.GetTicksUsec();
         if (WidgetRoot != null)
         {

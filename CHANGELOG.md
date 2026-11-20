@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.7
+#### Fixed
+- Ethereal cards fade as one picture: a copy of the card is drawn once at full opacity and that picture is faded, so the art no longer shows through the frame. It's drawn again only when the card changes, and a card it can't copy fades layer by layer as before.
+
+### Main Saves 1.0.19
+#### Changed
+- Shared code: a part of the mod's per-frame work can be timed on its own. No change in the game.
+
 ### Spire QoL 1.21.6
 #### Fixed
 - Ascender's Bane's art no longer draws white while it's faded (1.21.3 and 1.21.4).

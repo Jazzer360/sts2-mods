@@ -33,7 +33,7 @@ The game shows these only as card text. `CardModel.Keywords` merges local keywor
 
 - [~] **Ethereal translucency**: any card that is Ethereal right now renders at reduced opacity, whatever the source.
   - Sources: canonical Ethereal cards; Music Box (adds Ethereal to its copy); Hexed affliction via `HexPower` (granted globally, gone when Hex is removed).
-  - [x] Ascender's Bane drew its art white in the whole-card fade (1.21.3–1.21.4), and 1.21.5 faded every Ethereal card layer by layer; the whole-card fade was taken out in 1.21.6 (decision #112). Known: layer by layer, the art shows slightly through the frame's see-through parts.
+  - [x] Ascender's Bane drew its art white in the whole-card fade (1.21.3–1.21.4), and 1.21.5 faded every Ethereal card layer by layer; the whole-card fade was taken out in 1.21.6 (decision #112). From 1.21.7 a faded card is a flattened copy drawn as one picture (decision #113), confirmed clean in game.
   - Must still be readable. Opacity is a setting (default ~70%).
 - ~~Ethereal badge~~: dropped in 0.3.0; translucency alone marks Ethereal.
 - [~] **Retain tab** (0.9.0: Steady icon on a copy of the enchantment tab; retain for this turn only looks the same): from the Retain keyword or single-turn retain (`ShouldRetainThisTurn`).

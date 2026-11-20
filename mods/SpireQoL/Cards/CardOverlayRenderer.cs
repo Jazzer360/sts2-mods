@@ -13,7 +13,7 @@ namespace SpireQoL.Cards;
 ///    centered and overlapping the edge slightly. In a fanned hand the card tops stay visible
 ///    while the sides are covered, so the tabs read at a glance without hovering. A red slash on
 ///    a tab means "playing this might be bad for you".
-///  - **Opacity**: Ethereal translucency.
+///  - **Opacity**: Ethereal translucency, of the card as one picture (<see cref="FlatFade"/>, decision #113).
 ///
 /// Everything lives in an overlay that's the last child of the card's %CardContainer, so it
 /// follows the card's hover scale and hand rotation. Card nodes are pooled and reused by the
@@ -42,6 +42,9 @@ public sealed class CardOverlayRenderer
         _frame = frame;
     }
 
+    /// <summary>Time spent this frame on flattened fades (decision #113), reported to the host as "ethereal-fade" for the dev dashboard.</summary>
+    private static double _flatMs;
+
     private sealed class Entry
     {
         public required NCard Card;
@@ -49,6 +52,10 @@ public sealed class CardOverlayRenderer
         public required Control Overlay;
         public bool TouchedAlpha;
         public bool Seen;
+        /// <summary>The flattened copy drawn in the card's place while it's faded (decision #113).</summary>
+        public FlatFade? Flat;
+        /// <summary>The copy couldn't be made or failed: the card fades layer by layer until it's unfaded.</summary>
+        public bool FlatFailed;
         public readonly List<Control> Tabs = new();
 
         /// <summary>
@@ -95,6 +102,8 @@ public sealed class CardOverlayRenderer
             }
         }
         Outside.Clear();
+        if (_flatMs > 0) _host.AddLateTime("ethereal-fade", _flatMs);
+        _flatMs = 0;
 
         // Undo anything on nodes that are no longer decorated hand cards.
         var dead = new List<ulong>();
@@ -108,11 +117,7 @@ public sealed class CardOverlayRenderer
             if (e.Seen) continue;
             e.Overlay.Visible = false;
             if (e.TagLayer != null && GodotObject.IsInstanceValid(e.TagLayer)) e.TagLayer.Visible = false;
-            if (e.TouchedAlpha)
-            {
-                SetAlpha(e.Container, 1f);
-                e.TouchedAlpha = false;
-            }
+            if (e.TouchedAlpha) Unfade(e);
         }
         foreach (var id in dead) _entries.Remove(id);
 
@@ -194,16 +199,58 @@ public sealed class CardOverlayRenderer
         var layer = PlaceTagLayer(e, size);
         ApplyTabs(e, d.Tabs, layer);
 
-        if (d.Opacity is { } a)
+        if (d.Opacity is { } a) Fade(e, a);
+        else if (e.TouchedAlpha) Unfade(e);
+    }
+
+    /// <summary>
+    /// The card at <paramref name="a"/> opacity as one picture (decision #113): a flattened copy drawn in its place. Layer by
+    /// layer (each of the container's layers faded on its own, the art showing through the frame) when the copy can't be made.
+    /// </summary>
+    private static void Fade(Entry e, float a)
+    {
+        e.TouchedAlpha = true;
+        if (e.Container != e.Card && !e.FlatFailed)
         {
-            SetAlpha(e.Container, a);
-            e.TouchedAlpha = true;
+            var start = Time.GetTicksUsec();
+            try { FadeFlat(e, a); }
+            finally { _flatMs += (Time.GetTicksUsec() - start) / 1000.0; }
+            if (!e.FlatFailed) return;
         }
-        else if (e.TouchedAlpha)
+        SetAlpha(e.Container, a);
+    }
+
+    /// <summary>The flattened copy made if needed and drawn this frame; <see cref="Entry.FlatFailed"/> set when it can't be.</summary>
+    private static void FadeFlat(Entry e, float a)
+    {
+        if (e.Flat is { Valid: false }) e.Flat = null;
+        e.Flat ??= FlatFade.Create(e.Card, e.Container);
+        if (e.Flat == null)
         {
-            SetAlpha(e.Container, 1f);
-            e.TouchedAlpha = false;
+            e.FlatFailed = true;
+            return;
         }
+        try
+        {
+            var glow = e.Card.CardHighlight;
+            e.Flat.Update(a, new Node?[] { glow, e.TagLayer, e.Overlay }, new Node?[] { glow, e.TagLayer });
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log.Warn($"Ethereal: the flattened fade failed ({ex.Message}); this card fades its layers instead");
+            e.FlatFailed = true;
+            e.Flat.Dispose();
+            e.Flat = null;
+        }
+    }
+
+    private static void Unfade(Entry e)
+    {
+        e.TouchedAlpha = false;
+        e.Flat?.Dispose();
+        e.Flat = null;
+        e.FlatFailed = false;
+        SetAlpha(e.Container, 1f);
     }
 
     /// <summary>
