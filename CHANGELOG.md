@@ -8,7 +8,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 1.21.9
 #### Changed
-- About page: the philosophy adds "What's shown is what happens" (the exact outcome or chance, or a ? where something isn't modelled), and the feature list names Intent Details and Exploration Progress.
+- About page: the philosophy adds "What's shown is what happens": the exact outcome or chance, or a ? where something isn't modelled.
 
 ### Spire QoL 1.21.8
 #### Fixed
