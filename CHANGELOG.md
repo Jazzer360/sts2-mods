@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.6
+#### Fixed
+- Ascender's Bane's art no longer draws white while it's faded (1.21.3 and 1.21.4).
+#### Changed
+- Ethereal cards fade layer by layer again, as before 1.21.3: the whole-card fade is taken out, since it never drew the card quite as the game does.
+
 ### Spire QoL 1.21.5
 #### Fixed
 - An Ethereal card that can't be drawn inside the whole-card fade (Ascender's Bane drew washed out since 1.21.3) fades layer by layer instead, as before. The mod logs which card and why.
