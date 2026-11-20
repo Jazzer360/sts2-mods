@@ -32,10 +32,10 @@ public class SimUnmodelledTests
     public void YourDeathIsARangeWhereABranchIsntModelled()
     {
         // The enemy hits 10 and you have 5: you die where it's modelled (half), and the Strike Hellraiser plays might have
-        // killed it first (the other half): 50–100%, not 100%.
+        // killed it first (the other half; its play isn't built here): 50–100%, not 100%.
         var o = SimEngine.Run(Hellraiser(50), HitThenDraw(1));
         Assert.True(o.AnyUnmodelled);
-        Assert.Contains("Hellraiser auto-plays a drawn Strike", o.UnmodelledReasons);
+        Assert.Contains("Hellraiser auto-plays a drawn Strike whose play isn't built", o.UnmodelledReasons);
         var c = o.YouDieChance();
         Assert.Equal(0.5, c.Low, 9);
         Assert.Equal(1.0, c.High, 9);

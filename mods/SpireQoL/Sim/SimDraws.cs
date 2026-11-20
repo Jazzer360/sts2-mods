@@ -18,7 +18,7 @@ public sealed record SimDrawCard(string Key)
     public bool Status { get; init; }
     /// <summary>Ethereal (Pagestorm draws on each one drawn).</summary>
     public bool Ethereal { get; init; }
-    /// <summary>A Strike (Hellraiser auto-plays it when drawn: not simulated, so later auto-plays aren't either).</summary>
+    /// <summary>A Strike while Hellraiser is up: it plays itself when drawn (SimEngine.HellraiserPlays), as <see cref="Auto"/>.</summary>
     public bool Strike { get; init; }
     /// <summary>Stampede or Simpleton could pick it once it's in your hand; Auto is how it plays (null: not simulated).</summary>
     public bool Pickable { get; init; }

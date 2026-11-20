@@ -22,7 +22,9 @@ public static partial class SimEngine
 
     /// <summary>
     /// A draw the card acts on (DrawnCardAction, decision #118): the draws, recording the cards they gave (not the ones their
-    /// reactions chain: CardPileCmd.Draw returns its own), then the card's reaction to them, all in one step.
+    /// reactions chain: CardPileCmd.Draw returns its own), then the card's reaction to them, all in one step. Draw by draw, the
+    /// branches merge (decision #120): two that drew the same cards in another order are one (the record is in the key while set),
+    /// so Pillage's work grows with the draws, not with the orders they could come in.
     /// </summary>
     internal static IEnumerable<SimState> RunDrawnCard(SimState s, DrawnCardAction da)
     {
@@ -37,14 +39,19 @@ public static partial class SimEngine
         IEnumerable<SimState> r = new[] { s };
         if (da.DrawAgainIf != SimCardType.None)
         {
-            IEnumerable<SimState> Again(SimState x)
+            // Pillage (its do-while): draw; again while what it drew is an Attack and your hand has room. A draw that gave
+            // nothing (a full hand, empty piles) ends it. One level per draw, merged, the finished ones set aside.
+            var done = new List<SimState>();
+            IEnumerable<SimState> going = r;
+            for (var drawn = 0; going.Any(); drawn++)
             {
-                var before = x.DrawRecord!.Count;
-                return Then(DrawOne(x, player, da.Indirect, record: true), y =>
-                    y.DrawRecord!.Count > before && y.DrawRecord[^1].Card.Type == da.DrawAgainIf
-                    && PlayerOf(y, player)!.HandCount - (y.PlayFromHand ? 1 : 0) < MaxHand ? Again(y) : new[] { y });
+                var next = new List<SimState>();
+                foreach (var y in Then(going, x => DrawOne(x, player, da.Indirect, record: true)))
+                    (y.DrawRecord!.Count > drawn && y.DrawRecord[^1].Card.Type == da.DrawAgainIf
+                        && PlayerOf(y, player)!.HandCount - (y.PlayFromHand ? 1 : 0) < MaxHand ? next : done).Add(y);
+                going = next;
             }
-            r = Again(s);
+            r = done;
         }
         else
             for (var i = 0; i < da.Count; i++) r = Then(r, x => DrawOne(x, player, da.Indirect, record: true));
@@ -117,6 +124,50 @@ public static partial class SimEngine
         return result;
     }
 
+    /// <summary>
+    /// Hellraiser (HellraiserPower.AfterCardDrawnEarly, decision #121): the Strike just drawn plays itself (CardCmd.AutoPlay, no
+    /// target given: a random hittable enemy, a branch each), in the middle of whatever drew it; that play's own state is put
+    /// back after, so the play that drew it carries on as it was. It's an auto-play: it costs nothing, and the card it is
+    /// (CardModel) is still what the draw gave (Pillage reads an Attack). One with no play built (aimed at a teammate, or the
+    /// game's cap on endless auto-plays against enemies that can't die) isn't simulated: `?`.
+    /// </summary>
+    private static IEnumerable<SimState> HellraiserPlays(SimState s, int player, SimDrawCard card, int id)
+    {
+        if (card.Auto is not { Plays.Count: > 0 } auto)
+        {
+            s.AutoPlaysUnknown = true;
+            s.Unmodelled ??= "Hellraiser auto-plays a drawn Strike whose play isn't built";
+            return new[] { s };
+        }
+        var plays = auto.Plays.Count == 1 && auto.Plays[0].TargetId < 0
+            ? auto.Plays
+            : auto.Plays.Where(pl => s.Enemy(pl.TargetId) is { Alive: true, Hittable: true }).ToList();
+        if (player == Who.You) s.AutoPlayed++;
+        var mp = MutablePlayer(s, player);
+        if (mp.AutoHand != null) mp.AutoHand = mp.AutoHand.Where(h => h.Id != id).ToList();
+        if (plays.Count == 0)
+        {
+            // No enemy to hit: it goes to the discard pile unplayed (CardCmd.AutoPlay).
+            mp.HandCount--;
+            return new[] { s };
+        }
+        var (current, fromHand, events, blockGains, attack) = (s.CurrentPlay, s.PlayFromHand, s.PlayEvents, s.PlayCardBlockGains, s.CurrentAttack);
+        var result = new List<SimState>();
+        foreach (var play in plays)
+        {
+            var t = plays.Count == 1 ? s : s.Clone();
+            t.Weight = s.Weight / plays.Count;
+            var sub = new BranchSet(t, nested: true);
+            ApplyPlay(sub, play);
+            foreach (var x in sub.States)
+            {
+                (x.CurrentPlay, x.PlayFromHand, x.PlayEvents, x.PlayCardBlockGains, x.CurrentAttack) = (current, fromHand, events, blockGains, attack);
+                result.Add(x);
+            }
+        }
+        return result;
+    }
+
     private static SimPlayer MutablePlayer(SimState s, int player) => player == Who.You ? s.P : s.MutableTeammate(Who.TeammateIndex(player));
 
     /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
@@ -138,14 +189,10 @@ public static partial class SimEngine
                 p.AutoHand = new List<SimHandCard>(p.AutoHand) { new() { Id = -1000 - p.Drawn, Name = card.Auto.Name, IsAttack = card.Auto.IsAttack, Cost = card.Auto.Cost, Plays = card.Auto.Plays } };
             else s.AutoPlaysUnknown = true;
         }
-        // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly): not simulated, so later auto-plays aren't either.
-        if (card.Strike && p.Powers["HellraiserPower"] > 0)
-        {
-            s.AutoPlaysUnknown = true;
-            s.Unmodelled ??= "Hellraiser auto-plays a drawn Strike";
-        }
-
-        IEnumerable<SimState> r = FireCardEvent(s, CardEvent.Drawn, player, indirect);
+        // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly: before the other draw reactions).
+        IEnumerable<SimState> r = card.Strike && p.Powers["HellraiserPower"] > 0
+            ? Then(HellraiserPlays(s, player, card, -1000 - p.Drawn), x => FireCardEvent(x, CardEvent.Drawn, player, indirect))
+            : FireCardEvent(s, CardEvent.Drawn, player, indirect);
         // Iteration (IterationPower.AfterCardDrawn): the first Status you draw this turn draws its amount more.
         if (card.Status && p.Powers["IterationPower"] is > 0 and var iteration && p.StatusDrawn <= 1)
             r = Then(r, x => DrawCards(x, player, iteration, indirect: true));

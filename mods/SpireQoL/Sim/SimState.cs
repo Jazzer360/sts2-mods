@@ -477,8 +477,9 @@ public sealed class SimState
     /// </summary>
     public string? Unmodelled;
     /// <summary>
-    /// The cards a draw gave, while a card that acts on them draws (SimEngine.RunDrawnCard, decision #118); null otherwise. Only
-    /// ever set and cleared inside one step, so it never meets a merge.
+    /// The cards a draw gave, while a card that acts on them draws (SimEngine.RunDrawnCard, decision #118); null otherwise. Set
+    /// and cleared inside one step; in the key while set, as a set (decision #120): branches that drew the same cards in another
+    /// order merge between its draws, ones that drew different cards don't.
     /// </summary>
     internal List<(SimDrawCard Card, int Id)>? DrawRecord;
     /// <summary>
@@ -776,6 +777,12 @@ public sealed class SimState
         {
             Add(P.AutoHand.Count);
             foreach (var c in P.AutoHand) Add(c.Id);
+        }
+        if (DrawRecord != null)
+        {
+            Add(DrawRecord.Count);
+            foreach (var k in DrawRecord.Select(d => d.Card.Key.GetHashCode()).Order()) Add(k);
+            if (DrawRecord.Count > 0) Add((int)DrawRecord[^1].Card.Type); // Pillage reads the last one's type
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
         foreach (var pick in AutoPicks) { Add(pick.Card); Add(pick.Target); } // branches that picked differently stay apart (the check tells them apart)

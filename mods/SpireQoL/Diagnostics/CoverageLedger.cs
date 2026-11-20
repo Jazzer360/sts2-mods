@@ -197,7 +197,7 @@ internal static partial class CoverageLedger
         ["HatchPower"] = "ignore: AfterSideTurnEnd counts down to hatching (a later turn)",
         ["HauntPower"] = "covered: AfterCardPlayed damages a random enemy on Souls (proc damage)",
         ["HeistPower"] = "ignore: BeforeDeath returns stolen gold",
-        ["HellraiserPower"] = "covered: auto-plays drawn Strikes (noted by the audit; in the simulator a Strike drawn from your draw pile stops later auto-plays from being predicted, decision #90)",
+        ["HellraiserPower"] = "covered: auto-plays a drawn Strike (AfterCardDrawnEarly) at a random enemy: SimEngine.HellraiserPlays (decision #121); past the cap on endless auto-plays against enemies that can't die, not simulated",
         ["HexPower"] = "covered: afflicts cards (read from the card); AfterDeath removes it with its caster, and its cards' Ethereal goes: the simulator skips their end-of-turn exhaust once the caster is dead (decision #85)",
         ["HighVoltagePower"] = "ignore: AfterSideTurnEnd Strength at the end of its own turn (later attacks)",
         ["IllusionPower"] = "ignore: AfterDeath sets its Revive move (heal, no attack) and ShouldAllowHitting keeps it out of hits until it revives, so its kill holds for the turn; the simulator never ends the fight early",

@@ -392,9 +392,12 @@ public static partial class SimAdapter
                 var status = iteration && card.Type == CardType.Status;
                 var ethereal = pagestorm && card.Keywords.Contains(CardKeyword.Ethereal);
                 var strike = hellraiser && card.Tags.Contains(CardTag.Strike);
+                // Hellraiser's auto-play is built like a picked card's (decision #121), except past the game's cap on endless
+                // auto-plays, when every enemy you could hit can't die (HellraiserPower: 9 a turn): then it isn't simulated.
+                var hellraised = strike && !me.Creature.CombatState!.HittableEnemies.All(e => e.HpDisplay.IsInfinite());
                 var pickable = picks && !card.Keywords.Contains(CardKeyword.Unplayable) && (p.Simpleton > 0 || card.Type == CardType.Attack);
                 var cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved();
-                var who = pickable ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
+                var who = pickable || strike ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
                 var invincible = card is IAmInvincible ? CardBlock(card, cs, me) : 0;
                 var perfectFit = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit;
@@ -403,7 +406,7 @@ public static partial class SimAdapter
                 var sly = readsCost && card.Keywords.Contains(CardKeyword.Sly);
                 var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}";
                 SimHandCard? auto = null;
-                if (pickable && !autoByKey.TryGetValue(key, out auto))
+                if ((pickable || hellraised) && !autoByKey.TryGetValue(key, out auto))
                 {
                     // How it plays once in your hand: as the adapter builds a hand card's auto-plays. A card in the draw pile counts as
                     // not in your hand there (its hand delta 0): one less, as for a card played from hand.

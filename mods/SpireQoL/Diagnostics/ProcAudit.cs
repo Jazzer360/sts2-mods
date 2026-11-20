@@ -1570,8 +1570,18 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             "Each is logged as [audit] [odds] in the game log.", new Dictionary<string, string>(), new Dictionary<string, string> { ["check"] = "odds" });
     }
 
+    /// <summary>
+    /// The play auto-played a card of yours the simulation doesn't follow: any but the one you chose, and a Strike Hellraiser
+    /// played as the play drew it, which the simulator plays too (decision #121) when nothing in it went unmodelled.
+    /// </summary>
     private static bool UnpredictedAutoPlay(Window w, List<CombatHistoryEntry> entries, Player me)
-        => entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me && !ReferenceEquals(e.CardPlay.Card, w.Chosen));
+        => entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me && !ReferenceEquals(e.CardPlay.Card, w.Chosen)
+            && !HellraiserDrew(w, entries, me, e.CardPlay.Card));
+
+    /// <summary>A Strike drawn in the play while you have Hellraiser, with a simulation that modelled everything (decision #121).</summary>
+    private static bool HellraiserDrew(Window w, List<CombatHistoryEntry> entries, Player me, CardModel card)
+        => w.Facts is { Unmodelled.Count: 0 } && me.Creature.HasPower<HellraiserPower>() && card.Tags.Contains(CardTag.Strike)
+           && entries.OfType<CardDrawnEntry>().Any(d => ReferenceEquals(d.Card, card));
 
     private static readonly string[] DeathHooks = { "AfterDeath", "BeforeDeath" };
 
@@ -1718,7 +1728,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var sim = w.Facts?.Sim;
         var deaths = w.Facts?.DeathByAim;
         if (sim == null || deaths == null || w.After == null || w.AfterIds == null || w.FightEnded) return;
-        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && !ReferenceEquals(e.CardPlay.Card, w.Chosen)))
+        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && !ReferenceEquals(e.CardPlay.Card, w.Chosen)
+                && !HellraiserDrew(w, entries, w.Card.Owner, e.CardPlay.Card)))
         {
             model.Add(NotChecked("lethal", "auto-played cards"));
             return;
@@ -1765,7 +1776,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Add(NotChecked("state after the play", w.AfterSkipped ?? "not captured"));
             return;
         }
-        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && !ReferenceEquals(e.CardPlay.Card, w.Chosen)))
+        if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && !ReferenceEquals(e.CardPlay.Card, w.Chosen)
+                && !HellraiserDrew(w, entries, w.Card.Owner, e.CardPlay.Card)))
         {
             model.Add(NotChecked("state after the play", "auto-played cards"));
             return;
