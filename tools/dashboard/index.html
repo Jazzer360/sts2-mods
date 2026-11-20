@@ -51,7 +51,7 @@ nav { display: flex; gap: 2px; padding: 0 12px; overflow-x: auto; }
 nav button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 8px 12px; color: var(--dim); white-space: nowrap; }
 nav button.on { color: var(--text); border-bottom-color: var(--accent); }
 nav .count { background: var(--bad); color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; margin-left: 4px; }
-main { padding: 16px; max-width: 1500px; margin: 0 auto; }
+main { padding: 16px; max-width: 2200px; margin: 0 auto; }
 .page { display: none; }
 .page.on { display: block; }
 .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
@@ -112,9 +112,48 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: none;
 .checks { grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 1300px) { .checks { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 640px) { .checks { grid-template-columns: 1fr; } }
-#attn { max-height: 420px; overflow: auto; }
+
 .card { position: relative; }
 .hover-layer { position: absolute; pointer-events: none; }
+/* the Overview: a panel per area (eight), filling the screen: four by two on a wide screen, fewer columns on narrower ones */
+.ov { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .ov { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1150px) { .ov { grid-template-columns: repeat(3, 1fr); } }
+/* time-based panels wide (a chart over time wants width): predictions and performance first, two columns each; the lists next; the log and the launch comparison wide again */
+#chk-pred { order: 1; } #chk-calc { order: 2; } #chk-perf { order: 3; } #chk-attn { order: 4; } #chk-reports { order: 5; } #chk-notes { order: 6; } #chk-log { order: 7; } #chk-launch { order: 8; }
+@media (min-width: 1150px) and (max-width: 1499px) { #chk-pred, #chk-perf { grid-column: span 2; } #chk-launch { grid-column: span 3; } }
+@media (min-width: 1500px) {
+  .ov { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); height: calc(100vh - 128px); min-height: 720px; }
+  .ov .check { min-height: 0; }
+  #chk-pred, #chk-perf, #chk-log, #chk-launch { grid-column: span 2; }
+  #chk-perf { order: 2; } #chk-calc { order: 3; }
+}
+.check .fill { position: absolute; inset: 0; overflow: auto; }
+.check .fill table { font-size: 12px; }
+.check .li { padding: 4px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.check .li:last-child { border-bottom: 0; }
+.check .links { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.check .links a { margin-top: 0; }
+.check .links button { padding: 3px 10px; font-size: 12px; }
+dialog#noteDialog { width: min(640px, 92vw); background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+dialog#noteDialog::backdrop { background: rgba(0, 0, 0, .45); }
+dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
+.ov .check { display: flex; flex-direction: column; min-width: 0; }
+@media (max-width: 1499px) { .ov .check { min-height: 320px; } }
+.check .stats { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 8px 0 2px; }
+.check .stats div { display: flex; flex-direction: column; }
+.check .stats b { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.check .stats span { font-size: 11px; color: var(--dim); }
+.check .body { position: relative; flex: 1; min-height: 120px; margin-top: 10px; }
+.check .body canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.check .causes { margin-top: 8px; font-size: 12px; color: var(--dim); min-height: 1.4em; }
+.check .causes b { color: var(--text); font-weight: 600; }
+.fights { position: absolute; inset: 0; overflow: auto; }
+.fight { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.fight .name { flex: 0 0 150px; font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fight .strip { margin: 0; flex-wrap: wrap; }
+.fight .strip i { width: 13px; height: 15px; }
+.strip .t-none { background: var(--line); }
 #tip { position: fixed; display: none; z-index: 20; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
   padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); max-width: 320px; }
 #tip i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
@@ -130,6 +169,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: none;
   <div class="bar">
     <span class="brand">Spire QoL · dev</span>
     <div class="status" id="status"><span class="dot" id="dot"></span><span id="statusText">Not connected</span></div>
+    <button id="noteBtn" data-note title="Write a note for the next stretch of work (saved to feedback.jsonl, with the fight and turn)">✎ Note</button>
     <button id="connectBtn" class="primary">Connect</button>
     <button id="demoBtn" title="Made-up data, to see the page without the game">Demo</button>
     <button id="themeBtn" title="Light or dark">◐</button>
@@ -147,24 +187,47 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: none;
   </div>
 
   <section class="page" id="p-overview">
-    <p class="hint">What to look at, at a glance. Four checks, each with a verdict in a line (green fine, amber worth a look, red a problem), the numbers behind it, its trend, and a link to the page with the details. Then everything that needs a look, newest first.</p>
-    <div class="grid checks" id="checks">
+    <div class="ov">
       <div class="card check" id="chk-pred"><h3>Are the predictions right?</h3>
-        <p class="hint">Every play and every enemy turn is checked against what the game did. The strip is this launch's turns, oldest left: green, everything checked matched; red, something didn't; amber, a check was skipped (a gap); violet, a search stopped at a cap. Hover a square for the turn.</p>
-        <div class="verdict"></div><div class="s"></div><div class="strip" id="turnStrip"></div><a href="#" data-go="turn">Turns →</a></div>
-      <div class="card check" id="chk-frames"><h3>Is the mod costing frames?</h3>
-        <p class="hint">The mod's own time in a busy (95th-percentile) frame over the last 5 minutes. A 60 fps frame has 16.7 ms for the game and the mod together; the mod normally stays around 1–2 ms (the dashed line is 4 ms, where it's heavier than usual). A slow frame, over 30 ms, is a stutter you can see.</p>
-        <div class="verdict"></div><div class="s"></div><canvas id="sparkFrames" height="46"></canvas><a href="#" data-go="perf">Performance →</a></div>
+        <p class="hint">Every play and every enemy turn is checked against what the game did. Each row is a fight of this launch, each square a turn: green, everything checked matched; red, something didn't; amber, a check was skipped (a gap to close); violet, a search stopped at a cap. Hover a square for the turn. Below: the most common reasons a check was skipped.</p>
+        <div class="verdict"></div><div class="stats"></div>
+        <div class="body"><div class="fill" id="fightStrips"></div></div>
+        <div class="causes"></div><div class="links"><a href="#" data-go="turn">Turns →</a></div></div>
       <div class="card check" id="chk-calc"><h3>Are the calculations keeping up?</h3>
-        <p class="hint">When the board changes, a frame waits up to 8 ms (the dashed line) for the new predictions. Each dot is one wait over the last 5 minutes: blue finished in time, red ran out and left the rest to the background (the tabs came a frame or a few later). A search stopped at a cap shows ? instead of a number.</p>
-        <div class="verdict"></div><div class="s"></div><canvas id="sparkCalc" height="46"></canvas><a href="#" data-go="searches">Searches →</a></div>
-      <div class="card check" id="chk-stall"><h3>Is the game itself stalling?</h3>
-        <p class="hint">The longest gap between two frames in each quarter second over the last 5 minutes (16.7 ms is a smooth 60 fps; the dashed line is 50 ms, a hitch you can see). A hitch while the mod's own time is small is the game's (loading, a room change), not the mod's.</p>
-        <div class="verdict"></div><div class="s"></div><canvas id="sparkStall" height="46"></canvas><a href="#" data-go="perf">Performance →</a></div>
+        <p class="hint">When the board changes, a frame waits up to 8 ms for the new predictions. Ready in time: the share of boards worked out within that wait (the rest show a frame or a few later). A search stopped at a cap shows ? instead of a number. The list: the cards that took longest to work out in the last 5 minutes, with their most work (states copied; every random choice multiplies it).</p>
+        <div class="verdict"></div><div class="stats"></div>
+        <div class="body"><div class="fill" id="ovCards"></div></div>
+        <div class="causes"></div><div class="links"><a href="#" data-go="searches">Searches →</a></div></div>
+      <div class="card check" id="chk-perf"><h3>Is the game running smoothly?</h3>
+        <p class="hint">The mod's own time per frame over the last 5 minutes: a busy frame (95th percentile, blue) and the slowest (red). A 60 fps frame has 16.7 ms for the game and the mod together (dashed lines at 16.7 and 33.3 ms); the mod normally stays around 1–2 ms, and a frame over 30 ms is a stutter you can see. Hitches: gaps over 50 ms between frames while the mod's share was small, the game's own. Below: the features that cost the most.</p>
+        <div class="verdict"></div><div class="stats"></div>
+        <div class="body"><canvas id="sparkFrames" height="150"></canvas></div>
+        <div class="causes"></div><div class="links"><a href="#" data-go="perf">Performance →</a></div></div>
+      <div class="card check" id="chk-attn"><h3>What needs a look</h3>
+        <p class="hint">Newest first: predictions that didn't match, searches stopped at a cap, reports, warnings from the mod's log and slow frames. Each one is something to fix, or to explain in a note.</p>
+        <div class="verdict"></div>
+        <div class="body"><ul class="attn fill" id="attn"></ul></div></div>
+      <div class="card check" id="chk-reports"><h3>Reports from your game</h3>
+        <p class="hint">In dev mode nothing goes to Sentry: each report your game made is kept on this machine with everything it carries. Open ones are still to be fixed (or explained); once a fix is in, it's marked handled. The list: the newest open ones.</p>
+        <div class="verdict"></div><div class="stats"></div>
+        <div class="body"><div class="fill" id="ovReports"></div></div>
+        <div class="links"><a href="#" data-go="reports">Reports →</a></div></div>
+      <div class="card check" id="chk-notes"><h3>Your notes</h3>
+        <p class="hint">Thoughts you've written while playing, read at the start of each stretch of work. Open ones haven't been dealt with yet; a note closed by a fix says what was done. Write one any time with the button here or the Note button at the top.</p>
+        <div class="verdict"></div><div class="stats"></div>
+        <div class="body"><div class="fill" id="ovNotes"></div></div>
+        <div class="links"><button class="primary" data-note>Write a note</button><a href="#" data-go="feedback">Notes →</a></div></div>
+      <div class="card check" id="chk-log"><h3>The mod's log</h3>
+        <p class="hint">The mod's own lines in the game log this launch. Warnings and errors are worth a look (the newest are listed); most info lines are the audits' working notes.</p>
+        <div class="verdict"></div><div class="stats"></div>
+        <div class="body"><div class="fill log" id="ovLog"></div></div>
+        <div class="links"><a href="#" data-go="log">Log →</a></div></div>
+      <div class="card check" id="chk-launch"><h3>Better or worse than last time?</h3>
+        <p class="hint">This launch against the one before it (another launch file), on the numbers that tell whether a change helped: the mod's time in a busy frame, how long a slow search takes, and the share of checks that matched. Green when this launch is better. Compare has every number, any two launches, and the files themselves.</p>
+        <div class="verdict"></div>
+        <div class="body"><div class="fill" id="ovLaunch"></div></div>
+        <div class="causes"></div><div class="links"><a href="#" data-go="compare">Compare →</a></div></div>
     </div>
-    <div class="card" style="margin-top:12px"><h3>What needs a look <span class="faint" id="attnCount"></span></h3>
-      <p class="hint">Newest first: predictions that didn't match, searches stopped at a cap, reports, warnings from the mod's log and slow frames. Each one is something to fix, or to explain in a note.</p>
-      <ul class="attn" id="attn"></ul></div>
   </section>
 
   <section class="page" id="p-turn">
@@ -289,6 +352,14 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: none;
       <p class="faint" style="margin-bottom:0">Files the rule would delete are marked. The game also keeps only its newest 20 launch files. The newest launch (the one the game may be writing) is never deleted; reports and notes aren't touched.</p></div>
   </section>
 </main>
+<dialog id="noteDialog">
+  <h3>A note for the next stretch of work</h3>
+  <div class="faint" id="noteWhere" style="margin-bottom:8px"></div>
+  <textarea id="noteText" rows="6" placeholder="What felt off, what you'd want, what surprised you… (Ctrl+Enter saves)"></textarea>
+  <div class="row" style="margin-top:10px"><span class="dim">Kind</span>
+    <select id="noteKind"><option>bug</option><option>idea</option><option>performance</option><option>looks</option><option>prediction</option><option>other</option></select>
+    <span style="flex:1"></span><button id="noteCancel">Cancel</button><button class="primary" id="noteSave">Save note</button></div>
+</dialog>
 
 <script>
 "use strict";
@@ -605,8 +676,11 @@ function canvas(id) {
     c.addEventListener("mousemove", (e) => hover(id, e));
     c.addEventListener("mouseleave", hideTip);
   }
-  const h = +c.getAttribute("height");
-  c.width = Math.max(10, r.width * dpr); c.height = h * dpr; c.style.height = h + "px";
+  // In a check panel the chart fills the space the panel gives it (its .body); elsewhere, its height attribute.
+  const fill = c.parentElement?.classList.contains("body");
+  const h = fill ? Math.max(80, c.parentElement.clientHeight) : +c.getAttribute("height");
+  c.width = Math.max(10, r.width * dpr); c.height = h * dpr;
+  if (!fill) c.style.height = h + "px";
   const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   return { g, w: r.width, h };
 }
@@ -762,12 +836,14 @@ function nav() {
 }
 $("nav").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; page = b.dataset.p; try { localStorage.setItem("page", page); } catch {} render(true); });
 
-/** A health check's card (built once in the page): its colour, verdict and numbers. */
-function setCheck(id, cls, verdict, facts) {
+/** A summary panel (built once in the page): its colour, verdict, key numbers ([value, label, cls?]) and where it comes from. */
+function setCheck(id, cls, verdict, stats, causes) {
   const card = $(id);
   card.className = "card check " + cls;
   setHTML(card.querySelector(".verdict"), verdict);
-  setHTML(card.querySelector(".s"), facts);
+  const st = card.querySelector(".stats"), ca = card.querySelector(".causes");
+  if (st) setHTML(st, (stats || []).map(([v, label, c]) => `<div><b class="${c || ""}">${v}</b><span>${label}</span></div>`).join(""));
+  if (ca) setHTML(ca, causes || "");
 }
 /** A turn's colour, as on the Turn page: red a mismatch, violet a cap, amber a skipped check, green all matched. */
 function turnClass(r) {
@@ -775,69 +851,178 @@ function turnClass(r) {
   if (all.some((c) => c.kind === "check-done" && !c.matched)) return "bad";
   if (r.caps.length) return "capped";
   if (all.some((c) => c.kind === "check-skipped" && !c.expected)) return "warn";
-  return all.length ? "good" : "";
+  return all.length ? "good" : "none";
 }
+const top3 = (entries, show) => entries.length ? entries.slice(0, 3).map(show).join(" · ") : "";
+const when = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+
+// The launch before this one, summarized once (its file doesn't change): for "better or worse than last time".
+const LAST = { name: null, sum: null, busy: false };
+async function lastLaunch() {
+  if (LAST.busy) return;
+  try {
+    const names = (FS.demo ? Object.keys(DEMO.files).filter((n) => n.startsWith("stream-")) : (await streams()).map((x) => x.name)).sort().reverse();
+    const prev = names.find((n) => n !== M.file);
+    if (!prev || prev === LAST.name) return;
+    LAST.busy = true;
+    LAST.sum = await summarizeFile(prev);
+    LAST.name = prev;
+  } catch { /* no previous launch */ }
+  finally { LAST.busy = false; }
+}
+
 function renderOverview() {
   const s = M.state?.session, r1 = since(M.rollups, 60), r5 = since(M.rollups, 300), s5 = since(M.searches, 300), w5 = since(M.waits, 300);
   const mism = M.checks.filter((c) => c.kind === "check-done" && !c.matched).length;
   const p95 = quant(r1.map((r) => r.modP95), 0.5), slow5 = r5.reduce((a, r) => a + r.slow, 0);
   const caps5 = s5.filter((x) => x.cap).length, missed = w5.filter((x) => x.missed).length;
-  const settle = since(M.unsettled, 300).map((u) => u.ms);
-  const stalls5 = r5.filter((r) => r.gapMax > 50 && r.modMax < 30).length, gen2 = r5.reduce((a, r) => a + r.gen2, 0);
-  // 1. are the predictions right?
+  const stalls5 = r5.filter((r) => r.gapMax > 50 && r.modMax < 30).length;
+  // ---- predictions (Turn)
   {
     const turns = s?.turns ?? 0, unchecked = s?.unchecked ?? 0;
-    const facts = s ? `${s.clean} of ${turns} turns clean this session · ${unchecked} unchecked · ${s.capped} capped · ${M.saved.length} report(s) this launch` : `${M.saved.length} report(s) this launch`;
-    if (!s && !M.checks.length) setCheck("chk-pred", "", "No fights yet.", "The checks start with your first fight.");
-    else if (mism || M.saved.length) setCheck("chk-pred", "bad", `${mism || M.saved.length} prediction(s) didn't match what happened this launch.`, facts);
-    else if (turns && unchecked / turns > 0.2) setCheck("chk-pred", "warn", `Matched, but ${pct(unchecked, turns)} of turns couldn't be fully checked.`, facts);
-    else setCheck("chk-pred", "good", "Everything checked matched.", facts);
-    const strip = [...M.turns.values()].slice(-60);
-    setHTML($("turnStrip"), strip.length ? strip.map((r) => `<i class="t-${turnClass(r) || "none"}" data-turn="${esc(`${r.encounter} · fight ${r.combat} · turn ${r.turn}`)}"></i>`).join("") : `<span class="faint">no turns yet</span>`);
+    const stats = [[s ? pct(s.clean, turns) : "–", "turns clean", s && s.clean < turns ? "warn" : "good"], [fmt(mism, 0), "didn't match", mism ? "bad" : "good"],
+      [fmt(unchecked, 0), "not fully checked"], [fmt(s?.capped ?? 0, 0), "capped"]];
+    const reasons = {};
+    for (const c of M.checks) if (c.kind === "check-skipped" && !c.expected) reasons[c.reason] = (reasons[c.reason] || 0) + 1;
+    const causes = top3(Object.entries(reasons).sort((a, b) => b[1] - a[1]), ([k, v]) => `${esc(k)} <b>×${v}</b>`);
+    const causeLine = causes ? `Skipped most: ${causes}` : "";
+    if (!s && !M.checks.length) setCheck("chk-pred", "", "No fights yet: the checks start with your first fight.", stats, "");
+    else if (mism) setCheck("chk-pred", "bad", `${mism} prediction(s) didn't match what happened this launch.`, stats, causeLine);
+    else if (turns && unchecked / turns > 0.2) setCheck("chk-pred", "warn", `Matched, but ${pct(unchecked, turns)} of turns couldn't be fully checked.`, stats, causeLine);
+    else setCheck("chk-pred", "good", "Everything checked matched.", stats, causeLine);
+    const fights = new Map();
+    for (const r of M.turns.values()) { if (!fights.has(r.combat)) fights.set(r.combat, { name: r.encounter, turns: [] }); fights.get(r.combat).turns.push(r); }
+    const rows = [...fights.entries()].reverse();
+    setHTML($("fightStrips"), rows.length ? rows.map(([n, f]) => `<div class="fight"><span class="name" title="${esc(f.name)}">${esc(f.name)} <span class="faint">#${n}</span></span><div class="strip">`
+      + f.turns.map((r) => `<i class="t-${turnClass(r)}" data-turn="${esc(`${f.name} · fight ${n} · turn ${r.turn}`)}"></i>`).join("") + `</div></div>`).join("") : `<div class="empty">No turns yet</div>`);
   }
-  // 2. is the mod costing frames?
+  // ---- calculations (Searches)
   {
-    const facts = `${fmt(p95, 2)} ms in a busy frame, last minute · ${slow5} slow frame(s) in 5 minutes`;
-    if (!r1.length) setCheck("chk-frames", "", "No frames measured yet.", "");
-    else if (slow5) setCheck("chk-frames", "bad", `${slow5} frame(s) where the mod took over 30 ms in the last 5 minutes.`, facts);
-    else if (p95 > 4) setCheck("chk-frames", "warn", `Heavier than usual: ${fmt(p95, 1)} ms in a busy frame.`, facts);
-    else setCheck("chk-frames", "good", `Light: ${fmt(p95, 1)} ms in a busy frame.`, facts);
-    lines("sparkFrames", [{ name: "busy frame", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }], { refs: [4], unit: " ms", mini: true });
+    const stats = [[w5.length ? pct(w5.length - missed, w5.length) : "–", "ready in time", missed / Math.max(1, w5.length) > 0.05 ? "warn" : "good"], [fmt(caps5, 0), "stopped at a cap", caps5 ? "bad" : "good"],
+      [fmt(s5.filter((x) => x.background).length, 0), "in the background"]];
+    if (caps5) setCheck("chk-calc", "bad", `${caps5} search(es) stopped at a cap in 5 minutes: their numbers showed ?.`, stats);
+    else if (w5.length && missed / w5.length > 0.05) setCheck("chk-calc", "warn", `${pct(missed, w5.length)} of boards took longer than a frame to work out.`, stats);
+    else setCheck("chk-calc", "good", w5.length ? "Boards are worked out within their frame." : "Nothing to work out yet.", stats);
+    const byCard = new Map();
+    for (const x of s5) {
+      if (x.cancelled) continue;
+      const k = isForecast(x) ? "the turn forecast" : x.label.replace(/ \(target [^)]*\)$/, "");
+      const c = byCard.get(k) ?? { k, ms: 0, copies: 0, cap: false };
+      c.ms = Math.max(c.ms, x.ms); c.copies = Math.max(c.copies, x.copies); c.cap ||= !!x.cap;
+      byCard.set(k, c);
+    }
+    const top = [...byCard.values()].sort((a, b) => b.ms - a.ms).slice(0, 6);
+    setHTML($("ovCards"), top.length ? `<table><tr><th>Slowest to work out</th><th class="n">time</th><th class="n">work</th></tr>` + top.map((c) =>
+      `<tr><td>${esc(c.k)}${c.cap ? ' <span class="pill bad">cap</span>' : ""}</td><td class="n ${c.ms > 50 ? "bad" : c.ms > 8 ? "warn" : ""}">${fmt(c.ms, 1)} ms</td><td class="n">${fmt(c.copies, 0)}</td></tr>`).join("") + `</table>`
+      : `<div class="empty">No searches in the last 5 minutes</div>`);
   }
-  // 3. are the calculations keeping up?
+  // ---- performance (frames and the game's own hitches)
   {
-    const facts = `${w5.length - missed} of ${w5.length} waits within 8 ms · ${caps5} search(es) capped` + (settle.length ? ` · slowest to settle ${fmt(Math.max(...settle), 0)} ms` : "");
-    if (caps5) setCheck("chk-calc", "bad", `${caps5} search(es) stopped at a cap in 5 minutes: their numbers showed ?.`, facts);
-    else if (w5.length && missed / w5.length > 0.05) setCheck("chk-calc", "warn", `${pct(missed, w5.length)} of boards took longer than a frame to work out.`, facts);
-    else setCheck("chk-calc", "good", w5.length ? "Boards are worked out within their frame." : "Nothing to work out yet.", facts);
-    lines("sparkCalc", [{ name: "wait, in time", color: css("--accent"), dots: true, points: w5.filter((x) => !x.missed).map((x) => [x.t, x.ms]) },
-      { name: "wait, left to the background", color: css("--bad"), dots: true, points: w5.filter((x) => x.missed).map((x) => [x.t, x.ms]) }], { refs: [8], unit: " ms", mini: true });
+    const slowest = Math.max(0, ...r5.map((r) => r.modMax));
+    const stats = [[`${fmt(p95, 2)} ms`, "busy frame", p95 > 4 ? "warn" : "good"], [`${fmt(slowest, 1)} ms`, "slowest (5 min)", slowest > 30 ? "bad" : slowest > 16.7 ? "warn" : ""],
+      [fmt(slow5, 0), "stutters from the mod", slow5 ? "bad" : "good"], [fmt(stalls5, 0), "hitches from the game", stalls5 > 3 ? "warn" : "good"]];
+    const feat = {};
+    for (const x of r5) for (const [k, v] of Object.entries(x.featureMean || {})) feat[k] = (feat[k] || 0) + v;
+    const causes = top3(Object.entries(feat).sort((a, b) => b[1] - a[1]), ([k, v]) => `${esc(k)} <b>${fmt(v / Math.max(1, r5.length), 2)} ms</b>`);
+    const causeLine = causes ? `Costs the most: ${causes}` : "";
+    if (!r1.length) setCheck("chk-perf", "", "No frames measured yet.", stats, "");
+    else if (slow5) setCheck("chk-perf", "bad", `${slow5} stutter(s) from the mod (frames over 30 ms) in 5 minutes.`, stats, causeLine);
+    else if (p95 > 4 || stalls5 > 3) setCheck("chk-perf", "warn", p95 > 4 ? `The mod is heavier than usual: ${fmt(p95, 1)} ms in a busy frame.` : `${stalls5} hitches from the game itself in 5 minutes.`, stats, causeLine);
+    else setCheck("chk-perf", "good", `Smooth: the mod takes ${fmt(p95, 1)} ms in a busy frame.`, stats, causeLine);
+    lines("sparkFrames", [{ name: "busy frame (p95)", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }],
+      { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
   }
-  // 4. is the game itself stalling?
+  // ---- what needs a look
   {
-    const facts = `${stalls5} hitch(es) over 50 ms in 5 minutes · ${gen2} full memory clean-up(s)`;
-    if (stalls5 > 3) setCheck("chk-stall", "warn", `${stalls5} hitches from the game, not the mod, in 5 minutes.`, facts);
-    else setCheck("chk-stall", "good", stalls5 ? `${stalls5} small hitch(es): normal (loading, room changes).` : "No hitches.", facts);
-    lines("sparkStall", [{ name: "longest gap", color: css("--warn"), points: r5.map((r) => [r.t, r.gapMax]) }], { refs: [50], unit: " ms", mini: true });
+    const items = [];
+    for (const c of M.checks) if (c.kind === "check-done" && !c.matched) items.push({ t: c.t, cls: "bad", text: `${c.audit === "forecast" ? "Enemy turn" : "Play"} didn't match: <b>${esc(c.detail)}</b> (turn ${c.turn})` });
+    for (const x of M.searches) if (x.cap) items.push({ t: x.t, cls: "warn", text: `Search stopped at <b>${esc(x.cap)}</b>: ${esc(x.label)}` });
+    for (const r of M.saved) items.push({ t: r.t, cls: "bad", text: `Report saved: ${esc(r.title)}` });
+    for (const l of M.logs) if (l.level !== "INFO" && !/^\[audit\]/.test(l.text)) items.push({ t: l.t, cls: l.level === "ERROR" ? "bad" : "warn", text: esc(l.text.slice(0, 160)) });
+    for (const r of M.rollups) if (r.modMax > 50) items.push({ t: r.t, cls: "bad", text: `Slow frame: the mod took ${fmt(r.modMax, 0)} ms (${esc(topFeature(r))})` });
+    items.sort((a, b) => b.t - a.t);
+    setCheck("chk-attn", items.some((i) => i.cls === "bad") ? "bad" : items.length ? "warn" : "good", items.length ? `${items.length} thing(s) this launch.` : "Nothing needs a look.");
+    setHTML($("attn"), items.length ? items.slice(0, 80).map((i) => `<li><span class="pill ${i.cls}">${i.cls === "bad" ? "!" : "·"}</span><span style="flex:1">${i.text}</span><time>${ago(i.t)}</time></li>`).join("") : `<li class="empty">All clear.</li>`);
   }
-  // what needs a look: newest first
-  const items = [];
-  for (const c of M.checks) if (c.kind === "check-done" && !c.matched) items.push({ t: c.t, cls: "bad", text: `${c.audit === "forecast" ? "Enemy turn" : "Play"} didn't match: <b>${esc(c.detail)}</b> (turn ${c.turn})` });
-  for (const x of M.searches) if (x.cap) items.push({ t: x.t, cls: "warn", text: `Search stopped at <b>${esc(x.cap)}</b>: ${esc(x.label)} (${fmt(x.copies, 0)} states copied, ${fmt(x.ms, 0)} ms)` });
-  for (const r of M.saved) items.push({ t: r.t, cls: "bad", text: `Report saved: ${esc(r.title)}` });
-  for (const l of M.logs) if (l.level !== "INFO" && !/^\[audit\]/.test(l.text)) items.push({ t: l.t, cls: l.level === "ERROR" ? "bad" : "warn", text: esc(l.text.slice(0, 220)) });
-  for (const r of M.rollups) if (r.modMax > 50) items.push({ t: r.t, cls: "bad", text: `Slow frame: the mod took ${fmt(r.modMax, 0)} ms (${esc(topFeature(r))})` });
-  items.sort((a, b) => b.t - a.t);
-  $("attnCount").textContent = items.length ? items.length : "";
-  setHTML($("attn"), items.length ? items.slice(0, 40).map((i) => `<li><span class="pill ${i.cls}">${i.cls === "bad" ? "!" : "·"}</span><span style="flex:1">${i.text}</span><time>${ago(i.t)}</time></li>`).join("") : `<li class="empty">Nothing needs a look.</li>`);
+  // ---- reports
+  {
+    const open = REP.list.filter((r) => fbStatus[r.id] !== "handled"), handled = REP.list.length - open.length;
+    setCheck("chk-reports", open.length ? "bad" : "good", open.length ? `${open.length} report(s) still to fix.` : "No open reports.",
+      [[fmt(open.length, 0), "open", open.length ? "bad" : "good"], [fmt(M.saved.length, 0), "this launch", M.saved.length ? "bad" : ""], [fmt(handled, 0), "handled"]]);
+    setHTML($("ovReports"), open.length ? open.slice(0, 6).map((r) => `<div class="li"><span class="pill ${r.kind === "crash" ? "bad" : "warn"}">${esc(r.kind)}</span> ${esc(r.title)} <span class="faint">${when(r.atUtc)}</span></div>`).join("")
+      : `<div class="empty">Every report is handled.</div>`);
+  }
+  // ---- notes
+  {
+    const notes = fbNotes.filter((n) => n.kind !== "report"), open = notes.filter((n) => n.status !== "handled");
+    setCheck("chk-notes", open.length ? "warn" : "good", open.length ? `${open.length} note(s) not dealt with yet.` : "Every note is dealt with.",
+      [[fmt(open.length, 0), "open", open.length ? "warn" : "good"], [fmt(notes.length - open.length, 0), "handled"]]);
+    setHTML($("ovNotes"), open.length ? open.slice(0, 5).map((n) => `<div class="li"><span class="pill">${esc(n.kind)}</span> ${esc(n.text.length > 140 ? n.text.slice(0, 137) + "…" : n.text)} <span class="faint">${when(n.at)}</span></div>`).join("")
+      : `<div class="empty">Nothing open. Write one any time.</div>`);
+  }
+  // ---- the mod's log
+  {
+    const warns = M.logs.filter((l) => l.level === "WARN"), errs = M.logs.filter((l) => l.level === "ERROR");
+    setCheck("chk-log", errs.length ? "bad" : warns.length ? "warn" : "good", errs.length ? `${errs.length} error(s) in the log this launch.` : warns.length ? `${warns.length} warning(s) this launch.` : "No warnings or errors.",
+      [[fmt(errs.length, 0), "errors", errs.length ? "bad" : "good"], [fmt(warns.length, 0), "warnings", warns.length ? "warn" : "good"], [fmt(M.logs.length, 0), "lines"]]);
+    const shown = M.logs.filter((l) => l.level !== "INFO").slice(-8).reverse();
+    setHTML($("ovLog"), shown.length ? shown.map((l) => `<div class="${l.level}"><span class="faint">${clock(l.t)}</span> ${esc(l.text.slice(0, 200))}</div>`).join("") : `<div class="empty">Nothing but info lines.</div>`);
+  }
+  // ---- better or worse than last time (Compare)
+  {
+    lastLaunch();
+    const ms = M.searches.filter((x) => !x.cancelled).map((x) => x.ms), done = M.checks.filter((c) => c.kind === "check-done");
+    const now = { busy: quant(M.rollups.map((x) => x.modP95), 0.5), search: quant(ms, 0.95), matched: done.length ? done.filter((c) => c.matched).length / done.length : null };
+    const p = LAST.sum;
+    if (!p) setCheck("chk-launch", "", LAST.name || FS.demo || FS.dir ? "Reading the launch before this one…" : "No earlier launch to compare with.");
+    else {
+      const rows = [
+        ["Mod's time in a busy frame", now.busy, p["Mod's time in a busy frame (ms)"], false, (v) => `${fmt(v, 2)} ms`],
+        ["Slow search (95th percentile)", now.search, p["Slow search time (95th percentile, ms)"], false, (v) => `${fmt(v, 1)} ms`],
+        ["Checks that matched", now.matched, p["Share of checks that matched"], true, (v) => (v == null ? "–" : `${(v * 100).toFixed(1)}%`)],
+      ];
+      let better = 0, worse = 0;
+      const html = `<table><tr><th></th><th class="n">now (${esc(M.state?.mod ?? "?")})</th><th class="n">before (${esc(p["Mod version"])})</th><th></th></tr>` + rows.map(([name, a, b, higher, show]) => {
+        let ch = "";
+        if (a != null && b) { const d = (a - b) / Math.abs(b); const good = higher ? d > 0 : d < 0; if (Math.abs(d) >= 0.05) { good ? better++ : worse++; ch = `<span class="${good ? "good" : "bad"}">${good ? "better" : "worse"}</span>`; } else ch = '<span class="dim">same</span>'; }
+        return `<tr><td>${esc(name)}</td><td class="n">${show(a)}</td><td class="n">${show(b)}</td><td class="n">${ch}</td></tr>`;
+      }).join("") + `</table>`;
+      setCheck("chk-launch", worse ? "warn" : "good", worse ? `${worse} number(s) worse than the launch before.` : better ? "Better than the launch before." : "About the same as the launch before.", null,
+        `Against ${esc(LAST.name.replace(/^stream-|\.jsonl$/g, ""))}`);
+      setHTML($("ovLaunch"), html);
+    }
+  }
 }
-$("checks").addEventListener("click", (e) => { const a = e.target.closest("[data-go]"); if (!a) return; e.preventDefault(); page = a.dataset.go; try { localStorage.setItem("page", page); } catch {} render(true); });
-$("turnStrip").addEventListener("mouseover", (e) => {
+$("p-overview").addEventListener("click", (e) => { const a = e.target.closest("[data-go]"); if (!a) return; e.preventDefault(); page = a.dataset.go; try { localStorage.setItem("page", page); } catch {} render(true); });
+$("fightStrips").addEventListener("mouseover", (e) => {
   const sq = e.target.closest("[data-turn]"); if (!sq) return;
   tip.innerHTML = `<div>${esc(sq.dataset.turn)}</div>`; tip.style.display = "block";
   const r = sq.getBoundingClientRect(); tip.style.left = Math.min(r.left, window.innerWidth - tip.offsetWidth - 4) + "px"; tip.style.top = (r.top - tip.offsetHeight - 6) + "px";
 });
-$("turnStrip").addEventListener("mouseout", () => { tip.style.display = "none"; });
+$("fightStrips").addEventListener("mouseout", () => { tip.style.display = "none"; });
+
+// ---- the note dialog: write a note from anywhere (the header's Note button, the Overview's Notes panel)
+function openNote() {
+  const c = context();
+  $("noteWhere").textContent = `${c.mod}${c.encounter ? ` · ${c.encounter}, turn ${c.turn}` : " · not in a fight"}`;
+  $("noteDialog").showModal();
+  $("noteText").focus();
+}
+async function saveDialogNote() {
+  const text = $("noteText").value.trim();
+  if (!text) return;
+  try {
+    await writeFile("feedback.jsonl", JSON.stringify({ id: newId(), at: new Date().toISOString(), kind: $("noteKind").value, text, ...context() }) + "\n", true);
+    $("noteText").value = "";
+    $("noteDialog").close();
+    await loadFeedback();
+    render(true);
+  } catch (e) { alert("Couldn't save the note: " + e.message); }
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-note]")) { e.preventDefault(); openNote(); } });
+$("noteSave").addEventListener("click", saveDialogNote);
+$("noteCancel").addEventListener("click", () => $("noteDialog").close());
+$("noteText").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveDialogNote(); });
 const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${fmt(v, 0)} ms`).join(", ");
 
 function renderTurn() {
