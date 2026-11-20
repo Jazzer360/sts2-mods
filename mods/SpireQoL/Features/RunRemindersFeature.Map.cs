@@ -117,8 +117,7 @@ public sealed partial class RunRemindersFeature
         new HashSet<RoomType> { RoomType.Monster, RoomType.Elite, RoomType.Event, RoomType.Shop, RoomType.Treasure };
 
     /// <summary>
-    /// Whether it still changes that kind of room: not used up; Maw Bank until you buy something; Silver Crucible until its chestless
-    /// treasure room; a `?` changer while its own hook changes what a `?` can be (Golden Compass's act, Lantern Key's act 3).
+    /// Whether it still changes that kind of room: not used up; Maw Bank until you buy something; a `?` changer while its own hook changes what a `?` can be (Golden Compass's act, Lantern Key's act 3).
     /// </summary>
     private static bool PathApplies(AbstractModel model)
     {
@@ -129,8 +128,6 @@ public sealed partial class RunRemindersFeature
             {
                 case "MawBank":
                     return !Traverse.Create(model).Property("HasItemBeenBought").GetValue<bool>();
-                case "SilverCrucible":
-                    return Traverse.Create(model).Property("TreasureRoomsEntered").GetValue<int>() == 0;
             }
             var hook = model.GetType().GetMethod("ModifyUnknownMapPointRoomTypes");
             if (hook != null && hook.DeclaringType == model.GetType())

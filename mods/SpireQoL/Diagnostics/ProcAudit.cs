@@ -124,6 +124,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         /// <summary>See PlayRecord.TargetDraws.</summary>
         public int? TargetDraws;
         public PlaySnapshot? FullBefore, FullAfter;
+        /// <summary>Waterfall Giants already about to blow when the play began; null when the play's start wasn't seen.</summary>
+        public HashSet<Creature>? BlowingBefore;
     }
 
     private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
@@ -338,6 +340,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
         /// <summary>Energy, stars, gold, HP, cards and relics when the play started and finished.</summary>
         public PlaySnapshot? FullBefore, FullAfter;
+        /// <summary>Waterfall Giants already about to blow when the play began (see <see cref="Blowing"/>).</summary>
+        public HashSet<Creature>? BlowingBefore;
         /// <summary>
         /// A hand choice whose pick is auto-played (Decisions, Decisions): each card's tabs and facts on
         /// the last frame of the choice, when they described the auto-plays.
@@ -357,6 +361,28 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public List<string>? ShownDiff;
         public string? ShownSkip;
     }
+
+    /// <summary>
+    /// Waterfall Giants about to blow: brought to 0, Steam Eruption keeps one at 999999999 HP, stunned until it explodes and kills
+    /// itself (WaterfallGiant.TriggerAboutToBlowState, ExplodeMove). Every check that compares an enemy's HP or death treats it so,
+    /// all three rules here (decided once, after it came back several times; a new check of enemy HP or death applies them too):
+    ///  1. A play that brings it to 0 killed it: as good as dead (the lethal check; the after-play HP check skips its 999999999).
+    ///  2. One already about to blow before the play is no play's kill: it explodes on its turn whatever the play does (the lethal
+    ///     check skips it, with a note).
+    ///  3. The forecast check counts its HP only up to the killing hit (ForecastAudit.EnemyIssues); its self-kill after exploding
+    ///     isn't a hit, so it acted before dying.
+    /// </summary>
+    private static HashSet<Creature> Blowing()
+    {
+        var set = new HashSet<Creature>();
+        if (Sts2State.Combat is { } cs)
+            foreach (var c in cs.Enemies)
+                if (IsBlowing(c)) set.Add(c);
+        return set;
+    }
+
+    private static bool IsBlowing(Creature c) =>
+        c.Monster is MegaCrit.Sts2.Core.Models.Monsters.WaterfallGiant giant && Sts2State.Private(giant, "IsAboutToBlow", false);
 
     /// <summary>Power amounts on every creature in the fight, by creature and power class.</summary>
     private static Dictionary<(Creature, string), int> PowerSnapshot()
@@ -449,7 +475,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             if (!_running.TryGetValue(action, out var rec))
             {
-                rec = new PlayRecord { Action = action, Target = play.Target, Before = CaptureBefore(), PowersBefore = PowerSnapshot(), FullBefore = PlaySnapshot.Take(play.Player) };
+                rec = new PlayRecord { Action = action, Target = play.Target, Before = CaptureBefore(), PowersBefore = PowerSnapshot(), FullBefore = PlaySnapshot.Take(play.Player),
+                    BlowingBefore = Blowing() };
                 var card = play.NetCombatCard.ToCardModelOrNull();
                 if (card != null)
                 {
@@ -821,7 +848,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Before = rec.Before, Target = target, UpgradeBefore = captured ? rec.UpgradeBefore : -1,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded, RanDuringPause = rec.RanDuringPause,
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter, TargetDraws = captured ? rec.TargetDraws : null,
-            FullBefore = rec.FullBefore, FullAfter = rec.FullAfter,
+            FullBefore = rec.FullBefore, FullAfter = rec.FullAfter, BlowingBefore = rec.BlowingBefore,
             StaleBecause = captured ? rec.StaleBecause : StaleBecause(hist, card, start, me),
             ShownDiff = captured ? rec.ShownDiff : null, ShownSkip = captured ? rec.ShownSkip : "the play's start wasn't seen",
         };
@@ -1583,9 +1610,16 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         foreach (var (creature, id) in sim.Ids)
         {
             if (!card.TryGetValue(id, out var c) || sim.Start.Enemy(id) is not { Hp: > 0 } start) continue;
+            // A Waterfall Giant already about to blow before the play explodes on its turn whatever the play does: not the play's
+            // to kill or spare (its 999999999 HP lives through any play). Not checked when the play's start wasn't seen.
+            if (w.BlowingBefore == null ? IsBlowing(creature) : w.BlowingBefore.Contains(creature))
+            {
+                model.Add($"lethal: {start.Name} not checked (about to blow before the play)");
+                continue;
+            }
             // Gone from the board after the play: dead. So is a Waterfall Giant the play brought to 0: Steam Eruption keeps it at
             // 999999999 HP, stunned until it blows (WaterfallGiant.TriggerAboutToBlowState), as good as dead (issue #428).
-            var aboutToBlow = creature.Monster is MegaCrit.Sts2.Core.Models.Monsters.WaterfallGiant giant && Sts2State.Private(giant, "IsAboutToBlow", false);
+            var aboutToBlow = IsBlowing(creature);
             var d = !aboutToBlow && w.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(1, 1, true);
             if (c.Certain && !d.Certain)
                 issues.Add($"lethal: {start.Name} predicted to die before acting in every outcome of this play, but after it: {d.Text()}");
@@ -1646,8 +1680,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 static int Hp(SimEnemy e) => Math.Max(0, e.Hp);
                 // The Waterfall Giant doesn't leave at 0 HP: Steam Eruption puts it about to blow at 999999999 HP (WaterfallGiant.
                 // TriggerAboutToBlowState), stunned this turn, as good as dead until it explodes.
-                var aboutToBlow = pe.Hp <= 0 && creature.Monster is MegaCrit.Sts2.Core.Models.Monsters.WaterfallGiant giant
-                    && Sts2State.Private(giant, "IsAboutToBlow", false);
+                var aboutToBlow = pe.Hp <= 0 && IsBlowing(creature);
                 if (Hp(pe) != Hp(ae) && !aboutToBlow) d.Add($"after play enemy HP: {name} predicted {Hp(pe)}, actual {Hp(ae)}");
                 if (ae.Hp <= 0 || pe.Hp <= 0) continue;
                 if (pe.Block != ae.Block) d.Add($"after play enemy block: {name} predicted {pe.Block}, actual {ae.Block}");

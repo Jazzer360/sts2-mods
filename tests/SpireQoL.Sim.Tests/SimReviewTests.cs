@@ -112,6 +112,34 @@ public class SimReviewTests
     }
 
     [Fact]
+    public void ConsumingShadowsFrostEvokeIsInTheEndOfTurnBlock()
+    {
+        // Dev report 20261120-042856-c2ac65: ConsumingShadowPower.AfterSideTurnEnd evokes the last orb (OrbCmd.EvokeLast); a Frost
+        // orb gives its passive 2 (orb passives, before) then its evoke 5. Both are end-of-turn block: the breakdown Incoming Damage
+        // shows and the forecast check compares with the block the game gave (it listed only the passive's 2).
+        var s = new SimState { Enemies = { Enemy(1, 50, 0, 15) }, Log = true };
+        s.P.Block = 10;
+        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } };
+        s.P.OrbCapacity = 3;
+        s.P.ConsumingShadow = 1;
+        var w = SimEngine.Run(s).Worst;
+        Assert.Equal(0, w.Taken);
+        Assert.Equal(7, w.EndOfTurnBlock.Sum(x => x.Amount));
+    }
+
+    [Fact]
+    public void ConsumingShadowsLightningEvokeIsInTheEndOfTurnDamage()
+    {
+        // The evoke's damage is listed with your other end-of-turn damage (the forecast log's breakdown), as the passive's is.
+        var s = new SimState { Enemies = { Enemy(1, 50, 0, 5) }, Log = true };
+        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        s.P.OrbCapacity = 3;
+        s.P.ConsumingShadow = 1;
+        var w = SimEngine.Run(s).Worst;
+        Assert.Equal(11, w.EndOfTurnDamage.Sum(x => x.Amount));
+    }
+
+    [Fact]
     public void ADecayedGlassOrbStillDealsYourFocus()
     {
         // GlassOrb: PassiveVal = base + Focus; only the base decays (to 0). Base 0 with Focus 2 keeps

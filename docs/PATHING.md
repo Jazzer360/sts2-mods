@@ -62,7 +62,7 @@ Each entry is read from the relic's hook body, not its name. "Map shows it" entr
 | Shop | Lord's Parasol | buys everything on entering | `AfterRoomEntered` (MerchantRoom) |
 | Shop | Membership Card | half price | `ModifyMerchantPrice` |
 | Shop | The Courier | cheaper, and what you buy restocks | `ModifyMerchantPrice`, `ShouldRefillMerchantEntry` |
-| Treasure | Silver Crucible | changes treasure rooms | `ShouldGenerateTreasure` |
+| Treasure | (Silver Crucible: no mark, reviewed) | the first treasure room you enter has no chest, whichever it is: no route avoids it | `ShouldGenerateTreasure` |
 | Boss | Pantograph, Bath Robes | heal / effect at the boss | `AfterRoomEntered` (Boss) |
 | (map shows it) | Fur Coat, Golden Compass's map, Winged Boots, Spoils Map | mark or change the map | `ModifyGeneratedMap*`, `ShouldAllowFreeTravel` |
 

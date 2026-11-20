@@ -236,9 +236,15 @@ public sealed class TurnEndModel
         if (frame == _frame) return _cached;
         _frame = frame;
         SimJob.FlushLog(line => ModEntry.Log.Info(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"), ReportCap);
+        var start = Godot.Time.GetTicksUsec();
         _cached = ComputeNow();
+        // Once a frame, by whichever feature asks first: timed on its own for the dev dashboard, so that feature isn't charged for it.
+        PartTime?.Invoke("turn-forecast", (Godot.Time.GetTicksUsec() - start) / 1000.0);
         return _cached;
     }
+
+    /// <summary>Where the frame's shared forecast work is timed (OverlayHost.AddPartTime), set at startup.</summary>
+    internal static Action<string, double>? PartTime;
 
     /// <summary>
     /// What Incoming Damage, the Death Skull and Teammate Incoming Damage show (decision #105): the forecast for the board now, or,

@@ -213,7 +213,6 @@ public static class SettingsCatalog
         new(nameof(LordsParasol), SourceGroup.Relic, null, Map: "Beside Merchant (buys everything)"),
         new(nameof(MembershipCard), SourceGroup.Relic, null, Map: "Beside Merchant (half price)"),
         new(nameof(TheCourier), SourceGroup.Relic, null, Map: "Beside Merchant (cheaper, and what you buy restocks)"),
-        new(nameof(SilverCrucible), SourceGroup.Relic, null, Map: "Crossed, beside Treasure until its chestless one"),
         new("Dowsing", SourceGroup.Card, null, Map: "Beside Unknown while in your deck, with the rooms left"),
         new("ByrdonisEgg", SourceGroup.Card, null, Map: "Beside Rest while in your deck (Hatch)"),
         new("LanternKey", SourceGroup.Card, null, Map: "Beside Unknown in act 3 while in your deck (always an event)"),

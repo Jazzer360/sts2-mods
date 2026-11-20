@@ -285,12 +285,20 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><h3>Is the mod making frames slow?</h3>
-        <p class="hint">Each point is a quarter of a second of play: the mod's own time in its typical frame (median, green), a busy frame (95th percentile, blue) and its slowest frame (red). A 60 fps frame has 16.7 ms for the game and the mod together (the dashed lines are 16.7 and 33.3 ms). The mod normally stays around 1–2 ms; a red spike is one slow frame. Hover a spike, then read the feature chart beside it at the same moment to see which feature it was.</p>
+        <p class="hint">Each point is a quarter of a second of play: the mod's own time in its typical frame (median, green), a busy frame (95th percentile, blue) and its slowest frame (red). The dashed lines are the mod's own limits: its budget for a busy frame (4 ms; above it the Overview turns amber) and a stutter (30 ms, a frame you can see hitch; the mod logs each one). Whether the game keeps its frame rate is the chart below. The mod normally stays around 1–2 ms; a red spike is one slow frame. Hover a spike, then read the feature chart beside it at the same moment to see which feature it was.</p>
         <canvas id="pfFrame" height="170"></canvas>
         <div class="legend"><span><i style="background:var(--good)"></i>typical frame</span><span><i style="background:var(--accent)"></i>busy frame (p95)</span><span><i style="background:var(--bad)"></i>slowest frame</span></div></div>
       <div class="card"><h3>Which feature takes the time?</h3>
         <p class="hint">The mod's average time per frame, split by feature (stacked: the top of the pile is the mod's total). A feature growing over time, or one taking most of the pile, is where to look. The table below gives each feature's average and its single worst frame over the window.</p>
         <canvas id="pfFeatures" height="170"></canvas><div class="legend" id="pfFeaturesLegend"></div></div>
+      <div class="card"><h3>Is the game keeping its frame rate?</h3>
+        <p class="hint">The game's frames per second over time, the mod included (each point a quarter of a second). This is what you see: a dip here with the mod's time flat above is the game's own; a dip that lines up with a jump in the mod's time, or in its share below, is the mod's. The game caps its rate (your settings, and 30 fps while its window is in the background), so a flat line is the cap, not a limit the mod sets.</p>
+        <canvas id="pfFps" height="150"></canvas>
+        <div class="legend"><span><i style="background:var(--teal)"></i>frames per second</span></div></div>
+      <div class="card"><h3>How much of each frame is the mod?</h3>
+        <p class="hint">Each bar is a stretch of play (the window split into up to 60), the whole of its average frame: the mod's share at the bottom, the rest above (the game's own work, and waiting for the next screen refresh when the game is faster than your frame-rate cap). The label is the mod's share of the window; hover a bar for its numbers. A bar where the mod's share jumps is a moment to look at in the charts above.</p>
+        <canvas id="pfShare" height="150"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>the mod</span><span><i style="background:var(--line)"></i>the rest of the frame</span></div></div>
       <div class="card"><h3>Is the game itself stalling?</h3>
         <p class="hint">The longest gap between two frames in each quarter second (16.7 ms is a smooth 60 fps). Over 50 ms (the dashed line) is a hitch you can see. When the mod's own time at that moment is small (the chart on the left), the hitch is the game's (loading, a room change), not the mod's.</p>
         <canvas id="pfGap" height="150"></canvas>
@@ -654,6 +662,15 @@ function hover(id, e) {
     const total = h.groups.reduce((a, grp) => a + grp.values.reduce((x, y) => x + y, 0), 0);
     html = `<div class="faint">${esc(h.labels[i])}</div>` + h.groups.map((grp) => `<div>${sw(grp.color)}${esc(grp.name)}: <b>${fmt(grp.values[i], 0)}</b> searches</div>`).join("")
       + `<div class="faint">${pct(h.groups.reduce((a, grp) => a + grp.values[i], 0), total)} of all searches</div>`;
+  } else if (h.kind === "share") {
+    const i = Math.min(h.buckets.length - 1, Math.max(0, Math.floor((mx - h.pad.l) / h.cw)));
+    const b = h.buckets[i];
+    g.fillStyle = css("--text"); g.globalAlpha = 0.15;
+    g.fillRect(h.pad.l + i * h.cw, h.pad.t, h.cw, h.h - h.pad.t - h.pad.b);
+    g.globalAlpha = 1;
+    ax = h.pad.l + (i + 0.5) * h.cw;
+    html = `<div class="faint">${clock(b.t0)} to ${clock(b.t1)}</div><div>${sw(css("--accent"))}the mod: <b>${fmt(b.mod, 2)} ms</b> a frame (${pct(b.mod, b.frame)})</div>`
+      + `<div>${sw(css("--line"))}the rest: <b>${fmt(Math.max(0, b.frame - b.mod), 1)} ms</b></div><div class="faint">${fmt(b.frame, 1)} ms a frame, ${fmt(1000 / b.frame, 0)} fps</div>`;
   } else if (h.kind === "bars") {
     const i = Math.min(h.items.length - 1, Math.max(0, Math.floor((mx - h.pad.l) / h.bw)));
     const it = h.items[i];
@@ -726,6 +743,9 @@ function axes(g, w, h, yMax, unit, pad) {
 }
 /** Lines over time. series: [{ points: [[t, v]], color, dots? }]; refs: y values drawn dashed. */
 /** Times are spiky (one slow frame among hundreds): the time charts can use a log scale (the Performance page's switch). */
+/** The mod's own limits on its time charts: its busy-frame budget (the Overview's verdict turns amber above it) and a stutter (its slow-frame warning). */
+const MOD_BUDGET_MS = 4, STUTTER_MS = 30;
+const MOD_REFS = [{ v: MOD_BUDGET_MS, label: `budget ${MOD_BUDGET_MS} ms` }, { v: STUTTER_MS, label: `stutter ${STUTTER_MS} ms` }];
 const logTimes = () => { try { return localStorage.getItem("logTimes") !== "0"; } catch { return true; } };
 function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false, mini = false } = {}) {
   // mini: a trend in a small space (the Overview's checks): no axis labels, tight margins, the same hover readout.
@@ -733,7 +753,9 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
   const all = series.flatMap((s) => s.points);
   if (!all.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const t0 = Math.min(...all.map((p) => p[0])), t1 = Math.max(...all.map((p) => p[0]), t0 + 1);
-  const yMax = fixedMax ?? Math.max(...all.map((p) => p[1]), ...refs, 1) * (log ? 1.5 : 1.08);
+  // refs: numbers, or { v, label } (frame-rate lines). On a log scale every one fits; on a linear one, those above the data aren't drawn.
+  const refv = refs.map((r) => (typeof r === "number" ? { v: r } : r));
+  const yMax = fixedMax ?? Math.max(...all.map((p) => p[1]), ...(log ? refv.map((r) => r.v) : []), 1) * (log ? 1.5 : 1.08);
   const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r);
   let Y;
   if (log) {
@@ -751,8 +773,25 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
     Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (v - yMin) / (yMax - yMin));
   }
   g.setLineDash([4, 4]); g.strokeStyle = css("--faint");
-  for (const r of refs) { g.beginPath(); g.moveTo(pad.l, Y(r)); g.lineTo(w - pad.r, Y(r)); g.stroke(); }
+  for (const r of refv) {
+    if (r.v > yMax) continue;
+    g.beginPath(); g.moveTo(pad.l, Y(r.v)); g.lineTo(w - pad.r, Y(r.v)); g.stroke();
+  }
   g.setLineDash([]);
+  // Their labels, drawn over the data at the right edge on a backdrop; one too close to the last drawn is left out.
+  const refLabels = () => {
+    if (mini) return;
+    g.font = "10px system-ui";
+    let lastY = -100;
+    for (const r of [...refv].filter((r) => r.label && r.v <= yMax).sort((a, b) => a.v - b.v)) {
+      const y = Y(r.v);
+      if (Math.abs(y - lastY) < 12) continue;
+      lastY = y;
+      const tw = g.measureText(r.label).width, x = w - pad.r - tw - 4;
+      g.fillStyle = css("--panel"); g.globalAlpha = 0.85; g.fillRect(x - 2, y - 6, tw + 4, 12); g.globalAlpha = 1;
+      g.fillStyle = css("--dim"); g.fillText(r.label, x, y + 4);
+    }
+  };
   for (const s of series) {
     g.strokeStyle = g.fillStyle = s.color; g.lineWidth = 1.5;
     if (s.dots) { for (const [t, v] of s.points) { g.beginPath(); g.arc(X(t), Y(v), 2.5, 0, 7); g.fill(); } continue; }
@@ -760,6 +799,8 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
     s.points.forEach(([t, v], i) => (i ? g.lineTo(X(t), Y(v)) : g.moveTo(X(t), Y(v))));
     g.stroke();
   }
+  refLabels();
+  g.font = "11px system-ui";
   if (!mini) { g.fillStyle = css("--faint"); g.fillText(clock(t0), pad.l, h - 2); const e = clock(t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2); }
   HOVER[id] = { kind: "lines", series, t0, t1, pad, w, h, unit, X, Y };
   rehover(id);
@@ -833,6 +874,44 @@ function bars(id, items) {
 }
 
 /** Bars by category, a bar per group side by side in each (labels: the categories; groups: [{ name, color, values }]). */
+/**
+ * 100% bars of the average frame over time: the mod's share at the bottom, the rest of the frame above. rollups are frame-rollup
+ * events (seconds, frames, featureMean: each feature's mean ms per frame, the mod's total when summed), split into up to 60 bars.
+ */
+function shareBars(id, rollups) {
+  const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 16 };
+  const rs = rollups.filter((r) => r.frames > 0 && r.seconds > 0);
+  if (!rs.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
+  const n = Math.min(60, rs.length), per = Math.ceil(rs.length / n), buckets = [];
+  for (let i = 0; i < rs.length; i += per) {
+    const part = rs.slice(i, i + per), frames = part.reduce((a, r) => a + r.frames, 0);
+    const modTotal = part.reduce((a, r) => a + r.frames * Object.values(r.featureMean || {}).reduce((x, y) => x + y, 0), 0);
+    buckets.push({ t0: part[0].t, t1: part.at(-1).t, frame: (part.reduce((a, r) => a + r.seconds, 0) * 1000) / frames, mod: modTotal / frames });
+  }
+  g.font = "11px system-ui"; g.fillStyle = css("--faint"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+  for (const v of [0, 0.5, 1]) {
+    const y = pad.t + (h - pad.t - pad.b) * (1 - v);
+    g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+    g.fillText(`${v * 100}%`, 2, y + 4);
+  }
+  const cw = (w - pad.l - pad.r) / buckets.length, ih = h - pad.t - pad.b;
+  buckets.forEach((b, i) => {
+    const share = Math.min(1, b.mod / b.frame), x = pad.l + i * cw + 1, bw = Math.max(1, cw - 2);
+    g.fillStyle = css("--line"); g.fillRect(x, pad.t, bw, ih);
+    // The mod's share is tiny next to the frame: never under 1 px, so a bar shows it's there.
+    const mh = Math.max(1, ih * share);
+    g.fillStyle = css("--accent"); g.fillRect(x, pad.t + ih - mh, bw, mh);
+  });
+  const allMod = buckets.reduce((a, b) => a + b.mod, 0), allFrame = buckets.reduce((a, b) => a + b.frame, 0);
+  const label = `the mod: ${pct(allMod, allFrame)} of the frame`;
+  g.font = "12px system-ui"; g.fillStyle = css("--text");
+  g.fillText(label, w - pad.r - g.measureText(label).width - 4, pad.t + 14);
+  g.fillStyle = css("--faint"); g.font = "11px system-ui";
+  g.fillText(clock(buckets[0].t0), pad.l, h - 2); const e = clock(buckets.at(-1).t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2);
+  HOVER[id] = { kind: "share", buckets, pad, cw, h };
+  rehover(id);
+}
+
 function groupBars(id, labels, groups) {
   const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 18 };
   const max = Math.max(1, ...groups.flatMap((x) => x.values));
@@ -951,7 +1030,7 @@ function renderOverview() {
   // ---- performance (frames and the game's own hitches)
   {
     const slowest = Math.max(0, ...r5.filter((r) => !warmingUp(r.t)).map((r) => r.modMax));
-    const stats = [[`${fmt(p95, 2)} ms`, "busy frame", p95 > 4 ? "warn" : "good"], [`${fmt(slowest, 1)} ms`, "slowest (5 min)", slowest > 30 ? "bad" : slowest > 16.7 ? "warn" : ""],
+    const stats = [[`${fmt(p95, 2)} ms`, "busy frame", p95 > MOD_BUDGET_MS ? "warn" : "good"], [`${fmt(slowest, 1)} ms`, "slowest (5 min)", slowest > 30 ? "bad" : slowest > 16.7 ? "warn" : ""],
       [`${fmt(slow5, 0)} / ${STUTTER_BUDGET}`, "stutters from the mod (budget)", slow5 > STUTTER_BUDGET ? "bad" : slow5 ? "warn" : "good"], [fmt(stalls5, 0), "hitches in a fight", stalls5 > 3 ? "warn" : "good"],
       [fmt(loads5, 0), "while loading (expected)"]];
     const feat = {};
@@ -960,10 +1039,10 @@ function renderOverview() {
     const causeLine = causes ? `Costs the most: ${causes}` : "";
     if (!r1.length) setCheck("chk-perf", "", "No frames measured yet.", stats, "");
     else if (slow5 > STUTTER_BUDGET) setCheck("chk-perf", "bad", `${slow5} stutters from the mod (frames over 30 ms) in 5 minutes: over the budget of ${STUTTER_BUDGET}.`, stats, causeLine);
-    else if (p95 > 4 || stalls5 > 3) setCheck("chk-perf", "warn", p95 > 4 ? `The mod is heavier than usual: ${fmt(p95, 1)} ms in a busy frame.` : `${stalls5} hitches from the game itself during fights in 5 minutes.`, stats, causeLine);
+    else if (p95 > MOD_BUDGET_MS || stalls5 > 3) setCheck("chk-perf", "warn", p95 > MOD_BUDGET_MS ? `The mod is heavier than usual: ${fmt(p95, 1)} ms in a busy frame.` : `${stalls5} hitches from the game itself during fights in 5 minutes.`, stats, causeLine);
     else setCheck("chk-perf", "good", `Smooth: the mod takes ${fmt(p95, 1)} ms in a busy frame${slow5 ? `; ${slow5} stutter(s), within the budget` : ""}.`, stats, causeLine);
     lines("sparkFrames", [{ name: "busy frame (p95)", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }],
-      { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
+      { refs: MOD_REFS, unit: " ms", log: logTimes() });
   }
   // ---- what needs a look
   {
@@ -1159,7 +1238,7 @@ function renderPerf() {
     tile("Hitches from the game", fmt(stalls, 0), `gaps over 50 ms between frames while the mod's share was small, during fights; ${fmt(loads, 0)} more while the game loaded a scene (expected)`, stalls > 3 ? "warn" : "good"),
     tile("Full memory clean-ups", fmt(gen2, 0), `${fmt(r.reduce((a, x) => a + x.gcPauseMs, 0), 0)} ms paused in all (the whole game)`, gen2 > 5 ? "warn" : "good"),
   ].join(""));
-  lines("pfFrame", [{ name: "typical frame", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "busy frame (p95)", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
+  lines("pfFrame", [{ name: "typical frame", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "busy frame (p95)", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: MOD_REFS, unit: " ms", log: logTimes() });
   // features: the six with the most time, then the rest together
   const totals = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) totals[k] = (totals[k] || 0) + v;
@@ -1167,6 +1246,8 @@ function renderPerf() {
   const layers = top.map((k, i) => ({ name: k, color: colors[i % colors.length], points: r.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
   layers.push({ name: "the rest", color: css("--faint"), points: r.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
   stacked("pfFeatures", layers);
+  shareBars("pfShare", r);
+  lines("pfFps", [{ name: "frames per second", color: css("--teal"), points: r.filter((x) => x.seconds > 0).map((x) => [x.t, x.frames / x.seconds]) }], { unit: " fps" });
   setHTML($("pfFeaturesLegend"), layers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
   lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [50], unit: " ms", log: logTimes() });
   lines("pfGc", [{ name: "heap MB", color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { name: "allocated MB/s", color: css("--warn"), points: r.map((x) => [x.t, x.allocatedMb / Math.max(x.seconds, 0.01)]) }, { name: "gen 2 collection (heap MB)", color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) }], {});

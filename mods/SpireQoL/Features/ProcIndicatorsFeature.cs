@@ -114,6 +114,22 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         _cs = cs;
         _indirect = _ctx.Settings.ProcIndirect;
 
+        // Nothing changed since a frame whose every result was final: its facts and tabs again, without reading each card again
+        // (decision #114). In dev mode every 30th such frame is worked out anyway and checked against what would have been reused.
+        var te = TurnEnd();
+        var key = te == null ? 0 : FrameKey(te, hand);
+        var checkReuse = false;
+        if (key != 0 && key == _reuseKey)
+        {
+            if (!ModEntry.DevMode || ++_reusedSinceCheck < 30)
+            {
+                Reuse(hand, cs);
+                return;
+            }
+            _reusedSinceCheck = 0;
+            checkReuse = true;
+        }
+
         // Sources: your powers, your relics, and powers on enemies (theirs, or ones you applied).
         var sources = Sources(me, cs);
 
@@ -140,18 +156,90 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var forecastPending = TurnEnd() == null;
         foreach (var card in hand)
             if (!pending.Any(x => ReferenceEquals(x.Card, card))) _lastTabs.Remove(card);
+        var final = !forecastPending;
+        var shown = new List<(CardModel Card, List<TabSpec> Tabs)>();
         foreach (var (card, p, d) in pending)
         {
             if ((forecastPending || p.Sim is { IsCompleted: false }) && Held(card, cs) is { } held)
             {
                 _heldFrames++;
+                final = false;
                 foreach (var t in held) d.AddTab(t);
                 continue;
             }
+            if (p.Sim is { IsCompleted: false }) final = false;
             var tabs = Finish(card, p);
             _lastTabs[card] = (_ctx.Decor.Frame, tabs, cs, Sts2State.TurnNumber);
             if (_lastTabs.Count > 300) _lastTabs.Clear();
             foreach (var t in tabs) d.AddTab(t);
+            shown.Add((card, tabs));
+        }
+
+        if (checkReuse) CheckReuse(shown);
+        // Reusable only once every result is final: a pending simulation or forecast changes the tabs with nothing else changing.
+        _reuseKey = final ? key : 0;
+        _reuseTabs = shown;
+    }
+
+    // ------------------------------------------------------------------ reuse while nothing changes (decision #114)
+
+    private long _reuseKey;
+    private List<(CardModel Card, List<TabSpec> Tabs)> _reuseTabs = new();
+    private int _reusedSinceCheck;
+    private static readonly HashSet<string> _reuseWarned = new();
+
+    /// <summary>
+    /// What this frame's tabs depend on: the board (the turn forecast's state key: every creature, power, relic, orb, pile and
+    /// count the simulator reads), the fight and turn, the settings that change tabs, and each card in hand with what it shows
+    /// and can do (its numbers, cost, keywords, affliction, plays, whether it can be played now). Not where you aim: a tab that
+    /// needs aim is worked out for every target (decision #55). Aim-dependent tabs would need the target in this key.
+    /// </summary>
+    private long FrameKey(TurnEndModel te, IReadOnlyList<CardModel> hand)
+    {
+        var h = new HashCode();
+        h.Add(te.StateKey);
+        h.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_cs));
+        h.Add(Sts2State.TurnNumber);
+        h.Add(_indirect);
+        h.Add(_ctx.Settings.ProcNumbers);
+        foreach (var card in hand)
+        {
+            h.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(card));
+            h.Add(CardNumbers(card));
+            try { h.Add(card.EnergyCost.GetWithModifiers(CostModifiers.All)); } catch { h.Add(-99); }
+            h.Add(string.Join(",", card.Keywords));
+            h.Add(card.Affliction?.GetType().Name);
+            h.Add(CardIndicatorsFeature.PlayCount(card));
+            h.Add(CanEverPlayNow(card));
+        }
+        var k = h.ToHashCode();
+        return k == 0 ? 1 : k;
+    }
+
+    /// <summary>Last frame's facts and tabs again: kept for the audits (PreviousFacts, LastTabs) as a frame of their own.</summary>
+    private void Reuse(IReadOnlyList<CardModel> hand, ICombatState cs)
+    {
+        foreach (var card in hand) _ctx.Decor.SeenInHand(card);
+        foreach (var kv in PreviousFacts) _facts[kv.Key] = kv.Value;
+        foreach (var (card, tabs) in _reuseTabs)
+        {
+            _lastTabs[card] = (_ctx.Decor.Frame, tabs, cs, Sts2State.TurnNumber);
+            var d = _ctx.Decor.For(card);
+            foreach (var t in tabs) d.AddTab(t);
+        }
+    }
+
+    /// <summary>Dev mode: a frame worked out where the last one's tabs would have been reused; a difference means the key missed something.</summary>
+    private void CheckReuse(List<(CardModel Card, List<TabSpec> Tabs)> now)
+    {
+        foreach (var (card, tabs) in now)
+        {
+            var before = _reuseTabs.FirstOrDefault(x => ReferenceEquals(x.Card, card)).Tabs;
+            if (before == null || before.SequenceEqual(tabs)) continue;
+            var name = card.GetType().Name;
+            if (_reuseWarned.Add(name))
+                ModEntry.Log.Warn($"[proc] reused tabs went stale for {name} with no change the frame key sees: " +
+                    $"reused [{string.Join(", ", before.Select(t => t.Key))}], now [{string.Join(", ", tabs.Select(t => t.Key))}]");
         }
     }
 

@@ -102,7 +102,7 @@ public sealed class CardOverlayRenderer
             }
         }
         Outside.Clear();
-        if (_flatMs > 0) _host.AddLateTime("ethereal-fade", _flatMs);
+        if (_flatMs > 0) _host.AddPartTime("ethereal-fade", _flatMs);
         _flatMs = 0;
 
         // Undo anything on nodes that are no longer decorated hand cards.

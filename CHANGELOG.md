@@ -6,6 +6,18 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.8
+#### Fixed
+- Incoming Damage's end-of-turn block now lists an orb evoked at the end of your turn (Consuming Shadow evoking Frost: its block was counted but not listed), and the forecast check no longer reports that block as missing.
+- The play check no longer reports a Waterfall Giant that was already about to blow as killed by a play that didn't touch it.
+#### Changed
+- Silver Crucible no longer marks treasure rooms on the map: whichever treasure room you enter first has no chest, so no route avoids it.
+- Proc Indicators works out each card's tabs only when something changed, instead of on every frame.
+
+### Main Saves 1.0.20
+#### Changed
+- Shared code: any part of a feature's per-frame work can be timed on its own. No change in the game.
+
 ### Spire QoL 1.21.7
 #### Fixed
 - Ethereal cards fade as one picture: a copy of the card is drawn once at full opacity and that picture is faded, so the art no longer shows through the frame. It's drawn again only when the card changes, and a card it can't copy fades layer by layer as before.

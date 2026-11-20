@@ -561,18 +561,25 @@ public static partial class SimEngine
     /// <param name="mine">Your orb: a teammate's Frost blocks for them, not you.</param>
     private static IEnumerable<SimState> Evoke(SimState s, SimOrb orb, int? thunder = null, int who = -1)
     {
+        // An evoke at your end of turn (Consuming Shadow) is in the breakdown with the orbs' passives: its block is what the forecast
+        // check compares with the block the game gave, its damage what the forecast log lists.
+        var listed = s.Log && s.EndOfTurnNow && who < 0;
         switch (orb.Kind)
         {
             // Thunder hits the evoke's target again if it's still alive.
-            case OrbKind.Lightning: return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = thunder ?? st.P.Thunder; if (t > 0 && e.Alive) { Damage(st, e, t); st.LogFired("ThunderPower", t, who < 0 ? Who.You : Who.Teammate(who)); } });
-            case OrbKind.Frost: return GainBlock(s, orb.Evoke, null, who);
+            case OrbKind.Lightning:
+                if (listed && s.Targetable.Any()) s.EndOfTurnDamage.Add(("Lightning (evoked)", orb.Evoke));
+                return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = thunder ?? st.P.Thunder; if (t > 0 && e.Alive) { Damage(st, e, t); st.LogFired("ThunderPower", t, who < 0 ? Who.You : Who.Teammate(who)); } });
+            case OrbKind.Frost: return GainBlock(s, orb.Evoke, listed ? "Frost (evoked)" : null, who);
             case OrbKind.Dark:
             {
                 var weakest = s.Targetable.OrderBy(e => e.Hp).FirstOrDefault();
+                if (listed && weakest != null) s.EndOfTurnDamage.Add(("Dark (evoked)", orb.Evoke));
                 if (weakest != null) Damage(s, weakest, orb.Evoke);
                 return new[] { s };
             }
             case OrbKind.Glass:
+                if (listed && s.Targetable.Any()) s.EndOfTurnDamage.Add(("Glass (evoked, all)", orb.Evoke));
                 HitAll(s, _ => orb.Evoke);
                 return new[] { s };
             default:

@@ -168,6 +168,7 @@ public static class ModEntry
         host.AddLateFrame(menu.OnFrame);
         Menu.SettingsCatalog.Check(Log);
 
+        Combat.TurnEndModel.PartTime = host.AddPartTime;
         var renderer = new CardOverlayRenderer(host, ctx.Decor);
         host.AddLateFrame(renderer.Render);
 

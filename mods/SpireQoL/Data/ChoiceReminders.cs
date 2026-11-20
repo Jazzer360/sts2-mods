@@ -163,8 +163,6 @@ public static class ChoiceReminders
         new(nameof(LordsParasol), ChoiceEffect.None, Map: PathRoom.Shop),
         new(nameof(MembershipCard), ChoiceEffect.None, Map: PathRoom.Shop),
         new(nameof(TheCourier), ChoiceEffect.None, Map: PathRoom.Shop),
-        // Treasure: the first treasure room has no chest (ShouldGenerateTreasure), crossed until it's passed.
-        new(nameof(SilverCrucible), ChoiceEffect.None, Map: PathRoom.Treasure, MapCrossed: PathRoom.Treasure),
     };
 
     /// <summary>
@@ -187,6 +185,9 @@ public static class ChoiceReminders
         // The map shows it.
         ["FurCoat"] = "marks rooms on the map (the map shows the marks)", ["WingedBoots"] = "travel off the path (the map offers it)",
         ["SpoilsMap"] = "changes the map (the map shows it)",
+        // Whichever treasure room you enter first has no chest (ShouldGenerateTreasure: TreasureRoomsEntered > 1), however many the map
+        // has: no route avoids it, so no mark. (Every path also crosses exactly one: the act map's treasure row, StandardActMap.)
+        ["SilverCrucible"] = "the first treasure room you enter has no chest, whichever it is: no route avoids it",
         // In a fight.
         ["TheHunt"] = "a card's effect in a fight",
         // Shop cards changed like every card you get (ModifyMerchantCardCreationResults): rewards and events too, not shops in particular.

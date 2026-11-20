@@ -86,13 +86,33 @@ public sealed class OverlayHost
 
     public void AddLateFrame(Action action) => _lateFrame.Add(action);
 
-    private readonly List<(string Id, double Ms)> _lateParts = new();
+    private readonly List<(string Id, double Ms)> _parts = new();
 
     /// <summary>
-    /// Time a late-frame callback spent on one part of its work this frame, in ms: shown as its own entry in the frame's
-    /// feature times (the slow-frame log, the dev dashboard) and taken out of "late frame". Call it once per frame per part.
+    /// Time the running feature (or late-frame callback) spent on one part of its work this frame, in ms: shown as its own entry
+    /// in the frame's feature times (the slow-frame log, the dev dashboard) and taken out of the feature's own. Parts with the same
+    /// id add up.
     /// </summary>
-    public void AddLateTime(string id, double ms) => _lateParts.Add((id, ms));
+    public void AddPartTime(string id, double ms)
+    {
+        if (_inFrame) _parts.Add((id, ms)); // outside the frame's run (a game callback) there's no feature to take it from
+    }
+
+    private bool _inFrame;
+
+    /// <summary>A feature's time this frame, less the parts it timed on its own (each its own entry).</summary>
+    private void AddTimed(string id, double ms)
+    {
+        foreach (var (part, partMs) in _parts)
+        {
+            var i = _featureMs.FindIndex(x => x.Id == part);
+            if (i >= 0) _featureMs[i] = (part, _featureMs[i].Ms + partMs);
+            else _featureMs.Add((part, partMs));
+            ms -= partMs;
+        }
+        _parts.Clear();
+        _featureMs.Add((id, Math.Max(0, ms)));
+    }
 
     internal void RegisterWidget(MovableWidget widget)
     {
@@ -203,7 +223,10 @@ public sealed class OverlayHost
         var prevModMs = _lastModMs;
         _lastFrameStartUs = start;
         _featureMs.Clear();
-        RunFrame();
+        _parts.Clear();
+        _inFrame = true;
+        try { RunFrame(); }
+        finally { _inFrame = false; }
         var modMs = (Godot.Time.GetTicksUsec() - start) / 1000.0;
         _lastModMs = modMs;
         try { FrameMeasured?.Invoke(modMs, gapMs); } catch { /* diagnostics only */ }
@@ -274,7 +297,7 @@ public sealed class OverlayHost
                     _log.Error($"[{id}] turned off after repeated errors");
                 }
             }
-            _featureMs.Add((id, (Godot.Time.GetTicksUsec() - featureStart) / 1000.0));
+            AddTimed(id, (Godot.Time.GetTicksUsec() - featureStart) / 1000.0);
         }
 
         _running = null;
@@ -298,15 +321,7 @@ public sealed class OverlayHost
             }
         }
 
-        // Parts of the late frame's work timed on their own (AddLateTime) are their own entries, taken out of "late frame".
-        var lateMs = (Godot.Time.GetTicksUsec() - lateStart) / 1000.0;
-        foreach (var (id, ms) in _lateParts)
-        {
-            _featureMs.Add((id, ms));
-            lateMs -= ms;
-        }
-        _lateParts.Clear();
-        _featureMs.Add(("late frame", Math.Max(0, lateMs)));
+        AddTimed("late frame", (Godot.Time.GetTicksUsec() - lateStart) / 1000.0);
         var layoutStart = Godot.Time.GetTicksUsec();
         if (WidgetRoot != null)
         {
