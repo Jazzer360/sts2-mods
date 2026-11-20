@@ -125,6 +125,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: none;
 @media (min-width: 1500px) {
   .ov { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); height: calc(100vh - 128px); min-height: 720px; }
   .ov .check { min-height: 0; }
+  .ov .check .body { min-height: 0; }
   #chk-pred, #chk-perf, #chk-log, #chk-launch { grid-column: span 2; }
   #chk-perf { order: 2; } #chk-calc { order: 3; }
 }
@@ -199,7 +200,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
         <div class="body"><div class="fill" id="ovCards"></div></div>
         <div class="causes"></div><div class="links"><a href="#" data-go="searches">Searches →</a></div></div>
       <div class="card check" id="chk-perf"><h3>Is the game running smoothly?</h3>
-        <p class="hint">The mod's own time per frame over the last 5 minutes: a busy frame (95th percentile, blue) and the slowest (red). A 60 fps frame has 16.7 ms for the game and the mod together (dashed lines at 16.7 and 33.3 ms); the mod normally stays around 1–2 ms, and a frame over 30 ms is a stutter you can see. Hitches: gaps over 50 ms between frames while the mod's share was small, the game's own. Below: the features that cost the most.</p>
+        <p class="hint">The mod's own time per frame over the last 5 minutes: a busy frame (95th percentile, blue) and the slowest (red). A 60 fps frame has 16.7 ms for the game and the mod together (dashed lines at 16.7 and 33.3 ms); the mod normally stays around 1–2 ms, and a frame over 30 ms is a stutter you can see. The budget: up to 2 stutters in 5 minutes stays green (amber number), more turns the panel red. Hitches: gaps over 50 ms between frames while the mod's share was small, the game's own; only those during a fight count, since the game loading a scene (the launch, menus, the map, a room, a fight's first seconds) always hitches. The launch's first 20 s don't count against the mod either (its code compiling on first use). Below: the features that cost the most.</p>
         <div class="verdict"></div><div class="stats"></div>
         <div class="body"><canvas id="sparkFrames" height="150"></canvas></div>
         <div class="causes"></div><div class="links"><a href="#" data-go="perf">Performance →</a></div></div>
@@ -364,6 +365,24 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
 <script>
 "use strict";
 // ============================================================== the model: everything read from the stream and state
+/** Stutters from the mod (frames where it took over 30 ms) allowed in 5 minutes before Performance turns red: an occasional one (a first play compiling, a big fight's first search) is tolerated, a pattern isn't. */
+const STUTTER_BUDGET = 2;
+/** Loading the game: the launch's first seconds, where the mod's first frames compile its code and the game loads its menus. A stutter there is a one-off, not something to fix. */
+const WARMUP_S = 20;
+/** A fight's first seconds: the game loading its room. */
+const FIGHT_LOAD_S = 3;
+const warmingUp = (t) => t < WARMUP_S;
+/** Whether the game was loading a scene at t: the launch's warm-up, anywhere outside a fight (menus, the map, rooms, events, rewards: scene changes the game makes) or a fight's first seconds.
+ *  The game's own hitches there are its loading, nothing the mod can do about; they're shown but don't count against the verdicts. Hitches inside a fight still do (a full memory clean-up the mod's allocations set off, say). */
+function loadingAt(t) {
+  if (warmingUp(t)) return true;
+  const c = M.combats.findLast((c) => c.t <= t);
+  return !c || (c.ended != null && c.ended <= t) || t - c.t < FIGHT_LOAD_S;
+}
+/** A hitch from the game: a gap over 50 ms between frames while the mod's share was small. */
+const isHitch = (r) => r.gapMax > 50 && r.modMax < 30;
+/** The mod's slow-frame warning from its launch's warm-up (its code compiling on first use): expected, not a warning to act on. */
+const warmupWarning = (l) => l.level === "WARN" && /^\[perf\] slow frame/.test(l.text) && warmingUp(l.t);
 const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
   rollups: [], searches: [], checks: [], logs: [], waits: [], unsettled: [], saved: [],
@@ -389,6 +408,7 @@ function ingest(e) {
       break;
     }
     case "combat-started": M.combat++; M.combats.push({ ...e, n: M.combat }); break;
+    case "combat-ended": if (M.combats.length) M.combats.at(-1).ended = e.t; break;
     case "turn-started": turnRec(e.turn); break;
     case "check-done": case "check-skipped": {
       M.checks.push(e);
@@ -874,9 +894,9 @@ async function lastLaunch() {
 function renderOverview() {
   const s = M.state?.session, r1 = since(M.rollups, 60), r5 = since(M.rollups, 300), s5 = since(M.searches, 300), w5 = since(M.waits, 300);
   const mism = M.checks.filter((c) => c.kind === "check-done" && !c.matched).length;
-  const p95 = quant(r1.map((r) => r.modP95), 0.5), slow5 = r5.reduce((a, r) => a + r.slow, 0);
+  const p95 = quant(r1.map((r) => r.modP95), 0.5), slow5 = r5.filter((r) => !warmingUp(r.t)).reduce((a, r) => a + r.slow, 0);
   const caps5 = s5.filter((x) => x.cap).length, missed = w5.filter((x) => x.missed).length;
-  const stalls5 = r5.filter((r) => r.gapMax > 50 && r.modMax < 30).length;
+  const stalls5 = r5.filter((r) => isHitch(r) && !loadingAt(r.t)).length, loads5 = r5.filter((r) => isHitch(r) && loadingAt(r.t)).length;
   // ---- predictions (Turn)
   {
     const turns = s?.turns ?? 0, unchecked = s?.unchecked ?? 0;
@@ -918,17 +938,18 @@ function renderOverview() {
   }
   // ---- performance (frames and the game's own hitches)
   {
-    const slowest = Math.max(0, ...r5.map((r) => r.modMax));
+    const slowest = Math.max(0, ...r5.filter((r) => !warmingUp(r.t)).map((r) => r.modMax));
     const stats = [[`${fmt(p95, 2)} ms`, "busy frame", p95 > 4 ? "warn" : "good"], [`${fmt(slowest, 1)} ms`, "slowest (5 min)", slowest > 30 ? "bad" : slowest > 16.7 ? "warn" : ""],
-      [fmt(slow5, 0), "stutters from the mod", slow5 ? "bad" : "good"], [fmt(stalls5, 0), "hitches from the game", stalls5 > 3 ? "warn" : "good"]];
+      [`${fmt(slow5, 0)} / ${STUTTER_BUDGET}`, "stutters from the mod (budget)", slow5 > STUTTER_BUDGET ? "bad" : slow5 ? "warn" : "good"], [fmt(stalls5, 0), "hitches in a fight", stalls5 > 3 ? "warn" : "good"],
+      [fmt(loads5, 0), "while loading (expected)"]];
     const feat = {};
     for (const x of r5) for (const [k, v] of Object.entries(x.featureMean || {})) feat[k] = (feat[k] || 0) + v;
     const causes = top3(Object.entries(feat).sort((a, b) => b[1] - a[1]), ([k, v]) => `${esc(k)} <b>${fmt(v / Math.max(1, r5.length), 2)} ms</b>`);
     const causeLine = causes ? `Costs the most: ${causes}` : "";
     if (!r1.length) setCheck("chk-perf", "", "No frames measured yet.", stats, "");
-    else if (slow5) setCheck("chk-perf", "bad", `${slow5} stutter(s) from the mod (frames over 30 ms) in 5 minutes.`, stats, causeLine);
-    else if (p95 > 4 || stalls5 > 3) setCheck("chk-perf", "warn", p95 > 4 ? `The mod is heavier than usual: ${fmt(p95, 1)} ms in a busy frame.` : `${stalls5} hitches from the game itself in 5 minutes.`, stats, causeLine);
-    else setCheck("chk-perf", "good", `Smooth: the mod takes ${fmt(p95, 1)} ms in a busy frame.`, stats, causeLine);
+    else if (slow5 > STUTTER_BUDGET) setCheck("chk-perf", "bad", `${slow5} stutters from the mod (frames over 30 ms) in 5 minutes: over the budget of ${STUTTER_BUDGET}.`, stats, causeLine);
+    else if (p95 > 4 || stalls5 > 3) setCheck("chk-perf", "warn", p95 > 4 ? `The mod is heavier than usual: ${fmt(p95, 1)} ms in a busy frame.` : `${stalls5} hitches from the game itself during fights in 5 minutes.`, stats, causeLine);
+    else setCheck("chk-perf", "good", `Smooth: the mod takes ${fmt(p95, 1)} ms in a busy frame${slow5 ? `; ${slow5} stutter(s), within the budget` : ""}.`, stats, causeLine);
     lines("sparkFrames", [{ name: "busy frame (p95)", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }],
       { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
   }
@@ -938,8 +959,8 @@ function renderOverview() {
     for (const c of M.checks) if (c.kind === "check-done" && !c.matched) items.push({ t: c.t, cls: "bad", text: `${c.audit === "forecast" ? "Enemy turn" : "Play"} didn't match: <b>${esc(c.detail)}</b> (turn ${c.turn})` });
     for (const x of M.searches) if (x.cap) items.push({ t: x.t, cls: "warn", text: `Search stopped at <b>${esc(x.cap)}</b>: ${esc(x.label)}` });
     for (const r of M.saved) items.push({ t: r.t, cls: "bad", text: `Report saved: ${esc(r.title)}` });
-    for (const l of M.logs) if (l.level !== "INFO" && !/^\[audit\]/.test(l.text)) items.push({ t: l.t, cls: l.level === "ERROR" ? "bad" : "warn", text: esc(l.text.slice(0, 160)) });
-    for (const r of M.rollups) if (r.modMax > 50) items.push({ t: r.t, cls: "bad", text: `Slow frame: the mod took ${fmt(r.modMax, 0)} ms (${esc(topFeature(r))})` });
+    for (const l of M.logs) if (l.level !== "INFO" && !/^\[audit\]/.test(l.text) && !warmupWarning(l)) items.push({ t: l.t, cls: l.level === "ERROR" ? "bad" : "warn", text: esc(l.text.slice(0, 160)) });
+    for (const r of M.rollups) if (r.modMax > 50 && !warmingUp(r.t)) items.push({ t: r.t, cls: "bad", text: `Slow frame: the mod took ${fmt(r.modMax, 0)} ms (${esc(topFeature(r))})` });
     items.sort((a, b) => b.t - a.t);
     setCheck("chk-attn", items.some((i) => i.cls === "bad") ? "bad" : items.length ? "warn" : "good", items.length ? `${items.length} thing(s) this launch.` : "Nothing needs a look.");
     setHTML($("attn"), items.length ? items.slice(0, 80).map((i) => `<li><span class="pill ${i.cls}">${i.cls === "bad" ? "!" : "·"}</span><span style="flex:1">${i.text}</span><time>${ago(i.t)}</time></li>`).join("") : `<li class="empty">All clear.</li>`);
@@ -962,9 +983,9 @@ function renderOverview() {
   }
   // ---- the mod's log
   {
-    const warns = M.logs.filter((l) => l.level === "WARN"), errs = M.logs.filter((l) => l.level === "ERROR");
+    const warns = M.logs.filter((l) => l.level === "WARN" && !warmupWarning(l)), errs = M.logs.filter((l) => l.level === "ERROR"), warm = M.logs.filter(warmupWarning).length;
     setCheck("chk-log", errs.length ? "bad" : warns.length ? "warn" : "good", errs.length ? `${errs.length} error(s) in the log this launch.` : warns.length ? `${warns.length} warning(s) this launch.` : "No warnings or errors.",
-      [[fmt(errs.length, 0), "errors", errs.length ? "bad" : "good"], [fmt(warns.length, 0), "warnings", warns.length ? "warn" : "good"], [fmt(M.logs.length, 0), "lines"]]);
+      [[fmt(errs.length, 0), "errors", errs.length ? "bad" : "good"], [fmt(warns.length, 0), "warnings", warns.length ? "warn" : "good"], ...(warm ? [[fmt(warm, 0), "slow frames while loading (expected)"]] : []), [fmt(M.logs.length, 0), "lines"]]);
     const shown = M.logs.filter((l) => l.level !== "INFO").slice(-8).reverse();
     setHTML($("ovLog"), shown.length ? shown.map((l) => `<div class="${l.level}"><span class="faint">${clock(l.t)}</span> ${esc(l.text.slice(0, 200))}</div>`).join("") : `<div class="empty">Nothing but info lines.</div>`);
   }
@@ -1022,6 +1043,13 @@ async function saveDialogNote() {
 document.addEventListener("click", (e) => { if (e.target.closest("[data-note]")) { e.preventDefault(); openNote(); } });
 $("noteSave").addEventListener("click", saveDialogNote);
 $("noteCancel").addEventListener("click", () => $("noteDialog").close());
+// a click on the backdrop closes the dialog (both press and release outside, so a text selection dragged out doesn't)
+{
+  const d = $("noteDialog"), outside = (e) => { const r = d.getBoundingClientRect(); return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom; };
+  let downOutside = false;
+  d.addEventListener("mousedown", (e) => { downOutside = e.target === d && outside(e); });
+  d.addEventListener("click", (e) => { if (downOutside && e.target === d && outside(e)) d.close(); downOutside = false; });
+}
 $("noteText").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveDialogNote(); });
 const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${fmt(v, 0)} ms`).join(", ");
 
@@ -1108,12 +1136,13 @@ function renderPerf() {
   const win = +$("perfWindow").value, r = since(M.rollups, win), colors = seriesColors();
   const p95s = r.map((x) => x.modP95), frames = r.reduce((a, x) => a + x.frames, 0), secs = r.reduce((a, x) => a + x.seconds, 0);
   const waits = since(M.waits, win), uns = since(M.unsettled, win);
-  const busy = quant(p95s, 0.5), slow = r.reduce((a, x) => a + x.slow, 0), stalls = r.filter((x) => x.gapMax > 50 && x.modMax < 30).length;
+  const busy = quant(p95s, 0.5), slow = r.filter((x) => !warmingUp(x.t)).reduce((a, x) => a + x.slow, 0), stalls = r.filter((x) => isHitch(x) && !loadingAt(x.t)).length;
+  const loads = r.filter((x) => isHitch(x) && loadingAt(x.t)).length;
   const gen2 = r.reduce((a, x) => a + x.gen2, 0);
   setHTML($("perfTiles"), [
     tile("The mod's share of a frame", `${fmt(busy, 2)} ms`, `in a busy (95th-percentile) frame: ${pct(busy, 16.7)} of a 60 fps frame · ${fmt(secs ? frames / secs : 0, 0)} fps now`, busy > 8 ? "bad" : busy > 4 ? "warn" : "good"),
-    tile("Slow frames from the mod", fmt(slow, 0), "frames where the mod alone took over 30 ms (a visible stutter)", slow ? "bad" : "good"),
-    tile("Hitches from the game", fmt(stalls, 0), "gaps over 50 ms between frames while the mod's share was small", stalls > 3 ? "warn" : "good"),
+    tile("Slow frames from the mod", fmt(slow, 0), `frames where the mod alone took over 30 ms (a visible stutter), after the launch's first ${WARMUP_S} s; up to ${STUTTER_BUDGET} in 5 minutes is the budget`, slow > STUTTER_BUDGET ? "bad" : slow ? "warn" : "good"),
+    tile("Hitches from the game", fmt(stalls, 0), `gaps over 50 ms between frames while the mod's share was small, during fights; ${fmt(loads, 0)} more while the game loaded a scene (expected)`, stalls > 3 ? "warn" : "good"),
     tile("Full memory clean-ups", fmt(gen2, 0), `${fmt(r.reduce((a, x) => a + x.gcPauseMs, 0), 0)} ms paused in all (the whole game)`, gen2 > 5 ? "warn" : "good"),
   ].join(""));
   lines("pfFrame", [{ name: "typical frame", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "busy frame (p95)", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
