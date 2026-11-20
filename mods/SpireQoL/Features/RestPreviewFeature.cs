@@ -271,6 +271,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
             var what = $"rest: HP {c.CurrentHp}/{c.MaxHp}, predicted {want.Hp}/{want.Max}";
             var ok = c.CurrentHp == want.Hp && c.MaxHp == want.Max;
             ModEntry.Log.Info($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
+            Telemetry.Audits.Done(Telemetry.Audits.Rest, ok, "rest-heal");
             if (!ok) Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "HP after resting didn't match the preview", new[] { "rest-heal" }, what);
             _pendingRest = null;
         }
@@ -286,11 +287,18 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         }
         if (_bossPredicted is not { } boss) return;
         if (!Sts2State.InCombat) return;
-        if (me.RunState.CurrentRoom?.RoomType != RoomType.Boss) { _bossPredicted = null; return; }
+        if (me.RunState.CurrentRoom?.RoomType != RoomType.Boss)
+        {
+            // A fight that isn't the boss came first: the prediction was for the boss's start, so nothing to hold it to.
+            Telemetry.Audits.Skipped(Telemetry.Audits.Rest, "boss start: another fight came first", "rest-boss");
+            _bossPredicted = null;
+            return;
+        }
         // BeforeCombatStart has run by the time your first turn's cards are dealt; nothing hits you before you act.
         if (++_bossFrames < 45) return;
         var line = $"boss start: HP {c.CurrentHp}/{c.MaxHp}, predicted {boss}";
         ModEntry.Log.Info($"[audit] [rest] {line}{(c.CurrentHp == boss ? ", matched" : "")}");
+        Telemetry.Audits.Done(Telemetry.Audits.Rest, c.CurrentHp == boss, "rest-boss");
         if (c.CurrentHp != boss)
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "HP at the boss fight's start didn't match the rest preview", new[] { "rest-boss" }, line);
         _bossPredicted = null;
@@ -303,7 +311,13 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     private void CheckMend()
     {
         if (_pendingMend is not { } pending) { _mendFrames = 0; return; }
-        if (NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) { _pendingMend = null; return; }
+        if (NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room))
+        {
+            // Left the rest site before the Mend's heal settled on anyone: nothing seen to hold the preview to.
+            Telemetry.Audits.Skipped(Telemetry.Audits.Rest, "mend: left the rest site before the heal landed", "rest-mend");
+            _pendingMend = null;
+            return;
+        }
         var changed = pending.FirstOrDefault(kv => kv.Key.Creature.CurrentHp != kv.Value.Hp || kv.Key.Creature.MaxHp != kv.Value.Max);
         if (changed.Key == null) { _mendFrames = 0; return; }
         if (++_mendFrames < 90) return;
@@ -312,6 +326,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         var what = $"mend: teammate HP {c.CurrentHp}/{c.MaxHp}, predicted {want.WantHp}/{want.WantMax}";
         var ok = c.CurrentHp == want.WantHp && c.MaxHp == want.WantMax;
         ModEntry.Log.Info($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
+        Telemetry.Audits.Done(Telemetry.Audits.Rest, ok, "rest-mend");
         if (!ok) Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "A teammate's HP after Mend didn't match the preview", new[] { "rest-mend" }, what);
         _pendingMend = null;
     }

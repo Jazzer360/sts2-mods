@@ -501,7 +501,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         {
             var start = te.State;
             var name = card.GetType().Name;
-            task = new SimBatch(targets.Select(t => SimJob.Start(SimExploration.Of(start, inputs.PlayByTarget[t]), $"{name} (target {t})")).ToArray());
+            task = new SimBatch(targets.Select(t => SimJob.Start(SimSearch.Of(start, inputs.PlayByTarget[t]), $"{name} (target {t})")).ToArray());
             if (!_noCache) _simCache[cacheKey] = task;
             else _uncached.Add(task);
         }

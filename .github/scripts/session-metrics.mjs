@@ -35,6 +35,8 @@ export function emptyTotals() {
     sessions: 0, ended: {}, multiplayer: 0, otherMods: 0, minutes: 0, cores: {},
     combats: 0, turns: 0, clean: 0, unchecked: 0, capped: 0, mismatched: 0,
     forecast: audit(), plays: audit(),
+    // The audits outside the turns (intent, potion, reminders, rest), by name: summaries from 1.21.10 on.
+    others: {},
     searches: { count: 0, background: 0, cancelled: 0, copies: 0, cancelledCopies: 0, maxHeld: 0, slowestMs: 0, slowest: "", caps: {}, ms: timing() },
     waits: { missed: 0, ms: timing() },
     unsettled: timing(),
@@ -76,6 +78,8 @@ export function addSummary(t, s) {
   for (const k of ["combats", "turns", "clean", "unchecked", "capped", "mismatched"]) t[k] += num(s[k]);
   addAudit(t.forecast, s.forecast);
   addAudit(t.plays, s.plays);
+  t.others ||= {}; // a version's totals kept before the field existed
+  for (const [name, a] of Object.entries(s.others || {})) addAudit(t.others[name] ||= audit(), a);
   const q = s.searches || {};
   for (const k of ["count", "background", "cancelled", "copies", "cancelledCopies"]) t.searches[k] += num(q[k]);
   t.searches.maxHeld = Math.max(t.searches.maxHeld, num(q.maxHeld));
@@ -101,7 +105,7 @@ export function prune(state, now = Date.now()) {
   versions.slice(0, KEEP_VERSIONS).forEach((v, i) => {
     const t = state.versions[v];
     const n = i < FULL_REASON_VERSIONS ? KEEP_REASONS : 5;
-    for (const a of [t.forecast, t.plays]) { a.skipReasons = top(a.skipReasons, n); a.mismatches = top(a.mismatches, n); }
+    for (const a of [t.forecast, t.plays, ...Object.values(t.others || {})]) { a.skipReasons = top(a.skipReasons, n); a.mismatches = top(a.mismatches, n); }
     t.searches.caps = top(t.searches.caps, n);
     t.reports = top(t.reports, n);
   });
@@ -184,6 +188,7 @@ export function render(state, now = new Date()) {
     ["Mismatched turns", (t) => pct(t.mismatched, t.turns)],
     ["Forecasts matched / checked (skipped)", (t) => `${t.forecast.matched} / ${t.forecast.checked} (${t.forecast.skipped})`],
     ["Plays matched / checked (checks skipped)", (t) => `${t.plays.matched} / ${t.plays.checked} (${t.plays.skipped})`],
+    ["Other checks matched / checked (skipped)", (t) => Object.entries(t.others || {}).sort().map(([k, a]) => `${k} ${a.matched} / ${a.checked} (${a.skipped})`).join(", ") || "–"],
     ["Searches: background / cancelled", (t) => `${pct(t.searches.background, t.searches.count)} / ${pct(t.searches.cancelled, t.searches.count)}`],
     ["Search time p95", (t) => meanP95(t.searches.ms)],
     ["Slowest search", (t) => `${ms(t.searches.slowestMs)}${t.searches.slowest ? ` (${t.searches.slowest.replace(/\|/g, "/").slice(0, 40)})` : ""}`],
@@ -207,6 +212,10 @@ export function render(state, now = new Date()) {
   b += `| Play checks skipped | ${list(t.plays.skipReasons, 12)} |\n`;
   b += `| Forecast mismatches | ${list(t.forecast.mismatches, 12)} |\n`;
   b += `| Play mismatches | ${list(t.plays.mismatches, 12)} |\n`;
+  for (const [k, a] of Object.entries(t.others || {}).sort()) {
+    if (a.skipped) b += `| ${k} checks skipped | ${list(a.skipReasons, 12)} |\n`;
+    if (a.checked > a.matched) b += `| ${k} mismatches | ${list(a.mismatches, 12)} |\n`;
+  }
   b += `| Reports sent | ${list(t.reports, 12)} |\n`;
   b += `\n<!-- session-metrics-state\n${encodeState(state)}\n-->\n`;
   return b;

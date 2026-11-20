@@ -28,9 +28,9 @@ public class SimJobTests
     [Fact]
     public async Task ABackgroundJobEndsWithTheWholeOutcome()
     {
-        var whole = SimExploration.Of(Heavy()).ExploreAll();
+        var whole = SimSearch.Of(Heavy()).SearchAll();
         // A first budget of one copy: it waits for a background turn at its second step, then finishes there.
-        var job = SimJob.Start(SimExploration.Of(Heavy()), "test", firstBudget: 1);
+        var job = SimJob.Start(SimSearch.Of(Heavy()), "test", firstBudget: 1);
         await job.Ready.WaitAsync(TimeSpan.FromSeconds(30));
         Assert.True(job.Finished);
         Assert.False(job.Latest!.Truncated);

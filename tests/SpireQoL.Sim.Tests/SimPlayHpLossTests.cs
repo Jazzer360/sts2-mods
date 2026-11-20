@@ -118,13 +118,4 @@ public class SimPlayHpLossTests
         Assert.Equal(0, o.PlayHpLossesMin);
         Assert.Contains(o.Branches, b => b.PlayHpLosses > 0);
     }
-
-    [Fact]
-    public void QueuedPlaysBeforeItDontCount()
-    {
-        // The HP cost of a play still resolving isn't this card's.
-        var s = new SimState { Enemies = { E(1, 50) } };
-        var o = SimEngine.Run(s, new[] { Cost(3) }, Attack(1, 6));
-        Assert.Equal(0, o.PlayHpLossesMin);
-    }
 }

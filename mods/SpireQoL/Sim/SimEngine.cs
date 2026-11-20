@@ -40,7 +40,7 @@ public sealed class SimOutcome
     /// before it acts), so the range's floor is the deaths already settled.</remarks>
     public SimChance DeadChanceRange(int id) => Chance(b => b.Enemy(id) is { DiedBeforeActing: true } || (Truncated && !b.EnemyTurnNow && b.Enemy(id) is { Alive: false, StartedAlive: true }), lasting: true);
 
-    /// <summary>The chance the enemy turn kills you (nothing left to save you). An unexplored outcome can only if the safe run does.</summary>
+    /// <summary>The chance the enemy turn kills you (nothing left to save you).</summary>
     public SimChance YouDieChance() => Chance(b => b.Died);
 
     /// <summary>
@@ -139,19 +139,10 @@ public static partial class SimEngine
     /// <summary>OrbQueue.maxCapacity: OrbCmd.AddSlots stops here.</summary>
     public const int MaxOrbSlots = 10;
 
-    public static SimOutcome Run(SimState start, SimPlay? play = null) => Run(start, null, play);
+    /// <summary>This card (none: just end the turn), then the end of the turn and the enemy turn, from the board as it is (decision #28).</summary>
+    public static SimOutcome Run(SimState start, SimPlay? play = null) => Run(start, play == null ? null : SimScript.Of(play), null);
 
-    public static SimOutcome Run(SimState start, SimScript play) => Run(start, (IReadOnlyList<SimScript>?)null, play);
-
-    public static SimOutcome Run(SimState start, IReadOnlyList<SimPlay>? leadIn, SimPlay? play) =>
-        Run(start, leadIn?.Select(SimScript.Of).ToList(), play == null ? null : SimScript.Of(play));
-
-    /// <summary>
-    /// The plays still resolving or queued (leadIn, in resolution order) first, then this card, then the
-    /// end of the turn and the enemy turn (decision #27). The card's own results (kills, block breaks, block
-    /// gains, reactions) are measured from each branch's state after the lead-in.
-    /// </summary>
-    public static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play) => Run(start, leadIn, play, null);
+    public static SimOutcome Run(SimState start, SimScript play) => Run(start, play, null);
 
     /// <summary>
     /// One search (decision #107): every step advances all branches together, and branches that reach the same state merge
@@ -159,7 +150,7 @@ public static partial class SimEngine
     /// the memory cap (SimWork.Hold): past it the search stops where it is, and the outcome is Truncated. <paramref name="work"/>
     /// carries the cancellation and the background gate (SimJob).
     /// </summary>
-    internal static SimOutcome Run(SimState start, IReadOnlyList<SimScript>? leadIn, SimScript? play, SimWork? work)
+    internal static SimOutcome Run(SimState start, SimScript? play, SimWork? work)
     {
         work ??= new SimWork();
         var first = start.Clone();
@@ -171,22 +162,6 @@ public static partial class SimEngine
         {
             try
             {
-                if (leadIn is { Count: > 0 })
-                {
-                    foreach (var queued in leadIn) RunScript(b, queued);
-                    b.Do(s =>
-                    {
-                        s.PlayBase = new SimState.PlayBaseline(
-                            s.Enemies.Where(e => e.Alive).Select(e => e.Id).ToHashSet(),
-                            s.Enemies.Where(e => e.BlockBroken).Select(e => e.Id).ToHashSet(),
-                            s.P.BlockGains);
-                        foreach (var e in s.Enemies) e.ReactedWithBlock = false;
-                        s.PlayBiggestHit = 0;
-                        s.PlayHpReached = s.PlayHpLosses = s.PlayHpLost = 0;
-                        s.Fired = s.FiredAny = PowerSet.Empty;
-                        s.FirstHits = PowerSet.Empty;
-                    });
-                }
                 if (play != null) RunScript(b, play);
                 // The play is over in every branch: its own results are exact from here, even if the end of turn hits the cap.
                 outcome = PlayResults(b.States, start, aliveAtStart, complete: true);
@@ -223,13 +198,13 @@ public static partial class SimEngine
     private static SimOutcome PlayResults(List<SimState> states, SimState start, List<int> aliveAtStart, bool complete)
     {
         // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
-        var killedPerBranch = states.Select(s => (s.PlayBase?.Alive ?? (IEnumerable<int>)aliveAtStart).Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
+        var killedPerBranch = states.Select(s => aliveAtStart.Where(id => s.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
         // Enemies that gained block from Curl Up, Sneaky or Skittish because of the play, in some branch.
         var reacted = states.SelectMany(s => s.Enemies.Where(e => e.ReactedWithBlock).Select(e => e.Id)).ToHashSet();
         // Some enemy's block broken by the play, in every branch (Hand Drill).
-        var breaksBlock = complete && states.All(s => s.Enemies.Any(e => e.BlockBroken && !(s.PlayBase?.Broken.Contains(e.Id) ?? start.Enemy(e.Id) is not { BlockBroken: false })));
+        var breaksBlock = complete && states.All(s => s.Enemies.Any(e => e.BlockBroken && start.Enemy(e.Id) is { BlockBroken: false }));
         // Block gains during the play (each sets off Juggernaut).
-        var gains = states.Select(s => s.P.BlockGains - (s.PlayBase?.BlockGains ?? start.P.BlockGains)).ToList();
+        var gains = states.Select(s => s.P.BlockGains - start.P.BlockGains).ToList();
         int PlayMin(Func<SimState, int> f) => !complete || states.Count == 0 ? 0 : states.Min(f);
         // The play's log over its branches: in every branch (each merged one keeps its smallest), and in some branch.
         var firedEvery = !complete || states.Count == 0 ? PowerSet.Empty
@@ -732,17 +707,11 @@ public static partial class SimEngine
         branches = Detached(b.States);
     }
 
-    public static void ApplyPlayTo(SimState s, SimPlay play, out List<SimState> branches, out bool truncated) => ApplyPlayTo(s, null, play, out branches, out truncated);
-
-    /// <summary>The lead-in plays, then this play (the state right after it resolves).</summary>
-    public static void ApplyPlayTo(SimState s, IReadOnlyList<SimPlay>? leadIn, SimPlay play, out List<SimState> branches, out bool truncated)
+    /// <summary>This play on its own: the state right after it resolves, per branch.</summary>
+    public static void ApplyPlayTo(SimState s, SimPlay play, out List<SimState> branches, out bool truncated)
     {
         var b = Scratch(s, out var work);
-        truncated = Capped(work, () =>
-        {
-            if (leadIn != null) foreach (var queued in leadIn) ApplyPlay(b, queued);
-            ApplyPlay(b, play);
-        });
+        truncated = Capped(work, () => ApplyPlay(b, play));
         branches = Detached(b.States);
     }
 

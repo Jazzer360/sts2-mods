@@ -303,8 +303,8 @@ public sealed class PlayFacts
     /// </summary>
     public bool SimPending { get; set; }
     /// <summary>
-    /// Its tabs came from simulations not every outcome of which was explored yet (decision #87): what's shown carries the ?, and
-    /// an unexplored outcome may be what happens. The audit doesn't report the simulator's tabs then; it counts the skip.
+    /// Its tabs came from a simulation stopped at a cap (decision #107): what's shown carries the ?, and an outcome it never reached
+    /// may be what happens. The audit doesn't report the simulator's tabs then; it counts the skip.
     /// </summary>
     public bool SimIncomplete { get; set; }
 

@@ -1,8 +1,9 @@
 namespace SpireQoL.Sim;
 
 /// <summary>
-/// A chance from the simulator (SimOutcome.Chance, decision #87): Low and High are equal once every outcome is explored; while
-/// exploring, Low counts what's explored and High adds what isn't. Seen: some explored outcome has it.
+/// A chance from the simulator (SimOutcome.Chance, decision #88): Low and High are equal when the search finished. A search stopped
+/// at a cap, or with a branch not modelled (decisions #107, #92), gives a range: Low counts the outcomes it settled, High adds every
+/// one it didn't. Seen: some settled outcome has it.
 /// </summary>
 public readonly record struct SimChance(double Low, double High, bool Seen)
 {

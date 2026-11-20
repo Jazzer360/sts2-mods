@@ -121,7 +121,7 @@ public sealed class TurnEndModel
             if (job is { Pinned: false }) job.Cancel();
             var logged = state.Clone();
             logged.Log = true; // the display needs the breakdown; card simulations run without it
-            job = SimJob.Start(SimExploration.Of(logged), label);
+            job = SimJob.Start(SimSearch.Of(logged), label);
             lastKey = key;
         }
         return job;

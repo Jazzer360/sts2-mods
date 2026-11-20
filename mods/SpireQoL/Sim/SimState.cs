@@ -577,12 +577,6 @@ public sealed class SimState
     private bool _teammatesShared;
 
     /// <summary>
-    /// After a lead-in (plays still resolving or queued, decision #27): what this branch looked like when the
-    /// card itself starts, so its own kills, block breaks and block gains are measured from there.
-    /// </summary>
-    internal PlayBaseline? PlayBase;
-
-    /// <summary>
     /// The values of relics and powers (their DynamicVars), read from the game: "owner:Name:Var" â†’ value. Shared by every branch
     /// and never changed; models read them with SimEngine.Var.
     /// </summary>
@@ -626,8 +620,6 @@ public sealed class SimState
 
     /// <summary>The run's work counter (SimEngine.Run sets it; every copy of the state shares it).</summary>
     internal SimWork? Work;
-
-    internal sealed record PlayBaseline(HashSet<int> Alive, HashSet<int> Broken, int BlockGains);
 
     /// <summary>Teammate k, to change: copied for this branch first if it's shared.</summary>
     public SimPlayer MutableTeammate(int k)

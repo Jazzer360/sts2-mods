@@ -33,8 +33,9 @@ public sealed record CombatEnded : DevEvent;
 public sealed record TurnStarted(int Turn) : DevEvent;
 
 /// <summary>
-/// An audit compared a prediction with what happened. <paramref name="Audit"/>: "forecast" (the enemy turn after your turn) or
-/// "play" (a card's tabs and state after it). <paramref name="Detail"/>: the card, or the first issue's kind when it didn't match.
+/// An audit compared a prediction with what happened. <paramref name="Audit"/>: one of <see cref="Audits"/>. <paramref name="Turn"/>:
+/// your turn, for the per-turn audits (0 for the others). <paramref name="Detail"/>: what was checked (the card, the potion), or the
+/// first issue's kind when it didn't match.
 /// </summary>
 public sealed record CheckDone(string Audit, int Turn, bool Matched, string? Detail) : DevEvent;
 
@@ -76,6 +77,34 @@ public sealed record ReportSent(string What, string EventId) : DevEvent;
 /// The stream (decision #108): audits, the simulator and the reporter post here; the session counter (and the dev dashboard's file,
 /// later) read it. Subscribers run on the poster's thread (a worker's, for searches), so they must be quick and thread-safe.
 /// </summary>
+/// <summary>
+/// The audits that post checks (decision #92, rule 1: every prediction is paired with its outcome, every skip counted). The per-turn
+/// two decide how each turn of a fight is classified (SessionStats); the others are counted on their own, outside the turns.
+/// </summary>
+public static class Audits
+{
+    /// <summary>The enemy turn after your turn, against Incoming Damage, the Death Skull and the forecast behind them.</summary>
+    public const string Forecast = "forecast";
+    /// <summary>A card's play: its tabs, and the state after it.</summary>
+    public const string Play = "play";
+    /// <summary>Intent Forecast's next turn, each time the game rolls an enemy's move.</summary>
+    public const string Intent = "intent";
+    /// <summary>Potion tabs, after you drink a potion.</summary>
+    public const string Potion = "potion";
+    /// <summary>Run Reminders: event options, card rewards, shop prices and the card rules.</summary>
+    public const string Reminders = "reminders";
+    /// <summary>Rest Preview: HP after resting or Mend, and at the boss fight's start.</summary>
+    public const string Rest = "rest";
+
+    public static bool PerTurn(string audit) => audit is Forecast or Play;
+
+    /// <summary>A check outside the turns' audits ran.</summary>
+    public static void Done(string audit, bool matched, string? detail) => DevEvents.Post(new CheckDone(audit, 0, matched, detail));
+
+    /// <summary>A check outside the turns' audits was left undone: say why (no names or amounts in the reason, so it adds up).</summary>
+    public static void Skipped(string audit, string reason, string? detail = null) => DevEvents.Post(new CheckSkipped(audit, 0, reason, detail));
+}
+
 public static class DevEvents
 {
     /// <summary>The stream's format; bumped when an event's fields change meaning, so a reader can tell old files from new.</summary>

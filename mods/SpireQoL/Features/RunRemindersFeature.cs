@@ -162,6 +162,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         if (w.Me.Creature.IsDead)
         {
             ModEntry.Log.Info($"[audit] [reminders] {w.Option.TextKey}: the run ended, not checked ({state})");
+            Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "event option: the run ended", w.Option.TextKey);
             return;
         }
         var rule = (RelicModel r) => ChoiceReminders.For(r.GetType().Name)!;
@@ -178,6 +179,9 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         if (quiet.Count > silent.Count) ModEntry.Log.Info($"[audit] [reminders] icon shown, no reaction (logged only): {string.Join(", ", quiet.Select(r => r.GetType().Name).Except(silent))}");
         if (unseen != ChoiceEffect.None) ModEntry.Log.Info($"[audit] [reminders] read but didn't happen (logged only): {unseen}");
         var evt = w.Option.TextKey.Split('.')[0];
+        var eventOk = missed.Count == 0 && unread == ChoiceEffect.None && silent.Count == 0;
+        Telemetry.Audits.Done(Telemetry.Audits.Reminders, eventOk, eventOk ? "event option"
+            : missed.Count > 0 ? "reminder-missed" : unread != ChoiceEffect.None ? "reminder-unread" : "reminder-silent");
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;
         if (missed.Count > 0)
         {
@@ -410,6 +414,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         CheckCardRules(me, me.Deck.Cards.Where(c => !w.Start.Deck.Contains(c)).ToList(), false, null, "card reward");
         var what = $"card reward: {added} added (predicted {w.PerPick}), gold {w.Start.Gold}→{me.Gold}";
         ModEntry.Log.Info($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(p => p.Text)))}");
+        Telemetry.Audits.Done(Telemetry.Audits.Reminders, problems.Count == 0, problems.Count == 0 ? "card reward" : "reminder-reward");
         if (problems.Count > 0)
         {
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", $"Card reward tabs were wrong: {string.Join(", ", problems.Select(p => p.Key))}",
@@ -766,6 +771,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var paid = w.GoldBefore - me.Gold;
         var what = $"shop: bought {w.Entry.GetType().Name}, gold {w.GoldBefore}→{me.Gold}, predicted net {w.Net}";
         ModEntry.Log.Info($"[audit] [reminders] {what}{(paid == w.Net ? ", matched" : "")}");
+        Telemetry.Audits.Done(Telemetry.Audits.Reminders, paid == w.Net, paid == w.Net ? "shop" : "reminder-shop");
         if (paid != w.Net)
         {
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", "Shop net price after Lucky Fysh was wrong",

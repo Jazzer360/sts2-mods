@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.10
+#### Fixed
+- The checks behind every prediction count each part they leave out, with the reason, instead of excusing it unseen: the effects of random auto-plays, a random kill or a draw the simulation couldn't account for, and a shuffle whose draws depend on the target. The intent, potion, reminder and rest checks are counted too.
+
 ### Spire QoL 1.21.9
 #### Changed
 - About page: the philosophy adds "What's shown is what happens": the exact outcome or chance, or a ? where something isn't modelled.

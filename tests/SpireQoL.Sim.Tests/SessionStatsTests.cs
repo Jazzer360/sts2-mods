@@ -30,6 +30,28 @@ public class SessionStatsTests
         Assert.Equal((1, 1), (o.Plays.Checked, o.Plays.Matched));
     }
 
+    /// <summary>
+    /// The audits outside the turns (intent rolls, potions, reminders, rest) are counted on their own: a mismatch or a skip there is in
+    /// the summary but never changes how a fight's turn is classified, and never mixes into the plays' counts.
+    /// </summary>
+    [Fact]
+    public void AuditsOutsideTheTurnsAreCountedApart()
+    {
+        var s = Fight(new TurnStarted(1), new CheckDone(Audits.Play, 1, true, "Strike"), new CheckDone(Audits.Forecast, 1, true, null),
+            new CheckDone(Audits.Intent, 0, false, "JawWorm"), new CheckDone(Audits.Intent, 0, true, "JawWorm"),
+            new CheckSkipped(Audits.Intent, 0, "the enemy's move rules couldn't be read", "Doormaker"),
+            new CheckDone(Audits.Potion, 0, true, "FirePotion"), new TurnStarted(2));
+        var o = s.Summary("menu", Info);
+        Assert.Equal(2, o.Clean);
+        Assert.Equal((1, 1, 0), (o.Plays.Checked, o.Plays.Matched, o.Plays.Skipped));
+        Assert.Equal((2, 1, 1), (o.Others[Audits.Intent].Checked, o.Others[Audits.Intent].Matched, o.Others[Audits.Intent].Skipped));
+        Assert.Equal(1, o.Others[Audits.Intent].Mismatches["JawWorm"]);
+        Assert.Equal(1, o.Others[Audits.Intent].SkipReasons["the enemy's move rules couldn't be read"]);
+        Assert.Equal((1, 1), (o.Others[Audits.Potion].Checked, o.Others[Audits.Potion].Matched));
+        var back = SessionSummary.FromJson(o.ToJson())!;
+        Assert.Equal(2, back.Others[Audits.Intent].Checked);
+    }
+
     [Fact]
     public void TheWorstThingThatHappenedInATurnDecidesIt()
     {
@@ -200,7 +222,7 @@ public class SessionStatsTests
             SimJob.Context = SearchDone.ContextOf(7, 3);
             var s = new SimState();
             s.Enemies.Add(new SimEnemy { Id = 0, Name = "E", Hp = 20, Hits = new() { 5 } });
-            var job = SimJob.Start(SimExploration.Of(s, null), "telemetry test");
+            var job = SimJob.Start(SimSearch.Of(s, null), "telemetry test");
             SimJob.Context = 0;
             await job.Ready.WaitAsync(TimeSpan.FromSeconds(10));
             SpinWait.SpinUntil(() => { lock (seen) return seen.Count > 0; }, 5_000);

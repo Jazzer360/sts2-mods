@@ -56,7 +56,7 @@ public sealed class SimJob
     /// <summary>Log lines from worker threads, written out on the main thread (FlushLog).</summary>
     private static readonly ConcurrentQueue<(string Line, Exception? Error)> Pending = new();
 
-    private readonly SimExploration _ex;
+    private readonly SimSearch _ex;
     private readonly CancellationTokenSource _cts = new();
     private readonly TaskCompletionSource<bool> _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly string _label;
@@ -70,7 +70,7 @@ public sealed class SimJob
     /// </summary>
     public static long Context;
 
-    private SimJob(SimExploration ex, string label, long firstBudget)
+    private SimJob(SimSearch ex, string label, long firstBudget)
     {
         _ex = ex;
         _label = label;
@@ -78,7 +78,7 @@ public sealed class SimJob
     }
 
     /// <summary>Starts searching on a worker thread (waiting for a background turn after FirstBudget copies unless told otherwise: tests).</summary>
-    public static SimJob Start(SimExploration ex, string label, long firstBudget = FirstBudget)
+    public static SimJob Start(SimSearch ex, string label, long firstBudget = FirstBudget)
     {
         var job = new SimJob(ex, label, firstBudget) { _context = Interlocked.Read(ref Context) };
         if (Running.IsEmpty)

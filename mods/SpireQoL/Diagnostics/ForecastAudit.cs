@@ -186,7 +186,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private void Skip(string reason, int? turn = null)
     {
         CountIn(Skips, reason);
-        Telemetry.DevEvents.Post(new Telemetry.CheckSkipped("forecast", turn ?? _frozenTurn, reason, null));
+        Telemetry.DevEvents.Post(new Telemetry.CheckSkipped(Telemetry.Audits.Forecast, turn ?? _frozenTurn, reason, null));
     }
 
     public void OnFrame(OverlayHost host)
@@ -291,14 +291,14 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 Skip("a teammate auto-played a card at end of turn");
                 continue;
             }
-            if (actual > max || (!o.Truncated && actual < min)) issues.Add($"teammate {name} HP lost: forecast {(min == max ? $"{max}" : $"{min}-{max}")}, actual {actual}");
+            if (actual > max || actual < min) issues.Add($"teammate {name} HP lost: forecast {(min == max ? $"{max}" : $"{min}-{max}")}, actual {actual}");
             // Their Osty (Teammate Incoming Damage shows what he absorbs).
             if (mate.Osty is { } osty)
             {
                 var ostyActual = damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
                 var (oMin, oMax) = (o.TeammateOstyTakenMin(k), o.TeammateOstyTakenMax(k));
                 line += $", their Osty {ostyActual} (predicted {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")})";
-                if (ostyActual > oMax || (!o.Truncated && ostyActual < oMin)) issues.Add($"teammate {name} Osty HP lost: forecast {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")}, actual {ostyActual}");
+                if (ostyActual > oMax || ostyActual < oMin) issues.Add($"teammate {name} Osty HP lost: forecast {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")}, actual {ostyActual}");
             }
         }
         return line;
@@ -444,7 +444,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // Each number above is checked against its own range over the branches; together they must
         // also come from one branch (one set of random targets explains everything that happened).
         var o = f.Outcome;
-        if (issues.Count == 0 && !youDied && !o.Truncated && o.Branches.Count > 1)
+        if (issues.Count == 0 && !youDied && o.Branches.Count > 1)
         {
             bool Explains(SimState b) =>
                 b.Taken == actualTaken && (osty == null || b.OstyTaken == actualOsty) && b.AutoPlayed == autoPlays.Count
@@ -462,7 +462,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}{teamLine}");
 
         _checked++;
-        Telemetry.DevEvents.Post(new Telemetry.CheckDone("forecast", _frozenTurn, issues.Count == 0, issues.Count == 0 ? null : issues[0].Split(':')[0]));
+        Telemetry.DevEvents.Post(new Telemetry.CheckDone(Telemetry.Audits.Forecast, _frozenTurn, issues.Count == 0, issues.Count == 0 ? null : issues[0].Split(':')[0]));
         if (issues.Count == 0)
         {
             _matched++;
@@ -507,7 +507,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
     /// <summary>
     /// The simulator's per-enemy predictions against what the history shows (see the class summary).
-    /// Returns each issue with the monster it's about.
+    /// Returns each issue with the monster it's about. Only a finished search gets here: a capped one is skipped first (decision #107),
+    /// so every range below covers every outcome.
     /// </summary>
     private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel f, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me, out string summary,
         out Dictionary<int, (int Hp, int Through, bool Died)> actuals)
@@ -549,30 +550,26 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             actuals[id] = (hpAtTurnEnd, through, diedBeforeActing);
             if (o.DeadInAll(id) && !diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted dead before acting, but it lived to act (or outlived you)", monster));
-            // The search stopped at its cap: an unfinished branch may be where it dies (DeadInAll already needs them all).
-            if (!o.Truncated && !o.DeadInAny(id) && diedBeforeActing)
+            if (!o.DeadInAny(id) && diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted alive, but it died before acting", monster));
 
-            if (!o.Truncated)
-            {
-                int lo = o.HpAtTurnEndMin(id), hi = o.HpAtTurnEndMax(id);
-                if (hpAtTurnEnd < lo || hpAtTurnEnd > hi)
-                    result.Add(($"enemy HP at turn end: {name} predicted {(lo == hi ? $"{lo}" : $"{lo}-{hi}")}, actual {hpAtTurnEnd}", monster));
-                int ulo = o.UnblockedMin(id), uhi = o.UnblockedMax(id);
-                if (through < ulo || through > uhi)
-                    result.Add(($"hits through block: {name} predicted {(ulo == uhi ? $"{ulo}" : $"{ulo}-{uhi}")}, actual {through}", monster));
-            }
+            int lo = o.HpAtTurnEndMin(id), hi = o.HpAtTurnEndMax(id);
+            if (hpAtTurnEnd < lo || hpAtTurnEnd > hi)
+                result.Add(($"enemy HP at turn end: {name} predicted {(lo == hi ? $"{lo}" : $"{lo}-{hi}")}, actual {hpAtTurnEnd}", monster));
+            int ulo = o.UnblockedMin(id), uhi = o.UnblockedMax(id);
+            if (through < ulo || through > uhi)
+                result.Add(($"hits through block: {name} predicted {(ulo == uhi ? $"{ulo}" : $"{ulo}-{uhi}")}, actual {through}", monster));
 
             if (start.Imbalanced && firstHit != null)
             {
                 var blocked = firstHit.Result.WasFullyBlocked;
                 if (o.FirstHitBlockedInAll(id) && !blocked)
                     result.Add(($"Imbalanced: {name}'s first hit predicted fully blocked, but it wasn't", monster));
-                if (!o.Truncated && !o.FirstHitBlockedInAny(id) && blocked)
+                if (!o.FirstHitBlockedInAny(id) && blocked)
                     result.Add(($"Imbalanced: {name}'s first hit predicted not fully blocked, but it was", monster));
             }
         }
-        summary = string.Join("; ", parts) + (o.Truncated ? " [truncated]" : "");
+        summary = string.Join("; ", parts);
         return result;
     }
 

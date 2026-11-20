@@ -26,7 +26,7 @@ public class SimBatchTests
         // tight loop on this thread so it wakes as fast (SpinWait.SpinUntil backs off into sleeps, long enough for any WhenAll to catch up).
         for (var i = 0; i < 200; i++)
         {
-            var batch = new SimBatch(new[] { 0, 1 }.Select(t => SimJob.Start(SimExploration.Of(Board(), Strike(t)), "batch test")).ToArray());
+            var batch = new SimBatch(new[] { 0, 1 }.Select(t => SimJob.Start(SimSearch.Of(Board(), Strike(t)), "batch test")).ToArray());
             var clock = System.Diagnostics.Stopwatch.StartNew();
             while (!batch.Jobs.All(j => j.Ready.IsCompleted)) Assert.True(clock.ElapsedMilliseconds < 10_000, "the searches never finished");
             Assert.True(batch.IsCompleted, $"pending right after its jobs were done (run {i})");
@@ -38,7 +38,7 @@ public class SimBatchTests
     [Fact]
     public void NotCompleteWhileAJobIsRunning()
     {
-        var job = SimJob.Start(SimExploration.Of(Board(), Strike(0)), "batch test cancelled");
+        var job = SimJob.Start(SimSearch.Of(Board(), Strike(0)), "batch test cancelled");
         job.Cancel(); // a cancelled job never completes (nobody reads it)
         var batch = new SimBatch(new[] { job });
         Assert.False(batch.IsCompleted);

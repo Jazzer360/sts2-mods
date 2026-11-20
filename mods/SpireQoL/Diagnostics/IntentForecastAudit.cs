@@ -31,7 +31,12 @@ internal static class IntentForecastAudit
             if (__instance.MoveStateMachine is not { } machine) return;
             // FindNextMoveState stays put before the first move and on a move that must be performed first.
             if (!Sts2State.Private(machine, "_performedFirstMove", false) || !__instance.NextMove.CanTransitionAway) return;
-            if (IntentReader.Graph(machine) is not { } graph) return;
+            if (IntentReader.Graph(machine) is not { } graph)
+            {
+                // Intent Forecast can't read this enemy's move rules, so it showed nothing to check: a gap, counted.
+                Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "the enemy's move rules couldn't be read", __instance.GetType().Name);
+                return;
+            }
             var current = new MoveNodeMove(__instance.NextMove.Id, __instance.NextMove.FollowUpState?.Id ?? __instance.NextMove.FollowUpStateId);
             var turns = IntentForecast.Forecast(graph, current, machine.StateLog.Select(s => s.Id).ToList(), maxTurns: 1);
             __state = turns.FirstOrDefault();
@@ -39,6 +44,7 @@ internal static class IntentForecastAudit
         catch (Exception ex)
         {
             ModEntry.Log.Warn($"[audit] [intent] forecast before the roll failed: {ex.Message}");
+            Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "the forecast before the roll failed", __instance.GetType().Name);
         }
     }
 
@@ -53,6 +59,7 @@ internal static class IntentForecastAudit
             var chance = __state.Moves.FirstOrDefault(m => m.Move == picked).Chance;
             var ok = chance > 0;
             ModEntry.Log.Info($"[audit] [intent] {name}: forecast [{odds}], rolled {picked}{(ok ? ", matched" : "")}");
+            Telemetry.Audits.Done(Telemetry.Audits.Intent, ok, name);
             if (ok) return;
             var key = name + "|" + odds + "|" + picked;
             if (!Reported.Add(key) || Reported.Count > 200) return;

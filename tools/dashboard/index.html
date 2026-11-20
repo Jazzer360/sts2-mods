@@ -127,7 +127,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: none;
 @media (max-width: 640px) { .checks { grid-template-columns: 1fr; } }
 
 .card { position: relative; }
-.hover-layer { position: absolute; pointer-events: none; }
+canvas.hover-layer, .check canvas.hover-layer { position: absolute; pointer-events: none; margin: 0; } /* never a chart canvas's margin: it sits exactly over its chart */
 /* the Overview: a panel per area (eight), filling the screen: four by two on a wide screen, fewer columns on narrower ones */
 .ov { display: grid; gap: 12px; grid-template-columns: 1fr; }
 @media (min-width: 760px) { .ov { grid-template-columns: repeat(2, 1fr); } }
@@ -409,11 +409,11 @@ const isHitch = (r) => r.gapMax > 50 && r.modMax < 30;
 const warmupWarning = (l) => l.level === "WARN" && /^\[perf\] slow frame/.test(l.text) && warmingUp(l.t);
 const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
-  rollups: [], searches: [], checks: [], logs: [], waits: [], unsettled: [], saved: [],
+  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [],
   combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null,
 };
 function reset() {
-  Object.assign(M, { rollups: [], searches: [], checks: [], logs: [], waits: [], unsettled: [], saved: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null });
+  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null });
 }
 const push = (arr, v, max) => { arr.push(v); if (max && arr.length > max) arr.splice(0, arr.length - max); };
 function turnRec(turn) {
@@ -435,6 +435,8 @@ function ingest(e) {
     case "combat-ended": if (M.combats.length) M.combats.at(-1).ended = e.t; break;
     case "turn-started": turnRec(e.turn); break;
     case "check-done": case "check-skipped": {
+      // The audits outside the turns (intent rolls, potions, reminders, rest: Audits in the mod) are counted apart, never a turn's.
+      if (e.audit !== "forecast" && e.audit !== "play") { M.others.push(e); break; }
       M.checks.push(e);
       const turn = e.turn > 0 ? e.turn : (Math.max(0, ...[...M.turns.values()].filter(r => r.combat === M.combat).map(r => r.turn)) || 1);
       const r = turnRec(turn);
@@ -652,8 +654,13 @@ function layer(c) {
     c._layer = ov;
   }
   const dpr = window.devicePixelRatio || 1;
-  ov.style.left = c.offsetLeft + "px"; ov.style.top = c.offsetTop + "px";
-  ov.style.width = c.offsetWidth + "px"; ov.style.height = c.offsetHeight + "px";
+  // Placed and sized from where the chart is on screen (fractions of a pixel kept), not offsetTop/offsetWidth: with the chart's
+  // own margin those put the layer 8 px low on the Overview, and the hover dots below their lines.
+  const cr = c.getBoundingClientRect();
+  ov.style.width = cr.width + "px"; ov.style.height = cr.height + "px";
+  const base = ov.offsetParent?.getBoundingClientRect() ?? { left: 0, top: 0 };
+  const bl = ov.offsetParent ? ov.offsetParent.clientLeft - ov.offsetParent.scrollLeft : 0, bt = ov.offsetParent ? ov.offsetParent.clientTop - ov.offsetParent.scrollTop : 0;
+  ov.style.left = cr.left - base.left - bl + "px"; ov.style.top = cr.top - base.top - bt + "px";
   if (ov.width !== c.width || ov.height !== c.height) { ov.width = c.width; ov.height = c.height; }
   const g = ov.getContext("2d");
   g.setTransform(1, 0, 0, 1, 0, 0);
@@ -1039,20 +1046,30 @@ async function lastLaunch() {
 
 function renderOverview() {
   const s = M.state?.session, r1 = since(M.rollups, 60), r5 = since(M.rollups, 300), s5 = since(M.searches, 300), w5 = since(M.waits, 300);
-  const mism = M.checks.filter((c) => c.kind === "check-done" && !c.matched).length;
+  let mism = M.checks.filter((c) => c.kind === "check-done" && !c.matched).length;
   const p95 = quant(r1.map((r) => r.modP95), 0.5), slow5 = r5.filter((r) => !warmingUp(r.t)).reduce((a, r) => a + r.slow, 0);
   const caps5 = s5.filter((x) => x.cap).length, missed = w5.filter((x) => x.missed).length;
   const stalls5 = r5.filter((r) => isHitch(r) && !loadingAt(r.t)).length, loads5 = r5.filter((r) => isHitch(r) && loadingAt(r.t)).length;
   // ---- predictions (Turn)
   {
+    // The other audits (outside the turns): checked / matched / skipped per audit, with a mismatch counted in the headline.
+    const oth = {};
+    for (const c of M.others) {
+      const o = oth[c.audit] ||= { done: 0, matched: 0, skipped: 0 };
+      if (c.kind === "check-done") { o.done++; if (c.matched) o.matched++; } else o.skipped++;
+    }
+    const othMism = M.others.filter((c) => c.kind === "check-done" && !c.matched).length;
+    mism += othMism;
     const turns = s?.turns ?? 0, unchecked = s?.unchecked ?? 0;
     const stats = [[s ? pct(s.clean, turns) : "–", "turns clean", s && s.clean < turns ? "warn" : "good"], [fmt(mism, 0), "didn't match", mism ? "bad" : "good"],
       [fmt(unchecked, 0), "not fully checked"], [fmt(s?.capped ?? 0, 0), "capped"]];
     const reasons = {};
     for (const c of M.checks) if (c.kind === "check-skipped" && !c.expected) reasons[c.reason] = (reasons[c.reason] || 0) + 1;
     const causes = top3(Object.entries(reasons).sort((a, b) => b[1] - a[1]), ([k, v]) => `${esc(k)} <b>×${v}</b>`);
-    const causeLine = causes ? `Skipped most: ${causes}` : "";
-    if (!s && !M.checks.length) setCheck("chk-pred", "", "No fights yet: the checks start with your first fight.", stats, "");
+    const othLine = Object.keys(oth).length ? "Outside the turns: " + Object.entries(oth).sort().map(([k, o]) =>
+      `${esc(k)} <b class="${o.matched < o.done ? "bad" : "good"}">${o.matched}/${o.done}</b>${o.skipped ? ` <span class="warn">(${o.skipped} not checked)</span>` : ""}`).join(" · ") : "";
+    const causeLine = [causes ? `Skipped most: ${causes}` : "", othLine].filter(Boolean).join("<br>");
+    if (!s && !M.checks.length && !M.others.length) setCheck("chk-pred", "", "No fights yet: the checks start with your first fight.", stats, "");
     else if (mism) setCheck("chk-pred", "bad", `${mism} prediction(s) didn't match what happened this launch.`, stats, causeLine);
     else if (turns && unchecked / turns > 0.2) setCheck("chk-pred", "warn", `Matched, but ${pct(unchecked, turns)} of turns couldn't be fully checked.`, stats, causeLine);
     else setCheck("chk-pred", "good", "Everything checked matched.", stats, causeLine);
@@ -1103,6 +1120,7 @@ function renderOverview() {
   {
     const items = [];
     for (const c of M.checks) if (c.kind === "check-done" && !c.matched) items.push({ t: c.t, cls: "bad", text: `${c.audit === "forecast" ? "Enemy turn" : "Play"} didn't match: <b>${esc(c.detail)}</b> (turn ${c.turn})` });
+    for (const c of M.others) if (c.kind === "check-done" && !c.matched) items.push({ t: c.t, cls: "bad", text: `The ${esc(c.audit)} check didn't match: <b>${esc(c.detail)}</b>` });
     for (const x of M.searches) if (x.cap) items.push({ t: x.t, cls: "warn", text: `Search stopped at <b>${esc(x.cap)}</b>: ${esc(x.label)}` });
     for (const r of M.saved) items.push({ t: r.t, cls: "bad", text: `Report saved: ${esc(r.title)}` });
     for (const l of M.logs) if (l.level !== "INFO" && !/^\[audit\]/.test(l.text) && !warmupWarning(l)) items.push({ t: l.t, cls: l.level === "ERROR" ? "bad" : "warn", text: esc(l.text.slice(0, 160)) });
@@ -1741,6 +1759,7 @@ function demoTick(fast) {
   if (busy && rand() < 0.3) demoEmit({ kind: "unsettled", ms: 30 + rand() * 300 });
   if (rand() < 0.25) demoEmit({ kind: "check-done", audit: "play", turn: DEMO.turn, matched: rand() > 0.03, detail: ["Zap", "Strike", "Defend", "Coolheaded"][Math.floor(rand() * 4)] });
   if (rand() < 0.05) demoEmit({ kind: "check-skipped", audit: "play", turn: DEMO.turn, reason: "simulation pending", detail: "Ball Lightning" });
+  if (rand() < 0.08) demoEmit({ kind: "check-done", audit: "intent", turn: 0, matched: true, detail: "JawWorm" });
   if (rand() < 0.1) demoEmit({ kind: "log-line", level: rand() < 0.1 ? "WARN" : "INFO", text: rand() < 0.5 ? `[sim] searched Ball Lightning (target 1) in the background: 41 steps, ${Math.floor(rand() * 90000)} copies` : "[audit] played Zap: tabs Lightning → matched" });
   if (rand() < (fast ? 0.004 : 0.01)) demoReport();
   const turns = [...M.turns.values()], cl = (k) => turns.filter((r) => k(r)).length;

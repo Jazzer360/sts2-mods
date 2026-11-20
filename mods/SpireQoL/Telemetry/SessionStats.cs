@@ -49,6 +49,8 @@ public sealed class SessionStats
     private int _combats, _turnsTotal, _clean, _unchecked, _capped, _mismatched, _players;
     private string _characters = "";
     private readonly AuditCounts _forecast = new(), _plays = new();
+    /// <summary>The audits outside the turns (Audits.PerTurn false), by name: counted, never part of a turn's class.</summary>
+    private readonly Dictionary<string, AuditCounts> _others = new();
     private readonly Dictionary<string, int> _caps = new(), _reports = new();
     private int _searches, _background, _cancelled;
     private long _copies, _cancelledCopies, _maxHeld;
@@ -90,8 +92,14 @@ public sealed class SessionStats
                 {
                     var a = Audit(d.Audit);
                     a.Checked++;
+                    if (!Audits.PerTurn(d.Audit))
+                    {
+                        if (d.Matched) a.Matched++;
+                        else Count(a.Mismatches, d.Detail ?? "?");
+                        break;
+                    }
                     var rec = Turn(d.Turn);
-                    if (d.Audit == "forecast") rec.ForecastSeen = true;
+                    if (d.Audit == Audits.Forecast) rec.ForecastSeen = true;
                     if (d.Matched) a.Matched++;
                     else
                     {
@@ -105,9 +113,10 @@ public sealed class SessionStats
                     var a = Audit(s.Audit);
                     a.Skipped++;
                     Count(a.SkipReasons, s.Expected ? s.Reason + " (expected)" : s.Reason);
+                    if (!Audits.PerTurn(s.Audit)) break;
                     var rec = Turn(s.Turn);
                     if (!s.Expected) rec.Skipped = true;
-                    if (s.Audit == "forecast") rec.ForecastSeen = true;
+                    if (s.Audit == Audits.Forecast) rec.ForecastSeen = true;
                     break;
                 }
                 case SearchDone s:
@@ -154,7 +163,12 @@ public sealed class SessionStats
         }
     }
 
-    private AuditCounts Audit(string name) => name == "forecast" ? _forecast : _plays;
+    private AuditCounts Audit(string name) => name switch
+    {
+        Audits.Forecast => _forecast,
+        Audits.Play => _plays,
+        _ => _others.TryGetValue(name, out var a) ? a : _others[name] = new AuditCounts(),
+    };
 
     private TurnRecord Turn(int turn)
     {
@@ -254,6 +268,7 @@ public sealed class SessionStats
                 Combats = _combats, Turns = turns, Clean = clean, Unchecked = unchecked_, Capped = capped, Mismatched = mismatched,
                 Forecast = Audit(_forecast, forecastSkipped, forecastSkipReasons),
                 Plays = Audit(_plays, _plays.Skipped, _plays.SkipReasons),
+                Others = _others.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => Audit(kv.Value, kv.Value.Skipped, kv.Value.SkipReasons)),
                 Searches = new SearchSummary(_searches, _background, _cancelled, _copies, _cancelledCopies, _maxHeld, _slowestSearch,
                     _searchMs.Summary(), Top(_caps)),
                 Waits = new WaitSummary(_waitsMissed, _waitMs.Summary()),
@@ -296,6 +311,8 @@ public sealed record SessionSummary
     public int Mismatched { get; init; }
     public AuditSummary Forecast { get; init; } = AuditSummary.Empty;
     public AuditSummary Plays { get; init; } = AuditSummary.Empty;
+    /// <summary>The audits outside the turns (intent, potion, reminders, rest), by name.</summary>
+    public Dictionary<string, AuditSummary> Others { get; init; } = new();
     public SearchSummary Searches { get; init; } = SearchSummary.Empty;
     public WaitSummary Waits { get; init; } = new(0, new(0, 0, 0, 0, 0));
     public TimingSummary Unsettled { get; init; } = new(0, 0, 0, 0, 0);

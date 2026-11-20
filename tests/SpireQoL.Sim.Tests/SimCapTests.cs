@@ -26,7 +26,7 @@ public class SimCapTests
     private static SimPlay Strike() => new() { HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1, HitDamage = { [0] = 4, [1] = 4, [2] = 4 }, BlockAmount = 3, BlockGains = 1 };
 
     private static SimOutcome Capped(SimState s, SimPlay? play, long cap)
-        => SimEngine.Run(s, null, play == null ? null : SimScript.Of(play), new SimWork { OwnCap = cap });
+        => SimEngine.Run(s, play == null ? null : SimScript.Of(play), new SimWork { OwnCap = cap });
 
     [Fact]
     public void AFightThatFitsFinishes()
@@ -66,7 +66,7 @@ public class SimCapTests
             }
         }
         // Somewhere before the end, some death is settled while the search is still going: the range's floor counts it.
-        Assert.Contains(Enumerable.Range(2, 400), cap => SimEngine.Run(Heavy(), null, null, new SimWork { CopyCap = cap }) is { Truncated: true } o && Enumerable.Range(0, 3).Any(id => o.DeadChanceRange(id).Low > 0));
+        Assert.Contains(Enumerable.Range(2, 400), cap => SimEngine.Run(Heavy(), null, new SimWork { CopyCap = cap }) is { Truncated: true } o && Enumerable.Range(0, 3).Any(id => o.DeadChanceRange(id).Low > 0));
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class SimCapTests
     [Fact]
     public void TheWorkCapStopsASearchPartWayThroughAStep()
     {
-        var o = SimEngine.Run(Heavy(), null, null, new SimWork { CopyCap = 10 });
+        var o = SimEngine.Run(Heavy(), null, new SimWork { CopyCap = 10 });
         Assert.True(o.Truncated);
         Assert.Equal("the work cap", o.CapHit);
         Assert.Equal(1.0, o.Branches.Sum(b => b.Weight), 9);
@@ -108,7 +108,7 @@ public class SimCapTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        Assert.Throws<OperationCanceledException>(() => SimEngine.Run(Heavy(), null, null, new SimWork { Cancel = cts.Token }));
+        Assert.Throws<OperationCanceledException>(() => SimEngine.Run(Heavy(), null, new SimWork { Cancel = cts.Token }));
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class SimCapTests
     {
         // The shared count goes back down when a search is over, capped or not (other tests may be running: only this one's part).
         var work = new SimWork();
-        SimEngine.Run(Heavy(), null, null, work);
+        SimEngine.Run(Heavy(), null, work);
         Assert.True(work.PeakHeld > 0);
         Assert.Equal(0, work.Held);
     }

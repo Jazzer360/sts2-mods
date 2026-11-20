@@ -271,6 +271,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         }
         var what = $"potion {p.Potion.GetType().Name}: tabs [{string.Join(", ", p.Tabs)}]";
         ModEntry.Log.Info($"[audit] [potion] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(x => x.Text)))}");
+        Telemetry.Audits.Done(Telemetry.Audits.Potion, problems.Count == 0, problems.Count == 0 ? p.Potion.GetType().Name : problems[0].Key);
         if (problems.Count > 0)
         {
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("potion", $"Potion tabs were wrong: {string.Join(", ", problems.Select(x => x.Key))}",

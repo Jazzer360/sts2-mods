@@ -77,7 +77,7 @@ public class SimStepBudgetTests
         }
         Setup(s.P);
         for (var t = 0; t < 3; t++) s.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
-        var o = SimEngine.Run(s, null, null, new SimWork { CopyCap = 200_000 });
+        var o = SimEngine.Run(s, null, new SimWork { CopyCap = 200_000 });
         Assert.True(o.Truncated);
         Assert.Equal("the work cap", o.CapHit);
         Assert.Equal(1.0, o.Branches.Sum(b => b.Weight), 9);

@@ -36,6 +36,21 @@ test("adds summaries per version, once each", () => {
   assert.equal(st.cursor, "2026-11-19T11:00:00Z");
 });
 
+test("adds the audits outside the turns by name, and keeps older totals that had none", () => {
+  const st = emptyState();
+  const others = { intent: { checked: 10, matched: 9, skipped: 1, skipReasons: { "the enemy's move rules couldn't be read": 1 }, mismatches: { JawWorm: 1 } } };
+  addEvents(st, [event("c", "2026-11-20T10:00:00Z", summary({ mod: "1.21.10", others })), event("d", "2026-11-20T11:00:00Z", summary({ mod: "1.21.10", others }))]);
+  const t = st.versions["1.21.10"];
+  assert.deepEqual([t.others.intent.checked, t.others.intent.matched, t.others.intent.skipped], [20, 18, 2]);
+  assert.equal(t.others.intent.mismatches.JawWorm, 2);
+  assert.ok(render(prune(st)).includes("intent 18 / 20 (2)"));
+  const old = emptyState();
+  addEvents(old, [event("e", "2026-11-20T10:00:00Z", summary())]);
+  delete old.versions["1.20.14"].others; // kept by a sync from before the field
+  addEvents(old, [event("f", "2026-11-20T12:00:00Z", summary({ others }))]);
+  assert.equal(old.versions["1.20.14"].others.intent.checked, 10);
+});
+
 test("skips the developer's own sessions and summaries it can't read", () => {
   const st = emptyState();
   const n = addEvents(st, [

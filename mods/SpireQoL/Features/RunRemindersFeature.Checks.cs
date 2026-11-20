@@ -38,15 +38,25 @@ public sealed partial class RunRemindersFeature
                     predicted = CardAffinity.AppliesTo(rule, canonical);
                     changed = shows(card);
                 }
-                catch { continue; }
+                catch (Exception ex)
+                {
+                    // The rule or the card's state couldn't be read: say so, counted, rather than pass it.
+                    ModEntry.Log.Warn($"[audit] [card-rule] {where}: {name} on {card.GetType().Name}: couldn't be checked ({ex.Message})");
+                    Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "card rule: couldn't read the card or the rule", $"{name} on {card.GetType().Name}");
+                    continue;
+                }
                 var what = $"{where}: {name} on {card.GetType().Name}: rule says {(predicted ? "changes" : "doesn't change")}, card {(changed ? "changed" : "unchanged")}"
                     + (shown != null ? $", icon {(shown.Contains(relic) ? "shown" : "not shown")}" : "");
                 if (predicted == changed)
                 {
                     ModEntry.Log.Info($"[audit] [card-rule] {what}, matched");
+                    Telemetry.Audits.Done(Telemetry.Audits.Reminders, true, "card rule");
                     continue;
                 }
                 ModEntry.Log.Info($"[audit] [card-rule] {what}");
+                // The rule said no change and the card changed: logged only (something else may have changed it), and counted.
+                if (!predicted) Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "card rule: a card changed that the rule says it doesn't", $"{name} on {card.GetType().Name}");
+                else Telemetry.Audits.Done(Telemetry.Audits.Reminders, false, "card-rule");
                 if (predicted && !changed)
                 {
                     Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", $"{name}'s card rule says it changes {card.GetType().Name}, but it arrived unchanged",

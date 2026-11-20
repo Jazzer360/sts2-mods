@@ -47,8 +47,8 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        // Enemy → the chance shown beside the skull (null: certain). Decision #87: once some explored outcome kills it, with the
-        // range while the exploration goes on (and its mark), exact once every outcome is in.
+        // Enemy → the chance shown beside the skull (null: certain). Decision #88: once some outcome kills it; a range and a ? when the
+        // search stopped at a cap (decision #107), counting the deaths settled before it.
         var show = new Dictionary<Creature, string?>(ReferenceEqualityComparer.Instance);
         if (Sts2State.IsPlayerTurn && TurnEndModel.Shown() is { } model)
         {
