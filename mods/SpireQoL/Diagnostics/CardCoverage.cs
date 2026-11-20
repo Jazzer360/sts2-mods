@@ -251,6 +251,9 @@ internal static class CardCoverage
         foreach (var applied in PowersApplied(card.GetType()))
             if (SimAdapter.PlainSelfPowerAmount(card, applied) == 0)
                 issues.Add($"applies {applied.Name} with no amount the simulator reads");
+        // Osty attacks are read from the game's tag (PlayFacts.IsOstyAttack): a card attacking from Osty without it wouldn't be simulated.
+        if (Calls("AttackCommand", "FromOsty") && !PlayFacts.IsOstyAttack(card))
+            issues.Add("attacks from Osty without the OstyAttack tag (its hit isn't simulated: PlayFacts.IsOstyAttack)");
         if (Calls("CreatureCmd", "Kill") && !SimAdapter.KillsOstyCards.Contains(name))
             issues.Add("kills a creature (not in the simulator)");
         // A card that becomes another card once played (Mourning Blow into a Sadness): a created card.

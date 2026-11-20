@@ -27,7 +27,7 @@ internal static class MovePowers
     /// Per perform method: each Apply call's power, how its amount is read (a constant or a getter), or nothing; and whether it runs
     /// on every way through the move (<paramref name="Certain"/>) or only on some branches (decision #109).
     /// </summary>
-    internal sealed record Call(Type Power, decimal? Constant, MethodInfo? Getter, bool Certain = true);
+    internal sealed record Call(Type Power, decimal? Constant, MethodInfo? Getter, bool Certain = true, bool Negated = false);
 
     private static readonly Dictionary<MethodInfo, List<Call>> Calls = new();
 
@@ -54,6 +54,7 @@ internal static class MovePowers
                 {
                     try { amount = Convert.ToDecimal(c.Getter.Invoke(monster, null)); } catch { amount = null; }
                 }
+                if (c.Negated && amount is { } n) amount = -n; // -SpikenAmount: Toadpole's Spike Spit takes its Thorns away
                 result.Add(new Applied(c.Power, amount, Maybe: !c.Certain));
             }
             if (result.Any(a => a.Maybe))
@@ -190,7 +191,10 @@ internal static class MovePowers
             if (m.Name != "Apply" || m.DeclaringType?.Name != "PowerCmd") continue;
             var power = m.IsGenericMethod ? m.GetGenericArguments()[0] : made;
             if (power == null) continue;
-            calls.Add(AmountBefore(code, i) is var (constant, getter, _) ? new Call(power, constant, getter) : new Call(power, null, null));
+            // A getter followed by a neg: the amount is minus that number (Toadpole's Spike Spit applies -SpikenAmount Thorns).
+            calls.Add(AmountBefore(code, i) is var (constant, getter, from)
+                ? new Call(power, constant, getter, Negated: getter != null && from + 1 < code.Count && code[from + 1].opcode == OpCodes.Neg)
+                : new Call(power, null, null));
             at.Add(i);
         }
         if (calls.Count > 0)

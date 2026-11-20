@@ -24,6 +24,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
     private static readonly Color Behind = new(0.62f, 0.85f, 0.62f);
     private static readonly Color UpToDate = new(0.75f, 0.75f, 0.72f, 0.8f);
     private static readonly Color TestBuild = new(0.95f, 0.7f, 0.45f);
+    private static readonly Color Checking = new(0.75f, 0.75f, 0.72f, 0.55f);
 
     private bool _onMenu;
     private Task<GitHubReleases.Status?>? _check;
@@ -88,11 +89,17 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         var gear = _gear!;
         var warning = _warning!;
 
-        label.Visible = _status != null;
+        // While GitHub hasn't answered (the first visit to the menu), say so, so the notice doesn't seem to be missing.
+        label.Visible = _status != null || _check != null;
         if (_status is { } status)
         {
             label.Text = Text(status);
             label.AddThemeColorOverride("font_color", IsTestBuild(status) ? TestBuild : status.Newer > 0 ? Behind : UpToDate);
+        }
+        else if (_check != null)
+        {
+            label.Text = "Checking for Spire QoL updates…";
+            label.AddThemeColorOverride("font_color", Checking);
         }
         gear.Visible = OpenSettings != null && Cards.GameIcons.Valid(gear.Texture);
         gear.Modulate = gear.GetGlobalRect().HasPoint(gear.GetGlobalMousePosition()) ? Colors.White : new Color(0.85f, 0.85f, 0.85f, 0.85f);

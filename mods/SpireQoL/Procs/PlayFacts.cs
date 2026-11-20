@@ -430,12 +430,12 @@ public sealed class PlayFacts
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
             Channels = ChannelCount(card, name, me) * Math.Max(1, plays),
             StarGains = StarGainCards.Contains(name) ? Math.Max(1, plays) : 0,
-            OstyAttacks = OstyAttackCards.Contains(name) ? Math.Max(1, plays) : 0,
+            OstyAttacks = IsOstyAttack(card) ? Math.Max(1, plays) : 0,
             LosesHp = card.DynamicVars.ContainsKey("HpLoss"),
             HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
             OtherHandCards = others.Count,
-            ByOsty = OstyAttackCards.Contains(name),
-            AttackHits = (OstyAttackCards.Contains(name) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, name, cs, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
+            ByOsty = IsOstyAttack(card),
+            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, name, cs, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
             OrbDamage = orbs.Exact,
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
@@ -1060,11 +1060,15 @@ public sealed class PlayFacts
         nameof(BigBang), nameof(GatherLight), nameof(Glow), nameof(HiddenCache), nameof(KnockoutBlow), nameof(RoyalGamble), nameof(ShiningStrike), nameof(SolarStrike), nameof(Venerate),
     };
 
-    // Cards that make Osty attack.
-    private static readonly HashSet<string> OstyAttackCards = new()
+    /// <summary>
+    /// A card that makes Osty attack: the game's own tag on it (CardTag.OstyAttack, on every card whose OnPlay attacks FromOsty). A list
+    /// of names missed Fetch, so its hit, Bone Flute's block and the enemy HP after it weren't predicted (a dev-mode report, 1.21.2).
+    /// </summary>
+    internal static bool IsOstyAttack(CardModel card)
     {
-        nameof(BoneShards), nameof(Flatten), nameof(HighFive), nameof(Poke), nameof(Protector), nameof(Rattle), nameof(RightHandHand), nameof(SicEm), nameof(Snap), nameof(Squeeze), nameof(SweepingGaze), nameof(Unleash),
-    };
+        try { return card.Tags.Contains(MegaCrit.Sts2.Core.Entities.Cards.CardTag.OstyAttack); }
+        catch { return false; }
+    }
 
     // ------------------------------------------------------------------ generated cards
 

@@ -39,6 +39,16 @@ public class MoveBranchTests
     }
 
     [Fact]
+    public void ANegatedAmountIsMinus()
+    {
+        // Toadpole's Spike Spit applies -SpikenAmount Thorns (takes its Thorns away): a dev-mode report showed +2 against the -2 applied.
+        var spit = Assert.Single(Of("Toadpole.SpikeSpitMove"));
+        Assert.Equal("ThornsPower", spit.Power.Name);
+        Assert.True(spit.Negated);
+        Assert.False(Assert.Single(Of("Toadpole.SpikenMove")).Negated); // its Spiken gives them: +SpikenAmount
+    }
+
+    [Fact]
     public void PowersOnOneBranchAreNot()
     {
         // Entomancer's Pheromone Spit: Personal Hive and Strength 1 below 3 Personal Hive, Strength 2 otherwise.

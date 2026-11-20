@@ -93,6 +93,10 @@ canvas { width: 100%; display: block; }
 .note { border-bottom: 1px solid var(--line); padding: 8px 0; }
 .note .meta { color: var(--faint); font-size: 12px; }
 .note .body { white-space: pre-wrap; }
+#tip { position: fixed; display: none; z-index: 20; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); max-width: 320px; }
+#tip i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.note .comment { margin: 4px 0 0 14px; padding-left: 8px; border-left: 2px solid var(--line); white-space: pre-wrap; }
 .connect { max-width: 640px; margin: 40px auto; text-align: center; }
 .connect p { color: var(--dim); }
 .kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 11px; }
@@ -155,7 +159,7 @@ canvas { width: 100%; display: block; }
   </section>
 
   <section class="page" id="p-perf">
-    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select></div>
+    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label></div>
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><h3>Mod time per frame</h3><canvas id="pfFrame" height="170"></canvas><div class="legend"><span><i style="background:var(--accent)"></i>p95</span><span><i style="background:var(--good)"></i>median</span><span><i style="background:var(--bad)"></i>max</span><span class="faint">lines at 16.7 and 33.3 ms</span></div></div>
@@ -201,6 +205,24 @@ canvas { width: 100%; display: block; }
       <div class="row"><select id="cmpA"></select><span class="dim">against</span><select id="cmpB"></select><button id="cmpGo" class="primary">Compare</button></div>
       <p class="faint">Each stream file is one launch of the game. Compare a release with the one before it on similar fights.</p>
       <div id="cmpOut"></div></div>
+    <div class="card" style="margin-top:12px"><h3>Launch files <span class="faint" id="filesTotal"></span></h3>
+      <div class="row">
+        <span class="dim">Clean up</span>
+        <select id="cleanRule">
+          <option value="none">no rule</option>
+          <option value="days">launches older than N days</option>
+          <option value="versions">all but the newest N mod versions</option>
+          <option value="patch">all but the newest launch of each version (x.y.z)</option>
+          <option value="minor">all but the newest launch of each minor version (x.y)</option>
+          <option value="major">all but the newest launch of each major version (x)</option>
+        </select>
+        <input type="number" id="cleanN" min="1" value="14" style="width:70px" title="N">
+        <button id="cleanApply" class="danger">Delete them</button>
+        <label title="Each time the page connects to the folder"><input type="checkbox" id="cleanAuto"> apply each time the page connects</label>
+      </div>
+      <div id="cleanOut" class="dim" style="margin:6px 0"></div>
+      <div class="scroll"><table id="filesTable"></table></div>
+      <p class="faint" style="margin-bottom:0">Files the rule would delete are marked. The game also keeps only its newest 20 launch files. The newest launch (the one the game may be writing) is never deleted; reports and notes aren't touched.</p></div>
   </section>
 </main>
 
@@ -282,6 +304,7 @@ async function connect(fromClick) {
   await kv("dir", dir);
   FS.dir = dir; FS.demo = false; FS.stream = null;
   document.getElementById("connectBtn").textContent = "Change folder";
+  await autoClean();
   start();
 }
 async function streams() {
@@ -367,8 +390,62 @@ const tile = (label, value, sub, cls = "") => `<div class="card tile"><h3>${esc(
 function setStatus(text, kind) { $("statusText").innerHTML = text; $("dot").className = "dot " + (kind || ""); }
 
 // ============================================================== charts (canvas, no library)
+// ---- hover readout: each chart records what it drew (HOVER[id]); the tooltip reads the values nearest the cursor
+const HOVER = {}, TIP = { id: null, e: null };
+const tip = document.createElement("div");
+tip.id = "tip";
+document.body.appendChild(tip);
+function hideTip() { tip.style.display = "none"; TIP.id = null; }
+function hover(id, e) {
+  const h = HOVER[id], c = $(id);
+  if (!h || !c) return hideTip();
+  TIP.id = id; TIP.e = e;
+  const r = c.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const sw = (color) => `<i style="background:${color}"></i>`;
+  let html = "";
+  if (h.kind === "lines" || h.kind === "stacked") {
+    const span = h.w - h.pad.l - h.pad.r;
+    const t = h.t0 + Math.min(1, Math.max(0, (mx - h.pad.l) / span)) * (h.t1 - h.t0);
+    const near = (pts) => pts.reduce((b, p) => (!b || Math.abs(p[0] - t) < Math.abs(b[0] - t) ? p : b), null);
+    if (h.kind === "lines") {
+      const close = (h.t1 - h.t0) * 0.02; // a dots series only shows a point near the cursor
+      const rows = h.series.map((s) => {
+        const p = near(s.points);
+        if (!p || (s.dots && Math.abs(p[0] - t) > close)) return "";
+        return `<div>${sw(s.color)}${esc(s.name || "value")}: <b>${s.show ? s.show(p[1]) : fmt(p[1], p[1] < 10 ? 2 : 1) + h.unit}</b></div>`;
+      }).join("");
+      html = `<div class="faint">${clock(t)}</div>${rows || '<div class="faint">nothing here</div>'}`;
+    } else {
+      const i = h.ts.reduce((b, x, k) => (Math.abs(x - t) < Math.abs(h.ts[b] - t) ? k : b), 0);
+      const rows = h.layers.map((l) => ({ l, v: l.points[i]?.[1] || 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
+      html = `<div class="faint">${clock(h.ts[i])}</div>` + rows.map((x) => `<div>${sw(x.l.color)}${esc(x.l.name)}: <b>${fmt(x.v, 3)} ms</b></div>`).join("")
+        + `<div>total: <b>${fmt(rows.reduce((a, x) => a + x.v, 0), 2)} ms</b></div>`;
+    }
+  } else if (h.kind === "bars") {
+    const i = Math.floor((mx - h.pad.l) / h.bw);
+    const it = h.items[i];
+    if (!it) return hideTip();
+    html = `<div>HP lost <b>${esc(it.label)}</b>: <b>${(it.v * 100).toFixed(2)}%</b> of the rolls</div>${it.bad ? '<div class="bad">you die in some of them</div>' : ""}`;
+  } else if (h.kind === "scatter") {
+    const p = h.pts.reduce((b, q) => { const d = Math.hypot(q.sx - mx, q.sy - my); return d < 10 && (!b || d < b.d) ? { ...q, d } : b; }, null);
+    if (!p) return hideTip();
+    html = `<div><b>${esc(p.label || "search")}</b></div><div>${fmt(p.x, 0)} copies · ${fmt(p.y, 2)} ms</div>`;
+  }
+  tip.innerHTML = html;
+  tip.style.display = "block";
+  const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8), y = Math.min(e.clientY + 14, window.innerHeight - tip.offsetHeight - 8);
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+/** After a chart redraws under the cursor: its readout follows the new values. */
+const rehover = (id) => { if (TIP.id === id && TIP.e) hover(id, TIP.e); };
+
 function canvas(id) {
   const c = $(id), r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (!c.dataset.hover) {
+    c.dataset.hover = "1";
+    c.addEventListener("mousemove", (e) => hover(id, e));
+    c.addEventListener("mouseleave", hideTip);
+  }
   const h = +c.getAttribute("height");
   c.width = Math.max(10, r.width * dpr); c.height = h * dpr; c.style.height = h + "px";
   const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -383,14 +460,30 @@ function axes(g, w, h, yMax, unit, pad) {
   }
 }
 /** Lines over time. series: [{ points: [[t, v]], color, dots? }]; refs: y values drawn dashed. */
-function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax } = {}) {
+/** Times are spiky (one slow frame among hundreds): the time charts can use a log scale (the Performance page's switch). */
+const logTimes = () => { try { return localStorage.getItem("logTimes") !== "0"; } catch { return true; } };
+function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false } = {}) {
   const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 16 };
   const all = series.flatMap((s) => s.points);
   if (!all.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const t0 = Math.min(...all.map((p) => p[0])), t1 = Math.max(...all.map((p) => p[0]), t0 + 1);
-  const yMax = fixedMax ?? Math.max(...all.map((p) => p[1]), ...refs, 1) * 1.08;
-  axes(g, w, h, yMax, unit, pad);
-  const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r), Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (v - yMin) / (yMax - yMin));
+  const yMax = fixedMax ?? Math.max(...all.map((p) => p[1]), ...refs, 1) * (log ? 1.5 : 1.08);
+  const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r);
+  let Y;
+  if (log) {
+    // From 0.1 up: each power of ten an equal step, labelled.
+    const lo = 0.1, L = (v) => Math.log10(Math.max(v, lo)), span = L(yMax) - L(lo);
+    Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (L(v) - L(lo)) / span);
+    g.font = "11px system-ui"; g.fillStyle = css("--faint"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+    for (const tick of [0.1, 1, 10, 100, 1000, 10000].filter((x) => x <= yMax)) {
+      const y = Y(tick);
+      g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+      g.fillText(fmt(tick, 1) + unit, 2, y + 4);
+    }
+  } else {
+    axes(g, w, h, yMax, unit, pad);
+    Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (v - yMin) / (yMax - yMin));
+  }
   g.setLineDash([4, 4]); g.strokeStyle = css("--faint");
   for (const r of refs) { g.beginPath(); g.moveTo(pad.l, Y(r)); g.lineTo(w - pad.r, Y(r)); g.stroke(); }
   g.setLineDash([]);
@@ -402,6 +495,8 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax } = {}) {
     g.stroke();
   }
   g.fillStyle = css("--faint"); g.fillText(clock(t0), pad.l, h - 2); const e = clock(t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2);
+  HOVER[id] = { kind: "lines", series, t0, t1, pad, w, unit };
+  rehover(id);
 }
 /** Stacked areas over time: layers [{ name, color, points: [[t, v]] }] on the same t. */
 function stacked(id, layers) {
@@ -420,6 +515,8 @@ function stacked(id, layers) {
     g.closePath(); g.fill(); g.globalAlpha = 1;
     for (let i = 0; i < n; i++) base[i] += l.points[i]?.[1] || 0;
   }
+  HOVER[id] = { kind: "stacked", layers, ts, t0, t1, pad, w };
+  rehover(id);
 }
 function scatter(id, pts) {
   const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 18 };
@@ -429,11 +526,16 @@ function scatter(id, pts) {
   g.font = "11px system-ui"; g.strokeStyle = css("--line"); g.fillStyle = css("--faint");
   for (let e = 0; e <= Math.ceil(xMax); e++) { const x = pad.l + (e / xMax) * (w - pad.l - pad.r); g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, h - pad.b); g.stroke(); g.fillText("1e" + e, x + 2, h - 4); }
   for (let e = yMin; e <= Math.ceil(yMax); e++) { const y = pad.t + (h - pad.t - pad.b) * (1 - (e - yMin) / (yMax - yMin)); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke(); g.fillText(e < 0 ? `${10 ** e} ms` : `${10 ** e} ms`, 2, y + 4); }
+  const drawn = [];
   for (const p of pts) {
+    const sx = pad.l + (lx(p.x) / xMax) * (w - pad.l - pad.r), sy = pad.t + (h - pad.t - pad.b) * (1 - (ly(p.y) - yMin) / (yMax - yMin));
     g.fillStyle = p.color; g.globalAlpha = 0.7;
-    g.beginPath(); g.arc(pad.l + (lx(p.x) / xMax) * (w - pad.l - pad.r), pad.t + (h - pad.t - pad.b) * (1 - (ly(p.y) - yMin) / (yMax - yMin)), 2.5, 0, 7); g.fill();
+    g.beginPath(); g.arc(sx, sy, 2.5, 0, 7); g.fill();
+    drawn.push({ ...p, sx, sy });
   }
   g.globalAlpha = 1;
+  HOVER[id] = { kind: "scatter", pts: drawn };
+  rehover(id);
 }
 function bars(id, items) {
   const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 18 };
@@ -447,6 +549,8 @@ function bars(id, items) {
     g.fillRect(pad.l + i * bw + 1, h - pad.b - bh, Math.max(1, bw - 2), bh);
     if (items.length <= 30 || i % Math.ceil(items.length / 30) === 0) { g.fillStyle = css("--faint"); g.fillText(it.label, pad.l + i * bw + 1, h - 4); }
   });
+  HOVER[id] = { kind: "bars", items, pad, bw };
+  rehover(id);
 }
 
 // ============================================================== pages
@@ -484,8 +588,8 @@ function renderOverview() {
   items.sort((a, b) => b.t - a.t);
   $("attnCount").textContent = items.length ? items.length : "";
   $("attn").innerHTML = items.length ? items.slice(0, 40).map((i) => `<li><span class="pill ${i.cls}">${i.cls === "bad" ? "!" : "·"}</span><span style="flex:1">${i.text}</span><time>${ago(i.t)}</time></li>`).join("") : `<li class="empty">Nothing needs a look.</li>`;
-  lines("ovFrame", [{ color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }], { refs: [16.7, 33.3], unit: " ms" });
-  lines("ovHeld", [{ color: css("--violet"), points: r5.map((r) => [r.t, r.heldStates]) }, { color: css("--teal"), points: r5.map((r) => [r.t, r.searching * 1000]) }], {});
+  lines("ovFrame", [{ name: "p95", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "max", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
+  lines("ovHeld", [{ name: "states held", color: css("--violet"), points: r5.map((r) => [r.t, r.heldStates]) }, { name: "searches running", show: (v) => fmt(v / 1000, 0), color: css("--teal"), points: r5.map((r) => [r.t, r.searching * 1000]) }], {});
 }
 const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${fmt(v, 0)} ms`).join(", ");
 
@@ -529,9 +633,9 @@ function renderSearches() {
     tile("Cancelled", fmt(cancelled.length, 0), `${fmt(cancelled.reduce((a, x) => a + x.copies, 0), 0)} copies thrown away`),
     tile("Most states held", fmt(Math.max(0, ...done.map((x) => x.peakHeld)), 0), "by one search (cap 150,000 together)"),
   ].join("");
-  scatter("scatter", s.slice(-1500).map((x) => ({ x: x.copies, y: x.ms, color: x.cancelled ? css("--faint") : x.cap ? css("--violet") : isForecast(x) ? css("--good") : css("--accent") })));
+  scatter("scatter", s.slice(-1500).map((x) => ({ x: x.copies, y: x.ms, label: `${x.label}${x.cap ? " · " + x.cap : ""}${x.cancelled ? " · cancelled" : ""}${x.background ? " · background" : ""}`, color: x.cancelled ? css("--faint") : x.cap ? css("--violet") : isForecast(x) ? css("--good") : css("--accent") })));
   const tp = done.filter((x) => x.ms >= 1).slice(-600);
-  lines("throughput", [{ color: css("--accent"), dots: true, points: tp.map((x) => [x.t, x.copies / x.ms]) }], {});
+  lines("throughput", [{ name: "copies per ms", color: css("--accent"), dots: true, points: tp.map((x) => [x.t, x.copies / x.ms]) }], {});
   const f = $("searchFilter").value;
   const pick = { all: () => true, card: (x) => !isForecast(x), forecast: isForecast, bg: (x) => x.background, cap: (x) => x.cap, cancel: (x) => x.cancelled, slow: (x) => x.ms > 8 }[f];
   const rows = s.filter(pick).slice(-300).reverse();
@@ -553,7 +657,7 @@ function renderPerf() {
     tile("Gen 2 collections", fmt(r.reduce((a, x) => a + x.gen2, 0), 0), `${fmt(r.reduce((a, x) => a + x.gcPauseMs, 0), 0)} ms paused in all`),
     tile("Allocated", `${fmt(secs ? r.reduce((a, x) => a + x.allocatedMb, 0) / secs : 0, 1)} MB/s`, `heap now ${fmt(r.at(-1)?.heapMb, 0)} MB`),
   ].join("");
-  lines("pfFrame", [{ color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: [16.7, 33.3], unit: " ms" });
+  lines("pfFrame", [{ name: "median", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "p95", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "max", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
   // features: the six with the most time, then the rest together
   const totals = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) totals[k] = (totals[k] || 0) + v;
@@ -562,10 +666,10 @@ function renderPerf() {
   layers.push({ name: "the rest", color: css("--faint"), points: r.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
   stacked("pfFeatures", layers);
   $("pfFeaturesLegend").innerHTML = layers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join("");
-  lines("pfGap", [{ color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [50], unit: " ms" });
-  lines("pfGc", [{ color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { color: css("--warn"), points: r.map((x) => [x.t, x.allocatedMb / Math.max(x.seconds, 0.01)]) }, { color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) }], {});
-  lines("pfSim", [{ color: css("--violet"), points: r.map((x) => [x.t, x.heldStates]) }, { color: css("--teal"), points: r.map((x) => [x.t, x.searching * 1000]) }], {});
-  lines("pfWait", [{ color: css("--accent"), dots: true, points: waits.filter((x) => !x.missed).map((x) => [x.t, x.ms]) }, { color: css("--bad"), dots: true, points: waits.filter((x) => x.missed).map((x) => [x.t, x.ms]) }, { color: css("--warn"), dots: true, points: uns.map((x) => [x.t, x.ms]) }], { unit: " ms" });
+  lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [50], unit: " ms", log: logTimes() });
+  lines("pfGc", [{ name: "heap MB", color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { name: "allocated MB/s", color: css("--warn"), points: r.map((x) => [x.t, x.allocatedMb / Math.max(x.seconds, 0.01)]) }, { name: "gen 2 collection (heap MB)", color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) }], {});
+  lines("pfSim", [{ name: "states held", color: css("--violet"), points: r.map((x) => [x.t, x.heldStates]) }, { name: "searches running", show: (v) => fmt(v / 1000, 0), color: css("--teal"), points: r.map((x) => [x.t, x.searching * 1000]) }], {});
+  lines("pfWait", [{ name: "frame wait", color: css("--accent"), dots: true, points: waits.filter((x) => !x.missed).map((x) => [x.t, x.ms]) }, { name: "wait, left to the background", color: css("--bad"), dots: true, points: waits.filter((x) => x.missed).map((x) => [x.t, x.ms]) }, { name: "board settling", color: css("--warn"), dots: true, points: uns.map((x) => [x.t, x.ms]) }], { unit: " ms", log: logTimes() });
   const feat = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) { const f = (feat[k] ??= { mean: 0, max: 0, n: 0 }); f.mean += v; f.n++; f.max = Math.max(f.max, x.featureMax?.[k] || 0); }
   const rows = Object.entries(feat).sort((a, b) => b[1].mean - a[1].mean);
@@ -621,12 +725,28 @@ $("repList").addEventListener("click", async (e) => {
 $("repFilter").addEventListener("change", () => { $("repList").dataset.sig = ""; renderReports(); });
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-let fbNotes = [], fbStatus = {};
+let fbNotes = [], fbStatus = {}, fbComments = {};
+/**
+ * feedback.jsonl, read in order: notes ({id, text...}), status lines ({of, status, by?, note?}: the latest wins; a status line's note
+ * says what was done, shown with the comments) and comments ({of, comment}).
+ */
 async function loadFeedback() {
   const text = await readText("feedback.jsonl");
-  const notes = [], status = {};
-  for (const l of text.split("\n")) { if (!l.trim()) continue; try { const n = JSON.parse(l); if (n.status) status[n.of] = n.status; else notes.push(n); } catch {} }
+  const notes = [], status = {}, comments = {};
+  for (const l of text.split("\n")) {
+    if (!l.trim()) continue;
+    try {
+      const n = JSON.parse(l);
+      if (n.status) {
+        status[n.of] = n.status;
+        (comments[n.of] ??= []).push({ at: n.at, status: true, text: (n.status === "handled" ? "Marked handled" : "Reopened") + (n.by ? " by " + n.by : "") + (n.note ? ": " + n.note : "") });
+      }
+      else if (n.comment) (comments[n.of] ??= []).push({ at: n.at, text: n.comment });
+      else notes.push(n);
+    } catch {}
+  }
   fbStatus = status;
+  fbComments = comments;
   fbNotes = notes.map((n) => ({ ...n, status: status[n.id] || "open" })).reverse();
   if (page === "feedback") renderFeedback();
 }
@@ -635,12 +755,21 @@ function context() {
   return { mod: M.state?.mod ?? M.started?.mod ?? "?", encounter: w.inCombat ? w.encounter : null, combat: w.inCombat ? w.combat : null, turn: w.inCombat ? w.turn : null, stream: M.file, seconds: M.state?.seconds ?? null };
 }
 function renderFeedback() {
+  if (document.activeElement?.dataset?.comment) return; // a comment being typed: leave it
   const c = context();
   $("fbContext").textContent = `${c.mod}${c.encounter ? ` · ${c.encounter}, turn ${c.turn}` : " · not in a fight"}`;
   const f = $("fbFilter").value, list = fbNotes.filter((n) => n.kind !== "report" && (f === "all" || (f === "done" ? n.status === "handled" : n.status !== "handled")));
   $("fbList").innerHTML = list.length ? list.map((n) => `<div class="note"><div class="meta"><span class="pill">${esc(n.kind)}</span> ${new Date(n.at).toLocaleString()} · ${esc(n.mod)}${n.encounter ? ` · ${esc(n.encounter)}, turn ${n.turn}` : ""}
-     <button style="float:right;padding:1px 8px" data-toggle="${esc(n.id)}">${n.status === "handled" ? "Reopen" : "Mark handled"}</button></div><div class="body">${esc(n.text)}</div></div>`).join("") : `<div class="empty">No notes.</div>`;
+     <button style="float:right;padding:1px 8px" data-toggle="${esc(n.id)}">${n.status === "handled" ? "Reopen" : "Mark handled"}</button></div><div class="body">${esc(n.text)}</div>
+     ${(fbComments[n.id] || []).map((c) => `<div class="comment ${c.status ? "dim" : ""}"><span class="faint">${new Date(c.at).toLocaleString()}</span> ${esc(c.text)}</div>`).join("")}
+     <div class="row" style="margin-top:4px"><input type="text" data-comment="${esc(n.id)}" placeholder="Add a comment (Enter)" style="flex:1"></div></div>`).join("") : `<div class="empty">No notes.</div>`;
 }
+$("fbList").addEventListener("keydown", async (e) => {
+  const id = e.target.dataset?.comment;
+  if (!id || e.key !== "Enter" || !e.target.value.trim()) return;
+  try { await writeFile("feedback.jsonl", JSON.stringify({ of: id, comment: e.target.value.trim(), at: new Date().toISOString() }) + "\n", true); await loadFeedback(); }
+  catch (err) { alert("Couldn't save the comment: " + err.message); }
+});
 async function saveNote() {
   const text = $("fbText").value.trim();
   if (!text) return;
@@ -671,10 +800,98 @@ function renderLog(force) {
 ["logFilter", "logWarn"].forEach((id) => $(id).addEventListener("input", () => renderLog(true)));
 
 async function renderCompareList() {
+  renderFiles();
   const names = (FS.demo ? Object.keys(DEMO.files).filter((n) => n.startsWith("stream-")) : (await streams()).map((s) => s.name)).sort().reverse();
   for (const id of ["cmpA", "cmpB"]) { const cur = $(id).value; $(id).innerHTML = names.map((n) => `<option>${esc(n)}</option>`).join(""); if (names.includes(cur)) $(id).value = cur; }
   if (!$("cmpB").dataset.set && names.length > 1) { $("cmpA").value = names[0]; $("cmpB").value = names[1]; $("cmpB").dataset.set = 1; }
 }
+// ---- launch files: each one's mod version (its first line), date and size; deleted by hand or by a rule
+const semver = (v) => (/^(\d+)\.(\d+)\.(\d+)/.exec(String(v || "")) || [0, 0, 0, 0]).slice(1).map(Number);
+const cmpSemver = (a, b) => { const x = semver(a), y = semver(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
+/** stream-yyyyMMdd-HHmmss.jsonl: its local launch time. */
+function fileDate(name) {
+  const m = /stream-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/.exec(name);
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : new Date(0);
+}
+/** Every launch file, newest first: name, mod version, size, launch time. */
+async function launchFiles() {
+  const out = [];
+  if (FS.demo) {
+    for (const name of Object.keys(DEMO.files).filter((n) => n.startsWith("stream-"))) {
+      let mod = "?"; try { mod = JSON.parse(DEMO.files[name].split("\n")[0]).mod || "?"; } catch {}
+      out.push({ name, mod, size: DEMO.files[name].length, when: fileDate(name) });
+    }
+  } else {
+    for (const { name, h } of await streams()) {
+      const f = await h.getFile();
+      let mod = "?"; try { mod = JSON.parse((await f.slice(0, 600).text()).split("\n")[0]).mod || "?"; } catch {}
+      out.push({ name, mod, size: f.size, when: fileDate(name) });
+    }
+  }
+  return out.sort((a, b) => (a.name < b.name ? 1 : -1));
+}
+/** The files a rule would delete; never the newest (the game may be writing it). */
+function ruleDeletes(files, rule, n) {
+  if (rule === "none" || files.length < 2) return [];
+  const [newest, ...rest] = files;
+  if (rule === "days") return rest.filter((f) => Date.now() - f.when.getTime() > n * 86400000);
+  if (rule === "versions") {
+    const keep = [...new Set(files.map((f) => f.mod))].sort(cmpSemver).reverse().slice(0, Math.max(1, n));
+    return rest.filter((f) => !keep.includes(f.mod));
+  }
+  const level = { patch: 3, minor: 2, major: 1 }[rule];
+  const seen = new Set([semver(newest.mod).slice(0, level).join(".")]);
+  return rest.filter((f) => { const k = semver(f.mod).slice(0, level).join("."); if (seen.has(k)) return true; seen.add(k); return false; });
+}
+async function deleteFiles(names) {
+  for (const name of names) {
+    if (FS.demo) delete DEMO.files[name];
+    else await FS.dir.removeEntry(name);
+  }
+}
+const cleanSettings = () => { try { return JSON.parse(localStorage.getItem("clean") || "{}"); } catch { return {}; } };
+function saveClean() { try { localStorage.setItem("clean", JSON.stringify({ rule: $("cleanRule").value, n: +$("cleanN").value || 1, auto: $("cleanAuto").checked })); } catch {} }
+const mb = (bytes) => fmt(bytes / 1048576, 1) + " MB";
+async function renderFiles(note) {
+  const files = await launchFiles();
+  const doomed = new Set(ruleDeletes(files, $("cleanRule").value, +$("cleanN").value || 1).map((f) => f.name));
+  $("filesTotal").textContent = `${files.length} files · ${mb(files.reduce((a, f) => a + f.size, 0))}`;
+  $("filesTable").innerHTML = `<tr><th>Launch</th><th>Mod</th><th class="n">Size</th><th></th></tr>` + files.map((f, i) =>
+    `<tr><td>${f.when.toLocaleString()}${i === 0 ? ' <span class="pill">newest</span>' : ""}${doomed.has(f.name) ? ' <span class="pill warn">the rule deletes it</span>' : ""}</td><td>${esc(f.mod)}</td><td class="n">${mb(f.size)}</td>
+     <td>${i === 0 ? "" : `<button class="danger" data-del="${esc(f.name)}" style="padding:1px 8px">Delete</button>`}</td></tr>`).join("");
+  $("cleanOut").textContent = note ?? ($("cleanRule").value === "none" ? "" : `The rule deletes ${doomed.size} file(s), ${mb(files.filter((f) => doomed.has(f.name)).reduce((a, f) => a + f.size, 0))}.`);
+}
+async function applyRule(askFirst) {
+  const doomed = ruleDeletes(await launchFiles(), $("cleanRule").value, +$("cleanN").value || 1);
+  if (!doomed.length) return 0;
+  if (askFirst && !confirm(`Delete ${doomed.length} launch file(s)? This can't be undone.`)) return 0;
+  await deleteFiles(doomed.map((f) => f.name));
+  return doomed.length;
+}
+{
+  const c = cleanSettings();
+  if (c.rule) $("cleanRule").value = c.rule;
+  if (c.n) $("cleanN").value = c.n;
+  $("cleanAuto").checked = !!c.auto;
+}
+for (const id of ["cleanRule", "cleanN", "cleanAuto"]) $(id).addEventListener("change", () => { saveClean(); renderFiles(); });
+$("cleanApply").addEventListener("click", async () => {
+  try { const n = await applyRule(true); await renderFiles(n ? `Deleted ${n} file(s).` : "Nothing deleted."); await renderCompareList(); }
+  catch (e) { alert("Couldn't delete: " + e.message); }
+});
+$("filesTable").addEventListener("click", async (e) => {
+  const name = e.target.dataset.del; if (!name) return;
+  if (!confirm(`Delete ${name}? This can't be undone.`)) return;
+  try { await deleteFiles([name]); await renderFiles(`Deleted ${name}.`); await renderCompareList(); }
+  catch (err) { alert("Couldn't delete: " + err.message); }
+});
+/** On connecting: the clean-up rule, when it's set to run then (no question asked: that's what the switch asks for). */
+async function autoClean() {
+  if (!cleanSettings().auto) return;
+  try { const n = await applyRule(false); if (n) console.log(`dashboard: the clean-up rule deleted ${n} launch file(s)`); }
+  catch (e) { console.warn("dashboard: the clean-up rule failed: " + e.message); }
+}
+
 async function summarizeFile(name) {
   const text = FS.demo ? DEMO.files[name] : await (await (await FS.dir.getFileHandle(name)).getFile()).text();
   const r = [], s = [], c = { done: 0, matched: 0, skipped: 0 }, u = [];
@@ -747,6 +964,8 @@ function start() {
 }
 $("searchFilter").addEventListener("change", () => render(true));
 $("perfWindow").addEventListener("change", () => render(true));
+$("logTimesBox").checked = logTimes();
+$("logTimesBox").addEventListener("change", (e) => { try { localStorage.setItem("logTimes", e.target.checked ? "1" : "0"); } catch {} render(true); });
 $("connectBtn").addEventListener("click", () => connect(true));
 $("demoBtn").addEventListener("click", () => { FS.demo = true; FS.dir = null; start(); });
 $("themeBtn").addEventListener("click", () => {

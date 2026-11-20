@@ -13,7 +13,9 @@ namespace SpireQoL.Cards;
 ///    centered and overlapping the edge slightly. In a fanned hand the card tops stay visible
 ///    while the sides are covered, so the tabs read at a glance without hovering. A red slash on
 ///    a tab means "playing this might be bad for you".
-///  - **Opacity**: Ethereal translucency.
+///  - **Opacity**: Ethereal translucency, of the card as a whole (decision #110): its %CardContainer is drawn into a CanvasGroup
+///    of ours and the group is faded, so the art doesn't show through the frame drawn over it (a fade on the container itself
+///    fades each layer on its own). Put back as it was when the card stops being faded or the node is reused.
 ///
 /// Everything lives in an overlay that's the last child of the card's %CardContainer, so it
 /// follows the card's hover scale and hand rotation. Card nodes are pooled and reused by the
@@ -49,6 +51,11 @@ public sealed class CardOverlayRenderer
         public required Control Overlay;
         public bool TouchedAlpha;
         public bool Seen;
+
+        /// <summary>The CanvasGroup the container was moved into to fade the card as a whole (null: not grouped).</summary>
+        public CanvasGroup? Group;
+        /// <summary>Where the container came from and its layout there, to put it back exactly.</summary>
+        public (Control Parent, int Index, Vector4 Anchors, Vector4 Offsets)? Home;
         public readonly List<Control> Tabs = new();
 
         /// <summary>
@@ -108,11 +115,7 @@ public sealed class CardOverlayRenderer
             if (e.Seen) continue;
             e.Overlay.Visible = false;
             if (e.TagLayer != null && GodotObject.IsInstanceValid(e.TagLayer)) e.TagLayer.Visible = false;
-            if (e.TouchedAlpha)
-            {
-                SetAlpha(e.Container, 1f);
-                e.TouchedAlpha = false;
-            }
+            if (e.TouchedAlpha) Unfade(e);
         }
         foreach (var id in dead) _entries.Remove(id);
 
@@ -194,16 +197,86 @@ public sealed class CardOverlayRenderer
         var layer = PlaceTagLayer(e, size);
         ApplyTabs(e, d.Tabs, layer);
 
-        if (d.Opacity is { } a)
+        if (d.Opacity is { } a) Fade(e, a);
+        else if (e.TouchedAlpha) Unfade(e);
+    }
+
+    /// <summary>Grouping failed once (the game's card layout changed?): every card fades layer by layer instead, as before.</summary>
+    private static bool _groupBroken;
+
+    /// <summary>
+    /// The card at <paramref name="a"/> opacity as a whole (decision #110): its container moved into a CanvasGroup of ours (the game
+    /// reaches it through NCard.Body, a reference, so the move doesn't lose it), pinned to the same rect (a Control under a Node2D
+    /// takes its anchors from the viewport), and the group faded. Falls back to fading the container's layers if anything fails.
+    /// </summary>
+    private static void Fade(Entry e, float a)
+    {
+        e.TouchedAlpha = true;
+        if (_groupBroken || e.Container == e.Card)
         {
             SetAlpha(e.Container, a);
-            e.TouchedAlpha = true;
+            return;
         }
-        else if (e.TouchedAlpha)
+        try
         {
-            SetAlpha(e.Container, 1f);
-            e.TouchedAlpha = false;
+            if (e.Group == null || !GodotObject.IsInstanceValid(e.Group))
+            {
+                if (e.Container.GetParent() is not Control parent) throw new InvalidOperationException("the card container's parent isn't a Control");
+                var c = e.Container;
+                e.Home = (parent, c.GetIndex(), new Vector4(c.AnchorLeft, c.AnchorTop, c.AnchorRight, c.AnchorBottom),
+                    new Vector4(c.OffsetLeft, c.OffsetTop, c.OffsetRight, c.OffsetBottom));
+                var (pos, size) = (c.Position, c.Size);
+                var group = new CanvasGroup { Name = "SpireQoL_WholeCardFade" };
+                parent.AddChild(group);
+                parent.MoveChild(group, e.Home.Value.Index);
+                c.Reparent(group, keepGlobalTransform: false);
+                c.AnchorLeft = c.AnchorTop = c.AnchorRight = c.AnchorBottom = 0;
+                c.Position = pos;
+                c.Size = size;
+                e.Group = group;
+            }
+            var m = e.Group.Modulate;
+            m.A = a;
+            e.Group.Modulate = m;
         }
+        catch (Exception ex)
+        {
+            _groupBroken = true;
+            ModEntry.Log.Warn($"Ethereal: couldn't fade the card as a whole ({ex.Message}); fading its layers instead");
+            Ungroup(e);
+            SetAlpha(e.Container, a);
+        }
+    }
+
+    /// <summary>The card back at full opacity, its container where it was.</summary>
+    private static void Unfade(Entry e)
+    {
+        e.TouchedAlpha = false;
+        Ungroup(e);
+        SetAlpha(e.Container, 1f);
+    }
+
+    private static void Ungroup(Entry e)
+    {
+        if (e.Group == null) return;
+        try
+        {
+            if (e.Home is { } home && GodotObject.IsInstanceValid(e.Container) && GodotObject.IsInstanceValid(home.Parent))
+            {
+                var c = e.Container;
+                c.Reparent(home.Parent, keepGlobalTransform: false);
+                home.Parent.MoveChild(c, Math.Min(home.Index, home.Parent.GetChildCount() - 1));
+                (c.AnchorLeft, c.AnchorTop, c.AnchorRight, c.AnchorBottom) = (home.Anchors.X, home.Anchors.Y, home.Anchors.Z, home.Anchors.W);
+                (c.OffsetLeft, c.OffsetTop, c.OffsetRight, c.OffsetBottom) = (home.Offsets.X, home.Offsets.Y, home.Offsets.Z, home.Offsets.W);
+            }
+            if (GodotObject.IsInstanceValid(e.Group)) e.Group.QueueFree();
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log.Warn($"Ethereal: couldn't put the card back after fading it ({ex.Message})");
+        }
+        e.Group = null;
+        e.Home = null;
     }
 
     /// <summary>

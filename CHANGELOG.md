@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.3
+#### Fixed
+- Fetch's hit wasn't predicted (Osty's damage, the enemy's HP after it, Bone Flute's block): cards that make Osty attack are now read from the game's own tag instead of a list that missed it.
+- Intent Details showed Toadpole's Spike Spit giving 2 Thorns; it takes 2 away (shown as -2).
+- Ethereal cards fade as a whole: the card art no longer shows through the frame and text drawn over it (in your hand and on the event inspect screen).
+#### Changed
+- The update note on the main menu says it's checking while GitHub hasn't answered yet.
+
 ### Spire QoL 1.21.2
 #### Fixed
 - Intent Details showed every power a move could apply when only one branch of it runs (Entomancer's Pheromone Spit showed both +1 and +2 Strength). It now shows the branch that will run, decided from what you can see (its Personal Hive, a power it has, a free slot, how many times it has respawned), and a ? where that can't be known yet (Intent Forecast's later moves).
