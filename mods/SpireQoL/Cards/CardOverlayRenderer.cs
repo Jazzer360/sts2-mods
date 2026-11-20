@@ -54,6 +54,9 @@ public sealed class CardOverlayRenderer
 
         /// <summary>The CanvasGroup the container was moved into to fade the card as a whole (null: not grouped).</summary>
         public CanvasGroup? Group;
+        /// <summary>Why the card can't be drawn in a CanvasGroup (null: it can), checked again every <see cref="CheckIn"/> faded frames.</summary>
+        public string? Ungroupable;
+        public int CheckIn;
         /// <summary>Where the container came from and its layout there, to put it back exactly.</summary>
         public (Control Parent, int Index, Vector4 Anchors, Vector4 Offsets)? Home;
         public readonly List<Control> Tabs = new();
@@ -212,11 +215,19 @@ public sealed class CardOverlayRenderer
     private static void Fade(Entry e, float a)
     {
         e.TouchedAlpha = true;
-        if (_groupBroken || e.Container == e.Card)
+        if (!_groupBroken && e.Container != e.Card && --e.CheckIn <= 0)
         {
+            e.Ungroupable = Ungroupable(e);
+            e.CheckIn = 30; // the game sets a card's materials when it shows a card; a pooled node showing a new one is unfaded first
+            if (e.Ungroupable != null) LogUngroupable(e, e.Ungroupable);
+        }
+        if (_groupBroken || e.Container == e.Card || e.Ungroupable != null)
+        {
+            Ungroup(e);
             SetAlpha(e.Container, a);
             return;
         }
+        SetAlpha(e.Container, 1f);
         try
         {
             if (e.Group == null || !GodotObject.IsInstanceValid(e.Group))
@@ -248,10 +259,69 @@ public sealed class CardOverlayRenderer
         }
     }
 
+    /// <summary>
+    /// Why the card can't be drawn inside a CanvasGroup (null: it can). A CanvasGroup draws its children into the backbuffer, so
+    /// anything else that uses it draws wrong inside one (Godot's CanvasGroup docs: clip_children doesn't work there): a node clipping
+    /// its children, a nested CanvasGroup with a shader of its own, a non-mix blend mode, or a shader reading the screen. Such a card
+    /// (Ascender's Bane drew washed out) fades layer by layer instead, as before decision #110.
+    /// </summary>
+    private static string? Ungroupable(Entry e)
+    {
+        var stack = new Stack<Node>();
+        stack.Push(e.Container);
+        while (stack.Count > 0)
+        {
+            var n = stack.Pop();
+            if (n is CanvasItem ci && n != e.Overlay)
+            {
+                if (ci.ClipChildren != CanvasItem.ClipChildrenMode.Disabled) return $"{ci.Name} clips its children";
+                if (n is CanvasGroup && n != e.Container && ci.Material != null) return $"{ci.Name} is a CanvasGroup with its own material";
+                if (MaterialProblem(ci.Material) is { } why) return $"{ci.Name}: {why}";
+            }
+            foreach (var child in n.GetChildren()) stack.Push(child);
+        }
+        return null;
+    }
+
+    /// <summary>Shader code read once per shader (it's the game's, and doesn't change).</summary>
+    private static readonly Dictionary<ulong, string?> ShaderProblems = new();
+
+    private static string? MaterialProblem(Material? m)
+    {
+        switch (m)
+        {
+            case CanvasItemMaterial cim when cim.BlendMode != CanvasItemMaterial.BlendModeEnum.Mix:
+                return $"blend mode {cim.BlendMode}";
+            case ShaderMaterial { Shader: { } shader }:
+                var id = shader.GetInstanceId();
+                if (!ShaderProblems.TryGetValue(id, out var why))
+                {
+                    var code = shader.Code ?? "";
+                    why = code.Contains("hint_screen_texture") || code.Contains("SCREEN_TEXTURE") ? "a shader reading the screen"
+                        : code.Contains("blend_add") || code.Contains("blend_sub") || code.Contains("blend_mul") || code.Contains("blend_premul_alpha") ? "a shader with its own blend mode"
+                        : null;
+                    ShaderProblems[id] = why;
+                }
+                return why;
+            default:
+                return null;
+        }
+    }
+
+    private static readonly HashSet<string> LoggedUngroupable = new();
+
+    private static void LogUngroupable(Entry e, string why)
+    {
+        var card = e.Card.Model?.GetType().Name ?? e.Card.Name.ToString();
+        if (LoggedUngroupable.Add(card + "|" + why))
+            ModEntry.Log.Info($"Ethereal: {card} fades layer by layer ({why}: it can't be drawn inside a CanvasGroup)");
+    }
+
     /// <summary>The card back at full opacity, its container where it was.</summary>
     private static void Unfade(Entry e)
     {
         e.TouchedAlpha = false;
+        e.CheckIn = 0;
         Ungroup(e);
         SetAlpha(e.Container, 1f);
     }

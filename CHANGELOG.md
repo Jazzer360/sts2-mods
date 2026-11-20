@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.5
+#### Fixed
+- An Ethereal card that can't be drawn inside the whole-card fade (Ascender's Bane drew washed out since 1.21.3) fades layer by layer instead, as before. The mod logs which card and why.
+
 ### Spire QoL 1.21.4
 #### Fixed
 - Evil Eye gains its block twice once you've exhausted a card this turn, and Death's Door again for each Repeat once you've applied Doom this turn; both were predicted as one gain (the block, and what reacts to each gain: Juggernaut's damage).
