@@ -65,6 +65,10 @@ main { padding: 16px; max-width: 2200px; margin: 0 auto; }
 table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--dim); font-weight: 600; font-size: 12px; position: sticky; top: 0; background: var(--panel); }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+th.asc::after { content: " ▲"; font-size: 9px; }
+th.desc::after { content: " ▼"; font-size: 9px; }
 td.n, th.n { text-align: right; }
 .scroll { max-height: 520px; overflow: auto; }
 .pill { display: inline-block; border-radius: 9px; padding: 0 7px; font-size: 11px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
@@ -571,7 +575,58 @@ function setHTML(el, html) {
   if (!el || el._html === html) return;
   el._html = html;
   el.innerHTML = html;
+  sortTablesIn(el);
 }
+
+// ---- sorting: click a table's header to sort by that column (again: the other way; a third time: back to its own order). The
+// choice is kept per table (and across visits), and put back each time the table is rebuilt.
+const SORTS = (() => { try { return JSON.parse(localStorage.getItem("sorts") || "{}"); } catch { return {}; } })();
+const tableKey = (t) => t.id || `${t.closest("[id]")?.id ?? "page"}:${[...(t.closest("[id]") ?? document).querySelectorAll("table")].indexOf(t)}`;
+/** A cell's sort value: data-v when given, else its number (ms, %, ×, commas and units ignored), else its text. "–" sorts lowest. */
+function cellValue(td) {
+  if (!td) return -Infinity;
+  if (td.dataset.v != null) return isNaN(+td.dataset.v) ? td.dataset.v : +td.dataset.v;
+  const s = td.textContent.trim();
+  if (s === "" || s === "–" || s === "-") return -Infinity;
+  const m = /^×?\s*([-+]?[\d,]*\.?\d+)\s*(ms|s|%|×|fps|MB|KB)?$/i.exec(s.replace(/\(.*?\)/g, "").trim());
+  return m ? parseFloat(m[1].replace(/,/g, "")) : s.toLowerCase();
+}
+function sortTable(t) {
+  const st = SORTS[tableKey(t)], rows = [...t.rows];
+  const head = rows.find((r) => r.querySelector("th"));
+  if (!head) return;
+  head.querySelectorAll("th").forEach((th) => {
+    th.classList.add("sortable");
+    th.title ||= "Sort by this column (click again for the other way, a third time for the table's own order)";
+    th.classList.toggle("asc", st?.col === th.cellIndex && st.dir > 0);
+    th.classList.toggle("desc", st?.col === th.cellIndex && st.dir < 0);
+  });
+  // Data rows: not the header, not a one-cell row spanning the table ("None", a group title).
+  const body = rows.filter((r) => r !== head && !r.querySelector("th") && !(r.cells.length === 1 && r.cells[0].colSpan > 1));
+  if (!body.length) return;
+  body.forEach((r, i) => { if (r._order == null) r._order = i; });
+  const sorted = [...body].sort((a, b) => {
+    if (!st) return a._order - b._order;
+    const x = cellValue(a.cells[st.col]), y = cellValue(b.cells[st.col]);
+    const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true });
+    return (c || a._order - b._order) * st.dir;
+  });
+  const parent = body[0].parentNode;
+  for (const r of sorted) parent.appendChild(r);
+}
+function sortTablesIn(el) {
+  if (el.tagName === "TABLE") sortTable(el);
+  el.querySelectorAll?.("table").forEach(sortTable);
+}
+document.addEventListener("click", (e) => {
+  const th = e.target.closest("th.sortable");
+  if (!th) return;
+  const t = th.closest("table"), key = tableKey(t), col = th.cellIndex, st = SORTS[key];
+  SORTS[key] = !st || st.col !== col ? { col, dir: th.classList.contains("n") ? -1 : 1 } : st.dir === (th.classList.contains("n") ? -1 : 1) ? { col, dir: -st.dir } : undefined;
+  if (!SORTS[key]) delete SORTS[key];
+  try { localStorage.setItem("sorts", JSON.stringify(SORTS)); } catch {}
+  sortTable(t);
+});
 function setStatus(text, kind) { setHTML($("statusText"), text); $("dot").className = "dot " + (kind || ""); }
 
 // ============================================================== charts (canvas, no library)
@@ -1602,6 +1657,7 @@ $("cmpGo").addEventListener("click", async () => {
         if (num && y && higherBetter !== undefined) { const d = (x - y) / Math.abs(y); const better = higherBetter ? d > 0 : d < 0; ch = Math.abs(d) < 0.05 ? '<span class="dim">about the same</span>' : `<span class="${better ? "good" : "bad"}">${d > 0 ? "+" : ""}${(d * 100).toFixed(0)}% ${better ? "better" : "worse"}</span>`; }
         return `<tr><td>${esc(k)}${help ? ` <span class="info" data-tip="${esc(help)}">i</span>` : ""}</td><td class="n">${show(x)}</td><td class="n">${show(y)}</td><td class="n">${ch}</td></tr>`;
       }).join("") + `</table>`;
+    sortTablesIn($("cmpOut"));
   } catch (e) { $("cmpOut").innerHTML = `<div class="bad">${esc(e.message)}</div>`; }
 });
 
