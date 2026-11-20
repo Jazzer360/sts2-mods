@@ -687,7 +687,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
         // Lethal (decision #87): the card raises an enemy's chance of dying before it acts, for sure: its explored deaths (Low)
         // beat everything ending the turn now could give (High). Certain kills always count; a chance only with chances on.
-        var chances = _ctx.Settings.DeathChance;
+        var chances = _ctx.Settings.ShowDeathChance;
         SimChance? Lethal(SimOutcome o)
         {
             SimChance? best = null;

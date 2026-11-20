@@ -78,7 +78,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         // The skull whenever an outcome might kill you (decision #87), with the chance unless it's certain or chances are off.
         var death = m.DeathChance;
         var dies = death.Possible || m.Dies;
-        var chance = dies && !death.Certain && _ctx.Settings.DeathChance ? death.Text() : null;
+        var chance = dies && !death.Certain && _ctx.Settings.ShowDeathChance ? death.Text() : null;
         // The skull and the chance come from the whole outcome (both lines): the split is only how it's shown.
         int? unblockable = m.UnblockableTotal > 0 ? m.UnblockableTaken : null;
         _panel!.Show(m.BlockableTotal, m.ExpectedBlock,

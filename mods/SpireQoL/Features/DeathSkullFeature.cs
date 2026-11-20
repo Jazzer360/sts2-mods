@@ -13,7 +13,7 @@ namespace SpireQoL.Features;
 /// <summary>
 /// The game's skull just left of an enemy's HP numbers when it dies before acting if you end your turn
 /// now (the Incoming Damage simulation: poison, end-of-turn damage, orbs...). When a roll decides it
-/// (a random Lightning target), the skull carries the chance instead (QolSettings.DeathChance).
+/// (a random Lightning target), the skull carries the chance instead (QolSettings.ShowDeathChance).
 /// The card tabs still say what a card changes; this says what happens anyway.
 /// Spec: docs/FEATURES.md#death-skull.
 /// </summary>
@@ -61,7 +61,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
                     show[enemy] = null;
                     continue;
                 }
-                if (_ctx.Settings.DeathChance && chance.Seen) show[enemy] = chance.Text() + (model.ShownMark ?? "");
+                if (_ctx.Settings.ShowDeathChance && chance.Seen) show[enemy] = chance.Text() + (model.ShownMark ?? "");
             }
         }
 

@@ -94,7 +94,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
                     if (on) specs.Add(("potion:" + relic.GetType().Name, relic, false));
                 }
                 _last[potion] = specs.Select(s => s.Key).ToList();
-                var shown = specs.Where(s => _ctx.Settings.TabEnabled(s.Key)).ToList();
+                var shown = specs.Where(s => _ctx.Settings.TabEnabled(s.Key) && (s.Crossed ? _ctx.Settings.CrossedTabs : _ctx.Settings.PlainTabs)).ToList();
                 seen.Add(holder.GetInstanceId());
                 Show(holder, shown);
             }

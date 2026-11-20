@@ -83,6 +83,15 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         }
         _enemy = enemy;
         var (turns, view) = forecast.Value;
+        // Chances off (decision #122): the certain turns only.
+        if (!_ctx.Settings.ShowIntentOdds) turns = turns.TakeWhile(t => t.Certain).ToList();
+        if (turns.Count == 0)
+        {
+            _enemy = null;
+            _key = "";
+            _widget!.HasContent = false;
+            return;
+        }
         var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(t => string.Join(",", t.Moves.Select(m => $"{m.Move}:{m.Chance:0.###}"))));
         if (key != _key)
         {

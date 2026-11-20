@@ -575,6 +575,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] Test in game: the draw chance tab's text and corner number on Escape Plan, Pillage, Scrape (hand and Guide page), and that other tabs on a reused tab node don't show a stray corner number.
 - [x] 1.22.1 (decision #120): Pillage draws level by level, merging draws that gave the same cards; what was drawn is in the branch key while it draws, which fixes Pillage's chance tab with Iteration (two branches with different Attack counts merged: 75% shown for 25%). Tests against the textbook odds for every pile and hand size (Pillage, Scrape, Escape Plan), and a cost test (four kinds of Attack: 518,593 state copies before, under 5,000 now).
 - [x] 1.22.1 (decision #121): Hellraiser's auto-played Strike is simulated (its play at a random enemy, mid-draw); the play check follows plays where it happened.
+- [x] 1.23.0 (decision #122): settings by category: Show chances with each chance under it (Intent Forecast's random moves new), kinds of tab (plain, crossed, aim marker), reminders by place, options greyed out under their feature.
+- [ ] Test in game: the settings menu's new sections (Chances, Kinds of tab, Reminders by place), greyed-out options when a feature is off, and Show chances off in a fight (no chance on the Death Skull, lethal tab, draw chance tab or Intent Forecast).
 - [ ] Gap: Scrape discarding a Sly card plays it (not simulated: `?`).
 - [ ] Gap: Drum of Battle's energy when it's exhausted during another play (Exhaust a card from your hand while it's there) isn't simulated (`CardEnergy.Reviewed`).
 - [ ] Gap: a teammate's own Energy Surge (played through Howl from Beyond) gives you energy the simulator doesn't follow.

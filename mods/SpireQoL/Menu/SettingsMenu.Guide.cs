@@ -120,10 +120,10 @@ public sealed partial class SettingsMenu
         GuideCardCell(flow, Card<Acrobatics>(), "Discard pile: a reshuffle",
             "It draws more cards than your draw pile has, so playing it shuffles your discard pile back into your draw pile.",
             Tab("shuffle", GameIcons.DiscardPile()));
-        GuideCardCell(flow, Card<Apparition>(), "See-through: Ethereal",
-            "The one marker that isn't a tab: an Ethereal card exhausts if it's still in your hand at the end of your turn. "
-            + "How see-through: General, Ethereal opacity.",
-            (float?)S.EtherealOpacity);
+        GuideHandCell(flow, Card<StrikeIronclad>(), Card<AscendersBane>(), "See-through: Ethereal",
+            "The one marker that isn't a tab: an Ethereal card exhausts if it's still in your hand at the end of your turn, "
+            + "so it shows the card behind it. How see-through: In fights, Card Indicators, Ethereal opacity.",
+            S.EtherealOpacity);
         _rows!.AddChild(flow);
 
         Paragraph("Potion tabs: the same tab hangs under a potion in the top bar when drinking it sets off a relic "
@@ -394,7 +394,7 @@ public sealed partial class SettingsMenu
         example.AddChild(UiKit.Label("  12/40", 20, Colors.White));
         GuideRow(example, "Death Skull",
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
-            + "With a chance when a roll decides it (General: Death chance). With a range and ? when the fight was too big to work out (from the kills already certain up).");
+            + "With a chance when a roll decides it (In fights: Chances, Death chances). With a range and ? when the fight was too big to work out (from the kills already certain up).");
         var progress = UiKit.Row(6);
         progress.AddChild(UiKit.Icon(GameIcons.Clock(), 22));
         progress.AddChild(new ProgressBar
@@ -446,6 +446,37 @@ public sealed partial class SettingsMenu
             _lastGuideCard = example;
             cell.AddChild(example.Root);
             _guideTicks.Add((_, _) => example.Tick());
+        }
+        cell.AddChild(Label(title, 20, Accent));
+        cell.AddChild(CellText(text));
+        flow.AddChild(cell);
+    }
+
+    /// <summary>
+    /// Two cards held like a hand of two (fanned, each turned out a little about its bottom): <paramref name="back"/> plain
+    /// behind, <paramref name="front"/> over it at <paramref name="opacity"/>, so the card behind shows through.
+    /// </summary>
+    private void GuideHandCell(HFlowContainer flow, CardModel? back, CardModel? front, string title, string text, float opacity)
+    {
+        var cell = Cell();
+        if (back != null && front != null)
+        {
+            var cardWidth = MegaCrit.Sts2.Core.Nodes.Cards.NCard.defaultSize.X * GuideCardScale;
+            var behind = new ShownCard(back, GuideCardScale, cardWidth, Array.Empty<TabSpec>());
+            var over = new ShownCard(front, GuideCardScale, cardWidth, Array.Empty<TabSpec>(), opacity);
+            var height = behind.Root.CustomMinimumSize.Y;
+            // Room for the outer corners as they turn out.
+            var hand = new Control { CustomMinimumSize = new Vector2(GuideCellWidth, height + 12), MouseFilter = Control.MouseFilterEnum.Ignore };
+            var spread = cardWidth * 0.42f;
+            foreach (var (card, dx, degrees) in new[] { (behind, -spread / 2, -9f), (over, spread / 2, 7f) })
+            {
+                card.Root.Position = new Vector2((GuideCellWidth - cardWidth) / 2 + dx, 6);
+                card.Root.PivotOffset = new Vector2(cardWidth / 2, height);
+                card.Root.RotationDegrees = degrees;
+                hand.AddChild(card.Root);
+                _guideTicks.Add((_, _) => card.Tick());
+            }
+            cell.AddChild(hand);
         }
         cell.AddChild(Label(title, 20, Accent));
         cell.AddChild(CellText(text));

@@ -77,8 +77,42 @@ public sealed class QolSettings
     /// </summary>
     public bool TeammateHands { get; set; } = false;
 
-    /// <summary>Death Skull: also show it, with the chance, when a roll decides whether the enemy dies.</summary>
+    /// <summary>
+    /// Chances (decision #122): every chance the mod shows, all at once. Off: only what's certain (a chance that's hidden isn't
+    /// shown at all; a `?` or a range on what is shown stays, as it marks what isn't settled).
+    /// </summary>
+    public bool Chances { get; set; } = true;
+
+    /// <summary>Death Skull, your skull on Incoming Damage, lethal tabs: also show the chance when a roll decides a death.</summary>
     public bool DeathChance { get; set; } = true;
+
+    /// <summary>Intent Forecast: the random pick after the certain turns, each move with its chance (off: the certain turns only).</summary>
+    public bool IntentOdds { get; set; } = true;
+
+    /// <summary>Card tabs by kind (decision #122): plain ones (something extra happens), crossed ones (warnings).</summary>
+    public bool PlainTabs { get; set; } = true;
+    public bool CrossedTabs { get; set; } = true;
+
+    /// <summary>The aim marker on tabs that happen only at some targets (off: the tab shows without it).</summary>
+    public bool AimMarker { get; set; } = true;
+
+    [System.Text.Json.Serialization.JsonIgnore] public bool ShowDeathChance => Chances && DeathChance;
+    [System.Text.Json.Serialization.JsonIgnore] public bool ShowIntentOdds => Chances && IntentOdds;
+    [System.Text.Json.Serialization.JsonIgnore] public bool ShowEventOdds => Chances && EventOdds;
+
+    /// <summary>The draw chance tab's key: a chance, so it follows <see cref="Chances"/> too.</summary>
+    public const string DrawChanceKey = "drawn";
+
+    /// <summary>
+    /// A tab as it's shown, after the settings by kind: null when its kind is off; without its aim marker when that's off.
+    /// The key's own switch is <see cref="TabEnabled"/>.
+    /// </summary>
+    public Cards.TabSpec? Shown(Cards.TabSpec t)
+    {
+        if (t.Crossed ? !CrossedTabs : !PlainTabs) return null;
+        if (t.Key == DrawChanceKey && !Chances) return null;
+        return t.Aimed && !AimMarker ? t with { Aimed = false } : t;
+    }
 
     /// <summary>Show the amount on block / damage / summon proc tabs (off = icon only).</summary>
     public bool ProcNumbers { get; set; } = true;

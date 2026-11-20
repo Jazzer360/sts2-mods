@@ -46,17 +46,16 @@ public sealed class CardDecor
     /// <summary>Settings filter (QolSettings.TabEnabled); null = everything shown.</summary>
     internal Func<string, bool>? Filter { get; init; }
 
+    /// <summary>The settings by kind (QolSettings.Shown): null hides the tab; else the tab as shown. Null = as given.</summary>
+    internal Func<TabSpec, TabSpec?>? Shape { get; init; }
+
     /// <returns>Whether the tab was added (false if a tab with this key exists or it's turned off).</returns>
     /// <param name="kind">"block", "damage" or "summon" for quantified procs (with <paramref name="amount"/>), else null.</param>
     public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, string? kind = null, int amount = 0,
         int auditMin = 0, int auditMax = 0, string? text = null, CardModel? card = null)
     {
         if (Predicted.Any(t => t.Key == key)) return false;
-        var spec = new TabSpec(key, icon, crossed, number, kind, amount, auditMin, auditMax, text, card);
-        Predicted.Add(spec);
-        if (Filter != null && !Filter(key)) return false;
-        Tabs.Add(spec);
-        return true;
+        return AddTab(new TabSpec(key, icon, crossed, number, kind, amount, auditMin, auditMax, text, card));
     }
 
     /// <summary>Adds a tab with every field of <paramref name="spec"/> (number text, aim marker...).</summary>
@@ -66,7 +65,9 @@ public sealed class CardDecor
         if (Predicted.Any(t => t.Key == spec.Key)) return false;
         Predicted.Add(spec);
         if (Filter != null && !Filter(spec.Key)) return false;
-        Tabs.Add(spec);
+        var shown = Shape == null ? spec : Shape(spec);
+        if (shown == null) return false;
+        Tabs.Add(shown);
         return true;
     }
 
@@ -82,11 +83,14 @@ public sealed class CardDecorFrame
     /// <summary>Settings filter applied to every tab (set once settings are loaded).</summary>
     public Func<string, bool>? Filter { get; set; }
 
+    /// <summary>The settings by kind applied to every tab (CardDecor.Shape).</summary>
+    public Func<TabSpec, TabSpec?>? Shape { get; set; }
+
     public CardDecor For(CardModel card)
     {
         if (!_decor.TryGetValue(card, out var d))
         {
-            d = new CardDecor { Filter = Filter };
+            d = new CardDecor { Filter = Filter, Shape = Shape };
             _decor[card] = d;
         }
         return d;

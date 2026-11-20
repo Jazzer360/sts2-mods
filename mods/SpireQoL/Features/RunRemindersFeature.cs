@@ -434,7 +434,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             if (!GodotObject.IsInstanceValid(button)) continue;
             var icons = me != null && button.Option is { IsLocked: false, IsProceed: false } option
                 ? IconsFor(option, me).Where(i => _ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, i.Relic.GetType().Name)))
-                    .Select(i => (i.Relic, i.Crossed, _ctx.Settings.EventOdds ? i.Odds : null)).ToList()
+                    .Select(i => (i.Relic, i.Crossed, _ctx.Settings.ShowEventOdds ? i.Odds : null)).ToList()
                 : new List<(RelicModel Relic, bool Crossed, string? Odds)>();
             Show(button, icons);
             ShowInspect(button, me);

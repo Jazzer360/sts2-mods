@@ -6,6 +6,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.23.0
+#### Added
+- Settings by category. **Show chances** turns every chance the mod shows on or off at once (off: only what's certain), with a switch for each under it: death chances, the draw chance tab, Intent Forecast's random moves (new) and the chance under event icons.
+- **Kinds of tab** on the Card tabs page: plain tabs, crossed tabs (warnings) and the aim marker, each its own switch, so you can keep warnings only.
+- **Reminders by place** on the Outside fights page: Run Reminders on card rewards, at events, in shops and on the map, each one switch for every relic.
+#### Changed
+- Each option sits indented under the feature it changes, and is greyed out (saying what it needs) while that feature is off. Death chance moved under Show chances.
+- Guide: the Ethereal example is Ascender's Bane held over a Strike, the two fanned like a hand, so you can see the card behind it through it.
+
 ### Spire QoL 1.22.1
 #### Fixed
 - Pillage's draw chance could be wrong with Iteration (75% shown where the chance was 25%).

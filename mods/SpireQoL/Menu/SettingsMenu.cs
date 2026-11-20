@@ -378,41 +378,87 @@ public sealed partial class SettingsMenu
     {
         FeatureSwitches(FeaturePage.Fights);
 
+        ChancesSection(fights: true);
+
         Section("Card Indicators");
+        var cardIndicators = Needs("card-indicators");
         Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", S.EtherealOpacity, 0.25, 1, 0.05,
-            v => S.EtherealOpacity = (float)v, v => $"{v:0.00}");
+            v => S.EtherealOpacity = (float)v, v => $"{v:0.00}", cardIndicators);
 
         Section("Proc Indicators");
+        var procs = Needs("proc-indicators");
         Option("Amounts on proc tabs", "Show the block, damage or summon amount on proc tabs. Off: icon only.",
-            S.ProcNumbers, v => S.ProcNumbers = v);
+            S.ProcNumbers, v => S.ProcNumbers = v, procs);
         Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
-            S.ProcIndirect, v => S.ProcIndirect = v);
+            S.ProcIndirect, v => S.ProcIndirect = v, procs);
 
         Section("Relic Counters");
+        var counters = Needs("relic-counters");
         Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
-            S.PulseOneStepEarly, v => S.PulseOneStepEarly = v);
+            S.PulseOneStepEarly, v => S.PulseOneStepEarly = v, counters);
         Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", S.FlashHz, 0.5, 6, 0.5,
-            v => S.FlashHz = (float)v, v => $"{v:0.0}/s");
+            v => S.FlashHz = (float)v, v => $"{v:0.0}/s", counters);
 
-        Section("Predictions (Incoming Damage, Death Skull, lethal tabs)");
-        Option("Death chance", "Show chances when a roll decides a death (e.g. a random Lightning target): on the Death Skull, on your skull on Incoming Damage, and on lethal tabs. A range (40–55%) while the outcomes are still being explored. Off: only certain deaths (your skull still shows whenever you might die).",
-            S.DeathChance, v => S.DeathChance = v);
+        Section("Multiplayer");
         Option("Multiplayer predictions (experimental)", "Count teammates in predictions: their orbs and end-of-turn effects, their block and Beacon of Hope, and each enemy hit on every player. Still being checked against real co-op games.",
-            S.MultiplayerPredictions, v => { S.MultiplayerPredictions = v; Sim.SimAdapter.IncludeTeammates = v; });
+            S.MultiplayerPredictions, v => { S.MultiplayerPredictions = v; Sim.SimAdapter.IncludeTeammates = v; Refresh(); });
         Option("Count teammates' hands", "Multiplayer: predictions also use the cards in teammates' hands, which you can't see unless they tell you: Ethereal cards exhausting at end of turn (Feel No Pain block, Charon's Ashes and Forgotten Soul damage), Burn, Decay and Regret. Off: only their hand size counts.",
-            S.TeammateHands, v => { S.TeammateHands = v; Combat.TurnEndModel.CountTeammateHands = v; });
+            S.TeammateHands, v => { S.TeammateHands = v; Combat.TurnEndModel.CountTeammateHands = v; },
+            S.MultiplayerPredictions ? null : "Multiplayer predictions");
     }
+
+    /// <summary>
+    /// What an option needs on (decision #122): null when it's on, else its name, for the greyed-out row. An option shown under
+    /// a feature needs that feature (any one of several, for an option several features show).
+    /// </summary>
+    private string? Needs(params string[] features)
+        => features.Any(FeatureOn) ? null : string.Join(" or ", features.Select(id => FeatureRows.First(r => r.Id == id).Name));
+
+    /// <summary>
+    /// Chances (decision #122): one switch for every chance the mod shows, then each one under it, greyed out while it's off or
+    /// while the feature that shows it is. The same switch on both pages that show chances.
+    /// </summary>
+    private void ChancesSection(bool fights)
+    {
+        Section("Chances");
+        Option("Show chances", "Every chance the mod shows, when a roll decides an outcome. Off: only what's certain. A ? or a range on what's shown stays: it marks what isn't settled yet.",
+            S.Chances, v => { S.Chances = v; Refresh(); }, indent: false);
+        string? Under(string? feature) => !S.Chances ? "Show chances" : feature;
+        if (fights)
+        {
+            Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tabs, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
+                S.DeathChance, v => S.DeathChance = v, Under(Needs("death-skull", "incoming-damage", "proc-indicators")));
+            Option("Draw chance tab", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the Card tabs page has the same switch).",
+                S.TabOwn(QolSettings.DrawChanceKey), v => SetTab(QolSettings.DrawChanceKey, v), Under(Needs("proc-indicators")));
+            Option("Intent Forecast's random moves", "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",
+                S.IntentOdds, v => S.IntentOdds = v, Under(Needs("intent-forecast")));
+        }
+        else
+            Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
+                S.EventOdds, v => S.EventOdds = v, Under(Needs("run-reminders")));
+    }
+
+    /// <summary>The page again, for rows that depend on a switch just changed (deferred: the switch is mid-signal).</summary>
+    private void Refresh() => Callable.From(Rebuild).CallDeferred();
 
     /// <summary>Outside fights: its features and options, then a switch per relic or card for each place its reminder shows.</summary>
     private void BuildOutside()
     {
         FeatureSwitches(FeaturePage.Outside);
 
+        ChancesSection(fights: false);
+
         Section("Events");
-        Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
-            S.EventOdds, v => S.EventOdds = v);
         Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
-            S.EventInspect, v => S.EventInspect = v);
+            S.EventInspect, v => S.EventInspect = v, Needs("run-reminders"));
+
+        Section("Reminders by place");
+        var reminders = Needs("run-reminders");
+        foreach (var (place, name, desc) in ReminderPlaceRows)
+        {
+            var key = SpireQoL.Data.ChoiceReminders.Key(place, "*");
+            Option(name, desc, S.TabOwn(key), v => SetTab(key, v), reminders);
+        }
 
         var here = _onlyHere!.ButtonPressed ? PresentTypes() : null;
         var shown = SettingsCatalog.Sources.Where(s => s.OutsideFights)
@@ -444,8 +490,26 @@ public sealed partial class SettingsMenu
             });
     }
 
+    /// <summary>Run Reminders' places: one switch for every relic's reminder there (decision #122; the group key of their switches).</summary>
+    private static readonly (SpireQoL.Data.ReminderPlace Place, string Name, string Description)[] ReminderPlaceRows =
+    {
+        (SpireQoL.Data.ReminderPlace.Reward, "On card rewards", "Tabs on the cards you're offered after a fight."),
+        (SpireQoL.Data.ReminderPlace.Event, "At events", "Icons beside event options, and tabs on the cards an event offers."),
+        (SpireQoL.Data.ReminderPlace.Shop, "In shops", "Icons beside shop prices, and tabs on the cards for sale."),
+        (SpireQoL.Data.ReminderPlace.Map, "On the map", "Icons beside the map legend's rows."),
+    };
+
     private void BuildCardTabs()
     {
+        Section("Kinds of tab");
+        var tabs = Needs("card-indicators", "proc-indicators", "shuffle-warning", "potion-tabs", "run-reminders");
+        Option("Plain tabs", "Tabs that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only.",
+            S.PlainTabs, v => S.PlainTabs = v, tabs);
+        Option("Crossed tabs", "Tabs with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus).",
+            S.CrossedTabs, v => S.CrossedTabs = v, tabs);
+        Option("Aim marker", "The targeting arrow head in a tab's corner when it happens only at some targets. Off: the tab shows without it.",
+            S.AimMarker, v => S.AimMarker = v, tabs);
+
         Section("Card tabs");
         foreach (var t in SettingsCatalog.CardTabs)
         {
@@ -648,6 +712,7 @@ public sealed partial class SettingsMenu
         S.Features[id] = on;
         if (on) _features.EnableLate(id);
         Saved();
+        Refresh(); // the options that need it
     }
 
     /// <summary>The first click arms the button; a second click within 4 s resets.</summary>
@@ -709,10 +774,14 @@ public sealed partial class SettingsMenu
         Saved();
     }
 
-    private void Option(string name, string desc, bool value, Action<bool> set)
+    /// <summary>
+    /// An option, indented under what it changes (decision #122). <paramref name="needs"/>: what has to be on first (a feature, or
+    /// Show chances), null when it is; the row is greyed out and says so until it is.
+    /// </summary>
+    private void Option(string name, string desc, bool value, Action<bool> set, string? needs = null, bool indent = true)
     {
         if (!Matches(name, desc)) return;
-        SimpleRow(name, desc, value, v => { set(v); Saved(); }, IconSpacer());
+        SimpleRow(name, needs == null ? desc : $"{desc} Needs {needs} on.", value, v => { set(v); Saved(); }, IconSpacer(), needs == null, indent);
     }
 
     private void Saved() => _ctx.SettingsFile.Save();
@@ -811,10 +880,15 @@ public sealed partial class SettingsMenu
         icon.AddChild(slash);
     }
 
-    private void SimpleRow(string name, string desc, bool value, Action<bool> set, Control? icon = null)
+    private const float Indent = 28;
+
+    private void SimpleRow(string name, string desc, bool value, Action<bool> set, Control? icon = null, bool enabled = true, bool indent = false)
     {
         var row = RowBox();
-        var (_, check) = Check(value, set, null, null);
+        if (indent) row.AddChild(new Control { CustomMinimumSize = new Vector2(Indent, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        var (button, check) = Check(value, set, null, null);
+        button.Disabled = !enabled;
+        if (!enabled) row.Modulate = new Color(1, 1, 1, 0.5f);
         row.AddChild(check);
         if (icon != null) row.AddChild(icon);
         row.AddChild(Label(name, 20, Text, NameWidth));
@@ -825,11 +899,14 @@ public sealed partial class SettingsMenu
         AddRow(row);
     }
 
-    private void Slider(string name, string desc, double value, double min, double max, double step, Action<double> set, Func<double, string> fmt)
+    private void Slider(string name, string desc, double value, double min, double max, double step, Action<double> set, Func<double, string> fmt,
+        string? needs = null)
     {
         if (!Matches(name, desc)) return;
+        if (needs != null) desc = $"{desc} Needs {needs} on.";
         var row = RowBox();
-        row.AddChild(new Control { CustomMinimumSize = new Vector2(CheckSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        row.AddChild(new Control { CustomMinimumSize = new Vector2(Indent + CheckSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        if (needs != null) row.Modulate = new Color(1, 1, 1, 0.5f);
         row.AddChild(IconSpacer());
         row.AddChild(Label(name, 20, Text, NameWidth));
         var valueLabel = Label(fmt(value), 20, Accent, 70);
@@ -840,6 +917,7 @@ public sealed partial class SettingsMenu
             SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
             FocusMode = Control.FocusModeEnum.None,
         };
+        slider.Editable = needs == null;
         slider.ValueChanged += v => { set(v); valueLabel.Text = fmt(v); };
         slider.DragEnded += _ => Saved();
         row.AddChild(slider);
