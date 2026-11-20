@@ -916,9 +916,25 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ block
 
+    /// <summary>
+    /// Cards whose OnPlay can gain block more than once (a loop, or two GainBlock calls), each counted by a rule in BlockGainCount;
+    /// the card scan (CardCoverage) flags any other card that does.
+    /// </summary>
+    internal static readonly HashSet<string> RepeatedBlockCards = new()
+    {
+        nameof(SecondWind), "ChoLimbs", "ChoFirm", nameof(EvilEye), nameof(DeathsDoor),
+        // Its loop is over the living players: each gains block once, you included (once), so the default count holds.
+        nameof(Rally),
+    };
+
     internal static int BlockGainCount(CardModel card, string name, List<CardModel> others)
     {
         if (name == nameof(SecondWind)) return others.Count(c => c.Type != CardType.Attack);
+        // Twice when its owner exhausted a card this turn (EvilEye.WasCardExhaustedThisTurn, the game's own answer, read by name).
+        if (name == nameof(EvilEye)) return OwnerOf(card) != null && Sts2State.Private(card, "WasCardExhaustedThisTurn", false) ? 2 : 1;
+        // 1, plus its Repeat when its owner applied Doom this turn (DeathsDoor.WasDoomAppliedThisTurn, read by name).
+        if (name == nameof(DeathsDoor))
+            return 1 + (OwnerOf(card) != null && Sts2State.Private(card, "WasDoomAppliedThisTurn", false) ? Sts2State.Var(card, "Repeat", 0) : 0);
         // Block equal to the damage it dealt / to your current block: no Block value.
         if (name is nameof(Fisticuffs) or nameof(Entrench)) return 1;
         // Gains its Block twice (ChoLimbs); Cho Firm a second time while you have an arrow to shoot.

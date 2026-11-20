@@ -20,6 +20,25 @@ public sealed class DevSinkTests : IDisposable
     private DevSink Sink(DateTime? now = null) => new(_dir, () => 12.3456, now ?? new DateTime(2026, 11, 19, 12, 0, 0, DateTimeKind.Utc), start: false);
 
     [Fact]
+    public void AStateFileTheReaderHasOpenIsWrittenOnTheNextPassWithoutAWarning()
+    {
+        var warned = new List<string>();
+        using var sink = new DevSink(_dir, () => 0, DateTime.UtcNow, start: false, warn: warned.Add);
+        sink.SetState("{\"v\":1}");
+        sink.Flush();
+        var path = Path.Combine(_dir, DevSink.StatePath);
+        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) // the page reading it: no delete share
+        {
+            sink.SetState("{\"v\":2}");
+            sink.Flush();
+            Assert.Equal("{\"v\":1}", File.ReadAllText(path));
+        }
+        sink.Flush();
+        Assert.Equal("{\"v\":2}", File.ReadAllText(path));
+        Assert.Empty(warned);
+    }
+
+    [Fact]
     public void ALineIsTheTimeTheKindAndTheFieldsInCamelCase()
     {
         var line = DevSink.Line(1.23456, new SearchDone("Bash (target 0)", SearchDone.ContextOf(2, 3), 5, 100, 10, 1.5, true, "the memory cap", false));

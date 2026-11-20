@@ -193,6 +193,9 @@ internal static class CardCoverage
             issues.Add("channels orbs (not counted for Metronome)");
         if (Calls("CreatureCmd", "GainBlock") && None(c => PlayFacts.BlockGainCount(c, name, others)))
             issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");
+        // Block more than once in one play (Evil Eye twice after an exhaust): each gain sets off Juggernaut and block reactions.
+        if (Calls("CreatureCmd", "GainBlock") && RepeatsCall(card.GetType(), "CreatureCmd", "GainBlock") && !PlayFacts.RepeatedBlockCards.Contains(name))
+            issues.Add("can gain block more than once in a play (a loop or two calls: counted once; PlayFacts.BlockGainCount needs a rule)");
         // A block card that applies Stretch keeps it for a replay's later plays (Cho Ki); the simulator spends it otherwise.
         if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !SimAdapter.KeepsStretchCards.Contains(name))
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
@@ -347,6 +350,34 @@ internal static class CardCoverage
     }
 
     /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's OnPlay and its async state machine.</summary>
+    /// <summary>
+    /// The card's OnPlay calls Type.Method more than once, or inside a loop (a call between a backward branch and its target).
+    /// </summary>
+    private static bool RepeatsCall(Type cardType, string type, string method)
+    {
+        foreach (var m in OnPlayMethods(cardType))
+        {
+            try
+            {
+                var code = SpireQoL.Diagnostics.GameCode.Instructions(m);
+                var at = Enumerable.Range(0, code.Count)
+                    .Where(i => code[i].operand is MethodInfo mi && mi.Name == method && mi.DeclaringType?.Name == type).ToList();
+                if (at.Count > 1) return true;
+                if (at.Count == 0) continue;
+                var labels = new Dictionary<System.Reflection.Emit.Label, int>();
+                for (var i = 0; i < code.Count; i++) foreach (var l in code[i].labels) labels[l] = i;
+                for (var i = 0; i < code.Count; i++)
+                    if (code[i].operand is System.Reflection.Emit.Label t && labels.TryGetValue(t, out var to) && to < i && at.Any(c => c >= to && c < i))
+                        return true;
+            }
+            catch
+            {
+                // unreadable method
+            }
+        }
+        return false;
+    }
+
     private static HashSet<string> OnPlayCalls(Type cardType)
     {
         var set = new HashSet<string>();

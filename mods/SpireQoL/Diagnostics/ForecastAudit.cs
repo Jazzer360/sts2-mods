@@ -159,11 +159,14 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 if (gained != b) issues.Add($"intent block: {name}'s {shown.MoveId} showed {b}, it gained {gained}");
             }
             var applied = span.OfType<PowerReceivedEntry>().Where(x => x.Applier == c).ToList();
+            // A move can apply a power to its own monster with no applier (Devoted Sculptor's Ritual: PowerCmd.Apply(..., null)):
+            // counted for the powers the intent showed. Not for "applied, not shown": its powers ticking down have no applier either.
+            var ownless = span.OfType<PowerReceivedEntry>().Where(x => x.Applier == null && x.Actor == c).ToList();
             var artifact = span.OfType<PowerReceivedEntry>().Any(x => x.Power is MegaCrit.Sts2.Core.Models.Powers.ArtifactPower && x.Amount < 0);
             foreach (var p in shown.Powers)
             {
                 if (p.Maybe) continue; // only on some branches, shown as ? (decision #109): nothing promised either way
-                var same = applied.Where(x => x.Power.GetType() == p.Power).ToList();
+                var same = applied.Concat(ownless).Where(x => x.Power.GetType() == p.Power).ToList();
                 if (same.Count == 0)
                 {
                     if (!artifact) issues.Add($"intent power: {name}'s {shown.MoveId} showed {p.Power.Name}, it applied none");

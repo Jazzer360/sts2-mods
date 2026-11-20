@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.4
+#### Fixed
+- Evil Eye gains its block twice once you've exhausted a card this turn, and Death's Door again for each Repeat once you've applied Doom this turn; both were predicted as one gain (the block, and what reacts to each gain: Juggernaut's damage).
+- The end-of-turn check reported Devoted Sculptor's Forbidden Incantation as not applying the Ritual its intent showed (the game applies it with no applier).
+
 ### Spire QoL 1.21.3
 #### Fixed
 - Fetch's hit wasn't predicted (Osty's damage, the enemy's HP after it, Bone Flute's block): cards that make Osty attack are now read from the game's own tag instead of a list that missed it.

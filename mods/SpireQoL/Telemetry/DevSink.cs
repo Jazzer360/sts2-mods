@@ -191,7 +191,8 @@ public sealed class DevSink : IDisposable
                 var tmp = path + ".tmp";
                 File.WriteAllText(tmp, state);
                 try { File.Move(tmp, path, overwrite: true); }
-                catch (IOException) { Interlocked.CompareExchange(ref _state, state, null); } // the page is reading it: next pass
+                // The page is reading it (Windows says so as "access denied" as often as "in use"): next pass.
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Interlocked.CompareExchange(ref _state, state, null); }
             }
         }
         catch (Exception ex)
