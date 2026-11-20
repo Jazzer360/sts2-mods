@@ -103,8 +103,16 @@ summary .info { margin: 0 0 0 7px; vertical-align: 1px; }
 .check.good { border-left-color: var(--good); } .check.warn { border-left-color: var(--warn); } .check.bad { border-left-color: var(--bad); }
 .check .verdict { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
 .check .s { color: var(--dim); font-size: 12px; }
+.check canvas { margin-top: 8px; }
+.strip { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 10px; min-height: 12px; }
+.strip i { width: 10px; height: 12px; border-radius: 2px; background: var(--line); }
+.strip .t-good { background: var(--good); } .strip .t-bad { background: var(--bad); } .strip .t-warn { background: var(--warn); } .strip .t-capped { background: var(--violet); }
+input:focus, select:focus, textarea:focus, button:focus-visible { outline: none; border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent); }
 .check a { display: inline-block; margin-top: 8px; color: var(--accent); text-decoration: none; font-size: 12px; }
-.checks { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.checks { grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 1300px) { .checks { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 640px) { .checks { grid-template-columns: 1fr; } }
+#attn { max-height: 420px; overflow: auto; }
 .card { position: relative; }
 .hover-layer { position: absolute; pointer-events: none; }
 #tip { position: fixed; display: none; z-index: 20; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
@@ -139,17 +147,24 @@ summary .info { margin: 0 0 0 7px; vertical-align: 1px; }
   </div>
 
   <section class="page" id="p-overview">
-    <p class="hint">Four checks on the mod while you play. Each says in a line whether things are fine, the numbers behind it, and where to look next. Green is normal, amber is worth a look, red is a problem.</p>
-    <div class="grid checks" id="checks"></div>
-    <div class="grid2" style="margin-top:12px">
-      <div class="card"><h3>What needs a look <span class="faint" id="attnCount"></span></h3>
-        <p class="hint">Newest first: predictions that didn't match, searches stopped at a cap, reports, warnings from the mod's log and slow frames. Each one is something to fix, or to explain in a note.</p>
-        <ul class="attn" id="attn"></ul></div>
-      <div class="card"><h3>The mod's time per frame, last 5 minutes</h3>
-        <p class="hint">Each point is a quarter of a second: the mod's time in its 95th-percentile frame (blue: a busy frame) and in its slowest (red). A 60 fps frame has 16.7 ms for the game and the mod together (the dashed lines are 16.7 and 33.3 ms); the mod normally stays around 1–2 ms. A red spike is one slow frame: the Performance page says which feature it was.</p>
-        <canvas id="ovFrame" height="150"></canvas>
-        <div class="legend"><span><i style="background:var(--accent)"></i>95th-percentile frame</span><span><i style="background:var(--bad)"></i>slowest frame</span></div></div>
+    <p class="hint">What to look at, at a glance. Four checks, each with a verdict in a line (green fine, amber worth a look, red a problem), the numbers behind it, its trend, and a link to the page with the details. Then everything that needs a look, newest first.</p>
+    <div class="grid checks" id="checks">
+      <div class="card check" id="chk-pred"><h3>Are the predictions right?</h3>
+        <p class="hint">Every play and every enemy turn is checked against what the game did. The strip is this launch's turns, oldest left: green, everything checked matched; red, something didn't; amber, a check was skipped (a gap); violet, a search stopped at a cap. Hover a square for the turn.</p>
+        <div class="verdict"></div><div class="s"></div><div class="strip" id="turnStrip"></div><a href="#" data-go="turn">Turns →</a></div>
+      <div class="card check" id="chk-frames"><h3>Is the mod costing frames?</h3>
+        <p class="hint">The mod's own time in a busy (95th-percentile) frame over the last 5 minutes. A 60 fps frame has 16.7 ms for the game and the mod together; the mod normally stays around 1–2 ms (the dashed line is 4 ms, where it's heavier than usual). A slow frame, over 30 ms, is a stutter you can see.</p>
+        <div class="verdict"></div><div class="s"></div><canvas id="sparkFrames" height="46"></canvas><a href="#" data-go="perf">Performance →</a></div>
+      <div class="card check" id="chk-calc"><h3>Are the calculations keeping up?</h3>
+        <p class="hint">When the board changes, a frame waits up to 8 ms (the dashed line) for the new predictions. Each dot is one wait over the last 5 minutes: blue finished in time, red ran out and left the rest to the background (the tabs came a frame or a few later). A search stopped at a cap shows ? instead of a number.</p>
+        <div class="verdict"></div><div class="s"></div><canvas id="sparkCalc" height="46"></canvas><a href="#" data-go="searches">Searches →</a></div>
+      <div class="card check" id="chk-stall"><h3>Is the game itself stalling?</h3>
+        <p class="hint">The longest gap between two frames in each quarter second over the last 5 minutes (16.7 ms is a smooth 60 fps; the dashed line is 50 ms, a hitch you can see). A hitch while the mod's own time is small is the game's (loading, a room change), not the mod's.</p>
+        <div class="verdict"></div><div class="s"></div><canvas id="sparkStall" height="46"></canvas><a href="#" data-go="perf">Performance →</a></div>
     </div>
+    <div class="card" style="margin-top:12px"><h3>What needs a look <span class="faint" id="attnCount"></span></h3>
+      <p class="hint">Newest first: predictions that didn't match, searches stopped at a cap, reports, warnings from the mod's log and slow frames. Each one is something to fix, or to explain in a note.</p>
+      <ul class="attn" id="attn"></ul></div>
   </section>
 
   <section class="page" id="p-turn">
@@ -606,8 +621,9 @@ function axes(g, w, h, yMax, unit, pad) {
 /** Lines over time. series: [{ points: [[t, v]], color, dots? }]; refs: y values drawn dashed. */
 /** Times are spiky (one slow frame among hundreds): the time charts can use a log scale (the Performance page's switch). */
 const logTimes = () => { try { return localStorage.getItem("logTimes") !== "0"; } catch { return true; } };
-function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false } = {}) {
-  const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 16 };
+function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false, mini = false } = {}) {
+  // mini: a trend in a small space (the Overview's checks): no axis labels, tight margins, the same hover readout.
+  const { g, w, h } = canvas(id), pad = mini ? { l: 2, r: 2, t: 4, b: 4 } : { l: 44, r: 8, t: 8, b: 16 };
   const all = series.flatMap((s) => s.points);
   if (!all.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const t0 = Math.min(...all.map((p) => p[0])), t1 = Math.max(...all.map((p) => p[0]), t0 + 1);
@@ -625,7 +641,7 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
       g.fillText(fmt(tick, 1) + unit, 2, y + 4);
     }
   } else {
-    axes(g, w, h, yMax, unit, pad);
+    if (!mini) axes(g, w, h, yMax, unit, pad);
     Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (v - yMin) / (yMax - yMin));
   }
   g.setLineDash([4, 4]); g.strokeStyle = css("--faint");
@@ -638,7 +654,7 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
     s.points.forEach(([t, v], i) => (i ? g.lineTo(X(t), Y(v)) : g.moveTo(X(t), Y(v))));
     g.stroke();
   }
-  g.fillStyle = css("--faint"); g.fillText(clock(t0), pad.l, h - 2); const e = clock(t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2);
+  if (!mini) { g.fillStyle = css("--faint"); g.fillText(clock(t0), pad.l, h - 2); const e = clock(t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2); }
   HOVER[id] = { kind: "lines", series, t0, t1, pad, w, h, unit, X, Y };
   rehover(id);
 }
@@ -746,10 +762,20 @@ function nav() {
 }
 $("nav").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; page = b.dataset.p; try { localStorage.setItem("page", page); } catch {} render(true); });
 
-/** A health check: the question, a coloured verdict in words, the numbers behind it, and the page to look at next. */
-function check(question, cls, verdict, facts, page, pageName) {
-  return `<div class="card check ${cls}"><h3>${esc(question)}</h3><div class="verdict">${verdict}</div><div class="s">${facts}</div>`
-    + (page ? `<a href="#" data-go="${page}">${esc(pageName)} →</a>` : "") + `</div>`;
+/** A health check's card (built once in the page): its colour, verdict and numbers. */
+function setCheck(id, cls, verdict, facts) {
+  const card = $(id);
+  card.className = "card check " + cls;
+  setHTML(card.querySelector(".verdict"), verdict);
+  setHTML(card.querySelector(".s"), facts);
+}
+/** A turn's colour, as on the Turn page: red a mismatch, violet a cap, amber a skipped check, green all matched. */
+function turnClass(r) {
+  const all = [...r.plays, ...r.forecast];
+  if (all.some((c) => c.kind === "check-done" && !c.matched)) return "bad";
+  if (r.caps.length) return "capped";
+  if (all.some((c) => c.kind === "check-skipped" && !c.expected)) return "warn";
+  return all.length ? "good" : "";
 }
 function renderOverview() {
   const s = M.state?.session, r1 = since(M.rollups, 60), r5 = since(M.rollups, 300), s5 = since(M.searches, 300), w5 = since(M.waits, 300);
@@ -758,32 +784,42 @@ function renderOverview() {
   const caps5 = s5.filter((x) => x.cap).length, missed = w5.filter((x) => x.missed).length;
   const settle = since(M.unsettled, 300).map((u) => u.ms);
   const stalls5 = r5.filter((r) => r.gapMax > 50 && r.modMax < 30).length, gen2 = r5.reduce((a, r) => a + r.gen2, 0);
-  const checks = [];
   // 1. are the predictions right?
-  if (!s && !M.checks.length) checks.push(check("Are the predictions right?", "", "No fights yet.", "The checks start with your first fight.", "turn", "Turn"));
-  else {
+  {
     const turns = s?.turns ?? 0, unchecked = s?.unchecked ?? 0;
-    const facts = s ? `${s.clean} of ${turns} turns clean this session · ${unchecked} unchecked · ${s.capped} capped<br>${M.saved.length} report(s) this launch` : `${M.saved.length} report(s) this launch`;
-    if (mism || M.saved.length) checks.push(check("Are the predictions right?", "bad", `${mism || M.saved.length} prediction(s) didn't match what happened this launch.`, facts, "reports", "Reports"));
-    else if (turns && unchecked / turns > 0.2) checks.push(check("Are the predictions right?", "warn", `Matched, but ${pct(unchecked, turns)} of turns couldn't be fully checked.`, facts + "<br>Why: the Turn page lists each skip's reason.", "turn", "Turn"));
-    else checks.push(check("Are the predictions right?", "good", "Everything checked matched.", facts, "turn", "Turn"));
+    const facts = s ? `${s.clean} of ${turns} turns clean this session · ${unchecked} unchecked · ${s.capped} capped · ${M.saved.length} report(s) this launch` : `${M.saved.length} report(s) this launch`;
+    if (!s && !M.checks.length) setCheck("chk-pred", "", "No fights yet.", "The checks start with your first fight.");
+    else if (mism || M.saved.length) setCheck("chk-pred", "bad", `${mism || M.saved.length} prediction(s) didn't match what happened this launch.`, facts);
+    else if (turns && unchecked / turns > 0.2) setCheck("chk-pred", "warn", `Matched, but ${pct(unchecked, turns)} of turns couldn't be fully checked.`, facts);
+    else setCheck("chk-pred", "good", "Everything checked matched.", facts);
+    const strip = [...M.turns.values()].slice(-60);
+    setHTML($("turnStrip"), strip.length ? strip.map((r) => `<i class="t-${turnClass(r) || "none"}" data-turn="${esc(`${r.encounter} · fight ${r.combat} · turn ${r.turn}`)}"></i>`).join("") : `<span class="faint">no turns yet</span>`);
   }
   // 2. is the mod costing frames?
-  const frameFacts = `${fmt(p95, 2)} ms in a busy (95th-percentile) frame, last minute · ${slow5} slow frame(s) over 30 ms in 5 minutes<br>A 60 fps frame has 16.7 ms for everything.`;
-  if (!r1.length) checks.push(check("Is the mod costing frames?", "", "No frames measured yet.", "", "perf", "Performance"));
-  else if (slow5) checks.push(check("Is the mod costing frames?", "bad", `${slow5} frame(s) where the mod took over 30 ms in the last 5 minutes.`, frameFacts, "perf", "Performance"));
-  else if (p95 > 4) checks.push(check("Is the mod costing frames?", "warn", `Heavier than usual: ${fmt(p95, 1)} ms in a busy frame.`, frameFacts, "perf", "Performance"));
-  else checks.push(check("Is the mod costing frames?", "good", `Light: ${fmt(p95, 1)} ms in a busy frame.`, frameFacts, "perf", "Performance"));
+  {
+    const facts = `${fmt(p95, 2)} ms in a busy frame, last minute · ${slow5} slow frame(s) in 5 minutes`;
+    if (!r1.length) setCheck("chk-frames", "", "No frames measured yet.", "");
+    else if (slow5) setCheck("chk-frames", "bad", `${slow5} frame(s) where the mod took over 30 ms in the last 5 minutes.`, facts);
+    else if (p95 > 4) setCheck("chk-frames", "warn", `Heavier than usual: ${fmt(p95, 1)} ms in a busy frame.`, facts);
+    else setCheck("chk-frames", "good", `Light: ${fmt(p95, 1)} ms in a busy frame.`, facts);
+    lines("sparkFrames", [{ name: "busy frame", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }], { refs: [4], unit: " ms", mini: true });
+  }
   // 3. are the calculations keeping up?
-  const calcFacts = `${w5.length - missed} of ${w5.length} waits finished inside the frame's 8 ms · ${s5.length} searches, ${caps5} stopped at a cap` + (settle.length ? `<br>Not settled in its frame: ${settle.length} time(s), up to ${fmt(Math.max(...settle), 0)} ms` : "");
-  if (caps5) checks.push(check("Are the calculations keeping up?", "bad", `${caps5} search(es) stopped at a cap in 5 minutes: their numbers showed ?.`, calcFacts, "searches", "Searches"));
-  else if (w5.length && missed / w5.length > 0.05) checks.push(check("Are the calculations keeping up?", "warn", `${pct(missed, w5.length)} of boards took longer than a frame to work out.`, calcFacts, "searches", "Searches"));
-  else checks.push(check("Are the calculations keeping up?", "good", w5.length ? "Boards are worked out within their frame." : "Nothing to work out yet.", calcFacts, "searches", "Searches"));
+  {
+    const facts = `${w5.length - missed} of ${w5.length} waits within 8 ms · ${caps5} search(es) capped` + (settle.length ? ` · slowest to settle ${fmt(Math.max(...settle), 0)} ms` : "");
+    if (caps5) setCheck("chk-calc", "bad", `${caps5} search(es) stopped at a cap in 5 minutes: their numbers showed ?.`, facts);
+    else if (w5.length && missed / w5.length > 0.05) setCheck("chk-calc", "warn", `${pct(missed, w5.length)} of boards took longer than a frame to work out.`, facts);
+    else setCheck("chk-calc", "good", w5.length ? "Boards are worked out within their frame." : "Nothing to work out yet.", facts);
+    lines("sparkCalc", [{ name: "wait, in time", color: css("--accent"), dots: true, points: w5.filter((x) => !x.missed).map((x) => [x.t, x.ms]) },
+      { name: "wait, left to the background", color: css("--bad"), dots: true, points: w5.filter((x) => x.missed).map((x) => [x.t, x.ms]) }], { refs: [8], unit: " ms", mini: true });
+  }
   // 4. is the game itself stalling?
-  const stallFacts = `${stalls5} hitch(es) over 50 ms in 5 minutes with the mod's share small · ${gen2} full garbage collection(s)`;
-  if (stalls5 > 3) checks.push(check("Is the game itself stalling?", "warn", `${stalls5} hitches from the game, not the mod, in 5 minutes.`, stallFacts + "<br>Loading and room changes cause some; many in a fight are worth a look.", "perf", "Performance"));
-  else checks.push(check("Is the game itself stalling?", "good", stalls5 ? `${stalls5} small hitch(es): normal (loading, room changes).` : "No hitches.", stallFacts, "perf", "Performance"));
-  setHTML($("checks"), checks.join(""));
+  {
+    const facts = `${stalls5} hitch(es) over 50 ms in 5 minutes · ${gen2} full memory clean-up(s)`;
+    if (stalls5 > 3) setCheck("chk-stall", "warn", `${stalls5} hitches from the game, not the mod, in 5 minutes.`, facts);
+    else setCheck("chk-stall", "good", stalls5 ? `${stalls5} small hitch(es): normal (loading, room changes).` : "No hitches.", facts);
+    lines("sparkStall", [{ name: "longest gap", color: css("--warn"), points: r5.map((r) => [r.t, r.gapMax]) }], { refs: [50], unit: " ms", mini: true });
+  }
   // what needs a look: newest first
   const items = [];
   for (const c of M.checks) if (c.kind === "check-done" && !c.matched) items.push({ t: c.t, cls: "bad", text: `${c.audit === "forecast" ? "Enemy turn" : "Play"} didn't match: <b>${esc(c.detail)}</b> (turn ${c.turn})` });
@@ -794,9 +830,14 @@ function renderOverview() {
   items.sort((a, b) => b.t - a.t);
   $("attnCount").textContent = items.length ? items.length : "";
   setHTML($("attn"), items.length ? items.slice(0, 40).map((i) => `<li><span class="pill ${i.cls}">${i.cls === "bad" ? "!" : "·"}</span><span style="flex:1">${i.text}</span><time>${ago(i.t)}</time></li>`).join("") : `<li class="empty">Nothing needs a look.</li>`);
-  lines("ovFrame", [{ name: "95th-percentile frame", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
 }
 $("checks").addEventListener("click", (e) => { const a = e.target.closest("[data-go]"); if (!a) return; e.preventDefault(); page = a.dataset.go; try { localStorage.setItem("page", page); } catch {} render(true); });
+$("turnStrip").addEventListener("mouseover", (e) => {
+  const sq = e.target.closest("[data-turn]"); if (!sq) return;
+  tip.innerHTML = `<div>${esc(sq.dataset.turn)}</div>`; tip.style.display = "block";
+  const r = sq.getBoundingClientRect(); tip.style.left = Math.min(r.left, window.innerWidth - tip.offsetWidth - 4) + "px"; tip.style.top = (r.top - tip.offsetHeight - 6) + "px";
+});
+$("turnStrip").addEventListener("mouseout", () => { tip.style.display = "none"; });
 const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${fmt(v, 0)} ms`).join(", ");
 
 function renderTurn() {
