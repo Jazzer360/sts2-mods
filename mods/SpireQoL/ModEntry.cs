@@ -165,18 +165,18 @@ public static class ModEntry
         var menu = new Menu.SettingsMenu(ctx, Features, host);
         foreach (var notice in features.OfType<UpdateNoticeFeature>()) notice.OpenSettings = menu.Open;
         host.AddHotkey(ParseKey(settings.SettingsKey, Key.F10), menu.Toggle);
-        host.AddLateFrame(menu.OnFrame);
+        host.AddLateFrame("settings-menu", menu.OnFrame);
         Menu.SettingsCatalog.Check(Log);
 
         Combat.TurnEndModel.PartTime = host.AddPartTime;
         var renderer = new CardOverlayRenderer(host, ctx.Decor);
-        host.AddLateFrame(renderer.Render);
+        host.AddLateFrame("card-tabs", renderer.Render);
 
         // New tab kinds are written into settings as they first appear (so the file lists every
         // tab that can be turned off). Save at most every few seconds.
         ulong lastSave = 0;
         var warnedKeys = new HashSet<string>();
-        host.AddLateFrame(() =>
+        host.AddLateFrame("settings-save", () =>
         {
             if (!settings.TabsDirty) return;
             var now = Time.GetTicksMsec();

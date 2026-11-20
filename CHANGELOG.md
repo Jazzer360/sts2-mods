@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.24.2
+#### Changed
+- Slow-frame logs and the timing stats name each part of the work that runs after the features (the settings menu, drawing card tabs, saving settings, the dev dashboard) instead of grouping them as "late frame".
+
+### Main Saves 1.0.21
+#### Changed
+- Shared code: work run after the features each frame is timed under its own name. No change in the game.
+
 ### Spire QoL 1.24.1
 #### Changed
 - The draw chance tab on Pillage and Scrape shows the most likely number centred above its chance, with room between them, instead of in the corner.

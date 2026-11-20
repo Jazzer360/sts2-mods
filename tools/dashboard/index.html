@@ -1737,7 +1737,7 @@ function demoEmit(e) { e.t = DEMO.t; ingest(e); DEMO.files[M.file] += JSON.strin
 function demoTick(fast) {
   if (DEMO.t === 0) demoEmit({ kind: "stream-started", format: 1, mod: "1.21.0", game: "v0.113.1" });
   DEMO.t += 0.5;
-  const busy = rand() < 0.15, feat = { "proc-indicators": 0.8 + rand() * (busy ? 6 : 1), "incoming-damage": 0.3 + rand() * 0.4, "forecast-audit": 0.1 + rand() * 0.2, "proc-audit": 0.2 + rand() * 0.3, widgets: 0.2, "late frame": 0.4 };
+  const busy = rand() < 0.15, feat = { "proc-indicators": 0.8 + rand() * (busy ? 6 : 1), "incoming-damage": 0.3 + rand() * 0.4, "forecast-audit": 0.1 + rand() * 0.2, "proc-audit": 0.2 + rand() * 0.3, widgets: 0.2, "card-tabs": 0.3, "settings-menu": 0.05, "dev-dashboard": 0.05 };
   const sum = Object.values(feat).reduce((a, b) => a + b, 0);
   for (let k = 0; k < 2; k++) demoEmit({ kind: "frame-rollup", seconds: 0.25, frames: 30, modP50: sum * 0.7, modP95: sum * (1.2 + rand() * 0.3), modMax: sum * (1.5 + rand() * (busy ? 4 : 0.5)), gapMax: 16 + (rand() < 0.03 ? 80 : rand() * 6), slow: busy && rand() < 0.2 ? 1 : 0, featureMean: feat, featureMax: Object.fromEntries(Object.entries(feat).map(([a, b]) => [a, b * 2])), heapMb: 480 + 40 * Math.sin(DEMO.t / 40) + rand() * 5, allocatedMb: 1 + rand() * (busy ? 30 : 3), gen0: rand() < 0.3 ? 1 : 0, gen1: 0, gen2: rand() < 0.01 ? 1 : 0, gcPauseMs: rand() * 2, heldStates: busy ? Math.floor(rand() * 40000) : Math.floor(rand() * 400), searching: busy ? Math.floor(rand() * 6) : 0 });
   if (DEMO.turn === 0 || rand() < 0.05) {

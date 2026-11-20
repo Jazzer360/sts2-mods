@@ -16,7 +16,7 @@ public sealed class OverlayHost
     private readonly ModLog _log;
     private readonly List<(string Id, IFrameFeature Feature)> _features = new();
     private readonly Dictionary<string, int> _errors = new();
-    private readonly List<Action> _lateFrame = new();
+    private readonly List<(string Id, Action Action)> _lateFrame = new();
     private readonly List<MovableWidget> _widgets = new();
     private readonly Dictionary<Key, bool> _keyWasDown = new();
 
@@ -81,10 +81,10 @@ public sealed class OverlayHost
         catch { return true; }
     }
 
-    /// <summary>Runs after all features each frame (e.g. a shared renderer).</summary>
+    /// <summary>Runs after all features each frame (e.g. a shared renderer), timed under its own name.</summary>
     private readonly Dictionary<string, int> _lateErrors = new();
 
-    public void AddLateFrame(Action action) => _lateFrame.Add(action);
+    public void AddLateFrame(string id, Action action) => _lateFrame.Add((id, action));
 
     private readonly List<(string Id, double Ms)> _parts = new();
 
@@ -198,7 +198,7 @@ public sealed class OverlayHost
     /// </summary>
     public event Action<double, double>? FrameMeasured;
 
-    /// <summary>The last frame's time per feature (and "late frame", "widgets"), in ms: read inside FrameMeasured.</summary>
+    /// <summary>The last frame's time per feature (and each late-frame job, "widgets"), in ms: read inside FrameMeasured.</summary>
     public IReadOnlyList<(string Id, double Ms)> FeatureMs => _featureMs;
 
     /// <summary>A slow frame of the mod's own: logged, and reported from a feature's second one this session.</summary>
@@ -301,10 +301,9 @@ public sealed class OverlayHost
         }
 
         _running = null;
-        var lateStart = Godot.Time.GetTicksUsec();
-
-        foreach (var late in _lateFrame)
+        foreach (var (lateId, late) in _lateFrame)
         {
+            var lateStart = Godot.Time.GetTicksUsec();
             try { late(); }
             catch (Exception ex)
             {
@@ -314,14 +313,13 @@ public sealed class OverlayHost
                 var n = _lateErrors[key] = (_lateErrors.TryGetValue(key, out var prev) ? prev : 0) + 1;
                 if (n == 1)
                 {
-                    _log.Error($"late frame error: {ex}");
-                    if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, "late-frame");
+                    _log.Error($"[{lateId}] late frame error: {ex}");
+                    if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, lateId);
                 }
-                else if (n % 600 == 0) _log.Error($"late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
+                else if (n % 600 == 0) _log.Error($"[{lateId}] late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
             }
+            AddTimed(lateId, (Godot.Time.GetTicksUsec() - lateStart) / 1000.0);
         }
-
-        AddTimed("late frame", (Godot.Time.GetTicksUsec() - lateStart) / 1000.0);
         var layoutStart = Godot.Time.GetTicksUsec();
         if (WidgetRoot != null)
         {

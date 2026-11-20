@@ -55,7 +55,7 @@ public static class DevDashboard
                 };
             }
             _gc = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), GC.GetTotalAllocatedBytes(), GC.GetTotalPauseDuration());
-            host.AddLateFrame(Tick);
+            host.AddLateFrame("dev-dashboard", Tick);
             AppDomain.CurrentDomain.ProcessExit += (_, _) => sink.Dispose();
             _sink = sink;
             ModEntry.Log.Info($"[dev] dashboard stream: {sink.StreamPath} (open tools/dashboard/index.html and pick {Folder})");
