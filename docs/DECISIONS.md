@@ -649,3 +649,8 @@ Decision #122 indented options under section titles named for their feature, wit
 *Why:* the owner's notes from playing 1.23.0: an indented row reads as "this depends on the row above it", so it must.
 *Replaced:* #122's section-per-feature layout of options.
 
+### 124. The draw chance tab's count sits centred above its chance — active (2026-11-20)
+Pillage's and Scrape's draw chance tab showed its chance in the middle and the most likely number in the corner, where numbered tabs put their amount (decision #119). The owner found it hard to read and asked for all the text centred, with room between the two: the count now sits centred in the upper part of the tab and the chance in the lower half, a gap between them. Escape Plan's tab (a chance alone) is unchanged.
+*Why:* the owner's note from playing 1.24.0.
+*Replaced:* the count in the corner (decision #119's layout).
+

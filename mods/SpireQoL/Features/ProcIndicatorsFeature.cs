@@ -531,7 +531,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// </summary>
     /// <summary>
     /// The chance tab of a card that acts on what it draws (decision #119): the chance in the middle ("40%", with a ? when its search
-    /// stopped at a cap or met something not modelled), and for Pillage and Scrape the most likely number in the corner (Attacks drawn,
+    /// stopped at a cap or met something not modelled), and for Pillage and Scrape the most likely number above the chance (Attacks drawn,
     /// cards drawn that cost 0; a tie goes to the higher). From the first aim's outcomes: what a draw gives doesn't depend on the aim.
     /// </summary>
     private static void DrawnTab(PlayFacts f, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs)

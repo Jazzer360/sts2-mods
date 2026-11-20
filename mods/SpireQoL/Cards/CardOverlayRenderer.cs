@@ -423,7 +423,10 @@ public sealed class CardOverlayRenderer
                     // it picks the biggest size that fits.
                     RememberLabel(label);
                     var box = ti.Size * IconScale;
-                    label.Size = new Vector2(box.Y, box.X); // upright after the -90° turn
+                    // With a count too (Pillage, Scrape: decision #124), the chance takes the lower half and the count sits centred
+                    // above it, a gap between them. In the tab's unrotated coordinates, screen-down is +x.
+                    var two = spec.NumberText != null;
+                    label.Size = new Vector2(box.Y, two ? box.X * 0.5f : box.X); // upright after the -90° turn
                     if (label is MegaCrit.Sts2.addons.mega_text.MegaLabel mega)
                     {
                         mega.AutoSizeEnabled = true;
@@ -438,7 +441,7 @@ public sealed class CardOverlayRenderer
                     label.VerticalAlignment = VerticalAlignment.Center;
                     label.PivotOffset = label.Size / 2f;
                     label.Rotation = -Mathf.Pi / 2f;
-                    label.Position = ti.Position + ti.Size / 2f - label.Size / 2f;
+                    label.Position = ti.Position + ti.Size / 2f + new Vector2(two ? box.X * 0.24f : 0, 0) - label.Size / 2f;
                 }
                 else if ((spec.Number?.ToString() ?? spec.NumberText) is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic)
                 {
@@ -446,14 +449,26 @@ public sealed class CardOverlayRenderer
                     InCorner(label, n, ic);
                 }
             }
-            // A text tab with a number too (a drawn-card chance tab: "33%" in the middle, how many in the corner: decision #119):
-            // the number on a second label made with the tab, in the game's number style.
+            // A text tab with a count too (a drawn-card chance tab: how many, centred above its chance: decisions #119, #124): the
+            // count on a second label made with the tab, in the game's number style.
             if (tab.GetNodeOrNull<Label>("SpireQoL_Corner") is { } second)
             {
                 second.Visible = spec.Text != null && spec.NumberText != null;
-                if (second.Visible && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic2) InCorner(second, spec.NumberText!, ic2);
+                if (second.Visible && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic2) AboveText(second, spec.NumberText!, ic2);
             }
         }
+    }
+
+    /// <summary>A text tab's count (decision #124): upright, centred across the icon, in its upper part (screen-up is -x).</summary>
+    private static void AboveText(Label label, string text, TextureRect icon)
+    {
+        label.Text = text;
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.VerticalAlignment = VerticalAlignment.Center;
+        label.PivotOffset = label.Size / 2f;
+        label.Rotation = -Mathf.Pi / 2f;
+        var box = icon.Size * IconScale;
+        label.Position = icon.Position + icon.Size / 2f - new Vector2(box.X * 0.26f, 0) - label.Size / 2f;
     }
 
     /// <summary>

@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.24.1
+#### Changed
+- The draw chance tab on Pillage and Scrape shows the most likely number centred above its chance, with room between them, instead of in the corner.
+
 ### Spire QoL 1.24.0
 #### Added
 - **Tabs on cards**: one switch for every tab on cards, with the kinds of tab and each tab under it.

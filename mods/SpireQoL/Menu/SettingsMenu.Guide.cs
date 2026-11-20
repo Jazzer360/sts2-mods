@@ -106,7 +106,7 @@ public sealed partial class SettingsMenu
             + "in 40% of the cards your draw pile could give. From the pile's contents, never its order.",
             Tab("drawn", null, text: "40%"));
         GuideCardCell(flow, Card<Pillage>(), "Text: a chance, and how many",
-            "The most likely number in the corner, its chance in the middle: here Pillage most likely draws 1 Attack (33%) before it stops. "
+            "The most likely number on top, its chance under it: here Pillage most likely draws 1 Attack (33%) before it stops. "
             + "Scrape shows how many of the cards it draws cost 0 (the ones it keeps). A tie goes to the higher number.",
             Tab("drawn", null, text: "33%", numberText: "1"));
         GuideCardCell(flow, Card<Patter>(), "A card: it comes back",
