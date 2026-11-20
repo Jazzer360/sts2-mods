@@ -29,6 +29,12 @@ public sealed class SessionWatch : IFeature, IFrameFeature
 
     private static volatile SessionStats? _current;
 
+    /// <summary>Where the game is (the dev dashboard's state): in a run or not, the fight, your turn.</summary>
+    public static object Where { get; private set; } = new { inRun = false };
+
+    /// <summary>The session's counts so far (the dev dashboard's state), or null outside a session.</summary>
+    public static SessionSummary? Live() => _current?.Summary("live", Info());
+
     private object? _run;
     private object? _combat;
     private int _turn;
@@ -70,6 +76,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         if (!ReferenceEquals(run, _run))
         {
             if (_run != null) End(HowItEnded());
+            Where = new { inRun = run != null };
             _run = run;
             if (run != null) Begin();
         }
@@ -108,6 +115,8 @@ public sealed class SessionWatch : IFeature, IFrameFeature
             SavePending(stats);
         }
         Interlocked.Exchange(ref SimJob.Context, playerTurn ? SearchDone.ContextOf(stats.Combat, turn) : 0);
+        if (DevDashboard.Running)
+            Where = new { inRun = true, inCombat = cs != null, encounter = cs?.Encounter?.GetType().Name, combat = stats.Combat, turn = Sts2State.TurnNumber, playerTurn };
 
         // The progress bar's spells (searches still running on your turn): how long until the board settles.
         var running = playerTurn && SimJob.Progress().Count > 0;
@@ -174,6 +183,12 @@ public sealed class SessionWatch : IFeature, IFrameFeature
 
     private static void Send(SessionSummary s, bool flush)
     {
+        // The developer's game (decision #108): kept in the dev folder, never sent.
+        if (ModEntry.DevMode)
+        {
+            DevDashboard.SaveSession(s);
+            return;
+        }
         if (ErrorReporter.Instance is not { Enabled: true } reporter) return;
         var tags = new Dictionary<string, string>
         {
@@ -187,6 +202,8 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         reporter.Summary("Session summary", "session", tags,
             new Dictionary<string, string> { ["summary"] = s.ToJson(), ["summary_line"] = Line(s) }, flush);
     }
+
+    private static readonly object PendingLock = new();
 
     /// <summary>The summary so far, in case the game closes without the mod seeing it (written off the game's thread).</summary>
     private static void SavePending(SessionStats stats)
@@ -203,9 +220,13 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         {
             try
             {
-                var tmp = path + ".tmp";
-                File.WriteAllText(tmp, json);
-                File.Move(tmp, path, overwrite: true);
+                // One write at a time: a fight and its first turn save in the same frame, and two writers on one .tmp collide.
+                lock (PendingLock)
+                {
+                    var tmp = path + ".tmp";
+                    File.WriteAllText(tmp, json);
+                    File.Move(tmp, path, overwrite: true);
+                }
             }
             catch (Exception ex)
             {

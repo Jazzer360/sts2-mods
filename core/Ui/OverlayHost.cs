@@ -170,6 +170,9 @@ public sealed class OverlayHost
     /// </summary>
     public event Action<double, double>? FrameMeasured;
 
+    /// <summary>The last frame's time per feature (and "late frame", "widgets"), in ms: read inside FrameMeasured.</summary>
+    public IReadOnlyList<(string Id, double Ms)> FeatureMs => _featureMs;
+
     /// <summary>A slow frame of the mod's own: logged, and reported from a feature's second one this session.</summary>
     private void ModFrameSlow(double modMs, double gapMs)
     {

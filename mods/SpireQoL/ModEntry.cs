@@ -191,6 +191,8 @@ public static class ModEntry
                 }
             }
         });
+        // Dev mode (decision #108): the dev dashboard's files. Nothing at all for players.
+        Telemetry.DevDashboard.Start(host, settings.DevFolder);
         host.Start();
     }
 

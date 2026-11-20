@@ -533,6 +533,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         action.BeforePausedForPlayerChoice -= OnActionPaused;
     }
 
+    /// <summary>Why the state after a play wasn't captured when the play ended the fight (an expected skip: decision #108).</summary>
+    private const string FightEndedSkip = "the fight ended";
+
     private void OnActionFinished(GameAction action)
     {
         try
@@ -548,7 +551,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             {
                 // The fight is ending: its cleanup (temporary powers expiring, Focus back) changes the
                 // state, so the state the play left can't be compared. The history checks still run.
-                rec.AfterSkipped = "the fight ended";
+                rec.AfterSkipped = FightEndedSkip;
                 rec.FightEnded = true;
             }
             else if (me != null && cs != null)
@@ -645,7 +648,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var seenAt) || last.Frame != seenAt) return (null, "held from an earlier board, or not drawn on its last frame in hand");
         var shown = last.Tabs;
         if (shownFacts.SimPending || shownFacts.SimIncomplete || nowFacts.SimPending || nowFacts.SimIncomplete)
-            return (null, "simulation still exploring");
+            return (null, "a simulation not finished in time, or stopped at a cap");
         if (_history == null || !_ctx.Decor.LastSeenFrame.TryGetValue(card, out var frame) || !_countAtFrame.TryGetValue(frame, out var drawnAt))
             return (null, "no history position for them");
         var hist = _history.Entries.ToList();
@@ -862,8 +865,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             if (w.Facts?.SimPending == true)
             {
-                // Its simulation was still running when the frame stopped waiting: its simulator tabs may be missing.
-                var simOnly = issues.Where(x => SimTabSources.Any(x.Contains)).ToList();
+                // Its simulation was still running when the frame stopped waiting: every tab the simulator gives may be missing (every
+                // proc tab can come from a model's log, its block and damage too: SimDependent, as for a capped search below), so none
+                // of those checks can be held to it. Counted as not checked (decision #92).
+                var simOnly = issues.Where(SimDependent).ToList();
                 foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
                 issues.RemoveAll(simOnly.Contains);
             }
@@ -909,7 +914,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             {
                 var reason = SkipReason(line);
                 _skipCounts[reason] = (_skipCounts.TryGetValue(reason, out var sn) ? sn : 0) + 1;
-                Telemetry.DevEvents.Post(new Telemetry.CheckSkipped("play", turn, reason, w.CardName));
+                // The play that ended the fight: its state after it was never captured (the fight's cleanup runs first), which no model
+                // can close. Counted, but not held against the turn (decision #108).
+                var expected = w.FightEnded && w.After == null && w.AfterSkipped == FightEndedSkip && line.StartsWith("state after the play:", StringComparison.Ordinal);
+                Telemetry.DevEvents.Post(new Telemetry.CheckSkipped("play", turn, reason, w.CardName, expected));
             }
             foreach (var reason in w.Facts?.Unmodelled ?? Array.Empty<string>())
                 _gapCounts[reason] = (_gapCounts.TryGetValue(reason, out var gn) ? gn : 0) + 1;

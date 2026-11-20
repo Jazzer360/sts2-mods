@@ -13,7 +13,8 @@ namespace SpireQoL.Telemetry;
 /// <list type="bullet">
 /// <item>mismatched: some check of the turn (its plays, or the enemy turn after it) didn't match;</item>
 /// <item>capped: some search for the turn's boards stopped at a cap;</item>
-/// <item>unchecked: some check was skipped (a gap, decision #92), or the forecast was never checked though the fight went on;</item>
+/// <item>unchecked: some check was skipped (a gap, decision #92), or the forecast was never checked though the fight went on (an
+/// expected skip, CheckSkipped.Expected, is counted with its reason but doesn't make the turn unchecked);</item>
 /// <item>clean: everything checked and matched (the fight's last turn has no enemy turn: its plays decide).</item>
 /// </list>
 /// Thread-safe: searches post from worker threads.
@@ -103,9 +104,9 @@ public sealed class SessionStats
                 {
                     var a = Audit(s.Audit);
                     a.Skipped++;
-                    Count(a.SkipReasons, s.Reason);
+                    Count(a.SkipReasons, s.Expected ? s.Reason + " (expected)" : s.Reason);
                     var rec = Turn(s.Turn);
-                    rec.Skipped = true;
+                    if (!s.Expected) rec.Skipped = true;
                     if (s.Audit == "forecast") rec.ForecastSeen = true;
                     break;
                 }

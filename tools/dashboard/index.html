@@ -1,0 +1,832 @@
+<!doctype html>
+<!--
+  Spire QoL dev dashboard (decision #108). A static page with no dependencies: open it in Chrome or Edge (file:// is fine), click
+  "Connect", and pick the dev folder %USERPROFILE%\SpireQoL-dev (the game writes it in dev mode; docs/DEVELOPMENT.md
+  "Dev dashboard"). It reads the newest stream-*.jsonl as it grows, state.json, the reports kept in reports\ and
+  sessions.jsonl, and writes your notes into feedback.jsonl. Nothing here talks to the network. Add ?demo to the address (or click Demo) for made-up data.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spire QoL Dev</title>
+<style>
+:root {
+  --bg: #0f1216; --panel: #171b21; --panel2: #1e232b; --line: #2a313b; --text: #e3e7ec; --dim: #8b95a3; --faint: #5b6573;
+  --accent: #6aa9ff; --good: #4cc38a; --warn: #e8b545; --bad: #f06a6a; --violet: #a98bff; --teal: #3fc1c9;
+  --series: #6aa9ff, #4cc38a, #e8b545, #f06a6a, #a98bff, #3fc1c9, #f29b5b, #d77fd1;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f6f9; --panel: #ffffff; --panel2: #f0f2f6; --line: #dde2ea; --text: #1b2028; --dim: #5d6777; --faint: #98a1ae;
+    --accent: #2f6fd6; --good: #1f9a5f; --warn: #b7840e; --bad: #d23f3f; --violet: #7a5ad6; --teal: #138f97;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f4f6f9; --panel: #ffffff; --panel2: #f0f2f6; --line: #dde2ea; --text: #1b2028; --dim: #5d6777; --faint: #98a1ae;
+  --accent: #2f6fd6; --good: #1f9a5f; --warn: #b7840e; --bad: #d23f3f; --violet: #7a5ad6; --teal: #138f97;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.danger:hover { border-color: var(--bad); color: var(--bad); }
+button:disabled { opacity: .5; cursor: default; }
+input[type=text], select, textarea { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+textarea { width: 100%; resize: vertical; min-height: 64px; }
+code, .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12px; }
+header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; flex-wrap: wrap; }
+.brand { font-weight: 650; letter-spacing: .2px; }
+.status { display: flex; gap: 10px; align-items: center; color: var(--dim); flex-wrap: wrap; flex: 1; min-width: 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); display: inline-block; }
+.dot.live { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
+.dot.stale { background: var(--warn); }
+nav { display: flex; gap: 2px; padding: 0 12px; overflow-x: auto; }
+nav button { border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 8px 12px; color: var(--dim); white-space: nowrap; }
+nav button.on { color: var(--text); border-bottom-color: var(--accent); }
+nav .count { background: var(--bad); color: #fff; border-radius: 9px; padding: 0 6px; font-size: 11px; margin-left: 4px; }
+main { padding: 16px; max-width: 1500px; margin: 0 auto; }
+.page { display: none; }
+.page.on { display: block; }
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.grid2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(560px, 100%), 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.card h3 { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; display: flex; justify-content: space-between; gap: 8px; }
+.tile .v { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.tile .s { color: var(--dim); font-size: 12px; }
+.good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); } .dim { color: var(--dim); } .faint { color: var(--faint); }
+.section { margin: 20px 0 8px; font-size: 13px; font-weight: 600; color: var(--dim); }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 600; font-size: 12px; position: sticky; top: 0; background: var(--panel); }
+td.n, th.n { text-align: right; }
+.scroll { max-height: 520px; overflow: auto; }
+.pill { display: inline-block; border-radius: 9px; padding: 0 7px; font-size: 11px; border: 1px solid var(--line); color: var(--dim); white-space: nowrap; }
+.pill.good { border-color: var(--good); color: var(--good); } .pill.bad { border-color: var(--bad); color: var(--bad); } .pill.warn { border-color: var(--warn); color: var(--warn); }
+canvas { width: 100%; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; color: var(--dim); font-size: 12px; margin-top: 6px; }
+.legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.attn { list-style: none; margin: 0; padding: 0; }
+.attn li { padding: 6px 0; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: baseline; }
+.attn li:last-child { border-bottom: 0; }
+.attn time, .when { color: var(--faint); font-size: 12px; white-space: nowrap; }
+.turn { border-left: 3px solid var(--line); padding: 6px 0 6px 12px; margin: 8px 0; }
+.turn.t-clean { border-left-color: var(--good); } .turn.t-bad { border-left-color: var(--bad); } .turn.t-warn { border-left-color: var(--warn); } .turn.t-capped { border-left-color: var(--violet); }
+.turn h4 { margin: 0 0 4px; font-size: 13px; }
+.turn ul { margin: 0; padding-left: 18px; }
+.log { font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+.log div { padding: 1px 0; }
+.log .WARN { color: var(--warn); } .log .ERROR { color: var(--bad); }
+.empty { color: var(--faint); padding: 18px 0; text-align: center; }
+.rep { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel2); }
+.rep.handled { opacity: .6; }
+.rep .t { font-weight: 600; margin-bottom: 4px; word-break: break-word; }
+.rep pre { white-space: pre-wrap; word-break: break-word; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px; max-height: 320px; overflow: auto; margin: 4px 0 8px; }
+.rep details { margin-top: 6px; } .rep summary { cursor: pointer; color: var(--dim); }
+.note { border-bottom: 1px solid var(--line); padding: 8px 0; }
+.note .meta { color: var(--faint); font-size: 12px; }
+.note .body { white-space: pre-wrap; }
+.connect { max-width: 640px; margin: 40px auto; text-align: center; }
+.connect p { color: var(--dim); }
+.kbd { border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 11px; }
+@media (max-width: 640px) { main { padding: 12px; } .bar { padding: 8px 12px; } .tile .v { font-size: 20px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <span class="brand">Spire QoL · dev</span>
+    <div class="status" id="status"><span class="dot" id="dot"></span><span id="statusText">Not connected</span></div>
+    <button id="connectBtn" class="primary">Connect</button>
+    <button id="demoBtn" title="Made-up data, to see the page without the game">Demo</button>
+    <button id="themeBtn" title="Light or dark">◐</button>
+  </div>
+  <nav id="nav"></nav>
+</header>
+<main>
+  <div class="connect" id="connectHelp">
+    <h2>Pick the dev folder</h2>
+    <p>The game writes it in dev mode (a <code>dotnet build</code> install): <code>%USERPROFILE%\SpireQoL-dev</code>.
+      (or the <code>DevFolder</code> setting, if you set one; never under AppData or Program Files: the browser refuses those).
+      Click <b>Connect</b>, paste that path in the folder picker's address bar, and allow viewing and editing (the page writes your
+      notes and its commands there). Chrome or Edge. The folder is remembered; next time one click reconnects.</p>
+    <p class="faint">Nothing here talks to the network. docs/DEVELOPMENT.md "Dev dashboard" explains every file.</p>
+  </div>
+
+  <section class="page" id="p-overview">
+    <div class="grid" id="tiles"></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>Needs attention <span class="faint" id="attnCount"></span></h3><ul class="attn" id="attn"></ul></div>
+      <div class="card"><h3>Last 5 minutes</h3><canvas id="ovFrame" height="120"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>mod frame p95</span><span><i style="background:var(--bad)"></i>mod frame max</span><span class="faint">lines at 16.7 and 33.3 ms</span></div>
+        <canvas id="ovHeld" height="80" style="margin-top:10px"></canvas>
+        <div class="legend"><span><i style="background:var(--violet)"></i>states held by every search (cap 150,000)</span><span><i style="background:var(--teal)"></i>searches running</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="p-turn">
+    <div class="grid2">
+      <div class="card"><h3>Forecast now <span class="faint" id="whereText"></span></h3><div id="forecast"></div></div>
+      <div class="card"><h3>How the damage spreads over the rolls</h3><canvas id="spread" height="150"></canvas><div class="legend"><span><i style="background:var(--accent)"></i>share of the rolls</span><span><i style="background:var(--bad)"></i>you die in some of them</span></div></div>
+    </div>
+    <div class="section">Turns, newest first: plays checked, the enemy turn's check, searches and caps, and the audit's own lines</div>
+    <div id="turns"></div>
+  </section>
+
+  <section class="page" id="p-searches">
+    <div class="grid" id="searchTiles"></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>Copies against time (each search)</h3><canvas id="scatter" height="220"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>card</span><span><i style="background:var(--good)"></i>forecast</span><span><i style="background:var(--violet)"></i>capped</span><span><i style="background:var(--faint)"></i>cancelled</span><span class="faint">both axes log</span></div></div>
+      <div class="card"><h3>Copies per millisecond over time</h3><canvas id="throughput" height="220"></canvas><div class="legend"><span class="faint">searches over 1 ms; a drop means copying got more expensive, not just more frequent</span></div></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Searches <span class="row"><select id="searchFilter"><option value="all">all</option><option value="card">cards</option><option value="forecast">forecast</option><option value="bg">background</option><option value="cap">capped</option><option value="cancel">cancelled</option><option value="slow">over 8 ms</option></select></span></h3>
+      <div class="scroll"><table id="searchTable"></table></div>
+    </div>
+  </section>
+
+  <section class="page" id="p-perf">
+    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select></div>
+    <div class="grid" id="perfTiles"></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>Mod time per frame</h3><canvas id="pfFrame" height="170"></canvas><div class="legend"><span><i style="background:var(--accent)"></i>p95</span><span><i style="background:var(--good)"></i>median</span><span><i style="background:var(--bad)"></i>max</span><span class="faint">lines at 16.7 and 33.3 ms</span></div></div>
+      <div class="card"><h3>Mean time per frame, by feature</h3><canvas id="pfFeatures" height="170"></canvas><div class="legend" id="pfFeaturesLegend"></div></div>
+      <div class="card"><h3>Longest gap between frames (the game's own stalls too)</h3><canvas id="pfGap" height="150"></canvas><div class="legend"><span><i style="background:var(--warn)"></i>longest gap per 250 ms</span><span class="faint">line at 50 ms</span></div></div>
+      <div class="card"><h3>Memory and collections (whole process)</h3><canvas id="pfGc" height="150"></canvas><div class="legend"><span><i style="background:var(--teal)"></i>heap MB</span><span><i style="background:var(--warn)"></i>allocated MB/s</span><span><i style="background:var(--bad)"></i>gen 2 collection</span></div></div>
+      <div class="card"><h3>Simulator</h3><canvas id="pfSim" height="150"></canvas><div class="legend"><span><i style="background:var(--violet)"></i>states held</span><span><i style="background:var(--teal)"></i>searches running ×1000</span></div></div>
+      <div class="card"><h3>Waiting on searches</h3><canvas id="pfWait" height="150"></canvas><div class="legend"><span><i style="background:var(--accent)"></i>frame waits (ms)</span><span><i style="background:var(--bad)"></i>left to the background</span><span><i style="background:var(--warn)"></i>board settling spells (ms)</span></div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>Features in this window</h3><div class="scroll"><table id="featureTable"></table></div></div>
+  </section>
+
+  <section class="page" id="p-reports">
+    <div class="card"><h3>Reports kept on this machine <span class="row"><select id="repFilter"><option value="open">open</option><option value="all">all</option><option value="handled">handled</option></select></span></h3>
+      <p class="dim" style="margin-top:0">In dev mode nothing goes to Sentry: each report the game would have sent is saved in <code>reports\</code>, with
+        the details, the game state, the simulator's start state and the recent log. Add a note about what was going on, and mark it handled once it's fixed.
+        Both go to <code>feedback.jsonl</code>, which is read at the start of each stretch of work.</p>
+      <div id="repList"></div></div>
+  </section>
+
+  <section class="page" id="p-feedback">
+    <div class="card"><h3>A thought while playing</h3>
+      <textarea id="fbText" placeholder="What felt off, what you'd want, what surprised you… (Ctrl+Enter saves)"></textarea>
+      <div class="row" style="margin-top:8px">
+        <span class="dim">Kind</span>
+        <select id="fbKind"><option>bug</option><option>idea</option><option>performance</option><option>looks</option><option>prediction</option><option>other</option></select>
+        <span class="faint" id="fbContext"></span>
+        <span style="flex:1"></span>
+        <button class="primary" id="fbSave">Save note</button>
+      </div>
+      <p class="faint" style="margin-bottom:0">Saved to <code>feedback.jsonl</code> in the dev folder with the time, mod version, fight and turn, for the next development sprint.</p>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>Notes <span class="row"><select id="fbFilter"><option value="open">open</option><option value="all">all</option><option value="done">handled</option></select></span></h3><div id="fbList"></div></div>
+  </section>
+
+  <section class="page" id="p-log">
+    <div class="card"><h3>Mod log <span class="row"><input type="text" id="logFilter" placeholder="filter" style="width:200px"><label><input type="checkbox" id="logWarn"> warnings only</label><label><input type="checkbox" id="logFollow" checked> follow</label></span></h3>
+      <div class="scroll log" id="log" style="max-height:70vh"></div></div>
+  </section>
+
+  <section class="page" id="p-compare">
+    <div class="card"><h3>Two launches side by side</h3>
+      <div class="row"><select id="cmpA"></select><span class="dim">against</span><select id="cmpB"></select><button id="cmpGo" class="primary">Compare</button></div>
+      <p class="faint">Each stream file is one launch of the game. Compare a release with the one before it on similar fights.</p>
+      <div id="cmpOut"></div></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+// ============================================================== the model: everything read from the stream and state
+const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
+const M = {
+  rollups: [], searches: [], checks: [], logs: [], waits: [], unsettled: [], saved: [],
+  combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null,
+};
+function reset() {
+  Object.assign(M, { rollups: [], searches: [], checks: [], logs: [], waits: [], unsettled: [], saved: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null });
+}
+const push = (arr, v, max) => { arr.push(v); if (max && arr.length > max) arr.splice(0, arr.length - max); };
+function turnRec(turn) {
+  const key = `${M.combat}:${turn}`;
+  if (!M.turns.has(key)) M.turns.set(key, { combat: M.combat, turn, encounter: M.combats.at(-1)?.encounter ?? "?", plays: [], forecast: [], searches: 0, caps: [], lines: [] });
+  return M.turns.get(key);
+}
+function ingest(e) {
+  M.lastT = Math.max(M.lastT, e.t || 0);
+  switch (e.kind) {
+    case "stream-started": M.started = e; break;
+    case "frame-rollup": push(M.rollups, e, MAX.rollups); break;
+    case "search-done": {
+      push(M.searches, e, MAX.searches);
+      if (e.turn > 0) { const r = turnRec(e.turn); r.searches++; if (e.cap) r.caps.push(e.cap); }
+      break;
+    }
+    case "combat-started": M.combat++; M.combats.push({ ...e, n: M.combat }); break;
+    case "turn-started": turnRec(e.turn); break;
+    case "check-done": case "check-skipped": {
+      M.checks.push(e);
+      const turn = e.turn > 0 ? e.turn : (Math.max(0, ...[...M.turns.values()].filter(r => r.combat === M.combat).map(r => r.turn)) || 1);
+      const r = turnRec(turn);
+      (e.audit === "forecast" ? r.forecast : r.plays).push(e);
+      break;
+    }
+    case "frame-wait": push(M.waits, e, MAX.waits); break;
+    case "unsettled": push(M.unsettled, e, MAX.waits); break;
+    case "log-line": {
+      push(M.logs, e, MAX.logs);
+      const m = /^\[audit\] (?:\[(outcome|gaps|odds)\] )?turn (\d+)/.exec(e.text);
+      if (m) turnRec(+m[2]).lines.push(e);
+      else if (/^\[audit\] played /.test(e.text) || /^\[audit\] turn \d+ enemy turn/.test(e.text)) {
+        const cur = [...M.turns.values()].filter(r => r.combat === M.combat).at(-1);
+        if (cur) cur.lines.push(e);
+      }
+      break;
+    }
+    case "report-saved": M.saved.push(e); break;
+  }
+}
+
+// ============================================================== the folder: File System Access, remembered in IndexedDB
+const FS = { dir: null, stream: null, offset: 0, decoder: null, rest: "", listedAt: 0, demo: false };
+const idb = () => new Promise((ok, no) => { const r = indexedDB.open("spireqol-dev", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+async function kv(key, value) {
+  try {
+    const db = await idb();
+    return await new Promise((ok, no) => {
+      const tx = db.transaction("kv", value === undefined ? "readonly" : "readwrite"), st = tx.objectStore("kv");
+      const r = value === undefined ? st.get(key) : st.put(value, key);
+      r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
+    });
+  } catch { return undefined; }
+}
+async function connect(fromClick) {
+  if (!("showDirectoryPicker" in window)) { setStatus("This browser can't open folders: use Chrome or Edge (or Demo)", "stale"); return; }
+  let dir = await kv("dir");
+  try {
+    if (dir && (await dir.queryPermission({ mode: "readwrite" })) !== "granted") {
+      if (!fromClick || (await dir.requestPermission({ mode: "readwrite" })) !== "granted") dir = null;
+    }
+    if (!dir && fromClick) dir = await showDirectoryPicker({ id: "spireqol-dev", mode: "readwrite" });
+  } catch (e) { if (e.name !== "AbortError") setStatus("Couldn't open the folder: " + e.message, "stale"); return; }
+  if (!dir) { setStatus("Click Connect to reopen the dev folder", "stale"); return; }
+  await kv("dir", dir);
+  FS.dir = dir; FS.demo = false; FS.stream = null;
+  document.getElementById("connectBtn").textContent = "Change folder";
+  start();
+}
+async function streams() {
+  const list = [];
+  for await (const [name, h] of FS.dir.entries()) if (h.kind === "file" && /^stream-\d{8}-\d{6}\.jsonl$/.test(name)) list.push({ name, h });
+  return list.sort((a, b) => (a.name < b.name ? 1 : -1));
+}
+async function poll() {
+  if (!FS.dir) return;
+  try {
+    if (!FS.stream || Date.now() - FS.listedAt > 4000) {
+      FS.listedAt = Date.now();
+      const newest = (await streams())[0];
+      if (newest && newest.name !== FS.stream?.name) {
+        FS.stream = newest; FS.offset = 0; FS.decoder = new TextDecoder(); FS.rest = ""; reset(); M.file = newest.name;
+      }
+    }
+    if (FS.stream) {
+      const f = await FS.stream.h.getFile();
+      if (f.size > FS.offset) {
+        const buf = await f.slice(FS.offset).arrayBuffer();
+        FS.offset += buf.byteLength;
+        const text = FS.rest + FS.decoder.decode(buf, { stream: true });
+        const lines = text.split("\n");
+        FS.rest = lines.pop();
+        for (const l of lines) if (l) { try { ingest(JSON.parse(l)); } catch { /* a line cut short: rare */ } }
+      }
+    }
+    try {
+      const sf = await (await FS.dir.getFileHandle("state.json")).getFile();
+      if (sf.lastModified !== M.stateAt) { M.state = JSON.parse(await sf.text()); M.stateAt = sf.lastModified; }
+    } catch { /* not written yet, or mid-replace */ }
+  } catch (e) { setStatus("Reading the folder failed: " + e.message, "stale"); }
+}
+async function writeFile(name, text, append) {
+  if (FS.demo) return demoWrite(name, text, append);
+  let d = FS.dir;
+  const parts = name.split("/");
+  for (const p of parts.slice(0, -1)) d = await d.getDirectoryHandle(p, { create: true });
+  const fh = await d.getFileHandle(parts.at(-1), { create: true });
+  const w = await fh.createWritable({ keepExistingData: !!append });
+  if (append) await w.seek((await fh.getFile()).size);
+  await w.write(text);
+  await w.close();
+}
+async function readText(name) {
+  if (FS.demo) return DEMO.files[name] ?? "";
+  try { return await (await (await FS.dir.getFileHandle(name)).getFile()).text(); } catch { return ""; }
+}
+/** The report files (reports/*.json), newest first; each read once (they never change). */
+const REP = { cache: new Map(), listedAt: 0, list: [] };
+async function loadReports(force) {
+  if (!force && Date.now() - REP.listedAt < 3000) return REP.list;
+  REP.listedAt = Date.now();
+  const names = [];
+  if (FS.demo) names.push(...Object.keys(DEMO.files).filter((n) => n.startsWith("reports/")).map((n) => n.slice(8)));
+  else {
+    try { for await (const [name, h] of (await FS.dir.getDirectoryHandle("reports")).entries()) if (h.kind === "file" && name.endsWith(".json")) names.push(name); }
+    catch { /* no reports yet */ }
+  }
+  for (const n of names) {
+    if (REP.cache.has(n)) continue;
+    try { REP.cache.set(n, JSON.parse(FS.demo ? DEMO.files["reports/" + n] : await (await (await (await FS.dir.getDirectoryHandle("reports")).getFileHandle(n)).getFile()).text())); }
+    catch { /* being written: next time */ }
+  }
+  REP.list = names.filter((n) => REP.cache.has(n)).sort().reverse().map((n) => REP.cache.get(n));
+  return REP.list;
+}
+
+// ============================================================== helpers
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = (n, d = 1) => (n == null || isNaN(n) ? "–" : Number(n).toLocaleString(undefined, { maximumFractionDigits: d }));
+const pct = (n, d) => (d ? `${((100 * n) / d).toFixed(1)}%` : "–");
+const clock = (t) => { const s = Math.max(0, Math.floor(t)); return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
+const ago = (t) => { const s = M.lastT - t; return s < 60 ? `${Math.round(s)}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : `${(s / 3600).toFixed(1)}h ago`; };
+const quant = (arr, p) => { if (!arr.length) return 0; const a = [...arr].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.max(0, Math.ceil(p * a.length) - 1))]; };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const seriesColors = () => css("--series").split(",").map((s) => s.trim());
+const since = (arr, secs) => (secs ? arr.filter((e) => e.t >= M.lastT - secs) : arr);
+const isForecast = (s) => /forecast/i.test(s.label);
+const tile = (label, value, sub, cls = "") => `<div class="card tile"><h3>${esc(label)}</h3><div class="v ${cls}">${value}</div><div class="s">${sub ?? ""}</div></div>`;
+function setStatus(text, kind) { $("statusText").innerHTML = text; $("dot").className = "dot " + (kind || ""); }
+
+// ============================================================== charts (canvas, no library)
+function canvas(id) {
+  const c = $(id), r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  const h = +c.getAttribute("height");
+  c.width = Math.max(10, r.width * dpr); c.height = h * dpr; c.style.height = h + "px";
+  const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { g, w: r.width, h };
+}
+function axes(g, w, h, yMax, unit, pad) {
+  g.font = "11px system-ui"; g.fillStyle = css("--faint"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (h - pad.t - pad.b) * (1 - i / 4);
+    g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+    g.fillText(fmt((yMax * i) / 4, yMax < 10 ? 1 : 0) + (i === 4 ? unit : ""), 2, y + 4);
+  }
+}
+/** Lines over time. series: [{ points: [[t, v]], color, dots? }]; refs: y values drawn dashed. */
+function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax } = {}) {
+  const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 16 };
+  const all = series.flatMap((s) => s.points);
+  if (!all.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
+  const t0 = Math.min(...all.map((p) => p[0])), t1 = Math.max(...all.map((p) => p[0]), t0 + 1);
+  const yMax = fixedMax ?? Math.max(...all.map((p) => p[1]), ...refs, 1) * 1.08;
+  axes(g, w, h, yMax, unit, pad);
+  const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r), Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (v - yMin) / (yMax - yMin));
+  g.setLineDash([4, 4]); g.strokeStyle = css("--faint");
+  for (const r of refs) { g.beginPath(); g.moveTo(pad.l, Y(r)); g.lineTo(w - pad.r, Y(r)); g.stroke(); }
+  g.setLineDash([]);
+  for (const s of series) {
+    g.strokeStyle = g.fillStyle = s.color; g.lineWidth = 1.5;
+    if (s.dots) { for (const [t, v] of s.points) { g.beginPath(); g.arc(X(t), Y(v), 2.5, 0, 7); g.fill(); } continue; }
+    g.beginPath();
+    s.points.forEach(([t, v], i) => (i ? g.lineTo(X(t), Y(v)) : g.moveTo(X(t), Y(v))));
+    g.stroke();
+  }
+  g.fillStyle = css("--faint"); g.fillText(clock(t0), pad.l, h - 2); const e = clock(t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2);
+}
+/** Stacked areas over time: layers [{ name, color, points: [[t, v]] }] on the same t. */
+function stacked(id, layers) {
+  const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 16 };
+  if (!layers.length || !layers[0].points.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
+  const ts = layers[0].points.map((p) => p[0]), n = ts.length;
+  const tot = ts.map((_, i) => layers.reduce((a, l) => a + (l.points[i]?.[1] || 0), 0));
+  const yMax = Math.max(...tot, 0.1) * 1.08, t0 = ts[0], t1 = Math.max(ts.at(-1), t0 + 1);
+  axes(g, w, h, yMax, " ms", pad);
+  const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r), Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - v / yMax);
+  const base = new Array(n).fill(0);
+  for (const l of layers) {
+    g.fillStyle = l.color; g.globalAlpha = 0.75; g.beginPath();
+    for (let i = 0; i < n; i++) g.lineTo(X(ts[i]), Y(base[i] + (l.points[i]?.[1] || 0)));
+    for (let i = n - 1; i >= 0; i--) g.lineTo(X(ts[i]), Y(base[i]));
+    g.closePath(); g.fill(); g.globalAlpha = 1;
+    for (let i = 0; i < n; i++) base[i] += l.points[i]?.[1] || 0;
+  }
+}
+function scatter(id, pts) {
+  const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 18 };
+  if (!pts.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
+  const lx = (v) => Math.log10(Math.max(v, 1)), ly = (v) => Math.log10(Math.max(v, 0.01));
+  const xMax = Math.max(...pts.map((p) => lx(p.x)), 2), yMin = -2, yMax = Math.max(...pts.map((p) => ly(p.y)), 1);
+  g.font = "11px system-ui"; g.strokeStyle = css("--line"); g.fillStyle = css("--faint");
+  for (let e = 0; e <= Math.ceil(xMax); e++) { const x = pad.l + (e / xMax) * (w - pad.l - pad.r); g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, h - pad.b); g.stroke(); g.fillText("1e" + e, x + 2, h - 4); }
+  for (let e = yMin; e <= Math.ceil(yMax); e++) { const y = pad.t + (h - pad.t - pad.b) * (1 - (e - yMin) / (yMax - yMin)); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke(); g.fillText(e < 0 ? `${10 ** e} ms` : `${10 ** e} ms`, 2, y + 4); }
+  for (const p of pts) {
+    g.fillStyle = p.color; g.globalAlpha = 0.7;
+    g.beginPath(); g.arc(pad.l + (lx(p.x) / xMax) * (w - pad.l - pad.r), pad.t + (h - pad.t - pad.b) * (1 - (ly(p.y) - yMin) / (yMax - yMin)), 2.5, 0, 7); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+function bars(id, items) {
+  const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 18 };
+  if (!items.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("No forecast", w / 2 - 30, h / 2); return; }
+  const yMax = Math.max(...items.map((i) => i.v), 0.01) * 1.1;
+  axes(g, w, h, yMax * 100, "%", pad);
+  const bw = (w - pad.l - pad.r) / items.length;
+  items.forEach((it, i) => {
+    const bh = (h - pad.t - pad.b) * (it.v / yMax);
+    g.fillStyle = it.bad ? css("--bad") : css("--accent");
+    g.fillRect(pad.l + i * bw + 1, h - pad.b - bh, Math.max(1, bw - 2), bh);
+    if (items.length <= 30 || i % Math.ceil(items.length / 30) === 0) { g.fillStyle = css("--faint"); g.fillText(it.label, pad.l + i * bw + 1, h - 4); }
+  });
+}
+
+// ============================================================== pages
+const PAGES = [["overview", "Overview"], ["turn", "Turn"], ["searches", "Searches"], ["perf", "Performance"], ["reports", "Reports"], ["feedback", "Feedback"], ["log", "Log"], ["compare", "Compare"]];
+let page = "overview";
+function nav() {
+  const openN = REP.list.filter((r) => fbStatus[r.id] !== "handled").length;
+  $("nav").innerHTML = PAGES.map(([id, name]) => `<button data-p="${id}" class="${id === page ? "on" : ""}">${name}${id === "reports" && openN ? `<span class="count">${openN}</span>` : ""}</button>`).join("");
+}
+$("nav").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; page = b.dataset.p; try { localStorage.setItem("page", page); } catch {} render(true); });
+
+function renderOverview() {
+  const s = M.state?.session, r5 = since(M.rollups, 300), s5 = since(M.searches, 300);
+  const p95 = quant(since(M.rollups, 60).map((r) => r.modP95), 0.5), slow5 = r5.reduce((a, r) => a + r.slow, 0);
+  const caps5 = s5.filter((x) => x.cap).length, openN = REP.list.filter((r) => fbStatus[r.id] !== "handled").length;
+  const unsettled = since(M.unsettled, 300).map((u) => u.ms);
+  const gen2 = r5.reduce((a, r) => a + r.gen2, 0);
+  $("tiles").innerHTML = [
+    tile("Turns this session", s ? fmt(s.turns, 0) : "–", s ? `${pct(s.clean, s.turns)} clean · ${s.combats} fights` : "no session yet", s && s.turns && s.clean / s.turns < 0.8 ? "warn" : ""),
+    tile("Mismatched turns", s ? fmt(s.mismatched, 0) : "–", s ? `${s.unchecked} unchecked · ${s.capped} capped` : "", s?.mismatched ? "bad" : "good"),
+    tile("Mod frame time", `${fmt(p95, 2)} ms`, `median of p95s, last minute · ${slow5} slow frames in 5 min`, p95 > 16.7 ? "bad" : p95 > 8 ? "warn" : "good"),
+    tile("Searches, 5 min", fmt(s5.length, 0), `${s5.filter((x) => x.background).length} background · ${caps5} capped · slowest ${fmt(Math.max(0, ...s5.map((x) => x.ms)), 0)} ms`, caps5 ? "warn" : ""),
+    tile("Board settling", unsettled.length ? `${fmt(quant(unsettled, 0.95), 0)} ms` : "instant", unsettled.length ? `p95 of ${unsettled.length} waits in 5 min` : "every board settled within its frame", quant(unsettled, 0.95) > 250 ? "warn" : ""),
+    tile("Reports", fmt(M.saved.length, 0), `this launch · ${openN} open in all (Reports)`, M.saved.length ? "bad" : openN ? "warn" : "good"),
+    tile("Memory", `${fmt(r5.at(-1)?.heapMb, 0)} MB`, `${gen2} gen 2 collections in 5 min`, gen2 > 3 ? "warn" : ""),
+    tile("Stream", M.file ? esc(M.file.replace(/^stream-|\.jsonl$/g, "")) : "–", `${fmt(M.rollups.length + M.searches.length + M.logs.length, 0)} events · up ${clock(M.lastT)}`),
+  ].join("");
+  // what needs a look: newest first
+  const items = [];
+  for (const c of M.checks) if (c.kind === "check-done" && !c.matched) items.push({ t: c.t, cls: "bad", text: `${c.audit === "forecast" ? "Enemy turn" : "Play"} didn't match: <b>${esc(c.detail)}</b> (turn ${c.turn})` });
+  for (const x of M.searches) if (x.cap) items.push({ t: x.t, cls: "warn", text: `Search stopped at <b>${esc(x.cap)}</b>: ${esc(x.label)} (${fmt(x.copies, 0)} copies, ${fmt(x.ms, 0)} ms)` });
+  for (const r of M.saved) items.push({ t: r.t, cls: "bad", text: `Report saved: ${esc(r.title)}` });
+  for (const l of M.logs) if (l.level !== "INFO" && !/^\[audit\]/.test(l.text)) items.push({ t: l.t, cls: l.level === "ERROR" ? "bad" : "warn", text: esc(l.text.slice(0, 220)) });
+  for (const r of M.rollups) if (r.modMax > 50) items.push({ t: r.t, cls: "bad", text: `Slow frame: the mod took ${fmt(r.modMax, 0)} ms (${esc(topFeature(r))})` });
+  items.sort((a, b) => b.t - a.t);
+  $("attnCount").textContent = items.length ? items.length : "";
+  $("attn").innerHTML = items.length ? items.slice(0, 40).map((i) => `<li><span class="pill ${i.cls}">${i.cls === "bad" ? "!" : "·"}</span><span style="flex:1">${i.text}</span><time>${ago(i.t)}</time></li>`).join("") : `<li class="empty">Nothing needs a look.</li>`;
+  lines("ovFrame", [{ color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }], { refs: [16.7, 33.3], unit: " ms" });
+  lines("ovHeld", [{ color: css("--violet"), points: r5.map((r) => [r.t, r.heldStates]) }, { color: css("--teal"), points: r5.map((r) => [r.t, r.searching * 1000]) }], {});
+}
+const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${fmt(v, 0)} ms`).join(", ");
+
+function renderTurn() {
+  const w = M.state?.where, f = M.state?.forecast;
+  $("whereText").textContent = !w ? "" : !w.inRun ? "not in a run" : !w.inCombat ? "in a run, out of a fight" : `${w.encounter} · turn ${w.turn}${w.playerTurn ? "" : " (enemy turn)"}`;
+  if (!f) $("forecast").innerHTML = `<div class="empty">${w?.inCombat ? "No forecast this frame (its result is on its way, or the enemies are acting)" : "No fight"}</div>`;
+  else if (f.error) $("forecast").innerHTML = `<div class="bad">Couldn't read the forecast: ${esc(f.error)}</div>`;
+  else $("forecast").innerHTML = `<div class="grid">${[
+    tile("HP lost", f.takenMin === f.taken ? f.taken : `${f.takenMin}–${f.taken}`, `end-of-turn block ${f.blockGain}`, f.dies ? "bad" : ""),
+    tile("You die", f.dieChance > 0 ? `${(f.dieChance * 100).toFixed(1)}%` : "no", f.dies ? "in the worst case" : "", f.dieChance > 0 ? "bad" : "good"),
+    tile("Branches", fmt(f.branches, 0), `${fmt(f.steps, 0)} steps · ${fmt(f.copies, 0)} copies · ${fmt(f.peakHeld, 0)} held`),
+    tile("Complete", f.truncated ? "capped" : f.unmodelled?.length ? "gaps" : "yes", f.truncated ? esc(f.capHit) : f.unmodelled?.length ? esc(f.unmodelled.join("; ")) : "every outcome, everything modelled", f.truncated ? "bad" : f.unmodelled?.length ? "warn" : "good"),
+  ].join("")}</div>`;
+  bars("spread", (f?.spread || []).map((s) => ({ label: String(s.taken), v: s.weight, bad: s.died })));
+  const turns = [...M.turns.values()].reverse().slice(0, 60);
+  $("turns").innerHTML = turns.length ? turns.map((r) => {
+    const mism = [...r.plays, ...r.forecast].some((c) => c.kind === "check-done" && !c.matched), skip = [...r.plays, ...r.forecast].some((c) => c.kind === "check-skipped" && !c.expected);
+    const cls = mism ? "bad" : r.caps.length ? "capped" : skip ? "warn" : r.forecast.length ? "clean" : "";
+    const fc = r.forecast.map((c) => c.kind === "check-done" ? `<span class="pill ${c.matched ? "good" : "bad"}">enemy turn ${c.matched ? "matched" : "✗ " + esc(c.detail)}</span>` : `<span class="pill warn" title="${esc(c.reason)}">enemy turn not checked</span>`).join(" ");
+    const plays = r.plays.filter((c) => c.kind === "check-done").map((c) => `<li>${esc(c.matched ? c.detail : "")}${c.matched ? ' <span class="good">✓</span>' : `<span class="bad">✗ ${esc(c.detail)}</span>`}</li>`).join("");
+    const skips = [...new Set(r.plays.filter((c) => c.kind === "check-skipped").map((c) => `${c.expected ? "~" : ""}${c.detail ? c.detail + ": " : ""}${c.reason}`))]
+      .map((s) => s.startsWith("~") ? `<li class="dim">not checked (expected): ${esc(s.slice(1))}</li>` : `<li class="warn">not checked: ${esc(s)}</li>`).join("");
+    const fskips = r.forecast.filter((c) => c.kind === "check-skipped").map((c) => `<li class="warn">enemy turn not checked: ${esc(c.reason)}</li>`).join("");
+    const key = `${r.combat}:${r.turn}`;
+    return `<div class="turn t-${cls}"><h4>${esc(r.encounter)} · fight ${r.combat} · turn ${r.turn} <span class="dim" style="font-weight:400">· ${r.searches} searches${r.caps.length ? ` · <span class="bad">${r.caps.length} capped</span>` : ""}</span> ${fc}</h4>
+      <ul>${plays}${skips}${fskips}</ul>${r.lines.length ? `<details data-key="${key}" ${openTurns.has(key) ? "open" : ""}><summary class="dim">audit lines (${r.lines.length})</summary><div class="log">${r.lines.map((l) => `<div class="${l.level}">${esc(l.text)}</div>`).join("")}</div></details>` : ""}</div>`;
+  }).join("") : `<div class="empty">No turns yet: start a fight.</div>`;
+}
+
+const openTurns = new Set();
+$("turns").addEventListener("toggle", (e) => { const k = e.target.dataset?.key; if (k) (e.target.open ? openTurns.add(k) : openTurns.delete(k)); }, true);
+
+function renderSearches() {
+  const s = M.searches, done = s.filter((x) => !x.cancelled), ms = done.map((x) => x.ms);
+  const cancelled = s.filter((x) => x.cancelled);
+  $("searchTiles").innerHTML = [
+    tile("Searches", fmt(s.length, 0), `${pct(s.filter((x) => x.background).length, s.length)} background`),
+    tile("Time p50 / p95", `${fmt(quant(ms, 0.5), 2)} / ${fmt(quant(ms, 0.95), 1)} ms`, `slowest ${fmt(Math.max(0, ...ms), 0)} ms`),
+    tile("Capped", fmt(s.filter((x) => x.cap).length, 0), Object.entries(s.filter((x) => x.cap).reduce((a, x) => ((a[x.cap] = (a[x.cap] || 0) + 1), a), {})).map(([k, v]) => `${k} ×${v}`).join(", ") || "none", s.some((x) => x.cap) ? "warn" : "good"),
+    tile("Cancelled", fmt(cancelled.length, 0), `${fmt(cancelled.reduce((a, x) => a + x.copies, 0), 0)} copies thrown away`),
+    tile("Most states held", fmt(Math.max(0, ...done.map((x) => x.peakHeld)), 0), "by one search (cap 150,000 together)"),
+  ].join("");
+  scatter("scatter", s.slice(-1500).map((x) => ({ x: x.copies, y: x.ms, color: x.cancelled ? css("--faint") : x.cap ? css("--violet") : isForecast(x) ? css("--good") : css("--accent") })));
+  const tp = done.filter((x) => x.ms >= 1).slice(-600);
+  lines("throughput", [{ color: css("--accent"), dots: true, points: tp.map((x) => [x.t, x.copies / x.ms]) }], {});
+  const f = $("searchFilter").value;
+  const pick = { all: () => true, card: (x) => !isForecast(x), forecast: isForecast, bg: (x) => x.background, cap: (x) => x.cap, cancel: (x) => x.cancelled, slow: (x) => x.ms > 8 }[f];
+  const rows = s.filter(pick).slice(-300).reverse();
+  $("searchTable").innerHTML = `<tr><th>When</th><th>What</th><th class="n">Turn</th><th class="n">Steps</th><th class="n">Copies</th><th class="n">Held</th><th class="n">ms</th><th class="n">copies/ms</th><th></th></tr>` +
+    (rows.length ? rows.map((x) => `<tr><td class="when">${clock(x.t)}</td><td>${esc(x.label)}</td><td class="n">${x.turn ? `${x.combat}:${x.turn}` : "–"}</td><td class="n">${fmt(x.steps, 0)}</td><td class="n">${fmt(x.copies, 0)}</td><td class="n">${fmt(x.peakHeld, 0)}</td><td class="n ${x.ms > 50 ? "bad" : x.ms > 8 ? "warn" : ""}">${fmt(x.ms, 2)}</td><td class="n">${x.ms > 0 ? fmt(x.copies / x.ms, 0) : "–"}</td><td>${x.cancelled ? '<span class="pill">cancelled</span>' : ""}${x.background ? '<span class="pill">background</span>' : ""}${x.cap ? `<span class="pill bad">${esc(x.cap)}</span>` : ""}</td></tr>`).join("") : `<tr><td colspan="9" class="empty">None</td></tr>`);
+}
+
+function renderPerf() {
+  const win = +$("perfWindow").value, r = since(M.rollups, win), colors = seriesColors();
+  const p95s = r.map((x) => x.modP95), frames = r.reduce((a, x) => a + x.frames, 0), secs = r.reduce((a, x) => a + x.seconds, 0);
+  const waits = since(M.waits, win), uns = since(M.unsettled, win);
+  $("perfTiles").innerHTML = [
+    tile("Frames per second", fmt(secs ? frames / secs : 0, 0), `${fmt(frames, 0)} frames`),
+    tile("Mod p95 (median of windows)", `${fmt(quant(p95s, 0.5), 2)} ms`, `worst window ${fmt(Math.max(0, ...p95s), 1)} ms`, quant(p95s, 0.5) > 8 ? "warn" : "good"),
+    tile("Slow frames", fmt(r.reduce((a, x) => a + x.slow, 0), 0), "the mod over 30 ms", r.some((x) => x.slow) ? "bad" : "good"),
+    tile("Game stalls", fmt(r.filter((x) => x.gapMax > 50 && x.modMax < 30).length, 0), "gaps over 50 ms, the mod's share small"),
+    tile("Frame waits", fmt(waits.length, 0), `${waits.filter((x) => x.missed).length} left to the background · p95 ${fmt(quant(waits.map((x) => x.ms), 0.95), 1)} ms`),
+    tile("Board settling", fmt(uns.length, 0), uns.length ? `p95 ${fmt(quant(uns.map((x) => x.ms), 0.95), 0)} ms · longest ${fmt(Math.max(...uns.map((x) => x.ms)), 0)} ms` : "spells with searches still running"),
+    tile("Gen 2 collections", fmt(r.reduce((a, x) => a + x.gen2, 0), 0), `${fmt(r.reduce((a, x) => a + x.gcPauseMs, 0), 0)} ms paused in all`),
+    tile("Allocated", `${fmt(secs ? r.reduce((a, x) => a + x.allocatedMb, 0) / secs : 0, 1)} MB/s`, `heap now ${fmt(r.at(-1)?.heapMb, 0)} MB`),
+  ].join("");
+  lines("pfFrame", [{ color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: [16.7, 33.3], unit: " ms" });
+  // features: the six with the most time, then the rest together
+  const totals = {};
+  for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) totals[k] = (totals[k] || 0) + v;
+  const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k);
+  const layers = top.map((k, i) => ({ name: k, color: colors[i % colors.length], points: r.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
+  layers.push({ name: "the rest", color: css("--faint"), points: r.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
+  stacked("pfFeatures", layers);
+  $("pfFeaturesLegend").innerHTML = layers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join("");
+  lines("pfGap", [{ color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [50], unit: " ms" });
+  lines("pfGc", [{ color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { color: css("--warn"), points: r.map((x) => [x.t, x.allocatedMb / Math.max(x.seconds, 0.01)]) }, { color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) }], {});
+  lines("pfSim", [{ color: css("--violet"), points: r.map((x) => [x.t, x.heldStates]) }, { color: css("--teal"), points: r.map((x) => [x.t, x.searching * 1000]) }], {});
+  lines("pfWait", [{ color: css("--accent"), dots: true, points: waits.filter((x) => !x.missed).map((x) => [x.t, x.ms]) }, { color: css("--bad"), dots: true, points: waits.filter((x) => x.missed).map((x) => [x.t, x.ms]) }, { color: css("--warn"), dots: true, points: uns.map((x) => [x.t, x.ms]) }], { unit: " ms" });
+  const feat = {};
+  for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) { const f = (feat[k] ??= { mean: 0, max: 0, n: 0 }); f.mean += v; f.n++; f.max = Math.max(f.max, x.featureMax?.[k] || 0); }
+  const rows = Object.entries(feat).sort((a, b) => b[1].mean - a[1].mean);
+  $("featureTable").innerHTML = `<tr><th>Feature</th><th class="n">Mean per frame</th><th class="n">Largest in one frame</th><th class="n">Share of the mod's time</th></tr>` +
+    rows.map(([k, f]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(f.mean / f.n, 3)} ms</td><td class="n ${f.max > 16.7 ? "bad" : f.max > 8 ? "warn" : ""}">${fmt(f.max, 1)} ms</td><td class="n">${pct(f.mean, rows.reduce((a, [, g]) => a + g.mean, 0))}</td></tr>`).join("");
+}
+
+const repOpen = new Set();
+async function renderReports() {
+  const list = await loadReports();
+  const box = $("repList"), f = $("repFilter").value;
+  const shown = list.filter((r) => f === "all" || (f === "handled" ? fbStatus[r.id] === "handled" : fbStatus[r.id] !== "handled"));
+  const sig = shown.map((r) => r.id + (fbStatus[r.id] || "")).join() + "|" + fbNotes.length;
+  if (box.dataset.sig === sig) return; // unchanged: leave the notes being typed and the open sections alone
+  const keep = {}; box.querySelectorAll("textarea").forEach((t) => (keep[t.dataset.id] = t.value));
+  box.dataset.sig = sig;
+  const pre = (title, text) => (text ? `<details data-k="${title}"><summary>${esc(title)}</summary><pre>${esc(text)}</pre></details>` : "");
+  box.innerHTML = shown.length ? shown.map((r) => {
+    const x = r.extra || {}, t = r.tags || {}, handled = fbStatus[r.id] === "handled";
+    const notes = fbNotes.filter((n) => n.report === r.id);
+    return `<div class="rep ${handled ? "handled" : ""}" data-rep="${esc(r.id)}">
+      <div class="t">${esc(r.title)}</div>
+      <div class="dim"><span class="pill ${r.kind === "crash" ? "bad" : "warn"}">${esc(r.kind)}</span> ${new Date(r.atUtc).toLocaleString()} · ${esc(t.mod_version || "")}${t.encounter ? ` · ${esc(t.encounter)}` : ""}${t.card ? ` · ${esc(t.card)}` : ""} · <span class="mono">${esc(r.id)}</span></div>
+      <div class="mono faint">${esc((r.fingerprint || []).join(" | "))}</div>
+      ${pre("Details", x.details)}${pre("Exception", r.exception)}${pre("Plays this turn", x.turn_plays)}${pre("Audit window", x.audit_window)}
+      ${x.sim_state ? `<details data-k="sim"><summary>Simulator start state (replay case) <button data-copy="${esc(r.id)}" style="padding:0 8px;margin-left:6px">Copy</button></summary><pre>${esc(x.sim_state)}</pre></details>` : ""}
+      ${pre("Recent mod log", x.recent_log)}
+      ${pre("Everything else", Object.entries(x).filter(([k]) => !["details", "turn_plays", "audit_window", "sim_state", "recent_log"].includes(k)).map(([k, v]) => `--- ${k}\n${v}`).join("\n\n"))}
+      ${notes.map((n) => `<div class="note"><div class="meta">${new Date(n.at).toLocaleString()}</div><div class="body">${esc(n.text)}</div></div>`).join("")}
+      <textarea data-id="${esc(r.id)}" placeholder="What was going on? (saved with the report's id in feedback.jsonl)" style="margin-top:8px">${esc(keep[r.id] || "")}</textarea>
+      <div class="row" style="margin-top:6px"><button class="primary" data-note="${esc(r.id)}">Save note</button><button data-handled="${esc(r.id)}">${handled ? "Reopen" : "Mark handled"}</button></div>
+    </div>`;
+  }).join("") : `<div class="empty">${list.length ? "None here." : "No reports: nothing has gone wrong in dev mode yet."}</div>`;
+  box.querySelectorAll("details[data-k]").forEach((d) => { const k = d.closest("[data-rep]").dataset.rep + ":" + d.dataset.k; if (repOpen.has(k)) d.open = true; });
+}
+$("repList").addEventListener("toggle", (e) => { const d = e.target; if (!d.dataset?.k) return; const k = d.closest("[data-rep]").dataset.rep + ":" + d.dataset.k; d.open ? repOpen.add(k) : repOpen.delete(k); }, true);
+$("repList").addEventListener("click", async (e) => {
+  const t = e.target;
+  try {
+    if (t.dataset.copy) { e.preventDefault(); await navigator.clipboard.writeText(REP.list.find((r) => r.id === t.dataset.copy)?.extra?.sim_state || ""); t.textContent = "Copied"; return; }
+    if (t.dataset.note) {
+      const ta = $("repList").querySelector(`textarea[data-id="${CSS.escape(t.dataset.note)}"]`), text = ta?.value.trim();
+      if (!text) return;
+      await writeFile("feedback.jsonl", JSON.stringify({ id: newId(), at: new Date().toISOString(), kind: "report", report: t.dataset.note, text, ...context() }) + "\n", true);
+      ta.value = ""; await loadFeedback(); $("repList").dataset.sig = ""; renderReports();
+    }
+    if (t.dataset.handled) {
+      await writeFile("feedback.jsonl", JSON.stringify({ of: t.dataset.handled, status: fbStatus[t.dataset.handled] === "handled" ? "open" : "handled", at: new Date().toISOString() }) + "\n", true);
+      await loadFeedback(); $("repList").dataset.sig = ""; renderReports();
+    }
+  } catch (err) { alert("Couldn't write feedback.jsonl: " + err.message); }
+});
+$("repFilter").addEventListener("change", () => { $("repList").dataset.sig = ""; renderReports(); });
+const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+let fbNotes = [], fbStatus = {};
+async function loadFeedback() {
+  const text = await readText("feedback.jsonl");
+  const notes = [], status = {};
+  for (const l of text.split("\n")) { if (!l.trim()) continue; try { const n = JSON.parse(l); if (n.status) status[n.of] = n.status; else notes.push(n); } catch {} }
+  fbStatus = status;
+  fbNotes = notes.map((n) => ({ ...n, status: status[n.id] || "open" })).reverse();
+  if (page === "feedback") renderFeedback();
+}
+function context() {
+  const w = M.state?.where || {};
+  return { mod: M.state?.mod ?? M.started?.mod ?? "?", encounter: w.inCombat ? w.encounter : null, combat: w.inCombat ? w.combat : null, turn: w.inCombat ? w.turn : null, stream: M.file, seconds: M.state?.seconds ?? null };
+}
+function renderFeedback() {
+  const c = context();
+  $("fbContext").textContent = `${c.mod}${c.encounter ? ` · ${c.encounter}, turn ${c.turn}` : " · not in a fight"}`;
+  const f = $("fbFilter").value, list = fbNotes.filter((n) => n.kind !== "report" && (f === "all" || (f === "done" ? n.status === "handled" : n.status !== "handled")));
+  $("fbList").innerHTML = list.length ? list.map((n) => `<div class="note"><div class="meta"><span class="pill">${esc(n.kind)}</span> ${new Date(n.at).toLocaleString()} · ${esc(n.mod)}${n.encounter ? ` · ${esc(n.encounter)}, turn ${n.turn}` : ""}
+     <button style="float:right;padding:1px 8px" data-toggle="${esc(n.id)}">${n.status === "handled" ? "Reopen" : "Mark handled"}</button></div><div class="body">${esc(n.text)}</div></div>`).join("") : `<div class="empty">No notes.</div>`;
+}
+async function saveNote() {
+  const text = $("fbText").value.trim();
+  if (!text) return;
+  const note = { id: newId(), at: new Date().toISOString(), kind: $("fbKind").value, text, ...context() };
+  try { await writeFile("feedback.jsonl", JSON.stringify(note) + "\n", true); $("fbText").value = ""; await loadFeedback(); }
+  catch (e) { alert("Couldn't save the note: " + e.message); }
+}
+$("fbSave").addEventListener("click", saveNote);
+$("fbText").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveNote(); });
+$("fbFilter").addEventListener("change", renderFeedback);
+$("fbList").addEventListener("click", async (e) => {
+  const id = e.target.dataset.toggle; if (!id) return;
+  const n = fbNotes.find((x) => x.id === id);
+  await writeFile("feedback.jsonl", JSON.stringify({ of: id, status: n.status === "handled" ? "open" : "handled", at: new Date().toISOString() }) + "\n", true);
+  await loadFeedback();
+});
+
+let logShown = -1;
+function renderLog(force) {
+  const q = $("logFilter").value.toLowerCase(), warn = $("logWarn").checked;
+  if (!force && logShown === M.logs.length) return;
+  logShown = M.logs.length;
+  const rows = M.logs.filter((l) => (!warn || l.level !== "INFO") && (!q || l.text.toLowerCase().includes(q))).slice(-1500);
+  const el = $("log");
+  el.innerHTML = rows.map((l) => `<div class="${l.level}"><span class="faint">${clock(l.t)}</span> ${esc(l.text)}</div>`).join("") || `<div class="empty">No lines</div>`;
+  if ($("logFollow").checked) el.scrollTop = el.scrollHeight;
+}
+["logFilter", "logWarn"].forEach((id) => $(id).addEventListener("input", () => renderLog(true)));
+
+async function renderCompareList() {
+  const names = (FS.demo ? Object.keys(DEMO.files).filter((n) => n.startsWith("stream-")) : (await streams()).map((s) => s.name)).sort().reverse();
+  for (const id of ["cmpA", "cmpB"]) { const cur = $(id).value; $(id).innerHTML = names.map((n) => `<option>${esc(n)}</option>`).join(""); if (names.includes(cur)) $(id).value = cur; }
+  if (!$("cmpB").dataset.set && names.length > 1) { $("cmpA").value = names[0]; $("cmpB").value = names[1]; $("cmpB").dataset.set = 1; }
+}
+async function summarizeFile(name) {
+  const text = FS.demo ? DEMO.files[name] : await (await (await FS.dir.getFileHandle(name)).getFile()).text();
+  const r = [], s = [], c = { done: 0, matched: 0, skipped: 0 }, u = [];
+  let mod = "?", end = 0;
+  for (const l of text.split("\n")) {
+    if (!l) continue; let e; try { e = JSON.parse(l); } catch { continue; }
+    end = Math.max(end, e.t);
+    if (e.kind === "stream-started") mod = e.mod;
+    else if (e.kind === "frame-rollup") r.push(e);
+    else if (e.kind === "search-done") s.push(e);
+    else if (e.kind === "check-done") { c.done++; if (e.matched) c.matched++; }
+    else if (e.kind === "check-skipped") c.skipped++;
+    else if (e.kind === "unsettled") u.push(e.ms);
+  }
+  const ms = s.filter((x) => !x.cancelled).map((x) => x.ms), secs = r.reduce((a, x) => a + x.seconds, 0);
+  return {
+    "Mod version": mod, "Length": clock(end),
+    "Mod frame p95 (median of windows)": quant(r.map((x) => x.modP95), 0.5), "Mod frame p95 (worst window)": Math.max(0, ...r.map((x) => x.modP95)),
+    "Slow frames per hour": secs ? (r.reduce((a, x) => a + x.slow, 0) / secs) * 3600 : 0,
+    "Searches per minute": secs ? (s.length / secs) * 60 : 0, "Search p50 (ms)": quant(ms, 0.5), "Search p95 (ms)": quant(ms, 0.95), "Slowest search (ms)": Math.max(0, ...ms),
+    "Copies per ms (median)": quant(s.filter((x) => x.ms >= 1 && !x.cancelled).map((x) => x.copies / x.ms), 0.5),
+    "Capped searches": s.filter((x) => x.cap).length, "Cancelled share": s.length ? s.filter((x) => x.cancelled).length / s.length : 0,
+    "Board settling p95 (ms)": quant(u, 0.95), "Checks matched": c.done ? c.matched / c.done : 0, "Checks skipped": c.skipped,
+    "Gen 2 per hour": secs ? (r.reduce((a, x) => a + x.gen2, 0) / secs) * 3600 : 0, "Heap max (MB)": Math.max(0, ...r.map((x) => x.heapMb)),
+  };
+}
+$("cmpGo").addEventListener("click", async () => {
+  $("cmpOut").innerHTML = '<div class="empty">Reading…</div>';
+  try {
+    const [a, b] = await Promise.all([summarizeFile($("cmpA").value), summarizeFile($("cmpB").value)]);
+    const lowerBetter = (k) => !/matched|per minute|Copies per ms|Length|version/.test(k);
+    $("cmpOut").innerHTML = `<table><tr><th></th><th class="n">${esc($("cmpA").value)}</th><th class="n">${esc($("cmpB").value)}</th><th class="n">first against second</th></tr>` +
+      Object.keys(a).map((k) => {
+        const x = a[k], y = b[k], num = typeof x === "number" && typeof y === "number";
+        const share = /share|matched/i.test(k);
+        const show = (v) => (typeof v !== "number" ? esc(v) : share ? `${(v * 100).toFixed(1)}%` : fmt(v, 2));
+        let ch = "";
+        if (num && y) { const d = (x - y) / Math.abs(y); const better = lowerBetter(k) ? d < 0 : d > 0; ch = Math.abs(d) < 0.05 ? '<span class="dim">≈</span>' : `<span class="${better ? "good" : "bad"}">${d > 0 ? "+" : ""}${(d * 100).toFixed(0)}%</span>`; }
+        return `<tr><td>${esc(k)}</td><td class="n">${show(x)}</td><td class="n">${show(y)}</td><td class="n">${ch}</td></tr>`;
+      }).join("") + `</table>`;
+  } catch (e) { $("cmpOut").innerHTML = `<div class="bad">${esc(e.message)}</div>`; }
+});
+
+// ============================================================== render loop
+let lastFull = 0;
+function render(force) {
+  const connected = FS.dir || FS.demo;
+  $("connectHelp").style.display = connected ? "none" : "";
+  document.querySelectorAll(".page").forEach((p) => p.classList.toggle("on", connected && p.id === "p-" + page));
+  nav();
+  if (!connected) return;
+  const age = M.state ? (Date.now() - new Date(M.state.at).getTime()) / 1000 : Infinity;
+  const live = age < 5;
+  setStatus(`${FS.demo ? "Demo data" : esc(FS.dir.name)} · ${M.file ? esc(M.file) : "no stream yet"} · ${M.state ? `mod ${esc(M.state.mod)} · ${live ? "live" : `last update ${age < 3600 ? Math.round(age) + " s" : Math.round(age / 3600) + " h"} ago (game closed?)`}` : "no state yet"}`, live ? "live" : "stale");
+  if (!force && Date.now() - lastFull < 900) { if (page === "log") renderLog(); return; }
+  lastFull = Date.now();
+  ({ overview: renderOverview, turn: renderTurn, searches: renderSearches, perf: renderPerf, reports: renderReports, feedback: renderFeedback, log: () => renderLog(force), compare: renderCompareList })[page]();
+  if (page === "feedback" && force) loadFeedback();
+}
+let timer = null;
+function start() {
+  reset(); M.state = null; logShown = -1;
+  if (FS.demo) demoInit();
+  if (timer) clearInterval(timer);
+  fbNotes = []; fbStatus = {}; REP.cache.clear(); REP.list = []; REP.listedAt = 0;
+  loadFeedback();
+  const tick = async () => { if (FS.demo) demoTick(); else await poll(); loadReports(); render(false); };
+  tick().then(() => render(true));
+  timer = setInterval(tick, 500);
+}
+$("searchFilter").addEventListener("change", () => render(true));
+$("perfWindow").addEventListener("change", () => render(true));
+$("connectBtn").addEventListener("click", () => connect(true));
+$("demoBtn").addEventListener("click", () => { FS.demo = true; FS.dir = null; start(); });
+$("themeBtn").addEventListener("click", () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+  document.documentElement.dataset.theme = cur === "light" ? "dark" : "light";
+  try { localStorage.setItem("theme", document.documentElement.dataset.theme); } catch {}
+  render(true);
+});
+window.addEventListener("resize", () => render(true));
+
+// ============================================================== demo data: the same events the game writes, made up
+const DEMO = { files: {}, t: 0, combat: 0, turn: 0, rnd: 1 };
+const rand = () => ((DEMO.rnd = (DEMO.rnd * 16807) % 2147483647) / 2147483647);
+function demoInit() {
+  Object.assign(DEMO, { files: {}, t: 0, combat: 0, turn: 0, rnd: 7 });
+  DEMO.files["feedback.jsonl"] = JSON.stringify({ id: "demo1", at: new Date(Date.now() - 864e5).toISOString(), kind: "idea", text: "Incoming Damage's ? felt late on the Beacon board.", mod: "1.21.0", encounter: "Byrdonis", combat: 2, turn: 3 }) + "\n";
+  const old = [];
+  for (let i = 0; i < 400; i++) old.push(JSON.stringify({ t: i * 0.25, kind: "frame-rollup", seconds: 0.25, frames: 30, modP50: 0.9, modP95: 2.6 + rand(), modMax: 4 + rand() * 6, gapMax: 18, slow: 0, featureMean: { "proc-indicators": 0.6, "incoming-damage": 0.3 }, featureMax: {}, heapMb: 500, allocatedMb: 1, gen0: 0, gen1: 0, gen2: 0, gcPauseMs: 0, heldStates: 0, searching: 0 }));
+  DEMO.files["stream-20261118-201500.jsonl"] = JSON.stringify({ t: 0, kind: "stream-started", format: 1, mod: "1.20.13" }) + "\n" + old.join("\n") + "\n";
+  DEMO.files["stream-20261119-190000.jsonl"] = "";
+  M.file = "stream-20261119-190000.jsonl";
+  for (let i = 0; i < 600; i++) demoTick(true);
+}
+function demoEmit(e) { e.t = DEMO.t; ingest(e); DEMO.files[M.file] += JSON.stringify(e) + "\n"; }
+function demoTick(fast) {
+  if (DEMO.t === 0) demoEmit({ kind: "stream-started", format: 1, mod: "1.21.0", game: "v0.113.1" });
+  DEMO.t += 0.5;
+  const busy = rand() < 0.15, feat = { "proc-indicators": 0.8 + rand() * (busy ? 6 : 1), "incoming-damage": 0.3 + rand() * 0.4, "forecast-audit": 0.1 + rand() * 0.2, "proc-audit": 0.2 + rand() * 0.3, widgets: 0.2, "late frame": 0.4 };
+  const sum = Object.values(feat).reduce((a, b) => a + b, 0);
+  for (let k = 0; k < 2; k++) demoEmit({ kind: "frame-rollup", seconds: 0.25, frames: 30, modP50: sum * 0.7, modP95: sum * (1.2 + rand() * 0.3), modMax: sum * (1.5 + rand() * (busy ? 4 : 0.5)), gapMax: 16 + (rand() < 0.03 ? 80 : rand() * 6), slow: busy && rand() < 0.2 ? 1 : 0, featureMean: feat, featureMax: Object.fromEntries(Object.entries(feat).map(([a, b]) => [a, b * 2])), heapMb: 480 + 40 * Math.sin(DEMO.t / 40) + rand() * 5, allocatedMb: 1 + rand() * (busy ? 30 : 3), gen0: rand() < 0.3 ? 1 : 0, gen1: 0, gen2: rand() < 0.01 ? 1 : 0, gcPauseMs: rand() * 2, heldStates: busy ? Math.floor(rand() * 40000) : Math.floor(rand() * 400), searching: busy ? Math.floor(rand() * 6) : 0 });
+  if (DEMO.turn === 0 || rand() < 0.05) {
+    if (DEMO.turn === 0 || DEMO.turn > 4 + rand() * 4) { if (DEMO.combat) demoEmit({ kind: "combat-ended" }); DEMO.combat++; DEMO.turn = 0; demoEmit({ kind: "combat-started", encounter: ["Jaw Worm", "Byrdonis", "Fuzzy Wurm Crawler", "The Kin"][DEMO.combat % 4], players: 1, characters: "Defect" }); }
+    if (DEMO.turn) {
+      const ok = rand() > 0.06, skipped = rand() < 0.1;
+      if (skipped) demoEmit({ kind: "check-skipped", audit: "forecast", turn: DEMO.turn, reason: "a branch the forecast didn't model" });
+      else demoEmit({ kind: "check-done", audit: "forecast", turn: DEMO.turn, matched: ok, detail: ok ? null : "HP lost" });
+      demoEmit({ kind: "log-line", level: "INFO", text: `[audit] [outcome] turn ${DEMO.turn}: HP lost ${Math.floor(rand() * 12)} (predicted 0-12); Jaw Worm HP 30 (predicted 28-31)` });
+    }
+    DEMO.turn++;
+    demoEmit({ kind: "turn-started", turn: DEMO.turn });
+  }
+  for (let k = 0; k < (busy ? 12 : 3); k++) {
+    const heavy = rand() < 0.04, copies = Math.floor(10 ** (1 + rand() * (heavy ? 5.5 : 3))), cancelled = rand() < 0.08, cap = copies > 400000 && rand() < 0.3 ? "the memory cap" : null;
+    demoEmit({ kind: "search-done", label: rand() < 0.3 ? "the turn forecast" : `${["Zap", "Ball Lightning", "Cold Snap", "Strike"][Math.floor(rand() * 4)]} (target ${Math.floor(rand() * 3)})`, context: 0, combat: DEMO.combat, turn: DEMO.turn, steps: Math.floor(10 + rand() * 80), copies, peakHeld: Math.min(cap ? 150000 : 140000, Math.floor(copies / (4 + rand() * 6))), ms: copies / (800 + rand() * 900), background: copies > 20000, cap, cancelled });
+  }
+  if (rand() < 0.3) demoEmit({ kind: "frame-wait", ms: rand() * 8, missed: rand() < 0.15 });
+  if (busy && rand() < 0.3) demoEmit({ kind: "unsettled", ms: 30 + rand() * 300 });
+  if (rand() < 0.25) demoEmit({ kind: "check-done", audit: "play", turn: DEMO.turn, matched: rand() > 0.03, detail: ["Zap", "Strike", "Defend", "Coolheaded"][Math.floor(rand() * 4)] });
+  if (rand() < 0.05) demoEmit({ kind: "check-skipped", audit: "play", turn: DEMO.turn, reason: "simulation pending", detail: "Ball Lightning" });
+  if (rand() < 0.1) demoEmit({ kind: "log-line", level: rand() < 0.1 ? "WARN" : "INFO", text: rand() < 0.5 ? `[sim] searched Ball Lightning (target 1) in the background: 41 steps, ${Math.floor(rand() * 90000)} copies` : "[audit] played Zap: tabs Lightning → matched" });
+  if (rand() < (fast ? 0.004 : 0.01)) demoReport();
+  const turns = [...M.turns.values()], cl = (k) => turns.filter((r) => k(r)).length;
+  const bad = (r) => [...r.plays, ...r.forecast].some((c) => c.kind === "check-done" && !c.matched);
+  const spread = Array.from({ length: 14 }, (_, i) => ({ taken: i * 2, weight: Math.exp(-((i - 6) ** 2) / 8) / 5, died: i > 11 }));
+  M.state = {
+    v: 1, at: new Date().toISOString(), seconds: DEMO.t, mod: "1.21.0", game: "v0.113.1", streamFile: M.file, reportsOn: true,
+    where: { inRun: true, inCombat: true, encounter: M.combats.at(-1)?.encounter, combat: DEMO.combat, turn: DEMO.turn, playerTurn: true },
+    session: { turns: turns.length, clean: cl((r) => !bad(r) && !r.caps.length), unchecked: cl((r) => r.forecast.some((c) => c.kind === "check-skipped")), capped: cl((r) => r.caps.length && !bad(r)), mismatched: cl(bad), combats: DEMO.combat },
+    forecast: { taken: 24, takenMin: 4, dies: false, dieChance: 0.031, blockGain: 6, branches: 66, truncated: false, capHit: null, steps: 41, copies: 1820, peakHeld: 230, unmodelled: [], spread },
+  };
+}
+function demoWrite(name, text, append) {
+  DEMO.files[name] = (append ? DEMO.files[name] || "" : "") + text;
+}
+function demoReport() {
+  const crash = rand() < 0.3, id = `20261119-${String(170000 + Math.floor(DEMO.t)).padStart(6, "0")}-${Math.random().toString(16).slice(2, 8)}`;
+  const title = crash ? "NullReferenceException: Object reference not set to an instance of an object." : "Proc audit: no tab: Emotion Chip (played Zap)";
+  const fingerprint = crash ? ["crash", "frame:proc-indicators", "NullReferenceException", "at SpireQoL.Features.ProcIndicatorsFeature.Finish"] : ["mismatch", "proc", "no tab", "EmotionChipPower"];
+  DEMO.files["reports/" + id + ".json"] = JSON.stringify({ id, atUtc: new Date().toISOString(), kind: crash ? "crash" : "mismatch", title, fingerprint,
+    tags: { mod_version: "1.21.1", encounter: M.combats.at(-1)?.encounter || "", card: crash ? "" : "Zap", dev: "true" },
+    extra: { details: crash ? "" : "Played Zap (Zap).\nIssue: no tab: EmotionChipPower\nTabs before the play: none", audit_window: "#12 card play started: Zap\n#13 orb channeled: Lightning", sim_state: '{"p":{"hp":40},"enemies":[{"id":0,"hp":30}]}', recent_log: "17:02:11 INFO [audit] played Zap: tabs none → no tab" },
+    exception: crash ? "System.NullReferenceException: Object reference not set to an instance of an object.\n   at SpireQoL.Features.ProcIndicatorsFeature.Finish(...)" : null }, null, 2);
+  demoEmit({ kind: "report-saved", id, what: crash ? "crash" : "mismatch", title, fingerprint });
+}
+
+// ============================================================== start
+try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; page = localStorage.getItem("page") || page; } catch {}
+if (!PAGES.some(([id]) => id === page)) page = "overview";
+if (new URLSearchParams(location.search).has("demo")) { FS.demo = true; start(); }
+else { render(true); connect(false); }
+</script>
+</body>
+</html>

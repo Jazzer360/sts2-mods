@@ -180,25 +180,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// <summary>A card's facts, the proc sources this frame, and its running simulations.</summary>
     private sealed record Prepared(PlayFacts F, List<AbstractModel> Sources, SimBatch? Sim);
 
-    /// <summary>
-    /// A card's simulations, one per target: each searches on a worker (decision #107); Ready once every one is over (what the frame
-    /// waits for), and Latest is their outcomes.
-    /// </summary>
-    private sealed class SimBatch
-    {
-        public SimBatch(SimJob[] jobs)
-        {
-            Jobs = jobs;
-            Ready = Task.WhenAll(jobs.Select(j => j.Ready));
-        }
-
-        public SimJob[] Jobs { get; }
-        public Task Ready { get; }
-        public bool IsCompleted => Ready.IsCompleted;
-        public SimOutcome[] Latest => Jobs.Select(j => j.Latest!).ToArray();
-        public bool Finished => Jobs.All(j => j.Finished);
-        public void Cancel() { foreach (var j in Jobs) j.Cancel(); }
-    }
 
     /// <summary>The player whose Power cards a teammate's Imitation Learning copies (ImitationLearningPower.PlayerTarget).</summary>
     internal static Player? CopiesFrom(ImitationLearningPower p)
@@ -472,7 +453,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             f.SimPending = true;
             return false;
         }
-        if (task.Ready.IsFaulted) throw task.Ready.Exception!.GetBaseException();
+        if (task.Fault is { } fault) throw fault;
         var outcomes = task.Latest;
         _firesAt.Clear();
         _firesBy.Clear();

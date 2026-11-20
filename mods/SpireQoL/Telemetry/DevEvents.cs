@@ -41,8 +41,10 @@ public sealed record CheckDone(string Audit, int Turn, bool Matched, string? Det
 /// <summary>
 /// An audit left a check (or part of one) undone, with why (decision #92: a skipped check is a gap, not a pass). A whole forecast
 /// skipped posts only this; a partial skip (a teammate's part) posts this and the CheckDone that follows.
+/// <paramref name="Expected"/>: a skip no model could close, which the session counts don't hold against the turn (still counted, as
+/// "(expected)"): the play that ends the fight, whose state after it is gone by the time it finishes (the fight's cleanup runs first).
 /// </summary>
-public sealed record CheckSkipped(string Audit, int Turn, string Reason, string? Detail) : DevEvent;
+public sealed record CheckSkipped(string Audit, int Turn, string Reason, string? Detail, bool Expected = false) : DevEvent;
 
 /// <summary>
 /// A simulator search ended (decision #107): finished, stopped at a cap, or cancelled (the board changed). <paramref name="Context"/>

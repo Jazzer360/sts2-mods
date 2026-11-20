@@ -11,7 +11,7 @@
     <!-- Every pure simulator file (no game types); the game-facing adapter (SimAdapter.cs, Adapter/) is left out. -->
     <Compile Include="..\..\mods\SpireQoL\Sim\**\*.cs" Exclude="..\..\mods\SpireQoL\Sim\SimAdapter.cs;..\..\mods\SpireQoL\Sim\Adapter\**\*.cs" LinkBase="Sim" />
     <!-- The event stream and the session counter (decision #108): pure C# too; the simulator posts its searches there. -->
-    <Compile Include="..\..\mods\SpireQoL\Telemetry\**\*.cs" Exclude="..\..\mods\SpireQoL\Telemetry\SessionWatch.cs" LinkBase="Telemetry" />
+    <Compile Include="..\..\mods\SpireQoL\Telemetry\**\*.cs" Exclude="..\..\mods\SpireQoL\Telemetry\SessionWatch.cs;..\..\mods\SpireQoL\Telemetry\DevDashboard.cs" LinkBase="Telemetry" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Cases/*.json" CopyToOutputDirectory="PreserveNewest" />

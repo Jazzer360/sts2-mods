@@ -19,6 +19,9 @@ public sealed class ModLog
     public void Warn(string text) { Remember("WARN", text); Log.Warn(_prefix + text, skipFrames: 3); }
     public void Error(string text) { Remember("ERROR", text); Log.Error(_prefix + text, skipFrames: 3); }
 
+    /// <summary>Every line written (level, text), on the writer's thread: the dev dashboard's log tail (decision #108).</summary>
+    public event Action<string, string>? Written;
+
     /// <summary>The most recent mod log lines, oldest first.</summary>
     public IReadOnlyList<string> Recent()
     {
@@ -32,5 +35,6 @@ public sealed class ModLog
             _recent.Enqueue($"{DateTime.Now:HH:mm:ss} {level} {text}");
             while (_recent.Count > Keep) _recent.Dequeue();
         }
+        try { Written?.Invoke(level, text); } catch { /* a listener's problem is never the log's */ }
     }
 }

@@ -78,6 +78,25 @@ public class SessionStatsTests
     }
 
     [Fact]
+    public void AnExpectedSkipIsCountedButLeavesTheTurnClean()
+    {
+        // The play that won the fight: its state after it can never be checked (CheckSkipped.Expected).
+        var s = Fight(new TurnStarted(1), new CheckDone("forecast", 1, true, null), new TurnStarted(2),
+            new CheckSkipped("play", 2, "state after the play: the fight ended", "Strike", Expected: true), new CheckDone("play", 2, true, "Strike"),
+            new CombatEnded());
+        var o = s.Summary("won", Info);
+        Assert.Equal(2, o.Clean);
+        Assert.Equal(0, o.Unchecked);
+        Assert.Equal(1, o.Plays.Skipped);
+        Assert.Equal(1, o.Plays.SkipReasons["state after the play: the fight ended (expected)"]);
+        // Any other skip still makes the turn unchecked.
+        s.Post(new CombatStarted("Cultist", 1, "Ironclad"));
+        s.Post(new TurnStarted(1));
+        s.Post(new CheckSkipped("play", 1, "state after the play: the fight ended", "Strike"));
+        Assert.Equal(1, s.Summary("menu", Info).Unchecked);
+    }
+
+    [Fact]
     public void ASearchFromAnotherFightDoesntMarkThisOnesTurn()
     {
         var s = Fight(new TurnStarted(1), new CheckDone("forecast", 1, true, null),

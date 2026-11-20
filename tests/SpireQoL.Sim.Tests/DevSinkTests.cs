@@ -1,0 +1,104 @@
+using System.Text.Json;
+using SpireQoL.Telemetry;
+using Xunit;
+
+namespace SpireQoL.Sim.Tests;
+
+/// <summary>
+/// The dev dashboard's files (decision #108): the line format the page reads, the stream and state files, the reports and session
+/// summaries kept instead of sent, the frame rollup and the stream files' rotation.
+/// </summary>
+public sealed class DevSinkTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "spireqol-devsink-" + Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
+    }
+
+    private DevSink Sink(DateTime? now = null) => new(_dir, () => 12.3456, now ?? new DateTime(2026, 11, 19, 12, 0, 0, DateTimeKind.Utc), start: false);
+
+    [Fact]
+    public void ALineIsTheTimeTheKindAndTheFieldsInCamelCase()
+    {
+        var line = DevSink.Line(1.23456, new SearchDone("Bash (target 0)", SearchDone.ContextOf(2, 3), 5, 100, 10, 1.5, true, "the memory cap", false));
+        using var doc = JsonDocument.Parse(line);
+        var r = doc.RootElement;
+        Assert.Equal(1.235, r.GetProperty("t").GetDouble());
+        Assert.Equal("search-done", r.GetProperty("kind").GetString());
+        Assert.Equal("Bash (target 0)", r.GetProperty("label").GetString());
+        Assert.Equal(2, r.GetProperty("combat").GetInt32());
+        Assert.Equal(3, r.GetProperty("turn").GetInt32());
+        Assert.Equal("the memory cap", r.GetProperty("cap").GetString());
+        Assert.Equal("{\"t\":0,\"kind\":\"combat-ended\"}", DevSink.Line(0, new CombatEnded()));
+    }
+
+    [Fact]
+    public void EventsGoToTheStreamFileOneLineEachAndTheStateIsReplaced()
+    {
+        using var sink = Sink();
+        sink.Post(new TurnStarted(1));
+        sink.Post(new LogLine("INFO", "it's a \"quoted\" line\nwith a break"));
+        sink.SetState("{\"v\":1}");
+        sink.Flush();
+        sink.Post(new TurnStarted(2));
+        sink.SetState("{\"v\":2}");
+        sink.Flush();
+        var lines = File.ReadAllLines(sink.StreamPath);
+        Assert.Equal(3, lines.Length);
+        Assert.All(lines, l => JsonDocument.Parse(l).Dispose());
+        Assert.Contains("it's", lines[1]);
+        Assert.Equal("{\"v\":2}", File.ReadAllText(Path.Combine(_dir, DevSink.StatePath)));
+        Assert.EndsWith("stream-" + new DateTime(2026, 11, 19, 12, 0, 0, DateTimeKind.Utc).ToLocalTime().ToString("yyyyMMdd-HHmmss") + ".jsonl", sink.StreamPath);
+    }
+
+    [Fact]
+    public void ReportsAreFilesAndSessionsAreLines()
+    {
+        using var sink = Sink();
+        sink.SaveReport("20261119-120000-abc123", "{\n  \"title\": \"Proc audit: no tab\"\n}");
+        sink.SaveReport("../escape", "{}"); // an id never leaves the reports folder
+        sink.SaveSession("{\"v\":1,\n\"turns\":3}");
+        sink.SaveSession("{\"v\":1,\"turns\":5}");
+        sink.Flush();
+        var reports = Path.Combine(_dir, DevSink.ReportsDir);
+        Assert.Contains("Proc audit: no tab", File.ReadAllText(Path.Combine(reports, "20261119-120000-abc123.json")));
+        Assert.True(File.Exists(Path.Combine(reports, "___escape.json")));
+        var sessions = File.ReadAllLines(Path.Combine(_dir, DevSink.SessionsPath));
+        Assert.Equal(2, sessions.Length); // one line each, line breaks inside a summary flattened
+        Assert.All(sessions, l => JsonDocument.Parse(l).Dispose());
+    }
+
+    [Fact]
+    public void OnlyTheNewestStreamFilesAreKept()
+    {
+        Directory.CreateDirectory(_dir);
+        for (var i = 0; i < DevSink.KeepStreams + 5; i++) File.WriteAllText(Path.Combine(_dir, $"stream-20260101-{i:000000}.jsonl"), "");
+        File.WriteAllText(Path.Combine(_dir, DevSink.FeedbackPath), "{}\n");
+        using var sink = Sink();
+        var left = Directory.GetFiles(_dir, "stream-*.jsonl").Select(Path.GetFileName).ToList();
+        Assert.Equal(DevSink.KeepStreams - 1, left.Count); // and this launch's makes KeepStreams
+        Assert.Contains($"stream-20260101-{DevSink.KeepStreams + 4:000000}.jsonl", left);
+        Assert.True(File.Exists(Path.Combine(_dir, DevSink.FeedbackPath))); // the feedback is never rotated away
+    }
+
+    [Fact]
+    public void AFrameRollupHasPercentilesFeatureTimesAndStartsAgain()
+    {
+        var w = new FrameWindow();
+        for (var i = 1; i <= 20; i++) w.Add(i, 16, new[] { ("incoming-damage", 0.5), ("proc-indicators", i / 2.0) });
+        w.Add(40, 70, Array.Empty<(string, double)>());
+        var r = w.Take(0.25, (100, 3, 1, 0, 0, 2, 1234, 2));
+        Assert.Equal(21, r.Frames);
+        Assert.Equal(11, r.ModP50);
+        Assert.Equal(20, r.ModP95);
+        Assert.Equal(40, r.ModMax);
+        Assert.Equal(70, r.GapMax);
+        Assert.Equal(1, r.Slow);
+        Assert.Equal(10, r.FeatureMax["proc-indicators"]);
+        Assert.Equal(Math.Round(20 * 0.5 / 21, 2), r.FeatureMean["incoming-damage"]);
+        Assert.Equal(1234, r.HeldStates);
+        Assert.Equal(0, w.Take(0.25, default).Frames);
+    }
+}

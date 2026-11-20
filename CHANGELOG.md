@@ -6,6 +6,19 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.1
+#### Changed
+- Developer mode only (never on in a released download): the game writes files for a development dashboard and keeps its own error reports there instead of sending them. No change for players.
+- Session summaries: the play that wins a fight no longer makes its turn count as unchecked (the state after it can never be checked: the fight is already over); the skip is still counted.
+#### Fixed
+- A card's tabs could stay on the previous board's for a frame after its simulations were already done, and the check of the tabs shown was skipped as "simulation still exploring" on simulations that took a fraction of a millisecond.
+- The session's counts kept on disk (sent on the next launch if the game crashes) could fail to save as a fight started.
+- The same timing slip could make the check of a play report a missing tab and its block (Falling Star with Child of the Stars) when it compared against a prediction that wasn't ready yet. A check against a prediction that really isn't ready now skips every tab the simulator gives, and counts the skip, as it already did for a calculation that stopped at its cap.
+
+### Main Saves 1.0.18
+#### Changed
+- Shared code: log lines and frame timings can be listened to, and error reports can be kept locally instead of sent. No change in the game.
+
 ### Spire QoL 1.21.0
 #### Added
 - Session summary (settings, General; on): with Send error reports on, one summary of counts is also sent per play session: how many turns the predictions were checked and matched, how often a calculation was too big, how long they took. Nothing personal and no game state; it shows how rare the reported problems are. Turn it off on its own with its switch.

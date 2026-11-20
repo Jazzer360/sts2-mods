@@ -41,8 +41,8 @@ public sealed class ErrorReporter
     /// <summary>Tags read when a report is sent (who's in the fight: multiplayer or not, characters).</summary>
     public Func<IReadOnlyDictionary<string, string>>? TagProvider { get; set; }
 
-    /// <summary>Reports are being sent: a client exists and the player's switch is on.</summary>
-    public bool Enabled => _client != null && Active;
+    /// <summary>Reports are being made: sent (a client exists and the player's switch is on), or kept locally (dev mode: Local).</summary>
+    public bool Enabled => Local != null || (_client != null && Active);
 
     /// <summary>The player's on/off switch (ReportErrors). Can be flipped while the game runs.</summary>
     public bool Active { get; set; }
@@ -167,7 +167,7 @@ public sealed class ErrorReporter
 
     private void Send(string[] fingerprint, string? kindSkip, Action<SentryEvent> fill, Exception? ex)
     {
-        if (_client == null || !Active) return;
+        if (Local == null && (_client == null || !Active)) return;
         string? skip;
         try { skip = SkipReason?.Invoke(); } catch { skip = null; }
         skip ??= kindSkip;
@@ -228,24 +228,65 @@ public sealed class ErrorReporter
             Stage("game state");
             evt.SetExtra("recent_log", string.Join("\n", _log.Recent()));
             if (stages.Count > 0) _log.Warn($"[perf] building a {fingerprint[0]} report took: {string.Join(", ", stages)}");
-            // Handed to Sentry off the game's thread (the game state is read above, on it): whatever the client does with the
-            // event (its stack trace, serializing, queueing) never stalls a frame.
-            var client = _client;
-            System.Threading.Tasks.Task.Run(() =>
+            if (Local is { } local)
             {
-                try
-                {
-                    var id = client.CaptureEvent(evt);
-                    try { Sent?.Invoke(fingerprint, id.ToString()); } catch { /* a listener's problem is never the report's */ }
-                }
-                catch (Exception sendEx) { _log.Warn($"error report couldn't be sent: {sendEx.Message}"); }
-            });
+                // The developer's game (decision #108): kept on their machine for the dev dashboard, never sent.
+                var report = ToLocal(evt, fingerprint, ex);
+                _log.Info($"report saved locally ({report.Id}): {report.Title}");
+                try { local(report); } catch (Exception lex) { _log.Warn($"the local report couldn't be saved: {lex.Message}"); }
+                try { Sent?.Invoke(fingerprint, "local-" + report.Id); } catch { /* a listener's problem is never the report's */ }
+                return;
+            }
+            Capture(evt, fingerprint);
         }
         catch (Exception sendEx)
         {
             // Reporting must never break the game.
             _log.Warn($"error report couldn't be sent: {sendEx.Message}");
         }
+    }
+
+    /// <summary>
+    /// Handed to Sentry off the game's thread (the game state was read on it), so whatever the client does with the event (its stack
+    /// trace, serializing, queueing) never stalls a frame.
+    /// </summary>
+    private void Capture(SentryEvent evt, string[] fingerprint)
+    {
+        var client = _client;
+        if (client == null) return;
+        System.Threading.Tasks.Task.Run(() =>
+        {
+            try
+            {
+                var id = client.CaptureEvent(evt);
+                try { Sent?.Invoke(fingerprint, id.ToString()); } catch { /* a listener's problem is never the report's */ }
+            }
+            catch (Exception sendEx) { _log.Warn($"error report couldn't be sent: {sendEx.Message}"); }
+        });
+    }
+
+    // ---- local reports (decision #108): in the developer's game, reports stay on their machine.
+
+    /// <summary>
+    /// A report kept on the developer's machine instead of sent: everything the Sentry event would have carried (its title, fingerprint,
+    /// tags, extras: the details, the game state, the simulator's start state, the recent log; and the exception with its stack).
+    /// </summary>
+    public sealed record LocalReport(string Id, DateTime AtUtc, string Kind, string Title, string[] Fingerprint,
+        IReadOnlyDictionary<string, string> Tags, IReadOnlyDictionary<string, string> Extra, string? Exception);
+
+    /// <summary>
+    /// Set (dev mode): every report goes here instead of to Sentry, on the thread that made it, whether Send error reports is on or not
+    /// (the usual limits still apply: one per fingerprint, 40 a session). Session summaries aren't sent either.
+    /// </summary>
+    public Action<LocalReport>? Local { get; set; }
+
+    private static LocalReport ToLocal(SentryEvent evt, string[] fingerprint, Exception? ex)
+    {
+        var title = evt.Message?.Formatted ?? (ex != null ? $"{ex.GetType().Name}: {ex.Message}" : string.Join(" ", fingerprint));
+        var tags = evt.Tags.ToDictionary(kv => kv.Key, kv => kv.Value);
+        var extra = evt.Extra.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? "");
+        return new LocalReport($"{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..6]}", DateTime.UtcNow,
+            tags.GetValueOrDefault("kind") ?? fingerprint[0], title, fingerprint, tags, extra, ex?.ToString());
     }
 
     /// <summary>
@@ -256,7 +297,7 @@ public sealed class ErrorReporter
     /// </summary>
     public bool Summary(string title, string group, IReadOnlyDictionary<string, string> tags, IReadOnlyDictionary<string, string> extra, bool flush = false)
     {
-        if (_client == null || !Active) return false;
+        if (_client == null || !Active || Local != null) return false;
         string? skip;
         try { skip = SkipReason?.Invoke(); } catch { skip = null; }
         if (skip != null)

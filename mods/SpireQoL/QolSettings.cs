@@ -44,6 +44,12 @@ public sealed class QolSettings
     /// </summary>
     public bool? DevMode { get; set; }
 
+    /// <summary>
+    /// Dev mode: where the dev dashboard's files go (environment variables expanded); none: %USERPROFILE%\SpireQoL-dev. Not under
+    /// AppData or Program Files: the browser won't open folders there. See docs/DEVELOPMENT.md "Dev dashboard".
+    /// </summary>
+    public string? DevFolder { get; set; }
+
     public string UnlockLayoutKey { get; set; } = "F8";
     public string HideAllKey { get; set; } = "F9";
     public string SettingsKey { get; set; } = "F10";
