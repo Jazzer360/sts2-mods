@@ -27,6 +27,14 @@ public sealed record SimDrawCard(string Key)
     public bool PerfectFit { get; init; }
     /// <summary>I Am Invincible: its block when it's the top card as your turn ends (it plays itself from there).</summary>
     public int InvincibleBlock { get; init; }
+    /// <summary>Its type, while a card in your hand acts on the type of a card it draws (Escape Plan, Pillage: decision #118); else None.</summary>
+    public SimCardType Type { get; init; }
+    /// <summary>
+    /// It costs 0 now (CostModifiers.All, not X), while a card in your hand acts on that (Scrape discards the rest: decision #118);
+    /// null otherwise. <see cref="Sly"/>: it's Sly then (a Sly card plays itself when discarded: not simulated).
+    /// </summary>
+    public bool? Free { get; init; }
+    public bool Sly { get; init; }
 }
 
 /// <summary>Cards of one profile in a pile, and how many.</summary>

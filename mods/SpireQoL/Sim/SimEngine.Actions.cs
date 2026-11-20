@@ -138,23 +138,23 @@ public static partial class SimEngine
 
     private static void RunBlock(BranchSet b, GainBlockAction gb)
     {
-        for (var i = 0; i < gb.Times; i++)
-        {
-            b.Each(s =>
-            {
-                if (gb.To <= -2 && (Who.TeammateIndex(gb.To) >= s.Teammates.Count || s.Teammates[Who.TeammateIndex(gb.To)].Hp <= 0)) return new[] { s };
-                var mods = gb.Fixed ? null : new List<(SimModel Model, int Owner)>();
-                var amount = gb.Fixed ? Math.Max(0, (int)gb.Base)
-                    : CalcBlock(s, gb.Base, new BlockCtx(gb.To, gb.Props, s.CurrentPlay?.Card, s.CurrentPlay), gb.Captured, mods);
-                var who = gb.To == Who.You ? -1 : Who.TeammateIndex(gb.To);
-                var r = GainBlock(s, amount, s.EndOfTurnNow && who < 0 && s.Log ? s.CurrentPlay?.Card.Name ?? "block" : null, who);
-                // Block from a card play this turn (Unmovable counts the ones from earlier plays).
-                if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
-                    r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add("CardBlock", 1); return x; }).ToList();
-                if (mods != null && amount > 0) r = r.Select(x => { foreach (var (m, o) in mods) m.AfterModifyingBlockAmount(x, o, amount, x.CurrentPlay); return x; }).ToList();
-                return Then(r, x => Hook(x, nameof(SimModel.AfterBlockGained), (m, o, y) => m.AfterBlockGained(y, o, gb.To, amount, y.CurrentPlay?.Card)));
-            });
-        }
+        for (var i = 0; i < gb.Times; i++) b.Each(s => BlockOnce(s, gb));
+    }
+
+    /// <summary>One block gain of the action, through the block pipeline, with what reacts to it.</summary>
+    internal static IEnumerable<SimState> BlockOnce(SimState s, GainBlockAction gb)
+    {
+        if (gb.To <= -2 && (Who.TeammateIndex(gb.To) >= s.Teammates.Count || s.Teammates[Who.TeammateIndex(gb.To)].Hp <= 0)) return new[] { s };
+        var mods = gb.Fixed ? null : new List<(SimModel Model, int Owner)>();
+        var amount = gb.Fixed ? Math.Max(0, (int)gb.Base)
+            : CalcBlock(s, gb.Base, new BlockCtx(gb.To, gb.Props, s.CurrentPlay?.Card, s.CurrentPlay), gb.Captured, mods);
+        var who = gb.To == Who.You ? -1 : Who.TeammateIndex(gb.To);
+        var r = GainBlock(s, amount, s.EndOfTurnNow && who < 0 && s.Log ? s.CurrentPlay?.Card.Name ?? "block" : null, who);
+        // Block from a card play this turn (Unmovable counts the ones from earlier plays).
+        if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
+            r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add("CardBlock", 1); return x; }).ToList();
+        if (mods != null && amount > 0) r = r.Select(x => { foreach (var (m, o) in mods) m.AfterModifyingBlockAmount(x, o, amount, x.CurrentPlay); return x; }).ToList();
+        return Then(r, x => Hook(x, nameof(SimModel.AfterBlockGained), (m, o, y) => m.AfterBlockGained(y, o, gb.To, amount, y.CurrentPlay?.Card)));
     }
 
     /// <summary>

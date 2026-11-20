@@ -64,6 +64,24 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
 /// </summary>
 public sealed record GainEnergyAsHeldAction : SimAction;
 
+/// <summary>
+/// A draw the card acts on, by what it drew (decision #118: CardPileCmd.Draw's result), run with its reaction in one step so the
+/// branches of what was drawn stay apart until it's settled: Escape Plan's block when it draws a Skill, Pillage drawing again while
+/// it draws an Attack (and your hand has room), Scrape discarding what it drew unless it costs 0. Each draw is a branch per profile
+/// of your draw pile (decision #90), which carries the type or the cost while such a card is in your hand.
+/// </summary>
+public sealed record DrawnCardAction(int Count) : SimAction
+{
+    public bool Indirect { get; init; } = true;
+    /// <summary>Escape Plan: <see cref="Block"/> when the card it drew is of this type.</summary>
+    public SimCardType BlockIf { get; init; }
+    public GainBlockAction? Block { get; init; }
+    /// <summary>Pillage: draws again while the card it drew is of this type and your hand has room.</summary>
+    public SimCardType DrawAgainIf { get; init; }
+    /// <summary>Scrape: discards the cards it drew unless they cost 0.</summary>
+    public bool DiscardUnlessFree { get; init; }
+}
+
 /// <summary>Block (CreatureCmd.GainBlock) through the block pipeline, Times times; to you or the play's targeted teammate.</summary>
 public sealed record GainBlockAction(int Times, decimal Base, SimProps Props) : SimAction
 {

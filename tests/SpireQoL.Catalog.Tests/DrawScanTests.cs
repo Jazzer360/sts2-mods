@@ -39,4 +39,39 @@ public class DrawScanTests
         var stale = SimAdapter.DrawReactions.Keys.Where(k => !reactors.Contains(k)).ToList();
         Assert.True(stale.Count == 0, "Reviewed in SimAdapter.DrawReactions but no longer reacting to draws: " + string.Join(", ", stale));
     }
+
+    /// <summary>
+    /// A card that uses what its own draw gave (decision #118: the result of CardPileCmd.Draw isn't thrown away), read from its
+    /// compiled code: in an async method the draw's result comes out of its awaiter's GetResult, and a plain draw pops it.
+    /// </summary>
+    private static bool UsesWhatItDraws(Type card)
+    {
+        const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        foreach (var m in card.GetMethods(all))
+        {
+            var body = m.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()?.StateMachineType
+                .GetMethod("MoveNext", all) ?? (MethodBase)m;
+            List<HarmonyLib.CodeInstruction> code;
+            try { code = SpireQoL.Diagnostics.GameCode.Instructions(body); } catch { continue; }
+            for (var i = 0; i < code.Count; i++)
+            {
+                if (code[i].operand is not MethodInfo { Name: "Draw" } d || d.DeclaringType?.Name != "CardPileCmd") continue;
+                var get = code.FindIndex(i, x => x.operand is MethodInfo { Name: "GetResult" });
+                if (get >= 0 && get + 1 < code.Count && code[get + 1].opcode != System.Reflection.Emit.OpCodes.Pop) return true;
+            }
+        }
+        return false;
+    }
+
+    [Fact]
+    public void EveryCardThatUsesWhatItDrawsIsAReader()
+    {
+        GameModels.EnsureLoaded();
+        var users = ModelDb.AllCards.Select(c => c.GetType()).Distinct().Where(UsesWhatItDraws).Select(t => t.Name).OrderBy(n => n).ToList();
+        Assert.Contains("EscapePlan", users); // the scan finds the known ones
+        var missing = users.Where(n => !SimAdapter.DrawnCardReaders.ContainsKey(n)).ToList();
+        Assert.True(missing.Count == 0, "Cards that act on what they draw, not in SimAdapter.DrawnCardReaders: " + string.Join(", ", missing));
+        foreach (var name in SimAdapter.DrawnCardReaders.Keys)
+            Assert.True(users.Contains(name), $"{name} is a DrawnCardReader but no longer uses what it draws");
+    }
 }

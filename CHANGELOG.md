@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.12
+#### Fixed
+- Escape Plan's block counts only when the card it draws is a Skill, with each outcome's chance (it was counted as certain); Pillage keeps drawing while it draws Attacks; Scrape's discards leave your hand, so a Burn it discards no longer counts at the end of your turn.
+
 ### Spire QoL 1.21.11
 #### Fixed
 - Pael's Tears no longer warns on a card that gives its energy back: energy a card gains when played (Production, Turbo, Sunder on a kill, Double Energy, Epic Retrieval's arrows and the rest) now counts toward what you have left.

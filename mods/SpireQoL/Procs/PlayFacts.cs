@@ -66,6 +66,12 @@ public sealed class PlayFacts
     /// <summary>Cards the card itself draws, across plays.</summary>
     public int OwnDraws { get; init; }
 
+    /// <summary>
+    /// The most it can draw, when that depends on what it draws (Pillage draws again while it draws an Attack: up to a full hand;
+    /// decision #118). Otherwise <see cref="Draws"/>: the play check's upper bound on draws.
+    /// </summary>
+    public int DrawsAtMost { get; init; }
+
     private PlayChain.DrawInputs? _drawInputs;
 
     /// <summary>
@@ -340,6 +346,7 @@ public sealed class PlayFacts
             ExhaustsOthers = ExhaustsOthers + next.TotalExhausts,
             Discards = Discards + next.Discards,
             OwnDraws = OwnDraws + next.OwnDraws,
+            DrawsAtMost = DrawsAtMost + next.DrawsAtMost,
             EnchantmentDraws = EnchantmentDraws + next.EnchantmentDraws,
             BlockGains = BlockGains + next.BlockGains,
             Transforms = Transforms + next.Transforms,
@@ -415,6 +422,8 @@ public sealed class PlayFacts
             // Ki Chant looks at your draw pile, so each play discards its share; the others depend on the hand.
             Discards = DiscardCount(card, name, others, draws) * (name == "KiChant" ? Math.Max(1, plays) : 1),
             OwnDraws = draws + swiftDraws,
+            DrawsAtMost = SpireQoL.Sim.SimAdapter.DrawnCardReaders.GetValueOrDefault(name) is { DrawsAgain: true }
+                ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,
             EnchantmentDraws = swiftDraws,
             BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
             Generated = generated,

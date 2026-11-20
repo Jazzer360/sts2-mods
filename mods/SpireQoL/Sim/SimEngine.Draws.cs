@@ -21,12 +21,65 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// A draw the card acts on (DrawnCardAction, decision #118): the draws, recording the cards they gave (not the ones their
+    /// reactions chain: CardPileCmd.Draw returns its own), then the card's reaction to them, all in one step.
+    /// </summary>
+    internal static IEnumerable<SimState> RunDrawnCard(SimState s, DrawnCardAction da)
+    {
+        var player = s.CurrentPlay?.Owner ?? Who.You;
+        if (!DrawsFromPile(s, player))
+        {
+            // No pile read (a teammate's): the draws are counted, and what they gave isn't known.
+            s.Unmodelled ??= "a card that acts on what it draws, with no draw pile to draw from";
+            return ProcCardEvent(s, CardEvent.Drawn, da.Count, player, da.Indirect);
+        }
+        s.DrawRecord = new List<(SimDrawCard, int)>();
+        IEnumerable<SimState> r = new[] { s };
+        if (da.DrawAgainIf != SimCardType.None)
+        {
+            IEnumerable<SimState> Again(SimState x)
+            {
+                var before = x.DrawRecord!.Count;
+                return Then(DrawOne(x, player, da.Indirect, record: true), y =>
+                    y.DrawRecord!.Count > before && y.DrawRecord[^1].Card.Type == da.DrawAgainIf
+                    && PlayerOf(y, player)!.HandCount - (y.PlayFromHand ? 1 : 0) < MaxHand ? Again(y) : new[] { y });
+            }
+            r = Again(s);
+        }
+        else
+            for (var i = 0; i < da.Count; i++) r = Then(r, x => DrawOne(x, player, da.Indirect, record: true));
+        return Then(r, x =>
+        {
+            var drawn = x.DrawRecord!;
+            x.DrawRecord = null;
+            // Escape Plan: the card it drew (none into a full hand or from empty piles: no block).
+            if (da.Block != null && drawn.Count > 0 && drawn[0].Card.Type == da.BlockIf) return BlockOnce(x, da.Block);
+            if (!da.DiscardUnlessFree) return new[] { x };
+            var discard = drawn.Where(d => d.Card.Free == false).ToList();
+            if (discard.Count == 0) return new[] { x };
+            // A Sly card plays itself when discarded (CardModel.OnDiscard): not simulated.
+            if (discard.Any(d => d.Card.Sly)) x.Unmodelled ??= "a Sly card discarded by Scrape plays itself";
+            var p = MutablePlayer(x, player);
+            foreach (var (card, id) in discard)
+            {
+                p.HandCount--;
+                if (card.TurnEnd != null && p.TurnEndCards.IndexOf(card.TurnEnd) is var at and >= 0)
+                    p.TurnEndCards = p.TurnEndCards.Where((_, k) => k != at).ToList();
+                if (card.Fading) p.Fading--;
+                if (card.HexFading) p.HexFading--;
+                if (p.AutoHand != null) p.AutoHand = p.AutoHand.Where(h => h.Id != id).ToList();
+            }
+            return ProcCardEvent(x, CardEvent.Discarded, discard.Count, player);
+        });
+    }
+
+    /// <summary>
     /// One draw (CardPileCmd.Draw): none into a full hand (the card stays in the pile); the discard pile shuffled in when the
     /// draw pile is empty; then the top card when it's known, else a branch per profile in the rest, weighted by its count
     /// (each card equally likely: the order is hidden). The card joins your hand (what acts at end of turn, Ethereal, what
     /// Stampede or Simpleton could pick), then its reactions run.
     /// </summary>
-    private static IEnumerable<SimState> DrawOne(SimState s, int player, bool indirect)
+    private static IEnumerable<SimState> DrawOne(SimState s, int player, bool indirect, bool record = false)
     {
         var p = PlayerOf(s, player)!;
         // The card being played has left your hand already (the game moves it before OnPlay); HandCount drops at CardResolved.
@@ -38,14 +91,14 @@ public static partial class SimEngine
             if (pile.DiscardCount == 0) return new[] { s };
             p = MutablePlayer(s, player);
             p.Draw = pile.Shuffled();
-            return Then(ProcCardEvent(s, CardEvent.Shuffled, 1, player), x => DrawOne(x, player, indirect));
+            return Then(ProcCardEvent(s, CardEvent.Shuffled, 1, player), x => DrawOne(x, player, indirect, record));
         }
         if (pile.Top.Count > 0)
         {
             var mp = MutablePlayer(s, player);
             var top = pile.Top[0];
             mp.Draw = pile.WithoutTop();
-            return Drawn(s, player, top, indirect);
+            return Drawn(s, player, top, indirect, record);
         }
         var total = pile.RestCount;
         var result = new List<SimState>();
@@ -55,7 +108,7 @@ public static partial class SimEngine
             var c = pile.Rest.Count == 1 ? s : s.Clone();
             c.Weight = s.Weight * g.Count / total;
             MutablePlayer(c, player).Draw = pile.WithoutOneOf(i);
-            result.AddRange(Drawn(c, player, g.Card, indirect));
+            result.AddRange(Drawn(c, player, g.Card, indirect, record));
         }
         return result;
     }
@@ -63,11 +116,13 @@ public static partial class SimEngine
     private static SimPlayer MutablePlayer(SimState s, int player) => player == Who.You ? s.P : s.MutableTeammate(Who.TeammateIndex(player));
 
     /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
-    private static IEnumerable<SimState> Drawn(SimState s, int player, SimDrawCard card, bool indirect)
+    private static IEnumerable<SimState> Drawn(SimState s, int player, SimDrawCard card, bool indirect, bool record = false)
     {
         var p = MutablePlayer(s, player);
         p.HandCount++;
         p.Drawn++;
+        // The draw a card acts on (RunDrawnCard): this card, and its id in AutoHand. Copied, not added to: branches share the list.
+        if (record && s.DrawRecord != null) s.DrawRecord = new List<(SimDrawCard, int)>(s.DrawRecord) { (card, -1000 - p.Drawn) };
         if (card.TurnEnd != null) p.TurnEndCards = new List<TurnEndCard>(p.TurnEndCards) { card.TurnEnd };
         if (card.Fading) p.Fading++;
         if (card.HexFading) p.HexFading++;

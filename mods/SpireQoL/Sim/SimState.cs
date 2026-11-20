@@ -476,6 +476,11 @@ public sealed class SimState
     /// in every chance and guarantee (a range and a ?), and the reason is counted by the audits as a gap to model.
     /// </summary>
     public string? Unmodelled;
+    /// <summary>
+    /// The cards a draw gave, while a card that acts on them draws (SimEngine.RunDrawnCard, decision #118); null otherwise. Only
+    /// ever set and cleared inside one step, so it never meets a merge.
+    /// </summary>
+    internal List<(SimDrawCard Card, int Id)>? DrawRecord;
     /// <summary>Cards auto-played at the end of your turn in this branch (Stampede, Simpleton, I Am Invincible, Howl from Beyond).</summary>
     public int AutoPlayed;
     /// <summary>

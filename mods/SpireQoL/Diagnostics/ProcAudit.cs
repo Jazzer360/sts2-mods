@@ -1350,7 +1350,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // (Dark Embrace and Joss Paper draw per exhaust), or you have no orb slots left (the channel fails).
             if (draws < expectedDraws && !w.FightEnded && exhausts >= f.TotalExhausts) issues.Add($"draws: predicted {expectedDraws}, actual {draws}");
             if (orbs < f.Channels && !w.FightEnded && w.After?.P.OrbCapacity != 0) issues.Add($"orbs channeled: predicted {f.Channels}, actual {orbs}");
-            Budget(Effect.Draw, "draws", draws, expectedDraws);
+            // A card whose draws depend on what it draws (Pillage) may draw up to its most (decision #118).
+            Budget(Effect.Draw, "draws", draws, Math.Max(expectedDraws, f.DrawsAtMost));
             Budget(Effect.Exhaust, "exhausts", exhausts, f.TotalExhausts);
             Budget(Effect.Discard, "discards", discards, f.Discards);
             // Transformed cards are logged as created too (CardCmd.Transform), up to what the card can transform.

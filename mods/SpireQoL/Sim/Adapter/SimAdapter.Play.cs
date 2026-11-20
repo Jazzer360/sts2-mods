@@ -113,6 +113,7 @@ public static partial class SimAdapter
         // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
         CardEnergy.AddTo(play, card, me, cs, ids.FirstOrDefault(kv => kv.Value == targetId).Key, owner, allyId);
         AddCardEvents(play, f, plays);
+        if (DrawnCardReaders.ContainsKey(name)) UseDrawnCard(play, name);
 
         // ---- summary fields (not actions yet)
         play.ByOsty = f.ByOsty;
@@ -132,6 +133,37 @@ public static partial class SimAdapter
             for (var i = 0; i < play.Body.Count; i++)
                 if (play.Body[i] is GainBlockAction { To: Who.You } g) play.Body[i] = g with { To = owner };
         return play;
+    }
+
+    /// <summary>
+    /// A card that acts on what its own draw gave (decision #118: DrawnCardReaders): its draw and its reaction become one
+    /// DrawnCardAction in the draw's place, so the reaction sees the card each branch drew. Escape Plan's block moves into it (the game
+    /// gains it after the draw, only for a Skill); Scrape's discards are the ones it makes there, not the plain count.
+    /// </summary>
+    private static void UseDrawnCard(SimPlay play, string name)
+    {
+        var at = play.Body.FindIndex(a => a is CardEventAction { Event: CardEvent.Drawn });
+        if (at < 0) return; // nothing drawn (a full hand, empty piles): nothing to act on
+        var draw = (CardEventAction)play.Body[at];
+        var action = new DrawnCardAction(draw.Count) { Indirect = draw.Indirect };
+        switch (name)
+        {
+            case "EscapePlan":
+                if (play.Body.OfType<GainBlockAction>().FirstOrDefault() is { } block)
+                {
+                    play.Body.Remove(block);
+                    action = action with { BlockIf = SimCardType.Skill, Block = block };
+                }
+                break;
+            case "Pillage":
+                action = action with { DrawAgainIf = SimCardType.Attack };
+                break;
+            case "Scrape":
+                play.Body.RemoveAll(a => a is CardEventAction { Event: CardEvent.Discarded });
+                action = action with { DiscardUnlessFree = true };
+                break;
+        }
+        play.Body[play.Body.FindIndex(a => a is CardEventAction { Event: CardEvent.Drawn })] = action;
     }
 
     /// <summary>

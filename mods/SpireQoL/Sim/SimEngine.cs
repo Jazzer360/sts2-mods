@@ -785,6 +785,7 @@ public static partial class SimEngine
             case GainBlockAction gb: RunBlock(b, gb); break;
             case ApplyPowerAction ap: RunApplyPower(b, ap); break;
             case CardEventAction ce: RunCardEvent(b, ce); break;
+            case DrawnCardAction da: b.Each(s => RunDrawnCard(s, da)); break;
             case GainEnergyAsHeldAction:
                 b.Each(s => (s.CurrentPlay?.Owner ?? Who.You) is var o && PlayerOf(s, o) is { Energy: > 0 } p
                     ? ProcCardEvent(s, CardEvent.EnergyGained, p.Energy, o, indirect: false) : new[] { s });

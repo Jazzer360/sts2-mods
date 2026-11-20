@@ -379,6 +379,10 @@ public static partial class SimAdapter
             var pagestorm = me.Creature.HasPower<PagestormPower>();
             var hellraiser = me.Creature.HasPower<HellraiserPower>();
             var picks = p.AutoHand != null;
+            // A card in your hand that acts on the cards it draws (decision #118): what it reads goes into the profile.
+            var readers = PileType.Hand.GetPile(me).Cards.Select(c => DrawnCardReaders.GetValueOrDefault(c.GetType().Name)).OfType<DrawnCardReader>().ToList();
+            var readsType = readers.Any(r => r.What == DrawnCardReader.Reads.Type);
+            var readsCost = readers.Any(r => r.What == DrawnCardReader.Reads.Cost);
             var autoByKey = new Dictionary<string, SimHandCard?>();
             SimDrawCard Profile(CardModel card)
             {
@@ -394,7 +398,10 @@ public static partial class SimAdapter
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
                 var invincible = card is IAmInvincible ? CardBlock(card, cs, me) : 0;
                 var perfectFit = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit;
-                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}";
+                var type = readsType ? SimReaders.TypeOf(card) : SimCardType.None;
+                bool? free = readsCost ? !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.All) == 0 : null;
+                var sly = readsCost && card.Keywords.Contains(CardKeyword.Sly);
+                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}";
                 SimHandCard? auto = null;
                 if (pickable && !autoByKey.TryGetValue(key, out auto))
                 {
@@ -408,7 +415,7 @@ public static partial class SimAdapter
                 return new SimDrawCard(key)
                 {
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
-                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit,
+                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly,
                 };
             }
             List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Profile).GroupBy(c => c.Key)
@@ -430,6 +437,24 @@ public static partial class SimAdapter
         {
             p.Draw = null; // unreadable: draws are only counted, as before
         }
+    }
+
+    /// <summary>
+    /// Cards that act on the cards their own draw gives (decision #118): what each reads ("type: ..." or "cost: ..."), from the
+    /// result of its CardPileCmd.Draw. The draw profile carries it while one is in your hand, and the play runs as a DrawnCardAction.
+    /// DrawScanTests (catalog tests) finds every card that uses what it draws, so a new one can't be read as a plain draw.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, DrawnCardReader> DrawnCardReaders = new Dictionary<string, DrawnCardReader>
+    {
+        ["EscapePlan"] = new(DrawnCardReader.Reads.Type, "its block only when the card it draws is a Skill"),
+        ["Pillage"] = new(DrawnCardReader.Reads.Type, "draws again while the card it draws is an Attack and your hand has room", DrawsAgain: true),
+        ["Scrape"] = new(DrawnCardReader.Reads.Cost, "discards the cards it draws unless they cost 0 (an X cost counts as not 0)"),
+    };
+
+    /// <summary>What a card reads about the cards it draws (DrawnCardReaders). DrawsAgain: how many it draws depends on them.</summary>
+    internal sealed record DrawnCardReader(DrawnCardReader.Reads What, string Note, bool DrawsAgain = false)
+    {
+        internal enum Reads { Type, Cost }
     }
 
     /// <summary>
