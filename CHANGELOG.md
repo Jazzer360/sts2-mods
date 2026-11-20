@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.11
+#### Fixed
+- Pael's Tears no longer warns on a card that gives its energy back: energy a card gains when played (Production, Turbo, Sunder on a kill, Double Energy, Epic Retrieval's arrows and the rest) now counts toward what you have left.
+- The crossed tabs for giving up a relic's bonus (Art of War, Ripple Basin, Pael's Eye, Pael's Tears, and Biiig Hug's) are now checked against what the game did, and so is your energy after each play.
+
 ### Spire QoL 1.21.10
 #### Fixed
 - The checks behind every prediction count each part they leave out, with the reason, instead of excusing it unseen: the effects of random auto-plays, a random kill or a draw the simulation couldn't account for, and a shuffle whose draws depend on the target. The intent, potion, reminder and rest checks are counted too.

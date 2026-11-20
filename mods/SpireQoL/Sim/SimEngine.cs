@@ -785,6 +785,10 @@ public static partial class SimEngine
             case GainBlockAction gb: RunBlock(b, gb); break;
             case ApplyPowerAction ap: RunApplyPower(b, ap); break;
             case CardEventAction ce: RunCardEvent(b, ce); break;
+            case GainEnergyAsHeldAction:
+                b.Each(s => (s.CurrentPlay?.Owner ?? Who.You) is var o && PlayerOf(s, o) is { Energy: > 0 } p
+                    ? ProcCardEvent(s, CardEvent.EnergyGained, p.Energy, o, indirect: false) : new[] { s });
+                break;
             case LoseHpAction lh: b.Do(s => LandUnblockable(s, s.CurrentPlay?.Card.Name ?? "HP cost", lh.Amount)); break;
             default: throw new NotSupportedException($"No runner for {a.GetType().Name}");
         }

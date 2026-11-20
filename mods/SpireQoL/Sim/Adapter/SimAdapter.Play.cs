@@ -110,6 +110,8 @@ public static partial class SimAdapter
         play.Body.AddRange(PowersOf(card, f, name, allyId));
         if (TriggerPoisonCards.Contains(name)) play.Body.Add(new TriggerPoisonAction());
         play.Body.AddRange(OrbsOf(card, me, cs, name, play.ChannelToAlly ? allyId : owner));
+        // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
+        CardEnergy.AddTo(play, card, me, cs, ids.FirstOrDefault(kv => kv.Value == targetId).Key, owner, allyId);
         AddCardEvents(play, f, plays);
 
         // ---- summary fields (not actions yet)

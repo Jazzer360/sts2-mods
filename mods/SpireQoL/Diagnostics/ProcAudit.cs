@@ -1226,13 +1226,18 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 issues.Add($"didn't fire: {name}");
         }
 
+        GivenUpIssues(w, me, entries, sourceOf, issues, modelLines);
+
         // ---- Tabbed sources every outcome of the play sets off (decision #95): powers included, crossed or not, when their code
         // flashes. Relics are checked above (their plain tabs); a source that changes nothing visible doesn't flash.
         if (!w.FightEnded && CheckedAim(w) is { } everyAim && w.Facts?.FiresEveryByAim?.TryGetValue(everyAim, out var every) == true)
         {
             foreach (var t in every!)
             {
-                if (!typeof(PowerModel).IsAssignableFrom(t) || LaterPlayOnly.Contains(t.Name)) continue;
+                // Powers, and relics whose crossed tab a model fires when it acts and flashes (Biiig Hug); plain relic tabs are
+                // checked above, and crossed ones that give up a bonus by what the game shows instead (GivenUpIssues).
+                var flashingRelic = typeof(RelicModel).IsAssignableFrom(t) && SimModels.Get(t.Name) is { Harmful: true, Seen: ActedSeen.Flash };
+                if (!(typeof(PowerModel).IsAssignableFrom(t) || flashingRelic) || LaterPlayOnly.Contains(t.Name)) continue;
                 if (!CodeIndex.FlashesOutsideAmountHooks(t)) continue;
                 if (flashed.Any(f => f.GetType() == t)) continue;
                 issues.Add($"didn't fire: {t.Name} (every outcome of this play sets it off)");
@@ -1472,6 +1477,49 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     }
 
     /// <summary>Auto-plays other than a hand choice's pick (random ones: their effects aren't predicted).</summary>
+    /// <summary>
+    /// Crossed tabs for giving up a relic's bonus, which the game doesn't flash (decision #117), held to what it shows instead, both
+    /// ways (a tab when the bonus wasn't given up, or the bonus given up with no tab):
+    /// <list type="bullet">
+    /// <item>the relic going dark (ActedSeen.StatusCleared): Art of War and Ripple Basin on the turn's first Attack, Pael's Eye on
+    /// its first card, each clearing its Active status in the play's hooks;</item>
+    /// <item>no energy left (ActedSeen.NoEnergyLeft): Pael's Tears, whose bonus needs energy left as your turn ends; the tab says
+    /// the play spends energy and leaves none, so it's held to the energy spent in the play and what's left once it's over.</item>
+    /// </list>
+    /// </summary>
+    private static void GivenUpIssues(Window w, Player me, List<CombatHistoryEntry> entries, Dictionary<string, TabSpec> sourceOf,
+        List<string> issues, List<string> model)
+    {
+        if (w.FullBefore == null || w.FullAfter == null) return;
+        foreach (var (relic, (_, statusBefore)) in w.FullBefore.Relics)
+        {
+            var name = relic.GetType().Name;
+            if (SimModels.Get(name) is not { Harmful: true } m || m.Seen == ActedSeen.Flash) continue;
+            var tabbed = sourceOf.TryGetValue(name, out var t) && t.Crossed;
+            bool givenUp;
+            string what;
+            if (m.Seen == ActedSeen.StatusCleared)
+            {
+                var statusAfter = w.FullAfter.Relics.TryGetValue(relic, out var a) ? a.Status : statusBefore;
+                givenUp = statusBefore == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active
+                          && statusAfter != MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active;
+                what = givenUp ? "it went dark" : statusBefore == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active ? "it stayed lit" : "it was already dark";
+            }
+            else
+            {
+                var spent = entries.OfType<EnergySpentEntry>().Where(e => e.Actor == me.Creature).Sum(e => e.Amount);
+                givenUp = spent > 0 && w.FullAfter.Energy <= 0;
+                what = $"spent {spent}, {w.FullAfter.Energy} energy left";
+            }
+            if (tabbed == givenUp) continue;
+            // The fight's cleanup clears the relics' status as the play ends it (AfterCombatEnd: Status = Normal).
+            if (w.FightEnded) { model.Add(NotChecked(tabbed ? "didn't fire" : "no tab", FightEndedSkip, name)); continue; }
+            // Cards the play auto-played at random (Lost Lute, The Fool) can be the turn's first Attack, or spend energy.
+            if (UnpredictedAutoPlay(w, entries, me)) { model.Add(NotChecked(tabbed ? "didn't fire" : "no tab", "random auto-plays", name)); continue; }
+            issues.Add(tabbed ? $"didn't fire: {name} (crossed: {what})" : $"no tab: {name} gave up its bonus ({what})");
+        }
+    }
+
     private static bool UnpredictedAutoPlay(Window w, List<CombatHistoryEntry> entries, Player me)
         => entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me && !ReferenceEquals(e.CardPlay.Card, w.Chosen));
 
@@ -1729,6 +1777,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (p != a) d.Add($"after play {what}: predicted {p}, actual {a}");
             }
             Cmp("your block", pp.Block, ap.Block);
+            // Energy (decision #117): what the play spends and gives back, the card's own included (Pael's Tears reads it).
+            Cmp("your energy", pp.Energy, ap.Energy);
             Cmp("Plating", pp.Plating, ap.Plating);
             Cmp(nameof(Juggernaut), pp.Juggernaut, ap.Juggernaut);
             Cmp("Thorns", pp.Thorns, ap.Thorns);
@@ -1750,6 +1800,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                     var (pt, at) = (living[k], after.Teammates[k]);
                     Cmp($"teammate {k + 1} block", pt.Block, at.Block);
                     Cmp($"teammate {k + 1} HP", pt.Hp, at.Hp);
+                    Cmp($"teammate {k + 1} energy", pt.Energy, at.Energy);
                     // Their orbs (Ignition channels into them; full slots evoke their front orb): kinds, front first.
                     if (!pt.Orbs.Select(o => o.Kind).SequenceEqual(at.Orbs.Select(o => o.Kind))
                         && !pt.Orbs.Any(o => o.Kind == OrbKind.Unknown))

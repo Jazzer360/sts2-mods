@@ -9,6 +9,8 @@ namespace SpireQoL.Sim.Models;
 public abstract class FirstAttackGivesUp : RelicProc
 {
     public override bool Harmful => true;
+    /// <summary>The play that gives up the bonus clears the relic's Active status (AfterCardPlayed: Status = Normal); it doesn't flash.</summary>
+    public override ActedSeen Seen => ActedSeen.StatusCleared;
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Type == SimCardType.Attack && SimEngine.TurnOf(s, owner)["Started:Attack"] == 0 ? Fire(s, owner) : One(s);
 }
@@ -31,6 +33,7 @@ public sealed class PaelsTears : RelicProc
 {
     public override string Name => "PaelsTears";
     public override bool Harmful => true;
+    public override ActedSeen Seen => ActedSeen.NoEnergyLeft;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
     {
         if (ev == CardEvent.EnergySpent && player == owner && Data(s, owner) == 0) Set(s, owner, Amount(s, owner), 1);
@@ -49,6 +52,8 @@ public sealed class PaelsEye : RelicProc
 {
     public override string Name => "PaelsEye";
     public override bool Harmful => true;
+    /// <summary>The turn's first card clears its Active status (BeforeCardPlayed: Status = Normal); it doesn't flash.</summary>
+    public override ActedSeen Seen => ActedSeen.StatusCleared;
     /// <summary>
     /// BeforeSideTurnEndEarly: still armed (no card played this turn: SimPlayer.PaelsEyeExhaust), its owner's whole hand is
     /// exhausted (Feel No Pain, Charon's Ashes... react to each card); nothing is left to act in hand or exhaust as Ethereal.

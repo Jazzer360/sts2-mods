@@ -54,7 +54,15 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
     public bool RepeatPerKill { get; init; }
     /// <summary>A shot's attack: it only happens when the shot had an arrow (ArrowCmd.ShootArrowAtTarget runs the attack inside ImpaleTarget).</summary>
     public bool NeedsArrow { get; init; }
+    /// <summary>Sunder: energy for the play's player once the attack is over, when one of its hits killed the target (decision #117).</summary>
+    public int OnKillEnergy { get; init; }
 }
+
+/// <summary>
+/// Double Energy (PlayerCmd.GainEnergy(Energy)): its player gains as much energy as they have when it resolves, the cost already
+/// spent (decision #117).
+/// </summary>
+public sealed record GainEnergyAsHeldAction : SimAction;
 
 /// <summary>Block (CreatureCmd.GainBlock) through the block pipeline, Times times; to you or the play's targeted teammate.</summary>
 public sealed record GainBlockAction(int Times, decimal Base, SimProps Props) : SimAction

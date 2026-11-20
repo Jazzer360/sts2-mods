@@ -73,6 +73,10 @@ public static partial class SimEngine
             }
         }
         HookStep(b, nameof(SimModel.AfterAttack), (m, o, x) => m.AfterAttack(x, o, Info(x)));
+        // Sunder: energy once the attack is over, when it killed its target.
+        if (at.OnKillEnergy > 0)
+            b.Each(s => (at.TargetId >= 0 ? at.TargetId : s.CurrentPlay?.Target ?? -1) is var t && s.Enemy(t) is { Alive: false }
+                ? ProcCardEvent(s, CardEvent.EnergyGained, at.OnKillEnergy, s.CurrentPlay?.Owner ?? Who.You, indirect: false) : new[] { s });
         b.Do(s => s.CurrentAttack = 0);
 
         // One hit on every hittable enemy; with RepeatPerKill (Echoing Slash), one more round per enemy it killed.

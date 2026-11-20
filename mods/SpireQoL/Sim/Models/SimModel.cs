@@ -69,7 +69,17 @@ public sealed record SimCard(string Name, SimCardType Type)
 }
 
 /// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
-public sealed record SimCardPlay(SimCard Card, int Owner, int Target, int PlayIndex, int PlayCount, bool AutoPlay);
+/// <summary>How the game shows a model acted (SimModel.Seen).</summary>
+public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft }
+
+public sealed record SimCardPlay(SimCard Card, int Owner, int Target, int PlayIndex, int PlayCount, bool AutoPlay)
+{
+    /// <summary>
+    /// Epic Retrieval (AfterArrowDislodged, source this card): energy for each arrow of its player's knocked loose during the play
+    /// (decision #117).
+    /// </summary>
+    public int ArrowEnergy { get; init; }
+}
 
 /// <summary>A damage calculation's inputs (Hook.ModifyDamage): who deals it to whom, its props, and the card it's from.</summary>
 public sealed record DamageCtx(int? Dealer, int Target, SimProps Props, SimCard? Card, SimCardPlay? Play);
@@ -120,6 +130,12 @@ public abstract class SimModel
     public virtual TabKind? Tab => null;
     /// <summary>Its tab is crossed (a warning: it helps the enemy, hurts you, or gives up a bonus), shown when it fires in some branch.</summary>
     public virtual bool Harmful => false;
+    /// <summary>
+    /// How the game shows that it acted, for the play check (decision #117): a flash (the default), or, for a relic whose crossed tab
+    /// means the play gives up its bonus, the relic going dark (its Active status cleared: Art of War, Ripple Basin, Pael's Eye) or
+    /// no energy left after the play (Pael's Tears, which judges the energy as your turn ends).
+    /// </summary>
+    public virtual ActedSeen Seen => ActedSeen.Flash;
 
     protected static IEnumerable<SimState> One(SimState s) => new[] { s };
 

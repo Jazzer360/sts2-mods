@@ -127,6 +127,10 @@ public static partial class SimEngine
             var ev = (CardEvent)int.Parse(parts[0]);
             var player = int.Parse(parts[1]);
             r = Then(r.ToList(), x => ProcCardEvent(x, ev, e.Amount, player, indirect: false));
+            // Epic Retrieval: its own energy for each of its player's arrows its play knocks loose (the game passes the card as the source).
+            if (ev == CardEvent.ArrowDislodged)
+                r = Then(r.ToList(), x => x.CurrentPlay is { ArrowEnergy: > 0 } cp && cp.Owner == player
+                    ? ProcCardEvent(x, CardEvent.EnergyGained, cp.ArrowEnergy * e.Amount, player, indirect: false) : new[] { x });
         }
         return Then(r.ToList(), DrainPending);
     }
