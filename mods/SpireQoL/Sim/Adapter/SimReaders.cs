@@ -173,6 +173,8 @@ public static class SimReaders
                     break;
                 case "ParryingShield": amount = Sts2State.Var(r, "Damage"); data = Sts2State.Var(r, "Block"); break;
                 case "LunarPastry": amount = Sts2State.Var(r, "Stars", 1); break;
+                // Its Data is the model's own: energy spent during the play being simulated (PaelsTears), so none yet.
+                case "PaelsTears": data = 0; break;
                 case "UnsettlingLamp":
                     data = Sts2State.Private<object?>(r, "TriggeringCard", null) == null && !Sts2State.Private(r, "IsFinishedTriggering", true) ? 1 : 0;
                     break;

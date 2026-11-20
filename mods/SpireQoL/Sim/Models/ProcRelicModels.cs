@@ -22,13 +22,26 @@ public sealed class RippleBasin : FirstAttackGivesUp
         SimEngine.TakesPart(s, owner) && SimEngine.PlayerOf(s, owner) is { AttacksThisTurn: 0 } && Amount(s, owner) > 0 ? Block(s, owner, Amount(s, owner)) : One(s);
 }
 
-/// <summary>PaelsTears (BeforeSideTurnEnd: energy left gives energy next turn): spending your last energy gives that up (bad for you).</summary>
+/// <summary>
+/// PaelsTears (BeforeSideTurnEnd: any energy left gives energy next turn): a play that spends energy and leaves you with none gives
+/// that up (bad for you). Judged once the play has resolved (AfterPlayResolved), so energy the play gets back first (Orbit, Ivory
+/// Tile, Subroutine, the card's own) keeps the bonus and shows no warning. Data: energy was spent during this play (1), not the armed bit.
+/// </summary>
 public sealed class PaelsTears : RelicProc
 {
     public override string Name => "PaelsTears";
     public override bool Harmful => true;
-    public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
-        ev == CardEvent.EnergySpent && player == owner && SimEngine.PlayerOf(s, owner) is { Energy: <= 0 } ? Fire(s, owner) : One(s);
+    public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
+    {
+        if (ev == CardEvent.EnergySpent && player == owner && Data(s, owner) == 0) Set(s, owner, Amount(s, owner), 1);
+        return One(s);
+    }
+    public override IEnumerable<SimState> AfterPlayResolved(SimState s, int owner, int player)
+    {
+        if (player != owner || Data(s, owner) == 0) return One(s);
+        Set(s, owner, Amount(s, owner), 0);
+        return SimEngine.PlayerOf(s, owner) is { Energy: <= 0 } ? Fire(s, owner) : One(s);
+    }
 }
 
 /// <summary>PaelsEye.BeforeCardPlayed: while armed, the turn's first card you play (not an auto-play) gives up its extra turn (bad for you).</summary>
@@ -202,7 +215,8 @@ public sealed class IvoryTile : RelicProc
 {
     public override string Name => "IvoryTile";
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Energy >= Var(s, owner, "EnergyThreshold", 3) ? Fire(s, owner) : One(s);
+        Mine(play, owner) && play.Card.Energy >= Var(s, owner, "EnergyThreshold", 3)
+            ? Then(Fire(s, owner), CardEvent.EnergyGained, Var(s, owner, "Energy", 1), owner) : One(s);
 }
 
 /// <summary>ChemicalX.ModifyXValue: X-cost cards (energy or stars) get more.</summary>
@@ -314,7 +328,7 @@ public sealed class Nunchaku : CounterRelic
 {
     public override string Name => "Nunchaku";
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
-    protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => Fire(s, owner);
+    protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => Then(Fire(s, owner), CardEvent.EnergyGained, Var(s, owner, "Energy", 1), owner);
 }
 
 public sealed class OrnamentalFan : CounterRelic

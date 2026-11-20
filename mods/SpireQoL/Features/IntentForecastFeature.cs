@@ -209,7 +209,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         if (view.Move(moveId) is not { } move) return;
         // The powers the move applies (Frail 2), from its code, each in the corner of the buff or debuff intent it belongs to
         // (IntentCorner, as on the intent on screen: decision #99).
-        var corners = enemy.Monster is { } monster ? IntentCorner.Assign(move.Intents, MovePowers.Of(monster, move)) : new();
+        var corners = enemy.Monster is { } monster ? IntentCorner.Assign(move.Intents, MovePowers.Of(monster, move, now: false)) : new();
         for (var k = 0; k < move.Intents.Count; k++)
         {
             var intent = move.Intents[k];

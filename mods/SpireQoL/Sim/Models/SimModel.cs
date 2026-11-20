@@ -162,6 +162,12 @@ public abstract class SimModel
 
     public virtual IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play) => One(s);
     public virtual IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) => One(s);
+    /// <summary>
+    /// Not a game hook: once a play has fully resolved (every AfterCardPlayed, whatever their order, and what follows the play), for a
+    /// tab judged on what the play leaves rather than on a moment inside it (Pael's Tears: the energy left). <paramref name="player"/>:
+    /// who played it.
+    /// </summary>
+    public virtual IEnumerable<SimState> AfterPlayResolved(SimState s, int owner, int player) => One(s);
     // ---- damage-time hooks: deterministic, run inside the damage itself (SimEngine.Damage), so every source of damage
     // (hits, procs, orbs, end of turn) gets them
 

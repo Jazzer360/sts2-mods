@@ -222,10 +222,12 @@ export async function syncSessionMetrics({ ORG, PROJECT, REPO, sentry, sentryPag
   const found = await github(`/repos/${REPO}/issues?labels=${LABEL}&state=all&per_page=1`);
   let issue = found[0] ?? null;
   const state = decodeState(issue?.body);
-  const sessionIssues = await sentry(`/projects/${ORG}/${PROJECT}/issues/?query=${encodeURIComponent("kind:session")}&statsPeriod=90d&limit=25`);
+  // Sentry's issue search takes only '', 24h or 14d as a period: a session issue seen in the last 14 days is found (sessions come in
+  // all the time; with none for two weeks there's nothing new to count).
+  const sessionIssues = await sentry(`/projects/${ORG}/${PROJECT}/issues/?query=${encodeURIComponent("kind:session")}&statsPeriod=14d&limit=25`);
   const range = state.cursor
     ? `start=${encodeURIComponent(new Date(Date.parse(state.cursor) - OVERLAP_MS).toISOString())}&end=${encodeURIComponent(new Date().toISOString())}`
-    : "statsPeriod=90d";
+    : `start=${encodeURIComponent(new Date(Date.now() - 89 * 86400_000).toISOString())}&end=${encodeURIComponent(new Date().toISOString())}`; // the first run: what Sentry keeps (90 days)
   let added = 0, pages = 0;
   for (const si of sessionIssues || []) {
     for await (const page of sentryPages(`/organizations/${ORG}/issues/${si.id}/events/?full=true&per_page=100&${range}`)) {

@@ -6,6 +6,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.2
+#### Fixed
+- Intent Details showed every power a move could apply when only one branch of it runs (Entomancer's Pheromone Spit showed both +1 and +2 Strength). It now shows the branch that will run, decided from what you can see (its Personal Hive, a power it has, a free slot, how many times it has respawned), and a ? where that can't be known yet (Intent Forecast's later moves).
+- Pael's Tears warned on a card that spends your last energy even when the play gives energy back (Orbit, Automation, Subroutine, Yah, Ivory Tile, Nunchaku). It now warns only when the card leaves you with no energy once the play has resolved, which is what the relic checks at the end of your turn.
+
 ### Spire QoL 1.21.1
 #### Changed
 - Developer mode only (never on in a released download): the game writes files for a development dashboard and keeps its own error reports there instead of sending them. No change for players.

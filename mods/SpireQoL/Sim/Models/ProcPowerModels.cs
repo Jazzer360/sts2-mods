@@ -52,12 +52,12 @@ public sealed class StormPower : BoundPower
     protected override IEnumerable<SimState> Act(SimState s, int owner, SimCardPlay play, int amount) => Channel(Fire(s, owner), owner, OrbKind.Lightning, amount);
 }
 
-/// <summary>SubroutinePower: each Power card its owner plays gives energy.</summary>
+/// <summary>SubroutinePower: each Power card its owner plays gives its amount of energy (bound as the play begins).</summary>
 public sealed class SubroutinePower : BoundPower
 {
     public override string Name => "SubroutinePower";
     protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Power;
-    protected override IEnumerable<SimState> Act(SimState s, int owner, SimCardPlay play, int amount) => Fire(s, owner);
+    protected override IEnumerable<SimState> Act(SimState s, int owner, SimCardPlay play, int amount) => Then(Fire(s, owner), CardEvent.EnergyGained, amount, owner);
 }
 
 /// <summary>CalamityPower: each Attack its owner plays adds its amount of random Attacks to their hand (cards created).</summary>
@@ -425,7 +425,7 @@ public sealed class YahPower : ProcModel
     {
         if (ev != CardEvent.ArrowDislodged || player != owner || Data(s, owner) != 0) return One(s);
         Set(s, owner, Amount(s, owner), 1);
-        return Fire(s, owner);
+        return Then(Fire(s, owner), CardEvent.EnergyGained, Amount(s, owner), owner);
     }
 }
 
@@ -494,12 +494,12 @@ public abstract class EventCountdownPower : ProcModel
     }
 }
 
-/// <summary>OrbitPower.AfterEnergySpent: energy once enough energy is spent (its count, Data).</summary>
+/// <summary>OrbitPower.AfterEnergySpent: its amount of energy once enough energy is spent (its count, Data).</summary>
 public sealed class OrbitPower : EventCountdownPower
 {
     public override string Name => "OrbitPower";
     protected override CardEvent Event => CardEvent.EnergySpent;
-    protected override IEnumerable<SimState> OnZero(SimState s, int owner) => Fire(s, owner);
+    protected override IEnumerable<SimState> OnZero(SimState s, int owner) => Then(Fire(s, owner), CardEvent.EnergyGained, Amount(s, owner), owner);
 }
 
 /// <summary>AutomationPower.AfterCardDrawn: energy once enough cards are drawn (its count, Data).</summary>
@@ -507,7 +507,7 @@ public sealed class AutomationPower : EventCountdownPower
 {
     public override string Name => "AutomationPower";
     protected override CardEvent Event => CardEvent.Drawn;
-    protected override IEnumerable<SimState> OnZero(SimState s, int owner) => Fire(s, owner);
+    protected override IEnumerable<SimState> OnZero(SimState s, int owner) => Then(Fire(s, owner), CardEvent.EnergyGained, Amount(s, owner), owner);
 }
 
 /// <summary>CacophonyPower.AfterCardDrawn: its amount to a random hittable enemy once enough cards are drawn (its count, Data).</summary>

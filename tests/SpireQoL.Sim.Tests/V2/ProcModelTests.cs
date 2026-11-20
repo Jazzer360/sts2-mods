@@ -450,13 +450,57 @@ public class ProcModelTests
     [Fact]
     public void PaelsTearsWarnsWhenTheLastEnergyIsSpent()
     {
-        var s = Relic(State(), "PaelsTears");
+        var s = Relic(State(), "PaelsTears", data: 0);
         s.P.Energy = 2;
-        var spend = Events(new SimCard("Big", SimCardType.Skill) { Energy = 2 }, 1);
-        spend.Actions.Insert(0, new CardEventAction(CardEvent.EnergySpent, 2));
+        var spend = Spend(new SimCard("Big", SimCardType.Skill) { Energy = 2 }, 2);
         Assert.True(One(s, spend).Fired.Has("PaelsTears"));
         s.P.Energy = 3;
         Assert.False(One(s, spend).Fired.Has("PaelsTears"));
+        // Already at 0 before a free card: nothing given up by this play.
+        s.P.Energy = 0;
+        Assert.False(One(s, Spend(new SimCard("Free", SimCardType.Skill), 0)).Fired.Has("PaelsTears"));
+    }
+
+    /// <summary>A play as SimScript.Of compiles it: the energy it spends first, the play, then the card resolved.</summary>
+    private static SimScript Spend(SimCard card, int energy, params SimAction[] body)
+    {
+        var script = Events(card, 1, body);
+        if (energy > 0) script.Actions.Insert(0, new CardEventAction(CardEvent.EnergySpent, energy));
+        script.Actions.Add(new CardResolvedAction(0, 0, false, 0, 0, false));
+        return script;
+    }
+
+    [Fact]
+    public void PaelsTearsKeepsItsBonusWhenThePlayGivesEnergyBack()
+    {
+        // Your last energy on a 1-cost card while Orbit is one energy from firing: Orbit gives energy back, so energy is left at the
+        // end of the turn and nothing is given up (the owner's feedback, 1.21.1).
+        var s = Power(Relic(State(), "PaelsTears", data: 0), "OrbitPower", 1, data: 1);
+        s.P.Energy = 1;
+        var after = One(s, Spend(new SimCard("Strike", SimCardType.Attack) { Energy = 1 }, 1));
+        Assert.True(after.Fired.Has("OrbitPower"));
+        Assert.Equal(1, after.P.Energy);
+        Assert.False(after.Fired.Has("PaelsTears"));
+        // Ivory Tile on a 3-cost card at 3 energy: the same, from a relic reacting after the play.
+        var tile = Relic(Relic(State(), "PaelsTears", data: 0), "IvoryTile", vars: new[] { ("Energy", 1), ("EnergyThreshold", 3) });
+        tile.P.Energy = 3;
+        var big = One(tile, Spend(new SimCard("Big", SimCardType.Skill) { Energy = 3 }, 3));
+        Assert.Equal(1, big.P.Energy);
+        Assert.False(big.Fired.Has("PaelsTears"));
+        // Without them, the warning stands.
+        var plain = Relic(State(), "PaelsTears", data: 0);
+        plain.P.Energy = 1;
+        Assert.True(One(plain, Spend(new SimCard("Strike", SimCardType.Attack) { Energy = 1 }, 1)).Fired.Has("PaelsTears"));
+    }
+
+    [Fact]
+    public void EnergyFromPowersAndRelicsReachesYourEnergy()
+    {
+        // Automation, Subroutine, Yah, Nunchaku: each gives the simulator its energy, not just its tab.
+        var auto = Power(State(), "AutomationPower", 2, data: 1);
+        Assert.Equal(2, One(auto, Events(Card("Draw", SimCardType.Skill), 1, new CardEventAction(CardEvent.Drawn, 1))).P.Energy);
+        var sub = Power(State(), "SubroutinePower", 2);
+        Assert.Equal(2, One(sub, Events(Card("Defragment", SimCardType.Power), 1)).P.Energy);
     }
 
     [Fact]

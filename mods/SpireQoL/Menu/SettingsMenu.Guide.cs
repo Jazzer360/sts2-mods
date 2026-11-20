@@ -399,7 +399,7 @@ public sealed partial class SettingsMenu
             + "Until they're done, the last results stay on screen, and Incoming Damage and the Death Skull carry a ? after a moment; it all updates when the bar fills.");
         GuideRow(null, "Intent Details",
             "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
-            + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code. Nothing while the intent is hidden.");
+            + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
         GuideRow(null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");

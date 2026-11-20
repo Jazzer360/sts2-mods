@@ -78,7 +78,7 @@ public static class SettingsCatalog
         new(nameof(PenNib), SourceGroup.Relic, "Attacks while it's ready: this one deals double", "Attacks played, toward the doubled 10th"),
         new(nameof(ArtOfWar), SourceGroup.Relic, Crossed + "your first attack this turn (gives up its energy next turn)"),
         new(nameof(RippleBasin), SourceGroup.Relic, Crossed + "your first attack this turn (gives up its end-of-turn block)"),
-        new(nameof(PaelsTears), SourceGroup.Relic, Crossed + "cards that spend your last energy (gives up next turn's carry-over)"),
+        new(nameof(PaelsTears), SourceGroup.Relic, Crossed + "cards that leave you with no energy once played (gives up next turn's carry-over)"),
         new(nameof(PaelsEye), SourceGroup.Relic, Crossed + "any card while armed and nothing played yet (gives up the extra turn)"),
         new(nameof(Vambrace), SourceGroup.Relic, "Cards that gain block, while unused this combat"),
         new("PaelsLegion", SourceGroup.Relic, "Cards that gain block, while it's off cooldown (double block)"),

@@ -94,6 +94,16 @@ internal static class IntentCorner
             amount.MouseFilter = Control.MouseFilterEnum.Ignore;
             chip.AddChild(amount);
         }
+        else if (applied.Maybe)
+        {
+            // Only on some of the move's branches, and nothing tells which yet (decision #109).
+            var maybe = UiKit.Label("?", FontSize, Colors.White);
+            maybe.AddThemeConstantOverride("outline_size", 4);
+            maybe.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.95f));
+            maybe.VerticalAlignment = VerticalAlignment.Bottom;
+            maybe.MouseFilter = Control.MouseFilterEnum.Ignore;
+            chip.AddChild(maybe);
+        }
         return chip;
     }
 }

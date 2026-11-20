@@ -162,6 +162,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var artifact = span.OfType<PowerReceivedEntry>().Any(x => x.Power is MegaCrit.Sts2.Core.Models.Powers.ArtifactPower && x.Amount < 0);
             foreach (var p in shown.Powers)
             {
+                if (p.Maybe) continue; // only on some branches, shown as ? (decision #109): nothing promised either way
                 var same = applied.Where(x => x.Power.GetType() == p.Power).ToList();
                 if (same.Count == 0)
                 {

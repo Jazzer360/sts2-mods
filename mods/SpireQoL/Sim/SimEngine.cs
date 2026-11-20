@@ -790,7 +790,10 @@ public static partial class SimEngine
             case FixedHitsAction fh: RunFixedHits(b, fh); break;
             case HitYouAction hy: b.Do(s => LandBlockable(s, hy.Name, hy.Amount)); break;
             case FirstPlayOnly fp: if (b.States.Count > 0 && b.States[0].CurrentPlay is not { PlayIndex: > 0 }) foreach (var x in fp.Actions) Run(b, x); break;
-            case CardResolvedAction cr: b.Do(s => CardResolved(s, cr)); break;
+            case CardResolvedAction cr:
+                b.Do(s => CardResolved(s, cr));
+                HookStep(b, nameof(SimModel.AfterPlayResolved), (m, o, x) => m.AfterPlayResolved(x, o, cr.Owner));
+                break;
             case OrbAction oa: RunOrb(b, oa); break;
             case FocusAction fa: b.Do(s => ChangeFocus(s, fa.Delta)); break;
             case ShootAction: RunShoot(b); break;

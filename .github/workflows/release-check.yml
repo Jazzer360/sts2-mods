@@ -9,7 +9,8 @@
 #   - on main: the current version has a GitHub release with its zip. The normal flow is push,
 #     then run scripts/release.ps1, so a push to main WAITS for the release (polling every 30s for
 #     up to 20 minutes) instead of failing straight away. It fails only if no release shows up in
-#     that time. Version and changelog problems still fail immediately.
+#     that time. A release event waits up to 10 minutes the same way (the release script publishes one
+#     mod after another). Version and changelog problems still fail immediately.
 name: Release check
 
 on:
@@ -36,8 +37,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REQUIRE_RELEASE: ${{ github.event_name != 'pull_request' }}
-          # Minutes to wait for a missing release on a push (it's published right after the push).
-          RELEASE_WAIT_MINUTES: ${{ github.event_name == 'push' && '20' || '0' }}
+          # Minutes to wait for a missing release: on a push, it's published right after the push; on a release, scripts/release.ps1
+          # publishes the mods one after another, so the first one's run would otherwise fail on the next one not out yet.
+          RELEASE_WAIT_MINUTES: ${{ github.event_name == 'push' && '20' || github.event_name == 'release' && '10' || '0' }}
         shell: bash
         run: |
           set -uo pipefail
