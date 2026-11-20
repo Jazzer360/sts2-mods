@@ -93,6 +93,20 @@ canvas { width: 100%; display: block; }
 .note { border-bottom: 1px solid var(--line); padding: 8px 0; }
 .note .meta { color: var(--faint); font-size: 12px; }
 .note .body { white-space: pre-wrap; }
+.hint { color: var(--dim); font-size: 12px; margin: 0 0 8px; }
+.info { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; border: 1px solid var(--faint);
+  color: var(--dim); font: italic 600 10px Georgia, serif; text-transform: none; letter-spacing: 0; cursor: help; margin: 0 auto 0 7px; flex: none; }
+.info:hover { color: var(--accent); border-color: var(--accent); }
+#tip .infotext { max-width: 380px; line-height: 1.5; color: var(--text); }
+summary .info { margin: 0 0 0 7px; vertical-align: 1px; }
+.check { border-left: 4px solid var(--line); }
+.check.good { border-left-color: var(--good); } .check.warn { border-left-color: var(--warn); } .check.bad { border-left-color: var(--bad); }
+.check .verdict { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.check .s { color: var(--dim); font-size: 12px; }
+.check a { display: inline-block; margin-top: 8px; color: var(--accent); text-decoration: none; font-size: 12px; }
+.checks { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.card { position: relative; }
+.hover-layer { position: absolute; pointer-events: none; }
 #tip { position: fixed; display: none; z-index: 20; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
   padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); max-width: 320px; }
 #tip i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
@@ -125,56 +139,91 @@ canvas { width: 100%; display: block; }
   </div>
 
   <section class="page" id="p-overview">
-    <div class="grid" id="tiles"></div>
+    <p class="hint">Four checks on the mod while you play. Each says in a line whether things are fine, the numbers behind it, and where to look next. Green is normal, amber is worth a look, red is a problem.</p>
+    <div class="grid checks" id="checks"></div>
     <div class="grid2" style="margin-top:12px">
-      <div class="card"><h3>Needs attention <span class="faint" id="attnCount"></span></h3><ul class="attn" id="attn"></ul></div>
-      <div class="card"><h3>Last 5 minutes</h3><canvas id="ovFrame" height="120"></canvas>
-        <div class="legend"><span><i style="background:var(--accent)"></i>mod frame p95</span><span><i style="background:var(--bad)"></i>mod frame max</span><span class="faint">lines at 16.7 and 33.3 ms</span></div>
-        <canvas id="ovHeld" height="80" style="margin-top:10px"></canvas>
-        <div class="legend"><span><i style="background:var(--violet)"></i>states held by every search (cap 150,000)</span><span><i style="background:var(--teal)"></i>searches running</span></div>
-      </div>
+      <div class="card"><h3>What needs a look <span class="faint" id="attnCount"></span></h3>
+        <p class="hint">Newest first: predictions that didn't match, searches stopped at a cap, reports, warnings from the mod's log and slow frames. Each one is something to fix, or to explain in a note.</p>
+        <ul class="attn" id="attn"></ul></div>
+      <div class="card"><h3>The mod's time per frame, last 5 minutes</h3>
+        <p class="hint">Each point is a quarter of a second: the mod's time in its 95th-percentile frame (blue: a busy frame) and in its slowest (red). A 60 fps frame has 16.7 ms for the game and the mod together (the dashed lines are 16.7 and 33.3 ms); the mod normally stays around 1–2 ms. A red spike is one slow frame: the Performance page says which feature it was.</p>
+        <canvas id="ovFrame" height="150"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>95th-percentile frame</span><span><i style="background:var(--bad)"></i>slowest frame</span></div></div>
     </div>
   </section>
 
   <section class="page" id="p-turn">
     <div class="grid2">
-      <div class="card"><h3>Forecast now <span class="faint" id="whereText"></span></h3><div id="forecast"></div></div>
-      <div class="card"><h3>How the damage spreads over the rolls</h3><canvas id="spread" height="150"></canvas><div class="legend"><span><i style="background:var(--accent)"></i>share of the rolls</span><span><i style="background:var(--bad)"></i>you die in some of them</span></div></div>
+      <div class="card"><h3>What will the enemy turn do to you? <span class="faint" id="whereText"></span></h3>
+        <p class="hint">The turn forecast for the board right now, as if you ended your turn: the HP you'd lose (a range when random targets decide it), the chance you die, and how many distinct outcomes it found (branches). "Complete" means every outcome was worked out with everything modelled; "capped" means the search stopped at a cap and Incoming Damage shows ?; "gaps" means something in the fight isn't modelled yet, and the reasons are listed.</p>
+        <div id="forecast"></div></div>
+      <div class="card"><h3>How likely is each amount of damage?</h3>
+        <p class="hint">Each bar is an amount of HP you could lose this enemy turn, its height the share of the random rolls that lead to it (all the bars add up to 100%). One tall bar means the outcome is certain; a spread means random targets decide it. Red bars include outcomes where you die.</p>
+        <canvas id="spread" height="150"></canvas><div class="legend"><span><i style="background:var(--accent)"></i>share of the rolls</span><span><i style="background:var(--bad)"></i>you die in some of them</span></div></div>
     </div>
-    <div class="section">Turns, newest first: plays checked, the enemy turn's check, searches and caps, and the audit's own lines</div>
+    <div class="section">Was each turn predicted right? <span class="info" data-tip="Each turn of this launch, newest first. The stripe: green, everything checked matched; red, something didn't match (a card's play or the enemy turn); amber, a check was skipped (the reason is listed: a gap to close); violet, a search stopped at a cap. Under it: each card played (✓ matched), the enemy turn's check, how many searches the turn's boards needed, and the audit's own log lines for that turn.">i</span></div>
     <div id="turns"></div>
   </section>
 
   <section class="page" id="p-searches">
     <div class="grid" id="searchTiles"></div>
+    <div class="card" style="margin-top:12px"><h3>Which cards cost the most to work out?</h3>
+      <p class="hint">For every card in your hand the mod runs one search per target: it plays the card on the board as it is, follows everything it sets off, then plays out the rest of your turn and the enemy turn to predict the tabs and the outcome. The turn forecast is one more search, without a card. A search's <b>work</b> is how many game states it copied: every random choice (a random target, a Lightning orb, a random card) splits it into one copy per outcome, so work is how much a card branches on that board. Rows are cards (all their targets together), the costliest first. The end of the turn is part of every card's search, so a board whose enemy turn branches makes every card cost more.</p>
+      <div class="scroll"><table id="costTable"></table></div></div>
     <div class="grid2" style="margin-top:12px">
-      <div class="card"><h3>Copies against time (each search)</h3><canvas id="scatter" height="220"></canvas>
-        <div class="legend"><span><i style="background:var(--accent)"></i>card</span><span><i style="background:var(--good)"></i>forecast</span><span><i style="background:var(--violet)"></i>capped</span><span><i style="background:var(--faint)"></i>cancelled</span><span class="faint">both axes log</span></div></div>
-      <div class="card"><h3>Copies per millisecond over time</h3><canvas id="throughput" height="220"></canvas><div class="legend"><span class="faint">searches over 1 ms; a drop means copying got more expensive, not just more frequent</span></div></div>
+      <div class="card"><h3>How long do searches take?</h3>
+        <p class="hint">Every search this launch by how long it took, card plays and the turn forecast side by side. A frame waits up to 8 ms for searches, so the first three bars show up on the frame they belong to; the last two are worked out in the background while the last numbers stay on screen.</p>
+        <canvas id="timeHist" height="170"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>a card's play</span><span><i style="background:var(--good)"></i>the turn forecast</span></div></div>
+      <div class="card" id="scatterCard"><h3>Is a slow search slow for its size?</h3>
+        <p class="hint">One dot per search. Across: its work (states copied, 0 at the left); up: how long it took. Both go up in powers of ten. Dots normally form a rising band (more work, more time); a dot well above the band at the same work was slow for its size: the machine was busy, or each copy got more expensive (a regression to look into).</p>
+        <canvas id="scatter" height="170"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>a card's play</span><span><i style="background:var(--good)"></i>the turn forecast</span><span><i style="background:var(--violet)"></i>stopped at a cap</span><span><i style="background:var(--faint)"></i>cancelled</span></div></div>
+      <div class="card" id="quietCard"><h3>Is a slow search slow for its size?</h3><div class="empty">No search has done real work yet (over 100 states copied): your boards so far don't branch much. This chart appears once one does.</div></div>
+      <div class="card"><h3>How close do searches get to the memory cap?</h3>
+        <p class="hint">States held in memory by every search together (violet), against the cap of 150,000 (decision #107): a search that would go past it stops, and its numbers show ?. Teal: how many searches are running at once (counted in thousands on this scale). Normally near zero; tall spikes come from boards with many random targets.</p>
+        <canvas id="pfSim" height="170"></canvas>
+        <div class="legend"><span><i style="background:var(--violet)"></i>states held (cap 150,000)</span><span><i style="background:var(--teal)"></i>searches running</span></div></div>
     </div>
-    <div class="card" style="margin-top:12px">
-      <h3>Searches <span class="row"><select id="searchFilter"><option value="all">all</option><option value="card">cards</option><option value="forecast">forecast</option><option value="bg">background</option><option value="cap">capped</option><option value="cancel">cancelled</option><option value="slow">over 8 ms</option></select></span></h3>
+    <details class="card" style="margin-top:12px">
+      <summary><b>Every search, newest first</b> <span class="faint">(the raw list, for digging into one)</span></summary>
+      <div class="row" style="margin:8px 0"><span class="dim">Show</span><select id="searchFilter"><option value="all">all</option><option value="card">cards</option><option value="forecast">forecast</option><option value="bg">background</option><option value="cap">capped</option><option value="cancel">cancelled</option><option value="slow">over 8 ms</option></select></div>
       <div class="scroll"><table id="searchTable"></table></div>
-    </div>
+    </details>
   </section>
 
   <section class="page" id="p-perf">
     <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label></div>
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
-      <div class="card"><h3>Mod time per frame</h3><canvas id="pfFrame" height="170"></canvas><div class="legend"><span><i style="background:var(--accent)"></i>p95</span><span><i style="background:var(--good)"></i>median</span><span><i style="background:var(--bad)"></i>max</span><span class="faint">lines at 16.7 and 33.3 ms</span></div></div>
-      <div class="card"><h3>Mean time per frame, by feature</h3><canvas id="pfFeatures" height="170"></canvas><div class="legend" id="pfFeaturesLegend"></div></div>
-      <div class="card"><h3>Longest gap between frames (the game's own stalls too)</h3><canvas id="pfGap" height="150"></canvas><div class="legend"><span><i style="background:var(--warn)"></i>longest gap per 250 ms</span><span class="faint">line at 50 ms</span></div></div>
-      <div class="card"><h3>Memory and collections (whole process)</h3><canvas id="pfGc" height="150"></canvas><div class="legend"><span><i style="background:var(--teal)"></i>heap MB</span><span><i style="background:var(--warn)"></i>allocated MB/s</span><span><i style="background:var(--bad)"></i>gen 2 collection</span></div></div>
-      <div class="card"><h3>Simulator</h3><canvas id="pfSim" height="150"></canvas><div class="legend"><span><i style="background:var(--violet)"></i>states held</span><span><i style="background:var(--teal)"></i>searches running ×1000</span></div></div>
-      <div class="card"><h3>Waiting on searches</h3><canvas id="pfWait" height="150"></canvas><div class="legend"><span><i style="background:var(--accent)"></i>frame waits (ms)</span><span><i style="background:var(--bad)"></i>left to the background</span><span><i style="background:var(--warn)"></i>board settling spells (ms)</span></div></div>
+      <div class="card"><h3>Is the mod making frames slow?</h3>
+        <p class="hint">Each point is a quarter of a second of play: the mod's own time in its typical frame (median, green), a busy frame (95th percentile, blue) and its slowest frame (red). A 60 fps frame has 16.7 ms for the game and the mod together (the dashed lines are 16.7 and 33.3 ms). The mod normally stays around 1–2 ms; a red spike is one slow frame. Hover a spike, then read the feature chart beside it at the same moment to see which feature it was.</p>
+        <canvas id="pfFrame" height="170"></canvas>
+        <div class="legend"><span><i style="background:var(--good)"></i>typical frame</span><span><i style="background:var(--accent)"></i>busy frame (p95)</span><span><i style="background:var(--bad)"></i>slowest frame</span></div></div>
+      <div class="card"><h3>Which feature takes the time?</h3>
+        <p class="hint">The mod's average time per frame, split by feature (stacked: the top of the pile is the mod's total). A feature growing over time, or one taking most of the pile, is where to look. The table below gives each feature's average and its single worst frame over the window.</p>
+        <canvas id="pfFeatures" height="170"></canvas><div class="legend" id="pfFeaturesLegend"></div></div>
+      <div class="card"><h3>Is the game itself stalling?</h3>
+        <p class="hint">The longest gap between two frames in each quarter second (16.7 ms is a smooth 60 fps). Over 50 ms (the dashed line) is a hitch you can see. When the mod's own time at that moment is small (the chart on the left), the hitch is the game's (loading, a room change), not the mod's.</p>
+        <canvas id="pfGap" height="150"></canvas>
+        <div class="legend"><span><i style="background:var(--warn)"></i>longest gap between frames</span></div></div>
+      <div class="card"><h3>Could memory clean-ups cause hitches?</h3>
+        <p class="hint">Memory in use (teal) and new memory allocated per second (amber), for the whole game process, the mod included. Red dots are full garbage collections, which can pause the game for a moment. A steady line is normal; allocation that jumps whenever you hover cards points at the mod's calculations.</p>
+        <canvas id="pfGc" height="150"></canvas>
+        <div class="legend"><span><i style="background:var(--teal)"></i>memory in use (MB)</span><span><i style="background:var(--warn)"></i>allocated per second (MB)</span><span><i style="background:var(--bad)"></i>full collection</span></div></div>
+      <div class="card"><h3>Do calculations finish within a frame?</h3>
+        <p class="hint">When the board changes, a frame waits up to 8 ms for the new predictions. Blue: a wait that finished in time (how long it took). Red: a wait that ran out, leaving the rest to the background (the tabs come a frame or a few later). Amber: how long the board then took to settle, with every tab final. A few reds on busy boards are expected; many, or amber over 100 ms, are worth a look.</p>
+        <canvas id="pfWait" height="150"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>finished within the frame</span><span><i style="background:var(--bad)"></i>left to the background</span><span><i style="background:var(--warn)"></i>time to settle</span></div></div>
     </div>
-    <div class="card" style="margin-top:12px"><h3>Features in this window</h3><div class="scroll"><table id="featureTable"></table></div></div>
+    <div class="card" style="margin-top:12px"><h3>Each feature over this window</h3>
+      <p class="hint">Average: what the feature costs every frame. Largest: its single worst frame (amber over 8 ms, red over 16.7 ms, a frame's whole budget). Share: its part of the mod's total time.</p>
+      <div class="scroll"><table id="featureTable"></table></div></div>
   </section>
 
   <section class="page" id="p-reports">
     <div class="card"><h3>Reports kept on this machine <span class="row"><select id="repFilter"><option value="open">open</option><option value="all">all</option><option value="handled">handled</option></select></span></h3>
-      <p class="dim" style="margin-top:0">In dev mode nothing goes to Sentry: each report the game would have sent is saved in <code>reports\</code>, with
+      <p class="hint">In dev mode nothing goes to Sentry: each report the game would have sent is saved in <code>reports\</code>, with
         the details, the game state, the simulator's start state and the recent log. Add a note about what was going on, and mark it handled once it's fixed.
         Both go to <code>feedback.jsonl</code>, which is read at the start of each stretch of work.</p>
       <div id="repList"></div></div>
@@ -203,7 +252,7 @@ canvas { width: 100%; display: block; }
   <section class="page" id="p-compare">
     <div class="card"><h3>Two launches side by side</h3>
       <div class="row"><select id="cmpA"></select><span class="dim">against</span><select id="cmpB"></select><button id="cmpGo" class="primary">Compare</button></div>
-      <p class="faint">Each stream file is one launch of the game. Compare a release with the one before it on similar fights.</p>
+      <p class="hint">Each launch of the game writes its own file. Pick two (a release and the one before it, on similar fights) to see whether a change made things faster or slower. Hover a row's i for what it measures; the last column says how the first launch compares, green when it's better.</p>
       <div id="cmpOut"></div></div>
     <div class="card" style="margin-top:12px"><h3>Launch files <span class="faint" id="filesTotal"></span></h3>
       <div class="row">
@@ -386,56 +435,151 @@ const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v
 const seriesColors = () => css("--series").split(",").map((s) => s.trim());
 const since = (arr, secs) => (secs ? arr.filter((e) => e.t >= M.lastT - secs) : arr);
 const isForecast = (s) => /forecast/i.test(s.label);
-const tile = (label, value, sub, cls = "") => `<div class="card tile"><h3>${esc(label)}</h3><div class="v ${cls}">${value}</div><div class="s">${sub ?? ""}</div></div>`;
-function setStatus(text, kind) { $("statusText").innerHTML = text; $("dot").className = "dot " + (kind || ""); }
+const tile = (label, value, sub, cls = "", tip = "") =>
+  `<div class="card tile"><h3>${esc(label)}${tip ? `<span class="info" data-tip="${esc(tip)}">i</span>` : ""}</h3><div class="v ${cls}">${value}</div><div class="s">${sub ?? ""}</div></div>`;
+/**
+ * Sets an element's HTML only when it changed. The page re-renders on a timer: rebuilding a button that didn't change could swallow a
+ * click (the press and the release land on different elements), close an open dropdown or drop a focused field.
+ */
+function setHTML(el, html) {
+  if (!el || el._html === html) return;
+  el._html = html;
+  el.innerHTML = html;
+}
+function setStatus(text, kind) { setHTML($("statusText"), text); $("dot").className = "dot " + (kind || ""); }
 
 // ============================================================== charts (canvas, no library)
-// ---- hover readout: each chart records what it drew (HOVER[id]); the tooltip reads the values nearest the cursor
+// ---- hover readout: each chart records what it drew (HOVER[id]); the readout snaps to the nearest data point, marks it on a layer
+// over the chart (the chart itself isn't redrawn), and shows its values in a box just above the chart (below it near the top of the
+// window), so nothing covers the chart.
 const HOVER = {}, TIP = { id: null, e: null };
 const tip = document.createElement("div");
 tip.id = "tip";
 document.body.appendChild(tip);
-function hideTip() { tip.style.display = "none"; TIP.id = null; }
+function hideTip() {
+  tip.style.display = "none";
+  if (TIP.id) clearLayer($(TIP.id));
+  TIP.id = null;
+}
+/** The transparent layer over a chart for the hover marks, sized to it. */
+function layer(c) {
+  let ov = c._layer;
+  if (!ov) {
+    ov = document.createElement("canvas");
+    ov.className = "hover-layer";
+    c.after(ov);
+    c._layer = ov;
+  }
+  const dpr = window.devicePixelRatio || 1;
+  ov.style.left = c.offsetLeft + "px"; ov.style.top = c.offsetTop + "px";
+  ov.style.width = c.offsetWidth + "px"; ov.style.height = c.offsetHeight + "px";
+  if (ov.width !== c.width || ov.height !== c.height) { ov.width = c.width; ov.height = c.height; }
+  const g = ov.getContext("2d");
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, ov.width, ov.height);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return g;
+}
+function clearLayer(c) { if (c?._layer) c._layer.getContext("2d").clearRect(0, 0, c._layer.width, c._layer.height); }
+function dot(g, x, y, color) {
+  g.beginPath(); g.arc(x, y, 4.5, 0, 7); g.fillStyle = css("--panel"); g.fill();
+  g.beginPath(); g.arc(x, y, 3.2, 0, 7); g.fillStyle = color; g.fill();
+}
+function guide(g, x, h, pad) {
+  g.save(); g.strokeStyle = css("--dim"); g.lineWidth = 1; g.setLineDash([3, 3]);
+  g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, h - pad.b); g.stroke(); g.restore();
+}
 function hover(id, e) {
   const h = HOVER[id], c = $(id);
   if (!h || !c) return hideTip();
+  if (TIP.id && TIP.id !== id) clearLayer($(TIP.id));
   TIP.id = id; TIP.e = e;
   const r = c.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const g = layer(c);
   const sw = (color) => `<i style="background:${color}"></i>`;
-  let html = "";
-  if (h.kind === "lines" || h.kind === "stacked") {
+  let html = "", ax = mx; // ax: where the box lines up (the snapped point)
+  if (h.kind === "lines") {
     const span = h.w - h.pad.l - h.pad.r;
     const t = h.t0 + Math.min(1, Math.max(0, (mx - h.pad.l) / span)) * (h.t1 - h.t0);
-    const near = (pts) => pts.reduce((b, p) => (!b || Math.abs(p[0] - t) < Math.abs(b[0] - t) ? p : b), null);
-    if (h.kind === "lines") {
-      const close = (h.t1 - h.t0) * 0.02; // a dots series only shows a point near the cursor
-      const rows = h.series.map((s) => {
-        const p = near(s.points);
-        if (!p || (s.dots && Math.abs(p[0] - t) > close)) return "";
-        return `<div>${sw(s.color)}${esc(s.name || "value")}: <b>${s.show ? s.show(p[1]) : fmt(p[1], p[1] < 10 ? 2 : 1) + h.unit}</b></div>`;
-      }).join("");
-      html = `<div class="faint">${clock(t)}</div>${rows || '<div class="faint">nothing here</div>'}`;
-    } else {
-      const i = h.ts.reduce((b, x, k) => (Math.abs(x - t) < Math.abs(h.ts[b] - t) ? k : b), 0);
-      const rows = h.layers.map((l) => ({ l, v: l.points[i]?.[1] || 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
-      html = `<div class="faint">${clock(h.ts[i])}</div>` + rows.map((x) => `<div>${sw(x.l.color)}${esc(x.l.name)}: <b>${fmt(x.v, 3)} ms</b></div>`).join("")
-        + `<div>total: <b>${fmt(rows.reduce((a, x) => a + x.v, 0), 2)} ms</b></div>`;
+    // Snap: the data point nearest the cursor in time, over every series.
+    let snap = null;
+    for (const s of h.series) for (const p of s.points) if (!snap || Math.abs(p[0] - t) < Math.abs(snap - t)) snap = p[0];
+    if (snap == null) return hideTip();
+    const close = (h.t1 - h.t0) * 0.004 + 1e-9;
+    const rows = [];
+    for (const s of h.series) {
+      const p = s.points.reduce((b, q) => (!b || Math.abs(q[0] - snap) < Math.abs(b[0] - snap) ? q : b), null);
+      if (!p || Math.abs(p[0] - snap) > close) continue; // a series with no point at that moment (dots: frame waits, collections)
+      dot(g, h.X(p[0]), h.Y(p[1]), s.color);
+      rows.push(`<div>${sw(s.color)}${esc(s.name || "value")}: <b>${s.show ? s.show(p[1]) : fmt(p[1], p[1] < 10 ? 2 : 1) + h.unit}</b></div>`);
     }
+    ax = h.X(snap);
+    guide(g, ax, h.h, h.pad);
+    html = `<div class="faint">${clock(snap)}</div>${rows.join("")}`;
+  } else if (h.kind === "stacked") {
+    const span = h.w - h.pad.l - h.pad.r;
+    const t = h.t0 + Math.min(1, Math.max(0, (mx - h.pad.l) / span)) * (h.t1 - h.t0);
+    const i = h.ts.reduce((b, x, k) => (Math.abs(x - t) < Math.abs(h.ts[b] - t) ? k : b), 0);
+    ax = h.X(h.ts[i]);
+    guide(g, ax, h.h, h.pad);
+    let top = 0;
+    for (const l of h.layers) { const v = l.points[i]?.[1] || 0; top += v; if (v > 0) dot(g, ax, h.Y(top), l.color); }
+    const rows = h.layers.map((l) => ({ l, v: l.points[i]?.[1] || 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
+    html = `<div class="faint">${clock(h.ts[i])}</div>` + rows.map((x) => `<div>${sw(x.l.color)}${esc(x.l.name)}: <b>${fmt(x.v, 3)} ms</b></div>`).join("")
+      + `<div>total: <b>${fmt(top, 2)} ms</b></div>`;
+  } else if (h.kind === "groups") {
+    const i = Math.min(h.labels.length - 1, Math.max(0, Math.floor((mx - h.pad.l) / h.cw)));
+    g.fillStyle = css("--line"); g.globalAlpha = 0.35;
+    g.fillRect(h.pad.l + i * h.cw, h.pad.t, h.cw, h.h - h.pad.t - h.pad.b);
+    g.globalAlpha = 1;
+    ax = h.pad.l + (i + 0.5) * h.cw;
+    const total = h.groups.reduce((a, grp) => a + grp.values.reduce((x, y) => x + y, 0), 0);
+    html = `<div class="faint">${esc(h.labels[i])}</div>` + h.groups.map((grp) => `<div>${sw(grp.color)}${esc(grp.name)}: <b>${fmt(grp.values[i], 0)}</b> searches</div>`).join("")
+      + `<div class="faint">${pct(h.groups.reduce((a, grp) => a + grp.values[i], 0), total)} of all searches</div>`;
   } else if (h.kind === "bars") {
-    const i = Math.floor((mx - h.pad.l) / h.bw);
+    const i = Math.min(h.items.length - 1, Math.max(0, Math.floor((mx - h.pad.l) / h.bw)));
     const it = h.items[i];
     if (!it) return hideTip();
+    const bh = (h.h - h.pad.t - h.pad.b) * (it.v / h.yMax), x = h.pad.l + i * h.bw;
+    g.strokeStyle = css("--text"); g.lineWidth = 2;
+    g.strokeRect(x + 0.5, h.h - h.pad.b - bh - 1, Math.max(2, h.bw - 1), bh + 1);
+    ax = x + h.bw / 2;
     html = `<div>HP lost <b>${esc(it.label)}</b>: <b>${(it.v * 100).toFixed(2)}%</b> of the rolls</div>${it.bad ? '<div class="bad">you die in some of them</div>' : ""}`;
   } else if (h.kind === "scatter") {
-    const p = h.pts.reduce((b, q) => { const d = Math.hypot(q.sx - mx, q.sy - my); return d < 10 && (!b || d < b.d) ? { ...q, d } : b; }, null);
-    if (!p) return hideTip();
+    const p = h.pts.reduce((b, q) => { const d = Math.hypot(q.sx - mx, q.sy - my); return d < 24 && (!b || d < b.d) ? { ...q, d } : b; }, null);
+    if (!p) { clearLayer(c); tip.style.display = "none"; return; }
+    g.beginPath(); g.arc(p.sx, p.sy, 6, 0, 7); g.strokeStyle = css("--text"); g.lineWidth = 2; g.stroke();
+    ax = p.sx;
     html = `<div><b>${esc(p.label || "search")}</b></div><div>${fmt(p.x, 0)} copies · ${fmt(p.y, 2)} ms</div>`;
   }
   tip.innerHTML = html;
   tip.style.display = "block";
-  const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8), y = Math.min(e.clientY + 14, window.innerHeight - tip.offsetHeight - 8);
-  tip.style.left = x + "px"; tip.style.top = y + "px";
+  // Outside the chart: above it, centred on the snapped point; below it when there's no room above.
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  const left = Math.min(Math.max(4, r.left + ax - tw / 2), window.innerWidth - tw - 4);
+  const top = r.top - th - 8 >= 4 ? r.top - th - 8 : Math.min(r.bottom + 8, window.innerHeight - th - 4);
+  tip.style.left = left + "px"; tip.style.top = top + "px";
 }
+// ---- panel explanations: each panel's hint paragraph becomes an "i" beside its title, its text shown on hover (the page stays clean,
+// the explanation one hover away)
+for (const p of document.querySelectorAll(".card p.hint")) {
+  const card = p.closest(".card"), h = card.querySelector("h3") ?? card.querySelector("summary");
+  if (!h) continue;
+  const i = document.createElement("span");
+  i.className = "info"; i.textContent = "i"; i.dataset.tip = p.innerHTML;
+  h.insertBefore(i, [...h.childNodes].find((n) => n.nodeType === 1 && n !== i && !n.matches("b")) ?? null);
+  p.remove();
+}
+function showInfo(el) {
+  tip.innerHTML = `<div class="infotext">${el.dataset.tip}</div>`;
+  tip.style.display = "block";
+  const r = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  tip.style.left = Math.min(Math.max(4, r.left - 12), window.innerWidth - tw - 4) + "px";
+  tip.style.top = (r.bottom + 6 + th < window.innerHeight ? r.bottom + 6 : Math.max(4, r.top - th - 6)) + "px";
+}
+document.addEventListener("mouseover", (e) => { const i = e.target.closest?.(".info"); if (i) showInfo(i); });
+document.addEventListener("mouseout", (e) => { if (e.target.closest?.(".info")) tip.style.display = "none"; });
+
 /** After a chart redraws under the cursor: its readout follows the new values. */
 const rehover = (id) => { if (TIP.id === id && TIP.e) hover(id, TIP.e); };
 
@@ -495,7 +639,7 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
     g.stroke();
   }
   g.fillStyle = css("--faint"); g.fillText(clock(t0), pad.l, h - 2); const e = clock(t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2);
-  HOVER[id] = { kind: "lines", series, t0, t1, pad, w, unit };
+  HOVER[id] = { kind: "lines", series, t0, t1, pad, w, h, unit, X, Y };
   rehover(id);
 }
 /** Stacked areas over time: layers [{ name, color, points: [[t, v]] }] on the same t. */
@@ -515,20 +659,33 @@ function stacked(id, layers) {
     g.closePath(); g.fill(); g.globalAlpha = 1;
     for (let i = 0; i < n; i++) base[i] += l.points[i]?.[1] || 0;
   }
-  HOVER[id] = { kind: "stacked", layers, ts, t0, t1, pad, w };
+  HOVER[id] = { kind: "stacked", layers, ts, t0, t1, pad, w, h, X, Y };
   rehover(id);
 }
 function scatter(id, pts) {
   const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 18 };
   if (!pts.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
-  const lx = (v) => Math.log10(Math.max(v, 1)), ly = (v) => Math.log10(Math.max(v, 0.01));
-  const xMax = Math.max(...pts.map((p) => lx(p.x)), 2), yMin = -2, yMax = Math.max(...pts.map((p) => ly(p.y)), 1);
+  // Both axes in powers of ten, ending on a whole one so the last gridline is the edge; no work at all (0 copies) has its own column
+  // at the left, one step before 1.
+  const lx = (v) => (v < 1 ? -1 : Math.log10(v)), ly = (v) => Math.log10(Math.max(v, 0.01));
+  const xMin = -1, xMax = Math.max(Math.ceil(Math.max(...pts.map((p) => lx(p.x)))), 2), yMin = -2, yMax = Math.max(Math.ceil(Math.max(...pts.map((p) => ly(p.y)))), 1);
+  const count = (e) => (e < 0 ? "0" : ["1", "10", "100", "1k", "10k", "100k", "1M", "10M", "100M"][e] ?? `1e${e}`);
+  const time = (e) => (e >= 3 ? `${10 ** (e - 3)} s` : `${+(10 ** e).toFixed(2)} ms`);
+  const XS = (v) => pad.l + ((lx(v) - xMin) / (xMax - xMin)) * (w - pad.l - pad.r);
   g.font = "11px system-ui"; g.strokeStyle = css("--line"); g.fillStyle = css("--faint");
-  for (let e = 0; e <= Math.ceil(xMax); e++) { const x = pad.l + (e / xMax) * (w - pad.l - pad.r); g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, h - pad.b); g.stroke(); g.fillText("1e" + e, x + 2, h - 4); }
-  for (let e = yMin; e <= Math.ceil(yMax); e++) { const y = pad.t + (h - pad.t - pad.b) * (1 - (e - yMin) / (yMax - yMin)); g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke(); g.fillText(e < 0 ? `${10 ** e} ms` : `${10 ** e} ms`, 2, y + 4); }
+  for (let e = xMin; e <= xMax; e++) {
+    const x = pad.l + ((e - xMin) / (xMax - xMin)) * (w - pad.l - pad.r);
+    g.beginPath(); g.moveTo(x, pad.t); g.lineTo(x, h - pad.b); g.stroke();
+    const label = count(e), lw = g.measureText(label).width;
+    g.fillText(label, Math.min(x - lw / 2, w - pad.r - lw), h - 4);
+  }
+  for (let e = yMin; e <= yMax; e++) {
+    const y = pad.t + (h - pad.t - pad.b) * (1 - (e - yMin) / (yMax - yMin));
+    g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke(); g.fillText(time(e), 2, y + 4);
+  }
   const drawn = [];
   for (const p of pts) {
-    const sx = pad.l + (lx(p.x) / xMax) * (w - pad.l - pad.r), sy = pad.t + (h - pad.t - pad.b) * (1 - (ly(p.y) - yMin) / (yMax - yMin));
+    const sx = XS(p.x), sy = pad.t + (h - pad.t - pad.b) * (1 - (ly(p.y) - yMin) / (yMax - yMin));
     g.fillStyle = p.color; g.globalAlpha = 0.7;
     g.beginPath(); g.arc(sx, sy, 2.5, 0, 7); g.fill();
     drawn.push({ ...p, sx, sy });
@@ -549,7 +706,34 @@ function bars(id, items) {
     g.fillRect(pad.l + i * bw + 1, h - pad.b - bh, Math.max(1, bw - 2), bh);
     if (items.length <= 30 || i % Math.ceil(items.length / 30) === 0) { g.fillStyle = css("--faint"); g.fillText(it.label, pad.l + i * bw + 1, h - 4); }
   });
-  HOVER[id] = { kind: "bars", items, pad, bw };
+  HOVER[id] = { kind: "bars", items, pad, bw, h, yMax };
+  rehover(id);
+}
+
+/** Bars by category, a bar per group side by side in each (labels: the categories; groups: [{ name, color, values }]). */
+function groupBars(id, labels, groups) {
+  const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 18 };
+  const max = Math.max(1, ...groups.flatMap((x) => x.values));
+  const yMax = max * 1.1;
+  g.font = "11px system-ui"; g.fillStyle = css("--faint"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (h - pad.t - pad.b) * (1 - i / 4);
+    g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+    g.fillText(fmt((yMax * i) / 4, 0), 2, y + 4);
+  }
+  const cw = (w - pad.l - pad.r) / labels.length, bw = Math.min(28, (cw - 10) / groups.length);
+  labels.forEach((label, i) => {
+    const x0 = pad.l + i * cw + (cw - bw * groups.length) / 2;
+    groups.forEach((grp, k) => {
+      const bh = (h - pad.t - pad.b) * (grp.values[i] / yMax);
+      g.fillStyle = grp.color;
+      g.fillRect(x0 + k * bw + 1, h - pad.b - bh, bw - 2, bh);
+    });
+    g.fillStyle = css("--faint");
+    const lw = g.measureText(label).width;
+    g.fillText(label, pad.l + i * cw + (cw - lw) / 2, h - 4);
+  });
+  HOVER[id] = { kind: "groups", labels, groups, pad, cw, h, yMax };
   rehover(id);
 }
 
@@ -558,55 +742,77 @@ const PAGES = [["overview", "Overview"], ["turn", "Turn"], ["searches", "Searche
 let page = "overview";
 function nav() {
   const openN = REP.list.filter((r) => fbStatus[r.id] !== "handled").length;
-  $("nav").innerHTML = PAGES.map(([id, name]) => `<button data-p="${id}" class="${id === page ? "on" : ""}">${name}${id === "reports" && openN ? `<span class="count">${openN}</span>` : ""}</button>`).join("");
+  setHTML($("nav"), PAGES.map(([id, name]) => `<button data-p="${id}" class="${id === page ? "on" : ""}">${name}${id === "reports" && openN ? `<span class="count">${openN}</span>` : ""}</button>`).join(""));
 }
 $("nav").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; page = b.dataset.p; try { localStorage.setItem("page", page); } catch {} render(true); });
 
+/** A health check: the question, a coloured verdict in words, the numbers behind it, and the page to look at next. */
+function check(question, cls, verdict, facts, page, pageName) {
+  return `<div class="card check ${cls}"><h3>${esc(question)}</h3><div class="verdict">${verdict}</div><div class="s">${facts}</div>`
+    + (page ? `<a href="#" data-go="${page}">${esc(pageName)} →</a>` : "") + `</div>`;
+}
 function renderOverview() {
-  const s = M.state?.session, r5 = since(M.rollups, 300), s5 = since(M.searches, 300);
-  const p95 = quant(since(M.rollups, 60).map((r) => r.modP95), 0.5), slow5 = r5.reduce((a, r) => a + r.slow, 0);
-  const caps5 = s5.filter((x) => x.cap).length, openN = REP.list.filter((r) => fbStatus[r.id] !== "handled").length;
-  const unsettled = since(M.unsettled, 300).map((u) => u.ms);
-  const gen2 = r5.reduce((a, r) => a + r.gen2, 0);
-  $("tiles").innerHTML = [
-    tile("Turns this session", s ? fmt(s.turns, 0) : "–", s ? `${pct(s.clean, s.turns)} clean · ${s.combats} fights` : "no session yet", s && s.turns && s.clean / s.turns < 0.8 ? "warn" : ""),
-    tile("Mismatched turns", s ? fmt(s.mismatched, 0) : "–", s ? `${s.unchecked} unchecked · ${s.capped} capped` : "", s?.mismatched ? "bad" : "good"),
-    tile("Mod frame time", `${fmt(p95, 2)} ms`, `median of p95s, last minute · ${slow5} slow frames in 5 min`, p95 > 16.7 ? "bad" : p95 > 8 ? "warn" : "good"),
-    tile("Searches, 5 min", fmt(s5.length, 0), `${s5.filter((x) => x.background).length} background · ${caps5} capped · slowest ${fmt(Math.max(0, ...s5.map((x) => x.ms)), 0)} ms`, caps5 ? "warn" : ""),
-    tile("Board settling", unsettled.length ? `${fmt(quant(unsettled, 0.95), 0)} ms` : "instant", unsettled.length ? `p95 of ${unsettled.length} waits in 5 min` : "every board settled within its frame", quant(unsettled, 0.95) > 250 ? "warn" : ""),
-    tile("Reports", fmt(M.saved.length, 0), `this launch · ${openN} open in all (Reports)`, M.saved.length ? "bad" : openN ? "warn" : "good"),
-    tile("Memory", `${fmt(r5.at(-1)?.heapMb, 0)} MB`, `${gen2} gen 2 collections in 5 min`, gen2 > 3 ? "warn" : ""),
-    tile("Stream", M.file ? esc(M.file.replace(/^stream-|\.jsonl$/g, "")) : "–", `${fmt(M.rollups.length + M.searches.length + M.logs.length, 0)} events · up ${clock(M.lastT)}`),
-  ].join("");
+  const s = M.state?.session, r1 = since(M.rollups, 60), r5 = since(M.rollups, 300), s5 = since(M.searches, 300), w5 = since(M.waits, 300);
+  const mism = M.checks.filter((c) => c.kind === "check-done" && !c.matched).length;
+  const p95 = quant(r1.map((r) => r.modP95), 0.5), slow5 = r5.reduce((a, r) => a + r.slow, 0);
+  const caps5 = s5.filter((x) => x.cap).length, missed = w5.filter((x) => x.missed).length;
+  const settle = since(M.unsettled, 300).map((u) => u.ms);
+  const stalls5 = r5.filter((r) => r.gapMax > 50 && r.modMax < 30).length, gen2 = r5.reduce((a, r) => a + r.gen2, 0);
+  const checks = [];
+  // 1. are the predictions right?
+  if (!s && !M.checks.length) checks.push(check("Are the predictions right?", "", "No fights yet.", "The checks start with your first fight.", "turn", "Turn"));
+  else {
+    const turns = s?.turns ?? 0, unchecked = s?.unchecked ?? 0;
+    const facts = s ? `${s.clean} of ${turns} turns clean this session · ${unchecked} unchecked · ${s.capped} capped<br>${M.saved.length} report(s) this launch` : `${M.saved.length} report(s) this launch`;
+    if (mism || M.saved.length) checks.push(check("Are the predictions right?", "bad", `${mism || M.saved.length} prediction(s) didn't match what happened this launch.`, facts, "reports", "Reports"));
+    else if (turns && unchecked / turns > 0.2) checks.push(check("Are the predictions right?", "warn", `Matched, but ${pct(unchecked, turns)} of turns couldn't be fully checked.`, facts + "<br>Why: the Turn page lists each skip's reason.", "turn", "Turn"));
+    else checks.push(check("Are the predictions right?", "good", "Everything checked matched.", facts, "turn", "Turn"));
+  }
+  // 2. is the mod costing frames?
+  const frameFacts = `${fmt(p95, 2)} ms in a busy (95th-percentile) frame, last minute · ${slow5} slow frame(s) over 30 ms in 5 minutes<br>A 60 fps frame has 16.7 ms for everything.`;
+  if (!r1.length) checks.push(check("Is the mod costing frames?", "", "No frames measured yet.", "", "perf", "Performance"));
+  else if (slow5) checks.push(check("Is the mod costing frames?", "bad", `${slow5} frame(s) where the mod took over 30 ms in the last 5 minutes.`, frameFacts, "perf", "Performance"));
+  else if (p95 > 4) checks.push(check("Is the mod costing frames?", "warn", `Heavier than usual: ${fmt(p95, 1)} ms in a busy frame.`, frameFacts, "perf", "Performance"));
+  else checks.push(check("Is the mod costing frames?", "good", `Light: ${fmt(p95, 1)} ms in a busy frame.`, frameFacts, "perf", "Performance"));
+  // 3. are the calculations keeping up?
+  const calcFacts = `${w5.length - missed} of ${w5.length} waits finished inside the frame's 8 ms · ${s5.length} searches, ${caps5} stopped at a cap` + (settle.length ? `<br>Not settled in its frame: ${settle.length} time(s), up to ${fmt(Math.max(...settle), 0)} ms` : "");
+  if (caps5) checks.push(check("Are the calculations keeping up?", "bad", `${caps5} search(es) stopped at a cap in 5 minutes: their numbers showed ?.`, calcFacts, "searches", "Searches"));
+  else if (w5.length && missed / w5.length > 0.05) checks.push(check("Are the calculations keeping up?", "warn", `${pct(missed, w5.length)} of boards took longer than a frame to work out.`, calcFacts, "searches", "Searches"));
+  else checks.push(check("Are the calculations keeping up?", "good", w5.length ? "Boards are worked out within their frame." : "Nothing to work out yet.", calcFacts, "searches", "Searches"));
+  // 4. is the game itself stalling?
+  const stallFacts = `${stalls5} hitch(es) over 50 ms in 5 minutes with the mod's share small · ${gen2} full garbage collection(s)`;
+  if (stalls5 > 3) checks.push(check("Is the game itself stalling?", "warn", `${stalls5} hitches from the game, not the mod, in 5 minutes.`, stallFacts + "<br>Loading and room changes cause some; many in a fight are worth a look.", "perf", "Performance"));
+  else checks.push(check("Is the game itself stalling?", "good", stalls5 ? `${stalls5} small hitch(es): normal (loading, room changes).` : "No hitches.", stallFacts, "perf", "Performance"));
+  setHTML($("checks"), checks.join(""));
   // what needs a look: newest first
   const items = [];
   for (const c of M.checks) if (c.kind === "check-done" && !c.matched) items.push({ t: c.t, cls: "bad", text: `${c.audit === "forecast" ? "Enemy turn" : "Play"} didn't match: <b>${esc(c.detail)}</b> (turn ${c.turn})` });
-  for (const x of M.searches) if (x.cap) items.push({ t: x.t, cls: "warn", text: `Search stopped at <b>${esc(x.cap)}</b>: ${esc(x.label)} (${fmt(x.copies, 0)} copies, ${fmt(x.ms, 0)} ms)` });
+  for (const x of M.searches) if (x.cap) items.push({ t: x.t, cls: "warn", text: `Search stopped at <b>${esc(x.cap)}</b>: ${esc(x.label)} (${fmt(x.copies, 0)} states copied, ${fmt(x.ms, 0)} ms)` });
   for (const r of M.saved) items.push({ t: r.t, cls: "bad", text: `Report saved: ${esc(r.title)}` });
   for (const l of M.logs) if (l.level !== "INFO" && !/^\[audit\]/.test(l.text)) items.push({ t: l.t, cls: l.level === "ERROR" ? "bad" : "warn", text: esc(l.text.slice(0, 220)) });
   for (const r of M.rollups) if (r.modMax > 50) items.push({ t: r.t, cls: "bad", text: `Slow frame: the mod took ${fmt(r.modMax, 0)} ms (${esc(topFeature(r))})` });
   items.sort((a, b) => b.t - a.t);
   $("attnCount").textContent = items.length ? items.length : "";
-  $("attn").innerHTML = items.length ? items.slice(0, 40).map((i) => `<li><span class="pill ${i.cls}">${i.cls === "bad" ? "!" : "·"}</span><span style="flex:1">${i.text}</span><time>${ago(i.t)}</time></li>`).join("") : `<li class="empty">Nothing needs a look.</li>`;
-  lines("ovFrame", [{ name: "p95", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "max", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
-  lines("ovHeld", [{ name: "states held", color: css("--violet"), points: r5.map((r) => [r.t, r.heldStates]) }, { name: "searches running", show: (v) => fmt(v / 1000, 0), color: css("--teal"), points: r5.map((r) => [r.t, r.searching * 1000]) }], {});
+  setHTML($("attn"), items.length ? items.slice(0, 40).map((i) => `<li><span class="pill ${i.cls}">${i.cls === "bad" ? "!" : "·"}</span><span style="flex:1">${i.text}</span><time>${ago(i.t)}</time></li>`).join("") : `<li class="empty">Nothing needs a look.</li>`);
+  lines("ovFrame", [{ name: "95th-percentile frame", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
 }
+$("checks").addEventListener("click", (e) => { const a = e.target.closest("[data-go]"); if (!a) return; e.preventDefault(); page = a.dataset.go; try { localStorage.setItem("page", page); } catch {} render(true); });
 const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${fmt(v, 0)} ms`).join(", ");
 
 function renderTurn() {
   const w = M.state?.where, f = M.state?.forecast;
   $("whereText").textContent = !w ? "" : !w.inRun ? "not in a run" : !w.inCombat ? "in a run, out of a fight" : `${w.encounter} · turn ${w.turn}${w.playerTurn ? "" : " (enemy turn)"}`;
-  if (!f) $("forecast").innerHTML = `<div class="empty">${w?.inCombat ? "No forecast this frame (its result is on its way, or the enemies are acting)" : "No fight"}</div>`;
-  else if (f.error) $("forecast").innerHTML = `<div class="bad">Couldn't read the forecast: ${esc(f.error)}</div>`;
-  else $("forecast").innerHTML = `<div class="grid">${[
+  if (!f) setHTML($("forecast"), `<div class="empty">${w?.inCombat ? "No forecast this frame (its result is on its way, or the enemies are acting)" : "No fight"}</div>`);
+  else if (f.error) setHTML($("forecast"), `<div class="bad">Couldn't read the forecast: ${esc(f.error)}</div>`);
+  else setHTML($("forecast"), `<div class="grid">${[
     tile("HP lost", f.takenMin === f.taken ? f.taken : `${f.takenMin}–${f.taken}`, `end-of-turn block ${f.blockGain}`, f.dies ? "bad" : ""),
     tile("You die", f.dieChance > 0 ? `${(f.dieChance * 100).toFixed(1)}%` : "no", f.dies ? "in the worst case" : "", f.dieChance > 0 ? "bad" : "good"),
     tile("Branches", fmt(f.branches, 0), `${fmt(f.steps, 0)} steps · ${fmt(f.copies, 0)} copies · ${fmt(f.peakHeld, 0)} held`),
     tile("Complete", f.truncated ? "capped" : f.unmodelled?.length ? "gaps" : "yes", f.truncated ? esc(f.capHit) : f.unmodelled?.length ? esc(f.unmodelled.join("; ")) : "every outcome, everything modelled", f.truncated ? "bad" : f.unmodelled?.length ? "warn" : "good"),
-  ].join("")}</div>`;
+  ].join("")}</div>`);
   bars("spread", (f?.spread || []).map((s) => ({ label: String(s.taken), v: s.weight, bad: s.died })));
   const turns = [...M.turns.values()].reverse().slice(0, 60);
-  $("turns").innerHTML = turns.length ? turns.map((r) => {
+  setHTML($("turns"), turns.length ? turns.map((r) => {
     const mism = [...r.plays, ...r.forecast].some((c) => c.kind === "check-done" && !c.matched), skip = [...r.plays, ...r.forecast].some((c) => c.kind === "check-skipped" && !c.expected);
     const cls = mism ? "bad" : r.caps.length ? "capped" : skip ? "warn" : r.forecast.length ? "clean" : "";
     const fc = r.forecast.map((c) => c.kind === "check-done" ? `<span class="pill ${c.matched ? "good" : "bad"}">enemy turn ${c.matched ? "matched" : "✗ " + esc(c.detail)}</span>` : `<span class="pill warn" title="${esc(c.reason)}">enemy turn not checked</span>`).join(" ");
@@ -617,7 +823,7 @@ function renderTurn() {
     const key = `${r.combat}:${r.turn}`;
     return `<div class="turn t-${cls}"><h4>${esc(r.encounter)} · fight ${r.combat} · turn ${r.turn} <span class="dim" style="font-weight:400">· ${r.searches} searches${r.caps.length ? ` · <span class="bad">${r.caps.length} capped</span>` : ""}</span> ${fc}</h4>
       <ul>${plays}${skips}${fskips}</ul>${r.lines.length ? `<details data-key="${key}" ${openTurns.has(key) ? "open" : ""}><summary class="dim">audit lines (${r.lines.length})</summary><div class="log">${r.lines.map((l) => `<div class="${l.level}">${esc(l.text)}</div>`).join("")}</div></details>` : ""}</div>`;
-  }).join("") : `<div class="empty">No turns yet: start a fight.</div>`;
+  }).join("") : `<div class="empty">No turns yet: start a fight.</div>`);
 }
 
 const openTurns = new Set();
@@ -626,38 +832,65 @@ $("turns").addEventListener("toggle", (e) => { const k = e.target.dataset?.key; 
 function renderSearches() {
   const s = M.searches, done = s.filter((x) => !x.cancelled), ms = done.map((x) => x.ms);
   const cancelled = s.filter((x) => x.cancelled);
-  $("searchTiles").innerHTML = [
-    tile("Searches", fmt(s.length, 0), `${pct(s.filter((x) => x.background).length, s.length)} background`),
-    tile("Time p50 / p95", `${fmt(quant(ms, 0.5), 2)} / ${fmt(quant(ms, 0.95), 1)} ms`, `slowest ${fmt(Math.max(0, ...ms), 0)} ms`),
-    tile("Capped", fmt(s.filter((x) => x.cap).length, 0), Object.entries(s.filter((x) => x.cap).reduce((a, x) => ((a[x.cap] = (a[x.cap] || 0) + 1), a), {})).map(([k, v]) => `${k} ×${v}`).join(", ") || "none", s.some((x) => x.cap) ? "warn" : "good"),
-    tile("Cancelled", fmt(cancelled.length, 0), `${fmt(cancelled.reduce((a, x) => a + x.copies, 0), 0)} copies thrown away`),
-    tile("Most states held", fmt(Math.max(0, ...done.map((x) => x.peakHeld)), 0), "by one search (cap 150,000 together)"),
-  ].join("");
+  setHTML($("searchTiles"), [
+    tile("Searches this launch", fmt(s.length, 0), `${pct(s.filter((x) => x.background).length, s.length)} needed the background (over a frame's 8 ms)`, "",
+      "Every simulation run this launch: one per card per target whenever the board changes, plus the turn forecast. Most finish within the frame they're asked for; the rest go on in the background while the last numbers stay on screen."),
+    tile("Search time", `${fmt(quant(ms, 0.5), 2)} ms`, `typical · one in twenty over ${fmt(quant(ms, 0.95), 1)} ms · slowest ${fmt(Math.max(0, ...ms), 0)} ms`, quant(ms, 0.95) > 8 ? "warn" : "good",
+      "Typical: half the searches were faster. One in twenty (the 95th percentile) took longer than the second number: under 8 ms, nearly everything fits in a frame."),
+    tile("Stopped at a cap", fmt(s.filter((x) => x.cap).length, 0), Object.entries(s.filter((x) => x.cap).reduce((a, x) => ((a[x.cap] = (a[x.cap] || 0) + 1), a), {})).map(([k, v]) => `${k} ×${v}`).join(", ") || "none: every search finished", s.some((x) => x.cap) ? "bad" : "good",
+      "A search too big to finish within its memory or work cap (decision #107): its numbers show ? instead of a promise. Should be rare; each one is logged and listed on the Overview."),
+    tile("Thrown away", fmt(cancelled.length, 0), `${fmt(cancelled.reduce((a, x) => a + x.copies, 0), 0)} states copied for nothing`, "",
+      "Searches cancelled because the board changed before they finished (you hovered or played on). Normal in small numbers; a lot of thrown-away work on a busy board is a sign searches start too eagerly."),
+  ].join(""));
   scatter("scatter", s.slice(-1500).map((x) => ({ x: x.copies, y: x.ms, label: `${x.label}${x.cap ? " · " + x.cap : ""}${x.cancelled ? " · cancelled" : ""}${x.background ? " · background" : ""}`, color: x.cancelled ? css("--faint") : x.cap ? css("--violet") : isForecast(x) ? css("--good") : css("--accent") })));
-  const tp = done.filter((x) => x.ms >= 1).slice(-600);
-  lines("throughput", [{ name: "copies per ms", color: css("--accent"), dots: true, points: tp.map((x) => [x.t, x.copies / x.ms]) }], {});
+  lines("pfSim", [{ name: "states held", color: css("--violet"), points: since(M.rollups, 900).map((x) => [x.t, x.heldStates]) }, { name: "searches running", show: (v) => fmt(v / 1000, 0), color: css("--teal"), points: since(M.rollups, 900).map((x) => [x.t, x.searching * 1000]) }], {});
+  // The scatter only says something once searches do real work.
+  const busy = s.some((x) => x.copies > 100);
+  $("scatterCard").style.display = busy ? "" : "none";
+  $("quietCard").style.display = busy ? "none" : "";
+  // Search times in powers of ten, card plays and the forecast side by side.
+  const edges = [0.1, 1, 10, 100], names = ["under 0.1 ms", "0.1–1 ms", "1–10 ms", "10–100 ms", "100 ms or more"];
+  const bucket = (v) => { const k = edges.findIndex((e) => v < e); return k < 0 ? edges.length : k; };
+  const count = (pickOne) => { const c = names.map(() => 0); for (const x of done) if (pickOne(x)) c[bucket(x.ms)]++; return c; };
+  groupBars("timeHist", names, [{ name: "a card's play", color: css("--accent"), values: count((x) => !isForecast(x)) }, { name: "the turn forecast", color: css("--good"), values: count(isForecast) }]);
+  // Per card (its searches over every target): the costliest first.
+  const byCard = new Map();
+  for (const x of s) {
+    const key = isForecast(x) ? "the turn forecast" : x.label.replace(/ \(target [^)]*\)$/, "");
+    const c = byCard.get(key) ?? { key, n: 0, ms: [], maxMs: 0, maxCopies: 0, maxHeld: 0, bg: 0, caps: 0, cancelled: 0 };
+    c.n++;
+    if (x.cancelled) c.cancelled++;
+    else { c.ms.push(x.ms); c.maxMs = Math.max(c.maxMs, x.ms); c.maxCopies = Math.max(c.maxCopies, x.copies); c.maxHeld = Math.max(c.maxHeld, x.peakHeld); }
+    if (x.background) c.bg++;
+    if (x.cap) c.caps++;
+    byCard.set(key, c);
+  }
+  const cards = [...byCard.values()].sort((a, b) => b.maxCopies - a.maxCopies || b.maxMs - a.maxMs).slice(0, 40);
+  setHTML($("costTable"), `<tr><th>Card</th><th class="n">Searches</th><th class="n">Typical time</th><th class="n">Slowest</th><th class="n">Most work (states copied)</th><th class="n">Most states held at once</th><th></th></tr>` +
+    (cards.length ? cards.map((c) => `<tr><td>${esc(c.key)}</td><td class="n">${fmt(c.n, 0)}</td><td class="n">${fmt(quant(c.ms, 0.5), 2)} ms</td>
+      <td class="n ${c.maxMs > 50 ? "bad" : c.maxMs > 8 ? "warn" : ""}">${fmt(c.maxMs, 1)} ms</td><td class="n ${c.maxCopies > 100000 ? "bad" : c.maxCopies > 1000 ? "warn" : ""}">${fmt(c.maxCopies, 0)}</td>
+      <td class="n">${fmt(c.maxHeld, 0)}</td><td>${c.caps ? `<span class="pill bad">capped ×${c.caps}</span>` : ""}${c.bg ? `<span class="pill">background ×${c.bg}</span>` : ""}${c.cancelled ? `<span class="pill">cancelled ×${c.cancelled}</span>` : ""}</td></tr>`).join("")
+      : `<tr><td colspan="7" class="empty">No searches yet</td></tr>`));
   const f = $("searchFilter").value;
   const pick = { all: () => true, card: (x) => !isForecast(x), forecast: isForecast, bg: (x) => x.background, cap: (x) => x.cap, cancel: (x) => x.cancelled, slow: (x) => x.ms > 8 }[f];
   const rows = s.filter(pick).slice(-300).reverse();
-  $("searchTable").innerHTML = `<tr><th>When</th><th>What</th><th class="n">Turn</th><th class="n">Steps</th><th class="n">Copies</th><th class="n">Held</th><th class="n">ms</th><th class="n">copies/ms</th><th></th></tr>` +
-    (rows.length ? rows.map((x) => `<tr><td class="when">${clock(x.t)}</td><td>${esc(x.label)}</td><td class="n">${x.turn ? `${x.combat}:${x.turn}` : "–"}</td><td class="n">${fmt(x.steps, 0)}</td><td class="n">${fmt(x.copies, 0)}</td><td class="n">${fmt(x.peakHeld, 0)}</td><td class="n ${x.ms > 50 ? "bad" : x.ms > 8 ? "warn" : ""}">${fmt(x.ms, 2)}</td><td class="n">${x.ms > 0 ? fmt(x.copies / x.ms, 0) : "–"}</td><td>${x.cancelled ? '<span class="pill">cancelled</span>' : ""}${x.background ? '<span class="pill">background</span>' : ""}${x.cap ? `<span class="pill bad">${esc(x.cap)}</span>` : ""}</td></tr>`).join("") : `<tr><td colspan="9" class="empty">None</td></tr>`);
+  setHTML($("searchTable"), `<tr><th>When</th><th>What</th><th class="n">Turn</th><th class="n">Steps</th><th class="n">Copies</th><th class="n">Held</th><th class="n">ms</th><th class="n">copies/ms</th><th></th></tr>` +
+    (rows.length ? rows.map((x) => `<tr><td class="when">${clock(x.t)}</td><td>${esc(x.label)}</td><td class="n">${x.turn ? `${x.combat}:${x.turn}` : "–"}</td><td class="n">${fmt(x.steps, 0)}</td><td class="n">${fmt(x.copies, 0)}</td><td class="n">${fmt(x.peakHeld, 0)}</td><td class="n ${x.ms > 50 ? "bad" : x.ms > 8 ? "warn" : ""}">${fmt(x.ms, 2)}</td><td class="n">${x.ms > 0 ? fmt(x.copies / x.ms, 0) : "–"}</td><td>${x.cancelled ? '<span class="pill">cancelled</span>' : ""}${x.background ? '<span class="pill">background</span>' : ""}${x.cap ? `<span class="pill bad">${esc(x.cap)}</span>` : ""}</td></tr>`).join("") : `<tr><td colspan="9" class="empty">None</td></tr>`));
 }
 
 function renderPerf() {
   const win = +$("perfWindow").value, r = since(M.rollups, win), colors = seriesColors();
   const p95s = r.map((x) => x.modP95), frames = r.reduce((a, x) => a + x.frames, 0), secs = r.reduce((a, x) => a + x.seconds, 0);
   const waits = since(M.waits, win), uns = since(M.unsettled, win);
-  $("perfTiles").innerHTML = [
-    tile("Frames per second", fmt(secs ? frames / secs : 0, 0), `${fmt(frames, 0)} frames`),
-    tile("Mod p95 (median of windows)", `${fmt(quant(p95s, 0.5), 2)} ms`, `worst window ${fmt(Math.max(0, ...p95s), 1)} ms`, quant(p95s, 0.5) > 8 ? "warn" : "good"),
-    tile("Slow frames", fmt(r.reduce((a, x) => a + x.slow, 0), 0), "the mod over 30 ms", r.some((x) => x.slow) ? "bad" : "good"),
-    tile("Game stalls", fmt(r.filter((x) => x.gapMax > 50 && x.modMax < 30).length, 0), "gaps over 50 ms, the mod's share small"),
-    tile("Frame waits", fmt(waits.length, 0), `${waits.filter((x) => x.missed).length} left to the background · p95 ${fmt(quant(waits.map((x) => x.ms), 0.95), 1)} ms`),
-    tile("Board settling", fmt(uns.length, 0), uns.length ? `p95 ${fmt(quant(uns.map((x) => x.ms), 0.95), 0)} ms · longest ${fmt(Math.max(...uns.map((x) => x.ms)), 0)} ms` : "spells with searches still running"),
-    tile("Gen 2 collections", fmt(r.reduce((a, x) => a + x.gen2, 0), 0), `${fmt(r.reduce((a, x) => a + x.gcPauseMs, 0), 0)} ms paused in all`),
-    tile("Allocated", `${fmt(secs ? r.reduce((a, x) => a + x.allocatedMb, 0) / secs : 0, 1)} MB/s`, `heap now ${fmt(r.at(-1)?.heapMb, 0)} MB`),
-  ].join("");
-  lines("pfFrame", [{ name: "median", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "p95", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "max", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
+  const busy = quant(p95s, 0.5), slow = r.reduce((a, x) => a + x.slow, 0), stalls = r.filter((x) => x.gapMax > 50 && x.modMax < 30).length;
+  const gen2 = r.reduce((a, x) => a + x.gen2, 0);
+  setHTML($("perfTiles"), [
+    tile("The mod's share of a frame", `${fmt(busy, 2)} ms`, `in a busy (95th-percentile) frame: ${pct(busy, 16.7)} of a 60 fps frame · ${fmt(secs ? frames / secs : 0, 0)} fps now`, busy > 8 ? "bad" : busy > 4 ? "warn" : "good"),
+    tile("Slow frames from the mod", fmt(slow, 0), "frames where the mod alone took over 30 ms (a visible stutter)", slow ? "bad" : "good"),
+    tile("Hitches from the game", fmt(stalls, 0), "gaps over 50 ms between frames while the mod's share was small", stalls > 3 ? "warn" : "good"),
+    tile("Full memory clean-ups", fmt(gen2, 0), `${fmt(r.reduce((a, x) => a + x.gcPauseMs, 0), 0)} ms paused in all (the whole game)`, gen2 > 5 ? "warn" : "good"),
+  ].join(""));
+  lines("pfFrame", [{ name: "typical frame", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "busy frame (p95)", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: [16.7, 33.3], unit: " ms", log: logTimes() });
   // features: the six with the most time, then the rest together
   const totals = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) totals[k] = (totals[k] || 0) + v;
@@ -665,16 +898,15 @@ function renderPerf() {
   const layers = top.map((k, i) => ({ name: k, color: colors[i % colors.length], points: r.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
   layers.push({ name: "the rest", color: css("--faint"), points: r.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
   stacked("pfFeatures", layers);
-  $("pfFeaturesLegend").innerHTML = layers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join("");
+  setHTML($("pfFeaturesLegend"), layers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
   lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [50], unit: " ms", log: logTimes() });
   lines("pfGc", [{ name: "heap MB", color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { name: "allocated MB/s", color: css("--warn"), points: r.map((x) => [x.t, x.allocatedMb / Math.max(x.seconds, 0.01)]) }, { name: "gen 2 collection (heap MB)", color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) }], {});
-  lines("pfSim", [{ name: "states held", color: css("--violet"), points: r.map((x) => [x.t, x.heldStates]) }, { name: "searches running", show: (v) => fmt(v / 1000, 0), color: css("--teal"), points: r.map((x) => [x.t, x.searching * 1000]) }], {});
   lines("pfWait", [{ name: "frame wait", color: css("--accent"), dots: true, points: waits.filter((x) => !x.missed).map((x) => [x.t, x.ms]) }, { name: "wait, left to the background", color: css("--bad"), dots: true, points: waits.filter((x) => x.missed).map((x) => [x.t, x.ms]) }, { name: "board settling", color: css("--warn"), dots: true, points: uns.map((x) => [x.t, x.ms]) }], { unit: " ms", log: logTimes() });
   const feat = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) { const f = (feat[k] ??= { mean: 0, max: 0, n: 0 }); f.mean += v; f.n++; f.max = Math.max(f.max, x.featureMax?.[k] || 0); }
   const rows = Object.entries(feat).sort((a, b) => b[1].mean - a[1].mean);
-  $("featureTable").innerHTML = `<tr><th>Feature</th><th class="n">Mean per frame</th><th class="n">Largest in one frame</th><th class="n">Share of the mod's time</th></tr>` +
-    rows.map(([k, f]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(f.mean / f.n, 3)} ms</td><td class="n ${f.max > 16.7 ? "bad" : f.max > 8 ? "warn" : ""}">${fmt(f.max, 1)} ms</td><td class="n">${pct(f.mean, rows.reduce((a, [, g]) => a + g.mean, 0))}</td></tr>`).join("");
+  setHTML($("featureTable"), `<tr><th>Feature</th><th class="n">Mean per frame</th><th class="n">Largest in one frame</th><th class="n">Share of the mod's time</th></tr>` +
+    rows.map(([k, f]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(f.mean / f.n, 3)} ms</td><td class="n ${f.max > 16.7 ? "bad" : f.max > 8 ? "warn" : ""}">${fmt(f.max, 1)} ms</td><td class="n">${pct(f.mean, rows.reduce((a, [, g]) => a + g.mean, 0))}</td></tr>`).join(""));
 }
 
 const repOpen = new Set();
@@ -759,10 +991,10 @@ function renderFeedback() {
   const c = context();
   $("fbContext").textContent = `${c.mod}${c.encounter ? ` · ${c.encounter}, turn ${c.turn}` : " · not in a fight"}`;
   const f = $("fbFilter").value, list = fbNotes.filter((n) => n.kind !== "report" && (f === "all" || (f === "done" ? n.status === "handled" : n.status !== "handled")));
-  $("fbList").innerHTML = list.length ? list.map((n) => `<div class="note"><div class="meta"><span class="pill">${esc(n.kind)}</span> ${new Date(n.at).toLocaleString()} · ${esc(n.mod)}${n.encounter ? ` · ${esc(n.encounter)}, turn ${n.turn}` : ""}
+  setHTML($("fbList"), list.length ? list.map((n) => `<div class="note"><div class="meta"><span class="pill">${esc(n.kind)}</span> ${new Date(n.at).toLocaleString()} · ${esc(n.mod)}${n.encounter ? ` · ${esc(n.encounter)}, turn ${n.turn}` : ""}
      <button style="float:right;padding:1px 8px" data-toggle="${esc(n.id)}">${n.status === "handled" ? "Reopen" : "Mark handled"}</button></div><div class="body">${esc(n.text)}</div>
      ${(fbComments[n.id] || []).map((c) => `<div class="comment ${c.status ? "dim" : ""}"><span class="faint">${new Date(c.at).toLocaleString()}</span> ${esc(c.text)}</div>`).join("")}
-     <div class="row" style="margin-top:4px"><input type="text" data-comment="${esc(n.id)}" placeholder="Add a comment (Enter)" style="flex:1"></div></div>`).join("") : `<div class="empty">No notes.</div>`;
+     <div class="row" style="margin-top:4px"><input type="text" data-comment="${esc(n.id)}" placeholder="Add a comment (Enter)" style="flex:1"></div></div>`).join("") : `<div class="empty">No notes.</div>`);
 }
 $("fbList").addEventListener("keydown", async (e) => {
   const id = e.target.dataset?.comment;
@@ -802,7 +1034,7 @@ function renderLog(force) {
 async function renderCompareList() {
   renderFiles();
   const names = (FS.demo ? Object.keys(DEMO.files).filter((n) => n.startsWith("stream-")) : (await streams()).map((s) => s.name)).sort().reverse();
-  for (const id of ["cmpA", "cmpB"]) { const cur = $(id).value; $(id).innerHTML = names.map((n) => `<option>${esc(n)}</option>`).join(""); if (names.includes(cur)) $(id).value = cur; }
+  for (const id of ["cmpA", "cmpB"]) { const cur = $(id).value; setHTML($(id), names.map((n) => `<option>${esc(n)}</option>`).join("")); if (names.includes(cur)) $(id).value = cur; }
   if (!$("cmpB").dataset.set && names.length > 1) { $("cmpA").value = names[0]; $("cmpB").value = names[1]; $("cmpB").dataset.set = 1; }
 }
 // ---- launch files: each one's mod version (its first line), date and size; deleted by hand or by a rule
@@ -856,9 +1088,9 @@ async function renderFiles(note) {
   const files = await launchFiles();
   const doomed = new Set(ruleDeletes(files, $("cleanRule").value, +$("cleanN").value || 1).map((f) => f.name));
   $("filesTotal").textContent = `${files.length} files · ${mb(files.reduce((a, f) => a + f.size, 0))}`;
-  $("filesTable").innerHTML = `<tr><th>Launch</th><th>Mod</th><th class="n">Size</th><th></th></tr>` + files.map((f, i) =>
+  setHTML($("filesTable"), `<tr><th>Launch</th><th>Mod</th><th class="n">Size</th><th></th></tr>` + files.map((f, i) =>
     `<tr><td>${f.when.toLocaleString()}${i === 0 ? ' <span class="pill">newest</span>' : ""}${doomed.has(f.name) ? ' <span class="pill warn">the rule deletes it</span>' : ""}</td><td>${esc(f.mod)}</td><td class="n">${mb(f.size)}</td>
-     <td>${i === 0 ? "" : `<button class="danger" data-del="${esc(f.name)}" style="padding:1px 8px">Delete</button>`}</td></tr>`).join("");
+     <td>${i === 0 ? "" : `<button class="danger" data-del="${esc(f.name)}" style="padding:1px 8px">Delete</button>`}</td></tr>`).join(""));
   $("cleanOut").textContent = note ?? ($("cleanRule").value === "none" ? "" : `The rule deletes ${doomed.size} file(s), ${mb(files.filter((f) => doomed.has(f.name)).reduce((a, f) => a + f.size, 0))}.`);
 }
 async function applyRule(askFirst) {
@@ -908,29 +1140,49 @@ async function summarizeFile(name) {
   }
   const ms = s.filter((x) => !x.cancelled).map((x) => x.ms), secs = r.reduce((a, x) => a + x.seconds, 0);
   return {
-    "Mod version": mod, "Length": clock(end),
-    "Mod frame p95 (median of windows)": quant(r.map((x) => x.modP95), 0.5), "Mod frame p95 (worst window)": Math.max(0, ...r.map((x) => x.modP95)),
-    "Slow frames per hour": secs ? (r.reduce((a, x) => a + x.slow, 0) / secs) * 3600 : 0,
-    "Searches per minute": secs ? (s.length / secs) * 60 : 0, "Search p50 (ms)": quant(ms, 0.5), "Search p95 (ms)": quant(ms, 0.95), "Slowest search (ms)": Math.max(0, ...ms),
-    "Copies per ms (median)": quant(s.filter((x) => x.ms >= 1 && !x.cancelled).map((x) => x.copies / x.ms), 0.5),
-    "Capped searches": s.filter((x) => x.cap).length, "Cancelled share": s.length ? s.filter((x) => x.cancelled).length / s.length : 0,
-    "Board settling p95 (ms)": quant(u, 0.95), "Checks matched": c.done ? c.matched / c.done : 0, "Checks skipped": c.skipped,
-    "Gen 2 per hour": secs ? (r.reduce((a, x) => a + x.gen2, 0) / secs) * 3600 : 0, "Heap max (MB)": Math.max(0, ...r.map((x) => x.heapMb)),
+    "Mod version": mod, "Length of the launch": clock(end),
+    "Mod's time in a busy frame (ms)": quant(r.map((x) => x.modP95), 0.5), "…in the worst moment (ms)": Math.max(0, ...r.map((x) => x.modP95)),
+    "Slow frames from the mod, per hour": secs ? (r.reduce((a, x) => a + x.slow, 0) / secs) * 3600 : 0,
+    "Searches per minute": secs ? (s.length / secs) * 60 : 0, "Typical search time (ms)": quant(ms, 0.5), "Slow search time (95th percentile, ms)": quant(ms, 0.95), "Slowest search (ms)": Math.max(0, ...ms),
+    "Speed of a busy search (states copied per ms)": quant(s.filter((x) => x.ms >= 1 && !x.cancelled).map((x) => x.copies / x.ms), 0.5),
+    "Searches stopped at a cap": s.filter((x) => x.cap).length, "Share of searches cancelled": s.length ? s.filter((x) => x.cancelled).length / s.length : 0,
+    "Time for a board to settle (95th percentile, ms)": quant(u, 0.95), "Share of checks that matched": c.done ? c.matched / c.done : 0, "Checks skipped": c.skipped,
+    "Full memory clean-ups per hour": secs ? (r.reduce((a, x) => a + x.gen2, 0) / secs) * 3600 : 0, "Most memory in use (MB)": Math.max(0, ...r.map((x) => x.heapMb)),
   };
 }
+/** What each Compare row measures, and which way is better (higher: true). */
+const CMP_HELP = {
+  "Mod version": ["The Spire QoL version that launch ran."],
+  "Length of the launch": ["How long the game ran: longer launches give steadier numbers."],
+  "Mod's time in a busy frame (ms)": ["The mod's own time in a busy frame (the 95th percentile of each quarter second, then the median over the launch). Lower is better; 1–2 ms is normal.", false],
+  "…in the worst moment (ms)": ["The same, at the launch's worst quarter second. Lower is better.", false],
+  "Slow frames from the mod, per hour": ["Frames where the mod alone took over 30 ms: a stutter you can see. Lower is better; 0 is the goal.", false],
+  "Searches per minute": ["How many simulations ran. More isn't worse in itself: it follows how much you hovered and played.", true],
+  "Typical search time (ms)": ["Half the searches were faster than this. Lower is better.", false],
+  "Slow search time (95th percentile, ms)": ["One search in twenty was slower than this. Lower is better; under 8 ms fits in a frame.", false],
+  "Slowest search (ms)": ["The single slowest. Lower is better, but it depends on the fights you played.", false],
+  "Speed of a busy search (states copied per ms)": ["How fast the simulator works on searches over 1 ms: states copied per millisecond. Higher is better; a drop means each copy got more expensive.", true],
+  "Searches stopped at a cap": ["Searches too big to finish (their numbers showed ?). Lower is better.", false],
+  "Share of searches cancelled": ["Searches thrown away because the board changed before they finished. Lower is better (less wasted work).", false],
+  "Time for a board to settle (95th percentile, ms)": ["When a board isn't worked out within its frame, how long until every tab is final. Lower is better.", false],
+  "Share of checks that matched": ["Predictions checked against what happened that matched. Higher is better; 100% is the goal.", true],
+  "Checks skipped": ["Checks that couldn't be made (each a gap). Lower is better.", false],
+  "Full memory clean-ups per hour": ["Full garbage collections, which can pause the game (the whole process). Lower is better.", false],
+  "Most memory in use (MB)": ["The most memory the game used (the whole process). Lower is better.", false],
+};
 $("cmpGo").addEventListener("click", async () => {
   $("cmpOut").innerHTML = '<div class="empty">Reading…</div>';
   try {
     const [a, b] = await Promise.all([summarizeFile($("cmpA").value), summarizeFile($("cmpB").value)]);
-    const lowerBetter = (k) => !/matched|per minute|Copies per ms|Length|version/.test(k);
     $("cmpOut").innerHTML = `<table><tr><th></th><th class="n">${esc($("cmpA").value)}</th><th class="n">${esc($("cmpB").value)}</th><th class="n">first against second</th></tr>` +
       Object.keys(a).map((k) => {
         const x = a[k], y = b[k], num = typeof x === "number" && typeof y === "number";
-        const share = /share|matched/i.test(k);
+        const [help, higherBetter] = CMP_HELP[k] ?? ["", undefined];
+        const share = /^Share/.test(k);
         const show = (v) => (typeof v !== "number" ? esc(v) : share ? `${(v * 100).toFixed(1)}%` : fmt(v, 2));
         let ch = "";
-        if (num && y) { const d = (x - y) / Math.abs(y); const better = lowerBetter(k) ? d < 0 : d > 0; ch = Math.abs(d) < 0.05 ? '<span class="dim">≈</span>' : `<span class="${better ? "good" : "bad"}">${d > 0 ? "+" : ""}${(d * 100).toFixed(0)}%</span>`; }
-        return `<tr><td>${esc(k)}</td><td class="n">${show(x)}</td><td class="n">${show(y)}</td><td class="n">${ch}</td></tr>`;
+        if (num && y && higherBetter !== undefined) { const d = (x - y) / Math.abs(y); const better = higherBetter ? d > 0 : d < 0; ch = Math.abs(d) < 0.05 ? '<span class="dim">about the same</span>' : `<span class="${better ? "good" : "bad"}">${d > 0 ? "+" : ""}${(d * 100).toFixed(0)}% ${better ? "better" : "worse"}</span>`; }
+        return `<tr><td>${esc(k)}${help ? ` <span class="info" data-tip="${esc(help)}">i</span>` : ""}</td><td class="n">${show(x)}</td><td class="n">${show(y)}</td><td class="n">${ch}</td></tr>`;
       }).join("") + `</table>`;
   } catch (e) { $("cmpOut").innerHTML = `<div class="bad">${esc(e.message)}</div>`; }
 });
