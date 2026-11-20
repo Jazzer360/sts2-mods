@@ -31,7 +31,8 @@ public sealed class DevSinkTests : IDisposable
         {
             sink.SetState("{\"v\":2}");
             sink.Flush();
-            Assert.Equal("{\"v\":1}", File.ReadAllText(path));
+            // Windows won't replace a file another handle has open (the game's platform); Linux (GitHub's runners) does at once.
+            if (OperatingSystem.IsWindows()) Assert.Equal("{\"v\":1}", File.ReadAllText(path));
         }
         sink.Flush();
         Assert.Equal("{\"v\":2}", File.ReadAllText(path));
