@@ -881,6 +881,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var flashed = w.Flashes.Select(x => x.Model).ToList();
             var issues = Compare(w, me, entries, flashed, out var model);
             ShuffleIssues(w, me, entries, flashed, issues, model);
+            DrawnIssues(w, me, entries, issues, model);
             // The before/after snapshot checks: they see everything between the play's start and its end.
             var snapshot = new List<string>();
             AfterPlayIssues(w, entries, snapshot, model);
@@ -1519,6 +1520,54 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (UnpredictedAutoPlay(w, entries, me)) { model.Add(NotChecked(tabbed ? "didn't fire" : "no tab", "random auto-plays", name)); continue; }
             issues.Add(tabbed ? $"didn't fire: {name} (crossed: {what})" : $"no tab: {name} gave up its bonus ({what})");
         }
+    }
+
+    /// <summary>The drawn-card chances shown and what happened, over the session (decision #119): a report once if they drift apart.</summary>
+    private static readonly OddsTally DrawnOdds = new();
+    private static bool _drawnDriftReported;
+
+    /// <summary>
+    /// A card that acts on what it draws (decision #119): what its draw gave (Escape Plan: a Skill or not; Pillage: the Attacks it
+    /// drew; Scrape: the cards it drew that cost 0), read from the play's draws, must be an outcome its simulation had; the chance its
+    /// tab showed is logged with what happened ([audit] [odds]) and added up over the session, as the death chances are.
+    /// </summary>
+    private static void DrawnIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<string> issues, List<string> model)
+    {
+        var name = w.Card.GetType().Name;
+        if (!SimAdapter.DrawnCardReaders.TryGetValue(name, out var reader) || w.Facts?.Drawn is not { } d) return;
+        if (w.FightEnded) { model.Add(NotChecked("drawn", FightEndedSkip, name)); return; }
+        if (UnpredictedAutoPlay(w, entries, me)) { model.Add(NotChecked("drawn", "random auto-plays", name)); return; }
+        if (w.Facts.SimIncomplete || w.Facts.Unmodelled.Count > 0) { model.Add(NotChecked("drawn", "its simulation stopped at a cap or met something not modelled", name)); return; }
+        var drawn = entries.OfType<CardDrawnEntry>().Where(e => !e.FromHandDraw && e.Card.Owner == me).Select(e => e.Card).ToList();
+        static bool Free(CardModel c)
+        {
+            try { return !c.EnergyCost.CostsX && c.EnergyCost.GetWithModifiers(CostModifiers.All) == 0; } catch { return false; }
+        }
+        var actual = reader.What == SimAdapter.DrawnCardReader.Reads.Cost ? drawn.Count(Free)
+            : reader.Counts ? drawn.Count(c => c.Type == CardType.Attack)
+            : drawn.Count > 0 && drawn[0].Type == CardType.Skill ? 1 : 0;
+        if (!d.TryGetValue(actual, out var share) || share <= 0)
+        {
+            issues.Add($"drawn: {name} gave {actual}, which its simulation had no chance of ({string.Join(", ", d.Select(kv => $"{kv.Key}: {kv.Value:0.###}"))})");
+            return;
+        }
+        // The chance shown, and whether it happened.
+        double p;
+        bool happened;
+        if (reader.Counts)
+        {
+            var (n, chance) = DrawnChance.MostLikely(d);
+            (p, happened) = (chance, actual == n);
+        }
+        else (p, happened) = (DrawnChance.ChanceOfAny(d), actual > 0);
+        if (p <= 0 || p >= 1) return; // certain either way: the check above holds it
+        ModEntry.Log.Info($"[audit] [odds] {name}: predicted {new SimChance(p, p, true).Text()}, {(happened ? "happened" : "didn't")} (gave {actual})");
+        DrawnOdds.Add(new SimChance(p, p, true), happened);
+        if (!DrawnOdds.Drifted || _drawnDriftReported) return;
+        _drawnDriftReported = true;
+        Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("odds", $"Drawn-card odds: what happened is far from the chances shown ({DrawnOdds.Text()})",
+            new[] { "drawn-odds" }, $"Over this session, the chances on Escape Plan, Pillage and Scrape tabs don't match what their draws gave: {DrawnOdds.Text()}. " +
+            "Each is logged as [audit] [odds] in the game log.", new Dictionary<string, string>(), new Dictionary<string, string> { ["check"] = "odds" });
     }
 
     private static bool UnpredictedAutoPlay(Window w, List<CombatHistoryEntry> entries, Player me)

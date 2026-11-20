@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.22.0
+#### Added
+- Draw chance tab: Escape Plan shows the chance it draws a Skill (and gains its block); Pillage shows the most likely number of Attacks it draws, and Scrape the most likely number of cards it draws that cost 0, each with its chance. Worked out from your draw pile's contents, never its order. Its own switch in Card tabs, on by default.
+
 ### Spire QoL 1.21.12
 #### Fixed
 - Escape Plan's block counts only when the card it draws is a Skill, with each outcome's chance (it was counted as certain); Pillage keeps drawing while it draws Attacks; Scrape's discards leave your hand, so a Burn it discards no longer counts at the end of your turn.

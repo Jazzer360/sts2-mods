@@ -52,6 +52,10 @@ public static partial class SimEngine
         {
             var drawn = x.DrawRecord!;
             x.DrawRecord = null;
+            // What its chance tab counts (decision #119).
+            x.DrawnTally = da.Block != null ? (drawn.Count > 0 && drawn[0].Card.Type == da.BlockIf ? 1 : 0)
+                : da.DrawAgainIf != SimCardType.None ? drawn.Count(d => d.Card.Type == da.DrawAgainIf)
+                : drawn.Count(d => d.Card.Free == true);
             // Escape Plan: the card it drew (none into a full hand or from empty piles: no block).
             if (da.Block != null && drawn.Count > 0 && drawn[0].Card.Type == da.BlockIf) return BlockOnce(x, da.Block);
             if (!da.DiscardUnlessFree) return new[] { x };

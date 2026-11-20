@@ -442,22 +442,35 @@ public sealed class CardOverlayRenderer
                 }
                 else if ((spec.Number?.ToString() ?? spec.NumberText) is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic)
                 {
-                    // Upright like the icon, centered on the icon's lower-right corner as the game
-                    // places power amounts. In the tab's unrotated coordinates, screen-down is +x
-                    // and screen-right is -y.
                     RestoreLabel(label);
-                    label.Text = n;
-                    label.HorizontalAlignment = HorizontalAlignment.Center;
-                    label.VerticalAlignment = VerticalAlignment.Center;
-                    label.PivotOffset = label.Size / 2f;
-                    label.Rotation = -Mathf.Pi / 2f;
-                    var half = ic.Size * IconScale / 2f;
-                    var iconCenter = ic.Position + ic.Size / 2f;
-                    var corner = iconCenter + new Vector2(half.Y * 0.8f, -half.X * 0.8f);
-                    label.Position = corner - label.Size / 2f;
+                    InCorner(label, n, ic);
                 }
             }
+            // A text tab with a number too (a drawn-card chance tab: "33%" in the middle, how many in the corner: decision #119):
+            // the number on a second label made with the tab, in the game's number style.
+            if (tab.GetNodeOrNull<Label>("SpireQoL_Corner") is { } second)
+            {
+                second.Visible = spec.Text != null && spec.NumberText != null;
+                if (second.Visible && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic2) InCorner(second, spec.NumberText!, ic2);
+            }
         }
+    }
+
+    /// <summary>
+    /// A number upright like the icon, centered on the icon's lower-right corner as the game places power amounts. In the tab's
+    /// unrotated coordinates, screen-down is +x and screen-right is -y.
+    /// </summary>
+    private static void InCorner(Label label, string text, TextureRect icon)
+    {
+        label.Text = text;
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.VerticalAlignment = VerticalAlignment.Center;
+        label.PivotOffset = label.Size / 2f;
+        label.Rotation = -Mathf.Pi / 2f;
+        var half = icon.Size * IconScale / 2f;
+        var iconCenter = icon.Position + icon.Size / 2f;
+        var corner = iconCenter + new Vector2(half.Y * 0.8f, -half.X * 0.8f);
+        label.Position = corner - label.Size / 2f;
     }
 
     private static readonly Dictionary<ulong, (string Name, TinyCardIcon Icon)> TinyCards = new();
@@ -538,6 +551,14 @@ public sealed class CardOverlayRenderer
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
                 Visible = false,
             });
+        }
+        // The corner number of a text tab that has one (decision #119), copied from the game's label before anything changes it.
+        if (tab.GetNodeOrNull<Label>("Label") is { } number)
+        {
+            var second = (Label)number.Duplicate();
+            second.Name = "SpireQoL_Corner";
+            second.Visible = false;
+            tab.AddChild(second);
         }
         overlay.AddChild(tab);
         return tab;

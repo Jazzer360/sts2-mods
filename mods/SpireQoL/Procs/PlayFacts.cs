@@ -72,6 +72,12 @@ public sealed class PlayFacts
     /// </summary>
     public int DrawsAtMost { get; init; }
 
+    /// <summary>
+    /// A card that acts on what it draws (decision #119): each tally its draw can give (SimState.DrawnTally) and its share of the
+    /// outcomes, from the simulation its chance tab came from; null otherwise. The play check holds what happened to it.
+    /// </summary>
+    public SortedDictionary<int, double>? Drawn { get; set; }
+
     private PlayChain.DrawInputs? _drawInputs;
 
     /// <summary>

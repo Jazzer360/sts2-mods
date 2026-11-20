@@ -763,6 +763,11 @@ public sealed partial class SettingsMenu
                 case "sly": tex = Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.MasterPlannerPower>(); break;
                 case "shuffle": tex = Cards.GameIcons.DiscardPile(); break;
                 case "lethal": tex = Cards.GameIcons.Skull(); break;
+                case "drawn":
+                    var dl = Label("40%", 18, Text);
+                    dl.CustomMinimumSize = new Vector2(IconSize, IconSize);
+                    dl.HorizontalAlignment = HorizontalAlignment.Center;
+                    return dl;
                 case "replay":
                     var l = Label("2×", 22, Text);
                     l.CustomMinimumSize = new Vector2(IconSize, IconSize);

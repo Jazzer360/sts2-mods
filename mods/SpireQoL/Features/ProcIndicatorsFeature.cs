@@ -529,6 +529,27 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// before it acts than ending the turn now does: decision #87), in <paramref name="lethalAimed"/> whether only some aims are,
     /// and in <paramref name="lethalChance"/> the chance ("40%", "40–55%" while exploring; null when certain).
     /// </summary>
+    /// <summary>
+    /// The chance tab of a card that acts on what it draws (decision #119): the chance in the middle ("40%", with a ? when its search
+    /// stopped at a cap or met something not modelled), and for Pillage and Scrape the most likely number in the corner (Attacks drawn,
+    /// cards drawn that cost 0; a tie goes to the higher). From the first aim's outcomes: what a draw gives doesn't depend on the aim.
+    /// </summary>
+    private static void DrawnTab(PlayFacts f, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs)
+    {
+        if (outcomes.Length == 0 || !SimAdapter.DrawnCardReaders.TryGetValue(f.Card.GetType().Name, out var reader)) return;
+        if (DrawnChance.Distribution(outcomes[0]) is not { } d) return;
+        f.Drawn = d;
+        var unsure = outcomes[0].Truncated || outcomes[0].AnyUnmodelled;
+        string Pct(double p) => new SimChance(p, p, p > 0).Text() + (unsure ? "?" : "");
+        if (!reader.Counts)
+        {
+            tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(DrawnChance.ChanceOfAny(d)));
+            return;
+        }
+        var (n, chance) = DrawnChance.MostLikely(d);
+        tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(chance), NumberText: n.ToString());
+    }
+
     private bool FinishSim(PlayFacts f, List<AbstractModel> sources, SimBatch task, Dictionary<string, TabSpec> tabs, out bool lethalAimed,
         out string? lethalChance)
     {
@@ -550,6 +571,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         f.SimIncomplete = outcomes.Any(o => o.Truncated);
         f.Unmodelled = outcomes.SelectMany(o => o.UnmodelledReasons).Distinct().ToList();
         if (!_noCache) Diagnostics.DamageFormulaAudit.Check(f.Card, f, te.Ids, outcomes);
+        DrawnTab(f, outcomes, tabs);
 
         // ---- the play log: each source whose model fired during the play
         foreach (var src in sources)

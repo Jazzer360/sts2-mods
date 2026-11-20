@@ -101,6 +101,14 @@ public sealed partial class SettingsMenu
             + "Something else that doubles a play shows its own icon instead "
             + "(Echo Form, Burst, Duplication...).",
             Tab("replay", null, text: "2×"));
+        GuideCardCell(flow, Card<EscapePlan>(), "Text: a chance",
+            "The chance the card's effect happens, when it depends on what it draws: here Escape Plan draws a Skill (and gains its block) "
+            + "in 40% of the cards your draw pile could give. From the pile's contents, never its order.",
+            Tab("drawn", null, text: "40%"));
+        GuideCardCell(flow, Card<Pillage>(), "Text: a chance, and how many",
+            "The most likely number in the corner, its chance in the middle: here Pillage most likely draws 1 Attack (33%) before it stops. "
+            + "Scrape shows how many of the cards it draws cost 0 (the ones it keeps). A tie goes to the higher number.",
+            Tab("drawn", null, text: "33%", numberText: "1"));
         GuideCardCell(flow, Card<Patter>(), "A card: it comes back",
             "Playing this brings that card back to your hand: here Patter is your third Skill this turn, so Make It So comes back from your discard pile. "
             + "Also Right Hand Hand and Whistling Arrows.",

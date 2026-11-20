@@ -447,12 +447,16 @@ public static partial class SimAdapter
     internal static readonly IReadOnlyDictionary<string, DrawnCardReader> DrawnCardReaders = new Dictionary<string, DrawnCardReader>
     {
         ["EscapePlan"] = new(DrawnCardReader.Reads.Type, "its block only when the card it draws is a Skill"),
-        ["Pillage"] = new(DrawnCardReader.Reads.Type, "draws again while the card it draws is an Attack and your hand has room", DrawsAgain: true),
-        ["Scrape"] = new(DrawnCardReader.Reads.Cost, "discards the cards it draws unless they cost 0 (an X cost counts as not 0)"),
+        ["Pillage"] = new(DrawnCardReader.Reads.Type, "draws again while the card it draws is an Attack and your hand has room", DrawsAgain: true, Counts: true),
+        ["Scrape"] = new(DrawnCardReader.Reads.Cost, "discards the cards it draws unless they cost 0 (an X cost counts as not 0)", Counts: true),
     };
 
-    /// <summary>What a card reads about the cards it draws (DrawnCardReaders). DrawsAgain: how many it draws depends on them.</summary>
-    internal sealed record DrawnCardReader(DrawnCardReader.Reads What, string Note, bool DrawsAgain = false)
+    /// <summary>
+    /// What a card reads about the cards it draws (DrawnCardReaders). DrawsAgain: how many it draws depends on them. Counts: its chance
+    /// tab shows the most likely number (Attacks drawn, cards drawn that cost 0) with its chance, not just the chance its effect happens
+    /// (decision #119).
+    /// </summary>
+    internal sealed record DrawnCardReader(DrawnCardReader.Reads What, string Note, bool DrawsAgain = false, bool Counts = false)
     {
         internal enum Reads { Type, Cost }
     }

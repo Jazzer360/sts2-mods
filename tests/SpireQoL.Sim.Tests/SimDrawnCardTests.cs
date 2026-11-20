@@ -85,4 +85,54 @@ public class SimDrawnCardTests
         Assert.Contains(o.Branches, b => b.Unmodelled != null);
         Assert.Contains(o.Branches, b => b.Unmodelled == null);
     }
+
+    // ---- the chance tab (decision #119)
+
+    [Fact]
+    public void EscapePlansTabIsTheChanceItDrawsASkill()
+    {
+        var o = SimEngine.Run(You(Pile((Skill, 1), (Attack, 3))), Playing("EscapePlan", EscapePlan));
+        var d = DrawnChance.Distribution(o)!;
+        Assert.Equal(0.25, DrawnChance.ChanceOfAny(d), 9);
+    }
+
+    [Fact]
+    public void PillagesTabIsTheMostLikelyNumberOfAttacks()
+    {
+        // Two Attacks and two Skills: 0 Attacks 1/2, 1 Attack 1/3, 2 Attacks 1/6.
+        var o = SimEngine.Run(You(Pile((Attack, 2), (Skill, 2))), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
+        var d = DrawnChance.Distribution(o)!;
+        Assert.Equal(0.5, d[0], 9);
+        Assert.Equal(1.0 / 3, d[1], 9);
+        Assert.Equal(1.0 / 6, d[2], 9);
+        Assert.Equal((0, 0.5), (DrawnChance.MostLikely(d).Tally, Math.Round(DrawnChance.MostLikely(d).Chance, 9)));
+    }
+
+    [Fact]
+    public void ScrapesTabCountsTheCardsThatCostZeroAndATieGoesHigher()
+    {
+        // Draws 1 from one free card and one that isn't: 0 or 1 free, half each: the tie goes to 1.
+        var o = SimEngine.Run(You(Pile((FreeCard, 1), (Burn, 1))), Playing("Scrape", new DrawnCardAction(1) { DiscardUnlessFree = true }));
+        var (n, chance) = DrawnChance.MostLikely(DrawnChance.Distribution(o)!);
+        Assert.Equal(1, n);
+        Assert.Equal(0.5, chance, 9);
+    }
+
+    [Fact]
+    public void APlayWithoutSuchADrawHasNoTab()
+    {
+        var o = SimEngine.Run(You(Pile((Skill, 2))), new SimPlay { Name = "Strike", HandCard = 7, HandDelta = -1 });
+        Assert.Null(DrawnChance.Distribution(o));
+    }
+
+    [Fact]
+    public void TheOddsTallyFlagsChancesFarFromWhatHappened()
+    {
+        var fair = new OddsTally();
+        for (var i = 0; i < 100; i++) fair.Add(new SimChance(0.5, 0.5, true), i % 2 == 0);
+        Assert.False(fair.Drifted);
+        var off = new OddsTally();
+        for (var i = 0; i < 100; i++) off.Add(new SimChance(0.1, 0.1, true), true);
+        Assert.True(off.Drifted);
+    }
 }
