@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.21.9
+#### Changed
+- About page: the philosophy adds "What's shown is what happens" (the exact outcome or chance, or a ? where something isn't modelled), and the feature list names Intent Details and Exploration Progress.
+
 ### Spire QoL 1.21.8
 #### Fixed
 - Incoming Damage's end-of-turn block now lists an orb evoked at the end of your turn (Consuming Shadow evoking Frost: its block was counted but not listed), and the forecast check no longer reports that block as missing.

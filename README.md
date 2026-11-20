@@ -1,6 +1,6 @@
 # sts2-mods
 
-Slay the Spire 2 mods. **Spire QoL** is display-only: it shows information the game already has, without changing gameplay. It only shows what you could work out yourself with perfect memory and full knowledge of the rules: it never peeks at the RNG, the draw pile's order or enemies' upcoming moves.
+Slay the Spire 2 mods. **Spire QoL** is display-only: it shows information the game already has, without changing gameplay. It only shows what you could work out yourself with perfect memory and full knowledge of the rules: it never peeks at the RNG, the draw pile's order or a random roll before the game shows it.
 
 ## Installing
 
@@ -46,7 +46,7 @@ A development monorepo: every mod shares one build setup and a small `core` libr
 | Mod | Folder | What it does | Status |
 | --- | --- | --- | --- |
 | **Main Saves** | [`mods/MainSaves`](mods/MainSaves) | Keeps using your normal profiles while mods are installed (the game otherwise switches to separate modded profiles). | [Releases](https://github.com/Jazzer360/sts2-mods/releases) |
-| **Spire QoL** | [`mods/SpireQoL`](mods/SpireQoL) | Display-only QoL: on-card indicators for card modifiers, relic and power counters, relic reminders, incoming damage, shuffle warning. Each feature can be toggled, and indicators can be placed anywhere. | [Latest release](https://github.com/Jazzer360/sts2-mods/releases/latest) |
+| **Spire QoL** | [`mods/SpireQoL`](mods/SpireQoL) | Display-only QoL: tabs on cards for what playing them sets off, relic and power counters, incoming damage and enemy deaths at end of turn, enemy intent details and forecasts, reminders outside fights (events, rewards, shops, the map, resting). Each feature can be toggled, and indicators can be placed anywhere. | [Latest release](https://github.com/Jazzer360/sts2-mods/releases/latest) |
 
 **Docs:** [Feature reference](docs/FEATURES.md) (everything the mods change) · [Tracker](docs/TRACKER.md) (work list) · [Changelog](CHANGELOG.md) (patch notes) · [Roadmap](docs/ROADMAP.md)
 

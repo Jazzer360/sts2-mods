@@ -7,13 +7,13 @@ The full design lives in the "StS2 Mod Suite — Design Notes" doc (https://clau
 
 ## Goals
 
-What Spire QoL is for, in order. Everything else serves these.
+What Spire QoL is for. Everything else serves these, and all of them serve **the contract** (decision #92): what the mod shows for each decision you could make right now is exactly what happens, the exact chance of each outcome when a roll decides it, or a `?` where something isn't modelled. Never a certainty the game doesn't keep. Accuracy comes first; speed serves it.
 
 1. **Every card that does something beyond its listed effects gets a tab**, plus a few hand-picked cases (Retain, Sly, replays, Ethereal fading). Good or bad, from a power or a relic, yours or an enemy's: if playing a card sets anything off, the card says so.
 2. **Every relic that affects a fight is tracked**: by a tab on the cards it reacts to, a tracker row for its count or timer, or (for always-on relics with nothing to decide) an explicit entry saying so.
 3. **Reminders for decisions outside combat**: wherever a relic changes what a choice does (resting, event options, card rewards, shops), an indicator on that choice, as Relic Reminders did in StS1 (Regal Pillow on resting, Omamori on events that add a curse). Bing Bong copying cards added to your deck is the first example.
 4. **Only knowable information** (CLAUDE.md, hard rule): what a player with perfect memory and full knowledge of the rules could know, never the RNG or hidden state.
-5. **Everything that happens is accounted for.** Every effect in a fight is either predicted (a tab, a tracker row, the simulator) or reported when it happens (audits, coverage check), so gaps surface from players' games instead of hiding. Defaults are tuned afterwards: what shows on cards by default is a settings question, not a coverage one.
+5. **Everything that happens is accounted for.** Every effect in a fight is either predicted (a tab, a tracker row, the simulator) or reported when it happens (audits, coverage check), so gaps surface from players' games instead of hiding. Every prediction is paired with its outcome by an audit; a skipped check, or a branch the simulator doesn't model, is a counted gap to close, not a pass (decision #92). Defaults are tuned afterwards: what shows on cards by default is a settings question, not a coverage one.
 6. **Multiplayer is the whole team, evaluated in order** (decision #75). Plays resolve one after another, and every player's powers, relics, orbs and Osty are evaluated together, deterministically: what your card sets off for a teammate (block into their Juggernaut) counts toward its predictions like what it does for you.
 
 **What the simulator is for** (the owner's requirements): it checks the mod's understanding of the game's rules against what the game does, and it tells the mod what a card play leads to, so tabs show exactly when they should. How it's built is secondary to two things: it's written around the game's rules (the code a card runs, the hooks a relic overrides), not the words on each card, and it's ready for game updates (every per-card list has a scan that flags a new card doing the same thing).
@@ -33,6 +33,8 @@ What Spire QoL is for, in order. Everything else serves these.
 | Relic Counters | built | the tracker beside your HP bar: counters, countdowns, Make It So |
 | Incoming Damage | built | the end-of-turn sum, lethal and revives, teammates' on hover |
 | Death Skull | built | an enemy that dies before acting if you end your turn now, with its chance |
+| Intent Details | built (1.20.0) | the block and powers of the move on screen that its intent doesn't show (decisions #98, #99) |
+| Exploration Progress | built (1.18.0) | a clock and bar under End Turn while a prediction is still searching (decision #89) |
 | Shuffle Warning | built | plays whose draws reshuffle your discard pile |
 | Potion Tabs | built | relics that drinking a potion sets off |
 | Run Reminders | built | relic icons on events, card rewards, shops and the map; tabs on offered cards; card odds and the Inspect screen |
@@ -47,7 +49,8 @@ What Spire QoL is for, in order. Everything else serves these.
 3. ~~Out-of-combat reminders~~ (Run Reminders, 0.36.0 onward; Rest Preview; pathing).
 4. **Multiplayer as one team** (decision #75): cards that act on every player or on a teammate, and everything they set off for the team.
 5. ~~Intent Forecast~~ (decision #72, 1.12.0).
-6. The advisory mods.
+6. ~~Development tooling~~: the event stream, session metrics, dev mode and the dev dashboard (decision #108, 1.21.x).
+7. The advisory mods.
 
 ## Shared-infra principles
 

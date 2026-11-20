@@ -15,6 +15,8 @@ Display-only quality-of-life tweaks for Slay the Spire 2. The mod doesn't change
 | Rest Preview | At a rest site, the HP you'll have after resting and the heal wasted |
 | Update Notice | On the main menu, how many versions behind you are, and the settings gear |
 | Intent Forecast | Hover an enemy's intent: its next moves, stacked above it, where its rules decide them, and each move's chance when a roll does |
+| Intent Details | On each enemy's intent: the block its move gains and the powers it applies |
+| Exploration Progress | A small bar under End Turn, rarely: predictions still working through every outcome |
 
 The settings menu's Guide page shows how to read every tab and counter. See [docs/FEATURES.md](../../docs/FEATURES.md) for the full description of each feature, [docs/TRACKER.md](../../docs/TRACKER.md) for progress, and [CHANGELOG.md](../../CHANGELOG.md) for patch notes.
 
@@ -24,6 +26,7 @@ The settings menu's Guide page shows how to read every tab and counter. See [doc
 - **Only what you could know.** Everything shown is something a player with perfect memory and a complete understanding of the rules could work out from the screen. It never reads the seed or a random roll, or the draw pile's order. Wherever a roll decides something (a random target, an enemy's random next move), you see the range, the odds or the worst case, never the result.
 - **Plain or crossed.** A plain tab on a card means playing it does something extra right now. A red slash means it might be bad for you: a warning, not a verdict.
 - **Yours to arrange.** Every feature, tab and tracker row can be switched off, and every panel can be moved.
+- **What's shown is what happens.** A number or tab is exactly what follows from that play or from ending your turn, or the exact chance when a roll decides it; where the mod doesn't model something, it shows `?` rather than a guess.
 - **Checked against the game.** Predictions are compared with what the game actually did; with error reports on, mismatches are sent so they can be fixed.
 
 ## How it's built

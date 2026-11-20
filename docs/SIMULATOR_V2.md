@@ -92,7 +92,7 @@ are stateless code; their numbers live in the state (`Powers`, relic counters), 
 ### The interpreter (`Sim/SimEngine.cs`)
 A script's actions run in order on the branch set; each action is a step (or a few), and a hook that may branch (a random
 target) returns its branches, chained with the existing merging step (`SimEngine.Then`), so identical branches merge after
-every step and the copy budget, truncation and the safe run (decisions #29, #31) work as before. Hooks that run inside
+every step (decision #107: one merged search, bounded by its memory and work caps). Hooks that run inside
 damage (BeforeDamageReceived, the HP-loss pipeline, AfterDamageGiven, AfterDamageReceived, AfterBlockBroken) are
 deterministic and run synchronously inside `SimEngine.Damage`, so every source of damage (hits, procs, orbs, end of turn)
 gets them. (The first draft had an explicit per-branch work stack; composing over branch sets did the same with no new

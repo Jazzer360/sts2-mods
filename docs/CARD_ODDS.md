@@ -60,8 +60,8 @@ Readers are per game call, not per event: one for `CardCreationOptions.ForNonCom
 ### 4. What you see
 
 - **Event options:** a relic's icon only when some outcome can match (the Fresnel Lens bug goes away: a curse never matches). Under the icon, the chance as a small number (`43%`), left out at 100%. A crossed icon keeps its meaning (Bing Bong on a curse). `Unknown` keeps the plain icon, no number.
-- **Card reward screen and shops:** a plain tab on each offered card a **Boosts** relic affects, with the relic's icon (decision needed: tabs so far answer "does playing this do something now"; this is "this relic changes this card", in the same visual language). **Modifies** relics get no tab: the game already shows the upgrade or enchantment on the card.
-- **Card reward panel:** unchanged.
+- **Card reward screen and shops:** a plain tab on each offered card a **Boosts** relic affects, with the relic's icon (decided in #62: "this relic makes this card stronger", in the same visual language). **Modifies** relics get no tab: the game already shows the upgrade or enchantment on the card.
+- **Card reward panel:** unchanged here; later replaced by tabs on the offered cards (decision #82).
 - **Guide page:** an event option with a percentage, and a reward card with a Strike Dummy tab.
 
 ### 5. Checks
