@@ -1370,7 +1370,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private static void PowerChangeIssues(Window window, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, ModelLines model)
     {
-        if (window.PowersBefore == null || window.PowersAfter == null) return;
+        if (window.PowersBefore == null || window.PowersAfter == null)
+        {
+            model.Skip("unexplained powers", window.AfterSkipped ?? "the powers before or after the play weren't captured");
+            return;
+        }
         // The card's own powers, and those of cards it auto-played.
         var own = OwnPowerTypes(window.Card).Select(type => type.Name).ToHashSet();
         foreach (var cardPlayStartedEntry in entries.OfType<CardPlayStartedEntry>().Where(entry => entry.CardPlay.IsAutoPlay))
@@ -1456,7 +1460,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static void GivenUpIssues(Window window, Player me, List<CombatHistoryEntry> entries, Dictionary<string, TabSpec> sourceOf,
         List<string> issues, ModelLines model)
     {
-        if (window.FullBefore == null || window.FullAfter == null) return;
+        if (window.FullBefore == null || window.FullAfter == null)
+        {
+            model.Skip("given up", window.AfterSkipped ?? "your relics before or after the play weren't captured");
+            return;
+        }
         foreach (var (relic, (_, statusBefore)) in window.FullBefore.Relics)
         {
             var name = relic.GetType().Name;
@@ -1507,7 +1515,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static void DrawnIssues(Window window, Player me, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
         var name = window.Card.GetType().Name;
-        if (!SimAdapter.DrawnCardReaders.TryGetValue(name, out var reader) || window.Facts?.Drawn is not { } distribution) return;
+        if (!SimAdapter.DrawnCardReaders.TryGetValue(name, out var reader)) return; // a card that doesn't act on what it draws
+        if (window.Facts?.Drawn is not { } distribution)
+        {
+            model.Skip("drawn", "no chances worked out for what it draws (its simulation didn't finish)", name);
+            return;
+        }
         if (window.FightEnded) { model.Skip("drawn", FightEndedSkip, name); return; }
         if (UnpredictedAutoPlay(window, entries, me)) { model.Skip("drawn", "random auto-plays", name); return; }
         if (window.Facts.SimIncomplete || window.Facts.Unmodelled.Count > 0) { model.Skip("drawn", "its simulation stopped at a cap or met something not modelled", name); return; }
@@ -1701,14 +1714,22 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         var sim = window.Facts?.Sim;
         var deaths = window.Facts?.DeathByAim;
-        if (sim == null || deaths == null) return;
+        if (sim == null || deaths == null)
+        {
+            model.Skip("lethal", sim == null ? "no simulation for this card" : "no death chances for this play (its simulations didn't finish)");
+            return;
+        }
         if (entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)
                 && !HellraiserDrew(window, entries, window.Card.Owner, cardPlayStartedEntry.CardPlay.Card)))
         {
             model.Skip("lethal", "auto-played cards");
             return;
         }
-        if (sim.AimFor(window.Target) is not { } lethalAim || !deaths.TryGetValue(lethalAim, out var card)) return;
+        if (sim.AimFor(window.Target) is not { } lethalAim || !deaths.TryGetValue(lethalAim, out var card))
+        {
+            model.Skip("lethal", "no death chances for the target it was played at");
+            return;
+        }
         if (window.FightEnded)
         {
             FightEndLethalIssues(window, sim, card, issues, model);
