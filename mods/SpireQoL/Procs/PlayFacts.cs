@@ -57,6 +57,15 @@ public sealed class PlayFacts
     /// <summary>Cards it discards (Prepared, Survivor, Storm of Steel...).</summary>
     public int Discards { get; init; }
 
+    /// <summary>Cards of yours, other than this one, its play takes out of your hand: what it discards and exhausts from there (LeavingHand).</summary>
+    public int LeavesHand { get; init; }
+
+    /// <summary>It takes your whole hand (Fiend Fire, Storm of Steel, Calculated Gamble...): everything in it goes, whatever it was.</summary>
+    public bool TakesWholeHand { get; init; }
+
+    /// <summary>It discards from your hand while a Sly card is there (CardModel.IsSlyThisTurn): one it discards plays itself (CardCmd.Discard).</summary>
+    public bool MayDiscardSly { get; init; }
+
     /// <summary>
     /// Cards the play draws: its own draws plus the draws it sets off (ChainedDraws), limited by the
     /// room in your hand (draws stop at a full hand), and 0 while No Draw or Fiddle blocks draws.
@@ -351,6 +360,9 @@ public sealed class PlayFacts
             ExhaustsSelf = ExhaustsSelf,
             ExhaustsOthers = ExhaustsOthers + next.TotalExhausts,
             Discards = Discards + next.Discards,
+            LeavesHand = LeavesHand + next.LeavesHand,
+            TakesWholeHand = TakesWholeHand,
+            MayDiscardSly = MayDiscardSly || next.MayDiscardSly,
             OwnDraws = OwnDraws + next.OwnDraws,
             DrawsAtMost = DrawsAtMost + next.DrawsAtMost,
             EnchantmentDraws = EnchantmentDraws + next.EnchantmentDraws,
@@ -427,6 +439,9 @@ public sealed class PlayFacts
             ExhaustsOthers = ExhaustOthers(card, name, others, drawPile, plays),
             // Ki Chant looks at your draw pile, so each play discards its share; the others depend on the hand.
             Discards = DiscardCount(card, name, others, draws) * (name == "KiChant" ? Math.Max(1, plays) : 1),
+            LeavesHand = LeavingHand(card, name, others, drawPile, draws, plays),
+            TakesWholeHand = WholeHandCards.Contains(name),
+            MayDiscardSly = name is not ("KiChant" or nameof(Scrape)) && DiscardCount(card, name, others, draws) > 0 && others.Any(other => other.IsSlyThisTurn),
             OwnDraws = draws + swiftDraws,
             DrawsAtMost = SpireQoL.Sim.SimAdapter.DrawnCardReaders.GetValueOrDefault(name) is { DrawsAgain: true }
                 ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,
@@ -482,6 +497,10 @@ public sealed class PlayFacts
 
     /// <summary>Cards that draw, then discard (Acrobatics: the hand limit counts the hand before the discard).</summary>
     internal static readonly HashSet<string> DrawThenDiscardCards = new() { nameof(Acrobatics), nameof(DaggerThrow), nameof(Prepared), nameof(Scrape) };
+
+    /// <summary>Cards that exhaust others from your hand and draw: which comes first (the room the draws have), from each OnPlay.</summary>
+    internal static readonly HashSet<string> ExhaustThenDrawCards = new() { nameof(BurningPact), "TheHermit" };
+    internal static readonly HashSet<string> DrawThenExhaustCards = new();
 
     /// <summary>
     /// Total draws (own + chained), the hand limit, draw blockers, and whether they shuffle: the
@@ -932,6 +951,31 @@ public sealed class PlayFacts
         ["Florescence"] = "only Shoot cards",
         [nameof(FlakCannon)] = "only status cards",
         ["TheHermit"] = "only a Curse",
+    };
+
+    /// <summary>
+    /// Cards of yours, other than this one, its play takes out of your hand: what it discards from there (not Ki Chant's, from the
+    /// draw pile; Scrape's are the simulator's, from what it drew) and what it exhausts from there (not Cleanse's, from the draw
+    /// pile; of Florescence's and Flak Cannon's, from every pile, the ones in your hand).
+    /// </summary>
+    internal static int LeavingHand(CardModel card, string name, List<CardModel> others, int drawPile, int draws, int plays)
+    {
+        var exhausts = name switch
+        {
+            nameof(Cleanse) => 0,
+            "Florescence" => others.Count(Fool.IsShot),
+            nameof(FlakCannon) => others.Count(other => other.Type == CardType.Status),
+            _ => ExhaustOthers(card, name, others, drawPile, plays),
+        };
+        var discards = name is "KiChant" or nameof(Scrape) ? 0 : DiscardCount(card, name, others, draws);
+        return exhausts + discards;
+    }
+
+    /// <summary>Cards that take your whole hand (exhaust or discard every card in it), from each OnPlay.</summary>
+    internal static readonly HashSet<string> WholeHandCards = new()
+    {
+        nameof(FiendFire), nameof(Stoke), "TheDevil",                                                  // exhaust it
+        nameof(CalculatedGamble), nameof(ShadowStep), nameof(StormOfSteel), "WheelOfFortune",          // discard it
     };
 
     internal static int DiscardCount(CardModel card, string name, List<CardModel> others, int draws)

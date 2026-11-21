@@ -214,6 +214,9 @@ internal static class CardCoverage
         // A card that discards and draws: which comes first decides the room in your hand (The Hermit discards first).
         if (Calls("CardCmd", "Discard") && Calls("CardPileCmd", "Draw") && !PlayFacts.DiscardThenDrawCards.Contains(name) && !PlayFacts.DrawThenDiscardCards.Contains(name))
             issues.Add("discards and draws (which comes first isn't known: the hand limit)");
+        if (Calls("CardCmd", "Exhaust") && Calls("CardPileCmd", "Draw") && !None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, drawPile: 5, plays: 1))
+            && !PlayFacts.ExhaustThenDrawCards.Contains(name) && !PlayFacts.DrawThenExhaustCards.Contains(name))
+            issues.Add("exhausts others and draws (which comes first isn't known: the hand limit)");
         if (Calls("CardCmd", "DiscardAndDraw") && !PlayFacts.DiscardThenDrawCards.Contains(name))
             issues.Add("discards your hand, then draws (the hand limit isn't counted after the discard)");
         // An X-cost attack: its hits are X (unless its count is one of the named exceptions).

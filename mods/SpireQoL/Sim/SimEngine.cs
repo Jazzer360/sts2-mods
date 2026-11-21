@@ -793,6 +793,8 @@ public static partial class SimEngine
             case CardEventAction cardEventAction: RunCardEvent(branches, cardEventAction); break;
             case DrawnCardAction drawnCardAction: branches.Each(branch => RunDrawnCard(branch, drawnCardAction)); break;
             case ExhaustFromHandAction exhaustFromHandAction: branches.Each(branch => RunExhaustFromHand(branch, exhaustFromHandAction)); break;
+            case LeaveHandAction leaveHandAction: branches.Do(branch => RunLeaveHand(branch, leaveHandAction)); break;
+            case NotModelledAction notModelledAction: branches.Do(branch => branch.Unmodelled ??= notModelledAction.Reason); break;
             case UnreadAction unreadAction: branches.Do(branch => branch.Unmodelled ??= SimState.Unread(unreadAction.Member)); break;
             case GainEnergyAsHeldAction:
                 branches.Each(branch => (branch.CurrentPlay?.Owner ?? Who.You) is var playOwner && branch.Player(playOwner) is { Energy: > 0 } player

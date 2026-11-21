@@ -35,6 +35,26 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// Cards leaving the playing player's hand mid-play (what it discards and exhausts from there): the hand is that much smaller from
+    /// now, so a draw after it has their room and what reads the hand at the end of the turn counts what's left (Cloak Clasp, Regret).
+    /// The whole hand: what was in it is gone too (its Burns, its Ethereal cards, what Stampede could pick, what acts when exhausted).
+    /// Which cards go when it isn't the whole hand isn't kept, but how many is.
+    /// </summary>
+    private static void RunLeaveHand(SimState state, LeaveHandAction leave)
+    {
+        var owner = state.CurrentPlay?.Owner ?? Who.You;
+        if (state.Player(owner) == null) return;
+        var player = state.MutablePlayer(owner);
+        var inHand = Math.Max(0, player.HandCount - player.PlayingFromHand);
+        player.HandCount -= leave.Whole ? inHand : Math.Min(leave.Count, inHand);
+        if (!leave.Whole) return;
+        player.TurnEndCards = new();
+        player.Fading = player.HexFading = 0;
+        player.ExhaustingInHand = new();
+        if (player.AutoHand != null) player.AutoHand = new();
+    }
+
+    /// <summary>
     /// A play exhausting others: the cards that act when exhausted among the ones it can take (ExhaustFromHandAction) give their
     /// energy (Drum of Battle's AfterCardExhausted: PlayerCmd.GainEnergy). All of them; one card at random, a branch per such card by
     /// its share of the cards in the hand and one where another card went; or, when you choose, unknown while one could be picked.

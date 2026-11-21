@@ -119,6 +119,18 @@ public sealed record LoseHpAction(int Amount) : SimAction;
 /// </summary>
 public sealed record UnreadAction(string Member) : SimAction;
 
+/// <summary>Something the play does that the simulator doesn't follow (SimState.Unmodelled, decision #92): the play is unknown, with why.</summary>
+public sealed record NotModelledAction(string Reason) : SimAction;
+
+/// <summary>
+/// Cards of the playing player's leaving their hand mid-play: the ones it discards and exhausts from there (PlayFacts.LeavesHand),
+/// right after they go. Count: how many (Whole: every card in the hand now, whatever they were).
+/// </summary>
+public sealed record LeaveHandAction(int Count) : SimAction
+{
+    public bool Whole { get; init; }
+}
+
 /// <summary>How a play picks the cards it exhausts (ExhaustFromHandAction).</summary>
 public enum ExhaustPick { Random, All, Chosen }
 

@@ -189,11 +189,23 @@ public static partial class SimAdapter
         }
         Each(play.Before, CardEvent.EnergyGained, facts.EnergyBack, indirect: false, perPlay: false);
         Each(play.Before, CardEvent.EnergySpent, facts.EnergySpent, indirect: false, perPlay: false);
+        // What it takes from your hand (discards, exhausts) and its draws, in its OnPlay's order: the room the draws have.
+        void Leaving()
+        {
+            Each(play.Body, CardEvent.Discarded, facts.Discards, indirect: true);
+            Each(play.Body, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
+            // What the cards it takes do when exhausted (Drum of Battle), by how it picks them.
+            if (facts.ExhaustsOthers > 0 && PlayFacts.ExhaustPickOf(facts.Card) is { } exhaustPick) play.Body.Add(exhaustPick);
+            // A Sly card it discards plays itself (CardCmd.Discard: AutoPlay, SlyDiscard): not simulated yet (tracker).
+            if (facts.MayDiscardSly) play.Body.Add(new NotModelledAction("a Sly card in your hand it may discard plays itself"));
+            if (facts.TakesWholeHand) play.Body.Add(new LeaveHandAction(Count: 0) { Whole = true });
+            else if (facts.LeavesHand / plays > 0) play.Body.Add(new LeaveHandAction(facts.LeavesHand / plays));
+        }
+        var cardName = facts.Card.GetType().Name;
+        var takesFirst = PlayFacts.DiscardThenDrawCards.Contains(cardName) || PlayFacts.ExhaustThenDrawCards.Contains(cardName) || facts.TakesWholeHand;
+        if (takesFirst) Leaving();
         Each(play.Body, CardEvent.Drawn, Math.Min(facts.OwnDraws, facts.Draws), indirect: true);
-        Each(play.Body, CardEvent.Discarded, facts.Discards, indirect: true);
-        Each(play.Body, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
-        // What the cards it takes do when exhausted (Drum of Battle), by how it picks them.
-        if (facts.ExhaustsOthers > 0 && PlayFacts.ExhaustPickOf(facts.Card) is { } exhaustPick) play.Body.Add(exhaustPick);
+        if (!takesFirst) Leaving();
         var sadness = facts.SadnessCreated;
         var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
         Each(play.Body, CardEvent.Generated, Math.Max(0, facts.Generated + facts.TransformsCertain - statuses - sadness), indirect: true);

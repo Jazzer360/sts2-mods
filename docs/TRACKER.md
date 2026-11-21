@@ -590,6 +590,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] Test in game: the settings menu's new sections (Chances, Kinds of tab, Reminders by place), greyed-out options when a feature is off, and Show chances off in a fight (no chance on the Death Skull, lethal tab, draw chance tab or Intent Forecast).
 - [ ] Gap: Scrape discarding a Sly card plays it (not simulated: `?`).
 - [x] Gap: Drum of Battle's energy when it's exhausted during another play (Exhaust a card from your hand while it's there) isn't simulated (`CardEnergy.Reviewed`). Now simulated (decision #144): certain when the play takes every card, its chance at random, unknown when you choose.
+- [ ] Gap: a Sly card discarded from your hand by another card plays itself (CardCmd.Discard, AutoPlayType.SlyDiscard): such a play is `?` (decision #146). Model it as an auto-play at a random target (the Stampede plays, played after the discards and their draws).
+- [ ] Gap: which cards a chosen or random discard or exhaust takes isn't kept, only how many (decision #146): a Burn, an Ethereal card or a card Stampede could pick is still counted in your hand after Survivor or Cinder.
 - [ ] Gap: a card that acts when exhausted, exhausted outside a play (Ethereal at the end of your turn, an enemy's or a power's exhaust): its energy isn't simulated (nothing after it in the turn reads your energy today).
 - [ ] Gap: a teammate's own Energy Surge (played through Howl from Beyond) gives you energy the simulator doesn't follow.
 - [ ] Idea (owner): a crossed tab on cards for end-of-turn relics that count your hand (Cloak Clasp's block, Obsidian Vise's damage): playing a card loses one card's worth. Every card would carry it while you hold one; decide the design first.

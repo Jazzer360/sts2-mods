@@ -1882,6 +1882,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (predicted != actual) differences.Add($"after play {what}: predicted {predicted}, actual {actual}");
             }
             Cmp("your block", player.Block, simPlayer.Block);
+            // What it took from your hand and gave it (the room later draws have; Cloak Clasp, Regret at the end of the turn).
+            Cmp("cards in hand", player.HandCount, simPlayer.HandCount);
             if (drawn is { } drawnCount) Cmp("cards drawn", player.Drawn - startP.Drawn, drawnCount);
             // Energy (decision #117): what the play spends and gives back, the card's own included (Pael's Tears reads it).
             Cmp("your energy", player.Energy, simPlayer.Energy);
