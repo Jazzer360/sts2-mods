@@ -1338,10 +1338,18 @@ public sealed class SimInputs
     /// <summary>The teammates behind Start.Teammates, in order: a play aimed at one is keyed Who.Teammate(index).</summary>
     public IReadOnlyList<Creature> Allies { get; init; } = Array.Empty<Creature>();
 
-    /// <summary>The simulation key for a play aimed at this creature: an enemy id, a teammate's AllyKey, or -1.</summary>
-    public int KeyFor(Creature? target) =>
+    /// <summary>The simulation key for a play aimed at this creature: an enemy id, a teammate (Who.Teammate), or no one (Who.None).</summary>
+    private int KeyFor(Creature? target) =>
         target == null ? Who.None
         : Ids.TryGetValue(target, out var id) ? id
         : Allies.ToList().IndexOf(target) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : Who.None;
+    /// <summary>Each aim's play (an enemy id, a teammate, or Who.None for a card simulated once): looked up through AimFor.</summary>
     public Dictionary<int, SimPlay> PlayByTarget { get; } = new();
+
+    /// <summary>
+    /// The aim a play at this target was simulated under: its own, or no one's (a card simulated once, aimed at no one); null when
+    /// neither was simulated. The one lookup of a played card's aim (decision #142): every check reads its play and outcomes by it.
+    /// </summary>
+    public int? AimFor(Creature? target) =>
+        KeyFor(target) is var key && PlayByTarget.ContainsKey(key) ? key : PlayByTarget.ContainsKey(Who.None) ? Who.None : null;
 }

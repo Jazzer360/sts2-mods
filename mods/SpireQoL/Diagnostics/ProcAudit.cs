@@ -153,8 +153,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static int? CheckedAim(Window window)
     {
         if (window.Facts is not { Sim: { } sim } facts || facts.SimIncomplete || facts.SimPending || facts.Unmodelled.Count > 0) return null;
-        var key = sim.KeyFor(window.Target);
-        return sim.PlayByTarget.ContainsKey(key) ? key : sim.PlayByTarget.ContainsKey(Who.None) ? Who.None : null;
+        return sim.AimFor(window.Target);
     }
 
     /// <summary>
@@ -892,8 +891,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 issues.RemoveAll(fromSim.Contains);
             }
             if (issues.Count > 0 && window.Facts?.Sim is { FullStart: not null } handSim
-                && (handSim.PlayByTarget.TryGetValue(handSim.KeyFor(window.Target), out var handPlay) || handSim.PlayByTarget.TryGetValue(-1, out handPlay))
-                && handSim.HandChangesThePlay(handPlay))
+                && handSim.AimFor(window.Target) is { } handAim
+                && handSim.HandChangesThePlay(handSim.PlayByTarget[handAim]))
             {
                 // Count teammates' hands is off and their hand changes the play: its tabs were worked out without what decides it
                 // (decision #25), so they can't be held to what happened. The state after the play is checked with it.
@@ -1703,7 +1702,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Skip("lethal", "auto-played cards");
             return;
         }
-        if (!deaths.TryGetValue(sim.KeyFor(window.Target), out var card) && !deaths.TryGetValue(Who.None, out card)) return;
+        if (sim.AimFor(window.Target) is not { } lethalAim || !deaths.TryGetValue(lethalAim, out var card)) return;
         // What's shown leaves teammates' hands out when the setting is off (decisions #25, #94): the same here.
         var post = SimEngine.Run(sim.FullStart != null ? window.After.WithoutTeammateHands() : window.After);
         if (post.Truncated || post.AnyUnmodelled || post.Branches.Count == 0)
@@ -1760,8 +1759,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Skip("state after the play", "the pick's auto-plays hit different random enemies");
             return;
         }
-        var targetId = sim.KeyFor(window.Target);
-        if (!sim.PlayByTarget.TryGetValue(targetId, out var play) && !sim.PlayByTarget.TryGetValue(-1, out play))
+        if (sim.AimFor(window.Target) is not { } aim || !sim.PlayByTarget.TryGetValue(aim, out var play))
         {
             model.Skip("state after the play", "no simulated play for its target");
             return;
