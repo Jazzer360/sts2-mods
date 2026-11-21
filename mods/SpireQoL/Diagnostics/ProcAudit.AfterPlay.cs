@@ -1,0 +1,242 @@
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Combat.History;
+using MegaCrit.Sts2.Core.Combat.History.Entries;
+using SpireQoL.Procs;
+using SpireQoL.Sim;
+using MegaCrit.Sts2.Core.Models.Cards;
+
+namespace SpireQoL.Diagnostics;
+
+/// <summary>ProcAudit, part: The state the play left, and its lethal tab, against the simulator's prediction of the play.</summary>
+public sealed partial class ProcAudit
+{
+    // ------------------------------------------------------------------ state after the play
+
+    /// <summary>
+    /// The lethal tab's inputs (decision #95): each enemy's chance of dying before it acts, over every outcome of the play, against
+    /// the end of turn simulated from the board the play left (the game's, read back). An enemy dead in every outcome must be
+    /// certain to die then; one that lives in every outcome must not die then. A chance in between can't be judged on one play:
+    /// the end-of-turn check totals the chances it shows (ForecastAudit), and the forecast from this board is itself checked
+    /// against the enemy turn, so every link is paired.
+    /// </summary>
+    private static void LethalIssues(Window window, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
+    {
+        var sim = window.Facts?.Sim;
+        var deaths = window.Facts?.DeathByAim;
+        if (sim == null || deaths == null)
+        {
+            model.Skip("lethal", sim == null ? "no simulation for this card" : "no death chances for this play (its simulations didn't finish)");
+            return;
+        }
+        if (entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)
+                && !HellraiserDrew(window, entries, window.Card.Owner, cardPlayStartedEntry.CardPlay.Card)))
+        {
+            model.Skip("lethal", "auto-played cards");
+            return;
+        }
+        if (sim.AimFor(window.Target) is not { } lethalAim || !deaths.TryGetValue(lethalAim, out var card))
+        {
+            model.Skip("lethal", "no death chances for the target it was played at");
+            return;
+        }
+        if (window.FightEnded)
+        {
+            FightEndLethalIssues(window, sim, card, issues, model);
+            return;
+        }
+        if (window.After == null || window.AfterIds == null)
+        {
+            model.Skip("lethal", window.AfterSkipped ?? "the board after the play wasn't captured");
+            return;
+        }
+        // What's shown leaves teammates' hands out when the setting is off (decisions #25, #94): the same here.
+        var post = SimEngine.Run(sim.FullStart != null ? window.After.WithoutTeammateHands() : window.After);
+        if (post.Truncated || post.AnyUnmodelled || post.Branches.Count == 0)
+        {
+            model.Skip("lethal", "the board after the play: its search stopped at a cap or met something not modelled");
+            return;
+        }
+        foreach (var (creature, id) in sim.Ids)
+        {
+            if (!card.TryGetValue(id, out var chance) || sim.Start.Enemy(id) is not { Hp: > 0 } start) continue;
+            // A Waterfall Giant already about to blow before the play explodes on its turn whatever the play does: not the play's
+            // to kill or spare (its 999999999 HP lives through any play). Not checked when the play's start wasn't seen.
+            if (window.BlowingBefore == null ? IsBlowing(creature) : window.BlowingBefore.Contains(creature))
+            {
+                model.Skip("lethal", "an enemy about to blow before the play", start.Name);
+                continue;
+            }
+            // Gone from the board after the play: dead. So is a Waterfall Giant the play brought to 0: Steam Eruption keeps it at
+            // 999999999 HP, stunned until it blows (WaterfallGiant.TriggerAboutToBlowState), as good as dead (issue #428).
+            var aboutToBlow = IsBlowing(creature);
+            var simChance = !aboutToBlow && window.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(Low: 1, High: 1, Seen: true);
+            if (chance.Certain && !simChance.Certain)
+                issues.Add($"lethal: {start.Name} predicted to die before acting in every outcome of this play, but after it: {simChance.Text()}");
+            else if (!chance.Possible && simChance.Low > 0)
+                issues.Add($"lethal: {start.Name} predicted to live in every outcome of this play, but after it dies before acting ({simChance.Text()})");
+        }
+    }
+
+    /// <summary>
+    /// The lethal tab of a play that ended the fight: there's no board after it to simulate on, but who it killed is known (an enemy
+    /// dead as the fight ends died in this play, so before it acted). Checked one way: an enemy predicted to live in every outcome
+    /// that died. An enemy alive at the end may have fled, or the fight ended with you, so one predicted to die isn't checked
+    /// (counted).
+    /// </summary>
+    private static void FightEndLethalIssues(Window window, SimInputs sim, IReadOnlyDictionary<int, SimChance> card, List<string> issues, ModelLines model)
+    {
+        if (window.DeadAtFightEnd == null)
+        {
+            model.Skip("lethal", FightEndedSkip + ": who it killed wasn't read");
+            return;
+        }
+        foreach (var (creature, id) in sim.Ids)
+        {
+            if (!card.TryGetValue(id, out var chance) || sim.Start.Enemy(id) is not { Hp: > 0 } start) continue;
+            if (window.BlowingBefore?.Contains(creature) == true)
+            {
+                model.Skip("lethal", "an enemy about to blow before the play", start.Name);
+                continue;
+            }
+            if (window.DeadAtFightEnd.Contains(creature))
+            {
+                if (!chance.Possible) issues.Add($"lethal: {start.Name} predicted to live in every outcome of this play, but the play killed it (it ended the fight)");
+            }
+            else if (chance.Possible)
+                model.Skip("lethal", FightEndedSkip + ": alive as it ended (fled, or the fight ended with you)", start.Name);
+        }
+    }
+
+    /// <summary>
+    /// The state the play left against the simulator's prediction of it (see the class summary).
+    /// Each difference from the closest branch is one issue.
+    /// </summary>
+    private static void AfterPlayIssues(Window window, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
+    {
+        var sim = window.Facts?.Sim;
+        if (sim == null)
+        {
+            model.Skip("state after the play", "no simulation for this card");
+            return;
+        }
+        if (window.After == null || window.AfterIds == null)
+        {
+            model.Skip("state after the play", window.AfterSkipped ?? "not captured");
+            return;
+        }
+        if (entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)
+                && !HellraiserDrew(window, entries, window.Card.Owner, cardPlayStartedEntry.CardPlay.Card)))
+        {
+            model.Skip("state after the play", "auto-played cards");
+            return;
+        }
+        if (window.Chosen != null && window.Chosen.TargetType == TargetType.AnyEnemy && window.Target == null)
+        {
+            model.Skip("state after the play", "the pick's auto-plays hit different random enemies");
+            return;
+        }
+        if (sim.AimFor(window.Target) is not { } aim || !sim.PlayByTarget.TryGetValue(aim, out var play))
+        {
+            model.Skip("state after the play", "no simulated play for its target");
+            return;
+        }
+        // Teammates' hands included (decision #25: the check uses everything that isn't a roll).
+        SimEngine.ApplyPlayTo(sim.FullStart ?? sim.Start, play, out var branches, out var truncated);
+        if (truncated || branches.Count == 0)
+        {
+            model.Skip("state after the play", "its search stopped at a cap");
+            return;
+        }
+        // A branch it didn't follow (decision #92) is unknown both ways: what happened may be that branch, as the play showed `?`.
+        if (branches.FirstOrDefault(branch => branch.Unmodelled != null) is { } unknown)
+        {
+            model.Skip("state after the play", $"not modelled: {unknown.Unmodelled}");
+            return;
+        }
+        var after = window.After;
+        var afterIds = window.AfterIds;
+        // Cards drawn during the play (decision #132: the draw tabs' numbers are part of it, with the card's own draws), when the
+        // simulator drew from your pile: the history's draws of yours, not your turn's hand draw.
+        var startP = (sim.FullStart ?? sim.Start).You;
+        var me = window.Card.Owner;
+        int? drawn = startP.Draw == null ? null : entries.OfType<CardDrawnEntry>().Count(cardDrawnEntry => cardDrawnEntry.Actor == me.Creature && !cardDrawnEntry.FromHandDraw);
+        // Summoning raises Osty's HP in ways the simulator doesn't model: Osty isn't compared then.
+        var summoned = entries.OfType<SummonedEntry>().Any();
+
+        List<string> Diff(SimState pred)
+        {
+            var differences = new List<string>();
+            foreach (var (creature, id) in sim.Ids)
+            {
+                var enemy = pred.Enemy(id);
+                if (enemy == null || !afterIds.TryGetValue(creature, out var aid) || after.Enemy(aid) is not { } simEnemy) continue;
+                var name = enemy.Name;
+                static int Hp(SimEnemy nextEnemy) => Math.Max(0, nextEnemy.Hp);
+                // The Waterfall Giant doesn't leave at 0 HP: Steam Eruption puts it about to blow at 999999999 HP (WaterfallGiant.
+                // TriggerAboutToBlowState), stunned this turn, as good as dead until it explodes.
+                var aboutToBlow = enemy.Hp <= 0 && IsBlowing(creature);
+                if (Hp(enemy) != Hp(simEnemy) && !aboutToBlow) differences.Add($"after play enemy HP: {name} predicted {Hp(enemy)}, actual {Hp(simEnemy)}");
+                if (simEnemy.Hp <= 0 || enemy.Hp <= 0) continue;
+                if (enemy.Block != simEnemy.Block) differences.Add($"after play enemy block: {name} predicted {enemy.Block}, actual {simEnemy.Block}");
+                if (enemy.Poison != simEnemy.Poison) differences.Add($"after play enemy poison: {name} predicted {enemy.Poison}, actual {simEnemy.Poison}");
+                // FlutterPower.AfterDamageReceived: one stack per powered hit that gets through (no flash until it stuns).
+                if (enemy.Flutter != simEnemy.Flutter) differences.Add($"after play enemy Flutter: {name} predicted {enemy.Flutter}, actual {simEnemy.Flutter}");
+                if (enemy.Stunned != simEnemy.Stunned) differences.Add($"after play enemy stunned: {name} predicted {(enemy.Stunned ? "stunned" : "not stunned")}, actual {(simEnemy.Stunned ? "stunned" : "not stunned")}");
+                // A stunned enemy's intent becomes the stun move; the simulator keeps its hits and skips them. The predicted intent is
+                // its hits as they'd land on you in the predicted state (what the play gave or took: Weak, Tainted, Conductor's
+                // Baton...); Hits is only the intent as it was read before the play.
+                var predHits = enemy.Intent is { Count: > 0 } intent
+                    ? Enumerable.Range(0, intent.Count).Select(hitIndex => SimEngine.IntentDamage(pred, enemy, hitIndex, Who.You)).ToList()
+                    : enemy.Hits;
+                if (!enemy.Stunned && !simEnemy.Stunned && !predHits.SequenceEqual(simEnemy.Hits)) differences.Add($"after play enemy intent: {name} predicted [{string.Join(", ", predHits)}], actual [{string.Join(", ", simEnemy.Hits)}]");
+            }
+            var player = pred.You;
+            var simPlayer = after.You;
+            void Cmp(string what, int predicted, int actual)
+            {
+                if (predicted != actual) differences.Add($"after play {what}: predicted {predicted}, actual {actual}");
+            }
+            Cmp("your block", player.Block, simPlayer.Block);
+            // What it took from your hand and gave it (the room later draws have; Cloak Clasp, Regret at the end of the turn).
+            Cmp("cards in hand", player.HandCount, simPlayer.HandCount);
+            if (drawn is { } drawnCount) Cmp("cards drawn", player.Drawn - startP.Drawn, drawnCount);
+            // Energy (decision #117): what the play spends and gives back, the card's own included (Pael's Tears reads it).
+            Cmp("your energy", player.Energy, simPlayer.Energy);
+            Cmp("Plating", player.Plating, simPlayer.Plating);
+            Cmp(nameof(Juggernaut), player.Juggernaut, simPlayer.Juggernaut);
+            Cmp("Thorns", player.Thorns, simPlayer.Thorns);
+            Cmp("Flame Barrier", player.FlameBarrier, simPlayer.FlameBarrier);
+            Cmp("Feel No Pain", player.FeelNoPain, simPlayer.FeelNoPain);
+            if (!summoned) Cmp("Osty HP", player.OstyHp, simPlayer.OstyHp);
+            // A random orb (Chaos) is predicted as Unknown: any orb matches it.
+            static string Orb(SimOrb orb) => $"{orb.Kind} {orb.Passive}/{orb.Evoke}";
+            var orbsMatch = player.Orbs.Count == simPlayer.Orbs.Count
+                            && player.Orbs.Zip(simPlayer.Orbs).All(orbs => orbs.First.Kind == OrbKind.Unknown || Orb(orbs.First) == Orb(orbs.Second));
+            if (!orbsMatch) differences.Add($"after play orbs: predicted [{string.Join(", ", player.Orbs.Select(Orb))}], actual [{string.Join(", ", simPlayer.Orbs.Select(Orb))}]");
+            // Teammates (multiplayer): the block and HP your play leaves them (Beacon of Hope's share, hits).
+            // The state after is read from the living ones only (SimAdapter.IsTeammate), in player order.
+            var living = pred.Teammates.Where(teammate => teammate.Hp > 0).ToList();
+            if (living.Count == after.Teammates.Count)
+            {
+                for (var enemyIndex = 0; enemyIndex < living.Count; enemyIndex++)
+                {
+                    var (nextPlayer, at) = (living[enemyIndex], after.Teammates[enemyIndex]);
+                    Cmp($"teammate {enemyIndex + 1} block", nextPlayer.Block, at.Block);
+                    Cmp($"teammate {enemyIndex + 1} HP", nextPlayer.Hp, at.Hp);
+                    Cmp($"teammate {enemyIndex + 1} energy", nextPlayer.Energy, at.Energy);
+                    // Their orbs (Ignition channels into them; full slots evoke their front orb): kinds, front first.
+                    if (!nextPlayer.Orbs.Select(orb => orb.Kind).SequenceEqual(at.Orbs.Select(orb => orb.Kind))
+                        && !nextPlayer.Orbs.Any(orb => orb.Kind == OrbKind.Unknown))
+                        differences.Add($"after play teammate {enemyIndex + 1} orbs: predicted [{string.Join(", ", nextPlayer.Orbs.Select(orb => orb.Kind))}], actual [{string.Join(", ", at.Orbs.Select(orb => orb.Kind))}]");
+                }
+            }
+            else differences.Add($"after play teammates alive: predicted {living.Count}, actual {after.Teammates.Count}");
+            return differences;
+        }
+
+        var best = branches.Select(Diff).OrderBy(differences => differences.Count).First();
+        if (best.Count == 0) return;
+        var note = branches.Count > 1 ? $" (closest of {branches.Count} branches)" : "";
+        foreach (var difference in best) issues.Add(difference + note);
+    }
+}

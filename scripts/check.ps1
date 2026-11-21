@@ -27,7 +27,8 @@ $failed = @()
 
 foreach ($project in $projects) {
     Write-Host "Building $project..." -ForegroundColor Cyan
-    $output = dotnet build $project -warnaserror -p:InstallToGame=false -v quiet -nologo 2>&1
+    # From scratch, as the release builds: an up-to-date build skips the analyzers, so it would pass what the release fails.
+    $output = dotnet build $project -warnaserror -p:InstallToGame=false --no-incremental -v quiet -nologo 2>&1
     if ($LASTEXITCODE -ne 0) {
         $failed += "build: $project"
         $output | Select-String -Pattern ' error ' | ForEach-Object { $_.Line.Trim() } | Sort-Object -Unique | Select-Object -First 15 | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
