@@ -12,6 +12,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Setting **Incoming Damage: most likely outcome** (under Show chances, on by default).
 
 #### Changed
+- Writes far less to the game's log, which the game and every other mod share: the checks' lines, timings and summaries stay inside the mod (error reports still carry them), and a warning appears once per launch.
 - Incoming Damage shows the most likely outcome, with its chance, when a roll decides how the enemy turn goes (a draw at the end of your turn, I Am Invincible somewhere in your draw pile, a random target); it used to show the worst. The skull still shows whenever you might die, with its chance, and the Fairy in a Bottle or Lizard Tail line whenever one might save you, with its chance.
 
 #### Fixed
@@ -41,6 +42,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Pact's End deals no damage, in every prediction, unless your exhaust pile holds enough cards (when it glows gold).
 - The checks no longer report your death when Fairy in a Bottle or Lizard Tail saves you: a death is the game's own, not your HP reaching 0 on the way to the heal.
 
+
+### Main Saves 1.0.25
+#### Changed
+- Shared code: writes less to the game's log (a warning appears once per launch). No change in the game.
 
 ### Main Saves 1.0.24
 #### Changed

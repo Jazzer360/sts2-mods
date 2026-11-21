@@ -51,7 +51,7 @@ internal sealed class TinyCardIcon
         if (!_logged)
         {
             _logged = true;
-            ModEntry.Log.Info($"tiny card: layout box {layout}, drawn {box}");
+            ModEntry.Log.Detail($"tiny card: layout box {layout}, drawn {box}");
         }
         if (box.Size.X < 1 || box.Size.Y < 1) return;
         var scale = _size / Math.Max(box.Size.X, box.Size.Y);

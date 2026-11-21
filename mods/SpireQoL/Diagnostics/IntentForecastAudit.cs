@@ -58,13 +58,13 @@ internal static class IntentForecastAudit
             var odds = string.Join(", ", __state.Moves.Select(move => $"{move.Move} {move.Chance:0.###}"));
             var chance = __state.Moves.FirstOrDefault(move => move.Move == picked).Chance;
             var ok = chance > 0;
-            ModEntry.Log.Info($"[audit] [intent] {name}: forecast [{odds}], rolled {picked}{(ok ? ", matched" : "")}");
+            ModEntry.Log.Detail($"[audit] [intent] {name}: forecast [{odds}], rolled {picked}{(ok ? ", matched" : "")}");
             Telemetry.Audits.Done(Telemetry.Audits.Intent, ok, name);
             if (ok) return;
             var key = name + "|" + odds + "|" + picked;
             if (!Reported.Add(key) || Reported.Count > 200) return;
             var details = $"{name}: forecast [{odds}], the game rolled {picked}. Log: {string.Join(" > ", __instance.MoveStateMachine!.StateLog.Select(monsterState => monsterState.Id))}";
-            ModEntry.Log.Warn("[audit] [intent] " + details);
+            ModEntry.Log.Detail("[audit] [intent] " + details);
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", $"Intent forecast missed the move the game rolled: {name}",
                 new[] { "intent", name }, details);
         }

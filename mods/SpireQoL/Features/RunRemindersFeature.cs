@@ -162,7 +162,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         // every player dead), which isn't the option's doing. Logged, not checked.
         if (window.Me.Creature.IsDead)
         {
-            ModEntry.Log.Info($"[audit] [reminders] {window.Option.TextKey}: the run ended, not checked ({state})");
+            ModEntry.Log.Detail($"[audit] [reminders] {window.Option.TextKey}: the run ended, not checked ({state})");
             Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "event option: the run ended", window.Option.TextKey);
             return;
         }
@@ -181,9 +181,9 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var unseen = window.Effects & ~observed & ~ChoiceEffect.RestHeal;
         var what = $"{window.Option.TextKey}: read {window.Effects}, happened {observed}; " +
                    (obtained.Count == 0 ? "" : $"obtained [{string.Join(", ", obtained.Select(relic => $"{relic.GetType().Name}: {ObtainEffects(relic)}"))}]; ") + $"icons [{string.Join(", ", shown.Select(relic => relic.GetType().Name))}]; flashed [{string.Join(", ", window.Flashed.Select(relic => relic.GetType().Name))}]; {state}";
-        ModEntry.Log.Info($"[audit] [reminders] {what}");
-        if (quiet.Count > silent.Count) ModEntry.Log.Info($"[audit] [reminders] icon shown, no reaction (logged only): {string.Join(", ", quiet.Select(relic => relic.GetType().Name).Except(silent))}");
-        if (unseen != ChoiceEffect.None) ModEntry.Log.Info($"[audit] [reminders] read but didn't happen (logged only): {unseen}");
+        ModEntry.Log.Detail($"[audit] [reminders] {what}");
+        if (quiet.Count > silent.Count) ModEntry.Log.Detail($"[audit] [reminders] icon shown, no reaction (logged only): {string.Join(", ", quiet.Select(relic => relic.GetType().Name).Except(silent))}");
+        if (unseen != ChoiceEffect.None) ModEntry.Log.Detail($"[audit] [reminders] read but didn't happen (logged only): {unseen}");
         var evt = window.Option.TextKey.Split('.')[0];
         var eventOk = missed.Count == 0 && unread == ChoiceEffect.None && silent.Count == 0;
         Telemetry.Audits.Done(Telemetry.Audits.Reminders, eventOk, eventOk ? "event option"
@@ -419,7 +419,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         }
         CheckCardRules(me, me.Deck.Cards.Where(card => !rewardWatch.Start.Deck.Contains(card)).ToList(), givesUpgraded: false, shown: null, "card reward");
         var what = $"card reward: {added} added (predicted {rewardWatch.PerPick}), gold {rewardWatch.Start.Gold}→{me.Gold}";
-        ModEntry.Log.Info($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(problem => problem.Text)))}");
+        ModEntry.Log.Detail($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(problem => problem.Text)))}");
         Telemetry.Audits.Done(Telemetry.Audits.Reminders, problems.Count == 0, problems.Count == 0 ? "card reward" : "reminder-reward");
         if (problems.Count > 0)
         {
@@ -776,7 +776,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         if (RunMe() is not { } me) return;
         var paid = entryGoldBefore.GoldBefore - me.Gold;
         var what = $"shop: bought {entryGoldBefore.Entry.GetType().Name}, gold {entryGoldBefore.GoldBefore}→{me.Gold}, predicted net {entryGoldBefore.Net}";
-        ModEntry.Log.Info($"[audit] [reminders] {what}{(paid == entryGoldBefore.Net ? ", matched" : "")}");
+        ModEntry.Log.Detail($"[audit] [reminders] {what}{(paid == entryGoldBefore.Net ? ", matched" : "")}");
         Telemetry.Audits.Done(Telemetry.Audits.Reminders, paid == entryGoldBefore.Net, paid == entryGoldBefore.Net ? "shop" : "reminder-shop");
         if (paid != entryGoldBefore.Net)
         {

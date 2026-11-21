@@ -151,7 +151,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         var middle = room.GetViewportRect().Size.X / 2;
         var onRight = rect.GetCenter().X > middle;
         var key = $"{rect.Position.X:0},{rect.Position.Y:0}";
-        if (SidesLogged.Add(key)) ModEntry.Log.Info($"rest preview: character at {rect.Position}, {rect.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
+        if (SidesLogged.Add(key)) ModEntry.Log.Detail($"rest preview: character at {rect.Position}, {rect.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
         return onRight == right ? rect : null;
     }
 
@@ -270,7 +270,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         {
             var what = $"rest: HP {creature.CurrentHp}/{creature.MaxHp}, predicted {want.Hp}/{want.Max}";
             var ok = creature.CurrentHp == want.Hp && creature.MaxHp == want.Max;
-            ModEntry.Log.Info($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
+            ModEntry.Log.Detail($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
             Telemetry.Audits.Done(Telemetry.Audits.Rest, ok, "rest-heal");
             if (!ok) Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "HP after resting didn't match the preview", new[] { "rest-heal" }, what);
             _pendingRest = null;
@@ -297,7 +297,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         // BeforeCombatStart has run by the time your first turn's cards are dealt; nothing hits you before you act.
         if (++_bossFrames < 45) return;
         var line = $"boss start: HP {creature.CurrentHp}/{creature.MaxHp}, predicted {boss}";
-        ModEntry.Log.Info($"[audit] [rest] {line}{(creature.CurrentHp == boss ? ", matched" : "")}");
+        ModEntry.Log.Detail($"[audit] [rest] {line}{(creature.CurrentHp == boss ? ", matched" : "")}");
         Telemetry.Audits.Done(Telemetry.Audits.Rest, creature.CurrentHp == boss, "rest-boss");
         if (creature.CurrentHp != boss)
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "HP at the boss fight's start didn't match the rest preview", new[] { "rest-boss" }, line);
@@ -325,7 +325,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         var want = changed.Value;
         var what = $"mend: teammate HP {creature.CurrentHp}/{creature.MaxHp}, predicted {want.WantHp}/{want.WantMax}";
         var ok = creature.CurrentHp == want.WantHp && creature.MaxHp == want.WantMax;
-        ModEntry.Log.Info($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
+        ModEntry.Log.Detail($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
         Telemetry.Audits.Done(Telemetry.Audits.Rest, ok, "rest-mend");
         if (!ok) Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "A teammate's HP after Mend didn't match the preview", new[] { "rest-mend" }, what);
         _pendingMend = null;

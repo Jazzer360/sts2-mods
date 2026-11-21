@@ -253,7 +253,7 @@ public sealed class TurnEndModel
         var frame = Godot.Engine.GetProcessFrames();
         if (frame == _frame) return _cached;
         _frame = frame;
-        SimJob.FlushLog(line => ModEntry.Log.Info(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"), ReportCap);
+        SimJob.FlushLog(line => ModEntry.Log.Detail(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"), ReportCap);
         var start = Godot.Time.GetTicksUsec();
         var alloc = GC.GetAllocatedBytesForCurrentThread();
         _cached = ComputeNow();

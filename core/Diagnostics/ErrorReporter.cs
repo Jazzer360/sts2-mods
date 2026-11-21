@@ -175,7 +175,7 @@ public sealed class ErrorReporter
         {
             bool first;
             lock (_lock) first = _skipsLogged.Add(skip);
-            if (first) _log.Info($"{fingerprint[0]} reports not sent: {skip}");
+            if (first) _log.Detail($"{fingerprint[0]} reports not sent: {skip}");
             return;
         }
         var key = string.Join("|", fingerprint);
@@ -227,7 +227,7 @@ public sealed class ErrorReporter
             }
             Stage("game state");
             evt.SetExtra("recent_log", string.Join("\n", _log.Recent()));
-            if (stages.Count > 0) _log.Warn($"[perf] building a {fingerprint[0]} report took: {string.Join(", ", stages)}");
+            if (stages.Count > 0) _log.Detail($"[perf] building a {fingerprint[0]} report took: {string.Join(", ", stages)}");
             if (Local is { } local)
             {
                 // The developer's game (decision #108): kept on their machine for the dev dashboard, never sent.
@@ -259,6 +259,7 @@ public sealed class ErrorReporter
             try
             {
                 var id = client.CaptureEvent(evt);
+                _log.Info($"sent an error report: {evt.Message?.Message ?? fingerprint[0]}");
                 try { Sent?.Invoke(fingerprint, id.ToString()); } catch { /* a listener's problem is never the report's */ }
             }
             catch (Exception sendEx) { _log.Warn($"error report couldn't be sent: {sendEx.Message}"); }
@@ -302,7 +303,7 @@ public sealed class ErrorReporter
         try { skip = SkipReason?.Invoke(); } catch { skip = null; }
         if (skip != null)
         {
-            _log.Info($"{group} not sent: {skip}");
+            _log.Detail($"{group} not sent: {skip}");
             return false;
         }
         try

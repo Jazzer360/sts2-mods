@@ -57,7 +57,7 @@ public sealed class FeatureHost
             if (!(isEnabled?.Invoke(feature) ?? feature.EnabledByDefault))
             {
                 _states[feature.Id] = FeatureState.Disabled;
-                _log.Info($"[{feature.Id}] disabled");
+                _log.Detail($"[{feature.Id}] disabled");
                 continue;
             }
             TryApply(feature, harmony => $"active ({harmony.GetPatchedMethods().Count()} methods patched)");
@@ -76,7 +76,7 @@ public sealed class FeatureHost
         {
             feature.Apply(harmony);
             _states[feature.Id] = FeatureState.Active;
-            _log.Info($"[{feature.Id}] {applied(harmony)}");
+            _log.Detail($"[{feature.Id}] {applied(harmony)}");
             return true;
         }
         catch (Exception ex)

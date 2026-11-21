@@ -42,7 +42,7 @@ internal static class DamageFormulaAudit
         var key = name + "|" + string.Join(";", mismatches);
         if (!Reported.Add(key) || Reported.Count > 200) return;
         var details = $"{name} first hit: {string.Join(", ", mismatches)}";
-        ModEntry.Log.Warn("[audit] damage formula: " + details);
+        ModEntry.Log.Detail("[audit] damage formula: " + details);
         Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("damage-formula", $"Simulated hit damage differs from the game's: {name}",
             new[] { "damage-formula", name }, details, new Dictionary<string, string> { ["sim_state"] = facts.Sim.Start.ToJson() });
     }

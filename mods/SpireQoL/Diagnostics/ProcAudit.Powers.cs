@@ -210,7 +210,7 @@ public sealed partial class ProcAudit
         }
         else (likelihood, happened) = (DrawnChance.ChanceOfAny(distribution), actual > 0);
         if (likelihood <= 0 || likelihood >= 1) return; // certain either way: the check above holds it
-        ModEntry.Log.Info($"[audit] [odds] {name}: predicted {new SimChance(likelihood, likelihood, Seen: true).Text()}, {(happened ? "happened" : "didn't")} (gave {actual})");
+        ModEntry.Log.Detail($"[audit] [odds] {name}: predicted {new SimChance(likelihood, likelihood, Seen: true).Text()}, {(happened ? "happened" : "didn't")} (gave {actual})");
         DrawnOdds.Add(new SimChance(likelihood, likelihood, Seen: true), happened);
         if (!DrawnOdds.Drifted || _drawnDriftReported) return;
         _drawnDriftReported = true;

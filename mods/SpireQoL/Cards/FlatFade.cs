@@ -117,7 +117,7 @@ internal sealed class FlatFade
                 Sync();
                 Redraws++;
                 if (ModEntry.DevMode)
-                    ModEntry.Log.Info($"[perf] ethereal fade: drew {_live.Model?.GetType().Name ?? "?"} " +
+                    ModEntry.Log.Detail($"[perf] ethereal fade: drew {_live.Model?.GetType().Name ?? "?"} " +
                         $"({(Time.GetTicksUsec() - start) / 1000.0:0.00} ms to update the copy; {Redraws} drawn this launch)");
                 _signature = now;
                 _view.RenderTargetUpdateMode = SubViewport.UpdateMode.Once;

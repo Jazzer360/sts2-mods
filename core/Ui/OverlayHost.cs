@@ -234,7 +234,7 @@ public sealed class OverlayHost
     private void ModFrameSlow(double modMs, double gapMs)
     {
         var times = FeatureTimes();
-        _log.Warn($"[perf] slow frame: the mod took {modMs:0} ms ({times})");
+        _log.Detail($"[perf] slow frame: the mod took {modMs:0} ms ({times})");
         if (modMs <= ReportModFrameMs) return;
         var top = _featureMs.OrderByDescending(featureM => featureM.Ms).FirstOrDefault().Id ?? "?";
         var slowFrames = _slowByFeature[top] = (_slowByFeature.TryGetValue(top, out var prev) ? prev : 0) + 1;
@@ -274,7 +274,7 @@ public sealed class OverlayHost
             if (_stallsSkipped > 0) line += $"; {_stallsSkipped} more since the last line";
             _stallsSkipped = 0;
             _lastStallLogMs = now;
-            _log.Info(line);
+            _log.Detail(line);
         }
         catch
         {
@@ -466,7 +466,7 @@ public sealed class OverlayHost
             if (parent == null || parent == Layer || parent != from) return;
             parent.RemoveChild(WidgetRoot);
             Layer.AddChild(WidgetRoot);
-            _log.Info($"widget container moved out of {_parkedUnder} as it left the tree");
+            _log.Detail($"widget container moved out of {_parkedUnder} as it left the tree");
         }
         catch (Exception ex)
         {

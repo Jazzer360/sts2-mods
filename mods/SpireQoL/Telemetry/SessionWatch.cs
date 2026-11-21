@@ -135,7 +135,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         _turn = 0;
         _unsettledSince = 0;
         _abandoned = _gameOver = _endSeen = _won = false;
-        ModEntry.Log.Info("[session] started");
+        ModEntry.Log.Detail("[session] started");
     }
 
     private string HowItEnded()
@@ -152,11 +152,11 @@ public sealed class SessionWatch : IFeature, IFrameFeature
             if (stats.Turns == 0)
             {
                 DeletePending();
-                ModEntry.Log.Info($"[session] ended ({how}) with no fight turns: no summary");
+                ModEntry.Log.Detail($"[session] ended ({how}) with no fight turns: no summary");
                 return;
             }
             var summary = stats.Summary(how, Info());
-            ModEntry.Log.Info($"[session] ended ({how}): {Line(summary)}");
+            ModEntry.Log.Detail($"[session] ended ({how}): {Line(summary)}");
             Send(summary, flush);
             DeletePending();
         }
@@ -249,7 +249,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
             var sessionSummary = SessionSummary.FromJson(File.ReadAllText(PendingPath));
             DeletePending();
             if (sessionSummary is not { Turns: > 0 }) return;
-            ModEntry.Log.Info($"[session] the last launch's session wasn't seen ending (a crash, or the game closed early): {Line(sessionSummary)}");
+            ModEntry.Log.Detail($"[session] the last launch's session wasn't seen ending (a crash, or the game closed early): {Line(sessionSummary)}");
             Send(sessionSummary with { Ended = "unseen" }, flush: false);
         }
         catch (Exception ex)

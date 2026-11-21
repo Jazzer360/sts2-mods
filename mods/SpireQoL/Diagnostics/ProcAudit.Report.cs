@@ -119,13 +119,13 @@ public sealed partial class ProcAudit
             _turnPlays.Add($"{_turnPlays.Count + 1}. {window.CardName}: tabs {tabs} → {(issues.Count == 0 ? "matched" : string.Join("; ", issues))}");
             if (issues.Count > 0)
             {
-                log.Warn($"[audit] played {window.CardName}: {string.Join("; ", issues)}. Tabs were: {tabs}.");
+                log.Detail($"[audit] played {window.CardName}: {string.Join("; ", issues)}. Tabs were: {tabs}.");
                 _tabFilter = _ctx.Decor.Filter;
                 var lines = WindowLines(window, hist, me);
-                foreach (var line in lines) log.Warn($"[audit]   {line}");
+                foreach (var line in lines) log.Detail($"[audit]   {line}");
                 Report(window, issues, tabs, lines, entries.Count, string.Join("\n", _turnPlays));
             }
-            foreach (var note in model) log.Info($"[audit] [model] played {window.CardName}: {note}");
+            foreach (var note in model) log.Detail($"[audit] [model] played {window.CardName}: {note}");
         }
         catch (Exception ex)
         {
@@ -221,16 +221,16 @@ public sealed partial class ProcAudit
     private void Summarize()
     {
         // How the simulations did against the frame's wait and their caps (decision #104).
-        if (Combat.SimWait.Summary() is { } waits) ModEntry.Log.Info($"[perf] combat summary: simulations: {waits}.");
-        if (_ctx.Predictions.TakeHeldFrames() is > 0 and var held) ModEntry.Log.Info($"[perf] combat summary: card frames shown with tabs held from an earlier board while simulations ran: {held}.");
-        if (Combat.TurnEndModel.TakeHeldFrames() is > 0 and var heldForecast) ModEntry.Log.Info($"[perf] combat summary: frames showing the forecast held from an earlier board: {heldForecast}.");
-        if (SimJob.CapSummary() is { } caps) ModEntry.Log.Info($"[perf] combat summary: searches stopped by {caps}.");
+        if (Combat.SimWait.Summary() is { } waits) ModEntry.Log.Detail($"[perf] combat summary: simulations: {waits}.");
+        if (_ctx.Predictions.TakeHeldFrames() is > 0 and var held) ModEntry.Log.Detail($"[perf] combat summary: card frames shown with tabs held from an earlier board while simulations ran: {held}.");
+        if (Combat.TurnEndModel.TakeHeldFrames() is > 0 and var heldForecast) ModEntry.Log.Detail($"[perf] combat summary: frames showing the forecast held from an earlier board: {heldForecast}.");
+        if (SimJob.CapSummary() is { } caps) ModEntry.Log.Detail($"[perf] combat summary: searches stopped by {caps}.");
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"))})";
-        ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand, {_interleaved} with another action during a choice), {_matched} matched{issues}.");
+        ModEntry.Log.Detail($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand, {_interleaved} with another action during a choice), {_matched} matched{issues}.");
         static string List(Dictionary<string, int> counts) => string.Join(", ", counts.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"));
-        if (_skipCounts.Count > 0) ModEntry.Log.Info($"[audit] combat summary: card play checks skipped: {List(_skipCounts)}.");
-        if (_gapCounts.Count > 0) ModEntry.Log.Info($"[audit] combat summary: not modelled in played cards' simulations: {List(_gapCounts)}.");
+        if (_skipCounts.Count > 0) ModEntry.Log.Detail($"[audit] combat summary: card play checks skipped: {List(_skipCounts)}.");
+        if (_gapCounts.Count > 0) ModEntry.Log.Detail($"[audit] combat summary: not modelled in played cards' simulations: {List(_gapCounts)}.");
         _checked = _matched = _fromHand = _interleaved = 0;
         _issueCounts.Clear();
         _skipCounts.Clear();

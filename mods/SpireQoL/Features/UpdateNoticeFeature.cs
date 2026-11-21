@@ -69,7 +69,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             if (status != null)
             {
                 _status = status;
-                ModEntry.Log.Info($"update notice: {Text(status)}");
+                ModEntry.Log.Detail($"update notice: {Text(status)}");
             }
         }
         Show(menu!);
@@ -123,7 +123,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         if (!_logged)
         {
             _logged = true;
-            ModEntry.Log.Info($"update notice: shown at {label.GetGlobalRect()}, gear at {gear.GetGlobalRect()}, above {warning.GetPath()} at {rect} (screen {screen})");
+            ModEntry.Log.Detail($"update notice: shown at {label.GetGlobalRect()}, gear at {gear.GetGlobalRect()}, above {warning.GetPath()} at {rect} (screen {screen})");
         }
     }
 

@@ -128,7 +128,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private void Odds(string what, SimChance chance, bool happened)
     {
         if (chance.High <= 0 || chance.Low >= 1) return; // certain either way: the checks above hold those
-        ModEntry.Log.Info($"[audit] [odds] turn {_frozenTurn}: {what}: predicted {chance.Text()}, {(happened ? "happened" : "didn't")}");
+        ModEntry.Log.Detail($"[audit] [odds] turn {_frozenTurn}: {what}: predicted {chance.Text()}, {(happened ? "happened" : "didn't")}");
         FightOdds.Add(chance, happened);
         _sessionOdds.Add(chance, happened);
         if (!_sessionOdds.Drifted || _driftReported) return;
@@ -255,10 +255,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private void Summarize()
     {
         static string List(Dictionary<string, int> counts) => string.Join(", ", counts.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"));
-        if (_checked > 0) ModEntry.Log.Info($"[audit] combat summary: {_checked} enemy turns forecast, {_matched} matched.");
-        if (Skips.Count > 0) ModEntry.Log.Info($"[audit] combat summary: enemy turns not checked: {List(Skips)}.");
-        if (Gaps.Count > 0) ModEntry.Log.Info($"[audit] combat summary: not modelled in the forecast: {List(Gaps)}.");
-        if (FightOdds.Count > 0) ModEntry.Log.Info($"[audit] combat summary: chances: {FightOdds.Text()} (this session: {_sessionOdds.Text()}).");
+        if (_checked > 0) ModEntry.Log.Detail($"[audit] combat summary: {_checked} enemy turns forecast, {_matched} matched.");
+        if (Skips.Count > 0) ModEntry.Log.Detail($"[audit] combat summary: enemy turns not checked: {List(Skips)}.");
+        if (Gaps.Count > 0) ModEntry.Log.Detail($"[audit] combat summary: not modelled in the forecast: {List(Gaps)}.");
+        if (FightOdds.Count > 0) ModEntry.Log.Detail($"[audit] combat summary: chances: {FightOdds.Text()} (this session: {_sessionOdds.Text()}).");
         FightOdds.Count = FightOdds.Happened = 0;
         FightOdds.Low = FightOdds.High = FightOdds.Variance = 0;
         _checked = _matched = 0;
@@ -324,7 +324,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var shownChances = forecast.Outcome; // the chances as they stood when you ended your turn, before the history narrows them
         // What it didn't model (rule 2): logged and counted, whatever the check finds.
         foreach (var reason in forecast.Outcome.UnmodelledReasons) CountIn(Gaps, reason);
-        if (forecast.Outcome.AnyUnmodelled) ModEntry.Log.Info($"[audit] [gaps] turn {_frozenTurn}: the forecast didn't model: {string.Join("; ", forecast.Outcome.UnmodelledReasons)}");
+        if (forecast.Outcome.AnyUnmodelled) ModEntry.Log.Detail($"[audit] [gaps] turn {_frozenTurn}: the forecast didn't model: {string.Join("; ", forecast.Outcome.UnmodelledReasons)}");
         if (forecast.Job is { } job)
         {
             job.Pinned = false;
@@ -348,7 +348,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var mates = forecast.Teammates.Where(player => player.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.StampedePower>() || player.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.SimpletonPower>()).ToList();
         if (mates.Count > 0 && endOfTurn.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && mates.Contains(cardPlayStartedEntry.CardPlay.Card.Owner)))
         {
-            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a teammate's Stampede or Simpleton played a card at end of turn, which isn't predicted)");
+            ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (a teammate's Stampede or Simpleton played a card at end of turn, which isn't predicted)");
             Skip("a teammate's end-of-turn pick from their hand (not predicted)");
             return;
         }
@@ -356,7 +356,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // No enemy turn came (an extra turn: The Hanged Man's ExtraTurnPower.ShouldTakeExtraTurn): nothing to compare.
         if (!sawEnemy && !youDied)
         {
-            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (no enemy turn followed: an extra turn)");
+            ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (no enemy turn followed: an extra turn)");
             Skip("an extra turn (no enemy turn to compare)");
             return;
         }
@@ -395,7 +395,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             }
             else if (narrowed == null)
             {
-                ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {auto.CardPlay.Card.GetType().Name} at end of turn, which no branch did); {Predicted()}");
+                ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {auto.CardPlay.Card.GetType().Name} at end of turn, which no branch did); {Predicted()}");
                 Skip("an end-of-turn auto-play no branch made (another source)");
                 return;
             }
@@ -404,7 +404,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 // The pick it stopped at (the last one in that branch).
                 var last = narrowed.Outcome.Branches.First(branch => branch.AutoPlaysUnknown).AutoPicks.LastOrDefault();
                 var changer = autoPlays.FirstOrDefault(cardPlayStartedEntry => last != null && hand != null && hand.TryGetValue(SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card), out var picked) && picked == last.Card)?.CardPlay.Card ?? auto.CardPlay.Card;
-                ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {changer.GetType().Name} at end of turn, which changed your hand); {Predicted()}");
+                ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {changer.GetType().Name} at end of turn, which changed your hand); {Predicted()}");
                 Skip("an end-of-turn auto-play that changed your hand");
                 return;
             }
@@ -418,7 +418,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // nothing can be called wrong. The gap is counted above; the check is skipped and counted too (rule 1).
         if (forecast.Outcome.AnyUnmodelled)
         {
-            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a branch the forecast didn't model: {string.Join("; ", forecast.Outcome.UnmodelledReasons)}); HP lost {actualTaken} (predicted {(forecast.TakenMin == forecast.Taken ? $"{forecast.Taken}" : $"{forecast.TakenMin}-{forecast.Taken}")})");
+            ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (a branch the forecast didn't model: {string.Join("; ", forecast.Outcome.UnmodelledReasons)}); HP lost {actualTaken} (predicted {(forecast.TakenMin == forecast.Taken ? $"{forecast.Taken}" : $"{forecast.TakenMin}-{forecast.Taken}")})");
             Skip("a branch the forecast didn't model");
             return;
         }
@@ -426,7 +426,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // settled, so there's nothing to check it against. Skipped and counted (rule 1); the cap itself is reported by SimJob.
         if (forecast.Outcome.Truncated)
         {
-            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (the forecast's search stopped at its memory cap); HP lost {actualTaken}");
+            ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (the forecast's search stopped at its memory cap); HP lost {actualTaken}");
             Skip("the forecast's search stopped at its memory cap");
             return;
         }
@@ -473,7 +473,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             Odds($"the most likely outcome ({(likely.Dies ? "you die" : $"lose {likely.Taken} HP")})", likely.Chance, youDied ? likely.Dies : !likely.Dies && actualTaken == likely.Taken);
 
         // Every enemy turn, matched or not: predicted vs actual per enemy, so patterns show before they're reports.
-        ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(forecast.TakenMin == forecast.Taken ? $"{forecast.Taken}" : $"{forecast.TakenMin}-{forecast.Taken}")}); {outcomeLine}{teamLine}");
+        ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(forecast.TakenMin == forecast.Taken ? $"{forecast.Taken}" : $"{forecast.TakenMin}-{forecast.Taken}")}); {outcomeLine}{teamLine}");
 
         _checked++;
         Telemetry.DevEvents.Post(new Telemetry.CheckDone(Telemetry.Audits.Forecast, _frozenTurn, issues.Count == 0, issues.Count == 0 ? null : issues[0].Split(':')[0]));
@@ -484,13 +484,13 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         }
 
         var log = ModEntry.Log;
-        log.Warn($"[audit] turn {_frozenTurn} enemy turn: {string.Join("; ", issues)}.");
-        log.Warn($"[audit]   forecast: block {forecast.CurrentBlock} + end of turn {List(forecast.EndOfTurnBlock)}; blockable {List(forecast.Blockable)}; " +
+        log.Detail($"[audit] turn {_frozenTurn} enemy turn: {string.Join("; ", issues)}.");
+        log.Detail($"[audit]   forecast: block {forecast.CurrentBlock} + end of turn {List(forecast.EndOfTurnBlock)}; blockable {List(forecast.Blockable)}; " +
                  $"unblockable {List(forecast.Unblockable)}; your end-of-turn damage {List(forecast.EndOfTurnDamage)}; " +
                  $"skipped (poison {forecast.SkippedPoisoned}, end of turn {forecast.SkippedEndOfTurn}), cancelled hits {forecast.CancelledHits}, Osty HP {forecast.OstyHp}.");
         foreach (var entry in window)
             if (entry is DamageReceivedEntry or BlockGainedEntry)
-                log.Warn($"[audit]   actual: {entry.HumanReadableString}");
+                log.Detail($"[audit]   actual: {entry.HumanReadableString}");
 
         // One report per issue, grouped by what was wrong and the encounter.
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;

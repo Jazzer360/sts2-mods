@@ -49,11 +49,11 @@ public sealed partial class RunRemindersFeature
                     + (shown != null ? $", icon {(shown.Contains(relic) ? "shown" : "not shown")}" : "");
                 if (predicted == changed)
                 {
-                    ModEntry.Log.Info($"[audit] [card-rule] {what}, matched");
+                    ModEntry.Log.Detail($"[audit] [card-rule] {what}, matched");
                     Telemetry.Audits.Done(Telemetry.Audits.Reminders, matched: true, "card rule");
                     continue;
                 }
-                ModEntry.Log.Info($"[audit] [card-rule] {what}");
+                ModEntry.Log.Detail($"[audit] [card-rule] {what}");
                 // The rule said no change and the card changed: logged only (something else may have changed it), and counted.
                 if (!predicted) Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "card rule: a card changed that the rule says it doesn't", $"{name} on {card.GetType().Name}");
                 else Telemetry.Audits.Done(Telemetry.Audits.Reminders, matched: false, "card-rule");
@@ -89,7 +89,7 @@ public sealed partial class RunRemindersFeature
             if (chance is not { } lowHigh || lowHigh.Low >= 1) continue;
             var seen = window.Offered.Concat(added).ToList();
             var cameUp = seen.Any(card => CameUp(rule, card, held, read.GivesUpgraded));
-            ModEntry.Log.Info($"[audit] [odds] {window.Option.TextKey} {relic.GetType().Name}: predicted {lowHigh.Low:P0}"
+            ModEntry.Log.Detail($"[audit] [odds] {window.Option.TextKey} {relic.GetType().Name}: predicted {lowHigh.Low:P0}"
                 + (lowHigh.High > lowHigh.Low ? $"–{lowHigh.High:P0}" : "") + $", came up: {(cameUp ? "yes" : "no")} ({window.Offered.Count} offered, {added.Count} added)");
         }
     }

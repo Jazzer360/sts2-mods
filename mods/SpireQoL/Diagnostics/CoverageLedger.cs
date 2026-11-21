@@ -468,13 +468,13 @@ internal static partial class CoverageLedger
             var game = SafeGameVersion();
             var byStatus = ByType.Values.GroupBy(entry => entry.Status).ToDictionary(status => status.Key, status => status.ToList());
             int N(Status status) => byStatus.TryGetValue(status, out var entries) ? entries.Count : 0;
-            log.Info($"[coverage] game {game}, ledger {LedgerGameVersion}: {ByType.Count} classes with combat hooks; covered {N(Status.Covered)}, ignored {N(Status.Ignored)}, " +
+            log.Detail($"[coverage] game {game}, ledger {LedgerGameVersion}: {ByType.Count} classes with combat hooks; covered {N(Status.Covered)}, ignored {N(Status.Ignored)}, " +
                      $"known gaps {N(Status.Gap)}, unreviewed {N(Status.Unreviewed)}, new {N(Status.New)}, changed {N(Status.Changed)}.");
             foreach (var status in new[] { Status.New, Status.Changed, Status.Unreviewed })
                 if (byStatus.TryGetValue(status, out var otherEntries))
-                    log.Info($"[coverage] {status.ToString().ToLowerInvariant()}: {string.Join(", ", otherEntries.Select(entry => entry.Type))}");
+                    log.Detail($"[coverage] {status.ToString().ToLowerInvariant()}: {string.Join(", ", otherEntries.Select(entry => entry.Type))}");
             foreach (var entry in CardCoverage.Issues)
-                log.Info($"[coverage] card code: {entry.Key}: {string.Join("; ", entry.Value)}");
+                log.Detail($"[coverage] card code: {entry.Key}: {string.Join("; ", entry.Value)}");
             if (!string.IsNullOrEmpty(game) && !ReviewedVersion(game))
             {
                 log.Warn($"[coverage] the game ({game}) isn't the version the mod's coverage was checked against ({LedgerGameVersion}): " +
@@ -591,7 +591,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
                 switch (entry.Status)
                 {
                     case CoverageLedger.Status.Gap:
-                        log.Info($"[coverage] known gap in this fight: {type.Name} ({entry.Note})");
+                        log.Detail($"[coverage] known gap in this fight: {type.Name} ({entry.Note})");
                         break;
                     case CoverageLedger.Status.Unreviewed or CoverageLedger.Status.New or CoverageLedger.Status.Changed:
                         Unexpected(type.Name, entry.Status.ToString().ToLowerInvariant(), $"{entry.Note}. Combat hooks: {entry.Hooks}.");
@@ -643,7 +643,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         if (SpireQoL.Data.RelicSpecs.For(name) != null) return;
         if (RelicTracking.Reasons.TryGetValue(name, out var why))
         {
-            if (why.StartsWith("gap:", StringComparison.Ordinal)) ModEntry.Log.Info($"[coverage] known tracking gap in this fight: {name} ({why})");
+            if (why.StartsWith("gap:", StringComparison.Ordinal)) ModEntry.Log.Detail($"[coverage] known tracking gap in this fight: {name} ({why})");
             return;
         }
         Unexpected(name, "relic-untracked", "a relic that can affect fights with no tab, no tracker row and no reviewed reason (RelicTracking).");

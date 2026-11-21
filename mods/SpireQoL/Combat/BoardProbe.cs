@@ -54,7 +54,7 @@ internal static class BoardProbe
     public static void Missed(string what, string why, string? detail = null)
     {
         if (Warned.Add(what + why + detail))
-            ModEntry.Log.Warn($"[perf] board probe missed a change: {what}: {why}{(detail == null ? "" : $" ({detail})")} (results reused on unchanged frames could be stale)");
+            ModEntry.Log.Detail($"[perf] board probe missed a change: {what}: {why}{(detail == null ? "" : $" ({detail})")} (results reused on unchanged frames could be stale)");
     }
 
     /// <summary>Where two simulator states differ (their JSON, path by path; the first few), to tell what the probe should read.</summary>
