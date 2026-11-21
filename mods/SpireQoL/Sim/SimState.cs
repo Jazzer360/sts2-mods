@@ -48,23 +48,23 @@ public sealed class SimEnemy
     /// <summary>Hardened Shell (HardenedShellPower: amount per turn, Data what's left this turn): HP it can still lose this turn, and per turn (int.MaxValue = none).</summary>
     [JsonIgnore] public int ShellLeft
     {
-        get => Powers.Has("HardenedShellPower") ? Powers.DataOf("HardenedShellPower") : int.MaxValue;
+        get => Powers.Has(PowerId.HardenedShell) ? Powers.DataOf(PowerId.HardenedShell) : int.MaxValue;
         set
         {
-            if (!Powers.Has("HardenedShellPower") && value == int.MaxValue) return; // no shell: nothing to keep
-            Powers = Powers.With("HardenedShellPower", Powers.Has("HardenedShellPower") ? Powers["HardenedShellPower"] : int.MaxValue, value);
+            if (!Powers.Has(PowerId.HardenedShell) && value == int.MaxValue) return; // no shell: nothing to keep
+            Powers = Powers.With(PowerId.HardenedShell, Powers.Has(PowerId.HardenedShell) ? Powers[PowerId.HardenedShell] : int.MaxValue, value);
         }
     }
     [JsonIgnore] public int ShellPerTurn
     {
-        get => Powers.Has("HardenedShellPower") ? Powers["HardenedShellPower"] : int.MaxValue;
-        set => Powers = value == int.MaxValue ? Powers.Without("HardenedShellPower")
-            : Powers.With("HardenedShellPower", value, Powers.Has("HardenedShellPower") ? Powers.DataOf("HardenedShellPower") : value);
+        get => Powers.Has(PowerId.HardenedShell) ? Powers[PowerId.HardenedShell] : int.MaxValue;
+        set => Powers = value == int.MaxValue ? Powers.Without(PowerId.HardenedShell)
+            : Powers.With(PowerId.HardenedShell, value, Powers.Has(PowerId.HardenedShell) ? Powers.DataOf(PowerId.HardenedShell) : value);
     }
     /// <summary>Damage of its poison tick at the start of its turn.</summary>
     public int Poison;
     /// <summary>Keeps its block between turns (BarricadePower, or BurrowedPower.ShouldClearBlock).</summary>
-    [JsonIgnore] public bool Barricade { get => Powers.Has("BarricadePower") || Powers.Has("BurrowedPower"); set => Set("BarricadePower", value ? 1 : 0); }
+    [JsonIgnore] public bool Barricade { get => Powers.Has(PowerId.Barricade) || Powers.Has(PowerId.Burrowed); set => Set(PowerId.Barricade, value ? 1 : 0); }
     public bool Stunned;
     /// <summary>Its attack this turn: damage of each hit on you (the intent's numbers).</summary>
     public List<int> Hits = new();
@@ -82,8 +82,8 @@ public sealed class SimEnemy
     /// <summary>Most damage one instance can deal it: Hard to Kill's cap, 1 while Intangible (int.MaxValue = none). Setting it sets Hard to Kill.</summary>
     [JsonIgnore] public int HitCap
     {
-        get => Powers.Has("IntangiblePower") ? 1 : Powers.Has("HardToKillPower") ? Powers["HardToKillPower"] : int.MaxValue;
-        set => Set("HardToKillPower", value == int.MaxValue ? 0 : value);
+        get => Powers.Has(PowerId.Intangible) ? 1 : Powers.Has(PowerId.HardToKill) ? Powers[PowerId.HardToKill] : int.MaxValue;
+        set => Set(PowerId.HardToKill, value == int.MaxValue ? 0 : value);
     }
 
     // ---- per-branch results
@@ -100,11 +100,11 @@ public sealed class SimEnemy
 
     // Reactions to your card plays (block it gains during your turn; decompile v0.111.0).
     /// <summary>Curl Up: block it gains after a card whose attack damaged it (once; the power goes).</summary>
-    [JsonIgnore] public int CurlUp { get => Powers["CurlUpPower"]; set => Set("CurlUpPower", value); }
+    [JsonIgnore] public int CurlUp { get => Powers[PowerId.CurlUp]; set => Set(PowerId.CurlUp, value); }
     /// <summary>Sneaky: block it gains after each Attack you play.</summary>
-    [JsonIgnore] public int Sneaky { get => Powers["SneakyPower"]; set => Set("SneakyPower", value); }
+    [JsonIgnore] public int Sneaky { get => Powers[PowerId.Sneaky]; set => Set(PowerId.Sneaky, value); }
     /// <summary>Skittish: block it gains after a card's attack gets damage through its block (once per turn; 0 once used).</summary>
-    [JsonIgnore] public int Skittish { get => Powers["SkittishPower"]; set => Set("SkittishPower", value); }
+    [JsonIgnore] public int Skittish { get => Powers[PowerId.Skittish]; set => Set(PowerId.Skittish, value); }
     /// <summary>It gained block from Curl Up, Sneaky or Skittish because of the play.</summary>
     public bool ReactedWithBlock;
 
@@ -113,30 +113,30 @@ public sealed class SimEnemy
     /// Thorns: damage to you (blockable) before each hit of your card's attack on it
     /// (ThornsPower.BeforeDamageReceived on powered attacks), after the game's damage math (0 = none).
     /// </summary>
-    [JsonIgnore] public int Thorns { get => Powers["ThornsPower"]; set => Set("ThornsPower", value); }
+    [JsonIgnore] public int Thorns { get => Powers[PowerId.Thorns]; set => Set(PowerId.Thorns, value); }
     /// <summary>Burrowed: keeps its block between turns; breaking that block stuns it (AfterBlockBroken), and the power and its block go.</summary>
-    [JsonIgnore] public bool Burrowed { get => Powers.Has("BurrowedPower"); set => Set("BurrowedPower", value ? 1 : 0); }
+    [JsonIgnore] public bool Burrowed { get => Powers.Has(PowerId.Burrowed); set => Set(PowerId.Burrowed, value ? 1 : 0); }
     /// <summary>Asleep (Lagavulin Matriarch): any damage through its block wakes and stuns it (AsleepPower.AfterDamageReceived).</summary>
-    [JsonIgnore] public bool Asleep { get => Powers.Has("AsleepPower"); set => Set("AsleepPower", value ? 1 : 0); }
+    [JsonIgnore] public bool Asleep { get => Powers.Has(PowerId.Asleep); set => Set(PowerId.Asleep, value ? 1 : 0); }
     /// <summary>
     /// Slumber (Slumbering Beetle): each damage instance through its block takes a stack; the last one wakes it, stunned
     /// (SlumberPower.AfterDamageReceived). 0: none.
     /// </summary>
-    [JsonIgnore] public int Slumber { get => Powers["SlumberPower"]; set => Set("SlumberPower", value); }
+    [JsonIgnore] public int Slumber { get => Powers[PowerId.Slumber]; set => Set(PowerId.Slumber, value); }
     /// <summary>Flutter: powered-attack hits with damage through its block left before it's stunned (0 = none).</summary>
-    [JsonIgnore] public int Flutter { get => Powers["FlutterPower"]; set => Set("FlutterPower", value); }
+    [JsonIgnore] public int Flutter { get => Powers[PowerId.Flutter]; set => Set(PowerId.Flutter, value); }
     /// <summary>Plow / Shriek: stunned when damage gets through and leaves it at or below this HP (0 = none).</summary>
-    [JsonIgnore] public int StunAtHp { get => Math.Max(Powers["PlowPower"], Powers["ShriekPower"]); set => Set("PlowPower", value); }
+    [JsonIgnore] public int StunAtHp { get => Math.Max(Powers[PowerId.Plow], Powers[PowerId.Shriek]); set => Set(PowerId.Plow, value); }
     /// <summary>The Gambit: dies when a powered attack gets damage through.</summary>
-    [JsonIgnore] public bool Gambit { get => Powers.Has("TheGambitPower"); set => Set("TheGambitPower", value ? 1 : 0); }
+    [JsonIgnore] public bool Gambit { get => Powers.Has(PowerId.TheGambit); set => Set(PowerId.TheGambit, value ? 1 : 0); }
     public bool GambitTriggered;
     /// <summary>Slippery: hits that lose it at most 1 HP each, left (0 = none).</summary>
-    [JsonIgnore] public int Slippery { get => Powers["SlipperyPower"]; set => Set("SlipperyPower", value); }
+    [JsonIgnore] public int Slippery { get => Powers[PowerId.Slippery]; set => Set(PowerId.Slippery, value); }
     public bool SlipperyTriggered;
     /// <summary>Alive when the simulation starts (deaths after that set off Crab Rage and Ravenous).</summary>
     public bool StartedAlive = true;
     /// <summary>Ravenous: an ally dying stuns it (RavenousPower.AfterDeath).</summary>
-    [JsonIgnore] public bool Ravenous { get => Powers.Has("RavenousPower"); set => Set("RavenousPower", value ? 1 : 0); }
+    [JsonIgnore] public bool Ravenous { get => Powers.Has(PowerId.Ravenous); set => Set(PowerId.Ravenous, value ? 1 : 0); }
     /// <summary>Crab Rage: its hits once an ally has died (its Strength; null = no Crab Rage).</summary>
     public List<int>? HitsAfterAllyDies;
     /// <summary>Crab Rage: block it gains when an ally dies.</summary>
@@ -158,7 +158,7 @@ public sealed class SimEnemy
     public PowerSet Powers = PowerSet.Empty;
 
     /// <summary>Sets a power's amount (0 removes it).</summary>
-    private void Set(string power, int amount) => Powers = amount == 0 ? Powers.Without(power) : Powers.With(power, amount);
+    private void Set(PowerId power, int amount) => Powers = amount == 0 ? Powers.Without(power) : Powers.With(power, amount);
 
     /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
     public bool BlockBroken;
@@ -216,64 +216,64 @@ public sealed class SimPlayer
 {
     public int Block;
 
-    private void Set(string power, int amount) => Powers = amount == 0 ? Powers.Without(power) : Powers.With(power, amount);
-    private void SetRelic(string relic, int amount) => Relics = amount == 0 ? Relics.Without(relic) : Relics.With(relic, amount);
+    private void Set(PowerId power, int amount) => Powers = amount == 0 ? Powers.Without(power) : Powers.With(power, amount);
+    private void SetRelic(RelicId relic, int amount) => Relics = amount == 0 ? Relics.Without(relic) : Relics.With(relic, amount);
 
     /// <summary>Their powers the simulator reads or changes, in the order they were applied (docs/SIMULATOR_V2.md).</summary>
     public PowerSet Powers = PowerSet.Empty;
     /// <summary>Their relics the simulator models, in relic order, with each one's counter (Amount) and flag (Data).</summary>
-    public PowerSet Relics = PowerSet.Empty;
+    public RelicSet Relics = RelicSet.Empty;
     /// <summary>
     /// What they played this turn, as the hooks count it (the game's CardPlaysStarted and CardPlaysFinished), under SimKeys.Plays: "Started",
     /// "Started:Attack", "Finished:Skill", "Finished#Shiv" (by tag)... Each play of a replay counts.
     /// </summary>
-    public PowerSet Turn = PowerSet.Empty;
+    public NamedCounts Turn = NamedCounts.Empty;
 
     // Powers that react or act at end of turn.
-    [JsonIgnore] public int Juggernaut { get => Powers["JuggernautPower"]; set => Set("JuggernautPower", value); }
-    [JsonIgnore] public int Plating { get => Powers["PlatingPower"]; set => Set("PlatingPower", value); }
-    [JsonIgnore] public int FeelNoPain { get => Powers["FeelNoPainPower"]; set => Set("FeelNoPainPower", value); }
+    [JsonIgnore] public int Juggernaut { get => Powers[PowerId.Juggernaut]; set => Set(PowerId.Juggernaut, value); }
+    [JsonIgnore] public int Plating { get => Powers[PowerId.Plating]; set => Set(PowerId.Plating, value); }
+    [JsonIgnore] public int FeelNoPain { get => Powers[PowerId.FeelNoPain]; set => Set(PowerId.FeelNoPain, value); }
     // End-of-turn powers and relics, as views onto their entries (the models read the entries: Sim/Models/EndOfTurnModels.cs).
     /// <summary>Hailstorm (amount; Data = the Frost orbs it needs).</summary>
-    [JsonIgnore] public int Hailstorm { get => Powers["HailstormPower"]; set => Powers = value == 0 ? Powers.Without("HailstormPower") : Powers.With("HailstormPower", value, Powers.Has("HailstormPower") ? Powers.DataOf("HailstormPower") : 1); }
-    [JsonIgnore] public int HailstormFrostNeeded { get => Powers.Has("HailstormPower") ? Powers.DataOf("HailstormPower") : 1; set => Powers = Powers.With("HailstormPower", Powers["HailstormPower"], value); }
+    [JsonIgnore] public int Hailstorm { get => Powers[PowerId.Hailstorm]; set => Powers = value == 0 ? Powers.Without(PowerId.Hailstorm) : Powers.With(PowerId.Hailstorm, value, Powers.Has(PowerId.Hailstorm) ? Powers.DataOf(PowerId.Hailstorm) : 1); }
+    [JsonIgnore] public int HailstormFrostNeeded { get => Powers.Has(PowerId.Hailstorm) ? Powers.DataOf(PowerId.Hailstorm) : 1; set => Powers = Powers.With(PowerId.Hailstorm, Powers[PowerId.Hailstorm], value); }
     /// <summary>The Bomb's damage when it goes off this turn end (its last tick: amount 1; Data = its damage), else 0.</summary>
-    [JsonIgnore] public int TheBombDamage { get => Powers.Has("TheBombPower") && Powers["TheBombPower"] <= 1 ? Powers.DataOf("TheBombPower") : 0; set => Powers = value == 0 ? Powers.Without("TheBombPower") : Powers.With("TheBombPower", 1, value); }
-    [JsonIgnore] public int ConsumingShadow { get => Powers["ConsumingShadowPower"]; set => Set("ConsumingShadowPower", value); }
-    [JsonIgnore] public int Thorns { get => Powers["ThornsPower"]; set => Set("ThornsPower", value); }
-    [JsonIgnore] public int FlameBarrier { get => Powers["FlameBarrierPower"]; set => Set("FlameBarrierPower", value); }
+    [JsonIgnore] public int TheBombDamage { get => Powers.Has(PowerId.TheBomb) && Powers[PowerId.TheBomb] <= 1 ? Powers.DataOf(PowerId.TheBomb) : 0; set => Powers = value == 0 ? Powers.Without(PowerId.TheBomb) : Powers.With(PowerId.TheBomb, 1, value); }
+    [JsonIgnore] public int ConsumingShadow { get => Powers[PowerId.ConsumingShadow]; set => Set(PowerId.ConsumingShadow, value); }
+    [JsonIgnore] public int Thorns { get => Powers[PowerId.Thorns]; set => Set(PowerId.Thorns, value); }
+    [JsonIgnore] public int FlameBarrier { get => Powers[PowerId.FlameBarrier]; set => Set(PowerId.FlameBarrier, value); }
     public bool Reflect;
     /// <summary>
     /// Inferno: each time you lose HP on your turn, this much damage to every enemy (InfernoPower.AfterDamageReceived:
     /// UnblockedDamage &gt; 0 while it's their side's turn; unpowered). Any player's (the model is the owner's).
     /// </summary>
-    [JsonIgnore] public int Inferno { get => Powers["InfernoPower"]; set => Set("InfernoPower", value); }
+    [JsonIgnore] public int Inferno { get => Powers[PowerId.Inferno]; set => Set(PowerId.Inferno, value); }
 
     // Relics (amount: their block or damage; Data where said).
-    [JsonIgnore] public int OrichalcumBlock { get => Relics["Orichalcum"]; set => SetRelic("Orichalcum", value); }
-    [JsonIgnore] public int CloakClaspPerCard { get => Relics["CloakClasp"]; set => SetRelic("CloakClasp", value); }
-    [JsonIgnore] public int RippleBasinBlock { get => Relics["RippleBasin"]; set => SetRelic("RippleBasin", value); }
-    [JsonIgnore] public int ScreamingFlagonDamage { get => Relics["ScreamingFlagon"]; set => SetRelic("ScreamingFlagon", value); }
+    [JsonIgnore] public int OrichalcumBlock { get => Relics[RelicId.Orichalcum]; set => SetRelic(RelicId.Orichalcum, value); }
+    [JsonIgnore] public int CloakClaspPerCard { get => Relics[RelicId.CloakClasp]; set => SetRelic(RelicId.CloakClasp, value); }
+    [JsonIgnore] public int RippleBasinBlock { get => Relics[RelicId.RippleBasin]; set => SetRelic(RelicId.RippleBasin, value); }
+    [JsonIgnore] public int ScreamingFlagonDamage { get => Relics[RelicId.ScreamingFlagon]; set => SetRelic(RelicId.ScreamingFlagon, value); }
     /// <summary>Stone Calendar's damage when this is its turn (Data: turns until then), else 0.</summary>
-    [JsonIgnore] public int StoneCalendarDamage { get => Relics.DataOf("StoneCalendar") == 0 ? Relics["StoneCalendar"] : 0; set => SetRelic("StoneCalendar", value); }
+    [JsonIgnore] public int StoneCalendarDamage { get => Relics.DataOf(RelicId.StoneCalendar) == 0 ? Relics[RelicId.StoneCalendar] : 0; set => SetRelic(RelicId.StoneCalendar, value); }
     /// <summary>Obsidian Vice: damage per card in hand to a random enemy at end of turn (v0.113.0).</summary>
-    [JsonIgnore] public int ObsidianViceDamage { get => Relics["ObsidianVice"]; set => SetRelic("ObsidianVice", value); }
-    [JsonIgnore] public int CharonsAshesDamage { get => Relics["CharonsAshes"]; set => SetRelic("CharonsAshes", value); }
-    [JsonIgnore] public int ForgottenSoulDamage { get => Relics["ForgottenSoul"]; set => SetRelic("ForgottenSoul", value); }
+    [JsonIgnore] public int ObsidianViceDamage { get => Relics[RelicId.ObsidianVice]; set => SetRelic(RelicId.ObsidianVice, value); }
+    [JsonIgnore] public int CharonsAshesDamage { get => Relics[RelicId.CharonsAshes]; set => SetRelic(RelicId.CharonsAshes, value); }
+    [JsonIgnore] public int ForgottenSoulDamage { get => Relics[RelicId.ForgottenSoul]; set => SetRelic(RelicId.ForgottenSoul, value); }
     /// <summary>Parrying Shield (amount: its damage; Data: the block it needs).</summary>
-    [JsonIgnore] public int ParryingShieldDamage { get => Relics["ParryingShield"]; set => Relics = Relics.With("ParryingShield", value, Relics.DataOf("ParryingShield")); }
-    [JsonIgnore] public int ParryingShieldBlock { get => Relics.DataOf("ParryingShield"); set => Relics = Relics.With("ParryingShield", Relics["ParryingShield"], value); }
+    [JsonIgnore] public int ParryingShieldDamage { get => Relics[RelicId.ParryingShield]; set => Relics = Relics.With(RelicId.ParryingShield, value, Relics.DataOf(RelicId.ParryingShield)); }
+    [JsonIgnore] public int ParryingShieldBlock { get => Relics.DataOf(RelicId.ParryingShield); set => Relics = Relics.With(RelicId.ParryingShield, Relics[RelicId.ParryingShield], value); }
     /// <summary>
     /// Pael's Eye is armed (unused this combat, no card played this turn): BeforeSideTurnEndEarly exhausts your whole hand.
     /// A card you play disarms it (BeforeCardPlayed); auto-plays don't.
     /// </summary>
     [JsonIgnore] public bool PaelsEyeExhaust
     {
-        get => Relics.Has("PaelsEye") && (Relics.DataOf("PaelsEye") & 1) != 0;
+        get => Relics.Has(RelicId.PaelsEye) && (Relics.DataOf(RelicId.PaelsEye) & 1) != 0;
         set
         {
-            if (!value && !Relics.Has("PaelsEye")) return;
-            Relics = Relics.With("PaelsEye", Relics["PaelsEye"], value ? Relics.DataOf("PaelsEye") | 1 : Relics.DataOf("PaelsEye") & ~1);
+            if (!value && !Relics.Has(RelicId.PaelsEye)) return;
+            Relics = Relics.With(RelicId.PaelsEye, Relics[RelicId.PaelsEye], value ? Relics.DataOf(RelicId.PaelsEye) | 1 : Relics.DataOf(RelicId.PaelsEye) & ~1);
         }
     }
 
@@ -323,36 +323,36 @@ public sealed class SimPlayer
 
     // What happens to damage reaching your HP.
     /// <summary>Tungsten Rod (relic, amount = HpLossReduction).</summary>
-    [JsonIgnore] public int TungstenRod { get => Relics["TungstenRod"]; set => SetRelic("TungstenRod", value); }
+    [JsonIgnore] public int TungstenRod { get => Relics[RelicId.TungstenRod]; set => SetRelic(RelicId.TungstenRod, value); }
 
     /// <summary>Block gains so far (each sets off Juggernaut): counted for the Juggernaut tab.</summary>
     public int BlockGains;
 
     /// <summary>Envenom (EnvenomPower): poison on each enemy your attack gets damage through to (per hit).</summary>
-    [JsonIgnore] public int Envenom { get => Powers["EnvenomPower"]; set => Set("EnvenomPower", value); }
+    [JsonIgnore] public int Envenom { get => Powers[PowerId.Envenom]; set => Set(PowerId.Envenom, value); }
     /// <summary>Snecko Skull (relic, its amount): extra poison on every application of yours.</summary>
-    [JsonIgnore] public int PoisonBonus { get => Relics["SneckoSkull"]; set => SetRelic("SneckoSkull", value); }
+    [JsonIgnore] public int PoisonBonus { get => Relics[RelicId.SneckoSkull]; set => SetRelic(RelicId.SneckoSkull, value); }
     /// <summary>The Boot (relic, its amount): your attack hits that lose an enemy any HP lose it at least this much (0 = no relic).</summary>
-    [JsonIgnore] public int BootMinimum { get => Relics["TheBoot"]; set => SetRelic("TheBoot", value); }
+    [JsonIgnore] public int BootMinimum { get => Relics[RelicId.TheBoot]; set => SetRelic(RelicId.TheBoot, value); }
     /// <summary>Your Focus now (orb values already include it), for Focus changes during a play.</summary>
     public int Focus;
     /// <summary>Beating Remnant (relic: amount = MaxHpLoss, Data = HP lost since your turn started).</summary>
     [JsonIgnore] public int RemnantLeftPlayerTurn
     {
-        get => Relics.Has("BeatingRemnant") ? Math.Max(0, Relics["BeatingRemnant"] - Relics.DataOf("BeatingRemnant")) : int.MaxValue;
-        set { if (value != int.MaxValue) Relics = Relics.With("BeatingRemnant", Relics.Has("BeatingRemnant") ? Relics["BeatingRemnant"] : value, (Relics.Has("BeatingRemnant") ? Relics["BeatingRemnant"] : value) - value); }
+        get => Relics.Has(RelicId.BeatingRemnant) ? Math.Max(0, Relics[RelicId.BeatingRemnant] - Relics.DataOf(RelicId.BeatingRemnant)) : int.MaxValue;
+        set { if (value != int.MaxValue) Relics = Relics.With(RelicId.BeatingRemnant, Relics.Has(RelicId.BeatingRemnant) ? Relics[RelicId.BeatingRemnant] : value, (Relics.Has(RelicId.BeatingRemnant) ? Relics[RelicId.BeatingRemnant] : value) - value); }
     }
     [JsonIgnore] public int RemnantCap
     {
-        get => Relics.Has("BeatingRemnant") ? Relics["BeatingRemnant"] : int.MaxValue;
+        get => Relics.Has(RelicId.BeatingRemnant) ? Relics[RelicId.BeatingRemnant] : int.MaxValue;
         set
         {
-            if (value == int.MaxValue) { Relics = Relics.Without("BeatingRemnant"); return; }
+            if (value == int.MaxValue) { Relics = Relics.Without(RelicId.BeatingRemnant); return; }
             var left = RemnantLeftPlayerTurn;
-            Relics = Relics.With("BeatingRemnant", value, left == int.MaxValue ? 0 : Math.Max(0, value - left));
+            Relics = Relics.With(RelicId.BeatingRemnant, value, left == int.MaxValue ? 0 : Math.Max(0, value - left));
         }
     }
-    [JsonIgnore] public int Buffer { get => Powers["BufferPower"]; set => Set("BufferPower", value); }
+    [JsonIgnore] public int Buffer { get => Powers[PowerId.Buffer]; set => Set(PowerId.Buffer, value); }
     public int OstyHp;
     /// <summary>Osty takes the hits aimed at his owner first (DieForYouPower).</summary>
     public bool OstyShields = true;
@@ -533,7 +533,7 @@ public sealed class SimState
     /// caused (Data). Fired is the smallest over branches merged into this one (it happens in every one of them); FiredAny
     /// the largest (in some). Not in the branch key.
     /// </summary>
-    public PowerSet Fired = PowerSet.Empty, FiredAny = PowerSet.Empty;
+    public NamedCounts Fired = NamedCounts.Empty, FiredAny = NamedCounts.Empty;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
     [JsonIgnore] public int FairiesUsed { get => P.FairiesUsed; set => P.FairiesUsed = value; }
     [JsonIgnore] public bool LizardTailUsed { get => P.LizardTailUsed; set => P.LizardTailUsed = value; }
@@ -636,7 +636,7 @@ public sealed class SimState
     /// What models bound to a card play at BeforeCardPlayed (the game's amountsForPlayedCards: Afterimage, Gravity, Strangle...),
     /// "Name@owner" → amount; taken at AfterCardPlayed. A power the play itself applies isn't bound, so it doesn't fire on it.
     /// </summary>
-    internal PowerSet Bound = PowerSet.Empty;
+    internal NamedCounts Bound = NamedCounts.Empty;
     /// <summary>The first hit of a card's attack on each enemy (enemy id → damage), for the damage-formula audit.</summary>
     internal ImmutableSortedDictionary<int, int> FirstHits = ImmutableSortedDictionary<int, int>.Empty;
     /// <summary>Card events raised inside a hit or a death, run once it's over (SimEngine.Raise, DrainPending).</summary>
@@ -652,7 +652,7 @@ public sealed class SimState
 
     /// <summary>The listeners (SimEngine.Listeners) and the power and relic sets they were built from: rebuilt when one changes.</summary>
     internal List<(SimModel Model, int Owner)>? ListenerCache;
-    internal PowerSet[]? ListenerSets;
+    internal object[]? ListenerSets;
 
     /// <summary>The run's work counter (SimEngine.Run sets it; every copy of the state shares it).</summary>
     internal SimWork? Work;
@@ -713,10 +713,10 @@ public sealed class SimState
     }
 
     /// <summary>Two play logs as one: every (the smaller of each, gone when either lacks it) or any (the larger).</summary>
-    internal static PowerSet MergeLog(PowerSet a, PowerSet b, bool every)
+    internal static NamedCounts MergeLog(NamedCounts a, NamedCounts b, bool every)
     {
         if (ReferenceEquals(a, b)) return a;
-        var r = every ? PowerSet.Empty : a;
+        var r = every ? NamedCounts.Empty : a;
         if (every)
         {
             foreach (var e in a.Items)

@@ -115,7 +115,7 @@ public class SimDrawTests
         // Iteration 2: the first Status drawn this turn draws 2 more (a pile of Statuses: three in all). A second Status doesn't.
         var status = new SimDrawCard("status") { Status = true };
         var s = You();
-        s.P.Powers = s.P.Powers.With("IterationPower", 2, 0);
+        s.P.Powers = s.P.Powers.With(PowerId.Iteration, 2, 0);
         s.P.Draw = Pile((status, 6));
         var o = SimEngine.Run(s, Draws(1));
         Assert.All(o.Branches, b => Assert.Equal(3, b.P.Drawn));
@@ -128,7 +128,7 @@ public class SimDrawTests
     {
         var ethereal = new SimDrawCard("ethereal") { Ethereal = true };
         var s = You();
-        s.P.Powers = s.P.Powers.With("PagestormPower", 1, 0);
+        s.P.Powers = s.P.Powers.With(PowerId.Pagestorm, 1, 0);
         s.P.Draw = Pile((ethereal, 2), (Plain, 1));
         var o = SimEngine.Run(s, Draws(1));
         // The Plain first (1/3): no chain. An Ethereal first (2/3) draws one more: the other Ethereal (1/2), which draws the Plain,
@@ -145,7 +145,7 @@ public class SimDrawTests
         // Nine in hand (the played card out): the Status fills the hand, so Iteration's draw has no room.
         var status = new SimDrawCard("status") { Status = true };
         var s = You(hand: 10);
-        s.P.Powers = s.P.Powers.With("IterationPower", 2, 0);
+        s.P.Powers = s.P.Powers.With(PowerId.Iteration, 2, 0);
         s.P.Draw = Pile((status, 6));
         Assert.All(SimEngine.Run(s, Draws(1)).Branches, b => Assert.Equal(1, b.P.Drawn));
     }

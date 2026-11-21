@@ -35,7 +35,7 @@ public static partial class SimEngine
     {
         var p = s.Player(player);
         var focus = p?.Focus ?? 0;
-        var lightningBonus = p != null && p.Relics.Has("InfusedCore") ? Var(s, player, "InfusedCore", "ExtraDamage", 0) : 0;
+        var lightningBonus = p != null && p.Relics.Has(RelicId.InfusedCore) ? Var(s, player, "InfusedCore", "ExtraDamage", 0) : 0;
         int F(int v) => Math.Max(0, v + focus);
         return kind switch
         {

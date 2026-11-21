@@ -31,7 +31,7 @@ public class StrengthLossTests
             if (facts == null) continue;
             var play = SimAdapter.Play(card, facts, f.Me, f.Combat, new Dictionary<Creature, int>(), -1);
             var debuffs = play.Body.OfType<ApplyPowerAction>().Where(a => a.To is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies && a.Debuff).ToList();
-            var temporary = debuffs.Count(a => a.Power != "StrengthPower" && ModelDb.AllPowers.Any(p => p.GetType().Name == a.Power && p is MegaCrit.Sts2.Core.Models.Powers.TemporaryStrengthPower));
+            var temporary = debuffs.Count(a => a.Power != PowerId.Strength && ModelDb.AllPowers.Any(p => p.GetType().Name == a.Power.Name && p is MegaCrit.Sts2.Core.Models.Powers.TemporaryStrengthPower));
             if (temporary > 0) wrong.Add($"{name}: {string.Join(", ", debuffs.Select(d => d.Power))}");
         }
         Assert.True(wrong.Count == 0, string.Join("\n", wrong));

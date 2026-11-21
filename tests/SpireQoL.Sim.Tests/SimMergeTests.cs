@@ -31,7 +31,7 @@ public class SimMergeTests
         Differs(t => t.HandCount = 6);
         Differs(t => t.Drawn = 1);
         Differs(t => t.Died = true);
-        Differs(t => t.Powers = t.Powers.With("StrengthPower", 1));
+        Differs(t => t.Powers = t.Powers.With(PowerId.Strength, 1));
         Differs(t => t.OwnOrbs().Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }));
     }
 

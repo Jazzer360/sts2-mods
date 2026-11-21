@@ -656,8 +656,8 @@ public sealed class CardPredictions
         // An enemy's or a teammate's source reads its own key (SimState.LogFired: a teammate's firings are only there); yours, the
         // plain name.
         var key = SimKeys.Logged(name, ownerId);
-        static int Data(PowerSet log, string k) => log.DataOf(k);
-        bool Fired(PowerSet log) => log.Has(key) && (_indirect || log[key] > log[SimKeys.Indirect(key)]);
+        static int Data(NamedCounts log, string k) => log.DataOf(k);
+        bool Fired(NamedCounts log) => log.Has(key) && (_indirect || log[key] > log[SimKeys.Indirect(key)]);
         {
             // For the audits, direct or not (the game flashes either way), whether or not a tab shows.
             var srcName = src.GetType().Name;

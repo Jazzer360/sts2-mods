@@ -13,12 +13,12 @@ public abstract class ProcModel : SimModel
     protected static bool Mine(SimCardPlay play, int owner) => play.Owner == owner;
 
     /// <summary>Its amount on its owner (a power's stacks, a relic's counter).</summary>
-    protected virtual int Amount(SimState s, int owner) => SimEngine.PowerOn(s, owner, Name);
-    protected virtual int Data(SimState s, int owner) => SimEngine.PowersOf(s, owner).DataOf(Name);
+    protected virtual int Amount(SimState s, int owner) => SimEngine.PowerOn(s, owner, ThisPower);
+    protected virtual int Data(SimState s, int owner) => SimEngine.PowersOf(s, owner).DataOf(ThisPower);
     protected virtual void Set(SimState s, int owner, int amount, int data)
     {
         var p = SimEngine.PowersOf(s, owner);
-        if (p.Has(Name)) SimEngine.SetPowers(s, owner, p.With(Name, amount, data));
+        if (p.Has(ThisPower)) SimEngine.SetPowers(s, owner, p.With(ThisPower, amount, data));
     }
 
     /// <summary>One of its values (DynamicVars) as the adapter read it.</summary>
@@ -75,12 +75,12 @@ public abstract class ProcModel : SimModel
 /// <summary>A relic proc: its amount is its counter, its data a flag (armed, used this turn...), its values its DynamicVars.</summary>
 public abstract class RelicProc : ProcModel
 {
-    protected override int Amount(SimState s, int owner) => SimEngine.RelicsOf(s, owner)[Name];
-    protected override int Data(SimState s, int owner) => SimEngine.RelicsOf(s, owner).DataOf(Name);
+    protected override int Amount(SimState s, int owner) => SimEngine.RelicsOf(s, owner)[ThisRelic];
+    protected override int Data(SimState s, int owner) => SimEngine.RelicsOf(s, owner).DataOf(ThisRelic);
     protected override void Set(SimState s, int owner, int amount, int data)
     {
         var r = SimEngine.RelicsOf(s, owner);
-        if (r.Has(Name)) SimEngine.SetRelics(s, owner, r.With(Name, amount, data));
+        if (r.Has(ThisRelic)) SimEngine.SetRelics(s, owner, r.With(ThisRelic, amount, data));
     }
     /// <summary>Its Block value, as its BlockVar gives it (with its props).</summary>
     protected IEnumerable<SimState> RelicBlock(SimState s, int owner, int times = 1) =>

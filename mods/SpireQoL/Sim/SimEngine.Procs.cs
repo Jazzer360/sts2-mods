@@ -169,5 +169,5 @@ public static partial class SimEngine
     }
 
     /// <summary>A player's turn counters (SimPlayer.Turn) by id.</summary>
-    public static PowerSet TurnOf(SimState s, int id) => s.Player(id)?.Turn ?? PowerSet.Empty;
+    public static NamedCounts TurnOf(SimState s, int id) => s.Player(id)?.Turn ?? NamedCounts.Empty;
 }

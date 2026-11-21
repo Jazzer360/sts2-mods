@@ -69,7 +69,7 @@ public sealed class MonologuePower : BoundPower
     protected override int BoundAmount(SimState s, int owner) => Var(s, owner, "Strength", 1);
     protected override IEnumerable<SimState> Act(SimState s, int owner, SimCardPlay play, int amount)
     {
-        SimEngine.ApplyPower(s, owner, owner, "StrengthPower", amount, debuff: false);
+        SimEngine.ApplyPower(s, owner, owner, PowerId.Strength, amount, debuff: false);
         return Fire(s, owner);
     }
 }
@@ -390,16 +390,16 @@ public sealed class ImpaledPower : SimModel
     {
         if (e.Target != owner || e.Dealer != Who.You || !e.Props.IsPoweredAttack()) return;
         var p = SimEngine.PowersOf(s, owner);
-        if (p[Name] <= 0) return;
-        var counter = p.DataOf(Name) - 1;
-        if (counter > 0) { SimEngine.SetPowers(s, owner, p.With(Name, p[Name], counter)); return; }
-        SimEngine.SetPowers(s, owner, p.With(Name, p[Name], 3));
+        if (p[ThisPower] <= 0) return;
+        var counter = p.DataOf(ThisPower) - 1;
+        if (counter > 0) { SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], counter)); return; }
+        SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], 3));
         SimEngine.TakeArrows(s, owner, 1);
         SimEngine.Raise(s, CardEvent.ArrowDislodged, Who.You);
     }
     public override void AfterDeath(SimState s, int owner, int dead)
     {
-        var arrows = SimEngine.PowerOn(s, owner, Name);
+        var arrows = SimEngine.PowerOn(s, owner, ThisPower);
         if (dead != owner || arrows <= 0) return;
         SimEngine.TakeArrows(s, owner, arrows);
         SimEngine.Raise(s, CardEvent.ArrowDislodged, Who.You, arrows);
@@ -570,7 +570,7 @@ public sealed class TrashToTreasurePower : ProcModel
 public sealed class SleightOfFleshPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, string power, int amount, int applier, int target, bool debuff) =>
+    public override IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, PowerId power, int amount, int applier, int target, bool debuff) =>
         debuff && applier == owner && target >= 0 ? SimEngine.ProcDamageOn(s, owner, Name, target, Amount(s, owner), Unpowered) : One(s);
 }
 
@@ -578,16 +578,16 @@ public sealed class SleightOfFleshPower : ProcModel
 public sealed class ViciousPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Draw;
-    public override IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, string power, int amount, int applier, int target, bool debuff) =>
-        power == "VulnerablePower" && applier == owner && target >= 0 ? Cause(Fire(s, owner), CardEvent.Drawn, 1, owner) : One(s);
+    public override IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, PowerId power, int amount, int applier, int target, bool debuff) =>
+        power == PowerId.Vulnerable && applier == owner && target >= 0 ? Cause(Fire(s, owner), CardEvent.Drawn, 1, owner) : One(s);
 }
 
 /// <summary>ShroudPower.AfterPowerAmountChanged: block (unpowered) for each Doom its owner lands on an enemy.</summary>
 public sealed class ShroudPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, string power, int amount, int applier, int target, bool debuff) =>
-        power == "DoomPower" && applier == owner && target >= 0 ? Block(s, owner, Amount(s, owner)) : One(s);
+    public override IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, PowerId power, int amount, int applier, int target, bool debuff) =>
+        power == PowerId.Doom && applier == owner && target >= 0 ? Block(s, owner, Amount(s, owner)) : One(s);
 }
 
 /// <summary>ReaperFormPower.AfterDamageGiven: its owner's powered hits that get HP through apply Doom.</summary>
@@ -666,8 +666,8 @@ public sealed class TeammatesImpaledPower : SimModel
     {
         if (dead != owner) return;
         var p = SimEngine.PowersOf(s, owner);
-        var bits = p.DataOf(Name);
-        SimEngine.SetPowers(s, owner, p.Without(Name));
+        var bits = p.DataOf(ThisPower);
+        SimEngine.SetPowers(s, owner, p.Without(ThisPower));
         for (var k = 0; k < s.Teammates.Count && bits != 0; k++, bits >>= 4)
         {
             var arrows = bits & 15;

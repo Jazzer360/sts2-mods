@@ -48,7 +48,7 @@ public sealed class ExplosivePower : DeathSetsOff { }
 public sealed class StockPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, Name) > 0 ? OutcomeRules.KillsIt(owner) : null;
+        Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, ThisPower) > 0 ? OutcomeRules.KillsIt(owner) : null;
 }
 
 /// <summary>
@@ -93,7 +93,7 @@ public sealed class RupturePower : ReactsToYourHpLoss { }
 public sealed class DemonTongue : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        owner == Who.You && (SimEngine.RelicsOf(start, owner).DataOf(Name) & 2) == 0 ? OutcomeRules.YouLoseHp : null;
+        owner == Who.You && (SimEngine.RelicsOf(start, owner).DataOf(ThisRelic) & 2) == 0 ? OutcomeRules.YouLoseHp : null;
 }
 
 /// <summary>
@@ -106,7 +106,7 @@ public sealed class RedSkull : SimModel
     {
         if (owner != Who.You) return null;
         var hp = start.P.Hp;
-        var threshold = SimEngine.RelicsOf(start, owner)[Name];
+        var threshold = SimEngine.RelicsOf(start, owner)[ThisRelic];
         return hp > threshold ? new(false, o => o.PlayHpLostMin > 0 && hp - o.PlayHpLostMin <= threshold) : null;
     }
 }

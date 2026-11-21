@@ -101,7 +101,7 @@ public sealed class SimOutcome
     /// <summary>The play's HP loss of yours, in the branch where it's smallest (SimState.PlayHpReached, PlayHpLosses, PlayHpLost).</summary>
     public int PlayHpReachedMin, PlayHpLossesMin, PlayHpLostMin;
     /// <summary>What fired during the play (its log): the counts in every branch (smallest), and in some branch (largest).</summary>
-    public PowerSet PlayFiredEvery = PowerSet.Empty, PlayFiredAny = PowerSet.Empty;
+    public NamedCounts PlayFiredEvery = NamedCounts.Empty, PlayFiredAny = NamedCounts.Empty;
     /// <summary>The first hit of the card's attack on each enemy (enemy id: damage), the same in every branch; empty when it isn't.</summary>
     public IReadOnlyDictionary<int, int> PlayFirstHits = System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
 
@@ -225,9 +225,9 @@ public static partial class SimEngine
         var gains = states.Select(s => s.P.BlockGains - start.P.BlockGains).ToList();
         int PlayMin(Func<SimState, int> f) => !complete || states.Count == 0 ? 0 : states.Min(f);
         // The play's log over its branches: in every branch (each merged one keeps its smallest), and in some branch.
-        var firedEvery = !complete || states.Count == 0 ? PowerSet.Empty
+        var firedEvery = !complete || states.Count == 0 ? NamedCounts.Empty
             : states.Skip(1).Aggregate(states[0].Fired, (acc, x) => SimState.MergeLog(acc, x.Fired, every: true));
-        var firedAny = states.Aggregate(PowerSet.Empty, (acc, x) => SimState.MergeLog(acc, x.FiredAny, every: false));
+        var firedAny = states.Aggregate(NamedCounts.Empty, (acc, x) => SimState.MergeLog(acc, x.FiredAny, every: false));
         // The first hit of the card's attack on each enemy, when nothing random came before it (the damage-formula audit).
         var firstHits = complete && states.Count > 0 && states.All(x => ReferenceEquals(x.FirstHits, states[0].FirstHits) || x.FirstHits.SequenceEqual(states[0].FirstHits)) ? states[0].FirstHits : System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
         return new SimOutcome
@@ -1107,7 +1107,7 @@ public static partial class SimEngine
             e.BlockBroken = true;
             foreach (var (m, o) in Listeners(s)) m.AfterBlockBroken(s, o, e.Id);
         }
-        if (sb.RemoveArtifact && PowersOf(s, e.Id).Has("ArtifactPower")) SetPowers(s, e.Id, PowersOf(s, e.Id).Without("ArtifactPower"));
+        if (sb.RemoveArtifact && PowersOf(s, e.Id).Has(PowerId.Artifact)) SetPowers(s, e.Id, PowersOf(s, e.Id).Without(PowerId.Artifact));
     }
 
     /// <summary>

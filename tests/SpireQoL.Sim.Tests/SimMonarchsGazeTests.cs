@@ -17,7 +17,7 @@ public class SimMonarchsGazeTests
     {
         var s = new SimState();
         s.Enemies.AddRange(enemies);
-        s.P.Powers = s.P.Powers.With("MonarchsGazePower", 2);
+        s.P.Powers = s.P.Powers.With(PowerId.MonarchsGaze, 2);
         return s;
     }
 
@@ -30,8 +30,8 @@ public class SimMonarchsGazeTests
         // Both hits on one enemy: 6 + 10; one each: 8 + 8. Either way 16.
         Assert.Equal(16, o.TakenMax);
         Assert.Equal(16, o.TakenMin);
-        Assert.Contains(o.Branches, b => b.Enemy(0)!.Powers["StrengthPower"] == -4 && !b.Enemy(1)!.Powers.Has("StrengthPower"));
-        Assert.Contains(o.Branches, b => b.Enemy(0)!.Powers["StrengthPower"] == -2 && b.Enemy(1)!.Powers["StrengthPower"] == -2);
+        Assert.Contains(o.Branches, b => b.Enemy(0)!.Powers[PowerId.Strength] == -4 && !b.Enemy(1)!.Powers.Has(PowerId.Strength));
+        Assert.Contains(o.Branches, b => b.Enemy(0)!.Powers[PowerId.Strength] == -2 && b.Enemy(1)!.Powers[PowerId.Strength] == -2);
     }
 
     [Fact]

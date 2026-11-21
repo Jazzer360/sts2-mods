@@ -11,13 +11,13 @@ public class StripAndEchoTests
     {
         // Expose.OnPlay: CreatureCmd.LoseBlock(all of it), PowerCmd.Remove<ArtifactPower>, then Vulnerable.
         var s = new SimState { Enemies = { Enemy(0, 30, block: 7), Enemy(1, 30, block: 5) } };
-        s.Enemies[0].Powers = PowerSet.Empty.With("ArtifactPower", 1);
+        s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Artifact, 1);
         var after = After(s, Play(Card("Expose", SimCardType.Skill), 0, 1,
-            new StripBlockAction(RemoveArtifact: true), new ApplyPowerAction("VulnerablePower", 2) { Debuff = true })).Single();
+            new StripBlockAction(RemoveArtifact: true), new ApplyPowerAction(PowerId.Vulnerable, 2) { Debuff = true })).Single();
         Assert.Equal(0, after.Enemy(0)!.Block);
         Assert.Equal(5, after.Enemy(1)!.Block); // only its target
-        Assert.False(after.Enemy(0)!.Powers.Has("ArtifactPower"));
-        Assert.Equal(2, after.Enemy(0)!.Powers["VulnerablePower"]);
+        Assert.False(after.Enemy(0)!.Powers.Has(PowerId.Artifact));
+        Assert.Equal(2, after.Enemy(0)!.Powers[PowerId.Vulnerable]);
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public class StripAndEchoTests
     {
         // LoseBlock runs AfterBlockBroken when the block was above 0: Burrowed stuns its owner.
         var s = new SimState { Enemies = { Enemy(0, 30, block: 10) } };
-        s.Enemies[0].Powers = PowerSet.Empty.With("BurrowedPower", 1);
+        s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Burrowed, 1);
         s.Enemies[0].Hits = new List<int> { 12 };
         var after = After(s, Play(Card("Expose", SimCardType.Skill), 0, 1, new StripBlockAction(RemoveArtifact: true))).Single();
         Assert.True(after.Enemy(0)!.Stunned);

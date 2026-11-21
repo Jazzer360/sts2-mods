@@ -10,8 +10,8 @@ public class OutcomeTabTests
 {
     private static SimModel Model(string name) => SimModels.Get(name) ?? throw new InvalidOperationException(name + " isn't modelled");
 
-    private static SimState You(int hp, string? relic = null, int amount = 0, int data = 0) =>
-        new() { P = { Hp = hp, Relics = relic == null ? PowerSet.Empty : PowerSet.Empty.With(relic, amount, data) } };
+    private static SimState You(int hp, RelicId? relic = null, int amount = 0, int data = 0) =>
+        new() { P = { Hp = hp, Relics = relic is { } r ? RelicSet.Empty.With(r, amount, data) : RelicSet.Empty } };
 
     private static SimOutcome Ended(params SimState[] branches) => new() { Branches = branches.ToList() };
 
@@ -32,20 +32,20 @@ public class OutcomeTabTests
     public void RedSkullShowsWhenThePlayTakesYouToItsThresholdFromAbove()
     {
         // At 30 HP with the threshold at 20: losing 10 or more in every branch of an aim gives the Strength.
-        var rule = Model("RedSkull").OutcomeTab(You(30, "RedSkull", 20), Ended(), Who.You)!;
+        var rule = Model("RedSkull").OutcomeTab(You(30, RelicId.RedSkull, 20), Ended(), Who.You)!;
         Assert.False(rule.Harmful);
         Assert.True(rule.SetOff(new SimOutcome { PlayHpLostMin = 10 }));
         Assert.False(rule.SetOff(new SimOutcome { PlayHpLostMin = 9 }));
         // Already at the threshold: no tab (nothing changes), and never a teammate's.
-        Assert.Null(Model("RedSkull").OutcomeTab(You(20, "RedSkull", 20), Ended(), Who.You));
-        Assert.Null(Model("RedSkull").OutcomeTab(You(30, "RedSkull", 20), Ended(), Who.Teammate(0)));
+        Assert.Null(Model("RedSkull").OutcomeTab(You(20, RelicId.RedSkull, 20), Ended(), Who.You));
+        Assert.Null(Model("RedSkull").OutcomeTab(You(30, RelicId.RedSkull, 20), Ended(), Who.Teammate(0)));
     }
 
     [Fact]
     public void DemonTongueShowsOnlyWhileUnusedThisTurn()
     {
-        Assert.NotNull(Model("DemonTongue").OutcomeTab(You(30, "DemonTongue"), Ended(), Who.You));
-        Assert.Null(Model("DemonTongue").OutcomeTab(You(30, "DemonTongue", data: 2), Ended(), Who.You));
+        Assert.NotNull(Model("DemonTongue").OutcomeTab(You(30, RelicId.DemonTongue), Ended(), Who.You));
+        Assert.Null(Model("DemonTongue").OutcomeTab(You(30, RelicId.DemonTongue, data: 2), Ended(), Who.You));
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class OutcomeTabTests
         Assert.True(rule.SetOff(new SimOutcome { KilledByPlayInAny = { 1 } }));
         Assert.False(rule.SetOff(new SimOutcome { KilledByPlayInAny = { 0 } }));
         // Stock: only while stock is left.
-        var stocked = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 5, Powers = PowerSet.Empty.With("StockPower", 2) } } };
+        var stocked = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 5, Powers = PowerSet.Empty.With(PowerId.Stock, 2) } } };
         Assert.NotNull(Model("StockPower").OutcomeTab(stocked, Ended(), 1));
         Assert.Null(Model("StockPower").OutcomeTab(new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 5 } } }, Ended(), 1));
     }

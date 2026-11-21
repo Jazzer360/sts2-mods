@@ -95,7 +95,9 @@ public class SimTeammateHandFieldsTests
         else if (t == typeof(List<TurnEndCard>)) f.SetValue(p, new List<TurnEndCard> { new("Burn", "Burn", 2) });
         else if (t == typeof(List<SimHandCard>)) f.SetValue(p, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
         else if (t == typeof(List<SimPlay>)) f.SetValue(p, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
-        else if (t == typeof(PowerSet)) f.SetValue(p, PowerSet.Empty.With("StrengthPower", 2));
+        else if (t == typeof(PowerSet)) f.SetValue(p, PowerSet.Empty.With(PowerId.Strength, 2));
+        else if (t == typeof(RelicSet)) f.SetValue(p, RelicSet.Empty.With(RelicId.PenNib, 2));
+        else if (t == typeof(NamedCounts)) f.SetValue(p, NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started), 2));
         else if (t == typeof(List<SimOrb>)) f.SetValue(p, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
         else if (t == typeof(SimDrawPile)) f.SetValue(p, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), 2) } });
         else Assert.Fail($"SimPlayer.{f.Name}: type {t.Name} isn't handled by this test's Fill: add it");

@@ -17,7 +17,7 @@ public class SimUnmodelledTests
         var s = new SimState { Enemies = { Enemy(1, enemyHp, 10) } };
         s.P.HandCount = 5;
         s.P.Hp = 5;
-        s.P.Powers = s.P.Powers.With("HellraiserPower", 1, 0);
+        s.P.Powers = s.P.Powers.With(PowerId.Hellraiser, 1, 0);
         s.P.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("strike") { Strike = true }, 1), new SimDrawGroup(new SimDrawCard("plain"), 1) } };
         return s;
     }

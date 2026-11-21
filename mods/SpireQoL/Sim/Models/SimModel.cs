@@ -170,6 +170,12 @@ public abstract class SimModel
 
     private readonly string _name;
 
+    /// <summary>Its own entry on a creature, when it's a power (its PowerSet entry: amount and data).</summary>
+    protected PowerId ThisPower => new(Name);
+
+    /// <summary>Its own entry on a player, when it's a relic (its RelicSet entry: counter and flag).</summary>
+    protected RelicId ThisRelic => new(Name);
+
     /// <summary>It flashes when it changes a damage amount (the game's AfterModifyingDamageAmount: Slow, Hard to Kill...).</summary>
     public virtual bool FlashesOnDamageModified => false;
 
@@ -239,7 +245,7 @@ public abstract class SimModel
     public virtual decimal ModifyBlockAdditive(SimState s, int owner, BlockCtx b) => 0m;
     public virtual decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b) => 1m;
     /// <summary>Hook.ModifyPowerAmountGiven: a power's amount as <paramref name="applier"/> gives it to <paramref name="target"/> (Snecko Skull).</summary>
-    public virtual int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target, bool debuff) => amount;
+    public virtual int ModifyPowerAmountGiven(SimState s, int owner, PowerId power, int amount, int? applier, int target, bool debuff) => amount;
 
     // ---- hooks (may branch)
 
@@ -288,7 +294,7 @@ public abstract class SimModel
     /// <summary>An orb was channeled for a player (AfterOrbChanneled): Metronome.</summary>
     public virtual IEnumerable<SimState> AfterOrbChanneled(SimState s, int owner, int player) => One(s);
     /// <summary>A power landed on a creature (after Artifact): Sleight of Flesh, Vicious, Shroud.</summary>
-    public virtual IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, string power, int amount, int applier, int target, bool debuff) => One(s);
+    public virtual IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, PowerId power, int amount, int applier, int target, bool debuff) => One(s);
     /// <summary>A creature died (AfterDeath; once per death): Crab Rage, Ravenous.</summary>
     public virtual void AfterDeath(SimState s, int owner, int dead) { }
     /// <summary>After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier.</summary>

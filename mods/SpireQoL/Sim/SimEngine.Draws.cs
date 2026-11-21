@@ -193,14 +193,14 @@ public static partial class SimEngine
             else s.AutoPlaysUnknown = true;
         }
         // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly: before the other draw reactions).
-        IEnumerable<SimState> r = card.Strike && p.Powers["HellraiserPower"] > 0
+        IEnumerable<SimState> r = card.Strike && p.Powers[PowerId.Hellraiser] > 0
             ? Then(HellraiserPlays(s, player, card, -1000 - p.Drawn), x => FireCardEvent(x, CardEvent.Drawn, player, indirect))
             : FireCardEvent(s, CardEvent.Drawn, player, indirect);
         // Iteration (IterationPower.AfterCardDrawn): the first Status you draw this turn draws its amount more.
-        if (card.Status && p.Powers["IterationPower"] is > 0 and var iteration && p.StatusDrawn <= 1)
+        if (card.Status && p.Powers[PowerId.Iteration] is > 0 and var iteration && p.StatusDrawn <= 1)
             r = Then(r, x => DrawCards(x, player, iteration, indirect: true));
         // Pagestorm (PagestormPower.AfterCardDrawn): each Ethereal card you draw draws its amount more.
-        if (card.Ethereal && p.Powers["PagestormPower"] is > 0 and var pagestorm)
+        if (card.Ethereal && p.Powers[PowerId.Pagestorm] is > 0 and var pagestorm)
             r = Then(r, x => DrawCards(x, player, pagestorm, indirect: true));
         return r;
     }

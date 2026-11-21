@@ -21,13 +21,14 @@ public sealed record DislodgeAllAction : SimAction;
 
 public static partial class SimEngine
 {
-    public const string Impaled = nameof(Models.ImpaledPower);
+    /// <summary>Your arrows in an enemy (ImpaledPower), and a teammate's (the simulator's own entry: ImpaledPowerOther).</summary>
+    public static readonly PowerId Impaled = PowerId.Impaled, ImpaledOther = new("ImpaledPowerOther");
 
     /// <summary>The enemy is impaled by anyone's arrow (ArrowCmd.CreatureIsImpaledByArrow).</summary>
     public static bool IsImpaled(SimState s, int enemy)
     {
         var p = PowersOf(s, enemy);
-        return p.Has(Impaled) || p.Has(Impaled + "Other");
+        return p.Has(Impaled) || p.Has(ImpaledOther);
     }
 
     private static void RunShoot(BranchSet b)

@@ -37,9 +37,9 @@ public static partial class SimEngine
     }
 
     /// <summary>Every power and relic set listeners come from, in listener order.</summary>
-    private static PowerSet[] CurrentSets(SimState s)
+    private static object[] CurrentSets(SimState s)
     {
-        var sets = new PowerSet[2 + 2 * s.Teammates.Count + s.Enemies.Count];
+        var sets = new object[2 + 2 * s.Teammates.Count + s.Enemies.Count];
         var i = 0;
         sets[i++] = s.P.Powers; sets[i++] = s.P.Relics;
         foreach (var t in s.Teammates) { sets[i++] = t.Powers; sets[i++] = t.Relics; }
@@ -47,7 +47,7 @@ public static partial class SimEngine
         return sets;
     }
 
-    private static bool SameSets(SimState s, PowerSet[] sets)
+    private static bool SameSets(SimState s, object[] sets)
     {
         if (sets.Length != 2 + 2 * s.Teammates.Count + s.Enemies.Count) return false;
         var i = 0;
@@ -60,18 +60,18 @@ public static partial class SimEngine
     private static List<(SimModel Model, int Owner)> BuildListeners(SimState s)
     {
         var list = new List<(SimModel, int)>();
-        void Add(PowerSet set, int owner)
+        void Add(IEnumerable<string> names, int owner)
         {
-            foreach (var e in set.Items)
-                if (SimModels.Get(e.Name) is { } m) list.Add((m, owner));
+            foreach (var name in names)
+                if (SimModels.Get(name) is { } m) list.Add((m, owner));
         }
         foreach (var id in s.PlayerIds)
         {
             var p = s.Player(id)!;
-            Add(p.Powers, id);
-            Add(p.Relics, id);
+            Add(p.Powers.Items.Select(e => e.Name.Name), id);
+            Add(p.Relics.Items.Select(e => e.Name.Name), id);
         }
-        foreach (var e in s.Enemies) Add(e.Powers, e.Id);
+        foreach (var e in s.Enemies) Add(e.Powers.Items.Select(x => x.Name.Name), e.Id);
         return list;
     }
 
@@ -80,13 +80,18 @@ public static partial class SimEngine
     /// <summary>Whether any creature or player holds a modelled power or relic (most fights' cheap path: nothing to call).</summary>
     private static bool AnyModelled(SimState s)
     {
-        static bool Any(PowerSet set)
+        static bool Any(PowerSet powers)
         {
-            foreach (var e in set.Items) if (SimModels.Has(e.Name)) return true;
+            foreach (var e in powers.Items) if (SimModels.Has(e.Name.Name)) return true;
             return false;
         }
-        if (Any(s.P.Powers) || Any(s.P.Relics)) return true;
-        foreach (var t in s.Teammates) if (Any(t.Powers) || Any(t.Relics)) return true;
+        static bool AnyRelic(RelicSet relics)
+        {
+            foreach (var e in relics.Items) if (SimModels.Has(e.Name.Name)) return true;
+            return false;
+        }
+        if (Any(s.P.Powers) || AnyRelic(s.P.Relics)) return true;
+        foreach (var t in s.Teammates) if (Any(t.Powers) || AnyRelic(t.Relics)) return true;
         foreach (var e in s.Enemies) if (Any(e.Powers)) return true;
         return false;
     }
@@ -169,14 +174,14 @@ public static partial class SimEngine
     }
 
     /// <summary>A player's relic counters by id.</summary>
-    public static PowerSet RelicsOf(SimState s, int id) => s.Player(id)?.Relics ?? PowerSet.Empty;
+    public static RelicSet RelicsOf(SimState s, int id) => s.Player(id)?.Relics ?? RelicSet.Empty;
 
-    public static void SetRelics(SimState s, int id, PowerSet relics)
+    public static void SetRelics(SimState s, int id, RelicSet relics)
     {
         if (s.Player(id) != null) s.MutablePlayer(id).Relics = relics;
     }
 
-    public static int PowerOn(SimState s, int id, string power) => PowersOf(s, id)[power];
+    public static int PowerOn(SimState s, int id, PowerId power) => PowersOf(s, id)[power];
 }
 
 public static partial class SimEngine

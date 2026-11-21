@@ -200,7 +200,7 @@ public class SimTeammateTests
         s.Enemies[0].TeammateHits = new() { new() { 15 } };
         s.Enemies[0].Intent = new List<IntentHit> { new(10) { Captured = new Dictionary<int, CapturedTerms> { [Who.Teammate(0)] = new() { Mul = 1.5m } } } };
         s.Teammates.Add(Mate());
-        var play = V2.V2Script.Play(V2.V2Script.Card("Neutralize", SimCardType.Skill), 1, 1, new ApplyPowerAction("WeakPower", 1) { Debuff = true });
+        var play = V2.V2Script.Play(V2.V2Script.Card("Neutralize", SimCardType.Skill), 1, 1, new ApplyPowerAction(PowerId.Weak, 1) { Debuff = true });
         var o = SimEngine.Run(s, play);
         Assert.Equal(7, o.TakenMax);
         Assert.Equal(11, o.TeammateTakenMax(0));
@@ -274,7 +274,7 @@ public class SimTeammateTests
         s.Enemies[0].Intent = new List<IntentHit> { new(10) };
         s.Teammates.Add(Mate());
         var play = V2.V2Script.Play(V2.V2Script.Card("Intercept", SimCardType.Skill), Who.Teammate(0), 1,
-            new ApplyPowerAction("CoveredPower", 1) { To = ApplyPowerAction.Where.Creature, Creature = Who.Teammate(0) });
+            new ApplyPowerAction(PowerId.Covered, 1) { To = ApplyPowerAction.Where.Creature, Creature = Who.Teammate(0) });
         var o = SimEngine.Run(s, play);
         Assert.Equal(20, o.TakenMax);
         Assert.Equal(0, o.TeammateTakenMax(0));
@@ -319,7 +319,7 @@ public class SimCreatureIdTests
     public void ThornsHitsBackTheTeammateWhoAttacked()
     {
         // A teammate's powered hit on an enemy with 3 Thorns: the teammate takes the 3 (blockable), not you, not the enemy.
-        var s = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 50, Powers = PowerSet.Empty.With("ThornsPower", 3) } } };
+        var s = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 50, Powers = PowerSet.Empty.With(PowerId.Thorns, 3) } } };
         s.Teammates.Add(new SimPlayer { Hp = 40, Block = 1 });
         SimEngine.Damage(s, s.Enemies[0], 6, Who.Teammate(0), SimProps.Move);
         Assert.Equal(0, s.Teammates[0].Block);

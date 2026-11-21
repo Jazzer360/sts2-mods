@@ -39,8 +39,8 @@ public class OrbActionTests
     public void StormChannelsLightningOnPowerCardsAndMetronomeCountsIt()
     {
         var s = Defect();
-        s.P.Powers = s.P.Powers.With("StormPower", 2);
-        s.P.Relics = s.P.Relics.With("Metronome", 6, 1);
+        s.P.Powers = s.P.Powers.With(PowerId.Storm, 2);
+        s.P.Relics = s.P.Relics.With(RelicId.Metronome, 6, 1);
         s.Vars[$"{Who.You}:Metronome:OrbCount"] = 7;
         s.Vars[$"{Who.You}:Metronome:Damage"] = 30;
         var after = Assert.Single(After(s, Play(Card("Defragment", SimCardType.Power), -1, 1)));
@@ -55,7 +55,7 @@ public class OrbActionTests
     public void TrashToTreasureChannelsAnOrbPerStatusCreated()
     {
         var s = Defect();
-        s.P.Powers = s.P.Powers.With("TrashToTreasurePower", 1);
+        s.P.Powers = s.P.Powers.With(PowerId.TrashToTreasure, 1);
         var after = Assert.Single(After(s, Play(Card("Purge", SimCardType.Skill), -1, 1, new CardEventAction(CardEvent.GeneratedStatus, 2))));
         Assert.Equal(2, after.P.Orbs.Count(o => o.Kind == OrbKind.Unknown));
     }
@@ -64,7 +64,7 @@ public class OrbActionTests
     public void InfusedCoreAddsToLightning()
     {
         var s = Defect();
-        s.P.Relics = s.P.Relics.With("InfusedCore", 0);
+        s.P.Relics = s.P.Relics.With(RelicId.InfusedCore, 0);
         s.Vars[$"{Who.You}:InfusedCore:ExtraDamage"] = 1;
         var orb = Assert.Single(Assert.Single(After(s, Play(Card("Zap", SimCardType.Skill), -1, 1, new OrbAction(OrbAction.Op.Channel) { Orb = OrbKind.Lightning }))).P.Orbs);
         Assert.Equal((4, 9), (orb.Passive, orb.Evoke));

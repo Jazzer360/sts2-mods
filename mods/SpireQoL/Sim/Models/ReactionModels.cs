@@ -14,7 +14,7 @@ public sealed class ThornsPower : SimModel
     public override void BeforeDamageReceived(SimState s, int owner, DamageCtx d, int amount)
     {
         if (d.Target != owner || owner < 0 || d.Dealer is not { } dealer || !d.Props.IsPoweredAttack()) return;
-        var thorns = SimEngine.PowerOn(s, owner, Name);
+        var thorns = SimEngine.PowerOn(s, owner, ThisPower);
         if (thorns <= 0) return;
         var name = (s.Enemy(owner)?.Name ?? "Enemy") + " Thorns";
         var hit = SimEngine.CalcDamage(s, thorns, new DamageCtx(owner, dealer == Who.YourOsty ? Who.You : dealer, SimProps.Unpowered | SimProps.SkipHurtAnim, null, null));
@@ -35,7 +35,7 @@ public sealed class EnvenomPower : SimModel
     {
         if (e.Dealer != owner || !e.Props.IsPoweredAttack() || e.Unblocked <= 0) return;
         s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, e.Target, "PoisonPower", SimEngine.PowerOn(s, owner, Name), debuff: true);
+        SimEngine.ApplyPower(s, owner, e.Target, PowerId.Poison, SimEngine.PowerOn(s, owner, ThisPower), debuff: true);
     }
 }
 
@@ -46,18 +46,18 @@ public sealed class ConcoctPower : SimModel
     {
         if (e.Dealer != owner || !e.Props.IsPoweredAttack() || e.Unblocked <= 0) return;
         s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, e.Target, "PoisonPower", SimEngine.PowerOn(s, owner, Name), debuff: true);
+        SimEngine.ApplyPower(s, owner, e.Target, PowerId.Poison, SimEngine.PowerOn(s, owner, ThisPower), debuff: true);
     }
 }
 
 /// <summary>Snecko Skull (relic, amount = its Poison var): poison its owner gives gets that much more (ModifyPowerAmountGivenAdditive).</summary>
 public sealed class SneckoSkull : SimModel
 {
-    public override int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target, bool debuff)
+    public override int ModifyPowerAmountGiven(SimState s, int owner, PowerId power, int amount, int? applier, int target, bool debuff)
     {
-        if (power != "PoisonPower" || applier != owner) return amount;
+        if (power != PowerId.Poison || applier != owner) return amount;
         s.LogFired(Name, 0, owner);
-        return amount + SimEngine.RelicsOf(s, owner)[Name];
+        return amount + SimEngine.RelicsOf(s, owner)[ThisRelic];
     }
 }
 
@@ -68,7 +68,7 @@ public sealed class TheBoot : SimModel
     {
         if (!(d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty)) || d.Target == owner) return amount;
         if (!d.Props.IsPoweredAttack() || amount < 1m) return amount;
-        var min = SimEngine.RelicsOf(s, owner)[Name];
+        var min = SimEngine.RelicsOf(s, owner)[ThisRelic];
         return amount >= min ? amount : min;
     }
 }
@@ -77,12 +77,12 @@ public sealed class TheBoot : SimModel
 public sealed class HardenedShellPower : SimModel
 {
     public override decimal ModifyHpLostBeforeOstyLate(SimState s, int owner, DamageCtx d, decimal amount) =>
-        d.Target != owner || amount == 0m ? amount : Math.Min(amount, Math.Max(0, SimEngine.PowersOf(s, owner).DataOf(Name)));
+        d.Target != owner || amount == 0m ? amount : Math.Min(amount, Math.Max(0, SimEngine.PowersOf(s, owner).DataOf(ThisPower)));
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0) return;
         var p = SimEngine.PowersOf(s, owner);
-        SimEngine.SetPowers(s, owner, p.With(Name, p[Name], Math.Max(0, p.DataOf(Name) - e.Unblocked)));
+        SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], Math.Max(0, p.DataOf(ThisPower) - e.Unblocked)));
     }
 }
 
@@ -100,7 +100,7 @@ public sealed class SlipperyPower : SimModel
         if (e.Target != owner || e.Unblocked < 1) return;
         s.LogFired(Name, 0, owner);
         var p = SimEngine.PowersOf(s, owner);
-        SimEngine.SetPowers(s, owner, p[Name] <= 1 ? p.Without(Name) : p.With(Name, p[Name] - 1));
+        SimEngine.SetPowers(s, owner, p[ThisPower] <= 1 ? p.Without(ThisPower) : p.With(ThisPower, p[ThisPower] - 1));
         if (s.Enemy(owner) is { } en) en.SlipperyTriggered = true;
     }
 }
@@ -114,7 +114,7 @@ public sealed class BurrowedPower : SimModel
     {
         if (target != owner || s.Enemy(owner) is not { } e) return;
         SimEngine.Stun(e);
-        e.Powers = e.Powers.Without(Name);
+        e.Powers = e.Powers.Without(ThisPower);
         s.LogFired(Name, 0, owner);
     }
 }
@@ -128,7 +128,7 @@ public sealed class AsleepPower : SimModel
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0 || s.Enemy(owner) is not { } en) return;
-        en.Powers = en.Powers.Without("PlatingPower").Without(Name);
+        en.Powers = en.Powers.Without(PowerId.Plating).Without(ThisPower);
         SimEngine.Stun(en);
         s.LogFired(Name, 0, owner);
     }
@@ -138,14 +138,14 @@ public sealed class AsleepPower : SimModel
 public sealed class SlumberPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, Name) is var stacks && now.UnblockedMax(owner) < stacks
+        Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, ThisPower) is var stacks && now.UnblockedMax(owner) < stacks
             ? new(true, o => o.UnblockedMax(owner) >= stacks) : null;
 
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0 || s.Enemy(owner) is not { } en) return;
-        var left = en.Powers[Name] - 1;
-        en.Powers = left <= 0 ? en.Powers.Without(Name) : en.Powers.With(Name, left);
+        var left = en.Powers[ThisPower] - 1;
+        en.Powers = left <= 0 ? en.Powers.Without(ThisPower) : en.Powers.With(ThisPower, left);
         if (left <= 0)
         {
             SimEngine.Stun(en);
@@ -164,9 +164,9 @@ public sealed class PlowPower : SimModel
 
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
-        if (e.Target != owner || e.Unblocked <= 0 || s.Enemy(owner) is not { Alive: true } en || en.Hp > en.Powers[Name]) return;
+        if (e.Target != owner || e.Unblocked <= 0 || s.Enemy(owner) is not { Alive: true } en || en.Hp > en.Powers[ThisPower]) return;
         s.LogFired(Name, 0, owner);
-        en.Powers = en.Powers.Without("StrengthPower").Without(Name);
+        en.Powers = en.Powers.Without(PowerId.Strength).Without(ThisPower);
         SimEngine.Stun(en);
     }
 }
@@ -178,9 +178,9 @@ public sealed class ShriekPower : SimModel
 
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
-        if (e.Target != owner || e.Unblocked <= 0 || s.Enemy(owner) is not { Alive: true } en || en.Hp > en.Powers[Name]) return;
+        if (e.Target != owner || e.Unblocked <= 0 || s.Enemy(owner) is not { Alive: true } en || en.Hp > en.Powers[ThisPower]) return;
         s.LogFired(Name, 0, owner);
-        en.Powers = en.Powers.Without(Name);
+        en.Powers = en.Powers.Without(ThisPower);
         SimEngine.Stun(en);
     }
 }
@@ -194,7 +194,7 @@ public sealed class TheGambitPower : SimModel
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || !e.Props.IsPoweredAttack() || e.Unblocked <= 0 || s.Enemy(owner) is not { } en) return;
-        en.Powers = en.Powers.Without(Name);
+        en.Powers = en.Powers.Without(ThisPower);
         s.LogFired(Name, 0, owner);
         en.GambitTriggered = true;
         en.Hp = 0;
@@ -213,13 +213,13 @@ public sealed class CurlUpPower : SimModel
     {
         if (e.Target != owner || !e.Props.IsPoweredAttack() || e.Card == null || s.CurrentPlay == null) return;
         var p = SimEngine.PowersOf(s, owner);
-        if (p.Has(Name)) SimEngine.SetPowers(s, owner, p.With(Name, p[Name], 1));
+        if (p.Has(ThisPower)) SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], 1));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
-        if (s.Enemy(owner) is not { Alive: true } en || en.Powers.DataOf(Name) != 1) return One(s);
-        en.Block += en.Powers[Name];
-        en.Powers = en.Powers.Without(Name);
+        if (s.Enemy(owner) is not { Alive: true } en || en.Powers.DataOf(ThisPower) != 1) return One(s);
+        en.Block += en.Powers[ThisPower];
+        en.Powers = en.Powers.Without(ThisPower);
         en.ReactedWithBlock = true;
         s.LogFired(Name, 0, owner);
         return One(s);
@@ -237,24 +237,24 @@ public sealed class SkittishPower : SimModel
     public override IEnumerable<SimState> BeforeAttack(SimState s, int owner, AttackInfo attack)
     {
         var p = SimEngine.PowersOf(s, owner);
-        if (p.Has(Name)) SimEngine.SetPowers(s, owner, p.With(Name, p[Name], p.DataOf(Name) & 1));
+        if (p.Has(ThisPower)) SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], p.DataOf(ThisPower) & 1));
         return One(s);
     }
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || s.CurrentAttack == 0) return;
         var p = SimEngine.PowersOf(s, owner);
-        var data = p.DataOf(Name);
-        if (!p.Has(Name) || (data & 2) != 0) return;
-        SimEngine.SetPowers(s, owner, p.With(Name, p[Name], data | 2 | (e.Unblocked != 0 ? 4 : 0)));
+        var data = p.DataOf(ThisPower);
+        if (!p.Has(ThisPower) || (data & 2) != 0) return;
+        SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], data | 2 | (e.Unblocked != 0 ? 4 : 0)));
     }
     public override IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack)
     {
         if (s.Enemy(owner) is not { Alive: true } en) return One(s);
-        var data = en.Powers.DataOf(Name);
+        var data = en.Powers.DataOf(ThisPower);
         if ((data & 1) != 0 || (data & 4) == 0 || !attack.Props.HasFlag(SimProps.Move) || attack.Card == null) return One(s);
-        en.Block += en.Powers[Name];
-        en.Powers = en.Powers.With(Name, en.Powers[Name], 1);
+        en.Block += en.Powers[ThisPower];
+        en.Powers = en.Powers.With(ThisPower, en.Powers[ThisPower], 1);
         en.ReactedWithBlock = true;
         s.LogFired(Name, 0, owner);
         return One(s);
@@ -269,7 +269,7 @@ public sealed class SneakyPower : SimModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (play.Card.Type != SimCardType.Attack || play.Owner == owner || s.Enemy(owner) is not { Alive: true } en) return One(s);
-        en.Block += en.Powers[Name];
+        en.Block += en.Powers[ThisPower];
         en.ReactedWithBlock = true;
         s.LogFired(Name, 0, owner);
         return One(s);

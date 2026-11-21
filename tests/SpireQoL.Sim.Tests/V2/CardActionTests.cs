@@ -19,7 +19,7 @@ public class CardActionTests
     {
         // Curl Up reacts to attacks only: not to Capture Spirit's damage.
         var s = new SimState { Enemies = { Enemy(0, 30, block: 2) } };
-        s.Enemies[0].Powers = PowerSet.Empty.With("CurlUpPower", 5);
+        s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.CurlUp, 5);
         var after = Assert.Single(After(s, Play(Card("CaptureSpirit", SimCardType.Skill), 0, 1,
             new DamageAction(new DamageSpec(4, SimProps.Unblockable | SimProps.Unpowered)))));
         Assert.Equal(26, after.Enemy(0)!.Hp);
@@ -32,7 +32,7 @@ public class CardActionTests
     {
         var s = new SimState { Enemies = { Enemy(0, 50, block: 5), Enemy(1, 50) } };
         s.P.OstyHp = 7;
-        s.P.Powers = s.P.Powers.With("NecroMasteryPower", 2);
+        s.P.Powers = s.P.Powers.With(PowerId.NecroMastery, 2);
         var after = Assert.Single(After(s, Play(Card("Sacrifice", SimCardType.Skill), -1, 1, new KillOstyAction())));
         Assert.Equal(0, after.P.OstyHp);
         Assert.Equal(36, after.Enemy(0)!.Hp); // unblockable
@@ -44,9 +44,9 @@ public class CardActionTests
     public void ThornsOnOstysAttackHurtsHimAndSetsOffNecroMastery()
     {
         var s = new SimState { Enemies = { Enemy(0, 50) } };
-        s.Enemies[0].Powers = PowerSet.Empty.With("ThornsPower", 3);
+        s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Thorns, 3);
         s.P.OstyHp = 10;
-        s.P.Powers = s.P.Powers.With("NecroMasteryPower", 1);
+        s.P.Powers = s.P.Powers.With(PowerId.NecroMastery, 1);
         var poke = Play(Card("Poke"), 0, 1, new AttackAction(1, SimPlay.Target.Single, new DamageSpec(6, SimProps.Move) { Fixed = true }) { ByOsty = true });
         var after = Assert.Single(After(s, poke));
         Assert.Equal(7, after.P.OstyHp);
@@ -57,9 +57,9 @@ public class CardActionTests
     public void BouncingFlaskBranchesOnEveryApplicationAndSneckoSkullAddsToEach()
     {
         var s = new SimState { Enemies = { Enemy(0, 50), Enemy(1, 50) } };
-        s.P.Relics = s.P.Relics.With("SneckoSkull", 1);
+        s.P.Relics = s.P.Relics.With(RelicId.SneckoSkull, 1);
         var after = After(s, Play(Card("BouncingFlask", SimCardType.Skill), -1, 1,
-            new ApplyPowerAction("PoisonPower", 3) { To = ApplyPowerAction.Where.RandomEnemy, Times = 2, Debuff = true }));
+            new ApplyPowerAction(PowerId.Poison, 3) { To = ApplyPowerAction.Where.RandomEnemy, Times = 2, Debuff = true }));
         Assert.Equal(3, after.Count); // 8 on one, 8 on the other, 4 on each
         Assert.All(after, b => Assert.Equal(8, b.Enemies.Sum(e => e.PoisonStacks)));
     }
@@ -89,15 +89,15 @@ public class ShotTests
     public void AShotWithoutAnArrowDoesNothingNotEvenSpendVigor()
     {
         var s = new SimState { Enemies = { Enemy(0, 50) } };
-        s.P.Powers = s.P.Powers.With("VigorPower", 5);
+        s.P.Powers = s.P.Powers.With(PowerId.Vigor, 5);
         var shot = Play(Card("QuickShot"), 0, 2, new ShootAction(), Attack(6) with { NeedsArrow = true }, new ImpaleAction());
         var none = Assert.Single(After(s, shot));
         Assert.Equal(50, none.Enemy(0)!.Hp);
-        Assert.Equal(5, none.P.Powers["VigorPower"]);
+        Assert.Equal(5, none.P.Powers[PowerId.Vigor]);
         // One arrow: the first play shoots (6 + Vigor 5), the second has none left.
         s.P.Arrows = 1;
         var one = Assert.Single(After(s, shot));
         Assert.Equal(39, one.Enemy(0)!.Hp);
-        Assert.Equal(1, one.Enemy(0)!.Powers["ImpaledPower"]);
+        Assert.Equal(1, one.Enemy(0)!.Powers[PowerId.Impaled]);
     }
 }

@@ -18,7 +18,7 @@ public class PoisonTriggerTests
     }
 
     private static SimScript Outbreak(int poison) => Play(Card("Outbreak", SimCardType.Skill), -1, 1,
-        new ApplyPowerAction("PoisonPower", poison) { Debuff = true, To = ApplyPowerAction.Where.AllEnemies }, new TriggerPoisonAction());
+        new ApplyPowerAction(PowerId.Poison, poison) { Debuff = true, To = ApplyPowerAction.Where.AllEnemies }, new TriggerPoisonAction());
 
     [Fact]
     public void OutbreakTicksEveryEnemysPoisonOnce()
@@ -57,9 +57,9 @@ public class PoisonTriggerTests
     {
         // Your Accelerant (or a teammate's) raises every enemy's trigger count: poison 5 ticks 5 + 4 with 1 Accelerant.
         var s = new SimState { Enemies = { Poisoned(0, 50, 5), Poisoned(1, 50, 0) } };
-        var after = After(s, Play(Card("Accelerant", SimCardType.Power), -1, 1, new ApplyPowerAction("AccelerantPower", 1) { To = ApplyPowerAction.Where.You })).Single();
+        var after = After(s, Play(Card("Accelerant", SimCardType.Power), -1, 1, new ApplyPowerAction(PowerId.Accelerant, 1) { To = ApplyPowerAction.Where.You })).Single();
         Assert.Equal(9, after.Enemy(0)!.Poison);
         Assert.Equal(2, after.Enemy(1)!.PoisonTriggers);
-        Assert.Equal(1, after.P.Powers["AccelerantPower"]);
+        Assert.Equal(1, after.P.Powers[PowerId.Accelerant]);
     }
 }

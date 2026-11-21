@@ -230,7 +230,7 @@ public static partial class SimAdapter
             // Crab Rage: its Strength and block when an ally dies (CrabRagePower model: Strength as its amount, block here).
             if (e.GetPower<CrabRagePower>() is { } crab)
             {
-                se.Powers = se.Powers.With("CrabRagePower", Sts2State.Var(crab, "StrengthPower"));
+                se.Powers = se.Powers.With(PowerId.CrabRage, Sts2State.Var(crab, "StrengthPower"));
                 se.CrabRageBlock = Sts2State.Var(crab, "Block");
             }
             if (!e.IsAlive) se.Hp = 0;

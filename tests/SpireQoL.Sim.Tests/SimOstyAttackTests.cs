@@ -58,7 +58,7 @@ public class SimOstyAttackTests
         var s = new SimState { Enemies = { E(1, 30), E(2, 5) } };
         s.Enemies[0].Block = 20;
         s.P.OstyHp = 4;
-        s.P.Powers = s.P.Powers.With("NecroMasteryPower", 2);
+        s.P.Powers = s.P.Powers.With(PowerId.NecroMastery, 2);
         var play = new SimPlay { Name = "BoneShards", KillsOsty = true };
         SimEngine.ApplyPlayTo(s, play, out var branches, out _);
         Assert.All(branches, b =>
@@ -74,7 +74,7 @@ public class SimOstyAttackTests
     {
         // SicEmPower.AfterDamageGiven (a dev-mode report: High Five's Osty hit on a Thieving Hopper with Sic 'Em 4 summoned 4).
         var s = new SimState { Enemies = { E(1, 30), E(2, 30) } };
-        s.Enemies[0].Powers = s.Enemies[0].Powers.With("SicEmPower", 4);
+        s.Enemies[0].Powers = s.Enemies[0].Powers.With(PowerId.SicEm, 4);
         var byOsty = SimEngine.Run(s, Poke(1, 6, byOsty: true));
         Assert.All(byOsty.Branches, b => { Assert.Equal(1, b.Fired["SicEmPower"]); Assert.Equal(4, b.Fired.DataOf("SicEmPower")); });
         // Your own hit on it, and Osty's on another enemy: nothing.
@@ -91,7 +91,7 @@ public class SimOstyAttackTests
         var s = new SimState { Enemies = { E(1, 100, 9) } };
         s.P.OstyHp = 20;
         s.P.OstyShields = true;
-        s.P.Powers = s.P.Powers.With("NecroMasteryPower", 1);
+        s.P.Powers = s.P.Powers.With(PowerId.NecroMastery, 1);
         var o = SimEngine.Run(s);
         Assert.Equal(0, o.UnblockedAtTurnEndMax(1));
         Assert.Equal(1, o.UnblockedMin(1));

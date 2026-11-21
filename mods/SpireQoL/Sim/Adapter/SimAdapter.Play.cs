@@ -124,7 +124,7 @@ public static partial class SimAdapter
                 { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(me.RunState, cs, card, me.Creature, target2, tdv.BaseValue, tdv.Props) } }));
         if (ExecuteCards.Contains(name)) play.Body.Add(new ExecuteAction(Sts2State.Var(card, "Threshold")));
         if (card.TargetType == TargetType.RandomEnemy && card.DynamicVars.Values.FirstOrDefault(IsPowerVar<PoisonPower>) is { } flask)
-            play.Body.Add(new ApplyPowerAction(nameof(PoisonPower), (int)flask.BaseValue)
+            play.Body.Add(new ApplyPowerAction(PowerId.Poison, (int)flask.BaseValue)
                 { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 1)), Debuff = true });
         if (KillsOstyCards.Contains(name)) play.Body.Add(new KillOstyAction());
         // A teammate's card: the block it gives its player is theirs.
@@ -336,20 +336,20 @@ public static partial class SimAdapter
             if (PlayFacts.IsDebuffType(t))
             {
                 if (!debuffs.Contains(t) || whereEnemies is not { } w) continue;
-                actions.Add(new ApplyPowerAction(n, AmountOf(t)) { To = w, Debuff = true });
+                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(t)) { To = w, Debuff = true });
             }
             else if (card.TargetType == TargetType.AnyAlly && allyId != -1 && n == nameof(CoveredPower))
             {
-                actions.Add(new ApplyPowerAction(n, AmountOf(t)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
+                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(t)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
             }
             else if (n == "StretchPower" && KeepsStretchCards.Contains(name))
             {
                 // Cho Ki: your Stretch again, as much as you have (so the play keeps it).
-                actions.Add(new ApplyPowerAction(n, 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });
+                actions.Add(new ApplyPowerAction(new PowerId(n), 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });
             }
             else
             {
-                actions.Add(new ApplyPowerAction(n, AmountOf(t)) { To = ApplyPowerAction.Where.You });
+                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(t)) { To = ApplyPowerAction.Where.You });
             }
         }
         // Strength the card takes from enemies (this turn or for good) or gives them (Fight Me).
@@ -357,7 +357,7 @@ public static partial class SimAdapter
         {
             var amount = str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var));
             var where = str.All ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target;
-            actions.Add(new ApplyPowerAction(nameof(StrengthPower), amount) { To = where, Debuff = amount < 0 });
+            actions.Add(new ApplyPowerAction(PowerId.Strength, amount) { To = where, Debuff = amount < 0 });
         }
         return actions;
     }

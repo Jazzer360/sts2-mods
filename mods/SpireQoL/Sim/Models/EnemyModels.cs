@@ -12,7 +12,7 @@ public sealed class EnragePower : SimModel
     {
         if (play.Card.Type != SimCardType.Skill || s.Enemy(owner) is not { Alive: true }) return One(s);
         s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, owner, "StrengthPower", SimEngine.PowerOn(s, owner, Name), debuff: false);
+        SimEngine.ApplyPower(s, owner, owner, PowerId.Strength, SimEngine.PowerOn(s, owner, ThisPower), debuff: false);
         return One(s);
     }
 }
@@ -28,7 +28,7 @@ public sealed class MonarchsGazePower : SimModel
     {
         if (e.Dealer != owner || !e.Props.IsPoweredAttack() || e.Target < 0) return;
         s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, e.Target, "StrengthPower", -SimEngine.PowerOn(s, owner, Name), debuff: true);
+        SimEngine.ApplyPower(s, owner, e.Target, PowerId.Strength, -SimEngine.PowerOn(s, owner, ThisPower), debuff: true);
     }
 }
 
@@ -41,7 +41,7 @@ public sealed class VitalSparkPower : SimModel
     {
         if (play.Card.Affliction != SimAffliction.Tainted) return One(s);
         s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, play.Owner, "TaintedPower", SimEngine.PowerOn(s, owner, Name), debuff: false);
+        SimEngine.ApplyPower(s, owner, play.Owner, PowerId.Tainted, SimEngine.PowerOn(s, owner, ThisPower), debuff: false);
         return One(s);
     }
 }
@@ -57,8 +57,8 @@ public sealed class CrabRagePower : SimModel
     {
         if (dead == owner || dead < 0 || s.Enemy(owner) is not { Alive: true } e || e.Intent == null) return;
         s.LogFired(Name, 0, owner);
-        var strength = e.Powers[Name];
-        e.Powers = e.Powers.Without(Name).Add("StrengthPower", strength);
+        var strength = e.Powers[ThisPower];
+        e.Powers = e.Powers.Without(ThisPower).Add(PowerId.Strength, strength);
         e.Block += e.CrabRageBlock;
     }
 }

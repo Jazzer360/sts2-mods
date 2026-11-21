@@ -214,7 +214,7 @@ public class SimReviewTests
         s.P.Block = 10;
         s.P.ParryingShieldBlock = 10;
         s.P.ParryingShieldDamage = 5;
-        s.P.Powers = s.P.Powers.With("DisintegrationPower", 4);
+        s.P.Powers = s.P.Powers.With(PowerId.Disintegration, 4);
         Assert.True(SimEngine.Run(s).DeadInAll(1));
     }
 

@@ -78,7 +78,9 @@ public class SimKeyCoverageTests
         if (t == typeof(bool)) return !(bool)v!;
         if (t == typeof(string)) return (string?)v + "x";
         if (t.IsEnum) return Enum.ToObject(t, Convert.ToInt32(v) + 1);
-        if (t == typeof(PowerSet)) return ((PowerSet)v!).With("ProbePower", 3);
+        if (t == typeof(PowerSet)) return ((PowerSet)v!).With(new PowerId("ProbePower"), 3);
+        if (t == typeof(RelicSet)) return ((RelicSet)v!).With(new RelicId("ProbeRelic"), 3);
+        if (t == typeof(NamedCounts)) return ((NamedCounts)v!).Add("Probe", 3);
         if (t == typeof(List<int>)) return ((List<int>?)v ?? new()).Append(9).ToList();
         if (t == typeof(List<SimPick>)) return new List<SimPick>((List<SimPick>)v!) { new(4, 0) };
         if (t == typeof(List<TurnEndCard>)) return new List<TurnEndCard>((List<TurnEndCard>)v!) { new("Burn", "Burn", 2) };

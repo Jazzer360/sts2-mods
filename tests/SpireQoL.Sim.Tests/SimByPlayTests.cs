@@ -20,7 +20,7 @@ public class SimByPlayTests
     {
         // Twin Strike (two hits a play) played three times: 5, 5, 4, 4, 3, 3.
         var s = State(50);
-        s.P.Powers = s.P.Powers.With("TenderPower", 1);
+        s.P.Powers = s.P.Powers.With(PowerId.Tender, 1);
         var after = Assert.Single(After(s, Play(Card("TwinStrike"), 0, 3, Attack(5, hits: 2))));
         Assert.Equal(26, after.Enemy(0)!.Hp);
     }
@@ -29,7 +29,7 @@ public class SimByPlayTests
     public void TenderReplayBlocksOneLessOnItsSecondPlay()
     {
         var s = State(50);
-        s.P.Powers = s.P.Powers.With("TenderPower", 1);
+        s.P.Powers = s.P.Powers.With(PowerId.Tender, 1);
         var after = Assert.Single(After(s, Play(Card("Defend", SimCardType.Skill), -1, 2, Block(5))));
         Assert.Equal(9, after.P.Block);
     }
@@ -39,10 +39,10 @@ public class SimByPlayTests
     {
         // Repeat Shot+ into a 70-HP Soul Nexus: 33 (30 or more: +2 Strength), then 35 (a report from 0.46.2 predicted 33 twice).
         var s = State(70);
-        s.P.Relics = s.P.Relics.With("MightyWings", 2, 30);
+        s.P.Relics = s.P.Relics.With(RelicId.MightyWings, 2, 30);
         var after = Assert.Single(After(s, Play(Card("RepeatShot"), 0, 1, Attack(33, hits: 2))));
         Assert.Equal(2, after.Enemy(0)!.Hp);
-        Assert.Equal(4, after.P.Powers["StrengthPower"]); // the second hit (35) is 30 or more too
+        Assert.Equal(4, after.P.Powers[PowerId.Strength]); // the second hit (35) is 30 or more too
     }
 
     [Fact]
@@ -50,8 +50,8 @@ public class SimByPlayTests
     {
         // 25 into 10 block: 25 dealt in all (under 30), so no Strength for the second hit; 31 would count, block included.
         var s = State(50, block: 10);
-        s.P.Relics = s.P.Relics.With("MightyWings", 2, 30);
-        Assert.False(Assert.Single(After(s, Play(Card("Strike"), 0, 1, Attack(25, hits: 2)))).P.Powers.Has("StrengthPower"));
-        Assert.Equal(2, Assert.Single(After(s, Play(Card("Strike"), 0, 1, Attack(31)))).P.Powers["StrengthPower"]);
+        s.P.Relics = s.P.Relics.With(RelicId.MightyWings, 2, 30);
+        Assert.False(Assert.Single(After(s, Play(Card("Strike"), 0, 1, Attack(25, hits: 2)))).P.Powers.Has(PowerId.Strength));
+        Assert.Equal(2, Assert.Single(After(s, Play(Card("Strike"), 0, 1, Attack(31)))).P.Powers[PowerId.Strength]);
     }
 }

@@ -93,7 +93,7 @@ public sealed record GainBlockAction(int Times, decimal Base, SimProps Props) : 
 }
 
 /// <summary>Applies a power (PowerCmd.Apply): to the play's target, every enemy, or one creature. Artifact takes a debuff.</summary>
-public sealed record ApplyPowerAction(string Power, int Amount) : SimAction
+public sealed record ApplyPowerAction(PowerId Power, int Amount) : SimAction
 {
     public enum Where { Target, AllEnemies, You, Creature, RandomEnemy }
     public Where To { get; init; } = Where.Target;

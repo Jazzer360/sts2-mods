@@ -191,7 +191,7 @@ public class SimDrawnCardTests
         // 2 Attacks: it draws the Status first half the time (0 Attacks counted), else the Attack, then the Status (1).
         var status = new SimDrawCard("status") { Type = SimCardType.Status, Status = true };
         var s = You(Pile((Attack, 1), (status, 1)), hand: 1);
-        s.P.Powers = s.P.Powers.With("IterationPower", 2, 0);
+        s.P.Powers = s.P.Powers.With(PowerId.Iteration, 2, 0);
         s.P.Draw!.Rest.Add(new SimDrawGroup(new SimDrawCard("attack b") { Type = SimCardType.Attack }, 2));
         var o = SimEngine.Run(s, Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
         // Attacks: 3 in 4. Draws Attacks until the Status: 0 with 1/4, 1 with 3/4 * 1/3, 2 with 3/4 * 2/3 * 1/2, 3 with 1/4.
@@ -218,7 +218,7 @@ public class SimDrawnCardTests
     {
         var s = You(pile, hand);
         for (var id = 2; id <= enemies; id++) s.Enemies.Add(new SimEnemy { Id = id, Name = "E" + id, Hp = 50, Hits = new() { 10 } });
-        s.P.Powers = s.P.Powers.With("HellraiserPower", 1, 0);
+        s.P.Powers = s.P.Powers.With(PowerId.Hellraiser, 1, 0);
         return s;
     }
 

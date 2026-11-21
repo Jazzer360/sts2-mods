@@ -7,7 +7,7 @@ namespace SpireQoL.Sim.Models;
 public sealed class StrengthPower : SimModel
 {
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d) =>
-        d.Dealer == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, Name) : 0m;
+        d.Dealer == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, ThisPower) : 0m;
 }
 
 /// <summary>
@@ -19,7 +19,7 @@ public sealed class DexterityPower : SimModel
     public override decimal ModifyBlockAdditive(SimState s, int owner, BlockCtx b)
     {
         if (b.Play != null ? b.Play.Owner != owner : b.Target != owner) return 0m;
-        return b.Props.IsPoweredBlock() ? SimEngine.PowerOn(s, owner, Name) : 0m;
+        return b.Props.IsPoweredBlock() ? SimEngine.PowerOn(s, owner, ThisPower) : 0m;
     }
 }
 
@@ -43,10 +43,10 @@ public sealed class VulnerablePower : SimModel
         if (d.Dealer is { } dealer)
         {
             var player = dealer == Who.YourOsty ? Who.You : dealer;
-            if (Who.IsPlayer(player) && SimEngine.RelicsOf(s, player).Has("PaperPhrog")) num += 0.25m;
-            if (Who.IsPlayer(player) && SimEngine.PowerOn(s, player, "CrueltyPower") is var cruelty and not 0) num += cruelty / 100m;
+            if (Who.IsPlayer(player) && SimEngine.RelicsOf(s, player).Has(RelicId.PaperPhrog)) num += 0.25m;
+            if (Who.IsPlayer(player) && SimEngine.PowerOn(s, player, PowerId.Cruelty) is var cruelty and not 0) num += cruelty / 100m;
         }
-        if (SimEngine.PowersOf(s, owner).Has("DebilitatePower")) num += num - 1m;
+        if (SimEngine.PowersOf(s, owner).Has(PowerId.Debilitate)) num += num - 1m;
         return num;
     }
 }
@@ -61,8 +61,8 @@ public sealed class WeakPower : SimModel
     {
         if (d.Dealer != owner || !d.Props.IsPoweredAttack()) return 1m;
         var num = 0.75m;
-        if (Who.IsPlayer(d.Target) && SimEngine.RelicsOf(s, d.Target).Has("PaperKrane")) num -= 0.15m;
-        if (SimEngine.PowersOf(s, owner).Has("DebilitatePower")) num -= 1m - num;
+        if (Who.IsPlayer(d.Target) && SimEngine.RelicsOf(s, d.Target).Has(RelicId.PaperKrane)) num -= 0.15m;
+        if (SimEngine.PowersOf(s, owner).Has(PowerId.Debilitate)) num -= 1m - num;
         return num;
     }
 }
@@ -88,13 +88,13 @@ public abstract class AttackBoundPower : SimModel
     public override IEnumerable<SimState> BeforeAttack(SimState s, int owner, AttackInfo attack)
     {
         var powers = SimEngine.PowersOf(s, owner);
-        if (!powers.Has(Name) || powers.DataOf(Name) != 0 || !Qualifies(s, owner, attack)) return One(s);
-        SimEngine.SetPowers(s, owner, powers.With(Name, powers[Name], (attack.Id << 16) | Math.Clamp(powers[Name], 0, 0xFFFF)));
+        if (!powers.Has(ThisPower) || powers.DataOf(ThisPower) != 0 || !Qualifies(s, owner, attack)) return One(s);
+        SimEngine.SetPowers(s, owner, powers.With(ThisPower, powers[ThisPower], (attack.Id << 16) | Math.Clamp(powers[ThisPower], 0, 0xFFFF)));
         return One(s);
     }
 
     /// <summary>It applies to this damage: not bound, or bound to the attack in progress.</summary>
-    protected static bool AppliesNow(SimState s, int owner, string name)
+    protected static bool AppliesNow(SimState s, int owner, PowerId name)
     {
         var bound = BoundAttack(SimEngine.PowersOf(s, owner).DataOf(name));
         return bound == 0 || bound == s.CurrentAttack;
@@ -107,14 +107,14 @@ public sealed class VigorPower : AttackBoundPower
     public override TabKind? Tab => TabKind.Trigger;
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) => a.Dealer == owner && a.Props.IsPoweredAttack();
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d) =>
-        d.Dealer == owner && d.Props.IsPoweredAttack() && AppliesNow(s, owner, Name) ? SimEngine.PowerOn(s, owner, Name) : 0m;
+        d.Dealer == owner && d.Props.IsPoweredAttack() && AppliesNow(s, owner, ThisPower) ? SimEngine.PowerOn(s, owner, ThisPower) : 0m;
     public override IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack)
     {
         var powers = SimEngine.PowersOf(s, owner);
-        var data = powers.DataOf(Name);
-        if (!powers.Has(Name) || BoundAttack(data) != attack.Id) return One(s);
-        var left = powers[Name] - AmountAtStart(data);
-        SimEngine.SetPowers(s, owner, left == 0 ? powers.Without(Name) : powers.With(Name, left, 0));
+        var data = powers.DataOf(ThisPower);
+        if (!powers.Has(ThisPower) || BoundAttack(data) != attack.Id) return One(s);
+        var left = powers[ThisPower] - AmountAtStart(data);
+        SimEngine.SetPowers(s, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, 0));
         s.LogFired(Name, 0, owner);
         return One(s);
     }
@@ -129,18 +129,18 @@ public sealed class AimPower : AttackBoundPower
         a.Dealer == owner && a.Props.IsPoweredAttack() && a.Props.HasFlag(SimProps.FromArrow);
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d)
     {
-        if (d.Dealer != owner || !d.Props.IsPoweredAttack() || !d.Props.HasFlag(SimProps.FromArrow) || !AppliesNow(s, owner, Name)) return 0m;
-        decimal num = SimEngine.PowerOn(s, owner, Name);
+        if (d.Dealer != owner || !d.Props.IsPoweredAttack() || !d.Props.HasFlag(SimProps.FromArrow) || !AppliesNow(s, owner, ThisPower)) return 0m;
+        decimal num = SimEngine.PowerOn(s, owner, ThisPower);
         if (d.Card is { Name: "HeavyShot" } heavy && heavy.Vars.TryGetValue("AimMultiplier", out var mul)) num *= mul;
         return num;
     }
     public override IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack)
     {
         var powers = SimEngine.PowersOf(s, owner);
-        var data = powers.DataOf(Name);
-        if (!powers.Has(Name) || BoundAttack(data) != attack.Id) return One(s);
-        var left = powers[Name] - AmountAtStart(data);
-        SimEngine.SetPowers(s, owner, left == 0 ? powers.Without(Name) : powers.With(Name, left, 0));
+        var data = powers.DataOf(ThisPower);
+        if (!powers.Has(ThisPower) || BoundAttack(data) != attack.Id) return One(s);
+        var left = powers[ThisPower] - AmountAtStart(data);
+        SimEngine.SetPowers(s, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, 0));
         s.LogFired(Name, 0, owner);
         return One(s);
     }
@@ -152,13 +152,13 @@ public sealed class QuietusPower : AttackBoundPower
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) =>
         a.Dealer == owner && a.Props.IsPoweredAttack() && a.Props.HasFlag(SimProps.FromArrow);
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
-        d.Dealer == owner && d.Props.IsPoweredAttack() && d.Props.HasFlag(SimProps.FromArrow) && AppliesNow(s, owner, Name)
-            ? SimEngine.PowerOn(s, owner, Name) : 1m;
+        d.Dealer == owner && d.Props.IsPoweredAttack() && d.Props.HasFlag(SimProps.FromArrow) && AppliesNow(s, owner, ThisPower)
+            ? SimEngine.PowerOn(s, owner, ThisPower) : 1m;
     public override IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack)
     {
         var powers = SimEngine.PowersOf(s, owner);
-        if (!powers.Has(Name) || BoundAttack(powers.DataOf(Name)) != attack.Id) return One(s);
-        SimEngine.SetPowers(s, owner, powers.Without(Name));
+        if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(s);
+        SimEngine.SetPowers(s, owner, powers.Without(ThisPower));
         s.LogFired(Name, 0, owner);
         return One(s);
     }
@@ -174,13 +174,13 @@ public sealed class GigantificationPower : AttackBoundPower
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) =>
         a.Card is { Type: SimCardType.Attack } && s.CurrentPlay?.Owner == owner && a.Props.IsPoweredAttack();
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
-        d.Card != null && d.Play?.Owner == owner && d.Props.IsPoweredAttack() && AppliesNow(s, owner, Name) ? 3m : 1m;
+        d.Card != null && d.Play?.Owner == owner && d.Props.IsPoweredAttack() && AppliesNow(s, owner, ThisPower) ? 3m : 1m;
     public override IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack)
     {
         var powers = SimEngine.PowersOf(s, owner);
-        if (!powers.Has(Name) || BoundAttack(powers.DataOf(Name)) != attack.Id) return One(s);
-        var left = powers[Name] - 1;
-        SimEngine.SetPowers(s, owner, left <= 0 ? powers.Without(Name) : powers.With(Name, left, 0));
+        if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(s);
+        var left = powers[ThisPower] - 1;
+        SimEngine.SetPowers(s, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, 0));
         s.LogFired(Name, 0, owner);
         return One(s);
     }
@@ -202,12 +202,12 @@ public sealed class SlowPower : SimModel
     public override TabKind? Tab => TabKind.Trigger;
     public override bool FlashesOnDamageModified => true;
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
-        d.Target == owner && d.Props.IsPoweredAttack() ? 1m + 0.1m * SimEngine.PowersOf(s, owner).DataOf(Name) : 1m;
+        d.Target == owner && d.Props.IsPoweredAttack() ? 1m + 0.1m * SimEngine.PowersOf(s, owner).DataOf(ThisPower) : 1m;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         var powers = SimEngine.PowersOf(s, owner);
-        if (!powers.Has(Name)) return One(s);
-        SimEngine.SetPowers(s, owner, powers.With(Name, powers[Name], powers.DataOf(Name) + 1));
+        if (!powers.Has(ThisPower)) return One(s);
+        SimEngine.SetPowers(s, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) + 1));
         s.LogFired(Name, 0, owner);
         return One(s);
     }
@@ -222,8 +222,8 @@ public sealed class TenderPower : SimModel
     {
         if (play.Owner != owner) return One(s);
         s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, owner, "StrengthPower", -1, debuff: true);
-        SimEngine.ApplyPower(s, owner, owner, "DexterityPower", -1, debuff: true);
+        SimEngine.ApplyPower(s, owner, owner, PowerId.Strength, -1, debuff: true);
+        SimEngine.ApplyPower(s, owner, owner, PowerId.Dexterity, -1, debuff: true);
         return One(s);
     }
 }
@@ -239,7 +239,7 @@ public sealed class LethalityPower : SimModel
         if (!d.Props.IsPoweredAttack() || d.Card == null || d.Play?.Owner != owner) return 1m;
         if (d.Play.PlayIndex > 0) return 1m;
         var started = SimEngine.TurnOf(s, owner)[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)];
-        return started > 1 ? 1m : 1m + SimEngine.PowerOn(s, owner, Name) / 100m;
+        return started > 1 ? 1m : 1m + SimEngine.PowerOn(s, owner, ThisPower) / 100m;
     }
 }
 
@@ -250,7 +250,7 @@ public sealed class PhantomBladesPower : SimModel
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null || !d.Card.Is(SimCardTag.Shiv) || d.Dealer != owner) return 0m;
         var p = s.Player(owner);
-        return p != null && p.Turn[SimKeys.Plays(PlayStage.Finished, SimCardTag.Shiv)] > 0 ? 0m : SimEngine.PowerOn(s, owner, Name);
+        return p != null && p.Turn[SimKeys.Plays(PlayStage.Finished, SimCardTag.Shiv)] > 0 ? 0m : SimEngine.PowerOn(s, owner, ThisPower);
     }
 }
 
@@ -260,7 +260,7 @@ public sealed class SerratedArrowsPower : SimModel
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (!d.Props.IsPoweredAttack() || !(d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty))) return 1m;
-        return d.Target >= 0 && SimEngine.IsImpaled(s, d.Target) ? 1m + SimEngine.PowerOn(s, owner, Name) / 100m : 1m;
+        return d.Target >= 0 && SimEngine.IsImpaled(s, d.Target) ? 1m + SimEngine.PowerOn(s, owner, ThisPower) / 100m : 1m;
     }
 }
 
@@ -278,23 +278,23 @@ public sealed class PenNib : SimModel
         if (!d.Props.IsPoweredAttack() || d.Card == null) return 1m;
         if (!(d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty))) return 1m;
         var r = SimEngine.RelicsOf(s, owner);
-        if (r.DataOf(Name) == 2) return d.Play != null ? 2m : 1m;
-        if (r.DataOf(Name) == 1) return 1m; // the game's card mid-play is the doubled one
-        return d.Play == null && r[Name] == 9 ? 2m : 1m; // not being played (a preview): the next attack is the 10th
+        if (r.DataOf(ThisRelic) == 2) return d.Play != null ? 2m : 1m;
+        if (r.DataOf(ThisRelic) == 1) return 1m; // the game's card mid-play is the doubled one
+        return d.Play == null && r[ThisRelic] == 9 ? 2m : 1m; // not being played (a preview): the next attack is the 10th
     }
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (play.Card.Type != SimCardType.Attack || play.Owner != owner) return One(s);
         var r = SimEngine.RelicsOf(s, owner);
-        var count = (r[Name] + 1) % 10;
-        SimEngine.SetRelics(s, owner, r.With(Name, count, count == 0 ? 2 : r.DataOf(Name)));
+        var count = (r[ThisRelic] + 1) % 10;
+        SimEngine.SetRelics(s, owner, r.With(ThisRelic, count, count == 0 ? 2 : r.DataOf(ThisRelic)));
         if (count == 0) s.LogFired(Name, 0, owner);
         return One(s);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         var r = SimEngine.RelicsOf(s, owner);
-        if (r.DataOf(Name) == 2 && play.Owner == owner) SimEngine.SetRelics(s, owner, r.With(Name, r[Name], 0));
+        if (r.DataOf(ThisRelic) == 2 && play.Owner == owner) SimEngine.SetRelics(s, owner, r.With(ThisRelic, r[ThisRelic], 0));
         return One(s);
     }
 }
@@ -310,8 +310,8 @@ public sealed class MightyWings : SimModel
     {
         if (!e.Props.IsPoweredAttack() || !(e.Dealer == owner || (owner == Who.You && e.Dealer == Who.YourOsty))) return;
         var r = SimEngine.RelicsOf(s, owner);
-        if (e.Total < r.DataOf(Name)) return;
+        if (e.Total < r.DataOf(ThisRelic)) return;
         s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, owner, "StrengthPower", r[Name], debuff: false);
+        SimEngine.ApplyPower(s, owner, owner, PowerId.Strength, r[ThisRelic], debuff: false);
     }
 }

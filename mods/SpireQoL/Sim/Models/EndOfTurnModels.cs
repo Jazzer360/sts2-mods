@@ -43,7 +43,7 @@ public sealed class TheBombPower : EndOfTurnModel
         var turns = Amount(s, owner);
         var damage = Data(s, owner);
         if (turns > 1) { Set(s, owner, turns - 1, damage); return One(s); }
-        SimEngine.SetPowers(s, owner, SimEngine.PowersOf(s, owner).Without(Name));
+        SimEngine.SetPowers(s, owner, SimEngine.PowersOf(s, owner).Without(ThisPower));
         return damage > 0 ? DamageAll(s, owner, damage) : One(s);
     }
 }
@@ -147,7 +147,7 @@ public sealed class LunarPastry : EndOfTurnRelic
 public abstract class TurnEndDebuff : EndOfTurnModel
 {
     /// <summary>The applier is gone (Data: the applier's id + 100; 0: unknown, taken as alive).</summary>
-    protected static bool ApplierDead(SimState s, int owner, string name)
+    protected static bool ApplierDead(SimState s, int owner, PowerId name)
     {
         var data = SimEngine.PowersOf(s, owner).DataOf(name);
         return data >= 100 && s.Enemy(data - 100) is not { Alive: true };
@@ -161,7 +161,7 @@ public abstract class TurnEndDebuff : EndOfTurnModel
 public sealed class ConstrictPower : TurnEndDebuff
 {
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) =>
-        s.TakesPart(owner) && !ApplierDead(s, owner, Name) ? Hurt(s, owner, Amount(s, owner), Unpowered, selfDealt: true) : One(s);
+        s.TakesPart(owner) && !ApplierDead(s, owner, ThisPower) ? Hurt(s, owner, Amount(s, owner), Unpowered, selfDealt: true) : One(s);
 }
 
 /// <summary>MagicBombPower.AfterSideTurnEnd: while its applier lives, its amount to its owner (unpowered, dealt by its owner), then it goes.</summary>
@@ -169,9 +169,9 @@ public sealed class MagicBombPower : TurnEndDebuff
 {
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner)
     {
-        if (!s.TakesPart(owner) || ApplierDead(s, owner, Name)) return One(s);
+        if (!s.TakesPart(owner) || ApplierDead(s, owner, ThisPower)) return One(s);
         var amount = Amount(s, owner);
-        SimEngine.SetPowers(s, owner, SimEngine.PowersOf(s, owner).Without(Name));
+        SimEngine.SetPowers(s, owner, SimEngine.PowersOf(s, owner).Without(ThisPower));
         return Hurt(s, owner, amount, Unpowered, selfDealt: true);
     }
 }

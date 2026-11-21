@@ -44,7 +44,7 @@ public static class SimKeys
     public const string CardBlock = "CardBlock";
 
     /// <summary>A player's turn counts with one more play at this stage: in all, of its type, and of each of its tags.</summary>
-    public static PowerSet CountPlay(PowerSet turn, PlayStage stage, SimCardType type, IEnumerable<SimCardTag> tags)
+    public static NamedCounts CountPlay(NamedCounts turn, PlayStage stage, SimCardType type, IEnumerable<SimCardTag> tags)
     {
         var t = turn.Add(Plays(stage), 1).Add(Plays(stage, type), 1);
         foreach (var tag in tags) t = t.Add(Plays(stage, tag), 1);

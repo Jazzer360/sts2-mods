@@ -14,8 +14,8 @@ public class SimLunarPastryTests
     /// <summary>Lunar Pastry (its stars: 1) with Black Hole at this amount.</summary>
     private static void Lunar(SimPlayer p, int blackHole)
     {
-        p.Relics = p.Relics.With("LunarPastry", 1);
-        p.Powers = p.Powers.With("BlackHolePower", blackHole);
+        p.Relics = p.Relics.With(RelicId.LunarPastry, 1);
+        p.Powers = p.Powers.With(PowerId.BlackHole, blackHole);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class SimLunarPastryTests
         s.P.Block = 5;
         s.P.ParryingShieldBlock = 5;
         s.P.ParryingShieldDamage = 6;
-        s.P.Powers = s.P.Powers.With("InsatiableDominionPower", 1);
+        s.P.Powers = s.P.Powers.With(PowerId.InsatiableDominion, 1);
         s.Vars["-1:InsatiableDominionPower:Damage"] = 7;
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(1));

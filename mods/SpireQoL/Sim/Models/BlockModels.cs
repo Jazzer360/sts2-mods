@@ -15,8 +15,8 @@ public sealed class StretchPower : SimModel
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         var p = SimEngine.PowersOf(s, owner);
-        if (play.Owner != owner || !play.Card.GainsBlock || !p.Has(Name) || (p.DataOf(Name) & Bound) != 0) return One(s);
-        SimEngine.SetPowers(s, owner, p.With(Name, p[Name], Bound | (p[Name] << 4)));
+        if (play.Owner != owner || !play.Card.GainsBlock || !p.Has(ThisPower) || (p.DataOf(ThisPower) & Bound) != 0) return One(s);
+        SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], Bound | (p[ThisPower] << 4)));
         return One(s);
     }
 
@@ -24,27 +24,27 @@ public sealed class StretchPower : SimModel
     {
         if (b.Card == null || b.Play?.Owner != owner || !b.Props.IsPoweredBlock()) return 0m;
         var p = SimEngine.PowersOf(s, owner);
-        return (p.DataOf(Name) & Bound) != 0 ? p[Name] : 0m;
+        return (p.DataOf(ThisPower) & Bound) != 0 ? p[ThisPower] : 0m;
     }
 
     public override void AfterModifyingBlockAmount(SimState s, int owner, int amount, SimCardPlay? play)
     {
         var p = SimEngine.PowersOf(s, owner);
-        if ((p.DataOf(Name) & Bound) != 0) SimEngine.SetPowers(s, owner, p.With(Name, p[Name], p.DataOf(Name) | Gave));
+        if ((p.DataOf(ThisPower) & Bound) != 0) SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], p.DataOf(ThisPower) | Gave));
     }
 
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         var p = SimEngine.PowersOf(s, owner);
-        var data = p.DataOf(Name);
+        var data = p.DataOf(ThisPower);
         if (play.Owner != owner || (data & Bound) == 0) return One(s);
         if ((data & Gave) == 0)
         {
-            SimEngine.SetPowers(s, owner, p.With(Name, p[Name], 0));
+            SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], 0));
             return One(s);
         }
-        var left = p[Name] - (data >> 4);
-        SimEngine.SetPowers(s, owner, left <= 0 ? p.Without(Name) : p.With(Name, left, 0));
+        var left = p[ThisPower] - (data >> 4);
+        SimEngine.SetPowers(s, owner, left <= 0 ? p.Without(ThisPower) : p.With(ThisPower, left, 0));
         s.LogFired(Name, 0, owner);
         return One(s);
     }
@@ -62,19 +62,19 @@ public sealed class PaelsLegion : SimModel
     {
         if (!b.Props.IsCardOrMonsterMove() || b.Card == null || b.Play?.Owner != owner) return 1m;
         var r = SimEngine.RelicsOf(s, owner);
-        return r[Name] > 0 ? 1m : 2m; // bound or not: within one play, the play in progress is the bound one
+        return r[ThisRelic] > 0 ? 1m : 2m; // bound or not: within one play, the play in progress is the bound one
     }
     public override void AfterModifyingBlockAmount(SimState s, int owner, int amount, SimCardPlay? play)
     {
         var r = SimEngine.RelicsOf(s, owner);
-        if (amount > 0 && play != null && r[Name] <= 0) SimEngine.SetRelics(s, owner, r.With(Name, r[Name], 1));
+        if (amount > 0 && play != null && r[ThisRelic] <= 0) SimEngine.SetRelics(s, owner, r.With(ThisRelic, r[ThisRelic], 1));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         var r = SimEngine.RelicsOf(s, owner);
-        if (r.DataOf(Name) != 1) return One(s);
+        if (r.DataOf(ThisRelic) != 1) return One(s);
         s.LogFired(Name, 0, owner);
-        SimEngine.SetRelics(s, owner, r.With(Name, 2, 0)); // Turns: 2 (PaelsLegion.CanonicalVars)
+        SimEngine.SetRelics(s, owner, r.With(ThisRelic, 2, 0)); // Turns: 2 (PaelsLegion.CanonicalVars)
         return One(s);
     }
 }
@@ -90,20 +90,20 @@ public sealed class Vambrace : SimModel
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b)
     {
         if (!b.Props.IsCardOrMonsterMove() || b.Card == null || b.Play?.Owner != owner) return 1m;
-        return (SimEngine.RelicsOf(s, owner).DataOf(Name) & 2) != 0 ? 1m : 2m;
+        return (SimEngine.RelicsOf(s, owner).DataOf(ThisRelic) & 2) != 0 ? 1m : 2m;
     }
     public override void AfterModifyingBlockAmount(SimState s, int owner, int amount, SimCardPlay? play)
     {
         var r = SimEngine.RelicsOf(s, owner);
         if (amount <= 0 || play == null) return;
-        if ((r.DataOf(Name) & 1) == 0) s.LogFired(Name, 0, owner);
-        SimEngine.SetRelics(s, owner, r.With(Name, r[Name], r.DataOf(Name) | 1));
+        if ((r.DataOf(ThisRelic) & 1) == 0) s.LogFired(Name, 0, owner);
+        SimEngine.SetRelics(s, owner, r.With(ThisRelic, r[ThisRelic], r.DataOf(ThisRelic) | 1));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         var r = SimEngine.RelicsOf(s, owner);
-        var data = r.DataOf(Name);
-        if (play.Owner == owner && (data & 1) != 0 && (data & 2) == 0) SimEngine.SetRelics(s, owner, r.With(Name, r[Name], 2));
+        var data = r.DataOf(ThisRelic);
+        if (play.Owner == owner && (data & 1) != 0 && (data & 2) == 0) SimEngine.SetRelics(s, owner, r.With(ThisRelic, r[ThisRelic], 2));
         return One(s);
     }
 }
@@ -120,7 +120,7 @@ public sealed class UnmovablePower : SimModel
         if (b.Play != null && b.Play.Owner != owner) return 1m;
         var turn = SimEngine.TurnOf(s, owner);
         var earlier = turn[SimKeys.CardBlock] - (b.Play != null ? s.PlayCardBlockGains : 0);
-        return earlier >= SimEngine.PowerOn(s, owner, Name) ? 1m : 2m;
+        return earlier >= SimEngine.PowerOn(s, owner, ThisPower) ? 1m : 2m;
     }
 }
 
@@ -128,7 +128,7 @@ public sealed class UnmovablePower : SimModel
 public sealed class ShadowmeldPower : SimModel
 {
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b) =>
-        b.Target == owner ? (decimal)Math.Pow(2.0, SimEngine.PowerOn(s, owner, Name)) : 1m;
+        b.Target == owner ? (decimal)Math.Pow(2.0, SimEngine.PowerOn(s, owner, ThisPower)) : 1m;
 }
 
 /// <summary>NoBlockPower.ModifyBlockMultiplicative: its owner gains no block from cards (anything not Unpowered).</summary>

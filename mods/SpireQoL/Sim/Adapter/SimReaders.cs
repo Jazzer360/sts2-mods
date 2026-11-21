@@ -32,6 +32,7 @@ public static class SimReaders
             // itself is already in the owner's ThornsPower (TemporaryThornsPower.BeforeApplied applies it).
             if (SimAdapter.IsTemporaryThorns(pw.GetType())) continue;
             var name = SimAdapter.SimPowerName(pw.GetType());
+            var id = new PowerId(name);
             // Withering Presence: Aeonglass has one per player, each counting its Target's cards (AfterCardPlayed:
             // cardPlay.Card.Owner == Target.Player). Only yours reacts to your plays; a teammate's would mix in their count.
             if (name == "WitheringPresencePower" && pw.Target is { } wt && idOf(wt) != Who.You) continue;
@@ -88,7 +89,7 @@ public static class SimReaders
                     break;
                 }
             }
-            set = set.Has(name) ? set.With(name, set[name] + amount, name == "ImpaledPowerOther" ? set.DataOf(name) | data : data) : set.With(name, amount, data);
+            set = set.Has(id) ? set.With(id, set[id] + amount, id == SimEngine.ImpaledOther ? set.DataOf(id) | data : data) : set.With(id, amount, data);
         }
         return set;
     }
@@ -125,9 +126,9 @@ public static class SimReaders
     }
 
     /// <summary>A player's relics in relic order (melted ones don't listen), each with the numbers its model keeps.</summary>
-    public static PowerSet Relics(Player p)
+    public static RelicSet Relics(Player p)
     {
-        var set = PowerSet.Empty;
+        var set = RelicSet.Empty;
         foreach (var r in p.Relics)
         {
             if (r.IsMelted) continue;
@@ -187,7 +188,7 @@ public static class SimReaders
                     data = Features.RelicCountersFeature.IsArmed(r) ? 1 : 0;
                     break;
             }
-            set = set.With(name, amount, data);
+            set = set.With(new RelicId(name), amount, data);
         }
         return set;
     }
@@ -196,9 +197,9 @@ public static class SimReaders
     /// A player's turn counters (SimPlayer.Turn) from the combat history: card plays started and finished this turn (all, by
     /// type, by tag), and block gains from their card plays (Unmovable).
     /// </summary>
-    public static PowerSet Turn(Player p, ICombatState cs)
+    public static NamedCounts Turn(Player p, ICombatState cs)
     {
-        var t = PowerSet.Empty;
+        var t = NamedCounts.Empty;
         try
         {
             var history = CombatManager.Instance.History;

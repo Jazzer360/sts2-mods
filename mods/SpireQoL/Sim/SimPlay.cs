@@ -151,7 +151,7 @@ public sealed class SimScript
         s.Actions.AddRange(p.After);
         s.Actions.Add(new CardResolvedAction(p.HandDelta, p.HandCard, p.AutoPlay, p.Draws, p.FadingDelta, p.IsAttack) { Owner = play.Owner, HexFadingDelta = p.HexFadingDelta });
         if (p.RandomPoison > 0 && p.RandomPoisonTimes > 0)
-            s.Actions.Add(new ApplyPowerAction("PoisonPower", p.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = p.RandomPoisonTimes, Debuff = true });
+            s.Actions.Add(new ApplyPowerAction(PowerId.Poison, p.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = p.RandomPoisonTimes, Debuff = true });
         foreach (var proc in p.Procs) s.Actions.Add(new FixedHitsAction(proc.Spread, proc.TargetId, proc.Damage, proc.Times));
         foreach (var amount in p.ProcBlock) s.Actions.Add(new GainBlockAction(1, amount, SimProps.Unpowered) { Fixed = true });
         return s;
@@ -192,17 +192,17 @@ public sealed class SimScript
         if (p.EnchantmentBlock.Gains > 0) a.Add(new GainBlockAction(p.EnchantmentBlock.Gains, p.EnchantmentBlock.Amount, SimProps.Move) { Fixed = true });
         if (p.KillsOsty) a.Add(new KillOstyAction());
         foreach (var (name, amount) in p.DamageToYou) a.Add(new HitYouAction(name, amount));
-        void You(string power, int amount)
+        void You(PowerId power, int amount)
         {
             if (amount != 0) a.Add(new ApplyPowerAction(power, amount) { To = ApplyPowerAction.Where.You });
         }
-        You("PlatingPower", p.AddPlating);
-        You("JuggernautPower", p.AddJuggernaut);
-        You("FeelNoPainPower", p.AddFeelNoPain);
-        You("ThornsPower", p.AddThorns);
-        You("FlameBarrierPower", p.AddFlameBarrier);
+        You(PowerId.Plating, p.AddPlating);
+        You(PowerId.Juggernaut, p.AddJuggernaut);
+        You(PowerId.FeelNoPain, p.AddFeelNoPain);
+        You(PowerId.Thorns, p.AddThorns);
+        You(PowerId.FlameBarrier, p.AddFlameBarrier);
         if (p.Poison > 0 && (p.PoisonAll || p.TargetId >= 0))
-            a.Add(new ApplyPowerAction("PoisonPower", p.Poison) { To = p.PoisonAll ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = true });
+            a.Add(new ApplyPowerAction(PowerId.Poison, p.Poison) { To = p.PoisonAll ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = true });
         if (p.FocusDelta != 0) a.Add(new FocusAction(p.FocusDelta));
         return a;
     }

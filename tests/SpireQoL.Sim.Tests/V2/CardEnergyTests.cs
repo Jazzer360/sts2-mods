@@ -20,7 +20,7 @@ public class CardEnergyTests
 
     private static SimState WithTears(SimState s)
     {
-        s.P.Relics = s.P.Relics.With("PaelsTears", 0, 0);
+        s.P.Relics = s.P.Relics.With(RelicId.PaelsTears, 0, 0);
         return s;
     }
 
@@ -75,7 +75,7 @@ public class CardEnergyTests
     {
         // Two of your arrows in an enemy it kills: both come loose (ImpaledPower.AfterDeath), 3 energy each.
         var s = State(hp: 5, energy: 2);
-        s.Enemies[0].Powers = PowerSet.Empty.With("ImpaledPower", 2, 3);
+        s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, 2, 3);
         var card = new SimCard("EpicRetrieval", SimCardType.Attack) { Energy = 2 };
         var script = new SimScript
         {

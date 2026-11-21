@@ -17,8 +17,8 @@ public class SimMidPlayTests
         // Three hits of 4 with Serrated Arrows 50 (6) on an enemy holding your last arrow, its counter at 2: the second hit
         // knocks the arrow out (ImpaledPower.AfterDamageReceived) and with it Impaled, so the third hit loses the bonus: 6, 6, 4.
         var s = new SimState { Enemies = { E(1, 100) } };
-        s.P.Powers = s.P.Powers.With("SerratedArrowsPower", 50);
-        s.Enemies[0].Powers = PowerSet.Empty.With("ImpaledPower", 1, 2);
+        s.P.Powers = s.P.Powers.With(PowerId.SerratedArrows, 50);
+        s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, 1, 2);
         var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Flurry"), 1, 1, V2.V2Script.Attack(4, hits: 3))));
         Assert.Equal(84, after.Enemy(1)!.Hp);
         Assert.Equal(1, after.P.Arrows);
@@ -33,7 +33,7 @@ public class SimMidPlayTests
         // rounded down): 362 → 324.
         var s = new SimState { Enemies = { E(1, 362) } };
         var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Break"), 1, 2,
-            V2.V2Script.Attack(15, terms: new CapturedTerms { Mul = 1.05m }), new ApplyPowerAction("VulnerablePower", 2) { Debuff = true })));
+            V2.V2Script.Attack(15, terms: new CapturedTerms { Mul = 1.05m }), new ApplyPowerAction(PowerId.Vulnerable, 2) { Debuff = true })));
         Assert.Equal(324, after.Enemy(1)!.Hp);
 
     }
@@ -47,7 +47,7 @@ public class SimMidPlayTests
         // 3. 82 - 6 - 27 = 49.
         var s = new SimState { Enemies = { E(1, 82) } };
         s.P.Arrows = 2;
-        s.P.Powers = s.P.Powers.With("SerratedArrowsPower", 50).With("WeakPower", 1);
+        s.P.Powers = s.P.Powers.With(PowerId.SerratedArrows, 50).With(PowerId.Weak, 1);
         var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("RapidShot"), 1, 4,
             new ShootAction(), V2.V2Script.Attack(3, hits: 3) with { NeedsArrow = true }, new ImpaleAction())));
         Assert.Equal(49, after.Enemy(1)!.Hp);
@@ -60,8 +60,8 @@ public class SimMidPlayTests
         // Two hits of 5 on every enemy with Serrated Arrows 100: the one holding your last arrow (counter at 1) takes 10, loses
         // the arrow, then 5; the other takes 5 twice.
         var s = new SimState { Enemies = { E(1, 50), E(2, 50) } };
-        s.P.Powers = s.P.Powers.With("SerratedArrowsPower", 100);
-        s.Enemies[1].Powers = PowerSet.Empty.With("ImpaledPower", 1, 1);
+        s.P.Powers = s.P.Powers.With(PowerId.SerratedArrows, 100);
+        s.Enemies[1].Powers = PowerSet.Empty.With(PowerId.Impaled, 1, 1);
         var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Cleave"), -1, 1, V2.V2Script.Attack(5, hits: 2, mode: SimPlay.Target.All))));
         Assert.Equal(40, after.Enemy(1)!.Hp);
         Assert.Equal(35, after.Enemy(2)!.Hp);
@@ -158,7 +158,7 @@ public class SimMidPlayTests
     {
         // Defend+ (8) played twice with Stretch 12: 20, then 8 (StretchPower is spent by the first play).
         var s = new SimState { Enemies = { E(1, 50) } };
-        s.P.Powers = s.P.Powers.With("StretchPower", 12);
+        s.P.Powers = s.P.Powers.With(PowerId.Stretch, 12);
         var defend = new SimCard("Defend", SimCardType.Skill) { GainsBlock = true };
         Assert.Equal(28, Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(defend, -1, 2, V2.V2Script.Block(8)))).P.Block);
 
@@ -181,7 +181,7 @@ public class SimMidPlayTests
         // An Adroit 3 attack played twice with Stretch 4 (v0.113.1: StretchPower counts the enchantment's block): 7 on the
         // first play, which spends the Stretch, then 3.
         var s = new SimState { Enemies = { E(1, 50) } };
-        s.P.Powers = s.P.Powers.With("StretchPower", 4);
+        s.P.Powers = s.P.Powers.With(PowerId.Stretch, 4);
         var adroit = new SimCard("Strike", SimCardType.Attack) { GainsBlock = true, Enchanted = true };
         var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(adroit, -1, 2, V2.V2Script.Block(3))));
         Assert.Equal(10, after.P.Block);

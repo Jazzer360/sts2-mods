@@ -175,13 +175,13 @@ public sealed class MusicBox : RelicProc
 public sealed class UnsettlingLamp : RelicProc
 {
     private const int BoundBit = 2;
-    public override int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target, bool debuff)
+    public override int ModifyPowerAmountGiven(SimState s, int owner, PowerId power, int amount, int? applier, int target, bool debuff)
     {
         if (!debuff || applier != owner || target < 0 || s.CurrentPlay is not { } play || play.Owner != owner) return amount;
         var data = Data(s, owner);
         if ((data & BoundBit) == 0)
         {
-            if (!Armed(s, owner) || SimEngine.PowerOn(s, target, "ArtifactPower") > 0) return amount;
+            if (!Armed(s, owner) || SimEngine.PowerOn(s, target, PowerId.Artifact) > 0) return amount;
             Set(s, owner, Amount(s, owner), data | BoundBit);
         }
         return amount * 2;
@@ -308,7 +308,7 @@ public sealed class ConductorsBaton : RelicProc
         var (before, after) = Melodies.Finished(s, play);
         if (before >= 3 || after < 3) return One(s);
         Set(s, owner, Amount(s, owner), Data(s, owner) | 2);
-        SimEngine.ApplyPower(s, owner, owner, "ConductorsBatonPower", 1, debuff: false);
+        SimEngine.ApplyPower(s, owner, owner, PowerId.ConductorsBaton, 1, debuff: false);
         return Fire(s, owner);
     }
 }
@@ -347,7 +347,7 @@ public sealed class Kunai : CounterRelic
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState s, int owner)
     {
-        SimEngine.ApplyPower(s, owner, owner, "DexterityPower", Var(s, owner, "Dexterity", 1), debuff: false);
+        SimEngine.ApplyPower(s, owner, owner, PowerId.Dexterity, Var(s, owner, "Dexterity", 1), debuff: false);
         return Fire(s, owner);
     }
 }
@@ -357,7 +357,7 @@ public sealed class Shuriken : CounterRelic
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState s, int owner)
     {
-        SimEngine.ApplyPower(s, owner, owner, "StrengthPower", Var(s, owner, "Strength", 1), debuff: false);
+        SimEngine.ApplyPower(s, owner, owner, PowerId.Strength, Var(s, owner, "Strength", 1), debuff: false);
         return Fire(s, owner);
     }
 }

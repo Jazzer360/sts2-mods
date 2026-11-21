@@ -7,7 +7,7 @@ public sealed class TungstenRod : SimModel
 {
     public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount) =>
-        d.Target != owner ? amount : Math.Max(0m, amount - SimEngine.RelicsOf(s, owner)[Name]);
+        d.Target != owner ? amount : Math.Max(0m, amount - SimEngine.RelicsOf(s, owner)[ThisRelic]);
 }
 
 /// <summary>
@@ -20,13 +20,13 @@ public sealed class BeatingRemnant : SimModel
     {
         if (d.Target != owner) return amount;
         var r = SimEngine.RelicsOf(s, owner);
-        return Math.Min(amount, r[Name] - r.DataOf(Name));
+        return Math.Min(amount, r[ThisRelic] - r.DataOf(ThisRelic));
     }
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0) return;
         var r = SimEngine.RelicsOf(s, owner);
-        SimEngine.SetRelics(s, owner, r.With(Name, r[Name], r.DataOf(Name) + e.Unblocked));
+        SimEngine.SetRelics(s, owner, r.With(ThisRelic, r[ThisRelic], r.DataOf(ThisRelic) + e.Unblocked));
     }
 }
 
@@ -41,7 +41,7 @@ public sealed class BufferPower : SimModel
     public override void AfterModifyingHpLost(SimState s, int owner)
     {
         var p = SimEngine.PowersOf(s, owner);
-        SimEngine.SetPowers(s, owner, p[Name] <= 1 ? p.Without(Name) : p.With(Name, p[Name] - 1));
+        SimEngine.SetPowers(s, owner, p[ThisPower] <= 1 ? p.Without(ThisPower) : p.With(ThisPower, p[ThisPower] - 1));
         s.LogFired(Name, 0, owner);
     }
 }
@@ -56,7 +56,7 @@ public sealed class InfernoPower : SimModel
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked <= 0 || s.EnemyTurnNow) return;
-        var amount = SimEngine.PowerOn(s, owner, Name);
+        var amount = SimEngine.PowerOn(s, owner, ThisPower);
         if (amount <= 0) return;
         s.LogFired(Name, amount * s.Targetable.Count(), owner);
         if (s.Log) s.EndOfTurnDamage.Add(("Inferno (all)", amount));

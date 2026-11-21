@@ -9,7 +9,7 @@ public sealed class TrackingPower : SimModel
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null) return 1m;
         if (!(d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty))) return 1m;
-        return SimEngine.PowersOf(s, d.Target).Has("WeakPower") ? 1m + SimEngine.PowerOn(s, owner, Name) / 100m : 1m;
+        return SimEngine.PowersOf(s, d.Target).Has(PowerId.Weak) ? 1m + SimEngine.PowerOn(s, owner, ThisPower) / 100m : 1m;
     }
 }
 
@@ -17,14 +17,14 @@ public sealed class TrackingPower : SimModel
 public sealed class ColossusPower : SimModel
 {
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
-        d.Target == owner && d.Props.IsPoweredAttack() && d.Dealer is { } dealer && SimEngine.PowersOf(s, dealer).Has("VulnerablePower") ? 0.5m : 1m;
+        d.Target == owner && d.Props.IsPoweredAttack() && d.Dealer is { } dealer && SimEngine.PowersOf(s, dealer).Has(PowerId.Vulnerable) ? 0.5m : 1m;
 }
 
 /// <summary>TaintedPower.ModifyDamageAdditive: its amount on powered attacks on its owner (Vital Spark gives it for Tainted cards).</summary>
 public sealed class TaintedPower : SimModel
 {
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d) =>
-        d.Target == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, Name) : 0m;
+        d.Target == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, ThisPower) : 0m;
 }
 
 /// <summary>
@@ -38,16 +38,16 @@ public sealed class FlutterPower : SimModel
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (d.Target != owner || !d.Props.IsPoweredAttack()) return 1m;
-        var pct = SimEngine.PowersOf(s, owner).DataOf(Name);
+        var pct = SimEngine.PowersOf(s, owner).DataOf(ThisPower);
         return (pct == 0 ? 50 : pct) / 100m;
     }
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0 || !e.Props.IsPoweredAttack() || owner < 0) return;
         var p = SimEngine.PowersOf(s, owner);
-        if (!p.Has(Name)) return;
-        var left = p[Name] - 1;
-        SimEngine.SetPowers(s, owner, left <= 0 ? p.Without(Name) : p.With(Name, left));
+        if (!p.Has(ThisPower)) return;
+        var left = p[ThisPower] - 1;
+        SimEngine.SetPowers(s, owner, left <= 0 ? p.Without(ThisPower) : p.With(ThisPower, left));
         if (left <= 0 && s.Enemy(owner) is { Alive: true } en)
         {
             en.Stunned = true;
@@ -61,7 +61,7 @@ public sealed class FlutterPower : SimModel
 public sealed class HardToKillPower : SimModel
 {
     public override bool FlashesOnDamageModified => true;
-    public override decimal ModifyDamageCap(SimState s, int owner, DamageCtx d) => d.Target == owner ? SimEngine.PowerOn(s, owner, Name) : decimal.MaxValue;
+    public override decimal ModifyDamageCap(SimState s, int owner, DamageCtx d) => d.Target == owner ? SimEngine.PowerOn(s, owner, ThisPower) : decimal.MaxValue;
 }
 
 /// <summary>IntangiblePower.ModifyDamageCap: at most 1 per damage to its owner (its HP-loss cap is in the HP-loss pipeline).</summary>
@@ -81,20 +81,20 @@ public sealed class IntangiblePower : SimModel
 /// </summary>
 public sealed class SurroundedPower : SimModel
 {
-    private static string BehindPower(int facing) => facing == 0 ? "BackAttackLeftPower" : "BackAttackRightPower";
+    private static PowerId BehindPower(int facing) => facing == 0 ? PowerId.BackAttackLeft : PowerId.BackAttackRight;
 
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (d.Dealer is not { } dealer || d.Target != owner) return 1m;
-        return SimEngine.PowersOf(s, dealer).Has(BehindPower(SimEngine.PowersOf(s, owner).DataOf(Name))) ? 1.5m : 1m;
+        return SimEngine.PowersOf(s, dealer).Has(BehindPower(SimEngine.PowersOf(s, owner).DataOf(ThisPower))) ? 1.5m : 1m;
     }
 
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (play.Owner != owner || play.Target < 0) return One(s);
         var p = SimEngine.PowersOf(s, owner);
-        var facing = p.DataOf(Name);
-        if (SimEngine.PowersOf(s, play.Target).Has(BehindPower(facing))) SimEngine.SetPowers(s, owner, p.With(Name, p[Name], 1 - facing));
+        var facing = p.DataOf(ThisPower);
+        if (SimEngine.PowersOf(s, play.Target).Has(BehindPower(facing))) SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], 1 - facing));
         return One(s);
     }
 
@@ -104,13 +104,13 @@ public sealed class SurroundedPower : SimModel
     /// </summary>
     public override void AfterDeath(SimState s, int owner, int dead)
     {
-        if (s.Enemy(dead) == null || !SimEngine.PowersOf(s, owner).Has(Name)) return;
+        if (s.Enemy(dead) == null || !SimEngine.PowersOf(s, owner).Has(ThisPower)) return;
         var left = s.Targetable.ToList();
         if (left.Count == 0) return;
-        if (!left.All(e => e.Powers.Has("BackAttackLeftPower")) && !left.All(e => e.Powers.Has("BackAttackRightPower"))) return;
+        if (!left.All(e => e.Powers.Has(PowerId.BackAttackLeft)) && !left.All(e => e.Powers.Has(PowerId.BackAttackRight))) return;
         var p = SimEngine.PowersOf(s, owner);
-        var facing = p.DataOf(Name);
-        if (left[0].Powers.Has(BehindPower(facing))) SimEngine.SetPowers(s, owner, p.With(Name, p[Name], 1 - facing));
+        var facing = p.DataOf(ThisPower);
+        if (left[0].Powers.Has(BehindPower(facing))) SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], 1 - facing));
     }
 }
 
@@ -125,9 +125,9 @@ public sealed class CoveredPower : SimModel
     public override void AfterApplied(SimState s, int owner, int applier, int amount)
     {
         var p = SimEngine.PowersOf(s, owner);
-        SimEngine.SetPowers(s, owner, p.With(Name, p[Name], applier + 100));
+        SimEngine.SetPowers(s, owner, p.With(ThisPower, p[ThisPower], applier + 100));
         var a = SimEngine.PowersOf(s, applier);
-        SimEngine.SetPowers(s, applier, a.With("InterceptPower", a["InterceptPower"] + 1));
+        SimEngine.SetPowers(s, applier, a.With(PowerId.Intercept, a[PowerId.Intercept] + 1));
     }
 }
 
@@ -135,5 +135,5 @@ public sealed class CoveredPower : SimModel
 public sealed class InterceptPower : SimModel
 {
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
-        d.Target == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, Name) + 1 : 1m;
+        d.Target == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, ThisPower) + 1 : 1m;
 }

@@ -123,7 +123,7 @@ public static partial class SimEngine
         if (mods != null) foreach (var (m, o) in mods) m.AfterModifyingDamageAmount(s, o, card);
         // The first hit on each enemy, for the damage-formula audit (not after Mighty Wings gave Strength mid-attack: the preview
         // can't know that).
-        if (card != null && !at.ByOsty && !s.FirstHits.ContainsKey(target) && !s.Fired.Has("MightyWings")) s.FirstHits = s.FirstHits.Add(target, amount);
+        if (card != null && !at.ByOsty && !s.FirstHits.ContainsKey(target) && !s.Fired.Has(nameof(Models.MightyWings))) s.FirstHits = s.FirstHits.Add(target, amount);
         if (amount <= 0) return new[] { s };
         if (s.Enemy(target) is { Alive: true } e) Damage(s, e, amount, dealer, spec.Props, card);
         // Rain Shot: the target's damage to every other hittable enemy (only caps apply).
@@ -158,25 +158,25 @@ public static partial class SimEngine
     /// PowerCmd.Apply: the amount through ModifyPowerAmountGiven (Snecko Skull...), then Artifact takes a debuff (a charge
     /// each), else the power goes on (poison into the enemy's poison).
     /// </summary>
-    internal static bool ApplyPower(SimState s, int applier, int target, string power, int amount, bool debuff)
+    internal static bool ApplyPower(SimState s, int applier, int target, PowerId power, int amount, bool debuff)
     {
         if (amount == 0) return false;
         foreach (var (m, o) in Listeners(s)) amount = m.ModifyPowerAmountGiven(s, o, power, amount, applier, target, debuff);
         if (amount == 0) return false;
         var powers = PowersOf(s, target);
-        if (debuff && powers["ArtifactPower"] > 0)
+        if (debuff && powers[PowerId.Artifact] > 0)
         {
-            SetPowers(s, target, powers["ArtifactPower"] > 1 ? powers.Add("ArtifactPower", -1) : powers.Without("ArtifactPower"));
+            SetPowers(s, target, powers[PowerId.Artifact] > 1 ? powers.Add(PowerId.Artifact, -1) : powers.Without(PowerId.Artifact));
             return false;
         }
-        if (target >= 0 && power == "PoisonPower")
+        if (target >= 0 && power == PowerId.Poison)
         {
             s.Enemy(target)?.AddPoison(amount);
             return true;
         }
         // Accelerant on any player: every enemy's poison ticks that many more times (PoisonPower.TriggerCount sums every
         // living player's), and its next tick deals that much more.
-        if (Who.IsPlayer(target) && power == "AccelerantPower")
+        if (Who.IsPlayer(target) && power == PowerId.Accelerant)
             foreach (var e in s.Enemies)
             {
                 var more = e.PoisonTriggers + amount;
@@ -185,7 +185,7 @@ public static partial class SimEngine
             }
         var had = powers.Has(power);
         SetPowers(s, target, powers.Add(power, amount));
-        if (!had) SimModels.Get(power)?.AfterApplied(s, target, applier, amount);
+        if (!had) SimModels.Get(power.Name)?.AfterApplied(s, target, applier, amount);
         return true;
     }
 
