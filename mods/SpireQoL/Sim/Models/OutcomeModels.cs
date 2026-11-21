@@ -7,23 +7,23 @@ namespace SpireQoL.Sim.Models;
 internal static class OutcomeRules
 {
     /// <summary>The play kills this enemy in some branch: a warning, as its death sets something off.</summary>
-    public static OutcomeRule KillsIt(int enemy) => new(true, outcome => outcome.KilledByPlayInAny.Contains(enemy));
+    public static OutcomeRule KillsIt(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Contains(enemy));
 
     /// <summary>The play kills another enemy in some branch: a warning, as that makes this one stronger.</summary>
-    public static OutcomeRule KillsAnother(int enemy) => new(true, outcome => outcome.KilledByPlayInAny.Any(killed => killed != enemy));
+    public static OutcomeRule KillsAnother(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Any(killed => killed != enemy));
 
     /// <summary>The play kills some enemy in every branch of an aim (not always the same one): a bonus.</summary>
-    public static readonly OutcomeRule KillsOne = new(false, outcome => outcome.PlayKillsInAll);
+    public static readonly OutcomeRule KillsOne = new(Harmful: false, outcome => outcome.PlayKillsInAll);
 
     /// <summary>You lose HP during the play (its own HP cost, Thorns hitting back), in every branch of an aim: a bonus.</summary>
-    public static readonly OutcomeRule YouLoseHp = new(false, outcome => outcome.PlayHpLossesMin > 0);
+    public static readonly OutcomeRule YouLoseHp = new(Harmful: false, outcome => outcome.PlayHpLossesMin > 0);
 
     /// <summary>
     /// Stunned during your turn and alive when its turn comes, in every branch of an aim, when it isn't already without the play: a
     /// bonus. Null for anything but an enemy.
     /// </summary>
     public static OutcomeRule? Stuns(SimOutcome now, int enemy) =>
-        Who.IsEnemy(enemy) && !now.StunnedInAll(enemy) ? new(false, outcome => outcome.StunnedInAll(enemy)) : null;
+        Who.IsEnemy(enemy) && !now.StunnedInAll(enemy) ? new(Harmful: false, outcome => outcome.StunnedInAll(enemy)) : null;
 }
 
 /// <summary>An enemy's power whose death sets something off: a warning on a play that can kill it.</summary>
@@ -58,14 +58,14 @@ public sealed class StockPower : SimModel
 public sealed class ImbalancedPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && !now.FirstHitBlockedInAll(owner) ? new(false, outcome => outcome.FirstHitBlockedInAll(owner)) : null;
+        Who.IsEnemy(owner) && !now.FirstHitBlockedInAll(owner) ? new(Harmful: false, outcome => outcome.FirstHitBlockedInAll(owner)) : null;
 }
 
 /// <summary>HandDrill: Vulnerable on an enemy whose block you break. A bonus when every branch of an aim breaks one.</summary>
 public sealed class HandDrill : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        owner == Who.You ? new(false, outcome => outcome.PlayBreaksBlockInAll) : null;
+        owner == Who.You ? new(Harmful: false, outcome => outcome.PlayBreaksBlockInAll) : null;
 }
 
 /// <summary>CompostPower (yours or a teammate's): energy for every player on your side when an enemy dies.</summary>
@@ -107,6 +107,6 @@ public sealed class RedSkull : SimModel
         if (owner != Who.You) return null;
         var hp = start.You.Hp;
         var threshold = SimEngine.RelicsOf(start, owner)[ThisRelic];
-        return hp > threshold ? new(false, outcome => outcome.PlayHpLostMin > 0 && hp - outcome.PlayHpLostMin <= threshold) : null;
+        return hp > threshold ? new(Harmful: false, outcome => outcome.PlayHpLostMin > 0 && hp - outcome.PlayHpLostMin <= threshold) : null;
     }
 }

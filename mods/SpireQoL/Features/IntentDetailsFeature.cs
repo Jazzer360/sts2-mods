@@ -53,9 +53,9 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             if (!GodotObject.IsInstanceValid(node) || node.IntentContainer is not { } container || !GodotObject.IsInstanceValid(container)) continue;
             var intents = container.GetChildren().OfType<NIntent>().Where(GodotObject.IsInstanceValid).ToList();
             // As the intent on screen says: nothing while it's hidden there (its move would be given away).
-            var hidden = intents.Any(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", null) is HiddenIntent or UnknownIntent);
+            var hidden = intents.Any(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", fallback: null) is HiddenIntent or UnknownIntent);
             var shown = Sts2State.IsPlayerTurn && !hidden && node.Entity is { } creature ? For(creature) : null;
-            var onScreen = intents.Select(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", null)).ToList();
+            var onScreen = intents.Select(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", fallback: null)).ToList();
             var corners = shown != null && onScreen.All(abstractIntent => abstractIntent != null) ? IntentCorner.Assign(onScreen!, shown.Powers) : new();
             for (var intentIndex = 0; intentIndex < intents.Count; intentIndex++)
             {
@@ -80,7 +80,7 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
         }
         if (label == null)
         {
-            label = UiKit.Label("", 22, BlockColor);
+            label = UiKit.Label("", size: 22, BlockColor);
             label.Name = BlockName;
             label.MouseFilter = Control.MouseFilterEnum.Ignore;
             label.AddThemeConstantOverride("outline_size", 8);

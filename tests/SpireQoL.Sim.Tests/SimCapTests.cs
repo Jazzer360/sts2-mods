@@ -41,7 +41,7 @@ public class SimCapTests
     public void StoppedAtTheCapEveryShareOfTheRollsIsKept()
     {
         var whole = SimEngine.Run(Heavy());
-        var outcome = Capped(Heavy(), null, 4);
+        var outcome = Capped(Heavy(), play: null, cap: 4);
         Assert.True(outcome.Truncated);
         Assert.True(whole.Branches.Count > 4, "the scenario must overflow the cap");
         Assert.Equal(1.0, outcome.Branches.Sum(branch => branch.Weight), 9);
@@ -55,7 +55,7 @@ public class SimCapTests
         var exact = SimEngine.Run(Heavy());
         foreach (var cap in new[] { 3, 6, 12 })
         {
-            var outcome = Capped(Heavy(), null, cap);
+            var outcome = Capped(Heavy(), play: null, cap);
             Assert.True(outcome.Truncated);
             for (var id = 0; id < 3; id++)
             {
@@ -66,7 +66,7 @@ public class SimCapTests
             }
         }
         // Somewhere before the end, some death is settled while the search is still going: the range's floor counts it.
-        Assert.Contains(Enumerable.Range(2, 400), cap => SimEngine.Run(Heavy(), null, new SimWork { CopyCap = cap }) is { Truncated: true } outcome && Enumerable.Range(0, 3).Any(id => outcome.DeadChanceRange(id).Low > 0));
+        Assert.Contains(Enumerable.Range(2, 400), cap => SimEngine.Run(Heavy(), play: null, new SimWork { CopyCap = cap }) is { Truncated: true } outcome && Enumerable.Range(0, 3).Any(id => outcome.DeadChanceRange(id).Low > 0));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class SimCapTests
     {
         var state = Heavy();
         state.You.Hp = 3;
-        var chance = Capped(state, null, 4).YouDieChance();
+        var chance = Capped(state, play: null, cap: 4).YouDieChance();
         Assert.Equal(0, chance.Low);
         Assert.Equal(1, chance.High);
     }
@@ -84,7 +84,7 @@ public class SimCapTests
     {
         // The play is over in every branch before the end of turn: its kills and log are measured there, cap or no cap.
         var whole = SimEngine.Run(Heavy(), Strike());
-        var outcome = Capped(Heavy(), Strike(), 4);
+        var outcome = Capped(Heavy(), Strike(), cap: 4);
         Assert.True(outcome.Truncated);
         Assert.Equal(whole.KilledByPlayInAll.OrderBy(id => id), outcome.KilledByPlayInAll.OrderBy(id => id));
         Assert.Equal(whole.KilledByPlayInAny.OrderBy(id => id), outcome.KilledByPlayInAny.OrderBy(id => id));
@@ -95,7 +95,7 @@ public class SimCapTests
     [Fact]
     public void TheWorkCapStopsASearchPartWayThroughAStep()
     {
-        var outcome = SimEngine.Run(Heavy(), null, new SimWork { CopyCap = 10 });
+        var outcome = SimEngine.Run(Heavy(), play: null, new SimWork { CopyCap = 10 });
         Assert.True(outcome.Truncated);
         Assert.Equal("the work cap", outcome.CapHit);
         Assert.Equal(1.0, outcome.Branches.Sum(branch => branch.Weight), 9);
@@ -108,7 +108,7 @@ public class SimCapTests
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        Assert.Throws<OperationCanceledException>(() => SimEngine.Run(Heavy(), null, new SimWork { Cancel = cts.Token }));
+        Assert.Throws<OperationCanceledException>(() => SimEngine.Run(Heavy(), play: null, new SimWork { Cancel = cts.Token }));
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class SimCapTests
     {
         // The shared count goes back down when a search is over, capped or not (other tests may be running: only this one's part).
         var work = new SimWork();
-        SimEngine.Run(Heavy(), null, work);
+        SimEngine.Run(Heavy(), play: null, work);
         Assert.True(work.PeakHeld > 0);
         Assert.Equal(0, work.Held);
     }
@@ -128,7 +128,7 @@ public class SimCapTests
     [InlineData(0.996, 0.996, "99%", "99%")]
     public void ChanceText(double low, double high, string text, string shortText)
     {
-        var chance = new SimChance(low, high, true);
+        var chance = new SimChance(low, high, Seen: true);
         Assert.Equal(text, chance.Text());
         Assert.Equal(shortText, chance.ShortText());
     }

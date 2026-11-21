@@ -95,10 +95,10 @@ public static class Audits
     public static bool PerTurn(string audit) => audit is Forecast or Play;
 
     /// <summary>A check outside the turns' audits ran.</summary>
-    public static void Done(string audit, bool matched, string? detail) => DevEvents.Post(new CheckDone(audit, 0, matched, detail));
+    public static void Done(string audit, bool matched, string? detail) => DevEvents.Post(new CheckDone(audit, Turn: 0, matched, detail));
 
     /// <summary>A check outside the turns' audits was left undone: say why (no names or amounts in the reason, so it adds up).</summary>
-    public static void Skipped(string audit, string reason, string? detail = null) => DevEvents.Post(new CheckSkipped(audit, 0, reason, detail));
+    public static void Skipped(string audit, string reason, string? detail = null) => DevEvents.Post(new CheckSkipped(audit, Turn: 0, reason, detail));
 }
 
 /// <summary>

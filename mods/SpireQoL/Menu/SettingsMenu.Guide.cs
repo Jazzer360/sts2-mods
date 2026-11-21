@@ -100,19 +100,19 @@ public sealed partial class SettingsMenu
             "The total plays, when the card replays itself: here Transfigure gave Reave Replay, so it's played twice. "
             + "Something else that doubles a play shows its own icon instead "
             + "(Echo Form, Burst, Duplication...).",
-            Tab("replay", null, text: "2×"));
+            Tab("replay", icon: null, text: "2×"));
         GuideCardCell(flow, Card<EscapePlan>(), "Text: a chance",
             "The chance the card's effect happens, when it depends on what it draws: here Escape Plan draws a Skill (and gains its block) "
             + "in 40% of the cards your draw pile could give. From the pile's contents, never its order.",
-            Tab("drawn", null, text: "40%"));
+            Tab("drawn", icon: null, text: "40%"));
         GuideCardCell(flow, Card<Pillage>(), "Text: a chance, and how many",
             "The most likely number on top, its chance under it: here Pillage most likely draws 1 Attack (33%) before it stops. "
             + "Scrape shows how many of the cards it draws cost 0 (the ones it keeps). A tie goes to the higher number.",
-            Tab("drawn", null, text: "33%", numberText: "1"));
+            Tab("drawn", icon: null, text: "33%", numberText: "1"));
         GuideCardCell(flow, Card<Patter>(), "A card: it comes back",
             "Playing this brings that card back to your hand: here Patter is your third Skill this turn, so Make It So comes back from your discard pile. "
             + "Also Right Hand Hand and Whistling Arrows.",
-            new TabSpec("return:MakeItSo", null, Card: Card<MakeItSo>()));
+            new TabSpec("return:MakeItSo", Icon: null, Card: Card<MakeItSo>()));
         GuideCardCell(flow, Card<Backflip>(CardKeyword.Retain, CardKeyword.Sly), "Retain and Sly",
             "The card stays in your hand at end of turn (Retain), or is Sly (Hand Trick, Master Planner). The card's text says so too; "
             + "the tabs are there because they're about the card, not about playing it, and they show even when it's only for this turn.",
@@ -140,19 +140,19 @@ public sealed partial class SettingsMenu
         Paragraph("Beside your HP bar, one row per relic or power that counts what you do: its icon, a bar with one segment per step, and a label. "
             + "A row flashes when your next qualifying play sets it off. Counters that carry across turns come first.");
 
-        CounterRow(RelicOf<PenNib>(), 7, 10, RelicCountersFeature.Shade.Relic, "7/10", false,
+        CounterRow(RelicOf<PenNib>(), filled: 7, total: 10, RelicCountersFeature.Shade.Relic, "7/10", flash: false,
             "Gold: a relic's counter. Pen Nib has counted 7 of its 10 Attacks; it carries across turns and fights.");
-        CounterRow(RelicOf<Kunai>(), 2, 3, RelicCountersFeature.Shade.Relic, "2/3", true,
+        CounterRow(RelicOf<Kunai>(), filled: 2, total: 3, RelicCountersFeature.Shade.Relic, "2/3", flash: true,
             "Flashing: your next Attack sets Kunai off. (General: Tracker flashes early starts it one step sooner.)");
-        CounterRow(RelicOf<VelvetChoker>(), 5, 6, RelicCountersFeature.Shade.Warning, "1 left", true,
+        CounterRow(RelicOf<VelvetChoker>(), filled: 5, total: 6, RelicCountersFeature.Shade.Warning, "1 left", flash: true,
             "A limit: Velvet Choker's plays left this turn, red at the last one, then LIMIT.");
-        CounterRow(RelicOf<Pocketwatch>(), 2, 3, RelicCountersFeature.Shade.Good, "2/3 ok", false,
+        CounterRow(RelicOf<Pocketwatch>(), filled: 2, total: 3, RelicCountersFeature.Shade.Good, "2/3 ok", flash: false,
             "Stay under: green while you're within Pocketwatch's limit, red (missed) once you go over.");
-        CounterRow(PowerOf<PanachePower>(), 3, 5, RelicCountersFeature.Shade.Power, "2 cards left", false,
+        CounterRow(PowerOf<PanachePower>(), filled: 3, total: 5, RelicCountersFeature.Shade.Power, "2 cards left", flash: false,
             "Blue: a power of yours counting down to its next trigger (Panache: 2 more cards this turn).");
-        CounterRow(PowerOf<WitheringPresencePower>(), 4, 6, RelicCountersFeature.Shade.Warning, "2 cards left", false,
+        CounterRow(PowerOf<WitheringPresencePower>(), filled: 4, total: 6, RelicCountersFeature.Shade.Warning, "2 cards left", flash: false,
             "Red: an enemy's power counting your plays (Withering Presence adds a Wither to your hand).");
-        CounterRow(PowerOf<CacophonyPower>(), 12, 33, RelicCountersFeature.Shade.Power, "21 draws left", false,
+        CounterRow(PowerOf<CacophonyPower>(), filled: 12, total: 33, RelicCountersFeature.Shade.Power, "21 draws left", flash: false,
             "A long count shows just the number.");
         Paragraph("Relics that only count turns (Horn Cleat, Captain's Wheel...) are off by default: switch each on in the Tracker column of the Relics page.");
     }
@@ -191,29 +191,29 @@ public sealed partial class SettingsMenu
         foreach (var (name, detail) in legend)
         {
             var row = RowBox();
-            row.AddChild(Label(name, 20, Text, NameWidth));
+            row.AddChild(Label(name, size: 20, Text, NameWidth));
             row.AddChild(Wrapped(detail));
             AddRow(row);
         }
 
         var flow = Flow();
-        IncomingCell(flow, "You take 9", "", damageMathPanel => damageMathPanel.Show(14, 5, null, 9));
-        IncomingCell(flow, "All blocked", "", damageMathPanel => damageMathPanel.Show(8, 12, null, 0));
+        IncomingCell(flow, "You take 9", "", damageMathPanel => damageMathPanel.Show(incoming: 14, block: 5, osty: null, take: 9));
+        IncomingCell(flow, "All blocked", "", damageMathPanel => damageMathPanel.Show(incoming: 8, block: 12, osty: null, take: 0));
         IncomingCell(flow, "This kills you", "The skull: the enemy turn takes you to 0 with nothing to save you.",
-            damageMathPanel => damageMathPanel.Show(46, 6, null, 40, dies: true));
+            damageMathPanel => damageMathPanel.Show(incoming: 46, block: 6, osty: null, take: 40, dies: true));
         IncomingCell(flow, "This might kill you", "When a roll decides it (which enemy a Lightning orb hits first), the skull carries the chance. "
             + "The numbers are the worst case. ? means they aren't certain: some outcome has something not modelled, or they're waiting on a newer result (a busy play).",
-            damageMathPanel => damageMathPanel.Show(46, 6, null, 40, dies: true, deathChance: "40%", progress: "?"));
+            damageMathPanel => damageMathPanel.Show(incoming: 46, block: 6, osty: null, take: 40, dies: true, deathChance: "40%", progress: "?"));
         IncomingCell(flow, "Too much to work out", "Rarely, a fight has too many outcomes to work out in time: a lone ?, with no number and no promise either way.",
             damageMathPanel => damageMathPanel.ShowUnknown());
         IncomingCell(flow, "Something saves you", "Fairy in a Bottle (or Lizard Tail) brings you back: your HP after the enemy turn.",
-            damageMathPanel => damageMathPanel.Show(46, 6, null, 40, revive: (Potion<FairyInABottle>(), 23)));
+            damageMathPanel => damageMathPanel.Show(incoming: 46, block: 6, osty: null, take: 40, revive: (Potion<FairyInABottle>(), 23)));
         IncomingCell(flow, "Osty takes some", "Necrobinder: what Osty absorbs for you (red if it kills Osty).",
-            damageMathPanel => damageMathPanel.Show(18, 5, (6, false), 7));
+            damageMathPanel => damageMathPanel.Show(incoming: 18, block: 5, (6, false), take: 7));
         IncomingCell(flow, "Unblockable too", "Regret in hand: 3 HP lost whatever your block. The skull sits beside the last line.",
-            damageMathPanel => damageMathPanel.Show(14, 11, null, 3, unblockable: 3));
+            damageMathPanel => damageMathPanel.Show(incoming: 14, block: 11, osty: null, take: 3, unblockable: 3));
         IncomingCell(flow, "Another turn first", "Ending your turn now gives you another one before the enemies act (Pael's Eye, Extra Turn).",
-            damageMathPanel => damageMathPanel.Show(12, 0, null, 12, extraTurn: Relic<PaelsEye>()));
+            damageMathPanel => damageMathPanel.Show(incoming: 12, block: 0, osty: null, take: 12, extraTurn: Relic<PaelsEye>()));
         _rows!.AddChild(flow);
         Paragraph("Teammate Incoming Damage: in multiplayer, hover a teammate to see theirs beside their HP bar, worked out the same way "
             + "from what you can see of them (their block, powers, orbs and relics; not the cards in their hand).");
@@ -222,7 +222,7 @@ public sealed partial class SettingsMenu
     private static void IncomingCell(HFlowContainer flow, string title, string text, Action<DamageMathPanel> show)
     {
         var cell = Cell();
-        cell.AddChild(Label(title, 20, Accent));
+        cell.AddChild(Label(title, size: 20, Accent));
         cell.AddChild(ExampleBox(inner => show(new DamageMathPanel(inner))));
         if (text.Length > 0) cell.AddChild(CellText(text));
         flow.AddChild(cell);
@@ -239,23 +239,23 @@ public sealed partial class SettingsMenu
         var heal = GameIcons.RestOption("heal");
         var flow = Flow();
         RestCell(flow, "Resting", "30% of your max HP, rounded down.",
-            restMathPanel => restMathPanel.Show(30, new[] { (heal, 23) }, 53, 77, 0));
+            restMathPanel => restMathPanel.Show(currentHp: 30, new[] { (heal, 23) }, resultHp: 53, resultMax: 77, over: 0));
         RestCell(flow, "Some of it wasted", "Orange: the part of the heal past your max HP.",
-            restMathPanel => restMathPanel.Show(70, new[] { (heal, 7) }, 77, 77, 16));
+            restMathPanel => restMathPanel.Show(currentHp: 70, new[] { (heal, 7) }, resultHp: 77, resultMax: 77, over: 16));
         RestCell(flow, "Relics change it", "A line each: Regal Pillow's +15, Stone Humidifier's max HP (the result shows the new max), Night Terrors.",
-            restMathPanel => restMathPanel.Show(30, new[] { (heal, 23), (Relic<RegalPillow>(), 15), (Relic<StoneHumidifier>(), 5) }, 73, 82, 0));
+            restMathPanel => restMathPanel.Show(currentHp: 30, new[] { (heal, 23), (Relic<RegalPillow>(), 15), (Relic<StoneHumidifier>(), 5) }, resultHp: 73, resultMax: 82, over: 0));
         RestCell(flow, "Before the boss", "Pantograph and Bath Robes heal you when the boss fight starts: the result is the HP you start it with, "
             + "and what they'd heal anyway counts as wasted.",
-            restMathPanel => restMathPanel.Show(40, new[] { (heal, 23), (Relic<Pantograph>(), 14) }, 77, 77, 11));
+            restMathPanel => restMathPanel.Show(currentHp: 40, new[] { (heal, 23), (Relic<Pantograph>(), 14) }, resultHp: 77, resultMax: 77, over: 11));
         RestCell(flow, "Mending a teammate", "Hover them while Mend is on offer: Mend heals them as their own Rest would.",
-            restMathPanel => restMathPanel.Show(18, new[] { (GameIcons.RestOption("mend"), 21) }, 39, 70, 0));
+            restMathPanel => restMathPanel.Show(currentHp: 18, new[] { (GameIcons.RestOption("mend"), 21) }, resultHp: 39, resultMax: 70, over: 0));
         _rows!.AddChild(flow);
     }
 
     private static void RestCell(HFlowContainer flow, string title, string text, Action<RestMathPanel> show)
     {
         var cell = Cell();
-        cell.AddChild(Label(title, 20, Accent));
+        cell.AddChild(Label(title, size: 20, Accent));
         cell.AddChild(ExampleBox(inner => show(new RestMathPanel(inner))));
         cell.AddChild(CellText(text));
         flow.AddChild(cell);
@@ -265,7 +265,7 @@ public sealed partial class SettingsMenu
     private static PanelContainer ExampleBox(Action<VBoxContainer> fill)
     {
         var box = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin };
-        box.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0, 0, 0, 0.35f), 6, 14));
+        box.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0, 0, 0, 0.35f), radius: 6, margin: 14));
         var inner = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         box.AddChild(inner);
         fill(inner);
@@ -292,14 +292,14 @@ public sealed partial class SettingsMenu
 
         // Shops: icons left of the price, the net price under it.
         var shop = Cell();
-        shop.AddChild(Label("Shops", 20, Accent));
+        shop.AddChild(Label("Shops", size: 20, Accent));
         shop.AddChild(ExampleBox(inner =>
         {
-            var pair = UiKit.Row(28);
+            var pair = UiKit.Row(separation: 28);
             if (RelicOf<LuckyFysh>() is { } fysh)
-                pair.AddChild(RunRemindersFeature.ExampleShopPrice(new[] { (fysh, false) }, 75, 60));
+                pair.AddChild(RunRemindersFeature.ExampleShopPrice(new[] { (fysh, false) }, price: 75, net: 60));
             if (RelicOf<Sozu>() is { } sozu)
-                pair.AddChild(RunRemindersFeature.ExampleShopPrice(new[] { (sozu, true) }, 50, null));
+                pair.AddChild(RunRemindersFeature.ExampleShopPrice(new[] { (sozu, true) }, price: 50, net: null));
             inner.AddChild(pair);
         }));
         shop.AddChild(CellText("Beside each price: the relics buying it sets off. On a card with Lucky Fysh, the green number is what it "
@@ -308,16 +308,16 @@ public sealed partial class SettingsMenu
 
         // Events: icons left of the option.
         var vBoxContainer = Cell();
-        vBoxContainer.AddChild(Label("Events", 20, Accent));
+        vBoxContainer.AddChild(Label("Events", size: 20, Accent));
         vBoxContainer.AddChild(ExampleBox(inner =>
         {
             void Option(string text, params (RelicModel?, bool, string?)[] relics)
             {
-                var row = UiKit.Row(10);
+                var row = UiKit.Row(separation: 10);
                 row.AddChild(RunRemindersFeature.ExampleEventIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
                 var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-                option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), 6, 12));
-                option.AddChild(UiKit.Label(text, 18, Colors.White));
+                option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), radius: 6, margin: 12));
+                option.AddChild(UiKit.Label(text, size: 18, Colors.White));
                 row.AddChild(option);
                 inner.AddChild(row);
             }
@@ -331,15 +331,15 @@ public sealed partial class SettingsMenu
 
         // Inspect: the magnifier beside an option with random cards (decision #64).
         var inspect = Cell();
-        inspect.AddChild(Label("Inspect", 20, Accent));
+        inspect.AddChild(Label("Inspect", size: 20, Accent));
         inspect.AddChild(ExampleBox(inner =>
         {
-            var row = UiKit.Row(10);
+            var row = UiKit.Row(separation: 10);
             var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-            option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), 6, 12));
-            option.AddChild(UiKit.Label("Gorge: choose 2 of 8 commons", 18, Colors.White));
+            option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), radius: 6, margin: 12));
+            option.AddChild(UiKit.Label("Gorge: choose 2 of 8 commons", size: 18, Colors.White));
             row.AddChild(option);
-            var icon = UiKit.Icon(RunRemindersFeature.InspectIcon(), 40);
+            var icon = UiKit.Icon(RunRemindersFeature.InspectIcon(), size: 40);
             icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
             row.AddChild(icon);
             inner.AddChild(row);
@@ -351,14 +351,14 @@ public sealed partial class SettingsMenu
 
         // Map: icons left of the legend's rows (decision #65).
         var map = Cell();
-        map.AddChild(Label("Map", 20, Accent));
+        map.AddChild(Label("Map", size: 20, Accent));
         map.AddChild(ExampleBox(inner =>
         {
             void Legend(string room, params (RelicModel?, bool, string?)[] relics)
             {
-                var row = UiKit.Row(10);
+                var row = UiKit.Row(separation: 10);
                 row.AddChild(RunRemindersFeature.ExamplePathIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
-                var name = UiKit.Label(room, 20, Colors.White);
+                var name = UiKit.Label(room, size: 20, Colors.White);
                 name.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
                 row.AddChild(name);
                 row.Alignment = BoxContainer.AlignmentMode.End;
@@ -388,15 +388,15 @@ public sealed partial class SettingsMenu
     {
         Section("Elsewhere");
         var skull = UiKit.Icon(GameIcons.Skull(), IconSize * 0.7f);
-        var example = UiKit.Row(4);
+        var example = UiKit.Row(separation: 4);
         example.AddChild(skull);
-        example.AddChild(UiKit.Label("50%", 18, Colors.White));
-        example.AddChild(UiKit.Label("  12/40", 20, Colors.White));
+        example.AddChild(UiKit.Label("50%", size: 18, Colors.White));
+        example.AddChild(UiKit.Label("  12/40", size: 20, Colors.White));
         GuideRow(example, "Death Skull",
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
             + "With a chance when a roll decides it (In fights: Chances, Death chances). With a range and ? when the fight was too big to work out (from the kills already certain up).");
-        var progress = UiKit.Row(6);
-        progress.AddChild(UiKit.Icon(GameIcons.Clock(), 22));
+        var progress = UiKit.Row(separation: 6);
+        progress.AddChild(UiKit.Icon(GameIcons.Clock(), size: 22));
         progress.AddChild(new ProgressBar
         {
             MinValue = 0, MaxValue = 1, Value = 0.6, ShowPercentage = false, CustomMinimumSize = new Vector2(90, 8),
@@ -406,15 +406,15 @@ public sealed partial class SettingsMenu
             "Rarely, under the End Turn button: the mod hasn't finished working out its predictions for this board yet (it has too many possible "
             + "outcomes to finish within a frame), and keeps working in the background. The bar fills as it gets through them. Meanwhile you see "
             + "the last finished results: Incoming Damage and the Death Skull add a ? after a tenth of a second, and each card's tabs change as soon as that card is done.");
-        GuideRow(null, "Intent Details",
+        GuideRow(example: null, "Intent Details",
             "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
             + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
-        GuideRow(null, "Intent Forecast",
+        GuideRow(example: null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");
-        GuideRow(null, "Update Notice",
+        GuideRow(example: null, "Update Notice",
             "On the main menu, above the game's MODDED note: how many Spire QoL versions behind you are, or that you're up to date.");
-        GuideRow(null, "Moving things",
+        GuideRow(example: null, "Moving things",
             $"{Settings.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {Settings.HideAllKey} hides everything.");
     }
 
@@ -428,7 +428,7 @@ public sealed partial class SettingsMenu
             holder.AddChild(example);
         }
         row.AddChild(holder);
-        row.AddChild(Label(name, 20, Text, NameWidth));
+        row.AddChild(Label(name, size: 20, Text, NameWidth));
         row.AddChild(Wrapped(text));
         AddRow(row);
     }
@@ -436,7 +436,7 @@ public sealed partial class SettingsMenu
     // ------------------------------------------------------------------ example cards
 
     private void GuideCardCell(HFlowContainer flow, CardModel? card, string title, string text, params TabSpec[] tabs) =>
-        GuideCardCell(flow, card, title, text, null, tabs);
+        GuideCardCell(flow, card, title, text, opacity: null, tabs);
 
     private void GuideCardCell(HFlowContainer flow, CardModel? card, string title, string text, float? opacity, params TabSpec[] tabs)
     {
@@ -448,7 +448,7 @@ public sealed partial class SettingsMenu
             cell.AddChild(example.Root);
             _guideTicks.Add((_, _) => example.Tick());
         }
-        cell.AddChild(Label(title, 20, Accent));
+        cell.AddChild(Label(title, size: 20, Accent));
         cell.AddChild(CellText(text));
         flow.AddChild(cell);
     }
@@ -479,7 +479,7 @@ public sealed partial class SettingsMenu
             }
             cell.AddChild(hand);
         }
-        cell.AddChild(Label(title, 20, Accent));
+        cell.AddChild(Label(title, size: 20, Accent));
         cell.AddChild(CellText(text));
         flow.AddChild(cell);
     }
@@ -534,7 +534,7 @@ public sealed partial class SettingsMenu
 
     private void Paragraph(string text)
     {
-        var label = Label(text, 18, Muted);
+        var label = Label(text, size: 18, Muted);
         label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         var marginContainer = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -547,7 +547,7 @@ public sealed partial class SettingsMenu
 
     private static Label Wrapped(string text)
     {
-        var label = Label(text, 18, Muted);
+        var label = Label(text, size: 18, Muted);
         label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         return label;
@@ -570,7 +570,7 @@ public sealed partial class SettingsMenu
 
     private static Label CellText(string text)
     {
-        var label = Label(text, 17, Muted);
+        var label = Label(text, size: 17, Muted);
         label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         label.CustomMinimumSize = new Vector2(GuideCellWidth, 0);
         return label;

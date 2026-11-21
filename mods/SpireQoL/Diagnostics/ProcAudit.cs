@@ -346,7 +346,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     }
 
     private static bool IsBlowing(Creature creature) =>
-        creature.Monster is MegaCrit.Sts2.Core.Models.Monsters.WaterfallGiant giant && Sts2State.Private(giant, "IsAboutToBlow", false);
+        creature.Monster is MegaCrit.Sts2.Core.Models.Monsters.WaterfallGiant giant && Sts2State.Private(giant, "IsAboutToBlow", fallback: false);
 
     /// <summary>Power amounts on every creature in the fight, by creature and power class.</summary>
     private static Dictionary<(Creature, string), int> PowerSnapshot()
@@ -1148,7 +1148,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 }
                 if (had == true) modelLines.Add($"{otherModel.GetType().Name} fired on a drawn card (some outcomes set it off: the draw decided it)");
                 else modelLines.Skip("no tab", "fired on a drawn card; no simulation to tell", otherModel.GetType().Name);
-                sourceOf[otherModel.GetType().Name] = new TabSpec("proc:" + otherModel.GetType().Name, null);
+                sourceOf[otherModel.GetType().Name] = new TabSpec("proc:" + otherModel.GetType().Name, Icon: null);
                 continue;
             }
             // The play ended the fight: a proc with a rule fires with nothing left to hit (Violent Chord after the
@@ -1529,8 +1529,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
         else (likelihood, happened) = (DrawnChance.ChanceOfAny(distribution), actual > 0);
         if (likelihood <= 0 || likelihood >= 1) return; // certain either way: the check above holds it
-        ModEntry.Log.Info($"[audit] [odds] {name}: predicted {new SimChance(likelihood, likelihood, true).Text()}, {(happened ? "happened" : "didn't")} (gave {actual})");
-        DrawnOdds.Add(new SimChance(likelihood, likelihood, true), happened);
+        ModEntry.Log.Info($"[audit] [odds] {name}: predicted {new SimChance(likelihood, likelihood, Seen: true).Text()}, {(happened ? "happened" : "didn't")} (gave {actual})");
+        DrawnOdds.Add(new SimChance(likelihood, likelihood, Seen: true), happened);
         if (!DrawnOdds.Drifted || _drawnDriftReported) return;
         _drawnDriftReported = true;
         Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("odds", $"Drawn-card odds: what happened is far from the chances shown ({DrawnOdds.Text()})",
@@ -1720,7 +1720,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // Gone from the board after the play: dead. So is a Waterfall Giant the play brought to 0: Steam Eruption keeps it at
             // 999999999 HP, stunned until it blows (WaterfallGiant.TriggerAboutToBlowState), as good as dead (issue #428).
             var aboutToBlow = IsBlowing(creature);
-            var simChance = !aboutToBlow && window.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(1, 1, true);
+            var simChance = !aboutToBlow && window.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(Low: 1, High: 1, Seen: true);
             if (chance.Certain && !simChance.Certain)
                 issues.Add($"lethal: {start.Name} predicted to die before acting in every outcome of this play, but after it: {simChance.Text()}");
             else if (!chance.Possible && simChance.Low > 0)

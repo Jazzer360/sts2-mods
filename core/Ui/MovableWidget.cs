@@ -60,9 +60,9 @@ public sealed class MovableWidget
         Root.AddChild(box);
 
         // Header, shown only while the layout is unlocked.
-        _header = UiKit.Row(8);
+        _header = UiKit.Row(separation: 8);
         _header.Visible = false;
-        _headerLabel = UiKit.Label(title, 14, new Color(1f, 0.7f, 0.3f));
+        _headerLabel = UiKit.Label(title, size: 14, new Color(1f, 0.7f, 0.3f));
         _header.AddChild(_headerLabel);
 
         var pinGrid = new GridContainer { Columns = 3, MouseFilter = Control.MouseFilterEnum.Ignore, TooltipText = "Pin: which corner stays put" };
@@ -79,9 +79,9 @@ public sealed class MovableWidget
                 MouseFilter = Control.MouseFilterEnum.Stop,
                 TooltipText = $"Pin {anchor}",
             };
-            button.AddThemeStyleboxOverride("normal", UiKit.PanelStyle(Colors.White, 2, 0));
-            button.AddThemeStyleboxOverride("hover", UiKit.PanelStyle(Colors.White, 2, 0));
-            button.AddThemeStyleboxOverride("pressed", UiKit.PanelStyle(Colors.White, 2, 0));
+            button.AddThemeStyleboxOverride("normal", UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
+            button.AddThemeStyleboxOverride("hover", UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
+            button.AddThemeStyleboxOverride("pressed", UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
             button.Pressed += () => SetPin(anchor);
             _pinButtons[i] = button;
             pinGrid.AddChild(button);
@@ -272,7 +272,7 @@ public sealed class MovableWidget
         _layout.Anchor = pin;
         _layout.CustomPin = true;
         StoreCurrentPosition();
-        _host.Toast($"{_title}: pinned {pin}{(Attached ? " (attached)" : "")}", 2.5f);
+        _host.Toast($"{_title}: pinned {pin}{(Attached ? " (attached)" : "")}", seconds: 2.5f);
     }
 
     private void ToggleAttach()
@@ -280,7 +280,7 @@ public sealed class MovableWidget
         if (_attach.Count == 0) return;
         _layout.FollowGame = !_layout.FollowGame;
         StoreCurrentPosition();
-        _host.Toast(_layout.FollowGame ? $"{_title}: follows your character" : $"{_title}: fixed on screen", 2.5f);
+        _host.Toast(_layout.FollowGame ? $"{_title}: follows your character" : $"{_title}: fixed on screen", seconds: 2.5f);
     }
 
     private void OnGuiInput(InputEvent inputEvent)
@@ -307,7 +307,7 @@ public sealed class MovableWidget
             {
                 CopyFrom(_default);
                 _host.RaiseLayoutChanged();
-                _host.Toast($"{_title}: reset to default", 2f);
+                _host.Toast($"{_title}: reset to default", seconds: 2f);
                 Root.AcceptEvent();
             }
             else if (inputEventMouseButton.Pressed && inputEventMouseButton.ButtonIndex == MouseButton.Middle)

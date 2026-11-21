@@ -35,14 +35,14 @@ public static partial class SimEngine
     {
         var simPlayer = state.Player(player);
         var focus = simPlayer?.Focus ?? 0;
-        var lightningBonus = simPlayer != null && simPlayer.Relics.Has(RelicId.InfusedCore) ? Var(state, player, "InfusedCore", "ExtraDamage", 0) : 0;
+        var lightningBonus = simPlayer != null && simPlayer.Relics.Has(RelicId.InfusedCore) ? Var(state, player, "InfusedCore", "ExtraDamage", fallback: 0) : 0;
         int F(int baseValue) => Math.Max(0, baseValue + focus);
         return kind switch
         {
-            OrbKind.Lightning => new SimOrb { Kind = kind, Passive = F(3) + lightningBonus, Evoke = F(8) + lightningBonus },
-            OrbKind.Frost => new SimOrb { Kind = kind, Passive = F(2), Evoke = F(5) },
-            OrbKind.Dark => new SimOrb { Kind = kind, Passive = F(6), Evoke = 6 },
-            OrbKind.Glass => new SimOrb { Kind = kind, Passive = F(4), Evoke = F(4) * 2, GlassBase = 4, GlassBonus = focus },
+            OrbKind.Lightning => new SimOrb { Kind = kind, Passive = F(baseValue: 3) + lightningBonus, Evoke = F(baseValue: 8) + lightningBonus },
+            OrbKind.Frost => new SimOrb { Kind = kind, Passive = F(baseValue: 2), Evoke = F(baseValue: 5) },
+            OrbKind.Dark => new SimOrb { Kind = kind, Passive = F(baseValue: 6), Evoke = 6 },
+            OrbKind.Glass => new SimOrb { Kind = kind, Passive = F(baseValue: 4), Evoke = F(baseValue: 4) * 2, GlassBase = 4, GlassBonus = focus },
             OrbKind.Plasma => new SimOrb { Kind = kind, Passive = 1, Evoke = 2 }, // energy; Focus doesn't change it (PlasmaOrb)
             _ => new SimOrb { Kind = kind },
         };

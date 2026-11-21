@@ -122,13 +122,13 @@ public sealed partial class SettingsMenu
         if (_layer == null || !GodotObject.IsInstanceValid(_layer)) Build(tree);
         _layer!.Visible = true;
         Rebuild();
-        BlockGameInput(true);
+        BlockGameInput(block: true);
     }
 
     public void Close()
     {
         if (_layer != null && GodotObject.IsInstanceValid(_layer)) _layer.Visible = false;
-        BlockGameInput(false);
+        BlockGameInput(block: false);
         _ctx.SettingsFile.Save();
     }
 
@@ -173,7 +173,7 @@ public sealed partial class SettingsMenu
         if (button == null || button.GetParent() != parent)
         {
             button?.QueueFree();
-            button = MakeButton("Spire QoL settings", 22);
+            button = MakeButton("Spire QoL settings", size: 22);
             button.Pressed += Open;
             parent.AddChild(button);
             // Bottom-left corner of its parent, clear of the game's own buttons.
@@ -246,7 +246,7 @@ public sealed partial class SettingsMenu
         _root.AddChild(backdrop);
 
         _panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
-        var style = UiKit.PanelStyle(new Color(0.06f, 0.06f, 0.085f, 0.97f), 12, 22);
+        var style = UiKit.PanelStyle(new Color(0.06f, 0.06f, 0.085f, 0.97f), radius: 12, margin: 22);
         style.ContentMarginTop = 16;
         style.ContentMarginBottom = 14;
         style.SetBorderWidthAll(2);
@@ -259,35 +259,35 @@ public sealed partial class SettingsMenu
         _panel.AddChild(box);
 
         // Header: title, search, filter, close.
-        var header = UiKit.Row(14);
+        var header = UiKit.Row(separation: 14);
         header.MouseFilter = Control.MouseFilterEnum.Pass;
-        var title = Label("Spire QoL settings", 30, Accent);
+        var title = Label("Spire QoL settings", size: 30, Accent);
         header.AddChild(title);
         header.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
         _search = new LineEdit { PlaceholderText = "Search", CustomMinimumSize = new Vector2(260, 0), ClearButtonEnabled = true };
         _search.AddThemeFontSizeOverride("font_size", 20);
         _search.TextChanged += _ => Rebuild();
         header.AddChild(_search);
-        var (only, onlyBox) = Check(false, _ => Rebuild(), "Only what I have", "Show only what you have right now: your relics, the cards in your deck and, in a fight, the powers on you and the enemies.");
+        var (only, onlyBox) = Check(value: false, _ => Rebuild(), "Only what I have", "Show only what you have right now: your relics, the cards in your deck and, in a fight, the powers on you and the enemies.");
         _onlyHere = only;
         header.AddChild(onlyBox);
-        var reset = MakeButton("Reset defaults", 20);
+        var reset = MakeButton("Reset defaults", size: 20);
         reset.TooltipText = "Every feature, option, card tab and tracker row back to its default. Keeps hotkeys, widget positions and error reporting.";
         reset.CustomMinimumSize = new Vector2(230, 0); // fits "Click again to reset" without moving the header
         reset.Pressed += () => ConfirmReset(reset);
         header.AddChild(reset);
-        var close = MakeButton("Close", 20);
+        var close = MakeButton("Close", size: 20);
         close.Pressed += Close;
         header.AddChild(close);
         box.AddChild(header);
 
         // Page tabs.
-        var tabs = UiKit.Row(6);
+        var tabs = UiKit.Row(separation: 6);
         tabs.MouseFilter = Control.MouseFilterEnum.Pass;
         var group = new ButtonGroup();
         foreach (var (page, name) in Pages)
         {
-            var button = MakeButton(name, 21);
+            var button = MakeButton(name, size: 21);
             button.ToggleMode = true;
             button.ButtonGroup = group;
             button.ButtonPressed = page == _page;
@@ -297,7 +297,7 @@ public sealed partial class SettingsMenu
         }
         box.AddChild(tabs);
 
-        _columnHeader = UiKit.Row(12);
+        _columnHeader = UiKit.Row(separation: 12);
         _columnHeader.MouseFilter = Control.MouseFilterEnum.Pass;
         box.AddChild(_columnHeader);
 
@@ -312,7 +312,7 @@ public sealed partial class SettingsMenu
         box.AddChild(_scroll);
 
         var keys = $"{Settings.SettingsKey}: this menu · {Settings.UnlockLayoutKey}: move widgets · {Settings.HideAllKey}: hide everything · Esc: close. Changes apply right away.";
-        box.AddChild(Label(keys, 16, Muted));
+        box.AddChild(Label(keys, size: 16, Muted));
         FitPanel();
     }
 
@@ -357,7 +357,7 @@ public sealed partial class SettingsMenu
         {
             ModEntry.Log.Error($"settings menu page {_page} failed: {ex}");
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "settings-menu");
-            _rows.AddChild(Label("This page couldn't be built; see the game log.", 20, Colors.OrangeRed));
+            _rows.AddChild(Label("This page couldn't be built; see the game log.", size: 20, Colors.OrangeRed));
         }
     }
 
@@ -385,7 +385,7 @@ public sealed partial class SettingsMenu
     {
         FeatureSwitches(FeaturePage.Fights, new()
         {
-            ["card-indicators"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", Settings.EtherealOpacity, 0.25, 1, 0.05,
+            ["card-indicators"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", Settings.EtherealOpacity, min: 0.25, max: 1, step: 0.05,
                 value => Settings.EtherealOpacity = (float)value, value => $"{value:0.00}", Needs("card-indicators")),
             ["proc-indicators"] = () =>
             {
@@ -398,7 +398,7 @@ public sealed partial class SettingsMenu
             {
                 Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
                     Settings.PulseOneStepEarly, enabled => Settings.PulseOneStepEarly = enabled, Needs("relic-counters"));
-                Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", Settings.FlashHz, 0.5, 6, 0.5,
+                Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", Settings.FlashHz, min: 0.5, max: 6, step: 0.5,
                     value => Settings.FlashHz = (float)value, value => $"{value:0.0}/s", Needs("relic-counters"));
             },
         });
@@ -477,7 +477,7 @@ public sealed partial class SettingsMenu
         Section("Reminders");
         if (shown.Count == 0)
         {
-            _rows!.AddChild(Label(here != null ? "You have none of these." : "No matches.", 20, Muted));
+            _rows!.AddChild(Label(here != null ? "You have none of these." : "No matches.", size: 20, Muted));
             return;
         }
         ReminderRows(shown);
@@ -553,7 +553,7 @@ public sealed partial class SettingsMenu
 
         if (shown.Count == 0)
         {
-            _rows!.AddChild(Label(here != null ? "You have none of these right now." : "No matches.", 20, Muted));
+            _rows!.AddChild(Label(here != null ? "You have none of these right now." : "No matches.", size: 20, Muted));
             return;
         }
         // What they do outside fights (Run Reminders) is on the Outside fights page.
@@ -567,22 +567,22 @@ public sealed partial class SettingsMenu
 
         // Column headers with all-on / all-off for what's listed.
         header.AddChild(new Control { CustomMinimumSize = new Vector2(IconSize + NameWidth + 12, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
-        var tagHead = UiKit.Row(8);
+        var tagHead = UiKit.Row(separation: 8);
         tagHead.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        tagHead.AddChild(Label("On cards", 20, Accent));
+        tagHead.AddChild(Label("On cards", size: 20, Accent));
         AllButtons(tagHead, on =>
         {
             foreach (var (sourceEntry, _) in shown) if (sourceEntry.TagKey != null) Settings.Tabs[sourceEntry.TagKey] = on;
         });
         var groupKeys = shown.Where(entryName => entryName.Entry.TagKey != null).Select(entryName => entryName.Entry.TagPrefix + "*").Distinct();
         var groupOff = groupKeys.Where(groupKey => !Settings.TabOwn(groupKey)).ToList();
-        if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off on the Card tabs page)", 16, Colors.OrangeRed));
+        if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off on the Card tabs page)", size: 16, Colors.OrangeRed));
         header.AddChild(tagHead);
         if (anyTracker)
         {
-            var trackHead = UiKit.Row(8);
+            var trackHead = UiKit.Row(separation: 8);
             trackHead.CustomMinimumSize = new Vector2(TrackerWidth, 0);
-            trackHead.AddChild(Label("Tracker", 20, Accent));
+            trackHead.AddChild(Label("Tracker", size: 20, Accent));
             AllButtons(trackHead, on =>
             {
                 foreach (var (sourceEntry, _) in shown) if (sourceEntry.Tracker != null) Settings.Relics[sourceEntry.Type] = on;
@@ -596,27 +596,27 @@ public sealed partial class SettingsMenu
             var crossed = otherSourceEntry.Tag?.StartsWith(SettingsCatalog.CrossedPrefix) == true;
             var row = SourceRow(otherSourceEntry, name, crossed);
 
-            var tagCell = UiKit.Row(10);
+            var tagCell = UiKit.Row(separation: 10);
             tagCell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             if (otherSourceEntry.TagKey is { } key)
             {
                 var text = crossed ? "Crossed. " + Capitalize(otherSourceEntry.Tag![SettingsCatalog.CrossedPrefix.Length..]) : otherSourceEntry.Tag!;
-                var (_, control) = Check(Settings.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
+                var (_, control) = Check(Settings.TabOwn(key), on => SetTab(key, on), text, tooltip: null, expand: true);
                 tagCell.AddChild(control);
             }
             else
             {
-                tagCell.AddChild(Label("no card tab", 17, Muted));
+                tagCell.AddChild(Label("no card tab", size: 17, Muted));
             }
             row.AddChild(tagCell);
 
             if (anyTracker)
             {
-                var trackCell = UiKit.Row(10);
+                var trackCell = UiKit.Row(separation: 10);
                 trackCell.CustomMinimumSize = new Vector2(TrackerWidth, 0);
                 if (otherSourceEntry.Tracker != null)
                 {
-                    var (_, control) = Check(Settings.TrackerEnabled(otherSourceEntry.Type, otherSourceEntry.TrackerDefault), on => SetTracker(otherSourceEntry.Type, on), otherSourceEntry.Tracker, null, expand: true);
+                    var (_, control) = Check(Settings.TrackerEnabled(otherSourceEntry.Type, otherSourceEntry.TrackerDefault), on => SetTracker(otherSourceEntry.Type, on), otherSourceEntry.Tracker, tooltip: null, expand: true);
                     trackCell.AddChild(control);
                 }
                 row.AddChild(trackCell);
@@ -637,16 +637,16 @@ public sealed partial class SettingsMenu
     private void ReminderRows(List<(SourceEntry Entry, string Name)> shown)
     {
         if (!FeatureOn("run-reminders"))
-            _rows!.AddChild(Label("Run Reminders is off (above): none of these show.", 16, Colors.OrangeRed));
-        var head = UiKit.Row(12);
+            _rows!.AddChild(Label("Run Reminders is off (above): none of these show.", size: 16, Colors.OrangeRed));
+        var head = UiKit.Row(separation: 12);
         head.MouseFilter = Control.MouseFilterEnum.Pass;
         head.AddChild(new Control { CustomMinimumSize = new Vector2(IconSize + NameWidth + 12, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
         foreach (var (place, title) in ReminderColumns)
         {
-            var cell = UiKit.Row(8);
+            var cell = UiKit.Row(separation: 8);
             cell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             cell.SizeFlagsStretchRatio = 1;
-            cell.AddChild(Label(title, 20, Accent));
+            cell.AddChild(Label(title, size: 20, Accent));
             AllButtons(cell, on =>
             {
                 foreach (var (sourceEntry, _) in shown)
@@ -661,18 +661,18 @@ public sealed partial class SettingsMenu
             var row = SourceRow(otherSourceEntry, name, crossed: false);
             foreach (var (place, _) in ReminderColumns)
             {
-                var cell = UiKit.Row(10);
+                var cell = UiKit.Row(separation: 10);
                 cell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
                 cell.SizeFlagsStretchRatio = 1;
                 if (otherSourceEntry.Reminder(place) is { } text)
                 {
                     var key = ChoiceReminders.Key(place, otherSourceEntry.Type);
-                    var (_, control) = Check(Settings.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
+                    var (_, control) = Check(Settings.TabOwn(key), on => SetTab(key, on), text, tooltip: null, expand: true);
                     cell.AddChild(control);
                 }
                 else
                 {
-                    cell.AddChild(Label("—", 17, Muted));
+                    cell.AddChild(Label("—", size: 17, Muted));
                 }
                 row.AddChild(cell);
             }
@@ -695,7 +695,7 @@ public sealed partial class SettingsMenu
             icon.AddChild(tiny.Root);
             _tinyIcons.Add(tiny);
         }
-        var nameLabel = Label(name, 20, Text, NameWidth);
+        var nameLabel = Label(name, size: 20, Text, NameWidth);
         nameLabel.MouseFilter = Control.MouseFilterEnum.Pass;
         nameLabel.TooltipText = GameDescription(sourceEntry.Type);
         row.AddChild(nameLabel);
@@ -804,7 +804,7 @@ public sealed partial class SettingsMenu
 
     private void Section(string title)
     {
-        var label = Label(title, 24, Accent);
+        var label = Label(title, size: 24, Accent);
         var marginContainer = new MarginContainer();
         marginContainer.AddThemeConstantOverride("margin_top", _rows!.GetChildCount() == 0 ? 2 : 18);
         marginContainer.AddThemeConstantOverride("margin_bottom", 6);
@@ -815,7 +815,7 @@ public sealed partial class SettingsMenu
 
     private HBoxContainer RowBox()
     {
-        var row = UiKit.Row(12);
+        var row = UiKit.Row(separation: 12);
         row.MouseFilter = Control.MouseFilterEnum.Pass;
         row.CustomMinimumSize = new Vector2(0, IconSize + 8);
         return row;
@@ -824,7 +824,7 @@ public sealed partial class SettingsMenu
     private void AddRow(HBoxContainer row)
     {
         var panelContainer = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Pass };
-        panelContainer.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(_row++ % 2 == 0 ? RowA : RowB, 4, 8));
+        panelContainer.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(_row++ % 2 == 0 ? RowA : RowB, radius: 4, margin: 8));
         panelContainer.AddChild(row);
         _rows!.AddChild(panelContainer);
     }
@@ -842,12 +842,12 @@ public sealed partial class SettingsMenu
                 case "shuffle": tex = Cards.GameIcons.DiscardPile(); break;
                 case "lethal": tex = Cards.GameIcons.Skull(); break;
                 case "drawn":
-                    var label = Label("40%", 18, Text);
+                    var label = Label("40%", size: 18, Text);
                     label.CustomMinimumSize = new Vector2(IconSize, IconSize);
                     label.HorizontalAlignment = HorizontalAlignment.Center;
                     return label;
                 case "replay":
-                    var replayLabel = Label("2×", 22, Text);
+                    var replayLabel = Label("2×", size: 22, Text);
                     replayLabel.CustomMinimumSize = new Vector2(IconSize, IconSize);
                     replayLabel.HorizontalAlignment = HorizontalAlignment.Center;
                     return replayLabel;
@@ -895,13 +895,13 @@ public sealed partial class SettingsMenu
     {
         var row = RowBox();
         if (indent) row.AddChild(new Control { CustomMinimumSize = new Vector2(Indent, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
-        var (button, check) = Check(value, set, null, null);
+        var (button, check) = Check(value, set, text: null, tooltip: null);
         button.Disabled = !enabled;
         if (!enabled) row.Modulate = new Color(1, 1, 1, 0.5f);
         row.AddChild(check);
         if (icon != null) row.AddChild(icon);
-        row.AddChild(Label(name, 20, Text, NameWidth));
-        var label = Label(desc, 18, Muted);
+        row.AddChild(Label(name, size: 20, Text, NameWidth));
+        var label = Label(desc, size: 18, Muted);
         label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         row.AddChild(label);
@@ -917,8 +917,8 @@ public sealed partial class SettingsMenu
         row.AddChild(new Control { CustomMinimumSize = new Vector2(Indent + CheckSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
         if (needs != null) row.Modulate = new Color(1, 1, 1, 0.5f);
         row.AddChild(IconSpacer());
-        row.AddChild(Label(name, 20, Text, NameWidth));
-        var valueLabel = Label(fmt(value), 20, Accent, 70);
+        row.AddChild(Label(name, size: 20, Text, NameWidth));
+        var valueLabel = Label(fmt(value), size: 20, Accent, width: 70);
         var slider = new HSlider
         {
             MinValue = min, MaxValue = max, Step = step, Value = value,
@@ -931,7 +931,7 @@ public sealed partial class SettingsMenu
         slider.DragEnded += _ => Saved();
         row.AddChild(slider);
         row.AddChild(valueLabel);
-        var label = Label(desc, 18, Muted);
+        var label = Label(desc, size: 18, Muted);
         label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         row.AddChild(label);
@@ -942,7 +942,7 @@ public sealed partial class SettingsMenu
     {
         foreach (var (text, on) in new[] { ("All on", true), ("All off", false) })
         {
-            var button = MakeButton(text, 15);
+            var button = MakeButton(text, size: 15);
             button.Pressed += () => { setAll(on); Saved(); Rebuild(); };
             parent.AddChild(button);
         }
@@ -969,7 +969,7 @@ public sealed partial class SettingsMenu
         };
         StyleBoxFlat Box(Color color, Color border)
         {
-            var styleBoxFlat = UiKit.PanelStyle(color, 5, 0);
+            var styleBoxFlat = UiKit.PanelStyle(color, radius: 5, margin: 0);
             styleBoxFlat.SetBorderWidthAll(2);
             styleBoxFlat.BorderColor = border;
             return styleBoxFlat;
@@ -988,11 +988,11 @@ public sealed partial class SettingsMenu
 
         if (text == null) return (button, button);
 
-        var row = UiKit.Row(10);
+        var row = UiKit.Row(separation: 10);
         row.MouseFilter = Control.MouseFilterEnum.Pass;
         if (expand) row.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         row.AddChild(button);
-        var label = Label(text, 18, Muted);
+        var label = Label(text, size: 18, Muted);
         label.MouseFilter = Control.MouseFilterEnum.Stop;
         label.TooltipText = tooltip ?? "";
         if (expand)
@@ -1012,13 +1012,13 @@ public sealed partial class SettingsMenu
     {
         var button = new Button { Text = text, FocusMode = Control.FocusModeEnum.None };
         button.AddThemeFontSizeOverride("font_size", size);
-        var normal = UiKit.PanelStyle(new Color(0.13f, 0.13f, 0.17f), 6, 14);
+        var normal = UiKit.PanelStyle(new Color(0.13f, 0.13f, 0.17f), radius: 6, margin: 14);
         normal.SetBorderWidthAll(1);
         normal.BorderColor = new Color(0.4f, 0.4f, 0.45f);
-        var hover = UiKit.PanelStyle(new Color(0.2f, 0.2f, 0.26f), 6, 14);
+        var hover = UiKit.PanelStyle(new Color(0.2f, 0.2f, 0.26f), radius: 6, margin: 14);
         hover.SetBorderWidthAll(1);
         hover.BorderColor = Accent;
-        var pressed = UiKit.PanelStyle(new Color(0.32f, 0.18f, 0.05f), 6, 14);
+        var pressed = UiKit.PanelStyle(new Color(0.32f, 0.18f, 0.05f), radius: 6, margin: 14);
         pressed.SetBorderWidthAll(2);
         pressed.BorderColor = Accent;
         foreach (var styleBoxFlat in new[] { normal, hover, pressed }) { styleBoxFlat.ContentMarginTop = 6; styleBoxFlat.ContentMarginBottom = 6; }

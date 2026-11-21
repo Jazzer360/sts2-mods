@@ -22,7 +22,7 @@ public class SimMergeTests
         void Differs(Action<SimPlayer> change)
         {
             var branch = state.Clone();
-            change(branch.MutableTeammate(0));
+            change(branch.MutableTeammate(teammateIndex: 0));
             Assert.NotEqual(state.Key(), branch.Key());
         }
         Differs(player => player.Block = 4);
@@ -31,7 +31,7 @@ public class SimMergeTests
         Differs(player => player.HandCount = 6);
         Differs(player => player.Drawn = 1);
         Differs(player => player.Died = true);
-        Differs(player => player.Powers = player.Powers.With(PowerId.Strength, 1));
+        Differs(player => player.Powers = player.Powers.With(PowerId.Strength, amount: 1));
         Differs(player => player.OwnOrbs().Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }));
     }
 
@@ -78,7 +78,7 @@ public class SimMergeTests
                     Hit(orbIndex + 1, nextHp, nextBlock, weight / alive.Count);
                 }
             }
-            Hit(0, hp, block, 1);
+            Hit(orbIndex: 0, hp, block, weight: 1);
 
             var simulated = outcome.Branches
                 .GroupBy(branch => string.Join(",", branch.Enemies.OrderBy(enemy => enemy.Id).Select(enemy => Math.Max(0, enemy.Hp))))

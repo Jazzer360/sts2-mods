@@ -20,7 +20,7 @@ public class SimHexTests
     /// </summary>
     private static SimState Knights()
     {
-        var state = new SimState { Enemies = { Enemy(1, 5, 10), Enemy(2, 6, 35) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 10), Enemy(id: 2, hp: 6, hits: 35) } };
         state.You.CharonsAshesDamage = 3;
         state.You.Fading = 2;
         state.You.HexFading = 2;
@@ -32,17 +32,17 @@ public class SimHexTests
     public void HexedCardsExhaustWhileTheCasterLives()
     {
         var outcome = SimEngine.Run(Knights());
-        Assert.True(outcome.DeadInAll(1));
-        Assert.True(outcome.DeadInAll(2));
+        Assert.True(outcome.DeadInAll(enemyId: 1));
+        Assert.True(outcome.DeadInAll(enemyId: 2));
     }
 
     [Fact]
     public void KillingTheCasterEndsTheirEthereal()
     {
         // The caster dies before your turn ends: Hex goes, the cards stay in hand, and Charon's Ashes doesn't fire.
-        var outcome = SimEngine.Run(Knights(), Strike(1, 9));
-        Assert.True(outcome.DeadInAll(1));
-        Assert.False(outcome.DeadInAny(2));
+        var outcome = SimEngine.Run(Knights(), Strike(target: 1, damage: 9));
+        Assert.True(outcome.DeadInAll(enemyId: 1));
+        Assert.False(outcome.DeadInAny(enemyId: 2));
         Assert.Equal(35, outcome.TakenMax);
     }
 
@@ -54,17 +54,17 @@ public class SimHexTests
         state.You.Stampede = 1;
         state.You.AutoHand = new()
         {
-            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { Strike1(1, 11), Strike1(2, 11) } },
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { Strike1(target: 1, hand: 11), Strike1(target: 2, hand: 11) } },
         };
         var outcome = SimEngine.Run(state);
         // Aimed at the caster (1): it dies, the cards stay, Magi Knight lives. Aimed at Magi Knight (2): it dies, and so does the caster.
-        Assert.Equal(0.5, outcome.DeadChance(2), 3);
-        Assert.True(outcome.DeadInAll(1));
+        Assert.Equal(0.5, outcome.DeadChance(enemyId: 2), 3);
+        Assert.True(outcome.DeadInAll(enemyId: 1));
     }
 
     private static SimPlay Strike1(int target, int hand)
     {
-        var play = Strike(target, 9);
+        var play = Strike(target, damage: 9);
         play.HandCard = hand;
         return play;
     }
@@ -76,8 +76,8 @@ public class SimHexTests
         var state = Knights();
         state.You.HexFading = 1;
         state.Enemies[1].Hp = 3;
-        var outcome = SimEngine.Run(state, Strike(1, 9));
-        Assert.True(outcome.DeadInAll(2));
+        var outcome = SimEngine.Run(state, Strike(target: 1, damage: 9));
+        Assert.True(outcome.DeadInAll(enemyId: 2));
     }
 
     [Fact]
@@ -85,12 +85,12 @@ public class SimHexTests
     {
         // Played: it's no longer in hand to exhaust or to lose its Ethereal.
         var state = Knights();
-        var play = Strike(1, 9);
+        var play = Strike(target: 1, damage: 9);
         play.FadingDelta = -1;
         play.HexFadingDelta = -1;
         state.You.Fading = 3; // one more of its own
         state.Enemies[1].Hp = 3;
         var outcome = SimEngine.Run(state, play);
-        Assert.True(outcome.DeadInAll(2)); // the card of its own exhausts: 3
+        Assert.True(outcome.DeadInAll(enemyId: 2)); // the card of its own exhausts: 3
     }
 }

@@ -162,7 +162,7 @@ public sealed class ErrorReporter
             {
                 foreach (var (k, v) in extra) evt.SetExtra(k, v);
             }
-        }, null);
+        }, ex: null);
     }
 
     private void Send(string[] fingerprint, string? kindSkip, Action<SentryEvent> fill, Exception? ex)

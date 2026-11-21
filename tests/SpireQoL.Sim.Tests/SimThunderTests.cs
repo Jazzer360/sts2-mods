@@ -31,7 +31,7 @@ public class SimThunderTests
         // Dualcast on one enemy: two evokes of 8, each followed by Thunder 6.
         var state = State(new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 5 } });
         SimEngine.ApplyPlayTo(state, Dualcast(), out var states, out _);
-        Assert.Equal(40 - 2 * (8 + 6), states[0].Enemy(1)!.Hp);
+        Assert.Equal(40 - 2 * (8 + 6), states[0].Enemy(id: 1)!.Hp);
     }
 
     [Fact]
@@ -44,8 +44,8 @@ public class SimThunderTests
         one.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront, Times = 1 });
         var outcome = SimEngine.Run(state, one);
         // Branch on the Stabbot: it dies, E2 untouched. Branch on E2: 8 + 6.
-        Assert.Contains(outcome.Branches, branch => !branch.Enemy(1)!.Alive && branch.Enemy(2)!.Hp == 30);
-        Assert.Contains(outcome.Branches, branch => branch.Enemy(1)!.Alive && branch.Enemy(2)!.Hp == 30 - 14);
+        Assert.Contains(outcome.Branches, branch => !branch.Enemy(id: 1)!.Alive && branch.Enemy(id: 2)!.Hp == 30);
+        Assert.Contains(outcome.Branches, branch => branch.Enemy(id: 1)!.Alive && branch.Enemy(id: 2)!.Hp == 30 - 14);
     }
 
     [Fact]
@@ -57,9 +57,9 @@ public class SimThunderTests
         var state = State(new SimEnemy { Id = 0, Name = "Toadpole", Hp = 28, Hits = { 3, 3, 3 } }, new SimEnemy { Id = 1, Name = "Toadpole", Hp = 48 });
         state.You.Thunder = 8;
         SimEngine.ApplyPlayTo(state, Dualcast(), out var states, out _);
-        Assert.Contains(states, branch => branch.Enemy(0)!.Hp == 12 && branch.Enemy(1)!.Hp == 32);
-        Assert.Contains(states, branch => !branch.Enemy(0)!.Alive && branch.Enemy(1)!.Hp == 48);
-        Assert.Contains(states, branch => branch.Enemy(0)!.Hp == 28 && branch.Enemy(1)!.Hp == 16);
+        Assert.Contains(states, branch => branch.Enemy(id: 0)!.Hp == 12 && branch.Enemy(id: 1)!.Hp == 32);
+        Assert.Contains(states, branch => !branch.Enemy(id: 0)!.Alive && branch.Enemy(id: 1)!.Hp == 48);
+        Assert.Contains(states, branch => branch.Enemy(id: 0)!.Hp == 28 && branch.Enemy(id: 1)!.Hp == 16);
         Assert.Equal(3, states.Count);
     }
 
@@ -69,11 +69,11 @@ public class SimThunderTests
         var state = State(new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 5 } });
         state.You.Orbs[0] = new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 };
         SimEngine.ApplyPlayTo(state, Dualcast(), out var states, out _);
-        Assert.Equal(40, states[0].Enemy(1)!.Hp);
+        Assert.Equal(40, states[0].Enemy(id: 1)!.Hp);
 
         state = State(new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 5 } });
         state.You.Thunder = 0;
         SimEngine.ApplyPlayTo(state, Dualcast(), out states, out _);
-        Assert.Equal(40 - 16, states[0].Enemy(1)!.Hp);
+        Assert.Equal(40 - 16, states[0].Enemy(id: 1)!.Hp);
     }
 }

@@ -32,13 +32,13 @@ public static class PowerSpecs
 {
     public static readonly IReadOnlyList<PowerCounterSpec> All = new[]
     {
-        new PowerCounterSpec(nameof(OrbitPower), 4, "energy", CrossTurn: true),       // every 4 energy spent: gain energy
-        new PowerCounterSpec(nameof(AutomationPower), 10, "draws", CrossTurn: true),  // every 10 cards drawn: gain energy
-        new PowerCounterSpec(nameof(CacophonyPower), 33, "draws", CrossTurn: true),   // every 33 cards drawn: damage an enemy
-        new PowerCounterSpec(nameof(PanachePower), 5, "cards"),                       // every 5 cards this turn: damage all enemies
+        new PowerCounterSpec(nameof(OrbitPower), Threshold: 4, "energy", CrossTurn: true),       // every 4 energy spent: gain energy
+        new PowerCounterSpec(nameof(AutomationPower), Threshold: 10, "draws", CrossTurn: true),  // every 10 cards drawn: gain energy
+        new PowerCounterSpec(nameof(CacophonyPower), Threshold: 33, "draws", CrossTurn: true),   // every 33 cards drawn: damage an enemy
+        new PowerCounterSpec(nameof(PanachePower), Threshold: 5, "cards"),                       // every 5 cards this turn: damage all enemies
         // Counts every card played this turn, despite the game's property being named "AttacksPlayedThisTurn".
-        new PowerCounterSpec(nameof(PaleBlueDotPower), 5, "cards"),                   // 5 cards this turn: draw next turn (once)
-        new PowerCounterSpec(nameof(WitheringPresencePower), 6, "cards", CrossTurn: true, OnEnemy: true), // every 6 cards: Wither in hand
+        new PowerCounterSpec(nameof(PaleBlueDotPower), Threshold: 5, "cards"),                   // 5 cards this turn: draw next turn (once)
+        new PowerCounterSpec(nameof(WitheringPresencePower), Threshold: 6, "cards", CrossTurn: true, OnEnemy: true), // every 6 cards: Wither in hand
     };
 
     private static readonly Dictionary<string, PowerCounterSpec> ByName = All.ToDictionary(powerCounterSpec => powerCounterSpec.TypeName);

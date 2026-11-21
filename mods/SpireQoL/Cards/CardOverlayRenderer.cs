@@ -250,7 +250,7 @@ public sealed class CardOverlayRenderer
         entry.Flat?.Dispose();
         entry.Flat = null;
         entry.FlatFailed = false;
-        SetAlpha(entry.Container, 1f);
+        SetAlpha(entry.Container, alpha: 1f);
     }
 
     /// <summary>

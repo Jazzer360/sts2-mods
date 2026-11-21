@@ -66,7 +66,7 @@ public sealed class CalamityPower : BoundPower
 /// <summary>MonologuePower: each card its owner plays gives Strength (its Strength value, bound at the play's start).</summary>
 public sealed class MonologuePower : BoundPower
 {
-    protected override int BoundAmount(SimState state, int owner) => Var(state, owner, "Strength", 1);
+    protected override int BoundAmount(SimState state, int owner) => Var(state, owner, "Strength", fallback: 1);
     protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount)
     {
         SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, amount, debuff: false);
@@ -138,14 +138,14 @@ public sealed class DanseMacabrePower : ProcModel
 {
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Energy >= Var(state, owner, "Energy", 2) ? Block(state, owner, Amount(state, owner)) : One(state);
+        Mine(play, owner) && play.Card.Energy >= Var(state, owner, "Energy", fallback: 2) ? Block(state, owner, Amount(state, owner)) : One(state);
 }
 
 /// <summary>TheSealedThronePower.BeforeCardPlayed: each card its owner plays gains them stars (Black Hole reacts).</summary>
 public sealed class TheSealedThronePower : ProcModel
 {
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Amount(state, owner) > 0 ? Cause(Fire(state, owner), CardEvent.StarsGained, 1, owner) : One(state);
+        Mine(play, owner) && Amount(state, owner) > 0 ? Cause(Fire(state, owner), CardEvent.StarsGained, count: 1, owner) : One(state);
 }
 
 /// <summary>
@@ -159,10 +159,10 @@ public sealed class PanachePower : ProcModel
     {
         if (!Mine(play, owner)) return One(state);
         var left = Data(state, owner);
-        if (left <= 0) { Set(state, owner, Amount(state, owner), 5); return One(state); }
+        if (left <= 0) { Set(state, owner, Amount(state, owner), data: 5); return One(state); }
         left--;
         if (left > 0) { Set(state, owner, Amount(state, owner), left); return One(state); }
-        Set(state, owner, Amount(state, owner), 5);
+        Set(state, owner, Amount(state, owner), data: 5);
         return DamageAll(state, owner, Amount(state, owner));
     }
 }
@@ -267,7 +267,7 @@ public sealed class PaleBlueDotPower : ProcModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner) || Data(state, owner) != 0 || SimEngine.TurnOf(state, owner)[SimKeys.Plays(PlayStage.Finished)] < 5) return One(state);
-        Set(state, owner, Amount(state, owner), 1);
+        Set(state, owner, Amount(state, owner), data: 1);
         return Fire(state, owner);
     }
 }
@@ -326,7 +326,7 @@ public sealed class LullabyPower : ProcModel
         if (!Mine(play, owner) || Data(state, owner) != 0) return One(state);
         var (before, after) = Melodies.Finished(state, play);
         if (before >= 3 || after < 3) return One(state);
-        Set(state, owner, Amount(state, owner), 1);
+        Set(state, owner, Amount(state, owner), data: 1);
         return Block(state, owner, Amount(state, owner));
     }
 }
@@ -393,8 +393,8 @@ public sealed class ImpaledPower : SimModel
         if (powers[ThisPower] <= 0) return;
         var counter = powers.DataOf(ThisPower) - 1;
         if (counter > 0) { SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], counter)); return; }
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], 3));
-        SimEngine.TakeArrows(state, owner, 1);
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: 3));
+        SimEngine.TakeArrows(state, owner, count: 1);
         SimEngine.Raise(state, CardEvent.ArrowDislodged, Who.You);
     }
     public override void AfterDeath(SimState state, int owner, int dead)
@@ -413,7 +413,7 @@ public sealed class YahPower : ProcModel
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
         if (cardEvent != CardEvent.ArrowDislodged || player != owner || Data(state, owner) != 0) return One(state);
-        Set(state, owner, Amount(state, owner), 1);
+        Set(state, owner, Amount(state, owner), data: 1);
         return Cause(Fire(state, owner), CardEvent.EnergyGained, Amount(state, owner), owner);
     }
 }
@@ -453,7 +453,7 @@ public sealed class DarkEmbracePower : ProcModel
 {
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, 1, owner) : One(state);
+        cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner) : One(state);
 }
 
 /// <summary>ChildOfTheStarsPower.AfterStarsSpent: its amount of block per star spent (one gain).</summary>
@@ -579,7 +579,7 @@ public sealed class ViciousPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterPowerApplied(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) =>
-        power == PowerId.Vulnerable && applier == owner && target >= 0 ? Cause(Fire(state, owner), CardEvent.Drawn, 1, owner) : One(state);
+        power == PowerId.Vulnerable && applier == owner && target >= 0 ? Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner) : One(state);
 }
 
 /// <summary>ShroudPower.AfterPowerAmountChanged: block (unpowered) for each Doom its owner lands on an enemy.</summary>
@@ -595,7 +595,7 @@ public sealed class ReaperFormPower : ProcModel
 {
     public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
     {
-        if (hit.Dealer == owner && hit.Props.IsPoweredAttack() && hit.Unblocked > 0 && hit.Target >= 0) state.LogFired(Name, 0, owner);
+        if (hit.Dealer == owner && hit.Props.IsPoweredAttack() && hit.Unblocked > 0 && hit.Target >= 0) state.LogFired(Name, amount: 0, owner);
     }
 }
 
@@ -636,7 +636,7 @@ public sealed class PersonalHivePower : ProcModel
     public override bool Harmful => true;
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
-        if (hit.Target == owner && hit.Dealer is { } dealer && Who.IsPlayer(dealer) && hit.Props.IsPoweredAttack()) state.LogFired(Name, 0, owner);
+        if (hit.Target == owner && hit.Dealer is { } dealer && Who.IsPlayer(dealer) && hit.Props.IsPoweredAttack()) state.LogFired(Name, amount: 0, owner);
     }
 }
 

@@ -48,7 +48,7 @@ internal static class IntentReader
                 if (node == null) return null; // a kind of state the forecast doesn't know
                 nodes[id] = node;
             }
-            var initial = Sts2State.Private<MonsterState?>(machine, "_initialState", null);
+            var initial = Sts2State.Private<MonsterState?>(machine, "_initialState", fallback: null);
             return initial == null ? null : new MoveGraph(nodes, initial.Id);
         }
         catch

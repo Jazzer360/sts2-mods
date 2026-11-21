@@ -11,7 +11,7 @@ public sealed class EnragePower : SimModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (play.Card.Type != SimCardType.Skill || state.Enemy(owner) is not { Alive: true }) return One(state);
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
         SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
         return One(state);
     }
@@ -27,7 +27,7 @@ public sealed class MonarchsGazePower : SimModel
     public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
     {
         if (hit.Dealer != owner || !hit.Props.IsPoweredAttack() || hit.Target < 0) return;
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
         SimEngine.ApplyPower(state, owner, hit.Target, PowerId.Strength, -SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
     }
 }
@@ -40,7 +40,7 @@ public sealed class VitalSparkPower : SimModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (play.Card.Affliction != SimAffliction.Tainted) return One(state);
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
         SimEngine.ApplyPower(state, owner, play.Owner, PowerId.Tainted, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
         return One(state);
     }
@@ -56,7 +56,7 @@ public sealed class CrabRagePower : SimModel
     public override void AfterDeath(SimState state, int owner, int dead)
     {
         if (dead == owner || dead < 0 || state.Enemy(owner) is not { Alive: true } enemy || enemy.Intent == null) return;
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
         var strength = enemy.Powers[ThisPower];
         enemy.Powers = enemy.Powers.Without(ThisPower).Add(PowerId.Strength, strength);
         enemy.Block += enemy.CrabRageBlock;
@@ -71,7 +71,7 @@ public sealed class RavenousPower : SimModel
     public override void AfterDeath(SimState state, int owner, int dead)
     {
         if (dead == owner || dead < 0 || state.Enemy(owner) is not { Alive: true } enemy || enemy.Stunned) return;
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
         SimEngine.Stun(enemy);
     }
 }

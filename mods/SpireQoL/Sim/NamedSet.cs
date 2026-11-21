@@ -79,7 +79,7 @@ public sealed class NamedSet<TName> where TName : IEquatable<TName>
     /// <summary>The set with <paramref name="delta"/> added to the amount (added if new).</summary>
     public NamedSet<TName> Add(TName name, int delta) => delta == 0 && Has(name) ? this : With(name, this[name] + delta);
 
-    public NamedSet<TName> Without(TName name) => With(name, 0, remove: true);
+    public NamedSet<TName> Without(TName name) => With(name, amount: 0, remove: true);
 
     /// <summary>For branch keys: every entry's name and numbers.</summary>
     public void Hash(Action<long> add)

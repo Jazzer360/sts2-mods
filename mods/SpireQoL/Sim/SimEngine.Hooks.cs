@@ -119,7 +119,7 @@ public static partial class SimEngine
     /// Hook.ModifyDamage for one hit: the base, the enchantment, every listener's additive term, then multipliers, late
     /// multipliers and the smallest cap, with the captured terms of unmodelled sources in their places; the game's int cast.
     /// </summary>
-    public static int CalcDamage(SimState state, decimal baseDamage, DamageCtx damage, CapturedTerms? captured = null) => CalcDamage(state, baseDamage, damage, captured, null);
+    public static int CalcDamage(SimState state, decimal baseDamage, DamageCtx damage, CapturedTerms? captured = null) => CalcDamage(state, baseDamage, damage, captured, modifiers: null);
 
     /// <param name="modifiers">Gets the modelled sources whose term changed the amount (the game's modifiers list), when given.</param>
     public static int CalcDamage(SimState state, decimal baseDamage, DamageCtx damage, CapturedTerms? captured, List<(SimModel Model, int Owner)>? modifiers)
@@ -143,7 +143,7 @@ public static partial class SimEngine
     }
 
     /// <summary>Hook.ModifyBlock: the base, the enchantment, additive terms, then multipliers; the game's int cast.</summary>
-    public static int CalcBlock(SimState state, decimal baseBlock, BlockCtx block, CapturedTerms? captured = null) => CalcBlock(state, baseBlock, block, captured, null);
+    public static int CalcBlock(SimState state, decimal baseBlock, BlockCtx block, CapturedTerms? captured = null) => CalcBlock(state, baseBlock, block, captured, modifiers: null);
 
     public static int CalcBlock(SimState state, decimal baseBlock, BlockCtx block, CapturedTerms? captured, List<(SimModel Model, int Owner)>? modifiers)
     {

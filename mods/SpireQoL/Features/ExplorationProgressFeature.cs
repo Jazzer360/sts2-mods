@@ -43,8 +43,8 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
     {
         _widget = _ctx.Widget(Id, "Exploration Progress", DefaultLayout);
         _widget.AttachTo(EndTurnRect, AttachSide.Below);
-        var row = UiKit.Row(6);
-        _clock = UiKit.Icon(GameIcons.Clock(), 22);
+        var row = UiKit.Row(separation: 6);
+        _clock = UiKit.Icon(GameIcons.Clock(), size: 22);
         row.AddChild(_clock);
         _bar = Bar();
         row.AddChild(_bar);

@@ -75,7 +75,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         {
             var potions = me.Potions.ToList();
             var full = !me.HasOpenPotionSlots;
-            var buckleReady = me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } buckle && !Sts2State.Private(buckle, "_dexterityApplied", true);
+            var buckleReady = me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } buckle && !Sts2State.Private(buckle, "_dexterityApplied", fallback: true);
             foreach (var holder in holders)
             {
                 if (!GodotObject.IsInstanceValid(holder) || holder.Potion is not { } node || !GodotObject.IsInstanceValid(node)) continue;
@@ -242,7 +242,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         {
             if (list[i] is not PotionUsedEntry used || used.Actor != me.Creature) continue;
             var tabs = _last.Remove(used.Potion, out var previous) ? previous : new List<string>();
-            _pending = new Pending(used.Potion, tabs, _prevStrength, _prevBuckle, 0);
+            _pending = new Pending(used.Potion, tabs, _prevStrength, _prevBuckle, Frames: 0);
         }
         _historySeen = list.Count;
         _prevStrength = Strength(me);
@@ -252,7 +252,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     private static int Strength(MegaCrit.Sts2.Core.Entities.Players.Player me) => me.Creature.Powers.OfType<ReptileTrinketPower>().Sum(reptileTrinketPower => reptileTrinketPower.Amount);
 
     private static bool BuckleApplied(MegaCrit.Sts2.Core.Entities.Players.Player me)
-        => me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } beltBuckle && Sts2State.Private(beltBuckle, "_dexterityApplied", false);
+        => me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } beltBuckle && Sts2State.Private(beltBuckle, "_dexterityApplied", fallback: false);
 
     private static void Compare(MegaCrit.Sts2.Core.Entities.Players.Player me, Pending pending)
     {

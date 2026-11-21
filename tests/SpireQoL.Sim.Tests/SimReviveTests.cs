@@ -14,7 +14,7 @@ public class SimReviveTests
     [Fact]
     public void LosingAllYourHpWithNothingToSaveYouIsDeath()
     {
-        var state = new SimState { Enemies = { E(1, 50, 12) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, hits: 12) } };
         state.You.Hp = 10;
         var outcome = SimEngine.Run(state);
         Assert.True(outcome.Worst.Died);
@@ -24,7 +24,7 @@ public class SimReviveTests
     [Fact]
     public void SurvivingWithOneHpIsntDeath()
     {
-        var state = new SimState { Enemies = { E(1, 50, 9) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, hits: 9) } };
         state.You.Hp = 10;
         var outcome = SimEngine.Run(state);
         Assert.False(outcome.Worst.Died);
@@ -35,7 +35,7 @@ public class SimReviveTests
     public void LizardTailHealsYouFromZeroAndLaterHitsStillLand()
     {
         // 10 HP: the first hit (12) takes you to 0, Lizard Tail heals 40 (50% of 80); the second hit (6) leaves 34.
-        var state = new SimState { Enemies = { E(1, 50, 12, 6) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, hits: [12, 6]) } };
         state.You.Hp = 10;
         state.You.LizardTailHeal = 40;
         var outcome = SimEngine.Run(state);
@@ -49,7 +49,7 @@ public class SimReviveTests
     [Fact]
     public void FairyInABottleGoesFirstAndLizardTailStaysForLater()
     {
-        var state = new SimState { Enemies = { E(1, 50, 12) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, hits: 12) } };
         state.You.Hp = 10;
         state.You.Fairies = 1;
         state.You.FairyHeal = 24;
@@ -64,7 +64,7 @@ public class SimReviveTests
     public void BothCanBeUsedUpInOneEnemyTurn()
     {
         // 5 HP: 10 → Fairy (heals 8), 10 → Lizard Tail (heals 20), 10 → 10 left.
-        var state = new SimState { Enemies = { E(1, 50, 10, 10, 10) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, hits: [10, 10, 10]) } };
         state.You.Hp = 5;
         state.You.Fairies = 1;
         state.You.FairyHeal = 8;
@@ -79,10 +79,10 @@ public class SimReviveTests
     [Fact]
     public void UnblockableEndOfTurnDamageCanKillToo()
     {
-        var state = new SimState { Enemies = { E(1, 50) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50) } };
         state.You.Hp = 3;
-        state.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 2));
-        state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        state.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", Amount: 2));
+        state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
         state.You.HandCount = 2;
         Assert.True(SimEngine.Run(state).Worst.Died);
     }
@@ -91,7 +91,7 @@ public class SimReviveTests
     public void UntrackedHpNeverDies()
     {
         // The generated fights and older replay cases don't set your HP: nothing about them changes.
-        var state = new SimState { Enemies = { E(1, 50, 999) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, hits: 999) } };
         var branch = SimEngine.Run(state).Worst;
         Assert.False(branch.Died);
         Assert.Equal(999, branch.Taken);

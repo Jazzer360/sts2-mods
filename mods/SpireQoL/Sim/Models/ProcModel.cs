@@ -84,11 +84,11 @@ public abstract class RelicProc : ProcModel
     }
     /// <summary>Its Block value, as its BlockVar gives it (with its props).</summary>
     protected IEnumerable<SimState> RelicBlock(SimState state, int owner, int times = 1) =>
-        Block(state, owner, Var(state, owner, "Block", 0), PropsOf(state, owner, "Block"), times);
+        Block(state, owner, Var(state, owner, "Block", fallback: 0), PropsOf(state, owner, "Block"), times);
     protected IEnumerable<SimState> RelicDamageAll(SimState state, int owner, int times = 1) =>
-        DamageAll(state, owner, Var(state, owner, "Damage", 0), PropsOf(state, owner, "Damage"), times);
+        DamageAll(state, owner, Var(state, owner, "Damage", fallback: 0), PropsOf(state, owner, "Damage"), times);
     protected IEnumerable<SimState> RelicDamageRandom(SimState state, int owner, int times = 1) =>
-        DamageRandom(state, owner, Var(state, owner, "Damage", 0), PropsOf(state, owner, "Damage"), times);
+        DamageRandom(state, owner, Var(state, owner, "Damage", fallback: 0), PropsOf(state, owner, "Damage"), times);
     /// <summary>Armed (the adapter's Data 1: unused this combat or turn, as RelicCountersFeature.IsArmed reads it).</summary>
     protected bool Armed(SimState state, int owner) => (Data(state, owner) & 1) != 0;
     protected void Disarm(SimState state, int owner) => Set(state, owner, Amount(state, owner), Data(state, owner) & ~1);
@@ -106,7 +106,7 @@ public abstract class CounterRelic : RelicProc
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner) || !Counts(play.Card)) return One(state);
-        var cardsNeeded = Var(state, owner, "Cards", 0);
+        var cardsNeeded = Var(state, owner, "Cards", fallback: 0);
         if (cardsNeeded <= 0) return One(state);
         var count = Amount(state, owner) % cardsNeeded + 1;
         Set(state, owner, count % cardsNeeded, Data(state, owner));

@@ -16,11 +16,11 @@ public class SimSurroundedTests
         {
             Enemies =
             {
-                new SimEnemy { Id = 1, Name = "Crusher", Hp = leftHp, Hits = new() { 8 }, Intent = new() { new(8) }, Powers = PowerSet.Empty.With(PowerId.BackAttackLeft, 1) },
-                new SimEnemy { Id = 2, Name = "Rocket", Hp = rightHp, Hits = new() { 10 }, Intent = new() { new(10) }, Powers = PowerSet.Empty.With(PowerId.BackAttackRight, 1) },
+                new SimEnemy { Id = 1, Name = "Crusher", Hp = leftHp, Hits = new() { 8 }, Intent = new() { new(Base: 8) }, Powers = PowerSet.Empty.With(PowerId.BackAttackLeft, amount: 1) },
+                new SimEnemy { Id = 2, Name = "Rocket", Hp = rightHp, Hits = new() { 10 }, Intent = new() { new(Base: 10) }, Powers = PowerSet.Empty.With(PowerId.BackAttackRight, amount: 1) },
             },
         };
-        state.You.Powers = state.You.Powers.With(PowerId.Surrounded, 1, 1);
+        state.You.Powers = state.You.Powers.With(PowerId.Surrounded, amount: 1, data: 1);
         return state;
     }
 
@@ -35,7 +35,7 @@ public class SimSurroundedTests
     public void AimingAtTheCrabBehindYouTurnsYou()
     {
         // Strike the Rocket (behind you): you face it, so the Crusher is now behind you.
-        Assert.Equal(12 + 10, SimEngine.Run(Fight(), Strike(2, 1)).TakenMax);
+        Assert.Equal(12 + 10, SimEngine.Run(Fight(), Strike(target: 2, damage: 1)).TakenMax);
     }
 
     [Fact]
@@ -43,9 +43,9 @@ public class SimSurroundedTests
     {
         // Issue #336: the Crusher dies, only the Rocket is left, so you turn to face it and it no longer back-attacks.
         var state = Fight();
-        SimEngine.ApplyPlayTo(state, Strike(1, 5), out var after, out _);
+        SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 5), out var after, out _);
         Assert.Equal(0, after[0].You.Powers.DataOf(PowerId.Surrounded));
-        Assert.Equal(10, SimEngine.Run(state, Strike(1, 5)).TakenMax);
+        Assert.Equal(10, SimEngine.Run(state, Strike(target: 1, damage: 5)).TakenMax);
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class SimSurroundedTests
     {
         // Facing right, the Crusher is behind you. Killing the Rocket in front leaves only the Crusher: you turn to face it.
         var state = Fight(leftHp: 100, rightHp: 5);
-        state.You.Powers = state.You.Powers.With(PowerId.Surrounded, 1, 0); // facing right: the Crusher is behind you
+        state.You.Powers = state.You.Powers.With(PowerId.Surrounded, amount: 1, data: 0); // facing right: the Crusher is behind you
         SimEngine.ApplyPlayTo(state, new SimPlay { Name = "Bash", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 2, HitDamage = { [2] = 5 }, Hits = 1 }, out var after, out _);
         // The Rocket was in front (no turn on the play); with only the Crusher left, you turn to face it.
         Assert.Equal(1, after[0].You.Powers.DataOf(PowerId.Surrounded));
@@ -64,8 +64,8 @@ public class SimSurroundedTests
     {
         // A third enemy without a back-attack marker dies: the crabs are on both sides, so you keep facing left.
         var state = Fight();
-        state.Enemies.Insert(0, new SimEnemy { Id = 3, Name = "Add", Hp = 3, Hits = new() { 2 }, Intent = new() { new(2) } });
-        SimEngine.ApplyPlayTo(state, Strike(3, 3), out var after, out _);
+        state.Enemies.Insert(0, new SimEnemy { Id = 3, Name = "Add", Hp = 3, Hits = new() { 2 }, Intent = new() { new(Base: 2) } });
+        SimEngine.ApplyPlayTo(state, Strike(target: 3, damage: 3), out var after, out _);
         Assert.Equal(1, after[0].You.Powers.DataOf(PowerId.Surrounded));
     }
 }

@@ -80,8 +80,8 @@ public class SimTeammateParityTests
         asMate.Teammates.Add(mate);
         var them = SimEngine.Run(asMate);
 
-        Assert.Equal(you.Worst.BlockAtEnemyTurn, them.TeammateWorst(0).BlockGained);
-        static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(1)!.HpAtTurnEnd).Distinct().OrderBy(hpLeft => hpLeft).ToArray();
+        Assert.Equal(you.Worst.BlockAtEnemyTurn, them.TeammateWorst(teammateIndex: 0).BlockGained);
+        static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(id: 1)!.HpAtTurnEnd).Distinct().OrderBy(hpLeft => hpLeft).ToArray();
         Assert.Equal(Hp(you), Hp(them));
     }
 
@@ -92,14 +92,14 @@ public class SimTeammateParityTests
     [InlineData("Reflect")]
     public void YouAndATeammateRetaliateTheSame(string name)
     {
-        var asYou = new SimState { Enemies = { Target(200, 5, 5) } };
+        var asYou = new SimState { Enemies = { Target(hp: 200, hits: [5, 5]) } };
         Setup(name, asYou.You);
-        var asMate = new SimState { Enemies = { Target(200, 5, 5) } };
+        var asMate = new SimState { Enemies = { Target(hp: 200, hits: [5, 5]) } };
         var mate = new SimPlayer { Hp = 80 };
         Setup(name, mate);
         asMate.Teammates.Add(mate);
         // The enemy's HP after its turn: the same retaliation either way (it hits every player).
-        static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(1)!.Hp).Distinct().OrderBy(hpLeft => hpLeft).ToArray();
+        static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(id: 1)!.Hp).Distinct().OrderBy(hpLeft => hpLeft).ToArray();
         Assert.Equal(Hp(SimEngine.Run(asYou)), Hp(SimEngine.Run(asMate)));
     }
 
@@ -127,16 +127,16 @@ public class SimTeammateParityTests
                 case "Wuppy": player.WuppyHp = 8; break;
                 case "Osty": player.OstyHp = 10; player.OstyShields = true; break;
                 case "Tungsten Rod": player.TungstenRod = 1; break;
-                case "Regret": player.HandCount = 3; player.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0)); break;
+                case "Regret": player.HandCount = 3; player.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0)); break;
                 case "Fairy in a Bottle": player.Hp = 15; player.Fairies = 1; player.FairyHeal = 20; break;
                 case "Lizard Tail": player.Hp = 15; player.LizardTailHeal = 25; break;
                 case "death": player.Hp = 15; break;
             }
             if (name != "Osty") player.OstyShields = false;
         }
-        var asYou = new SimState { Enemies = { Target(200, 10, 10) } };
+        var asYou = new SimState { Enemies = { Target(hp: 200, hits: [10, 10]) } };
         Setup(name, asYou.You);
-        var asMate = new SimState { Enemies = { Target(200, 10, 10) } };
+        var asMate = new SimState { Enemies = { Target(hp: 200, hits: [10, 10]) } };
         asMate.You.OstyShields = false;
         var mate = new SimPlayer();
         Setup(name, mate);
@@ -154,9 +154,9 @@ public class SimTeammateParityTests
     {
         // Their hand acts at the end of turn (Regret, Ethereal cards), never during your play: the play gives the same branches
         // with or without it (SimInputs.HandChangesThePlay: the card play check's tabs stand either way).
-        var state = new SimState { Enemies = { Target(50, 10) } };
+        var state = new SimState { Enemies = { Target(hp: 50, hits: 10) } };
         var mate = new SimPlayer { Hp = 60, HandCount = 3, Fading = 2, FeelNoPain = 3 };
-        mate.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        mate.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
         state.Teammates.Add(mate);
         var play = new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 6 }, Hits = 1, HandCard = 7, HandDelta = -1 };
         SimEngine.ApplyPlayTo(state, play, out var full, out _);
@@ -169,13 +169,13 @@ public class SimTeammateParityTests
     public void ATeammatesRegretIsShownOnlyWithTheirHand()
     {
         // Regret in their hand (3 cards): 3 HP no block stops. The checks count it; what's shown leaves their hand out.
-        var state = new SimState { Enemies = { Target(50, 10) } };
+        var state = new SimState { Enemies = { Target(hp: 50, hits: 10) } };
         var mate = new SimPlayer { Hp = 60, Block = 4, HandCount = 3 };
-        mate.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        mate.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
         state.Teammates.Add(mate);
-        var full = SimEngine.Run(state).TeammateWorst(0);
+        var full = SimEngine.Run(state).TeammateWorst(teammateIndex: 0);
         Assert.Equal((10, 3, 9), (full.Incoming, full.UnblockableTaken, full.Taken));
-        var shown = SimEngine.Run(state.WithoutTeammateHands()).TeammateWorst(0);
+        var shown = SimEngine.Run(state.WithoutTeammateHands()).TeammateWorst(teammateIndex: 0);
         Assert.Equal((10, 0, 6), (shown.Incoming, shown.UnblockableTaken, shown.Taken));
     }
 
@@ -184,13 +184,13 @@ public class SimTeammateParityTests
     {
         // 15 incoming against their 5 block: 10 short now. Cloak Clasp with 5 cards in hand adds 5 at end
         // of turn, so they lose 5.
-        var state = new SimState { Enemies = { Target(50, 15) } };
+        var state = new SimState { Enemies = { Target(hp: 50, hits: 15) } };
         state.Teammates.Add(new SimPlayer { Hp = 60, Block = 5, CloakClaspPerCard = 1, HandCount = 5 });
         var outcome = SimEngine.Run(state);
-        var player = outcome.TeammateWorst(0);
+        var player = outcome.TeammateWorst(teammateIndex: 0);
         Assert.Equal(15, player.Incoming);
         Assert.Equal(5, player.BlockGained);
-        Assert.Equal(5, outcome.TeammateTakenMax(0));
+        Assert.Equal(5, outcome.TeammateTakenMax(teammateIndex: 0));
     }
 
     [Fact]
@@ -198,15 +198,15 @@ public class SimTeammateParityTests
     {
         // A Burn (2, blockable) in their hand: counted for the checks, not for what's shown. Their hand
         // size still counts (Cloak Clasp).
-        var state = new SimState { Enemies = { Target(50, 10) } };
+        var state = new SimState { Enemies = { Target(hp: 50, hits: 10) } };
         var mate = new SimPlayer { Hp = 60, CloakClaspPerCard = 1, HandCount = 3 };
-        mate.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        mate.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 2));
         state.Teammates.Add(mate);
 
-        Assert.Equal(9, SimEngine.Run(state).TeammateTakenMax(0));     // 10 + 2 - 3
+        Assert.Equal(9, SimEngine.Run(state).TeammateTakenMax(teammateIndex: 0));     // 10 + 2 - 3
         var shown = SimEngine.Run(state.WithoutTeammateHands());
-        Assert.Equal(7, shown.TeammateTakenMax(0));                  // 10 - 3
-        Assert.Equal(10, shown.TeammateWorst(0).Incoming);
+        Assert.Equal(7, shown.TeammateTakenMax(teammateIndex: 0));                  // 10 - 3
+        Assert.Equal(10, shown.TeammateWorst(teammateIndex: 0).Incoming);
         Assert.Single(state.Teammates[0].TurnEndCards);                 // the original is untouched
     }
 
@@ -215,14 +215,14 @@ public class SimTeammateParityTests
     {
         // Two Ethereal cards in their hand with Charon's Ashes 3: 6 to every enemy as they exhaust, killing the
         // 6 HP enemy before its 10 on you. Which cards are in their hand isn't known, so the shown run has it attack.
-        var state = new SimState { Enemies = { Target(6, 10) } };
+        var state = new SimState { Enemies = { Target(hp: 6, hits: 10) } };
         state.Teammates.Add(new SimPlayer { Hp = 60, HandCount = 2, Fading = 2, CharonsAshesDamage = 3 });
 
         var full = SimEngine.Run(state);
-        Assert.True(full.DeadInAll(1));
+        Assert.True(full.DeadInAll(enemyId: 1));
         Assert.Equal(0, full.TakenMax);
         var shown = SimEngine.Run(state.WithoutTeammateHands());
-        Assert.False(shown.DeadInAny(1));
+        Assert.False(shown.DeadInAny(enemyId: 1));
         Assert.Equal(10, shown.TakenMax);
         Assert.Equal(2, state.Teammates[0].Fading);                       // the original is untouched
     }

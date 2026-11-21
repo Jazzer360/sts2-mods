@@ -40,12 +40,12 @@ public sealed class StretchPower : SimModel
         if (play.Owner != owner || (data & Bound) == 0) return One(state);
         if ((data & Gave) == 0)
         {
-            SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], 0));
+            SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: 0));
             return One(state);
         }
         var left = powers[ThisPower] - (data >> 4);
-        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, 0));
-        state.LogFired(Name, 0, owner);
+        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
+        state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
 }
@@ -67,14 +67,14 @@ public sealed class PaelsLegion : SimModel
     public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
-        if (amount > 0 && play != null && relics[ThisRelic] <= 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], 1));
+        if (amount > 0 && play != null && relics[ThisRelic] <= 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: 1));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
         if (relics.DataOf(ThisRelic) != 1) return One(state);
-        state.LogFired(Name, 0, owner);
-        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, 2, 0)); // Turns: 2 (PaelsLegion.CanonicalVars)
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, amount: 2, data: 0)); // Turns: 2 (PaelsLegion.CanonicalVars)
         return One(state);
     }
 }
@@ -96,14 +96,14 @@ public sealed class Vambrace : SimModel
     {
         var relics = SimEngine.RelicsOf(state, owner);
         if (amount <= 0 || play == null) return;
-        if ((relics.DataOf(ThisRelic) & 1) == 0) state.LogFired(Name, 0, owner);
+        if ((relics.DataOf(ThisRelic) & 1) == 0) state.LogFired(Name, amount: 0, owner);
         SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) | 1));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
         var data = relics.DataOf(ThisRelic);
-        if (play.Owner == owner && (data & 1) != 0 && (data & 2) == 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], 2));
+        if (play.Owner == owner && (data & 1) != 0 && (data & 2) == 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: 2));
         return One(state);
     }
 }

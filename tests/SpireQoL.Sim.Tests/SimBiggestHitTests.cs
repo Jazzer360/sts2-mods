@@ -17,23 +17,23 @@ public class SimBiggestHitTests
     [Fact]
     public void BlockCountsTowardTheHit()
     {
-        var state = new SimState { Enemies = { Enemy(1, 50, block: 12) } };
-        Assert.Equal(32, SimEngine.Run(state, Hit(1, 32)).PlayBiggestHitMin);
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, block: 12) } };
+        Assert.Equal(32, SimEngine.Run(state, Hit(target: 1, damage: 32)).PlayBiggestHitMin);
     }
 
     [Fact]
     public void OverkillDoesnt()
     {
         // 32 into 20 HP and no block: 20 dealt, not enough.
-        var state = new SimState { Enemies = { Enemy(1, 20) } };
-        Assert.Equal(20, SimEngine.Run(state, Hit(1, 32)).PlayBiggestHitMin);
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 20) } };
+        Assert.Equal(20, SimEngine.Run(state, Hit(target: 1, damage: 32)).PlayBiggestHitMin);
     }
 
     [Fact]
     public void RandomHitsNeedEveryBranch()
     {
         // 30 at a random enemy: 30 on the 50-HP one, 10 on the 10-HP one.
-        var state = new SimState { Enemies = { Enemy(1, 50), Enemy(2, 10) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50), Enemy(id: 2, hp: 10) } };
         var play = new SimPlay { Name = "Sword Boomerang", IsAttack = true, HitTarget = SimPlay.Target.Random, Hits = 1, HitDamage = { [1] = 30, [2] = 30 } };
         Assert.Equal(10, SimEngine.Run(state, play).PlayBiggestHitMin);
     }

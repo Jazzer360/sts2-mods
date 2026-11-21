@@ -24,10 +24,10 @@ public static partial class SimEngine
             states = Then(states, branch =>
             {
                 if (!branch.TakesPart(gainer)) return new[] { branch };
-                var amount = CalcBlock(branch, baseBlock, new BlockCtx(gainer, props, null, null));
+                var amount = CalcBlock(branch, baseBlock, new BlockCtx(gainer, props, Card: null, Play: null));
                 branch.LogFired(name, amount, owner);
                 if (amount <= 0) return new[] { branch };
-                return Then(GainBlock(branch, amount, gainer == Who.You ? Breakdown(branch, owner, name, label) : null, gainer), copy => Hook(copy, nameof(SimModel.AfterBlockGained), (model, listenerOwner, simState) => model.AfterBlockGained(simState, listenerOwner, gainer, amount, null)));
+                return Then(GainBlock(branch, amount, gainer == Who.You ? Breakdown(branch, owner, name, label) : null, gainer), copy => Hook(copy, nameof(SimModel.AfterBlockGained), (model, listenerOwner, simState) => model.AfterBlockGained(simState, listenerOwner, gainer, amount, card: null)));
             });
         }
         return states;
@@ -57,7 +57,7 @@ public static partial class SimEngine
     private static int ProcHitOn(SimState state, int? dealer, SimEnemy enemy, decimal baseDamage, SimProps props)
     {
         if (!enemy.Alive) return 0;
-        var amount = CalcDamage(state, baseDamage, new DamageCtx(dealer, enemy.Id, props, null, null));
+        var amount = CalcDamage(state, baseDamage, new DamageCtx(dealer, enemy.Id, props, Card: null, Play: null));
         if (amount > 0) Damage(state, enemy, amount, dealer, props);
         return amount;
     }
@@ -116,7 +116,7 @@ public static partial class SimEngine
     public static IEnumerable<SimState> ProcDamagePlayer(SimState state, int owner, string name, int player, decimal baseDamage, SimProps props, bool noDealer = false, string? label = null)
     {
         var dealer = noDealer ? null : (int?)owner;
-        var amount = CalcDamage(state, baseDamage, new DamageCtx(dealer, player, props, null, null));
+        var amount = CalcDamage(state, baseDamage, new DamageCtx(dealer, player, props, Card: null, Play: null));
         state.LogFired(name, amount, owner);
         if (amount <= 0) return new[] { state };
         if (props.HasFlag(SimProps.Unblockable)) LandUnblockable(state, label ?? name, amount, player, dealer, props);
@@ -142,7 +142,7 @@ public static partial class SimEngine
     /// </summary>
     internal static Action<SimState>? TallyFor(string source, TabKind? tab, CardEvent cardEvent, int owner) =>
         (tab, cardEvent) is (TabKind.Draw, CardEvent.Drawn) or (TabKind.Energy, CardEvent.EnergyGained)
-            ? branch => branch.LogAmount(source, 1, owner)
+            ? branch => branch.LogAmount(source, amount: 1, owner)
             : null;
 
     /// <summary>One card event's bookkeeping and its listeners (AfterCardEvent).</summary>

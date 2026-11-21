@@ -62,7 +62,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     {
         try
         {
-            if (Sts2State.Private<Player?>(__instance, "Owner", null) is not { } owner || RunMe() != owner) return;
+            if (Sts2State.Private<Player?>(__instance, "Owner", fallback: null) is not { } owner || RunMe() != owner) return;
             Used.AddOrUpdate(__instance, true);
             if (Compute(owner, rest: true) is { } preview) _pendingRest = (preview.Outcome.RestedHp, preview.Outcome.RestedMax);
         }
@@ -79,7 +79,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     {
         try
         {
-            if (Sts2State.Private<Player?>(__instance, "Owner", null) is not { } owner || RunMe() != owner) return;
+            if (Sts2State.Private<Player?>(__instance, "Owner", fallback: null) is not { } owner || RunMe() != owner) return;
             Used.AddOrUpdate(__instance, true);
             var pending = new Dictionary<Player, (int, int, int, int)>();
             foreach (var mate in owner.RunState.Players)
@@ -185,9 +185,9 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         var humidifiers = who.Relics.OfType<StoneHumidifier>().ToList();
         // The boss fight's start: the relics mark themselves Active at the boss's parent map point (AfterRoomEntered).
         var bossRelics = who.Relics.Where(relic => relic.Status == RelicStatus.Active && relic is Pantograph or BathRobes { IsUsedUp: false }).ToList();
-        var boss = bossRelics.Select(relic => relic is BathRobes ? (RestStep.BathRobes, 0) : (RestStep.Pantograph, Sts2State.Var(relic, "Heal", 25))).ToList();
+        var boss = bossRelics.Select(relic => relic is BathRobes ? (RestStep.BathRobes, 0) : (RestStep.Pantograph, Sts2State.Var(relic, "Heal", fallback: 25))).ToList();
         var outcome = RestMath.Compute(creature.CurrentHp, creature.MaxHp, heal, pillow != null ? heal - baseHeal : 0,
-            humidifiers.Select(stoneHumidifier => Sts2State.Var(stoneHumidifier, "MaxHp", 5)).ToList(), nightTerrors != null, boss, rest);
+            humidifiers.Select(stoneHumidifier => Sts2State.Var(stoneHumidifier, "MaxHp", fallback: 5)).ToList(), nightTerrors != null, boss, rest);
 
         var lines = new List<(Texture2D?, int)>();
         int humid = 0, bossAt = 0;
@@ -232,7 +232,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         _hoveredMate = inRoom && canMend ? HoveredMate(room!, me!) : null;
         var theirs = _hoveredMate != null ? Compute(_hoveredMate, rest: true, mend: true) : null;
         _mate!.HasContent = theirs != null;
-        if (theirs != null) Show(_matePanel!, theirs, true);
+        if (theirs != null) Show(_matePanel!, theirs, rest: true);
     }
 
     private static void Show(RestMathPanel panel, Preview preview, bool rest) =>
@@ -334,7 +334,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     private static Player? RunMe()
     {
         if (Sts2State.Me is { } me) return me;
-        var state = Sts2State.Private<RunState?>(RunManager.Instance, "State", null);
+        var state = Sts2State.Private<RunState?>(RunManager.Instance, "State", fallback: null);
         return state == null ? null : LocalContext.GetMe(state);
     }
 }

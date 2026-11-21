@@ -23,7 +23,7 @@ internal static class Branches
         var exits = Enumerable.Range(0, code.Count).Where(index => code[index].operand is MethodInfo { Name: "SetResult" }).ToList();
         if (exits.Count == 0) exits = Enumerable.Range(0, code.Count).Where(index => code[index].opcode == OpCodes.Ret).ToList();
         var result = new bool[at.Count];
-        for (var point = 0; point < at.Count; point++) result[point] = exits.Count > 0 && !Reaches(succ, 0, exits, at[point]);
+        for (var point = 0; point < at.Count; point++) result[point] = exits.Count > 0 && !Reaches(succ, start: 0, exits, at[point]);
         return result;
     }
 

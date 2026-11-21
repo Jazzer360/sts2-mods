@@ -9,12 +9,12 @@ namespace SpireQoL.Sim.Tests;
 /// </summary>
 public class SessionStatsTests
 {
-    private static readonly SessionInfo Info = new("1.2.3", "0.9", false);
+    private static readonly SessionInfo Info = new("1.2.3", "0.9", OtherMods: false);
 
     private static SessionStats Fight(params DevEvent[] events)
     {
         var sessionStats = new SessionStats();
-        sessionStats.Post(new CombatStarted("Jaw Worm", 1, "Ironclad"));
+        sessionStats.Post(new CombatStarted("Jaw Worm", Players: 1, "Ironclad"));
         foreach (var devEvent in events) sessionStats.Post(devEvent);
         return sessionStats;
     }
@@ -22,7 +22,7 @@ public class SessionStatsTests
     [Fact]
     public void ATurnCheckedAndMatchedIsClean()
     {
-        var sessionStats = Fight(new TurnStarted(1), new CheckDone("play", 1, true, "Strike"), new CheckDone("forecast", 1, true, null), new TurnStarted(2));
+        var sessionStats = Fight(new TurnStarted(Turn: 1), new CheckDone("play", Turn: 1, Matched: true, "Strike"), new CheckDone("forecast", Turn: 1, Matched: true, Detail: null), new TurnStarted(Turn: 2));
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(2, sessionSummary.Turns);
         Assert.Equal(2, sessionSummary.Clean); // turn 2 is the fight's last so far: its plays decide (it has none)
@@ -37,10 +37,10 @@ public class SessionStatsTests
     [Fact]
     public void AuditsOutsideTheTurnsAreCountedApart()
     {
-        var sessionStats = Fight(new TurnStarted(1), new CheckDone(Audits.Play, 1, true, "Strike"), new CheckDone(Audits.Forecast, 1, true, null),
-            new CheckDone(Audits.Intent, 0, false, "JawWorm"), new CheckDone(Audits.Intent, 0, true, "JawWorm"),
-            new CheckSkipped(Audits.Intent, 0, "the enemy's move rules couldn't be read", "Doormaker"),
-            new CheckDone(Audits.Potion, 0, true, "FirePotion"), new TurnStarted(2));
+        var sessionStats = Fight(new TurnStarted(Turn: 1), new CheckDone(Audits.Play, Turn: 1, Matched: true, "Strike"), new CheckDone(Audits.Forecast, Turn: 1, Matched: true, Detail: null),
+            new CheckDone(Audits.Intent, Turn: 0, Matched: false, "JawWorm"), new CheckDone(Audits.Intent, Turn: 0, Matched: true, "JawWorm"),
+            new CheckSkipped(Audits.Intent, Turn: 0, "the enemy's move rules couldn't be read", "Doormaker"),
+            new CheckDone(Audits.Potion, Turn: 0, Matched: true, "FirePotion"), new TurnStarted(Turn: 2));
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(2, sessionSummary.Clean);
         Assert.Equal((1, 1, 0), (sessionSummary.Plays.Checked, sessionSummary.Plays.Matched, sessionSummary.Plays.Skipped));
@@ -56,13 +56,13 @@ public class SessionStatsTests
     public void TheWorstThingThatHappenedInATurnDecidesIt()
     {
         var sessionStats = Fight(
-            new TurnStarted(1), new CheckDone("play", 1, false, "proc"), new CheckDone("forecast", 1, true, null),
-            new TurnStarted(2), new CheckSkipped("play", 2, "simulation pending", "Bash"),
-            new SearchDone("the turn forecast", SearchDone.ContextOf(1, 2), 10, 1000, 100, 5, false, "the memory cap", false),
-            new CheckDone("forecast", 2, true, null),
-            new TurnStarted(3), new CheckSkipped("forecast", 3, "an extra turn (no enemy turn to compare)", null),
-            new TurnStarted(4), new CheckDone("forecast", 4, true, null),
-            new TurnStarted(5));
+            new TurnStarted(Turn: 1), new CheckDone("play", Turn: 1, Matched: false, "proc"), new CheckDone("forecast", Turn: 1, Matched: true, Detail: null),
+            new TurnStarted(Turn: 2), new CheckSkipped("play", Turn: 2, "simulation pending", "Bash"),
+            new SearchDone("the turn forecast", SearchDone.ContextOf(combat: 1, turn: 2), Steps: 10, Copies: 1000, PeakHeld: 100, Ms: 5, Background: false, "the memory cap", Cancelled: false),
+            new CheckDone("forecast", Turn: 2, Matched: true, Detail: null),
+            new TurnStarted(Turn: 3), new CheckSkipped("forecast", Turn: 3, "an extra turn (no enemy turn to compare)", Detail: null),
+            new TurnStarted(Turn: 4), new CheckDone("forecast", Turn: 4, Matched: true, Detail: null),
+            new TurnStarted(Turn: 5));
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(5, sessionSummary.Turns);
         Assert.Equal(1, sessionSummary.Mismatched); // turn 1
@@ -77,8 +77,8 @@ public class SessionStatsTests
     public void ATurnWhoseEnemyTurnWasNeverCheckedIsAGapUnlessTheFightEndedThere()
     {
         // Turn 1's enemy turn came (turn 2 followed) but no check said anything: unchecked, with that as the reason.
-        var sessionStats = Fight(new TurnStarted(1), new TurnStarted(2), new CheckDone("play", 2, true, "Strike"), new CombatEnded(),
-            new CombatStarted("Cultist", 1, "Ironclad"), new TurnStarted(1));
+        var sessionStats = Fight(new TurnStarted(Turn: 1), new TurnStarted(Turn: 2), new CheckDone("play", Turn: 2, Matched: true, "Strike"), new CombatEnded(),
+            new CombatStarted("Cultist", Players: 1, "Ironclad"), new TurnStarted(Turn: 1));
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(3, sessionSummary.Turns);
         Assert.Equal(1, sessionSummary.Unchecked);
@@ -91,8 +91,8 @@ public class SessionStatsTests
     public void AChecksThatComesAfterItsFightEndedCountsInItsLastTurn()
     {
         // The killing play's check comes a frame after the fight is over (no turn number to read then: 0).
-        var sessionStats = Fight(new TurnStarted(1), new CheckDone("forecast", 1, true, null), new TurnStarted(2), new CombatEnded(),
-            new CheckDone("play", 0, false, "damage"));
+        var sessionStats = Fight(new TurnStarted(Turn: 1), new CheckDone("forecast", Turn: 1, Matched: true, Detail: null), new TurnStarted(Turn: 2), new CombatEnded(),
+            new CheckDone("play", Turn: 0, Matched: false, "damage"));
         var sessionSummary = sessionStats.Summary("won", Info);
         Assert.Equal(2, sessionSummary.Turns);
         Assert.Equal(1, sessionSummary.Mismatched);
@@ -103,8 +103,8 @@ public class SessionStatsTests
     public void AnExpectedSkipIsCountedButLeavesTheTurnClean()
     {
         // The play that won the fight: its state after it can never be checked (CheckSkipped.Expected).
-        var sessionStats = Fight(new TurnStarted(1), new CheckDone("forecast", 1, true, null), new TurnStarted(2),
-            new CheckSkipped("play", 2, "state after the play: the fight ended", "Strike", Expected: true), new CheckDone("play", 2, true, "Strike"),
+        var sessionStats = Fight(new TurnStarted(Turn: 1), new CheckDone("forecast", Turn: 1, Matched: true, Detail: null), new TurnStarted(Turn: 2),
+            new CheckSkipped("play", Turn: 2, "state after the play: the fight ended", "Strike", Expected: true), new CheckDone("play", Turn: 2, Matched: true, "Strike"),
             new CombatEnded());
         var sessionSummary = sessionStats.Summary("won", Info);
         Assert.Equal(2, sessionSummary.Clean);
@@ -112,17 +112,17 @@ public class SessionStatsTests
         Assert.Equal(1, sessionSummary.Plays.Skipped);
         Assert.Equal(1, sessionSummary.Plays.SkipReasons["state after the play: the fight ended (expected)"]);
         // Any other skip still makes the turn unchecked.
-        sessionStats.Post(new CombatStarted("Cultist", 1, "Ironclad"));
-        sessionStats.Post(new TurnStarted(1));
-        sessionStats.Post(new CheckSkipped("play", 1, "state after the play: the fight ended", "Strike"));
+        sessionStats.Post(new CombatStarted("Cultist", Players: 1, "Ironclad"));
+        sessionStats.Post(new TurnStarted(Turn: 1));
+        sessionStats.Post(new CheckSkipped("play", Turn: 1, "state after the play: the fight ended", "Strike"));
         Assert.Equal(1, sessionStats.Summary("menu", Info).Unchecked);
     }
 
     [Fact]
     public void ASearchFromAnotherFightDoesntMarkThisOnesTurn()
     {
-        var sessionStats = Fight(new TurnStarted(1), new CheckDone("forecast", 1, true, null),
-            new SearchDone("old", SearchDone.ContextOf(0, 1), 1, 1, 1, 1, true, "the work cap", false), new TurnStarted(2));
+        var sessionStats = Fight(new TurnStarted(Turn: 1), new CheckDone("forecast", Turn: 1, Matched: true, Detail: null),
+            new SearchDone("old", SearchDone.ContextOf(combat: 0, turn: 1), Steps: 1, Copies: 1, PeakHeld: 1, Ms: 1, Background: true, "the work cap", Cancelled: false), new TurnStarted(Turn: 2));
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(0, sessionSummary.Capped);
         Assert.Equal(1, sessionSummary.Searches.Caps["the work cap"]); // still counted among the searches
@@ -132,12 +132,12 @@ public class SessionStatsTests
     public void SearchesWaitsAndFramesAreSummed()
     {
         var sessionStats = Fight(
-            new SearchDone("a", 0, 5, 100, 10, 2, false, null, false),
-            new SearchDone("b", 0, 50, 30_000, 900, 40, true, null, false),
-            new SearchDone("c", 0, 3, 70, 5, 1, true, null, true),
-            new FrameWait(8, true), new FrameWait(1, false), new Unsettled(120), new ReportSent("proc", "abc"));
-        foreach (var milliseconds in new[] { 1.0, 2, 3, 45 }) sessionStats.Frame(milliseconds, 16);
-        sessionStats.Frame(1, 120); // a stall of the game's own
+            new SearchDone("a", Context: 0, Steps: 5, Copies: 100, PeakHeld: 10, Ms: 2, Background: false, Cap: null, Cancelled: false),
+            new SearchDone("b", Context: 0, Steps: 50, Copies: 30_000, PeakHeld: 900, Ms: 40, Background: true, Cap: null, Cancelled: false),
+            new SearchDone("c", Context: 0, Steps: 3, Copies: 70, PeakHeld: 5, Ms: 1, Background: true, Cap: null, Cancelled: true),
+            new FrameWait(Ms: 8, Missed: true), new FrameWait(Ms: 1, Missed: false), new Unsettled(Ms: 120), new ReportSent("proc", "abc"));
+        foreach (var milliseconds in new[] { 1.0, 2, 3, 45 }) sessionStats.Frame(milliseconds, gapMs: 16);
+        sessionStats.Frame(modMs: 1, gapMs: 120); // a stall of the game's own
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(3, sessionSummary.Searches.Count);
         Assert.Equal(1, sessionSummary.Searches.Background);
@@ -159,7 +159,7 @@ public class SessionStatsTests
     [Fact]
     public void TakingTheSummaryChangesNothing()
     {
-        var sessionStats = Fight(new TurnStarted(1), new CheckDone("forecast", 1, true, null), new TurnStarted(2));
+        var sessionStats = Fight(new TurnStarted(Turn: 1), new CheckDone("forecast", Turn: 1, Matched: true, Detail: null), new TurnStarted(Turn: 2));
         var summary = sessionStats.Summary("unseen", Info).ToJson();
         var sessionSummary = sessionStats.Summary("unseen", Info);
         Assert.Equal(2, sessionSummary.Turns);
@@ -169,9 +169,9 @@ public class SessionStatsTests
     [Fact]
     public void ReasonListsKeepTheMostFrequent()
     {
-        var sessionStats = Fight(new TurnStarted(1));
+        var sessionStats = Fight(new TurnStarted(Turn: 1));
         for (var i = 0; i < SessionStats.MaxReasons + 5; i++)
-            for (var repeat = 0; repeat <= i; repeat++) sessionStats.Post(new CheckSkipped("play", 1, $"reason {i}", null));
+            for (var repeat = 0; repeat <= i; repeat++) sessionStats.Post(new CheckSkipped("play", Turn: 1, $"reason {i}", Detail: null));
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(SessionStats.MaxReasons, sessionSummary.Plays.SkipReasons.Count);
         Assert.Contains($"reason {SessionStats.MaxReasons + 4}", sessionSummary.Plays.SkipReasons.Keys);
@@ -181,7 +181,7 @@ public class SessionStatsTests
     [Fact]
     public void TheSummaryRoundTripsThroughItsFile()
     {
-        var sessionStats = Fight(new TurnStarted(1), new CheckSkipped("forecast", 1, "a branch the forecast didn't model", null));
+        var sessionStats = Fight(new TurnStarted(Turn: 1), new CheckSkipped("forecast", Turn: 1, "a branch the forecast didn't model", Detail: null));
         var json = sessionStats.Summary("unseen", Info).ToJson();
         Assert.Contains("\"v\":1", json);
         Assert.Contains("\"skipReasons\":{\"a branch the forecast didn't model\":1}", json);
@@ -207,7 +207,7 @@ public class SessionStatsTests
     [Fact]
     public void EventKindsAreKebabCase()
     {
-        Assert.Equal("search-done", new SearchDone("x", 0, 0, 0, 0, 0, false, null, false).Kind);
+        Assert.Equal("search-done", new SearchDone("x", Context: 0, Steps: 0, Copies: 0, PeakHeld: 0, Ms: 0, Background: false, Cap: null, Cancelled: false).Kind);
         Assert.Equal("combat-ended", new CombatEnded().Kind);
     }
 
@@ -219,10 +219,10 @@ public class SessionStatsTests
         DevEvents.Posted += Take;
         try
         {
-            SimJob.Context = SearchDone.ContextOf(7, 3);
+            SimJob.Context = SearchDone.ContextOf(combat: 7, turn: 3);
             var state = new SimState();
             state.Enemies.Add(new SimEnemy { Id = 0, Name = "E", Hp = 20, Hits = new() { 5 } });
-            var job = SimJob.Start(SimSearch.Of(state, null), "telemetry test");
+            var job = SimJob.Start(SimSearch.Of(state, play: null), "telemetry test");
             SimJob.Context = 0;
             await job.Ready.WaitAsync(TimeSpan.FromSeconds(10));
             SpinWait.SpinUntil(() => { lock (seen) return seen.Count > 0; }, 5_000);

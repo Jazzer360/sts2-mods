@@ -190,8 +190,8 @@ internal sealed class FlatFade
     {
         var live = new List<string>();
         var copy = new List<string>();
-        Describe(_container, keep, 0, "", live);
-        Describe(_copy.Body, new Node?[] { _copy.CardHighlight }, 0, "", copy);
+        Describe(_container, keep, depth: 0, "", live);
+        Describe(_copy.Body, new Node?[] { _copy.CardHighlight }, depth: 0, "", copy);
         var lineCount = Math.Max(live.Count, copy.Count);
         for (var i = 0; i < lineCount; i++)
         {
@@ -208,7 +208,7 @@ internal sealed class FlatFade
     private int Signature(Control root, IReadOnlyList<Node?> keep)
     {
         var parts = new List<string>();
-        Describe(root, keep, 0, "", parts);
+        Describe(root, keep, depth: 0, "", parts);
         var hashCode = new HashCode();
         foreach (var part in parts) hashCode.Add(part);
         var hash = hashCode.ToHashCode();

@@ -13,11 +13,11 @@ public class SimPaelsEyeTests
 
     private static SimState Armed()
     {
-        var state = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
         state.You.PaelsEyeExhaust = true;
         state.You.HandCount = 3;
         state.You.FeelNoPain = 3;
-        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 2));
         return state;
     }
 
@@ -58,10 +58,10 @@ public class SimPaelsEyeTests
     [Fact]
     public void CharonsAshesFiresPerCard()
     {
-        var state = new SimState { Enemies = { Enemy(1, 9, 10) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 9, hits: 10) } };
         state.You.PaelsEyeExhaust = true;
         state.You.HandCount = 3;
         state.You.CharonsAshesDamage = 3;
-        Assert.True(SimEngine.Run(state).DeadInAll(1));
+        Assert.True(SimEngine.Run(state).DeadInAll(enemyId: 1));
     }
 }

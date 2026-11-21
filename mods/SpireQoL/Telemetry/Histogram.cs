@@ -49,7 +49,7 @@ public sealed class Histogram
         return Max;
     }
 
-    public TimingSummary Summary() => new(Count, Round(Percentile(0.5)), Round(Percentile(0.95)), Round(Percentile(0.99)), Round(Max));
+    public TimingSummary Summary() => new(Count, Round(Percentile(percentile: 0.5)), Round(Percentile(percentile: 0.95)), Round(Percentile(percentile: 0.99)), Round(Max));
 
     private static double Round(double value) => Math.Round(value, 1);
 }

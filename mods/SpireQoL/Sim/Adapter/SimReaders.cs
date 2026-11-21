@@ -54,27 +54,27 @@ public static class SimReaders
                     data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var teammateIndex and >= 0 and < 7 ? Math.Min(15, amount) << (4 * teammateIndex) : 0;
                     amount = Math.Max(1, amount);
                     break;
-                case nameof(HailstormPower): data = Sts2State.Var(power, "FrostOrbs", 1); break;
+                case nameof(HailstormPower): data = Sts2State.Var(power, "FrostOrbs", fallback: 1); break;
                 case nameof(TheBombPower): data = Sts2State.Var(power, "Damage"); break;
-                case nameof(SlowPower): data = Sts2State.Var(power, "SlowAmount", 0); break;
-                case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", false) ? 1 : 0; break;
+                case nameof(SlowPower): data = Sts2State.Var(power, "SlowAmount", fallback: 0); break;
+                case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", fallback: false) ? 1 : 0; break;
                 case nameof(HardenedShellPower): data = Math.Max(0, power.DisplayAmount); break;
-                case nameof(FlutterPower): data = Sts2State.Var(power, "DamageDecrease", 50); break;
-                case nameof(SurroundedPower): data = Sts2State.Private<object?>(power, "Facing", null)?.ToString() == "Left" ? 1 : 0; break;
+                case nameof(FlutterPower): data = Sts2State.Var(power, "DamageDecrease", fallback: 50); break;
+                case nameof(SurroundedPower): data = Sts2State.Private<object?>(power, "Facing", fallback: null)?.ToString() == "Left" ? 1 : 0; break;
                 case nameof(CoveredPower): data = power.Applier is { } coverer && idOf(coverer) is { } apId ? apId + 100 : 0; break;
                 // Counters the proc models count down (the power's own number: DisplayAmount, or its CardsLeft value).
                 case nameof(FeralPower) or nameof(OrbitPower) or nameof(AutomationPower) or nameof(CacophonyPower): data = Math.Max(0, power.DisplayAmount); break;
-                case nameof(PanachePower) or nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", 5)); break;
+                case nameof(PanachePower) or nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
                 // Once a turn (Data 1: already this turn).
                 case nameof(PaleBlueDotPower): data = Internal(power, "alreadyActivatedThisTurn") ? 1 : 0; break;
-                case "LullabyPower": data = Sts2State.Private(power, "_proccdThisTurn", true) ? 1 : 0; break;
+                case "LullabyPower": data = Sts2State.Private(power, "_proccdThisTurn", fallback: true) ? 1 : 0; break;
                 case "YahPower": data = Internal(power, "triggeredThisTurn") ? 1 : 0; break;
                 // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
                 case nameof(VigorPower) or "AimPower" or "QuietusPower" or nameof(GigantificationPower):
-                    data = Sts2State.Private<object?>(power, "_internalData", null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", null) != null
+                    data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", fallback: null) != null
                         ? Models.AttackBoundPower.BoundOutside : 0;
                     break;
-                case nameof(JugglingPower): data = Sts2State.Private<object?>(power, "_internalData", null) is { } juggled ? Sts2State.Private(juggled, "attacksPlayedThisTurn", 0) : 0; break;
+                case nameof(JugglingPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } juggled ? Sts2State.Private(juggled, "attacksPlayedThisTurn", fallback: 0) : 0; break;
                 // Whose plays it acts on (+ 100, so 0 stays "nobody").
                 // Gone with their applier (AfterDeath), Magic Bomb only while it lives: its id + 100.
                 case nameof(ConstrictPower) or nameof(MagicBombPower): data = power.Applier is { } caster && idOf(caster) is { } caId ? caId + 100 : 0; break;
@@ -86,8 +86,8 @@ public static class SimReaders
                 case nameof(InterceptPower):
                 {
                     // The players it covers (InterceptPower's internal coveredCreatures): Intercept multiplies by count + 1.
-                    var internalData = Sts2State.Private<object?>(power, "_internalData", null);
-                    var covered = internalData == null ? null : Sts2State.Private<System.Collections.ICollection?>(internalData, "coveredCreatures", null);
+                    var internalData = Sts2State.Private<object?>(power, "_internalData", fallback: null);
+                    var covered = internalData == null ? null : Sts2State.Private<System.Collections.ICollection?>(internalData, "coveredCreatures", fallback: null);
                     amount = covered?.Count ?? 1;
                     break;
                 }
@@ -99,7 +99,7 @@ public static class SimReaders
 
     /// <summary>A flag in a power's internal data (PowerModel._internalData), true when unreadable (so a once-a-turn proc isn't promised).</summary>
     private static bool Internal(PowerModel power, string field) =>
-        Sts2State.Private<object?>(power, "_internalData", null) is not { } internalData || Sts2State.Private(internalData, field, true);
+        Sts2State.Private<object?>(power, "_internalData", fallback: null) is not { } internalData || Sts2State.Private(internalData, field, fallback: true);
 
     /// <summary>
     /// The values of every relic and power of these creatures and players (their DynamicVars) for SimState.Vars: "id:Name:Var",
@@ -140,51 +140,51 @@ public static class SimReaders
             switch (name)
             {
                 case nameof(PenNib):
-                    amount = Sts2State.Private(relic, "AttacksPlayed", 0);
-                    data = Sts2State.Private<object?>(relic, "AttackToDouble", null) != null ? 1 : 0;
+                    amount = Sts2State.Private(relic, "AttacksPlayed", fallback: 0);
+                    data = Sts2State.Private<object?>(relic, "AttackToDouble", fallback: null) != null ? 1 : 0;
                     break;
-                case "MightyWings": amount = Sts2State.Var(relic, "StrengthPower", 2); data = Sts2State.Var(relic, "DamageThreshold", 30); break;
+                case "MightyWings": amount = Sts2State.Var(relic, "StrengthPower", fallback: 2); data = Sts2State.Var(relic, "DamageThreshold", fallback: 30); break;
                 case nameof(Vambrace):
-                    data = (Sts2State.Private<object?>(relic, "TriggeringCard", null) != null ? 1 : 0) | (Sts2State.Private(relic, "BlockGainedThisCombat", false) ? 2 : 0);
+                    data = (Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) != null ? 1 : 0) | (Sts2State.Private(relic, "BlockGainedThisCombat", fallback: false) ? 2 : 0);
                     break;
                 case nameof(PaelsLegion):
-                    amount = Sts2State.Private(relic, "Cooldown", 0);
-                    data = Sts2State.Private<object?>(relic, "AffectedCardPlay", null) != null ? 1 : 0;
+                    amount = Sts2State.Private(relic, "Cooldown", fallback: 0);
+                    data = Sts2State.Private<object?>(relic, "AffectedCardPlay", fallback: null) != null ? 1 : 0;
                     break;
-                case nameof(TungstenRod): amount = Sts2State.Var(relic, "HpLossReduction", 1); break;
-                case nameof(CentennialPuzzle): amount = Sts2State.Private(relic, "UsedThisCombat", false) ? 1 : 0; break; // used up this combat
-                case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", 0); data = Sts2State.Var(relic, "CardThreshold", 3); break;
+                case nameof(TungstenRod): amount = Sts2State.Var(relic, "HpLossReduction", fallback: 1); break;
+                case nameof(CentennialPuzzle): amount = Sts2State.Private(relic, "UsedThisCombat", fallback: false) ? 1 : 0; break; // used up this combat
+                case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
                 case nameof(BeatingRemnant):
                     amount = Sts2State.Var(relic, "MaxHpLoss", int.MaxValue);
-                    data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", 0m);
+                    data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", fallback: 0m);
                     break;
-                case nameof(TheBoot): amount = Sts2State.Var(relic, "DamageMinimum", 5); break;
-                case nameof(SneckoSkull): amount = Sts2State.Var(relic, "PoisonPower", 1); break;
+                case nameof(TheBoot): amount = Sts2State.Var(relic, "DamageMinimum", fallback: 5); break;
+                case nameof(SneckoSkull): amount = Sts2State.Var(relic, "PoisonPower", fallback: 1); break;
                 // Counters the models keep counting (their tray number, or the private count behind it).
-                case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", 0); break;
-                case nameof(GalacticDust): amount = Sts2State.Private(relic, "StarsSpent", 0); break;
+                case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); break;
+                case nameof(GalacticDust): amount = Sts2State.Private(relic, "StarsSpent", fallback: 0); break;
                 case nameof(Metronome): amount = Sts2State.Private(relic, "OrbsChanneled", int.MaxValue / 2); break;
                 // Once a turn: armed until used (bit 1), done this turn (bit 2).
-                case nameof(MiniRegent) or nameof(Regalite): data = Sts2State.Private(relic, "UsedThisTurn", true) ? 0 : 1; break;
-                case nameof(RainbowRing): data = Sts2State.Private(relic, "ActivationCountThisTurn", 0) >= 1 ? 2 : 0; break;
-                case "ConductorsBaton" or nameof(DemonTongue): data = Sts2State.Private(relic, "_triggeredThisTurn", true) ? 2 : 0; break;
+                case nameof(MiniRegent) or nameof(Regalite): data = Sts2State.Private(relic, "UsedThisTurn", fallback: true) ? 0 : 1; break;
+                case nameof(RainbowRing): data = Sts2State.Private(relic, "ActivationCountThisTurn", fallback: 0) >= 1 ? 2 : 0; break;
+                case "ConductorsBaton" or nameof(DemonTongue): data = Sts2State.Private(relic, "_triggeredThisTurn", fallback: true) ? 2 : 0; break;
                 // The HP at or below which it gives Strength (its threshold of your max HP).
-                case nameof(RedSkull): amount = (int)Math.Floor(player.Creature.MaxHp * Sts2State.Var(relic, "HpThreshold", 50) / 100m); break;
+                case nameof(RedSkull): amount = (int)Math.Floor(player.Creature.MaxHp * Sts2State.Var(relic, "HpThreshold", fallback: 50) / 100m); break;
                 // End-of-turn relics: their block or damage (amount), and what they wait for (Data).
                 case nameof(Orichalcum) or nameof(FakeOrichalcum) or nameof(CloakClasp) or nameof(RippleBasin): amount = Sts2State.Var(relic, "Block"); break;
                 case nameof(ScreamingFlagon) or nameof(CharonsAshes) or nameof(ForgottenSoul): amount = Sts2State.Var(relic, "Damage"); break;
-                case "ObsidianVice": amount = Sts2State.Var(relic, "Damage", 1); break;
+                case "ObsidianVice": amount = Sts2State.Var(relic, "Damage", fallback: 1); break;
                 case nameof(StoneCalendar):
                     amount = Sts2State.Var(relic, "Damage");
-                    data = Math.Max(0, Sts2State.Var(relic, "DamageTurn", 7) - Sts2State.TurnNumber); // turns until it fires (0: this one)
-                    if (Sts2State.TurnNumber > Sts2State.Var(relic, "DamageTurn", 7)) amount = 0; // its turn has passed
+                    data = Math.Max(0, Sts2State.Var(relic, "DamageTurn", fallback: 7) - Sts2State.TurnNumber); // turns until it fires (0: this one)
+                    if (Sts2State.TurnNumber > Sts2State.Var(relic, "DamageTurn", fallback: 7)) amount = 0; // its turn has passed
                     break;
                 case nameof(ParryingShield): amount = Sts2State.Var(relic, "Damage"); data = Sts2State.Var(relic, "Block"); break;
-                case nameof(LunarPastry): amount = Sts2State.Var(relic, "Stars", 1); break;
+                case nameof(LunarPastry): amount = Sts2State.Var(relic, "Stars", fallback: 1); break;
                 // Its Data is the model's own: energy spent during the play being simulated (PaelsTears), so none yet.
                 case nameof(PaelsTears): data = 0; break;
                 case nameof(UnsettlingLamp):
-                    data = Sts2State.Private<object?>(relic, "TriggeringCard", null) == null && !Sts2State.Private(relic, "IsFinishedTriggering", true) ? 1 : 0;
+                    data = Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) == null && !Sts2State.Private(relic, "IsFinishedTriggering", fallback: true) ? 1 : 0;
                     break;
                 default:
                     amount = Math.Max(0, relic.DisplayAmount);

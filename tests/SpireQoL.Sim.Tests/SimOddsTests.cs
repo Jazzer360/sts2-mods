@@ -30,9 +30,9 @@ public class SimOddsTests
     [Fact]
     public void ARandomHitOnTwoEnemiesKillsEachHalfTheTime()
     {
-        var outcome = SimEngine.Run(WithLightning(Enemy(1, 8, 5), Enemy(2, 8, 5)), Evoke(1));
-        Assert.Equal(0.5, outcome.DeadChance(1), 6);
-        Assert.Equal(0.5, outcome.DeadChance(2), 6);
+        var outcome = SimEngine.Run(WithLightning(Enemy(id: 1, hp: 8, hits: 5), Enemy(id: 2, hp: 8, hits: 5)), Evoke(times: 1));
+        Assert.Equal(0.5, outcome.DeadChance(enemyId: 1), 6);
+        Assert.Equal(0.5, outcome.DeadChance(enemyId: 2), 6);
         Assert.Equal(1.0, outcome.Branches.Sum(branch => branch.Weight), 6);
     }
 
@@ -41,21 +41,21 @@ public class SimOddsTests
     {
         // Two evokes on two 16-HP enemies: four rolls. Both on E1 (1/4) kills it; both on E2 (1/4)
         // kills E2; one each (2/4, the two orders merge into one branch) kills neither.
-        var outcome = SimEngine.Run(WithLightning(Enemy(1, 16, 5), Enemy(2, 16, 5)), Evoke(2));
+        var outcome = SimEngine.Run(WithLightning(Enemy(id: 1, hp: 16, hits: 5), Enemy(id: 2, hp: 16, hits: 5)), Evoke(times: 2));
         Assert.Equal(3, outcome.Branches.Count);
-        Assert.Equal(0.25, outcome.DeadChance(1), 6);
-        Assert.Equal(0.25, outcome.DeadChance(2), 6);
+        Assert.Equal(0.25, outcome.DeadChance(enemyId: 1), 6);
+        Assert.Equal(0.25, outcome.DeadChance(enemyId: 2), 6);
         Assert.Equal(1.0, outcome.Branches.Sum(branch => branch.Weight), 6);
     }
 
     [Fact]
     public void CertainAndImpossibleDeaths()
     {
-        var outcome = SimEngine.Run(WithLightning(Enemy(1, 8, 5)), Evoke(1));
-        Assert.Equal(1.0, outcome.DeadChance(1), 6);
-        Assert.True(outcome.DeadInAll(1));
-        outcome = SimEngine.Run(WithLightning(Enemy(1, 30, 5)), Evoke(1));
-        Assert.Equal(0.0, outcome.DeadChance(1), 6);
+        var outcome = SimEngine.Run(WithLightning(Enemy(id: 1, hp: 8, hits: 5)), Evoke(times: 1));
+        Assert.Equal(1.0, outcome.DeadChance(enemyId: 1), 6);
+        Assert.True(outcome.DeadInAll(enemyId: 1));
+        outcome = SimEngine.Run(WithLightning(Enemy(id: 1, hp: 30, hits: 5)), Evoke(times: 1));
+        Assert.Equal(0.0, outcome.DeadChance(enemyId: 1), 6);
     }
 
     [Fact]
@@ -63,9 +63,9 @@ public class SimOddsTests
     {
         // Bouncing Flask style: 3 poison on a random enemy, twice; the enemy at 3 HP dies to its tick
         // at the start of its turn when at least one lands on it (3 of 4 rolls).
-        var state = new SimState { Enemies = { Enemy(1, 3, 5), Enemy(2, 50, 5) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 3, hits: 5), Enemy(id: 2, hp: 50, hits: 5) } };
         var play = new SimPlay { Name = "BouncingFlask", RandomPoison = 3, RandomPoisonTimes = 2 };
         var outcome = SimEngine.Run(state, play);
-        Assert.Equal(0.75, outcome.DeadChance(1), 6);
+        Assert.Equal(0.75, outcome.DeadChance(enemyId: 1), 6);
     }
 }

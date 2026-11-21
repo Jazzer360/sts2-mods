@@ -114,8 +114,8 @@ public sealed class VigorPower : AttackBoundPower
         var data = powers.DataOf(ThisPower);
         if (!powers.Has(ThisPower) || BoundAttack(data) != attack.Id) return One(state);
         var left = powers[ThisPower] - AmountAtStart(data);
-        SimEngine.SetPowers(state, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, 0));
-        state.LogFired(Name, 0, owner);
+        SimEngine.SetPowers(state, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
+        state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
 }
@@ -140,8 +140,8 @@ public sealed class AimPower : AttackBoundPower
         var data = powers.DataOf(ThisPower);
         if (!powers.Has(ThisPower) || BoundAttack(data) != attack.Id) return One(state);
         var left = powers[ThisPower] - AmountAtStart(data);
-        SimEngine.SetPowers(state, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, 0));
-        state.LogFired(Name, 0, owner);
+        SimEngine.SetPowers(state, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
+        state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
 }
@@ -159,7 +159,7 @@ public sealed class QuietusPower : AttackBoundPower
         var powers = SimEngine.PowersOf(state, owner);
         if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(state);
         SimEngine.SetPowers(state, owner, powers.Without(ThisPower));
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
 }
@@ -180,8 +180,8 @@ public sealed class GigantificationPower : AttackBoundPower
         var powers = SimEngine.PowersOf(state, owner);
         if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(state);
         var left = powers[ThisPower] - 1;
-        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, 0));
-        state.LogFired(Name, 0, owner);
+        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
+        state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
 }
@@ -208,7 +208,7 @@ public sealed class SlowPower : SimModel
         var powers = SimEngine.PowersOf(state, owner);
         if (!powers.Has(ThisPower)) return One(state);
         SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) + 1));
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
 }
@@ -221,9 +221,9 @@ public sealed class TenderPower : SimModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (play.Owner != owner) return One(state);
-        state.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, -1, debuff: true);
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, -1, debuff: true);
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, amount: -1, debuff: true);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, amount: -1, debuff: true);
         return One(state);
     }
 }
@@ -288,13 +288,13 @@ public sealed class PenNib : SimModel
         var relics = SimEngine.RelicsOf(state, owner);
         var count = (relics[ThisRelic] + 1) % 10;
         SimEngine.SetRelics(state, owner, relics.With(ThisRelic, count, count == 0 ? 2 : relics.DataOf(ThisRelic)));
-        if (count == 0) state.LogFired(Name, 0, owner);
+        if (count == 0) state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
-        if (relics.DataOf(ThisRelic) == 2 && play.Owner == owner) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], 0));
+        if (relics.DataOf(ThisRelic) == 2 && play.Owner == owner) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: 0));
         return One(state);
     }
 }
@@ -311,7 +311,7 @@ public sealed class MightyWings : SimModel
         if (!hit.Props.IsPoweredAttack() || !(hit.Dealer == owner || (owner == Who.You && hit.Dealer == Who.YourOsty))) return;
         var relics = SimEngine.RelicsOf(state, owner);
         if (hit.Total < relics.DataOf(ThisRelic)) return;
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
         SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, relics[ThisRelic], debuff: false);
     }
 }

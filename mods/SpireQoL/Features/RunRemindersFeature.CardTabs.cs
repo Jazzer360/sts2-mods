@@ -94,8 +94,8 @@ public sealed partial class RunRemindersFeature
                 || (!Sts2State.InCombat && top is NChooseACardSelectionScreen or NChooseABundleSelectionScreen or NSimpleCardSelectScreen);
             // A card reward (after a fight, or one an event gives) is the Card rewards column; an event's own choice of cards the Events one.
             var place = top is NCardRewardSelectionScreen ? ReminderPlace.Reward : ReminderPlace.Event;
-            if (offer && top is CanvasItem screen && GodotObject.IsInstanceValid(screen) && screen.IsVisibleInTree()) Collect(screen, found, place, 0);
-            if (NMerchantRoom.Instance?.Inventory is { } inv && GodotObject.IsInstanceValid(inv) && inv.IsOpen) Collect(inv, found, ReminderPlace.Shop, 0);
+            if (offer && top is CanvasItem screen && GodotObject.IsInstanceValid(screen) && screen.IsVisibleInTree()) Collect(screen, found, place, depth: 0);
+            if (NMerchantRoom.Instance?.Inventory is { } inv && GodotObject.IsInstanceValid(inv) && inv.IsOpen) Collect(inv, found, ReminderPlace.Shop, depth: 0);
         }
         catch { /* a screen closing under us */ }
         return found;

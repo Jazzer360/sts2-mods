@@ -75,7 +75,7 @@ public sealed class SimDrawPile
         Top = Top, Rest = Rest,
         Discard = Discard.Any(group => group.Card.Key == card.Key)
             ? Discard.Select(group => group.Card.Key == card.Key ? group with { Count = group.Count + 1 } : group).ToList()
-            : new List<SimDrawGroup>(Discard) { new(card, 1) },
+            : new List<SimDrawGroup>(Discard) { new(card, Count: 1) },
     };
 
     /// <summary>

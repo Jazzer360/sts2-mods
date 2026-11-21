@@ -18,7 +18,7 @@ What the mod shows for each decision you could make right now (play this card, d
 
 ## Names
 
-Names say what a thing is, in every scope (decision #138): no abbreviations in members (`SimState.You`, not `P`), and no one- or two-letter locals, parameters or lambda parameters (a state in a lambda is a `branch`, a damage event a `hit`, a card a `card`), apart from a for loop's `i`/`j`. Closed sets are enums; the game's powers, relics and cards are typed names (`PowerId.Thorns`), never strings (decision #136). `NamingTests` holds the line.
+Names say what a thing is, in every scope (decision #138): no abbreviations in members (`SimState.You`, not `P`), and no one- or two-letter locals, parameters or lambda parameters (a state in a lambda is a `branch`, a damage event a `hit`, a card a `card`), apart from a for loop's `i`/`j`. A literal argument to one of the repo's own methods names its parameter (`DeadInAll(enemyId: 1)`, `Enemy(id: 1, hp: 50, hits: [8, 8])`): a bare number says nothing at the call (decision #139). Closed sets are enums; the game's powers, relics and cards are typed names (`PowerId.Thorns`), never strings (decision #136). `NamingTests` holds the line.
 
 ## Raise concerns, track decisions
 

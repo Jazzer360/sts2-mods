@@ -41,7 +41,7 @@ internal static class MovePowers
         var result = new List<Applied>();
         try
         {
-            if (Sts2Mods.Core.Game.Sts2State.Private<Delegate?>(move, "_onPerform", null) is not { } perform) return result;
+            if (Sts2Mods.Core.Game.Sts2State.Private<Delegate?>(move, "_onPerform", fallback: null) is not { } perform) return result;
             List<Call> calls;
             lock (Calls)
             {
@@ -84,7 +84,7 @@ internal static class MovePowers
     {
         try
         {
-            if (Sts2Mods.Core.Game.Sts2State.Private<Delegate?>(move, "_onPerform", null) is not { } perform) return null;
+            if (Sts2Mods.Core.Game.Sts2State.Private<Delegate?>(move, "_onPerform", fallback: null) is not { } perform) return null;
             List<BlockCall> calls;
             lock (BlockCalls)
             {
@@ -127,16 +127,16 @@ internal static class MovePowers
             if (parameterInfos.Length < 2 || parameterInfos[1].ParameterType != typeof(decimal))
             {
                 // A BlockVar or another shape: the amount can't be read.
-                if (OnOwnCreature(code, i - 1, 8)) calls.Add(new BlockCall(null, null, move));
+                if (OnOwnCreature(code, i - 1, span: 8)) calls.Add(new BlockCall(Constant: null, Getter: null, move));
                 continue;
             }
             if (AmountBefore(code, i) is not var (constant, getter, at))
             {
-                if (OnOwnCreature(code, i - 1, 8)) calls.Add(new BlockCall(null, null, move));
+                if (OnOwnCreature(code, i - 1, span: 8)) calls.Add(new BlockCall(Constant: null, Getter: null, move));
                 continue;
             }
             // The creature is pushed just before the amount: base.Creature (MonsterModel.get_Creature) means its own.
-            if (!OnOwnCreature(code, at - 1, 3)) continue;
+            if (!OnOwnCreature(code, at - 1, span: 3)) continue;
             // The props follow the amount (after its conversion to decimal for a constant).
             var after = getter != null ? at + 1 : at + 2;
             var props = after < code.Count && Constant(code[after]) is { } otherConstant ? (int)otherConstant : move;
@@ -164,7 +164,7 @@ internal static class MovePowers
         {
             if (shown.Any(otherApplied => otherApplied.Power == applied.Power)) continue;
             var same = all.Where(otherApplied => otherApplied.Power == applied.Power).ToList();
-            shown.Add(same.Any(otherApplied => !otherApplied.Maybe) && same.All(otherApplied => otherApplied.Amount == same[0].Amount) ? same.First(otherApplied => !otherApplied.Maybe) : new Applied(applied.Power, null, Maybe: true));
+            shown.Add(same.Any(otherApplied => !otherApplied.Maybe) && same.All(otherApplied => otherApplied.Amount == same[0].Amount) ? same.First(otherApplied => !otherApplied.Maybe) : new Applied(applied.Power, Amount: null, Maybe: true));
         }
         return shown;
     }
@@ -194,7 +194,7 @@ internal static class MovePowers
             // A getter followed by a neg: the amount is minus that number (Toadpole's Spike Spit applies -SpikenAmount Thorns).
             calls.Add(AmountBefore(code, i) is var (constant, getter, from)
                 ? new Call(power, constant, getter, Negated: getter != null && from + 1 < code.Count && code[from + 1].opcode == OpCodes.Neg)
-                : new Call(power, null, null));
+                : new Call(power, Constant: null, Getter: null));
             at.Add(i);
         }
         if (calls.Count > 0)
@@ -203,7 +203,7 @@ internal static class MovePowers
             for (var callIndex = 0; callIndex < calls.Count; callIndex++) calls[callIndex] = calls[callIndex] with { Certain = certain[callIndex] };
         }
         // Made but applied another way (Dampen: added to the target directly): the icon alone.
-        if (calls.Count == 0 && made != null) calls.Add(new Call(made, null, null));
+        if (calls.Count == 0 && made != null) calls.Add(new Call(made, Constant: null, Getter: null));
         return calls;
     }
 

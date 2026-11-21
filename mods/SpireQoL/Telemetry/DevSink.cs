@@ -60,7 +60,7 @@ public sealed class FrameWindow
         double At(double percentile) => _mod.Count == 0 ? 0 : _mod[Math.Clamp((int)Math.Ceiling(percentile * _mod.Count) - 1, 0, _mod.Count - 1)];
         static double R(double value) => Math.Round(value, 2);
         var count = Math.Max(1, _mod.Count);
-        var frameRollup = new FrameRollup(R(seconds), _mod.Count, R(At(0.5)), R(At(0.95)), R(_mod.Count == 0 ? 0 : _mod[^1]), R(_gapMax), _slow,
+        var frameRollup = new FrameRollup(R(seconds), _mod.Count, R(At(percentile: 0.5)), R(At(percentile: 0.95)), R(_mod.Count == 0 ? 0 : _mod[^1]), R(_gapMax), _slow,
             _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Sum / count)), _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Max)),
             _kb.ToDictionary(entry => entry.Key, entry => R(entry.Value / count)),
             R(extra.HeapMb), R(extra.AllocatedMb), extra.Gen0, extra.Gen1, extra.Gen2, R(extra.GcPauseMs), extra.Held, extra.Searching);

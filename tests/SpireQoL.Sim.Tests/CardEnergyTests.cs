@@ -13,23 +13,23 @@ public class CardEnergyTests
 {
     private static SimState State(int hp = 100, int energy = 3)
     {
-        var state = new SimState { Enemies = { Enemy(0, hp) } };
+        var state = new SimState { Enemies = { Enemy(id: 0, hp) } };
         state.You.Energy = energy;
         return state;
     }
 
     private static SimState WithTears(SimState state)
     {
-        state.You.Relics = state.You.Relics.With(RelicId.PaelsTears, 0, 0);
+        state.You.Relics = state.You.Relics.With(RelicId.PaelsTears, amount: 0, data: 0);
         return state;
     }
 
     /// <summary>A play as the adapter builds it: its cost spent first, the card's actions, then the card resolved.</summary>
     private static SimScript Spending(SimCard card, int cost, params SimAction[] body)
     {
-        var script = Play(card, 0, 1, body);
+        var script = Play(card, target: 0, plays: 1, body);
         if (cost > 0) script.Actions.Insert(0, new CardEventAction(CardEvent.EnergySpent, cost));
-        script.Actions.Add(new CardResolvedAction(0, 0, false, 0, 0, false));
+        script.Actions.Add(new CardResolvedAction(HandDelta: 0, HandCard: 0, AutoPlay: false, Draws: 0, FadingDelta: 0, IsAttack: false));
         return script;
     }
 
@@ -40,7 +40,7 @@ public class CardEnergyTests
     {
         // Your last energy on a 1-cost card that gains 2 (Production): 2 left, so Pael's Tears keeps its bonus.
         var state = WithTears(State(energy: 1));
-        var after = One(state, Spending(new SimCard("Production", SimCardType.Skill) { Energy = 1 }, 1, new CardEventAction(CardEvent.EnergyGained, 2)));
+        var after = One(state, Spending(new SimCard("Production", SimCardType.Skill) { Energy = 1 }, cost: 1, new CardEventAction(CardEvent.EnergyGained, Count: 2)));
         Assert.Equal(2, after.You.Energy);
         Assert.False(after.Fired.Has("PaelsTears"));
     }
@@ -50,11 +50,11 @@ public class CardEnergyTests
     {
         // Your last 3 energy on Sunder: the kill gives 3 back (no Pael's Tears warning); no kill, none back (the warning stands).
         var sunder = new SimCard("Sunder", SimCardType.Attack) { Energy = 3 };
-        var kills = One(WithTears(State(hp: 10)), Spending(sunder, 3, Attack(24) with { OnKillEnergy = 3 }));
-        Assert.False(kills.Enemy(0)!.Alive);
+        var kills = One(WithTears(State(hp: 10)), Spending(sunder, cost: 3, Attack(baseDamage: 24) with { OnKillEnergy = 3 }));
+        Assert.False(kills.Enemy(id: 0)!.Alive);
         Assert.Equal(3, kills.You.Energy);
         Assert.False(kills.Fired.Has("PaelsTears"));
-        var survives = One(WithTears(State(hp: 50)), Spending(sunder, 3, Attack(24) with { OnKillEnergy = 3 }));
+        var survives = One(WithTears(State(hp: 50)), Spending(sunder, cost: 3, Attack(baseDamage: 24) with { OnKillEnergy = 3 }));
         Assert.Equal(0, survives.You.Energy);
         Assert.True(survives.Fired.Has("PaelsTears"));
     }
@@ -62,10 +62,10 @@ public class CardEnergyTests
     [Fact]
     public void DoubleEnergyGainsWhatYouHaveOnceItsCostIsSpent()
     {
-        var after = One(State(energy: 4), Spending(new SimCard("DoubleEnergy", SimCardType.Skill) { Energy = 1 }, 1, new GainEnergyAsHeldAction()));
+        var after = One(State(energy: 4), Spending(new SimCard("DoubleEnergy", SimCardType.Skill) { Energy = 1 }, cost: 1, new GainEnergyAsHeldAction()));
         Assert.Equal(6, after.You.Energy);
         // With nothing left after its cost, there's nothing to double.
-        var empty = One(WithTears(State(energy: 1)), Spending(new SimCard("DoubleEnergy", SimCardType.Skill) { Energy = 1 }, 1, new GainEnergyAsHeldAction()));
+        var empty = One(WithTears(State(energy: 1)), Spending(new SimCard("DoubleEnergy", SimCardType.Skill) { Energy = 1 }, cost: 1, new GainEnergyAsHeldAction()));
         Assert.Equal(0, empty.You.Energy);
         Assert.True(empty.Fired.Has("PaelsTears"));
     }
@@ -75,22 +75,22 @@ public class CardEnergyTests
     {
         // Two of your arrows in an enemy it kills: both come loose (ImpaledPower.AfterDeath), 3 energy each.
         var state = State(hp: 5, energy: 2);
-        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, 2, 3);
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, amount: 2, data: 3);
         var card = new SimCard("EpicRetrieval", SimCardType.Attack) { Energy = 2 };
         var script = new SimScript
         {
             Name = card.Name,
             Actions =
             {
-                new CardEventAction(CardEvent.EnergySpent, 2),
-                new CardPlayAction(new SimCardPlay(card, Who.You, 0, 0, 1, false) { ArrowEnergy = 3 }, new SimAction[] { Attack(9) }),
+                new CardEventAction(CardEvent.EnergySpent, Count: 2),
+                new CardPlayAction(new SimCardPlay(card, Who.You, Target: 0, PlayIndex: 0, PlayCount: 1, AutoPlay: false) { ArrowEnergy = 3 }, new SimAction[] { Attack(baseDamage: 9) }),
             },
         };
         var after = One(state, script);
         Assert.Equal(2, after.You.Arrows);
         Assert.Equal(6, after.You.Energy);
         // Another card knocking them loose gives nothing.
-        var other = One(state, Spending(new SimCard("Strike", SimCardType.Attack) { Energy = 2 }, 2, Attack(9)));
+        var other = One(state, Spending(new SimCard("Strike", SimCardType.Attack) { Energy = 2 }, cost: 2, Attack(baseDamage: 9)));
         Assert.Equal(0, other.You.Energy);
     }
 }

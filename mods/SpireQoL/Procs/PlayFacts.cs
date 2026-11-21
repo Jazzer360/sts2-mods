@@ -134,13 +134,13 @@ public sealed class PlayFacts
         if (!ShuffleWhenShortCards.Contains(name) || OwnerOf(card) is not { } me) return false;
         // KiChant.OnPlay: an empty draw pile shuffles if it must; a short one shuffles when the discard pile has cards.
         var draw = Sts2State.DrawPileCount(me);
-        return draw < Sts2State.Var(card, "Cards", 3) && Sts2State.DiscardPileCount(me) > 0;
+        return draw < Sts2State.Var(card, "Cards", fallback: 3) && Sts2State.DiscardPileCount(me) > 0;
     }
 
     /// <summary>Cards Ki Chant looks at: its Cards from the top of your draw pile, after a shuffle when it's short.</summary>
     private static int KiChantLooksAt(CardModel card)
     {
-        var count = Sts2State.Var(card, "Cards", 3);
+        var count = Sts2State.Var(card, "Cards", fallback: 3);
         if (OwnerOf(card) is not { } me) return count; // the game's template card (the scan)
         var available = Sts2State.DrawPileCount(me) + (ShufflesFirst(card) ? Sts2State.DiscardPileCount(me) : 0);
         return Math.Min(count, available);
@@ -450,7 +450,7 @@ public sealed class PlayFacts
             HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
             OtherHandCards = others.Count,
             ByOsty = IsOstyAttack(card),
-            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, name, combat, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
+            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, name, combat, target: null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
             OrbDamage = orbs.Exact,
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
@@ -527,15 +527,15 @@ public sealed class PlayFacts
             switch (relic)
             {
                 case JossPaper:
-                    drawInputs.JossPaperCount = Sts2State.Private(relic, "CardsExhausted", 0);
-                    drawInputs.JossPaperEvery = Sts2State.Var(relic, "ExhaustAmount", 5);
+                    drawInputs.JossPaperCount = Sts2State.Private(relic, "CardsExhausted", fallback: 0);
+                    drawInputs.JossPaperEvery = Sts2State.Var(relic, "ExhaustAmount", fallback: 5);
                     break;
-                case GamePiece: drawInputs.GamePiece += Sts2State.Var(relic, "Cards", 1); break;
+                case GamePiece: drawInputs.GamePiece += Sts2State.Var(relic, "Cards", fallback: 1); break;
                 case IronClub:
-                    drawInputs.IronClubEvery = Sts2State.Var(relic, "Cards", 4);
+                    drawInputs.IronClubEvery = Sts2State.Var(relic, "Cards", fallback: 4);
                     drawInputs.IronClubCount = relic.DisplayAmount; // CardsPlayed % Cards (reads Cards while it animates: % again)
                     break;
-                case CentennialPuzzle when !Sts2State.Private(relic, "UsedThisCombat", true): drawInputs.CentennialPuzzle += Sts2State.Var(relic, "Cards", 3); break;
+                case CentennialPuzzle when !Sts2State.Private(relic, "UsedThisCombat", fallback: true): drawInputs.CentennialPuzzle += Sts2State.Var(relic, "Cards", fallback: 3); break;
             }
         }
         if (ShuffleWhenShortCards.Contains(Card.GetType().Name))
@@ -553,7 +553,7 @@ public sealed class PlayFacts
         Draws = result.Draws;
         // Ki Chant replayed: a later play can find the draw pile short and shuffle (its own text, like its first play's).
         var laterShuffle = ShuffleWhenShortCards.Contains(Card.GetType().Name)
-                           && PlayChain.ShortPileShufflesOnLaterPlay(drawPile, drawInputs.DiscardPile, Sts2State.Var(Card, "Cards", 3), Math.Max(1, Plays));
+                           && PlayChain.ShortPileShufflesOnLaterPlay(drawPile, drawInputs.DiscardPile, Sts2State.Var(Card, "Cards", fallback: 3), Math.Max(1, Plays));
         Shuffles = result.Shuffles || laterShuffle;
         ShufflesItself = drawInputs.ShufflesFirst || laterShuffle;
         // Biiig Hug puts a Soot (a status) into your draw pile on the shuffle: a created status.
@@ -597,11 +597,11 @@ public sealed class PlayFacts
         {
             switch (name)
             {
-                case nameof(Dualcast): EvokeFront(2, true); break;
-                case nameof(Quadcast): EvokeFront(Math.Max(1, Sts2State.Var(card, "Repeat", 4)), true); break;
-                case nameof(MultiCast): EvokeFront(XValue(combat, card, SafeEnergy(card)) + (card.IsUpgraded ? 1 : 0), true); break;
+                case nameof(Dualcast): EvokeFront(times: 2, remove: true); break;
+                case nameof(Quadcast): EvokeFront(Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 4)), remove: true); break;
+                case nameof(MultiCast): EvokeFront(XValue(combat, card, SafeEnergy(card)) + (card.IsUpgraded ? 1 : 0), remove: true); break;
                 case nameof(Shatter):
-                    while (queue.Count > 0) EvokeFront(2, true);
+                    while (queue.Count > 0) EvokeFront(times: 2, remove: true);
                     break;
             }
             // Slots the card adds before it channels (The Magician: OrbCmd.AddSlots, up to 10).
@@ -610,7 +610,7 @@ public sealed class PlayFacts
             for (var channelIndex = 0; channelIndex < channels / Math.Max(1, plays); channelIndex++)
             {
                 if (cap <= 0) break;
-                if (queue.Count >= cap) EvokeFront(1, true);
+                if (queue.Count >= cap) EvokeFront(times: 1, remove: true);
                 queue.Add(template); // the new orb (null: its evoke isn't counted)
             }
         }
@@ -802,7 +802,7 @@ public sealed class PlayFacts
                 var teammate = target.Powers.Any(power => power.GetType().Name == "ImpaledPower" && power.Applier != owner.Creature);
                 // One hit a play (KiHop.OnPlay: DamageCmd.Attack with no hit count).
                 return cards * SimEngine.PlaysStartingImpaled(teammate, yours == null ? 0 : Fool.ArrowsIn(yours),
-                    yours == null ? 3 : Fool.HitCounter(yours), 1, plays);
+                    yours == null ? 3 : Fool.HitCounter(yours), hitsPerPlay: 1, plays);
             }
             case "Wrest":
                 return OwnerOf(card) is { } player && Fool.ImpaledBy(target, player.Creature) != null ? Sts2State.Var(card, "Cards") : 0;
@@ -872,7 +872,7 @@ public sealed class PlayFacts
 
     private static bool FtlCanDraw(CardModel card)
     {
-        try { return card.Owner == null || Sts2State.CountPlayedThisTurn(card.Owner) < Sts2State.Var(card, "PlayMax", 3); }
+        try { return card.Owner == null || Sts2State.CountPlayedThisTurn(card.Owner) < Sts2State.Var(card, "PlayMax", fallback: 3); }
         catch { return true; }
     }
 
@@ -946,10 +946,10 @@ public sealed class PlayFacts
     {
         if (name == nameof(SecondWind)) return others.Count(other => other.Type != CardType.Attack);
         // Twice when its owner exhausted a card this turn (EvilEye.WasCardExhaustedThisTurn, the game's own answer, read by name).
-        if (name == nameof(EvilEye)) return OwnerOf(card) != null && Sts2State.Private(card, "WasCardExhaustedThisTurn", false) ? 2 : 1;
+        if (name == nameof(EvilEye)) return OwnerOf(card) != null && Sts2State.Private(card, "WasCardExhaustedThisTurn", fallback: false) ? 2 : 1;
         // 1, plus its Repeat when its owner applied Doom this turn (DeathsDoor.WasDoomAppliedThisTurn, read by name).
         if (name == nameof(DeathsDoor))
-            return 1 + (OwnerOf(card) != null && Sts2State.Private(card, "WasDoomAppliedThisTurn", false) ? Sts2State.Var(card, "Repeat", 0) : 0);
+            return 1 + (OwnerOf(card) != null && Sts2State.Private(card, "WasDoomAppliedThisTurn", fallback: false) ? Sts2State.Var(card, "Repeat", fallback: 0) : 0);
         // Block equal to the damage it dealt / to your current block: no Block value.
         if (name is nameof(Fisticuffs) or nameof(Entrench)) return 1;
         // Gains its Block twice (ChoLimbs); Cho Firm a second time while you have an arrow to shoot.
@@ -1000,7 +1000,7 @@ public sealed class PlayFacts
     {
         // The card's hit count (v0.113.0: HitCount; v0.111.0: Repeat, or the fixed 2 in OnPlay).
         int Hits(int fixedBefore) => card.DynamicVars.ContainsKey("HitCount") ? Sts2State.Var(card, "HitCount", fixedBefore)
-            : fixedBefore > 0 ? fixedBefore : Sts2State.Var(card, "Repeat", 1);
+            : fixedBefore > 0 ? fixedBefore : Sts2State.Var(card, "Repeat", fallback: 1);
         try
         {
             // A Shoot card with no arrow to shoot does nothing at all (ArrowCmd.ShootArrowAtTarget returns before
@@ -1013,10 +1013,10 @@ public sealed class PlayFacts
                     return target != null ? (Fool.IsImpaled(target) ? 1 : 0) : (combat.HittableEnemies.Any(Fool.IsImpaled) ? 1 : 0);
                 // Twice once you've played a Cho or a Ki this turn (WahBlast.HitsTwice: the card glows gold).
                 case "WahBlast":
-                    return Sts2State.Private(card, "ShouldGlowGoldInternal", false) ? 2 : 1;
+                    return Sts2State.Private(card, "ShouldGlowGoldInternal", fallback: false) ? 2 : 1;
                 // v0.111.0 passed a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits).
                 case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
-                    return Hits(2);
+                    return Hits(fixedBefore: 2);
                 case var _ when XHitCards.Contains(name):
                     return XValue(combat, card, energy);
                 case var _ when SingleHitRepeatCards.Contains(name):
@@ -1029,14 +1029,14 @@ public sealed class PlayFacts
                 case nameof(Stardust):
                     return XValue(combat, card, stars);
                 case nameof(Dismantle):
-                    return target != null && target.HasPower<VulnerablePower>() ? Hits(2) : 1;
+                    return target != null && target.HasPower<VulnerablePower>() ? Hits(fixedBefore: 2) : 1;
                 case nameof(Spite): // its hit count only after you lost HP this turn (when the card glows gold)
-                    return Sts2State.Private(card, "ShouldGlowGoldInternal", false) ? Hits(0) : 1;
+                    return Sts2State.Private(card, "ShouldGlowGoldInternal", fallback: false) ? Hits(fixedBefore: 0) : 1;
                 case nameof(FiendFire):
                     return otherCards;
                 case nameof(MadScience):
                     return card is MadScience madScience && madScience.TinkerTimeRider == MegaCrit.Sts2.Core.Models.Events.TinkerTime.RiderEffect.Violence
-                        ? Sts2State.Var(card, "ViolenceHits", 1)
+                        ? Sts2State.Var(card, "ViolenceHits", fallback: 1)
                         : 1;
             }
             if (card.DynamicVars.TryGetValue("CalculatedHits", out var dynamicVar) && dynamicVar is CalculatedVar calc)
@@ -1046,7 +1046,7 @@ public sealed class PlayFacts
         {
             // fall through to the hit count
         }
-        return Math.Max(1, Hits(0));
+        return Math.Max(1, Hits(fixedBefore: 0));
     }
 
     private static int XValue(ICombatState combat, CardModel card, int spent)
@@ -1073,7 +1073,7 @@ public sealed class PlayFacts
         nameof(Chill) => ChillChannels(card), // one Frost per hittable enemy
         nameof(Glacier) => 2,
         nameof(MeteorStrike) or nameof(Rainbow) => 3,
-        nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) or "TheMagician" => Sts2State.Var(card, "Repeat", 1),
+        nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) or "TheMagician" => Sts2State.Var(card, "Repeat", fallback: 1),
         nameof(Tempest) => me?.PlayerCombatState?.Energy ?? 1, // X lightning
         // One Lightning per Lightning channeled this combat (its calculation reads the history).
         nameof(Voltaic) => card.DynamicVars.TryGetValue("CalculatedChannels", out var dynamicVar) && dynamicVar is CalculatedVar calc ? (int)calc.Calculate(null) : 0,
@@ -1151,15 +1151,15 @@ public sealed class PlayFacts
             case "BlotOutTheSky": case "Florescence": return 1;
             case "MourningBlow": case "Vitriol": case "Rummage": statuses = 1; return 1; // Mourning Blow turns into a Sadness
             case "Jest": case "SorrowfulStrike": statuses = Var("Cards"); return statuses;
-            case "BrightenUp": statuses = Var("Sadness", 2); return statuses + Var("Joy", 2);
+            case "BrightenUp": statuses = Var("Sadness", fallback: 2); return statuses + Var("Joy", fallback: 2);
             case "SelfDeprecate":
             {
                 // Sadness for you, Joy for every other living player (created by you).
                 var mates = me?.Creature?.CombatState?.Players.Count(player => player != me && player.Creature is { IsAlive: true }) ?? 0;
-                statuses = Var("Sadness", 1);
-                return statuses + Var("Joy", 2) * mates;
+                statuses = Var("Sadness", fallback: 1);
+                return statuses + Var("Joy", fallback: 2) * mates;
             }
-            case "TheHierophant": return Var("Cards", 3);
+            case "TheHierophant": return Var("Cards", fallback: 3);
             case "TheLovers": return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
             // Shivs until your hand is full (TheMoon.OnPlay: MaxCardsInHand - hand, once it has left your hand).
             case "TheMoon": return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
@@ -1207,8 +1207,8 @@ public sealed class PlayFacts
         {
             nameof(Begone) => Math.Min(1, Transformable(_ => true)),                        // 1 card in hand you pick
             nameof(Guards) => Transformable(_ => true),                                     // any cards in hand you pick
-            nameof(Charge) => Math.Min(Var("Cards", 2), drawPile),                          // cards from your draw pile
-            nameof(Seance) => Math.Min(Var("Cards", 1), drawPile),                          // into Souls
+            nameof(Charge) => Math.Min(Var("Cards", fallback: 2), drawPile),                          // cards from your draw pile
+            nameof(Seance) => Math.Min(Var("Cards", fallback: 1), drawPile),                          // into Souls
             nameof(Compact) => Transformable(otherCard => otherCard.Type == CardType.Status),               // every status in hand
             nameof(PrimalForce) => Transformable(otherCard => otherCard.Type == CardType.Attack),           // every attack in hand
             "PunchOfJoy" => Math.Min(1, others.Count(other => other.GetType().Name == "Sadness")),  // a Sadness in hand into Joy (v0.113.0)

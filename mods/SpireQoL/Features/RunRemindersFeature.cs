@@ -248,7 +248,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         if (relic is BookOfFiveRings)
         {
             if (SetOffByTaking(relic, me) != true) return new TabSpec(key, GameIcons.Relic(relic));
-            var heal = Sts2State.Var(relic, "Heal", 20);
+            var heal = Sts2State.Var(relic, "Heal", fallback: 20);
             var missing = me.Creature.MaxHp - me.Creature.CurrentHp;
             return new TabSpec(key, GameIcons.Relic(relic), Crossed: heal > missing, Marker: GameIcons.Heal());
         }
@@ -268,12 +268,12 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                 return true;
             case LuckyFysh:
                 // None with Ectoplasm (ModifyGoldGained to 0): then taking a card brings nothing.
-                return GoldAfterRelics(me, Sts2State.Var(relic, "Gold", 15)) > 0;
+                return GoldAfterRelics(me, Sts2State.Var(relic, "Gold", fallback: 15)) > 0;
             case BookOfFiveRings:
             {
-                var every = Sts2State.Var(relic, "Cards", 5);
+                var every = Sts2State.Var(relic, "Cards", fallback: 5);
                 if (every <= 0) return false;
-                var added = Sts2State.Private(relic, "CardsAdded", -1);
+                var added = Sts2State.Private(relic, "CardsAdded", fallback: -1);
                 if (added < 0) return false;
                 return added % every + PerPick(me) >= every;
             }
@@ -296,11 +296,11 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     internal static Control ExampleShopPrice(IEnumerable<(RelicModel Relic, bool Crossed)> icons, int price, int? net)
     {
         const float size = 30;
-        var row = UiKit.Row(6);
+        var row = UiKit.Row(separation: 6);
         foreach (var (relic, crossed) in icons) row.AddChild(Backed(Crossable(IconOf(relic), size, crossed), size));
         var col = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         col.AddThemeConstantOverride("separation", 0);
-        var priceLabel = UiKit.Label($"{price}", 26, new Color(1f, 0.85f, 0.3f));
+        var priceLabel = UiKit.Label($"{price}", size: 26, new Color(1f, 0.85f, 0.3f));
         priceLabel.HorizontalAlignment = HorizontalAlignment.Center;
         col.AddChild(priceLabel);
         if (net is { } netGold)
@@ -316,7 +316,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// <summary>An event option's relic icons for the Guide page, as left of an option button.</summary>
     internal static Control ExampleEventIcons(IEnumerable<(RelicModel Relic, bool Crossed, string? Odds)> icons)
     {
-        var row = UiKit.Row(4);
+        var row = UiKit.Row(separation: 4);
         foreach (var (relic, crossed, odds) in icons)
         {
             var icon = Crossable(IconOf(relic), EventIcon, crossed);
@@ -376,11 +376,11 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                 CheckReward();
                 var perPick = PerPick(me);
                 var rewardWatch = new RewardWatch { Me = me, Start = Before.Of(me), PerPick = perPick };
-                if (me.Relics.OfType<LuckyFysh>().FirstOrDefault() is { } fysh) rewardWatch.FyshGold = GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", 15)) * perPick;
+                if (me.Relics.OfType<LuckyFysh>().FirstOrDefault() is { } fysh) rewardWatch.FyshGold = GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", fallback: 15)) * perPick;
                 if (me.Relics.OfType<BookOfFiveRings>().FirstOrDefault() is { } book)
                 {
-                    rewardWatch.BookEvery = Sts2State.Var(book, "Cards", 5);
-                    rewardWatch.BookAdded = Sts2State.Private(book, "CardsAdded", -1);
+                    rewardWatch.BookEvery = Sts2State.Var(book, "Cards", fallback: 5);
+                    rewardWatch.BookAdded = Sts2State.Private(book, "CardsAdded", fallback: -1);
                     if (rewardWatch.BookEvery > 0 && rewardWatch.BookAdded >= 0) rewardWatch.BookHeals = SetOffByTaking(book, me);
                 }
                 _reward = rewardWatch;
@@ -406,14 +406,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         if (rewardWatch.FyshGold is { } fyshGold && gold != fyshGold) problems.Add((nameof(LuckyFysh), $"Lucky Fysh: gold +{gold}, predicted +{fyshGold}"));
         if (rewardWatch.BookHeals is { } heals && me.Relics.OfType<BookOfFiveRings>().FirstOrDefault() is { } book)
         {
-            var now = Sts2State.Private(book, "CardsAdded", -1);
+            var now = Sts2State.Private(book, "CardsAdded", fallback: -1);
             if (now >= 0)
             {
                 var healed = now / rewardWatch.BookEvery > rewardWatch.BookAdded / rewardWatch.BookEvery;
                 if (healed != heals) problems.Add((nameof(BookOfFiveRings), $"Book of Five Rings: {(healed ? "healed" : "didn't heal")} ({rewardWatch.BookAdded}→{now} cards), predicted {(heals ? "a heal" : "no heal")}"));
             }
         }
-        CheckCardRules(me, me.Deck.Cards.Where(card => !rewardWatch.Start.Deck.Contains(card)).ToList(), false, null, "card reward");
+        CheckCardRules(me, me.Deck.Cards.Where(card => !rewardWatch.Start.Deck.Contains(card)).ToList(), givesUpgraded: false, shown: null, "card reward");
         var what = $"card reward: {added} added (predicted {rewardWatch.PerPick}), gold {rewardWatch.Start.Gold}→{me.Gold}";
         ModEntry.Log.Info($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(problem => problem.Text)))}");
         Telemetry.Audits.Done(Telemetry.Audits.Reminders, problems.Count == 0, problems.Count == 0 ? "card reward" : "reminder-reward");
@@ -560,7 +560,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                     {
                         // Bing Bong's copy joins your deck too, so Lucky Fysh pays twice.
                         var perPick = me.Relics.Any(otherRelic => otherRelic is BingBong) ? 2 : 1;
-                        net = entry.Cost - GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", 15)) * perPick;
+                        net = entry.Cost - GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", fallback: 15)) * perPick;
                     }
                 }
             }
@@ -585,7 +585,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// <summary>A row of relic icons left of the item's price, and the net price under it; removed when empty.</summary>
     private static void ShowShop(NMerchantSlot slot, List<(RelicModel Relic, bool Crossed)> icons, int? net)
     {
-        var price = Sts2State.Private<Control?>(slot, "_costLabel", null);
+        var price = Sts2State.Private<Control?>(slot, "_costLabel", fallback: null);
         if (price == null || !GodotObject.IsInstanceValid(price)) return;
         var box = price.GetNodeOrNull<Control>(ShopNodeName);
         var key = string.Join(",", icons.Select(icon => icon.Relic.GetType().Name + (icon.Crossed ? "x" : ""))) + "|" + net;
@@ -795,13 +795,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             if (OnChosenProp?.GetValue(option) is Delegate handler)
             {
                 cards.Target = handler.Target;
-                Walk(handler.Method, handler.Method.DeclaringType, calls, new HashSet<MethodBase>(), 0, cards);
+                Walk(handler.Method, handler.Method.DeclaringType, calls, new HashSet<MethodBase>(), depth: 0, cards);
             }
             // An ancient's relic: what it does when you take it.
             if (option.Relic is { } relic && relic.GetType().GetMethod(nameof(RelicModel.AfterObtained)) is { } obtained && obtained.DeclaringType == relic.GetType())
             {
                 cards.Relic = relic;
-                Walk(obtained, relic.GetType(), calls, new HashSet<MethodBase>(), 0, cards);
+                Walk(obtained, relic.GetType(), calls, new HashSet<MethodBase>(), depth: 0, cards);
             }
         }
         catch (Exception ex)
@@ -915,7 +915,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     private static Player? RunMe()
     {
         if (Sts2State.Me is { } me) return me;
-        var state = Sts2State.Private<RunState?>(RunManager.Instance, "State", null);
+        var state = Sts2State.Private<RunState?>(RunManager.Instance, "State", fallback: null);
         return state == null ? null : LocalContext.GetMe(state);
     }
 }

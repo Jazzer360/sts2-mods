@@ -20,9 +20,9 @@ public sealed partial class SettingsMenu
         Section($"{ReleaseNotes.ModName} {version}");
         var author = ReleaseNotes.Author;
         if (author.Length > 0) Paragraph($"Made by {author}.");
-        var links = UiKit.Row(10);
+        var links = UiKit.Row(separation: 10);
         links.AddChild(LinkButton("Project on GitHub", $"https://github.com/{UpdateNoticeFeature.Repo}"));
-        links.AddChild(LinkButton("All releases", UpdateNoticeFeature.ReleasesLink(null)));
+        links.AddChild(LinkButton("All releases", UpdateNoticeFeature.ReleasesLink(status: null)));
         links.AddChild(LinkButton("Report a problem", $"https://github.com/{UpdateNoticeFeature.Repo}/issues"));
         _rows!.AddChild(Indented(links, bottom: 8));
 
@@ -74,15 +74,15 @@ public sealed partial class SettingsMenu
 
     private HBoxContainer Pager(int pages)
     {
-        var row = UiKit.Row(10);
-        var newer = MakeButton("◀ Newer", 18);
+        var row = UiKit.Row(separation: 10);
+        var newer = MakeButton("◀ Newer", size: 18);
         newer.Disabled = _notesPage == 0;
         newer.Pressed += () => { _notesPage--; Rebuild(); };
-        var older = MakeButton("Older ▶", 18);
+        var older = MakeButton("Older ▶", size: 18);
         older.Disabled = _notesPage >= pages - 1;
         older.Pressed += () => { _notesPage++; Rebuild(); };
         row.AddChild(newer);
-        row.AddChild(Label($"Page {_notesPage + 1} of {pages}", 18, Muted));
+        row.AddChild(Label($"Page {_notesPage + 1} of {pages}", size: 18, Muted));
         row.AddChild(older);
         return row;
     }
@@ -91,18 +91,18 @@ public sealed partial class SettingsMenu
     {
         var current = typeof(ModEntry).Assembly.GetName().Version?.ToString(3);
         var when = release.Date ?? (release.Version == current ? "this version" : null);
-        var head = UiKit.Row(12);
-        head.AddChild(Label(release.Version, 22, Text));
-        if (when != null) head.AddChild(Label(when, 16, Muted));
-        if (release.Title != null) head.AddChild(Label(release.Title, 16, Muted));
+        var head = UiKit.Row(separation: 12);
+        head.AddChild(Label(release.Version, size: 22, Text));
+        if (when != null) head.AddChild(Label(when, size: 16, Muted));
+        if (release.Title != null) head.AddChild(Label(release.Title, size: 16, Muted));
         _rows!.AddChild(Indented(head, top: 10));
         foreach (var releaseSection in release.Sections)
         {
-            if (releaseSection.Kind != null) _rows.AddChild(Indented(Label(releaseSection.Kind, 16, Accent), left: 20));
+            if (releaseSection.Kind != null) _rows.AddChild(Indented(Label(releaseSection.Kind, size: 16, Accent), left: 20));
             foreach (var item in releaseSection.Items)
             {
                 var nested = item.StartsWith("  ◦ ");
-                var label = Label(nested ? item.Trim() : "• " + item, 17, Muted);
+                var label = Label(nested ? item.Trim() : "• " + item, size: 17, Muted);
                 label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
                 label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
                 _rows.AddChild(Indented(label, left: nested ? 56 : 32, bottom: 3));
@@ -112,7 +112,7 @@ public sealed partial class SettingsMenu
 
     private static Button LinkButton(string text, string url)
     {
-        var button = MakeButton(text, 18);
+        var button = MakeButton(text, size: 18);
         button.Pressed += () => OS.ShellOpen(url);
         return button;
     }

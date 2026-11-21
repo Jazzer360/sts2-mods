@@ -14,10 +14,10 @@ public class SimUnblockableTakenTests
     public void RegretIsCountedApartFromTheHitsThroughYourBlock()
     {
         // Regret with 3 cards in hand (3, unblockable) and a hit of 10 against 6 block: 4 through, 7 in all.
-        var state = new SimState { Enemies = { E(1, 30, 10) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 30, hits: 10) } };
         state.You.Block = 6;
         state.You.HandCount = 3;
-        state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(7, branch.Taken);
         Assert.Equal(3, branch.UnblockableTaken);
@@ -27,9 +27,9 @@ public class SimUnblockableTakenTests
     public void BlockDoesntTouchIt()
     {
         // Beckon's 6 with 20 block and nothing else coming: all 6 lost, all of it unblockable.
-        var state = new SimState { Enemies = { E(1, 30) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
         state.You.Block = 20;
-        state.You.TurnEndCards.Add(new TurnEndCard("Beckon", "Beckon", 6));
+        state.You.TurnEndCards.Add(new TurnEndCard("Beckon", "Beckon", Amount: 6));
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(6, branch.Taken);
         Assert.Equal(6, branch.UnblockableTaken);
@@ -39,9 +39,9 @@ public class SimUnblockableTakenTests
     public void ItsWhatYouLoseAfterTungstenRod()
     {
         // Bad Luck's 13 through Tungsten Rod: 12 lost.
-        var state = new SimState { Enemies = { E(1, 30) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
         state.You.TungstenRod = 1;
-        state.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 13));
+        state.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", Amount: 13));
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(12, branch.UnblockableTaken);
         Assert.Equal(12, branch.Taken);
@@ -50,8 +50,8 @@ public class SimUnblockableTakenTests
     [Fact]
     public void BurnIsBlockable()
     {
-        var state = new SimState { Enemies = { E(1, 30) } };
-        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 2));
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(2, branch.Taken);
         Assert.Equal(0, branch.UnblockableTaken);

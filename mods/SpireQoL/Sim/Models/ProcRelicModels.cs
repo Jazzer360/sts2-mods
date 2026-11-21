@@ -34,13 +34,13 @@ public sealed class PaelsTears : RelicProc
     public override ActedSeen Seen => ActedSeen.NoEnergyLeft;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
-        if (cardEvent == CardEvent.EnergySpent && player == owner && Data(state, owner) == 0) Set(state, owner, Amount(state, owner), 1);
+        if (cardEvent == CardEvent.EnergySpent && player == owner && Data(state, owner) == 0) Set(state, owner, Amount(state, owner), data: 1);
         return One(state);
     }
     public override IEnumerable<SimState> AfterPlayResolved(SimState state, int owner, int player)
     {
         if (player != owner || Data(state, owner) == 0) return One(state);
-        Set(state, owner, Amount(state, owner), 0);
+        Set(state, owner, Amount(state, owner), data: 0);
         return state.Player(owner) is { Energy: <= 0 } ? Fire(state, owner) : One(state);
     }
 }
@@ -78,8 +78,8 @@ public sealed class GremlinHorn : SimModel
     public override void AfterDeath(SimState state, int owner, int dead)
     {
         if (dead < 0 || !Who.IsPlayer(owner)) return;
-        SimEngine.Raise(state, CardEvent.EnergyGained, owner, SimEngine.Var(state, owner, Name, "Energy", 1));
-        SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", 1));
+        SimEngine.Raise(state, CardEvent.EnergyGained, owner, SimEngine.Var(state, owner, Name, "Energy", fallback: 1));
+        SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", fallback: 1));
     }
 }
 
@@ -94,9 +94,9 @@ public sealed class CentennialPuzzle : RelicProc
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
         if (hit.Target != owner || hit.Unblocked <= 0 || !Who.IsPlayer(owner) || Amount(state, owner) != 0) return;
-        Set(state, owner, 1, Data(state, owner));
-        state.LogFired(Name, 0, owner);
-        SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", 3), Name);
+        Set(state, owner, amount: 1, Data(state, owner));
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", fallback: 3), Name);
     }
 }
 
@@ -148,7 +148,7 @@ public sealed class BurningSticks : RelicProc
     {
         if (cardEvent != CardEvent.Exhausted || player != owner || !Armed(state, owner) || state.EventCard?.Type != SimCardType.Skill) return One(state);
         Disarm(state, owner);
-        return Cause(Fire(state, owner), CardEvent.Generated, 1, owner);
+        return Cause(Fire(state, owner), CardEvent.Generated, count: 1, owner);
     }
 }
 
@@ -157,14 +157,14 @@ public sealed class MusicBox : RelicProc
 {
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (Mine(play, owner) && Armed(state, owner) && play.Card.Type == SimCardType.Attack && !state.Bound.Has(SimKeys.Owned(Name, owner))) Bind(state, owner, 1);
+        if (Mine(play, owner) && Armed(state, owner) && play.Card.Type == SimCardType.Attack && !state.Bound.Has(SimKeys.Owned(Name, owner))) Bind(state, owner, amount: 1);
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner) || TakeBound(state, owner) is null) return One(state);
         Disarm(state, owner);
-        return Cause(Fire(state, owner), CardEvent.Generated, 1, owner);
+        return Cause(Fire(state, owner), CardEvent.Generated, count: 1, owner);
     }
 }
 
@@ -189,7 +189,7 @@ public sealed class UnsettlingLamp : RelicProc
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner) || (Data(state, owner) & BoundBit) == 0) return One(state);
-        Set(state, owner, Amount(state, owner), 0);
+        Set(state, owner, Amount(state, owner), data: 0);
         return Fire(state, owner);
     }
 }
@@ -201,7 +201,7 @@ public sealed class IntimidatingHelmet : RelicProc
 {
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Energy >= Var(state, owner, "Energy", 2) ? RelicBlock(state, owner) : One(state);
+        Mine(play, owner) && play.Card.Energy >= Var(state, owner, "Energy", fallback: 2) ? RelicBlock(state, owner) : One(state);
 }
 
 /// <summary>DaughterOfTheWind.AfterCardPlayed: block for each Attack you play.</summary>
@@ -237,7 +237,7 @@ public sealed class GamePiece : RelicProc
 {
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Power ? Cause(Fire(state, owner), CardEvent.Drawn, 1, owner) : One(state);
+        Mine(play, owner) && play.Card.Type == SimCardType.Power ? Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner) : One(state);
 }
 
 /// <summary>
@@ -262,8 +262,8 @@ public sealed class IvoryTile : RelicProc
 {
     public override TabKind? Tab => TabKind.Energy;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Energy >= Var(state, owner, "EnergyThreshold", 3)
-            ? Cause(Fire(state, owner), CardEvent.EnergyGained, Var(state, owner, "Energy", 1), owner) : One(state);
+        Mine(play, owner) && play.Card.Energy >= Var(state, owner, "EnergyThreshold", fallback: 3)
+            ? Cause(Fire(state, owner), CardEvent.EnergyGained, Var(state, owner, "Energy", fallback: 1), owner) : One(state);
 }
 
 /// <summary>ChemicalX.ModifyXValue: X-cost cards (energy or stars) get more.</summary>
@@ -308,7 +308,7 @@ public sealed class ConductorsBaton : RelicProc
         var (before, after) = Melodies.Finished(state, play);
         if (before >= 3 || after < 3) return One(state);
         Set(state, owner, Amount(state, owner), Data(state, owner) | 2);
-        SimEngine.ApplyPower(state, owner, owner, PowerId.ConductorsBaton, 1, debuff: false);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.ConductorsBaton, amount: 1, debuff: false);
         return Fire(state, owner);
     }
 }
@@ -347,7 +347,7 @@ public sealed class Kunai : CounterRelic
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState state, int owner)
     {
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, Var(state, owner, "Dexterity", 1), debuff: false);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, Var(state, owner, "Dexterity", fallback: 1), debuff: false);
         return Fire(state, owner);
     }
 }
@@ -357,7 +357,7 @@ public sealed class Shuriken : CounterRelic
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState state, int owner)
     {
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "Strength", 1), debuff: false);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "Strength", fallback: 1), debuff: false);
         return Fire(state, owner);
     }
 }
@@ -366,7 +366,7 @@ public sealed class Nunchaku : CounterRelic
 {
     public override TabKind? Tab => TabKind.Energy;
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
-    protected override IEnumerable<SimState> OnComplete(SimState state, int owner) => Cause(Fire(state, owner), CardEvent.EnergyGained, Var(state, owner, "Energy", 1), owner);
+    protected override IEnumerable<SimState> OnComplete(SimState state, int owner) => Cause(Fire(state, owner), CardEvent.EnergyGained, Var(state, owner, "Energy", fallback: 1), owner);
 }
 
 public sealed class OrnamentalFan : CounterRelic
@@ -401,7 +401,7 @@ public sealed class IronClub : CounterRelic
 {
     public override TabKind? Tab => TabKind.Draw;
     protected override bool Counts(SimCard card) => true;
-    protected override IEnumerable<SimState> OnComplete(SimState state, int owner) => Cause(Fire(state, owner), CardEvent.Drawn, 1, owner);
+    protected override IEnumerable<SimState> OnComplete(SimState state, int owner) => Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner);
 }
 
 // ---- card events
@@ -429,11 +429,11 @@ public sealed class JossPaper : RelicProc
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
         if (cardEvent != CardEvent.Exhausted || player != owner) return One(state);
-        var needed = Var(state, owner, "ExhaustAmount", 5);
+        var needed = Var(state, owner, "ExhaustAmount", fallback: 5);
         var count = Amount(state, owner) + 1;
         if (count < needed) { Set(state, owner, count, Data(state, owner)); return One(state); }
         Set(state, owner, count - needed, Data(state, owner));
-        return Cause(Fire(state, owner), CardEvent.Drawn, 1, owner);
+        return Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner);
     }
 }
 
@@ -472,11 +472,11 @@ public sealed class GalacticDust : RelicProc
     {
         var stars = state.CurrentPlay?.Card.Stars ?? 0;
         if (cardEvent != CardEvent.StarsSpent || player != owner || stars <= 0) return One(state);
-        var per = Var(state, owner, "Stars", 10);
+        var per = Var(state, owner, "Stars", fallback: 10);
         if (per <= 0) return One(state);
         var spent = Amount(state, owner) + stars;
         Set(state, owner, spent % per, Data(state, owner));
-        return spent >= per ? Block(state, owner, spent / per * Var(state, owner, "Block", 0), Unpowered) : One(state);
+        return spent >= per ? Block(state, owner, spent / per * Var(state, owner, "Block", fallback: 0), Unpowered) : One(state);
     }
 }
 
@@ -521,7 +521,7 @@ public sealed class Metronome : RelicProc
     public override IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player)
     {
         if (player != owner) return One(state);
-        var needed = Var(state, owner, "OrbCount", 7);
+        var needed = Var(state, owner, "OrbCount", fallback: 7);
         var count = Amount(state, owner);
         if (count >= needed) return One(state);
         Set(state, owner, count + 1, Data(state, owner));

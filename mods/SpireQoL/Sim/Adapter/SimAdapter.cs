@@ -41,8 +41,8 @@ public static partial class SimAdapter
     /// </summary>
     internal static int SlotChange(CardModel card, string name) => name switch
     {
-        nameof(BulkUp) => -Sts2State.Var(card, "OrbSlots", 1),
-        nameof(Capacitor) or nameof(Modded) or "TheMagician" => Sts2State.Var(card, "Repeat", 1),
+        nameof(BulkUp) => -Sts2State.Var(card, "OrbSlots", fallback: 1),
+        nameof(Capacitor) or nameof(Modded) or "TheMagician" => Sts2State.Var(card, "Repeat", fallback: 1),
         _ => 0,
     };
 
@@ -247,9 +247,9 @@ public static partial class SimAdapter
                         // Intangible...) apply as it lands, so what your cards change shows.
                         if (intent == null || attack.DamageCalc == null) { intent = null; continue; }
                         var damageCalc = attack.DamageCalc();
-                        var terms = new Dictionary<int, CapturedTerms> { [Who.You] = SimReaders.Damage(me.RunState, combat, null, creature, me.Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) };
+                        var terms = new Dictionary<int, CapturedTerms> { [Who.You] = SimReaders.Damage(me.RunState, combat, card: null, creature, me.Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) };
                         for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
-                            terms[Who.Teammate(teammateIndex)] = SimReaders.Damage(me.RunState, combat, null, creature, mates[teammateIndex].Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
+                            terms[Who.Teammate(teammateIndex)] = SimReaders.Damage(me.RunState, combat, card: null, creature, mates[teammateIndex].Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
                         for (var i = 0; i < Math.Max(1, attack.Repeats); i++) intent.Add(new IntentHit(damageCalc) { Captured = terms });
                     }
                     if (intent is { Count: > 0 }) enemy.Intent = intent;
@@ -317,7 +317,7 @@ public static partial class SimAdapter
         simPlayer.Fairies = SafeInt(() => player.Potions.Count(potion => potion.GetType().Name == "FairyInABottle"));
         simPlayer.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
         simPlayer.LizardTailHeal = player.Relics.FirstOrDefault(relic => relic is LizardTail) is { IsUsedUp: false } tail
-            ? Math.Max(1, (int)(maxHp * (Sts2State.Var(tail, "Heal", 50) / 100m)))
+            ? Math.Max(1, (int)(maxHp * (Sts2State.Var(tail, "Heal", fallback: 50) / 100m)))
             : 0;
     }
 
@@ -352,7 +352,7 @@ public static partial class SimAdapter
             }
             foreach (var card in PileType.Exhaust.GetPile(me).Cards)
             {
-                if (card is HowlFromBeyond) player.ExhaustAutoPlays.Add(AutoPlay(card, me, combat, ids, -1, owner: owner));
+                if (card is HowlFromBeyond) player.ExhaustAutoPlays.Add(AutoPlay(card, me, combat, ids, target: -1, owner: owner));
             }
             var drawPile = PileType.Draw.GetPile(me).Cards;
             if (drawPile.Count > 0 && drawPile.All(card => card is IAmInvincible))
@@ -511,7 +511,7 @@ public static partial class SimAdapter
     {
         var facts = PlayFacts.For(card, me, combat, CardPlays.Count(card));
         if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
-        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, -1, facts) };
+        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: -1, facts) };
         return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, facts)).ToList();
     }
 
@@ -670,7 +670,7 @@ public static partial class SimAdapter
         if (orb is GlassOrb)
         {
             // Base and bonus separately: the base decays, the bonus (Focus) doesn't.
-            sim.GlassBase = (int)Sts2State.Private(orb, "_passiveVal", 4m);
+            sim.GlassBase = (int)Sts2State.Private(orb, "_passiveVal", fallback: 4m);
             sim.GlassBonus = sim.Passive - sim.GlassBase;
         }
         return sim;

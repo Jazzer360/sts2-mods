@@ -170,7 +170,7 @@ public sealed class OverlayHost
         WidgetRoot = new Control { Name = ModId + "_Widgets", MouseFilter = Control.MouseFilterEnum.Ignore };
         Layer.AddChild(WidgetRoot);
 
-        _toast = UiKit.Label("", 20, Colors.White);
+        _toast = UiKit.Label("", size: 20, Colors.White);
         _toast.Position = new Vector2(24, 24);
         _toast.Visible = false;
         Layer.AddChild(_toast);
@@ -511,7 +511,7 @@ public sealed class OverlayHost
                 if (!Pressed(key)) continue;
                 var hovered = _widgets.FirstOrDefault(widget => widget.Hovered);
                 if (hovered != null) hovered.SetPin(anchor);
-                else Toast("Hover a widget, then Ctrl+1–9 to pick its anchor", 2.5f);
+                else Toast("Hover a widget, then Ctrl+1–9 to pick its anchor", seconds: 2.5f);
             }
         }
         foreach (var (key, action) in _hotkeys)
@@ -527,7 +527,7 @@ public sealed class OverlayHost
         if (Pressed(HideAllKey))
         {
             HideAll = !HideAll;
-            Toast(HideAll ? $"{ModId}: overlays hidden ({HideAllKey} to show)" : $"{ModId}: overlays shown", 2.5f);
+            Toast(HideAll ? $"{ModId}: overlays hidden ({HideAllKey} to show)" : $"{ModId}: overlays shown", seconds: 2.5f);
         }
     }
 

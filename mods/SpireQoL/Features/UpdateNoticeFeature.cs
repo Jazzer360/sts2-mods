@@ -155,7 +155,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         _warning.AddChild(_label);
 
         // The game's own gear (the in-run top bar's settings button art).
-        _gear = UiKit.Icon(ResourceLoader.Exists(GearPath) ? ResourceLoader.Load<Texture2D>(GearPath) : null, 24);
+        _gear = UiKit.Icon(ResourceLoader.Exists(GearPath) ? ResourceLoader.Load<Texture2D>(GearPath) : null, size: 24);
         _gear.MouseFilter = Control.MouseFilterEnum.Stop;
         _gear.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
         _gear.TooltipText = "Spire QoL settings";

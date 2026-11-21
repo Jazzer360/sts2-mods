@@ -165,7 +165,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private void Skip(string reason, int? turn = null)
     {
         CountIn(Skips, reason);
-        Telemetry.DevEvents.Post(new Telemetry.CheckSkipped(Telemetry.Audits.Forecast, turn ?? _frozenTurn, reason, null));
+        Telemetry.DevEvents.Post(new Telemetry.CheckSkipped(Telemetry.Audits.Forecast, turn ?? _frozenTurn, reason, Detail: null));
     }
 
     public void OnFrame(OverlayHost host)

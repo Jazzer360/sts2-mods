@@ -19,12 +19,12 @@ public sealed class SimOutcome
     /// <param name="lasting">Once it happens nothing undoes it (an enemy's death): a branch unknown past that point still counts it.</param>
     public SimChance Chance(Func<SimState, bool> happens, bool lasting = false)
     {
-        if (Branches.Count == 0) return new SimChance(0, Truncated ? 1 : 0, false);
+        if (Branches.Count == 0) return new SimChance(Low: 0, Truncated ? 1 : 0, Seen: false);
         bool Known(SimState state) => (state.Unmodelled == null && !Truncated) || (lasting && happens(state));
         var seen = Branches.Any(branch => Known(branch) && happens(branch));
         var unknown = Branches.Where(branch => !Known(branch)).Sum(branch => branch.Weight);
         var total = Branches.Sum(branch => branch.Weight);
-        if (total <= 0) return new SimChance(0, 0, seen);
+        if (total <= 0) return new SimChance(Low: 0, High: 0, seen);
         var chance = Branches.Where(branch => Known(branch) && happens(branch)).Sum(branch => branch.Weight) / total;
         return new SimChance(chance, Math.Min(1, chance + unknown / total), seen);
     }
@@ -52,7 +52,7 @@ public sealed class SimOutcome
     /// <summary>The chance the enemy dies before it acts.</summary>
     /// <remarks>A search stopped at a cap before the enemy turn (decision #107): an enemy already dead there counts (no revive comes
     /// before it acts), so the range's floor is the deaths already settled.</remarks>
-    public SimChance DeadChanceRange(int id) => Chance(branch => branch.Enemy(id) is { DiedBeforeActing: true } || (Truncated && !branch.EnemyTurnNow && branch.Enemy(id) is { Alive: false, StartedAlive: true }), lasting: true);
+    public SimChance DeadChanceRange(int enemyId) => Chance(branch => branch.Enemy(enemyId) is { DiedBeforeActing: true } || (Truncated && !branch.EnemyTurnNow && branch.Enemy(enemyId) is { Alive: false, StartedAlive: true }), lasting: true);
 
     /// <summary>The chance the enemy turn kills you (nothing left to save you).</summary>
     public SimChance YouDieChance() => Chance(branch => branch.Died);
@@ -91,9 +91,9 @@ public sealed class SimOutcome
     public int PlayBlockGainsMax;
 
     /// <summary>Stunned during your turn (Burrowed, Flutter, Plow, Shriek) and alive when its turn comes, in every branch.</summary>
-    public bool StunnedInAll(int id) => InEvery(branch => branch.Enemy(id) is { StunnedThisTurn: true, DiedBeforeActing: false });
-    public bool GambitInAll(int id) => InEvery(branch => branch.Enemy(id) is { GambitTriggered: true });
-    public bool SlipperyInAny(int id) => InSome(branch => branch.Enemy(id) is { SlipperyTriggered: true });
+    public bool StunnedInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { StunnedThisTurn: true, DiedBeforeActing: false });
+    public bool GambitInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { GambitTriggered: true });
+    public bool SlipperyInAny(int enemyId) => InSome(branch => branch.Enemy(enemyId) is { SlipperyTriggered: true });
     /// <summary>The play kills some enemy in every branch (not always the same one).</summary>
     public bool PlayKillsInAll;
     /// <summary>The play's biggest powered hit (blocked plus HP lost), in the branch where it's smallest (Mighty Wings).</summary>
@@ -102,34 +102,34 @@ public sealed class SimOutcome
     public int PlayHpReachedMin, PlayHpLossesMin, PlayHpLostMin;
     /// <summary>What fired during the play (its log): the counts in every branch (smallest), and in some branch (largest).</summary>
     public NamedCounts PlayFiredEvery = NamedCounts.Empty, PlayFiredAny = NamedCounts.Empty;
-    /// <summary>The first hit of the card's attack on each enemy (enemy id: damage), the same in every branch; empty when it isn't.</summary>
+    /// <summary>The first hit of the card's attack on each enemy (enemy enemyId: damage), the same in every branch; empty when it isn't.</summary>
     public IReadOnlyDictionary<int, int> PlayFirstHits = System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
 
     /// <summary>The enemy is dead before it acts in every branch.</summary>
-    public bool DeadInAll(int id) => InEvery(branch => branch.Enemy(id) is { DiedBeforeActing: true }); // a death that happened stands, modelled past it or not
-    public bool DeadInAny(int id) => InSome(branch => branch.Enemy(id) is { DiedBeforeActing: true });
+    public bool DeadInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { DiedBeforeActing: true }); // a death that happened stands, modelled past it or not
+    public bool DeadInAny(int enemyId) => InSome(branch => branch.Enemy(enemyId) is { DiedBeforeActing: true });
     /// <summary>The chance it dies before acting (NaN when the search stopped at its cap: unknown).</summary>
-    public double DeadChance(int id)
+    public double DeadChance(int enemyId)
     {
         if (Truncated) return double.NaN;
         var total = Branches.Sum(branch => branch.Weight);
-        return total <= 0 ? double.NaN : Branches.Where(branch => branch.Enemy(id) is { DiedBeforeActing: true }).Sum(branch => branch.Weight) / total;
+        return total <= 0 ? double.NaN : Branches.Where(branch => branch.Enemy(enemyId) is { DiedBeforeActing: true }).Sum(branch => branch.Weight) / total;
     }
 
     /// <summary>Damage instances through its block during your turn: fewest and most over branches.</summary>
-    public int UnblockedMin(int id) => Fewest(branch => branch.Enemy(id)?.UnblockedInstances ?? 0);
-    public int UnblockedMax(int id) => Most(branch => branch.Enemy(id)?.UnblockedInstances ?? 0);
+    public int UnblockedMin(int enemyId) => Fewest(branch => branch.Enemy(enemyId)?.UnblockedInstances ?? 0);
+    public int UnblockedMax(int enemyId) => Most(branch => branch.Enemy(enemyId)?.UnblockedInstances ?? 0);
 
     /// <summary>The same, counted until your end of turn is over (not its turn): what the outcome audit sees in your end of turn.</summary>
-    public int UnblockedAtTurnEndMin(int id) => Fewest(branch => branch.Enemy(id)?.UnblockedAtTurnEnd ?? 0);
-    public int UnblockedAtTurnEndMax(int id) => Most(branch => branch.Enemy(id)?.UnblockedAtTurnEnd ?? 0);
+    public int UnblockedAtTurnEndMin(int enemyId) => Fewest(branch => branch.Enemy(enemyId)?.UnblockedAtTurnEnd ?? 0);
+    public int UnblockedAtTurnEndMax(int enemyId) => Most(branch => branch.Enemy(enemyId)?.UnblockedAtTurnEnd ?? 0);
 
-    public bool FirstHitBlockedInAll(int id) => InEvery(branch => branch.Enemy(id) is { FirstHitFullyBlocked: true });
-    public bool FirstHitBlockedInAny(int id) => InSome(branch => branch.Enemy(id) is { FirstHitFullyBlocked: true });
+    public bool FirstHitBlockedInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { FirstHitFullyBlocked: true });
+    public bool FirstHitBlockedInAny(int enemyId) => InSome(branch => branch.Enemy(enemyId) is { FirstHitFullyBlocked: true });
 
     /// <summary>Its HP when your end of turn is over: lowest and highest over branches.</summary>
-    public int HpAtTurnEndMin(int id) => Fewest(branch => branch.Enemy(id)?.HpAtTurnEnd ?? 0);
-    public int HpAtTurnEndMax(int id) => Most(branch => branch.Enemy(id)?.HpAtTurnEnd ?? 0);
+    public int HpAtTurnEndMin(int enemyId) => Fewest(branch => branch.Enemy(enemyId)?.HpAtTurnEnd ?? 0);
+    public int HpAtTurnEndMax(int enemyId) => Most(branch => branch.Enemy(enemyId)?.HpAtTurnEnd ?? 0);
 }
 
 /// <summary>
@@ -158,9 +158,9 @@ public static partial class SimEngine
     public const int MaxOrbSlots = 10;
 
     /// <summary>This card (none: just end the turn), then the end of the turn and the enemy turn, from the board as it is (decision #28).</summary>
-    public static SimOutcome Run(SimState start, SimPlay? play = null) => Run(start, play == null ? null : SimScript.Of(play), null);
+    public static SimOutcome Run(SimState start, SimPlay? play = null) => Run(start, play == null ? null : SimScript.Of(play), work: null);
 
-    public static SimOutcome Run(SimState start, SimScript play) => Run(start, play, null);
+    public static SimOutcome Run(SimState start, SimScript play) => Run(start, play, work: null);
 
     /// <summary>
     /// One search (decision #107): every step advances all branches together, and branches that reach the same state merge
@@ -586,7 +586,7 @@ public static partial class SimEngine
         if (blocked <= 0 && lost <= 0) return;
         var listeners = Listeners(state);
         if (listeners.Count == 0) return;
-        var hit = new DamageEvent(dealer, player, props, state.CurrentPlay?.Card, blocked + lost, blocked, lost, false);
+        var hit = new DamageEvent(dealer, player, props, state.CurrentPlay?.Card, blocked + lost, blocked, lost, Killed: false);
         foreach (var (model, o) in listeners) model.AfterDamageGiven(state, o, hit);
         foreach (var (simModel, o) in Listeners(state)) simModel.AfterDamageReceived(state, o, hit);
     }
@@ -700,7 +700,7 @@ public static partial class SimEngine
         Lose(state, player, lost);
         state.MutablePlayer(player).UnblockableTaken += lost;
         if (yours) PlayHp(state, amount, lost);
-        PlayerDamaged(state, player, dealer, props, 0, lost);
+        PlayerDamaged(state, player, dealer, props, blocked: 0, lost);
     }
 
     // ------------------------------------------------------------------ card play
@@ -992,7 +992,7 @@ public static partial class SimEngine
             {
                 branch.AutoPlaysUnknown = true;
                 branch.Unmodelled ??= $"{card.Name} auto-played at end of turn: its play isn't simulated";
-                if (yours) branch.AutoPicks = [..branch.AutoPicks, new SimPick(card.Id, -1)];
+                if (yours) branch.AutoPicks = [..branch.AutoPicks, new SimPick(card.Id, Target: -1)];
                 result.Add(branch);
                 continue;
             }
@@ -1085,9 +1085,9 @@ public static partial class SimEngine
         {
             switch (orb.Kind)
             {
-                case OrbKind.Lightning: orb.Passive = Shift(orb.Passive, 3); orb.Evoke = Shift(orb.Evoke, 8); break;
-                case OrbKind.Frost: orb.Passive = Shift(orb.Passive, 2); orb.Evoke = Shift(orb.Evoke, 5); break;
-                case OrbKind.Dark: orb.Passive = Shift(orb.Passive, 6); break;
+                case OrbKind.Lightning: orb.Passive = Shift(orb.Passive, baseValue: 3); orb.Evoke = Shift(orb.Evoke, baseValue: 8); break;
+                case OrbKind.Frost: orb.Passive = Shift(orb.Passive, baseValue: 2); orb.Evoke = Shift(orb.Evoke, baseValue: 5); break;
+                case OrbKind.Dark: orb.Passive = Shift(orb.Passive, baseValue: 6); break;
                 case OrbKind.Glass:
                     orb.Passive = Shift(orb.Passive, orb.GlassBase);
                     orb.GlassBonus += delta;

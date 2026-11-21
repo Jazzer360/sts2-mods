@@ -68,13 +68,13 @@ public abstract class OrichalcumBase : EndOfTurnRelic
 {
     public override IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState state, int owner)
     {
-        if (state.TakesPart(owner) && state.Player(owner) is { Block: <= 0 }) Set(state, owner, Amount(state, owner), 1);
+        if (state.TakesPart(owner) && state.Player(owner) is { Block: <= 0 }) Set(state, owner, Amount(state, owner), data: 1);
         return One(state);
     }
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
     {
         if (Data(state, owner) != 1) return One(state);
-        Set(state, owner, Amount(state, owner), 0);
+        Set(state, owner, Amount(state, owner), data: 0);
         return Block(state, owner, Amount(state, owner));
     }
 }
@@ -122,8 +122,8 @@ public sealed class ParryingShield : EndOfTurnRelic
     /// <summary>Plain when this play makes it fire for sure and ending the turn now might not; crossed when it would for sure now and the play can stop it.</summary>
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         owner != Who.You ? null
-        : !now.ParryingShieldInAll ? new(false, outcome => outcome.ParryingShieldInAll)
-        : new(true, outcome => !outcome.ParryingShieldInAll);
+        : !now.ParryingShieldInAll ? new(Harmful: false, outcome => outcome.ParryingShieldInAll)
+        : new(Harmful: true, outcome => !outcome.ParryingShieldInAll);
 
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
     {
@@ -137,7 +137,7 @@ public sealed class ParryingShield : EndOfTurnRelic
 public sealed class LunarPastry : EndOfTurnRelic
 {
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
-        state.TakesPart(owner) ? SimEngine.ProcCardEvent(state, CardEvent.StarsGained, 1, owner, indirect: false) : One(state);
+        state.TakesPart(owner) ? SimEngine.ProcCardEvent(state, CardEvent.StarsGained, count: 1, owner, indirect: false) : One(state);
 }
 
 // ---- debuffs on a player that hurt them when their side's turn ends (AfterSideTurnEnd, AfterSideTurnEndLate), in listener order
@@ -194,5 +194,5 @@ public sealed class DisintegrationPower : TurnEndDebuff
 public sealed class InsatiableDominionPower : TurnEndDebuff
 {
     public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) =>
-        state.TakesPart(owner) ? Hurt(state, owner, SimEngine.Var(state, owner, Name, "Damage", 0), Unpowered, selfDealt: false) : One(state);
+        state.TakesPart(owner) ? Hurt(state, owner, SimEngine.Var(state, owner, Name, "Damage", fallback: 0), Unpowered, selfDealt: false) : One(state);
 }

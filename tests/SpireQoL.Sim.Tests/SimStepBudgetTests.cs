@@ -23,11 +23,11 @@ public class SimStepBudgetTests
         var outcome = SimEngine.Run(state, Shatter());
 
         Assert.False(outcome.Truncated);
-        var byDamage = outcome.Branches.GroupBy(branch => 100 - branch.Enemy(0)!.HpAtTurnEnd).ToDictionary(sameDamage => sameDamage.Key, sameDamage => sameDamage.Sum(branch => branch.Weight) / outcome.Branches.Sum(branch => branch.Weight));
+        var byDamage = outcome.Branches.GroupBy(branch => 100 - branch.Enemy(id: 0)!.HpAtTurnEnd).ToDictionary(sameDamage => sameDamage.Key, sameDamage => sameDamage.Sum(branch => branch.Weight) / outcome.Branches.Sum(branch => branch.Weight));
         Assert.Equal(new[] { 0, 8, 16, 24, 32 }, byDamage.Keys.OrderBy(key => key).ToArray());
         Assert.Equal(6.0 / 16, byDamage[16], 6);
         Assert.Equal(1.0 / 16, byDamage[32], 6);
-        Assert.All(outcome.Branches, branch => Assert.Equal(32, 200 - branch.Enemy(0)!.HpAtTurnEnd - branch.Enemy(1)!.HpAtTurnEnd));
+        Assert.All(outcome.Branches, branch => Assert.Equal(32, 200 - branch.Enemy(id: 0)!.HpAtTurnEnd - branch.Enemy(id: 1)!.HpAtTurnEnd));
         Assert.All(outcome.Branches, branch => Assert.Empty(branch.You.Orbs));
     }
 
@@ -40,7 +40,7 @@ public class SimStepBudgetTests
         state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }, Lightning() };
         var outcome = SimEngine.Run(state, Shatter());
         Assert.Equal(10, outcome.Worst.BlockAtEnemyTurn);
-        Assert.Equal(24, outcome.Worst.Enemy(0)!.HpAtTurnEnd);
+        Assert.Equal(24, outcome.Worst.Enemy(id: 0)!.HpAtTurnEnd);
         Assert.Equal(2, outcome.TakenMax);
     }
 
@@ -77,7 +77,7 @@ public class SimStepBudgetTests
         }
         Setup(state.You);
         for (var teammate = 0; teammate < 3; teammate++) state.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
-        var outcome = SimEngine.Run(state, null, new SimWork { CopyCap = 200_000 });
+        var outcome = SimEngine.Run(state, play: null, new SimWork { CopyCap = 200_000 });
         Assert.True(outcome.Truncated);
         Assert.Equal("the work cap", outcome.CapHit);
         Assert.Equal(1.0, outcome.Branches.Sum(branch => branch.Weight), 9);

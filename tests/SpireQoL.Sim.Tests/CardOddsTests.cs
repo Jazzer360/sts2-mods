@@ -15,22 +15,22 @@ public class CardOddsTests
     public void One_card_of_one_rarity_is_matches_over_total()
     {
         // Colorful Philosophers' rare reward, one card: every slot is a Rare (the others are empty and wrap to it).
-        Assert.Equal(4.0 / 16, CardOdds.AtLeastOne(G(0, 0, 0, 0, 16, 4), 0.03, 0.37, 1), 10);
+        Assert.Equal(4.0 / 16, CardOdds.AtLeastOne(G(common: 0, commonMatching: 0, uncommon: 0, uncommonMatching: 0, rare: 16, rareMatching: 4), rare: 0.03, uncommon: 0.37, count: 1), 10);
     }
 
     [Fact]
     public void Several_cards_of_one_rarity_are_drawn_without_repeats()
     {
         // 3 of 20 commons, 5 good: 1 − C(15,3)/C(20,3) = 1 − 455/1140.
-        Assert.Equal(1 - 455.0 / 1140, CardOdds.AtLeastOne(G(20, 5, 0, 0, 0, 0), 0.03, 0.37, 3), 10);
-        Assert.Equal(1 - 455.0 / 1140, CardOdds.AtLeastOneUniform(20, 5, 3), 10);
+        Assert.Equal(1 - 455.0 / 1140, CardOdds.AtLeastOne(G(common: 20, commonMatching: 5, uncommon: 0, uncommonMatching: 0, rare: 0, rareMatching: 0), rare: 0.03, uncommon: 0.37, count: 3), 10);
+        Assert.Equal(1 - 455.0 / 1140, CardOdds.AtLeastOneUniform(total: 20, matching: 5, count: 3), 10);
     }
 
     [Fact]
     public void Rarity_rolls_weight_each_rarity()
     {
         // One card: Σ P(rarity) × matching/total.
-        var atLeastOne = CardOdds.AtLeastOne(G(20, 2, 30, 6, 10, 5), 0.03, 0.37, 1);
+        var atLeastOne = CardOdds.AtLeastOne(G(common: 20, commonMatching: 2, uncommon: 30, uncommonMatching: 6, rare: 10, rareMatching: 5), rare: 0.03, uncommon: 0.37, count: 1);
         Assert.Equal(0.60 * 2 / 20 + 0.37 * 6 / 30 + 0.03 * 5 / 10, atLeastOne, 10);
     }
 
@@ -38,8 +38,8 @@ public class CardOddsTests
     public void Matches_simulated_rewards()
     {
         // The game's draw, simulated: the exact answer must agree.
-        var groups = G(5, 1, 3, 2, 2, 1);
-        var exact = CardOdds.AtLeastOne(groups, 0.1, 0.3, 4);
+        var groups = G(common: 5, commonMatching: 1, uncommon: 3, uncommonMatching: 2, rare: 2, rareMatching: 1);
+        var exact = CardOdds.AtLeastOne(groups, rare: 0.1, uncommon: 0.3, count: 4);
         var rng = new Random(7);
         int hits = 0, runs = 200_000;
         for (var run = 0; run < runs; run++)
@@ -64,16 +64,16 @@ public class CardOddsTests
     [Fact]
     public void Nothing_matching_is_zero_and_everything_is_one()
     {
-        Assert.Equal(0, CardOdds.AtLeastOne(G(10, 0, 10, 0, 10, 0), 0.03, 0.37, 3), 10);
-        Assert.Equal(1, CardOdds.AtLeastOne(G(10, 10, 10, 10, 10, 10), 0.03, 0.37, 3), 10);
-        Assert.Equal(0, CardOdds.AtLeastOneUniform(10, 0, 3), 10);
+        Assert.Equal(0, CardOdds.AtLeastOne(G(common: 10, commonMatching: 0, uncommon: 10, uncommonMatching: 0, rare: 10, rareMatching: 0), rare: 0.03, uncommon: 0.37, count: 3), 10);
+        Assert.Equal(1, CardOdds.AtLeastOne(G(common: 10, commonMatching: 10, uncommon: 10, uncommonMatching: 10, rare: 10, rareMatching: 10), rare: 0.03, uncommon: 0.37, count: 3), 10);
+        Assert.Equal(0, CardOdds.AtLeastOneUniform(total: 10, matching: 0, count: 3), 10);
     }
 
     [Fact]
     public void More_cards_than_the_pool_holds_takes_them_all()
     {
-        Assert.Equal(1, CardOdds.AtLeastOneUniform(3, 1, 5), 10);
-        Assert.Equal(1, CardOdds.AtLeastOne(G(2, 1, 0, 0, 0, 0), 0.03, 0.37, 5), 10);
+        Assert.Equal(1, CardOdds.AtLeastOneUniform(total: 3, matching: 1, count: 5), 10);
+        Assert.Equal(1, CardOdds.AtLeastOne(G(common: 2, commonMatching: 1, uncommon: 0, uncommonMatching: 0, rare: 0, rareMatching: 0), rare: 0.03, uncommon: 0.37, count: 5), 10);
     }
 
     [Fact]

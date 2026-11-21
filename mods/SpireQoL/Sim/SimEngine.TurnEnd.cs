@@ -35,9 +35,9 @@ public static partial class SimEngine
             if (!HandAtTurnEnd.TryGetValue(card.Card, out var kind)) continue;
             var props = kind == InHand.Damage ? SimProps.Unpowered | SimProps.Move : SimProps.Unblockable | SimProps.Unpowered | SimProps.Move;
             var baseAmount = kind == InHand.HandSize ? handSize : card.Amount;
-            var amount = CalcDamage(state, baseAmount, new DamageCtx(null, player, props, null, null));
-            if (kind == InHand.Damage) LandBlockable(state, card.Title, amount, player, null, props);
-            else LandUnblockable(state, card.Title, amount, player, null, props);
+            var amount = CalcDamage(state, baseAmount, new DamageCtx(Dealer: null, player, props, Card: null, Play: null));
+            if (kind == InHand.Damage) LandBlockable(state, card.Title, amount, player, dealer: null, props);
+            else LandUnblockable(state, card.Title, amount, player, dealer: null, props);
         }
     }
 }

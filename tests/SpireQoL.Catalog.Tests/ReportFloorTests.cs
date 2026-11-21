@@ -42,10 +42,10 @@ public class ReleasesLinkTests
     [Fact]
     public void LinksAreSpireQoLsOwn()
     {
-        Assert.Equal("https://github.com/Jazzer360/sts2-mods/releases?q=spireqol", SpireQoL.Features.UpdateNoticeFeature.ReleasesLink(null));
-        var behind = new Sts2Mods.Core.Game.GitHubReleases.Status(2, new Version(1, 15, 3), true);
+        Assert.Equal("https://github.com/Jazzer360/sts2-mods/releases?q=spireqol", SpireQoL.Features.UpdateNoticeFeature.ReleasesLink(status: null));
+        var behind = new Sts2Mods.Core.Game.GitHubReleases.Status(Newer: 2, new Version(1, 15, 3), Released: true);
         Assert.Equal("https://github.com/Jazzer360/sts2-mods/releases/tag/spireqol-v1.15.3", SpireQoL.Features.UpdateNoticeFeature.ReleasesLink(behind));
-        var current = new Sts2Mods.Core.Game.GitHubReleases.Status(0, new Version(1, 15, 3), true);
+        var current = new Sts2Mods.Core.Game.GitHubReleases.Status(Newer: 0, new Version(1, 15, 3), Released: true);
         Assert.Equal("https://github.com/Jazzer360/sts2-mods/releases?q=spireqol", SpireQoL.Features.UpdateNoticeFeature.ReleasesLink(current));
     }
 }

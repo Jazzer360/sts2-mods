@@ -13,24 +13,24 @@ namespace SpireQoL.Sim.Tests;
 /// </summary>
 public class SimByPlayTests
 {
-    private static SimState State(int hp, int block = 0) => new() { Enemies = { Enemy(0, hp, block) } };
+    private static SimState State(int hp, int block = 0) => new() { Enemies = { Enemy(id: 0, hp, block) } };
 
     [Fact]
     public void TenderReplayHitsOneLessOnEachPlay()
     {
         // Twin Strike (two hits a play) played three times: 5, 5, 4, 4, 3, 3.
-        var state = State(50);
-        state.You.Powers = state.You.Powers.With(PowerId.Tender, 1);
-        var after = Assert.Single(After(state, Play(Card("TwinStrike"), 0, 3, Attack(5, hits: 2))));
-        Assert.Equal(26, after.Enemy(0)!.Hp);
+        var state = State(hp: 50);
+        state.You.Powers = state.You.Powers.With(PowerId.Tender, amount: 1);
+        var after = Assert.Single(After(state, Play(Card("TwinStrike"), target: 0, plays: 3, Attack(baseDamage: 5, hits: 2))));
+        Assert.Equal(26, after.Enemy(id: 0)!.Hp);
     }
 
     [Fact]
     public void TenderReplayBlocksOneLessOnItsSecondPlay()
     {
-        var state = State(50);
-        state.You.Powers = state.You.Powers.With(PowerId.Tender, 1);
-        var after = Assert.Single(After(state, Play(Card("Defend", SimCardType.Skill), -1, 2, Block(5))));
+        var state = State(hp: 50);
+        state.You.Powers = state.You.Powers.With(PowerId.Tender, amount: 1);
+        var after = Assert.Single(After(state, Play(Card("Defend", SimCardType.Skill), target: -1, plays: 2, Block(baseBlock: 5))));
         Assert.Equal(9, after.You.Block);
     }
 
@@ -38,10 +38,10 @@ public class SimByPlayTests
     public void MightyWingsStrengthLandsBeforeTheNextHit()
     {
         // Repeat Shot+ into a 70-HP Soul Nexus: 33 (30 or more: +2 Strength), then 35 (a report from 0.46.2 predicted 33 twice).
-        var state = State(70);
-        state.You.Relics = state.You.Relics.With(RelicId.MightyWings, 2, 30);
-        var after = Assert.Single(After(state, Play(Card("RepeatShot"), 0, 1, Attack(33, hits: 2))));
-        Assert.Equal(2, after.Enemy(0)!.Hp);
+        var state = State(hp: 70);
+        state.You.Relics = state.You.Relics.With(RelicId.MightyWings, amount: 2, data: 30);
+        var after = Assert.Single(After(state, Play(Card("RepeatShot"), target: 0, plays: 1, Attack(baseDamage: 33, hits: 2))));
+        Assert.Equal(2, after.Enemy(id: 0)!.Hp);
         Assert.Equal(4, after.You.Powers[PowerId.Strength]); // the second hit (35) is 30 or more too
     }
 
@@ -49,9 +49,9 @@ public class SimByPlayTests
     public void BlockedDamageCountsTowardMightyWings()
     {
         // 25 into 10 block: 25 dealt in all (under 30), so no Strength for the second hit; 31 would count, block included.
-        var state = State(50, block: 10);
-        state.You.Relics = state.You.Relics.With(RelicId.MightyWings, 2, 30);
-        Assert.False(Assert.Single(After(state, Play(Card("Strike"), 0, 1, Attack(25, hits: 2)))).You.Powers.Has(PowerId.Strength));
-        Assert.Equal(2, Assert.Single(After(state, Play(Card("Strike"), 0, 1, Attack(31)))).You.Powers[PowerId.Strength]);
+        var state = State(hp: 50, block: 10);
+        state.You.Relics = state.You.Relics.With(RelicId.MightyWings, amount: 2, data: 30);
+        Assert.False(Assert.Single(After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 25, hits: 2)))).You.Powers.Has(PowerId.Strength));
+        Assert.Equal(2, Assert.Single(After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 31)))).You.Powers[PowerId.Strength]);
     }
 }

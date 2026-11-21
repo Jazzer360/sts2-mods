@@ -65,7 +65,7 @@ internal sealed class DamageMathPanel
             _attackTiers[tier - 1] = LoadIntentIcon($"attack/intent_attack_{tier}");
         }
         // An extra turn comes before the enemies act: its source's icon (the relic or power).
-        _extraTurnIcon = UiKit.Icon(null, IconSize);
+        _extraTurnIcon = UiKit.Icon(tex: null, IconSize);
         _extraTurnIcon.Visible = false;
         grid.AddChild(_extraTurnIcon);
         _extraTurn = Number(SafeColor);
@@ -127,7 +127,7 @@ internal sealed class DamageMathPanel
         grid.AddChild(_unblockableRow);
 
         // What keeps you alive (Fairy in a Bottle's or Lizard Tail's icon) and your HP after it heals you.
-        _reviveIcon = UiKit.Icon(null, IconSize);
+        _reviveIcon = UiKit.Icon(tex: null, IconSize);
         _reviveIcon.Visible = false;
         grid.AddChild(_reviveIcon);
         _revive = Number(SafeColor);

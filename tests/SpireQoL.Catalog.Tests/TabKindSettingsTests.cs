@@ -15,8 +15,8 @@ public class TabKindSettingsTests
     public void WarningsOnlyHidesPlainTabsButKeepsThemPredicted()
     {
         var decor = Decor(new QolSettings { PlainTabs = false });
-        Assert.False(decor.AddTab(new TabSpec("relic:PenNib", null)));
-        Assert.True(decor.AddTab(new TabSpec("relic:ArtOfWar", null, Crossed: true)));
+        Assert.False(decor.AddTab(new TabSpec("relic:PenNib", Icon: null)));
+        Assert.True(decor.AddTab(new TabSpec("relic:ArtOfWar", Icon: null, Crossed: true)));
         Assert.Equal(new[] { "relic:ArtOfWar" }, decor.Tabs.Select(tab => tab.Key));
         Assert.Equal(2, decor.Predicted.Count);
     }
@@ -25,8 +25,8 @@ public class TabKindSettingsTests
     public void TabsOnCardsOffHidesEveryKind()
     {
         var decor = Decor(new QolSettings { CardTabs = false });
-        Assert.False(decor.AddTab(new TabSpec("relic:PenNib", null)));
-        Assert.False(decor.AddTab(new TabSpec("relic:ArtOfWar", null, Crossed: true)));
+        Assert.False(decor.AddTab(new TabSpec("relic:PenNib", Icon: null)));
+        Assert.False(decor.AddTab(new TabSpec("relic:ArtOfWar", Icon: null, Crossed: true)));
         Assert.Empty(decor.Tabs);
         Assert.Equal(2, decor.Predicted.Count);
     }
@@ -35,15 +35,15 @@ public class TabKindSettingsTests
     public void CrossedOffHidesWarnings()
     {
         var decor = Decor(new QolSettings { CrossedTabs = false });
-        Assert.False(decor.AddTab(new TabSpec("relic:ArtOfWar", null, Crossed: true)));
-        Assert.True(decor.AddTab(new TabSpec("relic:PenNib", null)));
+        Assert.False(decor.AddTab(new TabSpec("relic:ArtOfWar", Icon: null, Crossed: true)));
+        Assert.True(decor.AddTab(new TabSpec("relic:PenNib", Icon: null)));
     }
 
     [Fact]
     public void AimMarkerOffShowsTheTabWithoutIt()
     {
         var decor = Decor(new QolSettings { AimMarker = false });
-        Assert.True(decor.AddTab(new TabSpec("lethal", null, Aimed: true)));
+        Assert.True(decor.AddTab(new TabSpec("lethal", Icon: null, Aimed: true)));
         Assert.False(Assert.Single(decor.Tabs).Aimed);
         Assert.True(Assert.Single(decor.Predicted).Aimed);
     }
@@ -52,7 +52,7 @@ public class TabKindSettingsTests
     public void ChancesOffHidesTheDrawChanceTabAndEveryChance()
     {
         var settings = new QolSettings { Chances = false };
-        Assert.False(Decor(settings).AddTab(new TabSpec(QolSettings.DrawChanceKey, null, Text: "40%")));
+        Assert.False(Decor(settings).AddTab(new TabSpec(QolSettings.DrawChanceKey, Icon: null, Text: "40%")));
         Assert.False(settings.ShowDeathChance);
         Assert.False(settings.ShowIntentOdds);
         Assert.False(settings.ShowEventOdds);

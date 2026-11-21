@@ -29,7 +29,7 @@ public class PlayFactsTests
             {
                 card = gameFight.Combat.CreateCard(canon, gameFight.Me);
                 PileType.Hand.GetPile(gameFight.Me).AddInternal(card);
-                facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, 1);
+                facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
             }
             catch (Exception ex)
             {
@@ -65,9 +65,9 @@ public class PlayFactsTests
         var gameFight = new GameFight();
         var card = gameFight.Add<Impatience>();
         gameFight.Add<DefendIronclad>();
-        Assert.Equal(2, PlayFacts.For(card, gameFight.Me, gameFight.Combat, 1).OwnDraws);
+        Assert.Equal(2, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, 1).OwnDraws);
+        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
     }
 
     [Fact]
@@ -76,10 +76,10 @@ public class PlayFactsTests
         // Huddle Up draws for teammates, Blade Symphony gives them Shivs, Glimpse Beyond gives them Souls: alone, none of it is
         // yours (the counts once had Huddle Up drawing for you and Blade Symphony creating a card).
         var gameFight = new GameFight();
-        var huddle = PlayFacts.For(gameFight.Add<HuddleUp>(), gameFight.Me, gameFight.Combat, 1);
+        var huddle = PlayFacts.For(gameFight.Add<HuddleUp>(), gameFight.Me, gameFight.Combat, plays: 1);
         Assert.Equal(0, huddle.Draws);
-        Assert.Equal(0, PlayFacts.For(gameFight.Add<BladeSymphony>(), gameFight.Me, gameFight.Combat, 1).Generated);
-        Assert.Equal(0, PlayFacts.For(gameFight.Add<GlimpseBeyond>(), gameFight.Me, gameFight.Combat, 1).Generated);
+        Assert.Equal(0, PlayFacts.For(gameFight.Add<BladeSymphony>(), gameFight.Me, gameFight.Combat, plays: 1).Generated);
+        Assert.Equal(0, PlayFacts.For(gameFight.Add<GlimpseBeyond>(), gameFight.Me, gameFight.Combat, plays: 1).Generated);
     }
 
     [Fact]
@@ -87,9 +87,9 @@ public class PlayFactsTests
     {
         var gameFight = new GameFight();
         var card = gameFight.Add<Restlessness>();
-        Assert.True(PlayFacts.For(card, gameFight.Me, gameFight.Combat, 1).OwnDraws > 0);
+        Assert.True(PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws > 0);
         gameFight.Add<DefendIronclad>();
-        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, 1).OwnDraws);
+        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class PlayFactsTests
         // A report from 1.11.4: block predicted 1, the game gained none (SovereignBlade.OnPlay: only while you have Parry).
         var gameFight = new GameFight();
         var card = gameFight.Add<SovereignBlade>();
-        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, 1).BlockGains);
+        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).BlockGains);
     }
 
     [Fact]
@@ -111,8 +111,8 @@ public class PlayFactsTests
         var makeItSo = gameFight.Add<MakeItSo>(PileType.Draw);
         makeItSo.DynamicVars["Cards"].BaseValue = 1;
         for (var i = 0; i < 5; i++) gameFight.Add<DefendIronclad>();
-        Assert.Single(PlayFacts.For(bundle, gameFight.Me, gameFight.Combat, 1).CardsBack);
+        Assert.Single(PlayFacts.For(bundle, gameFight.Me, gameFight.Combat, plays: 1).CardsBack);
         gameFight.Add<DefendIronclad>();
-        Assert.Empty(PlayFacts.For(bundle, gameFight.Me, gameFight.Combat, 1).CardsBack);
+        Assert.Empty(PlayFacts.For(bundle, gameFight.Me, gameFight.Combat, plays: 1).CardsBack);
     }
 }

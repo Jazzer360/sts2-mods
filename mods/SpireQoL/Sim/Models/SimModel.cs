@@ -271,7 +271,7 @@ public abstract class SimModel
     public virtual decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) => amount;
     public virtual decimal ModifyHpLostAfterOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) => amount;
     /// <summary>It changed an HP loss (the game's AfterModifyingHpLost*): most flash.</summary>
-    public virtual void AfterModifyingHpLost(SimState state, int owner) => state.LogFired(Name, 0, owner);
+    public virtual void AfterModifyingHpLost(SimState state, int owner) => state.LogFired(Name, amount: 0, owner);
     public virtual IEnumerable<SimState> BeforeAttack(SimState state, int owner, AttackInfo attack) => One(state);
     public virtual IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack) => One(state);
     public virtual IEnumerable<SimState> AfterBlockGained(SimState state, int owner, int gainer, int amount, SimCard? card) => One(state);
@@ -302,7 +302,7 @@ public abstract class SimModel
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     public virtual void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play) { }
     /// <summary>After a damage amount it changed (the game's AfterModifyingDamageAmount): most only flash (FlashesOnDamageModified).</summary>
-    public virtual void AfterModifyingDamageAmount(SimState state, int owner, SimCard? card) { if (FlashesOnDamageModified) state.LogFired(Name, 0, owner); }
+    public virtual void AfterModifyingDamageAmount(SimState state, int owner, SimCard? card) { if (FlashesOnDamageModified) state.LogFired(Name, amount: 0, owner); }
 }
 
 /// <summary>The models the simulator knows, by the game's class name. A name not here isn't modelled.</summary>

@@ -92,14 +92,14 @@ public class SimTeammateHandFieldsTests
         if (type == typeof(int)) field.SetValue(player, 7);
         else if (type == typeof(bool)) field.SetValue(player, true);
         else if (type == typeof(List<(string, int)>)) field.SetValue(player, new List<(string, int)> { ("X", 3) });
-        else if (type == typeof(List<TurnEndCard>)) field.SetValue(player, new List<TurnEndCard> { new("Burn", "Burn", 2) });
+        else if (type == typeof(List<TurnEndCard>)) field.SetValue(player, new List<TurnEndCard> { new("Burn", "Burn", Amount: 2) });
         else if (type == typeof(List<SimHandCard>)) field.SetValue(player, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
         else if (type == typeof(List<SimPlay>)) field.SetValue(player, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
-        else if (type == typeof(PowerSet)) field.SetValue(player, PowerSet.Empty.With(PowerId.Strength, 2));
-        else if (type == typeof(RelicSet)) field.SetValue(player, RelicSet.Empty.With(RelicId.PenNib, 2));
-        else if (type == typeof(NamedCounts)) field.SetValue(player, NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started), 2));
+        else if (type == typeof(PowerSet)) field.SetValue(player, PowerSet.Empty.With(PowerId.Strength, amount: 2));
+        else if (type == typeof(RelicSet)) field.SetValue(player, RelicSet.Empty.With(RelicId.PenNib, amount: 2));
+        else if (type == typeof(NamedCounts)) field.SetValue(player, NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started), delta: 2));
         else if (type == typeof(List<SimOrb>)) field.SetValue(player, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
-        else if (type == typeof(SimDrawPile)) field.SetValue(player, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), 2) } });
+        else if (type == typeof(SimDrawPile)) field.SetValue(player, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), Count: 2) } });
         else Assert.Fail($"SimPlayer.{field.Name}: type {type.Name} isn't handled by this test's Fill: add it");
     }
 

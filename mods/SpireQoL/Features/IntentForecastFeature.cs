@@ -198,7 +198,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
                 column.AddThemeConstantOverride("separation", 0);
                 row.AddChild(column);
-                var pct = Outlined(UiKit.Label($"{Math.Round(chance * 100)}%", 18, ChanceColor));
+                var pct = Outlined(UiKit.Label($"{Math.Round(chance * 100)}%", size: 18, ChanceColor));
                 pct.HorizontalAlignment = HorizontalAlignment.Center;
                 var holder = Bobbing(pct, followIcon: false);
                 holder.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
@@ -242,7 +242,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     {
         var node = NCombatRoom.Instance?.CreatureNodes.FirstOrDefault(creatureNode => GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == enemy);
         var first = node?.IntentContainer?.GetChildren().OfType<NIntent>().FirstOrDefault();
-        return first != null ? Sts2State.Private(first, "_timeOffset", 0f) : 0f;
+        return first != null ? Sts2State.Private(first, "_timeOffset", fallback: 0f) : 0f;
     }
 
     /// <summary>The living enemy whose intent is under the mouse.</summary>

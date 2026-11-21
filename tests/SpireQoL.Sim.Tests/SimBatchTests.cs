@@ -38,7 +38,7 @@ public class SimBatchTests
     [Fact]
     public void NotCompleteWhileAJobIsRunning()
     {
-        var job = SimJob.Start(SimSearch.Of(Board(), Strike(0)), "batch test cancelled");
+        var job = SimJob.Start(SimSearch.Of(Board(), Strike(target: 0)), "batch test cancelled");
         job.Cancel(); // a cancelled job never completes (nobody reads it)
         var batch = new SimBatch(new[] { job });
         Assert.False(batch.IsCompleted);

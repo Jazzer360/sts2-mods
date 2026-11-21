@@ -142,7 +142,7 @@ public sealed class SimScript
     {
         var script = new SimScript { Name = simPlay.Name };
         script.Actions.AddRange(simPlay.Before);
-        var play = simPlay.Card is { } card ? card with { Target = simPlay.TargetId } : new SimCardPlay(new SimCard(simPlay.Name, simPlay.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, simPlay.TargetId, 0,
+        var play = simPlay.Card is { } card ? card with { Target = simPlay.TargetId } : new SimCardPlay(new SimCard(simPlay.Name, simPlay.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, simPlay.TargetId, PlayIndex: 0,
             Math.Max(1, simPlay.Plays), simPlay.AutoPlay);
         var body = new List<SimAction>(simPlay.Body);
         var shorthand = Shorthand(simPlay);
@@ -153,7 +153,7 @@ public sealed class SimScript
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)
             script.Actions.Add(new ApplyPowerAction(PowerId.Poison, simPlay.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = simPlay.RandomPoisonTimes, Debuff = true });
         foreach (var proc in simPlay.Procs) script.Actions.Add(new FixedHitsAction(proc.Spread, proc.TargetId, proc.Damage, proc.Times));
-        foreach (var amount in simPlay.ProcBlock) script.Actions.Add(new GainBlockAction(1, amount, SimProps.Unpowered) { Fixed = true });
+        foreach (var amount in simPlay.ProcBlock) script.Actions.Add(new GainBlockAction(Times: 1, amount, SimProps.Unpowered) { Fixed = true });
         return script;
     }
 
@@ -164,16 +164,16 @@ public sealed class SimScript
         for (var i = 0; i < play.HpCostTimes && play.HpCost > 0; i++) actions.Add(new LoseHpAction(play.HpCost));
         if (play.Hits > 0 && play.HitTarget != SimPlay.Target.None)
         {
-            actions.Add(new AttackAction(play.Hits, play.HitTarget, new DamageSpec(0m, SimProps.Move) { BaseOn = Decimals(play.HitDamage), Fixed = true })
+            actions.Add(new AttackAction(play.Hits, play.HitTarget, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = Decimals(play.HitDamage), Fixed = true })
             {
                 TargetId = play.HitTarget == SimPlay.Target.Single ? play.TargetId : -1,
                 ByOsty = play.ByOsty,
-                OnKill = play.OnKillHitAll.Count > 0 ? new DamageSpec(0m, SimProps.Move) { BaseOn = Decimals(play.OnKillHitAll), Fixed = true } : null,
+                OnKill = play.OnKillHitAll.Count > 0 ? new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = Decimals(play.OnKillHitAll), Fixed = true } : null,
                 Splash = play.SplashFromTarget,
             });
         }
         if (play.TargetDamage.Count > 0)
-            actions.Add(new DamageAction(new DamageSpec(0m, SimProps.Unblockable | SimProps.Unpowered) { BaseOn = Decimals(play.TargetDamage), Fixed = true }));
+            actions.Add(new DamageAction(new DamageSpec(Base: 0m, SimProps.Unblockable | SimProps.Unpowered) { BaseOn = Decimals(play.TargetDamage), Fixed = true }));
         if (play.ExecuteAtOrBelow > 0) actions.Add(new ExecuteAction(play.ExecuteAtOrBelow));
         foreach (var orbOp in play.OrbOps)
         {

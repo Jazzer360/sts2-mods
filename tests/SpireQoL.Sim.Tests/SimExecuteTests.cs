@@ -14,64 +14,64 @@ public class SimExecuteTests
     [Fact]
     public void KillsTheTargetAtOrBelowTheThreshold()
     {
-        var state = new SimState { Enemies = { E(1, 30, 48) } };
-        SimEngine.ApplyPlayTo(state, Judgement(1, 30), out var branches, out _);
-        Assert.All(branches, branch => Assert.False(branch.Enemy(1)!.Alive));
+        var state = new SimState { Enemies = { E(id: 1, hp: 30, hits: 48) } };
+        SimEngine.ApplyPlayTo(state, Judgement(target: 1, threshold: 30), out var branches, out _);
+        Assert.All(branches, branch => Assert.False(branch.Enemy(id: 1)!.Alive));
         Assert.Equal(0, SimEngine.Run(branches[0]).Worst.Taken); // it never attacks
     }
 
     [Fact]
     public void LeavesATargetAboveTheThreshold()
     {
-        var state = new SimState { Enemies = { E(1, 31, 48) } };
-        SimEngine.ApplyPlayTo(state, Judgement(1, 30), out var branches, out _);
-        Assert.All(branches, branch => Assert.Equal(31, branch.Enemy(1)!.Hp));
+        var state = new SimState { Enemies = { E(id: 1, hp: 31, hits: 48) } };
+        SimEngine.ApplyPlayTo(state, Judgement(target: 1, threshold: 30), out var branches, out _);
+        Assert.All(branches, branch => Assert.Equal(31, branch.Enemy(id: 1)!.Hp));
     }
 
     [Fact]
     public void OnlyTheTargetDies()
     {
-        var state = new SimState { Enemies = { E(1, 10, 5), E(2, 10, 5) } };
-        SimEngine.ApplyPlayTo(state, Judgement(2, 30), out var branches, out _);
-        Assert.All(branches, branch => { Assert.True(branch.Enemy(1)!.Alive); Assert.False(branch.Enemy(2)!.Alive); });
+        var state = new SimState { Enemies = { E(id: 1, hp: 10, hits: 5), E(id: 2, hp: 10, hits: 5) } };
+        SimEngine.ApplyPlayTo(state, Judgement(target: 2, threshold: 30), out var branches, out _);
+        Assert.All(branches, branch => { Assert.True(branch.Enemy(id: 1)!.Alive); Assert.False(branch.Enemy(id: 2)!.Alive); });
     }
 
     [Fact]
     public void ItsKillIsWhatTheLethalTabReads()
     {
         // The lethal tab: the target dead before it acts in every branch, and not without the card.
-        var state = new SimState { Enemies = { E(1, 21, 48) } };
-        Assert.False(SimEngine.Run(state).DeadInAll(1));
-        var outcome = SimEngine.Run(state, Judgement(1, 30));
-        Assert.True(outcome.DeadInAll(1));
+        var state = new SimState { Enemies = { E(id: 1, hp: 21, hits: 48) } };
+        Assert.False(SimEngine.Run(state).DeadInAll(enemyId: 1));
+        var outcome = SimEngine.Run(state, Judgement(target: 1, threshold: 30));
+        Assert.True(outcome.DeadInAll(enemyId: 1));
         Assert.True(outcome.PlayKillsInAll);
-        Assert.False(SimEngine.Run(state, Judgement(1, 20)).DeadInAll(1));
+        Assert.False(SimEngine.Run(state, Judgement(target: 1, threshold: 20)).DeadInAll(enemyId: 1));
     }
 
     [Fact]
     public void TimbersKillHitsEveryEnemy()
     {
         // Timber: its hit kills the target, then a second attack hits every enemy (30 each).
-        var state = new SimState { Enemies = { E(1, 8, 5), E(2, 36, 5), E(3, 13, 5) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 8, hits: 5), E(id: 2, hp: 36, hits: 5), E(id: 3, hp: 13, hits: 5) } };
         var timber = new SimPlay { Name = "Timber", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1,
             HitDamage = { [1] = 20, [2] = 20, [3] = 20 }, OnKillHitAll = { [1] = 30, [2] = 30, [3] = 30 } };
         SimEngine.ApplyPlayTo(state, timber, out var branches, out _);
         Assert.All(branches, branch =>
         {
-            Assert.False(branch.Enemy(1)!.Alive);
-            Assert.Equal(6, branch.Enemy(2)!.Hp);
-            Assert.False(branch.Enemy(3)!.Alive);
+            Assert.False(branch.Enemy(id: 1)!.Alive);
+            Assert.Equal(6, branch.Enemy(id: 2)!.Hp);
+            Assert.False(branch.Enemy(id: 3)!.Alive);
         });
     }
 
     [Fact]
     public void TimberWithoutAKillHitsOnlyItsTarget()
     {
-        var state = new SimState { Enemies = { E(1, 50, 5), E(2, 36, 5) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, hits: 5), E(id: 2, hp: 36, hits: 5) } };
         var timber = new SimPlay { Name = "Timber", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1,
             HitDamage = { [1] = 20, [2] = 20 }, OnKillHitAll = { [1] = 30, [2] = 30 } };
         SimEngine.ApplyPlayTo(state, timber, out var branches, out _);
-        Assert.All(branches, branch => { Assert.Equal(30, branch.Enemy(1)!.Hp); Assert.Equal(36, branch.Enemy(2)!.Hp); });
+        Assert.All(branches, branch => { Assert.Equal(30, branch.Enemy(id: 1)!.Hp); Assert.Equal(36, branch.Enemy(id: 2)!.Hp); });
     }
 
     [Fact]
@@ -79,24 +79,24 @@ public class SimExecuteTests
     {
         // Capture Spirit: 3 unblockable damage to its target. Slippery takes it down to 1 HP and loses a charge, so the
         // crossed Slippery tab shows.
-        var state = new SimState { Enemies = { E(1, 20, 5) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 20, hits: 5) } };
         state.Enemies[0].Block = 10;
         state.Enemies[0].Slippery = 2;
         var play = new SimPlay { Name = "CaptureSpirit", TargetId = 1, TargetDamage = { [1] = 3 } };
         SimEngine.ApplyPlayTo(state, play, out var branches, out _);
         Assert.All(branches, branch =>
         {
-            Assert.Equal(10, branch.Enemy(1)!.Block);
-            Assert.Equal(19, branch.Enemy(1)!.Hp);
-            Assert.Equal(1, branch.Enemy(1)!.Slippery);
+            Assert.Equal(10, branch.Enemy(id: 1)!.Block);
+            Assert.Equal(19, branch.Enemy(id: 1)!.Hp);
+            Assert.Equal(1, branch.Enemy(id: 1)!.Slippery);
         });
-        Assert.True(SimEngine.Run(state, play).SlipperyInAny(1));
+        Assert.True(SimEngine.Run(state, play).SlipperyInAny(enemyId: 1));
     }
 
     [Fact]
     public void CaptureSpiritCanKill()
     {
-        var state = new SimState { Enemies = { E(1, 3, 20) } };
-        Assert.True(SimEngine.Run(state, new SimPlay { Name = "CaptureSpirit", TargetId = 1, TargetDamage = { [1] = 3 } }).DeadInAll(1));
+        var state = new SimState { Enemies = { E(id: 1, hp: 3, hits: 20) } };
+        Assert.True(SimEngine.Run(state, new SimPlay { Name = "CaptureSpirit", TargetId = 1, TargetDamage = { [1] = 3 } }).DeadInAll(enemyId: 1));
     }
 }

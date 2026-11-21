@@ -362,7 +362,7 @@ public sealed class CardPredictions
         // Cards this play brings back to your hand (Make It So, Right Hand Hand, Whistling Arrows): plain, one per card name,
         // with the returning card as the icon.
         foreach (var back in prepared.F.CardsBack.GroupBy(otherCard => otherCard.GetType().Name))
-            list.Add(new TabSpec("return:" + back.Key, null, Card: back.First()));
+            list.Add(new TabSpec("return:" + back.Key, Icon: null, Card: back.First()));
         // Free Card, Free Attack, Free Skill, Free Power: the energy this play saves (or "?" when you couldn't know the cost); crossed when
         // the card already costs 0 or is X-cost, so playing it throws the free card away.
         foreach (var use in FreeCards.Uses(card, _me))
@@ -522,11 +522,11 @@ public sealed class CardPredictions
         string Pct(double share) => new SimChance(share, share, share > 0).Text() + (unsure ? "?" : "");
         if (!reader.Counts)
         {
-            tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(DrawnChance.ChanceOfAny(distribution)));
+            tabs["drawn"] = new TabSpec("drawn", Icon: null, Text: Pct(DrawnChance.ChanceOfAny(distribution)));
             return;
         }
         var (n, chance) = DrawnChance.MostLikely(distribution);
-        tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(chance), NumberText: n.ToString());
+        tabs["drawn"] = new TabSpec("drawn", Icon: null, Text: Pct(chance), NumberText: n.ToString());
     }
 
     /// <summary>

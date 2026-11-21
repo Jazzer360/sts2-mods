@@ -160,14 +160,14 @@ public sealed partial class RunRemindersFeature
             {
                 case nameof(EternalFeather):
                 {
-                    var every = Sts2State.Var(model, "Cards", 5);
-                    return every > 0 ? $"+{Sts2State.Var(model, "Heal", 3) * (me.Deck.Cards.Count() / every)}" : null;
+                    var every = Sts2State.Var(model, "Cards", fallback: 5);
+                    return every > 0 ? $"+{Sts2State.Var(model, "Heal", fallback: 3) * (me.Deck.Cards.Count() / every)}" : null;
                 }
                 case nameof(MealTicket):
                 case nameof(Planisphere):
-                    return $"+{Sts2State.Var(model, "Heal", 0)}";
+                    return $"+{Sts2State.Var(model, "Heal", fallback: 0)}";
                 case nameof(Dowsing):
-                    return $"{Sts2State.Var(model, "Rooms", 4)}";
+                    return $"{Sts2State.Var(model, "Rooms", fallback: 4)}";
             }
             return model is RelicModel { ShowCounter: true } relic ? $"{relic.DisplayAmount}" : null;
         }
@@ -179,7 +179,7 @@ public sealed partial class RunRemindersFeature
 
     private HBoxContainer PathRow(List<PathMark> marks, MapPointType type)
     {
-        var row = UiKit.Row(6);
+        var row = UiKit.Row(separation: 6);
         row.Name = PathNodeName;
         row.MouseFilter = Control.MouseFilterEnum.Ignore;
         foreach (var mark in marks)
@@ -219,7 +219,7 @@ public sealed partial class RunRemindersFeature
     /// <summary>A legend row with its pathing icons, for the Guide page (decision #56): the icons as the map shows them.</summary>
     internal static Control ExamplePathIcons(IEnumerable<(RelicModel Relic, bool Crossed, string? Note)> icons)
     {
-        var row = UiKit.Row(6);
+        var row = UiKit.Row(separation: 6);
         foreach (var (relic, crossed, note) in icons)
         {
             var icon = Crossable(IconOf(relic), PathIcon, crossed);

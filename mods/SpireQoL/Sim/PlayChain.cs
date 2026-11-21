@@ -129,7 +129,7 @@ public static class PlayChain
         }
         // Drawing stops when both piles are empty (CardPileCmd.Draw).
         var cards = pile + discard;
-        if (drawInputs.Blocked) return new DrawResult(0, chained, drawInputs.ShufflesFirst);
+        if (drawInputs.Blocked) return new DrawResult(Draws: 0, chained, drawInputs.ShufflesFirst);
         var first = Math.Min(Math.Min(drawInputs.OwnDraws + during, room), cards);
         if (drawInputs.EnchantmentDraws > 0)
             first += Math.Min(Math.Min(drawInputs.EnchantmentDraws, Math.Max(0, room - first - drawInputs.AddedToHandBeforeEnchantment)), cards - first);

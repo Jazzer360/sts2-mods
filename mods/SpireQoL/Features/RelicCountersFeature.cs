@@ -208,7 +208,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         if (left == 0)
         {
             // Pale Blue Dot shows 0 once it has fired this turn.
-            return new RowState(filled, spec.Threshold, false, Ok, "done");
+            return new RowState(filled, spec.Threshold, Flash: false, Ok, "done");
         }
         var color = spec.OnEnemy ? Warn : PowerFill;
         return new RowState(filled, spec.Threshold, left == 1, color, $"{left} {spec.Unit} left");
@@ -232,14 +232,14 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
 
     private static Row MakeRow(AbstractModel model)
     {
-        var root = UiKit.Row(6);
+        var root = UiKit.Row(separation: 6);
         if (model is CardModel card)
         {
-            var tiny = new Cards.TinyCardIcon(card, 28);
+            var tiny = new Cards.TinyCardIcon(card, size: 28);
             root.AddChild(tiny.Root);
-            var cardBar = new TickBar(9, 12);
+            var cardBar = new TickBar(segWidth: 9, height: 12);
             root.AddChild(cardBar.Root);
-            var cardText = UiKit.Label("", 15, Colors.White);
+            var cardText = UiKit.Label("", size: 15, Colors.White);
             root.AddChild(cardText);
             return new Row { Root = root, Bar = cardBar, Text = cardText, Tiny = tiny };
         }
@@ -257,10 +257,10 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         {
             // missing art: bar and text only
         }
-        root.AddChild(UiKit.Icon(icon, 28));
-        var bar = new TickBar(9, 12);
+        root.AddChild(UiKit.Icon(icon, size: 28));
+        var bar = new TickBar(segWidth: 9, height: 12);
         root.AddChild(bar.Root);
-        var text = UiKit.Label("", 15, Colors.White);
+        var text = UiKit.Label("", size: 15, Colors.White);
         root.AddChild(text);
         return new Row { Root = root, Bar = bar, Text = text };
     }
@@ -295,7 +295,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
                 if (threshold <= 0) return null;
                 var played = Sts2State.CountPlayedThisTurn(me);
                 var ok = played <= threshold;
-                return new RowState(Math.Min(played, threshold), threshold, false, ok ? Ok : Warn, ok ? $"{played}/{threshold} ok" : "missed");
+                return new RowState(Math.Min(played, threshold), threshold, Flash: false, ok ? Ok : Warn, ok ? $"{played}/{threshold} ok" : "missed");
             }
             case CounterKind.OnTurn:
             {
@@ -306,16 +306,16 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             case CounterKind.OneShot:
             {
                 var armed = IsArmed(relic);
-                return new RowState(armed ? 1 : 0, 1, false, armed ? Ok : Fill, armed ? "ready" : "used");
+                return new RowState(armed ? 1 : 0, Total: 1, Flash: false, armed ? Ok : Fill, armed ? "ready" : "used");
             }
             case CounterKind.KeepEnergy:
             {
                 // Pael's Tears: end your turn with energy left → +N energy next turn.
                 var energy = me.PlayerCombatState?.Energy ?? 0;
-                var bonus = Sts2State.Var(relic, "Energy", 2);
+                var bonus = Sts2State.Var(relic, "Energy", fallback: 2);
                 return energy > 0
-                    ? new RowState(1, 1, false, Ok, $"+{bonus} next turn")
-                    : new RowState(0, 1, false, Warn, "no energy left");
+                    ? new RowState(Filled: 1, Total: 1, Flash: false, Ok, $"+{bonus} next turn")
+                    : new RowState(Filled: 0, Total: 1, Flash: false, Warn, "no energy left");
             }
         }
         return null;
@@ -326,9 +326,9 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
     {
         return relic.GetType().Name switch
         {
-            nameof(Permafrost) => !Sts2State.Private(relic, "ActivatedThisCombat", true),
-            nameof(MusicBox) => !Sts2State.Private(relic, "WasUsedThisTurn", true),
-            nameof(PaelsLegion) => Sts2State.Private(relic, "Cooldown", 1) <= 0, // Status isn't Active at combat start
+            nameof(Permafrost) => !Sts2State.Private(relic, "ActivatedThisCombat", fallback: true),
+            nameof(MusicBox) => !Sts2State.Private(relic, "WasUsedThisTurn", fallback: true),
+            nameof(PaelsLegion) => Sts2State.Private(relic, "Cooldown", fallback: 1) <= 0, // Status isn't Active at combat start
             _ => relic.Status == RelicStatus.Active,
         };
     }

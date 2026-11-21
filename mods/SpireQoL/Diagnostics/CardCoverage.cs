@@ -168,7 +168,7 @@ internal static class CardCoverage
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(otherCard => PlayFacts.CardsDrawn(otherCard, 5) + PlayFacts.CardsDrawn(otherCard, 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
+            && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         // A card that takes block away (Expose): the simulator models the ones it knows.
         if (Calls("CreatureCmd", "LoseBlock") && !SimAdapter.StripBlockCards.Contains(name))
@@ -200,7 +200,7 @@ internal static class CardCoverage
         if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !SimAdapter.KeepsStretchCards.Contains(name))
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
         // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
-        if (Sts2Mods.Core.Game.Sts2State.Private(card, "GainsBlock", false) && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
+        if (Sts2Mods.Core.Game.Sts2State.Private(card, "GainsBlock", fallback: false) && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
             issues.Add("gains block without a Block value (whether it spends Stretch isn't known: Stretch tab)");
         // A card that isn't an attack but damages its target (Capture Spirit): the simulator models the ones it knows.
         if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !SimAdapter.TargetDamageCards.Contains(name))
@@ -223,14 +223,14 @@ internal static class CardCoverage
         // Repeat is its Frost channels). A card that really attacks Repeat times in a loop goes in Reviewed.
         if (card.Type == CardType.Attack && !Calls("AttackCommand", "WithHitCount") && !card.DynamicVars.ContainsKey("HitCount")
             && !PlayFacts.SingleHitRepeatCards.Contains(name)
-            && (Sts2Mods.Core.Game.Sts2State.Var(card, "Repeat", 1) > 1 || (upgraded != null && Sts2Mods.Core.Game.Sts2State.Var(upgraded, "Repeat", 1) > 1)))
+            && (Sts2Mods.Core.Game.Sts2State.Var(card, "Repeat", fallback: 1) > 1 || (upgraded != null && Sts2Mods.Core.Game.Sts2State.Var(upgraded, "Repeat", fallback: 1) > 1)))
             issues.Add("an attack with a Repeat value and no hit count in its code (its hits would be read as Repeat: damage, lethal)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
         // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.
-        if (Calls("CardCmd", "Exhaust") && None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, 5, 1)))
+        if (Calls("CardCmd", "Exhaust") && None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, drawPile: 5, plays: 1)))
             issues.Add("exhausts cards (not counted: Feel No Pain, Dark Embrace...)");
-        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, name, others, PlayFacts.CardsDrawn(otherCard, 5))))
+        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, name, others, PlayFacts.CardsDrawn(otherCard, handCount: 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
             && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))
@@ -247,7 +247,7 @@ internal static class CardCoverage
             issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");
         // Every game card as the hand, so any filter (statuses, attacks) finds something to transform.
         if ((Calls("CardCmd", "Transform") || Calls("CardCmd", "TransformTo") || Calls("CardCmd", "TransformToRandom"))
-            && None(otherCard => PlayFacts.TransformCount(otherCard, name, all, 5)))
+            && None(otherCard => PlayFacts.TransformCount(otherCard, name, all, drawPile: 5)))
             issues.Add("transforms cards (not counted: the proc check's created-card budget)");
         if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(otherCard => Math.Abs(SimAdapter.SlotChange(otherCard, name))))
             issues.Add("changes your orb slots (the simulator doesn't change them)");

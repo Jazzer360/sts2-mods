@@ -225,15 +225,15 @@ public class PlayChainTests
         // 14 → 10 → 6 → 2, so the fourth play shuffles.
         Assert.True(PlayChain.ShortPileShufflesOnLaterPlay(drawPile: 14, discardPile: 2, looksAt: 4, plays: 4));
         // Three plays leave 2 behind without shuffling.
-        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(14, 2, 4, 3));
+        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(drawPile: 14, discardPile: 2, looksAt: 4, plays: 3));
         // One play: only the first play's check (ShufflesFirst) applies.
-        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(3, 5, 4, 1));
+        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(drawPile: 3, discardPile: 5, looksAt: 4, plays: 1));
         // The first play shuffles already: not a later play's shuffle.
-        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(3, 5, 4, 2));
+        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(drawPile: 3, discardPile: 5, looksAt: 4, plays: 2));
         // Empty discard pile: the first play's 3 discards fill it, so the second play still shuffles.
-        Assert.True(PlayChain.ShortPileShufflesOnLaterPlay(6, 0, 4, 2));
+        Assert.True(PlayChain.ShortPileShufflesOnLaterPlay(drawPile: 6, discardPile: 0, looksAt: 4, plays: 2));
         // Looking at a single card discards nothing: with no discard pile, nothing to shuffle in.
-        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(1, 0, 1, 3));
+        Assert.False(PlayChain.ShortPileShufflesOnLaterPlay(drawPile: 1, discardPile: 0, looksAt: 1, plays: 3));
     }
 
     [Fact]
@@ -243,7 +243,7 @@ public class PlayChainTests
         // expected 2). Worked out with the target's draws in place of the card's own.
         var drawInputs = new PlayChain.DrawInputs { OwnDraws = 0, HandCount = 10, DrawPile = 20, DiscardPile = 1 };
         Assert.Equal(0, PlayChain.Resolve(drawInputs).Draws);
-        Assert.Equal(1, PlayChain.Resolve(drawInputs.WithOwnDraws(2)).Draws);
+        Assert.Equal(1, PlayChain.Resolve(drawInputs.WithOwnDraws(own: 2)).Draws);
         Assert.Equal(0, drawInputs.OwnDraws); // a copy
     }
 

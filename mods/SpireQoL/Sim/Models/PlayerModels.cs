@@ -42,7 +42,7 @@ public sealed class BufferPower : SimModel
     {
         var powers = SimEngine.PowersOf(state, owner);
         SimEngine.SetPowers(state, owner, powers[ThisPower] <= 1 ? powers.Without(ThisPower) : powers.With(ThisPower, powers[ThisPower] - 1));
-        state.LogFired(Name, 0, owner);
+        state.LogFired(Name, amount: 0, owner);
     }
 }
 

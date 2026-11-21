@@ -71,7 +71,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
     {
         var runManager = RunManager.Instance;
         var run = runManager is { IsInProgress: true }
-            ? RunStateProperty != null ? RunStateProperty.GetValue(runManager) : Sts2State.Private<RunState?>(runManager, "State", null)
+            ? RunStateProperty != null ? RunStateProperty.GetValue(runManager) : Sts2State.Private<RunState?>(runManager, "State", fallback: null)
             : null;
         if (!ReferenceEquals(run, _run))
         {

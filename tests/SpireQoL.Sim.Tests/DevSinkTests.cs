@@ -42,7 +42,7 @@ public sealed class DevSinkTests : IDisposable
     [Fact]
     public void ALineIsTheTimeTheKindAndTheFieldsInCamelCase()
     {
-        var line = DevSink.Line(1.23456, new SearchDone("Bash (target 0)", SearchDone.ContextOf(2, 3), 5, 100, 10, 1.5, true, "the memory cap", false));
+        var line = DevSink.Line(seconds: 1.23456, new SearchDone("Bash (target 0)", SearchDone.ContextOf(combat: 2, turn: 3), Steps: 5, Copies: 100, PeakHeld: 10, Ms: 1.5, Background: true, "the memory cap", Cancelled: false));
         using var doc = JsonDocument.Parse(line);
         var jsonElement = doc.RootElement;
         Assert.Equal(1.235, jsonElement.GetProperty("t").GetDouble());
@@ -51,18 +51,18 @@ public sealed class DevSinkTests : IDisposable
         Assert.Equal(2, jsonElement.GetProperty("combat").GetInt32());
         Assert.Equal(3, jsonElement.GetProperty("turn").GetInt32());
         Assert.Equal("the memory cap", jsonElement.GetProperty("cap").GetString());
-        Assert.Equal("{\"t\":0,\"kind\":\"combat-ended\"}", DevSink.Line(0, new CombatEnded()));
+        Assert.Equal("{\"t\":0,\"kind\":\"combat-ended\"}", DevSink.Line(seconds: 0, new CombatEnded()));
     }
 
     [Fact]
     public void EventsGoToTheStreamFileOneLineEachAndTheStateIsReplaced()
     {
         using var sink = Sink();
-        sink.Post(new TurnStarted(1));
+        sink.Post(new TurnStarted(Turn: 1));
         sink.Post(new LogLine("INFO", "it's a \"quoted\" line\nwith a break"));
         sink.SetState("{\"v\":1}");
         sink.Flush();
-        sink.Post(new TurnStarted(2));
+        sink.Post(new TurnStarted(Turn: 2));
         sink.SetState("{\"v\":2}");
         sink.Flush();
         var lines = File.ReadAllLines(sink.StreamPath);
@@ -107,9 +107,9 @@ public sealed class DevSinkTests : IDisposable
     public void AFrameRollupHasPercentilesFeatureTimesMemoryAndStartsAgain()
     {
         var frameWindow = new FrameWindow();
-        for (var i = 1; i <= 20; i++) frameWindow.Add(i, 16, new[] { ("incoming-damage", 0.5), ("proc-indicators", i / 2.0) }, new[] { ("proc-indicators", 42.0) });
-        frameWindow.Add(40, 70, Array.Empty<(string, double)>(), Array.Empty<(string, double)>());
-        var frameRollup = frameWindow.Take(0.25, (100, 3, 1, 0, 0, 2, 1234, 2));
+        for (var i = 1; i <= 20; i++) frameWindow.Add(i, gapMs: 16, new[] { ("incoming-damage", 0.5), ("proc-indicators", i / 2.0) }, new[] { ("proc-indicators", 42.0) });
+        frameWindow.Add(modMs: 40, gapMs: 70, Array.Empty<(string, double)>(), Array.Empty<(string, double)>());
+        var frameRollup = frameWindow.Take(seconds: 0.25, (100, 3, 1, 0, 0, 2, 1234, 2));
         Assert.Equal(21, frameRollup.Frames);
         Assert.Equal(11, frameRollup.ModP50);
         Assert.Equal(20, frameRollup.ModP95);
@@ -120,6 +120,6 @@ public sealed class DevSinkTests : IDisposable
         Assert.Equal(Math.Round(20 * 0.5 / 21, 2), frameRollup.FeatureMean["incoming-damage"]);
         Assert.Equal(Math.Round(20 * 42.0 / 21, 2), frameRollup.FeatureKb["proc-indicators"]); // KB per frame, over every frame
         Assert.Equal(1234, frameRollup.HeldStates);
-        Assert.Equal(0, frameWindow.Take(0.25, default).Frames);
+        Assert.Equal(0, frameWindow.Take(seconds: 0.25, extra: default).Frames);
     }
 }

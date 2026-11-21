@@ -70,7 +70,7 @@ public class ReplayTests
         state.You.OrbCapacity = 3;
         state.You.Juggernaut = 2;
         state.You.Plating = 4;
-        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 2));
         state.You.RemnantCap = 10;
         state.You.RemnantLeftPlayerTurn = 6;
 
@@ -78,9 +78,9 @@ public class ReplayTests
         var outcome = SimEngine.Run(state);
         var simOutcome = SimEngine.Run(back);
         Assert.Equal(outcome.TakenMax, simOutcome.TakenMax);
-        Assert.Equal(outcome.HpAtTurnEndMax(0), simOutcome.HpAtTurnEndMax(0));
-        Assert.Equal(outcome.UnblockedMax(0), simOutcome.UnblockedMax(0));
-        Assert.Equal(outcome.FirstHitBlockedInAll(0), simOutcome.FirstHitBlockedInAll(0));
+        Assert.Equal(outcome.HpAtTurnEndMax(enemyId: 0), simOutcome.HpAtTurnEndMax(enemyId: 0));
+        Assert.Equal(outcome.UnblockedMax(enemyId: 0), simOutcome.UnblockedMax(enemyId: 0));
+        Assert.Equal(outcome.FirstHitBlockedInAll(enemyId: 0), simOutcome.FirstHitBlockedInAll(enemyId: 0));
         Assert.Equal(state.ToJson(), back.ToJson());
     }
 }

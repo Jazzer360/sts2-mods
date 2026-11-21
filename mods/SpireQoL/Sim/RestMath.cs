@@ -95,7 +95,7 @@ public static class RestMath
             // The rest heal's worth is what it adds to the result over not resting at all, apart from what the relics after
             // it change (Stone Humidifier's HP, Night Terrors' loss).
             var skip = currentHp;
-            Boss(ref skip, max, null);
+            Boss(ref skip, max, into: null);
             var after = lines.Where(restLine => restLine.Step is RestStep.StoneHumidifier or RestStep.NightTerrors).Sum(restLine => restLine.Hp);
             over = Math.Max(0, nominal - (result - skip - after));
         }

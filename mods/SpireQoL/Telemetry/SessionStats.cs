@@ -314,10 +314,10 @@ public sealed record SessionSummary
     /// <summary>The audits outside the turns (intent, potion, reminders, rest), by name.</summary>
     public Dictionary<string, AuditSummary> Others { get; init; } = new();
     public SearchSummary Searches { get; init; } = SearchSummary.Empty;
-    public WaitSummary Waits { get; init; } = new(0, new(0, 0, 0, 0, 0));
-    public TimingSummary Unsettled { get; init; } = new(0, 0, 0, 0, 0);
-    public FrameSummary Frames { get; init; } = new(0, 0, new(0, 0, 0, 0, 0));
-    public GcSummary Gc { get; init; } = new(0, 0, 0, 0, 0);
+    public WaitSummary Waits { get; init; } = new(Missed: 0, new(Count: 0, P50: 0, P95: 0, P99: 0, Max: 0));
+    public TimingSummary Unsettled { get; init; } = new(Count: 0, P50: 0, P95: 0, P99: 0, Max: 0);
+    public FrameSummary Frames { get; init; } = new(Slow: 0, GameStalls: 0, new(Count: 0, P50: 0, P95: 0, P99: 0, Max: 0));
+    public GcSummary Gc { get; init; } = new(Gen0: 0, Gen1: 0, Gen2: 0, PauseMs: 0, AllocatedMb: 0);
     public Dictionary<string, int> Reports { get; init; } = new();
 
     private static readonly JsonSerializerOptions Options = new()
@@ -339,14 +339,14 @@ public sealed record SessionSummary
 
 public sealed record AuditSummary(int Checked, int Matched, int Skipped, Dictionary<string, int> SkipReasons, Dictionary<string, int> Mismatches)
 {
-    public static AuditSummary Empty => new(0, 0, 0, new(), new());
+    public static AuditSummary Empty => new(Checked: 0, Matched: 0, Skipped: 0, new(), new());
 }
 
 /// <summary>Searches that ended (Count includes the cancelled); Ms covers the ones not cancelled.</summary>
 public sealed record SearchSummary(int Count, int Background, int Cancelled, long Copies, long CancelledCopies, long MaxHeld,
     string Slowest, TimingSummary Ms, Dictionary<string, int> Caps)
 {
-    public static SearchSummary Empty => new(0, 0, 0, 0, 0, 0, "", new(0, 0, 0, 0, 0), new());
+    public static SearchSummary Empty => new(Count: 0, Background: 0, Cancelled: 0, Copies: 0, CancelledCopies: 0, MaxHeld: 0, "", new(Count: 0, P50: 0, P95: 0, P99: 0, Max: 0), new());
 }
 
 public sealed record WaitSummary(int Missed, TimingSummary Ms);

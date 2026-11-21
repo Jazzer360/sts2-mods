@@ -66,13 +66,13 @@ internal sealed class InspectScreen
         Regroup();
         Fill(me);
         _layer!.Visible = true;
-        BlockGameInput(true);
+        BlockGameInput(block: true);
     }
 
     public void Close()
     {
         if (_layer != null && GodotObject.IsInstanceValid(_layer)) _layer.Visible = false;
-        BlockGameInput(false);
+        BlockGameInput(block: false);
         if (_body != null) UiKit.Clear(_body);
         _cards.Clear();
         _cells.Clear();
@@ -117,7 +117,7 @@ internal sealed class InspectScreen
             groups.RemoveAll(drawGroup => drawGroup.Kind == DrawKind.Transform);
             var upgraded = _baseGroups.First(drawGroup => drawGroup.Kind == DrawKind.Transform).Upgraded;
             groups.Insert(Math.Min(first, groups.Count), new DrawGroup(DrawKind.Transform, RunRemindersFeature.OptionCards.TransformResults(_transformFrom),
-                MegaCrit.Sts2.Core.Runs.CardRarityOddsType.Uniform, 1, upgraded));
+                MegaCrit.Sts2.Core.Runs.CardRarityOddsType.Uniform, Count: 1, upgraded));
         }
         _groups = groups
             .GroupBy(drawGroup => (drawGroup.Kind, drawGroup.Count, string.Join(",", drawGroup.Cards.Select(card => card.Id.ToString()))))
@@ -130,7 +130,7 @@ internal sealed class InspectScreen
         UiKit.Clear(_transformRow!);
         _transformRow!.Visible = _baseGroups.Any(drawGroup => drawGroup.Kind == DrawKind.Transform);
         if (!_transformRow.Visible) return;
-        _transformRow.AddChild(Text("Card you transform:", 20, SettingsMenu.Text));
+        _transformRow.AddChild(Text("Card you transform:", size: 20, SettingsMenu.Text));
         var pick = new OptionButton { FocusMode = Control.FocusModeEnum.None };
         pick.AddThemeFontSizeOverride("font_size", 18);
         pick.AddItem("Any of your cards");
@@ -169,7 +169,7 @@ internal sealed class InspectScreen
         _root.AddChild(backdrop);
 
         _panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop };
-        var style = UiKit.PanelStyle(new Color(0.06f, 0.06f, 0.085f, 0.97f), 12, 22);
+        var style = UiKit.PanelStyle(new Color(0.06f, 0.06f, 0.085f, 0.97f), radius: 12, margin: 22);
         style.ContentMarginTop = 16;
         style.ContentMarginBottom = 14;
         style.SetBorderWidthAll(2);
@@ -181,25 +181,25 @@ internal sealed class InspectScreen
         box.AddThemeConstantOverride("separation", 10);
         _panel.AddChild(box);
 
-        var header = UiKit.Row(14);
-        _title = Text("", 28, SettingsMenu.Accent);
+        var header = UiKit.Row(separation: 14);
+        _title = Text("", size: 28, SettingsMenu.Accent);
         header.AddChild(_title);
         header.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
-        var clear = SettingsMenu.MakeButton("Clear marks", 20);
+        var clear = SettingsMenu.MakeButton("Clear marks", size: 20);
         clear.Pressed += () => { _marks.Clear(); Refresh(); };
         header.AddChild(clear);
-        var close = SettingsMenu.MakeButton("Close", 20);
+        var close = SettingsMenu.MakeButton("Close", size: 20);
         close.Pressed += Close;
         header.AddChild(close);
         box.AddChild(header);
 
-        _overall = Text("", 20, SettingsMenu.Text);
+        _overall = Text("", size: 20, SettingsMenu.Text);
         _overall.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         box.AddChild(_overall);
-        _relicButtons = UiKit.Row(8);
+        _relicButtons = UiKit.Row(separation: 8);
         _relicButtons.MouseFilter = Control.MouseFilterEnum.Pass;
         box.AddChild(_relicButtons);
-        _transformRow = UiKit.Row(10);
+        _transformRow = UiKit.Row(separation: 10);
         _transformRow.MouseFilter = Control.MouseFilterEnum.Pass;
         box.AddChild(_transformRow);
 
@@ -208,7 +208,7 @@ internal sealed class InspectScreen
         _body.AddThemeConstantOverride("separation", 14);
         scroll.AddChild(_body);
         box.AddChild(scroll);
-        box.AddChild(Text("Click the cards you'd be happy with. Marks are kept for this run. Every card the rules allow, never the roll. Esc: close.", 16, SettingsMenu.Muted));
+        box.AddChild(Text("Click the cards you'd be happy with. Marks are kept for this run. Every card the rules allow, never the roll. Esc: close.", size: 16, SettingsMenu.Muted));
         Fit();
     }
 
@@ -240,7 +240,7 @@ internal sealed class InspectScreen
         {
             var mine = all.Where(card => CardAffinity.AppliesWith(rule!, card, heldRules, upgradedCards)).ToList();
             if (mine.Count == 0) continue;
-            var button = SettingsMenu.MakeButton($"Mark {Title(relic)}'s cards ({mine.Count})", 18);
+            var button = SettingsMenu.MakeButton($"Mark {Title(relic)}'s cards ({mine.Count})", size: 18);
             button.Icon = GameIcons.Relic(relic);
             button.ExpandIcon = true;
             button.AddThemeConstantOverride("icon_max_width", 28);
@@ -252,7 +252,7 @@ internal sealed class InspectScreen
         foreach (var (group, times) in _groups)
         {
             position++;
-            var head = Text("", 21, SettingsMenu.Accent);
+            var head = Text("", size: 21, SettingsMenu.Accent);
             head.AutowrapMode = TextServer.AutowrapMode.WordSmart;
             _body!.AddChild(head);
             _groupLabels.Add((head, group, times));

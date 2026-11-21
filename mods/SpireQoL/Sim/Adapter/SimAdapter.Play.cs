@@ -52,7 +52,7 @@ public static partial class SimAdapter
 
         // ---- the card play and what each play does
         play.TargetId = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
-        play.Card = new SimCardPlay(SimReaders.Card(card, facts, me), owner, play.TargetId, 0, plays, facts.AutoPlayed);
+        play.Card = new SimCardPlay(SimReaders.Card(card, facts, me), owner, play.TargetId, PlayIndex: 0, plays, facts.AutoPlayed);
         if (facts.LosesHp) play.Body.Add(new LoseHpAction(Sts2State.Var(card, "HpLoss")));
         // A shot (ArrowCmd.ShootArrowAtTarget): the arrow leaves before the attack and impales the target after it. None from an X
         // shot at X 0.
@@ -95,7 +95,7 @@ public static partial class SimAdapter
                 var drawPile = PileType.Draw.GetPile(mates[teammateIndex]).Cards.Count;
                 var discard = PileType.Discard.GetPile(mates[teammateIndex]).Cards.Count;
                 var drawn = Math.Min(cards, Math.Min(Math.Max(0, CardPile.MaxCardsInHand - hand), drawPile + discard));
-                if (drawn > drawPile) play.Body.Add(new CardEventAction(CardEvent.Shuffled, 1) { Player = who, Indirect = true });
+                if (drawn > drawPile) play.Body.Add(new CardEventAction(CardEvent.Shuffled, Count: 1) { Player = who, Indirect = true });
                 if (drawn > 0) play.Body.Add(new CardEventAction(CardEvent.Drawn, drawn) { Player = who, Indirect = true });
             }
         }
@@ -103,7 +103,7 @@ public static partial class SimAdapter
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
         {
             var baseValue = adroit.DynamicVars.Block.BaseValue;
-            play.Body.Add(new GainBlockAction(1, baseValue, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, baseValue, ValueProp.Move) });
+            play.Body.Add(new GainBlockAction(Times: 1, baseValue, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, baseValue, ValueProp.Move) });
         }
         if (StripBlockCards.Contains(name)) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
         play.Body.AddRange(PowersOf(card, facts, name, allyId));
@@ -125,7 +125,7 @@ public static partial class SimAdapter
         if (ExecuteCards.Contains(name)) play.Body.Add(new ExecuteAction(Sts2State.Var(card, "Threshold")));
         if (card.TargetType == TargetType.RandomEnemy && card.DynamicVars.Values.FirstOrDefault(IsPowerVar<PoisonPower>) is { } flask)
             play.Body.Add(new ApplyPowerAction(PowerId.Poison, (int)flask.BaseValue)
-                { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", 1)), Debuff = true });
+                { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 1)), Debuff = true });
         if (KillsOstyCards.Contains(name)) play.Body.Add(new KillOstyAction());
         // A teammate's card: the block it gives its player is theirs.
         if (owner != Who.You)
@@ -177,20 +177,20 @@ public static partial class SimAdapter
             var perStep = perPlay ? total / plays : total;
             if (perStep > 0) to.Add(new CardEventAction(cardEvent, perStep) { Indirect = indirect });
         }
-        Each(play.Before, CardEvent.EnergyGained, facts.EnergyBack, false, perPlay: false);
-        Each(play.Before, CardEvent.EnergySpent, facts.EnergySpent, false, perPlay: false);
-        Each(play.Body, CardEvent.Drawn, Math.Min(facts.OwnDraws, facts.Draws), true);
-        Each(play.Body, CardEvent.Discarded, facts.Discards, true);
-        Each(play.Body, CardEvent.Exhausted, facts.ExhaustsOthers, true);
+        Each(play.Before, CardEvent.EnergyGained, facts.EnergyBack, indirect: false, perPlay: false);
+        Each(play.Before, CardEvent.EnergySpent, facts.EnergySpent, indirect: false, perPlay: false);
+        Each(play.Body, CardEvent.Drawn, Math.Min(facts.OwnDraws, facts.Draws), indirect: true);
+        Each(play.Body, CardEvent.Discarded, facts.Discards, indirect: true);
+        Each(play.Body, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
         var sadness = facts.SadnessCreated;
         var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
-        Each(play.Body, CardEvent.Generated, Math.Max(0, facts.Generated + facts.TransformsCertain - statuses - sadness), true);
-        Each(play.Body, CardEvent.GeneratedStatus, statuses, true);
-        Each(play.Body, CardEvent.GeneratedSadness, sadness, true);
-        Each(play.Body, CardEvent.StarsGained, facts.StarGains, false);
-        if (facts.Stars > 0) play.Body.Add(new CardEventAction(CardEvent.StarsSpent, 1) { FirstPlayOnly = true });
-        if (facts.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, 1) { Card = play.Card!.Card });
-        if (facts.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, 1) { Indirect = true });
+        Each(play.Body, CardEvent.Generated, Math.Max(0, facts.Generated + facts.TransformsCertain - statuses - sadness), indirect: true);
+        Each(play.Body, CardEvent.GeneratedStatus, statuses, indirect: true);
+        Each(play.Body, CardEvent.GeneratedSadness, sadness, indirect: true);
+        Each(play.Body, CardEvent.StarsGained, facts.StarGains, indirect: false);
+        if (facts.Stars > 0) play.Body.Add(new CardEventAction(CardEvent.StarsSpent, Count: 1) { FirstPlayOnly = true });
+        if (facts.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, Count: 1) { Card = play.Card!.Card });
+        if (facts.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, Count: 1) { Indirect = true });
     }
 
     private static bool IsPowerVar<T>(DynamicVar dynamicVar) where T : PowerModel =>
@@ -345,7 +345,7 @@ public static partial class SimAdapter
             else if (simPowerName == "StretchPower" && KeepsStretchCards.Contains(name))
             {
                 // Cho Ki: your Stretch again, as much as you have (so the play keeps it).
-                actions.Add(new ApplyPowerAction(new PowerId(simPowerName), 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });
+                actions.Add(new ApplyPowerAction(new PowerId(simPowerName), Amount: 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });
             }
             else
             {
@@ -376,7 +376,7 @@ public static partial class SimAdapter
         switch (name)
         {
             case nameof(Dualcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = 2 }); break;
-            case nameof(Quadcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = Math.Max(1, Sts2State.Var(card, "Repeat", 4)) }); break;
+            case nameof(Quadcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 4)) }); break;
             case nameof(MultiCast) when X() is var evokes and > 0: actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = evokes }); break;
             case nameof(Shatter): actions.Add(new OrbAction(OrbAction.Op.EvokeAllTwice)); break;
         }
@@ -388,9 +388,9 @@ public static partial class SimAdapter
         if (Channels.TryGetValue(name, out var kinds))
         {
             var times = name is nameof(Spinner) or nameof(Chill) ? PlayFacts.ChannelCount(card, name, me) : 1;
-            for (var time = 0; time < times; time++) foreach (var orbKind in kinds) Channel(orbKind, 1);
+            for (var time = 0; time < times; time++) foreach (var orbKind in kinds) Channel(orbKind, times: 1);
         }
-        else if (RepeatChannels.TryGetValue(name, out var otherOrbKind)) Channel(otherOrbKind, Math.Max(1, Sts2State.Var(card, "Repeat", 1)));
+        else if (RepeatChannels.TryGetValue(name, out var otherOrbKind)) Channel(otherOrbKind, Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 1)));
         else if (name == nameof(Voltaic)) Channel(OrbKind.Lightning, PlayFacts.ChannelCount(card, name, me));
         else if (name == nameof(Tempest)) Channel(OrbKind.Lightning, X());
         var focus = FocusChange(card);

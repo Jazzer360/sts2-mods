@@ -38,30 +38,30 @@ public class SimLethalChainTests
     public void AStrikeThatLeavesOneForTheLightningOrb()
     {
         // 9 HP: the Strike's 6 leaves 3, and the end-of-turn Lightning orb (3) finishes it.
-        var state = new SimState { Enemies = { E(1, 9, 10) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 9, hits: 10) } };
         state.You.OrbCapacity = 3;
         state.You.Orbs.Add(Lightning());
-        Agrees(state, Strike(1, 6));
-        Assert.True(SimEngine.Run(state, Strike(1, 6)).DeadChanceRange(1).Certain);
+        Agrees(state, Strike(target: 1, damage: 6));
+        Assert.True(SimEngine.Run(state, Strike(target: 1, damage: 6)).DeadChanceRange(enemyId: 1).Certain);
     }
 
     [Fact]
     public void ARandomOrbWithTwoEnemies()
     {
         // Two enemies at 3 after the Strike: the orb picks one, so neither is certain; each board agrees with the card.
-        var state = new SimState { Enemies = { E(1, 9, 10), E(2, 3, 10) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 9, hits: 10), E(id: 2, hp: 3, hits: 10) } };
         state.You.OrbCapacity = 3;
         state.You.Orbs.Add(Lightning());
-        Agrees(state, Strike(1, 6));
+        Agrees(state, Strike(target: 1, damage: 6));
     }
 
     [Fact]
     public void PoisonThatKillsAtTheEnemyTurn()
     {
-        var state = new SimState { Enemies = { E(1, 10, 10) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 10, hits: 10) } };
         state.Enemies[0].Poison = 5;
-        Agrees(state, Strike(1, 6));
-        Assert.True(SimEngine.Run(state, Strike(1, 6)).DeadChanceRange(1).Certain);
-        Assert.False(SimEngine.Run(state).DeadChanceRange(1).Possible);
+        Agrees(state, Strike(target: 1, damage: 6));
+        Assert.True(SimEngine.Run(state, Strike(target: 1, damage: 6)).DeadChanceRange(enemyId: 1).Certain);
+        Assert.False(SimEngine.Run(state).DeadChanceRange(enemyId: 1).Possible);
     }
 }

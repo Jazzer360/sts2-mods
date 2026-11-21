@@ -119,7 +119,7 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         // A card that can't be played (curses, Unplayable statuses, blocked cards) plays nothing twice.
         if (!CardPlays.CanPlayThisTurn(card)) return (ethereal, tabs);
         var replays = card.GetEnchantedReplayCount();
-        if (replays > 0) tabs.Add(new TabSpec("replay", null, Text: $"{replays + 1}×"));
+        if (replays > 0) tabs.Add(new TabSpec("replay", Icon: null, Text: $"{replays + 1}×"));
 
         // One tag per source, each with that source's own icon (Burst, Echo Form,
         // Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or the card's

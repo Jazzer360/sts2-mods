@@ -79,7 +79,7 @@ public static class CardPlays
         {
             if (NPlayerHand.Instance is not { IsInCardSelection: true }) return 0;
             var source = me.PlayerCombatState?.PlayPile.Cards.OfType<DecisionsDecisions>().FirstOrDefault();
-            return source == null ? 0 : Math.Max(1, Sts2State.Var(source, "Repeat", 3));
+            return source == null ? 0 : Math.Max(1, Sts2State.Var(source, "Repeat", fallback: 3));
         }
         catch
         {

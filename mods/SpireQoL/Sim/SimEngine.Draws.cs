@@ -104,7 +104,7 @@ public static partial class SimEngine
             if (pile.DiscardCount == 0) return new[] { state };
             simPlayer = state.MutablePlayer(player);
             simPlayer.Draw = pile.Shuffled();
-            return Then(ProcCardEvent(state, CardEvent.Shuffled, 1, player), branch => DrawOne(branch, player, indirect, record, onDrawn));
+            return Then(ProcCardEvent(state, CardEvent.Shuffled, count: 1, player), branch => DrawOne(branch, player, indirect, record, onDrawn));
         }
         if (pile.Top.Count > 0)
         {

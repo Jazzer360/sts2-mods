@@ -9,7 +9,7 @@ internal static class ScriptBuilder
     public static SimScript Play(SimCard card, int target, int plays, params SimAction[] body) => new()
     {
         Name = card.Name,
-        Actions = { new CardPlayAction(new SimCardPlay(card, Who.You, target, 0, plays, false), body) },
+        Actions = { new CardPlayAction(new SimCardPlay(card, Who.You, target, PlayIndex: 0, plays, AutoPlay: false), body) },
     };
 
     public static AttackAction Attack(decimal baseDamage, int hits = 1, SimPlay.Target mode = SimPlay.Target.Single, SimProps props = SimProps.Move,

@@ -50,13 +50,13 @@ public sealed partial class RunRemindersFeature
                 if (predicted == changed)
                 {
                     ModEntry.Log.Info($"[audit] [card-rule] {what}, matched");
-                    Telemetry.Audits.Done(Telemetry.Audits.Reminders, true, "card rule");
+                    Telemetry.Audits.Done(Telemetry.Audits.Reminders, matched: true, "card rule");
                     continue;
                 }
                 ModEntry.Log.Info($"[audit] [card-rule] {what}");
                 // The rule said no change and the card changed: logged only (something else may have changed it), and counted.
                 if (!predicted) Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "card rule: a card changed that the rule says it doesn't", $"{name} on {card.GetType().Name}");
-                else Telemetry.Audits.Done(Telemetry.Audits.Reminders, false, "card-rule");
+                else Telemetry.Audits.Done(Telemetry.Audits.Reminders, matched: false, "card-rule");
                 if (predicted && !changed)
                 {
                     Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", $"{name}'s card rule says it changes {card.GetType().Name}, but it arrived unchanged",

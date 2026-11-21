@@ -68,7 +68,7 @@ internal static class Fool
     public static int ArrowsAvailable(Player me)
     {
         var pcs = me.PlayerCombatState;
-        return pcs == null ? 0 : Sts2State.Private(pcs, "AvailableArrowCount", 0);
+        return pcs == null ? 0 : Sts2State.Private(pcs, "AvailableArrowCount", fallback: 0);
     }
 
     /// <summary>The Impaled power on <paramref name="target"/> holding <paramref name="applier"/>'s arrows (null: none).</summary>
@@ -79,11 +79,11 @@ internal static class Fool
     public static bool IsImpaled(Creature target) => target.Powers.Any(power => power.GetType().Name == "ImpaledPower");
 
     /// <summary>Your powered hits left before the next arrow comes loose (ImpaledPower.HitCounter).</summary>
-    public static int HitCounter(PowerModel impaled) => Math.Max(1, Sts2State.Var(impaled, "HitCounter", 3));
+    public static int HitCounter(PowerModel impaled) => Math.Max(1, Sts2State.Var(impaled, "HitCounter", fallback: 3));
 
     /// <summary>Arrows stuck in it (ImpaledPower.Arrows).</summary>
     public static int ArrowsIn(PowerModel impaled)
-        => Sts2State.Private<System.Collections.IEnumerable?>(impaled, "Arrows", null)?.Cast<object>().Count() ?? 0;
+        => Sts2State.Private<System.Collections.IEnumerable?>(impaled, "Arrows", fallback: null)?.Cast<object>().Count() ?? 0;
 
     /// <summary>
     /// Fool powers a play changes outside its own PowerCmd.Apply calls: a shot Impales its target
@@ -102,7 +102,7 @@ internal static class Fool
     /// Stretch counts this card's play (StretchPower.GainsBlock, v0.113.1): the card gains block, or its enchantment
     /// does (EnchantmentModel.GainsBlock: Adroit).
     /// </summary>
-    public static bool StretchCard(CardModel card) => Sts2State.Private(card, "GainsBlock", false) || EnchantmentGainsBlock(card);
+    public static bool StretchCard(CardModel card) => Sts2State.Private(card, "GainsBlock", fallback: false) || EnchantmentGainsBlock(card);
 
     /// <summary>The card's enchantment gains block on play (Adroit's powered Move block), so the play gets and spends Stretch.
     /// Read by name, so a game without the flag still runs.</summary>

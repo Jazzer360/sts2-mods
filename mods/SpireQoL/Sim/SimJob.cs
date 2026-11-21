@@ -137,7 +137,7 @@ public sealed class SimJob
         {
             // The board changed: the work it had done is counted as thrown away.
             Telemetry.DevEvents.Post(new Telemetry.SearchDone(_label, _context, work.Steps, work.Copies, work.PeakHeld, clock.Elapsed.TotalMilliseconds,
-                gated, null, Cancelled: true));
+                gated, Cap: null, Cancelled: true));
         }
         catch (Exception ex)
         {

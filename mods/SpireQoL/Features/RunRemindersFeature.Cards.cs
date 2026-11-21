@@ -203,7 +203,7 @@ public sealed partial class RunRemindersFeature
                     if (elementLength.Values.Count == elementLength.Length) { arrays[elementLength.Element] = elementLength.Values.ToArray(); building = null; }
                     continue;
                 }
-                if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var constant)) { Push(new IntExpr(constant, null)); continue; }
+                if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var constant)) { Push(new IntExpr(constant, Var: null)); continue; }
                 if (ins.opcode == OpCodes.Ldstr) { lastString = ins.operand as string; continue; }
                 if (ins.opcode == OpCodes.Div && last is { Const: { } divisor } && before is { Var: not null } && divisor != 0) { last = before with { Divisor = before.Divisor * divisor }; continue; }
                 if (SlotKey(ins, store: true) is { } slotKey) { if (producedInt && last != null) stored[slotKey] = last; continue; }
@@ -229,7 +229,7 @@ public sealed partial class RunRemindersFeature
                     continue;
                 }
                 if (type.Name == "DynamicVarSet" && otherMethod.Name.StartsWith("get_")) varName = otherMethod.Name == "get_Item" ? lastString : otherMethod.Name[4..];
-                else if (otherMethod.Name == "get_IntValue" && type.Name.EndsWith("Var") && varName != null) Push(new IntExpr(null, varName));
+                else if (otherMethod.Name == "get_IntValue" && type.Name.EndsWith("Var") && varName != null) Push(new IntExpr(Const: null, varName));
                 else if (IsRewardMaker(otherMethod))
                 {
                     // CardReward(options, count, player) / CardFactory.CreateForReward(player, count, options): the count is the
@@ -243,7 +243,7 @@ public sealed partial class RunRemindersFeature
                 else if (type == typeof(CardCreationOptions) && otherMethod.Name == nameof(CardCreationOptions.WithFlags) && _rewards.Count > 0 && last is { Const: { } flags })
                     _rewards[^1].Flags |= flags;
                 if (otherMethod.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(new PoolSource(otherMethod, character));
-                else if (type == typeof(ModelDb) && otherMethod is MethodInfo { IsGenericMethod: true } nextMethod && nextMethod.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(otherMethod, null));
+                else if (type == typeof(ModelDb) && otherMethod is MethodInfo { IsGenericMethod: true } nextMethod && nextMethod.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(otherMethod, Character: null));
                 else if (otherMethod is MethodInfo { IsGenericMethod: true } gc && (gc.Name is "Card" or "CreateCard" or "TransformTo")
                     && gc.GetGenericArguments()[0] is { } otherType && typeof(CardModel).IsAssignableFrom(otherType) && !otherType.IsAbstract)
                     _fixed.Add(otherType);
@@ -521,7 +521,7 @@ public sealed partial class RunRemindersFeature
         {
             var groups = new List<DrawGroup>();
             var fixedCards = _fixed.Select(type => ModelDb.AllCards.FirstOrDefault(card => card.GetType() == type)).OfType<CardModel>().ToList();
-            if (fixedCards.Count > 0) groups.Add(new DrawGroup(DrawKind.Certain, fixedCards, CardRarityOddsType.Uniform, null, GivesUpgraded));
+            if (fixedCards.Count > 0) groups.Add(new DrawGroup(DrawKind.Certain, fixedCards, CardRarityOddsType.Uniform, Count: null, GivesUpgraded));
             foreach (var reward in _rewards)
             {
                 if (Built(reward, me) is not { } built) return null;
@@ -532,14 +532,14 @@ public sealed partial class RunRemindersFeature
             foreach (var pool in _loosePools)
             {
                 var cards = Unlocked(Pool(pool, me), me).ToList();
-                if (cards.Count > 0) groups.Add(new DrawGroup(DrawKind.Pool, OrderForShow(cards, CardRarityOddsType.Uniform), CardRarityOddsType.Uniform, null));
+                if (cards.Count > 0) groups.Add(new DrawGroup(DrawKind.Pool, OrderForShow(cards, CardRarityOddsType.Uniform), CardRarityOddsType.Uniform, Count: null));
             }
             // A transform you don't choose (Pandora's Box's Strikes and Defends, a random card) draws from your whole pool:
             // nothing to inspect there. One you choose can be explored by the card you'd pick.
             if (_transformRandom && _picksTransform)
             {
                 foreach (var cards in TransformPools(me))
-                    groups.Add(new DrawGroup(DrawKind.Transform, OrderForShow(cards, CardRarityOddsType.Uniform), CardRarityOddsType.Uniform, 1, GivesUpgraded));
+                    groups.Add(new DrawGroup(DrawKind.Transform, OrderForShow(cards, CardRarityOddsType.Uniform), CardRarityOddsType.Uniform, Count: 1, GivesUpgraded));
             }
             return groups.Count == 0 ? null : groups;
         }
@@ -652,7 +652,7 @@ public sealed partial class RunRemindersFeature
         }
 
         /// <summary>Stands for "the pool the option passes in" in a reward's pools.</summary>
-        private static readonly PoolSource FromOption = new(AccessTools.Method(typeof(OptionCards), nameof(Candidates)), null);
+        private static readonly PoolSource FromOption = new(AccessTools.Method(typeof(OptionCards), nameof(Candidates)), Character: null);
 
         private CardPoolModel? Pool(PoolSource source, Player me)
         {

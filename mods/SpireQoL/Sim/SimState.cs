@@ -238,7 +238,7 @@ public sealed class SimPlayer
     [JsonIgnore] public int Hailstorm { get => Powers[PowerId.Hailstorm]; set => Powers = value == 0 ? Powers.Without(PowerId.Hailstorm) : Powers.With(PowerId.Hailstorm, value, Powers.Has(PowerId.Hailstorm) ? Powers.DataOf(PowerId.Hailstorm) : 1); }
     [JsonIgnore] public int HailstormFrostNeeded { get => Powers.Has(PowerId.Hailstorm) ? Powers.DataOf(PowerId.Hailstorm) : 1; set => Powers = Powers.With(PowerId.Hailstorm, Powers[PowerId.Hailstorm], value); }
     /// <summary>The Bomb's damage when it goes off this turn end (its last tick: amount 1; Data = its damage), else 0.</summary>
-    [JsonIgnore] public int TheBombDamage { get => Powers.Has(PowerId.TheBomb) && Powers[PowerId.TheBomb] <= 1 ? Powers.DataOf(PowerId.TheBomb) : 0; set => Powers = value == 0 ? Powers.Without(PowerId.TheBomb) : Powers.With(PowerId.TheBomb, 1, value); }
+    [JsonIgnore] public int TheBombDamage { get => Powers.Has(PowerId.TheBomb) && Powers[PowerId.TheBomb] <= 1 ? Powers.DataOf(PowerId.TheBomb) : 0; set => Powers = value == 0 ? Powers.Without(PowerId.TheBomb) : Powers.With(PowerId.TheBomb, amount: 1, value); }
     [JsonIgnore] public int ConsumingShadow { get => Powers[PowerId.ConsumingShadow]; set => Set(PowerId.ConsumingShadow, value); }
     [JsonIgnore] public int Thorns { get => Powers[PowerId.Thorns]; set => Set(PowerId.Thorns, value); }
     [JsonIgnore] public int FlameBarrier { get => Powers[PowerId.FlameBarrier]; set => Set(PowerId.FlameBarrier, value); }
@@ -733,13 +733,13 @@ public sealed class SimState
     /// <param name="owner">Whose source it is: an enemy's is also logged as "Name@id", so two enemies' powers stay apart.</param>
     /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
     /// <param name="owner">Whose source it is: an enemy's is also logged as "Name@id", so two enemies' powers stay apart.</param>
-    public void LogFired(string source, int amount = 0, int? owner = null) => LogAs(source, amount, owner, 1);
+    public void LogFired(string source, int amount = 0, int? owner = null) => LogAs(source, amount, owner, times: 1);
 
     /// <summary>
     /// More of what a firing gave, logged after it (each card a draw tab's source actually drew: decision #132), without counting
     /// another firing.
     /// </summary>
-    public void LogAmount(string source, int amount, int? owner) => LogAs(source, amount, owner, 0);
+    public void LogAmount(string source, int amount, int? owner) => LogAs(source, amount, owner, times: 0);
 
     private void LogAs(string source, int amount, int? owner, int times)
     {

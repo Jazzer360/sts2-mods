@@ -17,7 +17,7 @@ public class SimMonarchsGazeTests
     {
         var state = new SimState();
         state.Enemies.AddRange(enemies);
-        state.You.Powers = state.You.Powers.With(PowerId.MonarchsGaze, 2);
+        state.You.Powers = state.You.Powers.With(PowerId.MonarchsGaze, amount: 2);
         return state;
     }
 
@@ -25,19 +25,19 @@ public class SimMonarchsGazeTests
     public void EachBranchWeakensTheEnemiesItHit()
     {
         // Two random hits on two enemies attacking for 10; each hit takes 2 Strength off the enemy it lands on.
-        var outcome = SimEngine.Run(Gazing(Attacker(0, 50, 10), Attacker(1, 50, 10)),
-            Play(Card("SwordBoomerang"), -1, 1, Attack(3, hits: 2, mode: SimPlay.Target.Random)));
+        var outcome = SimEngine.Run(Gazing(Attacker(id: 0, hp: 50, hit: 10), Attacker(id: 1, hp: 50, hit: 10)),
+            Play(Card("SwordBoomerang"), target: -1, plays: 1, Attack(baseDamage: 3, hits: 2, mode: SimPlay.Target.Random)));
         // Both hits on one enemy: 6 + 10; one each: 8 + 8. Either way 16.
         Assert.Equal(16, outcome.TakenMax);
         Assert.Equal(16, outcome.TakenMin);
-        Assert.Contains(outcome.Branches, branch => branch.Enemy(0)!.Powers[PowerId.Strength] == -4 && !branch.Enemy(1)!.Powers.Has(PowerId.Strength));
-        Assert.Contains(outcome.Branches, branch => branch.Enemy(0)!.Powers[PowerId.Strength] == -2 && branch.Enemy(1)!.Powers[PowerId.Strength] == -2);
+        Assert.Contains(outcome.Branches, branch => branch.Enemy(id: 0)!.Powers[PowerId.Strength] == -4 && !branch.Enemy(id: 1)!.Powers.Has(PowerId.Strength));
+        Assert.Contains(outcome.Branches, branch => branch.Enemy(id: 0)!.Powers[PowerId.Strength] == -2 && branch.Enemy(id: 1)!.Powers[PowerId.Strength] == -2);
     }
 
     [Fact]
     public void ASingleEnemyTakesEveryHit()
     {
-        var outcome = SimEngine.Run(Gazing(Attacker(0, 50, 10)), Play(Card("SwordBoomerang"), -1, 1, Attack(3, hits: 3, mode: SimPlay.Target.Random)));
+        var outcome = SimEngine.Run(Gazing(Attacker(id: 0, hp: 50, hit: 10)), Play(Card("SwordBoomerang"), target: -1, plays: 1, Attack(baseDamage: 3, hits: 3, mode: SimPlay.Target.Random)));
         Assert.Equal(4, outcome.TakenMax);
     }
 }

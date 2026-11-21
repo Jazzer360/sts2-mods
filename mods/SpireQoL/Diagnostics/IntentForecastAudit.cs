@@ -30,7 +30,7 @@ internal static class IntentForecastAudit
         {
             if (__instance.MoveStateMachine is not { } machine) return;
             // FindNextMoveState stays put before the first move and on a move that must be performed first.
-            if (!Sts2State.Private(machine, "_performedFirstMove", false) || !__instance.NextMove.CanTransitionAway) return;
+            if (!Sts2State.Private(machine, "_performedFirstMove", fallback: false) || !__instance.NextMove.CanTransitionAway) return;
             if (IntentReader.Graph(machine) is not { } graph)
             {
                 // Intent Forecast can't read this enemy's move rules, so it showed nothing to check: a gap, counted.

@@ -27,9 +27,9 @@ public class StrengthLossTests
             var gameFight = new GameFight();
             var card = gameFight.Combat.CreateCard(canon, gameFight.Me);
             PileType.Hand.GetPile(gameFight.Me).AddInternal(card);
-            var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, 1);
+            var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
             if (facts == null) continue;
-            var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, new Dictionary<Creature, int>(), -1);
+            var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, new Dictionary<Creature, int>(), targetId: -1);
             var debuffs = play.Body.OfType<ApplyPowerAction>().Where(applyPowerAction => applyPowerAction.To is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies && applyPowerAction.Debuff).ToList();
             var temporary = debuffs.Count(applyPowerAction => applyPowerAction.Power != PowerId.Strength && ModelDb.AllPowers.Any(power => power.GetType().Name == applyPowerAction.Power.Name && power is MegaCrit.Sts2.Core.Models.Powers.TemporaryStrengthPower));
             if (temporary > 0) wrong.Add($"{name}: {string.Join(", ", debuffs.Select(applyPowerAction => applyPowerAction.Power))}");

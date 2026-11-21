@@ -41,7 +41,7 @@ internal static class MoveBranches
                 : Array.Empty<Applied>()),
         // Its first respawn gains Painful Stabs, its second Nemesis (Respawns counts them; the move adds one first).
         ["TestSubject.RespawnMove"] = new(new[] { nameof(PainfulStabsPower), nameof(NemesisPower) }, (monster, all) =>
-            Sts2State.Private(monster, "Respawns", -1) switch { 0 => new[] { all[0] }, 1 => new[] { all[1] }, _ => Array.Empty<Applied>() }),
+            Sts2State.Private(monster, "Respawns", fallback: -1) switch { 0 => new[] { all[0] }, 1 => new[] { all[1] }, _ => Array.Empty<Applied>() }),
         // A loop over the move's targets, which always include you: every one of them gets it.
         ["SpectralKnight.HexMove"] = new(new[] { nameof(HexPower) }, (_, all) => all),
         ["TheInsatiable.LiquifyMove"] = new(new[] { nameof(SandpitPower) }, (_, all) => all),

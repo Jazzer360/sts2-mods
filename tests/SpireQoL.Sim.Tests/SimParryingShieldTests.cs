@@ -46,10 +46,10 @@ public class SimParryingShieldTests
         // leaves 9 (it doesn't fire); a 4 Burn leaves exactly 10 (it does).
         var state = Start(block: 10);
         state.You.Plating = 4;
-        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 5));
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 5));
         Assert.False(SimEngine.Run(state).ParryingShieldInAny);
         state.You.TurnEndCards.Clear();
-        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 4));
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 4));
         Assert.True(SimEngine.Run(state).ParryingShieldInAll);
     }
 }

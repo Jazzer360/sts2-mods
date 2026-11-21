@@ -35,11 +35,11 @@ public class SimAutoPlayTests
     {
         // Issues #370, #392: Stampede plays a Strike, Daughter of the Wind gives 1 block. It lowers what you lose and shows in the
         // breakdown's end-of-turn block (what the forecast check compares with the block the game gave).
-        var state = new SimState { Enemies = { Enemy(1, 50, 10) }, Log = true };
-        state.You.Relics = state.You.Relics.With(RelicId.DaughterOfTheWind, 1, 0);
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) }, Log = true };
+        state.You.Relics = state.You.Relics.With(RelicId.DaughterOfTheWind, amount: 1, data: 0);
         state.Vars["-1:DaughterOfTheWind:Block"] = 1;
         state.You.Stampede = 1;
-        state.You.AutoHand = new() { StrikeCard(11, 6, 1, 1) };
+        state.You.AutoHand = new() { StrikeCard(id: 11, damage: 6, cost: 1, targets: 1) };
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(9, branch.Taken);
         Assert.Equal(1, branch.EndOfTurnBlock.Sum(nameAmount => nameAmount.Amount));
@@ -48,11 +48,11 @@ public class SimAutoPlayTests
     [Fact]
     public void HowlFromBeyondInYourExhaustPileHitsEveryEnemy()
     {
-        var state = new SimState { Enemies = { Enemy(1, 10, 5), Enemy(2, 12, 5) } };
-        state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", 10, 1, 2));
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 10, hits: 5), Enemy(id: 2, hp: 12, hits: 5) } };
+        state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", damage: 10, ids: [1, 2]));
         var outcome = SimEngine.Run(state);
-        Assert.True(outcome.DeadInAll(1));
-        Assert.False(outcome.DeadInAny(2));
+        Assert.True(outcome.DeadInAll(enemyId: 1));
+        Assert.False(outcome.DeadInAny(enemyId: 2));
         Assert.Equal(5, outcome.TakenMax);
         Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.AutoPlayed));
     }
@@ -60,20 +60,20 @@ public class SimAutoPlayTests
     [Fact]
     public void EachHowlCopyPlays()
     {
-        var state = new SimState { Enemies = { Enemy(1, 20, 5) } };
-        state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", 10, 1));
-        state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", 10, 1));
-        Assert.True(SimEngine.Run(state).DeadInAll(1));
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 20, hits: 5) } };
+        state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", damage: 10, ids: 1));
+        state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", damage: 10, ids: 1));
+        Assert.True(SimEngine.Run(state).DeadInAll(enemyId: 1));
     }
 
     [Fact]
     public void AnAutoPlayedAttackCountsAgainstRippleBasin()
     {
         // Ripple Basin (BeforeSideTurnEnd) checks for an attack played this turn: the auto-play phase comes first.
-        var state = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
         state.You.RippleBasinBlock = 4;
         Assert.Equal(6, SimEngine.Run(state).TakenMax);
-        state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", 3, 1));
+        state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", damage: 3, ids: 1));
         Assert.Equal(10, SimEngine.Run(state).TakenMax);
     }
 
@@ -81,7 +81,7 @@ public class SimAutoPlayTests
     public void IAmInvincibleOnTopGainsItsBlockBeforeOrichalcumLooks()
     {
         // Its block comes in the auto-play phase, so Orichalcum (no block at BeforeSideTurnEnd) doesn't arm.
-        var state = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
         state.You.OrichalcumBlock = 6;
         Assert.Equal(4, SimEngine.Run(state).TakenMax);
         state.You.InvincibleBlock = 8;
@@ -92,7 +92,7 @@ public class SimAutoPlayTests
     [Fact]
     public void DrawingTheWholePileLeavesTheTopUnknown()
     {
-        var state = new SimState { Enemies = { Enemy(1, 50, 10), Enemy(2, 50) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10), Enemy(id: 2, hp: 50) } };
         state.You.InvincibleBlock = 8;
         state.You.InvincibleDrawPile = 2;
         var draws = new SimPlay { Name = "Acrobatics", Draws = 1, HandDelta = 0 };
@@ -105,22 +105,22 @@ public class SimAutoPlayTests
     public void StampedeAimsAtARandomEnemy()
     {
         // One Attack in hand, two enemies at 5: it kills one of them, at random.
-        var state = new SimState { Enemies = { Enemy(1, 5, 4), Enemy(2, 5, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4), Enemy(id: 2, hp: 5, hits: 4) } };
         state.You.Stampede = 1;
-        state.You.AutoHand = new() { StrikeCard(11, 6, 1, 1, 2) };
+        state.You.AutoHand = new() { StrikeCard(id: 11, damage: 6, cost: 1, targets: [1, 2]) };
         var outcome = SimEngine.Run(state);
-        Assert.True(outcome.DeadInAny(1) && outcome.DeadInAny(2));
-        Assert.False(outcome.DeadInAll(1) || outcome.DeadInAll(2));
+        Assert.True(outcome.DeadInAny(enemyId: 1) && outcome.DeadInAny(enemyId: 2));
+        Assert.False(outcome.DeadInAll(enemyId: 1) || outcome.DeadInAll(enemyId: 2));
         Assert.Equal(4, outcome.TakenMax);
-        Assert.Equal(0.5, outcome.DeadChance(1), 3);
+        Assert.Equal(0.5, outcome.DeadChance(enemyId: 1), 3);
     }
 
     [Fact]
     public void StampedePicksOnlyAttacks()
     {
-        var state = new SimState { Enemies = { Enemy(1, 5, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4) } };
         state.You.Stampede = 1;
-        state.You.AutoHand = new() { Defend(12, 5, 1) };
+        state.You.AutoHand = new() { Defend(id: 12, block: 5, cost: 1) };
         var outcome = SimEngine.Run(state);
         Assert.Equal(4, outcome.TakenMax); // the Defend isn't played
         Assert.All(outcome.Branches, branch => Assert.Equal(0, branch.AutoPlayed));
@@ -130,40 +130,40 @@ public class SimAutoPlayTests
     public void StampedeTwiceTakesTwoDifferentCards()
     {
         // Two Strikes: the second pick is the card left, so both always play.
-        var state = new SimState { Enemies = { Enemy(1, 12, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 12, hits: 4) } };
         state.You.Stampede = 2;
-        state.You.AutoHand = new() { StrikeCard(11, 6, 1, 1), StrikeCard(13, 6, 1, 1) };
-        Assert.True(SimEngine.Run(state).DeadInAll(1));
+        state.You.AutoHand = new() { StrikeCard(id: 11, damage: 6, cost: 1, targets: 1), StrikeCard(id: 13, damage: 6, cost: 1, targets: 1) };
+        Assert.True(SimEngine.Run(state).DeadInAll(enemyId: 1));
     }
 
     [Fact]
     public void TheCardYouPlayIsNoLongerThereToPick()
     {
         // Playing the only Attack yourself: Stampede has nothing left, so it isn't played twice.
-        var state = new SimState { Enemies = { Enemy(1, 12, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 12, hits: 4) } };
         state.You.Stampede = 1;
-        state.You.AutoHand = new() { StrikeCard(11, 6, 1, 1) };
-        Assert.True(SimEngine.Run(state).DeadInAny(1) == false);
-        var outcome = SimEngine.Run(state, Strike(1, 6, 11));
-        Assert.False(outcome.DeadInAny(1));
-        Assert.All(outcome.Branches, branch => Assert.Equal(6, branch.Enemy(1)!.HpAtTurnEnd));
+        state.You.AutoHand = new() { StrikeCard(id: 11, damage: 6, cost: 1, targets: 1) };
+        Assert.True(SimEngine.Run(state).DeadInAny(enemyId: 1) == false);
+        var outcome = SimEngine.Run(state, Strike(target: 1, damage: 6, hand: 11));
+        Assert.False(outcome.DeadInAny(enemyId: 1));
+        Assert.All(outcome.Branches, branch => Assert.Equal(6, branch.Enemy(id: 1)!.HpAtTurnEnd));
     }
 
     [Fact]
     public void APlayThatChangesYourHandEndsWhatsPredicted()
     {
-        var state = new SimState { Enemies = { Enemy(1, 6, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 6, hits: 4) } };
         state.You.Stampede = 1;
-        state.You.AutoHand = new() { StrikeCard(11, 6, 1, 1) };
+        state.You.AutoHand = new() { StrikeCard(id: 11, damage: 6, cost: 1, targets: 1) };
         var outcome = SimEngine.Run(state, new SimPlay { Name = "Acrobatics", Draws = 2, HandDelta = 1 });
         Assert.All(outcome.Branches, branch => Assert.True(branch.AutoPlaysUnknown));
-        Assert.False(outcome.DeadInAny(1));
+        Assert.False(outcome.DeadInAny(enemyId: 1));
     }
 
     [Fact]
     public void ACardThatCantBeSimulatedEndsWhatsPredicted()
     {
-        var state = new SimState { Enemies = { Enemy(1, 6, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 6, hits: 4) } };
         state.You.Stampede = 2;
         state.You.AutoHand = new() { new SimHandCard { Id = 21, Name = "Pommel Strike", IsAttack = true, Cost = 1 } };
         var outcome = SimEngine.Run(state);
@@ -175,11 +175,11 @@ public class SimAutoPlayTests
     public void SimpletonPlaysYourCheapestCard()
     {
         // The 0-cost Strike, not the 1-cost Defend.
-        var state = new SimState { Enemies = { Enemy(1, 6, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 6, hits: 4) } };
         state.You.Simpleton = 1;
-        state.You.AutoHand = new() { Defend(12, 5, 1), StrikeCard(11, 6, 0, 1) };
+        state.You.AutoHand = new() { Defend(id: 12, block: 5, cost: 1), StrikeCard(id: 11, damage: 6, cost: 0, targets: 1) };
         var outcome = SimEngine.Run(state);
-        Assert.True(outcome.DeadInAll(1));
+        Assert.True(outcome.DeadInAll(enemyId: 1));
         Assert.Equal(0, outcome.TakenMax);
     }
 
@@ -187,12 +187,12 @@ public class SimAutoPlayTests
     public void SimpletonPicksAtRandomAmongTies()
     {
         // Strike or Defend, both 1: a kill in one branch, 5 block in the other (4 taken at worst, 0 at best).
-        var state = new SimState { Enemies = { Enemy(1, 6, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 6, hits: 4) } };
         state.You.Simpleton = 1;
-        state.You.AutoHand = new() { Defend(12, 5, 1), StrikeCard(11, 6, 1, 1) };
+        state.You.AutoHand = new() { Defend(id: 12, block: 5, cost: 1), StrikeCard(id: 11, damage: 6, cost: 1, targets: 1) };
         var outcome = SimEngine.Run(state);
-        Assert.True(outcome.DeadInAny(1));
-        Assert.False(outcome.DeadInAll(1));
+        Assert.True(outcome.DeadInAny(enemyId: 1));
+        Assert.False(outcome.DeadInAll(enemyId: 1));
         Assert.Equal(0, outcome.TakenMax);
     }
 
@@ -200,11 +200,11 @@ public class SimAutoPlayTests
     public void NoTargetLeftMeansItIsntPlayed()
     {
         // Your card killed the only enemy the Strike could aim at: it goes unplayed.
-        var state = new SimState { Enemies = { Enemy(1, 5), Enemy(2, 30, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5), Enemy(id: 2, hp: 30, hits: 4) } };
         state.You.Stampede = 1;
-        state.You.AutoHand = new() { StrikeCard(11, 6, 1, 1) };
-        var outcome = SimEngine.Run(state, Strike(1, 5));
-        Assert.All(outcome.Branches, branch => Assert.Equal(30, branch.Enemy(2)!.HpAtTurnEnd));
+        state.You.AutoHand = new() { StrikeCard(id: 11, damage: 6, cost: 1, targets: 1) };
+        var outcome = SimEngine.Run(state, Strike(target: 1, damage: 5));
+        Assert.All(outcome.Branches, branch => Assert.Equal(30, branch.Enemy(id: 2)!.HpAtTurnEnd));
     }
 
     /// <summary>Teammate 0's Howl from Beyond: their card (the play's owner), with its damage as final numbers.</summary>
@@ -213,7 +213,7 @@ public class SimAutoPlayTests
         var play = AllEnemies("HowlFromBeyond", damage, ids);
         play.HandDelta = 0; // from their exhaust pile
         play.AutoPlay = true;
-        play.Card = new SimCardPlay(new SimCard("HowlFromBeyond", SimCardType.Attack), Who.Teammate(0), -1, 0, 1, true);
+        play.Card = new SimCardPlay(new SimCard("HowlFromBeyond", SimCardType.Attack), Who.Teammate(teammateIndex: 0), Target: -1, PlayIndex: 0, PlayCount: 1, AutoPlay: true);
         return play;
     }
 
@@ -222,12 +222,12 @@ public class SimAutoPlayTests
     {
         // Hook.AfterAutoPostPlayPhaseEntered runs for every player ending the turn: their Howl from Beyond in their exhaust
         // pile (you can see it) plays too. It isn't your auto-play (the outcome audit counts yours).
-        var state = new SimState { Enemies = { Enemy(1, 10, 5) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 10, hits: 5) } };
         var mate = new SimPlayer { Hp = 50 };
-        mate.ExhaustAutoPlays.Add(TeammatesHowl(10, 1));
+        mate.ExhaustAutoPlays.Add(TeammatesHowl(damage: 10, ids: 1));
         state.Teammates.Add(mate);
         var outcome = SimEngine.Run(state);
-        Assert.True(outcome.DeadInAll(1));
+        Assert.True(outcome.DeadInAll(enemyId: 1));
         Assert.Equal(0, outcome.TakenMax);
         Assert.All(outcome.Branches, branch => Assert.Equal(0, branch.AutoPlayed));
     }
@@ -236,11 +236,11 @@ public class SimAutoPlayTests
     public void ATeammatesAutoPlayedAttackIsTheirsNotYours()
     {
         // Their Howl counts as their Attack this turn: your Ripple Basin still gives its block, and your hand keeps its size.
-        var state = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
         state.You.RippleBasinBlock = 4;
         state.You.HandCount = 3;
         var mate = new SimPlayer { Hp = 50 };
-        mate.ExhaustAutoPlays.Add(TeammatesHowl(3, 1));
+        mate.ExhaustAutoPlays.Add(TeammatesHowl(damage: 3, ids: 1));
         state.Teammates.Add(mate);
         var outcome = SimEngine.Run(state);
         Assert.Equal(6, outcome.TakenMax);
@@ -251,12 +251,12 @@ public class SimAutoPlayTests
     [Fact]
     public void ATeammatesIAmInvincibleBlocksForThemNotYou()
     {
-        var state = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
         var mate = new SimPlayer { Hp = 50, InvincibleBlock = 8, InvincibleDrawPile = 1 };
         state.Teammates.Add(mate);
         var outcome = SimEngine.Run(state);
         Assert.Equal(10, outcome.TakenMax);
-        Assert.Equal(2, outcome.TeammateTakenMax(0));
+        Assert.Equal(2, outcome.TeammateTakenMax(teammateIndex: 0));
     }
 
     [Fact]
@@ -264,10 +264,10 @@ public class SimAutoPlayTests
     {
         // It plays from your exhaust pile: Cloak Clasp (block per card in hand, BeforeSideTurnEnd, after the auto-plays) counts
         // the hand as it was. The adapter builds it with HandDelta 0 (SimAdapter.Play: the card isn't in your hand).
-        var state = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
         state.You.HandCount = 3;
         state.You.CloakClaspPerCard = 1;
-        var howl = AllEnemies("HowlFromBeyond", 3, 1);
+        var howl = AllEnemies("HowlFromBeyond", damage: 3, ids: 1);
         howl.HandDelta = 0;
         howl.AutoPlay = true;
         state.You.ExhaustAutoPlays.Add(howl);
@@ -281,20 +281,20 @@ public class SimAutoPlayTests
     private static SimPlay AdapterStrike(int target, int damage, int hand, int draws = 0) => new()
     {
         Name = "Strike", IsAttack = true, AutoPlay = true, HandCard = hand, HandDelta = -1 + draws, Draws = draws, TargetId = target,
-        Card = new SimCardPlay(new SimCard("Strike", SimCardType.Attack), Who.You, target, 0, 1, true),
-        Body = { new AttackAction(1, SimPlay.Target.Single, new DamageSpec(0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [target] = damage }, Fixed = true }) },
+        Card = new SimCardPlay(new SimCard("Strike", SimCardType.Attack), Who.You, target, PlayIndex: 0, PlayCount: 1, AutoPlay: true),
+        Body = { new AttackAction(Hits: 1, SimPlay.Target.Single, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [target] = damage }, Fixed = true }) },
     };
 
     [Fact]
     public void APlaysTargetIsItsTargetIdEvenWhenItsCardPlaySaysOtherwise()
     {
         // One place for the target (decision #84): the card play takes the play's TargetId when the script is built.
-        var state = new SimState { Enemies = { Enemy(1, 5), Enemy(2, 5) } };
-        var play = AdapterStrike(2, 6, 0);
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5), Enemy(id: 2, hp: 5) } };
+        var play = AdapterStrike(target: 2, damage: 6, hand: 0);
         play.Card = play.Card! with { Target = 1 };
         var outcome = SimEngine.Run(state, play);
-        Assert.True(outcome.DeadInAll(2));
-        Assert.False(outcome.DeadInAny(1));
+        Assert.True(outcome.DeadInAll(enemyId: 2));
+        Assert.False(outcome.DeadInAny(enemyId: 1));
     }
 
     [Fact]
@@ -302,16 +302,16 @@ public class SimAutoPlayTests
     {
         // In game (two Exoskeletons at 10 and 6, Strike+ and Perfected Strike in hand, Stampede 1): the plays' target is on
         // the card play, so each one is a possible target. Either card kills whichever it hits: one dies, 50% each.
-        var state = new SimState { Enemies = { Enemy(1, 10, 3, 3, 3, 3), Enemy(2, 6) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 10, hits: [3, 3, 3, 3]), Enemy(id: 2, hp: 6) } };
         state.You.Stampede = 1;
         state.You.AutoHand = new()
         {
-            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 13, 11), AdapterStrike(2, 13, 11) } },
-            new SimHandCard { Id = 13, Name = "PerfectedStrike", IsAttack = true, Cost = 2, Plays = { AdapterStrike(1, 34, 13), AdapterStrike(2, 34, 13) } },
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 13, hand: 11), AdapterStrike(target: 2, damage: 13, hand: 11) } },
+            new SimHandCard { Id = 13, Name = "PerfectedStrike", IsAttack = true, Cost = 2, Plays = { AdapterStrike(target: 1, damage: 34, hand: 13), AdapterStrike(target: 2, damage: 34, hand: 13) } },
         };
         var outcome = SimEngine.Run(state);
-        Assert.Equal(0.5, outcome.DeadChance(1), 3);
-        Assert.Equal(0.5, outcome.DeadChance(2), 3);
+        Assert.Equal(0.5, outcome.DeadChance(enemyId: 1), 3);
+        Assert.Equal(0.5, outcome.DeadChance(enemyId: 2), 3);
         Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.AutoPlayed));
     }
 
@@ -320,15 +320,15 @@ public class SimAutoPlayTests
     {
         // In game (one Exoskeleton at 7, Strike+ and Pommel Strike in hand, Stampede 1): Pommel Strike draws a card, but its hit
         // lands first, so the enemy dies either way. Only later picks, from the changed hand, aren't predicted.
-        var state = new SimState { Enemies = { Enemy(1, 7, 11) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 7, hits: 11) } };
         state.You.Stampede = 2;
         state.You.AutoHand = new()
         {
-            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 9, 11) } },
-            new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 9, 15, draws: 1) } },
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 9, hand: 11) } },
+            new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 9, hand: 15, draws: 1) } },
         };
         var outcome = SimEngine.Run(state);
-        Assert.True(outcome.DeadInAll(1));
+        Assert.True(outcome.DeadInAll(enemyId: 1));
         Assert.Contains(outcome.Branches, branch => branch.AutoPlaysUnknown); // Pommel Strike first: the second pick is from a changed hand
     }
 
@@ -336,12 +336,12 @@ public class SimAutoPlayTests
     public void EachBranchRecordsItsPicks()
     {
         // The forecast check keeps the branches whose picks are the game's (decision #86): one per card and target.
-        var state = new SimState { Enemies = { Enemy(1, 50, 4), Enemy(2, 50, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 4), Enemy(id: 2, hp: 50, hits: 4) } };
         state.You.Stampede = 1;
         state.You.AutoHand = new()
         {
-            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 6, 11), AdapterStrike(2, 6, 11) } },
-            new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 9, 15, draws: 1), AdapterStrike(2, 9, 15, draws: 1) } },
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 11), AdapterStrike(target: 2, damage: 6, hand: 11) } },
+            new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 9, hand: 15, draws: 1), AdapterStrike(target: 2, damage: 9, hand: 15, draws: 1) } },
         };
         var outcome = SimEngine.Run(state);
         var picks = outcome.Branches.Select(branch => string.Join(",", branch.AutoPicks.Select(pick => $"{pick.Card}@{pick.Target}"))).OrderBy(pickList => pickList).ToList();
@@ -354,12 +354,12 @@ public class SimAutoPlayTests
     public void BranchesThatPickedDifferentlyDontMerge()
     {
         // Same result either way (no kill, same damage), but the check has to tell the picks apart.
-        var state = new SimState { Enemies = { Enemy(1, 50, 4) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 4) } };
         state.You.Stampede = 1;
         state.You.AutoHand = new()
         {
-            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 6, 11) } },
-            new SimHandCard { Id = 12, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 6, 12) } },
+            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 11) } },
+            new SimHandCard { Id = 12, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 12) } },
         };
         Assert.Equal(2, SimEngine.Run(state).Branches.Count);
     }

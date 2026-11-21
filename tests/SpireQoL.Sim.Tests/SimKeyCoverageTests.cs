@@ -78,15 +78,15 @@ public class SimKeyCoverageTests
         if (type == typeof(bool)) return !(bool)v!;
         if (type == typeof(string)) return (string?)v + "x";
         if (type.IsEnum) return Enum.ToObject(type, Convert.ToInt32(v) + 1);
-        if (type == typeof(PowerSet)) return ((PowerSet)v!).With(new PowerId("ProbePower"), 3);
-        if (type == typeof(RelicSet)) return ((RelicSet)v!).With(new RelicId("ProbeRelic"), 3);
-        if (type == typeof(NamedCounts)) return ((NamedCounts)v!).Add("Probe", 3);
+        if (type == typeof(PowerSet)) return ((PowerSet)v!).With(new PowerId("ProbePower"), amount: 3);
+        if (type == typeof(RelicSet)) return ((RelicSet)v!).With(new RelicId("ProbeRelic"), amount: 3);
+        if (type == typeof(NamedCounts)) return ((NamedCounts)v!).Add("Probe", delta: 3);
         if (type == typeof(List<int>)) return ((List<int>?)v ?? new()).Append(9).ToList();
-        if (type == typeof(List<SimPick>)) return new List<SimPick>((List<SimPick>)v!) { new(4, 0) };
-        if (type == typeof(List<TurnEndCard>)) return new List<TurnEndCard>((List<TurnEndCard>)v!) { new("Burn", "Burn", 2) };
+        if (type == typeof(List<SimPick>)) return new List<SimPick>((List<SimPick>)v!) { new(Card: 4, Target: 0) };
+        if (type == typeof(List<TurnEndCard>)) return new List<TurnEndCard>((List<TurnEndCard>)v!) { new("Burn", "Burn", Amount: 2) };
         if (type == typeof(List<SimHandCard>)) return new List<SimHandCard> { new() { Id = 5 } };
         if (type == typeof(List<SimOrb>)) return new List<SimOrb> { new() { Kind = OrbKind.Dark, Passive = 6, Evoke = 6 } };
-        if (type == typeof(SimDrawPile)) return new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("probe"), 2) } };
+        if (type == typeof(SimDrawPile)) return new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("probe"), Count: 2) } };
         if (type == typeof(List<SimEnemy>) || type == typeof(List<SimPlayer>) || type == typeof(SimPlayer)) return null; // their fields are checked one by one
         return null;
     }
@@ -96,7 +96,7 @@ public class SimKeyCoverageTests
     {
         foreach (var field in FieldsOf(typeof(SimState))) yield return ($"SimState.{field.Name}", branch => branch, field);
         foreach (var field in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{field.Name}", branch => branch.You, field);
-        foreach (var field in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{field.Name} (teammate)", branch => branch.MutableTeammate(0), field);
+        foreach (var field in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{field.Name} (teammate)", branch => branch.MutableTeammate(teammateIndex: 0), field);
         foreach (var field in FieldsOf(typeof(SimEnemy))) yield return ($"SimEnemy.{field.Name}", branch => branch.Enemies[0], field);
         foreach (var field in FieldsOf(typeof(SimOrb))) yield return ($"SimOrb.{field.Name}", branch => branch.You.OwnOrbs()[0], field);
     }

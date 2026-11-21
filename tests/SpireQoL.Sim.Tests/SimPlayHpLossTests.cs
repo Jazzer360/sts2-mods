@@ -23,9 +23,9 @@ public class SimPlayHpLossTests
     [Fact]
     public void ThornsYourBlockStopsIsNoHpLoss()
     {
-        var state = new SimState { Enemies = { E(1, 50, thorns: 3) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, thorns: 3) } };
         state.You.Block = 5;
-        var outcome = SimEngine.Run(state, Attack(1, 6));
+        var outcome = SimEngine.Run(state, Attack(target: 1, damage: 6));
         Assert.Equal(0, outcome.PlayHpReachedMin);
         Assert.Equal(0, outcome.PlayHpLossesMin);
     }
@@ -33,8 +33,8 @@ public class SimPlayHpLossTests
     [Fact]
     public void ThornsPastYourBlockIsHpLoss()
     {
-        var state = new SimState { Enemies = { E(1, 50, thorns: 3) } };
-        var outcome = SimEngine.Run(state, Attack(1, 6));
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, thorns: 3) } };
+        var outcome = SimEngine.Run(state, Attack(target: 1, damage: 6));
         Assert.Equal(1, outcome.PlayHpReachedMin);
         Assert.Equal(1, outcome.PlayHpLossesMin);
         Assert.Equal(3, outcome.PlayHpLostMin);
@@ -44,9 +44,9 @@ public class SimPlayHpLossTests
     public void EachHitSetsThornsOffBlockRunsOutPartWay()
     {
         // Thorns 3 before each of 2 hits, 4 block: the first is blocked, the second loses 2 HP.
-        var state = new SimState { Enemies = { E(1, 50, thorns: 3) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, thorns: 3) } };
         state.You.Block = 4;
-        var outcome = SimEngine.Run(state, Attack(1, 2, hits: 2));
+        var outcome = SimEngine.Run(state, Attack(target: 1, damage: 2, hits: 2));
         Assert.Equal(1, outcome.PlayHpReachedMin);
         Assert.Equal(1, outcome.PlayHpLossesMin);
         Assert.Equal(2, outcome.PlayHpLostMin);
@@ -56,9 +56,9 @@ public class SimPlayHpLossTests
     public void TungstenRodTakesOneThornsToNothing()
     {
         // 1 Thorns past your block: Tungsten Rod takes it to 0, so it flashes but you lose no HP (no Self-Forming Clay).
-        var state = new SimState { Enemies = { E(1, 50, thorns: 1) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, thorns: 1) } };
         state.You.TungstenRod = 1;
-        var outcome = SimEngine.Run(state, Attack(1, 6));
+        var outcome = SimEngine.Run(state, Attack(target: 1, damage: 6));
         Assert.Equal(1, outcome.PlayHpReachedMin);
         Assert.Equal(0, outcome.PlayHpLossesMin);
     }
@@ -66,12 +66,12 @@ public class SimPlayHpLossTests
     [Fact]
     public void CardHpCostThroughTungstenRod()
     {
-        var state = new SimState { Enemies = { E(1, 50) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50) } };
         state.You.TungstenRod = 1;
-        var one = SimEngine.Run(state, Cost(1));
+        var one = SimEngine.Run(state, Cost(hp: 1));
         Assert.Equal(1, one.PlayHpReachedMin);
         Assert.Equal(0, one.PlayHpLossesMin);
-        var three = SimEngine.Run(state, Cost(3));
+        var three = SimEngine.Run(state, Cost(hp: 3));
         Assert.Equal(1, three.PlayHpLossesMin);
         Assert.Equal(2, three.PlayHpLostMin);
     }
@@ -79,9 +79,9 @@ public class SimPlayHpLossTests
     [Fact]
     public void CardHpCostIgnoresBlock()
     {
-        var state = new SimState { Enemies = { E(1, 50) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50) } };
         state.You.Block = 10;
-        var outcome = SimEngine.Run(state, Cost(3, times: 2));
+        var outcome = SimEngine.Run(state, Cost(hp: 3, times: 2));
         Assert.Equal(2, outcome.PlayHpLossesMin);
         Assert.Equal(6, outcome.PlayHpLostMin);
         Assert.Equal(6, outcome.TakenMax); // the enemy's 5 then goes into the untouched 10 block
@@ -91,9 +91,9 @@ public class SimPlayHpLossTests
     public void BufferStopsTheCostAndIsGoneForTheEnemyTurn()
     {
         // Buffer takes the card's HP cost, so nothing reacts to HP loss and the enemy's 5 then gets through.
-        var state = new SimState { Enemies = { E(1, 50) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50) } };
         state.You.Buffer = 1;
-        var outcome = SimEngine.Run(state, Cost(3));
+        var outcome = SimEngine.Run(state, Cost(hp: 3));
         Assert.Equal(1, outcome.PlayHpReachedMin);
         Assert.Equal(0, outcome.PlayHpLossesMin);
         Assert.Equal(5, outcome.TakenMax);
@@ -102,17 +102,17 @@ public class SimPlayHpLossTests
     [Fact]
     public void HpCostSetsOffInfernoOnce()
     {
-        var state = new SimState { Enemies = { E(1, 50) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50) } };
         state.You.Inferno = 5;
-        var outcome = SimEngine.Run(state, Cost(2));
-        Assert.Equal(45, outcome.Worst.Enemy(1)!.HpAtTurnEnd);
+        var outcome = SimEngine.Run(state, Cost(hp: 2));
+        Assert.Equal(45, outcome.Worst.Enemy(id: 1)!.HpAtTurnEnd);
     }
 
     [Fact]
     public void RandomHitNeedsThornsInEveryBranch()
     {
         // A random hit: only E1 has Thorns, so in E2's branch you lose nothing.
-        var state = new SimState { Enemies = { E(1, 50, thorns: 3), E(2, 50) } };
+        var state = new SimState { Enemies = { E(id: 1, hp: 50, thorns: 3), E(id: 2, hp: 50) } };
         var play = new SimPlay { Name = "Sword Boomerang", IsAttack = true, HitTarget = SimPlay.Target.Random, Hits = 1, HitDamage = { [1] = 3, [2] = 3 } };
         var outcome = SimEngine.Run(state, play);
         Assert.Equal(0, outcome.PlayHpLossesMin);

@@ -63,7 +63,7 @@ public static partial class SimEngine
                     });
                     break;
                 case SimPlay.Target.All:
-                    branches.Each(branch => HitAllRound(branch, 1));
+                    branches.Each(branch => HitAllRound(branch, rounds: 1));
                     break;
                 case SimPlay.Target.Random:
                     branches.Each(branch => RandomTarget(branch, (copy, id) => HitOnce(copy, Info(copy).Dealer, id, at)));
@@ -149,7 +149,7 @@ public static partial class SimEngine
         var states = GainBlock(state, amount, state.EndOfTurnNow && gainBlockAction.To == Who.You && state.Log ? state.CurrentPlay?.Card.Name ?? "block" : null, gainBlockAction.To);
         // Block from a card play this turn (Unmovable counts the ones from earlier plays).
         if (amount > 0 && state.CurrentPlay != null && gainBlockAction.Props.IsCardOrMonsterMove())
-            states = states.Select(branch => { branch.PlayCardBlockGains++; if (branch.CurrentPlay!.Owner == Who.You) branch.You.Turn = branch.You.Turn.Add(SimKeys.CardBlock, 1); return branch; }).ToList();
+            states = states.Select(branch => { branch.PlayCardBlockGains++; if (branch.CurrentPlay!.Owner == Who.You) branch.You.Turn = branch.You.Turn.Add(SimKeys.CardBlock, delta: 1); return branch; }).ToList();
         if (mods != null && amount > 0) states = states.Select(branch => { foreach (var (model, o) in mods) model.AfterModifyingBlockAmount(branch, o, amount, branch.CurrentPlay); return branch; }).ToList();
         return Then(states, branch => Hook(branch, nameof(SimModel.AfterBlockGained), (model, owner, copy) => model.AfterBlockGained(copy, owner, gainBlockAction.To, amount, copy.CurrentPlay?.Card)));
     }
@@ -166,7 +166,7 @@ public static partial class SimEngine
         var powers = PowersOf(state, target);
         if (debuff && powers[PowerId.Artifact] > 0)
         {
-            SetPowers(state, target, powers[PowerId.Artifact] > 1 ? powers.Add(PowerId.Artifact, -1) : powers.Without(PowerId.Artifact));
+            SetPowers(state, target, powers[PowerId.Artifact] > 1 ? powers.Add(PowerId.Artifact, delta: -1) : powers.Without(PowerId.Artifact));
             return false;
         }
         if (target >= 0 && power == PowerId.Poison)
@@ -230,7 +230,7 @@ public static partial class SimEngine
             // A draw from your draw pile (decision #90): a branch per card that matters, with its reactions.
             if (cardEventAction.Event == CardEvent.Drawn && branches.States.Count > 0 && DrawsFromPile(branches.States[0], cardEventAction.Player ?? branches.States[0].CurrentPlay?.Owner ?? Who.You))
             {
-                branches.Each(branch => DrawCards(branch, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You, 1, cardEventAction.Indirect));
+                branches.Each(branch => DrawCards(branch, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You, count: 1, cardEventAction.Indirect));
                 continue;
             }
             branches.Do(branch => { CountEvent(branch, cardEventAction.Event, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You); branch.EventCard = cardEventAction.Card; });
@@ -262,7 +262,7 @@ public static partial class SimEngine
     internal static int IntentDamage(SimState state, SimEnemy enemy, int hit, int player)
     {
         var otherHit = enemy.Intent![hit];
-        return CalcDamage(state, otherHit.Base, new DamageCtx(enemy.Id, player, SimProps.Move, null, null), otherHit.TermsOn(player));
+        return CalcDamage(state, otherHit.Base, new DamageCtx(enemy.Id, player, SimProps.Move, Card: null, Play: null), otherHit.TermsOn(player));
     }
 }
 
@@ -277,7 +277,7 @@ public static partial class SimEngine
     /// <summary>One hit on every hittable enemy with this damage (Timber's second attack), each through the pipeline.</summary>
     private static IEnumerable<SimState> HitEveryEnemy(SimState state, int dealer, DamageSpec spec)
     {
-        var at = new AttackAction(1, SimPlay.Target.All, spec);
+        var at = new AttackAction(Hits: 1, SimPlay.Target.All, spec);
         IEnumerable<SimState> states = new[] { state };
         foreach (var id in state.Targetable.Select(enemy => enemy.Id).ToList())
         {

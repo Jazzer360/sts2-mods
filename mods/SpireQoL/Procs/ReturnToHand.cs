@@ -48,7 +48,7 @@ internal static class ReturnToHand
     }
 
     /// <summary>Make It So's count: every this many Skills (its Cards value).</summary>
-    public static int Every(CardModel makeItSo) => Math.Max(1, Sts2State.Var(makeItSo, "Cards", 3));
+    public static int Every(CardModel makeItSo) => Math.Max(1, Sts2State.Var(makeItSo, "Cards", fallback: 3));
 
     /// <summary>Your Skills played this turn (each play of a replay counts, as the game counts them).</summary>
     public static int SkillsThisTurn(Player me) => Sts2State.CountPlayedThisTurn(me, CardType.Skill);
@@ -90,7 +90,7 @@ internal static class ReturnToHand
         foreach (var (c, pile) in Copies(me, RightHandHand))
         {
             if (pile != PileType.Discard || ReferenceEquals(c, card)) continue;
-            if (energy >= Sts2State.Var(c, "Energy", 2)) Add(c);
+            if (energy >= Sts2State.Var(c, "Energy", fallback: 2)) Add(c);
         }
         return back;
     }

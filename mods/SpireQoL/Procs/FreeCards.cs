@@ -53,10 +53,10 @@ internal static class FreeCards
         var savedYet = false;
         foreach (var power in powers)
         {
-            if (costsX) { uses.Add(new Use(power, null, false, true)); continue; }
-            if (hidden) { uses.Add(new Use(power, null, true, false)); continue; }
-            if (saved > 0 && !savedYet) { uses.Add(new Use(power, saved, false, false)); savedYet = true; }
-            else uses.Add(new Use(power, null, false, true));
+            if (costsX) { uses.Add(new Use(power, Saved: null, Hidden: false, Wasted: true)); continue; }
+            if (hidden) { uses.Add(new Use(power, Saved: null, Hidden: true, Wasted: false)); continue; }
+            if (saved > 0 && !savedYet) { uses.Add(new Use(power, saved, Hidden: false, Wasted: false)); savedYet = true; }
+            else uses.Add(new Use(power, Saved: null, Hidden: false, Wasted: true));
         }
         return uses;
     }
@@ -102,7 +102,7 @@ internal static class FreeCards
     }
 
     private static List<LocalCostModifier>? LocalModifiers(CardModel card) =>
-        Sts2State.Private<List<LocalCostModifier>?>(card.EnergyCost, "_localModifiers", null);
+        Sts2State.Private<List<LocalCostModifier>?>(card.EnergyCost, "_localModifiers", fallback: null);
 
     /// <summary>The card and every copy of yours this fight you can't tell apart from it (same card, upgrade and enchantment).</summary>
     private static IEnumerable<CardModel> LookAlikes(CardModel card, Player me)

@@ -107,10 +107,10 @@ internal static class CardEnergy
                 if (target != null && Fool.IsImpaled(target)) Gain(energy, owner);
                 return;
             case nameof(Restlessness):
-                if (Sts2State.Private(card, "IsOnlyCardInHand", false)) Gain(energy, owner);
+                if (Sts2State.Private(card, "IsOnlyCardInHand", fallback: false)) Gain(energy, owner);
                 return;
             case nameof(ForgottenRitual):
-                if (Sts2State.Private(card, "WasCardExhaustedThisTurn", false)) Gain(energy, owner);
+                if (Sts2State.Private(card, "WasCardExhaustedThisTurn", fallback: false)) Gain(energy, owner);
                 return;
             case nameof(DoubleEnergy):
                 play.Body.Add(new GainEnergyAsHeldAction());

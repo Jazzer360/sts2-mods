@@ -61,7 +61,7 @@ internal static class IntentCorner
         }
         if (row == null)
         {
-            row = UiKit.Row(2);
+            row = UiKit.Row(separation: 2);
             row.Name = PowersName;
             row.MouseFilter = Control.MouseFilterEnum.Ignore;
             row.SetMeta("key", key);
@@ -80,7 +80,7 @@ internal static class IntentCorner
     /// <summary>A power's icon with its amount beside it (the icon alone when the amount isn't a number the move keeps).</summary>
     private static Control Chip(MovePowers.Applied applied)
     {
-        var chip = UiKit.Row(0);
+        var chip = UiKit.Row(separation: 0);
         chip.MouseFilter = Control.MouseFilterEnum.Ignore;
         var icon = UiKit.Icon(GameIcons.Power(applied.Power), IconSize);
         icon.MouseFilter = Control.MouseFilterEnum.Ignore;

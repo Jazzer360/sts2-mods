@@ -54,10 +54,10 @@ public static partial class SimEngine
             branch.ArrowAwayAt = -1;
             if (branch.Enemy(target) is not { } enemy) return new[] { branch };
             var powers = enemy.Powers;
-            enemy.Powers = powers.Has(Impaled) ? powers.With(Impaled, powers[Impaled] + 1) : powers.With(Impaled, 1, 3);
+            enemy.Powers = powers.Has(Impaled) ? powers.With(Impaled, powers[Impaled] + 1) : powers.With(Impaled, amount: 1, data: 3);
             var states = Hook(branch, nameof(SimModel.AfterArrowImpaled), (model, owner, copy) => model.AfterArrowImpaled(copy, owner, target, Who.You));
             // Killed by the shot's own attack: the arrow comes straight out.
-            return Then(states.ToList(), copy => copy.Enemy(target) is { Alive: false } ? Dislodge(copy, target, 1) : new[] { copy });
+            return Then(states.ToList(), copy => copy.Enemy(target) is { Alive: false } ? Dislodge(copy, target, count: 1) : new[] { copy });
         });
     }
 

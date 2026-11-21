@@ -60,7 +60,7 @@ public static class OtherMods
     }
 
     /// <summary>The same, against a given map of other mods' assemblies (tests).</summary>
-    internal static string? InStack(Exception ex, IReadOnlyDictionary<Assembly, string> others, string ourHarmony) => Walk(ex, others, ourHarmony, 0);
+    internal static string? InStack(Exception ex, IReadOnlyDictionary<Assembly, string> others, string ourHarmony) => Walk(ex, others, ourHarmony, depth: 0);
 
     private static string? Walk(Exception? ex, IReadOnlyDictionary<Assembly, string> others, string ourHarmony, int depth)
     {
