@@ -58,7 +58,7 @@ public static partial class SimAdapter
     /// Feel No Pain; "DamageBack": Flame Barrier; "Accelerant"), 0 when it has neither (the card scan reports it), or
     /// null (none, or it has a PowerVar, read with the others).
     /// </summary>
-    private static readonly string[] PlainPowerVars = { "Power", "DamageBack", nameof(Accelerant) };
+    private static readonly string[] PlainPowerVars = { "Power", "DamageBack", "Accelerant" }; // DynamicVars keys
 
     /// <summary>
     /// How many times an enemy's poison ticks: 1 plus the Accelerant of every living opponent of it, so every player's

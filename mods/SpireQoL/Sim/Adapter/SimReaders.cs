@@ -143,7 +143,7 @@ public static class SimReaders
                     amount = Sts2State.Private(r, "AttacksPlayed", 0);
                     data = Sts2State.Private<object?>(r, "AttackToDouble", null) != null ? 1 : 0;
                     break;
-                case "MightyWings": amount = Sts2State.Var(r, nameof(StrengthPower), 2); data = Sts2State.Var(r, "DamageThreshold", 30); break;
+                case "MightyWings": amount = Sts2State.Var(r, "StrengthPower", 2); data = Sts2State.Var(r, "DamageThreshold", 30); break;
                 case nameof(Vambrace):
                     data = (Sts2State.Private<object?>(r, "TriggeringCard", null) != null ? 1 : 0) | (Sts2State.Private(r, "BlockGainedThisCombat", false) ? 2 : 0);
                     break;
@@ -159,7 +159,7 @@ public static class SimReaders
                     data = (int)Sts2State.Private(r, "DamageReceivedThisTurn", 0m);
                     break;
                 case nameof(TheBoot): amount = Sts2State.Var(r, "DamageMinimum", 5); break;
-                case nameof(SneckoSkull): amount = Sts2State.Var(r, nameof(PoisonPower), 1); break;
+                case nameof(SneckoSkull): amount = Sts2State.Var(r, "PoisonPower", 1); break;
                 // Counters the models keep counting (their tray number, or the private count behind it).
                 case nameof(JossPaper): amount = Sts2State.Private(r, "CardsExhausted", 0); break;
                 case nameof(GalacticDust): amount = Sts2State.Private(r, "StarsSpent", 0); break;

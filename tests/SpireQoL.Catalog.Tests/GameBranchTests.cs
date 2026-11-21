@@ -18,10 +18,14 @@ public class GameBranchTests
     /// <summary>A literal inside these calls is a value's or a private member's name that can match a class's (DynamicVars["StrengthPower"]).</summary>
     private static readonly Regex KeyCall = new(@"\b(Var|TryGetValue|Private|Internal|GetValue)\([^()""]*$");
 
+    /// <summary>A class's nameof where a value's key goes: Var(card, nameof(StrengthPower)).</summary>
+    private static readonly Regex KeyNameof = new(@"\b(Var|TryGetValue|Private|Internal)\([^()]*nameof\(");
+
     /// <summary>Literals that name something else that shares a class's name: the text, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
         ["(\"Juggernaut\", j)"] = "Incoming Damage's breakdown label (what the player reads), not the class",
+        ["\"Accelerant\" }; // DynamicVars keys"] = "a card's DynamicVars key (SimAdapter.PlainPowerVars), not the Accelerant card",
     };
 
     private static string RepoRoot()
@@ -61,6 +65,8 @@ public class GameBranchTests
                     if (Reviewed.Keys.FirstOrDefault(line.Contains) is { } key) { used.Add(key); continue; }
                     found.Add($"{rel}:{i + 1}: {m.Value}");
                 }
+                // The other way round: a value's key written as a class (DynamicVars["PoisonPower"] is the value's name, not the class).
+                if (KeyNameof.IsMatch(line)) found.Add($"{rel}:{i + 1}: a DynamicVars or member key written with nameof (keep the key a string)");
             }
         }
         Assert.True(found.Count == 0, "Classes both branches have, named by string (use nameof, a type check, or PowerId/RelicId/CardId): " + string.Join("; ", found));
