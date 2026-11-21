@@ -163,7 +163,9 @@ public static class SimReaders
                 // Once a turn: armed until used (bit 1), done this turn (bit 2).
                 case "MiniRegent" or "Regalite": data = Sts2State.Private(r, "UsedThisTurn", true) ? 0 : 1; break;
                 case "RainbowRing": data = Sts2State.Private(r, "ActivationCountThisTurn", 0) >= 1 ? 2 : 0; break;
-                case "ConductorsBaton": data = Sts2State.Private(r, "_triggeredThisTurn", true) ? 2 : 0; break;
+                case "ConductorsBaton" or "DemonTongue": data = Sts2State.Private(r, "_triggeredThisTurn", true) ? 2 : 0; break;
+                // The HP at or below which it gives Strength (its threshold of your max HP).
+                case "RedSkull": amount = (int)Math.Floor(p.Creature.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m); break;
                 // End-of-turn relics: their block or damage (amount), and what they wait for (Data).
                 case "Orichalcum" or "FakeOrichalcum" or "CloakClasp" or "RippleBasin": amount = Sts2State.Var(r, "Block"); break;
                 case "ScreamingFlagon" or "CharonsAshes" or "ForgottenSoul": amount = Sts2State.Var(r, "Damage"); break;

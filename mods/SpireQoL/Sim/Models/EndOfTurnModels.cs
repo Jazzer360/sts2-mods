@@ -119,6 +119,12 @@ public sealed class ObsidianVice : EndOfTurnRelic
 /// <summary>ParryingShield.AfterSideTurnEnd: its damage (amount) to a random hittable enemy when its owner has at least its Block (Data).</summary>
 public sealed class ParryingShield : EndOfTurnRelic
 {
+    /// <summary>Plain when this play makes it fire for sure and ending the turn now might not; crossed when it would for sure now and the play can stop it.</summary>
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        owner != Who.You ? null
+        : !now.ParryingShieldInAll ? new(false, o => o.ParryingShieldInAll)
+        : new(true, o => !o.ParryingShieldInAll);
+
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner)
     {
         if (!s.TakesPart(owner) || Amount(s, owner) <= 0 || s.Player(owner) is not { } p || p.Block < Data(s, owner)) return One(s);

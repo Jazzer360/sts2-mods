@@ -588,16 +588,18 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         DrawnTab(f, outcomes, tabs);
 
         // ---- the play log: each source whose model fired during the play
-        foreach (var src in sources)
+        // A source's owner in the simulation: an enemy's id for its powers, a teammate's for theirs; null for yours (or an enemy no
+        // longer in the fight).
+        bool SimOwner(AbstractModel src, out int? owner)
         {
-            int? ownerId = TeammateOf(src, _me, _cs);
-            if (src is PowerModel ep && OwnerOf(ep) is { IsEnemy: true } enemyOwner)
-            {
-                if (!te.Ids.TryGetValue(enemyOwner, out var eid)) continue;
-                ownerId = eid;
-            }
-            LogTab(src, ownerId, outcomes, tabs);
+            owner = TeammateOf(src, _me, _cs);
+            if (src is not PowerModel ep || OwnerOf(ep) is not { IsEnemy: true } enemyOwner) return true;
+            if (!te.Ids.TryGetValue(enemyOwner, out var eid)) return false;
+            owner = eid;
+            return true;
         }
+        foreach (var src in sources)
+            if (SimOwner(src, out var ownerId)) LogTab(src, ownerId, outcomes, tabs);
         // Effects the engine logs itself (Juggernaut on every block gain, Thunder on Lightning evokes): logged under their power's
         // name, yours and every teammate's.
         foreach (var src in sources.OfType<PowerModel>().Where(x => OwnerOf(x) is { IsPlayer: true } && x.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
@@ -629,74 +631,13 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             _firesAt[key] = firesAt;
             tabs[key] = new TabSpec(key, IconOf(src), harmful, Aimed: firesAt.Length > 1 && !firesAt.All(x => x));
         }
-        foreach (var (enemy, id) in te.Ids)
+        // The sources' own rules (SimModel.OutcomeTab), enemies' powers first, then relics, then players' powers.
+        var start = f.Sim!.Start;
+        foreach (var src in sources.OrderBy(x => x is PowerModel p && OwnerOf(p) is { IsEnemy: true } ? 0 : x is RelicModel ? 1 : 2))
         {
-            if (!enemy.IsAlive) continue;
-            foreach (var p in enemy.Powers)
-            {
-                (bool Harmful, Func<SimOutcome, bool> At)? rule = p.GetType().Name switch
-                {
-                    nameof(ImbalancedPower) when !baseline.FirstHitBlockedInAll(id) => (false, o => o.FirstHitBlockedInAll(id)),
-                    nameof(AsleepPower) when baseline.UnblockedMax(id) < 1 => (true, o => o.UnblockedMax(id) >= 1),
-                    nameof(SlumberPower) when baseline.UnblockedMax(id) < p.Amount => (true, o => o.UnblockedMax(id) >= p.Amount),
-                    // Its death sets something off (warnings: in any branch, for any aim).
-                    nameof(InfestedPower) or nameof(SteamEruptionPower) or nameof(SurprisePower) or nameof(ExplosivePower)
-                        => (true, o => o.KilledByPlayInAny.Contains(id)),
-                    // Stock: a new Axebot takes its place (it attacks this enemy turn) while stock is left.
-                    nameof(StockPower) when p.Amount > 0 => (true, o => o.KilledByPlayInAny.Contains(id)),
-                    // Another enemy's death makes it stronger.
-                    nameof(CrabRagePower) or nameof(RavenousPower) => (true, o => o.KilledByPlayInAny.Any(k => k != id)),
-                    // Stunned by your turn (block broken, enough hits through, HP threshold), in every branch for some aim, and not
-                    // already without this card.
-                    nameof(BurrowedPower) or nameof(FlutterPower) or nameof(PlowPower) or nameof(ShriekPower)
-                        when !baseline.StunnedInAll(id) => (false, o => o.StunnedInAll(id)),
-                    nameof(TheGambitPower) when !baseline.GambitInAll(id) => (false, o => o.GambitInAll(id)),
-                    nameof(SlipperyPower) when !baseline.SlipperyInAny(id) => (true, o => o.SlipperyInAny(id)),
-                    _ => null,
-                };
-                if (rule is { } r) Add(p, r.Harmful, r.At);
-            }
+            if (SimModels.Get(SimReaders.ModelName(src)) is not { JudgedOnOutcome: true } model || !SimOwner(src, out var owner)) continue;
+            if (model.OutcomeTab(start, baseline, owner ?? Who.You) is { } rule) Add(src, rule.Harmful, rule.SetOff);
         }
-
-        foreach (var r in _me.Relics)
-        {
-            switch (r)
-            {
-                // Hand Drill (Vulnerable on an enemy whose block you break): good, so every branch for some aim.
-                case HandDrill: Add(r, false, o => o.PlayBreaksBlockInAll); break;
-                // Parrying Shield (end of turn, block at least its threshold): plain when this play makes it fire in every branch and
-                // it wouldn't for sure now; crossed when it would for sure now and this play can stop it.
-                case ParryingShield when !baseline.ParryingShieldInAll: Add(r, false, o => o.ParryingShieldInAll); break;
-                case ParryingShield: Add(r, true, o => !o.ParryingShieldInAll); break;
-                // Gremlin Horn (energy and a draw when an enemy dies): some aim kills an enemy in every branch.
-                case GremlinHorn: Add(r, false, o => o.PlayKillsInAll); break;
-            }
-        }
-        // Compost (yours or a teammate's: energy for every player on your side when an enemy dies): every branch for some aim.
-        var compost = _cs.Players.Select(p => p.Creature).Where(c => c is { IsAlive: true }).SelectMany(c => c.Powers).FirstOrDefault(p => p is CompostPower);
-        if (compost != null) Add(compost, false, o => o.PlayKillsInAll);
-
-        // HP you lose during the play (the card's own HP cost, enemy Thorns before each hit), through your block, Tungsten Rod,
-        // Beating Remnant and Buffer: good, so every branch for some aim.
-        Func<SimOutcome, bool> losesHp = o => o.PlayHpLossesMin > 0;
-        foreach (var r in _me.Relics)
-        {
-            // Keys by nameof, so the settings check (CatalogCheck reads this class's string literals) sees each rule.
-            Func<SimOutcome, bool>? at = r switch
-            {
-                // AfterDamageReceived with UnblockedDamage > 0: HP actually lost, after Tungsten Rod.
-                SelfFormingClay => losesHp,
-                EmotionChip => losesHp,
-                DemonTongue when !Sts2State.Private(r, "_triggeredThisTurn", true) => losesHp,
-                // AfterCurrentHpChanged: Strength once your HP is at or below its threshold.
-                RedSkull when _me.Creature is var c && c.CurrentHp > c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m
-                    => o => o.PlayHpLostMin > 0 && c.CurrentHp - o.PlayHpLostMin <= c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m,
-                _ => null,
-            };
-            if (at != null) Add(r, false, at);
-        }
-        // Rupture (Strength when you lose HP on your turn).
-        if (_me.Creature.Powers.FirstOrDefault(p => p is RupturePower) is { } rupture) Add(rupture, false, losesHp);
 
         // Lethal (decision #87): the card raises an enemy's chance of dying before it acts, for sure: its explored deaths (Low)
         // beat everything ending the turn now could give (High). Certain kills always count; a chance only with chances on.
@@ -720,16 +661,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         lethalAimed = outcomes.Length > 1 && perAim.Any(c => c == null || c.Value.Low < top.Low);
         return true;
     }
-
-    /// <summary>
-    /// The sources whose tabs come from the end-of-turn comparisons by type. Not referenced in code: the settings check
-    /// (CatalogCheck) reads the string literals compiled into this class, and these names are how it finds those rules.
-    /// </summary>
-    internal static readonly string[] OutcomeTabs =
-    {
-        nameof(HandDrill), nameof(ParryingShield), nameof(GremlinHorn), nameof(CompostPower), nameof(RupturePower),
-        nameof(SelfFormingClay), nameof(EmotionChip), nameof(DemonTongue), nameof(RedSkull),
-    };
 
     private static Godot.Texture2D? IconOf(AbstractModel src) => src switch
     {

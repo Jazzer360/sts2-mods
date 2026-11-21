@@ -89,6 +89,9 @@ public sealed class HardenedShellPower : SimModel
 /// <summary>SlipperyPower: at most 1 HP per damage to its owner (AfterOsty); each that loses HP flashes and takes a charge.</summary>
 public sealed class SlipperyPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        Who.IsEnemy(owner) && !now.SlipperyInAny(owner) ? new(true, o => o.SlipperyInAny(owner)) : null;
+
     public override decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount) =>
         d.Target != owner || amount < 1m ? amount : 1m;
     public override void AfterModifyingHpLost(SimState s, int owner) { } // it flashes when the damage lands
@@ -105,6 +108,8 @@ public sealed class SlipperyPower : SimModel
 /// <summary>BurrowedPower.AfterBlockBroken: breaking its owner's block stuns it, and the power goes (with its block-keeping).</summary>
 public sealed class BurrowedPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
+
     public override void AfterBlockBroken(SimState s, int owner, int target)
     {
         if (target != owner || s.Enemy(owner) is not { } e) return;
@@ -117,6 +122,9 @@ public sealed class BurrowedPower : SimModel
 /// <summary>AsleepPower.AfterDamageReceived: HP through its owner's block (any source) wakes it: Plating goes, it's stunned, the power goes.</summary>
 public sealed class AsleepPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        Who.IsEnemy(owner) && now.UnblockedMax(owner) < 1 ? new(true, o => o.UnblockedMax(owner) >= 1) : null;
+
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0 || s.Enemy(owner) is not { } en) return;
@@ -129,6 +137,10 @@ public sealed class AsleepPower : SimModel
 /// <summary>SlumberPower.AfterDamageReceived: each damage that gets HP through takes a stack; the last stuns it.</summary>
 public sealed class SlumberPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, Name) is var stacks && now.UnblockedMax(owner) < stacks
+            ? new(true, o => o.UnblockedMax(owner) >= stacks) : null;
+
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0 || s.Enemy(owner) is not { } en) return;
@@ -148,6 +160,8 @@ public sealed class SlumberPower : SimModel
 /// </summary>
 public sealed class PlowPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
+
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked <= 0 || s.Enemy(owner) is not { Alive: true } en || en.Hp > en.Powers[Name]) return;
@@ -160,6 +174,8 @@ public sealed class PlowPower : SimModel
 /// <summary>ShriekPower.AfterDamageReceived: HP through that leaves its owner at or below its amount stuns it; the power goes.</summary>
 public sealed class ShriekPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
+
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked <= 0 || s.Enemy(owner) is not { Alive: true } en || en.Hp > en.Powers[Name]) return;
@@ -172,6 +188,9 @@ public sealed class ShriekPower : SimModel
 /// <summary>TheGambitPower.AfterDamageReceived: a powered attack that gets HP through kills its owner.</summary>
 public sealed class TheGambitPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        Who.IsEnemy(owner) && !now.GambitInAll(owner) ? new(false, o => o.GambitInAll(owner)) : null;
+
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || !e.Props.IsPoweredAttack() || e.Unblocked <= 0 || s.Enemy(owner) is not { } en) return;

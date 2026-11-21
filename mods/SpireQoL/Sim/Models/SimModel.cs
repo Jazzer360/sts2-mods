@@ -74,6 +74,9 @@ public sealed record SimCard(string Name, SimCardType Type)
 /// <summary>How the game shows a model acted (SimModel.Seen).</summary>
 public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft, CounterPassedLimit }
 
+/// <summary>A tab judged on how the turn ends (SimModel.OutcomeTab): crossed or plain, and whether one play's outcome sets it off.</summary>
+public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff);
+
 /// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
 public sealed record SimCardPlay(SimCard Card, int Owner, int Target, int PlayIndex, int PlayCount, bool AutoPlay)
 {
@@ -165,6 +168,19 @@ public abstract class SimModel
     /// damage or summon it adds. Null: no tab from the log (its tab, if any, comes from the outcome comparisons).
     /// </summary>
     public virtual TabKind? Tab => null;
+    /// <summary>
+    /// A tab judged on how the turn ends instead of on what fires during the play: given the turn ended now (<paramref name="now"/>,
+    /// from <paramref name="start"/>), the rule one play's outcome must pass for the tab to show, or null when there's none for this
+    /// source here (it happens anyway, or never can). The tab shows when some aim passes it, with the aim marker when not every aim
+    /// does; a bonus needs every branch of an aim (InEvery), a warning one branch (InSome). Rules shared by several sources are in
+    /// Models/OutcomeModels.cs (OutcomeRules).
+    /// </summary>
+    /// <param name="owner">Whose source it is: an enemy's id for its powers, a player's for theirs and their relics.</param>
+    public virtual OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => null;
+
+    /// <summary>It has a tab judged on how the turn ends (<see cref="OutcomeTab"/>).</summary>
+    public bool JudgedOnOutcome => Overrides(nameof(OutcomeTab));
+
     /// <summary>Its tab is crossed (a warning: it helps the enemy, hurts you, or gives up a bonus), shown when it fires in some branch.</summary>
     public virtual bool Harmful => false;
     /// <summary>

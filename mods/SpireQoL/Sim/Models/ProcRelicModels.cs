@@ -73,6 +73,8 @@ public sealed class Pocketwatch : RelicProc
 /// </summary>
 public sealed class GremlinHorn : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => owner == Who.You ? OutcomeRules.KillsOne : null;
+
     public override void AfterDeath(SimState s, int owner, int dead)
     {
         if (dead < 0 || !Who.IsPlayer(owner)) return;

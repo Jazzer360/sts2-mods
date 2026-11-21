@@ -33,6 +33,8 @@ public sealed class TaintedPower : SimModel
 /// </summary>
 public sealed class FlutterPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
+
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (d.Target != owner || !d.Props.IsPoweredAttack()) return 1m;

@@ -217,7 +217,7 @@ public class FirstHitTests
         Assert.Equal(10, all.PlayFirstHits[1]);
         // Random targets: the branches disagree on who was hit first, so nothing is recorded.
         var random = SimEngine.Run(s, V2Script.Play(V2Script.Card("SwordBoomerang"), -1, 1, V2Script.Attack(3, hits: 1, mode: SimPlay.Target.Random)));
-        Assert.Equal(0, random.PlayFirstHits.Count);
+        Assert.Empty(random.PlayFirstHits);
     }
 }
 

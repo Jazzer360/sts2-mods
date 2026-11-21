@@ -169,16 +169,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     }
 
     /// <summary>Sources whose tabs come from the outcome simulator (missing while its run was pending).</summary>
-    private static readonly string[] SimTabSources =
-    {
-        nameof(ImbalancedPower), nameof(AsleepPower), nameof(SlumberPower), nameof(InfestedPower), nameof(SteamEruptionPower),
-        nameof(SurprisePower), nameof(ExplosivePower), nameof(StockPower), nameof(CompostPower), nameof(MightyWings), nameof(CrabRagePower), nameof(RavenousPower), nameof(GremlinHorn), nameof(CurlUpPower), nameof(SkittishPower), nameof(SneakyPower), nameof(EnragePower), nameof(JuggernautPower),
-        nameof(BurrowedPower), nameof(FlutterPower), nameof(PlowPower), nameof(ShriekPower), nameof(TheGambitPower), nameof(SlipperyPower), nameof(HandDrill),
-        nameof(ParryingShield),
-        // HP you lose during the play (SimOutcome.PlayHpReachedMin...).
-        nameof(TungstenRod), nameof(SelfFormingClay), nameof(EmotionChip), nameof(CentennialPuzzle), nameof(DemonTongue), nameof(RedSkull),
-        nameof(InfernoPower), nameof(RupturePower),
-    };
+    private static readonly HashSet<string> SimTabSources =
+        SimModels.Names.Where(n => SimModels.Get(n) is { } m && (m.Tab != null || m.JudgedOnOutcome)).ToHashSet();
 
     /// <summary>
     /// Relic tabs about the end of your turn, not the play: they never fire during it (Parrying Shield doesn't

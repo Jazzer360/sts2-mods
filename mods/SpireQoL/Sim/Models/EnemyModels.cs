@@ -51,6 +51,8 @@ public sealed class VitalSparkPower : SimModel
 /// </summary>
 public sealed class CrabRagePower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsEnemy(owner) ? OutcomeRules.KillsAnother(owner) : null;
+
     public override void AfterDeath(SimState s, int owner, int dead)
     {
         if (dead == owner || dead < 0 || s.Enemy(owner) is not { Alive: true } e || e.Intent == null) return;
@@ -64,6 +66,8 @@ public sealed class CrabRagePower : SimModel
 /// <summary>RavenousPower (AfterDeath of an ally): it's stunned.</summary>
 public sealed class RavenousPower : SimModel
 {
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsEnemy(owner) ? OutcomeRules.KillsAnother(owner) : null;
+
     public override void AfterDeath(SimState s, int owner, int dead)
     {
         if (dead == owner || dead < 0 || s.Enemy(owner) is not { Alive: true } e || e.Stunned) return;

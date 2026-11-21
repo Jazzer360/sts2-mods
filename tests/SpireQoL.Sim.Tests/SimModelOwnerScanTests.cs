@@ -23,6 +23,12 @@ public class SimModelOwnerScanTests
         ["owner == Who.You && attack.Dealer == Who.YourOsty && s.P.OstyHp"] = "your Osty's attacks (a teammate's Osty doesn't attack in your turn)",
         ["dealer == Who.YourOsty ? Who.You : dealer"] = "your Osty's damage counts as yours",
         ["OstyLoses(s, Who.You, hit)"] = "Thorns hitting back at your Osty",
+        ["owner != Who.You ? null"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
+        ["owner == Who.You ? new(false, o => o.PlayBreaksBlockInAll)"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
+        ["owner == Who.You ? OutcomeRules.YouLoseHp"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
+        ["owner == Who.You && (SimEngine.RelicsOf(start, owner).DataOf(Name) & 2) == 0"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
+        ["if (owner != Who.You) return null;"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
+        ["owner == Who.You ? OutcomeRules.KillsOne"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["(owner == Who.You && d.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
         ["(owner == Who.You && e.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
     };
