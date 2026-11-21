@@ -47,3 +47,7 @@ csharp_style_namespace_declarations = file_scoped:warning
 dotnet_diagnostic.CA1861.severity = none
 # Test names read as sentences.
 dotnet_diagnostic.CA1707.severity = none
+
+[*.cs]
+# Reading the game's RNG or seed (BannedSymbols.txt, decision #149) is an error in every build, not only a release's.
+dotnet_diagnostic.RS0030.severity = error

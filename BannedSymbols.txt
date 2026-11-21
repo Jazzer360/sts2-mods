@@ -1,0 +1,8 @@
+T:MegaCrit.Sts2.Core.Random.Rng;Never read the game's RNG: the mod shows only what a player could know (CLAUDE.md, "Only knowable information")
+T:MegaCrit.Sts2.Core.Random.PlayerRngSet;Never read the game's RNG: the mod shows only what a player could know (CLAUDE.md, "Only knowable information")
+T:MegaCrit.Sts2.Core.Runs.RunRngSet;Never read the game's RNG: the mod shows only what a player could know (CLAUDE.md, "Only knowable information")
+T:MegaCrit.Sts2.Core.Helpers.SeedHelper;Never read the seed: the mod shows only what a player could know (CLAUDE.md, "Only knowable information")
+P:MegaCrit.Sts2.Core.Runs.IRunState.Rng;Never read the game's RNG (CLAUDE.md, "Only knowable information")
+P:MegaCrit.Sts2.Core.Runs.RunState.Rng;Never read the game's RNG (CLAUDE.md, "Only knowable information")
+P:MegaCrit.Sts2.Core.Entities.Players.Player.PlayerRng;Never read the game's RNG (CLAUDE.md, "Only knowable information")
+P:MegaCrit.Sts2.Core.Runs.RunHistory.Seed;Never read the seed (CLAUDE.md, "Only knowable information")

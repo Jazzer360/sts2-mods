@@ -18,6 +18,11 @@
     <Compile Include="$(RepoRoot)core\**\*.cs" Link="Core\%(RecursiveDir)%(Filename)%(Extension)" />
 
     <None Include="$(AssemblyName).json" CopyToOutputDirectory="PreserveNewest" />
+
+    <!-- The game's RNG and seed are a compile error in every mod (BannedSymbols.txt; decision #149): the hard rule that the mod shows
+         only what a player could know, held by the build, not by review. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <AdditionalFiles Include="$(RepoRoot)BannedSymbols.txt" />
   </ItemGroup>
 
   <Target Name="CheckSts2Install" BeforeTargets="ResolveAssemblyReferences" Condition="'$(IsSts2Mod)' == 'true'">
