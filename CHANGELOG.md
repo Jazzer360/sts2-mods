@@ -18,7 +18,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Main Saves 1.0.23
 #### Changed
-- Shared code: the mod frame loop says when it is running, so code called from the game mid-frame can tell. No change in the game.
+- Shared code: the mod frame loop says when it is running, so code called from the game mid-frame can tell; the frame loop, feature loading and game lookups are tidied. No change in the game.
 
 ### Spire QoL 1.24.6
 #### Fixed
