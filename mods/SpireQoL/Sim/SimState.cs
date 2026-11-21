@@ -29,6 +29,12 @@ public sealed class SimOrb
     public int GlassBonus;
 
     public SimOrb Clone() => (SimOrb)MemberwiseClone();
+
+    /// <summary>For branch keys (SimState.Key): every number of the orb.</summary>
+    internal void Hash(Action<long> add)
+    {
+        add((int)Kind); add(Passive); add(Evoke); add(Triggers); add(GlassBase); add(GlassBonus);
+    }
 }
 
 public sealed class SimEnemy
@@ -190,6 +196,17 @@ public sealed class SimEnemy
 
     /// <summary>Copies the numbers; the attack list never changes during a run, so it's shared.</summary>
     public SimEnemy Clone() => (SimEnemy)MemberwiseClone();
+
+    /// <summary>For branch keys (SimState.Key): every number that can differ between branches of one run.</summary>
+    internal void Hash(Action<long> add)
+    {
+        add(Id); add(Hp); add(Block); add(UnblockedInstances); add(FirstHitFullyBlocked ? 1 : 0); add(Poison); add(DiedBeforeActing ? 1 : 0);
+        add(PoisonStacks); add(Stunned ? 1 : 0); add(ReactedWithBlock ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
+        add(SlipperyTriggered ? 1 : 0); add(Exploded ? 1 : 0);
+        Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
+        add(Hits.Count); foreach (var hit in Hits) add(hit);
+        add(HitsAfterAllyDies?.Count ?? -1); if (HitsAfterAllyDies != null) foreach (var hit in HitsAfterAllyDies) add(hit);
+    }
 }
 
 /// <summary>A card in hand that acts when its owner's turn ends: its class name, its title, and its Damage or HpLoss value.</summary>
@@ -411,22 +428,24 @@ public sealed class SimPlayer
     }
 
     /// <summary>
-    /// A teammate's numbers that can differ between branches of one run, for SimState.Key: two branches that differ only in a
-    /// teammate (their draws, block, HP, orbs, what fired for them) mustn't merge, or one of them takes the other's state.
+    /// For branch keys (SimState.Key): a player's numbers that can differ between branches of one run, the same for you and each
+    /// teammate. Two branches that differ only in a player (their draws, block, HP, orbs, what fired for them) mustn't merge, or one
+    /// of them takes the other's state.
     /// </summary>
-    internal void HashAsTeammate(Action<long> add)
+    internal void Hash(Action<long> add)
     {
         add(Block); add(Hp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
-        add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(FairiesUsed); add(Fairies);
+        add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(LizardTailHeal); add(FairiesUsed); add(Fairies);
         add(BlockGains); add(Energy); add(HandCount); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(StatusDrawn);
-        add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0);
+        add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
         Draw?.Hash(add);
         add(TurnEndCards.Count);
         foreach (var c in TurnEndCards) { add(c.Card.GetHashCode()); add(c.Amount); }
-        if (AutoHand != null) { add(AutoHand.Count); foreach (var c in AutoHand) add(c.Id); }
+        add(AutoHand?.Count ?? -1);
+        if (AutoHand != null) foreach (var c in AutoHand) add(c.Id);
         Powers.Hash(add); Relics.Hash(add); Turn.Hash(add);
         add(Orbs.Count);
-        foreach (var o in Orbs) { add((int)o.Kind); add(o.Passive); add(o.Evoke); add(o.Triggers); add(o.GlassBase); add(o.GlassBonus); }
+        foreach (var o in Orbs) o.Hash(add);
     }
 
     public SimPlayer Clone()
@@ -783,22 +802,7 @@ public sealed class SimState
             }
         }
 
-        Add(P.Block); Add(P.Arrows); Add(Taken); Add(UnblockableTaken); Add(OstyTaken); Add(P.Buffer); Add(P.OstyHp); Add(P.WuppyHp); Add(P.Hp); Add(P.Fairies); Add(P.LizardTailHeal); Add(Died ? 1 : 0); Add(P.RemnantLeftPlayerTurn); Add(ParryingShieldFired ? 1 : 0);
-        Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
-        foreach (var e in Enemies)
-        {
-            Add(e.Id); Add(e.Hp); Add(e.Block); Add(e.ShellLeft); Add(e.UnblockedInstances); Add(e.FirstHitFullyBlocked ? 1 : 0); Add(e.Poison); Add(e.DiedBeforeActing ? 1 : 0);
-            Add(e.PoisonStacks); Add(e.CurlUp); Add(e.Skittish);
-            Add(e.Stunned ? 1 : 0); Add(e.Burrowed ? 1 : 0); Add(e.Asleep ? 1 : 0); Add(e.Slumber); Add(e.Flutter); Add(e.StunAtHp); Add(e.Gambit ? 1 : 0); Add(e.Slippery);
-            Add(e.ReactedWithBlock ? 1 : 0); Add(e.BlockBroken ? 1 : 0);
-            e.Powers.Hash(Add);
-            Add(e.HitsAfterAllyDies == null ? 0 : 1); Add(e.Hits.Count); foreach (var hit in e.Hits) Add(hit); Add(e.GambitTriggered ? 1 : 0); Add(e.SlipperyTriggered ? 1 : 0);
-        }
-        if (P.AutoHand != null)
-        {
-            Add(P.AutoHand.Count);
-            foreach (var c in P.AutoHand) Add(c.Id);
-        }
+        Add(ParryingShieldFired ? 1 : 0); Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         if (DrawRecord != null)
         {
             Add(DrawRecord.Count);
@@ -807,23 +811,10 @@ public sealed class SimState
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
         foreach (var pick in AutoPicks) { Add(pick.Card); Add(pick.Target); } // branches that picked differently stay apart (the check tells them apart)
-        // What's been drawn (decision #90): the pile left, and what joined the hand.
-        if (P.Draw != null)
-        {
-            P.Draw.Hash(Add);
-            Add(P.HandCount); Add(P.Fading); Add(P.HexFading); Add(P.StatusDrawn); Add(P.Drawn);
-            Add(P.TurnEndCards.Count);
-            foreach (var c in P.TurnEndCards) { Add(c.Card.GetHashCode()); Add(c.Amount); }
-        }
-        foreach (var e in Enemies) Add(e.Exploded ? 1 : 0);
-        P.Powers.Hash(Add); P.Relics.Hash(Add);
-        Add(P.Orbs.Count);
-        foreach (var o in P.Orbs)
-        {
-            Add((int)o.Kind); Add(o.Passive); Add(o.Evoke);
-        }
+        foreach (var e in Enemies) e.Hash(Add);
+        P.Hash(Add);
         // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
-        foreach (var t in Teammates) t.HashAsTeammate(Add);
+        foreach (var t in Teammates) t.Hash(Add);
         return h;
     }
 }

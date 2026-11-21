@@ -29,6 +29,20 @@ public sealed class SimOutcome
         return new SimChance(p, Math.Min(1, p + unknown / total), seen);
     }
 
+    // ---- the four questions every query below asks, each over the branches
+
+    /// <summary>It holds in every branch, and the search finished (one stopped at a cap guarantees nothing it didn't reach).</summary>
+    public bool InEvery(Func<SimState, bool> holds) => !Truncated && Branches.All(holds);
+
+    /// <summary>It holds in some branch (a possibility: warnings need only one).</summary>
+    public bool InSome(Func<SimState, bool> holds) => Branches.Any(holds);
+
+    /// <summary>The smallest value over the branches (the guarantee for something good).</summary>
+    public int Fewest(Func<SimState, int> of) => Branches.Min(of);
+
+    /// <summary>The largest value over the branches (the worst case for something bad).</summary>
+    public int Most(Func<SimState, int> of) => Branches.Max(of);
+
     /// <summary>Some branch has something not modelled (decision #92): what's shown carries the ?.</summary>
     public bool AnyUnmodelled => Branches.Any(b => b.Unmodelled != null);
 
@@ -50,21 +64,21 @@ public sealed class SimOutcome
     public int Steps, Stepped, Copies, MaxStepCopies, PeakHeld;
 
     public SimState Worst => Branches.OrderByDescending(b => b.Taken).ThenByDescending(b => b.OstyTaken).First();
-    public int TakenMin => Branches.Min(b => b.Taken);
+    public int TakenMin => Fewest(b => b.Taken);
+    public int TakenMax => Most(b => b.Taken);
+    public int OstyTakenMin => Fewest(b => b.OstyTaken);
+    public int OstyTakenMax => Most(b => b.OstyTaken);
     /// <summary>Teammate k's HP lost: the worst branch and the best.</summary>
-    public int TeammateTakenMax(int k) => Branches.Max(b => b.Teammates[k].Taken);
-    public int TeammateTakenMin(int k) => Branches.Min(b => b.Teammates[k].Taken);
+    public int TeammateTakenMax(int k) => Most(b => b.Teammates[k].Taken);
+    public int TeammateTakenMin(int k) => Fewest(b => b.Teammates[k].Taken);
     /// <summary>What teammate k's Osty takes: the worst branch and the best.</summary>
-    public int TeammateOstyTakenMax(int k) => Branches.Max(b => b.Teammates[k].OstyTaken);
-    public int TeammateOstyTakenMin(int k) => Branches.Min(b => b.Teammates[k].OstyTaken);
+    public int TeammateOstyTakenMax(int k) => Most(b => b.Teammates[k].OstyTaken);
+    public int TeammateOstyTakenMin(int k) => Fewest(b => b.Teammates[k].OstyTaken);
     /// <summary>Your Parrying Shield fires in every branch (the search finished) / in some branch.</summary>
-    public bool ParryingShieldInAll => !Truncated && Branches.All(b => b.ParryingShieldFired);
-    public bool ParryingShieldInAny => Branches.Any(b => b.ParryingShieldFired);
+    public bool ParryingShieldInAll => InEvery(b => b.ParryingShieldFired);
+    public bool ParryingShieldInAny => InSome(b => b.ParryingShieldFired);
     /// <summary>Teammate k in the branch where they lose the most HP: their Incoming Damage.</summary>
     public SimPlayer TeammateWorst(int k) => Branches.Select(b => b.Teammates[k]).OrderByDescending(t => t.Taken).First();
-    public int TakenMax => Branches.Max(b => b.Taken);
-    public int OstyTakenMin => Branches.Min(b => b.OstyTaken);
-    public int OstyTakenMax => Branches.Max(b => b.OstyTaken);
 
     /// <summary>Enemies the play itself kills (before your end of turn) in some branch / in every branch.</summary>
     public HashSet<int> KilledByPlayInAny = new();
@@ -72,16 +86,16 @@ public sealed class SimOutcome
     /// <summary>Enemies that gain block from Curl Up, Sneaky or Skittish because of the play, in some branch.</summary>
     public HashSet<int> BlockReactionInAny = new();
     /// <summary>The play breaks some enemy's block in every branch (Hand Drill).</summary>
-    public bool PlayBreaksBlockInEveryBranch;
+    public bool PlayBreaksBlockInAll;
     /// <summary>Block gains during the play (each sets off Juggernaut): the most over branches.</summary>
     public int PlayBlockGainsMax;
 
     /// <summary>Stunned during your turn (Burrowed, Flutter, Plow, Shriek) and alive when its turn comes, in every branch.</summary>
-    public bool StunnedInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { StunnedThisTurn: true, DiedBeforeActing: false });
-    public bool GambitInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { GambitTriggered: true });
-    public bool SlipperyInAny(int id) => Branches.Any(b => b.Enemy(id) is { SlipperyTriggered: true });
+    public bool StunnedInAll(int id) => InEvery(b => b.Enemy(id) is { StunnedThisTurn: true, DiedBeforeActing: false });
+    public bool GambitInAll(int id) => InEvery(b => b.Enemy(id) is { GambitTriggered: true });
+    public bool SlipperyInAny(int id) => InSome(b => b.Enemy(id) is { SlipperyTriggered: true });
     /// <summary>The play kills some enemy in every branch (not always the same one).</summary>
-    public bool PlayKillsInEveryBranch;
+    public bool PlayKillsInAll;
     /// <summary>The play's biggest powered hit (blocked plus HP lost), in the branch where it's smallest (Mighty Wings).</summary>
     public int PlayBiggestHitMin;
     /// <summary>The play's HP loss of yours, in the branch where it's smallest (SimState.PlayHpReached, PlayHpLosses, PlayHpLost).</summary>
@@ -92,8 +106,8 @@ public sealed class SimOutcome
     public IReadOnlyDictionary<int, int> PlayFirstHits = System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
 
     /// <summary>The enemy is dead before it acts in every branch.</summary>
-    public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true }); // a death that happened stands, modelled past it or not
-    public bool DeadInAny(int id) => Branches.Any(b => b.Enemy(id) is { DiedBeforeActing: true });
+    public bool DeadInAll(int id) => InEvery(b => b.Enemy(id) is { DiedBeforeActing: true }); // a death that happened stands, modelled past it or not
+    public bool DeadInAny(int id) => InSome(b => b.Enemy(id) is { DiedBeforeActing: true });
     /// <summary>The chance it dies before acting (NaN when the search stopped at its cap: unknown).</summary>
     public double DeadChance(int id)
     {
@@ -103,19 +117,19 @@ public sealed class SimOutcome
     }
 
     /// <summary>Damage instances through its block during your turn: fewest and most over branches.</summary>
-    public int UnblockedMin(int id) => Branches.Min(b => b.Enemy(id)?.UnblockedInstances ?? 0);
-    public int UnblockedMax(int id) => Branches.Max(b => b.Enemy(id)?.UnblockedInstances ?? 0);
+    public int UnblockedMin(int id) => Fewest(b => b.Enemy(id)?.UnblockedInstances ?? 0);
+    public int UnblockedMax(int id) => Most(b => b.Enemy(id)?.UnblockedInstances ?? 0);
 
     /// <summary>The same, counted until your end of turn is over (not its turn): what the outcome audit sees in your end of turn.</summary>
-    public int UnblockedAtTurnEndMin(int id) => Branches.Min(b => b.Enemy(id)?.UnblockedAtTurnEnd ?? 0);
-    public int UnblockedAtTurnEndMax(int id) => Branches.Max(b => b.Enemy(id)?.UnblockedAtTurnEnd ?? 0);
+    public int UnblockedAtTurnEndMin(int id) => Fewest(b => b.Enemy(id)?.UnblockedAtTurnEnd ?? 0);
+    public int UnblockedAtTurnEndMax(int id) => Most(b => b.Enemy(id)?.UnblockedAtTurnEnd ?? 0);
 
-    public bool FirstHitBlockedInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { FirstHitFullyBlocked: true });
-    public bool FirstHitBlockedInAny(int id) => Branches.Any(b => b.Enemy(id) is { FirstHitFullyBlocked: true });
+    public bool FirstHitBlockedInAll(int id) => InEvery(b => b.Enemy(id) is { FirstHitFullyBlocked: true });
+    public bool FirstHitBlockedInAny(int id) => InSome(b => b.Enemy(id) is { FirstHitFullyBlocked: true });
 
     /// <summary>Its HP when your end of turn is over: lowest and highest over branches.</summary>
-    public int HpAtTurnEndMin(int id) => Branches.Min(b => b.Enemy(id)?.HpAtTurnEnd ?? 0);
-    public int HpAtTurnEndMax(int id) => Branches.Max(b => b.Enemy(id)?.HpAtTurnEnd ?? 0);
+    public int HpAtTurnEndMin(int id) => Fewest(b => b.Enemy(id)?.HpAtTurnEnd ?? 0);
+    public int HpAtTurnEndMax(int id) => Most(b => b.Enemy(id)?.HpAtTurnEnd ?? 0);
 }
 
 /// <summary>
@@ -222,9 +236,9 @@ public static partial class SimEngine
             KilledByPlayInAll = !complete || killedPerBranch.Count == 0
                 ? new HashSet<int>()
                 : killedPerBranch.Skip(1).Aggregate(new HashSet<int>(killedPerBranch[0]), (acc, k) => { acc.IntersectWith(k); return acc; }),
-            PlayKillsInEveryBranch = complete && killedPerBranch.Count > 0 && killedPerBranch.All(k => k.Count > 0),
+            PlayKillsInAll = complete && killedPerBranch.Count > 0 && killedPerBranch.All(k => k.Count > 0),
             BlockReactionInAny = reacted,
-            PlayBreaksBlockInEveryBranch = breaksBlock,
+            PlayBreaksBlockInAll = breaksBlock,
             PlayBlockGainsMax = gains.Count > 0 ? gains.Max() : 0,
             PlayBiggestHitMin = PlayMin(s => s.PlayBiggestHit),
             PlayHpReachedMin = PlayMin(s => s.PlayHpReached),

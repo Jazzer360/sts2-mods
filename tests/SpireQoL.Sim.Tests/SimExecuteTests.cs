@@ -44,7 +44,7 @@ public class SimExecuteTests
         Assert.False(SimEngine.Run(s).DeadInAll(1));
         var o = SimEngine.Run(s, Judgement(1, 30));
         Assert.True(o.DeadInAll(1));
-        Assert.True(o.PlayKillsInEveryBranch);
+        Assert.True(o.PlayKillsInAll);
         Assert.False(SimEngine.Run(s, Judgement(1, 20)).DeadInAll(1));
     }
 

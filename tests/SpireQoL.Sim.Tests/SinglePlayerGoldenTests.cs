@@ -115,7 +115,7 @@ public class SinglePlayerGoldenTests
         var o = SimEngine.Run(sc.State, sc.Play);
         var sb = new StringBuilder();
         sb.Append($"T{o.Truncated} K[{string.Join(",", o.KilledByPlayInAll.OrderBy(x => x))}|{string.Join(",", o.KilledByPlayInAny.OrderBy(x => x))}] ");
-        sb.Append($"B{o.PlayBlockGainsMax} {o.PlayKillsInEveryBranch} {o.PlayBreaksBlockInEveryBranch} R[{string.Join(",", o.BlockReactionInAny.OrderBy(x => x))}] ");
+        sb.Append($"B{o.PlayBlockGainsMax} {o.PlayKillsInAll} {o.PlayBreaksBlockInAll} R[{string.Join(",", o.BlockReactionInAny.OrderBy(x => x))}] ");
         var branches = o.Branches.Select(b =>
         {
             var e = string.Join(";", b.Enemies.OrderBy(x => x.Id).Select(x =>

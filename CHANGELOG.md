@@ -14,6 +14,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Inspect: a reward that rolls its rarity first no longer lists Ancient cards it can never give (Lost Lute at Infested Automaton's Study), and says so with each rarity's chance, so a rare's small chance isn't a surprise.
 - Inspect: a marked card's ring goes around the card itself (it left a gap above and was hidden below), and the cards you didn't mark are darkened instead of see-through.
 - The turn forecast is no longer reused from just before a play began, for a frame, when the game changed the board mid-frame; the Fool's arrows count as a board change.
+- Predictions no longer treat two possible outcomes as one when they differ only in your energy, Focus, orb slots, Glass orbs or the turn's card counts (one of them could be shown for both).
 
 ### Main Saves 1.0.23
 #### Changed

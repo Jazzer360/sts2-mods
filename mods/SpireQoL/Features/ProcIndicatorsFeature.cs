@@ -671,18 +671,18 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             switch (r)
             {
                 // Hand Drill (Vulnerable on an enemy whose block you break): good, so every branch for some aim.
-                case HandDrill: Add(r, false, o => o.PlayBreaksBlockInEveryBranch); break;
+                case HandDrill: Add(r, false, o => o.PlayBreaksBlockInAll); break;
                 // Parrying Shield (end of turn, block at least its threshold): plain when this play makes it fire in every branch and
                 // it wouldn't for sure now; crossed when it would for sure now and this play can stop it.
                 case ParryingShield when !baseline.ParryingShieldInAll: Add(r, false, o => o.ParryingShieldInAll); break;
                 case ParryingShield: Add(r, true, o => !o.ParryingShieldInAll); break;
                 // Gremlin Horn (energy and a draw when an enemy dies): some aim kills an enemy in every branch.
-                case GremlinHorn: Add(r, false, o => o.PlayKillsInEveryBranch); break;
+                case GremlinHorn: Add(r, false, o => o.PlayKillsInAll); break;
             }
         }
         // Compost (yours or a teammate's: energy for every player on your side when an enemy dies): every branch for some aim.
         var compost = _cs.Players.Select(p => p.Creature).Where(c => c is { IsAlive: true }).SelectMany(c => c.Powers).FirstOrDefault(p => p is CompostPower);
-        if (compost != null) Add(compost, false, o => o.PlayKillsInEveryBranch);
+        if (compost != null) Add(compost, false, o => o.PlayKillsInAll);
 
         // HP you lose during the play (the card's own HP cost, enemy Thorns before each hit), through your block, Tungsten Rod,
         // Beating Remnant and Buffer: good, so every branch for some aim.

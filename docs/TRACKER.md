@@ -392,6 +392,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.27.0: `Sim/PlayChain.cs` (draw chains, pure, tested); 340 game class names compile-checked (`nameof`); missing private members reported (`Sts2State.MissingMember`); docs/DECISIONS.md.
 - [ ] Check in game: the action-based audit windows (Burning Pact's choice pause, queued plays, potions mid-turn, Catastrophe auto-plays).
 - [x] 0.28.0: one model of a play finished (DECISIONS #12): being-hit enemy powers in the simulator (Burrowed, Flutter, Plow, Shriek, The Gambit, Slippery); Juggernaut, Sneaky, Enrage, Hand Drill and the being-hit tabs from the simulator; dead PlayFacts helpers removed (Unblocked, BreaksBlock, UnblockedWithOrbs, OrbBlockGains). Tests in `SimBeingHitTests`.
+- [x] 1.25.0: the branch key hashes every player the same way (you had fewer fields than a teammate: energy, Focus, orb slots, the turn's card counts...), and every orb and enemy number; `SimKeyCoverageTests` changes each field of the state in turn and fails on one the key leaves out without a listed reason.
 
 ---
 

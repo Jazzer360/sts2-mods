@@ -19,7 +19,7 @@ public class SimKillTests
         var o = SimEngine.Run(s, p);
         Assert.Contains(1, o.KilledByPlayInAll);
         Assert.DoesNotContain(2, o.KilledByPlayInAny);
-        Assert.True(o.PlayKillsInEveryBranch);
+        Assert.True(o.PlayKillsInAll);
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class SimKillTests
         var o = SimEngine.Run(s, p);
         Assert.Contains(1, o.KilledByPlayInAny);
         Assert.Empty(o.KilledByPlayInAll);
-        Assert.False(o.PlayKillsInEveryBranch);
+        Assert.False(o.PlayKillsInAll);
     }
 
     [Fact]
@@ -41,7 +41,7 @@ public class SimKillTests
         var p = new SimPlay { Name = "Sword Boomerang", IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 3, [2] = 3 }, Hits = 1 };
         var o = SimEngine.Run(s, p);
         Assert.Empty(o.KilledByPlayInAll);
-        Assert.True(o.PlayKillsInEveryBranch);
+        Assert.True(o.PlayKillsInAll);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class SimKillTests
         p.Procs.Add(new ProcHit { Spread = SimPlay.Target.Single, TargetId = 2, Damage = { [2] = 9 } });
         var o = SimEngine.Run(s, p);
         Assert.Equal(new HashSet<int> { 1 }, o.KilledByPlayInAll);
-        Assert.True(o.PlayKillsInEveryBranch);
+        Assert.True(o.PlayKillsInAll);
 
         // Without the proc the card alone doesn't kill it.
         var alone = new SimPlay { Name = "Wah Cho", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 3 }, Hits = 1, BlockAmount = 3, BlockGains = 1 };

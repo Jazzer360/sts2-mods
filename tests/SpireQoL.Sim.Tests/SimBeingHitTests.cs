@@ -26,7 +26,7 @@ public class SimBeingHitTests
         var o = SimEngine.Run(s, Strike(1, 12));
         Assert.True(o.StunnedInAll(1));
         Assert.Equal(0, o.TakenMax);
-        Assert.True(o.PlayBreaksBlockInEveryBranch);
+        Assert.True(o.PlayBreaksBlockInAll);
     }
 
     [Fact]
