@@ -60,6 +60,28 @@ public sealed class TurnEndModel
     public int HpAfter { get; private set; }
     public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
 
+    /// <summary>
+    /// Every way the enemy turn can go for you (decision #155), the most likely first; on equal chances the worse for you first (you
+    /// die, then more HP lost), so a tie never shows the kinder one. One outcome when no roll decides anything.
+    /// </summary>
+    public IReadOnlyList<TurnOutcome> Outcomes => _outcomes ??= TurnOutcomes.Of(Outcome, _myHp);
+    private IReadOnlyList<TurnOutcome>? _outcomes;
+
+    /// <summary>The most likely outcome (Outcomes[0]); null with no branch.</summary>
+    public TurnOutcome? MostLikely => Outcomes.Count > 0 ? Outcomes[0] : null;
+
+    /// <summary>The chance Fairy in a Bottle or Lizard Tail brings you back (and nothing kills you after).</summary>
+    public SimChance ReviveChance => Outcome.Chance(branch => !branch.Died && (branch.FairiesUsed > 0 || branch.LizardTailUsed));
+
+    /// <summary>What an outcome shows on the sum: incoming, your block at end of turn, Osty, what gets through, and the HP no block stops.</summary>
+    public (int Incoming, int Block, (int Taken, bool Dies)? Osty, int Through, int? Unblockable) Sum(TurnOutcome outcome)
+    {
+        var branch = outcome.Branch;
+        int? unblockable = branch.Unblockable.Count > 0 ? outcome.UnblockableTaken : null;
+        return (branch.Blockable.Sum(source => source.Amount), CurrentBlock + branch.EndOfTurnBlock.Sum(source => source.Amount),
+            OstyHp > 0 ? (branch.OstyTaken, branch.OstyTaken >= OstyHp) : null, outcome.Taken - (unblockable ?? 0), unblockable);
+    }
+
     public int BlockGain => EndOfTurnBlock.Sum(source => source.Amount);
     public int BlockableTotal => Blockable.Sum(source => source.Amount);
     /// <summary>

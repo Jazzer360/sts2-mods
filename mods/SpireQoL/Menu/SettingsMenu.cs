@@ -440,6 +440,8 @@ public sealed partial class SettingsMenu
         {
             Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tabs, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
                 Settings.DeathChance, enabled => Settings.DeathChance = enabled, Under(Needs("death-skull", "incoming-damage", "proc-indicators")), icon: ArtIcon(Cards.GameIcons.Skull()));
+            Option("Incoming Damage: most likely outcome", "When a roll decides how the enemy turn goes (a draw at the end of your turn, a random target), the sum shows the most likely way, with its chance; the skull still shows whenever you might die. Hover the sum for every outcome. Off: the worst case.",
+                Settings.MostLikely, enabled => Settings.MostLikely = enabled, Under(Needs("incoming-damage")), icon: ArtIcon(Cards.GameIcons.Heart()));
             Option("Draw chance tab", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the Card tabs page has the same switch).",
                 Settings.TabOwn(QolSettings.DrawChanceKey), enabled => SetTab(QolSettings.DrawChanceKey, enabled), Under(Needs("proc-indicators")), icon: TextIcon("40%"));
             Option("Intent Forecast's random moves", "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",

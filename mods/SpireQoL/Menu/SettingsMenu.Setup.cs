@@ -190,6 +190,7 @@ public sealed partial class SettingsMenu
         settings.Chances = defaults.Chances;
         settings.DeathChance = defaults.DeathChance;
         settings.IntentOdds = defaults.IntentOdds;
+        settings.MostLikely = defaults.MostLikely;
         settings.EventOdds = defaults.EventOdds;
         settings.EventInspect = defaults.EventInspect;
         settings.Tabs[QolSettings.DrawChanceKey] = true;

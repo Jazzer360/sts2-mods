@@ -51,12 +51,19 @@ internal sealed class DamageMathPanel
     private readonly TextureRect _heartIcon;
     private readonly HBoxContainer _unblockableRow;
     private readonly Label _unblockable;
+    /// <summary>The chance of the outcome shown (decision #155), after the last number: "72%".</summary>
+    private readonly Label _outcomeChance;
+    private readonly Label _reviveChance;
+    private static readonly Color ChanceColor = new(0.8f, 0.8f, 0.8f);
+    /// <summary>The panel's own area: hovering it shows every outcome (OutcomeTip).</summary>
+    public Control Root { get; }
     /// <summary>The blockable math (attack, defend, Osty, the rule, the result): hidden when only unblockable HP loss is coming.</summary>
     private readonly List<Control> _math = new();
 
     public DamageMathPanel(Control parent)
     {
         var grid = new GridContainer { Columns = 2, MouseFilter = Control.MouseFilterEnum.Ignore };
+        Root = grid;
         grid.AddThemeConstantOverride("h_separation", 8);
         grid.AddThemeConstantOverride("v_separation", 2);
 
@@ -113,6 +120,9 @@ internal sealed class DamageMathPanel
         _progress = UiKit.Label("", (int)(FontSize * 0.75f), Colors.White);
         _progress.Visible = false;
         resultRow.AddChild(_progress);
+        _outcomeChance = UiKit.Label("", (int)(FontSize * 0.75f), ChanceColor);
+        _outcomeChance.Visible = false;
+        resultRow.AddChild(_outcomeChance);
         grid.AddChild(resultRow);
         _math.AddRange(new Control[] { _attackIcon, _incoming, defend, _block, rule1, rule2, label, resultRow });
 
@@ -132,7 +142,13 @@ internal sealed class DamageMathPanel
         grid.AddChild(_reviveIcon);
         _revive = Number(SafeColor);
         _revive.Visible = false;
-        grid.AddChild(_revive);
+        var reviveRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        reviveRow.AddThemeConstantOverride("separation", 4);
+        reviveRow.AddChild(_revive);
+        _reviveChance = UiKit.Label("", (int)(FontSize * 0.75f), ChanceColor);
+        _reviveChance.Visible = false;
+        reviveRow.AddChild(_reviveChance);
+        grid.AddChild(reviveRow);
 
         parent.AddChild(grid);
     }
@@ -145,8 +161,12 @@ internal sealed class DamageMathPanel
     /// <param name="progress">"?" while not every outcome is explored; null when complete.</param>
     /// <param name="unblockable">HP you lose that no block stops, shown on its own line under <paramref name="take"/> (what gets
     /// through your block); null when none is coming.</param>
+    /// <param name="outcomeChance">The chance of the outcome shown ("72%"), when a roll decides between outcomes (decision #155).</param>
+    /// <param name="reviveChance">The chance <paramref name="revive"/> brings you back ("30%"), when it might not; the line then shows
+    /// beside the skull too.</param>
     public void Show(int incoming, int block, (int Taken, bool Dies)? osty, int take, bool dies = false, (Texture2D? Icon, int HpAfter)? revive = null,
-        Texture2D? extraTurn = null, string? deathChance = null, string? progress = null, int? unblockable = null)
+        Texture2D? extraTurn = null, string? deathChance = null, string? progress = null, int? unblockable = null, string? outcomeChance = null,
+        string? reviveChance = null)
     {
         var mathShown = unblockable == null || incoming > 0;
         foreach (var control in _math) control.Visible = mathShown;
@@ -157,13 +177,16 @@ internal sealed class DamageMathPanel
         var last = unblockable != null ? _unblockableRow : _resultRow;
         if (_skull.GetParent() != last)
         {
-            foreach (var control in new Control[] { _deathChance, _skull, _progress }) control.GetParent()?.RemoveChild(control);
+            foreach (var control in new Control[] { _deathChance, _skull, _progress, _outcomeChance }) control.GetParent()?.RemoveChild(control);
             last.AddChild(_deathChance);
             last.AddChild(_skull);
             last.AddChild(_progress);
+            last.AddChild(_outcomeChance);
             last.MoveChild(_deathChance, 0);
             last.MoveChild(_skull, 1);
         }
+        _outcomeChance.Visible = outcomeChance != null;
+        _outcomeChance.Text = outcomeChance ?? "";
         _deathChance.Visible = dies && deathChance != null;
         _deathChance.Text = deathChance ?? "";
         _progress.Visible = progress != null;
@@ -172,8 +195,12 @@ internal sealed class DamageMathPanel
         _extraTurn.Visible = extraTurn != null;
         _extraTurnIcon.Texture = extraTurn;
         _skull.Visible = dies;
-        _reviveIcon.Visible = revive != null && !dies;
-        _revive.Visible = revive != null && !dies;
+        // With its chance, the line shows even beside the skull: one outcome saves you, another doesn't.
+        var reviveShown = revive != null && (!dies || reviveChance != null);
+        _reviveIcon.Visible = reviveShown;
+        _revive.Visible = reviveShown;
+        _reviveChance.Visible = reviveShown && reviveChance != null;
+        _reviveChance.Text = reviveChance ?? "";
         if (revive is { } iconHpAfter)
         {
             _reviveIcon.Texture = iconHpAfter.Icon;
@@ -203,7 +230,7 @@ internal sealed class DamageMathPanel
         foreach (var control in _math) control.Visible = false;
         _resultRow.Visible = true;
         _heartIcon.Visible = _unblockableRow.Visible = false;
-        _deathChance.Visible = _skull.Visible = _progress.Visible = false;
+        _deathChance.Visible = _skull.Visible = _progress.Visible = _outcomeChance.Visible = _reviveChance.Visible = false;
         _extraTurnIcon.Visible = _extraTurn.Visible = false;
         _reviveIcon.Visible = _revive.Visible = false;
         _ostyIcon.Visible = _osty.Visible = false;

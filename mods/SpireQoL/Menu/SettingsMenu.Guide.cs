@@ -185,7 +185,7 @@ public sealed partial class SettingsMenu
                 + "An enemy that dies first (Poison, your end-of-turn damage) doesn't attack, and retaliation can stop a multi-hit partway."),
             ("Block icon", "Your block when the turn ends, including what you gain then (Plating, Frost orbs, Orichalcum...)."),
             ("=", "What gets through your block: red, or 0 in green. "
-                + "When random targets are involved, it's the worst case for you."),
+                + "When a roll decides how the turn goes (a draw at the end of your turn, a random target), the sum is the most likely way, with its chance after it."),
             ("Heart", "HP loss no block can stop (Regret, Beckon, Bad Luck), on its own line under the result: more block won't help with it."),
         };
         foreach (var (name, detail) in legend)
@@ -202,8 +202,11 @@ public sealed partial class SettingsMenu
         IncomingCell(flow, "This kills you", "The skull: the enemy turn takes you to 0 with nothing to save you.",
             damageMathPanel => damageMathPanel.Show(incoming: 46, block: 6, osty: null, take: 40, dies: true));
         IncomingCell(flow, "This might kill you", "When a roll decides it (which enemy a Lightning orb hits first), the skull carries the chance. "
-            + "The numbers are the worst case. ? means they aren't certain: some outcome has something not modelled, or they're waiting on a newer result (a busy play).",
+            + "? means the numbers aren't certain: some outcome has something not modelled, or they're waiting on a newer result (a busy play).",
             damageMathPanel => damageMathPanel.Show(incoming: 46, block: 6, osty: null, take: 40, dies: true, deathChance: "40%", progress: "?"));
+        IncomingCell(flow, "Most likely", "When a roll decides it (Bad Luck might be the card you draw at the end of your turn), the sum is the most likely way the turn goes, "
+            + "with its chance. Hover the sum for every other way, each with its chance and what's different. Settings: Incoming Damage: most likely outcome (off: the worst case).",
+            damageMathPanel => damageMathPanel.Show(incoming: 14, block: 5, osty: null, take: 9, outcomeChance: "72%"));
         IncomingCell(flow, "Too much to work out", "Rarely, a fight has too many outcomes to work out in time: a lone ?, with no number and no promise either way.",
             damageMathPanel => damageMathPanel.ShowUnknown());
         IncomingCell(flow, "Something saves you", "Fairy in a Bottle (or Lizard Tail) brings you back: your HP after the enemy turn.",

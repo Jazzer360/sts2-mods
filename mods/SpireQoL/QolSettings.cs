@@ -94,6 +94,12 @@ public sealed class QolSettings
     /// <summary>Death Skull, your skull on Incoming Damage, lethal tabs: also show the chance when a roll decides a death.</summary>
     public bool DeathChance { get; set; } = true;
 
+    /// <summary>
+    /// Incoming Damage shows the most likely way the enemy turn goes, with its chance (decision #155). Off, or with Chances off: the
+    /// worst case, as before. Hovering it lists every outcome either way.
+    /// </summary>
+    public bool MostLikely { get; set; } = true;
+
     /// <summary>Intent Forecast: the random pick after the certain turns, each move with its chance (off: the certain turns only).</summary>
     public bool IntentOdds { get; set; } = true;
 
@@ -109,6 +115,7 @@ public sealed class QolSettings
 
     [System.Text.Json.Serialization.JsonIgnore] public bool ShowDeathChance => Chances && DeathChance;
     [System.Text.Json.Serialization.JsonIgnore] public bool ShowIntentOdds => Chances && IntentOdds;
+    [System.Text.Json.Serialization.JsonIgnore] public bool ShowMostLikely => Chances && MostLikely;
     [System.Text.Json.Serialization.JsonIgnore] public bool ShowEventOdds => Chances && EventOdds;
 
     /// <summary>The draw chance tab's key: a chance, so it follows <see cref="Chances"/> too.</summary>

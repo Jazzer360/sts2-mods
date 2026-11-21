@@ -19,6 +19,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     private readonly QolContext _ctx;
     private MovableWidget? _widget;
     private DamageMathPanel? _panel;
+    private OutcomeTip? _tip;
 
     public IncomingDamageFeature(QolContext ctx) => _ctx = ctx;
 
@@ -47,6 +48,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         _widget.AttachTo(Sts2State.PlayerBlockRect, AttachSide.LeftOf)
                .AttachTo(Sts2State.PlayerStatusRect, AttachSide.Below);
         _panel = new DamageMathPanel(_widget.Content);
+        _tip = new OutcomeTip(_widget.Content);
     }
 
     public void OnFrame(OverlayHost host)
@@ -55,6 +57,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         if (forecast == null || (!forecast.Unknown && forecast.BlockableTotal == 0 && forecast.UnblockableTotal == 0))
         {
             _widget!.HasContent = false;
+            _tip?.Hide();
             return;
         }
 
@@ -63,24 +66,44 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         if (forecast.Unknown)
         {
             _panel!.ShowUnknown();
+            _tip?.Hide();
             return;
         }
+        // Hovering the sum: every way the enemy turn can go (decision #155). Polled: the sum takes no mouse input.
+        var root = _panel!.Root;
+        if (root.IsVisibleInTree() && root.GetGlobalRect().HasPoint(root.GetGlobalMousePosition())) _tip!.Show(root, forecast, _ctx.Settings.Chances);
+        else _tip!.Hide();
+        // The most likely way the enemy turn goes, when a roll decides between several (decision #155); else the worst, as before.
+        var likely = _ctx.Settings.ShowMostLikely && forecast.Outcomes.Count > 1 ? forecast.MostLikely : null;
         // A lethal enemy turn: the skull. One something keeps you alive through (Fairy in a Bottle first, then
-        // Lizard Tail, the order the game asks them): its icon and your HP after.
+        // Lizard Tail, the order the game asks them): its icon and your HP after. With the most likely outcome shown, the line shows
+        // whenever some outcome uses it, with its chance (using it up costs you the potion or the relic's charge).
         (Godot.Texture2D? Icon, int HpAfter)? revive = null;
-        if (forecast.FairiesUsed > 0 || forecast.LizardTailUsed)
+        string? reviveChance = null;
+        var revived = likely == null ? null : forecast.Outcomes.FirstOrDefault(outcome => outcome.Revived);
+        var fairies = likely == null ? forecast.FairiesUsed : revived?.FairiesUsed ?? 0;
+        var tailUsed = likely == null ? forecast.LizardTailUsed : revived?.LizardTailUsed ?? false;
+        if (fairies > 0 || tailUsed)
         {
             var me = Sts2State.Me;
-            var icon = forecast.FairiesUsed > 0
+            var icon = fairies > 0
                 ? me?.Potions.FirstOrDefault(potion => potion.GetType().Name == "FairyInABottle") is { } fairy ? Cards.GameIcons.Potion(fairy) : null
                 : me?.Relics.FirstOrDefault(relic => relic is LizardTail) is { } tail ? Cards.GameIcons.Relic(tail) : null;
-            revive = (icon, forecast.HpAfter);
+            revive = (icon, revived?.HpAfter ?? forecast.HpAfter);
+            if (revived != null && forecast.ReviveChance is { Certain: false } saved) reviveChance = saved.Text();
         }
         // The skull whenever an outcome might kill you (decision #87), with the chance unless it's certain or chances are off.
         var death = forecast.DeathChance;
         var dies = death.Possible || forecast.Dies;
         var chance = dies && !death.Certain && _ctx.Settings.ShowDeathChance ? death.Text() : null;
         // The skull and the chance come from the whole outcome (both lines): the split is only how it's shown.
+        if (likely != null)
+        {
+            var (incoming, block, osty, through, unblockableLikely) = forecast.Sum(likely);
+            _panel!.Show(incoming, block, osty, through, dies, revive, ExtraTurnIcon(), chance, forecast.ShownMark, unblockableLikely,
+                outcomeChance: likely.Chance.Text(), reviveChance: reviveChance);
+            return;
+        }
         int? unblockable = forecast.UnblockableTotal > 0 ? forecast.UnblockableTaken : null;
         _panel!.Show(forecast.BlockableTotal, forecast.ExpectedBlock,
             forecast.OstyHp > 0 ? (forecast.OstyTaken, forecast.OstyDies) : null, forecast.Taken - (unblockable ?? 0), dies, revive, ExtraTurnIcon(), chance, forecast.ShownMark, unblockable);

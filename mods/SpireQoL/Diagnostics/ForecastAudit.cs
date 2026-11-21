@@ -134,7 +134,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (!_sessionOdds.Drifted || _driftReported) return;
         _driftReported = true;
         Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("odds", $"Forecast odds: what happened is far from the chances shown ({_sessionOdds.Text()})",
-            new[] { "odds-drift" }, $"Over this session, the death chances shown (yours and enemies' before they act) don't match what happened: {_sessionOdds.Text()}. " +
+            new[] { "odds-drift" }, $"Over this session, the chances shown (your death, enemies' before they act, the most likely outcome) don't match what happened: {_sessionOdds.Text()}. " +
             "Each chance is logged as [audit] [odds] in the game log.", new Dictionary<string, string>(), new Dictionary<string, string> { ["check"] = "odds" });
     }
 
@@ -468,6 +468,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (forecast.State.Enemy(id) is { Hp: > 0 } simEnemy && actuals.TryGetValue(id, out var act))
                 Odds($"{simEnemy.Name} dies before acting", shownChances.DeadChanceRange(id), act.Died);
         Odds("you die", shownChances.YouDieChance(), youDied);
+        // The most likely outcome Incoming Damage showed (decision #155): what you lost (or your death), as it said.
+        if (forecast.Outcomes.Count > 1 && forecast.MostLikely is { } likely)
+            Odds($"the most likely outcome ({(likely.Dies ? "you die" : $"lose {likely.Taken} HP")})", likely.Chance, youDied ? likely.Dies : !likely.Dies && actualTaken == likely.Taken);
 
         // Every enemy turn, matched or not: predicted vs actual per enemy, so patterns show before they're reports.
         ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(forecast.TakenMin == forecast.Taken ? $"{forecast.Taken}" : $"{forecast.TakenMin}-{forecast.Taken}")}); {outcomeLine}{teamLine}");

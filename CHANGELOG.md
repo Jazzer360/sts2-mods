@@ -6,7 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
-### Spire QoL 1.26.1
+### Spire QoL 1.27.0
+#### Added
+- Incoming Damage: hover the sum for every way the enemy turn can go for you, the most likely first, each with its chance and what's different (`Lose 11 HP (+2)`, `Burn +2`, `I Am Invincible block +10`).
+- Setting **Incoming Damage: most likely outcome** (under Show chances, on by default).
+
+#### Changed
+- Incoming Damage shows the most likely outcome, with its chance, when a roll decides how the enemy turn goes (a draw at the end of your turn, I Am Invincible somewhere in your draw pile, a random target); it used to show the worst. The skull still shows whenever you might die, with its chance, and the Fairy in a Bottle or Lizard Tail line whenever one might save you, with its chance.
+
 #### Fixed
 - Mini Regent's Strength counts on the card that spends the stars (it lands before the card hits), in every prediction.
 - Omnislice hits every other enemy for its target's damage, as Rain Shot does: its damage and lethal tabs count them.
