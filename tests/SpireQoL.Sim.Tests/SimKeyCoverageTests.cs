@@ -45,7 +45,6 @@ public class SimKeyCoverageTests
         // Display logs: the first merged branch's breakdown is shown (Incoming Damage's own run).
         ["SimState.EndOfTurnBlock"] = "Incoming Damage's breakdown: the first merged branch's", ["SimState.Blockable"] = "Incoming Damage's breakdown",
         ["SimState.Unblockable"] = "Incoming Damage's breakdown", ["SimState.EndOfTurnDamage"] = "Incoming Damage's breakdown",
-        ["SimState.FullBlockNeeded"] = "Imbalanced's threshold, set during the enemy turn after the last branching step",
         ["SimState.BlockAtEnemyTurn"] = "your block as the enemy turn starts: Block itself is in the key",
         ["SimEnemy.HpAtTurnEnd"] = "a copy of Hp taken once your end of turn is over (Hp is in the key)",
         ["SimEnemy.UnblockedAtTurnEnd"] = "a copy of UnblockedInstances taken once your end of turn is over (that is in the key)",

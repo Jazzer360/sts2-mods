@@ -626,7 +626,6 @@ public sealed class SimState
 
     /// <summary>Running "blockable damage landed so far" for Imbalanced's full-block threshold.</summary>
     public int BlockDemand;
-    public Dictionary<int, int> FullBlockNeeded = new();
 
     public SimEnemy? Enemy(int id) => Enemies.FirstOrDefault(enemy => enemy.Id == id);
 

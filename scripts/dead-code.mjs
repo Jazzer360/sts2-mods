@@ -2,8 +2,8 @@
 // dead-code review. The compiler's analyzers catch unused private members (IDE0051/IDE0052); this
 // catches public and internal ones. Names used by reflection, the game, JSON or interfaces show up
 // too: check each before deleting. Then lists unused usings in every project (IDE0005, which the
-// normal build doesn't check: implicit usings already give System, System.Linq, System.Threading...),
-// from one build with that analyzer on; remove them with --fix-usings (dotnet format).
+// build now fails on too: decision #148), from one build with that analyzer on; remove them with
+// --fix-usings (dotnet format). For a wider review (dead state, redundant code), scripts/inspect.ps1.
 // Usage: node scripts/dead-code.mjs [--fix-usings] [--skip-usings]
 import fs from "node:fs";
 import path from "node:path";

@@ -809,13 +809,6 @@ public static partial class SimEngine
 
     // ------------------------------------------------------------------ end of turn
 
-    private static void AllEnemies(SimState state, string name, int amount)
-    {
-        if (amount <= 0) return;
-        if (state.Log) state.EndOfTurnDamage.Add((name + " (all)", amount));
-        HitAll(state, _ => amount);
-    }
-
     /// <summary>One player's orb passives at end of turn, front first (yours, or a teammate's: their Frost blocks for them).</summary>
     private static void OrbPassives(BranchSet branches, int player)
     {
@@ -1143,7 +1136,6 @@ public static partial class SimEngine
     private static void EnemyTurn(SimState state)
     {
         AllyDeaths(state); // deaths at your end of turn
-        state.FullBlockNeeded = new Dictionary<int, int>(); // per branch (shared until now)
         state.EnemyTurnNow = true; // Inferno and the like react only on their owner's side's turn
         // Every enemy's poison ticks as the enemies' turn starts (PoisonPower.AfterSideTurnStart, before ExecuteEnemyTurn), stunned
         // or not, and Hardened Shell's budget resets then. Its deaths run their hooks before any enemy moves (Ravenous stuns the
@@ -1216,7 +1208,6 @@ public static partial class SimEngine
                 }
                 if (yours)
                 {
-                    if (hitsLanded == 0 && enemy.Imbalanced) state.FullBlockNeeded[enemy.Id] = state.BlockDemand + amount;
                     state.BlockDemand += amount;
                 }
                 var blockBefore = simPlayer.Block;

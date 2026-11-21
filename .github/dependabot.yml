@@ -1,0 +1,30 @@
+# Keeps the workflows' actions and the test and analyzer packages current (decision #152): one grouped pull request a month per
+# kind, against dev (main only fast-forwards to dev). The game's own assemblies aren't packages: they come from the install.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    target-branch: dev
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: nuget
+    directories:
+      - "/" # Directory.Build.targets (the analyzers) and .config/dotnet-tools.json
+      - "/tests/SpireQoL.Sim.Tests"
+      - "/tests/SpireQoL.Catalog.Tests"
+    target-branch: dev
+    schedule:
+      interval: monthly
+    groups:
+      packages:
+        patterns: ["*"]
+    ignore:
+      # Stryker 5 needs a newer .NET SDK than the repo builds with (scripts/mutation.ps1).
+      - dependency-name: dotnet-stryker
+        update-types: ["version-update:semver-major"]
+      # The 2025 InspectCode packages don't install as a local tool (scripts/inspect.ps1).
+      - dependency-name: JetBrains.ReSharper.GlobalTools

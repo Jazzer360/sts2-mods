@@ -460,7 +460,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 issues.Add($"no single branch: each result is possible on its own, but none of the {outcome.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
         }
         // The chances (decision #95): each one between 0 and 100% with what happened, totalled per fight and over the session.
-        foreach (var (creature, id) in forecast.Ids)
+        foreach (var (_, id) in forecast.Ids)
             if (forecast.State.Enemy(id) is { Hp: > 0 } simEnemy && actuals.TryGetValue(id, out var act))
                 Odds($"{simEnemy.Name} dies before acting", shownChances.DeadChanceRange(id), act.Died);
         Odds("you die", shownChances.YouDieChance(), youDied);
@@ -481,15 +481,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         log.Warn($"[audit]   forecast: block {forecast.CurrentBlock} + end of turn {List(forecast.EndOfTurnBlock)}; blockable {List(forecast.Blockable)}; " +
                  $"unblockable {List(forecast.Unblockable)}; your end-of-turn damage {List(forecast.EndOfTurnDamage)}; " +
                  $"skipped (poison {forecast.SkippedPoisoned}, end of turn {forecast.SkippedEndOfTurn}), cancelled hits {forecast.CancelledHits}, Osty HP {forecast.OstyHp}.");
-        var lines = new List<string>();
         foreach (var entry in window)
-        {
             if (entry is DamageReceivedEntry or BlockGainedEntry)
-            {
                 log.Warn($"[audit]   actual: {entry.HumanReadableString}");
-                lines.Add(entry.HumanReadableString);
-            }
-        }
 
         // One report per issue, grouped by what was wrong and the encounter.
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;

@@ -90,6 +90,17 @@ tools can measure how well the tests hold it:
   tests against each; an edit no test notices is a rule the tests don't really hold. Slow (about a minute and a half for a small file,
   hours for the whole simulator): run it on what you're working on. Report: `dist/stryker/reports/mutation-report.html`.
 
+## Wider reviews and dependencies
+
+- `./scripts/inspect.ps1` (decision #152): JetBrains InspectCode over the solution, summarized by kind and file (report in
+  `dist/inspect/`). It sees what the build's rules don't: state that's written and never read, unused public members, redundant
+  conditions and casts. Advice, not a gate: most of its findings here are noise (records read only by JSON, the simulator's public
+  fields), so read the bug-shaped kinds (`CollectionNeverQueried`, `UnassignedField`, `UnusedVariable`, `PossibleLossOfFraction`,
+  `ConditionIsAlwaysTrueOrFalse`) after a big change. Its first run found Imbalanced's old threshold, still filled on every branch.
+- `node scripts/dead-code.mjs`: members nothing references by name.
+- Dependabot (`.github/dependabot.yml`) opens one grouped pull request a month against `dev` for the workflows' actions and for the
+  test and analyzer packages. Merge it after `./scripts/check.ps1` passes on it.
+
 ## Dev mode
 
 Your own game is told apart from players' (decision #108). `dotnet build`'s install step (`Directory.Build.targets`, `InstallModToGame`) and `scripts/release.ps1`'s install step write a marker file, `SpireQoL.dev`, beside the installed DLL; release zips never contain it. At load the mod reads it (`ModEntry.DevMode`; the log says `dev mode on`). The hidden setting `"DevMode"` in `<game>/mods/SpireQoL/SpireQoL.settings.cfg` overrides the marker: `true` or `false`, or leave it out (null) to follow the marker. Delete the marker, or set the setting to `false`, to play exactly as a player would.
@@ -181,7 +192,7 @@ Working a report:
 - `core/`: shared code compiled into each mod (feature host, overlay, widgets, game-state helpers, error reporter).
 - `mods/SpireQoL/`: the mod. `Features/` (one per feature), `Procs/PlayFacts.cs` (what playing a card does), `Sim/` (the outcome simulator: `SimState`/`SimEngine` are pure C#, `SimAdapter` reads the game), `Combat/TurnEndModel.cs` (Incoming Damage view over the simulator), `Diagnostics/` (audits, snapshots), `Menu/` (settings menu and catalog), `Cards/` (on-card tab rendering).
 - `docs/`: FEATURES (complete list of what the mod does and touches), TRACKER (work log and open items), MODDING_NOTES (loader facts), ROADMAP, this file.
-- `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`, `coverage-ledger.mjs` (the coverage ledger from the decompile), `dead-code.mjs` (members nothing references, then unused usings from a build with IDE0005 on, which the normal build skips; `--fix-usings` removes them; run it with the analyzers before a cleanup).
+- `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`, `coverage-ledger.mjs` (the coverage ledger from the decompile), `dead-code.mjs` (members nothing references, then unused usings; `--fix-usings` removes them), `check.ps1` (the release's bar), `coverage.ps1`, `mutation.ps1` and `inspect.ps1` (see above).
 - `mods/SpireQoL/Telemetry/`: the event stream, the session counter and its summary (pure C#, tested with the simulator), and `SessionWatch` (reads the game).
 - `tests/SpireQoL.Sim.Tests/`: simulator tests, and the session counter's (no game needed).
 - `.github/scripts/`: `sentry-sync.mjs` (reports → issues), `session-metrics.mjs` (session summaries → the pinned metrics issue) and its tests.
