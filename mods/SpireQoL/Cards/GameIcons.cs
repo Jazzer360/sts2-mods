@@ -76,38 +76,17 @@ public static class GameIcons
     private static Texture2D? _skull;
 
     /// <summary>
-    /// The clock beside the run timer in the top bar (NTopBar.Timer, NRunTimer: its icon is a picture in its scene, so it's read
-    /// from the live node). Null until the top bar exists; the time-limit power's icon then stands in.
+    /// The clock beside the run timer in the top bar (packed/common_ui/top_bar/timer_icon.png, the picture NRunTimer's scene uses):
+    /// loaded by its path, so it's the same on the main menu as in a run. The time-limit power's icon stands in if it can't load.
     /// </summary>
     public static Texture2D? Clock()
     {
         if (Valid(_clock)) return _clock;
-        try
-        {
-            var timer = MegaCrit.Sts2.Core.Nodes.NRun.Instance?.GlobalUi?.TopBar?.Timer;
-            if (timer != null && GodotObject.IsInstanceValid(timer))
-            {
-                foreach (var node in Descendants(timer))
-                    if (node is TextureRect { Texture: { } t }) return _clock = t;
-            }
-        }
-        catch
-        {
-            // the stand-in below
-        }
-        return Power(typeof(MegaCrit.Sts2.Core.Models.Powers.BattlewornDummyTimeLimitPower));
+        _clock = LoadTexture("res://images/packed/common_ui/top_bar/timer_icon.png");
+        return Valid(_clock) ? _clock : Power(typeof(MegaCrit.Sts2.Core.Models.Powers.BattlewornDummyTimeLimitPower));
     }
 
     private static Texture2D? _clock;
-
-    private static IEnumerable<Node> Descendants(Node node)
-    {
-        foreach (var child in node.GetChildren())
-        {
-            yield return child;
-            foreach (var d in Descendants(child)) yield return d;
-        }
-    }
 
     /// <summary>The head of the game's targeting arrow (NTargetingArrow: ui/combat/targeting_arrow_head.png): the aim marker.</summary>
     public static Texture2D? TargetArrow()

@@ -403,9 +403,9 @@ public sealed partial class SettingsMenu
             SizeFlagsVertical = Control.SizeFlags.ShrinkCenter, MouseFilter = Control.MouseFilterEnum.Ignore,
         });
         GuideRow(progress, "Exploration Progress",
-            "Under the End Turn button, rarely: predictions are still searching their outcomes in the background, past the few milliseconds each frame gives them "
-            + "(a board with a great many outcomes). The bar is the share of those searches done. Until each is done its last result stays on screen: "
-            + "Incoming Damage and the Death Skull carry a ? once they've waited a tenth of a second, and each card's tabs update as soon as its own search is in.");
+            "Rarely, under the End Turn button: the mod hasn't finished working out its predictions for this board yet (it has too many possible "
+            + "outcomes to finish within a frame), and keeps working in the background. The bar fills as it gets through them. Meanwhile you see "
+            + "the last finished results: Incoming Damage and the Death Skull add a ? after a tenth of a second, and each card's tabs change as soon as that card is done.");
         GuideRow(null, "Intent Details",
             "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
             + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");

@@ -36,6 +36,10 @@ button { background: var(--panel2); border: 1px solid var(--line); border-radius
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.danger:hover { border-color: var(--bad); color: var(--bad); }
+/* a note's kind: one button each, the chosen one filled */
+.kinds { display: flex; flex-wrap: wrap; gap: 4px; }
+.kinds button { padding: 3px 10px; }
+.kinds button.on { background: color-mix(in srgb, var(--accent) 25%, var(--panel2)); border-color: var(--accent); }
 button:disabled { opacity: .5; cursor: default; }
 input[type=text], select, textarea { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 textarea { width: 100%; resize: vertical; min-height: 64px; }
@@ -335,7 +339,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
       <div class="shots" id="fbShots"></div>
       <div class="row" style="margin-top:8px">
         <span class="dim">Kind</span>
-        <select id="fbKind"><option>bug</option><option>idea</option><option>performance</option><option>looks</option><option>prediction</option><option>other</option></select>
+        <div class="kinds" id="fbKind" role="radiogroup" aria-label="Kind"></div>
         <span class="faint" id="fbContext"></span>
         <span style="flex:1"></span>
         <button class="primary" id="fbSave">Save note</button>
@@ -378,10 +382,10 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
 <dialog id="noteDialog">
   <h3>A note for the next stretch of work</h3>
   <div class="faint" id="noteWhere" style="margin-bottom:8px"></div>
-  <textarea id="noteText" rows="6" data-shots="noteShots" placeholder="What felt off, what you'd want, what surprised you… Paste or drop screenshots here. (Ctrl+Enter saves)"></textarea>
+  <textarea id="noteText" rows="6" data-shots="noteShots" placeholder="What felt off, what you'd want, what surprised you… Paste or drop screenshots here. (Ctrl+Enter saves; Ctrl+Enter anywhere on the dashboard opens this)"></textarea>
   <div class="shots" id="noteShots"></div>
   <div class="row" style="margin-top:10px"><span class="dim">Kind</span>
-    <select id="noteKind"><option>bug</option><option>idea</option><option>performance</option><option>looks</option><option>prediction</option><option>other</option></select>
+    <div class="kinds" id="noteKind" role="radiogroup" aria-label="Kind"></div>
     <span style="flex:1"></span><button id="noteCancel">Cancel</button><button class="primary" id="noteSave">Save note</button></div>
 </dialog>
 <dialog id="shotView"><img alt="screenshot"></dialog>
@@ -1186,7 +1190,27 @@ $("fightStrips").addEventListener("mouseover", (e) => {
 });
 $("fightStrips").addEventListener("mouseout", () => { tip.style.display = "none"; });
 
-// ---- the note dialog: write a note from anywhere (the header's Note button, the Overview's Notes panel)
+// ---- a note's kind: a row of buttons (one chosen), read as kindOf(id)
+const KINDS = ["bug", "idea", "performance", "looks", "prediction", "other"];
+function kindPicker(id) {
+  const box = $(id);
+  box.dataset.value = KINDS[0];
+  for (const k of KINDS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = k;
+    b.setAttribute("role", "radio");
+    b.addEventListener("click", () => { box.dataset.value = k; paint(); });
+    box.appendChild(b);
+  }
+  function paint() { for (const b of box.children) { const on = b.textContent === box.dataset.value; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); } }
+  paint();
+}
+const kindOf = (id) => $(id).dataset.value;
+kindPicker("fbKind");
+kindPicker("noteKind");
+
+// ---- the note dialog: write a note from anywhere (the header's Note button, the Overview's Notes panel, Ctrl+Enter)
 function openNote() {
   const c = context();
   $("noteWhere").textContent = `${c.mod}${c.encounter ? ` · ${c.encounter}, turn ${c.turn}` : " · not in a fight"}`;
@@ -1198,7 +1222,7 @@ async function saveDialogNote() {
   if (!text) return;
   try {
     const id = newId(), images = await saveShots("noteShots", id);
-    await writeFile("feedback.jsonl", JSON.stringify({ id, at: new Date().toISOString(), kind: $("noteKind").value, text, ...context(), ...(images.length ? { images } : {}) }) + "\n", true);
+    await writeFile("feedback.jsonl", JSON.stringify({ id, at: new Date().toISOString(), kind: kindOf("noteKind"), text, ...context(), ...(images.length ? { images } : {}) }) + "\n", true);
     $("noteText").value = "";
     clearShots("noteShots");
     $("noteDialog").close();
@@ -1217,6 +1241,13 @@ $("noteCancel").addEventListener("click", () => $("noteDialog").close());
   d.addEventListener("click", (e) => { if (downOutside && e.target === d && outside(e)) d.close(); downOutside = false; });
 }
 $("noteText").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) saveDialogNote(); });
+// Ctrl+Enter anywhere else opens the dialog (in a note's own text box it saves that note instead)
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey) || $("noteDialog").open) return;
+  if (e.target.closest?.("textarea, input, select")) return;
+  e.preventDefault();
+  openNote();
+});
 const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${fmt(v, 0)} ms`).join(", ");
 
 function renderTurn() {
@@ -1495,7 +1526,7 @@ async function saveNote() {
   if (!text) return;
   try {
     const id = newId(), images = await saveShots("fbShots", id);
-    const note = { id, at: new Date().toISOString(), kind: $("fbKind").value, text, ...context(), ...(images.length ? { images } : {}) };
+    const note = { id, at: new Date().toISOString(), kind: kindOf("fbKind"), text, ...context(), ...(images.length ? { images } : {}) };
     await writeFile("feedback.jsonl", JSON.stringify(note) + "\n", true); $("fbText").value = ""; clearShots("fbShots"); await loadFeedback();
   }
   catch (e) { alert("Couldn't save the note: " + e.message); }

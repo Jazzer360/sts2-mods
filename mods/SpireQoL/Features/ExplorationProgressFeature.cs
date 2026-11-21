@@ -57,7 +57,6 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
         _widget!.HasContent = count > 0;
         if (count == 0) return;
         _bar!.Value = progress;
-        _clock!.Texture = GameIcons.Clock(); // the run timer's clock, once the top bar exists
     }
 
     /// <summary>The End Turn button (NCombatUi.EndTurnButton) on screen.</summary>
