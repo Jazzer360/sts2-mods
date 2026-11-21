@@ -435,6 +435,16 @@ internal static partial class CoverageLedger
                               && Folders.Any(f => t.Namespace == "MegaCrit.Sts2.Core.Models." + f));
     }
 
+    /// <summary>
+    /// Earlier game versions players still run whose coverage was reviewed before the ledger moved on (decision #125): not
+    /// reported as a version the coverage wasn't checked against. v0.113.0, the first beta build (patched to v0.113.1), was reviewed in 0.31.29.
+    /// </summary>
+    internal static readonly string[] ReviewedGameVersions = { "v0.113.0" };
+
+    /// <summary>Whether the coverage was checked against this game version: the ledger's, or one reviewed before it.</summary>
+    internal static bool ReviewedVersion(string game) =>
+        ReviewedGameVersions.Append(LedgerGameVersion).Any(v => System.Text.RegularExpressions.Regex.IsMatch(game, @"(^|[^0-9.])v?" + System.Text.RegularExpressions.Regex.Escape(v.TrimStart('v')) + @"($|[^0-9])"));
+
     /// <summary>One summary line at load: the game's version against the ledger's, and the counts.</summary>
     public static void LogSummary(ModLog log, Sts2Mods.Core.Diagnostics.ErrorReporter? reporter)
     {
@@ -450,7 +460,7 @@ internal static partial class CoverageLedger
                     log.Info($"[coverage] {s.ToString().ToLowerInvariant()}: {string.Join(", ", l.Select(e => e.Type))}");
             foreach (var c in CardCoverage.Issues)
                 log.Info($"[coverage] card code: {c.Key}: {string.Join("; ", c.Value)}");
-            if (!string.IsNullOrEmpty(game) && !game.Contains(LedgerGameVersion.TrimStart('v')))
+            if (!string.IsNullOrEmpty(game) && !ReviewedVersion(game))
             {
                 log.Warn($"[coverage] the game ({game}) isn't the version the mod's coverage was checked against ({LedgerGameVersion}): " +
                          "new or changed mechanics are reported as they show up.");

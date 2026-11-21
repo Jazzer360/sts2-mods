@@ -654,3 +654,8 @@ Pillage's and Scrape's draw chance tab showed its chance in the middle and the m
 *Why:* the owner's note from playing 1.24.0.
 *Replaced:* the count in the corner (decision #119's layout).
 
+### 125. Game versions the coverage was reviewed on, beyond the ledger's — active (2026-11-20)
+The coverage check reported every game version other than the ledger's (v0.113.1). Players still run v0.113.0, the first beta build, patched to v0.113.1 since (not main: main was promoted to v0.111.1, decision #78), so it sent one report per launch for a version whose coverage was reviewed in 0.31.29. Now `CoverageLedger.ReviewedGameVersions` lists earlier versions reviewed before the ledger moved on (v0.113.0), and only a version that is neither is reported. The version is matched as a whole (`0.113.0` doesn't match `0.113.01`). Main's v0.111.1 is still reported until its check (the tracker's main branch compatibility item) is done.
+*Why:* issue #403: a report on every launch from a version already reviewed says nothing new.
+*Replaced:* the ledger's own version as the only one not reported.
+

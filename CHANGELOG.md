@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.24.5
+#### Fixed
+- The coverage check no longer reports game v0.113.0 (the first beta build, whose coverage was already reviewed) as a version it wasn't checked against (logs and error reports only).
+
 ### Spire QoL 1.24.4
 #### Fixed
 - Multiplayer: the play check no longer reports Legion of Bone's summon on each teammate, or the Die For You a newly summoned Osty gets, as unexplained (logs and error reports only).
