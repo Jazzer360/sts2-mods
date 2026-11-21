@@ -272,14 +272,16 @@ public sealed class SerratedArrowsPower : SimModel
 /// </summary>
 public sealed class PenNib : SimModel
 {
+    /// <summary>Its Data: the card the game is playing right now is the doubled one (AttackToDouble), or a play simulated here is.</summary>
+    public const int GameCardBound = 1, SimulatedPlayBound = 2;
     public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
     {
         if (!damage.Props.IsPoweredAttack() || damage.Card == null) return 1m;
         if (!(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty))) return 1m;
         var relics = SimEngine.RelicsOf(state, owner);
-        if (relics.DataOf(ThisRelic) == 2) return damage.Play != null ? 2m : 1m;
-        if (relics.DataOf(ThisRelic) == 1) return 1m; // the game's card mid-play is the doubled one
+        if (relics.DataOf(ThisRelic) == SimulatedPlayBound) return damage.Play != null ? 2m : 1m;
+        if (relics.DataOf(ThisRelic) == GameCardBound) return 1m; // the game's card mid-play is the doubled one
         return damage.Play == null && relics[ThisRelic] == 9 ? 2m : 1m; // not being played (a preview): the next attack is the 10th
     }
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
@@ -287,14 +289,14 @@ public sealed class PenNib : SimModel
         if (play.Card.Type != SimCardType.Attack || play.Owner != owner) return One(state);
         var relics = SimEngine.RelicsOf(state, owner);
         var count = (relics[ThisRelic] + 1) % 10;
-        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, count, count == 0 ? 2 : relics.DataOf(ThisRelic)));
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, count, count == 0 ? SimulatedPlayBound : relics.DataOf(ThisRelic)));
         if (count == 0) state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
-        if (relics.DataOf(ThisRelic) == 2 && play.Owner == owner) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: 0));
+        if (relics.DataOf(ThisRelic) == SimulatedPlayBound && play.Owner == owner) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: 0));
         return One(state);
     }
 }

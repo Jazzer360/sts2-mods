@@ -21,17 +21,10 @@ public class NamingTests
         new(@"\b(?:[A-Z]\w*(?:<[^>()]*>)?\??|int|string|bool|decimal|double|long|float|object) (?<name>[a-z_]\w?)(?=[,)=;])"),
     };
 
-    private static string RepoRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
-            if (Directory.Exists(Path.Combine(directory.FullName, "mods")) && Directory.Exists(Path.Combine(directory.FullName, "core"))) return directory.FullName;
-        throw new DirectoryNotFoundException("the repository root (mods/ and core/) not found above the test's folder");
-    }
-
     [Fact]
     public void NoOneOrTwoLetterNames()
     {
-        var root = RepoRoot();
+        var root = RepoFiles.Root();
         var found = new List<string>();
         foreach (var dir in new[] { "mods", "core", "tests" })
         {

@@ -89,11 +89,11 @@ public sealed class EmotionChip : ReactsToYourHpLoss { }
 /// <summary>RupturePower: Strength when you lose HP on your turn.</summary>
 public sealed class RupturePower : ReactsToYourHpLoss { }
 
-/// <summary>DemonTongue: heals the HP you lose, once a turn (the adapter's Data bit 2: done this turn).</summary>
+/// <summary>DemonTongue: heals the HP you lose, once a turn (RelicUse.UsedThisTurn).</summary>
 public sealed class DemonTongue : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        owner == Who.You && (SimEngine.RelicsOf(start, owner).DataOf(ThisRelic) & 2) == 0 ? OutcomeRules.YouLoseHp : null;
+        owner == Who.You && !((RelicUse)SimEngine.RelicsOf(start, owner).DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn) ? OutcomeRules.YouLoseHp : null;
 }
 
 /// <summary>

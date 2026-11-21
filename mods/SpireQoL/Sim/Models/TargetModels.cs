@@ -81,7 +81,9 @@ public sealed class IntangiblePower : SimModel
 /// </summary>
 public sealed class SurroundedPower : SimModel
 {
-    private static PowerId BehindPower(int facing) => facing == 0 ? PowerId.BackAttackLeft : PowerId.BackAttackRight;
+    /// <summary>Its Data: which way you face (the game's Facing).</summary>
+    public const int FacingRight = 0, FacingLeft = 1;
+    private static PowerId BehindPower(int facing) => facing == FacingRight ? PowerId.BackAttackLeft : PowerId.BackAttackRight;
 
     public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
     {
@@ -94,7 +96,7 @@ public sealed class SurroundedPower : SimModel
         if (play.Owner != owner || play.Target < 0) return One(state);
         var powers = SimEngine.PowersOf(state, owner);
         var facing = powers.DataOf(ThisPower);
-        if (SimEngine.PowersOf(state, play.Target).Has(BehindPower(facing))) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], 1 - facing));
+        if (SimEngine.PowersOf(state, play.Target).Has(BehindPower(facing))) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], facing == FacingRight ? FacingLeft : FacingRight));
         return One(state);
     }
 
@@ -115,8 +117,8 @@ public sealed class SurroundedPower : SimModel
 }
 
 /// <summary>
-/// CoveredPower (on a teammate you cover with Intercept): powered attacks on its owner deal nothing; Data is its applier's
-/// id + 100. Applying it gives the applier Intercept, counting one more covered player (CoveredPower.AfterApplied).
+/// CoveredPower (on a teammate you cover with Intercept): powered attacks on its owner deal nothing; Data is its applier
+/// (DataCreature). Applying it gives the applier Intercept, counting one more covered player (CoveredPower.AfterApplied).
 /// </summary>
 public sealed class CoveredPower : SimModel
 {
@@ -125,7 +127,7 @@ public sealed class CoveredPower : SimModel
     public override void AfterApplied(SimState state, int owner, int applier, int amount)
     {
         var powers = SimEngine.PowersOf(state, owner);
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], applier + 100));
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], DataCreature.Of(applier)));
         var otherPowers = SimEngine.PowersOf(state, applier);
         SimEngine.SetPowers(state, applier, otherPowers.With(PowerId.Intercept, otherPowers[PowerId.Intercept] + 1));
     }

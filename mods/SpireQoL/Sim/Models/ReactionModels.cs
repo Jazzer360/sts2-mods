@@ -207,17 +207,19 @@ public sealed class TheGambitPower : SimModel
 /// </summary>
 public sealed class CurlUpPower : SimModel
 {
+    /// <summary>Its Data: a card in play hit it (the one whose play gives it block).</summary>
+    private const int BoundToPlay = 1;
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
         if (hit.Target != owner || !hit.Props.IsPoweredAttack() || hit.Card == null || state.CurrentPlay == null) return;
         var powers = SimEngine.PowersOf(state, owner);
-        if (powers.Has(ThisPower)) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: 1));
+        if (powers.Has(ThisPower)) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: BoundToPlay));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (state.Enemy(owner) is not { Alive: true } enemy || enemy.Powers.DataOf(ThisPower) != 1) return One(state);
+        if (state.Enemy(owner) is not { Alive: true } enemy || enemy.Powers.DataOf(ThisPower) != BoundToPlay) return One(state);
         enemy.Block += enemy.Powers[ThisPower];
         enemy.Powers = enemy.Powers.Without(ThisPower);
         enemy.ReactedWithBlock = true;
@@ -232,12 +234,15 @@ public sealed class CurlUpPower : SimModel
 /// </summary>
 public sealed class SkittishPower : SimModel
 {
+    /// <summary>Its Data: block gained this turn (HasGainedBlockThisTurn); this attack's first hit was seen, and it got HP through.</summary>
+    public const int UsedThisTurn = 1;
+    private const int FirstHitSeen = 2, FirstHitGotThrough = 4;
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
     public override IEnumerable<SimState> BeforeAttack(SimState state, int owner, AttackInfo attack)
     {
         var powers = SimEngine.PowersOf(state, owner);
-        if (powers.Has(ThisPower)) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) & 1));
+        if (powers.Has(ThisPower)) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) & UsedThisTurn));
         return One(state);
     }
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
@@ -245,16 +250,16 @@ public sealed class SkittishPower : SimModel
         if (hit.Target != owner || state.CurrentAttack == 0) return;
         var powers = SimEngine.PowersOf(state, owner);
         var data = powers.DataOf(ThisPower);
-        if (!powers.Has(ThisPower) || (data & 2) != 0) return;
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data | 2 | (hit.Unblocked != 0 ? 4 : 0)));
+        if (!powers.Has(ThisPower) || (data & FirstHitSeen) != 0) return;
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data | FirstHitSeen | (hit.Unblocked != 0 ? FirstHitGotThrough : 0)));
     }
     public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
     {
         if (state.Enemy(owner) is not { Alive: true } enemy) return One(state);
         var data = enemy.Powers.DataOf(ThisPower);
-        if ((data & 1) != 0 || (data & 4) == 0 || !attack.Props.HasFlag(SimProps.Move) || attack.Card == null) return One(state);
+        if ((data & UsedThisTurn) != 0 || (data & FirstHitGotThrough) == 0 || !attack.Props.HasFlag(SimProps.Move) || attack.Card == null) return One(state);
         enemy.Block += enemy.Powers[ThisPower];
-        enemy.Powers = enemy.Powers.With(ThisPower, enemy.Powers[ThisPower], data: 1);
+        enemy.Powers = enemy.Powers.With(ThisPower, enemy.Powers[ThisPower], data: UsedThisTurn);
         enemy.ReactedWithBlock = true;
         state.LogFired(Name, amount: 0, owner);
         return One(state);

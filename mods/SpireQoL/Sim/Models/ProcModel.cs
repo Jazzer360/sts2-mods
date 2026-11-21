@@ -15,6 +15,11 @@ public abstract class ProcModel : SimModel
     /// <summary>Its amount on its owner (a power's stacks, a relic's counter).</summary>
     protected virtual int Amount(SimState state, int owner) => SimEngine.PowerOn(state, owner, ThisPower);
     protected virtual int Data(SimState state, int owner) => SimEngine.PowersOf(state, owner).DataOf(ThisPower);
+    /// <summary>The Data bit that says it was used this turn (a power's: PowerUse; a relic's: RelicUse).</summary>
+    protected virtual int UsedThisTurnBit => (int)PowerUse.UsedThisTurn;
+    /// <summary>Used this turn (once a turn).</summary>
+    protected bool UsedThisTurn(SimState state, int owner) => (Data(state, owner) & UsedThisTurnBit) != 0;
+    protected void MarkUsedThisTurn(SimState state, int owner) => Set(state, owner, Amount(state, owner), Data(state, owner) | UsedThisTurnBit);
     protected virtual void Set(SimState state, int owner, int amount, int data)
     {
         var powers = SimEngine.PowersOf(state, owner);
@@ -89,9 +94,10 @@ public abstract class RelicProc : ProcModel
         DamageAll(state, owner, Var(state, owner, "Damage", fallback: 0), PropsOf(state, owner, "Damage"), times);
     protected IEnumerable<SimState> RelicDamageRandom(SimState state, int owner, int times = 1) =>
         DamageRandom(state, owner, Var(state, owner, "Damage", fallback: 0), PropsOf(state, owner, "Damage"), times);
-    /// <summary>Armed (the adapter's Data 1: unused this combat or turn, as RelicCountersFeature.IsArmed reads it).</summary>
-    protected bool Armed(SimState state, int owner) => (Data(state, owner) & 1) != 0;
-    protected void Disarm(SimState state, int owner) => Set(state, owner, Amount(state, owner), Data(state, owner) & ~1);
+    protected override int UsedThisTurnBit => (int)RelicUse.UsedThisTurn;
+    /// <summary>Armed (RelicUse.Armed: unused this combat or turn, as RelicCountersFeature.IsArmed reads it).</summary>
+    protected bool Armed(SimState state, int owner) => ((RelicUse)Data(state, owner)).HasFlag(RelicUse.Armed);
+    protected void Disarm(SimState state, int owner) => Set(state, owner, Amount(state, owner), (int)((RelicUse)Data(state, owner) & ~RelicUse.Armed));
 }
 
 /// <summary>

@@ -57,6 +57,8 @@ public sealed class StretchPower : SimModel
 /// </summary>
 public sealed class PaelsLegion : SimModel
 {
+    /// <summary>Its Data: a play is bound to have its block doubled (the game's AffectedCardPlay).</summary>
+    public const int BoundToPlay = 1;
     public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block)
     {
@@ -67,12 +69,12 @@ public sealed class PaelsLegion : SimModel
     public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
-        if (amount > 0 && play != null && relics[ThisRelic] <= 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: 1));
+        if (amount > 0 && play != null && relics[ThisRelic] <= 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: BoundToPlay));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
-        if (relics.DataOf(ThisRelic) != 1) return One(state);
+        if (relics.DataOf(ThisRelic) != BoundToPlay) return One(state);
         state.LogFired(Name, amount: 0, owner);
         SimEngine.SetRelics(state, owner, relics.With(ThisRelic, amount: 2, data: 0)); // Turns: 2 (PaelsLegion.CanonicalVars)
         return One(state);
@@ -86,24 +88,26 @@ public sealed class PaelsLegion : SimModel
 /// </summary>
 public sealed class Vambrace : SimModel
 {
+    /// <summary>Its Data: a card is bound (its block was doubled: the game's TriggeringCard), block gained this combat.</summary>
+    public const int Bound = 1, GainedThisCombat = 2;
     public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block)
     {
         if (!block.Props.IsCardOrMonsterMove() || block.Card == null || block.Play?.Owner != owner) return 1m;
-        return (SimEngine.RelicsOf(state, owner).DataOf(ThisRelic) & 2) != 0 ? 1m : 2m;
+        return (SimEngine.RelicsOf(state, owner).DataOf(ThisRelic) & GainedThisCombat) != 0 ? 1m : 2m;
     }
     public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
         if (amount <= 0 || play == null) return;
-        if ((relics.DataOf(ThisRelic) & 1) == 0) state.LogFired(Name, amount: 0, owner);
-        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) | 1));
+        if ((relics.DataOf(ThisRelic) & Bound) == 0) state.LogFired(Name, amount: 0, owner);
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) | Bound));
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         var relics = SimEngine.RelicsOf(state, owner);
         var data = relics.DataOf(ThisRelic);
-        if (play.Owner == owner && (data & 1) != 0 && (data & 2) == 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: 2));
+        if (play.Owner == owner && (data & Bound) != 0 && (data & GainedThisCombat) == 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: GainedThisCombat));
         return One(state);
     }
 }

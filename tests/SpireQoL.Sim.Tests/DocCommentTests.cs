@@ -8,16 +8,9 @@ namespace SpireQoL.Sim.Tests;
 /// </summary>
 public class DocCommentTests
 {
-    private static string RepoRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
-            if (Directory.Exists(Path.Combine(directory.FullName, "mods")) && Directory.Exists(Path.Combine(directory.FullName, "core"))) return directory.FullName;
-        throw new DirectoryNotFoundException("the repository root (mods/ and core/) not found above the test's folder");
-    }
-
     private static IEnumerable<string> SourceFiles()
     {
-        var root = RepoRoot();
+        var root = RepoFiles.Root();
         return new[] { "mods", "core" }
             .SelectMany(dir => Directory.EnumerateFiles(Path.Combine(root, dir), "*.cs", SearchOption.AllDirectories))
             .Where(file => !file.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part => part is "bin" or "obj"));

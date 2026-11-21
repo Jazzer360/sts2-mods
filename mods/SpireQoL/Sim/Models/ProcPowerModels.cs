@@ -98,7 +98,7 @@ public sealed class StranglePower : ProcModel
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (Data(state, owner) - 100 == play.Owner && Data(state, owner) != 0) Bind(state, owner, Amount(state, owner));
+        if (DataCreature.In(Data(state, owner)) == play.Owner) Bind(state, owner, Amount(state, owner));
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
@@ -110,7 +110,7 @@ public sealed class OblivionPower : ProcModel
 {
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (Data(state, owner) - 100 == play.Owner && Data(state, owner) != 0) Bind(state, owner, Amount(state, owner));
+        if (DataCreature.In(Data(state, owner)) == play.Owner) Bind(state, owner, Amount(state, owner));
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
@@ -154,15 +154,17 @@ public sealed class TheSealedThronePower : ProcModel
 /// </summary>
 public sealed class PanachePower : ProcModel
 {
+    /// <summary>Where its count starts (PanachePower._baseCardsLeft).</summary>
+    private const int CardsLeftAtStart = 5;
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner)) return One(state);
         var left = Data(state, owner);
-        if (left <= 0) { Set(state, owner, Amount(state, owner), data: 5); return One(state); }
+        if (left <= 0) { Set(state, owner, Amount(state, owner), data: CardsLeftAtStart); return One(state); }
         left--;
         if (left > 0) { Set(state, owner, Amount(state, owner), left); return One(state); }
-        Set(state, owner, Amount(state, owner), data: 5);
+        Set(state, owner, Amount(state, owner), data: CardsLeftAtStart);
         return DamageAll(state, owner, Amount(state, owner));
     }
 }
@@ -264,10 +266,12 @@ public sealed class NostalgiaPower : ProcModel
 /// </summary>
 public sealed class PaleBlueDotPower : ProcModel
 {
+    /// <summary>The card plays it waits for (PaleBlueDotPower.cardPlayThresholdValue; the game's AttacksPlayedThisTurn counts every play).</summary>
+    private const int PlaysNeeded = 5;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (!Mine(play, owner) || Data(state, owner) != 0 || SimEngine.TurnOf(state, owner)[SimKeys.Plays(PlayStage.Finished)] < 5) return One(state);
-        Set(state, owner, Amount(state, owner), data: 1);
+        if (!Mine(play, owner) || UsedThisTurn(state, owner) || SimEngine.TurnOf(state, owner)[SimKeys.Plays(PlayStage.Finished)] < PlaysNeeded) return One(state);
+        MarkUsedThisTurn(state, owner);
         return Fire(state, owner);
     }
 }
@@ -276,7 +280,7 @@ public sealed class PaleBlueDotPower : ProcModel
 public sealed class ImitationLearningPower : ProcModel
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        play.Owner != owner && Data(state, owner) != 0 && Data(state, owner) - 100 == play.Owner && play.Card.Type == SimCardType.Power ? Fire(state, owner) : One(state);
+        play.Owner != owner && DataCreature.In(Data(state, owner)) == play.Owner && play.Card.Type == SimCardType.Power ? Fire(state, owner) : One(state);
 }
 
 // ---- the Fool (v0.113.0): melodies (card tags Wah, Cho, Ki) and arrows
@@ -323,10 +327,10 @@ public sealed class LullabyPower : ProcModel
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (!Mine(play, owner) || Data(state, owner) != 0) return One(state);
+        if (!Mine(play, owner) || UsedThisTurn(state, owner)) return One(state);
         var (before, after) = Melodies.Finished(state, play);
         if (before >= 3 || after < 3) return One(state);
-        Set(state, owner, Amount(state, owner), data: 1);
+        MarkUsedThisTurn(state, owner);
         return Block(state, owner, Amount(state, owner));
     }
 }
@@ -386,6 +390,8 @@ public sealed class CoveringFirePower : ProcModel
 /// </summary>
 public sealed class ImpaledPower : SimModel
 {
+    /// <summary>The hits each arrow takes to come loose (ImpaledPower's HitCounter, CanonicalVars).</summary>
+    private const int HitsPerArrow = 3;
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
         if (hit.Target != owner || hit.Dealer != Who.You || !hit.Props.IsPoweredAttack()) return;
@@ -393,7 +399,7 @@ public sealed class ImpaledPower : SimModel
         if (powers[ThisPower] <= 0) return;
         var counter = powers.DataOf(ThisPower) - 1;
         if (counter > 0) { SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], counter)); return; }
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: 3));
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: HitsPerArrow));
         SimEngine.TakeArrows(state, owner, count: 1);
         SimEngine.Raise(state, CardEvent.ArrowDislodged, Who.You);
     }
@@ -412,8 +418,8 @@ public sealed class YahPower : ProcModel
     public override TabKind? Tab => TabKind.Energy;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
-        if (cardEvent != CardEvent.ArrowDislodged || player != owner || Data(state, owner) != 0) return One(state);
-        Set(state, owner, Amount(state, owner), data: 1);
+        if (cardEvent != CardEvent.ArrowDislodged || player != owner || UsedThisTurn(state, owner)) return One(state);
+        MarkUsedThisTurn(state, owner);
         return Cause(Fire(state, owner), CardEvent.EnergyGained, Amount(state, owner), owner);
     }
 }

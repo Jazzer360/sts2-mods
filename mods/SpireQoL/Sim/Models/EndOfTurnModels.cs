@@ -61,20 +61,20 @@ public sealed class ConsumingShadowPower : EndOfTurnModel
 }
 
 /// <summary>
-/// Orichalcum (and its fake): BeforeSideTurnEndVeryEarly arms it when its owner has no block (Data 1); BeforeSideTurnEnd then
+/// Orichalcum (and its fake): BeforeSideTurnEndVeryEarly arms it when its owner has no block (RelicUse.Armed); BeforeSideTurnEnd then
 /// gives its block (amount, unpowered).
 /// </summary>
 public abstract class OrichalcumBase : EndOfTurnRelic
 {
     public override IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState state, int owner)
     {
-        if (state.TakesPart(owner) && state.Player(owner) is { Block: <= 0 }) Set(state, owner, Amount(state, owner), data: 1);
+        if (state.TakesPart(owner) && state.Player(owner) is { Block: <= 0 }) Set(state, owner, Amount(state, owner), (int)RelicUse.Armed); // armed: it gives its block
         return One(state);
     }
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
     {
-        if (Data(state, owner) != 1) return One(state);
-        Set(state, owner, Amount(state, owner), data: 0);
+        if (!Armed(state, owner)) return One(state);
+        Disarm(state, owner);
         return Block(state, owner, Amount(state, owner));
     }
 }
@@ -146,12 +146,9 @@ public sealed class LunarPastry : EndOfTurnRelic
 /// <summary>A debuff that hurts its owner at the end of their turn: its damage through the pipeline on them, named as the game names it.</summary>
 public abstract class TurnEndDebuff : EndOfTurnModel
 {
-    /// <summary>The applier is gone (Data: the applier's id + 100; 0: unknown, taken as alive).</summary>
-    protected static bool ApplierDead(SimState state, int owner, PowerId name)
-    {
-        var data = SimEngine.PowersOf(state, owner).DataOf(name);
-        return data >= 100 && state.Enemy(data - 100) is not { Alive: true };
-    }
+    /// <summary>The applier is gone (Data: the applier, DataCreature; no one: unknown, taken as alive).</summary>
+    protected static bool ApplierDead(SimState state, int owner, PowerId name) =>
+        DataCreature.In(SimEngine.PowersOf(state, owner).DataOf(name)) is var applier && Who.IsEnemy(applier) && state.Enemy(applier) is not { Alive: true };
 
     protected IEnumerable<SimState> Hurt(SimState state, int owner, int amount, SimProps props, bool selfDealt) =>
         amount <= 0 ? One(state) : SimEngine.ProcDamagePlayer(state, owner, Name, owner, amount, props, noDealer: !selfDealt, label: SimEngine.Title(state, owner, Name));

@@ -30,11 +30,13 @@ public sealed class RippleBasin : FirstAttackGivesUp
 /// </summary>
 public sealed class PaelsTears : RelicProc
 {
+    /// <summary>Its Data: energy was spent during the play under way (none: 0).</summary>
+    private const int SpentThisPlay = 1;
     public override bool Harmful => true;
     public override ActedSeen Seen => ActedSeen.NoEnergyLeft;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
-        if (cardEvent == CardEvent.EnergySpent && player == owner && Data(state, owner) == 0) Set(state, owner, Amount(state, owner), data: 1);
+        if (cardEvent == CardEvent.EnergySpent && player == owner && Data(state, owner) == 0) Set(state, owner, Amount(state, owner), data: SpentThisPlay);
         return One(state);
     }
     public override IEnumerable<SimState> AfterPlayResolved(SimState state, int owner, int player)
@@ -280,34 +282,34 @@ public sealed class RazorTooth : RelicProc
         Mine(play, owner) && play.PlayIndex == 0 && play.Card.Type is SimCardType.Attack or SimCardType.Skill && play.Card.Upgradable ? Fire(state, owner) : One(state);
 }
 
-/// <summary>RainbowRing.AfterCardPlayed: once a turn (Data 2: done), the play that completes an Attack, a Skill and a Power this turn.</summary>
+/// <summary>RainbowRing.AfterCardPlayed: once a turn (RelicUse.UsedThisTurn), the play that completes an Attack, a Skill and a Power this turn.</summary>
 public sealed class RainbowRing : RelicProc
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (!Mine(play, owner) || (Data(state, owner) & 2) != 0) return One(state);
+        if (!Mine(play, owner) || UsedThisTurn(state, owner)) return One(state);
         var turn = SimEngine.TurnOf(state, owner);
         int Of(SimCardType simCardType) => turn[SimKeys.Plays(PlayStage.Finished, simCardType)] - (play.Card.Type == simCardType ? 1 : 0);
         var all = new[] { SimCardType.Attack, SimCardType.Skill, SimCardType.Power }.All(simCardType => turn[SimKeys.Plays(PlayStage.Finished, simCardType)] > 0);
         var before = Of(SimCardType.Attack) > 0 && Of(SimCardType.Skill) > 0 && Of(SimCardType.Power) > 0;
         if (!all || before) return One(state);
-        Set(state, owner, Amount(state, owner), Data(state, owner) | 2);
+        MarkUsedThisTurn(state, owner);
         return Fire(state, owner);
     }
 }
 
 /// <summary>
-/// ConductorsBaton.AfterCardPlayed: once a turn (Data 2: done), the play that completes Wah, Cho and Ki applies
+/// ConductorsBaton.AfterCardPlayed: once a turn (RelicUse.UsedThisTurn), the play that completes Wah, Cho and Ki applies
 /// ConductorsBatonPower (1) to its owner.
 /// </summary>
 public sealed class ConductorsBaton : RelicProc
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (!Mine(play, owner) || (Data(state, owner) & 2) != 0) return One(state);
+        if (!Mine(play, owner) || UsedThisTurn(state, owner)) return One(state);
         var (before, after) = Melodies.Finished(state, play);
         if (before >= 3 || after < 3) return One(state);
-        Set(state, owner, Amount(state, owner), Data(state, owner) | 2);
+        MarkUsedThisTurn(state, owner);
         SimEngine.ApplyPower(state, owner, owner, PowerId.ConductorsBaton, amount: 1, debuff: false);
         return Fire(state, owner);
     }
