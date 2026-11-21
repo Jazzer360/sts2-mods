@@ -523,7 +523,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt) && !hitAfterKill;
             var firstHit = window.OfType<DamageReceivedEntry>().FirstOrDefault(d => d.Result.Receiver == me.Creature && d.Dealer == creature);
             string Range(int a, int b) => a == b ? $"{a}" : $"{a}-{b}";
-            parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(o.HpAtTurnEndMin(id), o.HpAtTurnEndMax(id))}), through {through} (pred {Range(o.UnblockedMin(id), o.UnblockedMax(id))}), " +
+            parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(o.HpAtTurnEndMin(id), o.HpAtTurnEndMax(id))}), through {through} (pred {Range(o.UnblockedAtTurnEndMin(id), o.UnblockedAtTurnEndMax(id))}), " +
                       $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(o.DeadInAll(id) ? "always" : o.DeadInAny(id) ? "sometimes" : "never")})");
 
             actuals[id] = (hpAtTurnEnd, through, diedBeforeActing);
@@ -535,7 +535,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             int lo = o.HpAtTurnEndMin(id), hi = o.HpAtTurnEndMax(id);
             if (hpAtTurnEnd < lo || hpAtTurnEnd > hi)
                 result.Add(($"enemy HP at turn end: {name} predicted {(lo == hi ? $"{lo}" : $"{lo}-{hi}")}, actual {hpAtTurnEnd}", monster));
-            int ulo = o.UnblockedMin(id), uhi = o.UnblockedMax(id);
+            // Your end of turn's hits on it, against the simulator's count when your end of turn is over (its turn's hits on it, Necro
+            // Mastery's when it hits Osty, come later in both).
+            int ulo = o.UnblockedAtTurnEndMin(id), uhi = o.UnblockedAtTurnEndMax(id);
             if (through < ulo || through > uhi)
                 result.Add(($"hits through block: {name} predicted {(ulo == uhi ? $"{ulo}" : $"{ulo}-{uhi}")}, actual {through}", monster));
 
@@ -562,7 +564,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var e = f.State.Enemy(id);
             if (e == null) continue;
             lines.Add($"{e.Name}: HP {e.Hp}, block {e.Block}, poison {e.Poison}, hits [{string.Join(", ", e.Hits)}]{(e.HitCap != int.MaxValue ? $", cap {e.HitCap}" : "")}" +
-                      $" → HP at turn end {o.HpAtTurnEndMin(id)}-{o.HpAtTurnEndMax(id)}, hits through block {o.UnblockedMin(id)}-{o.UnblockedMax(id)}, " +
+                      $" → HP at turn end {o.HpAtTurnEndMin(id)}-{o.HpAtTurnEndMax(id)}, hits through block {o.UnblockedAtTurnEndMin(id)}-{o.UnblockedAtTurnEndMax(id)}, " +
                       $"dead before acting {(o.DeadInAll(id) ? "always" : o.DeadInAny(id) ? "sometimes" : "never")}" +
                       $"{(e.Imbalanced ? $", first hit fully blocked {(o.FirstHitBlockedInAll(id) ? "always" : o.FirstHitBlockedInAny(id) ? "sometimes" : "never")}" : "")}");
         }

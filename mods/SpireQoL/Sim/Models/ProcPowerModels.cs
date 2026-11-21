@@ -204,6 +204,21 @@ public sealed class DevourLifePower : ProcModel
         Mine(play, owner) && play.Card.Name == "Soul" ? Fire(s, owner, Amount(s, owner)) : One(s);
 }
 
+/// <summary>
+/// SicEmPower (yours, on an enemy; InstancedPerApplier).AfterDamageGiven: each time its applier's Osty damages the enemy that has it,
+/// its applier summons its amount (OstyCmd.Summon). Owner: the enemy. Taken as yours: a teammate's Sic 'Em on the same enemy isn't
+/// told apart (the adapter reads the power by its type).
+/// </summary>
+public sealed class SicEmPower : ProcModel
+{
+    public override string Name => "SicEmPower";
+    public override TabKind? Tab => TabKind.Summon;
+    public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
+    {
+        if (e.Dealer == Who.YourOsty && e.Target == owner && e.Total > 0 && Amount(s, owner) > 0) s.LogFired(Name, Amount(s, owner), owner);
+    }
+}
+
 /// <summary>HauntPower.AfterCardPlayed: each Soul its owner plays deals its amount to a random hittable enemy (unblockable, unpowered, no dealer).</summary>
 public sealed class HauntPower : ProcModel
 {

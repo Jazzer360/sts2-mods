@@ -8,6 +8,9 @@ namespace SpireQoL;
 /// </summary>
 public sealed class QolSettings
 {
+    /// <summary>Counts the settings menu's changes (not saved): part of the board probe, so a changed setting is redrawn (decision #130).</summary>
+    public static int Revision;
+
     /// <summary>Feature id → enabled. Missing ids use the feature's default.</summary>
     public Dictionary<string, bool> Features { get; set; } = new();
 

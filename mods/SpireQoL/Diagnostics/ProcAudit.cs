@@ -285,10 +285,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     /// <summary>
     /// A skip no model could ever close (decision #108): the play ended the fight, so the game stopped logging (its history skips
-    /// the killing hit on) or cleaned up before the check could look. Counted, but not held against the turn.
+    /// the killing hit on) or cleaned up before the check could look; or it ended your turn (Void Form), so the end of the turn ran
+    /// before the check could look. Counted, but not held against the turn.
     /// </summary>
-    internal static bool ExpectedSkip(string reason) => reason.StartsWith(FightEndedSkip, StringComparison.Ordinal)
-        || reason.Contains(": " + FightEndedSkip, StringComparison.Ordinal);
+    internal static bool ExpectedSkip(string reason) => new[] { FightEndedSkip, TurnEndedSkip }.Any(skip =>
+        reason.StartsWith(skip, StringComparison.Ordinal) || reason.Contains(": " + skip, StringComparison.Ordinal));
 
     /// <summary>A "not checked" line's reason, without its details: "state after the play: auto-played cards".</summary>
     internal static string SkipReason(string line)
@@ -578,6 +579,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
     /// <summary>Why the state after a play wasn't captured when the play ended the fight (an expected skip: decision #108).</summary>
     private const string FightEndedSkip = "the fight ended";
+    /// <summary>A play that ends your turn (Void Form: PlayerCmd.EndTurn) lets the end of the turn run (Chains of Binding clearing Bound) before its state is read.</summary>
+    private const string TurnEndedSkip = "the play ended your turn";
 
     private void OnActionFinished(GameAction action)
     {
@@ -596,6 +599,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // state, so the state the play left can't be compared. The history checks still run.
                 rec.AfterSkipped = FightEndedSkip;
                 rec.FightEnded = true;
+            }
+            else if (me != null && cs != null && cs.CurrentSide != MegaCrit.Sts2.Core.Combat.CombatSide.Player)
+            {
+                // The play ended your turn (decision #126): what the end of the turn did is in the state, not the play's.
+                rec.AfterSkipped = TurnEndedSkip;
             }
             else if (me != null && cs != null)
             {
@@ -1513,6 +1521,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                           && statusAfter != MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active;
                 what = givenUp ? "it went dark" : statusBefore == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active ? "it stayed lit" : "it was already dark";
             }
+            else if (m.Seen == ActedSeen.CounterPassedLimit)
+            {
+                // Pocketwatch: its counter (cards this turn) went from within its limit to past it.
+                var limit = Sts2State.Var(relic, m.LimitVar ?? "", int.MaxValue);
+                var before = w.FullBefore.Relics[relic].Display;
+                var after = w.FullAfter.Relics.TryGetValue(relic, out var a) ? a.Display : before;
+                givenUp = before <= limit && after > limit;
+                what = $"its count went {before} → {after}, limit {limit}";
+            }
             else
             {
                 var spent = entries.OfType<EnergySpentEntry>().Where(e => e.Actor == me.Creature).Sum(e => e.Amount);
@@ -1613,6 +1630,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private static void EverythingIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, List<string> model)
     {
+        if (w.FullBefore != null && w.FullAfter == null && w.AfterSkipped != null) model.Add(NotChecked("your cards, relics and resources after the play", w.AfterSkipped));
         if (w.FullBefore == null || w.FullAfter == null) return;
         var cs = Sts2State.Combat;
         if (cs == null) return;

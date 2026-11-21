@@ -47,6 +47,44 @@ public sealed class PaelsTears : RelicProc
     }
 }
 
+/// <summary>
+/// Pocketwatch (ModifyHandDraw: 3 more cards at the start of your next turn when you played no more than its CardThreshold this
+/// turn; AfterCardPlayed counts each card its owner plays, auto-plays and each play of a replay included): the play that takes the
+/// count past the threshold gives that up (bad for you). Amount: cards played this turn (its counter); Data: the threshold.
+/// </summary>
+public sealed class Pocketwatch : RelicProc
+{
+    public override string Name => "Pocketwatch";
+    public override bool Harmful => true;
+    /// <summary>It doesn't flash: its counter (cards this turn) goes past the threshold.</summary>
+    public override ActedSeen Seen => ActedSeen.CounterPassedLimit;
+    public override string? LimitVar => "CardThreshold";
+    public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner)) return One(s);
+        var count = Amount(s, owner) + 1;
+        Set(s, owner, count, Data(s, owner));
+        return count == Data(s, owner) + 1 ? Fire(s, owner) : One(s);
+    }
+}
+
+/// <summary>
+/// GremlinHorn.AfterDeath: an enemy's death gives its owner its Energy (PlayerCmd.GainEnergy), then draws its Cards (CardPileCmd.Draw),
+/// queued to run once the hit or action that killed it is over (SimEngine.Raise). No tab of its own here: its tab is judged by the
+/// play's outcome (a kill in every branch: ProcIndicatorsFeature); this model makes the energy and the draw happen in the simulation
+/// (the play check compares the energy after each play: a dev-mode report, Unleash and Debilitate killing a segment).
+/// </summary>
+public sealed class GremlinHorn : SimModel
+{
+    public override string Name => "GremlinHorn";
+    public override void AfterDeath(SimState s, int owner, int dead)
+    {
+        if (dead < 0 || !Who.IsPlayer(owner)) return;
+        SimEngine.Raise(s, CardEvent.EnergyGained, owner, SimEngine.Var(s, owner, Name, "Energy", 1));
+        SimEngine.Raise(s, CardEvent.Drawn, owner, SimEngine.Var(s, owner, Name, "Cards", 1));
+    }
+}
+
 /// <summary>PaelsEye.BeforeCardPlayed: while armed, the turn's first card you play (not an auto-play) gives up its extra turn (bad for you).</summary>
 public sealed class PaelsEye : RelicProc
 {

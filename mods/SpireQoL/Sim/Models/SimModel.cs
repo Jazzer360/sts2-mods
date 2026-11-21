@@ -70,7 +70,7 @@ public sealed record SimCard(string Name, SimCardType Type)
 
 /// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
 /// <summary>How the game shows a model acted (SimModel.Seen).</summary>
-public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft }
+public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft, CounterPassedLimit }
 
 public sealed record SimCardPlay(SimCard Card, int Owner, int Target, int PlayIndex, int PlayCount, bool AutoPlay)
 {
@@ -133,9 +133,12 @@ public abstract class SimModel
     /// <summary>
     /// How the game shows that it acted, for the play check (decision #117): a flash (the default), or, for a relic whose crossed tab
     /// means the play gives up its bonus, the relic going dark (its Active status cleared: Art of War, Ripple Basin, Pael's Eye) or
-    /// no energy left after the play (Pael's Tears, which judges the energy as your turn ends).
+    /// no energy left after the play (Pael's Tears, which judges the energy as your turn ends), or its counter going past its limit
+    /// (Pocketwatch: <see cref="LimitVar"/>).
     /// </summary>
     public virtual ActedSeen Seen => ActedSeen.Flash;
+    /// <summary>For <see cref="ActedSeen.CounterPassedLimit"/>: the relic's value (DynamicVars) its counter must stay within.</summary>
+    public virtual string? LimitVar => null;
 
     protected static IEnumerable<SimState> One(SimState s) => new[] { s };
 

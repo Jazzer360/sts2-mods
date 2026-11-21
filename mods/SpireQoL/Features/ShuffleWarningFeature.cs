@@ -47,7 +47,8 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
             bool shuffles;
             try
             {
-                var f = PlayFacts.For(c, me, cs, CardIndicatorsFeature.PlayCount(c));
+                // Proc Indicators' facts for this frame when it has them (it runs first), else worked out here.
+                var f = ProcIndicatorsFeature.FactsThisFrame(c) ?? PlayFacts.For(c, me, cs, CardIndicatorsFeature.PlayCount(c));
                 shuffles = f.Shuffles && !f.ShufflesItself; // Reboot's text already says it shuffles
             }
             catch

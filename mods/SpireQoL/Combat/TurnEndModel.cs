@@ -237,14 +237,15 @@ public sealed class TurnEndModel
         _frame = frame;
         SimJob.FlushLog(line => ModEntry.Log.Info(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"), ReportCap);
         var start = Godot.Time.GetTicksUsec();
+        var alloc = GC.GetAllocatedBytesForCurrentThread();
         _cached = ComputeNow();
         // Once a frame, by whichever feature asks first: timed on its own for the dev dashboard, so that feature isn't charged for it.
-        PartTime?.Invoke("turn-forecast", (Godot.Time.GetTicksUsec() - start) / 1000.0);
+        PartTime?.Invoke("turn-forecast", (Godot.Time.GetTicksUsec() - start) / 1000.0, (GC.GetAllocatedBytesForCurrentThread() - alloc) / 1024.0);
         return _cached;
     }
 
     /// <summary>Where the frame's shared forecast work is timed (OverlayHost.AddPartTime), set at startup.</summary>
-    internal static Action<string, double>? PartTime;
+    internal static Action<string, double, double>? PartTime;
 
     /// <summary>
     /// What Incoming Damage, the Death Skull and Teammate Incoming Damage show (decision #105): the forecast for the board now, or,
@@ -322,6 +323,14 @@ public sealed class TurnEndModel
         var cs = Sts2State.Combat;
         if (me?.PlayerCombatState == null || cs == null) return null;
 
+        // Nothing a prediction reads changed since last frame, and its search is over (decision #130): last frame's model,
+        // without reading the board again. Dev mode works it out anyway every 30th such frame and logs it if the key differs.
+        var probe = BoardProbe.Hash(me, cs);
+        var probeSkip = !ownBudget && _lastModel is { Job.Ready.IsCompleted: true } && _lastModelProbe == probe;
+        if (probeSkip && (!ModEntry.DevMode || ++_skippedSinceCheck < BoardProbe.CheckEvery)) return _lastModel;
+        if (probeSkip) _skippedSinceCheck = 0;
+        var probeCheck = probeSkip ? _lastModel : null;
+
         // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
         DrawPileMemory.Update(me, cs);
         var full = SimAdapter.Build(me, cs, out var ids);
@@ -330,15 +339,32 @@ public sealed class TurnEndModel
         var state = CountTeammateHands || full.Teammates.Count == 0 ? full : full.WithoutTeammateHands();
         // The game state rarely changes between frames: rerun only when it did.
         var key = ReferenceEquals(state, full) ? fullKey : state.FullKey();
+        if (probeCheck != null && (probeCheck.StateKey != key || probeCheck._fullKey != fullKey))
+            BoardProbe.Missed("the turn forecast", "its start state changed while the board probe didn't", BoardProbe.Diff(probeCheck.FullState, full));
         var job = Explore(ref _lastKey, ref _lastJob, key, state, "the turn forecast");
         if (!Wait(job, ownBudget)) return null;
+        // The same board and the same search result as the last frame: its model again, not rebuilt from the outcome every frame.
+        if (_lastModel is { } last && last.StateKey == key && last._fullKey == fullKey && ReferenceEquals(last.Outcome, job.Latest)
+            && last.Teammates.Count == full.Teammates.Count)
+        {
+            _lastModelProbe = probe; // the board probe moved (a setting, say) but not what the forecast reads
+            return last;
+        }
         var m = From(state, key, job.Latest!, ids, SimAdapter.Teammates(me, cs), me.Creature.CurrentHp);
         m.Job = job;
         m.FullState = full;
         m._fullKey = fullKey;
         if (ReferenceEquals(state, full)) m._full = m;
+        _lastModel = m;
+        _lastModelProbe = probe;
         return m;
     }
+
+    /// <summary>The last model built from a search result (ComputeNow), handed back while the board and the result stay the same.</summary>
+    private static TurnEndModel? _lastModel;
+    /// <summary>The board probe <see cref="_lastModel"/> was worked out from (decision #130).</summary>
+    private static int _lastModelProbe;
+    private static int _skippedSinceCheck;
 
     private static TurnEndModel From(SimState state, long key, SimOutcome outcome, IReadOnlyDictionary<Creature, int> ids,
         IReadOnlyList<Player> teammates, int myHp)

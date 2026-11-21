@@ -52,7 +52,9 @@ public class SkipReasonTests
     [InlineData("block: not checked (random auto-plays): predicted 4, actual 7", false)]
     [InlineData("state after the play: not checked (auto-played cards)", false)]
     [InlineData("lethal: not checked (the board after the play: its search stopped at a cap or met something not modelled)", false)]
-    public void OnlyTheFightEndingIsExpected(string line, bool expected) => Assert.Equal(expected, ProcAudit.ExpectedSkip(ProcAudit.SkipReason(line)));
+    [InlineData("state after the play: not checked (the play ended your turn)", true)]
+    [InlineData("your cards, relics and resources after the play: not checked (the play ended your turn)", true)]
+    public void OnlyTheFightOrTurnEndingIsExpected(string line, bool expected) => Assert.Equal(expected, ProcAudit.ExpectedSkip(ProcAudit.SkipReason(line)));
 
     /// <summary>Decisions #92, #107: when a card's search stopped at a cap, the issues about the simulator's tabs aren't reported; the others are.</summary>
     [Theory]

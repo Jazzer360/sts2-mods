@@ -178,6 +178,12 @@ public sealed class SimEnemy
     /// <summary>Its HP when your end of turn is over (before its turn), for the outcome audit.</summary>
     public int HpAtTurnEnd;
 
+    /// <summary>
+    /// Its hits through block when your end of turn is over (before its turn), for the outcome audit, which counts the hits of your
+    /// end of turn; UnblockedInstances goes on through its turn (Necro Mastery when it hits Osty), which wake rules want.
+    /// </summary>
+    public int UnblockedAtTurnEnd;
+
     [JsonIgnore]
     public bool Alive => Hp > 0;
 

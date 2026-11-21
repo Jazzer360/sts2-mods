@@ -7,7 +7,8 @@ namespace SpireQoL.Telemetry;
 // ---------------------------------------------------------------- events only the dev dashboard reads
 
 /// <summary>The first line of every stream file: its format and what wrote it.</summary>
-public sealed record StreamStarted(int Format, string Mod, string Game, DateTime StartedUtc) : DevEvent;
+/// <summary>A launch's stream begins: the format, the mod version, its build (BuildInfo.Label: version, commit, uncommitted), the game.</summary>
+public sealed record StreamStarted(int Format, string Mod, string Game, DateTime StartedUtc, string Build) : DevEvent;
 
 /// <summary>
 /// The frames of the last moment (about 250 ms), rolled up: how many, the mod's time per frame (median, 95th percentile, largest),
@@ -15,7 +16,7 @@ public sealed record StreamStarted(int Format, string Mod, string Game, DateTime
 /// collections in that moment, the simulator's states held by every search and the searches running.
 /// </summary>
 public sealed record FrameRollup(double Seconds, int Frames, double ModP50, double ModP95, double ModMax, double GapMax, int Slow,
-    Dictionary<string, double> FeatureMean, Dictionary<string, double> FeatureMax,
+    Dictionary<string, double> FeatureMean, Dictionary<string, double> FeatureMax, Dictionary<string, double> FeatureKb,
     double HeapMb, double AllocatedMb, int Gen0, int Gen1, int Gen2, double GcPauseMs, long HeldStates, int Searching) : DevEvent;
 
 /// <summary>A line of the mod's own log ([SpireQoL] lines).</summary>
@@ -36,10 +37,11 @@ public sealed class FrameWindow
     private double _gapMax;
     private int _slow;
     private readonly Dictionary<string, (double Sum, double Max)> _features = new();
+    private readonly Dictionary<string, double> _kb = new();
 
     public int Frames => _mod.Count;
 
-    public void Add(double modMs, double gapMs, IEnumerable<(string Id, double Ms)> features)
+    public void Add(double modMs, double gapMs, IEnumerable<(string Id, double Ms)> features, IEnumerable<(string Id, double Kb)> kb)
     {
         _mod.Add(modMs);
         if (gapMs > _gapMax) _gapMax = gapMs;
@@ -49,6 +51,7 @@ public sealed class FrameWindow
             var f = _features.TryGetValue(id, out var v) ? v : (0, 0);
             _features[id] = (f.Sum + ms, Math.Max(f.Max, ms));
         }
+        foreach (var (id, k) in kb) _kb[id] = _kb.GetValueOrDefault(id) + k;
     }
 
     /// <summary>The rollup, then starts again. <paramref name="extra"/>: the process and simulator numbers the caller read.</summary>
@@ -60,11 +63,13 @@ public sealed class FrameWindow
         var n = Math.Max(1, _mod.Count);
         var r = new FrameRollup(R(seconds), _mod.Count, R(At(0.5)), R(At(0.95)), R(_mod.Count == 0 ? 0 : _mod[^1]), R(_gapMax), _slow,
             _features.ToDictionary(kv => kv.Key, kv => R(kv.Value.Sum / n)), _features.ToDictionary(kv => kv.Key, kv => R(kv.Value.Max)),
+            _kb.ToDictionary(kv => kv.Key, kv => R(kv.Value / n)),
             R(extra.HeapMb), R(extra.AllocatedMb), extra.Gen0, extra.Gen1, extra.Gen2, R(extra.GcPauseMs), extra.Held, extra.Searching);
         _mod.Clear();
         _gapMax = 0;
         _slow = 0;
         _features.Clear();
+        _kb.Clear();
         return r;
     }
 }

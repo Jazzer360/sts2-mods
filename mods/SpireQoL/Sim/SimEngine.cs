@@ -106,6 +106,10 @@ public sealed class SimOutcome
     public int UnblockedMin(int id) => Branches.Min(b => b.Enemy(id)?.UnblockedInstances ?? 0);
     public int UnblockedMax(int id) => Branches.Max(b => b.Enemy(id)?.UnblockedInstances ?? 0);
 
+    /// <summary>The same, counted until your end of turn is over (not its turn): what the outcome audit sees in your end of turn.</summary>
+    public int UnblockedAtTurnEndMin(int id) => Branches.Min(b => b.Enemy(id)?.UnblockedAtTurnEnd ?? 0);
+    public int UnblockedAtTurnEndMax(int id) => Branches.Max(b => b.Enemy(id)?.UnblockedAtTurnEnd ?? 0);
+
     public bool FirstHitBlockedInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { FirstHitFullyBlocked: true });
     public bool FirstHitBlockedInAny(int id) => Branches.Any(b => b.Enemy(id) is { FirstHitFullyBlocked: true });
 
@@ -1064,7 +1068,7 @@ public static partial class SimEngine
         {
             s.EndOfTurnNow = false;
             s.BlockAtEnemyTurn = s.P.Block;
-            foreach (var e in s.Enemies) e.HpAtTurnEnd = Math.Max(0, e.Hp);
+            foreach (var e in s.Enemies) { e.HpAtTurnEnd = Math.Max(0, e.Hp); e.UnblockedAtTurnEnd = e.UnblockedInstances; }
         });
     }
 

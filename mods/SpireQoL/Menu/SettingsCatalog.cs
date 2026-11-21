@@ -134,7 +134,7 @@ public static class SettingsCatalog
         new(nameof(RedSkull), SourceGroup.Relic, "Plays that take you to half HP or below"),
         new(nameof(BrilliantScarf), SourceGroup.Relic, null, "Cards this turn, toward the free one"),
         new(nameof(VelvetChoker), SourceGroup.Relic, null, "Plays left this turn; red at 1"),
-        new(nameof(Pocketwatch), SourceGroup.Relic, null, "Cards this turn: green while under its limit, red once over"),
+        new(nameof(Pocketwatch), SourceGroup.Relic, Crossed + "the card that takes this turn past its limit of cards (gives up next turn's extra draws)", "Cards this turn: green while under its limit, red once over"),
         new(nameof(StoneCalendar), SourceGroup.Relic, null, "Turn timer: turns until its damage", TrackerDefault: false),
         new(nameof(HappyFlower), SourceGroup.Relic, null, "Turn timer: turns until its energy", TrackerDefault: false),
         new(nameof(FakeHappyFlower), SourceGroup.Relic, null, "Turn timer: turns until its energy", TrackerDefault: false),
@@ -296,6 +296,7 @@ public static class SettingsCatalog
         // ------------------------------------------------------------------ powers on enemies
         new(nameof(TagTeamPower), SourceGroup.EnemyPower, "Attacks aimed at that enemy play twice", TagPrefix: "double-play:"),
         new(nameof(StranglePower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card: damage to it"),
+        new(nameof(SicEmPower), SourceGroup.EnemyPower, "Yours, on an enemy. Cards whose Osty hit damages it: summon"),
         new(nameof(OblivionPower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card"),
         new(nameof(ConquerorPower), SourceGroup.EnemyPower, "On an enemy (from anyone's Conqueror). Sovereign Blade: double damage to it"),
         new(nameof(SlowPower), SourceGroup.EnemyPower, "Every card: it takes more damage"),

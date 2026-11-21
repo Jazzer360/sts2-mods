@@ -104,11 +104,11 @@ public sealed class DevSinkTests : IDisposable
     }
 
     [Fact]
-    public void AFrameRollupHasPercentilesFeatureTimesAndStartsAgain()
+    public void AFrameRollupHasPercentilesFeatureTimesMemoryAndStartsAgain()
     {
         var w = new FrameWindow();
-        for (var i = 1; i <= 20; i++) w.Add(i, 16, new[] { ("incoming-damage", 0.5), ("proc-indicators", i / 2.0) });
-        w.Add(40, 70, Array.Empty<(string, double)>());
+        for (var i = 1; i <= 20; i++) w.Add(i, 16, new[] { ("incoming-damage", 0.5), ("proc-indicators", i / 2.0) }, new[] { ("proc-indicators", 42.0) });
+        w.Add(40, 70, Array.Empty<(string, double)>(), Array.Empty<(string, double)>());
         var r = w.Take(0.25, (100, 3, 1, 0, 0, 2, 1234, 2));
         Assert.Equal(21, r.Frames);
         Assert.Equal(11, r.ModP50);
@@ -118,6 +118,7 @@ public sealed class DevSinkTests : IDisposable
         Assert.Equal(1, r.Slow);
         Assert.Equal(10, r.FeatureMax["proc-indicators"]);
         Assert.Equal(Math.Round(20 * 0.5 / 21, 2), r.FeatureMean["incoming-damage"]);
+        Assert.Equal(Math.Round(20 * 42.0 / 21, 2), r.FeatureKb["proc-indicators"]); // KB per frame, over every frame
         Assert.Equal(1234, r.HeldStates);
         Assert.Equal(0, w.Take(0.25, default).Frames);
     }

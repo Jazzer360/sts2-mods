@@ -790,7 +790,11 @@ public sealed partial class SettingsMenu
         SimpleRow(name, needs == null ? desc : $"{desc} Needs {needs} on.", value, v => { set(v); Saved(); }, IconSpacer(), needs == null, indent);
     }
 
-    private void Saved() => _ctx.SettingsFile.Save();
+    private void Saved()
+    {
+        QolSettings.Revision++;
+        _ctx.SettingsFile.Save();
+    }
 
     // ------------------------------------------------------------------ rows
 

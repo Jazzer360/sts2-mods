@@ -35,13 +35,14 @@ public class GivenUpTests
     }
 
     [Fact]
-    public void TheFourGiveUpTabsAreCheckedByWhatTheGameShows()
+    public void TheGiveUpTabsAreCheckedByWhatTheGameShows()
     {
         var seen = CrossedRelics().ToDictionary(x => x.Name, x => x.Seen);
         Assert.Equal(ActedSeen.StatusCleared, seen["ArtOfWar"]);
         Assert.Equal(ActedSeen.StatusCleared, seen["RippleBasin"]);
         Assert.Equal(ActedSeen.StatusCleared, seen["PaelsEye"]);
         Assert.Equal(ActedSeen.NoEnergyLeft, seen["PaelsTears"]);
+        Assert.Equal(ActedSeen.CounterPassedLimit, seen["Pocketwatch"]);
         Assert.Equal(ActedSeen.Flash, seen["BiiigHug"]);
     }
 
@@ -61,6 +62,12 @@ public class GivenUpTests
                 case ActedSeen.NoEnergyLeft:
                     // It reads your energy as the turn ends.
                     Assert.Contains("get_Energy", CallsIn(relic, "BeforeSideTurnEnd"));
+                    break;
+                case ActedSeen.CounterPassedLimit:
+                    // It counts in a card-play hook, doesn't flash there, and has the limit its model names (Pocketwatch: CardThreshold).
+                    Assert.False(hooks.Any(c => c.Contains("Flash")), $"{name}: flashes on a play, so its tab can be checked by the flash");
+                    GameModels.EnsureLoaded();
+                    Assert.True(ModelDb.AllRelics.First(r => r.GetType() == relic).DynamicVars.ContainsKey(SimModels.Get(name)!.LimitVar!), $"{name}: no {SimModels.Get(name)!.LimitVar} value");
                     break;
                 case ActedSeen.Flash:
                     // Some hook of it flashes when it acts (Biiig Hug: AfterShuffle).

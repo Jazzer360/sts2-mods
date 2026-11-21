@@ -86,33 +86,41 @@ public sealed class OverlayHost
 
     public void AddLateFrame(string id, Action action) => _lateFrame.Add((id, action));
 
-    private readonly List<(string Id, double Ms)> _parts = new();
+    private readonly List<(string Id, double Ms, double Kb)> _parts = new();
 
     /// <summary>
     /// Time the running feature (or late-frame callback) spent on one part of its work this frame, in ms: shown as its own entry
     /// in the frame's feature times (the slow-frame log, the dev dashboard) and taken out of the feature's own. Parts with the same
     /// id add up.
     /// </summary>
-    public void AddPartTime(string id, double ms)
+    public void AddPartTime(string id, double ms, double kb = 0)
     {
-        if (_inFrame) _parts.Add((id, ms)); // outside the frame's run (a game callback) there's no feature to take it from
+        if (_inFrame) _parts.Add((id, ms, kb)); // outside the frame's run (a game callback) there's no feature to take it from
     }
 
     private bool _inFrame;
 
     /// <summary>A feature's time this frame, less the parts it timed on its own (each its own entry).</summary>
-    private void AddTimed(string id, double ms)
+    private void AddTimed(string id, double ms, double kb)
     {
-        foreach (var (part, partMs) in _parts)
+        foreach (var (part, partMs, partKb) in _parts)
         {
             var i = _featureMs.FindIndex(x => x.Id == part);
             if (i >= 0) _featureMs[i] = (part, _featureMs[i].Ms + partMs);
             else _featureMs.Add((part, partMs));
+            var j = _featureKb.FindIndex(x => x.Id == part);
+            if (j >= 0) _featureKb[j] = (part, _featureKb[j].Kb + partKb);
+            else _featureKb.Add((part, partKb));
             ms -= partMs;
+            kb -= partKb;
         }
         _parts.Clear();
         _featureMs.Add((id, Math.Max(0, ms)));
+        _featureKb.Add((id, Math.Max(0, kb)));
     }
+
+    /// <summary>Memory this thread allocated since <paramref name="start"/>, in KB (GC.GetAllocatedBytesForCurrentThread: no allocation itself).</summary>
+    private static double KbSince(long start) => (GC.GetAllocatedBytesForCurrentThread() - start) / 1024.0;
 
     internal void RegisterWidget(MovableWidget widget)
     {
@@ -187,6 +195,7 @@ public sealed class OverlayHost
     /// <summary>The game's own slow frames are logged at most this often, with a count of the ones in between.</summary>
     private const ulong GameStallLogIntervalMs = 2000;
     private readonly List<(string Id, double Ms)> _featureMs = new();
+    private readonly List<(string Id, double Kb)> _featureKb = new();
     private readonly Dictionary<string, int> _slowByFeature = new();
     private ulong _lastFrameStartUs, _lastStallLogMs;
     private double _lastModMs;
@@ -200,6 +209,9 @@ public sealed class OverlayHost
 
     /// <summary>The last frame's time per feature (and each late-frame job, "widgets"), in ms: read inside FrameMeasured.</summary>
     public IReadOnlyList<(string Id, double Ms)> FeatureMs => _featureMs;
+
+    /// <summary>The last frame's memory allocated on the game's thread per feature (and each late-frame job, "widgets"), in KB.</summary>
+    public IReadOnlyList<(string Id, double Kb)> FeatureKb => _featureKb;
 
     /// <summary>A slow frame of the mod's own: logged, and reported from a feature's second one this session.</summary>
     private void ModFrameSlow(double modMs, double gapMs)
@@ -223,6 +235,7 @@ public sealed class OverlayHost
         var prevModMs = _lastModMs;
         _lastFrameStartUs = start;
         _featureMs.Clear();
+        _featureKb.Clear();
         _parts.Clear();
         _inFrame = true;
         try { RunFrame(); }
@@ -283,6 +296,7 @@ public sealed class OverlayHost
             if (!IsOn(id)) continue;
             _running = id;
             var featureStart = Godot.Time.GetTicksUsec();
+            var featureAlloc = GC.GetAllocatedBytesForCurrentThread();
             try
             {
                 feature.OnFrame(this);
@@ -297,13 +311,14 @@ public sealed class OverlayHost
                     _log.Error($"[{id}] turned off after repeated errors");
                 }
             }
-            AddTimed(id, (Godot.Time.GetTicksUsec() - featureStart) / 1000.0);
+            AddTimed(id, (Godot.Time.GetTicksUsec() - featureStart) / 1000.0, KbSince(featureAlloc));
         }
 
         _running = null;
         foreach (var (lateId, late) in _lateFrame)
         {
             var lateStart = Godot.Time.GetTicksUsec();
+            var lateAlloc = GC.GetAllocatedBytesForCurrentThread();
             try { late(); }
             catch (Exception ex)
             {
@@ -318,9 +333,10 @@ public sealed class OverlayHost
                 }
                 else if (n % 600 == 0) _log.Error($"[{lateId}] late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
             }
-            AddTimed(lateId, (Godot.Time.GetTicksUsec() - lateStart) / 1000.0);
+            AddTimed(lateId, (Godot.Time.GetTicksUsec() - lateStart) / 1000.0, KbSince(lateAlloc));
         }
         var layoutStart = Godot.Time.GetTicksUsec();
+        var layoutAlloc = GC.GetAllocatedBytesForCurrentThread();
         if (WidgetRoot != null)
         {
             foreach (var w in _widgets)
@@ -334,6 +350,7 @@ public sealed class OverlayHost
             _toast.Visible = Godot.Time.GetTicksMsec() < _toastUntilMs;
         }
         _featureMs.Add(("widgets", (Godot.Time.GetTicksUsec() - layoutStart) / 1000.0));
+        _featureKb.Add(("widgets", KbSince(layoutAlloc)));
     }
 
     /// <summary>

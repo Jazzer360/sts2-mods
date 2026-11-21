@@ -233,7 +233,7 @@ public sealed class CardOverlayRenderer
         try
         {
             var glow = e.Card.CardHighlight;
-            e.Flat.Update(a, new Node?[] { glow, e.TagLayer, e.Overlay }, new Node?[] { glow, e.TagLayer });
+            e.Flat.Update(a, new Node?[] { glow, e.TagLayer, e.Overlay }, new Node?[] { glow, e.TagLayer }, glow);
         }
         catch (Exception ex)
         {

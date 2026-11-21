@@ -92,6 +92,19 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         = new Dictionary<CardModel, PlayFacts>(ReferenceEqualityComparer.Instance);
 
     private Dictionary<CardModel, PlayFacts> _facts = new(ReferenceEqualityComparer.Instance);
+    /// <summary>The frame _facts were filled on (worked out or reused).</summary>
+    private ulong _factsFrame = ulong.MaxValue;
+    /// <summary>Last frame's FrameKey, kept while the board probe sees nothing change.</summary>
+    private long _lastFrameKey;
+    /// <summary>The board probe _lastFrameKey was worked out from.</summary>
+    private int _lastFrameKeyProbe;
+
+    /// <summary>
+    /// This frame's facts for a card in your hand, when Proc Indicators has worked them out (or reused them) this frame: Shuffle
+    /// Warning, which runs after it, reads them instead of building them again. Null otherwise.
+    /// </summary>
+    internal static PlayFacts? FactsThisFrame(CardModel card) =>
+        _instance is { } i && i._factsFrame == Godot.Engine.GetProcessFrames() && i._facts.TryGetValue(card, out var f) ? f : null;
 
     public void OnFrame(OverlayHost host)
     {
@@ -117,17 +130,24 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         // Nothing changed since a frame whose every result was final: its facts and tabs again, without reading each card again
         // (decision #114). In dev mode every 30th such frame is worked out anyway and checked against what would have been reused.
         var te = TurnEnd();
-        var key = te == null ? 0 : FrameKey(te, hand);
+        // The frame key reads every card through the game's hooks (its play count, whether it can be played): on a frame where the
+        // board probe saw nothing change (decision #130), last frame's key stands.
+        var probe = BoardProbe.Hash(me, cs);
+        var probeSame = te != null && _lastFrameKey != 0 && _lastFrameKeyProbe == probe;
+        var key = te == null ? 0 : probeSame ? _lastFrameKey : FrameKey(te, hand);
+        _lastFrameKey = key;
+        _lastFrameKeyProbe = probe;
         var checkReuse = false;
         if (key != 0 && key == _reuseKey)
         {
-            if (!ModEntry.DevMode || ++_reusedSinceCheck < 30)
+            if (!ModEntry.DevMode || ++_reusedSinceCheck < BoardProbe.CheckEvery)
             {
                 Reuse(hand, cs);
                 return;
             }
             _reusedSinceCheck = 0;
             checkReuse = true;
+            if (probeSame && FrameKey(te!, hand) != key) BoardProbe.Missed("Proc Indicators", "its frame key changed while the board probe didn't");
         }
 
         // Sources: your powers, your relics, and powers on enemies (theirs, or ones you applied).
@@ -205,9 +225,9 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         foreach (var card in hand)
         {
             h.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(card));
-            h.Add(CardNumbers(card));
+            AddCardNumbers(ref h, card);
             try { h.Add(card.EnergyCost.GetWithModifiers(CostModifiers.All)); } catch { h.Add(-99); }
-            h.Add(string.Join(",", card.Keywords));
+            foreach (var kw in card.Keywords) h.Add(kw);
             h.Add(card.Affliction?.GetType().Name);
             h.Add(CardIndicatorsFeature.PlayCount(card));
             h.Add(CanEverPlayNow(card));
@@ -221,6 +241,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     {
         foreach (var card in hand) _ctx.Decor.SeenInHand(card);
         foreach (var kv in PreviousFacts) _facts[kv.Key] = kv.Value;
+        _factsFrame = Godot.Engine.GetProcessFrames();
         foreach (var (card, tabs) in _reuseTabs)
         {
             _lastTabs[card] = (_ctx.Decor.Frame, tabs, cs, Sts2State.TurnNumber);
@@ -339,6 +360,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         if (record)
         {
             _facts[card] = f;
+            _factsFrame = Godot.Engine.GetProcessFrames();
             _lastFacts[card] = f;
             if (_lastFacts.Count > 300) _lastFacts.Clear();
         }
@@ -506,6 +528,22 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             else _uncached.Add(task);
         }
         return task;
+    }
+
+    /// <summary>CardNumbers as a hash, for the key worked out every frame: the same numbers, no string built.</summary>
+    private static void AddCardNumbers(ref HashCode h, CardModel card)
+    {
+        try
+        {
+            h.Add(card.CurrentUpgradeLevel);
+            h.Add(card.Enchantment?.GetType());
+            h.Add(card.Enchantment?.Amount);
+            foreach (var kv in card.DynamicVars) { h.Add(kv.Key); h.Add(kv.Value.BaseValue); }
+        }
+        catch
+        {
+            h.Add(-1);
+        }
     }
 
     /// <summary>The card's upgrade level, enchantment and every dynamic value, for the simulation cache.</summary>

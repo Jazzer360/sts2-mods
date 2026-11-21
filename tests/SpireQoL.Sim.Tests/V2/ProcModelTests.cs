@@ -461,6 +461,35 @@ public class ProcModelTests
         Assert.False(One(s, Spend(new SimCard("Free", SimCardType.Skill), 0)).Fired.Has("PaelsTears"));
     }
 
+    [Fact]
+    public void GremlinHornGivesEnergyAndADrawWhenAnEnemyDies()
+    {
+        // GremlinHorn.AfterDeath (a dev-mode report: Unleash killing a segment left 2 energy, predicted 1): 1 energy, then a draw.
+        var s = Relic(State(enemies: 2, hp: 5), "GremlinHorn", vars: new[] { ("Energy", 1), ("Cards", 1) });
+        s.P.Energy = 1;
+        s.P.HandCount = 3;
+        var kill = One(s, Play(Card("Strike"), 0, 1, Attack(6)));
+        Assert.Equal(2, kill.P.Energy);
+        Assert.Equal(1, kill.PlayEvents["Drawn"]);
+        // No death, nothing.
+        var hit = One(Relic(State(enemies: 2, hp: 50), "GremlinHorn"), Play(Card("Strike"), 0, 1, Attack(6)));
+        Assert.Equal(0, hit.P.Energy);
+        Assert.False(hit.PlayEvents.Has("Drawn"));
+    }
+
+    [Fact]
+    public void PocketwatchWarnsOnThePlayThatPassesItsLimit()
+    {
+        // Pocketwatch (AfterCardPlayed counts each card played; ModifyHandDraw: 3 more next turn when no more than 3 were played):
+        // with 3 played, the 4th gives up next turn's draws. Data is the threshold, Amount the count.
+        Assert.True(One(Relic(State(), "Pocketwatch", amount: 3, data: 3), Play(Card("Strike"), 0, 1, Attack(1))).Fired.Has("Pocketwatch"));
+        // The 3rd stays within it; the 5th was already past it: nothing more is given up.
+        Assert.False(One(Relic(State(), "Pocketwatch", amount: 2, data: 3), Play(Card("Strike"), 0, 1, Attack(1))).Fired.Has("Pocketwatch"));
+        Assert.False(One(Relic(State(), "Pocketwatch", amount: 4, data: 3), Play(Card("Strike"), 0, 1, Attack(1))).Fired.Has("Pocketwatch"));
+        // Each play of a replay counts: two plays from 2 played take it to 4, past the limit.
+        Assert.True(One(Relic(State(), "Pocketwatch", amount: 2, data: 3), Play(Card("Strike"), 0, 2, Attack(1))).Fired.Has("Pocketwatch"));
+    }
+
     /// <summary>A play as SimScript.Of compiles it: the energy it spends first, the play, then the card resolved.</summary>
     private static SimScript Spend(SimCard card, int energy, params SimAction[] body)
     {

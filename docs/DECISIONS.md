@@ -659,3 +659,28 @@ The coverage check reported every game version other than the ledger's (v0.113.1
 *Why:* issue #403: a report on every launch from a version already reviewed says nothing new.
 *Replaced:* the ledger's own version as the only one not reported.
 
+### 126. A play that ends your turn isn't compared after it — active (2026-11-20)
+A card that ends your turn (Void Form: PlayerCmd.EndTurn) lets the end of the turn run before its play's state is read: Chains of Binding clearing Bound from your cards (BeforeSideTurnEnd) showed up as the play's own unexplained changes (a dev-mode report). Like a play that ends the fight, the state after it is skipped (`ProcAudit.TurnEndedSkip`, an expected skip: no model could make the end of the turn part of the play's window), counted in the combat summary; the history checks still run.
+*Why:* the contract (#92): a skip is named and counted, never a false report.
+*Replaced:* reading the state after a play whatever had run since.
+
+### 127. The glow is left out where a see-through card covers it — active (2026-11-20)
+An Ethereal card is drawn as one picture at its Ethereal opacity (decision #113), over the game's glow (NCardHighlight), so the playable glow showed through the card's frame and doubled its border (the owner's note). The glow now gets a copy of its own shader (`Cards/GlowMask`) with a few lines added: the card's flattened image as a mask, mapped from the glow's pixels to the image's, and the glow's alpha cut where the card is. The game animates the glow by setting values on its own material (kept from NCardHighlight._Ready), so those values are copied to the copy every frame; the original material goes back when the card stops fading. A shader the edit can't read (not a canvas_item one, no fragment()) is left as it is, logged once. Cost: one texture read per glow pixel and a few values set per frame, only on see-through cards. The other way, drawing the glow into the flattened picture, would redraw the picture every frame (the glow animates) and fade the glow with the card.
+*Why:* the owner's note from play; the glow should ring the card, not shine through it.
+*Replaced:* the glow drawn whole under the see-through card.
+
+### 128. Each build carries its commit in the dev data — active (2026-11-20)
+The dev stream (`stream-started`), `state.json` and the notes written on the dashboard carry `BuildInfo.Label`: the version, the commit the build was made from (stamped by SourceLink), and, for a build with uncommitted changes, "uncommitted, built" and its time. Releases are now made every few sessions (the owner's choice), so many builds share one version; the label tells their data apart. The About page's test-build lines read the same `BuildInfo`.
+*Why:* the owner asked for a reference to the exact build in the dashboard.
+*Replaced:* the version alone.
+
+### 129. What each feature allocates per frame is measured; work redone every frame is cut — active (2026-11-20)
+In fights the mod allocated 40 to 135 MB a second (a dev-mode session), almost all on the game's thread: about 0.8 MB a frame, most of it rebuilt identically every frame (the turn forecast's model from the same result, Shuffle Warning building every card's facts again after Proc Indicators had, strings built for a key). Now: the forecast's model is kept while the board and the result stay the same, Shuffle Warning reads Proc Indicators' facts for the frame, and the frame key hashes the card's numbers directly. The frame loop also measures each feature's allocation on the game's thread (`GC.GetAllocatedBytesForCurrentThread`, which allocates nothing) into the rollup (`featureKb`), shown per feature on the dashboard's Performance page, so the next cuts are measured, not guessed. Still rebuilt every frame: the simulator's start state from the game (about 32 KB and more with enemies), to compare its key; the next candidate once the numbers are in.
+*Why:* the owner asked what allocates and whether it could be cut; memory clean-ups pause the game.
+*Replaced:* the per-frame rebuilds named above.
+
+### 130. A cheap board probe skips per-frame work when nothing changed — active (2026-11-20)
+After decision #129 the mod still allocated about 300 KB a frame in fights, measured per feature: the turn forecast rebuilding the simulator's start state from the game to compare its key (93 KB), Proc Indicators' frame key and Card Indicators asking the game's hooks for every card each frame (how many times it plays, once more per enemy; whether it can be played: 88 and 71 KB). `Combat/BoardProbe` hashes, once a frame, the plain values a prediction reads, calling no hook: the combat log's length, each creature's HP, block, powers and next move, each player's energy, stars, piles, hand (upgrade, cost, enchantment, affliction, own keywords), relic counters, orbs and potions, the turn and side, and a count of settings changes. When it equals the probe a result was worked out from (each result keeps its own: comparing with last frame's missed changes made on frames where the result wasn't asked for, the end of the turn, which the dev check caught), the forecast returns its model (once its search is over), Proc Indicators keeps its key, and Card Indicators re-adds its tabs. Dev mode works each of them out anyway every 30th such frame and logs `[perf] board probe missed a change` when the result differs. A change the probe misses that changes a tab is also what the play check reports when the card is played, so a gap can't stay hidden; it's fixed by adding the value to the probe.
+*Why:* the owner asked to cut the memory the game spends cleaning up after the mod; most frames change nothing.
+*Replaced:* working those three out from the game on every frame.
+

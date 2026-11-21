@@ -42,10 +42,10 @@ public static class DevDashboard
             if (!string.IsNullOrWhiteSpace(folder)) Folder = Environment.ExpandEnvironmentVariables(folder);
             var sink = new DevSink(Folder, () => Clock.Elapsed.TotalSeconds, DateTime.UtcNow, warn: text => ModEntry.Log.Warn("[dev] " + text));
             var tags = ErrorReporter.Instance?.Tags;
-            sink.Post(new StreamStarted(DevEvents.Version, tags?.GetValueOrDefault("mod_version") ?? "?", tags?.GetValueOrDefault("game_version") ?? "?", DateTime.UtcNow));
+            sink.Post(new StreamStarted(DevEvents.Version, tags?.GetValueOrDefault("mod_version") ?? "?", tags?.GetValueOrDefault("game_version") ?? "?", DateTime.UtcNow, BuildInfo.Label));
             DevEvents.Posted += sink.Post;
             ModEntry.Log.Written += (level, text) => sink.Post(new LogLine(level, text));
-            host.FrameMeasured += (modMs, gapMs) => Window.Add(modMs, gapMs, host.FeatureMs);
+            host.FrameMeasured += (modMs, gapMs) => Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
             if (ErrorReporter.Instance is { } reporter)
             {
                 reporter.Local = r =>
@@ -99,6 +99,7 @@ public static class DevDashboard
             at = DateTime.UtcNow,
             seconds = Math.Round(Clock.Elapsed.TotalSeconds, 1),
             mod = tags?.GetValueOrDefault("mod_version") ?? "?",
+            build = BuildInfo.Label,
             game = tags?.GetValueOrDefault("game_version") ?? "?",
             streamFile = Path.GetFileName(sink.StreamPath),
             where = SessionWatch.Where,

@@ -11,6 +11,7 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using SpireQoL.Cards;
+using SpireQoL.Combat;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -47,57 +48,91 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
     {
     }
 
+    /// <summary>Last frame's result per hand card: Ethereal (faded) and its tabs, kept while the board probe sees nothing change.</summary>
+    private readonly List<(CardModel Card, bool Ethereal, List<TabSpec> Tabs)> _last = new();
+    private int _reusedSinceCheck;
+    /// <summary>The board probe _last was worked out from.</summary>
+    private int _lastProbe;
+
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
         if (me == null) return;
         var s = _ctx.Settings;
+        var hand = Sts2State.Hand(me);
 
-        foreach (var card in Sts2State.Hand(me))
+        // Nothing changed since last frame (decision #130): its results again, without asking the game's hooks for every card
+        // (how many times it plays, whether it can be played). Dev mode works them out anyway every 30th such frame and logs a
+        // difference (a change the probe missed).
+        var cs = Sts2State.Combat;
+        var same = cs != null && _last.Count == hand.Count && _last.Select(x => x.Card).SequenceEqual(hand, ReferenceEqualityComparer.Instance)
+                   && BoardProbe.Hash(me, cs) == _lastProbe;
+        if (same && (!ModEntry.DevMode || ++_reusedSinceCheck < BoardProbe.CheckEvery))
         {
-            _ctx.Decor.SeenInHand(card);
-            var kw = card.Keywords;
-            var d = _ctx.Decor.For(card);
-
-            // Only Ethereal that's on the card itself (KeywordSources.Local: the card's own keyword,
-            // or Music Box's copy). Ethereal granted by Hex (the Hexed affliction, via
-            // HexPower.TryModifyKeywordsInCombat) is a Global source and is skipped: when Hex hits,
-            // every card is Ethereal and the game's own affliction overlay already shows it.
-            if (card.GetKeywordsWithSources(KeywordSources.Local).Contains(CardKeyword.Ethereal))
-            {
-                d.Opacity = Mathf.Clamp(s.EtherealOpacity, 0.25f, 1f);
-            }
-
-            if (kw.Contains(CardKeyword.Retain)) d.AddTab("retain", GameIcons.Enchantment<Steady>());
-            else if (card.ShouldRetainThisTurn) d.AddTab("retain", GameIcons.Enchantment<Steady>());
-
-            if (kw.Contains(CardKeyword.Sly)) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>());
-            else if (card.IsSlyThisTurn) d.AddTab("sly", GameIcons.Power<MasterPlannerPower>());
-
-            // Replay on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, or
-            // an enchantment): no power or relic to show, so the tab reads "2×" (total plays).
-            // A card that can't be played (curses, Unplayable statuses, blocked cards) plays nothing twice.
-            if (!ProcIndicatorsFeature.CanEverPlayNow(card)) continue;
-            var replays = card.GetEnchantedReplayCount();
-            if (replays > 0) d.AddTab("replay", null, text: $"{replays + 1}×");
-
-            {
-                // One tag per source, each with that source's own icon (Burst, Echo Form,
-                // Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or the card's
-                // replay enchantment).
-                foreach (var src in ExtraPlaySources(card))
-                {
-                    var icon = src switch
-                    {
-                        RelicModel r => GameIcons.Relic(r),
-                        PowerModel p => GameIcons.Power(p),
-                        EnchantmentModel en => GameIcons.Enchantment(en),
-                        _ => null,
-                    };
-                    d.AddTab("double-play:" + src.GetType().Name, icon ?? GameIcons.Power<EchoFormPower>());
-                }
-            }
+            foreach (var (card, ethereal, tabs) in _last) Show(card, ethereal, tabs, s);
+            return;
         }
+        if (same) _reusedSinceCheck = 0;
+
+        var now = new List<(CardModel Card, bool Ethereal, List<TabSpec> Tabs)>(hand.Count);
+        foreach (var card in hand)
+        {
+            var (ethereal, tabs) = Work(card);
+            now.Add((card, ethereal, tabs));
+            Show(card, ethereal, tabs, s);
+        }
+        if (same && now.Zip(_last).FirstOrDefault(x => x.First.Ethereal != x.Second.Ethereal || !x.First.Tabs.SequenceEqual(x.Second.Tabs)) is { First.Card: { } changed } d)
+            BoardProbe.Missed("Card Indicators", "a card's tabs changed while the board probe didn't",
+                $"{changed.GetType().Name}: [{string.Join(", ", d.Second.Tabs.Select(t => t.Key))}] → [{string.Join(", ", d.First.Tabs.Select(t => t.Key))}]");
+        _last.Clear();
+        _last.AddRange(now);
+        if (cs != null) _lastProbe = BoardProbe.Hash(me, cs);
+    }
+
+    private void Show(CardModel card, bool ethereal, List<TabSpec> tabs, QolSettings s)
+    {
+        _ctx.Decor.SeenInHand(card);
+        var d = _ctx.Decor.For(card);
+        if (ethereal) d.Opacity = Mathf.Clamp(s.EtherealOpacity, 0.25f, 1f);
+        foreach (var t in tabs) d.AddTab(t);
+    }
+
+    /// <summary>A card's Ethereal fade and its tabs (Retain, Sly, replay, double-play), from the game.</summary>
+    private static (bool Ethereal, List<TabSpec> Tabs) Work(CardModel card)
+    {
+        var tabs = new List<TabSpec>();
+        var kw = card.Keywords;
+        // Only Ethereal that's on the card itself (KeywordSources.Local: the card's own keyword,
+        // or Music Box's copy). Ethereal granted by Hex (the Hexed affliction, via
+        // HexPower.TryModifyKeywordsInCombat) is a Global source and is skipped: when Hex hits,
+        // every card is Ethereal and the game's own affliction overlay already shows it.
+        var ethereal = card.GetKeywordsWithSources(KeywordSources.Local).Contains(CardKeyword.Ethereal);
+
+        if (kw.Contains(CardKeyword.Retain) || card.ShouldRetainThisTurn) tabs.Add(new TabSpec("retain", GameIcons.Enchantment<Steady>()));
+        if (kw.Contains(CardKeyword.Sly) || card.IsSlyThisTurn) tabs.Add(new TabSpec("sly", GameIcons.Power<MasterPlannerPower>()));
+
+        // Replay on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, or
+        // an enchantment): no power or relic to show, so the tab reads "2×" (total plays).
+        // A card that can't be played (curses, Unplayable statuses, blocked cards) plays nothing twice.
+        if (!ProcIndicatorsFeature.CanEverPlayNow(card)) return (ethereal, tabs);
+        var replays = card.GetEnchantedReplayCount();
+        if (replays > 0) tabs.Add(new TabSpec("replay", null, Text: $"{replays + 1}×"));
+
+        // One tag per source, each with that source's own icon (Burst, Echo Form,
+        // Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or the card's
+        // replay enchantment).
+        foreach (var src in ExtraPlaySources(card))
+        {
+            var icon = src switch
+            {
+                RelicModel r => GameIcons.Relic(r),
+                PowerModel p => GameIcons.Power(p),
+                EnchantmentModel en => GameIcons.Enchantment(en),
+                _ => null,
+            };
+            tabs.Add(new TabSpec("double-play:" + src.GetType().Name, icon ?? GameIcons.Power<EchoFormPower>()));
+        }
+        return (ethereal, tabs);
     }
 
     /// <summary>

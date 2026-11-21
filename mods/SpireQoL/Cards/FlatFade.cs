@@ -40,6 +40,9 @@ internal sealed class FlatFade
     private int _poll;
     private int _renderedFrames = -1; // frames since the last render was asked for (-1: none yet)
     private bool _verify;
+    /// <summary>The glow left out where the card covers it (decision #127), once the image is drawn; null when its shader can't take it.</summary>
+    private GlowMask? _glowMask;
+    private bool _glowTried;
 
     private FlatFade(NCard live, Control container)
     {
@@ -89,7 +92,7 @@ internal sealed class FlatFade
     /// Every frame while the card is faded. <paramref name="keep"/>: the container's layers that stay drawn (the glow, the mod's);
     /// <paramref name="under"/>: those of them the image is drawn over (the glow, the tabs' layer).
     /// </summary>
-    public void Update(float alpha, IReadOnlyList<Node?> keep, IReadOnlyList<Node?> under)
+    public void Update(float alpha, IReadOnlyList<Node?> keep, IReadOnlyList<Node?> under, CanvasItem? glow = null)
     {
         if (!_copy.IsNodeReady()) { HideLayers(alpha, keep, ready: false); return; }
         if (!_placed)
@@ -148,6 +151,11 @@ internal sealed class FlatFade
         _image.Modulate = m;
         _image.Visible = ready;
         HideLayers(alpha, keep, ready);
+        if (ready && glow != null)
+        {
+            if (!_glowTried) { _glowTried = true; _glowMask = GlowMask.Create(glow); }
+            _glowMask?.Update(_image, _image.Texture);
+        }
     }
 
     /// <summary>The card's own layers: invisible once the image is drawn, faded layer by layer until then.</summary>
@@ -243,6 +251,8 @@ internal sealed class FlatFade
     /// <summary>The card's layers back as they were; the image, its view and the copy freed.</summary>
     public void Dispose()
     {
+        _glowMask?.Dispose();
+        _glowMask = null;
         foreach (var (node, a) in _hidden)
         {
             if (!GodotObject.IsInstanceValid(node)) continue;

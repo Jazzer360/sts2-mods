@@ -168,11 +168,8 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         return true;
     }
 
-    private static readonly System.Reflection.Assembly Me = typeof(ModEntry).Assembly;
 
-    /// <summary>Built with uncommitted changes (Directory.Build.targets stamps GitDirty).</summary>
-    private static bool Dirty => Me.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)
-        .OfType<System.Reflection.AssemblyMetadataAttribute>().Any(a => a.Key == "GitDirty" && a.Value == "true");
+    private static bool Dirty => BuildInfo.Dirty;
 
     /// <summary>The newest Spire QoL release when you're behind (its download), else Spire QoL's releases (not the repo's other mods').</summary>
     internal static string ReleasesLink(GitHubReleases.Status? s) =>
@@ -184,14 +181,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
     {
         if (IsTestBuild(s))
         {
-            // "0.31.16+a70db85…": the version, then the commit SourceLink stamps.
-            var info = Me.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
-                .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "?";
-            var plus = info.IndexOf('+');
-            var version = plus >= 0 ? info[..plus] : info;
-            var commit = plus >= 0 ? info[(plus + 1)..] : "";
-            if (commit.Length > 7) commit = commit[..7];
-            var built = File.GetLastWriteTime(Me.Location).ToString("MMM d HH:mm");
+            var (version, commit, built) = (BuildInfo.Version, BuildInfo.Commit, BuildInfo.BuiltAt.ToString("MMM d HH:mm"));
             var lines = new List<string>
             {
                 $"Spire QoL {version} test build ({(commit == "" ? "no commit" : commit)}{(Dirty ? ", uncommitted changes" : "")}, built {built})",

@@ -6,6 +6,20 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.24.6
+#### Fixed
+- Pocketwatch: a crossed tab on the card that takes this turn past its limit of cards, giving up next turn's extra draws (like Art of War and Pael's Tears).
+- Necrobinder: a summon tab on cards whose Osty hit damages an enemy with your Sic 'Em (it was missing).
+- Gremlin Horn: its energy and its draw when an enemy dies count in the predictions (the tab was right; the energy after the play wasn't).
+- The end-of-turn check no longer counts Necro Mastery's hits during the enemy's turn as your end of turn's (logs and error reports only).
+- Ethereal cards: the playable glow rings the card instead of showing through its see-through frame.
+- Much less memory used each frame in fights: the predictions are worked out again only when something on the board changed, so fewer pauses to clean up memory.
+- The play check no longer reports a play that ends your turn (Void Form) for what the end of the turn changed (Chains of Binding clearing Bound); that play's state after is counted as not checked (logs and error reports only).
+
+### Main Saves 1.0.22
+#### Changed
+- Shared code: the memory each part of the mod's per-frame work allocates is measured. No change in the game.
+
 ### Spire QoL 1.24.5
 #### Fixed
 - The coverage check no longer reports game v0.113.0 (the first beta build, whose coverage was already reviewed) as a version it wasn't checked against (logs and error reports only).

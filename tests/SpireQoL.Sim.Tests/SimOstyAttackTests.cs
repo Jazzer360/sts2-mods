@@ -68,4 +68,33 @@ public class SimOstyAttackTests
             Assert.False(b.Enemy(2)!.Alive);
         });
     }
+
+    [Fact]
+    public void SicEmSummonsWhenOstyDamagesItsEnemyNotWhenYouDo()
+    {
+        // SicEmPower.AfterDamageGiven (a dev-mode report: High Five's Osty hit on a Thieving Hopper with Sic 'Em 4 summoned 4).
+        var s = new SimState { Enemies = { E(1, 30), E(2, 30) } };
+        s.Enemies[0].Powers = s.Enemies[0].Powers.With("SicEmPower", 4);
+        var byOsty = SimEngine.Run(s, Poke(1, 6, byOsty: true));
+        Assert.All(byOsty.Branches, b => { Assert.Equal(1, b.Fired["SicEmPower"]); Assert.Equal(4, b.Fired.DataOf("SicEmPower")); });
+        // Your own hit on it, and Osty's on another enemy: nothing.
+        Assert.All(SimEngine.Run(s, Poke(1, 6, byOsty: false)).Branches, b => Assert.False(b.Fired.Has("SicEmPower")));
+        Assert.All(SimEngine.Run(s, Poke(2, 6, byOsty: true)).Branches, b => Assert.False(b.Fired.Has("SicEmPower")));
+    }
+
+    [Fact]
+    public void NecroMasterysHitsInTheEnemyTurnAreNotYourEndOfTurns()
+    {
+        // A dev-mode report (the Knowledge Demon): its 9 hit Osty in its turn, and Necro Mastery hit it back for 9. That hit through its
+        // block is its turn's, not your end of turn's: the outcome audit counts your end of turn's (UnblockedAtTurnEnd), the wake
+        // rules every hit (UnblockedInstances).
+        var s = new SimState { Enemies = { E(1, 100, 9) } };
+        s.P.OstyHp = 20;
+        s.P.OstyShields = true;
+        s.P.Powers = s.P.Powers.With("NecroMasteryPower", 1);
+        var o = SimEngine.Run(s);
+        Assert.Equal(0, o.UnblockedAtTurnEndMax(1));
+        Assert.Equal(1, o.UnblockedMin(1));
+        Assert.Equal(100, o.HpAtTurnEndMin(1));
+    }
 }
