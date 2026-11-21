@@ -59,6 +59,7 @@ public static class ModEntry
         };
         host.LayoutChanged += settingsFile.Save;
         host.SuppressWhen = Sts2State.IsScreenOpenOverCombat;
+        host.CardChoiceWhen = Sts2State.IsCardChoiceOverCombat;
         host.WidgetUnderlay = Sts2State.WidgetUnderlay; // widgets draw under the cards in hand
 
         var ctx = new QolContext(settingsFile, host);

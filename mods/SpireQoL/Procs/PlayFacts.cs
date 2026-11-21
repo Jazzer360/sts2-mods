@@ -345,6 +345,12 @@ public sealed class PlayFacts
     public IReadOnlyDictionary<int, IReadOnlyDictionary<int, SimChance>>? DeathByAim { get; set; }
 
     /// <summary>
+    /// Per aim: the block the play gives you from evoking Frost orbs, least and most over its outcomes (the simulator's, every orb it
+    /// evokes, the ones it channels included): the play audit's block check.
+    /// </summary>
+    public IReadOnlyDictionary<int, (int Min, int Max)>? FrostBlockByAim { get; set; }
+
+    /// <summary>
     /// Per aim: the tabbed sources (proc models) the play sets off in every outcome, and in some. The audit holds the first to their
     /// flash (didn't fire), and excuses a proc a roll decided only when it's in the second.
     /// </summary>
@@ -406,6 +412,7 @@ public sealed class PlayFacts
             EnergyBack = EnergyBack + next.EnergyBack,
             Sim = next.Sim,
             DeathByAim = next.DeathByAim,
+            FrostBlockByAim = next.FrostBlockByAim,
             FiresEveryByAim = next.FiresEveryByAim,
             FiresAnyByAim = next.FiresAnyByAim,
             RandomOutcome = RandomOutcome || next.RandomOutcome,
@@ -840,6 +847,8 @@ public sealed class PlayFacts
     {
         plays = Math.Max(1, plays);
         if (card is Fetch) return CardsDrawn(card, handCount); // only the first play draws (its replay has finished a play)
+        // FTL draws on each play that starts with fewer than PlayMax plays finished this turn: a replay counts the plays before it.
+        if (card is Ftl) return FtlCanDraw(card) ? Sts2State.Var(card, "Cards") * PlaysUnder(FtlFinishedBefore(card), Sts2State.Var(card, "PlayMax", fallback: 3), plays) : 0;
         if (!TargetDrawCards.Contains(card.GetType().Name)) return CardsDrawn(card, handCount) * plays;
         try
         {
@@ -890,6 +899,15 @@ public sealed class PlayFacts
     /// </summary>
     internal static readonly HashSet<string> ConditionalDrawCards = new()
         { nameof(Impatience), nameof(Fetch), nameof(Ftl), nameof(Restlessness), "KiHop", "Wrest" };
+
+    /// <summary>How many of <paramref name="plays"/> plays in a row start with fewer than <paramref name="max"/> plays finished, <paramref name="finishedBefore"/> before the first.</summary>
+    internal static int PlaysUnder(int finishedBefore, int max, int plays) => Math.Clamp(max - finishedBefore, 0, Math.Max(1, plays));
+
+    private static int FtlFinishedBefore(CardModel card)
+    {
+        try { return card.Owner == null ? 0 : Sts2State.CountPlayedThisTurn(card.Owner); }
+        catch { return 0; }
+    }
 
     private static bool FtlCanDraw(CardModel card)
     {

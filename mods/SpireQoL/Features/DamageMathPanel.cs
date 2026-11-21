@@ -187,8 +187,10 @@ internal sealed class DamageMathPanel
         }
         _outcomeChance.Visible = outcomeChance != null;
         _outcomeChance.Text = outcomeChance ?? "";
-        // The chance reads before the number it's for ("89%  21").
-        last.MoveChild(_outcomeChance, (last == _unblockableRow ? _unblockable : _result).GetIndex());
+        // The chance reads before the number it's for ("89%  21"). Moved only when it's after it: moving it to the number's index
+        // when it's already in front puts it behind (the number's index counts the chance), so every frame swapped them.
+        var number = last == _unblockableRow ? _unblockable : _result;
+        if (_outcomeChance.GetIndex() > number.GetIndex()) last.MoveChild(_outcomeChance, number.GetIndex());
         _deathChance.Visible = dies && deathChance != null;
         _deathChance.Text = deathChance ?? "";
         _progress.Visible = progress != null;

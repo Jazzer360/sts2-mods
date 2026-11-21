@@ -163,9 +163,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 if (gained != block) issues.Add($"intent block: {name}'s {shown.MoveId} showed {block}, it gained {gained}");
             }
             var applied = span.OfType<PowerReceivedEntry>().Where(powerReceivedEntry => powerReceivedEntry.Applier == creature).ToList();
-            // A move can apply a power to its own monster with no applier (Devoted Sculptor's Ritual: PowerCmd.Apply(..., null)):
-            // counted for the powers the intent showed. Not for "applied, not shown": its powers ticking down have no applier either.
-            var ownless = span.OfType<PowerReceivedEntry>().Where(powerReceivedEntry => powerReceivedEntry.Applier == null && powerReceivedEntry.Actor == creature).ToList();
+            // A move can apply a power with no applier, to its own monster (Devoted Sculptor's Ritual: PowerCmd.Apply(..., null)) or to
+            // you (Slimed Berserker's Leeching Hug: Weak, applier null): counted for the powers the intent showed, when it's on its
+            // monster or gives some (powers ticking down lose some). Not for "applied, not shown": ticking powers have no applier either.
+            var ownless = span.OfType<PowerReceivedEntry>()
+                .Where(powerReceivedEntry => powerReceivedEntry.Applier == null && (powerReceivedEntry.Actor == creature || powerReceivedEntry.Amount > 0)).ToList();
             var artifact = span.OfType<PowerReceivedEntry>().Any(powerReceivedEntry => powerReceivedEntry.Power is MegaCrit.Sts2.Core.Models.Powers.ArtifactPower && powerReceivedEntry.Amount < 0);
             foreach (var power in shown.Powers)
             {

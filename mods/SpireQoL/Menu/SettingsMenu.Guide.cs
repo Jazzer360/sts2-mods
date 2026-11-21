@@ -181,7 +181,8 @@ public sealed partial class SettingsMenu
     {
         Section("Incoming Damage");
         Paragraph("Left of your block during your turn, a sum: what the enemies will deal on their turn, minus the block you'll have, "
-            + "equals what you'll lose. Worked out hit by hit, in the game's order.");
+            + "equals what you'll lose. Worked out hit by hit, in the game's order. It stays up while you pick one of a few cards mid-fight "
+            + "(a discovery, a potion's choice).");
 
         var legend = new (string Text, string Detail)[]
         {

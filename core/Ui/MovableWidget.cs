@@ -124,6 +124,9 @@ public sealed class MovableWidget
     /// <summary>No backdrop while locked (content that floats like the game's own, such as intents); framed while unlocked.</summary>
     public bool Frameless { get; set; }
 
+    /// <summary>Stays up while a card choice covers the fight (OverlayHost.InCardChoice), when other widgets hide.</summary>
+    public bool ShowsOverCardChoice { get; set; }
+
     private static readonly StyleBoxEmpty NoFrame = new();
 
     /// <summary>Mouse is over the widget (only meaningful while the layout is unlocked).</summary>
@@ -213,7 +216,7 @@ public sealed class MovableWidget
     internal void UpdateLayout(OverlayHost host)
     {
         var unlocked = host.LayoutUnlocked;
-        Root.Visible = !host.HideAll && !host.Suppressed && host.OwnerOn(this) && (HasContent || unlocked);
+        Root.Visible = !host.HideAll && (!host.Suppressed || (ShowsOverCardChoice && host.InCardChoice)) && host.OwnerOn(this) && (HasContent || unlocked);
         Root.MouseFilter = unlocked ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
         Root.AddThemeStyleboxOverride("panel", unlocked ? _unlockedStyle : Frameless ? NoFrame : _lockedStyle);
         Root.Modulate = new Color(1, 1, 1, Mathf.Clamp(_layout.Opacity, 0.1f, 1f));

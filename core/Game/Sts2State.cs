@@ -287,6 +287,21 @@ public static class Sts2State
         return map != null && map.IsOpen;
     }
 
+    /// <summary>
+    /// True while the only thing over combat is a pick of one card from a few (NChooseACardSelectionScreen: a discovery, a potion's
+    /// choice): the fight is still behind it, and what you take matters to it.
+    /// </summary>
+    public static bool IsCardChoiceOverCombat()
+    {
+        if (!InCombat) return false;
+        var capstone = MegaCrit.Sts2.Core.Nodes.Screens.Capstones.NCapstoneContainer.Instance;
+        if (capstone != null && capstone.InUse) return false;
+        var map = MegaCrit.Sts2.Core.Nodes.Screens.Map.NMapScreen.Instance;
+        if (map != null && map.IsOpen) return false;
+        var overlays = MegaCrit.Sts2.Core.Nodes.Screens.Overlays.NOverlayStack.Instance;
+        return overlays is { ScreenCount: 1 } && overlays.Peek() is MegaCrit.Sts2.Core.Nodes.Screens.CardSelection.NChooseACardSelectionScreen;
+    }
+
     /// <summary>Cards the local player finished playing this turn (from combat history).</summary>
     public static IEnumerable<CardModel> CardsPlayedThisTurn(Player me)
     {

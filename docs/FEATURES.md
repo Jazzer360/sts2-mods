@@ -226,7 +226,7 @@ The relic tabs (Pen Nib ready; crossed Art of War, Ripple Basin, Pael's Tears; o
 
 ## Incoming Damage
 
-**What you see**, during your turn: a small stacked sum, read like a math problem. It uses the game's own intent icons: defend, and the attack icon tier that matches the incoming total (the same thresholds enemies use: under 5, 10, 20, 40, and 40+):
+**What you see**, during your turn (and while you pick one of a few cards mid-fight: a discovery, a potion's choice): a small stacked sum, read like a math problem. It uses the game's own intent icons: defend, and the attack icon tier that matches the incoming total (the same thresholds enemies use: under 5, 10, 20, 40, and 40+):
 
 ```
 [eye]   +1 turn  only when ending your turn now gives you another turn first (Pael's Eye, Extra Turn): its icon
@@ -304,7 +304,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
 - **Plain tab:** it triggers (Strength, channels, upgrades, creates cards...).
 - **Tab with a number:** it gains you block, deals damage, summons, draws cards or gives energy, and the number is how much. Draws are the cards it really draws (decision #132): one at a time from your draw pile, none past 10 in hand, the discard pile shuffled in when the draw pile runs out; energy is what it gives. Draw tabs: Dark Embrace, Vicious, Motif, Game Piece, Iron Club, Joss Paper, Centennial Puzzle. Energy tabs: Subroutine, Yah!, Orbit, Automation, Ivory Tile, Nunchaku. Block uses the game's own block math (`Hook.ModifyBlock`), so Dexterity and Frail count where they apply. Block and damage are what the simulated play gained or dealt in total (every enemy hit, each through its own modifiers), the most that some aim guarantees.
 - **Crossed tab:** it helps the enemy or hurts you; a number is the damage you take.
-- **Multiplied by plays:** a card that plays twice (Echo Form, Burst...) sets off per-play procs twice. Procs that fire once per card (Black Hole, stars spent, exhausting itself) count once.
+- **Multiplied by plays:** a card that plays twice (Echo Form, Burst...) sets off per-play procs twice. Procs that fire once per card (Black Hole, stars spent, exhausting itself) count once. Each replay has the numbers the plays before it gave the card (decision #160, read from its code: Rampage, The Ball, Claw and Maul's Increase; Goopy's +1 block; Momentum's damage by its amount); a card whose replay changes some other way (Thrash, a Vigorous card) is `?`.
 - **Indirect procs** (setting `ProcIndirect`): cards that exhaust or discard other cards, draw, or create cards count what those set off too, through the whole chain (what a drawn-card proc sets off in turn counts as well). For example, with Feel No Pain, True Grit shows the block from exhausting another card. Choices you make mid-play count as the most the card can do (Purity, Hidden Daggers).
 - **The Boot:** a plain tab on an attack with a hit it raises: one that gets past the enemy's block for less than its minimum (6 into 5 block loses 1, raised to 5). With the aim marker when only some targets have that hit; a hit block stops entirely, or one already at the minimum, isn't raised.
 - **Counter relics** (Kunai, Shuriken, Ornamental Fan, Nunchaku, Kusarigama, Letter Opener, Tuning Fork, Iron Club) show only on cards that complete the count; the tray shows progress.

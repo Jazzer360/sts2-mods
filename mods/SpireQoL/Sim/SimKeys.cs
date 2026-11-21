@@ -43,6 +43,9 @@ public static class SimKeys
     /// <summary>Block gains from card plays this turn (Unmovable counts the earlier ones).</summary>
     public const string CardBlock = "CardBlock";
 
+    /// <summary>Block a play gave its player from evoking Frost orbs (the log's amount), for the play audit's block check.</summary>
+    public const string FrostEvokeBlock = "FrostOrb";
+
     /// <summary>A player's turn counts with one more play at this stage: in all, of its type, and of each of its tags.</summary>
     public static NamedCounts CountPlay(NamedCounts turn, PlayStage stage, SimCardType type, IEnumerable<SimCardTag> tags)
     {

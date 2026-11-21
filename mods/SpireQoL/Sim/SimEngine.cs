@@ -557,7 +557,10 @@ public static partial class SimEngine
             case OrbKind.Lightning:
                 if (listed && state.Targetable.Any()) state.EndOfTurnDamage.Add(("Lightning (evoked)", orb.Evoke));
                 return HitRandom(state, _ => orb.Evoke, then: (branch, enemy) => { var thunder = branch.Player(player)!.Thunder; if (thunder > 0 && enemy.Alive) { Damage(branch, enemy, thunder); branch.LogFired(PowerId.Thunder.Name, thunder, player); } });
-            case OrbKind.Frost: return GainBlock(state, orb.Evoke, listed ? "Frost (evoked)" : null, player);
+            case OrbKind.Frost:
+                // During a play: its block, for the play audit (an orb the play channels and pushes out too: Chill into full slots).
+                if (state.CurrentPlay != null && !state.EndOfTurnNow && orb.Evoke > 0) state.LogFired(SimKeys.FrostEvokeBlock, orb.Evoke, player);
+                return GainBlock(state, orb.Evoke, listed ? "Frost (evoked)" : null, player);
             case OrbKind.Dark:
             {
                 var weakest = state.Targetable.OrderBy(enemy => enemy.Hp).FirstOrDefault();

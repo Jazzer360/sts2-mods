@@ -42,6 +42,8 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     public void Attach(OverlayHost host)
     {
         _widget = _ctx.Widget(Id, "Incoming Damage", DefaultLayout);
+        // Still up while you pick a card from a few mid-fight (a discovery, a potion's choice): what you take matters to the turn.
+        _widget.ShowsOverCardChoice = true;
         // Left of the game's block indicator (it's about block). When the character stands too
         // close to the screen edge for that, fall back to below the HP bar and every row of
         // power icons (they can wrap to several rows).

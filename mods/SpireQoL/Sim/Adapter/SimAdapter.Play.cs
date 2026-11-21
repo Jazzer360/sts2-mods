@@ -129,6 +129,8 @@ public static partial class SimAdapter
             for (var i = 0; i < play.Body.Count; i++)
                 if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
         AddCardEvents(play, facts, plays);
+        // A replay of a card whose numbers change with each play in a way its code doesn't show (decision #160: Thrash).
+        if (plays > 1 && PlayGrowth.Of(card).Unmodelled is { } growthUnknown) play.Body.Add(new NotModelledAction(growthUnknown));
         if (DrawnCardReaders.ContainsKey(name)) UseDrawnCard(play, name);
 
         // ---- summary fields (not actions yet)
@@ -308,7 +310,8 @@ public static partial class SimAdapter
                 if (creature.IsAlive && creature.IsHittable) killTerms[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, kdv.BaseValue, kdv.Props);
             onKill = new DamageSpec(kdv.BaseValue, SimReaders.Props(kdv.Props)) { Captured = killTerms };
         }
-        return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props)) { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers })
+        var grows = plays > 1 && !fixedNumbers ? PlayGrowth.Of(card).Damage : 0m;
+        return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props)) { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers, GrowsEachPlay = grows })
         {
             ByOsty = facts.ByOsty, // a single target: the play's (SimPlay.TargetId)
             OnKill = onKill,
@@ -351,7 +354,10 @@ public static partial class SimAdapter
         else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) baseValue = otherDynamicVar.BaseValue;
         else return new GainBlockAction(gains, CardBlock(card, combat, me), SimProps.Move) { Fixed = true, To = to };
         var gainer = toAlly && ally != null ? ally : me.Creature;
-        return new GainBlockAction(gains, baseValue, SimProps.Move) { Captured = SimReaders.Block(combat, card, gainer, baseValue, ValueProp.Move), To = to };
+        return new GainBlockAction(gains, baseValue, SimProps.Move)
+        {
+            Captured = SimReaders.Block(combat, card, gainer, baseValue, ValueProp.Move), To = to, GrowsEachPlay = plays > 1 ? PlayGrowth.Of(card).Block : 0m,
+        };
     }
 
     /// <summary>

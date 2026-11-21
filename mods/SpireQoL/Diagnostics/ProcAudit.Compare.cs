@@ -126,6 +126,25 @@ public sealed partial class ProcAudit
             // The play ended the fight: the game stops at the killing hit, so a relic that acts after it (Bone Flute after
             // Osty's attack) never gets to.
             if (window.FightEnded) continue;
+            // An aimed tab (The Boot: only at a target whose block leaves a small hit) is held to the target played at: a flash where
+            // every outcome there sets it off, none where no outcome does.
+            if (otherTab.Aimed)
+            {
+                if (CheckedAim(window) is not { } aim || window.Facts?.FiresEveryByAim?.TryGetValue(aim, out var everyHere) != true
+                    || window.Facts.FiresAnyByAim?.TryGetValue(aim, out var anyHere) != true)
+                {
+                    modelLines.Skip("didn't fire", "an aimed tab, with no complete simulation of the target played at", name);
+                    continue;
+                }
+                var flashedHere = flashed.Any(otherModel => otherModel.GetType().Name == name);
+                if (everyHere!.Any(type => type.Name == name))
+                {
+                    if (!flashedHere) issues.Add($"didn't fire: {name} (at the target played at)");
+                }
+                else if (!anyHere!.Any(type => type.Name == name) && flashedHere)
+                    issues.Add($"no tab: {name} fired (its tab aims at other targets)");
+                continue;
+            }
             // Razor Tooth upgrades the played card without flashing (RazorTooth.AfterCardPlayed: no Flash call): its
             // effect is checked instead (CardCmd.Upgrade does nothing once the fight is ending).
             if (name == nameof(RazorTooth))
@@ -196,11 +215,22 @@ public sealed partial class ProcAudit
         var procBlock = entries.OfType<BlockGainedEntry>()
             .Where(blockGainedEntry => blockGainedEntry.Actor == me.Creature && blockGainedEntry.CardPlay == null)
             .Sum(blockGainedEntry => blockGainedEntry.Amount);
-        var predictedBlock = window.Predicted.Where(tab => tab.Kind == TabAmount.Block).Sum(tab => tab.Amount) + (window.Facts?.OrbBlock ?? 0);
+        // Frost evokes: the simulator's block for the target played at (every orb the play evokes, the ones it channels too); the
+        // card's own count of the orbs it evokes without a complete simulation.
+        var frostBlock = window.Facts?.OrbBlock ?? 0;
+        var frostSpread = 0; // more Frost block some outcomes give (a random evoke deciding which orb goes)
+        if (CheckedAim(window) is { } blockAim && window.Facts?.FrostBlockByAim?.TryGetValue(blockAim, out var frost) == true)
+        {
+            frostBlock = frost.Min;
+            frostSpread = frost.Max - frost.Min;
+        }
+        var predictedBlock = window.Predicted.Where(tab => tab.Kind == TabAmount.Block).Sum(tab => tab.Amount) + frostBlock;
         // The play ended the fight: the history stops at the killing hit, so less than predicted is expected.
         void Shortfall(string what, string predicted, int actual) =>
             modelLines.Skip(what, FightEndedSkip + ": the game logs nothing from the killing hit on", $"predicted {predicted}, actual {actual}");
         if (procBlock < predictedBlock && window.FightEnded) Shortfall("block", predictedBlock.ToString(), procBlock);
+        else if (frostSpread > 0 && procBlock >= predictedBlock && procBlock <= predictedBlock + frostSpread)
+            modelLines.Add($"block {procBlock}: Frost evokes give {frostBlock} to {frostBlock + frostSpread} by outcome");
         // Cards auto-played at random (Lost Lute, The Fool) set off block procs of their own (Song Path on a Cho it played).
         else if (procBlock > predictedBlock && UnpredictedAutoPlay(window, entries, me)) modelLines.Skip("block", "random auto-plays", $"predicted {predictedBlock}, actual {procBlock}");
         else if (procBlock != predictedBlock) issues.Add($"block: predicted {predictedBlock}, actual {procBlock}");

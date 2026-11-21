@@ -48,6 +48,14 @@ public sealed class OverlayHost
 
     public bool Suppressed { get; private set; }
 
+    /// <summary>
+    /// When this returns true while suppressed, the screen on top is a card choice the fight is still behind: widgets that ask for it
+    /// (MovableWidget.ShowsOverCardChoice) stay up.
+    /// </summary>
+    public Func<bool>? CardChoiceWhen { get; set; }
+
+    public bool InCardChoice { get; private set; }
+
     public Key UnlockLayoutKey { get; set; } = Key.F8;
     public Key HideAllKey { get; set; } = Key.F9;
 
@@ -292,10 +300,12 @@ public sealed class OverlayHost
         try
         {
             Suppressed = SuppressWhen?.Invoke() ?? false;
+            InCardChoice = Suppressed && (CardChoiceWhen?.Invoke() ?? false);
         }
         catch
         {
             Suppressed = false;
+            InCardChoice = false;
         }
         if (Layer != null)
         {

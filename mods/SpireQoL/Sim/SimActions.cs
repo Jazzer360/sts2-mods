@@ -32,6 +32,8 @@ public sealed record DamageSpec(decimal Base, SimProps Props)
     public IReadOnlyDictionary<int, decimal>? BaseOn { get; init; }
     public IReadOnlyDictionary<int, CapturedTerms>? Captured { get; init; }
     public bool Fixed { get; init; }
+    /// <summary>What the base gains with each play of the card before this one (decision #160: Rampage's Increase, Momentum).</summary>
+    public decimal GrowsEachPlay { get; init; }
 
     public decimal BaseFor(int target) => BaseOn != null && BaseOn.TryGetValue(target, out var baseOnTarget) ? baseOnTarget : Base;
     public CapturedTerms TermsFor(int target) => Captured != null && Captured.TryGetValue(target, out var terms) ? terms : CapturedTerms.None;
@@ -101,6 +103,8 @@ public sealed record GainBlockAction(int Times, decimal Base, SimProps Props) : 
     public bool Fixed { get; init; }
     /// <summary>Who gains it: you (Who.You), or a teammate (Who.Teammate(k)).</summary>
     public int To { get; init; } = Who.You;
+    /// <summary>What the base gains with each play of the card before this one (decision #160: Goopy's +1).</summary>
+    public decimal GrowsEachPlay { get; init; }
 }
 
 /// <summary>Applies a power (PowerCmd.Apply): to the play's target, every enemy, or one creature. Artifact takes a debuff.</summary>

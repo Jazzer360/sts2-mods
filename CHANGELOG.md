@@ -11,12 +11,18 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - A crossed tab that only some outcomes set off shows its chance in the corner (a random hit that might wake a sleeping enemy, or land on a Thorns enemy); without a number it's certain. Under Show chances.
 - Incoming Damage: hover the sum for every way the enemy turn can go for you, the most likely first, each with its chance and what's different (`Lose 11 HP (+2)`, `Burn +2`, `I Am Invincible block +10`), in a box no wider than what it lists.
 - Setting **Incoming Damage: most likely outcome** (under Show chances, on by default).
+- Incoming Damage stays up while you pick one of a few cards mid-fight (a discovery, a potion's choice), so you can weigh what to take against the enemy turn.
 
 #### Changed
 - Writes far less to the game's log, which the game and every other mod share: the checks' lines, timings and summaries stay inside the mod (error reports still carry them), and a warning appears once per launch.
 - Incoming Damage shows the most likely outcome, its chance before the number, when a roll decides how the enemy turn goes (a draw at the end of your turn, I Am Invincible somewhere in your draw pile, a random target); it used to show the worst. The skull still shows whenever you might die, with its chance, and the Fairy in a Bottle or Lizard Tail line whenever one might save you, with its chance.
 
 #### Fixed
+- A replayed card (Echo Form, Burst) has the numbers its earlier plays gave it, read from the card's code: Rampage, The Ball, Claw and Maul hit harder on the replay, a Goopy card blocks 1 more, a Momentum card hits harder by its amount. A Vigorous card's replay (it loses the bonus) and Thrash's are `?` for now.
+- FTL draws only on the plays that start with fewer than its limit of plays finished this turn: a replay that makes the third doesn't draw.
+- Incoming Damage no longer flickers between the chance and the number every frame.
+- The block check counts a Frost orb the play channels and then pushes out (Chill into full slots), from the simulator's own evokes.
+- The checks hold The Boot's tab to the target you played at (it shows with the aim marker when only some targets have a hit it raises), and accept a move's power that lands with no applier (Slimed Berserker's Weak).
 - The Boot has a tab: on an attack with a hit that gets past block for less than its minimum (6 into 5 block loses the enemy 5, not 1), with the aim marker when only some targets have one. The checks hold it to The Boot's flash; other relics and powers that only change a number still need no tab.
 - Your hand after a play counts only the cards it makes into your hand: Undeath's copy (and The Sun's card) go to your discard pile, and only one of Severance's three goes to your hand.
 - Knockout Blow's stars count only when its attack kills (Black Hole's damage from them too); they were counted on every play.
@@ -48,6 +54,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 ### Main Saves 1.0.25
 #### Changed
 - Shared code: writes less to the game's log (a warning appears once per launch). No change in the game.
+- Shared code: a widget can stay up over a card choice mid-fight (Spire QoL's Incoming Damage). No change in Main Saves.
 
 ### Main Saves 1.0.24
 #### Changed

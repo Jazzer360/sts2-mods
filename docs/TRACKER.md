@@ -406,7 +406,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
 - Known gaps (5; each is logged when present in a fight):
-  - [ ] Momentum (ledger): OnPlay raises the card's damage for its later plays; the game's math reads it on later turns, but a replay of the card in the same play hits for the old amount in the simulator
+  - [ ] Vigorous (ledger): AfterCardPlayed disables it after the first play (its bonus is read through the game on later turns), so a replay in the same play loses the bonus: not modelled (?) there (PlayGrowth)
   - [ ] BiiigHug (model's effect): a Soot shuffled into your draw pile at an unknown spot: later draws in the same simulation don't see it
   - [ ] PersonalHivePower (model's effect): a Dazed into your draw pile when you attack it: later draws in the same simulation don't see it
   - [ ] SurprisePower (model's effect): the gremlins it calls when it dies: a later hit in the same play can't target them (the next frame reads them)
@@ -475,6 +475,13 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [ ] **Balance of work:** after play testing, prefer closing reported gaps and building out-of-combat reminders (§15) over more diagnostics infrastructure.
 
 ---
+
+## 20. Replays (decision #160, 2026-11-21)
+
+- [x] 1.27.0: a replay has what the card's earlier plays gave it, read from its code (PlayGrowth: Rampage, The Ball, Claw, Maul; Goopy, Momentum), checked against every card and enchantment of the installed game (catalog `PlayGrowthTests`).
+- [ ] Thrash's replay (its damage grows by the exhausted card's): not modelled, `?`.
+- [ ] A Vigorous card's replay (the enchantment turns itself off after the first play): not modelled, `?` (ledger gap).
+- [ ] Test in game: Incoming Damage over a discovery mid-fight (it shouldn't cover the three cards).
 
 ## 19. Game v0.113.1 (beta, 2026-11-14)
 

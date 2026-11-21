@@ -582,6 +582,8 @@ public sealed class CardPredictions
             var enemies = forecast.Ids.Values.Distinct().ToList();
             facts.DeathByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
                 aimed => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[aimed.index].DeadChanceRange(id)));
+            facts.FrostBlockByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
+                aimed => (outcomes[aimed.index].PlayFiredEvery.DataOf(SimKeys.FrostEvokeBlock), outcomes[aimed.index].PlayFiredAny.DataOf(SimKeys.FrostEvokeBlock)));
         }
 
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act
