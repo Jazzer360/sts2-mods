@@ -36,12 +36,22 @@ public static class SimPropsExtensions
 public enum SimCardType { None, Attack, Skill, Power, Status, Curse }
 
 /// <summary>
-/// The card a play, hit or block comes from, as models need it: its class name, type, tags (Strike, Defend, Shiv, Minion,
-/// Shoot, Wah, Cho, Ki...), and a few flags. Immutable; shared by every branch.
+/// A card's tags (the game's CardTag), as models read them. The adapter maps them by name: the game's enum differs between its
+/// branches (main has no Wah, Cho, Ki or Shoot), and a game enum compiles into the mod as a number.
+/// </summary>
+public enum SimCardTag { Strike, Defend, Minion, OstyAttack, Shiv, Wah, Cho, Ki, Shoot }
+
+/// <summary>The affliction on a card (the game's AfflictionModel classes, by name; Other for one this list doesn't know yet).</summary>
+public enum SimAffliction { None, Bound, Entangled, Galvanized, Hexed, Ringing, Smog, Tainted, Other }
+
+/// <summary>
+/// The card a play, hit or block comes from, as models need it: its class name, type, tags, affliction, and a few flags. Immutable;
+/// shared by every branch.
 /// </summary>
 public sealed record SimCard(string Name, SimCardType Type)
 {
-    public HashSet<string> Tags { get; init; } = new();
+    public HashSet<SimCardTag> Tags { get; init; } = new();
+    public SimAffliction Affliction { get; init; }
     public bool Upgraded { get; init; }
     public bool Enchanted { get; init; }
     public bool Ethereal { get; init; }
@@ -68,7 +78,7 @@ public sealed record SimCard(string Name, SimCardType Type)
     /// <summary>Its dynamic values a model reads (Heavy Shot's AimMultiplier...), by the game's var name.</summary>
     public IReadOnlyDictionary<string, decimal> Vars { get; init; } = new Dictionary<string, decimal>();
 
-    public bool Is(string tag) => Tags.Contains(tag);
+    public bool Is(SimCardTag tag) => Tags.Contains(tag);
 }
 
 /// <summary>How the game shows a model acted (SimModel.Seen).</summary>

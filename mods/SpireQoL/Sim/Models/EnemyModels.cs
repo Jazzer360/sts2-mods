@@ -39,7 +39,7 @@ public sealed class VitalSparkPower : SimModel
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
-        if (!play.Card.Is("Tainted")) return One(s);
+        if (play.Card.Affliction != SimAffliction.Tainted) return One(s);
         s.LogFired(Name, 0, owner);
         SimEngine.ApplyPower(s, owner, play.Owner, "TaintedPower", SimEngine.PowerOn(s, owner, Name), debuff: false);
         return One(s);

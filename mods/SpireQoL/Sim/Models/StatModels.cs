@@ -248,9 +248,9 @@ public sealed class PhantomBladesPower : SimModel
 {
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d)
     {
-        if (!d.Props.IsPoweredAttack() || d.Card == null || !d.Card.Is("Shiv") || d.Dealer != owner) return 0m;
+        if (!d.Props.IsPoweredAttack() || d.Card == null || !d.Card.Is(SimCardTag.Shiv) || d.Dealer != owner) return 0m;
         var p = s.Player(owner);
-        return p != null && p.Turn[SimKeys.Plays(PlayStage.Finished, "Shiv")] > 0 ? 0m : SimEngine.PowerOn(s, owner, Name);
+        return p != null && p.Turn[SimKeys.Plays(PlayStage.Finished, SimCardTag.Shiv)] > 0 ? 0m : SimEngine.PowerOn(s, owner, Name);
     }
 }
 

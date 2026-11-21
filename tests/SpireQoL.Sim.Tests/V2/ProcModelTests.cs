@@ -132,7 +132,7 @@ public class ProcModelTests
 
         var s = Power(State(), "NostalgiaPower", 1);
         Assert.True(One(s, Play(Card("Strike"), 0, 1, Attack(1))).Fired.Has("NostalgiaPower"));
-        s.P.Turn = s.P.Turn.Add("Started:Skill", 1);
+        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardType.Skill), 1);
         Assert.False(One(s, Play(Card("Strike"), 0, 1, Attack(1))).Fired.Has("NostalgiaPower"));
 
         var dot = Power(State(), "PaleBlueDotPower", 1);
@@ -169,27 +169,27 @@ public class ProcModelTests
     [Fact]
     public void FirstMelodiesFireTheirPowers()
     {
-        var wah = Card("WahSlap", SimCardType.Attack, "Wah");
+        var wah = Card("WahSlap", SimCardType.Attack, SimCardTag.Wah);
         var s = Power(Power(Power(State(), "ViolentChordPower", 3), "MotifPower", 1), "SongPathPower", 4);
         var after = One(s, Play(wah, 0, 2, Attack(0)));
         Assert.Equal(97, after.Enemy(0)!.Hp); // the first Wah only, not the replay's second play
         Assert.Equal(1, after.Fired["MotifPower"]);
         Assert.False(after.Fired.Has("SongPathPower"));
-        s.P.Turn = s.P.Turn.Add("Started#Wah", 1);
+        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), 1);
         Assert.False(One(s, Play(wah, 0, 1, Attack(0))).Fired.Has("ViolentChordPower"));
     }
 
     [Fact]
     public void LullabyAndConductorsBatonFireOnTheThirdMelody()
     {
-        var ki = Card("KiStep", SimCardType.Skill, "Ki");
+        var ki = Card("KiStep", SimCardType.Skill, SimCardTag.Ki);
         var s = Power(State(), "LullabyPower", 5);
         Relic(s, "ConductorsBaton", data: 0);
-        s.P.Turn = s.P.Turn.Add("Finished#Wah", 1).Add("Finished#Cho", 1);
+        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Cho), 1);
         var after = One(s, Events(ki, 1));
         Assert.Equal(5, after.P.Block);
         Assert.True(after.Fired.Has("ConductorsBaton"));
-        s.P.Turn = s.P.Turn.Add("Finished#Ki", 1); // already complete
+        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Ki), 1); // already complete
         Assert.Equal(0, One(s, Events(ki, 1)).P.Block);
     }
 
@@ -198,11 +198,11 @@ public class ProcModelTests
     {
         // ConductorsBaton.AfterCardPlayed applies ConductorsBatonPower (1); its ModifyDamageMultiplicative is 0.75 on powered
         // attacks on its owner until the owner's next turn: Aeonglass' 22 becomes 16, 18 × 2 becomes 13 × 2.
-        var ki = Card("KiStep", SimCardType.Skill, "Ki");
+        var ki = Card("KiStep", SimCardType.Skill, SimCardTag.Ki);
         var s = State();
         Relic(s, "ConductorsBaton", data: 0);
         s.Enemies[0].Intent = new List<IntentHit> { new(22m) };
-        s.P.Turn = s.P.Turn.Add("Finished#Wah", 1).Add("Finished#Cho", 1);
+        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Cho), 1);
         var o = SimEngine.Run(s, Events(ki, 1));
         Assert.Equal(16, o.TakenMax);
         Assert.True(One(s, Events(ki, 1)).P.Powers.Has("ConductorsBatonPower"));
@@ -215,7 +215,7 @@ public class ProcModelTests
         on.Enemies[0].Intent = new List<IntentHit> { new(22m) };
         Assert.Equal(16, SimEngine.Run(on, Events(Card("Defend", SimCardType.Skill), 1)).TakenMax);
         // Not yet three melodies: no power, the full intent.
-        s.P.Turn = PowerSet.Empty.Add("Finished#Wah", 1);
+        s.P.Turn = PowerSet.Empty.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1);
         Assert.Equal(36, SimEngine.Run(s, Events(ki, 1)).TakenMax);
     }
 
@@ -417,7 +417,7 @@ public class ProcModelTests
         s.P.Block = 1;
         s.P.Hp = 50;
         s.Enemies[0].Powers = PowerSet.Empty.With("GalvanicPower", 4);
-        var after = One(s, Events(Card("A", SimCardType.Skill, "Galvanized"), 1));
+        var after = One(s, Events(Card("A", SimCardType.Skill) with { Affliction = SimAffliction.Galvanized }, 1));
         Assert.Equal(47, after.P.Hp);
         Assert.Equal(4, after.Fired.DataOf("GalvanicPower@0"));
         Assert.Equal(50, One(s, Events(Card("A", SimCardType.Skill), 1)).P.Hp);
@@ -441,7 +441,7 @@ public class ProcModelTests
         var after = One(s, Play(Card("Strike"), 0, 2, Attack(1)));
         Assert.Equal(1, after.Fired["ArtOfWar"]);
         Assert.Equal(1, after.Fired["PaelsEye"]);
-        s.P.Turn = s.P.Turn.Add("Started", 1).Add("Started:Attack", 1);
+        s.P.Turn = s.P.Turn.Add("Started", 1).Add(SimKeys.Plays(PlayStage.Started, SimCardType.Attack), 1);
         var later = One(s, Play(Card("Strike"), 0, 1, Attack(1)));
         Assert.False(later.Fired.Has("ArtOfWar"));
         Assert.False(later.Fired.Has("PaelsEye"));
@@ -577,7 +577,7 @@ public class ProcModelTests
     public void RainbowRingFiresOnTheTypeThatCompletesTheSet()
     {
         var s = Relic(State(), "RainbowRing", data: 0);
-        s.P.Turn = s.P.Turn.Add("Finished:Attack", 1).Add("Finished:Skill", 1);
+        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Attack), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Skill), 1);
         Assert.True(One(s, Events(Card("Inflame", SimCardType.Power), 1)).Fired.Has("RainbowRing"));
         Assert.False(One(s, Events(Card("Defend", SimCardType.Skill), 1)).Fired.Has("RainbowRing"));
     }
@@ -624,14 +624,14 @@ public class ProcModelTests
     public void MotifDrawsItsAmountForEachMelodyTheCardIsFirstToPlay()
     {
         // MotifPower.AfterCardPlayed: CardPileCmd.Draw(num * Amount), num the melodies (Wah, Cho, Ki) this play is the first of this turn.
-        var duet = Card("Duet", SimCardType.Skill, "Wah", "Cho");
+        var duet = Card("Duet", SimCardType.Skill, SimCardTag.Wah, SimCardTag.Cho);
         var after = One(Power(State(), "MotifPower", 2), Events(duet, 1));
         Assert.Equal(4, after.PlayEvents[CardEvent.Drawn]);
         Assert.Equal(1, after.Fired["MotifPower"]);
         Assert.Equal(4, after.Fired.DataOf("MotifPower"));
         // A Wah already played this turn: only the Cho counts.
         var s = Power(State(), "MotifPower", 2);
-        s.P.Turn = s.P.Turn.Add("Started#Wah", 1);
+        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), 1);
         Assert.Equal(2, One(s, Events(duet, 1)).Fired.DataOf("MotifPower"));
         // No melody: no draw.
         Assert.False(One(Power(State(), "MotifPower", 2), Events(Card("Defend", SimCardType.Skill), 1)).Fired.Has("MotifPower"));

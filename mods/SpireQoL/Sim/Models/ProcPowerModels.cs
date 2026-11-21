@@ -284,10 +284,10 @@ public sealed class ImitationLearningPower : ProcModel
 /// <summary>The melodies (Wah, Cho, Ki) and what a play does to them, from its owner's turn counters.</summary>
 internal static class Melodies
 {
-    public static readonly string[] Tags = { "Wah", "Cho", "Ki" };
+    public static readonly SimCardTag[] Tags = { SimCardTag.Wah, SimCardTag.Cho, SimCardTag.Ki };
 
     /// <summary>The play is the first this turn with that tag (MelodyCmd.IsFirstPlayThisTurn: the only play started with it).</summary>
-    public static bool First(SimState s, SimCardPlay play, string tag) => play.Card.Is(tag) && SimEngine.TurnOf(s, play.Owner)[SimKeys.Plays(PlayStage.Started, tag)] == 1;
+    public static bool First(SimState s, SimCardPlay play, SimCardTag tag) => play.Card.Is(tag) && SimEngine.TurnOf(s, play.Owner)[SimKeys.Plays(PlayStage.Started, tag)] == 1;
 
     public static bool AnyFirst(SimState s, SimCardPlay play) => Tags.Any(t => First(s, play, t));
 
@@ -306,7 +306,7 @@ public sealed class ViolentChordPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Melodies.First(s, play, "Wah") ? DamageAll(s, owner, Amount(s, owner)) : One(s);
+        Mine(play, owner) && Melodies.First(s, play, SimCardTag.Wah) ? DamageAll(s, owner, Amount(s, owner)) : One(s);
 }
 
 /// <summary>SongPathPower.AfterCardPlayed: the first Cho each turn gains its amount of block (unpowered).</summary>
@@ -314,7 +314,7 @@ public sealed class SongPathPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Melodies.First(s, play, "Cho") ? Block(s, owner, Amount(s, owner)) : One(s);
+        Mine(play, owner) && Melodies.First(s, play, SimCardTag.Cho) ? Block(s, owner, Amount(s, owner)) : One(s);
 }
 
 /// <summary>LullabyPower.AfterCardPlayed: once a turn (Data 1: already), the play that completes Wah, Cho and Ki gains its amount of block.</summary>
@@ -625,7 +625,7 @@ public sealed class GalvanicPower : ProcModel
     public override TabKind? Tab => TabKind.Damage;
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        play.Card.Is("Galvanized") && Who.IsPlayer(play.Owner)
+        play.Card.Affliction == SimAffliction.Galvanized && Who.IsPlayer(play.Owner)
             ? SimEngine.ProcDamagePlayer(s, owner, Name, play.Owner, Amount(s, owner), Unpowered | SimProps.Move, noDealer: true)
             : One(s);
 }

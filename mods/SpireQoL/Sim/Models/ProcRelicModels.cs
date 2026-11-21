@@ -254,7 +254,7 @@ public sealed class MummifiedHand : RelicProc
 public sealed class HelicalDart : RelicProc
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Is("Shiv") ? Fire(s, owner) : One(s);
+        Mine(play, owner) && play.Card.Is(SimCardTag.Shiv) ? Fire(s, owner) : One(s);
 }
 
 /// <summary>IvoryTile.AfterCardPlayed: energy for each card you play costing at least its EnergyThreshold.</summary>

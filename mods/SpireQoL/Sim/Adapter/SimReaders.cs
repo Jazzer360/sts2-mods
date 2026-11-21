@@ -205,12 +205,12 @@ public static class SimReaders
             foreach (var e in history.CardPlaysStarted)
             {
                 if (!e.HappenedThisTurn(cs) || e.CardPlay.Player != p) continue;
-                t = SimKeys.CountPlay(t, PlayStage.Started, TypeOf(e.CardPlay.Card), e.CardPlay.Card.Tags.Select(tag => tag.ToString()));
+                t = SimKeys.CountPlay(t, PlayStage.Started, TypeOf(e.CardPlay.Card), TagsOf(e.CardPlay.Card));
             }
             foreach (var e in history.CardPlaysFinished)
             {
                 if (!e.HappenedThisTurn(cs) || e.CardPlay.Player != p) continue;
-                t = SimKeys.CountPlay(t, PlayStage.Finished, TypeOf(e.CardPlay.Card), e.CardPlay.Card.Tags.Select(tag => tag.ToString()));
+                t = SimKeys.CountPlay(t, PlayStage.Finished, TypeOf(e.CardPlay.Card), TagsOf(e.CardPlay.Card));
             }
             var blocks = history.Entries.OfType<BlockGainedEntry>()
                 .Count(e => e.HappenedThisTurn(cs) && e.CardPlay != null && e.CardPlay.Player == p && e.Props.IsCardOrMonsterMove());
@@ -251,14 +251,30 @@ public static class SimReaders
         };
     }
 
+    /// <summary>A card's tags as the simulator's enum, matched by name (the game's CardTag numbers differ between its branches).</summary>
+    public static IEnumerable<SimCardTag> TagsOf(CardModel card)
+    {
+        var tags = new List<SimCardTag>();
+        try
+        {
+            foreach (var t in card.Tags)
+                if (Enum.TryParse<SimCardTag>(t.ToString(), out var tag)) tags.Add(tag);
+        }
+        catch
+        {
+            // none
+        }
+        return tags;
+    }
+
     /// <summary>The card as models see it: its class name, type, tags, values, and flags.</summary>
     public static SimCard Card(CardModel card, int energy)
     {
         var vars = new Dictionary<string, decimal>();
         try { foreach (var (k, v) in card.DynamicVars) vars[k] = v.BaseValue; } catch { /* none */ }
-        var tags = new HashSet<string>();
-        try { foreach (var t in card.Tags) tags.Add(t.ToString()); } catch { /* none */ }
-        if (card.Affliction != null) tags.Add(card.Affliction.GetType().Name);
+        var tags = TagsOf(card).ToHashSet();
+        var affliction = card.Affliction == null ? SimAffliction.None
+            : Enum.TryParse<SimAffliction>(card.Affliction.GetType().Name, out var a) ? a : SimAffliction.Other;
         bool gainsBlock;
         // Read by name (Fool.StretchCard): EnchantmentModel.GainsBlock is beta-only (v0.113.1), and naming it here made this whole
         // method fail to compile on main (MissingMethodException: no card simulated at all).
@@ -266,6 +282,7 @@ public static class SimReaders
         return new SimCard(card.GetType().Name, TypeOf(card))
         {
             Tags = tags,
+            Affliction = affliction,
             Upgraded = card.IsUpgraded,
             Enchanted = card.Enchantment != null,
             Ethereal = card.Keywords.Contains(CardKeyword.Ethereal),

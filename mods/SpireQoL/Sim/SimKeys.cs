@@ -15,7 +15,7 @@ public static class SimKeys
 {
     private static readonly ConcurrentDictionary<(string Name, int Owner), string> OwnedNames = new();
     private static readonly ConcurrentDictionary<string, string> IndirectNames = new();
-    private static readonly ConcurrentDictionary<(PlayStage, string Tag), string> TagNames = new();
+
     private static readonly string[][] TypeNames = Enum.GetValues<PlayStage>()
         .Select(stage => Enum.GetValues<SimCardType>().Select(type => $"{stage}:{type}").ToArray()).ToArray();
 
@@ -34,14 +34,17 @@ public static class SimKeys
     /// <summary>The turn's plays of one card type: "Started:Attack", "Finished:Skill".</summary>
     public static string Plays(PlayStage stage, SimCardType type) => TypeNames[(int)stage][(int)type];
 
+    private static readonly string[][] TagNames = Enum.GetValues<PlayStage>()
+        .Select(stage => Enum.GetValues<SimCardTag>().Select(tag => $"{stage}#{tag}").ToArray()).ToArray();
+
     /// <summary>The turn's plays of cards with this tag: "Finished#Shiv", "Started#Wah".</summary>
-    public static string Plays(PlayStage stage, string tag) => TagNames.GetOrAdd((stage, tag), k => (k.Item1 == PlayStage.Started ? "Started#" : "Finished#") + k.Tag);
+    public static string Plays(PlayStage stage, SimCardTag tag) => TagNames[(int)stage][(int)tag];
 
     /// <summary>Block gains from card plays this turn (Unmovable counts the earlier ones).</summary>
     public const string CardBlock = "CardBlock";
 
     /// <summary>A player's turn counts with one more play at this stage: in all, of its type, and of each of its tags.</summary>
-    public static PowerSet CountPlay(PowerSet turn, PlayStage stage, SimCardType type, IEnumerable<string> tags)
+    public static PowerSet CountPlay(PowerSet turn, PlayStage stage, SimCardType type, IEnumerable<SimCardTag> tags)
     {
         var t = turn.Add(Plays(stage), 1).Add(Plays(stage, type), 1);
         foreach (var tag in tags) t = t.Add(Plays(stage, tag), 1);

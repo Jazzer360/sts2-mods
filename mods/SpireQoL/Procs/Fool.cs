@@ -4,6 +4,8 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using Sts2Mods.Core.Game;
 
+using SpireQoL.Sim;
+
 namespace SpireQoL.Procs;
 
 /// <summary>
@@ -23,17 +25,13 @@ namespace SpireQoL.Procs;
 /// </summary>
 internal static class Fool
 {
-    public const string Wah = "Wah", Cho = "Cho", Ki = "Ki";
-    public static readonly string[] MelodyTags = { Wah, Cho, Ki };
+    public static readonly SimCardTag[] MelodyTags = { SimCardTag.Wah, SimCardTag.Cho, SimCardTag.Ki };
 
-    public static bool HasTag(CardModel card, string tag)
-    {
-        try { return card.Tags.Any(t => t.ToString() == tag); }
-        catch { return false; }
-    }
+    /// <summary>The card has the tag, matched by name (Sim.SimReaders.TagsOf: main's CardTag has no Wah, Cho, Ki or Shoot).</summary>
+    public static bool HasTag(CardModel card, SimCardTag tag) => SimReaders.TagsOf(card).Contains(tag);
 
     /// <summary>A Shoot card: its attack needs an available arrow (none: the card does nothing).</summary>
-    public static bool IsShot(CardModel card) => HasTag(card, "Shoot");
+    public static bool IsShot(CardModel card) => HasTag(card, SimCardTag.Shoot);
 
     /// <summary>
     /// Playing it now tries a shot (ArrowCmd.TryShootArrow, which calls AfterArrowShot even with no arrow: Covering Fire).
@@ -61,7 +59,7 @@ internal static class Fool
     /// <summary>Cards that pull every arrow of yours out of their target (ArrowCmd.DislodgeArrow in OnPlay).</summary>
     public static readonly HashSet<string> DislodgeCards = new() { "Recall", "Uproot", "Wrest" };
 
-    public static IEnumerable<string> Melodies(CardModel card) => MelodyTags.Where(t => HasTag(card, t));
+    public static IEnumerable<SimCardTag> Melodies(CardModel card) => MelodyTags.Where(t => HasTag(card, t));
 
     /// <summary>Arrows you can shoot now (PlayerCombatState.AvailableArrowCount; 0 before v0.113.0).</summary>
     public static int ArrowsAvailable(Player me)
@@ -130,13 +128,13 @@ internal static class Fool
     }
 
     /// <summary>You finished playing a card with this melody tag this turn (MelodyCmd.PlayedThisTurn).</summary>
-    public static bool PlayedThisTurn(Player me, string tag) => Sts2State.CardsPlayedThisTurn(me).Any(c => HasTag(c, tag));
+    public static bool PlayedThisTurn(Player me, SimCardTag tag) => Sts2State.CardsPlayedThisTurn(me).Any(c => HasTag(c, tag));
 
     /// <summary>Melodies (Wah, Cho, Ki) you've finished playing this turn (MelodyCmd.MelodiesThisTurn).</summary>
     public static int MelodiesThisTurn(Player me) => MelodyTags.Count(t => PlayedThisTurn(me, t));
 
     /// <summary>A play with this tag has started this turn (so a new one isn't the first: MelodyCmd.IsFirstPlayThisTurn).</summary>
-    public static bool StartedThisTurn(Player me, string tag)
+    public static bool StartedThisTurn(Player me, SimCardTag tag)
     {
         var cs = Sts2State.Combat;
         if (cs == null) return false;
@@ -152,5 +150,5 @@ internal static class Fool
     }
 
     /// <summary>Melodies this card plays first this turn (no play with that tag has started yet).</summary>
-    public static IEnumerable<string> FirstMelodies(CardModel card, Player me) => Melodies(card).Where(t => !StartedThisTurn(me, t));
+    public static IEnumerable<SimCardTag> FirstMelodies(CardModel card, Player me) => Melodies(card).Where(t => !StartedThisTurn(me, t));
 }
