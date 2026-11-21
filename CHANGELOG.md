@@ -10,6 +10,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 #### Added
 - Quick setup, the settings menu's first page, which it opens on at your first launch: a switch for each part of the mod with the game's art beside it (damage you'll take, enemies that die, enemy intents, enemies' next moves, counter relics, potion tabs, reminders on card rewards, events, shops and the map, rest sites, chances), card tabs as four levels shown on real cards (none, minimal, moderate, full) with amounts and the target marker, and Everything for every default at once.
 
+#### Changed
+- Settings menu: the game's art beside each feature's switch (a heart for Incoming Damage, the skull, the intent icons, the card reward, the map button...) and beside the options it fits (the target arrow, a crossed Thorns tab, the magnifier, a tab's number or chance).
+
+#### Fixed
+- Pact's End deals no damage, in every prediction, unless your exhaust pile holds enough cards (when it glows gold).
+- The checks no longer report your death when Fairy in a Bottle or Lizard Tail saves you: a death is the game's own, not your HP reaching 0 on the way to the heal.
+
 ### Spire QoL 1.25.0
 #### Added
 - Draw and energy tabs show how many: the cards the play makes Dark Embrace, Vicious, Motif, Game Piece, Iron Club, Joss Paper or Centennial Puzzle draw (only those that fit in your hand), and the energy Subroutine, Yah!, Orbit, Automation, Ivory Tile or Nunchaku gives. Motif stacked draws its amount for each melody the card is the first to play this turn.

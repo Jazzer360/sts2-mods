@@ -35,42 +35,30 @@ public sealed partial class SettingsMenu
     };
 
     /// <summary>One switch on the page: the features it turns on and off together.</summary>
-    private sealed record SetupSwitch(string Name, string Description, string[] Features, Func<Texture2D?> Icon);
+    private sealed record SetupSwitch(string Name, string Description, string[] Features);
 
     private static readonly SetupSwitch[] FightSwitches =
     {
         new("Damage you'll take", "What ending your turn costs you, after block, beside your HP (and a teammate's, when you hover them).",
-            new[] { "incoming-damage", "teammate-incoming-damage" }, GameIcons.Heart),
-        new("Enemies that die", "A skull beside an enemy that dies before it acts if you end your turn now.", new[] { "death-skull" }, GameIcons.Skull),
+            new[] { "incoming-damage", "teammate-incoming-damage" }),
+        new("Enemies that die", "A skull beside an enemy that dies before it acts if you end your turn now.", new[] { "death-skull" }),
         new("Enemy intents", "On each enemy's intent: the block its move gains, and the buffs and debuffs it applies with their amounts.",
-            new[] { "intent-details" }, () => GameIcons.Intent("buff")),
+            new[] { "intent-details" }),
         new("Enemy's next moves", "Hover an enemy: its moves after this one, every turn its rules make certain, then what a random pick can make.",
-            new[] { "intent-forecast" }, () => GameIcons.Intent("unknown")),
+            new[] { "intent-forecast" }),
         new("Counter relics", "A tray beside your HP of the relics and powers that count up to something, flashing when they're about to fire.",
-            new[] { "relic-counters" }, () => RelicIcon<PenNib>()),
-        new("Potion tabs", "A tab under a potion for each relic that drinking it sets off.", new[] { "potion-tabs" }, () => PotionIcon()),
+            new[] { "relic-counters" }),
+        new("Potion tabs", "A tab under a potion for each relic that drinking it sets off.", new[] { "potion-tabs" }),
     };
 
     /// <summary>Run Reminders by place (one switch each); the feature itself is on while any of them is.</summary>
-    private static readonly (ReminderPlace Place, string Name, string Description, Func<Texture2D?> Icon)[] ReminderSwitches =
+    private static readonly (ReminderPlace Place, string Name, string Description)[] ReminderSwitches =
     {
-        (ReminderPlace.Reward, "Card rewards", "A tab on a card you're offered when one of your relics cares about it (an egg upgrades it, a relic counts it).", GameIcons.CardReward),
-        (ReminderPlace.Event, "Events", "Your relics that change an event's choice, beside the option, and Inspect for an option that gives random cards.",
-            () => GameIcons.Room(MegaCrit.Sts2.Core.Map.MapPointType.Unknown, MegaCrit.Sts2.Core.Rooms.RoomType.Event)),
-        (ReminderPlace.Shop, "Shops", "Your relics that change a price or a card for sale, beside it.",
-            () => GameIcons.Room(MegaCrit.Sts2.Core.Map.MapPointType.Shop, MegaCrit.Sts2.Core.Rooms.RoomType.Shop)),
-        (ReminderPlace.Map, "Map", "Your relics that care about a kind of room, beside the map legend's row.", GameIcons.MapButton),
+        (ReminderPlace.Reward, "Card rewards", "A tab on a card you're offered when one of your relics cares about it (an egg upgrades it, a relic counts it)."),
+        (ReminderPlace.Event, "Events", "Your relics that change an event's choice, beside the option, and Inspect for an option that gives random cards."),
+        (ReminderPlace.Shop, "Shops", "Your relics that change a price or a card for sale, beside it."),
+        (ReminderPlace.Map, "Map", "Your relics that care about a kind of room, beside the map legend's row."),
     };
-
-    private static Texture2D? RelicIcon<T>() where T : RelicModel
-    {
-        try { return ModelDb.Relic<T>().Icon; } catch { return null; }
-    }
-
-    private static Texture2D? PotionIcon()
-    {
-        try { return ModelDb.AllPotions.Select(potion => GameIcons.Potion(potion)).FirstOrDefault(GameIcons.Valid); } catch { return null; }
-    }
 
     private bool _setupShown;
 
@@ -98,20 +86,21 @@ public sealed partial class SettingsMenu
         AddRow(everythingRow);
 
         Section("Card tabs");
-        var levels = Flow();
+        // One row of equal cells, so each Choose button sits on one line under its card.
+        var levels = UiKit.Row(separation: 24);
         foreach (var level in CardTabLevels) LevelCell(levels, level);
         _rows!.AddChild(levels);
         var tabsShown = CurrentCardTabLevel() is { Features.Count: > 1 };
         Option("Amounts on tabs", "The block, damage, draws or energy a tab's source gives, on the tab (Ornamental Fan's 4 block). Off: icon only.",
-            Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, tabsShown ? null : "Moderate or Full card tabs");
+            Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, tabsShown ? null : "Moderate or Full card tabs", icon: TextIcon("4"));
         Option("Target marker", "The game's targeting arrow in a tab's corner when it happens only at some targets (aim at the right enemy).",
-            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabsShown ? null : "Moderate or Full card tabs");
+            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabsShown ? null : "Moderate or Full card tabs", icon: ArtIcon(GameIcons.TargetArrow()));
 
         Section("In fights");
         foreach (var setupSwitch in FightSwitches) SwitchRow(setupSwitch);
 
         Section("Between fights");
-        foreach (var (place, name, desc, icon) in ReminderSwitches)
+        foreach (var (place, name, desc) in ReminderSwitches)
         {
             var key = ChoiceReminders.Key(place, "*");
             SimpleRow(name, desc, FeatureOn("run-reminders") && Settings.TabOwn(key), on =>
@@ -119,21 +108,19 @@ public sealed partial class SettingsMenu
                 Settings.Tabs[key] = on;
                 // Run Reminders is on while any place is.
                 SetFeature("run-reminders", ReminderSwitches.Any(other => Settings.TabOwn(ChoiceReminders.Key(other.Place, "*"))));
-            }, SetupIcon(icon));
+            }, ArtIcon(ReminderPlaceArt(place)));
         }
         SwitchRow(new SetupSwitch("Rest sites", "Beside your character at a rest site: the HP resting would leave you with, and what each relic adds.",
-            new[] { "rest-preview" }, GameIcons.Heal));
+            new[] { "rest-preview" }));
 
         Section("Chances");
-        var chance = Label("50%", size: 18, Text);
-        chance.CustomMinimumSize = new Vector2(IconSize, IconSize);
-        chance.HorizontalAlignment = HorizontalAlignment.Center;
+        var chance = TextIcon("50%");
         SimpleRow("Show chances", "When a roll decides something (which enemy a Lightning orb hits), its chance. Off: only what's certain; a range or ? still marks what isn't settled.",
             Settings.Chances, enabled => { Settings.Chances = enabled; Saved(); }, chance);
     }
 
     /// <summary>A card tab level: a real card carrying what it shows, its name and what it adds, and a button (marked when it's the current one).</summary>
-    private void LevelCell(HFlowContainer flow, CardTabLevel level)
+    private void LevelCell(HBoxContainer row, CardTabLevel level)
     {
         var (card, tabs) = level.Name switch
         {
@@ -152,25 +139,19 @@ public sealed partial class SettingsMenu
         }
         cell.AddChild(Label(level.Name, size: 22, chosen ? Accent : Text));
         cell.AddChild(CellText(level.Summary));
+        cell.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
         var choose = MakeButton(chosen ? "Chosen" : "Choose", size: 20);
         choose.Disabled = chosen;
         choose.Pressed += () => { ApplyCardTabs(level); Saved(); Refresh(); };
         cell.AddChild(choose);
-        flow.AddChild(cell);
+        row.AddChild(cell);
     }
 
     private void SwitchRow(SetupSwitch setupSwitch) =>
         SimpleRow(setupSwitch.Name, setupSwitch.Description, setupSwitch.Features.All(FeatureOn), on =>
         {
             foreach (var id in setupSwitch.Features) SetFeature(id, on);
-        }, SetupIcon(setupSwitch.Icon));
-
-    private static Control SetupIcon(Func<Texture2D?> icon)
-    {
-        Texture2D? tex;
-        try { tex = icon(); } catch { tex = null; }
-        return GameIcons.Valid(tex) ? UiKit.Icon(tex, IconSize) : IconSpacer();
-    }
+        }, FeatureIcon(setupSwitch.Features[0]));
 
     /// <summary>The card tab level the settings are at; null when they're a mix the levels don't make.</summary>
     private CardTabLevel? CurrentCardTabLevel() =>
@@ -214,6 +195,6 @@ public sealed partial class SettingsMenu
         settings.EventOdds = defaults.EventOdds;
         settings.EventInspect = defaults.EventInspect;
         settings.Tabs[QolSettings.DrawChanceKey] = true;
-        foreach (var (place, _, _, _) in ReminderSwitches) settings.Tabs[ChoiceReminders.Key(place, "*")] = true;
+        foreach (var (place, _, _) in ReminderSwitches) settings.Tabs[ChoiceReminders.Key(place, "*")] = true;
     }
 }

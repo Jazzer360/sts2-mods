@@ -396,7 +396,7 @@ public sealed partial class SettingsMenu
             ["proc-indicators"] = () =>
             {
                 Option("Amounts on proc tabs", "Show the amount on proc tabs: block gained, damage dealt, the amount summoned, cards drawn and energy gained. Off: icon only.",
-                    Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, Needs("proc-indicators"));
+                    Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, Needs("proc-indicators"), icon: TextIcon("4"));
                 Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
                     Settings.ProcIndirect, enabled => Settings.ProcIndirect = enabled, Needs("proc-indicators"));
             },
@@ -434,20 +434,20 @@ public sealed partial class SettingsMenu
     {
         Section("Chances");
         Option("Show chances", "Every chance the mod shows, when a roll decides an outcome. Off: only what's certain. A ? or a range on what's shown stays: it marks what isn't settled yet.",
-            Settings.Chances, enabled => { Settings.Chances = enabled; Refresh(); }, indent: false);
+            Settings.Chances, enabled => { Settings.Chances = enabled; Refresh(); }, indent: false, icon: TextIcon("50%"));
         string? Under(string? feature) => !Settings.Chances ? "Show chances" : feature;
         if (fights)
         {
             Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tabs, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
-                Settings.DeathChance, enabled => Settings.DeathChance = enabled, Under(Needs("death-skull", "incoming-damage", "proc-indicators")));
+                Settings.DeathChance, enabled => Settings.DeathChance = enabled, Under(Needs("death-skull", "incoming-damage", "proc-indicators")), icon: ArtIcon(Cards.GameIcons.Skull()));
             Option("Draw chance tab", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the Card tabs page has the same switch).",
-                Settings.TabOwn(QolSettings.DrawChanceKey), enabled => SetTab(QolSettings.DrawChanceKey, enabled), Under(Needs("proc-indicators")));
+                Settings.TabOwn(QolSettings.DrawChanceKey), enabled => SetTab(QolSettings.DrawChanceKey, enabled), Under(Needs("proc-indicators")), icon: TextIcon("40%"));
             Option("Intent Forecast's random moves", "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",
-                Settings.IntentOdds, enabled => Settings.IntentOdds = enabled, Under(Needs("intent-forecast")));
+                Settings.IntentOdds, enabled => Settings.IntentOdds = enabled, Under(Needs("intent-forecast")), icon: ArtIcon(Cards.GameIcons.Intent("unknown")));
         }
         else
             Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
-                Settings.EventOdds, enabled => Settings.EventOdds = enabled, Under(Needs("run-reminders")));
+                Settings.EventOdds, enabled => Settings.EventOdds = enabled, Under(Needs("run-reminders")), icon: TextIcon("25%"));
     }
 
     /// <summary>The page again, for rows that depend on a switch just changed (deferred: the switch is mid-signal).</summary>
@@ -464,10 +464,10 @@ public sealed partial class SettingsMenu
                 foreach (var (place, name, desc) in ReminderPlaceRows)
                 {
                     var key = SpireQoL.Data.ChoiceReminders.Key(place, "*");
-                    Option(name, desc, Settings.TabOwn(key), enabled => SetTab(key, enabled), Needs("run-reminders"));
+                    Option(name, desc, Settings.TabOwn(key), enabled => SetTab(key, enabled), Needs("run-reminders"), icon: ArtIcon(ReminderPlaceArt(place)));
                 }
                 Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
-                    Settings.EventInspect, enabled => Settings.EventInspect = enabled, Needs("run-reminders"));
+                    Settings.EventInspect, enabled => Settings.EventInspect = enabled, Needs("run-reminders"), icon: ArtIcon(Features.RunRemindersFeature.InspectIcon()));
             },
         });
 
@@ -517,14 +517,14 @@ public sealed partial class SettingsMenu
         // One switch for every tab on cards, then everything under it (decision #122): the kinds, each tab, the families.
         Section("Tabs on cards");
         Option("Tabs on cards", "Every tab the mod hangs on cards: in your hand, and on the cards you're offered outside fights. Off: none (the features' other parts stay).",
-            Settings.CardTabs, enabled => { Settings.CardTabs = enabled; Refresh(); }, indent: false);
+            Settings.CardTabs, enabled => { Settings.CardTabs = enabled; Refresh(); }, indent: false, icon: FeatureIcon("proc-indicators"));
         var tabs = Settings.CardTabs ? Needs("card-indicators", "proc-indicators", "shuffle-warning", "run-reminders") : "Tabs on cards";
         Option("Plain tabs", "Tabs that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only. Potion tabs too.",
-            Settings.PlainTabs, enabled => Settings.PlainTabs = enabled, tabs);
+            Settings.PlainTabs, enabled => Settings.PlainTabs = enabled, tabs, icon: FeatureIcon("proc-indicators"));
         Option("Crossed tabs", "Tabs with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus). Potion tabs too.",
-            Settings.CrossedTabs, enabled => Settings.CrossedTabs = enabled, tabs);
+            Settings.CrossedTabs, enabled => Settings.CrossedTabs = enabled, tabs, icon: ArtIcon(Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.ThornsPower>(), slashed: true));
         Option("Aim marker", "The targeting arrow head in a tab's corner when it happens only at some targets. Off: the tab shows without it.",
-            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabs);
+            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabs, icon: ArtIcon(Cards.GameIcons.TargetArrow()));
         foreach (var tabEntry in SettingsCatalog.CardTabs)
         {
             if (!Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
@@ -789,10 +789,10 @@ public sealed partial class SettingsMenu
     /// An option, indented under what it changes (decision #122). <paramref name="needs"/>: what has to be on first (a feature, or
     /// Show chances), null when it is; the row is greyed out and says so until it is.
     /// </summary>
-    private void Option(string name, string desc, bool value, Action<bool> set, string? needs = null, bool indent = true)
+    private void Option(string name, string desc, bool value, Action<bool> set, string? needs = null, bool indent = true, Control? icon = null)
     {
         if (!Matches(name, desc)) return;
-        SimpleRow(name, needs == null ? desc : $"{desc} Needs {needs} on.", value, enabled => { set(enabled); Saved(); }, IconSpacer(), needs == null, indent);
+        SimpleRow(name, needs == null ? desc : $"{desc} Needs {needs} on.", value, enabled => { set(enabled); Saved(); }, icon ?? IconSpacer(), needs == null, indent);
     }
 
     private void Saved()
@@ -867,21 +867,63 @@ public sealed partial class SettingsMenu
         return icon;
     }
 
-    /// <summary>The icon next to a feature on the General page (a spacer when it has none).</summary>
-    private static Control FeatureIcon(string id)
+    /// <summary>The game's art for a feature, beside its switch here and on Quick setup (null: none that reads as it).</summary>
+    internal static Texture2D? FeatureArt(string id)
     {
-        Texture2D? tex = null;
         try
         {
-            if (id == "shuffle-warning") tex = Cards.GameIcons.DiscardPile();
+            return id switch
+            {
+                "incoming-damage" or "teammate-incoming-damage" => Cards.GameIcons.Heart(),
+                "death-skull" => Cards.GameIcons.Skull(),
+                "intent-details" => Cards.GameIcons.Intent("buff"),
+                "intent-forecast" => Cards.GameIcons.Intent("unknown"),
+                "card-indicators" => Cards.GameIcons.Enchantment<MegaCrit.Sts2.Core.Models.Enchantments.Steady>(),
+                "proc-indicators" => ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.Kunai>().Icon,
+                "relic-counters" => ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.PenNib>().Icon,
+                "potion-tabs" => ModelDb.AllPotions.Select(potion => Cards.GameIcons.Potion(potion)).FirstOrDefault(Cards.GameIcons.Valid),
+                "shuffle-warning" => Cards.GameIcons.DiscardPile(),
+                "exploration-progress" => Cards.GameIcons.Clock(),
+                "run-reminders" => Cards.GameIcons.CardReward(),
+                "rest-preview" => Cards.GameIcons.Heal(),
+                _ => null,
+            };
         }
         catch
         {
-            tex = null;
+            return null;
         }
-        return Cards.GameIcons.Valid(tex)
-            ? UiKit.Icon(tex, IconSize)
-            : IconSpacer();
+    }
+
+    /// <summary>Run Reminders' art for a place: the card reward icon, the event and shop room icons, the top bar's map button.</summary>
+    internal static Texture2D? ReminderPlaceArt(ReminderPlace place) => place switch
+    {
+        ReminderPlace.Reward => Cards.GameIcons.CardReward(),
+        ReminderPlace.Event => Cards.GameIcons.Room(MegaCrit.Sts2.Core.Map.MapPointType.Unknown, MegaCrit.Sts2.Core.Rooms.RoomType.Event),
+        ReminderPlace.Shop => Cards.GameIcons.Room(MegaCrit.Sts2.Core.Map.MapPointType.Shop, MegaCrit.Sts2.Core.Rooms.RoomType.Shop),
+        ReminderPlace.Map => Cards.GameIcons.MapButton(),
+        _ => null,
+    };
+
+    /// <summary>The icon beside a feature's switch (a blank of the same size when it has none).</summary>
+    private static Control FeatureIcon(string id) => ArtIcon(FeatureArt(id));
+
+    /// <summary>A row's icon from the game's art; a blank of the same size when there's none.</summary>
+    private static Control ArtIcon(Texture2D? tex, bool slashed = false)
+    {
+        if (!Cards.GameIcons.Valid(tex)) return IconSpacer();
+        var icon = UiKit.Icon(tex, IconSize);
+        if (slashed) AddSlash(icon);
+        return icon;
+    }
+
+    /// <summary>A row's icon that's a number or a chance as a tab shows it ("4", "50%").</summary>
+    private static Control TextIcon(string text)
+    {
+        var label = Label(text, size: 18, Text);
+        label.CustomMinimumSize = new Vector2(IconSize, IconSize);
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        return label;
     }
 
     private static Control IconSpacer() =>

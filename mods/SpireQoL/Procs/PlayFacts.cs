@@ -1040,8 +1040,44 @@ public sealed class PlayFacts
     /// names are read as strings so both game versions work. Cards that use their X value or a condition
     /// are listed. Unknown target (null): target-dependent cards count their minimum.
     /// </summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> GlowGated = new();
+
+    /// <summary>Cards that attack only on the condition they glow gold for (Pact's End: 3 cards exhausted), from each OnPlay.</summary>
+    internal static readonly HashSet<string> GlowGatedAttackCards = new() { nameof(PactsEnd) };
+
+    /// <summary>
+    /// Cards that attack on a condition and glow gold, but whose glow isn't the attack's condition (the card scan's reviewed reasons).
+    /// </summary>
+    internal static readonly Dictionary<string, string> GlowNotTheAttack = new()
+    {
+        [nameof(Fetch)] = "its attack waits on Osty being there (Osty.CheckMissingWithAnim: AttackHits); its glow is its draw, once a turn",
+        [nameof(Flatten)] = "its attack waits on Osty being there (Osty.CheckMissingWithAnim: AttackHits); its glow is its cost",
+        ["Nail"] = "its attack waits on its target being Impaled (BaseHitsPerPlay's Nail case, per target); its glow is any enemy being Impaled",
+    };
+
+    /// <summary>
+    /// A card whose attack is only on some ways through its OnPlay and that glows gold (ShouldGlowGoldInternal), read from its code: the
+    /// card scan holds each to GlowGatedAttackCards or GlowNotTheAttack, since the code can't say whether the glow is the condition.
+    /// </summary>
+    internal static bool AttacksConditionallyAndGlows(Type cardType) => GlowGated.GetOrAdd(cardType, type =>
+    {
+        const System.Reflection.BindingFlags declared = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+            | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+        if (type.GetProperty("ShouldGlowGoldInternal", declared) == null || type.GetMethod("OnPlay", declared) is not { } onPlay) return false;
+        var body = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>(onPlay)?.StateMachineType
+            .GetMethod("MoveNext", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic) ?? (System.Reflection.MethodBase)onPlay;
+        List<HarmonyLib.CodeInstruction> code;
+        try { code = Diagnostics.GameCode.Instructions(body); } catch { return false; }
+        var attacks = code.Select((instruction, index) => (instruction, index))
+            .Where(entry => entry.instruction.operand is System.Reflection.MethodInfo { Name: "Attack" } method && method.DeclaringType?.Name == "DamageCmd")
+            .Select(entry => entry.index).ToList();
+        return attacks.Count > 0 && SpireQoL.Sim.Branches.OnEveryPath(code, attacks).Any(certain => !certain);
+    });
+
     internal static int HitsPerPlay(CardModel card, string name, ICombatState combat, Creature? target, int energy, int stars, int otherCards)
     {
+        // Its attack waits on the condition the card glows gold for (Pact's End): not glowing, it doesn't attack.
+        if (GlowGatedAttackCards.Contains(name) && !Sts2State.Private(card, "ShouldGlowGoldInternal", fallback: true)) return 0;
         var hits = BaseHitsPerPlay(card, name, combat, target, energy, stars, otherCards);
         // Then the game's hit-count modifiers (Thumbscrew: +1 on your multi-hit attacks), the way its card
         // preview applies them (HitCountVar.GetPreviewValue; the attack itself in AttackCommand.Execute).

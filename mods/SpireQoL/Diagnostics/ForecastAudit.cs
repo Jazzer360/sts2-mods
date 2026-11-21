@@ -49,6 +49,31 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private int _lastTurn;
     private bool _wasPlayerTurn;
 
+    /// <summary>
+    /// Your creature, watched for its Died event (Creature.InvokeDiedEvent: raised only when nothing prevents the death). HP 0 alone
+    /// isn't a death: Fairy in a Bottle and Lizard Tail heal you from 0 a few frames later (Hook.ShouldDie, AfterPreventingDeath).
+    /// </summary>
+    private MegaCrit.Sts2.Core.Entities.Creatures.Creature? _watched;
+    private bool _youDied;
+
+    private void Watch(MegaCrit.Sts2.Core.Entities.Creatures.Creature? creature)
+    {
+        if (ReferenceEquals(creature, _watched)) return;
+        if (_watched != null)
+        {
+            _watched.Died -= OnYouDied;
+            _watched.Revived -= OnYouRevived;
+        }
+        _watched = creature;
+        _youDied = false;
+        if (creature == null) return;
+        creature.Died += OnYouDied;
+        creature.Revived += OnYouRevived;
+    }
+
+    private void OnYouDied(MegaCrit.Sts2.Core.Entities.Creatures.Creature creature) => _youDied = true;
+    private void OnYouRevived(MegaCrit.Sts2.Core.Entities.Creatures.Creature creature) => _youDied = false;
+
     private TurnEndModel? _frozen;
     /// <summary>
     /// The forecast with teammates' hands had no result yet when your turn ended (decision #104: the audit waits a few milliseconds
@@ -171,8 +196,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
-        // You died before your next turn: the fight ends without one, so check the turn now, with what happened up to your death.
-        if (HasFrozen && _history != null && me?.Creature is { IsDead: true }) CheckFrozen(_history, me, youDied: true);
+        // You died before your next turn: the fight ends without one, so check the turn now, with what happened up to your death. A
+        // death is the game's Died event, not HP 0: a death something prevents passes through 0 before its heal.
+        Watch(me?.Creature);
+        if (HasFrozen && _history != null && me != null && _youDied) CheckFrozen(_history, me, youDied: true);
         if (me == null || !Sts2State.InCombat)
         {
             Summarize();

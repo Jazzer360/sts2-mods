@@ -187,6 +187,9 @@ internal static class CardCoverage
             && card.GetType().GetProperty("ShouldGlowGoldInternal", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly) != null
             && !PlayFacts.ConditionalDrawCards.Contains(name))
             issues.Add("draws only on a condition (it glows gold; not checked in PlayFacts.CardsDrawn)");
+        // An attack on a condition, on a card that glows gold: is the glow that condition (Pact's End)? Its hits must say.
+        if (PlayFacts.AttacksConditionallyAndGlows(card.GetType()) && !PlayFacts.GlowGatedAttackCards.Contains(name) && !PlayFacts.GlowNotTheAttack.ContainsKey(name))
+            issues.Add("attacks only on a condition and glows gold (is the glow its condition? PlayFacts.GlowGatedAttackCards)");
         if (Calls("OrbCmd", "Channel") && !SimAdapter.HandlesChannel(name))
             issues.Add("channels orbs (the simulator doesn't add them)");
         if (Calls("OrbCmd", "Channel") && None(otherCard => PlayFacts.ChannelCount(otherCard, name, null!)))
