@@ -1539,6 +1539,19 @@ async function loadFeedback() {
   fbNotes = notes.map((n) => ({ ...n, status: status[n.id] || "open" })).reverse();
   if (page === "feedback") renderFeedback();
 }
+/** feedback.jsonl is written from outside the page too (a dev review marks reports handled): reread it when it changes. */
+const FB = { seen: "", checkedAt: 0 };
+async function refreshFeedback() {
+  if (FS.demo || !FS.dir || Date.now() - FB.checkedAt < 2000) return;
+  FB.checkedAt = Date.now();
+  let seen = "";
+  try { const handle = await (await FS.dir.getFileHandle("feedback.jsonl")).getFile(); seen = `${handle.size}:${handle.lastModified}`; }
+  catch { /* no notes yet */ }
+  if (seen === FB.seen) return;
+  FB.seen = seen;
+  await loadFeedback(); // the reports list redraws itself when a status changes (its signature holds them)
+  render(true);
+}
 function context() {
   const w = M.state?.where || {};
   return { mod: M.state?.build ?? M.started?.build ?? M.state?.mod ?? M.started?.mod ?? "?", encounter: w.inCombat ? w.encounter : null, combat: w.inCombat ? w.combat : null, turn: w.inCombat ? w.turn : null, stream: M.file, seconds: M.state?.seconds ?? null };
@@ -1834,9 +1847,9 @@ function start() {
   reset(); M.state = null; logShown = -1;
   if (FS.demo) demoInit();
   if (timer) clearInterval(timer);
-  fbNotes = []; fbStatus = {}; REP.cache.clear(); REP.list = []; REP.listedAt = 0;
+  fbNotes = []; fbStatus = {}; FB.seen = ""; FB.checkedAt = 0; REP.cache.clear(); REP.list = []; REP.listedAt = 0;
   loadFeedback();
-  const tick = async () => { if (FS.demo) demoTick(); else await poll(); loadReports(); render(false); };
+  const tick = async () => { if (FS.demo) demoTick(); else await poll(); loadReports(); refreshFeedback(); render(false); };
   tick().then(() => render(true));
   timer = setInterval(tick, 500);
 }
