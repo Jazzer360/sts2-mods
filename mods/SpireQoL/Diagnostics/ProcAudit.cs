@@ -1343,7 +1343,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var discards = entries.OfType<CardDiscardedEntry>().Count(d => d.Card.Owner == me);
         var generated = entries.OfType<CardGeneratedEntry>().Count(d => d.Creator == me || d.Card.Owner == me);
         var orbs = entries.OfType<OrbChanneledEntry>().Count();
-        var summons = entries.OfType<SummonedEntry>().Count();
+        // A card that summons every player (Legion of Bone) summons each up to its own count; any other card's summons all count as its own.
+        var summoned = entries.OfType<SummonedEntry>().ToList();
+        var summons = SimAdapter.AllPlayersSummonCards.Contains(w.Card.GetType().Name)
+            ? summoned.GroupBy(s => s.Actor).Select(g => g.Count()).DefaultIfEmpty(0).Max()
+            : summoned.Count;
         if (f != null)
         {
             // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit),
@@ -1374,6 +1378,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // A death in the play giving back what a power on the dead creature took, applied by no one
             // (PossessStrengthPower.AfterDeath: the stolen Strength back to each player).
             .Where(p => !(p.Applier == null && DeathGivesPowers(w, entries)))
+            // A summon that makes a new Osty gives it Die For You (OstyCmd.Summon), applied by no one.
+            .Where(p => !(p.Power is DieForYouPower && p.Applier == null && entries.OfType<SummonedEntry>().Any()))
             .Select(p => p.Power.GetType().Name)
             .Distinct()
             .ToList();

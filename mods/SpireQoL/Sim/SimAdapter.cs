@@ -120,6 +120,12 @@ public static partial class SimAdapter
     internal static readonly HashSet<string> AllPlayersBlockCards = new() { nameof(Rally) };
 
     /// <summary>
+    /// Cards that summon every living player's Osty (LegionOfBone.OnPlay: OstyCmd.Summon for each of CombatState.PlayerCreatures),
+    /// reviewed in CardCoverage.TeammateTargetModelled: the play check expects their summon on each player.
+    /// </summary>
+    internal static readonly HashSet<string> AllPlayersSummonCards = new() { nameof(LegionOfBone) };
+
+    /// <summary>
     /// Cards that make every living teammate draw (HuddleUp.OnPlay: CardPileCmd.DrawWithoutBlockingOnOtherPlayers for each),
     /// not you: their draws are their card events (their draw procs), as many as their hand has room for and their piles hold.
     /// </summary>

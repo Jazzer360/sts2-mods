@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.24.4
+#### Fixed
+- Multiplayer: the play check no longer reports Legion of Bone's summon on each teammate, or the Die For You a newly summoned Osty gets, as unexplained (logs and error reports only).
+
 ### Spire QoL 1.24.3
 #### Fixed
 - Exploration Progress shows the run timer's clock from the top bar (it could show another picture, and on the main menu's Guide page a power's icon).
