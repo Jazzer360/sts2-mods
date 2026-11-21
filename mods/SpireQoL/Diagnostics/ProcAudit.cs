@@ -1826,6 +1826,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
         var after = w.After;
         var afterIds = w.AfterIds;
+        // Cards drawn during the play (decision #132: the draw tabs' numbers are part of it, with the card's own draws), when the
+        // simulator drew from your pile: the history's draws of yours, not your turn's hand draw.
+        var startP = (sim.FullStart ?? sim.Start).P;
+        var me = w.Card.Owner;
+        int? drawn = startP.Draw == null ? null : entries.OfType<CardDrawnEntry>().Count(e => e.Actor == me.Creature && !e.FromHandDraw);
         // Summoning raises Osty's HP in ways the simulator doesn't model: Osty isn't compared then.
         var summoned = entries.OfType<SummonedEntry>().Any();
 
@@ -1863,6 +1868,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 if (p != a) d.Add($"after play {what}: predicted {p}, actual {a}");
             }
             Cmp("your block", pp.Block, ap.Block);
+            if (drawn is { } dn) Cmp("cards drawn", pp.Drawn - startP.Drawn, dn);
             // Energy (decision #117): what the play spends and gives back, the card's own included (Pael's Tears reads it).
             Cmp("your energy", pp.Energy, ap.Energy);
             Cmp("Plating", pp.Plating, ap.Plating);

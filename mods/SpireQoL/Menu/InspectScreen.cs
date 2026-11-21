@@ -37,7 +37,7 @@ internal sealed class InspectScreen
     private Label? _overall;
     private HBoxContainer? _relicButtons;
     private readonly List<ShownCard> _cards = new();
-    private readonly List<(PanelContainer Frame, CardModel Card)> _cells = new();
+    private readonly List<(PanelContainer Frame, CardModel Card, ShownCard Shown, Panel Ring)> _cells = new();
     private readonly List<(Label Label, DrawGroup Group, int Times)> _groupLabels = new();
     private List<(DrawGroup Group, int Times)> _groups = new();
     private List<DrawGroup> _baseGroups = new();
@@ -84,6 +84,24 @@ internal sealed class InspectScreen
         if (!IsOpen) return;
         Fit();
         foreach (var c in _cards) c.Tick();
+        foreach (var cell in _cells) PlaceRing(cell.Shown, cell.Ring);
+    }
+
+    /// <summary>Space between a marked card and its ring.</summary>
+    private const float RingGap = 6;
+
+    /// <summary>
+    /// A marked card's ring, around the card itself (and its tabs, when it has some), drawn over it: the box it sits in has room
+    /// above for tabs, and the card reaches its bottom edge, so a border on the box left a gap above and was hidden below.
+    /// </summary>
+    private static void PlaceRing(ShownCard shown, Panel ring)
+    {
+        if (!ring.Visible || shown.CardRect is not { } r) return;
+        var top = shown.Decor.Tabs.Count > 0 ? 0 : r.Position.Y - RingGap;
+        var pos = new Vector2(r.Position.X - RingGap, top);
+        var size = new Vector2(r.Size.X + 2 * RingGap, r.End.Y + RingGap - top);
+        if (ring.Position != pos) ring.Position = pos;
+        if (ring.Size != size) ring.Size = size;
     }
 
     /// <summary>
@@ -256,7 +274,15 @@ internal sealed class InspectScreen
         var shown = new ShownCard(card, CardScale, CellWidth, tabs);
         _cards.Add(shown);
         var frame = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop, MouseDefaultCursorShape = Control.CursorShape.PointingHand, TooltipText = card.Title };
+        // Room around the card for its ring (RingGap and the border).
+        frame.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 4, ContentMarginRight = 4, ContentMarginTop = 4, ContentMarginBottom = RingGap + 6 });
         frame.AddChild(shown.Root);
+        var ringStyle = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = MarkColor };
+        ringStyle.SetBorderWidthAll(3);
+        ringStyle.SetCornerRadiusAll(10);
+        var ring = new Panel { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
+        ring.AddThemeStyleboxOverride("panel", ringStyle);
+        shown.Root.AddChild(ring); // after the card: drawn over it
         frame.GuiInput += e =>
         {
             if (e is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) return;
@@ -264,7 +290,7 @@ internal sealed class InspectScreen
             if (!_marks.Remove(id)) _marks.Add(id);
             Refresh();
         };
-        _cells.Add((frame, card));
+        _cells.Add((frame, card, shown, ring));
         return frame;
     }
 
@@ -272,14 +298,13 @@ internal sealed class InspectScreen
     private void Refresh()
     {
         bool Good(CardModel c) => _marks.Contains(c.Id.ToString());
-        foreach (var (frame, card) in _cells)
+        foreach (var (frame, card, shown, ring) in _cells)
         {
             var marked = Good(card);
-            var sb = UiKit.PanelStyle(marked ? new Color(MarkColor, 0.18f) : new Color(0, 0, 0, 0), 8, 4);
-            sb.SetBorderWidthAll(marked ? 3 : 0);
-            sb.BorderColor = MarkColor;
-            frame.AddThemeStyleboxOverride("panel", sb);
-            frame.Modulate = marked || _marks.Count == 0 ? Colors.White : new Color(1, 1, 1, 0.6f);
+            ring.Visible = marked;
+            PlaceRing(shown, ring);
+            // The others darkened, never see-through: a translucent card shows its art through its frame.
+            frame.Modulate = marked || _marks.Count == 0 ? Colors.White : new Color(0.45f, 0.45f, 0.45f);
         }
         var rewardChances = new List<double>();
         var n = 0;
@@ -306,13 +331,19 @@ internal sealed class InspectScreen
         var twice = times > 1 ? $" ({times} rewards like it)" : "";
         return g.Kind switch
         {
-            DrawKind.Reward when g.Count is { } k => $"Reward {n}: {(k == 1 ? "one" : k.ToString())} of these {count}{rarity}{twice}, chance one you marked is offered",
+            DrawKind.Reward when g.Count is { } k => $"Reward {n}: {(k == 1 ? "one" : k.ToString())} of these {count}{rarity}{twice}{Roll(g)}, chance one you marked is offered",
             DrawKind.Reward => $"Reward {n}: some of these {count}{rarity}",
             DrawKind.Transform => $"A card you transform becomes one of these {count}, chance it's one you marked",
             DrawKind.Certain => "Always given",
             _ => $"One of these {count}",
         };
     }
+
+    /// <summary>A reward that rolls its rarity first, then a card of it: each rarity's chance (" (rarity first: rare 1.5%, uncommon 98.5%)").</summary>
+    private static string Roll(DrawGroup g)
+        => g.Cards.Select(c => c.Rarity).Distinct().Count() > 1 && Features.RunRemindersFeature.OptionCards.RarityRoll(g.Cards, g.Odds) is { } r
+            ? $" (rarity first: {r})"
+            : "";
 
     private static string Percent(double p) => p <= 0 ? "0%" : p >= 1 ? "100%" : p < 0.01 ? "<1%" : $"{Math.Round(p * 100)}%";
 

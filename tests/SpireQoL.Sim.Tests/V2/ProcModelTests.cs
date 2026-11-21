@@ -618,6 +618,63 @@ public class ProcModelTests
             if (m is Models.ProcModel and not Models.EndOfTurnModel and not Models.EndOfTurnRelic && name != "CoveringFirePower") Assert.NotNull(m.Tab);
         }
     }
+    // ---- draw and energy tabs (decision #132): the amount is what the source really gave
+
+    [Fact]
+    public void MotifDrawsItsAmountForEachMelodyTheCardIsFirstToPlay()
+    {
+        // MotifPower.AfterCardPlayed: CardPileCmd.Draw(num * Amount), num the melodies (Wah, Cho, Ki) this play is the first of this turn.
+        var duet = Card("Duet", SimCardType.Skill, "Wah", "Cho");
+        var after = One(Power(State(), "MotifPower", 2), Events(duet, 1));
+        Assert.Equal(4, after.PlayEvents["Drawn"]);
+        Assert.Equal(1, after.Fired["MotifPower"]);
+        Assert.Equal(4, after.Fired.DataOf("MotifPower"));
+        // A Wah already played this turn: only the Cho counts.
+        var s = Power(State(), "MotifPower", 2);
+        s.P.Turn = s.P.Turn.Add("Started#Wah", 1);
+        Assert.Equal(2, One(s, Events(duet, 1)).Fired.DataOf("MotifPower"));
+        // No melody: no draw.
+        Assert.False(One(Power(State(), "MotifPower", 2), Events(Card("Defend", SimCardType.Skill), 1)).Fired.Has("MotifPower"));
+    }
+
+    [Fact]
+    public void ADrawTabCountsOnlyTheCardsThatFitInYourHand()
+    {
+        // Dark Embrace draws one per exhaust; with one space left in hand (10 at most), two exhausts draw one card: its tab says 1,
+        // and it fired twice.
+        var s = Power(State(), "DarkEmbracePower", 1);
+        s.P.HandCount = 9;
+        s.P.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 10) } };
+        var after = One(s, Events(Card("Purge", SimCardType.Skill), 1, new CardEventAction(CardEvent.Exhausted, 2)));
+        Assert.Equal(10, after.P.HandCount);
+        Assert.Equal(2, after.Fired["DarkEmbracePower"]);
+        Assert.Equal(1, after.Fired.DataOf("DarkEmbracePower"));
+    }
+
+    [Fact]
+    public void CentennialPuzzleDrawsOnTheFirstHpLossOfTheCombat()
+    {
+        // CentennialPuzzle.AfterDamageReceived: UnblockedDamage > 0 and not UsedThisCombat: draws its Cards (3), once.
+        var s = Relic(State(), "CentennialPuzzle", amount: 0, vars: new[] { ("Cards", 3) });
+        s.P.Hp = 50;
+        s.P.HandCount = 3;
+        var bleed = One(s, Events(Card("Bloodletting", SimCardType.Skill), 1, new LoseHpAction(3)));
+        Assert.Equal(3, bleed.PlayEvents["Drawn"]);
+        Assert.Equal(3, bleed.Fired.DataOf("CentennialPuzzle"));
+        Assert.Equal(1, bleed.P.Relics["CentennialPuzzle"]);
+        // Used up this combat: nothing.
+        Assert.False(One(Relic(State(), "CentennialPuzzle", amount: 1), Events(Card("Bloodletting", SimCardType.Skill), 1, new LoseHpAction(3))).Fired.Has("CentennialPuzzle"));
+    }
+
+    [Fact]
+    public void AnEnergyTabCountsTheEnergyItGives()
+    {
+        var after = One(Power(State(), "SubroutinePower", 2), Events(Card("Defragment", SimCardType.Power), 1));
+        Assert.Equal(2, after.P.Energy);
+        Assert.Equal(2, after.Fired.DataOf("SubroutinePower"));
+        var nun = One(Relic(State(), "Nunchaku", amount: 9, vars: new[] { ("Cards", 10), ("Energy", 1) }), Play(Card("Strike"), 0, 1, Attack(1)));
+        Assert.Equal(1, nun.Fired.DataOf("Nunchaku"));
+    }
 }
 
 /// <summary>Teammates' arrows (ImpaledPowerOther): your hits don't knock them loose, but a kill gives them back (their Twine).</summary>
@@ -641,4 +698,5 @@ public class TeammateArrowTests
         Assert.Equal(2, kill.Teammates[0].Arrows);
         Assert.False(kill.Enemy(0)!.Powers.Has("ImpaledPowerOther"));
     }
+
 }

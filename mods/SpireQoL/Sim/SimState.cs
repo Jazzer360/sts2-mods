@@ -704,30 +704,38 @@ public sealed class SimState
     private static string OwnedKey(string source, int owner, bool indirect) =>
         OwnedKeys.GetOrAdd((source, owner, indirect), k => (k.Item3 ? "~" : "") + k.Item1 + "@" + k.Item2);
 
-    public void LogFired(string source, int amount = 0, int? owner = null)
+    public void LogFired(string source, int amount = 0, int? owner = null) => LogAs(source, amount, owner, 1);
+
+    /// <summary>
+    /// More of what a firing gave, logged after it (each card a draw tab's source actually drew: decision #132), without counting
+    /// another firing.
+    /// </summary>
+    public void LogAmount(string source, int amount, int? owner) => LogAs(source, amount, owner, 0);
+
+    private void LogAs(string source, int amount, int? owner, int times)
     {
         // A teammate's firing is logged under them only (Name@id): its tab is theirs (decision #75), and the plain name stays
         // yours (and enemies'). An enemy's is logged under both.
         if (owner is { } t && Who.IsPlayer(t) && t != Who.You)
         {
-            Log1(OwnedKey(source, t, false), amount);
-            if (IndirectNow) Log1(OwnedKey(source, t, true), amount);
+            Log1(OwnedKey(source, t, false), amount, times);
+            if (IndirectNow) Log1(OwnedKey(source, t, true), amount, times);
             return;
         }
-        Log1(source, amount);
-        if (owner is >= 0) Log1($"{source}@{owner}", amount);
-        if (IndirectNow) Log1("~" + source, amount);
-        if (IndirectNow && owner is >= 0) Log1($"~{source}@{owner}", amount);
+        Log1(source, amount, times);
+        if (owner is >= 0) Log1($"{source}@{owner}", amount, times);
+        if (IndirectNow) Log1("~" + source, amount, times);
+        if (IndirectNow && owner is >= 0) Log1($"~{source}@{owner}", amount, times);
     }
 
     /// <summary>
     /// An indirect firing (from a card event) is also logged as "~Name" (and "~Name@id" for an enemy's or a teammate's). A
     /// teammate's firings are only under Name@id (ProcIndicatorsFeature.LogTab reads them there).
     /// </summary>
-    private void Log1(string key, int amount)
+    private void Log1(string key, int amount, int times = 1)
     {
-        Fired = Fired.With(key, Fired[key] + 1, Fired.DataOf(key) + amount);
-        FiredAny = FiredAny.With(key, FiredAny[key] + 1, FiredAny.DataOf(key) + amount);
+        Fired = Fired.With(key, Fired[key] + times, Fired.DataOf(key) + amount);
+        FiredAny = FiredAny.With(key, FiredAny[key] + times, FiredAny.DataOf(key) + amount);
     }
 
     public SimState Clone()

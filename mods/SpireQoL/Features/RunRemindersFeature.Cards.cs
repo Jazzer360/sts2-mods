@@ -548,8 +548,9 @@ public sealed partial class RunRemindersFeature
         private static List<CardModel> OrderForShow(IEnumerable<CardModel> cards, CardRarityOddsType odds)
         {
             var list = cards.Distinct();
-            // Uniform odds never offer Basic or Ancient cards (CreateForReward).
-            if (odds == CardRarityOddsType.Uniform) list = list.Where(c => c.Rarity != CardRarity.Basic && c.Rarity != CardRarity.Ancient);
+            // A reward (CreateForReward) never offers Basic or Ancient cards: uniform odds leave them out, and a rarity roll only
+            // lands on Common, Uncommon or Rare (Infested Automaton's Study listed Lost Lute).
+            if (odds != CardRarityOddsType.None) list = list.Where(c => c.Rarity != CardRarity.Basic && c.Rarity != CardRarity.Ancient);
             return list.OrderBy(c => c.Rarity).ThenBy(c => c.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
         }
 
@@ -591,6 +592,28 @@ public sealed partial class RunRemindersFeature
                 .Select(r => possible.Where(c => c.Rarity == r).ToList())
                 .Select(g => new SpireQoL.Sim.RarityGroup(g.Count, g.Count(applies))).ToList();
             return SpireQoL.Sim.CardOdds.AtLeastOne(groups, baseOdds.Rare, baseOdds.Uncommon, count);
+        }
+
+        /// <summary>
+        /// The chance a reward from <paramref name="possible"/> is of each rarity it has (the base odds, a roll for a rarity with no
+        /// card moving on to the next: GetNextAllowedRarity), rarest first: "rare 1.5%, uncommon 98.5%". Null for uniform odds.
+        /// </summary>
+        internal static string? RarityRoll(List<CardModel> possible, CardRarityOddsType odds)
+        {
+            if (odds is CardRarityOddsType.Uniform or CardRarityOddsType.None || BaseOdds(odds) is not { } b) return null;
+            var order = new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare };
+            var has = order.Select(r => possible.Any(c => c.Rarity == r)).ToArray();
+            if (!has.Any(x => x)) return null;
+            var rolled = new[] { Math.Max(0, 1 - b.Rare - b.Uncommon), b.Uncommon, b.Rare };
+            var lands = new double[3];
+            for (var i = 0; i < 3; i++)
+            {
+                var r = i;
+                while (!has[r]) r = (r + 1) % 3;
+                lands[r] += rolled[i];
+            }
+            static string Pct(double p) => p >= 0.1 ? $"{Math.Round(p * 100)}%" : $"{Math.Round(p * 100, 1)}%";
+            return string.Join(", ", new[] { 2, 1, 0 }.Where(i => has[i]).Select(i => $"{order[i].ToString().ToLowerInvariant()} {Pct(lands[i])}"));
         }
 
         private static readonly MethodInfo? GetBaseOdds = AccessTools.Method(typeof(MegaCrit.Sts2.Core.Odds.CardRarityOdds), "GetBaseOdds");

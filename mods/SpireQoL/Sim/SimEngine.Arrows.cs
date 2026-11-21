@@ -111,8 +111,9 @@ public static partial class SimEngine
     /// A card event raised where hooks can't branch (inside a hit or a death: an arrow knocked loose), run once the hit or action
     /// is over (DrainPending).
     /// </summary>
-    internal static void Raise(SimState s, CardEvent ev, int player, int count = 1) =>
-        s.Pending = s.Pending.Add($"{(int)ev}|{player}", count);
+    /// <param name="source">The model raising it, when its tab counts what it gives (a draw or energy tab: decision #132).</param>
+    internal static void Raise(SimState s, CardEvent ev, int player, int count = 1, string? source = null) =>
+        s.Pending = s.Pending.Add(source == null ? $"{(int)ev}|{player}" : $"{(int)ev}|{player}|{source}", count);
 
     /// <summary>The events raised during a hit or an action, each through every listener.</summary>
     internal static IEnumerable<SimState> DrainPending(SimState s)
@@ -126,7 +127,8 @@ public static partial class SimEngine
             var parts = e.Name.Split('|');
             var ev = (CardEvent)int.Parse(parts[0]);
             var player = int.Parse(parts[1]);
-            r = Then(r.ToList(), x => ProcCardEvent(x, ev, e.Amount, player, indirect: false));
+            var tally = parts.Length > 2 && SimModels.Get(parts[2]) is { } m ? TallyFor(m.Name, m.Tab, ev, player) : null;
+            r = Then(r.ToList(), x => ProcCardEvent(x, ev, e.Amount, player, indirect: false, tally));
             // Epic Retrieval: its own energy for each of its player's arrows its play knocks loose (the game passes the card as the source).
             if (ev == CardEvent.ArrowDislodged)
                 r = Then(r.ToList(), x => x.CurrentPlay is { ArrowEnergy: > 0 } cp && cp.Owner == player

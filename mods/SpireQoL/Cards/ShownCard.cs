@@ -40,6 +40,9 @@ internal sealed class ShownCard
     /// <summary>The tabs drawn on it (change them, and the next tick draws the new ones).</summary>
     public CardDecor Decor => _decor;
 
+    /// <summary>Where the card's frame is drawn in <see cref="Root"/> (null until it's laid out): for a mark around the card itself.</summary>
+    public Rect2? CardRect { get; private set; }
+
     /// <summary>The card node, once made (null when the card scene couldn't be made).</summary>
     public NCard? Node => _card;
 
@@ -130,6 +133,7 @@ internal sealed class ShownCard
         var rel = Root.GetGlobalTransform().AffineInverse() * frame.GetGlobalTransform();
         var shown = frame.Size * _scale;
         var want = new Vector2((Root.Size.X - shown.X) / 2f, Root.Size.Y - shown.Y);
+        CardRect = new Rect2(want, shown);
         var delta = want - rel.Origin;
         if (delta.LengthSquared() <= 0.25f) return false;
         _card.Position += delta;

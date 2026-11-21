@@ -390,7 +390,7 @@ public sealed partial class SettingsMenu
                 v => S.EtherealOpacity = (float)v, v => $"{v:0.00}", Needs("card-indicators")),
             ["proc-indicators"] = () =>
             {
-                Option("Amounts on proc tabs", "Show the block, damage or summon amount on proc tabs. Off: icon only.",
+                Option("Amounts on proc tabs", "Show the amount on proc tabs: block gained, damage dealt, the amount summoned, cards drawn and energy gained. Off: icon only.",
                     S.ProcNumbers, v => S.ProcNumbers = v, Needs("proc-indicators"));
                 Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
                     S.ProcIndirect, v => S.ProcIndirect = v, Needs("proc-indicators"));

@@ -1,7 +1,11 @@
 namespace SpireQoL.Sim;
 
 /// <summary>What a model's tab shows: a plain trigger, or the block, damage or summon it adds (docs/FEATURES.md "On-card tabs").</summary>
-public enum TabKind { Trigger, Block, Damage, Summon }
+/// <summary>
+/// A model's tab: a trigger (no number), or one with the amount it gives (block, damage, summon, the cards it draws, the energy it
+/// gives: decision #132).
+/// </summary>
+public enum TabKind { Trigger, Block, Damage, Summon, Draw, Energy }
 
 /// <summary>
 /// A card event the hooks see (AfterCardDrawn, AfterCardExhausted, AfterCardDiscarded, AfterCardGeneratedForCombat, AfterStarsGained,

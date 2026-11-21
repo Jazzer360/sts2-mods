@@ -100,6 +100,12 @@ public sealed class OverlayHost
 
     private bool _inFrame;
 
+    /// <summary>
+    /// True while the mod's frame run is going (features' OnFrame): the game changes nothing in between, so what's read once in it
+    /// holds for the rest of it. False in a game callback (a hook mid-frame), where the board may have just changed.
+    /// </summary>
+    public static bool InFrameRun { get; private set; }
+
     /// <summary>A feature's time this frame, less the parts it timed on its own (each its own entry).</summary>
     private void AddTimed(string id, double ms, double kb)
     {
@@ -238,8 +244,9 @@ public sealed class OverlayHost
         _featureKb.Clear();
         _parts.Clear();
         _inFrame = true;
+        InFrameRun = true;
         try { RunFrame(); }
-        finally { _inFrame = false; }
+        finally { _inFrame = false; InFrameRun = false; }
         var modMs = (Godot.Time.GetTicksUsec() - start) / 1000.0;
         _lastModMs = modMs;
         try { FrameMeasured?.Invoke(modMs, gapMs); } catch { /* diagnostics only */ }

@@ -11,7 +11,7 @@ namespace SpireQoL.Combat;
 /// Whether anything a prediction reads could have changed since the last frame (decision #130): one hash of plain values read
 /// from the game, worked out once a frame, calling none of its hooks and allocating nothing. The combat log's length (every
 /// play, hit, power, draw and move adds to it), each creature's HP, block, powers and next move, each player's energy, stars,
-/// piles, hand (each card: its upgrade, cost, enchantment, affliction and own keywords), relic counters, orbs and potions, the
+/// piles, hand (each card: its upgrade, cost, enchantment, affliction and own keywords), relic counters, orbs, arrows and potions, the
 /// turn and side, and the mod's settings. When it's the same as the probe a result was worked out from, the turn forecast, Proc
 /// Indicators and Card Indicators use that result instead of working it out again from the game. Dev mode works them out anyway every
 /// 30th such frame and logs it when they differ (a change this misses), so a gap shows up in the logs before it shows on screen.
@@ -31,6 +31,13 @@ internal static class BoardProbe
     /// </summary>
     public static int Hash(Player me, ICombatState cs)
     {
+        // A game callback (the audit's prediction as a play begins, inside the game's hook; decision #131): the board can change between it and
+        // the frame run in the same frame, so it reads the board now, and the frame run reads it again.
+        if (!Sts2Mods.Core.Ui.OverlayHost.InFrameRun)
+        {
+            _frame = ulong.MaxValue;
+            return Compute(me, cs);
+        }
         var frame = Godot.Engine.GetProcessFrames();
         if (frame == _frame) return _hash;
         _frame = frame;
@@ -89,6 +96,10 @@ internal static class BoardProbe
     private static readonly AccessTools.FieldRef<CardModel, HashSet<CardKeyword>> AddedKeywords = AccessTools.FieldRefAccess<CardModel, HashSet<CardKeyword>>("_keywordsAddedFromOutside");
     private static readonly AccessTools.FieldRef<CardModel, HashSet<CardKeyword>> RemovedKeywords = AccessTools.FieldRefAccess<CardModel, HashSet<CardKeyword>>("_keywordsRemovedFromOutside");
     private static readonly AccessTools.FieldRef<CardEnergyCost, int> BaseCost = AccessTools.FieldRefAccess<CardEnergyCost, int>("_base");
+    /// <summary>The Fool's arrows you can shoot (PlayerCombatState.AvailableArrowCount; none before v0.113.0, the main branch).</summary>
+    private static readonly Func<PlayerCombatState, int>? Arrows = AccessTools.PropertyGetter(typeof(PlayerCombatState), "AvailableArrowCount") is { } g
+        ? AccessTools.MethodDelegate<Func<PlayerCombatState, int>>(g)
+        : null;
 
     internal static int Compute(Player me, ICombatState cs)
     {
@@ -126,6 +137,7 @@ internal static class BoardProbe
         if (p.PlayerCombatState is not { } pcs) return;
         h.Add(pcs.Energy);
         h.Add(pcs.Stars);
+        if (Arrows != null) h.Add(Arrows(pcs));
         h.Add(PileType.Draw.GetPile(p).Cards.Count);
         h.Add(PileType.Discard.GetPile(p).Cards.Count);
         h.Add(PileType.Exhaust.GetPile(p).Cards.Count);

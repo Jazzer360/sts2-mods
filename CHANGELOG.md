@@ -6,6 +6,19 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.25.0
+#### Added
+- Draw and energy tabs show how many: the cards the play makes Dark Embrace, Vicious, Motif, Game Piece, Iron Club, Joss Paper or Centennial Puzzle draw (only those that fit in your hand), and the energy Subroutine, Yah!, Orbit, Automation, Ivory Tile or Nunchaku gives. Motif stacked draws its amount for each melody the card is the first to play this turn.
+
+#### Fixed
+- Inspect: a reward that rolls its rarity first no longer lists Ancient cards it can never give (Lost Lute at Infested Automaton's Study), and says so with each rarity's chance, so a rare's small chance isn't a surprise.
+- Inspect: a marked card's ring goes around the card itself (it left a gap above and was hidden below), and the cards you didn't mark are darkened instead of see-through.
+- The turn forecast is no longer reused from just before a play began, for a frame, when the game changed the board mid-frame; the Fool's arrows count as a board change.
+
+### Main Saves 1.0.23
+#### Changed
+- Shared code: the mod frame loop says when it is running, so code called from the game mid-frame can tell. No change in the game.
+
 ### Spire QoL 1.24.6
 #### Fixed
 - Pocketwatch: a crossed tab on the card that takes this turn past its limit of cards, giving up next turn's extra draws (like Art of War and Pael's Tears).

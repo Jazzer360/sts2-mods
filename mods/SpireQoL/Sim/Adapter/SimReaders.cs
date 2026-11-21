@@ -148,6 +148,7 @@ public static class SimReaders
                     data = Sts2State.Private<object?>(r, "AffectedCardPlay", null) != null ? 1 : 0;
                     break;
                 case "TungstenRod": amount = Sts2State.Var(r, "HpLossReduction", 1); break;
+                case "CentennialPuzzle": amount = Sts2State.Private(r, "UsedThisCombat", false) ? 1 : 0; break; // used up this combat
                 case "Pocketwatch": amount = Sts2State.Private(r, "_cardsPlayedThisTurn", 0); data = Sts2State.Var(r, "CardThreshold", 3); break;
                 case "BeatingRemnant":
                     amount = Sts2State.Var(r, "MaxHpLoss", int.MaxValue);

@@ -56,6 +56,7 @@ public sealed class StormPower : BoundPower
 public sealed class SubroutinePower : BoundPower
 {
     public override string Name => "SubroutinePower";
+    public override TabKind? Tab => TabKind.Energy;
     protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Power;
     protected override IEnumerable<SimState> Act(SimState s, int owner, SimCardPlay play, int amount) => Then(Fire(s, owner), CardEvent.EnergyGained, amount, owner);
 }
@@ -358,12 +359,18 @@ public sealed class LullabyPower : ProcModel
     }
 }
 
-/// <summary>MotifPower.AfterCardPlayed: the first Wah, Cho and Ki each turn draw.</summary>
+/// <summary>
+/// MotifPower.AfterCardPlayed: its amount of draws for each melody (Wah, Cho, Ki) the card is the first this turn to play
+/// (CardPileCmd.Draw(num * Amount)).
+/// </summary>
 public sealed class MotifPower : ProcModel
 {
     public override string Name => "MotifPower";
+    public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Melodies.AnyFirst(s, play) ? Fire(s, owner) : One(s);
+        Mine(play, owner) && Melodies.Tags.Count(t => Melodies.First(s, play, t)) is var n and > 0
+            ? Then(Fire(s, owner), CardEvent.Drawn, n * Amount(s, owner), owner)
+            : One(s);
 }
 
 /// <summary>LostLutePower.AfterCardPlayed: the first Wah, Cho and Ki each turn play the top card of your draw pile.</summary>
@@ -436,6 +443,7 @@ public sealed class ImpaledPower : SimModel
 public sealed class YahPower : ProcModel
 {
     public override string Name => "YahPower";
+    public override TabKind? Tab => TabKind.Energy;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
     {
         if (ev != CardEvent.ArrowDislodged || player != owner || Data(s, owner) != 0) return One(s);
@@ -480,6 +488,7 @@ public sealed class FeelNoPainPower : ProcModel
 public sealed class DarkEmbracePower : ProcModel
 {
     public override string Name => "DarkEmbracePower";
+    public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.Exhausted && player == owner ? Then(Fire(s, owner), CardEvent.Drawn, 1, owner) : One(s);
 }
@@ -513,6 +522,7 @@ public abstract class EventCountdownPower : ProcModel
 public sealed class OrbitPower : EventCountdownPower
 {
     public override string Name => "OrbitPower";
+    public override TabKind? Tab => TabKind.Energy;
     protected override CardEvent Event => CardEvent.EnergySpent;
     protected override IEnumerable<SimState> OnZero(SimState s, int owner) => Then(Fire(s, owner), CardEvent.EnergyGained, Amount(s, owner), owner);
 }
@@ -521,6 +531,7 @@ public sealed class OrbitPower : EventCountdownPower
 public sealed class AutomationPower : EventCountdownPower
 {
     public override string Name => "AutomationPower";
+    public override TabKind? Tab => TabKind.Energy;
     protected override CardEvent Event => CardEvent.Drawn;
     protected override IEnumerable<SimState> OnZero(SimState s, int owner) => Then(Fire(s, owner), CardEvent.EnergyGained, Amount(s, owner), owner);
 }
@@ -617,6 +628,7 @@ public sealed class SleightOfFleshPower : ProcModel
 public sealed class ViciousPower : ProcModel
 {
     public override string Name => "ViciousPower";
+    public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterPowerApplied(SimState s, int owner, string power, int amount, int applier, int target, bool debuff) =>
         power == "VulnerablePower" && applier == owner && target >= 0 ? Then(Fire(s, owner), CardEvent.Drawn, 1, owner) : One(s);
 }

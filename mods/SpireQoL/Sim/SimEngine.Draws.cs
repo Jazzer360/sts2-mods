@@ -13,10 +13,12 @@ public static partial class SimEngine
     /// reactions (Speedster, Corrosive Wave, Automation...) and the draws they chain (Iteration, Pagestorm) come first, so with
     /// a hand nearly full the order is the game's.
     /// </summary>
-    internal static IEnumerable<SimState> DrawCards(SimState s, int player, int count, bool indirect)
+    /// <param name="onDrawn">Called for each card these draws give (not the ones their reactions chain), before its reactions: a
+    /// draw tab counting what its source drew (decision #132).</param>
+    internal static IEnumerable<SimState> DrawCards(SimState s, int player, int count, bool indirect, Action<SimState>? onDrawn = null)
     {
         IEnumerable<SimState> r = new[] { s };
-        for (var i = 0; i < count; i++) r = Then(r, x => DrawOne(x, player, indirect));
+        for (var i = 0; i < count; i++) r = Then(r, x => DrawOne(x, player, indirect, onDrawn: onDrawn));
         return r;
     }
 
@@ -90,7 +92,7 @@ public static partial class SimEngine
     /// (each card equally likely: the order is hidden). The card joins your hand (what acts at end of turn, Ethereal, what
     /// Stampede or Simpleton could pick), then its reactions run.
     /// </summary>
-    private static IEnumerable<SimState> DrawOne(SimState s, int player, bool indirect, bool record = false)
+    private static IEnumerable<SimState> DrawOne(SimState s, int player, bool indirect, bool record = false, Action<SimState>? onDrawn = null)
     {
         var p = PlayerOf(s, player)!;
         // The card being played has left your hand already (the game moves it before OnPlay); HandCount drops at CardResolved.
@@ -102,13 +104,14 @@ public static partial class SimEngine
             if (pile.DiscardCount == 0) return new[] { s };
             p = MutablePlayer(s, player);
             p.Draw = pile.Shuffled();
-            return Then(ProcCardEvent(s, CardEvent.Shuffled, 1, player), x => DrawOne(x, player, indirect, record));
+            return Then(ProcCardEvent(s, CardEvent.Shuffled, 1, player), x => DrawOne(x, player, indirect, record, onDrawn));
         }
         if (pile.Top.Count > 0)
         {
             var mp = MutablePlayer(s, player);
             var top = pile.Top[0];
             mp.Draw = pile.WithoutTop();
+            onDrawn?.Invoke(s);
             return Drawn(s, player, top, indirect, record);
         }
         var total = pile.RestCount;
@@ -119,6 +122,7 @@ public static partial class SimEngine
             var c = pile.Rest.Count == 1 ? s : s.Clone();
             c.Weight = s.Weight * g.Count / total;
             MutablePlayer(c, player).Draw = pile.WithoutOneOf(i);
+            onDrawn?.Invoke(c);
             result.AddRange(Drawn(c, player, g.Card, indirect, record));
         }
         return result;

@@ -132,19 +132,27 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: none;
 
 .card { position: relative; }
 canvas.hover-layer, .check canvas.hover-layer { position: absolute; pointer-events: none; margin: 0; } /* never a chart canvas's margin: it sits exactly over its chart */
-/* the Overview: a panel per area (eight), filling the screen: four by two on a wide screen, fewer columns on narrower ones */
+/* the Overview: a panel per area (eight), filling the screen on a wide one, fewer columns on narrower ones */
 .ov { display: grid; gap: 12px; grid-template-columns: 1fr; }
 @media (min-width: 760px) { .ov { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1150px) { .ov { grid-template-columns: repeat(3, 1fr); } }
-/* time-based panels wide (a chart over time wants width): predictions and performance first, two columns each; the lists next; the log and the launch comparison wide again */
-#chk-pred { order: 1; } #chk-calc { order: 2; } #chk-perf { order: 3; } #chk-attn { order: 4; } #chk-reports { order: 5; } #chk-notes { order: 6; } #chk-log { order: 7; } #chk-launch { order: 8; }
-@media (min-width: 1150px) and (max-width: 1499px) { #chk-pred, #chk-perf { grid-column: span 2; } #chk-launch { grid-column: span 3; } }
+/* each panel sized to what it holds: the predictions (a short row per fight) narrow and tall; the calculations' list tall; charts over time,
+   the log's long lines and what needs a look wide */
+#chk-pred { order: 1; } #chk-calc { order: 2; } #chk-attn { order: 3; } #chk-perf { order: 4; } #chk-reports { order: 5; } #chk-notes { order: 6; } #chk-log { order: 7; } #chk-launch { order: 8; }
+@media (min-width: 1150px) and (max-width: 1499px) {
+  .ov { grid-template-areas: "pred perf perf" "pred calc attn" "reports notes launch" "log log log"; }
+  #chk-pred { grid-area: pred; } #chk-calc { grid-area: calc; } #chk-attn { grid-area: attn; } #chk-perf { grid-area: perf; }
+  #chk-reports { grid-area: reports; } #chk-notes { grid-area: notes; } #chk-log { grid-area: log; } #chk-launch { grid-area: launch; }
+}
 @media (min-width: 1500px) {
-  .ov { grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, minmax(0, 1fr)); height: calc(100vh - 128px); min-height: 720px; }
+  /* three rows filling the screen (at 1080p the first about 330 px for the frame chart, the others about 240): the predictions and the calculations two rows tall at either side,
+     the frame chart wide between them over what needs a look and the launch comparison, then reports, notes and the log, wide */
+  .ov { grid-template-columns: minmax(360px, 0.8fr) 1fr 1fr minmax(380px, 0.9fr); grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); height: calc(100vh - 128px); min-height: 720px;
+    grid-template-areas: "pred perf perf calc" "pred attn launch calc" "reports notes log log"; }
   .ov .check { min-height: 0; }
   .ov .check .body { min-height: 0; }
-  #chk-pred, #chk-perf, #chk-log, #chk-launch { grid-column: span 2; }
-  #chk-perf { order: 2; } #chk-calc { order: 3; }
+  #chk-pred { grid-area: pred; } #chk-calc { grid-area: calc; } #chk-attn { grid-area: attn; } #chk-perf { grid-area: perf; }
+  #chk-reports { grid-area: reports; } #chk-notes { grid-area: notes; } #chk-log { grid-area: log; } #chk-launch { grid-area: launch; }
 }
 .check .fill { position: absolute; inset: 0; overflow: auto; }
 .check .fill table { font-size: 12px; }
@@ -217,7 +225,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
         <div class="body"><div class="fill" id="ovCards"></div></div>
         <div class="causes"></div><div class="links"><a href="#" data-go="searches">Searches →</a></div></div>
       <div class="card check" id="chk-perf"><h3>Is the game running smoothly?</h3>
-        <p class="hint">The mod's own time per frame over the last 5 minutes: a busy frame (95th percentile, blue) and the slowest (red). A 60 fps frame has 16.7 ms for the game and the mod together (dashed lines at 16.7 and 33.3 ms); the mod normally stays around 1–2 ms, and a frame over 30 ms is a stutter you can see. Stuttering is a pattern, not a frame: a slow frame on its own (a settings page building, a fight's first prediction, a scene loading) is listed as a one-off and colours nothing; slow frames that keep coming (3 or more, each within 10 s of the last) are a stuttering spell, amber, and two spells in 5 minutes or one lasting 30 s turn the panel red. Hitches: gaps over 50 ms between frames while the mod's share was small, the game's own; only those during a fight count, since the game loading a scene (the launch, menus, the map, a room, a fight's first seconds) always hitches. The launch's first 20 s don't count against the mod either (its code compiling on first use). Below: the features that cost the most.</p>
+        <p class="hint">The mod's own time per frame over the last 5 minutes: a busy frame (95th percentile, blue) and the slowest (red). A frame has 6.1 ms for the game and the mod together at 165 fps, 16.7 ms at 60 fps and 33.3 ms at 30 fps (the yellow, orange and red dashed lines, each shown once the frames come near it); the mod normally stays around 1–2 ms, and a frame over 30 ms is a stutter you can see. Stuttering is a pattern, not a frame: a slow frame on its own (a settings page building, a fight's first prediction, a scene loading) is listed as a one-off and colours nothing; slow frames that keep coming (3 or more, each within 10 s of the last) are a stuttering spell, amber, and two spells in 5 minutes or one lasting 30 s turn the panel red. Hitches: gaps over 50 ms between frames while the mod's share was small, the game's own; only those during a fight count, since the game loading a scene (the launch, menus, the map, a room, a fight's first seconds) always hitches. The launch's first 20 s don't count against the mod either (its code compiling on first use). The chart leaves out the launch until your first fight has settled (the Performance page's "skip the launch"). Below: the features that cost the most.</p>
         <div class="verdict"></div><div class="stats"></div>
         <div class="body"><canvas id="sparkFrames" height="150"></canvas></div>
         <div class="causes"></div><div class="links"><a href="#" data-go="perf">Performance →</a></div></div>
@@ -289,7 +297,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
   </section>
 
   <section class="page" id="p-perf">
-    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label><span class="dim" title="Each point drawn as the average of the points within this much time around it: the trend, not every spike. The slow-frame tiles and the log still count every one.">Smooth over</span><select id="smoothSel"><option value="0">off</option><option value="0.5">0.5 s</option><option value="1.25">1.25 s</option><option value="3">3 s</option><option value="10">10 s</option><option value="30">30 s</option><option value="60">1 minute</option></select></div>
+    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label><label title="Leave out the frames before the game settled: the launch, the menus and map before your first fight, and that fight's first 15 s (loading, and the mod's code compiling on first use). They dwarf everything after."><input type="checkbox" id="skipLaunchBox"> skip the launch</label><span class="dim" title="Each point drawn as the average of the points within this much time around it: the trend, not every spike. The slow-frame tiles and the log still count every one.">Smooth over</span><select id="smoothSel"><option value="0">off</option><option value="0.5">0.5 s</option><option value="1.25">1.25 s</option><option value="3">3 s</option><option value="10">10 s</option><option value="30">30 s</option><option value="60">1 minute</option></select></div>
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><h3>Is the mod making frames slow?</h3>
@@ -425,6 +433,14 @@ const WARMUP_S = 20;
 /** A fight's first seconds: the game loading its room. */
 const FIGHT_LOAD_S = 3;
 const warmingUp = (t) => t < WARMUP_S;
+/** The launch settles once the first fight has loaded and made its first predictions (the mod's fight code compiling on first use), or at the warm-up's end before any fight. */
+const LAUNCH_FIGHT_S = 15;
+const settledAt = () => (M.combats.length ? M.combats[0].t + LAUNCH_FIGHT_S : WARMUP_S);
+/** The Performance page's "skip the launch" (on by default; kept per browser, and for the page while open). */
+let skipLaunchChosen = true;
+const skipLaunch = () => { try { const v = localStorage.getItem("skipLaunch"); return v == null ? skipLaunchChosen : v !== "0"; } catch { return skipLaunchChosen; } };
+/** Rollups for the charts: without the launch's (its loading and first-use frames dwarf everything after) when skipped. */
+const afterLaunch = (arr) => (skipLaunch() ? arr.filter((e) => e.t >= settledAt()) : arr);
 /** Whether the game was loading a scene at t: the launch's warm-up, anywhere outside a fight (menus, the map, rooms, events, rewards: scene changes the game makes) or a fight's first seconds.
  *  The game's own hitches there are its loading, nothing the mod can do about; they're shown but don't count against the verdicts. Hitches inside a fight still do (a full memory clean-up the mod's allocations set off, say). */
 function loadingAt(t) {
@@ -836,7 +852,17 @@ function axes(g, w, h, yMax, unit, pad) {
 /** Times are spiky (one slow frame among hundreds): the time charts can use a log scale (the Performance page's switch). */
 /** The mod's own limits on its time charts: its busy-frame budget (the Overview's verdict turns amber above it) and a stutter (its slow-frame warning). */
 const MOD_BUDGET_MS = 4, STUTTER_MS = 30;
-const MOD_REFS = [{ v: MOD_BUDGET_MS, label: `budget ${MOD_BUDGET_MS} ms` }, { v: STUTTER_MS, label: `stutter ${STUTTER_MS} ms` }];
+/**
+ * Frame-rate lines on the frame-time charts: a whole frame's time at 165 fps (yellow: where it starts to feel slower on a fast
+ * monitor), 60 fps (orange: a common monitor's refresh) and 30 fps (red: the lowest that's acceptable). Each shows only once the
+ * data comes near it (nearRefs), on every frame-time chart and, as frame rates, on the fps chart.
+ */
+const FPS_REFS = () => [
+  { v: 1000 / 165, label: "165 fps", color: "#eab308" },
+  { v: 1000 / 60, label: "60 fps", color: "#f97316" },
+  { v: 1000 / 30, label: "30 fps", color: css("--bad") },
+];
+const MOD_REFS = () => [{ v: MOD_BUDGET_MS, label: `budget ${MOD_BUDGET_MS} ms` }, ...FPS_REFS()];
 const logTimes = () => { try { return localStorage.getItem("logTimes") !== "0"; } catch { return true; } };
 /**
  * How much time each line-chart point is averaged over (seconds; 0: drawn as measured). The Performance page's "Smooth over" sets
@@ -866,9 +892,10 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
   const all = series.flatMap((s) => s.points);
   if (!all.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const t0 = Math.min(...all.map((p) => p[0])), t1 = Math.max(...all.map((p) => p[0]), t0 + 1);
-  // refs: numbers, or { v, label } (frame-rate lines). On a log scale every one fits; on a linear one, those above the data aren't drawn.
-  const refv = refs.map((r) => (typeof r === "number" ? { v: r } : r));
-  const yMax = fixedMax ?? Math.max(...all.map((p) => p[1]), ...(log ? refv.map((r) => r.v) : []), 1) * (log ? 1.5 : 1.08);
+  // refs: numbers, or { v, label, color, below } (frame-rate lines): each drawn only once the data nears it (nearRefs), the axis
+  // then reaching it.
+  const refv = nearRefs(refs.map((r) => (typeof r === "number" ? { v: r } : r)), all.map((p) => p[1]));
+  const yMax = fixedMax ?? Math.max(...all.map((p) => p[1]), ...refv.map((r) => r.v), 1) * (log ? 1.5 : 1.08);
   const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r);
   let Y;
   if (log) {
@@ -885,26 +912,8 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
     if (!mini) axes(g, w, h, yMax, unit, pad);
     Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (v - yMin) / (yMax - yMin));
   }
-  g.setLineDash([4, 4]); g.strokeStyle = css("--faint");
-  for (const r of refv) {
-    if (r.v > yMax) continue;
-    g.beginPath(); g.moveTo(pad.l, Y(r.v)); g.lineTo(w - pad.r, Y(r.v)); g.stroke();
-  }
-  g.setLineDash([]);
-  // Their labels, drawn over the data at the right edge on a backdrop; one too close to the last drawn is left out.
-  const refLabels = () => {
-    if (mini) return;
-    g.font = "10px system-ui";
-    let lastY = -100;
-    for (const r of [...refv].filter((r) => r.label && r.v <= yMax).sort((a, b) => a.v - b.v)) {
-      const y = Y(r.v);
-      if (Math.abs(y - lastY) < 12) continue;
-      lastY = y;
-      const tw = g.measureText(r.label).width, x = w - pad.r - tw - 4;
-      g.fillStyle = css("--panel"); g.globalAlpha = 0.85; g.fillRect(x - 2, y - 6, tw + 4, 12); g.globalAlpha = 1;
-      g.fillStyle = css("--dim"); g.fillText(r.label, x, y + 4);
-    }
-  };
+  drawRefLines(g, refv, yMax, Y, pad, w);
+  const refLabels = () => { if (!mini) drawRefLabels(g, refv, yMax, Y, pad, w); };
   for (const s of series) {
     g.strokeStyle = g.fillStyle = s.color; g.lineWidth = 1.5;
     if (s.dots) { for (const [t, v] of s.points) { g.beginPath(); g.arc(X(t), Y(v), 2.5, 0, 7); g.fill(); } continue; }
@@ -918,14 +927,49 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
   HOVER[id] = { kind: "lines", series, t0, t1, pad, w, h, unit, X, Y };
   rehover(id);
 }
-/** Stacked areas over time: layers [{ name, color, points: [[t, v]] }] on the same t. */
-function stacked(id, layers) {
+/**
+ * The reference lines worth drawing: those the data comes near, at half the line's value or more (a frame-rate line shows up as
+ * frames get slow, not while they're far from it); a "below" line (a frame rate on the fps chart) once the data drops within a
+ * third above it.
+ */
+const REF_NEAR = 0.5;
+function nearRefs(refv, values) {
+  if (!values.length) return [];
+  const hi = Math.max(...values), lo = Math.min(...values);
+  return refv.filter((r) => (r.below ? lo <= r.v * 1.33 : hi >= r.v * REF_NEAR));
+}
+/** Reference lines across a chart (dashed; a line's own colour, or faint), those within its range. */
+function drawRefLines(g, refv, yMax, Y, pad, w) {
+  g.setLineDash([4, 4]);
+  for (const r of refv) {
+    if (r.v > yMax) continue;
+    g.strokeStyle = r.color || css("--faint"); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(pad.l, Y(r.v)); g.lineTo(w - pad.r, Y(r.v)); g.stroke();
+  }
+  g.setLineDash([]);
+}
+/** Their labels, drawn over the data at the right edge on a backdrop; one too close to the last drawn is left out. */
+function drawRefLabels(g, refv, yMax, Y, pad, w) {
+  g.font = "10px system-ui";
+  let lastY = -100;
+  for (const r of [...refv].filter((r) => r.label && r.v <= yMax).sort((a, b) => a.v - b.v)) {
+    const y = Y(r.v);
+    if (Math.abs(y - lastY) < 12) continue;
+    lastY = y;
+    const tw = g.measureText(r.label).width, x = w - pad.r - tw - 4;
+    g.fillStyle = css("--panel"); g.globalAlpha = 0.85; g.fillRect(x - 2, y - 6, tw + 4, 12); g.globalAlpha = 1;
+    g.fillStyle = r.color || css("--dim"); g.fillText(r.label, x, y + 4);
+  }
+}
+/** Stacked areas over time: layers [{ name, color, points: [[t, v]] }] on the same t; refs as in lines (shown once the stack reaches them). */
+function stacked(id, layers, { refs = [] } = {}) {
   if (smoothSeconds() > 0) layers = layers.map((l) => ({ ...l, points: smoothed(l.points, smoothSeconds()) }));
   const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 16 };
   if (!layers.length || !layers[0].points.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const ts = layers[0].points.map((p) => p[0]), n = ts.length;
   const tot = ts.map((_, i) => layers.reduce((a, l) => a + (l.points[i]?.[1] || 0), 0));
-  const yMax = Math.max(...tot, 0.1) * 1.08, t0 = ts[0], t1 = Math.max(ts.at(-1), t0 + 1);
+  refs = nearRefs(refs, tot);
+  const yMax = Math.max(...tot, ...refs.map((r) => r.v), 0.1) * 1.08, t0 = ts[0], t1 = Math.max(ts.at(-1), t0 + 1);
   axes(g, w, h, yMax, " ms", pad);
   const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r), Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - v / yMax);
   const base = new Array(n).fill(0);
@@ -936,6 +980,8 @@ function stacked(id, layers) {
     g.closePath(); g.fill(); g.globalAlpha = 1;
     for (let i = 0; i < n; i++) base[i] += l.points[i]?.[1] || 0;
   }
+  drawRefLines(g, refs, yMax, Y, pad, w);
+  drawRefLabels(g, refs, yMax, Y, pad, w);
   HOVER[id] = { kind: "stacked", layers, ts, t0, t1, pad, w, h, X, Y };
   rehover(id);
 }
@@ -1165,8 +1211,8 @@ function renderOverview() {
     else if (st5.level !== "good") setCheck("chk-perf", st5.level, `Stuttering from the mod: ${spellText(st5)} in 5 minutes.`, stats, causeLine);
     else if (p95 > MOD_BUDGET_MS || stalls5 > 3) setCheck("chk-perf", "warn", p95 > MOD_BUDGET_MS ? `The mod is heavier than usual: ${fmt(p95, 1)} ms in a busy frame.` : `${stalls5} hitches from the game itself during fights in 5 minutes.`, stats, causeLine);
     else setCheck("chk-perf", "good", `Smooth: the mod takes ${fmt(p95, 1)} ms in a busy frame${st5.oneOffs ? `; ${st5.oneOffs} one-off slow frame(s), not a pattern` : ""}.`, stats, causeLine);
-    lines("sparkFrames", [{ name: "busy frame (p95)", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }],
-      { refs: MOD_REFS, unit: " ms", log: logTimes() });
+    lines("sparkFrames", [{ name: "busy frame (p95)", color: css("--accent"), points: afterLaunch(r5).map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: afterLaunch(r5).map((r) => [r.t, r.modMax]) }],
+      { refs: MOD_REFS(), unit: " ms", log: logTimes() });
   }
   // ---- what needs a look
   {
@@ -1387,7 +1433,7 @@ function renderSearches() {
 }
 
 function renderPerf() {
-  const win = +$("perfWindow").value, r = since(M.rollups, win), colors = seriesColors();
+  const win = +$("perfWindow").value, r = afterLaunch(since(M.rollups, win)), colors = seriesColors();
   const p95s = r.map((x) => x.modP95), frames = r.reduce((a, x) => a + x.frames, 0), secs = r.reduce((a, x) => a + x.seconds, 0);
   const waits = since(M.waits, win), uns = since(M.unsettled, win);
   const busy = quant(p95s, 0.5), st = stutters(r), stalls = r.filter((x) => isHitch(x) && !loadingAt(x.t)).length;
@@ -1399,20 +1445,20 @@ function renderPerf() {
     tile("Hitches from the game", fmt(stalls, 0), `gaps over 50 ms between frames while the mod's share was small, during fights; ${fmt(loads, 0)} more while the game loaded a scene (expected)`, stalls > 3 ? "warn" : "good"),
     tile("Full memory clean-ups", fmt(gen2, 0), `${fmt(r.reduce((a, x) => a + x.gcPauseMs, 0), 0)} ms paused in all (the whole game)`, gen2 > 5 ? "warn" : "good"),
   ].join(""));
-  lines("pfFrame", [{ name: "typical frame", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "busy frame (p95)", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: MOD_REFS, unit: " ms", log: logTimes() });
+  lines("pfFrame", [{ name: "typical frame", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "busy frame (p95)", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: MOD_REFS(), unit: " ms", log: logTimes() });
   // features: the six with the most time, then the rest together
   const totals = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) totals[k] = (totals[k] || 0) + v;
   const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k);
   const layers = top.map((k, i) => ({ name: k, color: colors[i % colors.length], points: r.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
   layers.push({ name: "the rest", color: css("--faint"), points: r.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
-  stacked("pfFeatures", layers);
+  stacked("pfFeatures", layers, { refs: FPS_REFS() });
   shareBars("pfShare", r);
-  lines("pfFps", [{ name: "frames per second", color: css("--teal"), points: r.filter((x) => x.seconds > 0).map((x) => [x.t, x.frames / x.seconds]) }], { unit: " fps" });
+  lines("pfFps", [{ name: "frames per second", color: css("--teal"), points: r.filter((x) => x.seconds > 0).map((x) => [x.t, x.frames / x.seconds]) }], { unit: " fps", refs: FPS_REFS().map((f) => ({ ...f, v: Math.round(1000 / f.v), below: true })) });
   setHTML($("pfFeaturesLegend"), layers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
-  lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [50], unit: " ms", log: logTimes() });
+  lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [{ v: 50, label: "50 ms" }, ...FPS_REFS()], unit: " ms" } /* linear always: a gap is a frame long or short, read against the frame-rate lines */);
   lines("pfGc", [{ name: "heap MB", color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { name: "allocated MB/s", color: css("--warn"), points: r.map((x) => [x.t, x.allocatedMb / Math.max(x.seconds, 0.01)]) }, { name: "gen 2 collection (heap MB)", color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) }], {});
-  lines("pfWait", [{ name: "frame wait", color: css("--accent"), dots: true, points: waits.filter((x) => !x.missed).map((x) => [x.t, x.ms]) }, { name: "wait, left to the background", color: css("--bad"), dots: true, points: waits.filter((x) => x.missed).map((x) => [x.t, x.ms]) }, { name: "board settling", color: css("--warn"), dots: true, points: uns.map((x) => [x.t, x.ms]) }], { unit: " ms", log: logTimes() });
+  lines("pfWait", [{ name: "frame wait", color: css("--accent"), dots: true, points: waits.filter((x) => !x.missed).map((x) => [x.t, x.ms]) }, { name: "wait, left to the background", color: css("--bad"), dots: true, points: waits.filter((x) => x.missed).map((x) => [x.t, x.ms]) }, { name: "board settling", color: css("--warn"), dots: true, points: uns.map((x) => [x.t, x.ms]) }], { refs: FPS_REFS(), unit: " ms", log: logTimes() });
   const feat = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) { const f = (feat[k] ??= { mean: 0, max: 0, n: 0, kb: 0 }); f.mean += v; f.n++; f.max = Math.max(f.max, x.featureMax?.[k] || 0); f.kb += x.featureKb?.[k] || 0; }
   const rows = Object.entries(feat).sort((a, b) => b[1].mean - a[1].mean);
@@ -1797,6 +1843,8 @@ function start() {
 $("searchFilter").addEventListener("change", () => render(true));
 $("perfWindow").addEventListener("change", () => render(true));
 $("logTimesBox").checked = logTimes();
+$("skipLaunchBox").checked = skipLaunch();
+$("skipLaunchBox").addEventListener("change", (e) => { skipLaunchChosen = e.target.checked; try { localStorage.setItem("skipLaunch", e.target.checked ? "1" : "0"); } catch {} render(true); });
 {
   // The chosen window, or the nearest one offered.
   const sel = $("smoothSel"), want = smoothSeconds();

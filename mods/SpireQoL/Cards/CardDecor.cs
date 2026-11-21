@@ -8,7 +8,7 @@ namespace SpireQoL.Cards;
 /// of the card's own enchantment tab) in a row along the card's top edge, with
 ///  - Icon: what's affecting the card (a relic, power, enchantment, the draw pile...),
 ///  - Crossed: a red slash = playing this card breaks or blocks something, or helps the enemy.
-///  - Number: only on quantified proc tabs (block gained, damage dealt, summon), else null.
+///  - Number: only on quantified proc tabs (block gained, damage dealt, summon, cards drawn, energy gained), else null.
 /// Key de-duplicates (one tab per source per card) and is the tab's settings key.
 /// </summary>
 /// Amount is the proc amount even when the number isn't displayed (ProcNumbers off), for the audit.
@@ -50,7 +50,7 @@ public sealed class CardDecor
     internal Func<TabSpec, TabSpec?>? Shape { get; init; }
 
     /// <returns>Whether the tab was added (false if a tab with this key exists or it's turned off).</returns>
-    /// <param name="kind">"block", "damage" or "summon" for quantified procs (with <paramref name="amount"/>), else null.</param>
+    /// <param name="kind">"block", "damage", "summon", "draw" or "energy-gain" for quantified procs (with <paramref name="amount"/>), else null.</param>
     public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, string? kind = null, int amount = 0,
         int auditMin = 0, int auditMax = 0, string? text = null, CardModel? card = null)
     {

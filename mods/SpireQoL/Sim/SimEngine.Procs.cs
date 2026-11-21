@@ -132,14 +132,25 @@ public static partial class SimEngine
     }
 
     /// <summary>Card events a proc causes (Dark Embrace's draw...): each through every listener, as an indirect event.</summary>
-    public static IEnumerable<SimState> ProcCardEvent(SimState s, CardEvent ev, int count, int player, bool indirect = true)
+    /// <param name="onEach">Called for each event that happens (each card drawn: a full hand or empty piles give fewer), before
+    /// its listeners: a draw or energy tab counting its source's (decision #132).</param>
+    public static IEnumerable<SimState> ProcCardEvent(SimState s, CardEvent ev, int count, int player, bool indirect = true, Action<SimState>? onEach = null)
     {
         // Your draws come from your draw pile (decision #90): which card matters.
-        if (ev == CardEvent.Drawn && DrawsFromPile(s, player)) return DrawCards(s, player, count, indirect);
+        if (ev == CardEvent.Drawn && DrawsFromPile(s, player)) return DrawCards(s, player, count, indirect, onEach);
         IEnumerable<SimState> r = new[] { s };
-        for (var i = 0; i < count; i++) r = Then(r, x => FireCardEvent(x, ev, player, indirect));
+        for (var i = 0; i < count; i++) r = Then(r, x => { onEach?.Invoke(x); return FireCardEvent(x, ev, player, indirect); });
         return r;
     }
+
+    /// <summary>
+    /// The amount a draw or energy tab shows (decision #132): <paramref name="source"/>'s count of what it gave, one per card drawn
+    /// or energy gained, when the event is the kind its tab counts; null otherwise.
+    /// </summary>
+    internal static Action<SimState>? TallyFor(string source, TabKind? tab, CardEvent ev, int owner) =>
+        (tab, ev) is (TabKind.Draw, CardEvent.Drawn) or (TabKind.Energy, CardEvent.EnergyGained)
+            ? x => x.LogAmount(source, 1, owner)
+            : null;
 
     /// <summary>One card event's bookkeeping and its listeners (AfterCardEvent).</summary>
     internal static IEnumerable<SimState> FireCardEvent(SimState x, CardEvent ev, int player, bool indirect)

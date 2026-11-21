@@ -21,7 +21,7 @@ namespace SpireQoL.Features;
 /// card sets off, with that source's icon. Spec: docs/FEATURES.md#proc-indicators.
 ///
 ///  - Trigger: plain icon ("this sets off that").
-///  - Block / damage / summon: icon plus the amount (QolSettings.ProcNumbers).
+///  - Block / damage / summon / draw / energy: icon plus the amount (QolSettings.ProcNumbers; draws and energy: decision #132).
 ///  - Harmful (helps the enemy, hurts you, or breaks one of your relics): crossed.
 ///
 /// Every tab comes from the outcome simulator (decision #48, docs/SIMULATOR_V2.md): the card's play is simulated once per target,
@@ -711,7 +711,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
                 // AfterDamageReceived with UnblockedDamage > 0: HP actually lost, after Tungsten Rod.
                 SelfFormingClay => losesHp,
                 EmotionChip => losesHp,
-                CentennialPuzzle when !Sts2State.Private(r, "UsedThisCombat", true) => losesHp,
                 DemonTongue when !Sts2State.Private(r, "_triggeredThisTurn", true) => losesHp,
                 // AfterCurrentHpChanged: Strength once your HP is at or below its threshold.
                 RedSkull when _me.Creature is var c && c.CurrentHp > c.MaxHp * Sts2State.Var(r, "HpThreshold", 50) / 100m
@@ -753,7 +752,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     internal static readonly string[] OutcomeTabs =
     {
         nameof(HandDrill), nameof(ParryingShield), nameof(GremlinHorn), nameof(CompostPower), nameof(RupturePower),
-        nameof(SelfFormingClay), nameof(EmotionChip), nameof(CentennialPuzzle), nameof(DemonTongue), nameof(RedSkull),
+        nameof(SelfFormingClay), nameof(EmotionChip), nameof(DemonTongue), nameof(RedSkull),
     };
 
     private static Godot.Texture2D? IconOf(AbstractModel src) => src switch
@@ -815,7 +814,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             max += prev.AuditMax;
         }
         int? number = kind != TabKind.Trigger && _ctx.Settings.ProcNumbers ? amount : null;
-        var kindName = kind switch { TabKind.Block => "block", TabKind.Damage => "damage", TabKind.Summon => "summon", _ => null };
+        var kindName = kind switch
+        {
+            TabKind.Block => "block", TabKind.Damage => "damage", TabKind.Summon => "summon",
+            TabKind.Draw => "draw", TabKind.Energy => "energy-gain", // decision #132
+            _ => null,
+        };
         tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, kindName, amount, min, max, Aimed: aimed);
     }
 
