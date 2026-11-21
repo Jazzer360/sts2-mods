@@ -63,7 +63,12 @@ public sealed class SimOutcome
     /// </summary>
     public int Steps, Stepped, Copies, MaxStepCopies, PeakHeld;
 
-    public SimState Worst => Branches.OrderByDescending(branch => branch.Taken).ThenByDescending(branch => branch.OstyTaken).First();
+    /// <summary>
+    /// The branch shown as the turn's outcome: the most HP you lose, then Osty; among those, the least block you'd have (a roll
+    /// can decide your end-of-turn block: I Am Invincible on top of a draw pile whose order isn't known), so what's shown never
+    /// counts block you might not get.
+    /// </summary>
+    public SimState Worst => Branches.OrderByDescending(branch => branch.Taken).ThenByDescending(branch => branch.OstyTaken).ThenBy(branch => branch.BlockAtEnemyTurn).First();
     public int TakenMin => Fewest(branch => branch.Taken);
     public int TakenMax => Most(branch => branch.Taken);
     public int OstyTakenMin => Fewest(branch => branch.OstyTaken);

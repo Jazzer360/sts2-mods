@@ -31,6 +31,9 @@ const hooks = lines(path.join(diag, "CoverageHooks.txt"));
 const folders = ["Relics", "Powers", "Cards", "Monsters", "Orbs", "Potions", "Enchantments", "Afflictions"];
 
 const rows = [];
+// An enchantment's or affliction's OnPlay acts on every play of its card, after the card (CardModel: EnchantmentModel.OnPlay):
+// reviewed like a hook. A card's own OnPlay is what PlayFacts reads, so it isn't one. Kept in step with CoverageLedger.OnCardHooks.
+const onCardHooks = { Enchantments: ["OnPlay"], Afflictions: ["OnPlay"] };
 const hookRe = new RegExp(`public override [^(=]*\\b(${hooks.join("|")})\\(`, "g");
 for (const folder of folders) {
   const dir = modelsDir(folder);
@@ -38,7 +41,8 @@ for (const folder of folders) {
   for (const f of fs.readdirSync(dir)) {
     if (!f.endsWith(".cs")) continue;
     const src = fs.readFileSync(path.join(dir, f), "utf8");
-    const found = [...new Set([...src.matchAll(hookRe)].map(m => m[1]))].sort();
+    const onCard = (onCardHooks[folder] || []).filter(h => new RegExp("public override [^(=]*\\b" + h + "\\(").test(src));
+    const found = [...new Set([...src.matchAll(hookRe)].map(m => m[1]).concat(onCard))].sort();
     if (found.length) rows.push({ folder, type: f.slice(0, -3), hooks: found });
   }
 }
@@ -117,7 +121,7 @@ const reminderRules = new Set([...fs.readFileSync(path.join(root, "mods", "Spire
 
 // Settings catalog rows for relics: tab (crossed ones are `Crossed + "..."`), tracker and reminder text.
 const rowsByRelic = new Map();
-for (const m of catalog.matchAll(new RegExp(String.raw`new\((?:nameof\((\w+)\)|"(\w+)"), SourceGroup\.Relic, (?:null|(Crossed \+ )?${strRe})(?:, (?:null|${strRe}))?([^\n]*)`, "g"))) {
+for (const m of catalog.matchAll(new RegExp(String.raw`new\((?:nameof\((\w+)\)|"(\w+)"), SourceGroup\.Relic, (?:Tag: )?(?:null|(Crossed \+ )?${strRe})(?:, (?:null|${strRe}))?([^\n]*)`, "g"))) {
   // The row's text up to the next row (a row can span lines), with its text for each place a reminder shows.
   const end = catalog.indexOf("\n        new(", m.index + 1);
   const rest = catalog.slice(m.index, end < 0 ? undefined : end);

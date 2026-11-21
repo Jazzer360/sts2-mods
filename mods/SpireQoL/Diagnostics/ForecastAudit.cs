@@ -442,7 +442,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         }
         else if (actualTaken > forecast.Taken || actualTaken < forecast.TakenMin) issues.Add($"HP lost: forecast {forecast.Taken}, actual {actualTaken}");
         if (actualOsty > forecast.OstyTaken || actualOsty < forecast.OstyTakenMin) issues.Add($"Osty HP lost: forecast {forecast.OstyTaken}, actual {actualOsty}");
-        if (actualBlockGain != forecast.BlockGain) issues.Add($"end-of-turn block: forecast {forecast.BlockGain}, actual {actualBlockGain}");
+        // Your end-of-turn block: any branch's, since a roll can decide it (I Am Invincible on top of a draw pile whose order isn't
+        // known). Every branch keeps its own breakdown (the forecast runs with Log on).
+        var blockGains = forecast.Outcome.Branches.Count == 0 ? new List<int> { forecast.BlockGain }
+            : forecast.Outcome.Branches.Select(branch => branch.EndOfTurnBlock.Sum(source => source.Amount)).Distinct().Order().ToList();
+        if (!blockGains.Contains(actualBlockGain)) issues.Add($"end-of-turn block: forecast {string.Join(" or ", blockGains)}, actual {actualBlockGain}");
         // Teammates (multiplayer, decision #24): each one's HP lost against their range over the branches.
         var teamLine = TeammateIssues(forecast, damage, endOfTurn, issues);
         var enemyIssues = EnemyIssues(forecast, window, endOfTurn, me, out var outcomeLine, out var actuals);

@@ -249,6 +249,10 @@ internal static class CardCoverage
         // your hand on something you do, which only ReturnToHand models (the return tabs, your hand size after).
         if (HookCalls(card.GetType()).Contains("CardPileCmd.Add") && !ReturnToHand.Modelled.Contains(name) && !ReturnToHand.NextTurn.Contains(name))
             issues.Add("moves a card from its own hooks (comes back to your hand? not counted: return tabs, hand size)");
+        // A card that reads a hit's overkill: to deal it again to the other enemies (Rain Shot, Omnislice: damage, lethal) or for
+        // something else, reviewed.
+        if (Calls("DamageResult", "get_OverkillDamage") && !PlayFacts.SplashCards.Contains(name) && !PlayFacts.OverkillReaders.ContainsKey(name))
+            issues.Add("reads a hit's overkill (deals it again to the other enemies? not counted: damage, lethal)");
         // A card whose own play moves cards (CardPileCmd.Add): into your hand (Hologram, Wish: your hand size after), back out of it
         // onto your draw pile (Glimmer), or somewhere your hand doesn't see. Each is counted or reviewed by where it moves them.
         if (Calls("CardPileCmd", "Add") && !PlayFacts.TakenToHandCards.Contains(name) && !PlayFacts.PutBackCards.Contains(name)

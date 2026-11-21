@@ -405,7 +405,8 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 1.20.11: 94 unused usings removed (IDE0005, which the normal build doesn't check); `scripts/dead-code.mjs` now lists them too (`--fix-usings` removes them). `TurnEndModel.Incomplete` removed (replaced by ProgressMark in 1.17.0).
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
-- Known gaps (0; each is logged when present in a fight):
+- Known gaps (1; each is logged when present in a fight):
+  - [ ] Momentum (ledger): OnPlay raises the card's damage for its later plays; the game's math reads it on later turns, but a replay of the card in the same play hits for the old amount in the simulator
 <!-- gaps:end -->
 
 ---
@@ -455,6 +456,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 
 ## 16. Open concerns (2026-11-10, waiting on play testing)
 
+- [ ] **Copies of a counter power, each with its own count** (2026-11-21): Orbit, Automation, Cacophony and Panache are instanced (each card played makes its own copy, counting on its own). The simulator keeps one count per power, so copies counting apart are not modelled (`?`, `SimReaders.CountersApart`). Model each copy's count (and the reset after it triggers: `EventCountdownPower` stops at 0 for the rest of the play).
 - [ ] **Cards taken from the draw pile leave the simulator's pile as it is** (2026-11-21): Wish, Secret Weapon, Secret Technique, Seeker Strike, Locked In, Anointed and Ki Chant put a card from your draw pile into your hand, counted in your hand (`PlayFacts.TakenToHand`), but the simulator's draw pile (decision #90) still holds it, so a later draw in the same simulation could draw it again. Which card is your choice or a roll: the pile should lose one card of unknown kind.
 - [ ] **A card Feral sends back makes Stampede's pick unknown** (2026-11-21): `SimEngine.AddToHand` marks the hand's contents unknown for any card joining it, but the card Feral returns is known (the one just played). Keep it in `AutoHand` instead.
 

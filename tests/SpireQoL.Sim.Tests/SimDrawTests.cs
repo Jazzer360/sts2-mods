@@ -227,6 +227,21 @@ public class SimDrawTests
     }
 
     [Fact]
+    public void WhenEitherWayTakesNothingTheShownBranchHasTheLessBlock()
+    {
+        // 13 block against a 12 hit: no HP lost whether I Am Invincible is on top or not. The branch shown (Worst: your panel's
+        // block) is the one without its block, never 10 block you might not get (a report: the panel and the check counted it).
+        var state = You();
+        state.You.Block = 13;
+        state.Enemies[0].Hits = new() { 12 };
+        state.You.Draw = Pile((Invincible, 1), (Plain, 8));
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(2, outcome.Branches.Count);
+        Assert.All(outcome.Branches, branch => Assert.Equal(0, branch.Taken));
+        Assert.Equal(13, outcome.Worst.BlockAtEnemyTurn);
+    }
+
+    [Fact]
     public void ACardKnownOnTopKeepsIAmInvincibleBelow()
     {
         var state = You();

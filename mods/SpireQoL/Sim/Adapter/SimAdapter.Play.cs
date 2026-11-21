@@ -32,6 +32,9 @@ public static partial class SimAdapter
         return play;
     }
 
+    /// <summary>What a Corrupted card deals its owner on every play (Corrupted._damageAmount, a constant in its code).</summary>
+    private const int CorruptedSelfDamage = 2;
+
     private static SimPlay PlayFromGame(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
         int targetId, int owner)
     {
@@ -137,6 +140,24 @@ public static partial class SimAdapter
             play.Body.Add(new ApplyPowerAction(PowerId.Poison, (int)flask.BaseValue)
                 { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 1)), Debuff = true });
         if (KillsOstyCards.Contains(name)) play.Body.Add(new KillOstyAction());
+        // The card's enchantment acts after the card itself, on every play (CardModel: EnchantmentModel.OnPlay after OnPlay; Adroit's
+        // block is above). The coverage ledger reviews every enchantment's OnPlay.
+        switch (card.Enchantment)
+        {
+            // Corrupted: damage to its owner, unblockable (Corrupted._damageAmount): your HP-loss modifiers and the damage hooks hear it
+            // (Centennial Puzzle).
+            case MegaCrit.Sts2.Core.Models.Enchantments.Corrupted when owner == Who.You:
+                play.Body.Add(new LoseHpAction(CorruptedSelfDamage));
+                break;
+            case MegaCrit.Sts2.Core.Models.Enchantments.Corrupted:
+                play.Body.Add(new NotModelledAction("a teammate's Corrupted card hurts them"));
+                break;
+            // Inky: Weak on the card's target, or on every enemy for a card that hits them all.
+            case MegaCrit.Sts2.Core.Models.Enchantments.Inky inky when inky.DynamicVars.Values.FirstOrDefault(IsPowerVar<WeakPower>) is { } weak:
+                play.Body.Add(new ApplyPowerAction(PowerId.Weak, (int)weak.BaseValue)
+                    { To = card.TargetType == TargetType.AllEnemies ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = true });
+                break;
+        }
         // A teammate's card: the block it gives its player is theirs.
         if (owner != Who.You)
             for (var i = 0; i < play.Body.Count; i++)
@@ -214,7 +235,9 @@ public static partial class SimAdapter
         Each(play.Body, CardEvent.GeneratedStatus, statuses, indirect: true);
         Each(play.Body, CardEvent.GeneratedSadness, sadness, indirect: true);
         Each(play.Body, CardEvent.StarsGained, facts.StarGains, indirect: false);
-        if (facts.Stars > 0) play.Body.Add(new CardEventAction(CardEvent.StarsSpent, Count: 1) { FirstPlayOnly = true });
+        // Spent with the energy, before the card does anything (PlayCardAction: SpendResources, then OnPlay): the play's first action,
+        // so Mini Regent's Strength is on the card's own hits. Inside the play, as Galactic Dust and Child of the Stars read its stars.
+        if (facts.Stars > 0) play.Body.Insert(0, new CardEventAction(CardEvent.StarsSpent, Count: 1) { FirstPlayOnly = true });
         if (facts.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, Count: 1) { Card = play.Card!.Card });
         // Its own exhaust (Corruption: Skills exhaust) sets off its own AfterCardExhausted (Drum of Battle's energy).
         if (facts.ExhaustsSelf && CardEnergy.WhenExhausted(facts.Card) is > 0 and var ownExhaustEnergy)
@@ -285,7 +308,7 @@ public static partial class SimAdapter
         {
             ByOsty = facts.ByOsty, // a single target: the play's (SimPlay.TargetId)
             OnKill = onKill,
-            Splash = name == "RainShot", // RainShot.OnPlay: the target's damage to every other enemy
+            Splash = PlayFacts.SplashCards.Contains(name), // the target's damage to every other enemy
             RepeatPerKill = RepeatPerKillCards.Contains(name),
         };
     }

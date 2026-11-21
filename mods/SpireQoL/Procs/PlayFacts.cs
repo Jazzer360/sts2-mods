@@ -976,6 +976,20 @@ public sealed class PlayFacts
         nameof(NeowsFury), nameof(SecretTechnique), nameof(SecretWeapon), nameof(SeekerStrike), nameof(SummonForth), nameof(TheWorld), nameof(Wish),
     };
 
+    /// <summary>
+    /// Cards that hit their target, then deal that hit's damage (overkill included: DamageResult.TotalDamage + OverkillDamage) to
+    /// every other hittable enemy, with only the damage caps applied (ModifyDamageHookType.Cap): RainShot.OnPlay, Omnislice.OnPlay.
+    /// The card scan holds every card reading a hit's overkill to this list or OverkillReaders.
+    /// </summary>
+    internal static readonly HashSet<string> SplashCards = new() { "RainShot", nameof(Omnislice) };
+
+    /// <summary>Cards that read a hit's overkill for something else, and what.</summary>
+    internal static readonly Dictionary<string, string> OverkillReaders = new()
+    {
+        [nameof(Fisticuffs)] = "block equal to the damage it dealt (SimAdapter: Fisticuffs)",
+        [nameof(BlossomShot)] = "Stretch equal to the damage it dealt: for a block card you play later, not this play's outcome",
+    };
+
     /// <summary>Cards that draw, then put cards from your hand back on your draw pile (their PutBack value; Thinking Ahead's one).</summary>
     internal static readonly HashSet<string> PutBackCards = new() { nameof(Glimmer), nameof(PhotonCut), nameof(ThinkingAhead) };
 

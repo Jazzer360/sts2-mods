@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.26.1
+#### Fixed
+- Mini Regent's Strength counts on the card that spends the stars (it lands before the card hits), in every prediction.
+- Omnislice hits every other enemy for its target's damage, as Rain Shot does: its damage and lethal tabs count them.
+- A Corrupted card hurts you for 2 after it plays, which sets off what reacts to losing HP (Centennial Puzzle's draw); an Inky card's Weak is counted too.
+- Incoming Damage never counts block you might not get: I Am Invincible somewhere in your draw pile (not known to be on top) is a chance, and when the outcome is the same either way the panel shows the block without it. The forecast check accepts either.
+- Two Orbit (or Automation, Cacophony, Panache) powers counting toward different totals are shown as unknown (`?`) instead of as one count.
+
 ### Spire QoL 1.26.0
 #### Added
 - Quick setup, the settings menu's first page, which it opens on at your first launch: a switch for each part of the mod with the game's art beside it (damage you'll take, enemies that die, enemy intents, enemies' next moves, counter relics, potion tabs, reminders on card rewards, events, shops and the map, rest sites, chances), card tabs as four levels shown on real cards (none, minimal, moderate, full) with amounts and the target marker, and Everything for every default at once.

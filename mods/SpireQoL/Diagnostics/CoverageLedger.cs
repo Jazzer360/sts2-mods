@@ -375,6 +375,11 @@ internal static partial class CoverageLedger
 
         // ======== potions, enchantments, afflictions
         ["FairyInABottle"] = "covered: ShouldDie (before Lizard Tail's ShouldDieLate)/AfterPreventingDeath heals you from 0 to 30% of max HP, used up (simulator: SimPlayer.Fairies; Incoming Damage's revive row)",
+        // OnPlay: acts on every play of the card, after the card's own (CardModel: EnchantmentModel.OnPlay).
+        ["Adroit"] = "covered: OnPlay block on every play, after the card's own (SimAdapter.Play)",
+        ["Corrupted"] = "covered: OnPlay 2 unblockable damage to you on every play, through your HP-loss modifiers and damage hooks (SimAdapter.Play: LoseHpAction); its 1.5× damage is the game's damage math",
+        ["Inky"] = "covered: OnPlay Weak on the card's target, or every enemy for an all-enemies card, on every play (SimAdapter.Play)",
+        ["Momentum"] = "gap: OnPlay raises the card's damage for its later plays; the game's math reads it on later turns, but a replay of the card in the same play hits for the old amount in the simulator",
         ["Glam"] = "ignore: AfterCardPlayed only marks it used (its replay is read through the game: replay tab)",
         ["Goopy"] = "ignore: AfterCardPlayed grows its amount (its bonus is read through the game)",
         ["Imbued"] = "ignore: auto-plays at the start of your turn",
@@ -388,6 +393,15 @@ internal static partial class CoverageLedger
 
     private static readonly string[] Folders = { "Relics", "Powers", "Cards", "Monsters", "Orbs", "Potions", "Enchantments", "Afflictions" };
 
+    /// <summary>
+    /// What an enchantment or affliction does on every play of its card, after the card (CardModel: EnchantmentModel.OnPlay,
+    /// AfflictionModel.OnPlay): reviewed like a hook (a card's own OnPlay is what PlayFacts reads). Kept in step with
+    /// scripts/coverage-ledger.mjs.
+    /// </summary>
+    private static readonly string[] OnCardHooks = { "OnPlay" };
+
+    private static bool OnCard(Type type) => typeof(EnchantmentModel).IsAssignableFrom(type) || typeof(AfflictionModel).IsAssignableFrom(type);
+
     private static Dictionary<Type, Entry>? _byType;
 
     /// <summary>The running game's classes against the ledger (built once).</summary>
@@ -397,6 +411,7 @@ internal static partial class CoverageLedger
     private static Dictionary<Type, Entry> Build()
     {
         var hookSet = Hooks.ToHashSet();
+        var onCardSet = hookSet.Concat(OnCardHooks).ToHashSet();
         var ledger = Generated.ToDictionary(folderType => (folderType.Folder, folderType.Type), folderType => folderType);
         var result = new Dictionary<Type, Entry>();
         foreach (var type in ModelTypes())
@@ -405,7 +420,7 @@ internal static partial class CoverageLedger
             try
             {
                 hooks = string.Join(",", type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-                    .Where(method => hookSet.Contains(method.Name) && method.IsVirtual && method.GetBaseDefinition().DeclaringType != type)
+                    .Where(method => (OnCard(type) ? onCardSet : hookSet).Contains(method.Name) && method.IsVirtual && method.GetBaseDefinition().DeclaringType != type)
                     .Select(method => method.Name).Distinct().OrderBy(name => name, StringComparer.Ordinal));
             }
             catch

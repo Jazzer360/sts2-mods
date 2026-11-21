@@ -373,6 +373,33 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void ACorruptedCardsSelfDamageSetsOffCentennialPuzzle()
+    {
+        // Corrupted's 2 to you after the card (LoseHpAction) is HP lost from damage: Centennial Puzzle draws (a report: Kingly Punch
+        // drew 3 that nothing predicted).
+        var state = Relic(State(), RelicId.CentennialPuzzle, amount: 0, vars: ("Cards", 3));
+        state.You.Hp = 50;
+        var after = One(state, Play(Card("KinglyPunch"), target: 0, plays: 1, Attack(baseDamage: 10), new LoseHpAction(Amount: 2)));
+        Assert.Equal(48, after.You.Hp);
+        Assert.True(after.Fired.Has("CentennialPuzzle"));
+    }
+
+    [Fact]
+    public void MiniRegentsStrengthIsOnTheCardThatSpentTheStars()
+    {
+        // MiniRegent.AfterStarsSpent: the stars go before the card does anything (PlayCardAction.SpendResources), so its Strength is on
+        // the card's own hit (a report: Falling Star dealt 11, predicted 10). Once a turn.
+        var state = Relic(State(), RelicId.MiniRegent, vars: ("StrengthPower", 1));
+        // As the adapter builds it: the stars spent first, then the hit.
+        var fallingStar = Play(Card("FallingStar"), target: 0, plays: 1, new CardEventAction(CardEvent.StarsSpent, Count: 1) { FirstPlayOnly = true }, Attack(baseDamage: 10));
+        var after = One(state, fallingStar);
+        Assert.True(after.Fired.Has("MiniRegent"));
+        Assert.Equal(89, after.Enemies[0].Hp);
+        Assert.Equal(1, after.You.Powers[PowerId.Strength]);
+        Assert.Equal(78, One(after, fallingStar).Enemies[0].Hp); // used this turn: no more Strength (10 + 1)
+    }
+
+    [Fact]
     public void ChildOfTheStarsAndGalacticDustCountStarsSpent()
     {
         var state = Power(State(), PowerId.ChildOfTheStars, amount: 2);

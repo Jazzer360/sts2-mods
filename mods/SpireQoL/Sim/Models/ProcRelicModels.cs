@@ -462,6 +462,7 @@ public sealed class MiniRegent : RelicProc
     {
         if (cardEvent != CardEvent.StarsSpent || player != owner || !Armed(state, owner)) return One(state);
         Disarm(state, owner);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "StrengthPower", fallback: 1), debuff: false);
         return Fire(state, owner);
     }
 }

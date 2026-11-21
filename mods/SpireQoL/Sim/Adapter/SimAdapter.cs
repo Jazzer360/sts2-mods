@@ -199,6 +199,9 @@ public static partial class SimAdapter
         using var reads = Sts2State.TrackReads();
         var state = BuildFromGame(me, combat, out ids);
         if (reads.Unread.Count > 0) state.Unmodelled ??= SimState.Unread(reads.Unread[0]);
+        // Two copies of a counter power counting apart (two Orbits): the simulator keeps one count (tracker).
+        foreach (var player in combat.Players)
+            if (SimReaders.CountersApart(player.Creature) is { } apart) state.Unmodelled ??= $"copies of {apart} counting apart";
         return state;
     }
 

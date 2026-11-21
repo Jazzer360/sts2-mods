@@ -96,6 +96,26 @@ public static class SimReaders
         return set;
     }
 
+    /// <summary>
+    /// Counter powers a creature can have several copies of (PowerInstanceType.Instanced: each Orbit card played makes its own), each
+    /// copy with its own count. The simulator keeps one count per power, their amounts added: right while the copies count together
+    /// (they trigger together), not when they count apart (CountersApart). CountdownTests holds every countdown model of an
+    /// instanced power to this list.
+    /// </summary>
+    internal static readonly HashSet<string> InstancedCounters = new() { nameof(OrbitPower), nameof(AutomationPower), nameof(CacophonyPower), nameof(PanachePower) };
+
+    /// <summary>A counter power whose copies on this creature count apart (InstancedCounters), or null.</summary>
+    public static string? CountersApart(Creature creature)
+    {
+        foreach (var copies in creature.Powers.Where(power => InstancedCounters.Contains(power.GetType().Name)).GroupBy(power => power.GetType().Name))
+            if (copies.Select(CountOf).Distinct().Count() > 1) return copies.Key;
+        return null;
+    }
+
+    /// <summary>A counter power's count, as Powers reads it into its Data.</summary>
+    private static int CountOf(PowerModel power) =>
+        power is PanachePower ? Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)) : Math.Max(0, power.DisplayAmount);
+
     /// <summary>A flag in a power's internal data (PowerModel._internalData), true when unreadable (so a once-a-turn proc isn't promised).</summary>
     private static bool Internal(PowerModel power, string field) =>
         Sts2State.Private<object?>(power, "_internalData", fallback: null) is not { } internalData || Sts2State.Private(internalData, field, fallback: true);
