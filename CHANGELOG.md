@@ -8,7 +8,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 1.26.0
 #### Added
-- A first-run setup: on your first launch, over the main menu, a short tour of what the mod does, two choices to start from (how much on screen: minimal, moderate or full; and chances: none, deaths only or all), and each part's core switches with what they do, then the hotkeys and error reports. Run it again from the settings menu's General page.
+- Quick setup, the settings menu's first page, which it opens on at your first launch: a switch for each part of the mod with the game's art beside it (damage you'll take, enemies that die, enemy intents, counter relics, potion tabs, reminders on card rewards, events, shops and the map, rest sites, chances), card tabs as four levels shown on real cards (none, minimal, moderate, full) with amounts and the target marker, and Everything for every default at once.
 
 ### Spire QoL 1.25.0
 #### Added

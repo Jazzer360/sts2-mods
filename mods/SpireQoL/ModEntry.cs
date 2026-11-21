@@ -176,10 +176,6 @@ public static class ModEntry
         foreach (var notice in features.OfType<UpdateNoticeFeature>()) notice.OpenSettings = menu.Open;
         host.AddHotkey(ParseKey(settings.SettingsKey, Key.F10), menu.Toggle);
         host.AddLateFrame("settings-menu", menu.OnFrame);
-        // The first-run setup: over the main menu, once, until it's done; the settings menu's General page runs it again.
-        var setup = new Menu.SetupScreen(ctx, Features, host) { SettingsOpen = () => menu.IsOpen };
-        menu.OpenSetup = setup.Open;
-        host.AddLateFrame("setup-screen", setup.OnFrame);
         Menu.SettingsCatalog.Check(Log);
 
         Combat.TurnEndModel.PartTime = host.AddPartTime;

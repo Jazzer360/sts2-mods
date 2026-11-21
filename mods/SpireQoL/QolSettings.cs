@@ -41,8 +41,7 @@ public sealed class QolSettings
     public bool ReportErrors { get; set; } = true;
 
     /// <summary>
-    /// The first-run setup (Menu/SetupScreen, decision #147) was finished or skipped: it doesn't show itself again (the settings menu's
-    /// General page runs it). Hidden: not in the settings menu. A settings file from before it counts as done (SettingsVersion 3).
+    /// Quick setup (the settings menu's first page, decision #147) was shown at the first launch and closed: it doesn't open itself again. Hidden: not in the settings menu. A settings file from before it counts as done (SettingsVersion 3).
     /// </summary>
     public bool SetupDone { get; set; }
 

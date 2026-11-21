@@ -35,10 +35,11 @@ public sealed partial class SettingsMenu
 
     // Pages (decision #66): what shows in fights (its features and options, then the tab kinds and every relic, power and card's
     // switches), what shows outside fights (its features and options, then every reminder's switches), and the rest.
-    private enum Page { Fights, CardTabs, Relics, YourPowers, EnemyPowers, Cards, Outside, General, Guide, About }
+    private enum Page { Setup, Fights, CardTabs, Relics, YourPowers, EnemyPowers, Cards, Outside, General, Guide, About }
 
     private static readonly (Page Page, string Title)[] Pages =
     {
+        (Page.Setup, "Quick setup"),
         (Page.Fights, "In fights"),
         (Page.CardTabs, "Card tabs"),
         (Page.Relics, "Relics"),
@@ -108,8 +109,6 @@ public sealed partial class SettingsMenu
 
     public bool IsOpen => _layer != null && GodotObject.IsInstanceValid(_layer) && _layer.Visible;
 
-    /// <summary>Opens the first-run setup (SetupScreen), from the General page's Run setup again.</summary>
-    internal Action? OpenSetup { get; set; }
 
     private QolSettings Settings => _ctx.Settings;
 
@@ -132,6 +131,8 @@ public sealed partial class SettingsMenu
     {
         if (_layer != null && GodotObject.IsInstanceValid(_layer)) _layer.Visible = false;
         BlockGameInput(block: false);
+        // Quick setup shows itself at the first launch only (FirstLaunch); once the menu has been open, it's done.
+        Settings.SetupDone = true;
         _ctx.SettingsFile.Save();
     }
 
@@ -141,8 +142,9 @@ public sealed partial class SettingsMenu
         if (IsOpen && _root != null) FitPanel();
         _tinyIcons.RemoveAll(tinyCardIcon => !GodotObject.IsInstanceValid(tinyCardIcon.Root));
         foreach (var tinyCardIcon in _tinyIcons) tinyCardIcon.Fit();
-        if (IsOpen && _page == Page.Guide) foreach (var tick in _guideTicks) tick(_host.Time, Settings.FlashHz);
+        if (IsOpen && _page is Page.Guide or Page.Setup) foreach (var tick in _guideTicks) tick(_host.Time, Settings.FlashHz);
         if (++_frame % 10 != 0) return;
+        FirstLaunch();
         _modsButton = KeepButton(_modsButton, ModsScreenAnchor());
         _pauseButton = KeepButton(_pauseButton, PauseMenuAnchor());
     }
@@ -344,6 +346,7 @@ public sealed partial class SettingsMenu
         {
             switch (_page)
             {
+                case Page.Setup: BuildSetup(); break;
                 case Page.Fights: BuildFights(); break;
                 case Page.Outside: BuildOutside(); break;
                 case Page.General: BuildGeneral(); break;
@@ -490,17 +493,6 @@ public sealed partial class SettingsMenu
     private void BuildGeneral()
     {
         FeatureSwitches(FeaturePage.General);
-
-        Section("Setup");
-        var setupRow = RowBox();
-        var runSetup = MakeButton("Run setup again", size: 20);
-        runSetup.Pressed += () => { Close(); OpenSetup?.Invoke(); };
-        setupRow.AddChild(runSetup);
-        var setupText = Label("The first-run setup: how much on screen and whether to show chances, then each page's core switches. Your hotkeys, widget positions and per-relic switches are kept.", size: 18, Muted);
-        setupText.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        setupText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        setupRow.AddChild(setupText);
-        AddRow(setupRow);
 
         Section("Error reports");
         Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time, and a summary of counts per play session (nothing personal), so they can be fixed.",

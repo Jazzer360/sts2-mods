@@ -414,8 +414,8 @@ public sealed partial class SettingsMenu
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");
         GuideRow(example: null, "Update Notice",
             "On the main menu, above the game's MODDED note: how many Spire QoL versions behind you are, or that you're up to date.");
-        GuideRow(example: null, "Setup",
-            "On your first launch, over the main menu: two choices to start from (how much on screen, and chances), then what each part of the mod does, with its core switches. General: Run setup again.");
+        GuideRow(example: null, "Quick setup",
+            "The first page of this menu, which opens on it at your first launch: a switch for each part of the mod, card tabs as four levels shown on real cards, and Everything for every default.");
         GuideRow(example: null, "Moving things",
             $"{Settings.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {Settings.HideAllKey} hides everything.");
     }
