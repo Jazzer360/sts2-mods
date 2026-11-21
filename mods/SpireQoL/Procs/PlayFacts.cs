@@ -268,9 +268,9 @@ public sealed class PlayFacts
             }
             else return 0;
             var dealer = ByOsty && Me.Osty is { } osty ? osty : Me.Creature;
-            var v = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, dealer, raw + baseDelta, props,
+            var damage = MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(Me.RunState, Combat, enemy, dealer, raw + baseDelta, props,
                 Card, null, hooks, CardPreviewMode.None, out _);
-            return Math.Max(0m, v);
+            return Math.Max(0m, damage);
         }
         catch
         {
@@ -343,7 +343,7 @@ public sealed class PlayFacts
     internal PlayFacts Then(PlayFacts next)
     {
         var orbDamage = new Dictionary<Creature, int>(next.OrbDamage);
-        foreach (var (creature, d) in OrbDamage) orbDamage[creature] = (orbDamage.TryGetValue(creature, out var x) ? x : 0) + d;
+        foreach (var (creature, d) in OrbDamage) orbDamage[creature] = (orbDamage.TryGetValue(creature, out var already) ? already : 0) + d;
         return new PlayFacts
         {
             Card = Card, Me = Me, Combat = Combat,
@@ -589,11 +589,11 @@ public sealed class PlayFacts
         void EvokeFront(int times, bool remove)
         {
             if (queue.Count == 0) return;
-            for (var t = 0; t < times; t++)
+            for (var time = 0; time < times; time++)
                 if (queue[0] is { } orb) result.Add(orb);
             if (remove) queue.RemoveAt(0);
         }
-        for (var p = 0; p < plays; p++)
+        for (var playIndex = 0; playIndex < plays; playIndex++)
         {
             switch (name)
             {
@@ -607,7 +607,7 @@ public sealed class PlayFacts
             // Slots the card adds before it channels (The Magician: OrbCmd.AddSlots, up to 10).
             var added = SpireQoL.Sim.SimAdapter.SlotChange(card, name);
             if (added > 0) cap = Math.Min(10, cap + added);
-            for (var c = 0; c < channels / Math.Max(1, plays); c++)
+            for (var channelIndex = 0; channelIndex < channels / Math.Max(1, plays); channelIndex++)
             {
                 if (cap <= 0) break;
                 if (queue.Count >= cap) EvokeFront(1, true);
@@ -643,19 +643,19 @@ public sealed class PlayFacts
         if (enemies.Count == 0) return none;
         var exact = new Dictionary<Creature, int>();
         int min = 0, max = 0;
-        int Mod(Creature creature, decimal v)
+        int Mod(Creature creature, decimal value)
         {
             try
             {
-                return Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(me.RunState, combat, creature, me.Creature, v,
+                return Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(me.RunState, combat, creature, me.Creature, value,
                     MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered, null, null, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, CardPreviewMode.None, out _));
             }
             catch
             {
-                return (int)v;
+                return (int)value;
             }
         }
-        void Add(Creature creature, int d) => exact[creature] = (exact.TryGetValue(creature, out var x) ? x : 0) + d;
+        void Add(Creature creature, int damage) => exact[creature] = (exact.TryGetValue(creature, out var already) ? already : 0) + damage;
         foreach (var orb in evoked)
         {
             var evokeVal = orb.EvokeVal;
@@ -881,13 +881,13 @@ public sealed class PlayFacts
     internal static int ExhaustOthers(CardModel card, string name, List<CardModel> others, int drawPile, int plays)
     {
         var otherCount = others.Count;
-        var p = Math.Max(1, plays);
+        var playCount = Math.Max(1, plays);
         return name switch
         {
             // One chosen or random card from hand, per play.
-            nameof(Brand) or nameof(BurningPact) or nameof(TrueGrit) or nameof(Scavenge) or nameof(Cinder) => Math.Min(p, otherCount),
-            nameof(Thrash) => Math.Min(p, others.Count(other => other.Type == CardType.Attack)),
-            nameof(Cleanse) => Math.Min(p, drawPile), // from the draw pile
+            nameof(Brand) or nameof(BurningPact) or nameof(TrueGrit) or nameof(Scavenge) or nameof(Cinder) => Math.Min(playCount, otherCount),
+            nameof(Thrash) => Math.Min(playCount, others.Count(other => other.Type == CardType.Attack)),
+            nameof(Cleanse) => Math.Min(playCount, drawPile), // from the draw pile
             // The whole rest of the hand (a second play finds the hand empty).
             nameof(FiendFire) or nameof(Stoke) => otherCount,
             nameof(SecondWind) => others.Count(other => other.Type != CardType.Attack),
@@ -899,9 +899,9 @@ public sealed class PlayFacts
                 ? pcs.AllCards.Count(combatCard => combatCard != card && Fool.IsShot(combatCard) && combatCard.Pile?.Type != PileType.Exhaust)
                 : others.Count(Fool.IsShot),
             // Up to Cards chosen cards: counted as the most it can exhaust.
-            nameof(Purity) => Math.Min(otherCount, Sts2State.Var(card, "Cards") * p),
+            nameof(Purity) => Math.Min(otherCount, Sts2State.Var(card, "Cards") * playCount),
             // The Hermit: the card you pick is exhausted instead of discarded when it's a Curse (counted as the most it can do).
-            "TheHermit" => Math.Min(p, others.Count(other => other.Type == CardType.Curse)),
+            "TheHermit" => Math.Min(playCount, others.Count(other => other.Type == CardType.Curse)),
             // Every status card in your piles.
             nameof(FlakCannon) => card.DynamicVars.TryGetValue("CalculatedHits", out var dynamicVar) && dynamicVar is CalculatedVar calculatedVar ? (int)calculatedVar.Calculate(null) : 0,
             _ => 0,
@@ -1123,8 +1123,8 @@ public sealed class PlayFacts
                 statuses = 2; return 2;
             case nameof(CrashLanding):
             {
-                var n = Math.Max(0, CardPile.MaxCardsInHand - others.Count);
-                statuses = n; return n;
+                var room = Math.Max(0, CardPile.MaxCardsInHand - others.Count);
+                statuses = room; return room;
             }
             // Shivs.
             case nameof(BladeDance): case nameof(BladeOfInk): case nameof(CloakAndDagger): case nameof(UpMySleeve): return Var("Cards");
@@ -1249,19 +1249,19 @@ public sealed class PlayFacts
     /// </summary>
     public static bool IsDebuffType(Type powerType)
     {
-        if (DebuffCache.TryGetValue(powerType, out var d)) return d;
-        d = false;
+        if (DebuffCache.TryGetValue(powerType, out var isDebuff)) return isDebuff;
+        isDebuff = false;
         try
         {
             var canonical = typeof(ModelDb).GetMethod(nameof(ModelDb.Power))!.MakeGenericMethod(powerType).Invoke(null, null) as PowerModel;
-            d = canonical?.Type == PowerType.Debuff;
+            isDebuff = canonical?.Type == PowerType.Debuff;
         }
         catch
         {
             // unknown: not a debuff
         }
-        DebuffCache[powerType] = d;
-        return d;
+        DebuffCache[powerType] = isDebuff;
+        return isDebuff;
     }
 
     /// <summary>
@@ -1276,9 +1276,9 @@ public sealed class PlayFacts
         if (perPlay == 0) return 0;
         int Landing(Creature creature)
         {
-            var n = perPlay * Plays;
+            var total = perPlay * Plays;
             var artifact = creature.Powers.OfType<ArtifactPower>().Sum(artifactPower => artifactPower.Amount);
-            return Math.Max(0, n - artifact);
+            return Math.Max(0, total - artifact);
         }
         return HitsAllEnemies ? enemies.Sum(Landing) : enemies.Max(Landing);
     }
@@ -1301,11 +1301,11 @@ public sealed class SimInputs
     public bool HandChangesThePlay(SimPlay play)
     {
         if (FullStart == null) return false;
-        SimEngine.ApplyPlayTo(Start, play, out var shown, out var t1);
-        SimEngine.ApplyPlayTo(FullStart, play, out var full, out var t2);
-        if (t1 || t2) return true;
+        SimEngine.ApplyPlayTo(Start, play, out var shown, out var shownCapped);
+        SimEngine.ApplyPlayTo(FullStart, play, out var full, out var fullCapped);
+        if (shownCapped || fullCapped) return true;
         // The shown run's teammates have their hand cleared: compare everything else.
-        static IEnumerable<long> Keys(IEnumerable<SimState> states) => states.Select(branch => branch.WithoutTeammateHands().Key()).Distinct().OrderBy(k => k);
+        static IEnumerable<long> Keys(IEnumerable<SimState> states) => states.Select(branch => branch.WithoutTeammateHands().Key()).Distinct().OrderBy(key => key);
         return !Keys(shown).SequenceEqual(Keys(full));
     }
     public required IReadOnlyDictionary<Creature, int> Ids { get; init; }
@@ -1316,6 +1316,6 @@ public sealed class SimInputs
     public int KeyFor(Creature? target) =>
         target == null ? -1
         : Ids.TryGetValue(target, out var id) ? id
-        : Allies.ToList().IndexOf(target) is var k and >= 0 ? Who.Teammate(k) : -1;
+        : Allies.ToList().IndexOf(target) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : -1;
     public Dictionary<int, SimPlay> PlayByTarget { get; } = new();
 }

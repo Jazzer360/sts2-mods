@@ -67,11 +67,11 @@ public static partial class SimAdapter
         if (facts.BlockGains > 0 && AllPlayersBlockCards.Contains(name) && card.DynamicVars.TryGetValue("Block", out var allBlock))
         {
             var mates = Teammates(me, combat);
-            for (var k = 0; k < mates.Count; k++)
+            for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
             {
-                if (mates[k].Creature is not { IsAlive: true } mate) continue;
+                if (mates[teammateIndex].Creature is not { IsAlive: true } mate) continue;
                 play.Body.Add(new GainBlockAction(facts.BlockGains / plays, allBlock.BaseValue, SimProps.Move)
-                    { Captured = SimReaders.Block(combat, card, mate, allBlock.BaseValue, ValueProp.Move), To = Who.Teammate(k) });
+                    { Captured = SimReaders.Block(combat, card, mate, allBlock.BaseValue, ValueProp.Move), To = Who.Teammate(teammateIndex) });
             }
         }
         // Teammates' draws and created cards (Huddle Up, Blade Symphony, Constellation's draws for its target): their card
@@ -80,23 +80,23 @@ public static partial class SimAdapter
         {
             var mates = Teammates(me, combat);
             var cards = Sts2State.Var(card, "Cards");
-            for (var k = 0; k < mates.Count; k++)
+            for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
             {
-                if (mates[k].Creature is not { IsAlive: true } mate) continue;
+                if (mates[teammateIndex].Creature is not { IsAlive: true } mate) continue;
                 if (PlayFacts.AllyDrawCards.Contains(name) && mate != ally) continue;
-                var who = Who.Teammate(k);
+                var who = Who.Teammate(teammateIndex);
                 if (TeammatesShivCards.Contains(name))
                 {
                     play.Body.Add(new CardEventAction(CardEvent.Generated, cards) { Player = who, Indirect = true });
                     continue;
                 }
                 // Their draws: as many as their hand has room for and their piles hold; a shuffle when the draw pile runs out.
-                var hand = PileType.Hand.GetPile(mates[k]).Cards.Count;
-                var drawPile = PileType.Draw.GetPile(mates[k]).Cards.Count;
-                var discard = PileType.Discard.GetPile(mates[k]).Cards.Count;
-                var n = Math.Min(cards, Math.Min(Math.Max(0, CardPile.MaxCardsInHand - hand), drawPile + discard));
-                if (n > drawPile) play.Body.Add(new CardEventAction(CardEvent.Shuffled, 1) { Player = who, Indirect = true });
-                if (n > 0) play.Body.Add(new CardEventAction(CardEvent.Drawn, n) { Player = who, Indirect = true });
+                var hand = PileType.Hand.GetPile(mates[teammateIndex]).Cards.Count;
+                var drawPile = PileType.Draw.GetPile(mates[teammateIndex]).Cards.Count;
+                var discard = PileType.Discard.GetPile(mates[teammateIndex]).Cards.Count;
+                var drawn = Math.Min(cards, Math.Min(Math.Max(0, CardPile.MaxCardsInHand - hand), drawPile + discard));
+                if (drawn > drawPile) play.Body.Add(new CardEventAction(CardEvent.Shuffled, 1) { Player = who, Indirect = true });
+                if (drawn > 0) play.Body.Add(new CardEventAction(CardEvent.Drawn, drawn) { Player = who, Indirect = true });
             }
         }
         // Adroit (enchantment): its block on every play, after the card's own (EnchantmentModel.OnPlay → CreatureCmd.GainBlock).
@@ -174,8 +174,8 @@ public static partial class SimAdapter
     {
         void Each(List<SimAction> to, CardEvent cardEvent, int total, bool indirect, bool perPlay = true)
         {
-            var n = perPlay ? total / plays : total;
-            if (n > 0) to.Add(new CardEventAction(cardEvent, n) { Indirect = indirect });
+            var perStep = perPlay ? total / plays : total;
+            if (perStep > 0) to.Add(new CardEventAction(cardEvent, perStep) { Indirect = indirect });
         }
         Each(play.Before, CardEvent.EnergyGained, facts.EnergyBack, false, perPlay: false);
         Each(play.Before, CardEvent.EnergySpent, facts.EnergySpent, false, perPlay: false);
@@ -240,9 +240,9 @@ public static partial class SimAdapter
                 baseOn[id] = facts.DamagePerHit(creature);
                 continue;
             }
-            var b = calc != null ? SafeDecimal(() => calc.Calculate(creature)) : baseDamage;
-            baseOn[id] = b;
-            captured[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, b, props);
+            var baseValue = calc != null ? SafeDecimal(() => calc.Calculate(creature)) : baseDamage;
+            baseOn[id] = baseValue;
+            captured[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, baseValue, props);
         }
         DamageSpec? onKill = null;
         if (OnKillHitAllCards.Contains(name) && card.DynamicVars.TryGetValue("OnKillDamage", out var kv2) && kv2 is DamageVar kdv)

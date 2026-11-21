@@ -80,7 +80,7 @@ internal static class ReturnToHand
             {
                 if (pile == PileType.Hand || ReferenceEquals(otherCard, card)) continue;
                 var every = Every(otherCard);
-                if (Enumerable.Range(1, plays).Any(i => (skills + i) % every == 0)) Add(otherCard);
+                if (Enumerable.Range(1, plays).Any(nextPlay => (skills + nextPlay) % every == 0)) Add(otherCard);
             }
         }
         int energy;

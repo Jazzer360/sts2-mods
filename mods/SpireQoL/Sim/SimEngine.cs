@@ -25,8 +25,8 @@ public sealed class SimOutcome
         var unknown = Branches.Where(branch => !Known(branch)).Sum(branch => branch.Weight);
         var total = Branches.Sum(branch => branch.Weight);
         if (total <= 0) return new SimChance(0, 0, seen);
-        var p = Branches.Where(branch => Known(branch) && happens(branch)).Sum(branch => branch.Weight) / total;
-        return new SimChance(p, Math.Min(1, p + unknown / total), seen);
+        var chance = Branches.Where(branch => Known(branch) && happens(branch)).Sum(branch => branch.Weight) / total;
+        return new SimChance(chance, Math.Min(1, chance + unknown / total), seen);
     }
 
     // ---- the four questions every query below asks, each over the branches
@@ -38,10 +38,10 @@ public sealed class SimOutcome
     public bool InSome(Func<SimState, bool> holds) => Branches.Any(holds);
 
     /// <summary>The smallest value over the branches (the guarantee for something good).</summary>
-    public int Fewest(Func<SimState, int> of) => Branches.Min(of);
+    public int Fewest(Func<SimState, int> valueOf) => Branches.Min(valueOf);
 
     /// <summary>The largest value over the branches (the worst case for something bad).</summary>
-    public int Most(Func<SimState, int> of) => Branches.Max(of);
+    public int Most(Func<SimState, int> valueOf) => Branches.Max(valueOf);
 
     /// <summary>Some branch has something not modelled (decision #92): what's shown carries the ?.</summary>
     public bool AnyUnmodelled => Branches.Any(branch => branch.Unmodelled != null);
@@ -69,16 +69,16 @@ public sealed class SimOutcome
     public int OstyTakenMin => Fewest(branch => branch.OstyTaken);
     public int OstyTakenMax => Most(branch => branch.OstyTaken);
     /// <summary>Teammate k's HP lost: the worst branch and the best.</summary>
-    public int TeammateTakenMax(int k) => Most(branch => branch.Teammates[k].Taken);
-    public int TeammateTakenMin(int k) => Fewest(branch => branch.Teammates[k].Taken);
+    public int TeammateTakenMax(int teammateIndex) => Most(branch => branch.Teammates[teammateIndex].Taken);
+    public int TeammateTakenMin(int teammateIndex) => Fewest(branch => branch.Teammates[teammateIndex].Taken);
     /// <summary>What teammate k's Osty takes: the worst branch and the best.</summary>
-    public int TeammateOstyTakenMax(int k) => Most(branch => branch.Teammates[k].OstyTaken);
-    public int TeammateOstyTakenMin(int k) => Fewest(branch => branch.Teammates[k].OstyTaken);
+    public int TeammateOstyTakenMax(int teammateIndex) => Most(branch => branch.Teammates[teammateIndex].OstyTaken);
+    public int TeammateOstyTakenMin(int teammateIndex) => Fewest(branch => branch.Teammates[teammateIndex].OstyTaken);
     /// <summary>Your Parrying Shield fires in every branch (the search finished) / in some branch.</summary>
     public bool ParryingShieldInAll => InEvery(branch => branch.ParryingShieldFired);
     public bool ParryingShieldInAny => InSome(branch => branch.ParryingShieldFired);
     /// <summary>Teammate k in the branch where they lose the most HP: their Incoming Damage.</summary>
-    public SimPlayer TeammateWorst(int k) => Branches.Select(branch => branch.Teammates[k]).OrderByDescending(player => player.Taken).First();
+    public SimPlayer TeammateWorst(int teammateIndex) => Branches.Select(branch => branch.Teammates[teammateIndex]).OrderByDescending(player => player.Taken).First();
 
     /// <summary>Enemies the play itself kills (before your end of turn) in some branch / in every branch.</summary>
     public HashSet<int> KilledByPlayInAny = new();
@@ -223,7 +223,7 @@ public static partial class SimEngine
         var breaksBlock = complete && states.All(branch => branch.Enemies.Any(enemy => enemy.BlockBroken && start.Enemy(enemy.Id) is { BlockBroken: false }));
         // Block gains during the play (each sets off Juggernaut).
         var gains = states.Select(branch => branch.You.BlockGains - start.You.BlockGains).ToList();
-        int PlayMin(Func<SimState, int> f) => !complete || states.Count == 0 ? 0 : states.Min(f);
+        int PlayMin(Func<SimState, int> valueOf) => !complete || states.Count == 0 ? 0 : states.Min(valueOf);
         // The play's log over its branches: in every branch (each merged one keeps its smallest), and in some branch.
         var firedEvery = !complete || states.Count == 0 ? NamedCounts.Empty
             : states.Skip(1).Aggregate(states[0].Fired, (acc, branch) => SimState.MergeLog(acc, branch.Fired, every: true));
@@ -232,11 +232,11 @@ public static partial class SimEngine
         var firstHits = complete && states.Count > 0 && states.All(branch => ReferenceEquals(branch.FirstHits, states[0].FirstHits) || branch.FirstHits.SequenceEqual(states[0].FirstHits)) ? states[0].FirstHits : System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
         return new SimOutcome
         {
-            KilledByPlayInAny = killedPerBranch.SelectMany(k => k).ToHashSet(),
+            KilledByPlayInAny = killedPerBranch.SelectMany(killed => killed).ToHashSet(),
             KilledByPlayInAll = !complete || killedPerBranch.Count == 0
                 ? new HashSet<int>()
-                : killedPerBranch.Skip(1).Aggregate(new HashSet<int>(killedPerBranch[0]), (acc, k) => { acc.IntersectWith(k); return acc; }),
-            PlayKillsInAll = complete && killedPerBranch.Count > 0 && killedPerBranch.All(k => k.Count > 0),
+                : killedPerBranch.Skip(1).Aggregate(new HashSet<int>(killedPerBranch[0]), (acc, killed) => { acc.IntersectWith(killed); return acc; }),
+            PlayKillsInAll = complete && killedPerBranch.Count > 0 && killedPerBranch.All(killed => killed.Count > 0),
             BlockReactionInAny = reacted,
             PlayBreaksBlockInAll = breaksBlock,
             PlayBlockGainsMax = gains.Count > 0 ? gains.Max() : 0,
@@ -433,19 +433,19 @@ public static partial class SimEngine
     {
         var listeners = Listeners(state);
         var changed = new List<(SimModel Model, int Owner)>();
-        void Phase(Func<SimModel, int, decimal, decimal> f)
+        void Phase(Func<SimModel, int, decimal, decimal> term)
         {
             foreach (var (model, o) in listeners)
             {
                 var before = amount;
-                amount = f(model, o, amount);
+                amount = term(model, o, amount);
                 if (decimal.Truncate(before) != decimal.Truncate(amount)) changed.Add((model, o));
             }
         }
-        Phase((model, o, a) => model.ModifyHpLostBeforeOsty(state, o, ctx, a));
-        Phase((model, o, a) => model.ModifyHpLostBeforeOstyLate(state, o, ctx, a));
-        Phase((model, o, a) => model.ModifyHpLostAfterOsty(state, o, ctx, a));
-        Phase((model, o, a) => model.ModifyHpLostAfterOstyLate(state, o, ctx, a));
+        Phase((model, owner, a) => model.ModifyHpLostBeforeOsty(state, owner, ctx, a));
+        Phase((model, owner, a) => model.ModifyHpLostBeforeOstyLate(state, owner, ctx, a));
+        Phase((model, owner, a) => model.ModifyHpLostAfterOsty(state, owner, ctx, a));
+        Phase((model, owner, a) => model.ModifyHpLostAfterOstyLate(state, owner, ctx, a));
         foreach (var (simModel, o) in changed) simModel.AfterModifyingHpLost(state, o);
         return amount;
     }
@@ -643,11 +643,11 @@ public static partial class SimEngine
             if (enemy.Alive || enemy.Exploded || !enemy.StartedAlive || (enemy.Explosive <= 0 && enemy.ExplosiveOnTeammates == null)) continue;
             enemy.Exploded = true;
             if (state.You.Hp > 0) LandBlockable(state, enemy.Name + " Explosive", enemy.Explosive, dealer: enemy.Id);
-            for (var k = 0; k < state.Teammates.Count; k++)
+            for (var teammateIndex = 0; teammateIndex < state.Teammates.Count; teammateIndex++)
             {
-                if (state.Teammates[k].Hp <= 0) continue;
-                var amount = enemy.ExplosiveOnTeammates is { } on && k < on.Count ? on[k] : enemy.Explosive;
-                LandBlockable(state, enemy.Name + " Explosive", amount, Who.Teammate(k), enemy.Id);
+                if (state.Teammates[teammateIndex].Hp <= 0) continue;
+                var amount = enemy.ExplosiveOnTeammates is { } on && teammateIndex < on.Count ? on[teammateIndex] : enemy.Explosive;
+                LandBlockable(state, enemy.Name + " Explosive", amount, Who.Teammate(teammateIndex), enemy.Id);
             }
         }
     }
@@ -739,12 +739,12 @@ public static partial class SimEngine
         return new BranchSet(first);
     }
 
-    /// <summary>Runs <paramref name="f"/> to the end or the memory cap (true), then frees what it held.</summary>
-    private static bool Capped(SimWork work, Action f)
+    /// <summary>Runs <paramref name="search"/> to the end or the memory cap (true), then frees what it held.</summary>
+    private static bool Capped(SimWork work, Action search)
     {
         try
         {
-            f();
+            search();
             return false;
         }
         catch (SimCapped)
@@ -774,7 +774,7 @@ public static partial class SimEngine
             case FirstPlayOnly firstPlayOnly: if (branches.States.Count > 0 && branches.States[0].CurrentPlay is not { PlayIndex: > 0 }) foreach (var simAction in firstPlayOnly.Actions) Run(branches, simAction); break;
             case CardResolvedAction cardResolvedAction:
                 branches.Do(branch => CardResolved(branch, cardResolvedAction));
-                HookStep(branches, nameof(SimModel.AfterPlayResolved), (model, o, branch) => model.AfterPlayResolved(branch, o, cardResolvedAction.Owner));
+                HookStep(branches, nameof(SimModel.AfterPlayResolved), (model, owner, branch) => model.AfterPlayResolved(branch, owner, cardResolvedAction.Owner));
                 break;
             case OrbAction orbAction: RunOrb(branches, orbAction); break;
             case FocusAction focusAction: branches.Do(branch => ChangeFocus(branch, focusAction.Delta)); break;
@@ -793,8 +793,8 @@ public static partial class SimEngine
             case CardEventAction cardEventAction: RunCardEvent(branches, cardEventAction); break;
             case DrawnCardAction drawnCardAction: branches.Each(branch => RunDrawnCard(branch, drawnCardAction)); break;
             case GainEnergyAsHeldAction:
-                branches.Each(branch => (branch.CurrentPlay?.Owner ?? Who.You) is var o && branch.Player(o) is { Energy: > 0 } player
-                    ? ProcCardEvent(branch, CardEvent.EnergyGained, player.Energy, o, indirect: false) : new[] { branch });
+                branches.Each(branch => (branch.CurrentPlay?.Owner ?? Who.You) is var playOwner && branch.Player(playOwner) is { Energy: > 0 } player
+                    ? ProcCardEvent(branch, CardEvent.EnergyGained, player.Energy, playOwner, indirect: false) : new[] { branch });
                 break;
             case LoseHpAction loseHpAction: branches.Do(branch => LandUnblockable(branch, branch.CurrentPlay?.Card.Name ?? "HP cost", loseHpAction.Amount)); break;
             default: throw new NotSupportedException($"No runner for {action.GetType().Name}");
@@ -825,9 +825,9 @@ public static partial class SimEngine
                 return index < simPlayer.Orbs.Count ? simPlayer.Orbs[index].Triggers + (index == 0 ? simPlayer.FrontOrbBonusTriggers : 0) : 0;
             }
             var maxTriggers = branches.States.Max(Triggers);
-            for (var t = 0; t < maxTriggers; t++)
+            for (var triggerIndex = 0; triggerIndex < maxTriggers; triggerIndex++)
             {
-                var trigger = t;
+                var trigger = triggerIndex;
                 branches.Each(branch =>
                 {
                     var simPlayer = branch.Player(player)!;
@@ -894,15 +894,15 @@ public static partial class SimEngine
         var stampede = branches.States.Max(branch => P(branch).Stampede);
         for (var i = 0; i < stampede; i++)
         {
-            var n = i;
-            branches.Each(branch => n < P(branch).Stampede && Alive(branch) ? AutoPlayFromHand(branch, player, hand => hand.Where(handCard => handCard.IsAttack).ToList()) : new[] { branch });
+            var stampedeIndex = i;
+            branches.Each(branch => stampedeIndex < P(branch).Stampede && Alive(branch) ? AutoPlayFromHand(branch, player, hand => hand.Where(handCard => handCard.IsAttack).ToList()) : new[] { branch });
         }
         // Simpleton: a random card among their cheapest, each time.
         var simpleton = branches.States.Max(branch => P(branch).Simpleton);
         for (var i = 0; i < simpleton; i++)
         {
-            var n = i;
-            branches.Each(branch => n < P(branch).Simpleton && Alive(branch)
+            var simpletonIndex = i;
+            branches.Each(branch => simpletonIndex < P(branch).Simpleton && Alive(branch)
                 ? AutoPlayFromHand(branch, player, hand => hand.Count == 0 ? hand : hand.Where(handCard => handCard.Cost == hand.Min(simHandCard => simHandCard.Cost)).ToList())
                 : new[] { branch });
         }
@@ -943,7 +943,7 @@ public static partial class SimEngine
         if (pile.Top.Count > 0)
             return pile.Top[0].InvincibleBlock > 0 ? Play(state, pile.Top[0], pile.WithoutTop()) : new[] { state };
         var total = pile.RestCount;
-        var copies = pile.Rest.Select((group, index) => (group, index)).Where(x => x.group.Card.InvincibleBlock > 0).ToList();
+        var copies = pile.Rest.Select((group, index) => (group, index)).Where(candidate => candidate.group.Card.InvincibleBlock > 0).ToList();
         if (total == 0 || copies.Count == 0) return new[] { state };
         var result = new List<SimState>();
         var other = total - copies.Sum(copy => copy.group.Count);
@@ -1037,10 +1037,10 @@ public static partial class SimEngine
     private static void EndOfTurn(BranchSet branches)
     {
         branches.Do(branch => branch.EndOfTurnNow = true);
-        HookStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, o, branch) => Who.IsPlayer(o) ? model.BeforeSideTurnEndVeryEarly(branch, o) : new[] { branch });
-        HookStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, o, branch) => Who.IsPlayer(o) ? model.BeforeSideTurnEndEarly(branch, o) : new[] { branch });
+        HookStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEndVeryEarly(branch, owner) : new[] { branch });
+        HookStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEndEarly(branch, owner) : new[] { branch });
         ExplosionCheck(branches);
-        HookStep(branches, nameof(SimModel.BeforeSideTurnEnd), (model, o, branch) => Who.IsPlayer(o) ? model.BeforeSideTurnEnd(branch, o) : new[] { branch });
+        HookStep(branches, nameof(SimModel.BeforeSideTurnEnd), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEnd(branch, owner) : new[] { branch });
         ExplosionCheck(branches);
 
         // 2. Each player's DoTurnEnd, in player order.
@@ -1055,9 +1055,9 @@ public static partial class SimEngine
 
         // 3. AfterSideTurnEnd (Constrict, Magic Bomb, Demise, Consuming Shadow, Parrying Shield, Lunar Pastry), then
         // AfterSideTurnEndLate (Disintegration, Insatiable Dominion).
-        HookStep(branches, nameof(SimModel.AfterSideTurnEnd), (model, o, branch) => Who.IsPlayer(o) ? model.AfterSideTurnEnd(branch, o) : new[] { branch });
+        HookStep(branches, nameof(SimModel.AfterSideTurnEnd), (model, owner, branch) => Who.IsPlayer(owner) ? model.AfterSideTurnEnd(branch, owner) : new[] { branch });
         ExplosionCheck(branches); // kills by Consuming Shadow's evokes, Parrying Shield, Black Hole
-        HookStep(branches, nameof(SimModel.AfterSideTurnEndLate), (model, o, branch) => Who.IsPlayer(o) ? model.AfterSideTurnEndLate(branch, o) : new[] { branch });
+        HookStep(branches, nameof(SimModel.AfterSideTurnEndLate), (model, owner, branch) => Who.IsPlayer(owner) ? model.AfterSideTurnEndLate(branch, owner) : new[] { branch });
 
         // Deaths at the end of your turn run their hooks before the enemies act (arrows coming back: Twine's block).
         branches.Do(AllyDeaths);
@@ -1241,12 +1241,12 @@ public static partial class SimEngine
             }
             // A teammate takes each hit in their turn order (CreatureCmd.Damage over every living player: a hit still reaches
             // everyone even if one player's Thorns kills the attacker during it), through the game's damage math for them.
-            void TeammateTakesHit(int k, int h, int mine)
+            void TeammateTakesHit(int teammateIndex, int hitIndex, int mine)
             {
-                if (state.Teammates[k].Hp <= 0) return;
-                var amount = enemy.Intent != null ? IntentDamage(state, enemy, h, Who.Teammate(k))
-                    : k < enemy.TeammateHits.Count && h < enemy.TeammateHits[k].Count ? enemy.TeammateHits[k][h] : mine;
-                TakesHit(Who.Teammate(k), amount);
+                if (state.Teammates[teammateIndex].Hp <= 0) return;
+                var amount = enemy.Intent != null ? IntentDamage(state, enemy, hitIndex, Who.Teammate(teammateIndex))
+                    : teammateIndex < enemy.TeammateHits.Count && hitIndex < enemy.TeammateHits[teammateIndex].Count ? enemy.TeammateHits[teammateIndex][hitIndex] : mine;
+                TakesHit(Who.Teammate(teammateIndex), amount);
             }
             var players = state.PlayerIds;
             for (var hit = 0; hit < HitCount(enemy); hit++)

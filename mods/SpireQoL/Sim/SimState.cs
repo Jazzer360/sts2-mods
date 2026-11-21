@@ -172,10 +172,10 @@ public sealed class SimEnemy
     public void AddPoison(int stacks)
     {
         if (stacks <= 0) return;
-        int Tick(int a)
+        int Tick(int stackCount)
         {
             var sum = 0;
-            for (var i = 0; i < Math.Min(a, Math.Max(1, PoisonTriggers)); i++) sum += a - i;
+            for (var i = 0; i < Math.Min(stackCount, Math.Max(1, PoisonTriggers)); i++) sum += stackCount - i;
             return sum;
         }
         Poison += Tick(PoisonStacks + stacks) - Tick(PoisonStacks);
@@ -583,16 +583,16 @@ public sealed class SimState
     public long FullKey()
     {
         var json = ToJson();
-        var h = unchecked((long)14695981039346656037UL);
-        foreach (var ch in json)
+        var hash = unchecked((long)14695981039346656037UL);
+        foreach (var character in json)
         {
             unchecked
             {
-                h ^= ch;
-                h *= 1099511628211L;
+                hash ^= character;
+                hash *= 1099511628211L;
             }
         }
-        return h;
+        return hash;
     }
 
     /// <summary>
@@ -672,14 +672,14 @@ public sealed class SimState
     [JsonIgnore] public int[] PlayerIds => Who.InPlayerOrder(Teammates.Count, TeammatesBeforeMe);
 
     /// <summary>Teammate k, to change: copied for this branch first if it's shared.</summary>
-    public SimPlayer MutableTeammate(int k)
+    public SimPlayer MutableTeammate(int teammateIndex)
     {
         if (_teammatesShared)
         {
             Teammates = Teammates.Select(player => player.Clone()).ToList();
             _teammatesShared = false;
         }
-        return Teammates[k];
+        return Teammates[teammateIndex];
     }
 
     /// <summary>
@@ -691,9 +691,9 @@ public sealed class SimState
     public SimState WithoutTeammateHands()
     {
         var shown = Clone();
-        for (var k = 0; k < shown.Teammates.Count; k++)
+        for (var teammateIndex = 0; teammateIndex < shown.Teammates.Count; teammateIndex++)
         {
-            var player = shown.MutableTeammate(k);
+            var player = shown.MutableTeammate(teammateIndex);
             player.TurnEndCards = new();
             player.Fading = player.HexFading = 0;
             player.Draw = null;
@@ -745,7 +745,7 @@ public sealed class SimState
     {
         // A teammate's firing is logged under them only (Name@id): its tab is theirs (decision #75), and the plain name stays
         // yours (and enemies'). An enemy's is logged under both. A firing set off by a card event is also under "~" (SimKeys).
-        var kind = owner is { } o ? Who.KindOf(o) : CreatureKind.You;
+        var kind = owner is { } id ? Who.KindOf(id) : CreatureKind.You;
         if (kind != CreatureKind.Teammate) LogUnder(source, amount, times);
         if (kind is CreatureKind.Teammate or CreatureKind.Enemy) LogUnder(SimKeys.Owned(source, owner!.Value), amount, times);
     }
@@ -794,13 +794,13 @@ public sealed class SimState
     {
         // FNV-1a over every number that can differ between branches of one run (64-bit: collisions
         // among a few hundred branches are vanishingly unlikely).
-        var h = unchecked((long)14695981039346656037UL);
-        void Add(long v)
+        var hash = unchecked((long)14695981039346656037UL);
+        void Add(long value)
         {
             unchecked
             {
-                h ^= v;
-                h *= 1099511628211L;
+                hash ^= value;
+                hash *= 1099511628211L;
             }
         }
 
@@ -808,7 +808,7 @@ public sealed class SimState
         if (DrawRecord != null)
         {
             Add(DrawRecord.Count);
-            foreach (var k in DrawRecord.Select(d => d.Card.Key.GetHashCode()).Order()) Add(k);
+            foreach (var cardHash in DrawRecord.Select(draw => draw.Card.Key.GetHashCode()).Order()) Add(cardHash);
             if (DrawRecord.Count > 0) Add((int)DrawRecord[^1].Card.Type); // Pillage reads the last one's type
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
@@ -817,7 +817,7 @@ public sealed class SimState
         You.Hash(Add);
         // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
         foreach (var player in Teammates) player.Hash(Add);
-        return h;
+        return hash;
     }
 }
 

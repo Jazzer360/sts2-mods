@@ -95,7 +95,7 @@ internal sealed class PlaySnapshot
         {
             if (explainers.Any(type => CodeIndex.Does(type, kind.Calls, kind.Overrides))) return;
             if (alsoOwn != null && CodeIndex.Does(alsoOwn, kind.Calls, kind.Overrides)) return;
-            var could = present.Select(model => model.GetType()).Distinct().Where(type => CodeIndex.Does(type, kind.Calls, kind.Overrides)).Select(type => type.Name).OrderBy(n => n).ToList();
+            var could = present.Select(model => model.GetType()).Distinct().Where(type => CodeIndex.Does(type, kind.Calls, kind.Overrides)).Select(type => type.Name).OrderBy(name => name).ToList();
             issues.Add($"untracked {kind.Name}: {what} (could be: {(could.Count == 0 ? "nothing present" : string.Join(", ", could))})");
         }
 

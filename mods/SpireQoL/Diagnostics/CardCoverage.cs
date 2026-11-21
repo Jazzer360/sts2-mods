@@ -329,7 +329,7 @@ internal static class CardCoverage
     private static HashSet<string> HookCalls(Type cardType)
     {
         var set = new HashSet<string>();
-        bool IsHook(string n) => n.StartsWith("After") || n.StartsWith("Before");
+        bool IsHook(string methodName) => methodName.StartsWith("After") || methodName.StartsWith("Before");
         var methods = cardType.GetMethods(All).Where(method => method.DeclaringType == cardType && IsHook(method.Name)).Cast<MethodBase>()
             .Concat(NestedTypes(cardType)
                 .Where(type => typeof(IAsyncStateMachine).IsAssignableFrom(type) && type.Name.StartsWith("<") && IsHook(type.Name[1..]))
@@ -360,13 +360,13 @@ internal static class CardCoverage
             {
                 var code = SpireQoL.Diagnostics.GameCode.Instructions(onPlayMethod);
                 var at = Enumerable.Range(0, code.Count)
-                    .Where(i => code[i].operand is MethodInfo nextMethod && nextMethod.Name == method && nextMethod.DeclaringType?.Name == type).ToList();
+                    .Where(index => code[index].operand is MethodInfo nextMethod && nextMethod.Name == method && nextMethod.DeclaringType?.Name == type).ToList();
                 if (at.Count > 1) return true;
                 if (at.Count == 0) continue;
                 var labels = new Dictionary<System.Reflection.Emit.Label, int>();
                 for (var i = 0; i < code.Count; i++) foreach (var label in code[i].labels) labels[label] = i;
                 for (var i = 0; i < code.Count; i++)
-                    if (code[i].operand is System.Reflection.Emit.Label otherLabel && labels.TryGetValue(otherLabel, out var to) && to < i && at.Any(c => c >= to && c < i))
+                    if (code[i].operand is System.Reflection.Emit.Label otherLabel && labels.TryGetValue(otherLabel, out var to) && to < i && at.Any(call => call >= to && call < i))
                         return true;
             }
             catch

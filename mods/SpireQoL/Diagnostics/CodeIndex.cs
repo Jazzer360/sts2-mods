@@ -47,9 +47,9 @@ internal static class CodeIndex
         {
             var types = new List<Type> { nextType };
             for (var i = 0; i < types.Count; i++) types.AddRange(types[i].GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
-            foreach (var nt in types)
+            foreach (var nested in types)
             {
-                foreach (var method in nt.GetMethods(All).Cast<MethodBase>())
+                foreach (var method in nested.GetMethods(All).Cast<MethodBase>())
                 {
                     bool flashes;
                     try
@@ -63,7 +63,7 @@ internal static class CodeIndex
                     }
                     if (!flashes) continue;
                     // A compiler-made body ("<AfterCardPlayed>d__5", "<AfterCardPlayed>b__5_0") belongs to the method in its brackets.
-                    var owner = method.Name.StartsWith('<') ? OwnerName(method.Name) : nt != nextType && nt.Name.StartsWith('<') ? OwnerName(nt.Name) : method.Name;
+                    var owner = method.Name.StartsWith('<') ? OwnerName(method.Name) : nested != nextType && nested.Name.StartsWith('<') ? OwnerName(nested.Name) : method.Name;
                     if (!amountHooks.Contains(owner)) return true;
                 }
             }
@@ -74,9 +74,9 @@ internal static class CodeIndex
     /// <summary>The method a compiler-made name belongs to: the part in its first brackets ("&lt;Name&gt;d__5" → "Name"), else the name.</summary>
     private static string OwnerName(string name)
     {
-        var i = name.IndexOf('<');
-        var j = i < 0 ? -1 : name.IndexOf('>', i);
-        return i >= 0 && j > i + 1 ? name[(i + 1)..j] : name;
+        var open = name.IndexOf('<');
+        var close = open < 0 ? -1 : name.IndexOf('>', open);
+        return open >= 0 && close > open + 1 ? name[(open + 1)..close] : name;
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ internal static class CodeIndex
     {
         var hooks = new List<string>();
         for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; otherType = otherType.BaseType)
-            hooks.AddRange(For(otherType).Overrides.Where(n => !n.StartsWith("get_") && !n.StartsWith("set_")));
+            hooks.AddRange(For(otherType).Overrides.Where(member => !member.StartsWith("get_") && !member.StartsWith("set_")));
         string[] amounts = { "AfterModifyingBlockAmount", "AfterModifyingDamageAmount" };
         return hooks.Any(amounts.Contains)
                && hooks.All(hook => amounts.Contains(hook) || hook is "ModifyBlockAdditive" or "ModifyBlockMultiplicative"

@@ -42,7 +42,7 @@ public static partial class SimEngine
                 branch.You.Arrows--;
                 branch.ArrowAwayAt = target;
             }
-            return Hook(branch, nameof(SimModel.AfterArrowShot), (model, o, copy) => model.AfterArrowShot(copy, o, Who.You));
+            return Hook(branch, nameof(SimModel.AfterArrowShot), (model, owner, copy) => model.AfterArrowShot(copy, owner, Who.You));
         });
     }
 
@@ -55,14 +55,14 @@ public static partial class SimEngine
             if (branch.Enemy(target) is not { } enemy) return new[] { branch };
             var powers = enemy.Powers;
             enemy.Powers = powers.Has(Impaled) ? powers.With(Impaled, powers[Impaled] + 1) : powers.With(Impaled, 1, 3);
-            var states = Hook(branch, nameof(SimModel.AfterArrowImpaled), (model, o, copy) => model.AfterArrowImpaled(copy, o, target, Who.You));
+            var states = Hook(branch, nameof(SimModel.AfterArrowImpaled), (model, owner, copy) => model.AfterArrowImpaled(copy, owner, target, Who.You));
             // Killed by the shot's own attack: the arrow comes straight out.
             return Then(states.ToList(), copy => copy.Enemy(target) is { Alive: false } ? Dislodge(copy, target, 1) : new[] { copy });
         });
     }
 
     private static void RunDislodgeAll(BranchSet branches) =>
-        branches.Each(branch => branch.CurrentPlay?.Target is { } t && t >= 0 ? Dislodge(branch, t, PowerOn(branch, t, Impaled)) : new[] { branch });
+        branches.Each(branch => branch.CurrentPlay?.Target is { } target && target >= 0 ? Dislodge(branch, target, PowerOn(branch, target, Impaled)) : new[] { branch });
 
     /// <summary>Arrows of yours out of an enemy (ArrowCmd.DislodgeArrow): back to you, each through AfterArrowDislodged.</summary>
     internal static IEnumerable<SimState> Dislodge(SimState state, int enemy, int count)
@@ -85,10 +85,10 @@ public static partial class SimEngine
         if (yourArrows <= 0) return 0;
         counter = Math.Max(1, counter);
         var arrows = yourArrows;
-        for (var k = 0; k < plays; k++)
+        for (var playIndex = 0; playIndex < plays; playIndex++)
         {
-            if (arrows <= 0) return k;
-            for (var h = 0; h < hitsPerPlay && arrows > 0; h++)
+            if (arrows <= 0) return playIndex;
+            for (var hit = 0; hit < hitsPerPlay && arrows > 0; hit++)
             {
                 if (--counter > 0) continue;
                 counter = 3;

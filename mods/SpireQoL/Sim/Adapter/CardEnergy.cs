@@ -67,13 +67,13 @@ internal static class CardEnergy
                 if (code[i].operand is MethodInfo { Name: "GainEnergy" } otherMethod && otherMethod.DeclaringType?.Name == "PlayerCmd") at.Add(i);
             if (at.Count == 0) continue;
             var certain = Branches.OnEveryPath(code, at);
-            for (var k = 0; k < at.Count; k++)
+            for (var aim = 0; aim < at.Count; aim++)
             {
                 // The arguments, pushed in order: the amount (base.DynamicVars.Energy...), then the player (base.Owner last).
-                var before = code.Take(at[k]).Reverse().Take(8).Select(codeInstruction => codeInstruction.operand as MethodInfo).Where(nextMethod => nextMethod != null).ToList();
+                var before = code.Take(at[aim]).Reverse().Take(8).Select(codeInstruction => codeInstruction.operand as MethodInfo).Where(nextMethod => nextMethod != null).ToList();
                 var toOwner = before.FirstOrDefault() is { Name: "get_Owner" } owner && typeof(CardModel).IsAssignableFrom(owner.DeclaringType);
                 var fromVar = before.Any(nextMethod => nextMethod!.Name == "get_Energy" && nextMethod.DeclaringType?.Name == "DynamicVarSet");
-                calls.Add(new Call(method.Name, certain[k], toOwner, fromVar));
+                calls.Add(new Call(method.Name, certain[aim], toOwner, fromVar));
             }
         }
         lock (Cache) Cache[cardType] = calls;
@@ -130,8 +130,8 @@ internal static class CardEnergy
                 // isn't followed (it'd need their numbering of the players).
                 if (owner != Who.You) return;
                 var mates = SimAdapter.Teammates(me, combat);
-                for (var k = 0; k < mates.Count; k++)
-                    if (mates[k].Creature is { IsAlive: true }) Gain(energy, Who.Teammate(k));
+                for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
+                    if (mates[teammateIndex].Creature is { IsAlive: true }) Gain(energy, Who.Teammate(teammateIndex));
                 return;
         }
         if (Reviewed.ContainsKey(name)) return;

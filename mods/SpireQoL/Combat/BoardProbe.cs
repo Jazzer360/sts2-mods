@@ -65,24 +65,24 @@ internal static class BoardProbe
             var json = System.Text.Json.Nodes.JsonNode.Parse(before.ToJson());
             var otherJson = System.Text.Json.Nodes.JsonNode.Parse(after.ToJson());
             var diffs = new List<string>();
-            void Walk(System.Text.Json.Nodes.JsonNode? nextJson, System.Text.Json.Nodes.JsonNode? y, string path)
+            void Walk(System.Text.Json.Nodes.JsonNode? beforeNode, System.Text.Json.Nodes.JsonNode? afterNode, string path)
             {
                 if (diffs.Count >= 6) return;
-                if (nextJson is System.Text.Json.Nodes.JsonObject jsonObject && y is System.Text.Json.Nodes.JsonObject otherJsonObject)
+                if (beforeNode is System.Text.Json.Nodes.JsonObject beforeObject && afterNode is System.Text.Json.Nodes.JsonObject afterObject)
                 {
-                    foreach (var k in jsonObject.Select(entry => entry.Key).Union(otherJsonObject.Select(entry => entry.Key))) Walk(jsonObject[k], otherJsonObject[k], path == "" ? k : path + "." + k);
+                    foreach (var key in beforeObject.Select(entry => entry.Key).Union(afterObject.Select(entry => entry.Key))) Walk(beforeObject[key], afterObject[key], path == "" ? key : path + "." + key);
                     return;
                 }
-                if (nextJson is System.Text.Json.Nodes.JsonArray jsonArray && y is System.Text.Json.Nodes.JsonArray otherJsonArray && jsonArray.Count == otherJsonArray.Count)
+                if (beforeNode is System.Text.Json.Nodes.JsonArray beforeArray && afterNode is System.Text.Json.Nodes.JsonArray afterArray && beforeArray.Count == afterArray.Count)
                 {
-                    for (var i = 0; i < jsonArray.Count; i++) Walk(jsonArray[i], otherJsonArray[i], $"{path}[{i}]");
+                    for (var i = 0; i < beforeArray.Count; i++) Walk(beforeArray[i], afterArray[i], $"{path}[{i}]");
                     return;
                 }
-                var sx = nextJson?.ToJsonString() ?? "null";
-                var sy = y?.ToJsonString() ?? "null";
-                if (sx != sy) diffs.Add($"{path}: {Short(sx)} → {Short(sy)}");
+                var beforeText = beforeNode?.ToJsonString() ?? "null";
+                var afterText = afterNode?.ToJsonString() ?? "null";
+                if (beforeText != afterText) diffs.Add($"{path}: {Short(beforeText)} → {Short(afterText)}");
             }
-            static string Short(string v) => v.Length > 60 ? v[..57] + "..." : v;
+            static string Short(string text) => text.Length > 60 ? text[..57] + "..." : text;
             Walk(json, otherJson, "");
             return diffs.Count == 0 ? "no difference in its JSON" : string.Join("; ", diffs);
         }

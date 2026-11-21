@@ -83,7 +83,7 @@ public sealed class ReportFloor
 
     /// <summary>Why nothing is sent (ErrorReporter.SkipReason), or null when this version is at or above the floor (or it's unknown).</summary>
     public string? SkipReason() =>
-        _floor is { } f && Version.TryParse(f, out var floor) && _current < floor
-            ? $"this version is older than the oldest one reports are taken from ({f})"
+        _floor is { } floorText && Version.TryParse(floorText, out var floor) && _current < floor
+            ? $"this version is older than the oldest one reports are taken from ({floorText})"
             : null;
 }

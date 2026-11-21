@@ -135,7 +135,7 @@ internal static class DrawPileMemory
     {
         if (Top.Count == 0) return;
         var actual = pile.Cards.Take(Top.Count).ToList();
-        if (actual.Count == Top.Count && actual.Zip(Top).All(x => ReferenceEquals(x.First, x.Second))) return;
+        if (actual.Count == Top.Count && actual.Zip(Top).All(pair => ReferenceEquals(pair.First, pair.Second))) return;
         var line = $"[audit] [draws] known top of the draw pile [{string.Join(", ", Top.Select(card => card.GetType().Name))}] isn't the pile's top " +
                    $"[{string.Join(", ", actual.Select(card => card.GetType().Name))}]: forgotten";
         if (Warned.Add(string.Join(",", Top.Select(card => card.GetType().Name)))) ModEntry.Log.Warn(line);

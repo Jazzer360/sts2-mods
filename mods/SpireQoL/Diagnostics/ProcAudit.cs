@@ -351,13 +351,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// <summary>Power amounts on every creature in the fight, by creature and power class.</summary>
     private static Dictionary<(Creature, string), int> PowerSnapshot()
     {
-        var d = new Dictionary<(Creature, string), int>();
+        var amounts = new Dictionary<(Creature, string), int>();
         var combat = Sts2State.Combat;
-        if (combat == null) return d;
+        if (combat == null) return amounts;
         foreach (var creature in combat.Creatures)
             foreach (var power in creature.Powers)
-                d[(creature, power.GetType().Name)] = d.TryGetValue((creature, power.GetType().Name), out var a) ? a + power.Amount : power.Amount;
-        return d;
+                amounts[(creature, power.GetType().Name)] = amounts.TryGetValue((creature, power.GetType().Name), out var already) ? already + power.Amount : power.Amount;
+        return amounts;
     }
 
     private static ProcAudit? _instance;
@@ -652,13 +652,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (_history == null || !_ctx.Decor.LastSeenFrame.TryGetValue(card, out var frame) || !_countAtFrame.TryGetValue(frame, out var drawnAt))
             return (null, "no history position for them");
         var hist = _history.Entries.ToList();
-        for (var k = Math.Max(0, drawnAt); k < hist.Count; k++)
+        for (var entryIndex = Math.Max(0, drawnAt); entryIndex < hist.Count; entryIndex++)
         {
-            if (hist[k] is CardPlayStartedEntry own && ReferenceEquals(own.CardPlay.Card, card)) continue;
+            if (hist[entryIndex] is CardPlayStartedEntry own && ReferenceEquals(own.CardPlay.Card, card)) continue;
             return (null, "the board changed since they were drawn");
         }
-        var before = shown.GroupBy(tab => tab.Key).ToDictionary(g => g.Key, g => Look(g.First()));
-        var atPlay = now.GroupBy(tab => tab.Key).ToDictionary(g => g.Key, g => Look(g.First()));
+        var before = shown.GroupBy(tab => tab.Key).ToDictionary(sameKey => sameKey.Key, sameKey => Look(sameKey.First()));
+        var atPlay = now.GroupBy(tab => tab.Key).ToDictionary(sameKey => sameKey.Key, sameKey => Look(sameKey.First()));
         var diff = new List<string>();
         foreach (var (key, was) in before)
         {
@@ -691,12 +691,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private string? StaleBecause(List<CombatHistoryEntry> hist, CardModel card, int start, Player me)
     {
         if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var frame) || !_countAtFrame.TryGetValue(frame, out var then)) return null;
-        for (var k = Math.Max(0, then); k < start && k < hist.Count; k++)
+        for (var entryIndex = Math.Max(0, then); entryIndex < start && entryIndex < hist.Count; entryIndex++)
         {
             // Any player's play (a teammate's too) or a potion that resolved in between.
-            if (hist[k] is CardPlayFinishedEntry { CardPlay: var play } && !ReferenceEquals(play.Card, card))
+            if (hist[entryIndex] is CardPlayFinishedEntry { CardPlay: var play } && !ReferenceEquals(play.Card, card))
                 return SafeTitle(play.Card);
-            if (hist[k] is PotionUsedEntry potionUsedEntry)
+            if (hist[entryIndex] is PotionUsedEntry potionUsedEntry)
                 return SafePotion(potionUsedEntry);
         }
         return null;
@@ -848,7 +848,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // Another action ran inside this play (during your choice): its effects are in the snapshots too.
                 // The history checks above still ran; these are logged, and counted in the combat summary.
                 _interleaved++;
-                foreach (var x in snapshot) model.Skip("", "another action ran during your choice", $"{window.RanDuringPause}: {x}");
+                foreach (var issue in snapshot) model.Skip("", "another action ran during your choice", $"{window.RanDuringPause}: {issue}");
             }
             else issues.AddRange(snapshot);
             if (issues.Count > 0 && window.Target is { IsPlayer: true } ally && ally != me.Creature
@@ -870,7 +870,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // proc tab can come from a model's log, its block and damage too: SimDependent, as for a capped search below), so none
                 // of those checks can be held to it. Counted as not checked (decision #92).
                 var simOnly = issues.Where(SimDependent).ToList();
-                foreach (var x in simOnly) model.Skip("", "simulation pending", x);
+                foreach (var issue in simOnly) model.Skip("", "simulation pending", issue);
                 issues.RemoveAll(simOnly.Contains);
             }
             if (window.Facts is { Sim: null, SimPending: false } && issues.Any(SimDependent))
@@ -878,7 +878,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // The card's simulation couldn't be built (it threw: reported as a crash on its own): every tab the simulator gives
                 // is missing, so those checks would only repeat that crash. Counted, not reported (decision #92).
                 var fromSim = issues.Where(SimDependent).ToList();
-                foreach (var x in fromSim) model.Skip("", "no simulation for this card", x);
+                foreach (var issue in fromSim) model.Skip("", "no simulation for this card", issue);
                 issues.RemoveAll(fromSim.Contains);
             }
             if (window.Facts is { } facts && (facts.SimIncomplete || facts.Unmodelled.Count > 0))
@@ -888,7 +888,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // so their checks aren't reported; the snapshot checks run their own simulation and stay.
                 var why = facts.Unmodelled.Count > 0 ? "a branch of its simulation not modelled" : "its simulation stopped at the memory cap";
                 var fromSim = issues.Where(SimDependent).ToList();
-                foreach (var x in fromSim) model.Skip("", why, x);
+                foreach (var issue in fromSim) model.Skip("", why, issue);
                 issues.RemoveAll(fromSim.Contains);
             }
             if (issues.Count > 0 && window.Facts?.Sim is { FullStart: not null } handSim
@@ -898,7 +898,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // Count teammates' hands is off and their hand changes the play: its tabs were worked out without what decides it
                 // (decision #25), so they can't be held to what happened. The state after the play is checked with it.
                 var fromSim = issues.Where(SimDependent).ToList();
-                foreach (var x in fromSim) model.Skip("", "a teammate's hand changes it; Count teammates' hands is off", x);
+                foreach (var issue in fromSim) model.Skip("", "a teammate's hand changes it; Count teammates' hands is off", issue);
                 issues.RemoveAll(fromSim.Contains);
             }
             // What the card showed in hand against the same prediction (decision #103): after the filters above, which are about
@@ -907,9 +907,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var turn = Sts2State.TurnNumber;
             if (window.ShownSkip != null)
             {
-                var sk = "tabs shown: " + window.ShownSkip;
-                _skipCounts[sk] = (_skipCounts.TryGetValue(sk, out var skn) ? skn : 0) + 1;
-                Telemetry.DevEvents.Post(new Telemetry.CheckSkipped(Telemetry.Audits.Play, turn, sk, window.CardName));
+                var shownSkip = "tabs shown: " + window.ShownSkip;
+                _skipCounts[shownSkip] = (_skipCounts.TryGetValue(shownSkip, out var skn) ? skn : 0) + 1;
+                Telemetry.DevEvents.Post(new Telemetry.CheckSkipped(Telemetry.Audits.Play, turn, shownSkip, window.CardName));
             }
             foreach (var skip in model.Skips)
             {
@@ -945,7 +945,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 foreach (var line in lines) log.Warn($"[audit]   {line}");
                 Report(window, issues, tabs, lines, entries.Count, string.Join("\n", _turnPlays));
             }
-            foreach (var m in model) log.Info($"[audit] [model] played {window.CardName}: {m}");
+            foreach (var note in model) log.Info($"[audit] [model] played {window.CardName}: {note}");
         }
         catch (Exception ex)
         {
@@ -999,7 +999,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             if (otherWindow.Before != null)
             {
                 foreach (var key in new[] { "player", "player_powers", "relics", "orbs", "enemies", "hand" })
-                    if (otherWindow.Before.TryGetValue(key, out var v)) extra["before_" + key] = v;
+                    if (otherWindow.Before.TryGetValue(key, out var before)) extra["before_" + key] = before;
             }
             if (kind.StartsWith("after play") && otherWindow.Facts?.Sim != null)
             {
@@ -1027,15 +1027,15 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// <summary>"predicted 4, actual 0" → "less" (more/less than predicted; amounts left out).</summary>
     private static string Direction(string rest)
     {
-        static int Last(string x) => int.TryParse(new string(x.Trim().Reverse().TakeWhile(char.IsDigit).Reverse().ToArray()), out var v) ? v : 0;
+        static int Last(string text) => int.TryParse(new string(text.Trim().Reverse().TakeWhile(char.IsDigit).Reverse().ToArray()), out var number) ? number : 0;
         var parts = rest.Split(',');
         if (parts.Length < 2) return "";
         var actual = Last(parts[1]);
         var predicted = parts[0].Replace("predicted", "").Trim();
         var range = predicted.Split('–');
-        var lo = Last(range[0]);
-        var hi = Last(range[^1]);
-        return actual > hi ? "more" : actual < lo ? "less" : "";
+        var low = Last(range[0]);
+        var high = Last(range[^1]);
+        return actual > high ? "more" : actual < low ? "less" : "";
     }
 
     private void Summarize()
@@ -1048,7 +1048,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (_checked == 0) return;
         var issues = _issueCounts.Count == 0 ? "" : $" ({string.Join(", ", _issueCounts.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"))})";
         ModEntry.Log.Info($"[audit] combat summary: {_checked} card plays checked ({_fromHand} against the tabs in hand, {_interleaved} with another action during a choice), {_matched} matched{issues}.");
-        static string List(Dictionary<string, int> c) => string.Join(", ", c.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"));
+        static string List(Dictionary<string, int> counts) => string.Join(", ", counts.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"));
         if (_skipCounts.Count > 0) ModEntry.Log.Info($"[audit] combat summary: card play checks skipped: {List(_skipCounts)}.");
         if (_gapCounts.Count > 0) ModEntry.Log.Info($"[audit] combat summary: not modelled in played cards' simulations: {List(_gapCounts)}.");
         _checked = _matched = _fromHand = _interleaved = 0;
@@ -1210,7 +1210,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             {
                 if (!window.PowersBefore.TryGetValue((me.Creature, spent), out var before) || before <= 0) continue;
                 if (spent != "StretchPower" && ownTypes.Contains(spent)) continue;
-                var after = window.PowersAfter.TryGetValue((me.Creature, spent), out var sa) ? sa : 0;
+                var after = window.PowersAfter.TryGetValue((me.Creature, spent), out var spentAfter) ? spentAfter : 0;
                 var tabbed = sourceOf.ContainsKey(spent);
                 // Spent: the history shows it going down, even when the card gives it back (Cho Ki re-applies the
                 // Stretch it had, so the amount ends where it started).
@@ -1223,7 +1223,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             foreach (var spent in SpireQoL.Procs.FreeCards.Powers)
             {
                 if (!window.PowersBefore.TryGetValue((me.Creature, spent), out var before) || before <= 0) continue;
-                var after = window.PowersAfter.TryGetValue((me.Creature, spent), out var sa) ? sa : 0;
+                var after = window.PowersAfter.TryGetValue((me.Creature, spent), out var spentAfter) ? spentAfter : 0;
                 var tabbed = window.Predicted.Any(tab => tab.Key == SpireQoL.Procs.FreeCards.Prefix + spent);
                 // Spent: the history shows a charge going, even when the card gives one back (Unrelenting spends Free Attack and
                 // applies it again, so the amount ends where it started).
@@ -1300,7 +1300,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // A card that summons every player (Legion of Bone) summons each up to its own count; any other card's summons all count as its own.
         var summoned = entries.OfType<SummonedEntry>().ToList();
         var summons = SimAdapter.AllPlayersSummonCards.Contains(window.Card.GetType().Name)
-            ? summoned.GroupBy(summonedEntry => summonedEntry.Actor).Select(g => g.Count()).DefaultIfEmpty(0).Max()
+            ? summoned.GroupBy(summonedEntry => summonedEntry.Actor).Select(byActor => byActor.Count()).DefaultIfEmpty(0).Max()
             : summoned.Count;
         if (facts != null)
         {
@@ -1373,11 +1373,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var acted = flashed.Select(otherModel => otherModel.GetType().Name).ToHashSet();
         var tabbed = window.Predicted.Select(tab => tab.Key.Contains(':') ? tab.Key[(tab.Key.IndexOf(':') + 1)..] : tab.Key).ToHashSet();
         // Artifact blocks any debuff, temporary ones included (Dark Shackles).
-        var debuffs = window.Facts?.EnemyDebuffs.Count > 0 || own.Any(t => PowerTypeNamed(t) is { } type && PlayFacts.IsDebuffType(type));
+        var debuffs = window.Facts?.EnemyDebuffs.Count > 0 || own.Any(typeName => PowerTypeNamed(typeName) is { } type && PlayFacts.IsDebuffType(type));
         var died = DiedInPlay(entries);
         foreach (var ((creature, type), before) in window.PowersBefore)
         {
-            var after = window.PowersAfter.TryGetValue((creature, type), out var a) ? a : 0;
+            var after = window.PowersAfter.TryGetValue((creature, type), out var amountAfter) ? amountAfter : 0;
             if (after >= before) continue;
             if (!creature.IsAlive) continue;
             // Killed in the play but kept in the fight (the Waterfall Giant erupts): its powers come off at death
@@ -1392,7 +1392,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 && CodeIndex.Does(countSource, Array.Empty<string>(), new[] { "ModifyCardPlayCount" })
                 && entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.Card == window.Card && cardPlayStartedEntry.CardPlay.PlayCount > 1)) continue;
             if (creature == me.Creature && Stats.Contains(type)
-                && acted.Concat(tabbed).Any(x => SourceEffects.TryGetValue(x, out var effects) && effects.Contains(Effect.Power))) continue;
+                && acted.Concat(tabbed).Any(source => SourceEffects.TryGetValue(source, out var effects) && effects.Contains(Effect.Power))) continue;
             // A tabbed or flashed power on that creature removes it (Plow takes the Ceremonial Beast's Strength
             // as it stuns her: PowerCmd.Remove; the index has no type arguments).
             // (Read from the powers before the play: Plow removes itself too.)
@@ -1502,7 +1502,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     private static void DrawnIssues(Window window, Player me, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
         var name = window.Card.GetType().Name;
-        if (!SimAdapter.DrawnCardReaders.TryGetValue(name, out var reader) || window.Facts?.Drawn is not { } d) return;
+        if (!SimAdapter.DrawnCardReaders.TryGetValue(name, out var reader) || window.Facts?.Drawn is not { } distribution) return;
         if (window.FightEnded) { model.Skip("drawn", FightEndedSkip, name); return; }
         if (UnpredictedAutoPlay(window, entries, me)) { model.Skip("drawn", "random auto-plays", name); return; }
         if (window.Facts.SimIncomplete || window.Facts.Unmodelled.Count > 0) { model.Skip("drawn", "its simulation stopped at a cap or met something not modelled", name); return; }
@@ -1514,23 +1514,23 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var actual = reader.What == SimAdapter.DrawnCardReader.Reads.Cost ? drawn.Count(Free)
             : reader.Counts ? drawn.Count(card => card.Type == CardType.Attack)
             : drawn.Count > 0 && drawn[0].Type == CardType.Skill ? 1 : 0;
-        if (!d.TryGetValue(actual, out var share) || share <= 0)
+        if (!distribution.TryGetValue(actual, out var share) || share <= 0)
         {
-            issues.Add($"drawn: {name} gave {actual}, which its simulation had no chance of ({string.Join(", ", d.Select(entry => $"{entry.Key}: {entry.Value:0.###}"))})");
+            issues.Add($"drawn: {name} gave {actual}, which its simulation had no chance of ({string.Join(", ", distribution.Select(entry => $"{entry.Key}: {entry.Value:0.###}"))})");
             return;
         }
         // The chance shown, and whether it happened.
-        double p;
+        double likelihood;
         bool happened;
         if (reader.Counts)
         {
-            var (n, chance) = DrawnChance.MostLikely(d);
-            (p, happened) = (chance, actual == n);
+            var (n, chance) = DrawnChance.MostLikely(distribution);
+            (likelihood, happened) = (chance, actual == n);
         }
-        else (p, happened) = (DrawnChance.ChanceOfAny(d), actual > 0);
-        if (p <= 0 || p >= 1) return; // certain either way: the check above holds it
-        ModEntry.Log.Info($"[audit] [odds] {name}: predicted {new SimChance(p, p, true).Text()}, {(happened ? "happened" : "didn't")} (gave {actual})");
-        DrawnOdds.Add(new SimChance(p, p, true), happened);
+        else (likelihood, happened) = (DrawnChance.ChanceOfAny(distribution), actual > 0);
+        if (likelihood <= 0 || likelihood >= 1) return; // certain either way: the check above holds it
+        ModEntry.Log.Info($"[audit] [odds] {name}: predicted {new SimChance(likelihood, likelihood, true).Text()}, {(happened ? "happened" : "didn't")} (gave {actual})");
+        DrawnOdds.Add(new SimChance(likelihood, likelihood, true), happened);
         if (!DrawnOdds.Drifted || _drawnDriftReported) return;
         _drawnDriftReported = true;
         Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("odds", $"Drawn-card odds: what happened is far from the chances shown ({DrawnOdds.Text()})",
@@ -1603,7 +1603,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // off you when its caster dies and upgrades your cards back).
         var deathReactors = !DiedInPlay(entries) ? Enumerable.Empty<Type>()
             : present.Select(otherModel => otherModel.GetType())
-                .Concat(window.PowersBefore?.Keys.Select(k => PowerTypeNamed(k.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())
+                .Concat(window.PowersBefore?.Keys.Select(key => PowerTypeNamed(key.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())
                 .Where(type => CodeIndex.Does(type, Array.Empty<string>(), DeathHooks));
         var explainers = present.Where(otherModel => tabbed.Contains(otherModel.GetType().Name)).Select(otherModel => otherModel.GetType())
             .Concat(flashed.Select(otherModel => otherModel.GetType())).Append(window.Card.GetType())
@@ -1614,7 +1614,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Concat(entries.OfType<OrbChanneledEntry>().Any() || CodeIndex.Does(window.Card.GetType(), new[] { "OrbCmd.Evoke*" }, Array.Empty<string>()) ? window.FullBefore.Orbs : Enumerable.Empty<Type>())
             .Concat(deathReactors)
             // Your powers a play uses up (Free Card): the costs they lowered go back up.
-            .Concat(window.PowersBefore?.Keys.Where(k => k.Item1 == me.Creature && SpentByAnyPlay.Contains(k.Item2)).Select(k => PowerTypeNamed(k.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())
+            .Concat(window.PowersBefore?.Keys.Where(key => key.Item1 == me.Creature && SpentByAnyPlay.Contains(key.Item2)).Select(key => PowerTypeNamed(key.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())
             .Distinct().ToList();
         var tracked = new HashSet<string>(tabbed);
         foreach (var relicCounterSpec in RelicSpecs.All) tracked.Add(relicCounterSpec.TypeName);
@@ -1781,7 +1781,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
         List<string> Diff(SimState pred)
         {
-            var d = new List<string>();
+            var differences = new List<string>();
             foreach (var (creature, id) in sim.Ids)
             {
                 var enemy = pred.Enemy(id);
@@ -1791,29 +1791,29 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // The Waterfall Giant doesn't leave at 0 HP: Steam Eruption puts it about to blow at 999999999 HP (WaterfallGiant.
                 // TriggerAboutToBlowState), stunned this turn, as good as dead until it explodes.
                 var aboutToBlow = enemy.Hp <= 0 && IsBlowing(creature);
-                if (Hp(enemy) != Hp(simEnemy) && !aboutToBlow) d.Add($"after play enemy HP: {name} predicted {Hp(enemy)}, actual {Hp(simEnemy)}");
+                if (Hp(enemy) != Hp(simEnemy) && !aboutToBlow) differences.Add($"after play enemy HP: {name} predicted {Hp(enemy)}, actual {Hp(simEnemy)}");
                 if (simEnemy.Hp <= 0 || enemy.Hp <= 0) continue;
-                if (enemy.Block != simEnemy.Block) d.Add($"after play enemy block: {name} predicted {enemy.Block}, actual {simEnemy.Block}");
-                if (enemy.Poison != simEnemy.Poison) d.Add($"after play enemy poison: {name} predicted {enemy.Poison}, actual {simEnemy.Poison}");
+                if (enemy.Block != simEnemy.Block) differences.Add($"after play enemy block: {name} predicted {enemy.Block}, actual {simEnemy.Block}");
+                if (enemy.Poison != simEnemy.Poison) differences.Add($"after play enemy poison: {name} predicted {enemy.Poison}, actual {simEnemy.Poison}");
                 // FlutterPower.AfterDamageReceived: one stack per powered hit that gets through (no flash until it stuns).
-                if (enemy.Flutter != simEnemy.Flutter) d.Add($"after play enemy Flutter: {name} predicted {enemy.Flutter}, actual {simEnemy.Flutter}");
-                if (enemy.Stunned != simEnemy.Stunned) d.Add($"after play enemy stunned: {name} predicted {(enemy.Stunned ? "stunned" : "not stunned")}, actual {(simEnemy.Stunned ? "stunned" : "not stunned")}");
+                if (enemy.Flutter != simEnemy.Flutter) differences.Add($"after play enemy Flutter: {name} predicted {enemy.Flutter}, actual {simEnemy.Flutter}");
+                if (enemy.Stunned != simEnemy.Stunned) differences.Add($"after play enemy stunned: {name} predicted {(enemy.Stunned ? "stunned" : "not stunned")}, actual {(simEnemy.Stunned ? "stunned" : "not stunned")}");
                 // A stunned enemy's intent becomes the stun move; the simulator keeps its hits and skips them. The predicted intent is
                 // its hits as they'd land on you in the predicted state (what the play gave or took: Weak, Tainted, Conductor's
                 // Baton...); Hits is only the intent as it was read before the play.
                 var predHits = enemy.Intent is { Count: > 0 } intent
-                    ? Enumerable.Range(0, intent.Count).Select(h => SimEngine.IntentDamage(pred, enemy, h, Who.You)).ToList()
+                    ? Enumerable.Range(0, intent.Count).Select(hitIndex => SimEngine.IntentDamage(pred, enemy, hitIndex, Who.You)).ToList()
                     : enemy.Hits;
-                if (!enemy.Stunned && !simEnemy.Stunned && !predHits.SequenceEqual(simEnemy.Hits)) d.Add($"after play enemy intent: {name} predicted [{string.Join(", ", predHits)}], actual [{string.Join(", ", simEnemy.Hits)}]");
+                if (!enemy.Stunned && !simEnemy.Stunned && !predHits.SequenceEqual(simEnemy.Hits)) differences.Add($"after play enemy intent: {name} predicted [{string.Join(", ", predHits)}], actual [{string.Join(", ", simEnemy.Hits)}]");
             }
             var player = pred.You;
             var simPlayer = after.You;
-            void Cmp(string what, int p, int a)
+            void Cmp(string what, int predicted, int actual)
             {
-                if (p != a) d.Add($"after play {what}: predicted {p}, actual {a}");
+                if (predicted != actual) differences.Add($"after play {what}: predicted {predicted}, actual {actual}");
             }
             Cmp("your block", player.Block, simPlayer.Block);
-            if (drawn is { } dn) Cmp("cards drawn", player.Drawn - startP.Drawn, dn);
+            if (drawn is { } drawnCount) Cmp("cards drawn", player.Drawn - startP.Drawn, drawnCount);
             // Energy (decision #117): what the play spends and gives back, the card's own included (Pael's Tears reads it).
             Cmp("your energy", player.Energy, simPlayer.Energy);
             Cmp("Plating", player.Plating, simPlayer.Plating);
@@ -1825,33 +1825,33 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // A random orb (Chaos) is predicted as Unknown: any orb matches it.
             static string Orb(SimOrb orb) => $"{orb.Kind} {orb.Passive}/{orb.Evoke}";
             var orbsMatch = player.Orbs.Count == simPlayer.Orbs.Count
-                            && player.Orbs.Zip(simPlayer.Orbs).All(x => x.First.Kind == OrbKind.Unknown || Orb(x.First) == Orb(x.Second));
-            if (!orbsMatch) d.Add($"after play orbs: predicted [{string.Join(", ", player.Orbs.Select(Orb))}], actual [{string.Join(", ", simPlayer.Orbs.Select(Orb))}]");
+                            && player.Orbs.Zip(simPlayer.Orbs).All(orbs => orbs.First.Kind == OrbKind.Unknown || Orb(orbs.First) == Orb(orbs.Second));
+            if (!orbsMatch) differences.Add($"after play orbs: predicted [{string.Join(", ", player.Orbs.Select(Orb))}], actual [{string.Join(", ", simPlayer.Orbs.Select(Orb))}]");
             // Teammates (multiplayer): the block and HP your play leaves them (Beacon of Hope's share, hits).
             // The state after is read from the living ones only (SimAdapter.IsTeammate), in player order.
             var living = pred.Teammates.Where(teammate => teammate.Hp > 0).ToList();
             if (living.Count == after.Teammates.Count)
             {
-                for (var k = 0; k < living.Count; k++)
+                for (var enemyIndex = 0; enemyIndex < living.Count; enemyIndex++)
                 {
-                    var (nextPlayer, at) = (living[k], after.Teammates[k]);
-                    Cmp($"teammate {k + 1} block", nextPlayer.Block, at.Block);
-                    Cmp($"teammate {k + 1} HP", nextPlayer.Hp, at.Hp);
-                    Cmp($"teammate {k + 1} energy", nextPlayer.Energy, at.Energy);
+                    var (nextPlayer, at) = (living[enemyIndex], after.Teammates[enemyIndex]);
+                    Cmp($"teammate {enemyIndex + 1} block", nextPlayer.Block, at.Block);
+                    Cmp($"teammate {enemyIndex + 1} HP", nextPlayer.Hp, at.Hp);
+                    Cmp($"teammate {enemyIndex + 1} energy", nextPlayer.Energy, at.Energy);
                     // Their orbs (Ignition channels into them; full slots evoke their front orb): kinds, front first.
                     if (!nextPlayer.Orbs.Select(orb => orb.Kind).SequenceEqual(at.Orbs.Select(orb => orb.Kind))
                         && !nextPlayer.Orbs.Any(orb => orb.Kind == OrbKind.Unknown))
-                        d.Add($"after play teammate {k + 1} orbs: predicted [{string.Join(", ", nextPlayer.Orbs.Select(orb => orb.Kind))}], actual [{string.Join(", ", at.Orbs.Select(orb => orb.Kind))}]");
+                        differences.Add($"after play teammate {enemyIndex + 1} orbs: predicted [{string.Join(", ", nextPlayer.Orbs.Select(orb => orb.Kind))}], actual [{string.Join(", ", at.Orbs.Select(orb => orb.Kind))}]");
                 }
             }
-            else d.Add($"after play teammates alive: predicted {living.Count}, actual {after.Teammates.Count}");
-            return d;
+            else differences.Add($"after play teammates alive: predicted {living.Count}, actual {after.Teammates.Count}");
+            return differences;
         }
 
-        var best = branches.Select(Diff).OrderBy(d => d.Count).First();
+        var best = branches.Select(Diff).OrderBy(differences => differences.Count).First();
         if (best.Count == 0) return;
         var note = branches.Count > 1 ? $" (closest of {branches.Count} branches)" : "";
-        foreach (var x in best) issues.Add(x + note);
+        foreach (var difference in best) issues.Add(difference + note);
     }
 
     private static string Range(int min, int max) => min == max ? $"{min}" : $"{min}–{max}";

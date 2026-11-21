@@ -40,20 +40,20 @@ public static partial class SimEngine
     private static object[] CurrentSets(SimState state)
     {
         var sets = new object[2 + 2 * state.Teammates.Count + state.Enemies.Count];
-        var i = 0;
-        sets[i++] = state.You.Powers; sets[i++] = state.You.Relics;
-        foreach (var player in state.Teammates) { sets[i++] = player.Powers; sets[i++] = player.Relics; }
-        foreach (var enemy in state.Enemies) sets[i++] = enemy.Powers;
+        var next = 0;
+        sets[next++] = state.You.Powers; sets[next++] = state.You.Relics;
+        foreach (var player in state.Teammates) { sets[next++] = player.Powers; sets[next++] = player.Relics; }
+        foreach (var enemy in state.Enemies) sets[next++] = enemy.Powers;
         return sets;
     }
 
     private static bool SameSets(SimState state, object[] sets)
     {
         if (sets.Length != 2 + 2 * state.Teammates.Count + state.Enemies.Count) return false;
-        var i = 0;
-        if (!ReferenceEquals(sets[i++], state.You.Powers) || !ReferenceEquals(sets[i++], state.You.Relics)) return false;
-        foreach (var player in state.Teammates) if (!ReferenceEquals(sets[i++], player.Powers) || !ReferenceEquals(sets[i++], player.Relics)) return false;
-        foreach (var enemy in state.Enemies) if (!ReferenceEquals(sets[i++], enemy.Powers)) return false;
+        var next = 0;
+        if (!ReferenceEquals(sets[next++], state.You.Powers) || !ReferenceEquals(sets[next++], state.You.Relics)) return false;
+        foreach (var player in state.Teammates) if (!ReferenceEquals(sets[next++], player.Powers) || !ReferenceEquals(sets[next++], player.Relics)) return false;
+        foreach (var enemy in state.Enemies) if (!ReferenceEquals(sets[next++], enemy.Powers)) return false;
         return true;
     }
 
@@ -107,8 +107,8 @@ public static partial class SimEngine
         {
             if (!simModel.Overrides(hook)) continue;
             var model = simModel;
-            var o = owner;
-            states = Then(states, branch => call(model, o, branch));
+            var listenerOwner = owner;
+            states = Then(states, branch => call(model, listenerOwner, branch));
         }
         return states;
     }
@@ -129,16 +129,16 @@ public static partial class SimEngine
         num += terms.EnchantAdd;
         num *= terms.EnchantMul;
         var listeners = Listeners(state);
-        foreach (var (model, o) in listeners) { var t = model.ModifyDamageAdditive(state, o, damage); num += t; if (t != 0m) modifiers?.Add((model, o)); }
+        foreach (var (model, owner) in listeners) { var term = model.ModifyDamageAdditive(state, owner, damage); num += term; if (term != 0m) modifiers?.Add((model, owner)); }
         num += terms.Add;
-        foreach (var (simModel, o) in listeners) { var t = simModel.ModifyDamageMultiplicative(state, o, damage); num *= t; if (t != 1m) modifiers?.Add((simModel, o)); }
+        foreach (var (model, owner) in listeners) { var term = model.ModifyDamageMultiplicative(state, owner, damage); num *= term; if (term != 1m) modifiers?.Add((model, owner)); }
         num *= terms.Mul;
-        foreach (var (nextModel, o) in listeners) { var t = nextModel.ModifyDamageMultiplicativeLate(state, o, damage); num *= t; if (t != 1m) modifiers?.Add((nextModel, o)); }
+        foreach (var (model, owner) in listeners) { var term = model.ModifyDamageMultiplicativeLate(state, owner, damage); num *= term; if (term != 1m) modifiers?.Add((model, owner)); }
         num *= terms.Late;
         var cap = terms.Cap;
         (SimModel, int)? capper = null;
-        foreach (var (m, o) in listeners) { var t = m.ModifyDamageCap(state, o, damage); if (t < cap) { cap = t; capper = (m, o); } }
-        if (num > cap) { num = cap; if (capper is { } cm) modifiers?.Add(cm); }
+        foreach (var (model, owner) in listeners) { var term = model.ModifyDamageCap(state, owner, damage); if (term < cap) { cap = term; capper = (model, owner); } }
+        if (num > cap) { num = cap; if (capper is { } capping) modifiers?.Add(capping); }
         return Math.Max(0, (int)num);
     }
 
@@ -152,9 +152,9 @@ public static partial class SimEngine
         num += terms.EnchantAdd;
         num *= terms.EnchantMul;
         var listeners = Listeners(state);
-        foreach (var (model, o) in listeners) { var t = model.ModifyBlockAdditive(state, o, block); num += t; if (t != 0m) modifiers?.Add((model, o)); }
+        foreach (var (model, owner) in listeners) { var term = model.ModifyBlockAdditive(state, owner, block); num += term; if (term != 0m) modifiers?.Add((model, owner)); }
         num += terms.Add;
-        foreach (var (simModel, o) in listeners) { var t = simModel.ModifyBlockMultiplicative(state, o, block); num *= t; if (t != 1m) modifiers?.Add((simModel, o)); }
+        foreach (var (model, owner) in listeners) { var term = model.ModifyBlockMultiplicative(state, owner, block); num *= term; if (term != 1m) modifiers?.Add((model, owner)); }
         num *= terms.Mul;
         return Math.Max(0, (int)Math.Max(0m, num));
     }

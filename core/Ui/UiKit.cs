@@ -57,5 +57,5 @@ public static class UiKit
     }
 
     /// <summary>0..1 triangle-ish pulse for flashing effects.</summary>
-    public static float Pulse(float time, float hz) => 0.5f + 0.5f * Mathf.Sin(time * hz * Mathf.Tau);
+    public static float Pulse(float time, float frequency) => 0.5f + 0.5f * Mathf.Sin(time * frequency * Mathf.Tau);
 }

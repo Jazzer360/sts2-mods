@@ -79,13 +79,13 @@ internal static class IntentReader
         var list = new List<(string, bool?)>();
         if (typeof(ConditionalBranchState).GetProperty("States", Any)?.GetValue(conditionalBranchState) is not System.Collections.IEnumerable branches)
             throw new InvalidOperationException("ConditionalBranchState.States not found");
-        foreach (var b in branches)
+        foreach (var branch in branches)
         {
-            var type = b.GetType();
-            var id = (string)(type.GetField("id", Any)?.GetValue(b) ?? throw new InvalidOperationException("ConditionalBranch.id"));
+            var type = branch.GetType();
+            var id = (string)(type.GetField("id", Any)?.GetValue(branch) ?? throw new InvalidOperationException("ConditionalBranch.id"));
             var evaluate = type.GetMethod("Evaluate", Any) ?? throw new InvalidOperationException("ConditionalBranch.Evaluate");
             bool? holds;
-            try { holds = (float)evaluate.Invoke(b, null)! > 0f; } catch { holds = null; } // only matters if reached
+            try { holds = (float)evaluate.Invoke(branch, null)! > 0f; } catch { holds = null; } // only matters if reached
             list.Add((id, holds));
         }
         return list;

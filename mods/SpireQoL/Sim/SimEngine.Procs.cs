@@ -27,7 +27,7 @@ public static partial class SimEngine
                 var amount = CalcBlock(branch, baseBlock, new BlockCtx(gainer, props, null, null));
                 branch.LogFired(name, amount, owner);
                 if (amount <= 0) return new[] { branch };
-                return Then(GainBlock(branch, amount, gainer == Who.You ? Breakdown(branch, owner, name, label) : null, gainer), copy => Hook(copy, nameof(SimModel.AfterBlockGained), (model, o, simState) => model.AfterBlockGained(simState, o, gainer, amount, null)));
+                return Then(GainBlock(branch, amount, gainer == Who.You ? Breakdown(branch, owner, name, label) : null, gainer), copy => Hook(copy, nameof(SimModel.AfterBlockGained), (model, listenerOwner, simState) => model.AfterBlockGained(simState, listenerOwner, gainer, amount, null)));
             });
         }
         return states;
@@ -151,7 +151,7 @@ public static partial class SimEngine
         CountEvent(state, cardEvent, player);
         var was = state.IndirectNow;
         state.IndirectNow = indirect || was;
-        var after = Hook(state, nameof(SimModel.AfterCardEvent), (model, o, branch) => model.AfterCardEvent(branch, o, cardEvent, player)).ToList();
+        var after = Hook(state, nameof(SimModel.AfterCardEvent), (model, owner, branch) => model.AfterCardEvent(branch, owner, cardEvent, player)).ToList();
         foreach (var branch in after) branch.IndirectNow = was;
         return after;
     }

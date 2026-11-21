@@ -33,7 +33,7 @@ internal static class MoveBranches
         ["MagiKnight.DampenMove"] = new(new[] { nameof(DampenPower) }, (monster, all) => Sts2State.Me?.Creature.HasPower<DampenPower>() == true ? Array.Empty<Applied>() : all),
         // Minion on each egg it lays, one per free slot of the encounter (up to 3).
         ["Ovicopter.LayEggsMove"] = new(new[] { nameof(MinionPower) }, (monster, all) =>
-            monster.Creature.CombatState is { } combat && combat.Encounter?.Slots.Any(s => combat.Enemies.All(creature => creature.SlotName != s)) == true ? all : Array.Empty<Applied>()),
+            monster.Creature.CombatState is { } combat && combat.Encounter?.Slots.Any(slot => combat.Enemies.All(creature => creature.SlotName != slot)) == true ? all : Array.Empty<Applied>()),
         // Strength to every ally but herself: 1, or 2 at the Dread ascension (a local, so the code's amount can't be read).
         ["Queen.BurnBrightForMeMove"] = new(new[] { nameof(StrengthPower) }, (monster, all) =>
             monster.Creature.CombatState is { } combat && combat.Enemies.Any(creature => creature != monster.Creature && creature.IsAlive)

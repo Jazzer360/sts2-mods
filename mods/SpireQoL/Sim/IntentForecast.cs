@@ -50,7 +50,7 @@ public static class IntentForecast
         var turns = new List<ForecastTurn>();
         var history = log.ToList();
         var move = current;
-        for (var t = 0; t < maxTurns; t++)
+        for (var turn = 0; turn < maxTurns; turn++)
         {
             var dist = new Dictionary<string, double>();
             if (!Walk(graph, move.FollowUp ?? graph.InitialId, 1.0, history, dist, 0)) break;
@@ -111,15 +111,15 @@ public static class IntentForecast
         {
             var times = randomBranch.Repeat == MoveRepeat.CannotRepeat ? 1 : randomBranch.MaxTimes;
             num = log.Count < times ? 1 : 0;
-            var i = 0;
-            while (log.Count >= times && i < times && log.Count - i > 0)
+            var index = 0;
+            while (log.Count >= times && index < times && log.Count - index > 0)
             {
-                if (log[log.Count - 1 - i] != randomBranch.To)
+                if (log[log.Count - 1 - index] != randomBranch.To)
                 {
                     num = 1;
                     break;
                 }
-                i++;
+                index++;
             }
         }
         if (randomBranch.Cooldown > 0 && log.Reverse().Take(randomBranch.Cooldown).Contains(randomBranch.To)) return 0;

@@ -187,8 +187,8 @@ public sealed class CardPredictions
             hashCode.Add(CardPlays.Count(card));
             hashCode.Add(CardPlays.CanPlayThisTurn(card));
         }
-        var k = hashCode.ToHashCode();
-        return k == 0 ? 1 : k;
+        var key = hashCode.ToHashCode();
+        return key == 0 ? 1 : key;
     }
 
     /// <summary>Last frame's facts and tabs again: kept for the audits (PreviousFacts, LastTabs) as a frame of their own.</summary>
@@ -218,9 +218,9 @@ public sealed class CardPredictions
     /// <summary>Card frames shown with held tabs since the last call (the combat summary: decision #105).</summary>
     internal int TakeHeldFrames()
     {
-        var n = _heldFrames;
+        var heldFrames = _heldFrames;
         _heldFrames = 0;
-        return n;
+        return heldFrames;
     }
 
     private int _heldFrames;
@@ -279,8 +279,8 @@ public sealed class CardPredictions
             _ => null,
         };
         if (owner == null || owner == me) return null;
-        var k = SimAdapter.Teammates(me, combat).IndexOf(owner);
-        return k < 0 ? null : Who.Teammate(k);
+        var teammateIndex = SimAdapter.Teammates(me, combat).IndexOf(owner);
+        return teammateIndex < 0 ? null : Who.Teammate(teammateIndex);
     }
 
     /// <summary>
@@ -519,7 +519,7 @@ public sealed class CardPredictions
         if (DrawnChance.Distribution(outcomes[0]) is not { } distribution) return;
         facts.Drawn = distribution;
         var unsure = outcomes[0].Truncated || outcomes[0].AnyUnmodelled;
-        string Pct(double p) => new SimChance(p, p, p > 0).Text() + (unsure ? "?" : "");
+        string Pct(double share) => new SimChance(share, share, share > 0).Text() + (unsure ? "?" : "");
         if (!reader.Counts)
         {
             tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(DrawnChance.ChanceOfAny(distribution)));
@@ -595,11 +595,11 @@ public sealed class CardPredictions
         {
             var key = "proc:" + src.GetType().Name;
             var firesAt = outcomes.Select(at).ToArray();
-            if (!firesAt.Any(x => x)) return;
+            if (!firesAt.Any(fires => fires)) return;
             if (_firesAt.TryGetValue(key, out var prev) && prev.Length == firesAt.Length)
                 for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prev[i];
             _firesAt[key] = firesAt;
-            tabs[key] = new TabSpec(key, IconOf(src), harmful, Aimed: firesAt.Length > 1 && !firesAt.All(x => x));
+            tabs[key] = new TabSpec(key, IconOf(src), harmful, Aimed: firesAt.Length > 1 && !firesAt.All(fires => fires));
         }
         // The sources' own rules (SimModel.OutcomeTab), enemies' powers first, then relics, then players' powers.
         var start = facts.Sim!.Start;
@@ -656,7 +656,7 @@ public sealed class CardPredictions
         // An enemy's or a teammate's source reads its own key (SimState.LogFired: a teammate's firings are only there); yours, the
         // plain name.
         var key = SimKeys.Logged(name, ownerId);
-        static int Data(NamedCounts log, string k) => log.DataOf(k);
+        static int Data(NamedCounts log, string logKey) => log.DataOf(logKey);
         bool Fired(NamedCounts log) => log.Has(key) && (_indirect || log[key] > log[SimKeys.Indirect(key)]);
         {
             // For the audits, direct or not (the game flashes either way), whether or not a tab shows.
@@ -676,7 +676,7 @@ public sealed class CardPredictions
         if (_firesAt.TryGetValue(tabKeyAt, out var prevAt) && prevAt.Length == firesAt.Length)
             for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prevAt[i];
         _firesAt[tabKeyAt] = firesAt;
-        var aimed = firesAt.Length > 1 && !firesAt.All(x => x);
+        var aimed = firesAt.Length > 1 && !firesAt.All(fires => fires);
         var amount = harmful
             ? outcomes.Max(outcome => Data(outcome.PlayFiredAny, key))
             : outcomes.Where(outcome => Fired(outcome.PlayFiredEvery)).Max(outcome => Data(outcome.PlayFiredEvery, key));

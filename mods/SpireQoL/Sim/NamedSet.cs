@@ -38,9 +38,9 @@ public sealed class NamedSet<TName> where TName : IEquatable<TName>
     public bool Has(TName name) => IndexOf(name) >= 0;
 
     /// <summary>The amount (0 when absent).</summary>
-    public int this[TName name] => IndexOf(name) is var i and >= 0 ? _items[i].Amount : 0;
+    public int this[TName name] => IndexOf(name) is var index and >= 0 ? _items[index].Amount : 0;
 
-    public int DataOf(TName name) => IndexOf(name) is var i and >= 0 ? _items[i].Data : 0;
+    public int DataOf(TName name) => IndexOf(name) is var index and >= 0 ? _items[index].Data : 0;
 
     private int IndexOf(TName name)
     {
@@ -52,22 +52,22 @@ public sealed class NamedSet<TName> where TName : IEquatable<TName>
     /// <summary>The set with <paramref name="name"/> at this amount and data (added last if new); removed when <paramref name="remove"/>.</summary>
     public NamedSet<TName> With(TName name, int amount, int? data = null, bool remove = false)
     {
-        var i = IndexOf(name);
+        var index = IndexOf(name);
         if (remove)
         {
-            if (i < 0) return this;
+            if (index < 0) return this;
             var less = new Entry[_items.Length - 1];
-            Array.Copy(_items, 0, less, 0, i);
-            Array.Copy(_items, i + 1, less, i, _items.Length - i - 1);
+            Array.Copy(_items, 0, less, 0, index);
+            Array.Copy(_items, index + 1, less, index, _items.Length - index - 1);
             return new NamedSet<TName>(less);
         }
-        if (i >= 0)
+        if (index >= 0)
         {
-            var entry = _items[i];
-            var d = data ?? entry.Data;
-            if (entry.Amount == amount && entry.Data == d) return this;
+            var entry = _items[index];
+            var newData = data ?? entry.Data;
+            if (entry.Amount == amount && entry.Data == newData) return this;
             var copy = (Entry[])_items.Clone();
-            copy[i] = new Entry(name, amount, d);
+            copy[index] = new Entry(name, amount, newData);
             return new NamedSet<TName>(copy);
         }
         var more = new Entry[_items.Length + 1];

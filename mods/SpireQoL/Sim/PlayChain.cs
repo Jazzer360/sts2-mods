@@ -148,9 +148,9 @@ public static class PlayChain
     {
         if (plays < 2 || looksAt <= 0) return false;
         if (drawPile < looksAt && discardPile > 0) return false; // the first play shuffles
-        for (var k = 0; k < plays; k++)
+        for (var playIndex = 0; playIndex < plays; playIndex++)
         {
-            if (k > 0 && drawPile < looksAt && discardPile > 0) return true;
+            if (playIndex > 0 && drawPile < looksAt && discardPile > 0) return true;
             var looked = Math.Min(looksAt, drawPile);
             drawPile -= looked;
             discardPile += Math.Max(0, looked - 1);

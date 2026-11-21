@@ -63,15 +63,15 @@ public static partial class SimEngine
             branch.DrawRecord = null;
             // What its chance tab counts (decision #119).
             branch.DrawnTally = drawnCardAction.Block != null ? (drawn.Count > 0 && drawn[0].Card.Type == drawnCardAction.BlockIf ? 1 : 0)
-                : drawnCardAction.DrawAgainIf != SimCardType.None ? drawn.Count(d => d.Card.Type == drawnCardAction.DrawAgainIf)
-                : drawn.Count(d => d.Card.Free == true);
+                : drawnCardAction.DrawAgainIf != SimCardType.None ? drawn.Count(draw => draw.Card.Type == drawnCardAction.DrawAgainIf)
+                : drawn.Count(draw => draw.Card.Free == true);
             // Escape Plan: the card it drew (none into a full hand or from empty piles: no block).
             if (drawnCardAction.Block != null && drawn.Count > 0 && drawn[0].Card.Type == drawnCardAction.BlockIf) return BlockOnce(branch, drawnCardAction.Block);
             if (!drawnCardAction.DiscardUnlessFree) return new[] { branch };
-            var discard = drawn.Where(d => d.Card.Free == false).ToList();
+            var discard = drawn.Where(draw => draw.Card.Free == false).ToList();
             if (discard.Count == 0) return new[] { branch };
             // A Sly card plays itself when discarded (CardModel.OnDiscard): not simulated.
-            if (discard.Any(d => d.Card.Sly)) branch.Unmodelled ??= "a Sly card discarded by Scrape plays itself";
+            if (discard.Any(draw => draw.Card.Sly)) branch.Unmodelled ??= "a Sly card discarded by Scrape plays itself";
             var simPlayer = branch.MutablePlayer(player);
             foreach (var (card, id) in discard)
             {

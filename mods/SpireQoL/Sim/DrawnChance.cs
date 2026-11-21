@@ -12,20 +12,20 @@ public static class DrawnChance
     {
         var withTally = outcome.Branches.Where(branch => branch.DrawnTally >= 0).ToList();
         if (withTally.Count == 0) return null;
-        var d = new SortedDictionary<int, double>();
-        foreach (var state in withTally) d[state.DrawnTally] = d.GetValueOrDefault(state.DrawnTally) + state.Weight;
-        return d;
+        var distribution = new SortedDictionary<int, double>();
+        foreach (var state in withTally) distribution[state.DrawnTally] = distribution.GetValueOrDefault(state.DrawnTally) + state.Weight;
+        return distribution;
     }
 
     /// <summary>The chance the tally is above 0 (Escape Plan: it drew a Skill).</summary>
-    public static double ChanceOfAny(SortedDictionary<int, double> d) => d.Where(entry => entry.Key > 0).Sum(entry => entry.Value) / Total(d);
+    public static double ChanceOfAny(SortedDictionary<int, double> distribution) => distribution.Where(entry => entry.Key > 0).Sum(entry => entry.Value) / Total(distribution);
 
     /// <summary>The most likely tally and its chance; a tie goes to the higher tally.</summary>
-    public static (int Tally, double Chance) MostLikely(SortedDictionary<int, double> d)
+    public static (int Tally, double Chance) MostLikely(SortedDictionary<int, double> distribution)
     {
-        var best = d.OrderByDescending(entry => Math.Round(entry.Value, 9)).ThenByDescending(entry => entry.Key).First();
-        return (best.Key, best.Value / Total(d));
+        var best = distribution.OrderByDescending(entry => Math.Round(entry.Value, 9)).ThenByDescending(entry => entry.Key).First();
+        return (best.Key, best.Value / Total(distribution));
     }
 
-    private static double Total(SortedDictionary<int, double> d) => Math.Max(1e-12, d.Values.Sum());
+    private static double Total(SortedDictionary<int, double> distribution) => Math.Max(1e-12, distribution.Values.Sum());
 }

@@ -82,14 +82,14 @@ public static class OtherMods
     /// <summary>The first patch owner other than us on the game method a dynamic replacement stands for ("DMD&lt;Type::Method&gt;").</summary>
     private static string? PatchOwner(string dynamicName, string ourHarmony)
     {
-        var i = dynamicName.IndexOf('<');
-        var j = dynamicName.LastIndexOf('>');
-        if (i < 0 || j <= i) return null;
-        var inner = dynamicName[(i + 1)..j];
+        var open = dynamicName.IndexOf('<');
+        var close = dynamicName.LastIndexOf('>');
+        if (open < 0 || close <= open) return null;
+        var inner = dynamicName[(open + 1)..close];
         foreach (var method in HarmonyLib.Harmony.GetAllPatchedMethods())
         {
             if (method.DeclaringType == null || !inner.Contains(method.DeclaringType.Name) || !inner.Contains("::" + method.Name)) continue;
-            if (HarmonyLib.Harmony.GetPatchInfo(method)?.Owners.FirstOrDefault(o => !o.StartsWith(ourHarmony, StringComparison.Ordinal)) is { } owner) return owner;
+            if (HarmonyLib.Harmony.GetPatchInfo(method)?.Owners.FirstOrDefault(patchOwner => !patchOwner.StartsWith(ourHarmony, StringComparison.Ordinal)) is { } owner) return owner;
         }
         return null;
     }

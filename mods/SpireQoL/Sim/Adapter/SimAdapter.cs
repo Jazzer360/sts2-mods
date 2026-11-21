@@ -197,14 +197,14 @@ public static partial class SimAdapter
         var state = new SimState();
         var mates = Teammates(me, combat);
         // Any creature's simulator id (Who): an enemy's, you, or teammate k.
-        int? IdOf(Creature creature) => idMap.TryGetValue(creature, out var i) ? i : creature == me.Creature ? Who.You
-            : mates.FindIndex(player => player.Creature == creature) is var k and >= 0 ? Who.Teammate(k) : null;
+        int? IdOf(Creature creature) => idMap.TryGetValue(creature, out var enemyId) ? enemyId : creature == me.Creature ? Who.You
+            : mates.FindIndex(player => player.Creature == creature) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : null;
         var targets = combat.Players.Select(player => player.Creature).ToList();
 
-        var n = 0;
+        var nextEnemyId = 0;
         foreach (var creature in combat.Enemies)
         {
-            var id = n++;
+            var id = nextEnemyId++;
             idMap[creature] = id;
             var enemy = new SimEnemy
             {
@@ -248,8 +248,8 @@ public static partial class SimAdapter
                         if (intent == null || attack.DamageCalc == null) { intent = null; continue; }
                         var damageCalc = attack.DamageCalc();
                         var terms = new Dictionary<int, CapturedTerms> { [Who.You] = SimReaders.Damage(me.RunState, combat, null, creature, me.Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) };
-                        for (var k = 0; k < mates.Count; k++)
-                            terms[Who.Teammate(k)] = SimReaders.Damage(me.RunState, combat, null, creature, mates[k].Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
+                        for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
+                            terms[Who.Teammate(teammateIndex)] = SimReaders.Damage(me.RunState, combat, null, creature, mates[teammateIndex].Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
                         for (var i = 0; i < Math.Max(1, attack.Repeats); i++) intent.Add(new IntentHit(damageCalc) { Captured = terms });
                     }
                     if (intent is { Count: > 0 }) enemy.Intent = intent;
@@ -426,7 +426,7 @@ public static partial class SimAdapter
                 };
             }
             List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Profile).GroupBy(drawn => drawn.Key)
-                .Select(g => new SimDrawGroup(g.First(), g.Count())).OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList();
+                .Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList();
             // The cards known to be on top (placed there: decision #91), in order; the rest as a set.
             var known = SpireQoL.Combat.DrawPileMemory.KnownTop.Where(card => card.Pile?.Type == PileType.Draw && card.Owner == me).ToList();
             player.Draw = new SimDrawPile
@@ -614,9 +614,9 @@ public static partial class SimAdapter
             foreach (var attack in creature.Monster!.NextMove.Intents.OfType<AttackIntent>())
             {
                 if (attack.DamageCalc == null) return null;
-                var v = Hook.ModifyDamage(me.RunState, combat, target, creature, attack.DamageCalc(), MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
+                var damage = Hook.ModifyDamage(me.RunState, combat, target, creature, attack.DamageCalc(), MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
                     ModifyDamageHookType.All, CardPreviewMode.None, out _);
-                var perHit = Math.Max(0, (int)v);
+                var perHit = Math.Max(0, (int)damage);
                 for (var i = 0; i < Math.Max(1, attack.Repeats); i++) hits.Add(perHit);
             }
             return hits;
@@ -745,14 +745,14 @@ public static partial class SimAdapter
         }
     }
 
-    private static int SafeInt(Func<int> f)
+    private static int SafeInt(Func<int> read)
     {
-        try { return f(); } catch { return 0; }
+        try { return read(); } catch { return 0; }
     }
 
-    private static int SafeInt(Func<int> f, int fallback)
+    private static int SafeInt(Func<int> read, int fallback)
     {
-        try { return f(); } catch { return fallback; }
+        try { return read(); } catch { return fallback; }
     }
 
     private static string SafeCardTitle(CardModel card)

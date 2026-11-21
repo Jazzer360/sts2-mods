@@ -35,21 +35,21 @@ internal static class CatalogCheck
         var gameTypes = GameModelTypes();
         // The simulator's models with a tab (the play log's tabs), and the outcome comparisons Proc Indicators names (tab keys are
         // built as "proc:" + nameof(X), which the compiler folds into one literal).
-        var ruleNames = LiteralsIn(typeof(Combat.CardPredictions)).Select(n => n.StartsWith("proc:") ? n[5..] : n)
+        var ruleNames = LiteralsIn(typeof(Combat.CardPredictions)).Select(literal => literal.StartsWith("proc:") ? literal[5..] : literal)
             .Concat(Sim.SimModels.Names.Where(name => Sim.SimModels.Get(name) is { } model && (model.Tab != null || model.JudgedOnOutcome)))
-            .Where(n => gameTypes.TryGetValue(n, out var type) && (typeof(RelicModel).IsAssignableFrom(type) || typeof(PowerModel).IsAssignableFrom(type)))
+            .Where(name => gameTypes.TryGetValue(name, out var type) && (typeof(RelicModel).IsAssignableFrom(type) || typeof(PowerModel).IsAssignableFrom(type)))
             .ToHashSet();
         var procRows = sources.Where(sourceEntry => sourceEntry.Tag != null && sourceEntry.TagPrefix == "proc:").Select(sourceEntry => sourceEntry.Type).ToHashSet();
-        foreach (var n in ruleNames.Except(procRows).OrderBy(n => n)) problems.Add($"proc rule without a settings row: {n}");
-        foreach (var n in procRows.Except(ruleNames).OrderBy(n => n)) problems.Add($"settings row (proc tab) without a rule: {n}");
+        foreach (var name in ruleNames.Except(procRows).Order()) problems.Add($"proc rule without a settings row: {name}");
+        foreach (var name in procRows.Except(ruleNames).Order()) problems.Add($"settings row (proc tab) without a rule: {name}");
 
         // Tracker rows.
         // Cards with a tray row of their own (Make It So's Skill count: RelicCountersFeature, Procs/ReturnToHand).
         var specs = RelicSpecs.All.Where(relicCounterSpec => relicCounterSpec.InTray).Select(relicCounterSpec => relicCounterSpec.TypeName).Concat(PowerSpecs.All.Select(powerCounterSpec => powerCounterSpec.TypeName))
             .Append(Procs.ReturnToHand.MakeItSo).ToHashSet();
         var trackerRows = sources.Where(sourceEntry => sourceEntry.Tracker != null).Select(sourceEntry => sourceEntry.Type).ToHashSet();
-        foreach (var n in specs.Except(trackerRows).OrderBy(n => n)) problems.Add($"tracker row without a settings row: {n}");
-        foreach (var n in trackerRows.Except(specs).OrderBy(n => n)) problems.Add($"settings row (tracker) without a tracker spec: {n}");
+        foreach (var name in specs.Except(trackerRows).Order()) problems.Add($"tracker row without a settings row: {name}");
+        foreach (var name in trackerRows.Except(specs).Order()) problems.Add($"settings row (tracker) without a tracker spec: {name}");
 
         // Double plays: every source of extra plays the game has.
         var replayers = gameTypes.Values
@@ -57,14 +57,14 @@ internal static class CatalogCheck
                         && method.GetBaseDefinition().DeclaringType != type)
             .Select(type => type.Name).ToHashSet();
         var doubleRows = sources.Where(sourceEntry => sourceEntry.TagPrefix == "double-play:").Select(sourceEntry => sourceEntry.Type).ToHashSet();
-        foreach (var n in replayers.Except(doubleRows).OrderBy(n => n)) problems.Add($"source of extra plays without a double-play row: {n}");
-        foreach (var n in doubleRows.Except(replayers).OrderBy(n => n)) problems.Add($"double-play row for a class that doesn't add plays: {n}");
+        foreach (var name in replayers.Except(doubleRows).Order()) problems.Add($"source of extra plays without a double-play row: {name}");
+        foreach (var name in doubleRows.Except(replayers).Order()) problems.Add($"double-play row for a class that doesn't add plays: {name}");
 
         // Run reminders: every rule has a settings row, every row a rule.
         var reminderRules = ChoiceReminders.Rules.Select(reminderRule => reminderRule.Relic).ToHashSet();
         var reminderRows = sources.Where(sourceEntry => sourceEntry.OutsideFights).Select(sourceEntry => sourceEntry.Type).ToHashSet();
-        foreach (var n in reminderRules.Except(reminderRows).OrderBy(n => n)) problems.Add($"reminder rule without a settings row: {n}");
-        foreach (var n in reminderRows.Except(reminderRules).OrderBy(n => n)) problems.Add($"settings row (reminder) without a rule: {n}");
+        foreach (var name in reminderRules.Except(reminderRows).Order()) problems.Add($"reminder rule without a settings row: {name}");
+        foreach (var name in reminderRows.Except(reminderRules).Order()) problems.Add($"settings row (reminder) without a rule: {name}");
         // Each place (card rewards, events, shops) has its text exactly where the rule shows there.
         foreach (var reminderRule in ChoiceReminders.Rules)
         {
@@ -79,8 +79,8 @@ internal static class CatalogCheck
         // Features: each one registered has an on/off switch in the menu, and each switch a feature.
         var registered = (featureIds ?? FeatureIds()).ToHashSet();
         var switches = SettingsMenu.FeatureRows.Select(featureRow => featureRow.Id).ToHashSet();
-        foreach (var n in registered.Except(switches).OrderBy(n => n)) problems.Add($"feature without a settings switch: {n}");
-        foreach (var n in switches.Except(registered).OrderBy(n => n)) problems.Add($"settings switch without a feature: {n}");
+        foreach (var name in registered.Except(switches).Order()) problems.Add($"feature without a settings switch: {name}");
+        foreach (var name in switches.Except(registered).Order()) problems.Add($"settings switch without a feature: {name}");
         return problems;
     }
 
@@ -100,10 +100,10 @@ internal static class CatalogCheck
         Type[] all;
         try { all = typeof(AbstractModel).Assembly.GetTypes(); }
         catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(type => type != null).ToArray()!; }
-        var d = new Dictionary<string, Type>();
+        var byName = new Dictionary<string, Type>();
         foreach (var type in all)
-            if (type is { IsAbstract: false, IsClass: true } && typeof(AbstractModel).IsAssignableFrom(type)) d.TryAdd(type.Name, type);
-        return d;
+            if (type is { IsAbstract: false, IsClass: true } && typeof(AbstractModel).IsAssignableFrom(type)) byName.TryAdd(type.Name, type);
+        return byName;
     }
 
     /// <summary>String literals in a type's methods, its lambdas and async state machines (nested types).</summary>

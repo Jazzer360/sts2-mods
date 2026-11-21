@@ -23,7 +23,7 @@ public static class SimKeys
     public static string Owned(string name, int owner) => OwnedNames.GetOrAdd((name, owner), nameOwner => nameOwner.Name + "@" + nameOwner.Owner);
 
     /// <summary>The play log's entry for a firing set off by a card event (the Indirect procs setting): "~" before its name.</summary>
-    public static string Indirect(string key) => IndirectNames.GetOrAdd(key, k => "~" + k);
+    public static string Indirect(string key) => IndirectNames.GetOrAdd(key, plain => "~" + plain);
 
     /// <summary>The play log's entry for a source: "Name" for yours, "Name@id" for anyone else's (an enemy's is also under "Name").</summary>
     public static string Logged(string name, int? owner) => owner is { } id && id != Who.You ? Owned(name, id) : name;

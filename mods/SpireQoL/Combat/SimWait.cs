@@ -36,11 +36,11 @@ internal static class SimWait
         if (fresh.Count > 0)
         {
             foreach (var job in fresh) job.Waited = true;
-            var ms = ownBudget ? FrameMs : Left();
+            var milliseconds = ownBudget ? FrameMs : Left();
             var clock = Stopwatch.StartNew();
-            if (ms > 0)
+            if (milliseconds > 0)
             {
-                try { Task.WaitAll(fresh.Select(job => job.Ready).ToArray(), ms); }
+                try { Task.WaitAll(fresh.Select(job => job.Ready).ToArray(), milliseconds); }
                 catch (AggregateException) { /* a failed search is rethrown by its reader */ }
             }
             var waited = clock.Elapsed.TotalMilliseconds;

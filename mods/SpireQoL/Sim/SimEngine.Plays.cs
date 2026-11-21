@@ -6,8 +6,8 @@ public static partial class SimEngine
     /// <summary>Damage given as final numbers: unpowered, from you, no card; to one enemy, every enemy, or a random one (a branch per target).</summary>
     private static void RunFixedHits(BranchSet branches, FixedHitsAction fixedHitsAction)
     {
-        int Dmg(SimEnemy enemy) => fixedHitsAction.Damage.TryGetValue(enemy.Id, out var d) ? d : 0;
-        for (var t = 0; t < fixedHitsAction.Times; t++)
+        int Dmg(SimEnemy enemy) => fixedHitsAction.Damage.TryGetValue(enemy.Id, out var damage) ? damage : 0;
+        for (var time = 0; time < fixedHitsAction.Times; time++)
         {
             switch (fixedHitsAction.Spread)
             {

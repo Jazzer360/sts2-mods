@@ -13,7 +13,7 @@ public class NamingTests
     /// <summary>
     /// Short names still in the code, being named one area at a time: this only goes down. A new short name fails; naming some lowers it.
     /// </summary>
-    private const int StillShort = 543;
+    private const int StillShort = 275;
 
     private static readonly HashSet<string> Words = new() { "id", "me", "ex", "ok", "to", "at", "on", "_" };
 
@@ -58,6 +58,6 @@ public class NamingTests
                 }
             }
         }
-        Assert.True(found.Count <= StillShort, $"{found.Count} short names, {found.Count - StillShort} more than before (say what each is): " + string.Join("; ", found.Distinct().Take(60)));
+        Assert.True(found.Count <= StillShort, $"{found.Count} short names, {found.Count - StillShort} more than before (say what each is): " + string.Join("; ", found.Distinct()));
     }
 }

@@ -120,7 +120,7 @@ public sealed class ErrorReporter
     /// <summary>A crash: an exception in a feature, the frame loop or the renderer.</summary>
     public void Exception(Exception ex, string where)
     {
-        var top = ex.StackTrace?.Split('\n').FirstOrDefault(l => l.Contains(" at ") && !l.Contains("System."))?.Trim() ?? "";
+        var top = ex.StackTrace?.Split('\n').FirstOrDefault(frame => frame.Contains(" at ") && !frame.Contains("System."))?.Trim() ?? "";
         // A game member this build names isn't in the running game (another game version or branch: the code naming it fails to
         // compile, wherever it's called from): one report per member, not one per caller.
         var missing = ex is MissingMemberException or TypeLoadException;

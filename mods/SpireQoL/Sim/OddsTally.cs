@@ -15,8 +15,8 @@ public sealed class OddsTally
         if (happened) Happened++;
         Low += chance.Low;
         High += chance.High;
-        var p = (chance.Low + chance.High) / 2;
-        Variance += p * (1 - p);
+        var middle = (chance.Low + chance.High) / 2;
+        Variance += middle * (1 - middle);
     }
 
     public string Text() => $"{Count} shown, {Happened} happened, expected {Low:0.#}{(High - Low > 0.05 ? $"–{High:0.#}" : "")}";

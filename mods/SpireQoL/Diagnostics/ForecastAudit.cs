@@ -227,7 +227,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
     private void Summarize()
     {
-        static string List(Dictionary<string, int> c) => string.Join(", ", c.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"));
+        static string List(Dictionary<string, int> counts) => string.Join(", ", counts.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"));
         if (_checked > 0) ModEntry.Log.Info($"[audit] combat summary: {_checked} enemy turns forecast, {_matched} matched.");
         if (Skips.Count > 0) ModEntry.Log.Info($"[audit] combat summary: enemy turns not checked: {List(Skips)}.");
         if (Gaps.Count > 0) ModEntry.Log.Info($"[audit] combat summary: not modelled in the forecast: {List(Gaps)}.");
@@ -253,15 +253,15 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     {
         var outcome = forecast.Outcome;
         var line = "";
-        for (var k = 0; k < forecast.Teammates.Count && outcome.Branches.Count > 0 && k < outcome.Branches[0].Teammates.Count; k++)
+        for (var teammateIndex = 0; teammateIndex < forecast.Teammates.Count && outcome.Branches.Count > 0 && teammateIndex < outcome.Branches[0].Teammates.Count; teammateIndex++)
         {
-            var mate = forecast.Teammates[k];
+            var mate = forecast.Teammates[teammateIndex];
             var name = SafeCharacter(mate);
             // Overkill counts, as yours does (decision #93: the forecast isn't capped by their HP).
             var actual = damage.Where(otherDamage => otherDamage.Result.Receiver == mate.Creature).Sum(otherDamage => otherDamage.Result.UnblockedDamage + otherDamage.Result.OverkillDamage);
-            var (min, max) = (outcome.TeammateTakenMin(k), outcome.TeammateTakenMax(k));
+            var (min, max) = (outcome.TeammateTakenMin(teammateIndex), outcome.TeammateTakenMax(teammateIndex));
             line += $"; teammate {name} HP lost {actual} (predicted {(min == max ? $"{max}" : $"{min}-{max}")})";
-            var shown = k < forecast.TeammateView.Count ? forecast.TeammateView[k] : null;
+            var shown = teammateIndex < forecast.TeammateView.Count ? forecast.TeammateView[teammateIndex] : null;
             if (shown != null && (shown.TakenMin != min || shown.TakenMax != max))
                 line += $" (shown without their hand: {(shown.TakenMin == shown.TakenMax ? $"{shown.TakenMax}" : $"{shown.TakenMin}-{shown.TakenMax}")})";
             if (endOfTurn.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && cardPlayStartedEntry.CardPlay.Card.Owner == mate))
@@ -275,7 +275,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (mate.Osty is { } osty)
             {
                 var ostyActual = damage.Where(otherDamage => otherDamage.Result.Receiver == osty).Sum(otherDamage => otherDamage.Result.UnblockedDamage);
-                var (oMin, oMax) = (outcome.TeammateOstyTakenMin(k), outcome.TeammateOstyTakenMax(k));
+                var (oMin, oMax) = (outcome.TeammateOstyTakenMin(teammateIndex), outcome.TeammateOstyTakenMax(teammateIndex));
                 line += $", their Osty {ostyActual} (predicted {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")})";
                 if (ostyActual > oMax || ostyActual < oMin) issues.Add($"teammate {name} Osty HP lost: forecast {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")}, actual {ostyActual}");
             }
@@ -476,8 +476,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var kind = issue.Split(':')[0];
             // Enemy outcome issues group by the monster too; amounts are left out of the fingerprint.
             var monster = enemyIssues.FirstOrDefault(enemyIssue => enemyIssue.Issue == issue).Monster;
-            var fp = monster != null ? new[] { kind, encounter, monster } : new[] { kind, encounter };
-            reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", fp,
+            var fingerprint = monster != null ? new[] { kind, encounter, monster } : new[] { kind, encounter };
+            reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", fingerprint,
                 $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}\n\nSimulator, per enemy (over {forecast.Outcome.Branches.Count} branch(es){(forecast.Outcome.Truncated ? ", truncated" : "")}):\n{prediction}",
                 new Dictionary<string, string> { ["audit_window"] = fullWindow, ["sim_state"] = forecast.State.ToJson() },
                 new Dictionary<string, string> { ["check"] = kind, ["encounter"] = encounter, ["monster"] = monster ?? "" });
@@ -522,7 +522,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 .Any(entry => entry is DamageReceivedEntry damage && damage.Dealer == creature);
             var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt) && !hitAfterKill;
             var firstHit = window.OfType<DamageReceivedEntry>().FirstOrDefault(damage => damage.Result.Receiver == me.Creature && damage.Dealer == creature);
-            string Range(int a, int b) => a == b ? $"{a}" : $"{a}-{b}";
+            string Range(int low, int high) => low == high ? $"{low}" : $"{low}-{high}";
             parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(outcome.HpAtTurnEndMin(id), outcome.HpAtTurnEndMax(id))}), through {through} (pred {Range(outcome.UnblockedAtTurnEndMin(id), outcome.UnblockedAtTurnEndMax(id))}), " +
                       $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(outcome.DeadInAll(id) ? "always" : outcome.DeadInAny(id) ? "sometimes" : "never")})");
 
@@ -576,7 +576,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
     private static string List(IEnumerable<Source> sources)
     {
-        var s = string.Join(", ", sources.Select(source => $"{source.Name} {source.Amount}"));
-        return s.Length == 0 ? "none" : s;
+        var listed = string.Join(", ", sources.Select(source => $"{source.Name} {source.Amount}"));
+        return listed.Length == 0 ? "none" : listed;
     }
 }

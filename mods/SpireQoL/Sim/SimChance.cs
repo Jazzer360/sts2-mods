@@ -14,7 +14,7 @@ public readonly record struct SimChance(double Low, double High, bool Seen)
     /// <summary>"40%", "40–55%" while it isn't known exactly; never 0 when it can happen, never 100 when it might not.</summary>
     public string Text()
     {
-        static string P(double p) => p <= 0 ? "0" : p < 0.01 ? "<1" : p >= 1 ? "100" : Math.Min(99, Math.Max(1, (int)Math.Round(p * 100))).ToString();
+        static string P(double chance) => chance <= 0 ? "0" : chance < 0.01 ? "<1" : chance >= 1 ? "100" : Math.Min(99, Math.Max(1, (int)Math.Round(chance * 100))).ToString();
         return Exact || P(Low) == P(High) ? $"{P(Low)}%" : $"{P(Low)}–{P(High)}%";
     }
 

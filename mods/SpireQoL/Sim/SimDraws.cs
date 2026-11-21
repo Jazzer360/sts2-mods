@@ -58,11 +58,11 @@ public sealed class SimDrawPile
     /// <summary>The top card drawn.</summary>
     internal SimDrawPile WithoutTop() => new() { Top = Top.Skip(1).ToList(), Rest = Rest, Discard = Discard };
 
-    /// <summary>One card of the group at <paramref name="i"/> drawn from the rest.</summary>
-    internal SimDrawPile WithoutOneOf(int i) => new()
+    /// <summary>One card of the group at <paramref name="groupIndex"/> drawn from the rest.</summary>
+    internal SimDrawPile WithoutOneOf(int groupIndex) => new()
     {
         Top = Top,
-        Rest = Rest.Select((group, index) => index == i ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
+        Rest = Rest.Select((group, index) => index == groupIndex ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
         Discard = Discard,
     };
 

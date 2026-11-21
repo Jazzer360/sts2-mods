@@ -20,10 +20,10 @@ internal static class Branches
     public static bool[] OnEveryPath(List<CodeInstruction> code, IReadOnlyList<int> at)
     {
         var succ = Successors(code);
-        var exits = Enumerable.Range(0, code.Count).Where(i => code[i].operand is MethodInfo { Name: "SetResult" }).ToList();
-        if (exits.Count == 0) exits = Enumerable.Range(0, code.Count).Where(i => code[i].opcode == OpCodes.Ret).ToList();
+        var exits = Enumerable.Range(0, code.Count).Where(index => code[index].operand is MethodInfo { Name: "SetResult" }).ToList();
+        if (exits.Count == 0) exits = Enumerable.Range(0, code.Count).Where(index => code[index].opcode == OpCodes.Ret).ToList();
         var result = new bool[at.Count];
-        for (var k = 0; k < at.Count; k++) result[k] = exits.Count > 0 && !Reaches(succ, 0, exits, at[k]);
+        for (var point = 0; point < at.Count; point++) result[point] = exits.Count > 0 && !Reaches(succ, 0, exits, at[point]);
         return result;
     }
 
@@ -39,11 +39,11 @@ internal static class Branches
         {
             var pop = stack.Pop();
             if (exits.Contains(pop)) return true;
-            foreach (var j in succ[pop])
+            foreach (var successor in succ[pop])
             {
-                if (j == avoid || j < 0 || j >= succ.Length || seen[j]) continue;
-                seen[j] = true;
-                stack.Push(j);
+                if (successor == avoid || successor < 0 || successor >= succ.Length || seen[successor]) continue;
+                seen[successor] = true;
+                stack.Push(successor);
             }
         }
         return false;
@@ -76,7 +76,7 @@ internal static class Branches
                     if (dispatch) break; // the jump on the state: only the first run is followed
                     if (ins.operand is Label target && labels.TryGetValue(target, out var nextLabel)) next.Add(nextLabel);
                     else if (ins.operand is Label[] many)
-                        foreach (var otherLabel in many) if (labels.TryGetValue(otherLabel, out var lt)) next.Add(lt);
+                        foreach (var otherLabel in many) if (labels.TryGetValue(otherLabel, out var labelTarget)) next.Add(labelTarget);
                     break;
                 default:
                     if (i + 1 < code.Count) next.Add(i + 1);
@@ -96,10 +96,10 @@ internal static class Branches
         return null;
     }
 
-    /// <summary>The branch at <paramref name="i"/> decides on the state local (loaded in the few instructions before it).</summary>
-    private static bool LoadsState(List<CodeInstruction> code, int i, object state)
+    /// <summary>The branch at <paramref name="index"/> decides on the state local (loaded in the few instructions before it).</summary>
+    private static bool LoadsState(List<CodeInstruction> code, int index, object state)
     {
-        for (var j = i - 1; j >= Math.Max(0, i - 3); j--)
+        for (var j = index - 1; j >= Math.Max(0, index - 3); j--)
             if (IsLdloc(code[j]) && Equals(LocalOf(code[j]), state)) return true;
         return false;
     }
@@ -117,6 +117,6 @@ internal static class Branches
         if (codeInstruction.opcode == OpCodes.Ldloc_1 || codeInstruction.opcode == OpCodes.Stloc_1) return 1;
         if (codeInstruction.opcode == OpCodes.Ldloc_2 || codeInstruction.opcode == OpCodes.Stloc_2) return 2;
         if (codeInstruction.opcode == OpCodes.Ldloc_3 || codeInstruction.opcode == OpCodes.Stloc_3) return 3;
-        return codeInstruction.operand switch { LocalBuilder localBuilder => localBuilder.LocalIndex, null => null, var o => o };
+        return codeInstruction.operand switch { LocalBuilder localBuilder => localBuilder.LocalIndex, null => null, var other => other };
     }
 }

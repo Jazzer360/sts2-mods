@@ -16,16 +16,16 @@ public static class Snapshot
 {
     public static IReadOnlyDictionary<string, string> Capture(QolContext ctx)
     {
-        var d = new Dictionary<string, string>();
+        var fields = new Dictionary<string, string>();
         var me = Sts2State.Me;
         var combat = Sts2State.Combat;
-        d["in_combat"] = (combat != null).ToString();
-        if (me == null || combat == null) return d;
+        fields["in_combat"] = (combat != null).ToString();
+        if (me == null || combat == null) return fields;
 
-        Try(d, "combat", () =>
+        Try(fields, "combat", () =>
             $"encounter {Name(combat.Encounter)}, turn {Sts2State.TurnNumber}, side {combat.CurrentSide}, player turn {Sts2State.IsPlayerTurn}");
 
-        Try(d, "player", () =>
+        Try(fields, "player", () =>
         {
             var creature = me.Creature;
             var pcs = me.PlayerCombatState;
@@ -34,10 +34,10 @@ public static class Snapshot
                    (osty != null ? $", Osty HP {osty.CurrentHp}/{osty.MaxHp} (alive {osty.IsAlive})" : "") +
                    $", draw pile {Sts2State.DrawPileCount(me)}, discard pile {Sts2State.DiscardPileCount(me)}";
         });
-        Try(d, "player_powers", () => Powers(me.Creature));
-        Try(d, "relics", () => string.Join(", ", me.Relics.Select(relic =>
+        Try(fields, "player_powers", () => Powers(me.Creature));
+        Try(fields, "relics", () => string.Join(", ", me.Relics.Select(relic =>
             $"{relic.GetType().Name}{(relic.ShowCounter ? $" [{relic.DisplayAmount}]" : "")}{(relic.Status != default ? $" ({relic.Status})" : "")}")));
-        Try(d, "orbs", () =>
+        Try(fields, "orbs", () =>
         {
             var orbQueue = me.PlayerCombatState?.OrbQueue;
             if (orbQueue == null) return "none";
@@ -45,7 +45,7 @@ public static class Snapshot
             return $"slots {orbQueue.Orbs.Count}/{orbQueue.Capacity}, front first: " + (orbQueue.Orbs.Count == 0 ? "empty" : string.Join(", ", orbs));
         });
 
-        Try(d, "enemies", () => string.Join("\n", combat.Enemies.Select(creature =>
+        Try(fields, "enemies", () => string.Join("\n", combat.Enemies.Select(creature =>
         {
             var intent = "";
             try
@@ -68,7 +68,7 @@ public static class Snapshot
             return $"{Name(creature.Monster)}: HP {creature.CurrentHp}/{creature.MaxHp}, block {creature.Block}, alive {creature.IsAlive}, stunned {creature.IsStunned} | powers {Powers(creature)}{intent}";
         })));
 
-        Try(d, "hand", () => string.Join("\n", Sts2State.Hand(me).Select(card =>
+        Try(fields, "hand", () => string.Join("\n", Sts2State.Hand(me).Select(card =>
         {
             var tabs = ctx.Decor.Previous.TryGetValue(card, out var otherTabs)
                 ? string.Join(", ", otherTabs.Select(tab => tab.Text ?? (tab.Amount > 0 ? $"{tab.Key} {tab.Amount}{(tab.AuditMax > 0 ? $" [{tab.AuditMin}-{tab.AuditMax}]" : "")}" : tab.Key) + (tab.Crossed ? " (crossed)" : "")))
@@ -81,9 +81,9 @@ public static class Snapshot
                    $" | tabs: {tabs} | facts: {facts}";
         })));
 
-        Try(d, "combat_history", () => string.Join("\n",
+        Try(fields, "combat_history", () => string.Join("\n",
             CombatManager.Instance.History.Entries.Reverse().Take(40).Reverse().Select(entry => entry.HumanReadableString)));
-        return d;
+        return fields;
     }
 
     /// <summary>What the mod expects one play of a card to do (PlayFacts), for reports.</summary>
@@ -96,9 +96,9 @@ public static class Snapshot
 
     private static string Name(object? model) => model?.GetType().Name ?? "none";
 
-    private static void Try(Dictionary<string, string> d, string key, Func<string> get)
+    private static void Try(Dictionary<string, string> fields, string key, Func<string> get)
     {
-        try { d[key] = get(); }
-        catch (Exception ex) { d[key] = $"(unavailable: {ex.Message})"; }
+        try { fields[key] = get(); }
+        catch (Exception ex) { fields[key] = $"(unavailable: {ex.Message})"; }
     }
 }

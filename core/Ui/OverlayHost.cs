@@ -94,9 +94,9 @@ public sealed class OverlayHost
     /// in the frame's feature times (the slow-frame log, the dev dashboard) and taken out of the feature's own. Parts with the same
     /// id add up.
     /// </summary>
-    public void AddPartTime(string id, double ms, double kb = 0)
+    public void AddPartTime(string id, double milliseconds, double kb = 0)
     {
-        if (InFrameRun) _parts.Add((id, ms, kb)); // outside the frame's run (a game callback) there's no feature to take it from
+        if (InFrameRun) _parts.Add((id, milliseconds, kb)); // outside the frame's run (a game callback) there's no feature to take it from
     }
 
     /// <summary>
@@ -118,22 +118,22 @@ public sealed class OverlayHost
     }
 
     /// <summary>A feature's time this frame, less the parts it timed on its own (each its own entry).</summary>
-    private void AddTimed(string id, double ms, double kb)
+    private void AddTimed(string id, double milliseconds, double kilobytes)
     {
         foreach (var (part, partMs, partKb) in _parts)
         {
-            var i = _featureMs.FindIndex(featureM => featureM.Id == part);
-            if (i >= 0) _featureMs[i] = (part, _featureMs[i].Ms + partMs);
+            var timeIndex = _featureMs.FindIndex(timing => timing.Id == part);
+            if (timeIndex >= 0) _featureMs[timeIndex] = (part, _featureMs[timeIndex].Ms + partMs);
             else _featureMs.Add((part, partMs));
-            var j = _featureKb.FindIndex(x => x.Id == part);
-            if (j >= 0) _featureKb[j] = (part, _featureKb[j].Kb + partKb);
+            var memoryIndex = _featureKb.FindIndex(memory => memory.Id == part);
+            if (memoryIndex >= 0) _featureKb[memoryIndex] = (part, _featureKb[memoryIndex].Kb + partKb);
             else _featureKb.Add((part, partKb));
-            ms -= partMs;
-            kb -= partKb;
+            milliseconds -= partMs;
+            kilobytes -= partKb;
         }
         _parts.Clear();
-        _featureMs.Add((id, Math.Max(0, ms)));
-        _featureKb.Add((id, Math.Max(0, kb)));
+        _featureMs.Add((id, Math.Max(0, milliseconds)));
+        _featureKb.Add((id, Math.Max(0, kilobytes)));
     }
 
     /// <summary>Memory this thread allocated since <paramref name="start"/>, in KB (GC.GetAllocatedBytesForCurrentThread: no allocation itself).</summary>
@@ -237,11 +237,11 @@ public sealed class OverlayHost
         _log.Warn($"[perf] slow frame: the mod took {modMs:0} ms ({times})");
         if (modMs <= ReportModFrameMs) return;
         var top = _featureMs.OrderByDescending(featureM => featureM.Ms).FirstOrDefault().Id ?? "?";
-        var n = _slowByFeature[top] = (_slowByFeature.TryGetValue(top, out var prev) ? prev : 0) + 1;
+        var slowFrames = _slowByFeature[top] = (_slowByFeature.TryGetValue(top, out var prev) ? prev : 0) + 1;
         // A freeze (a second or more) is reported the first time: no warm-up takes that long.
-        if (n < 2 && modMs < FreezeMs) return;
+        if (slowFrames < 2 && modMs < FreezeMs) return;
         Diagnostics.ErrorReporter.Instance?.Mismatch("perf", $"Slow frame: {top}", new[] { "slow-frame", top },
-            $"The mod's own work took {modMs:0} ms in one frame ({times}); {gapMs:0} ms since the frame before. Slow frame {n} from {top} this session.",
+            $"The mod's own work took {modMs:0} ms in one frame ({times}); {gapMs:0} ms since the frame before. Slow frame {slowFrames} from {top} this session.",
             tags: new Dictionary<string, string> { ["source"] = top, ["check"] = "slow-frame" });
     }
 
@@ -283,7 +283,7 @@ public sealed class OverlayHost
     }
 
     private string FeatureTimes()
-        => string.Join(", ", _featureMs.Where(featureM => featureM.Ms >= 1).OrderByDescending(featureM => featureM.Ms).Select(featureM => $"{featureM.Id} {featureM.Ms:0} ms")) is { Length: > 0 } s ? s : "spread thin";
+        => string.Join(", ", _featureMs.Where(timing => timing.Ms >= 1).OrderByDescending(timing => timing.Ms).Select(timing => $"{timing.Id} {timing.Ms:0} ms")) is { Length: > 0 } listed ? listed : "spread thin";
 
     private void RunFrame()
     {
@@ -312,11 +312,11 @@ public sealed class OverlayHost
             }
             if (!IsOn(id)) continue;
             _running = id;
-            Timed(id, (Host: this, Id: id, Feature: feature), static x => x.Host.RunFeature(x.Id, x.Feature));
+            Timed(id, (Host: this, Id: id, Feature: feature), static run => run.Host.RunFeature(run.Id, run.Feature));
         }
 
         _running = null;
-        foreach (var (lateId, late) in _lateFrame) Timed(lateId, (Host: this, Id: lateId, Late: late), static x => x.Host.RunLate(x.Id, x.Late));
+        foreach (var (lateId, late) in _lateFrame) Timed(lateId, (Host: this, Id: lateId, Late: late), static run => run.Host.RunLate(run.Id, run.Late));
         Timed("widgets", this, static host => host.LayOutWidgets());
     }
 
@@ -337,10 +337,10 @@ public sealed class OverlayHost
         }
         catch (Exception ex)
         {
-            var n = _errors[id] = (_errors.TryGetValue(id, out var prev) ? prev : 0) + 1;
-            _log.Error($"[{id}] frame error {n}/{MaxErrorsBeforeDisable}: {ex}");
+            var errors = _errors[id] = (_errors.TryGetValue(id, out var prev) ? prev : 0) + 1;
+            _log.Error($"[{id}] frame error {errors}/{MaxErrorsBeforeDisable}: {ex}");
             if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".OnFrame");
-            if (n >= MaxErrorsBeforeDisable) _log.Error($"[{id}] turned off after repeated errors");
+            if (errors >= MaxErrorsBeforeDisable) _log.Error($"[{id}] turned off after repeated errors");
         }
     }
 
@@ -354,13 +354,13 @@ public sealed class OverlayHost
         catch (Exception ex)
         {
             var key = ex.GetType().Name + ex.TargetSite;
-            var n = _lateErrors[key] = (_lateErrors.TryGetValue(key, out var prev) ? prev : 0) + 1;
-            if (n == 1)
+            var repeats = _lateErrors[key] = (_lateErrors.TryGetValue(key, out var prev) ? prev : 0) + 1;
+            if (repeats == 1)
             {
                 _log.Error($"[{id}] late frame error: {ex}");
                 if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, id);
             }
-            else if (n % 600 == 0) _log.Error($"[{id}] late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
+            else if (repeats % 600 == 0) _log.Error($"[{id}] late frame error repeated {repeats} times: {ex.GetType().Name}: {ex.Message}");
         }
     }
 

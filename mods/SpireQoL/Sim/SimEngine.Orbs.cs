@@ -36,7 +36,7 @@ public static partial class SimEngine
         var simPlayer = state.Player(player);
         var focus = simPlayer?.Focus ?? 0;
         var lightningBonus = simPlayer != null && simPlayer.Relics.Has(RelicId.InfusedCore) ? Var(state, player, "InfusedCore", "ExtraDamage", 0) : 0;
-        int F(int v) => Math.Max(0, v + focus);
+        int F(int baseValue) => Math.Max(0, baseValue + focus);
         return kind switch
         {
             OrbKind.Lightning => new SimOrb { Kind = kind, Passive = F(3) + lightningBonus, Evoke = F(8) + lightningBonus },
@@ -69,7 +69,7 @@ public static partial class SimEngine
             var nextPlayer = branch.MutablePlayer(player);
             if (nextPlayer.OrbCapacity <= 0) return new[] { branch };
             nextPlayer.OwnOrbs().Add(orb.Clone());
-            return Hook(branch, nameof(SimModel.AfterOrbChanneled), (model, o, copy) => model.AfterOrbChanneled(copy, o, player));
+            return Hook(branch, nameof(SimModel.AfterOrbChanneled), (model, owner, copy) => model.AfterOrbChanneled(copy, owner, player));
         });
     }
 
@@ -78,13 +78,13 @@ public static partial class SimEngine
         switch (orbAction.Kind)
         {
             case OrbAction.Op.Channel:
-                for (var t = 0; t < orbAction.Times; t++)
+                for (var time = 0; time < orbAction.Times; time++)
                     branches.Each(branch => ChannelOrb(branch, orbAction.Values ?? FreshOrb(branch, orbAction.Orb, orbAction.To), orbAction.To));
                 break;
             case OrbAction.Op.EvokeFront:
-                for (var t = 0; t < orbAction.Times; t++)
+                for (var time = 0; time < orbAction.Times; time++)
                 {
-                    var last = t == orbAction.Times - 1;
+                    var last = time == orbAction.Times - 1;
                     branches.Each(branch =>
                     {
                         if (branch.You.Orbs.Count == 0) return new[] { branch };

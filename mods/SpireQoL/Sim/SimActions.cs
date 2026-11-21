@@ -29,7 +29,7 @@ public sealed record DamageSpec(decimal Base, SimProps Props)
     public IReadOnlyDictionary<int, CapturedTerms>? Captured { get; init; }
     public bool Fixed { get; init; }
 
-    public decimal BaseFor(int target) => BaseOn != null && BaseOn.TryGetValue(target, out var b) ? b : Base;
+    public decimal BaseFor(int target) => BaseOn != null && BaseOn.TryGetValue(target, out var baseOnTarget) ? baseOnTarget : Base;
     public CapturedTerms TermsFor(int target) => Captured != null && Captured.TryGetValue(target, out var terms) ? terms : CapturedTerms.None;
 }
 

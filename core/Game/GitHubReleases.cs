@@ -65,7 +65,7 @@ public static class GitHubReleases
         {
             if (jsonElement.TryGetProperty("draft", out var otherJsonElement) && otherJsonElement.ValueKind == JsonValueKind.True) continue;
             if (jsonElement.TryGetProperty("prerelease", out var nextJsonElement) && nextJsonElement.ValueKind == JsonValueKind.True) continue;
-            if (!jsonElement.TryGetProperty("tag_name", out var t) || t.GetString() is not { } tag) continue;
+            if (!jsonElement.TryGetProperty("tag_name", out var tagName) || tagName.GetString() is not { } tag) continue;
             if (!tag.StartsWith(tagPrefix, StringComparison.OrdinalIgnoreCase)) continue;
             if (Version.TryParse(tag[tagPrefix.Length..], out var version)) list.Add(Normalize(version));
         }

@@ -54,7 +54,7 @@ internal static class MovePowers
                 {
                     try { amount = Convert.ToDecimal(call.Getter.Invoke(monster, null)); } catch { amount = null; }
                 }
-                if (call.Negated && amount is { } n) amount = -n; // -SpikenAmount: Toadpole's Spike Spit takes its Thorns away
+                if (call.Negated && amount is { } positive) amount = -positive; // -SpikenAmount: Toadpole's Spike Spit takes its Thorns away
                 result.Add(new Applied(call.Power, amount, Maybe: !call.Certain));
             }
             if (result.Any(applied => applied.Maybe))
@@ -100,10 +100,10 @@ internal static class MovePowers
                 {
                     try { amount = Convert.ToDecimal(blockCall.Getter.Invoke(monster, null)); } catch { amount = null; }
                 }
-                if (amount is not { } a) return null;
+                if (amount is not { } known) return null;
                 total += creature.CombatState is { } combat
-                    ? MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(combat, creature, a, (MegaCrit.Sts2.Core.ValueProps.ValueProp)blockCall.Props, null, null, out _)
-                    : a;
+                    ? MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(combat, creature, known, (MegaCrit.Sts2.Core.ValueProps.ValueProp)blockCall.Props, null, null, out _)
+                    : known;
             }
             return (int)total;
         }
@@ -200,7 +200,7 @@ internal static class MovePowers
         if (calls.Count > 0)
         {
             var certain = Branches.OnEveryPath(code, at);
-            for (var k = 0; k < calls.Count; k++) calls[k] = calls[k] with { Certain = certain[k] };
+            for (var callIndex = 0; callIndex < calls.Count; callIndex++) calls[callIndex] = calls[callIndex] with { Certain = certain[callIndex] };
         }
         // Made but applied another way (Dampen: added to the target directly): the icon alone.
         if (calls.Count == 0 && made != null) calls.Add(new Call(made, null, null));

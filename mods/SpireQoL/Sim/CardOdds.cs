@@ -35,15 +35,15 @@ public static class CardOdds
         {
             if (odds[rolled] <= 0) continue;
             // GetNextAllowedRarity: Common → Uncommon → Rare → Common, until one has a card left.
-            var r = rolled;
+            var remaining = rolled;
             var tries = 0;
-            while (totals[r] <= 0 && tries++ < 3) r = (r + 1) % 3;
-            if (totals[r] <= 0) return 1; // nothing left to offer: no more slots
-            var miss = (double)(totals[r] - matching[r]) / totals[r];
+            while (totals[remaining] <= 0 && tries++ < 3) remaining = (remaining + 1) % 3;
+            if (totals[remaining] <= 0) return 1; // nothing left to offer: no more slots
+            var miss = (double)(totals[remaining] - matching[remaining]) / totals[remaining];
             if (miss <= 0) continue;
-            totals[r]--;
+            totals[remaining]--;
             none += odds[rolled] * miss * NoneMatch(totals, matching, odds, slots - 1);
-            totals[r]++;
+            totals[remaining]++;
         }
         return none;
     }

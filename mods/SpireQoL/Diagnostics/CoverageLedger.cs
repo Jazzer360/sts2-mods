@@ -406,7 +406,7 @@ internal static partial class CoverageLedger
             {
                 hooks = string.Join(",", type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
                     .Where(method => hookSet.Contains(method.Name) && method.IsVirtual && method.GetBaseDefinition().DeclaringType != type)
-                    .Select(method => method.Name).Distinct().OrderBy(n => n, StringComparer.Ordinal));
+                    .Select(method => method.Name).Distinct().OrderBy(name => name, StringComparer.Ordinal));
             }
             catch
             {
@@ -443,7 +443,7 @@ internal static partial class CoverageLedger
 
     /// <summary>Whether the coverage was checked against this game version: the ledger's, or one reviewed before it.</summary>
     internal static bool ReviewedVersion(string game) =>
-        ReviewedGameVersions.Append(LedgerGameVersion).Any(v => System.Text.RegularExpressions.Regex.IsMatch(game, @"(^|[^0-9.])v?" + System.Text.RegularExpressions.Regex.Escape(v.TrimStart('v')) + @"($|[^0-9])"));
+        ReviewedGameVersions.Append(LedgerGameVersion).Any(version => System.Text.RegularExpressions.Regex.IsMatch(game, @"(^|[^0-9.])v?" + System.Text.RegularExpressions.Regex.Escape(version.TrimStart('v')) + @"($|[^0-9])"));
 
     /// <summary>One summary line at load: the game's version against the ledger's, and the counts.</summary>
     public static void LogSummary(ModLog log, Sts2Mods.Core.Diagnostics.ErrorReporter? reporter)
@@ -451,12 +451,12 @@ internal static partial class CoverageLedger
         try
         {
             var game = SafeGameVersion();
-            var by = ByType.Values.GroupBy(entry => entry.Status).ToDictionary(g => g.Key, g => g.ToList());
-            int N(Status status) => by.TryGetValue(status, out var entries) ? entries.Count : 0;
+            var byStatus = ByType.Values.GroupBy(entry => entry.Status).ToDictionary(status => status.Key, status => status.ToList());
+            int N(Status status) => byStatus.TryGetValue(status, out var entries) ? entries.Count : 0;
             log.Info($"[coverage] game {game}, ledger {LedgerGameVersion}: {ByType.Count} classes with combat hooks; covered {N(Status.Covered)}, ignored {N(Status.Ignored)}, " +
                      $"known gaps {N(Status.Gap)}, unreviewed {N(Status.Unreviewed)}, new {N(Status.New)}, changed {N(Status.Changed)}.");
             foreach (var status in new[] { Status.New, Status.Changed, Status.Unreviewed })
-                if (by.TryGetValue(status, out var otherEntries))
+                if (byStatus.TryGetValue(status, out var otherEntries))
                     log.Info($"[coverage] {status.ToString().ToLowerInvariant()}: {string.Join(", ", otherEntries.Select(entry => entry.Type))}");
             foreach (var entry in CardCoverage.Issues)
                 log.Info($"[coverage] card code: {entry.Key}: {string.Join("; ", entry.Value)}");
@@ -533,10 +533,10 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
                 Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(buildError, "coverage-build");
             }
             CoverageLedger.LogSummary(ModEntry.Log, Sts2Mods.Core.Diagnostics.ErrorReporter.Instance);
-            foreach (var p in _catalogProblems ?? new List<string>())
+            foreach (var problem in _catalogProblems ?? new List<string>())
             {
                 // Logged only: tests/SpireQoL.Catalog.Tests runs the same check before every release (decision #46).
-                ModEntry.Log.Warn($"[coverage] settings: {p}");
+                ModEntry.Log.Warn($"[coverage] settings: {problem}");
             }
         }
         // Tab kinds shown in play that the catalog doesn't describe (the menu lists them under "Other").
@@ -588,7 +588,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
             {
                 // Issues about teammates only count in a fight with other players.
                 var withTeammates = Sts2State.Combat?.Players.Count > 1;
-                var issues = all.Where(x => withTeammates || !x.StartsWith(CardCoverage.TeammatesOnly)).ToList();
+                var issues = all.Where(issue => withTeammates || !issue.StartsWith(CardCoverage.TeammatesOnly)).ToList();
                 if (issues.Count > 0)
                     Unexpected(type.Name, "card-code", $"its code does what the mod doesn't count: {string.Join("; ", issues)}.");
             }

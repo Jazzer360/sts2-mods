@@ -204,12 +204,12 @@ public sealed class TurnEndModel
         if (State.Teammates.Count == 0 || Teammates.Count != State.Teammates.Count) return Array.Empty<TeammateForecast>();
         var outcome = Outcome;
         var view = new List<TeammateForecast>();
-        for (var k = 0; k < Teammates.Count; k++)
+        for (var teammateIndex = 0; teammateIndex < Teammates.Count; teammateIndex++)
         {
-            var worst = outcome.TeammateWorst(k);
-            view.Add(new TeammateForecast(Teammates[k], worst.Incoming, State.Teammates[k].Block + worst.BlockGained,
-                State.Teammates[k].OstyShields ? State.Teammates[k].OstyHp : 0, worst.OstyTaken, outcome.TeammateTakenMin(k), outcome.TeammateTakenMax(k),
-                Math.Min(worst.UnblockableTaken, outcome.TeammateTakenMax(k))));
+            var worst = outcome.TeammateWorst(teammateIndex);
+            view.Add(new TeammateForecast(Teammates[teammateIndex], worst.Incoming, State.Teammates[teammateIndex].Block + worst.BlockGained,
+                State.Teammates[teammateIndex].OstyShields ? State.Teammates[teammateIndex].OstyHp : 0, worst.OstyTaken, outcome.TeammateTakenMin(teammateIndex), outcome.TeammateTakenMax(teammateIndex),
+                Math.Min(worst.UnblockableTaken, outcome.TeammateTakenMax(teammateIndex))));
         }
         return view;
     }
@@ -287,9 +287,9 @@ public sealed class TurnEndModel
     /// <summary>Frames that showed a held forecast since the last call (the combat summary).</summary>
     internal static int TakeHeldFrames()
     {
-        var n = _heldFrames;
+        var heldFrames = _heldFrames;
         _heldFrames = 0;
-        return n;
+        return heldFrames;
     }
 
     /// <summary>
@@ -392,10 +392,10 @@ public sealed class TurnEndModel
             HpAfter = branch.You.Hp == int.MaxValue ? myHp : branch.You.Hp,
         };
         // Same-name entries (one per Frost trigger, per Feel No Pain exhaust...) are summed for display.
-        foreach (var g in branch.EndOfTurnBlock.GroupBy(nameAmount => nameAmount.Name)) forecast.EndOfTurnBlock.Add(new Source(g.Key, g.Sum(nameAmount => nameAmount.Amount)));
+        foreach (var bySource in branch.EndOfTurnBlock.GroupBy(nameAmount => nameAmount.Name)) forecast.EndOfTurnBlock.Add(new Source(bySource.Key, bySource.Sum(nameAmount => nameAmount.Amount)));
         foreach (var (name, amount) in branch.Blockable) forecast.Blockable.Add(new Source(name, amount));
         foreach (var (name, amount) in branch.Unblockable) forecast.Unblockable.Add(new Source(name, amount));
-        foreach (var g in branch.EndOfTurnDamage.GroupBy(nameAmount => nameAmount.Name)) forecast.EndOfTurnDamage.Add(new Source(g.Key, g.Sum(nameAmount => nameAmount.Amount)));
+        foreach (var bySource in branch.EndOfTurnDamage.GroupBy(nameAmount => nameAmount.Name)) forecast.EndOfTurnDamage.Add(new Source(bySource.Key, bySource.Sum(nameAmount => nameAmount.Amount)));
         return forecast;
     }
 
