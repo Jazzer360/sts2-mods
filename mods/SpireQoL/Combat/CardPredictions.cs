@@ -122,14 +122,14 @@ public sealed class CardPredictions
         // Every card's simulations (one per target) run in parallel across CPU cores; the frame waits for new ones within its few
         // milliseconds (SimWait, decision #104), so tabs usually appear on the frame they belong to. What isn't ready by then shows
         // when it is, a frame or a few later (SimPending); a simulation that missed its frame never makes a later one wait.
-        SimWait.All(pending.Where(x => x.Prepared.Sim != null).SelectMany(x => x.Prepared.Sim!.Jobs).ToList());
+        SimWait.All(pending.Where(cardPrepared => cardPrepared.Prepared.Sim != null).SelectMany(cardPrepared => cardPrepared.Prepared.Sim!.Jobs).ToList());
 
         // Held (decision #105): a card whose simulation, or the turn forecast it compares with, has no result for this board yet keeps
         // the tabs it showed this turn until it has one, instead of losing them for a few frames (flicker on every hit of a busy
         // play). Each card switches as soon as its own result is in. A card with nothing to hold shows what it has.
         var forecastPending = TurnEnd() == null;
         foreach (var card in hand)
-            if (!pending.Any(x => ReferenceEquals(x.Card, card))) _lastTabs.Remove(card);
+            if (!pending.Any(cardPrepared => ReferenceEquals(cardPrepared.Card, card))) _lastTabs.Remove(card);
         var final = !forecastPending;
         var shown = new List<(CardModel Card, List<TabSpec> Tabs)>();
         var result = new List<(CardModel Card, List<TabSpec> Tabs)>(pending.Count);
@@ -194,7 +194,7 @@ public sealed class CardPredictions
     /// <summary>Last frame's facts and tabs again: kept for the audits (PreviousFacts, LastTabs) as a frame of their own.</summary>
     private List<(CardModel Card, List<TabSpec> Tabs)> Reuse(ICombatState combat)
     {
-        foreach (var kv in PreviousFacts) _facts[kv.Key] = kv.Value;
+        foreach (var entry in PreviousFacts) _facts[entry.Key] = entry.Value;
         _factsFrame = Godot.Engine.GetProcessFrames();
         foreach (var (card, tabs) in _reuseTabs) _lastTabs[card] = (_ctx.Decor.Frame, tabs, combat, Sts2State.TurnNumber);
         return _reuseTabs;
@@ -205,7 +205,7 @@ public sealed class CardPredictions
     {
         foreach (var (card, tabs) in now)
         {
-            var before = _reuseTabs.FirstOrDefault(x => ReferenceEquals(x.Card, card)).Tabs;
+            var before = _reuseTabs.FirstOrDefault(reuseTab => ReferenceEquals(reuseTab.Card, card)).Tabs;
             _reuse.Compare(before == null || before.SequenceEqual(tabs), "reused tabs went stale with no change the frame key sees",
                 () => $"{card.GetType().Name}: reused [{string.Join(", ", before!.Select(tab => tab.Key))}], now [{string.Join(", ", tabs.Select(tab => tab.Key))}]");
         }
@@ -441,7 +441,7 @@ public sealed class CardPredictions
         // is simulated once per target; a tab that needs some aim shows when one target gives it.
         var targets = card.TargetType switch
         {
-            TargetType.AnyEnemy => forecast.Ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => kv.Value).ToList(),
+            TargetType.AnyEnemy => forecast.Ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => entry.Value).ToList(),
             TargetType.AnyAlly => Enumerable.Range(0, forecast.Teammates.Count).Select(Who.Teammate).ToList(),
             _ => new List<int> { -1 },
         };
@@ -463,13 +463,13 @@ public sealed class CardPredictions
             Start = forecast.State, Ids = forecast.Ids, Allies = forecast.Teammates.Select(player => player.Creature).ToList(),
             FullStart = ReferenceEquals(forecast.FullState, forecast.State) ? null : forecast.FullState,
         };
-        foreach (var t in targets) inputs.PlayByTarget[t] = SimAdapter.Play(card, facts, _me, _cs, forecast.Ids, t);
+        foreach (var target in targets) inputs.PlayByTarget[target] = SimAdapter.Play(card, facts, _me, _cs, forecast.Ids, target);
         facts.Sim = inputs;
         if (_noCache || !_simCache.TryGetValue(cacheKey, out var task))
         {
             var start = forecast.State;
             var name = card.GetType().Name;
-            task = new SimBatch(targets.Select(t => SimJob.Start(SimSearch.Of(start, inputs.PlayByTarget[t]), $"{name} (target {t})")).ToArray());
+            task = new SimBatch(targets.Select(target => SimJob.Start(SimSearch.Of(start, inputs.PlayByTarget[target]), $"{name} (target {target})")).ToArray());
             if (!_noCache) _simCache[cacheKey] = task;
             else _uncached.Add(task);
         }
@@ -484,7 +484,7 @@ public sealed class CardPredictions
             hashCode.Add(card.CurrentUpgradeLevel);
             hashCode.Add(card.Enchantment?.GetType());
             hashCode.Add(card.Enchantment?.Amount);
-            foreach (var kv in card.DynamicVars) { hashCode.Add(kv.Key); hashCode.Add(kv.Value.BaseValue); }
+            foreach (var entry in card.DynamicVars) { hashCode.Add(entry.Key); hashCode.Add(entry.Value.BaseValue); }
         }
         catch
         {
@@ -499,7 +499,7 @@ public sealed class CardPredictions
         {
             var text = new System.Text.StringBuilder();
             text.Append(card.CurrentUpgradeLevel).Append('|').Append(card.Enchantment?.GetType().Name).Append(card.Enchantment?.Amount);
-            foreach (var kv in card.DynamicVars) text.Append('|').Append(kv.Key).Append('=').Append(kv.Value.BaseValue);
+            foreach (var entry in card.DynamicVars) text.Append('|').Append(entry.Key).Append('=').Append(entry.Value.BaseValue);
             return text.ToString();
         }
         catch
@@ -516,16 +516,16 @@ public sealed class CardPredictions
     private static void DrawnTab(PlayFacts facts, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs)
     {
         if (outcomes.Length == 0 || !SimAdapter.DrawnCardReaders.TryGetValue(facts.Card.GetType().Name, out var reader)) return;
-        if (DrawnChance.Distribution(outcomes[0]) is not { } d) return;
-        facts.Drawn = d;
+        if (DrawnChance.Distribution(outcomes[0]) is not { } distribution) return;
+        facts.Drawn = distribution;
         var unsure = outcomes[0].Truncated || outcomes[0].AnyUnmodelled;
         string Pct(double p) => new SimChance(p, p, p > 0).Text() + (unsure ? "?" : "");
         if (!reader.Counts)
         {
-            tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(DrawnChance.ChanceOfAny(d)));
+            tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(DrawnChance.ChanceOfAny(distribution)));
             return;
         }
-        var (n, chance) = DrawnChance.MostLikely(d);
+        var (n, chance) = DrawnChance.MostLikely(distribution);
         tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(chance), NumberText: n.ToString());
     }
 
@@ -580,12 +580,12 @@ public sealed class CardPredictions
         if (facts.Sim?.PlayByTarget.Keys.ToList() is { } aims && aims.Count == outcomes.Length)
         {
             IReadOnlyDictionary<int, IReadOnlyCollection<Type>> By(Func<(Type T, bool[] Every, bool[] Any), bool[]> at) =>
-                aims.Select((a, i) => (a, i)).ToDictionary(x => x.a, x => (IReadOnlyCollection<Type>)_firesBy.Values.Where(v => at(v)[x.i]).Select(v => v.T).Distinct().ToList());
-            facts.FiresEveryByAim = By(v => v.Every);
-            facts.FiresAnyByAim = By(v => v.Any);
+                aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => (IReadOnlyCollection<Type>)_firesBy.Values.Where(value => at(value)[aimed.index]).Select(value => value.T).Distinct().ToList());
+            facts.FiresEveryByAim = By(fired => fired.Every);
+            facts.FiresAnyByAim = By(fired => fired.Any);
             var enemies = forecast.Ids.Values.Distinct().ToList();
-            facts.DeathByAim = aims.Select((a, i) => (a, i)).ToDictionary(x => x.a,
-                x => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[x.i].DeadChanceRange(id)));
+            facts.DeathByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
+                aimed => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[aimed.index].DeadChanceRange(id)));
         }
 
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act

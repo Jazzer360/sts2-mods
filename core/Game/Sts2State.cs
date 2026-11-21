@@ -72,7 +72,7 @@ public static class Sts2State
         // the holder container to the hand itself, so it isn't in ActiveHolders. Its model is
         // still in the hand pile until the play starts.
         var held = HeldCard(hand);
-        if (held is { } h && h.Node != first) yield return h;
+        if (held is { } nodeCard && nodeCard.Node != first) yield return nodeCard;
     }
 
     private static (NCard Node, CardModel Card)? HeldCard(NPlayerHand hand)

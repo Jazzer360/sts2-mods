@@ -174,21 +174,21 @@ internal sealed class DamageMathPanel
         _skull.Visible = dies;
         _reviveIcon.Visible = revive != null && !dies;
         _revive.Visible = revive != null && !dies;
-        if (revive is { } r)
+        if (revive is { } iconHpAfter)
         {
-            _reviveIcon.Texture = r.Icon;
-            _revive.Text = $"{r.HpAfter} HP";
+            _reviveIcon.Texture = iconHpAfter.Icon;
+            _revive.Text = $"{iconHpAfter.HpAfter} HP";
         }
         _attackIcon.Texture = _attackTiers[AttackTier(incoming) - 1] ?? _attackTiers.FirstOrDefault(texture => texture != null);
         _incoming.Text = $"{incoming}";
         _block.Text = $"− {block}";
         _ostyIcon.Visible = osty != null && mathShown;
         _osty.Visible = osty != null && mathShown;
-        if (osty is { } o)
+        if (osty is { } takenDies)
         {
-            _osty.Text = $"− {o.Taken}";
+            _osty.Text = $"− {takenDies.Taken}";
             // Red when the enemy turn kills Osty (its overkill already counts toward yours).
-            _osty.AddThemeColorOverride("font_color", o.Dies ? TakeColor : OstyColor);
+            _osty.AddThemeColorOverride("font_color", takenDies.Dies ? TakeColor : OstyColor);
         }
         _result.Text = $"{take}";
         _result.AddThemeColorOverride("font_color", take > 0 ? TakeColor : SafeColor);

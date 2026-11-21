@@ -102,15 +102,15 @@ public static partial class SimAdapter
         // Adroit (enchantment): its block on every play, after the card's own (EnchantmentModel.OnPlay → CreatureCmd.GainBlock).
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
         {
-            var b = adroit.DynamicVars.Block.BaseValue;
-            play.Body.Add(new GainBlockAction(1, b, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, b, ValueProp.Move) });
+            var baseValue = adroit.DynamicVars.Block.BaseValue;
+            play.Body.Add(new GainBlockAction(1, baseValue, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, baseValue, ValueProp.Move) });
         }
         if (StripBlockCards.Contains(name)) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
         play.Body.AddRange(PowersOf(card, facts, name, allyId));
         if (TriggerPoisonCards.Contains(name)) play.Body.Add(new TriggerPoisonAction());
         play.Body.AddRange(OrbsOf(card, me, combat, name, play.ChannelToAlly ? allyId : owner));
         // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
-        CardEnergy.AddTo(play, card, me, combat, ids.FirstOrDefault(kv => kv.Value == targetId).Key, owner, allyId);
+        CardEnergy.AddTo(play, card, me, combat, ids.FirstOrDefault(entry => entry.Value == targetId).Key, owner, allyId);
         AddCardEvents(play, facts, plays);
         if (DrawnCardReaders.ContainsKey(name)) UseDrawnCard(play, name);
 
@@ -118,7 +118,7 @@ public static partial class SimAdapter
         play.ByOsty = facts.ByOsty;
         // The rest of what each play does, after the card's own actions above: Capture Spirit's damage, Judgement, Bouncing Flask's
         // poison on random enemies, Osty's death (Sacrifice, Bone Shards; Necro Mastery reacts).
-        var target2 = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
+        var target2 = ids.FirstOrDefault(entry => entry.Value == targetId).Key;
         if (TargetDamageCards.Contains(name) && target2 != null && card.DynamicVars.TryGetValue("Damage", out var tdVar) && tdVar is DamageVar tdv)
             play.Body.Add(new DamageAction(new DamageSpec(tdv.BaseValue, SimReaders.Props(tdv.Props))
                 { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(me.RunState, combat, card, me.Creature, target2, tdv.BaseValue, tdv.Props) } }));
@@ -212,7 +212,7 @@ public static partial class SimAdapter
             _ => SimPlay.Target.None,
         };
         if (mode == SimPlay.Target.None) return null;
-        var aimed = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
+        var aimed = ids.FirstOrDefault(entry => entry.Value == targetId).Key;
         var hits = (mode == SimPlay.Target.Single && aimed != null ? facts.HitsOn(aimed) : facts.AttackHits) / plays;
         if (hits <= 0) return null;
 
@@ -275,7 +275,7 @@ public static partial class SimAdapter
         var toAlly = BlockToAllyCards.Contains(name);
         var to = toAlly ? allyId : Who.You;
         if (toAlly && allyId == -1) return null; // no teammate to aim at: the block goes to no one
-        var aimed = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
+        var aimed = ids.FirstOrDefault(entry => entry.Value == targetId).Key;
         if (name == nameof(Fisticuffs))
         {
             // Fisticuffs.OnPlay: CreatureCmd.GainBlock(the damage dealt, ValueProp.Move), so Dexterity and Frail apply.
@@ -326,9 +326,9 @@ public static partial class SimAdapter
         };
         foreach (var type in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
         {
-            var n = SimPowerName(type);
-            if (!Simulated(n) && !(PlayFacts.IsDebuffType(type) && debuffs.Contains(type))) continue;
-            if (n == nameof(PoisonPower) && card.TargetType == TargetType.RandomEnemy) continue; // Bouncing Flask: random, a summary field
+            var simPowerName = SimPowerName(type);
+            if (!Simulated(simPowerName) && !(PlayFacts.IsDebuffType(type) && debuffs.Contains(type))) continue;
+            if (simPowerName == nameof(PoisonPower) && card.TargetType == TargetType.RandomEnemy) continue; // Bouncing Flask: random, a summary field
             // A temporary Strength loss (Piercing Wail, Dark Shackles: TemporaryStrengthPower) is the Strength action below
             // (EnemyStrengthCards): one debuff, so one Artifact charge takes all of it (issue #371: applied twice, Artifact took
             // the first and the Strength still landed).
@@ -336,20 +336,20 @@ public static partial class SimAdapter
             if (PlayFacts.IsDebuffType(type))
             {
                 if (!debuffs.Contains(type) || whereEnemies is not { } where) continue;
-                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(type)) { To = where, Debuff = true });
+                actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = where, Debuff = true });
             }
-            else if (card.TargetType == TargetType.AnyAlly && allyId != -1 && n == nameof(CoveredPower))
+            else if (card.TargetType == TargetType.AnyAlly && allyId != -1 && simPowerName == nameof(CoveredPower))
             {
-                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(type)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
+                actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
             }
-            else if (n == "StretchPower" && KeepsStretchCards.Contains(name))
+            else if (simPowerName == "StretchPower" && KeepsStretchCards.Contains(name))
             {
                 // Cho Ki: your Stretch again, as much as you have (so the play keeps it).
-                actions.Add(new ApplyPowerAction(new PowerId(n), 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });
+                actions.Add(new ApplyPowerAction(new PowerId(simPowerName), 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });
             }
             else
             {
-                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(type)) { To = ApplyPowerAction.Where.You });
+                actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = ApplyPowerAction.Where.You });
             }
         }
         // Strength the card takes from enemies (this turn or for good) or gives them (Fight Me).

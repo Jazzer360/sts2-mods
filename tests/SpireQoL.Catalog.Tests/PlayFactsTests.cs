@@ -43,8 +43,8 @@ public class PlayFactsTests
     [Fact]
     public void EveryCardInTheGameHasFacts()
     {
-        var failed = EveryCard().Where(c => c.Error != null)
-            .Select(c => $"{c.Card.GetType().Name}: {c.Error!.GetType().Name} {c.Error.Message.Split('\n')[0]}").ToList();
+        var failed = EveryCard().Where(cardFacts => cardFacts.Error != null)
+            .Select(cardFacts => $"{cardFacts.Card.GetType().Name}: {cardFacts.Error!.GetType().Name} {cardFacts.Error.Message.Split('\n')[0]}").ToList();
         Assert.True(failed.Count == 0, string.Join("\n", failed));
     }
 
@@ -53,8 +53,8 @@ public class PlayFactsTests
     {
         // CardModel.GainsBlock: the game's own flag (its card glow, Stretch). A Power whose Block value is for later gains none
         // on play; Sovereign Blade only with Parry.
-        var wrong = EveryCard().Where(c => c.Facts != null && (c.Facts.BlockGains > 0) != c.Card.GainsBlock)
-            .Select(c => $"{c.Card.GetType().Name}: counted {c.Facts!.BlockGains}, the game says {c.Card.GainsBlock}").ToList();
+        var wrong = EveryCard().Where(cardFacts => cardFacts.Facts != null && (cardFacts.Facts.BlockGains > 0) != cardFacts.Card.GainsBlock)
+            .Select(cardFacts => $"{cardFacts.Card.GetType().Name}: counted {cardFacts.Facts!.BlockGains}, the game says {cardFacts.Card.GainsBlock}").ToList();
         Assert.True(wrong.Count == 0, string.Join("\n", wrong));
     }
 

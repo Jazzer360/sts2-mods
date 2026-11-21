@@ -29,16 +29,16 @@ public class CardScanTests
     public void EveryCardIsCountedOrReviewed()
     {
         var missing = Issues()
-            .Select(kv => (kv.Key, Single: kv.Value.Where(i => !i.StartsWith(CardCoverage.TeammatesOnly)).ToList()))
-            .Where(x => x.Single.Count > 0)
-            .Select(x => $"{x.Key}: {string.Join("; ", x.Single)}").OrderBy(s => s).ToList();
+            .Select(entry => (entry.Key, Single: entry.Value.Where(i => !i.StartsWith(CardCoverage.TeammatesOnly)).ToList()))
+            .Where(keySingle => keySingle.Single.Count > 0)
+            .Select(keySingle => $"{keySingle.Key}: {string.Join("; ", keySingle.Single)}").OrderBy(s => s).ToList();
         Assert.True(missing.Count == 0, "Cards the scan flags (count them in their rule, or add a Reviewed reason):\n" + string.Join("\n", missing));
     }
 
     [Fact]
     public void MultiplayerGapsAreTheKnownOnes()
     {
-        var found = Issues().Where(kv => kv.Value.Any(i => i.StartsWith(CardCoverage.TeammatesOnly))).Select(kv => kv.Key).OrderBy(n => n).ToArray();
+        var found = Issues().Where(entry => entry.Value.Any(i => i.StartsWith(CardCoverage.TeammatesOnly))).Select(entry => entry.Key).OrderBy(n => n).ToArray();
         Assert.Equal(KnownMultiplayerGaps, found);
     }
 

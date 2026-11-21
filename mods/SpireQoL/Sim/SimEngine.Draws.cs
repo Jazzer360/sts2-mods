@@ -77,7 +77,7 @@ public static partial class SimEngine
             {
                 simPlayer.HandCount--;
                 if (card.TurnEnd != null && simPlayer.TurnEndCards.IndexOf(card.TurnEnd) is var at and >= 0)
-                    simPlayer.TurnEndCards = simPlayer.TurnEndCards.Where((_, k) => k != at).ToList();
+                    simPlayer.TurnEndCards = simPlayer.TurnEndCards.Where((_, index) => index != at).ToList();
                 if (card.Fading) simPlayer.Fading--;
                 if (card.HexFading) simPlayer.HexFading--;
                 if (simPlayer.AutoHand != null) simPlayer.AutoHand = simPlayer.AutoHand.Where(handCard => handCard.Id != id).ToList();

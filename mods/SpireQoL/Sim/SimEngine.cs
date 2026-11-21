@@ -514,9 +514,9 @@ public static partial class SimEngine
         IEnumerable<SimState> states = new[] { state };
         if (simPlayer.Juggernaut > 0)
         {
-            var j = simPlayer.Juggernaut;
-            if (yours && log != null && state.Log) state.EndOfTurnDamage.Add(("Juggernaut", j));
-            states = HitRandom(state, _ => j, then: (branch, _) => branch.LogFired(PowerId.Juggernaut.Name, j, player));
+            var juggernaut = simPlayer.Juggernaut;
+            if (yours && log != null && state.Log) state.EndOfTurnDamage.Add(("Juggernaut", juggernaut));
+            states = HitRandom(state, _ => juggernaut, then: (branch, _) => branch.LogFired(PowerId.Juggernaut.Name, juggernaut, player));
         }
         // Beacon of Hope: half (whole block only) to every other living player; theirs can pass half of
         // that on once (the giver's is held while it gives, and the giver still gets block back).
@@ -551,7 +551,7 @@ public static partial class SimEngine
             // Thunder hits the evoke's target again if it's still alive.
             case OrbKind.Lightning:
                 if (listed && state.Targetable.Any()) state.EndOfTurnDamage.Add(("Lightning (evoked)", orb.Evoke));
-                return HitRandom(state, _ => orb.Evoke, then: (branch, enemy) => { var t = branch.Player(player)!.Thunder; if (t > 0 && enemy.Alive) { Damage(branch, enemy, t); branch.LogFired(PowerId.Thunder.Name, t, player); } });
+                return HitRandom(state, _ => orb.Evoke, then: (branch, enemy) => { var thunder = branch.Player(player)!.Thunder; if (thunder > 0 && enemy.Alive) { Damage(branch, enemy, thunder); branch.LogFired(PowerId.Thunder.Name, thunder, player); } });
             case OrbKind.Frost: return GainBlock(state, orb.Evoke, listed ? "Frost (evoked)" : null, player);
             case OrbKind.Dark:
             {
@@ -850,9 +850,9 @@ public static partial class SimEngine
                             if (orb.Passive > 0)
                             {
                                 orb = branch.MutablePlayer(player).OwnOrbs()[index];
-                                var v = orb.Passive;
-                                if (branch.Log) branch.EndOfTurnDamage.Add(("Glass (all)", v));
-                                HitAll(branch, _ => v);
+                                var passive = orb.Passive;
+                                if (branch.Log) branch.EndOfTurnDamage.Add(("Glass (all)", passive));
+                                HitAll(branch, _ => passive);
                                 orb.GlassBase = Math.Max(0, orb.GlassBase - 1);
                                 orb.Passive = Math.Max(0, orb.GlassBase + orb.GlassBonus);
                                 orb.Evoke = orb.Passive * 2; // GlassOrb.EvokeVal => PassiveVal * 2
@@ -943,10 +943,10 @@ public static partial class SimEngine
         if (pile.Top.Count > 0)
             return pile.Top[0].InvincibleBlock > 0 ? Play(state, pile.Top[0], pile.WithoutTop()) : new[] { state };
         var total = pile.RestCount;
-        var copies = pile.Rest.Select((group, i) => (group, i)).Where(x => x.group.Card.InvincibleBlock > 0).ToList();
+        var copies = pile.Rest.Select((group, index) => (group, index)).Where(x => x.group.Card.InvincibleBlock > 0).ToList();
         if (total == 0 || copies.Count == 0) return new[] { state };
         var result = new List<SimState>();
-        var other = total - copies.Sum(x => x.group.Count);
+        var other = total - copies.Sum(copy => copy.group.Count);
         foreach (var (copy, i) in copies)
         {
             var branch = state.Clone();
@@ -1048,7 +1048,7 @@ public static partial class SimEngine
         {
             OrbPassives(branches, player);
             ExplosionCheck(branches); // kills by orb passives
-            branches.Each(branch => branch.Player(player) is { } simPlayer && Exhausting(branch, simPlayer) is > 0 and var n && branch.TakesPart(player) ? ProcCardEvent(branch, CardEvent.Exhausted, n, player, indirect: false) : new[] { branch });
+            branches.Each(branch => branch.Player(player) is { } simPlayer && Exhausting(branch, simPlayer) is > 0 and var exhausting && branch.TakesPart(player) ? ProcCardEvent(branch, CardEvent.Exhausted, exhausting, player, indirect: false) : new[] { branch });
             branches.Do(branch => CardsActInHand(branch, player));
             ExplosionCheck(branches);
         }

@@ -109,7 +109,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         if (Sts2State.InCombat && _ctx.Settings.TrackerEnabled(Procs.ReturnToHand.MakeItSo) && MakeItSo(me) is { } mis) entries.Add((mis.Card, 3, mis.State));
 
         var index = 0;
-        foreach (var (model, _, state) in entries.OrderBy(e => e.Sort))
+        foreach (var (model, _, state) in entries.OrderBy(entry => entry.Sort))
         {
             if (!_rows.TryGetValue(model, out var row))
             {
@@ -141,9 +141,9 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         var fill = state.Color;
         if (state.Flash)
         {
-            var p = UiKit.Pulse(time, hz);
-            fill = fill.Lerp(Ready, p);
-            row.Root.Modulate = new Color(1, 1, 1, 0.65f + 0.35f * p);
+            var pulse = UiKit.Pulse(time, hz);
+            fill = fill.Lerp(Ready, pulse);
+            row.Root.Modulate = new Color(1, 1, 1, 0.65f + 0.35f * pulse);
         }
         else
         {
@@ -222,12 +222,12 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
     {
         var copies = Procs.ReturnToHand.Copies(me, Procs.ReturnToHand.MakeItSo).ToList();
         if (copies.Count == 0) return null;
-        var n = Procs.ReturnToHand.Every(copies[0].Card);
-        var filled = Procs.ReturnToHand.SkillsThisTurn(me) % n;
-        var outside = copies.Count(c => c.Pile != PileType.Hand);
-        var next = filled == n - 1;
-        var label = outside == 0 ? $"{filled}/{n} Skills (in hand)" : next ? $"{filled}/{n} Skills: back on the next" : $"{filled}/{n} Skills";
-        return (copies[0].Card, new RowState(filled, n, outside > 0 && next, PowerFill, label));
+        var every = Procs.ReturnToHand.Every(copies[0].Card);
+        var filled = Procs.ReturnToHand.SkillsThisTurn(me) % every;
+        var outside = copies.Count(copy => copy.Pile != PileType.Hand);
+        var next = filled == every - 1;
+        var label = outside == 0 ? $"{filled}/{every} Skills (in hand)" : next ? $"{filled}/{every} Skills: back on the next" : $"{filled}/{every} Skills";
+        return (copies[0].Card, new RowState(filled, every, outside > 0 && next, PowerFill, label));
     }
 
     private static Row MakeRow(AbstractModel model)

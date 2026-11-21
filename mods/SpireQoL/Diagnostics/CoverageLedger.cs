@@ -397,7 +397,7 @@ internal static partial class CoverageLedger
     private static Dictionary<Type, Entry> Build()
     {
         var hookSet = Hooks.ToHashSet();
-        var ledger = Generated.ToDictionary(g => (g.Folder, g.Type), g => g);
+        var ledger = Generated.ToDictionary(folderType => (folderType.Folder, folderType.Type), folderType => folderType);
         var result = new Dictionary<Type, Entry>();
         foreach (var type in ModelTypes())
         {
@@ -412,11 +412,11 @@ internal static partial class CoverageLedger
             {
                 continue;
             }
-            var known = ledger.TryGetValue((type.Namespace?.Split('.').Last() ?? "", type.Name), out var g);
+            var known = ledger.TryGetValue((type.Namespace?.Split('.').Last() ?? "", type.Name), out var folderType);
             if (!known && hooks.Length == 0) continue;
             Entry entry;
             if (!known) entry = new Entry(type.Name, Status.New, "not in the ledger (new in this game version?)", hooks);
-            else if (g.Hooks != hooks) entry = new Entry(type.Name, Status.Changed, $"hooks were {g.Hooks}, now {hooks}", hooks);
+            else if (folderType.Hooks != hooks) entry = new Entry(type.Name, Status.Changed, $"hooks were {folderType.Hooks}, now {hooks}", hooks);
             else if (Reviewed.TryGetValue(type.Name, out var why))
                 entry = new Entry(type.Name, why.StartsWith("gap:") ? Status.Gap : why.StartsWith("covered:") ? Status.Covered : Status.Ignored, why, hooks);
             else entry = new Entry(type.Name, Status.Unreviewed, "not reviewed", hooks);
@@ -432,7 +432,7 @@ internal static partial class CoverageLedger
         try { all = typeof(AbstractModel).Assembly.GetTypes(); }
         catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(type => type != null).ToArray()!; }
         return all.Where(type => type is { IsAbstract: false, IsClass: true } && typeof(AbstractModel).IsAssignableFrom(type)
-                              && Folders.Any(f => type.Namespace == "MegaCrit.Sts2.Core.Models." + f));
+                              && Folders.Any(folder => type.Namespace == "MegaCrit.Sts2.Core.Models." + folder));
     }
 
     /// <summary>
@@ -458,8 +458,8 @@ internal static partial class CoverageLedger
             foreach (var status in new[] { Status.New, Status.Changed, Status.Unreviewed })
                 if (by.TryGetValue(status, out var otherEntries))
                     log.Info($"[coverage] {status.ToString().ToLowerInvariant()}: {string.Join(", ", otherEntries.Select(entry => entry.Type))}");
-            foreach (var c in CardCoverage.Issues)
-                log.Info($"[coverage] card code: {c.Key}: {string.Join("; ", c.Value)}");
+            foreach (var entry in CardCoverage.Issues)
+                log.Info($"[coverage] card code: {entry.Key}: {string.Join("; ", entry.Value)}");
             if (!string.IsNullOrEmpty(game) && !ReviewedVersion(game))
             {
                 log.Warn($"[coverage] the game ({game}) isn't the version the mod's coverage was checked against ({LedgerGameVersion}): " +
@@ -610,7 +610,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         CheckRelicCards(type);
         CheckRelicRooms(type);
         var name = type.Name;
-        var listed = CoverageLedger.RelicFightHooks.Any(r => r.Type == name);
+        var listed = CoverageLedger.RelicFightHooks.Any(relicFightHook => relicFightHook.Type == name);
         if (!listed)
         {
             var outOfCombat = CoverageLedger.OutOfCombatHooks.ToHashSet();

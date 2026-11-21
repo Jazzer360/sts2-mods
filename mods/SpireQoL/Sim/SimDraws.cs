@@ -62,7 +62,7 @@ public sealed class SimDrawPile
     internal SimDrawPile WithoutOneOf(int i) => new()
     {
         Top = Top,
-        Rest = Rest.Select((group, j) => j == i ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
+        Rest = Rest.Select((group, index) => index == i ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
         Discard = Discard,
     };
 

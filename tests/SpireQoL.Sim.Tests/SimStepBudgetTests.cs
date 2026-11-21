@@ -24,7 +24,7 @@ public class SimStepBudgetTests
 
         Assert.False(outcome.Truncated);
         var byDamage = outcome.Branches.GroupBy(branch => 100 - branch.Enemy(0)!.HpAtTurnEnd).ToDictionary(g => g.Key, g => g.Sum(branch => branch.Weight) / outcome.Branches.Sum(branch => branch.Weight));
-        Assert.Equal(new[] { 0, 8, 16, 24, 32 }, byDamage.Keys.OrderBy(k => k).ToArray());
+        Assert.Equal(new[] { 0, 8, 16, 24, 32 }, byDamage.Keys.OrderBy(key => key).ToArray());
         Assert.Equal(6.0 / 16, byDamage[16], 6);
         Assert.Equal(1.0 / 16, byDamage[32], 6);
         Assert.All(outcome.Branches, branch => Assert.Equal(32, 200 - branch.Enemy(0)!.HpAtTurnEnd - branch.Enemy(1)!.HpAtTurnEnd));

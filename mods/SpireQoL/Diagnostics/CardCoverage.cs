@@ -206,7 +206,7 @@ internal static class CardCoverage
         if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !SimAdapter.TargetDamageCards.Contains(name))
             issues.Add("damages an enemy without attacking (not in the simulator: kills, lethal, Slippery)");
         // A second damage value (Timber's hit on every enemy after a kill): the simulator models the ones it knows.
-        if (card.DynamicVars.Any(kv => kv.Key != "Damage" && kv.Value is DamageVar) && !SimAdapter.OnKillHitAllCards.Contains(name))
+        if (card.DynamicVars.Any(entry => entry.Key != "Damage" && entry.Value is DamageVar) && !SimAdapter.OnKillHitAllCards.Contains(name))
             issues.Add("has a second damage value (not in the simulator: kills, lethal)");
         // A card that sets an enemy's HP (Judgement kills at or below a threshold): the simulator models the ones it knows.
         if (Calls("CreatureCmd", "SetCurrentHp") && !SimAdapter.ExecuteCards.Contains(name))
@@ -240,7 +240,7 @@ internal static class CardCoverage
         if (HookCalls(card.GetType()).Contains("CardPileCmd.Add") && !ReturnToHand.Modelled.Contains(name) && !ReturnToHand.NextTurn.Contains(name))
             issues.Add("moves a card from its own hooks (comes back to your hand? not counted: return tabs, hand size)");
         // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
-        if (calls.Any(c => c.EndsWith(".CreateCard<Sadness>")) && !PlayFacts.SadnessCards.Contains(name))
+        if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>")) && !PlayFacts.SadnessCards.Contains(name))
             issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");
         // Forging creates the Sovereign Blade through ForgeCmd, not in the card's own code.
         if (Calls("ForgeCmd", "Forge") && !PlayFacts.ForgeCards.Contains(name))

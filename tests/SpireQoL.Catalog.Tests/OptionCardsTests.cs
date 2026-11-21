@@ -65,9 +65,9 @@ public class OptionCardsTests
         var relics = typeof(RelicModel).Assembly.GetTypes().Where(type => !type.IsAbstract && typeof(RelicModel).IsAssignableFrom(type)).ToDictionary(type => type.Name);
         var uniform = "new:" + (int)MegaCrit.Sts2.Core.Runs.CardRarityOddsType.Uniform;
         Assert.Equal(new[] { (uniform, "Cards", ""), (uniform, "Cards", ""), (uniform, "Cards", "") }, Read(byName["ColorfulPhilosophers"]).RewardsRead);
-        Assert.All(Read(byName["InfestedAutomaton"]).RewardsRead, r => Assert.Equal(("ForNonCombatWithDefaultOdds", "1", ""), r));
+        Assert.All(Read(byName["InfestedAutomaton"]).RewardsRead, makerCount => Assert.Equal(("ForNonCombatWithDefaultOdds", "1", ""), makerCount));
         Assert.Equal(new[] { ("ForNonCombatWithUniformOdds", "8", "") }, Read(byName["RoomFullOfCheese"]).RewardsRead);
-        Assert.All(Read(relics["SeaGlass"]).RewardsRead, r => Assert.Equal(("ForNonCombatWithUniformOdds", "Cards/3", ""), r));
+        Assert.All(Read(relics["SeaGlass"]).RewardsRead, makerCount => Assert.Equal(("ForNonCombatWithUniformOdds", "Cards/3", ""), makerCount));
         // Glass Eye: one reward in a loop over its rarities, a pass per value.
         Assert.Equal(new[] { ("ForNonCombatWithUniformOdds", "3", "Common,Common,Uncommon,Uncommon,Rare") }, Read(relics["GlassEye"]).RewardsRead);
     }

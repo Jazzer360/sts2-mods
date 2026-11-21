@@ -51,7 +51,7 @@ public static class SimReaders
                 case "ImpaledPower":
                     name = "ImpaledPowerOther";
                     amount = SpireQoL.Procs.Fool.ArrowsIn(power);
-                    data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var tk and >= 0 and < 7 ? Math.Min(15, amount) << (4 * tk) : 0;
+                    data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var teammateIndex and >= 0 and < 7 ? Math.Min(15, amount) << (4 * teammateIndex) : 0;
                     amount = Math.Max(1, amount);
                     break;
                 case nameof(HailstormPower): data = Sts2State.Var(power, "FrostOrbs", 1); break;

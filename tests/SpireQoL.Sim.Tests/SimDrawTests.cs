@@ -17,7 +17,7 @@ public class SimDrawTests
     private static readonly SimDrawCard Burn = new("burn") { TurnEnd = new TurnEndCard("Burn", "Burn", 2) };
     private static readonly SimDrawCard EtherealBurn = new("ethereal burn") { TurnEnd = new TurnEndCard("Burn", "Burn", 2), Fading = true };
 
-    private static SimDrawPile Pile(params (SimDrawCard Card, int Count)[] rest) => new() { Rest = rest.Select(r => new SimDrawGroup(r.Card, r.Count)).ToList() };
+    private static SimDrawPile Pile(params (SimDrawCard Card, int Count)[] rest) => new() { Rest = rest.Select(cardCount => new SimDrawGroup(cardCount.Card, cardCount.Count)).ToList() };
 
     /// <summary>A card played from your hand that draws <paramref name="n"/>.</summary>
     private static SimPlay Draws(int n) => new()

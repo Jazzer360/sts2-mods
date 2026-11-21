@@ -110,9 +110,9 @@ public class SinglePlayerGoldenTests
     }
 
     /// <summary>What a single-player outcome says: every branch's numbers that predictions read, sorted.</summary>
-    private static string Fingerprint((SimState State, SimPlay? Play) sc)
+    private static string Fingerprint((SimState State, SimPlay? Play) statePlay)
     {
-        var outcome = SimEngine.Run(sc.State, sc.Play);
+        var outcome = SimEngine.Run(statePlay.State, statePlay.Play);
         var text = new StringBuilder();
         text.Append($"T{outcome.Truncated} K[{string.Join(",", outcome.KilledByPlayInAll.OrderBy(x => x))}|{string.Join(",", outcome.KilledByPlayInAny.OrderBy(x => x))}] ");
         text.Append($"B{outcome.PlayBlockGainsMax} {outcome.PlayKillsInAll} {outcome.PlayBreaksBlockInAll} R[{string.Join(",", outcome.BlockReactionInAny.OrderBy(x => x))}] ");

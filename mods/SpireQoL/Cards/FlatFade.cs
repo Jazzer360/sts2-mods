@@ -164,7 +164,7 @@ internal sealed class FlatFade
         foreach (var child in _container.GetChildren())
         {
             if (child is not CanvasItem canvasItem || child == _image || keep.Contains(child)) continue;
-            var i = _hidden.FindIndex(h => h.Node == canvasItem);
+            var i = _hidden.FindIndex(nodeAlpha => nodeAlpha.Node == canvasItem);
             if (i < 0)
             {
                 _hidden.Add((canvasItem, canvasItem.Modulate.A));
@@ -210,7 +210,7 @@ internal sealed class FlatFade
         var parts = new List<string>();
         Describe(root, keep, 0, "", parts);
         var hashCode = new HashCode();
-        foreach (var p in parts) hashCode.Add(p);
+        foreach (var part in parts) hashCode.Add(part);
         var s = hashCode.ToHashCode();
         return s == 0 ? 1 : s;
     }

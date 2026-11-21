@@ -18,12 +18,12 @@ public static class DrawnChance
     }
 
     /// <summary>The chance the tally is above 0 (Escape Plan: it drew a Skill).</summary>
-    public static double ChanceOfAny(SortedDictionary<int, double> d) => d.Where(kv => kv.Key > 0).Sum(kv => kv.Value) / Total(d);
+    public static double ChanceOfAny(SortedDictionary<int, double> d) => d.Where(entry => entry.Key > 0).Sum(entry => entry.Value) / Total(d);
 
     /// <summary>The most likely tally and its chance; a tie goes to the higher tally.</summary>
     public static (int Tally, double Chance) MostLikely(SortedDictionary<int, double> d)
     {
-        var best = d.OrderByDescending(kv => Math.Round(kv.Value, 9)).ThenByDescending(kv => kv.Key).First();
+        var best = d.OrderByDescending(entry => Math.Round(entry.Value, 9)).ThenByDescending(entry => entry.Key).First();
         return (best.Key, best.Value / Total(d));
     }
 

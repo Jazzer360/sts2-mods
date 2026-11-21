@@ -157,7 +157,7 @@ public sealed class MovableWidget
         _layout.FollowGame == _default.FollowGame && _layout.CustomPin == _default.CustomPin && _layout.Anchor == _default.Anchor
         && Mathf.IsEqualApprox(_layout.OffsetX, _default.OffsetX) && Mathf.IsEqualApprox(_layout.OffsetY, _default.OffsetY);
 
-    private bool Attached => _layout.FollowGame && _attach.Any(a => !a.DefaultOnly);
+    private bool Attached => _layout.FollowGame && _attach.Any(targetSide => !targetSide.DefaultOnly);
 
     // ---------- placement ----------
 
@@ -228,8 +228,8 @@ public sealed class MovableWidget
         if (_dragging) return;
 
         var size = Root.Size * scale;
-        if (Placement(size) is not { } p) return;
-        var pos = TopLeft(p.Ref + new Vector2(_layout.OffsetX, _layout.OffsetY), p.Pin, size);
+        if (Placement(size) is not { } placement) return;
+        var pos = TopLeft(placement.Ref + new Vector2(_layout.OffsetX, _layout.OffsetY), placement.Pin, size);
         Root.Position = Clamp(pos, size, host.ViewportSize);
     }
 
@@ -257,8 +257,8 @@ public sealed class MovableWidget
     private void StoreCurrentPosition()
     {
         var size = Root.Size * Root.Scale;
-        if (Placement(size, forStoring: true) is not { } p) return;
-        var off = PinPoint(Root.Position, p.Pin, size) - p.Ref;
+        if (Placement(size, forStoring: true) is not { } placement) return;
+        var off = PinPoint(Root.Position, placement.Pin, size) - placement.Ref;
         _layout.OffsetX = off.X;
         _layout.OffsetY = off.Y;
         _host.RaiseLayoutChanged();

@@ -124,7 +124,7 @@ public class SimReviewTests
         state.You.ConsumingShadow = 1;
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(0, branch.Taken);
-        Assert.Equal(7, branch.EndOfTurnBlock.Sum(x => x.Amount));
+        Assert.Equal(7, branch.EndOfTurnBlock.Sum(nameAmount => nameAmount.Amount));
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class SimReviewTests
         state.You.OrbCapacity = 3;
         state.You.ConsumingShadow = 1;
         var branch = SimEngine.Run(state).Worst;
-        Assert.Equal(11, branch.EndOfTurnDamage.Sum(x => x.Amount));
+        Assert.Equal(11, branch.EndOfTurnDamage.Sum(nameAmount => nameAmount.Amount));
     }
 
     [Fact]

@@ -660,7 +660,7 @@ public sealed class SimState
     internal SimWork? Work;
 
     /// <summary>A player by id (Who.You, Who.Teammate(k)); null for any other creature, or a teammate not in this fight.</summary>
-    public SimPlayer? Player(int id) => id == Who.You ? You : Who.TeammateIndex(id) is var k and >= 0 && k < Teammates.Count ? Teammates[k] : null;
+    public SimPlayer? Player(int id) => id == Who.You ? You : Who.TeammateIndex(id) is var teammateIndex and >= 0 && teammateIndex < Teammates.Count ? Teammates[teammateIndex] : null;
 
     /// <summary>A player by id, to change (a teammate shared between branches is copied for this branch first).</summary>
     public SimPlayer MutablePlayer(int id) => id == Who.You ? You : MutableTeammate(Who.TeammateIndex(id));

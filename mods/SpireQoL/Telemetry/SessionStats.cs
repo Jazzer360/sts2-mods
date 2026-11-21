@@ -252,8 +252,8 @@ public sealed class SessionStats
                 }
             }
             static Dictionary<string, int> Top(Dictionary<string, int> d)
-                => d.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(MaxReasons)
-                    .ToDictionary(kv => kv.Key, kv => kv.Value);
+                => d.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.Ordinal).Take(MaxReasons)
+                    .ToDictionary(entry => entry.Key, entry => entry.Value);
             AuditSummary Audit(AuditCounts auditCounts, int skipped, Dictionary<string, int> reasons)
                 => new(auditCounts.Checked, auditCounts.Matched, skipped, Top(reasons), Top(auditCounts.Mismatches));
             var gcSummary = new GcSummary(
@@ -268,7 +268,7 @@ public sealed class SessionStats
                 Combats = _combats, Turns = turns, Clean = clean, Unchecked = unchecked_, Capped = capped, Mismatched = mismatched,
                 Forecast = Audit(_forecast, forecastSkipped, forecastSkipReasons),
                 Plays = Audit(_plays, _plays.Skipped, _plays.SkipReasons),
-                Others = _others.OrderBy(kv => kv.Key, StringComparer.Ordinal).ToDictionary(kv => kv.Key, kv => Audit(kv.Value, kv.Value.Skipped, kv.Value.SkipReasons)),
+                Others = _others.OrderBy(entry => entry.Key, StringComparer.Ordinal).ToDictionary(entry => entry.Key, entry => Audit(entry.Value, entry.Value.Skipped, entry.Value.SkipReasons)),
                 Searches = new SearchSummary(_searches, _background, _cancelled, _copies, _cancelledCopies, _maxHeld, _slowestSearch,
                     _searchMs.Summary(), Top(_caps)),
                 Waits = new WaitSummary(_waitsMissed, _waitMs.Summary()),

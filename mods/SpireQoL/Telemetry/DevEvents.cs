@@ -12,12 +12,12 @@ public abstract record DevEvent
 
     internal static string KindOf(Type type)
     {
-        var n = type.Name;
-        var text = new System.Text.StringBuilder(n.Length + 4);
-        for (var i = 0; i < n.Length; i++)
+        var name = type.Name;
+        var text = new System.Text.StringBuilder(name.Length + 4);
+        for (var i = 0; i < name.Length; i++)
         {
-            if (char.IsUpper(n[i]) && i > 0) text.Append('-');
-            text.Append(char.ToLowerInvariant(n[i]));
+            if (char.IsUpper(name[i]) && i > 0) text.Append('-');
+            text.Append(char.ToLowerInvariant(name[i]));
         }
         return text.ToString();
     }

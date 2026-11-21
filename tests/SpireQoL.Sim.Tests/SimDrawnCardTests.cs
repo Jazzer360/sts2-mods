@@ -16,7 +16,7 @@ public class SimDrawnCardTests
     private static readonly SimDrawCard Burn = new("burn") { Free = false, TurnEnd = new TurnEndCard("Burn", "Burn", 2) };
     private static readonly SimDrawCard SlyCard = new("sly") { Free = false, Sly = true };
 
-    private static SimDrawPile Pile(params (SimDrawCard Card, int Count)[] rest) => new() { Rest = rest.Select(r => new SimDrawGroup(r.Card, r.Count)).ToList() };
+    private static SimDrawPile Pile(params (SimDrawCard Card, int Count)[] rest) => new() { Rest = rest.Select(cardCount => new SimDrawGroup(cardCount.Card, cardCount.Count)).ToList() };
 
     private static SimState You(SimDrawPile pile, int hand = 5)
     {
@@ -104,10 +104,10 @@ public class SimDrawnCardTests
             d[t] = d.GetValueOrDefault(t) + p * others / left;
             p *= (double)(attacks - t) / left;
         }
-        return d.Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => kv.Value);
+        return d.Where(entry => entry.Value > 0).ToDictionary(entry => entry.Key, entry => entry.Value);
     }
 
-    private static double Choose(int n, int k) => k < 0 || k > n ? 0 : Enumerable.Range(1, k).Aggregate(1.0, (a, i) => a * (n - k + i) / i);
+    private static double Choose(int n, int k) => k < 0 || k > n ? 0 : Enumerable.Range(1, k).Aggregate(1.0, (a, index) => a * (n - k + index) / index);
 
     private static void SameOdds(Dictionary<int, double> expected, SimOutcome outcome, string what)
     {
@@ -164,7 +164,7 @@ public class SimDrawnCardTests
             if (others > 0) pile.Add((Burn, others));
             var outcome = SimEngine.Run(You(Pile(pile.ToArray()), hand: 1), Playing("Scrape", new DrawnCardAction(4) { DiscardUnlessFree = true }));
             var expected = Enumerable.Range(0, draws + 1).ToDictionary(f => f, f => Choose(free, f) * Choose(others, draws - f) / Choose(n, draws));
-            SameOdds(expected.Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => kv.Value), outcome, $"{free} free, {others} others");
+            SameOdds(expected.Where(entry => entry.Value > 0).ToDictionary(entry => entry.Key, entry => entry.Value), outcome, $"{free} free, {others} others");
         }
     }
 
@@ -206,11 +206,11 @@ public class SimDrawnCardTests
     /// <summary>A Strike as the adapter builds its auto-play: 6 damage at each enemy it could be aimed at.</summary>
     private static SimDrawCard HellStrike(params int[] targets) => new("strike") { Type = SimCardType.Attack, Strike = true, Auto = new SimHandCard
     {
-        Name = "StrikeIronclad", IsAttack = true, Plays = targets.Select(t => new SimPlay
+        Name = "StrikeIronclad", IsAttack = true, Plays = targets.Select(target => new SimPlay
         {
-            Name = "StrikeIronclad", IsAttack = true, AutoPlay = true, HandDelta = -1, TargetId = t,
-            Card = new SimCardPlay(new SimCard("StrikeIronclad", SimCardType.Attack), Who.You, t, 0, 1, true),
-            Body = { new AttackAction(1, SimPlay.Target.Single, new DamageSpec(0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [t] = 6 }, Fixed = true }) },
+            Name = "StrikeIronclad", IsAttack = true, AutoPlay = true, HandDelta = -1, TargetId = target,
+            Card = new SimCardPlay(new SimCard("StrikeIronclad", SimCardType.Attack), Who.You, target, 0, 1, true),
+            Body = { new AttackAction(1, SimPlay.Target.Single, new DamageSpec(0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [target] = 6 }, Fixed = true }) },
         }).ToList(),
     } };
 

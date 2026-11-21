@@ -314,7 +314,7 @@ public sealed partial class SettingsMenu
             void Option(string text, params (RelicModel?, bool, string?)[] relics)
             {
                 var row = UiKit.Row(10);
-                row.AddChild(RunRemindersFeature.ExampleEventIcons(relics.Where(r => r.Item1 != null).Select(r => (r.Item1!, r.Item2, r.Item3))));
+                row.AddChild(RunRemindersFeature.ExampleEventIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
                 var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
                 option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), 6, 12));
                 option.AddChild(UiKit.Label(text, 18, Colors.White));
@@ -357,7 +357,7 @@ public sealed partial class SettingsMenu
             void Legend(string room, params (RelicModel?, bool, string?)[] relics)
             {
                 var row = UiKit.Row(10);
-                row.AddChild(RunRemindersFeature.ExamplePathIcons(relics.Where(r => r.Item1 != null).Select(r => (r.Item1!, r.Item2, r.Item3))));
+                row.AddChild(RunRemindersFeature.ExamplePathIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
                 var name = UiKit.Label(room, 20, Colors.White);
                 name.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
                 row.AddChild(name);

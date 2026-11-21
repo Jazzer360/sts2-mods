@@ -199,7 +199,7 @@ public sealed class CardOverlayRenderer
         var layer = PlaceTagLayer(entry, size);
         ApplyTabs(entry, decor.Tabs, layer);
 
-        if (decor.Opacity is { } a) Fade(entry, a);
+        if (decor.Opacity is { } opacity) Fade(entry, opacity);
         else if (entry.TouchedAlpha) Unfade(entry);
     }
 

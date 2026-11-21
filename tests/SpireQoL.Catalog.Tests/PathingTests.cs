@@ -20,8 +20,8 @@ public class PathingTests
         var missing = Models()
             .Where(type => ChoiceReminders.For(type.Name) is not { Map: not PathRoom.None } && !ChoiceReminders.MapReviewed.ContainsKey(type.Name))
             .Select(type => (type.Name, Hooks: SpireQoL.Diagnostics.CoverageWatch.RoomTestingHooks(type)))
-            .Where(x => x.Hooks.Count > 0)
-            .Select(x => $"{x.Name}: {string.Join("; ", x.Hooks)}").ToList();
+            .Where(nameHooks => nameHooks.Hooks.Count > 0)
+            .Select(nameHooks => $"{nameHooks.Name}: {string.Join("; ", nameHooks.Hooks)}").ToList();
         Assert.True(missing.Count == 0, "Room tests with no Map rule or reason:\n" + string.Join("\n", missing));
     }
 

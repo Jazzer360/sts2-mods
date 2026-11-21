@@ -95,7 +95,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             Close();
             if (__instance.IsLocked || __instance.WasChosen || RunMe() is not { } me) return;
             var window = new Window { Option = __instance, Effects = EffectsOf(__instance), Me = me, Start = Before.Of(me) };
-            window.Shown = IconsFor(__instance, me).Select(i => i.Relic).ToHashSet();
+            window.Shown = IconsFor(__instance, me).Select(relicCrossed => relicCrossed.Relic).ToHashSet();
             foreach (var relic in me.Relics)
             {
                 if (ChoiceReminders.For(relic.GetType().Name) is not { On: not ChoiceEffect.None }) continue;
@@ -403,7 +403,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var problems = new List<(string Key, string Text)>();
         if (added != rewardWatch.PerPick) problems.Add(("cards", $"{added} cards joined the deck, predicted {rewardWatch.PerPick}"));
         var gold = me.Gold - rewardWatch.Start.Gold;
-        if (rewardWatch.FyshGold is { } g && gold != g) problems.Add((nameof(LuckyFysh), $"Lucky Fysh: gold +{gold}, predicted +{g}"));
+        if (rewardWatch.FyshGold is { } fyshGold && gold != fyshGold) problems.Add((nameof(LuckyFysh), $"Lucky Fysh: gold +{gold}, predicted +{fyshGold}"));
         if (rewardWatch.BookHeals is { } heals && me.Relics.OfType<BookOfFiveRings>().FirstOrDefault() is { } book)
         {
             var now = Sts2State.Private(book, "CardsAdded", -1);
@@ -415,12 +415,12 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         }
         CheckCardRules(me, me.Deck.Cards.Where(card => !rewardWatch.Start.Deck.Contains(card)).ToList(), false, null, "card reward");
         var what = $"card reward: {added} added (predicted {rewardWatch.PerPick}), gold {rewardWatch.Start.Gold}→{me.Gold}";
-        ModEntry.Log.Info($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(p => p.Text)))}");
+        ModEntry.Log.Info($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(problem => problem.Text)))}");
         Telemetry.Audits.Done(Telemetry.Audits.Reminders, problems.Count == 0, problems.Count == 0 ? "card reward" : "reminder-reward");
         if (problems.Count > 0)
         {
-            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", $"Card reward tabs were wrong: {string.Join(", ", problems.Select(p => p.Key))}",
-                new[] { "reminder-reward" }.Concat(problems.Select(p => p.Key)), what + "\n" + string.Join("\n", problems.Select(p => p.Text)));
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", $"Card reward tabs were wrong: {string.Join(", ", problems.Select(problem => problem.Key))}",
+                new[] { "reminder-reward" }.Concat(problems.Select(problem => problem.Key)), what + "\n" + string.Join("\n", problems.Select(problem => problem.Text)));
         }
     }
 
@@ -435,8 +435,8 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         {
             if (!GodotObject.IsInstanceValid(button)) continue;
             var icons = me != null && button.Option is { IsLocked: false, IsProceed: false } option
-                ? IconsFor(option, me).Where(i => _ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, i.Relic.GetType().Name)))
-                    .Select(i => (i.Relic, i.Crossed, _ctx.Settings.ShowEventOdds ? i.Odds : null)).ToList()
+                ? IconsFor(option, me).Where(relicCrossed => _ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, relicCrossed.Relic.GetType().Name)))
+                    .Select(relicCrossed => (relicCrossed.Relic, relicCrossed.Crossed, _ctx.Settings.ShowEventOdds ? relicCrossed.Odds : null)).ToList()
                 : new List<(RelicModel Relic, bool Crossed, string? Odds)>();
             Show(button, icons);
             ShowInspect(button, me);
@@ -474,7 +474,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     private static void Show(NEventOptionButton button, List<(RelicModel Relic, bool Crossed, string? Odds)> icons)
     {
         var box = button.GetNodeOrNull<HBoxContainer>(NodeName);
-        var key = string.Join(",", icons.Select(i => i.Relic.GetType().Name + (i.Crossed ? "x" : "") + i.Odds));
+        var key = string.Join(",", icons.Select(icon => icon.Relic.GetType().Name + (icon.Crossed ? "x" : "") + icon.Odds));
         if (icons.Count == 0)
         {
             box?.QueueFree();
@@ -588,7 +588,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var price = Sts2State.Private<Control?>(slot, "_costLabel", null);
         if (price == null || !GodotObject.IsInstanceValid(price)) return;
         var box = price.GetNodeOrNull<Control>(ShopNodeName);
-        var key = string.Join(",", icons.Select(i => i.Relic.GetType().Name + (i.Crossed ? "x" : ""))) + "|" + net;
+        var key = string.Join(",", icons.Select(icon => icon.Relic.GetType().Name + (icon.Crossed ? "x" : ""))) + "|" + net;
         if (icons.Count == 0)
         {
             box?.QueueFree();
@@ -640,14 +640,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         {
             if (control is Label label && label.GetThemeFont("font") is { } font)
             {
-                var w = font.GetStringSize(label.Text, HorizontalAlignment.Left, -1, label.GetThemeFontSize("font_size")).X;
+                var otherX = font.GetStringSize(label.Text, HorizontalAlignment.Left, -1, label.GetThemeFontSize("font_size")).X;
                 var x = label.HorizontalAlignment switch
                 {
-                    HorizontalAlignment.Center => (label.Size.X - w) / 2,
-                    HorizontalAlignment.Right => label.Size.X - w,
+                    HorizontalAlignment.Center => (label.Size.X - otherX) / 2,
+                    HorizontalAlignment.Right => label.Size.X - otherX,
                     _ => 0f,
                 };
-                return (x, w);
+                return (x, otherX);
             }
         }
         catch { /* unreadable font: the whole label */ }
@@ -762,19 +762,19 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// </summary>
     private void TickShopWatch()
     {
-        if (_shopWatch is not { } w) return;
-        if (w.Frames < 90)
+        if (_shopWatch is not { } entryGoldBefore) return;
+        if (entryGoldBefore.Frames < 90)
         {
-            _shopWatch = w with { Frames = w.Frames + 1 };
+            _shopWatch = entryGoldBefore with { Frames = entryGoldBefore.Frames + 1 };
             return;
         }
         _shopWatch = null;
         if (RunMe() is not { } me) return;
-        var paid = w.GoldBefore - me.Gold;
-        var what = $"shop: bought {w.Entry.GetType().Name}, gold {w.GoldBefore}→{me.Gold}, predicted net {w.Net}";
-        ModEntry.Log.Info($"[audit] [reminders] {what}{(paid == w.Net ? ", matched" : "")}");
-        Telemetry.Audits.Done(Telemetry.Audits.Reminders, paid == w.Net, paid == w.Net ? "shop" : "reminder-shop");
-        if (paid != w.Net)
+        var paid = entryGoldBefore.GoldBefore - me.Gold;
+        var what = $"shop: bought {entryGoldBefore.Entry.GetType().Name}, gold {entryGoldBefore.GoldBefore}→{me.Gold}, predicted net {entryGoldBefore.Net}";
+        ModEntry.Log.Info($"[audit] [reminders] {what}{(paid == entryGoldBefore.Net ? ", matched" : "")}");
+        Telemetry.Audits.Done(Telemetry.Audits.Reminders, paid == entryGoldBefore.Net, paid == entryGoldBefore.Net ? "shop" : "reminder-shop");
+        if (paid != entryGoldBefore.Net)
         {
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", "Shop net price after Lucky Fysh was wrong",
                 new[] { "reminder-shop", nameof(LuckyFysh) }, what);
@@ -891,7 +891,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                 else if (v != null && field.FieldType.IsValueType && !field.FieldType.IsPrimitive && !field.FieldType.IsEnum)
                     foreach (var inner in field.FieldType.GetFields(bindingFlags))
                     {
-                        try { if (inner.GetValue(v) is Delegate d2) found.AddRange(d2.GetInvocationList()); } catch { }
+                        try { if (inner.GetValue(v) is Delegate value) found.AddRange(value.GetInvocationList()); } catch { }
                     }
             }
         }

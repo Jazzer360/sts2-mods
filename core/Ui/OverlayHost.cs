@@ -122,7 +122,7 @@ public sealed class OverlayHost
     {
         foreach (var (part, partMs, partKb) in _parts)
         {
-            var i = _featureMs.FindIndex(x => x.Id == part);
+            var i = _featureMs.FindIndex(featureM => featureM.Id == part);
             if (i >= 0) _featureMs[i] = (part, _featureMs[i].Ms + partMs);
             else _featureMs.Add((part, partMs));
             var j = _featureKb.FindIndex(x => x.Id == part);
@@ -236,7 +236,7 @@ public sealed class OverlayHost
         var times = FeatureTimes();
         _log.Warn($"[perf] slow frame: the mod took {modMs:0} ms ({times})");
         if (modMs <= ReportModFrameMs) return;
-        var top = _featureMs.OrderByDescending(x => x.Ms).FirstOrDefault().Id ?? "?";
+        var top = _featureMs.OrderByDescending(featureM => featureM.Ms).FirstOrDefault().Id ?? "?";
         var n = _slowByFeature[top] = (_slowByFeature.TryGetValue(top, out var prev) ? prev : 0) + 1;
         // A freeze (a second or more) is reported the first time: no warm-up takes that long.
         if (n < 2 && modMs < FreezeMs) return;
@@ -283,7 +283,7 @@ public sealed class OverlayHost
     }
 
     private string FeatureTimes()
-        => string.Join(", ", _featureMs.Where(x => x.Ms >= 1).OrderByDescending(x => x.Ms).Select(x => $"{x.Id} {x.Ms:0} ms")) is { Length: > 0 } s ? s : "spread thin";
+        => string.Join(", ", _featureMs.Where(featureM => featureM.Ms >= 1).OrderByDescending(featureM => featureM.Ms).Select(featureM => $"{featureM.Id} {featureM.Ms:0} ms")) is { Length: > 0 } s ? s : "spread thin";
 
     private void RunFrame()
     {
@@ -306,7 +306,7 @@ public sealed class OverlayHost
 
         foreach (var (id, feature) in _features)
         {
-            if (_errors.TryGetValue(id, out var n) && n >= MaxErrorsBeforeDisable)
+            if (_errors.TryGetValue(id, out var error) && error >= MaxErrorsBeforeDisable)
             {
                 continue;
             }
@@ -395,18 +395,18 @@ public sealed class OverlayHost
             catch { target = null; }
         }
         // A game node that's about to be freed (it, or something above it, queued) is no place to stay (decision #102).
-        if (target is { } q && QueuedForDeletion(q.Parent)) target = null;
+        if (target is { } parentIndex && QueuedForDeletion(parentIndex.Parent)) target = null;
 
-        if (target is { } t && GodotObject.IsInstanceValid(t.Parent))
+        if (target is { } otherParentIndex && GodotObject.IsInstanceValid(otherParentIndex.Parent))
         {
-            if (WidgetRoot.GetParent() != t.Parent)
+            if (WidgetRoot.GetParent() != otherParentIndex.Parent)
             {
-                WidgetRoot.Reparent(t.Parent, keepGlobalTransform: false);
-                Watch(t.Parent);
+                WidgetRoot.Reparent(otherParentIndex.Parent, keepGlobalTransform: false);
+                Watch(otherParentIndex.Parent);
             }
             // Keep it directly before the target index (the hand), so the hand draws on top.
-            var want = Math.Max(0, t.Index - (WidgetRoot.GetIndex() < t.Index ? 1 : 0));
-            if (WidgetRoot.GetIndex() != want) t.Parent.MoveChild(WidgetRoot, want);
+            var want = Math.Max(0, otherParentIndex.Index - (WidgetRoot.GetIndex() < otherParentIndex.Index ? 1 : 0));
+            if (WidgetRoot.GetIndex() != want) otherParentIndex.Parent.MoveChild(WidgetRoot, want);
         }
         else if (WidgetRoot.GetParent() != Layer)
         {

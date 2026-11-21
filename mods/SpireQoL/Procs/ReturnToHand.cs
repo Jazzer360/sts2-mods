@@ -79,8 +79,8 @@ internal static class ReturnToHand
             foreach (var (otherCard, pile) in Copies(me, MakeItSo))
             {
                 if (pile == PileType.Hand || ReferenceEquals(otherCard, card)) continue;
-                var n = Every(otherCard);
-                if (Enumerable.Range(1, plays).Any(i => (skills + i) % n == 0)) Add(otherCard);
+                var every = Every(otherCard);
+                if (Enumerable.Range(1, plays).Any(i => (skills + i) % every == 0)) Add(otherCard);
             }
         }
         int energy;

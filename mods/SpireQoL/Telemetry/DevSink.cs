@@ -47,7 +47,7 @@ public sealed class FrameWindow
         if (modMs > SessionStats.SlowModFrameMs) _slow++;
         foreach (var (id, ms) in features)
         {
-            var f = _features.TryGetValue(id, out var v) ? v : (0, 0);
+            var f = _features.TryGetValue(id, out var feature) ? feature : (0, 0);
             _features[id] = (f.Sum + ms, Math.Max(f.Max, ms));
         }
         foreach (var (id, k) in kb) _kb[id] = _kb.GetValueOrDefault(id) + k;
@@ -61,8 +61,8 @@ public sealed class FrameWindow
         static double R(double v) => Math.Round(v, 2);
         var n = Math.Max(1, _mod.Count);
         var frameRollup = new FrameRollup(R(seconds), _mod.Count, R(At(0.5)), R(At(0.95)), R(_mod.Count == 0 ? 0 : _mod[^1]), R(_gapMax), _slow,
-            _features.ToDictionary(kv => kv.Key, kv => R(kv.Value.Sum / n)), _features.ToDictionary(kv => kv.Key, kv => R(kv.Value.Max)),
-            _kb.ToDictionary(kv => kv.Key, kv => R(kv.Value / n)),
+            _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Sum / n)), _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Max)),
+            _kb.ToDictionary(entry => entry.Key, entry => R(entry.Value / n)),
             R(extra.HeapMb), R(extra.AllocatedMb), extra.Gen0, extra.Gen1, extra.Gen2, R(extra.GcPauseMs), extra.Held, extra.Searching);
         _mod.Clear();
         _gapMax = 0;
@@ -184,10 +184,10 @@ public sealed class DevSink : IDisposable
                     streamWriter.Write('\n');
                 }
             }
-            while (_files.TryDequeue(out var f))
+            while (_files.TryDequeue(out var pathText))
             {
-                if (f.Append) File.AppendAllText(f.Path, f.Text);
-                else File.WriteAllText(f.Path, f.Text);
+                if (pathText.Append) File.AppendAllText(pathText.Path, pathText.Text);
+                else File.WriteAllText(pathText.Path, pathText.Text);
             }
             if (Interlocked.Exchange(ref _state, null) is { } state)
             {
@@ -210,7 +210,7 @@ public sealed class DevSink : IDisposable
     {
         try
         {
-            foreach (var old in Directory.EnumerateFiles(_dir, "stream-*.jsonl").OrderByDescending(f => f, StringComparer.Ordinal).Skip(KeepStreams - 1))
+            foreach (var old in Directory.EnumerateFiles(_dir, "stream-*.jsonl").OrderByDescending(enumerateFile => enumerateFile, StringComparer.Ordinal).Skip(KeepStreams - 1))
                 File.Delete(old);
         }
         catch (Exception ex)

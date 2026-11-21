@@ -60,5 +60,5 @@ public static class CardOdds
     }
 
     /// <summary>Several independent rewards (Colorful Philosophers' three): the chance at least one of them matches.</summary>
-    public static double AnyOf(IEnumerable<double> chances) => 1 - chances.Aggregate(1.0, (none, p) => none * (1 - p));
+    public static double AnyOf(IEnumerable<double> chances) => 1 - chances.Aggregate(1.0, (none, chance) => none * (1 - chance));
 }

@@ -41,7 +41,7 @@ public static partial class SimEngine
         state.Log && state.EndOfTurnNow && owner == Who.You ? label ?? Title(state, owner, name) : null;
 
     /// <summary>A relic's or power's name as the game shows it (SimState.Titles), or its class name.</summary>
-    public static string Title(SimState state, int owner, string name) => state.Titles.TryGetValue($"{owner}:{name}", out var t) ? t : name;
+    public static string Title(SimState state, int owner, string name) => state.Titles.TryGetValue($"{owner}:{name}", out var title) ? title : name;
 
     /// <summary>A player's last orb is evoked and goes (OrbCmd.EvokeLast: Consuming Shadow).</summary>
     public static IEnumerable<SimState> EvokeLast(SimState state, int player)

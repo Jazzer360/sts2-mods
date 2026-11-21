@@ -183,7 +183,7 @@ public sealed class ErrorReporter
         {
             string budget;
             try { budget = BudgetKey?.Invoke() ?? ""; } catch { budget = ""; }
-            var used = _counts.TryGetValue(budget, out var n) ? n : 0;
+            var used = _counts.TryGetValue(budget, out var count) ? count : 0;
             if (used >= MaxPerSession || !_sent.Add(key)) return;
             _counts[budget] = used + 1;
         }
@@ -283,8 +283,8 @@ public sealed class ErrorReporter
     private static LocalReport ToLocal(SentryEvent evt, string[] fingerprint, Exception? ex)
     {
         var title = evt.Message?.Formatted ?? (ex != null ? $"{ex.GetType().Name}: {ex.Message}" : string.Join(" ", fingerprint));
-        var tags = evt.Tags.ToDictionary(kv => kv.Key, kv => kv.Value);
-        var extra = evt.Extra.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? "");
+        var tags = evt.Tags.ToDictionary(entry => entry.Key, entry => entry.Value);
+        var extra = evt.Extra.ToDictionary(entry => entry.Key, entry => entry.Value?.ToString() ?? "");
         return new LocalReport($"{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid().ToString("N")[..6]}", DateTime.UtcNow,
             tags.GetValueOrDefault("kind") ?? fingerprint[0], title, fingerprint, tags, extra, ex?.ToString());
     }

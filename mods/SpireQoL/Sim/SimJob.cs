@@ -43,7 +43,7 @@ public sealed class SimJob
     public static string? CapSummary()
     {
         if (Caps.IsEmpty) return null;
-        var line = string.Join(", ", Caps.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"));
+        var line = string.Join(", ", Caps.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"));
         Caps.Clear();
         return line;
     }
@@ -123,7 +123,7 @@ public sealed class SimJob
             if (outcome.Truncated)
             {
                 var cap = outcome.CapHit ?? "a cap";
-                Caps.AddOrUpdate(cap, 1, (_, n) => n + 1);
+                Caps.AddOrUpdate(cap, 1, (_, index) => index + 1);
                 var line = $"[sim] cap: searching {_label} hit {cap} ({SimWork.MaxHeldStates:N0} states held by every search together, {SimWork.MaxCopies:N0} copies each): " +
                            $"stopped after {outcome.Steps} steps, {outcome.Copies} copies, holding at most {outcome.PeakHeld} states, after {clock.Elapsed.TotalMilliseconds:F1} ms";
                 Pending.Enqueue((line, null));
@@ -155,10 +155,10 @@ public sealed class SimJob
     /// <summary>Writes the workers' log lines, and reports their failures (call from the main thread).</summary>
     public static void FlushLog(Action<string> log, Action<Exception>? report = null, Action<CapHit>? cap = null)
     {
-        while (Pending.TryDequeue(out var e))
+        while (Pending.TryDequeue(out var lineError))
         {
-            log(e.Line);
-            if (e.Error != null) report?.Invoke(e.Error);
+            log(lineError.Line);
+            if (lineError.Error != null) report?.Invoke(lineError.Error);
         }
         while (CapsHit.TryDequeue(out var capHit)) cap?.Invoke(capHit);
     }

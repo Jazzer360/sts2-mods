@@ -24,10 +24,10 @@ public class MoveBranchTests
         }
     }
 
-    private static List<MovePowers.Call> Of(string key) => MovePowers.CallsOf(Moves().Single(x => x.Key == key).Method);
+    private static List<MovePowers.Call> Of(string key) => MovePowers.CallsOf(Moves().Single(move => move.Key == key).Method);
 
     private static string Describe(List<MovePowers.Call> calls) =>
-        string.Join(", ", calls.Select(call => (call.Certain ? "" : "?") + call.Power.Name + (call.Constant is { } k ? " " + k : "")));
+        string.Join(", ", calls.Select(call => (call.Certain ? "" : "?") + call.Power.Name + (call.Constant is { } constant ? " " + constant : "")));
 
     [Fact]
     public void PowersOnEveryPathAreCertain()
@@ -61,9 +61,9 @@ public class MoveBranchTests
     [Fact]
     public void EveryMoveWithBranchPowersHasARuleOrAReason()
     {
-        var missing = Moves().Select(x => (x.Key, Calls: MovePowers.CallsOf(x.Method)))
-            .Where(x => x.Calls.Any(call => !call.Certain) && !MoveBranches.Rules.ContainsKey(x.Key) && !MoveBranches.Reviewed.ContainsKey(x.Key))
-            .Select(x => $"{x.Key}: {Describe(x.Calls)}").ToList();
+        var missing = Moves().Select(move => (move.Key, Calls: MovePowers.CallsOf(move.Method)))
+            .Where(keyCalls => keyCalls.Calls.Any(call => !call.Certain) && !MoveBranches.Rules.ContainsKey(keyCalls.Key) && !MoveBranches.Reviewed.ContainsKey(keyCalls.Key))
+            .Select(keyCalls => $"{keyCalls.Key}: {Describe(keyCalls.Calls)}").ToList();
         Assert.True(missing.Count == 0, "Moves applying powers on only some branches, with no rule in Sim/Adapter/MoveBranches.cs (decision #109): " +
             "read each move in the decompile and add a rule that picks its branch from what a player sees, or a reviewed reason.\n" + string.Join("\n", missing));
     }
@@ -71,7 +71,7 @@ public class MoveBranchTests
     [Fact]
     public void EveryRuleStillMatchesItsMove()
     {
-        var moves = Moves().ToDictionary(x => x.Key, x => x.Method);
+        var moves = Moves().ToDictionary(move => move.Key, move => move.Method);
         var wrong = new List<string>();
         foreach (var (key, rule) in MoveBranches.Rules)
         {
@@ -82,7 +82,7 @@ public class MoveBranchTests
             else if (calls.All(call => call.Certain))
                 wrong.Add($"{key}: every power lands on every path now; the rule isn't needed");
         }
-        foreach (var key in MoveBranches.Reviewed.Keys.Where(k => !moves.ContainsKey(k))) wrong.Add($"{key}: reviewed, but no such move any more");
+        foreach (var key in MoveBranches.Reviewed.Keys.Where(key => !moves.ContainsKey(key))) wrong.Add($"{key}: reviewed, but no such move any more");
         Assert.True(wrong.Count == 0, "MoveBranches rules out of step with the game's moves (a game update?): re-read each in the decompile.\n" + string.Join("\n", wrong));
     }
 }

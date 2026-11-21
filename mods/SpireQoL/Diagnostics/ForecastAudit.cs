@@ -58,7 +58,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private (TurnEndModel From, SimJob Job)? _frozenPending;
 
     /// <summary>The frozen forecast to check: frozen as your turn ended, or built now from its exploration (null: it never had a result).</summary>
-    private TurnEndModel? Frozen() => _frozen ?? (_frozenPending is { } p ? p.From.FullFrom(p.Job) : null);
+    private TurnEndModel? Frozen() => _frozen ?? (_frozenPending is { } fromJob ? fromJob.From.FullFrom(fromJob.Job) : null);
 
     private bool HasFrozen => _frozen != null || _frozenPending != null;
 
@@ -132,10 +132,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             start = i + 1;
             if (monsterPerformedMoveEntry.Move.Id != shown.MoveId) continue; // another move than the intent showed (stunned, changed): nothing to compare
             var name = monsterPerformedMoveEntry.Monster.GetType().Name;
-            if (shown.Block is { } b)
+            if (shown.Block is { } block)
             {
                 var gained = span.OfType<BlockGainedEntry>().Where(blockGainedEntry => blockGainedEntry.Receiver == creature).Sum(blockGainedEntry => blockGainedEntry.Amount);
-                if (gained != b) issues.Add($"intent block: {name}'s {shown.MoveId} showed {b}, it gained {gained}");
+                if (gained != block) issues.Add($"intent block: {name}'s {shown.MoveId} showed {block}, it gained {gained}");
             }
             var applied = span.OfType<PowerReceivedEntry>().Where(powerReceivedEntry => powerReceivedEntry.Applier == creature).ToList();
             // A move can apply a power to its own monster with no applier (Devoted Sculptor's Ritual: PowerCmd.Apply(..., null)):
@@ -150,8 +150,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 {
                     if (!artifact) issues.Add($"intent power: {name}'s {shown.MoveId} showed {power.Power.Name}, it applied none");
                 }
-                else if (power.Amount is { } a && same.All(powerReceivedEntry => powerReceivedEntry.Amount != a))
-                    issues.Add($"intent power: {name}'s {shown.MoveId} showed {power.Power.Name} {a}, it applied {string.Join(", ", same.Select(powerReceivedEntry => powerReceivedEntry.Amount))}");
+                else if (power.Amount is { } amount && same.All(powerReceivedEntry => powerReceivedEntry.Amount != amount))
+                    issues.Add($"intent power: {name}'s {shown.MoveId} showed {power.Power.Name} {amount}, it applied {string.Join(", ", same.Select(powerReceivedEntry => powerReceivedEntry.Amount))}");
             }
             foreach (var type in applied.Select(powerReceivedEntry => powerReceivedEntry.Power.GetType()).Distinct().Where(type => shown.Powers.All(power => power.Power != type)))
                 issues.Add($"intent power: {name}'s {shown.MoveId} applied {type.Name}, not shown");
@@ -159,7 +159,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         return issues;
     }
 
-    private static void CountIn(Dictionary<string, int> counts, string reason) => counts[reason] = (counts.TryGetValue(reason, out var n) ? n : 0) + 1;
+    private static void CountIn(Dictionary<string, int> counts, string reason) => counts[reason] = (counts.TryGetValue(reason, out var count) ? count : 0) + 1;
 
     /// <summary>A turn (or part of one) not checked: counted for the combat summary, and in the session's counts (decision #108).</summary>
     private void Skip(string reason, int? turn = null)
@@ -215,8 +215,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 pendingJob.Pinned = true;
             }
             // What each enemy's intent showed (Intent Details): its block and the powers its move applies (decision #98).
-            _intentsShown = _last.Ids.Keys.Select(creature => (creature, Features.IntentDetailsFeature.For(creature))).Where(x => x.Item2 != null)
-                .ToDictionary(x => x.creature, x => x.Item2!, (IEqualityComparer<MegaCrit.Sts2.Core.Entities.Creatures.Creature>)ReferenceEqualityComparer.Instance);
+            _intentsShown = _last.Ids.Keys.Select(creature => (creature, Features.IntentDetailsFeature.For(creature))).Where(creature => creature.Item2 != null)
+                .ToDictionary(otherCreature => otherCreature.creature, creature => creature.Item2!, (IEqualityComparer<MegaCrit.Sts2.Core.Entities.Creatures.Creature>)ReferenceEqualityComparer.Instance);
             // Its exploration goes on after the board changes (decision #87): the check compares against all of it.
             if (_frozen?.Job is { } frozenJob) frozenJob.Pinned = true;
             _frozenAt = _lastHistoryCount;
@@ -227,7 +227,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
     private void Summarize()
     {
-        static string List(Dictionary<string, int> c) => string.Join(", ", c.OrderByDescending(k => k.Value).Select(k => $"{k.Key} ×{k.Value}"));
+        static string List(Dictionary<string, int> c) => string.Join(", ", c.OrderByDescending(entry => entry.Value).Select(entry => $"{entry.Key} ×{entry.Value}"));
         if (_checked > 0) ModEntry.Log.Info($"[audit] combat summary: {_checked} enemy turns forecast, {_matched} matched.");
         if (Skips.Count > 0) ModEntry.Log.Info($"[audit] combat summary: enemy turns not checked: {List(Skips)}.");
         if (Gaps.Count > 0) ModEntry.Log.Info($"[audit] combat summary: not modelled in the forecast: {List(Gaps)}.");
@@ -418,7 +418,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // Teammates (multiplayer, decision #24): each one's HP lost against their range over the branches.
         var teamLine = TeammateIssues(forecast, damage, endOfTurn, issues);
         var enemyIssues = EnemyIssues(forecast, window, endOfTurn, me, out var outcomeLine, out var actuals);
-        issues.AddRange(enemyIssues.Select(x => x.Issue));
+        issues.AddRange(enemyIssues.Select(enemyIssue => enemyIssue.Issue));
         issues.AddRange(IntentIssues(window));
         // Each number above is checked against its own range over the branches; together they must
         // also come from one branch (one set of random targets explains everything that happened).
@@ -427,7 +427,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             bool Explains(SimState state) =>
                 state.Taken == actualTaken && (osty == null || state.OstyTaken == actualOsty) && state.AutoPlayed == autoPlays.Count
-                && actuals.All(kv => state.Enemy(kv.Key) is { } enemy && enemy.HpAtTurnEnd == kv.Value.Hp && enemy.UnblockedInstances == kv.Value.Through && enemy.DiedBeforeActing == kv.Value.Died);
+                && actuals.All(entry => state.Enemy(entry.Key) is { } enemy && enemy.HpAtTurnEnd == entry.Value.Hp && enemy.UnblockedInstances == entry.Value.Through && enemy.DiedBeforeActing == entry.Value.Died);
             if (!outcome.Branches.Any(Explains))
                 issues.Add($"no single branch: each result is possible on its own, but none of the {outcome.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
         }
@@ -470,12 +470,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var breakdown = $"block {forecast.CurrentBlock} + end of turn {List(forecast.EndOfTurnBlock)}\nblockable {List(forecast.Blockable)}\nunblockable {List(forecast.Unblockable)}\n" +
                         $"your end-of-turn damage {List(forecast.EndOfTurnDamage)}\nskipped: poison {forecast.SkippedPoisoned}, end of turn {forecast.SkippedEndOfTurn}; cancelled hits {forecast.CancelledHits}; Osty HP {forecast.OstyHp}";
         var prediction = Prediction(forecast);
-        var fullWindow = string.Join("\n", window.Select((entry, i) => $"#{from + i} {ProcAudit.Describe(entry)}{(SideOf(entry) == CombatSide.Enemy ? " (enemy turn)" : "")}"));
+        var fullWindow = string.Join("\n", window.Select((entry, index) => $"#{from + index} {ProcAudit.Describe(entry)}{(SideOf(entry) == CombatSide.Enemy ? " (enemy turn)" : "")}"));
         foreach (var issue in issues)
         {
             var kind = issue.Split(':')[0];
             // Enemy outcome issues group by the monster too; amounts are left out of the fingerprint.
-            var monster = enemyIssues.FirstOrDefault(x => x.Issue == issue).Monster;
+            var monster = enemyIssues.FirstOrDefault(enemyIssue => enemyIssue.Issue == issue).Monster;
             var fp = monster != null ? new[] { kind, encounter, monster } : new[] { kind, encounter };
             reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", fp,
                 $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}\n\nSimulator, per enemy (over {forecast.Outcome.Branches.Count} branch(es){(forecast.Outcome.Truncated ? ", truncated" : "")}):\n{prediction}",
@@ -532,9 +532,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (!outcome.DeadInAny(id) && diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted alive, but it died before acting", monster));
 
-            int lo = outcome.HpAtTurnEndMin(id), hi = outcome.HpAtTurnEndMax(id);
-            if (hpAtTurnEnd < lo || hpAtTurnEnd > hi)
-                result.Add(($"enemy HP at turn end: {name} predicted {(lo == hi ? $"{lo}" : $"{lo}-{hi}")}, actual {hpAtTurnEnd}", monster));
+            int hpAtTurnEndMin = outcome.HpAtTurnEndMin(id), hpAtTurnEndMax = outcome.HpAtTurnEndMax(id);
+            if (hpAtTurnEnd < hpAtTurnEndMin || hpAtTurnEnd > hpAtTurnEndMax)
+                result.Add(($"enemy HP at turn end: {name} predicted {(hpAtTurnEndMin == hpAtTurnEndMax ? $"{hpAtTurnEndMin}" : $"{hpAtTurnEndMin}-{hpAtTurnEndMax}")}, actual {hpAtTurnEnd}", monster));
             // Your end of turn's hits on it, against the simulator's count when your end of turn is over (its turn's hits on it, Necro
             // Mastery's when it hits Osty, come later in both).
             int ulo = outcome.UnblockedAtTurnEndMin(id), uhi = outcome.UnblockedAtTurnEndMax(id);

@@ -46,14 +46,14 @@ internal static class FreeCards
         if (card.Pile?.Type != PileType.Hand || card.EnergyCost.Canonical < 0) return uses;
         var powers = ActiveOn(card, me);
         if (powers.Count == 0) return uses;
-        var x = card.EnergyCost.CostsX;
-        var hidden = !x && CostHidden(card, me);
-        var saved = x || hidden ? 0 : CostWithoutFree(card);
+        var costsX = card.EnergyCost.CostsX;
+        var hidden = !costsX && CostHidden(card, me);
+        var saved = costsX || hidden ? 0 : CostWithoutFree(card);
         // One play makes the card free once: the first of them saves the energy, the others are spent for nothing.
         var savedYet = false;
         foreach (var power in powers)
         {
-            if (x) { uses.Add(new Use(power, null, false, true)); continue; }
+            if (costsX) { uses.Add(new Use(power, null, false, true)); continue; }
             if (hidden) { uses.Add(new Use(power, null, true, false)); continue; }
             if (saved > 0 && !savedYet) { uses.Add(new Use(power, saved, false, false)); savedYet = true; }
             else uses.Add(new Use(power, null, false, true));

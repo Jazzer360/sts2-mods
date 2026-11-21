@@ -43,7 +43,7 @@ public class DocCommentTests
     public void NoMangledCharacters()
     {
         // UTF-8 text read back as Windows-1252 once ("→" became "â†’").
-        var mangled = SourceFiles().Where(f => File.ReadAllText(f).Contains("â€") || File.ReadAllText(f).Contains("â†")).Select(Path.GetFileName).ToList();
+        var mangled = SourceFiles().Where(sourceFile => File.ReadAllText(sourceFile).Contains("â€") || File.ReadAllText(sourceFile).Contains("â†")).Select(Path.GetFileName).ToList();
         Assert.True(mangled.Count == 0, "Mangled characters in: " + string.Join(", ", mangled));
     }
 }

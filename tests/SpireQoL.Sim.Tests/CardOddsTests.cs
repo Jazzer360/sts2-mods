@@ -30,8 +30,8 @@ public class CardOddsTests
     public void Rarity_rolls_weight_each_rarity()
     {
         // One card: Σ P(rarity) × matching/total.
-        var p = CardOdds.AtLeastOne(G(20, 2, 30, 6, 10, 5), 0.03, 0.37, 1);
-        Assert.Equal(0.60 * 2 / 20 + 0.37 * 6 / 30 + 0.03 * 5 / 10, p, 10);
+        var atLeastOne = CardOdds.AtLeastOne(G(20, 2, 30, 6, 10, 5), 0.03, 0.37, 1);
+        Assert.Equal(0.60 * 2 / 20 + 0.37 * 6 / 30 + 0.03 * 5 / 10, atLeastOne, 10);
     }
 
     [Fact]
@@ -48,8 +48,8 @@ public class CardOddsTests
             var any = false;
             for (var slot = 0; slot < 4; slot++)
             {
-                var x = rng.NextDouble();
-                var r = x < 0.1 ? 2 : x < 0.4 ? 1 : 0;
+                var nextDouble = rng.NextDouble();
+                var r = nextDouble < 0.1 ? 2 : nextDouble < 0.4 ? 1 : 0;
                 for (var t = 0; t < 3 && left[r].Count == 0; t++) r = (r + 1) % 3;
                 if (left[r].Count == 0) break;
                 var pick = rng.Next(left[r].Count);

@@ -115,17 +115,17 @@ public class SimKeyCoverageTests
             if (NotKeyed.ContainsKey(plain)) { listedUsed.Add(plain); continue; }
             var copy = start.Clone();
             var obj = holder(copy);
-            var v = Changed(field.GetValue(obj), field.FieldType);
-            if (v == null)
+            var changed = Changed(field.GetValue(obj), field.FieldType);
+            if (changed == null)
             {
                 if (field.FieldType is { } type && (type == typeof(List<SimEnemy>) || type == typeof(List<SimPlayer>) || type == typeof(SimPlayer))) continue;
                 unknown.Add($"{name} ({field.FieldType.Name})");
                 continue;
             }
-            field.SetValue(obj, v);
+            field.SetValue(obj, changed);
             if (copy.Key() == key) missing.Add(name);
         }
-        var stale = NotKeyed.Keys.Where(k => !listedUsed.Contains(k)).ToList();
+        var stale = NotKeyed.Keys.Where(otherKey => !listedUsed.Contains(otherKey)).ToList();
         Assert.True(unknown.Count == 0, "Fields this test can't change (teach Changed their type): " + string.Join(", ", unknown));
         Assert.True(stale.Count == 0, "Listed fields that no longer exist: " + string.Join(", ", stale));
         Assert.True(missing.Count == 0, "Fields the branch key leaves out (add them to SimState.Key, or to NotKeyed with why): " + string.Join(", ", missing));

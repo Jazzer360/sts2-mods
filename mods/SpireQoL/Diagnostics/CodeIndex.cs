@@ -26,7 +26,7 @@ internal static class CodeIndex
         for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; otherType = otherType.BaseType)
         {
             var info = For(otherType);
-            if (calls.Any(c => c.EndsWith('*') ? info.Calls.Any(x => x.StartsWith(c[..^1])) : info.Calls.Contains(c))) return true;
+            if (calls.Any(call => call.EndsWith('*') ? info.Calls.Any(otherCall => otherCall.StartsWith(call[..^1])) : info.Calls.Contains(call))) return true;
             if (overrides.Any(info.Overrides.Contains)) return true;
         }
         return false;
@@ -92,8 +92,8 @@ internal static class CodeIndex
             hooks.AddRange(For(otherType).Overrides.Where(n => !n.StartsWith("get_") && !n.StartsWith("set_")));
         string[] amounts = { "AfterModifyingBlockAmount", "AfterModifyingDamageAmount" };
         return hooks.Any(amounts.Contains)
-               && hooks.All(n => amounts.Contains(n) || n is "ModifyBlockAdditive" or "ModifyBlockMultiplicative"
-                   || (n.StartsWith("ModifyDamage") && n != "ModifyDamageGiven"));
+               && hooks.All(hook => amounts.Contains(hook) || hook is "ModifyBlockAdditive" or "ModifyBlockMultiplicative"
+                   || (hook.StartsWith("ModifyDamage") && hook != "ModifyDamageGiven"));
     }
 
     private static Info For(Type type)

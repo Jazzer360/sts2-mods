@@ -251,7 +251,7 @@ public static class ModEntry
         if (settings.SettingsVersion < 2)
         {
             // 0.43.0: a Run Reminders relic has a switch per place (card rewards, events, shops) instead of one.
-            foreach (var (key, on) in settings.Tabs.Where(kv => kv.Key.StartsWith("reminder:")).ToList())
+            foreach (var (key, on) in settings.Tabs.Where(entry => entry.Key.StartsWith("reminder:")).ToList())
             {
                 settings.Tabs.Remove(key);
                 if (on) continue;

@@ -61,11 +61,11 @@ public static class RestMath
             // Night Terrors heals to full: nothing of it is "wasted", the heal is whatever reaches max.
             nominal = nightTerrors ? gained : (int)Math.Floor(heal);
             h += gained;
-            foreach (var g in humidifiers)
+            foreach (var humidifier in humidifiers)
             {
-                m += g;
+                m += humidifier;
                 var before = h;
-                h = Math.Min(h + g, m);
+                h = Math.Min(h + humidifier, m);
                 lines.Add(new RestLine(RestStep.StoneHumidifier, h - before));
             }
             if (nightTerrors)

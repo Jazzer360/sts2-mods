@@ -20,8 +20,8 @@ public class CardAffinityTests
         var missing = Relics()
             .Where(type => CardAffinity.For(type.Name) == null && !CardAffinity.Reviewed.ContainsKey(type.Name))
             .Select(type => (type.Name, Hooks: SpireQoL.Diagnostics.CoverageWatch.CardTestingHooks(type)))
-            .Where(x => x.Hooks.Count > 0)
-            .Select(x => $"{x.Name}: {string.Join(", ", x.Hooks)}").ToList();
+            .Where(nameHooks => nameHooks.Hooks.Count > 0)
+            .Select(nameHooks => $"{nameHooks.Name}: {string.Join(", ", nameHooks.Hooks)}").ToList();
         Assert.True(missing.Count == 0, "Relics that test a card with no CardAffinity rule or reason:\n" + string.Join("\n", missing));
     }
 

@@ -339,8 +339,8 @@ public sealed class MotifPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Melodies.Tags.Count(simCardTag => Melodies.First(state, play, simCardTag)) is var n and > 0
-            ? Cause(Fire(state, owner), CardEvent.Drawn, n * Amount(state, owner), owner)
+        Mine(play, owner) && Melodies.Tags.Count(simCardTag => Melodies.First(state, play, simCardTag)) is var tagCount and > 0
+            ? Cause(Fire(state, owner), CardEvent.Drawn, tagCount * Amount(state, owner), owner)
             : One(state);
 }
 
@@ -636,7 +636,7 @@ public sealed class PersonalHivePower : ProcModel
     public override bool Harmful => true;
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
-        if (hit.Target == owner && hit.Dealer is { } d && Who.IsPlayer(d) && hit.Props.IsPoweredAttack()) state.LogFired(Name, 0, owner);
+        if (hit.Target == owner && hit.Dealer is { } dealer && Who.IsPlayer(dealer) && hit.Props.IsPoweredAttack()) state.LogFired(Name, 0, owner);
     }
 }
 

@@ -24,7 +24,7 @@ public class GameBranchTests
     /// <summary>Literals that name something else that shares a class's name: the text, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
-        ["(\"Juggernaut\", j)"] = "Incoming Damage's breakdown label (what the player reads), not the class",
+        ["EndOfTurnDamage.Add((\"Juggernaut\", "] = "Incoming Damage's breakdown label (what the player reads), not the class",
         ["\"Accelerant\" }; // DynamicVars keys"] = "a card's DynamicVars key (SimAdapter.PlainPowerVars), not the Accelerant card",
     };
 
@@ -40,7 +40,7 @@ public class GameBranchTests
         var names = typeof(PowerId).GetFields().Where(field => field.FieldType == typeof(PowerId)).Select(field => ((PowerId)field.GetValue(null)!).Name)
             .Concat(typeof(RelicId).GetFields().Where(field => field.FieldType == typeof(RelicId)).Select(field => ((RelicId)field.GetValue(null)!).Name))
             .Concat(typeof(CardId).GetFields().Where(field => field.FieldType == typeof(CardId)).Select(field => ((CardId)field.GetValue(null)!).Name));
-        return names.Where(n => !GameBranches.BetaOnly.Contains(n) && !GameBranches.MainOnly.Contains(n)).ToHashSet();
+        return names.Where(name => !GameBranches.BetaOnly.Contains(name) && !GameBranches.MainOnly.Contains(name)).ToHashSet();
     }
 
     [Fact]

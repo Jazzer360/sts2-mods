@@ -54,7 +54,7 @@ public sealed partial class SettingsMenu
             foreach (var release in all)
             {
                 var sections = release.Sections
-                    .Select(releaseSection => releaseSection with { Items = releaseSection.Items.Where(i => Matches(i, releaseSection.Kind, release.Version, release.Title)).ToList() })
+                    .Select(releaseSection => releaseSection with { Items = releaseSection.Items.Where(item => Matches(item, releaseSection.Kind, release.Version, release.Title)).ToList() })
                     .Where(releaseSection => releaseSection.Items.Count > 0).ToList();
                 if (sections.Count == 0) continue;
                 ReleaseBlock(release with { Sections = sections });

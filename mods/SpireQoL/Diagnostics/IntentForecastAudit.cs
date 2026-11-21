@@ -55,8 +55,8 @@ internal static class IntentForecastAudit
         {
             var picked = __instance.NextMove.Id;
             var name = __instance.GetType().Name;
-            var odds = string.Join(", ", __state.Moves.Select(m => $"{m.Move} {m.Chance:0.###}"));
-            var chance = __state.Moves.FirstOrDefault(m => m.Move == picked).Chance;
+            var odds = string.Join(", ", __state.Moves.Select(move => $"{move.Move} {move.Chance:0.###}"));
+            var chance = __state.Moves.FirstOrDefault(move => move.Move == picked).Chance;
             var ok = chance > 0;
             ModEntry.Log.Info($"[audit] [intent] {name}: forecast [{odds}], rolled {picked}{(ok ? ", matched" : "")}");
             Telemetry.Audits.Done(Telemetry.Audits.Intent, ok, name);

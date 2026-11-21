@@ -237,11 +237,11 @@ public static class ChoiceReminders
     public static ChoiceEffect EffectsOf(IEnumerable<string> calls)
     {
         var choiceEffect = ChoiceEffect.None;
-        foreach (var c in calls)
+        foreach (var otherCall in calls)
         {
             foreach (var (call, effect) in Calls)
             {
-                if (call.EndsWith('*') ? c.StartsWith(call[..^1]) : c == call) choiceEffect |= effect;
+                if (call.EndsWith('*') ? otherCall.StartsWith(call[..^1]) : otherCall == call) choiceEffect |= effect;
             }
         }
         return choiceEffect;

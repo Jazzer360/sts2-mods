@@ -86,11 +86,11 @@ public sealed partial class RunRemindersFeature
             (double Low, double High)? chance;
             try { chance = read.Chance(window.Me, card => CardAffinity.AppliesWith(rule, card, held, read.GivesUpgraded)); }
             catch { continue; }
-            if (chance is not { } p || p.Low >= 1) continue;
+            if (chance is not { } lowHigh || lowHigh.Low >= 1) continue;
             var seen = window.Offered.Concat(added).ToList();
             var cameUp = seen.Any(card => CameUp(rule, card, held, read.GivesUpgraded));
-            ModEntry.Log.Info($"[audit] [odds] {window.Option.TextKey} {relic.GetType().Name}: predicted {p.Low:P0}"
-                + (p.High > p.Low ? $"–{p.High:P0}" : "") + $", came up: {(cameUp ? "yes" : "no")} ({window.Offered.Count} offered, {added.Count} added)");
+            ModEntry.Log.Info($"[audit] [odds] {window.Option.TextKey} {relic.GetType().Name}: predicted {lowHigh.Low:P0}"
+                + (lowHigh.High > lowHigh.Low ? $"–{lowHigh.High:P0}" : "") + $", came up: {(cameUp ? "yes" : "no")} ({window.Offered.Count} offered, {added.Count} added)");
         }
     }
 }

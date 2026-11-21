@@ -37,9 +37,9 @@ internal static class Branches
         seen[start] = true;
         while (stack.Count > 0)
         {
-            var i = stack.Pop();
-            if (exits.Contains(i)) return true;
-            foreach (var j in succ[i])
+            var pop = stack.Pop();
+            if (exits.Contains(pop)) return true;
+            foreach (var j in succ[pop])
             {
                 if (j == avoid || j < 0 || j >= succ.Length || seen[j]) continue;
                 seen[j] = true;
@@ -74,7 +74,7 @@ internal static class Branches
                 case FlowControl.Cond_Branch:
                     if (i + 1 < code.Count) next.Add(i + 1);
                     if (dispatch) break; // the jump on the state: only the first run is followed
-                    if (ins.operand is Label target && labels.TryGetValue(target, out var ct)) next.Add(ct);
+                    if (ins.operand is Label target && labels.TryGetValue(target, out var nextLabel)) next.Add(nextLabel);
                     else if (ins.operand is Label[] many)
                         foreach (var otherLabel in many) if (labels.TryGetValue(otherLabel, out var lt)) next.Add(lt);
                     break;

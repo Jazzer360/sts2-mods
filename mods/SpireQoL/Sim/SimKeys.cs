@@ -20,7 +20,7 @@ public static class SimKeys
         .Select(stage => Enum.GetValues<SimCardType>().Select(type => $"{stage}:{type}").ToArray()).ToArray();
 
     /// <summary>A source's entry under its owner: "Name@id" (an enemy's or a teammate's power, a model bound to its owner's play).</summary>
-    public static string Owned(string name, int owner) => OwnedNames.GetOrAdd((name, owner), k => k.Name + "@" + k.Owner);
+    public static string Owned(string name, int owner) => OwnedNames.GetOrAdd((name, owner), nameOwner => nameOwner.Name + "@" + nameOwner.Owner);
 
     /// <summary>The play log's entry for a firing set off by a card event (the Indirect procs setting): "~" before its name.</summary>
     public static string Indirect(string key) => IndirectNames.GetOrAdd(key, k => "~" + k);

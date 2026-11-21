@@ -229,8 +229,8 @@ internal sealed class InspectScreen
         _cards.Clear();
         _cells.Clear();
         _groupLabels.Clear();
-        var held = me.Relics.Select(relic => (Relic: relic, Rule: CardAffinity.For(relic.GetType().Name))).Where(x => x.Rule != null).ToList();
-        var heldRules = held.Select(x => x.Rule!).ToList();
+        var held = me.Relics.Select(relic => (Relic: relic, Rule: CardAffinity.For(relic.GetType().Name))).Where(relicRule => relicRule.Rule != null).ToList();
+        var heldRules = held.Select(relicRule => relicRule.Rule!).ToList();
         var upgradedCards = _groups.Any(g => g.Group.Upgraded);
         var all = _groups.SelectMany(g => g.Group.Cards).Distinct().ToList();
         FillTransformPicker(me);
@@ -268,9 +268,9 @@ internal sealed class InspectScreen
     /// <summary>A card you can click to mark, with a tab for each relic of yours that applies to it.</summary>
     private Control Cell(CardModel card, List<(RelicModel Relic, CardAffinityRule? Rule)> held, bool upgraded)
     {
-        var heldRules = held.Select(x => x.Rule!).ToList();
-        var tabs = held.Where(x => CardAffinity.AppliesWith(x.Rule!, card, heldRules, upgraded))
-            .Select(x => new TabSpec("inspect:" + x.Relic.GetType().Name, GameIcons.Relic(x.Relic))).ToList();
+        var heldRules = held.Select(relicRule => relicRule.Rule!).ToList();
+        var tabs = held.Where(relicRule => CardAffinity.AppliesWith(relicRule.Rule!, card, heldRules, upgraded))
+            .Select(relicRule => new TabSpec("inspect:" + relicRule.Relic.GetType().Name, GameIcons.Relic(relicRule.Relic))).ToList();
         var shown = new ShownCard(card, CardScale, CellWidth, tabs);
         _cards.Add(shown);
         var frame = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop, MouseDefaultCursorShape = Control.CursorShape.PointingHand, TooltipText = card.Title };
@@ -311,11 +311,11 @@ internal sealed class InspectScreen
         foreach (var (label, group, times) in _groupLabels)
         {
             n++;
-            var p = group.Chance(Good);
-            label.Text = Describe(n, group, times) + (_marks.Count > 0 && p is { } v ? $": {Percent(v)}" : "");
-            if (group.Kind == DrawKind.Reward && p is { } rp) for (var i = 0; i < times; i++) rewardChances.Add(rp);
+            var chance = group.Chance(Good);
+            label.Text = Describe(n, group, times) + (_marks.Count > 0 && chance is { } v ? $": {Percent(v)}" : "");
+            if (group.Kind == DrawKind.Reward && chance is { } rp) for (var i = 0; i < times; i++) rewardChances.Add(rp);
         }
-        var marks = _cells.Select(c => c.Card).Distinct().Count(Good);
+        var marks = _cells.Select(cell => cell.Card).Distinct().Count(Good);
         _overall!.Text = _marks.Count == 0 || marks == 0
             ? "Mark the cards you'd be happy with to see your chances."
             : rewardChances.Count > 1
@@ -331,7 +331,7 @@ internal sealed class InspectScreen
         var twice = times > 1 ? $" ({times} rewards like it)" : "";
         return drawGroup.Kind switch
         {
-            DrawKind.Reward when drawGroup.Count is { } k => $"Reward {n}: {(k == 1 ? "one" : k.ToString())} of these {count}{rarity}{twice}{Roll(drawGroup)}, chance one you marked is offered",
+            DrawKind.Reward when drawGroup.Count is { } drawGroupCount => $"Reward {n}: {(drawGroupCount == 1 ? "one" : drawGroupCount.ToString())} of these {count}{rarity}{twice}{Roll(drawGroup)}, chance one you marked is offered",
             DrawKind.Reward => $"Reward {n}: some of these {count}{rarity}",
             DrawKind.Transform => $"A card you transform becomes one of these {count}, chance it's one you marked",
             DrawKind.Certain => "Always given",
@@ -341,8 +341,8 @@ internal sealed class InspectScreen
 
     /// <summary>A reward that rolls its rarity first, then a card of it: each rarity's chance (" (rarity first: rare 1.5%, uncommon 98.5%)").</summary>
     private static string Roll(DrawGroup drawGroup)
-        => drawGroup.Cards.Select(card => card.Rarity).Distinct().Count() > 1 && Features.RunRemindersFeature.OptionCards.RarityRoll(drawGroup.Cards, drawGroup.Odds) is { } r
-            ? $" (rarity first: {r})"
+        => drawGroup.Cards.Select(card => card.Rarity).Distinct().Count() > 1 && Features.RunRemindersFeature.OptionCards.RarityRoll(drawGroup.Cards, drawGroup.Odds) is { } rarityRoll
+            ? $" (rarity first: {rarityRoll})"
             : "";
 
     private static string Percent(double p) => p <= 0 ? "0%" : p >= 1 ? "100%" : p < 0.01 ? "<1%" : $"{Math.Round(p * 100)}%";
@@ -373,11 +373,11 @@ internal sealed class InspectScreen
             if (block)
             {
                 nHotkeyManager.AddBlockingScreen(_root);
-                foreach (var k in closeKeys) SettingsMenu.PushHotkey(nHotkeyManager, k, _closeAction);
+                foreach (var closeKey in closeKeys) SettingsMenu.PushHotkey(nHotkeyManager, closeKey, _closeAction);
             }
             else
             {
-                foreach (var k in closeKeys) nHotkeyManager.RemoveHotkeyPressedBinding(k, _closeAction);
+                foreach (var closeKey in closeKeys) nHotkeyManager.RemoveHotkeyPressedBinding(closeKey, _closeAction);
                 nHotkeyManager.RemoveBlockingScreen(_root);
             }
             _blocking = block;

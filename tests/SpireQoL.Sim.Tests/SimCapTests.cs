@@ -60,8 +60,8 @@ public class SimCapTests
             for (var id = 0; id < 3; id++)
             {
                 var chance = outcome.DeadChanceRange(id);
-                var p = exact.DeadChance(id);
-                Assert.InRange(p, chance.Low - 1e-9, chance.High + 1e-9);
+                var deadChance = exact.DeadChance(id);
+                Assert.InRange(deadChance, chance.Low - 1e-9, chance.High + 1e-9);
                 Assert.False(outcome.DeadInAll(id)); // no guarantee from a search that stopped
             }
         }

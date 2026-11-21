@@ -258,7 +258,7 @@ public sealed class TurnEndModel
             forecast.Waiting = false;
             return forecast;
         }
-        if (_shown is { } s && combat != null && ReferenceEquals(s.Combat, combat) && s.Turn == Sts2State.TurnNumber)
+        if (_shown is { } modelCombat && combat != null && ReferenceEquals(modelCombat.Combat, combat) && modelCombat.Turn == Sts2State.TurnNumber)
         {
             var frame = Godot.Engine.GetProcessFrames();
             if (frame != _heldFrame)
@@ -268,8 +268,8 @@ public sealed class TurnEndModel
             }
             // Held past ShownWaitMs: the ? beside it says a newer result is on its way (shorter waits go unseen, so it doesn't blink).
             if (_waitingSince == 0) _waitingSince = System.Diagnostics.Stopwatch.GetTimestamp();
-            s.Model.Waiting = System.Diagnostics.Stopwatch.GetElapsedTime(_waitingSince).TotalMilliseconds >= ShownWaitMs;
-            return s.Model;
+            modelCombat.Model.Waiting = System.Diagnostics.Stopwatch.GetElapsedTime(_waitingSince).TotalMilliseconds >= ShownWaitMs;
+            return modelCombat.Model;
         }
         return null;
     }
@@ -392,10 +392,10 @@ public sealed class TurnEndModel
             HpAfter = branch.You.Hp == int.MaxValue ? myHp : branch.You.Hp,
         };
         // Same-name entries (one per Frost trigger, per Feel No Pain exhaust...) are summed for display.
-        foreach (var g in branch.EndOfTurnBlock.GroupBy(x => x.Name)) forecast.EndOfTurnBlock.Add(new Source(g.Key, g.Sum(x => x.Amount)));
+        foreach (var g in branch.EndOfTurnBlock.GroupBy(nameAmount => nameAmount.Name)) forecast.EndOfTurnBlock.Add(new Source(g.Key, g.Sum(nameAmount => nameAmount.Amount)));
         foreach (var (name, amount) in branch.Blockable) forecast.Blockable.Add(new Source(name, amount));
         foreach (var (name, amount) in branch.Unblockable) forecast.Unblockable.Add(new Source(name, amount));
-        foreach (var g in branch.EndOfTurnDamage.GroupBy(x => x.Name)) forecast.EndOfTurnDamage.Add(new Source(g.Key, g.Sum(x => x.Amount)));
+        foreach (var g in branch.EndOfTurnDamage.GroupBy(nameAmount => nameAmount.Name)) forecast.EndOfTurnDamage.Add(new Source(g.Key, g.Sum(nameAmount => nameAmount.Amount)));
         return forecast;
     }
 

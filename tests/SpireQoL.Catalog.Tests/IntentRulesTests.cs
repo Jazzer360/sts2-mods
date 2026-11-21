@@ -50,7 +50,7 @@ public class IntentRulesTests
     public void AMovesPowersAreReadFromItsCode()
     {
         // Corpse Slug's Goop: PowerCmd.Apply<FrailPower>(..., GoopFrailAmt) with GoopFrailAmt 2.
-        var goop = EveryMove().Single(x => x.Monster.GetType().Name == "CorpseSlug" && x.Move.Id == "GOOP_MOVE");
+        var goop = EveryMove().Single(monsterMove => monsterMove.Monster.GetType().Name == "CorpseSlug" && monsterMove.Move.Id == "GOOP_MOVE");
         var applied = MovePowers.Of(goop.Monster, goop.Move);
         Assert.Equal("FrailPower 2", string.Join(", ", applied.Select(otherApplied => $"{otherApplied.Power.Name} {otherApplied.Amount}")));
     }
@@ -65,7 +65,7 @@ public class IntentRulesTests
         foreach (var (monster, move) in EveryMove())
         {
             var kinds = move.Intents.Select(abstractIntent => abstractIntent.GetType().Name).ToList();
-            if (!kinds.Any(k => k.Contains("Buff") || k.Contains("Debuff"))) continue;
+            if (!kinds.Any(kind => kind.Contains("Buff") || kind.Contains("Debuff"))) continue;
             counted++;
             var id = $"{monster.GetType().Name}.{move.Id}";
             if (MovePowers.Of(monster, move).Count == 0 && !WithoutPowers.ContainsKey(id)) missing.Add($"{monster.GetType().Name}.{move.Id} ({string.Join(", ", kinds)})");

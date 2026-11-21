@@ -41,7 +41,7 @@ public static class Snapshot
         {
             var orbQueue = me.PlayerCombatState?.OrbQueue;
             if (orbQueue == null) return "none";
-            var orbs = orbQueue.Orbs.Select((orb, i) => $"{i + 1}. {orb.GetType().Name} (passive {orb.PassiveVal}, evoke {orb.EvokeVal})");
+            var orbs = orbQueue.Orbs.Select((orb, index) => $"{index + 1}. {orb.GetType().Name} (passive {orb.PassiveVal}, evoke {orb.EvokeVal})");
             return $"slots {orbQueue.Orbs.Count}/{orbQueue.Capacity}, front first: " + (orbQueue.Orbs.Count == 0 ? "empty" : string.Join(", ", orbs));
         });
 

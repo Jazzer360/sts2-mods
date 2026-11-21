@@ -110,11 +110,11 @@ internal static class DrawPileMemory
         while (Pending.Count > 0)
         {
             var (cards, position, frames) = Pending[0];
-            if (!cards.All(c => c.Card.Pile == pile))
+            if (!cards.All(card => card.Card.Pile == pile))
             {
                 // Still on its way (the add is async: a card stays where it was until it lands), or it went somewhere else, or it
                 // never came (about two seconds): dropped then.
-                var elsewhere = cards.Any(c => c.Card.Pile != pile && c.Card.Pile != c.From);
+                var elsewhere = cards.Any(card => card.Card.Pile != pile && card.Card.Pile != card.From);
                 if (elsewhere || frames > 120) { Pending.RemoveAt(0); continue; }
                 Pending[0] = (cards, position, frames + 1);
                 break;

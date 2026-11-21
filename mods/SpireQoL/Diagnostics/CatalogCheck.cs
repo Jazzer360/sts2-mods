@@ -36,7 +36,7 @@ internal static class CatalogCheck
         // The simulator's models with a tab (the play log's tabs), and the outcome comparisons Proc Indicators names (tab keys are
         // built as "proc:" + nameof(X), which the compiler folds into one literal).
         var ruleNames = LiteralsIn(typeof(Combat.CardPredictions)).Select(n => n.StartsWith("proc:") ? n[5..] : n)
-            .Concat(Sim.SimModels.Names.Where(n => Sim.SimModels.Get(n) is { } model && (model.Tab != null || model.JudgedOnOutcome)))
+            .Concat(Sim.SimModels.Names.Where(name => Sim.SimModels.Get(name) is { } model && (model.Tab != null || model.JudgedOnOutcome)))
             .Where(n => gameTypes.TryGetValue(n, out var type) && (typeof(RelicModel).IsAssignableFrom(type) || typeof(PowerModel).IsAssignableFrom(type)))
             .ToHashSet();
         var procRows = sources.Where(sourceEntry => sourceEntry.Tag != null && sourceEntry.TagPrefix == "proc:").Select(sourceEntry => sourceEntry.Type).ToHashSet();
@@ -78,7 +78,7 @@ internal static class CatalogCheck
 
         // Features: each one registered has an on/off switch in the menu, and each switch a feature.
         var registered = (featureIds ?? FeatureIds()).ToHashSet();
-        var switches = SettingsMenu.FeatureRows.Select(r => r.Id).ToHashSet();
+        var switches = SettingsMenu.FeatureRows.Select(featureRow => featureRow.Id).ToHashSet();
         foreach (var n in registered.Except(switches).OrderBy(n => n)) problems.Add($"feature without a settings switch: {n}");
         foreach (var n in switches.Except(registered).OrderBy(n => n)) problems.Add($"settings switch without a feature: {n}");
         return problems;
@@ -120,7 +120,7 @@ internal static class CatalogCheck
                 try
                 {
                     foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(method))
-                        if (ins.operand is string s) set.Add(s);
+                        if (ins.operand is string otherOperand) set.Add(otherOperand);
                 }
                 catch
                 {

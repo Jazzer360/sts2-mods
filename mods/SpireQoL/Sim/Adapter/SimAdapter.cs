@@ -246,11 +246,11 @@ public static partial class SimAdapter
                         // the hit's base and the captured terms on each player; the models (its Strength and Weak, your Vulnerable,
                         // Intangible...) apply as it lands, so what your cards change shows.
                         if (intent == null || attack.DamageCalc == null) { intent = null; continue; }
-                        var b = attack.DamageCalc();
-                        var terms = new Dictionary<int, CapturedTerms> { [Who.You] = SimReaders.Damage(me.RunState, combat, null, creature, me.Creature, b, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) };
+                        var damageCalc = attack.DamageCalc();
+                        var terms = new Dictionary<int, CapturedTerms> { [Who.You] = SimReaders.Damage(me.RunState, combat, null, creature, me.Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) };
                         for (var k = 0; k < mates.Count; k++)
-                            terms[Who.Teammate(k)] = SimReaders.Damage(me.RunState, combat, null, creature, mates[k].Creature, b, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
-                        for (var i = 0; i < Math.Max(1, attack.Repeats); i++) intent.Add(new IntentHit(b) { Captured = terms });
+                            terms[Who.Teammate(k)] = SimReaders.Damage(me.RunState, combat, null, creature, mates[k].Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
+                        for (var i = 0; i < Math.Max(1, attack.Repeats); i++) intent.Add(new IntentHit(damageCalc) { Captured = terms });
                     }
                     if (intent is { Count: > 0 }) enemy.Intent = intent;
                 }
@@ -512,7 +512,7 @@ public static partial class SimAdapter
         var facts = PlayFacts.For(card, me, combat, CardPlays.Count(card));
         if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
         if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, -1, facts) };
-        return ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => AutoPlay(card, me, combat, ids, kv.Value, facts)).ToList();
+        return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, facts)).ToList();
     }
 
     private static SimPlay AutoPlay(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? facts = null,

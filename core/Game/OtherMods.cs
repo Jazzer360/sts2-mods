@@ -32,7 +32,7 @@ public static class OtherMods
             }
             _others = found;
         }
-        return _others.Where(o => o.Gameplay || (listed != null && listed.Contains(o.Id, StringComparer.OrdinalIgnoreCase))).Select(o => o.Name).ToList();
+        return _others.Where(other => other.Gameplay || (listed != null && listed.Contains(other.Id, StringComparer.OrdinalIgnoreCase))).Select(other => other.Name).ToList();
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public static class OtherMods
         }
         if (ex is AggregateException agg)
             foreach (var inner in agg.InnerExceptions)
-                if (Walk(inner, others, ourHarmony, depth + 1) is { } r) return r;
+                if (Walk(inner, others, ourHarmony, depth + 1) is { } walk) return walk;
         return Walk(ex.InnerException, others, ourHarmony, depth + 1);
     }
 

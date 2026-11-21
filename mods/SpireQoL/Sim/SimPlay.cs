@@ -207,5 +207,5 @@ public sealed class SimScript
         return actions;
     }
 
-    private static Dictionary<int, decimal> Decimals(Dictionary<int, int> d) => d.ToDictionary(kv => kv.Key, kv => (decimal)kv.Value);
+    private static Dictionary<int, decimal> Decimals(Dictionary<int, int> d) => d.ToDictionary(entry => entry.Key, entry => (decimal)entry.Value);
 }

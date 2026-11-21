@@ -139,7 +139,7 @@ internal static class MovePowers
             if (!OnOwnCreature(code, at - 1, 3)) continue;
             // The props follow the amount (after its conversion to decimal for a constant).
             var after = getter != null ? at + 1 : at + 2;
-            var props = after < code.Count && Constant(code[after]) is { } p ? (int)p : move;
+            var props = after < code.Count && Constant(code[after]) is { } otherConstant ? (int)otherConstant : move;
             calls.Add(new BlockCall(constant, getter, props));
         }
         return calls;
@@ -219,7 +219,7 @@ internal static class MovePowers
             if (ins.operand is MethodInfo { IsStatic: false } method && method.Name.StartsWith("get_") && method.GetParameters().Length == 0
                 && Numeric(method.ReturnType) && typeof(MonsterModel).IsAssignableFrom(method.DeclaringType))
                 return (null, method, j);
-            if (Constant(ins) is { } c && j + 1 < code.Count && ToDecimal(code[j + 1])) return (c, null, j);
+            if (Constant(ins) is { } constant && j + 1 < code.Count && ToDecimal(code[j + 1])) return (constant, null, j);
             // 1m, 0m, -1m compile to decimal's static fields.
             if (ins.operand is FieldInfo { IsStatic: true } field && field.DeclaringType == typeof(decimal))
                 return field.Name switch { "One" => (1m, null, j), "Zero" => (0m, null, j), "MinusOne" => (-1m, null, j), _ => null };

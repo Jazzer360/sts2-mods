@@ -200,7 +200,7 @@ public class SessionStatsTests
     public void PercentilesAreTheirBucketsUpperEdgeNeverAboveTheLargest(double[] values, double p, double expected)
     {
         var histogram = new Histogram();
-        foreach (var v in values) histogram.Add(v);
+        foreach (var value in values) histogram.Add(value);
         Assert.Equal(expected, histogram.Percentile(p), 6);
     }
 

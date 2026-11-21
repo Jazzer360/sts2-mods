@@ -25,7 +25,7 @@ public class SimAutoPlayTests
 
     /// <summary>A Strike in hand: one play per enemy it can be aimed at.</summary>
     private static SimHandCard StrikeCard(int id, int damage, int cost, params int[] targets)
-        => new() { Id = id, Name = "Strike", IsAttack = true, Cost = cost, Plays = targets.Select(t => Strike(t, damage, id)).ToList() };
+        => new() { Id = id, Name = "Strike", IsAttack = true, Cost = cost, Plays = targets.Select(target => Strike(target, damage, id)).ToList() };
 
     private static SimHandCard Defend(int id, int block, int cost)
         => new() { Id = id, Name = "Defend", Cost = cost, Plays = { new SimPlay { Name = "Defend", BlockAmount = block, BlockGains = 1, HandCard = id, HandDelta = -1 } } };
@@ -42,7 +42,7 @@ public class SimAutoPlayTests
         state.You.AutoHand = new() { StrikeCard(11, 6, 1, 1) };
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(9, branch.Taken);
-        Assert.Equal(1, branch.EndOfTurnBlock.Sum(x => x.Amount));
+        Assert.Equal(1, branch.EndOfTurnBlock.Sum(nameAmount => nameAmount.Amount));
     }
 
     [Fact]

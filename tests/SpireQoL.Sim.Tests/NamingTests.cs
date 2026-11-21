@@ -13,7 +13,7 @@ public class NamingTests
     /// <summary>
     /// Short names still in the code, being named one area at a time: this only goes down. A new short name fails; naming some lowers it.
     /// </summary>
-    private const int StillShort = 856;
+    private const int StillShort = 543;
 
     private static readonly HashSet<string> Words = new() { "id", "me", "ex", "ok", "to", "at", "on", "_" };
 

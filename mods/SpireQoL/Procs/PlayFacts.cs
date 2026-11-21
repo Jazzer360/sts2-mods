@@ -658,40 +658,40 @@ public sealed class PlayFacts
         void Add(Creature creature, int d) => exact[creature] = (exact.TryGetValue(creature, out var x) ? x : 0) + d;
         foreach (var orb in evoked)
         {
-            var v = orb.EvokeVal;
-            if (v <= 0) continue;
+            var evokeVal = orb.EvokeVal;
+            if (evokeVal <= 0) continue;
             switch (orb)
             {
                 case GlassOrb:
                     foreach (var creature in enemies)
                     {
-                        var d = Mod(creature, v);
-                        Add(creature, d);
-                        min += d;
-                        max += d;
+                        var mod = Mod(creature, evokeVal);
+                        Add(creature, mod);
+                        min += mod;
+                        max += mod;
                     }
                     break;
                 case DarkOrb:
                 {
                     var weakest = enemies.MinBy(creature => creature.CurrentHp)!;
-                    var d = Mod(weakest, v);
-                    Add(weakest, d);
-                    min += d;
-                    max += d;
+                    var mod = Mod(weakest, evokeVal);
+                    Add(weakest, mod);
+                    min += mod;
+                    max += mod;
                     break;
                 }
                 case LightningOrb:
                     if (enemies.Count == 1)
                     {
-                        var d = Mod(enemies[0], v);
-                        Add(enemies[0], d);
-                        min += d;
-                        max += d;
+                        var mod = Mod(enemies[0], evokeVal);
+                        Add(enemies[0], mod);
+                        min += mod;
+                        max += mod;
                     }
                     else
                     {
-                        min += enemies.Min(creature => Mod(creature, v));
-                        max += enemies.Max(creature => Mod(creature, v));
+                        min += enemies.Min(creature => Mod(creature, evokeVal));
+                        max += enemies.Max(creature => Mod(creature, evokeVal));
                     }
                     break;
             }
@@ -880,26 +880,26 @@ public sealed class PlayFacts
 
     internal static int ExhaustOthers(CardModel card, string name, List<CardModel> others, int drawPile, int plays)
     {
-        var n = others.Count;
+        var otherCount = others.Count;
         var p = Math.Max(1, plays);
         return name switch
         {
             // One chosen or random card from hand, per play.
-            nameof(Brand) or nameof(BurningPact) or nameof(TrueGrit) or nameof(Scavenge) or nameof(Cinder) => Math.Min(p, n),
+            nameof(Brand) or nameof(BurningPact) or nameof(TrueGrit) or nameof(Scavenge) or nameof(Cinder) => Math.Min(p, otherCount),
             nameof(Thrash) => Math.Min(p, others.Count(other => other.Type == CardType.Attack)),
             nameof(Cleanse) => Math.Min(p, drawPile), // from the draw pile
             // The whole rest of the hand (a second play finds the hand empty).
-            nameof(FiendFire) or nameof(Stoke) => n,
+            nameof(FiendFire) or nameof(Stoke) => otherCount,
             nameof(SecondWind) => others.Count(other => other.Type != CardType.Attack),
             // v0.113.0: The Devil exhausts your hand; Growth every Sadness in it; Florescence every Shoot card
             // you have outside your exhaust pile (any pile).
-            "TheDevil" => n,
+            "TheDevil" => otherCount,
             "Growth" => others.Count(other => other.GetType().Name == "Sadness"),
             "Florescence" => OwnerOf(card)?.PlayerCombatState is { } pcs
                 ? pcs.AllCards.Count(combatCard => combatCard != card && Fool.IsShot(combatCard) && combatCard.Pile?.Type != PileType.Exhaust)
                 : others.Count(Fool.IsShot),
             // Up to Cards chosen cards: counted as the most it can exhaust.
-            nameof(Purity) => Math.Min(n, Sts2State.Var(card, "Cards") * p),
+            nameof(Purity) => Math.Min(otherCount, Sts2State.Var(card, "Cards") * p),
             // The Hermit: the card you pick is exhausted instead of discarded when it's a Curse (counted as the most it can do).
             "TheHermit" => Math.Min(p, others.Count(other => other.Type == CardType.Curse)),
             // Every status card in your piles.
@@ -910,17 +910,17 @@ public sealed class PlayFacts
 
     internal static int DiscardCount(CardModel card, string name, List<CardModel> others, int draws)
     {
-        var n = others.Count;
+        var otherCount = others.Count;
         return name switch
         {
             // Discard after drawing, so the drawn cards are there to discard.
-            nameof(Acrobatics) or nameof(DaggerThrow) => Math.Min(1, n + draws),
-            nameof(Prepared) => Math.Min(Sts2State.Var(card, "Cards"), n + draws),
-            nameof(Survivor) => Math.Min(1, n),
-            nameof(HiddenDaggers) => Math.Min(Sts2State.Var(card, "Cards"), n),
-            nameof(CalculatedGamble) or nameof(ShadowStep) or nameof(StormOfSteel) or "WheelOfFortune" => n,
+            nameof(Acrobatics) or nameof(DaggerThrow) => Math.Min(1, otherCount + draws),
+            nameof(Prepared) => Math.Min(Sts2State.Var(card, "Cards"), otherCount + draws),
+            nameof(Survivor) => Math.Min(1, otherCount),
+            nameof(HiddenDaggers) => Math.Min(Sts2State.Var(card, "Cards"), otherCount),
+            nameof(CalculatedGamble) or nameof(ShadowStep) or nameof(StormOfSteel) or "WheelOfFortune" => otherCount,
             // Discards one card you choose (a Curse is exhausted instead).
-            "TheHermit" => Math.Min(1, n),
+            "TheHermit" => Math.Min(1, otherCount),
             // Looks at the top Cards of your draw pile (shuffling first when it's short), takes one, discards the rest.
             "KiChant" => Math.Max(0, KiChantLooksAt(card) - 1),
             // Discards the cards it drew that cost energy: at most all of them (which ones is a draw).
@@ -1023,8 +1023,8 @@ public sealed class PlayFacts
                     return 1;
                 case nameof(HeavenlyDrill):
                 {
-                    var x = XValue(combat, card, energy);
-                    return x >= Sts2State.Var(card, "Energy") ? x * 2 : x;
+                    var xValue = XValue(combat, card, energy);
+                    return xValue >= Sts2State.Var(card, "Energy") ? xValue * 2 : xValue;
                 }
                 case nameof(Stardust):
                     return XValue(combat, card, stars);

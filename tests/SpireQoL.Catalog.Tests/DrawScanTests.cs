@@ -19,7 +19,7 @@ public class DrawScanTests
         Assert.True(GameModels.EnsureLoaded() > 500, "the game's cards didn't load");
         return typeof(AbstractModel).Assembly.GetTypes()
             .Where(type => !type.IsAbstract && typeof(AbstractModel).IsAssignableFrom(type))
-            .Where(type => Hooks.Any(h => type.GetMethod(h, BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly) != null))
+            .Where(type => Hooks.Any(hook => type.GetMethod(hook, BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly) != null))
             .Select(type => type.Name).OrderBy(n => n).ToList();
     }
 
@@ -28,7 +28,7 @@ public class DrawScanTests
     {
         var reactors = DrawReactors();
         Assert.NotEmpty(reactors);
-        var missing = reactors.Where(n => !SimAdapter.DrawReactions.ContainsKey(n)).ToList();
+        var missing = reactors.Where(reactor => !SimAdapter.DrawReactions.ContainsKey(reactor)).ToList();
         Assert.True(missing.Count == 0, "React to a drawn card, not reviewed for the draw profile (SimAdapter.DrawReactions): " + string.Join(", ", missing));
     }
 
@@ -36,7 +36,7 @@ public class DrawScanTests
     public void NoReviewForAClassThatsGone()
     {
         var reactors = DrawReactors().ToHashSet();
-        var stale = SimAdapter.DrawReactions.Keys.Where(k => !reactors.Contains(k)).ToList();
+        var stale = SimAdapter.DrawReactions.Keys.Where(key => !reactors.Contains(key)).ToList();
         Assert.True(stale.Count == 0, "Reviewed in SimAdapter.DrawReactions but no longer reacting to draws: " + string.Join(", ", stale));
     }
 
@@ -69,7 +69,7 @@ public class DrawScanTests
         GameModels.EnsureLoaded();
         var users = ModelDb.AllCards.Select(card => card.GetType()).Distinct().Where(UsesWhatItDraws).Select(type => type.Name).OrderBy(n => n).ToList();
         Assert.Contains("EscapePlan", users); // the scan finds the known ones
-        var missing = users.Where(n => !SimAdapter.DrawnCardReaders.ContainsKey(n)).ToList();
+        var missing = users.Where(user => !SimAdapter.DrawnCardReaders.ContainsKey(user)).ToList();
         Assert.True(missing.Count == 0, "Cards that act on what they draw, not in SimAdapter.DrawnCardReaders: " + string.Join(", ", missing));
         foreach (var name in SimAdapter.DrawnCardReaders.Keys)
             Assert.True(users.Contains(name), $"{name} is a DrawnCardReader but no longer uses what it draws");

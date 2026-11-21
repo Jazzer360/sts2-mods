@@ -38,7 +38,7 @@ internal static class ScriptBuilder
         public int Count => 16;
         public bool ContainsKey(int key) => true;
         public bool TryGetValue(int key, out CapturedTerms value) { value = _t; return true; }
-        public IEnumerator<KeyValuePair<int, CapturedTerms>> GetEnumerator() => Keys.Select(k => new KeyValuePair<int, CapturedTerms>(k, _t)).GetEnumerator();
+        public IEnumerator<KeyValuePair<int, CapturedTerms>> GetEnumerator() => Keys.Select(key => new KeyValuePair<int, CapturedTerms>(key, _t)).GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

@@ -25,7 +25,7 @@ public class OutcomeTabTests
             "RupturePower", "SelfFormingClay", "ShriekPower", "SlipperyPower", "SlumberPower", "SteamEruptionPower", "StockPower",
             "SurprisePower", "TheGambitPower",
         };
-        Assert.Equal(expected, SimModels.Names.Where(n => Model(n).JudgedOnOutcome).Order());
+        Assert.Equal(expected, SimModels.Names.Where(name => Model(name).JudgedOnOutcome).Order());
     }
 
     [Fact]

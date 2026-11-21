@@ -197,17 +197,17 @@ public sealed partial class RunRemindersFeature
                     continue;
                 }
                 if (ins.opcode == OpCodes.Ldtoken && ins.operand is FieldInfo data) { arrayData = data; continue; }
-                if (building is { } b && ins.opcode.Name?.StartsWith("stelem") == true && last is { Const: { } value })
+                if (building is { } elementLength && ins.opcode.Name?.StartsWith("stelem") == true && last is { Const: { } value })
                 {
-                    b.Values.Add(Enum.ToObject(b.Element, value));
-                    if (b.Values.Count == b.Length) { arrays[b.Element] = b.Values.ToArray(); building = null; }
+                    elementLength.Values.Add(Enum.ToObject(elementLength.Element, value));
+                    if (elementLength.Values.Count == elementLength.Length) { arrays[elementLength.Element] = elementLength.Values.ToArray(); building = null; }
                     continue;
                 }
                 if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var k)) { Push(new IntExpr(k, null)); continue; }
                 if (ins.opcode == OpCodes.Ldstr) { lastString = ins.operand as string; continue; }
                 if (ins.opcode == OpCodes.Div && last is { Const: { } d } && before is { Var: not null } && d != 0) { last = before with { Divisor = before.Divisor * d }; continue; }
-                if (SlotKey(ins, store: true) is { } st) { if (producedInt && last != null) stored[st] = last; continue; }
-                if (SlotKey(ins, store: false) is { } ld) { if (stored.TryGetValue(ld, out var val)) Push(val); continue; }
+                if (SlotKey(ins, store: true) is { } slotKey) { if (producedInt && last != null) stored[slotKey] = last; continue; }
+                if (SlotKey(ins, store: false) is { } otherSlotKey) { if (stored.TryGetValue(otherSlotKey, out var val)) Push(val); continue; }
                 if (ins.opcode == OpCodes.Ldftn && ins.operand is MethodInfo method && IsCardFilter(method))
                 {
                     filter = method;
@@ -303,7 +303,7 @@ public sealed partial class RunRemindersFeature
         internal List<(string Maker, string Count, string Loop)> RewardsRead =>
             _rewards.Select(rewardSource => (rewardSource.Maker.IsConstructor ? "new:" + rewardSource.Odds : rewardSource.Maker.Name,
                 rewardSource.Count is { } intExpr ? (intExpr.Const?.ToString() ?? intExpr.Var!) + (intExpr.Divisor != 1 ? "/" + intExpr.Divisor : "") : "?",
-                rewardSource.LoopValues is { } v ? string.Join(",", v) : "")).ToList();
+                rewardSource.LoopValues is { } loopValues ? string.Join(",", loopValues) : "")).ToList();
 
         /// <summary>For the tests: whether you pick the card a transform turns.</summary>
         internal bool PicksTransform => _picksTransform;
@@ -449,8 +449,8 @@ public sealed partial class RunRemindersFeature
                 {
                     if (!possible.Any(applies)) continue;
                     if (reward.Count is not { } countExpr || Evaluate(countExpr) is not { } count) return null;
-                    if (RewardChance(possible, applies, options.RarityOdds, count) is not { } p) return null;
-                    chances.Add(p);
+                    if (RewardChance(possible, applies, options.RarityOdds, count) is not { } rewardChance) return null;
+                    chances.Add(rewardChance);
                 }
             }
             if (_transformRandom)
@@ -485,7 +485,7 @@ public sealed partial class RunRemindersFeature
                     byPool[key] = (options.Count, (double)options.Count(applies) / options.Count);
             }
             if (byPool.Count == 0) return null;
-            return (byPool.Values.Min(v => v.Chance), byPool.Values.Max(v => v.Chance));
+            return (byPool.Values.Min(value => value.Chance), byPool.Values.Max(value => value.Chance));
         }
 
         /// <summary>
@@ -600,11 +600,11 @@ public sealed partial class RunRemindersFeature
         /// </summary>
         internal static string? RarityRoll(List<CardModel> possible, CardRarityOddsType odds)
         {
-            if (odds is CardRarityOddsType.Uniform or CardRarityOddsType.None || BaseOdds(odds) is not { } b) return null;
+            if (odds is CardRarityOddsType.Uniform or CardRarityOddsType.None || BaseOdds(odds) is not { } baseOdds) return null;
             var order = new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare };
             var has = order.Select(cardRarity => possible.Any(card => card.Rarity == cardRarity)).ToArray();
-            if (!has.Any(x => x)) return null;
-            var rolled = new[] { Math.Max(0, 1 - b.Rare - b.Uncommon), b.Uncommon, b.Rare };
+            if (!has.Any(ha => ha)) return null;
+            var rolled = new[] { Math.Max(0, 1 - baseOdds.Rare - baseOdds.Uncommon), baseOdds.Uncommon, baseOdds.Rare };
             var lands = new double[3];
             for (var i = 0; i < 3; i++)
             {
@@ -733,7 +733,7 @@ public sealed partial class RunRemindersFeature
                     var self = ThisField(type);
                     if (fields.Any(field => field != self && field != loopField)) return _ => true;
                     inst = RuntimeHelpers.GetUninitializedObject(type);
-                    var owner = Holders().FirstOrDefault(h => self != null && self.FieldType.IsInstanceOfType(h));
+                    var owner = Holders().FirstOrDefault(holder => self != null && self.FieldType.IsInstanceOfType(holder));
                     if (self != null && owner != null) self.SetValue(inst, owner);
                     if (loopField != null && loopValue != null) loopField.SetValue(inst, loopValue);
                 }

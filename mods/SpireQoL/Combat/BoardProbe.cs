@@ -70,7 +70,7 @@ internal static class BoardProbe
                 if (diffs.Count >= 6) return;
                 if (nextJson is System.Text.Json.Nodes.JsonObject jsonObject && y is System.Text.Json.Nodes.JsonObject otherJsonObject)
                 {
-                    foreach (var k in jsonObject.Select(kv => kv.Key).Union(otherJsonObject.Select(kv => kv.Key))) Walk(jsonObject[k], otherJsonObject[k], path == "" ? k : path + "." + k);
+                    foreach (var k in jsonObject.Select(entry => entry.Key).Union(otherJsonObject.Select(entry => entry.Key))) Walk(jsonObject[k], otherJsonObject[k], path == "" ? k : path + "." + k);
                     return;
                 }
                 if (nextJson is System.Text.Json.Nodes.JsonArray jsonArray && y is System.Text.Json.Nodes.JsonArray otherJsonArray && jsonArray.Count == otherJsonArray.Count)

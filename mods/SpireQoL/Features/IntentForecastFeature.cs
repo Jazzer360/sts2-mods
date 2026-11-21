@@ -92,7 +92,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             _widget!.HasContent = false;
             return;
         }
-        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(forecastTurn => string.Join(",", forecastTurn.Moves.Select(m => $"{m.Move}:{m.Chance:0.###}"))));
+        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(forecastTurn => string.Join(",", forecastTurn.Moves.Select(move => $"{move.Move}:{move.Chance:0.###}"))));
         if (key != _key)
         {
             _key = key;

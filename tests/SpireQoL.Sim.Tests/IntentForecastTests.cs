@@ -14,7 +14,7 @@ public class IntentForecastTests
         new(to, repeat, max, cooldown, weight);
 
     private static string Show(List<ForecastTurn> turns) =>
-        string.Join(" | ", turns.Select(forecastTurn => string.Join(", ", forecastTurn.Moves.Select(m => m.Chance == 1 ? m.Move : $"{m.Move} {m.Chance:0.###}"))));
+        string.Join(" | ", turns.Select(forecastTurn => string.Join(", ", forecastTurn.Moves.Select(move => move.Chance == 1 ? move.Move : $"{move.Move} {move.Chance:0.###}"))));
 
     [Fact]
     public void AFixedPatternIsCertainTurnAfterTurnUpToTheCap()

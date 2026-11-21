@@ -85,9 +85,9 @@ internal static class IntentCorner
         var icon = UiKit.Icon(GameIcons.Power(applied.Power), IconSize);
         icon.MouseFilter = Control.MouseFilterEnum.Ignore;
         chip.AddChild(icon);
-        if (applied.Amount is { } a)
+        if (applied.Amount is { } otherAmount)
         {
-            var amount = UiKit.Label(a.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), FontSize, Colors.White);
+            var amount = UiKit.Label(otherAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), FontSize, Colors.White);
             amount.AddThemeConstantOverride("outline_size", 4);
             amount.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.95f));
             amount.VerticalAlignment = VerticalAlignment.Bottom;

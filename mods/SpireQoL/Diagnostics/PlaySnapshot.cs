@@ -115,48 +115,48 @@ internal sealed class PlaySnapshot
         // HP gained and max HP, on any creature alive before and after.
         foreach (var (creature, (hp, maxHp)) in before.Creatures)
         {
-            if (!after.Creatures.TryGetValue(creature, out var a) || !creature.IsAlive) continue;
+            if (!after.Creatures.TryGetValue(creature, out var otherCreature) || !creature.IsAlive) continue;
             var who = creature == me.Creature ? "you" : creature.Monster?.GetType().Name ?? "creature";
-            if (a.Hp > hp) Check(Heal, $"{who} {hp}→{a.Hp}");
-            if (a.MaxHp != maxHp) Check(MaxHp, $"{who} {maxHp}→{a.MaxHp}");
+            if (otherCreature.Hp > hp) Check(Heal, $"{who} {hp}→{otherCreature.Hp}");
+            if (otherCreature.MaxHp != maxHp) Check(MaxHp, $"{who} {maxHp}→{otherCreature.MaxHp}");
         }
 
         // Your cards: state, and moves the history doesn't record (draws, discards, exhausts, shuffles).
         var drawn = entries.OfType<CardDrawnEntry>().Select(cardDrawnEntry => cardDrawnEntry.Card).ToHashSet(ReferenceEqualityComparer.Instance);
         var discarded = entries.OfType<CardDiscardedEntry>().Select(cardDiscardedEntry => cardDiscardedEntry.Card).ToHashSet(ReferenceEqualityComparer.Instance);
         var exhausted = entries.OfType<CardExhaustedEntry>().Select(cardExhaustedEntry => cardExhaustedEntry.Card).ToHashSet(ReferenceEqualityComparer.Instance);
-        foreach (var (card, b) in before.Cards)
+        foreach (var (card, pileCost) in before.Cards)
         {
-            if (!after.Cards.TryGetValue(card, out var a)) continue; // gone (exhausted, removed): the budget's
+            if (!after.Cards.TryGetValue(card, out var otherCard)) continue; // gone (exhausted, removed): the budget's
             var own = card.GetType();
             var name = card.GetType().Name;
             // The played card's cost changing is the game clearing its "this turn or until played" cost, either way
             // (CardModel → CardEnergyCost.AfterCardPlayedCleanup: Splash, Bullet Time, Bookmark lowered it; a random cost raised it).
-            var playedCleanup = ReferenceEquals(card, played) && a.Cost != b.Cost;
+            var playedCleanup = ReferenceEquals(card, played) && otherCard.Cost != pileCost.Cost;
             // An upgrade or downgrade changes the card's cost and keywords itself (OnUpgrade: Big Bang+
             // gains Innate): those are the upgrade's, checked as one change.
-            var upgradeChanged = a.Upgraded != b.Upgraded;
-            if (a.Cost != b.Cost && b.Cost != -99 && a.Cost != -99 && !playedCleanup && !upgradeChanged) Check(Cost, $"{name} {b.Cost}→{a.Cost}", own);
+            var upgradeChanged = otherCard.Upgraded != pileCost.Upgraded;
+            if (otherCard.Cost != pileCost.Cost && pileCost.Cost != -99 && otherCard.Cost != -99 && !playedCleanup && !upgradeChanged) Check(Cost, $"{name} {pileCost.Cost}→{otherCard.Cost}", own);
             if (upgradeChanged) Check(Upgrade, name, own);
-            if (a.Keywords != b.Keywords && !upgradeChanged) Check(Keyword, $"{name} [{b.Keywords}]→[{a.Keywords}]", own);
-            if (a.Affliction != b.Affliction) Check(Affliction, $"{name} {(b.Affliction == "" ? "none" : b.Affliction)}→{(a.Affliction == "" ? "none" : a.Affliction)}", own);
-            if (a.Enchantment != b.Enchantment) Check(Enchant, $"{name} {(b.Enchantment == "" ? "none" : b.Enchantment)}→{(a.Enchantment == "" ? "none" : a.Enchantment)}", own);
-            if (a.Pile != b.Pile && !ReferenceEquals(card, played))
+            if (otherCard.Keywords != pileCost.Keywords && !upgradeChanged) Check(Keyword, $"{name} [{pileCost.Keywords}]→[{otherCard.Keywords}]", own);
+            if (otherCard.Affliction != pileCost.Affliction) Check(Affliction, $"{name} {(pileCost.Affliction == "" ? "none" : pileCost.Affliction)}→{(otherCard.Affliction == "" ? "none" : otherCard.Affliction)}", own);
+            if (otherCard.Enchantment != pileCost.Enchantment) Check(Enchant, $"{name} {(pileCost.Enchantment == "" ? "none" : pileCost.Enchantment)}→{(otherCard.Enchantment == "" ? "none" : otherCard.Enchantment)}", own);
+            if (otherCard.Pile != pileCost.Pile && !ReferenceEquals(card, played))
             {
-                var recorded = (a.Pile == PileType.Hand && drawn.Contains(card)) || (a.Pile == PileType.Discard && discarded.Contains(card))
-                               || (a.Pile == PileType.Exhaust && exhausted.Contains(card))
-                               || (shuffles > 0 && a.Pile == PileType.Draw && (b.Pile == PileType.Discard || discarded.Contains(card)));
-                if (!recorded) Check(Move, $"{name} {b.Pile}→{a.Pile}", own);
+                var recorded = (otherCard.Pile == PileType.Hand && drawn.Contains(card)) || (otherCard.Pile == PileType.Discard && discarded.Contains(card))
+                               || (otherCard.Pile == PileType.Exhaust && exhausted.Contains(card))
+                               || (shuffles > 0 && otherCard.Pile == PileType.Draw && (pileCost.Pile == PileType.Discard || discarded.Contains(card)));
+                if (!recorded) Check(Move, $"{name} {pileCost.Pile}→{otherCard.Pile}", own);
             }
         }
 
         // Relics whose counter or status changed with nothing showing it: no tab, no tracker row, no flash.
-        foreach (var (relic, b) in before.Relics)
+        foreach (var (relic, displayStatus) in before.Relics)
         {
-            if (!after.Relics.TryGetValue(relic, out var a) || a == b) continue;
+            if (!after.Relics.TryGetValue(relic, out var otherRelic) || otherRelic == displayStatus) continue;
             var name = relic.GetType().Name;
             if (tabbedOrTracked.Contains(name) || explainers.Contains(relic.GetType())) continue;
-            issues.Add($"untracked relic: {name} changed ({b.Display}/{b.Status} → {a.Display}/{a.Status}) with no tab, tracker row or flash (could be: {name})");
+            issues.Add($"untracked relic: {name} changed ({displayStatus.Display}/{displayStatus.Status} → {otherRelic.Display}/{otherRelic.Status}) with no tab, tracker row or flash (could be: {name})");
         }
         return issues;
     }

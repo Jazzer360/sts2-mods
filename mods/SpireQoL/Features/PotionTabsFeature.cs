@@ -93,8 +93,8 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
                     };
                     if (on) specs.Add(("potion:" + relic.GetType().Name, relic, false));
                 }
-                _last[potion] = specs.Select(s => s.Key).ToList();
-                var shown = specs.Where(s => _ctx.Settings.TabEnabled(s.Key) && (s.Crossed ? _ctx.Settings.CrossedTabs : _ctx.Settings.PlainTabs)).ToList();
+                _last[potion] = specs.Select(spec => spec.Key).ToList();
+                var shown = specs.Where(spec => _ctx.Settings.TabEnabled(spec.Key) && (spec.Crossed ? _ctx.Settings.CrossedTabs : _ctx.Settings.PlainTabs)).ToList();
                 seen.Add(holder.GetInstanceId());
                 Show(holder, shown);
             }
@@ -270,12 +270,12 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             if (gained != predicted) problems.Add((nameof(BeltBuckle), $"Belt Buckle: {(gained ? "gave Dexterity" : "didn't")}, tab {(predicted ? "shown" : "not shown")}"));
         }
         var what = $"potion {pending.Potion.GetType().Name}: tabs [{string.Join(", ", pending.Tabs)}]";
-        ModEntry.Log.Info($"[audit] [potion] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(x => x.Text)))}");
+        ModEntry.Log.Info($"[audit] [potion] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(problem => problem.Text)))}");
         Telemetry.Audits.Done(Telemetry.Audits.Potion, problems.Count == 0, problems.Count == 0 ? pending.Potion.GetType().Name : problems[0].Key);
         if (problems.Count > 0)
         {
-            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("potion", $"Potion tabs were wrong: {string.Join(", ", problems.Select(x => x.Key))}",
-                new[] { "potion-tabs" }.Concat(problems.Select(x => x.Key)), what + "\n" + string.Join("\n", problems.Select(x => x.Text)));
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("potion", $"Potion tabs were wrong: {string.Join(", ", problems.Select(problem => problem.Key))}",
+                new[] { "potion-tabs" }.Concat(problems.Select(problem => problem.Key)), what + "\n" + string.Join("\n", problems.Select(problem => problem.Text)));
         }
     }
 }

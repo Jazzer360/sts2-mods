@@ -55,7 +55,7 @@ public sealed partial class RunRemindersFeature
             }
             if (!have.Decor.IsEmpty) CardOverlayRenderer.Outside.Add((node, have.Decor));
         }
-        foreach (var gone in _offeredTabs.Keys.Where(k => !seen.Contains(k)).ToList()) _offeredTabs.Remove(gone);
+        foreach (var gone in _offeredTabs.Keys.Where(key => !seen.Contains(key)).ToList()) _offeredTabs.Remove(gone);
     }
 
     /// <summary>A tab per relic of yours that boosts this card (or a card it makes), with the relic's switch for this place.</summary>

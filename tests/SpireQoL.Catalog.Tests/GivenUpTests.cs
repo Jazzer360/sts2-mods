@@ -37,7 +37,7 @@ public class GivenUpTests
     [Fact]
     public void TheGiveUpTabsAreCheckedByWhatTheGameShows()
     {
-        var seen = CrossedRelics().ToDictionary(x => x.Name, x => x.Seen);
+        var seen = CrossedRelics().ToDictionary(crossedRelic => crossedRelic.Name, crossedRelic => crossedRelic.Seen);
         Assert.Equal(ActedSeen.StatusCleared, seen["ArtOfWar"]);
         Assert.Equal(ActedSeen.StatusCleared, seen["RippleBasin"]);
         Assert.Equal(ActedSeen.StatusCleared, seen["PaelsEye"]);
@@ -51,13 +51,13 @@ public class GivenUpTests
     {
         foreach (var (name, seen, relic) in CrossedRelics())
         {
-            var hooks = CardPlayHooks.Select(h => CallsIn(relic, h)).ToList();
+            var hooks = CardPlayHooks.Select(cardPlayHook => CallsIn(relic, cardPlayHook)).ToList();
             switch (seen)
             {
                 case ActedSeen.StatusCleared:
                     // Its card-play hook sets its status, and doesn't flash (a flash would be checked as one).
-                    Assert.True(hooks.Any(c => c.Contains("set_Status")), $"{name}: no card-play hook sets its status");
-                    Assert.False(hooks.Any(c => c.Contains("Flash")), $"{name}: flashes on a play, so its tab can be checked by the flash");
+                    Assert.True(hooks.Any(hook => hook.Contains("set_Status")), $"{name}: no card-play hook sets its status");
+                    Assert.False(hooks.Any(hook => hook.Contains("Flash")), $"{name}: flashes on a play, so its tab can be checked by the flash");
                     break;
                 case ActedSeen.NoEnergyLeft:
                     // It reads your energy as the turn ends.
@@ -65,7 +65,7 @@ public class GivenUpTests
                     break;
                 case ActedSeen.CounterPassedLimit:
                     // It counts in a card-play hook, doesn't flash there, and has the limit its model names (Pocketwatch: CardThreshold).
-                    Assert.False(hooks.Any(c => c.Contains("Flash")), $"{name}: flashes on a play, so its tab can be checked by the flash");
+                    Assert.False(hooks.Any(hook => hook.Contains("Flash")), $"{name}: flashes on a play, so its tab can be checked by the flash");
                     GameModels.EnsureLoaded();
                     Assert.True(ModelDb.AllRelics.First(canonicalRelic => canonicalRelic.GetType() == relic).DynamicVars.ContainsKey(SimModels.Get(name)!.LimitVar!), $"{name}: no {SimModels.Get(name)!.LimitVar} value");
                     break;

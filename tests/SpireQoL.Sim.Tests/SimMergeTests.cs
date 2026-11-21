@@ -85,11 +85,11 @@ public class SimMergeTests
                 .ToDictionary(g => g.Key, g => g.Sum(branch => branch.Weight));
             var what = $"fight {fight}: HP [{string.Join(",", hp)}], block [{string.Join(",", block)}], Lightning [{string.Join(",", passive)}]";
             Assert.False(outcome.Truncated, what);
-            Assert.Equal(counted.Keys.OrderBy(k => k), simulated.Keys.OrderBy(k => k));
+            Assert.Equal(counted.Keys.OrderBy(key => key), simulated.Keys.OrderBy(key => key));
             foreach (var (key, p) in counted) Assert.True(Math.Abs(p - simulated[key]) < 1e-9, $"{what}: HP {key}: counted {p}, simulated {simulated[key]}");
             for (var i = 0; i < enemies; i++)
             {
-                var dead = counted.Where(x => int.Parse(x.Key.Split(',')[i]) == 0).Sum(x => x.Value);
+                var dead = counted.Where(entry => int.Parse(entry.Key.Split(',')[i]) == 0).Sum(entry => entry.Value);
                 Assert.True(Math.Abs(dead - outcome.DeadChance(i)) < 1e-9, $"{what}: enemy {i} dies: counted {dead}, simulated {outcome.DeadChance(i)}");
             }
         }

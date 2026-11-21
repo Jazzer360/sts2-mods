@@ -200,11 +200,11 @@ public sealed partial class SettingsMenu
             if (block)
             {
                 nHotkeyManager.AddBlockingScreen(_root);
-                foreach (var k in closeKeys) PushHotkey(nHotkeyManager, k, _closeAction);
+                foreach (var closeKey in closeKeys) PushHotkey(nHotkeyManager, closeKey, _closeAction);
             }
             else
             {
-                foreach (var k in closeKeys) nHotkeyManager.RemoveHotkeyPressedBinding(k, _closeAction);
+                foreach (var closeKey in closeKeys) nHotkeyManager.RemoveHotkeyPressedBinding(closeKey, _closeAction);
                 nHotkeyManager.RemoveBlockingScreen(_root);
             }
             _blocking = block;
@@ -224,7 +224,7 @@ public sealed partial class SettingsMenu
         var method = typeof(NHotkeyManager).GetMethods().FirstOrDefault(otherMethod => otherMethod.Name == nameof(NHotkeyManager.PushHotkeyPressedBinding)
             && otherMethod.GetParameters() is { Length: >= 2 } parameterInfos && parameterInfos[0].ParameterType == typeof(string) && parameterInfos[1].ParameterType == typeof(Action))
             ?? throw new MissingMethodException(nameof(NHotkeyManager), nameof(NHotkeyManager.PushHotkeyPressedBinding));
-        var args = method.GetParameters().Select((parameterInfo, i) => i == 0 ? key : i == 1 ? action : parameterInfo.HasDefaultValue ? parameterInfo.DefaultValue : null).ToArray();
+        var args = method.GetParameters().Select((parameterInfo, index) => index == 0 ? key : index == 1 ? action : parameterInfo.HasDefaultValue ? parameterInfo.DefaultValue : null).ToArray();
         method.Invoke(nHotkeyManager, args);
     }
 
@@ -418,7 +418,7 @@ public sealed partial class SettingsMenu
     /// a feature needs that feature (any one of several, for an option several features show).
     /// </summary>
     private string? Needs(params string[] features)
-        => features.Any(FeatureOn) ? null : string.Join(" or ", features.Select(id => FeatureRows.First(r => r.Id == id).Name));
+        => features.Any(FeatureOn) ? null : string.Join(" or ", features.Select(id => FeatureRows.First(featureRow => featureRow.Id == id).Name));
 
     /// <summary>
     /// Chances (decision #122): one switch for every chance the mod shows, then each one under it, greyed out while it's off or
@@ -471,8 +471,8 @@ public sealed partial class SettingsMenu
         var shown = SettingsCatalog.Sources.Where(sourceEntry => sourceEntry.OutsideFights)
             .Where(sourceEntry => here == null || here.Contains(sourceEntry.Type))
             .Select(sourceEntry => (Entry: sourceEntry, Name: DisplayName(sourceEntry.Type)))
-            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Reward, x.Entry.Event, x.Entry.Shop, x.Entry.Map))
-            .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Where(entryName => Matches(entryName.Name, entryName.Entry.Type, entryName.Entry.Reward, entryName.Entry.Event, entryName.Entry.Shop, entryName.Entry.Map))
+            .OrderBy(entryName => entryName.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
         Section("Reminders");
         if (shown.Count == 0)
@@ -532,7 +532,7 @@ public sealed partial class SettingsMenu
         }
 
         // Tab kinds seen in play that the catalog doesn't know (a newer rule): still switchable.
-        var other = S.Tabs.Keys.Where(k => !k.EndsWith(":*") && !k.StartsWith("reminder-") && !SettingsCatalog.IsKnownTabKey(k)).OrderBy(k => k).ToList();
+        var other = S.Tabs.Keys.Where(key => !key.EndsWith(":*") && !key.StartsWith("reminder-") && !SettingsCatalog.IsKnownTabKey(key)).OrderBy(key => key).ToList();
         foreach (var key in other)
         {
             if (!Matches(key)) continue;
@@ -547,8 +547,8 @@ public sealed partial class SettingsMenu
         var shown = entries
             .Where(sourceEntry => here == null || here.Contains(sourceEntry.Type))
             .Select(sourceEntry => (Entry: sourceEntry, Name: DisplayName(sourceEntry.Type)))
-            .Where(x => Matches(x.Name, x.Entry.Type, x.Entry.Tag, x.Entry.Tracker, x.Entry.Reward, x.Entry.Event, x.Entry.Shop, x.Entry.Map))
-            .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Where(entryName => Matches(entryName.Name, entryName.Entry.Type, entryName.Entry.Tag, entryName.Entry.Tracker, entryName.Entry.Reward, entryName.Entry.Event, entryName.Entry.Shop, entryName.Entry.Map))
+            .OrderBy(entryName => entryName.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
         if (shown.Count == 0)
@@ -574,8 +574,8 @@ public sealed partial class SettingsMenu
         {
             foreach (var (sourceEntry, _) in shown) if (sourceEntry.TagKey != null) S.Tabs[sourceEntry.TagKey] = on;
         });
-        var groupKeys = shown.Where(x => x.Entry.TagKey != null).Select(x => x.Entry.TagPrefix + "*").Distinct();
-        var groupOff = groupKeys.Where(k => !S.TabOwn(k)).ToList();
+        var groupKeys = shown.Where(entryName => entryName.Entry.TagKey != null).Select(entryName => entryName.Entry.TagPrefix + "*").Distinct();
+        var groupOff = groupKeys.Where(groupKey => !S.TabOwn(groupKey)).ToList();
         if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off on the Card tabs page)", 16, Colors.OrangeRed));
         header.AddChild(tagHead);
         if (anyTracker)

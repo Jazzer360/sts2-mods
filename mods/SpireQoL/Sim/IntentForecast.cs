@@ -54,8 +54,8 @@ public static class IntentForecast
         {
             var dist = new Dictionary<string, double>();
             if (!Walk(graph, move.FollowUp ?? graph.InitialId, 1.0, history, dist, 0)) break;
-            var moves = dist.Where(kv => kv.Value > 0).OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key)
-                .Select(kv => (kv.Key, kv.Value)).ToList();
+            var moves = dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key)
+                .Select(entry => (entry.Key, entry.Value)).ToList();
             if (moves.Count == 0) break;
             turns.Add(new ForecastTurn(moves));
             if (moves.Count > 1) break; // the first random pick ends it

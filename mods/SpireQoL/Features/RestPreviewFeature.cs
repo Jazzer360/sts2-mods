@@ -318,7 +318,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
             _pendingMend = null;
             return;
         }
-        var changed = pending.FirstOrDefault(kv => kv.Key.Creature.CurrentHp != kv.Value.Hp || kv.Key.Creature.MaxHp != kv.Value.Max);
+        var changed = pending.FirstOrDefault(entry => entry.Key.Creature.CurrentHp != entry.Value.Hp || entry.Key.Creature.MaxHp != entry.Value.Max);
         if (changed.Key == null) { _mendFrames = 0; return; }
         if (++_mendFrames < 90) return;
         var creature = changed.Key.Creature;

@@ -23,7 +23,7 @@ public class SimJobTests
     }
 
     private static string Describe(SimOutcome outcome)
-        => string.Join("\n", outcome.Branches.Select(branch => (branch.Key(), branch.Weight)).OrderBy(x => x.Item1).Select(x => $"{x.Item1}:{x.Weight:F9}"));
+        => string.Join("\n", outcome.Branches.Select(branch => (branch.Key(), branch.Weight)).OrderBy(weight => weight.Item1).Select(weight => $"{weight.Item1}:{weight.Weight:F9}"));
 
     [Fact]
     public async Task ABackgroundJobEndsWithTheWholeOutcome()

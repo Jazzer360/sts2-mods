@@ -66,7 +66,7 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         // (how many times it plays, whether it can be played). Dev mode works them out anyway every 30th such frame and logs a
         // difference (a change the probe missed).
         var combat = Sts2State.Combat;
-        var reuse = _reuse.Decide(combat != null && _last.Count == hand.Count && _last.Select(x => x.Card).SequenceEqual(hand, ReferenceEqualityComparer.Instance)
+        var reuse = _reuse.Decide(combat != null && _last.Count == hand.Count && _last.Select(cardEthereal => cardEthereal.Card).SequenceEqual(hand, ReferenceEqualityComparer.Instance)
                                   && BoardProbe.Hash(me, combat) == _lastProbe);
         if (reuse == FrameReuse.Reuse)
         {
@@ -104,15 +104,15 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
     private static (bool Ethereal, List<TabSpec> Tabs) Work(CardModel card)
     {
         var tabs = new List<TabSpec>();
-        var kw = card.Keywords;
+        var keywords = card.Keywords;
         // Only Ethereal that's on the card itself (KeywordSources.Local: the card's own keyword,
         // or Music Box's copy). Ethereal granted by Hex (the Hexed affliction, via
         // HexPower.TryModifyKeywordsInCombat) is a Global source and is skipped: when Hex hits,
         // every card is Ethereal and the game's own affliction overlay already shows it.
         var ethereal = card.GetKeywordsWithSources(KeywordSources.Local).Contains(CardKeyword.Ethereal);
 
-        if (kw.Contains(CardKeyword.Retain) || card.ShouldRetainThisTurn) tabs.Add(new TabSpec("retain", GameIcons.Enchantment<Steady>()));
-        if (kw.Contains(CardKeyword.Sly) || card.IsSlyThisTurn) tabs.Add(new TabSpec("sly", GameIcons.Power<MasterPlannerPower>()));
+        if (keywords.Contains(CardKeyword.Retain) || card.ShouldRetainThisTurn) tabs.Add(new TabSpec("retain", GameIcons.Enchantment<Steady>()));
+        if (keywords.Contains(CardKeyword.Sly) || card.IsSlyThisTurn) tabs.Add(new TabSpec("sly", GameIcons.Power<MasterPlannerPower>()));
 
         // Replay on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, or
         // an enchantment): no power or relic to show, so the tab reads "2×" (total plays).
