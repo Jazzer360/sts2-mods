@@ -6,8 +6,8 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// A power or relic whose only hooks change a block, damage or HP-lost amount gets no tab: its flash is the play's own numbers,
-/// which the checks compare (CodeIndex.OnlyModifies). A report: The Boot flashed on Gunk Up's hits and the check asked for a tab.
+/// A power or relic whose only hooks change a block, damage or HP-lost amount needs no tab: its flash is the play's own numbers,
+/// which the checks compare (CodeIndex.OnlyModifies); one that has a tab anyway (The Boot) is still held to it.
 /// </summary>
 [Collection(GameFightCollection.Name)]
 public class OnlyModifiesTests

@@ -114,6 +114,7 @@ public static class SettingsCatalog
         new(nameof(OrnamentalFan), SourceGroup.Relic, "The attack that completes its count: block", "Attacks this turn, toward the next block"),
         new("Twine", SourceGroup.Relic, "Cards that knock your arrows loose: block per arrow"),
         new("ConductorsBaton", SourceGroup.Relic, "The card that brings you to three melodies this turn (less damage from attacks)"),
+        new(nameof(TheBoot), SourceGroup.Relic, "Attacks with a hit that gets past block for less than its minimum: raised to it"),
         new(nameof(Kusarigama), SourceGroup.Relic, "The attack that completes its count: damage", "Attacks this turn, toward the next hit"),
         new(nameof(LetterOpener), SourceGroup.Relic, "The skill that completes its count: damage to all", "Skills this turn, toward the next hit"),
         new(nameof(TuningFork), SourceGroup.Relic, "The skill that completes its count: block", "Skills played, toward the next block"),

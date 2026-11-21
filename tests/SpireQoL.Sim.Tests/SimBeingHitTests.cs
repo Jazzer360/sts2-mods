@@ -160,6 +160,24 @@ public class SimBeingHitTests
     }
 
     [Fact]
+    public void TheBootsTabIsAPlayWithAHitItRaises()
+    {
+        // Its tab: a hit that gets past block for less than its minimum. 6 into 5 block loses the enemy 1, raised to 5.
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 20, block: 5, hits: 6) } };
+        state.You.BootMinimum = 5;
+        SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 6), out var states, out _);
+        Assert.Equal(15, states[0].Enemy(id: 1)!.Hp);
+        Assert.True(states[0].Fired.Has("TheBoot"));
+        // A hit already at its minimum or more, or one block stops, isn't raised: no tab.
+        SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 10), out var bigStates, out _);
+        Assert.Equal(15, bigStates[0].Enemy(id: 1)!.Hp);
+        Assert.False(bigStates[0].Fired.Has("TheBoot"));
+        SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 5), out var blockedStates, out _);
+        Assert.Equal(20, blockedStates[0].Enemy(id: 1)!.Hp);
+        Assert.False(blockedStates[0].Fired.Has("TheBoot"));
+    }
+
+    [Fact]
     public void TheBootComesAfterSlipperysCap()
     {
         // Slippery caps HP lost at 1 (AfterOsty); The Boot then raises it to its minimum (AfterOstyLate).

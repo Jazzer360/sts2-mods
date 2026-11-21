@@ -61,15 +61,19 @@ public sealed class SneckoSkull : SimModel
     }
 }
 
-/// <summary>The Boot (relic, amount = DamageMinimum): its owner's (or Osty's) powered hits that lose another creature 1+ HP lose it at least that.</summary>
+/// <summary>The Boot (relic, amount = DamageMinimum): its owner's (or Osty's) powered hits that lose another creature 1+ HP lose it at least that. Its tab: a play with a hit it raises (one that gets past block for less than the minimum: 6 into 5 block loses the enemy 5, not 1).</summary>
 public sealed class TheBoot : SimModel
 {
+    public override TabKind? Tab => TabKind.Trigger;
+
     public override decimal ModifyHpLostAfterOstyLate(SimState state, int owner, DamageCtx damage, decimal amount)
     {
         if (!(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty)) || damage.Target == owner) return amount;
         if (!damage.Props.IsPoweredAttack() || amount < 1m) return amount;
         var min = SimEngine.RelicsOf(state, owner)[ThisRelic];
-        return amount >= min ? amount : min;
+        if (amount >= min) return amount;
+        state.LogFired(Name, amount: 0, owner);
+        return min;
     }
 }
 

@@ -454,6 +454,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 - [ ] Event options whose effect runs through a delegate the reader doesn't follow (a lambda passed to a card choice): the check reports a relic that reacts without its icon.
 - [x] 0.31.0: everything-snapshot per play (`PlaySnapshot`, `CodeIndex`), relic tracking review for all 163 fight-affecting relics (`RelicTracking`), no blanket skips for draws and auto-plays.
 - [x] 0.31.1: The Boot in the simulator (was a known gap; its hits would have caused after-play HP mismatches).
+- [x] 1.27.0: The Boot's tab (a play with a hit it raises past block to its minimum), checked against its flash.
 - [x] 0.31.2: failures inside the audits and coverage check are reported (they were log-only).
 
 ---

@@ -110,7 +110,7 @@ internal static partial class CoverageLedger
         ["StoneCalendar"] = "covered: BeforeSideTurnEnd damages all enemies on its turn (model StoneCalendar, tracker)",
         ["SturdyClamp"] = "ignore: ShouldClearBlock keeps up to 10 block into your next turn",
         ["TheAbacus"] = "covered: AfterShuffle block (proc block on cards that shuffle)",
-        ["TheBoot"] = "covered: ModifyHpLostAfterOstyLate raises your attack hits below its minimum to it (simulator BootMinimum, after Hardened Shell and Slippery)",
+        ["TheBoot"] = "covered: ModifyHpLostAfterOstyLate raises your attack hits below its minimum to it (simulator TheBoot, after Hardened Shell and Slippery; its tab on a play with a hit it raises)",
         ["Tingsha"] = "covered: AfterCardDiscarded damages a random enemy on your turn (proc damage)",
         ["ToughBandages"] = "covered: AfterCardDiscarded block on your turn (proc block)",
         ["TungstenRod"] = "covered: ModifyHpLostAfterOsty reduces HP lost (simulator; proc tab on cards that cost you HP, where it flashes)",
