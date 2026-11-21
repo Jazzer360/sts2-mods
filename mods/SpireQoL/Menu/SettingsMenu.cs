@@ -496,7 +496,7 @@ public sealed partial class SettingsMenu
         var runSetup = MakeButton("Run setup again", size: 20);
         runSetup.Pressed += () => { Close(); OpenSetup?.Invoke(); };
         setupRow.AddChild(runSetup);
-        var setupText = Label("The first-run setup: a starting point (Light, Standard, Everything), then each page's core switches. Your hotkeys, widget positions and per-relic switches are kept.", size: 18, Muted);
+        var setupText = Label("The first-run setup: how much on screen and whether to show chances, then each page's core switches. Your hotkeys, widget positions and per-relic switches are kept.", size: 18, Muted);
         setupText.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         setupText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         setupRow.AddChild(setupText);

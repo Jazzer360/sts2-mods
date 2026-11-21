@@ -415,7 +415,7 @@ public sealed partial class SettingsMenu
         GuideRow(example: null, "Update Notice",
             "On the main menu, above the game's MODDED note: how many Spire QoL versions behind you are, or that you're up to date.");
         GuideRow(example: null, "Setup",
-            "On your first launch, over the main menu: a starting point (Light, Standard or Everything), then what each part of the mod does, with its core switches. General: Run setup again.");
+            "On your first launch, over the main menu: two choices to start from (how much on screen, and chances), then what each part of the mod does, with its core switches. General: Run setup again.");
         GuideRow(example: null, "Moving things",
             $"{Settings.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {Settings.HideAllKey} hides everything.");
     }

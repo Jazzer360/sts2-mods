@@ -8,7 +8,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 1.26.0
 #### Added
-- A first-run setup: on your first launch, over the main menu, a short tour of what the mod does, three starting points (Light, Standard, Everything), and each part's core switches with what they do, then the hotkeys and error reports. Run it again from the settings menu's General page.
+- A first-run setup: on your first launch, over the main menu, a short tour of what the mod does, two choices to start from (how much on screen: minimal, moderate or full; and chances: none, deaths only or all), and each part's core switches with what they do, then the hotkeys and error reports. Run it again from the settings menu's General page.
 
 ### Spire QoL 1.25.0
 #### Added

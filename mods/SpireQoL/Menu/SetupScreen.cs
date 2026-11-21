@@ -9,8 +9,8 @@ namespace SpireQoL.Menu;
 
 /// <summary>
 /// The first-run setup (decision #147): on the first launch (QolSettings.SetupDone), over the main menu, a short tour in steps (tabs
-/// across the top): a starting point among three presets, then each page's core switches with what they do, then the hotkeys and
-/// error reports. Every change applies at once, as in the settings menu, and closing it in any way marks it done; the settings
+/// across the top): two choices to start from (how much on screen, and chances), then each page's core switches with what they do,
+/// then the hotkeys and error reports. Every change applies at once, as in the settings menu, and closing it in any way marks it done; the settings
 /// menu's General page runs it again. Only the features and options a player meets first: per-relic switches, tab kinds and widget
 /// places stay in the settings menu. In dev mode, one button sets up the defaults and closes.
 ///
@@ -19,34 +19,43 @@ namespace SpireQoL.Menu;
 /// </summary>
 public sealed class SetupScreen
 {
-    /// <summary>The options a preset sets; the card tab kinds stay on in every preset (the settings menu turns them off).</summary>
-    internal sealed record PresetOptions(bool Chances, bool DeathChance, bool IntentOdds, bool ProcNumbers, bool ProcIndirect, bool EventOdds, bool EventInspect);
+    /// <summary>
+    /// How much the mod puts on screen: the features it turns on (the rest of PresetFeatures off) and the options that add to what
+    /// they show. Chances are the other choice (ChanceLevel), so each changes only its own settings.
+    /// </summary>
+    internal sealed record Density(string Name, string Summary, IReadOnlySet<string> Features, bool ProcIndirect, bool EventInspect);
 
-    /// <summary>A starting point: its name, what it's for, the features it turns on (the rest of PresetFeatures off), its options.</summary>
-    internal sealed record Preset(string Name, string Summary, IReadOnlySet<string> Features, PresetOptions Options);
+    /// <summary>Whether the mod shows odds: every chance, death chances only, or none (only what's certain; ranges and ? stay).</summary>
+    internal sealed record ChanceLevel(string Name, string Summary, bool Chances, bool DeathChance, bool IntentOdds, bool EventOdds, bool DrawChance);
 
-    /// <summary>The features a preset decides: what shows in fights and outside them (the checks and the update notice aren't display).</summary>
+    /// <summary>The features a density decides: what shows in fights and outside them (the checks and the update notice aren't display).</summary>
     internal static IReadOnlyList<string> PresetFeatures { get; } =
         SettingsMenu.FeatureRows.Where(featureRow => featureRow.Where != SettingsMenu.FeaturePage.General).Select(featureRow => featureRow.Id).ToList();
 
-    private static readonly HashSet<string> LightFeatures = new()
-    {
-        "incoming-damage", "teammate-incoming-damage", "death-skull", "card-indicators", "relic-counters", "exploration-progress", "rest-preview",
-    };
+    private static readonly HashSet<string> MinimalFeatures = new() { "incoming-damage", "teammate-incoming-damage", "death-skull", "exploration-progress", "rest-preview" };
+
+    private static readonly HashSet<string> ModerateFeatures = new(MinimalFeatures) { "card-indicators", "relic-counters", "proc-indicators", "intent-details", "run-reminders" };
 
     private static readonly QolSettings Defaults = new();
 
-    internal static readonly Preset[] Presets =
+    internal static readonly Density[] Densities =
     {
-        new("Light", "What your turn leads to, and little else: the damage you'll take, which enemies die before they act, your counters. Only what's certain: no chances.",
-            LightFeatures,
-            new PresetOptions(Chances: false, DeathChance: true, IntentOdds: false, ProcNumbers: true, ProcIndirect: false, EventOdds: false, EventInspect: false)),
-        new("Standard", "Light, plus a tab on each card for what playing it sets off, enemies' intents in full, and reminders on rewards, events and shops. Death chances, not every chance.",
-            new HashSet<string>(LightFeatures) { "proc-indicators", "intent-details", "intent-forecast", "shuffle-warning", "potion-tabs", "run-reminders" },
-            new PresetOptions(Chances: true, DeathChance: true, IntentOdds: false, ProcNumbers: true, ProcIndirect: false, EventOdds: false, EventInspect: true)),
-        new("Everything", "Every feature and every chance: what each card sets off, even through what it draws or exhausts, and the odds of each enemy move. The mod's defaults.",
-            PresetFeatures.ToHashSet(),
-            new PresetOptions(Defaults.Chances, Defaults.DeathChance, Defaults.IntentOdds, Defaults.ProcNumbers, Defaults.ProcIndirect, Defaults.EventOdds, Defaults.EventInspect)),
+        new("Minimal", "The numbers that matter most: what you'll take when you end your turn, which enemies die before they act, what resting heals. Nothing on your cards.",
+            MinimalFeatures, ProcIndirect: false, EventInspect: false),
+        new("Moderate", "Plus a tab on each card for what playing it sets off, your counter relics' tray, what each enemy's move does, and your relics' reminders on rewards, events and shops.",
+            ModerateFeatures, ProcIndirect: false, EventInspect: true),
+        new("Full", "Everything: also each enemy's next moves, a warning before a draw reshuffles your discard pile, tabs under your potions, and what a card sets off through the cards it draws or exhausts.",
+            PresetFeatures.ToHashSet(), Defaults.ProcIndirect, Defaults.EventInspect),
+    };
+
+    internal static readonly ChanceLevel[] ChanceLevels =
+    {
+        new("None", "Only what's certain. When a roll decides something, you see a range or a ?, never a percentage.",
+            Chances: false, DeathChance: true, IntentOdds: false, EventOdds: false, DrawChance: false),
+        new("Deaths only", "The chance an enemy dies before it acts, or that you die, when a roll decides it. No other odds.",
+            Chances: true, DeathChance: true, IntentOdds: false, EventOdds: false, DrawChance: false),
+        new("All", "Every chance: deaths, each move an enemy's random pick can make, what a card's draw gives, the cards an event can offer.",
+            Defaults.Chances, Defaults.DeathChance, Defaults.IntentOdds, Defaults.EventOdds, DrawChance: true),
     };
 
     private enum Step { Start, Fights, CardTabs, Outside, Finish }
@@ -68,7 +77,6 @@ public sealed class SetupScreen
     private Button? _back, _next;
     private readonly Dictionary<Step, Button> _stepButtons = new();
     private Step _step = Step.Start;
-    private Preset? _chosen;
     private bool _shownThisLaunch;
     private bool _blocking;
     private Action? _closeAction;
@@ -152,8 +160,8 @@ public sealed class SetupScreen
         {
             // Dev mode: the setup the mod is developed with (every default), and done.
             var dev = SettingsMenu.MakeButton("Dev setup", size: 20);
-            dev.TooltipText = "Dev mode: every default (Everything), and close.";
-            dev.Pressed += () => { Apply(Presets[^1]); Done(); };
+            dev.TooltipText = "Dev mode: every default (Full, all chances), and close.";
+            dev.Pressed += () => { Apply(Densities[^1]); Apply(ChanceLevels[^1]); Done(); };
             header.AddChild(dev);
         }
         var skip = SettingsMenu.MakeButton("Skip", size: 20);
@@ -246,17 +254,25 @@ public sealed class SetupScreen
         Heading("Welcome to Spire QoL");
         Paragraph("Spire QoL works out what the game already knows, so you don't have to: the damage you'll take when you end your turn, "
             + "which enemies die before they act, and what each card would set off if you played it now. Everything comes from the game's own rules "
-            + "and what's on screen; it never looks ahead at the draw pile's order or a random roll. When a roll decides something, you see its chance or its range.");
-        Paragraph("Pick a starting point. The next pages show what each part does, and you can switch any of it there or later in the settings menu "
-            + $"({Settings.SettingsKey}).");
-        var cards = UiKit.Row(separation: 16);
-        foreach (var preset in Presets) cards.AddChild(PresetCard(preset));
-        _body!.AddChild(cards);
+            + "and what's on screen; it never looks ahead at the draw pile's order or a random roll.");
+        Paragraph($"Two choices to start from. The next pages show what each part does, and you can switch any of it there or later in the settings menu ({Settings.SettingsKey}).");
+        Heading("How much on screen?");
+        var densities = UiKit.Row(separation: 16);
+        foreach (var density in Densities)
+        {
+            var on = SettingsMenu.FeatureRows.Where(featureRow => density.Features.Contains(featureRow.Id)).Select(featureRow => featureRow.Name);
+            densities.AddChild(Choice(density.Name, density.Summary, "On: " + string.Join(", ", on) + ".", Matches(density), () => Apply(density)));
+        }
+        _body!.AddChild(densities);
+        Heading("Chances?");
+        var chances = UiKit.Row(separation: 16);
+        foreach (var level in ChanceLevels) chances.AddChild(Choice(level.Name, level.Summary, detail: null, Matches(level), () => Apply(level)));
+        _body.AddChild(chances);
     }
 
-    private Control PresetCard(Preset preset)
+    /// <summary>One answer to a choice: marked when the settings are what it sets; choosing it applies it at once.</summary>
+    private Control Choice(string name, string summary, string? detail, bool chosen, Action choose)
     {
-        var chosen = _chosen == preset;
         var panel = new PanelContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         var style = UiKit.PanelStyle(new Color(0.1f, 0.1f, 0.13f, 0.95f), radius: 10, margin: 16);
         style.SetBorderWidthAll(chosen ? 3 : 1);
@@ -265,13 +281,12 @@ public sealed class SetupScreen
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 10);
         panel.AddChild(box);
-        box.AddChild(SettingsMenu.Label(preset.Name, size: 26, SettingsMenu.Accent));
-        box.AddChild(Wrapped(preset.Summary, size: 18, SettingsMenu.Text, width: 330));
-        var on = SettingsMenu.FeatureRows.Where(featureRow => preset.Features.Contains(featureRow.Id)).Select(featureRow => featureRow.Name);
-        box.AddChild(Wrapped("On: " + string.Join(", ", on) + ".", size: 16, SettingsMenu.Muted, width: 330));
+        box.AddChild(SettingsMenu.Label(name, size: 26, SettingsMenu.Accent));
+        box.AddChild(Wrapped(summary, size: 18, SettingsMenu.Text, width: 330));
+        if (detail != null) box.AddChild(Wrapped(detail, size: 16, SettingsMenu.Muted, width: 330));
         box.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
-        var use = SettingsMenu.MakeButton(chosen ? "Chosen" : "Use this", size: 20);
-        use.Pressed += () => { _chosen = preset; Apply(preset); Refresh(); };
+        var use = SettingsMenu.MakeButton(chosen ? "Chosen" : "Choose", size: 20);
+        use.Pressed += () => { choose(); Refresh(); };
         box.AddChild(use);
         return panel;
     }
@@ -345,7 +360,9 @@ public sealed class SetupScreen
     {
         Heading("You're set");
         var on = PresetFeatures.Count(FeatureOn);
-        Paragraph($"{on} of {PresetFeatures.Count} features are on. Change any of this in the settings menu ({Settings.SettingsKey}); "
+        var density = Densities.FirstOrDefault(Matches)?.Name ?? "your own mix";
+        var chances = ChanceLevels.FirstOrDefault(Matches)?.Name.ToLowerInvariant() ?? "your own mix";
+        Paragraph($"On screen: {density}. Chances: {chances}. {on} of {PresetFeatures.Count} features are on. Change any of this in the settings menu ({Settings.SettingsKey}); "
             + "its General page runs this setup again.");
         Paragraph($"{Settings.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize it, right-click it to reset it. "
             + $"{Settings.HideAllKey} hides everything Spire QoL shows, and again shows it.");
@@ -369,21 +386,31 @@ public sealed class SetupScreen
         if (on) _features.EnableLate(id);
     }
 
-    /// <summary>A preset: its features on and the rest of PresetFeatures off, its options, every card tab kind on.</summary>
-    private void Apply(Preset preset)
+    /// <summary>A density: its features on and the rest of PresetFeatures off, and its options.</summary>
+    private void Apply(Density density)
     {
-        foreach (var id in PresetFeatures) SetFeature(id, preset.Features.Contains(id));
-        var options = preset.Options;
-        Settings.Chances = options.Chances;
-        Settings.DeathChance = options.DeathChance;
-        Settings.IntentOdds = options.IntentOdds;
-        Settings.ProcNumbers = options.ProcNumbers;
-        Settings.ProcIndirect = options.ProcIndirect;
-        Settings.EventOdds = options.EventOdds;
-        Settings.EventInspect = options.EventInspect;
-        Settings.CardTabs = Settings.PlainTabs = Settings.CrossedTabs = Settings.AimMarker = true;
+        foreach (var id in PresetFeatures) SetFeature(id, density.Features.Contains(id));
+        Settings.ProcIndirect = density.ProcIndirect;
+        Settings.EventInspect = density.EventInspect;
         Saved();
     }
+
+    private void Apply(ChanceLevel level)
+    {
+        Settings.Chances = level.Chances;
+        Settings.DeathChance = level.DeathChance;
+        Settings.IntentOdds = level.IntentOdds;
+        Settings.EventOdds = level.EventOdds;
+        Settings.Tabs[QolSettings.DrawChanceKey] = level.DrawChance;
+        Saved();
+    }
+
+    private bool Matches(Density density) =>
+        PresetFeatures.All(id => FeatureOn(id) == density.Features.Contains(id)) && Settings.ProcIndirect == density.ProcIndirect && Settings.EventInspect == density.EventInspect;
+
+    private bool Matches(ChanceLevel level) =>
+        Settings.Chances == level.Chances && (!level.Chances || (Settings.DeathChance == level.DeathChance && Settings.IntentOdds == level.IntentOdds
+            && Settings.EventOdds == level.EventOdds && Settings.TabOwn(QolSettings.DrawChanceKey) == level.DrawChance));
 
     private void Saved()
     {
