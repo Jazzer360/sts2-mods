@@ -175,16 +175,16 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
     internal static string ReleasesLink(GitHubReleases.Status? s) =>
         s is { Newer: > 0, Latest: { } latest } ? GitHubReleases.ReleaseUrl(Repo, TagPrefix, latest) : GitHubReleases.PageUrl(Repo, TagPrefix);
 
-    private static bool IsTestBuild(GitHubReleases.Status s) => !s.Released || Dirty;
+    private static bool IsTestBuild(GitHubReleases.Status s) => !s.Released || Dirty || BuildInfo.Dev;
 
     private static string Text(GitHubReleases.Status s)
     {
         if (IsTestBuild(s))
         {
-            var (version, commit, built) = (BuildInfo.Version, BuildInfo.Commit, BuildInfo.BuiltAt.ToString("MMM d HH:mm"));
+            var (version, built) = (BuildInfo.Version, BuildInfo.BuiltAt.ToString("MMM d HH:mm"));
             var lines = new List<string>
             {
-                $"Spire QoL {version} test build ({(commit == "" ? "no commit" : commit)}{(Dirty ? ", uncommitted changes" : "")}, built {built})",
+                $"Spire QoL {version}{(BuildInfo.Dev ? "-dev" : "")}{(BuildInfo.Commit == "" ? "" : "+" + BuildInfo.Commit)} test build ({(Dirty ? "uncommitted changes, " : "")}built {built})",
                 $"version {version} {(s.Released ? "is already released" : "isn't released yet")}; newest release {s.Latest?.ToString() ?? "none"}{(s.Newer > 0 ? $", {s.Newer} newer" : "")}",
             };
             return string.Join('\n', lines);

@@ -19,6 +19,16 @@ internal static class BuildInfo
     /// <summary>The commit, 7 characters, or "" when none was stamped.</summary>
     public static string Commit => Info.IndexOf('+') is var plus and >= 0 && Info[(plus + 1)..] is var c ? (c.Length > 7 ? c[..7] : c) : "";
 
+    /// <summary>
+    /// A development build: anything but the release script's Release build (a plain <c>dotnet build</c> is Debug). Its version is
+    /// the one the next release will carry, so it's labelled "-dev".
+    /// </summary>
+#if DEBUG
+    public static bool Dev => true;
+#else
+    public static bool Dev => false;
+#endif
+
     /// <summary>Built with uncommitted changes.</summary>
     public static bool Dirty => Me.GetCustomAttributes<AssemblyMetadataAttribute>().Any(a => a.Key == "GitDirty" && a.Value == "true");
 
@@ -33,8 +43,9 @@ internal static class BuildInfo
     }
 
     /// <summary>
-    /// "1.24.6+abc1234", with " uncommitted, built Nov 20 19:40" when it had uncommitted changes (the commit alone wouldn't tell
-    /// two such builds apart).
+    /// "1.25.0+abc1234" for a release; "1.25.0-dev+abc1234" for a development build (semantic versioning's pre-release and build
+    /// parts), with " uncommitted, built Nov 20 19:40" when it had uncommitted changes (the commit alone wouldn't tell two such
+    /// builds apart).
     /// </summary>
-    public static string Label => $"{Version}{(Commit == "" ? "" : "+" + Commit)}{(Dirty ? $" uncommitted, built {BuiltAt:MMM d HH:mm}" : "")}";
+    public static string Label => $"{Version}{(Dev ? "-dev" : "")}{(Commit == "" ? "" : "+" + Commit)}{(Dirty ? $" uncommitted, built {BuiltAt:MMM d HH:mm}" : "")}";
 }

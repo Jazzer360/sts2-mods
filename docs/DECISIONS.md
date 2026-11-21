@@ -670,7 +670,7 @@ An Ethereal card is drawn as one picture at its Ethereal opacity (decision #113)
 *Replaced:* the glow drawn whole under the see-through card.
 
 ### 128. Each build carries its commit in the dev data — active (2026-11-20)
-The dev stream (`stream-started`), `state.json` and the notes written on the dashboard carry `BuildInfo.Label`: the version, the commit the build was made from (stamped by SourceLink), and, for a build with uncommitted changes, "uncommitted, built" and its time. Releases are now made every few sessions (the owner's choice), so many builds share one version; the label tells their data apart. The About page's test-build lines read the same `BuildInfo`.
+The dev stream (`stream-started`), `state.json` and the notes written on the dashboard carry `BuildInfo.Label`: the version, the commit the build was made from (stamped by SourceLink), and, for a build with uncommitted changes, "uncommitted, built" and its time. Releases are now made every few sessions (the owner's choice), so many builds share one version; the label tells their data apart. The About page's test-build lines read the same `BuildInfo`. A development build (anything but the release script's Release build: a plain `dotnet build` is Debug) is labelled `-dev` after the version, the next release's (`1.25.0-dev+c4d800f`): in the dev data, on the main menu's test-build line and on the About page.
 *Why:* the owner asked for a reference to the exact build in the dashboard.
 *Replaced:* the version alone.
 

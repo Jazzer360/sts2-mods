@@ -15,7 +15,8 @@ public sealed partial class SettingsMenu
 
     private void BuildAbout()
     {
-        var version = typeof(ModEntry).Assembly.GetName().Version?.ToString(3) ?? "?";
+        // A development build shows which: "1.25.0-dev+abc1234" (BuildInfo.Label).
+        var version = BuildInfo.Dev ? BuildInfo.Label : typeof(ModEntry).Assembly.GetName().Version?.ToString(3) ?? "?";
         Section($"{ReleaseNotes.ModName} {version}");
         var author = ReleaseNotes.Author;
         if (author.Length > 0) Paragraph($"Made by {author}.");
