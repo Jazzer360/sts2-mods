@@ -158,7 +158,7 @@ Built on `main` without intermediate releases; 1.0.0 ships when every step is do
 
 1. **Interpreter core.** Work stack, actions, checkpoints and merging, models and hook dispatch in listener order, the
    damage/block/HP-loss pipelines, the event log. `SimPlay` becomes the input format for a legacy-style play and is
-   compiled to a script (`SimPlay.ToScript`), so every existing test and the single-player golden run on the new engine
+   compiled to a script (`SimScript.Of`), so every existing test and the single-player golden run on the new engine
    unchanged. Exit: all 259 tests and the golden pass on the interpreter; performance tests within budget (limits raised
    only with a stated reason).
 2. **Effects as models.** Move what the engine hard-codes into models dispatched by hooks: end of turn (Plating,
