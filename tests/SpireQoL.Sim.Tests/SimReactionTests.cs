@@ -27,7 +27,7 @@ public class SimReactionTests
     {
         // EnvenomPower.AfterDamageGiven: powered attack, UnblockedDamage > 0, per hit.
         var s = new SimState { Enemies = { Enemy(1, 50, 5, 10) } };
-        s.P.Envenom = 2;
+        s.You.Envenom = 2;
         var after = AfterPlay(s, Strike(1, 4, hits: 3)); // 4 blocked (block 5 → 1), then 3 through, 4 through
         Assert.Equal(4, after.Enemy(1)!.PoisonStacks);
         Assert.Equal(4, after.Enemy(1)!.Poison);
@@ -38,7 +38,7 @@ public class SimReactionTests
     {
         // Poison ticks at the start of its turn, before its move: the attack plus poison is lethal.
         var s = new SimState { Enemies = { Enemy(1, 8, 0, 20) } };
-        s.P.Envenom = 3;
+        s.You.Envenom = 3;
         var o = SimEngine.Run(s, Strike(1, 5));
         Assert.True(o.DeadInAll(1));
         Assert.Equal(0, o.TakenMax);
@@ -48,8 +48,8 @@ public class SimReactionTests
     public void SneckoSkullAddsToEnvenomAndCardPoison()
     {
         var s = new SimState { Enemies = { Enemy(1, 50) } };
-        s.P.Envenom = 1;
-        s.P.PoisonBonus = 1;
+        s.You.Envenom = 1;
+        s.You.PoisonBonus = 1;
         var after = AfterPlay(s, Strike(1, 3, hits: 2));
         Assert.Equal(4, after.Enemy(1)!.PoisonStacks); // (1 + 1) per hit
     }
@@ -144,7 +144,7 @@ public class SimReactionTests
         // though branches of one run never differ in it (the branch key leaves it out: SimKeyCoverageTests).
         var a = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
         var b = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
-        b.P.Reflect = true;
+        b.You.Reflect = true;
         Assert.Equal(a.Key(), b.Key());
         Assert.NotEqual(a.FullKey(), b.FullKey());
         // Intents are in both (Crab Rage can change them in one branch).
@@ -158,9 +158,9 @@ public class SimReactionTests
     {
         // Card simulations share the start state across worker threads; runs never change it.
         var s = new SimState { Enemies = { Enemy(1, 9, 0, 6, 6), Enemy(2, 12, 2, 10), Enemy(3, 7, 0, 3) } };
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
-        s.P.OrbCapacity = 3;
-        s.P.Juggernaut = 3;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        s.You.OrbCapacity = 3;
+        s.You.Juggernaut = 3;
         var plays = Enumerable.Range(0, 24).Select(i => new SimPlay { Name = "P" + i, BlockAmount = i % 5, BlockGains = i % 3, IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 4, [2] = 4, [3] = 4 }, Hits = 1 + i % 3 }).ToList();
         var before = s.ToJson();
         var sequential = plays.Select(p => SimEngine.Run(s, p)).ToList();
@@ -194,13 +194,13 @@ public class SimReactionTests
         // From a real fight: Lightning 3/8 and Glass 2/4 at 0 Focus; Hyperbeam takes 3 Focus:
         // the game showed Lightning 0/5 and Glass 0/0 afterwards.
         var s = new SimState { Enemies = { Enemy(1, 60) } };
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, GlassBase = 2 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
-        s.P.OrbCapacity = 3;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, GlassBase = 2 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        s.You.OrbCapacity = 3;
         SimEngine.ApplyPlayTo(s, new SimPlay { Name = "Hyperbeam", FocusDelta = -3 }, out var b, out _);
-        var orbs = b[0].P.Orbs;
+        var orbs = b[0].You.Orbs;
         Assert.Equal((0, 0), (orbs[0].Passive, orbs[0].Evoke));
         Assert.Equal((0, 5), (orbs[1].Passive, orbs[1].Evoke));
-        Assert.Equal(-3, b[0].P.Focus);
+        Assert.Equal(-3, b[0].You.Focus);
     }
 
     [Fact]
@@ -208,10 +208,10 @@ public class SimReactionTests
     {
         // Negative Focus floors values at 0; gaining Focus back counts from the base, not the floor.
         var s = new SimState { Enemies = { Enemy(1, 60) } };
-        s.P.Focus = -4;
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 0, Evoke = 1 } };
-        s.P.OrbCapacity = 3;
+        s.You.Focus = -4;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 0, Evoke = 1 } };
+        s.You.OrbCapacity = 3;
         SimEngine.ApplyPlayTo(s, new SimPlay { Name = "Defragment", FocusDelta = 3 }, out var b, out _);
-        Assert.Equal((1, 4), (b[0].P.Orbs[0].Passive, b[0].P.Orbs[0].Evoke));
+        Assert.Equal((1, 4), (b[0].You.Orbs[0].Passive, b[0].You.Orbs[0].Evoke));
     }
 }

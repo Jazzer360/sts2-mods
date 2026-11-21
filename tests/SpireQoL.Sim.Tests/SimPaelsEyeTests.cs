@@ -14,10 +14,10 @@ public class SimPaelsEyeTests
     private static SimState Armed()
     {
         var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
-        s.P.PaelsEyeExhaust = true;
-        s.P.HandCount = 3;
-        s.P.FeelNoPain = 3;
-        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        s.You.PaelsEyeExhaust = true;
+        s.You.HandCount = 3;
+        s.You.FeelNoPain = 3;
+        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         return s;
     }
 
@@ -50,8 +50,8 @@ public class SimPaelsEyeTests
         // Orichalcum checks your block in BeforeSideTurnEndVeryEarly, before Pael's Eye exhausts your hand (Early): with no block
         // then, it arms, and gives its 6 on top of Feel No Pain's 9.
         var s = Armed();
-        s.P.TurnEndCards.Clear();
-        s.P.OrichalcumBlock = 6;
+        s.You.TurnEndCards.Clear();
+        s.You.OrichalcumBlock = 6;
         Assert.Equal(0, SimEngine.Run(s).TakenMax);
     }
 
@@ -59,9 +59,9 @@ public class SimPaelsEyeTests
     public void CharonsAshesFiresPerCard()
     {
         var s = new SimState { Enemies = { Enemy(1, 9, 10) } };
-        s.P.PaelsEyeExhaust = true;
-        s.P.HandCount = 3;
-        s.P.CharonsAshesDamage = 3;
+        s.You.PaelsEyeExhaust = true;
+        s.You.HandCount = 3;
+        s.You.CharonsAshesDamage = 3;
         Assert.True(SimEngine.Run(s).DeadInAll(1));
     }
 }

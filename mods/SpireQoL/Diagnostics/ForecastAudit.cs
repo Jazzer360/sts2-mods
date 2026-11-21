@@ -351,7 +351,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var autoPlays = endOfTurn.OfType<CardPlayStartedEntry>().Where(e => e.CardPlay.IsAutoPlay && e.CardPlay.IsFirstInSeries && e.CardPlay.Card.Owner == me).ToList();
         if (autoPlays.Count > 0 && autoPlays[0] is var auto)
         {
-            var hand = f.State.P.AutoHand?.Select(c => c.Id).ToHashSet();
+            var hand = f.State.You.AutoHand?.Select(c => c.Id).ToHashSet();
             var picks = hand == null ? new List<SimPick>() : autoPlays.Where(e => hand.Contains(SimAdapter.HandId(e.CardPlay.Card)))
                 .Select(e => new SimPick(SimAdapter.HandId(e.CardPlay.Card), e.CardPlay.Target is { } t && f.Ids.TryGetValue(t, out var tid) ? tid : -1)).ToList();
             bool Picked(SimState b) => b.AutoPlaysUnknown
@@ -359,7 +359,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 : b.AutoPlayed == autoPlays.Count && picks.SequenceEqual(b.AutoPicks);
             string Predicted() => $"HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})";
             var narrowed = f.Narrowed(Picked);
-            if (narrowed == null && hand != null && picks.Count == autoPlays.Count && f.State.P.Stampede + f.State.P.Simpleton > 0)
+            if (narrowed == null && hand != null && picks.Count == autoPlays.Count && f.State.You.Stampede + f.State.You.Simpleton > 0)
             {
                 // Every auto-play was a pick from your hand, and no branch made those picks: the simulator's picks are wrong.
                 var names = string.Join(", ", autoPlays.Select(e => $"{e.CardPlay.Card.GetType().Name}{(e.CardPlay.Target is { } t ? $" at {t.Monster?.GetType().Name ?? "you"}" : "")}"));
@@ -568,7 +568,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                       $"dead before acting {(o.DeadInAll(id) ? "always" : o.DeadInAny(id) ? "sometimes" : "never")}" +
                       $"{(e.Imbalanced ? $", first hit fully blocked {(o.FirstHitBlockedInAll(id) ? "always" : o.FirstHitBlockedInAny(id) ? "sometimes" : "never")}" : "")}");
         }
-        var p = f.State.P;
+        var p = f.State.You;
         lines.Add($"you: block {p.Block}, orbs [{string.Join(", ", p.Orbs.Select(x => $"{x.Kind} {x.Passive}/{x.Evoke}"))}] (slots {p.OrbCapacity}), Juggernaut {p.Juggernaut}, Plating {p.Plating}, " +
                   $"hand {p.HandCount}, Ethereal exhausting {p.Fading}");
         return string.Join("\n", lines);

@@ -105,7 +105,7 @@ public sealed class RedSkull : SimModel
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner)
     {
         if (owner != Who.You) return null;
-        var hp = start.P.Hp;
+        var hp = start.You.Hp;
         var threshold = SimEngine.RelicsOf(start, owner)[ThisRelic];
         return hp > threshold ? new(false, o => o.PlayHpLostMin > 0 && hp - o.PlayHpLostMin <= threshold) : null;
     }

@@ -14,13 +14,13 @@ public class CardEnergyTests
     private static SimState State(int hp = 100, int energy = 3)
     {
         var s = new SimState { Enemies = { Enemy(0, hp) } };
-        s.P.Energy = energy;
+        s.You.Energy = energy;
         return s;
     }
 
     private static SimState WithTears(SimState s)
     {
-        s.P.Relics = s.P.Relics.With(RelicId.PaelsTears, 0, 0);
+        s.You.Relics = s.You.Relics.With(RelicId.PaelsTears, 0, 0);
         return s;
     }
 
@@ -41,7 +41,7 @@ public class CardEnergyTests
         // Your last energy on a 1-cost card that gains 2 (Production): 2 left, so Pael's Tears keeps its bonus.
         var s = WithTears(State(energy: 1));
         var after = One(s, Spending(new SimCard("Production", SimCardType.Skill) { Energy = 1 }, 1, new CardEventAction(CardEvent.EnergyGained, 2)));
-        Assert.Equal(2, after.P.Energy);
+        Assert.Equal(2, after.You.Energy);
         Assert.False(after.Fired.Has("PaelsTears"));
     }
 
@@ -52,10 +52,10 @@ public class CardEnergyTests
         var sunder = new SimCard("Sunder", SimCardType.Attack) { Energy = 3 };
         var kills = One(WithTears(State(hp: 10)), Spending(sunder, 3, Attack(24) with { OnKillEnergy = 3 }));
         Assert.False(kills.Enemy(0)!.Alive);
-        Assert.Equal(3, kills.P.Energy);
+        Assert.Equal(3, kills.You.Energy);
         Assert.False(kills.Fired.Has("PaelsTears"));
         var survives = One(WithTears(State(hp: 50)), Spending(sunder, 3, Attack(24) with { OnKillEnergy = 3 }));
-        Assert.Equal(0, survives.P.Energy);
+        Assert.Equal(0, survives.You.Energy);
         Assert.True(survives.Fired.Has("PaelsTears"));
     }
 
@@ -63,10 +63,10 @@ public class CardEnergyTests
     public void DoubleEnergyGainsWhatYouHaveOnceItsCostIsSpent()
     {
         var after = One(State(energy: 4), Spending(new SimCard("DoubleEnergy", SimCardType.Skill) { Energy = 1 }, 1, new GainEnergyAsHeldAction()));
-        Assert.Equal(6, after.P.Energy);
+        Assert.Equal(6, after.You.Energy);
         // With nothing left after its cost, there's nothing to double.
         var empty = One(WithTears(State(energy: 1)), Spending(new SimCard("DoubleEnergy", SimCardType.Skill) { Energy = 1 }, 1, new GainEnergyAsHeldAction()));
-        Assert.Equal(0, empty.P.Energy);
+        Assert.Equal(0, empty.You.Energy);
         Assert.True(empty.Fired.Has("PaelsTears"));
     }
 
@@ -87,10 +87,10 @@ public class CardEnergyTests
             },
         };
         var after = One(s, script);
-        Assert.Equal(2, after.P.Arrows);
-        Assert.Equal(6, after.P.Energy);
+        Assert.Equal(2, after.You.Arrows);
+        Assert.Equal(6, after.You.Energy);
         // Another card knocking them loose gives nothing.
         var other = One(s, Spending(new SimCard("Strike", SimCardType.Attack) { Energy = 2 }, 2, Attack(9)));
-        Assert.Equal(0, other.P.Energy);
+        Assert.Equal(0, other.You.Energy);
     }
 }

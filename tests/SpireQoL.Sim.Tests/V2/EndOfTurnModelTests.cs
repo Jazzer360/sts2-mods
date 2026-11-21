@@ -15,8 +15,8 @@ public class EndOfTurnModelTests
     {
         // Two Ethereal cards exhaust: Feel No Pain blocks for each, Dark Embrace draws for each, and each draw sets off Speedster.
         var s = new SimState { Enemies = { Attacker(0, 50, 10) } };
-        s.P.Fading = 2;
-        s.P.Powers = s.P.Powers.With(PowerId.FeelNoPain, 3).With(PowerId.DarkEmbrace, 1).With(PowerId.Speedster, 2);
+        s.You.Fading = 2;
+        s.You.Powers = s.You.Powers.With(PowerId.FeelNoPain, 3).With(PowerId.DarkEmbrace, 1).With(PowerId.Speedster, 2);
         var o = SimEngine.Run(s);
         Assert.Equal(4, o.TakenMax);
         Assert.All(o.Branches, b => Assert.Equal(46, b.Enemy(0)!.HpAtTurnEnd));
@@ -31,8 +31,8 @@ public class EndOfTurnModelTests
         var mate = new SimPlayer { Hp = 30, HandCount = 0 };
         mate.ScreamingFlagonDamage = 5;
         s.Teammates.Add(mate);
-        s.P.HandCount = 2;
-        s.P.ObsidianViceDamage = 4;
+        s.You.HandCount = 2;
+        s.You.ObsidianViceDamage = 4;
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(0));
         Assert.All(o.Branches, b => Assert.Equal(17, b.Enemy(1)!.HpAtTurnEnd)); // 30 - 5 (Flagon hits every enemy) - 8
@@ -42,11 +42,11 @@ public class EndOfTurnModelTests
     public void TheBombTicksDownUntilItsLastTurn()
     {
         var s = new SimState { Enemies = { Attacker(0, 50) } };
-        s.P.Powers = s.P.Powers.With(PowerId.TheBomb, 2, 40);
+        s.You.Powers = s.You.Powers.With(PowerId.TheBomb, 2, 40);
         var after = Assert.Single(SimEngine.Run(s).Branches);
         Assert.Equal(50, after.Enemy(0)!.Hp);
-        Assert.Equal(1, after.P.Powers[PowerId.TheBomb]);
-        s.P.Powers = PowerSet.Empty.With(PowerId.TheBomb, 1, 40);
+        Assert.Equal(1, after.You.Powers[PowerId.TheBomb]);
+        s.You.Powers = PowerSet.Empty.With(PowerId.TheBomb, 1, 40);
         Assert.Equal(10, Assert.Single(SimEngine.Run(s).Branches).Enemy(0)!.Hp);
     }
 
@@ -54,9 +54,9 @@ public class EndOfTurnModelTests
     public void StoneCalendarWaitsForItsTurn()
     {
         var s = new SimState { Enemies = { Attacker(0, 70) } };
-        s.P.Relics = s.P.Relics.With(RelicId.StoneCalendar, 52, 1);
+        s.You.Relics = s.You.Relics.With(RelicId.StoneCalendar, 52, 1);
         Assert.Equal(70, Assert.Single(SimEngine.Run(s).Branches).Enemy(0)!.Hp);
-        s.P.Relics = RelicSet.Empty.With(RelicId.StoneCalendar, 52, 0);
+        s.You.Relics = RelicSet.Empty.With(RelicId.StoneCalendar, 52, 0);
         Assert.Equal(18, Assert.Single(SimEngine.Run(s).Branches).Enemy(0)!.Hp);
     }
 
@@ -64,13 +64,13 @@ public class EndOfTurnModelTests
     public void ConsumingShadowEvokesTheLastOrb()
     {
         var s = new SimState { Enemies = { Attacker(0, 50, 10) } };
-        s.P.OrbCapacity = 3;
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Dark, Passive = 6, Evoke = 20 }, new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } };
-        s.P.ConsumingShadow = 1;
+        s.You.OrbCapacity = 3;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Dark, Passive = 6, Evoke = 20 }, new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } };
+        s.You.ConsumingShadow = 1;
         var o = SimEngine.Run(s);
         // Frost's passive (2) at turn end, then Consuming Shadow evokes it (5): 7 block. Dark's passive stays in it.
         Assert.Equal(3, o.TakenMax);
-        Assert.All(o.Branches, b => Assert.Equal(OrbKind.Dark, Assert.Single(b.P.Orbs).Kind));
+        Assert.All(o.Branches, b => Assert.Equal(OrbKind.Dark, Assert.Single(b.You.Orbs).Kind));
     }
 
     [Fact]
@@ -79,25 +79,25 @@ public class EndOfTurnModelTests
         // ConstrictPower.AfterDeath and MagicBombPower.AfterSideTurnEnd: once the enemy that applied them is dead (here Screaming
         // Flagon kills it at BeforeSideTurnEnd), neither hurts you. Data: the applier's id + 100.
         var s = new SimState { Enemies = { Attacker(0, 5), Attacker(1, 50) } };
-        s.P.HandCount = 0;
-        s.P.ScreamingFlagonDamage = 5;
-        s.P.Powers = s.P.Powers.With(PowerId.Constrict, 4, 100).With(PowerId.MagicBomb, 6, 100);
+        s.You.HandCount = 0;
+        s.You.ScreamingFlagonDamage = 5;
+        s.You.Powers = s.You.Powers.With(PowerId.Constrict, 4, 100).With(PowerId.MagicBomb, 6, 100);
         Assert.Equal(0, SimEngine.Run(s).TakenMax);
 
         // Applied by the enemy that lives: 4 + 6.
-        s.P.Powers = s.P.Powers.With(PowerId.Constrict, 4, 101).With(PowerId.MagicBomb, 6, 101);
+        s.You.Powers = s.You.Powers.With(PowerId.Constrict, 4, 101).With(PowerId.MagicBomb, 6, 101);
         var o = SimEngine.Run(s);
         Assert.Equal(10, o.TakenMax);
-        Assert.False(o.Worst.P.Powers.Has(PowerId.MagicBomb)); // it goes once it has gone off
-        Assert.True(o.Worst.P.Powers.Has(PowerId.Constrict));
+        Assert.False(o.Worst.You.Powers.Has(PowerId.MagicBomb)); // it goes once it has gone off
+        Assert.True(o.Worst.You.Powers.Has(PowerId.Constrict));
     }
 
     [Fact]
     public void DemiseIgnoresYourBlockAndConstrictUsesIt()
     {
         var s = new SimState { Enemies = { Attacker(0, 50) } };
-        s.P.Block = 10;
-        s.P.Powers = s.P.Powers.With(PowerId.Demise, 3).With(PowerId.Constrict, 4);
+        s.You.Block = 10;
+        s.You.Powers = s.You.Powers.With(PowerId.Demise, 3).With(PowerId.Constrict, 4);
         var o = SimEngine.Run(s);
         Assert.Equal(3, o.TakenMax);
         Assert.Equal(6, o.Worst.BlockAtEnemyTurn);
@@ -108,16 +108,16 @@ public class EndOfTurnModelTests
     {
         // Burn's 5 under Intangible is 1 (IntangiblePower.ModifyDamageCap), so it takes 1 block, not 5; Regret counts the hand.
         var s = new SimState { Enemies = { Attacker(0, 50) } };
-        s.P.Block = 10;
-        s.P.HandCount = 3;
-        s.P.Powers = s.P.Powers.With(PowerId.Intangible, 1);
-        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn+", 5));
-        s.P.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        s.You.Block = 10;
+        s.You.HandCount = 3;
+        s.You.Powers = s.You.Powers.With(PowerId.Intangible, 1);
+        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn+", 5));
+        s.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
         var o = SimEngine.Run(s);
         Assert.Equal(9, o.Worst.BlockAtEnemyTurn);
         Assert.Equal(1, o.TakenMax); // Regret's 3, capped at 1 HP too
 
-        s.P.Powers = PowerSet.Empty;
+        s.You.Powers = PowerSet.Empty;
         o = SimEngine.Run(s);
         Assert.Equal(5, o.Worst.BlockAtEnemyTurn);
         Assert.Equal(3, o.TakenMax);

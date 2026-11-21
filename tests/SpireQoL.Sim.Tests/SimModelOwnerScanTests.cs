@@ -14,13 +14,12 @@ public class SimModelOwnerScanTests
     /// <summary>A fragment of each reviewed line, and why naming you there is right.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
-        ["owner == Who.You ? x.P : x.MutableTeammate"] = "picks the owner's player",
         ["if (owner == Who.You) s.ParryingShieldFired = true;"] = "the forecast audit's flag for your Parrying Shield; a teammate's still deals its damage",
         ["ProcBlockFor(x, owner, Name, Who.You, amount, Unpowered)"] = "a teammate's power giving you block (Covering Fire gives every other player its block)",
         ["e.Dealer != Who.You || !e.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",
         ["CardEvent.ArrowDislodged, Who.You"] = "ImpaledPower is your arrows: they come back to you",
         ["play.Owner != Who.You"] = "Withering Presence counts its Target's cards; the adapter loads only the one aimed at you (SimReaders.Powers)",
-        ["owner == Who.You && attack.Dealer == Who.YourOsty && s.P.OstyHp"] = "your Osty's attacks (a teammate's Osty doesn't attack in your turn)",
+        ["owner == Who.You && attack.Dealer == Who.YourOsty && s.You.OstyHp"] = "your Osty's attacks (a teammate's Osty doesn't attack in your turn)",
         ["dealer == Who.YourOsty ? Who.You : dealer"] = "your Osty's damage counts as yours",
         ["OstyLoses(s, Who.You, hit)"] = "Thorns hitting back at your Osty",
         ["owner != Who.You ? null"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
@@ -43,7 +42,7 @@ public class SimModelOwnerScanTests
         throw new DirectoryNotFoundException("mods/SpireQoL/Sim/Models not found above the test's folder");
     }
 
-    private static readonly Regex NamesYou = new(@"Who\.You\b|\b[a-z]\.P\b");
+    private static readonly Regex NamesYou = new(@"Who\.You\b|\b[a-z]\.You\b");
 
     [Fact]
     public void EveryModelLineThatNamesYouIsReviewed()

@@ -21,10 +21,10 @@ public class SimHexTests
     private static SimState Knights()
     {
         var s = new SimState { Enemies = { Enemy(1, 5, 10), Enemy(2, 6, 35) } };
-        s.P.CharonsAshesDamage = 3;
-        s.P.Fading = 2;
-        s.P.HexFading = 2;
-        s.P.HexFrom = 1;
+        s.You.CharonsAshesDamage = 3;
+        s.You.Fading = 2;
+        s.You.HexFading = 2;
+        s.You.HexFrom = 1;
         return s;
     }
 
@@ -51,8 +51,8 @@ public class SimHexTests
     {
         // The auto-play phase comes before the Ethereal exhausts: a Stampede pick that kills the caster ends them too.
         var s = Knights();
-        s.P.Stampede = 1;
-        s.P.AutoHand = new()
+        s.You.Stampede = 1;
+        s.You.AutoHand = new()
         {
             new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { Strike1(1, 11), Strike1(2, 11) } },
         };
@@ -74,7 +74,7 @@ public class SimHexTests
     {
         // One card Ethereal of its own, one only through Hex: with the caster dead, one still exhausts (3 to Magi Knight).
         var s = Knights();
-        s.P.HexFading = 1;
+        s.You.HexFading = 1;
         s.Enemies[1].Hp = 3;
         var o = SimEngine.Run(s, Strike(1, 9));
         Assert.True(o.DeadInAll(2));
@@ -88,7 +88,7 @@ public class SimHexTests
         var play = Strike(1, 9);
         play.FadingDelta = -1;
         play.HexFadingDelta = -1;
-        s.P.Fading = 3; // one more of its own
+        s.You.Fading = 3; // one more of its own
         s.Enemies[1].Hp = 3;
         var o = SimEngine.Run(s, play);
         Assert.True(o.DeadInAll(2)); // the card of its own exhausts: 3

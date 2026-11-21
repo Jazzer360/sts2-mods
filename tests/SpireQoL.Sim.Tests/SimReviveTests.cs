@@ -15,7 +15,7 @@ public class SimReviveTests
     public void LosingAllYourHpWithNothingToSaveYouIsDeath()
     {
         var s = new SimState { Enemies = { E(1, 50, 12) } };
-        s.P.Hp = 10;
+        s.You.Hp = 10;
         var o = SimEngine.Run(s);
         Assert.True(o.Worst.Died);
         Assert.Equal(12, o.Worst.Taken); // all of it, overkill included (as the forecast check counts it)
@@ -25,10 +25,10 @@ public class SimReviveTests
     public void SurvivingWithOneHpIsntDeath()
     {
         var s = new SimState { Enemies = { E(1, 50, 9) } };
-        s.P.Hp = 10;
+        s.You.Hp = 10;
         var o = SimEngine.Run(s);
         Assert.False(o.Worst.Died);
-        Assert.Equal(1, o.Worst.P.Hp);
+        Assert.Equal(1, o.Worst.You.Hp);
     }
 
     [Fact]
@@ -36,13 +36,13 @@ public class SimReviveTests
     {
         // 10 HP: the first hit (12) takes you to 0, Lizard Tail heals 40 (50% of 80); the second hit (6) leaves 34.
         var s = new SimState { Enemies = { E(1, 50, 12, 6) } };
-        s.P.Hp = 10;
-        s.P.LizardTailHeal = 40;
+        s.You.Hp = 10;
+        s.You.LizardTailHeal = 40;
         var o = SimEngine.Run(s);
         var w = o.Worst;
         Assert.False(w.Died);
         Assert.True(w.LizardTailUsed);
-        Assert.Equal(34, w.P.Hp);
+        Assert.Equal(34, w.You.Hp);
         Assert.Equal(18, w.Taken); // 12 (overkill included), then 6
     }
 
@@ -50,14 +50,14 @@ public class SimReviveTests
     public void FairyInABottleGoesFirstAndLizardTailStaysForLater()
     {
         var s = new SimState { Enemies = { E(1, 50, 12) } };
-        s.P.Hp = 10;
-        s.P.Fairies = 1;
-        s.P.FairyHeal = 24;
-        s.P.LizardTailHeal = 40;
+        s.You.Hp = 10;
+        s.You.Fairies = 1;
+        s.You.FairyHeal = 24;
+        s.You.LizardTailHeal = 40;
         var w = SimEngine.Run(s).Worst;
         Assert.Equal(1, w.FairiesUsed);
         Assert.False(w.LizardTailUsed);
-        Assert.Equal(24, w.P.Hp);
+        Assert.Equal(24, w.You.Hp);
     }
 
     [Fact]
@@ -65,25 +65,25 @@ public class SimReviveTests
     {
         // 5 HP: 10 → Fairy (heals 8), 10 → Lizard Tail (heals 20), 10 → 10 left.
         var s = new SimState { Enemies = { E(1, 50, 10, 10, 10) } };
-        s.P.Hp = 5;
-        s.P.Fairies = 1;
-        s.P.FairyHeal = 8;
-        s.P.LizardTailHeal = 20;
+        s.You.Hp = 5;
+        s.You.Fairies = 1;
+        s.You.FairyHeal = 8;
+        s.You.LizardTailHeal = 20;
         var w = SimEngine.Run(s).Worst;
         Assert.False(w.Died);
         Assert.Equal(1, w.FairiesUsed);
         Assert.True(w.LizardTailUsed);
-        Assert.Equal(10, w.P.Hp);
+        Assert.Equal(10, w.You.Hp);
     }
 
     [Fact]
     public void UnblockableEndOfTurnDamageCanKillToo()
     {
         var s = new SimState { Enemies = { E(1, 50) } };
-        s.P.Hp = 3;
-        s.P.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 2));
-        s.P.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
-        s.P.HandCount = 2;
+        s.You.Hp = 3;
+        s.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 2));
+        s.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        s.You.HandCount = 2;
         Assert.True(SimEngine.Run(s).Worst.Died);
     }
 

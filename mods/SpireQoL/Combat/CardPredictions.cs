@@ -108,7 +108,7 @@ public sealed class CardPredictions
         // Sources: your powers, your relics, and powers on enemies (theirs, or ones you applied).
         var sources = Sources(me, cs);
 
-        var pending = new List<(CardModel Card, Prepared P)>();
+        var pending = new List<(CardModel Card, Prepared Prepared)>();
         foreach (var card in hand)
         {
             // Nothing happens on play for a card that can't be played (Unplayable statuses and
@@ -122,7 +122,7 @@ public sealed class CardPredictions
         // Every card's simulations (one per target) run in parallel across CPU cores; the frame waits for new ones within its few
         // milliseconds (SimWait, decision #104), so tabs usually appear on the frame they belong to. What isn't ready by then shows
         // when it is, a frame or a few later (SimPending); a simulation that missed its frame never makes a later one wait.
-        SimWait.All(pending.Where(x => x.P.Sim != null).SelectMany(x => x.P.Sim!.Jobs).ToList());
+        SimWait.All(pending.Where(x => x.Prepared.Sim != null).SelectMany(x => x.Prepared.Sim!.Jobs).ToList());
 
         // Held (decision #105): a card whose simulation, or the turn forecast it compares with, has no result for this board yet keeps
         // the tabs it showed this turn until it has one, instead of losing them for a few frames (flicker on every hit of a busy

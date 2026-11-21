@@ -39,8 +39,8 @@ public class SimLethalChainTests
     {
         // 9 HP: the Strike's 6 leaves 3, and the end-of-turn Lightning orb (3) finishes it.
         var s = new SimState { Enemies = { E(1, 9, 10) } };
-        s.P.OrbCapacity = 3;
-        s.P.Orbs.Add(Lightning());
+        s.You.OrbCapacity = 3;
+        s.You.Orbs.Add(Lightning());
         Agrees(s, Strike(1, 6));
         Assert.True(SimEngine.Run(s, Strike(1, 6)).DeadChanceRange(1).Certain);
     }
@@ -50,8 +50,8 @@ public class SimLethalChainTests
     {
         // Two enemies at 3 after the Strike: the orb picks one, so neither is certain; each board agrees with the card.
         var s = new SimState { Enemies = { E(1, 9, 10), E(2, 3, 10) } };
-        s.P.OrbCapacity = 3;
-        s.P.Orbs.Add(Lightning());
+        s.You.OrbCapacity = 3;
+        s.You.Orbs.Add(Lightning());
         Agrees(s, Strike(1, 6));
     }
 

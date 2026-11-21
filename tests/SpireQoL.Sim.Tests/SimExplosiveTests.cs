@@ -21,7 +21,7 @@ public class SimExplosiveTests
         // then the 8 hit with no block left.
         var s = new SimState { Enemies = { Enemy(1, 5), Enemy(2, 30, 8) } };
         s.Enemies[0].Explosive = 6;
-        s.P.Block = 4;
+        s.You.Block = 4;
         Assert.Equal(4, SimEngine.Run(s).TakenMax);
         var o = SimEngine.Run(s, Strike(1, 5));
         Assert.True(o.DeadInAll(1));
@@ -45,9 +45,9 @@ public class SimExplosiveTests
         // the 6 block takes the 5 explosion.
         var s = new SimState { Enemies = { Enemy(1, 3) } };
         s.Enemies[0].Explosive = 5;
-        s.P.Plating = 6;
-        s.P.OrbCapacity = 3;
-        s.P.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 });
+        s.You.Plating = 6;
+        s.You.OrbCapacity = 3;
+        s.You.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 });
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(1));
         Assert.Equal(0, o.TakenMax);
@@ -62,7 +62,7 @@ public class SimExplosiveTests
         s.Enemies[0].Explosive = 5;
         s.Enemies[0].Poison = 3;
         s.Enemies[0].PoisonStacks = 3;
-        s.P.Inferno = 10;
+        s.You.Inferno = 10;
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(1));
         Assert.False(o.DeadInAny(2));

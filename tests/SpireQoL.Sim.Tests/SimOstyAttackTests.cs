@@ -21,12 +21,12 @@ public class SimOstyAttackTests
     {
         var s = new SimState { Enemies = { E(1, 30) } };
         s.Enemies[0].Thorns = 3;
-        s.P.OstyHp = 10;
+        s.You.OstyHp = 10;
         SimEngine.ApplyPlayTo(s, Poke(1, 6, byOsty: true), out var branches, out _);
         Assert.All(branches, b =>
         {
             Assert.Equal(24, b.Enemy(1)!.Hp);
-            Assert.Equal(7, b.P.OstyHp);
+            Assert.Equal(7, b.You.OstyHp);
             Assert.Equal(0, b.Taken);
         });
         // Your own attack takes the Thorns yourself.
@@ -38,7 +38,7 @@ public class SimOstyAttackTests
     public void YourEnvenomDoesntApply()
     {
         var s = new SimState { Enemies = { E(1, 30) } };
-        s.P.Envenom = 2;
+        s.You.Envenom = 2;
         SimEngine.ApplyPlayTo(s, Poke(1, 6, byOsty: true), out var branches, out _);
         Assert.All(branches, b => Assert.Equal(0, b.Enemy(1)!.Poison));
     }
@@ -57,8 +57,8 @@ public class SimOstyAttackTests
         // Bone Shards kills Osty at 4 HP with Necro Mastery 2: 8 unblockable damage to every enemy.
         var s = new SimState { Enemies = { E(1, 30), E(2, 5) } };
         s.Enemies[0].Block = 20;
-        s.P.OstyHp = 4;
-        s.P.Powers = s.P.Powers.With(PowerId.NecroMastery, 2);
+        s.You.OstyHp = 4;
+        s.You.Powers = s.You.Powers.With(PowerId.NecroMastery, 2);
         var play = new SimPlay { Name = "BoneShards", KillsOsty = true };
         SimEngine.ApplyPlayTo(s, play, out var branches, out _);
         Assert.All(branches, b =>
@@ -89,9 +89,9 @@ public class SimOstyAttackTests
         // block is its turn's, not your end of turn's: the outcome audit counts your end of turn's (UnblockedAtTurnEnd), the wake
         // rules every hit (UnblockedInstances).
         var s = new SimState { Enemies = { E(1, 100, 9) } };
-        s.P.OstyHp = 20;
-        s.P.OstyShields = true;
-        s.P.Powers = s.P.Powers.With(PowerId.NecroMastery, 1);
+        s.You.OstyHp = 20;
+        s.You.OstyShields = true;
+        s.You.Powers = s.You.Powers.With(PowerId.NecroMastery, 1);
         var o = SimEngine.Run(s);
         Assert.Equal(0, o.UnblockedAtTurnEndMax(1));
         Assert.Equal(1, o.UnblockedMin(1));

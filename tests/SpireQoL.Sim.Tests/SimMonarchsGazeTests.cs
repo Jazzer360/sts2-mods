@@ -17,7 +17,7 @@ public class SimMonarchsGazeTests
     {
         var s = new SimState();
         s.Enemies.AddRange(enemies);
-        s.P.Powers = s.P.Powers.With(PowerId.MonarchsGaze, 2);
+        s.You.Powers = s.You.Powers.With(PowerId.MonarchsGaze, 2);
         return s;
     }
 

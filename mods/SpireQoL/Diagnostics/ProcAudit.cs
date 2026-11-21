@@ -1308,7 +1308,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // unless the fight ended (nothing more runs), fewer cards were exhausted than the upper bound
             // (Dark Embrace and Joss Paper draw per exhaust), or you have no orb slots left (the channel fails).
             if (draws < expectedDraws && !w.FightEnded && exhausts >= f.TotalExhausts) issues.Add($"draws: predicted {expectedDraws}, actual {draws}");
-            if (orbs < f.Channels && !w.FightEnded && w.After?.P.OrbCapacity != 0) issues.Add($"orbs channeled: predicted {f.Channels}, actual {orbs}");
+            if (orbs < f.Channels && !w.FightEnded && w.After?.You.OrbCapacity != 0) issues.Add($"orbs channeled: predicted {f.Channels}, actual {orbs}");
             // A card whose draws depend on what it draws (Pillage) may draw up to its most (decision #118).
             Budget(Effect.Draw, "draws", draws, Math.Max(expectedDraws, f.DrawsAtMost));
             Budget(Effect.Exhaust, "exhausts", exhausts, f.TotalExhausts);
@@ -1773,7 +1773,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var afterIds = w.AfterIds;
         // Cards drawn during the play (decision #132: the draw tabs' numbers are part of it, with the card's own draws), when the
         // simulator drew from your pile: the history's draws of yours, not your turn's hand draw.
-        var startP = (sim.FullStart ?? sim.Start).P;
+        var startP = (sim.FullStart ?? sim.Start).You;
         var me = w.Card.Owner;
         int? drawn = startP.Draw == null ? null : entries.OfType<CardDrawnEntry>().Count(e => e.Actor == me.Creature && !e.FromHandDraw);
         // Summoning raises Osty's HP in ways the simulator doesn't model: Osty isn't compared then.
@@ -1806,8 +1806,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                     : pe.Hits;
                 if (!pe.Stunned && !ae.Stunned && !predHits.SequenceEqual(ae.Hits)) d.Add($"after play enemy intent: {name} predicted [{string.Join(", ", predHits)}], actual [{string.Join(", ", ae.Hits)}]");
             }
-            var pp = pred.P;
-            var ap = after.P;
+            var pp = pred.You;
+            var ap = after.You;
             void Cmp(string what, int p, int a)
             {
                 if (p != a) d.Add($"after play {what}: predicted {p}, actual {a}");

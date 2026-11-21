@@ -22,7 +22,7 @@ public class SimLunarPastryTests
     public void BlackHoleHitsEveryEnemyAtTheEndOfYourTurn()
     {
         var s = new SimState { Enemies = { Enemy(1, 4, 9), Enemy(2, 10, 3) } };
-        Lunar(s.P, 4);
+        Lunar(s.You, 4);
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(1));
         Assert.Equal(3, o.TakenMax);
@@ -34,15 +34,15 @@ public class SimLunarPastryTests
     {
         // Lunar Pastry first: Black Hole kills E1, so Parrying Shield's 6 can only hit E2 (10 - 4 - 6 = 0).
         var s = new SimState { Enemies = { Enemy(1, 4, 9), Enemy(2, 10, 3) } };
-        Lunar(s.P, 4);
-        s.P.ParryingShieldDamage = 6;
-        s.P.ParryingShieldBlock = 0;
+        Lunar(s.You, 4);
+        s.You.ParryingShieldDamage = 6;
+        s.You.ParryingShieldBlock = 0;
         Assert.True(SimEngine.Run(s).DeadInAll(2));
         // Parrying Shield first in your relics: its hit lands on either enemy at random.
         var t = new SimState { Enemies = { Enemy(1, 4, 9), Enemy(2, 10, 3) } };
-        t.P.ParryingShieldDamage = 6;
-        t.P.ParryingShieldBlock = 0;
-        Lunar(t.P, 4);
+        t.You.ParryingShieldDamage = 6;
+        t.You.ParryingShieldBlock = 0;
+        Lunar(t.You, 4);
         var o = SimEngine.Run(t);
         Assert.True(o.DeadInAny(2));
         Assert.False(o.DeadInAll(2));
@@ -63,10 +63,10 @@ public class SimLunarPastryTests
     {
         // Its damage is an AfterSideTurnEndLate hit on you (its model): Parrying Shield still sees your block.
         var s = new SimState { Enemies = { Enemy(1, 6, 0) } };
-        s.P.Block = 5;
-        s.P.ParryingShieldBlock = 5;
-        s.P.ParryingShieldDamage = 6;
-        s.P.Powers = s.P.Powers.With(PowerId.InsatiableDominion, 1);
+        s.You.Block = 5;
+        s.You.ParryingShieldBlock = 5;
+        s.You.ParryingShieldDamage = 6;
+        s.You.Powers = s.You.Powers.With(PowerId.InsatiableDominion, 1);
         s.Vars["-1:InsatiableDominionPower:Damage"] = 7;
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(1));

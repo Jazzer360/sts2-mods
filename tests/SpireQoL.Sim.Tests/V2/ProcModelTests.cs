@@ -18,13 +18,13 @@ public class ProcModelTests
 
     private static SimState Power(SimState s, PowerId name, int amount, int data = 0)
     {
-        s.P.Powers = s.P.Powers.With(name, amount, data);
+        s.You.Powers = s.You.Powers.With(name, amount, data);
         return s;
     }
 
     private static SimState Relic(SimState s, RelicId name, int amount = 0, int data = 1, params (string Var, int Value)[] vars)
     {
-        s.P.Relics = s.P.Relics.With(name, amount, data);
+        s.You.Relics = s.You.Relics.With(name, amount, data);
         foreach (var (v, value) in vars) s.Vars[$"{Who.You}:{name}:{v}"] = value;
         return s;
     }
@@ -41,12 +41,12 @@ public class ProcModelTests
     public void AfterimageBlocksPerPlayButNotOnThePlayThatAppliesIt()
     {
         var after = One(Power(State(), PowerId.Afterimage, 2), Events(Card("Defend", SimCardType.Skill), 2));
-        Assert.Equal(4, after.P.Block);
+        Assert.Equal(4, after.You.Block);
         Assert.Equal(2, after.Fired["AfterimagePower"]);
         Assert.Equal(4, after.Fired.DataOf("AfterimagePower"));
         // The Afterimage card: the power lands during the play, so nothing is bound to it.
         var own = One(State(), Events(Card("Afterimage", SimCardType.Power), 1, new ApplyPowerAction(PowerId.Afterimage, 1) { To = ApplyPowerAction.Where.You }));
-        Assert.Equal(0, own.P.Block);
+        Assert.Equal(0, own.You.Block);
         Assert.False(own.Fired.Has("AfterimagePower"));
     }
 
@@ -54,19 +54,19 @@ public class ProcModelTests
     public void RageBlocksOnAttacksOnly()
     {
         var s = Power(State(), PowerId.Rage, 3);
-        Assert.Equal(3, One(s, Play(Card("Strike"), 0, 1, Attack(6))).P.Block);
-        Assert.Equal(0, One(s, Events(Card("Defend", SimCardType.Skill), 1)).P.Block);
+        Assert.Equal(3, One(s, Play(Card("Strike"), 0, 1, Attack(6))).You.Block);
+        Assert.Equal(0, One(s, Events(Card("Defend", SimCardType.Skill), 1)).You.Block);
     }
 
     [Fact]
     public void SpiritOfAshAndDanseMacabreBlockBeforeThePlay()
     {
         var ethereal = new SimCard("Wraith", SimCardType.Skill) { Ethereal = true };
-        Assert.Equal(4, One(Power(State(), PowerId.SpiritOfAsh, 4), Events(ethereal, 1)).P.Block);
+        Assert.Equal(4, One(Power(State(), PowerId.SpiritOfAsh, 4), Events(ethereal, 1)).You.Block);
         var s = Power(State(), PowerId.DanseMacabre, 3);
         s.Vars[$"{Who.You}:DanseMacabrePower:Energy"] = 2;
-        Assert.Equal(3, One(s, Events(new SimCard("Big", SimCardType.Skill) { Energy = 2 }, 1)).P.Block);
-        Assert.Equal(0, One(s, Events(new SimCard("Small", SimCardType.Skill) { Energy = 1 }, 1)).P.Block);
+        Assert.Equal(3, One(s, Events(new SimCard("Big", SimCardType.Skill) { Energy = 2 }, 1)).You.Block);
+        Assert.Equal(0, One(s, Events(new SimCard("Small", SimCardType.Skill) { Energy = 1 }, 1)).You.Block);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class ProcModelTests
         var s = Power(State(), PowerId.Panache, 10, data: 2);
         var after = One(s, Events(Card("A", SimCardType.Skill), 2));
         Assert.Equal(90, after.Enemy(0)!.Hp);
-        Assert.Equal(5, after.P.Powers.DataOf(PowerId.Panache));
+        Assert.Equal(5, after.You.Powers.DataOf(PowerId.Panache));
         Assert.Equal(100, One(Power(State(), PowerId.Panache, 10, data: 3), Events(Card("A", SimCardType.Skill), 2)).Enemy(0)!.Hp);
     }
 
@@ -119,7 +119,7 @@ public class ProcModelTests
         s.Vars[$"{Who.You}:MonologuePower:Strength"] = 2;
         var after = One(s, Play(Card("Strike"), 0, 2, Attack(5)));
         Assert.Equal(100 - 5 - 7, after.Enemy(0)!.Hp);
-        Assert.Equal(4, after.P.Powers[PowerId.Strength]);
+        Assert.Equal(4, after.You.Powers[PowerId.Strength]);
     }
 
     [Fact]
@@ -132,13 +132,13 @@ public class ProcModelTests
 
         var s = Power(State(), PowerId.Nostalgia, 1);
         Assert.True(One(s, Play(Card("Strike"), 0, 1, Attack(1))).Fired.Has("NostalgiaPower"));
-        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardType.Skill), 1);
+        s.You.Turn = s.You.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardType.Skill), 1);
         Assert.False(One(s, Play(Card("Strike"), 0, 1, Attack(1))).Fired.Has("NostalgiaPower"));
 
         var dot = Power(State(), PowerId.PaleBlueDot, 1);
-        dot.P.Turn = dot.P.Turn.Add("Finished", 4);
+        dot.You.Turn = dot.You.Turn.Add("Finished", 4);
         Assert.True(One(dot, Events(Card("A", SimCardType.Skill), 1)).Fired.Has("PaleBlueDotPower"));
-        dot.P.Powers = dot.P.Powers.With(PowerId.PaleBlueDot, 1, 1);
+        dot.You.Powers = dot.You.Powers.With(PowerId.PaleBlueDot, 1, 1);
         Assert.False(One(dot, Events(Card("A", SimCardType.Skill), 1)).Fired.Has("PaleBlueDotPower"));
     }
 
@@ -148,10 +148,10 @@ public class ProcModelTests
         // The power lands during the card's play and hears that play's AfterCardPlayed: played as your 5th card this turn, it
         // draws next turn at once (a report: DrawCardsNextTurnPower +2 right after Pale Blue Dot+ finished, 6th card).
         var s = State();
-        s.P.Turn = s.P.Turn.Add("Finished", 4);
+        s.You.Turn = s.You.Turn.Add("Finished", 4);
         var dot = Events(Card("PaleBlueDot", SimCardType.Power), 1, new ApplyPowerAction(PowerId.PaleBlueDot, 2) { To = ApplyPowerAction.Where.You });
         Assert.True(One(s, dot).Fired.Has("PaleBlueDotPower"));
-        s.P.Turn = s.P.Turn.Add("Finished", -1);
+        s.You.Turn = s.You.Turn.Add("Finished", -1);
         Assert.False(One(s, dot).Fired.Has("PaleBlueDotPower"));
     }
 
@@ -175,7 +175,7 @@ public class ProcModelTests
         Assert.Equal(97, after.Enemy(0)!.Hp); // the first Wah only, not the replay's second play
         Assert.Equal(1, after.Fired["MotifPower"]);
         Assert.False(after.Fired.Has("SongPathPower"));
-        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), 1);
+        s.You.Turn = s.You.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), 1);
         Assert.False(One(s, Play(wah, 0, 1, Attack(0))).Fired.Has("ViolentChordPower"));
     }
 
@@ -185,12 +185,12 @@ public class ProcModelTests
         var ki = Card("KiStep", SimCardType.Skill, SimCardTag.Ki);
         var s = Power(State(), PowerId.Lullaby, 5);
         Relic(s, RelicId.ConductorsBaton, data: 0);
-        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Cho), 1);
+        s.You.Turn = s.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Cho), 1);
         var after = One(s, Events(ki, 1));
-        Assert.Equal(5, after.P.Block);
+        Assert.Equal(5, after.You.Block);
         Assert.True(after.Fired.Has("ConductorsBaton"));
-        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Ki), 1); // already complete
-        Assert.Equal(0, One(s, Events(ki, 1)).P.Block);
+        s.You.Turn = s.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Ki), 1); // already complete
+        Assert.Equal(0, One(s, Events(ki, 1)).You.Block);
     }
 
     [Fact]
@@ -202,20 +202,20 @@ public class ProcModelTests
         var s = State();
         Relic(s, RelicId.ConductorsBaton, data: 0);
         s.Enemies[0].Intent = new List<IntentHit> { new(22m) };
-        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Cho), 1);
+        s.You.Turn = s.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Cho), 1);
         var o = SimEngine.Run(s, Events(ki, 1));
         Assert.Equal(16, o.TakenMax);
-        Assert.True(One(s, Events(ki, 1)).P.Powers.Has(PowerId.ConductorsBaton));
+        Assert.True(One(s, Events(ki, 1)).You.Powers.Has(PowerId.ConductorsBaton));
         s.Enemies[0].Intent = new List<IntentHit> { new(18m), new(18m) };
         Assert.Equal(26, SimEngine.Run(s, Events(ki, 1)).TakenMax);
 
         // Already on you (applied by an earlier play): read as a power, it cuts the intent the same way.
         var on = State();
-        on.P.Powers = on.P.Powers.With(PowerId.ConductorsBaton, 1);
+        on.You.Powers = on.You.Powers.With(PowerId.ConductorsBaton, 1);
         on.Enemies[0].Intent = new List<IntentHit> { new(22m) };
         Assert.Equal(16, SimEngine.Run(on, Events(Card("Defend", SimCardType.Skill), 1)).TakenMax);
         // Not yet three melodies: no power, the full intent.
-        s.P.Turn = NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1);
+        s.You.Turn = NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), 1);
         Assert.Equal(36, SimEngine.Run(s, Events(ki, 1)).TakenMax);
     }
 
@@ -224,13 +224,13 @@ public class ProcModelTests
     {
         // Explosive Arrows on the impale (after the attack), only with an arrow to shoot.
         var s = Power(State(), PowerId.ExplosiveArrows, 4);
-        s.P.Arrows = 1;
+        s.You.Arrows = 1;
         var shot = Play(Card("QuickShot"), 0, 1, new ShootAction(), Attack(5), new ImpaleAction());
         var after = One(s, shot);
         Assert.Equal(100 - 5 - 4, after.Enemy(0)!.Hp);
         Assert.Equal((1, 3), (after.Enemy(0)!.Powers[PowerId.Impaled], after.Enemy(0)!.Powers.DataOf(PowerId.Impaled)));
-        Assert.Equal(0, after.P.Arrows);
-        s.P.Arrows = 0;
+        Assert.Equal(0, after.You.Arrows);
+        s.You.Arrows = 0;
         Assert.Equal(95, One(s, shot).Enemy(0)!.Hp);
 
         // Recall pulls both arrows out: Yah once a turn, Twine per arrow; the arrows come back.
@@ -239,8 +239,8 @@ public class ProcModelTests
         r.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, 2, 3);
         var recalled = One(r, Play(Card("Recall", SimCardType.Skill), 0, 1, new DislodgeAllAction()));
         Assert.Equal(1, recalled.Fired["YahPower"]);
-        Assert.Equal(4, recalled.P.Block);
-        Assert.Equal(2, recalled.P.Arrows);
+        Assert.Equal(4, recalled.You.Block);
+        Assert.Equal(2, recalled.You.Arrows);
         Assert.False(recalled.Enemy(0)!.Powers.Has(PowerId.Impaled));
     }
 
@@ -252,15 +252,15 @@ public class ProcModelTests
         var after = One(s, Play(Card("Flurry"), 0, 1, Attack(1, hits: 4)));
         // Hit 2 knocks one out (counter 2 -> 0, back to 3); hits 3 and 4 count it down to 1.
         Assert.Equal((1, 1), (after.Enemy(0)!.Powers[PowerId.Impaled], after.Enemy(0)!.Powers.DataOf(PowerId.Impaled)));
-        Assert.Equal(2, after.P.Block);
-        Assert.Equal(1, after.P.Arrows);
+        Assert.Equal(2, after.You.Block);
+        Assert.Equal(1, after.You.Arrows);
         // A kill lets every arrow go.
         var kill = State(hp: 5);
         Relic(kill, RelicId.Twine, vars: ("Block", 2));
         kill.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, 2, 3);
         var killed = One(kill, Play(Card("Strike"), 0, 1, Attack(9)));
-        Assert.Equal(4, killed.P.Block);
-        Assert.Equal(2, killed.P.Arrows);
+        Assert.Equal(4, killed.You.Block);
+        Assert.Equal(2, killed.You.Arrows);
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class ProcModelTests
         s.Teammates.Add(new SimPlayer { Hp = 50 });
         var after = One(s, Play(Card("QuickShot"), 0, 2, new ShootAction(), new ImpaleAction()));
         Assert.Equal(6, after.Teammates[0].Block);
-        Assert.Equal(0, after.P.Block);
+        Assert.Equal(0, after.You.Block);
     }
 
     [Fact]
@@ -279,7 +279,7 @@ public class ProcModelTests
         // Huddle Up: every teammate draws 2, you don't (SimAdapter.TeammatesDrawCards). Their Speedster hits every enemy for each
         // card they draw; yours doesn't hear their draws.
         var s = State(hp: 100);
-        s.P.Powers = s.P.Powers.With(PowerId.Speedster, 3);
+        s.You.Powers = s.You.Powers.With(PowerId.Speedster, 3);
         var mate = new SimPlayer { Hp = 50 };
         mate.Powers = mate.Powers.With(PowerId.Speedster, 2);
         s.Teammates.Add(mate);
@@ -296,7 +296,7 @@ public class ProcModelTests
         // Blade Symphony: Shivs into the teammate's hand, created by them (their Arsenal, not yours). Glimpse Beyond: Souls into
         // their draw pile, created by you (your Arsenal, not theirs).
         var s = State();
-        s.P.Powers = s.P.Powers.With(PowerId.Arsenal, 1);
+        s.You.Powers = s.You.Powers.With(PowerId.Arsenal, 1);
         var mate = new SimPlayer { Hp = 50 };
         mate.Powers = mate.Powers.With(PowerId.Arsenal, 1);
         s.Teammates.Add(mate);
@@ -314,7 +314,7 @@ public class ProcModelTests
     {
         // Your last card is Huddle Up: you draw and create nothing, so Unceasing Top draws, whatever your teammates draw.
         var s = Relic(State(), RelicId.UnceasingTop);
-        s.P.HandCount = 1;
+        s.You.HandCount = 1;
         s.Teammates.Add(new SimPlayer { Hp = 50 });
         var after = One(s, Events(Card("HuddleUp", SimCardType.Skill), 1,
             new CardEventAction(CardEvent.Drawn, 2) { Player = Who.Teammate(0), Indirect = true }));
@@ -332,7 +332,7 @@ public class ProcModelTests
         s.Teammates.Add(mate);
         var after = One(s, Events(Card("Rally", SimCardType.Skill), 1,
             new GainBlockAction(1, 12, SimProps.Move), new GainBlockAction(1, 12, SimProps.Move) { To = Who.Teammate(0) }));
-        Assert.Equal(12, after.P.Block);
+        Assert.Equal(12, after.You.Block);
         Assert.Equal(12, after.Teammates[0].Block);
         Assert.True(after.Enemy(0) is null or { Hp: <= 0 });
         // Logged under the teammate (decision #75): the tab on your card is theirs, not your Juggernaut's.
@@ -346,7 +346,7 @@ public class ProcModelTests
     {
         var s = Power(Power(Power(State(), PowerId.FeelNoPain, 3), PowerId.DarkEmbrace, 1), PowerId.Speedster, 2);
         var after = One(s, Events(Card("TrueGrit", SimCardType.Skill), 1, new CardEventAction(CardEvent.Exhausted, 2) { Indirect = true }));
-        Assert.Equal(6, after.P.Block);
+        Assert.Equal(6, after.You.Block);
         Assert.Equal(2, after.Fired["DarkEmbracePower"]);
         Assert.Equal(96, after.Enemy(0)!.Hp); // two draws from Dark Embrace, Speedster on each
         Assert.Equal(2, after.Fired["~FeelNoPainPower"]); // indirect: from the exhausts
@@ -369,7 +369,7 @@ public class ProcModelTests
         var s = Power(Power(Power(State(), PowerId.PillarOfCreation, 2), PowerId.Smokestack, 3), PowerId.AllIsWell, 4);
         var after = One(s, Events(Card("A", SimCardType.Skill), 1,
             new CardEventAction(CardEvent.Generated, 1), new CardEventAction(CardEvent.GeneratedStatus, 1), new CardEventAction(CardEvent.GeneratedSadness, 1)));
-        Assert.Equal(3 * 2 + 4, after.P.Block); // Pillar on every created card, All Is Well on the Sadness
+        Assert.Equal(3 * 2 + 4, after.You.Block); // Pillar on every created card, All Is Well on the Sadness
         Assert.Equal(97, after.Enemy(0)!.Hp);   // Smokestack on the status
     }
 
@@ -380,8 +380,8 @@ public class ProcModelTests
         Relic(s, RelicId.GalacticDust, amount: 8, vars: new[] { ("Stars", 10), ("Block", 5) });
         var spender = new SimCard("Stardust", SimCardType.Skill) { Stars = 3 };
         var after = One(s, Events(spender, 2, new CardEventAction(CardEvent.StarsSpent, 1) { FirstPlayOnly = true }));
-        Assert.Equal(6 + 5, after.P.Block);
-        Assert.Equal(1, after.P.Relics[RelicId.GalacticDust]);
+        Assert.Equal(6 + 5, after.You.Block);
+        Assert.Equal(1, after.You.Relics[RelicId.GalacticDust]);
     }
 
     [Fact]
@@ -392,7 +392,7 @@ public class ProcModelTests
             new ApplyPowerAction(PowerId.Vulnerable, 2) { Debuff = true }, new ApplyPowerAction(PowerId.Doom, 3) { Debuff = true }));
         Assert.Equal(94, after.Enemy(0)!.Hp);
         Assert.True(after.Fired.Has("ViciousPower"));
-        Assert.Equal(2, after.P.Block);
+        Assert.Equal(2, after.You.Block);
         // Artifact takes the debuff: nothing lands, nothing fires.
         s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Artifact, 1);
         Assert.Equal(100, One(s, Play(Card("Bash"), 0, 1, new ApplyPowerAction(PowerId.Vulnerable, 2) { Debuff = true })).Enemy(0)!.Hp);
@@ -414,13 +414,13 @@ public class ProcModelTests
     public void GalvanicHitsYouForAGalvanizedCard()
     {
         var s = State();
-        s.P.Block = 1;
-        s.P.Hp = 50;
+        s.You.Block = 1;
+        s.You.Hp = 50;
         s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Galvanic, 4);
         var after = One(s, Events(Card("A", SimCardType.Skill) with { Affliction = SimAffliction.Galvanized }, 1));
-        Assert.Equal(47, after.P.Hp);
+        Assert.Equal(47, after.You.Hp);
         Assert.Equal(4, after.Fired.DataOf("GalvanicPower@0"));
-        Assert.Equal(50, One(s, Events(Card("A", SimCardType.Skill), 1)).P.Hp);
+        Assert.Equal(50, One(s, Events(Card("A", SimCardType.Skill), 1)).You.Hp);
     }
 
     [Fact]
@@ -441,7 +441,7 @@ public class ProcModelTests
         var after = One(s, Play(Card("Strike"), 0, 2, Attack(1)));
         Assert.Equal(1, after.Fired["ArtOfWar"]);
         Assert.Equal(1, after.Fired["PaelsEye"]);
-        s.P.Turn = s.P.Turn.Add("Started", 1).Add(SimKeys.Plays(PlayStage.Started, SimCardType.Attack), 1);
+        s.You.Turn = s.You.Turn.Add("Started", 1).Add(SimKeys.Plays(PlayStage.Started, SimCardType.Attack), 1);
         var later = One(s, Play(Card("Strike"), 0, 1, Attack(1)));
         Assert.False(later.Fired.Has("ArtOfWar"));
         Assert.False(later.Fired.Has("PaelsEye"));
@@ -451,13 +451,13 @@ public class ProcModelTests
     public void PaelsTearsWarnsWhenTheLastEnergyIsSpent()
     {
         var s = Relic(State(), RelicId.PaelsTears, data: 0);
-        s.P.Energy = 2;
+        s.You.Energy = 2;
         var spend = Spend(new SimCard("Big", SimCardType.Skill) { Energy = 2 }, 2);
         Assert.True(One(s, spend).Fired.Has("PaelsTears"));
-        s.P.Energy = 3;
+        s.You.Energy = 3;
         Assert.False(One(s, spend).Fired.Has("PaelsTears"));
         // Already at 0 before a free card: nothing given up by this play.
-        s.P.Energy = 0;
+        s.You.Energy = 0;
         Assert.False(One(s, Spend(new SimCard("Free", SimCardType.Skill), 0)).Fired.Has("PaelsTears"));
     }
 
@@ -466,14 +466,14 @@ public class ProcModelTests
     {
         // GremlinHorn.AfterDeath (a dev-mode report: Unleash killing a segment left 2 energy, predicted 1): 1 energy, then a draw.
         var s = Relic(State(enemies: 2, hp: 5), RelicId.GremlinHorn, vars: new[] { ("Energy", 1), ("Cards", 1) });
-        s.P.Energy = 1;
-        s.P.HandCount = 3;
+        s.You.Energy = 1;
+        s.You.HandCount = 3;
         var kill = One(s, Play(Card("Strike"), 0, 1, Attack(6)));
-        Assert.Equal(2, kill.P.Energy);
+        Assert.Equal(2, kill.You.Energy);
         Assert.Equal(1, kill.PlayEvents[CardEvent.Drawn]);
         // No death, nothing.
         var hit = One(Relic(State(enemies: 2, hp: 50), RelicId.GremlinHorn), Play(Card("Strike"), 0, 1, Attack(6)));
-        Assert.Equal(0, hit.P.Energy);
+        Assert.Equal(0, hit.You.Energy);
         Assert.Equal(0, hit.PlayEvents[CardEvent.Drawn]);
     }
 
@@ -505,20 +505,20 @@ public class ProcModelTests
         // Your last energy on a 1-cost card while Orbit is one energy from firing: Orbit gives energy back, so energy is left at the
         // end of the turn and nothing is given up (the owner's feedback, 1.21.1).
         var s = Power(Relic(State(), RelicId.PaelsTears, data: 0), PowerId.Orbit, 1, data: 1);
-        s.P.Energy = 1;
+        s.You.Energy = 1;
         var after = One(s, Spend(new SimCard("Strike", SimCardType.Attack) { Energy = 1 }, 1));
         Assert.True(after.Fired.Has("OrbitPower"));
-        Assert.Equal(1, after.P.Energy);
+        Assert.Equal(1, after.You.Energy);
         Assert.False(after.Fired.Has("PaelsTears"));
         // Ivory Tile on a 3-cost card at 3 energy: the same, from a relic reacting after the play.
         var tile = Relic(Relic(State(), RelicId.PaelsTears, data: 0), RelicId.IvoryTile, vars: new[] { ("Energy", 1), ("EnergyThreshold", 3) });
-        tile.P.Energy = 3;
+        tile.You.Energy = 3;
         var big = One(tile, Spend(new SimCard("Big", SimCardType.Skill) { Energy = 3 }, 3));
-        Assert.Equal(1, big.P.Energy);
+        Assert.Equal(1, big.You.Energy);
         Assert.False(big.Fired.Has("PaelsTears"));
         // Without them, the warning stands.
         var plain = Relic(State(), RelicId.PaelsTears, data: 0);
-        plain.P.Energy = 1;
+        plain.You.Energy = 1;
         Assert.True(One(plain, Spend(new SimCard("Strike", SimCardType.Attack) { Energy = 1 }, 1)).Fired.Has("PaelsTears"));
     }
 
@@ -527,9 +527,9 @@ public class ProcModelTests
     {
         // Automation, Subroutine, Yah, Nunchaku: each gives the simulator its energy, not just its tab.
         var auto = Power(State(), PowerId.Automation, 2, data: 1);
-        Assert.Equal(2, One(auto, Events(Card("Draw", SimCardType.Skill), 1, new CardEventAction(CardEvent.Drawn, 1))).P.Energy);
+        Assert.Equal(2, One(auto, Events(Card("Draw", SimCardType.Skill), 1, new CardEventAction(CardEvent.Drawn, 1))).You.Energy);
         var sub = Power(State(), PowerId.Subroutine, 2);
-        Assert.Equal(2, One(sub, Events(Card("Defragment", SimCardType.Power), 1)).P.Energy);
+        Assert.Equal(2, One(sub, Events(Card("Defragment", SimCardType.Power), 1)).You.Energy);
     }
 
     [Fact]
@@ -539,7 +539,7 @@ public class ProcModelTests
         var after = One(s, Play(Card("Bash"), 0, 1, new ApplyPowerAction(PowerId.Vulnerable, 2) { Debuff = true }));
         Assert.Equal(4, after.Enemy(0)!.Powers[PowerId.Vulnerable]);
         Assert.True(after.Fired.Has("UnsettlingLamp"));
-        Assert.Equal(0, after.P.Relics.DataOf(RelicId.UnsettlingLamp));
+        Assert.Equal(0, after.You.Relics.DataOf(RelicId.UnsettlingLamp));
         // An enemy with Artifact doesn't set it off.
         s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Artifact, 1);
         Assert.False(One(s, Play(Card("Bash"), 0, 1, new ApplyPowerAction(PowerId.Vulnerable, 2) { Debuff = true })).Fired.Has("UnsettlingLamp"));
@@ -551,11 +551,11 @@ public class ProcModelTests
         var s = Relic(State(), RelicId.Kunai, amount: 2, vars: new[] { ("Cards", 3), ("Dexterity", 1) });
         var after = One(s, Play(Card("Strike"), 0, 1, Attack(1)));
         Assert.True(after.Fired.Has("Kunai"));
-        Assert.Equal(1, after.P.Powers[PowerId.Dexterity]);
-        Assert.Equal(0, after.P.Relics[RelicId.Kunai]);
+        Assert.Equal(1, after.You.Powers[PowerId.Dexterity]);
+        Assert.Equal(0, after.You.Relics[RelicId.Kunai]);
         var fan = Relic(State(), RelicId.OrnamentalFan, amount: 1, vars: new[] { ("Cards", 3), ("Block", 4) });
-        Assert.Equal(0, One(fan, Play(Card("Strike"), 0, 1, Attack(1))).P.Block);
-        Assert.Equal(4, One(fan, Play(Card("Strike"), 0, 2, Attack(1))).P.Block);
+        Assert.Equal(0, One(fan, Play(Card("Strike"), 0, 1, Attack(1))).You.Block);
+        Assert.Equal(4, One(fan, Play(Card("Strike"), 0, 2, Attack(1))).You.Block);
         var opener = Relic(State(2), RelicId.LetterOpener, amount: 2, vars: new[] { ("Cards", 3), ("Damage", 5) });
         var opened = One(opener, Events(Card("Defend", SimCardType.Skill), 1));
         Assert.Equal(95, opened.Enemy(1)!.Hp);
@@ -566,18 +566,18 @@ public class ProcModelTests
     public void OnPlayRelicsCheckTheCard()
     {
         var s = Relic(Relic(Relic(State(), RelicId.DaughterOfTheWind, vars: ("Block", 1)), RelicId.LostWisp, vars: ("Damage", 8)), RelicId.IntimidatingHelmet, vars: new[] { ("Energy", 2), ("Block", 4) });
-        Assert.Equal(1, One(s, Play(Card("Strike"), 0, 1, Attack(0))).P.Block);
+        Assert.Equal(1, One(s, Play(Card("Strike"), 0, 1, Attack(0))).You.Block);
         Assert.Equal(92, One(s, Events(Card("Inflame", SimCardType.Power), 1)).Enemy(0)!.Hp);
-        Assert.Equal(4, One(s, Events(new SimCard("Big", SimCardType.Skill) { Energy = 2 }, 1)).P.Block);
+        Assert.Equal(4, One(s, Events(new SimCard("Big", SimCardType.Skill) { Energy = 2 }, 1)).You.Block);
         var once = Relic(State(), RelicId.Permafrost, vars: ("Block", 6));
-        Assert.Equal(6, One(once, Events(Card("Inflame", SimCardType.Power), 2)).P.Block);
+        Assert.Equal(6, One(once, Events(Card("Inflame", SimCardType.Power), 2)).You.Block);
     }
 
     [Fact]
     public void RainbowRingFiresOnTheTypeThatCompletesTheSet()
     {
         var s = Relic(State(), RelicId.RainbowRing, data: 0);
-        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Attack), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Skill), 1);
+        s.You.Turn = s.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Attack), 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Skill), 1);
         Assert.True(One(s, Events(Card("Inflame", SimCardType.Power), 1)).Fired.Has("RainbowRing"));
         Assert.False(One(s, Events(Card("Defend", SimCardType.Skill), 1)).Fired.Has("RainbowRing"));
     }
@@ -591,7 +591,7 @@ public class ProcModelTests
             new CardEventAction(CardEvent.Exhausted, 1) { Card = Card("Burn", SimCardType.Skill) },
             new CardEventAction(CardEvent.Discarded, 1), new CardEventAction(CardEvent.Shuffled, 1)));
         Assert.Equal(97, after.Enemy(0)!.Hp);
-        Assert.Equal(9, after.P.Block);
+        Assert.Equal(9, after.You.Block);
         Assert.True(after.Fired.Has("BurningSticks"));
         var joss = Relic(State(), RelicId.JossPaper, amount: 4, vars: ("ExhaustAmount", 5));
         Assert.True(One(joss, Events(Card("A", SimCardType.Skill), 1, new CardEventAction(CardEvent.Exhausted, 1))).Fired.Has("JossPaper"));
@@ -601,10 +601,10 @@ public class ProcModelTests
     public void UnceasingTopNeedsTheHandToEmpty()
     {
         var s = Relic(State(), RelicId.UnceasingTop);
-        s.P.HandCount = 1;
+        s.You.HandCount = 1;
         Assert.True(One(s, Events(Card("A", SimCardType.Skill), 1)).Fired.Has("UnceasingTop"));
         Assert.False(One(s, Events(Card("A", SimCardType.Skill), 1, new CardEventAction(CardEvent.Drawn, 1))).Fired.Has("UnceasingTop"));
-        s.P.HandCount = 2;
+        s.You.HandCount = 2;
         Assert.False(One(s, Events(Card("A", SimCardType.Skill), 1)).Fired.Has("UnceasingTop"));
     }
 
@@ -631,7 +631,7 @@ public class ProcModelTests
         Assert.Equal(4, after.Fired.DataOf("MotifPower"));
         // A Wah already played this turn: only the Cho counts.
         var s = Power(State(), PowerId.Motif, 2);
-        s.P.Turn = s.P.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), 1);
+        s.You.Turn = s.You.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), 1);
         Assert.Equal(2, One(s, Events(duet, 1)).Fired.DataOf("MotifPower"));
         // No melody: no draw.
         Assert.False(One(Power(State(), PowerId.Motif, 2), Events(Card("Defend", SimCardType.Skill), 1)).Fired.Has("MotifPower"));
@@ -643,10 +643,10 @@ public class ProcModelTests
         // Dark Embrace draws one per exhaust; with one space left in hand (10 at most), two exhausts draw one card: its tab says 1,
         // and it fired twice.
         var s = Power(State(), PowerId.DarkEmbrace, 1);
-        s.P.HandCount = 9;
-        s.P.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 10) } };
+        s.You.HandCount = 9;
+        s.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 10) } };
         var after = One(s, Events(Card("Purge", SimCardType.Skill), 1, new CardEventAction(CardEvent.Exhausted, 2)));
-        Assert.Equal(10, after.P.HandCount);
+        Assert.Equal(10, after.You.HandCount);
         Assert.Equal(2, after.Fired["DarkEmbracePower"]);
         Assert.Equal(1, after.Fired.DataOf("DarkEmbracePower"));
     }
@@ -656,12 +656,12 @@ public class ProcModelTests
     {
         // CentennialPuzzle.AfterDamageReceived: UnblockedDamage > 0 and not UsedThisCombat: draws its Cards (3), once.
         var s = Relic(State(), RelicId.CentennialPuzzle, amount: 0, vars: new[] { ("Cards", 3) });
-        s.P.Hp = 50;
-        s.P.HandCount = 3;
+        s.You.Hp = 50;
+        s.You.HandCount = 3;
         var bleed = One(s, Events(Card("Bloodletting", SimCardType.Skill), 1, new LoseHpAction(3)));
         Assert.Equal(3, bleed.PlayEvents[CardEvent.Drawn]);
         Assert.Equal(3, bleed.Fired.DataOf("CentennialPuzzle"));
-        Assert.Equal(1, bleed.P.Relics[RelicId.CentennialPuzzle]);
+        Assert.Equal(1, bleed.You.Relics[RelicId.CentennialPuzzle]);
         // Used up this combat: nothing.
         Assert.False(One(Relic(State(), RelicId.CentennialPuzzle, amount: 1), Events(Card("Bloodletting", SimCardType.Skill), 1, new LoseHpAction(3))).Fired.Has("CentennialPuzzle"));
     }
@@ -670,7 +670,7 @@ public class ProcModelTests
     public void AnEnergyTabCountsTheEnergyItGives()
     {
         var after = One(Power(State(), PowerId.Subroutine, 2), Events(Card("Defragment", SimCardType.Power), 1));
-        Assert.Equal(2, after.P.Energy);
+        Assert.Equal(2, after.You.Energy);
         Assert.Equal(2, after.Fired.DataOf("SubroutinePower"));
         var nun = One(Relic(State(), RelicId.Nunchaku, amount: 9, vars: new[] { ("Cards", 10), ("Energy", 1) }), Play(Card("Strike"), 0, 1, Attack(1)));
         Assert.Equal(1, nun.Fired.DataOf("Nunchaku"));

@@ -77,7 +77,7 @@ public class SimKillTests
     {
         // Juggernaut from end-of-turn Plating kills it, but not during the play.
         var s = new SimState { Enemies = { Enemy(1, 4, 9) } };
-        s.P.Juggernaut = 5;
+        s.You.Juggernaut = 5;
         var o = SimEngine.Run(s, new SimPlay { Name = "Stone Armor", AddPlating = 3 });
         Assert.True(o.DeadInAll(1));
         Assert.Empty(o.KilledByPlayInAny);

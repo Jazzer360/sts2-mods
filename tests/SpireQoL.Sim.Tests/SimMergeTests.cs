@@ -54,8 +54,8 @@ public class SimMergeTests
 
             var s = new SimState();
             for (var i = 0; i < enemies; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = hp[i], Block = block[i] });
-            s.P.OrbCapacity = orbs;
-            s.P.Orbs = passive.Select(p => new SimOrb { Kind = OrbKind.Lightning, Passive = p, Evoke = 8 }).ToList();
+            s.You.OrbCapacity = orbs;
+            s.You.Orbs = passive.Select(p => new SimOrb { Kind = OrbKind.Lightning, Passive = p, Evoke = 8 }).ToList();
             var o = SimEngine.Run(s);
 
             // Every order of targets, one by one: each hit picks a living enemy, all equally likely.

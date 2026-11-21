@@ -15,10 +15,10 @@ public class SimUnmodelledTests
     private static SimState Hellraiser(int enemyHp)
     {
         var s = new SimState { Enemies = { Enemy(1, enemyHp, 10) } };
-        s.P.HandCount = 5;
-        s.P.Hp = 5;
-        s.P.Powers = s.P.Powers.With(PowerId.Hellraiser, 1, 0);
-        s.P.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("strike") { Strike = true }, 1), new SimDrawGroup(new SimDrawCard("plain"), 1) } };
+        s.You.HandCount = 5;
+        s.You.Hp = 5;
+        s.You.Powers = s.You.Powers.With(PowerId.Hellraiser, 1, 0);
+        s.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("strike") { Strike = true }, 1), new SimDrawGroup(new SimDrawCard("plain"), 1) } };
         return s;
     }
 
@@ -66,7 +66,7 @@ public class SimUnmodelledTests
     public void FullyModelledStaysExact()
     {
         var s = Hellraiser(50);
-        s.P.Powers = PowerSet.Empty;
+        s.You.Powers = PowerSet.Empty;
         var o = SimEngine.Run(s, HitThenDraw(1));
         Assert.False(o.AnyUnmodelled);
         Assert.True(o.YouDieChance().Exact);

@@ -40,8 +40,8 @@ public class SimTeammateTests
         // A teammate before you in player order: their Lightning (random target, two enemies) runs
         // before your Lightning, so your orb can only hit what's still alive.
         var s = new SimState { Enemies = { Enemy(1, 3, 5), Enemy(2, 3, 5) } };
-        s.P.OrbCapacity = 3;
-        s.P.Orbs.Add(Lightning());
+        s.You.OrbCapacity = 3;
+        s.You.Orbs.Add(Lightning());
         s.Teammates.Add(Defect(Lightning()));
         s.TeammatesBeforeMe = 1;
         var o = SimEngine.Run(s);
@@ -157,7 +157,7 @@ public class SimTeammateTests
         // You gain 10 block with Beacon of Hope: the teammate gets 5; their Beacon passes 2 back to you
         // (you get it, but yours is held while it gives, so nothing goes round again).
         var s = new SimState { Enemies = { Enemy(1, 50, 20) } };
-        s.P.BeaconOfHope = true;
+        s.You.BeaconOfHope = true;
         var mate = Mate();
         mate.BeaconOfHope = true;
         s.Teammates.Add(mate);
@@ -238,14 +238,14 @@ public class SimTeammateTests
         var mate = new SimPlayer { Hp = 60, OrbCapacity = 1 };
         mate.Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 });
         s.Teammates.Add(mate);
-        s.P.OrbCapacity = 3;
+        s.You.OrbCapacity = 3;
         var play = new SimPlay { ChannelToAlly = true, AllyTarget = 0 };
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Plasma, Passive = 1, Evoke = 2 } });
         SimEngine.ApplyPlayTo(s, play, out var branches, out _);
         var after = Assert.Single(branches);
         Assert.Equal(5, after.Teammates[0].Block);
         Assert.Equal(OrbKind.Plasma, Assert.Single(after.Teammates[0].Orbs).Kind);
-        Assert.Empty(after.P.Orbs);
+        Assert.Empty(after.You.Orbs);
         Assert.Single(s.Teammates[0].Orbs); // the start state is untouched
         Assert.Equal(OrbKind.Frost, s.Teammates[0].Orbs[0].Kind);
     }
@@ -324,7 +324,7 @@ public class SimCreatureIdTests
         SimEngine.Damage(s, s.Enemies[0], 6, Who.Teammate(0), SimProps.Move);
         Assert.Equal(0, s.Teammates[0].Block);
         Assert.Equal(2, s.Teammates[0].Taken);
-        Assert.Equal(0, s.P.Taken);
+        Assert.Equal(0, s.You.Taken);
         Assert.Equal(44, s.Enemies[0].Hp);
     }
 
@@ -348,7 +348,7 @@ public class SimCreatureIdTests
         Assert.Equal(2, Who.TeammateIndex(Who.Teammate(2)));
         var s = new SimState();
         s.Teammates.Add(new SimPlayer());
-        Assert.Same(s.P, s.Player(Who.You));
+        Assert.Same(s.You, s.Player(Who.You));
         Assert.Same(s.Teammates[0], s.Player(Who.Teammate(0)));
         Assert.Null(s.Player(0));
         Assert.Null(s.Player(Who.Teammate(1)));

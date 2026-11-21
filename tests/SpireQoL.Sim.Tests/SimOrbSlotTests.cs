@@ -14,9 +14,9 @@ public class SimOrbSlotTests
     private static SimState TwoSlots()
     {
         var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 79, Hits = { 24 } } } };
-        s.P.OrbCapacity = 2;
-        s.P.Orbs.Add(Orb(OrbKind.Glass, 3, 6));
-        s.P.Orbs.Add(Orb(OrbKind.Lightning, 3, 8));
+        s.You.OrbCapacity = 2;
+        s.You.Orbs.Add(Orb(OrbKind.Glass, 3, 6));
+        s.You.Orbs.Add(Orb(OrbKind.Lightning, 3, 8));
         return s;
     }
 
@@ -27,8 +27,8 @@ public class SimOrbSlotTests
         var play = new SimPlay { Name = "BulkUp" };
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = -1 });
         SimEngine.ApplyPlayTo(TwoSlots(), play, out var b, out _);
-        Assert.Equal(1, b[0].P.OrbCapacity);
-        Assert.Equal(new[] { OrbKind.Glass }, b[0].P.Orbs.Select(o => o.Kind));
+        Assert.Equal(1, b[0].You.OrbCapacity);
+        Assert.Equal(new[] { OrbKind.Glass }, b[0].You.Orbs.Select(o => o.Kind));
         Assert.Equal(79, b[0].Enemy(1)!.Hp);
     }
 
@@ -40,8 +40,8 @@ public class SimOrbSlotTests
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = -3 });
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Orb(OrbKind.Frost, 2, 5) });
         SimEngine.ApplyPlayTo(TwoSlots(), play, out var b, out _);
-        Assert.Equal(0, b[0].P.OrbCapacity);
-        Assert.Empty(b[0].P.Orbs);
+        Assert.Equal(0, b[0].You.OrbCapacity);
+        Assert.Empty(b[0].You.Orbs);
         Assert.Equal(79, b[0].Enemy(1)!.Hp);
     }
 
@@ -53,17 +53,17 @@ public class SimOrbSlotTests
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = 2 });
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Orb(OrbKind.Frost, 2, 5) });
         SimEngine.ApplyPlayTo(TwoSlots(), play, out var b, out _);
-        Assert.Equal(4, b[0].P.OrbCapacity);
-        Assert.Equal(3, b[0].P.Orbs.Count);
+        Assert.Equal(4, b[0].You.OrbCapacity);
+        Assert.Equal(3, b[0].You.Orbs.Count);
         Assert.Equal(79, b[0].Enemy(1)!.Hp);
 
         // OrbCmd.AddSlots stops at 10 slots.
         var s = TwoSlots();
-        s.P.OrbCapacity = 9;
+        s.You.OrbCapacity = 9;
         var big = new SimPlay { Name = "Capacitor" };
         big.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = 2 });
         SimEngine.ApplyPlayTo(s, big, out b, out _);
-        Assert.Equal(10, b[0].P.OrbCapacity);
+        Assert.Equal(10, b[0].You.OrbCapacity);
     }
 
     [Fact]
@@ -72,16 +72,16 @@ public class SimOrbSlotTests
         // OrbCmd.Channel: a character with no base orb slots (BaseOrbSlotCount 0) and no capacity gains
         // a slot first, so the orb is channeled; a Defect whose slots are all gone doesn't.
         var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 20, Hits = { 5 } } } };
-        s.P.SlotOnFirstChannel = true;
+        s.You.SlotOnFirstChannel = true;
         var play = new SimPlay { Name = "Zap" };
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Orb(OrbKind.Lightning, 3, 8) });
         SimEngine.ApplyPlayTo(s, play, out var b, out _);
-        Assert.Equal(1, b[0].P.OrbCapacity);
-        Assert.Single(b[0].P.Orbs);
+        Assert.Equal(1, b[0].You.OrbCapacity);
+        Assert.Single(b[0].You.Orbs);
 
-        s.P.SlotOnFirstChannel = false;
+        s.You.SlotOnFirstChannel = false;
         SimEngine.ApplyPlayTo(s, play, out b, out _);
-        Assert.Equal(0, b[0].P.OrbCapacity);
-        Assert.Empty(b[0].P.Orbs);
+        Assert.Equal(0, b[0].You.OrbCapacity);
+        Assert.Empty(b[0].You.Orbs);
     }
 }

@@ -11,7 +11,7 @@ public class OutcomeTabTests
     private static SimModel Model(string name) => SimModels.Get(name) ?? throw new InvalidOperationException(name + " isn't modelled");
 
     private static SimState You(int hp, RelicId? relic = null, int amount = 0, int data = 0) =>
-        new() { P = { Hp = hp, Relics = relic is { } r ? RelicSet.Empty.With(r, amount, data) : RelicSet.Empty } };
+        new() { You = { Hp = hp, Relics = relic is { } r ? RelicSet.Empty.With(r, amount, data) : RelicSet.Empty } };
 
     private static SimOutcome Ended(params SimState[] branches) => new() { Branches = branches.ToList() };
 

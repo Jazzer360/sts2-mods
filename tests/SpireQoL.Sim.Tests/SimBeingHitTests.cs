@@ -52,8 +52,8 @@ public class SimBeingHitTests
         Assert.False(SimEngine.Run(s, Strike(1, 9)).StunnedInAll(1));
         Assert.True(SimEngine.Run(s, Strike(1, 10)).StunnedInAll(1));
         // A Lightning orb's end-of-turn hit counts too, so the card isn't needed then.
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
-        s.P.OrbCapacity = 3;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        s.You.OrbCapacity = 3;
         Assert.True(SimEngine.Run(s, Strike(1, 7)).StunnedInAll(1));
     }
 
@@ -97,8 +97,8 @@ public class SimBeingHitTests
     {
         // The card's own block, a block proc, and a Frost evoke: three gains.
         var s = new SimState { Enemies = { Enemy(1, 50, 0, 5) } };
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } };
-        s.P.OrbCapacity = 1;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } };
+        s.You.OrbCapacity = 1;
         var p = new SimPlay { Name = "Coolheaded", BlockAmount = 5, BlockGains = 1, ProcBlock = { 3 } };
         p.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.EvokeFront });
         var o = SimEngine.Run(s, p);
@@ -119,12 +119,12 @@ public class SimBeingHitTests
     {
         // TheBoot.ModifyHpLostAfterOstyLate: a powered hit losing the enemy 1..4 HP loses it 5.
         var s = new SimState { Enemies = { Enemy(1, 20, 0, 6) } };
-        s.P.BootMinimum = 5;
+        s.You.BootMinimum = 5;
         SimEngine.ApplyPlayTo(s, Strike(1, 2, hits: 3), out var b, out _);
         Assert.Equal(5, b[0].Enemy(1)!.Hp); // 3 hits of 5, not 2
         // A fully blocked hit loses no HP: unchanged.
         var blocked = new SimState { Enemies = { Enemy(1, 20, 10, 6) } };
-        blocked.P.BootMinimum = 5;
+        blocked.You.BootMinimum = 5;
         SimEngine.ApplyPlayTo(blocked, Strike(1, 3), out var bb, out _);
         Assert.Equal(20, bb[0].Enemy(1)!.Hp);
         // Proc damage isn't a powered attack.
@@ -140,7 +140,7 @@ public class SimBeingHitTests
         // Slippery caps HP lost at 1 (AfterOsty); The Boot then raises it to its minimum (AfterOstyLate).
         var s = new SimState { Enemies = { Enemy(1, 20, 0, 6) } };
         s.Enemies[0].Slippery = 3;
-        s.P.BootMinimum = 5;
+        s.You.BootMinimum = 5;
         SimEngine.ApplyPlayTo(s, Strike(1, 12), out var b, out _);
         Assert.Equal(15, b[0].Enemy(1)!.Hp);
     }
@@ -152,20 +152,20 @@ public class SimBeingHitTests
         // first (unpowered, so your block takes it). Auto-report: FTL into Spiny Toad (Thorns 5) with
         // 4 block left you with 0 block and 1 HP lost.
         var s = new SimState { Enemies = { Enemy(1, 98, 0, 25) } };
-        s.P.Block = 4;
+        s.You.Block = 4;
         s.Enemies[0].Thorns = 5;
         SimEngine.ApplyPlayTo(s, Strike(1, 6), out var b, out _);
-        Assert.Equal(0, b[0].P.Block);
+        Assert.Equal(0, b[0].You.Block);
         Assert.Equal(1, b[0].Taken);
         Assert.Equal(92, b[0].Enemy(1)!.Hp);
 
         // Two hits: twice. The hit that kills it still sets Thorns off (before the damage lands).
-        s.P.Block = 20;
+        s.You.Block = 20;
         SimEngine.ApplyPlayTo(s, Strike(1, 6, hits: 2), out b, out _);
-        Assert.Equal(10, b[0].P.Block);
+        Assert.Equal(10, b[0].You.Block);
         s.Enemies[0].Hp = 5;
         SimEngine.ApplyPlayTo(s, Strike(1, 6), out b, out _);
-        Assert.Equal(15, b[0].P.Block);
+        Assert.Equal(15, b[0].You.Block);
         Assert.False(b[0].Enemy(1)!.Alive);
 
         // Proc damage and orb evokes aren't a card's attack: no Thorns.
@@ -173,7 +173,7 @@ public class SimBeingHitTests
         var proc = new SimPlay { Name = "Defend" };
         proc.Procs.Add(new ProcHit { Spread = SimPlay.Target.Single, TargetId = 1, Damage = { [1] = 3 } });
         SimEngine.ApplyPlayTo(s, proc, out b, out _);
-        Assert.Equal(20, b[0].P.Block);
+        Assert.Equal(20, b[0].You.Block);
     }
 
     [Fact]

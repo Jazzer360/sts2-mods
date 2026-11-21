@@ -60,6 +60,6 @@ public class PoisonTriggerTests
         var after = After(s, Play(Card("Accelerant", SimCardType.Power), -1, 1, new ApplyPowerAction(PowerId.Accelerant, 1) { To = ApplyPowerAction.Where.You })).Single();
         Assert.Equal(9, after.Enemy(0)!.Poison);
         Assert.Equal(2, after.Enemy(1)!.PoisonTriggers);
-        Assert.Equal(1, after.P.Powers[PowerId.Accelerant]);
+        Assert.Equal(1, after.You.Powers[PowerId.Accelerant]);
     }
 }

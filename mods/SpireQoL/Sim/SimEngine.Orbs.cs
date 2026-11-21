@@ -87,9 +87,9 @@ public static partial class SimEngine
                     var last = t == a.Times - 1;
                     b.Each(s =>
                     {
-                        if (s.P.Orbs.Count == 0) return new[] { s };
-                        var orb = s.P.Orbs[0];
-                        if (last) s.P.OwnOrbs().RemoveAt(0);
+                        if (s.You.Orbs.Count == 0) return new[] { s };
+                        var orb = s.You.Orbs[0];
+                        if (last) s.You.OwnOrbs().RemoveAt(0);
                         return Evoke(s, orb);
                     });
                 }
@@ -97,14 +97,14 @@ public static partial class SimEngine
             case OrbAction.Op.EvokeAllTwice:
                 // Front orb first, each evoked twice (then gone). One step per evoke, so identical branches merge and the branch
                 // cap holds (one step for all of them was 4^16 copies with 4 enemies and 8 Lightning orbs).
-                for (var i = b.States.Max(s => s.P.Orbs.Count); i > 0; i--)
+                for (var i = b.States.Max(s => s.You.Orbs.Count); i > 0; i--)
                 {
-                    b.Each(s => s.P.Orbs.Count == 0 ? new[] { s } : Evoke(s, s.P.Orbs[0]));
+                    b.Each(s => s.You.Orbs.Count == 0 ? new[] { s } : Evoke(s, s.You.Orbs[0]));
                     b.Each(s =>
                     {
-                        if (s.P.Orbs.Count == 0) return new[] { s };
-                        var orb = s.P.Orbs[0];
-                        s.P.OwnOrbs().RemoveAt(0);
+                        if (s.You.Orbs.Count == 0) return new[] { s };
+                        var orb = s.You.Orbs[0];
+                        s.You.OwnOrbs().RemoveAt(0);
                         return Evoke(s, orb);
                     });
                 }
@@ -112,8 +112,8 @@ public static partial class SimEngine
             case OrbAction.Op.Slots:
                 b.Do(s =>
                 {
-                    s.P.OrbCapacity = Math.Clamp(s.P.OrbCapacity + a.Slots, 0, Math.Max(MaxOrbSlots, s.P.OrbCapacity));
-                    while (s.P.Orbs.Count > s.P.OrbCapacity) s.P.OwnOrbs().RemoveAt(s.P.Orbs.Count - 1);
+                    s.You.OrbCapacity = Math.Clamp(s.You.OrbCapacity + a.Slots, 0, Math.Max(MaxOrbSlots, s.You.OrbCapacity));
+                    while (s.You.Orbs.Count > s.You.OrbCapacity) s.You.OwnOrbs().RemoveAt(s.You.Orbs.Count - 1);
                 });
                 break;
         }

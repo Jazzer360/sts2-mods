@@ -12,9 +12,9 @@ public class SimThunderTests
     {
         var s = new SimState();
         s.Enemies.AddRange(enemies);
-        s.P.OrbCapacity = 3;
-        s.P.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 });
-        s.P.Thunder = 6;
+        s.You.OrbCapacity = 3;
+        s.You.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 });
+        s.You.Thunder = 6;
         return s;
     }
 
@@ -55,7 +55,7 @@ public class SimThunderTests
         // different Toadpoles, each followed by its Thunder: 28 → 12 and 48 → 32. The play alone covers
         // Thunder; no extra hit lands anywhere (32 damage in total in every branch).
         var s = State(new SimEnemy { Id = 0, Name = "Toadpole", Hp = 28, Hits = { 3, 3, 3 } }, new SimEnemy { Id = 1, Name = "Toadpole", Hp = 48 });
-        s.P.Thunder = 8;
+        s.You.Thunder = 8;
         SimEngine.ApplyPlayTo(s, Dualcast(), out var b, out _);
         Assert.Contains(b, x => x.Enemy(0)!.Hp == 12 && x.Enemy(1)!.Hp == 32);
         Assert.Contains(b, x => !x.Enemy(0)!.Alive && x.Enemy(1)!.Hp == 48);
@@ -67,12 +67,12 @@ public class SimThunderTests
     public void FrostEvokesAndNoThunderDontHit()
     {
         var s = State(new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 5 } });
-        s.P.Orbs[0] = new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 };
+        s.You.Orbs[0] = new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 };
         SimEngine.ApplyPlayTo(s, Dualcast(), out var b, out _);
         Assert.Equal(40, b[0].Enemy(1)!.Hp);
 
         s = State(new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 5 } });
-        s.P.Thunder = 0;
+        s.You.Thunder = 0;
         SimEngine.ApplyPlayTo(s, Dualcast(), out b, out _);
         Assert.Equal(40 - 16, b[0].Enemy(1)!.Hp);
     }

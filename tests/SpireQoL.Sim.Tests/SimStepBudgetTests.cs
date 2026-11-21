@@ -18,8 +18,8 @@ public class SimStepBudgetTests
         // 32, with the binomial odds 1, 4, 6, 4, 1 in 16 (merged branches keep their shares).
         var s = new SimState();
         for (var i = 0; i < 2; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 100 });
-        s.P.OrbCapacity = 2;
-        s.P.Orbs = new() { Lightning(), Lightning() };
+        s.You.OrbCapacity = 2;
+        s.You.Orbs = new() { Lightning(), Lightning() };
         var o = SimEngine.Run(s, Shatter());
 
         Assert.False(o.Truncated);
@@ -28,7 +28,7 @@ public class SimStepBudgetTests
         Assert.Equal(6.0 / 16, byDamage[16], 6);
         Assert.Equal(1.0 / 16, byDamage[32], 6);
         Assert.All(o.Branches, b => Assert.Equal(32, 200 - b.Enemy(0)!.HpAtTurnEnd - b.Enemy(1)!.HpAtTurnEnd));
-        Assert.All(o.Branches, b => Assert.Empty(b.P.Orbs));
+        Assert.All(o.Branches, b => Assert.Empty(b.You.Orbs));
     }
 
     [Fact]
@@ -36,8 +36,8 @@ public class SimStepBudgetTests
     {
         // Frost then Lightning, one enemy: 5 block twice, then 8 damage twice; no orbs left for passives.
         var s = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 40, Hits = new() { 12 } } } };
-        s.P.OrbCapacity = 2;
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }, Lightning() };
+        s.You.OrbCapacity = 2;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }, Lightning() };
         var o = SimEngine.Run(s, Shatter());
         Assert.Equal(10, o.Worst.BlockAtEnemyTurn);
         Assert.Equal(24, o.Worst.Enemy(0)!.HpAtTurnEnd);
@@ -51,8 +51,8 @@ public class SimStepBudgetTests
         // per split of the 20 evokes among four enemies (1,771), and every outcome is found.
         var s = new SimState();
         for (var i = 0; i < 4; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 500, Hits = new() { 6 } });
-        s.P.OrbCapacity = 10;
-        s.P.Orbs = Enumerable.Range(0, 10).Select(_ => Lightning()).ToList();
+        s.You.OrbCapacity = 10;
+        s.You.Orbs = Enumerable.Range(0, 10).Select(_ => Lightning()).ToList();
         var o = SimEngine.Run(s, Shatter());
         Assert.False(o.Truncated);
         Assert.Equal(1771, o.Branches.Count);
@@ -75,7 +75,7 @@ public class SimStepBudgetTests
             p.Plating = 4;
             return p;
         }
-        Setup(s.P);
+        Setup(s.You);
         for (var t = 0; t < 3; t++) s.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
         var o = SimEngine.Run(s, null, new SimWork { CopyCap = 200_000 });
         Assert.True(o.Truncated);

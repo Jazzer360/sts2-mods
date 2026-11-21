@@ -482,18 +482,20 @@ public sealed class SimHandCard
 /// <summary>One branch of the simulation: the state plus what happened so far.</summary>
 public sealed class SimState
 {
-    public SimPlayer P = new();
+    /// <summary>You: your own player (every other player is in <see cref="Teammates"/>; any player by id: <see cref="Player"/>).</summary>
+    [JsonPropertyName("P")] // the name reports and replay cases hold it under
+    public SimPlayer You = new();
     public List<SimEnemy> Enemies = new();
 
     /// <summary>Keep the display logs (Incoming Damage's own run). Off for card simulations: faster.</summary>
     public bool Log;
 
     // ---- results (per branch). Yours are on your SimPlayer like every player's (decision #93); these read them.
-    [JsonIgnore] public int Taken { get => P.Taken; set => P.Taken = value; }
+    [JsonIgnore] public int Taken { get => You.Taken; set => You.Taken = value; }
     /// <summary>The part of Taken that no block could stop (Regret, Beckon, Bad Luck: SimEngine.LandUnblockable), after the HP-loss modifiers.</summary>
-    [JsonIgnore] public int UnblockableTaken { get => P.UnblockableTaken; set => P.UnblockableTaken = value; }
+    [JsonIgnore] public int UnblockableTaken { get => You.UnblockableTaken; set => You.UnblockableTaken = value; }
     /// <summary>You reach 0 HP with nothing left to prevent death (your HP tracked: SimPlayer.Hp).</summary>
-    [JsonIgnore] public bool Died { get => P.Died; set => P.Died = value; }
+    [JsonIgnore] public bool Died { get => You.Died; set => You.Died = value; }
     /// <summary>An auto-play at the end of your turn couldn't be simulated in this branch (Stampede or Simpleton picked a card that changes your hand): later auto-plays aren't either.</summary>
     public bool AutoPlaysUnknown;
     /// <summary>
@@ -535,13 +537,13 @@ public sealed class SimState
     /// </summary>
     public NamedCounts Fired = NamedCounts.Empty, FiredAny = NamedCounts.Empty;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
-    [JsonIgnore] public int FairiesUsed { get => P.FairiesUsed; set => P.FairiesUsed = value; }
-    [JsonIgnore] public bool LizardTailUsed { get => P.LizardTailUsed; set => P.LizardTailUsed = value; }
+    [JsonIgnore] public int FairiesUsed { get => You.FairiesUsed; set => You.FairiesUsed = value; }
+    [JsonIgnore] public bool LizardTailUsed { get => You.LizardTailUsed; set => You.LizardTailUsed = value; }
 
     /// <summary>Damage your pet Wuppy took for you (enemy attacks it redirected).</summary>
-    [JsonIgnore] public int WuppyTaken { get => P.WuppyTaken; set => P.WuppyTaken = value; }
-    [JsonIgnore] public int OstyTaken { get => P.OstyTaken; set => P.OstyTaken = value; }
-    [JsonIgnore] public int DamageThrough { get => P.Through; set => P.Through = value; }
+    [JsonIgnore] public int WuppyTaken { get => You.WuppyTaken; set => You.WuppyTaken = value; }
+    [JsonIgnore] public int OstyTaken { get => You.OstyTaken; set => You.OstyTaken = value; }
+    [JsonIgnore] public int DamageThrough { get => You.Through; set => You.Through = value; }
     public int SkippedPoisoned;
     public int SkippedEndOfTurn;
     public int CancelledHits;
@@ -658,10 +660,10 @@ public sealed class SimState
     internal SimWork? Work;
 
     /// <summary>A player by id (Who.You, Who.Teammate(k)); null for any other creature, or a teammate not in this fight.</summary>
-    public SimPlayer? Player(int id) => id == Who.You ? P : Who.TeammateIndex(id) is var k and >= 0 && k < Teammates.Count ? Teammates[k] : null;
+    public SimPlayer? Player(int id) => id == Who.You ? You : Who.TeammateIndex(id) is var k and >= 0 && k < Teammates.Count ? Teammates[k] : null;
 
     /// <summary>A player by id, to change (a teammate shared between branches is copied for this branch first).</summary>
-    public SimPlayer MutablePlayer(int id) => id == Who.You ? P : MutableTeammate(Who.TeammateIndex(id));
+    public SimPlayer MutablePlayer(int id) => id == Who.You ? You : MutableTeammate(Who.TeammateIndex(id));
 
     /// <summary>The player takes part in what their side does (you always; a teammate while alive).</summary>
     public bool TakesPart(int id) => id == Who.You || Player(id) is { Hp: > 0 };
@@ -768,7 +770,7 @@ public sealed class SimState
     {
         if (Work != null && ++Work.Copies > Work.CopyCap) throw new SimEngine.SimCapped(); // the work cap (SimWork.MaxCopies)
         var c = (SimState)MemberwiseClone();
-        c.P = P.Clone();
+        c.You = You.Clone();
         _teammatesShared = true;
         c._teammatesShared = true;
         c.Enemies = new List<SimEnemy>(Enemies.Count);
@@ -812,7 +814,7 @@ public sealed class SimState
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
         foreach (var pick in AutoPicks) { Add(pick.Card); Add(pick.Target); } // branches that picked differently stay apart (the check tells them apart)
         foreach (var e in Enemies) e.Hash(Add);
-        P.Hash(Add);
+        You.Hash(Add);
         // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
         foreach (var t in Teammates) t.Hash(Add);
         return h;

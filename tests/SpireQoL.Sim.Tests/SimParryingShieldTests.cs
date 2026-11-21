@@ -12,11 +12,11 @@ public class SimParryingShieldTests
     private static SimState Start(int block = 0)
     {
         var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = { 3 } } } };
-        s.P.Block = block;
-        s.P.Plating = 4;          // Gorget's Plating on turn one
-        s.P.OrichalcumBlock = 6;  // only when you end your turn with no block
-        s.P.ParryingShieldBlock = 10;
-        s.P.ParryingShieldDamage = 6;
+        s.You.Block = block;
+        s.You.Plating = 4;          // Gorget's Plating on turn one
+        s.You.OrichalcumBlock = 6;  // only when you end your turn with no block
+        s.You.ParryingShieldBlock = 10;
+        s.You.ParryingShieldDamage = 6;
         return s;
     }
 
@@ -45,11 +45,11 @@ public class SimParryingShieldTests
         // 10 block + 4 Plating = 14, but a Burn in hand lands at end of turn, before it checks: a 5 Burn
         // leaves 9 (it doesn't fire); a 4 Burn leaves exactly 10 (it does).
         var s = Start(block: 10);
-        s.P.Plating = 4;
-        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 5));
+        s.You.Plating = 4;
+        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 5));
         Assert.False(SimEngine.Run(s).ParryingShieldInAny);
-        s.P.TurnEndCards.Clear();
-        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 4));
+        s.You.TurnEndCards.Clear();
+        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 4));
         Assert.True(SimEngine.Run(s).ParryingShieldInAll);
     }
 }

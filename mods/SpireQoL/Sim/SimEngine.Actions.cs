@@ -149,7 +149,7 @@ public static partial class SimEngine
         var r = GainBlock(s, amount, s.EndOfTurnNow && gb.To == Who.You && s.Log ? s.CurrentPlay?.Card.Name ?? "block" : null, gb.To);
         // Block from a card play this turn (Unmovable counts the ones from earlier plays).
         if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
-            r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add(SimKeys.CardBlock, 1); return x; }).ToList();
+            r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.You.Turn = x.You.Turn.Add(SimKeys.CardBlock, 1); return x; }).ToList();
         if (mods != null && amount > 0) r = r.Select(x => { foreach (var (m, o) in mods) m.AfterModifyingBlockAmount(x, o, amount, x.CurrentPlay); return x; }).ToList();
         return Then(r, x => Hook(x, nameof(SimModel.AfterBlockGained), (m, o, y) => m.AfterBlockGained(y, o, gb.To, amount, y.CurrentPlay?.Card)));
     }

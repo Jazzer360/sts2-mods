@@ -15,8 +15,8 @@ public class SimOddsTests
     {
         var s = new SimState();
         s.Enemies.AddRange(enemies);
-        s.P.OrbCapacity = 3;
-        s.P.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 });
+        s.You.OrbCapacity = 3;
+        s.You.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 });
         return s;
     }
 

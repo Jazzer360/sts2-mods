@@ -61,7 +61,7 @@ public class SinglePlayerGoldenTests
             if (r.Next(5) == 0) e.AddPoison(r.Next(1, 8));
             s.Enemies.Add(e);
         }
-        var p = s.P;
+        var p = s.You;
         p.Block = r.Next(0, 3) == 0 ? r.Next(1, 20) : 0;
         if (r.Next(5) == 0) p.Plating = r.Next(1, 6);
         if (r.Next(6) == 0) p.Juggernaut = r.Next(2, 6);
@@ -120,7 +120,7 @@ public class SinglePlayerGoldenTests
         {
             var e = string.Join(";", b.Enemies.OrderBy(x => x.Id).Select(x =>
                 $"{x.Id}:{x.Hp},{x.Block},{x.Alive},{x.DiedBeforeActing},{x.Stunned},{x.Poison},{x.FirstHitFullyBlocked}"));
-            return $"{b.Taken},{b.OstyTaken},{b.DamageThrough},{b.BlockAtEnemyTurn},{b.CancelledHits},{b.P.Block},{b.BlockDemand},{b.Weight.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)}|{e}";
+            return $"{b.Taken},{b.OstyTaken},{b.DamageThrough},{b.BlockAtEnemyTurn},{b.CancelledHits},{b.You.Block},{b.BlockDemand},{b.Weight.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)}|{e}";
         }).OrderBy(x => x, StringComparer.Ordinal);
         sb.Append(string.Join("#", branches));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString())))[..16];

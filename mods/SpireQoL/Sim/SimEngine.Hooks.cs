@@ -41,7 +41,7 @@ public static partial class SimEngine
     {
         var sets = new object[2 + 2 * s.Teammates.Count + s.Enemies.Count];
         var i = 0;
-        sets[i++] = s.P.Powers; sets[i++] = s.P.Relics;
+        sets[i++] = s.You.Powers; sets[i++] = s.You.Relics;
         foreach (var t in s.Teammates) { sets[i++] = t.Powers; sets[i++] = t.Relics; }
         foreach (var e in s.Enemies) sets[i++] = e.Powers;
         return sets;
@@ -51,7 +51,7 @@ public static partial class SimEngine
     {
         if (sets.Length != 2 + 2 * s.Teammates.Count + s.Enemies.Count) return false;
         var i = 0;
-        if (!ReferenceEquals(sets[i++], s.P.Powers) || !ReferenceEquals(sets[i++], s.P.Relics)) return false;
+        if (!ReferenceEquals(sets[i++], s.You.Powers) || !ReferenceEquals(sets[i++], s.You.Relics)) return false;
         foreach (var t in s.Teammates) if (!ReferenceEquals(sets[i++], t.Powers) || !ReferenceEquals(sets[i++], t.Relics)) return false;
         foreach (var e in s.Enemies) if (!ReferenceEquals(sets[i++], e.Powers)) return false;
         return true;
@@ -90,7 +90,7 @@ public static partial class SimEngine
             foreach (var e in relics.Items) if (SimModels.Has(e.Name.Name)) return true;
             return false;
         }
-        if (Any(s.P.Powers) || AnyRelic(s.P.Relics)) return true;
+        if (Any(s.You.Powers) || AnyRelic(s.You.Relics)) return true;
         foreach (var t in s.Teammates) if (Any(t.Powers) || AnyRelic(t.Relics)) return true;
         foreach (var e in s.Enemies) if (Any(e.Powers)) return true;
         return false;

@@ -29,8 +29,8 @@ public class SimDrawTests
     private static SimState You(int hand = 5)
     {
         var s = new SimState { Enemies = { Enemy(1, 50) } };
-        s.P.HandCount = hand;
-        s.P.Hp = 50;
+        s.You.HandCount = hand;
+        s.You.Hp = 50;
         return s;
     }
 
@@ -38,11 +38,11 @@ public class SimDrawTests
     public void APlainPileDoesntBranch()
     {
         var s = You();
-        s.P.Draw = Pile((Plain, 10));
+        s.You.Draw = Pile((Plain, 10));
         var o = SimEngine.Run(s, Draws(2));
         Assert.Single(o.Branches);
-        Assert.Equal(6, o.Branches[0].P.HandCount); // 5 - the card + 2 drawn
-        Assert.Equal(8, o.Branches[0].P.Draw!.RestCount);
+        Assert.Equal(6, o.Branches[0].You.HandCount); // 5 - the card + 2 drawn
+        Assert.Equal(8, o.Branches[0].You.Draw!.RestCount);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class SimDrawTests
     {
         // One Burn among ten: a 10% chance it's drawn and burns you for 2.
         var s = You();
-        s.P.Draw = Pile((Burn, 1), (Plain, 9));
+        s.You.Draw = Pile((Burn, 1), (Plain, 9));
         var o = SimEngine.Run(s, Draws(1));
         Assert.Equal(2, o.TakenMax);
         Assert.Equal(0, o.TakenMin);
@@ -63,17 +63,17 @@ public class SimDrawTests
         // An Ethereal Burn and a plain one, Feel No Pain 3: the Ethereal one exhausts (3 block) before burning (2), so it costs
         // nothing; the plain one burns you. Drawing two from ten: 28 + 8 + 8 + 1 ways out of 45.
         var s = You();
-        s.P.FeelNoPain = 3;
-        s.P.Draw = Pile((EtherealBurn, 1), (Burn, 1), (Plain, 8));
+        s.You.FeelNoPain = 3;
+        s.You.Draw = Pile((EtherealBurn, 1), (Burn, 1), (Plain, 8));
         var o = SimEngine.Run(s, Draws(2));
         double P(Func<SimState, bool> f) => o.Branches.Where(f).Sum(b => b.Weight);
         Assert.Equal(4, o.Branches.Count);
-        Assert.Equal(28 / 45.0, P(b => b.P.Drawn == 2 && b.P.TurnEndCards.Count == 0), 9);
-        Assert.Equal(8 / 45.0, P(b => b.P.TurnEndCards.Count == 1 && b.P.Fading == 1), 9);
-        Assert.Equal(8 / 45.0, P(b => b.P.TurnEndCards.Count == 1 && b.P.Fading == 0), 9);
-        Assert.Equal(1 / 45.0, P(b => b.P.TurnEndCards.Count == 2), 9);
-        Assert.Equal(0, o.Branches.Single(b => b.P.TurnEndCards.Count == 1 && b.P.Fading == 1).Taken); // 3 block takes the 2
-        Assert.Equal(2, o.Branches.Single(b => b.P.TurnEndCards.Count == 1 && b.P.Fading == 0).Taken);
+        Assert.Equal(28 / 45.0, P(b => b.You.Drawn == 2 && b.You.TurnEndCards.Count == 0), 9);
+        Assert.Equal(8 / 45.0, P(b => b.You.TurnEndCards.Count == 1 && b.You.Fading == 1), 9);
+        Assert.Equal(8 / 45.0, P(b => b.You.TurnEndCards.Count == 1 && b.You.Fading == 0), 9);
+        Assert.Equal(1 / 45.0, P(b => b.You.TurnEndCards.Count == 2), 9);
+        Assert.Equal(0, o.Branches.Single(b => b.You.TurnEndCards.Count == 1 && b.You.Fading == 1).Taken); // 3 block takes the 2
+        Assert.Equal(2, o.Branches.Single(b => b.You.TurnEndCards.Count == 1 && b.You.Fading == 0).Taken);
     }
 
     [Fact]
@@ -81,32 +81,32 @@ public class SimDrawTests
     {
         // Ten cards with the one being played: it has left the hand, so one draw fits; the second doesn't.
         var s = You(hand: 10);
-        s.P.Draw = Pile((Burn, 5));
+        s.You.Draw = Pile((Burn, 5));
         var o = SimEngine.Run(s, Draws(2));
-        Assert.All(o.Branches, b => Assert.Single(b.P.TurnEndCards));
-        Assert.All(o.Branches, b => Assert.Equal(4, b.P.Draw!.RestCount)); // the second stays in the pile
+        Assert.All(o.Branches, b => Assert.Single(b.You.TurnEndCards));
+        Assert.All(o.Branches, b => Assert.Equal(4, b.You.Draw!.RestCount)); // the second stays in the pile
     }
 
     [Fact]
     public void AnEmptyPileShufflesTheDiscardIn()
     {
         var s = You();
-        s.P.Draw = new SimDrawPile { Discard = { new SimDrawGroup(Burn, 2) } };
+        s.You.Draw = new SimDrawPile { Discard = { new SimDrawGroup(Burn, 2) } };
         var o = SimEngine.Run(s, Draws(1));
         var b = Assert.Single(o.Branches);
-        Assert.Single(b.P.TurnEndCards);
-        Assert.Equal(1, b.P.Draw!.RestCount);
-        Assert.Equal(0, b.P.Draw.DiscardCount);
+        Assert.Single(b.You.TurnEndCards);
+        Assert.Equal(1, b.You.Draw!.RestCount);
+        Assert.Equal(0, b.You.Draw.DiscardCount);
     }
 
     [Fact]
     public void TheKnownTopComesFirst()
     {
         var s = You();
-        s.P.Draw = new SimDrawPile { Top = { Burn }, Rest = { new SimDrawGroup(Plain, 9) } };
+        s.You.Draw = new SimDrawPile { Top = { Burn }, Rest = { new SimDrawGroup(Plain, 9) } };
         var o = SimEngine.Run(s, Draws(1));
         var b = Assert.Single(o.Branches);
-        Assert.Single(b.P.TurnEndCards);
+        Assert.Single(b.You.TurnEndCards);
     }
 
     [Fact]
@@ -115,12 +115,12 @@ public class SimDrawTests
         // Iteration 2: the first Status drawn this turn draws 2 more (a pile of Statuses: three in all). A second Status doesn't.
         var status = new SimDrawCard("status") { Status = true };
         var s = You();
-        s.P.Powers = s.P.Powers.With(PowerId.Iteration, 2, 0);
-        s.P.Draw = Pile((status, 6));
+        s.You.Powers = s.You.Powers.With(PowerId.Iteration, 2, 0);
+        s.You.Draw = Pile((status, 6));
         var o = SimEngine.Run(s, Draws(1));
-        Assert.All(o.Branches, b => Assert.Equal(3, b.P.Drawn));
-        s.P.StatusDrawn = 1; // one already drawn this turn
-        Assert.All(SimEngine.Run(s, Draws(1)).Branches, b => Assert.Equal(1, b.P.Drawn));
+        Assert.All(o.Branches, b => Assert.Equal(3, b.You.Drawn));
+        s.You.StatusDrawn = 1; // one already drawn this turn
+        Assert.All(SimEngine.Run(s, Draws(1)).Branches, b => Assert.Equal(1, b.You.Drawn));
     }
 
     [Fact]
@@ -128,15 +128,15 @@ public class SimDrawTests
     {
         var ethereal = new SimDrawCard("ethereal") { Ethereal = true };
         var s = You();
-        s.P.Powers = s.P.Powers.With(PowerId.Pagestorm, 1, 0);
-        s.P.Draw = Pile((ethereal, 2), (Plain, 1));
+        s.You.Powers = s.You.Powers.With(PowerId.Pagestorm, 1, 0);
+        s.You.Draw = Pile((ethereal, 2), (Plain, 1));
         var o = SimEngine.Run(s, Draws(1));
         // The Plain first (1/3): no chain. An Ethereal first (2/3) draws one more: the other Ethereal (1/2), which draws the Plain,
         // or the Plain (1/2).
         Assert.Equal(1.0, o.Branches.Sum(b => b.Weight), 9);
-        Assert.Equal(1 / 3.0, o.Branches.Where(b => b.P.Drawn == 1).Sum(b => b.Weight), 9);
-        Assert.Equal(1 / 3.0, o.Branches.Where(b => b.P.Drawn == 2).Sum(b => b.Weight), 9);
-        Assert.Equal(1 / 3.0, o.Branches.Where(b => b.P.Drawn == 3).Sum(b => b.Weight), 9);
+        Assert.Equal(1 / 3.0, o.Branches.Where(b => b.You.Drawn == 1).Sum(b => b.Weight), 9);
+        Assert.Equal(1 / 3.0, o.Branches.Where(b => b.You.Drawn == 2).Sum(b => b.Weight), 9);
+        Assert.Equal(1 / 3.0, o.Branches.Where(b => b.You.Drawn == 3).Sum(b => b.Weight), 9);
     }
 
     [Fact]
@@ -145,9 +145,9 @@ public class SimDrawTests
         // Nine in hand (the played card out): the Status fills the hand, so Iteration's draw has no room.
         var status = new SimDrawCard("status") { Status = true };
         var s = You(hand: 10);
-        s.P.Powers = s.P.Powers.With(PowerId.Iteration, 2, 0);
-        s.P.Draw = Pile((status, 6));
-        Assert.All(SimEngine.Run(s, Draws(1)).Branches, b => Assert.Equal(1, b.P.Drawn));
+        s.You.Powers = s.You.Powers.With(PowerId.Iteration, 2, 0);
+        s.You.Draw = Pile((status, 6));
+        Assert.All(SimEngine.Run(s, Draws(1)).Branches, b => Assert.Equal(1, b.You.Drawn));
     }
 
     [Fact]
@@ -156,16 +156,16 @@ public class SimDrawTests
         // Pommel Strike-like pick draws; the drawn card is an attack Stampede's second pick may take. Its own id in hand.
         var e = Enemy(1, 30, 5);
         var s = new SimState { Enemies = { e } };
-        s.P.HandCount = 1;
+        s.You.HandCount = 1;
         var strike = new SimHandCard { Id = 0, Name = "Strike", IsAttack = true, Cost = 1, Plays = { new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 6 }, Hits = 1, HandDelta = -1 } } };
-        s.P.Draw = Pile((new SimDrawCard("strike") { Pickable = true, Auto = strike }, 3));
-        s.P.Stampede = 2;
+        s.You.Draw = Pile((new SimDrawCard("strike") { Pickable = true, Auto = strike }, 3));
+        s.You.Stampede = 2;
         var pommel = new SimPlay
         {
             Name = "PommelStrike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 9 }, Hits = 1,
             HandCard = 15, HandDelta = 0, Draws = 1, Body = { new CardEventAction(CardEvent.Drawn, 1) },
         };
-        s.P.AutoHand = new() { new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { pommel } } };
+        s.You.AutoHand = new() { new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { pommel } } };
         var o = SimEngine.Run(s);
         var b = Assert.Single(o.Branches);
         Assert.Equal(2, b.AutoPlayed);
@@ -179,8 +179,8 @@ public class SimDrawTests
         var s = You();
         var o = SimEngine.Run(s, Draws(2));
         var b = Assert.Single(o.Branches);
-        Assert.Equal(6, b.P.HandCount); // the hand delta, as before
-        Assert.Equal(0, b.P.Drawn);
+        Assert.Equal(6, b.You.HandCount); // the hand delta, as before
+        Assert.Equal(0, b.You.Drawn);
     }
 
     [Fact]
@@ -188,8 +188,8 @@ public class SimDrawTests
     {
         // Four draws from Ethereal Burns, Burns and plain cards: the same cards drawn in another order is the same hand, one branch.
         var s = You();
-        s.P.FeelNoPain = 3;
-        s.P.Draw = Pile((EtherealBurn, 2), (Burn, 2), (Plain, 6));
+        s.You.FeelNoPain = 3;
+        s.You.Draw = Pile((EtherealBurn, 2), (Burn, 2), (Plain, 6));
         var o = SimEngine.Run(s, Draws(4));
         Assert.False(o.Truncated);
         Assert.True(o.Branches.Count > 2);
@@ -205,13 +205,13 @@ public class SimDrawTests
         // Known on top (placed there): its 10 block, for certain, and it goes to the discard pile.
         var s = You();
         s.Enemies[0].Hits = new() { 12 };
-        s.P.Draw = new SimDrawPile { Top = { Invincible }, Rest = { new SimDrawGroup(Plain, 5) } };
+        s.You.Draw = new SimDrawPile { Top = { Invincible }, Rest = { new SimDrawGroup(Plain, 5) } };
         var o = SimEngine.Run(s);
         var b = Assert.Single(o.Branches);
         Assert.Equal(2, b.Taken);
         Assert.Equal(1, b.AutoPlayed);
-        Assert.Equal(1, b.P.Draw!.DiscardCount);
-        Assert.Empty(b.P.Draw.Top);
+        Assert.Equal(1, b.You.Draw!.DiscardCount);
+        Assert.Empty(b.You.Draw.Top);
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class SimDrawTests
         // Two copies among ten, order unknown: a 20% chance one is on top.
         var s = You();
         s.Enemies[0].Hits = new() { 12 };
-        s.P.Draw = Pile((Invincible, 2), (Plain, 8));
+        s.You.Draw = Pile((Invincible, 2), (Plain, 8));
         var o = SimEngine.Run(s);
         Assert.Equal(0.2, o.Branches.Where(b => b.Taken == 2).Sum(b => b.Weight), 9);
         Assert.Equal(0.8, o.Branches.Where(b => b.Taken == 12).Sum(b => b.Weight), 9);
@@ -231,7 +231,7 @@ public class SimDrawTests
     {
         var s = You();
         s.Enemies[0].Hits = new() { 12 };
-        s.P.Draw = new SimDrawPile { Top = { Plain }, Rest = { new SimDrawGroup(Invincible, 3) } };
+        s.You.Draw = new SimDrawPile { Top = { Plain }, Rest = { new SimDrawGroup(Invincible, 3) } };
         var b = Assert.Single(SimEngine.Run(s).Branches);
         Assert.Equal(12, b.Taken);
         Assert.Equal(0, b.AutoPlayed);
@@ -243,7 +243,7 @@ public class SimDrawTests
         // Draw 1 with I Am Invincible known on top: it's drawn, so the new top is random again (no block for certain).
         var s = You();
         s.Enemies[0].Hits = new() { 12 };
-        s.P.Draw = new SimDrawPile { Top = { Invincible }, Rest = { new SimDrawGroup(Plain, 4) } };
+        s.You.Draw = new SimDrawPile { Top = { Invincible }, Rest = { new SimDrawGroup(Plain, 4) } };
         var b = Assert.Single(SimEngine.Run(s, Draws(1)).Branches);
         Assert.Equal(12, b.Taken);
     }
@@ -254,9 +254,9 @@ public class SimDrawTests
         // The draw pile is empty: the discard pile shuffles in, and the card enchanted with Perfect Fit goes on top.
         var fit = new SimDrawCard("fit burn") { TurnEnd = new TurnEndCard("Burn", "Burn", 2), PerfectFit = true };
         var s = You();
-        s.P.Draw = new SimDrawPile { Discard = { new SimDrawGroup(fit, 1), new SimDrawGroup(Plain, 9) } };
+        s.You.Draw = new SimDrawPile { Discard = { new SimDrawGroup(fit, 1), new SimDrawGroup(Plain, 9) } };
         var b = Assert.Single(SimEngine.Run(s, Draws(1)).Branches);
-        Assert.Single(b.P.TurnEndCards); // drew it for certain
+        Assert.Single(b.You.TurnEndCards); // drew it for certain
         Assert.Equal(2, b.Taken);
     }
 
@@ -265,7 +265,7 @@ public class SimDrawTests
     {
         var fit = new SimDrawCard("fit burn") { TurnEnd = new TurnEndCard("Burn", "Burn", 2), PerfectFit = true };
         var s = You();
-        s.P.Draw = new SimDrawPile { Discard = { new SimDrawGroup(fit, 2), new SimDrawGroup(Plain, 8) } };
+        s.You.Draw = new SimDrawPile { Discard = { new SimDrawGroup(fit, 2), new SimDrawGroup(Plain, 8) } };
         var o = SimEngine.Run(s, Draws(1));
         Assert.Equal(0.2, o.Branches.Where(b => b.Taken == 2).Sum(b => b.Weight), 9);
     }
@@ -275,10 +275,10 @@ public class SimDrawTests
     {
         // Nine cards and a play that makes three (Blade Dance-like): the hand stops at 10.
         var s = You(hand: 9);
-        s.P.Draw = Pile((Plain, 5));
+        s.You.Draw = Pile((Plain, 5));
         var make = new SimPlay { Name = "BladeDance", HandCard = 7, HandDelta = -1 + 3 };
         var b = Assert.Single(SimEngine.Run(s, make).Branches);
-        Assert.Equal(10, b.P.HandCount);
+        Assert.Equal(10, b.You.HandCount);
     }
 }
 

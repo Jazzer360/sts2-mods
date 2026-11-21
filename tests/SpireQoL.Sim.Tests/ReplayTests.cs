@@ -66,13 +66,13 @@ public class ReplayTests
     {
         // What a report carries (SimState.ToJson) must load back into the same simulation.
         var s = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "A", Hp = 12, Block = 3, Hits = new() { 5, 5 }, Imbalanced = true, HitCap = 4 } } };
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, GlassBase = 3, GlassBonus = 2, Triggers = 2 } };
-        s.P.OrbCapacity = 3;
-        s.P.Juggernaut = 2;
-        s.P.Plating = 4;
-        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
-        s.P.RemnantCap = 10;
-        s.P.RemnantLeftPlayerTurn = 6;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, GlassBase = 3, GlassBonus = 2, Triggers = 2 } };
+        s.You.OrbCapacity = 3;
+        s.You.Juggernaut = 2;
+        s.You.Plating = 4;
+        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        s.You.RemnantCap = 10;
+        s.You.RemnantLeftPlayerTurn = 6;
 
         var back = SimState.FromJson(s.ToJson());
         var a = SimEngine.Run(s);

@@ -21,9 +21,9 @@ public class SimDrawnCardTests
     private static SimState You(SimDrawPile pile, int hand = 5)
     {
         var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = new() { 10 } } } };
-        s.P.HandCount = hand;
-        s.P.Hp = 50;
-        s.P.Draw = pile;
+        s.You.HandCount = hand;
+        s.You.Hp = 50;
+        s.You.Draw = pile;
         return s;
     }
 
@@ -53,7 +53,7 @@ public class SimDrawnCardTests
     {
         // Two Attacks and two Skills: it stops at the first Skill. 1 card: 1/2; 2: 2/4 * 2/3 = 1/3; 3: 2/4 * 1/3 * 2/2 = 1/6.
         var o = SimEngine.Run(You(Pile((Attack, 2), (Skill, 2)), hand: 5), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-        double Drew(int n) => o.Branches.Where(b => b.P.Draw!.RestCount == 4 - n).Sum(b => b.Weight);
+        double Drew(int n) => o.Branches.Where(b => b.You.Draw!.RestCount == 4 - n).Sum(b => b.Weight);
         Assert.Equal(0.5, Drew(1), 9);
         Assert.Equal(1.0 / 3, Drew(2), 9);
         Assert.Equal(1.0 / 6, Drew(3), 9);
@@ -64,7 +64,7 @@ public class SimDrawnCardTests
     {
         // Nine in hand with Pillage: it leaves (8), then draws Attacks until the hand holds 10.
         var o = SimEngine.Run(You(Pile((Attack, 6)), hand: 9), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-        Assert.All(o.Branches, b => Assert.Equal(4, b.P.Draw!.RestCount));
+        Assert.All(o.Branches, b => Assert.Equal(4, b.You.Draw!.RestCount));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class SimDrawnCardTests
         var o = SimEngine.Run(You(Pile((FreeCard, 1), (Burn, 1))), Playing("Scrape", new DrawnCardAction(2) { DiscardUnlessFree = true }));
         var b = Assert.Single(o.Branches);
         Assert.Equal(10, b.Taken);                 // the enemy's 10, no Burn
-        Assert.Empty(b.P.TurnEndCards);
+        Assert.Empty(b.You.TurnEndCards);
         Assert.Equal(1, b.PlayEvents[CardEvent.Discarded]);
     }
 
@@ -191,14 +191,14 @@ public class SimDrawnCardTests
         // 2 Attacks: it draws the Status first half the time (0 Attacks counted), else the Attack, then the Status (1).
         var status = new SimDrawCard("status") { Type = SimCardType.Status, Status = true };
         var s = You(Pile((Attack, 1), (status, 1)), hand: 1);
-        s.P.Powers = s.P.Powers.With(PowerId.Iteration, 2, 0);
-        s.P.Draw!.Rest.Add(new SimDrawGroup(new SimDrawCard("attack b") { Type = SimCardType.Attack }, 2));
+        s.You.Powers = s.You.Powers.With(PowerId.Iteration, 2, 0);
+        s.You.Draw!.Rest.Add(new SimDrawGroup(new SimDrawCard("attack b") { Type = SimCardType.Attack }, 2));
         var o = SimEngine.Run(s, Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
         // Attacks: 3 in 4. Draws Attacks until the Status: 0 with 1/4, 1 with 3/4 * 1/3, 2 with 3/4 * 2/3 * 1/2, 3 with 1/4.
         SameOdds(new() { [0] = 0.25, [1] = 0.25, [2] = 0.25, [3] = 0.25 }, o, "with Iteration");
         // Iteration's 2 follow the Status: drawn first, it leaves 1 card in the pile; any later, it empties it.
-        Assert.Equal(0.25, o.Branches.Where(b => b.P.Draw!.RestCount == 1).Sum(b => b.Weight), 9);
-        Assert.Equal(0.75, o.Branches.Where(b => b.P.Draw!.RestCount == 0).Sum(b => b.Weight), 9);
+        Assert.Equal(0.25, o.Branches.Where(b => b.You.Draw!.RestCount == 1).Sum(b => b.Weight), 9);
+        Assert.Equal(0.75, o.Branches.Where(b => b.You.Draw!.RestCount == 0).Sum(b => b.Weight), 9);
     }
 
     // ---- Hellraiser (decision #121): a Strike you draw plays itself at once
@@ -218,7 +218,7 @@ public class SimDrawnCardTests
     {
         var s = You(pile, hand);
         for (var id = 2; id <= enemies; id++) s.Enemies.Add(new SimEnemy { Id = id, Name = "E" + id, Hp = 50, Hits = new() { 10 } });
-        s.P.Powers = s.P.Powers.With(PowerId.Hellraiser, 1, 0);
+        s.You.Powers = s.You.Powers.With(PowerId.Hellraiser, 1, 0);
         return s;
     }
 
@@ -245,7 +245,7 @@ public class SimDrawnCardTests
         SameOdds(new() { [0] = 0.5, [1] = 0.5 }, o, "with Hellraiser");
         Assert.Equal(0.5, o.Branches.Where(b => b.Enemies[0].Hp == 44).Sum(b => b.Weight), 9);
         // The Strike played: whichever came first, both cards were drawn in the Strike-first branch, one in the other.
-        Assert.Equal(0.5, o.Branches.Where(b => b.P.Draw!.RestCount == 0).Sum(b => b.Weight), 9);
+        Assert.Equal(0.5, o.Branches.Where(b => b.You.Draw!.RestCount == 0).Sum(b => b.Weight), 9);
     }
 
     [Fact]

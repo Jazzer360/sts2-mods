@@ -71,7 +71,7 @@ public class SimTeammateParityTests
     public void YouAndATeammateGetTheSameEndOfTurn(string name)
     {
         var asYou = new SimState { Enemies = { Target() } };
-        Setup(name, asYou.P);
+        Setup(name, asYou.You);
         var you = SimEngine.Run(asYou);
 
         var asMate = new SimState { Enemies = { Target() } };
@@ -93,7 +93,7 @@ public class SimTeammateParityTests
     public void YouAndATeammateRetaliateTheSame(string name)
     {
         var asYou = new SimState { Enemies = { Target(200, 5, 5) } };
-        Setup(name, asYou.P);
+        Setup(name, asYou.You);
         var asMate = new SimState { Enemies = { Target(200, 5, 5) } };
         var mate = new SimPlayer { Hp = 80 };
         Setup(name, mate);
@@ -135,14 +135,14 @@ public class SimTeammateParityTests
             if (name != "Osty") p.OstyShields = false;
         }
         var asYou = new SimState { Enemies = { Target(200, 10, 10) } };
-        Setup(name, asYou.P);
+        Setup(name, asYou.You);
         var asMate = new SimState { Enemies = { Target(200, 10, 10) } };
-        asMate.P.OstyShields = false;
+        asMate.You.OstyShields = false;
         var mate = new SimPlayer();
         Setup(name, mate);
         asMate.Teammates.Add(mate);
 
-        var you = SimEngine.Run(asYou).Worst.P;
+        var you = SimEngine.Run(asYou).Worst.You;
         var them = SimEngine.Run(asMate).Worst.Teammates[0];
         Assert.Equal(
             (you.Taken, you.Through, you.Incoming, you.UnblockableTaken, you.WuppyTaken, you.OstyTaken, you.Died, you.FairiesUsed, you.LizardTailUsed, you.Hp),

@@ -24,7 +24,7 @@ public class SimPlayHpLossTests
     public void ThornsYourBlockStopsIsNoHpLoss()
     {
         var s = new SimState { Enemies = { E(1, 50, thorns: 3) } };
-        s.P.Block = 5;
+        s.You.Block = 5;
         var o = SimEngine.Run(s, Attack(1, 6));
         Assert.Equal(0, o.PlayHpReachedMin);
         Assert.Equal(0, o.PlayHpLossesMin);
@@ -45,7 +45,7 @@ public class SimPlayHpLossTests
     {
         // Thorns 3 before each of 2 hits, 4 block: the first is blocked, the second loses 2 HP.
         var s = new SimState { Enemies = { E(1, 50, thorns: 3) } };
-        s.P.Block = 4;
+        s.You.Block = 4;
         var o = SimEngine.Run(s, Attack(1, 2, hits: 2));
         Assert.Equal(1, o.PlayHpReachedMin);
         Assert.Equal(1, o.PlayHpLossesMin);
@@ -57,7 +57,7 @@ public class SimPlayHpLossTests
     {
         // 1 Thorns past your block: Tungsten Rod takes it to 0, so it flashes but you lose no HP (no Self-Forming Clay).
         var s = new SimState { Enemies = { E(1, 50, thorns: 1) } };
-        s.P.TungstenRod = 1;
+        s.You.TungstenRod = 1;
         var o = SimEngine.Run(s, Attack(1, 6));
         Assert.Equal(1, o.PlayHpReachedMin);
         Assert.Equal(0, o.PlayHpLossesMin);
@@ -67,7 +67,7 @@ public class SimPlayHpLossTests
     public void CardHpCostThroughTungstenRod()
     {
         var s = new SimState { Enemies = { E(1, 50) } };
-        s.P.TungstenRod = 1;
+        s.You.TungstenRod = 1;
         var one = SimEngine.Run(s, Cost(1));
         Assert.Equal(1, one.PlayHpReachedMin);
         Assert.Equal(0, one.PlayHpLossesMin);
@@ -80,7 +80,7 @@ public class SimPlayHpLossTests
     public void CardHpCostIgnoresBlock()
     {
         var s = new SimState { Enemies = { E(1, 50) } };
-        s.P.Block = 10;
+        s.You.Block = 10;
         var o = SimEngine.Run(s, Cost(3, times: 2));
         Assert.Equal(2, o.PlayHpLossesMin);
         Assert.Equal(6, o.PlayHpLostMin);
@@ -92,7 +92,7 @@ public class SimPlayHpLossTests
     {
         // Buffer takes the card's HP cost, so nothing reacts to HP loss and the enemy's 5 then gets through.
         var s = new SimState { Enemies = { E(1, 50) } };
-        s.P.Buffer = 1;
+        s.You.Buffer = 1;
         var o = SimEngine.Run(s, Cost(3));
         Assert.Equal(1, o.PlayHpReachedMin);
         Assert.Equal(0, o.PlayHpLossesMin);
@@ -103,7 +103,7 @@ public class SimPlayHpLossTests
     public void HpCostSetsOffInfernoOnce()
     {
         var s = new SimState { Enemies = { E(1, 50) } };
-        s.P.Inferno = 5;
+        s.You.Inferno = 5;
         var o = SimEngine.Run(s, Cost(2));
         Assert.Equal(45, o.Worst.Enemy(1)!.HpAtTurnEnd);
     }

@@ -15,10 +15,10 @@ public class SimJobTests
     {
         var s = new SimState();
         for (var i = 0; i < 3; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 5 + i * 2, Block = i, Hits = new() { 6, 4 } });
-        s.P.Orbs = Enumerable.Range(0, 5).Select(i => Lightning(2 + i % 2)).ToList();
-        s.P.OrbCapacity = 5;
-        s.P.Juggernaut = 2;
-        s.P.Plating = 3;
+        s.You.Orbs = Enumerable.Range(0, 5).Select(i => Lightning(2 + i % 2)).ToList();
+        s.You.OrbCapacity = 5;
+        s.You.Juggernaut = 2;
+        s.You.Plating = 3;
         return s;
     }
 

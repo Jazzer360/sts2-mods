@@ -116,7 +116,7 @@ public sealed class PaelsEye : RelicProc
         var cards = p.HandCount;
         return SimEngine.ProcCardEvent(s, CardEvent.Exhausted, cards, owner, indirect: false).Select(x =>
         {
-            var px = owner == Who.You ? x.P : x.MutableTeammate(Who.TeammateIndex(owner));
+            var px = x.MutablePlayer(owner);
             px.HandCount = 0;
             px.Fading = 0;
             px.TurnEndCards = new();
@@ -534,5 +534,5 @@ public sealed class BoneFlute : RelicProc
 {
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack) =>
-        owner == Who.You && attack.Dealer == Who.YourOsty && s.P.OstyHp > 0 ? RelicBlock(s, owner) : One(s);
+        owner == Who.You && attack.Dealer == Who.YourOsty && s.You.OstyHp > 0 ? RelicBlock(s, owner) : One(s);
 }

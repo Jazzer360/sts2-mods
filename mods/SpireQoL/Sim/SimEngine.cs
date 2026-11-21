@@ -222,7 +222,7 @@ public static partial class SimEngine
         // Some enemy's block broken by the play, in every branch (Hand Drill).
         var breaksBlock = complete && states.All(s => s.Enemies.Any(e => e.BlockBroken && start.Enemy(e.Id) is { BlockBroken: false }));
         // Block gains during the play (each sets off Juggernaut).
-        var gains = states.Select(s => s.P.BlockGains - start.P.BlockGains).ToList();
+        var gains = states.Select(s => s.You.BlockGains - start.You.BlockGains).ToList();
         int PlayMin(Func<SimState, int> f) => !complete || states.Count == 0 ? 0 : states.Min(f);
         // The play's log over its branches: in every branch (each merged one keeps its smallest), and in some branch.
         var firedEvery = !complete || states.Count == 0 ? NamedCounts.Empty
@@ -642,7 +642,7 @@ public static partial class SimEngine
         {
             if (e.Alive || e.Exploded || !e.StartedAlive || (e.Explosive <= 0 && e.ExplosiveOnTeammates == null)) continue;
             e.Exploded = true;
-            if (s.P.Hp > 0) LandBlockable(s, e.Name + " Explosive", e.Explosive, dealer: e.Id);
+            if (s.You.Hp > 0) LandBlockable(s, e.Name + " Explosive", e.Explosive, dealer: e.Id);
             for (var k = 0; k < s.Teammates.Count; k++)
             {
                 if (s.Teammates[k].Hp <= 0) continue;
@@ -785,7 +785,7 @@ public static partial class SimEngine
             case ExecuteAction ex: RunExecute(b, ex); break;
             case StripBlockAction sb: b.Do(x => StripBlock(x, sb)); break;
             case TriggerPoisonAction: b.Each(TriggerPoison); break;
-            case KillOstyAction: b.Do(s => OstyLoses(s, Who.You, s.P.OstyHp)); break;
+            case KillOstyAction: b.Do(s => OstyLoses(s, Who.You, s.You.OstyHp)); break;
             case CardPlayAction pc: RunCardPlay(b, pc); break;
             case AttackAction at: RunAttack(b, at); break;
             case GainBlockAction gb: RunBlock(b, gb); break;
@@ -877,7 +877,7 @@ public static partial class SimEngine
     private static void AutoPostPlay(BranchSet b)
     {
         static bool Any(SimPlayer p) => p.Stampede > 0 || p.Simpleton > 0 || p.ExhaustAutoPlays.Count > 0 || p.InvincibleBlock > 0 || p.Draw?.HasInvincible == true;
-        if (!b.States.Any(s => Any(s.P) || s.Teammates.Any(Any))) return;
+        if (!b.States.Any(s => Any(s.You) || s.Teammates.Any(Any))) return;
         // Your turn is over: block gained now (the auto-played card's, Daughter of the Wind's on it) is end-of-turn block in the
         // Incoming Damage breakdown, as the forecast check counts it.
         b.Do(s => s.EndOfTurnNow = true);
@@ -1065,7 +1065,7 @@ public static partial class SimEngine
         b.Do(s =>
         {
             s.EndOfTurnNow = false;
-            s.BlockAtEnemyTurn = s.P.Block;
+            s.BlockAtEnemyTurn = s.You.Block;
             foreach (var e in s.Enemies) { e.HpAtTurnEnd = Math.Max(0, e.Hp); e.UnblockedAtTurnEnd = e.UnblockedInstances; }
         });
     }
@@ -1080,8 +1080,8 @@ public static partial class SimEngine
     /// </summary>
     private static void ChangeFocus(SimState s, int delta)
     {
-        int Shift(int value, int baseValue) => value + Math.Max(0, baseValue + s.P.Focus + delta) - Math.Max(0, baseValue + s.P.Focus);
-        foreach (var o in s.P.OwnOrbs())
+        int Shift(int value, int baseValue) => value + Math.Max(0, baseValue + s.You.Focus + delta) - Math.Max(0, baseValue + s.You.Focus);
+        foreach (var o in s.You.OwnOrbs())
         {
             switch (o.Kind)
             {
@@ -1095,7 +1095,7 @@ public static partial class SimEngine
                     break;
             }
         }
-        s.P.Focus += delta;
+        s.You.Focus += delta;
     }
 
     private static void StripBlock(SimState s, StripBlockAction sb)
@@ -1205,7 +1205,7 @@ public static partial class SimEngine
                     {
                         if (!yours) return;
                         // DamageResult.WasFullyBlocked: no HP lost and you had block (untouched).
-                        if (hitsLanded == 0) e.FirstHitFullyBlocked = s.P.Block > 0;
+                        if (hitsLanded == 0) e.FirstHitFullyBlocked = s.You.Block > 0;
                         hitsLanded++;
                         return;
                     }

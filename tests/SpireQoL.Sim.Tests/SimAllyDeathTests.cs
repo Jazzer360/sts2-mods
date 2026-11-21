@@ -43,8 +43,8 @@ public class SimAllyDeathTests
         // A Lightning orb kills the 3-HP ally at end of turn: Crab Rage's hits are up when it attacks.
         var s = new SimState { Enemies = { Enemy(1, 3, 4), Enemy(2, 30, 8) } };
         s.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
-        s.P.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
-        s.P.OrbCapacity = 3;
+        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        s.You.OrbCapacity = 3;
         var o = SimEngine.Run(s);
         // Random target: the bolt hits the ally (dies, crab hits 14) or the crab (ally hits 4, crab 8).
         Assert.Equal(14, o.TakenMax);

@@ -37,9 +37,9 @@ public static partial class SimEngine
         {
             var target = s.CurrentPlay?.Target ?? -1;
             s.ArrowAwayAt = -1;
-            if (s.P.Arrows > 0 && s.Enemy(target) is { Alive: true })
+            if (s.You.Arrows > 0 && s.Enemy(target) is { Alive: true })
             {
-                s.P.Arrows--;
+                s.You.Arrows--;
                 s.ArrowAwayAt = target;
             }
             return Hook(s, nameof(SimModel.AfterArrowShot), (m, o, x) => m.AfterArrowShot(x, o, Who.You));
@@ -104,7 +104,7 @@ public static partial class SimEngine
         var p = PowersOf(s, enemy);
         var left = p[Impaled] - count;
         SetPowers(s, enemy, left > 0 ? p.With(Impaled, left) : p.Without(Impaled));
-        s.P.Arrows += count;
+        s.You.Arrows += count;
     }
 
     // ------------------------------------------------------------------ events raised inside damage

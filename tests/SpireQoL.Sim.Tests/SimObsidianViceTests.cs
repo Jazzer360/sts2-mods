@@ -14,8 +14,8 @@ public class SimObsidianViceTests
     public void OneHitOfDamageTimesCardsInHand()
     {
         var s = new SimState { Enemies = { E(1, 30, 10) } };
-        s.P.ObsidianViceDamage = 1;
-        s.P.HandCount = 4;
+        s.You.ObsidianViceDamage = 1;
+        s.You.HandCount = 4;
         var o = SimEngine.Run(s);
         Assert.Equal(26, o.Worst.Enemy(1)!.HpAtTurnEnd);
     }
@@ -24,8 +24,8 @@ public class SimObsidianViceTests
     public void ItCanKillBeforeTheEnemyActsAndThenItDoesntAttack()
     {
         var s = new SimState { Enemies = { E(1, 5, 12) } };
-        s.P.ObsidianViceDamage = 1;
-        s.P.HandCount = 6;
+        s.You.ObsidianViceDamage = 1;
+        s.You.HandCount = 6;
         var o = SimEngine.Run(s);
         Assert.True(o.DeadInAll(1));
         Assert.Equal(0, o.TakenMax);
@@ -37,8 +37,8 @@ public class SimObsidianViceTests
         // Two enemies at 5 HP, 6 damage: each dies in one branch, neither in every branch; you take the
         // survivor's hit either way.
         var s = new SimState { Enemies = { E(1, 5, 7), E(2, 5, 9) } };
-        s.P.ObsidianViceDamage = 1;
-        s.P.HandCount = 6;
+        s.You.ObsidianViceDamage = 1;
+        s.You.HandCount = 6;
         var o = SimEngine.Run(s);
         Assert.False(o.DeadInAll(1));
         Assert.False(o.DeadInAll(2));
@@ -52,8 +52,8 @@ public class SimObsidianViceTests
     public void AnEmptyHandDealsNothing()
     {
         var s = new SimState { Enemies = { E(1, 30, 10) } };
-        s.P.ObsidianViceDamage = 1;
-        s.P.HandCount = 0;
+        s.You.ObsidianViceDamage = 1;
+        s.You.HandCount = 0;
         Assert.Equal(30, SimEngine.Run(s).Worst.Enemy(1)!.HpAtTurnEnd);
     }
 
@@ -62,8 +62,8 @@ public class SimObsidianViceTests
     {
         // A play that draws 2 (hand 3 → 3 - 1 + 2 = 4 at end of turn).
         var s = new SimState { Enemies = { E(1, 30, 10) } };
-        s.P.ObsidianViceDamage = 1;
-        s.P.HandCount = 3;
+        s.You.ObsidianViceDamage = 1;
+        s.You.HandCount = 3;
         var o = SimEngine.Run(s, new SimPlay { HandDelta = 1 });
         Assert.Equal(26, o.Worst.Enemy(1)!.HpAtTurnEnd);
     }

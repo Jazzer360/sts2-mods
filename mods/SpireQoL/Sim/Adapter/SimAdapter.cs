@@ -262,13 +262,13 @@ public static partial class SimAdapter
             s.Enemies.Add(se);
         }
 
-        FillPlayer(s.P, me, cs, IdOf);
+        FillPlayer(s.You, me, cs, IdOf);
         foreach (var pw in me.Creature.Powers) SimReaders.AddVars(s, Who.You, pw);
         foreach (var r in me.Relics) SimReaders.AddVars(s, Who.You, r);
-        FillAutoPlays(s.P, me, cs, ids);
-        FillDrawPile(s.P, me, cs, ids);
-        s.P.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
-        FillSurvival(s.P, me);
+        FillAutoPlays(s.You, me, cs, ids);
+        FillDrawPile(s.You, me, cs, ids);
+        s.You.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
+        FillSurvival(s.You, me);
 
         // Teammates (multiplayer): built like you (FillPlayer), in player order. Decision #25: their hand is
         // used too (their Ethereal exhausts can kill enemies); what's shown runs without it (SimState.WithoutTeammateHands).

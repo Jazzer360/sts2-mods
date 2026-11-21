@@ -15,9 +15,9 @@ public class SimUnblockableTakenTests
     {
         // Regret with 3 cards in hand (3, unblockable) and a hit of 10 against 6 block: 4 through, 7 in all.
         var s = new SimState { Enemies = { E(1, 30, 10) } };
-        s.P.Block = 6;
-        s.P.HandCount = 3;
-        s.P.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        s.You.Block = 6;
+        s.You.HandCount = 3;
+        s.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
         var w = SimEngine.Run(s).Worst;
         Assert.Equal(7, w.Taken);
         Assert.Equal(3, w.UnblockableTaken);
@@ -28,8 +28,8 @@ public class SimUnblockableTakenTests
     {
         // Beckon's 6 with 20 block and nothing else coming: all 6 lost, all of it unblockable.
         var s = new SimState { Enemies = { E(1, 30) } };
-        s.P.Block = 20;
-        s.P.TurnEndCards.Add(new TurnEndCard("Beckon", "Beckon", 6));
+        s.You.Block = 20;
+        s.You.TurnEndCards.Add(new TurnEndCard("Beckon", "Beckon", 6));
         var w = SimEngine.Run(s).Worst;
         Assert.Equal(6, w.Taken);
         Assert.Equal(6, w.UnblockableTaken);
@@ -40,8 +40,8 @@ public class SimUnblockableTakenTests
     {
         // Bad Luck's 13 through Tungsten Rod: 12 lost.
         var s = new SimState { Enemies = { E(1, 30) } };
-        s.P.TungstenRod = 1;
-        s.P.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 13));
+        s.You.TungstenRod = 1;
+        s.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 13));
         var w = SimEngine.Run(s).Worst;
         Assert.Equal(12, w.UnblockableTaken);
         Assert.Equal(12, w.Taken);
@@ -51,7 +51,7 @@ public class SimUnblockableTakenTests
     public void BurnIsBlockable()
     {
         var s = new SimState { Enemies = { E(1, 30) } };
-        s.P.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
         var w = SimEngine.Run(s).Worst;
         Assert.Equal(2, w.Taken);
         Assert.Equal(0, w.UnblockableTaken);

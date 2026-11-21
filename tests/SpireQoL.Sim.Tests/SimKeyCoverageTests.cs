@@ -59,7 +59,7 @@ public class SimKeyCoverageTests
         var s = new SimState
         {
             Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 30, Hits = new() { 5 }, HitsAfterAllyDies = new() { 6 } } },
-            P = { Hp = 40, Orbs = { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } }, AutoHand = new() { new SimHandCard { Id = 3 } },
+            You = { Hp = 40, Orbs = { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } }, AutoHand = new() { new SimHandCard { Id = 3 } },
                   Draw = new SimDrawPile() },
         };
         s.Teammates.Add(new SimPlayer { Hp = 30, Orbs = { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } } });
@@ -95,10 +95,10 @@ public class SimKeyCoverageTests
     private static IEnumerable<(string Name, Func<SimState, object> Holder, FieldInfo Field)> AllFields()
     {
         foreach (var f in FieldsOf(typeof(SimState))) yield return ($"SimState.{f.Name}", s => s, f);
-        foreach (var f in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{f.Name}", s => s.P, f);
+        foreach (var f in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{f.Name}", s => s.You, f);
         foreach (var f in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{f.Name} (teammate)", s => s.MutableTeammate(0), f);
         foreach (var f in FieldsOf(typeof(SimEnemy))) yield return ($"SimEnemy.{f.Name}", s => s.Enemies[0], f);
-        foreach (var f in FieldsOf(typeof(SimOrb))) yield return ($"SimOrb.{f.Name}", s => s.P.OwnOrbs()[0], f);
+        foreach (var f in FieldsOf(typeof(SimOrb))) yield return ($"SimOrb.{f.Name}", s => s.You.OwnOrbs()[0], f);
     }
 
     [Fact]
