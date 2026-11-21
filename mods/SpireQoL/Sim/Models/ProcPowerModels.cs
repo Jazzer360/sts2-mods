@@ -152,20 +152,27 @@ public sealed class TheSealedThronePower : ProcModel
 /// PanachePower.AfterCardPlayed: every card its owner plays counts its CardsLeft down (Data; 0 = just applied: the card that
 /// applied it doesn't count); at 0, its amount to every hittable enemy (unpowered), and the count starts over at 5.
 /// </summary>
-public sealed class PanachePower : ProcModel
+public sealed class PanachePower : CounterPower
 {
     /// <summary>Where its count starts (PanachePower._baseCardsLeft).</summary>
     private const int CardsLeftAtStart = 5;
     public override TabKind? Tab => TabKind.Damage;
+    public override int StartCount => 0;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner)) return One(state);
-        var left = Data(state, owner);
-        if (left <= 0) { Set(state, owner, Amount(state, owner), data: CardsLeftAtStart); return One(state); }
-        left--;
-        if (left > 0) { Set(state, owner, Amount(state, owner), left); return One(state); }
-        Set(state, owner, Amount(state, owner), data: CardsLeftAtStart);
-        return DamageAll(state, owner, Amount(state, owner));
+        var damage = new List<int>();
+        var next = Copies(state, owner).Select(copy =>
+        {
+            if (copy.Left <= 0) return copy with { Left = CardsLeftAtStart }; // just applied: this card doesn't count
+            if (copy.Left > 1) return copy with { Left = copy.Left - 1 };
+            damage.Add(copy.Amount);
+            return copy with { Left = CardsLeftAtStart };
+        }).ToList();
+        SetCopies(state, owner, next);
+        IEnumerable<SimState> states = One(state);
+        foreach (var amount in damage) states = states.SelectMany(branch => DamageAll(branch, owner, amount)).ToList();
+        return states;
     }
 }
 
@@ -473,42 +480,103 @@ public sealed class ChildOfTheStarsPower : ProcModel
 }
 
 /// <summary>A power counting card events down (its DisplayAmount, Data) that fires when the count runs out.</summary>
-public abstract class EventCountdownPower : ProcModel
+public abstract class EventCountdownPower : CounterPower
 {
     protected abstract CardEvent Event { get; }
-    protected abstract IEnumerable<SimState> OnZero(SimState state, int owner);
+    /// <summary>Where a copy's count starts, and starts again once it gets there.</summary>
+    protected abstract int Period { get; }
+    public override int StartCount => Period;
+    /// <summary>A copy got there: what it gives, its own amount.</summary>
+    protected abstract IEnumerable<SimState> OnZero(SimState state, int owner, int amount);
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
         if (cardEvent != Event || player != owner) return One(state);
-        var left = Data(state, owner);
-        if (left <= 0) return One(state); // the count isn't known (or it's spent): nothing more this play
-        Set(state, owner, Amount(state, owner), left - 1);
-        return left == 1 ? OnZero(state, owner) : One(state);
+        var triggered = new List<int>();
+        var next = Copies(state, owner).Select(copy =>
+        {
+            if (copy.Left <= 0) return copy; // its count isn't known
+            if (copy.Left > 1) return copy with { Left = copy.Left - 1 };
+            triggered.Add(copy.Amount);
+            return copy with { Left = Period };
+        }).ToList();
+        SetCopies(state, owner, next);
+        // Each copy that got there acts on its own, in the order the game holds them.
+        IEnumerable<SimState> states = One(state);
+        foreach (var amount in triggered) states = states.SelectMany(branch => OnZero(branch, owner, amount)).ToList();
+        return states;
     }
 }
 
-/// <summary>OrbitPower.AfterEnergySpent: its amount of energy once enough energy is spent (its count, Data).</summary>
+/// <summary>
+/// A power each application of which is a copy of its own (PowerInstanceType.Instanced), counting on its own: SimPlayer.Counters
+/// holds the copies, or, with none listed, its entry in Powers is the one copy (amount, Data: what's left). SimReaders.Counters
+/// reads each copy from the game; a copy applied during a simulation starts from StartCount (SimEngine.ApplyPower).
+/// </summary>
+public abstract class CounterPower : ProcModel
+{
+    /// <summary>A new copy's count (Panache: 0, just applied: the card that applied it doesn't count).</summary>
+    public abstract int StartCount { get; }
+
+    protected IReadOnlyList<CounterCopy> Copies(SimState state, int owner)
+    {
+        if (state.Player(owner) is { } player && player.Counters.Any(copy => copy.Power == ThisPower)) return player.Counters.Where(copy => copy.Power == ThisPower).ToList();
+        return new[] { new CounterCopy(ThisPower, Data(state, owner), Amount(state, owner)) };
+    }
+
+    protected void SetCopies(SimState state, int owner, IReadOnlyList<CounterCopy> copies)
+    {
+        if (state.Player(owner) is { } player && player.Counters.Any(copy => copy.Power == ThisPower))
+        {
+            state.MutablePlayer(owner).Counters = player.Counters.Where(copy => copy.Power != ThisPower).Concat(copies).ToList();
+            return;
+        }
+        Set(state, owner, copies[0].Amount, copies[0].Left);
+    }
+
+    /// <summary>
+    /// A copy applied (an Orbit card played): its own count from StartCount. Its entry in Powers already holds every copy's amount
+    /// added (ApplyPower); a first copy is that entry, a later one goes into Counters beside the ones before it.
+    /// </summary>
+    internal void NewCopy(SimState state, int target, int amount, bool had)
+    {
+        if (!had)
+        {
+            Set(state, target, Amount(state, target), StartCount);
+            return;
+        }
+        if (state.Player(target) is not { } player) return;
+        var before = player.Counters.Any(copy => copy.Power == ThisPower)
+            ? player.Counters.Where(copy => copy.Power == ThisPower).ToList()
+            : new List<CounterCopy> { new(ThisPower, Data(state, target), Amount(state, target) - amount) };
+        state.MutablePlayer(target).Counters = player.Counters.Where(copy => copy.Power != ThisPower).Concat(before).Append(new CounterCopy(ThisPower, StartCount, amount)).ToList();
+    }
+}
+
+/// <summary>OrbitPower.AfterEnergySpent: each copy gives its amount of energy for every 4 energy spent (OrbitPower._energyIncrement).</summary>
 public sealed class OrbitPower : EventCountdownPower
 {
     public override TabKind? Tab => TabKind.Energy;
     protected override CardEvent Event => CardEvent.EnergySpent;
-    protected override IEnumerable<SimState> OnZero(SimState state, int owner) => Cause(Fire(state, owner), CardEvent.EnergyGained, Amount(state, owner), owner);
+    protected override int Period => 4;
+    protected override IEnumerable<SimState> OnZero(SimState state, int owner, int amount) => Cause(Fire(state, owner), CardEvent.EnergyGained, amount, owner);
 }
 
-/// <summary>AutomationPower.AfterCardDrawn: energy once enough cards are drawn (its count, Data).</summary>
+/// <summary>AutomationPower.AfterCardDrawn: each copy gives its amount of energy for every 10 cards drawn (AutomationPower._baseCardsLeft).</summary>
 public sealed class AutomationPower : EventCountdownPower
 {
     public override TabKind? Tab => TabKind.Energy;
     protected override CardEvent Event => CardEvent.Drawn;
-    protected override IEnumerable<SimState> OnZero(SimState state, int owner) => Cause(Fire(state, owner), CardEvent.EnergyGained, Amount(state, owner), owner);
+    protected override int Period => 10;
+    protected override IEnumerable<SimState> OnZero(SimState state, int owner, int amount) => Cause(Fire(state, owner), CardEvent.EnergyGained, amount, owner);
 }
 
-/// <summary>CacophonyPower.AfterCardDrawn: its amount to a random hittable enemy once enough cards are drawn (its count, Data).</summary>
+/// <summary>CacophonyPower.AfterCardDrawn: each copy deals its amount to a random hittable enemy for every 33 cards drawn (its Cards reset).</summary>
 public sealed class CacophonyPower : EventCountdownPower
 {
     public override TabKind? Tab => TabKind.Damage;
     protected override CardEvent Event => CardEvent.Drawn;
-    protected override IEnumerable<SimState> OnZero(SimState state, int owner) => DamageRandom(state, owner, Amount(state, owner));
+    protected override int Period => 33;
+    protected override IEnumerable<SimState> OnZero(SimState state, int owner, int amount) => DamageRandom(state, owner, amount);
 }
 
 /// <summary>SpeedsterPower.AfterCardDrawn: its amount to every hittable enemy for each card its owner draws.</summary>

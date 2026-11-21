@@ -274,7 +274,10 @@ public static partial class SimEngine
             }
         var had = powers.Has(power);
         SetPowers(state, target, powers.Add(power, amount));
-        if (!had) SimModels.Get(power.Name)?.AfterApplied(state, target, applier, amount);
+        var powerModel = SimModels.Get(power.Name);
+        // Each application of a counter power is a copy of its own, counting from the start (Orbit played twice: two Orbits).
+        if (powerModel is Models.CounterPower counter) counter.NewCopy(state, target, amount, had);
+        if (!had) powerModel?.AfterApplied(state, target, applier, amount);
         return true;
     }
 

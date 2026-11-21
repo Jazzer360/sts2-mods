@@ -456,7 +456,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 
 ## 16. Open concerns (2026-11-10, waiting on play testing)
 
-- [ ] **Copies of a counter power, each with its own count** (2026-11-21): Orbit, Automation, Cacophony and Panache are instanced (each card played makes its own copy, counting on its own). The simulator keeps one count per power, so copies counting apart are not modelled (`?`, `SimReaders.CountersApart`). Model each copy's count (and the reset after it triggers: `EventCountdownPower` stops at 0 for the rest of the play).
+- [x] **Copies of a counter power, each with its own count** (2026-11-21): Orbit, Automation, Cacophony and Panache are instanced (each card played makes its own copy, counting on its own). Each copy is read into `SimPlayer.Counters` and counted on its own by its model (`CounterPower`), resetting after it triggers; a copy applied during a play starts its own count.
 - [ ] **Cards taken from the draw pile leave the simulator's pile as it is** (2026-11-21): Wish, Secret Weapon, Secret Technique, Seeker Strike, Locked In, Anointed and Ki Chant put a card from your draw pile into your hand, counted in your hand (`PlayFacts.TakenToHand`), but the simulator's draw pile (decision #90) still holds it, so a later draw in the same simulation could draw it again. Which card is your choice or a roll: the pile should lose one card of unknown kind.
 - [ ] **A card Feral sends back makes Stampede's pick unknown** (2026-11-21): `SimEngine.AddToHand` marks the hand's contents unknown for any card joining it, but the card Feral returns is known (the one just played). Keep it in `AutoHand` instead.
 

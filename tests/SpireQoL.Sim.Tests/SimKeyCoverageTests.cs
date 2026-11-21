@@ -83,6 +83,7 @@ public class SimKeyCoverageTests
         if (type == typeof(List<SimPick>)) return new List<SimPick>((List<SimPick>)v!) { new(Card: new HandCardKey("Probe", Digest: 1), Target: 0) };
         if (type == typeof(List<ExhaustingCard>)) return new List<ExhaustingCard>((List<ExhaustingCard>)v!) { new(HandCard: 7, Energy: 2, SimCardType.Skill) };
         if (type == typeof(List<TurnEndCard>)) return new List<TurnEndCard>((List<TurnEndCard>)v!) { new("Burn", "Burn", Amount: 2) };
+        if (type == typeof(List<CounterCopy>)) return new List<CounterCopy>((List<CounterCopy>)v!) { new(PowerId.Orbit, Left: 2, Amount: 1) };
         if (type == typeof(List<SimHandCard>)) return new List<SimHandCard> { new() { Id = 5, Name = "Probe" } }; // another card (another copy of the same is the same hand)
         if (type == typeof(List<SimOrb>)) return new List<SimOrb> { new() { Kind = OrbKind.Dark, Passive = 6, Evoke = 6 } };
         if (type == typeof(SimDrawPile)) return new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("probe"), Count: 2) } };

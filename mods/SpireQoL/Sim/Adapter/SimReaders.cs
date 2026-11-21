@@ -98,19 +98,15 @@ public static class SimReaders
 
     /// <summary>
     /// Counter powers a creature can have several copies of (PowerInstanceType.Instanced: each Orbit card played makes its own), each
-    /// copy with its own count. The simulator keeps one count per power, their amounts added: right while the copies count together
-    /// (they trigger together), not when they count apart (CountersApart). CountdownTests holds every countdown model of an
-    /// instanced power to this list.
+    /// copy with its own count and amount: read one by one into SimPlayer.Counters (Counters), each counted on its own by its model
+    /// (CounterPower). CountdownTests holds every countdown model of an instanced power to this list.
     /// </summary>
     internal static readonly HashSet<string> InstancedCounters = new() { nameof(OrbitPower), nameof(AutomationPower), nameof(CacophonyPower), nameof(PanachePower) };
 
-    /// <summary>A counter power whose copies on this creature count apart (InstancedCounters), or null.</summary>
-    public static string? CountersApart(Creature creature)
-    {
-        foreach (var copies in creature.Powers.Where(power => InstancedCounters.Contains(power.GetType().Name)).GroupBy(power => power.GetType().Name))
-            if (copies.Select(CountOf).Distinct().Count() > 1) return copies.Key;
-        return null;
-    }
+    /// <summary>Each copy of a counter power on this creature (InstancedCounters), in the game's order: its count and its amount.</summary>
+    public static List<CounterCopy> Counters(Creature creature) =>
+        creature.Powers.Where(power => InstancedCounters.Contains(power.GetType().Name))
+            .Select(power => new CounterCopy(new PowerId(power.GetType().Name), CountOf(power), power.Amount)).ToList();
 
     /// <summary>A counter power's count, as Powers reads it into its Data.</summary>
     private static int CountOf(PowerModel power) =>

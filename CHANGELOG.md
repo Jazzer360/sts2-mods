@@ -12,7 +12,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Omnislice hits every other enemy for its target's damage, as Rain Shot does: its damage and lethal tabs count them.
 - A Corrupted card hurts you for 2 after it plays, which sets off what reacts to losing HP (Centennial Puzzle's draw); an Inky card's Weak is counted too.
 - Incoming Damage never counts block you might not get: I Am Invincible somewhere in your draw pile (not known to be on top) is a chance, and when the outcome is the same either way the panel shows the block without it. The forecast check accepts either.
-- Two Orbit (or Automation, Cacophony, Panache) powers counting toward different totals are shown as unknown (`?`) instead of as one count.
+- Two Orbits (or Automations, Cacophonies, Panaches) each count on their own, as in the game: the energy tab shows what playing the card gives back, from each copy that gets there, and a count starts over once it does.
 
 ### Spire QoL 1.26.0
 #### Added

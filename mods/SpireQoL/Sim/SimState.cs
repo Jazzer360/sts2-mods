@@ -212,6 +212,9 @@ public sealed class SimEnemy
 /// <summary>A card in hand that acts when its owner's turn ends: its class name, its title, and its Damage or HpLoss value.</summary>
 public sealed record TurnEndCard(string Card, string Title, int Amount);
 
+/// <summary>One copy of a counter power (SimPlayer.Counters): what it still has to count, and what it gives when it gets there.</summary>
+public sealed record CounterCopy(PowerId Power, int Left, int Amount);
+
 public sealed class SimPlayer
 {
     public int Block;
@@ -314,6 +317,12 @@ public sealed class SimPlayer
     /// (SimEngine.HandAtTurnEnd). Never changed in place (shared between clones).
     /// </summary>
     public List<TurnEndCard> TurnEndCards = new();
+    /// <summary>
+    /// Their counter powers' copies, each with its own count (CounterPower: two Orbit cards played make two OrbitPowers, each
+    /// counting its own 4 energy; an upgraded Cacophony's copy deals more). A power with none listed here is one copy, its entry in
+    /// Powers (amount, Data: what's left). Never changed in place (shared between clones).
+    /// </summary>
+    public List<CounterCopy> Counters = new();
     /// <summary>
     /// Cards in their hand that act when they're exhausted (their own AfterCardExhausted: Drum of Battle's energy), each with its
     /// id in the hand (SimPlay.HandCard; drawn: -1000 - Drawn). A play exhausting from the hand sets them off (ExhaustFromHandAction);
@@ -456,6 +465,8 @@ public sealed class SimPlayer
         Draw?.Hash(add);
         add(TurnEndCards.Count);
         foreach (var turnEndCard in TurnEndCards) { add(turnEndCard.Card.GetHashCode()); add(turnEndCard.Amount); }
+        add(Counters.Count);
+        foreach (var copy in Counters) { add(copy.Power.GetHashCode()); add(copy.Left); add(copy.Amount); }
         // By what each one does, in any order (copies that act the same are the same hand, as for AutoHand).
         add(ExhaustingInHand.Count);
         foreach (var exhausting in ExhaustingInHand.OrderBy(card => card.Energy).ThenBy(card => card.Type)) { add(exhausting.Energy); add((int)exhausting.Type); }

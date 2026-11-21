@@ -8,9 +8,9 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// A counter power a creature can have several copies of (PowerInstanceType.Instanced), each with its own count, is read as one
-/// count by the simulator: SimReaders.InstancedCounters lists them, so copies counting apart are marked not modelled (a report: two
-/// Orbits, one about to give energy, predicted as one).
+/// A counter power a creature can have several copies of (PowerInstanceType.Instanced), each with its own count, is read copy by
+/// count: SimReaders.InstancedCounters lists them, and each copy is read with its own count (a report: two Orbits, one about to give
+/// energy, predicted as one).
 /// </summary>
 [Collection(GameFightCollection.Name)]
 public class CountdownTests
@@ -29,17 +29,16 @@ public class CountdownTests
     }
 
     [Fact]
-    public void TwoOrbitsCountingApartAreFound()
+    public void EachOrbitIsReadWithItsOwnCount()
     {
         var gameFight = new GameFight();
         var first = (OrbitPower)ModelDb.Power<OrbitPower>().ToMutable();
         first.ApplyInternal(gameFight.Me.Creature, amount: 1);
         var second = (OrbitPower)ModelDb.Power<OrbitPower>().ToMutable();
         second.ApplyInternal(gameFight.Me.Creature, amount: 1);
-        Assert.Null(SimReaders.CountersApart(gameFight.Me.Creature)); // both at 4: they count together
         // One has had 3 energy spent on it (OrbitPower.Data.energySpent): 1 left, the other 4.
         var data = typeof(PowerModel).GetField("_internalData", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(first)!;
         data.GetType().GetField("energySpent", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!.SetValue(data, 3);
-        Assert.Equal("OrbitPower", SimReaders.CountersApart(gameFight.Me.Creature));
+        Assert.Equal(new[] { (1, 1), (4, 1) }, SimReaders.Counters(gameFight.Me.Creature).Select(copy => (copy.Left, copy.Amount)));
     }
 }

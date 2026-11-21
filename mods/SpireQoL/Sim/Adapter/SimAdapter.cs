@@ -199,9 +199,6 @@ public static partial class SimAdapter
         using var reads = Sts2State.TrackReads();
         var state = BuildFromGame(me, combat, out ids);
         if (reads.Unread.Count > 0) state.Unmodelled ??= SimState.Unread(reads.Unread[0]);
-        // Two copies of a counter power counting apart (two Orbits): the simulator keeps one count (tracker).
-        foreach (var player in combat.Players)
-            if (SimReaders.CountersApart(player.Creature) is { } apart) state.Unmodelled ??= $"copies of {apart} counting apart";
         return state;
     }
 
@@ -577,6 +574,7 @@ public static partial class SimAdapter
         player.Block = creature.Block;
         // every power and relic with the numbers its model keeps, and the turn's card plays (docs/SIMULATOR.md).
         player.Powers = SimReaders.Powers(creature, idOf);
+        player.Counters = SimReaders.Counters(creature);
         player.Relics = SimReaders.Relics(me);
         player.Turn = SimReaders.Turn(me, combat);
         player.Reflect = creature.Powers.Any(power => power is ReflectPower);
