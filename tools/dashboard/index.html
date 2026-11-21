@@ -1183,7 +1183,7 @@ async function lastLaunch() {
 }
 
 function renderOverview() {
-  const s = M.state?.session, r1 = since(M.rollups, 60), r5 = since(M.rollups, 300), s5 = since(M.searches, 300), w5 = since(M.waits, 300);
+  const s = M.state?.session ?? (M.turns.size ? streamSession() : null), r1 = since(M.rollups, 60), r5 = since(M.rollups, 300), s5 = since(M.searches, 300), w5 = since(M.waits, 300);
   let mism = M.checks.filter((c) => c.kind === "check-done" && !c.matched).length;
   const p95 = quant(r1.map((r) => r.modP95), 0.5), st5 = stutters(r5);
   const caps5 = s5.filter((x) => x.cap).length, missed = w5.filter((x) => x.missed).length;
@@ -1592,6 +1592,18 @@ async function refreshFeedback() {
   await loadFeedback(); // the reports list redraws itself when a status changes (its signature holds them)
   render(true);
 }
+/**
+ * The turns of this launch's stream, counted the way the game's session summary counts them: the game's goes away once you leave
+ * the run (state.json's session is null), the stream's stays.
+ */
+function streamSession() {
+  const turns = [...M.turns.values()], count = (test) => turns.filter(test).length;
+  const bad = (turn) => [...turn.plays, ...turn.forecast].some((check) => check.kind === "check-done" && !check.matched);
+  return {
+    turns: turns.length, clean: count((turn) => !bad(turn) && !turn.caps.length), unchecked: count((turn) => turn.forecast.some((check) => check.kind === "check-skipped")),
+    capped: count((turn) => turn.caps.length && !bad(turn)), mismatched: count(bad),
+  };
+}
 function context() {
   const w = M.state?.where || {};
   return { mod: M.state?.build ?? M.started?.build ?? M.state?.mod ?? M.started?.mod ?? "?", encounter: w.inCombat ? w.encounter : null, combat: w.inCombat ? w.combat : null, turn: w.inCombat ? w.turn : null, stream: M.file, seconds: M.state?.seconds ?? null };
@@ -1958,13 +1970,11 @@ function demoTick(fast) {
   if (rand() < 0.08) demoEmit({ kind: "check-done", audit: "intent", turn: 0, matched: true, detail: "JawWorm" });
   if (rand() < 0.1) demoEmit({ kind: "log-line", level: rand() < 0.1 ? "WARN" : "INFO", text: rand() < 0.5 ? `[sim] searched Ball Lightning (target 1) in the background: 41 steps, ${Math.floor(rand() * 90000)} copies` : "[audit] played Zap: tabs Lightning → matched" });
   if (rand() < (fast ? 0.004 : 0.01)) demoReport();
-  const turns = [...M.turns.values()], cl = (k) => turns.filter((r) => k(r)).length;
-  const bad = (r) => [...r.plays, ...r.forecast].some((c) => c.kind === "check-done" && !c.matched);
   const spread = Array.from({ length: 14 }, (_, i) => ({ taken: i * 2, weight: Math.exp(-((i - 6) ** 2) / 8) / 5, died: i > 11 }));
   M.state = {
     v: 1, at: new Date().toISOString(), seconds: DEMO.t, mod: "1.21.0", game: "v0.113.1", streamFile: M.file, reportsOn: true,
     where: { inRun: true, inCombat: true, encounter: M.combats.at(-1)?.encounter, combat: DEMO.combat, turn: DEMO.turn, playerTurn: true },
-    session: { turns: turns.length, clean: cl((r) => !bad(r) && !r.caps.length), unchecked: cl((r) => r.forecast.some((c) => c.kind === "check-skipped")), capped: cl((r) => r.caps.length && !bad(r)), mismatched: cl(bad), combats: DEMO.combat },
+    session: { ...streamSession(), combats: DEMO.combat },
     forecast: { taken: 24, takenMin: 4, dies: false, dieChance: 0.031, blockGain: 6, branches: 66, truncated: false, capHit: null, steps: 41, copies: 1820, peakHeld: 230, unmodelled: [], spread },
   };
 }
