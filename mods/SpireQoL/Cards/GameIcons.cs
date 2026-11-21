@@ -130,6 +130,33 @@ public static class GameIcons
     /// The game's art at a path as a texture, or null. Some of it is imported as a plain image rather than a texture (the
     /// cursors: cursor_inspect.png is an .image resource), which is made into a texture here.
     /// </summary>
+    private static readonly Dictionary<string, Texture2D?> ByPath = new();
+
+    /// <summary>The game's art by the path its own code uses (ImageHelper.GetImagePath), loaded once.</summary>
+    public static Texture2D? Image(string innerPath)
+    {
+        if (ByPath.TryGetValue(innerPath, out var cached) && Valid(cached)) return cached;
+        Texture2D? texture;
+        try { texture = LoadTexture(MegaCrit.Sts2.Core.Helpers.ImageHelper.GetImagePath(innerPath)); } catch { texture = null; }
+        ByPath[innerPath] = texture;
+        return texture;
+    }
+
+    /// <summary>The card reward's icon after a fight (CardReward.RewardIcon: the common one).</summary>
+    public static Texture2D? CardReward() => Image("ui/reward_screen/reward_icon_card.png");
+
+    /// <summary>The map button in the top bar (NTopBar: top_bar/top_bar_map).</summary>
+    public static Texture2D? MapButton() => Image("atlases/ui_atlas.sprites/top_bar/top_bar_map.tres");
+
+    /// <summary>A room's icon, as the run history shows it (ImageHelper.GetRoomIconPath: event, shop...).</summary>
+    public static Texture2D? Room(MegaCrit.Sts2.Core.Map.MapPointType point, MegaCrit.Sts2.Core.Rooms.RoomType room)
+    {
+        try { return MegaCrit.Sts2.Core.Helpers.ImageHelper.GetRoomIconPath(point, room, null) is { } path ? LoadTexture(path) : null; } catch { return null; }
+    }
+
+    /// <summary>An intent's icon by its kind (AbstractIntent.SpritePath: "buff", "unknown"...).</summary>
+    public static Texture2D? Intent(string kind) => Image($"atlases/intent_atlas.sprites/intent_{kind}.tres");
+
     internal static Texture2D? LoadTexture(string path)
     {
         try

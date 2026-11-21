@@ -42,20 +42,24 @@ public sealed partial class SettingsMenu
         new("Damage you'll take", "What ending your turn costs you, after block, beside your HP (and a teammate's, when you hover them).",
             new[] { "incoming-damage", "teammate-incoming-damage" }, GameIcons.Heart),
         new("Enemies that die", "A skull beside an enemy that dies before it acts if you end your turn now.", new[] { "death-skull" }, GameIcons.Skull),
-        new("Enemy intents", "What each enemy's move does (its block, buffs and debuffs) and, when you hover it, its next moves.",
-            new[] { "intent-details", "intent-forecast" }, GameIcons.Power<StrengthPower>),
+        new("Enemy intents", "On each enemy's intent: the block its move gains, and the buffs and debuffs it applies with their amounts.",
+            new[] { "intent-details" }, () => GameIcons.Intent("buff")),
+        new("Enemy's next moves", "Hover an enemy: its moves after this one, every turn its rules make certain, then what a random pick can make.",
+            new[] { "intent-forecast" }, () => GameIcons.Intent("unknown")),
         new("Counter relics", "A tray beside your HP of the relics and powers that count up to something, flashing when they're about to fire.",
             new[] { "relic-counters" }, () => RelicIcon<PenNib>()),
         new("Potion tabs", "A tab under a potion for each relic that drinking it sets off.", new[] { "potion-tabs" }, () => PotionIcon()),
     };
 
     /// <summary>Run Reminders by place (one switch each); the feature itself is on while any of them is.</summary>
-    private static readonly (ReminderPlace Place, string Name, string Description)[] ReminderSwitches =
+    private static readonly (ReminderPlace Place, string Name, string Description, Func<Texture2D?> Icon)[] ReminderSwitches =
     {
-        (ReminderPlace.Reward, "Card rewards", "A tab on a card you're offered when one of your relics cares about it (an egg upgrades it, a relic counts it)."),
-        (ReminderPlace.Event, "Events", "Your relics that change an event's choice, beside the option, and Inspect for an option that gives random cards."),
-        (ReminderPlace.Shop, "Shops", "Your relics that change a price or a card for sale, beside it."),
-        (ReminderPlace.Map, "Map", "Your relics that care about a kind of room, beside the map legend's row."),
+        (ReminderPlace.Reward, "Card rewards", "A tab on a card you're offered when one of your relics cares about it (an egg upgrades it, a relic counts it).", GameIcons.CardReward),
+        (ReminderPlace.Event, "Events", "Your relics that change an event's choice, beside the option, and Inspect for an option that gives random cards.",
+            () => GameIcons.Room(MegaCrit.Sts2.Core.Map.MapPointType.Unknown, MegaCrit.Sts2.Core.Rooms.RoomType.Event)),
+        (ReminderPlace.Shop, "Shops", "Your relics that change a price or a card for sale, beside it.",
+            () => GameIcons.Room(MegaCrit.Sts2.Core.Map.MapPointType.Shop, MegaCrit.Sts2.Core.Rooms.RoomType.Shop)),
+        (ReminderPlace.Map, "Map", "Your relics that care about a kind of room, beside the map legend's row.", GameIcons.MapButton),
     };
 
     private static Texture2D? RelicIcon<T>() where T : RelicModel
@@ -107,7 +111,7 @@ public sealed partial class SettingsMenu
         foreach (var setupSwitch in FightSwitches) SwitchRow(setupSwitch);
 
         Section("Between fights");
-        foreach (var (place, name, desc) in ReminderSwitches)
+        foreach (var (place, name, desc, icon) in ReminderSwitches)
         {
             var key = ChoiceReminders.Key(place, "*");
             SimpleRow(name, desc, FeatureOn("run-reminders") && Settings.TabOwn(key), on =>
@@ -115,7 +119,7 @@ public sealed partial class SettingsMenu
                 Settings.Tabs[key] = on;
                 // Run Reminders is on while any place is.
                 SetFeature("run-reminders", ReminderSwitches.Any(other => Settings.TabOwn(ChoiceReminders.Key(other.Place, "*"))));
-            }, IconSpacer());
+            }, SetupIcon(icon));
         }
         SwitchRow(new SetupSwitch("Rest sites", "Beside your character at a rest site: the HP resting would leave you with, and what each relic adds.",
             new[] { "rest-preview" }, GameIcons.Heal));
@@ -210,6 +214,6 @@ public sealed partial class SettingsMenu
         settings.EventOdds = defaults.EventOdds;
         settings.EventInspect = defaults.EventInspect;
         settings.Tabs[QolSettings.DrawChanceKey] = true;
-        foreach (var (place, _, _) in ReminderSwitches) settings.Tabs[ChoiceReminders.Key(place, "*")] = true;
+        foreach (var (place, _, _, _) in ReminderSwitches) settings.Tabs[ChoiceReminders.Key(place, "*")] = true;
     }
 }

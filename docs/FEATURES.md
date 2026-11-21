@@ -80,8 +80,8 @@ Opens with **F10** (setting `SettingsKey`), the gear beside the version note on 
 The settings menu's first page, and what the menu opens on at the first launch (no settings file yet), over the main menu (decision #147). One switch per part of the mod, with the game's own art beside it:
 - **Everything:** every feature and option at the mod's defaults, and the menu closes.
 - **Card tabs:** four levels, each shown on a real card carrying what it adds: None; Minimal (Card Indicators: Retain, Sly, played twice, Ethereal fading); Moderate (plus Proc Indicators, direct procs); Full (plus indirect procs and Shuffle Warning, the defaults). Under them, **Amounts on tabs** and **Target marker**.
-- **In fights:** Damage you'll take (Incoming Damage and Teammate Incoming Damage), Enemies that die (Death Skull), Enemy intents (Intent Details and Intent Forecast), Counter relics (Relic Counters), Potion tabs.
-- **Between fights:** Run Reminders by place (card rewards, events, shops, the map; the feature is on while any is), Rest sites (Rest Preview).
+- **In fights:** Damage you'll take (Incoming Damage and Teammate Incoming Damage), Enemies that die (Death Skull), Enemy intents (Intent Details), Enemy's next moves (Intent Forecast), Counter relics (Relic Counters), Potion tabs.
+- **Between fights:** Run Reminders by place (card rewards, events, shops, the map; the feature is on while any is), Rest sites (Rest Preview). Each with the game's art: the card reward icon, the event and shop room icons, the top bar's map button.
 - **Chances:** Show chances.
 Every change applies at once. Closing the menu sets `SetupDone`, so it doesn't open itself again; the page stays in the menu.
 
