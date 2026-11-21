@@ -20,9 +20,9 @@ public static partial class SimEngine
     /// <summary>Every card that acts in hand at the end of the turn, by class name: the adapter reads exactly these.</summary>
     public static readonly IReadOnlyDictionary<string, InHand> HandAtTurnEnd = new Dictionary<string, InHand>
     {
-        ["Burn"] = InHand.Damage, ["Decay"] = InHand.Damage, ["Infection"] = InHand.Damage, ["Toxic"] = InHand.Damage, ["Wither"] = InHand.Damage,
-        ["BadLuck"] = InHand.HpLoss, ["Beckon"] = InHand.HpLoss,
-        ["Regret"] = InHand.HandSize,
+        [CardId.Burn.Name] = InHand.Damage, [CardId.Decay.Name] = InHand.Damage, [CardId.Infection.Name] = InHand.Damage, [CardId.Toxic.Name] = InHand.Damage, [CardId.Wither.Name] = InHand.Damage,
+        [CardId.BadLuck.Name] = InHand.HpLoss, [CardId.Beckon.Name] = InHand.HpLoss,
+        [CardId.Regret.Name] = InHand.HandSize,
     };
 
     /// <summary>A player's cards in hand act, in hand order (DoTurnEnd: OnTurnEndInHand).</summary>

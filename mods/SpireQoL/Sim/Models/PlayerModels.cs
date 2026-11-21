@@ -37,7 +37,7 @@ public sealed class BeatingRemnant : SimModel
 public sealed class BufferPower : SimModel
 {
     public override decimal ModifyHpLostAfterOstyLate(SimState s, int owner, DamageCtx d, decimal amount) =>
-        d.Target != owner || d.Card?.Name == "BrightestFlame" ? amount : 0m;
+        d.Target != owner || d.Card?.Name == CardId.BrightestFlame.Name ? amount : 0m;
     public override void AfterModifyingHpLost(SimState s, int owner)
     {
         var p = SimEngine.PowersOf(s, owner);

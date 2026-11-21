@@ -1,3 +1,6 @@
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Models.Powers;
 using HarmonyLib;
 using SpireQoL.Combat;
 using Sts2Mods.Core.Features;
@@ -72,7 +75,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
             var me = Sts2State.Me;
             var icon = m.FairiesUsed > 0
                 ? me?.Potions.FirstOrDefault(x => x.GetType().Name == "FairyInABottle") is { } fairy ? Cards.GameIcons.Potion(fairy) : null
-                : me?.Relics.FirstOrDefault(x => x.GetType().Name == "LizardTail") is { } tail ? Cards.GameIcons.Relic(tail) : null;
+                : me?.Relics.FirstOrDefault(x => x is LizardTail) is { } tail ? Cards.GameIcons.Relic(tail) : null;
             revive = (icon, m.HpAfter);
         }
         // The skull whenever an outcome might kill you (decision #87), with the chance unless it's certain or chances are off.

@@ -516,7 +516,7 @@ public static partial class SimEngine
         {
             var j = p.Juggernaut;
             if (yours && log != null && s.Log) s.EndOfTurnDamage.Add(("Juggernaut", j));
-            r = HitRandom(s, _ => j, then: (st, _) => st.LogFired("JuggernautPower", j, player));
+            r = HitRandom(s, _ => j, then: (st, _) => st.LogFired(PowerId.Juggernaut.Name, j, player));
         }
         // Beacon of Hope: half (whole block only) to every other living player; theirs can pass half of
         // that on once (the giver's is held while it gives, and the giver still gets block back).
@@ -551,7 +551,7 @@ public static partial class SimEngine
             // Thunder hits the evoke's target again if it's still alive.
             case OrbKind.Lightning:
                 if (listed && s.Targetable.Any()) s.EndOfTurnDamage.Add(("Lightning (evoked)", orb.Evoke));
-                return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = st.Player(player)!.Thunder; if (t > 0 && e.Alive) { Damage(st, e, t); st.LogFired("ThunderPower", t, player); } });
+                return HitRandom(s, _ => orb.Evoke, then: (st, e) => { var t = st.Player(player)!.Thunder; if (t > 0 && e.Alive) { Damage(st, e, t); st.LogFired(PowerId.Thunder.Name, t, player); } });
             case OrbKind.Frost: return GainBlock(s, orb.Evoke, listed ? "Frost (evoked)" : null, player);
             case OrbKind.Dark:
             {

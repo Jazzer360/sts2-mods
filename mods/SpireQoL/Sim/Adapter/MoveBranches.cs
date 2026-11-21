@@ -25,28 +25,28 @@ internal static class MoveBranches
     internal static readonly Dictionary<string, Rule> Rules = new()
     {
         // Below 3 Personal Hive (or none): +1 Personal Hive and +1 Strength; at 3 or more: +2 Strength.
-        ["Entomancer.SpitMove"] = new(new[] { "PersonalHivePower", "StrengthPower", "StrengthPower" },
+        ["Entomancer.SpitMove"] = new(new[] { nameof(PersonalHivePower), nameof(StrengthPower), nameof(StrengthPower) },
             (m, all) => m.Creature.GetPower<PersonalHivePower>() is { Amount: < 3 } ? new[] { all[0], all[1] } : new[] { all[2] }),
         // Strength only while it still has Plow (its Plow is taken away once it's stunned out of the charge).
-        ["CeremonialBeast.PlowMove"] = new(new[] { "StrengthPower" }, (m, all) => m.Creature.HasPower<PlowPower>() ? all : Array.Empty<Applied>()),
+        ["CeremonialBeast.PlowMove"] = new(new[] { nameof(StrengthPower) }, (m, all) => m.Creature.HasPower<PlowPower>() ? all : Array.Empty<Applied>()),
         // Dampen on a target that doesn't have it yet (one that does only adds the caster): yours decides what's shown.
-        ["MagiKnight.DampenMove"] = new(new[] { "DampenPower" }, (m, all) => Sts2State.Me?.Creature.HasPower<DampenPower>() == true ? Array.Empty<Applied>() : all),
+        ["MagiKnight.DampenMove"] = new(new[] { nameof(DampenPower) }, (m, all) => Sts2State.Me?.Creature.HasPower<DampenPower>() == true ? Array.Empty<Applied>() : all),
         // Minion on each egg it lays, one per free slot of the encounter (up to 3).
-        ["Ovicopter.LayEggsMove"] = new(new[] { "MinionPower" }, (m, all) =>
+        ["Ovicopter.LayEggsMove"] = new(new[] { nameof(MinionPower) }, (m, all) =>
             m.Creature.CombatState is { } cs && cs.Encounter?.Slots.Any(s => cs.Enemies.All(c => c.SlotName != s)) == true ? all : Array.Empty<Applied>()),
         // Strength to every ally but herself: 1, or 2 at the Dread ascension (a local, so the code's amount can't be read).
-        ["Queen.BurnBrightForMeMove"] = new(new[] { "StrengthPower" }, (m, all) =>
+        ["Queen.BurnBrightForMeMove"] = new(new[] { nameof(StrengthPower) }, (m, all) =>
             m.Creature.CombatState is { } cs && cs.Enemies.Any(c => c != m.Creature && c.IsAlive)
                 ? new[] { all[0] with { Amount = MegaCrit.Sts2.Core.Helpers.AscensionHelper.IsDread() ? 2 : 1 } }
                 : Array.Empty<Applied>()),
         // Its first respawn gains Painful Stabs, its second Nemesis (Respawns counts them; the move adds one first).
-        ["TestSubject.RespawnMove"] = new(new[] { "PainfulStabsPower", "NemesisPower" }, (m, all) =>
+        ["TestSubject.RespawnMove"] = new(new[] { nameof(PainfulStabsPower), nameof(NemesisPower) }, (m, all) =>
             Sts2State.Private(m, "Respawns", -1) switch { 0 => new[] { all[0] }, 1 => new[] { all[1] }, _ => Array.Empty<Applied>() }),
         // A loop over the move's targets, which always include you: every one of them gets it.
-        ["SpectralKnight.HexMove"] = new(new[] { "HexPower" }, (_, all) => all),
-        ["TheInsatiable.LiquifyMove"] = new(new[] { "SandpitPower" }, (_, all) => all),
+        ["SpectralKnight.HexMove"] = new(new[] { nameof(HexPower) }, (_, all) => all),
+        ["TheInsatiable.LiquifyMove"] = new(new[] { nameof(SandpitPower) }, (_, all) => all),
         // One Swipe for each card it steals: one from each target's draw and discard piles, which are never both empty in a fight.
-        ["ThievingHopper.ThieveryMove"] = new(new[] { "SwipePower" }, (_, all) => all),
+        ["ThievingHopper.ThieveryMove"] = new(new[] { nameof(SwipePower) }, (_, all) => all),
     };
 
     /// <summary>Moves with branch powers left as Maybe on purpose, and why (the scan's reviewed list).</summary>

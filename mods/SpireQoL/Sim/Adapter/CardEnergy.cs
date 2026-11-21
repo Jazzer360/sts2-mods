@@ -27,22 +27,22 @@ internal static class CardEnergy
     /// <summary>Cards whose gain a rule in <see cref="AddTo"/> works out, with what decides it (read from the decompile).</summary>
     internal static readonly Dictionary<string, string> Rules = new()
     {
-        ["Sunder"] = "its attack killed the target (DamageCmd's results: WasTargetKilled): AttackAction.OnKillEnergy",
+        [nameof(Sunder)] = "its attack killed the target (DamageCmd's results: WasTargetKilled): AttackAction.OnKillEnergy",
         ["BowSmack"] = "the target was impaled before its hit (ArrowCmd.CreatureIsImpaledByArrow)",
-        ["Restlessness"] = "it's the only card in your hand (IsOnlyCardInHand, the card's gold glow)",
-        ["ForgottenRitual"] = "you exhausted a card this turn (WasCardExhaustedThisTurn, the card's gold glow)",
-        ["DoubleEnergy"] = "as much energy as you have once its cost is spent (GainEnergyAsHeldAction)",
-        ["MadScience"] = "its Energized rider (TinkerTimeRider, EnergizedEnergy)",
+        [nameof(Restlessness)] = "it's the only card in your hand (IsOnlyCardInHand, the card's gold glow)",
+        [nameof(ForgottenRitual)] = "you exhausted a card this turn (WasCardExhaustedThisTurn, the card's gold glow)",
+        [nameof(DoubleEnergy)] = "as much energy as you have once its cost is spent (GainEnergyAsHeldAction)",
+        [nameof(MadScience)] = "its Energized rider (TinkerTimeRider, EnergizedEnergy)",
         ["EpicRetrieval"] = "per arrow of yours its play knocks loose (AfterArrowDislodged, source this card): SimCardPlay.ArrowEnergy",
-        ["BelieveInYou"] = "to the teammate it's aimed at",
-        ["Constellation"] = "to the teammate it's aimed at",
-        ["EnergySurge"] = "to every living player, you included",
+        [nameof(BelieveInYou)] = "to the teammate it's aimed at",
+        [nameof(Constellation)] = "to the teammate it's aimed at",
+        [nameof(EnergySurge)] = "to every living player, you included",
     };
 
     /// <summary>Cards that gain energy the simulator doesn't count, and why.</summary>
     internal static readonly Dictionary<string, string> Reviewed = new()
     {
-        ["DrumOfBattle"] = "when it's exhausted (AfterCardExhausted of itself), not when played: an exhaust of it during another play"
+        [nameof(DrumOfBattle)] = "when it's exhausted (AfterCardExhausted of itself), not when played: an exhaust of it during another play"
             + " isn't simulated (tracker: Drum of Battle)",
     };
 
@@ -99,32 +99,32 @@ internal static class CardEnergy
         }
         switch (name)
         {
-            case "Sunder":
+            case nameof(Sunder):
                 for (var i = 0; i < play.Body.Count; i++)
                     if (play.Body[i] is AttackAction a) { play.Body[i] = a with { OnKillEnergy = energy }; break; }
                 return;
             case "BowSmack":
                 if (target != null && Fool.IsImpaled(target)) Gain(energy, owner);
                 return;
-            case "Restlessness":
+            case nameof(Restlessness):
                 if (Sts2State.Private(card, "IsOnlyCardInHand", false)) Gain(energy, owner);
                 return;
-            case "ForgottenRitual":
+            case nameof(ForgottenRitual):
                 if (Sts2State.Private(card, "WasCardExhaustedThisTurn", false)) Gain(energy, owner);
                 return;
-            case "DoubleEnergy":
+            case nameof(DoubleEnergy):
                 play.Body.Add(new GainEnergyAsHeldAction());
                 return;
-            case "MadScience":
+            case nameof(MadScience):
                 if (card is MadScience ms && ms.TinkerTimeRider.ToString() == "Energized") Gain(Sts2State.Var(card, "EnergizedEnergy"), owner);
                 return;
             case "EpicRetrieval":
                 if (play.Card != null) play.Card = play.Card with { ArrowEnergy = energy };
                 return;
-            case "BelieveInYou" or "Constellation":
+            case nameof(BelieveInYou) or nameof(Constellation):
                 if (Who.KindOf(allyId) == CreatureKind.Teammate) Gain(energy, allyId);
                 return;
-            case "EnergySurge":
+            case nameof(EnergySurge):
                 Gain(energy, owner);
                 // Teammates are numbered from your side: a teammate's own Energy Surge (Howl from Beyond) gives you energy too, which
                 // isn't followed (it'd need their numbering of the players).

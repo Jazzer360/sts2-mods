@@ -1,3 +1,6 @@
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
@@ -20,15 +23,15 @@ namespace SpireQoL.Procs;
 /// </summary>
 internal static class ReturnToHand
 {
-    public const string MakeItSo = "MakeItSo";
-    public const string RightHandHand = "RightHandHand";
+    public const string MakeItSo = nameof(MakeItSo);
+    public const string RightHandHand = nameof(RightHandHand);
     public const string WhistlingArrows = "WhistlingArrows";
 
     /// <summary>The cards this class models (CardCoverage's scan accepts them).</summary>
     public static readonly HashSet<string> Modelled = new() { MakeItSo, RightHandHand, WhistlingArrows };
 
     /// <summary>Cards that come back next turn by their own text (CardCoverage's scan accepts them too).</summary>
-    public static readonly HashSet<string> NextTurn = new() { "Bolas", "Bounce", "ThrummingHatchet" };
+    public static readonly HashSet<string> NextTurn = new() { nameof(Bolas), "Bounce", nameof(ThrummingHatchet) };
 
     private static readonly PileType[] FightPiles = { PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust };
 

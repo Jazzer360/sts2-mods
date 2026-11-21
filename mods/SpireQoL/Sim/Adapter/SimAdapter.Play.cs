@@ -147,17 +147,17 @@ public static partial class SimAdapter
         var action = new DrawnCardAction(draw.Count) { Indirect = draw.Indirect };
         switch (name)
         {
-            case "EscapePlan":
+            case nameof(EscapePlan):
                 if (play.Body.OfType<GainBlockAction>().FirstOrDefault() is { } block)
                 {
                     play.Body.Remove(block);
                     action = action with { BlockIf = SimCardType.Skill, Block = block };
                 }
                 break;
-            case "Pillage":
+            case nameof(Pillage):
                 action = action with { DrawAgainIf = SimCardType.Attack };
                 break;
-            case "Scrape":
+            case nameof(Scrape):
                 play.Body.RemoveAll(a => a is CardEventAction { Event: CardEvent.Discarded });
                 action = action with { DiscardUnlessFree = true };
                 break;

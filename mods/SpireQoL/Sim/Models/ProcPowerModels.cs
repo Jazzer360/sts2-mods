@@ -185,7 +185,7 @@ public sealed class DevourLifePower : ProcModel
 {
     public override TabKind? Tab => TabKind.Summon;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Name == "Soul" ? Fire(s, owner, Amount(s, owner)) : One(s);
+        Mine(play, owner) && play.Card.Name == CardId.Soul.Name ? Fire(s, owner, Amount(s, owner)) : One(s);
 }
 
 /// <summary>
@@ -207,7 +207,7 @@ public sealed class HauntPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Name == "Soul"
+        Mine(play, owner) && play.Card.Name == CardId.Soul.Name
             ? SimEngine.ProcDamageRandom(s, owner, Name, Amount(s, owner), SimProps.Unblockable | Unpowered, noDealer: true)
             : One(s);
 }
@@ -424,7 +424,7 @@ public sealed class YahPower : ProcModel
 public abstract class SovereignBladeBuff : ProcModel
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Name == "SovereignBlade" && play.PlayIndex == 0 ? Fire(s, owner) : One(s);
+        Mine(play, owner) && play.Card.Name == CardId.SovereignBlade.Name && play.PlayIndex == 0 ? Fire(s, owner) : One(s);
 }
 
 public sealed class SeekingEdgePower : SovereignBladeBuff { }
@@ -435,7 +435,7 @@ public sealed class SwordSagePower : SovereignBladeBuff { }
 public sealed class ConquerorPower : ProcModel
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        owner >= 0 && play.Card.Name == "SovereignBlade" && play.PlayIndex == 0 ? Fire(s, owner) : One(s);
+        owner >= 0 && play.Card.Name == CardId.SovereignBlade.Name && play.PlayIndex == 0 ? Fire(s, owner) : One(s);
 }
 
 // ---- card events: exhausts, draws, discards, stars, energy, shuffles, created cards

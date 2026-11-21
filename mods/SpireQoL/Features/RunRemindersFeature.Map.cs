@@ -1,3 +1,6 @@
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.Models.Powers;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
@@ -126,7 +129,7 @@ public sealed partial class RunRemindersFeature
             if (model is RelicModel { IsUsedUp: true }) return false;
             switch (model.GetType().Name)
             {
-                case "MawBank":
+                case nameof(MawBank):
                     return !Traverse.Create(model).Property("HasItemBeenBought").GetValue<bool>();
             }
             var hook = model.GetType().GetMethod("ModifyUnknownMapPointRoomTypes");
@@ -134,7 +137,7 @@ public sealed partial class RunRemindersFeature
             {
                 // The hook is plain math on the set (no side effects): what a ? can be with it, against without it.
                 var after = (IReadOnlySet<RoomType>)hook.Invoke(model, new object[] { UnknownCanBe })!;
-                if (model.GetType().Name != "Dowsing") return !after.SetEquals(UnknownCanBe);
+                if (model is not Dowsing) return !after.SetEquals(UnknownCanBe);
             }
             return true;
         }
@@ -155,15 +158,15 @@ public sealed partial class RunRemindersFeature
         {
             switch (model.GetType().Name)
             {
-                case "EternalFeather":
+                case nameof(EternalFeather):
                 {
                     var every = Sts2State.Var(model, "Cards", 5);
                     return every > 0 ? $"+{Sts2State.Var(model, "Heal", 3) * (me.Deck.Cards.Count() / every)}" : null;
                 }
-                case "MealTicket":
-                case "Planisphere":
+                case nameof(MealTicket):
+                case nameof(Planisphere):
                     return $"+{Sts2State.Var(model, "Heal", 0)}";
-                case "Dowsing":
+                case nameof(Dowsing):
                     return $"{Sts2State.Var(model, "Rooms", 4)}";
             }
             return model is RelicModel { ShowCounter: true } r ? $"{r.DisplayAmount}" : null;

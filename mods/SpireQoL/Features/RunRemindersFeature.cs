@@ -1,3 +1,5 @@
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Powers;
 using System.Reflection;
 using OpCodes = System.Reflection.Emit.OpCodes;
 using System.Runtime.CompilerServices;
@@ -401,14 +403,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var problems = new List<(string Key, string Text)>();
         if (added != w.PerPick) problems.Add(("cards", $"{added} cards joined the deck, predicted {w.PerPick}"));
         var gold = me.Gold - w.Start.Gold;
-        if (w.FyshGold is { } g && gold != g) problems.Add(("LuckyFysh", $"Lucky Fysh: gold +{gold}, predicted +{g}"));
+        if (w.FyshGold is { } g && gold != g) problems.Add((nameof(LuckyFysh), $"Lucky Fysh: gold +{gold}, predicted +{g}"));
         if (w.BookHeals is { } heals && me.Relics.OfType<BookOfFiveRings>().FirstOrDefault() is { } book)
         {
             var now = Sts2State.Private(book, "CardsAdded", -1);
             if (now >= 0)
             {
                 var healed = now / w.BookEvery > w.BookAdded / w.BookEvery;
-                if (healed != heals) problems.Add(("BookOfFiveRings", $"Book of Five Rings: {(healed ? "healed" : "didn't heal")} ({w.BookAdded}→{now} cards), predicted {(heals ? "a heal" : "no heal")}"));
+                if (healed != heals) problems.Add((nameof(BookOfFiveRings), $"Book of Five Rings: {(healed ? "healed" : "didn't heal")} ({w.BookAdded}→{now} cards), predicted {(heals ? "a heal" : "no heal")}"));
             }
         }
         CheckCardRules(me, me.Deck.Cards.Where(c => !w.Start.Deck.Contains(c)).ToList(), false, null, "card reward");
@@ -775,7 +777,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         if (paid != w.Net)
         {
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("reminders", "Shop net price after Lucky Fysh was wrong",
-                new[] { "reminder-shop", "LuckyFysh" }, what);
+                new[] { "reminder-shop", nameof(LuckyFysh) }, what);
         }
     }
 
@@ -843,7 +845,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             if (owner != null && IsWithin(mb.DeclaringType, owner)) Walk(mb, owner, calls, seen, depth + 1, cards);
             // A delegate the event keeps in its state, called by the option (the Endless Conveyor's dish:
             // GrabSomethingOffTheBelt runs CurrentDish.action): read the ones the event holds now.
-            else if (mb.Name == "Invoke" && typeof(Delegate).IsAssignableFrom(mb.DeclaringType) && owner != null && cards.Target != null)
+            else if (mb.Name == nameof(Action.Invoke) && typeof(Delegate).IsAssignableFrom(mb.DeclaringType) && owner != null && cards.Target != null)
             {
                 foreach (var held in HeldDelegates(cards.Target))
                     if (held.Method.DeclaringType != null && IsWithin(held.Method.DeclaringType, owner)) Walk(held.Method, owner, calls, seen, depth + 1, cards);

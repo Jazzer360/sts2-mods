@@ -58,7 +58,7 @@ public static partial class SimAdapter
     /// Feel No Pain; "DamageBack": Flame Barrier; "Accelerant"), 0 when it has neither (the card scan reports it), or
     /// null (none, or it has a PowerVar, read with the others).
     /// </summary>
-    private static readonly string[] PlainPowerVars = { "Power", "DamageBack", "Accelerant" };
+    private static readonly string[] PlainPowerVars = { "Power", "DamageBack", nameof(Accelerant) };
 
     /// <summary>
     /// How many times an enemy's poison ticks: 1 plus the Accelerant of every living opponent of it, so every player's
@@ -316,7 +316,7 @@ public static partial class SimAdapter
         var maxHp = player.Creature.MaxHp;
         p.Fairies = SafeInt(() => player.Potions.Count(x => x.GetType().Name == "FairyInABottle"));
         p.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
-        p.LizardTailHeal = player.Relics.FirstOrDefault(r => r.GetType().Name == "LizardTail") is { IsUsedUp: false } tail
+        p.LizardTailHeal = player.Relics.FirstOrDefault(r => r is LizardTail) is { IsUsedUp: false } tail
             ? Math.Max(1, (int)(maxHp * (Sts2State.Var(tail, "Heal", 50) / 100m)))
             : 0;
     }
@@ -453,9 +453,9 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, DrawnCardReader> DrawnCardReaders = new Dictionary<string, DrawnCardReader>
     {
-        ["EscapePlan"] = new(DrawnCardReader.Reads.Type, "its block only when the card it draws is a Skill"),
-        ["Pillage"] = new(DrawnCardReader.Reads.Type, "draws again while the card it draws is an Attack and your hand has room", DrawsAgain: true, Counts: true),
-        ["Scrape"] = new(DrawnCardReader.Reads.Cost, "discards the cards it draws unless they cost 0 (an X cost counts as not 0)", Counts: true),
+        [nameof(EscapePlan)] = new(DrawnCardReader.Reads.Type, "its block only when the card it draws is a Skill"),
+        [nameof(Pillage)] = new(DrawnCardReader.Reads.Type, "draws again while the card it draws is an Attack and your hand has room", DrawsAgain: true, Counts: true),
+        [nameof(Scrape)] = new(DrawnCardReader.Reads.Cost, "discards the cards it draws unless they cost 0 (an X cost counts as not 0)", Counts: true),
     };
 
     /// <summary>
@@ -475,18 +475,18 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> DrawReactions = new Dictionary<string, string>
     {
-        ["AutomationPower"] = "any card: a count (CardEvent.Drawn)",
-        ["CacophonyPower"] = "any card: a count (CardEvent.Drawn)",
-        ["SpeedsterPower"] = "any card: a count (CardEvent.Drawn)",
-        ["CorrosiveWavePower"] = "any card: a count (CardEvent.Drawn)",
-        ["IterationPower"] = "a Status (the profile's Status, with Iteration): draws more",
-        ["PagestormPower"] = "Ethereal (the profile's Ethereal, with Pagestorm): draws more",
-        ["HellraiserPower"] = "a Strike (the profile's Strike, with Hellraiser): its auto-play isn't simulated; later auto-plays aren't predicted",
-        ["ChainsOfBindingPower"] = "afflicts drawn cards Bound (playability, read live; nothing at end of turn)",
-        ["ConfusedPower"] = "a random cost (costs matter to Simpleton only: read live in hand; a drawn card keeps the cost it had)",
-        ["KinglyKick"] = "its own cost on draw (Simpleton: the cost it had in the pile)",
-        ["KinglyPunch"] = "its own cost on draw (Simpleton: the cost it had in the pile)",
-        ["Void"] = "loses energy when drawn (not simulated: energy only matters at end of turn to Pael's Tears)",
+        [nameof(AutomationPower)] = "any card: a count (CardEvent.Drawn)",
+        [nameof(CacophonyPower)] = "any card: a count (CardEvent.Drawn)",
+        [nameof(SpeedsterPower)] = "any card: a count (CardEvent.Drawn)",
+        [nameof(CorrosiveWavePower)] = "any card: a count (CardEvent.Drawn)",
+        [nameof(IterationPower)] = "a Status (the profile's Status, with Iteration): draws more",
+        [nameof(PagestormPower)] = "Ethereal (the profile's Ethereal, with Pagestorm): draws more",
+        [nameof(HellraiserPower)] = "a Strike (the profile's Strike, with Hellraiser): its auto-play isn't simulated; later auto-plays aren't predicted",
+        [nameof(ChainsOfBindingPower)] = "afflicts drawn cards Bound (playability, read live; nothing at end of turn)",
+        [nameof(ConfusedPower)] = "a random cost (costs matter to Simpleton only: read live in hand; a drawn card keeps the cost it had)",
+        [nameof(KinglyKick)] = "its own cost on draw (Simpleton: the cost it had in the pile)",
+        [nameof(KinglyPunch)] = "its own cost on draw (Simpleton: the cost it had in the pile)",
+        [nameof(MegaCrit.Sts2.Core.Models.Cards.Void)] = "loses energy when drawn (not simulated: energy only matters at end of turn to Pael's Tears)",
         ["Slither"] = "a random cost on draw (Simpleton: the cost it had in the pile)",
         ["MockRemoveDrawnCardsFromCombatPower"] = "the game's test mock: never in a real fight",
     };
@@ -565,7 +565,7 @@ public static partial class SimAdapter
                     // Status Active: unused, and no card played this turn (BeforeCardPlayed sets it back); Whispering
                     // Earring's turn 1 counts as played (PaelsEye.AnyCardsPlayedThisTurn).
                     p.PaelsEyeExhaust = r.Status == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active
-                        && !(Sts2State.TurnNumber == 1 && me.Relics.Any(x => x.GetType().Name == "WhisperingEarring"));
+                        && !(Sts2State.TurnNumber == 1 && me.Relics.Any(x => x is WhisperingEarring));
                     break;
                 case nameof(GoldPlatedCables): p.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
             }
