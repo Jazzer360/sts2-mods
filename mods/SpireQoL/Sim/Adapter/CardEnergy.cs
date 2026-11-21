@@ -44,19 +44,26 @@ internal static class CardEnergy
     internal static readonly Dictionary<string, string> Reviewed = new();
 
     /// <summary>
+    /// The energy a card takes when it's drawn: a loss of its Energy value from its owner in its own AfterCardDrawn (Void), read from
+    /// its code; 0 for any other card. It's what SimDrawCard.EnergyLostOnDraw holds.
+    /// </summary>
+    internal static int LostWhenDrawn(CardModel card) =>
+        CallsOf(card.GetType(), "LoseEnergy").Any(call => call is { Method: "AfterCardDrawn", ToOwner: true, FromEnergyVar: true }) ? Sts2State.Var(card, "Energy") : 0;
+
+    /// <summary>
     /// The energy a card gives when it's exhausted: a gain of its Energy value to its owner in its own AfterCardExhausted (Drum of
     /// Battle), read from its code; 0 for any other card. It's what SimPlayer.ExhaustingInHand holds.
     /// </summary>
     internal static int WhenExhausted(CardModel card) =>
         CallsOf(card.GetType()).Any(call => call is { Method: "AfterCardExhausted", ToOwner: true, FromEnergyVar: true }) ? Sts2State.Var(card, "Energy") : 0;
 
-    private static readonly Dictionary<Type, List<Call>> Cache = new();
+    private static readonly Dictionary<(Type, string), List<Call>> Cache = new();
 
-    /// <summary>Every GainEnergy call in the card's own methods (an async one's state machine included).</summary>
-    internal static List<Call> CallsOf(Type cardType)
+    /// <summary>Every call of a PlayerCmd energy command (GainEnergy, LoseEnergy) in the card's own methods (an async one's state machine included).</summary>
+    internal static List<Call> CallsOf(Type cardType, string command = "GainEnergy")
     {
         lock (Cache)
-            if (Cache.TryGetValue(cardType, out var cached)) return cached;
+            if (Cache.TryGetValue((cardType, command), out var cached)) return cached;
         var calls = new List<Call>();
         const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
         foreach (var method in cardType.GetMethods(all))
@@ -68,7 +75,7 @@ internal static class CardEnergy
             catch { continue; }
             var at = new List<int>();
             for (var i = 0; i < code.Count; i++)
-                if (code[i].operand is MethodInfo { Name: "GainEnergy" } otherMethod && otherMethod.DeclaringType?.Name == "PlayerCmd") at.Add(i);
+                if (code[i].operand is MethodInfo otherMethod && otherMethod.Name == command && otherMethod.DeclaringType?.Name == "PlayerCmd") at.Add(i);
             if (at.Count == 0) continue;
             var certain = Branches.OnEveryPath(code, at);
             for (var aim = 0; aim < at.Count; aim++)
@@ -80,7 +87,7 @@ internal static class CardEnergy
                 calls.Add(new Call(method.Name, certain[aim], toOwner, fromVar));
             }
         }
-        lock (Cache) Cache[cardType] = calls;
+        lock (Cache) Cache[(cardType, command)] = calls;
         return calls;
     }
 

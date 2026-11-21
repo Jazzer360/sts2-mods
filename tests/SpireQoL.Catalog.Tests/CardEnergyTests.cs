@@ -41,6 +41,17 @@ public class CardEnergyTests
     }
 
     [Fact]
+    public void EveryCardThatLosesYouEnergyIsCounted()
+    {
+        // Void's loss when it's drawn is read from its code (CardEnergy.LostWhenDrawn); any other loss would need a rule here.
+        Assert.Contains(CardEnergy.CallsOf(Card("Void"), "LoseEnergy"), call => call is { Method: "AfterCardDrawn", ToOwner: true, FromEnergyVar: true });
+        var others = CardTypes()
+            .Where(type => CardEnergy.CallsOf(type, "LoseEnergy").Any(call => call is not { Method: "AfterCardDrawn", ToOwner: true, FromEnergyVar: true }))
+            .Select(type => $"{type.Name}: {string.Join("; ", CardEnergy.CallsOf(type, "LoseEnergy"))}").ToList();
+        Assert.True(others.Count == 0, "Cards that lose you energy some other way (not simulated):\n" + string.Join("\n", others));
+    }
+
+    [Fact]
     public void EveryCardThatGainsEnergyIsCounted()
     {
         var missing = CardTypes()

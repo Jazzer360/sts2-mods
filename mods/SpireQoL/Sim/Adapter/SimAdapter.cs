@@ -325,6 +325,7 @@ public static partial class SimAdapter
     private static void FillSurvival(SimPlayer simPlayer, Player player)
     {
         simPlayer.Hp = player.Creature.CurrentHp;
+        simPlayer.MaxHp = player.Creature.MaxHp;
         var maxHp = player.Creature.MaxHp;
         simPlayer.Fairies = SafeInt(() => player.Potions.Count(potion => potion.GetType().Name == "FairyInABottle"));
         simPlayer.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
@@ -422,7 +423,8 @@ public static partial class SimAdapter
                 var sly = readsCost && card.Keywords.Contains(CardKeyword.Sly);
                 // It acts when it's exhausted (Drum of Battle): its type goes with it, for an exhaust of a kind.
                 var exhaustEnergy = CardEnergy.WhenExhausted(card);
-                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}";
+                var energyLost = CardEnergy.LostWhenDrawn(card);
+                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}|{energyLost}";
                 SimHandCard? auto = null;
                 if ((pickable || hellraised) && !autoByKey.TryGetValue(key, out auto))
                 {
@@ -437,6 +439,7 @@ public static partial class SimAdapter
                 }
                 return new SimDrawCard(key)
                 {
+                    EnergyLostOnDraw = energyLost,
                     Exhausting = exhaustEnergy > 0 ? new ExhaustingCard(HandCard: 0, exhaustEnergy, SimReaders.TypeOf(card)) : null,
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
                     Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly,

@@ -380,6 +380,8 @@ public sealed class SimPlayer
     /// healing the player from 0; with none left, they die (Died). The same for every player (decision #93).
     /// </summary>
     public int Hp = int.MaxValue;
+    /// <summary>Max HP (int.MaxValue: not tracked): a heal stops there (CreatureCmd.Heal).</summary>
+    public int MaxHp = int.MaxValue;
     /// <summary>
     /// Fairy in a Bottle potions you hold (FairyInABottle.ShouldDie, checked before ShouldDieLate) and the HP each heals
     /// you to (30% of max HP, at least 1); then Lizard Tail's (50%, once: LizardTail.ShouldDieLate), 0 when used or none.
@@ -447,7 +449,7 @@ public sealed class SimPlayer
     /// </summary>
     internal void Hash(Action<long> add)
     {
-        add(Block); add(Hp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
+        add(Block); add(Hp); add(MaxHp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
         add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(LizardTailHeal); add(FairiesUsed); add(Fairies);
         add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(StatusDrawn);
         add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);

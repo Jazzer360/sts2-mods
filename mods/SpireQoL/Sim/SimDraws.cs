@@ -10,6 +10,8 @@ public sealed record SimDrawCard(string Key)
 {
     /// <summary>It acts in hand at the end of your turn (Burn, Regret...): SimEngine.HandAtTurnEnd.</summary>
     public TurnEndCard? TurnEnd { get; init; }
+    /// <summary>Energy it takes from you when drawn (Void: its own AfterCardDrawn, PlayerCmd.LoseEnergy).</summary>
+    public int EnergyLostOnDraw { get; init; }
     /// <summary>It acts when it's exhausted (SimPlayer.ExhaustingInHand once drawn; its HandCard is set then).</summary>
     public ExhaustingCard? Exhausting { get; init; }
     /// <summary>Ethereal, and it exhausts at the end of your turn (Feel No Pain, Charon's Ashes...).</summary>

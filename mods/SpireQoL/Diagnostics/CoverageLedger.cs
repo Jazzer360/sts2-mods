@@ -242,7 +242,7 @@ internal static partial class CoverageLedger
         ["ReattachPower"] = "ignore: AfterDeath sends a segment to its dead move (reattaching at the end of its turn, no attack) and ShouldAllowHitting keeps it out of hits, so its kill holds for the turn; the simulator never ends the fight early",
         ["ReboundPower"] = "ignore: ModifyCardPlayResultLocation puts played cards on your draw pile after their effects (later plays read piles live)",
         ["ReflectPower"] = "covered: AfterDamageReceived reflects blocked damage (simulator)",
-        ["RegenPower"] = "ignore: BeforeSideTurnEndEarly heals",
+        ["RegenPower"] = "covered: BeforeSideTurnEndEarly heals its owner before the enemies act (a player's), up to max HP, and ticks down (Sim/Models/EndOfTurnModels.cs)",
         ["RetainHandPower"] = "ignore: AfterSideTurnEnd ticks down",
         ["RingingPower"] = "ignore: ShouldPlay one Ringing card per turn (playability read live)",
         ["RitualPower"] = "ignore: AfterSideTurnEnd Strength at the end of its own turn (later attacks)",
@@ -353,9 +353,9 @@ internal static partial class CoverageLedger
         ["RocketPunch"] = "ignore: its own cost when statuses are created (read from the card)",
         ["SovereignBlade"] = "ignore: AfterCardChangedPiles forge visuals",
         ["Stomp"] = "ignore: its own cost (read from the card)",
-        ["Void"] = "ignore: AfterCardDrawn energy loss on a random draw",
+        ["Void"] = "covered: AfterCardDrawn energy loss when it's drawn (SimDrawCard.EnergyLostOnDraw, CardEnergy.LostWhenDrawn)",
         // v0.113.0
-        ["EpicRetrieval"] = "ignore: AfterArrowDislodged gains energy when its own hit dislodges your arrow; the game glows it gold then (ShouldGlowGoldInternal), and energy isn't predicted beyond Pael's Tears",
+        ["EpicRetrieval"] = "covered: AfterArrowDislodged energy when its own hit dislodges your arrow (CardEnergy.Rules: SimCardPlay.ArrowEnergy)",
         ["SpoilsMap"] = "ignore: AfterCardChangedPiles keeps its map quest (out of combat)",
         ["WhistlingArrows"] = "covered: AfterArrowShot returns it from your discard pile when you shoot an arrow: a return tab on shots with an arrow ready and your hand size after (Procs.ReturnToHand)",
 
