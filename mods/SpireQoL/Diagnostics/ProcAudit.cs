@@ -1594,9 +1594,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
         var tabbed = window.Predicted.Select(tab => tab.Key.Contains(':') ? tab.Key[(tab.Key.IndexOf(':') + 1)..] : tab.Key).ToHashSet();
         // Code that ran: the card, sources with a tab, sources that flashed, cards it auto-played, cards
-        // it drew (and their enchantments), and sources that react to draws when it drew.
+        // it drew (and their enchantments), sources that react to draws when it drew, and cards it exhausted that react to that.
         var autoPlayed = entries.OfType<CardPlayStartedEntry>().Where(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay).Select(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.Card).ToList();
         var drawn = entries.OfType<CardDrawnEntry>().Where(cardDrawnEntry => !cardDrawnEntry.FromHandDraw && cardDrawnEntry.Card.Owner == me).Select(cardDrawnEntry => cardDrawnEntry.Card).ToList();
+        // Cards it exhausted that act when exhausted run their own AfterCardExhausted (Drum of Battle's energy); not their play's code.
+        var exhaustReactors = entries.OfType<CardExhaustedEntry>().Where(cardExhaustedEntry => cardExhaustedEntry.Card.Owner == me).Select(cardExhaustedEntry => cardExhaustedEntry.Card.GetType())
+            .Where(type => CodeIndex.Does(type, Array.Empty<string>(), new[] { nameof(AbstractModel.AfterCardExhausted) }));
         var drawReactors = drawn.Count == 0 ? Enumerable.Empty<AbstractModel>()
             : present.Where(otherModel => CodeIndex.Does(otherModel.GetType(), Array.Empty<string>(), new[] { "AfterCardDrawn", "AfterCardDrawnEarly" }));
         // A death in the play runs death hooks, including those of powers gone by its end (Dampen comes
@@ -1610,6 +1613,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .Concat(autoPlayed.Select(card => card.GetType()))
             .Concat(drawn.Select(card => card.GetType())).Concat(drawn.Where(card => card.Enchantment != null).Select(card => card.Enchantment!.GetType()))
             .Concat(drawReactors.Select(drawReactor => drawReactor.GetType()))
+            .Concat(exhaustReactors)
             // Orbs the play may have evoked (channelling into full slots, evoke cards): Plasma's energy.
             .Concat(entries.OfType<OrbChanneledEntry>().Any() || CodeIndex.Does(window.Card.GetType(), new[] { "OrbCmd.Evoke*" }, Array.Empty<string>()) ? window.FullBefore.Orbs : Enumerable.Empty<Type>())
             .Concat(deathReactors)

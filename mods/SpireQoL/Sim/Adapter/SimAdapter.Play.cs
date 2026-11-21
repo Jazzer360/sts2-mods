@@ -182,6 +182,8 @@ public static partial class SimAdapter
         Each(play.Body, CardEvent.Drawn, Math.Min(facts.OwnDraws, facts.Draws), indirect: true);
         Each(play.Body, CardEvent.Discarded, facts.Discards, indirect: true);
         Each(play.Body, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
+        // What the cards it takes do when exhausted (Drum of Battle), by how it picks them.
+        if (facts.ExhaustsOthers > 0 && PlayFacts.ExhaustPickOf(facts.Card) is { } exhaustPick) play.Body.Add(exhaustPick);
         var sadness = facts.SadnessCreated;
         var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
         Each(play.Body, CardEvent.Generated, Math.Max(0, facts.Generated + facts.TransformsCertain - statuses - sadness), indirect: true);
@@ -190,6 +192,9 @@ public static partial class SimAdapter
         Each(play.Body, CardEvent.StarsGained, facts.StarGains, indirect: false);
         if (facts.Stars > 0) play.Body.Add(new CardEventAction(CardEvent.StarsSpent, Count: 1) { FirstPlayOnly = true });
         if (facts.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, Count: 1) { Card = play.Card!.Card });
+        // Its own exhaust (Corruption: Skills exhaust) sets off its own AfterCardExhausted (Drum of Battle's energy).
+        if (facts.ExhaustsSelf && CardEnergy.WhenExhausted(facts.Card) is > 0 and var ownExhaustEnergy)
+            play.After.Add(new CardEventAction(CardEvent.EnergyGained, ownExhaustEnergy) { Player = play.Card!.Owner });
         if (facts.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, Count: 1) { Indirect = true });
     }
 

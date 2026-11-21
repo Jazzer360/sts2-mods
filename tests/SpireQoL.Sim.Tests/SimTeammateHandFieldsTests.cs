@@ -19,6 +19,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.HexFading),       // of those, Ethereal only through Hex
         nameof(SimPlayer.Draw),            // their draw pile: never filled for a teammate (decision #90), cleared all the same
         nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...
+        nameof(SimPlayer.ExhaustingInHand), // Drum of Battle: which of their cards a play could exhaust
         // End-of-turn auto-plays picked from the hand (Stampede, Simpleton; never filled for a teammate today, decision #80).
         nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand),
     };
@@ -94,6 +95,7 @@ public class SimTeammateHandFieldsTests
         else if (type == typeof(bool)) field.SetValue(player, true);
         else if (type == typeof(List<(string, int)>)) field.SetValue(player, new List<(string, int)> { ("X", 3) });
         else if (type == typeof(List<TurnEndCard>)) field.SetValue(player, new List<TurnEndCard> { new("Burn", "Burn", Amount: 2) });
+        else if (type == typeof(List<ExhaustingCard>)) field.SetValue(player, new List<ExhaustingCard> { new(HandCard: 7, Energy: 2, SimCardType.Skill) });
         else if (type == typeof(List<SimHandCard>)) field.SetValue(player, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
         else if (type == typeof(List<SimPlay>)) field.SetValue(player, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
         else if (type == typeof(PowerSet)) field.SetValue(player, PowerSet.Empty.With(PowerId.Strength, amount: 2));

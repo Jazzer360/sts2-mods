@@ -408,7 +408,9 @@ public static partial class SimAdapter
                 var type = readsType ? SimReaders.TypeOf(card) : SimCardType.None;
                 bool? free = readsCost ? !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.All) == 0 : null;
                 var sly = readsCost && card.Keywords.Contains(CardKeyword.Sly);
-                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}";
+                // It acts when it's exhausted (Drum of Battle): its type goes with it, for an exhaust of a kind.
+                var exhaustEnergy = CardEnergy.WhenExhausted(card);
+                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}";
                 SimHandCard? auto = null;
                 if ((pickable || hellraised) && !autoByKey.TryGetValue(key, out auto))
                 {
@@ -423,6 +425,7 @@ public static partial class SimAdapter
                 }
                 return new SimDrawCard(key)
                 {
+                    Exhausting = exhaustEnergy > 0 ? new ExhaustingCard(HandCard: 0, exhaustEnergy, SimReaders.TypeOf(card)) : null,
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
                     Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly,
                 };
@@ -577,6 +580,8 @@ public static partial class SimAdapter
         player.Energy = pcs.Energy;
         player.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
         player.Fading = hand.Count(card => IsFading(card, combat));
+        player.ExhaustingInHand = hand.Where(card => CardEnergy.WhenExhausted(card) > 0)
+            .Select(card => new ExhaustingCard(HandId(card), CardEnergy.WhenExhausted(card), SimReaders.TypeOf(card))).ToList();
         // Hex (decision #85): its cards' Ethereal goes when its caster dies.
         if (creature.GetPower<HexPower>() is { Applier: { } hexer } && idOf(hexer) is { } hexId && hexId >= 0)
         {

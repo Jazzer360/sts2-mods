@@ -37,14 +37,18 @@ internal static class CardEnergy
         [nameof(BelieveInYou)] = "to the teammate it's aimed at",
         [nameof(Constellation)] = "to the teammate it's aimed at",
         [nameof(EnergySurge)] = "to every living player, you included",
+        [nameof(DrumOfBattle)] = "when it's exhausted (its own AfterCardExhausted, WhenExhausted): from your hand by another play (ExhaustFromHandAction), or its own exhaust (Corruption)",
     };
 
     /// <summary>Cards that gain energy the simulator doesn't count, and why.</summary>
-    internal static readonly Dictionary<string, string> Reviewed = new()
-    {
-        [nameof(DrumOfBattle)] = "when it's exhausted (AfterCardExhausted of itself), not when played: an exhaust of it during another play"
-            + " isn't simulated (tracker: Drum of Battle)",
-    };
+    internal static readonly Dictionary<string, string> Reviewed = new();
+
+    /// <summary>
+    /// The energy a card gives when it's exhausted: a gain of its Energy value to its owner in its own AfterCardExhausted (Drum of
+    /// Battle), read from its code; 0 for any other card. It's what SimPlayer.ExhaustingInHand holds.
+    /// </summary>
+    internal static int WhenExhausted(CardModel card) =>
+        CallsOf(card.GetType()).Any(call => call is { Method: "AfterCardExhausted", ToOwner: true, FromEnergyVar: true }) ? Sts2State.Var(card, "Energy") : 0;
 
     private static readonly Dictionary<Type, List<Call>> Cache = new();
 
@@ -124,6 +128,8 @@ internal static class CardEnergy
             case nameof(BelieveInYou) or nameof(Constellation):
                 if (Who.KindOf(allyId) == CreatureKind.Teammate) Gain(energy, allyId);
                 return;
+            case nameof(DrumOfBattle):
+                return; // not when played: when it's exhausted (WhenExhausted)
             case nameof(EnergySurge):
                 Gain(energy, owner);
                 // Teammates are numbered from your side: a teammate's own Energy Surge (Howl from Beyond) gives you energy too, which

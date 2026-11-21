@@ -908,6 +908,32 @@ public sealed class PlayFacts
         };
     }
 
+    /// <summary>
+    /// How a card that exhausts others picks them (ExhaustFromHandAction: what a card that acts when exhausted, Drum of Battle, does
+    /// then), from each card's OnPlay; null for a card that takes none of those (ExhaustTakesNoActingCard) or isn't listed. The card
+    /// scan flags one that exhausts others with neither.
+    /// </summary>
+    internal static ExhaustFromHandAction? ExhaustPickOf(CardModel card) => card.GetType().Name switch
+    {
+        nameof(Cinder) => new ExhaustFromHandAction(ExhaustPick.Random),                                           // CombatCardSelection.NextItem
+        nameof(TrueGrit) => new ExhaustFromHandAction(card.IsUpgraded ? ExhaustPick.Chosen : ExhaustPick.Random), // upgraded: CardSelectCmd
+        nameof(Thrash) => new ExhaustFromHandAction(ExhaustPick.Random) { Only = SimCardType.Attack },
+        nameof(Brand) or nameof(BurningPact) or nameof(Scavenge) or nameof(Purity) => new ExhaustFromHandAction(ExhaustPick.Chosen),
+        nameof(Cleanse) => new ExhaustFromHandAction(ExhaustPick.Chosen) { FromDrawPile = true },
+        nameof(FiendFire) or nameof(Stoke) or "TheDevil" => new ExhaustFromHandAction(ExhaustPick.All),
+        nameof(SecondWind) => new ExhaustFromHandAction(ExhaustPick.All) { Except = SimCardType.Attack },
+        _ => null,
+    };
+
+    /// <summary>Cards that exhaust others but only of a kind no card that acts when exhausted is (CardEnergy.WhenExhausted: Drum of Battle, a Skill).</summary>
+    internal static readonly Dictionary<string, string> ExhaustTakesNoActingCard = new()
+    {
+        ["Growth"] = "only Sadness cards",
+        ["Florescence"] = "only Shoot cards",
+        [nameof(FlakCannon)] = "only status cards",
+        ["TheHermit"] = "only a Curse",
+    };
+
     internal static int DiscardCount(CardModel card, string name, List<CardModel> others, int draws)
     {
         var otherCount = others.Count;

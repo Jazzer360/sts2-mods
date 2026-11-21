@@ -230,6 +230,10 @@ internal static class CardCoverage
         // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.
         if (Calls("CardCmd", "Exhaust") && None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, drawPile: 5, plays: 1)))
             issues.Add("exhausts cards (not counted: Feel No Pain, Dark Embrace...)");
+        // How it picks them decides whether a card that acts when exhausted goes (Drum of Battle's energy).
+        if (Calls("CardCmd", "Exhaust") && !None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, drawPile: 5, plays: 1))
+            && PlayFacts.ExhaustPickOf(card) == null && !PlayFacts.ExhaustTakesNoActingCard.ContainsKey(name))
+            issues.Add("exhausts other cards without saying how it picks them (Drum of Battle's energy when exhausted)");
         if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, name, others, PlayFacts.CardsDrawn(otherCard, handCount: 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))

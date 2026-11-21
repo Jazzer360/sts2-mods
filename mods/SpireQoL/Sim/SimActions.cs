@@ -18,6 +18,8 @@ public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> B
 {
     /// <summary>The card is played from its owner's hand (it has left it, though HandCount drops only at CardResolved).</summary>
     public bool FromHand { get; init; }
+    /// <summary>The card in its owner's hand it is (SimPlay.HandCard; 0: none).</summary>
+    public int HandCard { get; init; }
 }
 
 /// <summary>
@@ -110,6 +112,22 @@ public sealed record ApplyPowerAction(PowerId Power, int Amount) : SimAction
 
 /// <summary>HP the card costs you (CreatureCmd.Damage on you, Unblockable and Unpowered), through the HP-loss pipeline.</summary>
 public sealed record LoseHpAction(int Amount) : SimAction;
+
+/// <summary>How a play picks the cards it exhausts (ExhaustFromHandAction).</summary>
+public enum ExhaustPick { Random, All, Chosen }
+
+/// <summary>
+/// A play exhausting others (after its Exhausted event): what the ones that act when exhausted do (SimPlayer.ExhaustingInHand:
+/// Drum of Battle's energy). Every card in the hand (All), one at random (Random: each card equally likely), or the one you choose
+/// (Chosen: your later decision, so unknown while one could be picked). Only and Except filter by type (None: any); FromDrawPile
+/// (Cleanse): it takes from the draw pile.
+/// </summary>
+public sealed record ExhaustFromHandAction(ExhaustPick Pick) : SimAction
+{
+    public SimCardType Only { get; init; }
+    public SimCardType Except { get; init; }
+    public bool FromDrawPile { get; init; }
+}
 
 /// <summary>
 /// Card events of a play (from what the card does: PlayFacts' counts), each card's hooks in turn. Indirect: an exhaust, discard,

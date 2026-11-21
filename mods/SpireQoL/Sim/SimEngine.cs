@@ -792,6 +792,7 @@ public static partial class SimEngine
             case ApplyPowerAction applyPowerAction: RunApplyPower(branches, applyPowerAction); break;
             case CardEventAction cardEventAction: RunCardEvent(branches, cardEventAction); break;
             case DrawnCardAction drawnCardAction: branches.Each(branch => RunDrawnCard(branch, drawnCardAction)); break;
+            case ExhaustFromHandAction exhaustFromHandAction: branches.Each(branch => RunExhaustFromHand(branch, exhaustFromHandAction)); break;
             case GainEnergyAsHeldAction:
                 branches.Each(branch => (branch.CurrentPlay?.Owner ?? Who.You) is var playOwner && branch.Player(playOwner) is { Energy: > 0 } player
                     ? ProcCardEvent(branch, CardEvent.EnergyGained, player.Energy, playOwner, indirect: false) : new[] { branch });

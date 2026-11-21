@@ -11,9 +11,16 @@ public static partial class SimEngine
     /// </summary>
     private static void RunCardPlay(BranchSet branches, CardPlayAction cardPlayAction)
     {
-        // Played from your hand: it has left it until it resolves (SimPlayer.PlayingFromHand).
+        // Played from your hand: it has left it until it resolves (SimPlayer.PlayingFromHand), and no exhaust can take it from there.
         if (cardPlayAction.FromHand)
-            branches.Do(branch => { if (branch.Player(cardPlayAction.Play.Owner) != null) branch.MutablePlayer(cardPlayAction.Play.Owner).PlayingFromHand++; });
+            branches.Do(branch =>
+            {
+                if (branch.Player(cardPlayAction.Play.Owner) == null) return;
+                var player = branch.MutablePlayer(cardPlayAction.Play.Owner);
+                player.PlayingFromHand++;
+                if (player.ExhaustingInHand.Any(card => card.HandCard == cardPlayAction.HandCard))
+                    player.ExhaustingInHand = player.ExhaustingInHand.Where(card => card.HandCard != cardPlayAction.HandCard).ToList();
+            });
         for (var i = 0; i < Math.Max(1, cardPlayAction.Play.PlayCount); i++)
         {
             var play = cardPlayAction.Play with { PlayIndex = i };
@@ -25,6 +32,65 @@ public static partial class SimEngine
             HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, play));
         }
         branches.Do(branch => branch.CurrentPlay = null);
+    }
+
+    /// <summary>
+    /// A play exhausting others: the cards that act when exhausted among the ones it can take (ExhaustFromHandAction) give their
+    /// energy (Drum of Battle's AfterCardExhausted: PlayerCmd.GainEnergy). All of them; one card at random, a branch per such card by
+    /// its share of the cards in the hand and one where another card went; or, when you choose, unknown while one could be picked.
+    /// </summary>
+    private static IEnumerable<SimState> RunExhaustFromHand(SimState state, ExhaustFromHandAction exhaust)
+    {
+        var owner = state.CurrentPlay?.Owner ?? Who.You;
+        if (state.Player(owner) is not { } player) return new[] { state };
+        if (exhaust.FromDrawPile)
+        {
+            if (player.Draw?.Rest.Any(group => group.Card.Exhausting != null) == true || player.Draw?.Top.Any(card => card.Exhausting != null) == true)
+                state.Unmodelled ??= "you choose the card it exhausts from your draw pile, and a card that acts when exhausted (Drum of Battle) is there";
+            return new[] { state };
+        }
+        bool Takes(ExhaustingCard card) => (exhaust.Only == SimCardType.None || card.Type == exhaust.Only) && (exhaust.Except == SimCardType.None || card.Type != exhaust.Except);
+        var taken = player.ExhaustingInHand.Where(Takes).ToList();
+        if (taken.Count == 0) return new[] { state };
+        switch (exhaust.Pick)
+        {
+            case ExhaustPick.Chosen:
+                state.Unmodelled ??= "you choose the card it exhausts, and a card that acts when exhausted (Drum of Battle) is in your hand";
+                return new[] { state };
+            case ExhaustPick.All:
+            {
+                state.MutablePlayer(owner).ExhaustingInHand = player.ExhaustingInHand.Where(card => !Takes(card)).ToList();
+                IEnumerable<SimState> states = new[] { state };
+                foreach (var card in taken) states = Then(states, branch => ProcCardEvent(branch, CardEvent.EnergyGained, card.Energy, owner, indirect: false));
+                return states;
+            }
+            default:
+            {
+                // One of the cards in the hand, each equally likely (CombatCardSelection.NextItem); of a kind (Thrash), the count of
+                // that kind isn't held: unknown.
+                if (exhaust.Only != SimCardType.None || exhaust.Except != SimCardType.None)
+                {
+                    state.Unmodelled ??= "it exhausts a random card of a kind from your hand, and a card that acts when exhausted (Drum of Battle) is one";
+                    return new[] { state };
+                }
+                var inHand = Math.Max(taken.Count, player.HandCount - player.PlayingFromHand);
+                var result = new List<SimState>();
+                foreach (var card in taken)
+                {
+                    var branch = state.Clone();
+                    branch.Weight = state.Weight / inHand;
+                    var mine = branch.MutablePlayer(owner);
+                    mine.ExhaustingInHand = mine.ExhaustingInHand.Where(other => other.HandCard != card.HandCard).ToList();
+                    result.AddRange(ProcCardEvent(branch, CardEvent.EnergyGained, card.Energy, owner, indirect: false));
+                }
+                if (inHand > taken.Count)
+                {
+                    state.Weight = state.Weight * (inHand - taken.Count) / inHand;
+                    result.Add(state); // another card went
+                }
+                return result;
+            }
+        }
     }
 
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>

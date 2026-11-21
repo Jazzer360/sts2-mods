@@ -186,6 +186,7 @@ public static partial class SimEngine
         // The draw a card acts on (RunDrawnCard): this card, and its id in AutoHand. Copied, not added to: branches share the list.
         if (record && state.DrawRecord != null) state.DrawRecord = new List<(SimDrawCard, int)>(state.DrawRecord) { (card, -1000 - simPlayer.Drawn) };
         if (card.TurnEnd != null) simPlayer.TurnEndCards = new List<TurnEndCard>(simPlayer.TurnEndCards) { card.TurnEnd };
+        if (card.Exhausting != null) simPlayer.ExhaustingInHand = new List<ExhaustingCard>(simPlayer.ExhaustingInHand) { card.Exhausting with { HandCard = -1000 - simPlayer.Drawn } };
         if (card.Fading) simPlayer.Fading++;
         if (card.HexFading) simPlayer.HexFading++;
         if (card.Status) simPlayer.StatusDrawn++;

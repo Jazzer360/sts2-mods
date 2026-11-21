@@ -158,7 +158,7 @@ public sealed class SimScript
         var body = new List<SimAction>(simPlay.Body);
         var shorthand = Shorthand(simPlay);
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
-        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0 });
+        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard });
         script.Actions.AddRange(simPlay.After);
         script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta });
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)

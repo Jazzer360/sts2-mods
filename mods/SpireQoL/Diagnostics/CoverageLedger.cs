@@ -336,7 +336,7 @@ internal static partial class CoverageLedger
         // ======== cards
         ["BansheesCry"] = "ignore: its own cost (read from the card)",
         ["Bombardment"] = "ignore: auto-plays at the start of your turn",
-        ["DrumOfBattle"] = "ignore: AfterCardExhausted energy when it's exhausted",
+        ["DrumOfBattle"] = "covered: AfterCardExhausted energy when it's exhausted (SimPlayer.ExhaustingInHand, ExhaustFromHandAction; its own exhaust under Corruption)",
         ["Enthralled"] = "ignore: playability (CanPlay)",
         ["Flatten"] = "ignore: its own cost after Osty attacks (read from the card)",
         ["HowlFromBeyond"] = "covered: AfterAutoPostPlayPhaseEntered auto-plays it from its owner's exhaust pile at the end of the turn: the simulator plays each copy in the auto-play phase, yours and teammates' (their card: SimEngine.AutoPostPlay in player order)",

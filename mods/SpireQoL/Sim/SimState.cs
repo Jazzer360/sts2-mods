@@ -314,6 +314,12 @@ public sealed class SimPlayer
     /// (SimEngine.HandAtTurnEnd). Never changed in place (shared between clones).
     /// </summary>
     public List<TurnEndCard> TurnEndCards = new();
+    /// <summary>
+    /// Cards in their hand that act when they're exhausted (their own AfterCardExhausted: Drum of Battle's energy), each with its
+    /// id in the hand (SimPlay.HandCard; drawn: -1000 - Drawn). A play exhausting from the hand sets them off (ExhaustFromHandAction);
+    /// one played leaves the list as it leaves the hand. Never changed in place (shared between clones).
+    /// </summary>
+    public List<ExhaustingCard> ExhaustingInHand = new();
 
     // Orbs, front first.
     public List<SimOrb> Orbs = new();
@@ -448,6 +454,9 @@ public sealed class SimPlayer
         Draw?.Hash(add);
         add(TurnEndCards.Count);
         foreach (var turnEndCard in TurnEndCards) { add(turnEndCard.Card.GetHashCode()); add(turnEndCard.Amount); }
+        // By what each one does, in any order (copies that act the same are the same hand, as for AutoHand).
+        add(ExhaustingInHand.Count);
+        foreach (var exhausting in ExhaustingInHand.OrderBy(card => card.Energy).ThenBy(card => card.Type)) { add(exhausting.Energy); add((int)exhausting.Type); }
         add(AutoHand?.Count ?? -1);
         // By what each card is, in any order: branches that picked identical copies hold the same hand, and merge.
         if (AutoHand != null) foreach (var key in AutoHand.Select(handCard => handCard.Key).OrderBy(key => key.Digest)) add(key.GetHashCode());
@@ -481,6 +490,12 @@ public readonly record struct HandCardKey(string Name, long Digest)
 {
     public override string ToString() => $"{Name}:{Digest:X16}";
 }
+
+/// <summary>
+/// A card that acts when it's exhausted (SimPlayer.ExhaustingInHand): which card in the hand it is, the energy it gives (Drum of
+/// Battle's Energy, from its own AfterCardExhausted), and its type (what a filtered exhaust looks at).
+/// </summary>
+public sealed record ExhaustingCard(int HandCard, int Energy, SimCardType Type);
 
 /// <summary>A card in your hand that Stampede or Simpleton could auto-play.</summary>
 public sealed class SimHandCard
@@ -739,6 +754,7 @@ public sealed class SimState
         {
             var player = shown.MutableTeammate(teammateIndex);
             player.TurnEndCards = new();
+            player.ExhaustingInHand = new();
             player.Fading = player.HexFading = 0;
             player.Draw = null;
             player.Stampede = player.Simpleton = 0;
