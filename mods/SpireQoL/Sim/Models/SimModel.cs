@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SpireQoL.Sim;
 
 /// <summary>
@@ -88,7 +90,7 @@ public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft, CounterPassedLimit }
 public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff);
 
 /// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
-public sealed record SimCardPlay(SimCard Card, int Owner, int Target, int PlayIndex, int PlayCount, bool AutoPlay)
+public sealed record SimCardPlay(SimCard Card, int Owner, [property: JsonConverter(typeof(CreatureIdJson))] int Target, int PlayIndex, int PlayCount, bool AutoPlay)
 {
     /// <summary>
     /// Epic Retrieval (AfterArrowDislodged, source this card): energy for each arrow of its player's knocked loose during the play
@@ -109,8 +111,8 @@ public sealed record AttackInfo(int Id, int Dealer, SimProps Props, SimCard? Car
 /// <summary>A damage event (DamageResult) for the hooks around it.</summary>
 public sealed record DamageEvent(int? Dealer, int Target, SimProps Props, SimCard? Card, int Total, int Blocked, int Unblocked, bool Killed);
 
-/// <summary>What a creature id names (Who.KindOf).</summary>
-public enum CreatureKind { You, Teammate, YourOsty, Enemy }
+/// <summary>What a creature id names (Who.KindOf); None: no creature (Who.None).</summary>
+public enum CreatureKind { You, Teammate, YourOsty, Enemy, None }
 
 /// <summary>
 /// Creature ids: one number for any creature, the only one the simulator uses (hooks need an owner, a target, a dealer). Enemies
@@ -120,10 +122,16 @@ public enum CreatureKind { You, Teammate, YourOsty, Enemy }
 public static class Who
 {
     public const int You = -1;
+    /// <summary>
+    /// No one: a play aimed at no creature (a card with no target, or an enemy-aimed one with no enemy to aim at). A card is never
+    /// aimed at you, and this is no creature's id, so "aimed at no one" can't be read as you.
+    /// </summary>
+    public const int None = int.MinValue;
     /// <summary>Your Osty, as a dealer (his own powers aren't simulated: his damage is captured).</summary>
     public const int YourOsty = -100;
     public static int Teammate(int teammateIndex) => -2 - teammateIndex;
-    public static CreatureKind KindOf(int id) => id >= 0 ? CreatureKind.Enemy : id == You ? CreatureKind.You : id == YourOsty ? CreatureKind.YourOsty : CreatureKind.Teammate;
+    public static CreatureKind KindOf(int id) => id >= 0 ? CreatureKind.Enemy : id == You ? CreatureKind.You : id == YourOsty ? CreatureKind.YourOsty
+        : id == None ? CreatureKind.None : CreatureKind.Teammate;
     public static bool IsEnemy(int id) => id >= 0;
     public static bool IsPlayer(int id) => KindOf(id) is CreatureKind.You or CreatureKind.Teammate;
     /// <summary>The teammate index of a player id (SimState.Teammates[k]); -1 for anything else.</summary>

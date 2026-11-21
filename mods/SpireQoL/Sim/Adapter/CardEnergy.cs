@@ -87,7 +87,7 @@ internal static class CardEnergy
     /// <summary>
     /// What the card's own energy adds to its play aimed at <paramref name="target"/>: events for the energy it gains (each play),
     /// or the fields the simulator works it out from. <paramref name="owner"/>: whose card it is; <paramref name="allyId"/>: the
-    /// teammate it's aimed at (-1: none).
+    /// teammate it's aimed at (Who.None: none).
     /// </summary>
     internal static void AddTo(SimPlay play, CardModel card, Player me, ICombatState combat, Creature? target, int owner, int allyId)
     {

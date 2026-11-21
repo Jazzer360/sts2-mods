@@ -34,3 +34,21 @@ public static class SimJson
         foreach (var kind in ActionKinds) typeInfo.PolymorphismOptions.DerivedTypes.Add(new JsonDerivedType(kind, kind.Name));
     }
 }
+
+/// <summary>
+/// A creature id that may be no one (a play's target, who cast Hex): no one (Who.None) is written as null. Read, null is no one,
+/// and so is -1, which meant no one in states written before Who.None (a target is never you, the other -1).
+/// </summary>
+public sealed class CreatureIdJson : JsonConverter<int>
+{
+    public override bool HandleNull => true;
+
+    public override int Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        reader.TokenType == JsonTokenType.Null ? Who.None : reader.GetInt32() is var id && id == -1 ? Who.None : id;
+
+    public override void Write(Utf8JsonWriter writer, int value, JsonSerializerOptions options)
+    {
+        if (value == Who.None) writer.WriteNullValue();
+        else writer.WriteNumberValue(value);
+    }
+}

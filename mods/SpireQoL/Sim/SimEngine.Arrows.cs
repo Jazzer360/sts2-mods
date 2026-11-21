@@ -35,8 +35,8 @@ public static partial class SimEngine
     {
         branches.Each(branch =>
         {
-            var target = branch.CurrentPlay?.Target ?? -1;
-            branch.ArrowAwayAt = -1;
+            var target = branch.CurrentPlay?.Target ?? Who.None;
+            branch.ArrowAwayAt = Who.None;
             if (branch.You.Arrows > 0 && branch.Enemy(target) is { Alive: true })
             {
                 branch.You.Arrows--;
@@ -51,7 +51,7 @@ public static partial class SimEngine
         branches.Each(branch =>
         {
             var target = branch.ArrowAwayAt;
-            branch.ArrowAwayAt = -1;
+            branch.ArrowAwayAt = Who.None;
             if (branch.Enemy(target) is not { } enemy) return new[] { branch };
             var powers = enemy.Powers;
             enemy.Powers = powers.Has(Impaled) ? powers.With(Impaled, powers[Impaled] + 1) : powers.With(Impaled, amount: 1, data: 3);

@@ -354,7 +354,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             // Your hand as the forecast saw it: each card by its identity, and what it is (picks are by what it is: SimPick).
             var hand = forecast.State.You.AutoHand?.ToDictionary(handCard => handCard.Id, handCard => handCard.Key);
             var picks = hand == null ? new List<SimPick>() : autoPlays.Where(cardPlayStartedEntry => hand.ContainsKey(SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card)))
-                .Select(cardPlayStartedEntry => new SimPick(hand[SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card)], cardPlayStartedEntry.CardPlay.Target is { } creature && forecast.Ids.TryGetValue(creature, out var tid) ? tid : -1)).ToList();
+                .Select(cardPlayStartedEntry => new SimPick(hand[SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card)], cardPlayStartedEntry.CardPlay.Target is { } creature && forecast.Ids.TryGetValue(creature, out var tid) ? tid : Who.None)).ToList();
             bool Picked(SimState state) => state.AutoPlaysUnknown
                 ? state.AutoPlayed <= autoPlays.Count && picks.Count >= state.AutoPicks.Count && picks.Take(state.AutoPicks.Count).SequenceEqual(state.AutoPicks)
                 : state.AutoPlayed == autoPlays.Count && picks.SequenceEqual(state.AutoPicks);

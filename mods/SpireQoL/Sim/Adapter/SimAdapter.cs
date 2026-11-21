@@ -352,7 +352,7 @@ public static partial class SimAdapter
             }
             foreach (var card in PileType.Exhaust.GetPile(me).Cards)
             {
-                if (card is HowlFromBeyond) player.ExhaustAutoPlays.Add(AutoPlay(card, me, combat, ids, target: -1, owner: owner));
+                if (card is HowlFromBeyond) player.ExhaustAutoPlays.Add(AutoPlay(card, me, combat, ids, target: Who.None, owner: owner));
             }
             var drawPile = PileType.Draw.GetPile(me).Cards;
             if (drawPile.Count > 0 && drawPile.All(card => card is IAmInvincible))
@@ -513,7 +513,7 @@ public static partial class SimAdapter
     {
         var facts = PlayFacts.For(card, me, combat, CardPlays.Count(card));
         if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
-        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: -1, facts) };
+        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: Who.None, facts) };
         return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, facts)).ToList();
     }
 

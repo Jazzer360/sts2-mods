@@ -53,6 +53,8 @@ public static class DevDashboard
                     sink.SaveReport(localReport.Id, DevSink.Json(localReport, indented: true));
                     sink.Post(new ReportSaved(localReport.Id, localReport.Kind, localReport.Title, localReport.Fingerprint));
                 };
+                // The reporter's own start-up line says Sentry (it starts before dev mode takes its reports over).
+                ModEntry.Log.Info($"[dev] error reports kept in {Folder}, none sent to Sentry");
             }
             _gc = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), GC.GetTotalAllocatedBytes(), GC.GetTotalPauseDuration());
             host.AddLateFrame("dev-dashboard", Tick);

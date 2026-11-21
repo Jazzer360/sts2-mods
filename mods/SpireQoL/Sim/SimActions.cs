@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SpireQoL.Sim;
 
 /// <summary>
@@ -40,7 +42,8 @@ public sealed record DamageSpec(decimal Base, SimProps Props)
 public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Damage) : SimAction
 {
     /// <summary>The enemy aimed at (Mode Single; -1: the play's target).</summary>
-    public int TargetId { get; init; } = -1;
+    [JsonConverter(typeof(CreatureIdJson))]
+    public int TargetId { get; init; } = Who.None;
     /// <summary>Osty makes the attack (his hits: Thorns hits him; your Envenom and The Boot don't apply).</summary>
     public bool ByOsty { get; init; }
     /// <summary>Timber: when a hit kills the target, a second attack hits every enemy with this damage (OnKillDamage).</summary>

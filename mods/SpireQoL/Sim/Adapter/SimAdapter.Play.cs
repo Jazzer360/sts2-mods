@@ -39,7 +39,7 @@ public static partial class SimAdapter
         };
         // Aimed at a teammate: what lands on them goes to them (never to you, even with no teammate to aim at).
         Creature? ally = null;
-        var allyId = -1;
+        var allyId = Who.None;
         if (card.TargetType == TargetType.AnyAlly && Who.TeammateIndex(targetId) is var aimedAt and >= 0)
         {
             var allies = Teammates(me, combat);
@@ -274,7 +274,7 @@ public static partial class SimAdapter
         if (gains <= 0) return null;
         var toAlly = BlockToAllyCards.Contains(name);
         var to = toAlly ? allyId : Who.You;
-        if (toAlly && allyId == -1) return null; // no teammate to aim at: the block goes to no one
+        if (toAlly && allyId == Who.None) return null; // no teammate to aim at: the block goes to no one
         var aimed = ids.FirstOrDefault(entry => entry.Value == targetId).Key;
         if (name == nameof(Fisticuffs))
         {
@@ -338,7 +338,7 @@ public static partial class SimAdapter
                 if (!debuffs.Contains(type) || whereEnemies is not { } where) continue;
                 actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = where, Debuff = true });
             }
-            else if (card.TargetType == TargetType.AnyAlly && allyId != -1 && simPowerName == nameof(CoveredPower))
+            else if (card.TargetType == TargetType.AnyAlly && allyId != Who.None && simPowerName == nameof(CoveredPower))
             {
                 actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
             }
@@ -380,10 +380,10 @@ public static partial class SimAdapter
             case nameof(MultiCast) when X() is var evokes and > 0: actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = evokes }); break;
             case nameof(Shatter): actions.Add(new OrbAction(OrbAction.Op.EvokeAllTwice)); break;
         }
-        if (channelTo == -1 && ChannelToAllyCards.Contains(name)) channelTo = int.MinValue; // aimed at no teammate: nothing channelled
         void Channel(OrbKind kind, int times)
         {
-            if (times > 0 && channelTo != int.MinValue) actions.Add(new OrbAction(OrbAction.Op.Channel) { Orb = kind, Times = times, To = channelTo });
+            // Aimed at no teammate (Ignition with none to aim at): nothing channelled.
+            if (times > 0 && channelTo != Who.None) actions.Add(new OrbAction(OrbAction.Op.Channel) { Orb = kind, Times = times, To = channelTo });
         }
         if (Channels.TryGetValue(name, out var kinds))
         {

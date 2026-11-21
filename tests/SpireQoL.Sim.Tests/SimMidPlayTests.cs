@@ -62,7 +62,7 @@ public class SimMidPlayTests
         var state = new SimState { Enemies = { E(id: 1, hp: 50), E(id: 2, hp: 50) } };
         state.You.Powers = state.You.Powers.With(PowerId.SerratedArrows, amount: 100);
         state.Enemies[1].Powers = PowerSet.Empty.With(PowerId.Impaled, amount: 1, data: 1);
-        var after = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(ScriptBuilder.Card("Cleave"), target: -1, plays: 1, ScriptBuilder.Attack(baseDamage: 5, hits: 2, mode: SimPlay.Target.All))));
+        var after = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(ScriptBuilder.Card("Cleave"), target: Who.None, plays: 1, ScriptBuilder.Attack(baseDamage: 5, hits: 2, mode: SimPlay.Target.All))));
         Assert.Equal(40, after.Enemy(id: 1)!.Hp);
         Assert.Equal(35, after.Enemy(id: 2)!.Hp);
 
@@ -160,7 +160,7 @@ public class SimMidPlayTests
         var state = new SimState { Enemies = { E(id: 1, hp: 50) } };
         state.You.Powers = state.You.Powers.With(PowerId.Stretch, amount: 12);
         var defend = new SimCard("Defend", SimCardType.Skill) { GainsBlock = true };
-        Assert.Equal(28, Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(defend, target: -1, plays: 2, ScriptBuilder.Block(baseBlock: 8)))).You.Block);
+        Assert.Equal(28, Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(defend, target: Who.None, plays: 2, ScriptBuilder.Block(baseBlock: 8)))).You.Block);
 
     }
 
@@ -183,7 +183,7 @@ public class SimMidPlayTests
         var state = new SimState { Enemies = { E(id: 1, hp: 50) } };
         state.You.Powers = state.You.Powers.With(PowerId.Stretch, amount: 4);
         var adroit = new SimCard("Strike", SimCardType.Attack) { GainsBlock = true, Enchanted = true };
-        var after = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(adroit, target: -1, plays: 2, ScriptBuilder.Block(baseBlock: 3))));
+        var after = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(adroit, target: Who.None, plays: 2, ScriptBuilder.Block(baseBlock: 3))));
         Assert.Equal(10, after.You.Block);
         Assert.Equal(2, after.You.BlockGains);
 

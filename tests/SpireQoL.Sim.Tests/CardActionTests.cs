@@ -15,6 +15,18 @@ public class CardActionTests
     }
 
     [Fact]
+    public void ADebuffOnTheTargetOfAPlayAimedAtNoOneLandsNowhere()
+    {
+        // A card aimed at an enemy with no enemy to aim at (every one unhittable) is simulated aimed at no one: its Weak and Poison
+        // land on no one, never on you (a card is never aimed at you).
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 30) } };
+        var after = Assert.Single(After(state, Play(Card("DeadlyPoison", SimCardType.Skill), target: Who.None, plays: 1,
+            new ApplyPowerAction(PowerId.Weak, Amount: 1) { Debuff = true }, new ApplyPowerAction(PowerId.Poison, Amount: 5) { Debuff = true })));
+        Assert.Equal(PowerSet.Empty, after.You.Powers);
+        Assert.Equal(PowerSet.Empty, after.Enemy(id: 0)!.Powers);
+    }
+
+    [Fact]
     public void CaptureSpiritDamagesWithoutBeingAnAttack()
     {
         // Curl Up reacts to attacks only: not to Capture Spirit's damage.
@@ -33,7 +45,7 @@ public class CardActionTests
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50, block: 5), Enemy(id: 1, hp: 50) } };
         state.You.OstyHp = 7;
         state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, amount: 2);
-        var after = Assert.Single(After(state, Play(Card("Sacrifice", SimCardType.Skill), target: -1, plays: 1, new KillOstyAction())));
+        var after = Assert.Single(After(state, Play(Card("Sacrifice", SimCardType.Skill), target: Who.None, plays: 1, new KillOstyAction())));
         Assert.Equal(0, after.You.OstyHp);
         Assert.Equal(36, after.Enemy(id: 0)!.Hp); // unblockable
         Assert.Equal(36, after.Enemy(id: 1)!.Hp);
@@ -58,7 +70,7 @@ public class CardActionTests
     {
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50), Enemy(id: 1, hp: 50) } };
         state.You.Relics = state.You.Relics.With(RelicId.SneckoSkull, amount: 1);
-        var after = After(state, Play(Card("BouncingFlask", SimCardType.Skill), target: -1, plays: 1,
+        var after = After(state, Play(Card("BouncingFlask", SimCardType.Skill), target: Who.None, plays: 1,
             new ApplyPowerAction(PowerId.Poison, Amount: 3) { To = ApplyPowerAction.Where.RandomEnemy, Times = 2, Debuff = true }));
         Assert.Equal(3, after.Count); // 8 on one, 8 on the other, 4 on each
         Assert.All(after, branch => Assert.Equal(8, branch.Enemies.Sum(enemy => enemy.PoisonStacks)));

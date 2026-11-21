@@ -213,7 +213,7 @@ public class SimAutoPlayTests
         var play = AllEnemies("HowlFromBeyond", damage, ids);
         play.HandDelta = 0; // from their exhaust pile
         play.AutoPlay = true;
-        play.Card = new SimCardPlay(new SimCard("HowlFromBeyond", SimCardType.Attack), Who.Teammate(teammateIndex: 0), Target: -1, PlayIndex: 0, PlayCount: 1, AutoPlay: true);
+        play.Card = new SimCardPlay(new SimCard("HowlFromBeyond", SimCardType.Attack), Who.Teammate(teammateIndex: 0), Target: Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: true);
         return play;
     }
 

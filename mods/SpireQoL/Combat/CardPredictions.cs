@@ -443,9 +443,9 @@ public sealed class CardPredictions
         {
             TargetType.AnyEnemy => forecast.Ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => entry.Value).ToList(),
             TargetType.AnyAlly => Enumerable.Range(0, forecast.Teammates.Count).Select(Who.Teammate).ToList(),
-            _ => new List<int> { -1 },
+            _ => new List<int> { Who.None },
         };
-        if (targets.Count == 0) targets.Add(-1);
+        if (targets.Count == 0) targets.Add(Who.None); // aimed at an enemy with none to aim at: at no one
 
         var stateKey = forecast.StateKey;
         if (!_noCache && stateKey != _simKey)

@@ -30,7 +30,7 @@ public class SimByPlayTests
     {
         var state = State(hp: 50);
         state.You.Powers = state.You.Powers.With(PowerId.Tender, amount: 1);
-        var after = Assert.Single(After(state, Play(Card("Defend", SimCardType.Skill), target: -1, plays: 2, Block(baseBlock: 5))));
+        var after = Assert.Single(After(state, Play(Card("Defend", SimCardType.Skill), target: Who.None, plays: 2, Block(baseBlock: 5))));
         Assert.Equal(9, after.You.Block);
     }
 

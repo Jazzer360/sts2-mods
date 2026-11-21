@@ -344,6 +344,8 @@ public class SimCreatureIdTests
         Assert.Equal(CreatureKind.You, Who.KindOf(Who.You));
         Assert.Equal(CreatureKind.Teammate, Who.KindOf(Who.Teammate(teammateIndex: 0)));
         Assert.Equal(CreatureKind.YourOsty, Who.KindOf(Who.YourOsty));
+        Assert.Equal(CreatureKind.None, Who.KindOf(Who.None)); // no one: never read as a teammate or you
+        Assert.Equal(-1, Who.TeammateIndex(Who.None));
         Assert.Equal(-1, Who.TeammateIndex(id: 0));
         Assert.Equal(2, Who.TeammateIndex(Who.Teammate(teammateIndex: 2)));
         var state = new SimState();

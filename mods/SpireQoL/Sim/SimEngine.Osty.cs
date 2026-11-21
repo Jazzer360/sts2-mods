@@ -21,7 +21,7 @@ public static partial class SimEngine
 
     private static void RunDamage(BranchSet branches, DamageAction damageAction) => branches.Each(branch =>
     {
-        var target = branch.CurrentPlay?.Target ?? -1;
+        var target = branch.CurrentPlay?.Target ?? Who.None;
         if (branch.Enemy(target) is not { Alive: true } enemy) return new[] { branch };
         var spec = damageAction.Damage;
         var card = branch.CurrentPlay?.Card;
@@ -61,7 +61,7 @@ public static partial class SimEngine
 
     private static void RunExecute(BranchSet branches, ExecuteAction ex) => branches.Do(branch =>
     {
-        if (branch.Enemy(branch.CurrentPlay?.Target ?? -1) is { Alive: true } enemy && enemy.Hp <= ex.Threshold) enemy.Hp = 0;
+        if (branch.Enemy(branch.CurrentPlay?.Target ?? Who.None) is { Alive: true } enemy && enemy.Hp <= ex.Threshold) enemy.Hp = 0;
         AllyDeaths(branch);
     });
 }

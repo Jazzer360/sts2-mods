@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SpireQoL.Sim;
 
 /// <summary>
@@ -14,11 +16,12 @@ public sealed class SimPlay
 
     public string Name = "";
     /// <summary>
-    /// What the play is aimed at: an enemy's id, a teammate (Who.Teammate), or -1 for none. The one place a play's target is kept
+    /// What the play is aimed at: an enemy's id, a teammate (Who.Teammate), or no one (Who.None). The one place a play's target is kept
     /// (decision #84): the card play takes it when the script is built (SimScript.Of), and actions aimed at "the play's target"
     /// read it from there. Single hits, poison on the target, Capture Spirit, Judgement, and auto-plays picking a target.
     /// </summary>
-    public int TargetId = -1;
+    [JsonConverter(typeof(CreatureIdJson))]
+    public int TargetId = Who.None;
     /// <summary>The card play (its hooks run around each play); null: a card named Name, Attack when IsAttack. Its Target is set from TargetId.</summary>
     public SimCardPlay? Card;
     /// <summary>What each play does (OnPlay, then the enchantment's), in order.</summary>
@@ -98,7 +101,8 @@ public sealed class SimPlay
 public sealed class ProcHit
 {
     public SimPlay.Target Spread;
-    public int TargetId = -1;
+    [JsonConverter(typeof(CreatureIdJson))]
+    public int TargetId = Who.None;
     public Dictionary<int, int> Damage = new();
     public int Times = 1;
 }
@@ -117,7 +121,7 @@ public sealed class OrbOp
 }
 
 /// <summary>Damage given as final numbers (a proc in the test shorthand): unpowered, from you, no card; Times times.</summary>
-public sealed record FixedHitsAction(SimPlay.Target Spread, int TargetId, IReadOnlyDictionary<int, int> Damage, int Times) : SimAction;
+public sealed record FixedHitsAction(SimPlay.Target Spread, [property: JsonConverter(typeof(CreatureIdJson))] int TargetId, IReadOnlyDictionary<int, int> Damage, int Times) : SimAction;
 
 /// <summary>Blockable damage to you from an effect (unpowered; Galvanic-like in the test shorthand).</summary>
 public sealed record HitYouAction(string Name, int Amount) : SimAction;
@@ -173,7 +177,7 @@ public sealed class SimScript
         {
             actions.Add(new AttackAction(play.Hits, play.HitTarget, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = Decimals(play.HitDamage), Fixed = true })
             {
-                TargetId = play.HitTarget == SimPlay.Target.Single ? play.TargetId : -1,
+                TargetId = play.HitTarget == SimPlay.Target.Single ? play.TargetId : Who.None,
                 ByOsty = play.ByOsty,
                 OnKill = play.OnKillHitAll.Count > 0 ? new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = Decimals(play.OnKillHitAll), Fixed = true } : null,
                 Splash = play.SplashFromTarget,

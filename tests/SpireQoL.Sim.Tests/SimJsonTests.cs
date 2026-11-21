@@ -42,6 +42,23 @@ public class SimJsonTests
     }
 
     [Fact]
+    public void NoOneIsWrittenAsNullAndOldStatesMinusOneReadsAsNoOne()
+    {
+        // Aimed at no one is Who.None, written as null; a state written before it said -1 (never you in a target: a card isn't
+        // aimed at you), and reads as no one.
+        var state = new SimState();
+        state.You.ExhaustAutoPlays.Add(new SimPlay { Name = "HowlFromBeyond" });
+        var json = state.ToJson();
+        Assert.Contains("\"TargetId\":null", json);
+        Assert.Contains("\"HexFrom\":null", json);
+        Assert.Equal(Who.None, SimState.FromJson(json).You.ExhaustAutoPlays[0].TargetId);
+        var old = SimState.FromJson(json.Replace("\"TargetId\":null", "\"TargetId\":-1").Replace("\"HexFrom\":null", "\"HexFrom\":-1"));
+        Assert.Equal(Who.None, old.You.ExhaustAutoPlays[0].TargetId);
+        Assert.Equal(Who.None, old.You.HexFrom);
+        Assert.Equal(2, SimState.FromJson(json.Replace("\"TargetId\":null", "\"TargetId\":2")).You.ExhaustAutoPlays[0].TargetId);
+    }
+
+    [Fact]
     public void AHandCardsKeyReadsEveryFieldOfItsPlaysButNotWhichCardItIs()
     {
         SimHandCard Card(int id, Action<SimPlay>? change = null)

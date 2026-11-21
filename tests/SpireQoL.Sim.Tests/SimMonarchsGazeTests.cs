@@ -26,7 +26,7 @@ public class SimMonarchsGazeTests
     {
         // Two random hits on two enemies attacking for 10; each hit takes 2 Strength off the enemy it lands on.
         var outcome = SimEngine.Run(Gazing(Attacker(id: 0, hp: 50, hit: 10), Attacker(id: 1, hp: 50, hit: 10)),
-            Play(Card("SwordBoomerang"), target: -1, plays: 1, Attack(baseDamage: 3, hits: 2, mode: SimPlay.Target.Random)));
+            Play(Card("SwordBoomerang"), target: Who.None, plays: 1, Attack(baseDamage: 3, hits: 2, mode: SimPlay.Target.Random)));
         // Both hits on one enemy: 6 + 10; one each: 8 + 8. Either way 16.
         Assert.Equal(16, outcome.TakenMax);
         Assert.Equal(16, outcome.TakenMin);
@@ -37,7 +37,7 @@ public class SimMonarchsGazeTests
     [Fact]
     public void ASingleEnemyTakesEveryHit()
     {
-        var outcome = SimEngine.Run(Gazing(Attacker(id: 0, hp: 50, hit: 10)), Play(Card("SwordBoomerang"), target: -1, plays: 1, Attack(baseDamage: 3, hits: 3, mode: SimPlay.Target.Random)));
+        var outcome = SimEngine.Run(Gazing(Attacker(id: 0, hp: 50, hit: 10)), Play(Card("SwordBoomerang"), target: Who.None, plays: 1, Attack(baseDamage: 3, hits: 3, mode: SimPlay.Target.Random)));
         Assert.Equal(4, outcome.TakenMax);
     }
 }

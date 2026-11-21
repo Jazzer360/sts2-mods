@@ -178,7 +178,7 @@ public class StatModelTests
     public void DexterityAndFrailOnBlock()
     {
         var state = WithPowers((PowerId.Dexterity, 2), (PowerId.Frail, 1));
-        Assert.Equal(5, After(state, Play(Card("Defend", SimCardType.Skill), target: -1, plays: 1, Block(baseBlock: 5))).Single().You.Block); // (5 + 2) × 0.75
+        Assert.Equal(5, After(state, Play(Card("Defend", SimCardType.Skill), target: Who.None, plays: 1, Block(baseBlock: 5))).Single().You.Block); // (5 + 2) × 0.75
     }
 
     [Fact]
@@ -212,11 +212,11 @@ public class FirstHitTests
     {
         var state = new SimState { Enemies = { ScriptBuilder.Enemy(id: 0, hp: 100), ScriptBuilder.Enemy(id: 1, hp: 100) } };
         state.You.Powers = state.You.Powers.With(PowerId.Strength, amount: 2);
-        var all = SimEngine.Run(state, ScriptBuilder.Play(ScriptBuilder.Card("Cleave"), target: -1, plays: 1, ScriptBuilder.Attack(baseDamage: 8, hits: 2, mode: SimPlay.Target.All)));
+        var all = SimEngine.Run(state, ScriptBuilder.Play(ScriptBuilder.Card("Cleave"), target: Who.None, plays: 1, ScriptBuilder.Attack(baseDamage: 8, hits: 2, mode: SimPlay.Target.All)));
         Assert.Equal(10, all.PlayFirstHits[0]);
         Assert.Equal(10, all.PlayFirstHits[1]);
         // Random targets: the branches disagree on who was hit first, so nothing is recorded.
-        var random = SimEngine.Run(state, ScriptBuilder.Play(ScriptBuilder.Card("SwordBoomerang"), target: -1, plays: 1, ScriptBuilder.Attack(baseDamage: 3, hits: 1, mode: SimPlay.Target.Random)));
+        var random = SimEngine.Run(state, ScriptBuilder.Play(ScriptBuilder.Card("SwordBoomerang"), target: Who.None, plays: 1, ScriptBuilder.Attack(baseDamage: 3, hits: 1, mode: SimPlay.Target.Random)));
         Assert.Empty(random.PlayFirstHits);
     }
 }
@@ -230,12 +230,12 @@ public class ChoKiTests
         var state = new SimState { Enemies = { ScriptBuilder.Enemy(id: 0, hp: 100) } };
         state.You.Powers = state.You.Powers.With(PowerId.Stretch, amount: 3);
         var choKi = new SimCard("ChoKi", SimCardType.Skill) { GainsBlock = true };
-        var after = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(choKi, target: -1, plays: 1, ScriptBuilder.Block(baseBlock: 5),
+        var after = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(choKi, target: Who.None, plays: 1, ScriptBuilder.Block(baseBlock: 5),
             new ApplyPowerAction(PowerId.Stretch, Amount: 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true })));
         Assert.Equal(8, after.You.Block);
         Assert.Equal(3, after.You.Powers[PowerId.Stretch]);
         // Any other block card spends it.
-        var other = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(new SimCard("Defend", SimCardType.Skill) { GainsBlock = true }, target: -1, plays: 1, ScriptBuilder.Block(baseBlock: 5))));
+        var other = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(new SimCard("Defend", SimCardType.Skill) { GainsBlock = true }, target: Who.None, plays: 1, ScriptBuilder.Block(baseBlock: 5))));
         Assert.False(other.You.Powers.Has(PowerId.Stretch));
     }
 }

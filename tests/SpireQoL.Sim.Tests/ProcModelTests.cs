@@ -33,7 +33,7 @@ public class ProcModelTests
 
     private static SimState One(SimState state, SimScript script) => Assert.Single(After(state, script));
 
-    private static SimScript Events(SimCard card, int plays, params SimAction[] body) => Play(card, target: -1, plays, body);
+    private static SimScript Events(SimCard card, int plays, params SimAction[] body) => Play(card, target: Who.None, plays, body);
 
     // ---- your powers on play
 

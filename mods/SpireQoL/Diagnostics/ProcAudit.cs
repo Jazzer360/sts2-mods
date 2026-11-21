@@ -154,7 +154,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         if (window.Facts is not { Sim: { } sim } facts || facts.SimIncomplete || facts.SimPending || facts.Unmodelled.Count > 0) return null;
         var key = sim.KeyFor(window.Target);
-        return sim.PlayByTarget.ContainsKey(key) ? key : sim.PlayByTarget.ContainsKey(-1) ? -1 : null;
+        return sim.PlayByTarget.ContainsKey(key) ? key : sim.PlayByTarget.ContainsKey(Who.None) ? Who.None : null;
     }
 
     /// <summary>
@@ -1699,7 +1699,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Skip("lethal", "auto-played cards");
             return;
         }
-        if (!deaths.TryGetValue(sim.KeyFor(window.Target), out var card) && !deaths.TryGetValue(-1, out card)) return;
+        if (!deaths.TryGetValue(sim.KeyFor(window.Target), out var card) && !deaths.TryGetValue(Who.None, out card)) return;
         // What's shown leaves teammates' hands out when the setting is off (decisions #25, #94): the same here.
         var post = SimEngine.Run(sim.FullStart != null ? window.After.WithoutTeammateHands() : window.After);
         if (post.Truncated || post.AnyUnmodelled || post.Branches.Count == 0)

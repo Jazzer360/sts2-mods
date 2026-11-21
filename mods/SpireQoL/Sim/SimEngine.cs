@@ -992,7 +992,7 @@ public static partial class SimEngine
             {
                 branch.AutoPlaysUnknown = true;
                 branch.Unmodelled ??= $"{card.Name} auto-played at end of turn: its play isn't simulated";
-                if (yours) branch.AutoPicks = [..branch.AutoPicks, new SimPick(card.Key, Target: -1)];
+                if (yours) branch.AutoPicks = [..branch.AutoPicks, new SimPick(card.Key, Target: Who.None)];
                 result.Add(branch);
                 continue;
             }
@@ -1100,7 +1100,7 @@ public static partial class SimEngine
 
     private static void StripBlock(SimState state, StripBlockAction stripBlockAction)
     {
-        if (state.Enemy(state.CurrentPlay?.Target ?? -1) is not { Alive: true } enemy) return;
+        if (state.Enemy(state.CurrentPlay?.Target ?? Who.None) is not { Alive: true } enemy) return;
         if (enemy.Block > 0)
         {
             enemy.Block = 0;

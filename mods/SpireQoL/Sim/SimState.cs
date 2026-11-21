@@ -302,11 +302,12 @@ public sealed class SimPlayer
     public int StatusDrawn;
     /// <summary>
     /// Of those, the ones Ethereal only through Hex (HexPower.TryModifyKeywordsInCombat on its Hexed cards), and the enemy that
-    /// cast it (-1: none). Hex is removed when its caster dies (HexPower.AfterDeath), and those cards stop being Ethereal: they
+    /// cast it (Who.None: none). Hex is removed when its caster dies (HexPower.AfterDeath), and those cards stop being Ethereal: they
     /// stay in hand at end of turn (decision #85).
     /// </summary>
     public int HexFading;
-    public int HexFrom = -1;
+    [JsonConverter(typeof(CreatureIdJson))]
+    public int HexFrom = Who.None;
     public int AttacksThisTurn;
     /// <summary>
     /// Cards in hand that act when the turn ends (CardModel.OnTurnEndInHand), in hand order: what each does is the simulator's
@@ -468,9 +469,9 @@ public sealed class SimPlayer
 
 /// <summary>
 /// An auto-play from your hand in one branch: what the card is (SimHandCard.Key: copies the simulator plays the same are one pick,
-/// so a branch that picked either copy is one branch) and the enemy it was aimed at (-1: none).
+/// so a branch that picked either copy is one branch) and the enemy it was aimed at (Who.None: none).
 /// </summary>
-public sealed record SimPick(HandCardKey Card, int Target);
+public sealed record SimPick(HandCardKey Card, [property: JsonConverter(typeof(CreatureIdJson))] int Target);
 
 /// <summary>
 /// What a hand card is to the simulator (SimHandCard.Key): its name, and a digest of everything else it holds. Two copies with one
@@ -687,7 +688,7 @@ public sealed class SimState
     /// <summary>Card events raised inside a hit or a death, run once it's over (SimEngine.Raise, DrainPending).</summary>
     internal ImmutableArray<PendingEvent> Pending = ImmutableArray<PendingEvent>.Empty;
     /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
-    internal int ArrowAwayAt = -1;
+    internal int ArrowAwayAt = Who.None;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
     internal SimCard? EventCard;
     /// <summary>Card events during the current card play, for its player (Unceasing Top: nothing drawn or created).</summary>

@@ -56,7 +56,7 @@ public static partial class SimEngine
                 case SimPlay.Target.Single:
                     branches.Each(branch =>
                     {
-                        var target = at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? -1;
+                        var target = at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? Who.None;
                         if (branch.Enemy(target) is not { Alive: true }) return new[] { branch };
                         var states = HitOnce(branch, Info(branch).Dealer, target, at);
                         // Timber: the kill sets off a second attack on every enemy.
@@ -76,7 +76,7 @@ public static partial class SimEngine
         HookStep(branches, nameof(SimModel.AfterAttack), (model, owner, branch) => model.AfterAttack(branch, owner, Info(branch)));
         // Sunder: energy once the attack is over, when it killed its target.
         if (at.OnKillEnergy > 0)
-            branches.Each(branch => (at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? -1) is var target && branch.Enemy(target) is { Alive: false }
+            branches.Each(branch => (at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? Who.None) is var target && branch.Enemy(target) is { Alive: false }
                 ? ProcCardEvent(branch, CardEvent.EnergyGained, at.OnKillEnergy, branch.CurrentPlay?.Owner ?? Who.You, indirect: false) : new[] { branch });
         branches.Do(branch => branch.CurrentAttack = 0);
 
@@ -209,7 +209,8 @@ public static partial class SimEngine
             var applier = branch.CurrentPlay?.Owner ?? Who.You;
             var targets = applyPowerAction.To switch
             {
-                ApplyPowerAction.Where.Target => branch.CurrentPlay?.Target is { } aimed && (aimed < 0 || branch.Enemy(aimed) is { Alive: true }) ? new List<int> { aimed } : new List<int>(),
+                // The play's target: a living enemy, or a teammate (Ignition, Covered); aimed at no one, no one (never you: Who.None).
+                ApplyPowerAction.Where.Target => branch.CurrentPlay?.Target is { } aimed && (Who.KindOf(aimed) == CreatureKind.Teammate || branch.Enemy(aimed) is { Alive: true }) ? new List<int> { aimed } : new List<int>(),
                 ApplyPowerAction.Where.AllEnemies => branch.Targetable.Select(enemy => enemy.Id).ToList(),
                 ApplyPowerAction.Where.You => new List<int> { applier },
                 _ => new List<int> { applyPowerAction.Creature },

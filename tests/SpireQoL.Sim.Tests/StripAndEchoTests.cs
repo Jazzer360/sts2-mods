@@ -37,7 +37,7 @@ public class StripAndEchoTests
         // The report's fight: 9 per hit on Gardeners at 16, 28, 32 and 5 HP. Round 1 kills the 5; round 2 kills the 7 left of
         // the 16; round 3 kills none: 1 and 5 left.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 16), Enemy(id: 1, hp: 28), Enemy(id: 2, hp: 32), Enemy(id: 3, hp: 5) } };
-        var after = After(state, Play(Card("EchoingSlash"), target: -1, plays: 1, Attack(baseDamage: 9, mode: SimPlay.Target.All) with { RepeatPerKill = true })).Single();
+        var after = After(state, Play(Card("EchoingSlash"), target: Who.None, plays: 1, Attack(baseDamage: 9, mode: SimPlay.Target.All) with { RepeatPerKill = true })).Single();
         Assert.False(after.Enemy(id: 0)!.Alive);
         Assert.Equal(1, after.Enemy(id: 1)!.Hp);
         Assert.Equal(5, after.Enemy(id: 2)!.Hp);
@@ -48,10 +48,10 @@ public class StripAndEchoTests
     public void TwoKillsInOneRoundGiveTwoMoreRounds()
     {
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 5), Enemy(id: 1, hp: 5), Enemy(id: 2, hp: 30) } };
-        var after = After(state, Play(Card("EchoingSlash"), target: -1, plays: 1, Attack(baseDamage: 9, mode: SimPlay.Target.All) with { RepeatPerKill = true })).Single();
+        var after = After(state, Play(Card("EchoingSlash"), target: Who.None, plays: 1, Attack(baseDamage: 9, mode: SimPlay.Target.All) with { RepeatPerKill = true })).Single();
         Assert.Equal(3, after.Enemy(id: 2)!.Hp); // 3 rounds: 30 - 27
         // Without the flag, one round only.
-        var plain = After(state, Play(Card("Whirl"), target: -1, plays: 1, Attack(baseDamage: 9, mode: SimPlay.Target.All))).Single();
+        var plain = After(state, Play(Card("Whirl"), target: Who.None, plays: 1, Attack(baseDamage: 9, mode: SimPlay.Target.All))).Single();
         Assert.Equal(21, plain.Enemy(id: 2)!.Hp);
     }
 }

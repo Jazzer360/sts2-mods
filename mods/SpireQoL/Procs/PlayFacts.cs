@@ -1314,8 +1314,8 @@ public sealed class SimInputs
 
     /// <summary>The simulation key for a play aimed at this creature: an enemy id, a teammate's AllyKey, or -1.</summary>
     public int KeyFor(Creature? target) =>
-        target == null ? -1
+        target == null ? Who.None
         : Ids.TryGetValue(target, out var id) ? id
-        : Allies.ToList().IndexOf(target) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : -1;
+        : Allies.ToList().IndexOf(target) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : Who.None;
     public Dictionary<int, SimPlay> PlayByTarget { get; } = new();
 }
