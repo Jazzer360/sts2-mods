@@ -197,6 +197,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
     <div class="status" id="status"><span class="dot" id="dot"></span><span id="statusText">Not connected</span></div>
     <button id="noteBtn" data-note title="Write a note for the next stretch of work (saved to feedback.jsonl, with the fight and turn)">✎ Note</button>
     <button id="connectBtn" class="primary">Connect</button>
+    <button id="watchBtn" title="Reload this page by itself when index.html changes: pick its folder (tools/dashboard) once">⟳ Auto-reload</button>
     <button id="demoBtn" title="Made-up data, to see the page without the game">Demo</button>
     <button id="themeBtn" title="Light or dark">◐</button>
   </div>
@@ -532,6 +533,45 @@ async function connect(fromClick) {
   document.getElementById("connectBtn").textContent = "Change folder";
   await autoClean();
   start();
+}
+// ============================================================== this page's own file: reload when it changes
+/**
+ * A file:// page can't read itself, so it watches index.html through a handle to its folder (tools/dashboard), picked once and
+ * remembered like the dev folder. When the file changes the page reloads, once nothing would be lost: no dialog open, no note typed
+ * and unsaved. The tab, filters and the dev folder come back on their own.
+ */
+const SELF = { dir: null, seen: "", timer: null, pending: false };
+async function watchPage(fromClick) {
+  if (FS.demo || !("showDirectoryPicker" in window)) return;
+  let dir = await kv("pageDir");
+  try {
+    if (dir && (await dir.queryPermission({ mode: "read" })) !== "granted") {
+      if (!fromClick || (await dir.requestPermission({ mode: "read" })) !== "granted") dir = null;
+    }
+    if (!dir && fromClick) dir = await showDirectoryPicker({ id: "spireqol-page", mode: "read" });
+  } catch (e) { if (e.name !== "AbortError") alert("Couldn't open the page's folder: " + e.message); return; }
+  if (!dir) { $("watchBtn").textContent = (await kv("pageDir")) ? "⟳ Resume auto-reload" : "⟳ Auto-reload"; return; }
+  let page;
+  try { page = await (await dir.getFileHandle("index.html")).getFile(); } catch { page = null; }
+  if (!page || !(await page.text()).includes("<title>Spire QoL Dev</title>")) { alert("That folder doesn't hold this page: pick tools/dashboard in the repo."); return; }
+  await kv("pageDir", dir);
+  SELF.dir = dir; SELF.seen = `${page.size}:${page.lastModified}`;
+  $("watchBtn").textContent = "⟳ Auto-reload on";
+  if (!SELF.timer) SELF.timer = setInterval(checkPage, 1000);
+}
+/** Something on screen that a reload would lose: an open dialog, or a note typed and not saved. */
+const unsaved = () => !!document.querySelector("dialog[open]") || [...document.querySelectorAll("textarea, input[data-comment]")].some((box) => box.value.trim());
+async function checkPage() {
+  if (!SELF.dir) return;
+  if (!SELF.pending) {
+    let seen;
+    try { const page = await (await SELF.dir.getFileHandle("index.html")).getFile(); seen = `${page.size}:${page.lastModified}`; } catch { return; /* mid-save: next time */ }
+    if (seen === SELF.seen) return;
+    SELF.pending = true;
+  }
+  if (unsaved()) { $("watchBtn").textContent = "⟳ Updated: reloads once your note is saved"; return; }
+  clearInterval(SELF.timer); // once: a browser that refuses the reload isn't asked every second
+  location.reload();
 }
 async function streams() {
   const list = [];
@@ -1866,6 +1906,7 @@ $("skipLaunchBox").addEventListener("change", (e) => { skipLaunchChosen = e.targ
 }
 $("logTimesBox").addEventListener("change", (e) => { try { localStorage.setItem("logTimes", e.target.checked ? "1" : "0"); } catch {} render(true); });
 $("connectBtn").addEventListener("click", () => connect(true));
+$("watchBtn").addEventListener("click", () => watchPage(true));
 $("demoBtn").addEventListener("click", () => { FS.demo = true; FS.dir = null; start(); });
 $("themeBtn").addEventListener("click", () => {
   const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
@@ -1945,7 +1986,7 @@ function demoReport() {
 try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; page = localStorage.getItem("page") || page; } catch {}
 if (!PAGES.some(([id]) => id === page)) page = "overview";
 if (new URLSearchParams(location.search).has("demo")) { FS.demo = true; start(); }
-else { render(true); connect(false); }
+else { render(true); connect(false); watchPage(false); }
 </script>
 </body>
 </html>
