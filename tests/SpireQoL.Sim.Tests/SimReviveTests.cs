@@ -14,86 +14,86 @@ public class SimReviveTests
     [Fact]
     public void LosingAllYourHpWithNothingToSaveYouIsDeath()
     {
-        var s = new SimState { Enemies = { E(1, 50, 12) } };
-        s.You.Hp = 10;
-        var o = SimEngine.Run(s);
-        Assert.True(o.Worst.Died);
-        Assert.Equal(12, o.Worst.Taken); // all of it, overkill included (as the forecast check counts it)
+        var state = new SimState { Enemies = { E(1, 50, 12) } };
+        state.You.Hp = 10;
+        var outcome = SimEngine.Run(state);
+        Assert.True(outcome.Worst.Died);
+        Assert.Equal(12, outcome.Worst.Taken); // all of it, overkill included (as the forecast check counts it)
     }
 
     [Fact]
     public void SurvivingWithOneHpIsntDeath()
     {
-        var s = new SimState { Enemies = { E(1, 50, 9) } };
-        s.You.Hp = 10;
-        var o = SimEngine.Run(s);
-        Assert.False(o.Worst.Died);
-        Assert.Equal(1, o.Worst.You.Hp);
+        var state = new SimState { Enemies = { E(1, 50, 9) } };
+        state.You.Hp = 10;
+        var outcome = SimEngine.Run(state);
+        Assert.False(outcome.Worst.Died);
+        Assert.Equal(1, outcome.Worst.You.Hp);
     }
 
     [Fact]
     public void LizardTailHealsYouFromZeroAndLaterHitsStillLand()
     {
         // 10 HP: the first hit (12) takes you to 0, Lizard Tail heals 40 (50% of 80); the second hit (6) leaves 34.
-        var s = new SimState { Enemies = { E(1, 50, 12, 6) } };
-        s.You.Hp = 10;
-        s.You.LizardTailHeal = 40;
-        var o = SimEngine.Run(s);
-        var w = o.Worst;
-        Assert.False(w.Died);
-        Assert.True(w.LizardTailUsed);
-        Assert.Equal(34, w.You.Hp);
-        Assert.Equal(18, w.Taken); // 12 (overkill included), then 6
+        var state = new SimState { Enemies = { E(1, 50, 12, 6) } };
+        state.You.Hp = 10;
+        state.You.LizardTailHeal = 40;
+        var outcome = SimEngine.Run(state);
+        var branch = outcome.Worst;
+        Assert.False(branch.Died);
+        Assert.True(branch.LizardTailUsed);
+        Assert.Equal(34, branch.You.Hp);
+        Assert.Equal(18, branch.Taken); // 12 (overkill included), then 6
     }
 
     [Fact]
     public void FairyInABottleGoesFirstAndLizardTailStaysForLater()
     {
-        var s = new SimState { Enemies = { E(1, 50, 12) } };
-        s.You.Hp = 10;
-        s.You.Fairies = 1;
-        s.You.FairyHeal = 24;
-        s.You.LizardTailHeal = 40;
-        var w = SimEngine.Run(s).Worst;
-        Assert.Equal(1, w.FairiesUsed);
-        Assert.False(w.LizardTailUsed);
-        Assert.Equal(24, w.You.Hp);
+        var state = new SimState { Enemies = { E(1, 50, 12) } };
+        state.You.Hp = 10;
+        state.You.Fairies = 1;
+        state.You.FairyHeal = 24;
+        state.You.LizardTailHeal = 40;
+        var branch = SimEngine.Run(state).Worst;
+        Assert.Equal(1, branch.FairiesUsed);
+        Assert.False(branch.LizardTailUsed);
+        Assert.Equal(24, branch.You.Hp);
     }
 
     [Fact]
     public void BothCanBeUsedUpInOneEnemyTurn()
     {
         // 5 HP: 10 → Fairy (heals 8), 10 → Lizard Tail (heals 20), 10 → 10 left.
-        var s = new SimState { Enemies = { E(1, 50, 10, 10, 10) } };
-        s.You.Hp = 5;
-        s.You.Fairies = 1;
-        s.You.FairyHeal = 8;
-        s.You.LizardTailHeal = 20;
-        var w = SimEngine.Run(s).Worst;
-        Assert.False(w.Died);
-        Assert.Equal(1, w.FairiesUsed);
-        Assert.True(w.LizardTailUsed);
-        Assert.Equal(10, w.You.Hp);
+        var state = new SimState { Enemies = { E(1, 50, 10, 10, 10) } };
+        state.You.Hp = 5;
+        state.You.Fairies = 1;
+        state.You.FairyHeal = 8;
+        state.You.LizardTailHeal = 20;
+        var branch = SimEngine.Run(state).Worst;
+        Assert.False(branch.Died);
+        Assert.Equal(1, branch.FairiesUsed);
+        Assert.True(branch.LizardTailUsed);
+        Assert.Equal(10, branch.You.Hp);
     }
 
     [Fact]
     public void UnblockableEndOfTurnDamageCanKillToo()
     {
-        var s = new SimState { Enemies = { E(1, 50) } };
-        s.You.Hp = 3;
-        s.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 2));
-        s.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
-        s.You.HandCount = 2;
-        Assert.True(SimEngine.Run(s).Worst.Died);
+        var state = new SimState { Enemies = { E(1, 50) } };
+        state.You.Hp = 3;
+        state.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", 2));
+        state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        state.You.HandCount = 2;
+        Assert.True(SimEngine.Run(state).Worst.Died);
     }
 
     [Fact]
     public void UntrackedHpNeverDies()
     {
         // The generated fights and older replay cases don't set your HP: nothing about them changes.
-        var s = new SimState { Enemies = { E(1, 50, 999) } };
-        var w = SimEngine.Run(s).Worst;
-        Assert.False(w.Died);
-        Assert.Equal(999, w.Taken);
+        var state = new SimState { Enemies = { E(1, 50, 999) } };
+        var branch = SimEngine.Run(state).Worst;
+        Assert.False(branch.Died);
+        Assert.Equal(999, branch.Taken);
     }
 }

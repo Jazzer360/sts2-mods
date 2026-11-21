@@ -19,53 +19,53 @@ public class SimOstyAttackTests
     [Fact]
     public void ThornsHitsOstyNotYou()
     {
-        var s = new SimState { Enemies = { E(1, 30) } };
-        s.Enemies[0].Thorns = 3;
-        s.You.OstyHp = 10;
-        SimEngine.ApplyPlayTo(s, Poke(1, 6, byOsty: true), out var branches, out _);
-        Assert.All(branches, b =>
+        var state = new SimState { Enemies = { E(1, 30) } };
+        state.Enemies[0].Thorns = 3;
+        state.You.OstyHp = 10;
+        SimEngine.ApplyPlayTo(state, Poke(1, 6, byOsty: true), out var branches, out _);
+        Assert.All(branches, branch =>
         {
-            Assert.Equal(24, b.Enemy(1)!.Hp);
-            Assert.Equal(7, b.You.OstyHp);
-            Assert.Equal(0, b.Taken);
+            Assert.Equal(24, branch.Enemy(1)!.Hp);
+            Assert.Equal(7, branch.You.OstyHp);
+            Assert.Equal(0, branch.Taken);
         });
         // Your own attack takes the Thorns yourself.
-        SimEngine.ApplyPlayTo(s, Poke(1, 6, byOsty: false), out var mine, out _);
-        Assert.All(mine, b => Assert.Equal(3, b.Taken));
+        SimEngine.ApplyPlayTo(state, Poke(1, 6, byOsty: false), out var mine, out _);
+        Assert.All(mine, branch => Assert.Equal(3, branch.Taken));
     }
 
     [Fact]
     public void YourEnvenomDoesntApply()
     {
-        var s = new SimState { Enemies = { E(1, 30) } };
-        s.You.Envenom = 2;
-        SimEngine.ApplyPlayTo(s, Poke(1, 6, byOsty: true), out var branches, out _);
-        Assert.All(branches, b => Assert.Equal(0, b.Enemy(1)!.Poison));
+        var state = new SimState { Enemies = { E(1, 30) } };
+        state.You.Envenom = 2;
+        SimEngine.ApplyPlayTo(state, Poke(1, 6, byOsty: true), out var branches, out _);
+        Assert.All(branches, branch => Assert.Equal(0, branch.Enemy(1)!.Poison));
     }
 
     [Fact]
     public void SlipperyReactsToOstysHit()
     {
-        var s = new SimState { Enemies = { E(1, 30) } };
-        s.Enemies[0].Slippery = 1;
-        Assert.True(SimEngine.Run(s, Poke(1, 6, byOsty: true)).SlipperyInAny(1));
+        var state = new SimState { Enemies = { E(1, 30) } };
+        state.Enemies[0].Slippery = 1;
+        Assert.True(SimEngine.Run(state, Poke(1, 6, byOsty: true)).SlipperyInAny(1));
     }
 
     [Fact]
     public void NecroMasteryHitsEveryEnemyThroughBlockWhenOstyDies()
     {
         // Bone Shards kills Osty at 4 HP with Necro Mastery 2: 8 unblockable damage to every enemy.
-        var s = new SimState { Enemies = { E(1, 30), E(2, 5) } };
-        s.Enemies[0].Block = 20;
-        s.You.OstyHp = 4;
-        s.You.Powers = s.You.Powers.With(PowerId.NecroMastery, 2);
+        var state = new SimState { Enemies = { E(1, 30), E(2, 5) } };
+        state.Enemies[0].Block = 20;
+        state.You.OstyHp = 4;
+        state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, 2);
         var play = new SimPlay { Name = "BoneShards", KillsOsty = true };
-        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
-        Assert.All(branches, b =>
+        SimEngine.ApplyPlayTo(state, play, out var branches, out _);
+        Assert.All(branches, branch =>
         {
-            Assert.Equal(22, b.Enemy(1)!.Hp);
-            Assert.Equal(20, b.Enemy(1)!.Block);
-            Assert.False(b.Enemy(2)!.Alive);
+            Assert.Equal(22, branch.Enemy(1)!.Hp);
+            Assert.Equal(20, branch.Enemy(1)!.Block);
+            Assert.False(branch.Enemy(2)!.Alive);
         });
     }
 
@@ -73,13 +73,13 @@ public class SimOstyAttackTests
     public void SicEmSummonsWhenOstyDamagesItsEnemyNotWhenYouDo()
     {
         // SicEmPower.AfterDamageGiven (a dev-mode report: High Five's Osty hit on a Thieving Hopper with Sic 'Em 4 summoned 4).
-        var s = new SimState { Enemies = { E(1, 30), E(2, 30) } };
-        s.Enemies[0].Powers = s.Enemies[0].Powers.With(PowerId.SicEm, 4);
-        var byOsty = SimEngine.Run(s, Poke(1, 6, byOsty: true));
-        Assert.All(byOsty.Branches, b => { Assert.Equal(1, b.Fired["SicEmPower"]); Assert.Equal(4, b.Fired.DataOf("SicEmPower")); });
+        var state = new SimState { Enemies = { E(1, 30), E(2, 30) } };
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.SicEm, 4);
+        var byOsty = SimEngine.Run(state, Poke(1, 6, byOsty: true));
+        Assert.All(byOsty.Branches, branch => { Assert.Equal(1, branch.Fired["SicEmPower"]); Assert.Equal(4, branch.Fired.DataOf("SicEmPower")); });
         // Your own hit on it, and Osty's on another enemy: nothing.
-        Assert.All(SimEngine.Run(s, Poke(1, 6, byOsty: false)).Branches, b => Assert.False(b.Fired.Has("SicEmPower")));
-        Assert.All(SimEngine.Run(s, Poke(2, 6, byOsty: true)).Branches, b => Assert.False(b.Fired.Has("SicEmPower")));
+        Assert.All(SimEngine.Run(state, Poke(1, 6, byOsty: false)).Branches, branch => Assert.False(branch.Fired.Has("SicEmPower")));
+        Assert.All(SimEngine.Run(state, Poke(2, 6, byOsty: true)).Branches, branch => Assert.False(branch.Fired.Has("SicEmPower")));
     }
 
     [Fact]
@@ -88,13 +88,13 @@ public class SimOstyAttackTests
         // A dev-mode report (the Knowledge Demon): its 9 hit Osty in its turn, and Necro Mastery hit it back for 9. That hit through its
         // block is its turn's, not your end of turn's: the outcome audit counts your end of turn's (UnblockedAtTurnEnd), the wake
         // rules every hit (UnblockedInstances).
-        var s = new SimState { Enemies = { E(1, 100, 9) } };
-        s.You.OstyHp = 20;
-        s.You.OstyShields = true;
-        s.You.Powers = s.You.Powers.With(PowerId.NecroMastery, 1);
-        var o = SimEngine.Run(s);
-        Assert.Equal(0, o.UnblockedAtTurnEndMax(1));
-        Assert.Equal(1, o.UnblockedMin(1));
-        Assert.Equal(100, o.HpAtTurnEndMin(1));
+        var state = new SimState { Enemies = { E(1, 100, 9) } };
+        state.You.OstyHp = 20;
+        state.You.OstyShields = true;
+        state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, 1);
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(0, outcome.UnblockedAtTurnEndMax(1));
+        Assert.Equal(1, outcome.UnblockedMin(1));
+        Assert.Equal(100, outcome.HpAtTurnEndMin(1));
     }
 }

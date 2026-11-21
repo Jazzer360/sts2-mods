@@ -16,6 +16,10 @@ What the mod shows for each decision you could make right now (play this card, d
 - **Not modelled means uncertain, and it's a gap to close:** a branch the simulator can't follow carries the reason (`SimState.Unmodelled`) and counts as unknown (`?` and a range), never as exact; the audits count the reasons, and each is a tracker item to model. Never a way around predicting.
 - **Effects, not cards:** model what the game's code does (hooks, commands, pipelines, in its order). A per-card table only where nothing else can read the effect, always with a scan that finds every card doing that thing.
 
+## Names
+
+Names say what a thing is, in every scope (decision #138): no abbreviations in members (`SimState.You`, not `P`), and no one- or two-letter locals, parameters or lambda parameters (a state in a lambda is a `branch`, a damage event a `hit`, a card a `card`), apart from a for loop's `i`/`j`. Closed sets are enums; the game's powers, relics and cards are typed names (`PowerId.Thorns`), never strings (decision #136). `NamingTests` holds the line.
+
 ## Raise concerns, track decisions
 
 - **Raise concerns and ideas unprompted.** Whenever you notice something questionable (a direction that seems wrong, a fragile design, a gap in the audits, duplicated logic, a refactor that would pay off), say so with a concrete proposal, even when it would be a large or breaking change. Don't wait to be asked: the owner relies on this rather than reviewing every line. End a substantial piece of work with what you'd question or improve next.

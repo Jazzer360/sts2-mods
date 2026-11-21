@@ -44,13 +44,13 @@ public sealed class DevSinkTests : IDisposable
     {
         var line = DevSink.Line(1.23456, new SearchDone("Bash (target 0)", SearchDone.ContextOf(2, 3), 5, 100, 10, 1.5, true, "the memory cap", false));
         using var doc = JsonDocument.Parse(line);
-        var r = doc.RootElement;
-        Assert.Equal(1.235, r.GetProperty("t").GetDouble());
-        Assert.Equal("search-done", r.GetProperty("kind").GetString());
-        Assert.Equal("Bash (target 0)", r.GetProperty("label").GetString());
-        Assert.Equal(2, r.GetProperty("combat").GetInt32());
-        Assert.Equal(3, r.GetProperty("turn").GetInt32());
-        Assert.Equal("the memory cap", r.GetProperty("cap").GetString());
+        var jsonElement = doc.RootElement;
+        Assert.Equal(1.235, jsonElement.GetProperty("t").GetDouble());
+        Assert.Equal("search-done", jsonElement.GetProperty("kind").GetString());
+        Assert.Equal("Bash (target 0)", jsonElement.GetProperty("label").GetString());
+        Assert.Equal(2, jsonElement.GetProperty("combat").GetInt32());
+        Assert.Equal(3, jsonElement.GetProperty("turn").GetInt32());
+        Assert.Equal("the memory cap", jsonElement.GetProperty("cap").GetString());
         Assert.Equal("{\"t\":0,\"kind\":\"combat-ended\"}", DevSink.Line(0, new CombatEnded()));
     }
 
@@ -106,20 +106,20 @@ public sealed class DevSinkTests : IDisposable
     [Fact]
     public void AFrameRollupHasPercentilesFeatureTimesMemoryAndStartsAgain()
     {
-        var w = new FrameWindow();
-        for (var i = 1; i <= 20; i++) w.Add(i, 16, new[] { ("incoming-damage", 0.5), ("proc-indicators", i / 2.0) }, new[] { ("proc-indicators", 42.0) });
-        w.Add(40, 70, Array.Empty<(string, double)>(), Array.Empty<(string, double)>());
-        var r = w.Take(0.25, (100, 3, 1, 0, 0, 2, 1234, 2));
-        Assert.Equal(21, r.Frames);
-        Assert.Equal(11, r.ModP50);
-        Assert.Equal(20, r.ModP95);
-        Assert.Equal(40, r.ModMax);
-        Assert.Equal(70, r.GapMax);
-        Assert.Equal(1, r.Slow);
-        Assert.Equal(10, r.FeatureMax["proc-indicators"]);
-        Assert.Equal(Math.Round(20 * 0.5 / 21, 2), r.FeatureMean["incoming-damage"]);
-        Assert.Equal(Math.Round(20 * 42.0 / 21, 2), r.FeatureKb["proc-indicators"]); // KB per frame, over every frame
-        Assert.Equal(1234, r.HeldStates);
-        Assert.Equal(0, w.Take(0.25, default).Frames);
+        var frameWindow = new FrameWindow();
+        for (var i = 1; i <= 20; i++) frameWindow.Add(i, 16, new[] { ("incoming-damage", 0.5), ("proc-indicators", i / 2.0) }, new[] { ("proc-indicators", 42.0) });
+        frameWindow.Add(40, 70, Array.Empty<(string, double)>(), Array.Empty<(string, double)>());
+        var frameRollup = frameWindow.Take(0.25, (100, 3, 1, 0, 0, 2, 1234, 2));
+        Assert.Equal(21, frameRollup.Frames);
+        Assert.Equal(11, frameRollup.ModP50);
+        Assert.Equal(20, frameRollup.ModP95);
+        Assert.Equal(40, frameRollup.ModMax);
+        Assert.Equal(70, frameRollup.GapMax);
+        Assert.Equal(1, frameRollup.Slow);
+        Assert.Equal(10, frameRollup.FeatureMax["proc-indicators"]);
+        Assert.Equal(Math.Round(20 * 0.5 / 21, 2), frameRollup.FeatureMean["incoming-damage"]);
+        Assert.Equal(Math.Round(20 * 42.0 / 21, 2), frameRollup.FeatureKb["proc-indicators"]); // KB per frame, over every frame
+        Assert.Equal(1234, frameRollup.HeldStates);
+        Assert.Equal(0, frameWindow.Take(0.25, default).Frames);
     }
 }

@@ -86,8 +86,8 @@ public sealed class PlayFacts
     /// </summary>
     public int? DrawsWithOwn(int own)
     {
-        if (_drawInputs is not { } i) return null;
-        return PlayChain.Resolve(i.WithOwnDraws(own)).Draws;
+        if (_drawInputs is not { } drawInputs) return null;
+        return PlayChain.Resolve(drawInputs.WithOwnDraws(own)).Draws;
     }
 
     /// <summary>Of those, the card's enchantment's (Swift): drawn after the card's own play.</summary>
@@ -256,15 +256,15 @@ public sealed class PlayFacts
             decimal raw;
             // The card's own damage props, as its preview uses them (DamageVar.Props): an arrow attack's
             // FromArrow is what Aim, Heavy Shot's doubled Aim, Dislike You and Quietus check (v0.113.0).
-            if (Card.DynamicVars.TryGetValue("CalculatedDamage", out var cv) && cv is CalculatedVar calc)
+            if (Card.DynamicVars.TryGetValue("CalculatedDamage", out var dynamicVar) && dynamicVar is CalculatedVar calc)
             {
                 raw = calc.Calculate(enemy);
-                if (cv is CalculatedDamageVar cdv) props = cdv.Props;
+                if (dynamicVar is CalculatedDamageVar cdv) props = cdv.Props;
             }
-            else if (Card.DynamicVars.TryGetValue("Damage", out var dv) || Card.DynamicVars.TryGetValue("OstyDamage", out dv))
+            else if (Card.DynamicVars.TryGetValue("Damage", out var otherDynamicVar) || Card.DynamicVars.TryGetValue("OstyDamage", out otherDynamicVar))
             {
-                raw = dv.BaseValue;
-                if (dv is DamageVar d) props = d.Props;
+                raw = otherDynamicVar.BaseValue;
+                if (otherDynamicVar is DamageVar damageVar) props = damageVar.Props;
             }
             else return 0;
             var dealer = ByOsty && Me.Osty is { } osty ? osty : Me.Creature;
@@ -343,7 +343,7 @@ public sealed class PlayFacts
     internal PlayFacts Then(PlayFacts next)
     {
         var orbDamage = new Dictionary<Creature, int>(next.OrbDamage);
-        foreach (var (e, d) in OrbDamage) orbDamage[e] = (orbDamage.TryGetValue(e, out var x) ? x : 0) + d;
+        foreach (var (creature, d) in OrbDamage) orbDamage[creature] = (orbDamage.TryGetValue(creature, out var x) ? x : 0) + d;
         return new PlayFacts
         {
             Card = Card, Me = Me, Combat = Combat,
@@ -393,10 +393,10 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ building
 
-    public static PlayFacts For(CardModel card, Player me, ICombatState cs, int plays)
+    public static PlayFacts For(CardModel card, Player me, ICombatState combat, int plays)
     {
         var hand = Sts2State.Hand(me);
-        var others = hand.Where(c => !ReferenceEquals(c, card)).ToList();
+        var others = hand.Where(otherCard => !ReferenceEquals(otherCard, card)).ToList();
         var draws = CardsDrawnTotal(card, hand.Count, plays);
         var swiftDraws = 0;
         // Swift (enchantment): draws its amount when the card is played, once (Swift.AfterCardPlayed disables it).
@@ -404,8 +404,8 @@ public sealed class PlayFacts
             swiftDraws = swift.Amount;
         var drawPile = Sts2State.DrawPileCount(me);
         var name = card.GetType().Name;
-        var evoked = EvokedOrbs(card, name, me, cs, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
-        var orbs = OrbDamageFor(evoked, me, cs);
+        var evoked = EvokedOrbs(card, name, me, combat, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
+        var orbs = OrbDamageFor(evoked, me, combat);
         var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me);
         // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
         var createdInHand = GeneratedToPileCards.Contains(name) ? 0 : generated;
@@ -414,7 +414,7 @@ public sealed class PlayFacts
         {
             Card = card,
             Me = me,
-            Combat = cs,
+            Combat = combat,
             Plays = Math.Max(1, plays),
             Energy = SafeEnergy(card),
             AutoPlayed = CardPlays.ChoiceAutoPlayed(card),
@@ -423,7 +423,7 @@ public sealed class PlayFacts
             // exhaust pile (CorruptionPower.ModifyCardPlayResultLocation).
             ExhaustsSelf = card.Type != CardType.Power
                            && (card.Keywords.Contains(CardKeyword.Exhaust)
-                               || (card.Type == CardType.Skill && me.Creature.Powers.Any(p => p is CorruptionPower))),
+                               || (card.Type == CardType.Skill && me.Creature.Powers.Any(power => power is CorruptionPower))),
             ExhaustsOthers = ExhaustOthers(card, name, others, drawPile, plays),
             // Ki Chant looks at your draw pile, so each play discards its share; the others depend on the hand.
             Discards = DiscardCount(card, name, others, draws) * (name == "KiChant" ? Math.Max(1, plays) : 1),
@@ -450,14 +450,14 @@ public sealed class PlayFacts
             HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
             OtherHandCards = others.Count,
             ByOsty = IsOstyAttack(card),
-            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, name, cs, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
+            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, name, combat, null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
             OrbDamage = orbs.Exact,
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
-            LightningEvokes = evoked.Count(o => o is LightningOrb),
-            OrbBlock = OrbBlockFor(evoked, me, cs),
-            RandomOutcome = cs.HittableEnemies.Count(e => e.IsAlive) > 1
-                            && (evoked.Any(o => o is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
+            LightningEvokes = evoked.Count(orb => orb is LightningOrb),
+            OrbBlock = OrbBlockFor(evoked, me, combat),
+            RandomOutcome = combat.HittableEnemies.Count(creature => creature.IsAlive) > 1
+                            && (evoked.Any(orb => orb is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
         };
         facts.ResolveDraws(hand.Count, drawPile, name == nameof(Cleanse));
         return facts;
@@ -491,7 +491,7 @@ public sealed class PlayFacts
     private void ResolveDraws(int handCount, int drawPile, bool fromDrawPile)
     {
         var me = Me;
-        var i = new PlayChain.DrawInputs
+        var drawInputs = new PlayChain.DrawInputs
         {
             OwnDraws = OwnDraws - EnchantmentDraws,
             EnchantmentDraws = EnchantmentDraws,
@@ -514,50 +514,50 @@ public sealed class PlayFacts
             AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
             // Motif draws its amount per melody (Wah, Cho, Ki) this card plays first this turn, once (a replay's
             // later plays aren't first).
-            PowerDrawsAfterPlay = (me.Creature.Powers.FirstOrDefault(p => p.GetType().Name == "MotifPower")?.Amount ?? 0)
+            PowerDrawsAfterPlay = (me.Creature.Powers.FirstOrDefault(power => power.GetType().Name == "MotifPower")?.Amount ?? 0)
                                   * Fool.FirstMelodies(Card, me).Count(),
-            VulnerableLandings = DebuffsLandingTotal(t => t == typeof(VulnerablePower)),
+            VulnerableLandings = DebuffsLandingTotal(type => type == typeof(VulnerablePower)),
             LosesHp = HpLoss > 0,
-            Blocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(r => r is Fiddle),
+            Blocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(relic => relic is Fiddle),
             DarkEmbrace = me.Creature.GetPower<DarkEmbracePower>()?.Amount ?? 0,
             Vicious = me.Creature.GetPower<ViciousPower>()?.Amount ?? 0,
         };
-        foreach (var r in me.Relics)
+        foreach (var relic in me.Relics)
         {
-            switch (r)
+            switch (relic)
             {
                 case JossPaper:
-                    i.JossPaperCount = Sts2State.Private(r, "CardsExhausted", 0);
-                    i.JossPaperEvery = Sts2State.Var(r, "ExhaustAmount", 5);
+                    drawInputs.JossPaperCount = Sts2State.Private(relic, "CardsExhausted", 0);
+                    drawInputs.JossPaperEvery = Sts2State.Var(relic, "ExhaustAmount", 5);
                     break;
-                case GamePiece: i.GamePiece += Sts2State.Var(r, "Cards", 1); break;
+                case GamePiece: drawInputs.GamePiece += Sts2State.Var(relic, "Cards", 1); break;
                 case IronClub:
-                    i.IronClubEvery = Sts2State.Var(r, "Cards", 4);
-                    i.IronClubCount = r.DisplayAmount; // CardsPlayed % Cards (reads Cards while it animates: % again)
+                    drawInputs.IronClubEvery = Sts2State.Var(relic, "Cards", 4);
+                    drawInputs.IronClubCount = relic.DisplayAmount; // CardsPlayed % Cards (reads Cards while it animates: % again)
                     break;
-                case CentennialPuzzle when !Sts2State.Private(r, "UsedThisCombat", true): i.CentennialPuzzle += Sts2State.Var(r, "Cards", 3); break;
+                case CentennialPuzzle when !Sts2State.Private(relic, "UsedThisCombat", true): drawInputs.CentennialPuzzle += Sts2State.Var(relic, "Cards", 3); break;
             }
         }
         if (ShuffleWhenShortCards.Contains(Card.GetType().Name))
         {
             // Ki Chant takes the top cards it looks at off the draw pile: one to your hand, the rest discarded.
             var looked = KiChantLooksAt(Card);
-            var available = drawPile + (i.ShufflesFirst ? i.DiscardPile : 0);
-            i.TakenFromDrawPile = Math.Min(looked * Math.Max(1, Plays), available);
-            i.AddedToHandDuringPlay = looked > 0 ? Math.Min(Math.Max(1, Plays), i.TakenFromDrawPile) : 0;
+            var available = drawPile + (drawInputs.ShufflesFirst ? drawInputs.DiscardPile : 0);
+            drawInputs.TakenFromDrawPile = Math.Min(looked * Math.Max(1, Plays), available);
+            drawInputs.AddedToHandDuringPlay = looked > 0 ? Math.Min(Math.Max(1, Plays), drawInputs.TakenFromDrawPile) : 0;
         }
-        _drawInputs = i;
-        var result = PlayChain.Resolve(i);
-        DrawsBlocked = i.Blocked;
+        _drawInputs = drawInputs;
+        var result = PlayChain.Resolve(drawInputs);
+        DrawsBlocked = drawInputs.Blocked;
         ChainedDraws = result.Chained;
         Draws = result.Draws;
         // Ki Chant replayed: a later play can find the draw pile short and shuffle (its own text, like its first play's).
         var laterShuffle = ShuffleWhenShortCards.Contains(Card.GetType().Name)
-                           && PlayChain.ShortPileShufflesOnLaterPlay(drawPile, i.DiscardPile, Sts2State.Var(Card, "Cards", 3), Math.Max(1, Plays));
+                           && PlayChain.ShortPileShufflesOnLaterPlay(drawPile, drawInputs.DiscardPile, Sts2State.Var(Card, "Cards", 3), Math.Max(1, Plays));
         Shuffles = result.Shuffles || laterShuffle;
-        ShufflesItself = i.ShufflesFirst || laterShuffle;
+        ShufflesItself = drawInputs.ShufflesFirst || laterShuffle;
         // Biiig Hug puts a Soot (a status) into your draw pile on the shuffle: a created status.
-        if (Shuffles && me.Relics.Any(r => r is BiiigHug))
+        if (Shuffles && me.Relics.Any(relic => relic is BiiigHug))
         {
             Generated += 1;
             GeneratedStatuses += 1;
@@ -570,27 +570,27 @@ public sealed class PlayFacts
     /// slots (each channel past capacity evokes the front orb first; OrbCmd.Channel). Orbs the play
     /// channels and then evokes itself aren't counted (their type may be random).
     /// </summary>
-    private static List<OrbModel> EvokedOrbs(CardModel card, string name, Player me, ICombatState cs, int channels, int plays)
+    private static List<OrbModel> EvokedOrbs(CardModel card, string name, Player me, ICombatState combat, int channels, int plays)
     {
         var result = new List<OrbModel>();
-        var q = me.PlayerCombatState?.OrbQueue;
-        if (q == null) return result;
-        var queue = q.Orbs.Cast<OrbModel?>().ToList();
-        var cap = q.Capacity;
+        var orbQueue = me.PlayerCombatState?.OrbQueue;
+        if (orbQueue == null) return result;
+        var queue = orbQueue.Orbs.Cast<OrbModel?>().ToList();
+        var cap = orbQueue.Capacity;
         // A new orb pushed out by a later channel (Voltaic's Lightning filling every slot) evokes too: one of yours
         // of the same kind stands in for it when its evoke doesn't depend on the orb itself (Lightning, Frost).
         var kind = SpireQoL.Sim.SimAdapter.ChannelKind(name);
         OrbModel? template = kind switch
         {
-            SpireQoL.Sim.OrbKind.Lightning => q.Orbs.OfType<LightningOrb>().FirstOrDefault(),
-            SpireQoL.Sim.OrbKind.Frost => q.Orbs.OfType<FrostOrb>().FirstOrDefault(),
+            SpireQoL.Sim.OrbKind.Lightning => orbQueue.Orbs.OfType<LightningOrb>().FirstOrDefault(),
+            SpireQoL.Sim.OrbKind.Frost => orbQueue.Orbs.OfType<FrostOrb>().FirstOrDefault(),
             _ => null,
         };
         void EvokeFront(int times, bool remove)
         {
             if (queue.Count == 0) return;
             for (var t = 0; t < times; t++)
-                if (queue[0] is { } o) result.Add(o);
+                if (queue[0] is { } orb) result.Add(orb);
             if (remove) queue.RemoveAt(0);
         }
         for (var p = 0; p < plays; p++)
@@ -599,7 +599,7 @@ public sealed class PlayFacts
             {
                 case nameof(Dualcast): EvokeFront(2, true); break;
                 case nameof(Quadcast): EvokeFront(Math.Max(1, Sts2State.Var(card, "Repeat", 4)), true); break;
-                case nameof(MultiCast): EvokeFront(XValue(cs, card, SafeEnergy(card)) + (card.IsUpgraded ? 1 : 0), true); break;
+                case nameof(MultiCast): EvokeFront(XValue(combat, card, SafeEnergy(card)) + (card.IsUpgraded ? 1 : 0), true); break;
                 case nameof(Shatter):
                     while (queue.Count > 0) EvokeFront(2, true);
                     break;
@@ -617,7 +617,7 @@ public sealed class PlayFacts
         return result;
     }
 
-    private static int OrbBlockFor(List<OrbModel> evoked, Player me, ICombatState cs)
+    private static int OrbBlockFor(List<OrbModel> evoked, Player me, ICombatState combat)
     {
         var total = 0;
         foreach (var orb in evoked)
@@ -625,7 +625,7 @@ public sealed class PlayFacts
             if (orb is not FrostOrb || orb.EvokeVal <= 0) continue;
             try
             {
-                total += Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(cs, me.Creature, orb.EvokeVal, MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered, null, null, out _));
+                total += Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(combat, me.Creature, orb.EvokeVal, MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered, null, null, out _));
             }
             catch
             {
@@ -635,19 +635,19 @@ public sealed class PlayFacts
         return total;
     }
 
-    private static (Dictionary<Creature, int> Exact, int Min, int Max) OrbDamageFor(List<OrbModel> evoked, Player me, ICombatState cs)
+    private static (Dictionary<Creature, int> Exact, int Min, int Max) OrbDamageFor(List<OrbModel> evoked, Player me, ICombatState combat)
     {
         var none = (new Dictionary<Creature, int>(), 0, 0);
         if (evoked.Count == 0) return none;
-        var enemies = cs.HittableEnemies.Where(e => e.IsAlive).ToList();
+        var enemies = combat.HittableEnemies.Where(creature => creature.IsAlive).ToList();
         if (enemies.Count == 0) return none;
         var exact = new Dictionary<Creature, int>();
         int min = 0, max = 0;
-        int Mod(Creature t, decimal v)
+        int Mod(Creature creature, decimal v)
         {
             try
             {
-                return Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(me.RunState, cs, t, me.Creature, v,
+                return Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyDamage(me.RunState, combat, creature, me.Creature, v,
                     MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered, null, null, MegaCrit.Sts2.Core.Hooks.ModifyDamageHookType.All, CardPreviewMode.None, out _));
             }
             catch
@@ -655,7 +655,7 @@ public sealed class PlayFacts
                 return (int)v;
             }
         }
-        void Add(Creature e, int d) => exact[e] = (exact.TryGetValue(e, out var x) ? x : 0) + d;
+        void Add(Creature creature, int d) => exact[creature] = (exact.TryGetValue(creature, out var x) ? x : 0) + d;
         foreach (var orb in evoked)
         {
             var v = orb.EvokeVal;
@@ -663,17 +663,17 @@ public sealed class PlayFacts
             switch (orb)
             {
                 case GlassOrb:
-                    foreach (var e in enemies)
+                    foreach (var creature in enemies)
                     {
-                        var d = Mod(e, v);
-                        Add(e, d);
+                        var d = Mod(creature, v);
+                        Add(creature, d);
                         min += d;
                         max += d;
                     }
                     break;
                 case DarkOrb:
                 {
-                    var weakest = enemies.MinBy(e => e.CurrentHp)!;
+                    var weakest = enemies.MinBy(creature => creature.CurrentHp)!;
                     var d = Mod(weakest, v);
                     Add(weakest, d);
                     min += d;
@@ -690,8 +690,8 @@ public sealed class PlayFacts
                     }
                     else
                     {
-                        min += enemies.Min(e => Mod(e, v));
-                        max += enemies.Max(e => Mod(e, v));
+                        min += enemies.Min(creature => Mod(creature, v));
+                        max += enemies.Max(creature => Mod(creature, v));
                     }
                     break;
             }
@@ -733,42 +733,42 @@ public sealed class PlayFacts
     private static readonly HashSet<string> DrawOne = new() { nameof(DaggerThrow), nameof(EscapePlan), nameof(Pillage) };
 
     /// <summary>How many cards one play of this card draws right now (0 if it doesn't draw).</summary>
-    public static int CardsDrawn(CardModel c, int handCount)
+    public static int CardsDrawn(CardModel card, int handCount)
     {
-        var name = c.GetType().Name;
+        var name = card.GetType().Name;
         // A card's condition first: Impatience and Fetch are in DrawCards too (for the coverage scan) but don't always draw.
-        switch (c)
+        switch (card)
         {
             // Draws up to a full hand; Scrawl itself has left the hand by then.
             case Scrawl: return Math.Max(0, CardPile.MaxCardsInHand - (handCount - 1));
             // Discards the rest of your hand, then draws that many (CardCmd.DiscardAndDraw).
             case CalculatedGamble: return Math.Max(0, handCount - 1);
             // Draws one per distinct orb type channeled.
-            case CompileDriver when c.DynamicVars.TryGetValue("CalculatedCards", out var v) && v is CalculatedVar cv:
-                return (int)cv.Calculate(null);
+            case CompileDriver when card.DynamicVars.TryGetValue("CalculatedCards", out var dynamicVar) && dynamicVar is CalculatedVar calculatedVar:
+                return (int)calculatedVar.Calculate(null);
             // Draws only while you've finished fewer than PlayMax plays this turn (Ftl.CanDrawCard; the
             // game's template card, with no owner, counts as drawing).
-            case Ftl: return FtlCanDraw(c) ? Sts2State.Var(c, "Cards") : 0;
+            case Ftl: return FtlCanDraw(card) ? Sts2State.Var(card, "Cards") : 0;
             // Draws only when no Attack is in your hand (Impatience.OnPlay; it's a Skill itself).
-            case Impatience: return HandHasAttack(c) ? 0 : Sts2State.Var(c, "Cards");
+            case Impatience: return HandHasAttack(card) ? 0 : Sts2State.Var(card, "Cards");
             // Draws only while Osty is alive (Osty.CheckMissingWithAnim) and on this copy's first finished play this turn
             // (Fetch.HasBeenPlayedThisTurn); CardsDrawnTotal counts it once for a replay.
-            case Fetch: return FetchCanDraw(c) ? Sts2State.Var(c, "Cards") : 0;
+            case Fetch: return FetchCanDraw(card) ? Sts2State.Var(card, "Cards") : 0;
             // Only draws when it's the only card in hand.
-            case Restlessness: return handCount == 1 ? Sts2State.Var(c, "Cards") : 0;
+            case Restlessness: return handCount == 1 ? Sts2State.Var(card, "Cards") : 0;
             // Draws one per melody played this turn (Steady Cadence).
-            case var _ when c.GetType().Name == "SteadyCadence" && c.DynamicVars.TryGetValue("CalculatedCards", out var sv) && sv is CalculatedVar scv:
+            case var _ when card.GetType().Name == "SteadyCadence" && card.DynamicVars.TryGetValue("CalculatedCards", out var dynamicVar) && dynamicVar is CalculatedVar scv:
                 return (int)scv.Calculate(null);
             // Draws only when its target is Impaled (Ki Hop: anyone's arrow; Wrest: yours): counted when every
             // enemy you could aim at is, so whatever you aim at draws.
-            case var _ when c.GetType().Name == "KiHop":
-                return AllTargets(c, Fool.IsImpaled) ? Sts2State.Var(c, "Cards") : 0;
-            case var _ when c.GetType().Name == "Wrest":
-                return OwnerOf(c) is { } wo && AllTargets(c, e => Fool.ImpaledBy(e, wo.Creature) != null) ? Sts2State.Var(c, "Cards") : 0;
+            case var _ when card.GetType().Name == "KiHop":
+                return AllTargets(card, Fool.IsImpaled) ? Sts2State.Var(card, "Cards") : 0;
+            case var _ when card.GetType().Name == "Wrest":
+                return OwnerOf(card) is { } player && AllTargets(card, creature => Fool.ImpaledBy(creature, player.Creature) != null) ? Sts2State.Var(card, "Cards") : 0;
             // Mad Science with the Wisdom rider (Tinker Time).
-            case MadScience m when m.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(c, "WisdomCards");
+            case MadScience madScience when madScience.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(card, "WisdomCards");
         }
-        if (DrawCards.Contains(name)) return Sts2State.Var(c, "Cards");
+        if (DrawCards.Contains(name)) return Sts2State.Var(card, "Cards");
         if (DrawOne.Contains(name)) return 1;
         return 0;
     }
@@ -789,23 +789,23 @@ public sealed class PlayFacts
     /// its first play, so only that one draws. The audit takes it with the play's actual target as the play starts; the
     /// prediction counts what the worst target would draw (CardsDrawnTotal).
     /// </summary>
-    public static int? TargetDraws(CardModel c, Creature target, int plays)
+    public static int? TargetDraws(CardModel card, Creature target, int plays)
     {
         plays = Math.Max(1, plays);
-        switch (c.GetType().Name)
+        switch (card.GetType().Name)
         {
             case "KiHop":
             {
-                var cards = Sts2State.Var(c, "Cards");
-                if (OwnerOf(c) is not { } o) return Fool.IsImpaled(target) ? cards * plays : 0;
-                var yours = Fool.ImpaledBy(target, o.Creature);
-                var teammate = target.Powers.Any(p => p.GetType().Name == "ImpaledPower" && p.Applier != o.Creature);
+                var cards = Sts2State.Var(card, "Cards");
+                if (OwnerOf(card) is not { } owner) return Fool.IsImpaled(target) ? cards * plays : 0;
+                var yours = Fool.ImpaledBy(target, owner.Creature);
+                var teammate = target.Powers.Any(power => power.GetType().Name == "ImpaledPower" && power.Applier != owner.Creature);
                 // One hit a play (KiHop.OnPlay: DamageCmd.Attack with no hit count).
                 return cards * SimEngine.PlaysStartingImpaled(teammate, yours == null ? 0 : Fool.ArrowsIn(yours),
                     yours == null ? 3 : Fool.HitCounter(yours), 1, plays);
             }
             case "Wrest":
-                return OwnerOf(c) is { } wo && Fool.ImpaledBy(target, wo.Creature) != null ? Sts2State.Var(c, "Cards") : 0;
+                return OwnerOf(card) is { } player && Fool.ImpaledBy(target, player.Creature) != null ? Sts2State.Var(card, "Cards") : 0;
             default:
                 return null;
         }
@@ -815,15 +815,15 @@ public sealed class PlayFacts
     /// How many cards all <paramref name="plays"/> plays of this card draw right now. A card whose draws depend on its target
     /// counts what the worst target it could be aimed at would draw.
     /// </summary>
-    public static int CardsDrawnTotal(CardModel c, int handCount, int plays)
+    public static int CardsDrawnTotal(CardModel card, int handCount, int plays)
     {
         plays = Math.Max(1, plays);
-        if (c is Fetch) return CardsDrawn(c, handCount); // only the first play draws (its replay has finished a play)
-        if (!TargetDrawCards.Contains(c.GetType().Name)) return CardsDrawn(c, handCount) * plays;
+        if (card is Fetch) return CardsDrawn(card, handCount); // only the first play draws (its replay has finished a play)
+        if (!TargetDrawCards.Contains(card.GetType().Name)) return CardsDrawn(card, handCount) * plays;
         try
         {
-            var targets = c.CombatState?.HittableEnemies.Where(e => e.IsAlive).ToList();
-            return targets is { Count: > 0 } ? targets.Min(t => TargetDraws(c, t, plays) ?? 0) : 0;
+            var targets = card.CombatState?.HittableEnemies.Where(creature => creature.IsAlive).ToList();
+            return targets is { Count: > 0 } ? targets.Min(creature => TargetDraws(card, creature, plays) ?? 0) : 0;
         }
         catch
         {
@@ -832,11 +832,11 @@ public sealed class PlayFacts
     }
 
     /// <summary>Every enemy the card could target matches (none to target: false).</summary>
-    private static bool AllTargets(CardModel c, Func<Creature, bool> match)
+    private static bool AllTargets(CardModel card, Func<Creature, bool> match)
     {
         try
         {
-            var targets = c.CombatState?.HittableEnemies.Where(e => e.IsAlive).ToList();
+            var targets = card.CombatState?.HittableEnemies.Where(creature => creature.IsAlive).ToList();
             return targets is { Count: > 0 } && targets.All(match);
         }
         catch
@@ -845,20 +845,20 @@ public sealed class PlayFacts
         }
     }
 
-    private static bool HandHasAttack(CardModel c)
+    private static bool HandHasAttack(CardModel card)
     {
-        try { return OwnerOf(c) is { } me && PileType.Hand.GetPile(me).Cards.Any(h => !ReferenceEquals(h, c) && h.Type == CardType.Attack); }
+        try { return OwnerOf(card) is { } me && PileType.Hand.GetPile(me).Cards.Any(otherCard => !ReferenceEquals(otherCard, card) && otherCard.Type == CardType.Attack); }
         catch { return false; }
     }
 
-    private static bool FetchCanDraw(CardModel c)
+    private static bool FetchCanDraw(CardModel card)
     {
         try
         {
-            if (OwnerOf(c) is not { } me) return true; // the game's template card counts as drawing
+            if (OwnerOf(card) is not { } me) return true; // the game's template card counts as drawing
             if (!me.IsOstyAlive) return false;
-            var cs = c.CombatState;
-            return cs == null || !CombatManager.Instance.History.CardPlaysFinished.Any(e => ReferenceEquals(e.CardPlay.Card, c) && e.HappenedThisTurn(cs));
+            var combat = card.CombatState;
+            return combat == null || !CombatManager.Instance.History.CardPlaysFinished.Any(cardPlayFinishedEntry => ReferenceEquals(cardPlayFinishedEntry.CardPlay.Card, card) && cardPlayFinishedEntry.HappenedThisTurn(combat));
         }
         catch { return true; }
     }
@@ -870,9 +870,9 @@ public sealed class PlayFacts
     internal static readonly HashSet<string> ConditionalDrawCards = new()
         { nameof(Impatience), nameof(Fetch), nameof(Ftl), nameof(Restlessness), "KiHop", "Wrest" };
 
-    private static bool FtlCanDraw(CardModel c)
+    private static bool FtlCanDraw(CardModel card)
     {
-        try { return c.Owner == null || Sts2State.CountPlayedThisTurn(c.Owner) < Sts2State.Var(c, "PlayMax", 3); }
+        try { return card.Owner == null || Sts2State.CountPlayedThisTurn(card.Owner) < Sts2State.Var(card, "PlayMax", 3); }
         catch { return true; }
     }
 
@@ -886,24 +886,24 @@ public sealed class PlayFacts
         {
             // One chosen or random card from hand, per play.
             nameof(Brand) or nameof(BurningPact) or nameof(TrueGrit) or nameof(Scavenge) or nameof(Cinder) => Math.Min(p, n),
-            nameof(Thrash) => Math.Min(p, others.Count(c => c.Type == CardType.Attack)),
+            nameof(Thrash) => Math.Min(p, others.Count(other => other.Type == CardType.Attack)),
             nameof(Cleanse) => Math.Min(p, drawPile), // from the draw pile
             // The whole rest of the hand (a second play finds the hand empty).
             nameof(FiendFire) or nameof(Stoke) => n,
-            nameof(SecondWind) => others.Count(c => c.Type != CardType.Attack),
+            nameof(SecondWind) => others.Count(other => other.Type != CardType.Attack),
             // v0.113.0: The Devil exhausts your hand; Growth every Sadness in it; Florescence every Shoot card
             // you have outside your exhaust pile (any pile).
             "TheDevil" => n,
-            "Growth" => others.Count(c => c.GetType().Name == "Sadness"),
+            "Growth" => others.Count(other => other.GetType().Name == "Sadness"),
             "Florescence" => OwnerOf(card)?.PlayerCombatState is { } pcs
-                ? pcs.AllCards.Count(c => c != card && Fool.IsShot(c) && c.Pile?.Type != PileType.Exhaust)
+                ? pcs.AllCards.Count(combatCard => combatCard != card && Fool.IsShot(combatCard) && combatCard.Pile?.Type != PileType.Exhaust)
                 : others.Count(Fool.IsShot),
             // Up to Cards chosen cards: counted as the most it can exhaust.
             nameof(Purity) => Math.Min(n, Sts2State.Var(card, "Cards") * p),
             // The Hermit: the card you pick is exhausted instead of discarded when it's a Curse (counted as the most it can do).
-            "TheHermit" => Math.Min(p, others.Count(c => c.Type == CardType.Curse)),
+            "TheHermit" => Math.Min(p, others.Count(other => other.Type == CardType.Curse)),
             // Every status card in your piles.
-            nameof(FlakCannon) => card.DynamicVars.TryGetValue("CalculatedHits", out var v) && v is CalculatedVar cv ? (int)cv.Calculate(null) : 0,
+            nameof(FlakCannon) => card.DynamicVars.TryGetValue("CalculatedHits", out var dynamicVar) && dynamicVar is CalculatedVar calculatedVar ? (int)calculatedVar.Calculate(null) : 0,
             _ => 0,
         };
     }
@@ -944,7 +944,7 @@ public sealed class PlayFacts
 
     internal static int BlockGainCount(CardModel card, string name, List<CardModel> others)
     {
-        if (name == nameof(SecondWind)) return others.Count(c => c.Type != CardType.Attack);
+        if (name == nameof(SecondWind)) return others.Count(other => other.Type != CardType.Attack);
         // Twice when its owner exhausted a card this turn (EvilEye.WasCardExhaustedThisTurn, the game's own answer, read by name).
         if (name == nameof(EvilEye)) return OwnerOf(card) != null && Sts2State.Private(card, "WasCardExhaustedThisTurn", false) ? 2 : 1;
         // 1, plus its Repeat when its owner applied Doom this turn (DeathsDoor.WasDoomAppliedThisTurn, read by name).
@@ -954,7 +954,7 @@ public sealed class PlayFacts
         if (name is nameof(Fisticuffs) or nameof(Entrench)) return 1;
         // Gains its Block twice (ChoLimbs); Cho Firm a second time while you have an arrow to shoot.
         if (name == "ChoLimbs") return 2;
-        if (name == "ChoFirm") return OwnerOf(card) is { } p && Fool.ArrowsAvailable(p) > 0 ? 2 : 1;
+        if (name == "ChoFirm") return OwnerOf(card) is { } player && Fool.ArrowsAvailable(player) > 0 ? 2 : 1;
         // The game's own answer (CardModel.GainsBlock, v0.113.0): Sovereign Blade only while you have Parry, Mad Science only as a
         // Skill, and no block on play from a Power whose Block value is for later (Pillar of Creation, Shroud). Read by name, so
         // a game without it falls back to the card having a Block value. PlayFactsTests checks it against every card.
@@ -970,15 +970,15 @@ public sealed class PlayFacts
     /// names are read as strings so both game versions work. Cards that use their X value or a condition
     /// are listed. Unknown target (null): target-dependent cards count their minimum.
     /// </summary>
-    internal static int HitsPerPlay(CardModel card, string name, ICombatState cs, Creature? target, int energy, int stars, int otherCards)
+    internal static int HitsPerPlay(CardModel card, string name, ICombatState combat, Creature? target, int energy, int stars, int otherCards)
     {
-        var hits = BaseHitsPerPlay(card, name, cs, target, energy, stars, otherCards);
+        var hits = BaseHitsPerPlay(card, name, combat, target, energy, stars, otherCards);
         // Then the game's hit-count modifiers (Thumbscrew: +1 on your multi-hit attacks), the way its card
         // preview applies them (HitCountVar.GetPreviewValue; the attack itself in AttackCommand.Execute).
         if (hits <= 0 || card.Type != CardType.Attack) return hits;
         try
         {
-            return Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyAttackHitCount(cs,
+            return Math.Max(0, (int)MegaCrit.Sts2.Core.Hooks.Hook.ModifyAttackHitCount(combat,
                 MegaCrit.Sts2.Core.Commands.DamageCmd.Attack(0m).FromCard(card, null), hits));
         }
         catch
@@ -996,7 +996,7 @@ public sealed class PlayFacts
     /// <summary>X-cost attacks that hit X times (WithHitCount(X)); Repeat Shot is a shot (v0.113.0). The card scan flags a new one.</summary>
     internal static readonly HashSet<string> XHitCards = new() { nameof(Eradicate), nameof(Skewer), nameof(Volley), nameof(Whirlwind), "RepeatShot" };
 
-    private static int BaseHitsPerPlay(CardModel card, string name, ICombatState cs, Creature? target, int energy, int stars, int otherCards)
+    private static int BaseHitsPerPlay(CardModel card, string name, ICombatState combat, Creature? target, int energy, int stars, int otherCards)
     {
         // The card's hit count (v0.113.0: HitCount; v0.111.0: Repeat, or the fixed 2 in OnPlay).
         int Hits(int fixedBefore) => card.DynamicVars.ContainsKey("HitCount") ? Sts2State.Var(card, "HitCount", fixedBefore)
@@ -1010,7 +1010,7 @@ public sealed class PlayFacts
             {
                 // Nail attacks only an Impaled enemy (any player's arrow). Unknown target: it can hit if some enemy is.
                 case "Nail":
-                    return target != null ? (Fool.IsImpaled(target) ? 1 : 0) : (cs.HittableEnemies.Any(Fool.IsImpaled) ? 1 : 0);
+                    return target != null ? (Fool.IsImpaled(target) ? 1 : 0) : (combat.HittableEnemies.Any(Fool.IsImpaled) ? 1 : 0);
                 // Twice once you've played a Cho or a Ki this turn (WahBlast.HitsTwice: the card glows gold).
                 case "WahBlast":
                     return Sts2State.Private(card, "ShouldGlowGoldInternal", false) ? 2 : 1;
@@ -1018,16 +1018,16 @@ public sealed class PlayFacts
                 case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
                     return Hits(2);
                 case var _ when XHitCards.Contains(name):
-                    return XValue(cs, card, energy);
+                    return XValue(combat, card, energy);
                 case var _ when SingleHitRepeatCards.Contains(name):
                     return 1;
                 case nameof(HeavenlyDrill):
                 {
-                    var x = XValue(cs, card, energy);
+                    var x = XValue(combat, card, energy);
                     return x >= Sts2State.Var(card, "Energy") ? x * 2 : x;
                 }
                 case nameof(Stardust):
-                    return XValue(cs, card, stars);
+                    return XValue(combat, card, stars);
                 case nameof(Dismantle):
                     return target != null && target.HasPower<VulnerablePower>() ? Hits(2) : 1;
                 case nameof(Spite): // its hit count only after you lost HP this turn (when the card glows gold)
@@ -1035,11 +1035,11 @@ public sealed class PlayFacts
                 case nameof(FiendFire):
                     return otherCards;
                 case nameof(MadScience):
-                    return card is MadScience ms && ms.TinkerTimeRider == MegaCrit.Sts2.Core.Models.Events.TinkerTime.RiderEffect.Violence
+                    return card is MadScience madScience && madScience.TinkerTimeRider == MegaCrit.Sts2.Core.Models.Events.TinkerTime.RiderEffect.Violence
                         ? Sts2State.Var(card, "ViolenceHits", 1)
                         : 1;
             }
-            if (card.DynamicVars.TryGetValue("CalculatedHits", out var v) && v is CalculatedVar calc)
+            if (card.DynamicVars.TryGetValue("CalculatedHits", out var dynamicVar) && dynamicVar is CalculatedVar calc)
                 return Math.Max(0, (int)calc.Calculate(target));
         }
         catch
@@ -1049,9 +1049,9 @@ public sealed class PlayFacts
         return Math.Max(1, Hits(0));
     }
 
-    private static int XValue(ICombatState cs, CardModel card, int spent)
+    private static int XValue(ICombatState combat, CardModel card, int spent)
     {
-        try { return Math.Max(0, MegaCrit.Sts2.Core.Hooks.Hook.ModifyXValue(cs, card, spent)); } catch { return Math.Max(0, spent); }
+        try { return Math.Max(0, MegaCrit.Sts2.Core.Hooks.Hook.ModifyXValue(combat, card, spent)); } catch { return Math.Max(0, spent); }
     }
 
     /// <summary>An attack card aimed at enemies (Osty's attacks use OstyDamage or CalculatedDamage).</summary>
@@ -1076,13 +1076,13 @@ public sealed class PlayFacts
         nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) or "TheMagician" => Sts2State.Var(card, "Repeat", 1),
         nameof(Tempest) => me?.PlayerCombatState?.Energy ?? 1, // X lightning
         // One Lightning per Lightning channeled this combat (its calculation reads the history).
-        nameof(Voltaic) => card.DynamicVars.TryGetValue("CalculatedChannels", out var vc) && vc is CalculatedVar calc ? (int)calc.Calculate(null) : 0,
+        nameof(Voltaic) => card.DynamicVars.TryGetValue("CalculatedChannels", out var dynamicVar) && dynamicVar is CalculatedVar calc ? (int)calc.Calculate(null) : 0,
         _ => 0,
     };
 
     private static int ChillChannels(CardModel card)
     {
-        try { return card.CombatState is { } cs ? cs.HittableEnemies.Count : 1; } catch { return 1; }
+        try { return card.CombatState is { } combat ? combat.HittableEnemies.Count : 1; } catch { return 1; }
     }
 
     // Cards that gain you stars when played (PlayerCmd.GainStars in OnPlay).
@@ -1136,7 +1136,7 @@ public sealed class PlayFacts
             // Souls into every living teammate's draw pile, created by you (GlimpseBeyond.OnPlay: AddGeneratedCardsToCombat with
             // creator = you): your created-card procs, once per Soul. The template card (no owner) counts one teammate.
             case nameof(GlimpseBeyond):
-                return Var("Cards") * (me == null ? 1 : me.Creature?.CombatState?.Players.Count(p => p != me && p.Creature is { IsAlive: true }) ?? 0);
+                return Var("Cards") * (me == null ? 1 : me.Creature?.CombatState?.Players.Count(player => player != me && player.Creature is { IsAlive: true }) ?? 0);
             case nameof(Severance): return 3;
             case nameof(Dirge): return me?.PlayerCombatState?.Energy ?? 1; // X souls
             // Other cards.
@@ -1155,7 +1155,7 @@ public sealed class PlayFacts
             case "SelfDeprecate":
             {
                 // Sadness for you, Joy for every other living player (created by you).
-                var mates = me?.Creature?.CombatState?.Players.Count(p => p != me && p.Creature is { IsAlive: true }) ?? 0;
+                var mates = me?.Creature?.CombatState?.Players.Count(player => player != me && player.Creature is { IsAlive: true }) ?? 0;
                 statuses = Var("Sadness", 1);
                 return statuses + Var("Joy", 2) * mates;
             }
@@ -1186,7 +1186,7 @@ public sealed class PlayFacts
         if (!ForgeCards.Contains(name)) return 0;
         try
         {
-            var hasBlade = me.PlayerCombatState?.AllCards.Any(c => c is SovereignBlade && !c.IsDupe && c.Pile?.Type != PileType.Exhaust) ?? true;
+            var hasBlade = me.PlayerCombatState?.AllCards.Any(card => card is SovereignBlade && !card.IsDupe && card.Pile?.Type != PileType.Exhaust) ?? true;
             return hasBlade ? 0 : 1;
         }
         catch
@@ -1201,7 +1201,7 @@ public sealed class PlayFacts
         int Var(string key, int fallback) => Sts2State.Var(card, key, fallback);
         int Transformable(Func<CardModel, bool> filter)
         {
-            try { return others.Count(c => c.IsTransformable && filter(c)); } catch { return others.Count(filter); }
+            try { return others.Count(other => other.IsTransformable && filter(other)); } catch { return others.Count(filter); }
         }
         return name switch
         {
@@ -1209,9 +1209,9 @@ public sealed class PlayFacts
             nameof(Guards) => Transformable(_ => true),                                     // any cards in hand you pick
             nameof(Charge) => Math.Min(Var("Cards", 2), drawPile),                          // cards from your draw pile
             nameof(Seance) => Math.Min(Var("Cards", 1), drawPile),                          // into Souls
-            nameof(Compact) => Transformable(c => c.Type == CardType.Status),               // every status in hand
-            nameof(PrimalForce) => Transformable(c => c.Type == CardType.Attack),           // every attack in hand
-            "PunchOfJoy" => Math.Min(1, others.Count(c => c.GetType().Name == "Sadness")),  // a Sadness in hand into Joy (v0.113.0)
+            nameof(Compact) => Transformable(otherCard => otherCard.Type == CardType.Status),               // every status in hand
+            nameof(PrimalForce) => Transformable(otherCard => otherCard.Type == CardType.Attack),           // every attack in hand
+            "PunchOfJoy" => Math.Min(1, others.Count(other => other.GetType().Name == "Sadness")),  // a Sadness in hand into Joy (v0.113.0)
             _ => 0,
         };
     }
@@ -1224,12 +1224,12 @@ public sealed class PlayFacts
     {
         if (card.TargetType is not (TargetType.AnyEnemy or TargetType.AllEnemies or TargetType.RandomEnemy)) return Array.Empty<Type>();
         List<Type>? list = null;
-        foreach (var v in card.DynamicVars.Values)
+        foreach (var dynamicVar in card.DynamicVars.Values)
         {
-            var t = v.GetType();
-            if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(PowerVar<>)) continue;
-            if (v.BaseValue <= 0) continue;
-            var powerType = t.GetGenericArguments()[0];
+            var type = dynamicVar.GetType();
+            if (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(PowerVar<>)) continue;
+            if (dynamicVar.BaseValue <= 0) continue;
+            var powerType = type.GetGenericArguments()[0];
             if (!(temporary ? IsTemporaryDebuff(powerType) : IsDebuff(powerType))) continue;
             (list ??= new()).Add(powerType);
         }
@@ -1274,10 +1274,10 @@ public sealed class PlayFacts
         if (enemies.Count == 0) return 0;
         var perPlay = filter == null ? EnemyDebuffs.Count : EnemyDebuffs.Count(filter);
         if (perPlay == 0) return 0;
-        int Landing(Creature e)
+        int Landing(Creature creature)
         {
             var n = perPlay * Plays;
-            var artifact = e.Powers.OfType<ArtifactPower>().Sum(p => p.Amount);
+            var artifact = creature.Powers.OfType<ArtifactPower>().Sum(artifactPower => artifactPower.Amount);
             return Math.Max(0, n - artifact);
         }
         return HitsAllEnemies ? enemies.Sum(Landing) : enemies.Max(Landing);
@@ -1305,7 +1305,7 @@ public sealed class SimInputs
         SimEngine.ApplyPlayTo(FullStart, play, out var full, out var t2);
         if (t1 || t2) return true;
         // The shown run's teammates have their hand cleared: compare everything else.
-        static IEnumerable<long> Keys(IEnumerable<SimState> b) => b.Select(x => x.WithoutTeammateHands().Key()).Distinct().OrderBy(k => k);
+        static IEnumerable<long> Keys(IEnumerable<SimState> states) => states.Select(branch => branch.WithoutTeammateHands().Key()).Distinct().OrderBy(k => k);
         return !Keys(shown).SequenceEqual(Keys(full));
     }
     public required IReadOnlyDictionary<Creature, int> Ids { get; init; }

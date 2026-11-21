@@ -51,9 +51,9 @@ public sealed class SimDrawPile
     public List<SimDrawGroup> Rest { get; init; } = new();
     public List<SimDrawGroup> Discard { get; init; } = new();
 
-    public int RestCount => Rest.Sum(g => g.Count);
+    public int RestCount => Rest.Sum(group => group.Count);
     public int Count => Top.Count + RestCount;
-    public int DiscardCount => Discard.Sum(g => g.Count);
+    public int DiscardCount => Discard.Sum(group => group.Count);
 
     /// <summary>The top card drawn.</summary>
     internal SimDrawPile WithoutTop() => new() { Top = Top.Skip(1).ToList(), Rest = Rest, Discard = Discard };
@@ -62,19 +62,19 @@ public sealed class SimDrawPile
     internal SimDrawPile WithoutOneOf(int i) => new()
     {
         Top = Top,
-        Rest = Rest.Select((g, j) => j == i ? g with { Count = g.Count - 1 } : g).Where(g => g.Count > 0).ToList(),
+        Rest = Rest.Select((group, j) => j == i ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
         Discard = Discard,
     };
 
     /// <summary>Some I Am Invincible in the pile.</summary>
-    public bool HasInvincible => Top.Any(c => c.InvincibleBlock > 0) || Rest.Any(g => g.Card.InvincibleBlock > 0);
+    public bool HasInvincible => Top.Any(drawn => drawn.InvincibleBlock > 0) || Rest.Any(group => group.Card.InvincibleBlock > 0);
 
     /// <summary>A card played from the top goes to the discard pile.</summary>
     internal SimDrawPile WithDiscarded(SimDrawCard card) => new()
     {
         Top = Top, Rest = Rest,
-        Discard = Discard.Any(g => g.Card.Key == card.Key)
-            ? Discard.Select(g => g.Card.Key == card.Key ? g with { Count = g.Count + 1 } : g).ToList()
+        Discard = Discard.Any(group => group.Card.Key == card.Key)
+            ? Discard.Select(group => group.Card.Key == card.Key ? group with { Count = group.Count + 1 } : group).ToList()
             : new List<SimDrawGroup>(Discard) { new(card, 1) },
     };
 
@@ -84,17 +84,17 @@ public sealed class SimDrawPile
     /// </summary>
     internal SimDrawPile Shuffled()
     {
-        var fits = Discard.Where(g => g.Card.PerfectFit).ToList();
+        var fits = Discard.Where(group => group.Card.PerfectFit).ToList();
         if (fits.Count != 1 || fits[0].Count != 1) return new() { Top = new(), Rest = Discard.ToList(), Discard = new() };
-        return new() { Top = new() { fits[0].Card }, Rest = Discard.Where(g => !g.Card.PerfectFit).ToList(), Discard = new() };
+        return new() { Top = new() { fits[0].Card }, Rest = Discard.Where(group => !group.Card.PerfectFit).ToList(), Discard = new() };
     }
 
     /// <summary>For the branch key: what's left, by profile.</summary>
     internal void Hash(Action<long> add)
     {
         add(Top.Count);
-        foreach (var c in Top) add(c.Key.GetHashCode());
-        foreach (var g in Rest) { add(g.Card.Key.GetHashCode()); add(g.Count); }
+        foreach (var drawn in Top) add(drawn.Key.GetHashCode());
+        foreach (var group in Rest) { add(group.Card.Key.GetHashCode()); add(group.Count); }
         add(DiscardCount);
     }
 }

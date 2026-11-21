@@ -9,13 +9,13 @@ public sealed class OddsTally
     public int Count, Happened;
     public double Low, High, Variance;
 
-    public void Add(SimChance c, bool happened)
+    public void Add(SimChance chance, bool happened)
     {
         Count++;
         if (happened) Happened++;
-        Low += c.Low;
-        High += c.High;
-        var p = (c.Low + c.High) / 2;
+        Low += chance.Low;
+        High += chance.High;
+        var p = (chance.Low + chance.High) / 2;
         Variance += p * (1 - p);
     }
 

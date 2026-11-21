@@ -30,8 +30,8 @@ public class GuideTests
     {
         var guide = GuideSource();
         var features = typeof(ModEntry).Assembly.GetTypes()
-            .Where(t => !t.IsAbstract && typeof(IFeature).IsAssignableFrom(t))
-            .Select(t => ((IFeature)RuntimeHelpers.GetUninitializedObject(t)).DisplayName)
+            .Where(type => !type.IsAbstract && typeof(IFeature).IsAssignableFrom(type))
+            .Select(type => ((IFeature)RuntimeHelpers.GetUninitializedObject(type)).DisplayName)
             .Where(name => !name.EndsWith("(log only)")) // diagnostics: nothing on screen
             .ToList();
         Assert.True(features.Count >= 10, $"only {features.Count} features found");

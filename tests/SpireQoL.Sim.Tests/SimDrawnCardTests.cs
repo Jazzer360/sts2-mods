@@ -20,11 +20,11 @@ public class SimDrawnCardTests
 
     private static SimState You(SimDrawPile pile, int hand = 5)
     {
-        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = new() { 10 } } } };
-        s.You.HandCount = hand;
-        s.You.Hp = 50;
-        s.You.Draw = pile;
-        return s;
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = new() { 10 } } } };
+        state.You.HandCount = hand;
+        state.You.Hp = 50;
+        state.You.Draw = pile;
+        return state;
     }
 
     /// <summary>A card played from your hand whose draw it acts on.</summary>
@@ -36,24 +36,24 @@ public class SimDrawnCardTests
     public void EscapePlanBlocksOnlyWhenItDrawsASkill()
     {
         // One Skill in four: a quarter of the outcomes have its 3 block, so the enemy's 10 takes 7 there and 10 in the rest.
-        var o = SimEngine.Run(You(Pile((Skill, 1), (Attack, 3))), Playing("EscapePlan", EscapePlan));
-        Assert.Equal(0.25, o.Branches.Where(b => b.Taken == 7).Sum(b => b.Weight), 9);
-        Assert.Equal(0.75, o.Branches.Where(b => b.Taken == 10).Sum(b => b.Weight), 9);
+        var outcome = SimEngine.Run(You(Pile((Skill, 1), (Attack, 3))), Playing("EscapePlan", EscapePlan));
+        Assert.Equal(0.25, outcome.Branches.Where(branch => branch.Taken == 7).Sum(branch => branch.Weight), 9);
+        Assert.Equal(0.75, outcome.Branches.Where(branch => branch.Taken == 10).Sum(branch => branch.Weight), 9);
     }
 
     [Fact]
     public void EscapePlanIntoAFullHandDrawsNothingAndGainsNothing()
     {
-        var o = SimEngine.Run(You(Pile((Skill, 4)), hand: 11), Playing("EscapePlan", EscapePlan));
-        Assert.All(o.Branches, b => Assert.Equal(10, b.Taken));
+        var outcome = SimEngine.Run(You(Pile((Skill, 4)), hand: 11), Playing("EscapePlan", EscapePlan));
+        Assert.All(outcome.Branches, branch => Assert.Equal(10, branch.Taken));
     }
 
     [Fact]
     public void PillageDrawsAgainWhileItDrawsAnAttack()
     {
         // Two Attacks and two Skills: it stops at the first Skill. 1 card: 1/2; 2: 2/4 * 2/3 = 1/3; 3: 2/4 * 1/3 * 2/2 = 1/6.
-        var o = SimEngine.Run(You(Pile((Attack, 2), (Skill, 2)), hand: 5), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-        double Drew(int n) => o.Branches.Where(b => b.You.Draw!.RestCount == 4 - n).Sum(b => b.Weight);
+        var outcome = SimEngine.Run(You(Pile((Attack, 2), (Skill, 2)), hand: 5), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
+        double Drew(int n) => outcome.Branches.Where(branch => branch.You.Draw!.RestCount == 4 - n).Sum(branch => branch.Weight);
         Assert.Equal(0.5, Drew(1), 9);
         Assert.Equal(1.0 / 3, Drew(2), 9);
         Assert.Equal(1.0 / 6, Drew(3), 9);
@@ -63,27 +63,27 @@ public class SimDrawnCardTests
     public void PillageStopsAtAFullHand()
     {
         // Nine in hand with Pillage: it leaves (8), then draws Attacks until the hand holds 10.
-        var o = SimEngine.Run(You(Pile((Attack, 6)), hand: 9), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-        Assert.All(o.Branches, b => Assert.Equal(4, b.You.Draw!.RestCount));
+        var outcome = SimEngine.Run(You(Pile((Attack, 6)), hand: 9), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
+        Assert.All(outcome.Branches, branch => Assert.Equal(4, branch.You.Draw!.RestCount));
     }
 
     [Fact]
     public void ScrapeDiscardsWhatItDrewUnlessItCostsZero()
     {
         // Draws 2 from a free card and a Burn: the Burn is discarded, so it doesn't burn you at the end of your turn.
-        var o = SimEngine.Run(You(Pile((FreeCard, 1), (Burn, 1))), Playing("Scrape", new DrawnCardAction(2) { DiscardUnlessFree = true }));
-        var b = Assert.Single(o.Branches);
-        Assert.Equal(10, b.Taken);                 // the enemy's 10, no Burn
-        Assert.Empty(b.You.TurnEndCards);
-        Assert.Equal(1, b.PlayEvents[CardEvent.Discarded]);
+        var outcome = SimEngine.Run(You(Pile((FreeCard, 1), (Burn, 1))), Playing("Scrape", new DrawnCardAction(2) { DiscardUnlessFree = true }));
+        var state = Assert.Single(outcome.Branches);
+        Assert.Equal(10, state.Taken);                 // the enemy's 10, no Burn
+        Assert.Empty(state.You.TurnEndCards);
+        Assert.Equal(1, state.PlayEvents[CardEvent.Discarded]);
     }
 
     [Fact]
     public void ScrapeDiscardingASlyCardIsNotModelled()
     {
-        var o = SimEngine.Run(You(Pile((SlyCard, 1), (FreeCard, 1))), Playing("Scrape", new DrawnCardAction(1) { DiscardUnlessFree = true }));
-        Assert.Contains(o.Branches, b => b.Unmodelled != null);
-        Assert.Contains(o.Branches, b => b.Unmodelled == null);
+        var outcome = SimEngine.Run(You(Pile((SlyCard, 1), (FreeCard, 1))), Playing("Scrape", new DrawnCardAction(1) { DiscardUnlessFree = true }));
+        Assert.Contains(outcome.Branches, branch => branch.Unmodelled != null);
+        Assert.Contains(outcome.Branches, branch => branch.Unmodelled == null);
     }
 
     // ---- against the textbook odds (decision #120): every pile makeup and hand size, not just ones worked out by hand
@@ -109,9 +109,9 @@ public class SimDrawnCardTests
 
     private static double Choose(int n, int k) => k < 0 || k > n ? 0 : Enumerable.Range(1, k).Aggregate(1.0, (a, i) => a * (n - k + i) / i);
 
-    private static void SameOdds(Dictionary<int, double> expected, SimOutcome o, string what)
+    private static void SameOdds(Dictionary<int, double> expected, SimOutcome outcome, string what)
     {
-        var d = DrawnChance.Distribution(o)!;
+        var d = DrawnChance.Distribution(outcome)!;
         Assert.True(Math.Abs(d.Values.Sum() - 1) < 1e-9, $"{what}: the chances add to {d.Values.Sum()}");
         foreach (var n in expected.Keys.Union(d.Keys))
             Assert.True(Math.Abs(expected.GetValueOrDefault(n) - d.GetValueOrDefault(n)) < 1e-9,
@@ -130,8 +130,8 @@ public class SimDrawnCardTests
             var pile = new List<(SimDrawCard, int)>();
             if (attacks > 0) pile.Add((Attack, attacks));
             if (others > 0) pile.Add((Skill, others));
-            var o = SimEngine.Run(You(Pile(pile.ToArray()), hand), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-            SameOdds(PillageOdds(attacks, others, 11 - hand), o, $"{attacks} Attacks, {others} others, hand {hand}");
+            var outcome = SimEngine.Run(You(Pile(pile.ToArray()), hand), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
+            SameOdds(PillageOdds(attacks, others, 11 - hand), outcome, $"{attacks} Attacks, {others} others, hand {hand}");
         }
     }
 
@@ -162,9 +162,9 @@ public class SimDrawnCardTests
             var pile = new List<(SimDrawCard, int)>();
             if (free > 0) pile.Add((FreeCard, free));
             if (others > 0) pile.Add((Burn, others));
-            var o = SimEngine.Run(You(Pile(pile.ToArray()), hand: 1), Playing("Scrape", new DrawnCardAction(4) { DiscardUnlessFree = true }));
+            var outcome = SimEngine.Run(You(Pile(pile.ToArray()), hand: 1), Playing("Scrape", new DrawnCardAction(4) { DiscardUnlessFree = true }));
             var expected = Enumerable.Range(0, draws + 1).ToDictionary(f => f, f => Choose(free, f) * Choose(others, draws - f) / Choose(n, draws));
-            SameOdds(expected.Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => kv.Value), o, $"{free} free, {others} others");
+            SameOdds(expected.Where(kv => kv.Value > 0).ToDictionary(kv => kv.Key, kv => kv.Value), outcome, $"{free} free, {others} others");
         }
     }
 
@@ -178,8 +178,8 @@ public class SimDrawnCardTests
             var pile = new List<(SimDrawCard, int)>();
             if (skills > 0) pile.Add((Skill, skills));
             if (others > 0) pile.Add((Attack, others));
-            var o = SimEngine.Run(You(Pile(pile.ToArray())), Playing("EscapePlan", EscapePlan));
-            Assert.Equal((double)skills / (skills + others), DrawnChance.ChanceOfAny(DrawnChance.Distribution(o)!), 9);
+            var outcome = SimEngine.Run(You(Pile(pile.ToArray())), Playing("EscapePlan", EscapePlan));
+            Assert.Equal((double)skills / (skills + others), DrawnChance.ChanceOfAny(DrawnChance.Distribution(outcome)!), 9);
         }
     }
 
@@ -190,15 +190,15 @@ public class SimDrawnCardTests
         // aren't Pillage's (CardPileCmd.Draw returns only its own card), so they neither count nor carry it on. 1 Attack, 1 Status,
         // 2 Attacks: it draws the Status first half the time (0 Attacks counted), else the Attack, then the Status (1).
         var status = new SimDrawCard("status") { Type = SimCardType.Status, Status = true };
-        var s = You(Pile((Attack, 1), (status, 1)), hand: 1);
-        s.You.Powers = s.You.Powers.With(PowerId.Iteration, 2, 0);
-        s.You.Draw!.Rest.Add(new SimDrawGroup(new SimDrawCard("attack b") { Type = SimCardType.Attack }, 2));
-        var o = SimEngine.Run(s, Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
+        var state = You(Pile((Attack, 1), (status, 1)), hand: 1);
+        state.You.Powers = state.You.Powers.With(PowerId.Iteration, 2, 0);
+        state.You.Draw!.Rest.Add(new SimDrawGroup(new SimDrawCard("attack b") { Type = SimCardType.Attack }, 2));
+        var outcome = SimEngine.Run(state, Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
         // Attacks: 3 in 4. Draws Attacks until the Status: 0 with 1/4, 1 with 3/4 * 1/3, 2 with 3/4 * 2/3 * 1/2, 3 with 1/4.
-        SameOdds(new() { [0] = 0.25, [1] = 0.25, [2] = 0.25, [3] = 0.25 }, o, "with Iteration");
+        SameOdds(new() { [0] = 0.25, [1] = 0.25, [2] = 0.25, [3] = 0.25 }, outcome, "with Iteration");
         // Iteration's 2 follow the Status: drawn first, it leaves 1 card in the pile; any later, it empties it.
-        Assert.Equal(0.25, o.Branches.Where(b => b.You.Draw!.RestCount == 1).Sum(b => b.Weight), 9);
-        Assert.Equal(0.75, o.Branches.Where(b => b.You.Draw!.RestCount == 0).Sum(b => b.Weight), 9);
+        Assert.Equal(0.25, outcome.Branches.Where(branch => branch.You.Draw!.RestCount == 1).Sum(branch => branch.Weight), 9);
+        Assert.Equal(0.75, outcome.Branches.Where(branch => branch.You.Draw!.RestCount == 0).Sum(branch => branch.Weight), 9);
     }
 
     // ---- Hellraiser (decision #121): a Strike you draw plays itself at once
@@ -216,22 +216,22 @@ public class SimDrawnCardTests
 
     private static SimState Hellraised(SimDrawPile pile, int hand = 1, int enemies = 1)
     {
-        var s = You(pile, hand);
-        for (var id = 2; id <= enemies; id++) s.Enemies.Add(new SimEnemy { Id = id, Name = "E" + id, Hp = 50, Hits = new() { 10 } });
-        s.You.Powers = s.You.Powers.With(PowerId.Hellraiser, 1, 0);
-        return s;
+        var state = You(pile, hand);
+        for (var id = 2; id <= enemies; id++) state.Enemies.Add(new SimEnemy { Id = id, Name = "E" + id, Hp = 50, Hits = new() { 10 } });
+        state.You.Powers = state.You.Powers.With(PowerId.Hellraiser, 1, 0);
+        return state;
     }
 
     [Fact]
     public void HellraiserPlaysADrawnStrikeAtARandomEnemy()
     {
         // A draw of 1 from a pile of only Strikes, two enemies: it plays itself at either, half each, and leaves your hand.
-        var o = SimEngine.Run(Hellraised(Pile((HellStrike(1, 2), 3)), hand: 3, enemies: 2),
+        var outcome = SimEngine.Run(Hellraised(Pile((HellStrike(1, 2), 3)), hand: 3, enemies: 2),
             new SimPlay { Name = "Draw1", HandCard = 7, HandDelta = -1, Body = { new CardEventAction(CardEvent.Drawn, 1) } });
-        Assert.All(o.Branches, b => Assert.Null(b.Unmodelled));
-        Assert.Equal(0.5, o.Branches.Where(b => b.Enemies[0].Hp == 44 && b.Enemies[1].Hp == 50).Sum(b => b.Weight), 9);
-        Assert.Equal(0.5, o.Branches.Where(b => b.Enemies[1].Hp == 44 && b.Enemies[0].Hp == 50).Sum(b => b.Weight), 9);
-        Assert.All(o.Branches, b => Assert.Equal(1, b.AutoPlayed));
+        Assert.All(outcome.Branches, branch => Assert.Null(branch.Unmodelled));
+        Assert.Equal(0.5, outcome.Branches.Where(branch => branch.Enemies[0].Hp == 44 && branch.Enemies[1].Hp == 50).Sum(branch => branch.Weight), 9);
+        Assert.Equal(0.5, outcome.Branches.Where(branch => branch.Enemies[1].Hp == 44 && branch.Enemies[0].Hp == 50).Sum(branch => branch.Weight), 9);
+        Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.AutoPlayed));
     }
 
     [Fact]
@@ -239,22 +239,22 @@ public class SimDrawnCardTests
     {
         // Pillage's draw is still the Strike (an Attack) after it plays itself, and your hand has the room it left: it draws on.
         // One Strike, one Skill: the Strike first (half): 1 Attack, 6 damage; the Skill first: none.
-        var o = SimEngine.Run(Hellraised(Pile((HellStrike(1), 1), (Skill, 1))),
+        var outcome = SimEngine.Run(Hellraised(Pile((HellStrike(1), 1), (Skill, 1))),
             Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-        Assert.All(o.Branches, b => Assert.Null(b.Unmodelled));
-        SameOdds(new() { [0] = 0.5, [1] = 0.5 }, o, "with Hellraiser");
-        Assert.Equal(0.5, o.Branches.Where(b => b.Enemies[0].Hp == 44).Sum(b => b.Weight), 9);
+        Assert.All(outcome.Branches, branch => Assert.Null(branch.Unmodelled));
+        SameOdds(new() { [0] = 0.5, [1] = 0.5 }, outcome, "with Hellraiser");
+        Assert.Equal(0.5, outcome.Branches.Where(branch => branch.Enemies[0].Hp == 44).Sum(branch => branch.Weight), 9);
         // The Strike played: whichever came first, both cards were drawn in the Strike-first branch, one in the other.
-        Assert.Equal(0.5, o.Branches.Where(b => b.You.Draw!.RestCount == 0).Sum(b => b.Weight), 9);
+        Assert.Equal(0.5, outcome.Branches.Where(branch => branch.You.Draw!.RestCount == 0).Sum(branch => branch.Weight), 9);
     }
 
     [Fact]
     public void HellraiserWithAStrikeWhosePlayIsntBuiltIsNotModelled()
     {
         var bare = new SimDrawCard("bare strike") { Type = SimCardType.Attack, Strike = true };
-        var o = SimEngine.Run(Hellraised(Pile((bare, 2))),
+        var outcome = SimEngine.Run(Hellraised(Pile((bare, 2))),
             new SimPlay { Name = "Draw1", HandCard = 7, HandDelta = -1, Body = { new CardEventAction(CardEvent.Drawn, 1) } });
-        Assert.All(o.Branches, b => Assert.NotNull(b.Unmodelled));
+        Assert.All(outcome.Branches, branch => Assert.NotNull(branch.Unmodelled));
     }
 
     // ---- the chance tab (decision #119)
@@ -262,8 +262,8 @@ public class SimDrawnCardTests
     [Fact]
     public void EscapePlansTabIsTheChanceItDrawsASkill()
     {
-        var o = SimEngine.Run(You(Pile((Skill, 1), (Attack, 3))), Playing("EscapePlan", EscapePlan));
-        var d = DrawnChance.Distribution(o)!;
+        var outcome = SimEngine.Run(You(Pile((Skill, 1), (Attack, 3))), Playing("EscapePlan", EscapePlan));
+        var d = DrawnChance.Distribution(outcome)!;
         Assert.Equal(0.25, DrawnChance.ChanceOfAny(d), 9);
     }
 
@@ -271,8 +271,8 @@ public class SimDrawnCardTests
     public void PillagesTabIsTheMostLikelyNumberOfAttacks()
     {
         // Two Attacks and two Skills: 0 Attacks 1/2, 1 Attack 1/3, 2 Attacks 1/6.
-        var o = SimEngine.Run(You(Pile((Attack, 2), (Skill, 2))), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-        var d = DrawnChance.Distribution(o)!;
+        var outcome = SimEngine.Run(You(Pile((Attack, 2), (Skill, 2))), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
+        var d = DrawnChance.Distribution(outcome)!;
         Assert.Equal(0.5, d[0], 9);
         Assert.Equal(1.0 / 3, d[1], 9);
         Assert.Equal(1.0 / 6, d[2], 9);
@@ -283,8 +283,8 @@ public class SimDrawnCardTests
     public void ScrapesTabCountsTheCardsThatCostZeroAndATieGoesHigher()
     {
         // Draws 1 from one free card and one that isn't: 0 or 1 free, half each: the tie goes to 1.
-        var o = SimEngine.Run(You(Pile((FreeCard, 1), (Burn, 1))), Playing("Scrape", new DrawnCardAction(1) { DiscardUnlessFree = true }));
-        var (n, chance) = DrawnChance.MostLikely(DrawnChance.Distribution(o)!);
+        var outcome = SimEngine.Run(You(Pile((FreeCard, 1), (Burn, 1))), Playing("Scrape", new DrawnCardAction(1) { DiscardUnlessFree = true }));
+        var (n, chance) = DrawnChance.MostLikely(DrawnChance.Distribution(outcome)!);
         Assert.Equal(1, n);
         Assert.Equal(0.5, chance, 9);
     }
@@ -292,8 +292,8 @@ public class SimDrawnCardTests
     [Fact]
     public void APlayWithoutSuchADrawHasNoTab()
     {
-        var o = SimEngine.Run(You(Pile((Skill, 2))), new SimPlay { Name = "Strike", HandCard = 7, HandDelta = -1 });
-        Assert.Null(DrawnChance.Distribution(o));
+        var outcome = SimEngine.Run(You(Pile((Skill, 2))), new SimPlay { Name = "Strike", HandCard = 7, HandDelta = -1 });
+        Assert.Null(DrawnChance.Distribution(outcome));
     }
 
     [Fact]

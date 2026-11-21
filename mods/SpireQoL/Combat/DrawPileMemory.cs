@@ -70,7 +70,7 @@ internal static class DrawPileMemory
         {
             if (newPile.Type != PileType.Draw || position == CardPilePosition.Bottom) return;
             var me = Sts2State.Me;
-            var list = cards.Where(c => c.Owner == me).Select(c => (c, c.Pile)).ToList();
+            var list = cards.Where(card => card.Owner == me).Select(card => (card, card.Pile)).ToList();
             if (list.Count > 0) Pending.Add((list, position, 0));
         }
         catch
@@ -101,7 +101,7 @@ internal static class DrawPileMemory
             {
                 _shuffling = -1;
                 Top.Clear();
-                var fits = pile.Cards.Where(c => c.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit).ToList();
+                var fits = pile.Cards.Where(card => card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit).ToList();
                 if (fits.Count == 1) Top.Add(fits[0]);
             }
             else return; // mid-shuffle: nothing to check yet
@@ -121,12 +121,12 @@ internal static class DrawPileMemory
             }
             Pending.RemoveAt(0);
             if (position == CardPilePosition.Top)
-                foreach (var (c, _) in cards) { Top.Remove(c); Top.Insert(0, c); }
+                foreach (var (card, _) in cards) { Top.Remove(card); Top.Insert(0, card); }
             else
                 Top.Clear(); // a random place: it may be above them now
         }
         // Gone from the pile (drawn, played from the top, exhausted, the pile shuffled away).
-        Top.RemoveAll(c => c.Pile != pile);
+        Top.RemoveAll(card => card.Pile != pile);
         Check(pile);
     }
 
@@ -136,9 +136,9 @@ internal static class DrawPileMemory
         if (Top.Count == 0) return;
         var actual = pile.Cards.Take(Top.Count).ToList();
         if (actual.Count == Top.Count && actual.Zip(Top).All(x => ReferenceEquals(x.First, x.Second))) return;
-        var line = $"[audit] [draws] known top of the draw pile [{string.Join(", ", Top.Select(c => c.GetType().Name))}] isn't the pile's top " +
-                   $"[{string.Join(", ", actual.Select(c => c.GetType().Name))}]: forgotten";
-        if (Warned.Add(string.Join(",", Top.Select(c => c.GetType().Name)))) ModEntry.Log.Warn(line);
+        var line = $"[audit] [draws] known top of the draw pile [{string.Join(", ", Top.Select(card => card.GetType().Name))}] isn't the pile's top " +
+                   $"[{string.Join(", ", actual.Select(card => card.GetType().Name))}]: forgotten";
+        if (Warned.Add(string.Join(",", Top.Select(card => card.GetType().Name)))) ModEntry.Log.Warn(line);
         Top.Clear();
     }
 }

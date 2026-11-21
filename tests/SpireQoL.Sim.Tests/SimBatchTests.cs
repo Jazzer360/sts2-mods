@@ -11,10 +11,10 @@ public class SimBatchTests
 {
     private static SimState Board()
     {
-        var s = new SimState();
-        s.Enemies.Add(new SimEnemy { Id = 0, Name = "E", Hp = 20, Hits = new() { 5 } });
-        s.Enemies.Add(new SimEnemy { Id = 1, Name = "F", Hp = 12, Hits = new() { 3 } });
-        return s;
+        var state = new SimState();
+        state.Enemies.Add(new SimEnemy { Id = 0, Name = "E", Hp = 20, Hits = new() { 5 } });
+        state.Enemies.Add(new SimEnemy { Id = 1, Name = "F", Hp = 12, Hits = new() { 3 } });
+        return state;
     }
 
     private static SimPlay Strike(int target) => new() { HitTarget = SimPlay.Target.Single, TargetId = target, Hits = 1, HitDamage = { [0] = 6, [1] = 6 } };
@@ -28,10 +28,10 @@ public class SimBatchTests
         {
             var batch = new SimBatch(new[] { 0, 1 }.Select(t => SimJob.Start(SimSearch.Of(Board(), Strike(t)), "batch test")).ToArray());
             var clock = System.Diagnostics.Stopwatch.StartNew();
-            while (!batch.Jobs.All(j => j.Ready.IsCompleted)) Assert.True(clock.ElapsedMilliseconds < 10_000, "the searches never finished");
+            while (!batch.Jobs.All(job => job.Ready.IsCompleted)) Assert.True(clock.ElapsedMilliseconds < 10_000, "the searches never finished");
             Assert.True(batch.IsCompleted, $"pending right after its jobs were done (run {i})");
             Assert.Null(batch.Fault);
-            Assert.All(batch.Latest, o => Assert.NotNull(o));
+            Assert.All(batch.Latest, outcome => Assert.NotNull(outcome));
         }
     }
 

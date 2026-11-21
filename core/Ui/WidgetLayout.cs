@@ -49,7 +49,7 @@ public sealed class WidgetLayout
 
     public WidgetLayout Clone() => (WidgetLayout)MemberwiseClone();
 
-    public static (float X, float Y) Fraction(ScreenAnchor a) => a switch
+    public static (float X, float Y) Fraction(ScreenAnchor screenAnchor) => screenAnchor switch
     {
         ScreenAnchor.TopLeft => (0f, 0f),
         ScreenAnchor.Top => (0.5f, 0f),

@@ -24,11 +24,11 @@ public static class OtherMods
         if (_others == null)
         {
             var found = new List<(string, string, bool)>();
-            foreach (var m in ModManager.GetLoadedMods())
+            foreach (var mod in ModManager.GetLoadedMods())
             {
-                if (m.assemblies.Contains(ours) || m.manifest?.id == ours.GetName().Name) continue;
-                var id = m.manifest?.id ?? "?";
-                found.Add((id, $"{id}-{m.manifest?.version ?? "?"}", (m.manifest?.affectsGameplay ?? true) || m.assemblies.Any(AddsContent)));
+                if (mod.assemblies.Contains(ours) || mod.manifest?.id == ours.GetName().Name) continue;
+                var id = mod.manifest?.id ?? "?";
+                found.Add((id, $"{id}-{mod.manifest?.version ?? "?"}", (mod.manifest?.affectsGameplay ?? true) || mod.assemblies.Any(AddsContent)));
             }
             _others = found;
         }
@@ -46,10 +46,10 @@ public static class OtherMods
         try
         {
             var others = new Dictionary<Assembly, string>();
-            foreach (var m in ModManager.GetLoadedMods())
+            foreach (var mod in ModManager.GetLoadedMods())
             {
-                if (m.assemblies.Contains(ours) || m.manifest?.id == ours.GetName().Name) continue;
-                foreach (var a in m.assemblies) others[a] = m.manifest?.id ?? "?";
+                if (mod.assemblies.Contains(ours) || mod.manifest?.id == ours.GetName().Name) continue;
+                foreach (var assembly in mod.assemblies) others[assembly] = mod.manifest?.id ?? "?";
             }
             return InStack(ex, others, ourHarmony);
         }
@@ -65,13 +65,13 @@ public static class OtherMods
     private static string? Walk(Exception? ex, IReadOnlyDictionary<Assembly, string> others, string ourHarmony, int depth)
     {
         if (ex == null || depth > 8) return null;
-        foreach (var f in new System.Diagnostics.StackTrace(ex, false).GetFrames())
+        foreach (var stackFrame in new System.Diagnostics.StackTrace(ex, false).GetFrames())
         {
-            var mb = f.GetMethod();
-            if (mb == null) continue;
-            var asm = mb.DeclaringType?.Assembly ?? mb.Module.Assembly;
+            var method = stackFrame.GetMethod();
+            if (method == null) continue;
+            var asm = method.DeclaringType?.Assembly ?? method.Module.Assembly;
             if (others.TryGetValue(asm, out var id)) return id;
-            if (mb.DeclaringType == null && PatchOwner(mb.Name, ourHarmony) is { } owner) return owner;
+            if (method.DeclaringType == null && PatchOwner(method.Name, ourHarmony) is { } owner) return owner;
         }
         if (ex is AggregateException agg)
             foreach (var inner in agg.InnerExceptions)
@@ -86,10 +86,10 @@ public static class OtherMods
         var j = dynamicName.LastIndexOf('>');
         if (i < 0 || j <= i) return null;
         var inner = dynamicName[(i + 1)..j];
-        foreach (var m in HarmonyLib.Harmony.GetAllPatchedMethods())
+        foreach (var method in HarmonyLib.Harmony.GetAllPatchedMethods())
         {
-            if (m.DeclaringType == null || !inner.Contains(m.DeclaringType.Name) || !inner.Contains("::" + m.Name)) continue;
-            if (HarmonyLib.Harmony.GetPatchInfo(m)?.Owners.FirstOrDefault(o => !o.StartsWith(ourHarmony, StringComparison.Ordinal)) is { } owner) return owner;
+            if (method.DeclaringType == null || !inner.Contains(method.DeclaringType.Name) || !inner.Contains("::" + method.Name)) continue;
+            if (HarmonyLib.Harmony.GetPatchInfo(method)?.Owners.FirstOrDefault(o => !o.StartsWith(ourHarmony, StringComparison.Ordinal)) is { } owner) return owner;
         }
         return null;
     }
@@ -100,8 +100,8 @@ public static class OtherMods
         try
         {
             return ModManager.GetLoadedMods()
-                .Where(m => !m.assemblies.Contains(ours) && m.manifest?.id != ours.GetName().Name)
-                .Select(m => $"{m.manifest?.id ?? "?"}-{m.manifest?.version ?? "?"}")
+                .Where(mod => !mod.assemblies.Contains(ours) && mod.manifest?.id != ours.GetName().Name)
+                .Select(mod => $"{mod.manifest?.id ?? "?"}-{mod.manifest?.version ?? "?"}")
                 .ToList();
         }
         catch
@@ -110,15 +110,15 @@ public static class OtherMods
         }
     }
 
-    private static bool AddsContent(Assembly a)
+    private static bool AddsContent(Assembly assembly)
     {
         try
         {
-            return a.GetTypes().Any(t => !t.IsAbstract && typeof(AbstractModel).IsAssignableFrom(t));
+            return assembly.GetTypes().Any(type => !type.IsAbstract && typeof(AbstractModel).IsAssignableFrom(type));
         }
-        catch (ReflectionTypeLoadException e)
+        catch (ReflectionTypeLoadException reflectionTypeLoadException)
         {
-            return e.Types.Any(t => t is { IsAbstract: false } && typeof(AbstractModel).IsAssignableFrom(t));
+            return reflectionTypeLoadException.Types.Any(type => type is { IsAbstract: false } && typeof(AbstractModel).IsAssignableFrom(type));
         }
         catch
         {

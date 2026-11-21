@@ -13,9 +13,9 @@ public class MoveBlockTests
     private static List<MovePowers.BlockCall> Of(string monster, string method)
     {
         GameModels.EnsureLoaded();
-        var t = typeof(MegaCrit.Sts2.Core.Models.MonsterModel).Assembly.GetTypes().Single(x => x.Name == monster && x.Namespace == "MegaCrit.Sts2.Core.Models.Monsters");
-        var m = t.GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!;
-        return MovePowers.ReadBlock(m);
+        var type = typeof(MegaCrit.Sts2.Core.Models.MonsterModel).Assembly.GetTypes().Single(otherType => otherType.Name == monster && otherType.Namespace == "MegaCrit.Sts2.Core.Models.Monsters");
+        var otherMethod = type.GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!;
+        return MovePowers.ReadBlock(otherMethod);
     }
 
     [Fact]

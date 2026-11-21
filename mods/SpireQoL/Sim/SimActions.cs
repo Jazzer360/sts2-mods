@@ -30,7 +30,7 @@ public sealed record DamageSpec(decimal Base, SimProps Props)
     public bool Fixed { get; init; }
 
     public decimal BaseFor(int target) => BaseOn != null && BaseOn.TryGetValue(target, out var b) ? b : Base;
-    public CapturedTerms TermsFor(int target) => Captured != null && Captured.TryGetValue(target, out var c) ? c : CapturedTerms.None;
+    public CapturedTerms TermsFor(int target) => Captured != null && Captured.TryGetValue(target, out var terms) ? terms : CapturedTerms.None;
 }
 
 /// <summary>

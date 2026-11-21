@@ -83,7 +83,7 @@ internal sealed class InspectScreen
     {
         if (!IsOpen) return;
         Fit();
-        foreach (var c in _cards) c.Tick();
+        foreach (var shownCard in _cards) shownCard.Tick();
         foreach (var cell in _cells) PlaceRing(cell.Shown, cell.Ring);
     }
 
@@ -96,10 +96,10 @@ internal sealed class InspectScreen
     /// </summary>
     private static void PlaceRing(ShownCard shown, Panel ring)
     {
-        if (!ring.Visible || shown.CardRect is not { } r) return;
-        var top = shown.Decor.Tabs.Count > 0 ? 0 : r.Position.Y - RingGap;
-        var pos = new Vector2(r.Position.X - RingGap, top);
-        var size = new Vector2(r.Size.X + 2 * RingGap, r.End.Y + RingGap - top);
+        if (!ring.Visible || shown.CardRect is not { } rect) return;
+        var top = shown.Decor.Tabs.Count > 0 ? 0 : rect.Position.Y - RingGap;
+        var pos = new Vector2(rect.Position.X - RingGap, top);
+        var size = new Vector2(rect.Size.X + 2 * RingGap, rect.End.Y + RingGap - top);
         if (ring.Position != pos) ring.Position = pos;
         if (ring.Size != size) ring.Size = size;
     }
@@ -111,16 +111,16 @@ internal sealed class InspectScreen
     private void Regroup()
     {
         var groups = _baseGroups.ToList();
-        if (_transformFrom != null && groups.Any(g => g.Kind == DrawKind.Transform))
+        if (_transformFrom != null && groups.Any(drawGroup => drawGroup.Kind == DrawKind.Transform))
         {
-            var first = groups.FindIndex(g => g.Kind == DrawKind.Transform);
-            groups.RemoveAll(g => g.Kind == DrawKind.Transform);
-            var upgraded = _baseGroups.First(g => g.Kind == DrawKind.Transform).Upgraded;
+            var first = groups.FindIndex(drawGroup => drawGroup.Kind == DrawKind.Transform);
+            groups.RemoveAll(drawGroup => drawGroup.Kind == DrawKind.Transform);
+            var upgraded = _baseGroups.First(drawGroup => drawGroup.Kind == DrawKind.Transform).Upgraded;
             groups.Insert(Math.Min(first, groups.Count), new DrawGroup(DrawKind.Transform, RunRemindersFeature.OptionCards.TransformResults(_transformFrom),
                 MegaCrit.Sts2.Core.Runs.CardRarityOddsType.Uniform, 1, upgraded));
         }
         _groups = groups
-            .GroupBy(g => (g.Kind, g.Count, string.Join(",", g.Cards.Select(c => c.Id.ToString()))))
+            .GroupBy(drawGroup => (drawGroup.Kind, drawGroup.Count, string.Join(",", drawGroup.Cards.Select(card => card.Id.ToString()))))
             .Select(x => (x.First(), x.Count())).ToList();
     }
 
@@ -128,15 +128,15 @@ internal sealed class InspectScreen
     private void FillTransformPicker(Player me)
     {
         UiKit.Clear(_transformRow!);
-        _transformRow!.Visible = _baseGroups.Any(g => g.Kind == DrawKind.Transform);
+        _transformRow!.Visible = _baseGroups.Any(drawGroup => drawGroup.Kind == DrawKind.Transform);
         if (!_transformRow.Visible) return;
         _transformRow.AddChild(Text("Card you transform:", 20, SettingsMenu.Text));
         var pick = new OptionButton { FocusMode = Control.FocusModeEnum.None };
         pick.AddThemeFontSizeOverride("font_size", 18);
         pick.AddItem("Any of your cards");
         // One entry per card as you'd see it (same card, upgrade and enchantment), in your deck's order.
-        var cards = me.Deck.Cards.GroupBy(c => (c.Id, c.CurrentUpgradeLevel, c.Enchantment?.GetType())).Select(g => g.First()).ToList();
-        foreach (var c in cards) pick.AddItem(CardName(c));
+        var cards = me.Deck.Cards.GroupBy(card => (card.Id, card.CurrentUpgradeLevel, card.Enchantment?.GetType())).Select(g => g.First()).ToList();
+        foreach (var card in cards) pick.AddItem(CardName(card));
         var selected = _transformFrom == null ? 0 : cards.IndexOf(_transformFrom) + 1;
         pick.Selected = Math.Max(0, selected);
         pick.ItemSelected += i =>
@@ -148,11 +148,11 @@ internal sealed class InspectScreen
         _transformRow.AddChild(pick);
     }
 
-    private static string CardName(CardModel c)
+    private static string CardName(CardModel card)
     {
         string title;
-        try { title = c.Title; } catch { title = c.GetType().Name; }
-        return title + (c.CurrentUpgradeLevel > 0 ? "+" : "") + (c.Enchantment != null ? $" ({c.Enchantment.GetType().Name})" : "");
+        try { title = card.Title; } catch { title = card.GetType().Name; }
+        return title + (card.CurrentUpgradeLevel > 0 ? "+" : "") + (card.Enchantment != null ? $" ({card.Enchantment.GetType().Name})" : "");
     }
 
     // ------------------------------------------------------------------ building
@@ -215,11 +215,11 @@ internal sealed class InspectScreen
     private void Fit()
     {
         if (_panel == null) return;
-        var vp = _host.ViewportSize;
-        var size = new Vector2(Math.Min(1500, vp.X - 80), vp.Y - 80);
+        var position = _host.ViewportSize;
+        var size = new Vector2(Math.Min(1500, position.X - 80), position.Y - 80);
         _panel.CustomMinimumSize = size;
         _panel.Size = size;
-        _panel.Position = (vp - size) / 2;
+        _panel.Position = (position - size) / 2;
     }
 
     private void Fill(Player me)
@@ -229,7 +229,7 @@ internal sealed class InspectScreen
         _cards.Clear();
         _cells.Clear();
         _groupLabels.Clear();
-        var held = me.Relics.Select(r => (Relic: r, Rule: CardAffinity.For(r.GetType().Name))).Where(x => x.Rule != null).ToList();
+        var held = me.Relics.Select(relic => (Relic: relic, Rule: CardAffinity.For(relic.GetType().Name))).Where(x => x.Rule != null).ToList();
         var heldRules = held.Select(x => x.Rule!).ToList();
         var upgradedCards = _groups.Any(g => g.Group.Upgraded);
         var all = _groups.SelectMany(g => g.Group.Cards).Distinct().ToList();
@@ -238,14 +238,14 @@ internal sealed class InspectScreen
         // A button per relic of yours that applies to some card here: marks its cards.
         foreach (var (relic, rule) in held)
         {
-            var mine = all.Where(c => CardAffinity.AppliesWith(rule!, c, heldRules, upgradedCards)).ToList();
+            var mine = all.Where(card => CardAffinity.AppliesWith(rule!, card, heldRules, upgradedCards)).ToList();
             if (mine.Count == 0) continue;
-            var b = SettingsMenu.MakeButton($"Mark {Title(relic)}'s cards ({mine.Count})", 18);
-            b.Icon = GameIcons.Relic(relic);
-            b.ExpandIcon = true;
-            b.AddThemeConstantOverride("icon_max_width", 28);
-            b.Pressed += () => { foreach (var c in mine) _marks.Add(c.Id.ToString()); Refresh(); };
-            _relicButtons!.AddChild(b);
+            var button = SettingsMenu.MakeButton($"Mark {Title(relic)}'s cards ({mine.Count})", 18);
+            button.Icon = GameIcons.Relic(relic);
+            button.ExpandIcon = true;
+            button.AddThemeConstantOverride("icon_max_width", 28);
+            button.Pressed += () => { foreach (var card in mine) _marks.Add(card.Id.ToString()); Refresh(); };
+            _relicButtons!.AddChild(button);
         }
 
         var n = 0;
@@ -283,9 +283,9 @@ internal sealed class InspectScreen
         var ring = new Panel { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
         ring.AddThemeStyleboxOverride("panel", ringStyle);
         shown.Root.AddChild(ring); // after the card: drawn over it
-        frame.GuiInput += e =>
+        frame.GuiInput += inputEvent =>
         {
-            if (e is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) return;
+            if (inputEvent is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) return;
             var id = card.Id.ToString();
             if (!_marks.Remove(id)) _marks.Add(id);
             Refresh();
@@ -297,7 +297,7 @@ internal sealed class InspectScreen
     /// <summary>Marks and chances after a change.</summary>
     private void Refresh()
     {
-        bool Good(CardModel c) => _marks.Contains(c.Id.ToString());
+        bool Good(CardModel card) => _marks.Contains(card.Id.ToString());
         foreach (var (frame, card, shown, ring) in _cells)
         {
             var marked = Good(card);
@@ -324,14 +324,14 @@ internal sealed class InspectScreen
     }
 
     /// <summary>What a group is: "Reward 2: 3 of these 18 uncommons (twice)", "Each card you transform becomes one of these 72".</summary>
-    private static string Describe(int n, DrawGroup g, int times)
+    private static string Describe(int n, DrawGroup drawGroup, int times)
     {
-        var count = g.Cards.Count;
-        var rarity = g.Cards.Select(c => c.Rarity).Distinct().ToList() is { Count: 1 } one ? " " + one[0].ToString().ToLowerInvariant() + (count == 1 ? "" : "s") : "";
+        var count = drawGroup.Cards.Count;
+        var rarity = drawGroup.Cards.Select(card => card.Rarity).Distinct().ToList() is { Count: 1 } one ? " " + one[0].ToString().ToLowerInvariant() + (count == 1 ? "" : "s") : "";
         var twice = times > 1 ? $" ({times} rewards like it)" : "";
-        return g.Kind switch
+        return drawGroup.Kind switch
         {
-            DrawKind.Reward when g.Count is { } k => $"Reward {n}: {(k == 1 ? "one" : k.ToString())} of these {count}{rarity}{twice}{Roll(g)}, chance one you marked is offered",
+            DrawKind.Reward when drawGroup.Count is { } k => $"Reward {n}: {(k == 1 ? "one" : k.ToString())} of these {count}{rarity}{twice}{Roll(drawGroup)}, chance one you marked is offered",
             DrawKind.Reward => $"Reward {n}: some of these {count}{rarity}",
             DrawKind.Transform => $"A card you transform becomes one of these {count}, chance it's one you marked",
             DrawKind.Certain => "Always given",
@@ -340,45 +340,45 @@ internal sealed class InspectScreen
     }
 
     /// <summary>A reward that rolls its rarity first, then a card of it: each rarity's chance (" (rarity first: rare 1.5%, uncommon 98.5%)").</summary>
-    private static string Roll(DrawGroup g)
-        => g.Cards.Select(c => c.Rarity).Distinct().Count() > 1 && Features.RunRemindersFeature.OptionCards.RarityRoll(g.Cards, g.Odds) is { } r
+    private static string Roll(DrawGroup drawGroup)
+        => drawGroup.Cards.Select(card => card.Rarity).Distinct().Count() > 1 && Features.RunRemindersFeature.OptionCards.RarityRoll(drawGroup.Cards, drawGroup.Odds) is { } r
             ? $" (rarity first: {r})"
             : "";
 
     private static string Percent(double p) => p <= 0 ? "0%" : p >= 1 ? "100%" : p < 0.01 ? "<1%" : $"{Math.Round(p * 100)}%";
 
-    private static string Title(RelicModel r)
+    private static string Title(RelicModel relic)
     {
-        try { return r.Title.GetFormattedText(); } catch { return r.GetType().Name; }
+        try { return relic.Title.GetFormattedText(); } catch { return relic.GetType().Name; }
     }
 
     private static Label Text(string text, int size, Color color)
     {
-        var l = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
-        l.AddThemeFontSizeOverride("font_size", size);
-        l.AddThemeColorOverride("font_color", color);
-        return l;
+        var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
+        label.AddThemeFontSizeOverride("font_size", size);
+        label.AddThemeColorOverride("font_color", color);
+        return label;
     }
 
     // ------------------------------------------------------------------ input
 
     private void BlockGameInput(bool block)
     {
-        var hk = NHotkeyManager.Instance;
-        if (hk == null || _root == null || block == _blocking) return;
+        var nHotkeyManager = NHotkeyManager.Instance;
+        if (nHotkeyManager == null || _root == null || block == _blocking) return;
         try
         {
             _closeAction ??= Close;
             var closeKeys = new[] { MegaInput.cancel.ToString(), MegaInput.pauseAndBack.ToString(), MegaInput.back.ToString() };
             if (block)
             {
-                hk.AddBlockingScreen(_root);
-                foreach (var k in closeKeys) SettingsMenu.PushHotkey(hk, k, _closeAction);
+                nHotkeyManager.AddBlockingScreen(_root);
+                foreach (var k in closeKeys) SettingsMenu.PushHotkey(nHotkeyManager, k, _closeAction);
             }
             else
             {
-                foreach (var k in closeKeys) hk.RemoveHotkeyPressedBinding(k, _closeAction);
-                hk.RemoveBlockingScreen(_root);
+                foreach (var k in closeKeys) nHotkeyManager.RemoveHotkeyPressedBinding(k, _closeAction);
+                nHotkeyManager.RemoveBlockingScreen(_root);
             }
             _blocking = block;
         }

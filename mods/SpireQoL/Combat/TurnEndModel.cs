@@ -60,14 +60,14 @@ public sealed class TurnEndModel
     public int HpAfter { get; private set; }
     public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
 
-    public int BlockGain => EndOfTurnBlock.Sum(s => s.Amount);
-    public int BlockableTotal => Blockable.Sum(s => s.Amount);
+    public int BlockGain => EndOfTurnBlock.Sum(source => source.Amount);
+    public int BlockableTotal => Blockable.Sum(source => source.Amount);
     /// <summary>
     /// What you lose in the worst outcome that no block could stop (Regret, Beckon, Bad Luck), after the HP-loss modifiers:
     /// Incoming Damage shows it on its own line, under what gets through your block (Taken − this).
     /// </summary>
     public int UnblockableTaken { get; private set; }
-    public int UnblockableTotal => Unblockable.Sum(s => s.Amount);
+    public int UnblockableTotal => Unblockable.Sum(source => source.Amount);
     public int ExpectedBlock => CurrentBlock + BlockGain;
 
     /// <summary>
@@ -138,13 +138,13 @@ public sealed class TurnEndModel
     internal TurnEndModel Refreshed()
     {
         if (Job?.Latest is not { } latest || ReferenceEquals(latest, Outcome)) return this;
-        var m = From(State, StateKey, latest, Ids, Teammates, _myHp);
-        m.Job = Job;
-        m.FullState = FullState;
-        m._fullKey = _fullKey;
-        if (ReferenceEquals(_full, this)) m._full = m;
-        m._teammateView = _teammateView;
-        return m;
+        var forecast = From(State, StateKey, latest, Ids, Teammates, _myHp);
+        forecast.Job = Job;
+        forecast.FullState = FullState;
+        forecast._fullKey = _fullKey;
+        if (ReferenceEquals(_full, this)) forecast._full = forecast;
+        forecast._teammateView = _teammateView;
+        return forecast;
     }
 
     /// <summary>
@@ -156,13 +156,13 @@ public sealed class TurnEndModel
         var branches = Outcome.Branches.Where(keep).ToList();
         if (branches.Count == 0) return null;
         if (branches.Count == Outcome.Branches.Count) return this;
-        var o = new SimOutcome { Branches = branches, Truncated = Outcome.Truncated };
-        var m = From(State, StateKey, o, Ids, Teammates, _myHp);
-        m.FullState = FullState;
-        m._fullKey = _fullKey;
-        m._full = m;
-        m._teammateView = _teammateView;
-        return m;
+        var outcome = new SimOutcome { Branches = branches, Truncated = Outcome.Truncated };
+        var forecast = From(State, StateKey, outcome, Ids, Teammates, _myHp);
+        forecast.FullState = FullState;
+        forecast._fullKey = _fullKey;
+        forecast._full = forecast;
+        forecast._teammateView = _teammateView;
+        return forecast;
     }
 
     private TurnEndModel? BuildFull()
@@ -176,13 +176,13 @@ public sealed class TurnEndModel
     internal TurnEndModel? FullFrom(SimJob job)
     {
         if (job.Latest is not { } latest) return null;
-        var m = From(FullState, _fullKey, latest, Ids, Teammates, _myHp);
-        m.Job = job;
-        m.FullState = FullState;
-        m._fullKey = _fullKey;
-        m._full = m;
-        m._teammateView = TeammateView;
-        return m;
+        var forecast = From(FullState, _fullKey, latest, Ids, Teammates, _myHp);
+        forecast.Job = job;
+        forecast.FullState = FullState;
+        forecast._fullKey = _fullKey;
+        forecast._full = forecast;
+        forecast._teammateView = TeammateView;
+        return forecast;
     }
 
     /// <summary>
@@ -202,14 +202,14 @@ public sealed class TurnEndModel
     private IReadOnlyList<TeammateForecast> BuildTeammateView()
     {
         if (State.Teammates.Count == 0 || Teammates.Count != State.Teammates.Count) return Array.Empty<TeammateForecast>();
-        var o = Outcome;
+        var outcome = Outcome;
         var view = new List<TeammateForecast>();
         for (var k = 0; k < Teammates.Count; k++)
         {
-            var worst = o.TeammateWorst(k);
+            var worst = outcome.TeammateWorst(k);
             view.Add(new TeammateForecast(Teammates[k], worst.Incoming, State.Teammates[k].Block + worst.BlockGained,
-                State.Teammates[k].OstyShields ? State.Teammates[k].OstyHp : 0, worst.OstyTaken, o.TeammateTakenMin(k), o.TeammateTakenMax(k),
-                Math.Min(worst.UnblockableTaken, o.TeammateTakenMax(k))));
+                State.Teammates[k].OstyShields ? State.Teammates[k].OstyHp : 0, worst.OstyTaken, outcome.TeammateTakenMin(k), outcome.TeammateTakenMax(k),
+                Math.Min(worst.UnblockableTaken, outcome.TeammateTakenMax(k))));
         }
         return view;
     }
@@ -250,15 +250,15 @@ public sealed class TurnEndModel
     /// </summary>
     public static TurnEndModel? Shown()
     {
-        var cs = Sts2State.Combat;
-        if (Compute() is { } m)
+        var combat = Sts2State.Combat;
+        if (Compute() is { } forecast)
         {
-            _shown = (m, cs, Sts2State.TurnNumber);
+            _shown = (forecast, combat, Sts2State.TurnNumber);
             _waitingSince = 0;
-            m.Waiting = false;
-            return m;
+            forecast.Waiting = false;
+            return forecast;
         }
-        if (_shown is { } s && cs != null && ReferenceEquals(s.Combat, cs) && s.Turn == Sts2State.TurnNumber)
+        if (_shown is { } s && combat != null && ReferenceEquals(s.Combat, combat) && s.Turn == Sts2State.TurnNumber)
         {
             var frame = Godot.Engine.GetProcessFrames();
             if (frame != _heldFrame)
@@ -296,14 +296,14 @@ public sealed class TurnEndModel
     /// A search the memory cap stopped (decision #107), to Sentry (decision #105: how often the caps bind, from players' fights), grouped by
     /// the cap and what was explored (the forecast, or any card's play: the card is a tag), with its start state to replay.
     /// </summary>
-    private static void ReportCap(SimJob.CapHit c)
+    private static void ReportCap(SimJob.CapHit capHit)
     {
-        var card = c.Label.Contains(" (target") ? c.Label[..c.Label.IndexOf(" (target", StringComparison.Ordinal)] : null;
-        var what = card == null ? c.Label : "a card's play";
-        var tags = new Dictionary<string, string> { ["sim_cap"] = c.Caps };
+        var card = capHit.Label.Contains(" (target") ? capHit.Label[..capHit.Label.IndexOf(" (target", StringComparison.Ordinal)] : null;
+        var what = card == null ? capHit.Label : "a card's play";
+        var tags = new Dictionary<string, string> { ["sim_cap"] = capHit.Caps };
         if (card != null) tags["card"] = card;
-        Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("sim-cap", $"Simulation cap: {c.Caps} exploring {what}",
-            new[] { "sim-cap", c.Caps, what }, c.Line, new Dictionary<string, string> { ["sim_state"] = c.Start.ToJson() }, tags);
+        Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("sim-cap", $"Simulation cap: {capHit.Caps} exploring {what}",
+            new[] { "sim-cap", capHit.Caps, what }, capHit.Line, new Dictionary<string, string> { ["sim_state"] = capHit.Start.ToJson() }, tags);
     }
 
     /// <summary>The board right now, uncached (the audit's prediction as a play begins to resolve), on the audit's own wait.</summary>
@@ -316,19 +316,19 @@ public sealed class TurnEndModel
     private static TurnEndModel? ComputeNow(bool ownBudget = false)
     {
         var me = Sts2State.Me;
-        var cs = Sts2State.Combat;
-        if (me?.PlayerCombatState == null || cs == null) return null;
+        var combat = Sts2State.Combat;
+        if (me?.PlayerCombatState == null || combat == null) return null;
 
         // Nothing a prediction reads changed since last frame, and its search is over (decision #130): last frame's model,
         // without reading the board again. Dev mode works it out anyway every 30th such frame and logs it if the key differs.
-        var probe = BoardProbe.Hash(me, cs);
+        var probe = BoardProbe.Hash(me, combat);
         var reuse = ForecastReuse.Decide(!ownBudget && _lastModel is { Job.Ready.IsCompleted: true } && _lastModelProbe == probe);
         if (reuse == FrameReuse.Reuse) return _lastModel;
         var probeCheck = reuse == FrameReuse.WorkOutAndCheck ? _lastModel : null;
 
         // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
-        DrawPileMemory.Update(me, cs);
-        var full = SimAdapter.Build(me, cs, out var ids);
+        DrawPileMemory.Update(me, combat);
+        var full = SimAdapter.Build(me, combat, out var ids);
         var fullKey = full.FullKey();
         // What's shown: without the cards in teammates' hands (decision #25), unless the setting counts them.
         var state = CountTeammateHands || full.Teammates.Count == 0 ? full : full.WithoutTeammateHands();
@@ -346,14 +346,14 @@ public sealed class TurnEndModel
             _lastModelProbe = probe; // the board probe moved (a setting, say) but not what the forecast reads
             return last;
         }
-        var m = From(state, key, job.Latest!, ids, SimAdapter.Teammates(me, cs), me.Creature.CurrentHp);
-        m.Job = job;
-        m.FullState = full;
-        m._fullKey = fullKey;
-        if (ReferenceEquals(state, full)) m._full = m;
-        _lastModel = m;
+        var forecast = From(state, key, job.Latest!, ids, SimAdapter.Teammates(me, combat), me.Creature.CurrentHp);
+        forecast.Job = job;
+        forecast.FullState = full;
+        forecast._fullKey = fullKey;
+        if (ReferenceEquals(state, full)) forecast._full = forecast;
+        _lastModel = forecast;
         _lastModelProbe = probe;
-        return m;
+        return forecast;
     }
 
     /// <summary>The last model built from a search result (ComputeNow), handed back while the board and the result stay the same.</summary>
@@ -365,8 +365,8 @@ public sealed class TurnEndModel
     private static TurnEndModel From(SimState state, long key, SimOutcome outcome, IReadOnlyDictionary<Creature, int> ids,
         IReadOnlyList<Player> teammates, int myHp)
     {
-        var w = outcome.Worst;
-        var m = new TurnEndModel
+        var branch = outcome.Worst;
+        var forecast = new TurnEndModel
         {
             State = state,
             StateKey = key,
@@ -375,28 +375,28 @@ public sealed class TurnEndModel
             Teammates = teammates,
             _myHp = myHp,
             CurrentBlock = state.You.Block,
-            SkippedPoisoned = w.SkippedPoisoned,
-            SkippedEndOfTurn = w.SkippedEndOfTurn,
-            CancelledHits = w.CancelledHits,
-            DamageThrough = w.DamageThrough,
+            SkippedPoisoned = branch.SkippedPoisoned,
+            SkippedEndOfTurn = branch.SkippedEndOfTurn,
+            CancelledHits = branch.CancelledHits,
+            DamageThrough = branch.DamageThrough,
             Taken = outcome.TakenMax,
             TakenMin = outcome.TakenMin,
             OstyHp = state.You.OstyShields ? state.You.OstyHp : 0, // shown only while he takes your hits
             OstyTaken = outcome.OstyTakenMax,
             OstyTakenMin = outcome.OstyTakenMin,
-            Dies = w.Died,
-            UnblockableTaken = Math.Min(w.UnblockableTaken, outcome.TakenMax),
+            Dies = branch.Died,
+            UnblockableTaken = Math.Min(branch.UnblockableTaken, outcome.TakenMax),
             DeathChance = outcome.YouDieChance(),
-            FairiesUsed = w.FairiesUsed,
-            LizardTailUsed = w.LizardTailUsed,
-            HpAfter = w.You.Hp == int.MaxValue ? myHp : w.You.Hp,
+            FairiesUsed = branch.FairiesUsed,
+            LizardTailUsed = branch.LizardTailUsed,
+            HpAfter = branch.You.Hp == int.MaxValue ? myHp : branch.You.Hp,
         };
         // Same-name entries (one per Frost trigger, per Feel No Pain exhaust...) are summed for display.
-        foreach (var g in w.EndOfTurnBlock.GroupBy(x => x.Name)) m.EndOfTurnBlock.Add(new Source(g.Key, g.Sum(x => x.Amount)));
-        foreach (var (name, amount) in w.Blockable) m.Blockable.Add(new Source(name, amount));
-        foreach (var (name, amount) in w.Unblockable) m.Unblockable.Add(new Source(name, amount));
-        foreach (var g in w.EndOfTurnDamage.GroupBy(x => x.Name)) m.EndOfTurnDamage.Add(new Source(g.Key, g.Sum(x => x.Amount)));
-        return m;
+        foreach (var g in branch.EndOfTurnBlock.GroupBy(x => x.Name)) forecast.EndOfTurnBlock.Add(new Source(g.Key, g.Sum(x => x.Amount)));
+        foreach (var (name, amount) in branch.Blockable) forecast.Blockable.Add(new Source(name, amount));
+        foreach (var (name, amount) in branch.Unblockable) forecast.Unblockable.Add(new Source(name, amount));
+        foreach (var g in branch.EndOfTurnDamage.GroupBy(x => x.Name)) forecast.EndOfTurnDamage.Add(new Source(g.Key, g.Sum(x => x.Amount)));
+        return forecast;
     }
 
     public static string SafeTitle(AbstractModel model)
@@ -405,11 +405,11 @@ public sealed class TurnEndModel
         {
             var title = model switch
             {
-                RelicModel r => r.Title.GetFormattedText(),
-                CardModel c => c.Title,
-                PowerModel p => p.Title.GetFormattedText(),
-                MonsterModel mo => mo.Title.GetFormattedText(),
-                PotionModel po => po.Title.GetFormattedText(),
+                RelicModel relic => relic.Title.GetFormattedText(),
+                CardModel card => card.Title,
+                PowerModel power => power.Title.GetFormattedText(),
+                MonsterModel monster => monster.Title.GetFormattedText(),
+                PotionModel potion => potion.Title.GetFormattedText(),
                 _ => null,
             };
             if (!string.IsNullOrWhiteSpace(title)) return title;

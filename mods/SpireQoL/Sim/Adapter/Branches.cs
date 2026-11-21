@@ -53,7 +53,7 @@ internal static class Branches
     {
         var labels = new Dictionary<Label, int>();
         for (var i = 0; i < code.Count; i++)
-            foreach (var l in code[i].labels) labels[l] = i;
+            foreach (var label in code[i].labels) labels[label] = i;
         var stateLocal = StateLocal(code);
         var succ = new List<int>[code.Count];
         for (var i = 0; i < code.Count; i++)
@@ -69,14 +69,14 @@ internal static class Branches
                     break;
                 case FlowControl.Branch:
                     // leave/br: to the target. A suspension's leave goes to the method's end, where nothing more runs: no exit there.
-                    if (ins.operand is Label t && labels.TryGetValue(t, out var to)) next.Add(to);
+                    if (ins.operand is Label label && labels.TryGetValue(label, out var to)) next.Add(to);
                     break;
                 case FlowControl.Cond_Branch:
                     if (i + 1 < code.Count) next.Add(i + 1);
                     if (dispatch) break; // the jump on the state: only the first run is followed
-                    if (ins.operand is Label c && labels.TryGetValue(c, out var ct)) next.Add(ct);
+                    if (ins.operand is Label target && labels.TryGetValue(target, out var ct)) next.Add(ct);
                     else if (ins.operand is Label[] many)
-                        foreach (var l in many) if (labels.TryGetValue(l, out var lt)) next.Add(lt);
+                        foreach (var otherLabel in many) if (labels.TryGetValue(otherLabel, out var lt)) next.Add(lt);
                     break;
                 default:
                     if (i + 1 < code.Count) next.Add(i + 1);
@@ -104,19 +104,19 @@ internal static class Branches
         return false;
     }
 
-    private static bool IsStloc(CodeInstruction c) => c.opcode == OpCodes.Stloc_0 || c.opcode == OpCodes.Stloc_1 || c.opcode == OpCodes.Stloc_2
-        || c.opcode == OpCodes.Stloc_3 || c.opcode == OpCodes.Stloc_S || c.opcode == OpCodes.Stloc;
+    private static bool IsStloc(CodeInstruction codeInstruction) => codeInstruction.opcode == OpCodes.Stloc_0 || codeInstruction.opcode == OpCodes.Stloc_1 || codeInstruction.opcode == OpCodes.Stloc_2
+        || codeInstruction.opcode == OpCodes.Stloc_3 || codeInstruction.opcode == OpCodes.Stloc_S || codeInstruction.opcode == OpCodes.Stloc;
 
-    private static bool IsLdloc(CodeInstruction c) => c.opcode == OpCodes.Ldloc_0 || c.opcode == OpCodes.Ldloc_1 || c.opcode == OpCodes.Ldloc_2
-        || c.opcode == OpCodes.Ldloc_3 || c.opcode == OpCodes.Ldloc_S || c.opcode == OpCodes.Ldloc;
+    private static bool IsLdloc(CodeInstruction codeInstruction) => codeInstruction.opcode == OpCodes.Ldloc_0 || codeInstruction.opcode == OpCodes.Ldloc_1 || codeInstruction.opcode == OpCodes.Ldloc_2
+        || codeInstruction.opcode == OpCodes.Ldloc_3 || codeInstruction.opcode == OpCodes.Ldloc_S || codeInstruction.opcode == OpCodes.Ldloc;
 
     /// <summary>A local's identity: its index for the short forms, its LocalBuilder (or index) otherwise.</summary>
-    private static object? LocalOf(CodeInstruction c)
+    private static object? LocalOf(CodeInstruction codeInstruction)
     {
-        if (c.opcode == OpCodes.Ldloc_0 || c.opcode == OpCodes.Stloc_0) return 0;
-        if (c.opcode == OpCodes.Ldloc_1 || c.opcode == OpCodes.Stloc_1) return 1;
-        if (c.opcode == OpCodes.Ldloc_2 || c.opcode == OpCodes.Stloc_2) return 2;
-        if (c.opcode == OpCodes.Ldloc_3 || c.opcode == OpCodes.Stloc_3) return 3;
-        return c.operand switch { LocalBuilder lb => lb.LocalIndex, null => null, var o => o };
+        if (codeInstruction.opcode == OpCodes.Ldloc_0 || codeInstruction.opcode == OpCodes.Stloc_0) return 0;
+        if (codeInstruction.opcode == OpCodes.Ldloc_1 || codeInstruction.opcode == OpCodes.Stloc_1) return 1;
+        if (codeInstruction.opcode == OpCodes.Ldloc_2 || codeInstruction.opcode == OpCodes.Stloc_2) return 2;
+        if (codeInstruction.opcode == OpCodes.Ldloc_3 || codeInstruction.opcode == OpCodes.Stloc_3) return 3;
+        return codeInstruction.operand switch { LocalBuilder localBuilder => localBuilder.LocalIndex, null => null, var o => o };
     }
 }

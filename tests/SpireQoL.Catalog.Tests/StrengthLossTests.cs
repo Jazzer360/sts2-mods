@@ -22,17 +22,17 @@ public class StrengthLossTests
         var wrong = new List<string>();
         foreach (var name in SimAdapter.EnemyStrengthCards.Keys)
         {
-            var canon = ModelDb.AllCards.FirstOrDefault(c => c.GetType().Name == name);
+            var canon = ModelDb.AllCards.FirstOrDefault(canonicalCard => canonicalCard.GetType().Name == name);
             if (canon == null) continue;
-            var f = new GameFight();
-            var card = f.Combat.CreateCard(canon, f.Me);
-            PileType.Hand.GetPile(f.Me).AddInternal(card);
-            var facts = PlayFacts.For(card, f.Me, f.Combat, 1);
+            var gameFight = new GameFight();
+            var card = gameFight.Combat.CreateCard(canon, gameFight.Me);
+            PileType.Hand.GetPile(gameFight.Me).AddInternal(card);
+            var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, 1);
             if (facts == null) continue;
-            var play = SimAdapter.Play(card, facts, f.Me, f.Combat, new Dictionary<Creature, int>(), -1);
-            var debuffs = play.Body.OfType<ApplyPowerAction>().Where(a => a.To is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies && a.Debuff).ToList();
-            var temporary = debuffs.Count(a => a.Power != PowerId.Strength && ModelDb.AllPowers.Any(p => p.GetType().Name == a.Power.Name && p is MegaCrit.Sts2.Core.Models.Powers.TemporaryStrengthPower));
-            if (temporary > 0) wrong.Add($"{name}: {string.Join(", ", debuffs.Select(d => d.Power))}");
+            var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, new Dictionary<Creature, int>(), -1);
+            var debuffs = play.Body.OfType<ApplyPowerAction>().Where(applyPowerAction => applyPowerAction.To is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies && applyPowerAction.Debuff).ToList();
+            var temporary = debuffs.Count(applyPowerAction => applyPowerAction.Power != PowerId.Strength && ModelDb.AllPowers.Any(power => power.GetType().Name == applyPowerAction.Power.Name && power is MegaCrit.Sts2.Core.Models.Powers.TemporaryStrengthPower));
+            if (temporary > 0) wrong.Add($"{name}: {string.Join(", ", debuffs.Select(applyPowerAction => applyPowerAction.Power))}");
         }
         Assert.True(wrong.Count == 0, string.Join("\n", wrong));
     }

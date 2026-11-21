@@ -59,18 +59,18 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
     {
         var me = Sts2State.Me;
         if (me == null) return;
-        var s = _ctx.Settings;
+        var settings = _ctx.Settings;
         var hand = Sts2State.Hand(me);
 
         // Nothing changed since last frame (decision #130): its results again, without asking the game's hooks for every card
         // (how many times it plays, whether it can be played). Dev mode works them out anyway every 30th such frame and logs a
         // difference (a change the probe missed).
-        var cs = Sts2State.Combat;
-        var reuse = _reuse.Decide(cs != null && _last.Count == hand.Count && _last.Select(x => x.Card).SequenceEqual(hand, ReferenceEqualityComparer.Instance)
-                                  && BoardProbe.Hash(me, cs) == _lastProbe);
+        var combat = Sts2State.Combat;
+        var reuse = _reuse.Decide(combat != null && _last.Count == hand.Count && _last.Select(x => x.Card).SequenceEqual(hand, ReferenceEqualityComparer.Instance)
+                                  && BoardProbe.Hash(me, combat) == _lastProbe);
         if (reuse == FrameReuse.Reuse)
         {
-            foreach (var (card, ethereal, tabs) in _last) Show(card, ethereal, tabs, s);
+            foreach (var (card, ethereal, tabs) in _last) Show(card, ethereal, tabs, settings);
             return;
         }
 
@@ -79,25 +79,25 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         {
             var (ethereal, tabs) = Work(card);
             now.Add((card, ethereal, tabs));
-            Show(card, ethereal, tabs, s);
+            Show(card, ethereal, tabs, settings);
         }
         if (reuse == FrameReuse.WorkOutAndCheck)
         {
             var d = now.Zip(_last).FirstOrDefault(x => x.First.Ethereal != x.Second.Ethereal || !x.First.Tabs.SequenceEqual(x.Second.Tabs));
             _reuse.Compare(d.First.Card == null, "a card's tabs changed while the board probe didn't",
-                () => $"{d.First.Card!.GetType().Name}: [{string.Join(", ", d.Second.Tabs.Select(t => t.Key))}] → [{string.Join(", ", d.First.Tabs.Select(t => t.Key))}]");
+                () => $"{d.First.Card!.GetType().Name}: [{string.Join(", ", d.Second.Tabs.Select(tab => tab.Key))}] → [{string.Join(", ", d.First.Tabs.Select(tab => tab.Key))}]");
         }
         _last.Clear();
         _last.AddRange(now);
-        if (cs != null) _lastProbe = BoardProbe.Hash(me, cs);
+        if (combat != null) _lastProbe = BoardProbe.Hash(me, combat);
     }
 
-    private void Show(CardModel card, bool ethereal, List<TabSpec> tabs, QolSettings s)
+    private void Show(CardModel card, bool ethereal, List<TabSpec> tabs, QolSettings settings)
     {
         _ctx.Decor.SeenInHand(card);
-        var d = _ctx.Decor.For(card);
-        if (ethereal) d.Opacity = Mathf.Clamp(s.EtherealOpacity, 0.25f, 1f);
-        foreach (var t in tabs) d.AddTab(t);
+        var decor = _ctx.Decor.For(card);
+        if (ethereal) decor.Opacity = Mathf.Clamp(settings.EtherealOpacity, 0.25f, 1f);
+        foreach (var tab in tabs) decor.AddTab(tab);
     }
 
     /// <summary>A card's Ethereal fade and its tabs (Retain, Sly, replay, double-play), from the game.</summary>
@@ -128,9 +128,9 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         {
             var icon = src switch
             {
-                RelicModel r => GameIcons.Relic(r),
-                PowerModel p => GameIcons.Power(p),
-                EnchantmentModel en => GameIcons.Enchantment(en),
+                RelicModel relic => GameIcons.Relic(relic),
+                PowerModel power => GameIcons.Power(power),
+                EnchantmentModel enchantment => GameIcons.Enchantment(enchantment),
                 _ => null,
             };
             tabs.Add(new TabSpec("double-play:" + src.GetType().Name, icon ?? GameIcons.Power<EchoFormPower>()));

@@ -333,12 +333,12 @@ public static class SettingsCatalog
     /// <summary>Every tab key in the catalog.</summary>
     public static bool IsKnownTabKey(string key)
     {
-        _knownKeys ??= CardTabs.Select(t => t.Key)
-            .Concat(TabGroups.Select(t => t.Key))
-            .Concat(Sources.Where(s => s.TagKey != null).Select(s => s.TagKey!))
+        _knownKeys ??= CardTabs.Select(tabEntry => tabEntry.Key)
+            .Concat(TabGroups.Select(tabEntry => tabEntry.Key))
+            .Concat(Sources.Where(sourceEntry => sourceEntry.TagKey != null).Select(sourceEntry => sourceEntry.TagKey!))
             // Run Reminders keep their switches in the same store (one per place); not card tabs, so not under "Other".
-            .Concat(Sources.SelectMany(s => Enum.GetValues<SpireQoL.Data.ReminderPlace>()
-                .Where(p => s.Reminder(p) != null).Select(p => SpireQoL.Data.ChoiceReminders.Key(p, s.Type))))
+            .Concat(Sources.SelectMany(sourceEntry => Enum.GetValues<SpireQoL.Data.ReminderPlace>()
+                .Where(reminderPlace => sourceEntry.Reminder(reminderPlace) != null).Select(reminderPlace => SpireQoL.Data.ChoiceReminders.Key(reminderPlace, sourceEntry.Type))))
             .ToHashSet();
         return _knownKeys.Contains(key);
     }
@@ -349,8 +349,8 @@ public static class SettingsCatalog
     /// </summary>
     public static void Check(Sts2Mods.Core.ModLog log)
     {
-        var tracked = Sources.Where(s => s.Tracker != null).Select(s => s.Type).ToHashSet();
-        foreach (var spec in Data.RelicSpecs.All.Where(s => s.InTray))
+        var tracked = Sources.Where(sourceEntry => sourceEntry.Tracker != null).Select(sourceEntry => sourceEntry.Type).ToHashSet();
+        foreach (var spec in Data.RelicSpecs.All.Where(relicCounterSpec => relicCounterSpec.InTray))
         {
             if (!tracked.Contains(spec.TypeName)) log.Warn($"settings menu: relic tracker {spec.TypeName} isn't in SettingsCatalog");
         }
@@ -358,7 +358,7 @@ public static class SettingsCatalog
         {
             if (!tracked.Contains(spec.TypeName)) log.Warn($"settings menu: power tracker {spec.TypeName} isn't in SettingsCatalog");
         }
-        var dupes = Sources.GroupBy(s => s.Type).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        var dupes = Sources.GroupBy(sourceEntry => sourceEntry.Type).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         if (dupes.Count > 0) log.Warn($"settings menu: duplicate catalog rows {string.Join(", ", dupes)}");
     }
 }

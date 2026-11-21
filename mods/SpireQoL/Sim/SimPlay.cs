@@ -138,73 +138,73 @@ public sealed class SimScript
     /// A play as its script: the energy it spends, the card play (its actions on every play; the shorthand's on the first, as
     /// totals), what follows it, the card leaving your hand, then the shorthand's procs.
     /// </summary>
-    public static SimScript Of(SimPlay p)
+    public static SimScript Of(SimPlay simPlay)
     {
-        var s = new SimScript { Name = p.Name };
-        s.Actions.AddRange(p.Before);
-        var play = p.Card is { } card ? card with { Target = p.TargetId } : new SimCardPlay(new SimCard(p.Name, p.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, p.TargetId, 0,
-            Math.Max(1, p.Plays), p.AutoPlay);
-        var body = new List<SimAction>(p.Body);
-        var shorthand = Shorthand(p);
+        var script = new SimScript { Name = simPlay.Name };
+        script.Actions.AddRange(simPlay.Before);
+        var play = simPlay.Card is { } card ? card with { Target = simPlay.TargetId } : new SimCardPlay(new SimCard(simPlay.Name, simPlay.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, simPlay.TargetId, 0,
+            Math.Max(1, simPlay.Plays), simPlay.AutoPlay);
+        var body = new List<SimAction>(simPlay.Body);
+        var shorthand = Shorthand(simPlay);
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
-        s.Actions.Add(new CardPlayAction(play, body) { FromHand = p.HandCard != 0 });
-        s.Actions.AddRange(p.After);
-        s.Actions.Add(new CardResolvedAction(p.HandDelta, p.HandCard, p.AutoPlay, p.Draws, p.FadingDelta, p.IsAttack) { Owner = play.Owner, HexFadingDelta = p.HexFadingDelta });
-        if (p.RandomPoison > 0 && p.RandomPoisonTimes > 0)
-            s.Actions.Add(new ApplyPowerAction(PowerId.Poison, p.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = p.RandomPoisonTimes, Debuff = true });
-        foreach (var proc in p.Procs) s.Actions.Add(new FixedHitsAction(proc.Spread, proc.TargetId, proc.Damage, proc.Times));
-        foreach (var amount in p.ProcBlock) s.Actions.Add(new GainBlockAction(1, amount, SimProps.Unpowered) { Fixed = true });
-        return s;
+        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0 });
+        script.Actions.AddRange(simPlay.After);
+        script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta });
+        if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)
+            script.Actions.Add(new ApplyPowerAction(PowerId.Poison, simPlay.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = simPlay.RandomPoisonTimes, Debuff = true });
+        foreach (var proc in simPlay.Procs) script.Actions.Add(new FixedHitsAction(proc.Spread, proc.TargetId, proc.Damage, proc.Times));
+        foreach (var amount in simPlay.ProcBlock) script.Actions.Add(new GainBlockAction(1, amount, SimProps.Unpowered) { Fixed = true });
+        return script;
     }
 
     /// <summary>The shorthand's actions, in the order a card does them: HP cost, hits, direct damage and executions, orbs, block, Osty, damage to you, powers and poison, Focus.</summary>
-    private static List<SimAction> Shorthand(SimPlay p)
+    private static List<SimAction> Shorthand(SimPlay play)
     {
-        var a = new List<SimAction>();
-        for (var i = 0; i < p.HpCostTimes && p.HpCost > 0; i++) a.Add(new LoseHpAction(p.HpCost));
-        if (p.Hits > 0 && p.HitTarget != SimPlay.Target.None)
+        var actions = new List<SimAction>();
+        for (var i = 0; i < play.HpCostTimes && play.HpCost > 0; i++) actions.Add(new LoseHpAction(play.HpCost));
+        if (play.Hits > 0 && play.HitTarget != SimPlay.Target.None)
         {
-            a.Add(new AttackAction(p.Hits, p.HitTarget, new DamageSpec(0m, SimProps.Move) { BaseOn = Decimals(p.HitDamage), Fixed = true })
+            actions.Add(new AttackAction(play.Hits, play.HitTarget, new DamageSpec(0m, SimProps.Move) { BaseOn = Decimals(play.HitDamage), Fixed = true })
             {
-                TargetId = p.HitTarget == SimPlay.Target.Single ? p.TargetId : -1,
-                ByOsty = p.ByOsty,
-                OnKill = p.OnKillHitAll.Count > 0 ? new DamageSpec(0m, SimProps.Move) { BaseOn = Decimals(p.OnKillHitAll), Fixed = true } : null,
-                Splash = p.SplashFromTarget,
+                TargetId = play.HitTarget == SimPlay.Target.Single ? play.TargetId : -1,
+                ByOsty = play.ByOsty,
+                OnKill = play.OnKillHitAll.Count > 0 ? new DamageSpec(0m, SimProps.Move) { BaseOn = Decimals(play.OnKillHitAll), Fixed = true } : null,
+                Splash = play.SplashFromTarget,
             });
         }
-        if (p.TargetDamage.Count > 0)
-            a.Add(new DamageAction(new DamageSpec(0m, SimProps.Unblockable | SimProps.Unpowered) { BaseOn = Decimals(p.TargetDamage), Fixed = true }));
-        if (p.ExecuteAtOrBelow > 0) a.Add(new ExecuteAction(p.ExecuteAtOrBelow));
-        foreach (var op in p.OrbOps)
+        if (play.TargetDamage.Count > 0)
+            actions.Add(new DamageAction(new DamageSpec(0m, SimProps.Unblockable | SimProps.Unpowered) { BaseOn = Decimals(play.TargetDamage), Fixed = true }));
+        if (play.ExecuteAtOrBelow > 0) actions.Add(new ExecuteAction(play.ExecuteAtOrBelow));
+        foreach (var orbOp in play.OrbOps)
         {
-            if (op.Op == OrbOp.Kind.Channel && p.ChannelToAlly && p.AllyTarget < 0) continue; // no teammate to channel into
-            a.Add(op.Op switch
+            if (orbOp.Op == OrbOp.Kind.Channel && play.ChannelToAlly && play.AllyTarget < 0) continue; // no teammate to channel into
+            actions.Add(orbOp.Op switch
             {
-                OrbOp.Kind.Channel => new OrbAction(OrbAction.Op.Channel) { Values = op.Orb, To = p.ChannelToAlly ? Who.Teammate(p.AllyTarget) : Who.You },
-                OrbOp.Kind.EvokeFront => new OrbAction(OrbAction.Op.EvokeFront) { Times = op.Times },
+                OrbOp.Kind.Channel => new OrbAction(OrbAction.Op.Channel) { Values = orbOp.Orb, To = play.ChannelToAlly ? Who.Teammate(play.AllyTarget) : Who.You },
+                OrbOp.Kind.EvokeFront => new OrbAction(OrbAction.Op.EvokeFront) { Times = orbOp.Times },
                 OrbOp.Kind.EvokeAllTwice => new OrbAction(OrbAction.Op.EvokeAllTwice),
-                _ => new OrbAction(OrbAction.Op.Slots) { Slots = op.Slots },
+                _ => new OrbAction(OrbAction.Op.Slots) { Slots = orbOp.Slots },
             });
         }
         // The card's block goes to the targeted teammate (none aimed at: to no one, never to you).
-        if (p.BlockGains > 0 && !(p.BlockToAlly && p.AllyTarget < 0))
-            a.Add(new GainBlockAction(p.BlockGains, p.BlockAmount, SimProps.Move) { Fixed = true, To = p.BlockToAlly ? Who.Teammate(p.AllyTarget) : Who.You });
-        if (p.EnchantmentBlock.Gains > 0) a.Add(new GainBlockAction(p.EnchantmentBlock.Gains, p.EnchantmentBlock.Amount, SimProps.Move) { Fixed = true });
-        if (p.KillsOsty) a.Add(new KillOstyAction());
-        foreach (var (name, amount) in p.DamageToYou) a.Add(new HitYouAction(name, amount));
+        if (play.BlockGains > 0 && !(play.BlockToAlly && play.AllyTarget < 0))
+            actions.Add(new GainBlockAction(play.BlockGains, play.BlockAmount, SimProps.Move) { Fixed = true, To = play.BlockToAlly ? Who.Teammate(play.AllyTarget) : Who.You });
+        if (play.EnchantmentBlock.Gains > 0) actions.Add(new GainBlockAction(play.EnchantmentBlock.Gains, play.EnchantmentBlock.Amount, SimProps.Move) { Fixed = true });
+        if (play.KillsOsty) actions.Add(new KillOstyAction());
+        foreach (var (name, amount) in play.DamageToYou) actions.Add(new HitYouAction(name, amount));
         void You(PowerId power, int amount)
         {
-            if (amount != 0) a.Add(new ApplyPowerAction(power, amount) { To = ApplyPowerAction.Where.You });
+            if (amount != 0) actions.Add(new ApplyPowerAction(power, amount) { To = ApplyPowerAction.Where.You });
         }
-        You(PowerId.Plating, p.AddPlating);
-        You(PowerId.Juggernaut, p.AddJuggernaut);
-        You(PowerId.FeelNoPain, p.AddFeelNoPain);
-        You(PowerId.Thorns, p.AddThorns);
-        You(PowerId.FlameBarrier, p.AddFlameBarrier);
-        if (p.Poison > 0 && (p.PoisonAll || p.TargetId >= 0))
-            a.Add(new ApplyPowerAction(PowerId.Poison, p.Poison) { To = p.PoisonAll ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = true });
-        if (p.FocusDelta != 0) a.Add(new FocusAction(p.FocusDelta));
-        return a;
+        You(PowerId.Plating, play.AddPlating);
+        You(PowerId.Juggernaut, play.AddJuggernaut);
+        You(PowerId.FeelNoPain, play.AddFeelNoPain);
+        You(PowerId.Thorns, play.AddThorns);
+        You(PowerId.FlameBarrier, play.AddFlameBarrier);
+        if (play.Poison > 0 && (play.PoisonAll || play.TargetId >= 0))
+            actions.Add(new ApplyPowerAction(PowerId.Poison, play.Poison) { To = play.PoisonAll ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = true });
+        if (play.FocusDelta != 0) actions.Add(new FocusAction(play.FocusDelta));
+        return actions;
     }
 
     private static Dictionary<int, decimal> Decimals(Dictionary<int, int> d) => d.ToDictionary(kv => kv.Key, kv => (decimal)kv.Value);

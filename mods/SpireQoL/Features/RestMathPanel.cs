@@ -47,17 +47,17 @@ internal sealed class RestMathPanel
         foreach (var (icon, amount) in lines)
         {
             _grid.AddChild(UiKit.Icon(icon, DamageMathPanel.IconSize));
-            var n = DamageMathPanel.Number(amount < 0 ? DamageMathPanel.TakeColor : DamageMathPanel.SafeColor);
-            n.Text = amount < 0 ? $"− {-amount}" : $"+ {amount}";
-            _grid.AddChild(n);
+            var label = DamageMathPanel.Number(amount < 0 ? DamageMathPanel.TakeColor : DamageMathPanel.SafeColor);
+            label.Text = amount < 0 ? $"− {-amount}" : $"+ {amount}";
+            _grid.AddChild(label);
         }
         _grid.AddChild(DamageMathPanel.Rule());
         _grid.AddChild(DamageMathPanel.Rule());
 
-        var eq = UiKit.Label("=", DamageMathPanel.FontSize, Colors.White);
-        eq.HorizontalAlignment = HorizontalAlignment.Center;
-        eq.CustomMinimumSize = new Vector2(DamageMathPanel.IconSize, 0);
-        _grid.AddChild(eq);
+        var otherLabel = UiKit.Label("=", DamageMathPanel.FontSize, Colors.White);
+        otherLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        otherLabel.CustomMinimumSize = new Vector2(DamageMathPanel.IconSize, 0);
+        _grid.AddChild(otherLabel);
         var result = DamageMathPanel.Number(HpColor);
         result.Text = $"{resultHp}/{resultMax}";
         _grid.AddChild(result);
@@ -65,10 +65,10 @@ internal sealed class RestMathPanel
         if (over > 0)
         {
             _grid.AddChild(new Control { CustomMinimumSize = new Vector2(DamageMathPanel.IconSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
-            var o = DamageMathPanel.Number(OverColor);
-            o.Text = $"{over} over";
-            o.AddThemeFontSizeOverride("font_size", DamageMathPanel.FontSize - 4);
-            _grid.AddChild(o);
+            var label = DamageMathPanel.Number(OverColor);
+            label.Text = $"{over} over";
+            label.AddThemeFontSizeOverride("font_size", DamageMathPanel.FontSize - 4);
+            _grid.AddChild(label);
         }
     }
 }

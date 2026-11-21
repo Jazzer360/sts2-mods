@@ -6,8 +6,8 @@ namespace SpireQoL.Sim.Models;
 public sealed class TungstenRod : SimModel
 {
     public override TabKind? Tab => TabKind.Trigger;
-    public override decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount) =>
-        d.Target != owner ? amount : Math.Max(0m, amount - SimEngine.RelicsOf(s, owner)[ThisRelic]);
+    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
+        damage.Target != owner ? amount : Math.Max(0m, amount - SimEngine.RelicsOf(state, owner)[ThisRelic]);
 }
 
 /// <summary>
@@ -16,17 +16,17 @@ public sealed class TungstenRod : SimModel
 /// </summary>
 public sealed class BeatingRemnant : SimModel
 {
-    public override decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount)
+    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount)
     {
-        if (d.Target != owner) return amount;
-        var r = SimEngine.RelicsOf(s, owner);
-        return Math.Min(amount, r[ThisRelic] - r.DataOf(ThisRelic));
+        if (damage.Target != owner) return amount;
+        var relics = SimEngine.RelicsOf(state, owner);
+        return Math.Min(amount, relics[ThisRelic] - relics.DataOf(ThisRelic));
     }
-    public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
-        if (e.Target != owner || e.Unblocked == 0) return;
-        var r = SimEngine.RelicsOf(s, owner);
-        SimEngine.SetRelics(s, owner, r.With(ThisRelic, r[ThisRelic], r.DataOf(ThisRelic) + e.Unblocked));
+        if (hit.Target != owner || hit.Unblocked == 0) return;
+        var relics = SimEngine.RelicsOf(state, owner);
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) + hit.Unblocked));
     }
 }
 
@@ -36,13 +36,13 @@ public sealed class BeatingRemnant : SimModel
 /// </summary>
 public sealed class BufferPower : SimModel
 {
-    public override decimal ModifyHpLostAfterOstyLate(SimState s, int owner, DamageCtx d, decimal amount) =>
-        d.Target != owner || d.Card?.Name == CardId.BrightestFlame.Name ? amount : 0m;
-    public override void AfterModifyingHpLost(SimState s, int owner)
+    public override decimal ModifyHpLostAfterOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) =>
+        damage.Target != owner || damage.Card?.Name == CardId.BrightestFlame.Name ? amount : 0m;
+    public override void AfterModifyingHpLost(SimState state, int owner)
     {
-        var p = SimEngine.PowersOf(s, owner);
-        SimEngine.SetPowers(s, owner, p[ThisPower] <= 1 ? p.Without(ThisPower) : p.With(ThisPower, p[ThisPower] - 1));
-        s.LogFired(Name, 0, owner);
+        var powers = SimEngine.PowersOf(state, owner);
+        SimEngine.SetPowers(state, owner, powers[ThisPower] <= 1 ? powers.Without(ThisPower) : powers.With(ThisPower, powers[ThisPower] - 1));
+        state.LogFired(Name, 0, owner);
     }
 }
 
@@ -53,13 +53,13 @@ public sealed class BufferPower : SimModel
 public sealed class InfernoPower : SimModel
 {
     public override TabKind? Tab => TabKind.Damage;
-    public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
-        if (e.Target != owner || e.Unblocked <= 0 || s.EnemyTurnNow) return;
-        var amount = SimEngine.PowerOn(s, owner, ThisPower);
+        if (hit.Target != owner || hit.Unblocked <= 0 || state.EnemyTurnNow) return;
+        var amount = SimEngine.PowerOn(state, owner, ThisPower);
         if (amount <= 0) return;
-        s.LogFired(Name, amount * s.Targetable.Count(), owner);
-        if (s.Log) s.EndOfTurnDamage.Add(("Inferno (all)", amount));
-        SimEngine.DamageAllEnemies(s, amount, owner);
+        state.LogFired(Name, amount * state.Targetable.Count(), owner);
+        if (state.Log) state.EndOfTurnDamage.Add(("Inferno (all)", amount));
+        SimEngine.DamageAllEnemies(state, amount, owner);
     }
 }

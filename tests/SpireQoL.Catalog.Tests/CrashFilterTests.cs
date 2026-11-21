@@ -15,7 +15,7 @@ public class CrashFilterTests
     private static Exception Caught(Action a)
     {
         try { a(); }
-        catch (Exception e) { return e; }
+        catch (Exception ex) { return ex; }
         throw new InvalidOperationException("didn't throw");
     }
 

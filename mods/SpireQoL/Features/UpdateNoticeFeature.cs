@@ -65,11 +65,11 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         if (_check is { IsCompleted: true } done)
         {
             _check = null;
-            var n = done.Status == TaskStatus.RanToCompletion ? done.Result : null;
-            if (n != null)
+            var status = done.Status == TaskStatus.RanToCompletion ? done.Result : null;
+            if (status != null)
             {
-                _status = n;
-                ModEntry.Log.Info($"update notice: {Text(n)}");
+                _status = status;
+                ModEntry.Log.Info($"update notice: {Text(status)}");
             }
         }
         Show(menu!);
@@ -148,9 +148,9 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         _label.MouseFilter = Control.MouseFilterEnum.Stop;
         _label.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
         _label.TooltipText = "Open Spire QoL's releases on GitHub (the newest one when you're behind)";
-        _label.GuiInput += e =>
+        _label.GuiInput += inputEvent =>
         {
-            if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OS.ShellOpen(ReleasesLink(_status));
+            if (inputEvent is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OS.ShellOpen(ReleasesLink(_status));
         };
         _warning.AddChild(_label);
 
@@ -159,9 +159,9 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         _gear.MouseFilter = Control.MouseFilterEnum.Stop;
         _gear.MouseDefaultCursorShape = Control.CursorShape.PointingHand;
         _gear.TooltipText = "Spire QoL settings";
-        _gear.GuiInput += e =>
+        _gear.GuiInput += inputEvent =>
         {
-            if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OpenSettings?.Invoke();
+            if (inputEvent is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) OpenSettings?.Invoke();
         };
         _warning.AddChild(_gear);
         _logged = false;
@@ -172,35 +172,35 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
     private static bool Dirty => BuildInfo.Dirty;
 
     /// <summary>The newest Spire QoL release when you're behind (its download), else Spire QoL's releases (not the repo's other mods').</summary>
-    internal static string ReleasesLink(GitHubReleases.Status? s) =>
-        s is { Newer: > 0, Latest: { } latest } ? GitHubReleases.ReleaseUrl(Repo, TagPrefix, latest) : GitHubReleases.PageUrl(Repo, TagPrefix);
+    internal static string ReleasesLink(GitHubReleases.Status? status) =>
+        status is { Newer: > 0, Latest: { } latest } ? GitHubReleases.ReleaseUrl(Repo, TagPrefix, latest) : GitHubReleases.PageUrl(Repo, TagPrefix);
 
-    private static bool IsTestBuild(GitHubReleases.Status s) => !s.Released || Dirty || BuildInfo.Dev;
+    private static bool IsTestBuild(GitHubReleases.Status status) => !status.Released || Dirty || BuildInfo.Dev;
 
-    private static string Text(GitHubReleases.Status s)
+    private static string Text(GitHubReleases.Status status)
     {
-        if (IsTestBuild(s))
+        if (IsTestBuild(status))
         {
             var (version, built) = (BuildInfo.Version, BuildInfo.BuiltAt.ToString("MMM d HH:mm"));
             var lines = new List<string>
             {
                 $"Spire QoL {version}{(BuildInfo.Dev ? "-dev" : "")}{(BuildInfo.Commit == "" ? "" : "+" + BuildInfo.Commit)} test build ({(Dirty ? "uncommitted changes, " : "")}built {built})",
-                $"version {version} {(s.Released ? "is already released" : "isn't released yet")}; newest release {s.Latest?.ToString() ?? "none"}{(s.Newer > 0 ? $", {s.Newer} newer" : "")}",
+                $"version {version} {(status.Released ? "is already released" : "isn't released yet")}; newest release {status.Latest?.ToString() ?? "none"}{(status.Newer > 0 ? $", {status.Newer} newer" : "")}",
             };
             return string.Join('\n', lines);
         }
-        return s.Newer > 0 ? $"Spire QoL: {s.Newer} version{(s.Newer == 1 ? "" : "s")} behind (new version on GitHub)" : "Spire QoL up to date!";
+        return status.Newer > 0 ? $"Spire QoL: {status.Newer} version{(status.Newer == 1 ? "" : "s")} behind (new version on GitHub)" : "Spire QoL up to date!";
     }
 
     /// <summary>The game's "MODDED (n)" label in the main menu's info corner (NDebugInfoLabelManager).</summary>
-    private static Control? ModdedWarning(Node menu) => Find(menu) ?? (NGame.Instance is { } g ? Find(g) : null);
+    private static Control? ModdedWarning(Node menu) => Find(menu) ?? (NGame.Instance is { } nGame ? Find(nGame) : null);
 
     // The visible one (the game keeps another for in-run screens).
-    private static Control? Find(Node n)
+    private static Control? Find(Node node)
     {
-        if (n is NDebugInfoLabelManager && n.GetNodeOrNull<Control>("%ModdedWarning") is { } w && w.IsVisibleInTree()) return w;
-        foreach (var c in n.GetChildren())
-            if (Find(c) is { } found) return found;
+        if (node is NDebugInfoLabelManager && node.GetNodeOrNull<Control>("%ModdedWarning") is { } control && control.IsVisibleInTree()) return control;
+        foreach (var otherNode in node.GetChildren())
+            if (Find(otherNode) is { } found) return found;
         return null;
     }
 }

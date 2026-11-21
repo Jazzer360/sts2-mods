@@ -26,22 +26,22 @@ internal static class MoveBranches
     {
         // Below 3 Personal Hive (or none): +1 Personal Hive and +1 Strength; at 3 or more: +2 Strength.
         ["Entomancer.SpitMove"] = new(new[] { nameof(PersonalHivePower), nameof(StrengthPower), nameof(StrengthPower) },
-            (m, all) => m.Creature.GetPower<PersonalHivePower>() is { Amount: < 3 } ? new[] { all[0], all[1] } : new[] { all[2] }),
+            (monster, all) => monster.Creature.GetPower<PersonalHivePower>() is { Amount: < 3 } ? new[] { all[0], all[1] } : new[] { all[2] }),
         // Strength only while it still has Plow (its Plow is taken away once it's stunned out of the charge).
-        ["CeremonialBeast.PlowMove"] = new(new[] { nameof(StrengthPower) }, (m, all) => m.Creature.HasPower<PlowPower>() ? all : Array.Empty<Applied>()),
+        ["CeremonialBeast.PlowMove"] = new(new[] { nameof(StrengthPower) }, (monster, all) => monster.Creature.HasPower<PlowPower>() ? all : Array.Empty<Applied>()),
         // Dampen on a target that doesn't have it yet (one that does only adds the caster): yours decides what's shown.
-        ["MagiKnight.DampenMove"] = new(new[] { nameof(DampenPower) }, (m, all) => Sts2State.Me?.Creature.HasPower<DampenPower>() == true ? Array.Empty<Applied>() : all),
+        ["MagiKnight.DampenMove"] = new(new[] { nameof(DampenPower) }, (monster, all) => Sts2State.Me?.Creature.HasPower<DampenPower>() == true ? Array.Empty<Applied>() : all),
         // Minion on each egg it lays, one per free slot of the encounter (up to 3).
-        ["Ovicopter.LayEggsMove"] = new(new[] { nameof(MinionPower) }, (m, all) =>
-            m.Creature.CombatState is { } cs && cs.Encounter?.Slots.Any(s => cs.Enemies.All(c => c.SlotName != s)) == true ? all : Array.Empty<Applied>()),
+        ["Ovicopter.LayEggsMove"] = new(new[] { nameof(MinionPower) }, (monster, all) =>
+            monster.Creature.CombatState is { } combat && combat.Encounter?.Slots.Any(s => combat.Enemies.All(creature => creature.SlotName != s)) == true ? all : Array.Empty<Applied>()),
         // Strength to every ally but herself: 1, or 2 at the Dread ascension (a local, so the code's amount can't be read).
-        ["Queen.BurnBrightForMeMove"] = new(new[] { nameof(StrengthPower) }, (m, all) =>
-            m.Creature.CombatState is { } cs && cs.Enemies.Any(c => c != m.Creature && c.IsAlive)
+        ["Queen.BurnBrightForMeMove"] = new(new[] { nameof(StrengthPower) }, (monster, all) =>
+            monster.Creature.CombatState is { } combat && combat.Enemies.Any(creature => creature != monster.Creature && creature.IsAlive)
                 ? new[] { all[0] with { Amount = MegaCrit.Sts2.Core.Helpers.AscensionHelper.IsDread() ? 2 : 1 } }
                 : Array.Empty<Applied>()),
         // Its first respawn gains Painful Stabs, its second Nemesis (Respawns counts them; the move adds one first).
-        ["TestSubject.RespawnMove"] = new(new[] { nameof(PainfulStabsPower), nameof(NemesisPower) }, (m, all) =>
-            Sts2State.Private(m, "Respawns", -1) switch { 0 => new[] { all[0] }, 1 => new[] { all[1] }, _ => Array.Empty<Applied>() }),
+        ["TestSubject.RespawnMove"] = new(new[] { nameof(PainfulStabsPower), nameof(NemesisPower) }, (monster, all) =>
+            Sts2State.Private(monster, "Respawns", -1) switch { 0 => new[] { all[0] }, 1 => new[] { all[1] }, _ => Array.Empty<Applied>() }),
         // A loop over the move's targets, which always include you: every one of them gets it.
         ["SpectralKnight.HexMove"] = new(new[] { nameof(HexPower) }, (_, all) => all),
         ["TheInsatiable.LiquifyMove"] = new(new[] { nameof(SandpitPower) }, (_, all) => all),
@@ -57,8 +57,8 @@ internal static class MoveBranches
     /// <summary>The powers that land, when the move has a rule whose shape still matches; null otherwise (the caller shows Maybe).</summary>
     public static IReadOnlyList<MovePowers.Applied>? Settle(MonsterModel monster, MethodInfo perform, IReadOnlyList<MovePowers.Applied> all)
     {
-        if (!Rules.TryGetValue(Key(perform), out var rule) || !rule.Shape.SequenceEqual(all.Select(a => a.Power.Name))) return null;
-        try { return rule.Pick(monster, all).Select(a => a with { Maybe = false }).ToList(); }
+        if (!Rules.TryGetValue(Key(perform), out var rule) || !rule.Shape.SequenceEqual(all.Select(applied => applied.Power.Name))) return null;
+        try { return rule.Pick(monster, all).Select(applied => applied with { Maybe = false }).ToList(); }
         catch { return null; }
     }
 }

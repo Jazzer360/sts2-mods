@@ -13,26 +13,26 @@ public class SimMergeTests
     [Fact]
     public void BranchesThatDifferOnlyInATeammateDontMerge()
     {
-        var a = new SimState();
-        a.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 20 });
-        a.Teammates.Add(new SimPlayer { HandCount = 5, Block = 3, Hp = 40 });
-        var same = a.Clone();
-        Assert.Equal(a.Key(), same.Key());
+        var state = new SimState();
+        state.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 20 });
+        state.Teammates.Add(new SimPlayer { HandCount = 5, Block = 3, Hp = 40 });
+        var same = state.Clone();
+        Assert.Equal(state.Key(), same.Key());
 
         void Differs(Action<SimPlayer> change)
         {
-            var b = a.Clone();
-            change(b.MutableTeammate(0));
-            Assert.NotEqual(a.Key(), b.Key());
+            var branch = state.Clone();
+            change(branch.MutableTeammate(0));
+            Assert.NotEqual(state.Key(), branch.Key());
         }
-        Differs(t => t.Block = 4);
-        Differs(t => t.Hp = 39);
-        Differs(t => t.Taken = 1);
-        Differs(t => t.HandCount = 6);
-        Differs(t => t.Drawn = 1);
-        Differs(t => t.Died = true);
-        Differs(t => t.Powers = t.Powers.With(PowerId.Strength, 1));
-        Differs(t => t.OwnOrbs().Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }));
+        Differs(player => player.Block = 4);
+        Differs(player => player.Hp = 39);
+        Differs(player => player.Taken = 1);
+        Differs(player => player.HandCount = 6);
+        Differs(player => player.Drawn = 1);
+        Differs(player => player.Died = true);
+        Differs(player => player.Powers = player.Powers.With(PowerId.Strength, 1));
+        Differs(player => player.OwnOrbs().Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }));
     }
 
     /// <summary>
@@ -43,20 +43,20 @@ public class SimMergeTests
     [Fact]
     public void MergedChancesEqualEveryOrderOfTargetsCounted()
     {
-        var r = new Random(4101);
+        var random = new Random(4101);
         for (var fight = 0; fight < 300; fight++)
         {
-            var enemies = r.Next(1, 5);
-            var orbs = r.Next(1, enemies >= 3 ? 6 : 7);
-            var hp = Enumerable.Range(0, enemies).Select(_ => r.Next(1, 16)).ToArray();
-            var block = Enumerable.Range(0, enemies).Select(_ => r.Next(0, 5)).ToArray();
-            var passive = Enumerable.Range(0, orbs).Select(_ => r.Next(1, 7)).ToArray();
+            var enemies = random.Next(1, 5);
+            var orbs = random.Next(1, enemies >= 3 ? 6 : 7);
+            var hp = Enumerable.Range(0, enemies).Select(_ => random.Next(1, 16)).ToArray();
+            var block = Enumerable.Range(0, enemies).Select(_ => random.Next(0, 5)).ToArray();
+            var passive = Enumerable.Range(0, orbs).Select(_ => random.Next(1, 7)).ToArray();
 
-            var s = new SimState();
-            for (var i = 0; i < enemies; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = hp[i], Block = block[i] });
-            s.You.OrbCapacity = orbs;
-            s.You.Orbs = passive.Select(p => new SimOrb { Kind = OrbKind.Lightning, Passive = p, Evoke = 8 }).ToList();
-            var o = SimEngine.Run(s);
+            var state = new SimState();
+            for (var i = 0; i < enemies; i++) state.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = hp[i], Block = block[i] });
+            state.You.OrbCapacity = orbs;
+            state.You.Orbs = passive.Select(p => new SimOrb { Kind = OrbKind.Lightning, Passive = p, Evoke = 8 }).ToList();
+            var outcome = SimEngine.Run(state);
 
             // Every order of targets, one by one: each hit picks a living enemy, all equally likely.
             var counted = new Dictionary<string, double>();
@@ -80,17 +80,17 @@ public class SimMergeTests
             }
             Hit(0, hp, block, 1);
 
-            var simulated = o.Branches
-                .GroupBy(x => string.Join(",", x.Enemies.OrderBy(e => e.Id).Select(e => Math.Max(0, e.Hp))))
-                .ToDictionary(g => g.Key, g => g.Sum(x => x.Weight));
+            var simulated = outcome.Branches
+                .GroupBy(branch => string.Join(",", branch.Enemies.OrderBy(enemy => enemy.Id).Select(enemy => Math.Max(0, enemy.Hp))))
+                .ToDictionary(g => g.Key, g => g.Sum(branch => branch.Weight));
             var what = $"fight {fight}: HP [{string.Join(",", hp)}], block [{string.Join(",", block)}], Lightning [{string.Join(",", passive)}]";
-            Assert.False(o.Truncated, what);
+            Assert.False(outcome.Truncated, what);
             Assert.Equal(counted.Keys.OrderBy(k => k), simulated.Keys.OrderBy(k => k));
             foreach (var (key, p) in counted) Assert.True(Math.Abs(p - simulated[key]) < 1e-9, $"{what}: HP {key}: counted {p}, simulated {simulated[key]}");
             for (var i = 0; i < enemies; i++)
             {
                 var dead = counted.Where(x => int.Parse(x.Key.Split(',')[i]) == 0).Sum(x => x.Value);
-                Assert.True(Math.Abs(dead - o.DeadChance(i)) < 1e-9, $"{what}: enemy {i} dies: counted {dead}, simulated {o.DeadChance(i)}");
+                Assert.True(Math.Abs(dead - outcome.DeadChance(i)) < 1e-9, $"{what}: enemy {i} dies: counted {dead}, simulated {outcome.DeadChance(i)}");
             }
         }
     }

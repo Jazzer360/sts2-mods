@@ -6,7 +6,7 @@ public static partial class SimEngine
     public const int MaxHand = 10;
 
     /// <summary>A player's draws go through their draw pile (decision #90): only yours, when the adapter filled it.</summary>
-    internal static bool DrawsFromPile(SimState s, int player) => s.Player(player)?.Draw != null;
+    internal static bool DrawsFromPile(SimState state, int player) => state.Player(player)?.Draw != null;
 
     /// <summary>
     /// <paramref name="count"/> draws, one after another (CardPileCmd.Draw), each with its reactions before the next: the draw
@@ -15,11 +15,11 @@ public static partial class SimEngine
     /// </summary>
     /// <param name="onDrawn">Called for each card these draws give (not the ones their reactions chain), before its reactions: a
     /// draw tab counting what its source drew (decision #132).</param>
-    internal static IEnumerable<SimState> DrawCards(SimState s, int player, int count, bool indirect, Action<SimState>? onDrawn = null)
+    internal static IEnumerable<SimState> DrawCards(SimState state, int player, int count, bool indirect, Action<SimState>? onDrawn = null)
     {
-        IEnumerable<SimState> r = new[] { s };
-        for (var i = 0; i < count; i++) r = Then(r, x => DrawOne(x, player, indirect, onDrawn: onDrawn));
-        return r;
+        IEnumerable<SimState> states = new[] { state };
+        for (var i = 0; i < count; i++) states = Then(states, branch => DrawOne(branch, player, indirect, onDrawn: onDrawn));
+        return states;
     }
 
     /// <summary>
@@ -28,61 +28,61 @@ public static partial class SimEngine
     /// branches merge (decision #120): two that drew the same cards in another order are one (the record is in the key while set),
     /// so Pillage's work grows with the draws, not with the orders they could come in.
     /// </summary>
-    internal static IEnumerable<SimState> RunDrawnCard(SimState s, DrawnCardAction da)
+    internal static IEnumerable<SimState> RunDrawnCard(SimState state, DrawnCardAction drawnCardAction)
     {
-        var player = s.CurrentPlay?.Owner ?? Who.You;
-        if (!DrawsFromPile(s, player))
+        var player = state.CurrentPlay?.Owner ?? Who.You;
+        if (!DrawsFromPile(state, player))
         {
             // No pile read (a teammate's): the draws are counted, and what they gave isn't known.
-            s.Unmodelled ??= "a card that acts on what it draws, with no draw pile to draw from";
-            return ProcCardEvent(s, CardEvent.Drawn, da.Count, player, da.Indirect);
+            state.Unmodelled ??= "a card that acts on what it draws, with no draw pile to draw from";
+            return ProcCardEvent(state, CardEvent.Drawn, drawnCardAction.Count, player, drawnCardAction.Indirect);
         }
-        s.DrawRecord = new List<(SimDrawCard, int)>();
-        IEnumerable<SimState> r = new[] { s };
-        if (da.DrawAgainIf != SimCardType.None)
+        state.DrawRecord = new List<(SimDrawCard, int)>();
+        IEnumerable<SimState> states = new[] { state };
+        if (drawnCardAction.DrawAgainIf != SimCardType.None)
         {
             // Pillage (its do-while): draw; again while what it drew is an Attack and your hand has room. A draw that gave
             // nothing (a full hand, empty piles) ends it. One level per draw, merged, the finished ones set aside.
             var done = new List<SimState>();
-            IEnumerable<SimState> going = r;
+            IEnumerable<SimState> going = states;
             for (var drawn = 0; going.Any(); drawn++)
             {
                 var next = new List<SimState>();
-                foreach (var y in Then(going, x => DrawOne(x, player, da.Indirect, record: true)))
-                    (y.DrawRecord!.Count > drawn && y.DrawRecord[^1].Card.Type == da.DrawAgainIf
-                        && y.Player(player)!.HandCount - (y.PlayFromHand ? 1 : 0) < MaxHand ? next : done).Add(y);
+                foreach (var copy in Then(going, branch => DrawOne(branch, player, drawnCardAction.Indirect, record: true)))
+                    (copy.DrawRecord!.Count > drawn && copy.DrawRecord[^1].Card.Type == drawnCardAction.DrawAgainIf
+                        && copy.Player(player)!.HandCount - (copy.PlayFromHand ? 1 : 0) < MaxHand ? next : done).Add(copy);
                 going = next;
             }
-            r = done;
+            states = done;
         }
         else
-            for (var i = 0; i < da.Count; i++) r = Then(r, x => DrawOne(x, player, da.Indirect, record: true));
-        return Then(r, x =>
+            for (var i = 0; i < drawnCardAction.Count; i++) states = Then(states, branch => DrawOne(branch, player, drawnCardAction.Indirect, record: true));
+        return Then(states, branch =>
         {
-            var drawn = x.DrawRecord!;
-            x.DrawRecord = null;
+            var drawn = branch.DrawRecord!;
+            branch.DrawRecord = null;
             // What its chance tab counts (decision #119).
-            x.DrawnTally = da.Block != null ? (drawn.Count > 0 && drawn[0].Card.Type == da.BlockIf ? 1 : 0)
-                : da.DrawAgainIf != SimCardType.None ? drawn.Count(d => d.Card.Type == da.DrawAgainIf)
+            branch.DrawnTally = drawnCardAction.Block != null ? (drawn.Count > 0 && drawn[0].Card.Type == drawnCardAction.BlockIf ? 1 : 0)
+                : drawnCardAction.DrawAgainIf != SimCardType.None ? drawn.Count(d => d.Card.Type == drawnCardAction.DrawAgainIf)
                 : drawn.Count(d => d.Card.Free == true);
             // Escape Plan: the card it drew (none into a full hand or from empty piles: no block).
-            if (da.Block != null && drawn.Count > 0 && drawn[0].Card.Type == da.BlockIf) return BlockOnce(x, da.Block);
-            if (!da.DiscardUnlessFree) return new[] { x };
+            if (drawnCardAction.Block != null && drawn.Count > 0 && drawn[0].Card.Type == drawnCardAction.BlockIf) return BlockOnce(branch, drawnCardAction.Block);
+            if (!drawnCardAction.DiscardUnlessFree) return new[] { branch };
             var discard = drawn.Where(d => d.Card.Free == false).ToList();
-            if (discard.Count == 0) return new[] { x };
+            if (discard.Count == 0) return new[] { branch };
             // A Sly card plays itself when discarded (CardModel.OnDiscard): not simulated.
-            if (discard.Any(d => d.Card.Sly)) x.Unmodelled ??= "a Sly card discarded by Scrape plays itself";
-            var p = x.MutablePlayer(player);
+            if (discard.Any(d => d.Card.Sly)) branch.Unmodelled ??= "a Sly card discarded by Scrape plays itself";
+            var simPlayer = branch.MutablePlayer(player);
             foreach (var (card, id) in discard)
             {
-                p.HandCount--;
-                if (card.TurnEnd != null && p.TurnEndCards.IndexOf(card.TurnEnd) is var at and >= 0)
-                    p.TurnEndCards = p.TurnEndCards.Where((_, k) => k != at).ToList();
-                if (card.Fading) p.Fading--;
-                if (card.HexFading) p.HexFading--;
-                if (p.AutoHand != null) p.AutoHand = p.AutoHand.Where(h => h.Id != id).ToList();
+                simPlayer.HandCount--;
+                if (card.TurnEnd != null && simPlayer.TurnEndCards.IndexOf(card.TurnEnd) is var at and >= 0)
+                    simPlayer.TurnEndCards = simPlayer.TurnEndCards.Where((_, k) => k != at).ToList();
+                if (card.Fading) simPlayer.Fading--;
+                if (card.HexFading) simPlayer.HexFading--;
+                if (simPlayer.AutoHand != null) simPlayer.AutoHand = simPlayer.AutoHand.Where(handCard => handCard.Id != id).ToList();
             }
-            return ProcCardEvent(x, CardEvent.Discarded, discard.Count, player);
+            return ProcCardEvent(branch, CardEvent.Discarded, discard.Count, player);
         });
     }
 
@@ -92,38 +92,38 @@ public static partial class SimEngine
     /// (each card equally likely: the order is hidden). The card joins your hand (what acts at end of turn, Ethereal, what
     /// Stampede or Simpleton could pick), then its reactions run.
     /// </summary>
-    private static IEnumerable<SimState> DrawOne(SimState s, int player, bool indirect, bool record = false, Action<SimState>? onDrawn = null)
+    private static IEnumerable<SimState> DrawOne(SimState state, int player, bool indirect, bool record = false, Action<SimState>? onDrawn = null)
     {
-        var p = s.Player(player)!;
+        var simPlayer = state.Player(player)!;
         // The card being played has left your hand already (the game moves it before OnPlay); HandCount drops at CardResolved.
-        var inHand = p.HandCount - (s.PlayFromHand ? 1 : 0);
-        if (inHand >= MaxHand) return new[] { s };
-        var pile = p.Draw!;
+        var inHand = simPlayer.HandCount - (state.PlayFromHand ? 1 : 0);
+        if (inHand >= MaxHand) return new[] { state };
+        var pile = simPlayer.Draw!;
         if (pile.Count == 0)
         {
-            if (pile.DiscardCount == 0) return new[] { s };
-            p = s.MutablePlayer(player);
-            p.Draw = pile.Shuffled();
-            return Then(ProcCardEvent(s, CardEvent.Shuffled, 1, player), x => DrawOne(x, player, indirect, record, onDrawn));
+            if (pile.DiscardCount == 0) return new[] { state };
+            simPlayer = state.MutablePlayer(player);
+            simPlayer.Draw = pile.Shuffled();
+            return Then(ProcCardEvent(state, CardEvent.Shuffled, 1, player), branch => DrawOne(branch, player, indirect, record, onDrawn));
         }
         if (pile.Top.Count > 0)
         {
-            var mp = s.MutablePlayer(player);
+            var nextPlayer = state.MutablePlayer(player);
             var top = pile.Top[0];
-            mp.Draw = pile.WithoutTop();
-            onDrawn?.Invoke(s);
-            return Drawn(s, player, top, indirect, record);
+            nextPlayer.Draw = pile.WithoutTop();
+            onDrawn?.Invoke(state);
+            return Drawn(state, player, top, indirect, record);
         }
         var total = pile.RestCount;
         var result = new List<SimState>();
         for (var i = 0; i < pile.Rest.Count; i++)
         {
-            var g = pile.Rest[i];
-            var c = pile.Rest.Count == 1 ? s : s.Clone();
-            c.Weight = s.Weight * g.Count / total;
-            c.MutablePlayer(player).Draw = pile.WithoutOneOf(i);
-            onDrawn?.Invoke(c);
-            result.AddRange(Drawn(c, player, g.Card, indirect, record));
+            var group = pile.Rest[i];
+            var branch = pile.Rest.Count == 1 ? state : state.Clone();
+            branch.Weight = state.Weight * group.Count / total;
+            branch.MutablePlayer(player).Draw = pile.WithoutOneOf(i);
+            onDrawn?.Invoke(branch);
+            result.AddRange(Drawn(branch, player, group.Card, indirect, record));
         }
         return result;
     }
@@ -135,38 +135,38 @@ public static partial class SimEngine
     /// (CardModel) is still what the draw gave (Pillage reads an Attack). One with no play built (aimed at a teammate, or the
     /// game's cap on endless auto-plays against enemies that can't die) isn't simulated: `?`.
     /// </summary>
-    private static IEnumerable<SimState> HellraiserPlays(SimState s, int player, SimDrawCard card, int id)
+    private static IEnumerable<SimState> HellraiserPlays(SimState state, int player, SimDrawCard card, int id)
     {
         if (card.Auto is not { Plays.Count: > 0 } auto)
         {
-            s.AutoPlaysUnknown = true;
-            s.Unmodelled ??= "Hellraiser auto-plays a drawn Strike whose play isn't built";
-            return new[] { s };
+            state.AutoPlaysUnknown = true;
+            state.Unmodelled ??= "Hellraiser auto-plays a drawn Strike whose play isn't built";
+            return new[] { state };
         }
         var plays = auto.Plays.Count == 1 && auto.Plays[0].TargetId < 0
             ? auto.Plays
-            : auto.Plays.Where(pl => s.Enemy(pl.TargetId) is { Alive: true, Hittable: true }).ToList();
-        if (player == Who.You) s.AutoPlayed++;
-        var mp = s.MutablePlayer(player);
-        if (mp.AutoHand != null) mp.AutoHand = mp.AutoHand.Where(h => h.Id != id).ToList();
+            : auto.Plays.Where(play => state.Enemy(play.TargetId) is { Alive: true, Hittable: true }).ToList();
+        if (player == Who.You) state.AutoPlayed++;
+        var simPlayer = state.MutablePlayer(player);
+        if (simPlayer.AutoHand != null) simPlayer.AutoHand = simPlayer.AutoHand.Where(handCard => handCard.Id != id).ToList();
         if (plays.Count == 0)
         {
             // No enemy to hit: it goes to the discard pile unplayed (CardCmd.AutoPlay).
-            mp.HandCount--;
-            return new[] { s };
+            simPlayer.HandCount--;
+            return new[] { state };
         }
-        var (current, fromHand, events, blockGains, attack) = (s.CurrentPlay, s.PlayFromHand, s.PlayEvents, s.PlayCardBlockGains, s.CurrentAttack);
+        var (current, fromHand, events, blockGains, attack) = (state.CurrentPlay, state.PlayFromHand, state.PlayEvents, state.PlayCardBlockGains, state.CurrentAttack);
         var result = new List<SimState>();
         foreach (var play in plays)
         {
-            var t = plays.Count == 1 ? s : s.Clone();
-            t.Weight = s.Weight / plays.Count;
-            var sub = new BranchSet(t, nested: true);
+            var branch = plays.Count == 1 ? state : state.Clone();
+            branch.Weight = state.Weight / plays.Count;
+            var sub = new BranchSet(branch, nested: true);
             ApplyPlay(sub, play);
-            foreach (var x in sub.States)
+            foreach (var copy in sub.States)
             {
-                (x.CurrentPlay, x.PlayFromHand, x.PlayEvents, x.PlayCardBlockGains, x.CurrentAttack) = (current, fromHand, events, blockGains, attack);
-                result.Add(x);
+                (copy.CurrentPlay, copy.PlayFromHand, copy.PlayEvents, copy.PlayCardBlockGains, copy.CurrentAttack) = (current, fromHand, events, blockGains, attack);
+                result.Add(copy);
             }
         }
         return result;
@@ -174,34 +174,34 @@ public static partial class SimEngine
 
 
     /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
-    private static IEnumerable<SimState> Drawn(SimState s, int player, SimDrawCard card, bool indirect, bool record = false)
+    private static IEnumerable<SimState> Drawn(SimState state, int player, SimDrawCard card, bool indirect, bool record = false)
     {
-        var p = s.MutablePlayer(player);
-        p.HandCount++;
-        p.Drawn++;
+        var simPlayer = state.MutablePlayer(player);
+        simPlayer.HandCount++;
+        simPlayer.Drawn++;
         // The draw a card acts on (RunDrawnCard): this card, and its id in AutoHand. Copied, not added to: branches share the list.
-        if (record && s.DrawRecord != null) s.DrawRecord = new List<(SimDrawCard, int)>(s.DrawRecord) { (card, -1000 - p.Drawn) };
-        if (card.TurnEnd != null) p.TurnEndCards = new List<TurnEndCard>(p.TurnEndCards) { card.TurnEnd };
-        if (card.Fading) p.Fading++;
-        if (card.HexFading) p.HexFading++;
-        if (card.Status) p.StatusDrawn++;
-        if (p.AutoHand != null && card.Pickable)
+        if (record && state.DrawRecord != null) state.DrawRecord = new List<(SimDrawCard, int)>(state.DrawRecord) { (card, -1000 - simPlayer.Drawn) };
+        if (card.TurnEnd != null) simPlayer.TurnEndCards = new List<TurnEndCard>(simPlayer.TurnEndCards) { card.TurnEnd };
+        if (card.Fading) simPlayer.Fading++;
+        if (card.HexFading) simPlayer.HexFading++;
+        if (card.Status) simPlayer.StatusDrawn++;
+        if (simPlayer.AutoHand != null && card.Pickable)
         {
             // Its own id in your hand (two copies are two cards); plays as the adapter built it for a card in hand.
             if (card.Auto != null)
-                p.AutoHand = new List<SimHandCard>(p.AutoHand) { new() { Id = -1000 - p.Drawn, Name = card.Auto.Name, IsAttack = card.Auto.IsAttack, Cost = card.Auto.Cost, Plays = card.Auto.Plays } };
-            else s.AutoPlaysUnknown = true;
+                simPlayer.AutoHand = new List<SimHandCard>(simPlayer.AutoHand) { new() { Id = -1000 - simPlayer.Drawn, Name = card.Auto.Name, IsAttack = card.Auto.IsAttack, Cost = card.Auto.Cost, Plays = card.Auto.Plays } };
+            else state.AutoPlaysUnknown = true;
         }
         // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly: before the other draw reactions).
-        IEnumerable<SimState> r = card.Strike && p.Powers[PowerId.Hellraiser] > 0
-            ? Then(HellraiserPlays(s, player, card, -1000 - p.Drawn), x => FireCardEvent(x, CardEvent.Drawn, player, indirect))
-            : FireCardEvent(s, CardEvent.Drawn, player, indirect);
+        IEnumerable<SimState> states = card.Strike && simPlayer.Powers[PowerId.Hellraiser] > 0
+            ? Then(HellraiserPlays(state, player, card, -1000 - simPlayer.Drawn), branch => FireCardEvent(branch, CardEvent.Drawn, player, indirect))
+            : FireCardEvent(state, CardEvent.Drawn, player, indirect);
         // Iteration (IterationPower.AfterCardDrawn): the first Status you draw this turn draws its amount more.
-        if (card.Status && p.Powers[PowerId.Iteration] is > 0 and var iteration && p.StatusDrawn <= 1)
-            r = Then(r, x => DrawCards(x, player, iteration, indirect: true));
+        if (card.Status && simPlayer.Powers[PowerId.Iteration] is > 0 and var iteration && simPlayer.StatusDrawn <= 1)
+            states = Then(states, branch => DrawCards(branch, player, iteration, indirect: true));
         // Pagestorm (PagestormPower.AfterCardDrawn): each Ethereal card you draw draws its amount more.
-        if (card.Ethereal && p.Powers[PowerId.Pagestorm] is > 0 and var pagestorm)
-            r = Then(r, x => DrawCards(x, player, pagestorm, indirect: true));
-        return r;
+        if (card.Ethereal && simPlayer.Powers[PowerId.Pagestorm] is > 0 and var pagestorm)
+            states = Then(states, branch => DrawCards(branch, player, pagestorm, indirect: true));
+        return states;
     }
 }

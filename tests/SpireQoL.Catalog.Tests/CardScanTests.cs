@@ -49,7 +49,7 @@ public class CardScanTests
         GameModels.EnsureLoaded();
         var onPlayCalls = typeof(CardCoverage).GetMethod("OnPlayCalls", BindingFlags.Static | BindingFlags.NonPublic)!;
         HashSet<string> Calls(string card) =>
-            (HashSet<string>)onPlayCalls.Invoke(null, new object[] { typeof(MegaCrit.Sts2.Core.Models.CardModel).Assembly.GetTypes().Single(t => t.Name == card) })!;
+            (HashSet<string>)onPlayCalls.Invoke(null, new object[] { typeof(MegaCrit.Sts2.Core.Models.CardModel).Assembly.GetTypes().Single(type => type.Name == card) })!;
         Assert.Contains("CardPileCmd.Draw", Calls("Impatience"));
         Assert.Contains("DamageResult.get_WasTargetKilled", Calls("EchoingSlash"));
         Assert.Contains("CreatureCmd.LoseBlock", Calls("Expose"));

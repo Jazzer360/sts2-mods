@@ -15,17 +15,17 @@ public class OptionCardsTests
     {
         var cards = new RunRemindersFeature.OptionCards();
         var types = new[] { eventType }.Concat(eventType.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
-        foreach (var t in types)
-        foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+        foreach (var type in types)
+        foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
         {
-            if (m.IsAbstract) continue;
-            try { cards.Read(SpireQoL.Diagnostics.GameCode.Instructions(m)); } catch { /* no body */ }
+            if (method.IsAbstract) continue;
+            try { cards.Read(SpireQoL.Diagnostics.GameCode.Instructions(method)); } catch { /* no body */ }
         }
         return cards;
     }
 
     private static IEnumerable<Type> Events() => typeof(EventModel).Assembly.GetTypes()
-        .Where(t => !t.IsAbstract && typeof(EventModel).IsAssignableFrom(t));
+        .Where(type => !type.IsAbstract && typeof(EventModel).IsAssignableFrom(type));
 
     [Fact]
     public void OnlyReviewedEventsTakeTheirPoolFromTheOption()
@@ -33,14 +33,14 @@ public class OptionCardsTests
         // A reward with no pool in its code takes the CardPoolModel the option's delegate holds. That's how Colorful
         // Philosophers passes each character's pool; a new event doing it needs a look (does its delegate hold the pool?).
         var reviewed = new[] { "ColorfulPhilosophers" };
-        var found = Events().Where(t => Read(t).Summary.PoolFromOption > 0).Select(t => t.Name).OrderBy(n => n).ToList();
+        var found = Events().Where(type => Read(type).Summary.PoolFromOption > 0).Select(type => type.Name).OrderBy(n => n).ToList();
         Assert.Equal(reviewed, found);
     }
 
     [Fact]
     public void KnownEventsAreReadAsTheyAre()
     {
-        var byName = Events().ToDictionary(t => t.Name);
+        var byName = Events().ToDictionary(type => type.Name);
         // Study (Powers) and Touch Core (a cost filter): two rewards from your pool, each with its filter.
         var automaton = Read(byName["InfestedAutomaton"]).Summary;
         Assert.Equal(2, automaton.Rewards);
@@ -54,15 +54,15 @@ public class OptionCardsTests
         // Wuppy in Trouble: an Injury, a fixed card.
         Assert.True(Read(byName["WuppyInTrouble"]).Summary.Fixed >= 1);
         // Some event transforms a card at random.
-        Assert.Contains(Events(), t => Read(t).Summary.Transform);
+        Assert.Contains(Events(), type => Read(type).Summary.Transform);
     }
 
     [Fact]
     public void RewardCountsAndOddsAreRead()
     {
         // What the odds need: how each reward's options are built and how many cards it offers, read from the code.
-        var byName = Events().ToDictionary(t => t.Name);
-        var relics = typeof(RelicModel).Assembly.GetTypes().Where(t => !t.IsAbstract && typeof(RelicModel).IsAssignableFrom(t)).ToDictionary(t => t.Name);
+        var byName = Events().ToDictionary(type => type.Name);
+        var relics = typeof(RelicModel).Assembly.GetTypes().Where(type => !type.IsAbstract && typeof(RelicModel).IsAssignableFrom(type)).ToDictionary(type => type.Name);
         var uniform = "new:" + (int)MegaCrit.Sts2.Core.Runs.CardRarityOddsType.Uniform;
         Assert.Equal(new[] { (uniform, "Cards", ""), (uniform, "Cards", ""), (uniform, "Cards", "") }, Read(byName["ColorfulPhilosophers"]).RewardsRead);
         Assert.All(Read(byName["InfestedAutomaton"]).RewardsRead, r => Assert.Equal(("ForNonCombatWithDefaultOdds", "1", ""), r));
@@ -75,7 +75,7 @@ public class OptionCardsTests
     [Fact]
     public void ChangesToCardsAreRead()
     {
-        var relics = typeof(RelicModel).Assembly.GetTypes().Where(t => !t.IsAbstract && typeof(RelicModel).IsAssignableFrom(t)).ToDictionary(t => t.Name);
+        var relics = typeof(RelicModel).Assembly.GetTypes().Where(type => !type.IsAbstract && typeof(RelicModel).IsAssignableFrom(type)).ToDictionary(type => type.Name);
         // Tezcatara's Nutritious Soup enchants your Strikes with Tezcatara's Ember (Mystic Lighter).
         Assert.Equal("TezcatarasEmber", Read(relics["NutritiousSoup"]).ChangesRead.Enchantments);
         // Astrolabe upgrades the cards it transforms into: the eggs have nothing to do, Miniature Cannon applies.
@@ -91,7 +91,7 @@ public class OptionCardsTests
     public void AncientRelicsAreReadAsTheyAre()
     {
         // An ancient's relic option is read through its AfterObtained (and the lambdas it uses).
-        var relics = typeof(RelicModel).Assembly.GetTypes().Where(t => !t.IsAbstract && typeof(RelicModel).IsAssignableFrom(t)).ToDictionary(t => t.Name);
+        var relics = typeof(RelicModel).Assembly.GetTypes().Where(type => !type.IsAbstract && typeof(RelicModel).IsAssignableFrom(type)).ToDictionary(type => type.Name);
         // Pandora's Box: your Strikes and Defends transformed at random (CreateRandomCardForTransform in a lambda).
         Assert.True(Read(relics["PandorasBox"]).Summary.Transform);
         // Sea Glass: commons, uncommons and rares of another character's pool (its own Character, not yours).

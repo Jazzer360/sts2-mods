@@ -115,23 +115,23 @@ public sealed class SimJob
         };
         try
         {
-            var o = _ex.Run(work);
-            _latest = o;
+            var outcome = _ex.Run(work);
+            _latest = outcome;
             _ready.TrySetResult(true);
-            Telemetry.DevEvents.Post(new Telemetry.SearchDone(_label, _context, o.Steps, o.Copies, o.PeakHeld, clock.Elapsed.TotalMilliseconds,
-                gated, o.Truncated ? o.CapHit ?? "a cap" : null, Cancelled: false));
-            if (o.Truncated)
+            Telemetry.DevEvents.Post(new Telemetry.SearchDone(_label, _context, outcome.Steps, outcome.Copies, outcome.PeakHeld, clock.Elapsed.TotalMilliseconds,
+                gated, outcome.Truncated ? outcome.CapHit ?? "a cap" : null, Cancelled: false));
+            if (outcome.Truncated)
             {
-                var cap = o.CapHit ?? "a cap";
+                var cap = outcome.CapHit ?? "a cap";
                 Caps.AddOrUpdate(cap, 1, (_, n) => n + 1);
                 var line = $"[sim] cap: searching {_label} hit {cap} ({SimWork.MaxHeldStates:N0} states held by every search together, {SimWork.MaxCopies:N0} copies each): " +
-                           $"stopped after {o.Steps} steps, {o.Copies} copies, holding at most {o.PeakHeld} states, after {clock.Elapsed.TotalMilliseconds:F1} ms";
+                           $"stopped after {outcome.Steps} steps, {outcome.Copies} copies, holding at most {outcome.PeakHeld} states, after {clock.Elapsed.TotalMilliseconds:F1} ms";
                 Pending.Enqueue((line, null));
                 CapsHit.Enqueue(new CapHit(_label, cap, line, _ex.Start));
             }
             else if (gated)
-                Pending.Enqueue(($"[sim] searched {_label} in the background: {o.Steps} steps, {o.Copies} copies, at most {o.PeakHeld} states, " +
-                                 $"{o.Branches.Count} outcomes, {clock.Elapsed.TotalMilliseconds:F1} ms", null));
+                Pending.Enqueue(($"[sim] searched {_label} in the background: {outcome.Steps} steps, {outcome.Copies} copies, at most {outcome.PeakHeld} states, " +
+                                 $"{outcome.Branches.Count} outcomes, {clock.Elapsed.TotalMilliseconds:F1} ms", null));
         }
         catch (OperationCanceledException)
         {
@@ -160,6 +160,6 @@ public sealed class SimJob
             log(e.Line);
             if (e.Error != null) report?.Invoke(e.Error);
         }
-        while (CapsHit.TryDequeue(out var c)) cap?.Invoke(c);
+        while (CapsHit.TryDequeue(out var capHit)) cap?.Invoke(capHit);
     }
 }

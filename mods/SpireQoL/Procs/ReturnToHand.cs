@@ -42,8 +42,8 @@ internal static class ReturnToHand
         {
             IEnumerable<CardModel> cards;
             try { cards = pile.GetPile(me).Cards.ToList(); } catch { continue; }
-            foreach (var c in cards)
-                if (c.GetType().Name == name) yield return (c, pile);
+            foreach (var card in cards)
+                if (card.GetType().Name == name) yield return (card, pile);
         }
     }
 
@@ -62,25 +62,25 @@ internal static class ReturnToHand
     {
         var back = new List<CardModel>();
         var hand = handAfter;
-        void Add(CardModel c)
+        void Add(CardModel otherCard)
         {
             if (hand >= 10) return; // CardPileCmd.Add: a full hand sends it to the discard pile
-            back.Add(c);
+            back.Add(otherCard);
             hand++;
         }
         plays = Math.Max(1, plays);
         // Whistling Arrows: shooting comes during the play, before the card's own AfterCardPlayed hooks.
         if (shots > 0)
-            foreach (var (c, pile) in Copies(me, WhistlingArrows))
-                if (pile == PileType.Discard && !ReferenceEquals(c, card)) Add(c);
+            foreach (var (nextCard, pile) in Copies(me, WhistlingArrows))
+                if (pile == PileType.Discard && !ReferenceEquals(nextCard, card)) Add(nextCard);
         if (card.Type == CardType.Skill)
         {
             var skills = SkillsThisTurn(me);
-            foreach (var (c, pile) in Copies(me, MakeItSo))
+            foreach (var (otherCard, pile) in Copies(me, MakeItSo))
             {
-                if (pile == PileType.Hand || ReferenceEquals(c, card)) continue;
-                var n = Every(c);
-                if (Enumerable.Range(1, plays).Any(i => (skills + i) % n == 0)) Add(c);
+                if (pile == PileType.Hand || ReferenceEquals(otherCard, card)) continue;
+                var n = Every(otherCard);
+                if (Enumerable.Range(1, plays).Any(i => (skills + i) % n == 0)) Add(otherCard);
             }
         }
         int energy;

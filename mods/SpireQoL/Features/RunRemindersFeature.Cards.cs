@@ -43,7 +43,7 @@ public sealed partial class RunRemindersFeature
         var cards = CardsOf(option, me);
         var held = Held(me);
         var upgraded = CardsRead.TryGetValue(option, out var read) && read.GivesUpgraded;
-        return cards == null || cards.Any(c => CardAffinity.AppliesWith(rule, c, held, upgraded));
+        return cards == null || cards.Any(card => CardAffinity.AppliesWith(rule, card, held, upgraded));
     }
 
     /// <summary>Whether the change this option makes to your cards (an upgrade, an enchantment) can reach one the rule applies to.</summary>
@@ -69,7 +69,7 @@ public sealed partial class RunRemindersFeature
             if (CardsRead.TryGetValue(option, out var read))
             {
                 var held = Held(me);
-                if (read.Chance(me, c => CardAffinity.AppliesWith(rule, c, held, read.GivesUpgraded)) is { } chance && chance.Low < 1)
+                if (read.Chance(me, card => CardAffinity.AppliesWith(rule, card, held, read.GivesUpgraded)) is { } chance && chance.Low < 1)
                 {
                     text = Percent(chance.Low) == Percent(chance.High) ? Percent(chance.Low) + "%" : $"{Percent(chance.Low)}–{Percent(chance.High)}%";
                 }
@@ -89,17 +89,17 @@ public sealed partial class RunRemindersFeature
     /// <summary>The chance, small, along an icon's bottom edge (like the amount on a tab).</summary>
     private static Label OddsLabel(string text, float iconSize)
     {
-        var l = UiKit.Label(text, Math.Max(12, (int)(iconSize * 0.36f)), Colors.White);
-        l.HorizontalAlignment = HorizontalAlignment.Center;
-        l.Size = new Vector2(iconSize + 16, 0);
-        l.Position = new Vector2(-8, iconSize * 0.62f);
-        l.MouseFilter = Control.MouseFilterEnum.Ignore;
-        return l;
+        var label = UiKit.Label(text, Math.Max(12, (int)(iconSize * 0.36f)), Colors.White);
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.Size = new Vector2(iconSize + 16, 0);
+        label.Position = new Vector2(-8, iconSize * 0.62f);
+        label.MouseFilter = Control.MouseFilterEnum.Ignore;
+        return label;
     }
 
     /// <summary>Your relics' card rules (the modifiers a boost can count on).</summary>
     private static List<CardAffinityRule> Held(Player me) =>
-        me.Relics.Select(r => CardAffinity.For(r.GetType().Name)).OfType<CardAffinityRule>().ToList();
+        me.Relics.Select(relic => CardAffinity.For(relic.GetType().Name)).OfType<CardAffinityRule>().ToList();
 
     /// <summary>The cards (canonical) an option can give you, or null when they can't be read. Cached per option.</summary>
     internal static List<CardModel>? CardsOf(EventOption option, Player me)
@@ -186,7 +186,7 @@ public sealed partial class RunRemindersFeature
             FieldInfo? arrayData = null;
             var upgrades = false;
             var picksUpgrade = false;
-            void Push(IntExpr e) { before = last; last = e; }
+            void Push(IntExpr intExpr) { before = last; last = intExpr; }
             foreach (var ins in code)
             {
                 var producedInt = previous != null && ProducesInt(previous);
@@ -208,15 +208,15 @@ public sealed partial class RunRemindersFeature
                 if (ins.opcode == OpCodes.Div && last is { Const: { } d } && before is { Var: not null } && d != 0) { last = before with { Divisor = before.Divisor * d }; continue; }
                 if (SlotKey(ins, store: true) is { } st) { if (producedInt && last != null) stored[st] = last; continue; }
                 if (SlotKey(ins, store: false) is { } ld) { if (stored.TryGetValue(ld, out var val)) Push(val); continue; }
-                if (ins.opcode == OpCodes.Ldftn && ins.operand is MethodInfo fn && IsCardFilter(fn))
+                if (ins.opcode == OpCodes.Ldftn && ins.operand is MethodInfo method && IsCardFilter(method))
                 {
-                    filter = fn;
+                    filter = method;
                     continue;
                 }
-                if (ins.operand is not MethodBase mb || mb.DeclaringType == null) continue;
+                if (ins.operand is not MethodBase otherMethod || otherMethod.DeclaringType == null) continue;
                 if (ins.opcode != OpCodes.Call && ins.opcode != OpCodes.Callvirt && ins.opcode != OpCodes.Newobj) continue;
-                var type = mb.DeclaringType;
-                if (mb.Name == "InitializeArray" && type == typeof(RuntimeHelpers) && building is { } init && arrayData != null)
+                var type = otherMethod.DeclaringType;
+                if (otherMethod.Name == "InitializeArray" && type == typeof(RuntimeHelpers) && building is { } init && arrayData != null)
                 {
                     try
                     {
@@ -228,44 +228,44 @@ public sealed partial class RunRemindersFeature
                     building = null;
                     continue;
                 }
-                if (type.Name == "DynamicVarSet" && mb.Name.StartsWith("get_")) varName = mb.Name == "get_Item" ? lastString : mb.Name[4..];
-                else if (mb.Name == "get_IntValue" && type.Name.EndsWith("Var") && varName != null) Push(new IntExpr(null, varName));
-                else if (IsRewardMaker(mb))
+                if (type.Name == "DynamicVarSet" && otherMethod.Name.StartsWith("get_")) varName = otherMethod.Name == "get_Item" ? lastString : otherMethod.Name[4..];
+                else if (otherMethod.Name == "get_IntValue" && type.Name.EndsWith("Var") && varName != null) Push(new IntExpr(null, varName));
+                else if (IsRewardMaker(otherMethod))
                 {
                     // CardReward(options, count, player) / CardFactory.CreateForReward(player, count, options): the count is the
                     // last number pushed; it goes to the first reward still without one.
-                    if (_rewards.FirstOrDefault(r => r.Count == null) is { } open)
+                    if (_rewards.FirstOrDefault(rewardSource => rewardSource.Count == null) is { } open)
                     {
                         open.Count = last;
-                        if (mb.IsConstructor) open.Flags |= (int)CardCreationFlags.IsCardReward;
+                        if (otherMethod.IsConstructor) open.Flags |= (int)CardCreationFlags.IsCardReward;
                     }
                 }
-                else if (type == typeof(CardCreationOptions) && mb.Name == nameof(CardCreationOptions.WithFlags) && _rewards.Count > 0 && last is { Const: { } flags })
+                else if (type == typeof(CardCreationOptions) && otherMethod.Name == nameof(CardCreationOptions.WithFlags) && _rewards.Count > 0 && last is { Const: { } flags })
                     _rewards[^1].Flags |= flags;
-                if (mb.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(new PoolSource(mb, character));
-                else if (type == typeof(ModelDb) && mb is MethodInfo { IsGenericMethod: true } g && g.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(mb, null));
-                else if (mb is MethodInfo { IsGenericMethod: true } gc && (gc.Name is "Card" or "CreateCard" or "TransformTo")
-                    && gc.GetGenericArguments()[0] is { } t && typeof(CardModel).IsAssignableFrom(t) && !t.IsAbstract)
-                    _fixed.Add(t);
-                else if (mb is MethodInfo { IsGenericMethod: true } ge && (ge.Name is "Enchantment" or "Enchant")
-                    && ge.GetGenericArguments()[0] is { } e && typeof(EnchantmentModel).IsAssignableFrom(e) && !e.IsAbstract)
-                    _enchantments.Add(e);
-                else if (type == typeof(CardCreationOptions) && (mb.IsConstructor || (mb is MethodInfo f && f.IsStatic && f.ReturnType == typeof(CardCreationOptions))))
+                if (otherMethod.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(new PoolSource(otherMethod, character));
+                else if (type == typeof(ModelDb) && otherMethod is MethodInfo { IsGenericMethod: true } nextMethod && nextMethod.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(otherMethod, null));
+                else if (otherMethod is MethodInfo { IsGenericMethod: true } gc && (gc.Name is "Card" or "CreateCard" or "TransformTo")
+                    && gc.GetGenericArguments()[0] is { } otherType && typeof(CardModel).IsAssignableFrom(otherType) && !otherType.IsAbstract)
+                    _fixed.Add(otherType);
+                else if (otherMethod is MethodInfo { IsGenericMethod: true } ge && (ge.Name is "Enchantment" or "Enchant")
+                    && ge.GetGenericArguments()[0] is { } nextType && typeof(EnchantmentModel).IsAssignableFrom(nextType) && !nextType.IsAbstract)
+                    _enchantments.Add(nextType);
+                else if (type == typeof(CardCreationOptions) && (otherMethod.IsConstructor || (otherMethod is MethodInfo f && f.IsStatic && f.ReturnType == typeof(CardCreationOptions))))
                 {
                     var reward = new RewardSource
                     {
                         // No pool loaded here: it's passed in (Colorful Philosophers' option for one character's pool), so it's
                         // the CardPoolModel the option's delegate holds.
                         Pools = pools.Count == 0 ? new List<PoolSource> { FromOption } : pools.ToList(),
-                        Maker = mb,
+                        Maker = otherMethod,
                         Filter = filter,
                         // The constructor takes (pools, source, odds, filter): its odds are the last number pushed, its source the one before.
-                        Odds = mb.IsConstructor ? last?.Const : null,
-                        Source = mb.IsConstructor ? before?.Const : null,
+                        Odds = otherMethod.IsConstructor ? last?.Const : null,
+                        Source = otherMethod.IsConstructor ? before?.Const : null,
                     };
                     // A closure capturing one value of an enum we saw a constant array of: the loop's values (Glass Eye).
                     if (filter is { IsStatic: false } && filter.DeclaringType is { } closure && ThisField(closure) is var self
-                        && closure.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(x => x != self).ToList() is { Count: 1 } captured
+                        && closure.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(field => field != self).ToList() is { Count: 1 } captured
                         && arrays.TryGetValue(captured[0].FieldType, out var values))
                     {
                         reward.LoopField = captured[0];
@@ -275,17 +275,17 @@ public sealed partial class RunRemindersFeature
                     pools.Clear();
                     filter = null;
                 }
-                else if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && (mb.Name == "TransformToRandom"
-                        || (mb.Name == "Transform" && mb.GetParameters().Any(p => p.ParameterType.Name == "Rng"))))
-                    || (type == typeof(CardFactory) && mb.Name == nameof(CardFactory.CreateRandomCardForTransform)))
+                else if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && (otherMethod.Name == "TransformToRandom"
+                        || (otherMethod.Name == "Transform" && otherMethod.GetParameters().Any(parameterInfo => parameterInfo.ParameterType.Name == "Rng"))))
+                    || (type == typeof(CardFactory) && otherMethod.Name == nameof(CardFactory.CreateRandomCardForTransform)))
                     _transformRandom = true;
-                if (type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && mb.Name.StartsWith("Upgrade")) upgrades = true;
-                if (type.Name == "CardSelectCmd" && mb.Name == "FromDeckForUpgrade") picksUpgrade = true;
-                if (type.Name == "CardSelectCmd" && mb.Name == "FromDeckForTransformation") _picksTransform = true;
-                if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && mb.Name.StartsWith("Enchant")) || (type.Name == "CardSelectCmd" && mb.Name == "FromDeckForEnchantment"))
+                if (type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Upgrade")) upgrades = true;
+                if (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForUpgrade") picksUpgrade = true;
+                if (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForTransformation") _picksTransform = true;
+                if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Enchant")) || (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForEnchantment"))
                     _enchantsDeck = true;
                 // Whose character a pool belongs to: the last call that returned one (Owner.Character, or Sea Glass's Character).
-                if (mb is MethodInfo { ReturnType: var rt } && typeof(CharacterModel).IsAssignableFrom(rt)) character = mb;
+                if (otherMethod is MethodInfo { ReturnType: var rt } && typeof(CharacterModel).IsAssignableFrom(rt)) character = otherMethod;
             }
             _loosePools.AddRange(pools);
             // An upgrade with no pick from your deck in the same code is of the cards it makes (Astrolabe's new cards); with a
@@ -296,25 +296,25 @@ public sealed partial class RunRemindersFeature
 
         /// <summary>For the tests: what was read (fixed cards, rewards, rewards with a filter, transform, rewards whose pool the option passes in, pools of a character other than yours).</summary>
         internal (int Fixed, int Rewards, int Filters, bool Transform, int PoolFromOption, int OtherCharacterPools) Summary =>
-            (_fixed.Count, _rewards.Count, _rewards.Count(r => r.Filter != null), _transformRandom, _rewards.Count(r => r.Pools.Contains(FromOption)),
-             _rewards.SelectMany(r => r.Pools).Count(p => p.Character != null && !typeof(Player).IsAssignableFrom(p.Character.DeclaringType)));
+            (_fixed.Count, _rewards.Count, _rewards.Count(rewardSource => rewardSource.Filter != null), _transformRandom, _rewards.Count(rewardSource => rewardSource.Pools.Contains(FromOption)),
+             _rewards.SelectMany(rewardSource => rewardSource.Pools).Count(poolSource => poolSource.Character != null && !typeof(Player).IsAssignableFrom(poolSource.Character.DeclaringType)));
 
         /// <summary>For the tests: each reward's odds (null: the factory's own), count ("Cards", "Cards/3", "3", or "?") and loop values.</summary>
         internal List<(string Maker, string Count, string Loop)> RewardsRead =>
-            _rewards.Select(r => (r.Maker.IsConstructor ? "new:" + r.Odds : r.Maker.Name,
-                r.Count is { } c ? (c.Const?.ToString() ?? c.Var!) + (c.Divisor != 1 ? "/" + c.Divisor : "") : "?",
-                r.LoopValues is { } v ? string.Join(",", v) : "")).ToList();
+            _rewards.Select(rewardSource => (rewardSource.Maker.IsConstructor ? "new:" + rewardSource.Odds : rewardSource.Maker.Name,
+                rewardSource.Count is { } intExpr ? (intExpr.Const?.ToString() ?? intExpr.Var!) + (intExpr.Divisor != 1 ? "/" + intExpr.Divisor : "") : "?",
+                rewardSource.LoopValues is { } v ? string.Join(",", v) : "")).ToList();
 
         /// <summary>For the tests: whether you pick the card a transform turns.</summary>
         internal bool PicksTransform => _picksTransform;
 
         /// <summary>For the tests: the enchantments the code applies, and how it upgrades.</summary>
         internal (string Enchantments, bool GivesUpgraded, bool UpgradesDeck) ChangesRead =>
-            (string.Join(",", _enchantments.Select(e => e.Name).OrderBy(n => n)), GivesUpgraded, _upgradesDeck);
+            (string.Join(",", _enchantments.Select(type => type.Name).OrderBy(n => n)), GivesUpgraded, _upgradesDeck);
 
-        private static bool IsRewardMaker(MethodBase mb) =>
-            (mb.IsConstructor && mb.DeclaringType?.Name == "CardReward" && mb.GetParameters().Any(p => p.ParameterType == typeof(CardCreationOptions)))
-            || (mb.DeclaringType == typeof(CardFactory) && mb.Name == nameof(CardFactory.CreateForReward) && mb.GetParameters().Length == 3);
+        private static bool IsRewardMaker(MethodBase method) =>
+            (method.IsConstructor && method.DeclaringType?.Name == "CardReward" && method.GetParameters().Any(parameterInfo => parameterInfo.ParameterType == typeof(CardCreationOptions)))
+            || (method.DeclaringType == typeof(CardFactory) && method.Name == nameof(CardFactory.CreateForReward) && method.GetParameters().Length == 3);
 
         private static bool TryConst(CodeInstruction ins, out int value)
         {
@@ -341,10 +341,10 @@ public sealed partial class RunRemindersFeature
         {
             if (store ? ins.IsStloc() : ins.IsLdloc())
             {
-                var idx = ins.operand switch { LocalBuilder lb => lb.LocalIndex, int i => i, byte b => b, _ => LocalIndex(ins) };
+                var idx = ins.operand switch { LocalBuilder localBuilder => localBuilder.LocalIndex, int i => i, byte b => b, _ => LocalIndex(ins) };
                 return idx < 0 ? null : "loc:" + idx;
             }
-            if (ins.opcode == (store ? OpCodes.Stfld : OpCodes.Ldfld) && ins.operand is FieldInfo f && f.FieldType == typeof(int)) return "fld:" + f.Name;
+            if (ins.opcode == (store ? OpCodes.Stfld : OpCodes.Ldfld) && ins.operand is FieldInfo field && field.FieldType == typeof(int)) return "fld:" + field.Name;
             return null;
         }
 
@@ -355,26 +355,26 @@ public sealed partial class RunRemindersFeature
             return dot >= 0 && int.TryParse(name[(dot + 1)..], out var i) ? i : -1;
         }
 
-        private static bool IsCardFilter(MethodInfo m) =>
-            m.ReturnType == typeof(bool) && m.GetParameters() is { Length: 1 } p && typeof(CardModel).IsAssignableFrom(p[0].ParameterType);
+        private static bool IsCardFilter(MethodInfo method) =>
+            method.ReturnType == typeof(bool) && method.GetParameters() is { Length: 1 } parameterInfos && typeof(CardModel).IsAssignableFrom(parameterInfos[0].ParameterType);
 
         /// <summary>The cards (canonical) this code can give, or null when a reward's pool couldn't be read.</summary>
         public List<CardModel>? Candidates(Player me)
         {
             var set = new HashSet<CardModel>();
-            foreach (var t in _fixed)
+            foreach (var type in _fixed)
             {
-                var card = ModelDb.AllCards.FirstOrDefault(c => c.GetType() == t);
+                var card = ModelDb.AllCards.FirstOrDefault(canonicalCard => canonicalCard.GetType() == type);
                 if (card != null) set.Add(card);
             }
             foreach (var reward in _rewards)
             {
                 if (Built(reward, me) is not { } built) return null;
                 foreach (var (_, possible) in built)
-                foreach (var c in possible) set.Add(c);
+                foreach (var card in possible) set.Add(card);
             }
-            foreach (var p in _loosePools)
-            foreach (var c in Unlocked(Pool(p, me), me)) set.Add(c);
+            foreach (var poolSource in _loosePools)
+            foreach (var card in Unlocked(Pool(poolSource, me), me)) set.Add(card);
             if (_transformRandom)
             {
                 foreach (var original in me.Deck.Cards)
@@ -382,7 +382,7 @@ public sealed partial class RunRemindersFeature
                     IEnumerable<CardModel> options;
                     try { options = CardFactory.GetDefaultTransformationOptions(original, false); }
                     catch { continue; }
-                    foreach (var c in options) set.Add(c.IsCanonical ? c : c.CanonicalInstance);
+                    foreach (var card in options) set.Add(card.IsCanonical ? card : card.CanonicalInstance);
                 }
             }
             return set.Count == 0 ? null : set.ToList();
@@ -398,8 +398,8 @@ public sealed partial class RunRemindersFeature
         {
             if (reward.Pools.Contains(FromOption) && OptionPool() == null) return null;
             // A pool whose character can't be told: the cards are unknown, so the icons stay.
-            if (reward.Pools.Any(p => p.Method.Name == "get_CardPool" && CharacterOf(p.Character, me) == null)) return null;
-            var pools = reward.Pools.Select(p => Pool(p, me)).OfType<CardPoolModel>().Distinct().ToList();
+            if (reward.Pools.Any(poolSource => poolSource.Method.Name == "get_CardPool" && CharacterOf(poolSource.Character, me) == null)) return null;
+            var pools = reward.Pools.Select(poolSource => Pool(poolSource, me)).OfType<CardPoolModel>().Distinct().ToList();
             var built = new List<(CardCreationOptions, List<CardModel>)>();
             foreach (var value in reward.LoopValues ?? new object?[] { null })
             {
@@ -433,13 +433,13 @@ public sealed partial class RunRemindersFeature
         /// </summary>
         public (double Low, double High)? Chance(Player me, Func<CardModel, bool> applies)
         {
-            foreach (var t in _fixed)
+            foreach (var type in _fixed)
             {
-                if (ModelDb.AllCards.FirstOrDefault(c => c.GetType() == t) is { } card && applies(card)) return (1, 1);
+                if (ModelDb.AllCards.FirstOrDefault(canonicalCard => canonicalCard.GetType() == type) is { } card && applies(card)) return (1, 1);
             }
-            foreach (var p in _loosePools)
+            foreach (var poolSource in _loosePools)
             {
-                if (Unlocked(Pool(p, me), me).Any(applies)) return null;
+                if (Unlocked(Pool(poolSource, me), me).Any(applies)) return null;
             }
             var chances = new List<double>();
             foreach (var reward in _rewards)
@@ -475,7 +475,7 @@ public sealed partial class RunRemindersFeature
             foreach (var original in me.Deck.Cards)
             {
                 List<CardModel> options;
-                try { options = CardFactory.GetDefaultTransformationOptions(original, false).Select(c => c.IsCanonical ? c : c.CanonicalInstance).ToList(); }
+                try { options = CardFactory.GetDefaultTransformationOptions(original, false).Select(card => card.IsCanonical ? card : card.CanonicalInstance).ToList(); }
                 catch { continue; }
                 if (options.Count == 0) continue;
                 var colorless = original.Type == CardType.Quest || original.Rarity is CardRarity.Event or CardRarity.Ancient or CardRarity.Token;
@@ -496,19 +496,19 @@ public sealed partial class RunRemindersFeature
         public bool ChangeReaches(Player me, CardAffinityRule rule)
         {
             var deck = me.Deck.Cards.ToList();
-            bool Base(CardModel c) => rule.Base == null || rule.Base(c);
+            bool Base(CardModel card) => rule.Base == null || rule.Base(card);
             return rule.Change switch
             {
-                CardChange.Upgrade => _upgradesDeck && deck.Any(c => Base(c) && c.IsUpgradable),
-                CardChange.Enchant => _enchantsDeck && deck.Any(c => Base(c) && (_enchantments.Count == 0
-                    || _enchantments.Any(e => EnchantmentOf(e)?.CanEnchant(c) ?? true))),
+                CardChange.Upgrade => _upgradesDeck && deck.Any(card => Base(card) && card.IsUpgradable),
+                CardChange.Enchant => _enchantsDeck && deck.Any(card => Base(card) && (_enchantments.Count == 0
+                    || _enchantments.Any(type => EnchantmentOf(type)?.CanEnchant(card) ?? true))),
                 _ => false,
             };
         }
 
-        private static EnchantmentModel? EnchantmentOf(Type t)
+        private static EnchantmentModel? EnchantmentOf(Type type)
         {
-            try { return typeof(ModelDb).GetMethod(nameof(ModelDb.Enchantment))!.MakeGenericMethod(t).Invoke(null, null) as EnchantmentModel; }
+            try { return typeof(ModelDb).GetMethod(nameof(ModelDb.Enchantment))!.MakeGenericMethod(type).Invoke(null, null) as EnchantmentModel; }
             catch { return null; }
         }
 
@@ -520,12 +520,12 @@ public sealed partial class RunRemindersFeature
         public List<DrawGroup>? Groups(Player me)
         {
             var groups = new List<DrawGroup>();
-            var fixedCards = _fixed.Select(t => ModelDb.AllCards.FirstOrDefault(c => c.GetType() == t)).OfType<CardModel>().ToList();
+            var fixedCards = _fixed.Select(type => ModelDb.AllCards.FirstOrDefault(card => card.GetType() == type)).OfType<CardModel>().ToList();
             if (fixedCards.Count > 0) groups.Add(new DrawGroup(DrawKind.Certain, fixedCards, CardRarityOddsType.Uniform, null, GivesUpgraded));
             foreach (var reward in _rewards)
             {
                 if (Built(reward, me) is not { } built) return null;
-                var count = reward.Count is { } c ? Evaluate(c) : null;
+                var count = reward.Count is { } intExpr ? Evaluate(intExpr) : null;
                 foreach (var (options, possible) in built)
                     groups.Add(new DrawGroup(DrawKind.Reward, OrderForShow(possible, options.RarityOdds), options.RarityOdds, count, GivesUpgraded));
             }
@@ -550,14 +550,14 @@ public sealed partial class RunRemindersFeature
             var list = cards.Distinct();
             // A reward (CreateForReward) never offers Basic or Ancient cards: uniform odds leave them out, and a rarity roll only
             // lands on Common, Uncommon or Rare (Infested Automaton's Study listed Lost Lute).
-            if (odds != CardRarityOddsType.None) list = list.Where(c => c.Rarity != CardRarity.Basic && c.Rarity != CardRarity.Ancient);
-            return list.OrderBy(c => c.Rarity).ThenBy(c => c.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
+            if (odds != CardRarityOddsType.None) list = list.Where(card => card.Rarity != CardRarity.Basic && card.Rarity != CardRarity.Ancient);
+            return list.OrderBy(card => card.Rarity).ThenBy(card => card.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
         }
 
         /// <summary>What one card can transform into (CardFactory.GetDefaultTransformationOptions), as the Inspect screen lists it.</summary>
         internal static List<CardModel> TransformResults(CardModel original)
         {
-            try { return OrderForShow(CardFactory.GetDefaultTransformationOptions(original, false).Select(c => c.IsCanonical ? c : c.CanonicalInstance), CardRarityOddsType.None); }
+            try { return OrderForShow(CardFactory.GetDefaultTransformationOptions(original, false).Select(card => card.IsCanonical ? card : card.CanonicalInstance), CardRarityOddsType.None); }
             catch { return new List<CardModel>(); }
         }
 
@@ -568,7 +568,7 @@ public sealed partial class RunRemindersFeature
             foreach (var original in me.Deck.Cards)
             {
                 List<CardModel> options;
-                try { options = CardFactory.GetDefaultTransformationOptions(original, false).Select(c => c.IsCanonical ? c : c.CanonicalInstance).ToList(); }
+                try { options = CardFactory.GetDefaultTransformationOptions(original, false).Select(card => card.IsCanonical ? card : card.CanonicalInstance).ToList(); }
                 catch { continue; }
                 if (options.Count == 0) continue;
                 var colorless = original.Type == CardType.Quest || original.Rarity is CardRarity.Event or CardRarity.Ancient or CardRarity.Token;
@@ -584,13 +584,13 @@ public sealed partial class RunRemindersFeature
             if (odds == CardRarityOddsType.Uniform)
             {
                 // Uniform: every card but Basic and Ancient ones, equally likely.
-                var pool = possible.Where(c => c.Rarity != CardRarity.Basic && c.Rarity != CardRarity.Ancient).ToList();
+                var pool = possible.Where(card => card.Rarity != CardRarity.Basic && card.Rarity != CardRarity.Ancient).ToList();
                 return SpireQoL.Sim.CardOdds.AtLeastOneUniform(pool.Count, pool.Count(applies), count);
             }
             if (BaseOdds(odds) is not { } baseOdds) return null;
             var groups = new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare }
-                .Select(r => possible.Where(c => c.Rarity == r).ToList())
-                .Select(g => new SpireQoL.Sim.RarityGroup(g.Count, g.Count(applies))).ToList();
+                .Select(cardRarity => possible.Where(card => card.Rarity == cardRarity).ToList())
+                .Select(cards => new SpireQoL.Sim.RarityGroup(cards.Count, cards.Count(applies))).ToList();
             return SpireQoL.Sim.CardOdds.AtLeastOne(groups, baseOdds.Rare, baseOdds.Uncommon, count);
         }
 
@@ -602,7 +602,7 @@ public sealed partial class RunRemindersFeature
         {
             if (odds is CardRarityOddsType.Uniform or CardRarityOddsType.None || BaseOdds(odds) is not { } b) return null;
             var order = new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare };
-            var has = order.Select(r => possible.Any(c => c.Rarity == r)).ToArray();
+            var has = order.Select(cardRarity => possible.Any(card => card.Rarity == cardRarity)).ToArray();
             if (!has.Any(x => x)) return null;
             var rolled = new[] { Math.Max(0, 1 - b.Rare - b.Uncommon), b.Uncommon, b.Rare };
             var lands = new double[3];
@@ -631,10 +631,10 @@ public sealed partial class RunRemindersFeature
         }
 
         /// <summary>A number read from the code, on the objects running it (their DynamicVars).</summary>
-        private int? Evaluate(IntExpr e)
+        private int? Evaluate(IntExpr intExpr)
         {
-            int? value = e.Const;
-            if (e.Var != null)
+            int? value = intExpr.Const;
+            if (intExpr.Var != null)
             {
                 foreach (var holder in Holders())
                 {
@@ -642,13 +642,13 @@ public sealed partial class RunRemindersFeature
                     if (holder.GetType().GetProperty("DynamicVars")?.GetValue(holder) is not MegaCrit.Sts2.Core.Localization.DynamicVars.DynamicVarSet vars) continue;
                     try
                     {
-                        value = (int)vars[e.Var].IntValue;
+                        value = (int)vars[intExpr.Var].IntValue;
                         break;
                     }
                     catch { /* not this one */ }
                 }
             }
-            return value is { } v && e.Divisor != 0 ? v / e.Divisor : null;
+            return value is { } v && intExpr.Divisor != 0 ? v / intExpr.Divisor : null;
         }
 
         /// <summary>Stands for "the pool the option passes in" in a reward's pools.</summary>
@@ -692,16 +692,16 @@ public sealed partial class RunRemindersFeature
             if (Relic != null) yield return Relic;
         }
 
-        private static FieldInfo? ThisField(Type t) =>
-            t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(f => f.Name.EndsWith("__this"));
+        private static FieldInfo? ThisField(Type type) =>
+            type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(field => field.Name.EndsWith("__this"));
 
         /// <summary>The card pool the option's delegate holds (a closure field), if any.</summary>
         private CardPoolModel? OptionPool()
         {
             if (Target == null) return null;
             return Target.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .Where(f => typeof(CardPoolModel).IsAssignableFrom(f.FieldType)).Select(f => f.GetValue(Target) as CardPoolModel)
-                .FirstOrDefault(p => p != null);
+                .Where(field => typeof(CardPoolModel).IsAssignableFrom(field.FieldType)).Select(field => field.GetValue(Target) as CardPoolModel)
+                .FirstOrDefault(cardPoolModel => cardPoolModel != null);
         }
 
         private static IEnumerable<CardModel> Unlocked(CardPoolModel? pool, Player me) =>
@@ -718,29 +718,29 @@ public sealed partial class RunRemindersFeature
         /// event itself, or a closure over the event (<c>&lt;&gt;4__this</c>) and, for a loop, the value of this pass. A closure
         /// holding another value it can't be given keeps every card; a filter that throws keeps the card.
         /// </summary>
-        private Func<CardModel, bool> Filter(MethodInfo? m, FieldInfo? loopField = null, object? loopValue = null)
+        private Func<CardModel, bool> Filter(MethodInfo? method, FieldInfo? loopField = null, object? loopValue = null)
         {
-            if (m == null) return _ => true;
+            if (method == null) return _ => true;
             object? inst = null;
-            if (!m.IsStatic)
+            if (!method.IsStatic)
             {
-                var dt = m.DeclaringType!;
-                inst = Holders().FirstOrDefault(dt.IsInstanceOfType);
-                if (inst == null && dt.GetField("<>9", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is { } nine) inst = nine.GetValue(null);
+                var type = method.DeclaringType!;
+                inst = Holders().FirstOrDefault(type.IsInstanceOfType);
+                if (inst == null && type.GetField("<>9", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is { } nine) inst = nine.GetValue(null);
                 if (inst == null)
                 {
-                    var fields = dt.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    var self = ThisField(dt);
-                    if (fields.Any(f => f != self && f != loopField)) return _ => true;
-                    inst = RuntimeHelpers.GetUninitializedObject(dt);
+                    var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    var self = ThisField(type);
+                    if (fields.Any(field => field != self && field != loopField)) return _ => true;
+                    inst = RuntimeHelpers.GetUninitializedObject(type);
                     var owner = Holders().FirstOrDefault(h => self != null && self.FieldType.IsInstanceOfType(h));
                     if (self != null && owner != null) self.SetValue(inst, owner);
                     if (loopField != null && loopValue != null) loopField.SetValue(inst, loopValue);
                 }
             }
-            return c =>
+            return card =>
             {
-                try { return m.Invoke(inst, new object[] { c }) is true; }
+                try { return method.Invoke(inst, new object[] { card }) is true; }
                 catch { return true; }
             };
         }

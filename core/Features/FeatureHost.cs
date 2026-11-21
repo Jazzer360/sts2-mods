@@ -42,7 +42,7 @@ public sealed class FeatureHost
     /// </summary>
     public bool EnableLate(string id)
     {
-        var feature = _features.FirstOrDefault(f => f.Id == id);
+        var feature = _features.FirstOrDefault(candidate => candidate.Id == id);
         if (feature == null) return false;
         if (_states[id] == FeatureState.Active) return true;
         if (_states[id] == FeatureState.Failed) return false;
@@ -60,7 +60,7 @@ public sealed class FeatureHost
                 _log.Info($"[{feature.Id}] disabled");
                 continue;
             }
-            TryApply(feature, h => $"active ({h.GetPatchedMethods().Count()} methods patched)");
+            TryApply(feature, harmony => $"active ({harmony.GetPatchedMethods().Count()} methods patched)");
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -420,7 +420,7 @@ public sealed class SimPlayer
         if (_orbsShared)
         {
             var own = new List<SimOrb>(Orbs.Count);
-            foreach (var o in Orbs) own.Add(o.Clone());
+            foreach (var orb in Orbs) own.Add(orb.Clone());
             Orbs = own;
             _orbsShared = false;
         }
@@ -440,22 +440,22 @@ public sealed class SimPlayer
         add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
         Draw?.Hash(add);
         add(TurnEndCards.Count);
-        foreach (var c in TurnEndCards) { add(c.Card.GetHashCode()); add(c.Amount); }
+        foreach (var turnEndCard in TurnEndCards) { add(turnEndCard.Card.GetHashCode()); add(turnEndCard.Amount); }
         add(AutoHand?.Count ?? -1);
-        if (AutoHand != null) foreach (var c in AutoHand) add(c.Id);
+        if (AutoHand != null) foreach (var handCard in AutoHand) add(handCard.Id);
         Powers.Hash(add); Relics.Hash(add); Turn.Hash(add);
         add(Orbs.Count);
-        foreach (var o in Orbs) o.Hash(add);
+        foreach (var orb in Orbs) orb.Hash(add);
     }
 
     public SimPlayer Clone()
     {
         // The hand and debuff lists never change, so they're shared; the orbs until one branch changes them.
-        var c = (SimPlayer)MemberwiseClone();
+        var player = (SimPlayer)MemberwiseClone();
         // Both now point at one list: whichever changes it first copies it (an empty one too: a channel adds to it).
         _orbsShared = true;
-        c._orbsShared = true;
-        return c;
+        player._orbsShared = true;
+        return player;
     }
 }
 
@@ -560,10 +560,10 @@ public sealed class SimState
     public int BlockDemand;
     public Dictionary<int, int> FullBlockNeeded = new();
 
-    public SimEnemy? Enemy(int id) => Enemies.FirstOrDefault(e => e.Id == id);
+    public SimEnemy? Enemy(int id) => Enemies.FirstOrDefault(enemy => enemy.Id == id);
 
     [JsonIgnore]
-    public IEnumerable<SimEnemy> Targetable => Enemies.Where(e => e.Hittable && e.Alive);
+    public IEnumerable<SimEnemy> Targetable => Enemies.Where(enemy => enemy.Hittable && enemy.Alive);
 
     private static readonly JsonSerializerOptions JsonOptions = new() { IncludeFields = true, WriteIndented = false };
 
@@ -676,7 +676,7 @@ public sealed class SimState
     {
         if (_teammatesShared)
         {
-            Teammates = Teammates.Select(t => t.Clone()).ToList();
+            Teammates = Teammates.Select(player => player.Clone()).ToList();
             _teammatesShared = false;
         }
         return Teammates[k];
@@ -693,40 +693,40 @@ public sealed class SimState
         var shown = Clone();
         for (var k = 0; k < shown.Teammates.Count; k++)
         {
-            var t = shown.MutableTeammate(k);
-            t.TurnEndCards = new();
-            t.Fading = t.HexFading = 0;
-            t.Draw = null;
-            t.Stampede = t.Simpleton = 0;
-            t.AutoHand = null;
+            var player = shown.MutableTeammate(k);
+            player.TurnEndCards = new();
+            player.Fading = player.HexFading = 0;
+            player.Draw = null;
+            player.Stampede = player.Simpleton = 0;
+            player.AutoHand = null;
         }
         return shown;
     }
 
     /// <summary>An identical branch merged into this one: per-play results keep the guarantee (smallest) and the possibility (largest).</summary>
-    public void MergeResults(SimState r)
+    public void MergeResults(SimState state)
     {
-        PlayHpReached = Math.Min(PlayHpReached, r.PlayHpReached);
-        PlayHpLosses = Math.Min(PlayHpLosses, r.PlayHpLosses);
-        PlayHpLost = Math.Min(PlayHpLost, r.PlayHpLost);
-        PlayBiggestHit = Math.Min(PlayBiggestHit, r.PlayBiggestHit);
-        Fired = MergeLog(Fired, r.Fired, every: true);
-        FiredAny = MergeLog(FiredAny, r.FiredAny, every: false);
+        PlayHpReached = Math.Min(PlayHpReached, state.PlayHpReached);
+        PlayHpLosses = Math.Min(PlayHpLosses, state.PlayHpLosses);
+        PlayHpLost = Math.Min(PlayHpLost, state.PlayHpLost);
+        PlayBiggestHit = Math.Min(PlayBiggestHit, state.PlayBiggestHit);
+        Fired = MergeLog(Fired, state.Fired, every: true);
+        FiredAny = MergeLog(FiredAny, state.FiredAny, every: false);
     }
 
     /// <summary>Two play logs as one: every (the smaller of each, gone when either lacks it) or any (the larger).</summary>
-    internal static NamedCounts MergeLog(NamedCounts a, NamedCounts b, bool every)
+    internal static NamedCounts MergeLog(NamedCounts counts, NamedCounts otherCounts, bool every)
     {
-        if (ReferenceEquals(a, b)) return a;
-        var r = every ? NamedCounts.Empty : a;
+        if (ReferenceEquals(counts, otherCounts)) return counts;
+        var nextCounts = every ? NamedCounts.Empty : counts;
         if (every)
         {
-            foreach (var e in a.Items)
-                if (b.Has(e.Name)) r = r.With(e.Name, Math.Min(e.Amount, b[e.Name]), Math.Min(e.Data, b.DataOf(e.Name)));
-            return r;
+            foreach (var entry in counts.Items)
+                if (otherCounts.Has(entry.Name)) nextCounts = nextCounts.With(entry.Name, Math.Min(entry.Amount, otherCounts[entry.Name]), Math.Min(entry.Data, otherCounts.DataOf(entry.Name)));
+            return nextCounts;
         }
-        foreach (var e in b.Items) r = r.With(e.Name, Math.Max(e.Amount, a[e.Name]), Math.Max(e.Data, a.DataOf(e.Name)));
-        return r;
+        foreach (var entry in otherCounts.Items) nextCounts = nextCounts.With(entry.Name, Math.Max(entry.Amount, counts[entry.Name]), Math.Max(entry.Data, counts.DataOf(entry.Name)));
+        return nextCounts;
     }
 
     /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
@@ -769,20 +769,20 @@ public sealed class SimState
     public SimState Clone()
     {
         if (Work != null && ++Work.Copies > Work.CopyCap) throw new SimEngine.SimCapped(); // the work cap (SimWork.MaxCopies)
-        var c = (SimState)MemberwiseClone();
-        c.You = You.Clone();
+        var state = (SimState)MemberwiseClone();
+        state.You = You.Clone();
         _teammatesShared = true;
-        c._teammatesShared = true;
-        c.Enemies = new List<SimEnemy>(Enemies.Count);
-        foreach (var e in Enemies) c.Enemies.Add(e.Clone());
+        state._teammatesShared = true;
+        state.Enemies = new List<SimEnemy>(Enemies.Count);
+        foreach (var enemy in Enemies) state.Enemies.Add(enemy.Clone());
         if (Log)
         {
-            c.EndOfTurnBlock = new(EndOfTurnBlock);
-            c.Blockable = new(Blockable);
-            c.Unblockable = new(Unblockable);
-            c.EndOfTurnDamage = new(EndOfTurnDamage);
+            state.EndOfTurnBlock = new(EndOfTurnBlock);
+            state.Blockable = new(Blockable);
+            state.Unblockable = new(Unblockable);
+            state.EndOfTurnDamage = new(EndOfTurnDamage);
         }
-        return c;
+        return state;
     }
 
     /// <summary>
@@ -813,10 +813,10 @@ public sealed class SimState
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
         foreach (var pick in AutoPicks) { Add(pick.Card); Add(pick.Target); } // branches that picked differently stay apart (the check tells them apart)
-        foreach (var e in Enemies) e.Hash(Add);
+        foreach (var enemy in Enemies) enemy.Hash(Add);
         You.Hash(Add);
         // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
-        foreach (var t in Teammates) t.Hash(Add);
+        foreach (var player in Teammates) player.Hash(Add);
         return h;
     }
 }
@@ -913,5 +913,5 @@ internal sealed class SimWork
 public sealed record IntentHit(decimal Base)
 {
     public IReadOnlyDictionary<int, CapturedTerms>? Captured { get; init; }
-    public CapturedTerms TermsOn(int player) => Captured != null && Captured.TryGetValue(player, out var c) ? c : CapturedTerms.None;
+    public CapturedTerms TermsOn(int player) => Captured != null && Captured.TryGetValue(player, out var terms) ? terms : CapturedTerms.None;
 }

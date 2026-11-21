@@ -40,16 +40,16 @@ public sealed partial class RunRemindersFeature
         var me = RunMe();
         foreach (var item in items.GetChildren().OfType<NMapLegendItem>())
         {
-            var type = PointTypeField?.GetValue(item) is MapPointType t ? t : MapPointType.Unassigned;
+            var type = PointTypeField?.GetValue(item) is MapPointType mapPointType ? mapPointType : MapPointType.Unassigned;
             var shown = me == null ? new List<PathMark>() : PathMarks(me, RoomOf(type));
-            var signature = string.Join("|", shown.Select(s => $"{s.Model.GetType().Name}:{s.Crossed}:{s.Note}"));
+            var signature = string.Join("|", shown.Select(pathMark => $"{pathMark.Model.GetType().Name}:{pathMark.Crossed}:{pathMark.Note}"));
             var row = item.GetNodeOrNull<HBoxContainer>(PathNodeName);
             if (!_pathShown.TryGetValue(item, out var was) || was != signature || (row == null) != (shown.Count == 0))
             {
                 row?.QueueFree();
                 row = null;
                 _pathShown[item] = signature;
-                _pathCards.RemoveAll(c => !GodotObject.IsInstanceValid(c.Root) || c.Root.IsQueuedForDeletion() || IsUnder(c.Root, item));
+                _pathCards.RemoveAll(tinyCardIcon => !GodotObject.IsInstanceValid(tinyCardIcon.Root) || tinyCardIcon.Root.IsQueuedForDeletion() || IsUnder(tinyCardIcon.Root, item));
                 if (shown.Count > 0)
                 {
                     row = PathRow(shown, type);
@@ -82,7 +82,7 @@ public sealed partial class RunRemindersFeature
 
     private static bool IsUnder(Node node, Node parent)
     {
-        for (var n = node.GetParent(); n != null; n = n.GetParent()) if (n == parent) return true;
+        for (var otherNode = node.GetParent(); otherNode != null; otherNode = otherNode.GetParent()) if (otherNode == parent) return true;
         return false;
     }
 
@@ -169,7 +169,7 @@ public sealed partial class RunRemindersFeature
                 case nameof(Dowsing):
                     return $"{Sts2State.Var(model, "Rooms", 4)}";
             }
-            return model is RelicModel { ShowCounter: true } r ? $"{r.DisplayAmount}" : null;
+            return model is RelicModel { ShowCounter: true } relic ? $"{relic.DisplayAmount}" : null;
         }
         catch
         {

@@ -41,9 +41,9 @@ public static class PowerSpecs
         new PowerCounterSpec(nameof(WitheringPresencePower), 6, "cards", CrossTurn: true, OnEnemy: true), // every 6 cards: Wither in hand
     };
 
-    private static readonly Dictionary<string, PowerCounterSpec> ByName = All.ToDictionary(s => s.TypeName);
+    private static readonly Dictionary<string, PowerCounterSpec> ByName = All.ToDictionary(powerCounterSpec => powerCounterSpec.TypeName);
 
-    public static PowerCounterSpec? For(string typeName) => ByName.TryGetValue(typeName, out var s) ? s : null;
+    public static PowerCounterSpec? For(string typeName) => ByName.TryGetValue(typeName, out var powerCounterSpec) ? powerCounterSpec : null;
 }
 
 /// <param name="TypeName">The relic's class name in the game (e.g. "PenNib").</param>
@@ -116,7 +116,7 @@ public static class RelicSpecs
         new RelicCounterSpec("PaelsLegion", CounterKind.OneShot, InTray: false), // the game shows its cooldown on the relic
     };
 
-    private static readonly Dictionary<string, RelicCounterSpec> ByName = All.ToDictionary(s => s.TypeName);
+    private static readonly Dictionary<string, RelicCounterSpec> ByName = All.ToDictionary(relicCounterSpec => relicCounterSpec.TypeName);
 
-    public static RelicCounterSpec? For(string typeName) => ByName.TryGetValue(typeName, out var s) ? s : null;
+    public static RelicCounterSpec? For(string typeName) => ByName.TryGetValue(typeName, out var relicCounterSpec) ? relicCounterSpec : null;
 }

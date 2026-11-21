@@ -47,17 +47,17 @@ internal static class MovePowers
             {
                 if (!Calls.TryGetValue(perform.Method, out calls!)) Calls[perform.Method] = calls = Read(perform.Method);
             }
-            foreach (var c in calls)
+            foreach (var call in calls)
             {
-                decimal? amount = c.Constant;
-                if (c.Getter != null && c.Getter.DeclaringType!.IsInstanceOfType(monster))
+                decimal? amount = call.Constant;
+                if (call.Getter != null && call.Getter.DeclaringType!.IsInstanceOfType(monster))
                 {
-                    try { amount = Convert.ToDecimal(c.Getter.Invoke(monster, null)); } catch { amount = null; }
+                    try { amount = Convert.ToDecimal(call.Getter.Invoke(monster, null)); } catch { amount = null; }
                 }
-                if (c.Negated && amount is { } n) amount = -n; // -SpikenAmount: Toadpole's Spike Spit takes its Thorns away
-                result.Add(new Applied(c.Power, amount, Maybe: !c.Certain));
+                if (call.Negated && amount is { } n) amount = -n; // -SpikenAmount: Toadpole's Spike Spit takes its Thorns away
+                result.Add(new Applied(call.Power, amount, Maybe: !call.Certain));
             }
-            if (result.Any(a => a.Maybe))
+            if (result.Any(applied => applied.Maybe))
             {
                 var settled = now ? MoveBranches.Settle(monster, perform.Method, result) : null;
                 result = settled?.ToList() ?? Maybes(result);
@@ -93,16 +93,16 @@ internal static class MovePowers
             if (calls.Count == 0) return null;
             var creature = monster.Creature;
             var total = 0m;
-            foreach (var c in calls)
+            foreach (var blockCall in calls)
             {
-                decimal? amount = c.Constant;
-                if (c.Getter != null && c.Getter.DeclaringType!.IsInstanceOfType(monster))
+                decimal? amount = blockCall.Constant;
+                if (blockCall.Getter != null && blockCall.Getter.DeclaringType!.IsInstanceOfType(monster))
                 {
-                    try { amount = Convert.ToDecimal(c.Getter.Invoke(monster, null)); } catch { amount = null; }
+                    try { amount = Convert.ToDecimal(blockCall.Getter.Invoke(monster, null)); } catch { amount = null; }
                 }
                 if (amount is not { } a) return null;
-                total += creature.CombatState is { } cs
-                    ? MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(cs, creature, a, (MegaCrit.Sts2.Core.ValueProps.ValueProp)c.Props, null, null, out _)
+                total += creature.CombatState is { } combat
+                    ? MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(combat, creature, a, (MegaCrit.Sts2.Core.ValueProps.ValueProp)blockCall.Props, null, null, out _)
                     : a;
             }
             return (int)total;
@@ -122,9 +122,9 @@ internal static class MovePowers
         var move = (int)MegaCrit.Sts2.Core.ValueProps.ValueProp.Move;
         for (var i = 0; i < code.Count; i++)
         {
-            if (code[i].operand is not MethodInfo { Name: "GainBlock" } m || m.DeclaringType?.Name != "CreatureCmd") continue;
-            var ps = m.GetParameters();
-            if (ps.Length < 2 || ps[1].ParameterType != typeof(decimal))
+            if (code[i].operand is not MethodInfo { Name: "GainBlock" } otherMethod || otherMethod.DeclaringType?.Name != "CreatureCmd") continue;
+            var parameterInfos = otherMethod.GetParameters();
+            if (parameterInfos.Length < 2 || parameterInfos[1].ParameterType != typeof(decimal))
             {
                 // A BlockVar or another shape: the amount can't be read.
                 if (OnOwnCreature(code, i - 1, 8)) calls.Add(new BlockCall(null, null, move));
@@ -149,7 +149,7 @@ internal static class MovePowers
     private static bool OnOwnCreature(List<CodeInstruction> code, int from, int span)
     {
         for (var j = from; j >= Math.Max(0, from - span + 1); j--)
-            if (code[j].operand is MethodInfo { Name: "get_Creature" } g && typeof(MonsterModel).IsAssignableFrom(g.DeclaringType)) return true;
+            if (code[j].operand is MethodInfo { Name: "get_Creature" } method && typeof(MonsterModel).IsAssignableFrom(method.DeclaringType)) return true;
         return false;
     }
 
@@ -160,11 +160,11 @@ internal static class MovePowers
     private static List<Applied> Maybes(List<Applied> all)
     {
         var shown = new List<Applied>();
-        foreach (var a in all)
+        foreach (var applied in all)
         {
-            if (shown.Any(x => x.Power == a.Power)) continue;
-            var same = all.Where(x => x.Power == a.Power).ToList();
-            shown.Add(same.Any(x => !x.Maybe) && same.All(x => x.Amount == same[0].Amount) ? same.First(x => !x.Maybe) : new Applied(a.Power, null, Maybe: true));
+            if (shown.Any(otherApplied => otherApplied.Power == applied.Power)) continue;
+            var same = all.Where(otherApplied => otherApplied.Power == applied.Power).ToList();
+            shown.Add(same.Any(otherApplied => !otherApplied.Maybe) && same.All(otherApplied => otherApplied.Amount == same[0].Amount) ? same.First(otherApplied => !otherApplied.Maybe) : new Applied(applied.Power, null, Maybe: true));
         }
         return shown;
     }
@@ -182,14 +182,14 @@ internal static class MovePowers
         Type? made = null; // a power made first (ModelDb.Power<T>().ToMutable(): Sandpit, Dampen), applied by the plain Apply
         for (var i = 0; i < code.Count; i++)
         {
-            if (code[i].operand is not MethodInfo m) continue;
-            if (m is { IsGenericMethod: true, Name: "Power" } && m.DeclaringType?.Name == "ModelDb")
+            if (code[i].operand is not MethodInfo otherMethod) continue;
+            if (otherMethod is { IsGenericMethod: true, Name: "Power" } && otherMethod.DeclaringType?.Name == "ModelDb")
             {
-                made = m.GetGenericArguments()[0];
+                made = otherMethod.GetGenericArguments()[0];
                 continue;
             }
-            if (m.Name != "Apply" || m.DeclaringType?.Name != "PowerCmd") continue;
-            var power = m.IsGenericMethod ? m.GetGenericArguments()[0] : made;
+            if (otherMethod.Name != "Apply" || otherMethod.DeclaringType?.Name != "PowerCmd") continue;
+            var power = otherMethod.IsGenericMethod ? otherMethod.GetGenericArguments()[0] : made;
             if (power == null) continue;
             // A getter followed by a neg: the amount is minus that number (Toadpole's Spike Spit applies -SpikenAmount Thorns).
             calls.Add(AmountBefore(code, i) is var (constant, getter, from)
@@ -216,40 +216,40 @@ internal static class MovePowers
         for (var j = call - 1; j >= Math.Max(0, call - 12); j--)
         {
             var ins = code[j];
-            if (ins.operand is MethodInfo { IsStatic: false } g && g.Name.StartsWith("get_") && g.GetParameters().Length == 0
-                && Numeric(g.ReturnType) && typeof(MonsterModel).IsAssignableFrom(g.DeclaringType))
-                return (null, g, j);
+            if (ins.operand is MethodInfo { IsStatic: false } method && method.Name.StartsWith("get_") && method.GetParameters().Length == 0
+                && Numeric(method.ReturnType) && typeof(MonsterModel).IsAssignableFrom(method.DeclaringType))
+                return (null, method, j);
             if (Constant(ins) is { } c && j + 1 < code.Count && ToDecimal(code[j + 1])) return (c, null, j);
             // 1m, 0m, -1m compile to decimal's static fields.
-            if (ins.operand is FieldInfo { IsStatic: true } f && f.DeclaringType == typeof(decimal))
-                return f.Name switch { "One" => (1m, null, j), "Zero" => (0m, null, j), "MinusOne" => (-1m, null, j), _ => null };
+            if (ins.operand is FieldInfo { IsStatic: true } field && field.DeclaringType == typeof(decimal))
+                return field.Name switch { "One" => (1m, null, j), "Zero" => (0m, null, j), "MinusOne" => (-1m, null, j), _ => null };
             // Another call that makes a value (a Dynamic var, a calculation): not a number we can read.
             if (ins.operand is MethodInfo other && Numeric(other.ReturnType) && other.Name != "op_Implicit") return null;
         }
         return null;
     }
 
-    private static bool Numeric(Type t) => t == typeof(int) || t == typeof(decimal) || t == typeof(float) || t == typeof(double);
+    private static bool Numeric(Type type) => type == typeof(int) || type == typeof(decimal) || type == typeof(float) || type == typeof(double);
 
     private static bool ToDecimal(CodeInstruction next) =>
-        (next.operand is MethodInfo { Name: "op_Implicit" } mi && mi.ReturnType == typeof(decimal))
-        || (next.opcode == OpCodes.Newobj && next.operand is ConstructorInfo ci && ci.DeclaringType == typeof(decimal));
+        (next.operand is MethodInfo { Name: "op_Implicit" } method && method.ReturnType == typeof(decimal))
+        || (next.opcode == OpCodes.Newobj && next.operand is ConstructorInfo constructorInfo && constructorInfo.DeclaringType == typeof(decimal));
 
     private static decimal? Constant(CodeInstruction ins)
     {
-        var op = ins.opcode;
-        if (op == OpCodes.Ldc_I4_M1) return -1;
-        if (op == OpCodes.Ldc_I4_0) return 0;
-        if (op == OpCodes.Ldc_I4_1) return 1;
-        if (op == OpCodes.Ldc_I4_2) return 2;
-        if (op == OpCodes.Ldc_I4_3) return 3;
-        if (op == OpCodes.Ldc_I4_4) return 4;
-        if (op == OpCodes.Ldc_I4_5) return 5;
-        if (op == OpCodes.Ldc_I4_6) return 6;
-        if (op == OpCodes.Ldc_I4_7) return 7;
-        if (op == OpCodes.Ldc_I4_8) return 8;
-        if (op == OpCodes.Ldc_I4 || op == OpCodes.Ldc_I4_S) return Convert.ToDecimal(ins.operand);
-        if (op == OpCodes.Ldc_R4 || op == OpCodes.Ldc_R8) return Convert.ToDecimal(ins.operand);
+        var opCode = ins.opcode;
+        if (opCode == OpCodes.Ldc_I4_M1) return -1;
+        if (opCode == OpCodes.Ldc_I4_0) return 0;
+        if (opCode == OpCodes.Ldc_I4_1) return 1;
+        if (opCode == OpCodes.Ldc_I4_2) return 2;
+        if (opCode == OpCodes.Ldc_I4_3) return 3;
+        if (opCode == OpCodes.Ldc_I4_4) return 4;
+        if (opCode == OpCodes.Ldc_I4_5) return 5;
+        if (opCode == OpCodes.Ldc_I4_6) return 6;
+        if (opCode == OpCodes.Ldc_I4_7) return 7;
+        if (opCode == OpCodes.Ldc_I4_8) return 8;
+        if (opCode == OpCodes.Ldc_I4 || opCode == OpCodes.Ldc_I4_S) return Convert.ToDecimal(ins.operand);
+        if (opCode == OpCodes.Ldc_R4 || opCode == OpCodes.Ldc_R8) return Convert.ToDecimal(ins.operand);
         return null;
     }
 }

@@ -51,18 +51,18 @@ internal static class FreeCards
         var saved = x || hidden ? 0 : CostWithoutFree(card);
         // One play makes the card free once: the first of them saves the energy, the others are spent for nothing.
         var savedYet = false;
-        foreach (var p in powers)
+        foreach (var power in powers)
         {
-            if (x) { uses.Add(new Use(p, null, false, true)); continue; }
-            if (hidden) { uses.Add(new Use(p, null, true, false)); continue; }
-            if (saved > 0 && !savedYet) { uses.Add(new Use(p, saved, false, false)); savedYet = true; }
-            else uses.Add(new Use(p, null, false, true));
+            if (x) { uses.Add(new Use(power, null, false, true)); continue; }
+            if (hidden) { uses.Add(new Use(power, null, true, false)); continue; }
+            if (saved > 0 && !savedYet) { uses.Add(new Use(power, saved, false, false)); savedYet = true; }
+            else uses.Add(new Use(power, null, false, true));
         }
         return uses;
     }
 
     private static List<PowerModel> ActiveOn(CardModel card, Player me) =>
-        me.Creature.Powers.Where(p => p.Amount > 0 && Powers.Contains(p.GetType().Name) && Applies(p, card)).ToList();
+        me.Creature.Powers.Where(power => power.Amount > 0 && Powers.Contains(power.GetType().Name) && Applies(power, card)).ToList();
 
     // ------------------------------------------------------------------ what the player could know
 
@@ -78,7 +78,7 @@ internal static class FreeCards
         try
         {
             var inHand = new HashSet<CardModel>(hand, ReferenceEqualityComparer.Instance);
-            foreach (var gone in Seen.Keys.Where(c => !inHand.Contains(c)).ToList()) Seen.Remove(gone);
+            foreach (var gone in Seen.Keys.Where(card => !inHand.Contains(card)).ToList()) Seen.Remove(gone);
             foreach (var card in hand)
                 if (ActiveOn(card, me).Count == 0 && LocalModifiers(card) is { } mods) Seen[card] = mods.Count;
         }
@@ -98,7 +98,7 @@ internal static class FreeCards
         // Unknown (a game change): hide it rather than risk showing what the player can't know.
         if (mods == null) return true;
         if (Seen.TryGetValue(card, out var seenMods) && seenMods == mods.Count) return false;
-        return LookAlikes(card, me).Any(c => LocalModifiers(c) is not { } m || m.Any(x => x.Expiration == LocalCostModifierExpiration.EndOfCombat));
+        return LookAlikes(card, me).Any(lookAlike => LocalModifiers(lookAlike) is not { } localCostModifiers || localCostModifiers.Any(localCostModifier => localCostModifier.Expiration == LocalCostModifierExpiration.EndOfCombat));
     }
 
     private static List<LocalCostModifier>? LocalModifiers(CardModel card) =>
@@ -113,10 +113,10 @@ internal static class FreeCards
             IReadOnlyList<CardModel> cards;
             try { cards = pile.GetPile(me).Cards.ToList(); }
             catch { continue; }
-            foreach (var c in cards)
-                if (!ReferenceEquals(c, card) && c.GetType() == card.GetType() && c.CurrentUpgradeLevel == card.CurrentUpgradeLevel
-                    && c.Enchantment?.GetType() == card.Enchantment?.GetType())
-                    yield return c;
+            foreach (var otherCard in cards)
+                if (!ReferenceEquals(otherCard, card) && otherCard.GetType() == card.GetType() && otherCard.CurrentUpgradeLevel == card.CurrentUpgradeLevel
+                    && otherCard.Enchantment?.GetType() == card.Enchantment?.GetType())
+                    yield return otherCard;
         }
     }
 
@@ -129,10 +129,10 @@ internal static class FreeCards
         try
         {
             decimal cost = card.EnergyCost.GetWithModifiers(CostModifiers.Local);
-            if (card.CombatState is not { } cs || cost < 0) return Math.Max(0, (int)cost);
-            var listeners = cs.IterateHookListeners().Where(m => !Powers.Contains(m.GetType().Name)).ToList();
-            foreach (var m in listeners) m.TryModifyEnergyCostInCombat(card, cost, out cost);
-            foreach (var m in listeners) m.TryModifyEnergyCostInCombatLate(card, cost, out cost);
+            if (card.CombatState is not { } combat || cost < 0) return Math.Max(0, (int)cost);
+            var listeners = combat.IterateHookListeners().Where(model => !Powers.Contains(model.GetType().Name)).ToList();
+            foreach (var model in listeners) model.TryModifyEnergyCostInCombat(card, cost, out cost);
+            foreach (var model in listeners) model.TryModifyEnergyCostInCombatLate(card, cost, out cost);
             return Math.Max(0, (int)cost);
         }
         catch

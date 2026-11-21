@@ -17,8 +17,8 @@ public class AboutTests
         var headings = text!.Split('\n').Count(l => l.StartsWith("### " + ReleaseNotes.ModName + " "));
         var releases = ReleaseNotes.Releases;
         Assert.Equal(headings, releases.Count);
-        Assert.All(releases, r => Assert.NotEmpty(r.Sections));
-        Assert.Equal(releases.Count, releases.Select(r => r.Version).Distinct().Count());
+        Assert.All(releases, release => Assert.NotEmpty(release.Sections));
+        Assert.Equal(releases.Count, releases.Select(release => release.Version).Distinct().Count());
     }
 
     [Fact]
@@ -55,14 +55,14 @@ public class AboutTests
             ### Spire QoL 0.2.0 (first test build)
             - Plain item.
             """;
-        var r = ReleaseNotes.Parse(md, "Spire QoL", ReleaseNotes.Dates("spireqol-v1.2.0 2026-11-16\n"));
-        Assert.Equal(2, r.Count);
-        Assert.Equal("2026-11-16", r[0].Date);
-        Assert.Equal(new[] { "Added", "Fixed" }, r[0].Sections.Select(s => s.Kind));
-        Assert.Equal("Bold thing with code and a link continued here.", r[0].Sections[0].Items[0]);
-        Assert.Equal("  ◦ a nested point", r[0].Sections[0].Items[1]);
-        Assert.Equal("first test build", r[1].Title);
-        Assert.Null(r[1].Date);
-        Assert.Null(r[1].Sections[0].Kind);
+        var releases = ReleaseNotes.Parse(md, "Spire QoL", ReleaseNotes.Dates("spireqol-v1.2.0 2026-11-16\n"));
+        Assert.Equal(2, releases.Count);
+        Assert.Equal("2026-11-16", releases[0].Date);
+        Assert.Equal(new[] { "Added", "Fixed" }, releases[0].Sections.Select(releaseSection => releaseSection.Kind));
+        Assert.Equal("Bold thing with code and a link continued here.", releases[0].Sections[0].Items[0]);
+        Assert.Equal("  ◦ a nested point", releases[0].Sections[0].Items[1]);
+        Assert.Equal("first test build", releases[1].Title);
+        Assert.Null(releases[1].Date);
+        Assert.Null(releases[1].Sections[0].Kind);
     }
 }

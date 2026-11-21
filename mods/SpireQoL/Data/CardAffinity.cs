@@ -49,18 +49,18 @@ public static class CardAffinity
     public static readonly IReadOnlyList<CardAffinityRule> Rules = new CardAffinityRule[]
     {
         // EggRelicHelper.UpgradeValidCards / TryModifyCardBeingAddedToDeck: the type, upgradable, not upgraded yet.
-        new(nameof(MoltenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Attack), "upgrades Attacks you get", CardChange.Upgrade, Shows: c => c.IsUpgraded),
-        new(nameof(FrozenEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Power), "upgrades Powers you get", CardChange.Upgrade, Shows: c => c.IsUpgraded),
-        new(nameof(ToxicEgg), AffinityKind.Modifies, c => Upgrades(c, CardType.Skill), "upgrades Skills you get", CardChange.Upgrade, Shows: c => c.IsUpgraded),
+        new(nameof(MoltenEgg), AffinityKind.Modifies, card => Upgrades(card, CardType.Attack), "upgrades Attacks you get", CardChange.Upgrade, Shows: card => card.IsUpgraded),
+        new(nameof(FrozenEgg), AffinityKind.Modifies, card => Upgrades(card, CardType.Power), "upgrades Powers you get", CardChange.Upgrade, Shows: card => card.IsUpgraded),
+        new(nameof(ToxicEgg), AffinityKind.Modifies, card => Upgrades(card, CardType.Skill), "upgrades Skills you get", CardChange.Upgrade, Shows: card => card.IsUpgraded),
         // EnchantValidCards / TryModifyCardBeingAddedToDeck: Nimble.CanEnchant (a card that gains block, not a status or curse).
-        new(nameof(FresnelLens), AffinityKind.Modifies, c => ModelDb.Enchantment<Nimble>().CanEnchant(c), "enchants cards that gain block with Nimble", CardChange.Enchant, Shows: c => c.Enchantment is Nimble),
+        new(nameof(FresnelLens), AffinityKind.Modifies, card => ModelDb.Enchantment<Nimble>().CanEnchant(card), "enchants cards that gain block with Nimble", CardChange.Enchant, Shows: card => card.Enchantment is Nimble),
         // ModifyDamageAdditive on the card's powered attacks (IsPoweredAttack: an Attack's damage; read here as the card being an Attack).
-        new(nameof(StrikeDummy), AffinityKind.Boosts, c => c.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
-        new(nameof(FakeStrikeDummy), AffinityKind.Boosts, c => c.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
-        new(nameof(MiniatureCannon), AffinityKind.Boosts, c => IsAttack(c) && c.IsUpgraded, "upgraded Attacks deal more damage", CardChange.Upgrade, IsAttack),
-        new(nameof(MysticLighter), AffinityKind.Boosts, c => IsAttack(c) && c.Enchantment != null, "enchanted Attacks deal more damage", CardChange.Enchant, IsAttack),
+        new(nameof(StrikeDummy), AffinityKind.Boosts, card => card.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
+        new(nameof(FakeStrikeDummy), AffinityKind.Boosts, card => card.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
+        new(nameof(MiniatureCannon), AffinityKind.Boosts, card => IsAttack(card) && card.IsUpgraded, "upgraded Attacks deal more damage", CardChange.Upgrade, IsAttack),
+        new(nameof(MysticLighter), AffinityKind.Boosts, card => IsAttack(card) && card.Enchantment != null, "enchanted Attacks deal more damage", CardChange.Enchant, IsAttack),
         // ModifyDamageMultiplicative / ModifyBlockMultiplicative: double for Minion cards.
-        new(nameof(VitruvianMinion), AffinityKind.Boosts, c => c.Tags.Contains(CardTag.Minion), "Minion cards deal double damage and give double block"),
+        new(nameof(VitruvianMinion), AffinityKind.Boosts, card => card.Tags.Contains(CardTag.Minion), "Minion cards deal double damage and give double block"),
     };
 
     /// <summary>
@@ -77,13 +77,13 @@ public static class CardAffinity
         ["WingCharm"] = "none: enchants an offered reward card (shown on the offered card)",
     };
 
-    private static readonly Dictionary<string, CardAffinityRule> ByRelic = Rules.ToDictionary(r => r.Relic);
+    private static readonly Dictionary<string, CardAffinityRule> ByRelic = Rules.ToDictionary(cardAffinityRule => cardAffinityRule.Relic);
 
     public static CardAffinityRule? For(string relic) => ByRelic.GetValueOrDefault(relic);
 
-    private static bool Upgrades(CardModel c, CardType type) => c.Type == type && c.IsUpgradable && c.CurrentUpgradeLevel < 1;
+    private static bool Upgrades(CardModel card, CardType type) => card.Type == type && card.IsUpgradable && card.CurrentUpgradeLevel < 1;
 
-    private static bool IsAttack(CardModel c) => c.Type == CardType.Attack;
+    private static bool IsAttack(CardModel card) => card.Type == CardType.Attack;
 
     /// <summary>
     /// Whether a rule applies to a card as you'd get it with your relics: the card itself, or (a boost looking for a change)
@@ -100,10 +100,10 @@ public static class CardAffinity
         }
         if (AppliesTo(rule, card)) return true;
         // A boost also counts the cards this card makes when played (Begone!'s Minion Strike: a Strike and a Minion).
-        if (rule.Kind == AffinityKind.Boosts && Made(card).Any(m => AppliesTo(rule, m))) return true;
+        if (rule.Kind == AffinityKind.Boosts && Made(card).Any(otherCard => AppliesTo(rule, otherCard))) return true;
         if (rule.Kind != AffinityKind.Boosts || rule.Change == CardChange.None) return false;
         if (rule.Base != null && !Safe(rule.Base, card)) return false;
-        return held.Any(m => m.Kind == AffinityKind.Modifies && m.Change == rule.Change && AppliesTo(m, card));
+        return held.Any(cardAffinityRule => cardAffinityRule.Kind == AffinityKind.Modifies && cardAffinityRule.Change == rule.Change && AppliesTo(cardAffinityRule, card));
     }
 
     /// <summary>The option effect that makes a boost's change to your cards (an upgrade for Miniature Cannon).</summary>
@@ -120,40 +120,40 @@ public static class CardAffinity
     /// The cards a card makes (canonical), read from its own code: the card types it names in <c>CreateCard&lt;T&gt;</c> or
     /// <c>ModelDb.Card&lt;T&gt;</c>, in its methods and their lambdas and state machines. Cached per card type.
     /// </summary>
-    public static List<CardModel> Made(CardModel card) => MadeCache.GetOrAdd(card.GetType(), t =>
+    public static List<CardModel> Made(CardModel card) => MadeCache.GetOrAdd(card.GetType(), type =>
     {
         var list = new List<CardModel>();
-        foreach (var made in MadeTypes(t))
+        foreach (var made in MadeTypes(type))
         {
-            try { if (ModelDb.AllCards.FirstOrDefault(c => c.GetType() == made) is { } canonical) list.Add(canonical); }
+            try { if (ModelDb.AllCards.FirstOrDefault(canonicalCard => canonicalCard.GetType() == made) is { } canonical) list.Add(canonical); }
             catch { /* not in the database */ }
         }
         return list;
     });
 
     /// <summary>The card types a card class makes (see <see cref="Made"/>).</summary>
-    internal static HashSet<Type> MadeTypes(Type t)
+    internal static HashSet<Type> MadeTypes(Type otherType)
     {
         var types = new HashSet<Type>();
-        foreach (var type in new[] { t }.Concat(t.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)))
-        foreach (var m in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+        foreach (var type in new[] { otherType }.Concat(otherType.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)))
+        foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
         {
-            if (m.IsAbstract) continue;
+            if (method.IsAbstract) continue;
             List<CodeInstruction> code;
-            try { code = SpireQoL.Diagnostics.GameCode.Instructions(m); } catch { continue; }
+            try { code = SpireQoL.Diagnostics.GameCode.Instructions(method); } catch { continue; }
             foreach (var ins in code)
             {
-                if (ins.operand is MethodInfo { IsGenericMethod: true } g && g.Name is "CreateCard" or "Card"
-                    && g.GetGenericArguments()[0] is { } made && typeof(CardModel).IsAssignableFrom(made) && !made.IsAbstract && made != t)
+                if (ins.operand is MethodInfo { IsGenericMethod: true } otherMethod && otherMethod.Name is "CreateCard" or "Card"
+                    && otherMethod.GetGenericArguments()[0] is { } made && typeof(CardModel).IsAssignableFrom(made) && !made.IsAbstract && made != otherType)
                     types.Add(made);
             }
         }
         return types;
     }
 
-    private static bool Safe(Func<CardModel, bool> f, CardModel c)
+    private static bool Safe(Func<CardModel, bool> f, CardModel card)
     {
-        try { return f(c); }
+        try { return f(card); }
         catch { return true; }
     }
 

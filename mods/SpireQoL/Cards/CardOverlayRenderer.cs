@@ -75,7 +75,7 @@ public sealed class CardOverlayRenderer
 
     public void Render()
     {
-        foreach (var e in _entries.Values) e.Seen = false;
+        foreach (var entry in _entries.Values) entry.Seen = false;
 
         if (!_host.HideAll && Sts2State.InCombat)
         {
@@ -107,17 +107,17 @@ public sealed class CardOverlayRenderer
 
         // Undo anything on nodes that are no longer decorated hand cards.
         var dead = new List<ulong>();
-        foreach (var (id, e) in _entries)
+        foreach (var (id, otherEntry) in _entries)
         {
-            if (!GodotObject.IsInstanceValid(e.Card) || !GodotObject.IsInstanceValid(e.Overlay))
+            if (!GodotObject.IsInstanceValid(otherEntry.Card) || !GodotObject.IsInstanceValid(otherEntry.Overlay))
             {
                 dead.Add(id);
                 continue;
             }
-            if (e.Seen) continue;
-            e.Overlay.Visible = false;
-            if (e.TagLayer != null && GodotObject.IsInstanceValid(e.TagLayer)) e.TagLayer.Visible = false;
-            if (e.TouchedAlpha) Unfade(e);
+            if (otherEntry.Seen) continue;
+            otherEntry.Overlay.Visible = false;
+            if (otherEntry.TagLayer != null && GodotObject.IsInstanceValid(otherEntry.TagLayer)) otherEntry.TagLayer.Visible = false;
+            if (otherEntry.TouchedAlpha) Unfade(otherEntry);
         }
         foreach (var id in dead) _entries.Remove(id);
 
@@ -162,115 +162,115 @@ public sealed class CardOverlayRenderer
             _entry = new Entry { Card = card, Container = container, Overlay = overlay };
         }
 
-        public void Draw(CardDecor d)
+        public void Draw(CardDecor decor)
         {
             if (!GodotObject.IsInstanceValid(_entry.Card) || !GodotObject.IsInstanceValid(_entry.Overlay)) return;
-            Apply(_entry, d);
+            Apply(_entry, decor);
         }
     }
 
-    private static void Apply(Entry e, CardDecor d)
+    private static void Apply(Entry entry, CardDecor decor)
     {
         // Follow the card frame's transform inside the container.
-        var frame = e.Card.GetNodeOrNull<Control>("%Frame");
+        var frame = entry.Card.GetNodeOrNull<Control>("%Frame");
         Vector2 size;
-        if (frame != null && frame != e.Container && frame.Size.X > 1)
+        if (frame != null && frame != entry.Container && frame.Size.X > 1)
         {
-            var rel = e.Container.GetGlobalTransform().AffineInverse() * frame.GetGlobalTransform();
-            e.Overlay.Position = rel.Origin;
-            e.Overlay.Rotation = rel.Rotation;
-            e.Overlay.Scale = rel.Scale;
+            var rel = entry.Container.GetGlobalTransform().AffineInverse() * frame.GetGlobalTransform();
+            entry.Overlay.Position = rel.Origin;
+            entry.Overlay.Rotation = rel.Rotation;
+            entry.Overlay.Scale = rel.Scale;
             size = frame.Size;
         }
         else
         {
-            e.Overlay.Position = -DefaultCardSize / 2;
-            e.Overlay.Rotation = 0;
-            e.Overlay.Scale = Vector2.One;
+            entry.Overlay.Position = -DefaultCardSize / 2;
+            entry.Overlay.Rotation = 0;
+            entry.Overlay.Scale = Vector2.One;
             size = DefaultCardSize;
         }
-        e.Overlay.Size = size;
-        e.Overlay.Visible = true;
-        if (e.Overlay.GetIndex() != e.Container.GetChildCount() - 1)
+        entry.Overlay.Size = size;
+        entry.Overlay.Visible = true;
+        if (entry.Overlay.GetIndex() != entry.Container.GetChildCount() - 1)
         {
-            e.Container.MoveChild(e.Overlay, -1);
+            entry.Container.MoveChild(entry.Overlay, -1);
         }
 
-        var layer = PlaceTagLayer(e, size);
-        ApplyTabs(e, d.Tabs, layer);
+        var layer = PlaceTagLayer(entry, size);
+        ApplyTabs(entry, decor.Tabs, layer);
 
-        if (d.Opacity is { } a) Fade(e, a);
-        else if (e.TouchedAlpha) Unfade(e);
+        if (decor.Opacity is { } a) Fade(entry, a);
+        else if (entry.TouchedAlpha) Unfade(entry);
     }
 
     /// <summary>
     /// The card at <paramref name="a"/> opacity as one picture (decision #113): a flattened copy drawn in its place. Layer by
     /// layer (each of the container's layers faded on its own, the art showing through the frame) when the copy can't be made.
     /// </summary>
-    private static void Fade(Entry e, float a)
+    private static void Fade(Entry entry, float a)
     {
-        e.TouchedAlpha = true;
-        if (e.Container != e.Card && !e.FlatFailed)
+        entry.TouchedAlpha = true;
+        if (entry.Container != entry.Card && !entry.FlatFailed)
         {
             var start = Time.GetTicksUsec();
-            try { FadeFlat(e, a); }
+            try { FadeFlat(entry, a); }
             finally { _flatMs += (Time.GetTicksUsec() - start) / 1000.0; }
-            if (!e.FlatFailed) return;
+            if (!entry.FlatFailed) return;
         }
-        SetAlpha(e.Container, a);
+        SetAlpha(entry.Container, a);
     }
 
     /// <summary>The flattened copy made if needed and drawn this frame; <see cref="Entry.FlatFailed"/> set when it can't be.</summary>
-    private static void FadeFlat(Entry e, float a)
+    private static void FadeFlat(Entry entry, float a)
     {
-        if (e.Flat is { Valid: false }) e.Flat = null;
-        e.Flat ??= FlatFade.Create(e.Card, e.Container);
-        if (e.Flat == null)
+        if (entry.Flat is { Valid: false }) entry.Flat = null;
+        entry.Flat ??= FlatFade.Create(entry.Card, entry.Container);
+        if (entry.Flat == null)
         {
-            e.FlatFailed = true;
+            entry.FlatFailed = true;
             return;
         }
         try
         {
-            var glow = e.Card.CardHighlight;
-            e.Flat.Update(a, new Node?[] { glow, e.TagLayer, e.Overlay }, new Node?[] { glow, e.TagLayer }, glow);
+            var glow = entry.Card.CardHighlight;
+            entry.Flat.Update(a, new Node?[] { glow, entry.TagLayer, entry.Overlay }, new Node?[] { glow, entry.TagLayer }, glow);
         }
         catch (Exception ex)
         {
             ModEntry.Log.Warn($"Ethereal: the flattened fade failed ({ex.Message}); this card fades its layers instead");
-            e.FlatFailed = true;
-            e.Flat.Dispose();
-            e.Flat = null;
+            entry.FlatFailed = true;
+            entry.Flat.Dispose();
+            entry.Flat = null;
         }
     }
 
-    private static void Unfade(Entry e)
+    private static void Unfade(Entry entry)
     {
-        e.TouchedAlpha = false;
-        e.Flat?.Dispose();
-        e.Flat = null;
-        e.FlatFailed = false;
-        SetAlpha(e.Container, 1f);
+        entry.TouchedAlpha = false;
+        entry.Flat?.Dispose();
+        entry.Flat = null;
+        entry.FlatFailed = false;
+        SetAlpha(entry.Container, 1f);
     }
 
     /// <summary>
     /// Puts the tag layer right after the card's glow node and makes it match the card frame
     /// (via the overlay, which already does). Returns the layer, or the overlay as a fallback.
     /// </summary>
-    private static Control PlaceTagLayer(Entry e, Vector2 size)
+    private static Control PlaceTagLayer(Entry entry, Vector2 size)
     {
-        var glow = e.Card.CardHighlight;
+        var glow = entry.Card.CardHighlight;
         if (glow == null || !GodotObject.IsInstanceValid(glow) || glow.GetParent() is not { } parent)
         {
-            return e.Overlay;
+            return entry.Overlay;
         }
 
-        if (e.TagLayer == null || !GodotObject.IsInstanceValid(e.TagLayer))
+        if (entry.TagLayer == null || !GodotObject.IsInstanceValid(entry.TagLayer))
         {
-            e.TagLayer = new Control { Name = "SpireQoL_TagLayer", MouseFilter = Control.MouseFilterEnum.Ignore };
-            parent.AddChild(e.TagLayer);
+            entry.TagLayer = new Control { Name = "SpireQoL_TagLayer", MouseFilter = Control.MouseFilterEnum.Ignore };
+            parent.AddChild(entry.TagLayer);
         }
-        var layer = e.TagLayer;
+        var layer = entry.TagLayer;
         if (layer.GetParent() != parent) layer.Reparent(parent, keepGlobalTransform: false);
 
         // Directly above the glow, below everything the card draws after it (the card art).
@@ -279,8 +279,8 @@ public sealed class CardOverlayRenderer
         if (layer.GetIndex() != want) parent.MoveChild(layer, want);
 
         // Same transform as the card frame (the overlay mirrors it inside the container).
-        var frameXf = e.Overlay.GetGlobalTransform();
-        var rel = parent is CanvasItem ci ? ci.GetGlobalTransform().AffineInverse() * frameXf : frameXf;
+        var frameXf = entry.Overlay.GetGlobalTransform();
+        var rel = parent is CanvasItem canvasItem ? canvasItem.GetGlobalTransform().AffineInverse() * frameXf : frameXf;
         layer.Position = rel.Origin;
         layer.Rotation = rel.Rotation;
         layer.Scale = rel.Scale;
@@ -289,18 +289,18 @@ public sealed class CardOverlayRenderer
         return layer;
     }
 
-    private static void ApplyTabs(Entry e, List<TabSpec> tabs, Control layer)
+    private static void ApplyTabs(Entry entry, List<TabSpec> tabs, Control layer)
     {
-        var template = e.Card.EnchantmentTab;
+        var template = entry.Card.EnchantmentTab;
         if (template == null || !GodotObject.IsInstanceValid(template))
         {
-            HideTabs(e);
+            HideTabs(entry);
             return;
         }
 
-        while (e.Tabs.Count < tabs.Count)
+        while (entry.Tabs.Count < tabs.Count)
         {
-            e.Tabs.Add(MakeTab(template, layer));
+            entry.Tabs.Add(MakeTab(template, layer));
         }
 
         // The enchantment tab is drawn to stick out sideways from the card's left edge. Rotated a
@@ -328,9 +328,9 @@ public sealed class CardOverlayRenderer
         // sticks out above.
         var top = -tagH * fit * (1f - TabOverlap - TagDrop);
 
-        for (var i = 0; i < e.Tabs.Count; i++)
+        for (var i = 0; i < entry.Tabs.Count; i++)
         {
-            var tab = e.Tabs[i];
+            var tab = entry.Tabs[i];
             if (!GodotObject.IsInstanceValid(tab)) continue;
             if (tab.GetParent() != layer) tab.Reparent(layer, keepGlobalTransform: false);
             var on = i < tabs.Count;
@@ -416,13 +416,13 @@ public sealed class CardOverlayRenderer
             if (tab.GetNodeOrNull<Label>("Label") is { } label)
             {
                 label.Visible = spec.Number != null || spec.Text != null || spec.NumberText != null;
-                if (spec.Text != null && tab.GetNodeOrNull<TextureRect>("Icon") is { } ti)
+                if (spec.Text != null && tab.GetNodeOrNull<TextureRect>("Icon") is { } otherIcon)
                 {
                     // Text tab: the text fills the icon's slot, upright. The label is the game's
                     // auto-sizing MegaLabel: give it the icon's box and a large max font size, and
                     // it picks the biggest size that fits.
                     RememberLabel(label);
-                    var box = ti.Size * IconScale;
+                    var box = otherIcon.Size * IconScale;
                     // With a count too (Pillage, Scrape: decision #124), the chance takes the lower half and the count sits centred
                     // above it, a gap between them. In the tab's unrotated coordinates, screen-down is +x.
                     var two = spec.NumberText != null;
@@ -441,12 +441,12 @@ public sealed class CardOverlayRenderer
                     label.VerticalAlignment = VerticalAlignment.Center;
                     label.PivotOffset = label.Size / 2f;
                     label.Rotation = -Mathf.Pi / 2f;
-                    label.Position = ti.Position + ti.Size / 2f + new Vector2(two ? box.X * 0.24f : 0, 0) - label.Size / 2f;
+                    label.Position = otherIcon.Position + otherIcon.Size / 2f + new Vector2(two ? box.X * 0.24f : 0, 0) - label.Size / 2f;
                 }
-                else if ((spec.Number?.ToString() ?? spec.NumberText) is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic)
+                else if ((spec.Number?.ToString() ?? spec.NumberText) is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } nextIcon)
                 {
                     RestoreLabel(label);
-                    InCorner(label, n, ic);
+                    InCorner(label, n, nextIcon);
                 }
             }
             // A text tab with a count too (a drawn-card chance tab: how many, centred above its chance: decisions #119, #124): the
@@ -521,7 +521,7 @@ public sealed class CardOverlayRenderer
     {
         if (label.HasMeta(MetaSize)) return;
         label.SetMeta(MetaSize, label.Size);
-        label.SetMeta(MetaMaxFont, label is MegaCrit.Sts2.addons.mega_text.MegaLabel m ? m.MaxFontSize : 0);
+        label.SetMeta(MetaMaxFont, label is MegaCrit.Sts2.addons.mega_text.MegaLabel megaLabel ? megaLabel.MaxFontSize : 0);
     }
 
     /// <summary>Puts back what a text tab changed, for a number tab on the same node.</summary>
@@ -529,7 +529,7 @@ public sealed class CardOverlayRenderer
     {
         if (!label.HasMeta(MetaSize)) return;
         label.Size = (Vector2)label.GetMeta(MetaSize);
-        if (label is MegaCrit.Sts2.addons.mega_text.MegaLabel m) m.MaxFontSize = (int)label.GetMeta(MetaMaxFont);
+        if (label is MegaCrit.Sts2.addons.mega_text.MegaLabel megaLabel) megaLabel.MaxFontSize = (int)label.GetMeta(MetaMaxFont);
     }
 
     private static Control MakeTab(Control template, Control overlay)
@@ -541,9 +541,9 @@ public sealed class CardOverlayRenderer
         // The tab's backdrop uses a colorize shader (NCard.SetEnchantmentStatus sets h/s/v on it).
         // Duplicate() shares that material with the card's own tab, so give each tag its own copy
         // with the "enabled" values; otherwise a disabled enchantment greys our tags too.
-        if (tab.Material is ShaderMaterial sm)
+        if (tab.Material is ShaderMaterial shaderMaterial)
         {
-            var own = (ShaderMaterial)sm.Duplicate();
+            var own = (ShaderMaterial)shaderMaterial.Duplicate();
             own.SetShaderParameter("h", 0.25);
             own.SetShaderParameter("s", 0.4);
             own.SetShaderParameter("v", 0.6);
@@ -602,9 +602,9 @@ public sealed class CardOverlayRenderer
         slash.Rotation = -Mathf.Atan2(iconSize.Y, iconSize.X);
     }
 
-    private static void HideTabs(Entry e)
+    private static void HideTabs(Entry entry)
     {
-        foreach (var tab in e.Tabs)
+        foreach (var tab in entry.Tabs)
         {
             if (GodotObject.IsInstanceValid(tab)) tab.Visible = false;
         }
@@ -617,10 +617,10 @@ public sealed class CardOverlayRenderer
         foreach (var child in node.GetChildren()) ClearUniqueNames(child);
     }
 
-    private static void SetAlpha(Control c, float a)
+    private static void SetAlpha(Control control, float a)
     {
-        var m = c.Modulate;
-        m.A = a;
-        c.Modulate = m;
+        var color = control.Modulate;
+        color.A = a;
+        control.Modulate = color;
     }
 }

@@ -30,16 +30,16 @@ public class GameBranchTests
 
     private static string RepoRoot()
     {
-        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
-            if (Directory.Exists(Path.Combine(d.FullName, "mods")) && Directory.Exists(Path.Combine(d.FullName, "core"))) return d.FullName;
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
+            if (Directory.Exists(Path.Combine(directory.FullName, "mods")) && Directory.Exists(Path.Combine(directory.FullName, "core"))) return directory.FullName;
         throw new DirectoryNotFoundException("the repository root (mods/ and core/) not found above the test's folder");
     }
 
     private static HashSet<string> OnBothBranches()
     {
-        var names = typeof(PowerId).GetFields().Where(f => f.FieldType == typeof(PowerId)).Select(f => ((PowerId)f.GetValue(null)!).Name)
-            .Concat(typeof(RelicId).GetFields().Where(f => f.FieldType == typeof(RelicId)).Select(f => ((RelicId)f.GetValue(null)!).Name))
-            .Concat(typeof(CardId).GetFields().Where(f => f.FieldType == typeof(CardId)).Select(f => ((CardId)f.GetValue(null)!).Name));
+        var names = typeof(PowerId).GetFields().Where(field => field.FieldType == typeof(PowerId)).Select(field => ((PowerId)field.GetValue(null)!).Name)
+            .Concat(typeof(RelicId).GetFields().Where(field => field.FieldType == typeof(RelicId)).Select(field => ((RelicId)field.GetValue(null)!).Name))
+            .Concat(typeof(CardId).GetFields().Where(field => field.FieldType == typeof(CardId)).Select(field => ((CardId)field.GetValue(null)!).Name));
         return names.Where(n => !GameBranches.BetaOnly.Contains(n) && !GameBranches.MainOnly.Contains(n)).ToHashSet();
     }
 
@@ -59,11 +59,11 @@ public class GameBranchTests
             {
                 var line = lines[i];
                 if (line.TrimStart().StartsWith("//")) continue;
-                foreach (Match m in Regex.Matches(line, "\"(\\w+)\""))
+                foreach (Match match in Regex.Matches(line, "\"(\\w+)\""))
                 {
-                    if (!both.Contains(m.Groups[1].Value) || KeyCall.IsMatch(line[..m.Index])) continue;
+                    if (!both.Contains(match.Groups[1].Value) || KeyCall.IsMatch(line[..match.Index])) continue;
                     if (Reviewed.Keys.FirstOrDefault(line.Contains) is { } key) { used.Add(key); continue; }
-                    found.Add($"{rel}:{i + 1}: {m.Value}");
+                    found.Add($"{rel}:{i + 1}: {match.Value}");
                 }
                 // The other way round: a value's key written as a class (DynamicVars["PoisonPower"] is the value's name, not the class).
                 if (KeyNameof.IsMatch(line)) found.Add($"{rel}:{i + 1}: a DynamicVars or member key written with nameof (keep the key a string)");

@@ -16,15 +16,15 @@ public class GameNamesTests
     {
         Type[] all;
         try { all = typeof(AbstractModel).Assembly.GetTypes(); }
-        catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(t => t != null).ToArray()!; }
+        catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(type => type != null).ToArray()!; }
         // Not the game's test mocks (Models.*.Mocks: never in a real fight).
-        return all.Where(t => t is { IsAbstract: false, IsClass: true } && typeof(T).IsAssignableFrom(t) && t.Namespace?.EndsWith(".Mocks") != true)
-            .Select(t => t.Name).ToHashSet();
+        return all.Where(type => type is { IsAbstract: false, IsClass: true } && typeof(T).IsAssignableFrom(type) && type.Namespace?.EndsWith(".Mocks") != true)
+            .Select(type => type.Name).ToHashSet();
     }
 
     private static HashSet<string> Named<TId>() where TId : ISimName<TId> =>
-        typeof(TId).GetFields(BindingFlags.Public | BindingFlags.Static).Where(f => f.FieldType == typeof(TId))
-            .Select(f => ((TId)f.GetValue(null)!).Name).ToHashSet();
+        typeof(TId).GetFields(BindingFlags.Public | BindingFlags.Static).Where(field => field.FieldType == typeof(TId))
+            .Select(field => ((TId)field.GetValue(null)!).Name).ToHashSet();
 
     [Fact] public void EveryPowerHasItsName() => Check(GameClasses<PowerModel>(), Named<PowerId>(), "powers");
     [Fact] public void EveryRelicHasItsName() => Check(GameClasses<RelicModel>(), Named<RelicId>(), "relics");

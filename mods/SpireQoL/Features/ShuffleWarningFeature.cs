@@ -37,10 +37,10 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
         if (me == null || !Sts2State.IsPlayerTurn) return;
         if (Sts2State.DiscardPileCount(me) == 0) return;
 
-        var cs = Sts2State.Combat;
-        if (cs == null) return;
+        var combat = Sts2State.Combat;
+        if (combat == null) return;
         var hand = Sts2State.Hand(me);
-        foreach (var c in hand)
+        foreach (var card in hand)
         {
             // Every draw the play causes, including the ones it sets off (Dark Embrace per card
             // exhausted, Game Piece, Iron Club...), up to a full hand: PlayFacts.Draws.
@@ -48,14 +48,14 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
             try
             {
                 // Proc Indicators' facts for this frame when it has them (it runs first), else worked out here.
-                var f = _ctx.Predictions.FactsThisFrame(c) ?? PlayFacts.For(c, me, cs, CardPlays.Count(c));
-                shuffles = f.Shuffles && !f.ShufflesItself; // Reboot's text already says it shuffles
+                var facts = _ctx.Predictions.FactsThisFrame(card) ?? PlayFacts.For(card, me, combat, CardPlays.Count(card));
+                shuffles = facts.Shuffles && !facts.ShufflesItself; // Reboot's text already says it shuffles
             }
             catch
             {
-                shuffles = PlayFacts.CardsDrawnTotal(c, hand.Count, CardPlays.Count(c)) > Sts2State.DrawPileCount(me);
+                shuffles = PlayFacts.CardsDrawnTotal(card, hand.Count, CardPlays.Count(card)) > Sts2State.DrawPileCount(me);
             }
-            if (shuffles) _ctx.Decor.For(c).AddTab("shuffle", GameIcons.DiscardPile());
+            if (shuffles) _ctx.Decor.For(card).AddTab("shuffle", GameIcons.DiscardPile());
         }
     }
 

@@ -38,7 +38,7 @@ internal static class IntentForecastAudit
                 return;
             }
             var current = new MoveNodeMove(__instance.NextMove.Id, __instance.NextMove.FollowUpState?.Id ?? __instance.NextMove.FollowUpStateId);
-            var turns = IntentForecast.Forecast(graph, current, machine.StateLog.Select(s => s.Id).ToList(), maxTurns: 1);
+            var turns = IntentForecast.Forecast(graph, current, machine.StateLog.Select(monsterState => monsterState.Id).ToList(), maxTurns: 1);
             __state = turns.FirstOrDefault();
         }
         catch (Exception ex)
@@ -63,7 +63,7 @@ internal static class IntentForecastAudit
             if (ok) return;
             var key = name + "|" + odds + "|" + picked;
             if (!Reported.Add(key) || Reported.Count > 200) return;
-            var details = $"{name}: forecast [{odds}], the game rolled {picked}. Log: {string.Join(" > ", __instance.MoveStateMachine!.StateLog.Select(s => s.Id))}";
+            var details = $"{name}: forecast [{odds}], the game rolled {picked}. Log: {string.Join(" > ", __instance.MoveStateMachine!.StateLog.Select(monsterState => monsterState.Id))}";
             ModEntry.Log.Warn("[audit] [intent] " + details);
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", $"Intent forecast missed the move the game rolled: {name}",
                 new[] { "intent", name }, details);

@@ -25,52 +25,52 @@ public static partial class SimEngine
     public static readonly PowerId Impaled = PowerId.Impaled, ImpaledOther = new("ImpaledPowerOther");
 
     /// <summary>The enemy is impaled by anyone's arrow (ArrowCmd.CreatureIsImpaledByArrow).</summary>
-    public static bool IsImpaled(SimState s, int enemy)
+    public static bool IsImpaled(SimState state, int enemy)
     {
-        var p = PowersOf(s, enemy);
-        return p.Has(Impaled) || p.Has(ImpaledOther);
+        var powers = PowersOf(state, enemy);
+        return powers.Has(Impaled) || powers.Has(ImpaledOther);
     }
 
-    private static void RunShoot(BranchSet b)
+    private static void RunShoot(BranchSet branches)
     {
-        b.Each(s =>
+        branches.Each(branch =>
         {
-            var target = s.CurrentPlay?.Target ?? -1;
-            s.ArrowAwayAt = -1;
-            if (s.You.Arrows > 0 && s.Enemy(target) is { Alive: true })
+            var target = branch.CurrentPlay?.Target ?? -1;
+            branch.ArrowAwayAt = -1;
+            if (branch.You.Arrows > 0 && branch.Enemy(target) is { Alive: true })
             {
-                s.You.Arrows--;
-                s.ArrowAwayAt = target;
+                branch.You.Arrows--;
+                branch.ArrowAwayAt = target;
             }
-            return Hook(s, nameof(SimModel.AfterArrowShot), (m, o, x) => m.AfterArrowShot(x, o, Who.You));
+            return Hook(branch, nameof(SimModel.AfterArrowShot), (model, o, copy) => model.AfterArrowShot(copy, o, Who.You));
         });
     }
 
-    private static void RunImpale(BranchSet b)
+    private static void RunImpale(BranchSet branches)
     {
-        b.Each(s =>
+        branches.Each(branch =>
         {
-            var target = s.ArrowAwayAt;
-            s.ArrowAwayAt = -1;
-            if (s.Enemy(target) is not { } e) return new[] { s };
-            var p = e.Powers;
-            e.Powers = p.Has(Impaled) ? p.With(Impaled, p[Impaled] + 1) : p.With(Impaled, 1, 3);
-            var r = Hook(s, nameof(SimModel.AfterArrowImpaled), (m, o, x) => m.AfterArrowImpaled(x, o, target, Who.You));
+            var target = branch.ArrowAwayAt;
+            branch.ArrowAwayAt = -1;
+            if (branch.Enemy(target) is not { } enemy) return new[] { branch };
+            var powers = enemy.Powers;
+            enemy.Powers = powers.Has(Impaled) ? powers.With(Impaled, powers[Impaled] + 1) : powers.With(Impaled, 1, 3);
+            var states = Hook(branch, nameof(SimModel.AfterArrowImpaled), (model, o, copy) => model.AfterArrowImpaled(copy, o, target, Who.You));
             // Killed by the shot's own attack: the arrow comes straight out.
-            return Then(r.ToList(), x => x.Enemy(target) is { Alive: false } ? Dislodge(x, target, 1) : new[] { x });
+            return Then(states.ToList(), copy => copy.Enemy(target) is { Alive: false } ? Dislodge(copy, target, 1) : new[] { copy });
         });
     }
 
-    private static void RunDislodgeAll(BranchSet b) =>
-        b.Each(s => s.CurrentPlay?.Target is { } t && t >= 0 ? Dislodge(s, t, PowerOn(s, t, Impaled)) : new[] { s });
+    private static void RunDislodgeAll(BranchSet branches) =>
+        branches.Each(branch => branch.CurrentPlay?.Target is { } t && t >= 0 ? Dislodge(branch, t, PowerOn(branch, t, Impaled)) : new[] { branch });
 
     /// <summary>Arrows of yours out of an enemy (ArrowCmd.DislodgeArrow): back to you, each through AfterArrowDislodged.</summary>
-    internal static IEnumerable<SimState> Dislodge(SimState s, int enemy, int count)
+    internal static IEnumerable<SimState> Dislodge(SimState state, int enemy, int count)
     {
-        count = Math.Min(count, PowerOn(s, enemy, Impaled));
-        if (count <= 0) return new[] { s };
-        TakeArrows(s, enemy, count);
-        return ProcCardEvent(s, CardEvent.ArrowDislodged, count, Who.You, indirect: false);
+        count = Math.Min(count, PowerOn(state, enemy, Impaled));
+        if (count <= 0) return new[] { state };
+        TakeArrows(state, enemy, count);
+        return ProcCardEvent(state, CardEvent.ArrowDislodged, count, Who.You, indirect: false);
     }
 
     /// <summary>
@@ -99,12 +99,12 @@ public static partial class SimEngine
     }
 
     /// <summary>Takes arrows out of an enemy's Impaled (gone with the last) and gives them back to you.</summary>
-    internal static void TakeArrows(SimState s, int enemy, int count)
+    internal static void TakeArrows(SimState state, int enemy, int count)
     {
-        var p = PowersOf(s, enemy);
-        var left = p[Impaled] - count;
-        SetPowers(s, enemy, left > 0 ? p.With(Impaled, left) : p.Without(Impaled));
-        s.You.Arrows += count;
+        var powers = PowersOf(state, enemy);
+        var left = powers[Impaled] - count;
+        SetPowers(state, enemy, left > 0 ? powers.With(Impaled, left) : powers.Without(Impaled));
+        state.You.Arrows += count;
     }
 
     // ------------------------------------------------------------------ events raised inside damage
@@ -114,35 +114,35 @@ public static partial class SimEngine
     /// is over (DrainPending).
     /// </summary>
     /// <param name="source">The model raising it, when its tab counts what it gives (a draw or energy tab: decision #132).</param>
-    internal static void Raise(SimState s, CardEvent ev, int player, int count = 1, string? source = null)
+    internal static void Raise(SimState state, CardEvent cardEvent, int player, int count = 1, string? source = null)
     {
         // The same event for the same player from the same source adds up (one entry, in the order first raised).
-        for (var i = 0; i < s.Pending.Length; i++)
+        for (var i = 0; i < state.Pending.Length; i++)
         {
-            var e = s.Pending[i];
-            if (e.Event != ev || e.Player != player || e.Source != source) continue;
-            s.Pending = s.Pending.SetItem(i, e with { Count = e.Count + count });
+            var pending = state.Pending[i];
+            if (pending.Event != cardEvent || pending.Player != player || pending.Source != source) continue;
+            state.Pending = state.Pending.SetItem(i, pending with { Count = pending.Count + count });
             return;
         }
-        s.Pending = s.Pending.Add(new PendingEvent(ev, player, source, count));
+        state.Pending = state.Pending.Add(new PendingEvent(cardEvent, player, source, count));
     }
 
     /// <summary>The events raised during a hit or an action, each through every listener.</summary>
-    internal static IEnumerable<SimState> DrainPending(SimState s)
+    internal static IEnumerable<SimState> DrainPending(SimState state)
     {
-        if (s.Pending.IsEmpty) return new[] { s };
-        var pending = s.Pending;
-        s.Pending = ImmutableArray<PendingEvent>.Empty;
-        IEnumerable<SimState> r = new[] { s };
-        foreach (var (ev, player, source, count) in pending)
+        if (state.Pending.IsEmpty) return new[] { state };
+        var pending = state.Pending;
+        state.Pending = ImmutableArray<PendingEvent>.Empty;
+        IEnumerable<SimState> states = new[] { state };
+        foreach (var (cardEvent, player, source, count) in pending)
         {
-            var tally = source != null && SimModels.Get(source) is { } m ? TallyFor(m.Name, m.Tab, ev, player) : null;
-            r = Then(r.ToList(), x => ProcCardEvent(x, ev, count, player, indirect: false, tally));
+            var tally = source != null && SimModels.Get(source) is { } model ? TallyFor(model.Name, model.Tab, cardEvent, player) : null;
+            states = Then(states.ToList(), branch => ProcCardEvent(branch, cardEvent, count, player, indirect: false, tally));
             // Epic Retrieval: its own energy for each of its player's arrows its play knocks loose (the game passes the card as the source).
-            if (ev == CardEvent.ArrowDislodged)
-                r = Then(r.ToList(), x => x.CurrentPlay is { ArrowEnergy: > 0 } cp && cp.Owner == player
-                    ? ProcCardEvent(x, CardEvent.EnergyGained, cp.ArrowEnergy * count, player, indirect: false) : new[] { x });
+            if (cardEvent == CardEvent.ArrowDislodged)
+                states = Then(states.ToList(), branch => branch.CurrentPlay is { ArrowEnergy: > 0 } play && play.Owner == player
+                    ? ProcCardEvent(branch, CardEvent.EnergyGained, play.ArrowEnergy * count, player, indirect: false) : new[] { branch });
         }
-        return Then(r.ToList(), DrainPending);
+        return Then(states.ToList(), DrainPending);
     }
 }

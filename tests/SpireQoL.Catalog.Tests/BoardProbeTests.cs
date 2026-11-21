@@ -15,16 +15,16 @@ public class BoardProbeTests
     [Fact]
     public void TheProbeChangesWithTheBoardAndOnlyThen()
     {
-        var f = new GameFight();
-        var strike = f.Add<StrikeIronclad>();
-        f.Add<DefendIronclad>(PileType.Draw);
-        int Probe() => BoardProbe.Compute(f.Me, f.Combat);
+        var gameFight = new GameFight();
+        var strike = gameFight.Add<StrikeIronclad>();
+        gameFight.Add<DefendIronclad>(PileType.Draw);
+        int Probe() => BoardProbe.Compute(gameFight.Me, gameFight.Combat);
 
         var before = Probe();
         Assert.Equal(before, Probe());
 
         // A card drawn into your hand, a card upgraded, a settings change: each a different probe.
-        var bash = f.Add<Bash>();
+        var bash = gameFight.Add<Bash>();
         var drawn = Probe();
         Assert.NotEqual(before, drawn);
         bash.UpgradeInternal();
@@ -43,11 +43,11 @@ public class BoardProbeTests
     [Fact]
     public void ReadingTheProbeAllocatesLittle()
     {
-        var f = new GameFight();
-        for (var i = 0; i < 8; i++) f.Add<StrikeIronclad>();
-        BoardProbe.Compute(f.Me, f.Combat);
+        var gameFight = new GameFight();
+        for (var i = 0; i < 8; i++) gameFight.Add<StrikeIronclad>();
+        BoardProbe.Compute(gameFight.Me, gameFight.Combat);
         var start = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 100; i++) BoardProbe.Compute(f.Me, f.Combat);
+        for (var i = 0; i < 100; i++) BoardProbe.Compute(gameFight.Me, gameFight.Combat);
         var perCall = (GC.GetAllocatedBytesForCurrentThread() - start) / 100;
         Assert.True(perCall < 1024, $"{perCall} bytes per probe");
     }

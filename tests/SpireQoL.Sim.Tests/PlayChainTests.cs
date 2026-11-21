@@ -15,82 +15,82 @@ public class PlayChainTests
     public void BurningPactWithDarkEmbraceDrawsThreeAndShufflesAtTwo()
     {
         // Exhaust 1 (Dark Embrace draws 1), then draw 2: three draws, so a draw pile of 2 runs out.
-        var i = BurningPact(drawPile: 2);
-        i.DarkEmbrace = 1;
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(3, r.Draws);
-        Assert.Equal(1, r.Chained);
-        Assert.True(r.Shuffles);
+        var drawInputs = BurningPact(drawPile: 2);
+        drawInputs.DarkEmbrace = 1;
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(3, drawResult.Draws);
+        Assert.Equal(1, drawResult.Chained);
+        Assert.True(drawResult.Shuffles);
 
-        i.DarkEmbrace = 0;
-        Assert.False(PlayChain.Resolve(i).Shuffles); // its own 2 draws fit
+        drawInputs.DarkEmbrace = 0;
+        Assert.False(PlayChain.Resolve(drawInputs).Shuffles); // its own 2 draws fit
     }
 
     [Fact]
     public void NoShuffleWithAnEmptyDiscardPile()
     {
-        var i = BurningPact(drawPile: 0, discard: 0);
-        i.DarkEmbrace = 2;
-        Assert.False(PlayChain.Resolve(i).Shuffles);
+        var drawInputs = BurningPact(drawPile: 0, discard: 0);
+        drawInputs.DarkEmbrace = 2;
+        Assert.False(PlayChain.Resolve(drawInputs).Shuffles);
     }
 
     [Fact]
     public void DrawsStopAtAFullHand()
     {
         // 10 cards in hand: the card leaves (9), Burning Pact exhausts one (8): room for 2 of its 3 draws.
-        var i = BurningPact(drawPile: 2, hand: 10);
-        i.DarkEmbrace = 1;
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(2, r.Draws);
-        Assert.False(r.Shuffles);
+        var drawInputs = BurningPact(drawPile: 2, hand: 10);
+        drawInputs.DarkEmbrace = 1;
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(2, drawResult.Draws);
+        Assert.False(drawResult.Shuffles);
     }
 
     [Fact]
     public void NoDrawOrFiddleBlocksEverything()
     {
-        var i = BurningPact(drawPile: 0);
-        i.DarkEmbrace = 3;
-        i.Blocked = true;
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(0, r.Draws);
-        Assert.False(r.Shuffles);
+        var drawInputs = BurningPact(drawPile: 0);
+        drawInputs.DarkEmbrace = 3;
+        drawInputs.Blocked = true;
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(0, drawResult.Draws);
+        Assert.False(drawResult.Shuffles);
     }
 
     [Fact]
     public void JossPaperDrawsWhenItsCountIsReached()
     {
-        var i = new PlayChain.DrawInputs { Exhausts = 2, HandCount = 5, DrawPile = 10, JossPaperCount = 2, JossPaperEvery = 5 };
-        Assert.Equal(0, PlayChain.Resolve(i).Draws);
-        i.JossPaperCount = 3;
-        Assert.Equal(1, PlayChain.Resolve(i).Draws);
+        var drawInputs = new PlayChain.DrawInputs { Exhausts = 2, HandCount = 5, DrawPile = 10, JossPaperCount = 2, JossPaperEvery = 5 };
+        Assert.Equal(0, PlayChain.Resolve(drawInputs).Draws);
+        drawInputs.JossPaperCount = 3;
+        Assert.Equal(1, PlayChain.Resolve(drawInputs).Draws);
     }
 
     [Fact]
     public void IronClubAndGamePieceAddDrawsAfterThePlay()
     {
-        var i = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 10, IronClubCount = 3, IronClubEvery = 4, IsPower = true, GamePiece = 1 };
-        Assert.Equal(2, PlayChain.Resolve(i).Draws);
-        i.Plays = 2; // Echo Form: two plays, Iron Club completes once, Game Piece twice
-        Assert.Equal(3, PlayChain.Resolve(i).Draws);
+        var drawInputs = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 10, IronClubCount = 3, IronClubEvery = 4, IsPower = true, GamePiece = 1 };
+        Assert.Equal(2, PlayChain.Resolve(drawInputs).Draws);
+        drawInputs.Plays = 2; // Echo Form: two plays, Iron Club completes once, Game Piece twice
+        Assert.Equal(3, PlayChain.Resolve(drawInputs).Draws);
     }
 
     [Fact]
     public void ViciousAndCentennialPuzzle()
     {
-        var i = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 10, Vicious = 1, VulnerableLandings = 2, LosesHp = true, CentennialPuzzle = 3 };
-        Assert.Equal(5, PlayChain.Resolve(i).Draws);
-        i.LosesHp = false;
-        Assert.Equal(2, PlayChain.Resolve(i).Draws);
+        var drawInputs = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 10, Vicious = 1, VulnerableLandings = 2, LosesHp = true, CentennialPuzzle = 3 };
+        Assert.Equal(5, PlayChain.Resolve(drawInputs).Draws);
+        drawInputs.LosesHp = false;
+        Assert.Equal(2, PlayChain.Resolve(drawInputs).Draws);
     }
 
     [Fact]
     public void CleanseShrinksTheDrawPileBeforeDrawing()
     {
         // Cleanse exhausts from the draw pile: with Dark Embrace, its draws come from a smaller pile.
-        var i = new PlayChain.DrawInputs { Exhausts = 2, ExhaustedFromDrawPile = 1, HandCount = 5, DrawPile = 2, DiscardPile = 3, DarkEmbrace = 1 };
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(2, r.Draws);
-        Assert.True(r.Shuffles);
+        var drawInputs = new PlayChain.DrawInputs { Exhausts = 2, ExhaustedFromDrawPile = 1, HandCount = 5, DrawPile = 2, DiscardPile = 3, DarkEmbrace = 1 };
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(2, drawResult.Draws);
+        Assert.True(drawResult.Shuffles);
     }
 
 
@@ -109,10 +109,10 @@ public class PlayChainTests
     public void CalculatedGambleRefillsAnEmptyDiscardPileBeforeDrawing()
     {
         // Discards the 4 other cards, then draws 4 from a 2-card draw pile: the discards are shuffled in.
-        var i = new PlayChain.DrawInputs { OwnDraws = 4, HandCount = 5, DrawPile = 2, DiscardPile = 0, DiscardedBeforeDraw = 4 };
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(4, r.Draws);
-        Assert.True(r.Shuffles);
+        var drawInputs = new PlayChain.DrawInputs { OwnDraws = 4, HandCount = 5, DrawPile = 2, DiscardPile = 0, DiscardedBeforeDraw = 4 };
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(4, drawResult.Draws);
+        Assert.True(drawResult.Shuffles);
     }
 
     [Fact]
@@ -120,20 +120,20 @@ public class PlayChainTests
     {
         // Reboot: your hand goes into the draw pile, CardPileCmd.Shuffle, then draw 4. The shuffle
         // happens whatever the piles hold (play test: draw pile 10, discard 1, not predicted).
-        var i = new PlayChain.DrawInputs { OwnDraws = 4, HandCount = 6, DrawPile = 10, DiscardPile = 1, ShufflesFirst = true, HandShuffledIn = true };
-        var r = PlayChain.Resolve(i);
-        Assert.True(r.Shuffles);
-        Assert.Equal(4, r.Draws);
+        var drawInputs = new PlayChain.DrawInputs { OwnDraws = 4, HandCount = 6, DrawPile = 10, DiscardPile = 1, ShufflesFirst = true, HandShuffledIn = true };
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.True(drawResult.Shuffles);
+        Assert.Equal(4, drawResult.Draws);
 
         // An empty discard pile still shuffles (the draw pile and your hand).
-        i.DiscardPile = 0;
-        Assert.True(PlayChain.Resolve(i).Shuffles);
+        drawInputs.DiscardPile = 0;
+        Assert.True(PlayChain.Resolve(drawInputs).Shuffles);
 
         // No Draw stops the draws, not the shuffle.
-        i.Blocked = true;
-        r = PlayChain.Resolve(i);
-        Assert.True(r.Shuffles);
-        Assert.Equal(0, r.Draws);
+        drawInputs.Blocked = true;
+        drawResult = PlayChain.Resolve(drawInputs);
+        Assert.True(drawResult.Shuffles);
+        Assert.Equal(0, drawResult.Draws);
     }
 
     [Fact]
@@ -155,15 +155,15 @@ public class PlayChainTests
     {
         // CardPileCmd.Draw stops when both piles are empty: draw 3 with 1 card in the draw pile and
         // 1 in the discard pile draws 2 (shuffling once).
-        var i = new PlayChain.DrawInputs { OwnDraws = 3, HandCount = 3, DrawPile = 1, DiscardPile = 1 };
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(2, r.Draws);
-        Assert.True(r.Shuffles);
+        var drawInputs = new PlayChain.DrawInputs { OwnDraws = 3, HandCount = 3, DrawPile = 1, DiscardPile = 1 };
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(2, drawResult.Draws);
+        Assert.True(drawResult.Shuffles);
 
-        i.DiscardPile = 0;
-        r = PlayChain.Resolve(i);
-        Assert.Equal(1, r.Draws);
-        Assert.False(r.Shuffles);
+        drawInputs.DiscardPile = 0;
+        drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(1, drawResult.Draws);
+        Assert.False(drawResult.Shuffles);
     }
 
     [Fact]
@@ -172,16 +172,16 @@ public class PlayChainTests
         // Auto-reports: FTL with 10 cards in hand (9 after it leaves), Iron Club completing its count
         // and Calamity 1. Hook order (CombatState.IterateHookListeners): your powers, then your relics.
         // Calamity's attack makes 10, so Iron Club draws nothing.
-        var i = new PlayChain.DrawInputs { HandCount = 10, DrawPile = 6, DiscardPile = 30, IronClubCount = 3, IronClubEvery = 4, AddedToHandAfterPlay = 1 };
-        Assert.Equal(0, PlayChain.Resolve(i).Draws);
+        var drawInputs = new PlayChain.DrawInputs { HandCount = 10, DrawPile = 6, DiscardPile = 30, IronClubCount = 3, IronClubEvery = 4, AddedToHandAfterPlay = 1 };
+        Assert.Equal(0, PlayChain.Resolve(drawInputs).Draws);
 
         // Without Calamity, Iron Club draws into the last slot.
-        i.AddedToHandAfterPlay = 0;
-        Assert.Equal(1, PlayChain.Resolve(i).Draws);
+        drawInputs.AddedToHandAfterPlay = 0;
+        Assert.Equal(1, PlayChain.Resolve(drawInputs).Draws);
 
         // The card's own draws come first and still happen (during the play, before Calamity).
-        i = new PlayChain.DrawInputs { OwnDraws = 1, HandCount = 9, DrawPile = 6, DiscardPile = 30, IronClubCount = 3, IronClubEvery = 4, AddedToHandAfterPlay = 1 };
-        Assert.Equal(1, PlayChain.Resolve(i).Draws);
+        drawInputs = new PlayChain.DrawInputs { OwnDraws = 1, HandCount = 9, DrawPile = 6, DiscardPile = 30, IronClubCount = 3, IronClubEvery = 4, AddedToHandAfterPlay = 1 };
+        Assert.Equal(1, PlayChain.Resolve(drawInputs).Draws);
     }
 
     [Fact]
@@ -189,32 +189,32 @@ public class PlayChainTests
     {
         // MotifPower.AfterCardPlayed: Amount cards per melody (Wah, Cho, Ki) the card plays first this turn.
         // Auto-report: Cho Firm (first Cho, Motif 1) with an empty draw pile and 11 in discard: 1 draw, shuffled in.
-        var i = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 0, DiscardPile = 11, PowerDrawsAfterPlay = 1 };
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(1, r.Draws);
-        Assert.Equal(1, r.Chained);
-        Assert.True(r.Shuffles);
+        var drawInputs = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 0, DiscardPile = 11, PowerDrawsAfterPlay = 1 };
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(1, drawResult.Draws);
+        Assert.Equal(1, drawResult.Chained);
+        Assert.True(drawResult.Shuffles);
 
         // Wah Cho Ki after a Cho this turn: its own 2 draws, then Motif's 2 (Wah, Ki) run past a draw pile of 3.
-        i = new PlayChain.DrawInputs { OwnDraws = 2, HandCount = 5, DrawPile = 3, DiscardPile = 11, PowerDrawsAfterPlay = 2 };
-        r = PlayChain.Resolve(i);
-        Assert.Equal(4, r.Draws);
-        Assert.True(r.Shuffles);
+        drawInputs = new PlayChain.DrawInputs { OwnDraws = 2, HandCount = 5, DrawPile = 3, DiscardPile = 11, PowerDrawsAfterPlay = 2 };
+        drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(4, drawResult.Draws);
+        Assert.True(drawResult.Shuffles);
 
         // Wah Ki with a full hand: it leaves one slot, so Motif's 2 draws stop at 1 (still shuffling the empty pile in).
-        i = new PlayChain.DrawInputs { HandCount = 10, DrawPile = 0, DiscardPile = 17, PowerDrawsAfterPlay = 2 };
-        r = PlayChain.Resolve(i);
-        Assert.Equal(1, r.Draws);
-        Assert.True(r.Shuffles);
+        drawInputs = new PlayChain.DrawInputs { HandCount = 10, DrawPile = 0, DiscardPile = 17, PowerDrawsAfterPlay = 2 };
+        drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(1, drawResult.Draws);
+        Assert.True(drawResult.Shuffles);
 
         // Enough cards in the draw pile: no shuffle.
-        i = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 2, DiscardPile = 11, PowerDrawsAfterPlay = 2 };
-        Assert.Equal(2, PlayChain.Resolve(i).Draws);
-        Assert.False(PlayChain.Resolve(i).Shuffles);
+        drawInputs = new PlayChain.DrawInputs { HandCount = 5, DrawPile = 2, DiscardPile = 11, PowerDrawsAfterPlay = 2 };
+        Assert.Equal(2, PlayChain.Resolve(drawInputs).Draws);
+        Assert.False(PlayChain.Resolve(drawInputs).Shuffles);
 
         // No Draw blocks them.
-        i.Blocked = true;
-        Assert.Equal(0, PlayChain.Resolve(i).Draws);
+        drawInputs.Blocked = true;
+        Assert.Equal(0, PlayChain.Resolve(drawInputs).Draws);
     }
 
     [Fact]
@@ -241,10 +241,10 @@ public class PlayChainTests
     {
         // Ki Hop at an impaled enemy draws 2, from a hand of 10 with it: 9 once it's played, so 1 fits (a 1.0.0 report
         // expected 2). Worked out with the target's draws in place of the card's own.
-        var i = new PlayChain.DrawInputs { OwnDraws = 0, HandCount = 10, DrawPile = 20, DiscardPile = 1 };
-        Assert.Equal(0, PlayChain.Resolve(i).Draws);
-        Assert.Equal(1, PlayChain.Resolve(i.WithOwnDraws(2)).Draws);
-        Assert.Equal(0, i.OwnDraws); // a copy
+        var drawInputs = new PlayChain.DrawInputs { OwnDraws = 0, HandCount = 10, DrawPile = 20, DiscardPile = 1 };
+        Assert.Equal(0, PlayChain.Resolve(drawInputs).Draws);
+        Assert.Equal(1, PlayChain.Resolve(drawInputs.WithOwnDraws(2)).Draws);
+        Assert.Equal(0, drawInputs.OwnDraws); // a copy
     }
 
     [Fact]
@@ -253,17 +253,17 @@ public class PlayChainTests
         // KiChant.OnPlay with a short draw pile shuffles your discard pile in (not your hand, unlike Reboot), puts one of
         // the top 4 into your hand and discards the rest; Motif then draws 5. Auto-report (1.11.0): hand of 8 with
         // Ki Chant+, draw pile 3, discard 9: 7 left + the pick = 8, so 2 draws fit (predicted 5).
-        var i = new PlayChain.DrawInputs
+        var drawInputs = new PlayChain.DrawInputs
         {
             HandCount = 8, DrawPile = 3, DiscardPile = 9, ShufflesFirst = true,
             TakenFromDrawPile = 4, AddedToHandDuringPlay = 1, PowerDrawsAfterPlay = 5,
         };
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(2, r.Draws);
-        Assert.True(r.Shuffles);
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(2, drawResult.Draws);
+        Assert.True(drawResult.Shuffles);
         // A smaller hand: all 5 fit.
-        i.HandCount = 3;
-        Assert.Equal(5, PlayChain.Resolve(i).Draws);
+        drawInputs.HandCount = 3;
+        Assert.Equal(5, PlayChain.Resolve(drawInputs).Draws);
     }
 
     [Fact]
@@ -271,16 +271,16 @@ public class PlayChainTests
     {
         // No shuffle first (draw pile 6, looks at 4): 2 left on the draw pile, 3 discarded. Motif draws 5: past the 2
         // left, so the discard pile is shuffled in.
-        var i = new PlayChain.DrawInputs
+        var drawInputs = new PlayChain.DrawInputs
         {
             HandCount = 5, DrawPile = 6, DiscardPile = 3,
             TakenFromDrawPile = 4, AddedToHandDuringPlay = 1, PowerDrawsAfterPlay = 5,
         };
-        var r = PlayChain.Resolve(i);
-        Assert.Equal(5, r.Draws);
-        Assert.True(r.Shuffles);
+        var drawResult = PlayChain.Resolve(drawInputs);
+        Assert.Equal(5, drawResult.Draws);
+        Assert.True(drawResult.Shuffles);
         // Motif drawing 2: the 2 left are enough.
-        i.PowerDrawsAfterPlay = 2;
-        Assert.False(PlayChain.Resolve(i).Shuffles);
+        drawInputs.PowerDrawsAfterPlay = 2;
+        Assert.False(PlayChain.Resolve(drawInputs).Shuffles);
     }
 }

@@ -64,20 +64,20 @@ public static partial class SimAdapter
     /// How many times an enemy's poison ticks: 1 plus the Accelerant of every living opponent of it, so every player's
     /// (PoisonPower.TriggerCount). Not capped at its stacks, as the game's count is: stacks added later tick that many times.
     /// </summary>
-    private static int PoisonTriggers(Creature enemy, ICombatState cs)
+    private static int PoisonTriggers(Creature enemy, ICombatState combat)
     {
-        try { return 1 + cs.GetOpponentsOf(enemy).Where(c => c.IsAlive).Sum(c => c.GetPowerAmount<AccelerantPower>()); }
+        try { return 1 + combat.GetOpponentsOf(enemy).Where(creature => creature.IsAlive).Sum(creature => creature.GetPowerAmount<AccelerantPower>()); }
         catch { return 1; }
     }
 
     internal static int? PlainSelfPowerAmount(CardModel card, Type power)
     {
         if (!SelfPowers.Contains(power.Name)) return null;
-        var typed = card.DynamicVars.Values.Any(v => v.GetType() is { IsGenericType: true } t
-                                                     && t.GetGenericTypeDefinition() == typeof(PowerVar<>) && t.GetGenericArguments()[0] == power);
+        var typed = card.DynamicVars.Values.Any(dynamicVar => dynamicVar.GetType() is { IsGenericType: true } type
+                                                     && type.GetGenericTypeDefinition() == typeof(PowerVar<>) && type.GetGenericArguments()[0] == power);
         if (typed) return null;
         foreach (var key in PlainPowerVars)
-            if (card.DynamicVars.TryGetValue(key, out var pv)) return (int)pv.BaseValue;
+            if (card.DynamicVars.TryGetValue(key, out var otherDynamicVar)) return (int)otherDynamicVar.BaseValue;
         return 0;
     }
 
@@ -159,7 +159,7 @@ public static partial class SimAdapter
     internal static OrbKind? ChannelKind(string card) =>
         card is nameof(Tempest) or nameof(Voltaic) ? OrbKind.Lightning
         : Channels.TryGetValue(card, out var kinds) && kinds.Distinct().Count() == 1 ? kinds[0]
-        : RepeatChannels.TryGetValue(card, out var k) && k != OrbKind.Unknown ? k
+        : RepeatChannels.TryGetValue(card, out var orbKind) && orbKind != OrbKind.Unknown ? orbKind
         : null;
 
     /// <summary>The simulator channels this card's orbs (for the coverage check).</summary>
@@ -190,133 +190,133 @@ public static partial class SimAdapter
 
     // ------------------------------------------------------------------ state
 
-    public static SimState Build(Player me, ICombatState cs, out Dictionary<Creature, int> ids)
+    public static SimState Build(Player me, ICombatState combat, out Dictionary<Creature, int> ids)
     {
         var idMap = new Dictionary<Creature, int>();
         ids = idMap;
-        var s = new SimState();
-        var mates = Teammates(me, cs);
+        var state = new SimState();
+        var mates = Teammates(me, combat);
         // Any creature's simulator id (Who): an enemy's, you, or teammate k.
-        int? IdOf(Creature c) => idMap.TryGetValue(c, out var i) ? i : c == me.Creature ? Who.You
-            : mates.FindIndex(m => m.Creature == c) is var k and >= 0 ? Who.Teammate(k) : null;
-        var targets = cs.Players.Select(p => p.Creature).ToList();
+        int? IdOf(Creature creature) => idMap.TryGetValue(creature, out var i) ? i : creature == me.Creature ? Who.You
+            : mates.FindIndex(player => player.Creature == creature) is var k and >= 0 ? Who.Teammate(k) : null;
+        var targets = combat.Players.Select(player => player.Creature).ToList();
 
         var n = 0;
-        foreach (var e in cs.Enemies)
+        foreach (var creature in combat.Enemies)
         {
             var id = n++;
-            idMap[e] = id;
-            var se = new SimEnemy
+            idMap[creature] = id;
+            var enemy = new SimEnemy
             {
                 Id = id,
-                Name = Combat.TurnEndModel.SafeTitle(e.Monster!),
-                Hp = e.CurrentHp,
-                Block = e.Block,
-                Hittable = e.IsAlive && e.IsHittable,
-                Stunned = e.IsStunned,
-                Imbalanced = e.HasPower<ImbalancedPower>(),
-                Poison = SafeInt(() => e.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0),
-                PoisonStacks = e.GetPower<PoisonPower>()?.Amount ?? 0,
-                PoisonTriggers = PoisonTriggers(e, cs),
+                Name = Combat.TurnEndModel.SafeTitle(creature.Monster!),
+                Hp = creature.CurrentHp,
+                Block = creature.Block,
+                Hittable = creature.IsAlive && creature.IsHittable,
+                Stunned = creature.IsStunned,
+                Imbalanced = creature.HasPower<ImbalancedPower>(),
+                Poison = SafeInt(() => creature.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0),
+                PoisonStacks = creature.GetPower<PoisonPower>()?.Amount ?? 0,
+                PoisonTriggers = PoisonTriggers(creature, combat),
             };
             // Every power, with the numbers its model keeps (Curl Up, Sneaky, Skittish, Thorns, Burrowed, Asleep, Slumber, Flutter,
             // Plow, Shriek, The Gambit, Slippery, Hard to Kill, Intangible, Hardened Shell, Barricade, Strength, Weak...).
-            se.Powers = SimReaders.Powers(e, IdOf);
-            foreach (var pw in e.Powers) SimReaders.AddVars(s, id, pw);
+            enemy.Powers = SimReaders.Powers(creature, IdOf);
+            foreach (var power in creature.Powers) SimReaders.AddVars(state, id, power);
             // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
-            if (e.IsAlive && e.GetPower<ExplosivePower>() is { Amount: > 0 } explosive) se.Explosive = ExplosiveOn(e, me.Creature, explosive.Amount, me, cs);
-            se.StartedAlive = e.IsAlive;
+            if (creature.IsAlive && creature.GetPower<ExplosivePower>() is { Amount: > 0 } explosive) enemy.Explosive = ExplosiveOn(creature, me.Creature, explosive.Amount, me, combat);
+            enemy.StartedAlive = creature.IsAlive;
             // An ally dying: Ravenous stuns it (and gives Strength for later); Crab Rage gives it Strength once.
             // Crab Rage: its Strength and block when an ally dies (CrabRagePower model: Strength as its amount, block here).
-            if (e.GetPower<CrabRagePower>() is { } crab)
+            if (creature.GetPower<CrabRagePower>() is { } crab)
             {
-                se.Powers = se.Powers.With(PowerId.CrabRage, Sts2State.Var(crab, "StrengthPower"));
-                se.CrabRageBlock = Sts2State.Var(crab, "Block");
+                enemy.Powers = enemy.Powers.With(PowerId.CrabRage, Sts2State.Var(crab, "StrengthPower"));
+                enemy.CrabRageBlock = Sts2State.Var(crab, "Block");
             }
-            if (!e.IsAlive) se.Hp = 0;
-            if (e.IsAlive && e.Monster != null)
+            if (!creature.IsAlive) enemy.Hp = 0;
+            if (creature.IsAlive && creature.Monster != null)
             {
                 try
                 {
                     var intent = new List<IntentHit>();
-                    foreach (var attack in e.Monster.NextMove.Intents.OfType<AttackIntent>())
+                    foreach (var attack in creature.Monster.NextMove.Intents.OfType<AttackIntent>())
                     {
-                        var perHit = attack.GetSingleDamage(targets, e);
-                        for (var i = 0; i < Math.Max(1, attack.Repeats); i++) se.Hits.Add(perHit);
+                        var perHit = attack.GetSingleDamage(targets, creature);
+                        for (var i = 0; i < Math.Max(1, attack.Repeats); i++) enemy.Hits.Add(perHit);
                         // the hit's base and the captured terms on each player; the models (its Strength and Weak, your Vulnerable,
                         // Intangible...) apply as it lands, so what your cards change shows.
                         if (intent == null || attack.DamageCalc == null) { intent = null; continue; }
                         var b = attack.DamageCalc();
-                        var terms = new Dictionary<int, CapturedTerms> { [Who.You] = SimReaders.Damage(me.RunState, cs, null, e, me.Creature, b, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) };
+                        var terms = new Dictionary<int, CapturedTerms> { [Who.You] = SimReaders.Damage(me.RunState, combat, null, creature, me.Creature, b, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move) };
                         for (var k = 0; k < mates.Count; k++)
-                            terms[Who.Teammate(k)] = SimReaders.Damage(me.RunState, cs, null, e, mates[k].Creature, b, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
+                            terms[Who.Teammate(k)] = SimReaders.Damage(me.RunState, combat, null, creature, mates[k].Creature, b, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
                         for (var i = 0; i < Math.Max(1, attack.Repeats); i++) intent.Add(new IntentHit(b) { Captured = terms });
                     }
-                    if (intent is { Count: > 0 }) se.Intent = intent;
+                    if (intent is { Count: > 0 }) enemy.Intent = intent;
                 }
                 catch
                 {
                     // intent unavailable: no attack
                 }
             }
-            s.Enemies.Add(se);
+            state.Enemies.Add(enemy);
         }
 
-        FillPlayer(s.You, me, cs, IdOf);
-        foreach (var pw in me.Creature.Powers) SimReaders.AddVars(s, Who.You, pw);
-        foreach (var r in me.Relics) SimReaders.AddVars(s, Who.You, r);
-        FillAutoPlays(s.You, me, cs, ids);
-        FillDrawPile(s.You, me, cs, ids);
-        s.You.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
-        FillSurvival(s.You, me);
+        FillPlayer(state.You, me, combat, IdOf);
+        foreach (var power in me.Creature.Powers) SimReaders.AddVars(state, Who.You, power);
+        foreach (var relic in me.Relics) SimReaders.AddVars(state, Who.You, relic);
+        FillAutoPlays(state.You, me, combat, ids);
+        FillDrawPile(state.You, me, combat, ids);
+        state.You.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
+        FillSurvival(state.You, me);
 
         // Teammates (multiplayer): built like you (FillPlayer), in player order. Decision #25: their hand is
         // used too (their Ethereal exhausts can kill enemies); what's shown runs without it (SimState.WithoutTeammateHands).
         // Each enemy hit's amount on each teammate goes through the game's damage math for them.
-        var players = cs.Players.ToList();
+        var players = combat.Players.ToList();
         var myIndex = players.IndexOf(me);
         var teamCreatures = new List<Creature>();
         for (var i = 0; i < players.Count; i++)
         {
             var other = players[i];
             if (!IsTeammate(other, me)) continue;
-            var oc = other.Creature;
-            var t = new SimPlayer();
-            FillPlayer(t, other, cs, IdOf);
-            var mateId = Who.Teammate(s.Teammates.Count);
-            foreach (var pw in oc.Powers) SimReaders.AddVars(s, mateId, pw);
-            foreach (var r in other.Relics) SimReaders.AddVars(s, mateId, r);
-            FillAutoPlays(t, other, cs, ids, mateId);
-            FillSurvival(t, other); // their potions show in the game's expanded player view, their relics on screen
-            t.BeaconOfHope = oc.HasPower<BeaconOfHopePower>();
-            s.Teammates.Add(t);
-            teamCreatures.Add(oc);
-            if (i < myIndex) s.TeammatesBeforeMe++;
+            var creature = other.Creature;
+            var player = new SimPlayer();
+            FillPlayer(player, other, combat, IdOf);
+            var mateId = Who.Teammate(state.Teammates.Count);
+            foreach (var power in creature.Powers) SimReaders.AddVars(state, mateId, power);
+            foreach (var relic in other.Relics) SimReaders.AddVars(state, mateId, relic);
+            FillAutoPlays(player, other, combat, ids, mateId);
+            FillSurvival(player, other); // their potions show in the game's expanded player view, their relics on screen
+            player.BeaconOfHope = creature.HasPower<BeaconOfHopePower>();
+            state.Teammates.Add(player);
+            teamCreatures.Add(creature);
+            if (i < myIndex) state.TeammatesBeforeMe++;
         }
         if (teamCreatures.Count > 0)
         {
-            foreach (var (e, id) in ids)
+            foreach (var (creature, id) in ids)
             {
-                if (!e.IsAlive || e.Monster == null || s.Enemy(id) is not { } se) continue;
-                foreach (var tc in teamCreatures) se.TeammateHits.Add(HitsOn(e, tc, me, cs) ?? se.Hits);
-                if (e.GetPower<ExplosivePower>() is { Amount: > 0 } explosive)
-                    se.ExplosiveOnTeammates = teamCreatures.Select(tc => ExplosiveOn(e, tc, explosive.Amount, me, cs)).ToList();
+                if (!creature.IsAlive || creature.Monster == null || state.Enemy(id) is not { } enemy) continue;
+                foreach (var teamCreature in teamCreatures) enemy.TeammateHits.Add(HitsOn(creature, teamCreature, me, combat) ?? enemy.Hits);
+                if (creature.GetPower<ExplosivePower>() is { Amount: > 0 } explosive)
+                    enemy.ExplosiveOnTeammates = teamCreatures.Select(teamCreature => ExplosiveOn(creature, teamCreature, explosive.Amount, me, combat)).ToList();
             }
         }
-        return s;
+        return state;
     }
 
     /// <summary>
     /// A player's HP, and what keeps them alive at 0 (the Death Skull, Fairy in a Bottle and Lizard Tail), the same for every
     /// player (decision #93): the heal brings them from 0 to that much (CreatureCmd.Heal; the HP setter drops the fraction).
     /// </summary>
-    private static void FillSurvival(SimPlayer p, Player player)
+    private static void FillSurvival(SimPlayer simPlayer, Player player)
     {
-        p.Hp = player.Creature.CurrentHp;
+        simPlayer.Hp = player.Creature.CurrentHp;
         var maxHp = player.Creature.MaxHp;
-        p.Fairies = SafeInt(() => player.Potions.Count(x => x.GetType().Name == "FairyInABottle"));
-        p.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
-        p.LizardTailHeal = player.Relics.FirstOrDefault(r => r is LizardTail) is { IsUsedUp: false } tail
+        simPlayer.Fairies = SafeInt(() => player.Potions.Count(potion => potion.GetType().Name == "FairyInABottle"));
+        simPlayer.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
+        simPlayer.LizardTailHeal = player.Relics.FirstOrDefault(relic => relic is LizardTail) is { IsUsedUp: false } tail
             ? Math.Max(1, (int)(maxHp * (Sts2State.Var(tail, "Heal", 50) / 100m)))
             : 0;
     }
@@ -328,44 +328,44 @@ public static partial class SimAdapter
     /// For a teammate (<paramref name="owner"/>), the piles only: Stampede never counts (a random card), and Simpleton's pick
     /// would need their card plays built as theirs, which only Howl from Beyond's is (reviewed: decision #80).
     /// </summary>
-    private static void FillAutoPlays(SimPlayer p, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids, int owner = Who.You)
+    private static void FillAutoPlays(SimPlayer player, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int owner = Who.You)
     {
         try
         {
-            p.Stampede = owner == Who.You ? me.Creature.GetPower<StampedePower>()?.Amount ?? 0 : 0;
-            p.Simpleton = owner == Who.You ? me.Creature.GetPower<SimpletonPower>()?.Amount ?? 0 : 0;
-            if (p.Stampede > 0 || p.Simpleton > 0)
+            player.Stampede = owner == Who.You ? me.Creature.GetPower<StampedePower>()?.Amount ?? 0 : 0;
+            player.Simpleton = owner == Who.You ? me.Creature.GetPower<SimpletonPower>()?.Amount ?? 0 : 0;
+            if (player.Stampede > 0 || player.Simpleton > 0)
             {
-                p.AutoHand = new List<SimHandCard>();
+                player.AutoHand = new List<SimHandCard>();
                 foreach (var card in Sts2State.Hand(me))
                 {
                     if (card.Keywords.Contains(CardKeyword.Unplayable)) continue;
-                    p.AutoHand.Add(new SimHandCard
+                    player.AutoHand.Add(new SimHandCard
                     {
                         Id = HandId(card),
                         Name = card.GetType().Name,
                         IsAttack = card.Type == CardType.Attack,
                         Cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved(),
-                        Plays = AutoPlays(card, me, cs, ids),
+                        Plays = AutoPlays(card, me, combat, ids),
                     });
                 }
             }
             foreach (var card in PileType.Exhaust.GetPile(me).Cards)
             {
-                if (card is HowlFromBeyond) p.ExhaustAutoPlays.Add(AutoPlay(card, me, cs, ids, -1, owner: owner));
+                if (card is HowlFromBeyond) player.ExhaustAutoPlays.Add(AutoPlay(card, me, combat, ids, -1, owner: owner));
             }
             var drawPile = PileType.Draw.GetPile(me).Cards;
-            if (drawPile.Count > 0 && drawPile.All(c => c is IAmInvincible))
+            if (drawPile.Count > 0 && drawPile.All(card => card is IAmInvincible))
             {
-                p.InvincibleBlock = CardBlock(drawPile[0], cs, me);
-                p.InvincibleDrawPile = drawPile.Count;
+                player.InvincibleBlock = CardBlock(drawPile[0], combat, me);
+                player.InvincibleDrawPile = drawPile.Count;
             }
         }
         catch
         {
             // unreadable: no auto-plays predicted (the forecast check skips a turn with unpredicted auto-plays)
-            p.AutoHand = null;
-            p.Stampede = p.Simpleton = 0;
+            player.AutoHand = null;
+            player.Stampede = player.Simpleton = 0;
         }
     }
 
@@ -375,35 +375,35 @@ public static partial class SimAdapter
     /// turn (always), exhausting as Ethereal (always), a Status with Iteration, Ethereal with Pagestorm, a Strike with
     /// Hellraiser, and with Stampede or Simpleton the card itself (how it plays). Everything else is one plain profile.
     /// </summary>
-    private static void FillDrawPile(SimPlayer p, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids)
+    private static void FillDrawPile(SimPlayer player, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
     {
         try
         {
             var iteration = me.Creature.HasPower<IterationPower>();
             var pagestorm = me.Creature.HasPower<PagestormPower>();
             var hellraiser = me.Creature.HasPower<HellraiserPower>();
-            var picks = p.AutoHand != null;
+            var picks = player.AutoHand != null;
             // A card in your hand that acts on the cards it draws (decision #118): what it reads goes into the profile.
-            var readers = PileType.Hand.GetPile(me).Cards.Select(c => DrawnCardReaders.GetValueOrDefault(c.GetType().Name)).OfType<DrawnCardReader>().ToList();
-            var readsType = readers.Any(r => r.What == DrawnCardReader.Reads.Type);
-            var readsCost = readers.Any(r => r.What == DrawnCardReader.Reads.Cost);
+            var readers = PileType.Hand.GetPile(me).Cards.Select(card => DrawnCardReaders.GetValueOrDefault(card.GetType().Name)).OfType<DrawnCardReader>().ToList();
+            var readsType = readers.Any(drawnCardReader => drawnCardReader.What == DrawnCardReader.Reads.Type);
+            var readsCost = readers.Any(drawnCardReader => drawnCardReader.What == DrawnCardReader.Reads.Cost);
             var autoByKey = new Dictionary<string, SimHandCard?>();
             SimDrawCard Profile(CardModel card)
             {
                 var turnEnd = TurnEndOf(card);
-                var fading = IsFading(card, cs);
+                var fading = IsFading(card, combat);
                 var hexFading = fading && EtherealOnlyFromHex(card);
                 var status = iteration && card.Type == CardType.Status;
                 var ethereal = pagestorm && card.Keywords.Contains(CardKeyword.Ethereal);
                 var strike = hellraiser && card.Tags.Contains(CardTag.Strike);
                 // Hellraiser's auto-play is built like a picked card's (decision #121), except past the game's cap on endless
                 // auto-plays, when every enemy you could hit can't die (HellraiserPower: 9 a turn): then it isn't simulated.
-                var hellraised = strike && !me.Creature.CombatState!.HittableEnemies.All(e => e.HpDisplay.IsInfinite());
-                var pickable = picks && !card.Keywords.Contains(CardKeyword.Unplayable) && (p.Simpleton > 0 || card.Type == CardType.Attack);
+                var hellraised = strike && !me.Creature.CombatState!.HittableEnemies.All(creature => creature.HpDisplay.IsInfinite());
+                var pickable = picks && !card.Keywords.Contains(CardKeyword.Unplayable) && (player.Simpleton > 0 || card.Type == CardType.Attack);
                 var cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved();
                 var who = pickable || strike ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
-                var invincible = card is IAmInvincible ? CardBlock(card, cs, me) : 0;
+                var invincible = card is IAmInvincible ? CardBlock(card, combat, me) : 0;
                 var perfectFit = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit;
                 var type = readsType ? SimReaders.TypeOf(card) : SimCardType.None;
                 bool? free = readsCost ? !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.All) == 0 : null;
@@ -414,7 +414,7 @@ public static partial class SimAdapter
                 {
                     // How it plays once in your hand: as the adapter builds a hand card's auto-plays. A card in the draw pile counts as
                     // not in your hand there (its hand delta 0): one less, as for a card played from hand.
-                    var plays = AutoPlays(card, me, cs, ids);
+                    var plays = AutoPlays(card, me, combat, ids);
                     if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) play.HandDelta -= 1;
                     auto = new SimHandCard { Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, Plays = plays };
                     autoByKey[key] = auto;
@@ -425,24 +425,24 @@ public static partial class SimAdapter
                     Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly,
                 };
             }
-            List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Profile).GroupBy(c => c.Key)
-                .Select(g => new SimDrawGroup(g.First(), g.Count())).OrderBy(g => g.Card.Key, StringComparer.Ordinal).ToList();
+            List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Profile).GroupBy(drawn => drawn.Key)
+                .Select(g => new SimDrawGroup(g.First(), g.Count())).OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList();
             // The cards known to be on top (placed there: decision #91), in order; the rest as a set.
-            var known = SpireQoL.Combat.DrawPileMemory.KnownTop.Where(c => c.Pile?.Type == PileType.Draw && c.Owner == me).ToList();
-            p.Draw = new SimDrawPile
+            var known = SpireQoL.Combat.DrawPileMemory.KnownTop.Where(card => card.Pile?.Type == PileType.Draw && card.Owner == me).ToList();
+            player.Draw = new SimDrawPile
             {
                 Top = known.Select(Profile).ToList(),
-                Rest = Groups(PileType.Draw.GetPile(me).Cards.Where(c => !known.Contains(c))),
+                Rest = Groups(PileType.Draw.GetPile(me).Cards.Where(card => !known.Contains(card))),
                 Discard = Groups(PileType.Discard.GetPile(me).Cards),
             };
             // Iteration counts the Status cards drawn this turn (CardDrawnEntry: you watched them come).
             if (iteration)
-                p.StatusDrawn = CombatManager.Instance.History.Entries.OfType<MegaCrit.Sts2.Core.Combat.History.Entries.CardDrawnEntry>()
-                    .Count(e => e.HappenedThisTurn(cs) && e.Actor == me.Creature && e.Card.Type == CardType.Status);
+                player.StatusDrawn = CombatManager.Instance.History.Entries.OfType<MegaCrit.Sts2.Core.Combat.History.Entries.CardDrawnEntry>()
+                    .Count(cardDrawnEntry => cardDrawnEntry.HappenedThisTurn(combat) && cardDrawnEntry.Actor == me.Creature && cardDrawnEntry.Card.Type == CardType.Status);
         }
         catch
         {
-            p.Draw = null; // unreadable: draws are only counted, as before
+            player.Draw = null; // unreadable: draws are only counted, as before
         }
     }
 
@@ -507,26 +507,26 @@ public static partial class SimAdapter
     /// else one. A card that draws or makes cards plays too (its hits land; the simulator stops predicting later auto-plays,
     /// whose hand it changed). None when it aims at a teammate.
     /// </summary>
-    private static List<SimPlay> AutoPlays(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids)
+    private static List<SimPlay> AutoPlays(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
     {
-        var f = PlayFacts.For(card, me, cs, CardPlays.Count(card));
+        var facts = PlayFacts.For(card, me, combat, CardPlays.Count(card));
         if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
-        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, cs, ids, -1, f) };
-        return ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => AutoPlay(card, me, cs, ids, kv.Value, f)).ToList();
+        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, -1, facts) };
+        return ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => AutoPlay(card, me, combat, ids, kv.Value, facts)).ToList();
     }
 
-    private static SimPlay AutoPlay(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? f = null,
+    private static SimPlay AutoPlay(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? facts = null,
         int owner = Who.You)
     {
-        var play = Play(card, f ?? PlayFacts.For(card, me, cs, CardPlays.Count(card)), me, cs, ids, target, owner);
+        var play = Play(card, facts ?? PlayFacts.For(card, me, combat, CardPlays.Count(card)), me, combat, ids, target, owner);
         play.AutoPlay = true;
         if (play.Card != null) play.Card = play.Card with { AutoPlay = true };
         return play;
     }
 
     /// <summary>Explosive's damage on a player (ExplosivePower.AfterDeath: CreatureCmd.Damage, Unpowered | SkipHurtAnim, no dealer card).</summary>
-    private static int ExplosiveOn(Creature enemy, Creature target, int amount, Player me, ICombatState cs)
-        => SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, cs, target, enemy, amount,
+    private static int ExplosiveOn(Creature enemy, Creature target, int amount, Player me, ICombatState combat)
+        => SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, combat, target, enemy, amount,
             MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered | MegaCrit.Sts2.Core.ValueProps.ValueProp.SkipHurtAnim, null, null,
             ModifyDamageHookType.All, CardPreviewMode.None, out _)), amount);
 
@@ -537,68 +537,68 @@ public static partial class SimAdapter
     public static bool IncludeTeammates = true;
 
     /// <summary>Another living player in the fight: a simulated teammate (SimState.Teammates, in this order).</summary>
-    internal static bool IsTeammate(Player p, Player me) => IncludeTeammates && p != me && p.Creature is { IsAlive: true } && p.PlayerCombatState != null;
+    internal static bool IsTeammate(Player player, Player me) => IncludeTeammates && player != me && player.Creature is { IsAlive: true } && player.PlayerCombatState != null;
 
     /// <summary>The simulated teammates, in player order (SimState.Teammates[k] is the k-th).</summary>
-    public static List<Player> Teammates(Player me, ICombatState cs) => cs.Players.Where(p => IsTeammate(p, me)).ToList();
+    public static List<Player> Teammates(Player me, ICombatState combat) => combat.Players.Where(player => IsTeammate(player, me)).ToList();
 
     /// <summary>
     /// A player's state for the simulator: block, powers, relics, hand, orbs, Osty. The same for you and
     /// for each teammate (multiplayer), so a teammate is modelled exactly like you.
     /// </summary>
-    private static void FillPlayer(SimPlayer p, Player me, ICombatState cs, Func<Creature, int?> idOf)
+    private static void FillPlayer(SimPlayer player, Player me, ICombatState combat, Func<Creature, int?> idOf)
     {
-        var c = me.Creature;
+        var creature = me.Creature;
         var pcs = me.PlayerCombatState!;
         var hand = Sts2State.Hand(me);
-        p.Block = c.Block;
+        player.Block = creature.Block;
         // every power and relic with the numbers its model keeps, and the turn's card plays (docs/SIMULATOR.md).
-        p.Powers = SimReaders.Powers(c, idOf);
-        p.Relics = SimReaders.Relics(me);
-        p.Turn = SimReaders.Turn(me, cs);
-        p.Reflect = c.Powers.Any(pw => pw is ReflectPower);
-        foreach (var r in me.Relics)
+        player.Powers = SimReaders.Powers(creature, idOf);
+        player.Relics = SimReaders.Relics(me);
+        player.Turn = SimReaders.Turn(me, combat);
+        player.Reflect = creature.Powers.Any(power => power is ReflectPower);
+        foreach (var relic in me.Relics)
         {
-            switch (r.GetType().Name)
+            switch (relic.GetType().Name)
             {
                 case nameof(PaelsEye):
                     // Status Active: unused, and no card played this turn (BeforeCardPlayed sets it back); Whispering
                     // Earring's turn 1 counts as played (PaelsEye.AnyCardsPlayedThisTurn).
-                    p.PaelsEyeExhaust = r.Status == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active
-                        && !(Sts2State.TurnNumber == 1 && me.Relics.Any(x => x is WhisperingEarring));
+                    player.PaelsEyeExhaust = relic.Status == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active
+                        && !(Sts2State.TurnNumber == 1 && me.Relics.Any(otherRelic => otherRelic is WhisperingEarring));
                     break;
-                case nameof(GoldPlatedCables): p.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
+                case nameof(GoldPlatedCables): player.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
             }
         }
 
-        p.HandCount = hand.Count;
-        p.Energy = pcs.Energy;
-        p.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
-        p.Fading = hand.Count(card => IsFading(card, cs));
+        player.HandCount = hand.Count;
+        player.Energy = pcs.Energy;
+        player.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
+        player.Fading = hand.Count(card => IsFading(card, combat));
         // Hex (decision #85): its cards' Ethereal goes when its caster dies.
-        if (c.GetPower<HexPower>() is { Applier: { } hexer } && idOf(hexer) is { } hexId && hexId >= 0)
+        if (creature.GetPower<HexPower>() is { Applier: { } hexer } && idOf(hexer) is { } hexId && hexId >= 0)
         {
-            p.HexFrom = hexId;
-            p.HexFading = hand.Count(card => IsFading(card, cs) && EtherealOnlyFromHex(card));
+            player.HexFrom = hexId;
+            player.HexFading = hand.Count(card => IsFading(card, combat) && EtherealOnlyFromHex(card));
         }
-        p.AttacksThisTurn = Sts2State.CountPlayedThisTurn(me, CardType.Attack);
+        player.AttacksThisTurn = Sts2State.CountPlayedThisTurn(me, CardType.Attack);
         // Cards that act in hand at the end of the turn (the simulator's list): their Damage or HpLoss as the card shows it.
         foreach (var card in hand)
-            if (TurnEndOf(card) is { } turnEnd) p.TurnEndCards.Add(turnEnd);
+            if (TurnEndOf(card) is { } turnEnd) player.TurnEndCards.Add(turnEnd);
 
-        p.Focus = c.GetPower<FocusPower>()?.Amount ?? 0;
-        p.OrbCapacity = pcs.OrbQueue.Capacity;
-        p.SlotOnFirstChannel = SafeInt(() => me.Character.BaseOrbSlotCount) == 0;
-        p.Thunder = me.Creature.GetPower<ThunderPower>()?.Amount ?? 0;
-        foreach (var orb in pcs.OrbQueue.Orbs) p.Orbs.Add(ToSim(orb, cs));
+        player.Focus = creature.GetPower<FocusPower>()?.Amount ?? 0;
+        player.OrbCapacity = pcs.OrbQueue.Capacity;
+        player.SlotOnFirstChannel = SafeInt(() => me.Character.BaseOrbSlotCount) == 0;
+        player.Thunder = me.Creature.GetPower<ThunderPower>()?.Amount ?? 0;
+        foreach (var orb in pcs.OrbQueue.Orbs) player.Orbs.Add(ToSim(orb, combat));
         // The game's trigger count includes Gold-Plated Cables' bonus on the current front orb; the
         // simulator gives that bonus to whichever orb is in front when passives fire.
-        if (p.Orbs.Count > 0) p.Orbs[0].Triggers = Math.Max(1, p.Orbs[0].Triggers - p.FrontOrbBonusTriggers);
+        if (player.Orbs.Count > 0) player.Orbs[0].Triggers = Math.Max(1, player.Orbs[0].Triggers - player.FrontOrbBonusTriggers);
 
         var osty = me.Osty;
-        p.OstyHp = osty != null && osty.IsAlive ? osty.CurrentHp : 0;
-        p.OstyShields = osty != null && osty.HasPower<DieForYouPower>();
-        p.WuppyHp = SafeInt(() => me.Creature.Pets.Where(c => c.IsAlive && c.Powers.Any(x => x.GetType().Name == "WuppysLoyaltyPower")).Sum(c => c.CurrentHp));
+        player.OstyHp = osty != null && osty.IsAlive ? osty.CurrentHp : 0;
+        player.OstyShields = osty != null && osty.HasPower<DieForYouPower>();
+        player.WuppyHp = SafeInt(() => me.Creature.Pets.Where(pet => pet.IsAlive && pet.Powers.Any(power => power.GetType().Name == "WuppysLoyaltyPower")).Sum(pet => pet.CurrentHp));
     }
 
     /// <summary>
@@ -606,15 +606,15 @@ public static partial class SimAdapter
     /// (their Vulnerable, Intangible, Tank...), as AttackIntent.GetSingleDamage does for you. Null if the
     /// intent can't be read.
     /// </summary>
-    private static List<int>? HitsOn(Creature e, Creature target, Player me, ICombatState cs)
+    private static List<int>? HitsOn(Creature creature, Creature target, Player me, ICombatState combat)
     {
         try
         {
             var hits = new List<int>();
-            foreach (var attack in e.Monster!.NextMove.Intents.OfType<AttackIntent>())
+            foreach (var attack in creature.Monster!.NextMove.Intents.OfType<AttackIntent>())
             {
                 if (attack.DamageCalc == null) return null;
-                var v = Hook.ModifyDamage(me.RunState, cs, target, e, attack.DamageCalc(), MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
+                var v = Hook.ModifyDamage(me.RunState, combat, target, creature, attack.DamageCalc(), MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null,
                     ModifyDamageHookType.All, CardPreviewMode.None, out _);
                 var perHit = Math.Max(0, (int)v);
                 for (var i = 0; i < Math.Max(1, attack.Repeats); i++) hits.Add(perHit);
@@ -641,11 +641,11 @@ public static partial class SimAdapter
         }
     }
 
-    private static bool IsFading(CardModel card, ICombatState cs)
+    private static bool IsFading(CardModel card, ICombatState combat)
     {
         try
         {
-            return card.Keywords.Contains(CardKeyword.Ethereal) && (card.HasTurnEndInHandEffect || Hook.ShouldEtherealTrigger(cs, card));
+            return card.Keywords.Contains(CardKeyword.Ethereal) && (card.HasTurnEndInHandEffect || Hook.ShouldEtherealTrigger(combat, card));
         }
         catch
         {
@@ -653,7 +653,7 @@ public static partial class SimAdapter
         }
     }
 
-    private static SimOrb ToSim(OrbModel orb, ICombatState cs)
+    private static SimOrb ToSim(OrbModel orb, ICombatState combat)
     {
         var kind = orb switch
         {
@@ -665,7 +665,7 @@ public static partial class SimAdapter
             _ => OrbKind.Unknown,
         };
         var triggers = 1;
-        try { triggers = Hook.ModifyOrbPassiveTriggerCount(cs, orb, 1, out _); } catch { /* 1 */ }
+        try { triggers = Hook.ModifyOrbPassiveTriggerCount(combat, orb, 1, out _); } catch { /* 1 */ }
         var sim = new SimOrb { Kind = kind, Passive = (int)orb.PassiveVal, Evoke = (int)orb.EvokeVal, Triggers = triggers };
         if (orb is GlassOrb)
         {
@@ -687,11 +687,11 @@ public static partial class SimAdapter
     /// </summary>
     private static int FocusChange(CardModel card)
     {
-        var t = card.GetType();
-        if (!FocusSign.TryGetValue(t, out var sign))
+        var type = card.GetType();
+        if (!FocusSign.TryGetValue(type, out var sign))
         {
             sign = 0;
-            foreach (var applied in Diagnostics.CardCoverage.PowersApplied(t))
+            foreach (var applied in Diagnostics.CardCoverage.PowersApplied(type))
             {
                 if (applied == typeof(FocusPower)) sign = 1;
                 else if (typeof(TemporaryFocusPower).IsAssignableFrom(applied))
@@ -708,14 +708,14 @@ public static partial class SimAdapter
                     }
                 }
             }
-            FocusSign[t] = sign;
+            FocusSign[type] = sign;
         }
         if (sign == 0) return 0;
         decimal amount = 0;
         try
         {
-            if (card.DynamicVars.TryGetValue("FocusPower", out var v)) amount = v.BaseValue;
-            else if (card.DynamicVars.TryGetValue("CalculatedFocus", out var cv) && cv is CalculatedVar calc) amount = calc.Calculate(null);
+            if (card.DynamicVars.TryGetValue("FocusPower", out var dynamicVar)) amount = dynamicVar.BaseValue;
+            else if (card.DynamicVars.TryGetValue("CalculatedFocus", out var otherDynamicVar) && otherDynamicVar is CalculatedVar calc) amount = calc.Calculate(null);
         }
         catch
         {
@@ -728,16 +728,16 @@ public static partial class SimAdapter
     /// The card's block through the game's block math. gainer: who gets it (you by default; a targeted teammate for
     /// Lift); calcTarget: the target a calculated value is worked out on (Mimic, Demonic Shield aimed at a teammate).
     /// </summary>
-    public static int CardBlock(CardModel card, ICombatState cs, Player me, Creature? gainer = null, Creature? calcTarget = null)
+    public static int CardBlock(CardModel card, ICombatState combat, Player me, Creature? gainer = null, Creature? calcTarget = null)
     {
         try
         {
             decimal raw;
-            if (card.DynamicVars.TryGetValue("CalculatedBlock", out var cv) && cv is CalculatedVar calc) raw = calc.Calculate(calcTarget);
-            else if (card.DynamicVars.TryGetValue("Block", out var bv)) raw = bv.BaseValue;
+            if (card.DynamicVars.TryGetValue("CalculatedBlock", out var dynamicVar) && dynamicVar is CalculatedVar calc) raw = calc.Calculate(calcTarget);
+            else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) raw = otherDynamicVar.BaseValue;
             else return 0;
             if (raw <= 0) return 0;
-            return Math.Max(0, (int)Hook.ModifyBlock(cs, gainer ?? me.Creature, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _));
+            return Math.Max(0, (int)Hook.ModifyBlock(combat, gainer ?? me.Creature, raw, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, card, null, out _));
         }
         catch
         {
@@ -755,8 +755,8 @@ public static partial class SimAdapter
         try { return f(); } catch { return fallback; }
     }
 
-    private static string SafeCardTitle(CardModel c)
+    private static string SafeCardTitle(CardModel card)
     {
-        try { return c.Title; } catch { return c.GetType().Name; }
+        try { return card.Title; } catch { return card.GetType().Name; }
     }
 }

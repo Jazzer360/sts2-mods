@@ -11,17 +11,17 @@ public class SimOstyTests
     [Fact]
     public void ACardThatKillsOstyLeavesTheHitsToYou()
     {
-        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 6 } } } };
-        s.You.OstyHp = 10;
-        Assert.Equal(0, SimEngine.Run(s).TakenMax); // Osty takes the 6
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 6 } } } };
+        state.You.OstyHp = 10;
+        Assert.Equal(0, SimEngine.Run(state).TakenMax); // Osty takes the 6
 
         // Sacrifice: kills Osty, then 8 block (the block math stays the adapter's).
         var sacrifice = new SimPlay { Name = "Sacrifice", KillsOsty = true, BlockGains = 1, BlockAmount = 8 };
-        SimEngine.ApplyPlayTo(s, sacrifice, out var after, out _);
+        SimEngine.ApplyPlayTo(state, sacrifice, out var after, out _);
         Assert.Equal(0, after[0].You.OstyHp);
-        var o = SimEngine.Run(s, sacrifice);
-        Assert.Equal(0, o.TakenMax);           // 8 block against 6
-        Assert.Equal(0, o.OstyTakenMax);
+        var outcome = SimEngine.Run(state, sacrifice);
+        Assert.Equal(0, outcome.TakenMax);           // 8 block against 6
+        Assert.Equal(0, outcome.OstyTakenMax);
 
         var bigHit = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 40, Hits = { 12 } } } };
         bigHit.You.OstyHp = 10;

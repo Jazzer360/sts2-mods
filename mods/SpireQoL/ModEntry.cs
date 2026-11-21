@@ -67,7 +67,7 @@ public static class ModEntry
         if (DevMode) reporter.Tags["dev"] = "true";
         try { reporter.Tags["game_version"] = MegaCrit.Sts2.Core.Nodes.NGame.GetGameVersion(); } catch { }
         // Multiplayer reports have their own budget: a noisy co-op session can't crowd out single-player ones.
-        reporter.BudgetKey = () => Sts2State.Combat is { } c && c.Players.Count > 1 ? "multiplayer" : "single";
+        reporter.BudgetKey = () => Sts2State.Combat is { } combat && combat.Players.Count > 1 ? "multiplayer" : "single";
         // Who's in the fight: tells multiplayer reports apart (players 2-4, every player's character, yours first).
         reporter.TagProvider = () =>
         {
@@ -81,11 +81,11 @@ public static class ModEntry
             }
             tags["other_mods"] = Short(Sts2Mods.Core.Game.OtherMods.Loaded(typeof(ModEntry).Assembly));
             tags["gameplay_mods"] = Short(Sts2Mods.Core.Game.OtherMods.Gameplay(typeof(ModEntry).Assembly, _floor?.GameplayMods));
-            if (Sts2State.Combat is { } cs && Sts2State.Me is { } me)
+            if (Sts2State.Combat is { } combat && Sts2State.Me is { } me)
             {
-                var players = cs.Players.ToList();
+                var players = combat.Players.ToList();
                 tags["players"] = players.Count.ToString();
-                tags["characters"] = string.Join(", ", players.OrderBy(p => p == me ? 0 : 1).Select(p => p.Character.GetType().Name));
+                tags["characters"] = string.Join(", ", players.OrderBy(player => player == me ? 0 : 1).Select(player => player.Character.GetType().Name));
             }
             return tags;
         };
@@ -139,26 +139,26 @@ public static class ModEntry
             new Diagnostics.CoverageWatch(ctx),
             new Telemetry.SessionWatch(), // after the audits: a frame's checks are posted before its turn or fight changes
         };
-        foreach (var f in features) Features.Add(f);
+        foreach (var feature in features) Features.Add(feature);
 
-        Features.ApplyAll(f => settings.Features.TryGetValue(f.Id, out var on) ? on : f.EnabledByDefault);
+        Features.ApplyAll(feature => settings.Features.TryGetValue(feature.Id, out var on) ? on : feature.EnabledByDefault);
 
         // Write every feature id into settings so players can see what can be toggled.
-        foreach (var f in features)
+        foreach (var feature in features)
         {
-            settings.Features.TryAdd(f.Id, f.EnabledByDefault);
+            settings.Features.TryAdd(feature.Id, feature.EnabledByDefault);
         }
         settingsFile.Save();
 
         // Features switched off are still attached, just skipped each frame, so the settings menu
         // can turn them on and off while the game runs (host.FeatureEnabled).
-        var defaults = features.ToDictionary(f => f.Id, f => f.EnabledByDefault);
+        var defaults = features.ToDictionary(feature => feature.Id, feature => feature.EnabledByDefault);
         host.FeatureEnabled = id => settings.Features.TryGetValue(id, out var on) ? on : !defaults.TryGetValue(id, out var d) || d;
-        foreach (var f in features)
+        foreach (var feature in features)
         {
-            if (f is IFrameFeature frame && Features.States[f.Id] != FeatureState.Failed)
+            if (feature is IFrameFeature frame && Features.States[feature.Id] != FeatureState.Failed)
             {
-                host.AddFeature(f.Id, frame);
+                host.AddFeature(feature.Id, frame);
             }
         }
 
@@ -245,7 +245,7 @@ public static class ModEntry
             }
             if (settings.ShowTurnTimers == true)
             {
-                foreach (var spec in Data.RelicSpecs.All.Where(s => s.TurnTimer)) settings.Relics.TryAdd(spec.TypeName, true);
+                foreach (var spec in Data.RelicSpecs.All.Where(relicCounterSpec => relicCounterSpec.TurnTimer)) settings.Relics.TryAdd(spec.TypeName, true);
             }
         }
         if (settings.SettingsVersion < 2)

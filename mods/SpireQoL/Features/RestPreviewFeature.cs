@@ -64,7 +64,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         {
             if (Sts2State.Private<Player?>(__instance, "Owner", null) is not { } owner || RunMe() != owner) return;
             Used.AddOrUpdate(__instance, true);
-            if (Compute(owner, rest: true) is { } p) _pendingRest = (p.Outcome.RestedHp, p.Outcome.RestedMax);
+            if (Compute(owner, rest: true) is { } preview) _pendingRest = (preview.Outcome.RestedHp, preview.Outcome.RestedMax);
         }
         catch (Exception ex)
         {
@@ -84,8 +84,8 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
             var pending = new Dictionary<Player, (int, int, int, int)>();
             foreach (var mate in owner.RunState.Players)
             {
-                if (mate == owner || Compute(mate, rest: true) is not { } p) continue;
-                pending[mate] = (mate.Creature.CurrentHp, mate.Creature.MaxHp, p.Outcome.RestedHp, p.Outcome.RestedMax);
+                if (mate == owner || Compute(mate, rest: true) is not { } preview) continue;
+                pending[mate] = (mate.Creature.CurrentHp, mate.Creature.MaxHp, preview.Outcome.RestedHp, preview.Outcome.RestedMax);
             }
             _pendingMend = pending;
         }
@@ -147,22 +147,22 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     /// </summary>
     private static Rect2? Side(Rect2? character, bool right)
     {
-        if (character is not { } r || NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) return null;
+        if (character is not { } rect || NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) return null;
         var middle = room.GetViewportRect().Size.X / 2;
-        var onRight = r.GetCenter().X > middle;
-        var key = $"{r.Position.X:0},{r.Position.Y:0}";
-        if (SidesLogged.Add(key)) ModEntry.Log.Info($"rest preview: character at {r.Position}, {r.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
-        return onRight == right ? r : null;
+        var onRight = rect.GetCenter().X > middle;
+        var key = $"{rect.Position.X:0},{rect.Position.Y:0}";
+        if (SidesLogged.Add(key)) ModEntry.Log.Info($"rest preview: character at {rect.Position}, {rect.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
+        return onRight == right ? rect : null;
     }
 
     /// <summary>A player's character at the fire (NRestSiteCharacter's hitbox), on screen.</summary>
     private static Rect2? CharacterRect(Player? who)
     {
         if (who == null || NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) return null;
-        var c = room.GetCharacterForPlayer(who);
-        if (c == null || !GodotObject.IsInstanceValid(c) || c.Hitbox is not { } hit || !hit.IsVisibleInTree()) return null;
-        var r = Sts2State.ScreenRect(hit);
-        return r.Size.X >= 1 ? r : null;
+        var nRestSiteCharacter = room.GetCharacterForPlayer(who);
+        if (nRestSiteCharacter == null || !GodotObject.IsInstanceValid(nRestSiteCharacter) || nRestSiteCharacter.Hitbox is not { } hit || !hit.IsVisibleInTree()) return null;
+        var rect = Sts2State.ScreenRect(hit);
+        return rect.Size.X >= 1 ? rect : null;
     }
 
     /// <summary>A sum, and its icons (the game's own: the option, the relics, the modifier).</summary>
@@ -171,23 +171,23 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     /// <summary>What Rest (or a Mend on <paramref name="who"/>) leaves them with; rest false: only the boss relics.</summary>
     public static Preview? Compute(Player who, bool rest, bool mend = false)
     {
-        var c = who.Creature;
-        if (c.MaxHp <= 0) return null;
+        var creature = who.Creature;
+        if (creature.MaxHp <= 0) return null;
         decimal heal, baseHeal;
         try
         {
             heal = HealRestSiteOption.GetHealAmount(who);
-            baseHeal = HealRestSiteOption.GetBaseHealAmount(c);
+            baseHeal = HealRestSiteOption.GetBaseHealAmount(creature);
         }
         catch { return null; }
-        var nightTerrors = who.RunState.Modifiers.FirstOrDefault(m => m is NightTerrors);
+        var nightTerrors = who.RunState.Modifiers.FirstOrDefault(modifierModel => modifierModel is NightTerrors);
         var pillow = who.Relics.OfType<RegalPillow>().FirstOrDefault();
         var humidifiers = who.Relics.OfType<StoneHumidifier>().ToList();
         // The boss fight's start: the relics mark themselves Active at the boss's parent map point (AfterRoomEntered).
-        var bossRelics = who.Relics.Where(r => r.Status == RelicStatus.Active && r is Pantograph or BathRobes { IsUsedUp: false }).ToList();
-        var boss = bossRelics.Select(r => r is BathRobes ? (RestStep.BathRobes, 0) : (RestStep.Pantograph, Sts2State.Var(r, "Heal", 25))).ToList();
-        var outcome = RestMath.Compute(c.CurrentHp, c.MaxHp, heal, pillow != null ? heal - baseHeal : 0,
-            humidifiers.Select(h => Sts2State.Var(h, "MaxHp", 5)).ToList(), nightTerrors != null, boss, rest);
+        var bossRelics = who.Relics.Where(relic => relic.Status == RelicStatus.Active && relic is Pantograph or BathRobes { IsUsedUp: false }).ToList();
+        var boss = bossRelics.Select(relic => relic is BathRobes ? (RestStep.BathRobes, 0) : (RestStep.Pantograph, Sts2State.Var(relic, "Heal", 25))).ToList();
+        var outcome = RestMath.Compute(creature.CurrentHp, creature.MaxHp, heal, pillow != null ? heal - baseHeal : 0,
+            humidifiers.Select(stoneHumidifier => Sts2State.Var(stoneHumidifier, "MaxHp", 5)).ToList(), nightTerrors != null, boss, rest);
 
         var lines = new List<(Texture2D?, int)>();
         int humid = 0, bossAt = 0;
@@ -221,22 +221,22 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         var options = inRoom ? LocalOptions() : new List<RestSiteOption>();
 
         // Yours: Rest on offer (not chosen yet, not disabled); otherwise only what the boss relics will do anyway.
-        var canRest = options.Any(o => o is HealRestSiteOption && o.IsEnabled && !Used.TryGetValue(o, out _));
+        var canRest = options.Any(restSiteOption => restSiteOption is HealRestSiteOption && restSiteOption.IsEnabled && !Used.TryGetValue(restSiteOption, out _));
         var mine = inRoom ? Compute(me!, canRest) : null;
         var showMine = mine != null && (canRest || mine.BossRelics.Count > 0);
         _mine!.HasContent = showMine;
         if (showMine) Show(_minePanel!, mine!, canRest);
 
         // A teammate you hover while Mend is on offer: what Mend would leave them with.
-        var canMend = options.Any(o => o is MendRestSiteOption && o.IsEnabled && !Used.TryGetValue(o, out _));
+        var canMend = options.Any(restSiteOption => restSiteOption is MendRestSiteOption && restSiteOption.IsEnabled && !Used.TryGetValue(restSiteOption, out _));
         _hoveredMate = inRoom && canMend ? HoveredMate(room!, me!) : null;
         var theirs = _hoveredMate != null ? Compute(_hoveredMate, rest: true, mend: true) : null;
         _mate!.HasContent = theirs != null;
         if (theirs != null) Show(_matePanel!, theirs, true);
     }
 
-    private static void Show(RestMathPanel panel, Preview p, bool rest) =>
-        panel.Show(p.Outcome.Hp, p.Lines, p.Outcome.ResultHp, p.Outcome.ResultMax, rest ? p.Outcome.Over : 0);
+    private static void Show(RestMathPanel panel, Preview preview, bool rest) =>
+        panel.Show(preview.Outcome.Hp, preview.Lines, preview.Outcome.ResultHp, preview.Outcome.ResultMax, rest ? preview.Outcome.Over : 0);
 
     private static List<RestSiteOption> LocalOptions()
     {
@@ -248,10 +248,10 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     private static Player? HoveredMate(NRestSiteRoom room, Player me)
     {
         var mouse = room.GetViewport().GetMousePosition();
-        foreach (var c in room.characterAnims)
+        foreach (var nRestSiteCharacter in room.characterAnims)
         {
-            if (!GodotObject.IsInstanceValid(c) || c.Player == me || c.Hitbox is not { } hit || !hit.IsVisibleInTree()) continue;
-            if (Sts2State.ScreenRect(hit).HasPoint(mouse)) return c.Player;
+            if (!GodotObject.IsInstanceValid(nRestSiteCharacter) || nRestSiteCharacter.Player == me || nRestSiteCharacter.Hitbox is not { } hit || !hit.IsVisibleInTree()) continue;
+            if (Sts2State.ScreenRect(hit).HasPoint(mouse)) return nRestSiteCharacter.Player;
         }
         return null;
     }
@@ -265,11 +265,11 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     private void Check(Player? me)
     {
         if (me == null) return;
-        var c = me.Creature;
+        var creature = me.Creature;
         if (_pendingRest is { } want && ++_restCheckFrames >= 90)
         {
-            var what = $"rest: HP {c.CurrentHp}/{c.MaxHp}, predicted {want.Hp}/{want.Max}";
-            var ok = c.CurrentHp == want.Hp && c.MaxHp == want.Max;
+            var what = $"rest: HP {creature.CurrentHp}/{creature.MaxHp}, predicted {want.Hp}/{want.Max}";
+            var ok = creature.CurrentHp == want.Hp && creature.MaxHp == want.Max;
             ModEntry.Log.Info($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
             Telemetry.Audits.Done(Telemetry.Audits.Rest, ok, "rest-heal");
             if (!ok) Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "HP after resting didn't match the preview", new[] { "rest-heal" }, what);
@@ -277,11 +277,11 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         }
         if (_pendingRest == null) _restCheckFrames = 0;
 
-        if (NRestSiteRoom.Instance is { } r && GodotObject.IsInstanceValid(r))
+        if (NRestSiteRoom.Instance is { } nRestSiteRoom && GodotObject.IsInstanceValid(nRestSiteRoom))
         {
             // How you leave the rest site (rested or not): with Pantograph or Bath Robes ready, the boss fight's start.
-            var p = Compute(me, rest: false);
-            _bossPredicted = p is { BossRelics.Count: > 0 } ? p.Outcome.ResultHp : null;
+            var preview = Compute(me, rest: false);
+            _bossPredicted = preview is { BossRelics.Count: > 0 } ? preview.Outcome.ResultHp : null;
             _bossFrames = 0;
             return;
         }
@@ -296,10 +296,10 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         }
         // BeforeCombatStart has run by the time your first turn's cards are dealt; nothing hits you before you act.
         if (++_bossFrames < 45) return;
-        var line = $"boss start: HP {c.CurrentHp}/{c.MaxHp}, predicted {boss}";
-        ModEntry.Log.Info($"[audit] [rest] {line}{(c.CurrentHp == boss ? ", matched" : "")}");
-        Telemetry.Audits.Done(Telemetry.Audits.Rest, c.CurrentHp == boss, "rest-boss");
-        if (c.CurrentHp != boss)
+        var line = $"boss start: HP {creature.CurrentHp}/{creature.MaxHp}, predicted {boss}";
+        ModEntry.Log.Info($"[audit] [rest] {line}{(creature.CurrentHp == boss ? ", matched" : "")}");
+        Telemetry.Audits.Done(Telemetry.Audits.Rest, creature.CurrentHp == boss, "rest-boss");
+        if (creature.CurrentHp != boss)
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "HP at the boss fight's start didn't match the rest preview", new[] { "rest-boss" }, line);
         _bossPredicted = null;
     }
@@ -321,10 +321,10 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         var changed = pending.FirstOrDefault(kv => kv.Key.Creature.CurrentHp != kv.Value.Hp || kv.Key.Creature.MaxHp != kv.Value.Max);
         if (changed.Key == null) { _mendFrames = 0; return; }
         if (++_mendFrames < 90) return;
-        var c = changed.Key.Creature;
+        var creature = changed.Key.Creature;
         var want = changed.Value;
-        var what = $"mend: teammate HP {c.CurrentHp}/{c.MaxHp}, predicted {want.WantHp}/{want.WantMax}";
-        var ok = c.CurrentHp == want.WantHp && c.MaxHp == want.WantMax;
+        var what = $"mend: teammate HP {creature.CurrentHp}/{creature.MaxHp}, predicted {want.WantHp}/{want.WantMax}";
+        var ok = creature.CurrentHp == want.WantHp && creature.MaxHp == want.WantMax;
         ModEntry.Log.Info($"[audit] [rest] {what}{(ok ? ", matched" : "")}");
         Telemetry.Audits.Done(Telemetry.Audits.Rest, ok, "rest-mend");
         if (!ok) Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("rest", "A teammate's HP after Mend didn't match the preview", new[] { "rest-mend" }, what);

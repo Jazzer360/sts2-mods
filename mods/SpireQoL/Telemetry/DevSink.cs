@@ -60,7 +60,7 @@ public sealed class FrameWindow
         double At(double p) => _mod.Count == 0 ? 0 : _mod[Math.Clamp((int)Math.Ceiling(p * _mod.Count) - 1, 0, _mod.Count - 1)];
         static double R(double v) => Math.Round(v, 2);
         var n = Math.Max(1, _mod.Count);
-        var r = new FrameRollup(R(seconds), _mod.Count, R(At(0.5)), R(At(0.95)), R(_mod.Count == 0 ? 0 : _mod[^1]), R(_gapMax), _slow,
+        var frameRollup = new FrameRollup(R(seconds), _mod.Count, R(At(0.5)), R(At(0.95)), R(_mod.Count == 0 ? 0 : _mod[^1]), R(_gapMax), _slow,
             _features.ToDictionary(kv => kv.Key, kv => R(kv.Value.Sum / n)), _features.ToDictionary(kv => kv.Key, kv => R(kv.Value.Max)),
             _kb.ToDictionary(kv => kv.Key, kv => R(kv.Value / n)),
             R(extra.HeapMb), R(extra.AllocatedMb), extra.Gen0, extra.Gen1, extra.Gen2, R(extra.GcPauseMs), extra.Held, extra.Searching);
@@ -69,7 +69,7 @@ public sealed class FrameWindow
         _slow = 0;
         _features.Clear();
         _kb.Clear();
-        return r;
+        return frameRollup;
     }
 }
 
@@ -133,9 +133,9 @@ public sealed class DevSink : IDisposable
     }
 
     /// <summary>One event's line: <c>{"t":12.345,"kind":"search-done",...}</c>.</summary>
-    public static string Line(double t, DevEvent e)
+    public static string Line(double t, DevEvent devEvent)
     {
-        var json = JsonSerializer.Serialize(e, e.GetType(), Options);
+        var json = JsonSerializer.Serialize(devEvent, devEvent.GetType(), Options);
         var head = $"{{\"t\":{Math.Round(t, 3).ToString(System.Globalization.CultureInfo.InvariantCulture)}";
         return json.Length <= 2 ? head + "}" : head + "," + json[1..];
     }
@@ -143,7 +143,7 @@ public sealed class DevSink : IDisposable
     public static string Json(object value, bool indented = false) => JsonSerializer.Serialize(value, value.GetType(), indented ? Indented : Options);
 
     /// <summary>Queues an event (any thread).</summary>
-    public void Post(DevEvent e) => _queue.Enqueue((_seconds(), e));
+    public void Post(DevEvent devEvent) => _queue.Enqueue((_seconds(), devEvent));
 
     /// <summary>Sets the state the page reads (any thread); written on the writer's next pass.</summary>
     public void SetState(string json) => Interlocked.Exchange(ref _state, json);
@@ -174,14 +174,14 @@ public sealed class DevSink : IDisposable
         {
             if (!_queue.IsEmpty)
             {
-                using var w = new StreamWriter(new FileStream(StreamPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete));
+                using var streamWriter = new StreamWriter(new FileStream(StreamPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete));
                 while (_queue.TryDequeue(out var item))
                 {
                     string line;
                     try { line = Line(item.T, item.E); }
                     catch (Exception ex) { line = Line(item.T, new LogLine("WARN", $"[dev] couldn't write a {item.E.Kind} event: {ex.Message}")); }
-                    w.Write(line);
-                    w.Write('\n');
+                    streamWriter.Write(line);
+                    streamWriter.Write('\n');
                 }
             }
             while (_files.TryDequeue(out var f))

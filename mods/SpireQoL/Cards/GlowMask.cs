@@ -28,22 +28,22 @@ internal sealed class GlowMask
         _glow = glow;
         _original = glow.Material;
         _copy = new ShaderMaterial { Shader = masked };
-        foreach (var u in original.Shader.GetShaderUniformList())
-            if (u.AsGodotDictionary()["name"].AsString() is { Length: > 0 } name) _params.Add(name);
+        foreach (var variant in original.Shader.GetShaderUniformList())
+            if (variant.AsGodotDictionary()["name"].AsString() is { Length: > 0 } name) _params.Add(name);
         glow.Material = _copy;
     }
 
     /// <summary>A mask for this glow, or null when its shader can't take one (then the glow is left as it is).</summary>
     public static GlowMask? Create(CanvasItem? glow)
     {
-        if (glow == null || !GodotObject.IsInstanceValid(glow) || glow.Material is not ShaderMaterial { Shader: { } shader } m) return null;
+        if (glow == null || !GodotObject.IsInstanceValid(glow) || glow.Material is not ShaderMaterial { Shader: { } shader } shaderMaterial) return null;
         var id = shader.GetInstanceId();
         if (!Masked.TryGetValue(id, out var masked))
         {
             masked = MaskedCopy(shader);
             Masked[id] = masked;
         }
-        return masked == null ? null : new GlowMask(glow, m, masked);
+        return masked == null ? null : new GlowMask(glow, shaderMaterial, masked);
     }
 
     /// <summary>
@@ -115,8 +115,8 @@ internal sealed class GlowMask
     {
         if (!GodotObject.IsInstanceValid(_glow)) return;
         if (_glow.Material != _copy) _glow.Material = _copy; // the game put its own back (a pooled node reset)
-        if (_original is ShaderMaterial o)
-            foreach (var p in _params) _copy.SetShaderParameter(p, o.GetShaderParameter(p));
+        if (_original is ShaderMaterial shaderMaterial)
+            foreach (var stringName in _params) _copy.SetShaderParameter(stringName, shaderMaterial.GetShaderParameter(stringName));
         // A point in the glow's own coordinates to the image's (both CanvasItems: their global transforms).
         var toImage = image.GetGlobalTransform().AffineInverse() * _glow.GetGlobalTransform();
         _copy.SetShaderParameter(Mask, texture);

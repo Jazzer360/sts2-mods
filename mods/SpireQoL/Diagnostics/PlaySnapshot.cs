@@ -30,19 +30,19 @@ internal sealed class PlaySnapshot
     {
         try
         {
-            var s = new PlaySnapshot();
+            var playSnapshot = new PlaySnapshot();
             var pcs = me.PlayerCombatState!;
-            s.Energy = pcs.Energy;
-            s.Stars = pcs.Stars;
-            s.Gold = me.Gold;
-            foreach (var c in me.Creature.CombatState!.Creatures) s.Creatures[c] = (c.CurrentHp, c.MaxHp);
+            playSnapshot.Energy = pcs.Energy;
+            playSnapshot.Stars = pcs.Stars;
+            playSnapshot.Gold = me.Gold;
+            foreach (var creature in me.Creature.CombatState!.Creatures) playSnapshot.Creatures[creature] = (creature.CurrentHp, creature.MaxHp);
             foreach (var pile in new[] { pcs.Hand, pcs.DrawPile, pcs.DiscardPile, pcs.ExhaustPile })
             foreach (var card in pile.Cards)
-                s.Cards[card] = (pile.Type, SafeCost(card), card.IsUpgraded, string.Join(",", card.Keywords.OrderBy(k => k)),
+                playSnapshot.Cards[card] = (pile.Type, SafeCost(card), card.IsUpgraded, string.Join(",", card.Keywords.OrderBy(cardKeyword => cardKeyword)),
                     card.Affliction?.GetType().Name ?? "", card.Enchantment?.GetType().Name ?? "");
-            foreach (var r in me.Relics) s.Relics[r] = (SafeDisplay(r), r.Status);
-            foreach (var o in pcs.OrbQueue?.Orbs ?? Enumerable.Empty<OrbModel>()) s.Orbs.Add(o.GetType());
-            return s;
+            foreach (var relic in me.Relics) playSnapshot.Relics[relic] = (SafeDisplay(relic), relic.Status);
+            foreach (var orb in pcs.OrbQueue?.Orbs ?? Enumerable.Empty<OrbModel>()) playSnapshot.Orbs.Add(orb.GetType());
+            return playSnapshot;
         }
         catch
         {
@@ -52,14 +52,14 @@ internal sealed class PlaySnapshot
 
     // -99: not compared. An X cost resolves to the energy captured when it's played (CardEnergyCost.
     // CapturedXValue), which the play itself sets and clears: Whirlwind "1→0".
-    private static int SafeCost(CardModel c)
+    private static int SafeCost(CardModel card)
     {
-        try { return c.EnergyCost.CostsX ? -99 : c.EnergyCost.GetWithModifiers(CostModifiers.Local); } catch { return -99; }
+        try { return card.EnergyCost.CostsX ? -99 : card.EnergyCost.GetWithModifiers(CostModifiers.Local); } catch { return -99; }
     }
 
-    private static int SafeDisplay(RelicModel r)
+    private static int SafeDisplay(RelicModel relic)
     {
-        try { return r.DisplayAmount; } catch { return -99; }
+        try { return relic.DisplayAmount; } catch { return -99; }
     }
 
     // ------------------------------------------------------------------ explaining changes
@@ -91,40 +91,40 @@ internal sealed class PlaySnapshot
         IReadOnlyCollection<Type> explainers, IReadOnlyCollection<AbstractModel> present, Player me, ISet<string> tabbedOrTracked)
     {
         var issues = new List<string>();
-        void Check(Kind k, string what, Type? alsoOwn = null)
+        void Check(Kind kind, string what, Type? alsoOwn = null)
         {
-            if (explainers.Any(t => CodeIndex.Does(t, k.Calls, k.Overrides))) return;
-            if (alsoOwn != null && CodeIndex.Does(alsoOwn, k.Calls, k.Overrides)) return;
-            var could = present.Select(m => m.GetType()).Distinct().Where(t => CodeIndex.Does(t, k.Calls, k.Overrides)).Select(t => t.Name).OrderBy(n => n).ToList();
-            issues.Add($"untracked {k.Name}: {what} (could be: {(could.Count == 0 ? "nothing present" : string.Join(", ", could))})");
+            if (explainers.Any(type => CodeIndex.Does(type, kind.Calls, kind.Overrides))) return;
+            if (alsoOwn != null && CodeIndex.Does(alsoOwn, kind.Calls, kind.Overrides)) return;
+            var could = present.Select(model => model.GetType()).Distinct().Where(type => CodeIndex.Does(type, kind.Calls, kind.Overrides)).Select(type => type.Name).OrderBy(n => n).ToList();
+            issues.Add($"untracked {kind.Name}: {what} (could be: {(could.Count == 0 ? "nothing present" : string.Join(", ", could))})");
         }
 
         // Energy and stars: what the history shows spent is the card's cost.
-        var spent = entries.OfType<EnergySpentEntry>().Where(e => e.Actor == me.Creature).Sum(e => e.Amount);
+        var spent = entries.OfType<EnergySpentEntry>().Where(energySpentEntry => energySpentEntry.Actor == me.Creature).Sum(energySpentEntry => energySpentEntry.Amount);
         var energy = after.Energy - before.Energy + spent;
         // The played card's own enchantment acts in its play (Sown: energy on each play until the card finishes).
         var enchantment = played.Enchantment?.GetType();
         if (energy > 0) Check(EnergyGain, $"+{energy}", enchantment);
         if (energy < 0) Check(EnergyLoss, $"{energy}", enchantment);
-        var starsSpent = entries.OfType<StarsModifiedEntry>().Where(e => e.Actor == me.Creature && e.Amount < 0).Sum(e => -e.Amount);
+        var starsSpent = entries.OfType<StarsModifiedEntry>().Where(starsModifiedEntry => starsModifiedEntry.Actor == me.Creature && starsModifiedEntry.Amount < 0).Sum(starsModifiedEntry => -starsModifiedEntry.Amount);
         var stars = after.Stars - before.Stars + starsSpent;
         if (stars > 0) Check(StarGain, $"+{stars}", enchantment);
         if (stars < 0) Check(StarLoss, $"{stars}", enchantment);
         if (after.Gold != before.Gold) Check(GoldChange, $"{after.Gold - before.Gold:+#;-#;0}");
 
         // HP gained and max HP, on any creature alive before and after.
-        foreach (var (c, (hp, maxHp)) in before.Creatures)
+        foreach (var (creature, (hp, maxHp)) in before.Creatures)
         {
-            if (!after.Creatures.TryGetValue(c, out var a) || !c.IsAlive) continue;
-            var who = c == me.Creature ? "you" : c.Monster?.GetType().Name ?? "creature";
+            if (!after.Creatures.TryGetValue(creature, out var a) || !creature.IsAlive) continue;
+            var who = creature == me.Creature ? "you" : creature.Monster?.GetType().Name ?? "creature";
             if (a.Hp > hp) Check(Heal, $"{who} {hp}→{a.Hp}");
             if (a.MaxHp != maxHp) Check(MaxHp, $"{who} {maxHp}→{a.MaxHp}");
         }
 
         // Your cards: state, and moves the history doesn't record (draws, discards, exhausts, shuffles).
-        var drawn = entries.OfType<CardDrawnEntry>().Select(e => e.Card).ToHashSet(ReferenceEqualityComparer.Instance);
-        var discarded = entries.OfType<CardDiscardedEntry>().Select(e => e.Card).ToHashSet(ReferenceEqualityComparer.Instance);
-        var exhausted = entries.OfType<CardExhaustedEntry>().Select(e => e.Card).ToHashSet(ReferenceEqualityComparer.Instance);
+        var drawn = entries.OfType<CardDrawnEntry>().Select(cardDrawnEntry => cardDrawnEntry.Card).ToHashSet(ReferenceEqualityComparer.Instance);
+        var discarded = entries.OfType<CardDiscardedEntry>().Select(cardDiscardedEntry => cardDiscardedEntry.Card).ToHashSet(ReferenceEqualityComparer.Instance);
+        var exhausted = entries.OfType<CardExhaustedEntry>().Select(cardExhaustedEntry => cardExhaustedEntry.Card).ToHashSet(ReferenceEqualityComparer.Instance);
         foreach (var (card, b) in before.Cards)
         {
             if (!after.Cards.TryGetValue(card, out var a)) continue; // gone (exhausted, removed): the budget's
@@ -151,11 +151,11 @@ internal sealed class PlaySnapshot
         }
 
         // Relics whose counter or status changed with nothing showing it: no tab, no tracker row, no flash.
-        foreach (var (r, b) in before.Relics)
+        foreach (var (relic, b) in before.Relics)
         {
-            if (!after.Relics.TryGetValue(r, out var a) || a == b) continue;
-            var name = r.GetType().Name;
-            if (tabbedOrTracked.Contains(name) || explainers.Contains(r.GetType())) continue;
+            if (!after.Relics.TryGetValue(relic, out var a) || a == b) continue;
+            var name = relic.GetType().Name;
+            if (tabbedOrTracked.Contains(name) || explainers.Contains(relic.GetType())) continue;
             issues.Add($"untracked relic: {name} changed ({b.Display}/{b.Status} → {a.Display}/{a.Status}) with no tab, tracker row or flash (could be: {name})");
         }
         return issues;

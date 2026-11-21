@@ -13,35 +13,35 @@ public class SimPaelsEyeTests
 
     private static SimState Armed()
     {
-        var s = new SimState { Enemies = { Enemy(1, 50, 10) } };
-        s.You.PaelsEyeExhaust = true;
-        s.You.HandCount = 3;
-        s.You.FeelNoPain = 3;
-        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
-        return s;
+        var state = new SimState { Enemies = { Enemy(1, 50, 10) } };
+        state.You.PaelsEyeExhaust = true;
+        state.You.HandCount = 3;
+        state.You.FeelNoPain = 3;
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        return state;
     }
 
     [Fact]
     public void ItExhaustsYourHandFirst()
     {
         // Three exhausts: 9 block from Feel No Pain; the Burn is exhausted before it can burn you.
-        var o = SimEngine.Run(Armed());
-        Assert.Equal(1, o.TakenMax);
+        var outcome = SimEngine.Run(Armed());
+        Assert.Equal(1, outcome.TakenMax);
     }
 
     [Fact]
     public void ACardYouPlayDisarmsIt()
     {
         // Played: the hand (2 left) stays, the Burn burns you (2), no Feel No Pain block.
-        var o = SimEngine.Run(Armed(), new SimPlay { Name = "Defend", HandDelta = -1 });
-        Assert.Equal(12, o.TakenMax);
+        var outcome = SimEngine.Run(Armed(), new SimPlay { Name = "Defend", HandDelta = -1 });
+        Assert.Equal(12, outcome.TakenMax);
     }
 
     [Fact]
     public void AnAutoPlayDoesnt()
     {
-        var o = SimEngine.Run(Armed(), new SimPlay { Name = "Strike", HandDelta = -1, AutoPlay = true });
-        Assert.Equal(4, o.TakenMax); // two cards left to exhaust: 6 block
+        var outcome = SimEngine.Run(Armed(), new SimPlay { Name = "Strike", HandDelta = -1, AutoPlay = true });
+        Assert.Equal(4, outcome.TakenMax); // two cards left to exhaust: 6 block
     }
 
     [Fact]
@@ -49,19 +49,19 @@ public class SimPaelsEyeTests
     {
         // Orichalcum checks your block in BeforeSideTurnEndVeryEarly, before Pael's Eye exhausts your hand (Early): with no block
         // then, it arms, and gives its 6 on top of Feel No Pain's 9.
-        var s = Armed();
-        s.You.TurnEndCards.Clear();
-        s.You.OrichalcumBlock = 6;
-        Assert.Equal(0, SimEngine.Run(s).TakenMax);
+        var state = Armed();
+        state.You.TurnEndCards.Clear();
+        state.You.OrichalcumBlock = 6;
+        Assert.Equal(0, SimEngine.Run(state).TakenMax);
     }
 
     [Fact]
     public void CharonsAshesFiresPerCard()
     {
-        var s = new SimState { Enemies = { Enemy(1, 9, 10) } };
-        s.You.PaelsEyeExhaust = true;
-        s.You.HandCount = 3;
-        s.You.CharonsAshesDamage = 3;
-        Assert.True(SimEngine.Run(s).DeadInAll(1));
+        var state = new SimState { Enemies = { Enemy(1, 9, 10) } };
+        state.You.PaelsEyeExhaust = true;
+        state.You.HandCount = 3;
+        state.You.CharonsAshesDamage = 3;
+        Assert.True(SimEngine.Run(state).DeadInAll(1));
     }
 }

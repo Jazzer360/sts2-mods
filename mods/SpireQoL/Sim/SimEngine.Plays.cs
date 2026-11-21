@@ -4,25 +4,25 @@ namespace SpireQoL.Sim;
 public static partial class SimEngine
 {
     /// <summary>Damage given as final numbers: unpowered, from you, no card; to one enemy, every enemy, or a random one (a branch per target).</summary>
-    private static void RunFixedHits(BranchSet b, FixedHitsAction fh)
+    private static void RunFixedHits(BranchSet branches, FixedHitsAction fixedHitsAction)
     {
-        int Dmg(SimEnemy e) => fh.Damage.TryGetValue(e.Id, out var d) ? d : 0;
-        for (var t = 0; t < fh.Times; t++)
+        int Dmg(SimEnemy enemy) => fixedHitsAction.Damage.TryGetValue(enemy.Id, out var d) ? d : 0;
+        for (var t = 0; t < fixedHitsAction.Times; t++)
         {
-            switch (fh.Spread)
+            switch (fixedHitsAction.Spread)
             {
                 case SimPlay.Target.Single:
-                    b.Do(s => { if (s.Enemy(fh.TargetId) is { } e) Damage(s, e, Dmg(e)); });
+                    branches.Do(branch => { if (branch.Enemy(fixedHitsAction.TargetId) is { } enemy) Damage(branch, enemy, Dmg(enemy)); });
                     break;
                 case SimPlay.Target.All:
-                    b.Do(s => HitAll(s, Dmg));
+                    branches.Do(branch => HitAll(branch, Dmg));
                     break;
                 case SimPlay.Target.Random:
-                    b.Each(s => HitRandom(s, Dmg));
+                    branches.Each(branch => HitRandom(branch, Dmg));
                     break;
             }
         }
-        b.Do(AllyDeaths);
+        branches.Do(AllyDeaths);
     }
 
     /// <summary>
@@ -30,30 +30,30 @@ public static partial class SimEngine
     /// Simpleton pick from (cards it draws or makes aren't known); I Am Invincible stops being certain once its pile is drawn
     /// through; Fading; attacks this turn; Pael's Eye disarmed by a card played (not an auto-play).
     /// </summary>
-    private static void CardResolved(SimState s, CardResolvedAction cr)
+    private static void CardResolved(SimState state, CardResolvedAction cardResolvedAction)
     {
-        if (s.Player(cr.Owner) == null) { AllyDeaths(s); return; }
-        var p = s.MutablePlayer(cr.Owner);
+        if (state.Player(cardResolvedAction.Owner) == null) { AllyDeaths(state); return; }
+        var player = state.MutablePlayer(cardResolvedAction.Owner);
         // With a draw pile (decision #90), the cards it drew are already in hand, as drawn: only what it made or brought back is
         // unknown.
-        var handDelta = cr.HandDelta - (p.Draw != null ? cr.Draws : 0);
+        var handDelta = cardResolvedAction.HandDelta - (player.Draw != null ? cardResolvedAction.Draws : 0);
         // A card added to a full hand goes to the discard pile instead (CardPileCmd.Add): never more than 10 (decision #90).
-        p.HandCount = Math.Clamp(p.HandCount + handDelta, 0, p.Draw != null ? MaxHand : int.MaxValue);
-        if (!cr.AutoPlay) p.PaelsEyeExhaust = false;
-        if (p.AutoHand != null)
+        player.HandCount = Math.Clamp(player.HandCount + handDelta, 0, player.Draw != null ? MaxHand : int.MaxValue);
+        if (!cardResolvedAction.AutoPlay) player.PaelsEyeExhaust = false;
+        if (player.AutoHand != null)
         {
-            if (cr.HandCard != 0) p.AutoHand = p.AutoHand.Where(c => c.Id != cr.HandCard).ToList();
-            if (handDelta > -1) s.AutoPlaysUnknown = true;
+            if (cardResolvedAction.HandCard != 0) player.AutoHand = player.AutoHand.Where(handCard => handCard.Id != cardResolvedAction.HandCard).ToList();
+            if (handDelta > -1) state.AutoPlaysUnknown = true;
         }
-        if (cr.Draws > 0 && p.InvincibleBlock > 0)
+        if (cardResolvedAction.Draws > 0 && player.InvincibleBlock > 0)
         {
             // Drawing the whole pile shuffles the discard pile in: the top isn't known any more.
-            p.InvincibleDrawPile -= cr.Draws;
-            if (p.InvincibleDrawPile <= 0) p.InvincibleBlock = 0;
+            player.InvincibleDrawPile -= cardResolvedAction.Draws;
+            if (player.InvincibleDrawPile <= 0) player.InvincibleBlock = 0;
         }
-        p.Fading = Math.Max(0, p.Fading + cr.FadingDelta);
-        p.HexFading = Math.Max(0, p.HexFading + cr.HexFadingDelta);
-        if (cr.IsAttack) p.AttacksThisTurn++;
-        AllyDeaths(s);
+        player.Fading = Math.Max(0, player.Fading + cardResolvedAction.FadingDelta);
+        player.HexFading = Math.Max(0, player.HexFading + cardResolvedAction.HexFadingDelta);
+        if (cardResolvedAction.IsAttack) player.AttacksThisTurn++;
+        AllyDeaths(state);
     }
 }

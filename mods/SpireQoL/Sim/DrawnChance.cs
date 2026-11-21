@@ -8,12 +8,12 @@ namespace SpireQoL.Sim;
 public static class DrawnChance
 {
     /// <summary>Each tally and its share of the outcomes (null: the play made no such draw).</summary>
-    public static SortedDictionary<int, double>? Distribution(SimOutcome o)
+    public static SortedDictionary<int, double>? Distribution(SimOutcome outcome)
     {
-        var withTally = o.Branches.Where(b => b.DrawnTally >= 0).ToList();
+        var withTally = outcome.Branches.Where(branch => branch.DrawnTally >= 0).ToList();
         if (withTally.Count == 0) return null;
         var d = new SortedDictionary<int, double>();
-        foreach (var b in withTally) d[b.DrawnTally] = d.GetValueOrDefault(b.DrawnTally) + b.Weight;
+        foreach (var state in withTally) d[state.DrawnTally] = d.GetValueOrDefault(state.DrawnTally) + state.Weight;
         return d;
     }
 

@@ -21,9 +21,9 @@ internal static class ScriptBuilder
     public static SimEnemy Enemy(int id, int hp, int block = 0) => new() { Id = id, Name = $"E{id}", Hp = hp, Block = block };
 
     /// <summary>The state after running a script (one branch expected).</summary>
-    public static List<SimState> After(SimState s, SimScript script)
+    public static List<SimState> After(SimState state, SimScript script)
     {
-        SimEngine.RunScriptTo(s, script, out var branches, out _);
+        SimEngine.RunScriptTo(state, script, out var branches, out _);
         return branches;
     }
 
@@ -31,7 +31,7 @@ internal static class ScriptBuilder
     private sealed class AllTargets : IReadOnlyDictionary<int, CapturedTerms>
     {
         private readonly CapturedTerms _t;
-        public AllTargets(CapturedTerms t) => _t = t;
+        public AllTargets(CapturedTerms terms) => _t = terms;
         public CapturedTerms this[int key] => _t;
         public IEnumerable<int> Keys => Enumerable.Range(0, 16);
         public IEnumerable<CapturedTerms> Values => Keys.Select(_ => _t);

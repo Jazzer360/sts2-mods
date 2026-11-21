@@ -14,39 +14,39 @@ public class SimReviewTests
     public void PoisonTicksOnAStunnedEnemyToo()
     {
         // PoisonPower.AfterSideTurnStart ticks for every enemy on its side's turn start, stunned or not.
-        var e = Enemy(1, 4, 0, 10);
-        e.Stunned = true;
-        e.Poison = 4;
-        var o = SimEngine.Run(new SimState { Enemies = { e } });
-        Assert.True(o.DeadInAll(1));
-        Assert.Equal(0, o.TakenMax); // stunned: it wouldn't have attacked anyway
+        var enemy = Enemy(1, 4, 0, 10);
+        enemy.Stunned = true;
+        enemy.Poison = 4;
+        var outcome = SimEngine.Run(new SimState { Enemies = { enemy } });
+        Assert.True(outcome.DeadInAll(1));
+        Assert.Equal(0, outcome.TakenMax); // stunned: it wouldn't have attacked anyway
     }
 
     [Fact]
     public void HpAtTurnEndCoversEveryRandomOutcome()
     {
         // One Lightning bolt between two enemies: each ends your turn at 10 or 7.
-        var s = new SimState { Enemies = { Enemy(1, 10), Enemy(2, 10) } };
-        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
-        s.You.OrbCapacity = 3;
-        var o = SimEngine.Run(s);
-        Assert.Equal(7, o.HpAtTurnEndMin(1));
-        Assert.Equal(10, o.HpAtTurnEndMax(1));
-        Assert.Equal(0, o.UnblockedMin(1));
-        Assert.Equal(1, o.UnblockedMax(1));
+        var state = new SimState { Enemies = { Enemy(1, 10), Enemy(2, 10) } };
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        state.You.OrbCapacity = 3;
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(7, outcome.HpAtTurnEndMin(1));
+        Assert.Equal(10, outcome.HpAtTurnEndMax(1));
+        Assert.Equal(0, outcome.UnblockedMin(1));
+        Assert.Equal(1, outcome.UnblockedMax(1));
     }
 
     [Fact]
     public void HpAtTurnEndIsBeforeTheEnemyTurn()
     {
         // Poison and retaliation happen on its turn: not in HpAtTurnEnd.
-        var e = Enemy(1, 10, 0, 5);
-        e.Poison = 3;
-        var s = new SimState { Enemies = { e } };
-        s.You.Thorns = 2;
-        var o = SimEngine.Run(s);
-        Assert.Equal(10, o.HpAtTurnEndMax(1));
-        Assert.Equal(5, o.Worst.Enemy(1)!.Hp); // 10 - 3 poison - 2 Thorns
+        var enemy = Enemy(1, 10, 0, 5);
+        enemy.Poison = 3;
+        var state = new SimState { Enemies = { enemy } };
+        state.You.Thorns = 2;
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(10, outcome.HpAtTurnEndMax(1));
+        Assert.Equal(5, outcome.Worst.Enemy(1)!.Hp); // 10 - 3 poison - 2 Thorns
     }
 
     [Fact]
@@ -56,33 +56,33 @@ public class SimReviewTests
         // the second enemy's hit is the first to land on your block.
         var imbalanced = Enemy(2, 30, 0, 6);
         imbalanced.Imbalanced = true;
-        var s = new SimState { Enemies = { Enemy(1, 3, 0, 4), imbalanced } };
-        s.You.Plating = 6;
-        s.You.Juggernaut = 3;
-        var o = SimEngine.Run(s);
-        Assert.True(o.FirstHitBlockedInAny(2));  // the 3 HP enemy died: 6 block covers the 6 hit
-        Assert.False(o.FirstHitBlockedInAll(2)); // it survived: its 4 hit used block first
+        var state = new SimState { Enemies = { Enemy(1, 3, 0, 4), imbalanced } };
+        state.You.Plating = 6;
+        state.You.Juggernaut = 3;
+        var outcome = SimEngine.Run(state);
+        Assert.True(outcome.FirstHitBlockedInAny(2));  // the 3 HP enemy died: 6 block covers the 6 hit
+        Assert.False(outcome.FirstHitBlockedInAll(2)); // it survived: its 4 hit used block first
     }
 
     [Fact]
     public void BeatingRemnantBudgetCarriesFromYourTurnIntoTheEnemyTurn()
     {
         // BeatingRemnant.BeforeSideTurnStart resets only at the start of YOUR turn.
-        var s = new SimState { Enemies = { Enemy(1, 50, 0, 10) } };
-        s.You.RemnantCap = 20;
-        s.You.RemnantLeftPlayerTurn = 5; // already lost 15 this turn
-        Assert.Equal(5, SimEngine.Run(s).TakenMax);
+        var state = new SimState { Enemies = { Enemy(1, 50, 0, 10) } };
+        state.You.RemnantCap = 20;
+        state.You.RemnantLeftPlayerTurn = 5; // already lost 15 this turn
+        Assert.Equal(5, SimEngine.Run(state).TakenMax);
     }
 
     [Fact]
     public void BufferAbsorbingAHitDoesNotSpendTheRemnantBudget()
     {
         // Remnant counts result.UnblockedDamage after Buffer (ModifyHpLostAfterOstyLate).
-        var s = new SimState { Enemies = { Enemy(1, 50, 0, 6, 6) } };
-        s.You.RemnantCap = 6;
-        s.You.RemnantLeftPlayerTurn = 6;
-        s.You.Buffer = 1;
-        Assert.Equal(6, SimEngine.Run(s).TakenMax); // first hit buffered, second hit uses the full 6
+        var state = new SimState { Enemies = { Enemy(1, 50, 0, 6, 6) } };
+        state.You.RemnantCap = 6;
+        state.You.RemnantLeftPlayerTurn = 6;
+        state.You.Buffer = 1;
+        Assert.Equal(6, SimEngine.Run(state).TakenMax); // first hit buffered, second hit uses the full 6
     }
 
     [Fact]
@@ -90,11 +90,11 @@ public class SimReviewTests
     {
         // CombatManager.DoTurnEnd: orb passives, then Ethereal exhausts (Feel No Pain block), then
         // DoTurnEndCards (Burn...). The block is up before Burn hits.
-        var s = new SimState { Enemies = { Enemy(1, 50) } };
-        s.You.FeelNoPain = 3;
-        s.You.Fading = 1;
-        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
-        Assert.Equal(0, SimEngine.Run(s).TakenMax);
+        var state = new SimState { Enemies = { Enemy(1, 50) } };
+        state.You.FeelNoPain = 3;
+        state.You.Fading = 1;
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        Assert.Equal(0, SimEngine.Run(state).TakenMax);
     }
 
     [Fact]
@@ -102,13 +102,13 @@ public class SimReviewTests
     {
         // GlassOrb.EvokeVal => PassiveVal * 2; the passive loses 1 per trigger. Consuming Shadow evokes
         // after the passives (AfterSideTurnEnd): Glass 4 → passive 4, then evoke (3*2)=6, total 10.
-        var s = new SimState { Enemies = { Enemy(1, 11) } };
-        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 4, Evoke = 8, GlassBase = 4 } };
-        s.You.OrbCapacity = 3;
-        s.You.ConsumingShadow = 1;
-        var o = SimEngine.Run(s);
-        Assert.Equal(1, o.Worst.Enemy(1)!.Hp);
-        Assert.False(o.DeadInAll(1));
+        var state = new SimState { Enemies = { Enemy(1, 11) } };
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 4, Evoke = 8, GlassBase = 4 } };
+        state.You.OrbCapacity = 3;
+        state.You.ConsumingShadow = 1;
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(1, outcome.Worst.Enemy(1)!.Hp);
+        Assert.False(outcome.DeadInAll(1));
     }
 
     [Fact]
@@ -117,26 +117,26 @@ public class SimReviewTests
         // Dev report 20261120-042856-c2ac65: ConsumingShadowPower.AfterSideTurnEnd evokes the last orb (OrbCmd.EvokeLast); a Frost
         // orb gives its passive 2 (orb passives, before) then its evoke 5. Both are end-of-turn block: the breakdown Incoming Damage
         // shows and the forecast check compares with the block the game gave (it listed only the passive's 2).
-        var s = new SimState { Enemies = { Enemy(1, 50, 0, 15) }, Log = true };
-        s.You.Block = 10;
-        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } };
-        s.You.OrbCapacity = 3;
-        s.You.ConsumingShadow = 1;
-        var w = SimEngine.Run(s).Worst;
-        Assert.Equal(0, w.Taken);
-        Assert.Equal(7, w.EndOfTurnBlock.Sum(x => x.Amount));
+        var state = new SimState { Enemies = { Enemy(1, 50, 0, 15) }, Log = true };
+        state.You.Block = 10;
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } };
+        state.You.OrbCapacity = 3;
+        state.You.ConsumingShadow = 1;
+        var branch = SimEngine.Run(state).Worst;
+        Assert.Equal(0, branch.Taken);
+        Assert.Equal(7, branch.EndOfTurnBlock.Sum(x => x.Amount));
     }
 
     [Fact]
     public void ConsumingShadowsLightningEvokeIsInTheEndOfTurnDamage()
     {
         // The evoke's damage is listed with your other end-of-turn damage (the forecast log's breakdown), as the passive's is.
-        var s = new SimState { Enemies = { Enemy(1, 50, 0, 5) }, Log = true };
-        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
-        s.You.OrbCapacity = 3;
-        s.You.ConsumingShadow = 1;
-        var w = SimEngine.Run(s).Worst;
-        Assert.Equal(11, w.EndOfTurnDamage.Sum(x => x.Amount));
+        var state = new SimState { Enemies = { Enemy(1, 50, 0, 5) }, Log = true };
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        state.You.OrbCapacity = 3;
+        state.You.ConsumingShadow = 1;
+        var branch = SimEngine.Run(state).Worst;
+        Assert.Equal(11, branch.EndOfTurnDamage.Sum(x => x.Amount));
     }
 
     [Fact]
@@ -145,12 +145,12 @@ public class SimReviewTests
         // GlassOrb: PassiveVal = base + Focus; only the base decays (to 0). Base 0 with Focus 2 keeps
         // dealing 2 to every enemy each time it fires, and its evoke stays 4.
         var glass = new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, GlassBase = 0, GlassBonus = 2, Triggers = 2 };
-        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 4 } } };
-        s.You.Orbs = new() { glass };
-        s.You.OrbCapacity = 3;
-        var o = SimEngine.Run(s);
-        Assert.True(o.DeadInAll(1)); // 2 + 2
-        Assert.Equal(4, o.Worst.You.Orbs[0].Evoke);
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 4 } } };
+        state.You.Orbs = new() { glass };
+        state.You.OrbCapacity = 3;
+        var outcome = SimEngine.Run(state);
+        Assert.True(outcome.DeadInAll(1)); // 2 + 2
+        Assert.Equal(4, outcome.Worst.You.Orbs[0].Evoke);
     }
 
     [Fact]
@@ -158,12 +158,12 @@ public class SimReviewTests
     {
         // Base 3 with Focus 2: fires for 5, then 4 (base 2 + 2).
         var glass = new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, GlassBase = 3, GlassBonus = 2, Triggers = 2 };
-        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 20 } } };
-        s.You.Orbs = new() { glass };
-        s.You.OrbCapacity = 3;
-        var o = SimEngine.Run(s);
-        Assert.Equal(11, o.Worst.Enemy(1)!.Hp); // 20 - 5 - 4
-        Assert.Equal(6, o.Worst.You.Orbs[0].Evoke); // base 1 + Focus 2 = 3, x2
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 20 } } };
+        state.You.Orbs = new() { glass };
+        state.You.OrbCapacity = 3;
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(11, outcome.Worst.Enemy(1)!.Hp); // 20 - 5 - 4
+        Assert.Equal(6, outcome.Worst.You.Orbs[0].Evoke); // base 1 + Focus 2 = 3, x2
     }
 
     [Fact]
@@ -171,24 +171,24 @@ public class SimReviewTests
     {
         // GoldPlatedCables: +1 trigger for whichever orb is Orbs[0] when its passive fires. After Zap
         // evicts the front Frost orb, the bonus goes to the next orb (a Lightning).
-        var s = new SimState { Enemies = { Enemy(1, 7, 0, 10) } };
-        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 0 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
-        s.You.OrbCapacity = 2;
-        s.You.FrontOrbBonusTriggers = 1;
+        var state = new SimState { Enemies = { Enemy(1, 7, 0, 10) } };
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 0 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        state.You.OrbCapacity = 2;
+        state.You.FrontOrbBonusTriggers = 1;
         var zap = new SimPlay { OrbOps = { new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Lightning, Passive = 0, Evoke = 0 } } } };
-        var o = SimEngine.Run(s, zap);
-        Assert.Equal(1, o.Worst.Enemy(1)!.Hp); // the front Lightning fires twice: 3 + 3
+        var outcome = SimEngine.Run(state, zap);
+        Assert.Equal(1, outcome.Worst.Enemy(1)!.Hp); // the front Lightning fires twice: 3 + 3
     }
 
     [Fact]
     public void LethalMeansDeadBeforeItActsNotKilledByRetaliationDuringItsAttack()
     {
-        var s = new SimState { Enemies = { Enemy(1, 3, 0, 5, 5) } };
-        s.You.FlameBarrier = 5; // kills it after its first hit lands
-        var o = SimEngine.Run(s);
-        Assert.Equal(0, o.Worst.Enemy(1)!.Hp > 0 ? 1 : 0);
-        Assert.False(o.DeadInAll(1)); // it still acted
-        Assert.Equal(5, o.TakenMax);
+        var state = new SimState { Enemies = { Enemy(1, 3, 0, 5, 5) } };
+        state.You.FlameBarrier = 5; // kills it after its first hit lands
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(0, outcome.Worst.Enemy(1)!.Hp > 0 ? 1 : 0);
+        Assert.False(outcome.DeadInAll(1)); // it still acted
+        Assert.Equal(5, outcome.TakenMax);
     }
 
     [Fact]
@@ -196,47 +196,47 @@ public class SimReviewTests
     {
         // IterateHookListeners: your powers before your relics. Hailstorm (power) kills the 3 HP enemy
         // before Orichalcum's block (relic) sets off Juggernaut, which then can only hit the other one.
-        var s = new SimState { Enemies = { Enemy(1, 3, 0, 10), Enemy(2, 4, 0, 10) } };
-        s.You.Hailstorm = 3;
-        s.You.HailstormFrostNeeded = 0;
-        s.You.OrichalcumBlock = 5;
-        s.You.Juggernaut = 1;
-        var o = SimEngine.Run(s);
-        Assert.True(o.DeadInAll(1));
-        Assert.True(o.DeadInAll(2)); // 3 from Hailstorm + 1 from Juggernaut
+        var state = new SimState { Enemies = { Enemy(1, 3, 0, 10), Enemy(2, 4, 0, 10) } };
+        state.You.Hailstorm = 3;
+        state.You.HailstormFrostNeeded = 0;
+        state.You.OrichalcumBlock = 5;
+        state.You.Juggernaut = 1;
+        var outcome = SimEngine.Run(state);
+        Assert.True(outcome.DeadInAll(1));
+        Assert.True(outcome.DeadInAll(2)); // 3 from Hailstorm + 1 from Juggernaut
     }
 
     [Fact]
     public void DisintegrationLandsAfterParryingShieldChecksYourBlock()
     {
         // DisintegrationPower: AfterSideTurnEndLate, after Parrying Shield (AfterSideTurnEnd).
-        var s = new SimState { Enemies = { Enemy(1, 5, 0, 1) } };
-        s.You.Block = 10;
-        s.You.ParryingShieldBlock = 10;
-        s.You.ParryingShieldDamage = 5;
-        s.You.Powers = s.You.Powers.With(PowerId.Disintegration, 4);
-        Assert.True(SimEngine.Run(s).DeadInAll(1));
+        var state = new SimState { Enemies = { Enemy(1, 5, 0, 1) } };
+        state.You.Block = 10;
+        state.You.ParryingShieldBlock = 10;
+        state.You.ParryingShieldDamage = 5;
+        state.You.Powers = state.You.Powers.With(PowerId.Disintegration, 4);
+        Assert.True(SimEngine.Run(state).DeadInAll(1));
     }
 
     [Fact]
     public void ImbalancedCountsAHitThatBufferStops()
     {
         // WasFullyBlocked = (blocked > 0 || block > 0) && no HP lost after the AfterOsty modifiers.
-        var e = Enemy(1, 40, 0, 8);
-        e.Imbalanced = true;
-        var s = new SimState { Enemies = { e } };
-        s.You.Block = 3;
-        s.You.Buffer = 1;
-        Assert.True(SimEngine.Run(s).FirstHitBlockedInAll(1));
+        var enemy = Enemy(1, 40, 0, 8);
+        enemy.Imbalanced = true;
+        var state = new SimState { Enemies = { enemy } };
+        state.You.Block = 3;
+        state.You.Buffer = 1;
+        Assert.True(SimEngine.Run(state).FirstHitBlockedInAll(1));
     }
 
     [Fact]
     public void DamageStoppedByAnExhaustedHardenedShellDoesNotWakeIt()
     {
-        var e = Enemy(1, 50, 0, 0);
-        e.ShellLeft = 0;
-        e.ShellPerTurn = 10;
+        var enemy = Enemy(1, 50, 0, 0);
+        enemy.ShellLeft = 0;
+        enemy.ShellPerTurn = 10;
         var hit = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1, HitDamage = { [1] = 6 } };
-        Assert.Equal(0, SimEngine.Run(new SimState { Enemies = { e } }, hit).UnblockedMax(1));
+        Assert.Equal(0, SimEngine.Run(new SimState { Enemies = { enemy } }, hit).UnblockedMax(1));
     }
 }

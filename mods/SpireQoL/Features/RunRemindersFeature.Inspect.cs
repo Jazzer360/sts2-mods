@@ -32,9 +32,9 @@ public sealed partial class RunRemindersFeature
     private void ShowInspect(NEventOptionButton button, Player? me)
     {
         var existing = button.GetNodeOrNull<TextureButton>(InspectNodeName);
-        var option = me != null && button.Option is { IsLocked: false, IsProceed: false } o ? o : null;
+        var option = me != null && button.Option is { IsLocked: false, IsProceed: false } eventOption ? eventOption : null;
         var groups = option != null && _ctx.Settings.EventInspect ? GroupsOf(option, me!) : null;
-        if (groups == null || !groups.Any(g => g.IsRandom))
+        if (groups == null || !groups.Any(drawGroup => drawGroup.IsRandom))
         {
             existing?.QueueFree();
             return;
@@ -57,8 +57,8 @@ public sealed partial class RunRemindersFeature
             existing.MouseExited += () => existing.Modulate = Colors.White;
             existing.Pressed += () =>
             {
-                if (RunMe() is not { } who || button.Option is not { } opt || GroupsOf(opt, who) is not { } g) return;
-                _inspect?.Open(OptionTitle(opt), g, who);
+                if (RunMe() is not { } who || button.Option is not { } opt || GroupsOf(opt, who) is not { } drawGroups) return;
+                _inspect?.Open(OptionTitle(opt), drawGroups, who);
             };
             button.AddChild(existing);
         }

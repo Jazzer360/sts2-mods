@@ -12,14 +12,14 @@ namespace SpireQoL.Catalog.Tests;
 public class CardAffinityTests
 {
     private static List<Type> Relics() => typeof(RelicModel).Assembly.GetTypes()
-        .Where(t => !t.IsAbstract && typeof(RelicModel).IsAssignableFrom(t)).ToList();
+        .Where(type => !type.IsAbstract && typeof(RelicModel).IsAssignableFrom(type)).ToList();
 
     [Fact]
     public void EveryRelicThatTestsACardHasARuleOrAReason()
     {
         var missing = Relics()
-            .Where(t => CardAffinity.For(t.Name) == null && !CardAffinity.Reviewed.ContainsKey(t.Name))
-            .Select(t => (t.Name, Hooks: SpireQoL.Diagnostics.CoverageWatch.CardTestingHooks(t)))
+            .Where(type => CardAffinity.For(type.Name) == null && !CardAffinity.Reviewed.ContainsKey(type.Name))
+            .Select(type => (type.Name, Hooks: SpireQoL.Diagnostics.CoverageWatch.CardTestingHooks(type)))
             .Where(x => x.Hooks.Count > 0)
             .Select(x => $"{x.Name}: {string.Join(", ", x.Hooks)}").ToList();
         Assert.True(missing.Count == 0, "Relics that test a card with no CardAffinity rule or reason:\n" + string.Join("\n", missing));
@@ -29,7 +29,7 @@ public class CardAffinityTests
     public void TheScanFindsTheKnownRelics()
     {
         // An empty scan would pass silently: the relics the rules came from must be found by it.
-        var byName = Relics().ToDictionary(t => t.Name);
+        var byName = Relics().ToDictionary(type => type.Name);
         foreach (var name in new[] { "FresnelLens", "MoltenEgg", "StrikeDummy", "MiniatureCannon", "MysticLighter", "VitruvianMinion", "Glitter" })
             Assert.NotEmpty(SpireQoL.Diagnostics.CoverageWatch.CardTestingHooks(byName[name]));
     }
@@ -38,15 +38,15 @@ public class CardAffinityTests
     public void BegoneMakesAMinionStrike()
     {
         // Strike Dummy and Vitruvian Minion count the cards a card makes: Begone! makes a Minion Strike (a Strike and a Minion).
-        var begone = typeof(CardModel).Assembly.GetTypes().Single(t => t.Name == "Begone" && typeof(CardModel).IsAssignableFrom(t));
-        Assert.Contains(CardAffinity.MadeTypes(begone), t => t.Name == "MinionStrike");
+        var begone = typeof(CardModel).Assembly.GetTypes().Single(type => type.Name == "Begone" && typeof(CardModel).IsAssignableFrom(type));
+        Assert.Contains(CardAffinity.MadeTypes(begone), type => type.Name == "MinionStrike");
     }
 
     [Fact]
     public void EveryRuleNamesARelic()
     {
-        var names = Relics().Select(t => t.Name).ToHashSet();
-        var unknown = CardAffinity.Rules.Select(r => r.Relic).Concat(CardAffinity.Reviewed.Keys).Where(n => !names.Contains(n)).ToList();
+        var names = Relics().Select(type => type.Name).ToHashSet();
+        var unknown = CardAffinity.Rules.Select(cardAffinityRule => cardAffinityRule.Relic).Concat(CardAffinity.Reviewed.Keys).Where(n => !names.Contains(n)).ToList();
         Assert.Empty(unknown);
     }
 }

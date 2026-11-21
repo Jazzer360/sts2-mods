@@ -324,7 +324,7 @@ public sealed class OverlayHost
     private void LayOutWidgets()
     {
         if (WidgetRoot != null)
-            foreach (var w in _widgets) w.UpdateLayout(this);
+            foreach (var widget in _widgets) widget.UpdateLayout(this);
         if (_toast != null) _toast.Visible = Godot.Time.GetTicksMsec() < _toastUntilMs;
     }
 
@@ -477,9 +477,9 @@ public sealed class OverlayHost
     /// <summary>The node or something above it is queued to be freed at the end of this frame.</summary>
     private static bool QueuedForDeletion(Node node)
     {
-        for (var n = node; n != null; n = n.GetParent())
+        for (var otherNode = node; otherNode != null; otherNode = otherNode.GetParent())
         {
-            if (!GodotObject.IsInstanceValid(n) || n.IsQueuedForDeletion()) return true;
+            if (!GodotObject.IsInstanceValid(otherNode) || otherNode.IsQueuedForDeletion()) return true;
         }
         return false;
     }
@@ -509,7 +509,7 @@ public sealed class OverlayHost
             foreach (var (key, anchor) in AnchorKeys)
             {
                 if (!Pressed(key)) continue;
-                var hovered = _widgets.FirstOrDefault(w => w.Hovered);
+                var hovered = _widgets.FirstOrDefault(widget => widget.Hovered);
                 if (hovered != null) hovered.SetPin(anchor);
                 else Toast("Hover a widget, then Ctrl+1–9 to pick its anchor", 2.5f);
             }

@@ -48,10 +48,10 @@ public static class DevDashboard
             host.FrameMeasured += (modMs, gapMs) => Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
             if (ErrorReporter.Instance is { } reporter)
             {
-                reporter.Local = r =>
+                reporter.Local = localReport =>
                 {
-                    sink.SaveReport(r.Id, DevSink.Json(r, indented: true));
-                    sink.Post(new ReportSaved(r.Id, r.Kind, r.Title, r.Fingerprint));
+                    sink.SaveReport(localReport.Id, DevSink.Json(localReport, indented: true));
+                    sink.Post(new ReportSaved(localReport.Id, localReport.Kind, localReport.Title, localReport.Fingerprint));
                 };
             }
             _gc = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), GC.GetTotalAllocatedBytes(), GC.GetTotalPauseDuration());
@@ -67,7 +67,7 @@ public static class DevDashboard
     }
 
     /// <summary>A play session's summary, kept in sessions.jsonl instead of sent (dev mode).</summary>
-    public static void SaveSession(SessionSummary s) => _sink?.SaveSession(s.ToJson());
+    public static void SaveSession(SessionSummary sessionSummary) => _sink?.SaveSession(sessionSummary.ToJson());
 
     private static void Tick()
     {
@@ -113,24 +113,24 @@ public static class DevDashboard
     {
         try
         {
-            if (Combat.TurnEndModel.Compute() is not { } f) return null;
-            var o = f.Outcome;
+            if (Combat.TurnEndModel.Compute() is not { } forecast) return null;
+            var outcome = forecast.Outcome;
             return new
             {
-                taken = f.Taken,
-                takenMin = f.TakenMin,
-                dies = f.Dies,
-                dieChance = o.Branches.Count == 0 ? 0 : o.YouDieChance().Low,
-                blockGain = f.BlockGain,
-                branches = o.Branches.Count,
-                truncated = o.Truncated,
-                capHit = o.CapHit,
-                steps = o.Steps,
-                copies = o.Copies,
-                peakHeld = o.PeakHeld,
-                unmodelled = o.UnmodelledReasons.ToList(),
-                spread = o.Branches.GroupBy(b => b.Taken).OrderBy(g => g.Key)
-                    .Select(g => new { taken = g.Key, weight = Math.Round(g.Sum(b => b.Weight), 6), died = g.Any(b => b.Died) }).Take(60).ToList(),
+                taken = forecast.Taken,
+                takenMin = forecast.TakenMin,
+                dies = forecast.Dies,
+                dieChance = outcome.Branches.Count == 0 ? 0 : outcome.YouDieChance().Low,
+                blockGain = forecast.BlockGain,
+                branches = outcome.Branches.Count,
+                truncated = outcome.Truncated,
+                capHit = outcome.CapHit,
+                steps = outcome.Steps,
+                copies = outcome.Copies,
+                peakHeld = outcome.PeakHeld,
+                unmodelled = outcome.UnmodelledReasons.ToList(),
+                spread = outcome.Branches.GroupBy(branch => branch.Taken).OrderBy(g => g.Key)
+                    .Select(g => new { taken = g.Key, weight = Math.Round(g.Sum(branch => branch.Weight), 6), died = g.Any(branch => branch.Died) }).Take(60).ToList(),
             };
         }
         catch (Exception ex)

@@ -12,14 +12,14 @@ namespace SpireQoL.Catalog.Tests;
 public class PathingTests
 {
     private static List<Type> Models() => typeof(RelicModel).Assembly.GetTypes()
-        .Where(t => !t.IsAbstract && (typeof(RelicModel).IsAssignableFrom(t) || typeof(CardModel).IsAssignableFrom(t))).ToList();
+        .Where(type => !type.IsAbstract && (typeof(RelicModel).IsAssignableFrom(type) || typeof(CardModel).IsAssignableFrom(type))).ToList();
 
     [Fact]
     public void EveryRoomTestHasAMapRuleOrAReason()
     {
         var missing = Models()
-            .Where(t => ChoiceReminders.For(t.Name) is not { Map: not PathRoom.None } && !ChoiceReminders.MapReviewed.ContainsKey(t.Name))
-            .Select(t => (t.Name, Hooks: SpireQoL.Diagnostics.CoverageWatch.RoomTestingHooks(t)))
+            .Where(type => ChoiceReminders.For(type.Name) is not { Map: not PathRoom.None } && !ChoiceReminders.MapReviewed.ContainsKey(type.Name))
+            .Select(type => (type.Name, Hooks: SpireQoL.Diagnostics.CoverageWatch.RoomTestingHooks(type)))
             .Where(x => x.Hooks.Count > 0)
             .Select(x => $"{x.Name}: {string.Join("; ", x.Hooks)}").ToList();
         Assert.True(missing.Count == 0, "Room tests with no Map rule or reason:\n" + string.Join("\n", missing));
@@ -29,7 +29,7 @@ public class PathingTests
     public void TheScanFindsTheKnownOnes()
     {
         // An empty scan would pass silently: the rules came from these, each read a different way.
-        var byName = Models().ToDictionary(t => t.Name);
+        var byName = Models().ToDictionary(type => type.Name);
         foreach (var name in new[] { "BlackStar", "MealTicket", "Planisphere", "EternalFeather", "FishingRod", "Girya", "JuzuBracelet", "Dowsing", "ByrdonisEgg", "MembershipCard" })
             Assert.NotEmpty(SpireQoL.Diagnostics.CoverageWatch.RoomTestingHooks(byName[name]));
     }
@@ -37,10 +37,10 @@ public class PathingTests
     [Fact]
     public void EveryMapRuleAndReasonNamesAModel()
     {
-        var names = Models().Select(t => t.Name).ToHashSet();
-        var unknown = ChoiceReminders.Rules.Where(r => r.Map != PathRoom.None).Select(r => r.Relic).Concat(ChoiceReminders.MapReviewed.Keys)
+        var names = Models().Select(type => type.Name).ToHashSet();
+        var unknown = ChoiceReminders.Rules.Where(reminderRule => reminderRule.Map != PathRoom.None).Select(reminderRule => reminderRule.Relic).Concat(ChoiceReminders.MapReviewed.Keys)
             .Where(n => !names.Contains(n)).ToList();
         Assert.Empty(unknown);
-        Assert.All(ChoiceReminders.Rules, r => Assert.Equal(PathRoom.None, r.MapCrossed & ~r.Map));
+        Assert.All(ChoiceReminders.Rules, reminderRule => Assert.Equal(PathRoom.None, reminderRule.MapCrossed & ~reminderRule.Map));
     }
 }

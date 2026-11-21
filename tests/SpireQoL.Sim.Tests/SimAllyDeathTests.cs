@@ -17,49 +17,49 @@ public class SimAllyDeathTests
     [Fact]
     public void KillingAnAllyStunsRavenous()
     {
-        var s = new SimState { Enemies = { Enemy(1, 5, 4), Enemy(2, 30, 12) } };
-        s.Enemies[1].Ravenous = true;
-        Assert.Equal(16, SimEngine.Run(s).TakenMax);
-        var o = SimEngine.Run(s, Strike(1, 5));
-        Assert.Equal(0, o.TakenMax); // one dead, the slug stunned
-        Assert.True(o.StunnedInAll(2));
+        var state = new SimState { Enemies = { Enemy(1, 5, 4), Enemy(2, 30, 12) } };
+        state.Enemies[1].Ravenous = true;
+        Assert.Equal(16, SimEngine.Run(state).TakenMax);
+        var outcome = SimEngine.Run(state, Strike(1, 5));
+        Assert.Equal(0, outcome.TakenMax); // one dead, the slug stunned
+        Assert.True(outcome.StunnedInAll(2));
     }
 
     [Fact]
     public void CrabRageHitsHarderAndBlocksOnceAnAllyDies()
     {
-        var s = new SimState { Enemies = { Enemy(1, 5, 4), Enemy(2, 30, 8) } };
-        s.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
-        s.Enemies[1].CrabRageBlock = 6;
-        SimEngine.ApplyPlayTo(s, Strike(1, 5), out var after, out _);
+        var state = new SimState { Enemies = { Enemy(1, 5, 4), Enemy(2, 30, 8) } };
+        state.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
+        state.Enemies[1].CrabRageBlock = 6;
+        SimEngine.ApplyPlayTo(state, Strike(1, 5), out var after, out _);
         Assert.Equal(new[] { 14 }, after[0].Enemy(2)!.Hits);
         Assert.Equal(6, after[0].Enemy(2)!.Block);
-        Assert.Equal(14, SimEngine.Run(s, Strike(1, 5)).TakenMax);
+        Assert.Equal(14, SimEngine.Run(state, Strike(1, 5)).TakenMax);
     }
 
     [Fact]
     public void AnAllyDyingAtEndOfTurnCountsToo()
     {
         // A Lightning orb kills the 3-HP ally at end of turn: Crab Rage's hits are up when it attacks.
-        var s = new SimState { Enemies = { Enemy(1, 3, 4), Enemy(2, 30, 8) } };
-        s.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
-        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
-        s.You.OrbCapacity = 3;
-        var o = SimEngine.Run(s);
+        var state = new SimState { Enemies = { Enemy(1, 3, 4), Enemy(2, 30, 8) } };
+        state.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        state.You.OrbCapacity = 3;
+        var outcome = SimEngine.Run(state);
         // Random target: the bolt hits the ally (dies, crab hits 14) or the crab (ally hits 4, crab 8).
-        Assert.Equal(14, o.TakenMax);
-        Assert.Equal(12, o.TakenMin);
+        Assert.Equal(14, outcome.TakenMax);
+        Assert.Equal(12, outcome.TakenMin);
     }
 
     [Fact]
     public void BranchesThatDifferOnlyInIntentAreNotMerged()
     {
         // The key includes hits, so the Crab Rage branch and the other survive as two branches.
-        var s = new SimState { Enemies = { Enemy(1, 3, 0), Enemy(2, 30, 8) } };
-        s.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
-        var p = new SimPlay { Name = "Sword Boomerang", IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 3, [2] = 0 }, Hits = 1 };
-        SimEngine.ApplyPlayTo(s, p, out var branches, out _);
-        Assert.Contains(branches, b => b.Enemy(2)!.Hits.SequenceEqual(new[] { 14 }));
-        Assert.Contains(branches, b => b.Enemy(2)!.Hits.SequenceEqual(new[] { 8 }));
+        var state = new SimState { Enemies = { Enemy(1, 3, 0), Enemy(2, 30, 8) } };
+        state.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
+        var play = new SimPlay { Name = "Sword Boomerang", IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 3, [2] = 0 }, Hits = 1 };
+        SimEngine.ApplyPlayTo(state, play, out var branches, out _);
+        Assert.Contains(branches, branch => branch.Enemy(2)!.Hits.SequenceEqual(new[] { 14 }));
+        Assert.Contains(branches, branch => branch.Enemy(2)!.Hits.SequenceEqual(new[] { 8 }));
     }
 }

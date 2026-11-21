@@ -72,22 +72,22 @@ public static class IntentForecast
         if (depth > MaxDepth || !graph.Nodes.TryGetValue(id, out var node)) return false;
         switch (node)
         {
-            case MoveNodeMove m:
-                into[m.Id] = into.GetValueOrDefault(m.Id) + chance;
+            case MoveNodeMove moveNodeMove:
+                into[moveNodeMove.Id] = into.GetValueOrDefault(moveNodeMove.Id) + chance;
                 return true;
-            case MoveNodeRandom r:
+            case MoveNodeRandom moveNodeRandom:
             {
-                var weights = r.Branches.Select(b => Weight(b, log)).ToList();
+                var weights = moveNodeRandom.Branches.Select(randomBranch => Weight(randomBranch, log)).ToList();
                 if (weights.Any(double.IsNaN)) return false; // a weight that couldn't be read
                 var total = weights.Sum();
                 if (total <= 0) return false; // the game throws: no valid state
-                for (var i = 0; i < r.Branches.Count; i++)
-                    if (weights[i] > 0 && !Walk(graph, r.Branches[i].To, chance * weights[i] / total, log, into, depth + 1)) return false;
+                for (var i = 0; i < moveNodeRandom.Branches.Count; i++)
+                    if (weights[i] > 0 && !Walk(graph, moveNodeRandom.Branches[i].To, chance * weights[i] / total, log, into, depth + 1)) return false;
                 return true;
             }
-            case MoveNodeConditional c:
+            case MoveNodeConditional moveNodeConditional:
             {
-                foreach (var (to, holds) in c.Branches)
+                foreach (var (to, holds) in moveNodeConditional.Branches)
                 {
                     if (holds == null) return false; // a condition that couldn't be read, before the one that holds
                     if (holds.Value) return Walk(graph, to, chance, log, into, depth + 1);
@@ -100,21 +100,21 @@ public static class IntentForecast
     }
 
     /// <summary>A branch's weight now (RandomBranchState.GetStateWeight, line for line).</summary>
-    internal static double Weight(RandomBranch b, IReadOnlyList<string> log)
+    internal static double Weight(RandomBranch randomBranch, IReadOnlyList<string> log)
     {
         double num = 1;
-        if (b.Repeat == MoveRepeat.UseOnlyOnce)
+        if (randomBranch.Repeat == MoveRepeat.UseOnlyOnce)
         {
-            if (log.Contains(b.To)) num = 0;
+            if (log.Contains(randomBranch.To)) num = 0;
         }
-        else if (b.Repeat != MoveRepeat.CanRepeatForever)
+        else if (randomBranch.Repeat != MoveRepeat.CanRepeatForever)
         {
-            var times = b.Repeat == MoveRepeat.CannotRepeat ? 1 : b.MaxTimes;
+            var times = randomBranch.Repeat == MoveRepeat.CannotRepeat ? 1 : randomBranch.MaxTimes;
             num = log.Count < times ? 1 : 0;
             var i = 0;
             while (log.Count >= times && i < times && log.Count - i > 0)
             {
-                if (log[log.Count - 1 - i] != b.To)
+                if (log[log.Count - 1 - i] != randomBranch.To)
                 {
                     num = 1;
                     break;
@@ -122,7 +122,7 @@ public static class IntentForecast
                 i++;
             }
         }
-        if (b.Cooldown > 0 && log.Reverse().Take(b.Cooldown).Contains(b.To)) return 0;
-        return num * b.Weight;
+        if (randomBranch.Cooldown > 0 && log.Reverse().Take(randomBranch.Cooldown).Contains(randomBranch.To)) return 0;
+        return num * randomBranch.Weight;
     }
 }

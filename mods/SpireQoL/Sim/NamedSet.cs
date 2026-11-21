@@ -63,9 +63,9 @@ public sealed class NamedSet<TName> where TName : IEquatable<TName>
         }
         if (i >= 0)
         {
-            var e = _items[i];
-            var d = data ?? e.Data;
-            if (e.Amount == amount && e.Data == d) return this;
+            var entry = _items[i];
+            var d = data ?? entry.Data;
+            if (entry.Amount == amount && entry.Data == d) return this;
             var copy = (Entry[])_items.Clone();
             copy[i] = new Entry(name, amount, d);
             return new NamedSet<TName>(copy);
@@ -85,15 +85,15 @@ public sealed class NamedSet<TName> where TName : IEquatable<TName>
     public void Hash(Action<long> add)
     {
         add(_items.Length);
-        foreach (var e in _items)
+        foreach (var entry in _items)
         {
-            add(e.Name.GetHashCode());
-            add(e.Amount);
-            add(e.Data);
+            add(entry.Name.GetHashCode());
+            add(entry.Amount);
+            add(entry.Data);
         }
     }
 
-    public override string ToString() => string.Join(", ", _items.Select(e => e.Data != 0 ? $"{e.Name} {e.Amount} ({e.Data})" : $"{e.Name} {e.Amount}"));
+    public override string ToString() => string.Join(", ", _items.Select(entry => entry.Data != 0 ? $"{entry.Name} {entry.Amount} ({entry.Data})" : $"{entry.Name} {entry.Amount}"));
 }
 
 /// <summary>

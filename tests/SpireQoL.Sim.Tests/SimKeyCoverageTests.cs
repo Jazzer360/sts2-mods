@@ -56,49 +56,49 @@ public class SimKeyCoverageTests
 
     private static SimState Board()
     {
-        var s = new SimState
+        var state = new SimState
         {
             Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 30, Hits = new() { 5 }, HitsAfterAllyDies = new() { 6 } } },
             You = { Hp = 40, Orbs = { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } }, AutoHand = new() { new SimHandCard { Id = 3 } },
                   Draw = new SimDrawPile() },
         };
-        s.Teammates.Add(new SimPlayer { Hp = 30, Orbs = { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } } });
-        return s;
+        state.Teammates.Add(new SimPlayer { Hp = 30, Orbs = { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } } });
+        return state;
     }
 
-    private static IEnumerable<FieldInfo> FieldsOf(Type t) =>
-        t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(f => !f.Name.Contains("k__BackingField"));
+    private static IEnumerable<FieldInfo> FieldsOf(Type type) =>
+        type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(field => !field.Name.Contains("k__BackingField"));
 
     /// <summary>The value changed, or null when this test doesn't know how to change a field of that type.</summary>
-    private static object? Changed(object? v, Type t)
+    private static object? Changed(object? v, Type type)
     {
-        if (t == typeof(int)) return (int)v! == int.MaxValue ? 5 : (int)v! + 7;
-        if (t == typeof(long)) return (long)v! + 7;
-        if (t == typeof(double)) return (double)v! + 0.5;
-        if (t == typeof(bool)) return !(bool)v!;
-        if (t == typeof(string)) return (string?)v + "x";
-        if (t.IsEnum) return Enum.ToObject(t, Convert.ToInt32(v) + 1);
-        if (t == typeof(PowerSet)) return ((PowerSet)v!).With(new PowerId("ProbePower"), 3);
-        if (t == typeof(RelicSet)) return ((RelicSet)v!).With(new RelicId("ProbeRelic"), 3);
-        if (t == typeof(NamedCounts)) return ((NamedCounts)v!).Add("Probe", 3);
-        if (t == typeof(List<int>)) return ((List<int>?)v ?? new()).Append(9).ToList();
-        if (t == typeof(List<SimPick>)) return new List<SimPick>((List<SimPick>)v!) { new(4, 0) };
-        if (t == typeof(List<TurnEndCard>)) return new List<TurnEndCard>((List<TurnEndCard>)v!) { new("Burn", "Burn", 2) };
-        if (t == typeof(List<SimHandCard>)) return new List<SimHandCard> { new() { Id = 5 } };
-        if (t == typeof(List<SimOrb>)) return new List<SimOrb> { new() { Kind = OrbKind.Dark, Passive = 6, Evoke = 6 } };
-        if (t == typeof(SimDrawPile)) return new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("probe"), 2) } };
-        if (t == typeof(List<SimEnemy>) || t == typeof(List<SimPlayer>) || t == typeof(SimPlayer)) return null; // their fields are checked one by one
+        if (type == typeof(int)) return (int)v! == int.MaxValue ? 5 : (int)v! + 7;
+        if (type == typeof(long)) return (long)v! + 7;
+        if (type == typeof(double)) return (double)v! + 0.5;
+        if (type == typeof(bool)) return !(bool)v!;
+        if (type == typeof(string)) return (string?)v + "x";
+        if (type.IsEnum) return Enum.ToObject(type, Convert.ToInt32(v) + 1);
+        if (type == typeof(PowerSet)) return ((PowerSet)v!).With(new PowerId("ProbePower"), 3);
+        if (type == typeof(RelicSet)) return ((RelicSet)v!).With(new RelicId("ProbeRelic"), 3);
+        if (type == typeof(NamedCounts)) return ((NamedCounts)v!).Add("Probe", 3);
+        if (type == typeof(List<int>)) return ((List<int>?)v ?? new()).Append(9).ToList();
+        if (type == typeof(List<SimPick>)) return new List<SimPick>((List<SimPick>)v!) { new(4, 0) };
+        if (type == typeof(List<TurnEndCard>)) return new List<TurnEndCard>((List<TurnEndCard>)v!) { new("Burn", "Burn", 2) };
+        if (type == typeof(List<SimHandCard>)) return new List<SimHandCard> { new() { Id = 5 } };
+        if (type == typeof(List<SimOrb>)) return new List<SimOrb> { new() { Kind = OrbKind.Dark, Passive = 6, Evoke = 6 } };
+        if (type == typeof(SimDrawPile)) return new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("probe"), 2) } };
+        if (type == typeof(List<SimEnemy>) || type == typeof(List<SimPlayer>) || type == typeof(SimPlayer)) return null; // their fields are checked one by one
         return null;
     }
 
     /// <summary>Every field of the state and of what it holds, as (name, the object holding it in a copy, the field).</summary>
     private static IEnumerable<(string Name, Func<SimState, object> Holder, FieldInfo Field)> AllFields()
     {
-        foreach (var f in FieldsOf(typeof(SimState))) yield return ($"SimState.{f.Name}", s => s, f);
-        foreach (var f in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{f.Name}", s => s.You, f);
-        foreach (var f in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{f.Name} (teammate)", s => s.MutableTeammate(0), f);
-        foreach (var f in FieldsOf(typeof(SimEnemy))) yield return ($"SimEnemy.{f.Name}", s => s.Enemies[0], f);
-        foreach (var f in FieldsOf(typeof(SimOrb))) yield return ($"SimOrb.{f.Name}", s => s.You.OwnOrbs()[0], f);
+        foreach (var field in FieldsOf(typeof(SimState))) yield return ($"SimState.{field.Name}", branch => branch, field);
+        foreach (var field in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{field.Name}", branch => branch.You, field);
+        foreach (var field in FieldsOf(typeof(SimPlayer))) yield return ($"SimPlayer.{field.Name} (teammate)", branch => branch.MutableTeammate(0), field);
+        foreach (var field in FieldsOf(typeof(SimEnemy))) yield return ($"SimEnemy.{field.Name}", branch => branch.Enemies[0], field);
+        foreach (var field in FieldsOf(typeof(SimOrb))) yield return ($"SimOrb.{field.Name}", branch => branch.You.OwnOrbs()[0], field);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class SimKeyCoverageTests
             var v = Changed(field.GetValue(obj), field.FieldType);
             if (v == null)
             {
-                if (field.FieldType is { } ft && (ft == typeof(List<SimEnemy>) || ft == typeof(List<SimPlayer>) || ft == typeof(SimPlayer))) continue;
+                if (field.FieldType is { } type && (type == typeof(List<SimEnemy>) || type == typeof(List<SimPlayer>) || type == typeof(SimPlayer))) continue;
                 unknown.Add($"{name} ({field.FieldType.Name})");
                 continue;
             }

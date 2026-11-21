@@ -22,10 +22,10 @@ internal static class IntentReader
         if (!enemy.IsAlive || enemy.Monster is not { } monster || monster.MoveStateMachine is not { } machine) return null;
         var current = monster.NextMove;
         // The move on screen is hidden from you: its rules would give it away.
-        if (current.Intents.Any(i => i is HiddenIntent or UnknownIntent)) return null;
+        if (current.Intents.Any(abstractIntent => abstractIntent is HiddenIntent or UnknownIntent)) return null;
         var graph = Graph(machine);
         if (graph == null) return null;
-        var log = machine.StateLog.Select(s => s.Id).ToList();
+        var log = machine.StateLog.Select(monsterState => monsterState.Id).ToList();
         var turns = IntentForecast.Forecast(graph, Node(current), log);
         return turns.Count == 0 ? null : (turns, new MoveStateMachineView(machine));
     }
@@ -40,9 +40,9 @@ internal static class IntentReader
             {
                 MoveNode? node = state switch
                 {
-                    MoveState m => Node(m),
-                    RandomBranchState r => new MoveNodeRandom(id, r.States.Select(Branch).ToList()),
-                    ConditionalBranchState c => new MoveNodeConditional(id, Conditions(c)),
+                    MoveState moveState => Node(moveState),
+                    RandomBranchState randomBranchState => new MoveNodeRandom(id, randomBranchState.States.Select(Branch).ToList()),
+                    ConditionalBranchState conditionalBranchState => new MoveNodeConditional(id, Conditions(conditionalBranchState)),
                     _ => null,
                 };
                 if (node == null) return null; // a kind of state the forecast doesn't know
@@ -57,11 +57,11 @@ internal static class IntentReader
         }
     }
 
-    private static MoveNodeMove Node(MoveState m) => new(m.Id, m.FollowUpState?.Id ?? m.FollowUpStateId);
+    private static MoveNodeMove Node(MoveState moveState) => new(moveState.Id, moveState.FollowUpState?.Id ?? moveState.FollowUpStateId);
 
-    private static RandomBranch Branch(RandomBranchState.StateWeight w)
+    private static RandomBranch Branch(RandomBranchState.StateWeight stateWeight)
     {
-        var repeat = w.repeatType switch
+        var repeat = stateWeight.repeatType switch
         {
             MoveRepeatType.CanRepeatForever => MoveRepeat.CanRepeatForever,
             MoveRepeatType.CanRepeatXTimes => MoveRepeat.CanRepeatXTimes,
@@ -69,21 +69,21 @@ internal static class IntentReader
             _ => MoveRepeat.UseOnlyOnce,
         };
         float weight;
-        try { weight = w.GetWeight(); } catch { weight = float.NaN; } // its lambda can't answer now: only matters if reached
-        return new RandomBranch(w.stateId, repeat, w.maxTimes, w.cooldown, weight);
+        try { weight = stateWeight.GetWeight(); } catch { weight = float.NaN; } // its lambda can't answer now: only matters if reached
+        return new RandomBranch(stateWeight.stateId, repeat, stateWeight.maxTimes, stateWeight.cooldown, weight);
     }
 
     /// <summary>Each branch of a conditional state with whether its condition holds now (ConditionalBranch.Evaluate).</summary>
-    private static List<(string, bool?)> Conditions(ConditionalBranchState c)
+    private static List<(string, bool?)> Conditions(ConditionalBranchState conditionalBranchState)
     {
         var list = new List<(string, bool?)>();
-        if (typeof(ConditionalBranchState).GetProperty("States", Any)?.GetValue(c) is not System.Collections.IEnumerable branches)
+        if (typeof(ConditionalBranchState).GetProperty("States", Any)?.GetValue(conditionalBranchState) is not System.Collections.IEnumerable branches)
             throw new InvalidOperationException("ConditionalBranchState.States not found");
         foreach (var b in branches)
         {
-            var t = b.GetType();
-            var id = (string)(t.GetField("id", Any)?.GetValue(b) ?? throw new InvalidOperationException("ConditionalBranch.id"));
-            var evaluate = t.GetMethod("Evaluate", Any) ?? throw new InvalidOperationException("ConditionalBranch.Evaluate");
+            var type = b.GetType();
+            var id = (string)(type.GetField("id", Any)?.GetValue(b) ?? throw new InvalidOperationException("ConditionalBranch.id"));
+            var evaluate = type.GetMethod("Evaluate", Any) ?? throw new InvalidOperationException("ConditionalBranch.Evaluate");
             bool? holds;
             try { holds = (float)evaluate.Invoke(b, null)! > 0f; } catch { holds = null; } // only matters if reached
             list.Add((id, holds));

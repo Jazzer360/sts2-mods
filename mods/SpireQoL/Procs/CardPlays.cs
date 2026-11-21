@@ -38,11 +38,11 @@ public static class CardPlays
     /// <summary>How many times the card would play right now (best case over targets), an open hand choice's auto-plays included.</summary>
     public static int Count(CardModel card)
     {
-        var cs = Sts2State.Combat;
-        if (cs == null) return 1;
+        var combat = Sts2State.Combat;
+        if (combat == null) return 1;
         var auto = card.Owner is { } me && card.Pile?.Type == PileType.Hand ? ChoiceAutoPlays(me) : 0;
         var count = 1;
-        foreach (var target in Targets(card, cs)) count = Math.Max(count, PlayCount(cs, card, target, out _));
+        foreach (var target in Targets(card, combat)) count = Math.Max(count, PlayCount(combat, card, target, out _));
         return count * Math.Max(1, auto);
     }
 
@@ -57,13 +57,13 @@ public static class CardPlays
     public static List<AbstractModel> ReplaySources(CardModel card)
     {
         var sources = new List<AbstractModel>();
-        var cs = Sts2State.Combat;
-        if (cs == null) return sources;
-        foreach (var target in Targets(card, cs))
+        var combat = Sts2State.Combat;
+        if (combat == null) return sources;
+        foreach (var target in Targets(card, combat))
         {
-            PlayCount(cs, card, target, out var models);
-            foreach (var m in models)
-                if (!sources.Contains(m)) sources.Add(m);
+            PlayCount(combat, card, target, out var models);
+            foreach (var model in models)
+                if (!sources.Contains(model)) sources.Add(model);
         }
         return sources;
     }
@@ -92,18 +92,18 @@ public static class CardPlays
         => card.Owner is { } me && card.Pile?.Type == PileType.Hand && ChoiceAutoPlays(me) > 0;
 
     /// <summary>The play count the game would give the card at this target (null: none), and the models that changed it.</summary>
-    private static int PlayCount(ICombatState cs, CardModel card, Creature? target, out IEnumerable<AbstractModel> changedBy)
+    private static int PlayCount(ICombatState combat, CardModel card, Creature? target, out IEnumerable<AbstractModel> changedBy)
     {
-        var count = Hook.ModifyCardPlayCount(cs, card, card.GetEnchantedReplayCount() + 1, target, out var models);
+        var count = Hook.ModifyCardPlayCount(combat, card, card.GetEnchantedReplayCount() + 1, target, out var models);
         changedBy = models;
         return count;
     }
 
     /// <summary>Where the play count is worked out: no target, and each hittable enemy for a card aimed at one (Tag Team).</summary>
-    private static IEnumerable<Creature?> Targets(CardModel card, ICombatState cs)
+    private static IEnumerable<Creature?> Targets(CardModel card, ICombatState combat)
     {
         yield return null;
         if (card.TargetType != TargetType.AnyEnemy) yield break;
-        foreach (var enemy in cs.HittableEnemies) yield return enemy;
+        foreach (var enemy in combat.HittableEnemies) yield return enemy;
     }
 }

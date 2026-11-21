@@ -31,11 +31,11 @@ public static partial class SimEngine
     /// A newly channelled orb's values for a player: the base values plus their Focus (FocusPower.ModifyOrbValue, not below 0),
     /// plus Infused Core's ExtraDamage on Lightning (InfusedCore.ModifyOrbValue). Unknown: a random orb (Trash to Treasure).
     /// </summary>
-    public static SimOrb FreshOrb(SimState s, OrbKind kind, int player)
+    public static SimOrb FreshOrb(SimState state, OrbKind kind, int player)
     {
-        var p = s.Player(player);
-        var focus = p?.Focus ?? 0;
-        var lightningBonus = p != null && p.Relics.Has(RelicId.InfusedCore) ? Var(s, player, "InfusedCore", "ExtraDamage", 0) : 0;
+        var simPlayer = state.Player(player);
+        var focus = simPlayer?.Focus ?? 0;
+        var lightningBonus = simPlayer != null && simPlayer.Relics.Has(RelicId.InfusedCore) ? Var(state, player, "InfusedCore", "ExtraDamage", 0) : 0;
         int F(int v) => Math.Max(0, v + focus);
         return kind switch
         {
@@ -52,68 +52,68 @@ public static partial class SimEngine
     /// OrbCmd.Channel for a player: with no slots yet a character that gets one on its first channel does; full slots evoke the
     /// front orb first (its owner's Thunder, its Frost block to them); then the orb goes in and AfterOrbChanneled runs.
     /// </summary>
-    public static IEnumerable<SimState> ChannelOrb(SimState s, SimOrb orb, int player)
+    public static IEnumerable<SimState> ChannelOrb(SimState state, SimOrb orb, int player)
     {
-        if (!s.TakesPart(player)) return new[] { s };
-        var p = s.MutablePlayer(player);
-        if (p.OrbCapacity == 0 && p.SlotOnFirstChannel) p.OrbCapacity = 1;
-        IEnumerable<SimState> r = new[] { s };
-        if (p.OrbCapacity > 0 && p.Orbs.Count >= p.OrbCapacity)
+        if (!state.TakesPart(player)) return new[] { state };
+        var simPlayer = state.MutablePlayer(player);
+        if (simPlayer.OrbCapacity == 0 && simPlayer.SlotOnFirstChannel) simPlayer.OrbCapacity = 1;
+        IEnumerable<SimState> states = new[] { state };
+        if (simPlayer.OrbCapacity > 0 && simPlayer.Orbs.Count >= simPlayer.OrbCapacity)
         {
-            var front = p.Orbs[0];
-            p.OwnOrbs().RemoveAt(0);
-            r = Evoke(s, front, player);
+            var front = simPlayer.Orbs[0];
+            simPlayer.OwnOrbs().RemoveAt(0);
+            states = Evoke(state, front, player);
         }
-        return Then(r.ToList(), x =>
+        return Then(states.ToList(), branch =>
         {
-            var px = x.MutablePlayer(player);
-            if (px.OrbCapacity <= 0) return new[] { x };
-            px.OwnOrbs().Add(orb.Clone());
-            return Hook(x, nameof(SimModel.AfterOrbChanneled), (m, o, y) => m.AfterOrbChanneled(y, o, player));
+            var nextPlayer = branch.MutablePlayer(player);
+            if (nextPlayer.OrbCapacity <= 0) return new[] { branch };
+            nextPlayer.OwnOrbs().Add(orb.Clone());
+            return Hook(branch, nameof(SimModel.AfterOrbChanneled), (model, o, copy) => model.AfterOrbChanneled(copy, o, player));
         });
     }
 
-    private static void RunOrb(BranchSet b, OrbAction a)
+    private static void RunOrb(BranchSet branches, OrbAction orbAction)
     {
-        switch (a.Kind)
+        switch (orbAction.Kind)
         {
             case OrbAction.Op.Channel:
-                for (var t = 0; t < a.Times; t++)
-                    b.Each(s => ChannelOrb(s, a.Values ?? FreshOrb(s, a.Orb, a.To), a.To));
+                for (var t = 0; t < orbAction.Times; t++)
+                    branches.Each(branch => ChannelOrb(branch, orbAction.Values ?? FreshOrb(branch, orbAction.Orb, orbAction.To), orbAction.To));
                 break;
             case OrbAction.Op.EvokeFront:
-                for (var t = 0; t < a.Times; t++)
+                for (var t = 0; t < orbAction.Times; t++)
                 {
-                    var last = t == a.Times - 1;
-                    b.Each(s =>
+                    var last = t == orbAction.Times - 1;
+                    branches.Each(branch =>
                     {
-                        if (s.You.Orbs.Count == 0) return new[] { s };
-                        var orb = s.You.Orbs[0];
-                        if (last) s.You.OwnOrbs().RemoveAt(0);
-                        return Evoke(s, orb);
+                        if (branch.You.Orbs.Count == 0) return new[] { branch };
+                        var orb = branch.You.Orbs[0];
+                        if (last) branch.You.OwnOrbs().RemoveAt(0);
+                        return Evoke(branch, orb);
                     });
                 }
                 break;
             case OrbAction.Op.EvokeAllTwice:
                 // Front orb first, each evoked twice (then gone). One step per evoke, so identical branches merge and the branch
                 // cap holds (one step for all of them was 4^16 copies with 4 enemies and 8 Lightning orbs).
-                for (var i = b.States.Max(s => s.You.Orbs.Count); i > 0; i--)
+                for (var i = branches.States.Max(branch => branch.You.Orbs.Count); i > 0; i--)
                 {
-                    b.Each(s => s.You.Orbs.Count == 0 ? new[] { s } : Evoke(s, s.You.Orbs[0]));
-                    b.Each(s =>
+                    branches.Each(branch => branch.You.Orbs.Count == 0 ? new[] { branch } : Evoke(branch, branch.You.Orbs[0]));
+                    branches.Each(branch =>
                     {
-                        if (s.You.Orbs.Count == 0) return new[] { s };
-                        var orb = s.You.Orbs[0];
-                        s.You.OwnOrbs().RemoveAt(0);
-                        return Evoke(s, orb);
+                        if (branch.You.Orbs.Count == 0) return new[] { branch };
+                        var orb = branch.You.Orbs[0];
+                        branch.You.OwnOrbs().RemoveAt(0);
+                        return Evoke(branch, orb);
                     });
                 }
                 break;
             case OrbAction.Op.Slots:
-                b.Do(s =>
+                branches.Do(branch =>
                 {
-                    s.You.OrbCapacity = Math.Clamp(s.You.OrbCapacity + a.Slots, 0, Math.Max(MaxOrbSlots, s.You.OrbCapacity));
-                    while (s.You.Orbs.Count > s.You.OrbCapacity) s.You.OwnOrbs().RemoveAt(s.You.Orbs.Count - 1);
+                    branch.You.OrbCapacity = Math.Clamp(branch.You.OrbCapacity + orbAction.Slots, 0, Math.Max(MaxOrbSlots, branch.You.OrbCapacity));
+                    while (branch.You.Orbs.Count > branch.You.OrbCapacity) branch.You.OwnOrbs().RemoveAt(branch.You.Orbs.Count - 1);
                 });
                 break;
         }

@@ -10,16 +10,16 @@ public abstract record DevEvent
     /// <summary>The event's name in the stream ("search-done"): its record name, kebab-cased.</summary>
     public string Kind => KindOf(GetType());
 
-    internal static string KindOf(Type t)
+    internal static string KindOf(Type type)
     {
-        var n = t.Name;
-        var b = new System.Text.StringBuilder(n.Length + 4);
+        var n = type.Name;
+        var text = new System.Text.StringBuilder(n.Length + 4);
         for (var i = 0; i < n.Length; i++)
         {
-            if (char.IsUpper(n[i]) && i > 0) b.Append('-');
-            b.Append(char.ToLowerInvariant(n[i]));
+            if (char.IsUpper(n[i]) && i > 0) text.Append('-');
+            text.Append(char.ToLowerInvariant(n[i]));
         }
-        return b.ToString();
+        return text.ToString();
     }
 }
 
@@ -116,11 +116,11 @@ public static class DevEvents
     public static Action<Exception>? OnError;
     private static int _errorSaid;
 
-    public static void Post(DevEvent e)
+    public static void Post(DevEvent devEvent)
     {
         var h = Posted;
         if (h == null) return;
-        try { h(e); }
+        try { h(devEvent); }
         catch (Exception ex)
         {
             if (Interlocked.Exchange(ref _errorSaid, 1) == 0) OnError?.Invoke(ex);

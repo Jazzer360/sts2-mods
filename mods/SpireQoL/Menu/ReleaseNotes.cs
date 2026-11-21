@@ -34,10 +34,10 @@ internal static class ReleaseNotes
 
     public static string? Resource(string name)
     {
-        using var s = typeof(ReleaseNotes).Assembly.GetManifestResourceStream("SpireQoL." + name);
-        if (s == null) return null;
-        using var r = new StreamReader(s);
-        return r.ReadToEnd();
+        using var stream = typeof(ReleaseNotes).Assembly.GetManifestResourceStream("SpireQoL." + name);
+        if (stream == null) return null;
+        using var streamReader = new StreamReader(stream);
+        return streamReader.ReadToEnd();
     }
 
     private static readonly Regex Heading = new(@"^(\d+\.\d+\.\d+)\s*[:\-–]?\s*(.*)$");
@@ -70,10 +70,10 @@ internal static class ReleaseNotes
             if (line.StartsWith("## ") || line.StartsWith("### "))
             {
                 FlushRelease();
-                if (line.StartsWith(prefix) && Heading.Match(line[prefix.Length..].Trim()) is { Success: true } m)
+                if (line.StartsWith(prefix) && Heading.Match(line[prefix.Length..].Trim()) is { Success: true } match)
                 {
-                    version = m.Groups[1].Value;
-                    var t = m.Groups[2].Value.Trim().TrimStart('(').TrimEnd(')').Trim();
+                    version = match.Groups[1].Value;
+                    var t = match.Groups[2].Value.Trim().TrimStart('(').TrimEnd(')').Trim();
                     title = t.Length == 0 ? null : Plain(t);
                 }
                 continue;
@@ -150,7 +150,7 @@ internal static class ReleaseNotes
         try
         {
             using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("author", out var a) ? a.GetString() : null;
+            return doc.RootElement.TryGetProperty("author", out var jsonElement) ? jsonElement.GetString() : null;
         }
         catch (JsonException)
         {

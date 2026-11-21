@@ -197,23 +197,23 @@ public sealed partial class SettingsMenu
         }
 
         var flow = Flow();
-        IncomingCell(flow, "You take 9", "", p => p.Show(14, 5, null, 9));
-        IncomingCell(flow, "All blocked", "", p => p.Show(8, 12, null, 0));
+        IncomingCell(flow, "You take 9", "", damageMathPanel => damageMathPanel.Show(14, 5, null, 9));
+        IncomingCell(flow, "All blocked", "", damageMathPanel => damageMathPanel.Show(8, 12, null, 0));
         IncomingCell(flow, "This kills you", "The skull: the enemy turn takes you to 0 with nothing to save you.",
-            p => p.Show(46, 6, null, 40, dies: true));
+            damageMathPanel => damageMathPanel.Show(46, 6, null, 40, dies: true));
         IncomingCell(flow, "This might kill you", "When a roll decides it (which enemy a Lightning orb hits first), the skull carries the chance. "
             + "The numbers are the worst case. ? means they aren't certain: some outcome has something not modelled, or they're waiting on a newer result (a busy play).",
-            p => p.Show(46, 6, null, 40, dies: true, deathChance: "40%", progress: "?"));
+            damageMathPanel => damageMathPanel.Show(46, 6, null, 40, dies: true, deathChance: "40%", progress: "?"));
         IncomingCell(flow, "Too much to work out", "Rarely, a fight has too many outcomes to work out in time: a lone ?, with no number and no promise either way.",
-            p => p.ShowUnknown());
+            damageMathPanel => damageMathPanel.ShowUnknown());
         IncomingCell(flow, "Something saves you", "Fairy in a Bottle (or Lizard Tail) brings you back: your HP after the enemy turn.",
-            p => p.Show(46, 6, null, 40, revive: (Potion<FairyInABottle>(), 23)));
+            damageMathPanel => damageMathPanel.Show(46, 6, null, 40, revive: (Potion<FairyInABottle>(), 23)));
         IncomingCell(flow, "Osty takes some", "Necrobinder: what Osty absorbs for you (red if it kills Osty).",
-            p => p.Show(18, 5, (6, false), 7));
+            damageMathPanel => damageMathPanel.Show(18, 5, (6, false), 7));
         IncomingCell(flow, "Unblockable too", "Regret in hand: 3 HP lost whatever your block. The skull sits beside the last line.",
-            p => p.Show(14, 11, null, 3, unblockable: 3));
+            damageMathPanel => damageMathPanel.Show(14, 11, null, 3, unblockable: 3));
         IncomingCell(flow, "Another turn first", "Ending your turn now gives you another one before the enemies act (Pael's Eye, Extra Turn).",
-            p => p.Show(12, 0, null, 12, extraTurn: Relic<PaelsEye>()));
+            damageMathPanel => damageMathPanel.Show(12, 0, null, 12, extraTurn: Relic<PaelsEye>()));
         _rows!.AddChild(flow);
         Paragraph("Teammate Incoming Damage: in multiplayer, hover a teammate to see theirs beside their HP bar, worked out the same way "
             + "from what you can see of them (their block, powers, orbs and relics; not the cards in their hand).");
@@ -239,16 +239,16 @@ public sealed partial class SettingsMenu
         var heal = GameIcons.RestOption("heal");
         var flow = Flow();
         RestCell(flow, "Resting", "30% of your max HP, rounded down.",
-            p => p.Show(30, new[] { (heal, 23) }, 53, 77, 0));
+            restMathPanel => restMathPanel.Show(30, new[] { (heal, 23) }, 53, 77, 0));
         RestCell(flow, "Some of it wasted", "Orange: the part of the heal past your max HP.",
-            p => p.Show(70, new[] { (heal, 7) }, 77, 77, 16));
+            restMathPanel => restMathPanel.Show(70, new[] { (heal, 7) }, 77, 77, 16));
         RestCell(flow, "Relics change it", "A line each: Regal Pillow's +15, Stone Humidifier's max HP (the result shows the new max), Night Terrors.",
-            p => p.Show(30, new[] { (heal, 23), (Relic<RegalPillow>(), 15), (Relic<StoneHumidifier>(), 5) }, 73, 82, 0));
+            restMathPanel => restMathPanel.Show(30, new[] { (heal, 23), (Relic<RegalPillow>(), 15), (Relic<StoneHumidifier>(), 5) }, 73, 82, 0));
         RestCell(flow, "Before the boss", "Pantograph and Bath Robes heal you when the boss fight starts: the result is the HP you start it with, "
             + "and what they'd heal anyway counts as wasted.",
-            p => p.Show(40, new[] { (heal, 23), (Relic<Pantograph>(), 14) }, 77, 77, 11));
+            restMathPanel => restMathPanel.Show(40, new[] { (heal, 23), (Relic<Pantograph>(), 14) }, 77, 77, 11));
         RestCell(flow, "Mending a teammate", "Hover them while Mend is on offer: Mend heals them as their own Rest would.",
-            p => p.Show(18, new[] { (GameIcons.RestOption("mend"), 21) }, 39, 70, 0));
+            restMathPanel => restMathPanel.Show(18, new[] { (GameIcons.RestOption("mend"), 21) }, 39, 70, 0));
         _rows!.AddChild(flow);
     }
 
@@ -307,9 +307,9 @@ public sealed partial class SettingsMenu
         flow.AddChild(shop);
 
         // Events: icons left of the option.
-        var ev = Cell();
-        ev.AddChild(Label("Events", 20, Accent));
-        ev.AddChild(ExampleBox(inner =>
+        var vBoxContainer = Cell();
+        vBoxContainer.AddChild(Label("Events", 20, Accent));
+        vBoxContainer.AddChild(ExampleBox(inner =>
         {
             void Option(string text, params (RelicModel?, bool, string?)[] relics)
             {
@@ -324,10 +324,10 @@ public sealed partial class SettingsMenu
             Option("Accept: gain a relic, add a curse", (RelicOf<BingBong>(), true, null), (RelicOf<DarkstonePeriapt>(), false, null));
             Option("Study: choose a card", (RelicOf<FresnelLens>(), false, "43%"));
         }));
-        ev.AddChild(CellText("Left of an option: the first adds a curse, so Bing Bong (crossed) copies the curse and Darkstone Periapt "
+        vBoxContainer.AddChild(CellText("Left of an option: the first adds a curse, so Bing Bong (crossed) copies the curse and Darkstone Periapt "
             + "gives you max HP. A relic that changes only some cards shows only when one of them can come up, with the chance it "
             + "does: here 43% that a card Fresnel Lens enchants is among the ones you're offered."));
-        flow.AddChild(ev);
+        flow.AddChild(vBoxContainer);
 
         // Inspect: the magnifier beside an option with random cards (decision #64).
         var inspect = Cell();
@@ -499,7 +499,7 @@ public sealed partial class SettingsMenu
         try
         {
             var copy = canonical.ToMutable();
-            foreach (var k in keywords) copy.AddKeyword(k);
+            foreach (var cardKeyword in keywords) copy.AddKeyword(cardKeyword);
             return copy;
         }
         catch
@@ -534,23 +534,23 @@ public sealed partial class SettingsMenu
 
     private void Paragraph(string text)
     {
-        var l = Label(text, 18, Muted);
-        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        l.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        var m = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        m.AddThemeConstantOverride("margin_left", 8);
-        m.AddThemeConstantOverride("margin_right", 8);
-        m.AddThemeConstantOverride("margin_bottom", 8);
-        m.AddChild(l);
-        _rows!.AddChild(m);
+        var label = Label(text, 18, Muted);
+        label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        var marginContainer = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        marginContainer.AddThemeConstantOverride("margin_left", 8);
+        marginContainer.AddThemeConstantOverride("margin_right", 8);
+        marginContainer.AddThemeConstantOverride("margin_bottom", 8);
+        marginContainer.AddChild(label);
+        _rows!.AddChild(marginContainer);
     }
 
     private static Label Wrapped(string text)
     {
-        var d = Label(text, 18, Muted);
-        d.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        d.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        return d;
+        var label = Label(text, 18, Muted);
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        return label;
     }
 
     private static HFlowContainer Flow()
@@ -570,9 +570,9 @@ public sealed partial class SettingsMenu
 
     private static Label CellText(string text)
     {
-        var l = Label(text, 17, Muted);
-        l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-        l.CustomMinimumSize = new Vector2(GuideCellWidth, 0);
-        return l;
+        var label = Label(text, 17, Muted);
+        label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        label.CustomMinimumSize = new Vector2(GuideCellWidth, 0);
+        return label;
     }
 }

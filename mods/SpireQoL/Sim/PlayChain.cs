@@ -17,9 +17,9 @@ public static class PlayChain
         /// <summary>A copy with the card's own draws changed.</summary>
         public DrawInputs WithOwnDraws(int own)
         {
-            var c = (DrawInputs)MemberwiseClone();
-            c.OwnDraws = own;
-            return c;
+            var drawInputs = (DrawInputs)MemberwiseClone();
+            drawInputs.OwnDraws = own;
+            return drawInputs;
         }
 
         /// <summary>Cards the card itself draws, across plays.</summary>
@@ -91,51 +91,51 @@ public static class PlayChain
 
     public readonly record struct DrawResult(int Draws, int Chained, bool Shuffles);
 
-    public static DrawResult Resolve(DrawInputs i)
+    public static DrawResult Resolve(DrawInputs drawInputs)
     {
         // During the play: its own draws and what reacts to its exhausts, debuffs and HP loss.
-        var during = i.DarkEmbrace * i.Exhausts
-                     + i.Vicious * i.VulnerableLandings;
-        if (i.JossPaperCount >= 0 && i.JossPaperEvery > 0 && i.Exhausts > 0)
-            during += (i.JossPaperCount % i.JossPaperEvery + i.Exhausts) / i.JossPaperEvery;
-        if (i.LosesHp) during += i.CentennialPuzzle;
+        var during = drawInputs.DarkEmbrace * drawInputs.Exhausts
+                     + drawInputs.Vicious * drawInputs.VulnerableLandings;
+        if (drawInputs.JossPaperCount >= 0 && drawInputs.JossPaperEvery > 0 && drawInputs.Exhausts > 0)
+            during += (drawInputs.JossPaperCount % drawInputs.JossPaperEvery + drawInputs.Exhausts) / drawInputs.JossPaperEvery;
+        if (drawInputs.LosesHp) during += drawInputs.CentennialPuzzle;
         // After it (relics' AfterCardPlayed): they run after your powers', so cards your powers add to
         // your hand then (Calamity) take room first.
-        var after = i.PowerDrawsAfterPlay;
-        if (i.IsPower) after += i.GamePiece * Math.Max(1, i.Plays);
-        if (i.IronClubCount >= 0 && i.IronClubEvery > 0)
-            after += (i.IronClubCount % i.IronClubEvery + Math.Max(1, i.Plays)) / i.IronClubEvery;
+        var after = drawInputs.PowerDrawsAfterPlay;
+        if (drawInputs.IsPower) after += drawInputs.GamePiece * Math.Max(1, drawInputs.Plays);
+        if (drawInputs.IronClubCount >= 0 && drawInputs.IronClubEvery > 0)
+            after += (drawInputs.IronClubCount % drawInputs.IronClubEvery + Math.Max(1, drawInputs.Plays)) / drawInputs.IronClubEvery;
         var chained = during + after;
 
         int room, pile, discard;
-        if (i.HandShuffledIn)
+        if (drawInputs.HandShuffledIn)
         {
             // Your hand is in the draw pile with everything else: a whole hand of room.
-            pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile) + i.DiscardPile + Math.Max(0, i.HandCount - 1 - i.ExhaustedFromHand);
+            pile = Math.Max(0, drawInputs.DrawPile - drawInputs.ExhaustedFromDrawPile) + drawInputs.DiscardPile + Math.Max(0, drawInputs.HandCount - 1 - drawInputs.ExhaustedFromHand);
             discard = 0;
             room = MaxHand;
         }
         else
         {
             // The card has left your hand; cards it exhausts from hand first make room, cards it puts there take it.
-            room = Math.Max(0, MaxHand - (i.HandCount - 1 - i.ExhaustedFromHand - i.DiscardedBeforeDraw) - i.AddedToHandDuringPlay);
-            pile = Math.Max(0, i.DrawPile - i.ExhaustedFromDrawPile);
-            discard = i.DiscardPile + i.DiscardedBeforeDraw;
-            if (i.ShufflesFirst) { pile += discard; discard = 0; }
+            room = Math.Max(0, MaxHand - (drawInputs.HandCount - 1 - drawInputs.ExhaustedFromHand - drawInputs.DiscardedBeforeDraw) - drawInputs.AddedToHandDuringPlay);
+            pile = Math.Max(0, drawInputs.DrawPile - drawInputs.ExhaustedFromDrawPile);
+            discard = drawInputs.DiscardPile + drawInputs.DiscardedBeforeDraw;
+            if (drawInputs.ShufflesFirst) { pile += discard; discard = 0; }
             // Ki Chant: the cards it looks at leave the draw pile; the ones it doesn't take go to the discard pile.
-            var taken = Math.Min(i.TakenFromDrawPile, pile);
+            var taken = Math.Min(drawInputs.TakenFromDrawPile, pile);
             pile -= taken;
-            discard += Math.Max(0, taken - i.AddedToHandDuringPlay);
+            discard += Math.Max(0, taken - drawInputs.AddedToHandDuringPlay);
         }
         // Drawing stops when both piles are empty (CardPileCmd.Draw).
         var cards = pile + discard;
-        if (i.Blocked) return new DrawResult(0, chained, i.ShufflesFirst);
-        var first = Math.Min(Math.Min(i.OwnDraws + during, room), cards);
-        if (i.EnchantmentDraws > 0)
-            first += Math.Min(Math.Min(i.EnchantmentDraws, Math.Max(0, room - first - i.AddedToHandBeforeEnchantment)), cards - first);
-        var lateRoom = Math.Max(0, room - first - i.AddedToHandAfterPlay);
+        if (drawInputs.Blocked) return new DrawResult(0, chained, drawInputs.ShufflesFirst);
+        var first = Math.Min(Math.Min(drawInputs.OwnDraws + during, room), cards);
+        if (drawInputs.EnchantmentDraws > 0)
+            first += Math.Min(Math.Min(drawInputs.EnchantmentDraws, Math.Max(0, room - first - drawInputs.AddedToHandBeforeEnchantment)), cards - first);
+        var lateRoom = Math.Max(0, room - first - drawInputs.AddedToHandAfterPlay);
         var draws = first + Math.Min(Math.Min(after, lateRoom), cards - first);
-        var shuffles = i.ShufflesFirst || (draws > pile && discard > 0);
+        var shuffles = drawInputs.ShufflesFirst || (draws > pile && discard > 0);
         return new DrawResult(draws, chained, shuffles);
     }
 

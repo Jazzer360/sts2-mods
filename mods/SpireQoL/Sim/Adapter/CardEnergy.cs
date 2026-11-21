@@ -64,15 +64,15 @@ internal static class CardEnergy
             catch { continue; }
             var at = new List<int>();
             for (var i = 0; i < code.Count; i++)
-                if (code[i].operand is MethodInfo { Name: "GainEnergy" } m && m.DeclaringType?.Name == "PlayerCmd") at.Add(i);
+                if (code[i].operand is MethodInfo { Name: "GainEnergy" } otherMethod && otherMethod.DeclaringType?.Name == "PlayerCmd") at.Add(i);
             if (at.Count == 0) continue;
             var certain = Branches.OnEveryPath(code, at);
             for (var k = 0; k < at.Count; k++)
             {
                 // The arguments, pushed in order: the amount (base.DynamicVars.Energy...), then the player (base.Owner last).
-                var before = code.Take(at[k]).Reverse().Take(8).Select(x => x.operand as MethodInfo).Where(x => x != null).ToList();
+                var before = code.Take(at[k]).Reverse().Take(8).Select(codeInstruction => codeInstruction.operand as MethodInfo).Where(nextMethod => nextMethod != null).ToList();
                 var toOwner = before.FirstOrDefault() is { Name: "get_Owner" } owner && typeof(CardModel).IsAssignableFrom(owner.DeclaringType);
-                var fromVar = before.Any(x => x!.Name == "get_Energy" && x.DeclaringType?.Name == "DynamicVarSet");
+                var fromVar = before.Any(nextMethod => nextMethod!.Name == "get_Energy" && nextMethod.DeclaringType?.Name == "DynamicVarSet");
                 calls.Add(new Call(method.Name, certain[k], toOwner, fromVar));
             }
         }
@@ -89,7 +89,7 @@ internal static class CardEnergy
     /// or the fields the simulator works it out from. <paramref name="owner"/>: whose card it is; <paramref name="allyId"/>: the
     /// teammate it's aimed at (-1: none).
     /// </summary>
-    internal static void AddTo(SimPlay play, CardModel card, Player me, ICombatState cs, Creature? target, int owner, int allyId)
+    internal static void AddTo(SimPlay play, CardModel card, Player me, ICombatState combat, Creature? target, int owner, int allyId)
     {
         var name = card.GetType().Name;
         var energy = Sts2State.Var(card, "Energy");
@@ -101,7 +101,7 @@ internal static class CardEnergy
         {
             case nameof(Sunder):
                 for (var i = 0; i < play.Body.Count; i++)
-                    if (play.Body[i] is AttackAction a) { play.Body[i] = a with { OnKillEnergy = energy }; break; }
+                    if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { OnKillEnergy = energy }; break; }
                 return;
             case "BowSmack":
                 if (target != null && Fool.IsImpaled(target)) Gain(energy, owner);
@@ -116,7 +116,7 @@ internal static class CardEnergy
                 play.Body.Add(new GainEnergyAsHeldAction());
                 return;
             case nameof(MadScience):
-                if (card is MadScience ms && ms.TinkerTimeRider.ToString() == "Energized") Gain(Sts2State.Var(card, "EnergizedEnergy"), owner);
+                if (card is MadScience madScience && madScience.TinkerTimeRider.ToString() == "Energized") Gain(Sts2State.Var(card, "EnergizedEnergy"), owner);
                 return;
             case "EpicRetrieval":
                 if (play.Card != null) play.Card = play.Card with { ArrowEnergy = energy };
@@ -129,7 +129,7 @@ internal static class CardEnergy
                 // Teammates are numbered from your side: a teammate's own Energy Surge (Howl from Beyond) gives you energy too, which
                 // isn't followed (it'd need their numbering of the players).
                 if (owner != Who.You) return;
-                var mates = SimAdapter.Teammates(me, cs);
+                var mates = SimAdapter.Teammates(me, combat);
                 for (var k = 0; k < mates.Count; k++)
                     if (mates[k].Creature is { IsAlive: true }) Gain(energy, Who.Teammate(k));
                 return;

@@ -93,10 +93,10 @@ internal sealed class DamageMathPanel
         grid.AddChild(rule1);
         grid.AddChild(rule2);
 
-        var eq = UiKit.Label("=", FontSize, Colors.White);
-        eq.HorizontalAlignment = HorizontalAlignment.Center;
-        eq.CustomMinimumSize = new Vector2(IconSize, 0);
-        grid.AddChild(eq);
+        var label = UiKit.Label("=", FontSize, Colors.White);
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.CustomMinimumSize = new Vector2(IconSize, 0);
+        grid.AddChild(label);
         // The result, with the skull just left of it when the enemy turn kills you.
         var resultRow = _resultRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         resultRow.AddThemeConstantOverride("separation", 4);
@@ -114,7 +114,7 @@ internal sealed class DamageMathPanel
         _progress.Visible = false;
         resultRow.AddChild(_progress);
         grid.AddChild(resultRow);
-        _math.AddRange(new Control[] { _attackIcon, _incoming, defend, _block, rule1, rule2, eq, resultRow });
+        _math.AddRange(new Control[] { _attackIcon, _incoming, defend, _block, rule1, rule2, label, resultRow });
 
         // HP loss no block stops (Regret, Beckon, Bad Luck), under the result: added to it, never against your block.
         _heartIcon = UiKit.Icon(GameIcons.Heart(), IconSize);
@@ -149,7 +149,7 @@ internal sealed class DamageMathPanel
         Texture2D? extraTurn = null, string? deathChance = null, string? progress = null, int? unblockable = null)
     {
         var mathShown = unblockable == null || incoming > 0;
-        foreach (var c in _math) c.Visible = mathShown;
+        foreach (var control in _math) control.Visible = mathShown;
         _heartIcon.Visible = unblockable != null;
         _unblockableRow.Visible = unblockable != null;
         _unblockable.Text = mathShown ? $"+ {unblockable}" : $"{unblockable}";
@@ -157,7 +157,7 @@ internal sealed class DamageMathPanel
         var last = unblockable != null ? _unblockableRow : _resultRow;
         if (_skull.GetParent() != last)
         {
-            foreach (var n in new Control[] { _deathChance, _skull, _progress }) n.GetParent()?.RemoveChild(n);
+            foreach (var control in new Control[] { _deathChance, _skull, _progress }) control.GetParent()?.RemoveChild(control);
             last.AddChild(_deathChance);
             last.AddChild(_skull);
             last.AddChild(_progress);
@@ -179,7 +179,7 @@ internal sealed class DamageMathPanel
             _reviveIcon.Texture = r.Icon;
             _revive.Text = $"{r.HpAfter} HP";
         }
-        _attackIcon.Texture = _attackTiers[AttackTier(incoming) - 1] ?? _attackTiers.FirstOrDefault(t => t != null);
+        _attackIcon.Texture = _attackTiers[AttackTier(incoming) - 1] ?? _attackTiers.FirstOrDefault(texture => texture != null);
         _incoming.Text = $"{incoming}";
         _block.Text = $"− {block}";
         _ostyIcon.Visible = osty != null && mathShown;
@@ -200,7 +200,7 @@ internal sealed class DamageMathPanel
     /// </summary>
     public void ShowUnknown()
     {
-        foreach (var c in _math) c.Visible = false;
+        foreach (var control in _math) control.Visible = false;
         _resultRow.Visible = true;
         _heartIcon.Visible = _unblockableRow.Visible = false;
         _deathChance.Visible = _skull.Visible = _progress.Visible = false;
@@ -213,11 +213,11 @@ internal sealed class DamageMathPanel
 
     internal static Label Number(Color color)
     {
-        var l = UiKit.Label("", FontSize, color);
-        l.HorizontalAlignment = HorizontalAlignment.Right;
-        l.CustomMinimumSize = new Vector2(48, 0);
-        l.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        return l;
+        var label = UiKit.Label("", FontSize, color);
+        label.HorizontalAlignment = HorizontalAlignment.Right;
+        label.CustomMinimumSize = new Vector2(48, 0);
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        return label;
     }
 
     internal static ColorRect Rule() => new()

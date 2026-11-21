@@ -8,12 +8,12 @@ public sealed class EnragePower : SimModel
 {
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (play.Card.Type != SimCardType.Skill || s.Enemy(owner) is not { Alive: true }) return One(s);
-        s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, owner, PowerId.Strength, SimEngine.PowerOn(s, owner, ThisPower), debuff: false);
-        return One(s);
+        if (play.Card.Type != SimCardType.Skill || state.Enemy(owner) is not { Alive: true }) return One(state);
+        state.LogFired(Name, 0, owner);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
+        return One(state);
     }
 }
 
@@ -24,11 +24,11 @@ public sealed class EnragePower : SimModel
 public sealed class MonarchsGazePower : SimModel
 {
     public override TabKind? Tab => TabKind.Trigger;
-    public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
+    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
     {
-        if (e.Dealer != owner || !e.Props.IsPoweredAttack() || e.Target < 0) return;
-        s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, e.Target, PowerId.Strength, -SimEngine.PowerOn(s, owner, ThisPower), debuff: true);
+        if (hit.Dealer != owner || !hit.Props.IsPoweredAttack() || hit.Target < 0) return;
+        state.LogFired(Name, 0, owner);
+        SimEngine.ApplyPower(state, owner, hit.Target, PowerId.Strength, -SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
     }
 }
 
@@ -37,12 +37,12 @@ public sealed class VitalSparkPower : SimModel
 {
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (play.Card.Affliction != SimAffliction.Tainted) return One(s);
-        s.LogFired(Name, 0, owner);
-        SimEngine.ApplyPower(s, owner, play.Owner, PowerId.Tainted, SimEngine.PowerOn(s, owner, ThisPower), debuff: false);
-        return One(s);
+        if (play.Card.Affliction != SimAffliction.Tainted) return One(state);
+        state.LogFired(Name, 0, owner);
+        SimEngine.ApplyPower(state, owner, play.Owner, PowerId.Tainted, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
+        return One(state);
     }
 }
 
@@ -53,13 +53,13 @@ public sealed class CrabRagePower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsEnemy(owner) ? OutcomeRules.KillsAnother(owner) : null;
 
-    public override void AfterDeath(SimState s, int owner, int dead)
+    public override void AfterDeath(SimState state, int owner, int dead)
     {
-        if (dead == owner || dead < 0 || s.Enemy(owner) is not { Alive: true } e || e.Intent == null) return;
-        s.LogFired(Name, 0, owner);
-        var strength = e.Powers[ThisPower];
-        e.Powers = e.Powers.Without(ThisPower).Add(PowerId.Strength, strength);
-        e.Block += e.CrabRageBlock;
+        if (dead == owner || dead < 0 || state.Enemy(owner) is not { Alive: true } enemy || enemy.Intent == null) return;
+        state.LogFired(Name, 0, owner);
+        var strength = enemy.Powers[ThisPower];
+        enemy.Powers = enemy.Powers.Without(ThisPower).Add(PowerId.Strength, strength);
+        enemy.Block += enemy.CrabRageBlock;
     }
 }
 
@@ -68,10 +68,10 @@ public sealed class RavenousPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsEnemy(owner) ? OutcomeRules.KillsAnother(owner) : null;
 
-    public override void AfterDeath(SimState s, int owner, int dead)
+    public override void AfterDeath(SimState state, int owner, int dead)
     {
-        if (dead == owner || dead < 0 || s.Enemy(owner) is not { Alive: true } e || e.Stunned) return;
-        s.LogFired(Name, 0, owner);
-        SimEngine.Stun(e);
+        if (dead == owner || dead < 0 || state.Enemy(owner) is not { Alive: true } enemy || enemy.Stunned) return;
+        state.LogFired(Name, 0, owner);
+        SimEngine.Stun(enemy);
     }
 }

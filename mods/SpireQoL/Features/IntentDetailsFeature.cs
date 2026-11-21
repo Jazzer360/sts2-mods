@@ -40,8 +40,8 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
     internal static Shown? For(Creature enemy)
     {
         if (enemy is not { IsEnemy: true, IsAlive: true } || enemy.Monster is not { } monster || monster.NextMove is not { } move) return null;
-        if (move.Intents.Any(i => i is HiddenIntent or UnknownIntent)) return null;
-        var block = move.Intents.Any(i => i is DefendIntent) ? MovePowers.BlockOf(monster, move) : null;
+        if (move.Intents.Any(abstractIntent => abstractIntent is HiddenIntent or UnknownIntent)) return null;
+        var block = move.Intents.Any(abstractIntent => abstractIntent is DefendIntent) ? MovePowers.BlockOf(monster, move) : null;
         return new Shown(move.Id, block, MovePowers.Of(monster, move));
     }
 
@@ -53,10 +53,10 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             if (!GodotObject.IsInstanceValid(node) || node.IntentContainer is not { } container || !GodotObject.IsInstanceValid(container)) continue;
             var intents = container.GetChildren().OfType<NIntent>().Where(GodotObject.IsInstanceValid).ToList();
             // As the intent on screen says: nothing while it's hidden there (its move would be given away).
-            var hidden = intents.Any(i => Sts2State.Private<AbstractIntent?>(i, "_intent", null) is HiddenIntent or UnknownIntent);
-            var shown = Sts2State.IsPlayerTurn && !hidden && node.Entity is { } e ? For(e) : null;
-            var onScreen = intents.Select(i => Sts2State.Private<AbstractIntent?>(i, "_intent", null)).ToList();
-            var corners = shown != null && onScreen.All(x => x != null) ? IntentCorner.Assign(onScreen!, shown.Powers) : new();
+            var hidden = intents.Any(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", null) is HiddenIntent or UnknownIntent);
+            var shown = Sts2State.IsPlayerTurn && !hidden && node.Entity is { } creature ? For(creature) : null;
+            var onScreen = intents.Select(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", null)).ToList();
+            var corners = shown != null && onScreen.All(abstractIntent => abstractIntent != null) ? IntentCorner.Assign(onScreen!, shown.Powers) : new();
             for (var k = 0; k < intents.Count; k++)
             {
                 var intent = intents[k];

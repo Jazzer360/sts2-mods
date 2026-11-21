@@ -64,7 +64,7 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
     {
         try
         {
-            return NCombatRoom.Instance?.Ui?.EndTurnButton is { } b && GodotObject.IsInstanceValid(b) && b.IsVisibleInTree() ? b.GetGlobalRect() : null;
+            return NCombatRoom.Instance?.Ui?.EndTurnButton is { } nEndTurnButton && GodotObject.IsInstanceValid(nEndTurnButton) && nEndTurnButton.IsVisibleInTree() ? nEndTurnButton.GetGlobalRect() : null;
         }
         catch
         {

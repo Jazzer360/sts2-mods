@@ -46,8 +46,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             foreach (var card in Sts2State.Hand(me)) _ctx.Decor.SeenInHand(card);
         foreach (var (card, tabs) in predicted)
         {
-            var d = _ctx.Decor.For(card);
-            foreach (var t in tabs) d.AddTab(t);
+            var decor = _ctx.Decor.For(card);
+            foreach (var tab in tabs) decor.AddTab(tab);
         }
     }
 }

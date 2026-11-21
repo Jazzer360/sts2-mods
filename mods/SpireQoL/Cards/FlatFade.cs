@@ -144,11 +144,11 @@ internal sealed class FlatFade
             _image.Size = _view.Size;
         }
         var over = -1;
-        foreach (var k in under) if (k != null && GodotObject.IsInstanceValid(k) && k.GetParent() == _container) over = Math.Max(over, k.GetIndex());
+        foreach (var node in under) if (node != null && GodotObject.IsInstanceValid(node) && node.GetParent() == _container) over = Math.Max(over, node.GetIndex());
         if (_image.GetIndex() != over + 1) _container.MoveChild(_image, Math.Min(over + 1, _container.GetChildCount() - 1));
-        var m = _image.Modulate;
-        m.A = alpha;
-        _image.Modulate = m;
+        var color = _image.Modulate;
+        color.A = alpha;
+        _image.Modulate = color;
         _image.Visible = ready;
         HideLayers(alpha, keep, ready);
         if (ready && glow != null)
@@ -163,16 +163,16 @@ internal sealed class FlatFade
     {
         foreach (var child in _container.GetChildren())
         {
-            if (child is not CanvasItem ci || child == _image || keep.Contains(child)) continue;
-            var i = _hidden.FindIndex(h => h.Node == ci);
+            if (child is not CanvasItem canvasItem || child == _image || keep.Contains(child)) continue;
+            var i = _hidden.FindIndex(h => h.Node == canvasItem);
             if (i < 0)
             {
-                _hidden.Add((ci, ci.Modulate.A));
+                _hidden.Add((canvasItem, canvasItem.Modulate.A));
                 i = _hidden.Count - 1;
             }
-            var mm = ci.Modulate;
-            mm.A = ready ? 0f : _hidden[i].Alpha * alpha;
-            ci.Modulate = mm;
+            var color = canvasItem.Modulate;
+            color.A = ready ? 0f : _hidden[i].Alpha * alpha;
+            canvasItem.Modulate = color;
         }
     }
 
@@ -209,9 +209,9 @@ internal sealed class FlatFade
     {
         var parts = new List<string>();
         Describe(root, keep, 0, "", parts);
-        var h = new HashCode();
-        foreach (var p in parts) h.Add(p);
-        var s = h.ToHashCode();
+        var hashCode = new HashCode();
+        foreach (var p in parts) hashCode.Add(p);
+        var s = hashCode.ToHashCode();
         return s == 0 ? 1 : s;
     }
 
@@ -221,17 +221,17 @@ internal sealed class FlatFade
         foreach (var child in node.GetChildren())
         {
             if (child == _image || keep.Contains(child) || child is GpuParticles2D or SubViewport) continue;
-            if (child is not CanvasItem ci) continue;
+            if (child is not CanvasItem canvasItem) continue;
             var p = path + "/" + child.Name;
-            if (!ci.Visible) { into.Add(p + " hidden"); continue; }
+            if (!canvasItem.Visible) { into.Add(p + " hidden"); continue; }
             var s = p;
-            if (depth > 0 && ci.Modulate != Colors.White) s += " modulate " + ci.Modulate.ToHtml();
-            if (ci.SelfModulate != Colors.White) s += " self " + ci.SelfModulate.ToHtml();
+            if (depth > 0 && canvasItem.Modulate != Colors.White) s += " modulate " + canvasItem.Modulate.ToHtml();
+            if (canvasItem.SelfModulate != Colors.White) s += " self " + canvasItem.SelfModulate.ToHtml();
             switch (child)
             {
-                case Label l: s += $" \"{l.Text}\" {l.GetThemeColor("font_color").ToHtml()}"; break;
-                case RichTextLabel r: s += $" \"{r.Text}\""; break;
-                case TextureRect t: s += " tex " + (t.Texture?.ResourcePath is { Length: > 0 } rp ? rp : t.Texture?.GetInstanceId().ToString() ?? "none"); break;
+                case Label label: s += $" \"{label.Text}\" {label.GetThemeColor("font_color").ToHtml()}"; break;
+                case RichTextLabel richTextLabel: s += $" \"{richTextLabel.Text}\""; break;
+                case TextureRect icon: s += " tex " + (icon.Texture?.ResourcePath is { Length: > 0 } rp ? rp : icon.Texture?.GetInstanceId().ToString() ?? "none"); break;
             }
             into.Add(s);
             Describe(child, keep, depth + 1, p, into);
@@ -240,10 +240,10 @@ internal sealed class FlatFade
 
     private static void Quiet(Node node)
     {
-        if (node is Control c)
+        if (node is Control control)
         {
-            c.MouseFilter = Control.MouseFilterEnum.Ignore;
-            c.FocusMode = Control.FocusModeEnum.None;
+            control.MouseFilter = Control.MouseFilterEnum.Ignore;
+            control.FocusMode = Control.FocusModeEnum.None;
         }
         foreach (var child in node.GetChildren()) Quiet(child);
     }
@@ -256,9 +256,9 @@ internal sealed class FlatFade
         foreach (var (node, a) in _hidden)
         {
             if (!GodotObject.IsInstanceValid(node)) continue;
-            var m = node.Modulate;
-            m.A = a;
-            node.Modulate = m;
+            var color = node.Modulate;
+            color.A = a;
+            node.Modulate = color;
         }
         _hidden.Clear();
         if (GodotObject.IsInstanceValid(_image))

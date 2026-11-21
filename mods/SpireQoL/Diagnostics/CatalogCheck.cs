@@ -36,43 +36,43 @@ internal static class CatalogCheck
         // The simulator's models with a tab (the play log's tabs), and the outcome comparisons Proc Indicators names (tab keys are
         // built as "proc:" + nameof(X), which the compiler folds into one literal).
         var ruleNames = LiteralsIn(typeof(Combat.CardPredictions)).Select(n => n.StartsWith("proc:") ? n[5..] : n)
-            .Concat(Sim.SimModels.Names.Where(n => Sim.SimModels.Get(n) is { } m && (m.Tab != null || m.JudgedOnOutcome)))
-            .Where(n => gameTypes.TryGetValue(n, out var t) && (typeof(RelicModel).IsAssignableFrom(t) || typeof(PowerModel).IsAssignableFrom(t)))
+            .Concat(Sim.SimModels.Names.Where(n => Sim.SimModels.Get(n) is { } model && (model.Tab != null || model.JudgedOnOutcome)))
+            .Where(n => gameTypes.TryGetValue(n, out var type) && (typeof(RelicModel).IsAssignableFrom(type) || typeof(PowerModel).IsAssignableFrom(type)))
             .ToHashSet();
-        var procRows = sources.Where(s => s.Tag != null && s.TagPrefix == "proc:").Select(s => s.Type).ToHashSet();
+        var procRows = sources.Where(sourceEntry => sourceEntry.Tag != null && sourceEntry.TagPrefix == "proc:").Select(sourceEntry => sourceEntry.Type).ToHashSet();
         foreach (var n in ruleNames.Except(procRows).OrderBy(n => n)) problems.Add($"proc rule without a settings row: {n}");
         foreach (var n in procRows.Except(ruleNames).OrderBy(n => n)) problems.Add($"settings row (proc tab) without a rule: {n}");
 
         // Tracker rows.
         // Cards with a tray row of their own (Make It So's Skill count: RelicCountersFeature, Procs/ReturnToHand).
-        var specs = RelicSpecs.All.Where(s => s.InTray).Select(s => s.TypeName).Concat(PowerSpecs.All.Select(s => s.TypeName))
+        var specs = RelicSpecs.All.Where(relicCounterSpec => relicCounterSpec.InTray).Select(relicCounterSpec => relicCounterSpec.TypeName).Concat(PowerSpecs.All.Select(powerCounterSpec => powerCounterSpec.TypeName))
             .Append(Procs.ReturnToHand.MakeItSo).ToHashSet();
-        var trackerRows = sources.Where(s => s.Tracker != null).Select(s => s.Type).ToHashSet();
+        var trackerRows = sources.Where(sourceEntry => sourceEntry.Tracker != null).Select(sourceEntry => sourceEntry.Type).ToHashSet();
         foreach (var n in specs.Except(trackerRows).OrderBy(n => n)) problems.Add($"tracker row without a settings row: {n}");
         foreach (var n in trackerRows.Except(specs).OrderBy(n => n)) problems.Add($"settings row (tracker) without a tracker spec: {n}");
 
         // Double plays: every source of extra plays the game has.
         var replayers = gameTypes.Values
-            .Where(t => t.GetMethod("ModifyCardPlayCount", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) is { } m
-                        && m.GetBaseDefinition().DeclaringType != t)
-            .Select(t => t.Name).ToHashSet();
-        var doubleRows = sources.Where(s => s.TagPrefix == "double-play:").Select(s => s.Type).ToHashSet();
+            .Where(type => type.GetMethod("ModifyCardPlayCount", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) is { } method
+                        && method.GetBaseDefinition().DeclaringType != type)
+            .Select(type => type.Name).ToHashSet();
+        var doubleRows = sources.Where(sourceEntry => sourceEntry.TagPrefix == "double-play:").Select(sourceEntry => sourceEntry.Type).ToHashSet();
         foreach (var n in replayers.Except(doubleRows).OrderBy(n => n)) problems.Add($"source of extra plays without a double-play row: {n}");
         foreach (var n in doubleRows.Except(replayers).OrderBy(n => n)) problems.Add($"double-play row for a class that doesn't add plays: {n}");
 
         // Run reminders: every rule has a settings row, every row a rule.
-        var reminderRules = ChoiceReminders.Rules.Select(r => r.Relic).ToHashSet();
-        var reminderRows = sources.Where(s => s.OutsideFights).Select(s => s.Type).ToHashSet();
+        var reminderRules = ChoiceReminders.Rules.Select(reminderRule => reminderRule.Relic).ToHashSet();
+        var reminderRows = sources.Where(sourceEntry => sourceEntry.OutsideFights).Select(sourceEntry => sourceEntry.Type).ToHashSet();
         foreach (var n in reminderRules.Except(reminderRows).OrderBy(n => n)) problems.Add($"reminder rule without a settings row: {n}");
         foreach (var n in reminderRows.Except(reminderRules).OrderBy(n => n)) problems.Add($"settings row (reminder) without a rule: {n}");
         // Each place (card rewards, events, shops) has its text exactly where the rule shows there.
-        foreach (var r in ChoiceReminders.Rules)
+        foreach (var reminderRule in ChoiceReminders.Rules)
         {
-            if (sources.FirstOrDefault(s => s.Type == r.Relic && s.OutsideFights) is not { } row) continue;
+            if (sources.FirstOrDefault(sourceEntry => sourceEntry.Type == reminderRule.Relic && sourceEntry.OutsideFights) is not { } row) continue;
             foreach (var place in Enum.GetValues<ReminderPlace>())
             {
-                if (r.In(place) && row.Reminder(place) == null) problems.Add($"reminder shown at {place} without a settings switch there: {r.Relic}");
-                if (!r.In(place) && row.Reminder(place) != null) problems.Add($"settings switch at {place} where the reminder never shows: {r.Relic}");
+                if (reminderRule.In(place) && row.Reminder(place) == null) problems.Add($"reminder shown at {place} without a settings switch there: {reminderRule.Relic}");
+                if (!reminderRule.In(place) && row.Reminder(place) != null) problems.Add($"settings switch at {place} where the reminder never shows: {reminderRule.Relic}");
             }
         }
 
@@ -87,11 +87,11 @@ internal static class CatalogCheck
     /// <summary>The id of every feature class in the mod (Id is a constant on each: read from an instance made without its constructor).</summary>
     public static IEnumerable<string> FeatureIds()
     {
-        foreach (var t in typeof(CatalogCheck).Assembly.GetTypes())
+        foreach (var type in typeof(CatalogCheck).Assembly.GetTypes())
         {
-            if (t is not { IsAbstract: false, IsClass: true } || !typeof(Sts2Mods.Core.Features.IFeature).IsAssignableFrom(t)) continue;
-            var f = (Sts2Mods.Core.Features.IFeature)RuntimeHelpers.GetUninitializedObject(t);
-            yield return f.Id;
+            if (type is not { IsAbstract: false, IsClass: true } || !typeof(Sts2Mods.Core.Features.IFeature).IsAssignableFrom(type)) continue;
+            var feature = (Sts2Mods.Core.Features.IFeature)RuntimeHelpers.GetUninitializedObject(type);
+            yield return feature.Id;
         }
     }
 
@@ -99,10 +99,10 @@ internal static class CatalogCheck
     {
         Type[] all;
         try { all = typeof(AbstractModel).Assembly.GetTypes(); }
-        catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(t => t != null).ToArray()!; }
+        catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(type => type != null).ToArray()!; }
         var d = new Dictionary<string, Type>();
-        foreach (var t in all)
-            if (t is { IsAbstract: false, IsClass: true } && typeof(AbstractModel).IsAssignableFrom(t)) d.TryAdd(t.Name, t);
+        foreach (var type in all)
+            if (type is { IsAbstract: false, IsClass: true } && typeof(AbstractModel).IsAssignableFrom(type)) d.TryAdd(type.Name, type);
         return d;
     }
 
@@ -113,13 +113,13 @@ internal static class CatalogCheck
         const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
         var types = new List<Type> { type };
         for (var i = 0; i < types.Count; i++) types.AddRange(types[i].GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
-        foreach (var t in types)
+        foreach (var otherType in types)
         {
-            foreach (var m in t.GetMethods(all).Cast<MethodBase>().Concat(t.GetConstructors(all)))
+            foreach (var method in otherType.GetMethods(all).Cast<MethodBase>().Concat(otherType.GetConstructors(all)))
             {
                 try
                 {
-                    foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
+                    foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(method))
                         if (ins.operand is string s) set.Add(s);
                 }
                 catch

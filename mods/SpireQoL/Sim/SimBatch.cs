@@ -16,12 +16,12 @@ public sealed class SimBatch
     public SimJob[] Jobs { get; }
 
     /// <summary>Every search is over (or failed: Fault).</summary>
-    public bool IsCompleted => Jobs.All(j => j.Ready.IsCompleted);
+    public bool IsCompleted => Jobs.All(job => job.Ready.IsCompleted);
 
     /// <summary>The first search's failure, if one failed.</summary>
-    public Exception? Fault => Jobs.Select(j => j.Ready).FirstOrDefault(t => t.IsFaulted)?.Exception?.GetBaseException();
+    public Exception? Fault => Jobs.Select(job => job.Ready).FirstOrDefault(task => task.IsFaulted)?.Exception?.GetBaseException();
 
-    public SimOutcome[] Latest => Jobs.Select(j => j.Latest!).ToArray();
-    public bool Finished => Jobs.All(j => j.Finished);
-    public void Cancel() { foreach (var j in Jobs) j.Cancel(); }
+    public SimOutcome[] Latest => Jobs.Select(job => job.Latest!).ToArray();
+    public bool Finished => Jobs.All(job => job.Finished);
+    public void Cancel() { foreach (var job in Jobs) job.Cancel(); }
 }

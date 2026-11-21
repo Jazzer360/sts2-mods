@@ -18,9 +18,9 @@ public class DrawScanTests
     {
         Assert.True(GameModels.EnsureLoaded() > 500, "the game's cards didn't load");
         return typeof(AbstractModel).Assembly.GetTypes()
-            .Where(t => !t.IsAbstract && typeof(AbstractModel).IsAssignableFrom(t))
-            .Where(t => Hooks.Any(h => t.GetMethod(h, BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly) != null))
-            .Select(t => t.Name).OrderBy(n => n).ToList();
+            .Where(type => !type.IsAbstract && typeof(AbstractModel).IsAssignableFrom(type))
+            .Where(type => Hooks.Any(h => type.GetMethod(h, BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly) != null))
+            .Select(type => type.Name).OrderBy(n => n).ToList();
     }
 
     [Fact]
@@ -47,16 +47,16 @@ public class DrawScanTests
     private static bool UsesWhatItDraws(Type card)
     {
         const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
-        foreach (var m in card.GetMethods(all))
+        foreach (var method in card.GetMethods(all))
         {
-            var body = m.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()?.StateMachineType
-                .GetMethod("MoveNext", all) ?? (MethodBase)m;
+            var body = method.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()?.StateMachineType
+                .GetMethod("MoveNext", all) ?? (MethodBase)method;
             List<HarmonyLib.CodeInstruction> code;
             try { code = SpireQoL.Diagnostics.GameCode.Instructions(body); } catch { continue; }
             for (var i = 0; i < code.Count; i++)
             {
-                if (code[i].operand is not MethodInfo { Name: "Draw" } d || d.DeclaringType?.Name != "CardPileCmd") continue;
-                var get = code.FindIndex(i, x => x.operand is MethodInfo { Name: "GetResult" });
+                if (code[i].operand is not MethodInfo { Name: "Draw" } otherMethod || otherMethod.DeclaringType?.Name != "CardPileCmd") continue;
+                var get = code.FindIndex(i, codeInstruction => codeInstruction.operand is MethodInfo { Name: "GetResult" });
                 if (get >= 0 && get + 1 < code.Count && code[get + 1].opcode != System.Reflection.Emit.OpCodes.Pop) return true;
             }
         }
@@ -67,7 +67,7 @@ public class DrawScanTests
     public void EveryCardThatUsesWhatItDrawsIsAReader()
     {
         GameModels.EnsureLoaded();
-        var users = ModelDb.AllCards.Select(c => c.GetType()).Distinct().Where(UsesWhatItDraws).Select(t => t.Name).OrderBy(n => n).ToList();
+        var users = ModelDb.AllCards.Select(card => card.GetType()).Distinct().Where(UsesWhatItDraws).Select(type => type.Name).OrderBy(n => n).ToList();
         Assert.Contains("EscapePlan", users); // the scan finds the known ones
         var missing = users.Where(n => !SimAdapter.DrawnCardReaders.ContainsKey(n)).ToList();
         Assert.True(missing.Count == 0, "Cards that act on what they draw, not in SimAdapter.DrawnCardReaders: " + string.Join(", ", missing));

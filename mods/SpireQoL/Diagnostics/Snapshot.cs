@@ -18,81 +18,81 @@ public static class Snapshot
     {
         var d = new Dictionary<string, string>();
         var me = Sts2State.Me;
-        var cs = Sts2State.Combat;
-        d["in_combat"] = (cs != null).ToString();
-        if (me == null || cs == null) return d;
+        var combat = Sts2State.Combat;
+        d["in_combat"] = (combat != null).ToString();
+        if (me == null || combat == null) return d;
 
         Try(d, "combat", () =>
-            $"encounter {Name(cs.Encounter)}, turn {Sts2State.TurnNumber}, side {cs.CurrentSide}, player turn {Sts2State.IsPlayerTurn}");
+            $"encounter {Name(combat.Encounter)}, turn {Sts2State.TurnNumber}, side {combat.CurrentSide}, player turn {Sts2State.IsPlayerTurn}");
 
         Try(d, "player", () =>
         {
-            var c = me.Creature;
+            var creature = me.Creature;
             var pcs = me.PlayerCombatState;
             var osty = me.Osty;
-            return $"{Name(me.Character)}: HP {c.CurrentHp}/{c.MaxHp}, block {c.Block}, energy {pcs?.Energy}, stars {pcs?.Stars}" +
+            return $"{Name(me.Character)}: HP {creature.CurrentHp}/{creature.MaxHp}, block {creature.Block}, energy {pcs?.Energy}, stars {pcs?.Stars}" +
                    (osty != null ? $", Osty HP {osty.CurrentHp}/{osty.MaxHp} (alive {osty.IsAlive})" : "") +
                    $", draw pile {Sts2State.DrawPileCount(me)}, discard pile {Sts2State.DiscardPileCount(me)}";
         });
         Try(d, "player_powers", () => Powers(me.Creature));
-        Try(d, "relics", () => string.Join(", ", me.Relics.Select(r =>
-            $"{r.GetType().Name}{(r.ShowCounter ? $" [{r.DisplayAmount}]" : "")}{(r.Status != default ? $" ({r.Status})" : "")}")));
+        Try(d, "relics", () => string.Join(", ", me.Relics.Select(relic =>
+            $"{relic.GetType().Name}{(relic.ShowCounter ? $" [{relic.DisplayAmount}]" : "")}{(relic.Status != default ? $" ({relic.Status})" : "")}")));
         Try(d, "orbs", () =>
         {
-            var q = me.PlayerCombatState?.OrbQueue;
-            if (q == null) return "none";
-            var orbs = q.Orbs.Select((o, i) => $"{i + 1}. {o.GetType().Name} (passive {o.PassiveVal}, evoke {o.EvokeVal})");
-            return $"slots {q.Orbs.Count}/{q.Capacity}, front first: " + (q.Orbs.Count == 0 ? "empty" : string.Join(", ", orbs));
+            var orbQueue = me.PlayerCombatState?.OrbQueue;
+            if (orbQueue == null) return "none";
+            var orbs = orbQueue.Orbs.Select((orb, i) => $"{i + 1}. {orb.GetType().Name} (passive {orb.PassiveVal}, evoke {orb.EvokeVal})");
+            return $"slots {orbQueue.Orbs.Count}/{orbQueue.Capacity}, front first: " + (orbQueue.Orbs.Count == 0 ? "empty" : string.Join(", ", orbs));
         });
 
-        Try(d, "enemies", () => string.Join("\n", cs.Enemies.Select(e =>
+        Try(d, "enemies", () => string.Join("\n", combat.Enemies.Select(creature =>
         {
             var intent = "";
             try
             {
-                var attacks = e.Monster?.NextMove.Intents.OfType<AttackIntent>().ToList();
+                var attacks = creature.Monster?.NextMove.Intents.OfType<AttackIntent>().ToList();
                 if (attacks is { Count: > 0 })
                 {
-                    var targets = cs.Players.Select(p => p.Creature).ToList();
-                    intent = " | intent " + string.Join(" + ", attacks.Select(a => $"{a.GetSingleDamage(targets, e)}x{Math.Max(1, a.Repeats)}"));
+                    var targets = combat.Players.Select(player => player.Creature).ToList();
+                    intent = " | intent " + string.Join(" + ", attacks.Select(attackIntent => $"{attackIntent.GetSingleDamage(targets, creature)}x{Math.Max(1, attackIntent.Repeats)}"));
                 }
-                else if (e.Monster != null)
+                else if (creature.Monster != null)
                 {
-                    intent = " | intent " + string.Join(", ", e.Monster.NextMove.Intents.Select(i => i.GetType().Name));
+                    intent = " | intent " + string.Join(", ", creature.Monster.NextMove.Intents.Select(abstractIntent => abstractIntent.GetType().Name));
                 }
             }
             catch
             {
                 // intent unavailable
             }
-            return $"{Name(e.Monster)}: HP {e.CurrentHp}/{e.MaxHp}, block {e.Block}, alive {e.IsAlive}, stunned {e.IsStunned} | powers {Powers(e)}{intent}";
+            return $"{Name(creature.Monster)}: HP {creature.CurrentHp}/{creature.MaxHp}, block {creature.Block}, alive {creature.IsAlive}, stunned {creature.IsStunned} | powers {Powers(creature)}{intent}";
         })));
 
-        Try(d, "hand", () => string.Join("\n", Sts2State.Hand(me).Select(c =>
+        Try(d, "hand", () => string.Join("\n", Sts2State.Hand(me).Select(card =>
         {
-            var tabs = ctx.Decor.Previous.TryGetValue(c, out var t)
-                ? string.Join(", ", t.Select(x => x.Text ?? (x.Amount > 0 ? $"{x.Key} {x.Amount}{(x.AuditMax > 0 ? $" [{x.AuditMin}-{x.AuditMax}]" : "")}" : x.Key) + (x.Crossed ? " (crossed)" : "")))
+            var tabs = ctx.Decor.Previous.TryGetValue(card, out var otherTabs)
+                ? string.Join(", ", otherTabs.Select(tab => tab.Text ?? (tab.Amount > 0 ? $"{tab.Key} {tab.Amount}{(tab.AuditMax > 0 ? $" [{tab.AuditMin}-{tab.AuditMax}]" : "")}" : tab.Key) + (tab.Crossed ? " (crossed)" : "")))
                 : "none";
-            var facts = ctx.Predictions.PreviousFacts.TryGetValue(c, out var f) ? FactsLine(f) : "no facts";
+            var facts = ctx.Predictions.PreviousFacts.TryGetValue(card, out var otherFacts) ? FactsLine(otherFacts) : "no facts";
             string cost;
-            try { cost = c.EnergyCost.CostsX ? "X" : c.EnergyCost.GetAmountToSpend().ToString(); } catch { cost = "?"; }
-            return $"{c.GetType().Name}{(c.IsUpgraded ? "+" : "")} ({c.Type}, cost {cost}, keywords {string.Join("/", c.Keywords)}" +
-                   $"{(c.Enchantment != null ? $", enchant {c.Enchantment.GetType().Name}" : "")}{(c.Affliction != null ? $", affliction {c.Affliction.GetType().Name}" : "")})" +
+            try { cost = card.EnergyCost.CostsX ? "X" : card.EnergyCost.GetAmountToSpend().ToString(); } catch { cost = "?"; }
+            return $"{card.GetType().Name}{(card.IsUpgraded ? "+" : "")} ({card.Type}, cost {cost}, keywords {string.Join("/", card.Keywords)}" +
+                   $"{(card.Enchantment != null ? $", enchant {card.Enchantment.GetType().Name}" : "")}{(card.Affliction != null ? $", affliction {card.Affliction.GetType().Name}" : "")})" +
                    $" | tabs: {tabs} | facts: {facts}";
         })));
 
         Try(d, "combat_history", () => string.Join("\n",
-            CombatManager.Instance.History.Entries.Reverse().Take(40).Reverse().Select(e => e.HumanReadableString)));
+            CombatManager.Instance.History.Entries.Reverse().Take(40).Reverse().Select(entry => entry.HumanReadableString)));
         return d;
     }
 
     /// <summary>What the mod expects one play of a card to do (PlayFacts), for reports.</summary>
-    public static string FactsLine(SpireQoL.Procs.PlayFacts f) =>
-        $"plays {f.Plays}, energy {f.Energy}, stars {f.Stars}, exhausts {f.TotalExhausts}, discards {f.Discards}, draws {f.Draws}, created {f.Generated}, " +
-        $"orbs channeled {f.Channels}, hits {f.AttackHits}, block gains {f.BlockGains}, debuffs {string.Join("/", f.EnemyDebuffs.Select(x => x.Name))}, " +
-        $"orb evoke damage {f.OrbDamageMin}-{f.OrbDamageMax}, orb evoke block {f.OrbBlock}, random outcome {f.RandomOutcome}";
+    public static string FactsLine(SpireQoL.Procs.PlayFacts facts) =>
+        $"plays {facts.Plays}, energy {facts.Energy}, stars {facts.Stars}, exhausts {facts.TotalExhausts}, discards {facts.Discards}, draws {facts.Draws}, created {facts.Generated}, " +
+        $"orbs channeled {facts.Channels}, hits {facts.AttackHits}, block gains {facts.BlockGains}, debuffs {string.Join("/", facts.EnemyDebuffs.Select(type => type.Name))}, " +
+        $"orb evoke damage {facts.OrbDamageMin}-{facts.OrbDamageMax}, orb evoke block {facts.OrbBlock}, random outcome {facts.RandomOutcome}";
 
-    private static string Powers(Creature c) => c.Powers.Count == 0 ? "none" : string.Join(", ", c.Powers.Select(p => $"{p.GetType().Name} {p.Amount}"));
+    private static string Powers(Creature creature) => creature.Powers.Count == 0 ? "none" : string.Join(", ", creature.Powers.Select(power => $"{power.GetType().Name} {power.Amount}"));
 
     private static string Name(object? model) => model?.GetType().Name ?? "none";
 

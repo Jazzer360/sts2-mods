@@ -51,13 +51,13 @@ public sealed partial class SettingsMenu
         if (!string.IsNullOrEmpty(q))
         {
             var shown = 0;
-            foreach (var r in all)
+            foreach (var release in all)
             {
-                var sections = r.Sections
-                    .Select(s => s with { Items = s.Items.Where(i => Matches(i, s.Kind, r.Version, r.Title)).ToList() })
-                    .Where(s => s.Items.Count > 0).ToList();
+                var sections = release.Sections
+                    .Select(releaseSection => releaseSection with { Items = releaseSection.Items.Where(i => Matches(i, releaseSection.Kind, release.Version, release.Title)).ToList() })
+                    .Where(releaseSection => releaseSection.Items.Count > 0).ToList();
                 if (sections.Count == 0) continue;
-                ReleaseBlock(r with { Sections = sections });
+                ReleaseBlock(release with { Sections = sections });
                 shown++;
             }
             if (shown == 0) Paragraph("No patch notes match the search.");
@@ -68,7 +68,7 @@ public sealed partial class SettingsMenu
         _notesPage = Math.Clamp(_notesPage, 0, pages - 1);
         var pager = Pager(pages);
         _rows!.AddChild(Indented(pager, bottom: 4));
-        foreach (var r in all.Skip(_notesPage * ReleasesPerPage).Take(ReleasesPerPage)) ReleaseBlock(r);
+        foreach (var release in all.Skip(_notesPage * ReleasesPerPage).Take(ReleasesPerPage)) ReleaseBlock(release);
         if (pages > 1) _rows.AddChild(Indented(Pager(pages), bottom: 8));
     }
 
@@ -87,44 +87,44 @@ public sealed partial class SettingsMenu
         return row;
     }
 
-    private void ReleaseBlock(Release r)
+    private void ReleaseBlock(Release release)
     {
         var current = typeof(ModEntry).Assembly.GetName().Version?.ToString(3);
-        var when = r.Date ?? (r.Version == current ? "this version" : null);
+        var when = release.Date ?? (release.Version == current ? "this version" : null);
         var head = UiKit.Row(12);
-        head.AddChild(Label(r.Version, 22, Text));
+        head.AddChild(Label(release.Version, 22, Text));
         if (when != null) head.AddChild(Label(when, 16, Muted));
-        if (r.Title != null) head.AddChild(Label(r.Title, 16, Muted));
+        if (release.Title != null) head.AddChild(Label(release.Title, 16, Muted));
         _rows!.AddChild(Indented(head, top: 10));
-        foreach (var s in r.Sections)
+        foreach (var releaseSection in release.Sections)
         {
-            if (s.Kind != null) _rows.AddChild(Indented(Label(s.Kind, 16, Accent), left: 20));
-            foreach (var item in s.Items)
+            if (releaseSection.Kind != null) _rows.AddChild(Indented(Label(releaseSection.Kind, 16, Accent), left: 20));
+            foreach (var item in releaseSection.Items)
             {
                 var nested = item.StartsWith("  ◦ ");
-                var l = Label(nested ? item.Trim() : "• " + item, 17, Muted);
-                l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-                l.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-                _rows.AddChild(Indented(l, left: nested ? 56 : 32, bottom: 3));
+                var label = Label(nested ? item.Trim() : "• " + item, 17, Muted);
+                label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                _rows.AddChild(Indented(label, left: nested ? 56 : 32, bottom: 3));
             }
         }
     }
 
     private static Button LinkButton(string text, string url)
     {
-        var b = MakeButton(text, 18);
-        b.Pressed += () => OS.ShellOpen(url);
-        return b;
+        var button = MakeButton(text, 18);
+        button.Pressed += () => OS.ShellOpen(url);
+        return button;
     }
 
-    private static MarginContainer Indented(Control c, int left = 8, int top = 0, int bottom = 0)
+    private static MarginContainer Indented(Control control, int left = 8, int top = 0, int bottom = 0)
     {
-        var m = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Pass };
-        m.AddThemeConstantOverride("margin_left", left);
-        m.AddThemeConstantOverride("margin_right", 8);
-        m.AddThemeConstantOverride("margin_top", top);
-        m.AddThemeConstantOverride("margin_bottom", bottom);
-        m.AddChild(c);
-        return m;
+        var marginContainer = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Pass };
+        marginContainer.AddThemeConstantOverride("margin_left", left);
+        marginContainer.AddThemeConstantOverride("margin_right", 8);
+        marginContainer.AddThemeConstantOverride("margin_top", top);
+        marginContainer.AddThemeConstantOverride("margin_bottom", bottom);
+        marginContainer.AddChild(control);
+        return marginContainer;
     }
 }

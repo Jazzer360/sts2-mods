@@ -103,7 +103,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         foreach (var (id, tabs) in _tabs)
         {
             if (seen.Contains(id)) continue;
-            foreach (var t in tabs) if (GodotObject.IsInstanceValid(t)) t.Visible = false;
+            foreach (var control in tabs) if (GodotObject.IsInstanceValid(control)) control.Visible = false;
         }
     }
 
@@ -112,9 +112,9 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     {
         foreach (var (node, _) in Sts2State.HandNodes())
         {
-            if (node.EnchantmentTab is { } t && GodotObject.IsInstanceValid(t))
+            if (node.EnchantmentTab is { } control && GodotObject.IsInstanceValid(control))
             {
-                _proto = (Control)t.Duplicate();
+                _proto = (Control)control.Duplicate();
                 return;
             }
         }
@@ -124,7 +124,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     {
         var id = holder.GetInstanceId();
         if (!_tabs.TryGetValue(id, out var tabs)) _tabs[id] = tabs = new List<Control>();
-        tabs.RemoveAll(t => !GodotObject.IsInstanceValid(t));
+        tabs.RemoveAll(control => !GodotObject.IsInstanceValid(control));
         while (tabs.Count < specs.Count && _proto != null) tabs.Add(MakeTab(holder));
         if (_proto == null) return;
 
@@ -189,9 +189,9 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         tab.Name = TabName;
         ClearUniqueNames(tab);
         tab.MouseFilter = Control.MouseFilterEnum.Ignore;
-        if (tab.Material is ShaderMaterial sm)
+        if (tab.Material is ShaderMaterial shaderMaterial)
         {
-            var own = (ShaderMaterial)sm.Duplicate();
+            var own = (ShaderMaterial)shaderMaterial.Duplicate();
             own.SetShaderParameter("h", 0.25);
             own.SetShaderParameter("s", 0.4);
             own.SetShaderParameter("v", 0.6);
@@ -220,13 +220,13 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     /// </summary>
     private void Check(MegaCrit.Sts2.Core.Entities.Players.Player? me)
     {
-        if (_pending is { } p)
+        if (_pending is { } pending)
         {
-            if (p.Frames < 60) _pending = p with { Frames = p.Frames + 1 };
+            if (pending.Frames < 60) _pending = pending with { Frames = pending.Frames + 1 };
             else
             {
                 _pending = null;
-                if (me != null) Compare(me, p);
+                if (me != null) Compare(me, pending);
             }
         }
         var entries = CombatManager.Instance?.History?.Entries;
@@ -249,29 +249,29 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         _prevBuckle = BuckleApplied(me);
     }
 
-    private static int Strength(MegaCrit.Sts2.Core.Entities.Players.Player me) => me.Creature.Powers.OfType<ReptileTrinketPower>().Sum(x => x.Amount);
+    private static int Strength(MegaCrit.Sts2.Core.Entities.Players.Player me) => me.Creature.Powers.OfType<ReptileTrinketPower>().Sum(reptileTrinketPower => reptileTrinketPower.Amount);
 
     private static bool BuckleApplied(MegaCrit.Sts2.Core.Entities.Players.Player me)
-        => me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } b && Sts2State.Private(b, "_dexterityApplied", false);
+        => me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } beltBuckle && Sts2State.Private(beltBuckle, "_dexterityApplied", false);
 
-    private static void Compare(MegaCrit.Sts2.Core.Entities.Players.Player me, Pending p)
+    private static void Compare(MegaCrit.Sts2.Core.Entities.Players.Player me, Pending pending)
     {
         var problems = new List<(string Key, string Text)>();
-        if (me.Relics.Any(r => r is ReptileTrinket))
+        if (me.Relics.Any(relic => relic is ReptileTrinket))
         {
-            var gained = Strength(me) > p.Strength;
-            var predicted = p.Tabs.Contains("potion:" + nameof(ReptileTrinket));
+            var gained = Strength(me) > pending.Strength;
+            var predicted = pending.Tabs.Contains("potion:" + nameof(ReptileTrinket));
             if (gained != predicted) problems.Add((nameof(ReptileTrinket), $"Reptile Trinket: {(gained ? "fired" : "didn't fire")}, tab {(predicted ? "shown" : "not shown")}"));
         }
-        if (me.Relics.Any(r => r is BeltBuckle))
+        if (me.Relics.Any(relic => relic is BeltBuckle))
         {
-            var gained = !p.DexterityApplied && BuckleApplied(me);
-            var predicted = p.Tabs.Contains("potion:" + nameof(BeltBuckle));
+            var gained = !pending.DexterityApplied && BuckleApplied(me);
+            var predicted = pending.Tabs.Contains("potion:" + nameof(BeltBuckle));
             if (gained != predicted) problems.Add((nameof(BeltBuckle), $"Belt Buckle: {(gained ? "gave Dexterity" : "didn't")}, tab {(predicted ? "shown" : "not shown")}"));
         }
-        var what = $"potion {p.Potion.GetType().Name}: tabs [{string.Join(", ", p.Tabs)}]";
+        var what = $"potion {pending.Potion.GetType().Name}: tabs [{string.Join(", ", pending.Tabs)}]";
         ModEntry.Log.Info($"[audit] [potion] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(x => x.Text)))}");
-        Telemetry.Audits.Done(Telemetry.Audits.Potion, problems.Count == 0, problems.Count == 0 ? p.Potion.GetType().Name : problems[0].Key);
+        Telemetry.Audits.Done(Telemetry.Audits.Potion, problems.Count == 0, problems.Count == 0 ? pending.Potion.GetType().Name : problems[0].Key);
         if (problems.Count > 0)
         {
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("potion", $"Potion tabs were wrong: {string.Join(", ", problems.Select(x => x.Key))}",

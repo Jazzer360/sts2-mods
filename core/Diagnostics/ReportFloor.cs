@@ -27,7 +27,7 @@ public sealed class ReportFloor
     /// <summary>Starts reading the floor for <paramref name="modId"/> in the background.</summary>
     public static ReportFloor Start(string repo, string modId, Version current, ModLog log)
     {
-        var f = new ReportFloor(current);
+        var reportFloor = new ReportFloor(current);
         _ = Task.Run(async () =>
         {
             try
@@ -37,18 +37,18 @@ public sealed class ReportFloor
                 using var res = await Http.SendAsync(req).ConfigureAwait(false);
                 if (!res.IsSuccessStatusCode) return;
                 var text = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                f._gameplayMods = ParseGameplayMods(text);
+                reportFloor._gameplayMods = ParseGameplayMods(text);
                 var floor = Parse(text, modId);
                 if (floor == null) return;
-                f._floor = floor.ToString(3);
-                if (current < floor) log.Info($"error reporting off: this version is older than the oldest one reports are taken from ({f._floor})");
+                reportFloor._floor = floor.ToString(3);
+                if (current < floor) log.Info($"error reporting off: this version is older than the oldest one reports are taken from ({reportFloor._floor})");
             }
             catch
             {
                 // unreachable or unreadable: reports go out as before
             }
         });
-        return f;
+        return reportFloor;
     }
 
     /// <summary>The floor for <paramref name="modId"/> in reporting.json's text; null when it isn't there.</summary>
@@ -57,8 +57,8 @@ public sealed class ReportFloor
         try
         {
             using var doc = JsonDocument.Parse(json);
-            if (!doc.RootElement.TryGetProperty("oldestReported", out var all) || !all.TryGetProperty(modId, out var v)) return null;
-            return Version.TryParse(v.GetString(), out var floor) ? floor : null;
+            if (!doc.RootElement.TryGetProperty("oldestReported", out var all) || !all.TryGetProperty(modId, out var jsonElement)) return null;
+            return Version.TryParse(jsonElement.GetString(), out var floor) ? floor : null;
         }
         catch
         {
@@ -73,7 +73,7 @@ public sealed class ReportFloor
         {
             using var doc = JsonDocument.Parse(json);
             if (!doc.RootElement.TryGetProperty("gameplayMods", out var list) || list.ValueKind != JsonValueKind.Array) return Array.Empty<string>();
-            return list.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.String).Select(x => x.GetString()!).ToList();
+            return list.EnumerateArray().Where(jsonElement => jsonElement.ValueKind == JsonValueKind.String).Select(jsonElement => jsonElement.GetString()!).ToList();
         }
         catch
         {

@@ -127,7 +127,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
     {
         var room = NCombatRoom.Instance;
         if (room == null) return null;
-        var node = room.CreatureNodes.FirstOrDefault(n => GodotObject.IsInstanceValid(n) && n.Entity == creature);
+        var node = room.CreatureNodes.FirstOrDefault(creatureNode => GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == creature);
         var display = node?.GetNodeOrNull<Control>("%HealthBar");
         if (display == null) return null;
         return display.GetNodeOrNull<Control>("%HealthBar")?.GetNodeOrNull<Label>("%HpLabel")

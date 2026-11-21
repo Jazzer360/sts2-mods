@@ -96,7 +96,7 @@ public static class RestMath
             // it change (Stone Humidifier's HP, Night Terrors' loss).
             var skip = hp;
             Boss(ref skip, max, null);
-            var after = lines.Where(l => l.Step is RestStep.StoneHumidifier or RestStep.NightTerrors).Sum(l => l.Hp);
+            var after = lines.Where(restLine => restLine.Step is RestStep.StoneHumidifier or RestStep.NightTerrors).Sum(restLine => restLine.Hp);
             over = Math.Max(0, nominal - (result - skip - after));
         }
         return new RestOutcome(hp, max, lines, result, m, over, restedHp, restedMax);

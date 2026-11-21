@@ -55,7 +55,7 @@ internal sealed class ShownCard
             CustomMinimumSize = new Vector2(width, size.Y + TabRoom * scale),
             MouseFilter = Control.MouseFilterEnum.Ignore,
         };
-        foreach (var t in tabs) _decor.AddTab(t);
+        foreach (var tab in tabs) _decor.AddTab(tab);
         _decor.Opacity = opacity;
         try
         {
@@ -119,11 +119,11 @@ internal sealed class ShownCard
     /// <summary>What's drawn on it: its tabs and fade (no allocation: it runs every frame).</summary>
     private int DecorKey()
     {
-        var h = new HashCode();
-        foreach (var t in _decor.Tabs) h.Add(t);
-        h.Add(_decor.Opacity);
-        h.Add(FreeCost);
-        return h.ToHashCode();
+        var hashCode = new HashCode();
+        foreach (var tab in _decor.Tabs) hashCode.Add(tab);
+        hashCode.Add(_decor.Opacity);
+        hashCode.Add(FreeCost);
+        return hashCode.ToHashCode();
     }
 
     /// <summary>Moves the card so its frame sits centred at the bottom of the box (wherever the scene puts its origin). True if it moved.</summary>
@@ -142,10 +142,10 @@ internal sealed class ShownCard
 
     private static void Quiet(Node node)
     {
-        if (node is Control c)
+        if (node is Control control)
         {
-            c.MouseFilter = Control.MouseFilterEnum.Ignore;
-            c.FocusMode = Control.FocusModeEnum.None;
+            control.MouseFilter = Control.MouseFilterEnum.Ignore;
+            control.FocusMode = Control.FocusModeEnum.None;
         }
         foreach (var child in node.GetChildren()) Quiet(child);
     }

@@ -7,30 +7,30 @@ public static class UiKit
 {
     public static Label Label(string text, int size, Color color)
     {
-        var l = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
-        l.AddThemeFontSizeOverride("font_size", size);
-        l.AddThemeColorOverride("font_color", color);
-        l.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
-        l.AddThemeConstantOverride("outline_size", Math.Max(2, size / 4));
-        return l;
+        var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
+        label.AddThemeFontSizeOverride("font_size", size);
+        label.AddThemeColorOverride("font_color", color);
+        label.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
+        label.AddThemeConstantOverride("outline_size", Math.Max(2, size / 4));
+        return label;
     }
 
-    public static StyleBoxFlat PanelStyle(Color bg, int radius = 6, int margin = 6)
+    public static StyleBoxFlat PanelStyle(Color color, int radius = 6, int margin = 6)
     {
-        var sb = new StyleBoxFlat { BgColor = bg };
-        sb.SetCornerRadiusAll(radius);
-        sb.ContentMarginLeft = margin;
-        sb.ContentMarginRight = margin;
-        sb.ContentMarginTop = margin / 2f;
-        sb.ContentMarginBottom = margin / 2f;
-        return sb;
+        var styleBoxFlat = new StyleBoxFlat { BgColor = color };
+        styleBoxFlat.SetCornerRadiusAll(radius);
+        styleBoxFlat.ContentMarginLeft = margin;
+        styleBoxFlat.ContentMarginRight = margin;
+        styleBoxFlat.ContentMarginTop = margin / 2f;
+        styleBoxFlat.ContentMarginBottom = margin / 2f;
+        return styleBoxFlat;
     }
 
     public static HBoxContainer Row(int separation = 6)
     {
-        var r = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        r.AddThemeConstantOverride("separation", separation);
-        return r;
+        var hBoxContainer = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        hBoxContainer.AddThemeConstantOverride("separation", separation);
+        return hBoxContainer;
     }
 
     public static TextureRect Icon(Texture2D? tex, float size)

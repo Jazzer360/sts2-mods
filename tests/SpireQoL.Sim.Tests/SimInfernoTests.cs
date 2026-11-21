@@ -14,60 +14,60 @@ public class SimInfernoTests
     public void RegretAtEndOfTurnSetsOffInfernoOnEveryEnemy()
     {
         // Regret with 2 cards in hand: 2 HP lost on your turn, so 6 to each enemy (E2's 4 block takes some).
-        var s = new SimState { Enemies = { E(1, 30), E(2, 30, 4) } };
-        s.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
-        s.You.HandCount = 2;
-        s.You.Inferno = 6;
-        var o = SimEngine.Run(s);
-        Assert.Equal(24, o.Worst.Enemy(1)!.HpAtTurnEnd);
-        Assert.Equal(28, o.Worst.Enemy(2)!.HpAtTurnEnd);
-        Assert.Equal(2, o.TakenMax);
+        var state = new SimState { Enemies = { E(1, 30), E(2, 30, 4) } };
+        state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        state.You.HandCount = 2;
+        state.You.Inferno = 6;
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(24, outcome.Worst.Enemy(1)!.HpAtTurnEnd);
+        Assert.Equal(28, outcome.Worst.Enemy(2)!.HpAtTurnEnd);
+        Assert.Equal(2, outcome.TakenMax);
     }
 
     [Fact]
     public void EachBurnThatGetsThroughSetsItOffAgain()
     {
         // Two Burns of 2 with 3 block: the first is blocked (no HP lost), the second loses 1 HP: one Inferno.
-        var s = new SimState { Enemies = { E(1, 30) } };
-        s.You.Block = 3;
-        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
-        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
-        s.You.Inferno = 6;
-        var o = SimEngine.Run(s);
-        Assert.Equal(24, o.Worst.Enemy(1)!.HpAtTurnEnd);
+        var state = new SimState { Enemies = { E(1, 30) } };
+        state.You.Block = 3;
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        state.You.Inferno = 6;
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(24, outcome.Worst.Enemy(1)!.HpAtTurnEnd);
     }
 
     [Fact]
     public void InfernoCanKillBeforeTheEnemyActs()
     {
-        var s = new SimState { Enemies = { E(1, 5, 0, 10) } };
-        s.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
-        s.You.HandCount = 1;
-        s.You.Inferno = 6;
-        var o = SimEngine.Run(s);
-        Assert.True(o.Worst.Enemy(1)!.DiedBeforeActing);
-        Assert.Equal(1, o.TakenMax); // Regret only
+        var state = new SimState { Enemies = { E(1, 5, 0, 10) } };
+        state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", 0));
+        state.You.HandCount = 1;
+        state.You.Inferno = 6;
+        var outcome = SimEngine.Run(state);
+        Assert.True(outcome.Worst.Enemy(1)!.DiedBeforeActing);
+        Assert.Equal(1, outcome.TakenMax); // Regret only
     }
 
     [Fact]
     public void DamageToYouDuringAPlaySetsItOff()
     {
         // Galvanic's 6 with no block: HP lost on your turn.
-        var s = new SimState { Enemies = { E(1, 30) } };
-        s.You.Inferno = 4;
+        var state = new SimState { Enemies = { E(1, 30) } };
+        state.You.Inferno = 4;
         var play = new SimPlay { DamageToYou = { ("GalvanicPower", 6) } };
-        SimEngine.ApplyPlayTo(s, play, out var branches, out _);
+        SimEngine.ApplyPlayTo(state, play, out var branches, out _);
         Assert.Equal(26, branches[0].Enemy(1)!.Hp);
     }
 
     [Fact]
     public void NoInfernoWhenNothingGetsThrough()
     {
-        var s = new SimState { Enemies = { E(1, 30) } };
-        s.You.Block = 10;
-        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
-        s.You.Inferno = 6;
-        var o = SimEngine.Run(s);
-        Assert.Equal(30, o.Worst.Enemy(1)!.HpAtTurnEnd);
+        var state = new SimState { Enemies = { E(1, 30) } };
+        state.You.Block = 10;
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        state.You.Inferno = 6;
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(30, outcome.Worst.Enemy(1)!.HpAtTurnEnd);
     }
 }

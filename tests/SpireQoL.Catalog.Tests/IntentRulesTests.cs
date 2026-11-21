@@ -23,12 +23,12 @@ public class IntentRulesTests
         var monsters = ModelDb.All.OfType<MonsterModel>().ToList();
         Assert.True(monsters.Count > 100, "the game's enemies didn't load");
         var unread = new List<string>();
-        foreach (var m in monsters)
+        foreach (var monster in monsters)
         {
             MonsterMoveStateMachine machine;
-            try { machine = (MonsterMoveStateMachine)Generate.Invoke(m.ToMutable(), null)!; }
-            catch (Exception e) { unread.Add($"{m.GetType().Name}: rules not built ({(e.InnerException ?? e).Message})"); continue; }
-            if (IntentReader.Graph(machine) == null) unread.Add($"{m.GetType().Name}: rules not read");
+            try { machine = (MonsterMoveStateMachine)Generate.Invoke(monster.ToMutable(), null)!; }
+            catch (Exception ex) { unread.Add($"{monster.GetType().Name}: rules not built ({(ex.InnerException ?? ex).Message})"); continue; }
+            if (IntentReader.Graph(machine) == null) unread.Add($"{monster.GetType().Name}: rules not read");
         }
         Assert.True(unread.Count == 0, "Enemies whose move rules the forecast can't read:\n" + string.Join("\n", unread));
     }
@@ -39,10 +39,10 @@ public class IntentRulesTests
         GameModels.EnsureLoaded();
         foreach (var canon in ModelDb.All.OfType<MonsterModel>())
         {
-            var m = canon.ToMutable();
+            var monster = canon.ToMutable();
             MonsterMoveStateMachine machine;
-            try { machine = (MonsterMoveStateMachine)Generate.Invoke(m, null)!; } catch { continue; }
-            foreach (var move in machine.States.Values.OfType<MoveState>()) yield return ((MonsterModel)m, move);
+            try { machine = (MonsterMoveStateMachine)Generate.Invoke(monster, null)!; } catch { continue; }
+            foreach (var move in machine.States.Values.OfType<MoveState>()) yield return ((MonsterModel)monster, move);
         }
     }
 
@@ -52,7 +52,7 @@ public class IntentRulesTests
         // Corpse Slug's Goop: PowerCmd.Apply<FrailPower>(..., GoopFrailAmt) with GoopFrailAmt 2.
         var goop = EveryMove().Single(x => x.Monster.GetType().Name == "CorpseSlug" && x.Move.Id == "GOOP_MOVE");
         var applied = MovePowers.Of(goop.Monster, goop.Move);
-        Assert.Equal("FrailPower 2", string.Join(", ", applied.Select(a => $"{a.Power.Name} {a.Amount}")));
+        Assert.Equal("FrailPower 2", string.Join(", ", applied.Select(otherApplied => $"{otherApplied.Power.Name} {otherApplied.Amount}")));
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class IntentRulesTests
         var counted = 0;
         foreach (var (monster, move) in EveryMove())
         {
-            var kinds = move.Intents.Select(i => i.GetType().Name).ToList();
+            var kinds = move.Intents.Select(abstractIntent => abstractIntent.GetType().Name).ToList();
             if (!kinds.Any(k => k.Contains("Buff") || k.Contains("Debuff"))) continue;
             counted++;
             var id = $"{monster.GetType().Name}.{move.Id}";

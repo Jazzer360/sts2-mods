@@ -57,7 +57,7 @@ public sealed class CardDecor
     public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, TabAmount? kind = null, int amount = 0,
         int auditMin = 0, int auditMax = 0, string? text = null, CardModel? card = null)
     {
-        if (Predicted.Any(t => t.Key == key)) return false;
+        if (Predicted.Any(tab => tab.Key == key)) return false;
         return AddTab(new TabSpec(key, icon, crossed, number, kind, amount, auditMin, auditMax, text, card));
     }
 
@@ -65,7 +65,7 @@ public sealed class CardDecor
     /// <returns>Whether the tab was added (false if a tab with this key exists or it's turned off).</returns>
     public bool AddTab(TabSpec spec)
     {
-        if (Predicted.Any(t => t.Key == spec.Key)) return false;
+        if (Predicted.Any(tab => tab.Key == spec.Key)) return false;
         Predicted.Add(spec);
         if (Filter != null && !Filter(spec.Key)) return false;
         var shown = Shape == null ? spec : Shape(spec);
@@ -91,15 +91,15 @@ public sealed class CardDecorFrame
 
     public CardDecor For(CardModel card)
     {
-        if (!_decor.TryGetValue(card, out var d))
+        if (!_decor.TryGetValue(card, out var decor))
         {
-            d = new CardDecor { Filter = Filter, Shape = Shape };
-            _decor[card] = d;
+            decor = new CardDecor { Filter = Filter, Shape = Shape };
+            _decor[card] = decor;
         }
-        return d;
+        return decor;
     }
 
-    public CardDecor? Get(CardModel card) => _decor.TryGetValue(card, out var d) ? d : null;
+    public CardDecor? Get(CardModel card) => _decor.TryGetValue(card, out var decor) ? decor : null;
 
     /// <summary>Last frame's tabs per card (what was predicted just before a card was played; used by ProcAudit).</summary>
     public IReadOnlyDictionary<CardModel, IReadOnlyList<TabSpec>> Previous { get; private set; }
@@ -128,9 +128,9 @@ public sealed class CardDecorFrame
     public void Clear()
     {
         var snap = new Dictionary<CardModel, IReadOnlyList<TabSpec>>(ReferenceEqualityComparer.Instance);
-        foreach (var (card, d) in _decor)
+        foreach (var (card, decor) in _decor)
         {
-            if (d.Predicted.Count > 0) snap[card] = d.Predicted.ToList();
+            if (decor.Predicted.Count > 0) snap[card] = decor.Predicted.ToList();
         }
         Previous = snap;
         foreach (var card in _seenThisFrame)

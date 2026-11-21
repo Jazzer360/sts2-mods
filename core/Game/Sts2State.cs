@@ -26,7 +26,7 @@ public static class Sts2State
         _log = log;
         if (_subscribed) return;
         _subscribed = true;
-        CombatManager.Instance.CombatSetUp += cs => _combat = cs;
+        CombatManager.Instance.CombatSetUp += combat => _combat = combat;
     }
 
     public static bool InCombat => _combat != null && CombatManager.Instance.IsInProgress;
@@ -34,9 +34,9 @@ public static class Sts2State
     public static CombatState? Combat => InCombat ? _combat : null;
 
     /// <summary>The local player in the current combat, or null.</summary>
-    public static Player? Me => Combat is { } cs ? LocalContext.GetMe(cs) : null;
+    public static Player? Me => Combat is { } combat ? LocalContext.GetMe(combat) : null;
 
-    public static bool IsPlayerTurn => Combat is { } cs && cs.CurrentSide == CombatSide.Player
+    public static bool IsPlayerTurn => Combat is { } combat && combat.CurrentSide == CombatSide.Player
         && !CombatManager.Instance.EndingPlayerTurnPhaseOne && !CombatManager.Instance.EndingPlayerTurnPhaseTwo
         // Between the two end-of-turn phases (multiplayer waits for every player's ReadyToBeginEnemyTurnAction)
         // neither flag is set, but the end-of-turn effects have run: the player stays in the End phase until the
@@ -108,10 +108,10 @@ public static class Sts2State
         var iconHeight = 0f;
         if (powers != null)
         {
-            foreach (var r in VisibleControlRects(powers))
+            foreach (var visibleControlRect in VisibleControlRects(powers))
             {
-                rect = rect.Merge(r);
-                iconHeight = Math.Max(iconHeight, r.Size.Y);
+                rect = rect.Merge(visibleControlRect);
+                iconHeight = Math.Max(iconHeight, visibleControlRect.Size.Y);
             }
         }
 
@@ -144,16 +144,16 @@ public static class Sts2State
         var me = Me;
         var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
         if (me == null || room == null) return null;
-        foreach (var n in room.CreatureNodes)
+        foreach (var creatureNode in room.CreatureNodes)
         {
-            if (!Godot.GodotObject.IsInstanceValid(n) || !n.IsFocused) continue;
-            if (n.Entity?.Player is { } p && p != me && n.Entity == p.Creature) return p;
+            if (!Godot.GodotObject.IsInstanceValid(creatureNode) || !creatureNode.IsFocused) continue;
+            if (creatureNode.Entity?.Player is { } player && player != me && creatureNode.Entity == player.Creature) return player;
         }
         return null;
     }
 
     /// <summary>Screen rect of the hovered teammate's block indicator (see BlockRect), or null.</summary>
-    public static Godot.Rect2? FocusedTeammateBlockRect() => FocusedTeammate() is { } p ? BlockRect(p.Creature) : null;
+    public static Godot.Rect2? FocusedTeammateBlockRect() => FocusedTeammate() is { } player ? BlockRect(player.Creature) : null;
 
     /// <summary>
     /// Screen rect of a player's block indicator (NHealthBar "%BlockContainer", at the left end of the HP
@@ -166,9 +166,9 @@ public static class Sts2State
         if (block != null && block.Size.X >= 1)
         {
             // Vertically, use the HP bar's band so the widget centers on the bar, not the icon.
-            var b = ScreenRect(block);
-            var hp = ScreenRect(bar!);
-            return new Godot.Rect2(new Godot.Vector2(b.Position.X, hp.Position.Y), new Godot.Vector2(b.Size.X, hp.Size.Y));
+            var rect = ScreenRect(block);
+            var otherRect = ScreenRect(bar!);
+            return new Godot.Rect2(new Godot.Vector2(rect.Position.X, otherRect.Position.Y), new Godot.Vector2(rect.Size.X, otherRect.Size.Y));
         }
         return bar != null && bar.Size.X >= 1 ? ScreenRect(bar) : ScreenRect(display);
     }
@@ -178,20 +178,20 @@ public static class Sts2State
     {
         foreach (var child in parent.GetChildren())
         {
-            if (child is not Godot.Control c || !c.IsVisibleInTree()) continue;
-            if (c.Size.X >= 4 && c.Size.Y >= 4) yield return ScreenRect(c);
-            foreach (var grand in c.GetChildren())
+            if (child is not Godot.Control control || !control.IsVisibleInTree()) continue;
+            if (control.Size.X >= 4 && control.Size.Y >= 4) yield return ScreenRect(control);
+            foreach (var grand in control.GetChildren())
             {
-                if (grand is Godot.Control g && g.IsVisibleInTree() && g.Size.X >= 4 && g.Size.Y >= 4) yield return ScreenRect(g);
+                if (grand is Godot.Control otherControl && otherControl.IsVisibleInTree() && otherControl.Size.X >= 4 && otherControl.Size.Y >= 4) yield return ScreenRect(otherControl);
             }
         }
     }
 
     /// <summary>A control's rect in viewport (screen) coordinates, accounting for cameras and canvas layers.</summary>
-    public static Godot.Rect2 ScreenRect(Godot.Control c)
+    public static Godot.Rect2 ScreenRect(Godot.Control control)
     {
-        var xf = c.GetGlobalTransformWithCanvas();
-        return new Godot.Rect2(xf.Origin, c.Size * xf.Scale);
+        var transform2D = control.GetGlobalTransformWithCanvas();
+        return new Godot.Rect2(transform2D.Origin, control.Size * transform2D.Scale);
     }
 
     /// <summary>
@@ -216,9 +216,9 @@ public static class Sts2State
         if (container == null) return ScreenRect(bar);
 
         var rect = ScreenRect(container);
-        foreach (var r in VisibleControlRects(container))
+        foreach (var visibleControlRect in VisibleControlRects(container))
         {
-            rect = rect.Merge(r);
+            rect = rect.Merge(visibleControlRect);
         }
 
         // One log line per combat, so placement can be checked against the game log.
@@ -240,7 +240,7 @@ public static class Sts2State
     {
         var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
         if (room == null) return null;
-        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == who);
+        var creature = room.CreatureNodes.FirstOrDefault(creatureNode => Godot.GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == who);
         var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
         if (display == null || !BarShown(creature!, display)) return null;
         return (display, display.GetNodeOrNull<Godot.Control>("%HealthBar"));
@@ -290,15 +290,15 @@ public static class Sts2State
     /// <summary>Cards the local player finished playing this turn (from combat history).</summary>
     public static IEnumerable<CardModel> CardsPlayedThisTurn(Player me)
     {
-        var cs = Combat;
-        if (cs == null) return Array.Empty<CardModel>();
+        var combat = Combat;
+        if (combat == null) return Array.Empty<CardModel>();
         return CombatManager.Instance.History.CardPlaysFinished
-            .Where(e => e.HappenedThisTurn(cs) && e.CardPlay.Player == me)
-            .Select(e => e.CardPlay.Card);
+            .Where(cardPlayFinishedEntry => cardPlayFinishedEntry.HappenedThisTurn(combat) && cardPlayFinishedEntry.CardPlay.Player == me)
+            .Select(cardPlayFinishedEntry => cardPlayFinishedEntry.CardPlay.Card);
     }
 
     public static int CountPlayedThisTurn(Player me, CardType? type = null)
-        => CardsPlayedThisTurn(me).Count(c => type == null || c.Type == type);
+        => CardsPlayedThisTurn(me).Count(card => type == null || card.Type == type);
 
     public static T? Relic<T>(Player me) where T : RelicModel => me.Relics.OfType<T>().FirstOrDefault();
 
@@ -316,11 +316,11 @@ public static class Sts2State
     {
         try
         {
-            var t = Traverse.Create(obj);
-            var p = t.Property(member);
-            if (p.PropertyExists()) return p.GetValue<T>();
-            var f = t.Field(member);
-            if (f.FieldExists()) return f.GetValue<T>();
+            var traverse = Traverse.Create(obj);
+            var otherTraverse = traverse.Property(member);
+            if (otherTraverse.PropertyExists()) return otherTraverse.GetValue<T>();
+            var nextTraverse = traverse.Field(member);
+            if (nextTraverse.FieldExists()) return nextTraverse.GetValue<T>();
             lock (_missing)
             {
                 if (!_missing.Add((obj.GetType(), member))) return fallback;
@@ -338,12 +338,12 @@ public static class Sts2State
     {
         var vars = model switch
         {
-            CardModel c => c.DynamicVars,
-            RelicModel r => r.DynamicVars,
-            PowerModel p => p.DynamicVars,
-            PotionModel po => po.DynamicVars,
+            CardModel card => card.DynamicVars,
+            RelicModel relic => relic.DynamicVars,
+            PowerModel power => power.DynamicVars,
+            PotionModel potion => potion.DynamicVars,
             _ => null,
         };
-        return vars != null && vars.TryGetValue(key, out var v) ? v.IntValue : fallback;
+        return vars != null && vars.TryGetValue(key, out var dynamicVar) ? dynamicVar.IntValue : fallback;
     }
 }

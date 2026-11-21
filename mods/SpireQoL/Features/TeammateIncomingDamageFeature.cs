@@ -47,7 +47,7 @@ public sealed class TeammateIncomingDamageFeature : IFeature, IFrameFeature
     {
         var mate = Sts2State.IsPlayerTurn ? Sts2State.FocusedTeammate() : null;
         var model = mate != null ? TurnEndModel.Shown() : null;
-        var view = model?.TeammateView.FirstOrDefault(v => v.Player == mate);
+        var view = model?.TeammateView.FirstOrDefault(teammateForecast => teammateForecast.Player == mate);
         if (model == null || view == null || (!model.Unknown && view.Incoming == 0 && view.Unblockable == 0))
         {
             _widget!.HasContent = false;

@@ -25,14 +25,14 @@ internal static class IntentCorner
     {
         var at = new Dictionary<int, List<MovePowers.Applied>>();
         if (intents.Count == 0) return at;
-        var buff = Index(intents, i => i is BuffIntent);
-        var debuff = Index(intents, i => i is DebuffIntent);
-        foreach (var p in powers)
+        var buff = Index(intents, abstractIntent => abstractIntent is BuffIntent);
+        var debuff = Index(intents, abstractIntent => abstractIntent is DebuffIntent);
+        foreach (var applied in powers)
         {
-            var k = PlayFacts.IsDebuffType(p.Power) ? debuff ?? buff : buff ?? debuff;
+            var k = PlayFacts.IsDebuffType(applied.Power) ? debuff ?? buff : buff ?? debuff;
             k ??= intents.Count - 1;
             if (!at.TryGetValue(k.Value, out var list)) at[k.Value] = list = new List<MovePowers.Applied>();
-            list.Add(p);
+            list.Add(applied);
         }
         return at;
     }
@@ -53,7 +53,7 @@ internal static class IntentCorner
             row?.QueueFree();
             return;
         }
-        var key = string.Join(",", powers.Select(p => $"{p.Power.Name}:{p.Amount}"));
+        var key = string.Join(",", powers.Select(applied => $"{applied.Power.Name}:{applied.Amount}"));
         if (row != null && row.GetMeta("key", "").AsString() != key)
         {
             row.QueueFree();
@@ -65,7 +65,7 @@ internal static class IntentCorner
             row.Name = PowersName;
             row.MouseFilter = Control.MouseFilterEnum.Ignore;
             row.SetMeta("key", key);
-            foreach (var p in powers) row.AddChild(Chip(p));
+            foreach (var applied in powers) row.AddChild(Chip(applied));
             holder.AddChild(row);
         }
         var size = row.GetCombinedMinimumSize();

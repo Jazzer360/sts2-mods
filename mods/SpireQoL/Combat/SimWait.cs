@@ -32,26 +32,26 @@ internal static class SimWait
     /// </summary>
     public static bool All(IReadOnlyList<SimJob> jobs, bool ownBudget = false)
     {
-        var fresh = jobs.Where(j => !j.Ready.IsCompleted && !j.Waited).ToList();
+        var fresh = jobs.Where(job => !job.Ready.IsCompleted && !job.Waited).ToList();
         if (fresh.Count > 0)
         {
-            foreach (var j in fresh) j.Waited = true;
+            foreach (var job in fresh) job.Waited = true;
             var ms = ownBudget ? FrameMs : Left();
             var clock = Stopwatch.StartNew();
             if (ms > 0)
             {
-                try { Task.WaitAll(fresh.Select(j => j.Ready).ToArray(), ms); }
+                try { Task.WaitAll(fresh.Select(job => job.Ready).ToArray(), ms); }
                 catch (AggregateException) { /* a failed search is rethrown by its reader */ }
             }
             var waited = clock.Elapsed.TotalMilliseconds;
             _waits++;
             _totalMs += waited;
             _longestMs = Math.Max(_longestMs, waited);
-            var missed = fresh.Any(j => !j.Ready.IsCompleted);
+            var missed = fresh.Any(job => !job.Ready.IsCompleted);
             if (missed) _missed++;
             Telemetry.DevEvents.Post(new Telemetry.FrameWait(waited, missed));
         }
-        return jobs.All(j => j.Ready.IsCompleted);
+        return jobs.All(job => job.Ready.IsCompleted);
     }
 
     /// <summary>What's left of this frame's budget, in milliseconds.</summary>

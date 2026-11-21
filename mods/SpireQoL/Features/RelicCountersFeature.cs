@@ -76,15 +76,15 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        var w = _widget!;
+        var widget = _widget!;
         var me = Sts2State.Me;
         if (me == null)
         {
-            w.HasContent = false;
+            widget.HasContent = false;
             return;
         }
 
-        foreach (var r in _rows.Values) r.Seen = false;
+        foreach (var row in _rows.Values) row.Seen = false;
 
         // (model, sort key, state)
         var entries = new List<(AbstractModel Model, int Sort, RowState State)>();
@@ -115,12 +115,12 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             {
                 row = MakeRow(model);
                 _rows[model] = row;
-                w.Content.AddChild(row.Root);
+                widget.Content.AddChild(row.Root);
             }
             row.Seen = true;
             row.Root.Visible = true;
             row.Tiny?.Fit();
-            w.Content.MoveChild(row.Root, index++);
+            widget.Content.MoveChild(row.Root, index++);
 
             Paint(row, state, host.Time, _ctx.Settings.FlashHz);
         }
@@ -133,7 +133,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             _rows.Remove(model);
         }
 
-        w.HasContent = index > 0;
+        widget.HasContent = index > 0;
     }
 
     private static void Paint(Row row, RowState state, float time, float hz)
@@ -182,20 +182,20 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
     /// <summary>Countdown powers on you, plus ones on enemies that count your plays.</summary>
     private static IEnumerable<(PowerModel Power, PowerCounterSpec Spec)> CountdownPowers(Player me)
     {
-        foreach (var p in me.Creature.Powers)
+        foreach (var power in me.Creature.Powers)
         {
-            if (PowerSpecs.For(p.GetType().Name) is { OnEnemy: false } spec) yield return (p, spec);
+            if (PowerSpecs.For(power.GetType().Name) is { OnEnemy: false } spec) yield return (power, spec);
         }
-        var cs = Sts2State.Combat;
-        if (cs == null) yield break;
-        foreach (var enemy in cs.Enemies)
+        var combat = Sts2State.Combat;
+        if (combat == null) yield break;
+        foreach (var enemy in combat.Enemies)
         {
             if (!enemy.IsAlive) continue;
-            foreach (var p in enemy.Powers)
+            foreach (var power in enemy.Powers)
             {
-                if (PowerSpecs.For(p.GetType().Name) is { OnEnemy: true } spec && (p.Target == null || p.Target == me.Creature))
+                if (PowerSpecs.For(power.GetType().Name) is { OnEnemy: true } spec && (power.Target == null || power.Target == me.Creature))
                 {
-                    yield return (p, spec);
+                    yield return (power, spec);
                 }
             }
         }
@@ -248,8 +248,8 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         {
             icon = model switch
             {
-                RelicModel r => r.Icon,
-                PowerModel p => p.Icon,
+                RelicModel relic => relic.Icon,
+                PowerModel power => power.Icon,
                 _ => null,
             };
         }

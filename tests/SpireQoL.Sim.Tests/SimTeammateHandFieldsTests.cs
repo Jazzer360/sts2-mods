@@ -56,12 +56,12 @@ public class SimTeammateHandFieldsTests
     [Fact]
     public void EverySimPlayerFieldIsReviewedAsFromTheirHandOrKnown()
     {
-        var unreviewed = Fields().Select(f => f.Name).Where(n => !FromTheirHand.Contains(n) && !Known.Contains(n)).ToList();
+        var unreviewed = Fields().Select(field => field.Name).Where(n => !FromTheirHand.Contains(n) && !Known.Contains(n)).ToList();
         Assert.True(unreviewed.Count == 0,
             $"New SimPlayer field(s) {string.Join(", ", unreviewed)}: add each to FromTheirHand (and clear it in " +
             "SimState.WithoutTeammateHands) or to Known, with why.");
         Assert.Empty(FromTheirHand.Intersect(Known));
-        var stale = FromTheirHand.Concat(Known).Except(Fields().Select(f => f.Name)).ToList();
+        var stale = FromTheirHand.Concat(Known).Except(Fields().Select(field => field.Name)).ToList();
         Assert.True(stale.Count == 0, $"No longer on SimPlayer: {string.Join(", ", stale)}");
     }
 
@@ -69,38 +69,38 @@ public class SimTeammateHandFieldsTests
     public void WhatsShownClearsEveryFieldFromTheirHandAndKeepsTheRest()
     {
         var mate = new SimPlayer();
-        foreach (var f in Fields().Where(f => f.Name != "_orbsShared")) Fill(f, mate);
-        var s = new SimState();
-        s.Teammates.Add(mate);
+        foreach (var field in Fields().Where(field => field.Name != "_orbsShared")) Fill(field, mate);
+        var state = new SimState();
+        state.Teammates.Add(mate);
 
-        var shown = s.WithoutTeammateHands().Teammates[0];
+        var shown = state.WithoutTeammateHands().Teammates[0];
         var fresh = new SimPlayer();
-        foreach (var f in Fields().Where(f => f.Name != "_orbsShared"))
+        foreach (var field in Fields().Where(field => field.Name != "_orbsShared"))
         {
-            if (FromTheirHand.Contains(f.Name))
-                Assert.True(Describe(f.GetValue(shown)) == Describe(f.GetValue(fresh)), $"{f.Name} isn't cleared in what's shown");
+            if (FromTheirHand.Contains(field.Name))
+                Assert.True(Describe(field.GetValue(shown)) == Describe(field.GetValue(fresh)), $"{field.Name} isn't cleared in what's shown");
             else
-                Assert.True(Describe(f.GetValue(shown)) == Describe(f.GetValue(mate)), $"{f.Name} changed in what's shown");
+                Assert.True(Describe(field.GetValue(shown)) == Describe(field.GetValue(mate)), $"{field.Name} changed in what's shown");
         }
         Assert.NotEqual(Describe(new SimPlayer().Fading), Describe(mate.Fading)); // the original is untouched
     }
 
     /// <summary>Sets a field to a value unlike its default (lists get one entry).</summary>
-    private static void Fill(FieldInfo f, SimPlayer p)
+    private static void Fill(FieldInfo field, SimPlayer player)
     {
-        var t = f.FieldType;
-        if (t == typeof(int)) f.SetValue(p, 7);
-        else if (t == typeof(bool)) f.SetValue(p, true);
-        else if (t == typeof(List<(string, int)>)) f.SetValue(p, new List<(string, int)> { ("X", 3) });
-        else if (t == typeof(List<TurnEndCard>)) f.SetValue(p, new List<TurnEndCard> { new("Burn", "Burn", 2) });
-        else if (t == typeof(List<SimHandCard>)) f.SetValue(p, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
-        else if (t == typeof(List<SimPlay>)) f.SetValue(p, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
-        else if (t == typeof(PowerSet)) f.SetValue(p, PowerSet.Empty.With(PowerId.Strength, 2));
-        else if (t == typeof(RelicSet)) f.SetValue(p, RelicSet.Empty.With(RelicId.PenNib, 2));
-        else if (t == typeof(NamedCounts)) f.SetValue(p, NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started), 2));
-        else if (t == typeof(List<SimOrb>)) f.SetValue(p, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
-        else if (t == typeof(SimDrawPile)) f.SetValue(p, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), 2) } });
-        else Assert.Fail($"SimPlayer.{f.Name}: type {t.Name} isn't handled by this test's Fill: add it");
+        var type = field.FieldType;
+        if (type == typeof(int)) field.SetValue(player, 7);
+        else if (type == typeof(bool)) field.SetValue(player, true);
+        else if (type == typeof(List<(string, int)>)) field.SetValue(player, new List<(string, int)> { ("X", 3) });
+        else if (type == typeof(List<TurnEndCard>)) field.SetValue(player, new List<TurnEndCard> { new("Burn", "Burn", 2) });
+        else if (type == typeof(List<SimHandCard>)) field.SetValue(player, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
+        else if (type == typeof(List<SimPlay>)) field.SetValue(player, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
+        else if (type == typeof(PowerSet)) field.SetValue(player, PowerSet.Empty.With(PowerId.Strength, 2));
+        else if (type == typeof(RelicSet)) field.SetValue(player, RelicSet.Empty.With(RelicId.PenNib, 2));
+        else if (type == typeof(NamedCounts)) field.SetValue(player, NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started), 2));
+        else if (type == typeof(List<SimOrb>)) field.SetValue(player, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
+        else if (type == typeof(SimDrawPile)) field.SetValue(player, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), 2) } });
+        else Assert.Fail($"SimPlayer.{field.Name}: type {type.Name} isn't handled by this test's Fill: add it");
     }
 
     private static string Describe(object? v) => v switch

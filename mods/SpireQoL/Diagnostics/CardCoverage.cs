@@ -158,8 +158,8 @@ internal static class CardCoverage
         bool None(Func<CardModel, int> count) => count(card) == 0 && (upgraded == null || count(upgraded) == 0);
         bool Calls(string type, string method) => calls.Contains(type + "." + method);
         bool Applies<T>() => calls.Contains("PowerCmd.Apply<" + typeof(T).Name + ">");
-        bool HasPowerVar<T>() => card.DynamicVars.Values.Any(v => v.GetType() is { IsGenericType: true } t
-                                                                 && t.GetGenericTypeDefinition() == typeof(PowerVar<>) && t.GetGenericArguments()[0] == typeof(T));
+        bool HasPowerVar<T>() => card.DynamicVars.Values.Any(dynamicVar => dynamicVar.GetType() is { IsGenericType: true } type
+                                                                 && type.GetGenericTypeDefinition() == typeof(PowerVar<>) && type.GetGenericArguments()[0] == typeof(T));
 
         // Cards aimed at a teammate or at every player: the simulator applies the card's effects to you only.
         if (card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.ContainsKey(name))
@@ -168,7 +168,7 @@ internal static class CardCoverage
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(c => PlayFacts.CardsDrawn(c, 5) + PlayFacts.CardsDrawn(c, 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
+            && None(otherCard => PlayFacts.CardsDrawn(otherCard, 5) + PlayFacts.CardsDrawn(otherCard, 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         // A card that takes block away (Expose): the simulator models the ones it knows.
         if (Calls("CreatureCmd", "LoseBlock") && !SimAdapter.StripBlockCards.Contains(name))
@@ -189,9 +189,9 @@ internal static class CardCoverage
             issues.Add("draws only on a condition (it glows gold; not checked in PlayFacts.CardsDrawn)");
         if (Calls("OrbCmd", "Channel") && !SimAdapter.HandlesChannel(name))
             issues.Add("channels orbs (the simulator doesn't add them)");
-        if (Calls("OrbCmd", "Channel") && None(c => PlayFacts.ChannelCount(c, name, null!)))
+        if (Calls("OrbCmd", "Channel") && None(otherCard => PlayFacts.ChannelCount(otherCard, name, null!)))
             issues.Add("channels orbs (not counted for Metronome)");
-        if (Calls("CreatureCmd", "GainBlock") && None(c => PlayFacts.BlockGainCount(c, name, others)))
+        if (Calls("CreatureCmd", "GainBlock") && None(otherCard => PlayFacts.BlockGainCount(otherCard, name, others)))
             issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");
         // Block more than once in one play (Evil Eye twice after an exhaust): each gain sets off Juggernaut and block reactions.
         if (Calls("CreatureCmd", "GainBlock") && RepeatsCall(card.GetType(), "CreatureCmd", "GainBlock") && !PlayFacts.RepeatedBlockCards.Contains(name))
@@ -228,12 +228,12 @@ internal static class CardCoverage
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
         // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.
-        if (Calls("CardCmd", "Exhaust") && None(c => PlayFacts.ExhaustOthers(c, name, all, 5, 1)))
+        if (Calls("CardCmd", "Exhaust") && None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, 5, 1)))
             issues.Add("exhausts cards (not counted: Feel No Pain, Dark Embrace...)");
-        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(c => PlayFacts.DiscardCount(c, name, others, PlayFacts.CardsDrawn(c, 5))))
+        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, name, others, PlayFacts.CardsDrawn(otherCard, 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
-            && None(c => PlayFacts.GeneratedCount(c, name, others, null!, out _)))
+            && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))
             issues.Add("creates cards (not counted: created-card procs)");
         // A card whose hooks (not its play) move a card (itself: Make It So, Right Hand Hand...) to a pile: it comes back to
         // your hand on something you do, which only ReturnToHand models (the return tabs, your hand size after).
@@ -247,9 +247,9 @@ internal static class CardCoverage
             issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");
         // Every game card as the hand, so any filter (statuses, attacks) finds something to transform.
         if ((Calls("CardCmd", "Transform") || Calls("CardCmd", "TransformTo") || Calls("CardCmd", "TransformToRandom"))
-            && None(c => PlayFacts.TransformCount(c, name, all, 5)))
+            && None(otherCard => PlayFacts.TransformCount(otherCard, name, all, 5)))
             issues.Add("transforms cards (not counted: the proc check's created-card budget)");
-        if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(c => Math.Abs(SimAdapter.SlotChange(c, name))))
+        if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(otherCard => Math.Abs(SimAdapter.SlotChange(otherCard, name))))
             issues.Add("changes your orb slots (the simulator doesn't change them)");
         foreach (var applied in PowersApplied(card.GetType()))
             if (SimAdapter.PlainSelfPowerAmount(card, applied) == 0)
@@ -260,7 +260,7 @@ internal static class CardCoverage
         if (Calls("CreatureCmd", "Kill") && !SimAdapter.KillsOstyCards.Contains(name))
             issues.Add("kills a creature (not in the simulator)");
         // A card that becomes another card once played (Mourning Blow into a Sadness): a created card.
-        if (Calls("CardModel", "set_TransformIntoAfterPlay") && None(c => PlayFacts.GeneratedCount(c, name, others, null!, out _)))
+        if (Calls("CardModel", "set_TransformIntoAfterPlay") && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))
             issues.Add("turns into another card after the play (not counted: created-card procs)");
         if (Calls("CardPileCmd", "Shuffle") && !PlayFacts.ShuffleCards.Contains(name) && !PlayFacts.ShuffleWhenShortCards.Contains(name))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");
@@ -280,16 +280,16 @@ internal static class CardCoverage
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, List<Type>> Applied = new();
 
     /// <summary>The power types a card's OnPlay applies (PowerCmd.Apply&lt;T&gt;), read from its compiled code.</summary>
-    public static IReadOnlyList<Type> PowersApplied(Type cardType) => Applied.GetOrAdd(cardType, t =>
+    public static IReadOnlyList<Type> PowersApplied(Type cardType) => Applied.GetOrAdd(cardType, type =>
     {
         var list = new List<Type>();
-        foreach (var m in OnPlayMethods(t))
+        foreach (var method in OnPlayMethods(type))
         {
             try
             {
-                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
-                    if (ins.operand is MethodInfo { IsGenericMethod: true, Name: "Apply" } mi && mi.DeclaringType?.Name == "PowerCmd")
-                        list.Add(mi.GetGenericArguments()[0]);
+                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(method))
+                    if (ins.operand is MethodInfo { IsGenericMethod: true, Name: "Apply" } otherMethod && otherMethod.DeclaringType?.Name == "PowerCmd")
+                        list.Add(otherMethod.GetGenericArguments()[0]);
             }
             catch
             {
@@ -302,10 +302,10 @@ internal static class CardCoverage
     /// <summary>Every type nested in <paramref name="type"/>, at any depth (closures hold local functions' state machines).</summary>
     internal static IEnumerable<Type> NestedTypes(Type type)
     {
-        foreach (var t in type.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public))
+        foreach (var nestedType in type.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public))
         {
-            yield return t;
-            foreach (var inner in NestedTypes(t)) yield return inner;
+            yield return nestedType;
+            foreach (var inner in NestedTypes(nestedType)) yield return inner;
         }
     }
 
@@ -316,12 +316,12 @@ internal static class CardCoverage
     private static IEnumerable<MethodBase> OnPlayMethods(Type cardType)
     {
         var nested = NestedTypes(cardType).ToList();
-        return cardType.GetMethods(All).Where(m => m.Name == "OnPlay" || m.Name.StartsWith("<OnPlay>")).Cast<MethodBase>()
-            .Concat(nested.SelectMany(t => t.GetMethods(All)).Where(m => m.Name.StartsWith("<OnPlay>")))
+        return cardType.GetMethods(All).Where(method => method.Name == "OnPlay" || method.Name.StartsWith("<OnPlay>")).Cast<MethodBase>()
+            .Concat(nested.SelectMany(type => type.GetMethods(All)).Where(method => method.Name.StartsWith("<OnPlay>")))
             .Concat(nested
-                .Where(t => t.Name.Contains("<OnPlay>") && typeof(IAsyncStateMachine).IsAssignableFrom(t))
-                .Select(t => t.GetMethod("MoveNext", All))
-                .Where(m => m != null)
+                .Where(type => type.Name.Contains("<OnPlay>") && typeof(IAsyncStateMachine).IsAssignableFrom(type))
+                .Select(type => type.GetMethod("MoveNext", All))
+                .Where(method => method != null)
                 .Cast<MethodBase>());
     }
 
@@ -330,16 +330,16 @@ internal static class CardCoverage
     {
         var set = new HashSet<string>();
         bool IsHook(string n) => n.StartsWith("After") || n.StartsWith("Before");
-        var methods = cardType.GetMethods(All).Where(m => m.DeclaringType == cardType && IsHook(m.Name)).Cast<MethodBase>()
+        var methods = cardType.GetMethods(All).Where(method => method.DeclaringType == cardType && IsHook(method.Name)).Cast<MethodBase>()
             .Concat(NestedTypes(cardType)
-                .Where(t => typeof(IAsyncStateMachine).IsAssignableFrom(t) && t.Name.StartsWith("<") && IsHook(t.Name[1..]))
-                .Select(t => t.GetMethod("MoveNext", All)).Where(m => m != null).Cast<MethodBase>());
-        foreach (var m in methods)
+                .Where(type => typeof(IAsyncStateMachine).IsAssignableFrom(type) && type.Name.StartsWith("<") && IsHook(type.Name[1..]))
+                .Select(type => type.GetMethod("MoveNext", All)).Where(method => method != null).Cast<MethodBase>());
+        foreach (var method in methods)
         {
             try
             {
-                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
-                    if (ins.operand is MethodInfo mi && mi.DeclaringType != null) set.Add(mi.DeclaringType.Name + "." + mi.Name);
+                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(method))
+                    if (ins.operand is MethodInfo otherMethod && otherMethod.DeclaringType != null) set.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name);
             }
             catch
             {
@@ -354,19 +354,19 @@ internal static class CardCoverage
     /// </summary>
     private static bool RepeatsCall(Type cardType, string type, string method)
     {
-        foreach (var m in OnPlayMethods(cardType))
+        foreach (var onPlayMethod in OnPlayMethods(cardType))
         {
             try
             {
-                var code = SpireQoL.Diagnostics.GameCode.Instructions(m);
+                var code = SpireQoL.Diagnostics.GameCode.Instructions(onPlayMethod);
                 var at = Enumerable.Range(0, code.Count)
-                    .Where(i => code[i].operand is MethodInfo mi && mi.Name == method && mi.DeclaringType?.Name == type).ToList();
+                    .Where(i => code[i].operand is MethodInfo nextMethod && nextMethod.Name == method && nextMethod.DeclaringType?.Name == type).ToList();
                 if (at.Count > 1) return true;
                 if (at.Count == 0) continue;
                 var labels = new Dictionary<System.Reflection.Emit.Label, int>();
-                for (var i = 0; i < code.Count; i++) foreach (var l in code[i].labels) labels[l] = i;
+                for (var i = 0; i < code.Count; i++) foreach (var label in code[i].labels) labels[label] = i;
                 for (var i = 0; i < code.Count; i++)
-                    if (code[i].operand is System.Reflection.Emit.Label t && labels.TryGetValue(t, out var to) && to < i && at.Any(c => c >= to && c < i))
+                    if (code[i].operand is System.Reflection.Emit.Label otherLabel && labels.TryGetValue(otherLabel, out var to) && to < i && at.Any(c => c >= to && c < i))
                         return true;
             }
             catch
@@ -381,15 +381,15 @@ internal static class CardCoverage
     private static HashSet<string> OnPlayCalls(Type cardType)
     {
         var set = new HashSet<string>();
-        foreach (var m in OnPlayMethods(cardType))
+        foreach (var method in OnPlayMethods(cardType))
         {
             try
             {
-                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
+                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(method))
                 {
-                    if (ins.operand is not MethodInfo mi || mi.DeclaringType == null) continue;
-                    set.Add(mi.DeclaringType.Name + "." + mi.Name);
-                    if (mi.IsGenericMethod) set.Add(mi.DeclaringType.Name + "." + mi.Name + "<" + mi.GetGenericArguments()[0].Name + ">");
+                    if (ins.operand is not MethodInfo otherMethod || otherMethod.DeclaringType == null) continue;
+                    set.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name);
+                    if (otherMethod.IsGenericMethod) set.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name + "<" + otherMethod.GetGenericArguments()[0].Name + ">");
                 }
             }
             catch

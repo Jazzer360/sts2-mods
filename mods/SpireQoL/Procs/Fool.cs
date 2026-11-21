@@ -46,9 +46,9 @@ internal static class Fool
         try
         {
             if (!card.EnergyCost.CostsX) return true;
-            var cs = card.CombatState;
+            var combat = card.CombatState;
             var spent = card.EnergyCost.GetAmountToSpend();
-            return (cs == null ? spent : MegaCrit.Sts2.Core.Hooks.Hook.ModifyXValue(cs, card, spent)) > 0;
+            return (combat == null ? spent : MegaCrit.Sts2.Core.Hooks.Hook.ModifyXValue(combat, card, spent)) > 0;
         }
         catch { return true; }
     }
@@ -62,7 +62,7 @@ internal static class Fool
     /// <summary>Cards that pull every arrow of yours out of their target (ArrowCmd.DislodgeArrow in OnPlay).</summary>
     public static readonly HashSet<string> DislodgeCards = new() { "Recall", "Uproot", "Wrest" };
 
-    public static IEnumerable<SimCardTag> Melodies(CardModel card) => MelodyTags.Where(t => HasTag(card, t));
+    public static IEnumerable<SimCardTag> Melodies(CardModel card) => MelodyTags.Where(simCardTag => HasTag(card, simCardTag));
 
     /// <summary>Arrows you can shoot now (PlayerCombatState.AvailableArrowCount; 0 before v0.113.0).</summary>
     public static int ArrowsAvailable(Player me)
@@ -73,10 +73,10 @@ internal static class Fool
 
     /// <summary>The Impaled power on <paramref name="target"/> holding <paramref name="applier"/>'s arrows (null: none).</summary>
     public static PowerModel? ImpaledBy(Creature target, Creature applier)
-        => target.Powers.FirstOrDefault(p => p.GetType().Name == "ImpaledPower" && p.Applier == applier);
+        => target.Powers.FirstOrDefault(power => power.GetType().Name == "ImpaledPower" && power.Applier == applier);
 
     /// <summary>Impaled by anyone's arrow (ArrowCmd.CreatureIsImpaledByArrow).</summary>
-    public static bool IsImpaled(Creature target) => target.Powers.Any(p => p.GetType().Name == "ImpaledPower");
+    public static bool IsImpaled(Creature target) => target.Powers.Any(power => power.GetType().Name == "ImpaledPower");
 
     /// <summary>Your powered hits left before the next arrow comes loose (ImpaledPower.HitCounter).</summary>
     public static int HitCounter(PowerModel impaled) => Math.Max(1, Sts2State.Var(impaled, "HitCounter", 3));
@@ -107,7 +107,7 @@ internal static class Fool
     /// <summary>The card's enchantment gains block on play (Adroit's powered Move block), so the play gets and spends Stretch.
     /// Read by name, so a game without the flag still runs.</summary>
     public static bool EnchantmentGainsBlock(CardModel card) =>
-        card.Enchantment is { } e && EnchantmentFlag != null && EnchantmentFlag.GetValue(e) is true;
+        card.Enchantment is { } enchantment && EnchantmentFlag != null && EnchantmentFlag.GetValue(enchantment) is true;
 
     /// <summary>EnchantmentModel.GainsBlock (v0.113.1, beta): null on a game without it (main v0.113.0), which then has no such enchantments.</summary>
     private static readonly System.Reflection.PropertyInfo? EnchantmentFlag =
@@ -122,29 +122,29 @@ internal static class Fool
     /// <summary>The props of the card's block value (a BlockVar, or a CalculatedBlockVar: Stack, Mimic), or null without one.</summary>
     public static MegaCrit.Sts2.Core.ValueProps.ValueProp? BlockProps(CardModel card)
     {
-        foreach (var v in card.DynamicVars.Values)
+        foreach (var dynamicVar in card.DynamicVars.Values)
         {
-            if (v is MegaCrit.Sts2.Core.Localization.DynamicVars.BlockVar b) return b.Props;
-            if (v is MegaCrit.Sts2.Core.Localization.DynamicVars.CalculatedBlockVar c) return c.Props;
+            if (dynamicVar is MegaCrit.Sts2.Core.Localization.DynamicVars.BlockVar blockVar) return blockVar.Props;
+            if (dynamicVar is MegaCrit.Sts2.Core.Localization.DynamicVars.CalculatedBlockVar calculatedBlockVar) return calculatedBlockVar.Props;
         }
         return null;
     }
 
     /// <summary>You finished playing a card with this melody tag this turn (MelodyCmd.PlayedThisTurn).</summary>
-    public static bool PlayedThisTurn(Player me, SimCardTag tag) => Sts2State.CardsPlayedThisTurn(me).Any(c => HasTag(c, tag));
+    public static bool PlayedThisTurn(Player me, SimCardTag tag) => Sts2State.CardsPlayedThisTurn(me).Any(card => HasTag(card, tag));
 
     /// <summary>Melodies (Wah, Cho, Ki) you've finished playing this turn (MelodyCmd.MelodiesThisTurn).</summary>
-    public static int MelodiesThisTurn(Player me) => MelodyTags.Count(t => PlayedThisTurn(me, t));
+    public static int MelodiesThisTurn(Player me) => MelodyTags.Count(simCardTag => PlayedThisTurn(me, simCardTag));
 
     /// <summary>A play with this tag has started this turn (so a new one isn't the first: MelodyCmd.IsFirstPlayThisTurn).</summary>
     public static bool StartedThisTurn(Player me, SimCardTag tag)
     {
-        var cs = Sts2State.Combat;
-        if (cs == null) return false;
+        var combat = Sts2State.Combat;
+        if (combat == null) return false;
         try
         {
             return CombatManager.Instance.History.CardPlaysStarted
-                .Any(e => e.HappenedThisTurn(cs) && e.CardPlay.Player == me && HasTag(e.CardPlay.Card, tag));
+                .Any(cardPlayStartedEntry => cardPlayStartedEntry.HappenedThisTurn(combat) && cardPlayStartedEntry.CardPlay.Player == me && HasTag(cardPlayStartedEntry.CardPlay.Card, tag));
         }
         catch
         {
@@ -153,5 +153,5 @@ internal static class Fool
     }
 
     /// <summary>Melodies this card plays first this turn (no play with that tag has started yet).</summary>
-    public static IEnumerable<SimCardTag> FirstMelodies(CardModel card, Player me) => Melodies(card).Where(t => !StartedThisTurn(me, t));
+    public static IEnumerable<SimCardTag> FirstMelodies(CardModel card, Player me) => Melodies(card).Where(simCardTag => !StartedThisTurn(me, simCardTag));
 }

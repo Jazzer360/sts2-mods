@@ -94,15 +94,15 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         {
             Close();
             if (__instance.IsLocked || __instance.WasChosen || RunMe() is not { } me) return;
-            var w = new Window { Option = __instance, Effects = EffectsOf(__instance), Me = me, Start = Before.Of(me) };
-            w.Shown = IconsFor(__instance, me).Select(i => i.Relic).ToHashSet();
-            foreach (var r in me.Relics)
+            var window = new Window { Option = __instance, Effects = EffectsOf(__instance), Me = me, Start = Before.Of(me) };
+            window.Shown = IconsFor(__instance, me).Select(i => i.Relic).ToHashSet();
+            foreach (var relic in me.Relics)
             {
-                if (ChoiceReminders.For(r.GetType().Name) is not { On: not ChoiceEffect.None }) continue;
-                r.Flashed += OnFlashed;
-                w.Subscribed.Add(r);
+                if (ChoiceReminders.For(relic.GetType().Name) is not { On: not ChoiceEffect.None }) continue;
+                relic.Flashed += OnFlashed;
+                window.Subscribed.Add(relic);
             }
-            _window = w;
+            _window = window;
         }
         catch (Exception ex)
         {
@@ -113,13 +113,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// <summary>The option's task: the window stays open until it ends (card choices can take a while).</summary>
     private static void AfterChosen(EventOption __instance, Task __result)
     {
-        try { if (_window is { } w && w.Option == __instance) w.Task = __result; }
+        try { if (_window is { } window && window.Option == __instance) window.Task = __result; }
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-chosen"); }
     }
 
     private static void OnFlashed(RelicModel relic, IEnumerable<MegaCrit.Sts2.Core.Entities.Creatures.Creature> _)
     {
-        try { if (_window is { } w && !w.Flashed.Contains(relic)) w.Flashed.Add(relic); }
+        try { if (_window is { } window && !window.Flashed.Contains(relic)) window.Flashed.Add(relic); }
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-flash"); }
     }
 
@@ -128,20 +128,20 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// the deck (new card objects, so transforms count), gold gained, HP lost (not when max HP fell
     /// too: that's max HP loss), potions gained. Gold that Lucky Fysh paid for a card isn't the option's.
     /// </summary>
-    private static ChoiceEffect Observed(Window w, out string details)
+    private static ChoiceEffect Observed(Window window, out string details)
     {
-        var me = w.Me;
-        var s = w.Start;
-        var added = me.Deck.Cards.Where(c => !s.Deck.Contains(c)).ToList();
-        var e = ChoiceEffect.None;
-        if (added.Any(c => c.Type != MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse)) e |= ChoiceEffect.CardToDeck;
-        if (added.Any(c => c.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse)) e |= ChoiceEffect.CurseToDeck;
-        var luckyFysh = w.Flashed.Any(r => r is LuckyFysh);
-        if (me.Gold > s.Gold && !luckyFysh) e |= ChoiceEffect.GoldGain;
-        if (me.Creature.CurrentHp < s.Hp && me.Creature.MaxHp >= s.MaxHp) e |= ChoiceEffect.HpLoss;
-        if (me.Potions.Count() > s.Potions) e |= ChoiceEffect.Potion;
-        details = $"deck +[{string.Join(", ", added.Select(c => c.GetType().Name))}], gold {s.Gold}→{me.Gold}, HP {s.Hp}/{s.MaxHp}→{me.Creature.CurrentHp}/{me.Creature.MaxHp}, potions {s.Potions}→{me.Potions.Count()}";
-        return e;
+        var me = window.Me;
+        var before = window.Start;
+        var added = me.Deck.Cards.Where(card => !before.Deck.Contains(card)).ToList();
+        var choiceEffect = ChoiceEffect.None;
+        if (added.Any(card => card.Type != MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse)) choiceEffect |= ChoiceEffect.CardToDeck;
+        if (added.Any(card => card.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse)) choiceEffect |= ChoiceEffect.CurseToDeck;
+        var luckyFysh = window.Flashed.Any(relic => relic is LuckyFysh);
+        if (me.Gold > before.Gold && !luckyFysh) choiceEffect |= ChoiceEffect.GoldGain;
+        if (me.Creature.CurrentHp < before.Hp && me.Creature.MaxHp >= before.MaxHp) choiceEffect |= ChoiceEffect.HpLoss;
+        if (me.Potions.Count() > before.Potions) choiceEffect |= ChoiceEffect.Potion;
+        details = $"deck +[{string.Join(", ", added.Select(card => card.GetType().Name))}], gold {before.Gold}→{me.Gold}, HP {before.Hp}/{before.MaxHp}→{me.Creature.CurrentHp}/{me.Creature.MaxHp}, potions {before.Potions}→{me.Potions.Count()}";
+        return choiceEffect;
     }
 
     /// <summary>
@@ -154,33 +154,33 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// </summary>
     private static void Close()
     {
-        var w = _window;
-        if (w == null) return;
+        var window = _window;
+        if (window == null) return;
         _window = null;
-        foreach (var r in w.Subscribed) r.Flashed -= OnFlashed;
-        var observed = Observed(w, out var state);
+        foreach (var relic in window.Subscribed) relic.Flashed -= OnFlashed;
+        var observed = Observed(window, out var state);
         // The run ended (a win's last Proceed, or dying): the game sets your HP to 0 as it closes the run (RunState.IsGameOver is
         // every player dead), which isn't the option's doing. Logged, not checked.
-        if (w.Me.Creature.IsDead)
+        if (window.Me.Creature.IsDead)
         {
-            ModEntry.Log.Info($"[audit] [reminders] {w.Option.TextKey}: the run ended, not checked ({state})");
-            Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "event option: the run ended", w.Option.TextKey);
+            ModEntry.Log.Info($"[audit] [reminders] {window.Option.TextKey}: the run ended, not checked ({state})");
+            Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "event option: the run ended", window.Option.TextKey);
             return;
         }
-        var rule = (RelicModel r) => ChoiceReminders.For(r.GetType().Name)!;
-        var shown = w.Subscribed.Where(w.Shown.Contains).ToList();
-        var missed = w.Flashed.Where(r => !shown.Contains(r)).Select(r => r.GetType().Name).ToList();
-        var quiet = shown.Where(r => !w.Flashed.Contains(r)).ToList();
-        var silent = quiet.Where(r => (rule(r).Expect & observed) != 0).Select(r => r.GetType().Name).ToList();
-        var unread = observed & ~w.Effects;
+        var rule = (RelicModel relic) => ChoiceReminders.For(relic.GetType().Name)!;
+        var shown = window.Subscribed.Where(window.Shown.Contains).ToList();
+        var missed = window.Flashed.Where(relic => !shown.Contains(relic)).Select(relic => relic.GetType().Name).ToList();
+        var quiet = shown.Where(relic => !window.Flashed.Contains(relic)).ToList();
+        var silent = quiet.Where(relic => (rule(relic).Expect & observed) != 0).Select(relic => relic.GetType().Name).ToList();
+        var unread = observed & ~window.Effects;
         // A card added by an option read as adding a curse (or the other way) is still a card the icons covered.
-        if ((w.Effects & (ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck)) != 0) unread &= ~ChoiceEffect.CardToDeck;
-        var unseen = w.Effects & ~observed & ~ChoiceEffect.RestHeal;
-        var what = $"{w.Option.TextKey}: read {w.Effects}, happened {observed}; icons [{string.Join(", ", shown.Select(r => r.GetType().Name))}]; flashed [{string.Join(", ", w.Flashed.Select(r => r.GetType().Name))}]; {state}";
+        if ((window.Effects & (ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck)) != 0) unread &= ~ChoiceEffect.CardToDeck;
+        var unseen = window.Effects & ~observed & ~ChoiceEffect.RestHeal;
+        var what = $"{window.Option.TextKey}: read {window.Effects}, happened {observed}; icons [{string.Join(", ", shown.Select(relic => relic.GetType().Name))}]; flashed [{string.Join(", ", window.Flashed.Select(relic => relic.GetType().Name))}]; {state}";
         ModEntry.Log.Info($"[audit] [reminders] {what}");
-        if (quiet.Count > silent.Count) ModEntry.Log.Info($"[audit] [reminders] icon shown, no reaction (logged only): {string.Join(", ", quiet.Select(r => r.GetType().Name).Except(silent))}");
+        if (quiet.Count > silent.Count) ModEntry.Log.Info($"[audit] [reminders] icon shown, no reaction (logged only): {string.Join(", ", quiet.Select(relic => relic.GetType().Name).Except(silent))}");
         if (unseen != ChoiceEffect.None) ModEntry.Log.Info($"[audit] [reminders] read but didn't happen (logged only): {unseen}");
-        var evt = w.Option.TextKey.Split('.')[0];
+        var evt = window.Option.TextKey.Split('.')[0];
         var eventOk = missed.Count == 0 && unread == ChoiceEffect.None && silent.Count == 0;
         Telemetry.Audits.Done(Telemetry.Audits.Reminders, eventOk, eventOk ? "event option"
             : missed.Count > 0 ? "reminder-missed" : unread != ChoiceEffect.None ? "reminder-unread" : "reminder-silent");
@@ -200,19 +200,19 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             reporter?.Mismatch("reminders", $"Reminder icon's effect happened but the relic didn't react: {string.Join(", ", silent)}",
                 new[] { "reminder-silent" }.Concat(silent).Append(evt), what);
         }
-        var added = w.Me.Deck.Cards.Where(c => !w.Start.Deck.Contains(c)).ToList();
-        CheckCardRules(w.Me, added, CardsRead.TryGetValue(w.Option, out var read) && read.GivesUpgraded, w.Shown, w.Option.TextKey);
-        LogOdds(w, added);
+        var added = window.Me.Deck.Cards.Where(card => !window.Start.Deck.Contains(card)).ToList();
+        CheckCardRules(window.Me, added, CardsRead.TryGetValue(window.Option, out var read) && read.GivesUpgraded, window.Shown, window.Option.TextKey);
+        LogOdds(window, added);
     }
 
     private static void TickWindow()
     {
-        if (_window is not { } w) return;
+        if (_window is not { } window) return;
         // A fight from the event: what happens in it isn't the option's.
         if (Sts2State.InCombat) { Close(); return; }
         // Half a second after the option's task ends (its relics react within it), or a long timeout.
-        if (w.Task is { IsCompleted: true }) { if (++w.DoneFrames > 30) Close(); }
-        else if (++w.Frames > 100_000) Close();
+        if (window.Task is { IsCompleted: true }) { if (++window.DoneFrames > 30) Close(); }
+        else if (++window.Frames > 100_000) Close();
     }
 
     public void Attach(OverlayHost host)
@@ -282,7 +282,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     }
 
     /// <summary>Cards a pick adds to your deck: two with Bing Bong (its copy fires the deck hooks too).</summary>
-    private static int PerPick(Player me) => me.Relics.Any(r => r is BingBong) ? 2 : 1;
+    private static int PerPick(Player me) => me.Relics.Any(relic => relic is BingBong) ? 2 : 1;
 
     /// <summary>
     /// Gold after Bowler Hat, Ectoplasm and anything else that modifies it, through the game's own query
@@ -375,15 +375,15 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             {
                 CheckReward();
                 var perPick = PerPick(me);
-                var w = new RewardWatch { Me = me, Start = Before.Of(me), PerPick = perPick };
-                if (me.Relics.OfType<LuckyFysh>().FirstOrDefault() is { } fysh) w.FyshGold = GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", 15)) * perPick;
+                var rewardWatch = new RewardWatch { Me = me, Start = Before.Of(me), PerPick = perPick };
+                if (me.Relics.OfType<LuckyFysh>().FirstOrDefault() is { } fysh) rewardWatch.FyshGold = GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", 15)) * perPick;
                 if (me.Relics.OfType<BookOfFiveRings>().FirstOrDefault() is { } book)
                 {
-                    w.BookEvery = Sts2State.Var(book, "Cards", 5);
-                    w.BookAdded = Sts2State.Private(book, "CardsAdded", -1);
-                    if (w.BookEvery > 0 && w.BookAdded >= 0) w.BookHeals = SetOffByTaking(book, me);
+                    rewardWatch.BookEvery = Sts2State.Var(book, "Cards", 5);
+                    rewardWatch.BookAdded = Sts2State.Private(book, "CardsAdded", -1);
+                    if (rewardWatch.BookEvery > 0 && rewardWatch.BookAdded >= 0) rewardWatch.BookHeals = SetOffByTaking(book, me);
                 }
-                _reward = w;
+                _reward = rewardWatch;
             }
             return;
         }
@@ -394,27 +394,27 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     private void CheckReward()
     {
-        var w = _reward;
+        var rewardWatch = _reward;
         _reward = null;
-        if (w == null || w.ClosedFrames < 0) return;
-        var me = w.Me;
-        var added = me.Deck.Cards.Count(c => !w.Start.Deck.Contains(c));
+        if (rewardWatch == null || rewardWatch.ClosedFrames < 0) return;
+        var me = rewardWatch.Me;
+        var added = me.Deck.Cards.Count(card => !rewardWatch.Start.Deck.Contains(card));
         if (added == 0) return; // skipped or sacrificed
         var problems = new List<(string Key, string Text)>();
-        if (added != w.PerPick) problems.Add(("cards", $"{added} cards joined the deck, predicted {w.PerPick}"));
-        var gold = me.Gold - w.Start.Gold;
-        if (w.FyshGold is { } g && gold != g) problems.Add((nameof(LuckyFysh), $"Lucky Fysh: gold +{gold}, predicted +{g}"));
-        if (w.BookHeals is { } heals && me.Relics.OfType<BookOfFiveRings>().FirstOrDefault() is { } book)
+        if (added != rewardWatch.PerPick) problems.Add(("cards", $"{added} cards joined the deck, predicted {rewardWatch.PerPick}"));
+        var gold = me.Gold - rewardWatch.Start.Gold;
+        if (rewardWatch.FyshGold is { } g && gold != g) problems.Add((nameof(LuckyFysh), $"Lucky Fysh: gold +{gold}, predicted +{g}"));
+        if (rewardWatch.BookHeals is { } heals && me.Relics.OfType<BookOfFiveRings>().FirstOrDefault() is { } book)
         {
             var now = Sts2State.Private(book, "CardsAdded", -1);
             if (now >= 0)
             {
-                var healed = now / w.BookEvery > w.BookAdded / w.BookEvery;
-                if (healed != heals) problems.Add((nameof(BookOfFiveRings), $"Book of Five Rings: {(healed ? "healed" : "didn't heal")} ({w.BookAdded}→{now} cards), predicted {(heals ? "a heal" : "no heal")}"));
+                var healed = now / rewardWatch.BookEvery > rewardWatch.BookAdded / rewardWatch.BookEvery;
+                if (healed != heals) problems.Add((nameof(BookOfFiveRings), $"Book of Five Rings: {(healed ? "healed" : "didn't heal")} ({rewardWatch.BookAdded}→{now} cards), predicted {(heals ? "a heal" : "no heal")}"));
             }
         }
-        CheckCardRules(me, me.Deck.Cards.Where(c => !w.Start.Deck.Contains(c)).ToList(), false, null, "card reward");
-        var what = $"card reward: {added} added (predicted {w.PerPick}), gold {w.Start.Gold}→{me.Gold}";
+        CheckCardRules(me, me.Deck.Cards.Where(card => !rewardWatch.Start.Deck.Contains(card)).ToList(), false, null, "card reward");
+        var what = $"card reward: {added} added (predicted {rewardWatch.PerPick}), gold {rewardWatch.Start.Gold}→{me.Gold}";
         ModEntry.Log.Info($"[audit] [reminders] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(p => p.Text)))}");
         Telemetry.Audits.Done(Telemetry.Audits.Reminders, problems.Count == 0, problems.Count == 0 ? "card reward" : "reminder-reward");
         if (problems.Count > 0)
@@ -559,7 +559,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                     if (relic is LuckyFysh fysh && (effects & ChoiceEffect.CardToDeck) != 0)
                     {
                         // Bing Bong's copy joins your deck too, so Lucky Fysh pays twice.
-                        var perPick = me.Relics.Any(r => r is BingBong) ? 2 : 1;
+                        var perPick = me.Relics.Any(otherRelic => otherRelic is BingBong) ? 2 : 1;
                         net = entry.Cost - GoldAfterRelics(me, Sts2State.Var(fysh, "Gold", 15)) * perPick;
                     }
                 }
@@ -638,13 +638,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     {
         try
         {
-            if (control is Label l && l.GetThemeFont("font") is { } font)
+            if (control is Label label && label.GetThemeFont("font") is { } font)
             {
-                var w = font.GetStringSize(l.Text, HorizontalAlignment.Left, -1, l.GetThemeFontSize("font_size")).X;
-                var x = l.HorizontalAlignment switch
+                var w = font.GetStringSize(label.Text, HorizontalAlignment.Left, -1, label.GetThemeFontSize("font_size")).X;
+                var x = label.HorizontalAlignment switch
                 {
-                    HorizontalAlignment.Center => (l.Size.X - w) / 2,
-                    HorizontalAlignment.Right => l.Size.X - w,
+                    HorizontalAlignment.Center => (label.Size.X - w) / 2,
+                    HorizontalAlignment.Right => label.Size.X - w,
                     _ => 0f,
                 };
                 return (x, w);
@@ -665,20 +665,20 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         foreach (var pic in Pictures(slot))
         {
             if (price.GetNodeOrNull(ShopNodeName) is { } ours && ours.IsAncestorOf(pic) || !pic.IsVisibleInTree()) continue;
-            var r = pic.GetGlobalRect();
-            var level = r.End.Y > rect.Position.Y && r.Position.Y < rect.End.Y;
-            var beside = r.End.X <= rect.Position.X + rect.Size.Y && r.End.X >= rect.Position.X - rect.Size.Y;
-            if (level && beside) left = Math.Min(left, r.Position.X);
+            var otherRect = pic.GetGlobalRect();
+            var level = otherRect.End.Y > rect.Position.Y && otherRect.Position.Y < rect.End.Y;
+            var beside = otherRect.End.X <= rect.Position.X + rect.Size.Y && otherRect.End.X >= rect.Position.X - rect.Size.Y;
+            if (level && beside) left = Math.Min(left, otherRect.Position.X);
         }
         return left;
     }
 
-    private static IEnumerable<TextureRect> Pictures(Node n)
+    private static IEnumerable<TextureRect> Pictures(Node node)
     {
-        foreach (var c in n.GetChildren())
+        foreach (var otherNode in node.GetChildren())
         {
-            if (c is TextureRect t) yield return t;
-            foreach (var d in Pictures(c)) yield return d;
+            if (otherNode is TextureRect icon) yield return icon;
+            foreach (var picture in Pictures(otherNode)) yield return picture;
         }
     }
 
@@ -836,40 +836,40 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         cards.Read(code);
         foreach (var ins in code)
         {
-            if (ins.operand is not MethodBase mb || mb.DeclaringType == null) continue;
+            if (ins.operand is not MethodBase otherMethod || otherMethod.DeclaringType == null) continue;
             if (ins.opcode != OpCodes.Call && ins.opcode != OpCodes.Callvirt && ins.opcode != OpCodes.Newobj) continue;
-            calls.Add(mb.DeclaringType.Name + "." + mb.Name);
+            calls.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name);
             // The card it makes is a curse (Wuppy's Injury: ModelDb.Card<Injury>; the Museum's pick from the curse pool): whatever
             // command adds it, a curse joins the deck.
-            if (MakesCurse(mb)) calls.Add(ChoiceReminders.CurseMade);
-            if (owner != null && IsWithin(mb.DeclaringType, owner)) Walk(mb, owner, calls, seen, depth + 1, cards);
+            if (MakesCurse(otherMethod)) calls.Add(ChoiceReminders.CurseMade);
+            if (owner != null && IsWithin(otherMethod.DeclaringType, owner)) Walk(otherMethod, owner, calls, seen, depth + 1, cards);
             // A delegate the event keeps in its state, called by the option (the Endless Conveyor's dish:
             // GrabSomethingOffTheBelt runs CurrentDish.action): read the ones the event holds now.
-            else if (mb.Name == nameof(Action.Invoke) && typeof(Delegate).IsAssignableFrom(mb.DeclaringType) && owner != null && cards.Target != null)
+            else if (otherMethod.Name == nameof(Action.Invoke) && typeof(Delegate).IsAssignableFrom(otherMethod.DeclaringType) && owner != null && cards.Target != null)
             {
                 foreach (var held in HeldDelegates(cards.Target))
                     if (held.Method.DeclaringType != null && IsWithin(held.Method.DeclaringType, owner)) Walk(held.Method, owner, calls, seen, depth + 1, cards);
             }
             // An event's own part it creates (the Crystal Sphere's minigame, and the items it hides: card rewards, a curse, gold,
             // potions): everything that class does is something the option can do.
-            else if (ins.opcode == OpCodes.Newobj && mb.DeclaringType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Events.Custom") == true)
+            else if (ins.opcode == OpCodes.Newobj && otherMethod.DeclaringType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Events.Custom") == true)
             {
-                foreach (var m in mb.DeclaringType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
-                    Walk(m, mb.DeclaringType, calls, seen, depth + 1, cards);
+                foreach (var nextMethod in otherMethod.DeclaringType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                    Walk(nextMethod, otherMethod.DeclaringType, calls, seen, depth + 1, cards);
             }
             // A game mode's own rewards (Blitz's Neow option runs BlitzRunModel.GiveNeowRewards).
-            else if (mb.IsStatic && typeof(RunModel).IsAssignableFrom(mb.DeclaringType)) Walk(mb, mb.DeclaringType, calls, seen, depth + 1, cards);
+            else if (otherMethod.IsStatic && typeof(RunModel).IsAssignableFrom(otherMethod.DeclaringType)) Walk(otherMethod, otherMethod.DeclaringType, calls, seen, depth + 1, cards);
         }
     }
 
     /// <summary>ModelDb.Card&lt;T&gt; of a curse card, or ModelDb.CardPool&lt;CurseCardPool&gt;.</summary>
-    private static bool MakesCurse(MethodBase mb)
+    private static bool MakesCurse(MethodBase method)
     {
-        if (mb is not MethodInfo { IsGenericMethod: true } gm || gm.DeclaringType?.Name != nameof(ModelDb)) return false;
-        var arg = gm.GetGenericArguments()[0];
-        if (gm.Name == nameof(ModelDb.CardPool)) return arg.Name == "CurseCardPool";
-        if (gm.Name != nameof(ModelDb.Card)) return false;
-        try { return ModelDb.AllCards.FirstOrDefault(c => c.GetType() == arg)?.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse; }
+        if (method is not MethodInfo { IsGenericMethod: true } otherMethod || otherMethod.DeclaringType?.Name != nameof(ModelDb)) return false;
+        var arg = otherMethod.GetGenericArguments()[0];
+        if (otherMethod.Name == nameof(ModelDb.CardPool)) return arg.Name == "CurseCardPool";
+        if (otherMethod.Name != nameof(ModelDb.Card)) return false;
+        try { return ModelDb.AllCards.FirstOrDefault(card => card.GetType() == arg)?.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse; }
         catch { return false; }
     }
 
@@ -879,17 +879,17 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// </summary>
     private static IEnumerable<Delegate> HeldDelegates(object target)
     {
-        const BindingFlags f = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        const BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
         var found = new List<Delegate>();
-        for (var t = target.GetType(); t != null && t != typeof(object); t = t.BaseType)
+        for (var type = target.GetType(); type != null && type != typeof(object); type = type.BaseType)
         {
-            foreach (var field in t.GetFields(f))
+            foreach (var field in type.GetFields(bindingFlags))
             {
                 object? v;
                 try { v = field.GetValue(target); } catch { continue; }
                 if (v is Delegate d) found.AddRange(d.GetInvocationList());
                 else if (v != null && field.FieldType.IsValueType && !field.FieldType.IsPrimitive && !field.FieldType.IsEnum)
-                    foreach (var inner in field.FieldType.GetFields(f))
+                    foreach (var inner in field.FieldType.GetFields(bindingFlags))
                     {
                         try { if (inner.GetValue(v) is Delegate d2) found.AddRange(d2.GetInvocationList()); } catch { }
                     }
@@ -898,13 +898,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         return found;
     }
 
-    private static bool IsWithin(Type t, Type owner)
+    private static bool IsWithin(Type type, Type owner)
     {
         var root = owner;
         while (root.DeclaringType != null) root = root.DeclaringType;
-        for (var x = t; x != null; x = x.DeclaringType)
+        for (var otherType = type; otherType != null; otherType = otherType.DeclaringType)
         {
-            if (x == root) return true;
+            if (otherType == root) return true;
         }
         return false;
     }

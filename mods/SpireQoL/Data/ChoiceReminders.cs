@@ -195,7 +195,7 @@ public static class ChoiceReminders
         ["ToxicEgg"] = "upgrades shop cards like every card you get", ["FresnelLens"] = "enchants shop cards like every card you get",
     };
 
-    private static readonly Dictionary<string, ReminderRule> ByRelic = Rules.ToDictionary(r => r.Relic);
+    private static readonly Dictionary<string, ReminderRule> ByRelic = Rules.ToDictionary(reminderRule => reminderRule.Relic);
 
     public static ReminderRule? For(string relic) => ByRelic.GetValueOrDefault(relic);
 
@@ -236,14 +236,14 @@ public static class ChoiceReminders
 
     public static ChoiceEffect EffectsOf(IEnumerable<string> calls)
     {
-        var e = ChoiceEffect.None;
+        var choiceEffect = ChoiceEffect.None;
         foreach (var c in calls)
         {
             foreach (var (call, effect) in Calls)
             {
-                if (call.EndsWith('*') ? c.StartsWith(call[..^1]) : c == call) e |= effect;
+                if (call.EndsWith('*') ? c.StartsWith(call[..^1]) : c == call) choiceEffect |= effect;
             }
         }
-        return e;
+        return choiceEffect;
     }
 }

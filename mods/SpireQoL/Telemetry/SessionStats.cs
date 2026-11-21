@@ -70,83 +70,83 @@ public sealed class SessionStats
     /// <summary>Turns seen so far (the summary is sent only when there was one).</summary>
     public int Turns { get { lock (_lock) return _turnsTotal + _turns.Count; } }
 
-    public void Post(DevEvent e)
+    public void Post(DevEvent devEvent)
     {
         lock (_lock)
         {
-            switch (e)
+            switch (devEvent)
             {
-                case CombatStarted c:
+                case CombatStarted combatStarted:
                     CloseTurns();
                     _combat++;
                     _combats++;
-                    _players = Math.Max(_players, c.Players);
-                    if (_characters.Length == 0) _characters = c.Characters;
+                    _players = Math.Max(_players, combatStarted.Players);
+                    if (_characters.Length == 0) _characters = combatStarted.Characters;
                     break;
                 case CombatEnded:
                     break; // its turns close when the next fight starts: the last play's check may still come
-                case TurnStarted t:
-                    Turn(t.Turn);
+                case TurnStarted turnStarted:
+                    Turn(turnStarted.Turn);
                     break;
-                case CheckDone d:
+                case CheckDone checkDone:
                 {
-                    var a = Audit(d.Audit);
-                    a.Checked++;
-                    if (!Audits.PerTurn(d.Audit))
+                    var auditCounts = Audit(checkDone.Audit);
+                    auditCounts.Checked++;
+                    if (!Audits.PerTurn(checkDone.Audit))
                     {
-                        if (d.Matched) a.Matched++;
-                        else Count(a.Mismatches, d.Detail ?? "?");
+                        if (checkDone.Matched) auditCounts.Matched++;
+                        else Count(auditCounts.Mismatches, checkDone.Detail ?? "?");
                         break;
                     }
-                    var rec = Turn(d.Turn);
-                    if (d.Audit == Audits.Forecast) rec.ForecastSeen = true;
-                    if (d.Matched) a.Matched++;
+                    var rec = Turn(checkDone.Turn);
+                    if (checkDone.Audit == Audits.Forecast) rec.ForecastSeen = true;
+                    if (checkDone.Matched) auditCounts.Matched++;
                     else
                     {
                         rec.Mismatch = true;
-                        Count(a.Mismatches, d.Detail ?? "?");
+                        Count(auditCounts.Mismatches, checkDone.Detail ?? "?");
                     }
                     break;
                 }
-                case CheckSkipped s:
+                case CheckSkipped checkSkipped:
                 {
-                    var a = Audit(s.Audit);
-                    a.Skipped++;
-                    Count(a.SkipReasons, s.Expected ? s.Reason + " (expected)" : s.Reason);
-                    if (!Audits.PerTurn(s.Audit)) break;
-                    var rec = Turn(s.Turn);
-                    if (!s.Expected) rec.Skipped = true;
-                    if (s.Audit == Audits.Forecast) rec.ForecastSeen = true;
+                    var auditCounts = Audit(checkSkipped.Audit);
+                    auditCounts.Skipped++;
+                    Count(auditCounts.SkipReasons, checkSkipped.Expected ? checkSkipped.Reason + " (expected)" : checkSkipped.Reason);
+                    if (!Audits.PerTurn(checkSkipped.Audit)) break;
+                    var rec = Turn(checkSkipped.Turn);
+                    if (!checkSkipped.Expected) rec.Skipped = true;
+                    if (checkSkipped.Audit == Audits.Forecast) rec.ForecastSeen = true;
                     break;
                 }
-                case SearchDone s:
+                case SearchDone searchDone:
                     _searches++;
-                    _copies += s.Copies;
-                    if (s.Cancelled)
+                    _copies += searchDone.Copies;
+                    if (searchDone.Cancelled)
                     {
                         _cancelled++;
-                        _cancelledCopies += s.Copies;
+                        _cancelledCopies += searchDone.Copies;
                         break;
                     }
-                    if (s.Background) _background++;
-                    _maxHeld = Math.Max(_maxHeld, s.PeakHeld);
-                    if (s.Ms > _searchMs.Max) _slowestSearch = s.Label;
-                    _searchMs.Add(s.Ms);
-                    if (s.Cap != null)
+                    if (searchDone.Background) _background++;
+                    _maxHeld = Math.Max(_maxHeld, searchDone.PeakHeld);
+                    if (searchDone.Ms > _searchMs.Max) _slowestSearch = searchDone.Label;
+                    _searchMs.Add(searchDone.Ms);
+                    if (searchDone.Cap != null)
                     {
-                        Count(_caps, s.Cap);
-                        if (s.Turn > 0 && s.Combat == _combat) Turn(s.Turn).Capped = true;
+                        Count(_caps, searchDone.Cap);
+                        if (searchDone.Turn > 0 && searchDone.Combat == _combat) Turn(searchDone.Turn).Capped = true;
                     }
                     break;
-                case FrameWait w:
-                    _waitMs.Add(w.Ms);
-                    if (w.Missed) _waitsMissed++;
+                case FrameWait frameWait:
+                    _waitMs.Add(frameWait.Ms);
+                    if (frameWait.Missed) _waitsMissed++;
                     break;
-                case Unsettled u:
-                    _unsettledMs.Add(u.Ms);
+                case Unsettled unsettled:
+                    _unsettledMs.Add(unsettled.Ms);
                     break;
-                case ReportSent r:
-                    Count(_reports, r.What);
+                case ReportSent reportSent:
+                    Count(_reports, reportSent.What);
                     break;
             }
         }
@@ -167,7 +167,7 @@ public sealed class SessionStats
     {
         Audits.Forecast => _forecast,
         Audits.Play => _plays,
-        _ => _others.TryGetValue(name, out var a) ? a : _others[name] = new AuditCounts(),
+        _ => _others.TryGetValue(name, out var auditCounts) ? auditCounts : _others[name] = new AuditCounts(),
     };
 
     private TurnRecord Turn(int turn)
@@ -181,10 +181,10 @@ public sealed class SessionStats
     private static void Count(Dictionary<string, int> d, string key) => d[key] = (d.TryGetValue(key, out var n) ? n : 0) + 1;
 
     /// <summary>What a turn counts as (see the class summary). <paramref name="last"/>: the fight's last turn so far.</summary>
-    private static string Classify(TurnRecord t, bool last)
-        => t.Mismatch ? "mismatched"
-            : t.Capped ? "capped"
-            : t.Skipped || (!t.ForecastSeen && !last) ? "unchecked"
+    private static string Classify(TurnRecord turnRecord, bool last)
+        => turnRecord.Mismatch ? "mismatched"
+            : turnRecord.Capped ? "capped"
+            : turnRecord.Skipped || (!turnRecord.ForecastSeen && !last) ? "unchecked"
             : "clean";
 
     private void Tally(string kind)
@@ -254,9 +254,9 @@ public sealed class SessionStats
             static Dictionary<string, int> Top(Dictionary<string, int> d)
                 => d.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(MaxReasons)
                     .ToDictionary(kv => kv.Key, kv => kv.Value);
-            AuditSummary Audit(AuditCounts a, int skipped, Dictionary<string, int> reasons)
-                => new(a.Checked, a.Matched, skipped, Top(reasons), Top(a.Mismatches));
-            var gc = new GcSummary(
+            AuditSummary Audit(AuditCounts auditCounts, int skipped, Dictionary<string, int> reasons)
+                => new(auditCounts.Checked, auditCounts.Matched, skipped, Top(reasons), Top(auditCounts.Mismatches));
+            var gcSummary = new GcSummary(
                 GC.CollectionCount(0) - _gcAtStart.G0, GC.CollectionCount(1) - _gcAtStart.G1, GC.CollectionCount(2) - _gcAtStart.G2,
                 Math.Round((GC.GetTotalPauseDuration() - _gcAtStart.Pause).TotalMilliseconds, 1),
                 Math.Round((GC.GetTotalAllocatedBytes() - _gcAtStart.Alloc) / 1048576.0, 1));
@@ -274,7 +274,7 @@ public sealed class SessionStats
                 Waits = new WaitSummary(_waitsMissed, _waitMs.Summary()),
                 Unsettled = _unsettledMs.Summary(),
                 Frames = new FrameSummary(_slowFrames, _gameStalls, _modFrameMs.Summary()),
-                Gc = gc,
+                Gc = gcSummary,
                 Reports = Top(_reports),
             };
         }

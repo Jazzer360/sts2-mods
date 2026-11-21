@@ -155,7 +155,7 @@ public static class GameIcons
             var icon = button?.GetNodeOrNull<Control>("Icon");
             return icon switch
             {
-                TextureRect tr => tr.Texture,
+                TextureRect otherIcon => otherIcon.Texture,
                 null => null,
                 _ => FirstTexture(icon),
             };
@@ -170,9 +170,9 @@ public static class GameIcons
     {
         foreach (var child in node.GetChildren())
         {
-            if (child is TextureRect tr && tr.Texture != null) return tr.Texture;
-            if (child is Sprite2D sp && sp.Texture != null) return sp.Texture;
-            if (FirstTexture(child) is { } t) return t;
+            if (child is TextureRect icon && icon.Texture != null) return icon.Texture;
+            if (child is Sprite2D sprite2D && sprite2D.Texture != null) return sprite2D.Texture;
+            if (FirstTexture(child) is { } texture) return texture;
         }
         return null;
     }

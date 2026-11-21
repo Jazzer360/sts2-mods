@@ -13,17 +13,17 @@ public class SimJobTests
     /// <summary>Three enemies near death, five Lightning orbs and Juggernaut on block gains.</summary>
     private static SimState Heavy()
     {
-        var s = new SimState();
-        for (var i = 0; i < 3; i++) s.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 5 + i * 2, Block = i, Hits = new() { 6, 4 } });
-        s.You.Orbs = Enumerable.Range(0, 5).Select(i => Lightning(2 + i % 2)).ToList();
-        s.You.OrbCapacity = 5;
-        s.You.Juggernaut = 2;
-        s.You.Plating = 3;
-        return s;
+        var state = new SimState();
+        for (var i = 0; i < 3; i++) state.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 5 + i * 2, Block = i, Hits = new() { 6, 4 } });
+        state.You.Orbs = Enumerable.Range(0, 5).Select(i => Lightning(2 + i % 2)).ToList();
+        state.You.OrbCapacity = 5;
+        state.You.Juggernaut = 2;
+        state.You.Plating = 3;
+        return state;
     }
 
-    private static string Describe(SimOutcome o)
-        => string.Join("\n", o.Branches.Select(b => (b.Key(), b.Weight)).OrderBy(x => x.Item1).Select(x => $"{x.Item1}:{x.Weight:F9}"));
+    private static string Describe(SimOutcome outcome)
+        => string.Join("\n", outcome.Branches.Select(branch => (branch.Key(), branch.Weight)).OrderBy(x => x.Item1).Select(x => $"{x.Item1}:{x.Weight:F9}"));
 
     [Fact]
     public async Task ABackgroundJobEndsWithTheWholeOutcome()

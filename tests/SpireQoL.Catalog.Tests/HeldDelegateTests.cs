@@ -19,7 +19,7 @@ public class HeldDelegateTests
     [Fact]
     public void TheConveyorsCurrentDishIsRead()
     {
-        var conveyorType = typeof(EventModel).Assembly.GetTypes().Single(t => t.Name == "EndlessConveyor");
+        var conveyorType = typeof(EventModel).Assembly.GetTypes().Single(type => type.Name == "EndlessConveyor");
         var conveyor = RuntimeHelpers.GetUninitializedObject(conveyorType);
         var dishField = conveyorType.GetField("_currentDish", F)!;
         object dish = RuntimeHelpers.GetUninitializedObject(dishField.FieldType);

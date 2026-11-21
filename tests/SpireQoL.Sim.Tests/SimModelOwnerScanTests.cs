@@ -14,35 +14,36 @@ public class SimModelOwnerScanTests
     /// <summary>A fragment of each reviewed line, and why naming you there is right.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
-        ["if (owner == Who.You) s.ParryingShieldFired = true;"] = "the forecast audit's flag for your Parrying Shield; a teammate's still deals its damage",
-        ["ProcBlockFor(x, owner, Name, Who.You, amount, Unpowered)"] = "a teammate's power giving you block (Covering Fire gives every other player its block)",
-        ["e.Dealer != Who.You || !e.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",
+        ["if (owner == Who.You) state.ParryingShieldFired = true;"] = "the forecast audit's flag for your Parrying Shield; a teammate's still deals its damage",
+        ["ProcBlockFor(branch, owner, Name, Who.You, amount, Unpowered)"] = "a teammate's power giving you block (Covering Fire gives every other player its block)",
+        ["hit.Dealer != Who.You || !hit.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",
         ["CardEvent.ArrowDislodged, Who.You"] = "ImpaledPower is your arrows: they come back to you",
         ["play.Owner != Who.You"] = "Withering Presence counts its Target's cards; the adapter loads only the one aimed at you (SimReaders.Powers)",
-        ["owner == Who.You && attack.Dealer == Who.YourOsty && s.You.OstyHp"] = "your Osty's attacks (a teammate's Osty doesn't attack in your turn)",
+        ["owner == Who.You && attack.Dealer == Who.YourOsty && state.You.OstyHp"] = "your Osty's attacks (a teammate's Osty doesn't attack in your turn)",
         ["dealer == Who.YourOsty ? Who.You : dealer"] = "your Osty's damage counts as yours",
-        ["OstyLoses(s, Who.You, hit)"] = "Thorns hitting back at your Osty",
+        ["OstyLoses(state, Who.You, hit)"] = "Thorns hitting back at your Osty",
         ["owner != Who.You ? null"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
-        ["owner == Who.You ? new(false, o => o.PlayBreaksBlockInAll)"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
+        ["owner == Who.You ? new(false, outcome => outcome.PlayBreaksBlockInAll)"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["owner == Who.You ? OutcomeRules.YouLoseHp"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["owner == Who.You && (SimEngine.RelicsOf(start, owner).DataOf(ThisRelic) & 2) == 0"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["if (owner != Who.You) return null;"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["owner == Who.You ? OutcomeRules.KillsOne"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
-        ["(owner == Who.You && d.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
-        ["(owner == Who.You && e.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
+        ["var hp = start.You.Hp;"] = "Red Skull's outcome tab is yours only (the line before returns for anyone else): your HP",
+        ["(owner == Who.You && damage.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
+        ["(owner == Who.You && hit.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
     };
 
     private static string ModelsDir()
     {
-        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
         {
-            var models = Path.Combine(d.FullName, "mods", "SpireQoL", "Sim", "Models");
+            var models = Path.Combine(directory.FullName, "mods", "SpireQoL", "Sim", "Models");
             if (Directory.Exists(models)) return models;
         }
         throw new DirectoryNotFoundException("mods/SpireQoL/Sim/Models not found above the test's folder");
     }
 
-    private static readonly Regex NamesYou = new(@"Who\.You\b|\b[a-z]\.You\b");
+    private static readonly Regex NamesYou = new(@"Who\.You\b|\b(?!Who\b)[a-z]\w*\.You\b");
 
     [Fact]
     public void EveryModelLineThatNamesYouIsReviewed()

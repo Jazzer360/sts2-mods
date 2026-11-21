@@ -30,7 +30,7 @@ internal static class BuildInfo
 #endif
 
     /// <summary>Built with uncommitted changes.</summary>
-    public static bool Dirty => Me.GetCustomAttributes<AssemblyMetadataAttribute>().Any(a => a.Key == "GitDirty" && a.Value == "true");
+    public static bool Dirty => Me.GetCustomAttributes<AssemblyMetadataAttribute>().Any(assemblyMetadataAttribute => assemblyMetadataAttribute.Key == "GitDirty" && assemblyMetadataAttribute.Value == "true");
 
     /// <summary>When the DLL was built (its file's time).</summary>
     public static DateTime BuiltAt

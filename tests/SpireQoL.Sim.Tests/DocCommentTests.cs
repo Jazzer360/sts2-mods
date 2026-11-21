@@ -10,8 +10,8 @@ public class DocCommentTests
 {
     private static string RepoRoot()
     {
-        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
-            if (Directory.Exists(Path.Combine(d.FullName, "mods")) && Directory.Exists(Path.Combine(d.FullName, "core"))) return d.FullName;
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
+            if (Directory.Exists(Path.Combine(directory.FullName, "mods")) && Directory.Exists(Path.Combine(directory.FullName, "core"))) return directory.FullName;
         throw new DirectoryNotFoundException("the repository root (mods/ and core/) not found above the test's folder");
     }
 

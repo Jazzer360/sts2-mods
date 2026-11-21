@@ -15,10 +15,10 @@ public class CardEnergyTests
     {
         // The game's cards (ModelDb.AllCards), not its test mocks.
         GameModels.EnsureLoaded();
-        return ModelDb.AllCards.Select(c => c.GetType()).Distinct();
+        return ModelDb.AllCards.Select(card => card.GetType()).Distinct();
     }
 
-    private static Type Card(string name) => CardTypes().Single(t => t.Name == name);
+    private static Type Card(string name) => CardTypes().Single(type => type.Name == name);
 
     [Fact]
     public void APlainGainIsReadFromTheCardsCode()
@@ -31,11 +31,11 @@ public class CardEnergyTests
     [Fact]
     public void ConditionalOrRedirectedGainsAreNotPlain()
     {
-        Assert.Contains(CardEnergy.CallsOf(Card("Sunder")), c => c is { Method: "OnPlay", Certain: false });         // inside if (killed)
-        Assert.Contains(CardEnergy.CallsOf(Card("Restlessness")), c => c is { Method: "OnPlay", Certain: false });   // only card in hand
-        Assert.Contains(CardEnergy.CallsOf(Card("BelieveInYou")), c => c is { ToOwner: false });                    // to the target
-        Assert.Contains(CardEnergy.CallsOf(Card("DoubleEnergy")), c => c is { FromEnergyVar: false });              // your energy
-        Assert.Contains(CardEnergy.CallsOf(Card("DrumOfBattle")), c => c.Method != "OnPlay");                      // when exhausted
+        Assert.Contains(CardEnergy.CallsOf(Card("Sunder")), call => call is { Method: "OnPlay", Certain: false });         // inside if (killed)
+        Assert.Contains(CardEnergy.CallsOf(Card("Restlessness")), call => call is { Method: "OnPlay", Certain: false });   // only card in hand
+        Assert.Contains(CardEnergy.CallsOf(Card("BelieveInYou")), call => call is { ToOwner: false });                    // to the target
+        Assert.Contains(CardEnergy.CallsOf(Card("DoubleEnergy")), call => call is { FromEnergyVar: false });              // your energy
+        Assert.Contains(CardEnergy.CallsOf(Card("DrumOfBattle")), call => call.Method != "OnPlay");                      // when exhausted
         foreach (var name in new[] { "Sunder", "Restlessness", "BelieveInYou", "DoubleEnergy", "DrumOfBattle", "EpicRetrieval" })
             Assert.False(CardEnergy.IsPlain(Card(name)), name);
     }
@@ -44,9 +44,9 @@ public class CardEnergyTests
     public void EveryCardThatGainsEnergyIsCounted()
     {
         var missing = CardTypes()
-            .Where(t => CardEnergy.CallsOf(t).Count > 0)
-            .Where(t => !CardEnergy.IsPlain(t) && !CardEnergy.Rules.ContainsKey(t.Name) && !CardEnergy.Reviewed.ContainsKey(t.Name))
-            .Select(t => $"{t.Name}: {string.Join("; ", CardEnergy.CallsOf(t))}")
+            .Where(type => CardEnergy.CallsOf(type).Count > 0)
+            .Where(type => !CardEnergy.IsPlain(type) && !CardEnergy.Rules.ContainsKey(type.Name) && !CardEnergy.Reviewed.ContainsKey(type.Name))
+            .Select(type => $"{type.Name}: {string.Join("; ", CardEnergy.CallsOf(type))}")
             .ToList();
         Assert.True(missing.Count == 0, "Cards that gain energy with no rule or reviewed reason (CardEnergy):\n" + string.Join("\n", missing));
     }
@@ -54,7 +54,7 @@ public class CardEnergyTests
     [Fact]
     public void EveryRuleAndReviewIsAboutACardThatStillGainsEnergy()
     {
-        var gaining = CardTypes().Where(t => CardEnergy.CallsOf(t).Count > 0).Select(t => t.Name).ToHashSet();
+        var gaining = CardTypes().Where(type => CardEnergy.CallsOf(type).Count > 0).Select(type => type.Name).ToHashSet();
         foreach (var name in CardEnergy.Rules.Keys.Concat(CardEnergy.Reviewed.Keys))
             Assert.True(gaining.Contains(name), $"{name} is in CardEnergy but no longer gains energy in its code");
         // A rule for a plain card would count its energy twice.

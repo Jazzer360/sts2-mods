@@ -12,11 +12,11 @@ internal static class GameModels
     private static readonly Lazy<int> Loaded = new(() =>
     {
         var types = typeof(AbstractModel).Assembly.GetTypes()
-            .Where(t => !t.IsAbstract && !t.ContainsGenericParameters && typeof(AbstractModel).IsAssignableFrom(t) && t.GetConstructor(Type.EmptyTypes) != null)
+            .Where(type => !type.IsAbstract && !type.ContainsGenericParameters && typeof(AbstractModel).IsAssignableFrom(type) && type.GetConstructor(Type.EmptyTypes) != null)
             .ToArray();
-        foreach (var t in types)
+        foreach (var type in types)
         {
-            try { ModelDb.Init(new[] { t }); }
+            try { ModelDb.Init(new[] { type }); }
             catch { /* a model that can't be made outside the game: left out */ }
         }
         // No mods loaded (what the game's mod manager reports when mods are skipped), so lists that add mods' models work.

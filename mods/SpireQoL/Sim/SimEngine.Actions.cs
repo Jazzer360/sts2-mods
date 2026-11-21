@@ -9,101 +9,101 @@ public static partial class SimEngine
     /// enchantment's and affliction's), the play finished, AfterCardPlayed. The turn counters follow the game's history
     /// entries (CardPlayStarted after BeforeCardPlayed; CardPlayFinished before AfterCardPlayed).
     /// </summary>
-    private static void RunCardPlay(BranchSet b, CardPlayAction pc)
+    private static void RunCardPlay(BranchSet branches, CardPlayAction cardPlayAction)
     {
-        for (var i = 0; i < Math.Max(1, pc.Play.PlayCount); i++)
+        for (var i = 0; i < Math.Max(1, cardPlayAction.Play.PlayCount); i++)
         {
-            var play = pc.Play with { PlayIndex = i };
-            b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; s.PlayEvents = CardEventCounts.None; s.PlayFromHand = pc.FromHand; });
-            HookStep(b, nameof(SimModel.BeforeCardPlayed), (m, o, x) => m.BeforeCardPlayed(x, o, play));
-            b.Do(s => Count(s, play, PlayStage.Started));
-            foreach (var a in pc.Body) Run(b, a);
-            b.Do(s => Count(s, play, PlayStage.Finished));
-            HookStep(b, nameof(SimModel.AfterCardPlayed), (m, o, x) => m.AfterCardPlayed(x, o, play));
+            var play = cardPlayAction.Play with { PlayIndex = i };
+            branches.Do(branch => { branch.CurrentPlay = play; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayFromHand = cardPlayAction.FromHand; });
+            HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, o, branch) => model.BeforeCardPlayed(branch, o, play));
+            branches.Do(branch => Count(branch, play, PlayStage.Started));
+            foreach (var action in cardPlayAction.Body) Run(branches, action);
+            branches.Do(branch => Count(branch, play, PlayStage.Finished));
+            HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, o, branch) => model.AfterCardPlayed(branch, o, play));
         }
-        b.Do(s => { s.CurrentPlay = null; s.PlayFromHand = false; });
+        branches.Do(branch => { branch.CurrentPlay = null; branch.PlayFromHand = false; });
     }
 
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>
-    private static void Count(SimState s, SimCardPlay play, PlayStage stage)
+    private static void Count(SimState state, SimCardPlay play, PlayStage stage)
     {
-        if (s.Player(play.Owner) == null) return;
-        var p = s.MutablePlayer(play.Owner);
-        p.Turn = SimKeys.CountPlay(p.Turn, stage, play.Card.Type, play.Card.Tags);
+        if (state.Player(play.Owner) == null) return;
+        var player = state.MutablePlayer(play.Owner);
+        player.Turn = SimKeys.CountPlay(player.Turn, stage, play.Card.Type, play.Card.Tags);
     }
 
     // ------------------------------------------------------------------ attacks
 
-    private static void RunAttack(BranchSet b, AttackAction at)
+    private static void RunAttack(BranchSet branches, AttackAction at)
     {
         // A shot with no arrow does nothing: no attack, so no hooks either.
-        if (at.NeedsArrow && b.States.All(s => s.ArrowAwayAt < 0)) return;
+        if (at.NeedsArrow && branches.States.All(branch => branch.ArrowAwayAt < 0)) return;
         var dealer = at.ByOsty ? Who.YourOsty : Who.You;
-        b.Do(s =>
+        branches.Do(branch =>
         {
-            s.AttackSerial++;
-            s.CurrentAttack = s.AttackSerial;
+            branch.AttackSerial++;
+            branch.CurrentAttack = branch.AttackSerial;
         });
-        AttackInfo Info(SimState s) => new(s.CurrentAttack, s.CurrentPlay?.Owner is { } o && !at.ByOsty ? o : dealer, at.Damage.Props, s.CurrentPlay?.Card);
-        HookStep(b, nameof(SimModel.BeforeAttack), (m, o, x) => m.BeforeAttack(x, o, Info(x)));
+        AttackInfo Info(SimState state) => new(state.CurrentAttack, state.CurrentPlay?.Owner is { } o && !at.ByOsty ? o : dealer, at.Damage.Props, state.CurrentPlay?.Card);
+        HookStep(branches, nameof(SimModel.BeforeAttack), (model, o, branch) => model.BeforeAttack(branch, o, Info(branch)));
         for (var i = 0; i < at.Hits; i++)
         {
             switch (at.Mode)
             {
                 case SimPlay.Target.Single:
-                    b.Each(s =>
+                    branches.Each(branch =>
                     {
-                        var target = at.TargetId >= 0 ? at.TargetId : s.CurrentPlay?.Target ?? -1;
-                        if (s.Enemy(target) is not { Alive: true }) return new[] { s };
-                        var r = HitOnce(s, Info(s).Dealer, target, at);
+                        var target = at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? -1;
+                        if (branch.Enemy(target) is not { Alive: true }) return new[] { branch };
+                        var states = HitOnce(branch, Info(branch).Dealer, target, at);
                         // Timber: the kill sets off a second attack on every enemy.
-                        if (at.OnKill is { } onKill) r = Then(r, x => x.Enemy(target) is { Alive: false }
-                            ? HitEveryEnemy(x, Info(x).Dealer, onKill) : new[] { x });
-                        return r;
+                        if (at.OnKill is { } onKill) states = Then(states, copy => copy.Enemy(target) is { Alive: false }
+                            ? HitEveryEnemy(copy, Info(copy).Dealer, onKill) : new[] { copy });
+                        return states;
                     });
                     break;
                 case SimPlay.Target.All:
-                    b.Each(s => HitAllRound(s, 1));
+                    branches.Each(branch => HitAllRound(branch, 1));
                     break;
                 case SimPlay.Target.Random:
-                    b.Each(s => RandomTarget(s, (x, id) => HitOnce(x, Info(x).Dealer, id, at)));
+                    branches.Each(branch => RandomTarget(branch, (copy, id) => HitOnce(copy, Info(copy).Dealer, id, at)));
                     break;
             }
         }
-        HookStep(b, nameof(SimModel.AfterAttack), (m, o, x) => m.AfterAttack(x, o, Info(x)));
+        HookStep(branches, nameof(SimModel.AfterAttack), (model, o, branch) => model.AfterAttack(branch, o, Info(branch)));
         // Sunder: energy once the attack is over, when it killed its target.
         if (at.OnKillEnergy > 0)
-            b.Each(s => (at.TargetId >= 0 ? at.TargetId : s.CurrentPlay?.Target ?? -1) is var t && s.Enemy(t) is { Alive: false }
-                ? ProcCardEvent(s, CardEvent.EnergyGained, at.OnKillEnergy, s.CurrentPlay?.Owner ?? Who.You, indirect: false) : new[] { s });
-        b.Do(s => s.CurrentAttack = 0);
+            branches.Each(branch => (at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? -1) is var t && branch.Enemy(t) is { Alive: false }
+                ? ProcCardEvent(branch, CardEvent.EnergyGained, at.OnKillEnergy, branch.CurrentPlay?.Owner ?? Who.You, indirect: false) : new[] { branch });
+        branches.Do(branch => branch.CurrentAttack = 0);
 
         // One hit on every hittable enemy; with RepeatPerKill (Echoing Slash), one more round per enemy it killed.
-        IEnumerable<SimState> HitAllRound(SimState s, int rounds)
+        IEnumerable<SimState> HitAllRound(SimState state, int rounds)
         {
-            if (rounds <= 0) return new[] { s };
-            var ids = s.Targetable.Select(e => e.Id).ToList();
-            IEnumerable<SimState> r = new[] { s };
+            if (rounds <= 0) return new[] { state };
+            var ids = state.Targetable.Select(enemy => enemy.Id).ToList();
+            IEnumerable<SimState> states = new[] { state };
             foreach (var id in ids)
             {
                 var t = id;
-                r = Then(r, x => x.Enemy(t) is { Alive: true } ? HitOnce(x, Info(x).Dealer, t, at) : new[] { x });
+                states = Then(states, branch => branch.Enemy(t) is { Alive: true } ? HitOnce(branch, Info(branch).Dealer, t, at) : new[] { branch });
             }
-            return Then(r, x => HitAllRound(x, rounds - 1 + (at.RepeatPerKill ? ids.Count(id => x.Enemy(id) is { Alive: false }) : 0)));
+            return Then(states, branch => HitAllRound(branch, rounds - 1 + (at.RepeatPerKill ? ids.Count(id => branch.Enemy(id) is { Alive: false }) : 0)));
         }
     }
 
     /// <summary>One random living enemy: a branch per possible target.</summary>
-    private static IEnumerable<SimState> RandomTarget(SimState s, Func<SimState, int, IEnumerable<SimState>> then)
+    private static IEnumerable<SimState> RandomTarget(SimState state, Func<SimState, int, IEnumerable<SimState>> then)
     {
-        var targets = s.Targetable.Select(e => e.Id).ToList();
-        if (targets.Count == 0) return new[] { s };
-        if (targets.Count == 1) return then(s, targets[0]);
+        var targets = state.Targetable.Select(enemy => enemy.Id).ToList();
+        if (targets.Count == 0) return new[] { state };
+        if (targets.Count == 1) return then(state, targets[0]);
         var all = new List<SimState>();
         foreach (var id in targets)
         {
-            var c = s.Clone();
-            c.Weight = s.Weight / targets.Count;
-            all.AddRange(then(c, id));
+            var branch = state.Clone();
+            branch.Weight = state.Weight / targets.Count;
+            all.AddRange(then(branch, id));
         }
         return all;
     }
@@ -112,178 +112,178 @@ public static partial class SimEngine
     /// One hit of an attack on an enemy: its damage from the pipeline now (the modelled sources' terms and the captured ones), then
     /// the damage itself (SimEngine.Damage: Thorns, block, HP loss, the hooks).
     /// </summary>
-    private static IEnumerable<SimState> HitOnce(SimState s, int dealer, int target, AttackAction at)
+    private static IEnumerable<SimState> HitOnce(SimState state, int dealer, int target, AttackAction at)
     {
-        if (at.NeedsArrow && s.ArrowAwayAt < 0) return new[] { s };
+        if (at.NeedsArrow && state.ArrowAwayAt < 0) return new[] { state };
         var spec = at.Damage;
-        var card = s.CurrentPlay?.Card;
-        var ctx = new DamageCtx(dealer, target, spec.Props, card, s.CurrentPlay);
+        var card = state.CurrentPlay?.Card;
+        var ctx = new DamageCtx(dealer, target, spec.Props, card, state.CurrentPlay);
         var mods = spec.Fixed ? null : new List<(SimModel Model, int Owner)>();
-        var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target)) : CalcDamage(s, spec.BaseFor(target), ctx, spec.TermsFor(target), mods);
-        if (mods != null) foreach (var (m, o) in mods) m.AfterModifyingDamageAmount(s, o, card);
+        var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target)) : CalcDamage(state, spec.BaseFor(target), ctx, spec.TermsFor(target), mods);
+        if (mods != null) foreach (var (model, o) in mods) model.AfterModifyingDamageAmount(state, o, card);
         // The first hit on each enemy, for the damage-formula audit (not after Mighty Wings gave Strength mid-attack: the preview
         // can't know that).
-        if (card != null && !at.ByOsty && !s.FirstHits.ContainsKey(target) && !s.Fired.Has(nameof(Models.MightyWings))) s.FirstHits = s.FirstHits.Add(target, amount);
-        if (amount <= 0) return new[] { s };
-        if (s.Enemy(target) is { Alive: true } e) Damage(s, e, amount, dealer, spec.Props, card);
+        if (card != null && !at.ByOsty && !state.FirstHits.ContainsKey(target) && !state.Fired.Has(nameof(Models.MightyWings))) state.FirstHits = state.FirstHits.Add(target, amount);
+        if (amount <= 0) return new[] { state };
+        if (state.Enemy(target) is { Alive: true } enemy) Damage(state, enemy, amount, dealer, spec.Props, card);
         // Rain Shot: the target's damage to every other hittable enemy (only caps apply).
-        if (at.Splash) foreach (var other in s.Targetable.Where(x => x.Id != target).ToList()) Damage(s, other, amount, dealer, spec.Props, card);
-        AllyDeaths(s); // a death runs its hooks as it happens (AfterDeath: Impaled lets its arrows go, Crab Rage, Explosive)
-        return DrainPending(s); // what the hit set off where hooks can't branch (an arrow knocked loose: Yah, Twine)
+        if (at.Splash) foreach (var other in state.Targetable.Where(simEnemy => simEnemy.Id != target).ToList()) Damage(state, other, amount, dealer, spec.Props, card);
+        AllyDeaths(state); // a death runs its hooks as it happens (AfterDeath: Impaled lets its arrows go, Crab Rage, Explosive)
+        return DrainPending(state); // what the hit set off where hooks can't branch (an arrow knocked loose: Yah, Twine)
     }
 
     // ------------------------------------------------------------------ block, powers, HP
 
-    private static void RunBlock(BranchSet b, GainBlockAction gb)
+    private static void RunBlock(BranchSet branches, GainBlockAction gainBlockAction)
     {
-        for (var i = 0; i < gb.Times; i++) b.Each(s => BlockOnce(s, gb));
+        for (var i = 0; i < gainBlockAction.Times; i++) branches.Each(branch => BlockOnce(branch, gainBlockAction));
     }
 
     /// <summary>One block gain of the action, through the block pipeline, with what reacts to it.</summary>
-    internal static IEnumerable<SimState> BlockOnce(SimState s, GainBlockAction gb)
+    internal static IEnumerable<SimState> BlockOnce(SimState state, GainBlockAction gainBlockAction)
     {
-        if (!s.TakesPart(gb.To)) return new[] { s };
-        var mods = gb.Fixed ? null : new List<(SimModel Model, int Owner)>();
-        var amount = gb.Fixed ? Math.Max(0, (int)gb.Base)
-            : CalcBlock(s, gb.Base, new BlockCtx(gb.To, gb.Props, s.CurrentPlay?.Card, s.CurrentPlay), gb.Captured, mods);
-        var r = GainBlock(s, amount, s.EndOfTurnNow && gb.To == Who.You && s.Log ? s.CurrentPlay?.Card.Name ?? "block" : null, gb.To);
+        if (!state.TakesPart(gainBlockAction.To)) return new[] { state };
+        var mods = gainBlockAction.Fixed ? null : new List<(SimModel Model, int Owner)>();
+        var amount = gainBlockAction.Fixed ? Math.Max(0, (int)gainBlockAction.Base)
+            : CalcBlock(state, gainBlockAction.Base, new BlockCtx(gainBlockAction.To, gainBlockAction.Props, state.CurrentPlay?.Card, state.CurrentPlay), gainBlockAction.Captured, mods);
+        var states = GainBlock(state, amount, state.EndOfTurnNow && gainBlockAction.To == Who.You && state.Log ? state.CurrentPlay?.Card.Name ?? "block" : null, gainBlockAction.To);
         // Block from a card play this turn (Unmovable counts the ones from earlier plays).
-        if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
-            r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.You.Turn = x.You.Turn.Add(SimKeys.CardBlock, 1); return x; }).ToList();
-        if (mods != null && amount > 0) r = r.Select(x => { foreach (var (m, o) in mods) m.AfterModifyingBlockAmount(x, o, amount, x.CurrentPlay); return x; }).ToList();
-        return Then(r, x => Hook(x, nameof(SimModel.AfterBlockGained), (m, o, y) => m.AfterBlockGained(y, o, gb.To, amount, y.CurrentPlay?.Card)));
+        if (amount > 0 && state.CurrentPlay != null && gainBlockAction.Props.IsCardOrMonsterMove())
+            states = states.Select(branch => { branch.PlayCardBlockGains++; if (branch.CurrentPlay!.Owner == Who.You) branch.You.Turn = branch.You.Turn.Add(SimKeys.CardBlock, 1); return branch; }).ToList();
+        if (mods != null && amount > 0) states = states.Select(branch => { foreach (var (model, o) in mods) model.AfterModifyingBlockAmount(branch, o, amount, branch.CurrentPlay); return branch; }).ToList();
+        return Then(states, branch => Hook(branch, nameof(SimModel.AfterBlockGained), (model, o, copy) => model.AfterBlockGained(copy, o, gainBlockAction.To, amount, copy.CurrentPlay?.Card)));
     }
 
     /// <summary>
     /// PowerCmd.Apply: the amount through ModifyPowerAmountGiven (Snecko Skull...), then Artifact takes a debuff (a charge
     /// each), else the power goes on (poison into the enemy's poison).
     /// </summary>
-    internal static bool ApplyPower(SimState s, int applier, int target, PowerId power, int amount, bool debuff)
+    internal static bool ApplyPower(SimState state, int applier, int target, PowerId power, int amount, bool debuff)
     {
         if (amount == 0) return false;
-        foreach (var (m, o) in Listeners(s)) amount = m.ModifyPowerAmountGiven(s, o, power, amount, applier, target, debuff);
+        foreach (var (model, o) in Listeners(state)) amount = model.ModifyPowerAmountGiven(state, o, power, amount, applier, target, debuff);
         if (amount == 0) return false;
-        var powers = PowersOf(s, target);
+        var powers = PowersOf(state, target);
         if (debuff && powers[PowerId.Artifact] > 0)
         {
-            SetPowers(s, target, powers[PowerId.Artifact] > 1 ? powers.Add(PowerId.Artifact, -1) : powers.Without(PowerId.Artifact));
+            SetPowers(state, target, powers[PowerId.Artifact] > 1 ? powers.Add(PowerId.Artifact, -1) : powers.Without(PowerId.Artifact));
             return false;
         }
         if (target >= 0 && power == PowerId.Poison)
         {
-            s.Enemy(target)?.AddPoison(amount);
+            state.Enemy(target)?.AddPoison(amount);
             return true;
         }
         // Accelerant on any player: every enemy's poison ticks that many more times (PoisonPower.TriggerCount sums every
         // living player's), and its next tick deals that much more.
         if (Who.IsPlayer(target) && power == PowerId.Accelerant)
-            foreach (var e in s.Enemies)
+            foreach (var enemy in state.Enemies)
             {
-                var more = e.PoisonTriggers + amount;
-                e.Poison += PoisonTick(e.PoisonStacks, more) - PoisonTick(e.PoisonStacks, e.PoisonTriggers);
-                e.PoisonTriggers = more;
+                var more = enemy.PoisonTriggers + amount;
+                enemy.Poison += PoisonTick(enemy.PoisonStacks, more) - PoisonTick(enemy.PoisonStacks, enemy.PoisonTriggers);
+                enemy.PoisonTriggers = more;
             }
         var had = powers.Has(power);
-        SetPowers(s, target, powers.Add(power, amount));
-        if (!had) SimModels.Get(power.Name)?.AfterApplied(s, target, applier, amount);
+        SetPowers(state, target, powers.Add(power, amount));
+        if (!had) SimModels.Get(power.Name)?.AfterApplied(state, target, applier, amount);
         return true;
     }
 
     /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>
-    private static void RunApplyPower(BranchSet b, ApplyPowerAction ap)
+    private static void RunApplyPower(BranchSet branches, ApplyPowerAction applyPowerAction)
     {
-        IEnumerable<SimState> Apply(SimState x, int applier, int t) =>
-            ApplyPower(x, applier, t, ap.Power, ap.CopiesOwn ? PowerOn(x, applier, ap.Power) : ap.Amount, ap.Debuff)
-                ? Hook(x, nameof(SimModel.AfterPowerApplied), (m, o, y) => m.AfterPowerApplied(y, o, ap.Power, ap.Amount, applier, t, ap.Debuff)) : new[] { x };
-        if (ap.To == ApplyPowerAction.Where.RandomEnemy)
+        IEnumerable<SimState> Apply(SimState state, int applier, int t) =>
+            ApplyPower(state, applier, t, applyPowerAction.Power, applyPowerAction.CopiesOwn ? PowerOn(state, applier, applyPowerAction.Power) : applyPowerAction.Amount, applyPowerAction.Debuff)
+                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, o, branch) => model.AfterPowerApplied(branch, o, applyPowerAction.Power, applyPowerAction.Amount, applier, t, applyPowerAction.Debuff)) : new[] { state };
+        if (applyPowerAction.To == ApplyPowerAction.Where.RandomEnemy)
         {
             // Each application to a random hittable enemy: a branch per target, one step each (the branch budget holds).
-            for (var i = 0; i < ap.Times; i++) b.Each(s => RandomTarget(s, (x, id) => Apply(x, s.CurrentPlay?.Owner ?? Who.You, id)));
+            for (var i = 0; i < applyPowerAction.Times; i++) branches.Each(branch => RandomTarget(branch, (copy, id) => Apply(copy, branch.CurrentPlay?.Owner ?? Who.You, id)));
             return;
         }
-        b.Each(s =>
+        branches.Each(branch =>
         {
-            var applier = s.CurrentPlay?.Owner ?? Who.You;
-            var targets = ap.To switch
+            var applier = branch.CurrentPlay?.Owner ?? Who.You;
+            var targets = applyPowerAction.To switch
             {
-                ApplyPowerAction.Where.Target => s.CurrentPlay?.Target is { } t && (t < 0 || s.Enemy(t) is { Alive: true }) ? new List<int> { t } : new List<int>(),
-                ApplyPowerAction.Where.AllEnemies => s.Targetable.Select(e => e.Id).ToList(),
+                ApplyPowerAction.Where.Target => branch.CurrentPlay?.Target is { } t && (t < 0 || branch.Enemy(t) is { Alive: true }) ? new List<int> { t } : new List<int>(),
+                ApplyPowerAction.Where.AllEnemies => branch.Targetable.Select(enemy => enemy.Id).ToList(),
                 ApplyPowerAction.Where.You => new List<int> { applier },
-                _ => new List<int> { ap.Creature },
+                _ => new List<int> { applyPowerAction.Creature },
             };
-            IEnumerable<SimState> r = new[] { s };
+            IEnumerable<SimState> states = new[] { branch };
             foreach (var target in targets)
             {
                 var t = target;
-                r = Then(r, x => Apply(x, applier, t));
+                states = Then(states, copy => Apply(copy, applier, t));
             }
-            return r;
+            return states;
         });
     }
 
     /// <summary>Card events, one card at a time, each through every listener's AfterCardEvent (indirect ones marked in the log).</summary>
-    private static void RunCardEvent(BranchSet b, CardEventAction ce)
+    private static void RunCardEvent(BranchSet branches, CardEventAction cardEventAction)
     {
-        if (ce.FirstPlayOnly && b.States.Count > 0 && b.States[0].CurrentPlay is { PlayIndex: > 0 }) return;
-        for (var i = 0; i < ce.Count; i++)
+        if (cardEventAction.FirstPlayOnly && branches.States.Count > 0 && branches.States[0].CurrentPlay is { PlayIndex: > 0 }) return;
+        for (var i = 0; i < cardEventAction.Count; i++)
         {
             // A draw from your draw pile (decision #90): a branch per card that matters, with its reactions.
-            if (ce.Event == CardEvent.Drawn && b.States.Count > 0 && DrawsFromPile(b.States[0], ce.Player ?? b.States[0].CurrentPlay?.Owner ?? Who.You))
+            if (cardEventAction.Event == CardEvent.Drawn && branches.States.Count > 0 && DrawsFromPile(branches.States[0], cardEventAction.Player ?? branches.States[0].CurrentPlay?.Owner ?? Who.You))
             {
-                b.Each(s => DrawCards(s, ce.Player ?? s.CurrentPlay?.Owner ?? Who.You, 1, ce.Indirect));
+                branches.Each(branch => DrawCards(branch, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You, 1, cardEventAction.Indirect));
                 continue;
             }
-            b.Do(s => { CountEvent(s, ce.Event, ce.Player ?? s.CurrentPlay?.Owner ?? Who.You); s.EventCard = ce.Card; });
-            HookStep(b, nameof(SimModel.AfterCardEvent), (m, o, x) =>
+            branches.Do(branch => { CountEvent(branch, cardEventAction.Event, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You); branch.EventCard = cardEventAction.Card; });
+            HookStep(branches, nameof(SimModel.AfterCardEvent), (model, o, branch) =>
             {
-                x.IndirectNow = ce.Indirect;
-                var r = m.AfterCardEvent(x, o, ce.Event, ce.Player ?? x.CurrentPlay?.Owner ?? Who.You).ToList();
-                foreach (var y in r) y.IndirectNow = false;
-                return r;
+                branch.IndirectNow = cardEventAction.Indirect;
+                var states = model.AfterCardEvent(branch, o, cardEventAction.Event, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You).ToList();
+                foreach (var state in states) state.IndirectNow = false;
+                return states;
             });
-            b.Do(s => s.EventCard = null);
+            branches.Do(branch => branch.EventCard = null);
         }
     }
 
     /// <summary>A relic's or power's value (its DynamicVar) as the adapter read it (SimState.Vars), or the fallback.</summary>
-    public static int Var(SimState s, int owner, string model, string var, int fallback) =>
-        s.Vars.TryGetValue($"{owner}:{model}:{var}", out var v) ? v : fallback;
+    public static int Var(SimState state, int owner, string model, string var, int fallback) =>
+        state.Vars.TryGetValue($"{owner}:{model}:{var}", out var v) ? v : fallback;
 }
 
 public static partial class SimEngine
 {
     /// <summary>An enemy's hits this turn: its intent's, or the final numbers.</summary>
-    internal static int HitCount(SimEnemy e) => e.Intent?.Count ?? e.Hits.Count;
+    internal static int HitCount(SimEnemy enemy) => enemy.Intent?.Count ?? enemy.Hits.Count;
 
     /// <summary>
     /// One hit of an enemy's intent on a player, through the damage pipeline as it lands (a Move from the enemy: its Strength
     /// and Weak, the player's Vulnerable, Intangible...), with the captured terms of unmodelled sources on that player.
     /// </summary>
-    internal static int IntentDamage(SimState s, SimEnemy e, int hit, int player)
+    internal static int IntentDamage(SimState state, SimEnemy enemy, int hit, int player)
     {
-        var h = e.Intent![hit];
-        return CalcDamage(s, h.Base, new DamageCtx(e.Id, player, SimProps.Move, null, null), h.TermsOn(player));
+        var otherHit = enemy.Intent![hit];
+        return CalcDamage(state, otherHit.Base, new DamageCtx(enemy.Id, player, SimProps.Move, null, null), otherHit.TermsOn(player));
     }
 }
 
 public static partial class SimEngine
 {
     /// <summary>Blockable damage to a player (Who.You, Who.Teammate(k)): Thorns hitting back at whoever attacked.</summary>
-    internal static void LandOnPlayer(SimState s, string name, int amount, int player) => LandBlockable(s, name, amount, player);
+    internal static void LandOnPlayer(SimState state, string name, int amount, int player) => LandBlockable(state, name, amount, player);
 }
 
 public static partial class SimEngine
 {
     /// <summary>One hit on every hittable enemy with this damage (Timber's second attack), each through the pipeline.</summary>
-    private static IEnumerable<SimState> HitEveryEnemy(SimState s, int dealer, DamageSpec spec)
+    private static IEnumerable<SimState> HitEveryEnemy(SimState state, int dealer, DamageSpec spec)
     {
         var at = new AttackAction(1, SimPlay.Target.All, spec);
-        IEnumerable<SimState> r = new[] { s };
-        foreach (var id in s.Targetable.Select(e => e.Id).ToList())
+        IEnumerable<SimState> states = new[] { state };
+        foreach (var id in state.Targetable.Select(enemy => enemy.Id).ToList())
         {
             var t = id;
-            r = Then(r, x => x.Enemy(t) is { Alive: true } ? HitOnce(x, dealer, t, at) : new[] { x });
+            states = Then(states, branch => branch.Enemy(t) is { Alive: true } ? HitOnce(branch, dealer, t, at) : new[] { branch });
         }
-        return r;
+        return states;
     }
 }

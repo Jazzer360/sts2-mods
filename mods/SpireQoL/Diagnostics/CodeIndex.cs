@@ -16,16 +16,16 @@ internal static class CodeIndex
     /// <summary>Reads every class of the game's models up front (CoverageWatch does it on a worker thread at load).</summary>
     public static void Prewarm(IEnumerable<Type> types)
     {
-        foreach (var t in types) For(t);
+        foreach (var type in types) For(type);
     }
     private const BindingFlags All = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
 
     /// <summary>The class (or a base class below the game's model types) calls one of these ("Type.Method", or "Type.Prefix*" for methods starting with Prefix), or overrides one of these hooks.</summary>
     public static bool Does(Type type, IReadOnlyCollection<string> calls, IReadOnlyCollection<string> overrides)
     {
-        for (var t = type; t != null && t.Assembly == type.Assembly && t.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; t = t.BaseType)
+        for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; otherType = otherType.BaseType)
         {
-            var info = For(t);
+            var info = For(otherType);
             if (calls.Any(c => c.EndsWith('*') ? info.Calls.Any(x => x.StartsWith(c[..^1])) : info.Calls.Contains(c))) return true;
             if (overrides.Any(info.Overrides.Contains)) return true;
         }
@@ -40,22 +40,22 @@ internal static class CodeIndex
     /// on each card played). A tabbed source every outcome sets off is held to its flash only then (issue #425); the play's
     /// damage and block checks cover the amount hooks. Async bodies and lambdas count for the method they belong to.
     /// </summary>
-    public static bool FlashesOutsideAmountHooks(Type type) => FlashesOnItsOwn.GetOrAdd(type, static t =>
+    public static bool FlashesOutsideAmountHooks(Type type) => FlashesOnItsOwn.GetOrAdd(type, static otherType =>
     {
         string[] amountHooks = { "AfterModifyingDamageAmount", "AfterModifyingBlockAmount" };
-        for (var c = t; c != null && c.Assembly == t.Assembly && c.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; c = c.BaseType)
+        for (var nextType = otherType; nextType != null && nextType.Assembly == otherType.Assembly && nextType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; nextType = nextType.BaseType)
         {
-            var types = new List<Type> { c };
+            var types = new List<Type> { nextType };
             for (var i = 0; i < types.Count; i++) types.AddRange(types[i].GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
             foreach (var nt in types)
             {
-                foreach (var m in nt.GetMethods(All).Cast<MethodBase>())
+                foreach (var method in nt.GetMethods(All).Cast<MethodBase>())
                 {
                     bool flashes;
                     try
                     {
-                        flashes = SpireQoL.Diagnostics.GameCode.Instructions(m).Any(ins => ins.operand is MethodBase { Name: "Flash" } mb
-                            && mb.DeclaringType?.Name is "PowerModel" or "RelicModel" or "AbstractModel");
+                        flashes = SpireQoL.Diagnostics.GameCode.Instructions(method).Any(ins => ins.operand is MethodBase { Name: "Flash" } otherMethod
+                            && otherMethod.DeclaringType?.Name is "PowerModel" or "RelicModel" or "AbstractModel");
                     }
                     catch
                     {
@@ -63,7 +63,7 @@ internal static class CodeIndex
                     }
                     if (!flashes) continue;
                     // A compiler-made body ("<AfterCardPlayed>d__5", "<AfterCardPlayed>b__5_0") belongs to the method in its brackets.
-                    var owner = m.Name.StartsWith('<') ? OwnerName(m.Name) : nt != c && nt.Name.StartsWith('<') ? OwnerName(nt.Name) : m.Name;
+                    var owner = method.Name.StartsWith('<') ? OwnerName(method.Name) : nt != nextType && nt.Name.StartsWith('<') ? OwnerName(nt.Name) : method.Name;
                     if (!amountHooks.Contains(owner)) return true;
                 }
             }
@@ -88,8 +88,8 @@ internal static class CodeIndex
     public static bool OnlyModifies(Type type)
     {
         var hooks = new List<string>();
-        for (var t = type; t != null && t.Assembly == type.Assembly && t.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; t = t.BaseType)
-            hooks.AddRange(For(t).Overrides.Where(n => !n.StartsWith("get_") && !n.StartsWith("set_")));
+        for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; otherType = otherType.BaseType)
+            hooks.AddRange(For(otherType).Overrides.Where(n => !n.StartsWith("get_") && !n.StartsWith("set_")));
         string[] amounts = { "AfterModifyingBlockAmount", "AfterModifyingDamageAmount" };
         return hooks.Any(amounts.Contains)
                && hooks.All(n => amounts.Contains(n) || n is "ModifyBlockAdditive" or "ModifyBlockMultiplicative"
@@ -102,14 +102,14 @@ internal static class CodeIndex
         var calls = new HashSet<string>();
         var types = new List<Type> { type };
         for (var i = 0; i < types.Count; i++) types.AddRange(types[i].GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
-        foreach (var t in types)
+        foreach (var otherType in types)
         {
-            foreach (var m in t.GetMethods(All).Cast<MethodBase>().Concat(t.GetConstructors(All)))
+            foreach (var method in otherType.GetMethods(All).Cast<MethodBase>().Concat(otherType.GetConstructors(All)))
             {
                 try
                 {
-                    foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(m))
-                        if (ins.operand is MethodBase mb && mb.DeclaringType != null) calls.Add(mb.DeclaringType.Name + "." + mb.Name);
+                    foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(method))
+                        if (ins.operand is MethodBase otherMethod && otherMethod.DeclaringType != null) calls.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name);
                 }
                 catch
                 {
@@ -117,7 +117,7 @@ internal static class CodeIndex
                 }
             }
         }
-        var overrides = type.GetMethods(All).Where(m => m.IsVirtual && m.GetBaseDefinition().DeclaringType != type).Select(m => m.Name).ToHashSet();
+        var overrides = type.GetMethods(All).Where(method => method.IsVirtual && method.GetBaseDefinition().DeclaringType != type).Select(method => method.Name).ToHashSet();
         info = new Info(calls, overrides);
         return Cache.GetOrAdd(type, info);
     }

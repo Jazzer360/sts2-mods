@@ -399,28 +399,28 @@ internal static partial class CoverageLedger
         var hookSet = Hooks.ToHashSet();
         var ledger = Generated.ToDictionary(g => (g.Folder, g.Type), g => g);
         var result = new Dictionary<Type, Entry>();
-        foreach (var t in ModelTypes())
+        foreach (var type in ModelTypes())
         {
             string hooks;
             try
             {
-                hooks = string.Join(",", t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-                    .Where(m => hookSet.Contains(m.Name) && m.IsVirtual && m.GetBaseDefinition().DeclaringType != t)
-                    .Select(m => m.Name).Distinct().OrderBy(n => n, StringComparer.Ordinal));
+                hooks = string.Join(",", type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                    .Where(method => hookSet.Contains(method.Name) && method.IsVirtual && method.GetBaseDefinition().DeclaringType != type)
+                    .Select(method => method.Name).Distinct().OrderBy(n => n, StringComparer.Ordinal));
             }
             catch
             {
                 continue;
             }
-            var known = ledger.TryGetValue((t.Namespace?.Split('.').Last() ?? "", t.Name), out var g);
+            var known = ledger.TryGetValue((type.Namespace?.Split('.').Last() ?? "", type.Name), out var g);
             if (!known && hooks.Length == 0) continue;
-            Entry e;
-            if (!known) e = new Entry(t.Name, Status.New, "not in the ledger (new in this game version?)", hooks);
-            else if (g.Hooks != hooks) e = new Entry(t.Name, Status.Changed, $"hooks were {g.Hooks}, now {hooks}", hooks);
-            else if (Reviewed.TryGetValue(t.Name, out var why))
-                e = new Entry(t.Name, why.StartsWith("gap:") ? Status.Gap : why.StartsWith("covered:") ? Status.Covered : Status.Ignored, why, hooks);
-            else e = new Entry(t.Name, Status.Unreviewed, "not reviewed", hooks);
-            result[t] = e;
+            Entry entry;
+            if (!known) entry = new Entry(type.Name, Status.New, "not in the ledger (new in this game version?)", hooks);
+            else if (g.Hooks != hooks) entry = new Entry(type.Name, Status.Changed, $"hooks were {g.Hooks}, now {hooks}", hooks);
+            else if (Reviewed.TryGetValue(type.Name, out var why))
+                entry = new Entry(type.Name, why.StartsWith("gap:") ? Status.Gap : why.StartsWith("covered:") ? Status.Covered : Status.Ignored, why, hooks);
+            else entry = new Entry(type.Name, Status.Unreviewed, "not reviewed", hooks);
+            result[type] = entry;
         }
         return result;
     }
@@ -430,9 +430,9 @@ internal static partial class CoverageLedger
     {
         Type[] all;
         try { all = typeof(AbstractModel).Assembly.GetTypes(); }
-        catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(t => t != null).ToArray()!; }
-        return all.Where(t => t is { IsAbstract: false, IsClass: true } && typeof(AbstractModel).IsAssignableFrom(t)
-                              && Folders.Any(f => t.Namespace == "MegaCrit.Sts2.Core.Models." + f));
+        catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(type => type != null).ToArray()!; }
+        return all.Where(type => type is { IsAbstract: false, IsClass: true } && typeof(AbstractModel).IsAssignableFrom(type)
+                              && Folders.Any(f => type.Namespace == "MegaCrit.Sts2.Core.Models." + f));
     }
 
     /// <summary>
@@ -451,13 +451,13 @@ internal static partial class CoverageLedger
         try
         {
             var game = SafeGameVersion();
-            var by = ByType.Values.GroupBy(e => e.Status).ToDictionary(g => g.Key, g => g.ToList());
-            int N(Status s) => by.TryGetValue(s, out var l) ? l.Count : 0;
+            var by = ByType.Values.GroupBy(entry => entry.Status).ToDictionary(g => g.Key, g => g.ToList());
+            int N(Status status) => by.TryGetValue(status, out var entries) ? entries.Count : 0;
             log.Info($"[coverage] game {game}, ledger {LedgerGameVersion}: {ByType.Count} classes with combat hooks; covered {N(Status.Covered)}, ignored {N(Status.Ignored)}, " +
                      $"known gaps {N(Status.Gap)}, unreviewed {N(Status.Unreviewed)}, new {N(Status.New)}, changed {N(Status.Changed)}.");
-            foreach (var s in new[] { Status.New, Status.Changed, Status.Unreviewed })
-                if (by.TryGetValue(s, out var l))
-                    log.Info($"[coverage] {s.ToString().ToLowerInvariant()}: {string.Join(", ", l.Select(e => e.Type))}");
+            foreach (var status in new[] { Status.New, Status.Changed, Status.Unreviewed })
+                if (by.TryGetValue(status, out var otherEntries))
+                    log.Info($"[coverage] {status.ToString().ToLowerInvariant()}: {string.Join(", ", otherEntries.Select(entry => entry.Type))}");
             foreach (var c in CardCoverage.Issues)
                 log.Info($"[coverage] card code: {c.Key}: {string.Join("; ", c.Value)}");
             if (!string.IsNullOrEmpty(game) && !ReviewedVersion(game))
@@ -546,13 +546,13 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
             Unexpected(key, "tab-not-in-catalog", "a tab kind was shown that the settings catalog doesn't describe.");
         }
         var me = Sts2State.Me;
-        var cs = Sts2State.Combat;
-        if (me == null || cs == null) return;
-        foreach (var r in me.Relics) Check(r);
-        foreach (var c in cs.Creatures)
+        var combat = Sts2State.Combat;
+        if (me == null || combat == null) return;
+        foreach (var relic in me.Relics) Check(relic);
+        foreach (var creature in combat.Creatures)
         {
-            foreach (var p in c.Powers) Check(p);
-            if (c.Monster != null) Check(c.Monster);
+            foreach (var power in creature.Powers) Check(power);
+            if (creature.Monster != null) Check(creature.Monster);
         }
         foreach (var card in Sts2State.Hand(me))
         {
@@ -561,41 +561,41 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
             if (card.Affliction != null) Check(card.Affliction);
         }
         var orbs = me.PlayerCombatState?.OrbQueue?.Orbs;
-        if (orbs != null) foreach (var o in orbs) Check(o);
+        if (orbs != null) foreach (var orb in orbs) Check(orb);
     }
 
-    private void Check(AbstractModel m)
+    private void Check(AbstractModel model)
     {
-        var t = m.GetType();
-        if (!_checked.Add(t)) return;
+        var type = model.GetType();
+        if (!_checked.Add(type)) return;
         try
         {
             var log = ModEntry.Log;
-            if (CoverageLedger.ByType.TryGetValue(t, out var e))
+            if (CoverageLedger.ByType.TryGetValue(type, out var entry))
             {
-                switch (e.Status)
+                switch (entry.Status)
                 {
                     case CoverageLedger.Status.Gap:
-                        log.Info($"[coverage] known gap in this fight: {t.Name} ({e.Note})");
+                        log.Info($"[coverage] known gap in this fight: {type.Name} ({entry.Note})");
                         break;
                     case CoverageLedger.Status.Unreviewed or CoverageLedger.Status.New or CoverageLedger.Status.Changed:
-                        Unexpected(t.Name, e.Status.ToString().ToLowerInvariant(), $"{e.Note}. Combat hooks: {e.Hooks}.");
+                        Unexpected(type.Name, entry.Status.ToString().ToLowerInvariant(), $"{entry.Note}. Combat hooks: {entry.Hooks}.");
                         break;
                 }
             }
-            if (m is RelicModel) CheckRelicTracking(t);
-            if (CardCoverage.Issues.TryGetValue(t.Name, out var all))
+            if (model is RelicModel) CheckRelicTracking(type);
+            if (CardCoverage.Issues.TryGetValue(type.Name, out var all))
             {
                 // Issues about teammates only count in a fight with other players.
                 var withTeammates = Sts2State.Combat?.Players.Count > 1;
                 var issues = all.Where(x => withTeammates || !x.StartsWith(CardCoverage.TeammatesOnly)).ToList();
                 if (issues.Count > 0)
-                    Unexpected(t.Name, "card-code", $"its code does what the mod doesn't count: {string.Join("; ", issues)}.");
+                    Unexpected(type.Name, "card-code", $"its code does what the mod doesn't count: {string.Join("; ", issues)}.");
             }
         }
         catch (Exception ex)
         {
-            ModEntry.Log.Warn($"[coverage] check failed for {t.Name}: {ex.Message}");
+            ModEntry.Log.Warn($"[coverage] check failed for {type.Name}: {ex.Message}");
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "coverage-check");
         }
     }
@@ -604,27 +604,27 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     /// Goal 2: a relic that can affect a fight has a tab, a tracker row or a reviewed reason
     /// (RelicTracking). A relic the ledger doesn't list is checked by its hooks (new in a game update).
     /// </summary>
-    private static void CheckRelicTracking(Type t)
+    private static void CheckRelicTracking(Type type)
     {
-        CheckRelicChoices(t);
-        CheckRelicCards(t);
-        CheckRelicRooms(t);
-        var name = t.Name;
+        CheckRelicChoices(type);
+        CheckRelicCards(type);
+        CheckRelicRooms(type);
+        var name = type.Name;
         var listed = CoverageLedger.RelicFightHooks.Any(r => r.Type == name);
         if (!listed)
         {
             var outOfCombat = CoverageLedger.OutOfCombatHooks.ToHashSet();
             // Hooks are AbstractModel's public virtuals, as scripts/coverage-ledger.mjs reads them; its protected ones
             // (DeepCloneFields, AfterCloned) are model copying, not hooks (Yummy Cookie only changes its icon there).
-            var fight = t.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
-                .Where(m => m.IsVirtual && !m.IsSpecialName && m.GetBaseDefinition() is { IsPublic: true } b && b.DeclaringType != t && b.DeclaringType?.Name == "AbstractModel"
-                            && !outOfCombat.Contains(m.Name))
-                .Select(m => m.Name).Distinct().ToList();
+            var fight = type.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
+                .Where(method => method.IsVirtual && !method.IsSpecialName && method.GetBaseDefinition() is { IsPublic: true } otherMethod && otherMethod.DeclaringType != type && otherMethod.DeclaringType?.Name == "AbstractModel"
+                            && !outOfCombat.Contains(method.Name))
+                .Select(method => method.Name).Distinct().ToList();
             if (fight.Count == 0) return;
             Unexpected(name, "relic-new", $"a relic the tracking review doesn't list (new in this game version?) with fight hooks: {string.Join(", ", fight)}.");
             return;
         }
-        if (SettingsCatalog.Sources.Any(s => s.Type == name && (s.Tag != null || s.Tracker != null))) return;
+        if (SettingsCatalog.Sources.Any(sourceEntry => sourceEntry.Type == name && (sourceEntry.Tag != null || sourceEntry.Tracker != null))) return;
         if (SpireQoL.Data.RelicSpecs.For(name) != null) return;
         if (RelicTracking.Reasons.TryGetValue(name, out var why))
         {
@@ -639,14 +639,14 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     /// Run Reminders rule (Data/ChoiceReminders) or a reviewed reason (RelicChoiceTracking). Read from the
     /// relic's own overrides, so relics new in a game update are caught too.
     /// </summary>
-    private static void CheckRelicChoices(Type t)
+    private static void CheckRelicChoices(Type type)
     {
-        var name = t.Name;
+        var name = type.Name;
         if (SpireQoL.Data.ChoiceReminders.For(name) != null || RelicChoiceTracking.Reasons.ContainsKey(name)) return;
         var choice = CoverageLedger.ChoiceHooks.ToHashSet();
-        var hooks = t.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
-            .Where(m => m.IsVirtual && m.GetBaseDefinition().DeclaringType != t && choice.Contains(m.Name))
-            .Select(m => m.Name).Distinct().ToList();
+        var hooks = type.GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
+            .Where(method => method.IsVirtual && method.GetBaseDefinition().DeclaringType != type && choice.Contains(method.Name))
+            .Select(method => method.Name).Distinct().ToList();
         if (hooks.Count == 0) return;
         Unexpected(name, "relic-choice-unreviewed", $"a relic that changes choices outside combat with no reminder rule and no reviewed reason (RelicChoiceTracking): {string.Join(", ", hooks)}.");
     }
@@ -671,18 +671,18 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     /// (CardAffinity.Reviewed): Run Reminders shows it beside event options only when a card it applies to can come up.
     /// Read from the relic's own overrides' code, so relics new in a game update are caught too.
     /// </summary>
-    internal static List<string> CardTestingHooks(Type t)
+    internal static List<string> CardTestingHooks(Type type)
     {
         var hooks = new List<string>();
-        foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+        foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
         {
-            if (!m.IsVirtual || m.GetBaseDefinition().DeclaringType == t || !CardHooks.Contains(m.Name)) continue;
+            if (!method.IsVirtual || method.GetBaseDefinition().DeclaringType == type || !CardHooks.Contains(method.Name)) continue;
             List<CodeInstruction> code;
-            try { code = SpireQoL.Diagnostics.GameCode.Instructions(m); } catch { continue; }
-            if (code.Any(i => i.operand is MethodBase mb && mb.DeclaringType != null
-                    && (CardTests.Contains(mb.DeclaringType.Name + "." + mb.Name)
-                        || (mb.Name == "CanEnchant" && typeof(EnchantmentModel).IsAssignableFrom(mb.DeclaringType)))))
-                hooks.Add(m.Name);
+            try { code = SpireQoL.Diagnostics.GameCode.Instructions(method); } catch { continue; }
+            if (code.Any(codeInstruction => codeInstruction.operand is MethodBase otherMethod && otherMethod.DeclaringType != null
+                    && (CardTests.Contains(otherMethod.DeclaringType.Name + "." + otherMethod.Name)
+                        || (otherMethod.Name == "CanEnchant" && typeof(EnchantmentModel).IsAssignableFrom(otherMethod.DeclaringType)))))
+                hooks.Add(method.Name);
         }
         return hooks;
     }
@@ -704,62 +704,62 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     /// MapPoint.PointType) or tests a room's class (`room is MerchantRoom`). Each is "Hook: what it reads", for the review in
     /// Data/ChoiceReminders (a Map rule) or ChoiceReminders.MapReviewed. Read from the compiled code, so new ones are caught.
     /// </summary>
-    internal static List<string> RoomTestingHooks(Type t)
+    internal static List<string> RoomTestingHooks(Type type)
     {
         var found = new List<string>();
-        foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+        foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
         {
-            if (!m.IsVirtual || m.GetBaseDefinition().DeclaringType == t || m.IsSpecialName) continue;
-            if (MapHooks.Contains(m.Name)) { found.Add(m.Name + ": map hook"); continue; }
+            if (!method.IsVirtual || method.GetBaseDefinition().DeclaringType == type || method.IsSpecialName) continue;
+            if (MapHooks.Contains(method.Name)) { found.Add(method.Name + ": map hook"); continue; }
             var reads = new SortedSet<string>();
-            foreach (var code in BodiesOf(m, t))
+            foreach (var code in BodiesOf(method, type))
             {
-                foreach (var i in code)
+                foreach (var codeInstruction in code)
                 {
-                    if (i.operand is MethodBase mb && mb.DeclaringType != null
-                        && ((mb.Name == "get_RoomType" && (typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom).IsAssignableFrom(mb.DeclaringType) || typeof(EncounterModel).IsAssignableFrom(mb.DeclaringType)))
-                            || (mb.Name == "get_PointType" && mb.DeclaringType.Name == "MapPoint")))
-                        reads.Add(mb.DeclaringType.Name + "." + mb.Name[4..]);
-                    if ((i.opcode == System.Reflection.Emit.OpCodes.Isinst || i.opcode == System.Reflection.Emit.OpCodes.Castclass) && i.operand is Type rt
-                        && typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom).IsAssignableFrom(rt) && rt != typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom))
-                        reads.Add("is " + rt.Name);
+                    if (codeInstruction.operand is MethodBase otherMethod && otherMethod.DeclaringType != null
+                        && ((otherMethod.Name == "get_RoomType" && (typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom).IsAssignableFrom(otherMethod.DeclaringType) || typeof(EncounterModel).IsAssignableFrom(otherMethod.DeclaringType)))
+                            || (otherMethod.Name == "get_PointType" && otherMethod.DeclaringType.Name == "MapPoint")))
+                        reads.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name[4..]);
+                    if ((codeInstruction.opcode == System.Reflection.Emit.OpCodes.Isinst || codeInstruction.opcode == System.Reflection.Emit.OpCodes.Castclass) && codeInstruction.operand is Type otherType
+                        && typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom).IsAssignableFrom(otherType) && otherType != typeof(MegaCrit.Sts2.Core.Rooms.AbstractRoom))
+                        reads.Add("is " + otherType.Name);
                 }
             }
-            if (reads.Count > 0) found.Add(m.Name + ": " + string.Join(", ", reads));
+            if (reads.Count > 0) found.Add(method.Name + ": " + string.Join(", ", reads));
         }
         return found;
     }
 
     /// <summary>A method's code, its async state machine's and the lambdas it points at (one level), as Harmony reads them.</summary>
-    private static IEnumerable<List<CodeInstruction>> BodiesOf(MethodInfo m, Type owner)
+    private static IEnumerable<List<CodeInstruction>> BodiesOf(MethodInfo method, Type owner)
     {
         var bodies = new List<List<CodeInstruction>>();
-        void Add(MethodBase b) { try { bodies.Add(SpireQoL.Diagnostics.GameCode.Instructions(b)); } catch { } }
-        Add(m);
-        if (m.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()?.StateMachineType is { } sm
-            && sm.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is { } moveNext)
+        void Add(MethodBase otherMethod) { try { bodies.Add(SpireQoL.Diagnostics.GameCode.Instructions(otherMethod)); } catch { } }
+        Add(method);
+        if (method.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>()?.StateMachineType is { } type
+            && type.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is { } moveNext)
             Add(moveNext);
-        foreach (var lambda in bodies.ToList().SelectMany(c => c).Where(i => i.opcode == System.Reflection.Emit.OpCodes.Ldftn).Select(i => i.operand)
-                     .OfType<MethodInfo>().Where(l => l.DeclaringType == owner || l.DeclaringType?.DeclaringType == owner).Distinct())
+        foreach (var lambda in bodies.ToList().SelectMany(codeInstructions => codeInstructions).Where(codeInstruction => codeInstruction.opcode == System.Reflection.Emit.OpCodes.Ldftn).Select(codeInstruction => codeInstruction.operand)
+                     .OfType<MethodInfo>().Where(otherMethod => otherMethod.DeclaringType == owner || otherMethod.DeclaringType?.DeclaringType == owner).Distinct())
             Add(lambda);
         return bodies;
     }
 
     /// <summary>Pathing (decision #65): a relic whose hooks act on a kind of room has a Map rule or a reason (ChoiceReminders.MapReviewed).</summary>
-    private static void CheckRelicRooms(Type t)
+    private static void CheckRelicRooms(Type type)
     {
-        var name = t.Name;
+        var name = type.Name;
         if (SpireQoL.Data.ChoiceReminders.For(name) is { Map: not SpireQoL.Data.PathRoom.None } || SpireQoL.Data.ChoiceReminders.MapReviewed.ContainsKey(name)) return;
-        var hooks = RoomTestingHooks(t);
+        var hooks = RoomTestingHooks(type);
         if (hooks.Count == 0) return;
         Unexpected(name, "relic-room-unreviewed", $"a relic whose hooks act on a kind of room, with no map rule and no reviewed reason (ChoiceReminders.MapReviewed): {string.Join("; ", hooks)}.");
     }
 
-    private static void CheckRelicCards(Type t)
+    private static void CheckRelicCards(Type type)
     {
-        var name = t.Name;
+        var name = type.Name;
         if (SpireQoL.Data.CardAffinity.For(name) != null || SpireQoL.Data.CardAffinity.Reviewed.ContainsKey(name)) return;
-        var hooks = CardTestingHooks(t);
+        var hooks = CardTestingHooks(type);
         if (hooks.Count == 0) return;
         Unexpected(name, "relic-card-unreviewed", $"a relic whose hooks test a card, with no card rule and no reviewed reason (CardAffinity): {string.Join(", ", hooks)}.");
     }

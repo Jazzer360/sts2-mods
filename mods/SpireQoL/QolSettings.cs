@@ -113,11 +113,11 @@ public sealed class QolSettings
     /// A tab as it's shown, after the settings by kind: null when its kind is off; without its aim marker when that's off.
     /// The key's own switch is <see cref="TabEnabled"/>.
     /// </summary>
-    public Cards.TabSpec? Shown(Cards.TabSpec t)
+    public Cards.TabSpec? Shown(Cards.TabSpec tab)
     {
-        if (!CardTabs || (t.Crossed ? !CrossedTabs : !PlainTabs)) return null;
-        if (t.Key == DrawChanceKey && !Chances) return null;
-        return t.Aimed && !AimMarker ? t with { Aimed = false } : t;
+        if (!CardTabs || (tab.Crossed ? !CrossedTabs : !PlainTabs)) return null;
+        if (tab.Key == DrawChanceKey && !Chances) return null;
+        return tab.Aimed && !AimMarker ? tab with { Aimed = false } : tab;
     }
 
     /// <summary>Show the amount on block / damage / summon proc tabs (off = icon only).</summary>

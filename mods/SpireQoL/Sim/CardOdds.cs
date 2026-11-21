@@ -21,8 +21,8 @@ public static class CardOdds
     public static double AtLeastOne(IReadOnlyList<RarityGroup> groups, double rare, double uncommon, int count)
     {
         if (groups.Count != 3) throw new ArgumentException("Common, Uncommon and Rare", nameof(groups));
-        var totals = groups.Select(g => g.Total).ToArray();
-        var matching = groups.Select(g => g.Matching).ToArray();
+        var totals = groups.Select(rarityGroup => rarityGroup.Total).ToArray();
+        var matching = groups.Select(rarityGroup => rarityGroup.Matching).ToArray();
         var odds = new[] { Math.Max(0, 1 - rare - uncommon), uncommon, rare };
         return 1 - NoneMatch(totals, matching, odds, count);
     }

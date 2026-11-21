@@ -7,48 +7,48 @@ public static partial class SimEngine
     /// A player's Osty loses HP (a hit he takes for them, Thorns on his attack, his death): AfterCurrentHpChanged with a loss, for
     /// every listener (Necro Mastery). Returns the HP he lost.
     /// </summary>
-    internal static int OstyLoses(SimState s, int player, int amount)
+    internal static int OstyLoses(SimState state, int player, int amount)
     {
-        var p = s.Player(player);
-        if (p == null || amount <= 0 || p.OstyHp <= 0) return 0;
-        if (player != Who.You) p = s.MutableTeammate(Who.TeammateIndex(player));
-        var lost = Math.Min(amount, p.OstyHp);
-        p.OstyHp -= lost;
-        foreach (var (m, o) in Listeners(s)) m.AfterOstyHpLost(s, o, player, lost);
-        AllyDeaths(s);
+        var simPlayer = state.Player(player);
+        if (simPlayer == null || amount <= 0 || simPlayer.OstyHp <= 0) return 0;
+        if (player != Who.You) simPlayer = state.MutableTeammate(Who.TeammateIndex(player));
+        var lost = Math.Min(amount, simPlayer.OstyHp);
+        simPlayer.OstyHp -= lost;
+        foreach (var (model, o) in Listeners(state)) model.AfterOstyHpLost(state, o, player, lost);
+        AllyDeaths(state);
         return lost;
     }
 
-    private static void RunDamage(BranchSet b, DamageAction da) => b.Each(s =>
+    private static void RunDamage(BranchSet branches, DamageAction damageAction) => branches.Each(branch =>
     {
-        var target = s.CurrentPlay?.Target ?? -1;
-        if (s.Enemy(target) is not { Alive: true } e) return new[] { s };
-        var spec = da.Damage;
-        var card = s.CurrentPlay?.Card;
+        var target = branch.CurrentPlay?.Target ?? -1;
+        if (branch.Enemy(target) is not { Alive: true } enemy) return new[] { branch };
+        var spec = damageAction.Damage;
+        var card = branch.CurrentPlay?.Card;
         var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target))
-            : CalcDamage(s, spec.BaseFor(target), new DamageCtx(Who.You, target, spec.Props, card, s.CurrentPlay), spec.TermsFor(target));
-        if (amount > 0) Damage(s, e, amount, Who.You, spec.Props, card);
-        AllyDeaths(s);
-        return DrainPending(s);
+            : CalcDamage(branch, spec.BaseFor(target), new DamageCtx(Who.You, target, spec.Props, card, branch.CurrentPlay), spec.TermsFor(target));
+        if (amount > 0) Damage(branch, enemy, amount, Who.You, spec.Props, card);
+        AllyDeaths(branch);
+        return DrainPending(branch);
     });
 
-    private static IEnumerable<SimState> TriggerPoison(SimState s)
+    private static IEnumerable<SimState> TriggerPoison(SimState state)
     {
-        foreach (var e in s.Targetable.ToList())
+        foreach (var enemy in state.Targetable.ToList())
         {
-            if (e.PoisonStacks <= 0) continue;
-            var before = e.PoisonStacks;
-            var ticks = Math.Min(e.PoisonStacks, Math.Max(1, e.PoisonTriggers));
-            for (var i = 0; i < ticks && e.Alive; i++)
+            if (enemy.PoisonStacks <= 0) continue;
+            var before = enemy.PoisonStacks;
+            var ticks = Math.Min(enemy.PoisonStacks, Math.Max(1, enemy.PoisonTriggers));
+            for (var i = 0; i < ticks && enemy.Alive; i++)
             {
-                Damage(s, e, e.PoisonStacks, dealer: null, SimProps.Unblockable | SimProps.Unpowered);
-                if (e.Alive) e.PoisonStacks--;
+                Damage(state, enemy, enemy.PoisonStacks, dealer: null, SimProps.Unblockable | SimProps.Unpowered);
+                if (enemy.Alive) enemy.PoisonStacks--;
             }
             // The next tick's damage (Poison, the game's preview) drops by what the spent stacks dealt.
-            e.Poison = Math.Max(0, e.Poison - (PoisonTick(before, e.PoisonTriggers) - PoisonTick(e.PoisonStacks, e.PoisonTriggers)));
-            AllyDeaths(s);
+            enemy.Poison = Math.Max(0, enemy.Poison - (PoisonTick(before, enemy.PoisonTriggers) - PoisonTick(enemy.PoisonStacks, enemy.PoisonTriggers)));
+            AllyDeaths(state);
         }
-        return DrainPending(s);
+        return DrainPending(state);
     }
 
     /// <summary>A poison tick's damage before modifiers: the stacks, then one less, for min(stacks, triggers) hits.</summary>
@@ -59,9 +59,9 @@ public static partial class SimEngine
         return sum;
     }
 
-    private static void RunExecute(BranchSet b, ExecuteAction ex) => b.Do(s =>
+    private static void RunExecute(BranchSet branches, ExecuteAction ex) => branches.Do(branch =>
     {
-        if (s.Enemy(s.CurrentPlay?.Target ?? -1) is { Alive: true } e && e.Hp <= ex.Threshold) e.Hp = 0;
-        AllyDeaths(s);
+        if (branch.Enemy(branch.CurrentPlay?.Target ?? -1) is { Alive: true } enemy && enemy.Hp <= ex.Threshold) enemy.Hp = 0;
+        AllyDeaths(branch);
     });
 }

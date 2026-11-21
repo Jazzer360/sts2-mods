@@ -59,7 +59,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
     public void Attach(OverlayHost host)
     {
         DevEvents.OnError = ex => ModEntry.Log.Warn($"[session] the event stream's counter threw (later events still count): {ex.Message}");
-        DevEvents.Posted += e => _current?.Post(e);
+        DevEvents.Posted += devEvent => _current?.Post(devEvent);
         host.FrameMeasured += (modMs, gapMs) => _current?.Frame(modMs, gapMs);
         if (ErrorReporter.Instance is { } reporter)
             reporter.Sent += (fp, id) => DevEvents.Post(new ReportSent(fp[0] == "mismatch" && fp.Length > 1 ? fp[1] : fp[0], id));
@@ -69,9 +69,9 @@ public sealed class SessionWatch : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        var rm = RunManager.Instance;
-        var run = rm is { IsInProgress: true }
-            ? RunStateProperty != null ? RunStateProperty.GetValue(rm) : Sts2State.Private<RunState?>(rm, "State", null)
+        var runManager = RunManager.Instance;
+        var run = runManager is { IsInProgress: true }
+            ? RunStateProperty != null ? RunStateProperty.GetValue(runManager) : Sts2State.Private<RunState?>(runManager, "State", null)
             : null;
         if (!ReferenceEquals(run, _run))
         {
@@ -80,33 +80,33 @@ public sealed class SessionWatch : IFeature, IFrameFeature
             _run = run;
             if (run != null) Begin();
         }
-        if (_current is not { } stats || rm == null) return;
+        if (_current is not { } stats || runManager == null) return;
 
-        if (rm.IsAbandoned) _abandoned = true;
-        if (rm.IsGameOver) _gameOver = true;
-        if (!_endSeen && HasRunEnded?.GetValue(rm) is true)
+        if (runManager.IsAbandoned) _abandoned = true;
+        if (runManager.IsGameOver) _gameOver = true;
+        if (!_endSeen && HasRunEnded?.GetValue(runManager) is true)
         {
             // A win ends the run before the false end kills every player; a death ends it with everyone dead already.
             _endSeen = true;
-            _won = !rm.IsGameOver;
+            _won = !runManager.IsGameOver;
         }
 
-        var cs = Sts2State.Combat;
-        if (!ReferenceEquals(cs, _combat))
+        var otherCombat = Sts2State.Combat;
+        if (!ReferenceEquals(otherCombat, _combat))
         {
             if (_combat != null) DevEvents.Post(new CombatEnded());
-            _combat = cs;
+            _combat = otherCombat;
             _turn = 0;
-            if (cs != null)
+            if (otherCombat != null)
             {
                 var me = Sts2State.Me;
-                var players = cs.Players.ToList();
-                DevEvents.Post(new CombatStarted(cs.Encounter?.GetType().Name ?? "?", players.Count,
-                    string.Join(", ", players.OrderBy(p => p == me ? 0 : 1).Select(p => p.Character.GetType().Name))));
+                var players = otherCombat.Players.ToList();
+                DevEvents.Post(new CombatStarted(otherCombat.Encounter?.GetType().Name ?? "?", players.Count,
+                    string.Join(", ", players.OrderBy(player => player == me ? 0 : 1).Select(player => player.Character.GetType().Name))));
                 SavePending(stats);
             }
         }
-        var playerTurn = cs != null && Sts2State.IsPlayerTurn;
+        var playerTurn = otherCombat != null && Sts2State.IsPlayerTurn;
         var turn = playerTurn ? Sts2State.TurnNumber : 0;
         if (playerTurn && turn != _turn)
         {
@@ -116,7 +116,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         }
         Interlocked.Exchange(ref SimJob.Context, playerTurn ? SearchDone.ContextOf(stats.Combat, turn) : 0);
         if (DevDashboard.Running)
-            Where = new { inRun = true, inCombat = cs != null, encounter = cs?.Encounter?.GetType().Name, combat = stats.Combat, turn = Sts2State.TurnNumber, playerTurn };
+            Where = new { inRun = true, inCombat = otherCombat != null, encounter = otherCombat?.Encounter?.GetType().Name, combat = stats.Combat, turn = Sts2State.TurnNumber, playerTurn };
 
         // The progress bar's spells (searches still running on your turn): how long until the board settles.
         var running = playerTurn && SimJob.Progress().Count > 0;
@@ -167,11 +167,11 @@ public sealed class SessionWatch : IFeature, IFrameFeature
     }
 
     /// <summary>The summary's main counts on one line, for the game log.</summary>
-    public static string Line(SessionSummary s)
-        => $"{s.Combats} fights, {s.Turns} turns ({s.Clean} clean, {s.Unchecked} unchecked, {s.Capped} capped, {s.Mismatched} mismatched); " +
-           $"forecasts {s.Forecast.Matched}/{s.Forecast.Checked} matched, {s.Forecast.Skipped} skipped; plays {s.Plays.Matched}/{s.Plays.Checked} matched, " +
-           $"{s.Plays.Skipped} checks skipped; {s.Searches.Count} searches ({s.Searches.Background} in the background, {s.Searches.Cancelled} cancelled, " +
-           $"slowest {s.Searches.Ms.Max} ms); mod frame time p95 {s.Frames.ModMs.P95} ms, {s.Frames.Slow} slow frames";
+    public static string Line(SessionSummary sessionSummary)
+        => $"{sessionSummary.Combats} fights, {sessionSummary.Turns} turns ({sessionSummary.Clean} clean, {sessionSummary.Unchecked} unchecked, {sessionSummary.Capped} capped, {sessionSummary.Mismatched} mismatched); " +
+           $"forecasts {sessionSummary.Forecast.Matched}/{sessionSummary.Forecast.Checked} matched, {sessionSummary.Forecast.Skipped} skipped; plays {sessionSummary.Plays.Matched}/{sessionSummary.Plays.Checked} matched, " +
+           $"{sessionSummary.Plays.Skipped} checks skipped; {sessionSummary.Searches.Count} searches ({sessionSummary.Searches.Background} in the background, {sessionSummary.Searches.Cancelled} cancelled, " +
+           $"slowest {sessionSummary.Searches.Ms.Max} ms); mod frame time p95 {sessionSummary.Frames.ModMs.P95} ms, {sessionSummary.Frames.Slow} slow frames";
 
     private static SessionInfo Info()
     {
@@ -181,26 +181,26 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         return new SessionInfo(tags?.GetValueOrDefault("mod_version") ?? "?", tags?.GetValueOrDefault("game_version") ?? "?", others);
     }
 
-    private static void Send(SessionSummary s, bool flush)
+    private static void Send(SessionSummary sessionSummary, bool flush)
     {
         // The developer's game (decision #108): kept in the dev folder, never sent.
         if (ModEntry.DevMode)
         {
-            DevDashboard.SaveSession(s);
+            DevDashboard.SaveSession(sessionSummary);
             return;
         }
         if (ErrorReporter.Instance is not { Enabled: true } reporter) return;
         var tags = new Dictionary<string, string>
         {
-            ["ended"] = s.Ended,
-            ["players"] = s.Players.ToString(),
-            ["characters"] = s.Characters,
+            ["ended"] = sessionSummary.Ended,
+            ["players"] = sessionSummary.Players.ToString(),
+            ["characters"] = sessionSummary.Characters,
             // The session's own versions (a summary sent on a later launch may be from an older build).
-            ["mod_version"] = s.Mod,
-            ["game_version"] = s.Game,
+            ["mod_version"] = sessionSummary.Mod,
+            ["game_version"] = sessionSummary.Game,
         };
         reporter.Summary("Session summary", "session", tags,
-            new Dictionary<string, string> { ["summary"] = s.ToJson(), ["summary_line"] = Line(s) }, flush);
+            new Dictionary<string, string> { ["summary"] = sessionSummary.ToJson(), ["summary_line"] = Line(sessionSummary) }, flush);
     }
 
     private static readonly object PendingLock = new();
@@ -246,11 +246,11 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         try
         {
             if (!File.Exists(PendingPath)) return;
-            var s = SessionSummary.FromJson(File.ReadAllText(PendingPath));
+            var sessionSummary = SessionSummary.FromJson(File.ReadAllText(PendingPath));
             DeletePending();
-            if (s is not { Turns: > 0 }) return;
-            ModEntry.Log.Info($"[session] the last launch's session wasn't seen ending (a crash, or the game closed early): {Line(s)}");
-            Send(s with { Ended = "unseen" }, flush: false);
+            if (sessionSummary is not { Turns: > 0 }) return;
+            ModEntry.Log.Info($"[session] the last launch's session wasn't seen ending (a crash, or the game closed early): {Line(sessionSummary)}");
+            Send(sessionSummary with { Ended = "unseen" }, flush: false);
         }
         catch (Exception ex)
         {

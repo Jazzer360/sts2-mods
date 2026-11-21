@@ -76,7 +76,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// <summary>Checks the frozen turn, or counts it as not checked when its forecast never had a result.</summary>
     private void CheckFrozen(CombatHistory history, Player me, bool youDied = false)
     {
-        if (Frozen() is { } f) Compare(f, history, _frozenAt, me, youDied);
+        if (Frozen() is { } forecast) Compare(forecast, history, _frozenAt, me, youDied);
         else
         {
             Skip("the forecast had no result by the enemy turn");
@@ -100,12 +100,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private static OddsTally _sessionOdds = new();
     private static bool _driftReported;
 
-    private void Odds(string what, SimChance c, bool happened)
+    private void Odds(string what, SimChance chance, bool happened)
     {
-        if (c.High <= 0 || c.Low >= 1) return; // certain either way: the checks above hold those
-        ModEntry.Log.Info($"[audit] [odds] turn {_frozenTurn}: {what}: predicted {c.Text()}, {(happened ? "happened" : "didn't")}");
-        FightOdds.Add(c, happened);
-        _sessionOdds.Add(c, happened);
+        if (chance.High <= 0 || chance.Low >= 1) return; // certain either way: the checks above hold those
+        ModEntry.Log.Info($"[audit] [odds] turn {_frozenTurn}: {what}: predicted {chance.Text()}, {(happened ? "happened" : "didn't")}");
+        FightOdds.Add(chance, happened);
+        _sessionOdds.Add(chance, happened);
         if (!_sessionOdds.Drifted || _driftReported) return;
         _driftReported = true;
         Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("odds", $"Forecast odds: what happened is far from the chances shown ({_sessionOdds.Text()})",
@@ -123,38 +123,38 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private List<string> IntentIssues(List<CombatHistoryEntry> window)
     {
         var issues = new List<string>();
-        var start = window.FindIndex(e => SideOf(e) == CombatSide.Enemy);
+        var start = window.FindIndex(entry => SideOf(entry) == CombatSide.Enemy);
         if (start < 0) return issues;
         for (var i = start; i < window.Count; i++)
         {
-            if (window[i] is not MonsterPerformedMoveEntry m || m.Monster.Creature is not { } c || !_intentsShown.TryGetValue(c, out var shown)) continue;
+            if (window[i] is not MonsterPerformedMoveEntry monsterPerformedMoveEntry || monsterPerformedMoveEntry.Monster.Creature is not { } creature || !_intentsShown.TryGetValue(creature, out var shown)) continue;
             var span = window.Skip(start).Take(i - start + 1).ToList();
             start = i + 1;
-            if (m.Move.Id != shown.MoveId) continue; // another move than the intent showed (stunned, changed): nothing to compare
-            var name = m.Monster.GetType().Name;
+            if (monsterPerformedMoveEntry.Move.Id != shown.MoveId) continue; // another move than the intent showed (stunned, changed): nothing to compare
+            var name = monsterPerformedMoveEntry.Monster.GetType().Name;
             if (shown.Block is { } b)
             {
-                var gained = span.OfType<BlockGainedEntry>().Where(x => x.Receiver == c).Sum(x => x.Amount);
+                var gained = span.OfType<BlockGainedEntry>().Where(blockGainedEntry => blockGainedEntry.Receiver == creature).Sum(blockGainedEntry => blockGainedEntry.Amount);
                 if (gained != b) issues.Add($"intent block: {name}'s {shown.MoveId} showed {b}, it gained {gained}");
             }
-            var applied = span.OfType<PowerReceivedEntry>().Where(x => x.Applier == c).ToList();
+            var applied = span.OfType<PowerReceivedEntry>().Where(powerReceivedEntry => powerReceivedEntry.Applier == creature).ToList();
             // A move can apply a power to its own monster with no applier (Devoted Sculptor's Ritual: PowerCmd.Apply(..., null)):
             // counted for the powers the intent showed. Not for "applied, not shown": its powers ticking down have no applier either.
-            var ownless = span.OfType<PowerReceivedEntry>().Where(x => x.Applier == null && x.Actor == c).ToList();
-            var artifact = span.OfType<PowerReceivedEntry>().Any(x => x.Power is MegaCrit.Sts2.Core.Models.Powers.ArtifactPower && x.Amount < 0);
-            foreach (var p in shown.Powers)
+            var ownless = span.OfType<PowerReceivedEntry>().Where(powerReceivedEntry => powerReceivedEntry.Applier == null && powerReceivedEntry.Actor == creature).ToList();
+            var artifact = span.OfType<PowerReceivedEntry>().Any(powerReceivedEntry => powerReceivedEntry.Power is MegaCrit.Sts2.Core.Models.Powers.ArtifactPower && powerReceivedEntry.Amount < 0);
+            foreach (var power in shown.Powers)
             {
-                if (p.Maybe) continue; // only on some branches, shown as ? (decision #109): nothing promised either way
-                var same = applied.Concat(ownless).Where(x => x.Power.GetType() == p.Power).ToList();
+                if (power.Maybe) continue; // only on some branches, shown as ? (decision #109): nothing promised either way
+                var same = applied.Concat(ownless).Where(powerReceivedEntry => powerReceivedEntry.Power.GetType() == power.Power).ToList();
                 if (same.Count == 0)
                 {
-                    if (!artifact) issues.Add($"intent power: {name}'s {shown.MoveId} showed {p.Power.Name}, it applied none");
+                    if (!artifact) issues.Add($"intent power: {name}'s {shown.MoveId} showed {power.Power.Name}, it applied none");
                 }
-                else if (p.Amount is { } a && same.All(x => x.Amount != a))
-                    issues.Add($"intent power: {name}'s {shown.MoveId} showed {p.Power.Name} {a}, it applied {string.Join(", ", same.Select(x => x.Amount))}");
+                else if (power.Amount is { } a && same.All(powerReceivedEntry => powerReceivedEntry.Amount != a))
+                    issues.Add($"intent power: {name}'s {shown.MoveId} showed {power.Power.Name} {a}, it applied {string.Join(", ", same.Select(powerReceivedEntry => powerReceivedEntry.Amount))}");
             }
-            foreach (var t in applied.Select(x => x.Power.GetType()).Distinct().Where(t => shown.Powers.All(p => p.Power != t)))
-                issues.Add($"intent power: {name}'s {shown.MoveId} applied {t.Name}, not shown");
+            foreach (var type in applied.Select(powerReceivedEntry => powerReceivedEntry.Power.GetType()).Distinct().Where(type => shown.Powers.All(power => power.Power != type)))
+                issues.Add($"intent power: {name}'s {shown.MoveId} applied {type.Name}, not shown");
         }
         return issues;
     }
@@ -215,8 +215,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 pendingJob.Pinned = true;
             }
             // What each enemy's intent showed (Intent Details): its block and the powers its move applies (decision #98).
-            _intentsShown = _last.Ids.Keys.Select(c => (c, Features.IntentDetailsFeature.For(c))).Where(x => x.Item2 != null)
-                .ToDictionary(x => x.c, x => x.Item2!, (IEqualityComparer<MegaCrit.Sts2.Core.Entities.Creatures.Creature>)ReferenceEqualityComparer.Instance);
+            _intentsShown = _last.Ids.Keys.Select(creature => (creature, Features.IntentDetailsFeature.For(creature))).Where(x => x.Item2 != null)
+                .ToDictionary(x => x.creature, x => x.Item2!, (IEqualityComparer<MegaCrit.Sts2.Core.Entities.Creatures.Creature>)ReferenceEqualityComparer.Instance);
             // Its exploration goes on after the board changes (decision #87): the check compares against all of it.
             if (_frozen?.Job is { } frozenJob) frozenJob.Pinned = true;
             _frozenAt = _lastHistoryCount;
@@ -240,7 +240,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     }
 
     /// <summary>The side whose turn an entry happened on (CombatHistoryEntry.CurrentSide is private).</summary>
-    private static CombatSide SideOf(CombatHistoryEntry e) => Sts2State.Private(e, "CurrentSide", CombatSide.Player);
+    private static CombatSide SideOf(CombatHistoryEntry entry) => Sts2State.Private(entry, "CurrentSide", CombatSide.Player);
 
     /// <summary>
     /// Each simulated teammate's HP lost this round against the forecast's range (worst branch to best),
@@ -249,22 +249,22 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// of turn (Stampede: a random card). What's shown leaves their hand out (decision #25); when that range
     /// differs, the line says so, and an HP loss only the cards in their hand explain is logged, not reported.
     /// </summary>
-    private string TeammateIssues(TurnEndModel f, List<DamageReceivedEntry> damage, List<CombatHistoryEntry> endOfTurn, List<string> issues)
+    private string TeammateIssues(TurnEndModel forecast, List<DamageReceivedEntry> damage, List<CombatHistoryEntry> endOfTurn, List<string> issues)
     {
-        var o = f.Outcome;
+        var outcome = forecast.Outcome;
         var line = "";
-        for (var k = 0; k < f.Teammates.Count && o.Branches.Count > 0 && k < o.Branches[0].Teammates.Count; k++)
+        for (var k = 0; k < forecast.Teammates.Count && outcome.Branches.Count > 0 && k < outcome.Branches[0].Teammates.Count; k++)
         {
-            var mate = f.Teammates[k];
+            var mate = forecast.Teammates[k];
             var name = SafeCharacter(mate);
             // Overkill counts, as yours does (decision #93: the forecast isn't capped by their HP).
-            var actual = damage.Where(d => d.Result.Receiver == mate.Creature).Sum(d => d.Result.UnblockedDamage + d.Result.OverkillDamage);
-            var (min, max) = (o.TeammateTakenMin(k), o.TeammateTakenMax(k));
+            var actual = damage.Where(otherDamage => otherDamage.Result.Receiver == mate.Creature).Sum(otherDamage => otherDamage.Result.UnblockedDamage + otherDamage.Result.OverkillDamage);
+            var (min, max) = (outcome.TeammateTakenMin(k), outcome.TeammateTakenMax(k));
             line += $"; teammate {name} HP lost {actual} (predicted {(min == max ? $"{max}" : $"{min}-{max}")})";
-            var shown = k < f.TeammateView.Count ? f.TeammateView[k] : null;
+            var shown = k < forecast.TeammateView.Count ? forecast.TeammateView[k] : null;
             if (shown != null && (shown.TakenMin != min || shown.TakenMax != max))
                 line += $" (shown without their hand: {(shown.TakenMin == shown.TakenMax ? $"{shown.TakenMax}" : $"{shown.TakenMin}-{shown.TakenMax}")})";
-            if (endOfTurn.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == mate))
+            if (endOfTurn.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && cardPlayStartedEntry.CardPlay.Card.Owner == mate))
             {
                 line += " (auto-played a card: not checked)";
                 Skip("a teammate auto-played a card at end of turn");
@@ -274,8 +274,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             // Their Osty (Teammate Incoming Damage shows what he absorbs).
             if (mate.Osty is { } osty)
             {
-                var ostyActual = damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
-                var (oMin, oMax) = (o.TeammateOstyTakenMin(k), o.TeammateOstyTakenMax(k));
+                var ostyActual = damage.Where(otherDamage => otherDamage.Result.Receiver == osty).Sum(otherDamage => otherDamage.Result.UnblockedDamage);
+                var (oMin, oMax) = (outcome.TeammateOstyTakenMin(k), outcome.TeammateOstyTakenMax(k));
                 line += $", their Osty {ostyActual} (predicted {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")})";
                 if (ostyActual > oMax || ostyActual < oMin) issues.Add($"teammate {name} Osty HP lost: forecast {(oMin == oMax ? $"{oMax}" : $"{oMin}-{oMax}")}, actual {ostyActual}");
             }
@@ -283,22 +283,22 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         return line;
     }
 
-    private static string SafeCharacter(Player p)
+    private static string SafeCharacter(Player player)
     {
-        try { return p.Character.GetType().Name; } catch { return "?"; }
+        try { return player.Character.GetType().Name; } catch { return "?"; }
     }
 
     /// <param name="youDied">You died before your next turn (the fight ended): the enemy turn stopped there, so your HP lost is
     /// checked as a death against the forecast's, and the enemies left to act didn't.</param>
-    private void Compare(TurnEndModel f, CombatHistory history, int from, Player me, bool youDied = false)
+    private void Compare(TurnEndModel forecast, CombatHistory history, int from, Player me, bool youDied = false)
     {
         // The frozen forecast's search result; it isn't needed after this.
-        f = f.Refreshed();
-        var shownChances = f.Outcome; // the chances as they stood when you ended your turn, before the history narrows them
+        forecast = forecast.Refreshed();
+        var shownChances = forecast.Outcome; // the chances as they stood when you ended your turn, before the history narrows them
         // What it didn't model (rule 2): logged and counted, whatever the check finds.
-        foreach (var reason in f.Outcome.UnmodelledReasons) CountIn(Gaps, reason);
-        if (f.Outcome.AnyUnmodelled) ModEntry.Log.Info($"[audit] [gaps] turn {_frozenTurn}: the forecast didn't model: {string.Join("; ", f.Outcome.UnmodelledReasons)}");
-        if (f.Job is { } job)
+        foreach (var reason in forecast.Outcome.UnmodelledReasons) CountIn(Gaps, reason);
+        if (forecast.Outcome.AnyUnmodelled) ModEntry.Log.Info($"[audit] [gaps] turn {_frozenTurn}: the forecast didn't model: {string.Join("; ", forecast.Outcome.UnmodelledReasons)}");
+        if (forecast.Job is { } job)
         {
             job.Pinned = false;
             job.Cancel();
@@ -307,19 +307,19 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var window = new List<CombatHistoryEntry>();
         var endOfTurn = new List<CombatHistoryEntry>();
         var sawEnemy = false;
-        foreach (var e in history.Entries.Skip(from))
+        foreach (var entry in history.Entries.Skip(from))
         {
-            var side = SideOf(e);
+            var side = SideOf(entry);
             if (side == CombatSide.Enemy) sawEnemy = true;
             else if (sawEnemy) break;
-            window.Add(e);
-            if (!sawEnemy) endOfTurn.Add(e);
+            window.Add(entry);
+            if (!sawEnemy) endOfTurn.Add(entry);
         }
 
         // A teammate's end-of-turn pick from their hand (Stampede, Simpleton) isn't predicted (a random card; decisions #25, #80): what
         // it did to the enemies isn't in the forecast, so the enemies and your HP can't be held to it (issue #430). Counted, not reported.
-        var mates = f.Teammates.Where(t => t.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.StampedePower>() || t.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.SimpletonPower>()).ToList();
-        if (mates.Count > 0 && endOfTurn.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && mates.Contains(e.CardPlay.Card.Owner)))
+        var mates = forecast.Teammates.Where(player => player.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.StampedePower>() || player.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.SimpletonPower>()).ToList();
+        if (mates.Count > 0 && endOfTurn.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && mates.Contains(cardPlayStartedEntry.CardPlay.Card.Owner)))
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a teammate's Stampede or Simpleton played a card at end of turn, which isn't predicted)");
             Skip("a teammate's end-of-turn pick from their hand (not predicted)");
@@ -338,9 +338,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var damage = window.OfType<DamageReceivedEntry>().ToList();
         // A hit that kills you (Fairy in a Bottle, Lizard Tail bring you back) takes only the HP you had left; the
         // forecast isn't capped by your HP, so the overkill counts too (Creature.LoseHpInternal: OverkillDamage).
-        var actualTaken = damage.Where(d => d.Result.Receiver == me.Creature).Sum(d => d.Result.UnblockedDamage + d.Result.OverkillDamage);
-        var actualOsty = osty == null ? 0 : damage.Where(d => d.Result.Receiver == osty).Sum(d => d.Result.UnblockedDamage);
-        var actualBlockGain = endOfTurn.OfType<BlockGainedEntry>().Where(b => b.Actor == me.Creature).Sum(b => b.Amount);
+        var actualTaken = damage.Where(otherDamage => otherDamage.Result.Receiver == me.Creature).Sum(otherDamage => otherDamage.Result.UnblockedDamage + otherDamage.Result.OverkillDamage);
+        var actualOsty = osty == null ? 0 : damage.Where(otherDamage => otherDamage.Result.Receiver == osty).Sum(otherDamage => otherDamage.Result.UnblockedDamage);
+        var actualBlockGain = endOfTurn.OfType<BlockGainedEntry>().Where(blockGainedEntry => blockGainedEntry.Actor == me.Creature).Sum(blockGainedEntry => blockGainedEntry.Amount);
 
         // Cards of yours auto-played at end of turn: the simulator plays Stampede's, Simpleton's, Howl from Beyond and
         // I Am Invincible (SimEngine.AutoPostPlay), Stampede's and Simpleton's picks a branch each. The history shows which
@@ -348,21 +348,21 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // isn't checked when the pick that happened changed your hand (it drew or made cards: what came after isn't
         // simulated), or when the count matches no branch (another source).
         var issues = new List<string>();
-        var autoPlays = endOfTurn.OfType<CardPlayStartedEntry>().Where(e => e.CardPlay.IsAutoPlay && e.CardPlay.IsFirstInSeries && e.CardPlay.Card.Owner == me).ToList();
+        var autoPlays = endOfTurn.OfType<CardPlayStartedEntry>().Where(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && cardPlayStartedEntry.CardPlay.IsFirstInSeries && cardPlayStartedEntry.CardPlay.Card.Owner == me).ToList();
         if (autoPlays.Count > 0 && autoPlays[0] is var auto)
         {
-            var hand = f.State.You.AutoHand?.Select(c => c.Id).ToHashSet();
-            var picks = hand == null ? new List<SimPick>() : autoPlays.Where(e => hand.Contains(SimAdapter.HandId(e.CardPlay.Card)))
-                .Select(e => new SimPick(SimAdapter.HandId(e.CardPlay.Card), e.CardPlay.Target is { } t && f.Ids.TryGetValue(t, out var tid) ? tid : -1)).ToList();
-            bool Picked(SimState b) => b.AutoPlaysUnknown
-                ? b.AutoPlayed <= autoPlays.Count && picks.Count >= b.AutoPicks.Count && picks.Take(b.AutoPicks.Count).SequenceEqual(b.AutoPicks)
-                : b.AutoPlayed == autoPlays.Count && picks.SequenceEqual(b.AutoPicks);
-            string Predicted() => $"HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})";
-            var narrowed = f.Narrowed(Picked);
-            if (narrowed == null && hand != null && picks.Count == autoPlays.Count && f.State.You.Stampede + f.State.You.Simpleton > 0)
+            var hand = forecast.State.You.AutoHand?.Select(handCard => handCard.Id).ToHashSet();
+            var picks = hand == null ? new List<SimPick>() : autoPlays.Where(cardPlayStartedEntry => hand.Contains(SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card)))
+                .Select(cardPlayStartedEntry => new SimPick(SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card), cardPlayStartedEntry.CardPlay.Target is { } creature && forecast.Ids.TryGetValue(creature, out var tid) ? tid : -1)).ToList();
+            bool Picked(SimState state) => state.AutoPlaysUnknown
+                ? state.AutoPlayed <= autoPlays.Count && picks.Count >= state.AutoPicks.Count && picks.Take(state.AutoPicks.Count).SequenceEqual(state.AutoPicks)
+                : state.AutoPlayed == autoPlays.Count && picks.SequenceEqual(state.AutoPicks);
+            string Predicted() => $"HP lost {actualTaken} (predicted {(forecast.TakenMin == forecast.Taken ? $"{forecast.Taken}" : $"{forecast.TakenMin}-{forecast.Taken}")})";
+            var narrowed = forecast.Narrowed(Picked);
+            if (narrowed == null && hand != null && picks.Count == autoPlays.Count && forecast.State.You.Stampede + forecast.State.You.Simpleton > 0)
             {
                 // Every auto-play was a pick from your hand, and no branch made those picks: the simulator's picks are wrong.
-                var names = string.Join(", ", autoPlays.Select(e => $"{e.CardPlay.Card.GetType().Name}{(e.CardPlay.Target is { } t ? $" at {t.Monster?.GetType().Name ?? "you"}" : "")}"));
+                var names = string.Join(", ", autoPlays.Select(cardPlayStartedEntry => $"{cardPlayStartedEntry.CardPlay.Card.GetType().Name}{(cardPlayStartedEntry.CardPlay.Target is { } creature ? $" at {creature.Monster?.GetType().Name ?? "you"}" : "")}"));
                 issues.Add($"auto-play: you auto-played {names}, and no branch picked that");
             }
             else if (narrowed == null)
@@ -371,32 +371,32 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 Skip("an end-of-turn auto-play no branch made (another source)");
                 return;
             }
-            else if (narrowed.Outcome.Branches.Any(b => b.AutoPlaysUnknown))
+            else if (narrowed.Outcome.Branches.Any(branch => branch.AutoPlaysUnknown))
             {
                 // The pick it stopped at (the last one in that branch).
-                var last = narrowed.Outcome.Branches.First(b => b.AutoPlaysUnknown).AutoPicks.LastOrDefault();
-                var changer = autoPlays.FirstOrDefault(e => last != null && SimAdapter.HandId(e.CardPlay.Card) == last.Card)?.CardPlay.Card ?? auto.CardPlay.Card;
+                var last = narrowed.Outcome.Branches.First(branch => branch.AutoPlaysUnknown).AutoPicks.LastOrDefault();
+                var changer = autoPlays.FirstOrDefault(cardPlayStartedEntry => last != null && SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card) == last.Card)?.CardPlay.Card ?? auto.CardPlay.Card;
                 ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {changer.GetType().Name} at end of turn, which changed your hand); {Predicted()}");
                 Skip("an end-of-turn auto-play that changed your hand");
                 return;
             }
             else
             {
-                f = narrowed;
+                forecast = narrowed;
             }
         }
 
         // A branch the forecast didn't model (decision #92, rule 2) is unknown both ways: what happened may be that branch, so
         // nothing can be called wrong. The gap is counted above; the check is skipped and counted too (rule 1).
-        if (f.Outcome.AnyUnmodelled)
+        if (forecast.Outcome.AnyUnmodelled)
         {
-            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a branch the forecast didn't model: {string.Join("; ", f.Outcome.UnmodelledReasons)}); HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")})");
+            ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (a branch the forecast didn't model: {string.Join("; ", forecast.Outcome.UnmodelledReasons)}); HP lost {actualTaken} (predicted {(forecast.TakenMin == forecast.Taken ? $"{forecast.Taken}" : $"{forecast.TakenMin}-{forecast.Taken}")})");
             Skip("a branch the forecast didn't model");
             return;
         }
         // The search stopped at its memory cap (decision #107): it showed ? for your damage and promised nothing past what was
         // settled, so there's nothing to check it against. Skipped and counted (rule 1); the cap itself is reported by SimJob.
-        if (f.Outcome.Truncated)
+        if (forecast.Outcome.Truncated)
         {
             ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (the forecast's search stopped at its memory cap); HP lost {actualTaken}");
             Skip("the forecast's search stopped at its memory cap");
@@ -410,35 +410,35 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // branch, or any branch when a roll decides it).
         if (youDied)
         {
-            if (!f.Dies && !f.Outcome.Branches.Any(b => b.Died)) issues.Add($"your death: forecast you survive (HP lost {f.Taken}), but you died (HP lost {actualTaken})");
+            if (!forecast.Dies && !forecast.Outcome.Branches.Any(branch => branch.Died)) issues.Add($"your death: forecast you survive (HP lost {forecast.Taken}), but you died (HP lost {actualTaken})");
         }
-        else if (actualTaken > f.Taken || actualTaken < f.TakenMin) issues.Add($"HP lost: forecast {f.Taken}, actual {actualTaken}");
-        if (actualOsty > f.OstyTaken || actualOsty < f.OstyTakenMin) issues.Add($"Osty HP lost: forecast {f.OstyTaken}, actual {actualOsty}");
-        if (actualBlockGain != f.BlockGain) issues.Add($"end-of-turn block: forecast {f.BlockGain}, actual {actualBlockGain}");
+        else if (actualTaken > forecast.Taken || actualTaken < forecast.TakenMin) issues.Add($"HP lost: forecast {forecast.Taken}, actual {actualTaken}");
+        if (actualOsty > forecast.OstyTaken || actualOsty < forecast.OstyTakenMin) issues.Add($"Osty HP lost: forecast {forecast.OstyTaken}, actual {actualOsty}");
+        if (actualBlockGain != forecast.BlockGain) issues.Add($"end-of-turn block: forecast {forecast.BlockGain}, actual {actualBlockGain}");
         // Teammates (multiplayer, decision #24): each one's HP lost against their range over the branches.
-        var teamLine = TeammateIssues(f, damage, endOfTurn, issues);
-        var enemyIssues = EnemyIssues(f, window, endOfTurn, me, out var outcomeLine, out var actuals);
+        var teamLine = TeammateIssues(forecast, damage, endOfTurn, issues);
+        var enemyIssues = EnemyIssues(forecast, window, endOfTurn, me, out var outcomeLine, out var actuals);
         issues.AddRange(enemyIssues.Select(x => x.Issue));
         issues.AddRange(IntentIssues(window));
         // Each number above is checked against its own range over the branches; together they must
         // also come from one branch (one set of random targets explains everything that happened).
-        var o = f.Outcome;
-        if (issues.Count == 0 && !youDied && o.Branches.Count > 1)
+        var outcome = forecast.Outcome;
+        if (issues.Count == 0 && !youDied && outcome.Branches.Count > 1)
         {
-            bool Explains(SimState b) =>
-                b.Taken == actualTaken && (osty == null || b.OstyTaken == actualOsty) && b.AutoPlayed == autoPlays.Count
-                && actuals.All(kv => b.Enemy(kv.Key) is { } e && e.HpAtTurnEnd == kv.Value.Hp && e.UnblockedInstances == kv.Value.Through && e.DiedBeforeActing == kv.Value.Died);
-            if (!o.Branches.Any(Explains))
-                issues.Add($"no single branch: each result is possible on its own, but none of the {o.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
+            bool Explains(SimState state) =>
+                state.Taken == actualTaken && (osty == null || state.OstyTaken == actualOsty) && state.AutoPlayed == autoPlays.Count
+                && actuals.All(kv => state.Enemy(kv.Key) is { } enemy && enemy.HpAtTurnEnd == kv.Value.Hp && enemy.UnblockedInstances == kv.Value.Through && enemy.DiedBeforeActing == kv.Value.Died);
+            if (!outcome.Branches.Any(Explains))
+                issues.Add($"no single branch: each result is possible on its own, but none of the {outcome.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
         }
         // The chances (decision #95): each one between 0 and 100% with what happened, totalled per fight and over the session.
-        foreach (var (creature, id) in f.Ids)
-            if (f.State.Enemy(id) is { Hp: > 0 } st && actuals.TryGetValue(id, out var act))
-                Odds($"{st.Name} dies before acting", shownChances.DeadChanceRange(id), act.Died);
+        foreach (var (creature, id) in forecast.Ids)
+            if (forecast.State.Enemy(id) is { Hp: > 0 } simEnemy && actuals.TryGetValue(id, out var act))
+                Odds($"{simEnemy.Name} dies before acting", shownChances.DeadChanceRange(id), act.Died);
         Odds("you die", shownChances.YouDieChance(), youDied);
 
         // Every enemy turn, matched or not: predicted vs actual per enemy, so patterns show before they're reports.
-        ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(f.TakenMin == f.Taken ? $"{f.Taken}" : $"{f.TakenMin}-{f.Taken}")}); {outcomeLine}{teamLine}");
+        ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}:{(youDied ? " you died;" : "")} HP lost {actualTaken} (predicted {(forecast.TakenMin == forecast.Taken ? $"{forecast.Taken}" : $"{forecast.TakenMin}-{forecast.Taken}")}); {outcomeLine}{teamLine}");
 
         _checked++;
         Telemetry.DevEvents.Post(new Telemetry.CheckDone(Telemetry.Audits.Forecast, _frozenTurn, issues.Count == 0, issues.Count == 0 ? null : issues[0].Split(':')[0]));
@@ -450,16 +450,16 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
         var log = ModEntry.Log;
         log.Warn($"[audit] turn {_frozenTurn} enemy turn: {string.Join("; ", issues)}.");
-        log.Warn($"[audit]   forecast: block {f.CurrentBlock} + end of turn {List(f.EndOfTurnBlock)}; blockable {List(f.Blockable)}; " +
-                 $"unblockable {List(f.Unblockable)}; your end-of-turn damage {List(f.EndOfTurnDamage)}; " +
-                 $"skipped (poison {f.SkippedPoisoned}, end of turn {f.SkippedEndOfTurn}), cancelled hits {f.CancelledHits}, Osty HP {f.OstyHp}.");
+        log.Warn($"[audit]   forecast: block {forecast.CurrentBlock} + end of turn {List(forecast.EndOfTurnBlock)}; blockable {List(forecast.Blockable)}; " +
+                 $"unblockable {List(forecast.Unblockable)}; your end-of-turn damage {List(forecast.EndOfTurnDamage)}; " +
+                 $"skipped (poison {forecast.SkippedPoisoned}, end of turn {forecast.SkippedEndOfTurn}), cancelled hits {forecast.CancelledHits}, Osty HP {forecast.OstyHp}.");
         var lines = new List<string>();
-        foreach (var e in window)
+        foreach (var entry in window)
         {
-            if (e is DamageReceivedEntry or BlockGainedEntry)
+            if (entry is DamageReceivedEntry or BlockGainedEntry)
             {
-                log.Warn($"[audit]   actual: {e.HumanReadableString}");
-                lines.Add(e.HumanReadableString);
+                log.Warn($"[audit]   actual: {entry.HumanReadableString}");
+                lines.Add(entry.HumanReadableString);
             }
         }
 
@@ -467,10 +467,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;
         if (reporter is not { Enabled: true }) return;
         var encounter = Sts2State.Combat?.Encounter?.GetType().Name ?? "unknown";
-        var breakdown = $"block {f.CurrentBlock} + end of turn {List(f.EndOfTurnBlock)}\nblockable {List(f.Blockable)}\nunblockable {List(f.Unblockable)}\n" +
-                        $"your end-of-turn damage {List(f.EndOfTurnDamage)}\nskipped: poison {f.SkippedPoisoned}, end of turn {f.SkippedEndOfTurn}; cancelled hits {f.CancelledHits}; Osty HP {f.OstyHp}";
-        var prediction = Prediction(f);
-        var fullWindow = string.Join("\n", window.Select((e, i) => $"#{from + i} {ProcAudit.Describe(e)}{(SideOf(e) == CombatSide.Enemy ? " (enemy turn)" : "")}"));
+        var breakdown = $"block {forecast.CurrentBlock} + end of turn {List(forecast.EndOfTurnBlock)}\nblockable {List(forecast.Blockable)}\nunblockable {List(forecast.Unblockable)}\n" +
+                        $"your end-of-turn damage {List(forecast.EndOfTurnDamage)}\nskipped: poison {forecast.SkippedPoisoned}, end of turn {forecast.SkippedEndOfTurn}; cancelled hits {forecast.CancelledHits}; Osty HP {forecast.OstyHp}";
+        var prediction = Prediction(forecast);
+        var fullWindow = string.Join("\n", window.Select((entry, i) => $"#{from + i} {ProcAudit.Describe(entry)}{(SideOf(entry) == CombatSide.Enemy ? " (enemy turn)" : "")}"));
         foreach (var issue in issues)
         {
             var kind = issue.Split(':')[0];
@@ -478,8 +478,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var monster = enemyIssues.FirstOrDefault(x => x.Issue == issue).Monster;
             var fp = monster != null ? new[] { kind, encounter, monster } : new[] { kind, encounter };
             reporter.Mismatch("forecast", $"Forecast audit: {issue} ({encounter}, turn {_frozenTurn})", fp,
-                $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}\n\nSimulator, per enemy (over {f.Outcome.Branches.Count} branch(es){(f.Outcome.Truncated ? ", truncated" : "")}):\n{prediction}",
-                new Dictionary<string, string> { ["audit_window"] = fullWindow, ["sim_state"] = f.State.ToJson() },
+                $"Enemy turn after your turn {_frozenTurn}.\nIssue: {issue}\nAll issues: {string.Join("; ", issues)}\n\nForecast:\n{breakdown}\n\nSimulator, per enemy (over {forecast.Outcome.Branches.Count} branch(es){(forecast.Outcome.Truncated ? ", truncated" : "")}):\n{prediction}",
+                new Dictionary<string, string> { ["audit_window"] = fullWindow, ["sim_state"] = forecast.State.ToJson() },
                 new Dictionary<string, string> { ["check"] = kind, ["encounter"] = encounter, ["monster"] = monster ?? "" });
         }
     }
@@ -489,18 +489,18 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// Returns each issue with the monster it's about. Only a finished search gets here: a capped one is skipped first (decision #107),
     /// so every range below covers every outcome.
     /// </summary>
-    private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel f, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me, out string summary,
+    private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel forecast, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me, out string summary,
         out Dictionary<int, (int Hp, int Through, bool Died)> actuals)
     {
         var result = new List<(string, string?)>();
         actuals = new Dictionary<int, (int Hp, int Through, bool Died)>();
         var parts = new List<string>();
         summary = "";
-        var o = f.Outcome;
-        if (o.Branches.Count == 0) return result;
-        foreach (var (creature, id) in f.Ids)
+        var outcome = forecast.Outcome;
+        if (outcome.Branches.Count == 0) return result;
+        foreach (var (creature, id) in forecast.Ids)
         {
-            var start = f.State.Enemy(id);
+            var start = forecast.State.Enemy(id);
             if (start == null || start.Hp <= 0) continue;
             var monster = creature.Monster?.GetType().Name ?? "enemy";
             var name = start.Name;
@@ -509,44 +509,44 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             // died before its move; its first hit on you.
             // Up to the hit that kills it: an enemy that comes back (Waterfall Giant with Steam Eruption, at
             // 999999999 HP) takes later hits that aren't part of the simulated fight.
-            var eot = endOfTurn.OfType<DamageReceivedEntry>().Where(d => d.Result.Receiver == creature).ToList();
-            var killHit = eot.FindIndex(d => d.Result.WasTargetKilled);
+            var eot = endOfTurn.OfType<DamageReceivedEntry>().Where(damage => damage.Result.Receiver == creature).ToList();
+            var killHit = eot.FindIndex(damage => damage.Result.WasTargetKilled);
             if (killHit >= 0) eot = eot.Take(killHit + 1).ToList();
-            var hpAtTurnEnd = Math.Max(0, start.Hp - eot.Sum(d => d.Result.UnblockedDamage));
-            var through = eot.Count(d => d.Result.UnblockedDamage > 0);
-            var killAt = window.FindIndex(e => e is DamageReceivedEntry d && d.Result.Receiver == creature && d.Result.WasTargetKilled);
-            var moveAt = window.FindIndex(e => e is MonsterPerformedMoveEntry m && ReferenceEquals(m.Monster, creature.Monster));
+            var hpAtTurnEnd = Math.Max(0, start.Hp - eot.Sum(damage => damage.Result.UnblockedDamage));
+            var through = eot.Count(damage => damage.Result.UnblockedDamage > 0);
+            var killAt = window.FindIndex(entry => entry is DamageReceivedEntry damage && damage.Result.Receiver == creature && damage.Result.WasTargetKilled);
+            var moveAt = window.FindIndex(entry => entry is MonsterPerformedMoveEntry monsterPerformedMoveEntry && ReferenceEquals(monsterPerformedMoveEntry.Monster, creature.Monster));
             // Killed during its own attack (your Thorns hits back before each hit lands, ThornsPower.BeforeDamageReceived;
             // the move is logged once it ends): its hit still lands, so it acted.
             var hitAfterKill = killAt >= 0 && window.Skip(killAt + 1).Take(moveAt > killAt ? moveAt - killAt - 1 : int.MaxValue)
-                .Any(e => e is DamageReceivedEntry d && d.Dealer == creature);
+                .Any(entry => entry is DamageReceivedEntry damage && damage.Dealer == creature);
             var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt) && !hitAfterKill;
-            var firstHit = window.OfType<DamageReceivedEntry>().FirstOrDefault(d => d.Result.Receiver == me.Creature && d.Dealer == creature);
+            var firstHit = window.OfType<DamageReceivedEntry>().FirstOrDefault(damage => damage.Result.Receiver == me.Creature && damage.Dealer == creature);
             string Range(int a, int b) => a == b ? $"{a}" : $"{a}-{b}";
-            parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(o.HpAtTurnEndMin(id), o.HpAtTurnEndMax(id))}), through {through} (pred {Range(o.UnblockedAtTurnEndMin(id), o.UnblockedAtTurnEndMax(id))}), " +
-                      $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(o.DeadInAll(id) ? "always" : o.DeadInAny(id) ? "sometimes" : "never")})");
+            parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(outcome.HpAtTurnEndMin(id), outcome.HpAtTurnEndMax(id))}), through {through} (pred {Range(outcome.UnblockedAtTurnEndMin(id), outcome.UnblockedAtTurnEndMax(id))}), " +
+                      $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(outcome.DeadInAll(id) ? "always" : outcome.DeadInAny(id) ? "sometimes" : "never")})");
 
             actuals[id] = (hpAtTurnEnd, through, diedBeforeActing);
-            if (o.DeadInAll(id) && !diedBeforeActing)
+            if (outcome.DeadInAll(id) && !diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted dead before acting, but it lived to act (or outlived you)", monster));
-            if (!o.DeadInAny(id) && diedBeforeActing)
+            if (!outcome.DeadInAny(id) && diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted alive, but it died before acting", monster));
 
-            int lo = o.HpAtTurnEndMin(id), hi = o.HpAtTurnEndMax(id);
+            int lo = outcome.HpAtTurnEndMin(id), hi = outcome.HpAtTurnEndMax(id);
             if (hpAtTurnEnd < lo || hpAtTurnEnd > hi)
                 result.Add(($"enemy HP at turn end: {name} predicted {(lo == hi ? $"{lo}" : $"{lo}-{hi}")}, actual {hpAtTurnEnd}", monster));
             // Your end of turn's hits on it, against the simulator's count when your end of turn is over (its turn's hits on it, Necro
             // Mastery's when it hits Osty, come later in both).
-            int ulo = o.UnblockedAtTurnEndMin(id), uhi = o.UnblockedAtTurnEndMax(id);
+            int ulo = outcome.UnblockedAtTurnEndMin(id), uhi = outcome.UnblockedAtTurnEndMax(id);
             if (through < ulo || through > uhi)
                 result.Add(($"hits through block: {name} predicted {(ulo == uhi ? $"{ulo}" : $"{ulo}-{uhi}")}, actual {through}", monster));
 
             if (start.Imbalanced && firstHit != null)
             {
                 var blocked = firstHit.Result.WasFullyBlocked;
-                if (o.FirstHitBlockedInAll(id) && !blocked)
+                if (outcome.FirstHitBlockedInAll(id) && !blocked)
                     result.Add(($"Imbalanced: {name}'s first hit predicted fully blocked, but it wasn't", monster));
-                if (!o.FirstHitBlockedInAny(id) && blocked)
+                if (!outcome.FirstHitBlockedInAny(id) && blocked)
                     result.Add(($"Imbalanced: {name}'s first hit predicted not fully blocked, but it was", monster));
             }
         }
@@ -555,28 +555,28 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     }
 
     /// <summary>Per enemy: the simulator's start state and predicted outcomes, for reports.</summary>
-    private static string Prediction(TurnEndModel f)
+    private static string Prediction(TurnEndModel forecast)
     {
-        var o = f.Outcome;
+        var outcome = forecast.Outcome;
         var lines = new List<string>();
-        foreach (var (_, id) in f.Ids)
+        foreach (var (_, id) in forecast.Ids)
         {
-            var e = f.State.Enemy(id);
-            if (e == null) continue;
-            lines.Add($"{e.Name}: HP {e.Hp}, block {e.Block}, poison {e.Poison}, hits [{string.Join(", ", e.Hits)}]{(e.HitCap != int.MaxValue ? $", cap {e.HitCap}" : "")}" +
-                      $" → HP at turn end {o.HpAtTurnEndMin(id)}-{o.HpAtTurnEndMax(id)}, hits through block {o.UnblockedAtTurnEndMin(id)}-{o.UnblockedAtTurnEndMax(id)}, " +
-                      $"dead before acting {(o.DeadInAll(id) ? "always" : o.DeadInAny(id) ? "sometimes" : "never")}" +
-                      $"{(e.Imbalanced ? $", first hit fully blocked {(o.FirstHitBlockedInAll(id) ? "always" : o.FirstHitBlockedInAny(id) ? "sometimes" : "never")}" : "")}");
+            var enemy = forecast.State.Enemy(id);
+            if (enemy == null) continue;
+            lines.Add($"{enemy.Name}: HP {enemy.Hp}, block {enemy.Block}, poison {enemy.Poison}, hits [{string.Join(", ", enemy.Hits)}]{(enemy.HitCap != int.MaxValue ? $", cap {enemy.HitCap}" : "")}" +
+                      $" → HP at turn end {outcome.HpAtTurnEndMin(id)}-{outcome.HpAtTurnEndMax(id)}, hits through block {outcome.UnblockedAtTurnEndMin(id)}-{outcome.UnblockedAtTurnEndMax(id)}, " +
+                      $"dead before acting {(outcome.DeadInAll(id) ? "always" : outcome.DeadInAny(id) ? "sometimes" : "never")}" +
+                      $"{(enemy.Imbalanced ? $", first hit fully blocked {(outcome.FirstHitBlockedInAll(id) ? "always" : outcome.FirstHitBlockedInAny(id) ? "sometimes" : "never")}" : "")}");
         }
-        var p = f.State.You;
-        lines.Add($"you: block {p.Block}, orbs [{string.Join(", ", p.Orbs.Select(x => $"{x.Kind} {x.Passive}/{x.Evoke}"))}] (slots {p.OrbCapacity}), Juggernaut {p.Juggernaut}, Plating {p.Plating}, " +
-                  $"hand {p.HandCount}, Ethereal exhausting {p.Fading}");
+        var player = forecast.State.You;
+        lines.Add($"you: block {player.Block}, orbs [{string.Join(", ", player.Orbs.Select(orb => $"{orb.Kind} {orb.Passive}/{orb.Evoke}"))}] (slots {player.OrbCapacity}), Juggernaut {player.Juggernaut}, Plating {player.Plating}, " +
+                  $"hand {player.HandCount}, Ethereal exhausting {player.Fading}");
         return string.Join("\n", lines);
     }
 
     private static string List(IEnumerable<Source> sources)
     {
-        var s = string.Join(", ", sources.Select(x => $"{x.Name} {x.Amount}"));
+        var s = string.Join(", ", sources.Select(source => $"{source.Name} {source.Amount}"));
         return s.Length == 0 ? "none" : s;
     }
 }

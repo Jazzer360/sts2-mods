@@ -9,15 +9,15 @@ namespace SpireQoL.Sim.Tests;
 /// </summary>
 public class SimOrbSlotTests
 {
-    private static SimOrb Orb(OrbKind k, int passive, int evoke) => new() { Kind = k, Passive = passive, Evoke = evoke };
+    private static SimOrb Orb(OrbKind orbKind, int passive, int evoke) => new() { Kind = orbKind, Passive = passive, Evoke = evoke };
 
     private static SimState TwoSlots()
     {
-        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 79, Hits = { 24 } } } };
-        s.You.OrbCapacity = 2;
-        s.You.Orbs.Add(Orb(OrbKind.Glass, 3, 6));
-        s.You.Orbs.Add(Orb(OrbKind.Lightning, 3, 8));
-        return s;
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 79, Hits = { 24 } } } };
+        state.You.OrbCapacity = 2;
+        state.You.Orbs.Add(Orb(OrbKind.Glass, 3, 6));
+        state.You.Orbs.Add(Orb(OrbKind.Lightning, 3, 8));
+        return state;
     }
 
     [Fact]
@@ -26,10 +26,10 @@ public class SimOrbSlotTests
         // Auto-report: Bulk Up with [Glass, Lightning] in 2 slots left [Glass]; the enemy took nothing.
         var play = new SimPlay { Name = "BulkUp" };
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = -1 });
-        SimEngine.ApplyPlayTo(TwoSlots(), play, out var b, out _);
-        Assert.Equal(1, b[0].You.OrbCapacity);
-        Assert.Equal(new[] { OrbKind.Glass }, b[0].You.Orbs.Select(o => o.Kind));
-        Assert.Equal(79, b[0].Enemy(1)!.Hp);
+        SimEngine.ApplyPlayTo(TwoSlots(), play, out var states, out _);
+        Assert.Equal(1, states[0].You.OrbCapacity);
+        Assert.Equal(new[] { OrbKind.Glass }, states[0].You.Orbs.Select(orb => orb.Kind));
+        Assert.Equal(79, states[0].Enemy(1)!.Hp);
     }
 
     [Fact]
@@ -39,10 +39,10 @@ public class SimOrbSlotTests
         var play = new SimPlay { Name = "BulkUp" };
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = -3 });
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Orb(OrbKind.Frost, 2, 5) });
-        SimEngine.ApplyPlayTo(TwoSlots(), play, out var b, out _);
-        Assert.Equal(0, b[0].You.OrbCapacity);
-        Assert.Empty(b[0].You.Orbs);
-        Assert.Equal(79, b[0].Enemy(1)!.Hp);
+        SimEngine.ApplyPlayTo(TwoSlots(), play, out var states, out _);
+        Assert.Equal(0, states[0].You.OrbCapacity);
+        Assert.Empty(states[0].You.Orbs);
+        Assert.Equal(79, states[0].Enemy(1)!.Hp);
     }
 
     [Fact]
@@ -52,18 +52,18 @@ public class SimOrbSlotTests
         var play = new SimPlay { Name = "Capacitor" };
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = 2 });
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Orb(OrbKind.Frost, 2, 5) });
-        SimEngine.ApplyPlayTo(TwoSlots(), play, out var b, out _);
-        Assert.Equal(4, b[0].You.OrbCapacity);
-        Assert.Equal(3, b[0].You.Orbs.Count);
-        Assert.Equal(79, b[0].Enemy(1)!.Hp);
+        SimEngine.ApplyPlayTo(TwoSlots(), play, out var states, out _);
+        Assert.Equal(4, states[0].You.OrbCapacity);
+        Assert.Equal(3, states[0].You.Orbs.Count);
+        Assert.Equal(79, states[0].Enemy(1)!.Hp);
 
         // OrbCmd.AddSlots stops at 10 slots.
-        var s = TwoSlots();
-        s.You.OrbCapacity = 9;
+        var state = TwoSlots();
+        state.You.OrbCapacity = 9;
         var big = new SimPlay { Name = "Capacitor" };
         big.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Slots, Slots = 2 });
-        SimEngine.ApplyPlayTo(s, big, out b, out _);
-        Assert.Equal(10, b[0].You.OrbCapacity);
+        SimEngine.ApplyPlayTo(state, big, out states, out _);
+        Assert.Equal(10, states[0].You.OrbCapacity);
     }
 
     [Fact]
@@ -71,17 +71,17 @@ public class SimOrbSlotTests
     {
         // OrbCmd.Channel: a character with no base orb slots (BaseOrbSlotCount 0) and no capacity gains
         // a slot first, so the orb is channeled; a Defect whose slots are all gone doesn't.
-        var s = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 20, Hits = { 5 } } } };
-        s.You.SlotOnFirstChannel = true;
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 20, Hits = { 5 } } } };
+        state.You.SlotOnFirstChannel = true;
         var play = new SimPlay { Name = "Zap" };
         play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = Orb(OrbKind.Lightning, 3, 8) });
-        SimEngine.ApplyPlayTo(s, play, out var b, out _);
-        Assert.Equal(1, b[0].You.OrbCapacity);
-        Assert.Single(b[0].You.Orbs);
+        SimEngine.ApplyPlayTo(state, play, out var states, out _);
+        Assert.Equal(1, states[0].You.OrbCapacity);
+        Assert.Single(states[0].You.Orbs);
 
-        s.You.SlotOnFirstChannel = false;
-        SimEngine.ApplyPlayTo(s, play, out b, out _);
-        Assert.Equal(0, b[0].You.OrbCapacity);
-        Assert.Empty(b[0].You.Orbs);
+        state.You.SlotOnFirstChannel = false;
+        SimEngine.ApplyPlayTo(state, play, out states, out _);
+        Assert.Equal(0, states[0].You.OrbCapacity);
+        Assert.Empty(states[0].You.Orbs);
     }
 }

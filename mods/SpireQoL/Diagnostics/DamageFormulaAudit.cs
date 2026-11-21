@@ -17,10 +17,10 @@ internal static class DamageFormulaAudit
     private static readonly HashSet<string> Reported = new();
 
     /// <param name="outcomes">The card's simulations, in the order of its targets (PlayFacts.Sim.PlayByTarget).</param>
-    public static void Check(CardModel card, PlayFacts f, IReadOnlyDictionary<Creature, int> ids, SimOutcome[] outcomes)
+    public static void Check(CardModel card, PlayFacts facts, IReadOnlyDictionary<Creature, int> ids, SimOutcome[] outcomes)
     {
-        if (f.Sim == null || f.AttackHits <= 0 || f.ByOsty || f.Plays <= 0) return;
-        var targets = f.Sim.PlayByTarget.Keys.ToList();
+        if (facts.Sim == null || facts.AttackHits <= 0 || facts.ByOsty || facts.Plays <= 0) return;
+        var targets = facts.Sim.PlayByTarget.Keys.ToList();
         if (targets.Count != outcomes.Length) return;
         var mismatches = new List<string>();
         for (var i = 0; i < targets.Count; i++)
@@ -31,9 +31,9 @@ internal static class DamageFormulaAudit
             {
                 // A single-target card's simulation only hits its own target.
                 if (card.TargetType == TargetType.AnyEnemy && targets[i] != id) continue;
-                if (!hits.TryGetValue(id, out var sim) || !f.CanHit(enemy)) continue;
+                if (!hits.TryGetValue(id, out var sim) || !facts.CanHit(enemy)) continue;
                 int game;
-                try { game = f.DamagePerHit(enemy); } catch { continue; }
+                try { game = facts.DamagePerHit(enemy); } catch { continue; }
                 if (sim != game) mismatches.Add($"{SafeName(enemy)}: simulated {sim}, game {game}");
             }
         }
@@ -44,11 +44,11 @@ internal static class DamageFormulaAudit
         var details = $"{name} first hit: {string.Join(", ", mismatches)}";
         ModEntry.Log.Warn("[audit] damage formula: " + details);
         Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("damage-formula", $"Simulated hit damage differs from the game's: {name}",
-            new[] { "damage-formula", name }, details, new Dictionary<string, string> { ["sim_state"] = f.Sim.Start.ToJson() });
+            new[] { "damage-formula", name }, details, new Dictionary<string, string> { ["sim_state"] = facts.Sim.Start.ToJson() });
     }
 
-    private static string SafeName(Creature c)
+    private static string SafeName(Creature creature)
     {
-        try { return c.Monster != null ? Combat.TurnEndModel.SafeTitle(c.Monster) : "?"; } catch { return "?"; }
+        try { return creature.Monster != null ? Combat.TurnEndModel.SafeTitle(creature.Monster) : "?"; } catch { return "?"; }
     }
 }

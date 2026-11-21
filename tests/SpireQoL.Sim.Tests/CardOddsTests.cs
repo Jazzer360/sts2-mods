@@ -44,7 +44,7 @@ public class CardOddsTests
         int hits = 0, runs = 200_000;
         for (var run = 0; run < runs; run++)
         {
-            var left = groups.Select(g => Enumerable.Range(0, g.Total).Select(i => i < g.Matching).ToList()).ToArray();
+            var left = groups.Select(rarityGroup => Enumerable.Range(0, rarityGroup.Total).Select(i => i < rarityGroup.Matching).ToList()).ToArray();
             var any = false;
             for (var slot = 0; slot < 4; slot++)
             {

@@ -53,8 +53,8 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        var m = Sts2State.IsPlayerTurn ? TurnEndModel.Shown() : null;
-        if (m == null || (!m.Unknown && m.BlockableTotal == 0 && m.UnblockableTotal == 0))
+        var forecast = Sts2State.IsPlayerTurn ? TurnEndModel.Shown() : null;
+        if (forecast == null || (!forecast.Unknown && forecast.BlockableTotal == 0 && forecast.UnblockableTotal == 0))
         {
             _widget!.HasContent = false;
             return;
@@ -62,7 +62,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 
         _widget!.HasContent = true;
         // The search stopped at its memory cap (decision #107): ? in place of the damage, and no promise either way.
-        if (m.Unknown)
+        if (forecast.Unknown)
         {
             _panel!.ShowUnknown();
             return;
@@ -70,22 +70,22 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         // A lethal enemy turn: the skull. One something keeps you alive through (Fairy in a Bottle first, then
         // Lizard Tail, the order the game asks them): its icon and your HP after.
         (Godot.Texture2D? Icon, int HpAfter)? revive = null;
-        if (m.FairiesUsed > 0 || m.LizardTailUsed)
+        if (forecast.FairiesUsed > 0 || forecast.LizardTailUsed)
         {
             var me = Sts2State.Me;
-            var icon = m.FairiesUsed > 0
-                ? me?.Potions.FirstOrDefault(x => x.GetType().Name == "FairyInABottle") is { } fairy ? Cards.GameIcons.Potion(fairy) : null
-                : me?.Relics.FirstOrDefault(x => x is LizardTail) is { } tail ? Cards.GameIcons.Relic(tail) : null;
-            revive = (icon, m.HpAfter);
+            var icon = forecast.FairiesUsed > 0
+                ? me?.Potions.FirstOrDefault(potion => potion.GetType().Name == "FairyInABottle") is { } fairy ? Cards.GameIcons.Potion(fairy) : null
+                : me?.Relics.FirstOrDefault(relic => relic is LizardTail) is { } tail ? Cards.GameIcons.Relic(tail) : null;
+            revive = (icon, forecast.HpAfter);
         }
         // The skull whenever an outcome might kill you (decision #87), with the chance unless it's certain or chances are off.
-        var death = m.DeathChance;
-        var dies = death.Possible || m.Dies;
+        var death = forecast.DeathChance;
+        var dies = death.Possible || forecast.Dies;
         var chance = dies && !death.Certain && _ctx.Settings.ShowDeathChance ? death.Text() : null;
         // The skull and the chance come from the whole outcome (both lines): the split is only how it's shown.
-        int? unblockable = m.UnblockableTotal > 0 ? m.UnblockableTaken : null;
-        _panel!.Show(m.BlockableTotal, m.ExpectedBlock,
-            m.OstyHp > 0 ? (m.OstyTaken, m.OstyDies) : null, m.Taken - (unblockable ?? 0), dies, revive, ExtraTurnIcon(), chance, m.ShownMark, unblockable);
+        int? unblockable = forecast.UnblockableTotal > 0 ? forecast.UnblockableTaken : null;
+        _panel!.Show(forecast.BlockableTotal, forecast.ExpectedBlock,
+            forecast.OstyHp > 0 ? (forecast.OstyTaken, forecast.OstyDies) : null, forecast.Taken - (unblockable ?? 0), dies, revive, ExtraTurnIcon(), chance, forecast.ShownMark, unblockable);
     }
 
     /// <summary>
@@ -97,12 +97,12 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     {
         try
         {
-            if (Sts2State.Me is not { } me || Sts2State.Combat is not { } cs) return null;
-            if (!MegaCrit.Sts2.Core.Hooks.Hook.ShouldTakeExtraTurn(cs, me, out var source) || source == null) return null;
+            if (Sts2State.Me is not { } me || Sts2State.Combat is not { } combat) return null;
+            if (!MegaCrit.Sts2.Core.Hooks.Hook.ShouldTakeExtraTurn(combat, me, out var source) || source == null) return null;
             return source switch
             {
-                MegaCrit.Sts2.Core.Models.RelicModel r => Cards.GameIcons.Relic(r),
-                MegaCrit.Sts2.Core.Models.PowerModel p => Cards.GameIcons.Power(p),
+                MegaCrit.Sts2.Core.Models.RelicModel relic => Cards.GameIcons.Relic(relic),
+                MegaCrit.Sts2.Core.Models.PowerModel power => Cards.GameIcons.Power(power),
                 _ => null,
             };
         }

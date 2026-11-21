@@ -29,19 +29,19 @@ internal static class BoardProbe
     /// worked out from (each keeps its own), never "the same as last frame": the board can change on frames where that result
     /// isn't asked for (the enemy turn discarding your hand, its powers ticking down) and settle before it is asked again.
     /// </summary>
-    public static int Hash(Player me, ICombatState cs)
+    public static int Hash(Player me, ICombatState combat)
     {
         // A game callback (the audit's prediction as a play begins, inside the game's hook; decision #131): the board can change between it and
         // the frame run in the same frame, so it reads the board now, and the frame run reads it again.
         if (!Sts2Mods.Core.Ui.OverlayHost.InFrameRun)
         {
             _frame = ulong.MaxValue;
-            return Compute(me, cs);
+            return Compute(me, combat);
         }
         var frame = Godot.Engine.GetProcessFrames();
         if (frame == _frame) return _hash;
         _frame = frame;
-        _hash = Compute(me, cs);
+        _hash = Compute(me, combat);
         return _hash;
     }
 
@@ -62,28 +62,28 @@ internal static class BoardProbe
     {
         try
         {
-            var a = System.Text.Json.Nodes.JsonNode.Parse(before.ToJson());
-            var b = System.Text.Json.Nodes.JsonNode.Parse(after.ToJson());
+            var json = System.Text.Json.Nodes.JsonNode.Parse(before.ToJson());
+            var otherJson = System.Text.Json.Nodes.JsonNode.Parse(after.ToJson());
             var diffs = new List<string>();
-            void Walk(System.Text.Json.Nodes.JsonNode? x, System.Text.Json.Nodes.JsonNode? y, string path)
+            void Walk(System.Text.Json.Nodes.JsonNode? nextJson, System.Text.Json.Nodes.JsonNode? y, string path)
             {
                 if (diffs.Count >= 6) return;
-                if (x is System.Text.Json.Nodes.JsonObject ox && y is System.Text.Json.Nodes.JsonObject oy)
+                if (nextJson is System.Text.Json.Nodes.JsonObject jsonObject && y is System.Text.Json.Nodes.JsonObject otherJsonObject)
                 {
-                    foreach (var k in ox.Select(kv => kv.Key).Union(oy.Select(kv => kv.Key))) Walk(ox[k], oy[k], path == "" ? k : path + "." + k);
+                    foreach (var k in jsonObject.Select(kv => kv.Key).Union(otherJsonObject.Select(kv => kv.Key))) Walk(jsonObject[k], otherJsonObject[k], path == "" ? k : path + "." + k);
                     return;
                 }
-                if (x is System.Text.Json.Nodes.JsonArray ax && y is System.Text.Json.Nodes.JsonArray ay && ax.Count == ay.Count)
+                if (nextJson is System.Text.Json.Nodes.JsonArray jsonArray && y is System.Text.Json.Nodes.JsonArray otherJsonArray && jsonArray.Count == otherJsonArray.Count)
                 {
-                    for (var i = 0; i < ax.Count; i++) Walk(ax[i], ay[i], $"{path}[{i}]");
+                    for (var i = 0; i < jsonArray.Count; i++) Walk(jsonArray[i], otherJsonArray[i], $"{path}[{i}]");
                     return;
                 }
-                var sx = x?.ToJsonString() ?? "null";
+                var sx = nextJson?.ToJsonString() ?? "null";
                 var sy = y?.ToJsonString() ?? "null";
                 if (sx != sy) diffs.Add($"{path}: {Short(sx)} → {Short(sy)}");
             }
             static string Short(string v) => v.Length > 60 ? v[..57] + "..." : v;
-            Walk(a, b, "");
+            Walk(json, otherJson, "");
             return diffs.Count == 0 ? "no difference in its JSON" : string.Join("; ", diffs);
         }
         catch (Exception ex)
@@ -97,72 +97,72 @@ internal static class BoardProbe
     private static readonly AccessTools.FieldRef<CardModel, HashSet<CardKeyword>> RemovedKeywords = AccessTools.FieldRefAccess<CardModel, HashSet<CardKeyword>>("_keywordsRemovedFromOutside");
     private static readonly AccessTools.FieldRef<CardEnergyCost, int> BaseCost = AccessTools.FieldRefAccess<CardEnergyCost, int>("_base");
     /// <summary>The Fool's arrows you can shoot (PlayerCombatState.AvailableArrowCount; none before v0.113.0, the main branch).</summary>
-    private static readonly Func<PlayerCombatState, int>? Arrows = AccessTools.PropertyGetter(typeof(PlayerCombatState), "AvailableArrowCount") is { } g
-        ? AccessTools.MethodDelegate<Func<PlayerCombatState, int>>(g)
+    private static readonly Func<PlayerCombatState, int>? Arrows = AccessTools.PropertyGetter(typeof(PlayerCombatState), "AvailableArrowCount") is { } method
+        ? AccessTools.MethodDelegate<Func<PlayerCombatState, int>>(method)
         : null;
 
-    internal static int Compute(Player me, ICombatState cs)
+    internal static int Compute(Player me, ICombatState combat)
     {
-        var h = new HashCode();
+        var hashCode = new HashCode();
         try
         {
-            h.Add(cs.CurrentSide);
-            h.Add(Sts2State.TurnNumber);
-            h.Add(QolSettings.Revision);
-            h.Add(CombatManager.Instance?.History.Entries is ICollection<MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry> log ? log.Count : -1);
-            var creatures = cs.Creatures;
+            hashCode.Add(combat.CurrentSide);
+            hashCode.Add(Sts2State.TurnNumber);
+            hashCode.Add(QolSettings.Revision);
+            hashCode.Add(CombatManager.Instance?.History.Entries is ICollection<MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry> log ? log.Count : -1);
+            var creatures = combat.Creatures;
             for (var i = 0; i < creatures.Count; i++)
             {
-                var c = creatures[i];
-                h.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(c));
-                h.Add(c.CurrentHp);
-                h.Add(c.MaxHp);
-                h.Add(c.Block);
-                h.Add(c.IsAlive);
-                var powers = c.Powers;
-                for (var j = 0; j < powers.Count; j++) { h.Add(powers[j].GetType()); h.Add(powers[j].Amount); }
-                if (c.Monster is { } m) h.Add(m.NextMove?.Id);
-                if (c.Player is { } p) AddPlayer(ref h, p);
+                var creature = creatures[i];
+                hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(creature));
+                hashCode.Add(creature.CurrentHp);
+                hashCode.Add(creature.MaxHp);
+                hashCode.Add(creature.Block);
+                hashCode.Add(creature.IsAlive);
+                var powers = creature.Powers;
+                for (var j = 0; j < powers.Count; j++) { hashCode.Add(powers[j].GetType()); hashCode.Add(powers[j].Amount); }
+                if (creature.Monster is { } monster) hashCode.Add(monster.NextMove?.Id);
+                if (creature.Player is { } player) AddPlayer(ref hashCode, player);
             }
         }
         catch
         {
-            h.Add(Godot.Engine.GetProcessFrames()); // couldn't read it all: never the same as last frame
+            hashCode.Add(Godot.Engine.GetProcessFrames()); // couldn't read it all: never the same as last frame
         }
-        return h.ToHashCode();
+        return hashCode.ToHashCode();
     }
 
-    private static void AddPlayer(ref HashCode h, Player p)
+    private static void AddPlayer(ref HashCode hashCode, Player player)
     {
-        if (p.PlayerCombatState is not { } pcs) return;
-        h.Add(pcs.Energy);
-        h.Add(pcs.Stars);
-        if (Arrows != null) h.Add(Arrows(pcs));
-        h.Add(PileType.Draw.GetPile(p).Cards.Count);
-        h.Add(PileType.Discard.GetPile(p).Cards.Count);
-        h.Add(PileType.Exhaust.GetPile(p).Cards.Count);
-        var hand = PileType.Hand.GetPile(p).Cards;
-        h.Add(hand.Count);
+        if (player.PlayerCombatState is not { } pcs) return;
+        hashCode.Add(pcs.Energy);
+        hashCode.Add(pcs.Stars);
+        if (Arrows != null) hashCode.Add(Arrows(pcs));
+        hashCode.Add(PileType.Draw.GetPile(player).Cards.Count);
+        hashCode.Add(PileType.Discard.GetPile(player).Cards.Count);
+        hashCode.Add(PileType.Exhaust.GetPile(player).Cards.Count);
+        var hand = PileType.Hand.GetPile(player).Cards;
+        hashCode.Add(hand.Count);
         for (var i = 0; i < hand.Count; i++)
         {
             var card = hand[i];
-            h.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(card));
-            h.Add(card.CurrentUpgradeLevel);
-            h.Add(card.Enchantment);
-            h.Add(card.Enchantment?.Amount);
-            h.Add(card.Affliction);
-            h.Add(OwnKeywords(card)?.Count);
-            h.Add(AddedKeywords(card).Count);
-            h.Add(RemovedKeywords(card).Count);
-            h.Add(BaseCost(card.EnergyCost));
-            h.Add(card.EnergyCost.HasLocalModifiers);
+            hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(card));
+            hashCode.Add(card.CurrentUpgradeLevel);
+            hashCode.Add(card.Enchantment);
+            hashCode.Add(card.Enchantment?.Amount);
+            hashCode.Add(card.Affliction);
+            hashCode.Add(OwnKeywords(card)?.Count);
+            hashCode.Add(AddedKeywords(card).Count);
+            hashCode.Add(RemovedKeywords(card).Count);
+            hashCode.Add(BaseCost(card.EnergyCost));
+            hashCode.Add(card.EnergyCost.HasLocalModifiers);
         }
-        var relics = p.Relics;
-        for (var i = 0; i < relics.Count; i++) { h.Add(relics[i].DisplayAmount); h.Add(relics[i].Status); }
+        var relics = player.Relics;
+        for (var i = 0; i < relics.Count; i++) { hashCode.Add(relics[i].DisplayAmount); hashCode.Add(relics[i].Status); }
         var orbs = pcs.OrbQueue.Orbs;
-        h.Add(pcs.OrbQueue.Capacity);
-        for (var i = 0; i < orbs.Count; i++) h.Add(orbs[i].GetType());
-        var potions = p.PotionSlots;
-        for (var i = 0; i < potions.Count; i++) h.Add(potions[i]);
+        hashCode.Add(pcs.OrbQueue.Capacity);
+        for (var i = 0; i < orbs.Count; i++) hashCode.Add(orbs[i].GetType());
+        var potions = player.PotionSlots;
+        for (var i = 0; i < potions.Count; i++) hashCode.Add(potions[i]);
     }
 }

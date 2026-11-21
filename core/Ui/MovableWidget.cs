@@ -72,19 +72,19 @@ public sealed class MovableWidget
         for (var i = 0; i < 9; i++)
         {
             var anchor = anchors[i];
-            var b = new Button
+            var button = new Button
             {
                 CustomMinimumSize = new Vector2(12, 12),
                 FocusMode = Control.FocusModeEnum.None,
                 MouseFilter = Control.MouseFilterEnum.Stop,
                 TooltipText = $"Pin {anchor}",
             };
-            b.AddThemeStyleboxOverride("normal", UiKit.PanelStyle(Colors.White, 2, 0));
-            b.AddThemeStyleboxOverride("hover", UiKit.PanelStyle(Colors.White, 2, 0));
-            b.AddThemeStyleboxOverride("pressed", UiKit.PanelStyle(Colors.White, 2, 0));
-            b.Pressed += () => SetPin(anchor);
-            _pinButtons[i] = b;
-            pinGrid.AddChild(b);
+            button.AddThemeStyleboxOverride("normal", UiKit.PanelStyle(Colors.White, 2, 0));
+            button.AddThemeStyleboxOverride("hover", UiKit.PanelStyle(Colors.White, 2, 0));
+            button.AddThemeStyleboxOverride("pressed", UiKit.PanelStyle(Colors.White, 2, 0));
+            button.Pressed += () => SetPin(anchor);
+            _pinButtons[i] = button;
+            pinGrid.AddChild(button);
         }
         _header.AddChild(pinGrid);
 
@@ -164,7 +164,7 @@ public sealed class MovableWidget
     /// <summary>Reference point and pin for the current mode. Null reference = not placeable right now.</summary>
     private (Vector2 Ref, ScreenAnchor Pin)? Placement(Vector2 size, bool forStoring = false)
     {
-        var vp = _host.ViewportSize;
+        var position = _host.ViewportSize;
         if (Attached)
         {
             var offset = new Vector2(_layout.OffsetX, _layout.OffsetY);
@@ -179,14 +179,14 @@ public sealed class MovableWidget
                 var (reference, natural) = AttachReference(rect, side);
                 var pin = _layout.CustomPin ? _layout.Anchor : natural;
                 var pos = TopLeft(reference + offset, pin, size);
-                if (pos.X >= 0 && pos.Y >= 0 && pos.X + size.X <= vp.X && pos.Y + size.Y <= vp.Y) return (reference, pin);
+                if (pos.X >= 0 && pos.Y >= 0 && pos.X + size.X <= position.X && pos.Y + size.Y <= position.Y) return (reference, pin);
                 fallback ??= (reference, pin);
             }
             if (fallback != null) return fallback;
             // Element not on screen: fall through to screen mode with the same pin.
         }
         var (fx, fy) = WidgetLayout.Fraction(_layout.Anchor);
-        return (new Vector2(vp.X * fx, vp.Y * fy), _layout.Anchor);
+        return (new Vector2(position.X * fx, position.Y * fy), _layout.Anchor);
     }
 
     /// <summary>Reference point beside the target, and the pin that suits it.</summary>
@@ -246,11 +246,11 @@ public sealed class MovableWidget
         _headerLabel.Text = _title;
     }
 
-    private static Vector2 Clamp(Vector2 pos, Vector2 size, Vector2 vp)
+    private static Vector2 Clamp(Vector2 pos, Vector2 size, Vector2 position)
     {
         return new Vector2(
-            Mathf.Clamp(pos.X, 0, Mathf.Max(0, vp.X - size.X)),
-            Mathf.Clamp(pos.Y, 0, Mathf.Max(0, vp.Y - size.Y)));
+            Mathf.Clamp(pos.X, 0, Mathf.Max(0, position.X - size.X)),
+            Mathf.Clamp(pos.Y, 0, Mathf.Max(0, position.Y - size.Y)));
     }
 
     /// <summary>Recompute the stored offset so the widget stays exactly where it is now.</summary>
@@ -283,18 +283,18 @@ public sealed class MovableWidget
         _host.Toast(_layout.FollowGame ? $"{_title}: follows your character" : $"{_title}: fixed on screen", 2.5f);
     }
 
-    private void OnGuiInput(InputEvent ev)
+    private void OnGuiInput(InputEvent inputEvent)
     {
         if (!_host.LayoutUnlocked) return;
 
-        if (ev is InputEventMouseButton mb)
+        if (inputEvent is InputEventMouseButton inputEventMouseButton)
         {
-            if (mb.ButtonIndex == MouseButton.Left)
+            if (inputEventMouseButton.ButtonIndex == MouseButton.Left)
             {
-                if (mb.Pressed)
+                if (inputEventMouseButton.Pressed)
                 {
                     _dragging = true;
-                    _dragGrab = mb.GlobalPosition - Root.Position;
+                    _dragGrab = inputEventMouseButton.GlobalPosition - Root.Position;
                 }
                 else if (_dragging)
                 {
@@ -303,30 +303,30 @@ public sealed class MovableWidget
                 }
                 Root.AcceptEvent();
             }
-            else if (mb.Pressed && mb.ButtonIndex == MouseButton.Right)
+            else if (inputEventMouseButton.Pressed && inputEventMouseButton.ButtonIndex == MouseButton.Right)
             {
                 CopyFrom(_default);
                 _host.RaiseLayoutChanged();
                 _host.Toast($"{_title}: reset to default", 2f);
                 Root.AcceptEvent();
             }
-            else if (mb.Pressed && mb.ButtonIndex == MouseButton.Middle)
+            else if (inputEventMouseButton.Pressed && inputEventMouseButton.ButtonIndex == MouseButton.Middle)
             {
                 ToggleAttach();
                 Root.AcceptEvent();
             }
-            else if (mb.Pressed && (mb.ButtonIndex == MouseButton.WheelUp || mb.ButtonIndex == MouseButton.WheelDown))
+            else if (inputEventMouseButton.Pressed && (inputEventMouseButton.ButtonIndex == MouseButton.WheelUp || inputEventMouseButton.ButtonIndex == MouseButton.WheelDown))
             {
-                var step = mb.ButtonIndex == MouseButton.WheelUp ? 0.1f : -0.1f;
+                var step = inputEventMouseButton.ButtonIndex == MouseButton.WheelUp ? 0.1f : -0.1f;
                 _layout.Scale = Mathf.Clamp(_layout.Scale + step, 0.4f, 3f);
                 _host.RaiseLayoutChanged();
                 Root.AcceptEvent();
             }
         }
-        else if (ev is InputEventMouseMotion mm && _dragging)
+        else if (inputEvent is InputEventMouseMotion inputEventMouseMotion && _dragging)
         {
             var size = Root.Size * Root.Scale;
-            Root.Position = Clamp(mm.GlobalPosition - _dragGrab, size, _host.ViewportSize);
+            Root.Position = Clamp(inputEventMouseMotion.GlobalPosition - _dragGrab, size, _host.ViewportSize);
             Root.AcceptEvent();
         }
     }

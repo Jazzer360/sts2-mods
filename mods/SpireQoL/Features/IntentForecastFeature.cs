@@ -84,7 +84,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         _enemy = enemy;
         var (turns, view) = forecast.Value;
         // Chances off (decision #122): the certain turns only.
-        if (!_ctx.Settings.ShowIntentOdds) turns = turns.TakeWhile(t => t.Certain).ToList();
+        if (!_ctx.Settings.ShowIntentOdds) turns = turns.TakeWhile(forecastTurn => forecastTurn.Certain).ToList();
         if (turns.Count == 0)
         {
             _enemy = null;
@@ -92,7 +92,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             _widget!.HasContent = false;
             return;
         }
-        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(t => string.Join(",", t.Moves.Select(m => $"{m.Move}:{m.Chance:0.###}"))));
+        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(forecastTurn => string.Join(",", forecastTurn.Moves.Select(m => $"{m.Move}:{m.Chance:0.###}"))));
         if (key != _key)
         {
             _key = key;
@@ -107,21 +107,21 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         foreach (var (leftSpacer, left, right, rightSpacer) in _balance)
         {
             if (!GodotObject.IsInstanceValid(leftSpacer) || !GodotObject.IsInstanceValid(rightSpacer)) continue;
-            float Side(List<Control> xs) => xs.Where(GodotObject.IsInstanceValid).Sum(x => x.CustomMinimumSize.X + RowGap);
+            float Side(List<Control> controls) => controls.Where(GodotObject.IsInstanceValid).Sum(control => control.CustomMinimumSize.X + RowGap);
             var d = Side(right) - Side(left);
             Pad(leftSpacer, d);
             Pad(rightSpacer, -d);
         }
-        foreach (var c in _bobbing)
+        foreach (var control in _bobbing)
         {
-            if (!GodotObject.IsInstanceValid(c) || c.GetParent() is not Control holder) continue;
+            if (!GodotObject.IsInstanceValid(control) || control.GetParent() is not Control holder) continue;
             // Its size, known once it's on screen (a label's font): the holder takes it, so the row lays out around it.
-            var size = c.GetCombinedMinimumSize();
+            var size = control.GetCombinedMinimumSize();
             if (holder.CustomMinimumSize != size) holder.CustomMinimumSize = size;
-            c.Size = size;
+            control.Size = size;
             // Level with the intent icon in its row as it is drawn this frame (bob included); else centred, then the bob.
-            var top = !_bobOnly.Contains(c) && IconCentre(holder) is { } centre ? centre - size.Y / 2 : (holder.Size.Y - size.Y) / 2 + y + 8f;
-            c.Position = new Vector2(0, top);
+            var top = !_bobOnly.Contains(control) && IconCentre(holder) is { } centre ? centre - size.Y / 2 : (holder.Size.Y - size.Y) / 2 + y + 8f;
+            control.Position = new Vector2(0, top);
         }
     }
 
@@ -153,11 +153,11 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         return holder;
     }
 
-    private static Label Outlined(Label l)
+    private static Label Outlined(Label label)
     {
-        l.AddThemeConstantOverride("outline_size", 6);
-        l.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
-        return l;
+        label.AddThemeConstantOverride("outline_size", 6);
+        label.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
+        return label;
     }
 
     private void Build(Creature enemy, List<ForecastTurn> turns, MoveStateMachineView view)
@@ -240,7 +240,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     /// <summary>The bob timing (NIntent._timeOffset) of the enemy's first intent on screen, or 0.</summary>
     private static float BobOffset(Creature enemy)
     {
-        var node = NCombatRoom.Instance?.CreatureNodes.FirstOrDefault(n => GodotObject.IsInstanceValid(n) && n.Entity == enemy);
+        var node = NCombatRoom.Instance?.CreatureNodes.FirstOrDefault(creatureNode => GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == enemy);
         var first = node?.IntentContainer?.GetChildren().OfType<NIntent>().FirstOrDefault();
         return first != null ? Sts2State.Private(first, "_timeOffset", 0f) : 0f;
     }
@@ -250,10 +250,10 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     {
         if (NCombatRoom.Instance is not { } room) return null;
         var mouse = room.GetViewport().GetMousePosition();
-        foreach (var n in room.CreatureNodes)
+        foreach (var creatureNode in room.CreatureNodes)
         {
-            if (!GodotObject.IsInstanceValid(n) || n.Entity is not { IsEnemy: true, IsAlive: true } e) continue;
-            if (IntentRect(e) is { } r && r.Grow(6).HasPoint(mouse)) return e;
+            if (!GodotObject.IsInstanceValid(creatureNode) || creatureNode.Entity is not { IsEnemy: true, IsAlive: true } creature) continue;
+            if (IntentRect(creature) is { } rect && rect.Grow(6).HasPoint(mouse)) return creature;
         }
         return null;
     }
@@ -265,15 +265,15 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     private static Rect2? IntentRect(Creature? enemy)
     {
         if (enemy == null || NCombatRoom.Instance is not { } room) return null;
-        var node = room.CreatureNodes.FirstOrDefault(n => GodotObject.IsInstanceValid(n) && n.Entity == enemy);
+        var node = room.CreatureNodes.FirstOrDefault(creatureNode => GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == enemy);
         var intents = node?.IntentContainer;
         if (intents == null || !GodotObject.IsInstanceValid(intents) || !intents.IsVisibleInTree()) return null;
         Rect2? rect = null;
-        foreach (var i in intents.GetChildren().OfType<NIntent>())
+        foreach (var nIntent in intents.GetChildren().OfType<NIntent>())
         {
-            if (!i.IsVisibleInTree() || i.Size.X < 1) continue;
-            var r = Sts2State.ScreenRect(i);
-            rect = rect is { } u ? u.Merge(r) : r;
+            if (!nIntent.IsVisibleInTree() || nIntent.Size.X < 1) continue;
+            var otherRect = Sts2State.ScreenRect(nIntent);
+            rect = rect is { } nextRect ? nextRect.Merge(otherRect) : otherRect;
         }
         if (rect == null && intents.Size.X >= 1) rect = Sts2State.ScreenRect(intents);
         return rect;

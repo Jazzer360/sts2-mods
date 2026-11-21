@@ -32,31 +32,31 @@ public class ReplayTests
         using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Cases", file)));
         var root = doc.RootElement;
         var state = SimState.FromJson(root.GetProperty("state").GetRawText());
-        var o = SimEngine.Run(state);
+        var outcome = SimEngine.Run(state);
         var expect = root.GetProperty("expect");
 
-        if (expect.TryGetProperty("takenMin", out var tmin)) Assert.Equal(tmin.GetInt32(), o.TakenMin);
-        if (expect.TryGetProperty("takenMax", out var tmax)) Assert.Equal(tmax.GetInt32(), o.TakenMax);
+        if (expect.TryGetProperty("takenMin", out var tmin)) Assert.Equal(tmin.GetInt32(), outcome.TakenMin);
+        if (expect.TryGetProperty("takenMax", out var tmax)) Assert.Equal(tmax.GetInt32(), outcome.TakenMax);
         if (expect.TryGetProperty("deadBeforeActing", out var dead))
-            foreach (var id in dead.EnumerateArray()) Assert.True(o.DeadInAll(id.GetInt32()), $"{file}: enemy {id} should die before acting in every branch");
+            foreach (var id in dead.EnumerateArray()) Assert.True(outcome.DeadInAll(id.GetInt32()), $"{file}: enemy {id} should die before acting in every branch");
         if (expect.TryGetProperty("aliveBeforeActing", out var alive))
-            foreach (var id in alive.EnumerateArray()) Assert.False(o.DeadInAny(id.GetInt32()), $"{file}: enemy {id} should act in every branch");
-        if (expect.TryGetProperty("hpAtTurnEnd", out var hp))
+            foreach (var id in alive.EnumerateArray()) Assert.False(outcome.DeadInAny(id.GetInt32()), $"{file}: enemy {id} should act in every branch");
+        if (expect.TryGetProperty("hpAtTurnEnd", out var jsonElement))
         {
-            foreach (var p in hp.EnumerateObject())
+            foreach (var jsonProperty in jsonElement.EnumerateObject())
             {
-                var id = int.Parse(p.Name);
-                Assert.Equal(p.Value[0].GetInt32(), o.HpAtTurnEndMin(id));
-                Assert.Equal(p.Value[1].GetInt32(), o.HpAtTurnEndMax(id));
+                var id = int.Parse(jsonProperty.Name);
+                Assert.Equal(jsonProperty.Value[0].GetInt32(), outcome.HpAtTurnEndMin(id));
+                Assert.Equal(jsonProperty.Value[1].GetInt32(), outcome.HpAtTurnEndMax(id));
             }
         }
         if (expect.TryGetProperty("throughBlock", out var through))
         {
-            foreach (var p in through.EnumerateObject())
+            foreach (var jsonProperty in through.EnumerateObject())
             {
-                var id = int.Parse(p.Name);
-                Assert.Equal(p.Value[0].GetInt32(), o.UnblockedMin(id));
-                Assert.Equal(p.Value[1].GetInt32(), o.UnblockedMax(id));
+                var id = int.Parse(jsonProperty.Name);
+                Assert.Equal(jsonProperty.Value[0].GetInt32(), outcome.UnblockedMin(id));
+                Assert.Equal(jsonProperty.Value[1].GetInt32(), outcome.UnblockedMax(id));
             }
         }
     }
@@ -65,22 +65,22 @@ public class ReplayTests
     public void ReportedStateRoundTripsThroughJson()
     {
         // What a report carries (SimState.ToJson) must load back into the same simulation.
-        var s = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "A", Hp = 12, Block = 3, Hits = new() { 5, 5 }, Imbalanced = true, HitCap = 4 } } };
-        s.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, GlassBase = 3, GlassBonus = 2, Triggers = 2 } };
-        s.You.OrbCapacity = 3;
-        s.You.Juggernaut = 2;
-        s.You.Plating = 4;
-        s.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
-        s.You.RemnantCap = 10;
-        s.You.RemnantLeftPlayerTurn = 6;
+        var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "A", Hp = 12, Block = 3, Hits = new() { 5, 5 }, Imbalanced = true, HitCap = 4 } } };
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, GlassBase = 3, GlassBonus = 2, Triggers = 2 } };
+        state.You.OrbCapacity = 3;
+        state.You.Juggernaut = 2;
+        state.You.Plating = 4;
+        state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", 2));
+        state.You.RemnantCap = 10;
+        state.You.RemnantLeftPlayerTurn = 6;
 
-        var back = SimState.FromJson(s.ToJson());
-        var a = SimEngine.Run(s);
-        var b = SimEngine.Run(back);
-        Assert.Equal(a.TakenMax, b.TakenMax);
-        Assert.Equal(a.HpAtTurnEndMax(0), b.HpAtTurnEndMax(0));
-        Assert.Equal(a.UnblockedMax(0), b.UnblockedMax(0));
-        Assert.Equal(a.FirstHitBlockedInAll(0), b.FirstHitBlockedInAll(0));
-        Assert.Equal(s.ToJson(), back.ToJson());
+        var back = SimState.FromJson(state.ToJson());
+        var outcome = SimEngine.Run(state);
+        var simOutcome = SimEngine.Run(back);
+        Assert.Equal(outcome.TakenMax, simOutcome.TakenMax);
+        Assert.Equal(outcome.HpAtTurnEndMax(0), simOutcome.HpAtTurnEndMax(0));
+        Assert.Equal(outcome.UnblockedMax(0), simOutcome.UnblockedMax(0));
+        Assert.Equal(outcome.FirstHitBlockedInAll(0), simOutcome.FirstHitBlockedInAll(0));
+        Assert.Equal(state.ToJson(), back.ToJson());
     }
 }

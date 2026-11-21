@@ -19,7 +19,7 @@ public sealed partial class RunRemindersFeature
 {
     private static void CheckCardRules(Player me, List<CardModel> added, bool givesUpgraded, ICollection<RelicModel>? shown, string where)
     {
-        var cards = added.Where(c => c.Type != CardType.Curse).ToList();
+        var cards = added.Where(card => card.Type != CardType.Curse).ToList();
         if (cards.Count == 0) return;
         foreach (var relic in me.Relics)
         {
@@ -72,25 +72,25 @@ public sealed partial class RunRemindersFeature
         var canonical = card.IsCanonical ? card : card.CanonicalInstance;
         // A modifier is judged on the card before it changed it; a boost on the card as you got it, or as a modifier would change it.
         if (rule.Kind == AffinityKind.Modifies) return CardAffinity.AppliesWith(rule, canonical, held, givesUpgraded);
-        return CardAffinity.AppliesTo(rule, card) || CardAffinity.Made(card).Any(m => CardAffinity.AppliesTo(rule, m))
+        return CardAffinity.AppliesTo(rule, card) || CardAffinity.Made(card).Any(otherCard => CardAffinity.AppliesTo(rule, otherCard))
             || CardAffinity.AppliesWith(rule, canonical, held, givesUpgraded);
     }
 
-    private static void LogOdds(Window w, List<CardModel> added)
+    private static void LogOdds(Window window, List<CardModel> added)
     {
-        if (!CardsRead.TryGetValue(w.Option, out var read)) return;
-        var held = Held(w.Me);
-        foreach (var relic in w.Shown)
+        if (!CardsRead.TryGetValue(window.Option, out var read)) return;
+        var held = Held(window.Me);
+        foreach (var relic in window.Shown)
         {
             if (CardAffinity.For(relic.GetType().Name) is not { } rule) continue;
             (double Low, double High)? chance;
-            try { chance = read.Chance(w.Me, c => CardAffinity.AppliesWith(rule, c, held, read.GivesUpgraded)); }
+            try { chance = read.Chance(window.Me, card => CardAffinity.AppliesWith(rule, card, held, read.GivesUpgraded)); }
             catch { continue; }
             if (chance is not { } p || p.Low >= 1) continue;
-            var seen = w.Offered.Concat(added).ToList();
-            var cameUp = seen.Any(c => CameUp(rule, c, held, read.GivesUpgraded));
-            ModEntry.Log.Info($"[audit] [odds] {w.Option.TextKey} {relic.GetType().Name}: predicted {p.Low:P0}"
-                + (p.High > p.Low ? $"–{p.High:P0}" : "") + $", came up: {(cameUp ? "yes" : "no")} ({w.Offered.Count} offered, {added.Count} added)");
+            var seen = window.Offered.Concat(added).ToList();
+            var cameUp = seen.Any(card => CameUp(rule, card, held, read.GivesUpgraded));
+            ModEntry.Log.Info($"[audit] [odds] {window.Option.TextKey} {relic.GetType().Name}: predicted {p.Low:P0}"
+                + (p.High > p.Low ? $"–{p.High:P0}" : "") + $", came up: {(cameUp ? "yes" : "no")} ({window.Offered.Count} offered, {added.Count} added)");
         }
     }
 }

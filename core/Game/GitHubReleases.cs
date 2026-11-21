@@ -44,12 +44,12 @@ public static class GitHubReleases
                 using var res = await Http.SendAsync(req).ConfigureAwait(false);
                 if (!res.IsSuccessStatusCode) return null;
                 using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync().ConfigureAwait(false));
-                if (Versions(doc.RootElement, tagPrefix) is not { } v) return null;
-                versions.AddRange(v);
+                if (Versions(doc.RootElement, tagPrefix) is not { } otherVersions) return null;
+                versions.AddRange(otherVersions);
                 if (doc.RootElement.GetArrayLength() < 100) break;
             }
             var cur = Normalize(current);
-            return new Status(versions.Count(v => v > cur), versions.Count > 0 ? versions.Max() : null, versions.Contains(cur));
+            return new Status(versions.Count(version => version > cur), versions.Count > 0 ? versions.Max() : null, versions.Contains(cur));
         }
         catch
         {
@@ -61,17 +61,17 @@ public static class GitHubReleases
     {
         if (releases.ValueKind != JsonValueKind.Array) return null;
         var list = new List<Version>();
-        foreach (var r in releases.EnumerateArray())
+        foreach (var jsonElement in releases.EnumerateArray())
         {
-            if (r.TryGetProperty("draft", out var d) && d.ValueKind == JsonValueKind.True) continue;
-            if (r.TryGetProperty("prerelease", out var p) && p.ValueKind == JsonValueKind.True) continue;
-            if (!r.TryGetProperty("tag_name", out var t) || t.GetString() is not { } tag) continue;
+            if (jsonElement.TryGetProperty("draft", out var otherJsonElement) && otherJsonElement.ValueKind == JsonValueKind.True) continue;
+            if (jsonElement.TryGetProperty("prerelease", out var nextJsonElement) && nextJsonElement.ValueKind == JsonValueKind.True) continue;
+            if (!jsonElement.TryGetProperty("tag_name", out var t) || t.GetString() is not { } tag) continue;
             if (!tag.StartsWith(tagPrefix, StringComparison.OrdinalIgnoreCase)) continue;
-            if (Version.TryParse(tag[tagPrefix.Length..], out var v)) list.Add(Normalize(v));
+            if (Version.TryParse(tag[tagPrefix.Length..], out var version)) list.Add(Normalize(version));
         }
         return list;
     }
 
     // 0.31.13 and 0.31.13.0 compare equal.
-    private static Version Normalize(Version v) => new(v.Major, v.Minor, Math.Max(0, v.Build));
+    private static Version Normalize(Version version) => new(version.Major, version.Minor, Math.Max(0, version.Build));
 }

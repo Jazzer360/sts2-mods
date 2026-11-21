@@ -47,7 +47,7 @@ public sealed partial class RunRemindersFeature
             var id = node.GetInstanceId();
             seen.Add(id);
             // While an event option runs, what it offers (the odds log).
-            if (_window is { } w) w.Offered.Add(model);
+            if (_window is { } window) window.Offered.Add(model);
             if (recompute || !_offeredTabs.TryGetValue(id, out var have) || have.Model != model)
             {
                 have = (model, Boosts(model, me, place));
@@ -74,7 +74,7 @@ public sealed partial class RunRemindersFeature
             if (CardAffinity.For(name) is not { Kind: AffinityKind.Boosts } rule) continue;
             var key = ChoiceReminders.Key(place, name);
             if (ChoiceReminders.For(name) is not { CardTab: true } || !_ctx.Settings.TabEnabled(key)) continue;
-            if (!CardAffinity.AppliesTo(rule, card) && !CardAffinity.Made(card).Any(m => CardAffinity.AppliesTo(rule, m))) continue;
+            if (!CardAffinity.AppliesTo(rule, card) && !CardAffinity.Made(card).Any(otherCard => CardAffinity.AppliesTo(rule, otherCard))) continue;
             decor.AddTab(key, GameIcons.Relic(relic));
         }
         return decor;

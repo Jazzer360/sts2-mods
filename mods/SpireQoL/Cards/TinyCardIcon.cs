@@ -67,25 +67,25 @@ internal sealed class TinyCardIcon
         if (node is CanvasItem { Visible: false }) return;
         // A drop shadow is offset from what casts it: centring on it would pull the card off centre.
         if (node.Name.ToString().Contains("Shadow")) return;
-        if (node is TextureRect { Texture: { } tex } tr && tr.Size.X >= 1 && tr.Size.Y >= 1)
+        if (node is TextureRect { Texture: { } tex } icon && icon.Size.X >= 1 && icon.Size.Y >= 1)
         {
-            var local = DrawnRect(tr, tex.GetSize());
-            var t = toEntry * tr.GetGlobalTransform();
-            var a = t * local.Position;
-            var b = t * local.End;
-            var r = new Rect2(new Vector2(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y)), (b - a).Abs());
-            drawn = drawn is { } d ? d.Merge(r) : r;
+            var local = DrawnRect(icon, tex.GetSize());
+            var transform2D = toEntry * icon.GetGlobalTransform();
+            var position = transform2D * local.Position;
+            var otherPosition = transform2D * local.End;
+            var rect = new Rect2(new Vector2(Math.Min(position.X, otherPosition.X), Math.Min(position.Y, otherPosition.Y)), (otherPosition - position).Abs());
+            drawn = drawn is { } otherRect ? otherRect.Merge(rect) : rect;
         }
         foreach (var child in node.GetChildren()) Union(child, toEntry, ref drawn);
     }
 
     /// <summary>Where a TextureRect draws its texture inside its own rect (Godot's stretch modes).</summary>
-    private static Rect2 DrawnRect(TextureRect tr, Vector2 tex)
+    private static Rect2 DrawnRect(TextureRect icon, Vector2 tex)
     {
-        var size = tr.Size;
+        var size = icon.Size;
         if (tex.X < 1 || tex.Y < 1) return new Rect2(Vector2.Zero, size);
         var fit = Math.Min(size.X / tex.X, size.Y / tex.Y);
-        return tr.StretchMode switch
+        return icon.StretchMode switch
         {
             TextureRect.StretchModeEnum.Keep => new Rect2(Vector2.Zero, tex),
             TextureRect.StretchModeEnum.KeepCentered => new Rect2((size - tex) / 2f, tex),
@@ -97,10 +97,10 @@ internal sealed class TinyCardIcon
 
     private static void Quiet(Node node)
     {
-        if (node is Control c)
+        if (node is Control control)
         {
-            c.MouseFilter = Control.MouseFilterEnum.Ignore;
-            c.FocusMode = Control.FocusModeEnum.None;
+            control.MouseFilter = Control.MouseFilterEnum.Ignore;
+            control.FocusMode = Control.FocusModeEnum.None;
         }
         foreach (var child in node.GetChildren()) Quiet(child);
     }

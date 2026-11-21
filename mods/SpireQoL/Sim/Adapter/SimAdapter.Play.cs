@@ -22,63 +22,63 @@ public static partial class SimAdapter
     /// <paramref name="owner"/>: whose card it is (a teammate's auto-play: their Howl from Beyond); <paramref name="me"/> is then
     /// that teammate, and what the play gives its player goes to them.
     /// </summary>
-    public static SimPlay Play(CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
+    public static SimPlay Play(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
         int targetId, int owner = Who.You)
     {
         var name = card.GetType().Name;
-        var plays = Math.Max(1, f.Plays);
+        var plays = Math.Max(1, facts.Plays);
         var play = new SimPlay
         {
             Name = name,
             IsAttack = card.Type == CardType.Attack,
             Plays = plays,
             // A card played from elsewhere (Howl from Beyond from the exhaust pile) doesn't leave the hand.
-            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + f.Draws + f.Generated + f.ReturnsToHand,
-            FadingDelta = IsFading(card, cs) ? -1 : 0,
-            HexFadingDelta = IsFading(card, cs) && EtherealOnlyFromHex(card) ? -1 : 0,
+            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + facts.Draws + facts.Generated + facts.ReturnsToHand,
+            FadingDelta = IsFading(card, combat) ? -1 : 0,
+            HexFadingDelta = IsFading(card, combat) && EtherealOnlyFromHex(card) ? -1 : 0,
         };
         // Aimed at a teammate: what lands on them goes to them (never to you, even with no teammate to aim at).
         Creature? ally = null;
         var allyId = -1;
         if (card.TargetType == TargetType.AnyAlly && Who.TeammateIndex(targetId) is var aimedAt and >= 0)
         {
-            var allies = Teammates(me, cs);
+            var allies = Teammates(me, combat);
             if (aimedAt < allies.Count) { play.AllyTarget = aimedAt; ally = allies[aimedAt].Creature; allyId = Who.Teammate(aimedAt); }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
-        play.Draws = f.Draws;
+        play.Draws = facts.Draws;
         play.BlockToAlly = BlockToAllyCards.Contains(name);
         play.ChannelToAlly = ChannelToAllyCards.Contains(name);
 
         // ---- the card play and what each play does
         play.TargetId = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
-        play.Card = new SimCardPlay(SimReaders.Card(card, f, me), owner, play.TargetId, 0, plays, f.AutoPlayed);
-        if (f.LosesHp) play.Body.Add(new LoseHpAction(Sts2State.Var(card, "HpLoss")));
+        play.Card = new SimCardPlay(SimReaders.Card(card, facts, me), owner, play.TargetId, 0, plays, facts.AutoPlayed);
+        if (facts.LosesHp) play.Body.Add(new LoseHpAction(Sts2State.Var(card, "HpLoss")));
         // A shot (ArrowCmd.ShootArrowAtTarget): the arrow leaves before the attack and impales the target after it. None from an X
         // shot at X 0.
         var shot = Fool.TriesShot(card);
         if (shot) play.Body.Add(new ShootAction());
-        if (f.AttackHits > 0 && AttackOf(card, f, me, cs, ids, targetId, plays, name) is { } attack) play.Body.Add(shot ? attack with { NeedsArrow = true } : attack);
+        if (facts.AttackHits > 0 && AttackOf(card, facts, me, combat, ids, targetId, plays, name) is { } attack) play.Body.Add(shot ? attack with { NeedsArrow = true } : attack);
         if (shot) play.Body.Add(new ImpaleAction());
         // Recall, Uproot, Wrest: every arrow of yours out of the target.
         if (Fool.DislodgeCards.Contains(name)) play.Body.Add(new DislodgeAllAction());
-        if (f.BlockGains > 0 && BlockOf(card, f, me, cs, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
+        if (facts.BlockGains > 0 && BlockOf(card, facts, me, combat, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
         // Block for every player (Rally): the same value to each living teammate too, worked out on them (their Dexterity, Frail).
-        if (f.BlockGains > 0 && AllPlayersBlockCards.Contains(name) && card.DynamicVars.TryGetValue("Block", out var allBlock))
+        if (facts.BlockGains > 0 && AllPlayersBlockCards.Contains(name) && card.DynamicVars.TryGetValue("Block", out var allBlock))
         {
-            var mates = Teammates(me, cs);
+            var mates = Teammates(me, combat);
             for (var k = 0; k < mates.Count; k++)
             {
                 if (mates[k].Creature is not { IsAlive: true } mate) continue;
-                play.Body.Add(new GainBlockAction(f.BlockGains / plays, allBlock.BaseValue, SimProps.Move)
-                    { Captured = SimReaders.Block(cs, card, mate, allBlock.BaseValue, ValueProp.Move), To = Who.Teammate(k) });
+                play.Body.Add(new GainBlockAction(facts.BlockGains / plays, allBlock.BaseValue, SimProps.Move)
+                    { Captured = SimReaders.Block(combat, card, mate, allBlock.BaseValue, ValueProp.Move), To = Who.Teammate(k) });
             }
         }
         // Teammates' draws and created cards (Huddle Up, Blade Symphony, Constellation's draws for its target): their card
         // events, for their procs. Indirect, like your own draws and created cards.
         if (TeammatesDrawCards.Contains(name) || TeammatesShivCards.Contains(name) || (PlayFacts.AllyDrawCards.Contains(name) && ally != null))
         {
-            var mates = Teammates(me, cs);
+            var mates = Teammates(me, combat);
             var cards = Sts2State.Var(card, "Cards");
             for (var k = 0; k < mates.Count; k++)
             {
@@ -103,25 +103,25 @@ public static partial class SimAdapter
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
         {
             var b = adroit.DynamicVars.Block.BaseValue;
-            play.Body.Add(new GainBlockAction(1, b, SimProps.Move) { Captured = SimReaders.Block(cs, card, me.Creature, b, ValueProp.Move) });
+            play.Body.Add(new GainBlockAction(1, b, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, b, ValueProp.Move) });
         }
         if (StripBlockCards.Contains(name)) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
-        play.Body.AddRange(PowersOf(card, f, name, allyId));
+        play.Body.AddRange(PowersOf(card, facts, name, allyId));
         if (TriggerPoisonCards.Contains(name)) play.Body.Add(new TriggerPoisonAction());
-        play.Body.AddRange(OrbsOf(card, me, cs, name, play.ChannelToAlly ? allyId : owner));
+        play.Body.AddRange(OrbsOf(card, me, combat, name, play.ChannelToAlly ? allyId : owner));
         // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
-        CardEnergy.AddTo(play, card, me, cs, ids.FirstOrDefault(kv => kv.Value == targetId).Key, owner, allyId);
-        AddCardEvents(play, f, plays);
+        CardEnergy.AddTo(play, card, me, combat, ids.FirstOrDefault(kv => kv.Value == targetId).Key, owner, allyId);
+        AddCardEvents(play, facts, plays);
         if (DrawnCardReaders.ContainsKey(name)) UseDrawnCard(play, name);
 
         // ---- summary fields (not actions yet)
-        play.ByOsty = f.ByOsty;
+        play.ByOsty = facts.ByOsty;
         // The rest of what each play does, after the card's own actions above: Capture Spirit's damage, Judgement, Bouncing Flask's
         // poison on random enemies, Osty's death (Sacrifice, Bone Shards; Necro Mastery reacts).
         var target2 = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
         if (TargetDamageCards.Contains(name) && target2 != null && card.DynamicVars.TryGetValue("Damage", out var tdVar) && tdVar is DamageVar tdv)
             play.Body.Add(new DamageAction(new DamageSpec(tdv.BaseValue, SimReaders.Props(tdv.Props))
-                { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(me.RunState, cs, card, me.Creature, target2, tdv.BaseValue, tdv.Props) } }));
+                { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(me.RunState, combat, card, me.Creature, target2, tdv.BaseValue, tdv.Props) } }));
         if (ExecuteCards.Contains(name)) play.Body.Add(new ExecuteAction(Sts2State.Var(card, "Threshold")));
         if (card.TargetType == TargetType.RandomEnemy && card.DynamicVars.Values.FirstOrDefault(IsPowerVar<PoisonPower>) is { } flask)
             play.Body.Add(new ApplyPowerAction(PowerId.Poison, (int)flask.BaseValue)
@@ -130,7 +130,7 @@ public static partial class SimAdapter
         // A teammate's card: the block it gives its player is theirs.
         if (owner != Who.You)
             for (var i = 0; i < play.Body.Count; i++)
-                if (play.Body[i] is GainBlockAction { To: Who.You } g) play.Body[i] = g with { To = owner };
+                if (play.Body[i] is GainBlockAction { To: Who.You } gainBlockAction) play.Body[i] = gainBlockAction with { To = owner };
         return play;
     }
 
@@ -141,7 +141,7 @@ public static partial class SimAdapter
     /// </summary>
     private static void UseDrawnCard(SimPlay play, string name)
     {
-        var at = play.Body.FindIndex(a => a is CardEventAction { Event: CardEvent.Drawn });
+        var at = play.Body.FindIndex(simAction => simAction is CardEventAction { Event: CardEvent.Drawn });
         if (at < 0) return; // nothing drawn (a full hand, empty piles): nothing to act on
         var draw = (CardEventAction)play.Body[at];
         var action = new DrawnCardAction(draw.Count) { Indirect = draw.Indirect };
@@ -158,11 +158,11 @@ public static partial class SimAdapter
                 action = action with { DrawAgainIf = SimCardType.Attack };
                 break;
             case nameof(Scrape):
-                play.Body.RemoveAll(a => a is CardEventAction { Event: CardEvent.Discarded });
+                play.Body.RemoveAll(simAction => simAction is CardEventAction { Event: CardEvent.Discarded });
                 action = action with { DiscardUnlessFree = true };
                 break;
         }
-        play.Body[play.Body.FindIndex(a => a is CardEventAction { Event: CardEvent.Drawn })] = action;
+        play.Body[play.Body.FindIndex(simAction => simAction is CardEventAction { Event: CardEvent.Drawn })] = action;
     }
 
     /// <summary>
@@ -170,38 +170,38 @@ public static partial class SimAdapter
     /// (before the play), each play's draws, discards, other exhausts, created cards and star gains (indirect, but star gains), the
     /// stars it spends (first play), its own exhaust and a shuffle (after).
     /// </summary>
-    private static void AddCardEvents(SimPlay play, PlayFacts f, int plays)
+    private static void AddCardEvents(SimPlay play, PlayFacts facts, int plays)
     {
-        void Each(List<SimAction> to, CardEvent ev, int total, bool indirect, bool perPlay = true)
+        void Each(List<SimAction> to, CardEvent cardEvent, int total, bool indirect, bool perPlay = true)
         {
             var n = perPlay ? total / plays : total;
-            if (n > 0) to.Add(new CardEventAction(ev, n) { Indirect = indirect });
+            if (n > 0) to.Add(new CardEventAction(cardEvent, n) { Indirect = indirect });
         }
-        Each(play.Before, CardEvent.EnergyGained, f.EnergyBack, false, perPlay: false);
-        Each(play.Before, CardEvent.EnergySpent, f.EnergySpent, false, perPlay: false);
-        Each(play.Body, CardEvent.Drawn, Math.Min(f.OwnDraws, f.Draws), true);
-        Each(play.Body, CardEvent.Discarded, f.Discards, true);
-        Each(play.Body, CardEvent.Exhausted, f.ExhaustsOthers, true);
-        var sadness = f.SadnessCreated;
-        var statuses = Math.Max(0, f.GeneratedStatuses - sadness);
-        Each(play.Body, CardEvent.Generated, Math.Max(0, f.Generated + f.TransformsCertain - statuses - sadness), true);
+        Each(play.Before, CardEvent.EnergyGained, facts.EnergyBack, false, perPlay: false);
+        Each(play.Before, CardEvent.EnergySpent, facts.EnergySpent, false, perPlay: false);
+        Each(play.Body, CardEvent.Drawn, Math.Min(facts.OwnDraws, facts.Draws), true);
+        Each(play.Body, CardEvent.Discarded, facts.Discards, true);
+        Each(play.Body, CardEvent.Exhausted, facts.ExhaustsOthers, true);
+        var sadness = facts.SadnessCreated;
+        var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
+        Each(play.Body, CardEvent.Generated, Math.Max(0, facts.Generated + facts.TransformsCertain - statuses - sadness), true);
         Each(play.Body, CardEvent.GeneratedStatus, statuses, true);
         Each(play.Body, CardEvent.GeneratedSadness, sadness, true);
-        Each(play.Body, CardEvent.StarsGained, f.StarGains, false);
-        if (f.Stars > 0) play.Body.Add(new CardEventAction(CardEvent.StarsSpent, 1) { FirstPlayOnly = true });
-        if (f.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, 1) { Card = play.Card!.Card });
-        if (f.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, 1) { Indirect = true });
+        Each(play.Body, CardEvent.StarsGained, facts.StarGains, false);
+        if (facts.Stars > 0) play.Body.Add(new CardEventAction(CardEvent.StarsSpent, 1) { FirstPlayOnly = true });
+        if (facts.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, 1) { Card = play.Card!.Card });
+        if (facts.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, 1) { Indirect = true });
     }
 
-    private static bool IsPowerVar<T>(DynamicVar v) where T : PowerModel =>
-        v.GetType() is { IsGenericType: true } t && t.GetGenericTypeDefinition() == typeof(PowerVar<>) && t.GetGenericArguments()[0] == typeof(T);
+    private static bool IsPowerVar<T>(DynamicVar dynamicVar) where T : PowerModel =>
+        dynamicVar.GetType() is { IsGenericType: true } type && type.GetGenericTypeDefinition() == typeof(PowerVar<>) && type.GetGenericArguments()[0] == typeof(T);
 
     /// <summary>
     /// The card's attack, each play: its hits per play, its damage value (calculated on each target when it's a calculated
     /// value) and props, and the captured terms on each enemy. Osty's attacks keep the game's final numbers (his own powers
     /// aren't simulated). Timber's kill attack and Rain Shot's splash ride along.
     /// </summary>
-    private static AttackAction? AttackOf(CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
+    private static AttackAction? AttackOf(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
         int targetId, int plays, string name)
     {
         var mode = card.TargetType switch
@@ -213,7 +213,7 @@ public static partial class SimAdapter
         };
         if (mode == SimPlay.Target.None) return null;
         var aimed = ids.FirstOrDefault(kv => kv.Value == targetId).Key;
-        var hits = (mode == SimPlay.Target.Single && aimed != null ? f.HitsOn(aimed) : f.AttackHits) / plays;
+        var hits = (mode == SimPlay.Target.Single && aimed != null ? facts.HitsOn(aimed) : facts.AttackHits) / plays;
         if (hits <= 0) return null;
 
         var baseOn = new Dictionary<int, decimal>();
@@ -221,40 +221,40 @@ public static partial class SimAdapter
         decimal baseDamage = 0m;
         var props = ValueProp.Move;
         CalculatedVar? calc = null;
-        if (card.DynamicVars.TryGetValue("CalculatedDamage", out var cv) && cv is CalculatedVar c)
+        if (card.DynamicVars.TryGetValue("CalculatedDamage", out var dynamicVar) && dynamicVar is CalculatedVar calculatedVar)
         {
-            calc = c;
-            if (cv is CalculatedDamageVar cdv) props = cdv.Props;
+            calc = calculatedVar;
+            if (dynamicVar is CalculatedDamageVar cdv) props = cdv.Props;
         }
-        else if ((card.DynamicVars.TryGetValue("Damage", out var dv) || card.DynamicVars.TryGetValue("OstyDamage", out dv)) && dv is DamageVar d)
+        else if ((card.DynamicVars.TryGetValue("Damage", out var otherDynamicVar) || card.DynamicVars.TryGetValue("OstyDamage", out otherDynamicVar)) && otherDynamicVar is DamageVar damageVar)
         {
-            baseDamage = d.BaseValue;
-            props = d.Props;
+            baseDamage = damageVar.BaseValue;
+            props = damageVar.Props;
         }
-        var fixedNumbers = f.ByOsty || (calc == null && baseDamage == 0m);
-        foreach (var (e, id) in ids)
+        var fixedNumbers = facts.ByOsty || (calc == null && baseDamage == 0m);
+        foreach (var (creature, id) in ids)
         {
-            if (!f.CanHit(e)) continue;
+            if (!facts.CanHit(creature)) continue;
             if (fixedNumbers)
             {
-                baseOn[id] = f.DamagePerHit(e);
+                baseOn[id] = facts.DamagePerHit(creature);
                 continue;
             }
-            var b = calc != null ? SafeDecimal(() => calc.Calculate(e)) : baseDamage;
+            var b = calc != null ? SafeDecimal(() => calc.Calculate(creature)) : baseDamage;
             baseOn[id] = b;
-            captured[id] = SimReaders.Damage(me.RunState, cs, card, me.Creature, e, b, props);
+            captured[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, b, props);
         }
         DamageSpec? onKill = null;
         if (OnKillHitAllCards.Contains(name) && card.DynamicVars.TryGetValue("OnKillDamage", out var kv2) && kv2 is DamageVar kdv)
         {
             var killTerms = new Dictionary<int, CapturedTerms>();
-            foreach (var (e, id) in ids)
-                if (e.IsAlive && e.IsHittable) killTerms[id] = SimReaders.Damage(me.RunState, cs, card, me.Creature, e, kdv.BaseValue, kdv.Props);
+            foreach (var (creature, id) in ids)
+                if (creature.IsAlive && creature.IsHittable) killTerms[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, kdv.BaseValue, kdv.Props);
             onKill = new DamageSpec(kdv.BaseValue, SimReaders.Props(kdv.Props)) { Captured = killTerms };
         }
         return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props)) { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers })
         {
-            ByOsty = f.ByOsty, // a single target: the play's (SimPlay.TargetId)
+            ByOsty = facts.ByOsty, // a single target: the play's (SimPlay.TargetId)
             OnKill = onKill,
             Splash = name == "RainShot", // RainShot.OnPlay: the target's damage to every other enemy
             RepeatPerKill = RepeatPerKillCards.Contains(name),
@@ -267,10 +267,10 @@ public static partial class SimAdapter
     /// Other cards whose block isn't a value (Entrench: your block; Mimic and a calculated block aimed at a teammate) keep the
     /// game's number.
     /// </summary>
-    private static GainBlockAction? BlockOf(CardModel card, PlayFacts f, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids,
+    private static GainBlockAction? BlockOf(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
         int targetId, int plays, string name, Creature? ally, int allyId)
     {
-        var gains = f.BlockGains / plays;
+        var gains = facts.BlockGains / plays;
         if (gains <= 0) return null;
         var toAlly = BlockToAllyCards.Contains(name);
         var to = toAlly ? allyId : Who.You;
@@ -279,23 +279,23 @@ public static partial class SimAdapter
         if (name == nameof(Fisticuffs))
         {
             // Fisticuffs.OnPlay: CreatureCmd.GainBlock(the damage dealt, ValueProp.Move), so Dexterity and Frail apply.
-            var dealt = aimed != null ? f.TotalDamage(aimed) / plays : 0;
-            return new GainBlockAction(gains, dealt, SimProps.Move) { Captured = SimReaders.Block(cs, card, me.Creature, dealt, ValueProp.Move), To = to };
+            var dealt = aimed != null ? facts.TotalDamage(aimed) / plays : 0;
+            return new GainBlockAction(gains, dealt, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, dealt, ValueProp.Move), To = to };
         }
         int? fixedEach = name switch
         {
             nameof(Entrench) => me.Creature.Block,
-            _ when toAlly && card.DynamicVars.ContainsKey("CalculatedBlock") => ally != null ? CardBlock(card, cs, me, ally, ally) : 0,
-            nameof(Mimic) when ally != null => CardBlock(card, cs, me, me.Creature, ally),
+            _ when toAlly && card.DynamicVars.ContainsKey("CalculatedBlock") => ally != null ? CardBlock(card, combat, me, ally, ally) : 0,
+            nameof(Mimic) when ally != null => CardBlock(card, combat, me, me.Creature, ally),
             _ => null,
         };
         if (fixedEach is { } each) return new GainBlockAction(gains, each, SimProps.Move) { Fixed = true, To = to };
         decimal b;
-        if (card.DynamicVars.TryGetValue("CalculatedBlock", out var cv) && cv is CalculatedVar calc) b = SafeDecimal(() => calc.Calculate(null));
-        else if (card.DynamicVars.TryGetValue("Block", out var bv)) b = bv.BaseValue;
-        else return new GainBlockAction(gains, CardBlock(card, cs, me), SimProps.Move) { Fixed = true, To = to };
+        if (card.DynamicVars.TryGetValue("CalculatedBlock", out var dynamicVar) && dynamicVar is CalculatedVar calc) b = SafeDecimal(() => calc.Calculate(null));
+        else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) b = otherDynamicVar.BaseValue;
+        else return new GainBlockAction(gains, CardBlock(card, combat, me), SimProps.Move) { Fixed = true, To = to };
         var gainer = toAlly && ally != null ? ally : me.Creature;
-        return new GainBlockAction(gains, b, SimProps.Move) { Captured = SimReaders.Block(cs, card, gainer, b, ValueProp.Move), To = to };
+        return new GainBlockAction(gains, b, SimProps.Move) { Captured = SimReaders.Block(combat, card, gainer, b, ValueProp.Move), To = to };
     }
 
     /// <summary>
@@ -304,43 +304,43 @@ public static partial class SimAdapter
     /// takes or gives (EnemyStrengthCards). Amounts from the card's PowerVar, its plain value, or 1. Only powers the simulator
     /// reads: modelled ones, the ones it keeps as numbers, and poison.
     /// </summary>
-    private static IEnumerable<SimAction> PowersOf(CardModel card, PlayFacts f, string name, int allyId)
+    private static IEnumerable<SimAction> PowersOf(CardModel card, PlayFacts facts, string name, int allyId)
     {
         var actions = new List<SimAction>();
-        int AmountOf(Type t)
+        int AmountOf(Type type)
         {
-            foreach (var v in card.DynamicVars.Values)
+            foreach (var dynamicVar in card.DynamicVars.Values)
             {
-                var vt = v.GetType();
-                if (vt.IsGenericType && vt.GetGenericTypeDefinition() == typeof(PowerVar<>) && vt.GetGenericArguments()[0] == t) return (int)v.BaseValue;
+                var otherType = dynamicVar.GetType();
+                if (otherType.IsGenericType && otherType.GetGenericTypeDefinition() == typeof(PowerVar<>) && otherType.GetGenericArguments()[0] == type) return (int)dynamicVar.BaseValue;
             }
-            return PlainSelfPowerAmount(card, t) ?? 1;
+            return PlainSelfPowerAmount(card, type) ?? 1;
         }
         bool Simulated(string n) => SimModels.Has(n) || SelfPowers.Contains(n) || n == nameof(PoisonPower) || n == nameof(ArtifactPower);
-        var debuffs = f.EnemyDebuffs.Concat(f.EnemyTemporaryDebuffs).ToHashSet();
+        var debuffs = facts.EnemyDebuffs.Concat(facts.EnemyTemporaryDebuffs).ToHashSet();
         var whereEnemies = card.TargetType switch
         {
             TargetType.AnyEnemy => ApplyPowerAction.Where.Target,
             TargetType.AllEnemies => ApplyPowerAction.Where.AllEnemies,
             _ => (ApplyPowerAction.Where?)null,
         };
-        foreach (var t in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
+        foreach (var type in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
         {
-            var n = SimPowerName(t);
-            if (!Simulated(n) && !(PlayFacts.IsDebuffType(t) && debuffs.Contains(t))) continue;
+            var n = SimPowerName(type);
+            if (!Simulated(n) && !(PlayFacts.IsDebuffType(type) && debuffs.Contains(type))) continue;
             if (n == nameof(PoisonPower) && card.TargetType == TargetType.RandomEnemy) continue; // Bouncing Flask: random, a summary field
             // A temporary Strength loss (Piercing Wail, Dark Shackles: TemporaryStrengthPower) is the Strength action below
             // (EnemyStrengthCards): one debuff, so one Artifact charge takes all of it (issue #371: applied twice, Artifact took
             // the first and the Strength still landed).
-            if (typeof(TemporaryStrengthPower).IsAssignableFrom(t) && EnemyStrengthCards.ContainsKey(name)) continue;
-            if (PlayFacts.IsDebuffType(t))
+            if (typeof(TemporaryStrengthPower).IsAssignableFrom(type) && EnemyStrengthCards.ContainsKey(name)) continue;
+            if (PlayFacts.IsDebuffType(type))
             {
-                if (!debuffs.Contains(t) || whereEnemies is not { } w) continue;
-                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(t)) { To = w, Debuff = true });
+                if (!debuffs.Contains(type) || whereEnemies is not { } where) continue;
+                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(type)) { To = where, Debuff = true });
             }
             else if (card.TargetType == TargetType.AnyAlly && allyId != -1 && n == nameof(CoveredPower))
             {
-                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(t)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
+                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(type)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
             }
             else if (n == "StretchPower" && KeepsStretchCards.Contains(name))
             {
@@ -349,7 +349,7 @@ public static partial class SimAdapter
             }
             else
             {
-                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(t)) { To = ApplyPowerAction.Where.You });
+                actions.Add(new ApplyPowerAction(new PowerId(n), AmountOf(type)) { To = ApplyPowerAction.Where.You });
             }
         }
         // Strength the card takes from enemies (this turn or for good) or gives them (Fight Me).
@@ -367,12 +367,12 @@ public static partial class SimAdapter
     /// teammate's for Ignition; none when there's no teammate to aim at), then the Focus it gives or takes. Channelled orbs get
     /// their values when they're channelled. Storm and Trash to Treasure channel from their models.
     /// </summary>
-    private static IEnumerable<SimAction> OrbsOf(CardModel card, Player me, ICombatState cs, string name, int channelTo)
+    private static IEnumerable<SimAction> OrbsOf(CardModel card, Player me, ICombatState combat, string name, int channelTo)
     {
         var actions = new List<SimAction>();
         var slots = SlotChange(card, name);
         if (slots != 0) actions.Add(new OrbAction(OrbAction.Op.Slots) { Slots = slots });
-        int X() => SafeInt(() => Hook.ModifyXValue(cs, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0);
+        int X() => SafeInt(() => Hook.ModifyXValue(combat, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0);
         switch (name)
         {
             case nameof(Dualcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = 2 }); break;
@@ -388,9 +388,9 @@ public static partial class SimAdapter
         if (Channels.TryGetValue(name, out var kinds))
         {
             var times = name is nameof(Spinner) or nameof(Chill) ? PlayFacts.ChannelCount(card, name, me) : 1;
-            for (var t = 0; t < times; t++) foreach (var k in kinds) Channel(k, 1);
+            for (var t = 0; t < times; t++) foreach (var orbKind in kinds) Channel(orbKind, 1);
         }
-        else if (RepeatChannels.TryGetValue(name, out var rk)) Channel(rk, Math.Max(1, Sts2State.Var(card, "Repeat", 1)));
+        else if (RepeatChannels.TryGetValue(name, out var otherOrbKind)) Channel(otherOrbKind, Math.Max(1, Sts2State.Var(card, "Repeat", 1)));
         else if (name == nameof(Voltaic)) Channel(OrbKind.Lightning, PlayFacts.ChannelCount(card, name, me));
         else if (name == nameof(Tempest)) Channel(OrbKind.Lightning, X());
         var focus = FocusChange(card);
