@@ -1,17 +1,13 @@
-using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
-using MegaCrit.Sts2.Core.Models.Relics;
 using SpireQoL.Cards;
 using SpireQoL.Procs;
 using SpireQoL.Sim;
-using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
-using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Combat;
 
@@ -704,7 +700,6 @@ public sealed class CardPredictions
     /// A tab shown because of some targets but not all of them (decision #55): the card is aimed at several enemies or teammates
     /// (one simulation each) and at least one of them doesn't give it. It gets the aim marker.
     /// </summary>
-    private static bool Aimed(SimOutcome[] outcomes, Func<SimOutcome, bool> at) => outcomes.Length > 1 && !outcomes.All(at);
 
 
     /// <summary>PredictNow is running: the simulation cache (keyed to this frame's state) is left alone.</summary>

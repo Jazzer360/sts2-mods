@@ -16,8 +16,7 @@ public class CardScanTests
     /// Cards that act on every player, which the simulator applies to you only: open multiplayer gaps (docs/TRACKER.md), reported
     /// in game only with teammates. A card leaving this list (now simulated) or joining it fails the test, so the list stays true.
     /// </summary>
-    private static readonly string[] KnownMultiplayerGaps =
-        { };
+    private static readonly string[] KnownMultiplayerGaps = Array.Empty<string>();
 
     private static IReadOnlyDictionary<string, List<string>> Issues()
     {
@@ -29,7 +28,7 @@ public class CardScanTests
     public void EveryCardIsCountedOrReviewed()
     {
         var missing = Issues()
-            .Select(entry => (entry.Key, Single: entry.Value.Where(issue => !issue.StartsWith(CardCoverage.TeammatesOnly)).ToList()))
+            .Select(entry => (entry.Key, Single: entry.Value.Where(issue => !issue.StartsWith(CardCoverage.TeammatesOnly, StringComparison.Ordinal)).ToList()))
             .Where(keySingle => keySingle.Single.Count > 0)
             .Select(keySingle => $"{keySingle.Key}: {string.Join("; ", keySingle.Single)}").OrderBy(line => line).ToList();
         Assert.True(missing.Count == 0, "Cards the scan flags (count them in their rule, or add a Reviewed reason):\n" + string.Join("\n", missing));
@@ -38,7 +37,7 @@ public class CardScanTests
     [Fact]
     public void MultiplayerGapsAreTheKnownOnes()
     {
-        var found = Issues().Where(entry => entry.Value.Any(issue => issue.StartsWith(CardCoverage.TeammatesOnly))).Select(entry => entry.Key).OrderBy(name => name).ToArray();
+        var found = Issues().Where(entry => entry.Value.Any(issue => issue.StartsWith(CardCoverage.TeammatesOnly, StringComparison.Ordinal))).Select(entry => entry.Key).OrderBy(name => name).ToArray();
         Assert.Equal(KnownMultiplayerGaps, found);
     }
 

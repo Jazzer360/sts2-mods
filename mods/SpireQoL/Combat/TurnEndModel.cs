@@ -74,7 +74,7 @@ public sealed class TurnEndModel
     /// Settings "Count teammates' hands" (decision #38): what's shown also uses the cards in teammates' hands.
     /// Off (the default, decision #25): what's shown leaves them out; the checks use them either way.
     /// </summary>
-    public static volatile bool CountTeammateHands;
+    internal static volatile bool CountTeammateHands;
 
     /// <summary>
     /// The simulation behind what's shown (start state, enemy ids, outcome): Incoming Damage, the Death Skull, card
@@ -419,6 +419,6 @@ public sealed class TurnEndModel
             // fall through to the class name
         }
         var name = model.GetType().Name;
-        return name.EndsWith("Power") ? name[..^5] : name;
+        return name.EndsWith("Power", StringComparison.Ordinal) ? name[..^5] : name;
     }
 }

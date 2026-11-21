@@ -1,6 +1,5 @@
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Relics;
-using MegaCrit.Sts2.Core.Models.Powers;
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Players;
@@ -161,7 +160,7 @@ public sealed partial class RunRemindersFeature
                 case nameof(EternalFeather):
                 {
                     var every = Sts2State.Var(model, "Cards", fallback: 5);
-                    return every > 0 ? $"+{Sts2State.Var(model, "Heal", fallback: 3) * (me.Deck.Cards.Count() / every)}" : null;
+                    return every > 0 ? $"+{Sts2State.Var(model, "Heal", fallback: 3) * (me.Deck.Cards.Count / every)}" : null;
                 }
                 case nameof(MealTicket):
                 case nameof(Planisphere):

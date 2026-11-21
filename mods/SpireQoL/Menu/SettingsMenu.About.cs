@@ -101,7 +101,7 @@ public sealed partial class SettingsMenu
             if (releaseSection.Kind != null) _rows.AddChild(Indented(Label(releaseSection.Kind, size: 16, Accent), left: 20));
             foreach (var item in releaseSection.Items)
             {
-                var nested = item.StartsWith("  ◦ ");
+                var nested = item.StartsWith("  ◦ ", StringComparison.Ordinal);
                 var label = Label(nested ? item.Trim() : "• " + item, size: 17, Muted);
                 label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
                 label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;

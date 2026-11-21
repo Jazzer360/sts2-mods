@@ -21,7 +21,9 @@ public class CrashFilterTests
 
     [Fact]
     public void OurOwnCrashIsSent() =>
+#pragma warning disable CA2201 // the test throws what a real crash throws
         Assert.Null(OtherMods.InStack(Caught(() => throw new NullReferenceException()), Xunit, "SpireQoL."));
+#pragma warning restore CA2201
 
     [Fact]
     public void ACrashInAnotherModsCodeIsNot() =>

@@ -142,7 +142,7 @@ public sealed partial class SettingsMenu
         if (IsOpen && _root != null) FitPanel();
         _tinyIcons.RemoveAll(tinyCardIcon => !GodotObject.IsInstanceValid(tinyCardIcon.Root));
         foreach (var tinyCardIcon in _tinyIcons) tinyCardIcon.Fit();
-        if (IsOpen && _page is Page.Guide or Page.Setup) foreach (var tick in _guideTicks) tick(_host.Time, Settings.FlashHz);
+        if (IsOpen && _page is Page.Guide or Page.Setup) foreach (var tick in _guideTicks) tick(OverlayHost.Time, Settings.FlashHz);
         if (++_frame % 10 != 0) return;
         FirstLaunch();
         _modsButton = KeepButton(_modsButton, ModsScreenAnchor());
@@ -538,7 +538,7 @@ public sealed partial class SettingsMenu
         }
 
         // Tab kinds seen in play that the catalog doesn't know (a newer rule): still switchable.
-        var other = Settings.Tabs.Keys.Where(key => !key.EndsWith(":*") && !key.StartsWith("reminder-") && !SettingsCatalog.IsKnownTabKey(key)).OrderBy(key => key).ToList();
+        var other = Settings.Tabs.Keys.Where(key => !key.EndsWith(":*", StringComparison.Ordinal) && !key.StartsWith("reminder-", StringComparison.Ordinal) && !SettingsCatalog.IsKnownTabKey(key)).OrderBy(key => key).ToList();
         foreach (var key in other)
         {
             if (!Matches(key)) continue;
@@ -599,7 +599,7 @@ public sealed partial class SettingsMenu
         foreach (var (otherSourceEntry, name) in shown)
         {
             // The icon as the tab shows it: crossed tabs get the same red slash as on cards.
-            var crossed = otherSourceEntry.Tag?.StartsWith(SettingsCatalog.CrossedPrefix) == true;
+            var crossed = otherSourceEntry.Tag?.StartsWith(SettingsCatalog.CrossedPrefix, StringComparison.Ordinal) == true;
             var row = SourceRow(otherSourceEntry, name, crossed);
 
             var tagCell = UiKit.Row(separation: 10);
@@ -819,7 +819,7 @@ public sealed partial class SettingsMenu
         _row = 0;
     }
 
-    private HBoxContainer RowBox()
+    private static HBoxContainer RowBox()
     {
         var row = UiKit.Row(separation: 12);
         row.MouseFilter = Control.MouseFilterEnum.Pass;
@@ -836,7 +836,7 @@ public sealed partial class SettingsMenu
     }
 
     /// <summary>The icon a Card tabs row shows on cards (null = none to show here).</summary>
-    private Control? TabPreview(string key)
+    private static Control? TabPreview(string key)
     {
         Texture2D? tex = null;
         try
@@ -1153,7 +1153,7 @@ public sealed partial class SettingsMenu
         {
             // fall back to the class name
         }
-        var name = type.EndsWith("Power") ? type[..^5] : type;
+        var name = type.EndsWith("Power", StringComparison.Ordinal) ? type[..^5] : type;
         return Regex.Replace(name, "(?<=[a-z])(?=[A-Z])", " ");
     }
 

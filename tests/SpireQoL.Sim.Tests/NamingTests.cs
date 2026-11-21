@@ -30,12 +30,12 @@ public class NamingTests
         {
             foreach (var file in Directory.EnumerateFiles(Path.Combine(root, dir), "*.cs", SearchOption.AllDirectories))
             {
-                if (file.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part => part is "bin" or "obj") || file.EndsWith(".g.cs")) continue;
+                if (file.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Any(part => part is "bin" or "obj") || file.EndsWith(".g.cs", StringComparison.Ordinal)) continue;
                 var lines = File.ReadAllLines(file);
                 for (var i = 0; i < lines.Length; i++)
                 {
                     var line = Regex.Replace(lines[i], "\"(?:[^\"\\\\]|\\\\.)*\"", "\"\""); // not inside strings
-                    if (line.TrimStart().StartsWith("//")) continue;
+                    if (line.TrimStart().StartsWith("//", StringComparison.Ordinal)) continue;
                     foreach (var pattern in Declarations)
                         foreach (Match match in pattern.Matches(line))
                         {

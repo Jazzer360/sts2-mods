@@ -20,7 +20,13 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Analyzers and code style (decision #148): .NET's recommended rules and the .editorconfig's style rules run in every build;
+         a release builds with warnings as errors. The doc file lets the compiler check the XML comments (broken crefs, malformed
+         XML) and the unused-imports rule run; it isn't shipped. Not every member needs a comment, or every parameter a param tag. -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
 

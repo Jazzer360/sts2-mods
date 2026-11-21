@@ -9,7 +9,7 @@ namespace SpireQoL;
 public sealed class QolSettings
 {
     /// <summary>Counts the settings menu's changes (not saved): part of the board probe, so a changed setting is redrawn (decision #130).</summary>
-    public static int Revision;
+    internal static int Revision;
 
     /// <summary>Feature id → enabled. Missing ids use the feature's default.</summary>
     public Dictionary<string, bool> Features { get; set; } = new();
@@ -83,7 +83,7 @@ public sealed class QolSettings
     /// Ethereal cards exhausting (Feel No Pain, Charon's Ashes, Forgotten Soul), Burn, Decay, Regret. Off: only what
     /// you can see (their hand size). The checks always use them.
     /// </summary>
-    public bool TeammateHands { get; set; } = false;
+    public bool TeammateHands { get; set; }
 
     /// <summary>
     /// Chances (decision #122): every chance the mod shows, all at once. Off: only what's certain (a chance that's hidden isn't
@@ -152,7 +152,7 @@ public sealed class QolSettings
     // Replaced by per-relic Relics entries in 0.23.0 (turn timers default off); read once, then dropped.
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public bool? ShowTurnTimers { get; set; }
-    public bool PulseOneStepEarly { get; set; } = false;
+    public bool PulseOneStepEarly { get; set; }
     public float FlashHz { get; set; } = 2.5f;
 
 

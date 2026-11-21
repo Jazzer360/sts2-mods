@@ -122,7 +122,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     private static readonly Dictionary<string, int> Skips = new(), Gaps = new();
 
     private static readonly OddsTally FightOdds = new();
-    private static OddsTally _sessionOdds = new();
+    private static readonly OddsTally _sessionOdds = new();
     private static bool _driftReported;
 
     private void Odds(string what, SimChance chance, bool happened)

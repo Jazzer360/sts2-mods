@@ -216,7 +216,7 @@ internal static class MovePowers
         for (var j = call - 1; j >= Math.Max(0, call - 12); j--)
         {
             var ins = code[j];
-            if (ins.operand is MethodInfo { IsStatic: false } method && method.Name.StartsWith("get_") && method.GetParameters().Length == 0
+            if (ins.operand is MethodInfo { IsStatic: false } method && method.Name.StartsWith("get_", StringComparison.Ordinal) && method.GetParameters().Length == 0
                 && Numeric(method.ReturnType) && typeof(MonsterModel).IsAssignableFrom(method.DeclaringType))
                 return (null, method, j);
             if (Constant(ins) is { } constant && j + 1 < code.Count && ToDecimal(code[j + 1])) return (constant, null, j);

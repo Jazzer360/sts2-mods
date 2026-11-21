@@ -52,7 +52,7 @@ public sealed class OverlayHost
     public Key HideAllKey { get; set; } = Key.F9;
 
     /// <summary>Seconds since start, for pulse/flash animations.</summary>
-    public float Time => (float)(Godot.Time.GetTicksMsec() / 1000.0);
+    public static float Time => (float)(Godot.Time.GetTicksMsec() / 1000.0);
 
     public Vector2 ViewportSize => Layer?.GetViewport()?.GetVisibleRect().Size ?? new Vector2(1920, 1080);
 

@@ -41,7 +41,6 @@ internal sealed class InspectScreen
     private readonly List<(Label Label, DrawGroup Group, int Times)> _groupLabels = new();
     private List<(DrawGroup Group, int Times)> _groups = new();
     private List<DrawGroup> _baseGroups = new();
-    private Player? _me;
     /// <summary>The card you'd transform, picked on the screen (null: every pool your deck's cards transform from).</summary>
     private CardModel? _transformFrom;
     private HBoxContainer? _transformRow;
@@ -59,7 +58,6 @@ internal sealed class InspectScreen
         if (Engine.GetMainLoop() is not SceneTree tree) return;
         if (_layer == null || !GodotObject.IsInstanceValid(_layer)) Build(tree);
         _marks = MarksByRun.GetValue(me.RunState, _ => new HashSet<string>());
-        _me = me;
         _baseGroups = groups;
         _transformFrom = null;
         _title!.Text = $"Inspect: {optionTitle}";

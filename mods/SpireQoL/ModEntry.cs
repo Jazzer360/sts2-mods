@@ -196,7 +196,7 @@ public static class ModEntry
             settingsFile.Save();
             foreach (var key in settings.Tabs.Keys)
             {
-                if (!key.EndsWith(":*") && !Menu.SettingsCatalog.IsKnownTabKey(key) && warnedKeys.Add(key))
+                if (!key.EndsWith(":*", StringComparison.Ordinal) && !Menu.SettingsCatalog.IsKnownTabKey(key) && warnedKeys.Add(key))
                 {
                     Log.Warn($"tab kind {key} isn't in the settings menu catalog (Menu/SettingsCatalog.cs); it's listed under Card tabs > Other");
                 }
@@ -242,7 +242,7 @@ public static class ModEntry
 
     /// <summary>
     /// 0.23.0 (settings menu): Relics now only controls the tracker tray (relic tabs are
-    /// Tabs "proc:<Relic>"), and turn timers became per-relic tracker entries (off by default).
+    /// Tabs "proc:Relic"), and turn timers became per-relic tracker entries (off by default).
     /// </summary>
     private static void MigrateSettings(QolSettings settings, bool hadSettings)
     {
@@ -251,7 +251,7 @@ public static class ModEntry
             foreach (var (relic, on) in settings.Relics.ToList())
             {
                 // Relics also held countdown powers (tray only); only relic tabs were hidden by it.
-                if (!on && !relic.EndsWith("Power")) settings.Tabs["proc:" + relic] = false;
+                if (!on && !relic.EndsWith("Power", StringComparison.Ordinal)) settings.Tabs["proc:" + relic] = false;
             }
             if (settings.ShowTurnTimers == true)
             {
@@ -261,7 +261,7 @@ public static class ModEntry
         if (settings.SettingsVersion < 2)
         {
             // 0.43.0: a Run Reminders relic has a switch per place (card rewards, events, shops) instead of one.
-            foreach (var (key, on) in settings.Tabs.Where(entry => entry.Key.StartsWith("reminder:")).ToList())
+            foreach (var (key, on) in settings.Tabs.Where(entry => entry.Key.StartsWith("reminder:", StringComparison.Ordinal)).ToList())
             {
                 settings.Tabs.Remove(key);
                 if (on) continue;

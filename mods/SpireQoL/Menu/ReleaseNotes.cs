@@ -67,10 +67,10 @@ internal static class ReleaseNotes
         foreach (var raw in changelog.Split('\n'))
         {
             var line = raw.TrimEnd('\r');
-            if (line.StartsWith("## ") || line.StartsWith("### "))
+            if (line.StartsWith("## ", StringComparison.Ordinal) || line.StartsWith("### ", StringComparison.Ordinal))
             {
                 FlushRelease();
-                if (line.StartsWith(prefix) && Heading.Match(line[prefix.Length..].Trim()) is { Success: true } match)
+                if (line.StartsWith(prefix, StringComparison.Ordinal) && Heading.Match(line[prefix.Length..].Trim()) is { Success: true } match)
                 {
                     version = match.Groups[1].Value;
                     var heading = match.Groups[2].Value.Trim().TrimStart('(').TrimEnd(')').Trim();
@@ -79,7 +79,7 @@ internal static class ReleaseNotes
                 continue;
             }
             if (version == null) continue;
-            if (line.StartsWith("#### "))
+            if (line.StartsWith("#### ", StringComparison.Ordinal))
             {
                 FlushSection();
                 kind = Plain(line[5..].Trim());
@@ -87,7 +87,7 @@ internal static class ReleaseNotes
             }
             var text = line.TrimStart();
             if (text.Length == 0) continue;
-            if (text.StartsWith("- ") || text.StartsWith("* "))
+            if (text.StartsWith("- ", StringComparison.Ordinal) || text.StartsWith("* ", StringComparison.Ordinal))
             {
                 items ??= new List<string>();
                 var nested = line.Length - text.Length >= 2;
@@ -125,19 +125,19 @@ internal static class ReleaseNotes
         foreach (var raw in markdown.Split('\n'))
         {
             var line = raw.TrimEnd('\r');
-            if (line.StartsWith("## "))
+            if (line.StartsWith("## ", StringComparison.Ordinal))
             {
                 inside = line[3..].Trim().Equals(name, StringComparison.OrdinalIgnoreCase);
                 continue;
             }
-            if (!inside || line.StartsWith("#")) continue;
+            if (!inside || line.StartsWith('#')) continue;
             var text = line.Trim();
             if (text.Length == 0)
             {
                 blank = true;
                 continue;
             }
-            if (text.StartsWith("- ") || text.StartsWith("* ")) points.Add(Plain(text[2..]));
+            if (text.StartsWith("- ", StringComparison.Ordinal) || text.StartsWith("* ", StringComparison.Ordinal)) points.Add(Plain(text[2..]));
             else if (!blank && points.Count > 0) points[^1] += " " + Plain(text);
             else points.Add(Plain(text));
             blank = false;

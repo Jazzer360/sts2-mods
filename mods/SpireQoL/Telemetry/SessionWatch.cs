@@ -141,7 +141,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
     private string HowItEnded()
         => _abandoned ? "abandoned" : _endSeen ? (_won ? "won" : "died") : _gameOver ? "died" : "menu";
 
-    private void End(string how, bool flush = false)
+    private static void End(string how, bool flush = false)
     {
         var stats = _current;
         _current = null;

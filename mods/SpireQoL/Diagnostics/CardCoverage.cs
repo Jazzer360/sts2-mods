@@ -250,7 +250,7 @@ internal static class CardCoverage
         if (HookCalls(card.GetType()).Contains("CardPileCmd.Add") && !ReturnToHand.Modelled.Contains(name) && !ReturnToHand.NextTurn.Contains(name))
             issues.Add("moves a card from its own hooks (comes back to your hand? not counted: return tabs, hand size)");
         // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
-        if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>")) && !PlayFacts.SadnessCards.Contains(name))
+        if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !PlayFacts.SadnessCards.Contains(name))
             issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");
         // Forging creates the Sovereign Blade through ForgeCmd, not in the card's own code.
         if (Calls("ForgeCmd", "Forge") && !PlayFacts.ForgeCards.Contains(name))
@@ -326,8 +326,8 @@ internal static class CardCoverage
     private static IEnumerable<MethodBase> OnPlayMethods(Type cardType)
     {
         var nested = NestedTypes(cardType).ToList();
-        return cardType.GetMethods(All).Where(method => method.Name == "OnPlay" || method.Name.StartsWith("<OnPlay>")).Cast<MethodBase>()
-            .Concat(nested.SelectMany(type => type.GetMethods(All)).Where(method => method.Name.StartsWith("<OnPlay>")))
+        return cardType.GetMethods(All).Where(method => method.Name == "OnPlay" || method.Name.StartsWith("<OnPlay>", StringComparison.Ordinal)).Cast<MethodBase>()
+            .Concat(nested.SelectMany(type => type.GetMethods(All)).Where(method => method.Name.StartsWith("<OnPlay>", StringComparison.Ordinal)))
             .Concat(nested
                 .Where(type => type.Name.Contains("<OnPlay>") && typeof(IAsyncStateMachine).IsAssignableFrom(type))
                 .Select(type => type.GetMethod("MoveNext", All))
@@ -339,10 +339,10 @@ internal static class CardCoverage
     private static HashSet<string> HookCalls(Type cardType)
     {
         var set = new HashSet<string>();
-        bool IsHook(string methodName) => methodName.StartsWith("After") || methodName.StartsWith("Before");
+        bool IsHook(string methodName) => methodName.StartsWith("After", StringComparison.Ordinal) || methodName.StartsWith("Before", StringComparison.Ordinal);
         var methods = cardType.GetMethods(All).Where(method => method.DeclaringType == cardType && IsHook(method.Name)).Cast<MethodBase>()
             .Concat(NestedTypes(cardType)
-                .Where(type => typeof(IAsyncStateMachine).IsAssignableFrom(type) && type.Name.StartsWith("<") && IsHook(type.Name[1..]))
+                .Where(type => typeof(IAsyncStateMachine).IsAssignableFrom(type) && type.Name.StartsWith('<') && IsHook(type.Name[1..]))
                 .Select(type => type.GetMethod("MoveNext", All)).Where(method => method != null).Cast<MethodBase>());
         foreach (var method in methods)
         {

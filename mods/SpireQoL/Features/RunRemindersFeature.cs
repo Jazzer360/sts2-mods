@@ -1,5 +1,3 @@
-using MegaCrit.Sts2.Core.Models.Cards;
-using MegaCrit.Sts2.Core.Models.Powers;
 using System.Reflection;
 using OpCodes = System.Reflection.Emit.OpCodes;
 using System.Runtime.CompilerServices;
@@ -852,7 +850,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             }
             // An event's own part it creates (the Crystal Sphere's minigame, and the items it hides: card rewards, a curse, gold,
             // potions): everything that class does is something the option can do.
-            else if (ins.opcode == OpCodes.Newobj && otherMethod.DeclaringType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Events.Custom") == true)
+            else if (ins.opcode == OpCodes.Newobj && otherMethod.DeclaringType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Events.Custom", StringComparison.Ordinal) == true)
             {
                 foreach (var nextMethod in otherMethod.DeclaringType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
                     Walk(nextMethod, otherMethod.DeclaringType, calls, seen, depth + 1, cards);

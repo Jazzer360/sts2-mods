@@ -29,7 +29,6 @@ public class ProcModelTests
         return state;
     }
 
-    private static SimCard Typed(string name, SimCardType type) => new(name, type);
 
     private static SimState One(SimState state, SimScript script) => Assert.Single(After(state, script));
 

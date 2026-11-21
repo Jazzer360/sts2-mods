@@ -113,7 +113,7 @@ public static class DevEvents
     public static event Action<DevEvent>? Posted;
 
     /// <summary>A subscriber threw: said once (the stream keeps going; a counter missing a few events is no reason to stop playing).</summary>
-    public static Action<Exception>? OnError;
+    internal static Action<Exception>? OnError { get; set; }
     private static int _errorSaid;
 
     public static void Post(DevEvent devEvent)

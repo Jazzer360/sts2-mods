@@ -1,7 +1,6 @@
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
-using SpireQoL.Features;
 using Sts2Mods.Core.Game;
 
 namespace SpireQoL.Diagnostics;

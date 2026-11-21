@@ -25,7 +25,7 @@ public class DocCommentTests
             var lines = File.ReadAllLines(file);
             for (var i = 1; i < lines.Length; i++)
             {
-                if (lines[i].TrimStart().StartsWith("/// <summary>") && lines[i - 1].TrimEnd().EndsWith("</summary>"))
+                if (lines[i].TrimStart().StartsWith("/// <summary>", StringComparison.Ordinal) && lines[i - 1].TrimEnd().EndsWith("</summary>", StringComparison.Ordinal))
                     stacked.Add($"{Path.GetFileName(file)}:{i + 1}");
             }
         }

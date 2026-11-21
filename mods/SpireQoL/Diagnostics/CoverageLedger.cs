@@ -418,7 +418,7 @@ internal static partial class CoverageLedger
             if (!known) entry = new Entry(type.Name, Status.New, "not in the ledger (new in this game version?)", hooks);
             else if (folderType.Hooks != hooks) entry = new Entry(type.Name, Status.Changed, $"hooks were {folderType.Hooks}, now {hooks}", hooks);
             else if (Reviewed.TryGetValue(type.Name, out var why))
-                entry = new Entry(type.Name, why.StartsWith("gap:") ? Status.Gap : why.StartsWith("covered:") ? Status.Covered : Status.Ignored, why, hooks);
+                entry = new Entry(type.Name, why.StartsWith("gap:", StringComparison.Ordinal) ? Status.Gap : why.StartsWith("covered:", StringComparison.Ordinal) ? Status.Covered : Status.Ignored, why, hooks);
             else entry = new Entry(type.Name, Status.Unreviewed, "not reviewed", hooks);
             result[type] = entry;
         }
@@ -542,7 +542,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         // Tab kinds shown in play that the catalog doesn't describe (the menu lists them under "Other").
         foreach (var key in _ctx.Settings.Tabs.Keys)
         {
-            if (key.EndsWith(":*") || SettingsCatalog.IsKnownTabKey(key) || !_unknownTabs.Add(key)) continue;
+            if (key.EndsWith(":*", StringComparison.Ordinal) || SettingsCatalog.IsKnownTabKey(key) || !_unknownTabs.Add(key)) continue;
             Unexpected(key, "tab-not-in-catalog", "a tab kind was shown that the settings catalog doesn't describe.");
         }
         var me = Sts2State.Me;
@@ -588,7 +588,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
             {
                 // Issues about teammates only count in a fight with other players.
                 var withTeammates = Sts2State.Combat?.Players.Count > 1;
-                var issues = all.Where(issue => withTeammates || !issue.StartsWith(CardCoverage.TeammatesOnly)).ToList();
+                var issues = all.Where(issue => withTeammates || !issue.StartsWith(CardCoverage.TeammatesOnly, StringComparison.Ordinal)).ToList();
                 if (issues.Count > 0)
                     Unexpected(type.Name, "card-code", $"its code does what the mod doesn't count: {string.Join("; ", issues)}.");
             }
@@ -628,7 +628,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         if (SpireQoL.Data.RelicSpecs.For(name) != null) return;
         if (RelicTracking.Reasons.TryGetValue(name, out var why))
         {
-            if (why.StartsWith("gap:")) ModEntry.Log.Info($"[coverage] known tracking gap in this fight: {name} ({why})");
+            if (why.StartsWith("gap:", StringComparison.Ordinal)) ModEntry.Log.Info($"[coverage] known tracking gap in this fight: {name} ({why})");
             return;
         }
         Unexpected(name, "relic-untracked", "a relic that can affect fights with no tab, no tracker row and no reviewed reason (RelicTracking).");

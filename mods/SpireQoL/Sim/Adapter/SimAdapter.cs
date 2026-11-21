@@ -554,7 +554,7 @@ public static partial class SimAdapter
     /// Teammates are simulated (the "Multiplayer predictions (experimental)" setting, read each frame).
     /// Off: none are, so every prediction is for you alone.
     /// </summary>
-    public static bool IncludeTeammates = true;
+    internal static bool IncludeTeammates = true;
 
     /// <summary>Another living player in the fight: a simulated teammate (SimState.Teammates, in this order).</summary>
     internal static bool IsTeammate(Player player, Player me) => IncludeTeammates && player != me && player.Creature is { IsAlive: true } && player.PlayerCombatState != null;

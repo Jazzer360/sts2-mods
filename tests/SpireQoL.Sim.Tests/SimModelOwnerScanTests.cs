@@ -56,7 +56,7 @@ public class SimModelOwnerScanTests
             for (var i = 0; i < lines.Length; i++)
             {
                 var line = lines[i].Trim();
-                if (line.StartsWith("//") || !NamesYou.IsMatch(line)) continue;
+                if (line.StartsWith("//", StringComparison.Ordinal) || !NamesYou.IsMatch(line)) continue;
                 var key = Reviewed.Keys.FirstOrDefault(line.Contains);
                 if (key == null) unreviewed.Add($"{Path.GetFileName(file)}:{i + 1}: {line}");
                 else used.Add(key);

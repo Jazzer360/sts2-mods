@@ -6,7 +6,7 @@ namespace SpireQoL.Sim;
 
 /// <summary>
 /// Plain combat state for the outcome simulator: no game types, so the simulator can be tested on
-/// its own (tests/SpireQoL.Sim.Tests). <see cref="SimAdapter"/> builds it from the live game.
+/// its own (tests/SpireQoL.Sim.Tests). SimAdapter builds it from the live game.
 /// Amounts are already through the game's modifiers where the game would apply them (damage per
 /// enemy is precomputed per target; block amounts are what you'd gain).
 /// </summary>
@@ -794,8 +794,6 @@ public sealed class SimState
         return nextCounts;
     }
 
-    /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
-    /// <param name="owner">Whose source it is: an enemy's is also logged as "Name@id", so two enemies' powers stay apart.</param>
     /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
     /// <param name="owner">Whose source it is: an enemy's is also logged as "Name@id", so two enemies' powers stay apart.</param>
     public void LogFired(string source, int amount = 0, int? owner = null) => LogAs(source, amount, owner, times: 1);

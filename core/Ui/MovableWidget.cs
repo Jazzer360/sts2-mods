@@ -68,7 +68,7 @@ public sealed class MovableWidget
         var pinGrid = new GridContainer { Columns = 3, MouseFilter = Control.MouseFilterEnum.Ignore, TooltipText = "Pin: which corner stays put" };
         pinGrid.AddThemeConstantOverride("h_separation", 2);
         pinGrid.AddThemeConstantOverride("v_separation", 2);
-        var anchors = (ScreenAnchor[])Enum.GetValues(typeof(ScreenAnchor));
+        var anchors = Enum.GetValues<ScreenAnchor>();
         for (var i = 0; i < 9; i++)
         {
             var anchor = anchors[i];

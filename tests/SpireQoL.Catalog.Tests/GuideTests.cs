@@ -32,7 +32,7 @@ public class GuideTests
         var features = typeof(ModEntry).Assembly.GetTypes()
             .Where(type => !type.IsAbstract && typeof(IFeature).IsAssignableFrom(type))
             .Select(type => ((IFeature)RuntimeHelpers.GetUninitializedObject(type)).DisplayName)
-            .Where(name => !name.EndsWith("(log only)")) // diagnostics: nothing on screen
+            .Where(name => !name.EndsWith("(log only)", StringComparison.Ordinal)) // diagnostics: nothing on screen
             .ToList();
         Assert.True(features.Count >= 10, $"only {features.Count} features found");
         var missing = features.Where(name => !guide.Contains(CoveredAs.GetValueOrDefault(name, name))).ToList();

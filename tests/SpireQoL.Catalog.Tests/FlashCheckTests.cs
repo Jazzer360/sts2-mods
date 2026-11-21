@@ -1,7 +1,6 @@
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Powers;
 using SpireQoL.Diagnostics;
-using SpireQoL.Features;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
@@ -19,7 +18,7 @@ public class FlashCheckTests
     public void ACanonicalPowerHasNoOwnerRatherThanThrowing()
     {
         GameModels.EnsureLoaded();
-        var canon = ModelDb.GetById<PowerModel>(ModelDb.GetId(typeof(ChildOfTheStarsPower)))!;
+        var canon = ModelDb.GetById<PowerModel>(ModelDb.GetId<ChildOfTheStarsPower>())!;
         Assert.False(canon.IsMutable);
         Assert.Null(SpireQoL.Combat.CardPredictions.OwnerOf(canon));
     }

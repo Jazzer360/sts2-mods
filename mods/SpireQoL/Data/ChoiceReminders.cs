@@ -241,7 +241,7 @@ public static class ChoiceReminders
         {
             foreach (var (call, effect) in Calls)
             {
-                if (call.EndsWith('*') ? otherCall.StartsWith(call[..^1]) : otherCall == call) choiceEffect |= effect;
+                if (call.EndsWith('*') ? otherCall.StartsWith(call[..^1], StringComparison.Ordinal) : otherCall == call) choiceEffect |= effect;
             }
         }
         return choiceEffect;

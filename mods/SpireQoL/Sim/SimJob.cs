@@ -68,7 +68,7 @@ public sealed class SimJob
     /// The fight and your turn the boards being searched now belong to (Telemetry.SearchDone.ContextOf; 0 outside your turn), set by
     /// the game's thread each frame (SessionWatch). Each job keeps the value it started with, for the session's counts (decision #108).
     /// </summary>
-    public static long Context;
+    internal static long Context;
 
     private SimJob(SimSearch ex, string label, long firstBudget)
     {

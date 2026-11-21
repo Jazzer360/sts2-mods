@@ -19,7 +19,7 @@ public class MoveBranchTests
         foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly))
         {
             var parameterInfos = method.GetParameters();
-            if (method.ReturnType != typeof(Task) || parameterInfos.Length != 1 || !parameterInfos[0].ParameterType.Name.StartsWith("IReadOnlyList")) continue;
+            if (method.ReturnType != typeof(Task) || parameterInfos.Length != 1 || !parameterInfos[0].ParameterType.Name.StartsWith("IReadOnlyList", StringComparison.Ordinal)) continue;
             yield return ($"{type.Name}.{method.Name}", method);
         }
     }

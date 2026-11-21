@@ -58,7 +58,7 @@ public class GameBranchTests
             for (var i = 0; i < lines.Length; i++)
             {
                 var line = lines[i];
-                if (line.TrimStart().StartsWith("//")) continue;
+                if (line.TrimStart().StartsWith("//", StringComparison.Ordinal)) continue;
                 foreach (Match match in Regex.Matches(line, "\"(\\w+)\""))
                 {
                     if (!both.Contains(match.Groups[1].Value) || KeyCall.IsMatch(line[..match.Index])) continue;

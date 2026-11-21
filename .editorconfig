@@ -13,3 +13,37 @@ indent_size = 2
 
 [*.cs]
 csharp_style_namespace_declarations = file_scoped:suggestion
+
+# ---- Analyzers (decision #148): .NET's recommended set (AnalysisLevel in Directory.Build.props), every warning an error in a
+# release. Off or quieter only where a rule fights a deliberate design; each says why.
+# The simulator's state is plain public fields on purpose: copied per branch with MemberwiseClone, cheap to read (decision #31).
+dotnet_diagnostic.CA1051.severity = none
+# Names read as the game names things (Sim, Event, Card...), not as keywords or type names.
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1720.severity = none
+dotnet_diagnostic.CA1711.severity = none
+# NamedSet<T>.Empty: a static on a generic type is the design.
+dotnet_diagnostic.CA1000.severity = none
+# Godot nodes (GodotObject is IDisposable) are freed by the scene tree, not by their owner's Dispose.
+dotnet_diagnostic.CA1001.severity = none
+# Numbers on screen follow the player's locale; game values read as objects are numbers already. Comparisons (CA1310) are enforced.
+dotnet_diagnostic.CA1305.severity = suggestion
+dotnet_diagnostic.CA1859.severity = suggestion
+# A constant array argument allocates per call. Here they're report fingerprints and code-index lookups, cold paths; per-frame
+# allocation is what matters, and the dev dashboard measures it.
+dotnet_diagnostic.CA1861.severity = suggestion
+
+# ---- Code style the build enforces: dead code and imports, fields that never change, file-scoped namespaces.
+dotnet_diagnostic.IDE0005.severity = warning
+dotnet_diagnostic.IDE0051.severity = warning
+dotnet_diagnostic.IDE0052.severity = warning
+dotnet_diagnostic.IDE0059.severity = warning
+dotnet_diagnostic.IDE0044.severity = warning
+dotnet_diagnostic.IDE0161.severity = warning
+csharp_style_namespace_declarations = file_scoped:warning
+
+[tests/**.cs]
+# Test data: an array inline in an assertion is clearer than a field, and allocation doesn't matter there.
+dotnet_diagnostic.CA1861.severity = none
+# Test names read as sentences.
+dotnet_diagnostic.CA1707.severity = none

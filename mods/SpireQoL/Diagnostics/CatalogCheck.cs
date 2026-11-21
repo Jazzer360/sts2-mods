@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Data;
-using SpireQoL.Features;
 using SpireQoL.Menu;
 
 namespace SpireQoL.Diagnostics;
@@ -35,7 +34,7 @@ internal static class CatalogCheck
         var gameTypes = GameModelTypes();
         // The simulator's models with a tab (the play log's tabs), and the outcome comparisons Proc Indicators names (tab keys are
         // built as "proc:" + nameof(X), which the compiler folds into one literal).
-        var ruleNames = LiteralsIn(typeof(Combat.CardPredictions)).Select(literal => literal.StartsWith("proc:") ? literal[5..] : literal)
+        var ruleNames = LiteralsIn(typeof(Combat.CardPredictions)).Select(literal => literal.StartsWith("proc:", StringComparison.Ordinal) ? literal[5..] : literal)
             .Concat(Sim.SimModels.Names.Where(name => Sim.SimModels.Get(name) is { } model && (model.Tab != null || model.JudgedOnOutcome)))
             .Where(name => gameTypes.TryGetValue(name, out var type) && (typeof(RelicModel).IsAssignableFrom(type) || typeof(PowerModel).IsAssignableFrom(type)))
             .ToHashSet();

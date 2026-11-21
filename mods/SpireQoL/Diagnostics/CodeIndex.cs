@@ -23,10 +23,10 @@ internal static class CodeIndex
     /// <summary>The class (or a base class below the game's model types) calls one of these ("Type.Method", or "Type.Prefix*" for methods starting with Prefix), or overrides one of these hooks.</summary>
     public static bool Does(Type type, IReadOnlyCollection<string> calls, IReadOnlyCollection<string> overrides)
     {
-        for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; otherType = otherType.BaseType)
+        for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.", StringComparison.Ordinal) == true; otherType = otherType.BaseType)
         {
             var info = For(otherType);
-            if (calls.Any(call => call.EndsWith('*') ? info.Calls.Any(otherCall => otherCall.StartsWith(call[..^1])) : info.Calls.Contains(call))) return true;
+            if (calls.Any(call => call.EndsWith('*') ? info.Calls.Any(otherCall => otherCall.StartsWith(call[..^1], StringComparison.Ordinal)) : info.Calls.Contains(call))) return true;
             if (overrides.Any(info.Overrides.Contains)) return true;
         }
         return false;
@@ -43,7 +43,7 @@ internal static class CodeIndex
     public static bool FlashesOutsideAmountHooks(Type type) => FlashesOnItsOwn.GetOrAdd(type, static otherType =>
     {
         string[] amountHooks = { "AfterModifyingDamageAmount", "AfterModifyingBlockAmount" };
-        for (var nextType = otherType; nextType != null && nextType.Assembly == otherType.Assembly && nextType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; nextType = nextType.BaseType)
+        for (var nextType = otherType; nextType != null && nextType.Assembly == otherType.Assembly && nextType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.", StringComparison.Ordinal) == true; nextType = nextType.BaseType)
         {
             var types = new List<Type> { nextType };
             for (var i = 0; i < types.Count; i++) types.AddRange(types[i].GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
@@ -88,12 +88,12 @@ internal static class CodeIndex
     public static bool OnlyModifies(Type type)
     {
         var hooks = new List<string>();
-        for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.") == true; otherType = otherType.BaseType)
-            hooks.AddRange(For(otherType).Overrides.Where(member => !member.StartsWith("get_") && !member.StartsWith("set_")));
+        for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.", StringComparison.Ordinal) == true; otherType = otherType.BaseType)
+            hooks.AddRange(For(otherType).Overrides.Where(member => !member.StartsWith("get_", StringComparison.Ordinal) && !member.StartsWith("set_", StringComparison.Ordinal)));
         string[] amounts = { "AfterModifyingBlockAmount", "AfterModifyingDamageAmount" };
         return hooks.Any(amounts.Contains)
                && hooks.All(hook => amounts.Contains(hook) || hook is "ModifyBlockAdditive" or "ModifyBlockMultiplicative"
-                   || (hook.StartsWith("ModifyDamage") && hook != "ModifyDamageGiven"));
+                   || (hook.StartsWith("ModifyDamage", StringComparison.Ordinal) && hook != "ModifyDamageGiven"));
     }
 
     private static Info For(Type type)

@@ -17,6 +17,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Pact's End deals no damage, in every prediction, unless your exhaust pile holds enough cards (when it glows gold).
 - The checks no longer report your death when Fairy in a Bottle or Lizard Tail saves you: a death is the game's own, not your HP reaching 0 on the way to the heal.
 
+
+### Main Saves 1.0.24
+#### Changed
+- Shared code: tidied to the analyzers every build now runs (ordinal string comparisons, no unused code). No change in the game.
 ### Spire QoL 1.25.0
 #### Added
 - Draw and energy tabs show how many: the cards the play makes Dark Embrace, Vicious, Motif, Game Piece, Iron Club, Joss Paper or Centennial Puzzle draw (only those that fit in your hand), and the energy Subroutine, Yah!, Orbit, Automation, Ivory Tile or Nunchaku gives. Motif stacked draws its amount for each melody the card is the first to play this turn.

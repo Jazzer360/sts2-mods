@@ -3,6 +3,9 @@ using MegaCrit.Sts2.Core.Models;
 
 namespace SpireQoL.Cards;
 
+/// <summary>What a tab's amount counts (TabSpec.Amount): the block, damage, summon, draw and energy tabs (decision #132), and a free card's saving.</summary>
+public enum TabAmount { Block, Damage, Summon, CardsDrawn, EnergyGained, EnergySaved }
+
 /// <summary>
 /// One on-card indicator. Every on-card indicator uses this same form: a native-style tab (a copy
 /// of the card's own enchantment tab) in a row along the card's top edge, with
@@ -20,8 +23,7 @@ namespace SpireQoL.Cards;
 /// icon's top-left corner.
 /// Marker: another picture in that corner instead (decision #83: the heart on the card reward pick that makes Book of Five Rings
 /// heal); null for none.
-/// <summary>What a tab's amount counts (TabSpec.Amount): the block, damage, summon, draw and energy tabs (decision #132), and a free card's saving.</summary>
-public enum TabAmount { Block, Damage, Summon, CardsDrawn, EnergyGained, EnergySaved }
+/// </summary>
 
 public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null, TabAmount? Kind = null, int Amount = 0,
     int AuditMin = 0, int AuditMax = 0, string? Text = null, CardModel? Card = null, string? NumberText = null, bool Aimed = false,

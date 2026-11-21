@@ -197,7 +197,7 @@ public sealed partial class RunRemindersFeature
                     continue;
                 }
                 if (ins.opcode == OpCodes.Ldtoken && ins.operand is FieldInfo data) { arrayData = data; continue; }
-                if (building is { } elementLength && ins.opcode.Name?.StartsWith("stelem") == true && last is { Const: { } value })
+                if (building is { } elementLength && ins.opcode.Name?.StartsWith("stelem", StringComparison.Ordinal) == true && last is { Const: { } value })
                 {
                     elementLength.Values.Add(Enum.ToObject(elementLength.Element, value));
                     if (elementLength.Values.Count == elementLength.Length) { arrays[elementLength.Element] = elementLength.Values.ToArray(); building = null; }
@@ -228,8 +228,8 @@ public sealed partial class RunRemindersFeature
                     building = null;
                     continue;
                 }
-                if (type.Name == "DynamicVarSet" && otherMethod.Name.StartsWith("get_")) varName = otherMethod.Name == "get_Item" ? lastString : otherMethod.Name[4..];
-                else if (otherMethod.Name == "get_IntValue" && type.Name.EndsWith("Var") && varName != null) Push(new IntExpr(Const: null, varName));
+                if (type.Name == "DynamicVarSet" && otherMethod.Name.StartsWith("get_", StringComparison.Ordinal)) varName = otherMethod.Name == "get_Item" ? lastString : otherMethod.Name[4..];
+                else if (otherMethod.Name == "get_IntValue" && type.Name.EndsWith("Var", StringComparison.Ordinal) && varName != null) Push(new IntExpr(Const: null, varName));
                 else if (IsRewardMaker(otherMethod))
                 {
                     // CardReward(options, count, player) / CardFactory.CreateForReward(player, count, options): the count is the
@@ -279,10 +279,10 @@ public sealed partial class RunRemindersFeature
                         || (otherMethod.Name == "Transform" && otherMethod.GetParameters().Any(parameterInfo => parameterInfo.ParameterType.Name == "Rng"))))
                     || (type == typeof(CardFactory) && otherMethod.Name == nameof(CardFactory.CreateRandomCardForTransform)))
                     _transformRandom = true;
-                if (type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Upgrade")) upgrades = true;
+                if (type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Upgrade", StringComparison.Ordinal)) upgrades = true;
                 if (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForUpgrade") picksUpgrade = true;
                 if (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForTransformation") _picksTransform = true;
-                if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Enchant")) || (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForEnchantment"))
+                if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Enchant", StringComparison.Ordinal)) || (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForEnchantment"))
                     _enchantsDeck = true;
                 // Whose character a pool belongs to: the last call that returned one (Owner.Character, or Sea Glass's Character).
                 if (otherMethod is MethodInfo { ReturnType: var returnType } && typeof(CharacterModel).IsAssignableFrom(returnType)) character = otherMethod;
@@ -693,7 +693,7 @@ public sealed partial class RunRemindersFeature
         }
 
         private static FieldInfo? ThisField(Type type) =>
-            type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(field => field.Name.EndsWith("__this"));
+            type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(field => field.Name.EndsWith("__this", StringComparison.Ordinal));
 
         /// <summary>The card pool the option's delegate holds (a closure field), if any.</summary>
         private CardPoolModel? OptionPool()

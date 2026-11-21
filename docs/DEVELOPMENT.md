@@ -67,6 +67,18 @@ The mod is developed on Steam's **beta** branch (the installed game) and also su
 - **Logs:** `%APPDATA%\SlayTheSpire2\logs\godot*.log` (newest is `godot.log`). Mod lines start with `[SpireQoL]`. Audit lines: `[SpireQoL] [audit]`, with a `combat summary` line per fight. Read these first for any in-game report (see CLAUDE.md "Logs first").
 - **Release every change** (CLAUDE.md "Releasing"): bump the version in `SpireQoL.json` and `SpireQoL.csproj`, add the CHANGELOG section, commit, push, `./scripts/release.ps1`. The release script works while the game is running (it doesn't install); install afterwards with `dotnet build` once the game is closed. The "Release check" workflow on GitHub goes red if a release is missing. After a release the script also starts the site's build (`gh workflow run pages.yml --ref gh-pages`), which reads the changelog and releases fresh; the site otherwise rebuilds only when its own branch changes.
 
+## Analyzers and code style
+
+Every build runs .NET's recommended analyzers (`AnalysisLevel` in `Directory.Build.props`) and the code-style rules in
+`.editorconfig` (decision #148); a release builds with warnings as errors, so a finding fails it. What they hold: string comparisons
+say they're ordinal (`StartsWith(x, StringComparison.Ordinal)`, or a char overload), no unused imports or private members, fields
+that never change are `readonly`, members that touch no instance data are `static`, mutable statics aren't public, and XML comments
+are well formed (a `<see cref>` must point at something). The rules turned off or down each say why in `.editorconfig` (the
+simulator's public fields, Godot nodes the scene tree frees, numbers on screen in the player's locale, cold-path arrays).
+
+Most findings fix themselves in an IDE (the light bulb), or for imports: `dotnet format style --diagnostics IDE0005`. Turn a rule off
+only in `.editorconfig`, with the reason beside it, never with a `#pragma` unless the one line really is the exception (and says why).
+
 ## Dev mode
 
 Your own game is told apart from players' (decision #108). `dotnet build`'s install step (`Directory.Build.targets`, `InstallModToGame`) and `scripts/release.ps1`'s install step write a marker file, `SpireQoL.dev`, beside the installed DLL; release zips never contain it. At load the mod reads it (`ModEntry.DevMode`; the log says `dev mode on`). The hidden setting `"DevMode"` in `<game>/mods/SpireQoL/SpireQoL.settings.cfg` overrides the marker: `true` or `false`, or leave it out (null) to follow the marker. Delete the marker, or set the setting to `false`, to play exactly as a player would.

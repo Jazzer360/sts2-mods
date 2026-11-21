@@ -83,7 +83,7 @@ public static class GameIcons
     {
         if (Valid(_clock)) return _clock;
         _clock = LoadTexture("res://images/packed/common_ui/top_bar/timer_icon.png");
-        return Valid(_clock) ? _clock : Power(typeof(MegaCrit.Sts2.Core.Models.Powers.BattlewornDummyTimeLimitPower));
+        return Valid(_clock) ? _clock : Power<MegaCrit.Sts2.Core.Models.Powers.BattlewornDummyTimeLimitPower>();
     }
 
     private static Texture2D? _clock;

@@ -3,7 +3,7 @@ namespace SpireQoL.Sim;
 /// <summary>
 /// Orbs as actions (OrbCmd): channel (into full slots the front orb is evoked first), evoke the front orb, evoke every orb twice,
 /// gain or lose slots, and Focus changes. A channelled orb's values come from its owner's state when it's channelled (its Focus,
-/// Infused Core), and every channel goes through AfterOrbChanneled (Metronome). Models channel through <see cref="ChannelOrb"/>
+/// Infused Core), and every channel goes through AfterOrbChanneled (Metronome). Models channel through <see cref="SimEngine.ChannelOrb"/>
 /// (Storm, Trash to Treasure).
 /// </summary>
 public sealed record OrbAction(OrbAction.Op Kind) : SimAction

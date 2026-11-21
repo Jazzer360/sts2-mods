@@ -9,7 +9,6 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
 using SpireQoL.Data;
-using SpireQoL.Features;
 using SpireQoL.Procs;
 using SpireQoL.Sim;
 using MegaCrit.Sts2.Core.Runs;
@@ -993,11 +992,11 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 "tabs shown" => new[] { kind, card, rest.Split(' ')[0] },
                 "power went down" => new[] { kind, rest.Split(' ')[0] },
                 // Grouped by the sources that could have done it (amounts and cards left out).
-                _ when kind.StartsWith("untracked") => new[] { kind, rest.Contains("could be: ") ? rest[(rest.IndexOf("could be: ") + 10)..].TrimEnd(')') : card },
+                _ when kind.StartsWith("untracked", StringComparison.Ordinal) => new[] { kind, rest.Contains("could be: ") ? rest[(rest.IndexOf("could be: ", StringComparison.Ordinal) + 10)..].TrimEnd(')') : card },
                 // Which powers, and which way an amount was off: different causes, different issues.
                 "unexplained" when effect == "powers" => new[] { kind, card, "powers", rest },
                 "unexplained" => new[] { kind, card, effect },
-                _ when rest.StartsWith("predicted") => new[] { kind, card, Direction(rest) },
+                _ when rest.StartsWith("predicted", StringComparison.Ordinal) => new[] { kind, card, Direction(rest) },
                 _ => new[] { kind, card },
             };
             var extra = new Dictionary<string, string> { ["audit_window"] = string.Join("\n", window), ["turn_plays"] = turnPlays };
@@ -1006,7 +1005,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 foreach (var key in new[] { "player", "player_powers", "relics", "orbs", "enemies", "hand" })
                     if (otherWindow.Before.TryGetValue(key, out var before)) extra["before_" + key] = before;
             }
-            if (kind.StartsWith("after play") && otherWindow.Facts?.Sim != null)
+            if (kind.StartsWith("after play", StringComparison.Ordinal) && otherWindow.Facts?.Sim != null)
             {
                 extra["sim_state"] = otherWindow.Facts.Sim.Start.ToJson();
                 if (otherWindow.After != null) extra["sim_state_after"] = otherWindow.After.ToJson();
@@ -1169,7 +1168,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         // ---- relic tabs whose relic didn't fire (crossed ones mean "this breaks it": no flash)
         foreach (var (name, otherTab) in sourceOf)
         {
-            if (otherTab.Crossed || !otherTab.Key.StartsWith("proc:") || EndOfTurnRelicTabs.Contains(name) || SilentRelics.Contains(name)) continue;
+            if (otherTab.Crossed || !otherTab.Key.StartsWith("proc:", StringComparison.Ordinal) || EndOfTurnRelicTabs.Contains(name) || SilentRelics.Contains(name)) continue;
             // The play ended the fight: the game stops at the killing hit, so a relic that acts after it (Bone Flute after
             // Osty's attack) never gets to.
             if (window.FightEnded) continue;
@@ -1655,7 +1654,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 .Where(entry => ReturnToHand.Modelled.Contains(entry.Key.GetType().Name) && entry.Value.Pile == PileType.Hand && !ReferenceEquals(entry.Key, window.Card)
                              && window.FullBefore.Cards.TryGetValue(entry.Key, out var was) && was.Pile != PileType.Hand && !drawnNow.Contains(entry.Key))
                 .Select(entry => entry.Key.GetType().Name).ToHashSet();
-            var tabbedBack = window.Predicted.Where(tab => tab.Key.StartsWith("return:")).Select(tab => tab.Key["return:".Length..]).ToHashSet();
+            var tabbedBack = window.Predicted.Where(tab => tab.Key.StartsWith("return:", StringComparison.Ordinal)).Select(tab => tab.Key["return:".Length..]).ToHashSet();
             var randomPlays = UnpredictedAutoPlay(window, entries, me);
             foreach (var name in cameBack.Except(tabbedBack))
             {

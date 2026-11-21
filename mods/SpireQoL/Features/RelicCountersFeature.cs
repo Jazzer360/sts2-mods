@@ -122,7 +122,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             row.Tiny?.Fit();
             widget.Content.MoveChild(row.Root, index++);
 
-            Paint(row, state, host.Time, _ctx.Settings.FlashHz);
+            Paint(row, state, OverlayHost.Time, _ctx.Settings.FlashHz);
         }
 
         foreach (var (model, row) in _rows.ToList())

@@ -18,7 +18,7 @@ public class GameNamesTests
         try { all = typeof(AbstractModel).Assembly.GetTypes(); }
         catch (ReflectionTypeLoadException ex) { all = ex.Types.Where(type => type != null).ToArray()!; }
         // Not the game's test mocks (Models.*.Mocks: never in a real fight).
-        return all.Where(type => type is { IsAbstract: false, IsClass: true } && typeof(T).IsAssignableFrom(type) && type.Namespace?.EndsWith(".Mocks") != true)
+        return all.Where(type => type is { IsAbstract: false, IsClass: true } && typeof(T).IsAssignableFrom(type) && type.Namespace?.EndsWith(".Mocks", StringComparison.Ordinal) != true)
             .Select(type => type.Name).ToHashSet();
     }
 

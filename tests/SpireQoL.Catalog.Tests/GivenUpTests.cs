@@ -72,7 +72,7 @@ public class GivenUpTests
                 case ActedSeen.Flash:
                     // Some hook of it flashes when it acts (Biiig Hug: AfterShuffle).
                     Assert.True(relic.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-                        .Where(method => method.Name.StartsWith("After") || method.Name.StartsWith("Before"))
+                        .Where(method => method.Name.StartsWith("After", StringComparison.Ordinal) || method.Name.StartsWith("Before", StringComparison.Ordinal))
                         .Any(method => CallsIn(relic, method.Name).Contains("Flash")), $"{name}: no hook of it flashes, so a flash can't check its tab");
                     break;
             }
