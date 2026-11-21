@@ -48,4 +48,24 @@ public class CardCodeTests
         Assert.Equal(0, PlayFacts.StarGainsOf(ModelDb.Card<KnockoutBlow>()));
         Assert.Contains(nameof(KnockoutBlow), PlayFacts.KillStarCards);
     }
+
+    [Fact]
+    public void MadeCardsGoWhereTheCodeSends()
+    {
+        // Undeath's copy goes to your discard pile (a report: the hand was counted one too many); Severance's three go one to each pile,
+        // so one into your hand; Bundle of Joy's all into your hand.
+        GameModels.EnsureLoaded();
+        Assert.Equal(0, PlayFacts.MadeIntoHand(ModelDb.Card<Undeath>(), generated: 1));
+        Assert.Equal(1, PlayFacts.MadeIntoHand(ModelDb.Card<Severance>(), generated: 3));
+        Assert.Equal(4, PlayFacts.MadeIntoHand(ModelDb.Card<BundleOfJoy>(), generated: 4));
+    }
+
+    [Fact]
+    public void EveryMadeCardsPileIsRead()
+    {
+        // Every card that makes cards names their pile as a constant the code reader finds (a new way to pass it would read as unknown).
+        GameModels.EnsureLoaded();
+        var unread = ModelDb.AllCards.Where(card => CardCode.MadeInto(card.GetType()).Any(pile => pile == null)).Select(card => card.GetType().Name).ToList();
+        Assert.True(unread.Count == 0, "cards whose made cards' pile isn't read: " + string.Join(", ", unread));
+    }
 }

@@ -42,6 +42,99 @@ internal static class CardCode
         return set;
     }
 
+    private static readonly ConcurrentDictionary<Type, IReadOnlyList<MegaCrit.Sts2.Core.Entities.Cards.PileType?>> MadeIntoCache = new();
+
+    /// <summary>
+    /// The pile each card the play makes goes into (CardPileCmd.AddGeneratedCardToCombat, AddGeneratedCardsToCombat,
+    /// AddToCombatAndPreview: the PileType it passes), read from its code, one per call; null for a call whose pile isn't written
+    /// as a constant there.
+    /// </summary>
+    public static IReadOnlyList<MegaCrit.Sts2.Core.Entities.Cards.PileType?> MadeInto(Type cardType) => MadeIntoCache.GetOrAdd(cardType, ReadMadeInto);
+
+    private static readonly HashSet<string> MakeCalls = new() { "AddGeneratedCardToCombat", "AddGeneratedCardsToCombat", "AddToCombatAndPreview" };
+
+    private static IReadOnlyList<MegaCrit.Sts2.Core.Entities.Cards.PileType?> ReadMadeInto(Type cardType)
+    {
+        var piles = new List<MegaCrit.Sts2.Core.Entities.Cards.PileType?>();
+        foreach (var method in OnPlayMethods(cardType))
+        {
+            List<HarmonyLib.CodeInstruction> code;
+            try { code = SpireQoL.Diagnostics.GameCode.Instructions(method); } catch { continue; }
+            for (var i = 0; i < code.Count; i++)
+            {
+                if (code[i].operand is not MethodInfo called || called.DeclaringType?.Name != "CardPileCmd" || !MakeCalls.Contains(called.Name)) continue;
+                var pileParameter = Array.FindIndex(called.GetParameters(), parameter => parameter.ParameterType == typeof(MegaCrit.Sts2.Core.Entities.Cards.PileType));
+                piles.Add(pileParameter >= 0 && ArgumentSource(code, i, called, pileParameter) is { } source && Constant(source) is { } value
+                    ? (MegaCrit.Sts2.Core.Entities.Cards.PileType)value : null);
+            }
+        }
+        return piles;
+    }
+
+    /// <summary>
+    /// The instruction that pushed argument <paramref name="parameter"/> of the call at <paramref name="callAt"/>, walking back over
+    /// what each instruction pushes and pops; null when the way there isn't straight (a jump, or a jump's target) or it's unclear.
+    /// </summary>
+    internal static HarmonyLib.CodeInstruction? ArgumentSource(List<HarmonyLib.CodeInstruction> code, int callAt, MethodInfo called, int parameter)
+    {
+        var count = called.GetParameters().Length + (called.IsStatic ? 0 : 1);
+        var index = parameter + (called.IsStatic ? 0 : 1);
+        var wanted = count - index; // slots from the top of the stack: the last argument is 1
+        for (var i = callAt - 1; i >= 0; i--)
+        {
+            var instruction = code[i];
+            if (instruction.labels.Count > 0 && i < callAt - 1) return null;
+            if (instruction.opcode.FlowControl is System.Reflection.Emit.FlowControl.Branch or System.Reflection.Emit.FlowControl.Cond_Branch) return null;
+            if (StackEffect(instruction) is not var (push, pop)) return null;
+            if (wanted <= push) return push == 1 ? instruction : null;
+            wanted += pop - push;
+        }
+        return null;
+    }
+
+    /// <summary>An int constant an instruction loads (ldc.i4 and its short forms); null for any other.</summary>
+    private static int? Constant(HarmonyLib.CodeInstruction instruction)
+    {
+        var opcode = instruction.opcode;
+        if (opcode == System.Reflection.Emit.OpCodes.Ldc_I4_M1) return -1;
+        if (opcode.Value >= System.Reflection.Emit.OpCodes.Ldc_I4_0.Value && opcode.Value <= System.Reflection.Emit.OpCodes.Ldc_I4_8.Value)
+            return opcode.Value - System.Reflection.Emit.OpCodes.Ldc_I4_0.Value;
+        if (opcode == System.Reflection.Emit.OpCodes.Ldc_I4_S || opcode == System.Reflection.Emit.OpCodes.Ldc_I4) return Convert.ToInt32(instruction.operand);
+        return null;
+    }
+
+    /// <summary>How many values an instruction pushes and pops; null when that can't be told.</summary>
+    private static (int Push, int Pop)? StackEffect(HarmonyLib.CodeInstruction instruction)
+    {
+        var opcode = instruction.opcode;
+        int push, pop;
+        switch (opcode.StackBehaviourPush)
+        {
+            case System.Reflection.Emit.StackBehaviour.Push0: push = 0; break;
+            case System.Reflection.Emit.StackBehaviour.Push1_push1: push = 2; break;
+            case System.Reflection.Emit.StackBehaviour.Varpush:
+                if (instruction.operand is not MethodInfo pushed) return null;
+                push = pushed.ReturnType == typeof(void) ? 0 : 1;
+                break;
+            default: push = 1; break;
+        }
+        switch (opcode.StackBehaviourPop)
+        {
+            case System.Reflection.Emit.StackBehaviour.Pop0: pop = 0; break;
+            case System.Reflection.Emit.StackBehaviour.Pop1 or System.Reflection.Emit.StackBehaviour.Popi or System.Reflection.Emit.StackBehaviour.Popref: pop = 1; break;
+            case System.Reflection.Emit.StackBehaviour.Varpop:
+                if (instruction.operand is not MethodBase popped) return null;
+                pop = popped.GetParameters().Length + (popped.IsStatic || opcode == System.Reflection.Emit.OpCodes.Newobj ? 0 : 1);
+                break;
+            case System.Reflection.Emit.StackBehaviour.Popi_popi_popi or System.Reflection.Emit.StackBehaviour.Popref_popi_popi
+                or System.Reflection.Emit.StackBehaviour.Popref_popi_popi8 or System.Reflection.Emit.StackBehaviour.Popref_popi_popr4
+                or System.Reflection.Emit.StackBehaviour.Popref_popi_popr8 or System.Reflection.Emit.StackBehaviour.Popref_popi_popref:
+                pop = 3; break;
+            default: pop = 2; break;
+        }
+        return (push, pop);
+    }
+
     /// <summary>
     /// OnPlay, its state machine, and the local functions it declares (named "&lt;OnPlay&gt;g__...", in the card or a closure class,
     /// with their own state machines): Blossom Shot applies its Stretch from one.

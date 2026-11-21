@@ -46,7 +46,7 @@ public static partial class SimAdapter
             IsAttack = card.Type == CardType.Attack,
             Plays = plays,
             // A card played from elsewhere (Howl from Beyond from the exhaust pile) doesn't leave the hand.
-            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + facts.Draws + facts.Generated + facts.ReturnsToHand + facts.TakenToHand,
+            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + facts.Draws + facts.GeneratedInHand + facts.ReturnsToHand + facts.TakenToHand,
             FadingDelta = IsFading(card, combat) ? -1 : 0,
             HexFadingDelta = IsFading(card, combat) && EtherealOnlyFromHex(card) ? -1 : 0,
         };

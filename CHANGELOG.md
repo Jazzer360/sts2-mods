@@ -15,6 +15,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Incoming Damage shows the most likely outcome, with its chance, when a roll decides how the enemy turn goes (a draw at the end of your turn, I Am Invincible somewhere in your draw pile, a random target); it used to show the worst. The skull still shows whenever you might die, with its chance, and the Fairy in a Bottle or Lizard Tail line whenever one might save you, with its chance.
 
 #### Fixed
+- Your hand after a play counts only the cards it makes into your hand: Undeath's copy (and The Sun's card) go to your discard pile, and only one of Severance's three goes to your hand.
 - Knockout Blow's stars count only when its attack kills (Black Hole's damage from them too); they were counted on every play.
 - Relics and powers whose effect only showed as a tab now happen in every prediction: Corrosive Wave's poison for each card drawn, Arsenal's and Fertilizer's Strength for cards made, Helical Dart's Dexterity for a Shiv, Whittling Knife's Aim on a shuffle, Rainbow Ring's Strength and Dexterity, Compost's energy when an enemy dies, Demon Tongue's heal, and Hand Drill's Vulnerable when you break an enemy's block (the rest of the attack hits harder).
 - Mini Regent's Strength counts on the card that spends the stars (it lands before the card hits), in every prediction.

@@ -167,6 +167,8 @@ public sealed class PlayFacts
 
     /// <summary>Cards it creates (Shivs, Souls, clones, statuses...), and how many of those are statuses.</summary>
     public int Generated { get; private set; }
+    /// <summary>The ones of those that go into your hand (MadeIntoHand): the rest go to your draw or discard pile.</summary>
+    public int GeneratedInHand { get; private set; }
     public int GeneratedStatuses { get; private set; }
     /// <summary>Of those, Sadness cards you create (Fertilizer, All Is Well react: AfterCardGeneratedForCombat).</summary>
     public int SadnessCreated { get; private set; }
@@ -395,6 +397,7 @@ public sealed class PlayFacts
             Shuffles = Shuffles || next.Shuffles,
             ShufflesItself = ShufflesItself || next.ShufflesItself,
             Generated = Generated + next.Generated,
+            GeneratedInHand = GeneratedInHand + next.GeneratedInHand,
             GeneratedStatuses = GeneratedStatuses + next.GeneratedStatuses,
             SadnessCreated = SadnessCreated + next.SadnessCreated,
             CardsBack = CardsBack.Concat(next.CardsBack).ToList(),
@@ -429,7 +432,7 @@ public sealed class PlayFacts
         var orbs = OrbDamageFor(evoked, me, combat);
         var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me);
         // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
-        var createdInHand = GeneratedToPileCards.Contains(name) ? 0 : generated;
+        var createdInHand = MadeIntoHand(card, generated);
 
         var facts = new PlayFacts
         {
@@ -457,6 +460,7 @@ public sealed class PlayFacts
             EnchantmentDraws = swiftDraws,
             BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
             Generated = generated,
+            GeneratedInHand = createdInHand,
             GeneratedStatuses = statuses * Math.Max(1, plays),
             SadnessCreated = SadnessCards.Contains(name) ? statuses * Math.Max(1, plays) : 0,
             CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,
@@ -497,15 +501,17 @@ public sealed class PlayFacts
     internal static readonly HashSet<string> DiscardThenDrawCards = new() { nameof(CalculatedGamble), "WheelOfFortune", "TheHermit" };
 
     /// <summary>
-    /// Cards whose created cards go to your draw or discard pile, not your hand (AddGeneratedCardToCombat with
-    /// PileType.Draw or Discard; decompile v0.113.0). Every other card's created cards are counted as going to your hand.
+    /// How many of the <paramref name="generated"/> cards a play makes go into your hand: the share of its make calls that name your
+    /// hand (CardCode.MadeInto, the pile each passes, read from its code: Anger's copy into your discard pile, Severance's one of
+    /// three into your hand), exact when each call makes as many (they do). Made some other way (a forge): into your hand.
     /// </summary>
-    internal static readonly HashSet<string> GeneratedToPileCards = new()
+    internal static int MadeIntoHand(CardModel card, int generated)
     {
-        nameof(AdaptiveStrike), nameof(Anger), nameof(BoostAway), nameof(CaptureSpirit), nameof(Dirge), nameof(FightThrough),
-        nameof(GlimpseBeyond), nameof(GraveWarden), nameof(GunkUp), nameof(Metamorphosis), nameof(MightyShield), nameof(MightyWeapon),
-        nameof(Outrage), nameof(Overclock), nameof(Reave), nameof(Turbo), nameof(Undeath),
-    };
+        var piles = CardCode.MadeInto(card.GetType());
+        if (piles.Count == 0 || generated <= 0) return generated;
+        var hand = piles.Count(pile => pile is null or PileType.Hand);
+        return hand == piles.Count ? generated : generated * hand / piles.Count;
+    }
 
     /// <summary>Cards that draw, then discard (Acrobatics: the hand limit counts the hand before the discard).</summary>
     internal static readonly HashSet<string> DrawThenDiscardCards = new() { nameof(Acrobatics), nameof(DaggerThrow), nameof(Prepared), nameof(Scrape) };
@@ -527,7 +533,7 @@ public sealed class PlayFacts
             OwnDraws = OwnDraws - EnchantmentDraws,
             EnchantmentDraws = EnchantmentDraws,
             // Cards the card itself puts into your hand, before its enchantment draws.
-            AddedToHandBeforeEnchantment = EnchantmentDraws > 0 && !GeneratedToPileCards.Contains(Card.GetType().Name) ? Generated : 0,
+            AddedToHandBeforeEnchantment = EnchantmentDraws > 0 ? GeneratedInHand : 0,
             Plays = Math.Max(1, Plays),
             IsPower = Card.Type == CardType.Power,
             Exhausts = TotalExhausts,
