@@ -705,7 +705,7 @@ public static partial class SimEngine
 
     // ------------------------------------------------------------------ card play
 
-    /// <summary>A script on its own (the state right after it), for tests of v2 plays.</summary>
+    /// <summary>A script on its own (the state right after it), for tests of plays.</summary>
     public static void RunScriptTo(SimState s, SimScript script, out List<SimState> branches, out bool truncated)
     {
         var b = Scratch(s, out var work);

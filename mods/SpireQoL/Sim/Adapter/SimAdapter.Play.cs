@@ -16,7 +16,7 @@ namespace SpireQoL.Sim;
 public static partial class SimAdapter
 {
     /// <summary>
-    /// The play of <paramref name="card"/> aimed at <paramref name="targetId"/> (docs/SIMULATOR_V2.md "Card scripts"): the card
+    /// The play of <paramref name="card"/> aimed at <paramref name="targetId"/> (docs/SIMULATOR.md "Card scripts"): the card
     /// play with what each play does as actions (HP cost, attack, block, powers), worked out by the simulator from the card's
     /// values, the models and the captured terms; plus, as summary fields, what isn't an action yet (orbs, procs, hand changes).
     /// <paramref name="owner"/>: whose card it is (a teammate's auto-play: their Howl from Beyond); <paramref name="me"/> is then
@@ -50,7 +50,7 @@ public static partial class SimAdapter
         play.BlockToAlly = BlockToAllyCards.Contains(name);
         play.ChannelToAlly = ChannelToAllyCards.Contains(name);
 
-        // ---- v2: the card play and what each play does
+        // ---- the card play and what each play does
         play.TargetId = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
         play.Card = new SimCardPlay(SimReaders.Card(card, f, me), owner, play.TargetId, 0, plays, f.AutoPlayed);
         if (f.LosesHp) play.Body.Add(new LoseHpAction(Sts2State.Var(card, "HpLoss")));

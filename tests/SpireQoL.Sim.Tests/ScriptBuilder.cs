@@ -1,7 +1,7 @@
-namespace SpireQoL.Sim.Tests.V2;
+namespace SpireQoL.Sim.Tests;
 
-/// <summary>Builds v2 scripts for tests (docs/SIMULATOR_V2.md): a card play with its body actions.</summary>
-internal static class V2Script
+/// <summary>Builds simulator scripts for tests (docs/SIMULATOR.md): a card play with its body actions, and the states they leave.</summary>
+internal static class ScriptBuilder
 {
     public static SimCard Card(string name, SimCardType type = SimCardType.Attack, params SimCardTag[] tags) =>
         new(name, type) { Tags = tags.ToHashSet() };

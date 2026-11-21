@@ -1,4 +1,4 @@
-# Simulator v2 (Spire QoL 1.0.0)
+# The outcome simulator (since Spire QoL 1.0.0)
 
 The design and the plan for rebuilding the outcome simulator around the game's own structure: an interpreter that runs a
 card's effects step by step through the same hooks and pipelines the game uses. Decision #48. This file is the plan of
@@ -42,7 +42,7 @@ Non-goals:
 - Running the game's own engine on a copy of the fight (rejected: global singletons, history, saves, Steam stats, UI
   calls without null checks, RNG; and it breaks observe-only, decision #10).
 - Reading the RNG or anything hidden (CLAUDE.md "Only knowable information"): random outcomes stay branches.
-- Changing what's shown. Tabs, Incoming Damage, Death Skull, the lethal tab and the trackers look and mean the same; v2
+- Changing what's shown. Tabs, Incoming Damage, Death Skull, the lethal tab and the trackers look and mean the same; the simulator
   changes how their numbers are made.
 
 ## The game model being mirrored (decompile v0.113.1)

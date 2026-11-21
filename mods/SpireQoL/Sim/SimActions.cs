@@ -1,14 +1,14 @@
 namespace SpireQoL.Sim;
 
 /// <summary>
-/// One step of a card's script (docs/SIMULATOR_V2.md "Card scripts"). The engine runs a script's actions in order on every
+/// One step of a card's script (docs/SIMULATOR.md "Card scripts"). The engine runs a script's actions in order on every
 /// branch; an action may run hooks and branch. Actions are immutable values shared by every branch.
 /// </summary>
 public abstract record SimAction;
 
 /// <summary>
 /// A card play (CardModel.OnPlayWrapper): its body runs once per play (PlayCount, from the game's ModifyCardPlayCount), with
-/// BeforeCardPlayed before each play and AfterCardPlayed after it (docs/SIMULATOR_V2.md "The game model").
+/// BeforeCardPlayed before each play and AfterCardPlayed after it (docs/SIMULATOR.md "The game model").
 /// </summary>
 /// <param name="Play">The play (its PlayIndex is set for each play).</param>
 /// <param name="Body">The card's own actions (OnPlay), then its enchantment's and affliction's.</param>
@@ -19,7 +19,7 @@ public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> B
 }
 
 /// <summary>
-/// The damage of one attack, worked out at each hit from the state (docs/SIMULATOR_V2.md "Pipelines"): the card's base value
+/// The damage of one attack, worked out at each hit from the state (docs/SIMULATOR.md "Pipelines"): the card's base value
 /// (per target when it's calculated on the target), its props, and the captured terms of sources the simulator doesn't model,
 /// per target. Fixed: the numbers are final (no modelled terms are added).
 /// </summary>

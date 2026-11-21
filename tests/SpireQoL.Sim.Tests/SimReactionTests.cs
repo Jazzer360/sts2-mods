@@ -120,7 +120,7 @@ public class SimReactionTests
         // Weak from the card changes the enemy's intent: its hits go through the damage pipeline as they land.
         var s = new SimState { Enemies = { Enemy(1, 30, 0, 12) } };
         s.Enemies[0].Intent = new List<IntentHit> { new(12) };
-        var weak = V2.V2Script.Play(V2.V2Script.Card("Neutralize", SimCardType.Skill), 1, 1, new ApplyPowerAction(PowerId.Weak, 1) { Debuff = true });
+        var weak = ScriptBuilder.Play(ScriptBuilder.Card("Neutralize", SimCardType.Skill), 1, 1, new ApplyPowerAction(PowerId.Weak, 1) { Debuff = true });
         Assert.Equal(12, SimEngine.Run(s).TakenMax);
         Assert.Equal(9, SimEngine.Run(s, weak).TakenMax);
     }

@@ -11,7 +11,7 @@ using Sts2Mods.Core.Game;
 namespace SpireQoL.Sim;
 
 /// <summary>
-/// Reads the game into the simulator's v2 inputs (docs/SIMULATOR_V2.md "The adapter"): creatures' powers and players' relics
+/// Reads the game into the simulator's inputs (docs/SIMULATOR.md "The adapter"): creatures' powers and players' relics
 /// with the numbers each model keeps, players' turn counters, cards, and the captured terms of every damage or block source
 /// the simulator doesn't model. State only: the rules are the models'.
 /// </summary>
@@ -298,7 +298,7 @@ public static class SimReaders
     // ------------------------------------------------------------------ captured terms
 
     /// <summary>
-    /// The terms of one damage calculation that the simulator doesn't model (docs/SIMULATOR_V2.md "Pipelines"): the card's
+    /// The terms of one damage calculation that the simulator doesn't model (docs/SIMULATOR.md "Pipelines"): the card's
     /// enchantment, and every hook listener whose class isn't modelled, each asked for its own term the way Hook.ModifyDamage
     /// asks it (with this card, dealer and target).
     /// </summary>

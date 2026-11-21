@@ -243,7 +243,7 @@ public static partial class SimAdapter
                     {
                         var perHit = attack.GetSingleDamage(targets, e);
                         for (var i = 0; i < Math.Max(1, attack.Repeats); i++) se.Hits.Add(perHit);
-                        // v2: the hit's base and the captured terms on each player; the models (its Strength and Weak, your Vulnerable,
+                        // the hit's base and the captured terms on each player; the models (its Strength and Weak, your Vulnerable,
                         // Intangible...) apply as it lands, so what your cards change shows.
                         if (intent == null || attack.DamageCalc == null) { intent = null; continue; }
                         var b = attack.DamageCalc();
@@ -552,7 +552,7 @@ public static partial class SimAdapter
         var pcs = me.PlayerCombatState!;
         var hand = Sts2State.Hand(me);
         p.Block = c.Block;
-        // v2: every power and relic with the numbers its model keeps, and the turn's card plays (docs/SIMULATOR_V2.md).
+        // every power and relic with the numbers its model keeps, and the turn's card plays (docs/SIMULATOR.md).
         p.Powers = SimReaders.Powers(c, idOf);
         p.Relics = SimReaders.Relics(me);
         p.Turn = SimReaders.Turn(me, cs);

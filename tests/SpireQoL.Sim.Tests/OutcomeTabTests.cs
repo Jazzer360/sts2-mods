@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace SpireQoL.Sim.Tests.V2;
+namespace SpireQoL.Sim.Tests;
 
 /// <summary>
 /// Tabs judged on how the turn ends (SimModel.OutcomeTab): each source's rule against ending the turn now, on its own model. The

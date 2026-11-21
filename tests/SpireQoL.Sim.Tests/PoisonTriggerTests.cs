@@ -1,7 +1,7 @@
 using Xunit;
-using static SpireQoL.Sim.Tests.V2.V2Script;
+using static SpireQoL.Sim.Tests.ScriptBuilder;
 
-namespace SpireQoL.Sim.Tests.V2;
+namespace SpireQoL.Sim.Tests;
 
 /// <summary>
 /// Outbreak setting off every enemy's poison during the play (Outbreak.OnPlay: PoisonPower.Trigger on each), and Accelerant's

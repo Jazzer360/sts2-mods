@@ -1,6 +1,6 @@
 namespace SpireQoL.Sim.Models;
 
-// The damage and block sources that can change during your turn (docs/SIMULATOR_V2.md "Coverage"), each from its
+// The damage and block sources that can change during your turn (docs/SIMULATOR.md "Coverage"), each from its
 // decompiled body (v0.113.1). Amounts live on the owner's PowerSet; Data holds what a model keeps between hooks.
 
 /// <summary>StrengthPower.ModifyDamageAdditive: its amount on the owner's powered attacks (negative allowed).</summary>

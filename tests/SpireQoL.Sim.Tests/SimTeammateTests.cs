@@ -200,7 +200,7 @@ public class SimTeammateTests
         s.Enemies[0].TeammateHits = new() { new() { 15 } };
         s.Enemies[0].Intent = new List<IntentHit> { new(10) { Captured = new Dictionary<int, CapturedTerms> { [Who.Teammate(0)] = new() { Mul = 1.5m } } } };
         s.Teammates.Add(Mate());
-        var play = V2.V2Script.Play(V2.V2Script.Card("Neutralize", SimCardType.Skill), 1, 1, new ApplyPowerAction(PowerId.Weak, 1) { Debuff = true });
+        var play = ScriptBuilder.Play(ScriptBuilder.Card("Neutralize", SimCardType.Skill), 1, 1, new ApplyPowerAction(PowerId.Weak, 1) { Debuff = true });
         var o = SimEngine.Run(s, play);
         Assert.Equal(7, o.TakenMax);
         Assert.Equal(11, o.TeammateTakenMax(0));
@@ -273,7 +273,7 @@ public class SimTeammateTests
         s.Enemies[0].TeammateHits = new() { new() { 10 } };
         s.Enemies[0].Intent = new List<IntentHit> { new(10) };
         s.Teammates.Add(Mate());
-        var play = V2.V2Script.Play(V2.V2Script.Card("Intercept", SimCardType.Skill), Who.Teammate(0), 1,
+        var play = ScriptBuilder.Play(ScriptBuilder.Card("Intercept", SimCardType.Skill), Who.Teammate(0), 1,
             new ApplyPowerAction(PowerId.Covered, 1) { To = ApplyPowerAction.Where.Creature, Creature = Who.Teammate(0) });
         var o = SimEngine.Run(s, play);
         Assert.Equal(20, o.TakenMax);

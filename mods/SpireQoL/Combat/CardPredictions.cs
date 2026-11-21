@@ -16,7 +16,7 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Combat;
 
 /// <summary>
-/// The prediction for every card in your hand (decision #48, docs/SIMULATOR_V2.md): each card's facts (PlayFacts), its play simulated
+/// The prediction for every card in your hand (decision #48, docs/SIMULATOR.md): each card's facts (PlayFacts), its play simulated
 /// once per target against ending the turn now, and the proc tabs that come from it, with everything kept between frames (the
 /// simulations, reused results while nothing changes: decision #114, held tabs while a result is on its way: decision #105). Proc
 /// Indicators draws the tabs; the play check (ProcAudit), the error reports and Shuffle Warning read the same predictions here. Its tab
@@ -640,7 +640,7 @@ public sealed class CardPredictions
     };
 
     /// <summary>
-    /// A source's tab from the play log (docs/SIMULATOR_V2.md "Tabs from the log"): its model fired during the play, in every
+    /// A source's tab from the play log (docs/SIMULATOR.md "Tabs from the log"): its model fired during the play, in every
     /// branch of some aim (good) or in some branch of any aim (harmful). Indirect firings (from draws, exhausts, discards, created
     /// cards, shuffles) count only with the Indirect procs setting. Block, damage and summon tabs carry the amount the model logged
     /// (the most any aim guarantees) and the audit's range (the least any aim guarantees to the most any branch gives). Several

@@ -7,7 +7,7 @@ using SpireQoL.Sim;
 namespace SpireQoL.Diagnostics;
 
 /// <summary>
-/// The simulator's damage pipeline against the game's own numbers (docs/SIMULATOR_V2.md "Audits"): for every card in hand, the
+/// The simulator's damage pipeline against the game's own numbers (docs/SIMULATOR.md "Audits"): for every card in hand, the
 /// first hit of its attack on each enemy, as the simulation worked it out (models plus the captured terms), must equal the damage
 /// the game's preview gives that hit (PlayFacts.DamagePerHit). A difference means a model's term is wrong or a source is both
 /// modelled and captured. Reported once per card and pair of numbers; nothing reaches the screen.

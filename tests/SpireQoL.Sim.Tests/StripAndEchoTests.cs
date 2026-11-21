@@ -1,7 +1,7 @@
 using Xunit;
-using static SpireQoL.Sim.Tests.V2.V2Script;
+using static SpireQoL.Sim.Tests.ScriptBuilder;
 
-namespace SpireQoL.Sim.Tests.V2;
+namespace SpireQoL.Sim.Tests;
 
 /// <summary>Expose taking its target's block and Artifact, and Echoing Slash repeating per kill (decompile v0.113.1).</summary>
 public class StripAndEchoTests

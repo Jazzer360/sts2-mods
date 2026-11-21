@@ -1,7 +1,7 @@
 using Xunit;
-using static SpireQoL.Sim.Tests.V2.V2Script;
+using static SpireQoL.Sim.Tests.ScriptBuilder;
 
-namespace SpireQoL.Sim.Tests.V2;
+namespace SpireQoL.Sim.Tests;
 
 /// <summary>Orbs as actions (Sim/SimEngine.Orbs.cs): OrbCmd.Channel and evokes, values from the owner's state when channelled.</summary>
 public class OrbActionTests

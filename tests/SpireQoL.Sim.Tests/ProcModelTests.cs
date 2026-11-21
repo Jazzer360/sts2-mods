@@ -1,7 +1,7 @@
 using Xunit;
-using static SpireQoL.Sim.Tests.V2.V2Script;
+using static SpireQoL.Sim.Tests.ScriptBuilder;
 
-namespace SpireQoL.Sim.Tests.V2;
+namespace SpireQoL.Sim.Tests;
 
 /// <summary>
 /// Powers and relics that act on your plays and card events (Sim/Models/ProcPowerModels.cs, ProcRelicModels.cs), each as its hook

@@ -1,7 +1,7 @@
 using Xunit;
-using static SpireQoL.Sim.Tests.V2.V2Script;
+using static SpireQoL.Sim.Tests.ScriptBuilder;
 
-namespace SpireQoL.Sim.Tests.V2;
+namespace SpireQoL.Sim.Tests;
 
 /// <summary>Card effects that aren't attacks (Sim/SimEngine.Osty.cs, SimEngine.Actions.cs), as their OnPlay does them.</summary>
 public class CardActionTests

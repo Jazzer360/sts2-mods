@@ -2,7 +2,7 @@ namespace SpireQoL.Sim.Models;
 
 /// <summary>
 /// A power or relic that does something when a card is played, drawn, exhausted... (a proc): its tab comes from the play log
-/// (docs/SIMULATOR_V2.md "Tabs from the log"). Helpers for its amount, values, the play binding the game keeps, and logging.
+/// (docs/SIMULATOR.md "Tabs from the log"). Helpers for its amount, values, the play binding the game keeps, and logging.
 /// </summary>
 public abstract class ProcModel : SimModel
 {

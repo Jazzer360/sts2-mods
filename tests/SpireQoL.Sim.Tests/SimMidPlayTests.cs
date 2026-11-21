@@ -19,7 +19,7 @@ public class SimMidPlayTests
         var s = new SimState { Enemies = { E(1, 100) } };
         s.You.Powers = s.You.Powers.With(PowerId.SerratedArrows, 50);
         s.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, 1, 2);
-        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Flurry"), 1, 1, V2.V2Script.Attack(4, hits: 3))));
+        var after = Assert.Single(ScriptBuilder.After(s, ScriptBuilder.Play(ScriptBuilder.Card("Flurry"), 1, 1, ScriptBuilder.Attack(4, hits: 3))));
         Assert.Equal(84, after.Enemy(1)!.Hp);
         Assert.Equal(1, after.You.Arrows);
 
@@ -32,8 +32,8 @@ public class SimMidPlayTests
         // Vulnerable (Break.OnPlay: the hit, then PowerCmd.Apply<VulnerablePower>), so the replay hits for 23 (15.75 × 1.5,
         // rounded down): 362 → 324.
         var s = new SimState { Enemies = { E(1, 362) } };
-        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Break"), 1, 2,
-            V2.V2Script.Attack(15, terms: new CapturedTerms { Mul = 1.05m }), new ApplyPowerAction(PowerId.Vulnerable, 2) { Debuff = true })));
+        var after = Assert.Single(ScriptBuilder.After(s, ScriptBuilder.Play(ScriptBuilder.Card("Break"), 1, 2,
+            ScriptBuilder.Attack(15, terms: new CapturedTerms { Mul = 1.05m }), new ApplyPowerAction(PowerId.Vulnerable, 2) { Debuff = true })));
         Assert.Equal(324, after.Enemy(1)!.Hp);
 
     }
@@ -48,8 +48,8 @@ public class SimMidPlayTests
         var s = new SimState { Enemies = { E(1, 82) } };
         s.You.Arrows = 2;
         s.You.Powers = s.You.Powers.With(PowerId.SerratedArrows, 50).With(PowerId.Weak, 1);
-        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("RapidShot"), 1, 4,
-            new ShootAction(), V2.V2Script.Attack(3, hits: 3) with { NeedsArrow = true }, new ImpaleAction())));
+        var after = Assert.Single(ScriptBuilder.After(s, ScriptBuilder.Play(ScriptBuilder.Card("RapidShot"), 1, 4,
+            new ShootAction(), ScriptBuilder.Attack(3, hits: 3) with { NeedsArrow = true }, new ImpaleAction())));
         Assert.Equal(49, after.Enemy(1)!.Hp);
 
     }
@@ -62,7 +62,7 @@ public class SimMidPlayTests
         var s = new SimState { Enemies = { E(1, 50), E(2, 50) } };
         s.You.Powers = s.You.Powers.With(PowerId.SerratedArrows, 100);
         s.Enemies[1].Powers = PowerSet.Empty.With(PowerId.Impaled, 1, 1);
-        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(V2.V2Script.Card("Cleave"), -1, 1, V2.V2Script.Attack(5, hits: 2, mode: SimPlay.Target.All))));
+        var after = Assert.Single(ScriptBuilder.After(s, ScriptBuilder.Play(ScriptBuilder.Card("Cleave"), -1, 1, ScriptBuilder.Attack(5, hits: 2, mode: SimPlay.Target.All))));
         Assert.Equal(40, after.Enemy(1)!.Hp);
         Assert.Equal(35, after.Enemy(2)!.Hp);
 
@@ -160,7 +160,7 @@ public class SimMidPlayTests
         var s = new SimState { Enemies = { E(1, 50) } };
         s.You.Powers = s.You.Powers.With(PowerId.Stretch, 12);
         var defend = new SimCard("Defend", SimCardType.Skill) { GainsBlock = true };
-        Assert.Equal(28, Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(defend, -1, 2, V2.V2Script.Block(8)))).You.Block);
+        Assert.Equal(28, Assert.Single(ScriptBuilder.After(s, ScriptBuilder.Play(defend, -1, 2, ScriptBuilder.Block(8)))).You.Block);
 
     }
 
@@ -183,7 +183,7 @@ public class SimMidPlayTests
         var s = new SimState { Enemies = { E(1, 50) } };
         s.You.Powers = s.You.Powers.With(PowerId.Stretch, 4);
         var adroit = new SimCard("Strike", SimCardType.Attack) { GainsBlock = true, Enchanted = true };
-        var after = Assert.Single(V2.V2Script.After(s, V2.V2Script.Play(adroit, -1, 2, V2.V2Script.Block(3))));
+        var after = Assert.Single(ScriptBuilder.After(s, ScriptBuilder.Play(adroit, -1, 2, ScriptBuilder.Block(3))));
         Assert.Equal(10, after.You.Block);
         Assert.Equal(2, after.You.BlockGains);
 

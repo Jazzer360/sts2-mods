@@ -1,7 +1,7 @@
 namespace SpireQoL.Sim;
 
 /// <summary>
-/// What proc models do (docs/SIMULATOR_V2.md "Models"): gain block, deal damage, or only fire, each logged under the model's name
+/// What proc models do (docs/SIMULATOR.md "Models"): gain block, deal damage, or only fire, each logged under the model's name
 /// with the block or damage it caused (the play log the tabs and the audit read).
 /// </summary>
 public static partial class SimEngine

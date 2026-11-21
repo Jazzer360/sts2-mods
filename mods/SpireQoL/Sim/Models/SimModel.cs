@@ -155,7 +155,7 @@ public static class Who
 }
 
 /// <summary>
-/// A relic, power or enemy effect the simulator models (docs/SIMULATOR_V2.md): the game hooks it overrides, written from its
+/// A relic, power or enemy effect the simulator models (docs/SIMULATOR.md): the game hooks it overrides, written from its
 /// decompiled body. Models hold no state of their own: their numbers live in the state (the creature's PowerSet, a player's
 /// relic counters), so a branch copies only numbers. A hook returns the branches after it (one, unless it's random) and
 /// never changes anything but the state it's given (or its copies).

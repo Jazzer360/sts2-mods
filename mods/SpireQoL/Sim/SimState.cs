@@ -69,7 +69,7 @@ public sealed class SimEnemy
     /// <summary>Its attack this turn: damage of each hit on you (the intent's numbers).</summary>
     public List<int> Hits = new();
     /// <summary>
-    /// Its attack as pipeline inputs (docs/SIMULATOR_V2.md): each hit's base and the captured terms of unmodelled sources on each
+    /// Its attack as pipeline inputs (docs/SIMULATOR.md): each hit's base and the captured terms of unmodelled sources on each
     /// player, so Weak, Strength and the rest are applied as the hit lands. Null: Hits holds the final numbers.
     /// </summary>
     public List<IntentHit>? Intent;
@@ -154,7 +154,7 @@ public sealed class SimEnemy
     /// <summary>Its death has been handled (AfterDeath dispatched once).</summary>
     public bool DeathHandled;
 
-    /// <summary>Its powers the simulator reads or changes (docs/SIMULATOR_V2.md), in the order they were applied.</summary>
+    /// <summary>Its powers the simulator reads or changes (docs/SIMULATOR.md), in the order they were applied.</summary>
     public PowerSet Powers = PowerSet.Empty;
 
     /// <summary>Sets a power's amount (0 removes it).</summary>
@@ -219,7 +219,7 @@ public sealed class SimPlayer
     private void Set(PowerId power, int amount) => Powers = amount == 0 ? Powers.Without(power) : Powers.With(power, amount);
     private void SetRelic(RelicId relic, int amount) => Relics = amount == 0 ? Relics.Without(relic) : Relics.With(relic, amount);
 
-    /// <summary>Their powers the simulator reads or changes, in the order they were applied (docs/SIMULATOR_V2.md).</summary>
+    /// <summary>Their powers the simulator reads or changes, in the order they were applied (docs/SIMULATOR.md).</summary>
     public PowerSet Powers = PowerSet.Empty;
     /// <summary>Their relics the simulator models, in relic order, with each one's counter (Amount) and flag (Data).</summary>
     public RelicSet Relics = RelicSet.Empty;
@@ -531,7 +531,7 @@ public sealed class SimState
     /// </summary>
     public int PlayHpReached, PlayHpLosses, PlayHpLost;
     /// <summary>
-    /// What fired during the play (the play log, docs/SIMULATOR_V2.md): source name → times (Amount) and the damage or block it
+    /// What fired during the play (the play log, docs/SIMULATOR.md): source name → times (Amount) and the damage or block it
     /// caused (Data). Fired is the smallest over branches merged into this one (it happens in every one of them); FiredAny
     /// the largest (in some). Not in the branch key.
     /// </summary>

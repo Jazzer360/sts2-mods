@@ -1,8 +1,8 @@
 using SpireQoL.Sim.Models;
 using Xunit;
-using static SpireQoL.Sim.Tests.V2.V2Script;
+using static SpireQoL.Sim.Tests.ScriptBuilder;
 
-namespace SpireQoL.Sim.Tests.V2;
+namespace SpireQoL.Sim.Tests;
 
 /// <summary>
 /// The damage and block sources that change during a turn (Sim/Models/StatModels.cs), each as the game resolves it
@@ -210,13 +210,13 @@ public class FirstHitTests
     [Fact]
     public void FirstHitIsRecordedPerEnemyAndOnlyWhenEveryBranchAgrees()
     {
-        var s = new SimState { Enemies = { V2Script.Enemy(0, 100), V2Script.Enemy(1, 100) } };
+        var s = new SimState { Enemies = { ScriptBuilder.Enemy(0, 100), ScriptBuilder.Enemy(1, 100) } };
         s.You.Powers = s.You.Powers.With(PowerId.Strength, 2);
-        var all = SimEngine.Run(s, V2Script.Play(V2Script.Card("Cleave"), -1, 1, V2Script.Attack(8, hits: 2, mode: SimPlay.Target.All)));
+        var all = SimEngine.Run(s, ScriptBuilder.Play(ScriptBuilder.Card("Cleave"), -1, 1, ScriptBuilder.Attack(8, hits: 2, mode: SimPlay.Target.All)));
         Assert.Equal(10, all.PlayFirstHits[0]);
         Assert.Equal(10, all.PlayFirstHits[1]);
         // Random targets: the branches disagree on who was hit first, so nothing is recorded.
-        var random = SimEngine.Run(s, V2Script.Play(V2Script.Card("SwordBoomerang"), -1, 1, V2Script.Attack(3, hits: 1, mode: SimPlay.Target.Random)));
+        var random = SimEngine.Run(s, ScriptBuilder.Play(ScriptBuilder.Card("SwordBoomerang"), -1, 1, ScriptBuilder.Attack(3, hits: 1, mode: SimPlay.Target.Random)));
         Assert.Empty(random.PlayFirstHits);
     }
 }
@@ -227,15 +227,15 @@ public class ChoKiTests
     [Fact]
     public void ChoKiKeepsYourStretch()
     {
-        var s = new SimState { Enemies = { V2Script.Enemy(0, 100) } };
+        var s = new SimState { Enemies = { ScriptBuilder.Enemy(0, 100) } };
         s.You.Powers = s.You.Powers.With(PowerId.Stretch, 3);
         var choKi = new SimCard("ChoKi", SimCardType.Skill) { GainsBlock = true };
-        var after = Assert.Single(V2Script.After(s, V2Script.Play(choKi, -1, 1, V2Script.Block(5),
+        var after = Assert.Single(ScriptBuilder.After(s, ScriptBuilder.Play(choKi, -1, 1, ScriptBuilder.Block(5),
             new ApplyPowerAction(PowerId.Stretch, 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true })));
         Assert.Equal(8, after.You.Block);
         Assert.Equal(3, after.You.Powers[PowerId.Stretch]);
         // Any other block card spends it.
-        var other = Assert.Single(V2Script.After(s, V2Script.Play(new SimCard("Defend", SimCardType.Skill) { GainsBlock = true }, -1, 1, V2Script.Block(5))));
+        var other = Assert.Single(ScriptBuilder.After(s, ScriptBuilder.Play(new SimCard("Defend", SimCardType.Skill) { GainsBlock = true }, -1, 1, ScriptBuilder.Block(5))));
         Assert.False(other.You.Powers.Has(PowerId.Stretch));
     }
 }

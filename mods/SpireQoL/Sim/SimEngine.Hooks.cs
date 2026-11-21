@@ -1,7 +1,7 @@
 namespace SpireQoL.Sim;
 
 /// <summary>
-/// The terms of the damage or block math that the simulator doesn't model (docs/SIMULATOR_V2.md "Pipelines"): every other
+/// The terms of the damage or block math that the simulator doesn't model (docs/SIMULATOR.md "Pipelines"): every other
 /// source's term, read from the game for one card and target (fixed for the turn), plus the card's enchantment's. Applied
 /// in the game's order with the modelled sources' terms (Hook.ModifyDamage, Hook.ModifyBlock).
 /// </summary>
