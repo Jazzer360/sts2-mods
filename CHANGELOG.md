@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.26.0
+#### Added
+- A first-run setup: on your first launch, over the main menu, a short tour of what the mod does, three starting points (Light, Standard, Everything), and each part's core switches with what they do, then the hotkeys and error reports. Run it again from the settings menu's General page.
+
 ### Spire QoL 1.25.0
 #### Added
 - Draw and energy tabs show how many: the cards the play makes Dark Embrace, Vicious, Motif, Game Piece, Iron Club, Joss Paper or Centennial Puzzle draw (only those that fit in your hand), and the energy Subroutine, Yah!, Orbit, Automation, Ivory Tile or Nunchaku gives. Motif stacked draws its amount for each melody the card is the first to play this turn.

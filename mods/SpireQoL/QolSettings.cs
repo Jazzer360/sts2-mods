@@ -29,7 +29,7 @@ public sealed class QolSettings
     /// <summary>Bumped when default widget positions change; older saved positions get reset.</summary>
     public int LayoutVersion { get; set; }
 
-    public const int CurrentSettingsVersion = 2;
+    public const int CurrentSettingsVersion = 3;
 
     /// <summary>Bumped when a setting's meaning changes; older files are migrated once (ModEntry.Migrate).</summary>
     public int SettingsVersion { get; set; }
@@ -39,6 +39,12 @@ public sealed class QolSettings
     /// mod's Sentry project, where they become GitHub issues. See README "Error reporting".
     /// </summary>
     public bool ReportErrors { get; set; } = true;
+
+    /// <summary>
+    /// The first-run setup (Menu/SetupScreen, decision #147) was finished or skipped: it doesn't show itself again (the settings menu's
+    /// General page runs it). Hidden: not in the settings menu. A settings file from before it counts as done (SettingsVersion 3).
+    /// </summary>
+    public bool SetupDone { get; set; }
 
     /// <summary>
     /// Developer mode (decision #108; not in the settings menu): null follows the marker file the developer's own builds install

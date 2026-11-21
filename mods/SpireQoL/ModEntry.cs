@@ -38,11 +38,14 @@ public static class ModEntry
     {
         Log.Info($"loading v{typeof(ModEntry).Assembly.GetName().Version}");
 
-        var settingsFile = new JsonSettingsFile<QolSettings>(JsonSettingsFile<QolSettings>.DefaultPathFor(typeof(ModEntry), Id), Log);
+        var settingsPath = JsonSettingsFile<QolSettings>.DefaultPathFor(typeof(ModEntry), Id);
+        // A settings file there already: a player from before (the first-run setup is for new ones: MigrateSettings).
+        var hadSettings = File.Exists(settingsPath);
+        var settingsFile = new JsonSettingsFile<QolSettings>(settingsPath, Log);
         var settings = settingsFile.Load();
         MigrateLayout(settings);
         MigrateTabs(settings);
-        MigrateSettings(settings);
+        MigrateSettings(settings, hadSettings);
         Sim.SimAdapter.IncludeTeammates = settings.MultiplayerPredictions;
         Combat.TurnEndModel.CountTeammateHands = settings.TeammateHands;
         DevMode = settings.DevMode ?? File.Exists(Path.Combine(Path.GetDirectoryName(typeof(ModEntry).Assembly.Location) ?? "", DevMarker));
@@ -173,6 +176,10 @@ public static class ModEntry
         foreach (var notice in features.OfType<UpdateNoticeFeature>()) notice.OpenSettings = menu.Open;
         host.AddHotkey(ParseKey(settings.SettingsKey, Key.F10), menu.Toggle);
         host.AddLateFrame("settings-menu", menu.OnFrame);
+        // The first-run setup: over the main menu, once, until it's done; the settings menu's General page runs it again.
+        var setup = new Menu.SetupScreen(ctx, Features, host) { SettingsOpen = () => menu.IsOpen };
+        menu.OpenSetup = setup.Open;
+        host.AddLateFrame("setup-screen", setup.OnFrame);
         Menu.SettingsCatalog.Check(Log);
 
         Combat.TurnEndModel.PartTime = host.AddPartTime;
@@ -241,7 +248,7 @@ public static class ModEntry
     /// 0.23.0 (settings menu): Relics now only controls the tracker tray (relic tabs are
     /// Tabs "proc:<Relic>"), and turn timers became per-relic tracker entries (off by default).
     /// </summary>
-    private static void MigrateSettings(QolSettings settings)
+    private static void MigrateSettings(QolSettings settings, bool hadSettings)
     {
         if (settings.SettingsVersion < 1)
         {
@@ -267,6 +274,8 @@ public static class ModEntry
                     settings.Tabs[Data.ChoiceReminders.Key(place, key["reminder:".Length..])] = false;
             }
         }
+        // 1.26.0: the first-run setup. A file from before it is a player who has set the mod up already.
+        if (settings.SettingsVersion < 3 && hadSettings) settings.SetupDone = true;
         settings.ShowTurnTimers = null;
         settings.SettingsVersion = QolSettings.CurrentSettingsVersion;
     }

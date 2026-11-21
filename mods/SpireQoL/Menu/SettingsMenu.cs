@@ -108,6 +108,9 @@ public sealed partial class SettingsMenu
 
     public bool IsOpen => _layer != null && GodotObject.IsInstanceValid(_layer) && _layer.Visible;
 
+    /// <summary>Opens the first-run setup (SetupScreen), from the General page's Run setup again.</summary>
+    internal Action? OpenSetup { get; set; }
+
     private QolSettings Settings => _ctx.Settings;
 
     public void Toggle()
@@ -487,6 +490,17 @@ public sealed partial class SettingsMenu
     private void BuildGeneral()
     {
         FeatureSwitches(FeaturePage.General);
+
+        Section("Setup");
+        var setupRow = RowBox();
+        var runSetup = MakeButton("Run setup again", size: 20);
+        runSetup.Pressed += () => { Close(); OpenSetup?.Invoke(); };
+        setupRow.AddChild(runSetup);
+        var setupText = Label("The first-run setup: a starting point (Light, Standard, Everything), then each page's core switches. Your hotkeys, widget positions and per-relic switches are kept.", size: 18, Muted);
+        setupText.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        setupText.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        setupRow.AddChild(setupText);
+        AddRow(setupRow);
 
         Section("Error reports");
         Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time, and a summary of counts per play session (nothing personal), so they can be fixed.",
@@ -956,7 +970,7 @@ public sealed partial class SettingsMenu
     /// A checkbox drawn with our own boxes (filled orange = on), so it doesn't depend on the
     /// game theme's checkbox art. With text, the text is part of the click target.
     /// </summary>
-    private static (Button Button, Control Box) Check(bool value, Action<bool> changed, string? text, string? tooltip, bool expand = false)
+    internal static (Button Button, Control Box) Check(bool value, Action<bool> changed, string? text, string? tooltip, bool expand = false)
     {
         var button = new Button
         {
@@ -1034,7 +1048,7 @@ public sealed partial class SettingsMenu
         return button;
     }
 
-    private static Label Label(string text, int size, Color color, float width = 0)
+    internal static Label Label(string text, int size, Color color, float width = 0)
     {
         var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore, VerticalAlignment = VerticalAlignment.Center };
         label.AddThemeFontSizeOverride("font_size", size);
