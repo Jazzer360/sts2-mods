@@ -13,12 +13,18 @@ public enum SourceGroup { Relic, YourPower, EnemyPower, Card }
 /// <param name="Tracker">What its Relic Counters row shows; null = no tray row.</param>
 /// <param name="TagPrefix">"proc:" (Proc Indicators) or "double-play:" (Card Indicators).</param>
 /// <param name="TrackerDefault">Tray row on by default (turn timers are off).</param>
+/// <param name="TagDefault">
+/// Its tab on by default. Off for a power that acts on every card you play, whatever the card, and never runs out (Afterimage,
+/// Serpent Form): its tab would be on every card, saying nothing about this one (decision #153). A tab that's on every card
+/// until it's used up (Vigor) stays on.
+/// </param>
 /// <param name="Reward">Outside fights (Run Reminders, Data/ChoiceReminders): what its tab on cards a card reward offers marks; null = none.</param>
 /// <param name="Event">What its icon beside event options marks; null = none.</param>
 /// <param name="Shop">What its icon beside shop prices marks; null = none.</param>
 /// <param name="Map">What its icon beside the map legend marks (pathing, decision #65); null = none.</param>
 public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, string? Tracker = null,
-    string TagPrefix = "proc:", bool TrackerDefault = true, string? Reward = null, string? Event = null, string? Shop = null, string? Map = null)
+    string TagPrefix = "proc:", bool TrackerDefault = true, string? Reward = null, string? Event = null, string? Shop = null, string? Map = null,
+    bool TagDefault = true)
 {
     public string? TagKey => Tag == null ? null : TagPrefix + Type;
 
@@ -72,6 +78,10 @@ public static class SettingsCatalog
     /// <summary>Marks a crossed tab (helps the enemy, hurts you, or gives up a relic); the menu draws the red slash.</summary>
     public const string CrossedPrefix = "crossed: ";
     private const string Crossed = CrossedPrefix;
+
+    /// <summary>The tab keys that are off until you turn them on (SourceEntry.TagDefault, decision #153).</summary>
+    public static IReadOnlySet<string> TabsOffByDefault => _tabsOffByDefault ??= Sources.Where(source => !source.TagDefault && source.TagKey != null).Select(source => source.TagKey!).ToHashSet();
+    private static HashSet<string>? _tabsOffByDefault;
 
     public static readonly IReadOnlyList<SourceEntry> Sources = new SourceEntry[]
     {
@@ -235,7 +245,7 @@ public static class SettingsCatalog
         new("StretchPower", SourceGroup.YourPower, "Block cards (and Adroit cards) that spend your Stretch"),
         new(nameof(VigorPower), SourceGroup.YourPower, "Attacks that spend your Vigor (Akabeko's on turn 1)"),
         new(nameof(GigantificationPower), SourceGroup.YourPower, "Attacks that spend a stack of Gigantification"),
-        new(nameof(AfterimagePower), SourceGroup.YourPower, "Every card: block per play"),
+        new(nameof(AfterimagePower), SourceGroup.YourPower, "Every card: block per play", TagDefault: false),
         new(nameof(RagePower), SourceGroup.YourPower, "Attacks: block"),
         new(nameof(SpiritOfAshPower), SourceGroup.YourPower, "Ethereal cards: block"),
         new(nameof(DanseMacabrePower), SourceGroup.YourPower, "Cards costing 2+ energy: block"),
@@ -245,8 +255,8 @@ public static class SettingsCatalog
         new(nameof(PillarOfCreationPower), SourceGroup.YourPower, "Cards that create cards: block per card"),
         new(nameof(AllIsWellPower), SourceGroup.YourPower, "Cards that create a Sadness: block per Sadness"),
         new(nameof(CompostPower), SourceGroup.YourPower, "Attacks that kill an enemy (yours or a teammate's: energy for every player)"),
-        new(nameof(GravityPower), SourceGroup.YourPower, "Every card: damage to all"),
-        new(nameof(SerpentFormPower), SourceGroup.YourPower, "Every card: damage to a random enemy"),
+        new(nameof(GravityPower), SourceGroup.YourPower, "Every card: damage to all", TagDefault: false),
+        new(nameof(SerpentFormPower), SourceGroup.YourPower, "Every card: damage to a random enemy", TagDefault: false),
         new(nameof(ThunderPower), SourceGroup.YourPower, "Cards that evoke Lightning: damage to its target again"),
         new(nameof(PanachePower), SourceGroup.YourPower, "The card that completes its count: damage to all", "Cards this turn, toward the next hit"),
         new(nameof(BlackHolePower), SourceGroup.YourPower, "Cards that spend or gain stars: damage to all"),
@@ -268,8 +278,8 @@ public static class SettingsCatalog
         new(nameof(MasterPlannerPower), SourceGroup.YourPower, "Skills: gain Sly"),
         new(nameof(FeralPower), SourceGroup.YourPower, "0-cost Attacks, while it has charges this turn: back to your hand"),
         new("NostalgiaPower", SourceGroup.YourPower, "Your first Attacks and Skills this turn: onto your draw pile"),
-        new(nameof(MonologuePower), SourceGroup.YourPower, "Every card"),
-        new(nameof(TheSealedThronePower), SourceGroup.YourPower, "Every card: gain stars"),
+        new(nameof(MonologuePower), SourceGroup.YourPower, "Every card", TagDefault: false),
+        new(nameof(TheSealedThronePower), SourceGroup.YourPower, "Every card: gain stars", TagDefault: false),
         new(nameof(PaleBlueDotPower), SourceGroup.YourPower, "Your 5th card this turn", "Cards this turn, toward 5 (\"done\" once it fired)"),
         new(nameof(DarkEmbracePower), SourceGroup.YourPower, "Cards that exhaust: draw"),
         new(nameof(OrbitPower), SourceGroup.YourPower, "Cards whose energy finishes its count", "Energy spent, toward the next energy"),
@@ -290,16 +300,16 @@ public static class SettingsCatalog
         new(nameof(SeekingEdgePower), SourceGroup.YourPower, "Sovereign Blade: hits all enemies"),
         new(nameof(ParryPower), SourceGroup.YourPower, "Sovereign Blade: block"),
         new(nameof(SwordSagePower), SourceGroup.YourPower, "Sovereign Blade: replays"),
-        new(nameof(TenderPower), SourceGroup.YourPower, Crossed + "every card"),
+        new(nameof(TenderPower), SourceGroup.YourPower, Crossed + "every card", TagDefault: false),
         new(nameof(SmoggyPower), SourceGroup.YourPower, Crossed + "skills"),
 
         // ------------------------------------------------------------------ powers on enemies
         new(nameof(TagTeamPower), SourceGroup.EnemyPower, "Attacks aimed at that enemy play twice", TagPrefix: "double-play:"),
-        new(nameof(StranglePower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card: damage to it"),
+        new(nameof(StranglePower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card: damage to it", TagDefault: false),
         new(nameof(SicEmPower), SourceGroup.EnemyPower, "Yours, on an enemy. Cards whose Osty hit damages it: summon"),
-        new(nameof(OblivionPower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card"),
+        new(nameof(OblivionPower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card", TagDefault: false),
         new(nameof(ConquerorPower), SourceGroup.EnemyPower, "On an enemy (from anyone's Conqueror). Sovereign Blade: double damage to it"),
-        new(nameof(SlowPower), SourceGroup.EnemyPower, "Every card: it takes more damage"),
+        new(nameof(SlowPower), SourceGroup.EnemyPower, "Every card: it takes more damage", TagDefault: false),
         new(nameof(BurrowedPower), SourceGroup.EnemyPower, "Attacks that break its block: stuns it"),
         new(nameof(FlutterPower), SourceGroup.EnemyPower, "Attacks that hit it enough times: stuns it"),
         new(nameof(PlowPower), SourceGroup.EnemyPower, "Attacks that bring it to its threshold"),

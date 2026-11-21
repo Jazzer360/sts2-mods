@@ -177,6 +177,22 @@ public static partial class SimEngine
     }
 
 
+    /// <summary>
+    /// Cards a relic or power puts into a player's hand (CardPileCmd.AddGeneratedCardToCombat to PileType.Hand), or a played card a
+    /// power sends back there (Feral): each takes a slot while the hand has room, and in a full hand goes to the discard pile instead
+    /// (CardPileCmd.Add). The cards being played still hold their slots until they resolve. An Ethereal one exhausts at end of turn
+    /// (Fading); what they are isn't known to a pick from the hand (Stampede).
+    /// </summary>
+    internal static void AddToHand(SimState state, int player, int count, bool ethereal = false)
+    {
+        if (count <= 0 || state.Player(player) == null) return;
+        var simPlayer = state.MutablePlayer(player);
+        var added = Math.Min(count, Math.Max(0, MaxHand - (simPlayer.HandCount - simPlayer.PlayingFromHand)));
+        simPlayer.HandCount += added;
+        if (ethereal) simPlayer.Fading += added;
+        if (added > 0 && simPlayer.AutoHand != null) state.AutoPlaysUnknown = true;
+    }
+
     /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
     private static IEnumerable<SimState> Drawn(SimState state, int player, SimDrawCard card, bool indirect, bool record = false)
     {

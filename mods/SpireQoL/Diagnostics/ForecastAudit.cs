@@ -455,7 +455,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             bool Explains(SimState state) =>
                 state.Taken == actualTaken && (osty == null || state.OstyTaken == actualOsty) && state.AutoPlayed == autoPlays.Count
-                && actuals.All(entry => state.Enemy(entry.Key) is { } enemy && enemy.HpAtTurnEnd == entry.Value.Hp && enemy.UnblockedInstances == entry.Value.Through && enemy.DiedBeforeActing == entry.Value.Died);
+                && actuals.All(entry => state.Enemy(entry.Key) is { } enemy && enemy.HpAtTurnEnd == entry.Value.Hp && enemy.UnblockedAtTurnEnd == entry.Value.Through && enemy.DiedBeforeActing == entry.Value.Died);
             if (!outcome.Branches.Any(Explains))
                 issues.Add($"no single branch: each result is possible on its own, but none of the {outcome.Branches.Count} branches gives them all (HP lost {actualTaken}; {outcomeLine})");
         }

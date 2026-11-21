@@ -1138,16 +1138,16 @@ public static partial class SimEngine
         AllyDeaths(state); // deaths at your end of turn
         state.EnemyTurnNow = true; // Inferno and the like react only on their owner's side's turn
         // Every enemy's poison ticks as the enemies' turn starts (PoisonPower.AfterSideTurnStart, before ExecuteEnemyTurn), stunned
-        // or not, and Hardened Shell's budget resets then. Its deaths run their hooks before any enemy moves (Ravenous stuns the
-        // other Corpse Slug; Crab Rage).
+        // or not, and Hardened Shell's budget resets then. The tick is damage (PoisonPower.Trigger: CreatureCmd.Damage, Unblockable |
+        // Unpowered, no dealer): the HP-loss pipeline caps it (Hardened Shell, Slippery) and the damage hooks hear it (Shriek stuns at
+        // its threshold, Asleep wakes, Slumber and Plow count it). Its deaths run their hooks before any enemy moves (Ravenous stuns
+        // the other Corpse Slug; Crab Rage).
         var poisoned = new HashSet<int>();
-        foreach (var enemy in state.Enemies)
+        foreach (var enemy in state.Enemies.ToList())
         {
             if (!enemy.Alive) continue;
             enemy.ShellLeft = enemy.ShellPerTurn;
-            var poison = Math.Min(enemy.Poison, enemy.ShellLeft);
-            enemy.Hp -= poison;
-            if (enemy.ShellLeft != int.MaxValue) enemy.ShellLeft -= poison;
+            if (enemy.Poison > 0) Damage(state, enemy, enemy.Poison, dealer: null, SimProps.Unblockable | SimProps.Unpowered);
             if (enemy.Alive) continue;
             poisoned.Add(enemy.Id);
             enemy.DiedBeforeActing = true;

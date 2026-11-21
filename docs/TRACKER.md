@@ -274,7 +274,7 @@ Quantified procs use **option A**: one tab per source, with the source's own ico
 
 Players should be able to trim what shows, down to single indicators. Defaults show everything.
 
-- [~] **Per-tab toggles** (0.19.0): `Tabs` in settings, one key per tab kind (today: `retain`, `sly`, `replay`, `shuffle`, `double-play:<Source>`, `proc:<Source>`; `exhaust`, `relic:` and `blocked` are gone), added as each kind first appears, default on. Replaced `ShowDoublePlay` and `DimBlockedCards` (migrated); `ShowInnateEternalBadges` removed with the tabs.
+- [~] **Per-tab toggles** (0.19.0): `Tabs` in settings, one key per tab kind (today: `retain`, `sly`, `replay`, `shuffle`, `double-play:<Source>`, `proc:<Source>`; `exhaust`, `relic:` and `blocked` are gone), added as each kind first appears, default on (apart from the every-card powers' tabs, decision #153). Replaced `ShowDoublePlay` and `DimBlockedCards` (migrated); `ShowInnateEternalBadges` removed with the tabs.
 - [~] **Per-proc options** (0.19.0): `ProcNumbers` (show amounts), `ProcIndirect` (count procs one step removed).
 - [~] **Group switches** (0.19.0): `relic:*`, `proc:*`, `double-play:*` in `Tabs`.
 - [x] Builds on the per-relic `Relics` table and the per-feature `Features` table that exist now. An in-game menu (§0) makes these usable without editing the `.cfg` file.
@@ -454,6 +454,9 @@ An indicator on a choice outside combat when one of your relics changes what it 
 ---
 
 ## 16. Open concerns (2026-11-10, waiting on play testing)
+
+- [ ] **Cards taken from the draw pile leave the simulator's pile as it is** (2026-11-21): Wish, Secret Weapon, Secret Technique, Seeker Strike, Locked In, Anointed and Ki Chant put a card from your draw pile into your hand, counted in your hand (`PlayFacts.TakenToHand`), but the simulator's draw pile (decision #90) still holds it, so a later draw in the same simulation could draw it again. Which card is your choice or a roll: the pile should lose one card of unknown kind.
+- [ ] **A card Feral sends back makes Stampede's pick unknown** (2026-11-21): `SimEngine.AddToHand` marks the hand's contents unknown for any card joining it, but the card Feral returns is known (the one just played). Keep it in `AutoHand` instead.
 
 Recorded before the first runs with 0.26–0.31; revisit with real reports.
 

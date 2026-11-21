@@ -1,5 +1,7 @@
 using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Powers;
 using SpireQoL.Combat;
 using Xunit;
 
@@ -38,6 +40,20 @@ public class BoardProbeTests
         var costed = Probe();
         strike.EnergyCost.SetThisTurn(0);
         Assert.NotEqual(costed, Probe());
+    }
+
+    [Fact]
+    public void APowersShownCountChangesTheProbe()
+    {
+        // Withering Presence counts your cards down in its CardsLeft variable, its Amount unchanged (a report: its tab stayed on
+        // every card after the count started over, the probe not seeing it).
+        var gameFight = new GameFight();
+        var power = ModelDb.Power<WitheringPresencePower>().ToMutable();
+        power.ApplyInternal(gameFight.Me.Creature, amount: 1);
+        int Probe() => BoardProbe.Compute(gameFight.Me, gameFight.Combat);
+        var before = Probe();
+        power.DynamicVars["CardsLeft"].BaseValue = 3;
+        Assert.NotEqual(before, Probe());
     }
 
     [Fact]

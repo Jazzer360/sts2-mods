@@ -60,7 +60,7 @@ public sealed class SubroutinePower : BoundPower
 public sealed class CalamityPower : BoundPower
 {
     protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Attack;
-    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => Cause(Fire(state, owner), CardEvent.Generated, amount, owner);
+    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => MakeInHand(Fire(state, owner), CardEvent.Generated, amount, owner);
 }
 
 /// <summary>MonologuePower: each card its owner plays gives Strength (its Strength value, bound at the play's start).</summary>
@@ -89,7 +89,7 @@ public sealed class JugglingPower : ProcModel
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && TakeBound(state, owner) is { } bound ? Cause(Fire(state, owner), CardEvent.Generated, bound, owner) : One(state);
+        Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), CardEvent.Generated, bound, owner) : One(state);
 }
 
 /// <summary>StranglePower (on an enemy, Data = its applier + 100): each card the applier plays deals its amount to it (unblockable, unpowered, no dealer).</summary>
@@ -231,7 +231,7 @@ public sealed class SmoggyPower : ProcModel
 
 /// <summary>
 /// FeralPower.ModifyCardPlayResultLocation: an Attack its owner plays for 0 energy (not a copy) goes back to their hand while it
-/// has charges left this turn (Data: its DisplayAmount).
+/// has charges left this turn (Data: its DisplayAmount): it keeps its slot, where the card would have left the hand at CardResolved.
 /// </summary>
 public sealed class FeralPower : ProcModel
 {
@@ -241,6 +241,7 @@ public sealed class FeralPower : ProcModel
         var left = Data(state, owner);
         if (left <= 0) return One(state);
         Set(state, owner, Amount(state, owner), left - 1);
+        SimEngine.AddToHand(state, owner, count: 1);
         return Fire(state, owner);
     }
 }
@@ -608,8 +609,8 @@ public sealed class ReaperFormPower : ProcModel
 // ---- enemy powers acting on your plays
 
 /// <summary>
-/// WitheringPresencePower (on an enemy): each card its target plays counts its CardsLeft down (Data); at 0 a Wither goes into
-/// their hand (bad for you) and the count starts over at 6.
+/// WitheringPresencePower (on an enemy): each card its target plays counts its CardsLeft down (Data); at 0 a Wither (a Status) goes
+/// into their hand (CardPileCmd.AddToCombatAndPreview: bad for you) and the count starts over at 6.
 /// </summary>
 public sealed class WitheringPresencePower : ProcModel
 {
@@ -621,7 +622,7 @@ public sealed class WitheringPresencePower : ProcModel
         if (left <= 0) return One(state);
         left--;
         Set(state, owner, Amount(state, owner), left <= 0 ? 6 : left);
-        return left <= 0 ? Fire(state, owner) : One(state);
+        return left <= 0 ? MakeInHand(Fire(state, owner), CardEvent.GeneratedStatus, count: 1, play.Owner) : One(state);
     }
 }
 

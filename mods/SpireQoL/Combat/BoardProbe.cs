@@ -10,7 +10,7 @@ namespace SpireQoL.Combat;
 /// <summary>
 /// Whether anything a prediction reads could have changed since the last frame (decision #130): one hash of plain values read
 /// from the game, worked out once a frame, calling none of its hooks and allocating nothing. The combat log's length (every
-/// play, hit, power, draw and move adds to it), each creature's HP, block, powers and next move, each player's energy, stars,
+/// play, hit, power, draw and move adds to it), each creature's HP, block, powers (their amount and shown count) and next move, each player's energy, stars,
 /// piles, hand (each card: its upgrade, cost, enchantment, affliction and own keywords), relic counters, orbs, arrows and potions, the
 /// turn and side, and the mod's settings. When it's the same as the probe a result was worked out from, the turn forecast, Proc
 /// Indicators and Card Indicators use that result instead of working it out again from the game. Dev mode works them out anyway every
@@ -120,7 +120,8 @@ internal static class BoardProbe
                 hashCode.Add(creature.Block);
                 hashCode.Add(creature.IsAlive);
                 var powers = creature.Powers;
-                for (var j = 0; j < powers.Count; j++) { hashCode.Add(powers[j].GetType()); hashCode.Add(powers[j].Amount); }
+                // Its shown count too: some keep theirs apart from Amount (Withering Presence counts its CardsLeft down in a variable).
+                for (var j = 0; j < powers.Count; j++) { hashCode.Add(powers[j].GetType()); hashCode.Add(powers[j].Amount); hashCode.Add(powers[j].DisplayAmount); }
                 if (creature.Monster is { } monster) hashCode.Add(monster.NextMove?.Id);
                 if (creature.Player is { } player) AddPlayer(ref hashCode, player);
             }

@@ -43,7 +43,7 @@ public static partial class SimAdapter
             IsAttack = card.Type == CardType.Attack,
             Plays = plays,
             // A card played from elsewhere (Howl from Beyond from the exhaust pile) doesn't leave the hand.
-            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + facts.Draws + facts.Generated + facts.ReturnsToHand,
+            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + facts.Draws + facts.Generated + facts.ReturnsToHand + facts.TakenToHand,
             FadingDelta = IsFading(card, combat) ? -1 : 0,
             HexFadingDelta = IsFading(card, combat) && EtherealOnlyFromHex(card) ? -1 : 0,
         };
@@ -198,6 +198,8 @@ public static partial class SimAdapter
             if (facts.ExhaustsOthers > 0 && PlayFacts.ExhaustPickOf(facts.Card) is { } exhaustPick) play.Body.Add(exhaustPick);
             // A Sly card it discards plays itself (CardCmd.Discard: AutoPlay, SlyDiscard): not simulated yet (tracker).
             if (facts.MayDiscardSly) play.Body.Add(new NotModelledAction("a Sly card in your hand it may discard plays itself"));
+            // How many it takes into your hand is your choice (Neow's Fury): your hand after it isn't known.
+            if (facts.HandTakeChosen) play.Body.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
             if (facts.TakesWholeHand) play.Body.Add(new LeaveHandAction(Count: 0) { Whole = true });
             else if (facts.LeavesHand / plays > 0) play.Body.Add(new LeaveHandAction(facts.LeavesHand / plays));
         }

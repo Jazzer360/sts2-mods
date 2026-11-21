@@ -60,10 +60,11 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     // ------------------------------------------------------------------ check (audit)
 
     /// <summary>What the player has that an option can change, to compare before and after it.</summary>
-    private sealed record Before(HashSet<CardModel> Deck, int Gold, int Hp, int MaxHp, int Potions)
+    private sealed record Before(HashSet<CardModel> Deck, int Gold, int Hp, int MaxHp, int Potions, HashSet<RelicModel> Relics)
     {
         public static Before Of(Player me) => new(me.Deck.Cards.ToHashSet(ReferenceEqualityComparer.Instance as IEqualityComparer<CardModel>),
-            me.Gold, me.Creature.CurrentHp, me.Creature.MaxHp, me.Potions.Count());
+            me.Gold, me.Creature.CurrentHp, me.Creature.MaxHp, me.Potions.Count(),
+            me.Relics.ToHashSet(ReferenceEqualityComparer.Instance as IEqualityComparer<RelicModel>));
     }
 
     /// <summary>The option being resolved: relics with a reminder rule that flash while it runs, and the state before it.</summary>
@@ -170,11 +171,16 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var missed = window.Flashed.Where(relic => !shown.Contains(relic)).Select(relic => relic.GetType().Name).ToList();
         var quiet = shown.Where(relic => !window.Flashed.Contains(relic)).ToList();
         var silent = quiet.Where(relic => (rule(relic).Expect & observed) != 0).Select(relic => relic.GetType().Name).ToList();
-        var unread = observed & ~window.Effects;
+        // A relic the option gave you (This or That's Ornate: a random one) does its own thing as you obtain it (Cursed Pearl's
+        // gold): its AfterObtained, read like the option's code, is the relic's doing, not an effect the option's code missed.
+        var obtained = window.Me.Relics.Where(relic => !window.Start.Relics.Contains(relic) && relic != window.Option.Relic).ToList();
+        var fromObtained = obtained.Aggregate(ChoiceEffect.None, (effects, relic) => effects | ObtainEffects(relic));
+        var unread = observed & ~window.Effects & ~fromObtained;
         // A card added by an option read as adding a curse (or the other way) is still a card the icons covered.
         if ((window.Effects & (ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck)) != 0) unread &= ~ChoiceEffect.CardToDeck;
         var unseen = window.Effects & ~observed & ~ChoiceEffect.RestHeal;
-        var what = $"{window.Option.TextKey}: read {window.Effects}, happened {observed}; icons [{string.Join(", ", shown.Select(relic => relic.GetType().Name))}]; flashed [{string.Join(", ", window.Flashed.Select(relic => relic.GetType().Name))}]; {state}";
+        var what = $"{window.Option.TextKey}: read {window.Effects}, happened {observed}; " +
+                   (obtained.Count == 0 ? "" : $"obtained [{string.Join(", ", obtained.Select(relic => $"{relic.GetType().Name}: {ObtainEffects(relic)}"))}]; ") + $"icons [{string.Join(", ", shown.Select(relic => relic.GetType().Name))}]; flashed [{string.Join(", ", window.Flashed.Select(relic => relic.GetType().Name))}]; {state}";
         ModEntry.Log.Info($"[audit] [reminders] {what}");
         if (quiet.Count > silent.Count) ModEntry.Log.Info($"[audit] [reminders] icon shown, no reaction (logged only): {string.Join(", ", quiet.Select(relic => relic.GetType().Name).Except(silent))}");
         if (unseen != ChoiceEffect.None) ModEntry.Log.Info($"[audit] [reminders] read but didn't happen (logged only): {unseen}");
@@ -810,6 +816,22 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         Effects.AddOrUpdate(option, new StrongBox<ChoiceEffect>(effects));
         CardsRead.AddOrUpdate(option, cards);
         return effects;
+    }
+
+    /// <summary>What a relic does as you obtain it (its own AfterObtained), read like an option's code.</summary>
+    internal static ChoiceEffect ObtainEffects(RelicModel relic)
+    {
+        var calls = new HashSet<string>();
+        try
+        {
+            if (relic.GetType().GetMethod(nameof(RelicModel.AfterObtained)) is { } obtained && obtained.DeclaringType == relic.GetType())
+                Walk(obtained, relic.GetType(), calls, new HashSet<MethodBase>(), depth: 0, new OptionCards { Relic = relic });
+        }
+        catch (Exception ex)
+        {
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders:obtained:" + relic.GetType().Name);
+        }
+        return ChoiceReminders.EffectsOf(calls);
     }
 
     /// <summary>

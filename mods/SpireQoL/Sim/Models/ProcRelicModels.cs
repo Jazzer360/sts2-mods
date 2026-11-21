@@ -150,7 +150,7 @@ public sealed class BurningSticks : RelicProc
     {
         if (cardEvent != CardEvent.Exhausted || player != owner || !Armed(state, owner) || state.EventCard?.Type != SimCardType.Skill) return One(state);
         Disarm(state, owner);
-        return Cause(Fire(state, owner), CardEvent.Generated, count: 1, owner);
+        return MakeInHand(Fire(state, owner), CardEvent.Generated, count: 1, owner);
     }
 }
 
@@ -166,7 +166,7 @@ public sealed class MusicBox : RelicProc
     {
         if (!Mine(play, owner) || TakeBound(state, owner) is null) return One(state);
         Disarm(state, owner);
-        return Cause(Fire(state, owner), CardEvent.Generated, count: 1, owner);
+        return MakeInHand(Fire(state, owner), CardEvent.Generated, count: 1, owner, ethereal: true);
     }
 }
 

@@ -182,6 +182,13 @@ public sealed class PlayFacts
     /// </summary>
     public IReadOnlyList<CardModel> CardsBack { get; init; } = Array.Empty<CardModel>();
     public int ReturnsToHand => CardsBack.Count;
+    /// <summary>
+    /// Cards the play itself moves into your hand from a pile (CardPileCmd.Add to PileType.Hand: Hologram, Wish, Dredge...,
+    /// TakenToHandCards), as many as the piles hold and your hand has room for; in your hand after it.
+    /// </summary>
+    public int TakenToHand { get; init; }
+    /// <summary>The play moves cards into your hand and you choose how many (Neow's Fury: 0 or more): your hand after it is your later decision.</summary>
+    public bool HandTakeChosen { get; init; }
     /// <summary>Energy the play certainly gives back (Sown, on the card's first play: Sown.OnPlay while Normal).</summary>
     public int EnergyBack { get; init; }
 
@@ -391,6 +398,8 @@ public sealed class PlayFacts
             GeneratedStatuses = GeneratedStatuses + next.GeneratedStatuses,
             SadnessCreated = SadnessCreated + next.SadnessCreated,
             CardsBack = CardsBack.Concat(next.CardsBack).ToList(),
+            TakenToHand = TakenToHand + next.TakenToHand,
+            HandTakeChosen = HandTakeChosen || next.HandTakeChosen,
             EnergyBack = EnergyBack + next.EnergyBack,
             Sim = next.Sim,
             DeathByAim = next.DeathByAim,
@@ -452,6 +461,9 @@ public sealed class PlayFacts
             SadnessCreated = SadnessCards.Contains(name) ? statuses * Math.Max(1, plays) : 0,
             CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,
                 Fool.Shoots(card, me) ? Math.Max(1, plays) : 0),
+            TakenToHand = TakenToHandCount(card, name, me, Math.Max(1, plays),
+                room: CardPile.MaxCardsInHand - Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand + draws + swiftDraws)),
+            HandTakeChosen = name == nameof(NeowsFury) && PileCards(me, PileType.Discard).Count > 0 && hand.Count - 1 < CardPile.MaxCardsInHand,
             EnergyBack = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Sown { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } sown ? sown.Amount : 0,
             Transforms = TransformCount(card, name, others, drawPile) * Math.Max(1, plays),
             // A shot with no arrow to shoot does nothing at all (its debuffs neither: Hobbling Shot).
@@ -954,6 +966,76 @@ public sealed class PlayFacts
     };
 
     /// <summary>
+    /// Cards whose own play moves cards into your hand from a pile (CardPileCmd.Add to PileType.Hand), each counted by
+    /// TakenToHandCount from its OnPlay. CardCoverage's scan holds every card calling CardPileCmd.Add in its play to this list,
+    /// PutBackCards, WholeHandCards or MovedElsewhereCards.
+    /// </summary>
+    internal static readonly HashSet<string> TakenToHandCards = new()
+    {
+        nameof(AllForOne), nameof(Anointed), nameof(ArrowStab), nameof(Dredge), nameof(Graveblast), nameof(Hologram), "KiChant", nameof(LockedIn),
+        nameof(NeowsFury), nameof(SecretTechnique), nameof(SecretWeapon), nameof(SeekerStrike), nameof(SummonForth), nameof(TheWorld), nameof(Wish),
+    };
+
+    /// <summary>Cards that draw, then put cards from your hand back on your draw pile (their PutBack value; Thinking Ahead's one).</summary>
+    internal static readonly HashSet<string> PutBackCards = new() { nameof(Glimmer), nameof(PhotonCut), nameof(ThinkingAhead) };
+
+    /// <summary>Cards whose own play moves cards with CardPileCmd.Add, but never into or out of your hand, and where they go.</summary>
+    internal static readonly Dictionary<string, string> MovedElsewhereCards = new()
+    {
+        [nameof(CosmicIndifference)] = "a card from your discard pile onto your draw pile",
+        [nameof(Headbutt)] = "a card from your discard pile onto your draw pile",
+        [nameof(Recall)] = "a card from your discard pile onto your draw pile",
+        [nameof(Tutor)] = "a card from the teammate's draw pile into their hand (it aims only at a teammate)",
+    };
+
+    private static List<CardModel> PileCards(Player me, PileType pile)
+    {
+        try { return pile.GetPile(me).Cards.ToList(); } catch { return new List<CardModel>(); }
+    }
+
+    /// <summary>
+    /// How many cards <paramref name="card"/>'s plays move into your hand from a pile (its OnPlay), with <paramref name="room"/>
+    /// left in your hand: a card added to a full hand goes to the discard pile instead (CardPileCmd.Add). Which cards is a choice
+    /// or a draw; how many is in the piles now. Neow's Fury's is your choice (HandTakeChosen).
+    /// </summary>
+    internal static int TakenToHandCount(CardModel card, string name, Player me, int plays, int room)
+    {
+        if (!TakenToHandCards.Contains(name) || room <= 0) return 0;
+        var draw = PileCards(me, PileType.Draw);
+        var discard = PileCards(me, PileType.Discard);
+        var cards = Sts2State.Var(card, "Cards", fallback: 1);
+        var hasArrows = Fool.ArrowsAvailable(me) > 0; // ArrowCmd.PlayerHasAnyArrows
+        var count = name switch
+        {
+            // Every 0-cost (not X) Attack, Skill or Power in your discard pile (AllForOne.Filter).
+            nameof(AllForOne) => discard.Count(other => other.Type is CardType.Attack or CardType.Skill or CardType.Power && !other.EnergyCost.CostsX
+                                                        && SafeCostWithModifiers(other) == 0),
+            // Every Rare in your draw pile, as many as fit (which ones is a roll).
+            nameof(Anointed) => draw.Count(other => other.Rarity == CardRarity.Rare),
+            // A Shoot card from your discard pile, when you have arrows.
+            nameof(ArrowStab) => hasArrows ? Math.Min(plays, discard.Count(other => other.Tags.Contains(CardTag.Shoot))) : 0,
+            // Its Cards from your discard pile (you choose them; The World's are a roll).
+            nameof(Dredge) or nameof(TheWorld) => Math.Min(cards * plays, discard.Count),
+            nameof(Graveblast) or nameof(Hologram) => Math.Min(plays, discard.Count),
+            nameof(LockedIn) => Math.Min(plays, draw.Count(other => other.Tags.Contains(CardTag.Shoot))),
+            nameof(SecretTechnique) => Math.Min(plays, draw.Count(other => other.Type == CardType.Skill)),
+            nameof(SecretWeapon) => Math.Min(plays, draw.Count(other => other.Type == CardType.Attack)),
+            nameof(SeekerStrike) or nameof(Wish) => Math.Min(plays, draw.Count),
+            // Every Sovereign Blade not in your hand (before it forges).
+            nameof(SummonForth) => me.PlayerCombatState?.AllCards.OfType<SovereignBlade>().Count(blade => blade.Pile?.Type != PileType.Hand) ?? 0,
+            // One of the cards it looks at.
+            "KiChant" => KiChantLooksAt(card) > 0 ? plays : 0,
+            _ => 0, // Neow's Fury: you choose how many (HandTakeChosen)
+        };
+        return Math.Min(room, count);
+    }
+
+    private static int SafeCostWithModifiers(CardModel card)
+    {
+        try { return card.EnergyCost.GetWithModifiers(CostModifiers.All); } catch { return -1; }
+    }
+
+    /// <summary>
     /// Cards of yours, other than this one, its play takes out of your hand: what it discards from there (not Ki Chant's, from the
     /// draw pile; Scrape's are the simulator's, from what it drew) and what it exhausts from there (not Cleanse's, from the draw
     /// pile; of Florescence's and Flak Cannon's, from every pile, the ones in your hand).
@@ -968,7 +1050,10 @@ public sealed class PlayFacts
             _ => ExhaustOthers(card, name, others, drawPile, plays),
         };
         var discards = name is "KiChant" or nameof(Scrape) ? 0 : DiscardCount(card, name, others, draws);
-        return exhausts + discards;
+        // Put back on your draw pile after the draws, from the cards in hand then (you choose which).
+        var putBack = PutBackCards.Contains(name)
+            ? Math.Min(name == nameof(ThinkingAhead) ? 1 : Sts2State.Var(card, "PutBack", fallback: 1), others.Count + draws) * Math.Max(1, plays) : 0;
+        return exhausts + discards + putBack;
     }
 
     /// <summary>Cards that take your whole hand (exhaust or discard every card in it), from each OnPlay.</summary>
@@ -976,6 +1061,7 @@ public sealed class PlayFacts
     {
         nameof(FiendFire), nameof(Stoke), "TheDevil",                                                  // exhaust it
         nameof(CalculatedGamble), nameof(ShadowStep), nameof(StormOfSteel), "WheelOfFortune",          // discard it
+        nameof(Reboot),                                                                               // shuffle it into your draw pile, then draw
     };
 
     internal static int DiscardCount(CardModel card, string name, List<CardModel> others, int draws)

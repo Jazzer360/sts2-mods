@@ -272,6 +272,10 @@ public static class ModEntry
         }
         // 1.26.0: the first-run setup. A file from before it is a player who has set the mod up already.
         if (settings.SettingsVersion < 3 && hadSettings) settings.SetupDone = true;
+        // The tabs that would be on every card start off (decision #153). A file from before saved them on as it first met them,
+        // not by a choice, so they go off there too.
+        if (settings.SettingsVersion < 4)
+            foreach (var key in Menu.SettingsCatalog.TabsOffByDefault) settings.Tabs[key] = false;
         settings.ShowTurnTimers = null;
         settings.SettingsVersion = QolSettings.CurrentSettingsVersion;
     }

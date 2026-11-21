@@ -11,9 +11,15 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Quick setup, the settings menu's first page, which it opens on at your first launch: a switch for each part of the mod with the game's art beside it (damage you'll take, enemies that die, enemy intents, enemies' next moves, counter relics, potion tabs, reminders on card rewards, events, shops and the map, rest sites, chances), card tabs as four levels shown on real cards (none, minimal, moderate, full) with amounts and the target marker, and Everything for every default at once.
 
 #### Changed
+- The tabs of powers that act on every card you play, whatever the card, start off: Afterimage, Gravity, Serpent Form, Monologue, The Sealed Throne, Tender, Strangle, Oblivion and Slow (their tab sat on every card). Turn each on in the settings menu. A tab that's on every card until it's used up, like Vigor, stays on.
 - Settings menu: the game's art beside each feature's switch (a heart for Incoming Damage, the skull, the intent icons, the card reward, the map button...) and beside the options it fits (the target arrow, a crossed Thorns tab, the magnifier, a tab's number or chance).
 
 #### Fixed
+- Your hand after a play counts the cards the play moves into it or out of it: Hologram, Wish, Secret Weapon, Secret Technique, Seeker Strike, Locked In, Arrow Stab, Graveblast, Dredge, The World, Anointed, All for One, Summon Forth and Ki Chant take cards into it (Neow's Fury, where you choose how many, is `?`); Glimmer, Photon Cut and Thinking Ahead put cards back on your draw pile; Reboot takes your whole hand.
+- Cards a relic or power puts into your hand join it in every prediction: a card Feral sends back, Withering Presence's Wither, Calamity's and Juggling's cards, Burning Sticks' and Music Box's copies (Music Box's is Ethereal). A full hand sends them to your discard pile.
+- An enemy's poison at the start of its turn is damage like any other: Shriek stuns at its threshold (a Terror Eel poisoned below it skips its attack), Slippery, Hard to Kill and Intangible cap it, and a sleeping enemy wakes.
+- Withering Presence's tab no longer stays on every card after its count starts over.
+- The event check no longer reports what a relic an option gave you did as you got it (Cursed Pearl's gold from This or That).
 - Pact's End deals no damage, in every prediction, unless your exhaust pile holds enough cards (when it glows gold).
 - The checks no longer report your death when Fairy in a Bottle or Lizard Tail saves you: a death is the game's own, not your HP reaching 0 on the way to the heal.
 

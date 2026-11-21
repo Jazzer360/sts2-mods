@@ -249,6 +249,11 @@ internal static class CardCoverage
         // your hand on something you do, which only ReturnToHand models (the return tabs, your hand size after).
         if (HookCalls(card.GetType()).Contains("CardPileCmd.Add") && !ReturnToHand.Modelled.Contains(name) && !ReturnToHand.NextTurn.Contains(name))
             issues.Add("moves a card from its own hooks (comes back to your hand? not counted: return tabs, hand size)");
+        // A card whose own play moves cards (CardPileCmd.Add): into your hand (Hologram, Wish: your hand size after), back out of it
+        // onto your draw pile (Glimmer), or somewhere your hand doesn't see. Each is counted or reviewed by where it moves them.
+        if (Calls("CardPileCmd", "Add") && !PlayFacts.TakenToHandCards.Contains(name) && !PlayFacts.PutBackCards.Contains(name)
+            && !PlayFacts.WholeHandCards.Contains(name) && !PlayFacts.MovedElsewhereCards.ContainsKey(name))
+            issues.Add("moves cards with CardPileCmd.Add in its play (into or out of your hand? not counted: hand size after)");
         // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
         if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !PlayFacts.SadnessCards.Contains(name))
             issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");

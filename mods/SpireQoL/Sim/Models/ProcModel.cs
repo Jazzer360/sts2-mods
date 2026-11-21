@@ -65,6 +65,13 @@ public abstract class ProcModel : SimModel
         return states.SelectMany(branch => SimEngine.ProcCardEvent(branch, cardEvent, count, player, onEach: tally)).ToList();
     }
 
+    /// <summary>
+    /// Cards made into a player's hand (CardPileCmd.AddGeneratedCardToCombat to PileType.Hand): they join the hand
+    /// (SimEngine.AddToHand), then what reacts to cards made runs (AfterCardGeneratedForCombat).
+    /// </summary>
+    protected IEnumerable<SimState> MakeInHand(IEnumerable<SimState> states, CardEvent made, int count, int player, bool ethereal = false) =>
+        Cause(states.Select(branch => { SimEngine.AddToHand(branch, player, count, ethereal); return branch; }).ToList(), made, count, player);
+
     /// <summary>Channels <paramref name="times"/> orbs of a kind for a player, one after another (OrbCmd.Channel).</summary>
     protected static IEnumerable<SimState> Channel(IEnumerable<SimState> states, int player, OrbKind kind, int times)
     {

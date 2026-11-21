@@ -29,7 +29,7 @@ public sealed class QolSettings
     /// <summary>Bumped when default widget positions change; older saved positions get reset.</summary>
     public int LayoutVersion { get; set; }
 
-    public const int CurrentSettingsVersion = 3;
+    public const int CurrentSettingsVersion = 4;
 
     /// <summary>Bumped when a setting's meaning changes; older files are migrated once (ModEntry.Migrate).</summary>
     public int SettingsVersion { get; set; }
@@ -160,7 +160,10 @@ public sealed class QolSettings
     public bool TrackerEnabled(string typeName, bool defaultOn = true) => Relics.TryGetValue(typeName, out var on) ? on : defaultOn;
 
     /// <summary>A tab's own switch, ignoring its group (for the settings menu).</summary>
-    public bool TabOwn(string key) => !Tabs.TryGetValue(key, out var on) || on;
+    public bool TabOwn(string key) => Tabs.TryGetValue(key, out var on) ? on : TabDefault(key);
+
+    /// <summary>A tab's switch before you've touched it: on, apart from the tabs that would be on every card (decision #153).</summary>
+    public static bool TabDefault(string key) => !Menu.SettingsCatalog.TabsOffByDefault.Contains(key);
 
     /// <summary>Set when a new tab key or group was added to <see cref="Tabs"/> and should be saved.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
@@ -171,7 +174,7 @@ public sealed class QolSettings
         var colon = key.IndexOf(':');
         var group = colon > 0 ? key[..colon] + ":*" : null;
         if (group != null && !Tabs.ContainsKey(group)) { Tabs[group] = true; TabsDirty = true; }
-        if (!Tabs.TryGetValue(key, out var on)) { Tabs[key] = true; TabsDirty = true; on = true; }
+        if (!Tabs.TryGetValue(key, out var on)) { on = TabDefault(key); Tabs[key] = on; TabsDirty = true; }
         if (!on) return false;
         return group == null || Tabs[group];
     }
