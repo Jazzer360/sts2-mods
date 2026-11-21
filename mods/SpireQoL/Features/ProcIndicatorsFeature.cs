@@ -475,12 +475,12 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var te = TurnEnd();
         if (te == null) return null;
 
-        // A card aimed at any enemy, or at any teammate (AnyAlly: one simulation per living teammate, SimAdapter.AllyKey),
+        // A card aimed at any enemy, or at any teammate (AnyAlly: one simulation per living teammate, Who.Teammate),
         // is simulated once per target; a tab that needs some aim shows when one target gives it.
         var targets = card.TargetType switch
         {
             TargetType.AnyEnemy => te.Ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => kv.Value).ToList(),
-            TargetType.AnyAlly => Enumerable.Range(0, te.Teammates.Count).Select(SimAdapter.AllyKey).ToList(),
+            TargetType.AnyAlly => Enumerable.Range(0, te.Teammates.Count).Select(Who.Teammate).ToList(),
             _ => new List<int> { -1 },
         };
         if (targets.Count == 0) targets.Add(-1);

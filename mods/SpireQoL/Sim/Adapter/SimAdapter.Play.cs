@@ -40,11 +40,10 @@ public static partial class SimAdapter
         // Aimed at a teammate: what lands on them goes to them (never to you, even with no teammate to aim at).
         Creature? ally = null;
         var allyId = -1;
-        if (card.TargetType == TargetType.AnyAlly && targetId <= -2)
+        if (card.TargetType == TargetType.AnyAlly && Who.TeammateIndex(targetId) is var aimedAt and >= 0)
         {
             var allies = Teammates(me, cs);
-            var k = -2 - targetId;
-            if (k < allies.Count) { play.AllyTarget = k; ally = allies[k].Creature; allyId = Who.Teammate(k); }
+            if (aimedAt < allies.Count) { play.AllyTarget = aimedAt; ally = allies[aimedAt].Creature; allyId = Who.Teammate(aimedAt); }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
         play.Draws = f.Draws;

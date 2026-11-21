@@ -308,3 +308,49 @@ public class SimTeammateTests
         Assert.Equal(6, o.Worst.Teammates[0].WuppyHp);
     }
 }
+
+/// <summary>
+/// One id per creature (Who): an enemy's Thorns hits back at whoever made the attack, you or a teammate. A teammate's index into
+/// SimState.Teammates is never an id (teammate 0 is Who.Teammate(0), and 0 is the first enemy).
+/// </summary>
+public class SimCreatureIdTests
+{
+    [Fact]
+    public void ThornsHitsBackTheTeammateWhoAttacked()
+    {
+        // A teammate's powered hit on an enemy with 3 Thorns: the teammate takes the 3 (blockable), not you, not the enemy.
+        var s = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 50, Powers = PowerSet.Empty.With("ThornsPower", 3) } } };
+        s.Teammates.Add(new SimPlayer { Hp = 40, Block = 1 });
+        SimEngine.Damage(s, s.Enemies[0], 6, Who.Teammate(0), SimProps.Move);
+        Assert.Equal(0, s.Teammates[0].Block);
+        Assert.Equal(2, s.Teammates[0].Taken);
+        Assert.Equal(0, s.P.Taken);
+        Assert.Equal(44, s.Enemies[0].Hp);
+    }
+
+    [Fact]
+    public void PlayersComeInPlayerOrderWithYouAtYourPlace()
+    {
+        Assert.Equal(new[] { Who.You }, Who.InPlayerOrder(0, 0));
+        Assert.Equal(new[] { Who.Teammate(0), Who.You, Who.Teammate(1) }, Who.InPlayerOrder(2, 1));
+        Assert.Equal(new[] { Who.Teammate(0), Who.Teammate(1), Who.Teammate(2), Who.Teammate(3), Who.You }, Who.InPlayerOrder(4, 4));
+        Assert.Same(Who.InPlayerOrder(3, 2), Who.InPlayerOrder(3, 2)); // made once
+    }
+
+    [Fact]
+    public void EveryIdHasOneKind()
+    {
+        Assert.Equal(CreatureKind.Enemy, Who.KindOf(0));
+        Assert.Equal(CreatureKind.You, Who.KindOf(Who.You));
+        Assert.Equal(CreatureKind.Teammate, Who.KindOf(Who.Teammate(0)));
+        Assert.Equal(CreatureKind.YourOsty, Who.KindOf(Who.YourOsty));
+        Assert.Equal(-1, Who.TeammateIndex(0));
+        Assert.Equal(2, Who.TeammateIndex(Who.Teammate(2)));
+        var s = new SimState();
+        s.Teammates.Add(new SimPlayer());
+        Assert.Same(s.P, s.Player(Who.You));
+        Assert.Same(s.Teammates[0], s.Player(Who.Teammate(0)));
+        Assert.Null(s.Player(0));
+        Assert.Null(s.Player(Who.Teammate(1)));
+    }
+}

@@ -238,7 +238,7 @@ public sealed class LethalityPower : SimModel
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null || d.Play?.Owner != owner) return 1m;
         if (d.Play.PlayIndex > 0) return 1m;
-        var started = Who.IsPlayer(owner) ? (owner == Who.You ? s.P : s.Teammates[Who.TeammateIndex(owner)]).Turn["Started:Attack"] : 0;
+        var started = SimEngine.TurnOf(s, owner)["Started:Attack"];
         return started > 1 ? 1m : 1m + SimEngine.PowerOn(s, owner, Name) / 100m;
     }
 }
@@ -249,7 +249,7 @@ public sealed class PhantomBladesPower : SimModel
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d)
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null || !d.Card.Is("Shiv") || d.Dealer != owner) return 0m;
-        var p = owner == Who.You ? s.P : Who.IsPlayer(owner) ? s.Teammates[Who.TeammateIndex(owner)] : null;
+        var p = s.Player(owner);
         return p != null && p.Turn["Finished#Shiv"] > 0 ? 0m : SimEngine.PowerOn(s, owner, Name);
     }
 }

@@ -23,12 +23,11 @@ public static partial class SimEngine
         {
             r = Then(r, x =>
             {
-                var who = gainer == Who.You ? -1 : Who.TeammateIndex(gainer);
-                if (who >= 0 && (who >= x.Teammates.Count || x.Teammates[who].Hp <= 0)) return new[] { x };
+                if (!x.TakesPart(gainer)) return new[] { x };
                 var amount = CalcBlock(x, baseBlock, new BlockCtx(gainer, props, null, null));
                 x.LogFired(name, amount, owner);
                 if (amount <= 0) return new[] { x };
-                return Then(GainBlock(x, amount, gainer == Who.You ? Breakdown(x, owner, name, label) : null, who), y => Hook(y, nameof(SimModel.AfterBlockGained), (m, o, z) => m.AfterBlockGained(z, o, gainer, amount, null)));
+                return Then(GainBlock(x, amount, gainer == Who.You ? Breakdown(x, owner, name, label) : null, gainer), y => Hook(y, nameof(SimModel.AfterBlockGained), (m, o, z) => m.AfterBlockGained(z, o, gainer, amount, null)));
             });
         }
         return r;
@@ -44,19 +43,14 @@ public static partial class SimEngine
     /// <summary>A relic's or power's name as the game shows it (SimState.Titles), or its class name.</summary>
     public static string Title(SimState s, int owner, string name) => s.Titles.TryGetValue($"{owner}:{name}", out var t) ? t : name;
 
-    /// <summary>A player takes part in their side's turn end (alive; you always).</summary>
-    public static bool TakesPart(SimState s, int owner) =>
-        owner == Who.You || (owner <= -2 && Who.TeammateIndex(owner) < s.Teammates.Count && s.Teammates[Who.TeammateIndex(owner)].Hp > 0);
-
     /// <summary>A player's last orb is evoked and goes (OrbCmd.EvokeLast: Consuming Shadow).</summary>
     public static IEnumerable<SimState> EvokeLast(SimState s, int player)
     {
-        var k = player == Who.You ? -1 : Who.TeammateIndex(player);
-        var p = k < 0 ? s.P : s.MutableTeammate(k);
+        var p = s.MutablePlayer(player);
         if (p.Orbs.Count == 0) return new[] { s };
         var orb = p.Orbs[^1];
         p.OwnOrbs().RemoveAt(p.Orbs.Count - 1);
-        return k < 0 ? Evoke(s, orb) : Evoke(s, orb, p.Thunder, k);
+        return Evoke(s, orb, player);
     }
 
     /// <summary>One proc hit on an enemy from <paramref name="dealer"/>: the damage pipeline (no card), then the damage. Returns the damage.</summary>
@@ -124,10 +118,9 @@ public static partial class SimEngine
         var dealer = noDealer ? null : (int?)owner;
         var amount = CalcDamage(s, baseDamage, new DamageCtx(dealer, player, props, null, null));
         s.LogFired(name, amount, owner);
-        var who = player == Who.You ? -1 : Who.TeammateIndex(player);
         if (amount <= 0) return new[] { s };
-        if (props.HasFlag(SimProps.Unblockable)) LandUnblockable(s, label ?? name, amount, who, dealer, props);
-        else LandBlockable(s, label ?? name, amount, who, dealer, props);
+        if (props.HasFlag(SimProps.Unblockable)) LandUnblockable(s, label ?? name, amount, player, dealer, props);
+        else LandBlockable(s, label ?? name, amount, player, dealer, props);
         return new[] { s };
     }
 
@@ -170,16 +163,11 @@ public static partial class SimEngine
         // cards (Huddle Up, Blade Symphony) aren't the player's.
         if (player == (s.CurrentPlay?.Owner ?? Who.You)) s.PlayEvents = s.PlayEvents.Add(ev.ToString(), 1);
         if (!Who.IsPlayer(player)) return;
-        var p = player == Who.You ? s.P : s.MutableTeammate(Who.TeammateIndex(player));
+        var p = s.MutablePlayer(player);
         if (ev == CardEvent.EnergySpent) p.Energy--;
         else if (ev == CardEvent.EnergyGained) p.Energy++;
     }
 
     /// <summary>A player's turn counters (SimPlayer.Turn) by id.</summary>
-    public static PowerSet TurnOf(SimState s, int id) =>
-        id == Who.You ? s.P.Turn : id <= -2 && Who.TeammateIndex(id) < s.Teammates.Count ? s.Teammates[Who.TeammateIndex(id)].Turn : PowerSet.Empty;
-
-    /// <summary>A player by id (null for enemies).</summary>
-    public static SimPlayer? PlayerOf(SimState s, int id) =>
-        id == Who.You ? s.P : id <= -2 && Who.TeammateIndex(id) < s.Teammates.Count ? s.Teammates[Who.TeammateIndex(id)] : null;
+    public static PowerSet TurnOf(SimState s, int id) => s.Player(id)?.Turn ?? PowerSet.Empty;
 }

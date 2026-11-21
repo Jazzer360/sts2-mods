@@ -637,6 +637,18 @@ public sealed class SimState
     /// <summary>The run's work counter (SimEngine.Run sets it; every copy of the state shares it).</summary>
     internal SimWork? Work;
 
+    /// <summary>A player by id (Who.You, Who.Teammate(k)); null for any other creature, or a teammate not in this fight.</summary>
+    public SimPlayer? Player(int id) => id == Who.You ? P : Who.TeammateIndex(id) is var k and >= 0 && k < Teammates.Count ? Teammates[k] : null;
+
+    /// <summary>A player by id, to change (a teammate shared between branches is copied for this branch first).</summary>
+    public SimPlayer MutablePlayer(int id) => id == Who.You ? P : MutableTeammate(Who.TeammateIndex(id));
+
+    /// <summary>The player takes part in what their side does (you always; a teammate while alive).</summary>
+    public bool TakesPart(int id) => id == Who.You || Player(id) is { Hp: > 0 };
+
+    /// <summary>Every player's id in player order (Who.InPlayerOrder).</summary>
+    [JsonIgnore] public int[] PlayerIds => Who.InPlayerOrder(Teammates.Count, TeammatesBeforeMe);
+
     /// <summary>Teammate k, to change: copied for this branch first if it's shared.</summary>
     public SimPlayer MutableTeammate(int k)
     {

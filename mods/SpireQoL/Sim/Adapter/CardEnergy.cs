@@ -122,7 +122,7 @@ internal static class CardEnergy
                 if (play.Card != null) play.Card = play.Card with { ArrowEnergy = energy };
                 return;
             case "BelieveInYou" or "Constellation":
-                if (allyId <= -2) Gain(energy, allyId);
+                if (Who.KindOf(allyId) == CreatureKind.Teammate) Gain(energy, allyId);
                 return;
             case "EnergySurge":
                 Gain(energy, owner);

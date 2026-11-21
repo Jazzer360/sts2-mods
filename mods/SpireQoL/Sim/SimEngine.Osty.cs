@@ -9,7 +9,7 @@ public static partial class SimEngine
     /// </summary>
     internal static int OstyLoses(SimState s, int player, int amount)
     {
-        var p = PlayerOf(s, player);
+        var p = s.Player(player);
         if (p == null || amount <= 0 || p.OstyHp <= 0) return 0;
         if (player != Who.You) p = s.MutableTeammate(Who.TeammateIndex(player));
         var lost = Math.Min(amount, p.OstyHp);

@@ -27,7 +27,7 @@ public static partial class SimEngine
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>
     private static void Count(SimState s, SimCardPlay play, string what)
     {
-        var p = play.Owner == Who.You ? s.P : play.Owner <= -2 ? s.MutableTeammate(Who.TeammateIndex(play.Owner)) : null;
+        var p = s.Player(play.Owner) == null ? null : s.MutablePlayer(play.Owner);
         if (p == null) return;
         var t = p.Turn.Add(what, 1).Add($"{what}:{play.Card.Type}", 1);
         foreach (var tag in play.Card.Tags) t = t.Add($"{what}#{tag}", 1);
@@ -144,12 +144,11 @@ public static partial class SimEngine
     /// <summary>One block gain of the action, through the block pipeline, with what reacts to it.</summary>
     internal static IEnumerable<SimState> BlockOnce(SimState s, GainBlockAction gb)
     {
-        if (gb.To <= -2 && (Who.TeammateIndex(gb.To) >= s.Teammates.Count || s.Teammates[Who.TeammateIndex(gb.To)].Hp <= 0)) return new[] { s };
+        if (!s.TakesPart(gb.To)) return new[] { s };
         var mods = gb.Fixed ? null : new List<(SimModel Model, int Owner)>();
         var amount = gb.Fixed ? Math.Max(0, (int)gb.Base)
             : CalcBlock(s, gb.Base, new BlockCtx(gb.To, gb.Props, s.CurrentPlay?.Card, s.CurrentPlay), gb.Captured, mods);
-        var who = gb.To == Who.You ? -1 : Who.TeammateIndex(gb.To);
-        var r = GainBlock(s, amount, s.EndOfTurnNow && who < 0 && s.Log ? s.CurrentPlay?.Card.Name ?? "block" : null, who);
+        var r = GainBlock(s, amount, s.EndOfTurnNow && gb.To == Who.You && s.Log ? s.CurrentPlay?.Card.Name ?? "block" : null, gb.To);
         // Block from a card play this turn (Unmovable counts the ones from earlier plays).
         if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
             r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add("CardBlock", 1); return x; }).ToList();
@@ -271,11 +270,8 @@ public static partial class SimEngine
 
 public static partial class SimEngine
 {
-    /// <summary>Blockable damage to you during your turn (Thorns hitting back...): your block, the HP-loss modifiers, Inferno.</summary>
-    internal static void LandOnYou(SimState s, string name, int amount) => LandBlockable(s, name, amount);
-
-    /// <summary>Blockable damage to teammate k.</summary>
-    internal static void LandOnTeammate(SimState s, string name, int amount, int k) => LandBlockable(s, name, amount, k);
+    /// <summary>Blockable damage to a player (Who.You, Who.Teammate(k)): Thorns hitting back at whoever attacked.</summary>
+    internal static void LandOnPlayer(SimState s, string name, int amount, int player) => LandBlockable(s, name, amount, player);
 }
 
 public static partial class SimEngine

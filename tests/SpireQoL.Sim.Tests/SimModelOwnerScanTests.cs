@@ -14,10 +14,7 @@ public class SimModelOwnerScanTests
     /// <summary>A fragment of each reviewed line, and why naming you there is right.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
-        ["owner == Who.You ? s.P.Turn"] = "picks the owner's player (you or the teammate)",
         ["owner == Who.You ? x.P : x.MutableTeammate"] = "picks the owner's player",
-        ["owner == Who.You ? s.P : s.Teammates"] = "picks the owner's player",
-        ["owner == Who.You ? s.P : Who.IsPlayer(owner)"] = "picks the owner's player",
         ["if (owner == Who.You) s.ParryingShieldFired = true;"] = "the forecast audit's flag for your Parrying Shield; a teammate's still deals its damage",
         ["ProcBlockFor(x, owner, Name, Who.You, amount, Unpowered)"] = "a teammate's power giving you block (Covering Fire gives every other player its block)",
         ["e.Dealer != Who.You || !e.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",
@@ -26,7 +23,6 @@ public class SimModelOwnerScanTests
         ["owner == Who.You && attack.Dealer == Who.YourOsty && s.P.OstyHp"] = "your Osty's attacks (a teammate's Osty doesn't attack in your turn)",
         ["dealer == Who.YourOsty ? Who.You : dealer"] = "your Osty's damage counts as yours",
         ["OstyLoses(s, Who.You, hit)"] = "Thorns hitting back at your Osty",
-        ["else if (dealer == Who.You) SimEngine.LandOnYou"] = "Thorns hitting back at you; a teammate dealer is the next line",
         ["(owner == Who.You && d.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
         ["(owner == Who.You && e.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
     };

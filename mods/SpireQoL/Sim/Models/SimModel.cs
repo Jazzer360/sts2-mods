@@ -96,20 +96,49 @@ public sealed record AttackInfo(int Id, int Dealer, SimProps Props, SimCard? Car
 /// <summary>A damage event (DamageResult) for the hooks around it.</summary>
 public sealed record DamageEvent(int? Dealer, int Target, SimProps Props, SimCard? Card, int Total, int Blocked, int Unblocked, bool Killed);
 
+/// <summary>What a creature id names (Who.KindOf).</summary>
+public enum CreatureKind { You, Teammate, YourOsty, Enemy }
+
 /// <summary>
-/// Creature ids (one number for any creature, as hooks need an owner and a target): enemies are their SimEnemy.Id (0 and up),
-/// you are -1, teammate k is -2 - k (SimAdapter.AllyKey).
+/// Creature ids: one number for any creature, the only one the simulator uses (hooks need an owner, a target, a dealer). Enemies
+/// are their SimEnemy.Id (0 and up), you are -1, teammate k (SimState.Teammates[k]) is -2 - k, your Osty as a dealer -100.
+/// Look a player up by id with SimState.Player.
 /// </summary>
 public static class Who
 {
     public const int You = -1;
-    public static int Teammate(int k) => -2 - k;
-    public static bool IsEnemy(int id) => id >= 0;
-    public static bool IsPlayer(int id) => id < 0 && id > YourOsty;
     /// <summary>Your Osty, as a dealer (his own powers aren't simulated: his damage is captured).</summary>
     public const int YourOsty = -100;
-    /// <summary>The teammate index of a player id (-1 for you).</summary>
-    public static int TeammateIndex(int id) => id <= -2 ? -2 - id : -1;
+    public static int Teammate(int k) => -2 - k;
+    public static CreatureKind KindOf(int id) => id >= 0 ? CreatureKind.Enemy : id == You ? CreatureKind.You : id == YourOsty ? CreatureKind.YourOsty : CreatureKind.Teammate;
+    public static bool IsEnemy(int id) => id >= 0;
+    public static bool IsPlayer(int id) => KindOf(id) is CreatureKind.You or CreatureKind.Teammate;
+    /// <summary>The teammate index of a player id (SimState.Teammates[k]); -1 for anything else.</summary>
+    public static int TeammateIndex(int id) => KindOf(id) == CreatureKind.Teammate ? -2 - id : -1;
+
+    /// <summary>
+    /// Every player's id in player order, with you at your place among your teammates (the order the game runs players in: hook
+    /// listeners, turn ends, hits on every player). Made once per team shape, so reading it allocates nothing.
+    /// </summary>
+    public static int[] InPlayerOrder(int teammates, int teammatesBeforeYou)
+    {
+        if (teammates >= Orders.Length) return Order(teammates, teammatesBeforeYou);
+        var before = Math.Clamp(teammatesBeforeYou, 0, teammates);
+        return Orders[teammates][before];
+    }
+
+    private static readonly int[][][] Orders = Enumerable.Range(0, 4)
+        .Select(n => Enumerable.Range(0, n + 1).Select(before => Order(n, before)).ToArray()).ToArray();
+
+    private static int[] Order(int teammates, int before)
+    {
+        before = Math.Clamp(before, 0, teammates);
+        var order = new int[teammates + 1];
+        for (var k = 0; k < before; k++) order[k] = Teammate(k);
+        order[before] = You;
+        for (var k = before; k < teammates; k++) order[k + 1] = Teammate(k);
+        return order;
+    }
 }
 
 /// <summary>

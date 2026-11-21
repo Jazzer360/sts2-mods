@@ -1309,13 +1309,13 @@ public sealed class SimInputs
         return !Keys(shown).SequenceEqual(Keys(full));
     }
     public required IReadOnlyDictionary<Creature, int> Ids { get; init; }
-    /// <summary>The teammates behind Start.Teammates, in order: a play aimed at one is keyed SimAdapter.AllyKey(index).</summary>
+    /// <summary>The teammates behind Start.Teammates, in order: a play aimed at one is keyed Who.Teammate(index).</summary>
     public IReadOnlyList<Creature> Allies { get; init; } = Array.Empty<Creature>();
 
     /// <summary>The simulation key for a play aimed at this creature: an enemy id, a teammate's AllyKey, or -1.</summary>
     public int KeyFor(Creature? target) =>
         target == null ? -1
         : Ids.TryGetValue(target, out var id) ? id
-        : Allies.ToList().IndexOf(target) is var k and >= 0 ? SpireQoL.Sim.SimAdapter.AllyKey(k) : -1;
+        : Allies.ToList().IndexOf(target) is var k and >= 0 ? Who.Teammate(k) : -1;
     public Dictionary<int, SimPlay> PlayByTarget { get; } = new();
 }

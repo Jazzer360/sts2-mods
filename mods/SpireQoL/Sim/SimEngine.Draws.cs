@@ -6,7 +6,7 @@ public static partial class SimEngine
     public const int MaxHand = 10;
 
     /// <summary>A player's draws go through their draw pile (decision #90): only yours, when the adapter filled it.</summary>
-    internal static bool DrawsFromPile(SimState s, int player) => PlayerOf(s, player)?.Draw != null;
+    internal static bool DrawsFromPile(SimState s, int player) => s.Player(player)?.Draw != null;
 
     /// <summary>
     /// <paramref name="count"/> draws, one after another (CardPileCmd.Draw), each with its reactions before the next: the draw
@@ -50,7 +50,7 @@ public static partial class SimEngine
                 var next = new List<SimState>();
                 foreach (var y in Then(going, x => DrawOne(x, player, da.Indirect, record: true)))
                     (y.DrawRecord!.Count > drawn && y.DrawRecord[^1].Card.Type == da.DrawAgainIf
-                        && PlayerOf(y, player)!.HandCount - (y.PlayFromHand ? 1 : 0) < MaxHand ? next : done).Add(y);
+                        && y.Player(player)!.HandCount - (y.PlayFromHand ? 1 : 0) < MaxHand ? next : done).Add(y);
                 going = next;
             }
             r = done;
@@ -72,7 +72,7 @@ public static partial class SimEngine
             if (discard.Count == 0) return new[] { x };
             // A Sly card plays itself when discarded (CardModel.OnDiscard): not simulated.
             if (discard.Any(d => d.Card.Sly)) x.Unmodelled ??= "a Sly card discarded by Scrape plays itself";
-            var p = MutablePlayer(x, player);
+            var p = x.MutablePlayer(player);
             foreach (var (card, id) in discard)
             {
                 p.HandCount--;
@@ -94,7 +94,7 @@ public static partial class SimEngine
     /// </summary>
     private static IEnumerable<SimState> DrawOne(SimState s, int player, bool indirect, bool record = false, Action<SimState>? onDrawn = null)
     {
-        var p = PlayerOf(s, player)!;
+        var p = s.Player(player)!;
         // The card being played has left your hand already (the game moves it before OnPlay); HandCount drops at CardResolved.
         var inHand = p.HandCount - (s.PlayFromHand ? 1 : 0);
         if (inHand >= MaxHand) return new[] { s };
@@ -102,13 +102,13 @@ public static partial class SimEngine
         if (pile.Count == 0)
         {
             if (pile.DiscardCount == 0) return new[] { s };
-            p = MutablePlayer(s, player);
+            p = s.MutablePlayer(player);
             p.Draw = pile.Shuffled();
             return Then(ProcCardEvent(s, CardEvent.Shuffled, 1, player), x => DrawOne(x, player, indirect, record, onDrawn));
         }
         if (pile.Top.Count > 0)
         {
-            var mp = MutablePlayer(s, player);
+            var mp = s.MutablePlayer(player);
             var top = pile.Top[0];
             mp.Draw = pile.WithoutTop();
             onDrawn?.Invoke(s);
@@ -121,7 +121,7 @@ public static partial class SimEngine
             var g = pile.Rest[i];
             var c = pile.Rest.Count == 1 ? s : s.Clone();
             c.Weight = s.Weight * g.Count / total;
-            MutablePlayer(c, player).Draw = pile.WithoutOneOf(i);
+            c.MutablePlayer(player).Draw = pile.WithoutOneOf(i);
             onDrawn?.Invoke(c);
             result.AddRange(Drawn(c, player, g.Card, indirect, record));
         }
@@ -147,7 +147,7 @@ public static partial class SimEngine
             ? auto.Plays
             : auto.Plays.Where(pl => s.Enemy(pl.TargetId) is { Alive: true, Hittable: true }).ToList();
         if (player == Who.You) s.AutoPlayed++;
-        var mp = MutablePlayer(s, player);
+        var mp = s.MutablePlayer(player);
         if (mp.AutoHand != null) mp.AutoHand = mp.AutoHand.Where(h => h.Id != id).ToList();
         if (plays.Count == 0)
         {
@@ -172,12 +172,11 @@ public static partial class SimEngine
         return result;
     }
 
-    private static SimPlayer MutablePlayer(SimState s, int player) => player == Who.You ? s.P : s.MutableTeammate(Who.TeammateIndex(player));
 
     /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
     private static IEnumerable<SimState> Drawn(SimState s, int player, SimDrawCard card, bool indirect, bool record = false)
     {
-        var p = MutablePlayer(s, player);
+        var p = s.MutablePlayer(player);
         p.HandCount++;
         p.Drawn++;
         // The draw a card acts on (RunDrawnCard): this card, and its id in AutoHand. Copied, not added to: branches share the list.

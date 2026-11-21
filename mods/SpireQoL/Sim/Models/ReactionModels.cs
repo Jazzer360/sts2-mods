@@ -23,8 +23,7 @@ public sealed class ThornsPower : SimModel
         {
             SimEngine.OstyLoses(s, Who.You, hit);
         }
-        else if (dealer == Who.You) SimEngine.LandOnYou(s, name, hit);
-        else if (dealer <= -2) SimEngine.LandOnTeammate(s, name, hit, Who.TeammateIndex(dealer));
+        else if (Who.IsPlayer(dealer)) SimEngine.LandOnPlayer(s, name, hit, dealer);
     }
 }
 

@@ -33,7 +33,7 @@ public static partial class SimEngine
     /// </summary>
     public static SimOrb FreshOrb(SimState s, OrbKind kind, int player)
     {
-        var p = PlayerOf(s, player);
+        var p = s.Player(player);
         var focus = p?.Focus ?? 0;
         var lightningBonus = p != null && p.Relics.Has("InfusedCore") ? Var(s, player, "InfusedCore", "ExtraDamage", 0) : 0;
         int F(int v) => Math.Max(0, v + focus);
@@ -54,20 +54,19 @@ public static partial class SimEngine
     /// </summary>
     public static IEnumerable<SimState> ChannelOrb(SimState s, SimOrb orb, int player)
     {
-        var k = player == Who.You ? -1 : Who.TeammateIndex(player);
-        if (k >= 0 && (k >= s.Teammates.Count || s.Teammates[k].Hp <= 0)) return new[] { s };
-        var p = k < 0 ? s.P : s.MutableTeammate(k);
+        if (!s.TakesPart(player)) return new[] { s };
+        var p = s.MutablePlayer(player);
         if (p.OrbCapacity == 0 && p.SlotOnFirstChannel) p.OrbCapacity = 1;
         IEnumerable<SimState> r = new[] { s };
         if (p.OrbCapacity > 0 && p.Orbs.Count >= p.OrbCapacity)
         {
             var front = p.Orbs[0];
             p.OwnOrbs().RemoveAt(0);
-            r = k < 0 ? Evoke(s, front) : Evoke(s, front, p.Thunder, k);
+            r = Evoke(s, front, player);
         }
         return Then(r.ToList(), x =>
         {
-            var px = k < 0 ? x.P : x.MutableTeammate(k);
+            var px = x.MutablePlayer(player);
             if (px.OrbCapacity <= 0) return new[] { x };
             px.OwnOrbs().Add(orb.Clone());
             return Hook(x, nameof(SimModel.AfterOrbChanneled), (m, o, y) => m.AfterOrbChanneled(y, o, player));

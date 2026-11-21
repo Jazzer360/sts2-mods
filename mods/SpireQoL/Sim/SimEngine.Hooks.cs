@@ -65,17 +65,12 @@ public static partial class SimEngine
             foreach (var e in set.Items)
                 if (SimModels.Get(e.Name) is { } m) list.Add((m, owner));
         }
-        var before = Math.Min(s.TeammatesBeforeMe, s.Teammates.Count);
-        void Player(int k)
+        foreach (var id in s.PlayerIds)
         {
-            var p = k < 0 ? s.P : s.Teammates[k];
-            var id = k < 0 ? Who.You : Who.Teammate(k);
+            var p = s.Player(id)!;
             Add(p.Powers, id);
             Add(p.Relics, id);
         }
-        for (var k = 0; k < before; k++) Player(k);
-        Player(-1);
-        for (var k = before; k < s.Teammates.Count; k++) Player(k);
         foreach (var e in s.Enemies) Add(e.Powers, e.Id);
         return list;
     }
@@ -162,25 +157,23 @@ public static partial class SimEngine
     // ------------------------------------------------------------------ creature access
 
     /// <summary>A creature's powers by id (enemy id, You, Teammate(k)).</summary>
-    public static PowerSet PowersOf(SimState s, int id) => id >= 0
+    public static PowerSet PowersOf(SimState s, int id) => Who.IsEnemy(id)
         ? s.Enemy(id)?.Powers ?? PowerSet.Empty
-        : id == Who.You ? s.P.Powers : s.Teammates[Who.TeammateIndex(id)].Powers;
+        : s.Player(id)?.Powers ?? PowerSet.Empty;
 
     /// <summary>Sets a creature's powers (a teammate shared between branches is copied first).</summary>
     public static void SetPowers(SimState s, int id, PowerSet powers)
     {
-        if (id >= 0) { if (s.Enemy(id) is { } e) e.Powers = powers; }
-        else if (id == Who.You) s.P.Powers = powers;
-        else s.MutableTeammate(Who.TeammateIndex(id)).Powers = powers;
+        if (Who.IsEnemy(id)) { if (s.Enemy(id) is { } e) e.Powers = powers; }
+        else if (s.Player(id) != null) s.MutablePlayer(id).Powers = powers;
     }
 
     /// <summary>A player's relic counters by id.</summary>
-    public static PowerSet RelicsOf(SimState s, int id) => id == Who.You ? s.P.Relics : id <= -2 ? s.Teammates[Who.TeammateIndex(id)].Relics : PowerSet.Empty;
+    public static PowerSet RelicsOf(SimState s, int id) => s.Player(id)?.Relics ?? PowerSet.Empty;
 
     public static void SetRelics(SimState s, int id, PowerSet relics)
     {
-        if (id == Who.You) s.P.Relics = relics;
-        else if (id <= -2) s.MutableTeammate(Who.TeammateIndex(id)).Relics = relics;
+        if (s.Player(id) != null) s.MutablePlayer(id).Relics = relics;
     }
 
     public static int PowerOn(SimState s, int id, string power) => PowersOf(s, id)[power];

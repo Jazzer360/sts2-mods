@@ -32,9 +32,8 @@ public static partial class SimEngine
     /// </summary>
     private static void CardResolved(SimState s, CardResolvedAction cr)
     {
-        var k = cr.Owner == Who.You ? -1 : Who.TeammateIndex(cr.Owner);
-        if (k >= s.Teammates.Count) { AllyDeaths(s); return; }
-        var p = k < 0 ? s.P : s.MutableTeammate(k);
+        if (s.Player(cr.Owner) == null) { AllyDeaths(s); return; }
+        var p = s.MutablePlayer(cr.Owner);
         // With a draw pile (decision #90), the cards it drew are already in hand, as drawn: only what it made or brought back is
         // unknown.
         var handDelta = cr.HandDelta - (p.Draw != null ? cr.Draws : 0);

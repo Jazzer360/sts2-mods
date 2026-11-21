@@ -139,8 +139,6 @@ public static partial class SimAdapter
     /// <summary>Cards aimed at a teammate whose channels go into that teammate's orbs (Ignition: OrbCmd.Channel on the target's player).</summary>
     internal static readonly HashSet<string> ChannelToAllyCards = new() { nameof(Ignition) };
 
-    /// <summary>The simulation key of a play aimed at teammate k (SimState.Teammates order). Enemy ids are 0 and up; -1 is no target.</summary>
-    public static int AllyKey(int k) => -2 - k;
 
     /// <summary>Cards that aren't attacks but damage their target (Capture Spirit: CreatureCmd.Damage). The card scan flags a new one.</summary>
     internal static readonly HashSet<string> TargetDamageCards = new() { nameof(CaptureSpirit) };
@@ -198,7 +196,7 @@ public static partial class SimAdapter
         ids = idMap;
         var s = new SimState();
         var mates = Teammates(me, cs);
-        // Any creature's simulator id: an enemy's, you (-1), or teammate k (-2 - k).
+        // Any creature's simulator id (Who): an enemy's, you, or teammate k.
         int? IdOf(Creature c) => idMap.TryGetValue(c, out var i) ? i : c == me.Creature ? Who.You
             : mates.FindIndex(m => m.Creature == c) is var k and >= 0 ? Who.Teammate(k) : null;
         var targets = cs.Players.Select(p => p.Creature).ToList();

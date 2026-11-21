@@ -20,7 +20,7 @@ public sealed class ArtOfWar : FirstAttackGivesUp { }
 public sealed class RippleBasin : FirstAttackGivesUp
 {
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) =>
-        SimEngine.TakesPart(s, owner) && SimEngine.PlayerOf(s, owner) is { AttacksThisTurn: 0 } && Amount(s, owner) > 0 ? Block(s, owner, Amount(s, owner)) : One(s);
+        s.TakesPart(owner) && s.Player(owner) is { AttacksThisTurn: 0 } && Amount(s, owner) > 0 ? Block(s, owner, Amount(s, owner)) : One(s);
 }
 
 /// <summary>
@@ -41,7 +41,7 @@ public sealed class PaelsTears : RelicProc
     {
         if (player != owner || Data(s, owner) == 0) return One(s);
         Set(s, owner, Amount(s, owner), 0);
-        return SimEngine.PlayerOf(s, owner) is { Energy: <= 0 } ? Fire(s, owner) : One(s);
+        return s.Player(owner) is { Energy: <= 0 } ? Fire(s, owner) : One(s);
     }
 }
 
@@ -110,7 +110,7 @@ public sealed class PaelsEye : RelicProc
     /// </summary>
     public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState s, int owner)
     {
-        if (!SimEngine.TakesPart(s, owner) || SimEngine.PlayerOf(s, owner) is not { PaelsEyeExhaust: true, HandCount: > 0 } p) return One(s);
+        if (!s.TakesPart(owner) || s.Player(owner) is not { PaelsEyeExhaust: true, HandCount: > 0 } p) return One(s);
         var cards = p.HandCount;
         return SimEngine.ProcCardEvent(s, CardEvent.Exhausted, cards, owner, indirect: false).Select(x =>
         {
@@ -333,7 +333,7 @@ public sealed class Twine : RelicProc
 public sealed class UnceasingTop : RelicProc
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.PlayIndex == 0 && SimEngine.PlayerOf(s, owner) is { HandCount: 1 }
+        Mine(play, owner) && play.PlayIndex == 0 && s.Player(owner) is { HandCount: 1 }
         && s.PlayEvents[nameof(CardEvent.Drawn)] == 0 && s.PlayEvents[nameof(CardEvent.Generated)] + s.PlayEvents[nameof(CardEvent.GeneratedStatus)] + s.PlayEvents[nameof(CardEvent.GeneratedSadness)] == 0
             ? Fire(s, owner) : One(s);
 }

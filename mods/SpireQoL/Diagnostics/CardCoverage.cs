@@ -63,7 +63,7 @@ internal static class CardCoverage
 
     /// <summary>
     /// Cards aimed at players (TargetType AnyAlly or AllAllies), reviewed from their OnPlay: how the simulator handles
-    /// what lands on the teammate (one simulation per teammate, SimAdapter.AllyKey), or why it doesn't change this
+    /// what lands on the teammate (one simulation per teammate, Who.Teammate), or why it doesn't change this
     /// turn's outcome. A new ally card is reported until it has an entry.
     /// </summary>
     private static readonly Dictionary<string, string> TeammateTargetModelled = new()
