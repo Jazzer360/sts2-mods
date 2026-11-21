@@ -3,6 +3,7 @@
 Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). **Setup on a new machine, the day-to-day loop and working error reports: docs/DEVELOPMENT.md (read it first).** Design notes: docs/ROADMAP.md. Loader facts: docs/MODDING_NOTES.md. What's done and open: docs/TRACKER.md.
 
 - Build: `dotnet build` (also installs to `<game>/mods/<ModId>/`; `-p:InstallToGame=false` to skip).
+- Check before every commit: `./scripts/check.ps1` (every project with warnings as errors, then both test suites; `-NoGame` skips the catalog tests). It's the bar a release holds.
 - Game assemblies are referenced from the install via Directory.Build.props/targets. Never commit game DLLs or decompiled code.
 - Decompiled game source (read-only reference): `~/git/sts2-decompiled` for Steam's beta branch, which the mod is developed on, and `~/git/sts2-decompiled-main` for the main branch, which it also supports (decision #78; layout and how to make each: docs/DEVELOPMENT.md "Decompiled game source"; same paths on every machine; local-only, never pushed; see each VERSION.json). If it's missing or older than the installed game, run `./scripts/decompile.ps1`. Look up real class/method names there before writing a Harmony patch or modelling a game rule; don't guess.
 - `core/` is compiled into each mod via a linked `<Compile Include>`; it is not a separate DLL.
