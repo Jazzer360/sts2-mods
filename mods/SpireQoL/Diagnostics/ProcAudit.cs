@@ -266,51 +266,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// <summary>Decision #92: checks skipped, by reason (rule 1), and what the played card's simulations didn't model (rule 2).</summary>
     private readonly Dictionary<string, int> _skipCounts = new(), _gapCounts = new();
 
-    /// <summary>
-    /// The one way to write a check this play leaves out (decision #92, rule 1: a skipped check is a gap, not a pass). Every line
-    /// it makes is counted by reason in the combat summary and posted to the dev stream (<see cref="SkipReason"/> reads it back):
-    /// "block: not checked (random auto-plays): predicted 4, actual 7". Keep <paramref name="why"/> free of names and amounts so
-    /// the same gap adds up across plays; those go in <paramref name="detail"/>. An excuse written any other way isn't counted.
-    /// </summary>
-    internal static string NotChecked(string what, string why, string? detail = null)
-        => $"{what}: not checked ({why})" + (detail == null ? "" : $": {detail}");
-
-    /// <summary>
-    /// A skip no model could ever close (decision #108): the play ended the fight, so the game stopped logging (its history skips
-    /// the killing hit on) or cleaned up before the check could look; or it ended your turn (Void Form), so the end of the turn ran
-    /// before the check could look. Counted, but not held against the turn.
-    /// </summary>
-    internal static bool ExpectedSkip(string reason) => new[] { FightEndedSkip, TurnEndedSkip }.Any(skip =>
-        reason.StartsWith(skip, StringComparison.Ordinal) || reason.Contains(": " + skip, StringComparison.Ordinal));
-
-    /// <summary>A "not checked" line's reason, without its details: "state after the play: auto-played cards".</summary>
-    internal static string SkipReason(string line)
-    {
-        var i = line.IndexOf("not checked", StringComparison.Ordinal);
-        var what = line[..i].TrimEnd(' ', ':');
-        var rest = line[(i + "not checked".Length)..].TrimStart();
-        var why = rest.StartsWith('(') ? Bracketed(rest) : rest.TrimStart(':', ' ').Split('(')[0].Trim();
-        // Card and source names vary: keep the shape (anything before " ran during" is an action's name).
-        var ran = why.IndexOf(" ran during", StringComparison.Ordinal);
-        if (ran > 0) why = "another action" + why[ran..];
-        var before = why.IndexOf("computed before ", StringComparison.Ordinal);
-        if (before >= 0) why = why[..(before + "computed before ".Length)] + "another play finished";
-        if (why.Length == 0) return what; // "budget not checked": the reason is what comes before
-        return what.Length > 0 ? $"{what}: {why}" : why;
-    }
-
-    /// <summary>The text inside a leading parenthesis, nested ones included ("(Unleash (a teammate's) ran ...)").</summary>
-    private static string Bracketed(string s)
-    {
-        var depth = 0;
-        for (var k = 0; k < s.Length; k++)
-        {
-            if (s[k] == '(') depth++;
-            else if (s[k] == ')' && --depth == 0) return s[1..k];
-        }
-        return s.TrimStart('(');
-    }
-
     // Every play this turn (card, its tabs, result), sent with each report: the turn is the unit
     // that explains most mismatches (counters, "first this turn" relics, queued plays).
     private readonly List<string> _turnPlays = new();
@@ -569,10 +524,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         action.BeforePausedForPlayerChoice -= OnActionPaused;
     }
 
-    /// <summary>Why the state after a play wasn't captured when the play ended the fight (an expected skip: decision #108).</summary>
-    private const string FightEndedSkip = "the fight ended";
-    /// <summary>A play that ends your turn (Void Form: PlayerCmd.EndTurn) lets the end of the turn run (Chains of Binding clearing Bound) before its state is read.</summary>
-    private const string TurnEndedSkip = "the play ended your turn";
+    // Why the state after a play wasn't captured: the play ended the fight, or your turn (Void Form: PlayerCmd.EndTurn lets the end
+    // of the turn run, Chains of Binding clearing Bound, before its state is read). Expected skips (CheckSkip.Expected: decision #108).
+    private const string FightEndedSkip = CheckSkip.FightEnded;
+    private const string TurnEndedSkip = CheckSkip.TurnEnded;
 
     private void OnActionFinished(GameAction action)
     {
@@ -893,20 +848,20 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // Another action ran inside this play (during your choice): its effects are in the snapshots too.
                 // The history checks above still ran; these are logged, and counted in the combat summary.
                 _interleaved++;
-                foreach (var x in snapshot) model.Add($"not checked ({w.RanDuringPause} ran during your choice): {x}");
+                foreach (var x in snapshot) model.Skip("", "another action ran during your choice", $"{w.RanDuringPause}: {x}");
             }
             else issues.AddRange(snapshot);
             if (issues.Count > 0 && w.Target is { IsPlayer: true } ally && ally != me.Creature
                 && CardCoverage.TeammateTargetUnmodelled(w.Chosen ?? w.Card))
             {
                 // Aimed at a teammate (Ignition's Plasma goes to their orbs): the simulator applies the card to you.
-                model.Add($"not checked (aimed at a teammate; the simulator applies it to you): {string.Join("; ", issues)}");
+                model.Skip("", "aimed at a teammate; the simulator applies it to you", string.Join("; ", issues));
                 issues.Clear();
             }
             if (w.StaleBecause != null && issues.Count > 0)
             {
                 // Played before the previous card finished: its tabs didn't see that card's effects.
-                model.Add($"not checked: its tabs were computed before {w.StaleBecause} finished ({string.Join("; ", issues)})");
+                model.Skip("", "its tabs were computed before another play finished", $"{w.StaleBecause} finished first ({string.Join("; ", issues)})");
                 issues.Clear();
             }
             if (w.Facts?.SimPending == true)
@@ -915,7 +870,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // proc tab can come from a model's log, its block and damage too: SimDependent, as for a capped search below), so none
                 // of those checks can be held to it. Counted as not checked (decision #92).
                 var simOnly = issues.Where(SimDependent).ToList();
-                foreach (var x in simOnly) model.Add($"not checked (simulation pending): {x}");
+                foreach (var x in simOnly) model.Skip("", "simulation pending", x);
                 issues.RemoveAll(simOnly.Contains);
             }
             if (w.Facts is { Sim: null, SimPending: false } && issues.Any(SimDependent))
@@ -923,7 +878,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // The card's simulation couldn't be built (it threw: reported as a crash on its own): every tab the simulator gives
                 // is missing, so those checks would only repeat that crash. Counted, not reported (decision #92).
                 var fromSim = issues.Where(SimDependent).ToList();
-                foreach (var x in fromSim) model.Add($"not checked (no simulation for this card): {x}");
+                foreach (var x in fromSim) model.Skip("", "no simulation for this card", x);
                 issues.RemoveAll(fromSim.Contains);
             }
             if (w.Facts is { } facts && (facts.SimIncomplete || facts.Unmodelled.Count > 0))
@@ -933,7 +888,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // so their checks aren't reported; the snapshot checks run their own simulation and stay.
                 var why = facts.Unmodelled.Count > 0 ? "a branch of its simulation not modelled" : "its simulation stopped at the memory cap";
                 var fromSim = issues.Where(SimDependent).ToList();
-                foreach (var x in fromSim) model.Add($"not checked ({why}): {x}");
+                foreach (var x in fromSim) model.Skip("", why, x);
                 issues.RemoveAll(fromSim.Contains);
             }
             if (issues.Count > 0 && w.Facts?.Sim is { FullStart: not null } handSim
@@ -943,7 +898,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // Count teammates' hands is off and their hand changes the play: its tabs were worked out without what decides it
                 // (decision #25), so they can't be held to what happened. The state after the play is checked with it.
                 var fromSim = issues.Where(SimDependent).ToList();
-                foreach (var x in fromSim) model.Add($"not checked (a teammate's hand changes it; Count teammates' hands is off): {x}");
+                foreach (var x in fromSim) model.Skip("", "a teammate's hand changes it; Count teammates' hands is off", x);
                 issues.RemoveAll(fromSim.Contains);
             }
             // What the card showed in hand against the same prediction (decision #103): after the filters above, which are about
@@ -956,12 +911,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 _skipCounts[sk] = (_skipCounts.TryGetValue(sk, out var skn) ? skn : 0) + 1;
                 Telemetry.DevEvents.Post(new Telemetry.CheckSkipped(Telemetry.Audits.Play, turn, sk, w.CardName));
             }
-            foreach (var line in model.Where(x => x.Contains("not checked", StringComparison.Ordinal)))
+            foreach (var skip in model.Skips)
             {
-                var reason = SkipReason(line);
+                var reason = skip.Reason;
                 _skipCounts[reason] = (_skipCounts.TryGetValue(reason, out var sn) ? sn : 0) + 1;
-                // The play that ended the fight: what the game never logged or cleaned up first, which no model can close (ExpectedSkip).
-                var expected = w.FightEnded && ExpectedSkip(reason);
+                // The play that ended the fight: what the game never logged or cleaned up first, which no model can close (Expected).
+                var expected = w.FightEnded && skip.Expected;
                 Telemetry.DevEvents.Post(new Telemetry.CheckSkipped(Telemetry.Audits.Play, turn, reason, w.CardName, expected));
             }
             foreach (var reason in w.Facts?.Unmodelled ?? Array.Empty<string>())
@@ -1102,10 +1057,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         _gapCounts.Clear();
     }
 
-    private static List<string> Compare(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, out List<string> model)
+    private static List<string> Compare(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, out ModelLines model)
     {
         var issues = new List<string>();
-        var modelLines = new List<string>();
+        var modelLines = new ModelLines();
         model = modelLines;
         // Random outcomes (several enemies): only effects the history shows a random hit caused are
         // excused. Random hits = damage to enemies with no card source (procs, orbs) or from this card
@@ -1162,7 +1117,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 }
                 if (had == null)
                 {
-                    modelLines.Add(NotChecked("no tab", "fired after a random hit or kill; no simulation to tell", m.GetType().Name));
+                    modelLines.Skip("no tab", "fired after a random hit or kill; no simulation to tell", m.GetType().Name);
                     continue;
                 }
                 issues.Add($"no tab: {m.GetType().Name} fired (after a random hit or kill, but no outcome of the simulation set it off)");
@@ -1179,7 +1134,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // plays would: which cards is a roll.
             if (UnpredictedAutoPlay(w, entries, me))
             {
-                modelLines.Add(NotChecked("no tab", "fired during random auto-plays", m.GetType().Name));
+                modelLines.Skip("no tab", "fired during random auto-plays", m.GetType().Name);
                 continue;
             }
             if (DrawReactive.Contains(m.GetType().Name) && entries.OfType<CardDrawnEntry>().Any(d => !d.FromHandDraw && d.Card.Owner == me))
@@ -1191,9 +1146,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                     issues.Add($"no tab: {m.GetType().Name} fired (on a drawn card, but no outcome of the simulation set it off)");
                     continue;
                 }
-                modelLines.Add(had == true
-                    ? $"{m.GetType().Name} fired on a drawn card (some outcomes set it off: the draw decided it)"
-                    : NotChecked("no tab", "fired on a drawn card; no simulation to tell", m.GetType().Name));
+                if (had == true) modelLines.Add($"{m.GetType().Name} fired on a drawn card (some outcomes set it off: the draw decided it)");
+                else modelLines.Skip("no tab", "fired on a drawn card; no simulation to tell", m.GetType().Name);
                 sourceOf[m.GetType().Name] = new TabSpec("proc:" + m.GetType().Name, null);
                 continue;
             }
@@ -1287,10 +1241,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var predictedBlock = w.Predicted.Where(t => t.Kind == TabAmount.Block).Sum(t => t.Amount) + (w.Facts?.OrbBlock ?? 0);
         // The play ended the fight: the history stops at the killing hit, so less than predicted is expected.
         void Shortfall(string what, string predicted, int actual) =>
-            modelLines.Add(NotChecked(what, FightEndedSkip + ": the game logs nothing from the killing hit on", $"predicted {predicted}, actual {actual}"));
+            modelLines.Skip(what, FightEndedSkip + ": the game logs nothing from the killing hit on", $"predicted {predicted}, actual {actual}");
         if (procBlock < predictedBlock && w.FightEnded) Shortfall("block", predictedBlock.ToString(), procBlock);
         // Cards auto-played at random (Lost Lute, The Fool) set off block procs of their own (Song Path on a Cho it played).
-        else if (procBlock > predictedBlock && UnpredictedAutoPlay(w, entries, me)) modelLines.Add(NotChecked("block", "random auto-plays", $"predicted {predictedBlock}, actual {procBlock}"));
+        else if (procBlock > predictedBlock && UnpredictedAutoPlay(w, entries, me)) modelLines.Skip("block", "random auto-plays", $"predicted {predictedBlock}, actual {procBlock}");
         else if (procBlock != predictedBlock) issues.Add($"block: predicted {predictedBlock}, actual {procBlock}");
 
         // ---- damage from procs (no card source), against each tab's range
@@ -1316,19 +1270,19 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var capped = flashed.Any(Caps);
         if (toEnemies < eMin && capped) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}, capped by {string.Join(", ", flashed.Where(Caps).Select(m => m.GetType().Name).Distinct())}");
         else if (toEnemies < eMin && w.FightEnded) Shortfall("damage to enemies", Range(eMin, eMax), toEnemies);
-        else if (toEnemies > eMax && UnpredictedAutoPlay(w, entries, me)) modelLines.Add(NotChecked("damage to enemies", "random auto-plays", $"predicted {Range(eMin, eMax)}, actual {toEnemies}"));
+        else if (toEnemies > eMax && UnpredictedAutoPlay(w, entries, me)) modelLines.Skip("damage to enemies", "random auto-plays", $"predicted {Range(eMin, eMax)}, actual {toEnemies}");
         else if (toEnemies < eMin || toEnemies > eMax) issues.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}");
         if (toMe < mMin && w.FightEnded) Shortfall("damage to you", Range(mMin, mMax), toMe);
         else if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");
 
         // ---- budget: everything else the play caused
         var autoPlayed = UnpredictedAutoPlay(w, entries, me);
-        if (autoPlayed) modelLines.Add(NotChecked("budget", "random auto-plays"));
+        if (autoPlayed) modelLines.Skip("budget", "random auto-plays");
         var f = autoPlayed ? null : w.Facts;
         bool Explained(Effect e) => sourceOf.Keys.Any(s => SourceEffects.TryGetValue(s, out var fx) && fx.Contains(e));
         void Budget(Effect e, string what, int actual, int own)
         {
-            if (actual > own && !Explained(e) && randomKill) modelLines.Add(NotChecked($"unexplained {what}", "after a random kill", $"{actual - own} more than the card's own {own}"));
+            if (actual > own && !Explained(e) && randomKill) modelLines.Skip($"unexplained {what}", "after a random kill", $"{actual - own} more than the card's own {own}");
             else if (actual > own && !Explained(e)) issues.Add($"unexplained: {actual - own} more {what} than the card's own {own}");
             // Fewer than the card's own: "up to" counts you choose (exhausts, discards, created cards), or a pile ran out. Draws and
             // channels, which aren't a choice, are reported above.
@@ -1385,8 +1339,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             .ToList();
         if (foreign.Count > 0 && !Explained(Effect.Power))
         {
-            if (randomKill) modelLines.Add(NotChecked("unexplained powers", "after a random kill", string.Join(", ", foreign)));
-            else if (autoPlayed) modelLines.Add(NotChecked("unexplained powers", "random auto-plays", string.Join(", ", foreign)));
+            if (randomKill) modelLines.Skip("unexplained powers", "after a random kill", string.Join(", ", foreign));
+            else if (autoPlayed) modelLines.Skip("unexplained powers", "random auto-plays", string.Join(", ", foreign));
             else issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
         }
 
@@ -1409,7 +1363,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// applies debuffs, temporary powers, the simulator's own powers (compared already), and anything on
     /// a creature that died. Increases are the budget check's ("unexplained: powers applied").
     /// </summary>
-    private static void PowerChangeIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, List<string> model)
+    private static void PowerChangeIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, ModelLines model)
     {
         if (w.PowersBefore == null || w.PowersAfter == null) return;
         // The card's own powers, and those of cards it auto-played.
@@ -1495,7 +1449,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </list>
     /// </summary>
     private static void GivenUpIssues(Window w, Player me, List<CombatHistoryEntry> entries, Dictionary<string, TabSpec> sourceOf,
-        List<string> issues, List<string> model)
+        List<string> issues, ModelLines model)
     {
         if (w.FullBefore == null || w.FullAfter == null) return;
         foreach (var (relic, (_, statusBefore)) in w.FullBefore.Relics)
@@ -1529,9 +1483,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             }
             if (tabbed == givenUp) continue;
             // The fight's cleanup clears the relics' status as the play ends it (AfterCombatEnd: Status = Normal).
-            if (w.FightEnded) { model.Add(NotChecked(tabbed ? "didn't fire" : "no tab", FightEndedSkip, name)); continue; }
+            if (w.FightEnded) { model.Skip(tabbed ? "didn't fire" : "no tab", FightEndedSkip, name); continue; }
             // Cards the play auto-played at random (Lost Lute, The Fool) can be the turn's first Attack, or spend energy.
-            if (UnpredictedAutoPlay(w, entries, me)) { model.Add(NotChecked(tabbed ? "didn't fire" : "no tab", "random auto-plays", name)); continue; }
+            if (UnpredictedAutoPlay(w, entries, me)) { model.Skip(tabbed ? "didn't fire" : "no tab", "random auto-plays", name); continue; }
             issues.Add(tabbed ? $"didn't fire: {name} (crossed: {what})" : $"no tab: {name} gave up its bonus ({what})");
         }
     }
@@ -1545,13 +1499,13 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// drew; Scrape: the cards it drew that cost 0), read from the play's draws, must be an outcome its simulation had; the chance its
     /// tab showed is logged with what happened ([audit] [odds]) and added up over the session, as the death chances are.
     /// </summary>
-    private static void DrawnIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<string> issues, List<string> model)
+    private static void DrawnIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
         var name = w.Card.GetType().Name;
         if (!SimAdapter.DrawnCardReaders.TryGetValue(name, out var reader) || w.Facts?.Drawn is not { } d) return;
-        if (w.FightEnded) { model.Add(NotChecked("drawn", FightEndedSkip, name)); return; }
-        if (UnpredictedAutoPlay(w, entries, me)) { model.Add(NotChecked("drawn", "random auto-plays", name)); return; }
-        if (w.Facts.SimIncomplete || w.Facts.Unmodelled.Count > 0) { model.Add(NotChecked("drawn", "its simulation stopped at a cap or met something not modelled", name)); return; }
+        if (w.FightEnded) { model.Skip("drawn", FightEndedSkip, name); return; }
+        if (UnpredictedAutoPlay(w, entries, me)) { model.Skip("drawn", "random auto-plays", name); return; }
+        if (w.Facts.SimIncomplete || w.Facts.Unmodelled.Count > 0) { model.Skip("drawn", "its simulation stopped at a cap or met something not modelled", name); return; }
         var drawn = entries.OfType<CardDrawnEntry>().Where(e => !e.FromHandDraw && e.Card.Owner == me).Select(e => e.Card).ToList();
         static bool Free(CardModel c)
         {
@@ -1619,9 +1573,9 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// Energy, stars, gold, HP, max HP, your cards and relics before and after the play (PlaySnapshot):
     /// a change no code that ran explains is reported with the sources present that could have made it.
     /// </summary>
-    private static void EverythingIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, List<string> model)
+    private static void EverythingIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, ModelLines model)
     {
-        if (w.FullBefore != null && w.FullAfter == null && w.AfterSkipped != null) model.Add(NotChecked("your cards, relics and resources after the play", w.AfterSkipped));
+        if (w.FullBefore != null && w.FullAfter == null && w.AfterSkipped != null) model.Skip("your cards, relics and resources after the play", w.AfterSkipped);
         if (w.FullBefore == null || w.FullAfter == null) return;
         var cs = Sts2State.Combat;
         if (cs == null) return;
@@ -1683,7 +1637,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var randomPlays = UnpredictedAutoPlay(w, entries, me);
             foreach (var name in cameBack.Except(tabbedBack))
             {
-                if (randomPlays) model.Add(NotChecked("no tab", "random auto-plays", $"{name} came back to your hand"));
+                if (randomPlays) model.Skip("no tab", "random auto-plays", $"{name} came back to your hand");
                 else issues.Add($"no tab: {name} came back to your hand");
             }
             foreach (var name in tabbedBack.Except(cameBack))
@@ -1694,7 +1648,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     // ------------------------------------------------------------------ shuffles
 
     /// <summary>Shuffles during the play (CardPileCmd.Shuffle prefix) against PlayFacts.Shuffles (the Shuffle Warning and shuffle procs).</summary>
-    private static void ShuffleIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, List<string> model)
+    private static void ShuffleIssues(Window w, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, ModelLines model)
     {
         var f = w.Facts;
         if (f == null) return;
@@ -1706,18 +1660,18 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var why = $"(draws: predicted {f.Draws} = own {f.OwnDraws} + set off {f.ChainedDraws}{(f.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
         if (w.TargetDraws is { } td && td != f.OwnDraws - f.EnchantmentDraws)
         {
-            model.Add(NotChecked("shuffle", "its draws depend on its target, counted for every target", $"{(shuffled ? "happened" : "didn't happen")} {why}"));
+            model.Skip("shuffle", "its draws depend on its target, counted for every target", $"{(shuffled ? "happened" : "didn't happen")} {why}");
             return;
         }
         if (!shuffled && w.FightEnded)
         {
             // The play's hit ended the fight (Compile Driver on the last enemy): its draws, and their shuffle, never came.
-            model.Add(NotChecked("shuffle", FightEndedSkip, $"didn't happen {why}"));
+            model.Skip("shuffle", FightEndedSkip, $"didn't happen {why}");
             return;
         }
         if (autoPlayed || (shuffled && drawReactive))
         {
-            model.Add(NotChecked("shuffle", "after random auto-plays or a draw-reactive source", $"{(shuffled ? "happened" : "didn't happen")} {why}"));
+            model.Skip("shuffle", "after random auto-plays or a draw-reactive source", $"{(shuffled ? "happened" : "didn't happen")} {why}");
             return;
         }
         issues.Add(shuffled
@@ -1734,7 +1688,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// the end-of-turn check totals the chances it shows (ForecastAudit), and the forecast from this board is itself checked
     /// against the enemy turn, so every link is paired.
     /// </summary>
-    private static void LethalIssues(Window w, List<CombatHistoryEntry> entries, List<string> issues, List<string> model)
+    private static void LethalIssues(Window w, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
         var sim = w.Facts?.Sim;
         var deaths = w.Facts?.DeathByAim;
@@ -1742,7 +1696,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && !ReferenceEquals(e.CardPlay.Card, w.Chosen)
                 && !HellraiserDrew(w, entries, w.Card.Owner, e.CardPlay.Card)))
         {
-            model.Add(NotChecked("lethal", "auto-played cards"));
+            model.Skip("lethal", "auto-played cards");
             return;
         }
         if (!deaths.TryGetValue(sim.KeyFor(w.Target), out var card) && !deaths.TryGetValue(-1, out card)) return;
@@ -1750,7 +1704,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var post = SimEngine.Run(sim.FullStart != null ? w.After.WithoutTeammateHands() : w.After);
         if (post.Truncated || post.AnyUnmodelled || post.Branches.Count == 0)
         {
-            model.Add(NotChecked("lethal", "the board after the play: its search stopped at a cap or met something not modelled"));
+            model.Skip("lethal", "the board after the play: its search stopped at a cap or met something not modelled");
             return;
         }
         foreach (var (creature, id) in sim.Ids)
@@ -1760,7 +1714,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             // to kill or spare (its 999999999 HP lives through any play). Not checked when the play's start wasn't seen.
             if (w.BlowingBefore == null ? IsBlowing(creature) : w.BlowingBefore.Contains(creature))
             {
-                model.Add(NotChecked("lethal", "an enemy about to blow before the play", start.Name));
+                model.Skip("lethal", "an enemy about to blow before the play", start.Name);
                 continue;
             }
             // Gone from the board after the play: dead. So is a Waterfall Giant the play brought to 0: Steam Eruption keeps it at
@@ -1778,41 +1732,41 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// The state the play left against the simulator's prediction of it (see the class summary).
     /// Each difference from the closest branch is one issue.
     /// </summary>
-    private static void AfterPlayIssues(Window w, List<CombatHistoryEntry> entries, List<string> issues, List<string> model)
+    private static void AfterPlayIssues(Window w, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
         var sim = w.Facts?.Sim;
         if (sim == null)
         {
-            model.Add(NotChecked("state after the play", "no simulation for this card"));
+            model.Skip("state after the play", "no simulation for this card");
             return;
         }
         if (w.After == null || w.AfterIds == null)
         {
-            model.Add(NotChecked("state after the play", w.AfterSkipped ?? "not captured"));
+            model.Skip("state after the play", w.AfterSkipped ?? "not captured");
             return;
         }
         if (entries.OfType<CardPlayStartedEntry>().Any(e => e.CardPlay.IsAutoPlay && !ReferenceEquals(e.CardPlay.Card, w.Chosen)
                 && !HellraiserDrew(w, entries, w.Card.Owner, e.CardPlay.Card)))
         {
-            model.Add(NotChecked("state after the play", "auto-played cards"));
+            model.Skip("state after the play", "auto-played cards");
             return;
         }
         if (w.Chosen != null && w.Chosen.TargetType == TargetType.AnyEnemy && w.Target == null)
         {
-            model.Add(NotChecked("state after the play", "the pick's auto-plays hit different random enemies"));
+            model.Skip("state after the play", "the pick's auto-plays hit different random enemies");
             return;
         }
         var targetId = sim.KeyFor(w.Target);
         if (!sim.PlayByTarget.TryGetValue(targetId, out var play) && !sim.PlayByTarget.TryGetValue(-1, out play))
         {
-            model.Add(NotChecked("state after the play", "no simulated play for its target"));
+            model.Skip("state after the play", "no simulated play for its target");
             return;
         }
         // Teammates' hands included (decision #25: the check uses everything that isn't a roll).
         SimEngine.ApplyPlayTo(sim.FullStart ?? sim.Start, play, out var branches, out var truncated);
         if (truncated || branches.Count == 0)
         {
-            model.Add(NotChecked("state after the play", "its search stopped at a cap"));
+            model.Skip("state after the play", "its search stopped at a cap");
             return;
         }
         var after = w.After;
