@@ -9,6 +9,7 @@ namespace SpireQoL.Catalog.Tests;
 /// Decision #157: a card's draws and star gains are read from its own code (CardCode, CardEnergy.CallsOf), not from lists of names,
 /// so a new card, or one that differs between the game's branches, is read as it is in the installed game.
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class CardCodeTests
 {
     [Fact]

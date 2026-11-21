@@ -51,7 +51,7 @@ internal sealed class DamageMathPanel
     private readonly TextureRect _heartIcon;
     private readonly HBoxContainer _unblockableRow;
     private readonly Label _unblockable;
-    /// <summary>The chance of the outcome shown (decision #155), after the last number: "72%".</summary>
+    /// <summary>The chance of the outcome shown (decision #155), before the last number: "72%".</summary>
     private readonly Label _outcomeChance;
     private readonly Label _reviveChance;
     private static readonly Color ChanceColor = new(0.8f, 0.8f, 0.8f);
@@ -144,10 +144,10 @@ internal sealed class DamageMathPanel
         _revive.Visible = false;
         var reviveRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         reviveRow.AddThemeConstantOverride("separation", 4);
-        reviveRow.AddChild(_revive);
         _reviveChance = UiKit.Label("", (int)(FontSize * 0.75f), ChanceColor);
         _reviveChance.Visible = false;
-        reviveRow.AddChild(_reviveChance);
+        reviveRow.AddChild(_reviveChance); // before the HP it's for
+        reviveRow.AddChild(_revive);
         grid.AddChild(reviveRow);
 
         parent.AddChild(grid);
@@ -187,6 +187,8 @@ internal sealed class DamageMathPanel
         }
         _outcomeChance.Visible = outcomeChance != null;
         _outcomeChance.Text = outcomeChance ?? "";
+        // The chance reads before the number it's for ("89%  21").
+        last.MoveChild(_outcomeChance, (last == _unblockableRow ? _unblockable : _result).GetIndex());
         _deathChance.Visible = dies && deathChance != null;
         _deathChance.Text = deathChance ?? "";
         _progress.Visible = progress != null;

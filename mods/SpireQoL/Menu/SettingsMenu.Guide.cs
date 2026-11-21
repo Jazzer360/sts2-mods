@@ -73,6 +73,10 @@ public sealed partial class SettingsMenu
             "Playing this might be bad for you: it helps an enemy, hurts you, or gives up a relic's bonus. Often still the right play; "
             + "the slash makes sure you know. Here the enemy's Thorns hits you for 3.",
             Tab("proc:ThornsPower", Power<ThornsPower>(), crossed: true, number: 3));
+        GuideCardCell(flow, Card<BallLightning>(), "A chance on a warning",
+            "When only some outcomes set the warning off (here, the Lightning orb waking the sleeping enemy if it hits that one), the tab "
+            + "carries the chance. No number: it's certain. Shown with Show chances on.",
+            Tab("proc:AsleepPower", Power<AsleepPower>(), crossed: true, numberText: "50%"));
         GuideCardCell(flow, Card<BallLightning>(), "A chance on the skull",
             "When a roll decides the kill (here, which enemy the Lightning orb hits), the lethal tab carries the chance. "
             + "Shown only when the card surely makes a death more likely than ending your turn now.",
@@ -185,7 +189,7 @@ public sealed partial class SettingsMenu
                 + "An enemy that dies first (Poison, your end-of-turn damage) doesn't attack, and retaliation can stop a multi-hit partway."),
             ("Block icon", "Your block when the turn ends, including what you gain then (Plating, Frost orbs, Orichalcum...)."),
             ("=", "What gets through your block: red, or 0 in green. "
-                + "When a roll decides how the turn goes (a draw at the end of your turn, a random target), the sum is the most likely way, with its chance after it."),
+                + "When a roll decides how the turn goes (a draw at the end of your turn, a random target), the sum is the most likely way, with its chance before the result."),
             ("Heart", "HP loss no block can stop (Regret, Beckon, Bad Luck), on its own line under the result: more block won't help with it."),
         };
         foreach (var (name, detail) in legend)

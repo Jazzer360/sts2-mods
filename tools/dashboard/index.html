@@ -298,7 +298,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
   </section>
 
   <section class="page" id="p-perf">
-    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label><label title="Leave out the frames before the game settled: the launch, the menus and map before your first fight, and that fight's first 15 s (loading, and the mod's code compiling on first use). They dwarf everything after."><input type="checkbox" id="skipLaunchBox"> skip the launch</label><span class="dim" title="Each point drawn as the average of the points within this much time around it: the trend, not every spike. The slow-frame tiles and the log still count every one.">Smooth over</span><select id="smoothSel"><option value="0">off</option><option value="0.5">0.5 s</option><option value="1.25">1.25 s</option><option value="3">3 s</option><option value="10">10 s</option><option value="30">30 s</option><option value="60">1 minute</option></select></div>
+    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">everything kept</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label><label title="Leave out the frames before the game settled: the launch, the menus and map before your first fight, and that fight's first 15 s (loading, and the mod's code compiling on first use). They dwarf everything after."><input type="checkbox" id="skipLaunchBox"> skip the launch</label><span class="dim" title="Each point drawn as the average of the points within this much time around it: the trend, not every spike. The slow-frame tiles and the log still count every one.">Smooth over</span><select id="smoothSel"><option value="0">off</option><option value="0.5">0.5 s</option><option value="1.25">1.25 s</option><option value="3">3 s</option><option value="10">10 s</option><option value="30">30 s</option><option value="60">1 minute</option></select></div>
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><h3>Is the mod making frames slow?</h3>
@@ -433,15 +433,24 @@ const spellText = (st) => st.spells.length
 const WARMUP_S = 20;
 /** A fight's first seconds: the game loading its room. */
 const FIGHT_LOAD_S = 3;
-const warmingUp = (t) => t < WARMUP_S;
+/**
+ * Each launch's start on the page's one timeline: a new launch's stream (a new file) continues from where the last one ended
+ * (its times shifted by FS.base), so the charts keep every launch since the page opened, and each launch's loading is left out.
+ */
+const launchAt = (t) => M.launches.findLast((at) => at <= t) ?? 0;
+const warmingUp = (t) => t - launchAt(t) < WARMUP_S;
 /** The launch settles once the first fight has loaded and made its first predictions (the mod's fight code compiling on first use), or at the warm-up's end before any fight. */
 const LAUNCH_FIGHT_S = 15;
-const settledAt = () => (M.combats.length ? M.combats[0].t + LAUNCH_FIGHT_S : WARMUP_S);
+/** When the launch t belongs to settled: its first fight's start plus LAUNCH_FIGHT_S, or its warm-up's end before any fight. */
+function settledAt(t) {
+  const at = launchAt(t), first = M.combats.find((c) => c.t >= at);
+  return first ? first.t + LAUNCH_FIGHT_S : at + WARMUP_S;
+}
 /** The Performance page's "skip the launch" (on by default; kept per browser, and for the page while open). */
 let skipLaunchChosen = true;
 const skipLaunch = () => { try { const v = localStorage.getItem("skipLaunch"); return v == null ? skipLaunchChosen : v !== "0"; } catch { return skipLaunchChosen; } };
 /** Rollups for the charts: without the launch's (its loading and first-use frames dwarf everything after) when skipped. */
-const afterLaunch = (arr) => (skipLaunch() ? arr.filter((e) => e.t >= settledAt()) : arr);
+const afterLaunch = (arr) => (skipLaunch() ? arr.filter((e) => e.t >= settledAt(e.t)) : arr);
 /** Whether the game was loading a scene at t: the launch's warm-up, anywhere outside a fight (menus, the map, rooms, events, rewards: scene changes the game makes) or a fight's first seconds.
  *  The game's own hitches there are its loading, nothing the mod can do about; they're shown but don't count against the verdicts. Hitches inside a fight still do (a full memory clean-up the mod's allocations set off, say). */
 function loadingAt(t) {
@@ -456,10 +465,11 @@ const warmupWarning = (l) => l.level === "WARN" && /^\[perf\] slow frame/.test(l
 const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
   rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [],
-  combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null,
+  combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null, launches: [0],
 };
 function reset() {
-  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null });
+  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0] });
+  FS.base = 0;
 }
 const push = (arr, v, max) => { arr.push(v); if (max && arr.length > max) arr.splice(0, arr.length - max); };
 function turnRec(turn) {
@@ -468,7 +478,8 @@ function turnRec(turn) {
   return M.turns.get(key);
 }
 function ingest(e) {
-  M.lastT = Math.max(M.lastT, e.t || 0);
+  e.t = (e.t || 0) + (FS.base || 0); // this launch's place on the page's timeline
+  M.lastT = Math.max(M.lastT, e.t);
   switch (e.kind) {
     case "stream-started": M.started = e; break;
     case "frame-rollup": push(M.rollups, e, MAX.rollups); break;
@@ -506,7 +517,7 @@ function ingest(e) {
 }
 
 // ============================================================== the folder: File System Access, remembered in IndexedDB
-const FS = { dir: null, stream: null, offset: 0, decoder: null, rest: "", listedAt: 0, demo: false };
+const FS = { dir: null, stream: null, offset: 0, decoder: null, rest: "", listedAt: 0, demo: false, base: 0 };
 const idb = () => new Promise((ok, no) => { const r = indexedDB.open("spireqol-dev", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
 async function kv(key, value) {
   try {
@@ -585,7 +596,9 @@ async function poll() {
       FS.listedAt = Date.now();
       const newest = (await streams())[0];
       if (newest && newest.name !== FS.stream?.name) {
-        FS.stream = newest; FS.offset = 0; FS.decoder = new TextDecoder(); FS.rest = ""; reset(); M.file = newest.name;
+        // A new launch: its stream continues the timeline (a second's gap), keeping what came before; the first one starts it.
+        if (FS.stream) { FS.base = M.lastT + 1; M.launches.push(FS.base); } else reset();
+        FS.stream = newest; FS.offset = 0; FS.decoder = new TextDecoder(); FS.rest = ""; M.file = newest.name;
       }
     }
     if (FS.stream) {
@@ -1529,20 +1542,26 @@ async function renderReports() {
       ${pre("Everything else", Object.entries(x).filter(([k]) => !["details", "turn_plays", "audit_window", "sim_state", "recent_log"].includes(k)).map(([k, v]) => `--- ${k}\n${v}`).join("\n\n"))}
       ${notes.map((n) => `<div class="note"><div class="meta">${new Date(n.at).toLocaleString()}</div><div class="body">${esc(n.text)}</div></div>`).join("")}
       <textarea data-id="${esc(r.id)}" placeholder="What was going on? (saved with the report's id in feedback.jsonl)" style="margin-top:8px">${esc(keep[r.id] || "")}</textarea>
-      <div class="row" style="margin-top:6px"><button class="primary" data-note="${esc(r.id)}">Save note</button><button data-handled="${esc(r.id)}">${handled ? "Reopen" : "Mark handled"}</button></div>
+      <div class="row" style="margin-top:6px"><button class="primary" data-save-note="${esc(r.id)}">Save note</button><button data-handled="${esc(r.id)}">${handled ? "Reopen" : "Mark handled"}</button></div>
     </div>`;
   }).join("") : `<div class="empty">${list.length ? "None here." : "No reports: nothing has gone wrong in dev mode yet."}</div>`;
   box.querySelectorAll("details[data-k]").forEach((d) => { const k = d.closest("[data-rep]").dataset.rep + ":" + d.dataset.k; if (repOpen.has(k)) d.open = true; });
 }
 $("repList").addEventListener("toggle", (e) => { const d = e.target; if (!d.dataset?.k) return; const k = d.closest("[data-rep]").dataset.rep + ":" + d.dataset.k; d.open ? repOpen.add(k) : repOpen.delete(k); }, true);
+// Ctrl+Enter in a report's note saves it, as its Save note button does.
+$("repList").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey) || e.target.tagName !== "TEXTAREA" || !e.target.dataset.id) return;
+  e.preventDefault();
+  $("repList").querySelector(`[data-save-note="${CSS.escape(e.target.dataset.id)}"]`)?.click();
+});
 $("repList").addEventListener("click", async (e) => {
   const t = e.target;
   try {
     if (t.dataset.copy) { e.preventDefault(); await navigator.clipboard.writeText(REP.list.find((r) => r.id === t.dataset.copy)?.extra?.sim_state || ""); t.textContent = "Copied"; return; }
-    if (t.dataset.note) {
-      const ta = $("repList").querySelector(`textarea[data-id="${CSS.escape(t.dataset.note)}"]`), text = ta?.value.trim();
+    if (t.dataset.saveNote) {
+      const ta = $("repList").querySelector(`textarea[data-id="${CSS.escape(t.dataset.saveNote)}"]`), text = ta?.value.trim();
       if (!text) return;
-      await writeFile("feedback.jsonl", JSON.stringify({ id: newId(), at: new Date().toISOString(), kind: "report", report: t.dataset.note, text, ...context() }) + "\n", true);
+      await writeFile("feedback.jsonl", JSON.stringify({ id: newId(), at: new Date().toISOString(), kind: "report", report: t.dataset.saveNote, text, ...context() }) + "\n", true);
       ta.value = ""; await loadFeedback(); $("repList").dataset.sig = ""; renderReports();
     }
     if (t.dataset.handled) {

@@ -90,7 +90,7 @@ public sealed class HardenedShellPower : SimModel
 public sealed class SlipperyPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && !now.SlipperyInAny(owner) ? new(Harmful: true, outcome => outcome.SlipperyInAny(owner)) : null;
+        Who.IsEnemy(owner) && !now.SlipperyInAny(owner) ? new(Harmful: true, outcome => outcome.SlipperyInAny(owner), branch => branch.Enemy(owner) is { SlipperyTriggered: true }) : null;
 
     public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
         damage.Target != owner || amount < 1m ? amount : 1m;
@@ -123,7 +123,7 @@ public sealed class BurrowedPower : SimModel
 public sealed class AsleepPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && now.UnblockedMax(owner) < 1 ? new(Harmful: true, outcome => outcome.UnblockedMax(owner) >= 1) : null;
+        Who.IsEnemy(owner) && now.UnblockedMax(owner) < 1 ? new(Harmful: true, outcome => outcome.UnblockedMax(owner) >= 1, branch => (branch.Enemy(owner)?.UnblockedInstances ?? 0) >= 1) : null;
 
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
@@ -139,7 +139,7 @@ public sealed class SlumberPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, ThisPower) is var stacks && now.UnblockedMax(owner) < stacks
-            ? new(Harmful: true, outcome => outcome.UnblockedMax(owner) >= stacks) : null;
+            ? new(Harmful: true, outcome => outcome.UnblockedMax(owner) >= stacks, branch => (branch.Enemy(owner)?.UnblockedInstances ?? 0) >= stacks) : null;
 
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {

@@ -141,7 +141,7 @@ public sealed class ParryingShield : EndOfTurnRelic
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         owner != Who.You ? null
         : !now.ParryingShieldInAll ? new(Harmful: false, outcome => outcome.ParryingShieldInAll)
-        : new(Harmful: true, outcome => !outcome.ParryingShieldInAll);
+        : new(Harmful: true, outcome => !outcome.ParryingShieldInAll, branch => !branch.ParryingShieldFired);
 
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
     {

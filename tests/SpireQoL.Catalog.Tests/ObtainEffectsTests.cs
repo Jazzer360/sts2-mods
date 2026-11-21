@@ -11,6 +11,7 @@ namespace SpireQoL.Catalog.Tests;
 /// its AfterObtained), so that isn't counted against the option's code. A report: This or That's Ornate gave a random relic,
 /// Cursed Pearl, whose gold was reported as the option's.
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class ObtainEffectsTests
 {
     [Fact]

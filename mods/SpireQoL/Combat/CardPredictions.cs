@@ -587,7 +587,7 @@ public sealed class CardPredictions
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act
         // Each rule is a test per target (one simulation each): the tab shows when some target passes it, with the aim marker
         // when not every target does (several enemies with the same power: when no target passes any of them).
-        void Add(AbstractModel src, bool harmful, Func<SimOutcome, bool> at)
+        void Add(AbstractModel src, bool harmful, Func<SimOutcome, bool> at, Func<SimState, bool>? inBranch)
         {
             var key = "proc:" + src.GetType().Name;
             var firesAt = outcomes.Select(at).ToArray();
@@ -595,14 +595,18 @@ public sealed class CardPredictions
             if (_firesAt.TryGetValue(key, out var prev) && prev.Length == firesAt.Length)
                 for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prev[i];
             _firesAt[key] = firesAt;
-            tabs[key] = new TabSpec(key, IconOf(src), harmful, Aimed: firesAt.Length > 1 && !firesAt.All(fires => fires));
+            // A warning only some outcomes set off: its chance (decision #159), the likeliest aim's.
+            string? chance = null;
+            if (harmful && inBranch != null && _ctx.Settings.Chances)
+                chance = WarningChance(outcomes.Where(at).Select(outcome => outcome.Chance(inBranch)));
+            tabs[key] = new TabSpec(key, IconOf(src), harmful, NumberText: chance, Aimed: firesAt.Length > 1 && !firesAt.All(fires => fires));
         }
         // The sources' own rules (SimModel.OutcomeTab), enemies' powers first, then relics, then players' powers.
         var start = facts.Sim!.Start;
         foreach (var src in sources.OrderBy(model => model is PowerModel power && OwnerOf(power) is { IsEnemy: true } ? 0 : model is RelicModel ? 1 : 2))
         {
             if (SimModels.Get(SimReaders.ModelName(src)) is not { JudgedOnOutcome: true } model || !SimOwner(src, out var owner)) continue;
-            if (model.OutcomeTab(start, baseline, owner ?? Who.You) is { } rule) Add(src, rule.Harmful, rule.SetOff);
+            if (model.OutcomeTab(start, baseline, owner ?? Who.You) is { } rule) Add(src, rule.Harmful, rule.SetOff, rule.InBranch);
         }
 
         // Lethal (decision #87): the card raises an enemy's chance of dying before it acts, for sure: its explored deaths (Low)
@@ -626,6 +630,18 @@ public sealed class CardPredictions
         // Aimed: some aim doesn't give it (or not as surely as the best one).
         lethalAimed = outcomes.Length > 1 && perAim.Any(chance => chance == null || chance.Value.Low < top.Low);
         return true;
+    }
+
+    /// <summary>
+    /// A warning's chance on its tab (decision #159): the likeliest aim's chance that the play sets it off, as the tab's corner text
+    /// ("40%", "40%?" while not every outcome is settled); null when it's certain, so the tab alone says it.
+    /// </summary>
+    private static string? WarningChance(IEnumerable<SimChance> perAim)
+    {
+        var chances = perAim.ToList();
+        if (chances.Count == 0) return null;
+        var likeliest = chances.MaxBy(chance => chance.High);
+        return likeliest.Certain ? null : likeliest.ShortText();
     }
 
     private static Godot.Texture2D? IconOf(AbstractModel src) => src switch
@@ -687,13 +703,20 @@ public sealed class CardPredictions
             max += prev.AuditMax;
         }
         int? number = kind != TabKind.Trigger && _ctx.Settings.ProcNumbers ? amount : null;
+        // A warning only some outcomes set off (a random hit on a Thorns enemy): its chance in the corner instead of its amount
+        // (decision #159), from each branch's own log: fired in every branch merged into it (Fired) up to in some (FiredAny).
+        string? chance = null;
+        if (harmful && _ctx.Settings.Chances)
+            chance = WarningChance(outcomes.Where(at).Select(outcome =>
+                new SimChance(outcome.Chance(branch => Fired(branch.Fired)).Low, outcome.Chance(branch => Fired(branch.FiredAny)).High, Seen: true)));
+        if (chance != null) number = null;
         TabAmount? counts = kind switch
         {
             TabKind.Block => TabAmount.Block, TabKind.Damage => TabAmount.Damage, TabKind.Summon => TabAmount.Summon,
             TabKind.Draw => TabAmount.CardsDrawn, TabKind.Energy => TabAmount.EnergyGained, // decision #132
             _ => null,
         };
-        tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, counts, amount, min, max, Aimed: aimed);
+        tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, counts, amount, min, max, NumberText: chance, Aimed: aimed);
     }
 
     /// <summary>

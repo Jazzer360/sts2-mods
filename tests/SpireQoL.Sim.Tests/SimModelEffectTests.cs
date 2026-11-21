@@ -118,4 +118,19 @@ public class SimModelEffectTests
         Assert.Equal(47, After(WithBlackHole(targetHp: 5), knockout).Enemies[1].Hp);
         Assert.Equal(50, After(WithBlackHole(targetHp: 30), knockout).Enemies[1].Hp);
     }
+
+    [Fact]
+    public void AWarningOnlySomeOutcomesSetOffHasItsChance()
+    {
+        // Decision #159: a random hit (one of two enemies) wakes the sleeping one half the time: the Asleep warning's chance is 50%,
+        // from its rule's per-branch test.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 40), Enemy(id: 1, hp: 40) } };
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Asleep, amount: 1);
+        var proc = new SimPlay { Name = "Defend" };
+        proc.Procs.Add(new ProcHit { Spread = SimPlay.Target.Random, Damage = { [0] = 5, [1] = 5 }, Times = 1 });
+        var rule = SimModels.Get("AsleepPower")!.OutcomeTab(state, SimEngine.Run(state), owner: 0)!;
+        var outcome = SimEngine.Run(state, proc);
+        Assert.True(rule.SetOff(outcome));
+        Assert.Equal("50%", outcome.Chance(rule.InBranch!).Text());
+    }
 }

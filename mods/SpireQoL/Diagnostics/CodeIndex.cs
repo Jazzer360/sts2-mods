@@ -80,9 +80,9 @@ internal static class CodeIndex
     }
 
     /// <summary>
-    /// A power whose only hooks change a block or damage amount as the game works it out (Modify*, and
-    /// AfterModifyingBlockAmount or AfterModifyingDamageAmount, where it flashes): Fasten adds to a Defend's block, Hard to
-    /// Kill caps damage. The card's own number already shows it, so its flash is no proc. Play-count and pile modifiers
+    /// A power or relic whose only hooks change a block, damage or HP-lost amount as the game works it out (Modify*, and the
+    /// AfterModifying* where it flashes): Fasten adds to a Defend's block, Hard to Kill caps damage, The Boot raises a small hit to
+    /// its minimum. The play's own numbers (and their checks) already show it, so its flash is no proc. Play-count and pile modifiers
     /// (Signal Boost, Nostalgia) are procs with tabs and don't count.
     /// </summary>
     public static bool OnlyModifies(Type type)
@@ -90,10 +90,12 @@ internal static class CodeIndex
         var hooks = new List<string>();
         for (var otherType = type; otherType != null && otherType.Assembly == type.Assembly && otherType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models.", StringComparison.Ordinal) == true; otherType = otherType.BaseType)
             hooks.AddRange(For(otherType).Overrides.Where(member => !member.StartsWith("get_", StringComparison.Ordinal) && !member.StartsWith("set_", StringComparison.Ordinal)));
-        string[] amounts = { "AfterModifyingBlockAmount", "AfterModifyingDamageAmount" };
+        // The flash after a change, and the numbers it changes: block, damage (its caps too), HP lost (The Boot's minimum).
+        string[] amounts = { "AfterModifyingBlockAmount", "AfterModifyingDamageAmount", "AfterModifyingHpLostBeforeOsty", "AfterModifyingHpLostAfterOsty" };
         return hooks.Any(amounts.Contains)
                && hooks.All(hook => amounts.Contains(hook) || hook is "ModifyBlockAdditive" or "ModifyBlockMultiplicative"
-                   || (hook.StartsWith("ModifyDamage", StringComparison.Ordinal) && hook != "ModifyDamageGiven"));
+                   || (hook.StartsWith("ModifyDamage", StringComparison.Ordinal) && hook != "ModifyDamageGiven")
+                   || hook.StartsWith("ModifyHpLost", StringComparison.Ordinal));
     }
 
     private static Info For(Type type)

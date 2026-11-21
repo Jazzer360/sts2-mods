@@ -16,7 +16,8 @@ internal sealed class OutcomeTip
     private const int FontSize = 18;
     private static readonly Color Dim = new(0.75f, 0.75f, 0.75f);
     private readonly PanelContainer _root;
-    private readonly VBoxContainer _rows;
+    /// <summary>Three columns (chance, outcome, what differs), each as wide as its widest entry: the tooltip is no wider than it needs.</summary>
+    private readonly GridContainer _rows;
     private TurnEndModel? _builtFor;
     private bool _builtWithChances;
 
@@ -24,8 +25,9 @@ internal sealed class OutcomeTip
     {
         _root = new PanelContainer { TopLevel = true, Visible = false, MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = 100 };
         _root.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.06f, 0.06f, 0.09f, 0.94f), radius: 6, margin: 10));
-        _rows = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        _rows.AddThemeConstantOverride("separation", 3);
+        _rows = new GridContainer { Columns = 3, MouseFilter = Control.MouseFilterEnum.Ignore };
+        _rows.AddThemeConstantOverride("h_separation", 12);
+        _rows.AddThemeConstantOverride("v_separation", 3);
         _root.AddChild(_rows);
         parent.AddChild(_root);
     }
@@ -42,7 +44,7 @@ internal sealed class OutcomeTip
             _builtWithChances = chances;
         }
         _root.Visible = true;
-        _root.ResetSize();
+        _root.ResetSize(); // shrinks to the rows built for this forecast
         var rect = anchor.GetGlobalRect();
         var screen = anchor.GetViewportRect().Size;
         var size = _root.Size;
@@ -95,18 +97,13 @@ internal sealed class OutcomeTip
         return text;
     }
 
+    /// <summary>One outcome: its chance first (as on the sum), what it is, and what makes it different.</summary>
     private void Row(string outcome, string chance, string detail, Color color)
     {
-        var row = UiKit.Row(separation: 12);
-        row.MouseFilter = Control.MouseFilterEnum.Ignore;
-        var name = UiKit.Label(outcome, FontSize, color);
-        name.CustomMinimumSize = new Vector2(230, 0);
-        row.AddChild(name);
         var odds = UiKit.Label(chance, FontSize, Colors.White);
-        odds.CustomMinimumSize = new Vector2(64, 0);
         odds.HorizontalAlignment = HorizontalAlignment.Right;
-        row.AddChild(odds);
-        if (detail.Length > 0) row.AddChild(UiKit.Label(detail, FontSize, Dim));
-        _rows.AddChild(row);
+        _rows.AddChild(odds);
+        _rows.AddChild(UiKit.Label(outcome, FontSize, color));
+        _rows.AddChild(UiKit.Label(detail, FontSize, Dim));
     }
 }

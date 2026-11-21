@@ -87,7 +87,11 @@ public sealed record SimCard(string Name, SimCardType Type)
 public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft, CounterPassedLimit }
 
 /// <summary>A tab judged on how the turn ends (SimModel.OutcomeTab): crossed or plain, and whether one play's outcome sets it off.</summary>
-public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff);
+/// <param name="InBranch">
+/// Whether one branch sets it off, for a warning's chance (decision #159: the share of the outcomes that do); null when the rule
+/// can't be told branch by branch (no chance shown then).
+/// </param>
+public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff, Func<SimState, bool>? InBranch = null);
 
 /// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
 public sealed record SimCardPlay(SimCard Card, int Owner, [property: JsonConverter(typeof(CreatureIdJson))] int Target, int PlayIndex, int PlayCount, bool AutoPlay)

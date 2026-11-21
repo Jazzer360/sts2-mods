@@ -8,6 +8,7 @@ namespace SpireQoL.Catalog.Tests;
 /// (ModelEffectCheck; a report: Mini Regent fired and its Strength never landed). A model reported here gets its effect, or a
 /// reviewed reason in ModelEffectCheck.Reviewed.
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class ModelEffectTests
 {
     [Fact]

@@ -7,7 +7,7 @@ namespace SpireQoL.Sim.Models;
 internal static class OutcomeRules
 {
     /// <summary>The play kills this enemy in some branch: a warning, as its death sets something off.</summary>
-    public static OutcomeRule KillsIt(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Contains(enemy));
+    public static OutcomeRule KillsIt(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Contains(enemy), branch => branch.Enemy(enemy) is not { Alive: true });
 
     /// <summary>The play kills another enemy in some branch: a warning, as that makes this one stronger.</summary>
     public static OutcomeRule KillsAnother(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Any(killed => killed != enemy));

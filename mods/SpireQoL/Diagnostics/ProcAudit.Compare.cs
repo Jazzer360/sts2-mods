@@ -42,8 +42,9 @@ public sealed partial class ProcAudit
         foreach (var otherModel in flashed.Distinct())
         {
             if (sourceOf.ContainsKey(otherModel.GetType().Name) || Modifiers.Contains(otherModel.GetType().Name) || TeammateOnly.Contains(otherModel.GetType().Name)) continue;
-            // A power that only changes numbers (Fasten's block on Defends): the play's block and damage checks cover it.
-            if (otherModel is PowerModel && CodeIndex.OnlyModifies(otherModel.GetType())) continue;
+            // A power or relic that only changes numbers (Fasten's block on Defends, The Boot's minimum): the play's block, damage and HP
+            // checks cover it.
+            if (CodeIndex.OnlyModifies(otherModel.GetType())) continue;
             if (LaterPlayOnly.Contains(otherModel.GetType().Name))
             {
                 modelLines.Add($"{otherModel.GetType().Name} fired (it changes a card for a later play: no tab by design)");

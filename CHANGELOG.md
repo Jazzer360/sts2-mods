@@ -8,14 +8,16 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 1.27.0
 #### Added
-- Incoming Damage: hover the sum for every way the enemy turn can go for you, the most likely first, each with its chance and what's different (`Lose 11 HP (+2)`, `Burn +2`, `I Am Invincible block +10`).
+- A crossed tab that only some outcomes set off shows its chance in the corner (a random hit that might wake a sleeping enemy, or land on a Thorns enemy); without a number it's certain. Under Show chances.
+- Incoming Damage: hover the sum for every way the enemy turn can go for you, the most likely first, each with its chance and what's different (`Lose 11 HP (+2)`, `Burn +2`, `I Am Invincible block +10`), in a box no wider than what it lists.
 - Setting **Incoming Damage: most likely outcome** (under Show chances, on by default).
 
 #### Changed
 - Writes far less to the game's log, which the game and every other mod share: the checks' lines, timings and summaries stay inside the mod (error reports still carry them), and a warning appears once per launch.
-- Incoming Damage shows the most likely outcome, with its chance, when a roll decides how the enemy turn goes (a draw at the end of your turn, I Am Invincible somewhere in your draw pile, a random target); it used to show the worst. The skull still shows whenever you might die, with its chance, and the Fairy in a Bottle or Lizard Tail line whenever one might save you, with its chance.
+- Incoming Damage shows the most likely outcome, its chance before the number, when a roll decides how the enemy turn goes (a draw at the end of your turn, I Am Invincible somewhere in your draw pile, a random target); it used to show the worst. The skull still shows whenever you might die, with its chance, and the Fairy in a Bottle or Lizard Tail line whenever one might save you, with its chance.
 
 #### Fixed
+- The checks no longer ask The Boot for a tab: it only raises a small hit to its minimum, which the damage already shows (like any relic or power that only changes a number).
 - Your hand after a play counts only the cards it makes into your hand: Undeath's copy (and The Sun's card) go to your discard pile, and only one of Severance's three goes to your hand.
 - Knockout Blow's stars count only when its attack kills (Black Hole's damage from them too); they were counted on every play.
 - Relics and powers whose effect only showed as a tab now happen in every prediction: Corrosive Wave's poison for each card drawn, Arsenal's and Fertilizer's Strength for cards made, Helical Dart's Dexterity for a Shiv, Whittling Knife's Aim on a shuffle, Rainbow Ring's Strength and Dexterity, Compost's energy when an enemy dies, Demon Tongue's heal, and Hand Drill's Vulnerable when you break an enemy's block (the rest of the attack hits harder).
