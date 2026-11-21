@@ -344,7 +344,7 @@ public class SimAutoPlayTests
             new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(1, 9, 15, draws: 1), AdapterStrike(2, 9, 15, draws: 1) } },
         };
         var outcome = SimEngine.Run(state);
-        var picks = outcome.Branches.Select(branch => string.Join(",", branch.AutoPicks.Select(pick => $"{pick.Card}@{pick.Target}"))).OrderBy(x => x).ToList();
+        var picks = outcome.Branches.Select(branch => string.Join(",", branch.AutoPicks.Select(pick => $"{pick.Card}@{pick.Target}"))).OrderBy(pickList => pickList).ToList();
         Assert.Equal(new[] { "11@1", "11@2", "15@1", "15@2" }, picks);
         // Only Pommel Strike's branches changed the hand: a turn where Strike was picked can still be checked.
         Assert.All(outcome.Branches, branch => Assert.Equal(branch.AutoPicks[0].Card == 15, branch.AutoPlaysUnknown));

@@ -56,7 +56,7 @@ public class SimTeammateHandFieldsTests
     [Fact]
     public void EverySimPlayerFieldIsReviewedAsFromTheirHandOrKnown()
     {
-        var unreviewed = Fields().Select(field => field.Name).Where(n => !FromTheirHand.Contains(n) && !Known.Contains(n)).ToList();
+        var unreviewed = Fields().Select(field => field.Name).Where(name => !FromTheirHand.Contains(name) && !Known.Contains(name)).ToList();
         Assert.True(unreviewed.Count == 0,
             $"New SimPlayer field(s) {string.Join(", ", unreviewed)}: add each to FromTheirHand (and clear it in " +
             "SimState.WithoutTeammateHands) or to Known, with why.");

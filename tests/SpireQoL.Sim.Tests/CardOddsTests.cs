@@ -9,7 +9,7 @@ namespace SpireQoL.Sim.Tests;
 /// </summary>
 public class CardOddsTests
 {
-    private static RarityGroup[] G(int c, int cm, int u, int um, int r, int rm) => new[] { new RarityGroup(c, cm), new RarityGroup(u, um), new RarityGroup(r, rm) };
+    private static RarityGroup[] G(int common, int commonMatching, int uncommon, int uncommonMatching, int rare, int rareMatching) => new[] { new RarityGroup(common, commonMatching), new RarityGroup(uncommon, uncommonMatching), new RarityGroup(rare, rareMatching) };
 
     [Fact]
     public void One_card_of_one_rarity_is_matches_over_total()
@@ -44,17 +44,17 @@ public class CardOddsTests
         int hits = 0, runs = 200_000;
         for (var run = 0; run < runs; run++)
         {
-            var left = groups.Select(rarityGroup => Enumerable.Range(0, rarityGroup.Total).Select(i => i < rarityGroup.Matching).ToList()).ToArray();
+            var left = groups.Select(rarityGroup => Enumerable.Range(0, rarityGroup.Total).Select(index => index < rarityGroup.Matching).ToList()).ToArray();
             var any = false;
             for (var slot = 0; slot < 4; slot++)
             {
                 var nextDouble = rng.NextDouble();
-                var r = nextDouble < 0.1 ? 2 : nextDouble < 0.4 ? 1 : 0;
-                for (var t = 0; t < 3 && left[r].Count == 0; t++) r = (r + 1) % 3;
-                if (left[r].Count == 0) break;
-                var pick = rng.Next(left[r].Count);
-                any |= left[r][pick];
-                left[r].RemoveAt(pick);
+                var rarity = nextDouble < 0.1 ? 2 : nextDouble < 0.4 ? 1 : 0;
+                for (var attempt = 0; attempt < 3 && left[rarity].Count == 0; attempt++) rarity = (rarity + 1) % 3;
+                if (left[rarity].Count == 0) break;
+                var pick = rng.Next(left[rarity].Count);
+                any |= left[rarity][pick];
+                left[rarity].RemoveAt(pick);
             }
             if (any) hits++;
         }

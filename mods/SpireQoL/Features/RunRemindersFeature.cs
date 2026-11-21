@@ -303,9 +303,9 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var priceLabel = UiKit.Label($"{price}", 26, new Color(1f, 0.85f, 0.3f));
         priceLabel.HorizontalAlignment = HorizontalAlignment.Center;
         col.AddChild(priceLabel);
-        if (net is { } n)
+        if (net is { } netGold)
         {
-            var netLabel = UiKit.Label($"{n}", (int)Math.Round(size * NetScale), NetColor);
+            var netLabel = UiKit.Label($"{netGold}", (int)Math.Round(size * NetScale), NetColor);
             netLabel.HorizontalAlignment = HorizontalAlignment.Center;
             col.AddChild(netLabel);
         }
@@ -568,7 +568,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             {
                 if (entry.IsStocked)
                 {
-                    if (net is { } n) _shopNet[entry] = n;
+                    if (net is { } netGold) _shopNet[entry] = netGold;
                     else _shopNet.Remove(entry);
                 }
                 else if (_shopNet.Remove(entry, out var predicted))
@@ -604,9 +604,9 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             row.AddThemeConstantOverride("separation", (int)Math.Round(size * ShopIconGap));
             foreach (var (relic, crossed) in icons) row.AddChild(Backed(Crossable(IconOf(relic), size, crossed), size));
             box.AddChild(row);
-            if (net is { } n)
+            if (net is { } netGold)
             {
-                var label = UiKit.Label($"{n}", (int)Math.Round(size * NetScale), NetColor);
+                var label = UiKit.Label($"{netGold}", (int)Math.Round(size * NetScale), NetColor);
                 label.Name = "Net";
                 label.MouseFilter = Control.MouseFilterEnum.Ignore;
                 label.HorizontalAlignment = HorizontalAlignment.Center;
@@ -641,13 +641,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             if (control is Label label && label.GetThemeFont("font") is { } font)
             {
                 var otherX = font.GetStringSize(label.Text, HorizontalAlignment.Left, -1, label.GetThemeFontSize("font_size")).X;
-                var x = label.HorizontalAlignment switch
+                var left = label.HorizontalAlignment switch
                 {
                     HorizontalAlignment.Center => (label.Size.X - otherX) / 2,
                     HorizontalAlignment.Right => label.Size.X - otherX,
                     _ => 0f,
                 };
-                return (x, otherX);
+                return (left, otherX);
             }
         }
         catch { /* unreadable font: the whole label */ }
@@ -792,10 +792,10 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var cards = new OptionCards();
         try
         {
-            if (OnChosenProp?.GetValue(option) is Delegate d)
+            if (OnChosenProp?.GetValue(option) is Delegate handler)
             {
-                cards.Target = d.Target;
-                Walk(d.Method, d.Method.DeclaringType, calls, new HashSet<MethodBase>(), 0, cards);
+                cards.Target = handler.Target;
+                Walk(handler.Method, handler.Method.DeclaringType, calls, new HashSet<MethodBase>(), 0, cards);
             }
             // An ancient's relic: what it does when you take it.
             if (option.Relic is { } relic && relic.GetType().GetMethod(nameof(RelicModel.AfterObtained)) is { } obtained && obtained.DeclaringType == relic.GetType())
@@ -887,7 +887,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             {
                 object? v;
                 try { v = field.GetValue(target); } catch { continue; }
-                if (v is Delegate d) found.AddRange(d.GetInvocationList());
+                if (v is Delegate handler) found.AddRange(handler.GetInvocationList());
                 else if (v != null && field.FieldType.IsValueType && !field.FieldType.IsPrimitive && !field.FieldType.IsEnum)
                     foreach (var inner in field.FieldType.GetFields(bindingFlags))
                     {

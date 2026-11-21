@@ -84,7 +84,7 @@ public sealed partial class RunRemindersFeature
     }
 
     /// <summary>A chance as a whole percent: never 0 when it can happen, never 100 when it might not.</summary>
-    private static string Percent(double p) => p <= 0 ? "0" : p < 0.01 ? "<1" : Math.Min(99, (int)Math.Round(p * 100)).ToString();
+    private static string Percent(double share) => share <= 0 ? "0" : share < 0.01 ? "<1" : Math.Min(99, (int)Math.Round(share * 100)).ToString();
 
     /// <summary>The chance, small, along an icon's bottom edge (like the amount on a tab).</summary>
     private static Label OddsLabel(string text, float iconSize)
@@ -203,9 +203,9 @@ public sealed partial class RunRemindersFeature
                     if (elementLength.Values.Count == elementLength.Length) { arrays[elementLength.Element] = elementLength.Values.ToArray(); building = null; }
                     continue;
                 }
-                if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var k)) { Push(new IntExpr(k, null)); continue; }
+                if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var constant)) { Push(new IntExpr(constant, null)); continue; }
                 if (ins.opcode == OpCodes.Ldstr) { lastString = ins.operand as string; continue; }
-                if (ins.opcode == OpCodes.Div && last is { Const: { } d } && before is { Var: not null } && d != 0) { last = before with { Divisor = before.Divisor * d }; continue; }
+                if (ins.opcode == OpCodes.Div && last is { Const: { } divisor } && before is { Var: not null } && divisor != 0) { last = before with { Divisor = before.Divisor * divisor }; continue; }
                 if (SlotKey(ins, store: true) is { } slotKey) { if (producedInt && last != null) stored[slotKey] = last; continue; }
                 if (SlotKey(ins, store: false) is { } otherSlotKey) { if (stored.TryGetValue(otherSlotKey, out var val)) Push(val); continue; }
                 if (ins.opcode == OpCodes.Ldftn && ins.operand is MethodInfo method && IsCardFilter(method))
@@ -285,7 +285,7 @@ public sealed partial class RunRemindersFeature
                 if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Enchant")) || (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForEnchantment"))
                     _enchantsDeck = true;
                 // Whose character a pool belongs to: the last call that returned one (Owner.Character, or Sea Glass's Character).
-                if (otherMethod is MethodInfo { ReturnType: var rt } && typeof(CharacterModel).IsAssignableFrom(rt)) character = otherMethod;
+                if (otherMethod is MethodInfo { ReturnType: var returnType } && typeof(CharacterModel).IsAssignableFrom(returnType)) character = otherMethod;
             }
             _loosePools.AddRange(pools);
             // An upgrade with no pick from your deck in the same code is of the cards it makes (Astrolabe's new cards); with a
@@ -310,7 +310,7 @@ public sealed partial class RunRemindersFeature
 
         /// <summary>For the tests: the enchantments the code applies, and how it upgrades.</summary>
         internal (string Enchantments, bool GivesUpgraded, bool UpgradesDeck) ChangesRead =>
-            (string.Join(",", _enchantments.Select(type => type.Name).OrderBy(n => n)), GivesUpgraded, _upgradesDeck);
+            (string.Join(",", _enchantments.Select(type => type.Name).OrderBy(name => name)), GivesUpgraded, _upgradesDeck);
 
         private static bool IsRewardMaker(MethodBase method) =>
             (method.IsConstructor && method.DeclaringType?.Name == "CardReward" && method.GetParameters().Any(parameterInfo => parameterInfo.ParameterType == typeof(CardCreationOptions)))
@@ -341,7 +341,7 @@ public sealed partial class RunRemindersFeature
         {
             if (store ? ins.IsStloc() : ins.IsLdloc())
             {
-                var idx = ins.operand switch { LocalBuilder localBuilder => localBuilder.LocalIndex, int i => i, byte b => b, _ => LocalIndex(ins) };
+                var idx = ins.operand switch { LocalBuilder localBuilder => localBuilder.LocalIndex, int index => index, byte shortIndex => shortIndex, _ => LocalIndex(ins) };
                 return idx < 0 ? null : "loc:" + idx;
             }
             if (ins.opcode == (store ? OpCodes.Stfld : OpCodes.Ldfld) && ins.operand is FieldInfo field && field.FieldType == typeof(int)) return "fld:" + field.Name;
@@ -352,7 +352,7 @@ public sealed partial class RunRemindersFeature
         {
             var name = ins.opcode.Name ?? "";
             var dot = name.LastIndexOf('.');
-            return dot >= 0 && int.TryParse(name[(dot + 1)..], out var i) ? i : -1;
+            return dot >= 0 && int.TryParse(name[(dot + 1)..], out var number) ? number : -1;
         }
 
         private static bool IsCardFilter(MethodInfo method) =>
@@ -603,17 +603,17 @@ public sealed partial class RunRemindersFeature
             if (odds is CardRarityOddsType.Uniform or CardRarityOddsType.None || BaseOdds(odds) is not { } baseOdds) return null;
             var order = new[] { CardRarity.Common, CardRarity.Uncommon, CardRarity.Rare };
             var has = order.Select(cardRarity => possible.Any(card => card.Rarity == cardRarity)).ToArray();
-            if (!has.Any(ha => ha)) return null;
+            if (!has.Any(present => present)) return null;
             var rolled = new[] { Math.Max(0, 1 - baseOdds.Rare - baseOdds.Uncommon), baseOdds.Uncommon, baseOdds.Rare };
             var lands = new double[3];
             for (var i = 0; i < 3; i++)
             {
-                var r = i;
-                while (!has[r]) r = (r + 1) % 3;
-                lands[r] += rolled[i];
+                var rarityIndex = i;
+                while (!has[rarityIndex]) rarityIndex = (rarityIndex + 1) % 3;
+                lands[rarityIndex] += rolled[i];
             }
-            static string Pct(double p) => p >= 0.1 ? $"{Math.Round(p * 100)}%" : $"{Math.Round(p * 100, 1)}%";
-            return string.Join(", ", new[] { 2, 1, 0 }.Where(i => has[i]).Select(i => $"{order[i].ToString().ToLowerInvariant()} {Pct(lands[i])}"));
+            static string Pct(double share) => share >= 0.1 ? $"{Math.Round(share * 100)}%" : $"{Math.Round(share * 100, 1)}%";
+            return string.Join(", ", new[] { 2, 1, 0 }.Where(rarity => has[rarity]).Select(rarity => $"{order[rarity].ToString().ToLowerInvariant()} {Pct(lands[rarity])}"));
         }
 
         private static readonly MethodInfo? GetBaseOdds = AccessTools.Method(typeof(MegaCrit.Sts2.Core.Odds.CardRarityOdds), "GetBaseOdds");
@@ -648,7 +648,7 @@ public sealed partial class RunRemindersFeature
                     catch { /* not this one */ }
                 }
             }
-            return value is { } v && intExpr.Divisor != 0 ? v / intExpr.Divisor : null;
+            return value is { } known && intExpr.Divisor != 0 ? known / intExpr.Divisor : null;
         }
 
         /// <summary>Stands for "the pool the option passes in" in a reward's pools.</summary>
@@ -769,10 +769,10 @@ internal sealed record DrawGroup(DrawKind Kind, List<CardModel> Cards, CardRarit
     {
         DrawKind.Certain => Cards.Any(good) ? 1 : 0,
         DrawKind.Transform => Cards.Count == 0 ? null : (double)Cards.Count(good) / Cards.Count,
-        DrawKind.Reward when Count is { } n => RunRemindersFeature.OptionCards.RewardChance(Cards, good, Odds, n),
+        DrawKind.Reward when Count is { } count => RunRemindersFeature.OptionCards.RewardChance(Cards, good, Odds, count),
         _ => null,
     };
 
     /// <summary>A random draw the player can't see beforehand (worth inspecting): more cards than it gives.</summary>
-    public bool IsRandom => Kind is DrawKind.Transform or DrawKind.Pool || (Kind == DrawKind.Reward && (Count is not { } n || Cards.Count > n));
+    public bool IsRandom => Kind is DrawKind.Transform or DrawKind.Pool || (Kind == DrawKind.Reward && (Count is not { } count || Cards.Count > count));
 }

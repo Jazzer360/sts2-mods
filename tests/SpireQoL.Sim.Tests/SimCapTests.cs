@@ -16,7 +16,7 @@ public class SimCapTests
     {
         var state = new SimState();
         for (var i = 0; i < 3; i++) state.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 5 + i * 2, Block = i, Hits = new() { 6, 4 } });
-        state.You.Orbs = Enumerable.Range(0, 5).Select(i => Lightning(2 + i % 2)).ToList();
+        state.You.Orbs = Enumerable.Range(0, 5).Select(index => Lightning(2 + index % 2)).ToList();
         state.You.OrbCapacity = 5;
         state.You.Juggernaut = 2;
         state.You.Plating = 3;
@@ -86,8 +86,8 @@ public class SimCapTests
         var whole = SimEngine.Run(Heavy(), Strike());
         var outcome = Capped(Heavy(), Strike(), 4);
         Assert.True(outcome.Truncated);
-        Assert.Equal(whole.KilledByPlayInAll.OrderBy(x => x), outcome.KilledByPlayInAll.OrderBy(x => x));
-        Assert.Equal(whole.KilledByPlayInAny.OrderBy(x => x), outcome.KilledByPlayInAny.OrderBy(x => x));
+        Assert.Equal(whole.KilledByPlayInAll.OrderBy(id => id), outcome.KilledByPlayInAll.OrderBy(id => id));
+        Assert.Equal(whole.KilledByPlayInAny.OrderBy(id => id), outcome.KilledByPlayInAny.OrderBy(id => id));
         Assert.Equal(whole.PlayBlockGainsMax, outcome.PlayBlockGainsMax);
         Assert.Equal(whole.PlayFiredEvery.Items.ToArray(), outcome.PlayFiredEvery.Items.ToArray());
     }

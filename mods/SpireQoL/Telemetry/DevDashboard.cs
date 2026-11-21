@@ -77,10 +77,10 @@ public static class DevDashboard
         {
             var seconds = _lastRollup == 0 ? RollupSeconds : now - _lastRollup;
             _lastRollup = now;
-            var gc = (G0: GC.CollectionCount(0), G1: GC.CollectionCount(1), G2: GC.CollectionCount(2), Alloc: GC.GetTotalAllocatedBytes(), Pause: GC.GetTotalPauseDuration());
-            sink.Post(Window.Take(seconds, (GC.GetTotalMemory(false) / 1048576.0, (gc.Alloc - _gc.Alloc) / 1048576.0, gc.G0 - _gc.G0, gc.G1 - _gc.G1,
-                gc.G2 - _gc.G2, (gc.Pause - _gc.Pause).TotalMilliseconds, SimWork.HeldEverywhere, SimJob.Progress().Count)));
-            _gc = gc;
+            var collections = (G0: GC.CollectionCount(0), G1: GC.CollectionCount(1), G2: GC.CollectionCount(2), Alloc: GC.GetTotalAllocatedBytes(), Pause: GC.GetTotalPauseDuration());
+            sink.Post(Window.Take(seconds, (GC.GetTotalMemory(false) / 1048576.0, (collections.Alloc - _gc.Alloc) / 1048576.0, collections.G0 - _gc.G0, collections.G1 - _gc.G1,
+                collections.G2 - _gc.G2, (collections.Pause - _gc.Pause).TotalMilliseconds, SimWork.HeldEverywhere, SimJob.Progress().Count)));
+            _gc = collections;
         }
         if (now - _lastState >= StateSeconds)
         {
@@ -129,8 +129,8 @@ public static class DevDashboard
                 copies = outcome.Copies,
                 peakHeld = outcome.PeakHeld,
                 unmodelled = outcome.UnmodelledReasons.ToList(),
-                spread = outcome.Branches.GroupBy(branch => branch.Taken).OrderBy(g => g.Key)
-                    .Select(g => new { taken = g.Key, weight = Math.Round(g.Sum(branch => branch.Weight), 6), died = g.Any(branch => branch.Died) }).Take(60).ToList(),
+                spread = outcome.Branches.GroupBy(branch => branch.Taken).OrderBy(sameTaken => sameTaken.Key)
+                    .Select(sameTaken => new { taken = sameTaken.Key, weight = Math.Round(sameTaken.Sum(branch => branch.Weight), 6), died = sameTaken.Any(branch => branch.Died) }).Take(60).ToList(),
             };
         }
         catch (Exception ex)

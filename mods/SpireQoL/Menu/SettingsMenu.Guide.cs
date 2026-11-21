@@ -123,7 +123,7 @@ public sealed partial class SettingsMenu
         GuideHandCell(flow, Card<StrikeIronclad>(), Card<AscendersBane>(), "See-through: Ethereal",
             "The one marker that isn't a tab: an Ethereal card exhausts if it's still in your hand at the end of your turn, "
             + "so it shows the card behind it. How see-through: In fights, Card Indicators, Ethereal opacity.",
-            S.EtherealOpacity);
+            Settings.EtherealOpacity);
         _rows!.AddChild(flow);
 
         Paragraph("Potion tabs: the same tab hangs under a potion in the top bar when drinking it sets off a relic "
@@ -415,7 +415,7 @@ public sealed partial class SettingsMenu
         GuideRow(null, "Update Notice",
             "On the main menu, above the game's MODDED note: how many Spire QoL versions behind you are, or that you're up to date.");
         GuideRow(null, "Moving things",
-            $"{S.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {S.HideAllKey} hides everything.");
+            $"{Settings.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {Settings.HideAllKey} hides everything.");
     }
 
     private void GuideRow(Control? example, string name, string text)

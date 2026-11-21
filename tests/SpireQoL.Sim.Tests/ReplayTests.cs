@@ -21,7 +21,7 @@ public class ReplayTests
     {
         var dir = Path.Combine(AppContext.BaseDirectory, "Cases");
         return Directory.Exists(dir)
-            ? Directory.GetFiles(dir, "*.json").OrderBy(f => f).Select(f => new object[] { Path.GetFileName(f) })
+            ? Directory.GetFiles(dir, "*.json").Order().Select(file => new object[] { Path.GetFileName(file) })
             : Enumerable.Empty<object[]>();
     }
 

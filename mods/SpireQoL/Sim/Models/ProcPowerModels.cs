@@ -17,7 +17,7 @@ public abstract class BoundPower : ProcModel
     }
 
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && TakeBound(state, owner) is { } v ? Act(state, owner, play, v) : One(state);
+        Mine(play, owner) && TakeBound(state, owner) is { } bound ? Act(state, owner, play, bound) : One(state);
 }
 
 /// <summary>AfterimagePower: block (unpowered) for each card its owner plays.</summary>
@@ -89,7 +89,7 @@ public sealed class JugglingPower : ProcModel
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && TakeBound(state, owner) is { } n ? Cause(Fire(state, owner), CardEvent.Generated, n, owner) : One(state);
+        Mine(play, owner) && TakeBound(state, owner) is { } bound ? Cause(Fire(state, owner), CardEvent.Generated, bound, owner) : One(state);
 }
 
 /// <summary>StranglePower (on an enemy, Data = its applier + 100): each card the applier plays deals its amount to it (unblockable, unpowered, no dealer).</summary>
@@ -102,7 +102,7 @@ public sealed class StranglePower : ProcModel
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        TakeBound(state, owner) is { } v ? SimEngine.ProcDamageOn(state, owner, Name, owner, v, SimProps.Unblockable | Unpowered, noDealer: true) : One(state);
+        TakeBound(state, owner) is { } bound ? SimEngine.ProcDamageOn(state, owner, Name, owner, bound, SimProps.Unblockable | Unpowered, noDealer: true) : One(state);
 }
 
 /// <summary>OblivionPower (on an enemy, Data = its applier + 100): each card the applier plays applies Doom to it.</summary>
@@ -368,9 +368,9 @@ public sealed class CoveringFirePower : ProcModel
         if (shooter != owner || state.CurrentPlay == null) return One(state);
         IEnumerable<SimState> states = One(state);
         var amount = Amount(state, owner);
-        for (var k = 0; k < state.Teammates.Count; k++)
+        for (var teammateIndex = 0; teammateIndex < state.Teammates.Count; teammateIndex++)
         {
-            var mate = Who.Teammate(k);
+            var mate = Who.Teammate(teammateIndex);
             if (mate == owner) continue;
             states = states.SelectMany(branch => SimEngine.ProcBlockFor(branch, owner, Name, mate, amount, Unpowered)).ToList();
         }
@@ -668,12 +668,12 @@ public sealed class TeammatesImpaledPower : SimModel
         var powers = SimEngine.PowersOf(state, owner);
         var bits = powers.DataOf(ThisPower);
         SimEngine.SetPowers(state, owner, powers.Without(ThisPower));
-        for (var k = 0; k < state.Teammates.Count && bits != 0; k++, bits >>= 4)
+        for (var teammateIndex = 0; teammateIndex < state.Teammates.Count && bits != 0; teammateIndex++, bits >>= 4)
         {
             var arrows = bits & 15;
-            if (arrows == 0 || state.Teammates[k].Hp <= 0) continue;
-            state.MutableTeammate(k).Arrows += arrows;
-            SimEngine.Raise(state, CardEvent.ArrowDislodged, Who.Teammate(k), arrows);
+            if (arrows == 0 || state.Teammates[teammateIndex].Hp <= 0) continue;
+            state.MutableTeammate(teammateIndex).Arrows += arrows;
+            SimEngine.Raise(state, CardEvent.ArrowDislodged, Who.Teammate(teammateIndex), arrows);
         }
     }
 }

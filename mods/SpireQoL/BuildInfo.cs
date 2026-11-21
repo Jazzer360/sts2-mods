@@ -17,7 +17,7 @@ internal static class BuildInfo
     public static string Version => Info.IndexOf('+') is var plus and >= 0 ? Info[..plus] : Info;
 
     /// <summary>The commit, 7 characters, or "" when none was stamped.</summary>
-    public static string Commit => Info.IndexOf('+') is var plus and >= 0 && Info[(plus + 1)..] is var c ? (c.Length > 7 ? c[..7] : c) : "";
+    public static string Commit => Info.IndexOf('+') is var plus and >= 0 && Info[(plus + 1)..] is var commit ? (commit.Length > 7 ? commit[..7] : commit) : "";
 
     /// <summary>
     /// A development build: anything but the release script's Release build (a plain <c>dotnet build</c> is Debug). Its version is

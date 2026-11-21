@@ -39,7 +39,7 @@ public class PathingTests
     {
         var names = Models().Select(type => type.Name).ToHashSet();
         var unknown = ChoiceReminders.Rules.Where(reminderRule => reminderRule.Map != PathRoom.None).Select(reminderRule => reminderRule.Relic).Concat(ChoiceReminders.MapReviewed.Keys)
-            .Where(n => !names.Contains(n)).ToList();
+            .Where(name => !names.Contains(name)).ToList();
         Assert.Empty(unknown);
         Assert.All(ChoiceReminders.Rules, reminderRule => Assert.Equal(PathRoom.None, reminderRule.MapCrossed & ~reminderRule.Map));
     }

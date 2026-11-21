@@ -153,7 +153,7 @@ public static class ModEntry
         // Features switched off are still attached, just skipped each frame, so the settings menu
         // can turn them on and off while the game runs (host.FeatureEnabled).
         var defaults = features.ToDictionary(feature => feature.Id, feature => feature.EnabledByDefault);
-        host.FeatureEnabled = id => settings.Features.TryGetValue(id, out var on) ? on : !defaults.TryGetValue(id, out var d) || d;
+        host.FeatureEnabled = id => settings.Features.TryGetValue(id, out var on) ? on : !defaults.TryGetValue(id, out var byDefault) || byDefault;
         foreach (var feature in features)
         {
             if (feature is IFrameFeature frame && Features.States[feature.Id] != FeatureState.Failed)

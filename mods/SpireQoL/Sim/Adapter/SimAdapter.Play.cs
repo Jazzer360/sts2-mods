@@ -290,12 +290,12 @@ public static partial class SimAdapter
             _ => null,
         };
         if (fixedEach is { } each) return new GainBlockAction(gains, each, SimProps.Move) { Fixed = true, To = to };
-        decimal b;
-        if (card.DynamicVars.TryGetValue("CalculatedBlock", out var dynamicVar) && dynamicVar is CalculatedVar calc) b = SafeDecimal(() => calc.Calculate(null));
-        else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) b = otherDynamicVar.BaseValue;
+        decimal baseValue;
+        if (card.DynamicVars.TryGetValue("CalculatedBlock", out var dynamicVar) && dynamicVar is CalculatedVar calc) baseValue = SafeDecimal(() => calc.Calculate(null));
+        else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) baseValue = otherDynamicVar.BaseValue;
         else return new GainBlockAction(gains, CardBlock(card, combat, me), SimProps.Move) { Fixed = true, To = to };
         var gainer = toAlly && ally != null ? ally : me.Creature;
-        return new GainBlockAction(gains, b, SimProps.Move) { Captured = SimReaders.Block(combat, card, gainer, b, ValueProp.Move), To = to };
+        return new GainBlockAction(gains, baseValue, SimProps.Move) { Captured = SimReaders.Block(combat, card, gainer, baseValue, ValueProp.Move), To = to };
     }
 
     /// <summary>
@@ -316,7 +316,7 @@ public static partial class SimAdapter
             }
             return PlainSelfPowerAmount(card, type) ?? 1;
         }
-        bool Simulated(string n) => SimModels.Has(n) || SelfPowers.Contains(n) || n == nameof(PoisonPower) || n == nameof(ArtifactPower);
+        bool Simulated(string powerName) => SimModels.Has(powerName) || SelfPowers.Contains(powerName) || powerName == nameof(PoisonPower) || powerName == nameof(ArtifactPower);
         var debuffs = facts.EnemyDebuffs.Concat(facts.EnemyTemporaryDebuffs).ToHashSet();
         var whereEnemies = card.TargetType switch
         {
@@ -377,7 +377,7 @@ public static partial class SimAdapter
         {
             case nameof(Dualcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = 2 }); break;
             case nameof(Quadcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = Math.Max(1, Sts2State.Var(card, "Repeat", 4)) }); break;
-            case nameof(MultiCast) when X() is var x and > 0: actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = x }); break;
+            case nameof(MultiCast) when X() is var evokes and > 0: actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = evokes }); break;
             case nameof(Shatter): actions.Add(new OrbAction(OrbAction.Op.EvokeAllTwice)); break;
         }
         if (channelTo == -1 && ChannelToAllyCards.Contains(name)) channelTo = int.MinValue; // aimed at no teammate: nothing channelled
@@ -388,7 +388,7 @@ public static partial class SimAdapter
         if (Channels.TryGetValue(name, out var kinds))
         {
             var times = name is nameof(Spinner) or nameof(Chill) ? PlayFacts.ChannelCount(card, name, me) : 1;
-            for (var t = 0; t < times; t++) foreach (var orbKind in kinds) Channel(orbKind, 1);
+            for (var time = 0; time < times; time++) foreach (var orbKind in kinds) Channel(orbKind, 1);
         }
         else if (RepeatChannels.TryGetValue(name, out var otherOrbKind)) Channel(otherOrbKind, Math.Max(1, Sts2State.Var(card, "Repeat", 1)));
         else if (name == nameof(Voltaic)) Channel(OrbKind.Lightning, PlayFacts.ChannelCount(card, name, me));
@@ -398,8 +398,8 @@ public static partial class SimAdapter
         return actions;
     }
 
-    private static decimal SafeDecimal(Func<decimal> f)
+    private static decimal SafeDecimal(Func<decimal> read)
     {
-        try { return f(); } catch { return 0m; }
+        try { return read(); } catch { return 0m; }
     }
 }

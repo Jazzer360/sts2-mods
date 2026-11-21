@@ -83,9 +83,9 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         }
         if (reuse == FrameReuse.WorkOutAndCheck)
         {
-            var d = now.Zip(_last).FirstOrDefault(x => x.First.Ethereal != x.Second.Ethereal || !x.First.Tabs.SequenceEqual(x.Second.Tabs));
-            _reuse.Compare(d.First.Card == null, "a card's tabs changed while the board probe didn't",
-                () => $"{d.First.Card!.GetType().Name}: [{string.Join(", ", d.Second.Tabs.Select(tab => tab.Key))}] → [{string.Join(", ", d.First.Tabs.Select(tab => tab.Key))}]");
+            var changed = now.Zip(_last).FirstOrDefault(pair => pair.First.Ethereal != pair.Second.Ethereal || !pair.First.Tabs.SequenceEqual(pair.Second.Tabs));
+            _reuse.Compare(changed.First.Card == null, "a card's tabs changed while the board probe didn't",
+                () => $"{changed.First.Card!.GetType().Name}: [{string.Join(", ", changed.Second.Tabs.Select(tab => tab.Key))}] → [{string.Join(", ", changed.First.Tabs.Select(tab => tab.Key))}]");
         }
         _last.Clear();
         _last.AddRange(now);

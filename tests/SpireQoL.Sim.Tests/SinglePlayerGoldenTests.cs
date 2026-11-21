@@ -20,7 +20,7 @@ public class SinglePlayerGoldenTests
     [Fact]
     public void SinglePlayerOutcomesAreUnchanged()
     {
-        var actual = Enumerable.Range(0, Scenarios).Select(i => $"{i} {Fingerprint(Scenario(i))}").ToList();
+        var actual = Enumerable.Range(0, Scenarios).Select(scenario => $"{scenario} {Fingerprint(Scenario(scenario))}").ToList();
         if (Environment.GetEnvironmentVariable("SPIREQOL_UPDATE_GOLDEN") == "1")
         {
             File.WriteAllLines(SourceGoldenPath, actual);
@@ -28,7 +28,7 @@ public class SinglePlayerGoldenTests
         }
         Assert.True(File.Exists(GoldenPath), $"missing {GoldenPath}: generate it with SPIREQOL_UPDATE_GOLDEN=1");
         var expected = File.ReadAllLines(GoldenPath);
-        var changed = actual.Zip(expected).Where(p => p.First != p.Second).Select(p => p.First.Split(' ')[0]).ToList();
+        var changed = actual.Zip(expected).Where(pair => pair.First != pair.Second).Select(pair => pair.First.Split(' ')[0]).ToList();
         Assert.True(expected.Length == actual.Count && changed.Count == 0,
             $"single-player outcomes changed in {changed.Count} of {actual.Count} scenarios (first: {string.Join(", ", changed.Take(10))})");
     }
@@ -75,7 +75,7 @@ public class SinglePlayerGoldenTests
         {
             player.OrbCapacity = random.Next(1, 6);
             var kinds = new[] { OrbKind.Lightning, OrbKind.Frost, OrbKind.Dark, OrbKind.Glass };
-            for (var o = 0; o < random.Next(0, player.OrbCapacity + 1); o++)
+            for (var orb = 0; orb < random.Next(0, player.OrbCapacity + 1); orb++)
             {
                 var orbKind = kinds[random.Next(kinds.Length)];
                 player.Orbs.Add(orbKind switch
@@ -104,7 +104,7 @@ public class SinglePlayerGoldenTests
         if (random.Next(5) == 0) play.OrbOps.Add(new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } });
         if (random.Next(8) == 0) play.AddPlating = random.Next(1, 5);
         if (random.Next(8) == 0) play.AddFlameBarrier = random.Next(2, 6);
-        if (random.Next(6) == 0) play.Procs.Add(new ProcHit { Spread = SimPlay.Target.Random, Damage = Enumerable.Range(0, enemies).ToDictionary(i => i, _ => random.Next(1, 8)), Times = random.Next(1, 3) });
+        if (random.Next(6) == 0) play.Procs.Add(new ProcHit { Spread = SimPlay.Target.Random, Damage = Enumerable.Range(0, enemies).ToDictionary(enemyId => enemyId, _ => random.Next(1, 8)), Times = random.Next(1, 3) });
         if (random.Next(10) == 0) play.FocusDelta = random.Next(-2, 3);
         return (state, play);
     }
@@ -118,10 +118,10 @@ public class SinglePlayerGoldenTests
         text.Append($"B{outcome.PlayBlockGainsMax} {outcome.PlayKillsInAll} {outcome.PlayBreaksBlockInAll} R[{string.Join(",", outcome.BlockReactionInAny.OrderBy(x => x))}] ");
         var branches = outcome.Branches.Select(branch =>
         {
-            var e = string.Join(";", branch.Enemies.OrderBy(enemy => enemy.Id).Select(enemy =>
+            var enemies = string.Join(";", branch.Enemies.OrderBy(enemy => enemy.Id).Select(enemy =>
                 $"{enemy.Id}:{enemy.Hp},{enemy.Block},{enemy.Alive},{enemy.DiedBeforeActing},{enemy.Stunned},{enemy.Poison},{enemy.FirstHitFullyBlocked}"));
-            return $"{branch.Taken},{branch.OstyTaken},{branch.DamageThrough},{branch.BlockAtEnemyTurn},{branch.CancelledHits},{branch.You.Block},{branch.BlockDemand},{branch.Weight.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)}|{e}";
-        }).OrderBy(x => x, StringComparer.Ordinal);
+            return $"{branch.Taken},{branch.OstyTaken},{branch.DamageThrough},{branch.BlockAtEnemyTurn},{branch.CancelledHits},{branch.You.Block},{branch.BlockDemand},{branch.Weight.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)}|{enemies}";
+        }).OrderBy(line => line, StringComparer.Ordinal);
         text.Append(string.Join("#", branches));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())))[..16];
     }

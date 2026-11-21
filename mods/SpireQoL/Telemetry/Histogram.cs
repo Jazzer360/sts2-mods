@@ -14,32 +14,32 @@ public sealed class Histogram
     public double Max { get; private set; }
     public double Sum { get; private set; }
 
-    public void Add(double ms)
+    public void Add(double milliseconds)
     {
-        if (double.IsNaN(ms) || ms < 0) ms = 0;
-        _buckets[Index(ms)]++;
+        if (double.IsNaN(milliseconds) || milliseconds < 0) milliseconds = 0;
+        _buckets[Index(milliseconds)]++;
         Count++;
-        Sum += ms;
-        if (ms > Max) Max = ms;
+        Sum += milliseconds;
+        if (milliseconds > Max) Max = milliseconds;
     }
 
-    private static int Index(double ms)
-        => ms < 20 ? (int)(ms * 10)
-            : ms < 200 ? Fine + (int)(ms - 20)
-            : ms < 5000 ? Fine + Mid + (int)((ms - 200) / 50)
+    private static int Index(double milliseconds)
+        => milliseconds < 20 ? (int)(milliseconds * 10)
+            : milliseconds < 200 ? Fine + (int)(milliseconds - 20)
+            : milliseconds < 5000 ? Fine + Mid + (int)((milliseconds - 200) / 50)
             : Fine + Mid + Coarse;
 
-    private double UpperEdge(int i)
-        => i < Fine ? (i + 1) / 10.0
-            : i < Fine + Mid ? 20 + (i - Fine + 1)
-            : i < Fine + Mid + Coarse ? 200 + (i - Fine - Mid + 1) * 50.0
+    private double UpperEdge(int bucket)
+        => bucket < Fine ? (bucket + 1) / 10.0
+            : bucket < Fine + Mid ? 20 + (bucket - Fine + 1)
+            : bucket < Fine + Mid + Coarse ? 200 + (bucket - Fine - Mid + 1) * 50.0
             : Max;
 
-    /// <summary>The value <paramref name="p"/> (0 to 1) of them are at or below (0 when empty), never above the largest seen.</summary>
-    public double Percentile(double p)
+    /// <summary>The value <paramref name="percentile"/> (0 to 1) of them are at or below (0 when empty), never above the largest seen.</summary>
+    public double Percentile(double percentile)
     {
         if (Count == 0) return 0;
-        var rank = Math.Max(1, (int)Math.Ceiling(p * Count));
+        var rank = Math.Max(1, (int)Math.Ceiling(percentile * Count));
         var seen = 0;
         for (var i = 0; i < _buckets.Length; i++)
         {
@@ -51,7 +51,7 @@ public sealed class Histogram
 
     public TimingSummary Summary() => new(Count, Round(Percentile(0.5)), Round(Percentile(0.95)), Round(Percentile(0.99)), Round(Max));
 
-    private static double Round(double v) => Math.Round(v, 1);
+    private static double Round(double value) => Math.Round(value, 1);
 }
 
 /// <summary>A histogram's numbers, as sent: how many, the median, 95th and 99th percentiles and the largest (ms).</summary>

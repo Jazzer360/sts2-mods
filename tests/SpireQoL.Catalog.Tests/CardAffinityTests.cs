@@ -46,7 +46,7 @@ public class CardAffinityTests
     public void EveryRuleNamesARelic()
     {
         var names = Relics().Select(type => type.Name).ToHashSet();
-        var unknown = CardAffinity.Rules.Select(cardAffinityRule => cardAffinityRule.Relic).Concat(CardAffinity.Reviewed.Keys).Where(n => !names.Contains(n)).ToList();
+        var unknown = CardAffinity.Rules.Select(cardAffinityRule => cardAffinityRule.Relic).Concat(CardAffinity.Reviewed.Keys).Where(name => !names.Contains(name)).ToList();
         Assert.Empty(unknown);
     }
 }

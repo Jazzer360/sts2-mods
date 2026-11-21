@@ -53,7 +53,7 @@ public class SimDrawnCardTests
     {
         // Two Attacks and two Skills: it stops at the first Skill. 1 card: 1/2; 2: 2/4 * 2/3 = 1/3; 3: 2/4 * 1/3 * 2/2 = 1/6.
         var outcome = SimEngine.Run(You(Pile((Attack, 2), (Skill, 2)), hand: 5), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-        double Drew(int n) => outcome.Branches.Where(branch => branch.You.Draw!.RestCount == 4 - n).Sum(branch => branch.Weight);
+        double Drew(int drawn) => outcome.Branches.Where(branch => branch.You.Draw!.RestCount == 4 - drawn).Sum(branch => branch.Weight);
         Assert.Equal(0.5, Drew(1), 9);
         Assert.Equal(1.0 / 3, Drew(2), 9);
         Assert.Equal(1.0 / 6, Drew(3), 9);
@@ -95,27 +95,27 @@ public class SimDrawnCardTests
     /// </summary>
     private static Dictionary<int, double> PillageOdds(int attacks, int others, int room)
     {
-        var d = new Dictionary<int, double>();
-        var p = 1.0;
-        for (var t = 0; p > 0; t++)
+        var distribution = new Dictionary<int, double>();
+        var chanceStillDrawing = 1.0;
+        for (var attacksDrawn = 0; chanceStillDrawing > 0; attacksDrawn++)
         {
-            var left = attacks + others - t;
-            if (t == room || left == 0) { d[t] = d.GetValueOrDefault(t) + p; break; }
-            d[t] = d.GetValueOrDefault(t) + p * others / left;
-            p *= (double)(attacks - t) / left;
+            var left = attacks + others - attacksDrawn;
+            if (attacksDrawn == room || left == 0) { distribution[attacksDrawn] = distribution.GetValueOrDefault(attacksDrawn) + chanceStillDrawing; break; }
+            distribution[attacksDrawn] = distribution.GetValueOrDefault(attacksDrawn) + chanceStillDrawing * others / left;
+            chanceStillDrawing *= (double)(attacks - attacksDrawn) / left;
         }
-        return d.Where(entry => entry.Value > 0).ToDictionary(entry => entry.Key, entry => entry.Value);
+        return distribution.Where(entry => entry.Value > 0).ToDictionary(entry => entry.Key, entry => entry.Value);
     }
 
-    private static double Choose(int n, int k) => k < 0 || k > n ? 0 : Enumerable.Range(1, k).Aggregate(1.0, (a, index) => a * (n - k + index) / index);
+    private static double Choose(int total, int chosen) => chosen < 0 || chosen > total ? 0 : Enumerable.Range(1, chosen).Aggregate(1.0, (product, index) => product * (total - chosen + index) / index);
 
     private static void SameOdds(Dictionary<int, double> expected, SimOutcome outcome, string what)
     {
-        var d = DrawnChance.Distribution(outcome)!;
-        Assert.True(Math.Abs(d.Values.Sum() - 1) < 1e-9, $"{what}: the chances add to {d.Values.Sum()}");
-        foreach (var n in expected.Keys.Union(d.Keys))
-            Assert.True(Math.Abs(expected.GetValueOrDefault(n) - d.GetValueOrDefault(n)) < 1e-9,
-                $"{what}: {n} drawn, expected {expected.GetValueOrDefault(n)}, simulated {d.GetValueOrDefault(n)}");
+        var distribution = DrawnChance.Distribution(outcome)!;
+        Assert.True(Math.Abs(distribution.Values.Sum() - 1) < 1e-9, $"{what}: the chances add to {distribution.Values.Sum()}");
+        foreach (var drawn in expected.Keys.Union(distribution.Keys))
+            Assert.True(Math.Abs(expected.GetValueOrDefault(drawn) - distribution.GetValueOrDefault(drawn)) < 1e-9,
+                $"{what}: {drawn} drawn, expected {expected.GetValueOrDefault(drawn)}, simulated {distribution.GetValueOrDefault(drawn)}");
     }
 
     [Fact]
@@ -156,14 +156,14 @@ public class SimDrawnCardTests
         for (var free = 0; free <= 7; free++)
         for (var others = 0; others <= 7; others++)
         {
-            var n = free + others;
-            if (n == 0) continue;
-            var draws = Math.Min(4, n);
+            var total = free + others;
+            if (total == 0) continue;
+            var draws = Math.Min(4, total);
             var pile = new List<(SimDrawCard, int)>();
             if (free > 0) pile.Add((FreeCard, free));
             if (others > 0) pile.Add((Burn, others));
             var outcome = SimEngine.Run(You(Pile(pile.ToArray()), hand: 1), Playing("Scrape", new DrawnCardAction(4) { DiscardUnlessFree = true }));
-            var expected = Enumerable.Range(0, draws + 1).ToDictionary(f => f, f => Choose(free, f) * Choose(others, draws - f) / Choose(n, draws));
+            var expected = Enumerable.Range(0, draws + 1).ToDictionary(freeDrawn => freeDrawn, freeDrawn => Choose(free, freeDrawn) * Choose(others, draws - freeDrawn) / Choose(total, draws));
             SameOdds(expected.Where(entry => entry.Value > 0).ToDictionary(entry => entry.Key, entry => entry.Value), outcome, $"{free} free, {others} others");
         }
     }
@@ -263,8 +263,8 @@ public class SimDrawnCardTests
     public void EscapePlansTabIsTheChanceItDrawsASkill()
     {
         var outcome = SimEngine.Run(You(Pile((Skill, 1), (Attack, 3))), Playing("EscapePlan", EscapePlan));
-        var d = DrawnChance.Distribution(outcome)!;
-        Assert.Equal(0.25, DrawnChance.ChanceOfAny(d), 9);
+        var distribution = DrawnChance.Distribution(outcome)!;
+        Assert.Equal(0.25, DrawnChance.ChanceOfAny(distribution), 9);
     }
 
     [Fact]
@@ -272,11 +272,11 @@ public class SimDrawnCardTests
     {
         // Two Attacks and two Skills: 0 Attacks 1/2, 1 Attack 1/3, 2 Attacks 1/6.
         var outcome = SimEngine.Run(You(Pile((Attack, 2), (Skill, 2))), Playing("Pillage", new DrawnCardAction(1) { DrawAgainIf = SimCardType.Attack }));
-        var d = DrawnChance.Distribution(outcome)!;
-        Assert.Equal(0.5, d[0], 9);
-        Assert.Equal(1.0 / 3, d[1], 9);
-        Assert.Equal(1.0 / 6, d[2], 9);
-        Assert.Equal((0, 0.5), (DrawnChance.MostLikely(d).Tally, Math.Round(DrawnChance.MostLikely(d).Chance, 9)));
+        var distribution = DrawnChance.Distribution(outcome)!;
+        Assert.Equal(0.5, distribution[0], 9);
+        Assert.Equal(1.0 / 3, distribution[1], 9);
+        Assert.Equal(1.0 / 6, distribution[2], 9);
+        Assert.Equal((0, 0.5), (DrawnChance.MostLikely(distribution).Tally, Math.Round(DrawnChance.MostLikely(distribution).Chance, 9)));
     }
 
     [Fact]

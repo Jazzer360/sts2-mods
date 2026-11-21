@@ -358,7 +358,7 @@ public static class SettingsCatalog
         {
             if (!tracked.Contains(spec.TypeName)) log.Warn($"settings menu: power tracker {spec.TypeName} isn't in SettingsCatalog");
         }
-        var dupes = Sources.GroupBy(sourceEntry => sourceEntry.Type).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        var dupes = Sources.GroupBy(sourceEntry => sourceEntry.Type).Where(sameType => sameType.Count() > 1).Select(sameType => sameType.Key).ToList();
         if (dupes.Count > 0) log.Warn($"settings menu: duplicate catalog rows {string.Join(", ", dupes)}");
     }
 }

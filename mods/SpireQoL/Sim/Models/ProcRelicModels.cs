@@ -429,10 +429,10 @@ public sealed class JossPaper : RelicProc
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
         if (cardEvent != CardEvent.Exhausted || player != owner) return One(state);
-        var n = Var(state, owner, "ExhaustAmount", 5);
+        var needed = Var(state, owner, "ExhaustAmount", 5);
         var count = Amount(state, owner) + 1;
-        if (count < n) { Set(state, owner, count, Data(state, owner)); return One(state); }
-        Set(state, owner, count - n, Data(state, owner));
+        if (count < needed) { Set(state, owner, count, Data(state, owner)); return One(state); }
+        Set(state, owner, count - needed, Data(state, owner));
         return Cause(Fire(state, owner), CardEvent.Drawn, 1, owner);
     }
 }
@@ -521,11 +521,11 @@ public sealed class Metronome : RelicProc
     public override IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player)
     {
         if (player != owner) return One(state);
-        var n = Var(state, owner, "OrbCount", 7);
+        var needed = Var(state, owner, "OrbCount", 7);
         var count = Amount(state, owner);
-        if (count >= n) return One(state);
+        if (count >= needed) return One(state);
         Set(state, owner, count + 1, Data(state, owner));
-        return count + 1 == n ? RelicDamageAll(state, owner) : One(state);
+        return count + 1 == needed ? RelicDamageAll(state, owner) : One(state);
     }
 }
 

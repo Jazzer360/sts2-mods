@@ -30,15 +30,15 @@ internal static class ScriptBuilder
     /// <summary>Captured terms that are the same for every target.</summary>
     private sealed class AllTargets : IReadOnlyDictionary<int, CapturedTerms>
     {
-        private readonly CapturedTerms _t;
-        public AllTargets(CapturedTerms terms) => _t = terms;
-        public CapturedTerms this[int key] => _t;
+        private readonly CapturedTerms _terms;
+        public AllTargets(CapturedTerms terms) => _terms = terms;
+        public CapturedTerms this[int key] => _terms;
         public IEnumerable<int> Keys => Enumerable.Range(0, 16);
-        public IEnumerable<CapturedTerms> Values => Keys.Select(_ => _t);
+        public IEnumerable<CapturedTerms> Values => Keys.Select(_ => _terms);
         public int Count => 16;
         public bool ContainsKey(int key) => true;
-        public bool TryGetValue(int key, out CapturedTerms value) { value = _t; return true; }
-        public IEnumerator<KeyValuePair<int, CapturedTerms>> GetEnumerator() => Keys.Select(key => new KeyValuePair<int, CapturedTerms>(key, _t)).GetEnumerator();
+        public bool TryGetValue(int key, out CapturedTerms value) { value = _terms; return true; }
+        public IEnumerator<KeyValuePair<int, CapturedTerms>> GetEnumerator() => Keys.Select(key => new KeyValuePair<int, CapturedTerms>(key, _terms)).GetEnumerator();
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

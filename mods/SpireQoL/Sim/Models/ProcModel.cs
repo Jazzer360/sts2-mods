@@ -33,9 +33,9 @@ public abstract class ProcModel : SimModel
     {
         var key = SimKeys.Owned(Name, owner);
         if (!state.Bound.Has(key)) return null;
-        var v = state.Bound[key];
+        var bound = state.Bound[key];
         state.Bound = state.Bound.Without(key);
-        return v;
+        return bound;
     }
 
     /// <summary>It fired (a trigger: no block or damage of its own).</summary>
@@ -106,11 +106,11 @@ public abstract class CounterRelic : RelicProc
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner) || !Counts(play.Card)) return One(state);
-        var n = Var(state, owner, "Cards", 0);
-        if (n <= 0) return One(state);
-        var count = Amount(state, owner) % n + 1;
-        Set(state, owner, count % n, Data(state, owner));
-        if (count < n) return One(state);
+        var cardsNeeded = Var(state, owner, "Cards", 0);
+        if (cardsNeeded <= 0) return One(state);
+        var count = Amount(state, owner) % cardsNeeded + 1;
+        Set(state, owner, count % cardsNeeded, Data(state, owner));
+        if (count < cardsNeeded) return One(state);
         return OnComplete(state, owner);
     }
 }

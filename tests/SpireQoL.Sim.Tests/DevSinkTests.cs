@@ -67,7 +67,7 @@ public sealed class DevSinkTests : IDisposable
         sink.Flush();
         var lines = File.ReadAllLines(sink.StreamPath);
         Assert.Equal(3, lines.Length);
-        Assert.All(lines, l => JsonDocument.Parse(l).Dispose());
+        Assert.All(lines, line => JsonDocument.Parse(line).Dispose());
         Assert.Contains("it's", lines[1]);
         Assert.Equal("{\"v\":2}", File.ReadAllText(Path.Combine(_dir, DevSink.StatePath)));
         Assert.EndsWith("stream-" + new DateTime(2026, 11, 19, 12, 0, 0, DateTimeKind.Utc).ToLocalTime().ToString("yyyyMMdd-HHmmss") + ".jsonl", sink.StreamPath);
@@ -87,7 +87,7 @@ public sealed class DevSinkTests : IDisposable
         Assert.True(File.Exists(Path.Combine(reports, "___escape.json")));
         var sessions = File.ReadAllLines(Path.Combine(_dir, DevSink.SessionsPath));
         Assert.Equal(2, sessions.Length); // one line each, line breaks inside a summary flattened
-        Assert.All(sessions, l => JsonDocument.Parse(l).Dispose());
+        Assert.All(sessions, line => JsonDocument.Parse(line).Dispose());
     }
 
     [Fact]

@@ -44,16 +44,16 @@ public static class RestMath
     /// <param name="humidifiers">Stone Humidifier max HP gains, one per copy.</param>
     /// <param name="boss">Pantograph's heal or Bath Robes (amount ignored), in relic order; empty when not before the boss.</param>
     /// <param name="rest">Rest (or Mend) is taken; false gives only the boss relics' lines.</param>
-    public static RestOutcome Compute(int hp, int max, decimal heal, decimal pillow, IReadOnlyList<int> humidifiers, bool nightTerrors,
+    public static RestOutcome Compute(int currentHp, int max, decimal heal, decimal pillow, IReadOnlyList<int> humidifiers, bool nightTerrors,
         IReadOnlyList<(RestStep Step, int Amount)> boss, bool rest)
     {
         var lines = new List<RestLine>();
-        int h = hp, m = max;
+        int h = currentHp, m = max;
         var nominal = 0;
         if (rest)
         {
             // CreatureCmd.Heal: SetCurrentHpInternal((int)min(hp + heal, max)).
-            var gained = (int)Math.Min(hp + heal, max) - hp;
+            var gained = (int)Math.Min(currentHp + heal, max) - currentHp;
             var pillowPart = nightTerrors ? 0 : (int)Math.Max(0, Math.Floor(pillow));
             var restGain = Math.Min(gained, Math.Max(0, (int)Math.Floor(heal) - pillowPart));
             lines.Add(new RestLine(RestStep.Rest, restGain));
@@ -94,11 +94,11 @@ public static class RestMath
         {
             // The rest heal's worth is what it adds to the result over not resting at all, apart from what the relics after
             // it change (Stone Humidifier's HP, Night Terrors' loss).
-            var skip = hp;
+            var skip = currentHp;
             Boss(ref skip, max, null);
             var after = lines.Where(restLine => restLine.Step is RestStep.StoneHumidifier or RestStep.NightTerrors).Sum(restLine => restLine.Hp);
             over = Math.Max(0, nominal - (result - skip - after));
         }
-        return new RestOutcome(hp, max, lines, result, m, over, restedHp, restedMax);
+        return new RestOutcome(currentHp, max, lines, result, m, over, restedHp, restedMax);
     }
 }

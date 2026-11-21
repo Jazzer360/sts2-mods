@@ -81,7 +81,7 @@ public class SimTeammateParityTests
         var them = SimEngine.Run(asMate);
 
         Assert.Equal(you.Worst.BlockAtEnemyTurn, them.TeammateWorst(0).BlockGained);
-        static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(1)!.HpAtTurnEnd).Distinct().OrderBy(x => x).ToArray();
+        static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(1)!.HpAtTurnEnd).Distinct().OrderBy(hpLeft => hpLeft).ToArray();
         Assert.Equal(Hp(you), Hp(them));
     }
 
@@ -99,7 +99,7 @@ public class SimTeammateParityTests
         Setup(name, mate);
         asMate.Teammates.Add(mate);
         // The enemy's HP after its turn: the same retaliation either way (it hits every player).
-        static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(1)!.Hp).Distinct().OrderBy(x => x).ToArray();
+        static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(1)!.Hp).Distinct().OrderBy(hpLeft => hpLeft).ToArray();
         Assert.Equal(Hp(SimEngine.Run(asYou)), Hp(SimEngine.Run(asMate)));
     }
 
@@ -161,7 +161,7 @@ public class SimTeammateParityTests
         var play = new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 6 }, Hits = 1, HandCard = 7, HandDelta = -1 };
         SimEngine.ApplyPlayTo(state, play, out var full, out _);
         SimEngine.ApplyPlayTo(state.WithoutTeammateHands(), play, out var shown, out _);
-        static long[] Keys(List<SimState> states) => states.Select(branch => branch.WithoutTeammateHands().Key()).OrderBy(k => k).ToArray();
+        static long[] Keys(List<SimState> states) => states.Select(branch => branch.WithoutTeammateHands().Key()).OrderBy(key => key).ToArray();
         Assert.Equal(Keys(shown), Keys(full));
     }
 

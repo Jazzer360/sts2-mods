@@ -57,14 +57,14 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             var shown = Sts2State.IsPlayerTurn && !hidden && node.Entity is { } creature ? For(creature) : null;
             var onScreen = intents.Select(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", null)).ToList();
             var corners = shown != null && onScreen.All(abstractIntent => abstractIntent != null) ? IntentCorner.Assign(onScreen!, shown.Powers) : new();
-            for (var k = 0; k < intents.Count; k++)
+            for (var intentIndex = 0; intentIndex < intents.Count; intentIndex++)
             {
-                var intent = intents[k];
+                var intent = intents[intentIndex];
                 var holder = intent.GetNodeOrNull<Control>("%IntentHolder");
                 if (holder == null) continue;
-                Block(holder, intent, onScreen[k] is DefendIntent && shown?.Block is > 0 ? shown.Block : null);
+                Block(holder, intent, onScreen[intentIndex] is DefendIntent && shown?.Block is > 0 ? shown.Block : null);
                 // Each power in the corner of the intent it belongs to (decision #99).
-                IntentCorner.Place(intent, corners.TryGetValue(k, out var mine) ? mine : null);
+                IntentCorner.Place(intent, corners.TryGetValue(intentIndex, out var mine) ? mine : null);
             }
         }
     }

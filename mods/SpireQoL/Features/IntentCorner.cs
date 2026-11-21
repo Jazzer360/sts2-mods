@@ -29,9 +29,9 @@ internal static class IntentCorner
         var debuff = Index(intents, abstractIntent => abstractIntent is DebuffIntent);
         foreach (var applied in powers)
         {
-            var k = PlayFacts.IsDebuffType(applied.Power) ? debuff ?? buff : buff ?? debuff;
-            k ??= intents.Count - 1;
-            if (!at.TryGetValue(k.Value, out var list)) at[k.Value] = list = new List<MovePowers.Applied>();
+            var corner = PlayFacts.IsDebuffType(applied.Power) ? debuff ?? buff : buff ?? debuff;
+            corner ??= intents.Count - 1;
+            if (!at.TryGetValue(corner.Value, out var list)) at[corner.Value] = list = new List<MovePowers.Applied>();
             list.Add(applied);
         }
         return at;

@@ -47,8 +47,8 @@ public sealed class FrameWindow
         if (modMs > SessionStats.SlowModFrameMs) _slow++;
         foreach (var (id, ms) in features)
         {
-            var f = _features.TryGetValue(id, out var feature) ? feature : (0, 0);
-            _features[id] = (f.Sum + ms, Math.Max(f.Max, ms));
+            var totals = _features.TryGetValue(id, out var feature) ? feature : (0, 0);
+            _features[id] = (totals.Sum + ms, Math.Max(totals.Max, ms));
         }
         foreach (var (id, k) in kb) _kb[id] = _kb.GetValueOrDefault(id) + k;
     }
@@ -57,12 +57,12 @@ public sealed class FrameWindow
     public FrameRollup Take(double seconds, (double HeapMb, double AllocatedMb, int Gen0, int Gen1, int Gen2, double GcPauseMs, long Held, int Searching) extra)
     {
         _mod.Sort();
-        double At(double p) => _mod.Count == 0 ? 0 : _mod[Math.Clamp((int)Math.Ceiling(p * _mod.Count) - 1, 0, _mod.Count - 1)];
-        static double R(double v) => Math.Round(v, 2);
-        var n = Math.Max(1, _mod.Count);
+        double At(double percentile) => _mod.Count == 0 ? 0 : _mod[Math.Clamp((int)Math.Ceiling(percentile * _mod.Count) - 1, 0, _mod.Count - 1)];
+        static double R(double value) => Math.Round(value, 2);
+        var count = Math.Max(1, _mod.Count);
         var frameRollup = new FrameRollup(R(seconds), _mod.Count, R(At(0.5)), R(At(0.95)), R(_mod.Count == 0 ? 0 : _mod[^1]), R(_gapMax), _slow,
-            _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Sum / n)), _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Max)),
-            _kb.ToDictionary(entry => entry.Key, entry => R(entry.Value / n)),
+            _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Sum / count)), _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Max)),
+            _kb.ToDictionary(entry => entry.Key, entry => R(entry.Value / count)),
             R(extra.HeapMb), R(extra.AllocatedMb), extra.Gen0, extra.Gen1, extra.Gen2, R(extra.GcPauseMs), extra.Held, extra.Searching);
         _mod.Clear();
         _gapMax = 0;
@@ -133,10 +133,10 @@ public sealed class DevSink : IDisposable
     }
 
     /// <summary>One event's line: <c>{"t":12.345,"kind":"search-done",...}</c>.</summary>
-    public static string Line(double t, DevEvent devEvent)
+    public static string Line(double seconds, DevEvent devEvent)
     {
         var json = JsonSerializer.Serialize(devEvent, devEvent.GetType(), Options);
-        var head = $"{{\"t\":{Math.Round(t, 3).ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var head = $"{{\"t\":{Math.Round(seconds, 3).ToString(System.Globalization.CultureInfo.InvariantCulture)}";
         return json.Length <= 2 ? head + "}" : head + "," + json[1..];
     }
 
@@ -154,7 +154,7 @@ public sealed class DevSink : IDisposable
     /// <summary>Queues a session summary's line in <c>sessions.jsonl</c> (any thread).</summary>
     public void SaveSession(string json) => _files.Enqueue((Path.Combine(_dir, SessionsPath), json.ReplaceLineEndings(" ") + "\n", true));
 
-    private static string Safe(string id) => string.Concat(id.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_'));
+    private static string Safe(string id) => string.Concat(id.Select(character => char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '_'));
 
     private void Loop()
     {

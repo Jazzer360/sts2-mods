@@ -73,8 +73,8 @@ internal static class ReleaseNotes
                 if (line.StartsWith(prefix) && Heading.Match(line[prefix.Length..].Trim()) is { Success: true } match)
                 {
                     version = match.Groups[1].Value;
-                    var t = match.Groups[2].Value.Trim().TrimStart('(').TrimEnd(')').Trim();
-                    title = t.Length == 0 ? null : Plain(t);
+                    var heading = match.Groups[2].Value.Trim().TrimStart('(').TrimEnd(')').Trim();
+                    title = heading.Length == 0 ? null : Plain(heading);
                 }
                 continue;
             }
@@ -109,9 +109,9 @@ internal static class ReleaseNotes
             var parts = raw.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2) continue;
             var tag = parts[0];
-            var v = tag.LastIndexOf("-v", StringComparison.Ordinal);
-            if (v < 0) continue;
-            dates[tag[(v + 2)..]] = parts[1];
+            var versionAt = tag.LastIndexOf("-v", StringComparison.Ordinal);
+            if (versionAt < 0) continue;
+            dates[tag[(versionAt + 2)..]] = parts[1];
         }
         return dates;
     }
@@ -161,10 +161,10 @@ internal static class ReleaseNotes
     private static readonly Regex Link = new(@"\[([^\]]+)\]\([^)]*\)");
 
     /// <summary>Markdown to plain text: links to their text, no bold, italics or code marks.</summary>
-    public static string Plain(string md)
+    public static string Plain(string markdown)
     {
-        var s = Link.Replace(md, "$1");
-        s = s.Replace("**", "").Replace("__", "").Replace("`", "");
-        return s.Trim();
+        var text = Link.Replace(markdown, "$1");
+        text = text.Replace("**", "").Replace("__", "").Replace("`", "");
+        return text.Trim();
     }
 }

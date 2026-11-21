@@ -33,7 +33,7 @@ public class OptionCardsTests
         // A reward with no pool in its code takes the CardPoolModel the option's delegate holds. That's how Colorful
         // Philosophers passes each character's pool; a new event doing it needs a look (does its delegate hold the pool?).
         var reviewed = new[] { "ColorfulPhilosophers" };
-        var found = Events().Where(type => Read(type).Summary.PoolFromOption > 0).Select(type => type.Name).OrderBy(n => n).ToList();
+        var found = Events().Where(type => Read(type).Summary.PoolFromOption > 0).Select(type => type.Name).OrderBy(name => name).ToList();
         Assert.Equal(reviewed, found);
     }
 

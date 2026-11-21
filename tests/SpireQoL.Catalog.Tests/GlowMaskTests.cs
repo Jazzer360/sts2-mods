@@ -47,7 +47,7 @@ public class GlowMaskTests
         Assert.True(own >= 0 && cut > own);
         Assert.True(cut < code.IndexOf("void vertex()"));
         // Braces still balance.
-        Assert.Equal(code.Count(c => c == '{'), code.Count(c => c == '}'));
+        Assert.Equal(code.Count(character => character == '{'), code.Count(character => character == '}'));
     }
 
     [Fact]

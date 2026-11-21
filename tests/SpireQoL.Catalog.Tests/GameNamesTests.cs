@@ -35,7 +35,7 @@ public class GameNamesTests
         var missing = game.Except(named).Order().ToList();
         // A name the installed game lacks is fine when only the other branch has it.
         var otherBranch = GameBranches.BetaOnly.Overlaps(game) ? GameBranches.MainOnly : GameBranches.BetaOnly;
-        var extra = named.Except(game).Where(n => !otherBranch.Contains(n)).Order().ToList();
+        var extra = named.Except(game).Where(name => !otherBranch.Contains(name)).Order().ToList();
         Assert.True(missing.Count == 0, $"{what} the game has with no typed name (run node scripts/game-names.mjs): {string.Join(", ", missing)}");
         Assert.True(extra.Count == 0, $"typed {what} the game doesn't have and the list doesn't mark as the other branch's: {string.Join(", ", extra)}");
     }

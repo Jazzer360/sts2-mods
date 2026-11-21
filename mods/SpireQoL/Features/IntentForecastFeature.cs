@@ -102,15 +102,15 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         foreach (var (node, powers) in _corners)
             if (GodotObject.IsInstanceValid(node) && node.IsNodeReady()) IntentCorner.Place(node, powers);
         // NIntent._Process's bob, for rows with no intent icon to follow.
-        var y = -(Mathf.Sin(Time.GetTicksMsec() * 0.001f * Mathf.Pi + _bob) * 10f + 8f);
+        var offsetY = -(Mathf.Sin(Time.GetTicksMsec() * 0.001f * Mathf.Pi + _bob) * 10f + 8f);
         // The narrower side of each row's intents gets a spacer (each shown child adds its width and a gap): the intents sit centred.
         foreach (var (leftSpacer, left, right, rightSpacer) in _balance)
         {
             if (!GodotObject.IsInstanceValid(leftSpacer) || !GodotObject.IsInstanceValid(rightSpacer)) continue;
             float Side(List<Control> controls) => controls.Where(GodotObject.IsInstanceValid).Sum(control => control.CustomMinimumSize.X + RowGap);
-            var d = Side(right) - Side(left);
-            Pad(leftSpacer, d);
-            Pad(rightSpacer, -d);
+            var gap = Side(right) - Side(left);
+            Pad(leftSpacer, gap);
+            Pad(rightSpacer, -gap);
         }
         foreach (var control in _bobbing)
         {
@@ -120,16 +120,16 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             if (holder.CustomMinimumSize != size) holder.CustomMinimumSize = size;
             control.Size = size;
             // Level with the intent icon in its row as it is drawn this frame (bob included); else centred, then the bob.
-            var top = !_bobOnly.Contains(control) && IconCentre(holder) is { } centre ? centre - size.Y / 2 : (holder.Size.Y - size.Y) / 2 + y + 8f;
+            var top = !_bobOnly.Contains(control) && IconCentre(holder) is { } centre ? centre - size.Y / 2 : (holder.Size.Y - size.Y) / 2 + offsetY + 8f;
             control.Position = new Vector2(0, top);
         }
     }
 
-    /// <summary>A spacer shown only when its side is short by <paramref name="by"/>, as wide as that less its own gap.</summary>
-    private static void Pad(Control spacer, float by)
+    /// <summary>A spacer shown only when its side is short by <paramref name="amount"/>, as wide as that less its own gap.</summary>
+    private static void Pad(Control spacer, float amount)
     {
-        spacer.Visible = by > 0.5f; // a hidden child takes no gap
-        var width = Math.Max(0, by - RowGap);
+        spacer.Visible = amount > 0.5f; // a hidden child takes no gap
+        var width = Math.Max(0, amount - RowGap);
         if (spacer.Visible && !Mathf.IsEqualApprox(spacer.CustomMinimumSize.X, width)) spacer.CustomMinimumSize = new Vector2(width, 0);
     }
 
@@ -170,9 +170,9 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         var targets = enemy.CombatState?.PlayerCreatures.ToList() ?? new List<Creature>();
         // The game's intents bob (NIntent._Process: a sine from _timeOffset); ours start in step with the intent on screen.
         var bob = _bob = BobOffset(enemy);
-        for (var t = 0; t < turns.Count; t++)
+        for (var turnIndex = 0; turnIndex < turns.Count; turnIndex++)
         {
-            var turn = turns[t];
+            var turn = turns[turnIndex];
             // One row per turn, each on top of the last, so the forecast reads upward from the intent (next turn just above it).
             var row = UiKit.Row(turn.Certain ? RowGap : OptionGap);
             row.Alignment = BoxContainer.AlignmentMode.Center;
@@ -219,10 +219,10 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         // The powers the move applies (Frail 2), from its code, each in the corner of the buff or debuff intent it belongs to
         // (IntentCorner, as on the intent on screen: decision #99).
         var corners = enemy.Monster is { } monster ? IntentCorner.Assign(move.Intents, MovePowers.Of(monster, move, now: false)) : new();
-        for (var k = 0; k < move.Intents.Count; k++)
+        for (var intentIndex = 0; intentIndex < move.Intents.Count; intentIndex++)
         {
-            var intent = move.Intents[k];
-            var powers = corners.TryGetValue(k, out var mine) ? mine : null;
+            var intent = move.Intents[intentIndex];
+            var powers = corners.TryGetValue(intentIndex, out var mine) ? mine : null;
             var node = NIntent.Create(bob);
             node.MouseFilter = Control.MouseFilterEnum.Ignore;
             line.AddChild(node);

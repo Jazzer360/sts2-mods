@@ -23,7 +23,7 @@ public class SimStepBudgetTests
         var outcome = SimEngine.Run(state, Shatter());
 
         Assert.False(outcome.Truncated);
-        var byDamage = outcome.Branches.GroupBy(branch => 100 - branch.Enemy(0)!.HpAtTurnEnd).ToDictionary(g => g.Key, g => g.Sum(branch => branch.Weight) / outcome.Branches.Sum(branch => branch.Weight));
+        var byDamage = outcome.Branches.GroupBy(branch => 100 - branch.Enemy(0)!.HpAtTurnEnd).ToDictionary(sameDamage => sameDamage.Key, sameDamage => sameDamage.Sum(branch => branch.Weight) / outcome.Branches.Sum(branch => branch.Weight));
         Assert.Equal(new[] { 0, 8, 16, 24, 32 }, byDamage.Keys.OrderBy(key => key).ToArray());
         Assert.Equal(6.0 / 16, byDamage[16], 6);
         Assert.Equal(1.0 / 16, byDamage[32], 6);
@@ -76,7 +76,7 @@ public class SimStepBudgetTests
             return player;
         }
         Setup(state.You);
-        for (var t = 0; t < 3; t++) state.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
+        for (var teammate = 0; teammate < 3; teammate++) state.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
         var outcome = SimEngine.Run(state, null, new SimWork { CopyCap = 200_000 });
         Assert.True(outcome.Truncated);
         Assert.Equal("the work cap", outcome.CapHit);

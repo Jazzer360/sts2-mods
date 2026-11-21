@@ -178,7 +178,7 @@ public sealed class SessionStats
         return rec;
     }
 
-    private static void Count(Dictionary<string, int> d, string key) => d[key] = (d.TryGetValue(key, out var n) ? n : 0) + 1;
+    private static void Count(Dictionary<string, int> counts, string key) => counts[key] = (counts.TryGetValue(key, out var count) ? count : 0) + 1;
 
     /// <summary>What a turn counts as (see the class summary). <paramref name="last"/>: the fight's last turn so far.</summary>
     private static string Classify(TurnRecord turnRecord, bool last)
@@ -251,8 +251,8 @@ public sealed class SessionStats
                     }
                 }
             }
-            static Dictionary<string, int> Top(Dictionary<string, int> d)
-                => d.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.Ordinal).Take(MaxReasons)
+            static Dictionary<string, int> Top(Dictionary<string, int> counts)
+                => counts.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.Ordinal).Take(MaxReasons)
                     .ToDictionary(entry => entry.Key, entry => entry.Value);
             AuditSummary Audit(AuditCounts auditCounts, int skipped, Dictionary<string, int> reasons)
                 => new(auditCounts.Checked, auditCounts.Matched, skipped, Top(reasons), Top(auditCounts.Mismatches));

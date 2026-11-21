@@ -122,7 +122,7 @@ public static class Who
     public const int You = -1;
     /// <summary>Your Osty, as a dealer (his own powers aren't simulated: his damage is captured).</summary>
     public const int YourOsty = -100;
-    public static int Teammate(int k) => -2 - k;
+    public static int Teammate(int teammateIndex) => -2 - teammateIndex;
     public static CreatureKind KindOf(int id) => id >= 0 ? CreatureKind.Enemy : id == You ? CreatureKind.You : id == YourOsty ? CreatureKind.YourOsty : CreatureKind.Teammate;
     public static bool IsEnemy(int id) => id >= 0;
     public static bool IsPlayer(int id) => KindOf(id) is CreatureKind.You or CreatureKind.Teammate;
@@ -141,15 +141,15 @@ public static class Who
     }
 
     private static readonly int[][][] Orders = Enumerable.Range(0, 4)
-        .Select(n => Enumerable.Range(0, n + 1).Select(before => Order(n, before)).ToArray()).ToArray();
+        .Select(teammates => Enumerable.Range(0, teammates + 1).Select(before => Order(teammates, before)).ToArray()).ToArray();
 
     private static int[] Order(int teammates, int before)
     {
         before = Math.Clamp(before, 0, teammates);
         var order = new int[teammates + 1];
-        for (var k = 0; k < before; k++) order[k] = Teammate(k);
+        for (var teammateIndex = 0; teammateIndex < before; teammateIndex++) order[teammateIndex] = Teammate(teammateIndex);
         order[before] = You;
-        for (var k = before; k < teammates; k++) order[k + 1] = Teammate(k);
+        for (var teammateIndex = before; teammateIndex < teammates; teammateIndex++) order[teammateIndex + 1] = Teammate(teammateIndex);
         return order;
     }
 }

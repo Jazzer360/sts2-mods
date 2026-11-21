@@ -109,9 +109,9 @@ public class RestMathTests
     {
         var boss = new[] { (RestStep.Pantograph, 25), (RestStep.BathRobes, 0) };
         foreach (var hp in new[] { 1, 20, 50, 76 })
-        foreach (var nt in new[] { false, true })
+        foreach (var nightTerrors in new[] { false, true })
         {
-            var restOutcome = RestMath.Compute(hp, 77, nt ? 77 : 38.1m, 15, new[] { 5 }, nt, boss, rest: true);
+            var restOutcome = RestMath.Compute(hp, 77, nightTerrors ? 77 : 38.1m, 15, new[] { 5 }, nightTerrors, boss, rest: true);
             Assert.Equal(restOutcome.ResultHp, restOutcome.Hp + restOutcome.Lines.Sum(restLine => restLine.Hp));
         }
     }

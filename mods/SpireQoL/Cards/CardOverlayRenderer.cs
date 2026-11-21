@@ -204,24 +204,24 @@ public sealed class CardOverlayRenderer
     }
 
     /// <summary>
-    /// The card at <paramref name="a"/> opacity as one picture (decision #113): a flattened copy drawn in its place. Layer by
+    /// The card at <paramref name="alpha"/> opacity as one picture (decision #113): a flattened copy drawn in its place. Layer by
     /// layer (each of the container's layers faded on its own, the art showing through the frame) when the copy can't be made.
     /// </summary>
-    private static void Fade(Entry entry, float a)
+    private static void Fade(Entry entry, float alpha)
     {
         entry.TouchedAlpha = true;
         if (entry.Container != entry.Card && !entry.FlatFailed)
         {
             var start = Time.GetTicksUsec();
-            try { FadeFlat(entry, a); }
+            try { FadeFlat(entry, alpha); }
             finally { _flatMs += (Time.GetTicksUsec() - start) / 1000.0; }
             if (!entry.FlatFailed) return;
         }
-        SetAlpha(entry.Container, a);
+        SetAlpha(entry.Container, alpha);
     }
 
     /// <summary>The flattened copy made if needed and drawn this frame; <see cref="Entry.FlatFailed"/> set when it can't be.</summary>
-    private static void FadeFlat(Entry entry, float a)
+    private static void FadeFlat(Entry entry, float alpha)
     {
         if (entry.Flat is { Valid: false }) entry.Flat = null;
         entry.Flat ??= FlatFade.Create(entry.Card, entry.Container);
@@ -233,7 +233,7 @@ public sealed class CardOverlayRenderer
         try
         {
             var glow = entry.Card.CardHighlight;
-            entry.Flat.Update(a, new Node?[] { glow, entry.TagLayer, entry.Overlay }, new Node?[] { glow, entry.TagLayer }, glow);
+            entry.Flat.Update(alpha, new Node?[] { glow, entry.TagLayer, entry.Overlay }, new Node?[] { glow, entry.TagLayer }, glow);
         }
         catch (Exception ex)
         {
@@ -323,7 +323,7 @@ public sealed class CardOverlayRenderer
             step = Math.Max(0f, (layer.Size.X - tagW) / (tabs.Count - 1));
             width = step * (tabs.Count - 1) + tagW;
         }
-        var x0 = (layer.Size.X - width) / 2f;
+        var left = (layer.Size.X - width) / 2f;
         // Tucked under the card's top edge (the card art covers the tucked part); the icon end
         // sticks out above.
         var top = -tagH * fit * (1f - TabOverlap - TagDrop);
@@ -340,7 +340,7 @@ public sealed class CardOverlayRenderer
             var spec = tabs[i];
             try
             {
-                LayoutTab(tab, spec, x0 + i * step, top, tagW * fit, scale);
+                LayoutTab(tab, spec, left + i * step, top, tagW * fit, scale);
             }
             catch (Exception ex)
             {
@@ -443,10 +443,10 @@ public sealed class CardOverlayRenderer
                     label.Rotation = -Mathf.Pi / 2f;
                     label.Position = otherIcon.Position + otherIcon.Size / 2f + new Vector2(two ? box.X * 0.24f : 0, 0) - label.Size / 2f;
                 }
-                else if ((spec.Number?.ToString() ?? spec.NumberText) is { } n && tab.GetNodeOrNull<TextureRect>("Icon") is { } nextIcon)
+                else if ((spec.Number?.ToString() ?? spec.NumberText) is { } numberText && tab.GetNodeOrNull<TextureRect>("Icon") is { } nextIcon)
                 {
                     RestoreLabel(label);
-                    InCorner(label, n, nextIcon);
+                    InCorner(label, numberText, nextIcon);
                 }
             }
             // A text tab with a count too (a drawn-card chance tab: how many, centred above its chance: decisions #119, #124): the
@@ -617,10 +617,10 @@ public sealed class CardOverlayRenderer
         foreach (var child in node.GetChildren()) ClearUniqueNames(child);
     }
 
-    private static void SetAlpha(Control control, float a)
+    private static void SetAlpha(Control control, float alpha)
     {
         var color = control.Modulate;
-        color.A = a;
+        color.A = alpha;
         control.Modulate = color;
     }
 }

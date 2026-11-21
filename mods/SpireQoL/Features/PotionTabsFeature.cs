@@ -144,7 +144,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             step = Math.Max(0f, (holder.Size.X - tagW) / (specs.Count - 1));
             width = step * (specs.Count - 1) + tagW;
         }
-        var x0 = (holder.Size.X - width) / 2f;
+        var left = (holder.Size.X - width) / 2f;
         var top = holder.Size.Y - tagH * TabOverlap; // the tucked end starts just above the slot's bottom edge
 
         for (var i = 0; i < tabs.Count; i++)
@@ -157,7 +157,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             tab.PivotOffset = Vector2.Zero;
             tab.Rotation = -Mathf.Pi / 2f;
             tab.Scale = scale;
-            tab.Position = new Vector2(x0 + i * step, top + tagH);
+            tab.Position = new Vector2(left + i * step, top + tagH);
             tab.Modulate = Colors.White;
             tab.SelfModulate = Colors.White;
             if (tab.GetNodeOrNull<Label>("Label") is { } label) label.Visible = false;
@@ -241,7 +241,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         for (var i = _historySeen; i < list.Count; i++)
         {
             if (list[i] is not PotionUsedEntry used || used.Actor != me.Creature) continue;
-            var tabs = _last.Remove(used.Potion, out var t) ? t : new List<string>();
+            var tabs = _last.Remove(used.Potion, out var previous) ? previous : new List<string>();
             _pending = new Pending(used.Potion, tabs, _prevStrength, _prevBuckle, 0);
         }
         _historySeen = list.Count;

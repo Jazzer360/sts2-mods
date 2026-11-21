@@ -20,7 +20,7 @@ public class DrawScanTests
         return typeof(AbstractModel).Assembly.GetTypes()
             .Where(type => !type.IsAbstract && typeof(AbstractModel).IsAssignableFrom(type))
             .Where(type => Hooks.Any(hook => type.GetMethod(hook, BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly) != null))
-            .Select(type => type.Name).OrderBy(n => n).ToList();
+            .Select(type => type.Name).OrderBy(name => name).ToList();
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class DrawScanTests
     public void EveryCardThatUsesWhatItDrawsIsAReader()
     {
         GameModels.EnsureLoaded();
-        var users = ModelDb.AllCards.Select(card => card.GetType()).Distinct().Where(UsesWhatItDraws).Select(type => type.Name).OrderBy(n => n).ToList();
+        var users = ModelDb.AllCards.Select(card => card.GetType()).Distinct().Where(UsesWhatItDraws).Select(type => type.Name).OrderBy(name => name).ToList();
         Assert.Contains("EscapePlan", users); // the scan finds the known ones
         var missing = users.Where(user => !SimAdapter.DrawnCardReaders.ContainsKey(user)).ToList();
         Assert.True(missing.Count == 0, "Cards that act on what they draw, not in SimAdapter.DrawnCardReaders: " + string.Join(", ", missing));

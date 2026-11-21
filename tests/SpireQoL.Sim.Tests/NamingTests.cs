@@ -10,12 +10,8 @@ namespace SpireQoL.Sim.Tests;
 /// </summary>
 public class NamingTests
 {
-    /// <summary>
-    /// Short names still in the code, being named one area at a time: this only goes down. A new short name fails; naming some lowers it.
-    /// </summary>
-    private const int StillShort = 275;
-
-    private static readonly HashSet<string> Words = new() { "id", "me", "ex", "ok", "to", "at", "on", "_" };
+    /// <summary>Short words that are the word itself: hp is the game's own name for the stat, id an id.</summary>
+    private static readonly HashSet<string> Words = new() { "id", "hp", "me", "ex", "ok", "to", "at", "on", "_" };
 
     private static readonly Regex[] Declarations =
     {
@@ -58,6 +54,6 @@ public class NamingTests
                 }
             }
         }
-        Assert.True(found.Count <= StillShort, $"{found.Count} short names, {found.Count - StillShort} more than before (say what each is): " + string.Join("; ", found.Distinct()));
+        Assert.True(found.Count == 0, $"{found.Count} short names (say what each is): " + string.Join("; ", found.Distinct().Take(60))); ", found.Distinct()));
     }
 }

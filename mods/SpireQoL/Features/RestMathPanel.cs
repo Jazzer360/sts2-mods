@@ -33,16 +33,16 @@ internal sealed class RestMathPanel
 
     /// <param name="lines">Each step's icon and the HP it changes, in order.</param>
     /// <param name="over">The rest heal that doesn't reach the result (0: no line).</param>
-    public void Show(int hp, IReadOnlyList<(Texture2D? Icon, int Hp)> lines, int resultHp, int resultMax, int over)
+    public void Show(int currentHp, IReadOnlyList<(Texture2D? Icon, int Hp)> lines, int resultHp, int resultMax, int over)
     {
-        var key = $"{hp}|{string.Join(",", lines.Select(line => $"{line.Icon?.GetInstanceId()}:{line.Hp}"))}|{resultHp}/{resultMax}|{over}";
+        var key = $"{currentHp}|{string.Join(",", lines.Select(line => $"{line.Icon?.GetInstanceId()}:{line.Hp}"))}|{resultHp}/{resultMax}|{over}";
         if (key == _key) return;
         _key = key;
         UiKit.Clear(_grid);
 
         _grid.AddChild(UiKit.Icon(GameIcons.Heart(), DamageMathPanel.IconSize));
         var now = DamageMathPanel.Number(HpColor);
-        now.Text = $"{hp}";
+        now.Text = $"{currentHp}";
         _grid.AddChild(now);
         foreach (var (icon, amount) in lines)
         {

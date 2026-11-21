@@ -14,7 +14,7 @@ public class AboutTests
     {
         var text = ReleaseNotes.Resource("CHANGELOG.md");
         Assert.NotNull(text);
-        var headings = text!.Split('\n').Count(l => l.StartsWith("### " + ReleaseNotes.ModName + " "));
+        var headings = text!.Split('\n').Count(line => line.StartsWith("### " + ReleaseNotes.ModName + " "));
         var releases = ReleaseNotes.Releases;
         Assert.Equal(headings, releases.Count);
         Assert.All(releases, release => Assert.NotEmpty(release.Sections));

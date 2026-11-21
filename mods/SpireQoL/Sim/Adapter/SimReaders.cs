@@ -71,10 +71,10 @@ public static class SimReaders
                 case "YahPower": data = Internal(power, "triggeredThisTurn") ? 1 : 0; break;
                 // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
                 case nameof(VigorPower) or "AimPower" or "QuietusPower" or nameof(GigantificationPower):
-                    data = Sts2State.Private<object?>(power, "_internalData", null) is { } bd && Sts2State.Private<object?>(bd, "commandToModify", null) != null
+                    data = Sts2State.Private<object?>(power, "_internalData", null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", null) != null
                         ? Models.AttackBoundPower.BoundOutside : 0;
                     break;
-                case nameof(JugglingPower): data = Sts2State.Private<object?>(power, "_internalData", null) is { } jd ? Sts2State.Private(jd, "attacksPlayedThisTurn", 0) : 0; break;
+                case nameof(JugglingPower): data = Sts2State.Private<object?>(power, "_internalData", null) is { } juggled ? Sts2State.Private(juggled, "attacksPlayedThisTurn", 0) : 0; break;
                 // Whose plays it acts on (+ 100, so 0 stays "nobody").
                 // Gone with their applier (AfterDeath), Magic Bomb only while it lives: its id + 100.
                 case nameof(ConstrictPower) or nameof(MagicBombPower): data = power.Applier is { } caster && idOf(caster) is { } caId ? caId + 100 : 0; break;
@@ -99,7 +99,7 @@ public static class SimReaders
 
     /// <summary>A flag in a power's internal data (PowerModel._internalData), true when unreadable (so a once-a-turn proc isn't promised).</summary>
     private static bool Internal(PowerModel power, string field) =>
-        Sts2State.Private<object?>(power, "_internalData", null) is not { } d || Sts2State.Private(d, field, true);
+        Sts2State.Private<object?>(power, "_internalData", null) is not { } internalData || Sts2State.Private(internalData, field, true);
 
     /// <summary>
     /// The values of every relic and power of these creatures and players (their DynamicVars) for SimState.Vars: "id:Name:Var",
@@ -243,7 +243,7 @@ public static class SimReaders
     public static SimCard Card(CardModel card, SpireQoL.Procs.PlayFacts facts, Player me)
     {
         var simCard = Card(card, facts.Energy);
-        bool Safe(Func<bool> q) { try { return q(); } catch { return false; } }
+        bool Safe(Func<bool> read) { try { return read(); } catch { return false; } }
         return simCard with
         {
             Stars = facts.Stars,

@@ -15,7 +15,7 @@ public class SimJobTests
     {
         var state = new SimState();
         for (var i = 0; i < 3; i++) state.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 5 + i * 2, Block = i, Hits = new() { 6, 4 } });
-        state.You.Orbs = Enumerable.Range(0, 5).Select(i => Lightning(2 + i % 2)).ToList();
+        state.You.Orbs = Enumerable.Range(0, 5).Select(index => Lightning(2 + index % 2)).ToList();
         state.You.OrbCapacity = 5;
         state.You.Juggernaut = 2;
         state.You.Plating = 3;

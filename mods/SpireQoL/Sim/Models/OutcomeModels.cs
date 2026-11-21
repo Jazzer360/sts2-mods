@@ -10,7 +10,7 @@ internal static class OutcomeRules
     public static OutcomeRule KillsIt(int enemy) => new(true, outcome => outcome.KilledByPlayInAny.Contains(enemy));
 
     /// <summary>The play kills another enemy in some branch: a warning, as that makes this one stronger.</summary>
-    public static OutcomeRule KillsAnother(int enemy) => new(true, outcome => outcome.KilledByPlayInAny.Any(k => k != enemy));
+    public static OutcomeRule KillsAnother(int enemy) => new(true, outcome => outcome.KilledByPlayInAny.Any(killed => killed != enemy));
 
     /// <summary>The play kills some enemy in every branch of an aim (not always the same one): a bonus.</summary>
     public static readonly OutcomeRule KillsOne = new(false, outcome => outcome.PlayKillsInAll);

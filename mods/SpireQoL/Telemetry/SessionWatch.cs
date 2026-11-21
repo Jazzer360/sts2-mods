@@ -62,7 +62,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         DevEvents.Posted += devEvent => _current?.Post(devEvent);
         host.FrameMeasured += (modMs, gapMs) => _current?.Frame(modMs, gapMs);
         if (ErrorReporter.Instance is { } reporter)
-            reporter.Sent += (fp, id) => DevEvents.Post(new ReportSent(fp[0] == "mismatch" && fp.Length > 1 ? fp[1] : fp[0], id));
+            reporter.Sent += (fingerprint, id) => DevEvents.Post(new ReportSent(fingerprint[0] == "mismatch" && fingerprint.Length > 1 ? fingerprint[1] : fingerprint[0], id));
         AppDomain.CurrentDomain.ProcessExit += (_, _) => End("quit", flush: true);
         SendUnseen();
     }

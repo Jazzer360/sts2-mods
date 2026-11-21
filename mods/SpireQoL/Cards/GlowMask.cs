@@ -65,14 +65,14 @@ internal sealed class GlowMask
     internal static string? MaskedCode(string code)
     {
         if (string.IsNullOrEmpty(code) || !code.Contains("canvas_item")) return null;
-        var typeEnd = code.IndexOf(';', code.IndexOf("shader_type", StringComparison.Ordinal) is var t and >= 0 ? t : 0);
+        var typeEnd = code.IndexOf(';', code.IndexOf("shader_type", StringComparison.Ordinal) is var shaderType and >= 0 ? shaderType : 0);
         if (typeEnd < 0) return null;
         var decls = $"\nuniform sampler2D {Mask} : filter_linear;\nuniform vec2 {Row0} = vec2(1.0, 0.0);\nuniform vec2 {Row1} = vec2(0.0, 1.0);\n" +
                     $"uniform vec2 {Origin} = vec2(0.0);\nuniform vec2 {Size} = vec2(1.0);\nvarying vec2 spireqol_local;\n";
         // After shader_type and any render_mode line.
         var insertAt = typeEnd + 1;
         var render = code.IndexOf("render_mode", insertAt, StringComparison.Ordinal);
-        if (render >= 0 && code.IndexOf(';', render) is var r and >= 0 && code.IndexOf('{', insertAt) is var firstBrace && (firstBrace < 0 || render < firstBrace)) insertAt = r + 1;
+        if (render >= 0 && code.IndexOf(';', render) is var renderEnd and >= 0 && code.IndexOf('{', insertAt) is var firstBrace && (firstBrace < 0 || render < firstBrace)) insertAt = renderEnd + 1;
         code = code.Insert(insertAt, decls);
 
         const string grab = "\n\tspireqol_local = VERTEX;\n";

@@ -442,10 +442,10 @@ public static partial class SimEngine
                 if (decimal.Truncate(before) != decimal.Truncate(amount)) changed.Add((model, o));
             }
         }
-        Phase((model, owner, a) => model.ModifyHpLostBeforeOsty(state, owner, ctx, a));
-        Phase((model, owner, a) => model.ModifyHpLostBeforeOstyLate(state, owner, ctx, a));
-        Phase((model, owner, a) => model.ModifyHpLostAfterOsty(state, owner, ctx, a));
-        Phase((model, owner, a) => model.ModifyHpLostAfterOstyLate(state, owner, ctx, a));
+        Phase((model, owner, running) => model.ModifyHpLostBeforeOsty(state, owner, ctx, running));
+        Phase((model, owner, running) => model.ModifyHpLostBeforeOstyLate(state, owner, ctx, running));
+        Phase((model, owner, running) => model.ModifyHpLostAfterOsty(state, owner, ctx, running));
+        Phase((model, owner, running) => model.ModifyHpLostAfterOstyLate(state, owner, ctx, running));
         foreach (var (simModel, o) in changed) simModel.AfterModifyingHpLost(state, o);
         return amount;
     }

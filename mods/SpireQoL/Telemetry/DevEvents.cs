@@ -118,9 +118,9 @@ public static class DevEvents
 
     public static void Post(DevEvent devEvent)
     {
-        var h = Posted;
-        if (h == null) return;
-        try { h(devEvent); }
+        var handlers = Posted;
+        if (handlers == null) return;
+        try { handlers(devEvent); }
         catch (Exception ex)
         {
             if (Interlocked.Exchange(ref _errorSaid, 1) == 0) OnError?.Invoke(ex);

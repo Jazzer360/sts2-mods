@@ -64,12 +64,12 @@ public class SimPerformanceTests
         state.You.Plating = 3;
         state.You.OrichalcumBlock = 6;
         var plays = new List<SimPlay?> { null };
-        for (var c = 0; c < 10; c++)
-            for (var t = 0; t < 3; t++)
+        for (var copy = 0; copy < 10; copy++)
+            for (var target = 0; target < 3; target++)
                 plays.Add(new SimPlay
                 {
-                    HitTarget = SimPlay.Target.Single, TargetId = t, Hits = 1, HitDamage = { [0] = 9, [1] = 9, [2] = 9 },
-                    BlockAmount = 5, BlockGains = c % 2,
+                    HitTarget = SimPlay.Target.Single, TargetId = target, Hits = 1, HitDamage = { [0] = 9, [1] = 9, [2] = 9 },
+                    BlockAmount = 5, BlockGains = copy % 2,
                     OrbOps = { new OrbOp { Op = OrbOp.Kind.Channel, Orb = Lightning() } },
                 });
         return (state, plays);
@@ -85,11 +85,11 @@ public class SimPerformanceTests
         for (var i = 0; i < 4; i++) state.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 60 + i * 11, Block = 4, Hits = new() { 9, 9 } });
         state.You.OrbCapacity = 6;
         state.You.Orbs = Enumerable.Range(0, 6).Select(_ => Lightning()).ToList();
-        for (var t = 0; t < 3; t++)
+        for (var target = 0; target < 3; target++)
             state.Teammates.Add(new SimPlayer { OrbCapacity = 6, HandCount = -1, Orbs = Enumerable.Range(0, 6).Select(_ => Lightning()).ToList() });
         state.TeammatesBeforeMe = 1;
         var plays = new List<SimPlay?> { null };
-        plays.AddRange(Enumerable.Range(0, 4).Select(t => new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = t, Hits = 1, HitDamage = { [0] = 9, [1] = 9, [2] = 9, [3] = 9 } }));
+        plays.AddRange(Enumerable.Range(0, 4).Select(target => new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = target, Hits = 1, HitDamage = { [0] = 9, [1] = 9, [2] = 9, [3] = 9 } }));
         return (state, plays);
     }
 
@@ -127,7 +127,7 @@ public class SimPerformanceTests
         state.You.Orbs = new() { Lightning(), Lightning(), Frost() };
         state.You.OrbCapacity = 3;
         var plays = new List<SimPlay?> { null };
-        plays.AddRange(Enumerable.Range(0, 16).Select(t => new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = t % 2, Hits = 1, HitDamage = { [0] = 6, [1] = 6 } }));
+        plays.AddRange(Enumerable.Range(0, 16).Select(target => new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = target % 2, Hits = 1, HitDamage = { [0] = 6, [1] = 6 } }));
         return (state, plays);
     }
 
@@ -200,7 +200,7 @@ public class SimPerformanceTests
             SimPlayer Setup(SimPlayer player)
             {
                 player.OrbCapacity = Math.Max(orbs, 1);
-                player.Orbs = Enumerable.Range(0, orbs).Select(i => i % 3 == 2 ? Frost() : Lightning()).ToList();
+                player.Orbs = Enumerable.Range(0, orbs).Select(index => index % 3 == 2 ? Frost() : Lightning()).ToList();
                 player.Plating = 4;
                 if (beacon)
                 {
@@ -210,12 +210,12 @@ public class SimPerformanceTests
                 return player;
             }
             Setup(state.You);
-            for (var t = 1; t < players; t++) state.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
+            for (var teammate = 1; teammate < players; teammate++) state.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
             var plays = new SimPlay?[]
             {
                 null,
                 Shatter(),
-                new() { HitTarget = SimPlay.Target.Random, Hits = 5, HitDamage = Enumerable.Range(0, enemies).ToDictionary(i => i, _ => 4) },
+                new() { HitTarget = SimPlay.Target.Random, Hits = 5, HitDamage = Enumerable.Range(0, enemies).ToDictionary(enemyId => enemyId, _ => 4) },
                 new() { BlockAmount = 6, BlockGains = 2, OrbOps = { new OrbOp { Op = OrbOp.Kind.Channel, Orb = Lightning() } } },
             };
             foreach (var play in plays)

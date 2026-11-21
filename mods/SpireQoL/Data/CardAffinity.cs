@@ -151,9 +151,9 @@ public static class CardAffinity
         return types;
     }
 
-    private static bool Safe(Func<CardModel, bool> f, CardModel card)
+    private static bool Safe(Func<CardModel, bool> test, CardModel card)
     {
-        try { return f(card); }
+        try { return test(card); }
         catch { return true; }
     }
 

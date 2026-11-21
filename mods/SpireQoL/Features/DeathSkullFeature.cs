@@ -109,8 +109,8 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
         if (mark.Root.GetParent() is not Label label) return;
         mark.Chance.Visible = chance != null;
         mark.Chance.Text = chance ?? "";
-        var h = Math.Max(12f, label.Size.Y * 0.9f);
-        mark.Icon.CustomMinimumSize = new Vector2(h, h);
+        var height = Math.Max(12f, label.Size.Y * 0.9f);
+        mark.Icon.CustomMinimumSize = new Vector2(height, height);
         var font = label.GetThemeFont("font");
         var fontSize = label.GetThemeFontSize("font_size");
         var textWidth = font?.GetStringSize(label.Text, HorizontalAlignment.Left, -1, fontSize).X ?? label.Size.X / 2;
@@ -118,7 +118,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
         var min = mark.Root.GetCombinedMinimumSize();
         mark.Root.Size = min;
         // A gap that scales with the numbers (the label's outline reaches past the measured text).
-        var gap = Math.Max(6f, h * 0.4f);
+        var gap = Math.Max(6f, height * 0.4f);
         mark.Root.Position = new Vector2(textLeft - min.X - gap, (label.Size.Y - min.Y) / 2);
     }
 

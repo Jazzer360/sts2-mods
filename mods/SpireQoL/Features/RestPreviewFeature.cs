@@ -100,9 +100,9 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     {
         try
         {
-            __result?.ContinueWith(t =>
+            __result?.ContinueWith(task =>
             {
-                if (t.IsCompletedSuccessfully && t.Result) return;
+                if (task.IsCompletedSuccessfully && task.Result) return;
                 Used.Remove(__instance);
                 _pendingMend = null;
             });

@@ -121,7 +121,7 @@ internal sealed class InspectScreen
         }
         _groups = groups
             .GroupBy(drawGroup => (drawGroup.Kind, drawGroup.Count, string.Join(",", drawGroup.Cards.Select(card => card.Id.ToString()))))
-            .Select(x => (x.First(), x.Count())).ToList();
+            .Select(sameCard => (sameCard.First(), sameCard.Count())).ToList();
     }
 
     /// <summary>For a transform: pick the card you'd transform from your deck and see exactly what it can become.</summary>
@@ -135,13 +135,13 @@ internal sealed class InspectScreen
         pick.AddThemeFontSizeOverride("font_size", 18);
         pick.AddItem("Any of your cards");
         // One entry per card as you'd see it (same card, upgrade and enchantment), in your deck's order.
-        var cards = me.Deck.Cards.GroupBy(card => (card.Id, card.CurrentUpgradeLevel, card.Enchantment?.GetType())).Select(g => g.First()).ToList();
+        var cards = me.Deck.Cards.GroupBy(card => (card.Id, card.CurrentUpgradeLevel, card.Enchantment?.GetType())).Select(sameCard => sameCard.First()).ToList();
         foreach (var card in cards) pick.AddItem(CardName(card));
         var selected = _transformFrom == null ? 0 : cards.IndexOf(_transformFrom) + 1;
         pick.Selected = Math.Max(0, selected);
-        pick.ItemSelected += i =>
+        pick.ItemSelected += chosen =>
         {
-            _transformFrom = i <= 0 || i > cards.Count ? null : cards[(int)i - 1];
+            _transformFrom = chosen <= 0 || chosen > cards.Count ? null : cards[(int)chosen - 1];
             Regroup();
             Fill(me);
         };
@@ -231,8 +231,8 @@ internal sealed class InspectScreen
         _groupLabels.Clear();
         var held = me.Relics.Select(relic => (Relic: relic, Rule: CardAffinity.For(relic.GetType().Name))).Where(relicRule => relicRule.Rule != null).ToList();
         var heldRules = held.Select(relicRule => relicRule.Rule!).ToList();
-        var upgradedCards = _groups.Any(g => g.Group.Upgraded);
-        var all = _groups.SelectMany(g => g.Group.Cards).Distinct().ToList();
+        var upgradedCards = _groups.Any(row => row.Group.Upgraded);
+        var all = _groups.SelectMany(row => row.Group.Cards).Distinct().ToList();
         FillTransformPicker(me);
 
         // A button per relic of yours that applies to some card here: marks its cards.
@@ -248,10 +248,10 @@ internal sealed class InspectScreen
             _relicButtons!.AddChild(button);
         }
 
-        var n = 0;
+        var position = 0;
         foreach (var (group, times) in _groups)
         {
-            n++;
+            position++;
             var head = Text("", 21, SettingsMenu.Accent);
             head.AutowrapMode = TextServer.AutowrapMode.WordSmart;
             _body!.AddChild(head);
@@ -307,13 +307,13 @@ internal sealed class InspectScreen
             frame.Modulate = marked || _marks.Count == 0 ? Colors.White : new Color(0.45f, 0.45f, 0.45f);
         }
         var rewardChances = new List<double>();
-        var n = 0;
+        var position = 0;
         foreach (var (label, group, times) in _groupLabels)
         {
-            n++;
+            position++;
             var chance = group.Chance(Good);
-            label.Text = Describe(n, group, times) + (_marks.Count > 0 && chance is { } v ? $": {Percent(v)}" : "");
-            if (group.Kind == DrawKind.Reward && chance is { } rp) for (var i = 0; i < times; i++) rewardChances.Add(rp);
+            label.Text = Describe(position, group, times) + (_marks.Count > 0 && chance is { } shownChance ? $": {Percent(shownChance)}" : "");
+            if (group.Kind == DrawKind.Reward && chance is { } rewardChance) for (var i = 0; i < times; i++) rewardChances.Add(rewardChance);
         }
         var marks = _cells.Select(cell => cell.Card).Distinct().Count(Good);
         _overall!.Text = _marks.Count == 0 || marks == 0
@@ -324,15 +324,15 @@ internal sealed class InspectScreen
     }
 
     /// <summary>What a group is: "Reward 2: 3 of these 18 uncommons (twice)", "Each card you transform becomes one of these 72".</summary>
-    private static string Describe(int n, DrawGroup drawGroup, int times)
+    private static string Describe(int position, DrawGroup drawGroup, int times)
     {
         var count = drawGroup.Cards.Count;
         var rarity = drawGroup.Cards.Select(card => card.Rarity).Distinct().ToList() is { Count: 1 } one ? " " + one[0].ToString().ToLowerInvariant() + (count == 1 ? "" : "s") : "";
         var twice = times > 1 ? $" ({times} rewards like it)" : "";
         return drawGroup.Kind switch
         {
-            DrawKind.Reward when drawGroup.Count is { } drawGroupCount => $"Reward {n}: {(drawGroupCount == 1 ? "one" : drawGroupCount.ToString())} of these {count}{rarity}{twice}{Roll(drawGroup)}, chance one you marked is offered",
-            DrawKind.Reward => $"Reward {n}: some of these {count}{rarity}",
+            DrawKind.Reward when drawGroup.Count is { } drawGroupCount => $"Reward {position}: {(drawGroupCount == 1 ? "one" : drawGroupCount.ToString())} of these {count}{rarity}{twice}{Roll(drawGroup)}, chance one you marked is offered",
+            DrawKind.Reward => $"Reward {position}: some of these {count}{rarity}",
             DrawKind.Transform => $"A card you transform becomes one of these {count}, chance it's one you marked",
             DrawKind.Certain => "Always given",
             _ => $"One of these {count}",
@@ -345,7 +345,7 @@ internal sealed class InspectScreen
             ? $" (rarity first: {rarityRoll})"
             : "";
 
-    private static string Percent(double p) => p <= 0 ? "0%" : p >= 1 ? "100%" : p < 0.01 ? "<1%" : $"{Math.Round(p * 100)}%";
+    private static string Percent(double share) => share <= 0 ? "0%" : share >= 1 ? "100%" : share < 0.01 ? "<1%" : $"{Math.Round(share * 100)}%";
 
     private static string Title(RelicModel relic)
     {

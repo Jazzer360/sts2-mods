@@ -12,9 +12,9 @@ public class CrashFilterTests
 {
     private static readonly IReadOnlyDictionary<Assembly, string> Xunit = new Dictionary<Assembly, string> { [typeof(Assert).Assembly] = "OtherMod" };
 
-    private static Exception Caught(Action a)
+    private static Exception Caught(Action crash)
     {
-        try { a(); }
+        try { crash(); }
         catch (Exception ex) { return ex; }
         throw new InvalidOperationException("didn't throw");
     }

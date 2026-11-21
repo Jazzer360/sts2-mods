@@ -47,8 +47,8 @@ public sealed partial class SettingsMenu
         }
 
         // A search shows every matching line across all releases, unpaged.
-        var q = _search?.Text?.Trim();
-        if (!string.IsNullOrEmpty(q))
+        var query = _search?.Text?.Trim();
+        if (!string.IsNullOrEmpty(query))
         {
             var shown = 0;
             foreach (var release in all)

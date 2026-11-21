@@ -116,10 +116,10 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         var screen = warning.GetViewportRect().Size;
         var rect = warning.GetGlobalRect();
         var rightSide = rect.GetCenter().X > screen.X / 2;
-        var x0 = rightSide ? warning.Size.X - width : 0;
+        var left = rightSide ? warning.Size.X - width : 0;
         var top = -height - 2;
-        label.Position = new Vector2(x0, top + (height - min.Y) / 2);
-        gear.Position = new Vector2(x0 + width - gearSize, top + (height - gearSize) / 2);
+        label.Position = new Vector2(left, top + (height - min.Y) / 2);
+        gear.Position = new Vector2(left + width - gearSize, top + (height - gearSize) / 2);
         if (!_logged)
         {
             _logged = true;

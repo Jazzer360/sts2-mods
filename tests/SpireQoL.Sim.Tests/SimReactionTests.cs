@@ -161,7 +161,7 @@ public class SimReactionTests
         state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
         state.You.OrbCapacity = 3;
         state.You.Juggernaut = 3;
-        var plays = Enumerable.Range(0, 24).Select(i => new SimPlay { Name = "P" + i, BlockAmount = i % 5, BlockGains = i % 3, IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 4, [2] = 4, [3] = 4 }, Hits = 1 + i % 3 }).ToList();
+        var plays = Enumerable.Range(0, 24).Select(index => new SimPlay { Name = "P" + index, BlockAmount = index % 5, BlockGains = index % 3, IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 4, [2] = 4, [3] = 4 }, Hits = 1 + index % 3 }).ToList();
         var before = state.ToJson();
         var sequential = plays.Select(play => SimEngine.Run(state, play)).ToList();
         var parallel = await Task.WhenAll(plays.Select(play => Task.Run(() => SimEngine.Run(state, play))));

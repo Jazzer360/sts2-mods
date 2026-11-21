@@ -108,7 +108,7 @@ public sealed partial class SettingsMenu
 
     public bool IsOpen => _layer != null && GodotObject.IsInstanceValid(_layer) && _layer.Visible;
 
-    private QolSettings S => _ctx.Settings;
+    private QolSettings Settings => _ctx.Settings;
 
     public void Toggle()
     {
@@ -138,7 +138,7 @@ public sealed partial class SettingsMenu
         if (IsOpen && _root != null) FitPanel();
         _tinyIcons.RemoveAll(tinyCardIcon => !GodotObject.IsInstanceValid(tinyCardIcon.Root));
         foreach (var tinyCardIcon in _tinyIcons) tinyCardIcon.Fit();
-        if (IsOpen && _page == Page.Guide) foreach (var tick in _guideTicks) tick(_host.Time, S.FlashHz);
+        if (IsOpen && _page == Page.Guide) foreach (var tick in _guideTicks) tick(_host.Time, Settings.FlashHz);
         if (++_frame % 10 != 0) return;
         _modsButton = KeepButton(_modsButton, ModsScreenAnchor());
         _pauseButton = KeepButton(_pauseButton, PauseMenuAnchor());
@@ -311,7 +311,7 @@ public sealed partial class SettingsMenu
         _scroll.AddChild(_rows);
         box.AddChild(_scroll);
 
-        var keys = $"{S.SettingsKey}: this menu · {S.UnlockLayoutKey}: move widgets · {S.HideAllKey}: hide everything · Esc: close. Changes apply right away.";
+        var keys = $"{Settings.SettingsKey}: this menu · {Settings.UnlockLayoutKey}: move widgets · {Settings.HideAllKey}: hide everything · Esc: close. Changes apply right away.";
         box.AddChild(Label(keys, 16, Muted));
         FitPanel();
     }
@@ -385,21 +385,21 @@ public sealed partial class SettingsMenu
     {
         FeatureSwitches(FeaturePage.Fights, new()
         {
-            ["card-indicators"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", S.EtherealOpacity, 0.25, 1, 0.05,
-                v => S.EtherealOpacity = (float)v, v => $"{v:0.00}", Needs("card-indicators")),
+            ["card-indicators"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", Settings.EtherealOpacity, 0.25, 1, 0.05,
+                value => Settings.EtherealOpacity = (float)value, value => $"{value:0.00}", Needs("card-indicators")),
             ["proc-indicators"] = () =>
             {
                 Option("Amounts on proc tabs", "Show the amount on proc tabs: block gained, damage dealt, the amount summoned, cards drawn and energy gained. Off: icon only.",
-                    S.ProcNumbers, v => S.ProcNumbers = v, Needs("proc-indicators"));
+                    Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, Needs("proc-indicators"));
                 Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
-                    S.ProcIndirect, v => S.ProcIndirect = v, Needs("proc-indicators"));
+                    Settings.ProcIndirect, enabled => Settings.ProcIndirect = enabled, Needs("proc-indicators"));
             },
             ["relic-counters"] = () =>
             {
                 Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
-                    S.PulseOneStepEarly, v => S.PulseOneStepEarly = v, Needs("relic-counters"));
-                Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", S.FlashHz, 0.5, 6, 0.5,
-                    v => S.FlashHz = (float)v, v => $"{v:0.0}/s", Needs("relic-counters"));
+                    Settings.PulseOneStepEarly, enabled => Settings.PulseOneStepEarly = enabled, Needs("relic-counters"));
+                Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", Settings.FlashHz, 0.5, 6, 0.5,
+                    value => Settings.FlashHz = (float)value, value => $"{value:0.0}/s", Needs("relic-counters"));
             },
         });
 
@@ -407,10 +407,10 @@ public sealed partial class SettingsMenu
 
         Section("Multiplayer");
         Option("Multiplayer predictions (experimental)", "Count teammates in predictions: their orbs and end-of-turn effects, their block and Beacon of Hope, and each enemy hit on every player. Still being checked against real co-op games.",
-            S.MultiplayerPredictions, v => { S.MultiplayerPredictions = v; Sim.SimAdapter.IncludeTeammates = v; Refresh(); }, indent: false);
+            Settings.MultiplayerPredictions, enabled => { Settings.MultiplayerPredictions = enabled; Sim.SimAdapter.IncludeTeammates = enabled; Refresh(); }, indent: false);
         Option("Count teammates' hands", "Multiplayer: predictions also use the cards in teammates' hands, which you can't see unless they tell you: Ethereal cards exhausting at end of turn (Feel No Pain block, Charon's Ashes and Forgotten Soul damage), Burn, Decay and Regret. Off: only their hand size counts.",
-            S.TeammateHands, v => { S.TeammateHands = v; Combat.TurnEndModel.CountTeammateHands = v; },
-            S.MultiplayerPredictions ? null : "Multiplayer predictions");
+            Settings.TeammateHands, enabled => { Settings.TeammateHands = enabled; Combat.TurnEndModel.CountTeammateHands = enabled; },
+            Settings.MultiplayerPredictions ? null : "Multiplayer predictions");
     }
 
     /// <summary>
@@ -428,20 +428,20 @@ public sealed partial class SettingsMenu
     {
         Section("Chances");
         Option("Show chances", "Every chance the mod shows, when a roll decides an outcome. Off: only what's certain. A ? or a range on what's shown stays: it marks what isn't settled yet.",
-            S.Chances, v => { S.Chances = v; Refresh(); }, indent: false);
-        string? Under(string? feature) => !S.Chances ? "Show chances" : feature;
+            Settings.Chances, enabled => { Settings.Chances = enabled; Refresh(); }, indent: false);
+        string? Under(string? feature) => !Settings.Chances ? "Show chances" : feature;
         if (fights)
         {
             Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tabs, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
-                S.DeathChance, v => S.DeathChance = v, Under(Needs("death-skull", "incoming-damage", "proc-indicators")));
+                Settings.DeathChance, enabled => Settings.DeathChance = enabled, Under(Needs("death-skull", "incoming-damage", "proc-indicators")));
             Option("Draw chance tab", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the Card tabs page has the same switch).",
-                S.TabOwn(QolSettings.DrawChanceKey), v => SetTab(QolSettings.DrawChanceKey, v), Under(Needs("proc-indicators")));
+                Settings.TabOwn(QolSettings.DrawChanceKey), enabled => SetTab(QolSettings.DrawChanceKey, enabled), Under(Needs("proc-indicators")));
             Option("Intent Forecast's random moves", "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",
-                S.IntentOdds, v => S.IntentOdds = v, Under(Needs("intent-forecast")));
+                Settings.IntentOdds, enabled => Settings.IntentOdds = enabled, Under(Needs("intent-forecast")));
         }
         else
             Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
-                S.EventOdds, v => S.EventOdds = v, Under(Needs("run-reminders")));
+                Settings.EventOdds, enabled => Settings.EventOdds = enabled, Under(Needs("run-reminders")));
     }
 
     /// <summary>The page again, for rows that depend on a switch just changed (deferred: the switch is mid-signal).</summary>
@@ -458,10 +458,10 @@ public sealed partial class SettingsMenu
                 foreach (var (place, name, desc) in ReminderPlaceRows)
                 {
                     var key = SpireQoL.Data.ChoiceReminders.Key(place, "*");
-                    Option(name, desc, S.TabOwn(key), v => SetTab(key, v), Needs("run-reminders"));
+                    Option(name, desc, Settings.TabOwn(key), enabled => SetTab(key, enabled), Needs("run-reminders"));
                 }
                 Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
-                    S.EventInspect, v => S.EventInspect = v, Needs("run-reminders"));
+                    Settings.EventInspect, enabled => Settings.EventInspect = enabled, Needs("run-reminders"));
             },
         });
 
@@ -490,10 +490,10 @@ public sealed partial class SettingsMenu
 
         Section("Error reports");
         Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time, and a summary of counts per play session (nothing personal), so they can be fixed.",
-            S.ReportErrors, v =>
+            Settings.ReportErrors, enabled =>
             {
-                S.ReportErrors = v;
-                if (Sts2Mods.Core.Diagnostics.ErrorReporter.Instance is { } errorReporter) errorReporter.Active = v;
+                Settings.ReportErrors = enabled;
+                if (Sts2Mods.Core.Diagnostics.ErrorReporter.Instance is { } errorReporter) errorReporter.Active = enabled;
             }, indent: false);
     }
 
@@ -511,32 +511,32 @@ public sealed partial class SettingsMenu
         // One switch for every tab on cards, then everything under it (decision #122): the kinds, each tab, the families.
         Section("Tabs on cards");
         Option("Tabs on cards", "Every tab the mod hangs on cards: in your hand, and on the cards you're offered outside fights. Off: none (the features' other parts stay).",
-            S.CardTabs, v => { S.CardTabs = v; Refresh(); }, indent: false);
-        var tabs = S.CardTabs ? Needs("card-indicators", "proc-indicators", "shuffle-warning", "run-reminders") : "Tabs on cards";
+            Settings.CardTabs, enabled => { Settings.CardTabs = enabled; Refresh(); }, indent: false);
+        var tabs = Settings.CardTabs ? Needs("card-indicators", "proc-indicators", "shuffle-warning", "run-reminders") : "Tabs on cards";
         Option("Plain tabs", "Tabs that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only. Potion tabs too.",
-            S.PlainTabs, v => S.PlainTabs = v, tabs);
+            Settings.PlainTabs, enabled => Settings.PlainTabs = enabled, tabs);
         Option("Crossed tabs", "Tabs with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus). Potion tabs too.",
-            S.CrossedTabs, v => S.CrossedTabs = v, tabs);
+            Settings.CrossedTabs, enabled => Settings.CrossedTabs = enabled, tabs);
         Option("Aim marker", "The targeting arrow head in a tab's corner when it happens only at some targets. Off: the tab shows without it.",
-            S.AimMarker, v => S.AimMarker = v, tabs);
+            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabs);
         foreach (var tabEntry in SettingsCatalog.CardTabs)
         {
             if (!Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
-            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, tabs), S.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), TabPreview(tabEntry.Key), tabs == null, indent: true);
+            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, tabs), Settings.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), TabPreview(tabEntry.Key), tabs == null, indent: true);
         }
         foreach (var tabEntry in SettingsCatalog.TabGroups)
         {
             if (!Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
             var spacer = new Control { CustomMinimumSize = new Vector2(IconSize, IconSize), MouseFilter = Control.MouseFilterEnum.Ignore };
-            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, tabs), S.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), spacer, tabs == null, indent: true);
+            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, tabs), Settings.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), spacer, tabs == null, indent: true);
         }
 
         // Tab kinds seen in play that the catalog doesn't know (a newer rule): still switchable.
-        var other = S.Tabs.Keys.Where(key => !key.EndsWith(":*") && !key.StartsWith("reminder-") && !SettingsCatalog.IsKnownTabKey(key)).OrderBy(key => key).ToList();
+        var other = Settings.Tabs.Keys.Where(key => !key.EndsWith(":*") && !key.StartsWith("reminder-") && !SettingsCatalog.IsKnownTabKey(key)).OrderBy(key => key).ToList();
         foreach (var key in other)
         {
             if (!Matches(key)) continue;
-            SimpleRow(key, NeedsText("A tab kind without a description yet.", tabs), S.TabOwn(key), on => SetTab(key, on), IconSpacer(), tabs == null, indent: true);
+            SimpleRow(key, NeedsText("A tab kind without a description yet.", tabs), Settings.TabOwn(key), on => SetTab(key, on), IconSpacer(), tabs == null, indent: true);
         }
     }
 
@@ -572,10 +572,10 @@ public sealed partial class SettingsMenu
         tagHead.AddChild(Label("On cards", 20, Accent));
         AllButtons(tagHead, on =>
         {
-            foreach (var (sourceEntry, _) in shown) if (sourceEntry.TagKey != null) S.Tabs[sourceEntry.TagKey] = on;
+            foreach (var (sourceEntry, _) in shown) if (sourceEntry.TagKey != null) Settings.Tabs[sourceEntry.TagKey] = on;
         });
         var groupKeys = shown.Where(entryName => entryName.Entry.TagKey != null).Select(entryName => entryName.Entry.TagPrefix + "*").Distinct();
-        var groupOff = groupKeys.Where(groupKey => !S.TabOwn(groupKey)).ToList();
+        var groupOff = groupKeys.Where(groupKey => !Settings.TabOwn(groupKey)).ToList();
         if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off on the Card tabs page)", 16, Colors.OrangeRed));
         header.AddChild(tagHead);
         if (anyTracker)
@@ -585,7 +585,7 @@ public sealed partial class SettingsMenu
             trackHead.AddChild(Label("Tracker", 20, Accent));
             AllButtons(trackHead, on =>
             {
-                foreach (var (sourceEntry, _) in shown) if (sourceEntry.Tracker != null) S.Relics[sourceEntry.Type] = on;
+                foreach (var (sourceEntry, _) in shown) if (sourceEntry.Tracker != null) Settings.Relics[sourceEntry.Type] = on;
             });
             header.AddChild(trackHead);
         }
@@ -601,7 +601,7 @@ public sealed partial class SettingsMenu
             if (otherSourceEntry.TagKey is { } key)
             {
                 var text = crossed ? "Crossed. " + Capitalize(otherSourceEntry.Tag![SettingsCatalog.CrossedPrefix.Length..]) : otherSourceEntry.Tag!;
-                var (_, control) = Check(S.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
+                var (_, control) = Check(Settings.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
                 tagCell.AddChild(control);
             }
             else
@@ -616,7 +616,7 @@ public sealed partial class SettingsMenu
                 trackCell.CustomMinimumSize = new Vector2(TrackerWidth, 0);
                 if (otherSourceEntry.Tracker != null)
                 {
-                    var (_, control) = Check(S.TrackerEnabled(otherSourceEntry.Type, otherSourceEntry.TrackerDefault), on => SetTracker(otherSourceEntry.Type, on), otherSourceEntry.Tracker, null, expand: true);
+                    var (_, control) = Check(Settings.TrackerEnabled(otherSourceEntry.Type, otherSourceEntry.TrackerDefault), on => SetTracker(otherSourceEntry.Type, on), otherSourceEntry.Tracker, null, expand: true);
                     trackCell.AddChild(control);
                 }
                 row.AddChild(trackCell);
@@ -650,7 +650,7 @@ public sealed partial class SettingsMenu
             AllButtons(cell, on =>
             {
                 foreach (var (sourceEntry, _) in shown)
-                    if (sourceEntry.Reminder(place) != null) S.Tabs[ChoiceReminders.Key(place, sourceEntry.Type)] = on;
+                    if (sourceEntry.Reminder(place) != null) Settings.Tabs[ChoiceReminders.Key(place, sourceEntry.Type)] = on;
             });
             head.AddChild(cell);
         }
@@ -667,7 +667,7 @@ public sealed partial class SettingsMenu
                 if (otherSourceEntry.Reminder(place) is { } text)
                 {
                     var key = ChoiceReminders.Key(place, otherSourceEntry.Type);
-                    var (_, control) = Check(S.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
+                    var (_, control) = Check(Settings.TabOwn(key), on => SetTab(key, on), text, null, expand: true);
                     cell.AddChild(control);
                 }
                 else
@@ -706,13 +706,13 @@ public sealed partial class SettingsMenu
 
     private bool FeatureOn(string id)
     {
-        if (S.Features.TryGetValue(id, out var on)) return on;
+        if (Settings.Features.TryGetValue(id, out var on)) return on;
         return true;
     }
 
     private void SetFeature(string id, bool on)
     {
-        S.Features[id] = on;
+        Settings.Features[id] = on;
         if (on) _features.EnableLate(id);
         Saved();
         Refresh(); // the options that need it
@@ -744,21 +744,21 @@ public sealed partial class SettingsMenu
     private void ResetDefaults()
     {
         var settings = new QolSettings();
-        S.Features.Clear();
-        S.Tabs.Clear();
-        S.Relics.Clear();
-        S.ProcNumbers = settings.ProcNumbers;
-        S.ProcIndirect = settings.ProcIndirect;
-        S.DeathChance = settings.DeathChance;
-        S.MultiplayerPredictions = settings.MultiplayerPredictions;
+        Settings.Features.Clear();
+        Settings.Tabs.Clear();
+        Settings.Relics.Clear();
+        Settings.ProcNumbers = settings.ProcNumbers;
+        Settings.ProcIndirect = settings.ProcIndirect;
+        Settings.DeathChance = settings.DeathChance;
+        Settings.MultiplayerPredictions = settings.MultiplayerPredictions;
         Sim.SimAdapter.IncludeTeammates = settings.MultiplayerPredictions;
-        S.TeammateHands = settings.TeammateHands;
+        Settings.TeammateHands = settings.TeammateHands;
         Combat.TurnEndModel.CountTeammateHands = settings.TeammateHands;
-        S.PulseOneStepEarly = settings.PulseOneStepEarly;
-        S.EventOdds = settings.EventOdds;
-        S.EventInspect = settings.EventInspect;
-        S.EtherealOpacity = settings.EtherealOpacity;
-        S.FlashHz = settings.FlashHz;
+        Settings.PulseOneStepEarly = settings.PulseOneStepEarly;
+        Settings.EventOdds = settings.EventOdds;
+        Settings.EventInspect = settings.EventInspect;
+        Settings.EtherealOpacity = settings.EtherealOpacity;
+        Settings.FlashHz = settings.FlashHz;
         foreach (var (id, _, _, _) in FeatureRows)
             if (FeatureOn(id)) _features.EnableLate(id);
         Saved();
@@ -767,13 +767,13 @@ public sealed partial class SettingsMenu
 
     private void SetTab(string key, bool on)
     {
-        S.Tabs[key] = on;
+        Settings.Tabs[key] = on;
         Saved();
     }
 
     private void SetTracker(string type, bool on)
     {
-        S.Relics[type] = on;
+        Settings.Relics[type] = on;
         Saved();
     }
 
@@ -786,7 +786,7 @@ public sealed partial class SettingsMenu
     private void Option(string name, string desc, bool value, Action<bool> set, string? needs = null, bool indent = true)
     {
         if (!Matches(name, desc)) return;
-        SimpleRow(name, needs == null ? desc : $"{desc} Needs {needs} on.", value, v => { set(v); Saved(); }, IconSpacer(), needs == null, indent);
+        SimpleRow(name, needs == null ? desc : $"{desc} Needs {needs} on.", value, enabled => { set(enabled); Saved(); }, IconSpacer(), needs == null, indent);
     }
 
     private void Saved()
@@ -927,7 +927,7 @@ public sealed partial class SettingsMenu
             FocusMode = Control.FocusModeEnum.None,
         };
         slider.Editable = needs == null;
-        slider.ValueChanged += v => { set(v); valueLabel.Text = fmt(v); };
+        slider.ValueChanged += newValue => { set(newValue); valueLabel.Text = fmt(newValue); };
         slider.DragEnded += _ => Saved();
         row.AddChild(slider);
         row.AddChild(valueLabel);
@@ -1049,13 +1049,13 @@ public sealed partial class SettingsMenu
 
     // ------------------------------------------------------------------ data
 
-    private static string Capitalize(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
+    private static string Capitalize(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
 
     private bool Matches(params string?[] fields)
     {
-        var q = _search?.Text?.Trim();
-        if (string.IsNullOrEmpty(q)) return true;
-        return fields.Any(f => f != null && f.Contains(q, StringComparison.CurrentCultureIgnoreCase));
+        var query = _search?.Text?.Trim();
+        if (string.IsNullOrEmpty(query)) return true;
+        return fields.Any(searchable => searchable != null && searchable.Contains(query, StringComparison.CurrentCultureIgnoreCase));
     }
 
     private static HashSet<string> PresentTypes()
@@ -1136,9 +1136,9 @@ public sealed partial class SettingsMenu
     /// <summary>"{Amount:plural:an extra time|{} extra times}" → "an extra time"; "{Amount}" → "X".</summary>
     private static string Placeholders(string raw)
     {
-        var s = raw.Replace("{}", "X");
-        s = Plural.Replace(s, "$1");
-        return Placeholder.Replace(s, "X");
+        var pattern = raw.Replace("{}", "X");
+        pattern = Plural.Replace(pattern, "$1");
+        return Placeholder.Replace(pattern, "X");
     }
 
     private Texture2D? Icon(string type)

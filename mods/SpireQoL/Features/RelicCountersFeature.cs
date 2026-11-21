@@ -136,12 +136,12 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         widget.HasContent = index > 0;
     }
 
-    private static void Paint(Row row, RowState state, float time, float hz)
+    private static void Paint(Row row, RowState state, float time, float frequency)
     {
         var fill = state.Color;
         if (state.Flash)
         {
-            var pulse = UiKit.Pulse(time, hz);
+            var pulse = UiKit.Pulse(time, frequency);
             fill = fill.Lerp(Ready, pulse);
             row.Root.Modulate = new Color(1, 1, 1, 0.65f + 0.35f * pulse);
         }
@@ -169,11 +169,11 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         var row = MakeRow(model);
         var color = shade switch { Shade.Power => PowerFill, Shade.Warning => Warn, Shade.Good => Ok, _ => Fill };
         var state = new RowState(filled, total, flash, color, label);
-        paint = (time, hz) =>
+        paint = (time, frequency) =>
         {
             if (!GodotObject.IsInstanceValid(row.Root)) return;
             row.Tiny?.Fit();
-            Paint(row, state, time, hz);
+            Paint(row, state, time, frequency);
         };
         paint(0, 1);
         return row.Root;
@@ -279,9 +279,9 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
                 // fires) or the turn (Brilliant Scarf), or not counting yet.
                 if (!relic.ShowCounter && !active) return null;
                 if (threshold <= 0) return null;
-                var n = Math.Clamp(relic.DisplayAmount, 0, threshold);
-                var oneEarly = _ctx.Settings.PulseOneStepEarly && n == threshold - 2;
-                return new RowState(n, threshold, active || oneEarly, Fill, $"{n}/{threshold}");
+                var count = Math.Clamp(relic.DisplayAmount, 0, threshold);
+                var oneEarly = _ctx.Settings.PulseOneStepEarly && count == threshold - 2;
+                return new RowState(count, threshold, active || oneEarly, Fill, $"{count}/{threshold}");
             }
             case CounterKind.Limit:
             {

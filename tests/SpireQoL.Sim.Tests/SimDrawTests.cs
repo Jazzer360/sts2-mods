@@ -19,11 +19,11 @@ public class SimDrawTests
 
     private static SimDrawPile Pile(params (SimDrawCard Card, int Count)[] rest) => new() { Rest = rest.Select(cardCount => new SimDrawGroup(cardCount.Card, cardCount.Count)).ToList() };
 
-    /// <summary>A card played from your hand that draws <paramref name="n"/>.</summary>
-    private static SimPlay Draws(int n) => new()
+    /// <summary>A card played from your hand that draws <paramref name="cards"/>.</summary>
+    private static SimPlay Draws(int cards) => new()
     {
-        Name = "Acrobatics", HandCard = 7, HandDelta = -1 + n, Draws = n,
-        Body = { new CardEventAction(CardEvent.Drawn, n) },
+        Name = "Acrobatics", HandCard = 7, HandDelta = -1 + cards, Draws = cards,
+        Body = { new CardEventAction(CardEvent.Drawn, cards) },
     };
 
     private static SimState You(int hand = 5)
@@ -66,7 +66,7 @@ public class SimDrawTests
         state.You.FeelNoPain = 3;
         state.You.Draw = Pile((EtherealBurn, 1), (Burn, 1), (Plain, 8));
         var outcome = SimEngine.Run(state, Draws(2));
-        double P(Func<SimState, bool> f) => outcome.Branches.Where(f).Sum(branch => branch.Weight);
+        double P(Func<SimState, bool> holds) => outcome.Branches.Where(holds).Sum(branch => branch.Weight);
         Assert.Equal(4, outcome.Branches.Count);
         Assert.Equal(28 / 45.0, P(branch => branch.You.Drawn == 2 && branch.You.TurnEndCards.Count == 0), 9);
         Assert.Equal(8 / 45.0, P(branch => branch.You.TurnEndCards.Count == 1 && branch.You.Fading == 1), 9);

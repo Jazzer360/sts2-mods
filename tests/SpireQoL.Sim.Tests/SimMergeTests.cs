@@ -55,34 +55,34 @@ public class SimMergeTests
             var state = new SimState();
             for (var i = 0; i < enemies; i++) state.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = hp[i], Block = block[i] });
             state.You.OrbCapacity = orbs;
-            state.You.Orbs = passive.Select(p => new SimOrb { Kind = OrbKind.Lightning, Passive = p, Evoke = 8 }).ToList();
+            state.You.Orbs = passive.Select(passiveDamage => new SimOrb { Kind = OrbKind.Lightning, Passive = passiveDamage, Evoke = 8 }).ToList();
             var outcome = SimEngine.Run(state);
 
             // Every order of targets, one by one: each hit picks a living enemy, all equally likely.
             var counted = new Dictionary<string, double>();
-            void Hit(int k, int[] h, int[] b, double weight)
+            void Hit(int orbIndex, int[] hpLeft, int[] blockLeft, double weight)
             {
-                var alive = Enumerable.Range(0, enemies).Where(i => h[i] > 0).ToList();
-                if (k == orbs || alive.Count == 0)
+                var alive = Enumerable.Range(0, enemies).Where(enemyIndex => hpLeft[enemyIndex] > 0).ToList();
+                if (orbIndex == orbs || alive.Count == 0)
                 {
-                    var key = string.Join(",", h.Select(x => Math.Max(0, x)));
+                    var key = string.Join(",", hpLeft.Select(enemyHpLeft => Math.Max(0, enemyHpLeft)));
                     counted[key] = counted.GetValueOrDefault(key) + weight;
                     return;
                 }
-                foreach (var i in alive)
+                foreach (var target in alive)
                 {
-                    var (h2, b2) = ((int[])h.Clone(), (int[])b.Clone());
-                    var absorbed = Math.Min(b2[i], passive[k]);
-                    b2[i] -= absorbed;
-                    h2[i] -= passive[k] - absorbed;
-                    Hit(k + 1, h2, b2, weight / alive.Count);
+                    var (nextHp, nextBlock) = ((int[])hpLeft.Clone(), (int[])blockLeft.Clone());
+                    var absorbed = Math.Min(nextBlock[target], passive[orbIndex]);
+                    nextBlock[target] -= absorbed;
+                    nextHp[target] -= passive[orbIndex] - absorbed;
+                    Hit(orbIndex + 1, nextHp, nextBlock, weight / alive.Count);
                 }
             }
             Hit(0, hp, block, 1);
 
             var simulated = outcome.Branches
                 .GroupBy(branch => string.Join(",", branch.Enemies.OrderBy(enemy => enemy.Id).Select(enemy => Math.Max(0, enemy.Hp))))
-                .ToDictionary(g => g.Key, g => g.Sum(branch => branch.Weight));
+                .ToDictionary(sameEnemies => sameEnemies.Key, sameEnemies => sameEnemies.Sum(branch => branch.Weight));
             var what = $"fight {fight}: HP [{string.Join(",", hp)}], block [{string.Join(",", block)}], Lightning [{string.Join(",", passive)}]";
             Assert.False(outcome.Truncated, what);
             Assert.Equal(counted.Keys.OrderBy(key => key), simulated.Keys.OrderBy(key => key));

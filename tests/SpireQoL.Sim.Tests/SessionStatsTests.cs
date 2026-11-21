@@ -136,7 +136,7 @@ public class SessionStatsTests
             new SearchDone("b", 0, 50, 30_000, 900, 40, true, null, false),
             new SearchDone("c", 0, 3, 70, 5, 1, true, null, true),
             new FrameWait(8, true), new FrameWait(1, false), new Unsettled(120), new ReportSent("proc", "abc"));
-        foreach (var ms in new[] { 1.0, 2, 3, 45 }) sessionStats.Frame(ms, 16);
+        foreach (var milliseconds in new[] { 1.0, 2, 3, 45 }) sessionStats.Frame(milliseconds, 16);
         sessionStats.Frame(1, 120); // a stall of the game's own
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(3, sessionSummary.Searches.Count);
@@ -160,10 +160,10 @@ public class SessionStatsTests
     public void TakingTheSummaryChangesNothing()
     {
         var sessionStats = Fight(new TurnStarted(1), new CheckDone("forecast", 1, true, null), new TurnStarted(2));
-        var a = sessionStats.Summary("unseen", Info).ToJson();
+        var summary = sessionStats.Summary("unseen", Info).ToJson();
         var sessionSummary = sessionStats.Summary("unseen", Info);
         Assert.Equal(2, sessionSummary.Turns);
-        Assert.Equal(SessionSummary.FromJson(a)!.Clean, sessionSummary.Clean);
+        Assert.Equal(SessionSummary.FromJson(summary)!.Clean, sessionSummary.Clean);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ public class SessionStatsTests
     {
         var sessionStats = Fight(new TurnStarted(1));
         for (var i = 0; i < SessionStats.MaxReasons + 5; i++)
-            for (var n = 0; n <= i; n++) sessionStats.Post(new CheckSkipped("play", 1, $"reason {i}", null));
+            for (var repeat = 0; repeat <= i; repeat++) sessionStats.Post(new CheckSkipped("play", 1, $"reason {i}", null));
         var sessionSummary = sessionStats.Summary("menu", Info);
         Assert.Equal(SessionStats.MaxReasons, sessionSummary.Plays.SkipReasons.Count);
         Assert.Contains($"reason {SessionStats.MaxReasons + 4}", sessionSummary.Plays.SkipReasons.Keys);
@@ -197,11 +197,11 @@ public class SessionStatsTests
     [InlineData(new[] { 0.05 }, 0.95, 0.05)]
     [InlineData(new[] { 25.0, 25.5 }, 1.0, 25.5)]
     [InlineData(new double[0], 0.95, 0)]
-    public void PercentilesAreTheirBucketsUpperEdgeNeverAboveTheLargest(double[] values, double p, double expected)
+    public void PercentilesAreTheirBucketsUpperEdgeNeverAboveTheLargest(double[] values, double percentile, double expected)
     {
         var histogram = new Histogram();
         foreach (var value in values) histogram.Add(value);
-        Assert.Equal(expected, histogram.Percentile(p), 6);
+        Assert.Equal(expected, histogram.Percentile(percentile), 6);
     }
 
     [Fact]

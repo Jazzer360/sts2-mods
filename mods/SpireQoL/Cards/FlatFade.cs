@@ -164,14 +164,14 @@ internal sealed class FlatFade
         foreach (var child in _container.GetChildren())
         {
             if (child is not CanvasItem canvasItem || child == _image || keep.Contains(child)) continue;
-            var i = _hidden.FindIndex(nodeAlpha => nodeAlpha.Node == canvasItem);
-            if (i < 0)
+            var hiddenIndex = _hidden.FindIndex(nodeAlpha => nodeAlpha.Node == canvasItem);
+            if (hiddenIndex < 0)
             {
                 _hidden.Add((canvasItem, canvasItem.Modulate.A));
-                i = _hidden.Count - 1;
+                hiddenIndex = _hidden.Count - 1;
             }
             var color = canvasItem.Modulate;
-            color.A = ready ? 0f : _hidden[i].Alpha * alpha;
+            color.A = ready ? 0f : _hidden[hiddenIndex].Alpha * alpha;
             canvasItem.Modulate = color;
         }
     }
@@ -192,15 +192,15 @@ internal sealed class FlatFade
         var copy = new List<string>();
         Describe(_container, keep, 0, "", live);
         Describe(_copy.Body, new Node?[] { _copy.CardHighlight }, 0, "", copy);
-        var n = Math.Max(live.Count, copy.Count);
-        for (var i = 0; i < n; i++)
+        var lineCount = Math.Max(live.Count, copy.Count);
+        for (var i = 0; i < lineCount; i++)
         {
-            var l = i < live.Count ? live[i] : "(nothing)";
-            var c = i < copy.Count ? copy[i] : "(nothing)";
-            if (l == c) continue;
+            var liveLine = i < live.Count ? live[i] : "(nothing)";
+            var copyLine = i < copy.Count ? copy[i] : "(nothing)";
+            if (liveLine == copyLine) continue;
             var card = _live.Model?.GetType().Name ?? "?";
-            if (LoggedMismatch.Add(card + "|" + l))
-                ModEntry.Log.Warn($"Ethereal: the faded copy of {card} differs from the card: the card has {l}, the copy {c}");
+            if (LoggedMismatch.Add(card + "|" + liveLine))
+                ModEntry.Log.Warn($"Ethereal: the faded copy of {card} differs from the card: the card has {liveLine}, the copy {copyLine}");
             return;
         }
     }
@@ -211,8 +211,8 @@ internal sealed class FlatFade
         Describe(root, keep, 0, "", parts);
         var hashCode = new HashCode();
         foreach (var part in parts) hashCode.Add(part);
-        var s = hashCode.ToHashCode();
-        return s == 0 ? 1 : s;
+        var hash = hashCode.ToHashCode();
+        return hash == 0 ? 1 : hash;
     }
 
     /// <summary>What a node tree shows: each visible node's text, texture and colours (not the top layers' alpha, which this sets).</summary>
@@ -222,19 +222,19 @@ internal sealed class FlatFade
         {
             if (child == _image || keep.Contains(child) || child is GpuParticles2D or SubViewport) continue;
             if (child is not CanvasItem canvasItem) continue;
-            var p = path + "/" + child.Name;
-            if (!canvasItem.Visible) { into.Add(p + " hidden"); continue; }
-            var s = p;
-            if (depth > 0 && canvasItem.Modulate != Colors.White) s += " modulate " + canvasItem.Modulate.ToHtml();
-            if (canvasItem.SelfModulate != Colors.White) s += " self " + canvasItem.SelfModulate.ToHtml();
+            var childPath = path + "/" + child.Name;
+            if (!canvasItem.Visible) { into.Add(childPath + " hidden"); continue; }
+            var line = childPath;
+            if (depth > 0 && canvasItem.Modulate != Colors.White) line += " modulate " + canvasItem.Modulate.ToHtml();
+            if (canvasItem.SelfModulate != Colors.White) line += " self " + canvasItem.SelfModulate.ToHtml();
             switch (child)
             {
-                case Label label: s += $" \"{label.Text}\" {label.GetThemeColor("font_color").ToHtml()}"; break;
-                case RichTextLabel richTextLabel: s += $" \"{richTextLabel.Text}\""; break;
-                case TextureRect icon: s += " tex " + (icon.Texture?.ResourcePath is { Length: > 0 } rp ? rp : icon.Texture?.GetInstanceId().ToString() ?? "none"); break;
+                case Label label: line += $" \"{label.Text}\" {label.GetThemeColor("font_color").ToHtml()}"; break;
+                case RichTextLabel richTextLabel: line += $" \"{richTextLabel.Text}\""; break;
+                case TextureRect icon: line += " tex " + (icon.Texture?.ResourcePath is { Length: > 0 } resourcePath ? resourcePath : icon.Texture?.GetInstanceId().ToString() ?? "none"); break;
             }
-            into.Add(s);
-            Describe(child, keep, depth + 1, p, into);
+            into.Add(line);
+            Describe(child, keep, depth + 1, childPath, into);
         }
     }
 
