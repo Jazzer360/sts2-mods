@@ -349,7 +349,6 @@ internal static class CardCoverage
         return set;
     }
 
-    /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's OnPlay and its async state machine.</summary>
     /// <summary>
     /// The card's OnPlay calls Type.Method more than once, or inside a loop (a call between a backward branch and its target).
     /// </summary>
@@ -378,6 +377,7 @@ internal static class CardCoverage
         return false;
     }
 
+    /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's OnPlay and its async state machine.</summary>
     private static HashSet<string> OnPlayCalls(Type cardType)
     {
         var set = new HashSet<string>();

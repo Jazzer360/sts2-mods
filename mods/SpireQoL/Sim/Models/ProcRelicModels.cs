@@ -15,11 +15,10 @@ public abstract class FirstAttackGivesUp : RelicProc
         Mine(play, owner) && play.Card.Type == SimCardType.Attack && SimEngine.TurnOf(s, owner)["Started:Attack"] == 0 ? Fire(s, owner) : One(s);
 }
 
-public sealed class ArtOfWar : FirstAttackGivesUp { public override string Name => "ArtOfWar"; }
+public sealed class ArtOfWar : FirstAttackGivesUp { }
 /// <summary>RippleBasin: also BeforeSideTurnEnd: its block (amount) when its owner played no Attack this turn.</summary>
 public sealed class RippleBasin : FirstAttackGivesUp
 {
-    public override string Name => "RippleBasin";
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) && SimEngine.PlayerOf(s, owner) is { AttacksThisTurn: 0 } && Amount(s, owner) > 0 ? Block(s, owner, Amount(s, owner)) : One(s);
 }
@@ -31,7 +30,6 @@ public sealed class RippleBasin : FirstAttackGivesUp
 /// </summary>
 public sealed class PaelsTears : RelicProc
 {
-    public override string Name => "PaelsTears";
     public override bool Harmful => true;
     public override ActedSeen Seen => ActedSeen.NoEnergyLeft;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
@@ -54,7 +52,6 @@ public sealed class PaelsTears : RelicProc
 /// </summary>
 public sealed class Pocketwatch : RelicProc
 {
-    public override string Name => "Pocketwatch";
     public override bool Harmful => true;
     /// <summary>It doesn't flash: its counter (cards this turn) goes past the threshold.</summary>
     public override ActedSeen Seen => ActedSeen.CounterPassedLimit;
@@ -76,7 +73,6 @@ public sealed class Pocketwatch : RelicProc
 /// </summary>
 public sealed class GremlinHorn : SimModel
 {
-    public override string Name => "GremlinHorn";
     public override void AfterDeath(SimState s, int owner, int dead)
     {
         if (dead < 0 || !Who.IsPlayer(owner)) return;
@@ -92,7 +88,6 @@ public sealed class GremlinHorn : SimModel
 /// </summary>
 public sealed class CentennialPuzzle : RelicProc
 {
-    public override string Name => "CentennialPuzzle";
     public override TabKind? Tab => TabKind.Draw;
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
@@ -106,7 +101,6 @@ public sealed class CentennialPuzzle : RelicProc
 /// <summary>PaelsEye.BeforeCardPlayed: while armed, the turn's first card you play (not an auto-play) gives up its extra turn (bad for you).</summary>
 public sealed class PaelsEye : RelicProc
 {
-    public override string Name => "PaelsEye";
     public override bool Harmful => true;
     /// <summary>The turn's first card clears its Active status (BeforeCardPlayed: Status = Normal); it doesn't flash.</summary>
     public override ActedSeen Seen => ActedSeen.StatusCleared;
@@ -138,7 +132,6 @@ public sealed class PaelsEye : RelicProc
 /// <summary>BiiigHug.AfterShuffle: a Soot into your draw pile on every shuffle (bad for you).</summary>
 public sealed class BiiigHug : RelicProc
 {
-    public override string Name => "BiiigHug";
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.Shuffled && player == owner ? Fire(s, owner) : One(s);
@@ -149,19 +142,17 @@ public sealed class BiiigHug : RelicProc
 /// <summary>BurningSticks.AfterCardExhausted: once a combat, a Skill you exhaust is copied into your hand.</summary>
 public sealed class BurningSticks : RelicProc
 {
-    public override string Name => "BurningSticks";
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
     {
         if (ev != CardEvent.Exhausted || player != owner || !Armed(s, owner) || s.EventCard?.Type != SimCardType.Skill) return One(s);
         Disarm(s, owner);
-        return Then(Fire(s, owner), CardEvent.Generated, 1, owner);
+        return Cause(Fire(s, owner), CardEvent.Generated, 1, owner);
     }
 }
 
 /// <summary>MusicBox: once a turn, the first Attack you play (bound at BeforeCardPlayed) is copied into your hand, Ethereal.</summary>
 public sealed class MusicBox : RelicProc
 {
-    public override string Name => "MusicBox";
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (Mine(play, owner) && Armed(s, owner) && play.Card.Type == SimCardType.Attack && !s.Bound.Has($"{Name}@{owner}")) Bind(s, owner, 1);
@@ -171,7 +162,7 @@ public sealed class MusicBox : RelicProc
     {
         if (!Mine(play, owner) || TakeBound(s, owner) is null) return One(s);
         Disarm(s, owner);
-        return Then(Fire(s, owner), CardEvent.Generated, 1, owner);
+        return Cause(Fire(s, owner), CardEvent.Generated, 1, owner);
     }
 }
 
@@ -181,7 +172,6 @@ public sealed class MusicBox : RelicProc
 /// </summary>
 public sealed class UnsettlingLamp : RelicProc
 {
-    public override string Name => "UnsettlingLamp";
     private const int BoundBit = 2;
     public override int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target, bool debuff)
     {
@@ -207,7 +197,6 @@ public sealed class UnsettlingLamp : RelicProc
 /// <summary>IntimidatingHelmet.BeforeCardPlayed: block for each card you play costing at least its Energy value.</summary>
 public sealed class IntimidatingHelmet : RelicProc
 {
-    public override string Name => "IntimidatingHelmet";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Energy >= Var(s, owner, "Energy", 2) ? RelicBlock(s, owner) : One(s);
@@ -216,7 +205,6 @@ public sealed class IntimidatingHelmet : RelicProc
 /// <summary>DaughterOfTheWind.AfterCardPlayed: block for each Attack you play.</summary>
 public sealed class DaughterOfTheWind : RelicProc
 {
-    public override string Name => "DaughterOfTheWind";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Type == SimCardType.Attack ? RelicBlock(s, owner) : One(s);
@@ -225,7 +213,6 @@ public sealed class DaughterOfTheWind : RelicProc
 /// <summary>Permafrost.AfterCardPlayed: block for the first Power you play each combat.</summary>
 public sealed class Permafrost : RelicProc
 {
-    public override string Name => "Permafrost";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
@@ -238,7 +225,6 @@ public sealed class Permafrost : RelicProc
 /// <summary>LostWisp.AfterCardPlayed: damage to every hittable enemy for each Power you play.</summary>
 public sealed class LostWisp : RelicProc
 {
-    public override string Name => "LostWisp";
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Type == SimCardType.Power ? RelicDamageAll(s, owner) : One(s);
@@ -247,10 +233,9 @@ public sealed class LostWisp : RelicProc
 /// <summary>GamePiece.AfterCardPlayed: a draw for each Power you play.</summary>
 public sealed class GamePiece : RelicProc
 {
-    public override string Name => "GamePiece";
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Power ? Then(Fire(s, owner), CardEvent.Drawn, 1, owner) : One(s);
+        Mine(play, owner) && play.Card.Type == SimCardType.Power ? Cause(Fire(s, owner), CardEvent.Drawn, 1, owner) : One(s);
 }
 
 /// <summary>
@@ -259,7 +244,6 @@ public sealed class GamePiece : RelicProc
 /// </summary>
 public sealed class MummifiedHand : RelicProc
 {
-    public override string Name => "MummifiedHand";
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Type == SimCardType.Power && play.Card.OthersInHandCost ? Fire(s, owner) : One(s);
 }
@@ -267,7 +251,6 @@ public sealed class MummifiedHand : RelicProc
 /// <summary>HelicalDart.AfterCardPlayed: each Shiv you play gives Dexterity this turn.</summary>
 public sealed class HelicalDart : RelicProc
 {
-    public override string Name => "HelicalDart";
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Is("Shiv") ? Fire(s, owner) : One(s);
 }
@@ -275,17 +258,15 @@ public sealed class HelicalDart : RelicProc
 /// <summary>IvoryTile.AfterCardPlayed: energy for each card you play costing at least its EnergyThreshold.</summary>
 public sealed class IvoryTile : RelicProc
 {
-    public override string Name => "IvoryTile";
     public override TabKind? Tab => TabKind.Energy;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Energy >= Var(s, owner, "EnergyThreshold", 3)
-            ? Then(Fire(s, owner), CardEvent.EnergyGained, Var(s, owner, "Energy", 1), owner) : One(s);
+            ? Cause(Fire(s, owner), CardEvent.EnergyGained, Var(s, owner, "Energy", 1), owner) : One(s);
 }
 
 /// <summary>ChemicalX.ModifyXValue: X-cost cards (energy or stars) get more.</summary>
 public sealed class ChemicalX : RelicProc
 {
-    public override string Name => "ChemicalX";
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.PlayIndex == 0 && (play.Card.CostsX || play.Card.StarCostX) ? Fire(s, owner) : One(s);
 }
@@ -293,7 +274,6 @@ public sealed class ChemicalX : RelicProc
 /// <summary>RazorTooth.AfterCardPlayed: an Attack or Skill you play that can be upgraded is upgraded.</summary>
 public sealed class RazorTooth : RelicProc
 {
-    public override string Name => "RazorTooth";
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.PlayIndex == 0 && play.Card.Type is SimCardType.Attack or SimCardType.Skill && play.Card.Upgradable ? Fire(s, owner) : One(s);
 }
@@ -301,7 +281,6 @@ public sealed class RazorTooth : RelicProc
 /// <summary>RainbowRing.AfterCardPlayed: once a turn (Data 2: done), the play that completes an Attack, a Skill and a Power this turn.</summary>
 public sealed class RainbowRing : RelicProc
 {
-    public override string Name => "RainbowRing";
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner) || (Data(s, owner) & 2) != 0) return One(s);
@@ -321,7 +300,6 @@ public sealed class RainbowRing : RelicProc
 /// </summary>
 public sealed class ConductorsBaton : RelicProc
 {
-    public override string Name => "ConductorsBaton";
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
         if (!Mine(play, owner) || (Data(s, owner) & 2) != 0) return One(s);
@@ -339,7 +317,6 @@ public sealed class ConductorsBaton : RelicProc
 /// </summary>
 public sealed class ConductorsBatonPower : SimModel
 {
-    public override string Name => "ConductorsBatonPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
         d.Target == owner && d.Props.IsPoweredAttack() ? 0.75m : 1m;
 }
@@ -347,7 +324,6 @@ public sealed class ConductorsBatonPower : SimModel
 /// <summary>Twine.AfterArrowDislodged: block for each of your arrows that comes loose.</summary>
 public sealed class Twine : RelicProc
 {
-    public override string Name => "Twine";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.ArrowDislodged && player == owner ? RelicBlock(s, owner) : One(s);
@@ -356,7 +332,6 @@ public sealed class Twine : RelicProc
 /// <summary>UnceasingTop.AfterHandEmptied: a draw when your last card leaves your hand (a play that draws or creates nothing).</summary>
 public sealed class UnceasingTop : RelicProc
 {
-    public override string Name => "UnceasingTop";
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.PlayIndex == 0 && SimEngine.PlayerOf(s, owner) is { HandCount: 1 }
         && s.PlayEvents[nameof(CardEvent.Drawn)] == 0 && s.PlayEvents[nameof(CardEvent.Generated)] + s.PlayEvents[nameof(CardEvent.GeneratedStatus)] + s.PlayEvents[nameof(CardEvent.GeneratedSadness)] == 0
@@ -367,7 +342,6 @@ public sealed class UnceasingTop : RelicProc
 
 public sealed class Kunai : CounterRelic
 {
-    public override string Name => "Kunai";
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState s, int owner)
     {
@@ -378,7 +352,6 @@ public sealed class Kunai : CounterRelic
 
 public sealed class Shuriken : CounterRelic
 {
-    public override string Name => "Shuriken";
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState s, int owner)
     {
@@ -389,15 +362,13 @@ public sealed class Shuriken : CounterRelic
 
 public sealed class Nunchaku : CounterRelic
 {
-    public override string Name => "Nunchaku";
     public override TabKind? Tab => TabKind.Energy;
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
-    protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => Then(Fire(s, owner), CardEvent.EnergyGained, Var(s, owner, "Energy", 1), owner);
+    protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => Cause(Fire(s, owner), CardEvent.EnergyGained, Var(s, owner, "Energy", 1), owner);
 }
 
 public sealed class OrnamentalFan : CounterRelic
 {
-    public override string Name => "OrnamentalFan";
     public override TabKind? Tab => TabKind.Block;
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => RelicBlock(s, owner);
@@ -405,7 +376,6 @@ public sealed class OrnamentalFan : CounterRelic
 
 public sealed class Kusarigama : CounterRelic
 {
-    public override string Name => "Kusarigama";
     public override TabKind? Tab => TabKind.Damage;
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => RelicDamageRandom(s, owner);
@@ -413,7 +383,6 @@ public sealed class Kusarigama : CounterRelic
 
 public sealed class LetterOpener : CounterRelic
 {
-    public override string Name => "LetterOpener";
     public override TabKind? Tab => TabKind.Damage;
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Skill;
     protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => RelicDamageAll(s, owner);
@@ -421,7 +390,6 @@ public sealed class LetterOpener : CounterRelic
 
 public sealed class TuningFork : CounterRelic
 {
-    public override string Name => "TuningFork";
     public override TabKind? Tab => TabKind.Block;
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Skill;
     protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => RelicBlock(s, owner);
@@ -429,10 +397,9 @@ public sealed class TuningFork : CounterRelic
 
 public sealed class IronClub : CounterRelic
 {
-    public override string Name => "IronClub";
     public override TabKind? Tab => TabKind.Draw;
     protected override bool Counts(SimCard card) => true;
-    protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => Then(Fire(s, owner), CardEvent.Drawn, 1, owner);
+    protected override IEnumerable<SimState> OnComplete(SimState s, int owner) => Cause(Fire(s, owner), CardEvent.Drawn, 1, owner);
 }
 
 // ---- card events
@@ -440,7 +407,6 @@ public sealed class IronClub : CounterRelic
 /// <summary>CharonsAshes.AfterCardExhausted: damage to every hittable enemy for each card you exhaust.</summary>
 public sealed class CharonsAshes : RelicProc
 {
-    public override string Name => "CharonsAshes";
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.Exhausted && player == owner ? DamageAll(s, owner, Amount(s, owner), PropsOf(s, owner, "Damage")) : One(s);
@@ -449,7 +415,6 @@ public sealed class CharonsAshes : RelicProc
 /// <summary>ForgottenSoul.AfterCardExhausted: damage to a random hittable enemy for each card you exhaust.</summary>
 public sealed class ForgottenSoul : RelicProc
 {
-    public override string Name => "ForgottenSoul";
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.Exhausted && player == owner ? DamageRandom(s, owner, Amount(s, owner), PropsOf(s, owner, "Damage")) : One(s);
@@ -458,7 +423,6 @@ public sealed class ForgottenSoul : RelicProc
 /// <summary>JossPaper.AfterCardExhausted: a draw once its ExhaustAmount cards are exhausted (Amount: CardsExhausted).</summary>
 public sealed class JossPaper : RelicProc
 {
-    public override string Name => "JossPaper";
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
     {
@@ -467,14 +431,13 @@ public sealed class JossPaper : RelicProc
         var count = Amount(s, owner) + 1;
         if (count < n) { Set(s, owner, count, Data(s, owner)); return One(s); }
         Set(s, owner, count - n, Data(s, owner));
-        return Then(Fire(s, owner), CardEvent.Drawn, 1, owner);
+        return Cause(Fire(s, owner), CardEvent.Drawn, 1, owner);
     }
 }
 
 /// <summary>Tingsha.AfterCardDiscarded: damage to a random hittable enemy for each card you discard.</summary>
 public sealed class Tingsha : RelicProc
 {
-    public override string Name => "Tingsha";
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.Discarded && player == owner ? RelicDamageRandom(s, owner) : One(s);
@@ -483,7 +446,6 @@ public sealed class Tingsha : RelicProc
 /// <summary>ToughBandages.AfterCardDiscarded: block for each card you discard.</summary>
 public sealed class ToughBandages : RelicProc
 {
-    public override string Name => "ToughBandages";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.Discarded && player == owner ? RelicBlock(s, owner) : One(s);
@@ -492,7 +454,6 @@ public sealed class ToughBandages : RelicProc
 /// <summary>MiniRegent.AfterStarsSpent: once a turn (armed), Strength when you spend stars.</summary>
 public sealed class MiniRegent : RelicProc
 {
-    public override string Name => "MiniRegent";
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
     {
         if (ev != CardEvent.StarsSpent || player != owner || !Armed(s, owner)) return One(s);
@@ -504,7 +465,6 @@ public sealed class MiniRegent : RelicProc
 /// <summary>GalacticDust.AfterStarsSpent: block for every Stars value of stars spent (Amount: StarsSpent so far, kept below it).</summary>
 public sealed class GalacticDust : RelicProc
 {
-    public override string Name => "GalacticDust";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
     {
@@ -521,7 +481,6 @@ public sealed class GalacticDust : RelicProc
 /// <summary>Regalite.AfterCardGeneratedForCombat: once a turn (armed), block when you create a card.</summary>
 public sealed class Regalite : RelicProc
 {
-    public override string Name => "Regalite";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player)
     {
@@ -534,7 +493,6 @@ public sealed class Regalite : RelicProc
 /// <summary>TheAbacus.AfterShuffle: block on every shuffle.</summary>
 public sealed class TheAbacus : RelicProc
 {
-    public override string Name => "TheAbacus";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.Shuffled && player == owner ? RelicBlock(s, owner) : One(s);
@@ -543,7 +501,6 @@ public sealed class TheAbacus : RelicProc
 /// <summary>WhittlingKnife.AfterShuffle: Aim on every shuffle.</summary>
 public sealed class WhittlingKnife : RelicProc
 {
-    public override string Name => "WhittlingKnife";
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.Shuffled && player == owner ? Fire(s, owner) : One(s);
 }
@@ -551,7 +508,6 @@ public sealed class WhittlingKnife : RelicProc
 /// <summary>Fertilizer.AfterCardGeneratedForCombat: Strength when you create a Sadness.</summary>
 public sealed class Fertilizer : RelicProc
 {
-    public override string Name => "Fertilizer";
     public override IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) =>
         ev == CardEvent.GeneratedSadness && player == owner ? Fire(s, owner) : One(s);
 }
@@ -559,7 +515,6 @@ public sealed class Fertilizer : RelicProc
 /// <summary>Metronome.AfterOrbChanneled: damage to every hittable enemy once its OrbCount orbs are channeled this combat (Amount: OrbsChanneled).</summary>
 public sealed class Metronome : RelicProc
 {
-    public override string Name => "Metronome";
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterOrbChanneled(SimState s, int owner, int player)
     {
@@ -575,7 +530,6 @@ public sealed class Metronome : RelicProc
 /// <summary>BoneFlute.AfterAttack: block for each attack your Osty makes.</summary>
 public sealed class BoneFlute : RelicProc
 {
-    public override string Name => "BoneFlute";
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack) =>
         owner == Who.You && attack.Dealer == Who.YourOsty && s.P.OstyHp > 0 ? RelicBlock(s, owner) : One(s);

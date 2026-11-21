@@ -20,7 +20,7 @@ public sealed record DislodgeAllAction : SimAction;
 
 public static partial class SimEngine
 {
-    public const string Impaled = "ImpaledPower";
+    public const string Impaled = nameof(Models.ImpaledPower);
 
     /// <summary>The enemy is impaled by anyone's arrow (ArrowCmd.CreatureIsImpaledByArrow).</summary>
     public static bool IsImpaled(SimState s, int enemy)

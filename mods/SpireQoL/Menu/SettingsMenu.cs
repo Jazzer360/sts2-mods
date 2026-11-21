@@ -361,7 +361,6 @@ public sealed partial class SettingsMenu
         }
     }
 
-    /// <summary>The feature switches on one page.</summary>
     /// <summary>
     /// The feature switches on one page, each followed by its own options, indented under it (decision #122): every indented row
     /// sits under the switch it depends on.

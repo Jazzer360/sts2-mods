@@ -6,7 +6,6 @@ namespace SpireQoL.Telemetry;
 
 // ---------------------------------------------------------------- events only the dev dashboard reads
 
-/// <summary>The first line of every stream file: its format and what wrote it.</summary>
 /// <summary>A launch's stream begins: the format, the mod version, its build (BuildInfo.Label: version, commit, uncommitted), the game.</summary>
 public sealed record StreamStarted(int Format, string Mod, string Game, DateTime StartedUtc, string Build) : DevEvent;
 

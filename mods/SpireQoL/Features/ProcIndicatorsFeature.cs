@@ -57,21 +57,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     private readonly HashSet<string> _warned = new();
 
-    internal static bool CanEverPlayNow(CardModel card)
-    {
-        try
-        {
-            if (card.CanPlay(out var reason, out _)) return true;
-            const UnplayableReason never = UnplayableReason.HasUnplayableKeyword | UnplayableReason.BlockedByHook
-                                           | UnplayableReason.BlockedByCardLogic | UnplayableReason.NoLivingAllies;
-            return (reason & never) == 0;
-        }
-        catch
-        {
-            return true;
-        }
-    }
-
     // Per-frame context.
     private Player _me = null!;
     private ICombatState _cs = null!;
@@ -82,7 +67,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     /// <summary>Per tabbed source this frame's card: whether each aim sets it off in every outcome and in some (PlayFacts.FiresEveryByAim).</summary>
     private readonly Dictionary<string, (Type T, bool[] Every, bool[] Any)> _firesBy = new();
 
-    /// <summary>Each hand card's PlayFacts on the previous frame (what ProcAudit expects a play to do).</summary>
     /// <summary>Each card's facts from the last frame it was in hand (kept after it leaves; ProcAudit).</summary>
     public static IReadOnlyDictionary<CardModel, PlayFacts> LastFacts => _lastFacts;
 
@@ -160,7 +144,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             // Nothing happens on play for a card that can't be played (Unplayable statuses and
             // curses, blocked cards, cards whose own condition isn't met). Cards you just can't
             // afford yet still show, since energy can come mid-turn.
-            if (!CanEverPlayNow(card)) continue;
+            if (!CardPlays.CanPlayThisTurn(card)) continue;
             if (Prepare(card, sources, record: true) is not { } p) continue;
             pending.Add((card, p, _ctx.Decor.For(card)));
         }
@@ -229,8 +213,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             try { h.Add(card.EnergyCost.GetWithModifiers(CostModifiers.All)); } catch { h.Add(-99); }
             foreach (var kw in card.Keywords) h.Add(kw);
             h.Add(card.Affliction?.GetType().Name);
-            h.Add(CardIndicatorsFeature.PlayCount(card));
-            h.Add(CanEverPlayNow(card));
+            h.Add(CardPlays.Count(card));
+            h.Add(CardPlays.CanPlayThisTurn(card));
         }
         var k = h.ToHashCode();
         return k == 0 ? 1 : k;
@@ -345,7 +329,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         PlayFacts f;
         try
         {
-            f = PlayFacts.For(card, _me, _cs, CardIndicatorsFeature.PlayCount(card));
+            f = PlayFacts.For(card, _me, _cs, CardPlays.Count(card));
         }
         catch (Exception ex)
         {
@@ -422,7 +406,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         {
             var numbers = _ctx.Settings.ProcNumbers;
             list.Add(new TabSpec(FreeCards.Prefix + use.Power.GetType().Name, GameIcons.Power(use.Power), Crossed: use.Wasted,
-                Number: numbers ? use.Saved : null, Kind: "energy", Amount: use.Saved ?? 0, NumberText: numbers && use.Hidden ? "?" : null));
+                Number: numbers ? use.Saved : null, Kind: TabAmount.EnergySaved, Amount: use.Saved ?? 0, NumberText: numbers && use.Hidden ? "?" : null));
         }
         return list;
     }
@@ -563,11 +547,6 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     }
 
     /// <summary>
-    /// Reads a card's simulations into its tabs; returns whether it's lethal (some aim makes an enemy surely more likely to die
-    /// before it acts than ending the turn now does: decision #87), in <paramref name="lethalAimed"/> whether only some aims are,
-    /// and in <paramref name="lethalChance"/> the chance ("40%", "40–55%" while exploring; null when certain).
-    /// </summary>
-    /// <summary>
     /// The chance tab of a card that acts on what it draws (decision #119): the chance in the middle ("40%", with a ? when its search
     /// stopped at a cap or met something not modelled), and for Pillage and Scrape the most likely number above the chance (Attacks drawn,
     /// cards drawn that cost 0; a tie goes to the higher). From the first aim's outcomes: what a draw gives doesn't depend on the aim.
@@ -588,6 +567,11 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         tabs["drawn"] = new TabSpec("drawn", null, Text: Pct(chance), NumberText: n.ToString());
     }
 
+    /// <summary>
+    /// Reads a card's simulations into its tabs; returns whether it's lethal (some aim makes an enemy surely more likely to die
+    /// before it acts than ending the turn now does: decision #87), in <paramref name="lethalAimed"/> whether only some aims are,
+    /// and in <paramref name="lethalChance"/> the chance ("40%", "40–55%" while exploring; null when certain).
+    /// </summary>
     private bool FinishSim(PlayFacts f, List<AbstractModel> sources, SimBatch task, Dictionary<string, TabSpec> tabs, out bool lethalAimed,
         out string? lethalChance)
     {
@@ -814,13 +798,13 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
             max += prev.AuditMax;
         }
         int? number = kind != TabKind.Trigger && _ctx.Settings.ProcNumbers ? amount : null;
-        var kindName = kind switch
+        TabAmount? counts = kind switch
         {
-            TabKind.Block => "block", TabKind.Damage => "damage", TabKind.Summon => "summon",
-            TabKind.Draw => "draw", TabKind.Energy => "energy-gain", // decision #132
+            TabKind.Block => TabAmount.Block, TabKind.Damage => TabAmount.Damage, TabKind.Summon => TabAmount.Summon,
+            TabKind.Draw => TabAmount.CardsDrawn, TabKind.Energy => TabAmount.EnergyGained, // decision #132
             _ => null,
         };
-        tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, kindName, amount, min, max, Aimed: aimed);
+        tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, counts, amount, min, max, Aimed: aimed);
     }
 
     /// <summary>

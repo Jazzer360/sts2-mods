@@ -121,7 +121,7 @@ the play's **event log** per branch (model flashes with their damage, block, sum
 energy and stars), merged into "in every branch" and "in some branch" sets. Proc Indicators builds tabs from it; the play
 check compares it with what the game did.
 
-## The adapter (`Sim/SimAdapter.cs`)
+## The adapter (`Sim/Adapter/SimAdapter.cs`)
 Reads state only (CLAUDE.md: rules live in the simulator):
 - creatures, powers and relics into `Powers` and models (a reader per modelled class: amount, counters, armed flags);
 - for each card the simulation may play (the hovered card, lead-in plays, auto-plays): its script, its base values per

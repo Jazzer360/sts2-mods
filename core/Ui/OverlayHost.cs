@@ -81,9 +81,10 @@ public sealed class OverlayHost
         catch { return true; }
     }
 
-    /// <summary>Runs after all features each frame (e.g. a shared renderer), timed under its own name.</summary>
+    /// <summary>Late-frame errors by exception type and site, so a failure repeated every frame is logged once and then counted.</summary>
     private readonly Dictionary<string, int> _lateErrors = new();
 
+    /// <summary>Runs after all features each frame (e.g. a shared renderer), timed under its own name.</summary>
     public void AddLateFrame(string id, Action action) => _lateFrame.Add((id, action));
 
     private readonly List<(string Id, double Ms, double Kb)> _parts = new();
@@ -95,16 +96,26 @@ public sealed class OverlayHost
     /// </summary>
     public void AddPartTime(string id, double ms, double kb = 0)
     {
-        if (_inFrame) _parts.Add((id, ms, kb)); // outside the frame's run (a game callback) there's no feature to take it from
+        if (InFrameRun) _parts.Add((id, ms, kb)); // outside the frame's run (a game callback) there's no feature to take it from
     }
-
-    private bool _inFrame;
 
     /// <summary>
     /// True while the mod's frame run is going (features' OnFrame): the game changes nothing in between, so what's read once in it
     /// holds for the rest of it. False in a game callback (a hook mid-frame), where the board may have just changed.
     /// </summary>
     public static bool InFrameRun { get; private set; }
+
+    /// <summary>
+    /// Runs one piece of the frame and records its time and memory under <paramref name="id"/> (AddTimed). The work gets its state
+    /// passed in, so a static lambda does it: nothing is allocated per frame to time it.
+    /// </summary>
+    private void Timed<T>(string id, T state, Action<T> run)
+    {
+        var start = Godot.Time.GetTicksUsec();
+        var alloc = GC.GetAllocatedBytesForCurrentThread();
+        run(state);
+        AddTimed(id, (Godot.Time.GetTicksUsec() - start) / 1000.0, KbSince(alloc));
+    }
 
     /// <summary>A feature's time this frame, less the parts it timed on its own (each its own entry).</summary>
     private void AddTimed(string id, double ms, double kb)
@@ -243,10 +254,9 @@ public sealed class OverlayHost
         _featureMs.Clear();
         _featureKb.Clear();
         _parts.Clear();
-        _inFrame = true;
         InFrameRun = true;
         try { RunFrame(); }
-        finally { _inFrame = false; InFrameRun = false; }
+        finally { InFrameRun = false; }
         var modMs = (Godot.Time.GetTicksUsec() - start) / 1000.0;
         _lastModMs = modMs;
         try { FrameMeasured?.Invoke(modMs, gapMs); } catch { /* diagnostics only */ }
@@ -302,62 +312,56 @@ public sealed class OverlayHost
             }
             if (!IsOn(id)) continue;
             _running = id;
-            var featureStart = Godot.Time.GetTicksUsec();
-            var featureAlloc = GC.GetAllocatedBytesForCurrentThread();
-            try
-            {
-                feature.OnFrame(this);
-            }
-            catch (Exception ex)
-            {
-                n = _errors[id] = (_errors.TryGetValue(id, out var prev) ? prev : 0) + 1;
-                _log.Error($"[{id}] frame error {n}/{MaxErrorsBeforeDisable}: {ex}");
-                if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".OnFrame");
-                if (n >= MaxErrorsBeforeDisable)
-                {
-                    _log.Error($"[{id}] turned off after repeated errors");
-                }
-            }
-            AddTimed(id, (Godot.Time.GetTicksUsec() - featureStart) / 1000.0, KbSince(featureAlloc));
+            Timed(id, (Host: this, Id: id, Feature: feature), static x => x.Host.RunFeature(x.Id, x.Feature));
         }
 
         _running = null;
-        foreach (var (lateId, late) in _lateFrame)
-        {
-            var lateStart = Godot.Time.GetTicksUsec();
-            var lateAlloc = GC.GetAllocatedBytesForCurrentThread();
-            try { late(); }
-            catch (Exception ex)
-            {
-                // Log the first occurrence in full, then only a count every 600 repeats (~10s), so a
-                // per-frame failure can't flood the game log.
-                var key = ex.GetType().Name + ex.TargetSite;
-                var n = _lateErrors[key] = (_lateErrors.TryGetValue(key, out var prev) ? prev : 0) + 1;
-                if (n == 1)
-                {
-                    _log.Error($"[{lateId}] late frame error: {ex}");
-                    if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, lateId);
-                }
-                else if (n % 600 == 0) _log.Error($"[{lateId}] late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
-            }
-            AddTimed(lateId, (Godot.Time.GetTicksUsec() - lateStart) / 1000.0, KbSince(lateAlloc));
-        }
-        var layoutStart = Godot.Time.GetTicksUsec();
-        var layoutAlloc = GC.GetAllocatedBytesForCurrentThread();
-        if (WidgetRoot != null)
-        {
-            foreach (var w in _widgets)
-            {
-                w.UpdateLayout(this);
-            }
-        }
+        foreach (var (lateId, late) in _lateFrame) Timed(lateId, (Host: this, Id: lateId, Late: late), static x => x.Host.RunLate(x.Id, x.Late));
+        Timed("widgets", this, static host => host.LayOutWidgets());
+    }
 
-        if (_toast != null)
+    /// <summary>Places every widget, and shows or hides the toast.</summary>
+    private void LayOutWidgets()
+    {
+        if (WidgetRoot != null)
+            foreach (var w in _widgets) w.UpdateLayout(this);
+        if (_toast != null) _toast.Visible = Godot.Time.GetTicksMsec() < _toastUntilMs;
+    }
+
+    /// <summary>One feature's frame. A feature that throws <see cref="MaxErrorsBeforeDisable"/> times is turned off.</summary>
+    private void RunFeature(string id, IFrameFeature feature)
+    {
+        try
         {
-            _toast.Visible = Godot.Time.GetTicksMsec() < _toastUntilMs;
+            feature.OnFrame(this);
         }
-        _featureMs.Add(("widgets", (Godot.Time.GetTicksUsec() - layoutStart) / 1000.0));
-        _featureKb.Add(("widgets", KbSince(layoutAlloc)));
+        catch (Exception ex)
+        {
+            var n = _errors[id] = (_errors.TryGetValue(id, out var prev) ? prev : 0) + 1;
+            _log.Error($"[{id}] frame error {n}/{MaxErrorsBeforeDisable}: {ex}");
+            if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".OnFrame");
+            if (n >= MaxErrorsBeforeDisable) _log.Error($"[{id}] turned off after repeated errors");
+        }
+    }
+
+    /// <summary>
+    /// One late-frame job. It's never turned off (a shared renderer must keep running), so its error is logged in full the first
+    /// time and then only counted every 600 repeats (~10 s): a failure every frame can't flood the game log.
+    /// </summary>
+    private void RunLate(string id, Action late)
+    {
+        try { late(); }
+        catch (Exception ex)
+        {
+            var key = ex.GetType().Name + ex.TargetSite;
+            var n = _lateErrors[key] = (_lateErrors.TryGetValue(key, out var prev) ? prev : 0) + 1;
+            if (n == 1)
+            {
+                _log.Error($"[{id}] late frame error: {ex}");
+                if (!(WidgetsLost && ex is ObjectDisposedException)) Diagnostics.ErrorReporter.Instance?.Exception(ex, id);
+            }
+            else if (n % 600 == 0) _log.Error($"[{id}] late frame error repeated {n} times: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     /// <summary>

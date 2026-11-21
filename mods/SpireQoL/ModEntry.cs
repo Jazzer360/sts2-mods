@@ -107,7 +107,7 @@ public static class ModEntry
                 ? $"{why}, and {mod}'s code is in the crash"
                 : null;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
-        Sts2State.Init();
+        Sts2State.Init(Log);
         // A private member a rule reads is gone (a game update renamed it): the rule silently uses its
         // fallback, so say so once, in the log and as a report.
         Sts2State.MissingMember += (type, member) =>

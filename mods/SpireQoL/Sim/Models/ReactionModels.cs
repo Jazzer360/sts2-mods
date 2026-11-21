@@ -9,7 +9,6 @@ namespace SpireQoL.Sim.Models;
 /// </summary>
 public sealed class ThornsPower : SimModel
 {
-    public override string Name => "ThornsPower";
     public override TabKind? Tab => TabKind.Damage;
     public override bool Harmful => true;
     public override void BeforeDamageReceived(SimState s, int owner, DamageCtx d, int amount)
@@ -32,7 +31,6 @@ public sealed class ThornsPower : SimModel
 /// <summary>EnvenomPower / ConcoctPower.AfterDamageGiven: a powered hit of its owner's that gets HP through poisons the target.</summary>
 public sealed class EnvenomPower : SimModel
 {
-    public override string Name => "EnvenomPower";
     public override TabKind? Tab => TabKind.Trigger;
     public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {
@@ -44,7 +42,6 @@ public sealed class EnvenomPower : SimModel
 
 public sealed class ConcoctPower : SimModel
 {
-    public override string Name => "ConcoctPower";
     public override TabKind? Tab => TabKind.Trigger;
     public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {
@@ -57,7 +54,6 @@ public sealed class ConcoctPower : SimModel
 /// <summary>Snecko Skull (relic, amount = its Poison var): poison its owner gives gets that much more (ModifyPowerAmountGivenAdditive).</summary>
 public sealed class SneckoSkull : SimModel
 {
-    public override string Name => "SneckoSkull";
     public override int ModifyPowerAmountGiven(SimState s, int owner, string power, int amount, int? applier, int target, bool debuff)
     {
         if (power != "PoisonPower" || applier != owner) return amount;
@@ -69,7 +65,6 @@ public sealed class SneckoSkull : SimModel
 /// <summary>The Boot (relic, amount = DamageMinimum): its owner's (or Osty's) powered hits that lose another creature 1+ HP lose it at least that.</summary>
 public sealed class TheBoot : SimModel
 {
-    public override string Name => "TheBoot";
     public override decimal ModifyHpLostAfterOstyLate(SimState s, int owner, DamageCtx d, decimal amount)
     {
         if (!(d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty)) || d.Target == owner) return amount;
@@ -82,7 +77,6 @@ public sealed class TheBoot : SimModel
 /// <summary>HardenedShellPower: at most what's left this turn (Data) of HP lost (BeforeOstyLate); HP it loses uses that up (AfterDamageReceived).</summary>
 public sealed class HardenedShellPower : SimModel
 {
-    public override string Name => "HardenedShellPower";
     public override decimal ModifyHpLostBeforeOstyLate(SimState s, int owner, DamageCtx d, decimal amount) =>
         d.Target != owner || amount == 0m ? amount : Math.Min(amount, Math.Max(0, SimEngine.PowersOf(s, owner).DataOf(Name)));
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
@@ -96,7 +90,6 @@ public sealed class HardenedShellPower : SimModel
 /// <summary>SlipperyPower: at most 1 HP per damage to its owner (AfterOsty); each that loses HP flashes and takes a charge.</summary>
 public sealed class SlipperyPower : SimModel
 {
-    public override string Name => "SlipperyPower";
     public override decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount) =>
         d.Target != owner || amount < 1m ? amount : 1m;
     public override void AfterModifyingHpLost(SimState s, int owner) { } // it flashes when the damage lands
@@ -113,7 +106,6 @@ public sealed class SlipperyPower : SimModel
 /// <summary>BurrowedPower.AfterBlockBroken: breaking its owner's block stuns it, and the power goes (with its block-keeping).</summary>
 public sealed class BurrowedPower : SimModel
 {
-    public override string Name => "BurrowedPower";
     public override void AfterBlockBroken(SimState s, int owner, int target)
     {
         if (target != owner || s.Enemy(owner) is not { } e) return;
@@ -126,7 +118,6 @@ public sealed class BurrowedPower : SimModel
 /// <summary>AsleepPower.AfterDamageReceived: HP through its owner's block (any source) wakes it: Plating goes, it's stunned, the power goes.</summary>
 public sealed class AsleepPower : SimModel
 {
-    public override string Name => "AsleepPower";
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0 || s.Enemy(owner) is not { } en) return;
@@ -139,7 +130,6 @@ public sealed class AsleepPower : SimModel
 /// <summary>SlumberPower.AfterDamageReceived: each damage that gets HP through takes a stack; the last stuns it.</summary>
 public sealed class SlumberPower : SimModel
 {
-    public override string Name => "SlumberPower";
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked == 0 || s.Enemy(owner) is not { } en) return;
@@ -159,7 +149,6 @@ public sealed class SlumberPower : SimModel
 /// </summary>
 public sealed class PlowPower : SimModel
 {
-    public override string Name => "PlowPower";
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked <= 0 || s.Enemy(owner) is not { Alive: true } en || en.Hp > en.Powers[Name]) return;
@@ -172,7 +161,6 @@ public sealed class PlowPower : SimModel
 /// <summary>ShriekPower.AfterDamageReceived: HP through that leaves its owner at or below its amount stuns it; the power goes.</summary>
 public sealed class ShriekPower : SimModel
 {
-    public override string Name => "ShriekPower";
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || e.Unblocked <= 0 || s.Enemy(owner) is not { Alive: true } en || en.Hp > en.Powers[Name]) return;
@@ -185,7 +173,6 @@ public sealed class ShriekPower : SimModel
 /// <summary>TheGambitPower.AfterDamageReceived: a powered attack that gets HP through kills its owner.</summary>
 public sealed class TheGambitPower : SimModel
 {
-    public override string Name => "TheGambitPower";
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {
         if (e.Target != owner || !e.Props.IsPoweredAttack() || e.Unblocked <= 0 || s.Enemy(owner) is not { } en) return;
@@ -202,7 +189,6 @@ public sealed class TheGambitPower : SimModel
 /// </summary>
 public sealed class CurlUpPower : SimModel
 {
-    public override string Name => "CurlUpPower";
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
@@ -228,7 +214,6 @@ public sealed class CurlUpPower : SimModel
 /// </summary>
 public sealed class SkittishPower : SimModel
 {
-    public override string Name => "SkittishPower";
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
     public override IEnumerable<SimState> BeforeAttack(SimState s, int owner, AttackInfo attack)
@@ -261,7 +246,6 @@ public sealed class SkittishPower : SimModel
 /// <summary>SneakyPower.AfterCardPlayed: every Attack play by someone else gives its owner its amount of block.</summary>
 public sealed class SneakyPower : SimModel
 {
-    public override string Name => "SneakyPower";
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)

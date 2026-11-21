@@ -10,7 +10,7 @@ namespace SpireQoL.Cards;
 ///  - Crossed: a red slash = playing this card breaks or blocks something, or helps the enemy.
 ///  - Number: only on quantified proc tabs (block gained, damage dealt, summon, cards drawn, energy gained), else null.
 /// Key de-duplicates (one tab per source per card) and is the tab's settings key.
-/// </summary>
+/// Kind: what Amount counts, for a tab with an amount (null for the rest).
 /// Amount is the proc amount even when the number isn't displayed (ProcNumbers off), for the audit.
 /// AuditMin/AuditMax: for damage procs, the total damage range the audit expects (all targets).
 /// Text: shown instead of an icon (replay count, e.g. "2×"); null for icon tabs.
@@ -20,7 +20,10 @@ namespace SpireQoL.Cards;
 /// icon's top-left corner.
 /// Marker: another picture in that corner instead (decision #83: the heart on the card reward pick that makes Book of Five Rings
 /// heal); null for none.
-public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null, string? Kind = null, int Amount = 0,
+/// <summary>What a tab's amount counts (TabSpec.Amount): the block, damage, summon, draw and energy tabs (decision #132), and a free card's saving.</summary>
+public enum TabAmount { Block, Damage, Summon, CardsDrawn, EnergyGained, EnergySaved }
+
+public sealed record TabSpec(string Key, Texture2D? Icon, bool Crossed = false, int? Number = null, TabAmount? Kind = null, int Amount = 0,
     int AuditMin = 0, int AuditMax = 0, string? Text = null, CardModel? Card = null, string? NumberText = null, bool Aimed = false,
     Texture2D? Marker = null);
 
@@ -50,8 +53,8 @@ public sealed class CardDecor
     internal Func<TabSpec, TabSpec?>? Shape { get; init; }
 
     /// <returns>Whether the tab was added (false if a tab with this key exists or it's turned off).</returns>
-    /// <param name="kind">"block", "damage", "summon", "draw" or "energy-gain" for quantified procs (with <paramref name="amount"/>), else null.</param>
-    public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, string? kind = null, int amount = 0,
+    /// <param name="kind">What <paramref name="amount"/> counts, for a tab with an amount; else null.</param>
+    public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, TabAmount? kind = null, int amount = 0,
         int auditMin = 0, int auditMax = 0, string? text = null, CardModel? card = null)
     {
         if (Predicted.Any(t => t.Key == key)) return false;

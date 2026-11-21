@@ -89,10 +89,6 @@ public sealed class TurnEndModel
     public SimState FullState { get; private set; } = new();
 
     /// <summary>
-    /// The same forecast from FullState, for the enemy-turn check (this one when they're the same: single-player, or
-    /// the setting on). Its TeammateView stays the shown one, so the check can say when what's shown differs.
-    /// </summary>
-    /// <summary>
     /// The forecast with teammates' hands (the forecast check's), or null while its first result is still on its way past the
     /// audit's wait: PendingFull is that exploration then, and FullFrom builds the model once it has one.
     /// </summary>

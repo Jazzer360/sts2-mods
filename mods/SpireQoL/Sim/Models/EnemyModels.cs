@@ -6,7 +6,6 @@ namespace SpireQoL.Sim.Models;
 /// <summary>EnragePower.AfterCardPlayed: every Skill played gives its owner its amount of Strength.</summary>
 public sealed class EnragePower : SimModel
 {
-    public override string Name => "EnragePower";
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
@@ -24,7 +23,6 @@ public sealed class EnragePower : SimModel
 /// </summary>
 public sealed class MonarchsGazePower : SimModel
 {
-    public override string Name => "MonarchsGazePower";
     public override TabKind? Tab => TabKind.Trigger;
     public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {
@@ -37,7 +35,6 @@ public sealed class MonarchsGazePower : SimModel
 /// <summary>VitalSparkPower.AfterCardPlayed: playing a Tainted card gives its player Tainted (its amount: more damage from powered attacks).</summary>
 public sealed class VitalSparkPower : SimModel
 {
-    public override string Name => "VitalSparkPower";
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
@@ -54,7 +51,6 @@ public sealed class VitalSparkPower : SimModel
 /// </summary>
 public sealed class CrabRagePower : SimModel
 {
-    public override string Name => "CrabRagePower";
     public override void AfterDeath(SimState s, int owner, int dead)
     {
         if (dead == owner || dead < 0 || s.Enemy(owner) is not { Alive: true } e || e.Intent == null) return;
@@ -68,7 +64,6 @@ public sealed class CrabRagePower : SimModel
 /// <summary>RavenousPower (AfterDeath of an ally): it's stunned.</summary>
 public sealed class RavenousPower : SimModel
 {
-    public override string Name => "RavenousPower";
     public override void AfterDeath(SimState s, int owner, int dead)
     {
         if (dead == owner || dead < 0 || s.Enemy(owner) is not { Alive: true } e || e.Stunned) return;

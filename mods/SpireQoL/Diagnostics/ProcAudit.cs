@@ -142,7 +142,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private static readonly HashSet<string> DrawReactive = new() { nameof(PagestormPower), nameof(IterationPower), nameof(HellraiserPower), nameof(ChainsOfBindingPower) };
 
-    /// <summary>Sources whose tabs come from the outcome simulator (missing while its run was pending).</summary>
     /// <summary>An issue about the tabs the card's simulations gave (procs that fired or didn't, their block and damage).</summary>
     internal static bool SimDependent(string issue) =>
         issue.StartsWith("no tab:", StringComparison.Ordinal) || issue.StartsWith("didn't fire:", StringComparison.Ordinal)
@@ -169,6 +168,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         return any!.Contains(m.GetType());
     }
 
+    /// <summary>Sources whose tabs come from the outcome simulator (missing while its run was pending).</summary>
     private static readonly string[] SimTabSources =
     {
         nameof(ImbalancedPower), nameof(AsleepPower), nameof(SlumberPower), nameof(InfestedPower), nameof(SteamEruptionPower),
@@ -437,7 +437,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
 
         // While a hand choice's pick will be auto-played, keep each hand card's tabs and facts on the play
         // that opened it (they describe the auto-plays; once the choice closes they're back to one play).
-        if (CardIndicatorsFeature.ChoiceAutoPlays(me) > 0
+        if (CardPlays.ChoiceAutoPlays(me) > 0
             && _running.Values.FirstOrDefault(r => r.Card is DecisionsDecisions) is { } choosing)
         {
             var hand = new Dictionary<CardModel, (IReadOnlyList<TabSpec>, PlayFacts?)>(ReferenceEqualityComparer.Instance);
@@ -522,7 +522,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                     // board as it starts (its own hits and Wrest's pull change the target's Impaled during the play).
                     if (play.Target != null)
                     {
-                        try { rec.TargetDraws = PlayFacts.TargetDraws(card, play.Target, rec.Facts?.Plays ?? CardIndicatorsFeature.PlayCount(card)); }
+                        try { rec.TargetDraws = PlayFacts.TargetDraws(card, play.Target, rec.Facts?.Plays ?? CardPlays.Count(card)); }
                         catch (Exception e) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(e, "audit-target-draws"); }
                     }
                 }
@@ -1292,7 +1292,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var procBlock = entries.OfType<BlockGainedEntry>()
             .Where(b => b.Actor == me.Creature && b.CardPlay == null)
             .Sum(b => b.Amount);
-        var predictedBlock = w.Predicted.Where(t => t.Kind == "block").Sum(t => t.Amount) + (w.Facts?.OrbBlock ?? 0);
+        var predictedBlock = w.Predicted.Where(t => t.Kind == TabAmount.Block).Sum(t => t.Amount) + (w.Facts?.OrbBlock ?? 0);
         // The play ended the fight: the history stops at the killing hit, so less than predicted is expected.
         void Shortfall(string what, string predicted, int actual) =>
             modelLines.Add(NotChecked(what, FightEndedSkip + ": the game logs nothing from the killing hit on", $"predicted {predicted}, actual {actual}"));
@@ -1310,8 +1310,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         int Dealt(DamageReceivedEntry d) => d.Result.TotalDamage + d.Result.OverkillDamage;
         var toEnemies = procDamage.Where(d => d.Result.Receiver.IsEnemy).Sum(Dealt);
         var toMe = procDamage.Where(d => d.Result.Receiver == me.Creature).Sum(Dealt);
-        var enemyTabs = w.Predicted.Where(t => t.Kind == "damage" && !t.Crossed).ToList();
-        var meTabs = w.Predicted.Where(t => t.Kind == "damage" && t.Crossed).ToList();
+        var enemyTabs = w.Predicted.Where(t => t.Kind == TabAmount.Damage && !t.Crossed).ToList();
+        var meTabs = w.Predicted.Where(t => t.Kind == TabAmount.Damage && t.Crossed).ToList();
         var (eMin, eMax) = (enemyTabs.Sum(t => t.AuditMin), enemyTabs.Sum(t => t.AuditMax));
         // Orbs the card itself evokes (Dualcast, channelling into full slots) deal unsourced damage too.
         eMin += w.Facts?.OrbDamageMin ?? 0;
@@ -1492,7 +1492,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
-    /// <summary>Auto-plays other than a hand choice's pick (random ones: their effects aren't predicted).</summary>
     /// <summary>
     /// Crossed tabs for giving up a relic's bonus, which the game doesn't flash (decision #117), held to what it shows instead, both
     /// ways (a tab when the bonus wasn't given up, or the bonus given up with no tab):
@@ -1737,10 +1736,6 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     // ------------------------------------------------------------------ state after the play
 
     /// <summary>
-    /// The state the play left against the simulator's prediction of it (see the class summary).
-    /// Each difference from the closest branch is one issue.
-    /// </summary>
-    /// <summary>
     /// The lethal tab's inputs (decision #95): each enemy's chance of dying before it acts, over every outcome of the play, against
     /// the end of turn simulated from the board the play left (the game's, read back). An enemy dead in every outcome must be
     /// certain to die then; one that lives in every outcome must not die then. A chance in between can't be judged on one play:
@@ -1787,6 +1782,10 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         }
     }
 
+    /// <summary>
+    /// The state the play left against the simulator's prediction of it (see the class summary).
+    /// Each difference from the closest branch is one issue.
+    /// </summary>
     private static void AfterPlayIssues(Window w, List<CombatHistoryEntry> entries, List<string> issues, List<string> model)
     {
         var sim = w.Facts?.Sim;

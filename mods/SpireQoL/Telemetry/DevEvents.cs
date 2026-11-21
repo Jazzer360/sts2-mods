@@ -74,10 +74,6 @@ public sealed record Unsettled(double Ms) : DevEvent;
 public sealed record ReportSent(string What, string EventId) : DevEvent;
 
 /// <summary>
-/// The stream (decision #108): audits, the simulator and the reporter post here; the session counter (and the dev dashboard's file,
-/// later) read it. Subscribers run on the poster's thread (a worker's, for searches), so they must be quick and thread-safe.
-/// </summary>
-/// <summary>
 /// The audits that post checks (decision #92, rule 1: every prediction is paired with its outcome, every skip counted). The per-turn
 /// two decide how each turn of a fight is classified (SessionStats); the others are counted on their own, outside the turns.
 /// </summary>
@@ -105,6 +101,10 @@ public static class Audits
     public static void Skipped(string audit, string reason, string? detail = null) => DevEvents.Post(new CheckSkipped(audit, 0, reason, detail));
 }
 
+/// <summary>
+/// The stream (decision #108): audits, the simulator and the reporter post here; the session counter (and the dev dashboard's file,
+/// later) read it. Subscribers run on the poster's thread (a worker's, for searches), so they must be quick and thread-safe.
+/// </summary>
 public static class DevEvents
 {
     /// <summary>The stream's format; bumped when an event's fields change meaning, so a reader can tell old files from new.</summary>

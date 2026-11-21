@@ -625,17 +625,17 @@ public static partial class SimEngine
         PlayerDamaged(s, who, dealer, props, blocked, lost);
     }
 
-    /// <summary>
-    /// Explosive (ExplosivePower.AfterDeath): an enemy holding it that died since the last check damages every living
-    /// player, blocked by the block they have then. Runs where deaths are handled (AllyDeaths) and after each
-    /// end-of-turn step, so the block it meets is the block at that point.
-    /// </summary>
     /// <summary>An end-of-turn step's explosions, only in fights with an Explosive enemy (no extra step otherwise).</summary>
     private static void ExplosionCheck(BranchSet b)
     {
         if (b.States.Any(s => s.Enemies.Any(e => !e.Exploded && (e.Explosive > 0 || e.ExplosiveOnTeammates != null)))) b.Do(s => Explosions(s));
     }
 
+    /// <summary>
+    /// Explosive (ExplosivePower.AfterDeath): an enemy holding it that died since the last check damages every living
+    /// player, blocked by the block they have then. Runs where deaths are handled (AllyDeaths) and after each
+    /// end-of-turn step, so the block it meets is the block at that point.
+    /// </summary>
     private static void Explosions(SimState s)
     {
         foreach (var e in s.Enemies)
@@ -1075,10 +1075,6 @@ public static partial class SimEngine
     // ------------------------------------------------------------------ enemy turn
 
     /// <summary>
-    /// Enemies react to an ally's death as it happens (AfterDeath): Ravenous is stunned (and gains
-    /// Strength for later turns), Crab Rage gains Strength (its hits) and block, once.
-    /// </summary>
-    /// <summary>
     /// Your Focus changes: each orb's values move by what Focus does to its base value
     /// (FocusPower.ModifyOrbValue: base + Focus, not below 0), so other modifiers on it stay.
     /// Lightning 3/8, Frost 2/5, Dark's passive 6 (its evoke is what it stored), Glass from its base
@@ -1116,6 +1112,10 @@ public static partial class SimEngine
         if (sb.RemoveArtifact && PowersOf(s, e.Id).Has("ArtifactPower")) SetPowers(s, e.Id, PowersOf(s, e.Id).Without("ArtifactPower"));
     }
 
+    /// <summary>
+    /// Enemies react to an ally's death as it happens (AfterDeath): Ravenous is stunned (and gains
+    /// Strength for later turns), Crab Rage gains Strength (its hits) and block, once.
+    /// </summary>
     private static void AllyDeaths(SimState s)
     {
         Explosions(s);

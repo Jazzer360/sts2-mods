@@ -20,7 +20,6 @@ public abstract class EndOfTurnRelic : RelicProc
 /// <summary>PlatingPower.BeforeSideTurnEndEarly: its amount of block (unpowered).</summary>
 public sealed class PlatingPower : EndOfTurnModel
 {
-    public override string Name => "PlatingPower";
     public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) && Amount(s, owner) > 0 ? Block(s, owner, Amount(s, owner)) : One(s);
 }
@@ -28,7 +27,6 @@ public sealed class PlatingPower : EndOfTurnModel
 /// <summary>HailstormPower.BeforeSideTurnEnd: its amount to every hittable enemy when its owner has its FrostOrbs (Data) Frost orbs.</summary>
 public sealed class HailstormPower : EndOfTurnModel
 {
-    public override string Name => "HailstormPower";
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
     {
         if (!SimEngine.TakesPart(s, owner) || SimEngine.PlayerOf(s, owner) is not { } p || Amount(s, owner) <= 0) return One(s);
@@ -39,7 +37,6 @@ public sealed class HailstormPower : EndOfTurnModel
 /// <summary>TheBombPower.BeforeSideTurnEnd: ticks down (amount: turns left); on its last its Damage (Data) to every hittable enemy, then it goes.</summary>
 public sealed class TheBombPower : EndOfTurnModel
 {
-    public override string Name => "TheBombPower";
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
     {
         if (!SimEngine.TakesPart(s, owner)) return One(s);
@@ -54,7 +51,6 @@ public sealed class TheBombPower : EndOfTurnModel
 /// <summary>ConsumingShadowPower.AfterSideTurnEnd: its owner's last orb is evoked, its amount of times (OrbCmd.EvokeLast).</summary>
 public sealed class ConsumingShadowPower : EndOfTurnModel
 {
-    public override string Name => "ConsumingShadowPower";
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner)
     {
         if (!SimEngine.TakesPart(s, owner)) return One(s);
@@ -83,13 +79,12 @@ public abstract class OrichalcumBase : EndOfTurnRelic
     }
 }
 
-public sealed class Orichalcum : OrichalcumBase { public override string Name => "Orichalcum"; }
-public sealed class FakeOrichalcum : OrichalcumBase { public override string Name => "FakeOrichalcum"; }
+public sealed class Orichalcum : OrichalcumBase { }
+public sealed class FakeOrichalcum : OrichalcumBase { }
 
 /// <summary>CloakClasp.BeforeSideTurnEnd: its block (amount) per card in its owner's hand (unpowered).</summary>
 public sealed class CloakClasp : EndOfTurnRelic
 {
-    public override string Name => "CloakClasp";
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
     {
         if (!SimEngine.TakesPart(s, owner) || SimEngine.PlayerOf(s, owner) is not { HandCount: > 0 } p) return One(s);
@@ -100,7 +95,6 @@ public sealed class CloakClasp : EndOfTurnRelic
 /// <summary>ScreamingFlagon.BeforeSideTurnEnd: its damage (amount) to every hittable enemy when its owner's hand is empty.</summary>
 public sealed class ScreamingFlagon : EndOfTurnRelic
 {
-    public override string Name => "ScreamingFlagon";
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) && SimEngine.PlayerOf(s, owner) is { HandCount: 0 } ? DamageAll(s, owner, Amount(s, owner)) : One(s);
 }
@@ -108,7 +102,6 @@ public sealed class ScreamingFlagon : EndOfTurnRelic
 /// <summary>StoneCalendar.BeforeSideTurnEnd: its damage (amount) to every hittable enemy on its DamageTurn (Data: turns until then).</summary>
 public sealed class StoneCalendar : EndOfTurnRelic
 {
-    public override string Name => "StoneCalendar";
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) && Data(s, owner) == 0 && Amount(s, owner) > 0 ? DamageAll(s, owner, Amount(s, owner)) : One(s);
 }
@@ -116,7 +109,6 @@ public sealed class StoneCalendar : EndOfTurnRelic
 /// <summary>ObsidianVice.BeforeSideTurnEnd: its damage (amount) per card in its owner's hand, to one random hittable enemy (unpowered).</summary>
 public sealed class ObsidianVice : EndOfTurnRelic
 {
-    public override string Name => "ObsidianVice";
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState s, int owner)
     {
         if (!SimEngine.TakesPart(s, owner) || SimEngine.PlayerOf(s, owner) is not { HandCount: > 0 } p || Amount(s, owner) <= 0) return One(s);
@@ -127,7 +119,6 @@ public sealed class ObsidianVice : EndOfTurnRelic
 /// <summary>ParryingShield.AfterSideTurnEnd: its damage (amount) to a random hittable enemy when its owner has at least its Block (Data).</summary>
 public sealed class ParryingShield : EndOfTurnRelic
 {
-    public override string Name => "ParryingShield";
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner)
     {
         if (!SimEngine.TakesPart(s, owner) || Amount(s, owner) <= 0 || SimEngine.PlayerOf(s, owner) is not { } p || p.Block < Data(s, owner)) return One(s);
@@ -139,7 +130,6 @@ public sealed class ParryingShield : EndOfTurnRelic
 /// <summary>LunarPastry.AfterSideTurnEnd: its owner gains stars (Black Hole reacts: AfterStarsGained).</summary>
 public sealed class LunarPastry : EndOfTurnRelic
 {
-    public override string Name => "LunarPastry";
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) ? SimEngine.ProcCardEvent(s, CardEvent.StarsGained, 1, owner, indirect: false) : One(s);
 }
@@ -164,7 +154,6 @@ public abstract class TurnEndDebuff : EndOfTurnModel
 /// <summary>ConstrictPower.AfterSideTurnEnd: its amount to its owner (unpowered, dealt by its owner); it goes when its applier dies (AfterDeath).</summary>
 public sealed class ConstrictPower : TurnEndDebuff
 {
-    public override string Name => "ConstrictPower";
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) && !ApplierDead(s, owner, Name) ? Hurt(s, owner, Amount(s, owner), Unpowered, selfDealt: true) : One(s);
 }
@@ -172,7 +161,6 @@ public sealed class ConstrictPower : TurnEndDebuff
 /// <summary>MagicBombPower.AfterSideTurnEnd: while its applier lives, its amount to its owner (unpowered, dealt by its owner), then it goes.</summary>
 public sealed class MagicBombPower : TurnEndDebuff
 {
-    public override string Name => "MagicBombPower";
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner)
     {
         if (!SimEngine.TakesPart(s, owner) || ApplierDead(s, owner, Name)) return One(s);
@@ -185,7 +173,6 @@ public sealed class MagicBombPower : TurnEndDebuff
 /// <summary>DemisePower.AfterSideTurnEnd: its amount to its owner, unblockable (no dealer).</summary>
 public sealed class DemisePower : TurnEndDebuff
 {
-    public override string Name => "DemisePower";
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) ? Hurt(s, owner, Amount(s, owner), SimProps.Unblockable | Unpowered, selfDealt: false) : One(s);
 }
@@ -193,7 +180,6 @@ public sealed class DemisePower : TurnEndDebuff
 /// <summary>DisintegrationPower.AfterSideTurnEndLate: its amount to its owner (unpowered, dealt by its owner).</summary>
 public sealed class DisintegrationPower : TurnEndDebuff
 {
-    public override string Name => "DisintegrationPower";
     public override IEnumerable<SimState> AfterSideTurnEndLate(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) ? Hurt(s, owner, Amount(s, owner), Unpowered, selfDealt: true) : One(s);
 }
@@ -201,7 +187,6 @@ public sealed class DisintegrationPower : TurnEndDebuff
 /// <summary>InsatiableDominionPower.AfterSideTurnEndLate: its Damage (2 + its owner's turn number, unpowered, no dealer) to its owner.</summary>
 public sealed class InsatiableDominionPower : TurnEndDebuff
 {
-    public override string Name => "InsatiableDominionPower";
     public override IEnumerable<SimState> AfterSideTurnEndLate(SimState s, int owner) =>
         SimEngine.TakesPart(s, owner) ? Hurt(s, owner, SimEngine.Var(s, owner, Name, "Damage", 0), Unpowered, selfDealt: false) : One(s);
 }

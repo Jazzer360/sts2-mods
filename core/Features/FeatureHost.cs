@@ -46,22 +46,7 @@ public sealed class FeatureHost
         if (feature == null) return false;
         if (_states[id] == FeatureState.Active) return true;
         if (_states[id] == FeatureState.Failed) return false;
-        var harmony = new Harmony($"{_modId}.{feature.Id}");
-        try
-        {
-            feature.Apply(harmony);
-            _states[id] = FeatureState.Active;
-            _log.Info($"[{id}] turned on");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _states[id] = FeatureState.Failed;
-            _log.Error($"[{id}] failed to apply; feature turned off. {ex}");
-            Diagnostics.ErrorReporter.Instance?.Exception(ex, id + ".Apply");
-            try { harmony.UnpatchAll(harmony.Id); } catch { /* best effort */ }
-            return false;
-        }
+        return TryApply(feature, _ => "turned on");
     }
 
     /// <param name="isEnabled">Settings lookup; defaults to each feature's EnabledByDefault.</param>
@@ -75,21 +60,32 @@ public sealed class FeatureHost
                 _log.Info($"[{feature.Id}] disabled");
                 continue;
             }
+            TryApply(feature, h => $"active ({h.GetPatchedMethods().Count()} methods patched)");
+        }
+    }
 
-            var harmony = new Harmony($"{_modId}.{feature.Id}");
-            try
-            {
-                feature.Apply(harmony);
-                _states[feature.Id] = FeatureState.Active;
-                _log.Info($"[{feature.Id}] active ({harmony.GetPatchedMethods().Count()} methods patched)");
-            }
-            catch (Exception ex)
-            {
-                _states[feature.Id] = FeatureState.Failed;
-                _log.Error($"[{feature.Id}] failed to apply; feature turned off. {ex}");
-                Diagnostics.ErrorReporter.Instance?.Exception(ex, feature.Id + ".Apply");
-                try { harmony.UnpatchAll(harmony.Id); } catch { /* best effort */ }
-            }
+    /// <summary>
+    /// Applies one feature under its own Harmony id. If it throws, everything it patched is undone, it's marked failed and
+    /// reported, and the game goes on without it.
+    /// </summary>
+    /// <param name="applied">The log line once it's on, given its Harmony instance.</param>
+    private bool TryApply(IFeature feature, Func<Harmony, string> applied)
+    {
+        var harmony = new Harmony($"{_modId}.{feature.Id}");
+        try
+        {
+            feature.Apply(harmony);
+            _states[feature.Id] = FeatureState.Active;
+            _log.Info($"[{feature.Id}] {applied(harmony)}");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _states[feature.Id] = FeatureState.Failed;
+            _log.Error($"[{feature.Id}] failed to apply; feature turned off. {ex}");
+            Diagnostics.ErrorReporter.Instance?.Exception(ex, feature.Id + ".Apply");
+            try { harmony.UnpatchAll(harmony.Id); } catch { /* best effort */ }
+            return false;
         }
     }
 }

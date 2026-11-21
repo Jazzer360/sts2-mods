@@ -5,7 +5,6 @@ namespace SpireQoL.Sim.Models;
 /// <summary>TrackingPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's (or pet's) powered hits from a card on a Weak enemy.</summary>
 public sealed class TrackingPower : SimModel
 {
-    public override string Name => "TrackingPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null) return 1m;
@@ -17,7 +16,6 @@ public sealed class TrackingPower : SimModel
 /// <summary>ColossusPower.ModifyDamageMultiplicative: powered attacks on its owner from a Vulnerable dealer deal its DamageDecrease (0.5).</summary>
 public sealed class ColossusPower : SimModel
 {
-    public override string Name => "ColossusPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
         d.Target == owner && d.Props.IsPoweredAttack() && d.Dealer is { } dealer && SimEngine.PowersOf(s, dealer).Has("VulnerablePower") ? 0.5m : 1m;
 }
@@ -25,7 +23,6 @@ public sealed class ColossusPower : SimModel
 /// <summary>TaintedPower.ModifyDamageAdditive: its amount on powered attacks on its owner (Vital Spark gives it for Tainted cards).</summary>
 public sealed class TaintedPower : SimModel
 {
-    public override string Name => "TaintedPower";
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d) =>
         d.Target == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, Name) : 0m;
 }
@@ -36,7 +33,6 @@ public sealed class TaintedPower : SimModel
 /// </summary>
 public sealed class FlutterPower : SimModel
 {
-    public override string Name => "FlutterPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (d.Target != owner || !d.Props.IsPoweredAttack()) return 1m;
@@ -62,7 +58,6 @@ public sealed class FlutterPower : SimModel
 /// <summary>HardToKillPower.ModifyDamageCap: at most its amount per damage to its owner; it flashes when it caps.</summary>
 public sealed class HardToKillPower : SimModel
 {
-    public override string Name => "HardToKillPower";
     public override bool FlashesOnDamageModified => true;
     public override decimal ModifyDamageCap(SimState s, int owner, DamageCtx d) => d.Target == owner ? SimEngine.PowerOn(s, owner, Name) : decimal.MaxValue;
 }
@@ -70,7 +65,6 @@ public sealed class HardToKillPower : SimModel
 /// <summary>IntangiblePower.ModifyDamageCap: at most 1 per damage to its owner (its HP-loss cap is in the HP-loss pipeline).</summary>
 public sealed class IntangiblePower : SimModel
 {
-    public override string Name => "IntangiblePower";
     public override bool FlashesOnDamageModified => true;
     public override decimal ModifyDamageCap(SimState s, int owner, DamageCtx d) => d.Target == owner ? 1m : decimal.MaxValue;
     /// <summary>ModifyHpLostAfterOsty: at most 1 HP per damage to its owner (it flashes when it changes one).</summary>
@@ -85,7 +79,6 @@ public sealed class IntangiblePower : SimModel
 /// </summary>
 public sealed class SurroundedPower : SimModel
 {
-    public override string Name => "SurroundedPower";
     private static string BehindPower(int facing) => facing == 0 ? "BackAttackLeftPower" : "BackAttackRightPower";
 
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
@@ -125,7 +118,6 @@ public sealed class SurroundedPower : SimModel
 /// </summary>
 public sealed class CoveredPower : SimModel
 {
-    public override string Name => "CoveredPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
         d.Target == owner && d.Props.IsPoweredAttack() ? 0m : 1m;
     public override void AfterApplied(SimState s, int owner, int applier, int amount)
@@ -140,7 +132,6 @@ public sealed class CoveredPower : SimModel
 /// <summary>InterceptPower.ModifyDamageMultiplicative: powered attacks on its owner deal × (players covered + 1): its amount is the count.</summary>
 public sealed class InterceptPower : SimModel
 {
-    public override string Name => "InterceptPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
         d.Target == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, Name) + 1 : 1m;
 }

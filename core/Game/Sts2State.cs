@@ -18,9 +18,12 @@ public static class Sts2State
     private static CombatState? _combat;
     private static bool _subscribed;
 
-    /// <summary>Call once at mod load. Remembers the current combat via CombatManager.CombatSetUp.</summary>
-    public static void Init()
+    private static ModLog? _log;
+
+    /// <summary>Call once at mod load. Remembers the current combat via CombatManager.CombatSetUp; <paramref name="log"/> gets the placement lines.</summary>
+    public static void Init(ModLog log)
     {
+        _log = log;
         if (_subscribed) return;
         _subscribed = true;
         CombatManager.Instance.CombatSetUp += cs => _combat = cs;
@@ -96,15 +99,7 @@ public static class Sts2State
     /// </summary>
     public static Godot.Rect2? PlayerStatusRect()
     {
-        var me = Me;
-        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
-        if (me == null || room == null) return null;
-
-        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == me.Creature);
-        var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
-        if (display == null || !BarShown(creature!, display)) return null;
-
-        var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
+        if (Me is not { } me || HealthBarOf(me.Creature) is not var (display, bar)) return null;
         var rect = bar != null && bar.Size.X >= 1 ? ScreenRect(bar) : ScreenRect(display);
 
         // The power container doesn't size itself to its icons (it reported a tiny rect in game
@@ -166,14 +161,7 @@ public static class Sts2State
     /// </summary>
     public static Godot.Rect2? BlockRect(MegaCrit.Sts2.Core.Entities.Creatures.Creature who)
     {
-        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
-        if (room == null) return null;
-
-        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == who);
-        var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
-        if (display == null || !BarShown(creature!, display)) return null;
-
-        var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
+        if (HealthBarOf(who) is not var (display, bar)) return null;
         var block = bar?.GetNodeOrNull<Godot.Control>("%BlockContainer");
         if (block != null && block.Size.X >= 1)
         {
@@ -221,12 +209,7 @@ public static class Sts2State
 
     private static Godot.Rect2? HpBarRect(MegaCrit.Sts2.Core.Entities.Creatures.Creature who, bool log)
     {
-        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
-        if (room == null) return null;
-        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == who);
-        var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
-        if (display == null || !BarShown(creature!, display)) return null;
-        var bar = display.GetNodeOrNull<Godot.Control>("%HealthBar");
+        if (HealthBarOf(who) is not var (display, bar)) return null;
         if (bar == null) return ScreenRect(display);
 
         var container = bar.GetNodeOrNull<Godot.Control>("%HpBarContainer");
@@ -243,10 +226,24 @@ public static class Sts2State
         if (log && combatId != null && !Equals(combatId, _loggedHpBarFor))
         {
             _loggedHpBarFor = combatId;
-            MegaCrit.Sts2.Core.Logging.Log.Info(
-                $"[SpireQoL] HP bar rects: NHealthBar={ScreenRect(bar)} HpBarContainer={ScreenRect(container)} measured={rect} viewport={bar.GetViewportRect().Size}");
+            _log?.Info(
+                $"HP bar rects: NHealthBar={ScreenRect(bar)} HpBarContainer={ScreenRect(container)} measured={rect} viewport={bar.GetViewportRect().Size}");
         }
         return rect;
+    }
+
+    /// <summary>
+    /// A creature's status display (its NCreature's "%HealthBar", an NCreatureStateDisplay) and the NHealthBar inside it (its own
+    /// "%HealthBar"), while the bar is shown (BarShown); null when the creature has no node or its bar is down.
+    /// </summary>
+    private static (Godot.Control Display, Godot.Control? Bar)? HealthBarOf(MegaCrit.Sts2.Core.Entities.Creatures.Creature who)
+    {
+        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
+        if (room == null) return null;
+        var creature = room.CreatureNodes.FirstOrDefault(n => Godot.GodotObject.IsInstanceValid(n) && n.Entity == who);
+        var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
+        if (display == null || !BarShown(creature!, display)) return null;
+        return (display, display.GetNodeOrNull<Godot.Control>("%HealthBar"));
     }
 
     /// <summary>

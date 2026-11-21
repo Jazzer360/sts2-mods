@@ -35,7 +35,6 @@ public static partial class SimAdapter
         [nameof(Rainbow)] = new[] { OrbKind.Lightning, OrbKind.Frost, OrbKind.Dark },
     };
 
-    /// <summary>The simulator channels this card's orbs (for the coverage check).</summary>
     /// <summary>
     /// Orb slots a card's play adds or removes (OrbCmd.AddSlots / RemoveSlots in OnPlay; decompile
     /// v0.111.0): Bulk Up loses its OrbSlots, Capacitor and Modded add their Repeat.
@@ -165,6 +164,7 @@ public static partial class SimAdapter
         : RepeatChannels.TryGetValue(card, out var k) && k != OrbKind.Unknown ? k
         : null;
 
+    /// <summary>The simulator channels this card's orbs (for the coverage check).</summary>
     internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card is nameof(Tempest) or nameof(Voltaic);
 
     /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
@@ -511,7 +511,7 @@ public static partial class SimAdapter
     /// </summary>
     private static List<SimPlay> AutoPlays(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids)
     {
-        var f = PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card));
+        var f = PlayFacts.For(card, me, cs, CardPlays.Count(card));
         if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
         if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, cs, ids, -1, f) };
         return ids.Where(kv => kv.Key.IsAlive && kv.Key.IsHittable).Select(kv => AutoPlay(card, me, cs, ids, kv.Value, f)).ToList();
@@ -520,7 +520,7 @@ public static partial class SimAdapter
     private static SimPlay AutoPlay(CardModel card, Player me, ICombatState cs, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? f = null,
         int owner = Who.You)
     {
-        var play = Play(card, f ?? PlayFacts.For(card, me, cs, Features.CardIndicatorsFeature.PlayCount(card)), me, cs, ids, target, owner);
+        var play = Play(card, f ?? PlayFacts.For(card, me, cs, CardPlays.Count(card)), me, cs, ids, target, owner);
         play.AutoPlay = true;
         if (play.Card != null) play.Card = play.Card with { AutoPlay = true };
         return play;
@@ -726,7 +726,6 @@ public static partial class SimAdapter
         return sign * (int)amount;
     }
 
-    /// <summary>The card's own block per play (its Block value through the game's block math).</summary>
     /// <summary>
     /// The card's block through the game's block math. gainer: who gets it (you by default; a targeted teammate for
     /// Lift); calcTarget: the target a calculated value is worked out on (Mimic, Demonic Shield aimed at a teammate).

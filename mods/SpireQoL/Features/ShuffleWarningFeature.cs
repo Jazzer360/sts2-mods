@@ -48,12 +48,12 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
             try
             {
                 // Proc Indicators' facts for this frame when it has them (it runs first), else worked out here.
-                var f = ProcIndicatorsFeature.FactsThisFrame(c) ?? PlayFacts.For(c, me, cs, CardIndicatorsFeature.PlayCount(c));
+                var f = ProcIndicatorsFeature.FactsThisFrame(c) ?? PlayFacts.For(c, me, cs, CardPlays.Count(c));
                 shuffles = f.Shuffles && !f.ShufflesItself; // Reboot's text already says it shuffles
             }
             catch
             {
-                shuffles = PlayFacts.CardsDrawnTotal(c, hand.Count, CardIndicatorsFeature.PlayCount(c)) > Sts2State.DrawPileCount(me);
+                shuffles = PlayFacts.CardsDrawnTotal(c, hand.Count, CardPlays.Count(c)) > Sts2State.DrawPileCount(me);
             }
             if (shuffles) _ctx.Decor.For(c).AddTab("shuffle", GameIcons.DiscardPile());
         }

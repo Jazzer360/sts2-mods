@@ -51,10 +51,10 @@ public abstract class ProcModel : SimModel
         SimEngine.ProcDamageAll(s, owner, Name, amount, props, times);
     protected IEnumerable<SimState> DamageRandom(SimState s, int owner, decimal amount, SimProps props = Unpowered, int times = 1) =>
         SimEngine.ProcDamageRandom(s, owner, Name, amount, props, times);
-    /// <summary>Cards it makes happen (Dark Embrace's draw, Calamity's attacks), through every listener.</summary>
+    /// <summary>Card events it causes (Dark Embrace's draws, Calamity's cards), after the branches it's given, each through every listener.</summary>
     /// <remarks>A draw or energy tab's amount is what the events gave: each card drawn (fewer into a full hand or from empty
     /// piles), each energy (decision #132).</remarks>
-    protected IEnumerable<SimState> Then(IEnumerable<SimState> states, CardEvent ev, int count, int player)
+    protected IEnumerable<SimState> Cause(IEnumerable<SimState> states, CardEvent ev, int count, int player)
     {
         var tally = SimEngine.TallyFor(Name, Tab, ev, player);
         return states.SelectMany(x => SimEngine.ProcCardEvent(x, ev, count, player, onEach: tally)).ToList();

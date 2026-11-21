@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using SpireQoL.Cards;
 using SpireQoL.Combat;
+using SpireQoL.Procs;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -114,14 +115,14 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         // Replay on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, or
         // an enchantment): no power or relic to show, so the tab reads "2×" (total plays).
         // A card that can't be played (curses, Unplayable statuses, blocked cards) plays nothing twice.
-        if (!ProcIndicatorsFeature.CanEverPlayNow(card)) return (ethereal, tabs);
+        if (!CardPlays.CanPlayThisTurn(card)) return (ethereal, tabs);
         var replays = card.GetEnchantedReplayCount();
         if (replays > 0) tabs.Add(new TabSpec("replay", null, Text: $"{replays + 1}×"));
 
         // One tag per source, each with that source's own icon (Burst, Echo Form,
         // Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe, or the card's
         // replay enchantment).
-        foreach (var src in ExtraPlaySources(card))
+        foreach (var src in CardPlays.ReplaySources(card))
         {
             var icon = src switch
             {
@@ -133,82 +134,5 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             tabs.Add(new TabSpec("double-play:" + src.GetType().Name, icon ?? GameIcons.Power<EchoFormPower>()));
         }
         return (ethereal, tabs);
-    }
-
-    /// <summary>
-    /// What would make this card play more than once right now: the same calculation the game
-    /// runs when you play it (CardModel.GeneratePlayCount): enchanted replays + 1, then
-    /// Hook.ModifyCardPlayCount, which reports the models that changed the count. That covers
-    /// Echo Form, Burst, Duplication, One-Two Punch, Signal Boost, Tag Team, Throwing Axe and
-    /// anything added later. The hook is a pure query; side effects live in
-    /// AfterModifyingCardPlayCount, which we never call.
-    /// Tag Team only doubles attacks aimed at the enemy that has it, so single-target cards are
-    /// also checked against each enemy and every source that applies to any of them is shown.
-    /// </summary>
-    /// <summary>How many times the card would play right now (best case over targets).</summary>
-    /// <summary>
-    /// While Decisions, Decisions asks you to pick a Skill from your hand (CardSelectCmd.FromHand: the
-    /// hand in select mode, the card in your play pile), the pick is auto-played Repeat times for free
-    /// (CardCmd.AutoPlay, each with its own replays). 0 when no such choice is open.
-    /// </summary>
-    public static int ChoiceAutoPlays(Player me)
-    {
-        try
-        {
-            if (NPlayerHand.Instance is not { IsInCardSelection: true }) return 0;
-            var source = me.PlayerCombatState?.PlayPile.Cards.OfType<DecisionsDecisions>().FirstOrDefault();
-            return source == null ? 0 : Math.Max(1, Sts2State.Var(source, "Repeat", 3));
-        }
-        catch
-        {
-            return 0;
-        }
-    }
-
-    /// <summary>The card would be auto-played by an open hand choice (it's in your hand while one is open).</summary>
-    public static bool ChoiceAutoPlayed(CardModel card)
-        => card.Owner is { } me && card.Pile?.Type == PileType.Hand && ChoiceAutoPlays(me) > 0;
-
-    public static int PlayCount(CardModel card)
-    {
-        var cs = Sts2State.Combat;
-        if (cs == null) return 1;
-        var auto = card.Owner is { } me && card.Pile?.Type == PileType.Hand ? ChoiceAutoPlays(me) : 0;
-        return OwnPlayCount(card, cs) * Math.Max(1, auto);
-    }
-
-    private static int OwnPlayCount(CardModel card, ICombatState cs)
-    {
-        var baseCount = card.GetEnchantedReplayCount() + 1;
-        var best = Hook.ModifyCardPlayCount(cs, card, baseCount, null, out _);
-        if (card.TargetType == TargetType.AnyEnemy)
-        {
-            foreach (var enemy in cs.HittableEnemies) best = Math.Max(best, Hook.ModifyCardPlayCount(cs, card, baseCount, enemy, out _));
-        }
-        return Math.Max(1, best);
-    }
-
-    private static List<AbstractModel> ExtraPlaySources(CardModel card)
-    {
-        var sources = new List<AbstractModel>();
-        var cs = Sts2State.Combat;
-        if (cs == null) return sources;
-        var replays = card.GetEnchantedReplayCount();
-
-        void Add(Creature? target)
-        {
-            Hook.ModifyCardPlayCount(cs, card, replays + 1, target, out var models);
-            foreach (var m in models)
-            {
-                if (!sources.Contains(m)) sources.Add(m);
-            }
-        }
-
-        Add(null);
-        if (card.TargetType == TargetType.AnyEnemy)
-        {
-            foreach (var enemy in cs.HittableEnemies) Add(enemy);
-        }
-        return sources;
     }
 }

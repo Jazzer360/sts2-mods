@@ -9,7 +9,6 @@ namespace SpireQoL.Sim.Models;
 /// </summary>
 public sealed class StretchPower : SimModel
 {
-    public override string Name => "StretchPower";
     public override TabKind? Tab => TabKind.Trigger;
     private const int Bound = 1, Gave = 2;
 
@@ -58,7 +57,6 @@ public sealed class StretchPower : SimModel
 /// </summary>
 public sealed class PaelsLegion : SimModel
 {
-    public override string Name => "PaelsLegion";
     public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b)
     {
@@ -88,7 +86,6 @@ public sealed class PaelsLegion : SimModel
 /// </summary>
 public sealed class Vambrace : SimModel
 {
-    public override string Name => "Vambrace";
     public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b)
     {
@@ -117,7 +114,6 @@ public sealed class Vambrace : SimModel
 /// </summary>
 public sealed class UnmovablePower : SimModel
 {
-    public override string Name => "UnmovablePower";
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b)
     {
         if (b.Target >= 0 || !b.Props.IsCardOrMonsterMove()) return 1m;
@@ -131,7 +127,6 @@ public sealed class UnmovablePower : SimModel
 /// <summary>ShadowmeldPower.ModifyBlockMultiplicative: 2^amount on its owner's block.</summary>
 public sealed class ShadowmeldPower : SimModel
 {
-    public override string Name => "ShadowmeldPower";
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b) =>
         b.Target == owner ? (decimal)Math.Pow(2.0, SimEngine.PowerOn(s, owner, Name)) : 1m;
 }
@@ -139,7 +134,6 @@ public sealed class ShadowmeldPower : SimModel
 /// <summary>NoBlockPower.ModifyBlockMultiplicative: its owner gains no block from cards (anything not Unpowered).</summary>
 public sealed class NoBlockPower : SimModel
 {
-    public override string Name => "NoBlockPower";
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b) =>
         b.Target == owner && !b.Props.HasFlag(SimProps.Unpowered) && b.Card != null ? 0m : 1m;
 }

@@ -417,7 +417,7 @@ public sealed class PlayFacts
             Combat = cs,
             Plays = Math.Max(1, plays),
             Energy = SafeEnergy(card),
-            AutoPlayed = Features.CardIndicatorsFeature.ChoiceAutoPlayed(card),
+            AutoPlayed = CardPlays.ChoiceAutoPlayed(card),
             Stars = SafeStars(card),
             // Exhaust keyword (including added Exhaust), or Corruption sending a played skill to the
             // exhaust pile (CorruptionPower.ModifyCardPlayResultLocation).

@@ -5,7 +5,6 @@ namespace SpireQoL.Sim.Models;
 /// <summary>Tungsten Rod (relic, amount = HpLossReduction): ModifyHpLostAfterOsty takes that much off HP its owner loses; it flashes when it does.</summary>
 public sealed class TungstenRod : SimModel
 {
-    public override string Name => "TungstenRod";
     public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount) =>
         d.Target != owner ? amount : Math.Max(0m, amount - SimEngine.RelicsOf(s, owner)[Name]);
@@ -17,7 +16,6 @@ public sealed class TungstenRod : SimModel
 /// </summary>
 public sealed class BeatingRemnant : SimModel
 {
-    public override string Name => "BeatingRemnant";
     public override decimal ModifyHpLostAfterOsty(SimState s, int owner, DamageCtx d, decimal amount)
     {
         if (d.Target != owner) return amount;
@@ -38,7 +36,6 @@ public sealed class BeatingRemnant : SimModel
 /// </summary>
 public sealed class BufferPower : SimModel
 {
-    public override string Name => "BufferPower";
     public override decimal ModifyHpLostAfterOstyLate(SimState s, int owner, DamageCtx d, decimal amount) =>
         d.Target != owner || d.Card?.Name == "BrightestFlame" ? amount : 0m;
     public override void AfterModifyingHpLost(SimState s, int owner)
@@ -55,7 +52,6 @@ public sealed class BufferPower : SimModel
 /// </summary>
 public sealed class InfernoPower : SimModel
 {
-    public override string Name => "InfernoPower";
     public override TabKind? Tab => TabKind.Damage;
     public override void AfterDamageReceived(SimState s, int owner, DamageEvent e)
     {

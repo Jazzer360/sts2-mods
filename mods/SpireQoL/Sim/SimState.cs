@@ -147,13 +147,13 @@ public sealed class SimEnemy
     /// <summary>Its death has been handled (AfterDeath dispatched once).</summary>
     public bool DeathHandled;
 
-    /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
     /// <summary>Its powers the simulator reads or changes (docs/SIMULATOR_V2.md), in the order they were applied.</summary>
     public PowerSet Powers = PowerSet.Empty;
 
     /// <summary>Sets a power's amount (0 removes it).</summary>
     private void Set(string power, int amount) => Powers = amount == 0 ? Powers.Without(power) : Powers.With(power, amount);
 
+    /// <summary>Its block was broken (taken from above 0 to 0 by damage) during your turn.</summary>
     public bool BlockBroken;
     /// <summary>Stunned by something during your turn (not at the start).</summary>
     public bool StunnedThisTurn;
@@ -295,7 +295,7 @@ public sealed class SimPlayer
     public int OrbCapacity;
     /// <summary>
     /// A character with no base orb slots: the first channel with no capacity adds a slot
-    /// (OrbCmd.Channel â†’ AddSlots 1). A Defect whose slots are all gone channels nothing.
+    /// (OrbCmd.Channel → AddSlots 1). A Defect whose slots are all gone channels nothing.
     /// </summary>
     public bool SlotOnFirstChannel;
     /// <summary>Thunder: damage (unpowered) to each Lightning evoke's target that's still alive (ThunderPower.AfterOrbEvoked; 0 = none).</summary>
@@ -318,7 +318,6 @@ public sealed class SimPlayer
     [JsonIgnore] public int BootMinimum { get => Relics["TheBoot"]; set => SetRelic("TheBoot", value); }
     /// <summary>Your Focus now (orb values already include it), for Focus changes during a play.</summary>
     public int Focus;
-    /// <summary>Beating Remnant: HP you can still lose until the start of your next turn (it resets only then).</summary>
     /// <summary>Beating Remnant (relic: amount = MaxHpLoss, Data = HP lost since your turn started).</summary>
     [JsonIgnore] public int RemnantLeftPlayerTurn
     {
@@ -510,7 +509,7 @@ public sealed class SimState
     /// </summary>
     public int PlayHpReached, PlayHpLosses, PlayHpLost;
     /// <summary>
-    /// What fired during the play (the play log, docs/SIMULATOR_V2.md): source name â†’ times (Amount) and the damage or block it
+    /// What fired during the play (the play log, docs/SIMULATOR_V2.md): source name → times (Amount) and the damage or block it
     /// caused (Data). Fired is the smallest over branches merged into this one (it happens in every one of them); FiredAny
     /// the largest (in some). Not in the branch key.
     /// </summary>
@@ -594,7 +593,7 @@ public sealed class SimState
     private bool _teammatesShared;
 
     /// <summary>
-    /// The values of relics and powers (their DynamicVars), read from the game: "owner:Name:Var" â†’ value. Shared by every branch
+    /// The values of relics and powers (their DynamicVars), read from the game: "owner:Name:Var" → value. Shared by every branch
     /// and never changed; models read them with SimEngine.Var.
     /// </summary>
     public Dictionary<string, int> Vars = new();
@@ -615,10 +614,10 @@ public sealed class SimState
     public Dictionary<string, string> Titles = new();
     /// <summary>
     /// What models bound to a card play at BeforeCardPlayed (the game's amountsForPlayedCards: Afterimage, Gravity, Strangle...),
-    /// "Name@owner" â†’ amount; taken at AfterCardPlayed. A power the play itself applies isn't bound, so it doesn't fire on it.
+    /// "Name@owner" → amount; taken at AfterCardPlayed. A power the play itself applies isn't bound, so it doesn't fire on it.
     /// </summary>
     internal PowerSet Bound = PowerSet.Empty;
-    /// <summary>The first hit of a card's attack on each enemy (enemy id â†’ damage), for the damage-formula audit.</summary>
+    /// <summary>The first hit of a card's attack on each enemy (enemy id → damage), for the damage-formula audit.</summary>
     internal PowerSet FirstHits = PowerSet.Empty;
     /// <summary>Card events raised inside a hit or a death, run once it's over (SimEngine.Raise, DrainPending).</summary>
     internal PowerSet Pending = PowerSet.Empty;

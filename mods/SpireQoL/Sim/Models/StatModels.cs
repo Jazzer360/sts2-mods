@@ -6,7 +6,6 @@ namespace SpireQoL.Sim.Models;
 /// <summary>StrengthPower.ModifyDamageAdditive: its amount on the owner's powered attacks (negative allowed).</summary>
 public sealed class StrengthPower : SimModel
 {
-    public override string Name => "StrengthPower";
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d) =>
         d.Dealer == owner && d.Props.IsPoweredAttack() ? SimEngine.PowerOn(s, owner, Name) : 0m;
 }
@@ -17,7 +16,6 @@ public sealed class StrengthPower : SimModel
 /// </summary>
 public sealed class DexterityPower : SimModel
 {
-    public override string Name => "DexterityPower";
     public override decimal ModifyBlockAdditive(SimState s, int owner, BlockCtx b)
     {
         if (b.Play != null ? b.Play.Owner != owner : b.Target != owner) return 0m;
@@ -28,7 +26,6 @@ public sealed class DexterityPower : SimModel
 /// <summary>FrailPower.ModifyBlockMultiplicative: 0.75 on its owner's powered block.</summary>
 public sealed class FrailPower : SimModel
 {
-    public override string Name => "FrailPower";
     public override decimal ModifyBlockMultiplicative(SimState s, int owner, BlockCtx b) =>
         b.Target == owner && b.Props.IsPoweredBlock() ? 0.75m : 1m;
 }
@@ -39,7 +36,6 @@ public sealed class FrailPower : SimModel
 /// </summary>
 public sealed class VulnerablePower : SimModel
 {
-    public override string Name => "VulnerablePower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (d.Target != owner || !d.Props.IsPoweredAttack()) return 1m;
@@ -61,7 +57,6 @@ public sealed class VulnerablePower : SimModel
 /// </summary>
 public sealed class WeakPower : SimModel
 {
-    public override string Name => "WeakPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (d.Dealer != owner || !d.Props.IsPoweredAttack()) return 1m;
@@ -109,7 +104,6 @@ public abstract class AttackBoundPower : SimModel
 /// <summary>VigorPower: its amount on the owner's powered attack from a card; the attack that started with it spends that much (AfterAttack).</summary>
 public sealed class VigorPower : AttackBoundPower
 {
-    public override string Name => "VigorPower";
     public override TabKind? Tab => TabKind.Trigger;
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) => a.Dealer == owner && a.Props.IsPoweredAttack();
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d) =>
@@ -131,7 +125,6 @@ public sealed class VigorPower : AttackBoundPower
 /// </summary>
 public sealed class AimPower : AttackBoundPower
 {
-    public override string Name => "AimPower";
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) =>
         a.Dealer == owner && a.Props.IsPoweredAttack() && a.Props.HasFlag(SimProps.FromArrow);
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d)
@@ -156,7 +149,6 @@ public sealed class AimPower : AttackBoundPower
 /// <summary>QuietusPower: multiplies the owner's powered arrow attack by its amount; the attack bound to it removes it.</summary>
 public sealed class QuietusPower : AttackBoundPower
 {
-    public override string Name => "QuietusPower";
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) =>
         a.Dealer == owner && a.Props.IsPoweredAttack() && a.Props.HasFlag(SimProps.FromArrow);
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
@@ -178,7 +170,6 @@ public sealed class QuietusPower : AttackBoundPower
 /// </summary>
 public sealed class GigantificationPower : AttackBoundPower
 {
-    public override string Name => "GigantificationPower";
     public override TabKind? Tab => TabKind.Trigger;
     protected override bool Qualifies(SimState s, int owner, AttackInfo a) =>
         a.Card is { Type: SimCardType.Attack } && s.CurrentPlay?.Owner == owner && a.Props.IsPoweredAttack();
@@ -198,7 +189,6 @@ public sealed class GigantificationPower : AttackBoundPower
 /// <summary>DoubleDamagePower.ModifyDamageMultiplicative: 2 on the owner's (or their pet's) powered attacks from a card.</summary>
 public sealed class DoubleDamagePower : SimModel
 {
-    public override string Name => "DoubleDamagePower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
         (d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty)) && d.Props.IsPoweredAttack() && d.Card != null ? 2m : 1m;
 }
@@ -209,7 +199,6 @@ public sealed class DoubleDamagePower : SimModel
 /// </summary>
 public sealed class SlowPower : SimModel
 {
-    public override string Name => "SlowPower";
     public override TabKind? Tab => TabKind.Trigger;
     public override bool FlashesOnDamageModified => true;
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d) =>
@@ -227,7 +216,6 @@ public sealed class SlowPower : SimModel
 /// <summary>TenderPower.AfterCardPlayed: each card its owner plays takes 1 Strength and 1 Dexterity (Artifact can take them).</summary>
 public sealed class TenderPower : SimModel
 {
-    public override string Name => "TenderPower";
     public override TabKind? Tab => TabKind.Trigger;
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
@@ -246,7 +234,6 @@ public sealed class TenderPower : SimModel
 /// </summary>
 public sealed class LethalityPower : SimModel
 {
-    public override string Name => "LethalityPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null || d.Play?.Owner != owner) return 1m;
@@ -259,7 +246,6 @@ public sealed class LethalityPower : SimModel
 /// <summary>PhantomBladesPower.ModifyDamageAdditive: its amount on the owner's first Shiv each turn (no Shiv play finished yet).</summary>
 public sealed class PhantomBladesPower : SimModel
 {
-    public override string Name => "PhantomBladesPower";
     public override decimal ModifyDamageAdditive(SimState s, int owner, DamageCtx d)
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null || !d.Card.Is("Shiv") || d.Dealer != owner) return 0m;
@@ -271,7 +257,6 @@ public sealed class PhantomBladesPower : SimModel
 /// <summary>SerratedArrowsPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's (or pet's) powered hits on an Impaled enemy.</summary>
 public sealed class SerratedArrowsPower : SimModel
 {
-    public override string Name => "SerratedArrowsPower";
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
         if (!d.Props.IsPoweredAttack() || !(d.Dealer == owner || (owner == Who.You && d.Dealer == Who.YourOsty))) return 1m;
@@ -287,7 +272,6 @@ public sealed class SerratedArrowsPower : SimModel
 /// </summary>
 public sealed class PenNib : SimModel
 {
-    public override string Name => "PenNib";
     public override TabKind? Tab => TabKind.Trigger;
     public override decimal ModifyDamageMultiplicative(SimState s, int owner, DamageCtx d)
     {
@@ -321,7 +305,6 @@ public sealed class PenNib : SimModel
 /// </summary>
 public sealed class MightyWings : SimModel
 {
-    public override string Name => "MightyWings";
     public override TabKind? Tab => TabKind.Trigger;
     public override void AfterDamageGiven(SimState s, int owner, DamageEvent e)
     {

@@ -1,6 +1,5 @@
 namespace SpireQoL.Sim;
 
-/// <summary>What a model's tab shows: a plain trigger, or the block, damage or summon it adds (docs/FEATURES.md "On-card tabs").</summary>
 /// <summary>
 /// A model's tab: a trigger (no number), or one with the amount it gives (block, damage, summon, the cards it draws, the energy it
 /// gives: decision #132).
@@ -72,10 +71,10 @@ public sealed record SimCard(string Name, SimCardType Type)
     public bool Is(string tag) => Tags.Contains(tag);
 }
 
-/// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
 /// <summary>How the game shows a model acted (SimModel.Seen).</summary>
 public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft, CounterPassedLimit }
 
+/// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
 public sealed record SimCardPlay(SimCard Card, int Owner, int Target, int PlayIndex, int PlayCount, bool AutoPlay)
 {
     /// <summary>
@@ -121,8 +120,13 @@ public static class Who
 /// </summary>
 public abstract class SimModel
 {
-    /// <summary>The game's class name (StrengthPower, PenNib...).</summary>
-    public abstract string Name { get; }
+    /// <summary>
+    /// The game's class name (StrengthPower, PenNib...): a model is named after the class it models, so this is its own class name
+    /// unless it says otherwise (the one entry two models share, or a name the game doesn't have).
+    /// </summary>
+    public virtual string Name => _name;
+
+    private readonly string _name;
 
     /// <summary>It flashes when it changes a damage amount (the game's AfterModifyingDamageAmount: Slow, Hard to Kill...).</summary>
     public virtual bool FlashesOnDamageModified => false;
@@ -150,6 +154,7 @@ public abstract class SimModel
 
     protected SimModel()
     {
+        _name = GetType().Name;
         // The hooks this model overrides (here or in a base class of its own): the engine calls only those.
         _overrides = GetType().GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
             .Where(m => m.IsVirtual && m.DeclaringType != typeof(SimModel) && m.GetBaseDefinition().DeclaringType == typeof(SimModel))
@@ -209,7 +214,6 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> BeforeAttack(SimState s, int owner, AttackInfo attack) => One(s);
     public virtual IEnumerable<SimState> AfterAttack(SimState s, int owner, AttackInfo attack) => One(s);
     public virtual IEnumerable<SimState> AfterBlockGained(SimState s, int owner, int gainer, int amount, SimCard? card) => One(s);
-    /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     /// <summary>A card event (one per card or star): draws, exhausts, discards, created cards, stars, shuffles. Player: who it happened to.</summary>
     public virtual IEnumerable<SimState> AfterCardEvent(SimState s, int owner, CardEvent ev, int player) => One(s);
     // ---- end of your side's turn (Hook.BeforeSideTurnEnd: every listener's VeryEarly, then Early, then BeforeSideTurnEnd;
@@ -234,6 +238,7 @@ public abstract class SimModel
     public virtual void AfterDeath(SimState s, int owner, int dead) { }
     /// <summary>After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier.</summary>
     public virtual void AfterApplied(SimState s, int owner, int applier, int amount) { }
+    /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     public virtual void AfterModifyingBlockAmount(SimState s, int owner, int amount, SimCardPlay? play) { }
     /// <summary>After a damage amount it changed (the game's AfterModifyingDamageAmount): most only flash (FlashesOnDamageModified).</summary>
     public virtual void AfterModifyingDamageAmount(SimState s, int owner, SimCard? card) { if (FlashesOnDamageModified) s.LogFired(Name, 0, owner); }
