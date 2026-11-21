@@ -289,7 +289,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
   </section>
 
   <section class="page" id="p-perf">
-    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label><label title="Each point the average of the 5 around it (about a second and a quarter): the trend, not every spike. The slow-frame tiles and log still count every one."><input type="checkbox" id="smoothBox"> smooth lines</label></div>
+    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">this launch</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label><span class="dim" title="Each point drawn as the average of the points within this much time around it: the trend, not every spike. The slow-frame tiles and the log still count every one.">Smooth over</span><select id="smoothSel"><option value="0">off</option><option value="0.5">0.5 s</option><option value="1.25">1.25 s</option><option value="3">3 s</option><option value="10">10 s</option><option value="30">30 s</option><option value="60">1 minute</option></select></div>
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><h3>Is the mod making frames slow?</h3>
@@ -335,7 +335,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
 
   <section class="page" id="p-feedback">
     <div class="card"><h3>A thought while playing</h3>
-      <textarea id="fbText" data-shots="fbShots" placeholder="What felt off, what you'd want, what surprised you… Paste or drop screenshots here. (Ctrl+Enter saves)"></textarea>
+      <textarea id="fbText" data-shots="fbShots" placeholder="What felt off, what you'd want, what surprised you… Paste or drop screenshots here. (Ctrl+Enter saves, Tab picks the kind)"></textarea>
       <div class="shots" id="fbShots"></div>
       <div class="row" style="margin-top:8px">
         <span class="dim">Kind</span>
@@ -382,7 +382,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
 <dialog id="noteDialog">
   <h3>A note for the next stretch of work</h3>
   <div class="faint" id="noteWhere" style="margin-bottom:8px"></div>
-  <textarea id="noteText" rows="6" data-shots="noteShots" placeholder="What felt off, what you'd want, what surprised you… Paste or drop screenshots here. (Ctrl+Enter saves; Ctrl+Enter anywhere on the dashboard opens this)"></textarea>
+  <textarea id="noteText" rows="6" data-shots="noteShots" placeholder="What felt off, what you'd want, what surprised you… Paste or drop screenshots here. (Ctrl+Enter saves, Tab picks the kind; Ctrl+Enter anywhere on the dashboard opens this)"></textarea>
   <div class="shots" id="noteShots"></div>
   <div class="row" style="margin-top:10px"><span class="dim">Kind</span>
     <div class="kinds" id="noteKind" role="radiogroup" aria-label="Kind"></div>
@@ -838,20 +838,29 @@ function axes(g, w, h, yMax, unit, pad) {
 const MOD_BUDGET_MS = 4, STUTTER_MS = 30;
 const MOD_REFS = [{ v: MOD_BUDGET_MS, label: `budget ${MOD_BUDGET_MS} ms` }, { v: STUTTER_MS, label: `stutter ${STUTTER_MS} ms` }];
 const logTimes = () => { try { return localStorage.getItem("logTimes") !== "0"; } catch { return true; } };
-/** Line charts drawn smoothed (on by default): each point the mean of the 5 around it. Spikes still count in the tiles and the log. */
-const smoothLines = () => { try { return localStorage.getItem("smoothLines") !== "0"; } catch { return true; } };
-const SMOOTH_POINTS = 5;
-/** A centred moving average over n points (fewer at the ends). */
-function smoothed(points, n) {
-  const half = Math.floor(n / 2);
-  return points.map(([t], i) => {
-    let sum = 0, k = 0;
-    for (let j = Math.max(0, i - half); j <= Math.min(points.length - 1, i + half); j++) { sum += points[j][1]; k++; }
-    return [t, sum / k];
-  });
+/**
+ * How much time each line-chart point is averaged over (seconds; 0: drawn as measured). The Performance page's "Smooth over" sets
+ * it, kept per browser; 1.25 s by default. Spikes still count in the tiles and the log.
+ */
+const SMOOTH_DEFAULT_S = 1.25;
+/** The choice made on this page, which holds where the browser keeps nothing (storage blocked). */
+let smoothChosen = null;
+const smoothSeconds = () => { if (smoothChosen != null) return smoothChosen; try { const v = localStorage.getItem("smoothSeconds"); return v == null ? SMOOTH_DEFAULT_S : +v || 0; } catch { return SMOOTH_DEFAULT_S; } };
+/** A centred moving average over a time window (seconds): each point the mean of the points within half of it on either side. */
+function smoothed(points, seconds) {
+  if (!(seconds > 0) || points.length < 3) return points;
+  const half = seconds / 2, out = [];
+  let lo = 0, hi = 0, sum = 0;
+  for (let i = 0; i < points.length; i++) {
+    const t = points[i][0];
+    while (hi < points.length && points[hi][0] <= t + half) sum += points[hi++][1];
+    while (points[lo][0] < t - half) sum -= points[lo++][1];
+    out.push([t, sum / (hi - lo)]);
+  }
+  return out;
 }
 function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false, mini = false } = {}) {
-  if (!mini && smoothLines()) series = series.map((s) => (s.dots ? s : { ...s, points: smoothed(s.points, SMOOTH_POINTS) }));
+  if (!mini && smoothSeconds() > 0) series = series.map((s) => (s.dots ? s : { ...s, points: smoothed(s.points, smoothSeconds()) }));
   // mini: a trend in a small space (the Overview's checks): no axis labels, tight margins, the same hover readout.
   const { g, w, h } = canvas(id), pad = mini ? { l: 2, r: 2, t: 4, b: 4 } : { l: 44, r: 8, t: 8, b: 16 };
   const all = series.flatMap((s) => s.points);
@@ -911,7 +920,7 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
 }
 /** Stacked areas over time: layers [{ name, color, points: [[t, v]] }] on the same t. */
 function stacked(id, layers) {
-  if (smoothLines()) layers = layers.map((l) => ({ ...l, points: smoothed(l.points, SMOOTH_POINTS) }));
+  if (smoothSeconds() > 0) layers = layers.map((l) => ({ ...l, points: smoothed(l.points, smoothSeconds()) }));
   const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 16 };
   if (!layers.length || !layers[0].points.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const ts = layers[0].points.map((p) => p[0]), n = ts.length;
@@ -1246,6 +1255,15 @@ function kindPicker(id) {
   paint();
 }
 const kindOf = (id) => $(id).dataset.value;
+/** The next kind (or the one before), as if its button were clicked. */
+function cycleKind(id, back) {
+  const box = $(id), i = KINDS.indexOf(box.dataset.value);
+  const next = KINDS[(i + (back ? KINDS.length - 1 : 1)) % KINDS.length];
+  [...box.children].find((b) => b.textContent === next)?.click();
+}
+// Tab in a note's text box picks its kind (Shift+Tab the one before) instead of moving the focus away.
+for (const [text, kind] of [["noteText", "noteKind"], ["fbText", "fbKind"]])
+  $(text).addEventListener("keydown", (e) => { if (e.key === "Tab" && !e.ctrlKey && !e.altKey && !e.metaKey) { e.preventDefault(); cycleKind(kind, e.shiftKey); } });
 kindPicker("fbKind");
 kindPicker("noteKind");
 
@@ -1779,8 +1797,12 @@ function start() {
 $("searchFilter").addEventListener("change", () => render(true));
 $("perfWindow").addEventListener("change", () => render(true));
 $("logTimesBox").checked = logTimes();
-$("smoothBox").checked = smoothLines();
-$("smoothBox").addEventListener("change", (e) => { try { localStorage.setItem("smoothLines", e.target.checked ? "1" : "0"); } catch {} render(true); });
+{
+  // The chosen window, or the nearest one offered.
+  const sel = $("smoothSel"), want = smoothSeconds();
+  sel.value = [...sel.options].map((o) => o.value).reduce((a, b) => (Math.abs(+b - want) < Math.abs(+a - want) ? b : a));
+  sel.addEventListener("change", () => { smoothChosen = +sel.value; try { localStorage.setItem("smoothSeconds", sel.value); } catch {} render(true); });
+}
 $("logTimesBox").addEventListener("change", (e) => { try { localStorage.setItem("logTimes", e.target.checked ? "1" : "0"); } catch {} render(true); });
 $("connectBtn").addEventListener("click", () => connect(true));
 $("demoBtn").addEventListener("click", () => { FS.demo = true; FS.dir = null; start(); });

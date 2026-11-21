@@ -95,7 +95,9 @@ A page for a second monitor while you play (decision #108): what the mod's predi
 
 **Design rule:** every panel answers one question, and its title is that question. Its explanation (how to read it, what's normal, when to worry) is in the ⓘ beside the title, shown on hover: in the page's source it's a `<p class="hint">` inside the panel, turned into the icon when the page loads. Numbers are coloured against a stated threshold (green normal, amber worth a look, red a problem). A panel that doesn't answer a question you'd act on doesn't belong; the raw lists sit behind a fold. Every chart shows its values on hover, snapped to the nearest data point and marked on the chart, in a box outside it.
 
-**Charts:** line charts are drawn smoothed by default (each point the mean of the 5 around it, about 1.25 s; the "smooth lines" switch on the Performance page turns it off); the slow-frame tiles and the log still count every spike.
+**Charts:** line charts are drawn smoothed: each point the mean of the points within a time window around it, chosen on the Performance page ("Smooth over": off, 0.5 s, 1.25 s by default, 3 s, 10 s, 30 s, 1 minute; kept per browser); the slow-frame tiles and the log still count every spike.
+
+**Notes:** Ctrl+Enter anywhere opens the note dialog; in a note's text box Ctrl+Enter saves it and Tab picks its kind (Shift+Tab the one before).
 
 **Tables:** every table sorts by a column when you click its header (numbers biggest first; again for the other way; a third time for the table's own order). The choice is kept per table, across refreshes and visits. No libraries: the page is one file that works offline from the dev folder; charts and tables are drawn by hand.
 
