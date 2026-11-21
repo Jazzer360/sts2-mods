@@ -11,7 +11,7 @@ namespace SpireQoL.Diagnostics;
 /// Everything the mod tracks has a row in the settings menu, and every row still has something
 /// behind it (SettingsCatalog). Checked once at load, from the compiled mod and game:
 ///  - proc rules: the simulator's models with a tab (from the play log, or judged on how the turn ends: SimModel.OutcomeTab),
-///    and the relic and power classes Proc Indicators still names itself (nameof compiles to string literals, read from its code),
+///    and the relic and power classes the card predictions still name themselves (nameof compiles to string literals, read from CardPredictions' code),
 ///    against the catalog's proc rows;
 ///  - tracker rows: RelicSpecs (in the tray) and PowerSpecs against the catalog's tracker rows;
 ///  - double plays: every game class that changes how many times a card plays
@@ -35,7 +35,7 @@ internal static class CatalogCheck
         var gameTypes = GameModelTypes();
         // The simulator's models with a tab (the play log's tabs), and the outcome comparisons Proc Indicators names (tab keys are
         // built as "proc:" + nameof(X), which the compiler folds into one literal).
-        var ruleNames = LiteralsIn(typeof(ProcIndicatorsFeature)).Select(n => n.StartsWith("proc:") ? n[5..] : n)
+        var ruleNames = LiteralsIn(typeof(Combat.CardPredictions)).Select(n => n.StartsWith("proc:") ? n[5..] : n)
             .Concat(Sim.SimModels.Names.Where(n => Sim.SimModels.Get(n) is { } m && (m.Tab != null || m.JudgedOnOutcome)))
             .Where(n => gameTypes.TryGetValue(n, out var t) && (typeof(RelicModel).IsAssignableFrom(t) || typeof(PowerModel).IsAssignableFrom(t)))
             .ToHashSet();

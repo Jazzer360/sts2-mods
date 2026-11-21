@@ -435,7 +435,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             var hand = new Dictionary<CardModel, (IReadOnlyList<TabSpec>, PlayFacts?)>(ReferenceEqualityComparer.Instance);
             foreach (var c in Sts2State.Hand(me))
                 hand[c] = (_ctx.Decor.LastInHand.TryGetValue(c, out var t) ? t.ToList() : new List<TabSpec>(),
-                           ProcIndicatorsFeature.LastFacts.TryGetValue(c, out var cf) ? cf : null);
+                           _ctx.Predictions.LastFacts.TryGetValue(c, out var cf) ? cf : null);
             choosing.Choice = hand;
         }
 
@@ -493,7 +493,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                     rec.UpgradeBefore = card.CurrentUpgradeLevel;
                     // The prediction checked (decision #28): from the board as the play begins to resolve, through
                     // the same code as the tabs, so nothing ahead of it is pending or unknown.
-                    if (ProcIndicatorsFeature.PredictNow(card) is { } now)
+                    if (_ctx.Predictions.PredictNow(card) is { } now)
                     {
                         rec.Predicted = now.Tabs;
                         rec.Facts = now.Facts;
@@ -506,7 +506,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                         _fromHand++;
                         rec.ShownSkip = "no prediction as the play began";
                         rec.Predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null;
-                        rec.Facts = ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var facts) ? facts : null;
+                        rec.Facts = _ctx.Predictions.LastFacts.TryGetValue(card, out var facts) ? facts : null;
                         rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
                         if (_history != null) rec.StaleBecause = StaleBecause(_history.Entries.ToList(), card, _history.Entries.Count(), play.Player);
                     }
@@ -686,7 +686,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private (List<string>? Diff, string? Skip) ShownCheck(CardModel card, List<TabSpec> now, PlayFacts nowFacts)
     {
-        if (!ProcIndicatorsFeature.LastTabs.TryGetValue(card, out var last) || !ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var shownFacts))
+        if (!_ctx.Predictions.LastTabs.TryGetValue(card, out var last) || !_ctx.Predictions.LastFacts.TryGetValue(card, out var shownFacts))
             return (null, "none recorded in hand");
         // Drawn on the last frame the card was in hand: not held from an earlier board while its simulation ran (decision #105), nor
         // from a frame the feature skipped.
@@ -841,7 +841,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         var captured = ReferenceEquals(rec.Card, card);
         var predicted = captured && rec.Predicted != null ? rec.Predicted
             : _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs : Array.Empty<TabSpec>();
-        var facts = captured ? rec.Facts : ProcIndicatorsFeature.LastFacts.TryGetValue(card, out var f0) ? f0 : null;
+        var facts = captured ? rec.Facts : _ctx.Predictions.LastFacts.TryGetValue(card, out var f0) ? f0 : null;
         // A hand choice's pick, auto-played: its tabs and facts from the choice join the card's own.
         var autoPlays = indices.Select(i => hist[i]).OfType<CardPlayStartedEntry>().Where(e => e.CardPlay.IsAutoPlay && e.CardPlay.Card.Owner == me).ToList();
         CardModel? chosen = null;
@@ -1087,7 +1087,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         // How the simulations did against the frame's wait and their caps (decision #104).
         if (Combat.SimWait.Summary() is { } waits) ModEntry.Log.Info($"[perf] combat summary: simulations: {waits}.");
-        if (ProcIndicatorsFeature.TakeHeldFrames() is > 0 and var held) ModEntry.Log.Info($"[perf] combat summary: card frames shown with tabs held from an earlier board while simulations ran: {held}.");
+        if (_ctx.Predictions.TakeHeldFrames() is > 0 and var held) ModEntry.Log.Info($"[perf] combat summary: card frames shown with tabs held from an earlier board while simulations ran: {held}.");
         if (Combat.TurnEndModel.TakeHeldFrames() is > 0 and var heldForecast) ModEntry.Log.Info($"[perf] combat summary: frames showing the forecast held from an earlier board: {heldForecast}.");
         if (SimJob.CapSummary() is { } caps) ModEntry.Log.Info($"[perf] combat summary: searches stopped by {caps}.");
         if (_checked == 0) return;

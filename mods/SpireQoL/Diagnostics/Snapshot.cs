@@ -73,7 +73,7 @@ public static class Snapshot
             var tabs = ctx.Decor.Previous.TryGetValue(c, out var t)
                 ? string.Join(", ", t.Select(x => x.Text ?? (x.Amount > 0 ? $"{x.Key} {x.Amount}{(x.AuditMax > 0 ? $" [{x.AuditMin}-{x.AuditMax}]" : "")}" : x.Key) + (x.Crossed ? " (crossed)" : "")))
                 : "none";
-            var facts = ProcIndicatorsFeature.PreviousFacts.TryGetValue(c, out var f) ? FactsLine(f) : "no facts";
+            var facts = ctx.Predictions.PreviousFacts.TryGetValue(c, out var f) ? FactsLine(f) : "no facts";
             string cost;
             try { cost = c.EnergyCost.CostsX ? "X" : c.EnergyCost.GetAmountToSpend().ToString(); } catch { cost = "?"; }
             return $"{c.GetType().Name}{(c.IsUpgraded ? "+" : "")} ({c.Type}, cost {cost}, keywords {string.Join("/", c.Keywords)}" +

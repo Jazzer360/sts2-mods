@@ -68,7 +68,7 @@ public sealed class Pocketwatch : RelicProc
 /// <summary>
 /// GremlinHorn.AfterDeath: an enemy's death gives its owner its Energy (PlayerCmd.GainEnergy), then draws its Cards (CardPileCmd.Draw),
 /// queued to run once the hit or action that killed it is over (SimEngine.Raise). No tab of its own here: its tab is judged by the
-/// play's outcome (a kill in every branch: ProcIndicatorsFeature); this model makes the energy and the draw happen in the simulation
+/// play's outcome (a kill in every branch: its OutcomeTab); this model makes the energy and the draw happen in the simulation
 /// (the play check compares the energy after each play: a dev-mode report, Unleash and Debilitate killing a segment).
 /// </summary>
 public sealed class GremlinHorn : SimModel

@@ -17,7 +17,7 @@ namespace SpireQoL.Procs;
 /// <summary>
 /// What playing one card in hand right now would do, as far as procs care: how many times it
 /// plays, what it spends, and what it exhausts, discards, draws, debuffs and creates. Built once per
-/// card per frame and read by every proc rule (ProcIndicatorsFeature) and the Shuffle Warning.
+/// card per frame and read by every proc rule (Combat/CardPredictions) and the Shuffle Warning.
 ///
 /// Counts come from the game's own numbers where it has them (play count hook, energy/star cost
 /// with modifiers, DynamicVars) and from per-card tables (decompile v0.111.0) where the effect is

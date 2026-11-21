@@ -77,7 +77,7 @@ public static class SimReaders
                 case "StranglePower" or "OblivionPower": data = pw.Applier is { } sa && idOf(sa) is { } saId ? saId + 100 : 0; break;
                 case "ImitationLearningPower":
                     data = pw is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower il
-                           && Features.ProcIndicatorsFeature.CopiesFrom(il)?.Creature is { } copied && idOf(copied) is { } cId ? cId + 100 : 0;
+                           && Combat.CardPredictions.CopiesFrom(il)?.Creature is { } copied && idOf(copied) is { } cId ? cId + 100 : 0;
                     break;
                 case "InterceptPower":
                 {

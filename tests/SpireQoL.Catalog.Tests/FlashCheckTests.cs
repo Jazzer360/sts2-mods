@@ -21,6 +21,6 @@ public class FlashCheckTests
         GameModels.EnsureLoaded();
         var canon = ModelDb.GetById<PowerModel>(ModelDb.GetId(typeof(ChildOfTheStarsPower)))!;
         Assert.False(canon.IsMutable);
-        Assert.Null(ProcIndicatorsFeature.OwnerOf(canon));
+        Assert.Null(SpireQoL.Combat.CardPredictions.OwnerOf(canon));
     }
 }

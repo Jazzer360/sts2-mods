@@ -42,7 +42,7 @@ public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, st
 public sealed record TabEntry(string Key, string Name, string Description);
 
 /// <summary>
-/// Everything the settings menu lists. Must cover every rule in ProcIndicatorsFeature, every
+/// Everything the settings menu lists. Must cover every rule in the card predictions (Combat/CardPredictions), every
 /// double-play source, and every RelicSpecs / PowerSpecs entry (SettingsCatalog.Check logs any
 /// tab key seen in play that isn't here, and the menu lists such keys under "Other").
 /// Text follows docs/FEATURES.md "Proc Indicators" and "Relic Counters".

@@ -324,7 +324,7 @@ public static partial class SimAdapter
     /// <summary>
     /// A player's end-of-turn auto-plays (the auto-play phase, before BeforeSideTurnEnd): Stampede and Simpleton pick from
     /// their hand, Howl from Beyond plays from their exhaust pile, and I Am Invincible from the top of their draw pile when
-    /// that's certain (every card there is a copy of it). Auto-plays get no procs from the rules (ProcIndicatorsFeature).
+    /// that's certain (every card there is a copy of it). Auto-plays get no procs from the rules (Combat/CardPredictions).
     /// For a teammate (<paramref name="owner"/>), the piles only: Stampede never counts (a random card), and Simpleton's pick
     /// would need their card plays built as theirs, which only Howl from Beyond's is (reviewed: decision #80).
     /// </summary>
