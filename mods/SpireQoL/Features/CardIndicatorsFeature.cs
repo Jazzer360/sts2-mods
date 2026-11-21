@@ -51,7 +51,7 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 
     /// <summary>Last frame's result per hand card: Ethereal (faded) and its tabs, kept while the board probe sees nothing change.</summary>
     private readonly List<(CardModel Card, bool Ethereal, List<TabSpec> Tabs)> _last = new();
-    private int _reusedSinceCheck;
+    private readonly ReuseCheck _reuse = new("Card Indicators");
     /// <summary>The board probe _last was worked out from.</summary>
     private int _lastProbe;
 
@@ -66,14 +66,13 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         // (how many times it plays, whether it can be played). Dev mode works them out anyway every 30th such frame and logs a
         // difference (a change the probe missed).
         var cs = Sts2State.Combat;
-        var same = cs != null && _last.Count == hand.Count && _last.Select(x => x.Card).SequenceEqual(hand, ReferenceEqualityComparer.Instance)
-                   && BoardProbe.Hash(me, cs) == _lastProbe;
-        if (same && (!ModEntry.DevMode || ++_reusedSinceCheck < BoardProbe.CheckEvery))
+        var reuse = _reuse.Decide(cs != null && _last.Count == hand.Count && _last.Select(x => x.Card).SequenceEqual(hand, ReferenceEqualityComparer.Instance)
+                                  && BoardProbe.Hash(me, cs) == _lastProbe);
+        if (reuse == FrameReuse.Reuse)
         {
             foreach (var (card, ethereal, tabs) in _last) Show(card, ethereal, tabs, s);
             return;
         }
-        if (same) _reusedSinceCheck = 0;
 
         var now = new List<(CardModel Card, bool Ethereal, List<TabSpec> Tabs)>(hand.Count);
         foreach (var card in hand)
@@ -82,9 +81,12 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             now.Add((card, ethereal, tabs));
             Show(card, ethereal, tabs, s);
         }
-        if (same && now.Zip(_last).FirstOrDefault(x => x.First.Ethereal != x.Second.Ethereal || !x.First.Tabs.SequenceEqual(x.Second.Tabs)) is { First.Card: { } changed } d)
-            BoardProbe.Missed("Card Indicators", "a card's tabs changed while the board probe didn't",
-                $"{changed.GetType().Name}: [{string.Join(", ", d.Second.Tabs.Select(t => t.Key))}] → [{string.Join(", ", d.First.Tabs.Select(t => t.Key))}]");
+        if (reuse == FrameReuse.WorkOutAndCheck)
+        {
+            var d = now.Zip(_last).FirstOrDefault(x => x.First.Ethereal != x.Second.Ethereal || !x.First.Tabs.SequenceEqual(x.Second.Tabs));
+            _reuse.Compare(d.First.Card == null, "a card's tabs changed while the board probe didn't",
+                () => $"{d.First.Card!.GetType().Name}: [{string.Join(", ", d.Second.Tabs.Select(t => t.Key))}] → [{string.Join(", ", d.First.Tabs.Select(t => t.Key))}]");
+        }
         _last.Clear();
         _last.AddRange(now);
         if (cs != null) _lastProbe = BoardProbe.Hash(me, cs);

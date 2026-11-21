@@ -322,10 +322,9 @@ public sealed class TurnEndModel
         // Nothing a prediction reads changed since last frame, and its search is over (decision #130): last frame's model,
         // without reading the board again. Dev mode works it out anyway every 30th such frame and logs it if the key differs.
         var probe = BoardProbe.Hash(me, cs);
-        var probeSkip = !ownBudget && _lastModel is { Job.Ready.IsCompleted: true } && _lastModelProbe == probe;
-        if (probeSkip && (!ModEntry.DevMode || ++_skippedSinceCheck < BoardProbe.CheckEvery)) return _lastModel;
-        if (probeSkip) _skippedSinceCheck = 0;
-        var probeCheck = probeSkip ? _lastModel : null;
+        var reuse = ForecastReuse.Decide(!ownBudget && _lastModel is { Job.Ready.IsCompleted: true } && _lastModelProbe == probe);
+        if (reuse == FrameReuse.Reuse) return _lastModel;
+        var probeCheck = reuse == FrameReuse.WorkOutAndCheck ? _lastModel : null;
 
         // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
         DrawPileMemory.Update(me, cs);
@@ -335,8 +334,9 @@ public sealed class TurnEndModel
         var state = CountTeammateHands || full.Teammates.Count == 0 ? full : full.WithoutTeammateHands();
         // The game state rarely changes between frames: rerun only when it did.
         var key = ReferenceEquals(state, full) ? fullKey : state.FullKey();
-        if (probeCheck != null && (probeCheck.StateKey != key || probeCheck._fullKey != fullKey))
-            BoardProbe.Missed("the turn forecast", "its start state changed while the board probe didn't", BoardProbe.Diff(probeCheck.FullState, full));
+        if (probeCheck != null)
+            ForecastReuse.Compare(probeCheck.StateKey == key && probeCheck._fullKey == fullKey, "its start state changed while the board probe didn't",
+                () => BoardProbe.Diff(probeCheck.FullState, full));
         var job = Explore(ref _lastKey, ref _lastJob, key, state, "the turn forecast");
         if (!Wait(job, ownBudget)) return null;
         // The same board and the same search result as the last frame: its model again, not rebuilt from the outcome every frame.
@@ -360,7 +360,7 @@ public sealed class TurnEndModel
     private static TurnEndModel? _lastModel;
     /// <summary>The board probe <see cref="_lastModel"/> was worked out from (decision #130).</summary>
     private static int _lastModelProbe;
-    private static int _skippedSinceCheck;
+    private static readonly ReuseCheck ForecastReuse = new("the turn forecast");
 
     private static TurnEndModel From(SimState state, long key, SimOutcome outcome, IReadOnlyDictionary<Creature, int> ids,
         IReadOnlyList<Player> teammates, int myHp)

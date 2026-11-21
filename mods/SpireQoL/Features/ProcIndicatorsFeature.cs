@@ -121,18 +121,14 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         var key = te == null ? 0 : probeSame ? _lastFrameKey : FrameKey(te, hand);
         _lastFrameKey = key;
         _lastFrameKeyProbe = probe;
-        var checkReuse = false;
-        if (key != 0 && key == _reuseKey)
+        var reuse = _reuse.Decide(key != 0 && key == _reuseKey);
+        if (reuse == FrameReuse.Reuse)
         {
-            if (!ModEntry.DevMode || ++_reusedSinceCheck < BoardProbe.CheckEvery)
-            {
-                Reuse(hand, cs);
-                return;
-            }
-            _reusedSinceCheck = 0;
-            checkReuse = true;
-            if (probeSame && FrameKey(te!, hand) != key) BoardProbe.Missed("Proc Indicators", "its frame key changed while the board probe didn't");
+            Reuse(hand, cs);
+            return;
         }
+        var checkReuse = reuse == FrameReuse.WorkOutAndCheck;
+        if (checkReuse && probeSame) _reuse.Compare(FrameKey(te!, hand) == key, "its frame key changed while the board probe didn't");
 
         // Sources: your powers, your relics, and powers on enemies (theirs, or ones you applied).
         var sources = Sources(me, cs);
@@ -189,8 +185,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     private long _reuseKey;
     private List<(CardModel Card, List<TabSpec> Tabs)> _reuseTabs = new();
-    private int _reusedSinceCheck;
-    private static readonly HashSet<string> _reuseWarned = new();
+    private readonly ReuseCheck _reuse = new("Proc Indicators");
 
     /// <summary>
     /// What this frame's tabs depend on: the board (the turn forecast's state key: every creature, power, relic, orb, pile and
@@ -240,11 +235,8 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         foreach (var (card, tabs) in now)
         {
             var before = _reuseTabs.FirstOrDefault(x => ReferenceEquals(x.Card, card)).Tabs;
-            if (before == null || before.SequenceEqual(tabs)) continue;
-            var name = card.GetType().Name;
-            if (_reuseWarned.Add(name))
-                ModEntry.Log.Warn($"[proc] reused tabs went stale for {name} with no change the frame key sees: " +
-                    $"reused [{string.Join(", ", before.Select(t => t.Key))}], now [{string.Join(", ", tabs.Select(t => t.Key))}]");
+            _reuse.Compare(before == null || before.SequenceEqual(tabs), "reused tabs went stale with no change the frame key sees",
+                () => $"{card.GetType().Name}: reused [{string.Join(", ", before!.Select(t => t.Key))}], now [{string.Join(", ", tabs.Select(t => t.Key))}]");
         }
     }
 
