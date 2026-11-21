@@ -38,7 +38,7 @@ public class SimKeyCoverageTests
         ["SimState.PlayBiggestHit"] = Merged, ["SimState.Fired"] = Merged, ["SimState.FiredAny"] = Merged,
         // Inside one step only.
         ["SimState.IndirectNow"] = Scratch, ["SimState.CurrentPlay"] = Scratch, ["SimState.AttackSerial"] = Scratch,
-        ["SimState.CurrentAttack"] = Scratch, ["SimState.PlayFromHand"] = Scratch, ["SimState.EnemyTurnNow"] = Scratch,
+        ["SimState.CurrentAttack"] = Scratch, ["SimState.EnemyTurnNow"] = Scratch,
         ["SimState.EndOfTurnNow"] = Scratch, ["SimState.Bound"] = Scratch, ["SimState.Pending"] = Scratch, ["SimState.ArrowAwayAt"] = Scratch,
         ["SimState.EventCard"] = Scratch, ["SimState.PlayEvents"] = Scratch, ["SimState.PlayCardBlockGains"] = Scratch,
         ["SimState.DrawRecord"] = "in the key while it's set (as a set: decision #120); null between steps",

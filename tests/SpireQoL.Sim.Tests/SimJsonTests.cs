@@ -62,13 +62,15 @@ public class SimJsonTests
     }
 
     [Fact]
-    public void ADrawnCopyHasTheKeyOfTheCardItCopies()
+    public void ADrawnCopyHasTheKeyOfTheCardItCopiesAndItsPlays()
     {
-        var card = new SimHandCard { Name = "Strike", IsAttack = true, Cost = 1, Plays = { new SimPlay { Hits = 1 } } };
+        var card = new SimHandCard { Id = 31, Name = "Strike", IsAttack = true, Cost = 1, Plays = { new SimPlay { HandCard = 31, Hits = 1 }, new SimPlay { HandCard = 0, Hits = 2 } } };
         var drawn = card.CopyWithId(-1001);
         Assert.Equal(-1001, drawn.Id);
+        Assert.Equal(new[] { -1001, 0 }, drawn.Plays.Select(play => play.HandCard)); // its own play is the copy's; one that isn't stays so
+        Assert.Equal(new[] { 31, 0 }, card.Plays.Select(play => play.HandCard)); // the card it copies is untouched
         Assert.Equal(card.Key, drawn.Key);
-        Assert.Equal(card.Key, new SimHandCard { Id = -1001, Name = "Strike", IsAttack = true, Cost = 1, Plays = card.Plays }.Key); // as if read from scratch
+        Assert.Equal(card.Key, new SimHandCard { Id = -1001, Name = "Strike", IsAttack = true, Cost = 1, Plays = drawn.Plays }.Key); // as if read from scratch
     }
 
     private static IEnumerable<MemberInfo> Members(Type type) =>

@@ -11,17 +11,20 @@ public static partial class SimEngine
     /// </summary>
     private static void RunCardPlay(BranchSet branches, CardPlayAction cardPlayAction)
     {
+        // Played from your hand: it has left it until it resolves (SimPlayer.PlayingFromHand).
+        if (cardPlayAction.FromHand)
+            branches.Do(branch => { if (branch.Player(cardPlayAction.Play.Owner) != null) branch.MutablePlayer(cardPlayAction.Play.Owner).PlayingFromHand++; });
         for (var i = 0; i < Math.Max(1, cardPlayAction.Play.PlayCount); i++)
         {
             var play = cardPlayAction.Play with { PlayIndex = i };
-            branches.Do(branch => { branch.CurrentPlay = play; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayFromHand = cardPlayAction.FromHand; });
+            branches.Do(branch => { branch.CurrentPlay = play; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; });
             HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, play));
             branches.Do(branch => Count(branch, play, PlayStage.Started));
             foreach (var action in cardPlayAction.Body) Run(branches, action);
             branches.Do(branch => Count(branch, play, PlayStage.Finished));
             HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, play));
         }
-        branches.Do(branch => { branch.CurrentPlay = null; branch.PlayFromHand = false; });
+        branches.Do(branch => branch.CurrentPlay = null);
     }
 
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>

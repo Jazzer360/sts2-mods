@@ -37,6 +37,8 @@ public static partial class SimEngine
             state.Unmodelled ??= "a card that acts on what it draws, with no draw pile to draw from";
             return ProcCardEvent(state, CardEvent.Drawn, drawnCardAction.Count, player, drawnCardAction.Indirect);
         }
+        // A draw inside another's (a card it drew played itself: Hellraiser) records its own, then gives the outer one's back.
+        var outerRecord = state.DrawRecord;
         state.DrawRecord = new List<(SimDrawCard, int)>();
         IEnumerable<SimState> states = new[] { state };
         if (drawnCardAction.DrawAgainIf != SimCardType.None)
@@ -50,7 +52,7 @@ public static partial class SimEngine
                 var next = new List<SimState>();
                 foreach (var copy in Then(going, branch => DrawOne(branch, player, drawnCardAction.Indirect, record: true)))
                     (copy.DrawRecord!.Count > drawn && copy.DrawRecord[^1].Card.Type == drawnCardAction.DrawAgainIf
-                        && copy.Player(player)!.HandCount - (copy.PlayFromHand ? 1 : 0) < MaxHand ? next : done).Add(copy);
+                        && copy.Player(player)!.HandCount - copy.Player(player)!.PlayingFromHand < MaxHand ? next : done).Add(copy);
                 going = next;
             }
             states = done;
@@ -60,7 +62,7 @@ public static partial class SimEngine
         return Then(states, branch =>
         {
             var drawn = branch.DrawRecord!;
-            branch.DrawRecord = null;
+            branch.DrawRecord = outerRecord;
             // What its chance tab counts (decision #119).
             branch.DrawnTally = drawnCardAction.Block != null ? (drawn.Count > 0 && drawn[0].Card.Type == drawnCardAction.BlockIf ? 1 : 0)
                 : drawnCardAction.DrawAgainIf != SimCardType.None ? drawn.Count(draw => draw.Card.Type == drawnCardAction.DrawAgainIf)
@@ -95,8 +97,8 @@ public static partial class SimEngine
     private static IEnumerable<SimState> DrawOne(SimState state, int player, bool indirect, bool record = false, Action<SimState>? onDrawn = null)
     {
         var simPlayer = state.Player(player)!;
-        // The card being played has left your hand already (the game moves it before OnPlay); HandCount drops at CardResolved.
-        var inHand = simPlayer.HandCount - (state.PlayFromHand ? 1 : 0);
+        // The cards being played have left their owner's hand already (the game moves each before OnPlay); HandCount drops each at CardResolved.
+        var inHand = simPlayer.HandCount - simPlayer.PlayingFromHand;
         if (inHand >= MaxHand) return new[] { state };
         var pile = simPlayer.Draw!;
         if (pile.Count == 0)
@@ -143,9 +145,11 @@ public static partial class SimEngine
             state.Unmodelled ??= "Hellraiser auto-plays a drawn Strike whose play isn't built";
             return new[] { state };
         }
-        var plays = auto.Plays.Count == 1 && auto.Plays[0].TargetId < 0
-            ? auto.Plays
-            : auto.Plays.Where(play => state.Enemy(play.TargetId) is { Alive: true, Hittable: true }).ToList();
+        // The copy drawn plays (from your hand: it's there once drawn), so its plays are its own.
+        var ownPlays = auto.CopyWithId(id).Plays;
+        var plays = ownPlays.Count == 1 && ownPlays[0].TargetId < 0
+            ? ownPlays
+            : ownPlays.Where(play => state.Enemy(play.TargetId) is { Alive: true, Hittable: true }).ToList();
         if (player == Who.You) state.AutoPlayed++;
         var simPlayer = state.MutablePlayer(player);
         if (simPlayer.AutoHand != null) simPlayer.AutoHand = simPlayer.AutoHand.Where(handCard => handCard.Id != id).ToList();
@@ -155,7 +159,7 @@ public static partial class SimEngine
             simPlayer.HandCount--;
             return new[] { state };
         }
-        var (current, fromHand, events, blockGains, attack) = (state.CurrentPlay, state.PlayFromHand, state.PlayEvents, state.PlayCardBlockGains, state.CurrentAttack);
+        var (current, events, blockGains, attack) = (state.CurrentPlay, state.PlayEvents, state.PlayCardBlockGains, state.CurrentAttack);
         var result = new List<SimState>();
         foreach (var play in plays)
         {
@@ -165,7 +169,7 @@ public static partial class SimEngine
             ApplyPlay(sub, play);
             foreach (var copy in sub.States)
             {
-                (copy.CurrentPlay, copy.PlayFromHand, copy.PlayEvents, copy.PlayCardBlockGains, copy.CurrentAttack) = (current, fromHand, events, blockGains, attack);
+                (copy.CurrentPlay, copy.PlayEvents, copy.PlayCardBlockGains, copy.CurrentAttack) = (current, events, blockGains, attack);
                 result.Add(copy);
             }
         }

@@ -34,11 +34,13 @@ public static partial class SimEngine
     {
         if (state.Player(cardResolvedAction.Owner) == null) { AllyDeaths(state); return; }
         var player = state.MutablePlayer(cardResolvedAction.Owner);
+        if (cardResolvedAction.HandCard != 0) player.PlayingFromHand = Math.Max(0, player.PlayingFromHand - 1); // it resolved: HandCount drops it now
         // With a draw pile (decision #90), the cards it drew are already in hand, as drawn: only what it made or brought back is
         // unknown.
         var handDelta = cardResolvedAction.HandDelta - (player.Draw != null ? cardResolvedAction.Draws : 0);
         // A card added to a full hand goes to the discard pile instead (CardPileCmd.Add): never more than 10 (decision #90).
-        player.HandCount = Math.Clamp(player.HandCount + handDelta, 0, player.Draw != null ? MaxHand : int.MaxValue);
+        // The cap is on the hand: the cards still being played (a play inside this one's: Hellraiser) are counted, not held.
+        player.HandCount = Math.Clamp(player.HandCount + handDelta, 0, player.Draw != null ? MaxHand + player.PlayingFromHand : int.MaxValue);
         if (!cardResolvedAction.AutoPlay) player.PaelsEyeExhaust = false;
         if (player.AutoHand != null)
         {

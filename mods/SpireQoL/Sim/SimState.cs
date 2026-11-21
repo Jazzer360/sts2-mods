@@ -279,6 +279,12 @@ public sealed class SimPlayer
 
     // Hand and turn counters.
     public int HandCount;
+    /// <summary>
+    /// Their cards being played from their hand: each has left it (the game moves it before it plays), but HandCount counts it until
+    /// it resolves (CardResolved), so a draw meanwhile has its slot (SimEngine.DrawOne). More than one when a play plays another
+    /// (Hellraiser's Strike, drawn by a card being played).
+    /// </summary>
+    public int PlayingFromHand;
     /// <summary>Arrows they can shoot now (PlayerCombatState.AvailableArrowCount; the Fool).</summary>
     public int Arrows;
     /// <summary>Energy now (PlayerCombatState.Energy): Pael's Tears.</summary>
@@ -436,7 +442,7 @@ public sealed class SimPlayer
     {
         add(Block); add(Hp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
         add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(LizardTailHeal); add(FairiesUsed); add(Fairies);
-        add(BlockGains); add(Energy); add(HandCount); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(StatusDrawn);
+        add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(StatusDrawn);
         add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
         Draw?.Hash(add);
         add(TurnEndCards.Count);
@@ -501,7 +507,12 @@ public sealed class SimHandCard
     }
 
     /// <summary>Another copy of this card in your hand (one drawn): its own id, the same plays, so the same key.</summary>
-    public SimHandCard CopyWithId(int id) => new() { Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, Plays = Plays, _key = Key };
+    /// <remarks>Its own plays become the copy's (SimPlay.HandCard): played, it's the copy that leaves your hand.</remarks>
+    public SimHandCard CopyWithId(int id) => new()
+    {
+        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, _key = Key,
+        Plays = Id == 0 ? Plays : Plays.Select(play => play.HandCard == Id ? play.AsHandCard(id) : play).ToList(),
+    };
 
     public string Name = "";
     public bool IsAttack;
@@ -660,8 +671,6 @@ public sealed class SimState
     /// <summary>The card play being resolved (its hooks and actions read it), and the attack in progress (Vigor, Aim...).</summary>
     internal SimCardPlay? CurrentPlay;
     internal int AttackSerial, CurrentAttack;
-    /// <summary>The card being played was played from its owner's hand (a draw then has its slot: SimEngine.DrawOne).</summary>
-    internal bool PlayFromHand;
     /// <summary>The enemy turn is under way (the players' side's turn is over: Inferno doesn't react).</summary>
     internal bool EnemyTurnNow;
     /// <summary>Your side's turn is ending (EndOfTurn): block and damage from models go into the Incoming Damage breakdown.</summary>

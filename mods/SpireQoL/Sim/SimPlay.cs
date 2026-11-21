@@ -27,6 +27,13 @@ public sealed class SimPlay
     public List<SimAction> Before = new(), After = new();
     /// <summary>The card in your hand this play is (SimHandCard.Id): playing it takes it out of SimPlayer.AutoHand. 0 = none.</summary>
     public int HandCard;
+    /// <summary>This play as another card's in your hand (a copy of it: SimHandCard.CopyWithId); the rest is shared, as it isn't changed.</summary>
+    public SimPlay AsHandCard(int handCard)
+    {
+        var play = (SimPlay)MemberwiseClone();
+        play.HandCard = handCard;
+        return play;
+    }
     /// <summary>Cards it draws (the draw pile it leaves: I Am Invincible on top).</summary>
     public int Draws;
     /// <summary>An auto-play (CardPlay.IsAutoPlay): Pael's Eye doesn't count it as a card you played.</summary>

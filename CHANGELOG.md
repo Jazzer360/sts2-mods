@@ -17,6 +17,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Predictions no longer treat two possible outcomes as one when they differ only in your energy, Focus, orb slots, Glass orbs or the turn's card counts (one of them could be shown for both).
 - Error reports keep the actions of the cards Stampede or Simpleton could auto-play (they were left empty), so the report replays as the game ran.
 - Stampede and Simpleton picking one of several identical copies of a card is one possible outcome, not one per copy.
+- A card drawn this turn that Stampede, Simpleton or Hellraiser plays counts as played from your hand: with a full hand, its own draws are no longer one short, and the hand isn't one card smaller afterwards. A card of yours being played no longer takes a slot in a teammate's hand when they draw.
 
 ### Main Saves 1.0.23
 #### Changed

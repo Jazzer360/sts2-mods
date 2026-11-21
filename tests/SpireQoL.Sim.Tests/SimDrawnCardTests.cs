@@ -203,12 +203,12 @@ public class SimDrawnCardTests
 
     // ---- Hellraiser (decision #121): a Strike you draw plays itself at once
 
-    /// <summary>A Strike as the adapter builds its auto-play: 6 damage at each enemy it could be aimed at.</summary>
+    /// <summary>A Strike as the adapter builds its auto-play in the draw pile: 6 damage at each enemy it could be aimed at, its plays its own.</summary>
     private static SimDrawCard HellStrike(params int[] targets) => new("strike") { Type = SimCardType.Attack, Strike = true, Auto = new SimHandCard
     {
-        Name = "StrikeIronclad", IsAttack = true, Plays = targets.Select(target => new SimPlay
+        Id = 31, Name = "StrikeIronclad", IsAttack = true, Plays = targets.Select(target => new SimPlay
         {
-            Name = "StrikeIronclad", IsAttack = true, AutoPlay = true, HandDelta = -1, TargetId = target,
+            Name = "StrikeIronclad", IsAttack = true, AutoPlay = true, HandCard = 31, HandDelta = -1, TargetId = target,
             Card = new SimCardPlay(new SimCard("StrikeIronclad", SimCardType.Attack), Who.You, target, PlayIndex: 0, PlayCount: 1, AutoPlay: true),
             Body = { new AttackAction(Hits: 1, SimPlay.Target.Single, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [target] = 6 }, Fixed = true }) },
         }).ToList(),
@@ -246,6 +246,70 @@ public class SimDrawnCardTests
         Assert.Equal(0.5, outcome.Branches.Where(branch => branch.Enemies[0].Hp == 44).Sum(branch => branch.Weight), 9);
         // The Strike played: whichever came first, both cards were drawn in the Strike-first branch, one in the other.
         Assert.Equal(0.5, outcome.Branches.Where(branch => branch.You.Draw!.RestCount == 0).Sum(branch => branch.Weight), 9);
+    }
+
+    /// <summary>
+    /// A card that draws 1 as the adapter builds it in the draw pile for once it's in your hand (SimAdapter.FillDrawPile): its own
+    /// id, which its plays carry, so a copy drawn plays from your hand (each copy takes the plays as its own: SimHandCard.CopyWithId).
+    /// </summary>
+    private static SimDrawCard DrawingStrike(int id, SimAction? draw = null) => new("drawing strike") { Type = SimCardType.Attack, Strike = true, Pickable = true, Auto = new SimHandCard
+    {
+        Id = id, Name = "PommelStrike", IsAttack = true, Cost = 1,
+        Plays = { new SimPlay { Name = "PommelStrike", IsAttack = true, AutoPlay = true, HandCard = id, HandDelta = 0, Draws = 1, Body = { draw ?? new CardEventAction(CardEvent.Drawn, Count: 1) } } },
+    } };
+
+    /// <summary>A card from your hand that draws 1 (its draw counted out of its hand delta at CardResolved).</summary>
+    private static SimPlay DrawOneFromHand => new() { Name = "Draw1", HandCard = 7, HandDelta = 0, Draws = 1, Body = { new CardEventAction(CardEvent.Drawn, Count: 1) } };
+
+    [Fact]
+    public void AStrikeHellraiserPlaysHasItsOwnSlotAndThePlayThatDrewIts()
+    {
+        // In game, a full hand of 10 with the card that draws: it leaves your hand (9) and draws the Strike (10); the Strike plays
+        // itself, leaving your hand too (9), so its own draw has room (10). Both have left while both are still counted in the hand
+        // (each until it resolves): the Strike's draw sees two fewer cards, not one, and not none.
+        var state = Hellraised(Pile((DrawingStrike(id: 31), 1), (Skill, 3)), hand: 10);
+        var outcome = SimEngine.Run(state, DrawOneFromHand);
+        var strikeFirst = outcome.Branches.Where(branch => branch.AutoPlayed == 1).ToList();
+        Assert.Equal(0.25, strikeFirst.Sum(branch => branch.Weight), precision: 9);
+        Assert.All(strikeFirst, branch => Assert.Equal(2, branch.You.Drawn));
+        Assert.All(outcome.Branches, branch => Assert.Equal(10, branch.You.HandCount));
+    }
+
+    [Fact]
+    public void ACardDrawnThisTurnThatStampedePicksPlaysFromYourHand()
+    {
+        // A full hand: the card that draws leaves it and draws the card that draws (10). At the end of the turn Stampede plays that
+        // one from your hand: it leaves (9), and its draw has room (10).
+        var state = You(Pile((DrawingStrike(id: 31), 2)), hand: 10);
+        state.You.Stampede = 1;
+        state.You.AutoHand = new();
+        var outcome = SimEngine.Run(state, DrawOneFromHand);
+        Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.AutoPlayed));
+        Assert.All(outcome.Branches, branch => Assert.Equal(2, branch.You.Drawn));
+    }
+
+    [Fact]
+    public void ADrawInsideADrawThatActsOnItKeepsTheOuterOnesRecord()
+    {
+        // Pillage draws a Strike that plays itself (Hellraiser) and acts on what it draws: its own draw is recorded apart, and
+        // Pillage still reads its own last card (the Strike, an Attack: it draws on, a Skill, and stops).
+        var strike = DrawingStrike(id: 31, draw: new DrawnCardAction(Count: 1));
+        var outcome = SimEngine.Run(Hellraised(Pile((strike, 1), (Skill, 2))), Playing("Pillage", new DrawnCardAction(Count: 1) { DrawAgainIf = SimCardType.Attack }));
+        Assert.All(outcome.Branches, branch => Assert.Null(branch.Unmodelled));
+        var strikeFirst = outcome.Branches.Where(branch => branch.AutoPlayed == 1).ToList();
+        Assert.Equal(1.0 / 3, strikeFirst.Sum(branch => branch.Weight), precision: 9);
+        Assert.All(strikeFirst, branch => Assert.Equal(3, branch.You.Drawn));
+    }
+
+    [Fact]
+    public void YourCardInPlayDoesntTakeATeammatesSlot()
+    {
+        // You play a card from your hand that makes your teammate draw: their full hand of 10 has no room, whatever you're playing.
+        var state = You(Pile((Skill, 3)), hand: 5);
+        state.Teammates.Add(new SimPlayer { Hp = 40, HandCount = 10, Draw = Pile((Skill, 3)) });
+        var outcome = SimEngine.Run(state, new SimPlay { Name = "Feed", HandCard = 7, HandDelta = -1, Body = { new CardEventAction(CardEvent.Drawn, Count: 1) { Player = Who.Teammate(0) } } });
+        Assert.All(outcome.Branches, branch => Assert.Equal(0, branch.Teammates[0].Drawn));
+        Assert.All(outcome.Branches, branch => Assert.Equal(10, branch.Teammates[0].HandCount));
     }
 
     [Fact]

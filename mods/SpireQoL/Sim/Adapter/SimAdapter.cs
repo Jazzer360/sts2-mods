@@ -413,10 +413,12 @@ public static partial class SimAdapter
                 if ((pickable || hellraised) && !autoByKey.TryGetValue(key, out auto))
                 {
                     // How it plays once in your hand: as the adapter builds a hand card's auto-plays. A card in the draw pile counts as
-                    // not in your hand there (its hand delta 0): one less, as for a card played from hand.
+                    // not in your hand there (its hand delta 0, no hand card): played once drawn, it's from your hand, so one less, and
+                    // its plays are its own (each copy drawn takes them as its own: SimHandCard.CopyWithId).
                     var plays = AutoPlays(card, me, combat, ids);
-                    if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) play.HandDelta -= 1;
-                    auto = new SimHandCard { Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, Plays = plays };
+                    var id = HandId(card);
+                    if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) { play.HandDelta -= 1; play.HandCard = id; }
+                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, Plays = plays };
                     autoByKey[key] = auto;
                 }
                 return new SimDrawCard(key)
