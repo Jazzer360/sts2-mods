@@ -405,8 +405,12 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 1.20.11: 94 unused usings removed (IDE0005, which the normal build doesn't check); `scripts/dead-code.mjs` now lists them too (`--fix-usings` removes them). `TurnEndModel.Incomplete` removed (replaced by ProgressMark in 1.17.0).
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
-- Known gaps (1; each is logged when present in a fight):
+- Known gaps (5; each is logged when present in a fight):
   - [ ] Momentum (ledger): OnPlay raises the card's damage for its later plays; the game's math reads it on later turns, but a replay of the card in the same play hits for the old amount in the simulator
+  - [ ] BiiigHug (model's effect): a Soot shuffled into your draw pile at an unknown spot: later draws in the same simulation don't see it
+  - [ ] PersonalHivePower (model's effect): a Dazed into your draw pile when you attack it: later draws in the same simulation don't see it
+  - [ ] SurprisePower (model's effect): the gremlins it calls when it dies: a later hit in the same play can't target them (the next frame reads them)
+  - [ ] UnceasingTop (model's effect): a draw when your hand empties during your turn: not simulated (your hand size, and what the draw sets off)
 <!-- gaps:end -->
 
 ---

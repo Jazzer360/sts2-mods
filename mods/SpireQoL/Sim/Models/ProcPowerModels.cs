@@ -587,11 +587,15 @@ public sealed class SpeedsterPower : ProcModel
         cardEvent == CardEvent.Drawn && player == owner ? DamageAll(state, owner, Amount(state, owner)) : One(state);
 }
 
-/// <summary>CorrosiveWavePower.AfterCardDrawn: poison on every enemy for each card its owner draws.</summary>
+/// <summary>CorrosiveWavePower.AfterCardDrawn: its amount of poison on every hittable enemy for each card its owner draws.</summary>
 public sealed class CorrosiveWavePower : ProcModel
 {
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Drawn && player == owner ? Fire(state, owner) : One(state);
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (cardEvent != CardEvent.Drawn || player != owner) return One(state);
+        foreach (var enemy in state.Targetable.ToList()) SimEngine.ApplyPower(state, owner, enemy.Id, PowerId.Poison, Amount(state, owner), debuff: true);
+        return Fire(state, owner);
+    }
 }
 
 /// <summary>StratagemPower.AfterShuffle: a pick from the draw pile on each shuffle.</summary>
@@ -601,11 +605,15 @@ public sealed class StratagemPower : ProcModel
         cardEvent == CardEvent.Shuffled && player == owner ? Fire(state, owner) : One(state);
 }
 
-/// <summary>ArsenalPower.AfterCardGeneratedForCombat: Strength for each card its owner creates.</summary>
+/// <summary>ArsenalPower.AfterCardGeneratedForCombat: its amount of Strength for each card its owner creates.</summary>
 public sealed class ArsenalPower : ProcModel
 {
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        Generated(cardEvent) && player == owner ? Fire(state, owner) : One(state);
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (!Generated(cardEvent) || player != owner) return One(state);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Amount(state, owner), debuff: false);
+        return Fire(state, owner);
+    }
 }
 
 /// <summary>PillarOfCreationPower.AfterCardGeneratedForCombat: block (unpowered) for each card its owner creates.</summary>

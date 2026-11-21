@@ -252,11 +252,18 @@ public sealed class MummifiedHand : RelicProc
         Mine(play, owner) && play.Card.Type == SimCardType.Power && play.Card.OthersInHandCost ? Fire(state, owner) : One(state);
 }
 
-/// <summary>HelicalDart.AfterCardPlayed: each Shiv you play gives Dexterity this turn.</summary>
+/// <summary>
+/// HelicalDart.AfterCardPlayed: each Shiv you play gives Dexterity this turn (HelicalDartPower, a TemporaryDexterityPower: the
+/// Dexterity now, taken back as the turn ends).
+/// </summary>
 public sealed class HelicalDart : RelicProc
 {
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Is(SimCardTag.Shiv) ? Fire(state, owner) : One(state);
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner) || !play.Card.Is(SimCardTag.Shiv)) return One(state);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, Var(state, owner, "DexterityPower", fallback: 1), debuff: false);
+        return Fire(state, owner);
+    }
 }
 
 /// <summary>IvoryTile.AfterCardPlayed: energy for each card you play costing at least its EnergyThreshold.</summary>
@@ -282,7 +289,7 @@ public sealed class RazorTooth : RelicProc
         Mine(play, owner) && play.PlayIndex == 0 && play.Card.Type is SimCardType.Attack or SimCardType.Skill && play.Card.Upgradable ? Fire(state, owner) : One(state);
 }
 
-/// <summary>RainbowRing.AfterCardPlayed: once a turn (RelicUse.UsedThisTurn), the play that completes an Attack, a Skill and a Power this turn.</summary>
+/// <summary>RainbowRing.AfterCardPlayed: once a turn (RelicUse.UsedThisTurn), the play that completes an Attack, a Skill and a Power this turn: Strength and Dexterity.</summary>
 public sealed class RainbowRing : RelicProc
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
@@ -294,6 +301,8 @@ public sealed class RainbowRing : RelicProc
         var before = Of(SimCardType.Attack) > 0 && Of(SimCardType.Skill) > 0 && Of(SimCardType.Power) > 0;
         if (!all || before) return One(state);
         MarkUsedThisTurn(state, owner);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "StrengthPower", fallback: 1), debuff: false);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, Var(state, owner, "DexterityPower", fallback: 1), debuff: false);
         return Fire(state, owner);
     }
 }
@@ -503,18 +512,26 @@ public sealed class TheAbacus : RelicProc
         cardEvent == CardEvent.Shuffled && player == owner ? RelicBlock(state, owner) : One(state);
 }
 
-/// <summary>WhittlingKnife.AfterShuffle: Aim on every shuffle.</summary>
+/// <summary>WhittlingKnife.AfterShuffle: Aim (its AimPower value) on every shuffle.</summary>
 public sealed class WhittlingKnife : RelicProc
 {
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Shuffled && player == owner ? Fire(state, owner) : One(state);
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (cardEvent != CardEvent.Shuffled || player != owner) return One(state);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Aim, Var(state, owner, "AimPower", fallback: 5), debuff: false);
+        return Fire(state, owner);
+    }
 }
 
-/// <summary>Fertilizer.AfterCardGeneratedForCombat: Strength when you create a Sadness.</summary>
+/// <summary>Fertilizer.AfterCardGeneratedForCombat: Strength (its StrengthPower value) when you create a Sadness.</summary>
 public sealed class Fertilizer : RelicProc
 {
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.GeneratedSadness && player == owner ? Fire(state, owner) : One(state);
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (cardEvent != CardEvent.GeneratedSadness || player != owner) return One(state);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "StrengthPower", fallback: 1), debuff: false);
+        return Fire(state, owner);
+    }
 }
 
 /// <summary>Metronome.AfterOrbChanneled: damage to every hittable enemy once its OrbCount orbs are channeled this combat (Amount: OrbsChanneled).</summary>

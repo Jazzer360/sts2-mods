@@ -385,7 +385,7 @@ public static partial class SimEngine
         if (hadBlock && enemy.Block == 0)
         {
             enemy.BlockBroken = true;
-            foreach (var (model, o) in Listeners(state)) model.AfterBlockBroken(state, o, enemy.Id);
+            foreach (var (model, o) in Listeners(state)) model.AfterBlockBroken(state, o, enemy.Id, dealer);
         }
         var hpBefore = enemy.Hp;
         var toHp = 0;
@@ -1107,7 +1107,7 @@ public static partial class SimEngine
         {
             enemy.Block = 0;
             enemy.BlockBroken = true;
-            foreach (var (model, o) in Listeners(state)) model.AfterBlockBroken(state, o, enemy.Id);
+            foreach (var (model, o) in Listeners(state)) model.AfterBlockBroken(state, o, enemy.Id, state.CurrentPlay?.Owner);
         }
         if (stripBlockAction.RemoveArtifact && PowersOf(state, enemy.Id).Has(PowerId.Artifact)) SetPowers(state, enemy.Id, PowersOf(state, enemy.Id).Without(PowerId.Artifact));
     }

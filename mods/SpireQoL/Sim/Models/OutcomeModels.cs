@@ -61,17 +61,34 @@ public sealed class ImbalancedPower : SimModel
         Who.IsEnemy(owner) && !now.FirstHitBlockedInAll(owner) ? new(Harmful: false, outcome => outcome.FirstHitBlockedInAll(owner)) : null;
 }
 
-/// <summary>HandDrill: Vulnerable on an enemy whose block you break. A bonus when every branch of an aim breaks one.</summary>
+/// <summary>
+/// HandDrill.AfterBlockBroken: Vulnerable (its VulnerablePower value) on an enemy whose block its owner (or their Osty) breaks, so
+/// the rest of the attack hits harder. A bonus when every branch of an aim breaks one.
+/// </summary>
 public sealed class HandDrill : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         owner == Who.You ? new(Harmful: false, outcome => outcome.PlayBreaksBlockInAll) : null;
+    public override void AfterBlockBroken(SimState state, int owner, int target, int? breaker)
+    {
+        if (!Who.IsEnemy(target) || !(breaker == owner || (owner == Who.You && breaker == Who.YourOsty))) return;
+        SimEngine.ApplyPower(state, owner, target, PowerId.Vulnerable, SimEngine.Var(state, owner, Name, "VulnerablePower", fallback: 2), debuff: true);
+        state.LogFired(Name, amount: 0, owner);
+    }
 }
 
-/// <summary>CompostPower (yours or a teammate's): energy for every player on your side when an enemy dies.</summary>
+/// <summary>CompostPower.AfterDeath (yours or a teammate's): its amount of energy for every living player on your side when an enemy dies.</summary>
 public sealed class CompostPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsPlayer(owner) ? OutcomeRules.KillsOne : null;
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        if (!Who.IsPlayer(owner) || !Who.IsEnemy(dead)) return;
+        var amount = SimEngine.PowerOn(state, owner, ThisPower);
+        if (amount <= 0) return;
+        state.LogFired(Name, amount, owner);
+        foreach (var player in state.PlayerIds.Where(id => state.Player(id) is { Died: false }).ToList()) SimEngine.Raise(state, CardEvent.EnergyGained, player, amount, Name);
+    }
 }
 
 /// <summary>A relic or power of yours that reacts to HP you lose (AfterDamageReceived with UnblockedDamage &gt; 0, after Tungsten Rod).</summary>
@@ -89,11 +106,24 @@ public sealed class EmotionChip : ReactsToYourHpLoss { }
 /// <summary>RupturePower: Strength when you lose HP on your turn.</summary>
 public sealed class RupturePower : ReactsToYourHpLoss { }
 
-/// <summary>DemonTongue: heals the HP you lose, once a turn (RelicUse.UsedThisTurn).</summary>
+/// <summary>
+/// DemonTongue.AfterDamageReceived: once a turn (RelicUse.UsedThisTurn), on its owner's side's turn, heals the HP they just lost
+/// (the HP-loss modifiers already applied).
+/// </summary>
 public sealed class DemonTongue : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         owner == Who.You && !((RelicUse)SimEngine.RelicsOf(start, owner).DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn) ? OutcomeRules.YouLoseHp : null;
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked <= 0 || state.EnemyTurnNow || state.Player(owner) is not { Died: false, Hp: < int.MaxValue }) return;
+        var relics = SimEngine.RelicsOf(state, owner);
+        if (((RelicUse)relics.DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn)) return;
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) | (int)RelicUse.UsedThisTurn));
+        var player = state.MutablePlayer(owner);
+        player.Hp = (int)Math.Min(player.MaxHp, (long)player.Hp + hit.Unblocked);
+        state.LogFired(Name, hit.Unblocked, owner);
+    }
 }
 
 /// <summary>

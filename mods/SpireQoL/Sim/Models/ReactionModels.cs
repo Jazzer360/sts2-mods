@@ -110,7 +110,7 @@ public sealed class BurrowedPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
 
-    public override void AfterBlockBroken(SimState state, int owner, int target)
+    public override void AfterBlockBroken(SimState state, int owner, int target, int? breaker)
     {
         if (target != owner || state.Enemy(owner) is not { } enemy) return;
         SimEngine.Stun(enemy);

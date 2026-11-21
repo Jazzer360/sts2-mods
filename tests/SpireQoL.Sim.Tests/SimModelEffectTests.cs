@@ -1,0 +1,105 @@
+using Xunit;
+using static SpireQoL.Sim.Tests.ScriptBuilder;
+
+namespace SpireQoL.Sim.Tests;
+
+/// <summary>
+/// Decision #156: models that fired their tab without doing what their game class does (ModelEffectCheck found them), each now doing
+/// it, from its hook in the decompile.
+/// </summary>
+public class SimModelEffectTests
+{
+    private static SimState State(int enemyHp = 100, int enemyBlock = 0)
+    {
+        var state = new SimState { Enemies = { Enemy(id: 0, enemyHp, enemyBlock) } };
+        state.You.Hp = 50;
+        state.You.MaxHp = 80;
+        return state;
+    }
+
+    private static SimState Power(SimState state, PowerId power, int amount)
+    {
+        state.You.Powers = state.You.Powers.With(power, amount);
+        return state;
+    }
+
+    private static SimState Relic(SimState state, RelicId relic, params (string Var, int Value)[] vars)
+    {
+        state.You.Relics = state.You.Relics.With(relic, amount: 0, data: 1);
+        foreach (var (name, value) in vars) state.Vars[$"{Who.You}:{relic}:{name}"] = value;
+        return state;
+    }
+
+    private static SimScript Events(params SimAction[] body) => Play(Card("X", SimCardType.Skill), target: Who.None, plays: 1, body);
+
+    private static SimState After(SimState state, SimScript script) => Assert.Single(ScriptBuilder.After(state, script));
+
+    [Fact]
+    public void CorrosiveWavePoisonsEveryEnemyForEachCardDrawn()
+    {
+        // CorrosiveWavePower.AfterCardDrawn: its amount of poison on every hittable enemy, each draw.
+        var after = After(Power(State(), PowerId.CorrosiveWave, amount: 2), Events(new CardEventAction(CardEvent.Drawn, Count: 3)));
+        Assert.Equal(6, after.Enemies[0].PoisonStacks);
+    }
+
+    [Fact]
+    public void ArsenalAndFertilizerGiveStrength()
+    {
+        // ArsenalPower: its amount for each card made; Fertilizer: its StrengthPower when a Sadness is made.
+        Assert.Equal(2, After(Power(State(), PowerId.Arsenal, amount: 1), Events(new CardEventAction(CardEvent.Generated, Count: 2))).You.Powers[PowerId.Strength]);
+        Assert.Equal(1, After(Relic(State(), RelicId.Fertilizer, ("StrengthPower", 1)), Events(new CardEventAction(CardEvent.GeneratedSadness, Count: 1))).You.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
+    public void HelicalDartGivesDexterityForAShiv()
+    {
+        var after = After(Relic(State(), RelicId.HelicalDart, ("DexterityPower", 1)), Play(Card("Shiv", SimCardType.Attack, SimCardTag.Shiv), target: 0, plays: 1, Attack(baseDamage: 4)));
+        Assert.Equal(1, after.You.Powers[PowerId.Dexterity]);
+    }
+
+    [Fact]
+    public void WhittlingKnifeGivesAimOnAShuffle()
+    {
+        var after = After(Relic(State(), RelicId.WhittlingKnife, ("AimPower", 5)), Events(new CardEventAction(CardEvent.Shuffled, Count: 1)));
+        Assert.Equal(5, after.You.Powers[PowerId.Aim]);
+    }
+
+    [Fact]
+    public void RainbowRingGivesStrengthAndDexterityOnTheThirdKind()
+    {
+        // An Attack and a Skill played already: the Power completes the three, once a turn.
+        var state = Relic(State(), RelicId.RainbowRing, ("StrengthPower", 1), ("DexterityPower", 1));
+        state.You.Relics = state.You.Relics.With(RelicId.RainbowRing, amount: 0, data: 0);
+        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Attack), delta: 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Skill), delta: 1);
+        var after = After(state, Play(Card("Inflame", SimCardType.Power), target: Who.None, plays: 1));
+        Assert.Equal(1, after.You.Powers[PowerId.Strength]);
+        Assert.Equal(1, after.You.Powers[PowerId.Dexterity]);
+    }
+
+    [Fact]
+    public void CompostGivesEnergyWhenAnEnemyDies()
+    {
+        var state = Power(State(enemyHp: 5), PowerId.Compost, amount: 1);
+        state.You.Energy = 0;
+        Assert.Equal(1, After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).You.Energy);
+    }
+
+    [Fact]
+    public void DemonTongueHealsTheFirstHpLostOnYourTurn()
+    {
+        // 5 lost, healed; then 3 lost: once a turn.
+        var state = Relic(State(), RelicId.DemonTongue);
+        state.You.Relics = state.You.Relics.With(RelicId.DemonTongue, amount: 0, data: 0);
+        Assert.Equal(47, After(state, Events(new LoseHpAction(Amount: 5), new LoseHpAction(Amount: 3))).You.Hp);
+    }
+
+    [Fact]
+    public void HandDrillMakesTheRestOfTheAttackHitHarder()
+    {
+        // Two hits of 10 on 5 block: the first breaks it (5 through) and applies Vulnerable 2, so the second deals 15.
+        var state = Relic(State(enemyBlock: 5), RelicId.HandDrill, ("VulnerablePower", 2));
+        var after = After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10, hits: 2)));
+        Assert.Equal(80, after.Enemies[0].Hp);
+        Assert.Equal(2, after.Enemies[0].Powers[PowerId.Vulnerable]);
+    }
+}

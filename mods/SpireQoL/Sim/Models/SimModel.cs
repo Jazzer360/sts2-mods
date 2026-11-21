@@ -272,7 +272,8 @@ public abstract class SimModel
     public virtual void AfterDamageGiven(SimState state, int owner, DamageEvent hit) { }
     public virtual void AfterDamageReceived(SimState state, int owner, DamageEvent hit) { }
     /// <summary>A creature's block went from above 0 to 0 (AfterBlockBroken: Burrowed).</summary>
-    public virtual void AfterBlockBroken(SimState state, int owner, int target) { }
+    /// <param name="breaker">Who dealt the damage that broke it (null: no one).</param>
+    public virtual void AfterBlockBroken(SimState state, int owner, int target, int? breaker) { }
     /// <summary>The HP-loss pipeline (Hook.ModifyHpLost*): BeforeOsty, BeforeOstyLate, AfterOsty, AfterOstyLate.</summary>
     public virtual decimal ModifyHpLostBeforeOsty(SimState state, int owner, DamageCtx damage, decimal amount) => amount;
     public virtual decimal ModifyHpLostBeforeOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) => amount;
