@@ -1,0 +1,11 @@
+{
+  "stryker-config": {
+    "project": "SpireQoL.Simulator.csproj",
+    "test-projects": [ "SpireQoL.Sim.Tests.csproj" ],
+    "mutate": [ "**/Sim/**/*.cs", "!**/GameNames.g.cs", "!**/SimJob.cs" ],
+    "test-case-filter": "FullyQualifiedName!~SimPerformanceTests",
+    "coverage-analysis": "perTest",
+    "reporters": [ "html", "progress", "cleartext" ],
+    "thresholds": { "high": 80, "low": 60, "break": 0 }
+  }
+}

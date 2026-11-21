@@ -80,6 +80,16 @@ simulator's public fields, Godot nodes the scene tree frees, numbers on screen i
 Most findings fix themselves in an IDE (the light bulb), or for imports: `dotnet format style --diagnostics IDE0005`. Turn a rule off
 only in `.editorconfig`, with the reason beside it, never with a `#pragma` unless the one line really is the exception (and says why).
 
+## Coverage and mutation testing
+
+The simulator is its own assembly for its tests (`tests/SpireQoL.Simulator`, the same files the mod compiles; decision #151), so two
+tools can measure how well the tests hold it:
+- `./scripts/coverage.ps1`: the share of the simulator's lines a test runs, and the files with the most lines none does. A line no test
+  runs is a rule nothing checks. Quick (the test run, a little slower).
+- `./scripts/mutation.ps1 -Mutate '**/Sim/Models/BlockModels.cs'`: Stryker.NET changes the code one small edit at a time and runs the
+  tests against each; an edit no test notices is a rule the tests don't really hold. Slow (about a minute and a half for a small file,
+  hours for the whole simulator): run it on what you're working on. Report: `dist/stryker/reports/mutation-report.html`.
+
 ## Dev mode
 
 Your own game is told apart from players' (decision #108). `dotnet build`'s install step (`Directory.Build.targets`, `InstallModToGame`) and `scripts/release.ps1`'s install step write a marker file, `SpireQoL.dev`, beside the installed DLL; release zips never contain it. At load the mod reads it (`ModEntry.DevMode`; the log says `dev mode on`). The hidden setting `"DevMode"` in `<game>/mods/SpireQoL/SpireQoL.settings.cfg` overrides the marker: `true` or `false`, or leave it out (null) to follow the marker. Delete the marker, or set the setting to `false`, to play exactly as a player would.

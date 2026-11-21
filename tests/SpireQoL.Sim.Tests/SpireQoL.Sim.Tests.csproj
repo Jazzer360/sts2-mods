@@ -8,10 +8,8 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Every pure simulator file (no game types); the game-facing adapter (SimAdapter.cs, Adapter/) is left out. -->
-    <Compile Include="..\..\mods\SpireQoL\Sim\**\*.cs" Exclude="..\..\mods\SpireQoL\Sim\Adapter\**\*.cs" LinkBase="Sim" />
-    <!-- The event stream and the session counter (decision #108): pure C# too; the simulator posts its searches there. -->
-    <Compile Include="..\..\mods\SpireQoL\Telemetry\**\*.cs" Exclude="..\..\mods\SpireQoL\Telemetry\SessionWatch.cs;..\..\mods\SpireQoL\Telemetry\DevDashboard.cs" LinkBase="Telemetry" />
+    <!-- The simulator, as its own assembly (decision #151): coverage measures it, Stryker mutates it. -->
+    <ProjectReference Include="..\SpireQoL.Simulator\SpireQoL.Simulator.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Cases/*.json" CopyToOutputDirectory="PreserveNewest" />
@@ -21,5 +19,6 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2" PrivateAssets="all" />
   </ItemGroup>
 </Project>
