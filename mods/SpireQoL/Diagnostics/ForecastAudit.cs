@@ -351,9 +351,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         var autoPlays = endOfTurn.OfType<CardPlayStartedEntry>().Where(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && cardPlayStartedEntry.CardPlay.IsFirstInSeries && cardPlayStartedEntry.CardPlay.Card.Owner == me).ToList();
         if (autoPlays.Count > 0 && autoPlays[0] is var auto)
         {
-            var hand = forecast.State.You.AutoHand?.Select(handCard => handCard.Id).ToHashSet();
-            var picks = hand == null ? new List<SimPick>() : autoPlays.Where(cardPlayStartedEntry => hand.Contains(SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card)))
-                .Select(cardPlayStartedEntry => new SimPick(SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card), cardPlayStartedEntry.CardPlay.Target is { } creature && forecast.Ids.TryGetValue(creature, out var tid) ? tid : -1)).ToList();
+            // Your hand as the forecast saw it: each card by its identity, and what it is (picks are by what it is: SimPick).
+            var hand = forecast.State.You.AutoHand?.ToDictionary(handCard => handCard.Id, handCard => handCard.Key);
+            var picks = hand == null ? new List<SimPick>() : autoPlays.Where(cardPlayStartedEntry => hand.ContainsKey(SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card)))
+                .Select(cardPlayStartedEntry => new SimPick(hand[SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card)], cardPlayStartedEntry.CardPlay.Target is { } creature && forecast.Ids.TryGetValue(creature, out var tid) ? tid : -1)).ToList();
             bool Picked(SimState state) => state.AutoPlaysUnknown
                 ? state.AutoPlayed <= autoPlays.Count && picks.Count >= state.AutoPicks.Count && picks.Take(state.AutoPicks.Count).SequenceEqual(state.AutoPicks)
                 : state.AutoPlayed == autoPlays.Count && picks.SequenceEqual(state.AutoPicks);
@@ -375,7 +376,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             {
                 // The pick it stopped at (the last one in that branch).
                 var last = narrowed.Outcome.Branches.First(branch => branch.AutoPlaysUnknown).AutoPicks.LastOrDefault();
-                var changer = autoPlays.FirstOrDefault(cardPlayStartedEntry => last != null && SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card) == last.Card)?.CardPlay.Card ?? auto.CardPlay.Card;
+                var changer = autoPlays.FirstOrDefault(cardPlayStartedEntry => last != null && hand != null && hand.TryGetValue(SimAdapter.HandId(cardPlayStartedEntry.CardPlay.Card), out var picked) && picked == last.Card)?.CardPlay.Card ?? auto.CardPlay.Card;
                 ModEntry.Log.Info($"[audit] [outcome] turn {_frozenTurn}: not checked (you auto-played {changer.GetType().Name} at end of turn, which changed your hand); {Predicted()}");
                 Skip("an end-of-turn auto-play that changed your hand");
                 return;

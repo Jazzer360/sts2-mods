@@ -15,6 +15,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Inspect: a marked card's ring goes around the card itself (it left a gap above and was hidden below), and the cards you didn't mark are darkened instead of see-through.
 - The turn forecast is no longer reused from just before a play began, for a frame, when the game changed the board mid-frame; the Fool's arrows count as a board change.
 - Predictions no longer treat two possible outcomes as one when they differ only in your energy, Focus, orb slots, Glass orbs or the turn's card counts (one of them could be shown for both).
+- Error reports keep the actions of the cards Stampede or Simpleton could auto-play (they were left empty), so the report replays as the game ran.
+- Stampede and Simpleton picking one of several identical copies of a card is one possible outcome, not one per copy.
 
 ### Main Saves 1.0.23
 #### Changed

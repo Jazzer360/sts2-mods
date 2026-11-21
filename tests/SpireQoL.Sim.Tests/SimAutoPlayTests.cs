@@ -338,29 +338,59 @@ public class SimAutoPlayTests
         // The forecast check keeps the branches whose picks are the game's (decision #86): one per card and target.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 4), Enemy(id: 2, hp: 50, hits: 4) } };
         state.You.Stampede = 1;
+        var strike = new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 11), AdapterStrike(target: 2, damage: 6, hand: 11) } };
+        var pommelStrike = new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 9, hand: 15, draws: 1), AdapterStrike(target: 2, damage: 9, hand: 15, draws: 1) } };
         state.You.AutoHand = new()
         {
-            new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 11), AdapterStrike(target: 2, damage: 6, hand: 11) } },
-            new SimHandCard { Id = 15, Name = "PommelStrike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 9, hand: 15, draws: 1), AdapterStrike(target: 2, damage: 9, hand: 15, draws: 1) } },
+            strike,
+            pommelStrike,
         };
         var outcome = SimEngine.Run(state);
-        var picks = outcome.Branches.Select(branch => string.Join(",", branch.AutoPicks.Select(pick => $"{pick.Card}@{pick.Target}"))).OrderBy(pickList => pickList).ToList();
-        Assert.Equal(new[] { "11@1", "11@2", "15@1", "15@2" }, picks);
+        var picks = outcome.Branches.Select(branch => Assert.Single(branch.AutoPicks)).ToHashSet();
+        var expected = new[] { new SimPick(strike.Key, Target: 1), new SimPick(strike.Key, Target: 2), new SimPick(pommelStrike.Key, Target: 1), new SimPick(pommelStrike.Key, Target: 2) };
+        Assert.True(picks.SetEquals(expected), string.Join(", ", picks));
         // Only Pommel Strike's branches changed the hand: a turn where Strike was picked can still be checked.
-        Assert.All(outcome.Branches, branch => Assert.Equal(branch.AutoPicks[0].Card == 15, branch.AutoPlaysUnknown));
+        Assert.All(outcome.Branches, branch => Assert.Equal(branch.AutoPicks[0].Card == pommelStrike.Key, branch.AutoPlaysUnknown));
     }
 
     [Fact]
-    public void BranchesThatPickedDifferentlyDontMerge()
+    public void IdenticalCopiesPickedAreOneBranch()
     {
-        // Same result either way (no kill, same damage), but the check has to tell the picks apart.
+        // Two copies of one Strike: Stampede picking either plays the same in every way the simulator follows, so it's one branch
+        // (decision #140), and the check matches the game's pick by what the card is (SimHandCard.Key).
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 4) } };
+        state.You.Stampede = 1;
+        var strike = new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 11) } };
+        state.You.AutoHand = new() { strike, new SimHandCard { Id = 12, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 12) } } };
+        var branch = Assert.Single(SimEngine.Run(state).Branches);
+        Assert.Equal(1.0, branch.Weight, precision: 9);
+        Assert.Equal(new SimPick(strike.Key, Target: 1), Assert.Single(branch.AutoPicks));
+    }
+
+    [Fact]
+    public void CopiesThatDifferInAnythingStayApart()
+    {
+        // The same hit either way, but one copy costs 0: nothing in this turn's outcome shows it, but it's part of the card, so the
+        // picks stay apart and the check knows which one the game played.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 4) } };
         state.You.Stampede = 1;
         state.You.AutoHand = new()
         {
             new SimHandCard { Id = 11, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 11) } },
-            new SimHandCard { Id = 12, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: 12) } },
+            new SimHandCard { Id = 12, Name = "Strike", IsAttack = true, Cost = 0, Plays = { AdapterStrike(target: 1, damage: 6, hand: 12) } },
         };
         Assert.Equal(2, SimEngine.Run(state).Branches.Count);
+    }
+
+    [Fact]
+    public void TwoPicksOfThreeCopiesAreOneBranch()
+    {
+        // Stampede twice from three copies: which two it took doesn't matter, the hand left holds one copy either way.
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 4) } };
+        state.You.Stampede = 2;
+        state.You.AutoHand = new(Enumerable.Range(11, 3).Select(id => new SimHandCard { Id = id, Name = "Strike", IsAttack = true, Cost = 1, Plays = { AdapterStrike(target: 1, damage: 6, hand: id) } }));
+        var branch = Assert.Single(SimEngine.Run(state).Branches);
+        Assert.Equal(2, branch.AutoPicks.Count);
+        Assert.Equal(38, branch.Enemies[0].Hp);
     }
 }

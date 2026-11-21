@@ -187,9 +187,9 @@ public static partial class SimEngine
         if (card.Status) simPlayer.StatusDrawn++;
         if (simPlayer.AutoHand != null && card.Pickable)
         {
-            // Its own id in your hand (two copies are two cards); plays as the adapter built it for a card in hand.
+            // Its own id in your hand (two copies are two cards, with one key: SimHandCard.Key); plays as the adapter built it for a card in hand.
             if (card.Auto != null)
-                simPlayer.AutoHand = new List<SimHandCard>(simPlayer.AutoHand) { new() { Id = -1000 - simPlayer.Drawn, Name = card.Auto.Name, IsAttack = card.Auto.IsAttack, Cost = card.Auto.Cost, Plays = card.Auto.Plays } };
+                simPlayer.AutoHand = new List<SimHandCard>(simPlayer.AutoHand) { card.Auto.CopyWithId(-1000 - simPlayer.Drawn) };
             else state.AutoPlaysUnknown = true;
         }
         // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly: before the other draw reactions).

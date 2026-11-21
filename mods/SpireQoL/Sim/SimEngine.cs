@@ -992,7 +992,7 @@ public static partial class SimEngine
             {
                 branch.AutoPlaysUnknown = true;
                 branch.Unmodelled ??= $"{card.Name} auto-played at end of turn: its play isn't simulated";
-                if (yours) branch.AutoPicks = [..branch.AutoPicks, new SimPick(card.Id, Target: -1)];
+                if (yours) branch.AutoPicks = [..branch.AutoPicks, new SimPick(card.Key, Target: -1)];
                 result.Add(branch);
                 continue;
             }
@@ -1008,7 +1008,7 @@ public static partial class SimEngine
             {
                 var copy = plays.Count == 1 ? branch : branch.Clone();
                 copy.Weight = branch.Weight / plays.Count;
-                if (yours) copy.AutoPicks = [..copy.AutoPicks, new SimPick(card.Id, play.TargetId)];
+                if (yours) copy.AutoPicks = [..copy.AutoPicks, new SimPick(card.Key, play.TargetId)];
                 var sub = new BranchSet(copy, nested: true);
                 ApplyPlay(sub, play);
                 result.AddRange(sub.States);

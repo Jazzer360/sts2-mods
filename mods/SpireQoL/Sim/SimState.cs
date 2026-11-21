@@ -442,7 +442,8 @@ public sealed class SimPlayer
         add(TurnEndCards.Count);
         foreach (var turnEndCard in TurnEndCards) { add(turnEndCard.Card.GetHashCode()); add(turnEndCard.Amount); }
         add(AutoHand?.Count ?? -1);
-        if (AutoHand != null) foreach (var handCard in AutoHand) add(handCard.Id);
+        // By what each card is, in any order: branches that picked identical copies hold the same hand, and merge.
+        if (AutoHand != null) foreach (var key in AutoHand.Select(handCard => handCard.Key).OrderBy(key => key.Digest)) add(key.GetHashCode());
         Powers.Hash(add); Relics.Hash(add); Turn.Hash(add);
         add(Orbs.Count);
         foreach (var orb in Orbs) orb.Hash(add);
@@ -459,14 +460,49 @@ public sealed class SimPlayer
     }
 }
 
-/// <summary>An auto-play from your hand in one branch: the card (SimHandCard.Id) and the enemy it was aimed at (-1: none).</summary>
-public sealed record SimPick(int Card, int Target);
+/// <summary>
+/// An auto-play from your hand in one branch: what the card is (SimHandCard.Key: copies the simulator plays the same are one pick,
+/// so a branch that picked either copy is one branch) and the enemy it was aimed at (-1: none).
+/// </summary>
+public sealed record SimPick(HandCardKey Card, int Target);
+
+/// <summary>
+/// What a hand card is to the simulator (SimHandCard.Key): its name, and a digest of everything else it holds. Two copies with one
+/// key play the same in every way the simulator follows (decision #140).
+/// </summary>
+public readonly record struct HandCardKey(string Name, long Digest)
+{
+    public override string ToString() => $"{Name}:{Digest:X16}";
+}
 
 /// <summary>A card in your hand that Stampede or Simpleton could auto-play.</summary>
 public sealed class SimHandCard
 {
     /// <summary>Which card (SimPlay.HandCard of its own play, so playing it takes it out of the hand).</summary>
     public int Id;
+    /// <summary>
+    /// What the card is to the simulator: its name and a digest of everything else it holds (its cost, whether it's an attack, every
+    /// play and action), apart from which card it is (Id, and its plays' HandCard). Copies with one key play the same in every way the
+    /// simulator follows, so picking either is one branch (decision #140), and the check matches the game's pick by it. Read once
+    /// (a hand card isn't changed once built).
+    /// </summary>
+    [JsonIgnore]
+    public HandCardKey Key => _key ??= ContentKey();
+    private HandCardKey? _key;
+
+    private HandCardKey ContentKey()
+    {
+        var content = JsonSerializer.SerializeToNode(this, SimJson.Options)!.AsObject();
+        content.Remove(nameof(Id));
+        foreach (var play in content[nameof(Plays)]!.AsArray())
+            if (Id != 0 && play![nameof(SimPlay.HandCard)]!.GetValue<int>() == Id) play[nameof(SimPlay.HandCard)] = "this card"; // played from your hand as itself (not 0: none)
+        var digest = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content.ToJsonString()));
+        return new HandCardKey(Name, BitConverter.ToInt64(digest, startIndex: 0));
+    }
+
+    /// <summary>Another copy of this card in your hand (one drawn): its own id, the same plays, so the same key.</summary>
+    public SimHandCard CopyWithId(int id) => new() { Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, Plays = Plays, _key = Key };
+
     public string Name = "";
     public bool IsAttack;
     /// <summary>Its cost now (X costs: 999999999, as SimpletonPower orders them).</summary>
@@ -565,15 +601,13 @@ public sealed class SimState
     [JsonIgnore]
     public IEnumerable<SimEnemy> Targetable => Enemies.Where(enemy => enemy.Hittable && enemy.Alive);
 
-    private static readonly JsonSerializerOptions JsonOptions = new() { IncludeFields = true, WriteIndented = false };
-
     /// <summary>
     /// The state as JSON, for reports: a report's start state can be dropped into
     /// tests/SpireQoL.Sim.Tests/Cases to replay it offline (see docs/DEVELOPMENT.md).
     /// </summary>
-    public string ToJson() => JsonSerializer.Serialize(this, JsonOptions);
+    public string ToJson() => JsonSerializer.Serialize(this, SimJson.Options);
 
-    public static SimState FromJson(string json) => JsonSerializer.Deserialize<SimState>(json, JsonOptions)!;
+    public static SimState FromJson(string json) => JsonSerializer.Deserialize<SimState>(json, SimJson.Options)!;
 
     /// <summary>
     /// Fingerprint of everything in the state (every field, via its JSON), for caching simulations
@@ -812,7 +846,7 @@ public sealed class SimState
             if (DrawRecord.Count > 0) Add((int)DrawRecord[^1].Card.Type); // Pillage reads the last one's type
         }
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
-        foreach (var pick in AutoPicks) { Add(pick.Card); Add(pick.Target); } // branches that picked differently stay apart (the check tells them apart)
+        foreach (var pick in AutoPicks) { Add(pick.Card.GetHashCode()); Add(pick.Target); } // branches that picked different cards stay apart (the check tells them apart)
         foreach (var enemy in Enemies) enemy.Hash(Add);
         You.Hash(Add);
         // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
