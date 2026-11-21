@@ -471,7 +471,7 @@ public sealed class PlayFacts
             EnemyTemporaryDebuffs = Fool.IsShot(card) && !Fool.Shoots(card, me) ? Array.Empty<Type>() : EnemyDebuffTypes(card, temporary: true),
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
             Channels = ChannelCount(card, name, me) * Math.Max(1, plays),
-            StarGains = StarGainCards.Contains(name) ? Math.Max(1, plays) : 0,
+            StarGains = StarGainsOf(card) * Math.Max(1, plays),
             OstyAttacks = IsOstyAttack(card) ? Math.Max(1, plays) : 0,
             LosesHp = card.DynamicVars.ContainsKey("HpLoss"),
             HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
@@ -747,35 +747,20 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ draws
 
-    // Cards that draw DynamicVars["Cards"] cards (every CardPileCmd.Draw caller in the decompile).
-    private static readonly HashSet<string> DrawCards = new()
-    {
-        nameof(Acrobatics), nameof(Adrenaline), nameof(Backflip), nameof(BattleTrance), nameof(BigBang), nameof(BrightestFlame), nameof(BurningPact),
-        nameof(Coolheaded), nameof(DecisionsDecisions), nameof(DrumOfBattle), nameof(Expertise), nameof(Fetch), nameof(Finesse),
-        nameof(FlashOfSteel), nameof(Glimmer), nameof(Glow), nameof(Impatience), nameof(MasterOfStrategy), nameof(MinionStrike),
-        nameof(Modded), nameof(Neurosurge), nameof(Offering), nameof(Overclock), nameof(Parse), nameof(PhotonCut), nameof(PommelStrike), nameof(Prepared), nameof(Prophesize),
-        nameof(Reboot), nameof(Reflex), nameof(RocketPunch), nameof(Scourge), nameof(Scrape), nameof(ShrugItOff), nameof(Skim), nameof(Slimed), nameof(Soul),
-        nameof(SpoilsOfBattle), nameof(SweepingBeam), nameof(ThinkingAhead),
-        // v0.113.0 (names as strings: these cards don't exist before it)
-        "DeepStretch", "Encore", "Joy", "Rummage", "WahChoKi", "TheHighPriestess", "TheSun", "TheHermit", "WheelOfFortune",
-    };
-
-    // Cards that always draw exactly one (Pillage draws at least one).
-    private static readonly HashSet<string> DrawOne = new() { nameof(DaggerThrow), nameof(EscapePlan), nameof(Pillage) };
-
     /// <summary>How many cards one play of this card draws right now (0 if it doesn't draw).</summary>
     public static int CardsDrawn(CardModel card, int handCount)
     {
         var name = card.GetType().Name;
-        // A card's condition first: Impatience and Fetch are in DrawCards too (for the coverage scan) but don't always draw.
+        // A card's condition or its own count first (the card scan holds every drawing card that glows gold to ConditionalDrawCards).
         switch (card)
         {
             // Draws up to a full hand; Scrawl itself has left the hand by then.
             case Scrawl: return Math.Max(0, CardPile.MaxCardsInHand - (handCount - 1));
             // Discards the rest of your hand, then draws that many (CardCmd.DiscardAndDraw).
             case CalculatedGamble: return Math.Max(0, handCount - 1);
-            // Draws one per distinct orb type channeled.
-            case CompileDriver when card.DynamicVars.TryGetValue("CalculatedCards", out var dynamicVar) && dynamicVar is CalculatedVar calculatedVar:
+            // A count the game calculates from the fight (its CalculatedCards: Compile Driver per orb type channeled, Steady Cadence per
+            // melody played this turn).
+            case var _ when card.DynamicVars.TryGetValue("CalculatedCards", out var dynamicVar) && dynamicVar is CalculatedVar calculatedVar:
                 return (int)calculatedVar.Calculate(null);
             // Draws only while you've finished fewer than PlayMax plays this turn (Ftl.CanDrawCard; the
             // game's template card, with no owner, counts as drawing).
@@ -787,9 +772,6 @@ public sealed class PlayFacts
             case Fetch: return FetchCanDraw(card) ? Sts2State.Var(card, "Cards") : 0;
             // Only draws when it's the only card in hand.
             case Restlessness: return handCount == 1 ? Sts2State.Var(card, "Cards") : 0;
-            // Draws one per melody played this turn (Steady Cadence).
-            case var _ when card.GetType().Name == "SteadyCadence" && card.DynamicVars.TryGetValue("CalculatedCards", out var dynamicVar) && dynamicVar is CalculatedVar scv:
-                return (int)scv.Calculate(null);
             // Draws only when its target is Impaled (Ki Hop: anyone's arrow; Wrest: yours): counted when every
             // enemy you could aim at is, so whatever you aim at draws.
             case var _ when card.GetType().Name == "KiHop":
@@ -799,8 +781,10 @@ public sealed class PlayFacts
             // Mad Science with the Wisdom rider (Tinker Time).
             case MadScience madScience when madScience.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(card, "WisdomCards");
         }
-        if (DrawCards.Contains(name)) return Sts2State.Var(card, "Cards");
-        if (DrawOne.Contains(name)) return 1;
+        // Every other card that draws in its play (CardPileCmd.Draw, read from its own code: CardCode): its Cards value, or one card
+        // when it has none (Dagger Throw, Escape Plan). Not a card that makes a teammate draw (Constellation, Huddle Up).
+        if (CardCode.Calls(card.GetType(), "CardPileCmd", "Draw") && !AllyDrawCards.Contains(name) && !SpireQoL.Sim.SimAdapter.TeammatesDrawCards.Contains(name))
+            return card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
         return 0;
     }
 
@@ -1291,11 +1275,15 @@ public sealed class PlayFacts
         try { return card.CombatState is { } combat ? combat.HittableEnemies.Count : 1; } catch { return 1; }
     }
 
-    // Cards that gain you stars when played (PlayerCmd.GainStars in OnPlay).
-    internal static readonly HashSet<string> StarGainCards = new()
-    {
-        nameof(BigBang), nameof(GatherLight), nameof(Glow), nameof(HiddenCache), nameof(KnockoutBlow), nameof(RoyalGamble), nameof(ShiningStrike), nameof(SolarStrike), nameof(Venerate),
-    };
+    /// <summary>
+    /// The star gains of one play of the card: each PlayerCmd.GainStars in its play, on every way through it, to its owner, read from
+    /// its own code (CardEnergy.CallsOf). A gain that waits on its attack's kill is the attack's instead (KillStarCards).
+    /// </summary>
+    internal static int StarGainsOf(CardModel card) =>
+        SpireQoL.Sim.CardEnergy.CallsOf(card.GetType(), "GainStars").Count(call => call is { Method: "OnPlay", Certain: true, ToOwner: true });
+
+    /// <summary>Cards that gain stars only when their attack kills its target (WasTargetKilled): the attack's (AttackAction.KillRewards).</summary>
+    internal static readonly HashSet<string> KillStarCards = new() { nameof(KnockoutBlow) };
 
     /// <summary>
     /// A card that makes Osty attack: the game's own tag on it (CardTag.OstyAttack, on every card whose OnPlay attacks FromOsty). A list

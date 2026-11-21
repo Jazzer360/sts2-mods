@@ -289,7 +289,7 @@ internal static class CardCoverage
             issues.Add("shoots an arrow without the Shoot tag (its damage is counted even with no arrow to shoot)");
         if (Calls("ArrowCmd", "DislodgeArrow") && !Procs.Fool.DislodgeCards.Contains(name))
             issues.Add("knocks arrows loose (not counted: Twine, Yah)");
-        if (Calls("PlayerCmd", "GainStars") && !PlayFacts.StarGainCards.Contains(name))
+        if (Calls("PlayerCmd", "GainStars") && PlayFacts.StarGainsOf(card) == 0 && !PlayFacts.KillStarCards.Contains(name))
             issues.Add("gains stars (not counted for Black Hole)");
         return issues;
     }
@@ -318,31 +318,11 @@ internal static class CardCoverage
         return list;
     });
 
-    /// <summary>Every type nested in <paramref name="type"/>, at any depth (closures hold local functions' state machines).</summary>
-    internal static IEnumerable<Type> NestedTypes(Type type)
-    {
-        foreach (var nestedType in type.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public))
-        {
-            yield return nestedType;
-            foreach (var inner in NestedTypes(nestedType)) yield return inner;
-        }
-    }
+    /// <summary>Every type nested in <paramref name="type"/>, at any depth (CardCode.NestedTypes).</summary>
+    internal static IEnumerable<Type> NestedTypes(Type type) => CardCode.NestedTypes(type);
 
-    /// <summary>
-    /// OnPlay, its state machine, and the local functions it declares (named "&lt;OnPlay&gt;g__...", in the card or a
-    /// closure class, with their own state machines): Blossom Shot applies its Stretch from one.
-    /// </summary>
-    private static IEnumerable<MethodBase> OnPlayMethods(Type cardType)
-    {
-        var nested = NestedTypes(cardType).ToList();
-        return cardType.GetMethods(All).Where(method => method.Name == "OnPlay" || method.Name.StartsWith("<OnPlay>", StringComparison.Ordinal)).Cast<MethodBase>()
-            .Concat(nested.SelectMany(type => type.GetMethods(All)).Where(method => method.Name.StartsWith("<OnPlay>", StringComparison.Ordinal)))
-            .Concat(nested
-                .Where(type => type.Name.Contains("<OnPlay>") && typeof(IAsyncStateMachine).IsAssignableFrom(type))
-                .Select(type => type.GetMethod("MoveNext", All))
-                .Where(method => method != null)
-                .Cast<MethodBase>());
-    }
+    /// <summary>OnPlay, its state machine and the local functions it declares (CardCode.OnPlayMethods).</summary>
+    private static IEnumerable<MethodBase> OnPlayMethods(Type cardType) => CardCode.OnPlayMethods(cardType);
 
     /// <summary>"Type.Method" for every call in the card's own hook overrides (After*, Before*) and their async state machines.</summary>
     private static HashSet<string> HookCalls(Type cardType)
@@ -396,26 +376,6 @@ internal static class CardCoverage
         return false;
     }
 
-    /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's OnPlay and its async state machine.</summary>
-    private static HashSet<string> OnPlayCalls(Type cardType)
-    {
-        var set = new HashSet<string>();
-        foreach (var method in OnPlayMethods(cardType))
-        {
-            try
-            {
-                foreach (var ins in SpireQoL.Diagnostics.GameCode.Instructions(method))
-                {
-                    if (ins.operand is not MethodInfo otherMethod || otherMethod.DeclaringType == null) continue;
-                    set.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name);
-                    if (otherMethod.IsGenericMethod) set.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name + "<" + otherMethod.GetGenericArguments()[0].Name + ">");
-                }
-            }
-            catch
-            {
-                // unreadable method: nothing found
-            }
-        }
-        return set;
-    }
+    /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's play (CardCode.OnPlayCalls).</summary>
+    private static IReadOnlySet<string> OnPlayCalls(Type cardType) => CardCode.OnPlayCalls(cardType);
 }

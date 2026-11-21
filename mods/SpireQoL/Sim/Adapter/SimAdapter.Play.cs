@@ -124,6 +124,10 @@ public static partial class SimAdapter
         play.Body.AddRange(OrbsOf(card, me, combat, name, play.ChannelToAlly ? allyId : owner));
         // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
         CardEnergy.AddTo(play, card, me, combat, ids.FirstOrDefault(entry => entry.Value == targetId).Key, owner, allyId);
+        // Stars that wait on the attack's kill (Knockout Blow): the attack's, when its target dies.
+        if (PlayFacts.KillStarCards.Contains(name))
+            for (var i = 0; i < play.Body.Count; i++)
+                if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
         AddCardEvents(play, facts, plays);
         if (DrawnCardReaders.ContainsKey(name)) UseDrawnCard(play, name);
 

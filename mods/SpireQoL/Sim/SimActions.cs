@@ -59,9 +59,15 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
     public bool RepeatPerKill { get; init; }
     /// <summary>A shot's attack: it only happens when the shot had an arrow (ArrowCmd.ShootArrowAtTarget runs the attack inside ImpaleTarget).</summary>
     public bool NeedsArrow { get; init; }
-    /// <summary>Sunder: energy for the play's player once the attack is over, when one of its hits killed the target (decision #117).</summary>
-    public int OnKillEnergy { get; init; }
+    /// <summary>
+    /// What the play's player gets once the attack is over, when one of its hits killed the target (DamageCmd's results:
+    /// WasTargetKilled): Sunder's energy (decision #117), Knockout Blow's stars.
+    /// </summary>
+    public IReadOnlyList<KillReward> KillRewards { get; init; } = Array.Empty<KillReward>();
 }
+
+/// <summary>A card event an attack sets off when it kills its target (AttackAction.KillRewards): energy gained, stars gained.</summary>
+public sealed record KillReward(CardEvent Event, int Count);
 
 /// <summary>
 /// Double Energy (PlayerCmd.GainEnergy(Energy)): its player gains as much energy as they have when it resolves, the cost already

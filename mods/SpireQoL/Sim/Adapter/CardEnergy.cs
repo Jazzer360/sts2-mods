@@ -27,7 +27,7 @@ internal static class CardEnergy
     /// <summary>Cards whose gain a rule in <see cref="AddTo"/> works out, with what decides it (read from the decompile).</summary>
     internal static readonly Dictionary<string, string> Rules = new()
     {
-        [nameof(Sunder)] = "its attack killed the target (DamageCmd's results: WasTargetKilled): AttackAction.OnKillEnergy",
+        [nameof(Sunder)] = "its attack killed the target (DamageCmd's results: WasTargetKilled): AttackAction.KillRewards",
         ["BowSmack"] = "the target was impaled before its hit (ArrowCmd.CreatureIsImpaledByArrow)",
         [nameof(Restlessness)] = "it's the only card in your hand (IsOnlyCardInHand, the card's gold glow)",
         [nameof(ForgottenRitual)] = "you exhausted a card this turn (WasCardExhaustedThisTurn, the card's gold glow)",
@@ -112,7 +112,7 @@ internal static class CardEnergy
         {
             case nameof(Sunder):
                 for (var i = 0; i < play.Body.Count; i++)
-                    if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { OnKillEnergy = energy }; break; }
+                    if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.EnergyGained, energy)).ToList() }; break; }
                 return;
             case "BowSmack":
                 if (target != null && Fool.IsImpaled(target)) Gain(energy, owner);

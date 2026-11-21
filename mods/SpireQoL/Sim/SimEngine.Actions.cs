@@ -160,10 +160,10 @@ public static partial class SimEngine
             }
         }
         HookStep(branches, nameof(SimModel.AfterAttack), (model, owner, branch) => model.AfterAttack(branch, owner, Info(branch)));
-        // Sunder: energy once the attack is over, when it killed its target.
-        if (at.OnKillEnergy > 0)
+        // Once the attack is over, when it killed its target: what it gives (Sunder's energy, Knockout Blow's stars).
+        foreach (var reward in at.KillRewards)
             branches.Each(branch => (at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? Who.None) is var target && branch.Enemy(target) is { Alive: false }
-                ? ProcCardEvent(branch, CardEvent.EnergyGained, at.OnKillEnergy, branch.CurrentPlay?.Owner ?? Who.You, indirect: false) : new[] { branch });
+                ? ProcCardEvent(branch, reward.Event, reward.Count, branch.CurrentPlay?.Owner ?? Who.You, indirect: false) : new[] { branch });
         branches.Do(branch => branch.CurrentAttack = 0);
 
         // One hit on every hittable enemy; with RepeatPerKill (Echoing Slash), one more round per enemy it killed.

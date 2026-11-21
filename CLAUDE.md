@@ -15,7 +15,7 @@ Monorepo of Slay the Spire 2 mods (C# net9.0, Harmony, Godot). **Setup on a new 
 What the mod shows for each decision you could make right now (play this card, drink this potion, end your turn; never a sequence of decisions), followed through everything it sets off and re-evaluated as the board changes, is exactly what happens: the outcome, or the exact chance of each when a roll decides it, or a `?` where something isn't modelled. Never a certainty the game doesn't keep. Three rules follow, for every change:
 - **Every prediction is paired with its outcome** by an audit. A skipped check is a gap, not a pass: name the reason, count it, track it in docs/TRACKER.md.
 - **Not modelled means uncertain, and it's a gap to close:** a branch the simulator can't follow carries the reason (`SimState.Unmodelled`) and counts as unknown (`?` and a range), never as exact; the audits count the reasons, and each is a tracker item to model. Never a way around predicting.
-- **Effects, not cards:** model what the game's code does (hooks, commands, pipelines, in its order). A per-card table only where nothing else can read the effect, always with a scan that finds every card doing that thing.
+- **Effects, not cards:** model what the game's code does (hooks, commands, pipelines, in its order). Read a card's effect from its own code where it can be (`CardCode`, `CardEnergy.CallsOf`: decision #157), so new cards and the other game branch are covered without a list. A per-card table only where nothing else can read the effect, always with a scan that finds every card doing that thing.
 
 ## Names
 
