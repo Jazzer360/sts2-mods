@@ -1838,6 +1838,12 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             model.Skip("state after the play", "its search stopped at a cap");
             return;
         }
+        // A branch it didn't follow (decision #92) is unknown both ways: what happened may be that branch, as the play showed `?`.
+        if (branches.FirstOrDefault(branch => branch.Unmodelled != null) is { } unknown)
+        {
+            model.Skip("state after the play", $"not modelled: {unknown.Unmodelled}");
+            return;
+        }
         var after = window.After;
         var afterIds = window.AfterIds;
         // Cards drawn during the play (decision #132: the draw tabs' numbers are part of it, with the card's own draws), when the
