@@ -54,6 +54,6 @@ public class NamingTests
                 }
             }
         }
-        Assert.True(found.Count == 0, $"{found.Count} short names (say what each is): " + string.Join("; ", found.Distinct().Take(60))); ", found.Distinct()));
+        Assert.True(found.Count == 0, $"{found.Count} short names (say what each is): " + string.Join("; ", found.Distinct().Take(60)));
     }
 }
