@@ -309,11 +309,51 @@ public static class Sts2State
     /// </summary>
     public static event Action<string, string>? MissingMember;
 
+    /// <summary>Called once per type and member that <see cref="Private{T}"/> found but couldn't read as the type asked for (a game update changed it), with the error.</summary>
+    public static event Action<string, string, string>? UnreadableMember;
+
     private static readonly HashSet<(Type, string)> _missing = new();
 
-    /// <summary>Reads a private member by name. Returns fallback if it's missing (game patch renamed it), and reports that once.</summary>
+    /// <summary>
+    /// The members <see cref="Private{T}"/> couldn't read on this thread while it's open (missing, or not of the type asked for):
+    /// whatever was built from them holds their fallbacks, a guess, so a state or play built in one is marked unknown. Scopes nest:
+    /// a read an inner one misses counts in the outer one too.
+    /// </summary>
+    public sealed class ReadScope : IDisposable
+    {
+        private readonly ReadScope? _outer;
+        private readonly List<string> _unread = new();
+
+        internal ReadScope()
+        {
+            _outer = _current;
+            _current = this;
+        }
+
+        /// <summary>Each member it couldn't read, as Type.Member, in the order they were missed.</summary>
+        public IReadOnlyList<string> Unread => _unread;
+
+        internal void Missed(string member)
+        {
+            _unread.Add(member);
+            _outer?.Missed(member);
+        }
+
+        public void Dispose() => _current = _outer;
+    }
+
+    [ThreadStatic] private static ReadScope? _current;
+
+    /// <summary>Starts collecting the reads that fail on this thread, until the scope is disposed.</summary>
+    public static ReadScope TrackReads() => new();
+
+    /// <summary>
+    /// Reads a private member by name. Returns fallback if it's missing (game patch renamed it) or not of type T, reports a missing
+    /// one once, and tells the open read scope (TrackReads) every time.
+    /// </summary>
     public static T Private<T>(object obj, string member, T fallback)
     {
+        var name = $"{obj?.GetType().Name}.{member}";
         try
         {
             var traverse = Traverse.Create(obj);
@@ -321,15 +361,20 @@ public static class Sts2State
             if (otherTraverse.PropertyExists()) return otherTraverse.GetValue<T>();
             var nextTraverse = traverse.Field(member);
             if (nextTraverse.FieldExists()) return nextTraverse.GetValue<T>();
+            _current?.Missed(name);
             lock (_missing)
             {
-                if (!_missing.Add((obj.GetType(), member))) return fallback;
+                if (!_missing.Add((obj!.GetType(), member))) return fallback;
             }
             MissingMember?.Invoke(obj.GetType().Name, member);
+            return fallback;
         }
-        catch
+        catch (Exception ex)
         {
-            // fall through
+            _current?.Missed(name); // there, but not a T (a game update changed its type)
+            bool first;
+            lock (_missing) first = obj != null && _missing.Add((obj.GetType(), member));
+            if (first) UnreadableMember?.Invoke(obj!.GetType().Name, member, $"{ex.GetType().Name}: {ex.Message}");
         }
         return fallback;
     }

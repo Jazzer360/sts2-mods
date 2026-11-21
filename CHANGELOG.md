@@ -16,6 +16,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - The turn forecast is no longer reused from just before a play began, for a frame, when the game changed the board mid-frame; the Fool's arrows count as a board change.
 - Predictions no longer treat two possible outcomes as one when they differ only in your energy, Focus, orb slots, Glass orbs or the turn's card counts (one of them could be shown for both).
 - Drum of Battle's energy when another card exhausts it from your hand: certain when the card takes your whole hand (Fiend Fire, Stoke, Second Wind), its exact chance when one card at random (Cinder, True Grit), and unknown when you choose the card (Brand, Burning Pact, Cleanse...). Its own exhaust under Corruption gives its energy too.
+- Something the mod reads from the game that a game update renamed or changed no longer gives a confident prediction from a guessed value: predictions built from it show their `?`, with the reason naming what couldn't be read, and a member of the wrong type is reported like a missing one.
 - A card aimed at an enemy, when no enemy can be hit, is no longer predicted to put its debuffs and poison on you.
 - Dev mode says in the log that error reports are kept on this machine (it said they went to Sentry).
 - Error reports keep the actions of the cards Stampede or Simpleton could auto-play (they were left empty), so the report replays as the game ran.
@@ -24,6 +25,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Main Saves 1.0.23
 #### Changed
+- Shared code: a game member found but not of the type asked for is reported like a missing one, and reads can be watched for what they couldn't give. No change in the game.
 - Shared code: the mod frame loop says when it is running, so code called from the game mid-frame can tell; the frame loop, feature loading and game lookups are tidied. No change in the game.
 
 ### Spire QoL 1.24.6

@@ -190,7 +190,19 @@ public static partial class SimAdapter
 
     // ------------------------------------------------------------------ state
 
+    /// <summary>
+    /// The state of the fight from the game (BuildFromGame). A member it couldn't read (Sts2State.ReadScope) makes it unknown, named
+    /// by the member: its fallback is a guess, not the game's state.
+    /// </summary>
     public static SimState Build(Player me, ICombatState combat, out Dictionary<Creature, int> ids)
+    {
+        using var reads = Sts2State.TrackReads();
+        var state = BuildFromGame(me, combat, out ids);
+        if (reads.Unread.Count > 0) state.Unmodelled ??= SimState.Unread(reads.Unread[0]);
+        return state;
+    }
+
+    private static SimState BuildFromGame(Player me, ICombatState combat, out Dictionary<Creature, int> ids)
     {
         var idMap = new Dictionary<Creature, int>();
         ids = idMap;

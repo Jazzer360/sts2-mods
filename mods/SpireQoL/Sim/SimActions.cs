@@ -113,6 +113,12 @@ public sealed record ApplyPowerAction(PowerId Power, int Amount) : SimAction
 /// <summary>HP the card costs you (CreatureCmd.Damage on you, Unblockable and Unpowered), through the HP-loss pipeline.</summary>
 public sealed record LoseHpAction(int Amount) : SimAction;
 
+/// <summary>
+/// A part of the play the adapter couldn't read from the game (Sts2State.ReadScope: a member a game update renamed): what's built
+/// from it is a guess, so the play is unknown (SimState.Unmodelled), named by the member.
+/// </summary>
+public sealed record UnreadAction(string Member) : SimAction;
+
 /// <summary>How a play picks the cards it exhausts (ExhaustFromHandAction).</summary>
 public enum ExhaustPick { Random, All, Chosen }
 

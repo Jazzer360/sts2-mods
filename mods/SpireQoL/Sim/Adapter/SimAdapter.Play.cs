@@ -22,8 +22,18 @@ public static partial class SimAdapter
     /// <paramref name="owner"/>: whose card it is (a teammate's auto-play: their Howl from Beyond); <paramref name="me"/> is then
     /// that teammate, and what the play gives its player goes to them.
     /// </summary>
+    /// <remarks>A member it couldn't read (Sts2State.ReadScope) makes the play unknown (UnreadAction), named by the member.</remarks>
     public static SimPlay Play(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
         int targetId, int owner = Who.You)
+    {
+        using var reads = Sts2State.TrackReads();
+        var play = PlayFromGame(card, facts, me, combat, ids, targetId, owner);
+        if (reads.Unread.Count > 0) play.Before.Insert(0, new UnreadAction(reads.Unread[0]));
+        return play;
+    }
+
+    private static SimPlay PlayFromGame(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
+        int targetId, int owner)
     {
         var name = card.GetType().Name;
         var plays = Math.Max(1, facts.Plays);

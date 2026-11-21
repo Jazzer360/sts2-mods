@@ -545,6 +545,9 @@ public sealed class SimHandCard
 /// <summary>One branch of the simulation: the state plus what happened so far.</summary>
 public sealed class SimState
 {
+    /// <summary>The reason a state or play built from a member the game couldn't give is unknown (Sts2State.ReadScope).</summary>
+    public static string Unread(string member) => $"the game's {member} couldn't be read (a game update?): what's built from it is a guess";
+
     /// <summary>You: your own player (every other player is in <see cref="Teammates"/>; any player by id: <see cref="Player"/>).</summary>
     [JsonPropertyName("P")] // the name reports and replay cases hold it under
     public SimPlayer You = new();

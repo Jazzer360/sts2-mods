@@ -117,6 +117,13 @@ public static class ModEntry
                 $"Sts2State.Private couldn't find {type}.{member}. A game update probably renamed or removed it; the rule reading it is using its fallback value.");
         };
 
+        Sts2State.UnreadableMember += (type, member, error) =>
+        {
+            Log.Warn($"game member unreadable: {type}.{member} ({error}; a rule reading it uses its fallback)");
+            reporter.Mismatch("api", $"Game member unreadable: {type}.{member}", new[] { "unreadable-member", type, member },
+                $"Sts2State.Private found {type}.{member} but couldn't read it ({error}). A game update probably changed its type; the rule reading it is using its fallback value.");
+        };
+
         // Order matters for card decorations: later features add badges after earlier ones.
         IFeature[] features =
         {

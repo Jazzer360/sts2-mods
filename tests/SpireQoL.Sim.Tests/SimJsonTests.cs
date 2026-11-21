@@ -59,6 +59,15 @@ public class SimJsonTests
     }
 
     [Fact]
+    public void APlayBuiltFromAMemberTheGameCouldntGiveIsUnknown()
+    {
+        // The adapter couldn't read a member while building the play (Sts2State.ReadScope): the play is a guess, named by it.
+        var play = new SimPlay { Name = "Strike", HandCard = 7, Before = { new UnreadAction("PenNib.AttackToDouble") } };
+        var branch = Assert.Single(SimEngine.Run(new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 50 } } }, play).Branches);
+        Assert.Equal(SimState.Unread("PenNib.AttackToDouble"), branch.Unmodelled);
+    }
+
+    [Fact]
     public void AHandCardsKeyReadsEveryFieldOfItsPlaysButNotWhichCardItIs()
     {
         SimHandCard Card(int id, Action<SimPlay>? change = null)
