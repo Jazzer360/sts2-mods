@@ -238,7 +238,7 @@ public sealed class LethalityPower : SimModel
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null || d.Play?.Owner != owner) return 1m;
         if (d.Play.PlayIndex > 0) return 1m;
-        var started = SimEngine.TurnOf(s, owner)["Started:Attack"];
+        var started = SimEngine.TurnOf(s, owner)[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)];
         return started > 1 ? 1m : 1m + SimEngine.PowerOn(s, owner, Name) / 100m;
     }
 }
@@ -250,7 +250,7 @@ public sealed class PhantomBladesPower : SimModel
     {
         if (!d.Props.IsPoweredAttack() || d.Card == null || !d.Card.Is("Shiv") || d.Dealer != owner) return 0m;
         var p = s.Player(owner);
-        return p != null && p.Turn["Finished#Shiv"] > 0 ? 0m : SimEngine.PowerOn(s, owner, Name);
+        return p != null && p.Turn[SimKeys.Plays(PlayStage.Finished, "Shiv")] > 0 ? 0m : SimEngine.PowerOn(s, owner, Name);
     }
 }
 

@@ -31,10 +31,9 @@ internal static class DamageFormulaAudit
             {
                 // A single-target card's simulation only hits its own target.
                 if (card.TargetType == TargetType.AnyEnemy && targets[i] != id) continue;
-                if (!hits.Has(id.ToString()) || !f.CanHit(enemy)) continue;
+                if (!hits.TryGetValue(id, out var sim) || !f.CanHit(enemy)) continue;
                 int game;
                 try { game = f.DamagePerHit(enemy); } catch { continue; }
-                var sim = hits[id.ToString()];
                 if (sim != game) mismatches.Add($"{SafeName(enemy)}: simulated {sim}, game {game}");
             }
         }

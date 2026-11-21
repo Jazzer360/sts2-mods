@@ -14,24 +14,22 @@ public static partial class SimEngine
         for (var i = 0; i < Math.Max(1, pc.Play.PlayCount); i++)
         {
             var play = pc.Play with { PlayIndex = i };
-            b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; s.PlayEvents = PowerSet.Empty; s.PlayFromHand = pc.FromHand; });
+            b.Do(s => { s.CurrentPlay = play; s.PlayCardBlockGains = 0; s.PlayEvents = CardEventCounts.None; s.PlayFromHand = pc.FromHand; });
             HookStep(b, nameof(SimModel.BeforeCardPlayed), (m, o, x) => m.BeforeCardPlayed(x, o, play));
-            b.Do(s => Count(s, play, "Started"));
+            b.Do(s => Count(s, play, PlayStage.Started));
             foreach (var a in pc.Body) Run(b, a);
-            b.Do(s => Count(s, play, "Finished"));
+            b.Do(s => Count(s, play, PlayStage.Finished));
             HookStep(b, nameof(SimModel.AfterCardPlayed), (m, o, x) => m.AfterCardPlayed(x, o, play));
         }
         b.Do(s => { s.CurrentPlay = null; s.PlayFromHand = false; });
     }
 
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>
-    private static void Count(SimState s, SimCardPlay play, string what)
+    private static void Count(SimState s, SimCardPlay play, PlayStage stage)
     {
-        var p = s.Player(play.Owner) == null ? null : s.MutablePlayer(play.Owner);
-        if (p == null) return;
-        var t = p.Turn.Add(what, 1).Add($"{what}:{play.Card.Type}", 1);
-        foreach (var tag in play.Card.Tags) t = t.Add($"{what}#{tag}", 1);
-        p.Turn = t;
+        if (s.Player(play.Owner) == null) return;
+        var p = s.MutablePlayer(play.Owner);
+        p.Turn = SimKeys.CountPlay(p.Turn, stage, play.Card.Type, play.Card.Tags);
     }
 
     // ------------------------------------------------------------------ attacks
@@ -125,7 +123,7 @@ public static partial class SimEngine
         if (mods != null) foreach (var (m, o) in mods) m.AfterModifyingDamageAmount(s, o, card);
         // The first hit on each enemy, for the damage-formula audit (not after Mighty Wings gave Strength mid-attack: the preview
         // can't know that).
-        if (card != null && !at.ByOsty && !s.FirstHits.Has(target.ToString()) && !s.Fired.Has("MightyWings")) s.FirstHits = s.FirstHits.With(target.ToString(), amount);
+        if (card != null && !at.ByOsty && !s.FirstHits.ContainsKey(target) && !s.Fired.Has("MightyWings")) s.FirstHits = s.FirstHits.Add(target, amount);
         if (amount <= 0) return new[] { s };
         if (s.Enemy(target) is { Alive: true } e) Damage(s, e, amount, dealer, spec.Props, card);
         // Rain Shot: the target's damage to every other hittable enemy (only caps apply).
@@ -151,7 +149,7 @@ public static partial class SimEngine
         var r = GainBlock(s, amount, s.EndOfTurnNow && gb.To == Who.You && s.Log ? s.CurrentPlay?.Card.Name ?? "block" : null, gb.To);
         // Block from a card play this turn (Unmovable counts the ones from earlier plays).
         if (amount > 0 && s.CurrentPlay != null && gb.Props.IsCardOrMonsterMove())
-            r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add("CardBlock", 1); return x; }).ToList();
+            r = r.Select(x => { x.PlayCardBlockGains++; if (x.CurrentPlay!.Owner == Who.You) x.P.Turn = x.P.Turn.Add(SimKeys.CardBlock, 1); return x; }).ToList();
         if (mods != null && amount > 0) r = r.Select(x => { foreach (var (m, o) in mods) m.AfterModifyingBlockAmount(x, o, amount, x.CurrentPlay); return x; }).ToList();
         return Then(r, x => Hook(x, nameof(SimModel.AfterBlockGained), (m, o, y) => m.AfterBlockGained(y, o, gb.To, amount, y.CurrentPlay?.Card)));
     }

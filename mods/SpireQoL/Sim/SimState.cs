@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace SpireQoL.Sim;
@@ -206,7 +207,7 @@ public sealed class SimPlayer
     /// <summary>Their relics the simulator models, in relic order, with each one's counter (Amount) and flag (Data).</summary>
     public PowerSet Relics = PowerSet.Empty;
     /// <summary>
-    /// What they played this turn, as the hooks count it (the game's CardPlaysStarted and CardPlaysFinished): "Started", "Finished",
+    /// What they played this turn, as the hooks count it (the game's CardPlaysStarted and CardPlaysFinished), under SimKeys.Plays: "Started",
     /// "Started:Attack", "Finished:Skill", "Finished#Shiv" (by tag)... Each play of a replay counts.
     /// </summary>
     public PowerSet Turn = PowerSet.Empty;
@@ -618,15 +619,15 @@ public sealed class SimState
     /// </summary>
     internal PowerSet Bound = PowerSet.Empty;
     /// <summary>The first hit of a card's attack on each enemy (enemy id → damage), for the damage-formula audit.</summary>
-    internal PowerSet FirstHits = PowerSet.Empty;
+    internal ImmutableSortedDictionary<int, int> FirstHits = ImmutableSortedDictionary<int, int>.Empty;
     /// <summary>Card events raised inside a hit or a death, run once it's over (SimEngine.Raise, DrainPending).</summary>
-    internal PowerSet Pending = PowerSet.Empty;
+    internal ImmutableArray<PendingEvent> Pending = ImmutableArray<PendingEvent>.Empty;
     /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
     internal int ArrowAwayAt = -1;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
     internal SimCard? EventCard;
-    /// <summary>Card events during the current card play, by CardEvent name (Unceasing Top: nothing drawn or created).</summary>
-    internal PowerSet PlayEvents = PowerSet.Empty;
+    /// <summary>Card events during the current card play, for its player (Unceasing Top: nothing drawn or created).</summary>
+    internal CardEventCounts PlayEvents = CardEventCounts.None;
     /// <summary>Block gains from the current card play (Unmovable doesn't count them).</summary>
     internal int PlayCardBlockGains;
 
@@ -709,12 +710,8 @@ public sealed class SimState
 
     /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
     /// <param name="owner">Whose source it is: an enemy's is also logged as "Name@id", so two enemies' powers stay apart.</param>
-    /// <summary>Log keys for a teammate's firings ("Name@id", "~Name@id"), made once per name and id: strings only, read by every thread.</summary>
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string, int, bool), string> OwnedKeys = new();
-
-    private static string OwnedKey(string source, int owner, bool indirect) =>
-        OwnedKeys.GetOrAdd((source, owner, indirect), k => (k.Item3 ? "~" : "") + k.Item1 + "@" + k.Item2);
-
+    /// <summary>Logs that <paramref name="source"/> fired, with the damage or block it caused.</summary>
+    /// <param name="owner">Whose source it is: an enemy's is also logged as "Name@id", so two enemies' powers stay apart.</param>
     public void LogFired(string source, int amount = 0, int? owner = null) => LogAs(source, amount, owner, 1);
 
     /// <summary>
@@ -726,17 +723,16 @@ public sealed class SimState
     private void LogAs(string source, int amount, int? owner, int times)
     {
         // A teammate's firing is logged under them only (Name@id): its tab is theirs (decision #75), and the plain name stays
-        // yours (and enemies'). An enemy's is logged under both.
-        if (owner is { } t && Who.IsPlayer(t) && t != Who.You)
-        {
-            Log1(OwnedKey(source, t, false), amount, times);
-            if (IndirectNow) Log1(OwnedKey(source, t, true), amount, times);
-            return;
-        }
-        Log1(source, amount, times);
-        if (owner is >= 0) Log1($"{source}@{owner}", amount, times);
-        if (IndirectNow) Log1("~" + source, amount, times);
-        if (IndirectNow && owner is >= 0) Log1($"~{source}@{owner}", amount, times);
+        // yours (and enemies'). An enemy's is logged under both. A firing set off by a card event is also under "~" (SimKeys).
+        var kind = owner is { } o ? Who.KindOf(o) : CreatureKind.You;
+        if (kind != CreatureKind.Teammate) LogUnder(source, amount, times);
+        if (kind is CreatureKind.Teammate or CreatureKind.Enemy) LogUnder(SimKeys.Owned(source, owner!.Value), amount, times);
+    }
+
+    private void LogUnder(string key, int amount, int times)
+    {
+        Log1(key, amount, times);
+        if (IndirectNow) Log1(SimKeys.Indirect(key), amount, times);
     }
 
     /// <summary>

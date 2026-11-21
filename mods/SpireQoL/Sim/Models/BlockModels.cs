@@ -119,7 +119,7 @@ public sealed class UnmovablePower : SimModel
         if (b.Target >= 0 || !b.Props.IsCardOrMonsterMove()) return 1m;
         if (b.Play != null && b.Play.Owner != owner) return 1m;
         var turn = SimEngine.TurnOf(s, owner);
-        var earlier = turn["CardBlock"] - (b.Play != null ? s.PlayCardBlockGains : 0);
+        var earlier = turn[SimKeys.CardBlock] - (b.Play != null ? s.PlayCardBlockGains : 0);
         return earlier >= SimEngine.PowerOn(s, owner, Name) ? 1m : 2m;
     }
 }

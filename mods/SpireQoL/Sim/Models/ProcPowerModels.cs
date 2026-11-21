@@ -253,7 +253,7 @@ public sealed class NostalgiaPower : ProcModel
     {
         if (!Mine(play, owner) || play.Card.Type is not (SimCardType.Attack or SimCardType.Skill) || play.Card.ExhaustsSelf) return One(s);
         var turn = SimEngine.TurnOf(s, owner);
-        var before = turn["Started:Attack"] + turn["Started:Skill"] - 1;
+        var before = turn[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)] + turn[SimKeys.Plays(PlayStage.Started, SimCardType.Skill)] - 1;
         return before < Amount(s, owner) ? Fire(s, owner) : One(s);
     }
 }
@@ -266,7 +266,7 @@ public sealed class PaleBlueDotPower : ProcModel
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
     {
-        if (!Mine(play, owner) || Data(s, owner) != 0 || SimEngine.TurnOf(s, owner)["Finished"] < 5) return One(s);
+        if (!Mine(play, owner) || Data(s, owner) != 0 || SimEngine.TurnOf(s, owner)[SimKeys.Plays(PlayStage.Finished)] < 5) return One(s);
         Set(s, owner, Amount(s, owner), 1);
         return Fire(s, owner);
     }
@@ -287,7 +287,7 @@ internal static class Melodies
     public static readonly string[] Tags = { "Wah", "Cho", "Ki" };
 
     /// <summary>The play is the first this turn with that tag (MelodyCmd.IsFirstPlayThisTurn: the only play started with it).</summary>
-    public static bool First(SimState s, SimCardPlay play, string tag) => play.Card.Is(tag) && SimEngine.TurnOf(s, play.Owner)[$"Started#{tag}"] == 1;
+    public static bool First(SimState s, SimCardPlay play, string tag) => play.Card.Is(tag) && SimEngine.TurnOf(s, play.Owner)[SimKeys.Plays(PlayStage.Started, tag)] == 1;
 
     public static bool AnyFirst(SimState s, SimCardPlay play) => Tags.Any(t => First(s, play, t));
 
@@ -295,8 +295,8 @@ internal static class Melodies
     public static (int Before, int After) Finished(SimState s, SimCardPlay play)
     {
         var turn = SimEngine.TurnOf(s, play.Owner);
-        var after = Tags.Count(t => turn[$"Finished#{t}"] > 0);
-        var before = Tags.Count(t => turn[$"Finished#{t}"] - (play.Card.Is(t) ? 1 : 0) > 0);
+        var after = Tags.Count(t => turn[SimKeys.Plays(PlayStage.Finished, t)] > 0);
+        var before = Tags.Count(t => turn[SimKeys.Plays(PlayStage.Finished, t)] - (play.Card.Is(t) ? 1 : 0) > 0);
         return (before, after);
     }
 }

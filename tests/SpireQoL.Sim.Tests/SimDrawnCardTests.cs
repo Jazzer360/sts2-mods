@@ -75,7 +75,7 @@ public class SimDrawnCardTests
         var b = Assert.Single(o.Branches);
         Assert.Equal(10, b.Taken);                 // the enemy's 10, no Burn
         Assert.Empty(b.P.TurnEndCards);
-        Assert.Equal(1, b.PlayEvents["Discarded"]);
+        Assert.Equal(1, b.PlayEvents[CardEvent.Discarded]);
     }
 
     [Fact]

@@ -12,7 +12,7 @@ public abstract class FirstAttackGivesUp : RelicProc
     /// <summary>The play that gives up the bonus clears the relic's Active status (AfterCardPlayed: Status = Normal); it doesn't flash.</summary>
     public override ActedSeen Seen => ActedSeen.StatusCleared;
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Attack && SimEngine.TurnOf(s, owner)["Started:Attack"] == 0 ? Fire(s, owner) : One(s);
+        Mine(play, owner) && play.Card.Type == SimCardType.Attack && SimEngine.TurnOf(s, owner)[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)] == 0 ? Fire(s, owner) : One(s);
 }
 
 public sealed class ArtOfWar : FirstAttackGivesUp { }
@@ -123,7 +123,7 @@ public sealed class PaelsEye : RelicProc
     }
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
     {
-        if (!Mine(play, owner) || play.AutoPlay || !Armed(s, owner) || SimEngine.TurnOf(s, owner)["Started"] != 0) return One(s);
+        if (!Mine(play, owner) || play.AutoPlay || !Armed(s, owner) || SimEngine.TurnOf(s, owner)[SimKeys.Plays(PlayStage.Started)] != 0) return One(s);
         Disarm(s, owner);
         return Fire(s, owner);
     }
@@ -155,7 +155,7 @@ public sealed class MusicBox : RelicProc
 {
     public override IEnumerable<SimState> BeforeCardPlayed(SimState s, int owner, SimCardPlay play)
     {
-        if (Mine(play, owner) && Armed(s, owner) && play.Card.Type == SimCardType.Attack && !s.Bound.Has($"{Name}@{owner}")) Bind(s, owner, 1);
+        if (Mine(play, owner) && Armed(s, owner) && play.Card.Type == SimCardType.Attack && !s.Bound.Has(SimKeys.Owned(Name, owner))) Bind(s, owner, 1);
         return One(s);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play)
@@ -285,8 +285,8 @@ public sealed class RainbowRing : RelicProc
     {
         if (!Mine(play, owner) || (Data(s, owner) & 2) != 0) return One(s);
         var turn = SimEngine.TurnOf(s, owner);
-        int Of(SimCardType t) => turn[$"Finished:{t}"] - (play.Card.Type == t ? 1 : 0);
-        var all = turn["Finished:Attack"] > 0 && turn["Finished:Skill"] > 0 && turn["Finished:Power"] > 0;
+        int Of(SimCardType t) => turn[SimKeys.Plays(PlayStage.Finished, t)] - (play.Card.Type == t ? 1 : 0);
+        var all = new[] { SimCardType.Attack, SimCardType.Skill, SimCardType.Power }.All(t => turn[SimKeys.Plays(PlayStage.Finished, t)] > 0);
         var before = Of(SimCardType.Attack) > 0 && Of(SimCardType.Skill) > 0 && Of(SimCardType.Power) > 0;
         if (!all || before) return One(s);
         Set(s, owner, Amount(s, owner), Data(s, owner) | 2);
@@ -334,7 +334,7 @@ public sealed class UnceasingTop : RelicProc
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState s, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.PlayIndex == 0 && s.Player(owner) is { HandCount: 1 }
-        && s.PlayEvents[nameof(CardEvent.Drawn)] == 0 && s.PlayEvents[nameof(CardEvent.Generated)] + s.PlayEvents[nameof(CardEvent.GeneratedStatus)] + s.PlayEvents[nameof(CardEvent.GeneratedSadness)] == 0
+        && s.PlayEvents[CardEvent.Drawn] == 0 && s.PlayEvents[CardEvent.Generated] + s.PlayEvents[CardEvent.GeneratedStatus] + s.PlayEvents[CardEvent.GeneratedSadness] == 0
             ? Fire(s, owner) : One(s);
 }
 

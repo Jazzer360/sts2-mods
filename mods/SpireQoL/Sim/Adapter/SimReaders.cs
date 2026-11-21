@@ -203,18 +203,16 @@ public static class SimReaders
             foreach (var e in history.CardPlaysStarted)
             {
                 if (!e.HappenedThisTurn(cs) || e.CardPlay.Player != p) continue;
-                t = t.Add("Started", 1).Add($"Started:{TypeOf(e.CardPlay.Card)}", 1);
-                foreach (var tag in e.CardPlay.Card.Tags) t = t.Add($"Started#{tag}", 1);
+                t = SimKeys.CountPlay(t, PlayStage.Started, TypeOf(e.CardPlay.Card), e.CardPlay.Card.Tags.Select(tag => tag.ToString()));
             }
             foreach (var e in history.CardPlaysFinished)
             {
                 if (!e.HappenedThisTurn(cs) || e.CardPlay.Player != p) continue;
-                t = t.Add("Finished", 1).Add($"Finished:{TypeOf(e.CardPlay.Card)}", 1);
-                foreach (var tag in e.CardPlay.Card.Tags) t = t.Add($"Finished#{tag}", 1);
+                t = SimKeys.CountPlay(t, PlayStage.Finished, TypeOf(e.CardPlay.Card), e.CardPlay.Card.Tags.Select(tag => tag.ToString()));
             }
             var blocks = history.Entries.OfType<BlockGainedEntry>()
                 .Count(e => e.HappenedThisTurn(cs) && e.CardPlay != null && e.CardPlay.Player == p && e.Props.IsCardOrMonsterMove());
-            if (blocks > 0) t = t.Add("CardBlock", blocks);
+            if (blocks > 0) t = t.Add(SimKeys.CardBlock, blocks);
         }
         catch
         {

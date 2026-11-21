@@ -213,8 +213,8 @@ public class FirstHitTests
         var s = new SimState { Enemies = { V2Script.Enemy(0, 100), V2Script.Enemy(1, 100) } };
         s.P.Powers = s.P.Powers.With("StrengthPower", 2);
         var all = SimEngine.Run(s, V2Script.Play(V2Script.Card("Cleave"), -1, 1, V2Script.Attack(8, hits: 2, mode: SimPlay.Target.All)));
-        Assert.Equal(10, all.PlayFirstHits["0"]);
-        Assert.Equal(10, all.PlayFirstHits["1"]);
+        Assert.Equal(10, all.PlayFirstHits[0]);
+        Assert.Equal(10, all.PlayFirstHits[1]);
         // Random targets: the branches disagree on who was hit first, so nothing is recorded.
         var random = SimEngine.Run(s, V2Script.Play(V2Script.Card("SwordBoomerang"), -1, 1, V2Script.Attack(3, hits: 1, mode: SimPlay.Target.Random)));
         Assert.Equal(0, random.PlayFirstHits.Count);

@@ -88,8 +88,8 @@ public sealed class SimOutcome
     public int PlayHpReachedMin, PlayHpLossesMin, PlayHpLostMin;
     /// <summary>What fired during the play (its log): the counts in every branch (smallest), and in some branch (largest).</summary>
     public PowerSet PlayFiredEvery = PowerSet.Empty, PlayFiredAny = PowerSet.Empty;
-    /// <summary>The first hit of the card's attack on each enemy (name: the enemy id), the same in every branch; empty when it isn't.</summary>
-    public PowerSet PlayFirstHits = PowerSet.Empty;
+    /// <summary>The first hit of the card's attack on each enemy (enemy id: damage), the same in every branch; empty when it isn't.</summary>
+    public IReadOnlyDictionary<int, int> PlayFirstHits = System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
 
     /// <summary>The enemy is dead before it acts in every branch.</summary>
     public bool DeadInAll(int id) => !Truncated && Branches.All(b => b.Enemy(id) is { DiedBeforeActing: true }); // a death that happened stands, modelled past it or not
@@ -215,7 +215,7 @@ public static partial class SimEngine
             : states.Skip(1).Aggregate(states[0].Fired, (acc, x) => SimState.MergeLog(acc, x.Fired, every: true));
         var firedAny = states.Aggregate(PowerSet.Empty, (acc, x) => SimState.MergeLog(acc, x.FiredAny, every: false));
         // The first hit of the card's attack on each enemy, when nothing random came before it (the damage-formula audit).
-        var firstHits = complete && states.Count > 0 && states.All(x => ReferenceEquals(x.FirstHits, states[0].FirstHits) || x.FirstHits.Items.AsSpan().SequenceEqual(states[0].FirstHits.Items)) ? states[0].FirstHits : PowerSet.Empty;
+        var firstHits = complete && states.Count > 0 && states.All(x => ReferenceEquals(x.FirstHits, states[0].FirstHits) || x.FirstHits.SequenceEqual(states[0].FirstHits)) ? states[0].FirstHits : System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
         return new SimOutcome
         {
             KilledByPlayInAny = killedPerBranch.SelectMany(k => k).ToHashSet(),
@@ -786,7 +786,7 @@ public static partial class SimEngine
             default: throw new NotSupportedException($"No runner for {a.GetType().Name}");
         }
         // Events raised inside its hits or deaths (an arrow knocked loose) run once the action is over.
-        if (b.States.Any(s => s.Pending.Count > 0)) b.Each(DrainPending);
+        if (b.States.Any(s => !s.Pending.IsEmpty)) b.Each(DrainPending);
     }
 
     // ------------------------------------------------------------------ end of turn
@@ -1047,7 +1047,7 @@ public static partial class SimEngine
 
         // Deaths at the end of your turn run their hooks before the enemies act (arrows coming back: Twine's block).
         b.Do(AllyDeaths);
-        if (b.States.Any(s => s.Pending.Count > 0)) b.Each(DrainPending);
+        if (b.States.Any(s => !s.Pending.IsEmpty)) b.Each(DrainPending);
         b.Do(s =>
         {
             s.EndOfTurnNow = false;

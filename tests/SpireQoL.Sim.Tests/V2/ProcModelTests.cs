@@ -470,11 +470,11 @@ public class ProcModelTests
         s.P.HandCount = 3;
         var kill = One(s, Play(Card("Strike"), 0, 1, Attack(6)));
         Assert.Equal(2, kill.P.Energy);
-        Assert.Equal(1, kill.PlayEvents["Drawn"]);
+        Assert.Equal(1, kill.PlayEvents[CardEvent.Drawn]);
         // No death, nothing.
         var hit = One(Relic(State(enemies: 2, hp: 50), "GremlinHorn"), Play(Card("Strike"), 0, 1, Attack(6)));
         Assert.Equal(0, hit.P.Energy);
-        Assert.False(hit.PlayEvents.Has("Drawn"));
+        Assert.Equal(0, hit.PlayEvents[CardEvent.Drawn]);
     }
 
     [Fact]
@@ -626,7 +626,7 @@ public class ProcModelTests
         // MotifPower.AfterCardPlayed: CardPileCmd.Draw(num * Amount), num the melodies (Wah, Cho, Ki) this play is the first of this turn.
         var duet = Card("Duet", SimCardType.Skill, "Wah", "Cho");
         var after = One(Power(State(), "MotifPower", 2), Events(duet, 1));
-        Assert.Equal(4, after.PlayEvents["Drawn"]);
+        Assert.Equal(4, after.PlayEvents[CardEvent.Drawn]);
         Assert.Equal(1, after.Fired["MotifPower"]);
         Assert.Equal(4, after.Fired.DataOf("MotifPower"));
         // A Wah already played this turn: only the Cho counts.
@@ -659,7 +659,7 @@ public class ProcModelTests
         s.P.Hp = 50;
         s.P.HandCount = 3;
         var bleed = One(s, Events(Card("Bloodletting", SimCardType.Skill), 1, new LoseHpAction(3)));
-        Assert.Equal(3, bleed.PlayEvents["Drawn"]);
+        Assert.Equal(3, bleed.PlayEvents[CardEvent.Drawn]);
         Assert.Equal(3, bleed.Fired.DataOf("CentennialPuzzle"));
         Assert.Equal(1, bleed.P.Relics["CentennialPuzzle"]);
         // Used up this combat: nothing.

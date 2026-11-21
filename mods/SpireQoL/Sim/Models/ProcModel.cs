@@ -27,11 +27,11 @@ public abstract class ProcModel : SimModel
     protected SimProps PropsOf(SimState s, int owner, string var) => (SimProps)SimEngine.Var(s, owner, Name, var + ".Props", (int)Unpowered);
 
     /// <summary>Binds the play in progress with an amount (BeforeCardPlayed: the game's amountsForPlayedCards).</summary>
-    protected void Bind(SimState s, int owner, int amount) => s.Bound = s.Bound.With($"{Name}@{owner}", amount);
+    protected void Bind(SimState s, int owner, int amount) => s.Bound = s.Bound.With(SimKeys.Owned(Name, owner), amount);
     /// <summary>The amount bound to the play, removed (AfterCardPlayed); null when it wasn't bound.</summary>
     protected int? TakeBound(SimState s, int owner)
     {
-        var key = $"{Name}@{owner}";
+        var key = SimKeys.Owned(Name, owner);
         if (!s.Bound.Has(key)) return null;
         var v = s.Bound[key];
         s.Bound = s.Bound.Without(key);

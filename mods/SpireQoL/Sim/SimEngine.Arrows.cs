@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 namespace SpireQoL.Sim;
 
 /// <summary>
@@ -112,27 +113,34 @@ public static partial class SimEngine
     /// is over (DrainPending).
     /// </summary>
     /// <param name="source">The model raising it, when its tab counts what it gives (a draw or energy tab: decision #132).</param>
-    internal static void Raise(SimState s, CardEvent ev, int player, int count = 1, string? source = null) =>
-        s.Pending = s.Pending.Add(source == null ? $"{(int)ev}|{player}" : $"{(int)ev}|{player}|{source}", count);
+    internal static void Raise(SimState s, CardEvent ev, int player, int count = 1, string? source = null)
+    {
+        // The same event for the same player from the same source adds up (one entry, in the order first raised).
+        for (var i = 0; i < s.Pending.Length; i++)
+        {
+            var e = s.Pending[i];
+            if (e.Event != ev || e.Player != player || e.Source != source) continue;
+            s.Pending = s.Pending.SetItem(i, e with { Count = e.Count + count });
+            return;
+        }
+        s.Pending = s.Pending.Add(new PendingEvent(ev, player, source, count));
+    }
 
     /// <summary>The events raised during a hit or an action, each through every listener.</summary>
     internal static IEnumerable<SimState> DrainPending(SimState s)
     {
-        if (s.Pending.Count == 0) return new[] { s };
-        var pending = s.Pending.Items;
-        s.Pending = PowerSet.Empty;
+        if (s.Pending.IsEmpty) return new[] { s };
+        var pending = s.Pending;
+        s.Pending = ImmutableArray<PendingEvent>.Empty;
         IEnumerable<SimState> r = new[] { s };
-        foreach (var e in pending)
+        foreach (var (ev, player, source, count) in pending)
         {
-            var parts = e.Name.Split('|');
-            var ev = (CardEvent)int.Parse(parts[0]);
-            var player = int.Parse(parts[1]);
-            var tally = parts.Length > 2 && SimModels.Get(parts[2]) is { } m ? TallyFor(m.Name, m.Tab, ev, player) : null;
-            r = Then(r.ToList(), x => ProcCardEvent(x, ev, e.Amount, player, indirect: false, tally));
+            var tally = source != null && SimModels.Get(source) is { } m ? TallyFor(m.Name, m.Tab, ev, player) : null;
+            r = Then(r.ToList(), x => ProcCardEvent(x, ev, count, player, indirect: false, tally));
             // Epic Retrieval: its own energy for each of its player's arrows its play knocks loose (the game passes the card as the source).
             if (ev == CardEvent.ArrowDislodged)
                 r = Then(r.ToList(), x => x.CurrentPlay is { ArrowEnergy: > 0 } cp && cp.Owner == player
-                    ? ProcCardEvent(x, CardEvent.EnergyGained, cp.ArrowEnergy * e.Amount, player, indirect: false) : new[] { x });
+                    ? ProcCardEvent(x, CardEvent.EnergyGained, cp.ArrowEnergy * count, player, indirect: false) : new[] { x });
         }
         return Then(r.ToList(), DrainPending);
     }
