@@ -15,6 +15,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Inspect: a marked card's ring goes around the card itself (it left a gap above and was hidden below), and the cards you didn't mark are darkened instead of see-through.
 - The turn forecast is no longer reused from just before a play began, for a frame, when the game changed the board mid-frame; the Fool's arrows count as a board change.
 - Predictions no longer treat two possible outcomes as one when they differ only in your energy, Focus, orb slots, Glass orbs or the turn's card counts (one of them could be shown for both).
+- The checks hold the lethal tab of the play that wins a fight to who it killed (it wasn't checked, nor counted as unchecked), and count a lethal tab they can't check because the board after the play wasn't captured.
 - Drum of Battle's energy when another card exhausts it from your hand: certain when the card takes your whole hand (Fiend Fire, Stoke, Second Wind), its exact chance when one card at random (Cinder, True Grit), and unknown when you choose the card (Brand, Burning Pact, Cleanse...). Its own exhaust under Corruption gives its energy too.
 - Something the mod reads from the game that a game update renamed or changed no longer gives a confident prediction from a guessed value: predictions built from it show their `?`, with the reason naming what couldn't be read, and a member of the wrong type is reported like a missing one.
 - A card aimed at an enemy, when no enemy can be hit, is no longer predicted to put its debuffs and poison on you.

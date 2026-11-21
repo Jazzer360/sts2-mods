@@ -126,6 +126,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public PlaySnapshot? FullBefore, FullAfter;
         /// <summary>Waterfall Giants already about to blow when the play began; null when the play's start wasn't seen.</summary>
         public HashSet<Creature>? BlowingBefore;
+        /// <summary>The play ended the fight: the enemies it was simulated against that were dead as it ended (it killed them).</summary>
+        public HashSet<Creature>? DeadAtFightEnd;
     }
 
     private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
@@ -305,6 +307,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
         public PlaySnapshot? FullBefore, FullAfter;
         /// <summary>Waterfall Giants already about to blow when the play began (see <see cref="Blowing"/>).</summary>
         public HashSet<Creature>? BlowingBefore;
+        /// <summary>The play ended the fight: the enemies it was simulated against that were dead as it ended (it killed them).</summary>
+        public HashSet<Creature>? DeadAtFightEnd;
         /// <summary>
         /// A hand choice whose pick is auto-played (Decisions, Decisions): each card's tabs and facts on
         /// the last frame of the choice, when they described the auto-plays.
@@ -545,6 +549,8 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 // state, so the state the play left can't be compared. The history checks still run.
                 rec.AfterSkipped = FightEndedSkip;
                 rec.FightEnded = true;
+                // Who it killed is still known (the lethal check reads it): the creatures are there, dead or not.
+                rec.DeadAtFightEnd = rec.Facts?.Sim?.Ids.Keys.Where(creature => creature.IsDead).ToHashSet();
             }
             else if (me != null && combat != null && combat.CurrentSide != MegaCrit.Sts2.Core.Combat.CombatSide.Player)
             {
@@ -820,7 +826,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             Before = rec.Before, Target = target, UpgradeBefore = captured ? rec.UpgradeBefore : -1,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded, RanDuringPause = rec.RanDuringPause,
             PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter, TargetDraws = captured ? rec.TargetDraws : null,
-            FullBefore = rec.FullBefore, FullAfter = rec.FullAfter, BlowingBefore = rec.BlowingBefore,
+            FullBefore = rec.FullBefore, FullAfter = rec.FullAfter, BlowingBefore = rec.BlowingBefore, DeadAtFightEnd = rec.DeadAtFightEnd,
             StaleBecause = captured ? rec.StaleBecause : StaleBecause(hist, card, start, me),
             ShownDiff = captured ? rec.ShownDiff : null, ShownSkip = captured ? rec.ShownSkip : "the play's start wasn't seen",
         };
@@ -1695,7 +1701,7 @@ public sealed class ProcAudit : IFeature, IFrameFeature
     {
         var sim = window.Facts?.Sim;
         var deaths = window.Facts?.DeathByAim;
-        if (sim == null || deaths == null || window.After == null || window.AfterIds == null || window.FightEnded) return;
+        if (sim == null || deaths == null) return;
         if (entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)
                 && !HellraiserDrew(window, entries, window.Card.Owner, cardPlayStartedEntry.CardPlay.Card)))
         {
@@ -1703,6 +1709,16 @@ public sealed class ProcAudit : IFeature, IFrameFeature
             return;
         }
         if (sim.AimFor(window.Target) is not { } lethalAim || !deaths.TryGetValue(lethalAim, out var card)) return;
+        if (window.FightEnded)
+        {
+            FightEndLethalIssues(window, sim, card, issues, model);
+            return;
+        }
+        if (window.After == null || window.AfterIds == null)
+        {
+            model.Skip("lethal", window.AfterSkipped ?? "the board after the play wasn't captured");
+            return;
+        }
         // What's shown leaves teammates' hands out when the setting is off (decisions #25, #94): the same here.
         var post = SimEngine.Run(sim.FullStart != null ? window.After.WithoutTeammateHands() : window.After);
         if (post.Truncated || post.AnyUnmodelled || post.Branches.Count == 0)
@@ -1728,6 +1744,36 @@ public sealed class ProcAudit : IFeature, IFrameFeature
                 issues.Add($"lethal: {start.Name} predicted to die before acting in every outcome of this play, but after it: {simChance.Text()}");
             else if (!chance.Possible && simChance.Low > 0)
                 issues.Add($"lethal: {start.Name} predicted to live in every outcome of this play, but after it dies before acting ({simChance.Text()})");
+        }
+    }
+
+    /// <summary>
+    /// The lethal tab of a play that ended the fight: there's no board after it to simulate on, but who it killed is known (an enemy
+    /// dead as the fight ends died in this play, so before it acted). Checked one way: an enemy predicted to live in every outcome
+    /// that died. An enemy alive at the end may have fled, or the fight ended with you, so one predicted to die isn't checked
+    /// (counted).
+    /// </summary>
+    private static void FightEndLethalIssues(Window window, SimInputs sim, IReadOnlyDictionary<int, SimChance> card, List<string> issues, ModelLines model)
+    {
+        if (window.DeadAtFightEnd == null)
+        {
+            model.Skip("lethal", FightEndedSkip + ": who it killed wasn't read");
+            return;
+        }
+        foreach (var (creature, id) in sim.Ids)
+        {
+            if (!card.TryGetValue(id, out var chance) || sim.Start.Enemy(id) is not { Hp: > 0 } start) continue;
+            if (window.BlowingBefore?.Contains(creature) == true)
+            {
+                model.Skip("lethal", "an enemy about to blow before the play", start.Name);
+                continue;
+            }
+            if (window.DeadAtFightEnd.Contains(creature))
+            {
+                if (!chance.Possible) issues.Add($"lethal: {start.Name} predicted to live in every outcome of this play, but the play killed it (it ended the fight)");
+            }
+            else if (chance.Possible)
+                model.Skip("lethal", FightEndedSkip + ": alive as it ended (fled, or the fight ended with you)", start.Name);
         }
     }
 
