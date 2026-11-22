@@ -252,15 +252,43 @@ public sealed class TurnEndModel
     {
         var frame = Godot.Engine.GetProcessFrames();
         if (frame == _frame) return _cached;
+        var begun = Begin();
         _frame = frame;
-        SimJob.FlushLog(line => ModEntry.Log.Detail(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"), ReportCap);
         var start = Godot.Time.GetTicksUsec();
         var alloc = GC.GetAllocatedBytesForCurrentThread();
-        _cached = ComputeNow();
-        // Once a frame, by whichever feature asks first: timed on its own for the dev dashboard, so that feature isn't charged for it.
+        _cached = begun == null ? null : Finish(begun, ownBudget: false);
         PartTime?.Invoke("turn-forecast", (Godot.Time.GetTicksUsec() - start) / 1000.0, (GC.GetAllocatedBytesForCurrentThread() - alloc) / 1024.0);
         return _cached;
     }
+
+    private static ulong _beginFrame = ulong.MaxValue;
+    private static ForecastStart? _begun;
+
+    /// <summary>
+    /// This frame's forecast start: the board read and its search started, not waited for (decision #166). The card searches start
+    /// from it alongside the forecast's own, rather than after the forecast has a result; Compute then waits for it. Null outside combat.
+    /// </summary>
+    public static ForecastStart? Begin()
+    {
+        var frame = Godot.Engine.GetProcessFrames();
+        if (frame == _beginFrame) return _begun;
+        _beginFrame = frame;
+        SimJob.FlushLog(line => ModEntry.Log.Detail(line), ex => Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "sim:background"), ReportCap);
+        var start = Godot.Time.GetTicksUsec();
+        var alloc = GC.GetAllocatedBytesForCurrentThread();
+        _begun = BeginNow(ownBudget: false);
+        // Once a frame, by whichever feature asks first: timed on its own for the dev dashboard, so that feature isn't charged for it.
+        PartTime?.Invoke("turn-forecast", (Godot.Time.GetTicksUsec() - start) / 1000.0, (GC.GetAllocatedBytesForCurrentThread() - alloc) / 1024.0);
+        return _begun;
+    }
+
+    /// <summary>
+    /// The board the forecast searches from, read before any wait (decision #166): what a card's search starts from (State, Ids,
+    /// Teammates, FullState) and is cached by (StateKey), with the forecast's search (Job). Reused: last frame's model, when the board
+    /// probe saw nothing change and its search was over.
+    /// </summary>
+    public sealed record ForecastStart(SimState State, long StateKey, SimState FullState, long FullKey, IReadOnlyDictionary<Creature, int> Ids,
+        IReadOnlyList<Player> Teammates, int MyHp, int Probe, SimJob Job, TurnEndModel? Reused);
 
     /// <summary>Where the frame's shared forecast work is timed (OverlayHost.AddPartTime), set at startup.</summary>
     internal static Action<string, double, double>? PartTime;
@@ -329,13 +357,11 @@ public sealed class TurnEndModel
     }
 
     /// <summary>The board right now, uncached (the audit's prediction as a play begins to resolve), on the audit's own wait.</summary>
-    public static TurnEndModel? ComputeLive() => ComputeNow(ownBudget: true);
+    public static (ForecastStart Start, TurnEndModel Model)? ComputeLive()
+        => BeginNow(ownBudget: true) is { } begun && Finish(begun, ownBudget: true) is { } model ? (begun, model) : null;
 
-    /// <summary>
-    /// Null outside combat, and while the forecast's first result is still on its way past the frame's wait (decision #104): what
-    /// it feeds shows as pending until it comes, on a later frame.
-    /// </summary>
-    private static TurnEndModel? ComputeNow(bool ownBudget = false)
+    /// <summary>Reads the board and starts (or keeps) the forecast's search, without waiting for it. Null outside combat.</summary>
+    private static ForecastStart? BeginNow(bool ownBudget)
     {
         var me = Sts2State.Me;
         var combat = Sts2State.Combat;
@@ -345,7 +371,8 @@ public sealed class TurnEndModel
         // without reading the board again. Dev mode works it out anyway every 30th such frame and logs it if the key differs.
         var probe = BoardProbe.Hash(me, combat);
         var reuse = ForecastReuse.Decide(!ownBudget && _lastModel is { Job.Ready.IsCompleted: true } && _lastModelProbe == probe);
-        if (reuse == FrameReuse.Reuse) return _lastModel;
+        if (reuse == FrameReuse.Reuse && _lastModel is { Job: { } lastJob } reused)
+            return new ForecastStart(reused.State, reused.StateKey, reused.FullState, reused._fullKey, reused.Ids, reused.Teammates, reused._myHp, probe, lastJob, reused);
         var probeCheck = reuse == FrameReuse.WorkOutAndCheck ? _lastModel : null;
 
         // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
@@ -360,21 +387,32 @@ public sealed class TurnEndModel
             ForecastReuse.Compare(probeCheck.StateKey == key && probeCheck._fullKey == fullKey, "its start state changed while the board probe didn't",
                 () => BoardProbe.Diff(probeCheck.FullState, full));
         var job = Explore(ref _lastKey, ref _lastJob, key, state, "the turn forecast");
+        return new ForecastStart(state, key, full, fullKey, ids, SimAdapter.Teammates(me, combat), me.Creature.CurrentHp, probe, job, Reused: null);
+    }
+
+    /// <summary>
+    /// The forecast from its start, once its search has a result: null while it's still on its way past the frame's wait (decision
+    /// #104), and what it feeds shows as pending until it comes, on a later frame.
+    /// </summary>
+    private static TurnEndModel? Finish(ForecastStart begun, bool ownBudget)
+    {
+        if (begun.Reused is { } reused) return reused;
+        var job = begun.Job;
         if (!Wait(job, ownBudget)) return null;
         // The same board and the same search result as the last frame: its model again, not rebuilt from the outcome every frame.
-        if (_lastModel is { } last && last.StateKey == key && last._fullKey == fullKey && ReferenceEquals(last.Outcome, job.Latest)
-            && last.Teammates.Count == full.Teammates.Count)
+        if (_lastModel is { } last && last.StateKey == begun.StateKey && last._fullKey == begun.FullKey && ReferenceEquals(last.Outcome, job.Latest)
+            && last.Teammates.Count == begun.FullState.Teammates.Count)
         {
-            _lastModelProbe = probe; // the board probe moved (a setting, say) but not what the forecast reads
+            _lastModelProbe = begun.Probe; // the board probe moved (a setting, say) but not what the forecast reads
             return last;
         }
-        var forecast = From(state, key, job.Latest!, ids, SimAdapter.Teammates(me, combat), me.Creature.CurrentHp);
+        var forecast = From(begun.State, begun.StateKey, job.Latest!, begun.Ids, begun.Teammates, begun.MyHp);
         forecast.Job = job;
-        forecast.FullState = full;
-        forecast._fullKey = fullKey;
-        if (ReferenceEquals(state, full)) forecast._full = forecast;
+        forecast.FullState = begun.FullState;
+        forecast._fullKey = begun.FullKey;
+        if (ReferenceEquals(begun.State, begun.FullState)) forecast._full = forecast;
         _lastModel = forecast;
-        _lastModelProbe = probe;
+        _lastModelProbe = begun.Probe;
         return forecast;
     }
 

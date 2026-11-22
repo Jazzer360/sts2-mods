@@ -863,8 +863,12 @@ public static partial class SimEngine
                                 orb.Evoke = orb.Passive * 2; // GlassOrb.EvokeVal => PassiveVal * 2
                             }
                             return new[] { branch };
-                        default:
+                        case OrbKind.Unknown:
+                            // An orb the simulator doesn't know (another mod's): what its passive does isn't modelled.
+                            branch.Unmodelled ??= "an orb the simulator doesn't know acts at the end of the turn";
                             return new[] { branch };
+                        default:
+                            return new[] { branch }; // Plasma: its energy comes at the start of your turn
                     }
                 });
             }

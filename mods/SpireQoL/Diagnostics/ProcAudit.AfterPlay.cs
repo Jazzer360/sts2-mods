@@ -208,7 +208,7 @@ public sealed partial class ProcAudit
             Cmp("Flame Barrier", player.FlameBarrier, simPlayer.FlameBarrier);
             Cmp("Feel No Pain", player.FeelNoPain, simPlayer.FeelNoPain);
             if (!summoned) Cmp("Osty HP", player.OstyHp, simPlayer.OstyHp);
-            // A random orb (Chaos) is predicted as Unknown: any orb matches it.
+            // An orb the simulator doesn't know (another mod's) is Unknown: any orb matches it. A random one (Chaos) is a branch per orb.
             static string Orb(SimOrb orb) => $"{orb.Kind} {orb.Passive}/{orb.Evoke}";
             var orbsMatch = player.Orbs.Count == simPlayer.Orbs.Count
                             && player.Orbs.Zip(simPlayer.Orbs).All(orbs => orbs.First.Kind == OrbKind.Unknown || Orb(orbs.First) == Orb(orbs.Second));

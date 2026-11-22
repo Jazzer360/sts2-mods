@@ -88,18 +88,19 @@ public sealed class CardPredictions
 
         // Nothing changed since a frame whose every result was final: its facts and tabs again, without reading each card again
         // (decision #114). In dev mode every 30th such frame is worked out anyway and checked against what would have been reused.
-        var forecast = TurnEnd();
+        // The forecast's start, not its result (decision #166): every card's search starts from it alongside the forecast's own.
+        var begun = Start();
         // The frame key reads every card through the game's hooks (its play count, whether it can be played): on a frame where the
         // board probe saw nothing change (decision #130), last frame's key stands.
         var probe = BoardProbe.Hash(me, combat);
-        var probeSame = forecast != null && _lastFrameKey != 0 && _lastFrameKeyProbe == probe;
-        var key = forecast == null ? 0 : probeSame ? _lastFrameKey : FrameKey(forecast, hand);
+        var probeSame = begun != null && _lastFrameKey != 0 && _lastFrameKeyProbe == probe;
+        var key = begun == null ? 0 : probeSame ? _lastFrameKey : FrameKey(begun, hand);
         _lastFrameKey = key;
         _lastFrameKeyProbe = probe;
         var reuse = _reuse.Decide(key != 0 && key == _reuseKey);
         if (reuse == FrameReuse.Reuse) return Reuse(combat);
         var checkReuse = reuse == FrameReuse.WorkOutAndCheck;
-        if (checkReuse && probeSame) _reuse.Compare(FrameKey(forecast!, hand) == key, "its frame key changed while the board probe didn't");
+        if (checkReuse && probeSame) _reuse.Compare(FrameKey(begun!, hand) == key, "its frame key changed while the board probe didn't");
 
         // Sources: your powers, your relics, and powers on enemies (theirs, or ones you applied).
         var sources = Sources(me, combat);
@@ -115,10 +116,13 @@ public sealed class CardPredictions
             pending.Add((card, prepared));
         }
 
-        // Every card's simulations (one per target) run in parallel across CPU cores; the frame waits for new ones within its few
-        // milliseconds (SimWait, decision #104), so tabs usually appear on the frame they belong to. What isn't ready by then shows
-        // when it is, a frame or a few later (SimPending); a simulation that missed its frame never makes a later one wait.
-        SimWait.All(pending.Where(cardPrepared => cardPrepared.Prepared.Sim != null).SelectMany(cardPrepared => cardPrepared.Prepared.Sim!.Jobs).ToList());
+        // Every card's simulations (one per target) and the forecast's run in parallel across CPU cores, all started before any wait
+        // (decision #166); the frame waits for them together within its few milliseconds (SimWait, decision #104), so tabs usually
+        // appear on the frame they belong to. What isn't ready by then shows when it is, a frame or a few later (SimPending); a
+        // simulation that missed its frame never makes a later one wait.
+        var jobs = pending.Where(cardPrepared => cardPrepared.Prepared.Sim != null).SelectMany(cardPrepared => cardPrepared.Prepared.Sim!.Jobs).ToList();
+        if (begun != null) jobs.Add(begun.Job);
+        SimWait.All(jobs);
 
         // Held (decision #105): a card whose simulation, or the turn forecast it compares with, has no result for this board yet keeps
         // the tabs it showed this turn until it has one, instead of losing them for a few frames (flicker on every hit of a busy
@@ -165,10 +169,10 @@ public sealed class CardPredictions
     /// and can do (its numbers, cost, keywords, affliction, plays, whether it can be played now). Not where you aim: a tab that
     /// needs aim is worked out for every target (decision #55). Aim-dependent tabs would need the target in this key.
     /// </summary>
-    private long FrameKey(TurnEndModel forecast, IReadOnlyList<CardModel> hand)
+    private long FrameKey(TurnEndModel.ForecastStart begun, IReadOnlyList<CardModel> hand)
     {
         var hashCode = new HashCode();
-        hashCode.Add(forecast.StateKey);
+        hashCode.Add(begun.StateKey);
         hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_cs));
         hashCode.Add(Sts2State.TurnNumber);
         hashCode.Add(_indirect);
@@ -381,14 +385,14 @@ public sealed class CardPredictions
         var me = Sts2State.Me;
         var combat = Sts2State.Combat;
         if (me == null || combat == null) return null;
-        var live = TurnEndModel.ComputeLive();
-        if (live == null) return null;
-        var (savedMe, savedCs, savedTe, savedFrame) = (self._me, self._cs, self._turnEnd, self._turnEndFrame);
+        if (TurnEndModel.ComputeLive() is not { } live) return null;
+        var (savedMe, savedCs, savedTe, savedStart, savedFrame, savedStartFrame) = (self._me, self._cs, self._turnEnd, self._start, self._turnEndFrame, self._startFrame);
         self._me = me;
         self._cs = combat;
         self._indirect = self._ctx.Settings.ProcIndirect;
-        self._turnEnd = live;
-        self._turnEndFrame = self._ctx.Decor.Frame;
+        self._turnEnd = live.Model;
+        self._start = live.Start;
+        self._turnEndFrame = self._startFrame = self._ctx.Decor.Frame;
         self._noCache = true;
         try
         {
@@ -402,7 +406,7 @@ public sealed class CardPredictions
             self._uncached.ForEach(batch => batch.Cancel());
             self._uncached.Clear();
             self._noCache = false;
-            (self._me, self._cs, self._turnEnd, self._turnEndFrame) = (savedMe, savedCs, savedTe, savedFrame);
+            (self._me, self._cs, self._turnEnd, self._start, self._turnEndFrame, self._startFrame) = (savedMe, savedCs, savedTe, savedStart, savedFrame, savedStartFrame);
         }
     }
 
@@ -430,7 +434,7 @@ public sealed class CardPredictions
     /// <summary>Runs the outcome simulator for this card (once per possible target for single-target cards) against "end your turn now".</summary>
     private SimBatch? StartSim(CardModel card, PlayFacts facts)
     {
-        var forecast = TurnEnd();
+        var forecast = Start();
         if (forecast == null) return null;
 
         // A card aimed at any enemy, or at any teammate (AnyAlly: one simulation per living teammate, Who.Teammate),
@@ -732,9 +736,11 @@ public sealed class CardPredictions
     private bool _noCache;
 
     private TurnEndModel? _turnEnd;
+    private TurnEndModel.ForecastStart? _start;
     private long _turnEndFrame = -1;
+    private long _startFrame = -1;
 
-    /// <summary>The Incoming Damage simulation for this frame (computed once, shared by every card).</summary>
+    /// <summary>The Incoming Damage simulation for this frame (computed once, shared by every card): its result, waited for.</summary>
     private TurnEndModel? TurnEnd()
     {
         if (_turnEndFrame != _ctx.Decor.Frame)
@@ -743,5 +749,16 @@ public sealed class CardPredictions
             _turnEndFrame = _ctx.Decor.Frame;
         }
         return _turnEnd;
+    }
+
+    /// <summary>The forecast's start for this frame (decision #166): the board the card searches start from, not waited for.</summary>
+    private TurnEndModel.ForecastStart? Start()
+    {
+        if (_startFrame != _ctx.Decor.Frame)
+        {
+            _start = TurnEndModel.Begin();
+            _startFrame = _ctx.Decor.Frame;
+        }
+        return _start;
     }
 }

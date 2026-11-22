@@ -72,11 +72,11 @@ public abstract class ProcModel : SimModel
     protected IEnumerable<SimState> MakeInHand(IEnumerable<SimState> states, CardEvent made, int count, int player, bool ethereal = false) =>
         Cause(states.Select(branch => { SimEngine.AddToHand(branch, player, count, ethereal); return branch; }).ToList(), made, count, player);
 
-    /// <summary>Channels <paramref name="times"/> orbs of a kind for a player, one after another (OrbCmd.Channel).</summary>
+    /// <summary>Channels <paramref name="times"/> orbs of a kind for a player, one after another (OrbCmd.Channel); a random one is a branch per orb.</summary>
     protected static IEnumerable<SimState> Channel(IEnumerable<SimState> states, int player, OrbKind kind, int times)
     {
         var otherStates = states;
-        for (var i = 0; i < times; i++) otherStates = otherStates.SelectMany(branch => SimEngine.ChannelOrb(branch, SimEngine.FreshOrb(branch, kind, player), player)).ToList();
+        for (var i = 0; i < times; i++) otherStates = otherStates.SelectMany(branch => SimEngine.ChannelKind(branch, kind, player)).ToList();
         return otherStates;
     }
 

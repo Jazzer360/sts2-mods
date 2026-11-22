@@ -644,7 +644,7 @@ public sealed class SmokestackPower : ProcModel
 public sealed class TrashToTreasurePower : ProcModel
 {
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.GeneratedStatus && player == owner ? Channel(Fire(state, owner), owner, OrbKind.Unknown, Amount(state, owner)) : One(state);
+        cardEvent == CardEvent.GeneratedStatus && player == owner ? Channel(Fire(state, owner), owner, OrbKind.Random, Amount(state, owner)) : One(state);
 }
 
 // ---- powers landing

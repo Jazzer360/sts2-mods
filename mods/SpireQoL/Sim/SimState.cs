@@ -10,7 +10,17 @@ namespace SpireQoL.Sim;
 /// Amounts are already through the game's modifiers where the game would apply them (damage per
 /// enemy is precomputed per target; block amounts are what you'd gain).
 /// </summary>
-public enum OrbKind { Lightning, Frost, Dark, Glass, Plasma, Unknown }
+public enum OrbKind
+{
+    Lightning, Frost, Dark, Glass, Plasma,
+    /// <summary>An orb on the board the simulator doesn't know (another mod's): it does nothing here, and the audit matches any orb.</summary>
+    Unknown,
+    /// <summary>
+    /// A random orb to channel (OrbModel.GetRandomOrb: Chaos, The Magician, Trash to Treasure): channelling it is a branch per
+    /// orb it can be (SimEngine.RandomOrbs), so no orb on the board is ever Random.
+    /// </summary>
+    Random,
+}
 
 public sealed class SimOrb
 {

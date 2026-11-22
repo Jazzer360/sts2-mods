@@ -863,3 +863,8 @@ One build serves both branches: a single DLL, built against beta, that runs on m
 `scripts/decompile.ps1` copies the branch's `sts2.dll` into `assembly/` beside the decompiled source, ignored by that local repo's git and replaced on every run. A check that needs the real assembly (a rule the simulator detects from the game's code, tested against main's) loads it and skips without it, as the main checks skip without the main decompile.
 *Why:* the main checks read decompiled source, which can't run the detection code a version-dependent rule needs. Kept as a cache, not in the history: the machine is ephemeral, so an archive here would be lost with it anyway, and Steam serves only each branch's current build, which a fresh decompile fetches again.
 *Replaced:* the decompiled source alone.
+
+### 166. Card simulations start alongside the turn forecast — active (2026-11-22)
+Each frame reads the board and starts the forecast's search (`TurnEndModel.Begin`, the forecast's start: its state, ids and key) before anything waits; every card's searches start from that same start, and the frame waits for all of them together within its 8 ms (decision #104). `TurnEndModel.Compute` then takes the forecast's result.
+*Why:* a card's search needs only the board it starts from, but it was started only once the forecast had a result, so on a board whose forecast missed the frame's wait, the card tabs came a frame or more after it: the forecast's time plus their own, where they could take only the longer of the two. The tabs judged against ending the turn now (kills, lethal, stuns, waking) still need the forecast's result, so a card shows once both are in.
+*Replaced:* card searches started from the forecast's finished model.

@@ -22,7 +22,7 @@ namespace SpireQoL.Sim;
 /// </summary>
 public static partial class SimAdapter
 {
-    /// <summary>Orbs each card channels (OrbCmd.Channel&lt;T&gt; in its OnPlay; decompile v0.111.0). Chaos is random.</summary>
+    /// <summary>Orbs each card channels (OrbCmd.Channel&lt;T&gt; in its OnPlay; decompile v0.111.0). Chaos is random (OrbKind.Random: a branch per orb).</summary>
     private static readonly Dictionary<string, OrbKind[]> Channels = new()
     {
         [nameof(BallLightning)] = new[] { OrbKind.Lightning }, [nameof(Zap)] = new[] { OrbKind.Lightning },
@@ -159,7 +159,7 @@ public static partial class SimAdapter
     internal static OrbKind? ChannelKind(string card) =>
         card is nameof(Tempest) or nameof(Voltaic) ? OrbKind.Lightning
         : Channels.TryGetValue(card, out var kinds) && kinds.Distinct().Count() == 1 ? kinds[0]
-        : RepeatChannels.TryGetValue(card, out var orbKind) && orbKind != OrbKind.Unknown ? orbKind
+        : RepeatChannels.TryGetValue(card, out var orbKind) && orbKind != OrbKind.Random ? orbKind
         : null;
 
     /// <summary>The simulator channels this card's orbs (for the coverage check).</summary>
@@ -169,8 +169,8 @@ public static partial class SimAdapter
     private static readonly Dictionary<string, OrbKind> RepeatChannels = new()
     {
         [nameof(ConsumingShadow)] = OrbKind.Dark, [nameof(Hibernate)] = OrbKind.Frost, [nameof(IceLance)] = OrbKind.Frost,
-        [nameof(Refract)] = OrbKind.Glass, [nameof(Chaos)] = OrbKind.Unknown,
-        [nameof(TheMagician)] = OrbKind.Unknown, // random orbs (v0.113.0), after adding as many slots
+        [nameof(Refract)] = OrbKind.Glass, [nameof(Chaos)] = OrbKind.Random,
+        [nameof(TheMagician)] = OrbKind.Random, // random orbs (v0.113.0), after adding as many slots
 
     };
 

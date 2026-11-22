@@ -56,8 +56,42 @@ public class OrbActionTests
     {
         var state = Defect();
         state.You.Powers = state.You.Powers.With(PowerId.TrashToTreasure, amount: 1);
-        var after = Assert.Single(After(state, Play(Card("Purge", SimCardType.Skill), target: Who.None, plays: 1, new CardEventAction(CardEvent.GeneratedStatus, Count: 2))));
-        Assert.Equal(2, after.You.Orbs.Count(orb => orb.Kind == OrbKind.Unknown));
+        var branches = After(state, Play(Card("Purge", SimCardType.Skill), target: Who.None, plays: 1, new CardEventAction(CardEvent.GeneratedStatus, Count: 2)));
+        // Two random orbs, one after the other: every order of two of the five, each 1/25.
+        Assert.Equal(25, branches.Count);
+        Assert.All(branches, branch => Assert.Equal(2, branch.You.Orbs.Count(orb => SimEngine.RandomOrbs.Contains(orb.Kind))));
+        Assert.All(branches, branch => Assert.Equal(1.0 / 25, branch.Weight, precision: 9));
+    }
+
+    [Fact]
+    public void ARandomOrbIsABranchPerOrbItCanBe()
+    {
+        // Chaos (OrbModel.GetRandomOrb: Rng.NextItem over Lightning, Frost, Dark, Plasma, Glass): each orb 1/5, with its values as channelled.
+        var branches = After(Defect(focus: 1), Play(Card("Chaos", SimCardType.Skill), target: Who.None, plays: 1, new OrbAction(OrbAction.Op.Channel) { Orb = OrbKind.Random }));
+        Assert.Equal(SimEngine.RandomOrbs.OrderBy(kind => kind), branches.Select(branch => Assert.Single(branch.You.Orbs).Kind).OrderBy(kind => kind));
+        Assert.All(branches, branch => Assert.Equal(0.2, branch.Weight, precision: 9));
+        var lightning = branches.Select(branch => branch.You.Orbs[0]).Single(orb => orb.Kind == OrbKind.Lightning);
+        Assert.Equal((4, 9), (lightning.Passive, lightning.Evoke));
+    }
+
+    [Fact]
+    public void AnOrbTheSimulatorDoesntKnowIsUnmodelledAtTheEndOfTheTurn()
+    {
+        var state = Defect();
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Unknown } };
+        var outcome = SimEngine.Run(state);
+        Assert.Contains(outcome.Branches, branch => branch.Unmodelled != null);
+    }
+
+    [Fact]
+    public void ARandomOrbsPassiveActsAtTheEndOfTheTurnInItsShare()
+    {
+        // Lightning's passive hits the one enemy (3), Glass hits every enemy (4): the enemy takes damage in 2 of the 5 branches.
+        var state = Defect();
+        var outcome = SimEngine.Run(state, Play(Card("Chaos", SimCardType.Skill), target: Who.None, plays: 1, new OrbAction(OrbAction.Op.Channel) { Orb = OrbKind.Random }));
+        var hurt = outcome.Chance(branch => branch.Enemy(id: 0)!.Hp < 100);
+        Assert.Equal(0.4, hurt.Low, precision: 9);
+        Assert.Equal(0.4, hurt.High, precision: 9);
     }
 
     [Fact]

@@ -24,6 +24,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - FTL draws only on the plays that start with fewer than its limit of plays finished this turn: a replay that makes the third doesn't draw.
 - Incoming Damage no longer flickers between the chance and the number every frame.
 - The block check counts a Frost orb the play channels and then pushes out (Chill into full slots), from the simulator's own evokes.
+- Chaos, The Magician and Trash to Treasure: their random orb is predicted (Lightning, Frost, Dark, Plasma or Glass, each 1 in 5) instead of doing nothing, so Incoming Damage, the lethal tab and the other tabs count what it does at the end of your turn. An orb another mod adds shows `?` where it acts.
+- Card tabs settle sooner after the board changes: each card's simulation starts alongside the turn forecast's instead of after it.
 - The checks hold The Boot's tab to the target you played at (it shows with the aim marker when only some targets have a hit it raises), and accept a move's power that lands with no applier (Slimed Berserker's Weak).
 - The Boot has a tab: on an attack with a hit that gets past block for less than its minimum (6 into 5 block loses the enemy 5, not 1), with the aim marker when only some targets have one. The checks hold it to The Boot's flash; other relics and powers that only change a number still need no tab.
 - Your hand after a play counts only the cards it makes into your hand: Undeath's copy (and The Sun's card) go to your discard pile, and only one of Severance's three goes to your hand.

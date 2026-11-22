@@ -73,13 +73,33 @@ public static partial class SimEngine
         });
     }
 
+    /// <summary>The orbs a random orb can be (OrbModel._validOrbs), each equally likely (Rng.NextItem).</summary>
+    public static readonly OrbKind[] RandomOrbs = { OrbKind.Lightning, OrbKind.Frost, OrbKind.Dark, OrbKind.Plasma, OrbKind.Glass };
+
+    /// <summary>
+    /// OrbCmd.Channel of an orb of this kind, with its values as channelled; a random orb (OrbKind.Random: OrbModel.GetRandomOrb) is a
+    /// branch per orb it can be, each its share. Identical branches merge in the step that runs it.
+    /// </summary>
+    public static IEnumerable<SimState> ChannelKind(SimState state, OrbKind kind, int player)
+    {
+        if (kind != OrbKind.Random) return ChannelOrb(state, FreshOrb(state, kind, player), player);
+        var branches = new List<SimState>();
+        for (var i = 0; i < RandomOrbs.Length; i++)
+        {
+            var branch = i == RandomOrbs.Length - 1 ? state : state.Clone();
+            branch.Weight = state.Weight / RandomOrbs.Length;
+            branches.AddRange(ChannelOrb(branch, FreshOrb(branch, RandomOrbs[i], player), player));
+        }
+        return branches;
+    }
+
     private static void RunOrb(BranchSet branches, OrbAction orbAction)
     {
         switch (orbAction.Kind)
         {
             case OrbAction.Op.Channel:
                 for (var time = 0; time < orbAction.Times; time++)
-                    branches.Each(branch => ChannelOrb(branch, orbAction.Values ?? FreshOrb(branch, orbAction.Orb, orbAction.To), orbAction.To));
+                    branches.Each(branch => orbAction.Values is { } values ? ChannelOrb(branch, values, orbAction.To) : ChannelKind(branch, orbAction.Orb, orbAction.To));
                 break;
             case OrbAction.Op.EvokeFront:
                 for (var time = 0; time < orbAction.Times; time++)
