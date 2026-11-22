@@ -140,6 +140,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
     private Dictionary<MegaCrit.Sts2.Core.Entities.Creatures.Creature, Features.IntentDetailsFeature.Shown> _intentsShown = new(ReferenceEqualityComparer.Instance);
 
+    /// <summary>The creatures on the board when the intents were shown (as your turn ended): one the enemy turn spawns isn't among them.</summary>
+    private HashSet<MegaCrit.Sts2.Core.Entities.Creatures.Creature> _onBoard = new(ReferenceEqualityComparer.Instance);
+
     /// <summary>
     /// Intent Details against the enemy turn (decision #98): each enemy that made the move its intent showed, the block it gained
     /// during that move and the powers it applied (the history entries between the enemy's previous move and its own move entry).
@@ -180,7 +183,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 else if (power.Amount is { } amount && same.All(powerReceivedEntry => powerReceivedEntry.Amount != amount))
                     issues.Add($"intent power: {name}'s {shown.MoveId} showed {power.Power.Name} {amount}, it applied {string.Join(", ", same.Select(powerReceivedEntry => powerReceivedEntry.Amount))}");
             }
-            foreach (var type in applied.Select(powerReceivedEntry => powerReceivedEntry.Power.GetType()).Distinct().Where(type => shown.Powers.All(power => power.Power != type)))
+            // A power on a creature the move spawned is part of the summon (its Summon intent), not a buff or debuff: the Fabricator's
+            // bots get Minion as it makes them (a dev review report).
+            foreach (var type in applied.Where(powerReceivedEntry => powerReceivedEntry.Actor is not { } receiver || _onBoard.Contains(receiver))
+                         .Select(powerReceivedEntry => powerReceivedEntry.Power.GetType()).Distinct().Where(type => shown.Powers.All(power => power.Power != type)))
                 issues.Add($"intent power: {name}'s {shown.MoveId} applied {type.Name}, not shown");
         }
         return issues;
@@ -244,6 +250,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 pendingJob.Pinned = true;
             }
             // What each enemy's intent showed (Intent Details): its block and the powers its move applies (decision #98).
+            _onBoard = new HashSet<MegaCrit.Sts2.Core.Entities.Creatures.Creature>(_last.Ids.Keys, ReferenceEqualityComparer.Instance);
             _intentsShown = _last.Ids.Keys.Select(creature => (creature, Features.IntentDetailsFeature.For(creature))).Where(creature => creature.Item2 != null)
                 .ToDictionary(otherCreature => otherCreature.creature, creature => creature.Item2!, (IEqualityComparer<MegaCrit.Sts2.Core.Entities.Creatures.Creature>)ReferenceEqualityComparer.Instance);
             // Its exploration goes on after the board changes (decision #87): the check compares against all of it.

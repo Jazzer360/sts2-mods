@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
+using SpireQoL.Combat;
 using SpireQoL.Procs;
 using SpireQoL.Sim;
 using MegaCrit.Sts2.Core.Runs;
@@ -125,6 +126,7 @@ public sealed partial class ProcAudit
         {
             _finished.Clear();
             _running.Clear();
+            _countAtFrame.Clear(); // trimmed by frame below, which skips the frames out of a fight
             _current = null;
             Summarize();
             DetachHistory();
@@ -160,9 +162,16 @@ public sealed partial class ProcAudit
             _executor.BeforeActionExecuted += OnBeforeAction;
         }
 
-        Subscribe(me, combat);
+        // New relics and powers come with a change on the board (the probe: decision #130); subscribing every frame rebuilt the game's
+        // player and creature lists each time (a dev review: the play check's garbage while idle).
+        var probe = BoardProbe.Hash(me, combat);
+        if (probe != _subscribedAt)
+        {
+            Subscribe(me, combat);
+            _subscribedAt = probe;
+        }
         _countAtFrame[_ctx.Decor.Frame] = history.Entries.Count();
-        if (_countAtFrame.Count > 600) _countAtFrame.Remove(_countAtFrame.Keys.Min());
+        _countAtFrame.Remove(_ctx.Decor.Frame - 600); // frames count up by one: the oldest kept is 600 back
 
         while (_finished.Count > 0) Check(_finished.Dequeue(), me);
     }
@@ -524,19 +533,32 @@ public sealed partial class ProcAudit
         }
     }
 
+    /// <summary>The board probe the relics and powers were last subscribed at.</summary>
+    private int _subscribedAt;
+
     private void Subscribe(Player me, ICombatState combat)
     {
-        // Every player's relics: a teammate's relic your card sets off has a tab too (decision #75).
-        foreach (var relic in combat.Players.SelectMany(player => player.Relics))
+        SubscribeAll(combat.Allies);
+        SubscribeAll(combat.Enemies);
+    }
+
+    /// <summary>
+    /// Each creature's powers, and each player's relics: a teammate's relic your card sets off has a tab too (decision #75). By index: the
+    /// game's Players and Creatures make lists on every read.
+    /// </summary>
+    private void SubscribeAll(IReadOnlyList<Creature> creatures)
+    {
+        for (var i = 0; i < creatures.Count; i++)
         {
-            if (_subscribed.Add(relic)) relic.Flashed += OnRelicFlashed;
-        }
-        foreach (var creature in combat.Creatures)
-        {
-            foreach (var power in creature.Powers)
+            if (creatures[i].Player is { } player)
             {
-                if (_subscribed.Add(power)) power.Flashed += OnPowerFlashed;
+                var relics = player.Relics;
+                for (var j = 0; j < relics.Count; j++)
+                    if (_subscribed.Add(relics[j])) relics[j].Flashed += OnRelicFlashed;
             }
+            var powers = creatures[i].Powers;
+            for (var j = 0; j < powers.Count; j++)
+                if (_subscribed.Add(powers[j])) powers[j].Flashed += OnPowerFlashed;
         }
     }
 

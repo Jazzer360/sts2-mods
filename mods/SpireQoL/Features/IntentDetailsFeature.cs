@@ -54,7 +54,7 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
         if (NCombatRoom.Instance is not { } room) return;
         var playerTurn = Sts2State.IsPlayerTurn;
         var probe = Sts2State.Me is { } me && Sts2State.Combat is { } combat ? BoardProbe.Hash(me, combat) : 0;
-        foreach (var node in room.CreatureNodes)
+        foreach (var node in Sts2State.CreatureNodesOf(room))
         {
             if (!GodotObject.IsInstanceValid(node) || node.IntentContainer is not { } container || !GodotObject.IsInstanceValid(container)) continue;
             // The same intent nodes on screen, the same board and turn as last frame: what's on them already stands.

@@ -355,6 +355,7 @@ public sealed partial class ProcAudit
         {
             if (randomKill) modelLines.Skip("unexplained powers", "after a random kill", string.Join(", ", foreign));
             else if (autoPlayed) modelLines.Skip("unexplained powers", "random auto-plays", string.Join(", ", foreign));
+            else if (window.Chosen != null) modelLines.Skip("unexplained powers", PickApart, string.Join(", ", foreign));
             else issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
         }
 

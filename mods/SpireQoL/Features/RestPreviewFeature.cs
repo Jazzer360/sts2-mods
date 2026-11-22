@@ -221,6 +221,9 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     private int _bossFrames;
     private int _mendFrames;
 
+    /// <summary>Outside a rest site: no options, one list for every frame (it's only read).</summary>
+    private static readonly List<RestSiteOption> NoOptions = new();
+
     public void OnFrame(OverlayHost host)
     {
         var room = NRestSiteRoom.Instance;
@@ -228,7 +231,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         Check(me);
         CheckMend();
         var inRoom = room != null && GodotObject.IsInstanceValid(room) && room.IsVisibleInTree() && me != null;
-        var options = inRoom ? LocalOptions() : new List<RestSiteOption>();
+        var options = inRoom ? LocalOptions() : NoOptions;
 
         // Yours: Rest on offer (not chosen yet, not disabled); otherwise only what the boss relics will do anyway.
         var canRest = options.Any(restSiteOption => restSiteOption is HealRestSiteOption && restSiteOption.IsEnabled && !Used.TryGetValue(restSiteOption, out _));

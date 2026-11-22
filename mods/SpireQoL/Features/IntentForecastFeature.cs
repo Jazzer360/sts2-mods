@@ -240,10 +240,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     /// <summary>The bob timing (NIntent._timeOffset) of the enemy's first intent on screen, or 0.</summary>
     private static float BobOffset(Creature enemy)
     {
-        NCreature? node = null;
-        if (NCombatRoom.Instance is { } room)
-            foreach (var creatureNode in room.CreatureNodes)
-                if (GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == enemy) { node = creatureNode; break; }
+        var node = Sts2State.NodeOf(enemy);
         var first = UiKit.FirstChild<NIntent>(node?.IntentContainer);
         return first != null ? Sts2State.Private(first, "_timeOffset", fallback: 0f) : 0f;
     }
@@ -253,7 +250,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     {
         if (NCombatRoom.Instance is not { } room) return null;
         var mouse = room.GetViewport().GetMousePosition();
-        foreach (var creatureNode in room.CreatureNodes)
+        foreach (var creatureNode in Sts2State.CreatureNodesOf(room))
         {
             if (!GodotObject.IsInstanceValid(creatureNode) || creatureNode.Entity is not { IsEnemy: true, IsAlive: true } creature) continue;
             if (IntentRect(creature) is { } rect && rect.Grow(6).HasPoint(mouse)) return creature;
@@ -267,8 +264,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     /// </summary>
     private static Rect2? IntentRect(Creature? enemy)
     {
-        if (enemy == null || NCombatRoom.Instance is not { } room) return null;
-        var node = room.CreatureNodes.FirstOrDefault(creatureNode => GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == enemy);
+        if (enemy == null || NCombatRoom.Instance == null) return null;
+        var node = Sts2State.NodeOf(enemy);
         var intents = node?.IntentContainer;
         if (intents == null || !GodotObject.IsInstanceValid(intents) || !intents.IsVisibleInTree()) return null;
         Rect2? rect = null;

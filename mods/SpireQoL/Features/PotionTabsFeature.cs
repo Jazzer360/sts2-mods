@@ -264,7 +264,8 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             _last.Clear();
             return;
         }
-        var list = entries.ToList();
+        // The game's own list when it is one (it is): copying the whole fight's history every frame was garbage that grew all fight.
+        var list = entries as IReadOnlyList<MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry> ?? entries.ToList();
         if (_historySeen < 0 || _historySeen > list.Count) _historySeen = list.Count;
         for (var i = _historySeen; i < list.Count; i++)
         {
@@ -277,10 +278,22 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         _prevBuckle = BuckleApplied(me);
     }
 
-    private static int Strength(MegaCrit.Sts2.Core.Entities.Players.Player me) => me.Creature.Powers.OfType<ReptileTrinketPower>().Sum(reptileTrinketPower => reptileTrinketPower.Amount);
+    private static int Strength(MegaCrit.Sts2.Core.Entities.Players.Player me)
+    {
+        var powers = me.Creature.Powers;
+        var strength = 0;
+        for (var i = 0; i < powers.Count; i++)
+            if (powers[i] is ReptileTrinketPower reptileTrinketPower) strength += reptileTrinketPower.Amount;
+        return strength;
+    }
 
     private static bool BuckleApplied(MegaCrit.Sts2.Core.Entities.Players.Player me)
-        => me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } beltBuckle && Sts2State.Private(beltBuckle, "_dexterityApplied", fallback: false);
+    {
+        var relics = me.Relics;
+        for (var i = 0; i < relics.Count; i++)
+            if (relics[i] is BeltBuckle beltBuckle) return Sts2State.Private(beltBuckle, "_dexterityApplied", fallback: false);
+        return false;
+    }
 
     private static void Compare(MegaCrit.Sts2.Core.Entities.Players.Player me, Pending pending)
     {

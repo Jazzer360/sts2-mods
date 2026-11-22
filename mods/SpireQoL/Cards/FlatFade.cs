@@ -145,7 +145,8 @@ internal sealed class FlatFade
             _image.Size = _view.Size;
         }
         var over = -1;
-        foreach (var node in under) if (node != null && GodotObject.IsInstanceValid(node) && node.GetParent() == _container) over = Math.Max(over, node.GetIndex());
+        for (var i = 0; i < under.Count; i++)
+            if (under[i] is { } node && GodotObject.IsInstanceValid(node) && node.GetParent() == _container) over = Math.Max(over, node.GetIndex());
         if (_image.GetIndex() != over + 1) _container.MoveChild(_image, Math.Min(over + 1, _container.GetChildCount() - 1));
         var color = _image.Modulate;
         color.A = alpha;
@@ -162,10 +163,13 @@ internal sealed class FlatFade
     /// <summary>The card's own layers: invisible once the image is drawn, faded layer by layer until then.</summary>
     private void HideLayers(float alpha, IReadOnlyList<Node?> keep, bool ready)
     {
-        foreach (var child in _container.GetChildren())
+        for (var i = 0; i < _container.GetChildCount(); i++)
         {
-            if (child is not CanvasItem canvasItem || child == _image || keep.Contains(child)) continue;
-            var hiddenIndex = _hidden.FindIndex(nodeAlpha => nodeAlpha.Node == canvasItem);
+            var child = _container.GetChild(i);
+            if (child is not CanvasItem canvasItem || child == _image || Kept(keep, child)) continue;
+            var hiddenIndex = -1;
+            for (var j = 0; j < _hidden.Count && hiddenIndex < 0; j++)
+                if (_hidden[j].Node == canvasItem) hiddenIndex = j;
             if (hiddenIndex < 0)
             {
                 _hidden.Add((canvasItem, canvasItem.Modulate.A));
@@ -206,14 +210,45 @@ internal sealed class FlatFade
         }
     }
 
+    /// <summary>
+    /// What the card shows, as one number: each visible node, its colours, label text and texture (what Describe says, without building
+    /// it as text). Every few frames per faded card: the text was garbage every time (a dev review: Dazed in hand).
+    /// </summary>
     private int Signature(Control root, IReadOnlyList<Node?> keep)
     {
-        var parts = new List<string>();
-        Describe(root, keep, depth: 0, "", parts);
         var hashCode = new HashCode();
-        foreach (var part in parts) hashCode.Add(part);
+        AddShown(root, keep, depth: 0, ref hashCode);
         var hash = hashCode.ToHashCode();
         return hash == 0 ? 1 : hash;
+    }
+
+    private void AddShown(Node node, IReadOnlyList<Node?> keep, int depth, ref HashCode hashCode)
+    {
+        for (var i = 0; i < node.GetChildCount(); i++)
+        {
+            var child = node.GetChild(i);
+            if (child == _image || Kept(keep, child) || child is GpuParticles2D or SubViewport) continue;
+            if (child is not CanvasItem canvasItem) continue;
+            hashCode.Add(child.GetInstanceId());
+            if (!canvasItem.Visible) { hashCode.Add(-1); continue; }
+            if (depth > 0) hashCode.Add(canvasItem.Modulate);
+            hashCode.Add(canvasItem.SelfModulate);
+            switch (child)
+            {
+                case Label label: hashCode.Add(label.Text); hashCode.Add(label.GetThemeColor(GodotNames.Name("font_color"))); break;
+                case RichTextLabel richTextLabel: hashCode.Add(richTextLabel.Text); break;
+                case TextureRect icon: hashCode.Add(icon.Texture?.GetInstanceId() ?? 0); break;
+            }
+            AddShown(child, keep, depth + 1, ref hashCode);
+        }
+    }
+
+    /// <summary>Whether the node is one of the layers that stay drawn (by index: no enumerator).</summary>
+    private static bool Kept(IReadOnlyList<Node?> keep, Node node)
+    {
+        for (var i = 0; i < keep.Count; i++)
+            if (keep[i] == node) return true;
+        return false;
     }
 
     /// <summary>What a node tree shows: each visible node's text, texture and colours (not the top layers' alpha, which this sets).</summary>

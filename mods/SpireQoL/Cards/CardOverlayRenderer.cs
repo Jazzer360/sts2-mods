@@ -44,6 +44,8 @@ public sealed class CardOverlayRenderer
 
     /// <summary>Time spent this frame on flattened fades (decision #113), reported to the host as "ethereal-fade" for the dev dashboard.</summary>
     private static double _flatMs;
+    /// <summary>The memory the faded copies allocated this frame (KB), with their time: the "ethereal-fade" part.</summary>
+    private static double _flatKb;
 
     private sealed class Entry
     {
@@ -57,6 +59,8 @@ public sealed class CardOverlayRenderer
         /// <summary>The copy couldn't be made or failed: the card fades layer by layer until it's unfaded.</summary>
         public bool FlatFailed;
         public readonly List<Control> Tabs = new();
+        /// <summary>The faded copy's layers that stay drawn (the glow, the tabs' layer, the overlay) and those it's drawn over.</summary>
+        public readonly Node?[] Keep = new Node?[3], Under = new Node?[2];
         /// <summary>
         /// What each tab was last laid out with (its spec, place, width and scale): laid out again only when that changes. Laying one out
         /// sets its icon, number and label every time, which made garbage every frame (a dev review: card tabs while idle).
@@ -107,8 +111,9 @@ public sealed class CardOverlayRenderer
             }
         }
         Outside.Clear();
-        if (_flatMs > 0) _host.AddPartTime("ethereal-fade", _flatMs);
+        if (_flatMs > 0) _host.AddPartTime("ethereal-fade", _flatMs, _flatKb);
         _flatMs = 0;
+        _flatKb = 0;
 
         // Undo anything on nodes that are no longer decorated hand cards.
         var dead = new List<ulong>();
@@ -218,8 +223,13 @@ public sealed class CardOverlayRenderer
         if (entry.Container != entry.Card && !entry.FlatFailed)
         {
             var start = Time.GetTicksUsec();
+            var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
             try { FadeFlat(entry, alpha); }
-            finally { _flatMs += (Time.GetTicksUsec() - start) / 1000.0; }
+            finally
+            {
+                _flatMs += (Time.GetTicksUsec() - start) / 1000.0;
+                _flatKb += (GC.GetAllocatedBytesForCurrentThread() - allocatedBefore) / 1024.0;
+            }
             if (!entry.FlatFailed) return;
         }
         SetAlpha(entry.Container, alpha);
@@ -238,7 +248,10 @@ public sealed class CardOverlayRenderer
         try
         {
             var glow = entry.Card.CardHighlight;
-            entry.Flat.Update(alpha, new Node?[] { glow, entry.TagLayer, entry.Overlay }, new Node?[] { glow, entry.TagLayer }, glow);
+            // The layers that stay drawn and those the image goes over: kept per card, filled in place (none made per frame).
+            (entry.Keep[0], entry.Keep[1], entry.Keep[2]) = (glow, entry.TagLayer, entry.Overlay);
+            (entry.Under[0], entry.Under[1]) = (glow, entry.TagLayer);
+            entry.Flat.Update(alpha, entry.Keep, entry.Under, glow);
         }
         catch (Exception ex)
         {

@@ -15,6 +15,8 @@ public class AllocationSamplerTests
     public void WhatThisThreadAllocatesIsSampledByType()
     {
         using var sampler = new AllocationSampler(AllocationSampler.CurrentOsThread());
+        sampler.Cycle(seconds: 0); // the start of a burst: listening
+        Assert.True(sampler.Sampling);
         sampler.SetQuiet(true);
         var kept = new List<SampledThing>();
         var clock = System.Diagnostics.Stopwatch.StartNew();
@@ -29,5 +31,17 @@ public class AllocationSamplerTests
         }
         Assert.NotNull(found);
         if (AllocationSampler.CurrentOsThread() != 0) Assert.StartsWith("game|", found);
+    }
+
+    [Fact]
+    public void ItListensInBursts()
+    {
+        using var sampler = new AllocationSampler(gameThread: 0);
+        sampler.Cycle(seconds: 1);
+        Assert.True(sampler.Sampling);
+        sampler.Cycle(seconds: AllocationSampler.OnSeconds + 1);
+        Assert.False(sampler.Sampling);
+        sampler.Cycle(seconds: AllocationSampler.PeriodSeconds + 0.5);
+        Assert.True(sampler.Sampling);
     }
 }

@@ -160,6 +160,22 @@ public static class Sts2State
     public static Godot.Rect2? PlayerBlockRect() => Me is { } me ? BlockRect(me.Creature) : null;
 
     /// <summary>
+    /// The combat room's creature nodes as the game's own list. CreatureNodes is that list behind an IEnumerable, and a foreach through the
+    /// interface makes an enumerator every time: garbage on every frame for each widget beside an HP bar (decision #173).
+    /// </summary>
+    public static List<MegaCrit.Sts2.Core.Nodes.Combat.NCreature> CreatureNodesOf(MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom room) =>
+        room.CreatureNodes as List<MegaCrit.Sts2.Core.Nodes.Combat.NCreature> ?? room.CreatureNodes.ToList();
+
+    /// <summary>A creature's node in the combat room, or null.</summary>
+    public static MegaCrit.Sts2.Core.Nodes.Combat.NCreature? NodeOf(MegaCrit.Sts2.Core.Entities.Creatures.Creature who)
+    {
+        if (MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance is not { } room) return null;
+        foreach (var creatureNode in CreatureNodesOf(room))
+            if (Godot.GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == who) return creatureNode;
+        return null;
+    }
+
+    /// <summary>
     /// The teammate whose character you're hovering (multiplayer: the game then shows their HP bar,
     /// NCreature.OnFocus), or null.
     /// </summary>
@@ -168,7 +184,7 @@ public static class Sts2State
         var me = Me;
         var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
         if (me == null || room == null) return null;
-        foreach (var creatureNode in room.CreatureNodes)
+        foreach (var creatureNode in CreatureNodesOf(room))
         {
             if (!Godot.GodotObject.IsInstanceValid(creatureNode) || !creatureNode.IsFocused) continue;
             if (creatureNode.Entity?.Player is { } player && player != me && creatureNode.Entity == player.Creature) return player;
@@ -272,11 +288,7 @@ public static class Sts2State
     /// </summary>
     private static (Godot.Control Display, Godot.Control? Bar)? HealthBarOf(MegaCrit.Sts2.Core.Entities.Creatures.Creature who)
     {
-        var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
-        if (room == null) return null;
-        MegaCrit.Sts2.Core.Nodes.Combat.NCreature? creature = null;
-        foreach (var creatureNode in room.CreatureNodes)
-            if (Godot.GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == who) { creature = creatureNode; break; }
+        var creature = NodeOf(who);
         var display = creature?.GetNodeOrNull<Godot.Control>(GodotNames.Path("%HealthBar"));
         if (display == null || !BarShown(creature!, display)) return null;
         return (display, display.GetNodeOrNull<Godot.Control>(GodotNames.Path("%HealthBar")));

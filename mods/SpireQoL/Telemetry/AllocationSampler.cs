@@ -10,6 +10,9 @@ namespace SpireQoL.Telemetry;
 /// no input and no board change for a while, when nothing should be allocating) or active. Taken every few seconds into an
 /// AllocationSample for the dev stream. The ticks arrive on the runtime's own thread a little late; a tick's quiet or active is told
 /// from its own time.
+/// The runtime gives the ticks only with every verbose GC event, and those include one per object finalized (the game finalizes many
+/// Godot wrappers): about a megabyte a second of the listener's own garbage. So it listens in bursts (OnSeconds of every PeriodSeconds:
+/// Cycle), the rates are over the sampled time, and the ticks of the thread that delivers them (its own garbage) are left out.
 /// </summary>
 public sealed class AllocationSampler : EventListener
 {
@@ -20,6 +23,14 @@ public sealed class AllocationSampler : EventListener
     private readonly object _gate = new();
     private Dictionary<string, double> _quietKb = new(), _activeKb = new();
     private readonly long _gameThread;
+    private EventSource? _runtime;
+    private long _deliveryThread = -1;
+
+    /// <summary>How long each burst listens, and how often one starts (seconds).</summary>
+    public const double OnSeconds = 2, PeriodSeconds = 10;
+
+    /// <summary>Listening now (a burst is on).</summary>
+    public bool Sampling { get; private set; }
 
     /// <summary>When the current quiet stretch began (UTC; MaxValue while not quiet), set by the dashboard every frame.</summary>
     private long _quietSinceTicks = DateTime.MaxValue.Ticks;
@@ -47,7 +58,17 @@ public sealed class AllocationSampler : EventListener
 
     protected override void OnEventSourceCreated(EventSource eventSource)
     {
-        if (eventSource.Name == RuntimeSource) EnableEvents(eventSource, EventLevel.Verbose, GcKeyword);
+        if (eventSource.Name == RuntimeSource) _runtime = eventSource;
+    }
+
+    /// <summary>A burst on for OnSeconds at the start of every PeriodSeconds of <paramref name="seconds"/> (the dashboard's clock).</summary>
+    public void Cycle(double seconds)
+    {
+        var on = seconds % PeriodSeconds < OnSeconds;
+        if (on == Sampling || _runtime == null) return;
+        Sampling = on;
+        if (on) EnableEvents(_runtime, EventLevel.Verbose, GcKeyword);
+        else DisableEvents(_runtime);
     }
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -65,6 +86,9 @@ public sealed class AllocationSampler : EventListener
             }
         }
         if (string.IsNullOrEmpty(type) || bytes <= 0) return;
+        // The thread delivering the events allocates for each one: the listener's own garbage, not the game's or the mod's.
+        if (_deliveryThread < 0) _deliveryThread = CurrentOsThread();
+        if (_deliveryThread != 0 && eventData.OSThreadId == _deliveryThread) return;
         var thread = _gameThread != 0 && eventData.OSThreadId == _gameThread ? "game" : "other";
         var quiet = eventData.TimeStamp.ToUniversalTime().Ticks >= Interlocked.Read(ref _quietSinceTicks);
         var key = thread + "|" + type;

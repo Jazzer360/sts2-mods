@@ -25,6 +25,7 @@ public sealed record FrameRollup(double Seconds, int Frames, double ModP50, doub
 /// <summary>
 /// What the garbage was made of over the last few seconds (AllocationSampler, decision #176): KB by "thread|type" (thread: game or
 /// other), from the runtime's allocation ticks, split by whether the moment was quiet (no input, no board change) or active.
+/// Seconds and QuietSeconds count only the time the sampler listened (its bursts), so KB over them is a rate.
 /// </summary>
 public sealed record AllocationSample(double Seconds, double QuietSeconds, Dictionary<string, double> QuietKb, Dictionary<string, double> ActiveKb) : DevEvent;
 

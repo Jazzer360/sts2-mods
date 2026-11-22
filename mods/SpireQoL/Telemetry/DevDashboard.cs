@@ -26,7 +26,7 @@ public static class DevDashboard
     private static (int G0, int G1, int G2, long Alloc, TimeSpan Pause) _gc;
     private static long _simAllocated;
     private static AllocationSampler? _sampler;
-    private static double _lastSample, _quietSecondsInSample;
+    private static double _lastSample, _quietSecondsInSample, _sampledSecondsInSample;
 
     // ---- quiet moments (decision #176): no input and no change on the board for QuietSeconds, when the mod should allocate nothing.
     private const double QuietSeconds = 2;
@@ -50,8 +50,12 @@ public static class DevDashboard
         var settled = Math.Max(_lastInputMs, BoardProbe.ChangedAtMs);
         var quiet = now - settled >= QuietSeconds * 1000;
         _sampler?.SetQuiet(quiet);
-        if (quiet) _quietSecondsInSample += gapMs / 1000;
-        else _quietAllWindow = false;
+        if (_sampler is { Sampling: true })
+        {
+            _sampledSecondsInSample += gapMs / 1000;
+            if (quiet) _quietSecondsInSample += gapMs / 1000;
+        }
+        if (!quiet) _quietAllWindow = false;
     }
     /// <summary>The engine's shader compiles: its running total at the last frame, those in this rollup, those since the frame before.</summary>
     private static long _compilesTotal;
@@ -158,12 +162,15 @@ public static class DevDashboard
             _checksAtRollup = ReuseCheck.ChecksRun;
             _gc = collections;
             _simAllocated = SimJob.AllocatedBytes;
+            _sampler?.Cycle(now);
             if (_sampler != null && now - _lastSample >= SampleSeconds)
             {
+                // Seconds: those sampled (the bursts), so the rates are over the time listened.
                 var (quietKb, activeKb) = _sampler.Take();
-                sink.Post(new AllocationSample(Math.Round(now - _lastSample, 2), Math.Round(_quietSecondsInSample, 2), Rounded(quietKb), Rounded(activeKb)));
+                sink.Post(new AllocationSample(Math.Round(_sampledSecondsInSample, 2), Math.Round(_quietSecondsInSample, 2), Rounded(quietKb), Rounded(activeKb)));
                 _lastSample = now;
                 _quietSecondsInSample = 0;
+                _sampledSecondsInSample = 0;
             }
             _compilesInWindow = 0;
         }

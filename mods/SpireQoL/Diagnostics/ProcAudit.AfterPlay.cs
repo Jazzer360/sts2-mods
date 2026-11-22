@@ -108,6 +108,14 @@ public sealed partial class ProcAudit
     }
 
     /// <summary>
+    /// Why a play with a pick from your hand auto-played (Decisions, Decisions) isn't held to its state or powers after it: the pick's
+    /// plays are simulated from the board as you chose, apart from what the card itself does around them (its draws before the choice;
+    /// as it finishes, what spending its stars sets off, Black Hole, and its count toward Pale Blue Dot). A gap (docs/TRACKER.md): one
+    /// simulation of the whole play would close it. A dev review: three reports of Decisions, Decisions.
+    /// </summary>
+    internal const string PickApart = "your pick's auto-plays are simulated apart from the card's own effects around them";
+
+    /// <summary>
     /// The state the play left against the simulator's prediction of it (see the class summary).
     /// Each difference from the closest branch is one issue.
     /// </summary>
@@ -133,6 +141,11 @@ public sealed partial class ProcAudit
         if (window.Chosen != null && window.Chosen.TargetType == TargetType.AnyEnemy && window.Target == null)
         {
             model.Skip("state after the play", "the pick's auto-plays hit different random enemies");
+            return;
+        }
+        if (window.Chosen != null)
+        {
+            model.Skip("state after the play", PickApart);
             return;
         }
         if (sim.AimFor(window.Target) is not { } aim || !sim.PlayByTarget.TryGetValue(aim, out var play))

@@ -1,6 +1,7 @@
 using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
+using SpireQoL.Combat;
 using Sts2Mods.Core;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
@@ -567,29 +568,49 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
                 ModEntry.Log.Warn($"[coverage] settings: {problem}");
             }
         }
-        // Tab kinds shown in play that the catalog doesn't describe (the menu lists them under "Other").
-        foreach (var key in _ctx.Settings.Tabs.Keys)
+        // Tab kinds shown in play that the catalog doesn't describe (the menu lists them under "Other"); looked at when one is added.
+        if (_ctx.Settings.Tabs.Count != _tabsLookedAt)
         {
-            if (key.EndsWith(":*", StringComparison.Ordinal) || SettingsCatalog.IsKnownTabKey(key) || !_unknownTabs.Add(key)) continue;
-            Unexpected(key, "tab-not-in-catalog", "a tab kind was shown that the settings catalog doesn't describe.");
+            _tabsLookedAt = _ctx.Settings.Tabs.Count;
+            foreach (var key in _ctx.Settings.Tabs.Keys)
+            {
+                if (key.EndsWith(":*", StringComparison.Ordinal) || SettingsCatalog.IsKnownTabKey(key) || !_unknownTabs.Add(key)) continue;
+                Unexpected(key, "tab-not-in-catalog", "a tab kind was shown that the settings catalog doesn't describe.");
+            }
         }
         var me = Sts2State.Me;
         var combat = Sts2State.Combat;
         if (me == null || combat == null) return;
-        foreach (var relic in me.Relics) Check(relic);
-        foreach (var creature in combat.Creatures)
+        // What's in the fight changes only with the board (the probe, decision #130): looked at again then, by index (a dev review: this
+        // rebuilt the game's creature list every frame).
+        var probe = BoardProbe.Hash(me, combat);
+        if (probe == _lookedAt) return;
+        _lookedAt = probe;
+        var relics = me.Relics;
+        for (var i = 0; i < relics.Count; i++) Check(relics[i]);
+        CheckAll(combat.Allies);
+        CheckAll(combat.Enemies);
+        var hand = Sts2State.Hand(me);
+        for (var i = 0; i < hand.Count; i++)
         {
-            foreach (var power in creature.Powers) Check(power);
-            if (creature.Monster != null) Check(creature.Monster);
-        }
-        foreach (var card in Sts2State.Hand(me))
-        {
-            Check(card);
-            if (card.Enchantment != null) Check(card.Enchantment);
-            if (card.Affliction != null) Check(card.Affliction);
+            Check(hand[i]);
+            if (hand[i].Enchantment != null) Check(hand[i].Enchantment!);
+            if (hand[i].Affliction != null) Check(hand[i].Affliction!);
         }
         var orbs = me.PlayerCombatState?.OrbQueue?.Orbs;
-        if (orbs != null) foreach (var orb in orbs) Check(orb);
+        if (orbs != null) for (var i = 0; i < orbs.Count; i++) Check(orbs[i]);
+    }
+
+    private int _tabsLookedAt = -1, _lookedAt;
+
+    private void CheckAll(IReadOnlyList<MegaCrit.Sts2.Core.Entities.Creatures.Creature> creatures)
+    {
+        for (var i = 0; i < creatures.Count; i++)
+        {
+            var powers = creatures[i].Powers;
+            for (var j = 0; j < powers.Count; j++) Check(powers[j]);
+            if (creatures[i].Monster is { } monster) Check(monster);
+        }
     }
 
     private void Check(AbstractModel model)
