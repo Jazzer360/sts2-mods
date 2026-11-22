@@ -140,8 +140,8 @@ public sealed class ParryingShield : EndOfTurnRelic
     /// <summary>Plain when this play makes it fire for sure and ending the turn now might not; crossed when it would for sure now and the play can stop it.</summary>
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         owner != Who.You ? null
-        : !now.ParryingShieldInAll ? new(Harmful: false, outcome => outcome.ParryingShieldInAll)
-        : new(Harmful: true, outcome => !outcome.ParryingShieldInAll, branch => !branch.ParryingShieldFired);
+        : !now.ParryingShieldInAll ? new(Harmful: false, outcome => outcome.ParryingShieldInAll, InPlay: false)
+        : new(Harmful: true, outcome => !outcome.ParryingShieldInAll, branch => !branch.ParryingShieldFired, InPlay: false);
 
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
     {

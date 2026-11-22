@@ -95,7 +95,12 @@ public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft, CounterPassedLimit }
 /// For a bonus (set off in every outcome: SetOff), whether some outcome of one play sets it off, so the checks accept its flash there
 /// (Gremlin Horn on a kill that only some rolls make); null: SetOff alone.
 /// </param>
-public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff, Func<SimState, bool>? InBranch = null, Func<SimOutcome, bool>? InSome = null);
+/// <param name="InPlay">
+/// The play itself sets it off, so it flashes while the play resolves and the play check holds it to that (a kill's Gremlin Horn).
+/// False for an effect the play only makes certain for later: the end of your turn (Parrying Shield) or the enemy turn (Imbalanced,
+/// stunned when its hit is fully blocked), which the play check can't see; the turn's own check holds those.
+/// </param>
+public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff, Func<SimState, bool>? InBranch = null, Func<SimOutcome, bool>? InSome = null, bool InPlay = true);
 
 /// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
 public sealed record SimCardPlay(SimCard Card, int Owner, [property: JsonConverter(typeof(CreatureIdJson))] int Target, int PlayIndex, int PlayCount, bool AutoPlay)

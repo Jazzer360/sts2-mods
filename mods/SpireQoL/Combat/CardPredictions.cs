@@ -586,7 +586,7 @@ public sealed class CardPredictions
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act
         // Each rule is a test per target (one simulation each): the tab shows when some target passes it, with the aim marker
         // when not every target does (several enemies with the same power: when no target passes any of them).
-        void Add(AbstractModel src, bool harmful, Func<SimOutcome, bool> at, Func<SimState, bool>? inBranch, Func<SimOutcome, bool>? inSome)
+        void Add(AbstractModel src, bool harmful, Func<SimOutcome, bool> at, Func<SimState, bool>? inBranch, Func<SimOutcome, bool>? inSome, bool inPlay = true)
         {
             var key = "proc:" + src.GetType().Name;
             var firesAt = outcomes.Select(at).ToArray();
@@ -595,9 +595,13 @@ public sealed class CardPredictions
             var every = harmful ? new bool[firesAt.Length] : firesAt.ToArray();
             var any = outcomes.Select((outcome, index) => firesAt[index] || inSome?.Invoke(outcome) == true).ToArray();
             var srcName = src.GetType().Name;
-            if (_firesBy.TryGetValue(srcName, out var had) && had.Every.Length == every.Length)
-                for (var i = 0; i < every.Length; i++) { every[i] |= had.Every[i]; any[i] |= had.Any[i]; }
-            _firesBy[srcName] = (src.GetType(), every, any);
+            // Set off after the play (OutcomeRule.InPlay false): nothing for the play check to see flash.
+            if (inPlay)
+            {
+                if (_firesBy.TryGetValue(srcName, out var had) && had.Every.Length == every.Length)
+                    for (var i = 0; i < every.Length; i++) { every[i] |= had.Every[i]; any[i] |= had.Any[i]; }
+                _firesBy[srcName] = (src.GetType(), every, any);
+            }
             if (!firesAt.Any(fires => fires)) return;
             if (_firesAt.TryGetValue(key, out var prev) && prev.Length == firesAt.Length)
                 for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prev[i];
@@ -613,7 +617,7 @@ public sealed class CardPredictions
         foreach (var src in sources.OrderBy(model => model is PowerModel power && OwnerOf(power) is { IsEnemy: true } ? 0 : model is RelicModel ? 1 : 2))
         {
             if (SimModels.Get(SimReaders.ModelName(src)) is not { JudgedOnOutcome: true } model || !SimOwner(src, out var owner)) continue;
-            if (model.OutcomeTab(start, baseline, owner ?? Who.You) is { } rule) Add(src, rule.Harmful, rule.SetOff, rule.InBranch, rule.InSome);
+            if (model.OutcomeTab(start, baseline, owner ?? Who.You) is { } rule) Add(src, rule.Harmful, rule.SetOff, rule.InBranch, rule.InSome, rule.InPlay);
         }
 
         // What the audits hold the play to, per aim (decisions #87, #95): the tabbed sources it sets off in every outcome and in
@@ -730,8 +734,7 @@ public sealed class CardPredictions
         // (decision #159), from each branch's own log: fired in every branch merged into it (Fired) up to in some (FiredAny).
         string? chance = null;
         if (harmful && _ctx.Settings.Chances)
-            chance = WarningChance(outcomes.Where(at).Select(outcome =>
-                new SimChance(outcome.Chance(branch => Fired(branch.Fired)).Low, outcome.Chance(branch => Fired(branch.FiredAny)).High, Seen: true)));
+            chance = WarningChance(outcomes.Where(at).Select(outcome => outcome.LoggedChance(Fired)));
         if (chance != null) number = null;
         TabAmount? counts = kind switch
         {

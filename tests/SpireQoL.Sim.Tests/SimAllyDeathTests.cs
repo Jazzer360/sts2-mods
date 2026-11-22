@@ -38,6 +38,21 @@ public class SimAllyDeathTests
     }
 
     [Fact]
+    public void CrabRageGivesItsStrengthAndBlockWhateverItsMove()
+    {
+        // A dev review report: the Crusher, with a Buff intent (no attack: no Intent), gained 6 Strength and 99 block when the Rocket
+        // died (CrabRagePower.AfterDeath has no condition on its own move); the simulation gave neither.
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4), Enemy(id: 2, hp: 30) } };
+        state.Enemies[1].Powers = state.Enemies[1].Powers.With(PowerId.CrabRage, 6);
+        state.Enemies[1].CrabRageBlock = 99;
+        SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 5), out var after, out _);
+        var crusher = after[0].Enemy(id: 2)!;
+        Assert.Equal(99, crusher.Block);
+        Assert.Equal(6, crusher.Powers[PowerId.Strength]);
+        Assert.False(crusher.Powers.Has(PowerId.CrabRage)); // once
+    }
+
+    [Fact]
     public void AnAllyDyingAtEndOfTurnCountsToo()
     {
         // A Lightning orb kills the 3-HP ally at end of turn: Crab Rage's hits are up when it attacks.

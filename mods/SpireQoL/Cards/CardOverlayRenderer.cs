@@ -57,6 +57,11 @@ public sealed class CardOverlayRenderer
         /// <summary>The copy couldn't be made or failed: the card fades layer by layer until it's unfaded.</summary>
         public bool FlatFailed;
         public readonly List<Control> Tabs = new();
+        /// <summary>
+        /// What each tab was last laid out with (its spec, place, width and scale): laid out again only when that changes. Laying one out
+        /// sets its icon, number and label every time, which made garbage every frame (a dev review: card tabs while idle).
+        /// </summary>
+        public readonly List<(TabSpec Spec, float Left, float Top, float Width, Vector2 Scale)?> LaidOut = new();
 
         /// <summary>
         /// Holds the tags, placed directly after the card's glow (NCard.CardHighlight) in the glow's
@@ -331,22 +336,31 @@ public sealed class CardOverlayRenderer
         for (var i = 0; i < entry.Tabs.Count; i++)
         {
             var tab = entry.Tabs[i];
+            while (entry.LaidOut.Count <= i) entry.LaidOut.Add(null);
             if (!GodotObject.IsInstanceValid(tab)) continue;
-            if (tab.GetParent() != layer) tab.Reparent(layer, keepGlobalTransform: false);
+            if (tab.GetParent() != layer)
+            {
+                tab.Reparent(layer, keepGlobalTransform: false);
+                entry.LaidOut[i] = null;
+            }
             var on = i < tabs.Count;
             tab.Visible = on;
             if (!on) continue;
 
             var spec = tabs[i];
+            var laidOut = (spec, left + i * step, top, tagW * fit, scale);
+            if (entry.LaidOut[i] is { } before && before.Equals(laidOut)) continue;
             try
             {
                 LayoutTab(tab, spec, left + i * step, top, tagW * fit, scale);
+                entry.LaidOut[i] = laidOut;
             }
             catch (Exception ex)
             {
                 // Never leave a tag half-configured: a copy of the card's enchantment tab that
-                // failed partway would still show that enchantment's icon and number.
+                // failed partway would still show that enchantment's icon and number. Laid out again next frame.
                 tab.Visible = false;
+                entry.LaidOut[i] = null;
                 if (_tabErrors++ % 600 == 0) ModEntry.Log.Warn($"tab layout failed ({spec.Key}), tab hidden: {ex.Message}");
                 Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "tab-layout");
             }

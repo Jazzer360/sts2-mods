@@ -22,6 +22,9 @@ public sealed class ReuseCheck
     private readonly string _what;
     private long _lastCheck;
 
+    /// <summary>Dev checks run since launch, every result's together (the dev stream marks the moments that had one: decision #176).</summary>
+    public static int ChecksRun { get; private set; }
+
     /// <param name="what">What's kept, as the log names it ("the turn forecast", "Card Indicators").</param>
     public ReuseCheck(string what) => _what = what;
 
@@ -33,6 +36,7 @@ public sealed class ReuseCheck
         var now = System.Diagnostics.Stopwatch.GetTimestamp();
         if (System.Diagnostics.Stopwatch.GetElapsedTime(_lastCheck, now).TotalSeconds < BoardProbe.CheckSeconds) return FrameReuse.Reuse;
         _lastCheck = now;
+        ChecksRun++;
         return FrameReuse.WorkOutAndCheck;
     }
 

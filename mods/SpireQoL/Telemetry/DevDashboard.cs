@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using SpireQoL.Combat;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Diagnostics;
 using Sts2Mods.Core.Ui;
@@ -24,6 +25,34 @@ public static class DevDashboard
     private static double _lastRollup, _lastState;
     private static (int G0, int G1, int G2, long Alloc, TimeSpan Pause) _gc;
     private static long _simAllocated;
+    private static AllocationSampler? _sampler;
+    private static double _lastSample, _quietSecondsInSample;
+
+    // ---- quiet moments (decision #176): no input and no change on the board for QuietSeconds, when the mod should allocate nothing.
+    private const double QuietSeconds = 2;
+    private static Godot.Vector2I _lastMouse;
+    private static ulong _lastInputMs;
+    private static bool _quietAllWindow = true;
+    private static int _checksAtRollup;
+
+    /// <summary>Every frame: input (the mouse moved, anything held), the game's window not in front, and the board probe changing end a quiet moment.</summary>
+    private static void WatchQuiet(double gapMs)
+    {
+        var now = Godot.Time.GetTicksMsec();
+        var mouse = Godot.DisplayServer.MouseGetPosition();
+        // In the background (another window focused) the game runs at 30 fps and nobody is watching: never quiet, and quiet starts over
+        // only once it's back in front.
+        if (mouse != _lastMouse || Godot.Input.IsAnythingPressed() || !Godot.DisplayServer.WindowIsFocused())
+        {
+            _lastMouse = mouse;
+            _lastInputMs = now;
+        }
+        var settled = Math.Max(_lastInputMs, BoardProbe.ChangedAtMs);
+        var quiet = now - settled >= QuietSeconds * 1000;
+        _sampler?.SetQuiet(quiet);
+        if (quiet) _quietSecondsInSample += gapMs / 1000;
+        else _quietAllWindow = false;
+    }
     /// <summary>The engine's shader compiles: its running total at the last frame, those in this rollup, those since the frame before.</summary>
     private static long _compilesTotal;
     private static int _compilesInWindow, _compilesLastFrame;
@@ -50,6 +79,11 @@ public static class DevDashboard
 
     public static bool Running => _sink != null;
 
+    /// <summary>How often the allocation sample is written (seconds).</summary>
+    private const double SampleSeconds = 10;
+
+    private static Dictionary<string, double> Rounded(Dictionary<string, double> kilobytes) => kilobytes.ToDictionary(entry => entry.Key, entry => Math.Round(entry.Value, 1));
+
     /// <summary>
     /// The dev folder: <c>SpireQoL-dev</c> in the user's folder, or the hidden setting DevFolder. Not under AppData (beside the game's
     /// logs): Chrome and Edge refuse to open any folder there ("contains system files"), and under Program Files too.
@@ -72,8 +106,12 @@ public static class DevDashboard
             host.FrameMeasured += (modMs, gapMs) =>
             {
                 CountCompiles();
+                WatchQuiet(gapMs);
                 Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
             };
+            // What the garbage is made of: the runtime's allocation ticks, by type (dev mode only).
+            try { _sampler = new AllocationSampler(AllocationSampler.CurrentOsThread()); }
+            catch (Exception ex) { ModEntry.Log.Warn($"[dev] the allocation sampler couldn't start: {ex.Message}"); }
             host.StallNote = () => _compilesLastFrame > 0 ? $"{_compilesLastFrame} shader compiles" : null;
             if (ErrorReporter.Instance is { } reporter)
             {
@@ -115,9 +153,18 @@ public static class DevDashboard
             sink.Post(Window.Take(seconds, (GC.GetTotalMemory(false) / 1048576.0, (collections.Alloc - _gc.Alloc) / 1048576.0, collections.G0 - _gc.G0, collections.G1 - _gc.G1,
                 collections.G2 - _gc.G2, (collections.Pause - _gc.Pause).TotalMilliseconds, SimWork.HeldEverywhere, SimJob.Progress().Count),
                 ((SimJob.AllocatedBytes - _simAllocated) / 1048576.0, _compilesInWindow, (int)Godot.Performance.GetMonitor(Godot.Performance.Monitor.ObjectNodeCount),
-                    (int)Godot.Performance.GetMonitor(Godot.Performance.Monitor.ObjectOrphanNodeCount))));
+                    (int)Godot.Performance.GetMonitor(Godot.Performance.Monitor.ObjectOrphanNodeCount), _quietAllWindow, ReuseCheck.ChecksRun - _checksAtRollup)));
+            _quietAllWindow = true;
+            _checksAtRollup = ReuseCheck.ChecksRun;
             _gc = collections;
             _simAllocated = SimJob.AllocatedBytes;
+            if (_sampler != null && now - _lastSample >= SampleSeconds)
+            {
+                var (quietKb, activeKb) = _sampler.Take();
+                sink.Post(new AllocationSample(Math.Round(now - _lastSample, 2), Math.Round(_quietSecondsInSample, 2), Rounded(quietKb), Rounded(activeKb)));
+                _lastSample = now;
+                _quietSecondsInSample = 0;
+            }
             _compilesInWindow = 0;
         }
         if (now - _lastState >= StateSeconds)

@@ -38,7 +38,8 @@ public sealed partial class RunRemindersFeature
         }
         // Relics and settings change rarely: the tabs are worked out again a few times a second, drawn every frame.
         var recompute = ++_offeredFrame % 10 == 0;
-        var seen = new HashSet<ulong>();
+        var seen = _seenOffered;
+        seen.Clear();
         foreach (var (node, place) in nodes)
         {
             CardModel? model;
@@ -55,8 +56,14 @@ public sealed partial class RunRemindersFeature
             }
             if (!have.Decor.IsEmpty) CardOverlayRenderer.Outside.Add((node, have.Decor));
         }
-        foreach (var gone in _offeredTabs.Keys.Where(key => !seen.Contains(key)).ToList()) _offeredTabs.Remove(gone);
+        _goneOffered.Clear();
+        foreach (var key in _offeredTabs.Keys)
+            if (!seen.Contains(key)) _goneOffered.Add(key);
+        foreach (var gone in _goneOffered) _offeredTabs.Remove(gone);
     }
+
+    private readonly HashSet<ulong> _seenOffered = new();
+    private readonly List<ulong> _goneOffered = new();
 
     /// <summary>A tab per relic of yours that boosts this card (or a card it makes), with the relic's switch for this place.</summary>
     private CardDecor Boosts(CardModel card, Player me, ReminderPlace place)
@@ -80,13 +87,17 @@ public sealed partial class RunRemindersFeature
         return decor;
     }
 
+    /// <summary>The cards on screen (OfferedCards), one list kept and filled again each frame.</summary>
+    private static readonly List<(NCard Node, ReminderPlace Place)> Found = new();
+
     /// <summary>
     /// The card nodes on screen that you're being offered: the card reward screen, an event's choice of cards out of combat
     /// (choose a card, a bundle, a grid of cards), and the open shop.
     /// </summary>
     private static List<(NCard Node, ReminderPlace Place)> OfferedCards()
     {
-        var found = new List<(NCard, ReminderPlace)>();
+        var found = Found;
+        found.Clear();
         try
         {
             var top = NOverlayStack.Instance?.Peek();
@@ -101,11 +112,16 @@ public sealed partial class RunRemindersFeature
         return found;
     }
 
+    /// <summary>
+    /// Every visible card under the node. By index, not GetChildren: every frame on a shop's whole inventory, and GetChildren makes an
+    /// array at each level (a dev review: Run Reminders' garbage in a shop).
+    /// </summary>
     private static void Collect(Node node, List<(NCard, ReminderPlace)> into, ReminderPlace place, int depth)
     {
         if (depth > 14) return;
-        foreach (var child in node.GetChildren())
+        for (var i = 0; i < node.GetChildCount(); i++)
         {
+            var child = node.GetChild(i);
             if (!GodotObject.IsInstanceValid(child)) continue;
             if (child is NCard card)
             {

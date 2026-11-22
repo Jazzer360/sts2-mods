@@ -6,6 +6,18 @@ namespace Sts2Mods.Core.Ui;
 public static class UiKit
 {
     /// <summary>
+    /// The node's first child of a type, or null. By index: GetChildren makes an array each call, garbage in code that runs every frame
+    /// (decision #173).
+    /// </summary>
+    public static T? FirstChild<T>(Node? node) where T : class
+    {
+        if (node == null) return null;
+        for (var i = 0; i < node.GetChildCount(); i++)
+            if (node.GetChild(i) is T child) return child;
+        return null;
+    }
+
+    /// <summary>
     /// Takes a node out of its parent now and frees it at the end of the frame. QueueFree alone leaves it in the tree until then, so a
     /// node added in its place with the same name is renamed by Godot, and code finding it by name loses track of it (a stale row left on
     /// the map legend).

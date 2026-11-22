@@ -20,6 +20,9 @@ internal static class BoardProbe
     private static ulong _frame = ulong.MaxValue;
     private static int _hash;
 
+    /// <summary>When the frame's probe last differed from the frame before (Godot's ms clock): the dev stream's quiet moments (decision #176).</summary>
+    public static ulong ChangedAtMs { get; private set; }
+
     /// <summary>
     /// How often dev mode works a kept result out anyway on unchanged frames, to check the probe: once a second for each (decision
     /// #173; every 30th frame before, which at a high frame rate was about half the mod's garbage in a quiet fight).
@@ -43,7 +46,9 @@ internal static class BoardProbe
         var frame = Godot.Engine.GetProcessFrames();
         if (frame == _frame) return _hash;
         _frame = frame;
-        _hash = Compute(me, combat);
+        var hash = Compute(me, combat);
+        if (hash != _hash) ChangedAtMs = Godot.Time.GetTicksMsec();
+        _hash = hash;
         return _hash;
     }
 

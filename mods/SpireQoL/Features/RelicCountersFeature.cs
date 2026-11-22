@@ -5,6 +5,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Data;
+using SpireQoL.Combat;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
@@ -76,6 +77,9 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
 
     private readonly List<(AbstractModel Model, int Sort, RowState State, int Order)> _entries = new();
     private readonly List<AbstractModel> _gone = new();
+    /// <summary>The board probe the rows were last worked out for (0: not in a fight), and whether one reads a flag it doesn't.</summary>
+    private int _paintedProbe;
+    private bool _paintedOneShot;
     private static readonly Comparison<(AbstractModel Model, int Sort, RowState State, int Order)> ByKey =
         (left, right) => left.Sort != right.Sort ? left.Sort.CompareTo(right.Sort) : left.Order.CompareTo(right.Order);
 
@@ -89,6 +93,24 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             return;
         }
 
+        // Nothing a row reads changed (the board probe, decision #130: relic counters, cards played, the turn, the settings): last
+        // frame's rows painted again (flashing goes on), without working out their labels (a dev review: garbage every frame while
+        // idle). A one-shot row reads a relic's private flag the probe doesn't, so it's worked out every frame.
+        var combat = Sts2State.Combat;
+        var probe = combat != null ? BoardProbe.Hash(me, combat) : 0;
+        if (combat != null && probe == _paintedProbe && !_paintedOneShot && _rows.Count == _entries.Count)
+        {
+            foreach (var (model, _, state, _) in _entries)
+            {
+                if (!_rows.TryGetValue(model, out var kept)) continue;
+                kept.Tiny?.Fit();
+                Paint(kept, state, OverlayHost.Time, _ctx.Settings.FlashHz);
+            }
+            return;
+        }
+        _paintedProbe = combat != null ? probe : 0;
+        _paintedOneShot = false;
+
         foreach (var row in _rows.Values) row.Seen = false;
 
         // (model, sort key, state): kept between frames, filled again each one
@@ -99,6 +121,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         {
             var spec = RelicSpecs.For(relic.GetType().Name);
             if (spec == null || !spec.InTray || !_ctx.Settings.TrackerEnabled(spec.TypeName, !spec.TurnTimer)) continue;
+            if (spec.Kind == CounterKind.OneShot) _paintedOneShot = true;
             if (Evaluate(relic, spec, me) is { } state)
             {
                 entries.Add((relic, spec.CrossTurn ? 0 : 2, state, 0));

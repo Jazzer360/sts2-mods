@@ -136,7 +136,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     /// <summary>The y, in the holder's own coordinates, of the centre of the intent icon drawn in its row (the NIntent's sprite).</summary>
     private static float? IconCentre(Control holder)
     {
-        if (holder.GetParent()?.GetChildren().OfType<NIntent>().FirstOrDefault() is not { } intent) return null;
+        if (UiKit.FirstChild<NIntent>(holder.GetParent()) is not { } intent) return null;
         if (intent.GetNodeOrNull<Node2D>(GodotNames.Path("%Intent")) is not { } sprite) return null;
         return (holder.GetGlobalTransform().AffineInverse() * sprite.GlobalPosition).Y;
     }
@@ -240,8 +240,11 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     /// <summary>The bob timing (NIntent._timeOffset) of the enemy's first intent on screen, or 0.</summary>
     private static float BobOffset(Creature enemy)
     {
-        var node = NCombatRoom.Instance?.CreatureNodes.FirstOrDefault(creatureNode => GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == enemy);
-        var first = node?.IntentContainer?.GetChildren().OfType<NIntent>().FirstOrDefault();
+        NCreature? node = null;
+        if (NCombatRoom.Instance is { } room)
+            foreach (var creatureNode in room.CreatureNodes)
+                if (GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == enemy) { node = creatureNode; break; }
+        var first = UiKit.FirstChild<NIntent>(node?.IntentContainer);
         return first != null ? Sts2State.Private(first, "_timeOffset", fallback: 0f) : 0f;
     }
 
@@ -269,9 +272,9 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         var intents = node?.IntentContainer;
         if (intents == null || !GodotObject.IsInstanceValid(intents) || !intents.IsVisibleInTree()) return null;
         Rect2? rect = null;
-        foreach (var nIntent in intents.GetChildren().OfType<NIntent>())
+        for (var i = 0; i < intents.GetChildCount(); i++)
         {
-            if (!nIntent.IsVisibleInTree() || nIntent.Size.X < 1) continue;
+            if (intents.GetChild(i) is not NIntent nIntent || !nIntent.IsVisibleInTree() || nIntent.Size.X < 1) continue;
             var otherRect = Sts2State.ScreenRect(nIntent);
             rect = rect is { } nextRect ? nextRect.Merge(otherRect) : otherRect;
         }

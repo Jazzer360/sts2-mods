@@ -352,6 +352,10 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
         <canvas id="pfWait" height="150"></canvas>
         <div class="legend"><span><i style="background:var(--accent)"></i>finished within the frame</span><span><i style="background:var(--bad)"></i>left to the background</span><span><i style="background:var(--warn)"></i>time to settle</span></div></div>
     </div>
+    <div class="card" style="margin-top:12px"><h3>What is the garbage made of?</h3>
+      <p class="hint">A sample of every allocation by type (the .NET runtime names the type about every 100 KB allocated, so each row's rate is an estimate), split by whether you were <b>quiet</b>: no mouse movement, nothing held and no change on the board for 2 s, with the game's window in front. On a quiet board nothing of the mod's should allocate, so a quiet row of the mod's own types (bold), or of strings and lists while the game's thread is the one allocating, is garbage to find and stop. "game" is the game's thread (the mod's frame work and the game's own code), "other" every other thread (the mod's searches among them). The feature table below has each feature's memory while quiet too.</p>
+      <div class="row" style="margin:6px 0"><span class="dim" id="allocQuietNote"></span></div>
+      <div class="scroll"><table id="allocTable"></table></div></div>
     <div class="card" style="margin-top:12px"><h3>Each feature over this window</h3>
       <p class="hint">Average: what the feature costs every frame. Largest: its single worst frame (amber over 8 ms, red over 16.7 ms, a frame's whole budget). Share: its part of the mod's total time.</p>
       <div class="scroll"><table id="featureTable"></table></div></div>
@@ -494,7 +498,7 @@ const isHitch = (r) => r.gapMax > 50 && r.modMax < 30;
 const warmupWarning = (l) => l.level === "WARN" && /^\[perf\] slow frame/.test(l.text) && warmingUp(l.t);
 const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
-  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [],
+  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [],
   combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null, launches: [0],
   searchTotals: newSearchTotals(), searchCards: new Map(),
 };
@@ -517,7 +521,7 @@ function countSearch(e) {
   M.searchCards.set(key, c);
 }
 function reset() {
-  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
+  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
     searchTotals: newSearchTotals(), searchCards: new Map() });
   FS.base = 0;
 }
@@ -533,6 +537,7 @@ function ingest(e) {
   switch (e.kind) {
     case "stream-started": M.started = e; break;
     case "frame-rollup": push(M.rollups, e, MAX.rollups); break;
+    case "allocation-sample": push(M.allocSamples, e, MAX.rollups); break;
     case "search-done": {
       push(M.searches, e, MAX.searches);
       countSearch(e);
@@ -1654,8 +1659,28 @@ function renderPerf() {
   const feat = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) { const f = (feat[k] ??= { mean: 0, max: 0, n: 0, kb: 0 }); f.mean += v; f.n++; f.max = Math.max(f.max, x.featureMax?.[k] || 0); f.kb += x.featureKb?.[k] || 0; }
   const rows = Object.entries(feat).sort((a, b) => b[1].mean - a[1].mean);
-  setHTML($("featureTable"), `<tr><th>Feature</th><th class="n">Mean per frame</th><th class="n">Largest in one frame</th><th class="n">Share of the mod's time</th><th class="n">Memory per frame</th></tr>` +
-    rows.map(([k, f]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(f.mean / f.n, 3)} ms</td><td class="n ${f.max > 16.7 ? "bad" : f.max > 8 ? "warn" : ""}">${fmt(f.max, 1)} ms</td><td class="n">${pct(f.mean, rows.reduce((a, [, g]) => a + g.mean, 0))}</td><td class="n ${f.kb / f.n > 100 ? "bad" : f.kb / f.n > 20 ? "warn" : ""}">${fmt(f.kb / f.n, 1)} KB</td></tr>`).join(""));
+  // While quiet (decision #176): the moments with no input and no board change, without a dev check in them (dev mode works a kept
+  // result out again once a second, which players' builds never do).
+  const quietRollups = r.filter((x) => x.quiet && !x.devChecks), quietFrames = quietRollups.reduce((a, x) => a + x.frames, 0);
+  const quietKb = {};
+  for (const x of quietRollups) for (const [k, v] of Object.entries(x.featureKb || {})) quietKb[k] = (quietKb[k] || 0) + v * x.frames;
+  const quietCell = (k) => (quietFrames ? (() => { const v = (quietKb[k] || 0) / quietFrames; return `<td class="n ${v > 1 ? "bad" : v > 0.1 ? "warn" : ""}">${fmt(v, 2)} KB</td>`; })() : `<td class="n faint">–</td>`);
+  setHTML($("featureTable"), `<tr><th>Feature</th><th class="n">Mean per frame</th><th class="n">Largest in one frame</th><th class="n">Share of the mod's time</th><th class="n">Memory per frame</th><th class="n" title="Memory per frame in quiet moments (no input, no board change for 2 s, the window in front; none with a dev check): what a feature allocates while nothing changes. Amber over 0.1 KB, red over 1 KB.">While quiet</th></tr>` +
+    rows.map(([k, f]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(f.mean / f.n, 3)} ms</td><td class="n ${f.max > 16.7 ? "bad" : f.max > 8 ? "warn" : ""}">${fmt(f.max, 1)} ms</td><td class="n">${pct(f.mean, rows.reduce((a, [, g]) => a + g.mean, 0))}</td><td class="n ${f.kb / f.n > 100 ? "bad" : f.kb / f.n > 20 ? "warn" : ""}">${fmt(f.kb / f.n, 1)} KB</td>${quietCell(k)}</tr>`).join(""));
+  // What the garbage is made of: the samples in the window, each type's rate while quiet and while active.
+  const samples = since(M.allocSamples, win);
+  const quietS = samples.reduce((a, x) => a + (x.quietSeconds || 0), 0), activeS = samples.reduce((a, x) => a + Math.max(0, x.seconds - (x.quietSeconds || 0)), 0);
+  const byType = {};
+  for (const x of samples) {
+    for (const [k, v] of Object.entries(x.quietKb || {})) (byType[k] ??= { quiet: 0, active: 0 }).quiet += v;
+    for (const [k, v] of Object.entries(x.activeKb || {})) (byType[k] ??= { quiet: 0, active: 0 }).active += v;
+  }
+  const ours = (type) => /SpireQoL|Sts2Mods/.test(type);
+  const typeRows = Object.entries(byType).map(([k, v]) => ({ thread: k.split("|")[0], type: k.slice(k.indexOf("|") + 1), quiet: quietS ? v.quiet / quietS : 0, active: activeS ? v.active / activeS : 0 }))
+    .sort((a, b) => b.quiet - a.quiet || b.active - a.active).slice(0, 30);
+  setHTML($("allocQuietNote"), samples.length ? `Quiet for ${fmt(quietS, 0)} s of the ${fmt(quietS + activeS, 0)} s sampled in this window.` : "No samples yet: the game writes one every 10 s in dev mode.");
+  setHTML($("allocTable"), `<tr><th>Type</th><th>Thread</th><th class="n">Quiet (KB/s)</th><th class="n">Active (KB/s)</th></tr>` +
+    (typeRows.length ? typeRows.map((x) => `<tr><td>${ours(x.type) ? `<b>${esc(x.type)}</b>` : esc(x.type)}</td><td>${esc(x.thread)}</td><td class="n ${x.quiet > 50 ? "bad" : x.quiet > 5 ? "warn" : ""}">${fmt(x.quiet, 1)}</td><td class="n">${fmt(x.active, 1)}</td></tr>`).join("") : `<tr><td colspan="4" class="empty">None</td></tr>`));
 }
 
 const repOpen = new Set();
@@ -2111,7 +2136,11 @@ function demoTick(fast) {
   DEMO.t += 0.5;
   const busy = rand() < 0.15, feat = { "proc-indicators": 0.8 + rand() * (busy ? 6 : 1), "incoming-damage": 0.3 + rand() * 0.4, "forecast-audit": 0.1 + rand() * 0.2, "proc-audit": 0.2 + rand() * 0.3, widgets: 0.2, "card-tabs": 0.3, "settings-menu": 0.05, "dev-dashboard": 0.05 };
   const sum = Object.values(feat).reduce((a, b) => a + b, 0);
-  for (let k = 0; k < 2; k++) demoEmit({ kind: "frame-rollup", seconds: 0.25, frames: 30, modP50: sum * 0.7, modP95: sum * (1.2 + rand() * 0.3), modMax: sum * (1.5 + rand() * (busy ? 4 : 0.5)), gapMax: 16 + (rand() < 0.03 ? 80 : rand() * 6), slow: busy && rand() < 0.2 ? 1 : 0, featureMean: feat, featureMax: Object.fromEntries(Object.entries(feat).map(([a, b]) => [a, b * 2])), featureKb: Object.fromEntries(Object.entries(feat).map(([a, b]) => [a, b * 30])), heapMb: 480 + 40 * Math.sin(DEMO.t / 40) + rand() * 5, allocatedMb: 1 + rand() * (busy ? 30 : 3), gen0: rand() < 0.3 ? 1 : 0, gen1: 0, gen2: rand() < 0.01 ? 1 : 0, gcPauseMs: rand() * 2, heldStates: busy ? Math.floor(rand() * 40000) : Math.floor(rand() * 400), searching: busy ? Math.floor(rand() * 6) : 0, simMb: busy ? rand() * 8 : 0, compiles: rand() < 0.02 ? 1 + Math.floor(rand() * 6) : 0, nodes: 2400, orphanNodes: 12 });
+  for (let k = 0; k < 2; k++) demoEmit({ kind: "frame-rollup", seconds: 0.25, frames: 30, modP50: sum * 0.7, modP95: sum * (1.2 + rand() * 0.3), modMax: sum * (1.5 + rand() * (busy ? 4 : 0.5)), gapMax: 16 + (rand() < 0.03 ? 80 : rand() * 6), slow: busy && rand() < 0.2 ? 1 : 0, featureMean: feat, featureMax: Object.fromEntries(Object.entries(feat).map(([a, b]) => [a, b * 2])), featureKb: Object.fromEntries(Object.entries(feat).map(([a, b]) => [a, b * 30])), heapMb: 480 + 40 * Math.sin(DEMO.t / 40) + rand() * 5, allocatedMb: 1 + rand() * (busy ? 30 : 3), gen0: rand() < 0.3 ? 1 : 0, gen1: 0, gen2: rand() < 0.01 ? 1 : 0, gcPauseMs: rand() * 2, heldStates: busy ? Math.floor(rand() * 40000) : Math.floor(rand() * 400), searching: busy ? Math.floor(rand() * 6) : 0, simMb: busy ? rand() * 8 : 0, compiles: rand() < 0.02 ? 1 + Math.floor(rand() * 6) : 0, nodes: 2400, orphanNodes: 12, quiet: !busy && rand() < 0.6, devChecks: rand() < 0.25 ? 1 : 0 });
+  if (Math.floor(DEMO.t) % 10 === 0 && Math.floor(DEMO.t) !== DEMO.lastSample) {
+    DEMO.lastSample = Math.floor(DEMO.t);
+    demoEmit({ kind: "allocation-sample", seconds: 10, quietSeconds: 4, quietKb: { "game|System.String": 40 + rand() * 20, "game|SpireQoL.Cards.TabSpec": 12, "game|System.Collections.Generic.List`1[SpireQoL.Cards.TabSpec]": 6 }, activeKb: { "game|System.String": 900, "other|SpireQoL.Sim.SimState": 4000, "game|MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry": 300 } });
+  }
   if (DEMO.turn === 0 || rand() < 0.05) {
     if (DEMO.turn === 0 || DEMO.turn > 4 + rand() * 4) { if (DEMO.combat) demoEmit({ kind: "combat-ended" }); DEMO.combat++; DEMO.turn = 0; demoEmit({ kind: "combat-started", encounter: ["Jaw Worm", "Byrdonis", "Fuzzy Wurm Crawler", "The Kin"][DEMO.combat % 4], players: 1, characters: "Defect" }); }
     if (DEMO.turn) {

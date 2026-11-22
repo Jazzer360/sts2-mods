@@ -29,6 +29,14 @@ public sealed class SimOutcome
         return new SimChance(chance, Math.Min(1, chance + unknown / total), seen);
     }
 
+    /// <summary>
+    /// The chance the play's log holds something (a warning tab's corner: decision #159), from every branch merged into each (Fired) up
+    /// to some (FiredAny). A model that fired stays fired, so a branch the simulation couldn't follow past that point counts it (a dev
+    /// review: Neow's Fury's hit on Personal Hive showed 0%?, its pick from your discard pile not modelled after the Dazed were made).
+    /// </summary>
+    public SimChance LoggedChance(Func<NamedCounts, bool> fired) =>
+        new(Chance(branch => fired(branch.Fired), lasting: true).Low, Chance(branch => fired(branch.FiredAny), lasting: true).High, Seen: true);
+
     // ---- the four questions every query below asks, each over the branches
 
     /// <summary>It holds in every branch, and the search finished (one stopped at a cap guarantees nothing it didn't reach).</summary>

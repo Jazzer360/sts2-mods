@@ -81,6 +81,24 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void AModelThatFiredCountsInABranchNotFollowedPastIt()
+    {
+        // A dev review: Neow's Fury hits Personal Hive (its Dazed made), then you choose cards from your discard pile, which the
+        // simulation doesn't follow (Unmodelled). Its warning showed 0%?: the Dazed were certain, made before that point.
+        var key = SimKeys.Owned("PersonalHivePower", owner: 1);
+        var fired = new SimState { Unmodelled = "you choose how many cards it takes into your hand" };
+        fired.Fired = fired.Fired.With(key, 1, 2);
+        fired.FiredAny = fired.FiredAny.With(key, 1, 2);
+        var outcome = new SimOutcome { Branches = { fired } };
+        var chance = outcome.LoggedChance(log => log.Has(key));
+        Assert.True(chance.Certain);
+        // One it didn't fire in, not followed: unknown, so 50% to 100%.
+        var notFired = new SimState { Unmodelled = "you choose how many cards it takes into your hand" };
+        var mixed = new SimOutcome { Branches = { fired, notFired } };
+        Assert.Equal(0.5, mixed.LoggedChance(log => log.Has(key)).Low, precision: 9);
+    }
+
+    [Fact]
     public void PersonalHivesDazedGoIntoYourDrawPileAtRandomSpots()
     {
         // CardPileCmd.AddGeneratedCardToCombat(Dazed, Draw, Random): one hit, amount 1, into a pile of three plain cards: the pile

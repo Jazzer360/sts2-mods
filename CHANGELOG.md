@@ -19,7 +19,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Leading Strike's Shivs count as two (the checks expected one, and the cards in your hand after it one short).
 - A teammate's arrows in an enemy (the Fool's Impaled) are read as theirs, not yours.
 - The board's quick check sees a power's own state change (Skittish's block this turn), so the turn forecast and the tabs work it out again instead of keeping last frame's.
-- The mod makes far less garbage while nothing changes in a fight (it made most of the game's), so the memory clean-ups that pause the game for a few milliseconds come much less often.
+- Crab Rage's Strength and 99 block count when its ally dies whatever its own move is (a Buff intent too): the forecast had neither.
+- The checks no longer expect Imbalanced or Parrying Shield to fire during the play that sets them up: they act in the enemy turn and as your turn ends.
+- A crossed tab whose effect a play makes before a part the simulation can't follow shows its count, not a chance: Personal Hive's Dazed on Neow's Fury (whose pick from your discard pile isn't followed) showed 0%?.
+- The mod makes far less garbage while nothing changes in a fight (it made most of the game's), so the memory clean-ups that pause the game for a few milliseconds come much less often. Also the Shuffle Warning with an unplayable card in hand, the card tabs, Relic Counters, Intent Forecast and the card tabs in shops.
 
 #### Changed
 - A card whose draws No Draw (Battle Trance) would stop gets No Draw's tab, plain (its icon already shows the crossed card).

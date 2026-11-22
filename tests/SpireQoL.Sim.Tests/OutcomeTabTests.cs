@@ -29,6 +29,18 @@ public class OutcomeTabTests
     }
 
     [Fact]
+    public void WhatTheEnemyTurnOrYourTurnsEndSetsOffIsntHeldToThePlay()
+    {
+        // A dev review report: Manifest Authority+'s block made the Bowlbug's hit fully blocked (its Imbalanced tab), and the play check
+        // reported Imbalanced not flashing during the play, which it can't: it acts in the enemy turn. Parrying Shield fires as your
+        // turn ends. Rules the play itself sets off (a kill's Gremlin Horn) are held to it.
+        var enemy = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 20 } } };
+        Assert.False(Model("ImbalancedPower").OutcomeTab(enemy, Ended(enemy), owner: 1)!.InPlay);
+        Assert.False(Model("ParryingShield").OutcomeTab(You(hp: 30), Ended(You(hp: 30)), Who.You)!.InPlay);
+        Assert.True(Model("GremlinHorn").OutcomeTab(You(hp: 30), Ended(), Who.You)!.InPlay);
+    }
+
+    [Fact]
     public void RedSkullShowsWhenThePlayTakesYouToItsThresholdFromAbove()
     {
         // At 30 HP with the threshold at 20: losing 10 or more in every branch of an aim gives the Strength.

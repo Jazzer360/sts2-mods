@@ -20,7 +20,13 @@ public sealed record StreamStarted(int Format, string Mod, string Game, DateTime
 public sealed record FrameRollup(double Seconds, int Frames, double ModP50, double ModP95, double ModMax, double GapMax, int Slow,
     Dictionary<string, double> FeatureMean, Dictionary<string, double> FeatureMax, Dictionary<string, double> FeatureKb,
     double HeapMb, double AllocatedMb, int Gen0, int Gen1, int Gen2, double GcPauseMs, long HeldStates, int Searching,
-    double SimMb, int Compiles, int Nodes, int OrphanNodes) : DevEvent;
+    double SimMb, int Compiles, int Nodes, int OrphanNodes, bool Quiet = false, int DevChecks = 0) : DevEvent;
+
+/// <summary>
+/// What the garbage was made of over the last few seconds (AllocationSampler, decision #176): KB by "thread|type" (thread: game or
+/// other), from the runtime's allocation ticks, split by whether the moment was quiet (no input, no board change) or active.
+/// </summary>
+public sealed record AllocationSample(double Seconds, double QuietSeconds, Dictionary<string, double> QuietKb, Dictionary<string, double> ActiveKb) : DevEvent;
 
 /// <summary>A line of the mod's own log ([SpireQoL] lines).</summary>
 public sealed record LogLine(string Level, string Text) : DevEvent;
@@ -59,7 +65,7 @@ public sealed class FrameWindow
 
     /// <summary>The rollup, then starts again. <paramref name="extra"/>: the process and simulator numbers the caller read.</summary>
     public FrameRollup Take(double seconds, (double HeapMb, double AllocatedMb, int Gen0, int Gen1, int Gen2, double GcPauseMs, long Held, int Searching) extra,
-        (double SimMb, int Compiles, int Nodes, int OrphanNodes) engine)
+        (double SimMb, int Compiles, int Nodes, int OrphanNodes, bool Quiet, int DevChecks) engine)
     {
         _mod.Sort();
         double At(double percentile) => _mod.Count == 0 ? 0 : _mod[Math.Clamp((int)Math.Ceiling(percentile * _mod.Count) - 1, 0, _mod.Count - 1)];
@@ -69,7 +75,7 @@ public sealed class FrameWindow
             _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Sum / count)), _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Max)),
             _kb.ToDictionary(entry => entry.Key, entry => R(entry.Value / count)),
             R(extra.HeapMb), R(extra.AllocatedMb), extra.Gen0, extra.Gen1, extra.Gen2, R(extra.GcPauseMs), extra.Held, extra.Searching,
-            R(engine.SimMb), engine.Compiles, engine.Nodes, engine.OrphanNodes);
+            R(engine.SimMb), engine.Compiles, engine.Nodes, engine.OrphanNodes, engine.Quiet, engine.DevChecks);
         _mod.Clear();
         _gapMax = 0;
         _slow = 0;

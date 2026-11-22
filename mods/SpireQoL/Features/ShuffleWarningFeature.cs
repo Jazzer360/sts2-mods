@@ -1,5 +1,7 @@
 using HarmonyLib;
+using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
+using SpireQoL.Combat;
 using SpireQoL.Procs;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
@@ -40,8 +42,23 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
         var combat = Sts2State.Combat;
         if (combat == null) return;
         var hand = Sts2State.Hand(me);
+        // Each card's answer is kept while the board probe stays the same (decision #130): worked out from the game, it was garbage on every
+        // frame, most of all for a card Proc Indicators has no facts for (a Dazed in hand: a dev review).
+        var probe = BoardProbe.Hash(me, combat);
+        if (_kept.Count > 64) _kept.Clear();
         foreach (var card in hand)
         {
+            if (_kept.TryGetValue(card, out var kept) && kept.Probe == probe)
+            {
+                if (kept.Shuffles) _ctx.Decor.For(card).AddTab("shuffle", GameIcons.DiscardPile());
+                continue;
+            }
+            // A card you can't play draws nothing (a Dazed, a curse).
+            if (!CardPlays.CanPlayThisTurn(card))
+            {
+                _kept[card] = (probe, false);
+                continue;
+            }
             // Every draw the play causes, including the ones it sets off (Dark Embrace per card
             // exhausted, Game Piece, Iron Club...), up to a full hand: PlayFacts.Draws.
             bool shuffles;
@@ -55,8 +72,11 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
             {
                 shuffles = PlayFacts.CardsDrawnTotal(card, hand.Count, CardPlays.Count(card)) > Sts2State.DrawPileCount(me);
             }
+            _kept[card] = (probe, shuffles);
             if (shuffles) _ctx.Decor.For(card).AddTab("shuffle", GameIcons.DiscardPile());
         }
     }
+
+    private readonly Dictionary<CardModel, (int Probe, bool Shuffles)> _kept = new(ReferenceEqualityComparer.Instance);
 
 }
