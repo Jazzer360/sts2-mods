@@ -55,7 +55,7 @@ The mod is developed on Steam's **beta** branch (the installed game) and also su
 
 ## When main updates
 
-`GameBranchTests.MainIsReviewedAtItsVersion` fails once the main decompile is newer than `MainReviewed` (decision #163). With the game switched to main in Steam:
+The Steam branches workflow opens a `steam-update` issue when main (or beta) gets a new build (decision #164), with these steps as a checklist. `GameBranchTests.MainIsReviewedAtItsVersion` fails once the main decompile is newer than `MainReviewed` (decision #163). With the game switched to main in Steam:
 
 1. `./scripts/decompile.ps1 -Branch main`, then switch the game back to beta.
 2. `node scripts/game-names.mjs` (the beta-only and main-only names move).

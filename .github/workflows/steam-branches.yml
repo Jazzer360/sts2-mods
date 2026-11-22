@@ -1,0 +1,29 @@
+# Watches the game's Steam branches (main = public, beta = public-beta) every 6 hours and opens an issue labelled
+# steam-update when one gets a new build, with the patch notes and the steps it needs. See .github/scripts/steam-branches.mjs.
+# No setup: Steam's app info and news are public.
+name: Steam branches
+
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test the branch watcher
+        run: node --test .github/scripts/steam-branches.test.mjs
+      - name: Check the Steam branches
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node .github/scripts/steam-branches.mjs

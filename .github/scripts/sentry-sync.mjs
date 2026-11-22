@@ -186,6 +186,8 @@ function body(issue, event) {
     b += `| Note | from an older version (newest release ${newestRelease}): check whether it's already fixed |\n`;
   if (tags.players) b += `| Players | ${tags.players}${tags.players !== "1" ? " (multiplayer)" : ""}: ${tags.characters || "?"} |\n`;
   if (tags.where) b += `| Where | \`${tags.where}\` |\n`;
+  // Other mods loaded with it (their ids): a report is explained from the game's own code, and this says what else was running.
+  if (tags.other_mods) b += `| Other mods | ${tags.other_mods} |\n`;
   if (tags.audit) b += `| Audit | ${tags.audit} |\n`;
   b += `\n${kind === "mismatch" ? "A prediction didn't match what the game did." : "An exception was caught (the feature kept running or was turned off)."} Sections below are from the latest occurrence.\n`;
   b += block("Details", extra.details, 4000);
