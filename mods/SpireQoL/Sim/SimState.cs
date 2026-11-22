@@ -84,6 +84,11 @@ public sealed class SimEnemy
     /// </summary>
     public List<IntentHit>? Intent;
     /// <summary>
+    /// The creatures its death adds to the fight (Surprise: the Gremlin Merc's Sneaky and Fat Gremlin), in the order the game adds them:
+    /// SimEngine.Spawn. Null: none.
+    /// </summary>
+    public List<SimSpawn>? Spawns;
+    /// <summary>
     /// Each hit's amount on teammate k (their own Vulnerable, Intangible, Tank...: the game's damage math per
     /// target); missing: the same as yours.
     /// </summary>
@@ -221,6 +226,13 @@ public sealed class SimEnemy
 
 /// <summary>A card in hand that acts when its owner's turn ends: its class name, its title, and its Damage or HpLoss value.</summary>
 public sealed record TurnEndCard(string Card, string Title, int Amount);
+
+/// <summary>
+/// A creature an enemy's death adds to the fight (SimEnemy.Spawns): its name, and every HP it can start with, each equally likely
+/// (Creature.SetUniqueMonsterHpValue: a value in its range no other enemy has, then ScaleMonsterHpForMultiplayer). It joins with a
+/// move that does nothing this turn (the gremlins' SPAWNED_MOVE: a stun intent).
+/// </summary>
+public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp);
 
 /// <summary>One copy of a counter power (SimPlayer.Counters): what it still has to count, and what it gives when it gets there.</summary>
 public sealed record CounterCopy(PowerId Power, int Left, int Amount);
@@ -736,6 +748,8 @@ public sealed class SimState
     internal ImmutableArray<PendingEvent> Pending = ImmutableArray<PendingEvent>.Empty;
     /// <summary>Cards made into a player's draw pile inside a hit (Personal Hive's Dazed), put in once it's over (DrainPending).</summary>
     internal ImmutableArray<(int Player, string Card)> PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
+    /// <summary>Enemies whose death adds creatures (SimEnemy.Spawns), added once the hit is over (DrainPending).</summary>
+    internal ImmutableArray<int> PendingSpawns = ImmutableArray<int>.Empty;
     /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
     internal int ArrowAwayAt = Who.None;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>

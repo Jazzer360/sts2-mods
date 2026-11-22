@@ -823,7 +823,7 @@ public static partial class SimEngine
             default: throw new NotSupportedException($"No runner for {action.GetType().Name}");
         }
         // Events raised inside its hits or deaths (an arrow knocked loose) run once the action is over.
-        if (branches.States.Any(branch => !branch.Pending.IsEmpty || !branch.PendingIntoDraw.IsEmpty)) branches.Each(DrainPending);
+        if (branches.States.Any(branch => !branch.Pending.IsEmpty || !branch.PendingIntoDraw.IsEmpty || !branch.PendingSpawns.IsEmpty)) branches.Each(DrainPending);
     }
 
     // ------------------------------------------------------------------ end of turn
@@ -1081,7 +1081,7 @@ public static partial class SimEngine
 
         // Deaths at the end of your turn run their hooks before the enemies act (arrows coming back: Twine's block).
         branches.Do(AllyDeaths);
-        if (branches.States.Any(branch => !branch.Pending.IsEmpty || !branch.PendingIntoDraw.IsEmpty)) branches.Each(DrainPending);
+        if (branches.States.Any(branch => !branch.Pending.IsEmpty || !branch.PendingIntoDraw.IsEmpty || !branch.PendingSpawns.IsEmpty)) branches.Each(DrainPending);
         branches.Do(branch =>
         {
             branch.EndOfTurnNow = false;

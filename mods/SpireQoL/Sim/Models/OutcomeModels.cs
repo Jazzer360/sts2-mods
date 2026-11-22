@@ -38,8 +38,17 @@ public sealed class InfestedPower : DeathSetsOff { }
 /// <summary>SteamEruptionPower: its death erupts.</summary>
 public sealed class SteamEruptionPower : DeathSetsOff { }
 
-/// <summary>SurprisePower: its death springs the surprise.</summary>
-public sealed class SurprisePower : DeathSetsOff { }
+/// <summary>
+/// SurprisePower: its death springs the surprise (AfterDeath: CreatureCmd.Add of a Sneaky Gremlin and a Fat Gremlin, whose HP is a
+/// roll): their creatures (SimEnemy.Spawns) join once the hit is over (SimEngine.Spawn), so later hits and random targets count them.
+/// </summary>
+public sealed class SurprisePower : DeathSetsOff
+{
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        if (dead == owner && state.Enemy(owner) is { Spawns.Count: > 0 }) state.PendingSpawns = state.PendingSpawns.Add(owner);
+    }
+}
 
 /// <summary>ExplosivePower: its death damages every living player (the engine's: SimEnemy.Explosive).</summary>
 public sealed class ExplosivePower : DeathSetsOff { }

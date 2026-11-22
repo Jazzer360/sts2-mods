@@ -127,15 +127,37 @@ public static partial class SimEngine
         state.Pending = state.Pending.Add(new PendingEvent(cardEvent, player, source, count));
     }
 
+    /// <summary>
+    /// The creatures an enemy's death adds (SimEnemy.Spawns: Surprise's gremlins), one after another, each with the next id (the
+    /// adapter numbers enemies in the game's order, so a creature added last is next), a branch per HP it can start with, each its
+    /// share. They join doing nothing this turn (no hits), hittable at once: later hits in the same play and random targets count them.
+    /// </summary>
+    internal static IEnumerable<SimState> Spawn(SimState state, int dead)
+    {
+        IEnumerable<SimState> states = new[] { state };
+        foreach (var spawn in state.Enemy(dead)?.Spawns ?? new List<SimSpawn>())
+            states = Then(states.ToList(), branch => spawn.Hp.Select((hp, index) =>
+            {
+                var copy = index == spawn.Hp.Count - 1 ? branch : branch.Clone();
+                copy.Weight = branch.Weight / spawn.Hp.Count;
+                copy.Enemies.Add(new SimEnemy { Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Hp = hp });
+                return copy;
+            }).ToList());
+        return states;
+    }
+
     /// <summary>The events raised during a hit or an action, each through every listener.</summary>
     internal static IEnumerable<SimState> DrainPending(SimState state)
     {
-        if (state.Pending.IsEmpty && state.PendingIntoDraw.IsEmpty) return new[] { state };
+        if (state.Pending.IsEmpty && state.PendingIntoDraw.IsEmpty && state.PendingSpawns.IsEmpty) return new[] { state };
         var pending = state.Pending;
         var intoDraw = state.PendingIntoDraw;
+        var spawns = state.PendingSpawns;
         state.Pending = ImmutableArray<PendingEvent>.Empty;
         state.PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
+        state.PendingSpawns = ImmutableArray<int>.Empty;
         IEnumerable<SimState> states = new[] { state };
+        foreach (var dead in spawns) states = Then(states.ToList(), branch => Spawn(branch, dead));
         foreach (var (player, card) in intoDraw) states = Then(states.ToList(), branch => IntoDrawPile(branch, player, card));
         foreach (var (cardEvent, player, source, count) in pending)
         {

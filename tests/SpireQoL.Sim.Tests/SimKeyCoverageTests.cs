@@ -31,14 +31,14 @@ public class SimKeyCoverageTests
         ["SimPlayer.Reflect"] = Constant, ["SimPlayer.SlotOnFirstChannel"] = Constant, ["SimPlayer.FrontOrbBonusTriggers"] = Constant,
         ["SimPlayer.OstyShields"] = Constant, ["SimPlayer.FairyHeal"] = Constant, ["SimPlayer.BeaconOfHope"] = Constant,
         ["SimPlayer.Stampede"] = Constant, ["SimPlayer.Simpleton"] = Constant, ["SimPlayer.ExhaustAutoPlays"] = Constant,
-        ["SimOrb.Triggers"] = Constant, ["SimPlayer.MadeCards"] = Constant,
+        ["SimOrb.Triggers"] = Constant, ["SimPlayer.MadeCards"] = Constant, ["SimEnemy.Spawns"] = Constant,
         // Per-play results, merged.
         ["SimState.PlayHpReached"] = Merged, ["SimState.PlayHpLosses"] = Merged, ["SimState.PlayHpLost"] = Merged,
         ["SimState.PlayBiggestHit"] = Merged, ["SimState.Fired"] = Merged, ["SimState.FiredAny"] = Merged,
         // Inside one step only.
         ["SimState.IndirectNow"] = Scratch, ["SimState.CurrentPlay"] = Scratch, ["SimState.AttackSerial"] = Scratch,
         ["SimState.CurrentAttack"] = Scratch, ["SimState.EnemyTurnNow"] = Scratch,
-        ["SimState.EndOfTurnNow"] = Scratch, ["SimState.Bound"] = Scratch, ["SimState.Pending"] = Scratch, ["SimState.PendingIntoDraw"] = Scratch, ["SimState.ArrowAwayAt"] = Scratch,
+        ["SimState.EndOfTurnNow"] = Scratch, ["SimState.Bound"] = Scratch, ["SimState.Pending"] = Scratch, ["SimState.PendingIntoDraw"] = Scratch, ["SimState.PendingSpawns"] = Scratch, ["SimState.ArrowAwayAt"] = Scratch,
         ["SimState.EventCard"] = Scratch, ["SimState.PlayEvents"] = Scratch, ["SimState.PlayCardBlockGains"] = Scratch,
         ["SimState.DrawRecord"] = "in the key while it's set (as a set: decision #120); null between steps",
         ["SimState.FirstHits"] = "the damage-formula audit's first hit on each enemy: the outcome keeps it only when every branch has the same",
