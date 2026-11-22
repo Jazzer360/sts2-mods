@@ -91,6 +91,23 @@ public class PlayFactsTests
     }
 
     [Fact]
+    public void NoDrawStopsACardsDraws()
+    {
+        // The owner's request: a card whose draws No Draw (Battle Trance) would stop gets No Draw's tab (decision #171).
+        var gameFight = new GameFight();
+        var card = gameFight.Add<ShrugItOff>();
+        gameFight.Add<StrikeIronclad>(PileType.Draw);
+        Assert.False(PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).DrawsStopped);
+        var noDraw = (MegaCrit.Sts2.Core.Models.PowerModel)MegaCrit.Sts2.Core.Models.ModelDb.Power<MegaCrit.Sts2.Core.Models.Powers.NoDrawPower>().ToMutable();
+        noDraw.ApplyInternal(gameFight.Me.Creature, amount: 1);
+        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
+        Assert.Equal(0, facts.Draws);
+        Assert.True(facts.DrawsStopped);
+        // A card that draws nothing has nothing to stop.
+        Assert.False(PlayFacts.For(gameFight.Add<DefendIronclad>(), gameFight.Me, gameFight.Combat, plays: 1).DrawsStopped);
+    }
+
+    [Fact]
     public void CardsForTeammatesDoNothingForYouAlone()
     {
         // Huddle Up draws for teammates, Blade Symphony gives them Shivs, Glimpse Beyond gives them Souls: alone, none of it is

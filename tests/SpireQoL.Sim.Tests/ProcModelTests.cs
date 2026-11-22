@@ -139,6 +139,24 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void RedSkullsStrengthLandsAsYourHpDropsToItsThreshold()
+    {
+        // A dev review report: Hemokinesis at 42/80 (Red Skull's threshold 40) costs 2 HP, Red Skull gives 3 Strength, and the attack after
+        // it has it (RedSkull.AfterCurrentHpChanged). Once: with its Strength already given, nothing more.
+        SimState Board(int given)
+        {
+            var state = Relic(State(), RelicId.RedSkull, amount: 40, data: given, vars: ("StrengthPower", 3));
+            state.You.Hp = 42;
+            return state;
+        }
+        SimScript Hemokinesis() => Play(Card("Hemokinesis"), target: 0, plays: 1, new LoseHpAction(Amount: 2), Attack(baseDamage: 15));
+        var after = One(Board(given: 0), Hemokinesis());
+        Assert.Equal(82, after.Enemy(id: 0)!.Hp);
+        Assert.Equal(3, after.You.Powers[PowerId.Strength]);
+        Assert.Equal(85, One(Board(given: Models.RedSkull.StrengthGiven), Hemokinesis()).Enemy(id: 0)!.Hp);
+    }
+
+    [Fact]
     public void GravityHitsEveryEnemyAndSerpentFormBranchesOnItsTarget()
     {
         var after = One(Power(State(enemies: 2), PowerId.Gravity, amount: 3), Events(Card("Defend", SimCardType.Skill), plays: 1));

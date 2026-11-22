@@ -286,6 +286,7 @@ public static class SettingsCatalog
         new(nameof(OrbitPower), SourceGroup.YourPower, "Cards whose energy finishes its count", "Energy spent, toward the next energy"),
         new(nameof(AutomationPower), SourceGroup.YourPower, "Cards whose draws finish its count", "Cards drawn, toward the next energy"),
         new(nameof(CorrosiveWavePower), SourceGroup.YourPower, "Cards that draw"),
+        new(nameof(NoDrawPower), SourceGroup.YourPower, "Cards whose draws it stops (Battle Trance)"),
         new(nameof(StratagemPower), SourceGroup.YourPower, "Cards whose draw causes a shuffle"),
         new(nameof(ViciousPower), SourceGroup.YourPower, "Cards that apply Vulnerable"),
         new(nameof(ArsenalPower), SourceGroup.YourPower, "Cards that create cards"),

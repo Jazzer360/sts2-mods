@@ -187,7 +187,10 @@ public static class SimReaders
                 case nameof(RainbowRing): data = Sts2State.Private(relic, "ActivationCountThisTurn", fallback: 0) >= 1 ? (int)RelicUse.UsedThisTurn : 0; break;
                 case nameof(ConductorsBaton) or nameof(DemonTongue): data = Sts2State.Private(relic, "_triggeredThisTurn", fallback: true) ? (int)RelicUse.UsedThisTurn : 0; break;
                 // The HP at or below which it gives Strength (its threshold of your max HP).
-                case nameof(RedSkull): amount = (int)Math.Floor(player.Creature.MaxHp * Sts2State.Var(relic, "HpThreshold", fallback: 50) / 100m); break;
+                case nameof(RedSkull):
+                    amount = (int)Math.Floor(player.Creature.MaxHp * Sts2State.Var(relic, "HpThreshold", fallback: 50) / 100m);
+                    data = Sts2State.Private(relic, "StrengthApplied", fallback: true) ? Models.RedSkull.StrengthGiven : 0; // its Strength already given
+                    break;
                 // End-of-turn relics: their block or damage (amount), and what they wait for (Data).
                 case nameof(Orichalcum) or nameof(FakeOrichalcum) or nameof(CloakClasp) or nameof(RippleBasin): amount = Sts2State.Var(relic, "Block"); break;
                 case nameof(ScreamingFlagon) or nameof(CharonsAshes) or nameof(ForgottenSoul): amount = Sts2State.Var(relic, "Damage"); break;

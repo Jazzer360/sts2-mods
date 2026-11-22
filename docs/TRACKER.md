@@ -482,6 +482,8 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [ ] Test in game: Incoming Damage over a discovery mid-fight (it shouldn't cover the three cards).
 - [x] Personal Hive's crossed tab counts its Dazed: its amount per powered attack hit (decision #161), held to the cards created by the play check.
 - [ ] Test in game: Personal Hive's count on a multi-hit attack (Entomancer).
+- [x] Red Skull's Strength mid-play (2026-11-22, a dev review report: Hemokinesis at 42/80 hit for 28, predicted 24): `RedSkull.AfterDamageReceived` gives it as HP lost reaches the threshold, once (`StrengthApplied`).
+- [x] No Draw stopping a card's draws gets its tab (2026-11-22, the owner's request, decision #171); the checks expect No Draw to flash on those plays, and a fight that ends mid-play makes fewer of Personal Hive's Dazed than its tab counted.
 
 ## 19. Game v0.113.1 (beta, 2026-11-14)
 

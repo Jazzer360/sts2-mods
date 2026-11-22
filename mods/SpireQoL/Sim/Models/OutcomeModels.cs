@@ -141,11 +141,28 @@ public sealed class DemonTongue : SimModel
 /// </summary>
 public sealed class RedSkull : SimModel
 {
+    /// <summary>Its Data once its Strength is given (RedSkull.StrengthApplied); 0 before.</summary>
+    public const int StrengthGiven = 1;
+
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner)
     {
         if (owner != Who.You) return null;
         var hp = start.You.Hp;
         var threshold = SimEngine.RelicsOf(start, owner)[ThisRelic];
         return hp > threshold ? new(Harmful: false, outcome => outcome.PlayHpLostMin > 0 && hp - outcome.PlayHpLostMin <= threshold) : null;
+    }
+
+    /// <summary>
+    /// RedSkull.AfterCurrentHpChanged (ModifyStrengthIfNecessary): HP lost to its threshold or below (amount) gives its Strength at once,
+    /// once (StrengthApplied: Data), so a hit after it in the same play has it (Hemokinesis' own HP cost, then its attack). A dev review
+    /// report: Hemokinesis at 42/80 hit for 28, predicted 24.
+    /// </summary>
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked <= 0 || !Who.IsPlayer(owner) || state.Player(owner) is not { } player || player.Hp == int.MaxValue) return;
+        var relics = SimEngine.RelicsOf(state, owner);
+        if (relics.DataOf(ThisRelic) != 0 || player.Hp > relics[ThisRelic]) return;
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], StrengthGiven));
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, SimEngine.Var(state, owner, Name, "StrengthPower", fallback: 3), debuff: false);
     }
 }

@@ -88,6 +88,12 @@ public sealed partial class ProcAudit
                 modelLines.Add($"{otherModel.GetType().Name} fired on this play, but your end of turn sets it off anyway (no tab by design)");
                 continue;
             }
+            // No Draw flashes as it stops a draw (NoDrawPower.ShouldDraw): the play's draws were predicted blocked (none counted).
+            if (otherModel is NoDrawPower && window.Facts is { DrawsBlocked: true })
+            {
+                modelLines.Add("NoDrawPower stopped the play's draws (predicted: none)");
+                continue;
+            }
             // Cards the play auto-plays at random (The Fool: random cards from your hand) set off what their own
             // plays would: which cards is a roll.
             if (UnpredictedAutoPlay(window, entries, me))
@@ -304,6 +310,8 @@ public sealed partial class ProcAudit
             if (generated > own + most || generated < least)
             {
                 if (randomKill) modelLines.Skip("cards made by tabs", "after a random kill", what);
+                // The play ended the fight: the game logs nothing from the killing hit on (Personal Hive's Dazed on the hit that kills it).
+                else if (generated < least && window.FightEnded) Shortfall("cards made by tabs", $"{least}-{most}", generated);
                 else issues.Add(what);
             }
         }

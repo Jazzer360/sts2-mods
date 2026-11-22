@@ -90,6 +90,21 @@ public sealed class PlayFacts
     private PlayChain.DrawInputs? _drawInputs;
 
     /// <summary>
+    /// No Draw (or Fiddle) stops draws the play would make (its own, or ones it sets off): the No Draw tab (decision #171). Worked out
+    /// on the same count with nothing blocked.
+    /// </summary>
+    public bool DrawsStopped
+    {
+        get
+        {
+            if (!DrawsBlocked || _drawInputs is not { } drawInputs) return false;
+            drawInputs.Blocked = false;
+            try { return PlayChain.Resolve(drawInputs).Draws > 0; }
+            finally { drawInputs.Blocked = true; }
+        }
+    }
+
+    /// <summary>
     /// The simulation found the play losing you HP in some outcome (an enemy's Galvanic on a Galvanized card, Thorns hitting back, a
     /// Corrupted card), which sets off Centennial Puzzle while the card's own count (LosesHp: only its HP cost) doesn't have it: Draws,
     /// ChainedDraws and Shuffles worked out again with its draws (the Shuffle Warning, the checks' draw budget). Once; nothing when

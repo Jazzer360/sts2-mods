@@ -359,6 +359,10 @@ public sealed class CardPredictions
         }
         var list = tabs.Values.ToList();
         if (lethal) list.Add(new TabSpec("lethal", GameIcons.Skull(), Aimed: lethalAimed, NumberText: lethalChance));
+        // No Draw (Battle Trance) stops the draws this card would make: plain, with its icon (its art already shows the crossed card:
+        // decision #171).
+        if (prepared.F.DrawsStopped && _me.Creature.GetPower<NoDrawPower>() is { } noDraw)
+            list.Add(new TabSpec("proc:" + nameof(NoDrawPower), GameIcons.Power(noDraw)));
         // Cards this play brings back to your hand (Make It So, Right Hand Hand, Whistling Arrows): plain, one per card name,
         // with the returning card as the icon.
         foreach (var back in prepared.F.CardsBack.GroupBy(otherCard => otherCard.GetType().Name))

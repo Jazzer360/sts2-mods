@@ -14,6 +14,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - An event option no longer shows a relic's icon with 0% when it can't give a card the relic cares about (Strike Dummy on Bugslayer's Exterminate).
 - The checks no longer report Gremlin Horn (or another tab that a kill sets off) firing at a target its tab didn't aim at.
 - Centennial Puzzle's draws count when a play loses you HP some other way than its own cost (an enemy's Galvanic on a Galvanized card, Thorns hitting back, a Corrupted card): the Shuffle Warning shows the shuffle they cause, and the checks expect them.
+- Red Skull's Strength counts from the moment a play's HP loss takes you to its threshold, so the rest of the play hits harder: Hemokinesis' own HP cost, then its attack (it predicted the hit without the Strength).
+- The checks no longer report No Draw stopping a play's draws (none were predicted), nor cards a play would have made when the fight ended before it made them (Stomp killing the last enemy with Personal Hive's Dazed still to come).
+
+#### Changed
+- A card whose draws No Draw (Battle Trance) would stop gets No Draw's tab, plain (its icon already shows the crossed card).
 
 ### Main Saves 1.0.26
 #### Changed
