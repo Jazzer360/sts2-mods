@@ -90,6 +90,24 @@ public sealed class SimDrawPile
         Discard = Discard.Select((group, index) => index == groupIndex ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
     };
 
+    /// <summary>A card put among the known top cards, at <paramref name="index"/> (the ones above it stay above).</summary>
+    internal SimDrawPile WithTopAt(int index, SimDrawCard card)
+    {
+        var top = new List<SimDrawCard>(Top);
+        top.Insert(index, card);
+        return new() { Top = top, Rest = Rest, Discard = Discard };
+    }
+
+    /// <summary>A card put somewhere in the unordered rest.</summary>
+    internal SimDrawPile WithInRest(SimDrawCard card) => new()
+    {
+        Top = Top,
+        Rest = Rest.Any(group => group.Card.Key == card.Key)
+            ? Rest.Select(group => group.Card.Key == card.Key ? group with { Count = group.Count + 1 } : group).ToList()
+            : Rest.Append(new SimDrawGroup(card, Count: 1)).OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList(),
+        Discard = Discard,
+    };
+
     /// <summary>Some I Am Invincible in the pile.</summary>
     public bool HasInvincible => Top.Any(drawn => drawn.InvincibleBlock > 0) || Rest.Any(group => group.Card.InvincibleBlock > 0);
 

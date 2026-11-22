@@ -615,6 +615,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] Gap: Scrape discarding a Sly card plays it (not simulated: `?`).
 - [x] A random orb (Chaos, The Magician, Trash to Treasure: `OrbModel.GetRandomOrb`) is a branch per orb, 1/5 each (`OrbKind.Random`); it used to be an orb with no values that did nothing, with no `?`. An orb the simulator doesn't know (another mod's) is `?` at the end of the turn.
 - [x] Decision #166: card simulations start alongside the turn forecast's, not after its result.
+- [x] Personal Hive's Dazed and Biiig Hug's Soot go into the simulated draw pile at a random spot (`SimEngine.IntoDrawPile`: a branch per spot among the known top cards, else into the rest; their profiles read for the board: `SimPlayer.MadeCards`).
 - [x] Gap: Drum of Battle's energy when it's exhausted during another play (Exhaust a card from your hand while it's there) isn't simulated (`CardEnergy.Reviewed`). Now simulated (decision #144): certain when the play takes every card, its chance at random, unknown when you choose.
 - [x] Regen (RegenPower.BeforeSideTurnEndEarly) heals you before the enemies act, up to max HP (was reviewed "ignore"). Void's energy when drawn mid-play (CardEnergy.LostWhenDrawn; was "ignore").
 - [ ] Tests: the simulator files coverage shows least run (`./scripts/coverage.ps1`, 2026-11-21: 90.6% overall): `Sim/Models/BlockModels.cs` (35%: Pael's Legion, Vambrace), `Sim/Models/EnemyModels.cs` (28%), `Sim/Models/ProcRelicModels.cs` (76%). A scenario test per untested hook, from the decompile.

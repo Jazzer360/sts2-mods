@@ -133,12 +133,12 @@ public sealed class PaelsEye : RelicProc
     }
 }
 
-/// <summary>BiiigHug.AfterShuffle: a Soot into your draw pile on every shuffle (bad for you).</summary>
+/// <summary>BiiigHug.AfterShuffle: a Soot into your draw pile at a random spot on every shuffle (bad for you), where a later draw can find it.</summary>
 public sealed class BiiigHug : RelicProc
 {
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Shuffled && player == owner ? Fire(state, owner) : One(state);
+        cardEvent == CardEvent.Shuffled && player == owner ? Fire(state, owner).SelectMany(branch => SimEngine.IntoDrawPile(branch, owner, CardId.Soot.Name)).ToList() : One(state);
 }
 
 // ---- used up by a play

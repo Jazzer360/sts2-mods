@@ -81,6 +81,37 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void PersonalHivesDazedGoIntoYourDrawPileAtRandomSpots()
+    {
+        // CardPileCmd.AddGeneratedCardToCombat(Dazed, Draw, Random): one hit, amount 1, into a pile of three plain cards: the pile
+        // holds it after, so a later draw can find it.
+        var dazed = new SimDrawCard("dazed") { Fading = true };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50) } };
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.PersonalHive, amount: 1);
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 3) } };
+        state.You.MadeCards = new Dictionary<string, SimDrawCard> { ["Dazed"] = dazed };
+        var after = After(state, Play(Card("Strike"), target: 1, plays: 1, Attack(baseDamage: 3))).Single();
+        Assert.Equal(1, after.You.Draw!.Rest.Single(group => group.Card.Key == "dazed").Count);
+        // With a card known on top, it lands above it 1 time in 5 (5 spots in a pile of 4), else below it.
+        state.You.Draw = new SimDrawPile { Top = { new SimDrawCard("plain") }, Rest = { new SimDrawGroup(new SimDrawCard("plain"), 3) } };
+        var branches = After(state, Play(Card("Strike"), target: 1, plays: 1, Attack(baseDamage: 3)));
+        Assert.Equal(2, branches.Count);
+        Assert.Equal(0.2, branches.Single(branch => branch.You.Draw!.Top[0].Key == "dazed").Weight, precision: 9);
+    }
+
+    [Fact]
+    public void BiiigHugsSootGoesIntoYourDrawPileOnEveryShuffle()
+    {
+        var soot = new SimDrawCard("soot");
+        var state = Relic(State(), RelicId.BiiigHug);
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 2) } };
+        state.You.MadeCards = new Dictionary<string, SimDrawCard> { ["Soot"] = soot };
+        var after = One(state, Events(Card("Defend", SimCardType.Skill), plays: 1, new CardEventAction(CardEvent.Shuffled, Count: 1)));
+        Assert.Equal(1, after.You.Draw!.Rest.Single(group => group.Card.Key == "soot").Count);
+        Assert.True(after.Fired.Has("BiiigHug"));
+    }
+
+    [Fact]
     public void GravityHitsEveryEnemyAndSerpentFormBranchesOnItsTarget()
     {
         var after = One(Power(State(enemies: 2), PowerId.Gravity, amount: 3), Events(Card("Defend", SimCardType.Skill), plays: 1));

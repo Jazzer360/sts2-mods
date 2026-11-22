@@ -130,10 +130,13 @@ public static partial class SimEngine
     /// <summary>The events raised during a hit or an action, each through every listener.</summary>
     internal static IEnumerable<SimState> DrainPending(SimState state)
     {
-        if (state.Pending.IsEmpty) return new[] { state };
+        if (state.Pending.IsEmpty && state.PendingIntoDraw.IsEmpty) return new[] { state };
         var pending = state.Pending;
+        var intoDraw = state.PendingIntoDraw;
         state.Pending = ImmutableArray<PendingEvent>.Empty;
+        state.PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
         IEnumerable<SimState> states = new[] { state };
+        foreach (var (player, card) in intoDraw) states = Then(states.ToList(), branch => IntoDrawPile(branch, player, card));
         foreach (var (cardEvent, player, source, count) in pending)
         {
             var tally = source != null && SimModels.Get(source) is { } model ? TallyFor(model.Name, model.Tab, cardEvent, player) : null;

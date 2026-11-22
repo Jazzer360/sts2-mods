@@ -309,6 +309,11 @@ public sealed class SimPlayer
     /// are only counted (a teammate's; tests that don't set it).
     /// </summary>
     public SimDrawPile? Draw;
+    /// <summary>
+    /// The draw profile of each card something on this board can make into this player's draw pile (Personal Hive's Dazed, Biiig Hug's
+    /// Soot), by the card's class name, as the adapter reads them for this board: SimEngine.IntoDrawPile. Null: none.
+    /// </summary>
+    public IReadOnlyDictionary<string, SimDrawCard>? MadeCards;
     /// <summary>Cards drawn in this simulation (each drawn card's id in AutoHand).</summary>
     public int Drawn;
     /// <summary>Cards taken from your draw pile into your hand in this simulation (each one's id in AutoHand: TakenId).</summary>
@@ -729,6 +734,8 @@ public sealed class SimState
     internal ImmutableSortedDictionary<int, int> FirstHits = ImmutableSortedDictionary<int, int>.Empty;
     /// <summary>Card events raised inside a hit or a death, run once it's over (SimEngine.Raise, DrainPending).</summary>
     internal ImmutableArray<PendingEvent> Pending = ImmutableArray<PendingEvent>.Empty;
+    /// <summary>Cards made into a player's draw pile inside a hit (Personal Hive's Dazed), put in once it's over (DrainPending).</summary>
+    internal ImmutableArray<(int Player, string Card)> PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
     /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
     internal int ArrowAwayAt = Who.None;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
@@ -784,6 +791,7 @@ public sealed class SimState
             player.ExhaustingInHand = new();
             player.Fading = player.HexFading = 0;
             player.Draw = null;
+            player.MadeCards = null;
             player.Stampede = player.Simpleton = 0;
             player.AutoHand = null;
         }

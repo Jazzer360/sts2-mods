@@ -18,6 +18,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.Fading),          // Ethereal cards that exhaust (Feel No Pain, Charon's Ashes, Forgotten Soul)
         nameof(SimPlayer.HexFading),       // of those, Ethereal only through Hex
         nameof(SimPlayer.Draw),            // their draw pile: never filled for a teammate (decision #90), cleared all the same
+        nameof(SimPlayer.MadeCards),       // what goes into their draw pile: only with it (never filled for a teammate), cleared all the same
         nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...
         nameof(SimPlayer.ExhaustingInHand), // Drum of Battle: which of their cards a play could exhaust
         // End-of-turn auto-plays picked from the hand (Stampede, Simpleton; never filled for a teammate today, decision #80).
@@ -106,6 +107,7 @@ public class SimTeammateHandFieldsTests
         else if (type == typeof(NamedCounts)) field.SetValue(player, NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started), delta: 2));
         else if (type == typeof(List<SimOrb>)) field.SetValue(player, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
         else if (type == typeof(SimDrawPile)) field.SetValue(player, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), Count: 2) } });
+        else if (type == typeof(IReadOnlyDictionary<string, SimDrawCard>)) field.SetValue(player, new Dictionary<string, SimDrawCard> { ["Dazed"] = new("dazed") });
         else Assert.Fail($"SimPlayer.{field.Name}: type {type.Name} isn't handled by this test's Fill: add it");
     }
 

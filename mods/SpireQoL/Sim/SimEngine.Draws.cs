@@ -396,6 +396,34 @@ public static partial class SimEngine
         simPlayer.Draw = simPlayer.Draw!.WithDiscarded(card);
     }
 
+    /// <summary>
+    /// A card made into a player's draw pile at a random spot (CardPileCmd.AddGeneratedCardToCombat, CardPilePosition.Random: Personal
+    /// Hive's Dazed, Biiig Hug's Soot), so a later draw in the same simulation can draw it: with cards known on top, a branch for each
+    /// spot among them (1 in the pile's count + 1 each) and one for anywhere below them, into the unordered rest. Its profile is the
+    /// board's (SimPlayer.MadeCards); with none read (no pile, or not built), what it does later isn't known.
+    /// </summary>
+    internal static IEnumerable<SimState> IntoDrawPile(SimState state, int player, string card)
+    {
+        if (!DrawsFromPile(state, player)) return new[] { state };
+        var simPlayer = state.Player(player)!;
+        if (simPlayer.MadeCards?.GetValueOrDefault(card) is not { } profile)
+        {
+            state.Unmodelled ??= $"a {card} made into your draw pile, whose draw isn't built";
+            return new[] { state };
+        }
+        var pile = simPlayer.Draw!;
+        var slots = pile.Count + 1;
+        var result = new List<SimState>();
+        for (var i = 0; i <= pile.Top.Count; i++)
+        {
+            var branch = i == pile.Top.Count ? state : state.Clone();
+            branch.Weight = state.Weight * (i < pile.Top.Count ? 1 : pile.RestCount + 1) / slots;
+            branch.MutablePlayer(player).Draw = i < pile.Top.Count ? pile.WithTopAt(i, profile) : pile.WithInRest(profile);
+            result.Add(branch);
+        }
+        return result;
+    }
+
     /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
     private static IEnumerable<SimState> Drawn(SimState state, int player, SimDrawCard card, bool indirect, bool record = false)
     {

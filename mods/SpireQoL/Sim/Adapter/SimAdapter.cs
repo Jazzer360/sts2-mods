@@ -488,6 +488,16 @@ public static partial class SimAdapter
             if (handCards.Any(card => PlayFacts.ShuffleCards.Contains(card.GetType().Name)))
                 foreach (var card in handCards) Remembered(card);
             DrawProfiles = profiles;
+            // Cards something on this board makes into your draw pile (Personal Hive's Dazed, Biiig Hug's Soot): their profiles, from
+            // the game's own card (ModelDb), for a draw later in the same simulation.
+            var made = new Dictionary<string, SimDrawCard>();
+            void Made<T>() where T : CardModel
+            {
+                try { made[typeof(T).Name] = Profile(ModelDb.Card<T>()); } catch { /* not built: a draw of it is unknown */ }
+            }
+            if (combat.Enemies.Any(enemy => enemy.Powers.Any(power => power.GetType().Name == nameof(PersonalHivePower)))) Made<Dazed>();
+            if (me.Relics.Any(relic => relic.GetType().Name == nameof(MegaCrit.Sts2.Core.Models.Relics.BiiigHug))) Made<Soot>();
+            player.MadeCards = made.Count > 0 ? made : null;
             // Iteration counts the Status cards drawn this turn (CardDrawnEntry: you watched them come).
             if (iteration)
                 player.StatusDrawn = CombatManager.Instance.History.Entries.OfType<MegaCrit.Sts2.Core.Combat.History.Entries.CardDrawnEntry>()

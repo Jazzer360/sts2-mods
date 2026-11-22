@@ -719,8 +719,8 @@ public sealed class GalvanicPower : ProcModel
 }
 
 /// <summary>
-/// PersonalHivePower.AfterDamageReceived: each powered attack hit on it from a player puts its amount of Dazed into their draw pile
-/// (bad for you). Its tab counts them (decision #161): the hits of the play times its amount.
+/// PersonalHivePower.AfterDamageReceived: each powered attack hit on it from a player puts its amount of Dazed into their draw pile at
+/// random spots (bad for you), where a later draw can find them. Its tab counts them (decision #161): the hits of the play times its amount.
 /// </summary>
 public sealed class PersonalHivePower : ProcModel
 {
@@ -728,7 +728,11 @@ public sealed class PersonalHivePower : ProcModel
     public override bool Harmful => true;
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
-        if (hit.Target == owner && hit.Dealer is { } dealer && Who.IsPlayer(dealer) && hit.Props.IsPoweredAttack()) state.LogFired(Name, Amount(state, owner), owner);
+        if (hit.Target != owner || hit.Dealer is not { } dealer || !Who.IsPlayer(dealer) || !hit.Props.IsPoweredAttack()) return;
+        var amount = Amount(state, owner);
+        state.LogFired(Name, amount, owner);
+        // Each Dazed goes into the attacker's draw pile at a random spot (CardPilePosition.Random), once the hit is over.
+        for (var i = 0; i < amount; i++) state.PendingIntoDraw = state.PendingIntoDraw.Add((dealer, CardId.Dazed.Name));
     }
 }
 
