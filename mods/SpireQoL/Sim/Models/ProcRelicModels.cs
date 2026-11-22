@@ -342,13 +342,18 @@ public sealed class Twine : RelicProc
         cardEvent == CardEvent.ArrowDislodged && player == owner ? RelicBlock(state, owner) : One(state);
 }
 
-/// <summary>UnceasingTop.AfterHandEmptied: a draw when your last card leaves your hand (a play that draws or creates nothing).</summary>
+/// <summary>
+/// UnceasingTop.AfterHandEmptied: a draw (CardPileCmd.Draw) when a play leaves your hand empty. The game checks once the card has
+/// resolved (CardModel: CombatManager.CheckForEmptyHand after it reaches its pile) and only while no other card's effect is running,
+/// in your turn's play and auto-play phases (IsValidPhase: Stampede's plays at the end of your turn count): your hand holds nothing and
+/// no card of yours is still being played. The card it draws is drawn, with what reacts to draws.
+/// </summary>
 public sealed class UnceasingTop : RelicProc
 {
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.PlayIndex == 0 && state.Player(owner) is { HandCount: 1 }
-        && state.PlayEvents[CardEvent.Drawn] == 0 && state.PlayEvents[CardEvent.Generated] + state.PlayEvents[CardEvent.GeneratedStatus] + state.PlayEvents[CardEvent.GeneratedSadness] == 0
-            ? Fire(state, owner) : One(state);
+    public override IEnumerable<SimState> AfterPlayResolved(SimState state, int owner, int player) =>
+        player == owner && !state.EnemyTurnNow && state.Player(owner) is { HandCount: 0, PlayingFromHand: 0 }
+            ? Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner)
+            : One(state);
 }
 
 // ---- counters

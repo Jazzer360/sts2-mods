@@ -57,7 +57,6 @@ internal static class ModelEffectCheck
         ["ImbalancedPower"] = "the stun when its first hit is fully blocked: the engine's (SimEnemy.FirstHitFullyBlocked)",
         ["RupturePower"] = "Strength after the card that lost you HP (AfterCardPlayed), or at once for HP lost to something else on your turn (end-of-turn damage: unpowered, Strength doesn't touch it): later plays read it from the game",
         // Not simulated yet.
-        ["UnceasingTop"] = "gap: a draw when your hand empties during your turn: not simulated (your hand size, and what the draw sets off)",
     };
 
     /// <summary>Each model whose game class changes the fight while the model changes nothing in the simulation, with the game's commands.</summary>

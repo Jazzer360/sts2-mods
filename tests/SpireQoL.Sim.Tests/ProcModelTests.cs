@@ -394,9 +394,13 @@ public class ProcModelTests
         var state = Relic(State(), RelicId.UnceasingTop);
         state.You.HandCount = 1;
         state.Teammates.Add(new SimPlayer { Hp = 50 });
-        var after = One(state, Events(Card("HuddleUp", SimCardType.Skill), plays: 1,
-            new CardEventAction(CardEvent.Drawn, Count: 2) { Player = Who.Teammate(teammateIndex: 0), Indirect = true }));
-        Assert.True(after.Fired.Has("UnceasingTop"));
+        var play = new SimPlay
+        {
+            Name = "HuddleUp", HandCard = 7, HandDelta = -1,
+            Card = new SimCardPlay(new SimCard("HuddleUp", SimCardType.Skill), Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false),
+            Body = { new CardEventAction(CardEvent.Drawn, Count: 2) { Player = Who.Teammate(teammateIndex: 0), Indirect = true } },
+        };
+        Assert.True(Assert.Single(SimEngine.Run(state, play).Branches).Fired.Has("UnceasingTop"));
     }
 
     [Fact]
@@ -703,14 +707,26 @@ public class ProcModelTests
     }
 
     [Fact]
-    public void UnceasingTopNeedsTheHandToEmpty()
+    public void UnceasingTopDrawsWhenAPlayLeavesYourHandEmpty()
     {
+        // UnceasingTop.AfterHandEmptied, checked once the card has resolved (CombatManager.CheckForEmptyHand): your last card played
+        // draws one, from your draw pile; a play that draws, or with another card left, doesn't.
         var state = Relic(State(), RelicId.UnceasingTop);
         state.You.HandCount = 1;
-        Assert.True(One(state, Events(Card("A", SimCardType.Skill), plays: 1)).Fired.Has("UnceasingTop"));
-        Assert.False(One(state, Events(Card("A", SimCardType.Skill), plays: 1, new CardEventAction(CardEvent.Drawn, Count: 1))).Fired.Has("UnceasingTop"));
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 3) } };
+        SimPlay Last(int draws = 0) => new()
+        {
+            Name = "A", HandCard = 7, HandDelta = -1 + draws, Draws = draws,
+            Card = new SimCardPlay(new SimCard("A", SimCardType.Skill), Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false),
+            Body = { new CardEventAction(CardEvent.Drawn, draws) },
+        };
+        var after = Assert.Single(SimEngine.Run(state, Last()).Branches);
+        Assert.True(after.Fired.Has("UnceasingTop"));
+        Assert.Equal(1, after.You.HandCount);
+        Assert.Equal(2, after.You.Draw!.Count);
+        Assert.False(Assert.Single(SimEngine.Run(state, Last(draws: 1)).Branches).Fired.Has("UnceasingTop"));
         state.You.HandCount = 2;
-        Assert.False(One(state, Events(Card("A", SimCardType.Skill), plays: 1)).Fired.Has("UnceasingTop"));
+        Assert.False(Assert.Single(SimEngine.Run(state, Last()).Branches).Fired.Has("UnceasingTop"));
     }
 
     [Fact]
