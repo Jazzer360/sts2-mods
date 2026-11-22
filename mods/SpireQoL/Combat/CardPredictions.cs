@@ -551,6 +551,8 @@ public sealed class CardPredictions
         _firesAt.Clear();
         _firesBy.Clear();
         var baseline = forecast.Outcome;
+        // Centennial Puzzle set off by HP the play loses some other way than its own cost: the card's draw count with its draws.
+        if (outcomes.Any(outcome => outcome.PlayFiredAny.Has(RelicId.CentennialPuzzle.Name))) facts.CountSimulatedHpLoss();
         if (outcomes.Any(outcome => outcome.Truncated || outcome.Branches.Count > 1)) facts.RandomOutcome = true;
         facts.SimIncomplete = outcomes.Any(outcome => outcome.Truncated);
         facts.Unmodelled = outcomes.SelectMany(outcome => outcome.UnmodelledReasons).Distinct().ToList();

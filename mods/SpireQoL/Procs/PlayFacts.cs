@@ -90,6 +90,22 @@ public sealed class PlayFacts
     private PlayChain.DrawInputs? _drawInputs;
 
     /// <summary>
+    /// The simulation found the play losing you HP in some outcome (an enemy's Galvanic on a Galvanized card, Thorns hitting back, a
+    /// Corrupted card), which sets off Centennial Puzzle while the card's own count (LosesHp: only its HP cost) doesn't have it: Draws,
+    /// ChainedDraws and Shuffles worked out again with its draws (the Shuffle Warning, the checks' draw budget). Once; nothing when
+    /// the count already has them or Centennial Puzzle is used up.
+    /// </summary>
+    internal void CountSimulatedHpLoss()
+    {
+        if (_drawInputs is not { LosesHp: false, CentennialPuzzle: > 0 } drawInputs) return;
+        drawInputs.LosesHp = true;
+        var result = PlayChain.Resolve(drawInputs);
+        ChainedDraws = result.Chained;
+        Draws = result.Draws;
+        Shuffles = Shuffles || result.Shuffles;
+    }
+
+    /// <summary>
     /// The play's draws (Draws) had the card itself drawn <paramref name="own"/> instead, across plays: a card whose draws depend on
     /// its target (Ki Hop, Wrest) at the target it was played at, still stopping at a full hand. Null when not worked out here.
     /// </summary>

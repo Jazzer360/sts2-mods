@@ -71,6 +71,26 @@ public class PlayFactsTests
     }
 
     [Fact]
+    public void CentennialPuzzlesDrawsFromHpTheSimulationLosesCount()
+    {
+        // A dev review: Tune+ was Galvanized and the enemy's Galvanic cost you HP, which set off Centennial Puzzle's 3 draws. The card's
+        // own count has them only for its own HP cost; the simulation's (CountSimulatedHpLoss) brings them in: with 2 cards in the draw
+        // pile, they shuffle the discard pile in, which the Shuffle Warning shows.
+        var gameFight = new GameFight();
+        var card = gameFight.Add<DefendIronclad>();
+        gameFight.Add<StrikeIronclad>(PileType.Draw);
+        gameFight.Add<StrikeIronclad>(PileType.Draw);
+        gameFight.Add<StrikeIronclad>(PileType.Discard);
+        gameFight.Me.AddRelicInternal(MegaCrit.Sts2.Core.Models.ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.CentennialPuzzle>().ToMutable());
+        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
+        Assert.Equal(0, facts.Draws);
+        Assert.False(facts.Shuffles);
+        facts.CountSimulatedHpLoss();
+        Assert.Equal(3, facts.Draws);
+        Assert.True(facts.Shuffles);
+    }
+
+    [Fact]
     public void CardsForTeammatesDoNothingForYouAlone()
     {
         // Huddle Up draws for teammates, Blade Symphony gives them Shivs, Glimpse Beyond gives them Souls: alone, none of it is

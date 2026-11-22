@@ -12,7 +12,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - An enemy's move that applies two of its numbers multiplied shows their product: Axebot's Boot Up gives Strength for each Axebot that came before it (it showed 2 where it applied 8).
 - The map legend no longer keeps a relic's icon after the relic changes (Sword of Stone becoming Sword of Jade left its count beside Elite), nor an event option a stale icon row.
 - An event option no longer shows a relic's icon with 0% when it can't give a card the relic cares about (Strike Dummy on Bugslayer's Exterminate).
-- The checks no longer report Gremlin Horn (or another tab that a kill sets off) firing at a target its tab didn't aim at, and count Centennial Puzzle's draws when an enemy's Galvanic (not the card's own cost) makes you lose HP.
+- The checks no longer report Gremlin Horn (or another tab that a kill sets off) firing at a target its tab didn't aim at.
+- Centennial Puzzle's draws count when a play loses you HP some other way than its own cost (an enemy's Galvanic on a Galvanized card, Thorns hitting back, a Corrupted card): the Shuffle Warning shows the shuffle they cause, and the checks expect them.
 
 ### Main Saves 1.0.26
 #### Changed
