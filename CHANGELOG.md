@@ -34,7 +34,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Blossom Shot: the Stretch it gives (the damage it dealt) is part of the prediction, for block later in the turn (I Am Invincible at its end).
 - Co-op: with Count teammates' hands on, a teammate's Stampede and Simpleton plays at the end of their turn are predicted from their hand; a teammate's Sic 'Em is no longer read as yours.
 - A card that stops for your choice (Survivor's discard, Burning Pact's exhaust, Wish's pick) is predicted with the pick that changes nothing (a plain card), and its tabs follow your actual pick once you've made it: no more `?` on Burning Pact while a Drum of Battle is in hand, or on Wish with a Burn in your draw pile. A Cleanse also takes its card out of your draw pile in the prediction.
-- The mod builds with the game on Steam's main branch (v0.111.1, checked: identical to v0.111.0), and the coverage check accepts it.
+- Steam's main branch v0.111.1 (the same game as v0.111.0) is checked: one download runs on both branches, and on main the mod no longer reports at launch that its coverage wasn't checked against the game.
 - On Steam's main branch, the rules main's game does differently from beta's are predicted main's way: Buffer stops Brightest Flame's HP loss, Omnislice's splash is unpowered (Envenom and the like don't react; Thorns still does), Juggling's copy comes as the third Attack is played, and Ceremonial Beast's Plow always gives its Strength.
 - Card tabs settle sooner after the board changes: each card's simulation starts alongside the turn forecast's instead of after it.
 - The checks hold The Boot's tab to the target you played at (it shows with the aim marker when only some targets have a hit it raises), and accept a move's power that lands with no applier (Slimed Berserker's Weak).
@@ -70,6 +70,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 #### Changed
 - Shared code: writes less to the game's log (a warning appears once per launch). No change in the game.
 - Shared code: a widget can stay up over a card choice mid-fight (Spire QoL's Incoming Damage). No change in Main Saves.
+- Shared code: parts of the game only Steam's beta branch has are used only where the game has them, so one download runs on both branches. No change in Main Saves.
 
 ### Main Saves 1.0.24
 #### Changed
