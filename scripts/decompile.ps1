@@ -5,6 +5,7 @@
 #   main:           ~/git/sts2-decompiled-main (a worktree of the same repo), Steam's default branch.
 # Switch the game's Steam branch first, then pass the matching -Branch.
 # `git -C ~/git/sts2-decompiled diff main beta --stat` shows what differs between them.
+# Each also keeps that build's sts2.dll in assembly/ (ignored by its git: replaced every run, gone with the machine).
 #
 # Usage: ./scripts/decompile.ps1 [-Branch beta|main] [-GameDir <Slay the Spire 2 folder>]
 # Needs: ilspycmd (dotnet tool install -g ilspycmd --version 9.1.0.7988), git.
@@ -47,6 +48,12 @@ foreach ($item in Get-ChildItem $Out -Force | Where-Object { $_.Name -ne ".git" 
 $env:DOTNET_ROLL_FORWARD = "Major"
 ilspycmd -p -o $Out $dll
 if ($LASTEXITCODE -ne 0) { throw "ilspycmd failed" }
+
+# The branch's game assembly beside its source (assembly/sts2.dll), for checks that need the real thing (decision #165). Kept
+# out of the history: a cache of the build this decompile is of, like the decompile itself local to this machine.
+New-Item -ItemType Directory -Force (Join-Path $Out "assembly") | Out-Null
+Copy-Item $dll (Join-Path $Out "assembly\sts2.dll")
+[System.IO.File]::WriteAllText((Join-Path $Out ".gitignore"), "/assembly/`n", (New-Object System.Text.UTF8Encoding $false))
 
 $decompiler = (dotnet tool list -g | Select-String "ilspycmd" | ForEach-Object { ($_ -split "\s+")[1] })
 [ordered]@{
