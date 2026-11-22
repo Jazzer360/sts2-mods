@@ -995,7 +995,7 @@ public sealed class PlayFacts
     internal static readonly Dictionary<string, string> OverkillReaders = new()
     {
         [nameof(Fisticuffs)] = "block equal to the damage it dealt (SimAdapter: Fisticuffs)",
-        [nameof(BlossomShot)] = "Stretch equal to the damage it dealt: for a block card you play later, not this play's outcome",
+        [nameof(BlossomShot)] = "Stretch equal to the damage it dealt (AttackAction.StretchFromDamage): for block later in the turn (I Am Invincible at its end)",
     };
 
     /// <summary>Cards that draw, then put cards from your hand back on your draw pile (their PutBack value; Thinking Ahead's one).</summary>

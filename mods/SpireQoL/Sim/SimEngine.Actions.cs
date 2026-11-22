@@ -132,6 +132,7 @@ public static partial class SimEngine
         {
             branch.AttackSerial++;
             branch.CurrentAttack = branch.AttackSerial;
+            branch.AttackDealt = 0;
         });
         AttackInfo Info(SimState state) => new(state.CurrentAttack, state.CurrentPlay?.Owner is { } playOwner && !at.ByOsty ? playOwner : dealer, at.Damage.Props, state.CurrentPlay?.Card);
         HookStep(branches, nameof(SimModel.BeforeAttack), (model, owner, branch) => model.BeforeAttack(branch, owner, Info(branch)));
@@ -160,6 +161,13 @@ public static partial class SimEngine
             }
         }
         HookStep(branches, nameof(SimModel.AfterAttack), (model, owner, branch) => model.AfterAttack(branch, owner, Info(branch)));
+        // Blossom Shot: Stretch for the damage it dealt (PowerCmd.Apply<StretchPower> after the attack, inside the shot).
+        if (at.StretchFromDamage)
+            branches.Do(branch =>
+            {
+                var owner = branch.CurrentPlay?.Owner ?? Who.You;
+                if (branch.AttackDealt > 0) ApplyPower(branch, owner, owner, PowerId.Stretch, branch.AttackDealt, debuff: false);
+            });
         // Once the attack is over, when it killed its target: what it gives (Sunder's energy, Knockout Blow's stars).
         foreach (var reward in at.KillRewards)
             branches.Each(branch => (at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? Who.None) is var target && branch.Enemy(target) is { Alive: false }

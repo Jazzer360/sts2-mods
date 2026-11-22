@@ -398,6 +398,7 @@ public static partial class SimEngine
                 enemy.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
             }
         }
+        state.AttackDealt += absorbed + toHp;
         var hit = new DamageEvent(dealer, enemy.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && enemy.Hp <= 0);
         if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(state, hit.Total);
         foreach (var (m, o) in Listeners(state)) m.AfterDamageGiven(state, o, hit);
@@ -426,6 +427,7 @@ public static partial class SimEngine
             enemy.UnblockedInstances++;
         }
         else toHp = 0;
+        state.AttackDealt += absorbed + toHp;
         if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(state, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)));
         return toHp;
     }

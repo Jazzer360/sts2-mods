@@ -129,6 +129,16 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void BlossomShotGivesStretchForTheDamageItDealt()
+    {
+        // BlossomShot.OnPlay: PowerCmd.Apply<StretchPower>(the sum of TotalDamage + OverkillDamage) after the attack: 6 into 2 block and
+        // 3 HP is 6 (blocked, unblocked and overkill).
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 3, block: 2) } };
+        var after = After(state, Play(Card("BlossomShot"), target: 1, plays: 1, Attack(baseDamage: 6) with { StretchFromDamage = true })).Single();
+        Assert.Equal(6, after.You.Powers[PowerId.Stretch]);
+    }
+
+    [Fact]
     public void GravityHitsEveryEnemyAndSerpentFormBranchesOnItsTarget()
     {
         var after = One(Power(State(enemies: 2), PowerId.Gravity, amount: 3), Events(Card("Defend", SimCardType.Skill), plays: 1));

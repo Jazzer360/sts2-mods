@@ -750,6 +750,8 @@ public sealed class SimState
     internal ImmutableArray<(int Player, string Card)> PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
     /// <summary>Enemies whose death adds creatures (SimEnemy.Spawns), added once the hit is over (DrainPending).</summary>
     internal ImmutableArray<int> PendingSpawns = ImmutableArray<int>.Empty;
+    /// <summary>The damage the current attack's hits dealt, blocked, unblocked and overkill (Blossom Shot's Stretch); reset as each attack starts.</summary>
+    internal int AttackDealt;
     /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
     internal int ArrowAwayAt = Who.None;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>

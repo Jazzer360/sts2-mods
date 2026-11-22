@@ -71,7 +71,8 @@ public static partial class SimAdapter
         // shot at X 0.
         var shot = Fool.TriesShot(card);
         if (shot) play.Body.Add(new ShootAction());
-        if (facts.AttackHits > 0 && AttackOf(card, facts, me, combat, ids, targetId, plays, name) is { } attack) play.Body.Add(shot ? attack with { NeedsArrow = true } : attack);
+        if (facts.AttackHits > 0 && AttackOf(card, facts, me, combat, ids, targetId, plays, name) is { } attack)
+            play.Body.Add((shot ? attack with { NeedsArrow = true } : attack) with { StretchFromDamage = name == nameof(BlossomShot) });
         if (shot) play.Body.Add(new ImpaleAction());
         // Recall, Uproot, Wrest: every arrow of yours out of the target.
         if (Fool.DislodgeCards.Contains(name)) play.Body.Add(new DislodgeAllAction());

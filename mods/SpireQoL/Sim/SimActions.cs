@@ -64,6 +64,11 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
     /// <summary>A shot's attack: it only happens when the shot had an arrow (ArrowCmd.ShootArrowAtTarget runs the attack inside ImpaleTarget).</summary>
     public bool NeedsArrow { get; init; }
     /// <summary>
+    /// Blossom Shot: once the attack is over, its player gains Stretch equal to the damage its hits dealt (the sum of each result's
+    /// TotalDamage + OverkillDamage: blocked, unblocked and overkill), none when it didn't happen (a shot with no arrow).
+    /// </summary>
+    public bool StretchFromDamage { get; init; }
+    /// <summary>
     /// What the play's player gets once the attack is over, when one of its hits killed the target (DamageCmd's results:
     /// WasTargetKilled): Sunder's energy (decision #117), Knockout Blow's stars.
     /// </summary>
