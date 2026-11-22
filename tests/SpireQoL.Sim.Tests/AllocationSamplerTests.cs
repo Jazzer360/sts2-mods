@@ -44,4 +44,36 @@ public class AllocationSamplerTests
         sampler.Cycle(seconds: AllocationSampler.PeriodSeconds + 0.5);
         Assert.True(sampler.Sampling);
     }
+
+    private sealed class Finalized
+    {
+        public static int Done;
+        // A finalizer the runtime reports on (FinalizeObject): what floods the listener with events.
+        ~Finalized() => Interlocked.Increment(ref Done);
+    }
+
+    [Fact]
+    public void ItsOwnGarbageIsLeftOut()
+    {
+        // Each burst's events (one per object finalized among them) make garbage on the thread that delivers them: never in the sample,
+        // over several bursts (each a new session, on its own thread).
+        using var sampler = new AllocationSampler(AllocationSampler.CurrentOsThread());
+        var seen = new HashSet<string>();
+        for (var burst = 0; burst < 3; burst++)
+        {
+            sampler.Cycle(seconds: burst * AllocationSampler.PeriodSeconds);
+            for (var round = 0; round < 5; round++)
+            {
+                for (var i = 0; i < 20_000; i++) _ = new Finalized();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+            Thread.Sleep(300);
+            var (quiet, active) = sampler.Take();
+            foreach (var key in quiet.Keys.Concat(active.Keys)) seen.Add(key);
+            sampler.Cycle(seconds: burst * AllocationSampler.PeriodSeconds + AllocationSampler.OnSeconds + 1);
+            Thread.Sleep(100);
+        }
+        Assert.DoesNotContain(seen, key => key.Contains("EventWrittenEventArgs", StringComparison.Ordinal) || key.EndsWith("MoreEventInfo", StringComparison.Ordinal));
+    }
 }

@@ -4,6 +4,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Nodes.Cards;
+using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Cards;
@@ -87,6 +88,8 @@ internal sealed class FlatFade
         }
     }
 
+    private int _probeLooked;
+
     public bool Valid => GodotObject.IsInstanceValid(_image) && GodotObject.IsInstanceValid(_copy);
 
     /// <summary>
@@ -108,9 +111,13 @@ internal sealed class FlatFade
             _signature = 0;
         }
 
-        // Drawn again only when the card shows something new (cost, text, an upgrade, a target's numbers).
-        if (_signature == 0 || ++_poll % 3 == 0)
+        // Drawn again only when the card shows something new (cost, text, an upgrade, a target's numbers): looked at when the board
+        // changes (the probe), and every 15th frame for what it doesn't see (aiming the card at a target). Each look reads every label's
+        // text from Godot, a new string each: every third frame was garbage while idle (a dev review).
+        var probe = Sts2State.Me is { } me && Sts2State.Combat is { } combat ? SpireQoL.Combat.BoardProbe.Hash(me, combat) : 0;
+        if (_signature == 0 || probe != _probeLooked || ++_poll % 15 == 0)
         {
+            _probeLooked = probe;
             var now = Signature(_container, keep);
             if (now != _signature)
             {

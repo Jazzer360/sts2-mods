@@ -71,4 +71,13 @@ public class PerFrameMemoryTests
         });
         Assert.True(perFrame == 0, $"{perFrame} bytes a frame");
     }
+
+    [Fact]
+    public void AskingWhetherATabIsOnMakesNothing()
+    {
+        // Every tab shown asks every frame (CardDecor's filter): its group's key ("proc:*") was built as two strings each time.
+        var settings = new QolSettings();
+        var perCall = BytesPerCall(() => settings.TabEnabled("proc:ThornsPower"));
+        Assert.True(perCall == 0, $"{perCall} bytes a tab");
+    }
 }

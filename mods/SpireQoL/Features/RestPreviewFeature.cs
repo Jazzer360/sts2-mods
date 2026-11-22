@@ -231,7 +231,16 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         Check(me);
         CheckMend();
         var inRoom = room != null && GodotObject.IsInstanceValid(room) && room.IsVisibleInTree() && me != null;
-        var options = inRoom ? LocalOptions() : NoOptions;
+        // The site's options change only when one is chosen: read every few frames, not made into a new list every frame.
+        if (!inRoom) _options = null;
+        else if (_options == null || ++_optionsFrame % 10 == 0) _options = LocalOptions();
+        var options = _options ?? NoOptions;
+        // What the panels show depends only on these (a dev review: the heal worked out through every relic, every frame while idle at
+        // the fire): drawn again when one changes.
+        var hovered = inRoom ? HoveredMate(room!, me!) : null;
+        var shownFor = inRoom ? ShownFor(me!, options, hovered) : 0;
+        if (inRoom && shownFor == _shownFor) return;
+        _shownFor = shownFor;
 
         // Yours: Rest on offer (not chosen yet, not disabled); otherwise only what the boss relics will do anyway.
         var canRest = options.Any(restSiteOption => restSiteOption is HealRestSiteOption && restSiteOption.IsEnabled && !Used.TryGetValue(restSiteOption, out _));
@@ -242,10 +251,42 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
 
         // A teammate you hover while Mend is on offer: what Mend would leave them with.
         var canMend = options.Any(restSiteOption => restSiteOption is MendRestSiteOption && restSiteOption.IsEnabled && !Used.TryGetValue(restSiteOption, out _));
-        _hoveredMate = inRoom && canMend ? HoveredMate(room!, me!) : null;
+        _hoveredMate = inRoom && canMend ? hovered : null;
         var theirs = _hoveredMate != null ? Compute(_hoveredMate, rest: true, mend: true) : null;
         _mate!.HasContent = theirs != null;
         if (theirs != null) Show(_matePanel!, theirs, rest: true);
+    }
+
+    private List<RestSiteOption>? _options;
+    private int _optionsFrame, _shownFor;
+
+    /// <summary>
+    /// Everything the panels read, as one number: the settings, your HP and relics (their counters and status), the options and whether each is on
+    /// offer, and the teammate you hover with theirs.
+    /// </summary>
+    private static int ShownFor(Player me, List<RestSiteOption> options, Player? hovered)
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(QolSettings.Revision);
+        AddPlayer(ref hashCode, me);
+        for (var i = 0; i < options.Count; i++)
+        {
+            hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(options[i]));
+            hashCode.Add(options[i].IsEnabled);
+            hashCode.Add(Used.TryGetValue(options[i], out _));
+        }
+        if (hovered != null) AddPlayer(ref hashCode, hovered);
+        return hashCode.ToHashCode();
+
+        static void AddPlayer(ref HashCode hashCode, Player player)
+        {
+            hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(player));
+            hashCode.Add(player.Creature.CurrentHp);
+            hashCode.Add(player.Creature.MaxHp);
+            var relics = player.Relics;
+            hashCode.Add(relics.Count);
+            for (var i = 0; i < relics.Count; i++) { hashCode.Add(relics[i].DisplayAmount); hashCode.Add(relics[i].Status); }
+        }
     }
 
     private static void Show(RestMathPanel panel, Preview preview, bool rest) =>

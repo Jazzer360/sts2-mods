@@ -178,14 +178,28 @@ public sealed class QolSettings
 
     public bool TabEnabled(string key)
     {
-        var colon = key.IndexOf(':');
-        var group = colon > 0 ? key[..colon] + ":*" : null;
+        var group = GroupOf(key);
         if (group != null && !Tabs.ContainsKey(group)) { Tabs[group] = true; TabsDirty = true; }
         if (!Tabs.TryGetValue(key, out var on)) { on = TabDefault(key); Tabs[key] = on; TabsDirty = true; }
         if (!on) return false;
         return group == null || Tabs[group];
     }
 
+
+    /// <summary>
+    /// A tab key's group switch ("proc:Thorns" → "proc:*"; null for none), worked out once per key: every tab shown asks every frame,
+    /// and building it made two strings each time (a dev review). The keys are the game's sources: a set that stops growing.
+    /// </summary>
+    private static string? GroupOf(string key)
+    {
+        if (GroupKeys.TryGetValue(key, out var group)) return group;
+        var colon = key.IndexOf(':');
+        group = colon > 0 ? key[..colon] + ":*" : null;
+        GroupKeys[key] = group;
+        return group;
+    }
+
+    private static readonly Dictionary<string, string?> GroupKeys = new();
 
     public WidgetLayout Widget(string id, WidgetLayout fallback)
     {

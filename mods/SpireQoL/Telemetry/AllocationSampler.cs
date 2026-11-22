@@ -24,7 +24,9 @@ public sealed class AllocationSampler : EventListener
     private Dictionary<string, double> _quietKb = new(), _activeKb = new();
     private readonly long _gameThread;
     private EventSource? _runtime;
-    private long _deliveryThread = -1;
+    /// <summary>Every thread that has delivered events (each burst's session has its own): their ticks are the listener's own garbage.</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<long, byte> _deliveryThreads = new();
+    [ThreadStatic] private static long _thisOsThread;
 
     /// <summary>How long each burst listens, and how often one starts (seconds).</summary>
     public const double OnSeconds = 2, PeriodSeconds = 10;
@@ -73,6 +75,8 @@ public sealed class AllocationSampler : EventListener
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
+        if (_thisOsThread == 0) _thisOsThread = CurrentOsThread();
+        if (_thisOsThread != 0) _deliveryThreads.TryAdd(_thisOsThread, 0);
         if (eventData.EventName == null || !eventData.EventName.StartsWith("GCAllocationTick", StringComparison.Ordinal) || eventData.Payload == null) return;
         string? type = null;
         double bytes = 0;
@@ -86,9 +90,8 @@ public sealed class AllocationSampler : EventListener
             }
         }
         if (string.IsNullOrEmpty(type) || bytes <= 0) return;
-        // The thread delivering the events allocates for each one: the listener's own garbage, not the game's or the mod's.
-        if (_deliveryThread < 0) _deliveryThread = CurrentOsThread();
-        if (_deliveryThread != 0 && eventData.OSThreadId == _deliveryThread) return;
+        // A thread delivering the events allocates for each one: the listener's own garbage, not the game's or the mod's.
+        if (_deliveryThreads.ContainsKey(eventData.OSThreadId)) return;
         var thread = _gameThread != 0 && eventData.OSThreadId == _gameThread ? "game" : "other";
         var quiet = eventData.TimeStamp.ToUniversalTime().Ticks >= Interlocked.Read(ref _quietSinceTicks);
         var key = thread + "|" + type;
