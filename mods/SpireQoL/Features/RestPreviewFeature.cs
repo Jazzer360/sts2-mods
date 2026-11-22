@@ -60,6 +60,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
 
     private static void BeforeRest(HealRestSiteOption __instance)
     {
+        using var timing = OverlayHost.TimeHook("rest-preview");
         try
         {
             if (Sts2State.Private<Player?>(__instance, "Owner", fallback: null) is not { } owner || RunMe() != owner) return;
@@ -77,6 +78,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
 
     private static void BeforeMend(MendRestSiteOption __instance)
     {
+        using var timing = OverlayHost.TimeHook("rest-preview");
         try
         {
             if (Sts2State.Private<Player?>(__instance, "Owner", fallback: null) is not { } owner || RunMe() != owner) return;
@@ -98,6 +100,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     /// <summary>Targeting cancelled (OnSelect returns false): Mend is on offer again, and there's nothing to check.</summary>
     private static void AfterMend(MendRestSiteOption __instance, Task<bool> __result)
     {
+        using var timing = OverlayHost.TimeHook("rest-preview");
         try
         {
             __result?.ContinueWith(task =>

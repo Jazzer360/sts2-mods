@@ -36,6 +36,16 @@ public class SimBatchTests
     }
 
     [Fact]
+    public async Task ASearchCountsTheMemoryItAllocatedOnItsThread()
+    {
+        // The dev dashboard's searches line (decision #172): the frame's own counts can't see a worker thread's memory.
+        var before = SimJob.AllocatedBytes;
+        var job = SimJob.Start(SimSearch.Of(Board(), Strike(target: 0)), "memory test");
+        await job.Ready.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.True(SpinWait.SpinUntil(() => SimJob.AllocatedBytes > before, TimeSpan.FromSeconds(10)), "no memory counted for the search");
+    }
+
+    [Fact]
     public void NotCompleteWhileAJobIsRunning()
     {
         var job = SimJob.Start(SimSearch.Of(Board(), Strike(target: 0)), "batch test cancelled");

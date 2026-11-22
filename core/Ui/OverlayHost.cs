@@ -97,6 +97,74 @@ public sealed class OverlayHost
 
     private readonly List<(string Id, double Ms, double Kb)> _parts = new();
 
+    // ---- the mod's code in the game's hooks (Harmony patches, the game's events): outside the frame's run, so the frame's own
+    // times can't see it. Timed where it runs (TimeHook) and shown with the next frame's times as "hook:<id>".
+    private static readonly List<(string Id, double Ms, double Kb)> HookTimes = new();
+    private static int _mainThread, _hookDepth;
+    private static double _hookMsSinceFrame;
+
+    /// <summary>
+    /// Times the mod's code in one of the game's hooks until disposed (<c>using var timing = OverlayHost.TimeHook("proc-audit");</c>):
+    /// its time and memory join the next frame's feature times as "hook:<paramref name="id"/>", and the slow-frame log says how much
+    /// of a long frame was the mod's hooks. Only the outermost hook on the game's thread counts, and nothing inside the frame's own
+    /// run (that time is already its feature's). Allocates nothing.
+    /// </summary>
+    public static HookTiming TimeHook(string id) => new(id);
+
+    /// <summary>One hook's timing (TimeHook).</summary>
+    public readonly struct HookTiming : IDisposable
+    {
+        private readonly string? _id;
+        private readonly ulong _startUs;
+        private readonly long _allocatedBefore;
+
+        internal HookTiming(string id)
+        {
+            if (InFrameRun || System.Environment.CurrentManagedThreadId != _mainThread || _hookDepth++ > 0)
+            {
+                _id = null;
+                _startUs = 0;
+                _allocatedBefore = 0;
+                return;
+            }
+            _id = id;
+            _startUs = Godot.Time.GetTicksUsec();
+            _allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        }
+
+        public void Dispose()
+        {
+            if (System.Environment.CurrentManagedThreadId != _mainThread || InFrameRun) return;
+            _hookDepth = Math.Max(0, _hookDepth - 1);
+            if (_id == null) return;
+            var milliseconds = (Godot.Time.GetTicksUsec() - _startUs) / 1000.0;
+            _hookMsSinceFrame += milliseconds;
+            HookTimes.Add((_id, milliseconds, KbSince(_allocatedBefore)));
+        }
+    }
+
+    /// <summary>The hooks' times since the last frame join this frame's feature times, one entry per hook id.</summary>
+    private void TakeHookTimes()
+    {
+        foreach (var (id, milliseconds, kilobytes) in HookTimes)
+        {
+            var entry = "hook:" + id;
+            var timeIndex = _featureMs.FindIndex(timing => timing.Id == entry);
+            if (timeIndex >= 0) _featureMs[timeIndex] = (entry, _featureMs[timeIndex].Ms + milliseconds);
+            else _featureMs.Add((entry, milliseconds));
+            var memoryIndex = _featureKb.FindIndex(memory => memory.Id == entry);
+            if (memoryIndex >= 0) _featureKb[memoryIndex] = (entry, _featureKb[memoryIndex].Kb + kilobytes);
+            else _featureKb.Add((entry, kilobytes));
+        }
+        HookTimes.Clear();
+    }
+
+    /// <summary>
+    /// Something the slow-frame log adds about a long frame the game took (the dev dashboard: the engine's shader compiles since the
+    /// frame before), or null.
+    /// </summary>
+    public Func<string?>? StallNote { get; set; }
+
     /// <summary>
     /// Time the running feature (or late-frame callback) spent on one part of its work this frame, in ms: shown as its own entry
     /// in the frame's feature times (the slow-frame log, the dev dashboard) and taken out of the feature's own. Parts with the same
@@ -172,6 +240,7 @@ public sealed class OverlayHost
             return;
         }
 
+        _mainThread = System.Environment.CurrentManagedThreadId;
         Layer = new CanvasLayer { Name = ModId + "_Overlay", Layer = 10 };
         tree.Root.AddChild(Layer);
 
@@ -244,7 +313,7 @@ public sealed class OverlayHost
         var times = FeatureTimes();
         _log.Detail($"[perf] slow frame: the mod took {modMs:0} ms ({times})");
         if (modMs <= ReportModFrameMs) return;
-        var top = _featureMs.OrderByDescending(featureM => featureM.Ms).FirstOrDefault().Id ?? "?";
+        var top = _featureMs.Where(timing => !timing.Id.StartsWith("hook:", StringComparison.Ordinal)).OrderByDescending(timing => timing.Ms).FirstOrDefault().Id ?? "?";
         var slowFrames = _slowByFeature[top] = (_slowByFeature.TryGetValue(top, out var prev) ? prev : 0) + 1;
         // A freeze (a second or more) is reported the first time: no warm-up takes that long.
         if (slowFrames < 2 && modMs < FreezeMs) return;
@@ -262,6 +331,9 @@ public sealed class OverlayHost
         _featureMs.Clear();
         _featureKb.Clear();
         _parts.Clear();
+        var hookMs = _hookMsSinceFrame;
+        _hookMsSinceFrame = 0;
+        TakeHookTimes();
         InFrameRun = true;
         try { RunFrame(); }
         finally { InFrameRun = false; }
@@ -278,7 +350,9 @@ public sealed class OverlayHost
             if (gapMs <= SlowGameFrameMs || prevModMs >= SlowModFrameMs) return;
             var now = Godot.Time.GetTicksMsec();
             if (now - _lastStallLogMs < GameStallLogIntervalMs) { _stallsSkipped++; return; }
-            var line = $"[perf] slow frame: {gapMs:0} ms since the last frame, the mod's share {prevModMs:0.0} ms (the game's own work)";
+            // The rest of the frame is the game's: its own code and drawing everything, the mod's controls included.
+            var line = $"[perf] slow frame: {gapMs:0} ms since the last frame, the mod's share {prevModMs:0.0} ms in its frame and {hookMs:0.0} ms in the game's hooks";
+            if (StallNote?.Invoke() is { } note) line += $" ({note})";
             if (_stallsSkipped > 0) line += $"; {_stallsSkipped} more since the last line";
             _stallsSkipped = 0;
             _lastStallLogMs = now;
@@ -291,7 +365,7 @@ public sealed class OverlayHost
     }
 
     private string FeatureTimes()
-        => string.Join(", ", _featureMs.Where(timing => timing.Ms >= 1).OrderByDescending(timing => timing.Ms).Select(timing => $"{timing.Id} {timing.Ms:0} ms")) is { Length: > 0 } listed ? listed : "spread thin";
+        => string.Join(", ", _featureMs.Where(timing => timing.Ms >= 1 && !timing.Id.StartsWith("hook:", StringComparison.Ordinal)).OrderByDescending(timing => timing.Ms).Select(timing => $"{timing.Id} {timing.Ms:0} ms")) is { Length: > 0 } listed ? listed : "spread thin";
 
     private void RunFrame()
     {

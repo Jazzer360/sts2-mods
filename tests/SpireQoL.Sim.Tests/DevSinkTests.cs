@@ -109,7 +109,7 @@ public sealed class DevSinkTests : IDisposable
         var frameWindow = new FrameWindow();
         for (var i = 1; i <= 20; i++) frameWindow.Add(i, gapMs: 16, new[] { ("incoming-damage", 0.5), ("proc-indicators", i / 2.0) }, new[] { ("proc-indicators", 42.0) });
         frameWindow.Add(modMs: 40, gapMs: 70, Array.Empty<(string, double)>(), Array.Empty<(string, double)>());
-        var frameRollup = frameWindow.Take(seconds: 0.25, (100, 3, 1, 0, 0, 2, 1234, 2));
+        var frameRollup = frameWindow.Take(seconds: 0.25, (100, 3, 1, 0, 0, 2, 1234, 2), (SimMb: 1.5, Compiles: 4, Nodes: 900, OrphanNodes: 3));
         Assert.Equal(21, frameRollup.Frames);
         Assert.Equal(11, frameRollup.ModP50);
         Assert.Equal(20, frameRollup.ModP95);
@@ -120,6 +120,7 @@ public sealed class DevSinkTests : IDisposable
         Assert.Equal(Math.Round(20 * 0.5 / 21, 2), frameRollup.FeatureMean["incoming-damage"]);
         Assert.Equal(Math.Round(20 * 42.0 / 21, 2), frameRollup.FeatureKb["proc-indicators"]); // KB per frame, over every frame
         Assert.Equal(1234, frameRollup.HeldStates);
-        Assert.Equal(0, frameWindow.Take(seconds: 0.25, extra: default).Frames);
+        Assert.Equal((1.5, 4, 900, 3), (frameRollup.SimMb, frameRollup.Compiles, frameRollup.Nodes, frameRollup.OrphanNodes));
+        Assert.Equal(0, frameWindow.Take(seconds: 0.25, extra: default, engine: default).Frames);
     }
 }

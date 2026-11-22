@@ -23,6 +23,30 @@ public static class DevDashboard
     private static readonly FrameWindow Window = new();
     private static double _lastRollup, _lastState;
     private static (int G0, int G1, int G2, long Alloc, TimeSpan Pause) _gc;
+    private static long _simAllocated;
+    /// <summary>The engine's shader compiles: its running total at the last frame, those in this rollup, those since the frame before.</summary>
+    private static long _compilesTotal;
+    private static int _compilesInWindow, _compilesLastFrame;
+
+    private static readonly Godot.Performance.Monitor[] CompileMonitors =
+    {
+        Godot.Performance.Monitor.PipelineCompilationsCanvas, Godot.Performance.Monitor.PipelineCompilationsMesh,
+        Godot.Performance.Monitor.PipelineCompilationsSurface, Godot.Performance.Monitor.PipelineCompilationsDraw,
+        Godot.Performance.Monitor.PipelineCompilationsSpecialization,
+    };
+
+    /// <summary>
+    /// The engine's shader compiles since the frame before (its pipeline compilations, a running total: the difference; a total that
+    /// went down started over, so all of it is new). Read once a frame, dev mode only: five reads of the engine's counters.
+    /// </summary>
+    private static void CountCompiles()
+    {
+        long total = 0;
+        foreach (var monitor in CompileMonitors) total += (long)Godot.Performance.GetMonitor(monitor);
+        _compilesLastFrame = (int)(total >= _compilesTotal ? total - _compilesTotal : total);
+        _compilesTotal = total;
+        _compilesInWindow += _compilesLastFrame;
+    }
 
     public static bool Running => _sink != null;
 
@@ -45,7 +69,12 @@ public static class DevDashboard
             sink.Post(new StreamStarted(DevEvents.Version, tags?.GetValueOrDefault("mod_version") ?? "?", tags?.GetValueOrDefault("game_version") ?? "?", DateTime.UtcNow, BuildInfo.Label));
             DevEvents.Posted += sink.Post;
             ModEntry.Log.Written += (level, text) => sink.Post(new LogLine(level, text));
-            host.FrameMeasured += (modMs, gapMs) => Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
+            host.FrameMeasured += (modMs, gapMs) =>
+            {
+                CountCompiles();
+                Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
+            };
+            host.StallNote = () => _compilesLastFrame > 0 ? $"{_compilesLastFrame} shader compiles" : null;
             if (ErrorReporter.Instance is { } reporter)
             {
                 reporter.Local = localReport =>
@@ -57,6 +86,9 @@ public static class DevDashboard
                 ModEntry.Log.Info($"[dev] error reports kept in {Folder}, none sent to Sentry");
             }
             _gc = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), GC.GetTotalAllocatedBytes(), GC.GetTotalPauseDuration());
+            _simAllocated = SimJob.AllocatedBytes;
+            CountCompiles();
+            _compilesInWindow = 0;
             host.AddLateFrame("dev-dashboard", Tick);
             AppDomain.CurrentDomain.ProcessExit += (_, _) => sink.Dispose();
             _sink = sink;
@@ -81,8 +113,12 @@ public static class DevDashboard
             _lastRollup = now;
             var collections = (G0: GC.CollectionCount(0), G1: GC.CollectionCount(1), G2: GC.CollectionCount(2), Alloc: GC.GetTotalAllocatedBytes(), Pause: GC.GetTotalPauseDuration());
             sink.Post(Window.Take(seconds, (GC.GetTotalMemory(false) / 1048576.0, (collections.Alloc - _gc.Alloc) / 1048576.0, collections.G0 - _gc.G0, collections.G1 - _gc.G1,
-                collections.G2 - _gc.G2, (collections.Pause - _gc.Pause).TotalMilliseconds, SimWork.HeldEverywhere, SimJob.Progress().Count)));
+                collections.G2 - _gc.G2, (collections.Pause - _gc.Pause).TotalMilliseconds, SimWork.HeldEverywhere, SimJob.Progress().Count),
+                ((SimJob.AllocatedBytes - _simAllocated) / 1048576.0, _compilesInWindow, (int)Godot.Performance.GetMonitor(Godot.Performance.Monitor.ObjectNodeCount),
+                    (int)Godot.Performance.GetMonitor(Godot.Performance.Monitor.ObjectOrphanNodeCount))));
             _gc = collections;
+            _simAllocated = SimJob.AllocatedBytes;
+            _compilesInWindow = 0;
         }
         if (now - _lastState >= StateSeconds)
         {

@@ -175,6 +175,7 @@ public sealed partial class ProcAudit
 
     private void OnBeforeAction(GameAction action)
     {
+        using var timing = OverlayHost.TimeHook("proc-audit");
         try
         {
             // Another action starting while a play of yours waits for a choice (a teammate's play, in multiplayer).
@@ -254,6 +255,7 @@ public sealed partial class ProcAudit
 
     private void OnActionPaused(GameAction action)
     {
+        using var timing = OverlayHost.TimeHook("proc-audit");
         if (_running.TryGetValue(action, out var paused)) paused.Paused = true;
         OnHistoryChanged();
         if (_current != null && ReferenceEquals(_current.Action, action)) _current = null;
@@ -261,6 +263,7 @@ public sealed partial class ProcAudit
 
     private void OnActionCancelled(GameAction action)
     {
+        using var timing = OverlayHost.TimeHook("proc-audit");
         Unhook(action);
         _running.Remove(action);
         if (_current != null && ReferenceEquals(_current.Action, action)) _current = null;
@@ -280,6 +283,7 @@ public sealed partial class ProcAudit
 
     private void OnActionFinished(GameAction action)
     {
+        using var timing = OverlayHost.TimeHook("proc-audit");
         try
         {
             OnHistoryChanged();
@@ -331,6 +335,7 @@ public sealed partial class ProcAudit
     /// <summary>New history entries belong to the play action running when they were added.</summary>
     private void OnHistoryChanged()
     {
+        using var timing = OverlayHost.TimeHook("proc-audit");
         // Called from the game's CombatHistory.Changed event: an exception here would surface in the game's code.
         try { HistoryChanged(); }
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "audit-history"); }
@@ -352,6 +357,7 @@ public sealed partial class ProcAudit
 
     private void Flash(AbstractModel model)
     {
+        using var timing = OverlayHost.TimeHook("proc-audit");
         // Called from the game's Flashed events.
         try
         {
@@ -371,6 +377,7 @@ public sealed partial class ProcAudit
     /// </summary>
     private static void ShufflePrefix(Player player)
     {
+        using var timing = OverlayHost.TimeHook("proc-audit");
         try
         {
             var procAudit = _instance;

@@ -89,6 +89,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     private static void BeforeChosen(EventOption __instance)
     {
+        using var timing = OverlayHost.TimeHook("run-reminders");
         try
         {
             Close();
@@ -112,12 +113,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// <summary>The option's task: the window stays open until it ends (card choices can take a while).</summary>
     private static void AfterChosen(EventOption __instance, Task __result)
     {
+        using var timing = OverlayHost.TimeHook("run-reminders");
         try { if (_window is { } window && window.Option == __instance) window.Task = __result; }
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-chosen"); }
     }
 
     private static void OnFlashed(RelicModel relic, IEnumerable<MegaCrit.Sts2.Core.Entities.Creatures.Creature> _)
     {
+        using var timing = OverlayHost.TimeHook("run-reminders");
         try { if (_window is { } window && !window.Flashed.Contains(relic)) window.Flashed.Add(relic); }
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-flash"); }
     }

@@ -19,6 +19,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Changed
 - A card whose draws No Draw (Battle Trance) would stop gets No Draw's tab, plain (its icon already shows the crossed card).
+- The slow-frame log line for the game's long frames gives the mod's share in its frame and in the game's hooks, instead of calling the rest the game's own work.
 
 ### Main Saves 1.0.26
 #### Changed

@@ -51,6 +51,7 @@ internal static class DrawPileMemory
 
     private static void BeforeShuffle(Player player)
     {
+        using var timing = Sts2Mods.Core.Ui.OverlayHost.TimeHook("draw-pile-memory");
         try
         {
             if (player != Sts2State.Me) return;
@@ -66,6 +67,7 @@ internal static class DrawPileMemory
 
     private static void BeforeAdd(IEnumerable<CardModel> cards, CardPile newPile, CardPilePosition position)
     {
+        using var timing = Sts2Mods.Core.Ui.OverlayHost.TimeHook("draw-pile-memory");
         try
         {
             if (newPile.Type != PileType.Draw || position == CardPilePosition.Bottom) return;

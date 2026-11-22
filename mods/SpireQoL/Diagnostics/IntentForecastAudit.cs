@@ -25,6 +25,7 @@ internal static class IntentForecastAudit
 
     private static void Before(MonsterModel __instance, out ForecastTurn? __state)
     {
+        using var timing = Sts2Mods.Core.Ui.OverlayHost.TimeHook("intent-forecast");
         __state = null;
         try
         {
@@ -50,6 +51,7 @@ internal static class IntentForecastAudit
 
     private static void After(MonsterModel __instance, ForecastTurn? __state)
     {
+        using var timing = Sts2Mods.Core.Ui.OverlayHost.TimeHook("intent-forecast");
         if (__state == null) return;
         try
         {

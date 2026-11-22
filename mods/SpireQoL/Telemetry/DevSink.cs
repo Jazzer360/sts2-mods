@@ -11,12 +11,16 @@ public sealed record StreamStarted(int Format, string Mod, string Game, DateTime
 
 /// <summary>
 /// The frames of the last moment (about 250 ms), rolled up: how many, the mod's time per frame (median, 95th percentile, largest),
-/// the longest gap between frames, slow frames (the mod over 30 ms), each feature's mean and largest time, the process's memory and
-/// collections in that moment, the simulator's states held by every search and the searches running.
+/// the longest gap between frames, slow frames (the mod over 30 ms), each feature's mean and largest time and mean memory per frame
+/// (the mod's code in the game's hooks too, as "hook:" entries), the whole process's memory, allocation and collections in that
+/// moment, the simulations' allocation on their worker threads, the engine's shader compiles (pipeline compilations: a first draw
+/// of something new stalls drawing while they run) and its node counts (orphans: nodes freed from the tree but never deleted), the
+/// simulator's states held by every search and the searches running.
 /// </summary>
 public sealed record FrameRollup(double Seconds, int Frames, double ModP50, double ModP95, double ModMax, double GapMax, int Slow,
     Dictionary<string, double> FeatureMean, Dictionary<string, double> FeatureMax, Dictionary<string, double> FeatureKb,
-    double HeapMb, double AllocatedMb, int Gen0, int Gen1, int Gen2, double GcPauseMs, long HeldStates, int Searching) : DevEvent;
+    double HeapMb, double AllocatedMb, int Gen0, int Gen1, int Gen2, double GcPauseMs, long HeldStates, int Searching,
+    double SimMb, int Compiles, int Nodes, int OrphanNodes) : DevEvent;
 
 /// <summary>A line of the mod's own log ([SpireQoL] lines).</summary>
 public sealed record LogLine(string Level, string Text) : DevEvent;
@@ -54,7 +58,8 @@ public sealed class FrameWindow
     }
 
     /// <summary>The rollup, then starts again. <paramref name="extra"/>: the process and simulator numbers the caller read.</summary>
-    public FrameRollup Take(double seconds, (double HeapMb, double AllocatedMb, int Gen0, int Gen1, int Gen2, double GcPauseMs, long Held, int Searching) extra)
+    public FrameRollup Take(double seconds, (double HeapMb, double AllocatedMb, int Gen0, int Gen1, int Gen2, double GcPauseMs, long Held, int Searching) extra,
+        (double SimMb, int Compiles, int Nodes, int OrphanNodes) engine)
     {
         _mod.Sort();
         double At(double percentile) => _mod.Count == 0 ? 0 : _mod[Math.Clamp((int)Math.Ceiling(percentile * _mod.Count) - 1, 0, _mod.Count - 1)];
@@ -63,7 +68,8 @@ public sealed class FrameWindow
         var frameRollup = new FrameRollup(R(seconds), _mod.Count, R(At(percentile: 0.5)), R(At(percentile: 0.95)), R(_mod.Count == 0 ? 0 : _mod[^1]), R(_gapMax), _slow,
             _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Sum / count)), _features.ToDictionary(entry => entry.Key, entry => R(entry.Value.Max)),
             _kb.ToDictionary(entry => entry.Key, entry => R(entry.Value / count)),
-            R(extra.HeapMb), R(extra.AllocatedMb), extra.Gen0, extra.Gen1, extra.Gen2, R(extra.GcPauseMs), extra.Held, extra.Searching);
+            R(extra.HeapMb), R(extra.AllocatedMb), extra.Gen0, extra.Gen1, extra.Gen2, R(extra.GcPauseMs), extra.Held, extra.Searching,
+            R(engine.SimMb), engine.Compiles, engine.Nodes, engine.OrphanNodes);
         _mod.Clear();
         _gapMax = 0;
         _slow = 0;

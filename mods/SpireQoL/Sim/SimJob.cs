@@ -26,6 +26,13 @@ public sealed class SimJob
     private static readonly ConcurrentDictionary<SimJob, byte> Running = new();
     /// <summary>Jobs started and finished since the last time none was running: how far along they are together.</summary>
     private static int _started, _done;
+    private static long _allocated;
+
+    /// <summary>
+    /// Memory every search has allocated on its worker thread since launch, in bytes (GC.GetAllocatedBytesForCurrentThread around
+    /// each run): the dev dashboard's simulation share, which the frame's per-feature counts can't see.
+    /// </summary>
+    public static long AllocatedBytes => Interlocked.Read(ref _allocated);
 
     /// <summary>The searches going on now, and how far along they are together: the share of this busy spell's searches done. None: (0, 1).</summary>
     public static (int Count, double Progress) Progress()
@@ -106,6 +113,7 @@ public sealed class SimJob
     private void Work()
     {
         var clock = Stopwatch.StartNew();
+        var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
         var gated = false;
         var work = new SimWork { Cancel = _cts.Token, HeavyAt = _firstBudget };
         work.OnHeavy = () =>
@@ -147,6 +155,7 @@ public sealed class SimJob
         finally
         {
             if (gated) Background.Release();
+            Interlocked.Add(ref _allocated, GC.GetAllocatedBytesForCurrentThread() - allocatedBefore);
             Running.TryRemove(this, out _);
             Interlocked.Increment(ref _done);
         }
