@@ -466,9 +466,29 @@ const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
   rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [],
   combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null, launches: [0],
+  searchTotals: newSearchTotals(), searchCards: new Map(),
 };
+/** Every search this launch, counted as it comes (M.searches keeps only the last MAX.searches, for the charts and times). */
+function newSearchTotals() { return { n: 0, bg: 0, cancelled: 0, cancelledCopies: 0, caps: {} }; }
+const searchKey = (x) => isForecast(x) ? "the turn forecast" : x.label.replace(/ \(target [^)]*\)$/, "");
+function countSearch(e) {
+  const tot = M.searchTotals;
+  tot.n++;
+  if (e.background) tot.bg++;
+  if (e.cancelled) { tot.cancelled++; tot.cancelledCopies += e.copies || 0; }
+  if (e.cap) tot.caps[e.cap] = (tot.caps[e.cap] || 0) + 1;
+  const key = searchKey(e);
+  const c = M.searchCards.get(key) ?? { key, n: 0, maxMs: 0, maxCopies: 0, maxHeld: 0, bg: 0, caps: 0, cancelled: 0 };
+  c.n++;
+  if (e.cancelled) c.cancelled++;
+  else { c.maxMs = Math.max(c.maxMs, e.ms); c.maxCopies = Math.max(c.maxCopies, e.copies); c.maxHeld = Math.max(c.maxHeld, e.peakHeld); }
+  if (e.background) c.bg++;
+  if (e.cap) c.caps++;
+  M.searchCards.set(key, c);
+}
 function reset() {
-  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0] });
+  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
+    searchTotals: newSearchTotals(), searchCards: new Map() });
   FS.base = 0;
 }
 const push = (arr, v, max) => { arr.push(v); if (max && arr.length > max) arr.splice(0, arr.length - max); };
@@ -485,6 +505,7 @@ function ingest(e) {
     case "frame-rollup": push(M.rollups, e, MAX.rollups); break;
     case "search-done": {
       push(M.searches, e, MAX.searches);
+      countSearch(e);
       if (e.turn > 0) { const r = turnRec(e.turn); r.searches++; if (e.cap) r.caps.push(e.cap); }
       break;
     }
@@ -1438,15 +1459,15 @@ $("turns").addEventListener("toggle", (e) => { const k = e.target.dataset?.key; 
 
 function renderSearches() {
   const s = M.searches, done = s.filter((x) => !x.cancelled), ms = done.map((x) => x.ms);
-  const cancelled = s.filter((x) => x.cancelled);
+  const tot = M.searchTotals, sampled = tot.n > s.length ? ` · times from the last ${fmt(s.length, 0)}` : "";
   setHTML($("searchTiles"), [
-    tile("Searches this launch", fmt(s.length, 0), `${pct(s.filter((x) => x.background).length, s.length)} needed the background (over a frame's 8 ms)`, "",
+    tile("Searches this launch", fmt(tot.n, 0), `${pct(tot.bg, tot.n)} needed the background (over a frame's 8 ms)`, "",
       "Every simulation run this launch: one per card per target whenever the board changes, plus the turn forecast. Most finish within the frame they're asked for; the rest go on in the background while the last numbers stay on screen."),
-    tile("Search time", `${fmt(quant(ms, 0.5), 2)} ms`, `typical · one in twenty over ${fmt(quant(ms, 0.95), 1)} ms · slowest ${fmt(Math.max(0, ...ms), 0)} ms`, quant(ms, 0.95) > 8 ? "warn" : "good",
+    tile("Search time", `${fmt(quant(ms, 0.5), 2)} ms`, `typical · one in twenty over ${fmt(quant(ms, 0.95), 1)} ms · slowest ${fmt(Math.max(0, ...ms), 0)} ms${sampled}`, quant(ms, 0.95) > 8 ? "warn" : "good",
       "Typical: half the searches were faster. One in twenty (the 95th percentile) took longer than the second number: under 8 ms, nearly everything fits in a frame."),
-    tile("Stopped at a cap", fmt(s.filter((x) => x.cap).length, 0), Object.entries(s.filter((x) => x.cap).reduce((a, x) => ((a[x.cap] = (a[x.cap] || 0) + 1), a), {})).map(([k, v]) => `${k} ×${v}`).join(", ") || "none: every search finished", s.some((x) => x.cap) ? "bad" : "good",
+    tile("Stopped at a cap", fmt(Object.values(tot.caps).reduce((a, v) => a + v, 0), 0), Object.entries(tot.caps).map(([k, v]) => `${k} ×${v}`).join(", ") || "none: every search finished", Object.keys(tot.caps).length ? "bad" : "good",
       "A search too big to finish within its memory or work cap (decision #107): its numbers show ? instead of a promise. Should be rare; each one is logged and listed on the Overview."),
-    tile("Thrown away", fmt(cancelled.length, 0), `${fmt(cancelled.reduce((a, x) => a + x.copies, 0), 0)} states copied for nothing`, "",
+    tile("Thrown away", fmt(tot.cancelled, 0), `${fmt(tot.cancelledCopies, 0)} states copied for nothing`, "",
       "Searches cancelled because the board changed before they finished (you hovered or played on). Normal in small numbers; a lot of thrown-away work on a busy board is a sign searches start too eagerly."),
   ].join(""));
   scatter("scatter", s.slice(-1500).map((x) => ({ x: x.copies, y: x.ms, label: `${x.label}${x.cap ? " · " + x.cap : ""}${x.cancelled ? " · cancelled" : ""}${x.background ? " · background" : ""}`, color: x.cancelled ? css("--faint") : x.cap ? css("--violet") : isForecast(x) ? css("--good") : css("--accent") })));
@@ -1460,19 +1481,12 @@ function renderSearches() {
   const bucket = (v) => { const k = edges.findIndex((e) => v < e); return k < 0 ? edges.length : k; };
   const count = (pickOne) => { const c = names.map(() => 0); for (const x of done) if (pickOne(x)) c[bucket(x.ms)]++; return c; };
   groupBars("timeHist", names, [{ name: "a card's play", color: css("--accent"), values: count((x) => !isForecast(x)) }, { name: "the turn forecast", color: css("--good"), values: count(isForecast) }]);
-  // Per card (its searches over every target): the costliest first.
-  const byCard = new Map();
-  for (const x of s) {
-    const key = isForecast(x) ? "the turn forecast" : x.label.replace(/ \(target [^)]*\)$/, "");
-    const c = byCard.get(key) ?? { key, n: 0, ms: [], maxMs: 0, maxCopies: 0, maxHeld: 0, bg: 0, caps: 0, cancelled: 0 };
-    c.n++;
-    if (x.cancelled) c.cancelled++;
-    else { c.ms.push(x.ms); c.maxMs = Math.max(c.maxMs, x.ms); c.maxCopies = Math.max(c.maxCopies, x.copies); c.maxHeld = Math.max(c.maxHeld, x.peakHeld); }
-    if (x.background) c.bg++;
-    if (x.cap) c.caps++;
-    byCard.set(key, c);
-  }
-  const cards = [...byCard.values()].sort((a, b) => b.maxCopies - a.maxCopies || b.maxMs - a.maxMs).slice(0, 40);
+  // Per card (its searches over every target): the costliest first. Counts and maxima over every search this launch; the typical
+  // time from the recent ones the page keeps.
+  const recentMs = new Map();
+  for (const x of done) { const key = searchKey(x); (recentMs.get(key) ?? recentMs.set(key, []).get(key)).push(x.ms); }
+  const cards = [...M.searchCards.values()].map((c) => ({ ...c, ms: recentMs.get(c.key) ?? [] }))
+    .sort((a, b) => b.maxCopies - a.maxCopies || b.maxMs - a.maxMs).slice(0, 40);
   setHTML($("costTable"), `<tr><th>Card</th><th class="n">Searches</th><th class="n">Typical time</th><th class="n">Slowest</th><th class="n">Most work (states copied)</th><th class="n">Most states held at once</th><th></th></tr>` +
     (cards.length ? cards.map((c) => `<tr><td>${esc(c.key)}</td><td class="n">${fmt(c.n, 0)}</td><td class="n">${fmt(quant(c.ms, 0.5), 2)} ms</td>
       <td class="n ${c.maxMs > 50 ? "bad" : c.maxMs > 8 ? "warn" : ""}">${fmt(c.maxMs, 1)} ms</td><td class="n ${c.maxCopies > 100000 ? "bad" : c.maxCopies > 1000 ? "warn" : ""}">${fmt(c.maxCopies, 0)}</td>

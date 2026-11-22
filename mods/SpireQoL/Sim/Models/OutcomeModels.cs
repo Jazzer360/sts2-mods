@@ -13,7 +13,7 @@ internal static class OutcomeRules
     public static OutcomeRule KillsAnother(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Any(killed => killed != enemy));
 
     /// <summary>The play kills some enemy in every branch of an aim (not always the same one): a bonus.</summary>
-    public static readonly OutcomeRule KillsOne = new(Harmful: false, outcome => outcome.PlayKillsInAll);
+    public static readonly OutcomeRule KillsOne = new(Harmful: false, outcome => outcome.PlayKillsInAll, InSome: outcome => outcome.KilledByPlayInAny.Count > 0);
 
     /// <summary>You lose HP during the play (its own HP cost, Thorns hitting back), in every branch of an aim: a bonus.</summary>
     public static readonly OutcomeRule YouLoseHp = new(Harmful: false, outcome => outcome.PlayHpLossesMin > 0);

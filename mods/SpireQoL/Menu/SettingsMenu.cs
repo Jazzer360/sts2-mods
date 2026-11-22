@@ -177,7 +177,7 @@ public sealed partial class SettingsMenu
         }
         if (button == null || button.GetParent() != parent)
         {
-            button?.QueueFree();
+            button.RemoveAndFree();
             button = MakeButton("Spire QoL settings", size: 22);
             button.Pressed += Open;
             parent.AddChild(button);

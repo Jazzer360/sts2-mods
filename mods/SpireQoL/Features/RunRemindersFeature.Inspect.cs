@@ -3,6 +3,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Events;
 using MegaCrit.Sts2.Core.Nodes.Events;
+using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Features;
 
@@ -36,7 +37,7 @@ public sealed partial class RunRemindersFeature
         var groups = option != null && _ctx.Settings.EventInspect ? GroupsOf(option, me!) : null;
         if (groups == null || !groups.Any(drawGroup => drawGroup.IsRandom))
         {
-            existing?.QueueFree();
+            existing.RemoveAndFree();
             return;
         }
         if (existing == null)

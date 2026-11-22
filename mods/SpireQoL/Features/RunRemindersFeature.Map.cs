@@ -45,7 +45,7 @@ public sealed partial class RunRemindersFeature
             var row = item.GetNodeOrNull<HBoxContainer>(PathNodeName);
             if (!_pathShown.TryGetValue(item, out var was) || was != signature || (row == null) != (shown.Count == 0))
             {
-                row?.QueueFree();
+                row.RemoveAndFree();
                 row = null;
                 _pathShown[item] = signature;
                 _pathCards.RemoveAll(tinyCardIcon => !GodotObject.IsInstanceValid(tinyCardIcon.Root) || tinyCardIcon.Root.IsQueuedForDeletion() || IsUnder(tinyCardIcon.Root, item));

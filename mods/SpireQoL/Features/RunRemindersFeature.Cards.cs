@@ -53,25 +53,33 @@ public sealed partial class RunRemindersFeature
         return !CardsRead.TryGetValue(option, out var read) || read.ChangeReaches(me, rule);
     }
 
-    private static readonly ConditionalWeakTable<EventOption, Dictionary<string, string?>> OddsCache = new();
+    private static readonly ConditionalWeakTable<EventOption, Dictionary<string, (string? Text, bool Never)>> OddsCache = new();
 
     /// <summary>
     /// The chance under a relic's icon (docs/CARD_ODDS.md): "43%", or a range for a transform whose cards differ in pool; null when
-    /// it's sure or can't be told. Cached per option and relic.
+    /// it's sure or can't be told. <paramref name="never"/>: the option can't give a card the relic cares about (a 0% chance), so the
+    /// icon isn't shown. Cached per option and relic.
     /// </summary>
-    private static string? OddsText(EventOption option, Player me, CardAffinityRule rule)
+    private static string? OddsText(EventOption option, Player me, CardAffinityRule rule, out bool never)
     {
-        var cache = OddsCache.GetValue(option, _ => new Dictionary<string, string?>());
-        if (cache.TryGetValue(rule.Relic, out var text)) return text;
-        text = null;
+        var cache = OddsCache.GetValue(option, _ => new Dictionary<string, (string? Text, bool Never)>());
+        if (cache.TryGetValue(rule.Relic, out var cached))
+        {
+            never = cached.Never;
+            return cached.Text;
+        }
+        string? text = null;
+        never = false;
         try
         {
             if (CardsRead.TryGetValue(option, out var read))
             {
                 var held = Held(me);
-                if (read.Chance(me, card => CardAffinity.AppliesWith(rule, card, held, read.GivesUpgraded)) is { } chance && chance.Low < 1)
+                if (read.Chance(me, card => CardAffinity.AppliesWith(rule, card, held, read.GivesUpgraded)) is { } chance)
                 {
-                    text = Percent(chance.Low) == Percent(chance.High) ? Percent(chance.Low) + "%" : $"{Percent(chance.Low)}–{Percent(chance.High)}%";
+                    never = chance.High <= 0;
+                    if (!never && chance.Low < 1)
+                        text = Percent(chance.Low) == Percent(chance.High) ? Percent(chance.Low) + "%" : $"{Percent(chance.Low)}–{Percent(chance.High)}%";
                 }
             }
         }
@@ -79,7 +87,7 @@ public sealed partial class RunRemindersFeature
         {
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-odds:" + option.TextKey);
         }
-        cache[rule.Relic] = text;
+        cache[rule.Relic] = (text, never);
         return text;
     }
 

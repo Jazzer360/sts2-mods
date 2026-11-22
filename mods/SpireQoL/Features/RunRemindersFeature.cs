@@ -466,7 +466,12 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             if (CardAffinity.For(name) is { } affinity)
             {
                 if ((effects & CardAffinity.ChangeEffect(affinity)) != 0 && ChangeReaches(option, me, affinity)) { }
-                else if ((effects & ChoiceEffect.CardToDeck) != 0 && CanGet(option, me, affinity)) odds = OddsText(option, me, affinity);
+                else if ((effects & ChoiceEffect.CardToDeck) != 0 && CanGet(option, me, affinity))
+                {
+                    // A card it cares about can't come up after all (its chance is 0%): no icon.
+                    odds = OddsText(option, me, affinity, out var never);
+                    if (never) continue;
+                }
                 else continue;
             }
             icons.Add((relic, (rule.CrossedOn & effects) != 0, odds));
@@ -481,12 +486,12 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var key = string.Join(",", icons.Select(icon => icon.Relic.GetType().Name + (icon.Crossed ? "x" : "") + icon.Odds));
         if (icons.Count == 0)
         {
-            box?.QueueFree();
+            box.RemoveAndFree();
             return;
         }
         if (box == null || (string)box.GetMeta("key", "") != key)
         {
-            box?.QueueFree();
+            box.RemoveAndFree();
             box = new HBoxContainer { Name = NodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
             box.AddThemeConstantOverride("separation", 4);
             box.SetMeta("key", key);
@@ -595,13 +600,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var key = string.Join(",", icons.Select(icon => icon.Relic.GetType().Name + (icon.Crossed ? "x" : ""))) + "|" + net;
         if (icons.Count == 0)
         {
-            box?.QueueFree();
+            box.RemoveAndFree();
             return;
         }
         var size = Math.Clamp(price.Size.Y, 20f, 36f);
         if (box == null || (string)box.GetMeta("key", "") != key)
         {
-            box?.QueueFree();
+            box.RemoveAndFree();
             box = new Control { Name = ShopNodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
             box.SetMeta("key", key);
             var row = new HBoxContainer { Name = "Icons", MouseFilter = Control.MouseFilterEnum.Ignore };

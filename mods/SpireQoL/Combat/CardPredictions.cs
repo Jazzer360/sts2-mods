@@ -575,28 +575,21 @@ public sealed class CardPredictions
         foreach (var src in sources.OfType<PowerModel>().Where(power => OwnerOf(power) is { IsPlayer: true } && power.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
             LogTab(src, TeammateOf(src, _me, _cs), outcomes, tabs, TabKind.Damage);
 
-        // What the audits hold the play to, per aim (decisions #87, #95): the tabbed sources it sets off in every outcome and in
-        // some, and each enemy's chance of dying before it acts.
-        if (facts.Sim?.PlayByTarget.Keys.ToList() is { } aims && aims.Count == outcomes.Length)
-        {
-            IReadOnlyDictionary<int, IReadOnlyCollection<Type>> By(Func<(Type T, bool[] Every, bool[] Any), bool[]> at) =>
-                aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => (IReadOnlyCollection<Type>)_firesBy.Values.Where(value => at(value)[aimed.index]).Select(value => value.T).Distinct().ToList());
-            facts.FiresEveryByAim = By(fired => fired.Every);
-            facts.FiresAnyByAim = By(fired => fired.Any);
-            var enemies = forecast.Ids.Values.Distinct().ToList();
-            facts.DeathByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
-                aimed => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[aimed.index].DeadChanceRange(id)));
-            facts.FrostBlockByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
-                aimed => (outcomes[aimed.index].PlayFiredEvery.DataOf(SimKeys.FrostEvokeBlock), outcomes[aimed.index].PlayFiredAny.DataOf(SimKeys.FrostEvokeBlock)));
-        }
-
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act
         // Each rule is a test per target (one simulation each): the tab shows when some target passes it, with the aim marker
         // when not every target does (several enemies with the same power: when no target passes any of them).
-        void Add(AbstractModel src, bool harmful, Func<SimOutcome, bool> at, Func<SimState, bool>? inBranch)
+        void Add(AbstractModel src, bool harmful, Func<SimOutcome, bool> at, Func<SimState, bool>? inBranch, Func<SimOutcome, bool>? inSome)
         {
             var key = "proc:" + src.GetType().Name;
             var firesAt = outcomes.Select(at).ToArray();
+            // For the audits, per aim, as the play-log tabs are (LogTab): a bonus in every outcome where it's set off, in some where some
+            // outcome sets it off; a warning (set off in some outcome) in some only.
+            var every = harmful ? new bool[firesAt.Length] : firesAt.ToArray();
+            var any = outcomes.Select((outcome, index) => firesAt[index] || inSome?.Invoke(outcome) == true).ToArray();
+            var srcName = src.GetType().Name;
+            if (_firesBy.TryGetValue(srcName, out var had) && had.Every.Length == every.Length)
+                for (var i = 0; i < every.Length; i++) { every[i] |= had.Every[i]; any[i] |= had.Any[i]; }
+            _firesBy[srcName] = (src.GetType(), every, any);
             if (!firesAt.Any(fires => fires)) return;
             if (_firesAt.TryGetValue(key, out var prev) && prev.Length == firesAt.Length)
                 for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prev[i];
@@ -612,8 +605,24 @@ public sealed class CardPredictions
         foreach (var src in sources.OrderBy(model => model is PowerModel power && OwnerOf(power) is { IsEnemy: true } ? 0 : model is RelicModel ? 1 : 2))
         {
             if (SimModels.Get(SimReaders.ModelName(src)) is not { JudgedOnOutcome: true } model || !SimOwner(src, out var owner)) continue;
-            if (model.OutcomeTab(start, baseline, owner ?? Who.You) is { } rule) Add(src, rule.Harmful, rule.SetOff, rule.InBranch);
+            if (model.OutcomeTab(start, baseline, owner ?? Who.You) is { } rule) Add(src, rule.Harmful, rule.SetOff, rule.InBranch, rule.InSome);
         }
+
+        // What the audits hold the play to, per aim (decisions #87, #95): the tabbed sources it sets off in every outcome and in
+        // some, and each enemy's chance of dying before it acts.
+        if (facts.Sim?.PlayByTarget.Keys.ToList() is { } aims && aims.Count == outcomes.Length)
+        {
+            IReadOnlyDictionary<int, IReadOnlyCollection<Type>> By(Func<(Type T, bool[] Every, bool[] Any), bool[]> at) =>
+                aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => (IReadOnlyCollection<Type>)_firesBy.Values.Where(value => at(value)[aimed.index]).Select(value => value.T).Distinct().ToList());
+            facts.FiresEveryByAim = By(fired => fired.Every);
+            facts.FiresAnyByAim = By(fired => fired.Any);
+            var enemies = forecast.Ids.Values.Distinct().ToList();
+            facts.DeathByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
+                aimed => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[aimed.index].DeadChanceRange(id)));
+            facts.FrostBlockByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
+                aimed => (outcomes[aimed.index].PlayFiredEvery.DataOf(SimKeys.FrostEvokeBlock), outcomes[aimed.index].PlayFiredAny.DataOf(SimKeys.FrostEvokeBlock)));
+        }
+
 
         // Lethal (decision #87): the card raises an enemy's chance of dying before it acts, for sure: its explored deaths (Low)
         // beat everything ending the turn now could give (High). Certain kills always count; a chance only with chances on.

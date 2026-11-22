@@ -91,7 +91,11 @@ public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft, CounterPassedLimit }
 /// Whether one branch sets it off, for a warning's chance (decision #159: the share of the outcomes that do); null when the rule
 /// can't be told branch by branch (no chance shown then).
 /// </param>
-public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff, Func<SimState, bool>? InBranch = null);
+/// <param name="InSome">
+/// For a bonus (set off in every outcome: SetOff), whether some outcome of one play sets it off, so the checks accept its flash there
+/// (Gremlin Horn on a kill that only some rolls make); null: SetOff alone.
+/// </param>
+public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff, Func<SimState, bool>? InBranch = null, Func<SimOutcome, bool>? InSome = null);
 
 /// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
 public sealed record SimCardPlay(SimCard Card, int Owner, [property: JsonConverter(typeof(CreatureIdJson))] int Target, int PlayIndex, int PlayCount, bool AutoPlay)

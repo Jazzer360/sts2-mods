@@ -56,6 +56,19 @@ public class IntentRulesTests
     }
 
     [Fact]
+    public void AMovesAmountMadeOfTwoNumbersIsTheirProduct()
+    {
+        // A dev review report: Axebot's Boot Up applies BootUpStrGain * RespawnCount Strength (showed 2, applied 8). The amount is the
+        // product of the two numbers the monster keeps, not the second alone.
+        var bootUp = EveryMove().Single(monsterMove => monsterMove.Monster.GetType().Name == "Axebot" && monsterMove.Move.Id == "BOOT_UP_MOVE");
+        // The last Axebot of the stock (StockAmount 0: RespawnCount 2), so the product isn't the second number alone.
+        bootUp.Monster.GetType().GetProperty("StockAmount")!.SetValue(bootUp.Monster, 0);
+        int Number(string getter) => Convert.ToInt32(bootUp.Monster.GetType().GetProperty(getter, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)!.GetValue(bootUp.Monster));
+        var strength = Assert.Single(MovePowers.Of(bootUp.Monster, bootUp.Move), applied => applied.Power.Name == "StrengthPower");
+        Assert.Equal(Number("BootUpStrGain") * Number("RespawnCount"), strength.Amount);
+    }
+
+    [Fact]
     public void EveryBuffAndDebuffMoveNamesItsPowers()
     {
         // A buff or debuff intent whose move applies no power the reader finds (a power applied another way): listed, so a

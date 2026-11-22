@@ -50,7 +50,7 @@ internal static class IntentCorner
         var row = holder.GetNodeOrNull<HBoxContainer>(PowersName);
         if (powers is not { Count: > 0 })
         {
-            row?.QueueFree();
+            row.RemoveAndFree();
             return;
         }
         var key = string.Join(",", powers.Select(applied => $"{applied.Power.Name}:{applied.Amount}"));

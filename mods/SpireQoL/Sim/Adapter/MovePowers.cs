@@ -27,7 +27,32 @@ internal static class MovePowers
     /// Per perform method: each Apply call's power, how its amount is read (a constant or a getter), or nothing; and whether it runs
     /// on every way through the move (<paramref name="Certain"/>) or only on some branches (decision #109).
     /// </summary>
-    internal sealed record Call(Type Power, decimal? Constant, MethodInfo? Getter, bool Certain = true, bool Negated = false);
+    internal sealed record Call(Type Power, decimal? Constant, MethodInfo? Getter, bool Certain = true, bool Negated = false, Arithmetic? Combined = null);
+
+    /// <summary>
+    /// The amount is its first number combined with another the monster keeps (Axebot's Boot Up: BootUpStrGain * RespawnCount): the
+    /// operation and the getter of the second.
+    /// </summary>
+    internal sealed record Arithmetic(OpCode Op, MethodInfo Right);
+
+    /// <summary>A read amount: the first number (constant or getter), combined with another when combined is set.</summary>
+    private static decimal? Evaluate(MonsterModel monster, decimal? constant, MethodInfo? getter, Arithmetic? combined)
+    {
+        decimal? Get(MethodInfo method)
+        {
+            if (!method.DeclaringType!.IsInstanceOfType(monster)) return null;
+            try { return Convert.ToDecimal(method.Invoke(monster, null)); } catch { return null; }
+        }
+        var amount = getter != null ? Get(getter) : constant;
+        if (combined == null || amount is not { } left) return amount;
+        if (Get(combined.Right) is not { } right) return null;
+        if (combined.Op == OpCodes.Mul) return left * right;
+        if (combined.Op == OpCodes.Add) return left + right;
+        if (combined.Op == OpCodes.Sub) return left - right;
+        return right != 0 && combined.Op == OpCodes.Div ? Math.Truncate(left / right) : null;
+    }
+
+    private static bool IsArithmetic(CodeInstruction ins) => ins.opcode == OpCodes.Mul || ins.opcode == OpCodes.Add || ins.opcode == OpCodes.Sub || ins.opcode == OpCodes.Div;
 
     private static readonly Dictionary<MethodInfo, List<Call>> Calls = new();
 
@@ -49,11 +74,7 @@ internal static class MovePowers
             }
             foreach (var call in calls)
             {
-                decimal? amount = call.Constant;
-                if (call.Getter != null && call.Getter.DeclaringType!.IsInstanceOfType(monster))
-                {
-                    try { amount = Convert.ToDecimal(call.Getter.Invoke(monster, null)); } catch { amount = null; }
-                }
+                var amount = Evaluate(monster, call.Constant, call.Getter, call.Combined);
                 if (call.Negated && amount is { } positive) amount = -positive; // -SpikenAmount: Toadpole's Spike Spit takes its Thorns away
                 result.Add(new Applied(call.Power, amount, Maybe: !call.Certain));
             }
@@ -71,7 +92,7 @@ internal static class MovePowers
     }
 
     /// <summary>One CreatureCmd.GainBlock call of a move on its own enemy (base.Creature): its amount, as for powers, and its props.</summary>
-    internal sealed record BlockCall(decimal? Constant, MethodInfo? Getter, int Props);
+    internal sealed record BlockCall(decimal? Constant, MethodInfo? Getter, int Props, Arithmetic? Combined = null);
 
     private static readonly Dictionary<MethodInfo, List<BlockCall>> BlockCalls = new();
 
@@ -95,11 +116,7 @@ internal static class MovePowers
             var total = 0m;
             foreach (var blockCall in calls)
             {
-                decimal? amount = blockCall.Constant;
-                if (blockCall.Getter != null && blockCall.Getter.DeclaringType!.IsInstanceOfType(monster))
-                {
-                    try { amount = Convert.ToDecimal(blockCall.Getter.Invoke(monster, null)); } catch { amount = null; }
-                }
+                var amount = Evaluate(monster, blockCall.Constant, blockCall.Getter, blockCall.Combined);
                 if (amount is not { } known) return null;
                 total += creature.CombatState is { } combat
                     ? MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(combat, creature, known, (MegaCrit.Sts2.Core.ValueProps.ValueProp)blockCall.Props, null, null, out _)
@@ -130,7 +147,7 @@ internal static class MovePowers
                 if (OnOwnCreature(code, i - 1, span: 8)) calls.Add(new BlockCall(Constant: null, Getter: null, move));
                 continue;
             }
-            if (AmountBefore(code, i) is not var (constant, getter, at))
+            if (AmountBefore(code, i) is not var (constant, getter, at, combined))
             {
                 if (OnOwnCreature(code, i - 1, span: 8)) calls.Add(new BlockCall(Constant: null, Getter: null, move));
                 continue;
@@ -140,7 +157,7 @@ internal static class MovePowers
             // The props follow the amount (after its conversion to decimal for a constant).
             var after = getter != null ? at + 1 : at + 2;
             var props = after < code.Count && Constant(code[after]) is { } otherConstant ? (int)otherConstant : move;
-            calls.Add(new BlockCall(constant, getter, props));
+            calls.Add(new BlockCall(constant, getter, props, combined));
         }
         return calls;
     }
@@ -192,8 +209,8 @@ internal static class MovePowers
             var power = otherMethod.IsGenericMethod ? otherMethod.GetGenericArguments()[0] : made;
             if (power == null) continue;
             // A getter followed by a neg: the amount is minus that number (Toadpole's Spike Spit applies -SpikenAmount Thorns).
-            calls.Add(AmountBefore(code, i) is var (constant, getter, from)
-                ? new Call(power, constant, getter, Negated: getter != null && from + 1 < code.Count && code[from + 1].opcode == OpCodes.Neg)
+            calls.Add(AmountBefore(code, i) is var (constant, getter, from, combined)
+                ? new Call(power, constant, getter, Negated: getter != null && combined == null && from + 1 < code.Count && code[from + 1].opcode == OpCodes.Neg, Combined: combined)
                 : new Call(power, Constant: null, Getter: null));
             at.Add(i);
         }
@@ -210,19 +227,33 @@ internal static class MovePowers
     /// <summary>
     /// The amount argument: looking back from the call, the first number the monster keeps (an instance getter with a numeric
     /// result) or a constant made into a decimal. Its applier (base.Creature) and card (null) come after it, so they're passed over.
+    /// A getter that's the second number of an operation (A * B: the operation follows it) makes the amount that operation, read when
+    /// its first number is another getter or a constant; any other computed amount isn't a number we can read (null).
     /// </summary>
-    private static (decimal?, MethodInfo?, int)? AmountBefore(List<CodeInstruction> code, int call)
+    private static (decimal?, MethodInfo?, int, Arithmetic?)? AmountBefore(List<CodeInstruction> code, int call)
     {
+        static bool IsGetter(CodeInstruction ins, out MethodInfo getter)
+        {
+            getter = (ins.operand as MethodInfo)!;
+            return ins.operand is MethodInfo { IsStatic: false } method && method.Name.StartsWith("get_", StringComparison.Ordinal) && method.GetParameters().Length == 0
+                   && Numeric(method.ReturnType) && typeof(MonsterModel).IsAssignableFrom(method.DeclaringType);
+        }
         for (var j = call - 1; j >= Math.Max(0, call - 12); j--)
         {
             var ins = code[j];
-            if (ins.operand is MethodInfo { IsStatic: false } method && method.Name.StartsWith("get_", StringComparison.Ordinal) && method.GetParameters().Length == 0
-                && Numeric(method.ReturnType) && typeof(MonsterModel).IsAssignableFrom(method.DeclaringType))
-                return (null, method, j);
-            if (Constant(ins) is { } constant && j + 1 < code.Count && ToDecimal(code[j + 1])) return (constant, null, j);
+            if (IsGetter(ins, out var method))
+            {
+                if (j + 1 >= call || !IsArithmetic(code[j + 1])) return (null, method, j, null);
+                // The second number of an operation: its first is just before its own push of the monster (ldarg.0, call).
+                var combined = new Arithmetic(code[j + 1].opcode, method);
+                if (j >= 3 && IsGetter(code[j - 2], out var left)) return (null, left, j - 2, combined);
+                if (j >= 2 && Constant(code[j - 2]) is { } leftConstant) return (leftConstant, null, j - 2, combined);
+                return null;
+            }
+            if (Constant(ins) is { } constant && j + 1 < code.Count && ToDecimal(code[j + 1])) return (constant, null, j, null);
             // 1m, 0m, -1m compile to decimal's static fields.
             if (ins.operand is FieldInfo { IsStatic: true } field && field.DeclaringType == typeof(decimal))
-                return field.Name switch { "One" => (1m, null, j), "Zero" => (0m, null, j), "MinusOne" => (-1m, null, j), _ => null };
+                return field.Name switch { "One" => (1m, null, j, null), "Zero" => (0m, null, j, null), "MinusOne" => (-1m, null, j, null), _ => null };
             // Another call that makes a value (a Dynamic var, a calculation): not a number we can read.
             if (ins.operand is MethodInfo other && Numeric(other.ReturnType) && other.Name != "op_Implicit") return null;
         }

@@ -75,7 +75,7 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
         var label = holder.GetNodeOrNull<Label>(BlockName);
         if (amount == null)
         {
-            label?.QueueFree();
+            label.RemoveAndFree();
             return;
         }
         if (label == null)

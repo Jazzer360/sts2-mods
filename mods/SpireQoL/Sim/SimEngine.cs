@@ -1139,13 +1139,26 @@ public static partial class SimEngine
     private static void AllyDeaths(SimState state)
     {
         Explosions(state);
-        // AfterDeath, once for each enemy that has died (Crab Rage, Ravenous as models).
-        foreach (var dead in state.Enemies)
+        // AfterDeath, once for each enemy that has died (Crab Rage, Ravenous as models). A main enemy's death kills the enemies left
+        // when every one of them is a Minion (CreatureCmd.Kill: isPrimaryEnemy, teammates all IsSecondaryEnemy), whose deaths are
+        // handled the same way, in turn.
+        bool handled;
+        do
         {
-            if (dead.Alive || dead.DeathHandled || !dead.StartedAlive) continue;
-            dead.DeathHandled = true;
-            foreach (var (model, o) in Listeners(state)) model.AfterDeath(state, o, dead.Id);
-        }
+            handled = false;
+            var mainDied = false;
+            foreach (var dead in state.Enemies)
+            {
+                if (dead.Alive || dead.DeathHandled || !dead.StartedAlive) continue;
+                dead.DeathHandled = true;
+                handled = true;
+                if (!PowersOf(state, dead.Id).Has(PowerId.Minion)) mainDied = true;
+                foreach (var (model, o) in Listeners(state)) model.AfterDeath(state, o, dead.Id);
+            }
+            var left = state.Enemies.Where(enemy => enemy.Alive).ToList();
+            if (mainDied && left.Count > 0 && left.All(enemy => PowersOf(state, enemy.Id).Has(PowerId.Minion)))
+                foreach (var minion in left) minion.Hp = 0;
+        } while (handled);
         foreach (var enemy in state.Enemies)
         {
             if (!enemy.Alive || !state.Enemies.Any(simEnemy => simEnemy != enemy && simEnemy.StartedAlive && !simEnemy.Alive)) continue;

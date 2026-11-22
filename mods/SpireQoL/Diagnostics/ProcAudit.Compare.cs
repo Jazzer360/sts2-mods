@@ -281,6 +281,10 @@ public sealed partial class ProcAudit
         var expectedDraws = facts == null ? 0 : facts.Draws;
         if (facts != null && window.TargetDraws is { } targetDraws)
             expectedDraws = facts.DrawsWithOwn(targetDraws) ?? Math.Max(0, facts.Draws - (facts.OwnDraws - facts.EnchantmentDraws) + targetDraws);
+        // Centennial Puzzle's draws are in the card's count only for its own HP cost (PlayFacts.LosesHp); HP lost to something the play
+        // sets off (an enemy's Galvanic on a Galvanized card, Thorns) is the simulator's, on its draw tab: the most it draws there.
+        if (facts is { LosesHp: false } && sourceOf.GetValueOrDefault(nameof(CentennialPuzzle)) is { Kind: TabAmount.CardsDrawn } puzzle)
+            expectedDraws += puzzle.AuditMax;
         var exhausts = entries.OfType<CardExhaustedEntry>().Count(cardExhaustedEntry => cardExhaustedEntry.Card.Owner == me);
         var discards = entries.OfType<CardDiscardedEntry>().Count(cardDiscardedEntry => cardDiscardedEntry.Card.Owner == me);
         var generated = entries.OfType<CardGeneratedEntry>().Count(cardGeneratedEntry => cardGeneratedEntry.Creator == me || cardGeneratedEntry.Card.Owner == me);

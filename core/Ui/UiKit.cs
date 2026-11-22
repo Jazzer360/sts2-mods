@@ -5,6 +5,18 @@ namespace Sts2Mods.Core.Ui;
 /// <summary>Small factory helpers for plain Godot controls. Everything is click-through.</summary>
 public static class UiKit
 {
+    /// <summary>
+    /// Takes a node out of its parent now and frees it at the end of the frame. QueueFree alone leaves it in the tree until then, so a
+    /// node added in its place with the same name is renamed by Godot, and code finding it by name loses track of it (a stale row left on
+    /// the map legend).
+    /// </summary>
+    public static void RemoveAndFree(this Node? node)
+    {
+        if (node == null || !GodotObject.IsInstanceValid(node)) return;
+        node.GetParent()?.RemoveChild(node);
+        node.QueueFree();
+    }
+
     public static Label Label(string text, int size, Color color)
     {
         var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };

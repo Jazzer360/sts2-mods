@@ -6,6 +6,18 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.27.1
+#### Fixed
+- Minions die with the last enemy that isn't one, as in the game: killing the Ovicopter takes its Hatchlings with it, so the lethal tab and Incoming Damage count them gone (their attacks were still predicted).
+- An enemy's move that applies two of its numbers multiplied shows their product: Axebot's Boot Up gives Strength for each Axebot that came before it (it showed 2 where it applied 8).
+- The map legend no longer keeps a relic's icon after the relic changes (Sword of Stone becoming Sword of Jade left its count beside Elite), nor an event option a stale icon row.
+- An event option no longer shows a relic's icon with 0% when it can't give a card the relic cares about (Strike Dummy on Bugslayer's Exterminate).
+- The checks no longer report Gremlin Horn (or another tab that a kill sets off) firing at a target its tab didn't aim at, and count Centennial Puzzle's draws when an enemy's Galvanic (not the card's own cost) makes you lose HP.
+
+### Main Saves 1.0.26
+#### Changed
+- Shared code: a replaced on-screen row is taken out at once, so the one replacing it isn't renamed (a stale row left behind). No change in Main Saves.
+
 ### Spire QoL 1.27.0
 #### Added
 - A crossed tab that only some outcomes set off shows its chance in the corner (a random hit that might wake a sleeping enemy, or land on a Thorns enemy); without a number it's certain. Under Show chances.
