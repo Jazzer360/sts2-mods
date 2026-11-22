@@ -258,6 +258,9 @@ internal static class CardCoverage
         if (Calls("CardPileCmd", "Add") && !PlayFacts.TakenToHandCards.Contains(name) && !PlayFacts.PutBackCards.Contains(name)
             && !PlayFacts.WholeHandCards.Contains(name) && !PlayFacts.MovedElsewhereCards.ContainsKey(name))
             issues.Add("moves cards with CardPileCmd.Add in its play (into or out of your hand? not counted: hand size after)");
+        // A card counted as taking cards into your hand: the simulator takes them out of their pile (which pile, which cards).
+        if (PlayFacts.TakenToHandCards.Contains(name) && !SimAdapter.HandTakes.ContainsKey(name))
+            issues.Add("takes cards into your hand without saying from which pile (they'd stay there in the simulation: later draws)");
         // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
         if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !PlayFacts.SadnessCards.Contains(name))
             issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");

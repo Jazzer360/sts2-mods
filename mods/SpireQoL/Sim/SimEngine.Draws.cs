@@ -193,6 +193,113 @@ public static partial class SimEngine
         if (added > 0 && simPlayer.AutoHand != null) state.AutoPlaysUnknown = true;
     }
 
+    /// <summary>
+    /// A card from a pile joins its player's hand (drawn, or taken: TakeToHandAction), with <paramref name="id"/> its id there: what
+    /// it changes in the hand (acts at the end of the turn, acts when exhausted, Ethereal, what Stampede or Simpleton could pick). Its
+    /// count in the hand is the caller's.
+    /// </summary>
+    private static void JoinHand(SimState state, SimPlayer simPlayer, SimDrawCard card, int id)
+    {
+        if (card.TurnEnd != null) simPlayer.TurnEndCards = new List<TurnEndCard>(simPlayer.TurnEndCards) { card.TurnEnd };
+        if (card.Exhausting != null) simPlayer.ExhaustingInHand = new List<ExhaustingCard>(simPlayer.ExhaustingInHand) { card.Exhausting with { HandCard = id } };
+        if (card.Fading) simPlayer.Fading++;
+        if (card.HexFading) simPlayer.HexFading++;
+        if (simPlayer.AutoHand != null && card.Pickable)
+        {
+            // Its own id in your hand (two copies are two cards, with one key: SimHandCard.Key); plays as the adapter built it for a card in hand.
+            if (card.Auto != null)
+                simPlayer.AutoHand = new List<SimHandCard>(simPlayer.AutoHand) { card.Auto.CopyWithId(id) };
+            else state.AutoPlaysUnknown = true;
+        }
+    }
+
+    /// <summary>The id in the hand of the <paramref name="taken"/>th card taken from a pile in this simulation.</summary>
+    private static int TakenId(int taken) => -1_000_000 - taken;
+
+    /// <summary>
+    /// A play taking cards from its owner's draw or discard pile into their hand (TakeToHandAction), one after another: each leaves
+    /// the pile and joins the hand (no draw: nothing that reacts to draws hears it). With no pile read (a teammate's), only the count
+    /// is kept.
+    /// </summary>
+    internal static IEnumerable<SimState> RunTakeToHand(SimState state, TakeToHandAction take)
+    {
+        var player = state.CurrentPlay?.Owner ?? Who.You;
+        if (!DrawsFromPile(state, player) || take.Count <= 0) return new[] { state };
+        return TakeToHand(state, player, take, take.Eligible, take.Count);
+    }
+
+    /// <summary>How many cards of this profile the pile a take comes from holds now.</summary>
+    private static int InPile(SimDrawPile pile, bool fromDiscard, string key) => fromDiscard
+        ? pile.Discard.Where(group => group.Card.Key == key).Sum(group => group.Count)
+        : pile.Top.Count(card => card.Key == key) + pile.Rest.Where(group => group.Card.Key == key).Sum(group => group.Count);
+
+    private static IEnumerable<SimState> TakeToHand(SimState state, int player, TakeToHandAction take, IReadOnlyDictionary<string, int> eligible, int count)
+    {
+        var pile = state.Player(player)!.Draw!;
+        // The cards it can take, by profile: as many as it could take of each, and as many as the pile still holds.
+        var candidates = eligible.Where(entry => entry.Value > 0)
+            .Select(entry => (Key: entry.Key, Available: Math.Min(entry.Value, InPile(pile, take.FromDiscard, entry.Key))))
+            .Where(candidate => candidate.Available > 0).OrderBy(candidate => candidate.Key, StringComparer.Ordinal).ToList();
+        var total = candidates.Sum(candidate => candidate.Available);
+        if (count <= 0 || total == 0) return new[] { state };
+        if (count >= total)
+        {
+            // Every one it can take: no pick to make.
+            foreach (var (key, available) in candidates)
+                for (var i = 0; i < available; i++) TakeOne(state, player, key, take.FromDiscard);
+            return new[] { state };
+        }
+        if (!take.Random)
+        {
+            // Your pick: the same whichever you take when they're all one profile; otherwise which is your later decision.
+            if (candidates.Count > 1) state.Unmodelled ??= "you choose which card it takes into your hand, and they differ in what the simulation follows";
+            TakeOne(state, player, candidates[0].Key, take.FromDiscard);
+            return TakeToHand(state, player, take, Less(eligible, candidates[0].Key), count - 1);
+        }
+        var result = new List<SimState>();
+        for (var i = 0; i < candidates.Count; i++)
+        {
+            var branch = candidates.Count == 1 ? state : state.Clone();
+            branch.Weight = state.Weight * candidates[i].Available / total;
+            TakeOne(branch, player, candidates[i].Key, take.FromDiscard);
+            result.AddRange(TakeToHand(branch, player, take, Less(eligible, candidates[i].Key), count - 1));
+        }
+        return result;
+    }
+
+    private static IReadOnlyDictionary<string, int> Less(IReadOnlyDictionary<string, int> eligible, string key) =>
+        eligible.ToDictionary(entry => entry.Key, entry => entry.Key == key ? entry.Value - 1 : entry.Value);
+
+    /// <summary>
+    /// One card of this profile out of its pile into the hand: from the discard pile, or the draw pile's unordered rest when it's there,
+    /// else its known top.
+    /// </summary>
+    private static void TakeOne(SimState state, int player, string key, bool fromDiscard)
+    {
+        var simPlayer = state.MutablePlayer(player);
+        var pile = simPlayer.Draw!;
+        SimDrawCard card;
+        if (fromDiscard)
+        {
+            var discardIndex = pile.Discard.FindIndex(group => group.Card.Key == key);
+            card = pile.Discard[discardIndex].Card;
+            simPlayer.Draw = pile.WithoutOneDiscarded(discardIndex);
+        }
+        else if (pile.Rest.FindIndex(group => group.Card.Key == key) is var restIndex and >= 0)
+        {
+            card = pile.Rest[restIndex].Card;
+            simPlayer.Draw = pile.WithoutOneOf(restIndex);
+        }
+        else
+        {
+            var topIndex = pile.Top.FindIndex(drawCard => drawCard.Key == key);
+            card = pile.Top[topIndex];
+            simPlayer.Draw = pile.WithoutTopAt(topIndex);
+        }
+        simPlayer.TakenToHand++;
+        JoinHand(state, simPlayer, card, TakenId(simPlayer.TakenToHand));
+    }
+
     /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
     private static IEnumerable<SimState> Drawn(SimState state, int player, SimDrawCard card, bool indirect, bool record = false)
     {
@@ -201,20 +308,10 @@ public static partial class SimEngine
         simPlayer.Drawn++;
         // The draw a card acts on (RunDrawnCard): this card, and its id in AutoHand. Copied, not added to: branches share the list.
         if (record && state.DrawRecord != null) state.DrawRecord = new List<(SimDrawCard, int)>(state.DrawRecord) { (card, -1000 - simPlayer.Drawn) };
-        if (card.TurnEnd != null) simPlayer.TurnEndCards = new List<TurnEndCard>(simPlayer.TurnEndCards) { card.TurnEnd };
         // Void: you lose its energy as it's drawn (PlayerCmd.LoseEnergy: no hooks, never below 0).
         if (card.EnergyLostOnDraw > 0) simPlayer.Energy = Math.Max(0, simPlayer.Energy - card.EnergyLostOnDraw);
-        if (card.Exhausting != null) simPlayer.ExhaustingInHand = new List<ExhaustingCard>(simPlayer.ExhaustingInHand) { card.Exhausting with { HandCard = -1000 - simPlayer.Drawn } };
-        if (card.Fading) simPlayer.Fading++;
-        if (card.HexFading) simPlayer.HexFading++;
         if (card.Status) simPlayer.StatusDrawn++;
-        if (simPlayer.AutoHand != null && card.Pickable)
-        {
-            // Its own id in your hand (two copies are two cards, with one key: SimHandCard.Key); plays as the adapter built it for a card in hand.
-            if (card.Auto != null)
-                simPlayer.AutoHand = new List<SimHandCard>(simPlayer.AutoHand) { card.Auto.CopyWithId(-1000 - simPlayer.Drawn) };
-            else state.AutoPlaysUnknown = true;
-        }
+        JoinHand(state, simPlayer, card, -1000 - simPlayer.Drawn);
         // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly: before the other draw reactions).
         IEnumerable<SimState> states = card.Strike && simPlayer.Powers[PowerId.Hellraiser] > 0
             ? Then(HellraiserPlays(state, player, card, -1000 - simPlayer.Drawn), branch => FireCardEvent(branch, CardEvent.Drawn, player, indirect))

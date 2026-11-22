@@ -128,6 +128,7 @@ public static partial class SimAdapter
         if (PlayFacts.KillStarCards.Contains(name))
             for (var i = 0; i < play.Body.Count; i++)
                 if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
+        play.Body.AddRange(TakesToHand(facts, me, name));
         AddCardEvents(play, facts, plays);
         // A replay of a card whose numbers change with each play in a way its code doesn't show (decision #160: Thrash).
         if (plays > 1 && PlayGrowth.Of(card).Unmodelled is { } growthUnknown) play.Body.Add(new NotModelledAction(growthUnknown));
@@ -425,6 +426,74 @@ public static partial class SimAdapter
             actions.Add(new ApplyPowerAction(PowerId.Strength, amount) { To = where, Debuff = amount < 0 });
         }
         return actions;
+    }
+
+    /// <summary>How a card's play takes cards into your hand (HandTakes).</summary>
+    /// <param name="FromDiscard">From your discard pile; else your draw pile.</param>
+    /// <param name="Eligible">Which cards there it can take.</param>
+    /// <param name="Random">The pick is a roll (TakeRandom); else it's yours.</param>
+    /// <param name="AllAtOnce">Every card it takes, on its first play (PlayFacts.TakenToHand); else one a play.</param>
+    internal sealed record HandTake(bool FromDiscard, Func<CardModel, bool> Eligible, bool Random = false, bool AllAtOnce = false);
+
+    /// <summary>
+    /// How every card in PlayFacts.TakenToHandCards takes cards into your hand, from each card's OnPlay (decompile v0.113.1), so the
+    /// cards it takes leave their pile in the simulation (TakeToHandAction). The card scan holds every TakenToHandCards card to this
+    /// table (CardCoverage). Summon Forth takes its Sovereign Blades from both piles (SummonForthTakes); Neow's Fury takes as many as
+    /// you choose (none counted).
+    /// </summary>
+    internal static readonly Dictionary<string, HandTake?> HandTakes = new()
+    {
+        [nameof(Anointed)] = new(FromDiscard: false, other => other.Rarity == CardRarity.Rare, Random: true, AllAtOnce: true),
+        [nameof(Wish)] = new(FromDiscard: false, _ => true),
+        [nameof(SeekerStrike)] = new(FromDiscard: false, _ => true), // one of three drawn at random from it, your pick
+        [nameof(KiChant)] = new(FromDiscard: false, _ => true),      // one of the cards on top, your pick
+        [nameof(SecretWeapon)] = new(FromDiscard: false, other => other.Type == CardType.Attack),
+        [nameof(SecretTechnique)] = new(FromDiscard: false, other => other.Type == CardType.Skill),
+        [nameof(LockedIn)] = new(FromDiscard: false, other => other.Tags.Contains(CardTag.Shoot)),
+        [nameof(AllForOne)] = new(FromDiscard: true, other => other.Type is CardType.Attack or CardType.Skill or CardType.Power && !other.EnergyCost.CostsX
+                                                             && SafeCost(other) == 0, AllAtOnce: true),
+        [nameof(ArrowStab)] = new(FromDiscard: true, other => other.Tags.Contains(CardTag.Shoot)),
+        [nameof(Dredge)] = new(FromDiscard: true, _ => true, AllAtOnce: true),
+        [nameof(TheWorld)] = new(FromDiscard: true, _ => true, Random: true, AllAtOnce: true),
+        [nameof(Graveblast)] = new(FromDiscard: true, _ => true),
+        [nameof(Hologram)] = new(FromDiscard: true, _ => true),
+        [nameof(SummonForth)] = null,
+        [nameof(NeowsFury)] = null,
+    };
+
+    private static int SafeCost(CardModel card)
+    {
+        try { return card.EnergyCost.GetWithModifiers(CostModifiers.All); } catch { return -1; }
+    }
+
+    /// <summary>
+    /// What a play takes into your hand from your piles (HandTakes): each pile's cards it can take, by profile (DrawProfiles), as a
+    /// TakeToHandAction. Summon Forth: every Sovereign Blade in your draw and discard piles. None with no pile read.
+    /// </summary>
+    private static IEnumerable<SimAction> TakesToHand(PlayFacts facts, Player me, string name)
+    {
+        if (facts.TakenToHand <= 0) yield break;
+        if (name == nameof(SummonForth))
+        {
+            foreach (var fromDiscard in new[] { false, true })
+                if (Eligible(me, fromDiscard, card => card is SovereignBlade) is { Count: > 0 } blades)
+                    yield return new FirstPlayOnly(new SimAction[] { new TakeToHandAction(blades.Values.Sum(), blades) { FromDiscard = fromDiscard } });
+            yield break;
+        }
+        if (HandTakes.GetValueOrDefault(name) is not { } take || Eligible(me, take.FromDiscard, take.Eligible) is not { Count: > 0 } counts) yield break;
+        if (take.AllAtOnce)
+            yield return new FirstPlayOnly(new SimAction[] { new TakeToHandAction(facts.TakenToHand, counts) { Random = take.Random, FromDiscard = take.FromDiscard } });
+        else
+            yield return new TakeToHandAction(Count: 1, counts) { Random = take.Random, FromDiscard = take.FromDiscard };
+    }
+
+    /// <summary>How many cards of each profile in your draw or discard pile pass the filter.</summary>
+    private static Dictionary<string, int> Eligible(Player me, bool fromDiscard, Func<CardModel, bool> eligible)
+    {
+        var counts = new Dictionary<string, int>();
+        foreach (var other in (fromDiscard ? PileType.Discard : PileType.Draw).GetPile(me).Cards)
+            if (eligible(other) && DrawProfiles.TryGetValue(other, out var key)) counts[key] = counts.GetValueOrDefault(key) + 1;
+        return counts;
     }
 
     /// <summary>

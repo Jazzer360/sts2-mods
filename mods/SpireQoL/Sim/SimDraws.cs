@@ -60,7 +60,10 @@ public sealed class SimDrawPile
     public int DiscardCount => Discard.Sum(group => group.Count);
 
     /// <summary>The top card drawn.</summary>
-    internal SimDrawPile WithoutTop() => new() { Top = Top.Skip(1).ToList(), Rest = Rest, Discard = Discard };
+    internal SimDrawPile WithoutTop() => WithoutTopAt(0);
+
+    /// <summary>The known top card at <paramref name="index"/> taken out (the cards above it stay on top, in order).</summary>
+    internal SimDrawPile WithoutTopAt(int index) => new() { Top = Top.Where((_, at) => at != index).ToList(), Rest = Rest, Discard = Discard };
 
     /// <summary>One card of the group at <paramref name="groupIndex"/> drawn from the rest.</summary>
     internal SimDrawPile WithoutOneOf(int groupIndex) => new()
@@ -68,6 +71,13 @@ public sealed class SimDrawPile
         Top = Top,
         Rest = Rest.Select((group, index) => index == groupIndex ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
         Discard = Discard,
+    };
+
+    /// <summary>One card of the discard pile's group at <paramref name="groupIndex"/> taken out.</summary>
+    internal SimDrawPile WithoutOneDiscarded(int groupIndex) => new()
+    {
+        Top = Top, Rest = Rest,
+        Discard = Discard.Select((group, index) => index == groupIndex ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
     };
 
     /// <summary>Some I Am Invincible in the pile.</summary>

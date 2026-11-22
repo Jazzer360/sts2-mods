@@ -311,6 +311,8 @@ public sealed class SimPlayer
     public SimDrawPile? Draw;
     /// <summary>Cards drawn in this simulation (each drawn card's id in AutoHand).</summary>
     public int Drawn;
+    /// <summary>Cards taken from your draw pile into your hand in this simulation (each one's id in AutoHand: TakenId).</summary>
+    public int TakenToHand;
     /// <summary>Status cards drawn this turn, the simulation's included (Iteration draws on the first).</summary>
     public int StatusDrawn;
     /// <summary>
@@ -470,7 +472,7 @@ public sealed class SimPlayer
     {
         add(Block); add(Hp); add(MaxHp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
         add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(LizardTailHeal); add(FairiesUsed); add(Fairies);
-        add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(StatusDrawn);
+        add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(TakenToHand); add(StatusDrawn);
         add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
         Draw?.Hash(add);
         add(TurnEndCards.Count);

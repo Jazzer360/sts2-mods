@@ -145,6 +145,20 @@ public sealed record LeaveHandAction(int Count) : SimAction
     public bool Whole { get; init; }
 }
 
+/// <summary>
+/// Cards a play moves from your draw pile (Wish, Secret Weapon, Seeker Strike, Anointed...) or your discard pile (FromDiscard:
+/// Hologram, Dredge, The World...) into your hand with CardPileCmd.Add, <paramref name="Count"/> of them: each leaves its pile and
+/// joins the hand as it is (what acts there at the end of your turn, Ethereal, what Stampede could pick; the hand's count is the
+/// play's HandDelta). Eligible: how many cards of each pile profile (SimDrawCard.Key) it can take. Random (Anointed, The World:
+/// TakeRandom): each eligible card equally likely, a branch per profile. Otherwise you choose: when the ones you could take differ
+/// in what the simulation follows, which one is your later decision, so unknown.
+/// </summary>
+public sealed record TakeToHandAction(int Count, IReadOnlyDictionary<string, int> Eligible) : SimAction
+{
+    public bool Random { get; init; }
+    public bool FromDiscard { get; init; }
+}
+
 /// <summary>How a play picks the cards it exhausts (ExhaustFromHandAction).</summary>
 public enum ExhaustPick { Random, All, Chosen }
 

@@ -383,6 +383,12 @@ public static partial class SimAdapter
     }
 
     /// <summary>
+    /// Each card in your piles and its draw profile's key (SimDrawCard.Key), from the last board read (FillDrawPile, on the game's
+    /// thread): what a play taking cards from your draw pile names as the ones it can take (TakeFromDrawAction).
+    /// </summary>
+    internal static IReadOnlyDictionary<CardModel, string> DrawProfiles { get; private set; } = new Dictionary<CardModel, string>();
+
+    /// <summary>
     /// Your draw and discard piles by profile (decision #90): what about each card matters if you draw it on this board, never
     /// their order (hidden; only the cards known to be on top would be: none yet). What matters: acting in hand at end of
     /// turn (always), exhausting as Ethereal (always), a Status with Iteration, Ethereal with Pagestorm, a Strike with
@@ -390,6 +396,7 @@ public static partial class SimAdapter
     /// </summary>
     private static void FillDrawPile(SimPlayer player, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
     {
+        DrawProfiles = new Dictionary<CardModel, string>(ReferenceEqualityComparer.Instance);
         try
         {
             var iteration = me.Creature.HasPower<IterationPower>();
@@ -445,16 +452,24 @@ public static partial class SimAdapter
                     Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly,
                 };
             }
-            List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Profile).GroupBy(drawn => drawn.Key)
+            var profiles = new Dictionary<CardModel, string>(ReferenceEqualityComparer.Instance);
+            SimDrawCard Remembered(CardModel card)
+            {
+                var profile = Profile(card);
+                profiles[card] = profile.Key;
+                return profile;
+            }
+            List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Remembered).GroupBy(drawn => drawn.Key)
                 .Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList();
             // The cards known to be on top (placed there: decision #91), in order; the rest as a set.
             var known = SpireQoL.Combat.DrawPileMemory.KnownTop.Where(card => card.Pile?.Type == PileType.Draw && card.Owner == me).ToList();
             player.Draw = new SimDrawPile
             {
-                Top = known.Select(Profile).ToList(),
+                Top = known.Select(Remembered).ToList(),
                 Rest = Groups(PileType.Draw.GetPile(me).Cards.Where(card => !known.Contains(card))),
                 Discard = Groups(PileType.Discard.GetPile(me).Cards),
             };
+            DrawProfiles = profiles;
             // Iteration counts the Status cards drawn this turn (CardDrawnEntry: you watched them come).
             if (iteration)
                 player.StatusDrawn = CombatManager.Instance.History.Entries.OfType<MegaCrit.Sts2.Core.Combat.History.Entries.CardDrawnEntry>()
