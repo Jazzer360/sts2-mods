@@ -14,6 +14,12 @@
     <Sts2Dir Condition="'$(Sts2Dir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Slay the Spire 2</Sts2Dir>
     <Sts2DataDir>$(Sts2Dir)\data_sts2_windows_x86_64</Sts2DataDir>
     <Sts2ModsDir>$(Sts2Dir)\mods</Sts2ModsDir>
+    <!-- The mods are written for the beta branch (decision #163): they compile against beta's game assembly, kept beside the beta
+         decompile (scripts/decompile.ps1, decision #165), so they build whichever branch Steam has installed (decision #168).
+         Without it (no beta decompile on this machine yet), against the installed game's. -->
+    <Sts2BetaAssembly Condition="'$(Sts2BetaAssembly)' == ''">$(USERPROFILE)\git\sts2-decompiled\assembly\sts2.dll</Sts2BetaAssembly>
+    <Sts2CompileAssembly Condition="Exists('$(Sts2BetaAssembly)')">$(Sts2BetaAssembly)</Sts2CompileAssembly>
+    <Sts2CompileAssembly Condition="'$(Sts2CompileAssembly)' == ''">$(Sts2DataDir)\sts2.dll</Sts2CompileAssembly>
 
     <TargetFramework>net9.0</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>

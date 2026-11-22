@@ -8,7 +8,7 @@
   -->
   <ItemGroup Condition="'$(IsSts2Mod)' == 'true'">
     <!-- Game assemblies: compile against them, never copy them. -->
-    <Reference Include="sts2" HintPath="$(Sts2DataDir)\sts2.dll" Private="false" />
+    <Reference Include="sts2" HintPath="$(Sts2CompileAssembly)" Private="false" />
     <Reference Include="GodotSharp" HintPath="$(Sts2DataDir)\GodotSharp.dll" Private="false" />
     <Reference Include="0Harmony" HintPath="$(Sts2DataDir)\0Harmony.dll" Private="false" />
     <!-- The game ships Sentry .NET; mods report through their own client (core/Diagnostics/ErrorReporter.cs). -->

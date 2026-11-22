@@ -47,7 +47,17 @@ public static partial class SimEngine
         var player = state.MutablePlayer(owner);
         var inHand = Math.Max(0, player.HandCount - player.PlayingFromHand);
         player.HandCount -= leave.Whole ? inHand : Math.Min(leave.Count, inHand);
-        if (!leave.Whole) return;
+        if (!leave.Whole)
+        {
+            // The cards it takes are the ones that change nothing the simulation follows (decision #167: a choice inside the play is
+            // your later decision): there are enough of them unless the cards it follows in your hand (acting at the end of your turn,
+            // acting when exhausted, Ethereal, what Stampede or Simpleton could pick) may be all that's left to take.
+            var picks = player.AutoHand == null ? 0 : player.Simpleton > 0 ? player.AutoHand.Count : player.AutoHand.Count(handCard => handCard.IsAttack);
+            var followed = player.TurnEndCards.Count + player.ExhaustingInHand.Count + player.Fading + picks;
+            if (inHand - followed < Math.Min(leave.Count, inHand))
+                state.Unmodelled ??= "it takes cards from your hand, and the cards the simulation follows there may be all it can take";
+            return;
+        }
         player.TurnEndCards = new();
         player.Fading = player.HexFading = 0;
         player.ExhaustingInHand = new();
@@ -57,26 +67,36 @@ public static partial class SimEngine
     /// <summary>
     /// A play exhausting others: the cards that act when exhausted among the ones it can take (ExhaustFromHandAction) give their
     /// energy (Drum of Battle's AfterCardExhausted: PlayerCmd.GainEnergy). All of them; one card at random, a branch per such card by
-    /// its share of the cards in the hand and one where another card went; or, when you choose, unknown while one could be picked.
+    /// its share of the cards in the hand and one where another card went. When you choose (decision #167: a choice inside the play
+    /// is your later decision), the option that changes nothing the simulation follows: a card that doesn't act when exhausted, when
+    /// the hand has one; with only cards that do, the same whichever you take, or unknown when they differ. Cleanse's pick from
+    /// your draw pile leaves it the same way: a plain card when there is one.
     /// </summary>
     private static IEnumerable<SimState> RunExhaustFromHand(SimState state, ExhaustFromHandAction exhaust)
     {
         var owner = state.CurrentPlay?.Owner ?? Who.You;
         if (state.Player(owner) is not { } player) return new[] { state };
-        if (exhaust.FromDrawPile)
-        {
-            if (player.Draw?.Rest.Any(group => group.Card.Exhausting != null) == true || player.Draw?.Top.Any(card => card.Exhausting != null) == true)
-                state.Unmodelled ??= "you choose the card it exhausts from your draw pile, and a card that acts when exhausted (Drum of Battle) is there";
-            return new[] { state };
-        }
+        if (exhaust.FromDrawPile) return ExhaustChosenFromDrawPile(state, owner);
         bool Takes(ExhaustingCard card) => (exhaust.Only == SimCardType.None || card.Type == exhaust.Only) && (exhaust.Except == SimCardType.None || card.Type != exhaust.Except);
         var taken = player.ExhaustingInHand.Where(Takes).ToList();
         if (taken.Count == 0) return new[] { state };
         switch (exhaust.Pick)
         {
             case ExhaustPick.Chosen:
-                state.Unmodelled ??= "you choose the card it exhausts, and a card that acts when exhausted (Drum of Battle) is in your hand";
-                return new[] { state };
+            {
+                var inHand = player.HandCount - player.PlayingFromHand;
+                var filtered = exhaust.Only != SimCardType.None || exhaust.Except != SimCardType.None;
+                if (!filtered && inHand > taken.Count) return new[] { state }; // a card that doesn't act when exhausted: yours to take
+                if (filtered || taken.Select(card => (card.Energy, card.Type)).Distinct().Count() > 1)
+                {
+                    state.Unmodelled ??= "you choose the card it exhausts, and every card you could take acts when exhausted, not all alike";
+                    return new[] { state };
+                }
+                // Only cards that act when exhausted, all alike: one of them.
+                var mine = state.MutablePlayer(owner);
+                mine.ExhaustingInHand = mine.ExhaustingInHand.Where(other => other.HandCard != taken[0].HandCard).ToList();
+                return ProcCardEvent(state, CardEvent.EnergyGained, taken[0].Energy, owner, indirect: false);
+            }
             case ExhaustPick.All:
             {
                 state.MutablePlayer(owner).ExhaustingInHand = player.ExhaustingInHand.Where(card => !Takes(card)).ToList();
@@ -111,6 +131,28 @@ public static partial class SimEngine
                 return result;
             }
         }
+    }
+
+    /// <summary>
+    /// Cleanse: the card you choose from your draw pile is exhausted (decision #167: your later decision): a plain card when the pile
+    /// has one, else the same whichever you take (its energy when it acts when exhausted), or unknown when they differ. With no pile
+    /// read, only its count is kept.
+    /// </summary>
+    private static IEnumerable<SimState> ExhaustChosenFromDrawPile(SimState state, int owner)
+    {
+        if (state.Player(owner)?.Draw is not { Count: > 0 } pile) return new[] { state };
+        var profiles = pile.Top.Concat(pile.Rest.Select(group => group.Card)).DistinctBy(card => card.Key).ToList();
+        var card = profiles.FirstOrDefault(profile => profile.Plain) ?? (profiles.Count == 1 ? profiles[0] : null);
+        if (card == null)
+        {
+            state.Unmodelled ??= "you choose the card it exhausts from your draw pile, and the ones there differ in what the simulation follows";
+            return new[] { state };
+        }
+        var simPlayer = state.MutablePlayer(owner);
+        simPlayer.Draw = pile.Rest.FindIndex(group => group.Card.Key == card.Key) is var restIndex and >= 0
+            ? pile.WithoutOneOf(restIndex)
+            : pile.WithoutTopAt(pile.Top.FindIndex(top => top.Key == card.Key));
+        return card.Exhausting is { } acting ? ProcCardEvent(state, CardEvent.EnergyGained, acting.Energy, owner, indirect: false) : new[] { state };
     }
 
     /// <summary>The play's turn counters on its owner (SimPlayer.Turn): all, by type, by tag.</summary>

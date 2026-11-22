@@ -49,6 +49,12 @@ public sealed record SimDrawCard(string Key)
     /// </summary>
     public bool? Free { get; init; }
     public bool Sly { get; init; }
+
+    /// <summary>
+    /// Nothing about it is followed (every field but its key at its default: the adapter's plain profile): moving it changes only a
+    /// pile's count. A choice inside a play takes such a card when it can (decision #167).
+    /// </summary>
+    public bool Plain => this == new SimDrawCard(Key);
 }
 
 /// <summary>Cards of one profile in a pile, and how many.</summary>

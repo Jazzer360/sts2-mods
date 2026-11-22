@@ -58,7 +58,7 @@ The mod is developed on Steam's **beta** branch (the installed game) and also su
 
 The Steam branches workflow opens a `steam-update` issue when main (or beta) gets a new build (decision #164), with these steps as a checklist. `GameBranchTests.MainIsReviewedAtItsVersion` fails once the main decompile is newer than `MainReviewed` (decision #163). With the game switched to main in Steam:
 
-1. `./scripts/decompile.ps1 -Branch main`, then switch the game back to beta.
+1. `./scripts/decompile.ps1 -Branch main`. The mods still build (they compile against beta's cached assembly: decision #168), and `./scripts/check.ps1` runs only the branch checks while main is installed, so switch the game back to beta before the whole check or a release.
 2. `node scripts/game-names.mjs` (the beta-only and main-only names move).
 3. `dotnet test tests/SpireQoL.Catalog.Tests`: take every gate the tests say main has caught up on off (plain code, main's fallback gone), and move anything main now lacks behind a gate.
 4. `git -C ~/git/sts2-decompiled diff <old main> main --stat` for what else changed on main that the mod reads (docs/FEATURES.md lists every class it touches); a class main changed differently from beta gets a gate of its own.

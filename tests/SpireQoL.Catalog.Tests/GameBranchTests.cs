@@ -80,7 +80,7 @@ public class GameBranchTests
     /// The main branch's version this code was last reviewed against (docs/DEVELOPMENT.md "When main updates"). A newer main
     /// decompile fails <see cref="MainIsReviewedAtItsVersion"/> until the review is done and this is moved up.
     /// </summary>
-    private const string MainReviewed = "v0.111.0";
+    private const string MainReviewed = "v0.111.1";
 
     private static string MainDecompile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "git", "sts2-decompiled-main");
 
@@ -138,8 +138,9 @@ public class GameBranchTests
 
     /// <summary>Every gate opens on beta, where the mod is built: what it names resolves, so beta runs the plain code.</summary>
     [Fact]
-    public void EveryGateOpensOnBeta()
+    public void EveryGateOpensOnBetaAndClosesOnMain()
     {
+        var main = InstalledIsMain();
         GameModels.EnsureLoaded();
         var gated = typeof(PowerId).Assembly.GetTypes()
             .SelectMany(type => type.GetMethods(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
@@ -147,7 +148,30 @@ public class GameBranchTests
             .Where(method => method.GetCustomAttributes(typeof(Sts2Mods.Core.Game.BetaOnlyAttribute), inherit: false).Length > 0).ToList();
         Assert.True(gated.Count >= 9, $"only {gated.Count} [BetaOnly] methods found");
         var closed = gated.Where(method => !Sts2Mods.Core.Game.BetaOnly.Runs(method)).Select(method => $"{method.DeclaringType?.Name}.{method.Name}").ToList();
-        Assert.True(closed.Count == 0, "[BetaOnly] methods that don't resolve on beta: " + string.Join(", ", closed));
+        // On main every gate closes (decision #168: the installed game is main's build): each names something main doesn't have.
+        if (main) Assert.True(closed.Count == gated.Count, "[BetaOnly] methods that resolve on main (main caught up: take the gate off): "
+                                                         + string.Join(", ", gated.Where(method => Sts2Mods.Core.Game.BetaOnly.Runs(method)).Select(method => $"{method.DeclaringType?.Name}.{method.Name}")));
+        else Assert.True(closed.Count == 0, "[BetaOnly] methods that don't resolve on beta: " + string.Join(", ", closed));
+    }
+
+    /// <summary>
+    /// The installed game is main's build (decision #168): its assembly's commit (AssemblyInformationalVersion "0.1.0+commit") is the
+    /// main decompile's (VERSION.json) and not the beta decompile's.
+    /// </summary>
+    internal static bool InstalledIsMain()
+    {
+        var installed = typeof(MegaCrit.Sts2.Core.Models.ModelDb).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), inherit: false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion.Split('+').LastOrDefault() ?? "";
+        static string? CommitOf(string decompile)
+        {
+            var version = Path.Combine(decompile, "VERSION.json");
+            return File.Exists(version) ? Regex.Match(File.ReadAllText(version), "\"commit\"\\s*:\\s*\"([0-9a-f]+)\"").Groups[1].Value : null;
+        }
+        var mainCommit = CommitOf(MainDecompile);
+        var betaCommit = CommitOf(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "git", "sts2-decompiled"));
+        return !string.IsNullOrEmpty(mainCommit) && installed.StartsWith(mainCommit, StringComparison.Ordinal)
+               && (string.IsNullOrEmpty(betaCommit) || !installed.StartsWith(betaCommit, StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -161,12 +185,19 @@ public class GameBranchTests
         if (!File.Exists(version)) return;
         var decompiled = System.Text.Json.JsonDocument.Parse(File.ReadAllText(version)).RootElement.GetProperty("version").GetString();
         Assert.True(decompiled == MainReviewed, $"The main decompile is {decompiled}, reviewed at {MainReviewed}: follow docs/DEVELOPMENT.md \"When main updates\", then set MainReviewed.");
+        // Players on main run the reviewed version: the coverage check accepts it (no report that coverage wasn't checked against it).
+        Assert.Contains(MainReviewed, SpireQoL.Diagnostics.CoverageLedger.ReviewedGameVersions);
     }
 
     /// <summary>The late damage multiplier's gate: open on beta, and 1 for a model with no late multiplier.</summary>
     [Fact]
     public void TheLateDamageMultiplierBindsOnBeta()
     {
+        if (InstalledIsMain())
+        {
+            Assert.Null(SimReaders.LateMultiplier); // main has no late multiplier: its gate is closed
+            return;
+        }
         Assert.NotNull(SimReaders.LateMultiplier);
         GameModels.EnsureLoaded();
         var model = MegaCrit.Sts2.Core.Models.ModelDb.Power<MegaCrit.Sts2.Core.Models.Powers.StrengthPower>();

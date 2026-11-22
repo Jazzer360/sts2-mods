@@ -155,8 +155,8 @@ public sealed record LeaveHandAction(int Count) : SimAction
 /// Hologram, Dredge, The World...) into your hand with CardPileCmd.Add, <paramref name="Count"/> of them: each leaves its pile and
 /// joins the hand as it is (what acts there at the end of your turn, Ethereal, what Stampede could pick; the hand's count is the
 /// play's HandDelta). Eligible: how many cards of each pile profile (SimDrawCard.Key) it can take. Random (Anointed, The World:
-/// TakeRandom): each eligible card equally likely, a branch per profile. Otherwise you choose: when the ones you could take differ
-/// in what the simulation follows, which one is your later decision, so unknown.
+/// TakeRandom): each eligible card equally likely, a branch per profile. Otherwise you choose, a later decision (decision #167): a
+/// plain card when there is one, else unknown when the ones you could take differ.
 /// </summary>
 public sealed record TakeToHandAction(int Count, IReadOnlyDictionary<string, int> Eligible) : SimAction
 {

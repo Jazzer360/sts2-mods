@@ -38,9 +38,29 @@ foreach ($project in $projects) {
 if ($failed.Count -eq 0) {
     $suites = @('tests/SpireQoL.Sim.Tests')
     if (-not $NoGame) { $suites += 'tests/SpireQoL.Catalog.Tests' }
+    # The catalog tests check the beta catalog (decision #163): with main installed, only the branch checks run (decision #168).
+    $mainInstalled = $false
+    $installedInfo = Join-Path ${env:ProgramFiles(x86)} 'Steam\steamapps\common\Slay the Spire 2\release_info.json'
+    $localProps = Join-Path $root 'Sts2.local.props'
+    if (Test-Path $localProps) {
+        $dir = Select-String -Path $localProps -Pattern '<Sts2Dir>(.+)</Sts2Dir>' | Select-Object -First 1
+        if ($dir) { $installedInfo = Join-Path $dir.Matches[0].Groups[1].Value 'release_info.json' }
+    }
+    $mainVersion = Join-Path $HOME 'git\sts2-decompiled-main\VERSION.json'
+    $betaVersion = Join-Path $HOME 'git\sts2-decompiled\VERSION.json'
+    if ((Test-Path $installedInfo) -and (Test-Path $mainVersion)) {
+        $installedCommit = (Get-Content $installedInfo -Raw | ConvertFrom-Json).commit
+        $betaCommit = if (Test-Path $betaVersion) { (Get-Content $betaVersion -Raw | ConvertFrom-Json).commit } else { '' }
+        $mainInstalled = $installedCommit -eq (Get-Content $mainVersion -Raw | ConvertFrom-Json).commit -and $installedCommit -ne $betaCommit
+    }
     foreach ($suite in $suites) {
         Write-Host "Testing $suite..." -ForegroundColor Cyan
-        $output = dotnet test $suite --no-build -nologo 2>&1
+        $filter = @()
+        if ($suite -eq 'tests/SpireQoL.Catalog.Tests' -and $mainInstalled) {
+            Write-Host "  The game is on Steam's main branch: only the branch checks run (switch to beta for the whole catalog)." -ForegroundColor Yellow
+            $filter = @('--filter', 'FullyQualifiedName~GameBranchTests')
+        }
+        $output = dotnet test $suite --no-build -nologo @filter 2>&1
         $summary = $output | Select-String -Pattern 'Passed!|Failed!' | Select-Object -Last 1
         if ($summary) { Write-Host "  $($summary.Line.Trim())" }
         if ($LASTEXITCODE -ne 0) {

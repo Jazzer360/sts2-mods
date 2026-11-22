@@ -228,6 +228,11 @@ public static partial class SimEngine
         return TakeToHand(state, player, take, take.Eligible, take.Count);
     }
 
+    /// <summary>The profile with this key in the pile a take comes from.</summary>
+    private static SimDrawCard? ProfileIn(SimDrawPile pile, bool fromDiscard, string key) => fromDiscard
+        ? pile.Discard.FirstOrDefault(group => group.Card.Key == key)?.Card
+        : pile.Top.FirstOrDefault(card => card.Key == key) ?? pile.Rest.FirstOrDefault(group => group.Card.Key == key)?.Card;
+
     /// <summary>How many cards of this profile the pile a take comes from holds now.</summary>
     private static int InPile(SimDrawPile pile, bool fromDiscard, string key) => fromDiscard
         ? pile.Discard.Where(group => group.Card.Key == key).Sum(group => group.Count)
@@ -251,10 +256,13 @@ public static partial class SimEngine
         }
         if (!take.Random)
         {
-            // Your pick: the same whichever you take when they're all one profile; otherwise which is your later decision.
-            if (candidates.Count > 1) state.Unmodelled ??= "you choose which card it takes into your hand, and they differ in what the simulation follows";
-            TakeOne(state, player, candidates[0].Key, take.FromDiscard);
-            return TakeToHand(state, player, take, Less(eligible, candidates[0].Key), count - 1);
+            // Your pick is your later decision (decision #167): a plain card when there is one, the same whichever you take when they're
+            // all one profile, else unknown.
+            var plain = candidates.FindIndex(candidate => ProfileIn(pile, take.FromDiscard, candidate.Key) is { Plain: true });
+            if (plain < 0 && candidates.Count > 1) state.Unmodelled ??= "you choose which card it takes into your hand, and they differ in what the simulation follows";
+            var chosen = candidates[Math.Max(0, plain)].Key;
+            TakeOne(state, player, chosen, take.FromDiscard);
+            return TakeToHand(state, player, take, Less(eligible, chosen), count - 1);
         }
         var result = new List<SimState>();
         for (var i = 0; i < candidates.Count; i++)

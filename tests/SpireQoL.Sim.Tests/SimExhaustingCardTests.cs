@@ -71,11 +71,17 @@ public class SimExhaustingCardTests
     }
 
     [Fact]
-    public void ACardYouChooseToExhaustIsUnknownWhileADrumCouldBeIt()
+    public void ACardYouChooseToExhaustIsOneThatChangesNothingWhenThereIsOne()
     {
+        // Decision #167: your pick is your later decision. With a card besides the Drum, the prediction exhausts that one: no energy.
         var chosen = new ExhaustFromHandAction(ExhaustPick.Chosen);
-        Assert.All(SimEngine.Run(Hand(cards: 3, Drum(id: 21)), Exhausting(chosen)).Branches, branch => Assert.NotNull(branch.Unmodelled));
-        Assert.All(SimEngine.Run(Hand(cards: 3), Exhausting(chosen)).Branches, branch => Assert.Null(branch.Unmodelled));
+        var plain = Assert.Single(SimEngine.Run(Hand(cards: 3, Drum(id: 21)), Exhausting(chosen)).Branches);
+        Assert.Null(plain.Unmodelled);
+        Assert.Equal(0, plain.You.Energy);
+        // Only the Drum to take: it's exhausted, its energy given.
+        Assert.Equal(2, Assert.Single(SimEngine.Run(Hand(cards: 1, Drum(id: 21)), Exhausting(chosen)).Branches).You.Energy);
+        // Only Drums that differ: which one is unknown.
+        Assert.All(SimEngine.Run(Hand(cards: 2, Drum(id: 21), Drum(id: 22, energy: 3)), Exhausting(chosen)).Branches, branch => Assert.NotNull(branch.Unmodelled));
     }
 
     [Fact]

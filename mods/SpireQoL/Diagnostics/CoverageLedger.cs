@@ -453,8 +453,10 @@ internal static partial class CoverageLedger
     /// <summary>
     /// Earlier game versions players still run whose coverage was reviewed before the ledger moved on (decision #125): not
     /// reported as a version the coverage wasn't checked against. v0.113.0, the first beta build (patched to v0.113.1), was reviewed in 0.31.29.
+    /// The main branch's version is reviewed against the main decompile (decision #163: GameBranchTests.MainReviewed, which must be here):
+    /// v0.111.1, code-identical to v0.111.0.
     /// </summary>
-    internal static readonly string[] ReviewedGameVersions = { "v0.113.0" };
+    internal static readonly string[] ReviewedGameVersions = { "v0.113.0", "v0.111.0", "v0.111.1" };
 
     /// <summary>Whether the coverage was checked against this game version: the ledger's, or one reviewed before it.</summary>
     internal static bool ReviewedVersion(string game) =>

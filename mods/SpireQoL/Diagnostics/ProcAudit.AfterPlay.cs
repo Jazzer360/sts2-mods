@@ -153,6 +153,14 @@ public sealed partial class ProcAudit
             model.Skip("state after the play", $"not modelled: {unknown.Unmodelled}");
             return;
         }
+        // A choice inside the play is yours (decision #167): the prediction took a card that doesn't act when exhausted. Your pick
+        // exhausting one that does (Drum of Battle's energy) made a state the prediction left to your choice: not checked.
+        if (PlayFacts.ExhaustPickOf(window.Card) is { Pick: ExhaustPick.Chosen }
+            && entries.OfType<CardExhaustedEntry>().Any(exhausted => !ReferenceEquals(exhausted.Card, window.Card) && CardEnergy.WhenExhausted(exhausted.Card) > 0))
+        {
+            model.Skip("state after the play", "your pick inside the play exhausted a card that acts when exhausted");
+            return;
+        }
         var after = window.After;
         var afterIds = window.AfterIds;
         // Cards drawn during the play (decision #132: the draw tabs' numbers are part of it, with the card's own draws), when the

@@ -71,12 +71,18 @@ public class SimTakeToHandTests
     }
 
     [Fact]
-    public void YourPickAmongCardsThatDifferIsUnknown()
+    public void YourPickTakesAPlainCardWhenThereIsOne()
     {
-        // Wish with a Burn and plain cards to choose from: which you take is your later decision.
+        // Wish with a Burn and plain cards to choose from (decision #167: your pick is your later decision): a plain card, so the
+        // Burn stays in the pile. With only cards the simulation follows to choose from, and different ones, it's unknown.
         var outcome = SimEngine.Run(You((Plain, 3), (Burn, 1)),
             Takes(new TakeToHandAction(Count: 1, new Dictionary<string, int> { ["plain"] = 3, ["burn"] = 1 })));
-        Assert.Contains(outcome.Branches, branch => branch.Unmodelled != null);
+        var taken = Assert.Single(outcome.Branches);
+        Assert.Null(taken.Unmodelled);
+        Assert.Equal(1, taken.You.Draw!.Rest.Single(group => group.Card.Key == "burn").Count);
+        var ethereal = new SimDrawCard("ethereal") { Fading = true };
+        var unknown = SimEngine.Run(You((ethereal, 1), (Burn, 1)), Takes(new TakeToHandAction(Count: 1, new Dictionary<string, int> { ["ethereal"] = 1, ["burn"] = 1 })));
+        Assert.Contains(unknown.Branches, branch => branch.Unmodelled != null);
         // Among plain cards only, it's the same whichever you take.
         var plain = SimEngine.Run(You((Plain, 3), (Burn, 1)), Takes(new TakeToHandAction(Count: 1, new Dictionary<string, int> { ["plain"] = 3 })));
         Assert.Null(Assert.Single(plain.Branches).Unmodelled);

@@ -42,6 +42,14 @@ Set-Location $root
 function Fail([string]$msg) { Write-Host "error: $msg" -ForegroundColor Red; exit 1 }
 
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { Fail 'dotnet SDK not found.' }
+# A release runs the whole catalog, which checks the beta catalog (decision #163): the game has to be on Steam's beta branch then
+# (with main installed, scripts/check.ps1 runs only the branch checks: decision #168).
+$installedInfo = Join-Path ${env:ProgramFiles(x86)} 'Steam\steamapps\common\Slay the Spire 2\release_info.json'
+$mainVersion = Join-Path $HOME 'git\sts2-decompiled-main\VERSION.json'
+if ((Test-Path $installedInfo) -and (Test-Path $mainVersion) -and
+    (Get-Content $installedInfo -Raw | ConvertFrom-Json).commit -eq (Get-Content $mainVersion -Raw | ConvertFrom-Json).commit) {
+    Fail "The game is on Steam's main branch: switch it to beta to release (the release checks the whole catalog against beta)."
+}
 if (-not $DryRun -and -not (Get-Command gh -ErrorAction SilentlyContinue)) { Fail 'GitHub CLI (gh) not found. Install it and run "gh auth login".' }
 
 if (-not $DryRun) {
