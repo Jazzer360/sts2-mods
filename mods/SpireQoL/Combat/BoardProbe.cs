@@ -111,27 +111,45 @@ internal static class BoardProbe
             hashCode.Add(Sts2State.TurnNumber);
             hashCode.Add(QolSettings.Revision);
             hashCode.Add(CombatManager.Instance?.History.Entries is ICollection<MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry> log ? log.Count : -1);
-            var creatures = combat.Creatures;
-            for (var i = 0; i < creatures.Count; i++)
-            {
-                var creature = creatures[i];
-                hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(creature));
-                hashCode.Add(creature.CurrentHp);
-                hashCode.Add(creature.MaxHp);
-                hashCode.Add(creature.Block);
-                hashCode.Add(creature.IsAlive);
-                var powers = creature.Powers;
-                // Its shown count too: some keep theirs apart from Amount (Withering Presence counts its CardsLeft down in a variable).
-                for (var j = 0; j < powers.Count; j++) { hashCode.Add(powers[j].GetType()); hashCode.Add(powers[j].Amount); hashCode.Add(powers[j].DisplayAmount); }
-                if (creature.Monster is { } monster) hashCode.Add(monster.NextMove?.Id);
-                if (creature.Player is { } player) AddPlayer(ref hashCode, player);
-            }
+            // Allies, then enemies: Creatures makes a list of both each read.
+            AddCreatures(ref hashCode, combat.Allies);
+            AddCreatures(ref hashCode, combat.Enemies);
         }
         catch
         {
             hashCode.Add(Godot.Engine.GetProcessFrames()); // couldn't read it all: never the same as last frame
         }
         return hashCode.ToHashCode();
+    }
+
+    /// <summary>A creature in the hash: a stand-in for its id in what a power read names (any value that's the same for the same creature).</summary>
+    private static readonly Func<MegaCrit.Sts2.Core.Entities.Creatures.Creature, int?> ProbeId = creature => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(creature);
+
+    private static void AddCreatures(ref HashCode hashCode, IReadOnlyList<MegaCrit.Sts2.Core.Entities.Creatures.Creature> creatures)
+    {
+        for (var i = 0; i < creatures.Count; i++)
+        {
+            var creature = creatures[i];
+            hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(creature));
+            hashCode.Add(creature.CurrentHp);
+            hashCode.Add(creature.MaxHp);
+            hashCode.Add(creature.Block);
+            hashCode.Add(creature.IsAlive);
+            var powers = creature.Powers;
+            // Its shown count, and what the simulator reads from it (SimReaders.Read: a flag such as Skittish's block this turn, a
+            // count kept apart from Amount such as Withering Presence's CardsLeft): a change in either is a change.
+            for (var j = 0; j < powers.Count; j++)
+            {
+                hashCode.Add(powers[j].GetType());
+                hashCode.Add(powers[j].Amount);
+                hashCode.Add(powers[j].DisplayAmount);
+                var (_, amount, data) = Sim.SimReaders.Read(powers[j], Sim.SimAdapter.SimPowerName(powers[j].GetType()), ProbeId);
+                hashCode.Add(amount);
+                hashCode.Add(data);
+            }
+            if (creature.Monster is { } monster) hashCode.Add(monster.NextMove?.Id);
+            if (creature.Player is { } player) AddPlayer(ref hashCode, player);
+        }
     }
 
     private static void AddPlayer(ref HashCode hashCode, Player player)

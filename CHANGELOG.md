@@ -16,6 +16,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Centennial Puzzle's draws count when a play loses you HP some other way than its own cost (an enemy's Galvanic on a Galvanized card, Thorns hitting back, a Corrupted card): the Shuffle Warning shows the shuffle they cause, and the checks expect them.
 - Red Skull's Strength counts from the moment a play's HP loss takes you to its threshold, so the rest of the play hits harder: Hemokinesis' own HP cost, then its attack (it predicted the hit without the Strength).
 - The checks no longer report No Draw stopping a play's draws (none were predicted), nor cards a play would have made when the fight ended before it made them (Stomp killing the last enemy with Personal Hive's Dazed still to come).
+- Leading Strike's Shivs count as two (the checks expected one, and the cards in your hand after it one short).
+- A teammate's arrows in an enemy (the Fool's Impaled) are read as theirs, not yours.
+- The board's quick check sees a power's own state change (Skittish's block this turn), so the turn forecast and the tabs work it out again instead of keeping last frame's.
 - The mod makes far less garbage while nothing changes in a fight (it made most of the game's), so the memory clean-ups that pause the game for a few milliseconds come much less often.
 
 #### Changed

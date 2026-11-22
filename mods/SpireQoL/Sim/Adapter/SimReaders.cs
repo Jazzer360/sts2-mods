@@ -34,69 +34,81 @@ public static class SimReaders
             // itself is already in the owner's ThornsPower (TemporaryThornsPower.BeforeApplied applies it).
             if (SimAdapter.IsTemporaryThorns(power.GetType())) continue;
             var name = SimAdapter.SimPowerName(power.GetType());
-            var id = new PowerId(name);
             // Withering Presence: Aeonglass has one per player, each counting its Target's cards (AfterCardPlayed:
             // cardPlay.Card.Owner == Target.Player). Only yours reacts to your plays; a teammate's would mix in their count.
             if (name == nameof(WitheringPresencePower) && power.Target is { } otherCreature && idOf(otherCreature) != Who.You) continue;
             // Sic 'Em is one instance per applier (InstancedPerApplier): only yours summons for your Osty's hits. A teammate's reacts to their
             // Osty, whose hits aren't part of your turn's simulation, and would otherwise be read as yours.
             if (name == nameof(SicEmPower) && (power.Applier is not { } sicEmApplier || idOf(sicEmApplier) != Who.You)) continue;
-            int amount = power.Amount, data = 0;
-            switch (name)
-            {
-                // Your arrows in it (Amount) and its hit counter (Data); a teammate's Impaled only makes it Impaled.
-                case nameof(ImpaledPower) when power.Applier is { } impaler && idOf(impaler) == Who.You:
-                    amount = SpireQoL.Procs.Fool.ArrowsIn(power);
-                    data = SpireQoL.Procs.Fool.HitCounter(power);
-                    break;
-                // A teammate's arrows in it: 4 bits of Data per teammate (index from their id); amount: arrows in all (it stays Impaled).
-                case nameof(ImpaledPower):
-                    name = "ImpaledPowerOther";
-                    amount = SpireQoL.Procs.Fool.ArrowsIn(power);
-                    data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var teammateIndex and >= 0 and < 7 ? Math.Min(15, amount) << (4 * teammateIndex) : 0;
-                    amount = Math.Max(1, amount);
-                    break;
-                case nameof(HailstormPower): data = Sts2State.Var(power, "FrostOrbs", fallback: 1); break;
-                case nameof(TheBombPower): data = Sts2State.Var(power, "Damage"); break;
-                case nameof(SlowPower): data = Sts2State.Var(power, "SlowAmount", fallback: 0); break;
-                case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", fallback: false) ? Models.SkittishPower.UsedThisTurn : 0; break;
-                case nameof(HardenedShellPower): data = Math.Max(0, power.DisplayAmount); break;
-                case nameof(FlutterPower): data = Sts2State.Var(power, "DamageDecrease", fallback: 50); break;
-                case nameof(SurroundedPower): data = Sts2State.Private<object?>(power, "Facing", fallback: null)?.ToString() == "Left" ? Models.SurroundedPower.FacingLeft : Models.SurroundedPower.FacingRight; break;
-                case nameof(CoveredPower): data = DataCreature.Of(power.Applier is { } coverer ? idOf(coverer) : null); break;
-                // Counters the proc models count down (the power's own number: DisplayAmount, or its CardsLeft value).
-                case nameof(FeralPower) or nameof(OrbitPower) or nameof(AutomationPower) or nameof(CacophonyPower): data = Math.Max(0, power.DisplayAmount); break;
-                case nameof(PanachePower) or nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
-                // Once a turn (PowerUse.UsedThisTurn: already this turn).
-                case nameof(PaleBlueDotPower): data = Internal(power, "alreadyActivatedThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
-                case nameof(LullabyPower): data = Sts2State.Private(power, "_proccdThisTurn", fallback: true) ? (int)PowerUse.UsedThisTurn : 0; break;
-                case nameof(YahPower): data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
-                // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
-                case nameof(VigorPower) or nameof(AimPower) or nameof(QuietusPower) or nameof(GigantificationPower):
-                    data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", fallback: null) != null
-                        ? Models.AttackBoundPower.BoundOutside : 0;
-                    break;
-                case nameof(JugglingPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } juggled ? Sts2State.Private(juggled, "attacksPlayedThisTurn", fallback: 0) : 0; break;
-                // Whose plays it acts on (DataCreature: 0 is no one).
-                // Gone with their applier (AfterDeath), Magic Bomb only while it lives: the applier.
-                case nameof(ConstrictPower) or nameof(MagicBombPower): data = DataCreature.Of(power.Applier is { } caster ? idOf(caster) : null); break;
-                case nameof(StranglePower) or nameof(OblivionPower): data = DataCreature.Of(power.Applier is { } strangler ? idOf(strangler) : null); break;
-                case nameof(ImitationLearningPower):
-                    data = DataCreature.Of(power is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower imitationLearningPower
-                           && Combat.CardPredictions.CopiesFrom(imitationLearningPower)?.Creature is { } copied ? idOf(copied) : null);
-                    break;
-                case nameof(InterceptPower):
-                {
-                    // The players it covers (InterceptPower's internal coveredCreatures): Intercept multiplies by count + 1.
-                    var internalData = Sts2State.Private<object?>(power, "_internalData", fallback: null);
-                    var covered = internalData == null ? null : Sts2State.Private<System.Collections.ICollection?>(internalData, "coveredCreatures", fallback: null);
-                    amount = covered?.Count ?? 1;
-                    break;
-                }
-            }
+            var (readName, amount, data) = Read(power, name, idOf);
+            // After the read: a teammate's Impaled is its own power (ImpaledPowerOther).
+            var id = new PowerId(readName);
             set = set.Has(id) ? set.With(id, set[id] + amount, id == SimEngine.ImpaledOther ? set.DataOf(id) | data : data) : set.With(id, amount, data);
         }
         return set;
+    }
+
+    /// <summary>
+    /// One power as the simulator reads it: its name (a teammate's Impaled apart: ImpaledPowerOther), its amount and the Data its model
+    /// keeps (a flag, a count, a creature). The board probe hashes the same read (decision #130), so a change in what's read here is a
+    /// change it sees.
+    /// </summary>
+    internal static (string Name, int Amount, int Data) Read(PowerModel power, string name, Func<Creature, int?> idOf)
+    {
+        int amount = power.Amount, data = 0;
+        switch (name)
+        {
+            // Your arrows in it (Amount) and its hit counter (Data); a teammate's Impaled only makes it Impaled.
+            case nameof(ImpaledPower) when power.Applier is { } impaler && idOf(impaler) == Who.You:
+                amount = SpireQoL.Procs.Fool.ArrowsIn(power);
+                data = SpireQoL.Procs.Fool.HitCounter(power);
+                break;
+            // A teammate's arrows in it: 4 bits of Data per teammate (index from their id); amount: arrows in all (it stays Impaled).
+            case nameof(ImpaledPower):
+                name = "ImpaledPowerOther";
+                amount = SpireQoL.Procs.Fool.ArrowsIn(power);
+                data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var teammateIndex and >= 0 and < 7 ? Math.Min(15, amount) << (4 * teammateIndex) : 0;
+                amount = Math.Max(1, amount);
+                break;
+            case nameof(HailstormPower): data = Sts2State.Var(power, "FrostOrbs", fallback: 1); break;
+            case nameof(TheBombPower): data = Sts2State.Var(power, "Damage"); break;
+            case nameof(SlowPower): data = Sts2State.Var(power, "SlowAmount", fallback: 0); break;
+            case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", fallback: false) ? Models.SkittishPower.UsedThisTurn : 0; break;
+            case nameof(HardenedShellPower): data = Math.Max(0, power.DisplayAmount); break;
+            case nameof(FlutterPower): data = Sts2State.Var(power, "DamageDecrease", fallback: 50); break;
+            case nameof(SurroundedPower): data = Sts2State.Private<object?>(power, "Facing", fallback: null)?.ToString() == "Left" ? Models.SurroundedPower.FacingLeft : Models.SurroundedPower.FacingRight; break;
+            case nameof(CoveredPower): data = DataCreature.Of(power.Applier is { } coverer ? idOf(coverer) : null); break;
+            // Counters the proc models count down (the power's own number: DisplayAmount, or its CardsLeft value).
+            case nameof(FeralPower) or nameof(OrbitPower) or nameof(AutomationPower) or nameof(CacophonyPower): data = Math.Max(0, power.DisplayAmount); break;
+            case nameof(PanachePower) or nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
+            // Once a turn (PowerUse.UsedThisTurn: already this turn).
+            case nameof(PaleBlueDotPower): data = Internal(power, "alreadyActivatedThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
+            case nameof(LullabyPower): data = Sts2State.Private(power, "_proccdThisTurn", fallback: true) ? (int)PowerUse.UsedThisTurn : 0; break;
+            case nameof(YahPower): data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
+            // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
+            case nameof(VigorPower) or nameof(AimPower) or nameof(QuietusPower) or nameof(GigantificationPower):
+                data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", fallback: null) != null
+                    ? Models.AttackBoundPower.BoundOutside : 0;
+                break;
+            case nameof(JugglingPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } juggled ? Sts2State.Private(juggled, "attacksPlayedThisTurn", fallback: 0) : 0; break;
+            // Whose plays it acts on (DataCreature: 0 is no one).
+            // Gone with their applier (AfterDeath), Magic Bomb only while it lives: the applier.
+            case nameof(ConstrictPower) or nameof(MagicBombPower): data = DataCreature.Of(power.Applier is { } caster ? idOf(caster) : null); break;
+            case nameof(StranglePower) or nameof(OblivionPower): data = DataCreature.Of(power.Applier is { } strangler ? idOf(strangler) : null); break;
+            case nameof(ImitationLearningPower):
+                data = DataCreature.Of(power is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower imitationLearningPower
+                       && Combat.CardPredictions.CopiesFrom(imitationLearningPower)?.Creature is { } copied ? idOf(copied) : null);
+                break;
+            case nameof(InterceptPower):
+            {
+                // The players it covers (InterceptPower's internal coveredCreatures): Intercept multiplies by count + 1.
+                var internalData = Sts2State.Private<object?>(power, "_internalData", fallback: null);
+                var covered = internalData == null ? null : Sts2State.Private<System.Collections.ICollection?>(internalData, "coveredCreatures", fallback: null);
+                amount = covered?.Count ?? 1;
+                break;
+            }
+        }
+        return (name, amount, data);
     }
 
     /// <summary>

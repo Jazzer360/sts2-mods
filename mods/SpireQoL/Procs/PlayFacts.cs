@@ -1380,7 +1380,7 @@ public sealed class PlayFacts
             // Shivs.
             case nameof(BladeDance): case nameof(BladeOfInk): case nameof(CloakAndDagger): case nameof(UpMySleeve): return Var("Cards");
             case nameof(FanOfKnives): case nameof(HiddenDaggers): return Var("Shivs");
-            case nameof(LeadingStrike): return 1;
+            case nameof(LeadingStrike): return Var("Shivs");
             case nameof(StormOfSteel): return others.Count;
             // Souls.
             case nameof(CaptureSpirit): case nameof(GraveWarden): case nameof(Reave): return Var("Cards");

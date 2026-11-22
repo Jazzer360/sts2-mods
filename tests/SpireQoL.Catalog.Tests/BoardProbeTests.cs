@@ -1,3 +1,4 @@
+using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -53,6 +54,20 @@ public class BoardProbeTests
         int Probe() => BoardProbe.Compute(gameFight.Me, gameFight.Combat);
         var before = Probe();
         power.DynamicVars["CardsLeft"].BaseValue = 3;
+        Assert.NotEqual(before, Probe());
+    }
+
+    [Fact]
+    public void APowersReadFlagChangesTheProbe()
+    {
+        // A dev review: Skittish's block this turn (its internal data, Amount unchanged) changed the turn forecast's start state while
+        // the probe stayed the same. The probe hashes what the simulator reads from each power (SimReaders.Read).
+        var gameFight = new GameFight();
+        var skittish = (PowerModel)ModelDb.Power<SkittishPower>().ToMutable();
+        skittish.ApplyInternal(gameFight.Me.Creature, amount: 5);
+        int Probe() => BoardProbe.Compute(gameFight.Me, gameFight.Combat);
+        var before = Probe();
+        AccessTools.PropertySetter(typeof(SkittishPower), nameof(SkittishPower.HasGainedBlockThisTurn)).Invoke(skittish, new object[] { true });
         Assert.NotEqual(before, Probe());
     }
 

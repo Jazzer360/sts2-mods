@@ -909,3 +909,13 @@ In a fight with nothing changing, the mod's frame work allocated about 60 KB a f
 `PerFrameMemoryTests` (catalog) holds the parts that run on the game's objects at zero bytes a frame.
 *Why:* decision #172's numbers: the mod's garbage, not the game's, set the pace of the collections that pause every frame.
 *Replaced:* the every-30th-frame dev check (#130's cadence); string names, LINQ and per-frame copies in the frame's hot paths.
+
+### 174. The board probe hashes what the simulator reads from each power — active (2026-11-22)
+`BoardProbe` hashed each power's type, Amount and shown amount. A power whose state lives elsewhere (Skittish's block this turn, in its internal data) changed the turn forecast's start state with the probe unchanged, which dev mode's check caught. The adapter's per-power read (amount, Data, a teammate's Impaled apart) is now one method, `SimReaders.Read`, which both the adapter and the probe call: anything a model reads from a power is in the probe by construction, with no second list to keep. Reading it found the adapter making a power's id before a teammate's Impaled was renamed, so their arrows read as yours; fixed.
+*Why:* a probe that lists what to hash drifts from what the simulator reads; one read for both can't.
+*Replaced:* the probe's own Amount and shown-amount hash for powers (decision #130), kept alongside.
+
+### 175. A new launch starts the dashboard over; each window has its own smoothing — active (2026-11-22)
+The dev dashboard kept every launch since the page opened on one timeline; now a new launch's stream starts the page over, its charts that launch's alone (Compare reads any two launches from their files). The Performance page's window is a row of buttons, each drawing its charts smoothed to suit it (1 minute 1.25 s, 5 minutes 3 s, 15 minutes 10 s, the whole launch a three-hundredth of its length), replacing the separate "Smooth over" choice. The 165 fps line always shows, for scale; with log scale on, the features' chart is a line per feature (a pile on a log scale shows only its bottom layer); memory is two charts: who makes the garbage (stacked: the mod's frames and hooks, its searches, the rest of the game) and memory in use with the clean-ups' pauses on a second scale. Hovering a legend entry fades the rest of its chart.
+*Why:* the owner's notes from a dev session: old launches mixed into the charts, two choices for one thing, and charts without a sense of scale.
+*Replaced:* decision #108's one timeline across launches on the page; the "Smooth over" choice.

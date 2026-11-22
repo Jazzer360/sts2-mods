@@ -35,6 +35,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 button { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 11px; cursor: pointer; }
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.seg { display: inline-flex; }
+.seg button { border-radius: 0; margin-left: -1px; padding: 3px 10px; }
+.seg button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.seg button:last-child { border-radius: 0 6px 6px 0; }
+.seg button.on { background: var(--accent); border-color: var(--accent); color: #fff; position: relative; }
 button.danger:hover { border-color: var(--bad); color: var(--bad); }
 /* a note's kind: one button each, the chosen one filled */
 .kinds { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -80,6 +85,8 @@ td.n, th.n { text-align: right; }
 canvas { width: 100%; display: block; }
 .legend { display: flex; flex-wrap: wrap; gap: 10px; color: var(--dim); font-size: 12px; margin-top: 6px; }
 .legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+.legend span { cursor: default; transition: opacity .1s; }
+.legend:hover span:not(:hover) { opacity: .45; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .attn { list-style: none; margin: 0; padding: 0; }
 .attn li { padding: 6px 0; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: baseline; }
@@ -298,7 +305,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
   </section>
 
   <section class="page" id="p-perf">
-    <div class="row" style="margin-bottom:10px"><span class="dim">Window</span><select id="perfWindow"><option value="60">1 minute</option><option value="300" selected>5 minutes</option><option value="900">15 minutes</option><option value="0">everything kept</option></select><label><input type="checkbox" id="logTimesBox"> log scale for times</label><label title="Leave out the frames before the game settled: the launch, the menus and map before your first fight, and that fight's first 15 s (loading, and the mod's code compiling on first use). They dwarf everything after."><input type="checkbox" id="skipLaunchBox"> skip the launch</label><span class="dim" title="Each point drawn as the average of the points within this much time around it: the trend, not every spike. The slow-frame tiles and the log still count every one.">Smooth over</span><select id="smoothSel"><option value="0">off</option><option value="0.5">0.5 s</option><option value="1.25">1.25 s</option><option value="3">3 s</option><option value="10">10 s</option><option value="30">30 s</option><option value="60">1 minute</option></select></div>
+    <div class="row" style="margin-bottom:10px"><span class="dim" title="Each window draws its points averaged over a stretch that suits it: 1.25 s over a minute, 3 s over five, 10 s over fifteen, and over the whole launch about a three-hundredth of it. Spikes still count in the tiles and the log.">Window</span><span class="seg" id="perfWindow"><button data-v="60">1 minute</button><button data-v="300">5 minutes</button><button data-v="900">15 minutes</button><button data-v="0">whole launch</button></span><label><input type="checkbox" id="logTimesBox"> log scale for times</label><label title="Leave out the frames before the game settled: the launch, the menus and map before your first fight, and that fight's first 15 s (loading, and the mod's code compiling on first use). They dwarf everything after."><input type="checkbox" id="skipLaunchBox"> skip the launch</label></div>
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><h3>Is the mod making frames slow?</h3>
@@ -320,10 +327,14 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
         <p class="hint">The longest gap between two frames in each quarter second (16.7 ms is a smooth 60 fps). Over 50 ms (the dashed line) is a hitch you can see. When the mod's own time at that moment is small (the chart on the left), the hitch is the game's (loading, a room change), not the mod's.</p>
         <canvas id="pfGap" height="150"></canvas>
         <div class="legend"><span><i style="background:var(--warn)"></i>longest gap between frames</span></div></div>
+      <div class="card"><h3>Who makes the garbage?</h3>
+        <p class="hint">New memory allocated per second, stacked: the mod's frame work and its code in the game's hooks (blue), its searches on their own threads (violet), and the rest of the game (grey). The top of the pile is the whole game. Every few megabytes sets off a quick clean-up that pauses everything for several milliseconds (the chart beside this one), so the blue and violet layers are the mod's share of those pauses. The feature table below gives each feature's memory per frame (amber over 20 KB, red over 100 KB).</p>
+        <canvas id="pfAlloc" height="150"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>the mod's frames and hooks</span><span><i style="background:var(--violet)"></i>the mod's searches</span><span><i style="background:var(--line)"></i>the rest of the game</span></div></div>
       <div class="card"><h3>Could memory clean-ups cause hitches?</h3>
-        <p class="hint">New memory allocated per second: the whole game (amber, the mod included), the mod's frame work and its code in the game's hooks (blue), and its searches on their own threads (violet). Teal: memory in use. Every few megabytes allocated sets off a quick clean-up that pauses everything, the mod's frames too, for several milliseconds; red dots are full clean-ups, which pause longer. So the blue and violet lines are what the mod adds to those pauses. The feature table below gives each feature's memory per frame (amber over 20 KB, red over 100 KB).</p>
+        <p class="hint">Memory in use by the whole game (teal, left scale, MB) and the time its clean-ups paused everything, per second (amber, right scale, ms). Red dots are full clean-ups, the long ones. Memory in use is the whole process's: the game's and the mod's live together and can't be told apart. A line that keeps climbing between full clean-ups is memory held on to.</p>
         <canvas id="pfGc" height="150"></canvas>
-        <div class="legend"><span><i style="background:var(--warn)"></i>whole game (MB/s)</span><span><i style="background:var(--accent)"></i>the mod's frames and hooks (MB/s)</span><span><i style="background:var(--violet)"></i>the mod's searches (MB/s)</span><span><i style="background:var(--teal)"></i>memory in use (MB)</span><span><i style="background:var(--bad)"></i>full collection</span></div></div>
+        <div class="legend"><span><i style="background:var(--teal)"></i>memory in use (MB, left)</span><span><i style="background:var(--warn)"></i>clean-up pauses (ms per s, right)</span><span><i style="background:var(--bad)"></i>full collection</span></div></div>
       <div class="card"><h3>Is the engine compiling shaders?</h3>
         <p class="hint">Amber dots: shaders the game's engine compiled in each quarter second (its pipeline compilations). The first time something new is drawn (an effect, a material, a control), the engine compiles what it needs, and drawing stalls meanwhile: a stall with dots here is that, not the mod's code. Teal: nodes freed from the scene but never deleted (orphans); a line that keeps climbing is a leak, the mod's or the game's.</p>
         <canvas id="pfEngine" height="150"></canvas>
@@ -446,8 +457,8 @@ const WARMUP_S = 20;
 /** A fight's first seconds: the game loading its room. */
 const FIGHT_LOAD_S = 3;
 /**
- * Each launch's start on the page's one timeline: a new launch's stream (a new file) continues from where the last one ended
- * (its times shifted by FS.base), so the charts keep every launch since the page opened, and each launch's loading is left out.
+ * The launch's start on the page's timeline (0: a new launch's stream starts the page over, so its charts are that launch's alone),
+ * so its loading is left out.
  */
 const launchAt = (t) => M.launches.findLast((at) => at <= t) ?? 0;
 const warmingUp = (t) => t - launchAt(t) < WARMUP_S;
@@ -629,8 +640,8 @@ async function poll() {
       FS.listedAt = Date.now();
       const newest = (await streams())[0];
       if (newest && newest.name !== FS.stream?.name) {
-        // A new launch: its stream continues the timeline (a second's gap), keeping what came before; the first one starts it.
-        if (FS.stream) { FS.base = M.lastT + 1; M.launches.push(FS.base); } else reset();
+        // A new launch starts the page over: its charts are that launch's alone (Compare reads any two launches from their files).
+        reset(); FS.base = 0;
         FS.stream = newest; FS.offset = 0; FS.decoder = new TextDecoder(); FS.rest = ""; M.file = newest.name;
       }
     }
@@ -767,6 +778,24 @@ function setStatus(text, kind) { setHTML($("statusText"), text); $("dot").classN
 // over the chart (the chart itself isn't redrawn), and shows its values in a box just above the chart (below it near the top of the
 // window), so nothing covers the chart.
 const HOVER = {}, TIP = { id: null, e: null };
+/**
+ * The legend entry under the mouse: its chart (the canvas in the same card) and its colour. That chart draws every other line or
+ * layer faded, so one can be followed through a noisy chart. Matched by colour, as the legend shows it.
+ */
+let FOCUS = null;
+const COLOR_PROBE = document.createElement("canvas").getContext("2d");
+/** A colour in one form (the canvas's own), so a legend swatch's computed colour and a series' colour compare equal. */
+function sameColor(color) { COLOR_PROBE.fillStyle = "#000"; COLOR_PROBE.fillStyle = color; return COLOR_PROBE.fillStyle; }
+/** Whether this series or layer of this chart is drawn faded (another legend entry of the chart is hovered). */
+const faded = (id, color) => FOCUS != null && FOCUS.id === id && sameColor(color) !== FOCUS.color;
+document.addEventListener("mouseover", (e) => {
+  const entry = e.target.closest?.(".legend span");
+  const swatch = entry?.querySelector("i"), chart = entry?.closest(".card")?.querySelector("canvas");
+  const next = swatch && chart ? { id: chart.id, color: sameColor(getComputedStyle(swatch).backgroundColor) } : null;
+  if (next?.id === FOCUS?.id && next?.color === FOCUS?.color) return;
+  FOCUS = next;
+  render(true);
+});
 const tip = document.createElement("div");
 tip.id = "tip";
 document.body.appendChild(tip);
@@ -829,8 +858,8 @@ function hover(id, e) {
     for (const s of h.series) {
       const p = s.points.reduce((b, q) => (!b || Math.abs(q[0] - snap) < Math.abs(b[0] - snap) ? q : b), null);
       if (!p || Math.abs(p[0] - snap) > close) continue; // a series with no point at that moment (dots: frame waits, collections)
-      dot(g, h.X(p[0]), h.Y(p[1]), s.color);
-      rows.push(`<div>${sw(s.color)}${esc(s.name || "value")}: <b>${s.show ? s.show(p[1]) : fmt(p[1], p[1] < 10 ? 2 : 1) + h.unit}</b></div>`);
+      dot(g, h.X(p[0]), (s.Y || h.Y)(p[1]), s.color);
+      rows.push(`<div>${sw(s.color)}${esc(s.name || "value")}: <b>${s.show ? s.show(p[1]) : fmt(p[1], p[1] < 10 ? 2 : 1) + (s.right ? h.rightUnit : h.unit)}</b></div>`);
     }
     ax = h.X(snap);
     guide(g, ax, h.h, h.pad);
@@ -844,8 +873,8 @@ function hover(id, e) {
     let top = 0;
     for (const l of h.layers) { const v = l.points[i]?.[1] || 0; top += v; if (v > 0) dot(g, ax, h.Y(top), l.color); }
     const rows = h.layers.map((l) => ({ l, v: l.points[i]?.[1] || 0 })).filter((x) => x.v > 0).sort((a, b) => b.v - a.v);
-    html = `<div class="faint">${clock(h.ts[i])}</div>` + rows.map((x) => `<div>${sw(x.l.color)}${esc(x.l.name)}: <b>${fmt(x.v, 3)} ms</b></div>`).join("")
-      + `<div>total: <b>${fmt(top, 2)} ms</b></div>`;
+    html = `<div class="faint">${clock(h.ts[i])}</div>` + rows.map((x) => `<div>${sw(x.l.color)}${esc(x.l.name)}: <b>${fmt(x.v, 3)}${h.unit}</b></div>`).join("")
+      + `<div>total: <b>${fmt(top, 2)}${h.unit}</b></div>`;
   } else if (h.kind === "groups") {
     const i = Math.min(h.labels.length - 1, Math.max(0, Math.floor((mx - h.pad.l) / h.cw)));
     g.fillStyle = css("--line"); g.globalAlpha = 0.35;
@@ -940,24 +969,35 @@ function axes(g, w, h, yMax, unit, pad) {
 const MOD_BUDGET_MS = 4, STUTTER_MS = 30;
 /**
  * Frame-rate lines on the frame-time charts: a whole frame's time at 165 fps (yellow: where it starts to feel slower on a fast
- * monitor), 60 fps (orange: a common monitor's refresh) and 30 fps (red: the lowest that's acceptable). Each shows only once the
- * data comes near it (nearRefs), on every frame-time chart and, as frame rates, on the fps chart.
+ * monitor), 60 fps (orange: a common monitor's refresh) and 30 fps (red: the lowest that's acceptable). The slower two show only
+ * once the data comes near them (nearRefs); 165 fps always, so a chart of small times keeps a sense of scale (a whole frame).
  */
 const FPS_REFS = () => [
-  { v: 1000 / 165, label: "165 fps", color: "#eab308" },
+  { v: 1000 / 165, label: "165 fps", color: "#eab308", always: true },
   { v: 1000 / 60, label: "60 fps", color: "#f97316" },
   { v: 1000 / 30, label: "30 fps", color: css("--bad") },
 ];
 const MOD_REFS = () => [{ v: MOD_BUDGET_MS, label: `budget ${MOD_BUDGET_MS} ms` }, ...FPS_REFS()];
 const logTimes = () => { try { return localStorage.getItem("logTimes") !== "0"; } catch { return true; } };
 /**
- * How much time each line-chart point is averaged over (seconds; 0: drawn as measured). The Performance page's "Smooth over" sets
- * it, kept per browser; 1.25 s by default. Spikes still count in the tiles and the log.
+ * The Performance page's window (seconds; 0: the whole launch), kept per browser; 5 minutes by default. The choice made on this page
+ * holds where the browser keeps nothing (storage blocked).
  */
-const SMOOTH_DEFAULT_S = 1.25;
-/** The choice made on this page, which holds where the browser keeps nothing (storage blocked). */
-let smoothChosen = null;
-const smoothSeconds = () => { if (smoothChosen != null) return smoothChosen; try { const v = localStorage.getItem("smoothSeconds"); return v == null ? SMOOTH_DEFAULT_S : +v || 0; } catch { return SMOOTH_DEFAULT_S; } };
+let perfWindowChosen = null;
+const perfWindow = () => { if (perfWindowChosen != null) return perfWindowChosen; try { const v = localStorage.getItem("perfWindow"); return v == null ? 300 : +v; } catch { return 300; } };
+/** Each window's smoothing (seconds), set by the owner: enough to show the trend at that span without hiding a moment. */
+const SMOOTH_BY_WINDOW = { 60: 1.25, 300: 3, 900: 10 };
+/**
+ * How much time each line-chart point is averaged over (seconds; 0: drawn as measured): the window's (SMOOTH_BY_WINDOW); over the
+ * whole launch, a three-hundredth of what's kept, 1.25 s at least, so a long launch reads like a short one. Spikes still count in the
+ * tiles and the log.
+ */
+const smoothSeconds = () => {
+  const win = perfWindow();
+  if (SMOOTH_BY_WINDOW[win]) return SMOOTH_BY_WINDOW[win];
+  const span = M.rollups.length ? M.rollups.at(-1).t - M.rollups[0].t : 0;
+  return Math.max(1.25, span / 300);
+};
 /** A centred moving average over a time window (seconds): each point the mean of the points within half of it on either side. */
 function smoothed(points, seconds) {
   if (!(seconds > 0) || points.length < 3) return points;
@@ -971,46 +1011,62 @@ function smoothed(points, seconds) {
   }
   return out;
 }
-function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false, mini = false } = {}) {
+function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false, mini = false, rightUnit = "", logFloor = 0.1 } = {}) {
   if (!mini && smoothSeconds() > 0) series = series.map((s) => (s.dots ? s : { ...s, points: smoothed(s.points, smoothSeconds()) }));
   // mini: a trend in a small space (the Overview's checks): no axis labels, tight margins, the same hover readout.
-  const { g, w, h } = canvas(id), pad = mini ? { l: 2, r: 2, t: 4, b: 4 } : { l: 44, r: 8, t: 8, b: 16 };
+  const rightSeries = series.filter((s) => s.right), hasRight = !mini && rightSeries.some((s) => s.points.length);
+  const { g, w, h } = canvas(id), pad = mini ? { l: 2, r: 2, t: 4, b: 4 } : { l: 44, r: hasRight ? 44 : 8, t: 8, b: 16 };
   const all = series.flatMap((s) => s.points);
   if (!all.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const t0 = Math.min(...all.map((p) => p[0])), t1 = Math.max(...all.map((p) => p[0]), t0 + 1);
   // refs: numbers, or { v, label, color, below } (frame-rate lines): each drawn only once the data nears it (nearRefs), the axis
   // then reaching it.
-  const refv = nearRefs(refs.map((r) => (typeof r === "number" ? { v: r } : r)), all.map((p) => p[1]));
-  const yMax = fixedMax ?? Math.max(...all.map((p) => p[1]), ...refv.map((r) => r.v), 1) * (log ? 1.5 : 1.08);
+  const left = series.filter((s) => !s.right).flatMap((s) => s.points), leftValues = (left.length ? left : all).map((p) => p[1]);
+  const refv = nearRefs(refs.map((r) => (typeof r === "number" ? { v: r } : r)), leftValues);
+  const yMax = fixedMax ?? Math.max(...leftValues, ...refv.map((r) => r.v), 1) * (log ? 1.5 : 1.08);
+  const rightMax = hasRight ? Math.max(...rightSeries.flatMap((s) => s.points.map((p) => p[1])), 1) * 1.08 : 1;
   const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r);
   let Y;
   if (log) {
     // From 0.1 up: each power of ten an equal step, labelled.
-    const lo = 0.1, L = (v) => Math.log10(Math.max(v, lo)), span = L(yMax) - L(lo);
+    const lo = logFloor, L = (v) => Math.log10(Math.max(v, lo)), span = L(yMax) - L(lo);
     Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (L(v) - L(lo)) / span);
     g.font = "11px system-ui"; g.fillStyle = css("--faint"); g.strokeStyle = css("--line"); g.lineWidth = 1;
-    for (const tick of [0.1, 1, 10, 100, 1000, 10000].filter((x) => x <= yMax)) {
+    for (const tick of [0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000].filter((x) => x >= lo && x <= yMax)) {
       const y = Y(tick);
       g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
-      g.fillText(fmt(tick, 1) + unit, 2, y + 4);
+      g.fillText(fmt(tick, tick < 0.1 ? 3 : 1) + unit, 2, y + 4);
     }
   } else {
     if (!mini) axes(g, w, h, yMax, unit, pad);
     Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (v - yMin) / (yMax - yMin));
   }
+  // The right-hand scale: its own ticks and unit at the right edge, on the left's gridlines.
+  const YR = (v) => pad.t + (h - pad.t - pad.b) * (1 - v / rightMax);
+  if (hasRight) {
+    g.font = "11px system-ui"; g.fillStyle = css("--faint");
+    for (let i = 0; i <= 4; i++) {
+      const label = fmt((rightMax * i) / 4, rightMax < 10 ? 1 : 0) + (i === 4 ? rightUnit : "");
+      g.fillText(label, w - g.measureText(label).width - 2, pad.t + (h - pad.t - pad.b) * (1 - i / 4) + 4);
+    }
+  }
   drawRefLines(g, refv, yMax, Y, pad, w);
   const refLabels = () => { if (!mini) drawRefLabels(g, refv, yMax, Y, pad, w); };
-  for (const s of series) {
+  for (const s of [...series].sort((a, b) => faded(id, b.color) - faded(id, a.color))) {
+    const SY = s.right ? YR : Y;
+    s.Y = SY;
+    g.globalAlpha = faded(id, s.color) ? 0.12 : 1;
     g.strokeStyle = g.fillStyle = s.color; g.lineWidth = 1.5;
-    if (s.dots) { for (const [t, v] of s.points) { g.beginPath(); g.arc(X(t), Y(v), 2.5, 0, 7); g.fill(); } continue; }
+    if (s.dots) { for (const [t, v] of s.points) { g.beginPath(); g.arc(X(t), SY(v), 2.5, 0, 7); g.fill(); } continue; }
     g.beginPath();
-    s.points.forEach(([t, v], i) => (i ? g.lineTo(X(t), Y(v)) : g.moveTo(X(t), Y(v))));
+    s.points.forEach(([t, v], i) => (i ? g.lineTo(X(t), SY(v)) : g.moveTo(X(t), SY(v))));
     g.stroke();
   }
+  g.globalAlpha = 1;
   refLabels();
   g.font = "11px system-ui";
   if (!mini) { g.fillStyle = css("--faint"); g.fillText(clock(t0), pad.l, h - 2); const e = clock(t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2); }
-  HOVER[id] = { kind: "lines", series, t0, t1, pad, w, h, unit, X, Y };
+  HOVER[id] = { kind: "lines", series, t0, t1, pad, w, h, unit, rightUnit, X, Y };
   rehover(id);
 }
 /**
@@ -1022,7 +1078,7 @@ const REF_NEAR = 0.5;
 function nearRefs(refv, values) {
   if (!values.length) return [];
   const hi = Math.max(...values), lo = Math.min(...values);
-  return refv.filter((r) => (r.below ? lo <= r.v * 1.33 : hi >= r.v * REF_NEAR));
+  return refv.filter((r) => r.always || (r.below ? lo <= r.v * 1.33 : hi >= r.v * REF_NEAR));
 }
 /** Reference lines across a chart (dashed; a line's own colour, or faint), those within its range. */
 function drawRefLines(g, refv, yMax, Y, pad, w) {
@@ -1048,19 +1104,34 @@ function drawRefLabels(g, refv, yMax, Y, pad, w) {
   }
 }
 /** Stacked areas over time: layers [{ name, color, points: [[t, v]] }] on the same t; refs as in lines (shown once the stack reaches them). */
-function stacked(id, layers, { refs = [] } = {}) {
+function stacked(id, layers, { refs = [], unit = " ms", log = false } = {}) {
   if (smoothSeconds() > 0) layers = layers.map((l) => ({ ...l, points: smoothed(l.points, smoothSeconds()) }));
   const { g, w, h } = canvas(id), pad = { l: 44, r: 8, t: 8, b: 16 };
   if (!layers.length || !layers[0].points.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const ts = layers[0].points.map((p) => p[0]), n = ts.length;
   const tot = ts.map((_, i) => layers.reduce((a, l) => a + (l.points[i]?.[1] || 0), 0));
   refs = nearRefs(refs, tot);
-  const yMax = Math.max(...tot, ...refs.map((r) => r.v), 0.1) * 1.08, t0 = ts[0], t1 = Math.max(ts.at(-1), t0 + 1);
-  axes(g, w, h, yMax, " ms", pad);
-  const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r), Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - v / yMax);
+  const yMax = Math.max(...tot, ...refs.map((r) => r.v), 0.1) * (log ? 1.5 : 1.08), t0 = ts[0], t1 = Math.max(ts.at(-1), t0 + 1);
+  const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r);
+  let Y;
+  if (log) {
+    // Each power of ten an equal step, from a hundredth of a unit (a feature's share of a frame is often that small); each layer's top
+    // is the pile up to it, so the layers keep their order and the top is still the total.
+    const lo = 0.01, L = (v) => Math.log10(Math.max(v, lo)), span = L(yMax) - L(lo);
+    Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - (L(v) - L(lo)) / span);
+    g.font = "11px system-ui"; g.fillStyle = css("--faint"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+    for (const tick of [0.01, 0.1, 1, 10, 100, 1000].filter((x) => x <= yMax)) {
+      const y = Y(tick);
+      g.beginPath(); g.moveTo(pad.l, y); g.lineTo(w - pad.r, y); g.stroke();
+      g.fillText(fmt(tick, 2) + unit, 2, y + 4);
+    }
+  } else {
+    axes(g, w, h, yMax, unit, pad);
+    Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - v / yMax);
+  }
   const base = new Array(n).fill(0);
   for (const l of layers) {
-    g.fillStyle = l.color; g.globalAlpha = 0.75; g.beginPath();
+    g.fillStyle = l.color; g.globalAlpha = faded(id, l.color) ? 0.12 : 0.75; g.beginPath();
     for (let i = 0; i < n; i++) g.lineTo(X(ts[i]), Y(base[i] + (l.points[i]?.[1] || 0)));
     for (let i = n - 1; i >= 0; i--) g.lineTo(X(ts[i]), Y(base[i]));
     g.closePath(); g.fill(); g.globalAlpha = 1;
@@ -1068,7 +1139,7 @@ function stacked(id, layers, { refs = [] } = {}) {
   }
   drawRefLines(g, refs, yMax, Y, pad, w);
   drawRefLabels(g, refs, yMax, Y, pad, w);
-  HOVER[id] = { kind: "stacked", layers, ts, t0, t1, pad, w, h, X, Y };
+  HOVER[id] = { kind: "stacked", layers, ts, t0, t1, pad, w, h, X, Y, unit };
   rehover(id);
 }
 function scatter(id, pts) {
@@ -1512,7 +1583,7 @@ function renderSearches() {
 }
 
 function renderPerf() {
-  const win = +$("perfWindow").value, r = afterLaunch(since(M.rollups, win)), colors = seriesColors();
+  const win = perfWindow(), r = afterLaunch(since(M.rollups, win)), colors = seriesColors();
   const p95s = r.map((x) => x.modP95), frames = r.reduce((a, x) => a + x.frames, 0), secs = r.reduce((a, x) => a + x.seconds, 0);
   const waits = since(M.waits, win), uns = since(M.unsettled, win);
   const busy = quant(p95s, 0.5), st = stutters(r), stalls = r.filter((x) => isHitch(x) && !loadingAt(x.t)).length;
@@ -1533,14 +1604,23 @@ function renderPerf() {
   const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k);
   const layers = top.map((k, i) => ({ name: k, color: colors[i % colors.length], points: r.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
   layers.push({ name: "the rest", color: css("--faint"), points: r.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
-  stacked("pfFeatures", layers, { refs: FPS_REFS() });
+  // On a log scale a pile hides all but its bottom layer: each feature its own line instead, with the mod in all (the pile's top).
+  if (logTimes()) lines("pfFeatures", [...layers, { name: "the mod in all", color: css("--text"), points: r.map((x) => [x.t, Object.values(x.featureMean || {}).reduce((a, v) => a + v, 0)]) }], { refs: FPS_REFS(), unit: " ms", log: true, logFloor: 0.001 });
+  else stacked("pfFeatures", layers, { refs: FPS_REFS() });
   shareBars("pfShare", r);
   lines("pfFps", [{ name: "frames per second", color: css("--teal"), points: r.filter((x) => x.seconds > 0).map((x) => [x.t, x.frames / x.seconds]) }], { unit: " fps", refs: FPS_REFS().map((f) => ({ ...f, v: Math.round(1000 / f.v), below: true })) });
-  setHTML($("pfFeaturesLegend"), layers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
+  setHTML($("pfFeaturesLegend"), [...layers, ...(logTimes() ? [{ name: "the mod in all", color: css("--text") }] : [])].map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
   lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [{ v: 50, label: "50 ms" }, ...FPS_REFS()], unit: " ms" } /* linear always: a gap is a frame long or short, read against the frame-rate lines */);
   // featureKb is KB per frame (a mean over the rollup's frames): times the frames, it's the rollup's total
   const modMbPerSec = (x) => Object.values(x.featureKb || {}).reduce((a, v) => a + v, 0) * x.frames / 1024 / Math.max(x.seconds, 0.01);
-  lines("pfGc", [{ name: "whole game MB/s", color: css("--warn"), points: r.map((x) => [x.t, x.allocatedMb / Math.max(x.seconds, 0.01)]) }, { name: "the mod's frames and hooks MB/s", color: css("--accent"), points: r.map((x) => [x.t, modMbPerSec(x)]) }, { name: "the mod's searches MB/s", color: css("--violet"), points: r.filter((x) => x.simMb != null).map((x) => [x.t, x.simMb / Math.max(x.seconds, 0.01)]) }, { name: "memory in use MB", color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { name: "full collection (memory in use)", color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) }], {});
+  const simMbPerSec = (x) => (x.simMb || 0) / Math.max(x.seconds, 0.01);
+  stacked("pfAlloc", [
+    { name: "the mod's frames and hooks", color: css("--accent"), points: r.map((x) => [x.t, modMbPerSec(x)]) },
+    { name: "the mod's searches", color: css("--violet"), points: r.map((x) => [x.t, simMbPerSec(x)]) },
+    { name: "the rest of the game", color: css("--line"), points: r.map((x) => [x.t, Math.max(0, x.allocatedMb / Math.max(x.seconds, 0.01) - modMbPerSec(x) - simMbPerSec(x))]) },
+  ], { unit: " MB/s" });
+  lines("pfGc", [{ name: "memory in use", color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { name: "full collection (memory in use)", color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) },
+    { name: "clean-up pauses", color: css("--warn"), right: true, points: r.map((x) => [x.t, x.gcPauseMs / Math.max(x.seconds, 0.01)]) }], { unit: " MB", rightUnit: " ms/s" });
   lines("pfEngine", [{ name: "shader compiles", color: css("--warn"), dots: true, points: r.filter((x) => x.compiles > 0).map((x) => [x.t, x.compiles]) }, { name: "orphan nodes", color: css("--teal"), points: r.filter((x) => x.orphanNodes != null).map((x) => [x.t, x.orphanNodes]) }], {});
   const searches = since(M.searches, win).filter((x) => !x.cancelled && !loadingAt(x.t));
   lines("pfSearchTime", [{ name: "card play", color: css("--accent"), dots: true, points: searches.filter((x) => !isForecast(x) && !x.background).map((x) => [x.t, x.ms]) }, { name: "the turn forecast", color: css("--teal"), dots: true, points: searches.filter((x) => isForecast(x) && !x.background).map((x) => [x.t, x.ms]) }, { name: "in the background", color: css("--bad"), dots: true, points: searches.filter((x) => x.background).map((x) => [x.t, x.ms]) }], { refs: [{ v: 8, label: "8 ms wait" }], unit: " ms", log: logTimes() });
@@ -1959,16 +2039,22 @@ function start() {
   timer = setInterval(tick, 500);
 }
 $("searchFilter").addEventListener("change", () => render(true));
-$("perfWindow").addEventListener("change", () => render(true));
+{
+  const seg = $("perfWindow");
+  const mark = () => seg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", +b.dataset.v === perfWindow()));
+  mark();
+  seg.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    perfWindowChosen = +b.dataset.v;
+    try { localStorage.setItem("perfWindow", b.dataset.v); } catch {}
+    mark();
+    render(true);
+  });
+}
 $("logTimesBox").checked = logTimes();
 $("skipLaunchBox").checked = skipLaunch();
 $("skipLaunchBox").addEventListener("change", (e) => { skipLaunchChosen = e.target.checked; try { localStorage.setItem("skipLaunch", e.target.checked ? "1" : "0"); } catch {} render(true); });
-{
-  // The chosen window, or the nearest one offered.
-  const sel = $("smoothSel"), want = smoothSeconds();
-  sel.value = [...sel.options].map((o) => o.value).reduce((a, b) => (Math.abs(+b - want) < Math.abs(+a - want) ? b : a));
-  sel.addEventListener("change", () => { smoothChosen = +sel.value; try { localStorage.setItem("smoothSeconds", sel.value); } catch {} render(true); });
-}
 $("logTimesBox").addEventListener("change", (e) => { try { localStorage.setItem("logTimes", e.target.checked ? "1" : "0"); } catch {} render(true); });
 $("connectBtn").addEventListener("click", () => connect(true));
 $("watchBtn").addEventListener("click", () => watchPage(true));

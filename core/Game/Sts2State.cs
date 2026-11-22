@@ -98,8 +98,13 @@ public static class Sts2State
         if (held is { } nodeCard && nodeCard.Node != first) yield return nodeCard;
     }
 
-    private static readonly AccessTools.FieldRef<NPlayerHand, MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay?> CurrentCardPlay =
-        AccessTools.FieldRefAccess<NPlayerHand, MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay?>("_currentCardPlay");
+    /// <summary>
+    /// NPlayerHand._currentCardPlay, found once. A plain field read, not FieldRefAccess: that generates code when the class is first
+    /// used, and two threads doing it at once made this class's initializer throw (every read of the game failing after it).
+    /// </summary>
+    private static readonly FieldInfo? CurrentCardPlayField = AccessTools.Field(typeof(NPlayerHand), "_currentCardPlay");
+
+    private static MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay? CurrentCardPlay(NPlayerHand hand) => CurrentCardPlayField?.GetValue(hand) as MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay;
 
     private static (NCard Node, CardModel Card)? HeldCard(NPlayerHand hand)
     {
