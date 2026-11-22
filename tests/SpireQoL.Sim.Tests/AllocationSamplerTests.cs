@@ -57,6 +57,9 @@ public class AllocationSamplerTests
     {
         // Each burst's events (one per object finalized among them) make garbage on the thread that delivers them: never in the sample,
         // over several bursts (each a new session, on its own thread).
+        // Threads are told apart by the operating system's number for them, which the sampler reads on Windows only (where the game and dev
+        // mode run): elsewhere (the Linux build machine) there's nothing to leave out by.
+        if (AllocationSampler.CurrentOsThread() == 0) return;
         using var sampler = new AllocationSampler(AllocationSampler.CurrentOsThread());
         var seen = new HashSet<string>();
         for (var burst = 0; burst < 3; burst++)
