@@ -22,6 +22,12 @@ public static class SimReaders
     // ------------------------------------------------------------------ creatures
 
     /// <summary>
+    /// The creature's power with this name, read by name: for a power that's on one game branch only (Explosive, Simpleton), which
+    /// a typed reference would break the whole method on the other (decision #78).
+    /// </summary>
+    public static PowerModel? PowerOf(Creature creature, PowerId power) => creature.Powers.FirstOrDefault(model => model.GetType().Name == power.Name);
+
+    /// <summary>
     /// A creature's powers, in order, each with the Data its model keeps. Every power goes in (a model reads others by name:
     /// Vulnerable reads Debilitate); unmodelled ones are only names and amounts.
     /// </summary>
@@ -316,6 +322,16 @@ public static class SimReaders
     // ------------------------------------------------------------------ captured terms
 
     /// <summary>
+    /// AbstractModel.ModifyDamageMultiplicativeLate, which only the beta branch has (main: none, so no late term), as an open
+    /// delegate that calls each model's own override.
+    /// </summary>
+    internal static readonly Func<AbstractModel, Creature?, decimal, ValueProp, Creature?, CardModel?, MegaCrit.Sts2.Core.Entities.Cards.CardPlay?, decimal>? LateMultiplier =
+        typeof(AbstractModel).GetMethod("ModifyDamageMultiplicativeLate") is { } lateMethod
+            ? (Func<AbstractModel, Creature?, decimal, ValueProp, Creature?, CardModel?, MegaCrit.Sts2.Core.Entities.Cards.CardPlay?, decimal>?)Delegate.CreateDelegate(
+                typeof(Func<AbstractModel, Creature?, decimal, ValueProp, Creature?, CardModel?, MegaCrit.Sts2.Core.Entities.Cards.CardPlay?, decimal>), lateMethod, throwOnBindFailure: false)
+            : null;
+
+    /// <summary>
     /// The terms of one damage calculation that the simulator doesn't model (docs/SIMULATOR.md "Pipelines"): the card's
     /// enchantment, and every hook listener whose class isn't modelled, each asked for its own term the way Hook.ModifyDamage
     /// asks it (with this card, dealer and target).
@@ -333,7 +349,7 @@ public static class SimReaders
             var listeners = runState.IterateHookListeners(combat).Where(model => !SimModels.Has(ModelName(model))).ToList();
             foreach (var model in listeners) add += model.ModifyDamageAdditive(target, baseDamage, props, dealer, card, null);
             foreach (var model in listeners) mul *= model.ModifyDamageMultiplicative(target, baseDamage, props, dealer, card, null);
-            foreach (var model in listeners) late *= model.ModifyDamageMultiplicativeLate(target, baseDamage, props, dealer, card, null);
+            if (LateMultiplier is { } lateMultiplier) foreach (var model in listeners) late *= lateMultiplier(model, target, baseDamage, props, dealer, card, null);
             foreach (var model in listeners) cap = Math.Min(cap, model.ModifyDamageCap(target, props, dealer, card, null));
         }
         catch

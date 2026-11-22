@@ -64,10 +64,13 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     {
     }
 
+    /// <summary>NPotionContainer._holders: the potion slots (the public Holders is on the beta branch only).</summary>
+    private static readonly System.Reflection.FieldInfo? HoldersField = AccessTools.Field(typeof(NPotionContainer), "_holders");
+
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
-        var holders = NRun.Instance?.GlobalUi?.TopBar?.PotionContainer?.Holders;
+        var holders = NRun.Instance?.GlobalUi?.TopBar?.PotionContainer is { } container ? HoldersField?.GetValue(container) as IReadOnlyList<NPotionHolder> : null;
         if (_proto == null) TakeProto();
         Check(me);
         var seen = new HashSet<ulong>();

@@ -184,8 +184,10 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         var pillow = who.Relics.OfType<RegalPillow>().FirstOrDefault();
         var humidifiers = who.Relics.OfType<StoneHumidifier>().ToList();
         // The boss fight's start: the relics mark themselves Active at the boss's parent map point (AfterRoomEntered).
-        var bossRelics = who.Relics.Where(relic => relic.Status == RelicStatus.Active && relic is Pantograph or BathRobes { IsUsedUp: false }).ToList();
-        var boss = bossRelics.Select(relic => relic is BathRobes ? (RestStep.BathRobes, 0) : (RestStep.Pantograph, Sts2State.Var(relic, "Heal", fallback: 25))).ToList();
+        // Bath Robes is on the beta branch only: by name, so this still runs on main.
+        static bool IsBathRobes(RelicModel relic) => relic.GetType().Name == Sim.RelicId.BathRobes.Name;
+        var bossRelics = who.Relics.Where(relic => relic.Status == RelicStatus.Active && (relic is Pantograph || (IsBathRobes(relic) && !relic.IsUsedUp))).ToList();
+        var boss = bossRelics.Select(relic => IsBathRobes(relic) ? (RestStep.BathRobes, 0) : (RestStep.Pantograph, Sts2State.Var(relic, "Heal", fallback: 25))).ToList();
         var outcome = RestMath.Compute(creature.CurrentHp, creature.MaxHp, heal, pillow != null ? heal - baseHeal : 0,
             humidifiers.Select(stoneHumidifier => Sts2State.Var(stoneHumidifier, "MaxHp", fallback: 5)).ToList(), nightTerrors != null, boss, rest);
 

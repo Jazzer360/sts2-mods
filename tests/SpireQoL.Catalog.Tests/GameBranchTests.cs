@@ -72,4 +72,40 @@ public class GameBranchTests
         Assert.True(found.Count == 0, "Classes both branches have, named by string (use nameof, a type check, or PowerId/RelicId/CardId): " + string.Join("; ", found));
         Assert.True(!Reviewed.Keys.Except(used).Any(), "Reviewed literals no longer in the code: " + string.Join(", ", Reviewed.Keys.Except(used)));
     }
+
+    /// <summary>
+    /// Every game type and member the built mods name exists on the main branch too (decompiled to ~/git/sts2-decompiled-main, the
+    /// version in its VERSION.json; nothing to check where it isn't): a reference main lacks breaks the whole method holding it
+    /// there, as Explosive, Simpleton, Free Card, Bath Robes, RunModel, Holders, IsDread, the late damage multiplier and the extra
+    /// turn's source once did. Read a one-branch member by name instead (SimReaders.PowerOf, a name check, reflection).
+    /// </summary>
+    [Fact]
+    public void EveryGameMemberTheModsNameIsOnMain()
+    {
+        var main = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "git", "sts2-decompiled-main");
+        if (!Directory.Exists(main)) return; // no main decompile here (docs/DEVELOPMENT.md "Decompiled game source")
+        var source = SourceIndex.Build(main);
+        var assemblies = new List<string> { typeof(PowerId).Assembly.Location };
+        var mainSaves = new DirectoryInfo(Path.Combine(RepoRoot(), "mods", "MainSaves", "bin"));
+        if (mainSaves.Exists && mainSaves.EnumerateFiles("MainSaves.dll", SearchOption.AllDirectories).MaxBy(dll => dll.LastWriteTimeUtc) is { } newest) assemblies.Add(newest.FullName);
+        var missing = new List<string>();
+        var total = 0;
+        foreach (var assembly in assemblies)
+        {
+            missing.AddRange(GameMembers.Missing(assembly, source, out var checkedCount));
+            total += checkedCount;
+        }
+        Assert.True(total > 500, $"only {total} game references found: the reader isn't seeing them");
+        Assert.True(missing.Count == 0, $"Game members the mod names that main ({File.ReadAllText(Path.Combine(main, "VERSION.json")).Split('\"')[3]}) doesn't have: " + string.Join("; ", missing));
+    }
+
+    /// <summary>The late damage multiplier, called through a delegate so main (no such hook) still runs: it binds on beta and gives 1 by default.</summary>
+    [Fact]
+    public void TheLateDamageMultiplierBindsOnBeta()
+    {
+        Assert.NotNull(SimReaders.LateMultiplier);
+        GameModels.EnsureLoaded();
+        var model = MegaCrit.Sts2.Core.Models.ModelDb.Power<MegaCrit.Sts2.Core.Models.Powers.StrengthPower>();
+        Assert.Equal(1m, SimReaders.LateMultiplier!.Invoke(model, null, 10m, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null, null));
+    }
 }

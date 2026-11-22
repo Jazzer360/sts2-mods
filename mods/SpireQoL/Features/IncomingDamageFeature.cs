@@ -112,6 +112,12 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     }
 
     /// <summary>
+    /// Hook.ShouldTakeExtraTurn with the source that gives the turn (beta branch); main's has no source, so no icon there.
+    /// </summary>
+    private static readonly System.Reflection.MethodInfo? ExtraTurnWithSource = AccessTools.Method(typeof(MegaCrit.Sts2.Core.Hooks.Hook), "ShouldTakeExtraTurn",
+        new[] { typeof(MegaCrit.Sts2.Core.Combat.ICombatState), typeof(MegaCrit.Sts2.Core.Entities.Players.Player), typeof(MegaCrit.Sts2.Core.Models.AbstractModel).MakeByRefType() });
+
+    /// <summary>
     /// Ending your turn now gives you another turn before the enemies act (Hook.ShouldTakeExtraTurn, a pure query:
     /// Pael's Eye when you've played nothing, Extra Turn): its source's icon. The forecast is still the enemies' next
     /// turn, which comes after that one (your end-of-turn block will be gone by then).
@@ -120,8 +126,9 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     {
         try
         {
-            if (Sts2State.Me is not { } me || Sts2State.Combat is not { } combat) return null;
-            if (!MegaCrit.Sts2.Core.Hooks.Hook.ShouldTakeExtraTurn(combat, me, out var source) || source == null) return null;
+            if (Sts2State.Me is not { } me || Sts2State.Combat is not { } combat || ExtraTurnWithSource == null) return null;
+            var arguments = new object?[] { combat, me, null };
+            if (ExtraTurnWithSource.Invoke(null, arguments) is not true || arguments[2] is not MegaCrit.Sts2.Core.Models.AbstractModel source) return null;
             return source switch
             {
                 MegaCrit.Sts2.Core.Models.RelicModel relic => Cards.GameIcons.Relic(relic),

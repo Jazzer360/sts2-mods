@@ -21,6 +21,9 @@ internal static class MoveBranches
     /// </summary>
     internal sealed record Rule(string[] Shape, Func<MonsterModel, IReadOnlyList<MovePowers.Applied>, IEnumerable<MovePowers.Applied>> Pick);
 
+    /// <summary>AscensionHelper.IsDread: the Dread ascension, on the beta branch only (main: no Dread).</summary>
+    private static readonly MethodInfo? IsDread = typeof(MegaCrit.Sts2.Core.Helpers.AscensionHelper).GetMethod("IsDread", Type.EmptyTypes);
+
     /// <summary>Rules by the move's perform method: "Monster.Method". Each reads only what a player sees (decision #72).</summary>
     internal static readonly Dictionary<string, Rule> Rules = new()
     {
@@ -37,7 +40,7 @@ internal static class MoveBranches
         // Strength to every ally but herself: 1, or 2 at the Dread ascension (a local, so the code's amount can't be read).
         ["Queen.BurnBrightForMeMove"] = new(new[] { nameof(StrengthPower) }, (monster, all) =>
             monster.Creature.CombatState is { } combat && combat.Enemies.Any(creature => creature != monster.Creature && creature.IsAlive)
-                ? new[] { all[0] with { Amount = MegaCrit.Sts2.Core.Helpers.AscensionHelper.IsDread() ? 2 : 1 } }
+                ? new[] { all[0] with { Amount = IsDread?.Invoke(null, null) is true ? 2 : 1 } }
                 : Array.Empty<Applied>()),
         // Its first respawn gains Painful Stabs, its second Nemesis (Respawns counts them; the move adds one first).
         ["TestSubject.RespawnMove"] = new(new[] { nameof(PainfulStabsPower), nameof(NemesisPower) }, (monster, all) =>

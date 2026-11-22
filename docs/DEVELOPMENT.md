@@ -49,6 +49,7 @@ The mod is developed on Steam's **beta** branch (the installed game) and also su
 - **Comparing:** `git -C ~/git/sts2-decompiled diff main beta --stat` lists what differs between the branches; `git -C ~/git/sts2-decompiled log --oneline beta` (or `main`) lists the versions on each.
 - **Paths differ by version:** before v0.113.0 the decompiler wrote nested folders (`MegaCrit/sts2/Core/Models/Cards/`), from v0.113.0 one folder per namespace (`MegaCrit.Sts2.Core.Models.Cards/`). Search by class name (`grep -rl "class PenNib"`), not by path.
 - **Scripts read beta:** `scripts/coverage-ledger.mjs` and the docs' decompile references use `~/git/sts2-decompiled`. Main is for checking that code also works there; when a member or class differs, read it by name with a fallback (`Sts2State.Private`, `Sts2State.Var`, names as strings) rather than adding a second build.
+- **Main is checked by the catalog tests:** `GameBranchTests.EveryGameMemberTheModsNameIsOnMain` fails on any game type or member the built mods reference that the main decompile doesn't declare (decision #162); read such a member by name. Keep the main decompile current with Steam's main branch.
 - **Main is supported through reports:** crashes and mismatches from main players arrive as auto-reports like any other (the report's game version says which branch). When one points at a difference, decompile main (ask the owner to switch branches if the main decompile is older than the game's main version) and fix it in the shared code.
 
 ## After a game patch

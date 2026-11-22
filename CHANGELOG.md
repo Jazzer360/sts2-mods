@@ -19,6 +19,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Incoming Damage shows the most likely outcome, its chance before the number, when a roll decides how the enemy turn goes (a draw at the end of your turn, I Am Invincible somewhere in your draw pile, a random target); it used to show the worst. The skull still shows whenever you might die, with its chance, and the Fairy in a Bottle or Lizard Tail line whenever one might save you, with its chance.
 
 #### Fixed
+- On the game's main branch: card predictions, Incoming Damage, potion tabs, the rest preview, free-card tabs and the event reminders' card reading named game parts only the beta branch has (Explosive, Simpleton, Free Card, Bath Robes, the potion slots' list, the Dread ascension, a late damage multiplier, the extra turn's source), which stops the code holding them on main. Each is read by name now, and main goes without what it doesn't have.
 - A replayed card (Echo Form, Burst) has the numbers its earlier plays gave it, read from the card's code: Rampage, The Ball, Claw and Maul hit harder on the replay, a Goopy card blocks 1 more, a Momentum card hits harder by its amount, and a Vigorous card's replay loses its bonus (the enchantment turns itself off after the first play). Thrash's replay is `?` for now.
 - FTL draws only on the plays that start with fewer than its limit of plays finished this turn: a replay that makes the third doesn't draw.
 - Incoming Damage no longer flickers between the chance and the number every frame.

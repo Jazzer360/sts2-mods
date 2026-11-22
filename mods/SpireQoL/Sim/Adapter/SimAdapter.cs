@@ -236,7 +236,7 @@ public static partial class SimAdapter
             enemy.Powers = SimReaders.Powers(creature, IdOf);
             foreach (var power in creature.Powers) SimReaders.AddVars(state, id, power);
             // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
-            if (creature.IsAlive && creature.GetPower<ExplosivePower>() is { Amount: > 0 } explosive) enemy.Explosive = ExplosiveOn(creature, me.Creature, explosive.Amount, me, combat);
+            if (creature.IsAlive && SimReaders.PowerOf(creature, PowerId.Explosive) is { Amount: > 0 } explosive) enemy.Explosive = ExplosiveOn(creature, me.Creature, explosive.Amount, me, combat);
             enemy.StartedAlive = creature.IsAlive;
             // An ally dying: Ravenous stuns it (and gives Strength for later); Crab Rage gives it Strength once.
             // Crab Rage: its Strength and block when an ally dies (CrabRagePower model: Strength as its amount, block here).
@@ -311,7 +311,7 @@ public static partial class SimAdapter
             {
                 if (!creature.IsAlive || creature.Monster == null || state.Enemy(id) is not { } enemy) continue;
                 foreach (var teamCreature in teamCreatures) enemy.TeammateHits.Add(HitsOn(creature, teamCreature, me, combat) ?? enemy.Hits);
-                if (creature.GetPower<ExplosivePower>() is { Amount: > 0 } explosive)
+                if (SimReaders.PowerOf(creature, PowerId.Explosive) is { Amount: > 0 } explosive)
                     enemy.ExplosiveOnTeammates = teamCreatures.Select(teamCreature => ExplosiveOn(creature, teamCreature, explosive.Amount, me, combat)).ToList();
             }
         }
@@ -346,7 +346,7 @@ public static partial class SimAdapter
         try
         {
             player.Stampede = owner == Who.You ? me.Creature.GetPower<StampedePower>()?.Amount ?? 0 : 0;
-            player.Simpleton = owner == Who.You ? me.Creature.GetPower<SimpletonPower>()?.Amount ?? 0 : 0;
+            player.Simpleton = owner == Who.You ? SimReaders.PowerOf(me.Creature, PowerId.Simpleton)?.Amount ?? 0 : 0;
             if (player.Stampede > 0 || player.Simpleton > 0)
             {
                 player.AutoHand = new List<SimHandCard>();

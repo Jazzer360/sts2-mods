@@ -32,7 +32,8 @@ internal static class FreeCards
     /// <summary>Whether <paramref name="power"/> takes a charge when <paramref name="card"/> is played from your hand.</summary>
     public static bool Applies(PowerModel power, CardModel card) => power switch
     {
-        FreeCardPower => true,
+        // Free Card is on the beta branch only: by name, so the switch still runs on main.
+        _ when power.GetType().Name == Sim.PowerId.FreeCard.Name => true,
         FreeAttackPower => card.Type == CardType.Attack,
         FreeSkillPower => card.Type == CardType.Skill,
         FreePowerPower => card.Type == CardType.Power,

@@ -834,6 +834,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         return ChoiceReminders.EffectsOf(calls);
     }
 
+    /// <summary>A game mode's class (Blitz's BlitzRunModel), by name: RunModel is on the beta branch only.</summary>
+    private static bool IsGameMode(Type? type)
+    {
+        for (var current = type; current != null; current = current.BaseType)
+            if (current.Name == "RunModel") return true;
+        return false;
+    }
+
     /// <summary>
     /// The calls a method makes, following calls (not delegates: those are the next page's options)
     /// into its own class and the classes nested in it (lambdas, async state machines), and into a
@@ -878,7 +886,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                     Walk(nextMethod, otherMethod.DeclaringType, calls, seen, depth + 1, cards);
             }
             // A game mode's own rewards (Blitz's Neow option runs BlitzRunModel.GiveNeowRewards).
-            else if (otherMethod.IsStatic && typeof(RunModel).IsAssignableFrom(otherMethod.DeclaringType)) Walk(otherMethod, otherMethod.DeclaringType, calls, seen, depth + 1, cards);
+            else if (otherMethod.IsStatic && IsGameMode(otherMethod.DeclaringType)) Walk(otherMethod, otherMethod.DeclaringType, calls, seen, depth + 1, cards);
         }
     }
 
