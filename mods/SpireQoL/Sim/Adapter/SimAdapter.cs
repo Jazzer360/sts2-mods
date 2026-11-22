@@ -42,7 +42,7 @@ public static partial class SimAdapter
     internal static int SlotChange(CardModel card, string name) => name switch
     {
         nameof(BulkUp) => -Sts2State.Var(card, "OrbSlots", fallback: 1),
-        nameof(Capacitor) or nameof(Modded) or "TheMagician" => Sts2State.Var(card, "Repeat", fallback: 1),
+        nameof(Capacitor) or nameof(Modded) or nameof(TheMagician) => Sts2State.Var(card, "Repeat", fallback: 1),
         _ => 0,
     };
 
@@ -85,16 +85,16 @@ public static partial class SimAdapter
     /// Block cards that put back the Stretch they use (Cho Ki: applies the Stretch it had when played, before the play
     /// spends it), so a replay's later plays get Stretch too (v0.113.0). The card scan flags a new one.
     /// </summary>
-    internal static readonly HashSet<string> KeepsStretchCards = new() { "ChoKi" };
+    internal static readonly HashSet<string> KeepsStretchCards = new() { nameof(ChoKi) };
 
     /// <summary>Cards whose play kills your Osty (CreatureCmd.Kill on Owner.Osty; decompile v0.111.0).</summary>
     internal static readonly HashSet<string> KillsOstyCards = new() { nameof(Sacrifice), nameof(BoneShards) };
 
     /// <summary>Cards that kill an enemy at or below a threshold (Judgement: SetCurrentHp to 0). The card scan flags a new one.</summary>
-    internal static readonly HashSet<string> ExecuteCards = new() { "Judgement" };
+    internal static readonly HashSet<string> ExecuteCards = new() { nameof(Judgement) };
 
     /// <summary>Cards whose kill sets off a hit on every enemy (Timber: OnKillDamage). The card scan flags a new damage value.</summary>
-    internal static readonly HashSet<string> OnKillHitAllCards = new() { "Timber" };
+    internal static readonly HashSet<string> OnKillHitAllCards = new() { nameof(Timber) };
 
     /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
     internal static readonly HashSet<string> RepeatPerKillCards = new() { nameof(EchoingSlash) };
@@ -170,7 +170,7 @@ public static partial class SimAdapter
     {
         [nameof(ConsumingShadow)] = OrbKind.Dark, [nameof(Hibernate)] = OrbKind.Frost, [nameof(IceLance)] = OrbKind.Frost,
         [nameof(Refract)] = OrbKind.Glass, [nameof(Chaos)] = OrbKind.Unknown,
-        ["TheMagician"] = OrbKind.Unknown, // random orbs (v0.113.0), after adding as many slots
+        [nameof(TheMagician)] = OrbKind.Unknown, // random orbs (v0.113.0), after adding as many slots
 
     };
 
@@ -236,7 +236,7 @@ public static partial class SimAdapter
             enemy.Powers = SimReaders.Powers(creature, IdOf);
             foreach (var power in creature.Powers) SimReaders.AddVars(state, id, power);
             // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
-            if (creature.IsAlive && SimReaders.PowerOf(creature, PowerId.Explosive) is { Amount: > 0 } explosive) enemy.Explosive = ExplosiveOn(creature, me.Creature, explosive.Amount, me, combat);
+            if (creature.IsAlive && (ExplosiveOf?.Invoke(creature) ?? 0) is > 0 and var explosive) enemy.Explosive = ExplosiveOn(creature, me.Creature, explosive, me, combat);
             enemy.StartedAlive = creature.IsAlive;
             // An ally dying: Ravenous stuns it (and gives Strength for later); Crab Rage gives it Strength once.
             // Crab Rage: its Strength and block when an ally dies (CrabRagePower model: Strength as its amount, block here).
@@ -311,8 +311,8 @@ public static partial class SimAdapter
             {
                 if (!creature.IsAlive || creature.Monster == null || state.Enemy(id) is not { } enemy) continue;
                 foreach (var teamCreature in teamCreatures) enemy.TeammateHits.Add(HitsOn(creature, teamCreature, me, combat) ?? enemy.Hits);
-                if (SimReaders.PowerOf(creature, PowerId.Explosive) is { Amount: > 0 } explosive)
-                    enemy.ExplosiveOnTeammates = teamCreatures.Select(teamCreature => ExplosiveOn(creature, teamCreature, explosive.Amount, me, combat)).ToList();
+                if ((ExplosiveOf?.Invoke(creature) ?? 0) is > 0 and var explosive)
+                    enemy.ExplosiveOnTeammates = teamCreatures.Select(teamCreature => ExplosiveOn(creature, teamCreature, explosive, me, combat)).ToList();
             }
         }
         return state;
@@ -346,7 +346,7 @@ public static partial class SimAdapter
         try
         {
             player.Stampede = owner == Who.You ? me.Creature.GetPower<StampedePower>()?.Amount ?? 0 : 0;
-            player.Simpleton = owner == Who.You ? SimReaders.PowerOf(me.Creature, PowerId.Simpleton)?.Amount ?? 0 : 0;
+            player.Simpleton = owner == Who.You ? SimpletonOf?.Invoke(me.Creature) ?? 0 : 0;
             if (player.Stampede > 0 || player.Simpleton > 0)
             {
                 player.AutoHand = new List<SimHandCard>();
@@ -544,6 +544,18 @@ public static partial class SimAdapter
         return play;
     }
 
+    /// <summary>The creature's Explosive (its death damages every player): beta only (decision #163); main has no Explosive.</summary>
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static int ExplosiveAmount(Creature creature) => creature.GetPower<ExplosivePower>()?.Amount ?? 0;
+
+    private static readonly Func<Creature, int>? ExplosiveOf = BetaOnly.Gate<Func<Creature, int>>(ExplosiveAmount);
+
+    /// <summary>The creature's Simpleton (it auto-plays your cheapest cards): beta only (decision #163); main has no Simpleton.</summary>
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static int SimpletonAmount(Creature creature) => creature.GetPower<SimpletonPower>()?.Amount ?? 0;
+
+    internal static readonly Func<Creature, int>? SimpletonOf = BetaOnly.Gate<Func<Creature, int>>(SimpletonAmount);
+
     /// <summary>Explosive's damage on a player (ExplosivePower.AfterDeath: CreatureCmd.Damage, Unpowered | SkipHurtAnim, no dealer card).</summary>
     private static int ExplosiveOn(Creature enemy, Creature target, int amount, Player me, ICombatState combat)
         => SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, combat, target, enemy, amount,
@@ -621,7 +633,7 @@ public static partial class SimAdapter
         var osty = me.Osty;
         player.OstyHp = osty != null && osty.IsAlive ? osty.CurrentHp : 0;
         player.OstyShields = osty != null && osty.HasPower<DieForYouPower>();
-        player.WuppyHp = SafeInt(() => me.Creature.Pets.Where(pet => pet.IsAlive && pet.Powers.Any(power => power.GetType().Name == "WuppysLoyaltyPower")).Sum(pet => pet.CurrentHp));
+        player.WuppyHp = SafeInt(() => me.Creature.Pets.Where(pet => pet.IsAlive && pet.Powers.Any(power => power.GetType().Name == nameof(WuppysLoyaltyPower))).Sum(pet => pet.CurrentHp));
     }
 
     /// <summary>

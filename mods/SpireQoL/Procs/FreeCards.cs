@@ -32,13 +32,18 @@ internal static class FreeCards
     /// <summary>Whether <paramref name="power"/> takes a charge when <paramref name="card"/> is played from your hand.</summary>
     public static bool Applies(PowerModel power, CardModel card) => power switch
     {
-        // Free Card is on the beta branch only: by name, so the switch still runs on main.
-        _ when power.GetType().Name == Sim.PowerId.FreeCard.Name => true,
+        _ when FreeCardIs?.Invoke(power) == true => true,
         FreeAttackPower => card.Type == CardType.Attack,
         FreeSkillPower => card.Type == CardType.Skill,
         FreePowerPower => card.Type == CardType.Power,
         _ => false,
     };
+
+    /// <summary>Free Card (any card you play is free): beta only (decision #163); main has no Free Card.</summary>
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static bool IsFreeCard(PowerModel power) => power is FreeCardPower;
+
+    private static readonly Func<PowerModel, bool>? FreeCardIs = BetaOnly.Gate<Func<PowerModel, bool>>(IsFreeCard);
 
     /// <summary>The free powers playing <paramref name="card"/> from your hand uses up, in the game's hook order.</summary>
     public static List<Use> Uses(CardModel card, Player me)

@@ -23,13 +23,13 @@ internal static class ReturnToHand
 {
     public const string MakeItSo = nameof(MakeItSo);
     public const string RightHandHand = nameof(RightHandHand);
-    public const string WhistlingArrows = "WhistlingArrows";
+    public const string WhistlingArrows = nameof(MegaCrit.Sts2.Core.Models.Cards.WhistlingArrows);
 
     /// <summary>The cards this class models (CardCoverage's scan accepts them).</summary>
     public static readonly HashSet<string> Modelled = new() { MakeItSo, RightHandHand, WhistlingArrows };
 
     /// <summary>Cards that come back next turn by their own text (CardCoverage's scan accepts them too).</summary>
-    public static readonly HashSet<string> NextTurn = new() { nameof(Bolas), "Bounce", nameof(ThrummingHatchet) };
+    public static readonly HashSet<string> NextTurn = new() { nameof(Bolas), nameof(Bounce), nameof(ThrummingHatchet) };
 
     private static readonly PileType[] FightPiles = { PileType.Hand, PileType.Draw, PileType.Discard, PileType.Exhaust };
 

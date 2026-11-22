@@ -407,7 +407,7 @@ public static partial class SimAdapter
             {
                 actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
             }
-            else if (simPowerName == "StretchPower" && KeepsStretchCards.Contains(name))
+            else if (simPowerName == nameof(StretchPower) && KeepsStretchCards.Contains(name))
             {
                 // Cho Ki: your Stretch again, as much as you have (so the play keeps it).
                 actions.Add(new ApplyPowerAction(new PowerId(simPowerName), Amount: 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });

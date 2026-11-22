@@ -48,9 +48,20 @@ The mod is developed on Steam's **beta** branch (the installed game) and also su
 - **Making one:** switch the game's branch in Steam (Properties → Betas), let it update, then run `./scripts/decompile.ps1 -Branch beta` (the default) or `-Branch main`. The script can't tell which Steam branch is installed, so the flag must match. It creates the repo, the `main` worktree or the branch when missing (a repo from before branches has its one branch renamed to `beta`). Switch the game back to beta afterwards: the build installs into it.
 - **Comparing:** `git -C ~/git/sts2-decompiled diff main beta --stat` lists what differs between the branches; `git -C ~/git/sts2-decompiled log --oneline beta` (or `main`) lists the versions on each.
 - **Paths differ by version:** before v0.113.0 the decompiler wrote nested folders (`MegaCrit/sts2/Core/Models/Cards/`), from v0.113.0 one folder per namespace (`MegaCrit.Sts2.Core.Models.Cards/`). Search by class name (`grep -rl "class PenNib"`), not by path.
-- **Scripts read beta:** `scripts/coverage-ledger.mjs` and the docs' decompile references use `~/git/sts2-decompiled`. Main is for checking that code also works there; when a member or class differs, read it by name with a fallback (`Sts2State.Private`, `Sts2State.Var`, names as strings) rather than adding a second build.
-- **Main is checked by the catalog tests:** `GameBranchTests.EveryGameMemberTheModsNameIsOnMain` fails on any game type or member the built mods reference that the main decompile doesn't declare (decision #162); read such a member by name. Keep the main decompile current with Steam's main branch.
+- **Scripts read beta:** `scripts/coverage-ledger.mjs` and the docs' decompile references use `~/git/sts2-decompiled`. Main is for checking that code also works there.
+- **Written for beta, accommodating main (decision #163).** The mod is beta's code: a game class is named with `nameof` (or `PowerId`/`RelicId`/`CardId` in the simulator), which compiles to a plain string and so is safe on main even for a class only beta has. A type or member only beta has is used as plain code inside a small method marked `[BetaOnly]` (and `MethodImpl(NoInlining)`), called only through its gate: `static readonly Func<Creature, int>? ExplosiveOf = BetaOnly.Gate<Func<Creature, int>>(ExplosiveAmount)`, then `ExplosiveOf?.Invoke(creature) ?? 0`, main's fallback at the call. The gate is null where the running game lacks what the method names, so main never compiles it. Reading a *private* member by name (`Sts2State.Private`) is how the mod reads private state on either branch, not a branch workaround.
+- **The catalog tests hold it** (`GameBranchTests`, needing the main decompile): a game part main lacks named outside a `[BetaOnly]` method fails (decision #162); a gated method called directly fails; a `[BetaOnly]` method whose parts main has now fails until it's plain code and main's fallback is gone (beta's workarounds don't linger); every gate opens on beta; a string naming a game class (other than one only main has) fails.
 - **Main is supported through reports:** crashes and mismatches from main players arrive as auto-reports like any other (the report's game version says which branch). When one points at a difference, decompile main (ask the owner to switch branches if the main decompile is older than the game's main version) and fix it in the shared code.
+
+## When main updates
+
+`GameBranchTests.MainIsReviewedAtItsVersion` fails once the main decompile is newer than `MainReviewed` (decision #163). With the game switched to main in Steam:
+
+1. `./scripts/decompile.ps1 -Branch main`, then switch the game back to beta.
+2. `node scripts/game-names.mjs` (the beta-only and main-only names move).
+3. `dotnet test tests/SpireQoL.Catalog.Tests`: take every gate the tests say main has caught up on off (plain code, main's fallback gone), and move anything main now lacks behind a gate.
+4. `git -C ~/git/sts2-decompiled diff <old main> main --stat` for what else changed on main that the mod reads (docs/FEATURES.md lists every class it touches); a class main changed differently from beta gets a gate of its own.
+5. Set `MainReviewed` to the new version.
 
 ## After a game patch
 

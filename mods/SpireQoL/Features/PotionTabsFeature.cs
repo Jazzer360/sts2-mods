@@ -64,13 +64,21 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     {
     }
 
-    /// <summary>NPotionContainer._holders: the potion slots (the public Holders is on the beta branch only).</summary>
-    private static readonly System.Reflection.FieldInfo? HoldersField = AccessTools.Field(typeof(NPotionContainer), "_holders");
+    /// <summary>The potion slots (NPotionContainer.Holders): beta only (decision #163).</summary>
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static IReadOnlyList<NPotionHolder> HoldersOf(NPotionContainer container) => container.Holders;
+
+    private static readonly Func<NPotionContainer, IReadOnlyList<NPotionHolder>>? Holders = BetaOnly.Gate<Func<NPotionContainer, IReadOnlyList<NPotionHolder>>>(HoldersOf);
+
+    /// <summary>Main's potion slots: its private list (main has no Holders).</summary>
+    private static readonly System.Reflection.FieldInfo? MainHoldersField = AccessTools.Field(typeof(NPotionContainer), "_holders");
 
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
-        var holders = NRun.Instance?.GlobalUi?.TopBar?.PotionContainer is { } container ? HoldersField?.GetValue(container) as IReadOnlyList<NPotionHolder> : null;
+        var holders = NRun.Instance?.GlobalUi?.TopBar?.PotionContainer is { } container
+            ? Holders?.Invoke(container) ?? MainHoldersField?.GetValue(container) as IReadOnlyList<NPotionHolder>
+            : null;
         if (_proto == null) TakeProto();
         Check(me);
         var seen = new HashSet<ulong>();

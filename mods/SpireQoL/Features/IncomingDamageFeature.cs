@@ -112,10 +112,15 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     }
 
     /// <summary>
-    /// Hook.ShouldTakeExtraTurn with the source that gives the turn (beta branch); main's has no source, so no icon there.
+    /// What gives you an extra turn if you end yours now (Hook.ShouldTakeExtraTurn with its source): beta only (decision #163); main's
+    /// gives no source, so no icon there.
     /// </summary>
-    private static readonly System.Reflection.MethodInfo? ExtraTurnWithSource = AccessTools.Method(typeof(MegaCrit.Sts2.Core.Hooks.Hook), "ShouldTakeExtraTurn",
-        new[] { typeof(MegaCrit.Sts2.Core.Combat.ICombatState), typeof(MegaCrit.Sts2.Core.Entities.Players.Player), typeof(MegaCrit.Sts2.Core.Models.AbstractModel).MakeByRefType() });
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static MegaCrit.Sts2.Core.Models.AbstractModel? ExtraTurnSource(MegaCrit.Sts2.Core.Combat.ICombatState combat, MegaCrit.Sts2.Core.Entities.Players.Player me) =>
+        MegaCrit.Sts2.Core.Hooks.Hook.ShouldTakeExtraTurn(combat, me, out var source) ? source : null;
+
+    private static readonly Func<MegaCrit.Sts2.Core.Combat.ICombatState, MegaCrit.Sts2.Core.Entities.Players.Player, MegaCrit.Sts2.Core.Models.AbstractModel?>? ExtraTurnSourceOf =
+        BetaOnly.Gate<Func<MegaCrit.Sts2.Core.Combat.ICombatState, MegaCrit.Sts2.Core.Entities.Players.Player, MegaCrit.Sts2.Core.Models.AbstractModel?>>(ExtraTurnSource);
 
     /// <summary>
     /// Ending your turn now gives you another turn before the enemies act (Hook.ShouldTakeExtraTurn, a pure query:
@@ -126,9 +131,8 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     {
         try
         {
-            if (Sts2State.Me is not { } me || Sts2State.Combat is not { } combat || ExtraTurnWithSource == null) return null;
-            var arguments = new object?[] { combat, me, null };
-            if (ExtraTurnWithSource.Invoke(null, arguments) is not true || arguments[2] is not MegaCrit.Sts2.Core.Models.AbstractModel source) return null;
+            if (Sts2State.Me is not { } me || Sts2State.Combat is not { } combat) return null;
+            if (ExtraTurnSourceOf?.Invoke(combat, me) is not { } source) return null;
             return source switch
             {
                 MegaCrit.Sts2.Core.Models.RelicModel relic => Cards.GameIcons.Relic(relic),

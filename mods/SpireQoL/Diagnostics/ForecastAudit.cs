@@ -347,7 +347,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
         // A teammate's end-of-turn pick from their hand (Stampede, Simpleton) isn't predicted (a random card; decisions #25, #80): what
         // it did to the enemies isn't in the forecast, so the enemies and your HP can't be held to it (issue #430). Counted, not reported.
-        var mates = forecast.Teammates.Where(player => player.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.StampedePower>() || SimReaders.PowerOf(player.Creature, PowerId.Simpleton) != null).ToList();
+        var mates = forecast.Teammates.Where(player => player.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.StampedePower>() || (SimAdapter.SimpletonOf?.Invoke(player.Creature) ?? 0) > 0).ToList();
         if (mates.Count > 0 && endOfTurn.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && mates.Contains(cardPlayStartedEntry.CardPlay.Card.Owner)))
         {
             ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (a teammate's Stampede or Simpleton played a card at end of turn, which isn't predicted)");

@@ -28,12 +28,12 @@ internal static class CardEnergy
     internal static readonly Dictionary<string, string> Rules = new()
     {
         [nameof(Sunder)] = "its attack killed the target (DamageCmd's results: WasTargetKilled): AttackAction.KillRewards",
-        ["BowSmack"] = "the target was impaled before its hit (ArrowCmd.CreatureIsImpaledByArrow)",
+        [nameof(BowSmack)] = "the target was impaled before its hit (ArrowCmd.CreatureIsImpaledByArrow)",
         [nameof(Restlessness)] = "it's the only card in your hand (IsOnlyCardInHand, the card's gold glow)",
         [nameof(ForgottenRitual)] = "you exhausted a card this turn (WasCardExhaustedThisTurn, the card's gold glow)",
         [nameof(DoubleEnergy)] = "as much energy as you have once its cost is spent (GainEnergyAsHeldAction)",
         [nameof(MadScience)] = "its Energized rider (TinkerTimeRider, EnergizedEnergy)",
-        ["EpicRetrieval"] = "per arrow of yours its play knocks loose (AfterArrowDislodged, source this card): SimCardPlay.ArrowEnergy",
+        [nameof(EpicRetrieval)] = "per arrow of yours its play knocks loose (AfterArrowDislodged, source this card): SimCardPlay.ArrowEnergy",
         [nameof(BelieveInYou)] = "to the teammate it's aimed at",
         [nameof(Constellation)] = "to the teammate it's aimed at",
         [nameof(EnergySurge)] = "to every living player, you included",
@@ -114,7 +114,7 @@ internal static class CardEnergy
                 for (var i = 0; i < play.Body.Count; i++)
                     if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.EnergyGained, energy)).ToList() }; break; }
                 return;
-            case "BowSmack":
+            case nameof(BowSmack):
                 if (target != null && Fool.IsImpaled(target)) Gain(energy, owner);
                 return;
             case nameof(Restlessness):
@@ -129,7 +129,7 @@ internal static class CardEnergy
             case nameof(MadScience):
                 if (card is MadScience madScience && madScience.TinkerTimeRider.ToString() == "Energized") Gain(Sts2State.Var(card, "EnergizedEnergy"), owner);
                 return;
-            case "EpicRetrieval":
+            case nameof(EpicRetrieval):
                 if (play.Card != null) play.Card = play.Card with { ArrowEnergy = energy };
                 return;
             case nameof(BelieveInYou) or nameof(Constellation):

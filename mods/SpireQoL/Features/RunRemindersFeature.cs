@@ -834,13 +834,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         return ChoiceReminders.EffectsOf(calls);
     }
 
-    /// <summary>A game mode's class (Blitz's BlitzRunModel), by name: RunModel is on the beta branch only.</summary>
-    private static bool IsGameMode(Type? type)
-    {
-        for (var current = type; current != null; current = current.BaseType)
-            if (current.Name == "RunModel") return true;
-        return false;
-    }
+    /// <summary>A game mode's class (Blitz's BlitzRunModel): beta only (decision #163); main has no game modes.</summary>
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static bool IsRunModel(Type type) => typeof(RunModel).IsAssignableFrom(type);
+
+    private static readonly Func<Type, bool>? GameModeIs = BetaOnly.Gate<Func<Type, bool>>(IsRunModel);
+
+    private static bool IsGameMode(Type? type) => type != null && GameModeIs?.Invoke(type) == true;
 
     /// <summary>
     /// The calls a method makes, following calls (not delegates: those are the next page's options)

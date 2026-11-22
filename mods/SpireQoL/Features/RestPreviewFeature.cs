@@ -168,6 +168,12 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     /// <summary>A sum, and its icons (the game's own: the option, the relics, the modifier).</summary>
     public sealed record Preview(RestOutcome Outcome, List<(Texture2D? Icon, int Hp)> Lines, List<RelicModel> BossRelics);
 
+    /// <summary>Bath Robes (the boss fight heals you to full): beta only (decision #163); main has no Bath Robes.</summary>
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static bool IsBathRobesRelic(RelicModel relic) => relic is BathRobes;
+
+    private static readonly Func<RelicModel, bool>? BathRobesIs = BetaOnly.Gate<Func<RelicModel, bool>>(IsBathRobesRelic);
+
     /// <summary>What Rest (or a Mend on <paramref name="who"/>) leaves them with; rest false: only the boss relics.</summary>
     public static Preview? Compute(Player who, bool rest, bool mend = false)
     {
@@ -184,8 +190,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         var pillow = who.Relics.OfType<RegalPillow>().FirstOrDefault();
         var humidifiers = who.Relics.OfType<StoneHumidifier>().ToList();
         // The boss fight's start: the relics mark themselves Active at the boss's parent map point (AfterRoomEntered).
-        // Bath Robes is on the beta branch only: by name, so this still runs on main.
-        static bool IsBathRobes(RelicModel relic) => relic.GetType().Name == Sim.RelicId.BathRobes.Name;
+        static bool IsBathRobes(RelicModel relic) => BathRobesIs?.Invoke(relic) == true;
         var bossRelics = who.Relics.Where(relic => relic.Status == RelicStatus.Active && (relic is Pantograph || (IsBathRobes(relic) && !relic.IsUsedUp))).ToList();
         var boss = bossRelics.Select(relic => IsBathRobes(relic) ? (RestStep.BathRobes, 0) : (RestStep.Pantograph, Sts2State.Var(relic, "Heal", fallback: 25))).ToList();
         var outcome = RestMath.Compute(creature.CurrentHp, creature.MaxHp, heal, pillow != null ? heal - baseHeal : 0,

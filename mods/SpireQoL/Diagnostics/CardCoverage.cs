@@ -53,7 +53,7 @@ internal static class CardCoverage
     /// but they read 0 on the game's template card, so the scan can't test them by value.
     /// Steady Cadence draws one per melody played this turn (MelodyCmd.MelodiesThisTurn of its owner).
     /// </summary>
-    private static readonly HashSet<string> Calculated = new() { nameof(CompileDriver), nameof(FlakCannon), nameof(Voltaic), "SteadyCadence" };
+    private static readonly HashSet<string> Calculated = new() { nameof(CompileDriver), nameof(FlakCannon), nameof(Voltaic), nameof(SteadyCadence) };
 
     /// <summary>
     /// Prefix of issues that only matter with teammates (multiplayer): CoverageWatch reports them only in a
@@ -203,7 +203,7 @@ internal static class CardCoverage
         if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !SimAdapter.KeepsStretchCards.Contains(name))
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
         // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
-        if (Sts2Mods.Core.Game.Sts2State.Private(card, "GainsBlock", fallback: false) && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
+        if (card.GainsBlock && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
             issues.Add("gains block without a Block value (whether it spends Stretch isn't known: Stretch tab)");
         // A card that isn't an attack but damages its target (Capture Spirit): the simulator models the ones it knows.
         if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !SimAdapter.TargetDamageCards.Contains(name))

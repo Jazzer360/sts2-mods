@@ -183,10 +183,10 @@ public sealed partial class ProcAudit
             && !entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay))
         {
             var ownTypes = OwnPowerTypes(window.Card).Select(type => type.Name).ToHashSet();
-            foreach (var spent in new[] { "StretchPower", nameof(VigorPower), nameof(GigantificationPower) })
+            foreach (var spent in new[] { nameof(StretchPower), nameof(VigorPower), nameof(GigantificationPower) })
             {
                 if (!window.PowersBefore.TryGetValue((me.Creature, spent), out var before) || before <= 0) continue;
-                if (spent != "StretchPower" && ownTypes.Contains(spent)) continue;
+                if (spent != nameof(StretchPower) && ownTypes.Contains(spent)) continue;
                 var after = window.PowersAfter.TryGetValue((me.Creature, spent), out var spentAfter) ? spentAfter : 0;
                 var tabbed = sourceOf.ContainsKey(spent);
                 // Spent: the history shows it going down, even when the card gives it back (Cho Ki re-applies the

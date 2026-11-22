@@ -41,8 +41,11 @@ public sealed class SessionWatch : IFeature, IFrameFeature
     private long _unsettledSince;
     private bool _abandoned, _gameOver, _endSeen, _won;
 
-    /// <summary>RunManager.HasRunEnded: on the beta branch only (decision #78), so read when it's there.</summary>
-    private static readonly PropertyInfo? HasRunEnded = typeof(RunManager).GetProperty("HasRunEnded", BindingFlags.Public | BindingFlags.Instance);
+    /// <summary>RunManager.HasRunEnded: beta only (decision #163); main tells a run's end apart from game over and abandoning only.</summary>
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static bool RunEnded(RunManager runManager) => runManager.HasRunEnded;
+
+    private static readonly Func<RunManager, bool>? HasRunEnded = BetaOnly.Gate<Func<RunManager, bool>>(RunEnded);
 
     /// <summary>RunManager's private State (the run itself: a new object per run), read every frame, so looked up once.
     /// Missing (a game update renamed it): Sts2State.Private reads it, and says so once.</summary>
@@ -84,7 +87,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
 
         if (runManager.IsAbandoned) _abandoned = true;
         if (runManager.IsGameOver) _gameOver = true;
-        if (!_endSeen && HasRunEnded?.GetValue(runManager) is true)
+        if (!_endSeen && HasRunEnded?.Invoke(runManager) == true)
         {
             // A win ends the run before the false end kills every player; a death ends it with everyone dead already.
             _endSeen = true;

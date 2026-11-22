@@ -96,10 +96,8 @@ internal static class BoardProbe
     private static readonly AccessTools.FieldRef<CardModel, HashSet<CardKeyword>> AddedKeywords = AccessTools.FieldRefAccess<CardModel, HashSet<CardKeyword>>("_keywordsAddedFromOutside");
     private static readonly AccessTools.FieldRef<CardModel, HashSet<CardKeyword>> RemovedKeywords = AccessTools.FieldRefAccess<CardModel, HashSet<CardKeyword>>("_keywordsRemovedFromOutside");
     private static readonly AccessTools.FieldRef<CardEnergyCost, int> BaseCost = AccessTools.FieldRefAccess<CardEnergyCost, int>("_base");
-    /// <summary>The Fool's arrows you can shoot (PlayerCombatState.AvailableArrowCount; none before v0.113.0, the main branch).</summary>
-    private static readonly Func<PlayerCombatState, int>? Arrows = AccessTools.PropertyGetter(typeof(PlayerCombatState), "AvailableArrowCount") is { } method
-        ? AccessTools.MethodDelegate<Func<PlayerCombatState, int>>(method)
-        : null;
+    /// <summary>The Fool's arrows you can shoot (beta only: null on main, which has no arrows).</summary>
+    private static readonly Func<PlayerCombatState, int>? Arrows = Procs.Fool.ArrowCount;
 
     internal static int Compute(Player me, ICombatState combat)
     {

@@ -131,7 +131,7 @@ public sealed class AimPower : AttackBoundPower
     {
         if (damage.Dealer != owner || !damage.Props.IsPoweredAttack() || !damage.Props.HasFlag(SimProps.FromArrow) || !AppliesNow(state, owner, ThisPower)) return 0m;
         decimal num = SimEngine.PowerOn(state, owner, ThisPower);
-        if (damage.Card is { Name: "HeavyShot" } heavy && heavy.Vars.TryGetValue("AimMultiplier", out var mul)) num *= mul;
+        if (damage.Card is { } heavy && heavy.Name == CardId.HeavyShot.Name && heavy.Vars.TryGetValue("AimMultiplier", out var mul)) num *= mul;
         return num;
     }
     public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)

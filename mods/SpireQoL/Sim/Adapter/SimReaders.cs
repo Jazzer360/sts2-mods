@@ -22,12 +22,6 @@ public static class SimReaders
     // ------------------------------------------------------------------ creatures
 
     /// <summary>
-    /// The creature's power with this name, read by name: for a power that's on one game branch only (Explosive, Simpleton), which
-    /// a typed reference would break the whole method on the other (decision #78).
-    /// </summary>
-    public static PowerModel? PowerOf(Creature creature, PowerId power) => creature.Powers.FirstOrDefault(model => model.GetType().Name == power.Name);
-
-    /// <summary>
     /// A creature's powers, in order, each with the Data its model keeps. Every power goes in (a model reads others by name:
     /// Vulnerable reads Debilitate); unmodelled ones are only names and amounts.
     /// </summary>
@@ -48,12 +42,12 @@ public static class SimReaders
             switch (name)
             {
                 // Your arrows in it (Amount) and its hit counter (Data); a teammate's Impaled only makes it Impaled.
-                case "ImpaledPower" when power.Applier is { } impaler && idOf(impaler) == Who.You:
+                case nameof(ImpaledPower) when power.Applier is { } impaler && idOf(impaler) == Who.You:
                     amount = SpireQoL.Procs.Fool.ArrowsIn(power);
                     data = SpireQoL.Procs.Fool.HitCounter(power);
                     break;
                 // A teammate's arrows in it: 4 bits of Data per teammate (index from their id); amount: arrows in all (it stays Impaled).
-                case "ImpaledPower":
+                case nameof(ImpaledPower):
                     name = "ImpaledPowerOther";
                     amount = SpireQoL.Procs.Fool.ArrowsIn(power);
                     data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var teammateIndex and >= 0 and < 7 ? Math.Min(15, amount) << (4 * teammateIndex) : 0;
@@ -72,10 +66,10 @@ public static class SimReaders
                 case nameof(PanachePower) or nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
                 // Once a turn (PowerUse.UsedThisTurn: already this turn).
                 case nameof(PaleBlueDotPower): data = Internal(power, "alreadyActivatedThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
-                case "LullabyPower": data = Sts2State.Private(power, "_proccdThisTurn", fallback: true) ? (int)PowerUse.UsedThisTurn : 0; break;
-                case "YahPower": data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
+                case nameof(LullabyPower): data = Sts2State.Private(power, "_proccdThisTurn", fallback: true) ? (int)PowerUse.UsedThisTurn : 0; break;
+                case nameof(YahPower): data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
                 // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
-                case nameof(VigorPower) or "AimPower" or "QuietusPower" or nameof(GigantificationPower):
+                case nameof(VigorPower) or nameof(AimPower) or nameof(QuietusPower) or nameof(GigantificationPower):
                     data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", fallback: null) != null
                         ? Models.AttackBoundPower.BoundOutside : 0;
                     break;
@@ -164,7 +158,7 @@ public static class SimReaders
                     amount = Sts2State.Private(relic, "AttacksPlayed", fallback: 0);
                     data = Sts2State.Private<object?>(relic, "AttackToDouble", fallback: null) != null ? Models.PenNib.GameCardBound : 0;
                     break;
-                case "MightyWings": amount = Sts2State.Var(relic, "StrengthPower", fallback: 2); data = Sts2State.Var(relic, "DamageThreshold", fallback: 30); break;
+                case nameof(MightyWings): amount = Sts2State.Var(relic, "StrengthPower", fallback: 2); data = Sts2State.Var(relic, "DamageThreshold", fallback: 30); break;
                 case nameof(Vambrace):
                     data = (Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) != null ? Models.Vambrace.Bound : 0) | (Sts2State.Private(relic, "BlockGainedThisCombat", fallback: false) ? Models.Vambrace.GainedThisCombat : 0);
                     break;
@@ -183,18 +177,18 @@ public static class SimReaders
                 case nameof(SneckoSkull): amount = Sts2State.Var(relic, "PoisonPower", fallback: 1); break;
                 // Counters the models keep counting (their tray number, or the private count behind it).
                 case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); break;
-                case nameof(GalacticDust): amount = Sts2State.Private(relic, "StarsSpent", fallback: 0); break;
+                case nameof(GalacticDust): amount = relic is GalacticDust dust ? dust.StarsSpent : 0; break;
                 case nameof(Metronome): amount = Sts2State.Private(relic, "OrbsChanneled", int.MaxValue / 2); break;
                 // Once a turn: armed until used, used this turn (RelicUse).
                 case nameof(MiniRegent) or nameof(Regalite): data = Sts2State.Private(relic, "UsedThisTurn", fallback: true) ? 0 : (int)RelicUse.Armed; break;
                 case nameof(RainbowRing): data = Sts2State.Private(relic, "ActivationCountThisTurn", fallback: 0) >= 1 ? (int)RelicUse.UsedThisTurn : 0; break;
-                case "ConductorsBaton" or nameof(DemonTongue): data = Sts2State.Private(relic, "_triggeredThisTurn", fallback: true) ? (int)RelicUse.UsedThisTurn : 0; break;
+                case nameof(ConductorsBaton) or nameof(DemonTongue): data = Sts2State.Private(relic, "_triggeredThisTurn", fallback: true) ? (int)RelicUse.UsedThisTurn : 0; break;
                 // The HP at or below which it gives Strength (its threshold of your max HP).
                 case nameof(RedSkull): amount = (int)Math.Floor(player.Creature.MaxHp * Sts2State.Var(relic, "HpThreshold", fallback: 50) / 100m); break;
                 // End-of-turn relics: their block or damage (amount), and what they wait for (Data).
                 case nameof(Orichalcum) or nameof(FakeOrichalcum) or nameof(CloakClasp) or nameof(RippleBasin): amount = Sts2State.Var(relic, "Block"); break;
                 case nameof(ScreamingFlagon) or nameof(CharonsAshes) or nameof(ForgottenSoul): amount = Sts2State.Var(relic, "Damage"); break;
-                case "ObsidianVice": amount = Sts2State.Var(relic, "Damage", fallback: 1); break;
+                case nameof(ObsidianVice): amount = Sts2State.Var(relic, "Damage", fallback: 1); break;
                 case nameof(StoneCalendar):
                     amount = Sts2State.Var(relic, "Damage");
                     data = Math.Max(0, Sts2State.Var(relic, "DamageTurn", fallback: 7) - Sts2State.TurnNumber); // turns until it fires (0: this one)
@@ -321,15 +315,13 @@ public static class SimReaders
 
     // ------------------------------------------------------------------ captured terms
 
-    /// <summary>
-    /// AbstractModel.ModifyDamageMultiplicativeLate, which only the beta branch has (main: none, so no late term), as an open
-    /// delegate that calls each model's own override.
-    /// </summary>
-    internal static readonly Func<AbstractModel, Creature?, decimal, ValueProp, Creature?, CardModel?, MegaCrit.Sts2.Core.Entities.Cards.CardPlay?, decimal>? LateMultiplier =
-        typeof(AbstractModel).GetMethod("ModifyDamageMultiplicativeLate") is { } lateMethod
-            ? (Func<AbstractModel, Creature?, decimal, ValueProp, Creature?, CardModel?, MegaCrit.Sts2.Core.Entities.Cards.CardPlay?, decimal>?)Delegate.CreateDelegate(
-                typeof(Func<AbstractModel, Creature?, decimal, ValueProp, Creature?, CardModel?, MegaCrit.Sts2.Core.Entities.Cards.CardPlay?, decimal>), lateMethod, throwOnBindFailure: false)
-            : null;
+    /// <summary>A model's late damage multiplier (AbstractModel.ModifyDamageMultiplicativeLate): beta only (decision #163); main has no such hook.</summary>
+    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static decimal LateTerm(AbstractModel model, Creature? target, decimal amount, ValueProp props, Creature? dealer, CardModel? card) =>
+        model.ModifyDamageMultiplicativeLate(target, amount, props, dealer, card, null);
+
+    internal static readonly Func<AbstractModel, Creature?, decimal, ValueProp, Creature?, CardModel?, decimal>? LateMultiplier =
+        BetaOnly.Gate<Func<AbstractModel, Creature?, decimal, ValueProp, Creature?, CardModel?, decimal>>(LateTerm);
 
     /// <summary>
     /// The terms of one damage calculation that the simulator doesn't model (docs/SIMULATOR.md "Pipelines"): the card's
@@ -349,7 +341,7 @@ public static class SimReaders
             var listeners = runState.IterateHookListeners(combat).Where(model => !SimModels.Has(ModelName(model))).ToList();
             foreach (var model in listeners) add += model.ModifyDamageAdditive(target, baseDamage, props, dealer, card, null);
             foreach (var model in listeners) mul *= model.ModifyDamageMultiplicative(target, baseDamage, props, dealer, card, null);
-            if (LateMultiplier is { } lateMultiplier) foreach (var model in listeners) late *= lateMultiplier(model, target, baseDamage, props, dealer, card, null);
+            if (LateMultiplier is { } lateMultiplier) foreach (var model in listeners) late *= lateMultiplier(model, target, baseDamage, props, dealer, card);
             foreach (var model in listeners) cap = Math.Min(cap, model.ModifyDamageCap(target, props, dealer, card, null));
         }
         catch

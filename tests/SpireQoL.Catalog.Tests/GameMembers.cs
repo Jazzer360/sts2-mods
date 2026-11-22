@@ -8,63 +8,203 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Every type and member of the game (sts2) a built mod references, checked against a branch's decompiled source (decision #78): a
-/// reference the other branch lacks breaks the whole method that holds it there (a TypeLoadException or MissingMethodException when
-/// it's compiled), so code that needs a one-branch member reads it by name. Methods are matched by name and parameter types
-/// (simple names), so a changed signature counts as missing; members are looked up through the declared base types.
+/// Every type and member of the game (sts2) a built mod references, checked against a branch's decompiled source, and where each is
+/// named (decisions #162, #163): a reference main lacks breaks the whole method that holds it there (a TypeLoadException or
+/// MissingMethodException when it's compiled), so it may only be named inside a <see cref="Sts2Mods.Core.Game.BetaOnlyAttribute"/>
+/// method, called through its gate. Methods are matched by name and parameter types (simple names), so a changed signature counts as
+/// missing; members are looked up through the declared base types.
 /// </summary>
-internal static class GameMembers
+internal sealed class GameMembers
 {
-    /// <summary>The references in <paramref name="assemblyPath"/> that <paramref name="source"/> doesn't declare, one line each.</summary>
-    public static List<string> Missing(string assemblyPath, SourceIndex source, out int checkedCount)
+    /// <summary>Every game reference that branch doesn't declare: what it is.</summary>
+    public Dictionary<EntityHandle, string> Missing { get; } = new();
+
+    /// <summary>How many game references were checked.</summary>
+    public int Checked { get; private set; }
+
+    /// <summary>A reference the branch lacks named outside a gated method (or in a signature): where, and what.</summary>
+    public List<string> Outside { get; } = new();
+
+    /// <summary>Gated methods that name nothing the branch lacks: the gate can come off.</summary>
+    public List<string> CaughtUp { get; } = new();
+
+    /// <summary>Gated methods called directly, not through BetaOnly.Gate.</summary>
+    public List<string> CalledDirectly { get; } = new();
+
+    /// <summary>The gated methods found.</summary>
+    public int Gated { get; private set; }
+
+    private readonly MetadataReader _reader;
+    private readonly SignatureNames _names;
+
+    private GameMembers(MetadataReader reader)
     {
-        var missing = new SortedSet<string>();
-        checkedCount = 0;
+        _reader = reader;
+        _names = new SignatureNames(reader);
+    }
+
+    public static GameMembers Of(string assemblyPath, SourceIndex source)
+    {
         using var stream = File.OpenRead(assemblyPath);
         using var portable = new PEReader(stream);
-        var reader = portable.GetMetadataReader();
-        var names = new SignatureNames(reader);
-        var file = Path.GetFileName(assemblyPath);
-        foreach (var handle in reader.TypeReferences)
+        var members = new GameMembers(portable.GetMetadataReader());
+        members.FindMissing(source);
+        members.FindUses(portable, Path.GetFileName(assemblyPath));
+        return members;
+    }
+
+    private void FindMissing(SourceIndex source)
+    {
+        foreach (var handle in _reader.TypeReferences)
         {
-            var name = names.TypeReferenceName(handle, out var assembly);
+            var name = _names.TypeReferenceName(handle, out var assembly);
             if (assembly != SignatureNames.GameAssembly) continue;
-            checkedCount++;
-            if (source.Find(name) == null) missing.Add($"type {name} [{file}]");
+            Checked++;
+            if (source.Find(name) == null) Missing[handle] = $"type {name}";
         }
-        foreach (var handle in reader.MemberReferences)
+        foreach (var handle in _reader.MemberReferences)
         {
-            var member = reader.GetMemberReference(handle);
+            var member = _reader.GetMemberReference(handle);
             string parentName;
             if (member.Parent.Kind == HandleKind.TypeReference)
             {
-                parentName = names.TypeReferenceName((TypeReferenceHandle)member.Parent, out var assembly);
+                parentName = _names.TypeReferenceName((TypeReferenceHandle)member.Parent, out var assembly);
                 if (assembly != SignatureNames.GameAssembly) continue;
             }
             else if (member.Parent.Kind == HandleKind.TypeSpecification)
             {
-                var decoded = reader.GetTypeSpecification((TypeSpecificationHandle)member.Parent).DecodeSignature(names, genericContext: null);
+                var decoded = _reader.GetTypeSpecification((TypeSpecificationHandle)member.Parent).DecodeSignature(_names, genericContext: null);
                 if (!decoded.StartsWith(SignatureNames.GamePrefix, StringComparison.Ordinal)) continue;
                 parentName = decoded;
             }
             else continue;
             parentName = SignatureNames.Plain(parentName);
-            var memberName = reader.GetString(member.Name);
-            checkedCount++;
+            var memberName = _reader.GetString(member.Name);
+            Checked++;
             if (source.Find(parentName) is not { } type)
             {
-                missing.Add($"{parentName}.{memberName} (its type is missing) [{file}]");
+                Missing[handle] = $"{parentName}.{memberName} (its type is missing)";
                 continue;
             }
             if (member.GetKind() == MemberReferenceKind.Method)
             {
-                var parameters = member.DecodeMethodSignature(names, genericContext: null).ParameterTypes.Select(SignatureNames.Simple).ToList();
+                var parameters = member.DecodeMethodSignature(_names, genericContext: null).ParameterTypes.Select(SignatureNames.Simple).ToList();
                 if (!source.HasMethod(type, memberName, parameters))
-                    missing.Add($"method {parentName}.{memberName}({string.Join(", ", parameters)}) [{file}]; declared: {source.Describe(type, memberName)}");
+                    Missing[handle] = $"method {parentName}.{memberName}({string.Join(", ", parameters)}); declared: {source.Describe(type, memberName)}";
             }
-            else if (!source.HasField(type, memberName)) missing.Add($"field {parentName}.{memberName} [{file}]");
+            else if (!source.HasField(type, memberName)) Missing[handle] = $"field {parentName}.{memberName}";
         }
-        return missing.ToList();
+    }
+
+    /// <summary>The references a token stands for: itself, its parent type, and the types its signature or instantiation names.</summary>
+    private void Expand(EntityHandle handle, HashSet<EntityHandle> into)
+    {
+        if (!into.Add(handle)) return;
+        switch (handle.Kind)
+        {
+            case HandleKind.TypeReference:
+                var type = _reader.GetTypeReference((TypeReferenceHandle)handle);
+                if (type.ResolutionScope.Kind == HandleKind.TypeReference) Expand((EntityHandle)type.ResolutionScope, into);
+                break;
+            case HandleKind.TypeSpecification:
+                Record(into, () => _reader.GetTypeSpecification((TypeSpecificationHandle)handle).DecodeSignature(_names, genericContext: null));
+                break;
+            case HandleKind.MemberReference:
+                var member = _reader.GetMemberReference((MemberReferenceHandle)handle);
+                Expand(member.Parent, into);
+                Record(into, () => member.GetKind() == MemberReferenceKind.Method
+                    ? member.DecodeMethodSignature(_names, genericContext: null).ReturnType
+                    : member.DecodeFieldSignature(_names, genericContext: null));
+                break;
+            case HandleKind.MethodSpecification:
+                var specification = _reader.GetMethodSpecification((MethodSpecificationHandle)handle);
+                Expand(specification.Method, into);
+                Record(into, () => string.Join(",", specification.DecodeSignature(_names, genericContext: null)));
+                break;
+        }
+    }
+
+    /// <summary>Decodes a signature, adding every type reference it names.</summary>
+    private void Record(HashSet<EntityHandle> into, Func<string> decode)
+    {
+        var seen = new HashSet<TypeReferenceHandle>();
+        _names.Seen = seen;
+        try { decode(); }
+        finally { _names.Seen = null; }
+        foreach (var typeHandle in seen) Expand(typeHandle, into);
+    }
+
+    private string NameOf(MethodDefinitionHandle handle)
+    {
+        var method = _reader.GetMethodDefinition(handle);
+        var type = _reader.GetTypeDefinition(method.GetDeclaringType());
+        return $"{_reader.GetString(type.Name)}.{_reader.GetString(method.Name)}";
+    }
+
+    private bool IsGated(MethodDefinitionHandle handle) => _reader.GetMethodDefinition(handle).GetCustomAttributes().Any(attributeHandle =>
+    {
+        var constructor = _reader.GetCustomAttribute(attributeHandle).Constructor;
+        if (constructor.Kind != HandleKind.MethodDefinition) return false;
+        var attributeType = _reader.GetTypeDefinition(_reader.GetMethodDefinition((MethodDefinitionHandle)constructor).GetDeclaringType());
+        return _reader.GetString(attributeType.Name) == nameof(Sts2Mods.Core.Game.BetaOnlyAttribute);
+    });
+
+    private void FindUses(PEReader portable, string file)
+    {
+        var gated = _reader.MethodDefinitions.Where(IsGated).ToHashSet();
+        Gated = gated.Count;
+        var usedBy = new Dictionary<EntityHandle, List<string>>();
+        void Use(EntityHandle handle, string where)
+        {
+            if (!Missing.ContainsKey(handle)) return;
+            if (!usedBy.TryGetValue(handle, out var places)) usedBy[handle] = places = new();
+            places.Add(where);
+        }
+        foreach (var methodHandle in _reader.MethodDefinitions)
+        {
+            var method = _reader.GetMethodDefinition(methodHandle);
+            var name = NameOf(methodHandle);
+            // Its signature loads with every call to it, gated or not.
+            var signature = new HashSet<EntityHandle>();
+            Record(signature, () => method.DecodeSignature(_names, genericContext: null).ReturnType);
+            Record(signature, () => string.Join(",", method.DecodeSignature(_names, genericContext: null).ParameterTypes));
+            foreach (var handle in signature) Use(handle, name + " (its signature)");
+            if (method.RelativeVirtualAddress == 0) continue;
+            var body = portable.GetMethodBody(method.RelativeVirtualAddress);
+            var inside = new HashSet<EntityHandle>();
+            if (!body.LocalSignature.IsNil)
+                Record(inside, () => string.Join(",", _reader.GetStandaloneSignature(body.LocalSignature).DecodeLocalSignature(_names, genericContext: null)));
+            foreach (var (opCode, token) in Sts2Mods.Core.Game.BetaOnly.Tokens(body.GetILBytes() ?? Array.Empty<byte>()))
+            {
+                var handle = System.Reflection.Metadata.Ecma335.MetadataTokens.EntityHandle(token);
+                if (handle.Kind == HandleKind.MethodDefinition && gated.Contains((MethodDefinitionHandle)handle) && !gated.Contains(methodHandle)
+                    && opCode.Value != System.Reflection.Emit.OpCodes.Ldftn.Value)
+                    CalledDirectly.Add($"{name} calls {NameOf((MethodDefinitionHandle)handle)} [{file}]");
+                Expand(handle, inside);
+            }
+            if (gated.Contains(methodHandle))
+            {
+                if (!inside.Any(Missing.ContainsKey)) CaughtUp.Add($"{name} [{file}]");
+            }
+            else foreach (var handle in inside) Use(handle, name);
+        }
+        foreach (var fieldHandle in _reader.FieldDefinitions)
+        {
+            var field = _reader.GetFieldDefinition(fieldHandle);
+            var signature = new HashSet<EntityHandle>();
+            Record(signature, () => field.DecodeSignature(_names, genericContext: null));
+            var owner = _reader.GetTypeDefinition(field.GetDeclaringType());
+            foreach (var handle in signature) Use(handle, $"{_reader.GetString(owner.Name)}.{_reader.GetString(field.Name)} (a field)");
+        }
+        foreach (var typeHandle in _reader.TypeDefinitions)
+        {
+            var type = _reader.GetTypeDefinition(typeHandle);
+            var bases = new HashSet<EntityHandle>();
+            if (!type.BaseType.IsNil) Expand(type.BaseType, bases);
+            foreach (var interfaceHandle in type.GetInterfaceImplementations()) Expand(_reader.GetInterfaceImplementation(interfaceHandle).Interface, bases);
+            foreach (var handle in bases) Use(handle, $"{_reader.GetString(type.Name)} (its base types)");
+        }
+        foreach (var (handle, places) in usedBy) Outside.Add($"{Missing[handle]} [{file}], named in {string.Join(", ", places.Distinct().Take(4))}");
     }
 }
 
@@ -77,6 +217,9 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
     private readonly MetadataReader _reader;
 
     public SignatureNames(MetadataReader reader) => _reader = reader;
+
+    /// <summary>While set, every type reference a decode names is added to it.</summary>
+    public HashSet<TypeReferenceHandle>? Seen { get; set; }
 
     public string TypeReferenceName(TypeReferenceHandle handle, out string assembly)
     {
@@ -140,6 +283,7 @@ internal sealed class SignatureNames : ISignatureTypeProvider<string, object?>
     public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind) => reader.GetString(reader.GetTypeDefinition(handle).Name);
     public string GetTypeFromReference(MetadataReader reader, TypeReferenceHandle handle, byte rawTypeKind)
     {
+        Seen?.Add(handle);
         var name = TypeReferenceName(handle, out var assembly);
         return assembly == GameAssembly ? GamePrefix + name : name;
     }
