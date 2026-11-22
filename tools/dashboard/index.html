@@ -328,9 +328,9 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
         <canvas id="pfGap" height="150"></canvas>
         <div class="legend"><span><i style="background:var(--warn)"></i>longest gap between frames</span></div></div>
       <div class="card"><h3>Who makes the garbage?</h3>
-        <p class="hint">New memory allocated per second, stacked: the mod's frame work and its code in the game's hooks (blue), its searches on their own threads (violet), and the rest of the game (grey). The top of the pile is the whole game. Every few megabytes sets off a quick clean-up that pauses everything for several milliseconds (the chart beside this one), so the blue and violet layers are the mod's share of those pauses. The feature table below gives each feature's memory per frame (amber over 20 KB, red over 100 KB).</p>
+        <p class="hint">New memory allocated per second, stacked: the mod's features that allocate most over the window, each its own layer (their code in the game's hooks as hook: entries), the mod's other features together, its searches on their own threads (violet), and the rest of the game (grey). The top of the pile is the whole game. Every few megabytes sets off a quick clean-up that pauses everything for several milliseconds (the chart beside this one), so the layers under the grey one are the mod's share of those pauses. Hover a legend entry to pick one layer out; the feature table below gives each feature's memory per frame (amber over 20 KB, red over 100 KB).</p>
         <canvas id="pfAlloc" height="150"></canvas>
-        <div class="legend"><span><i style="background:var(--accent)"></i>the mod's frames and hooks</span><span><i style="background:var(--violet)"></i>the mod's searches</span><span><i style="background:var(--line)"></i>the rest of the game</span></div></div>
+        <div class="legend" id="pfAllocLegend"></div></div>
       <div class="card"><h3>Could memory clean-ups cause hitches?</h3>
         <p class="hint">Memory in use by the whole game (teal, left scale, MB) and the time its clean-ups paused everything, per second (amber, right scale, ms). Red dots are full clean-ups, the long ones. Memory in use is the whole process's: the game's and the mod's live together and can't be told apart. A line that keeps climbing between full clean-ups is memory held on to.</p>
         <canvas id="pfGc" height="150"></canvas>
@@ -1614,11 +1614,21 @@ function renderPerf() {
   // featureKb is KB per frame (a mean over the rollup's frames): times the frames, it's the rollup's total
   const modMbPerSec = (x) => Object.values(x.featureKb || {}).reduce((a, v) => a + v, 0) * x.frames / 1024 / Math.max(x.seconds, 0.01);
   const simMbPerSec = (x) => (x.simMb || 0) / Math.max(x.seconds, 0.01);
-  stacked("pfAlloc", [
-    { name: "the mod's frames and hooks", color: css("--accent"), points: r.map((x) => [x.t, modMbPerSec(x)]) },
+  // A feature's MB/s at a moment: its KB per frame (featureKb, a mean over the rollup's frames) times the frames, per second.
+  const featureMbPerSec = (x, k) => ((x.featureKb?.[k] || 0) * x.frames) / 1024 / Math.max(x.seconds, 0.01);
+  const allocTotals = {};
+  for (const x of r) for (const [k, v] of Object.entries(x.featureKb || {})) allocTotals[k] = (allocTotals[k] || 0) + v * x.frames;
+  const allocTop = Object.entries(allocTotals).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k);
+  // The palette without the searches' violet, so no feature shares its colour (or its legend hover).
+  const allocColors = colors.filter((c) => sameColor(c) !== sameColor(css("--violet")));
+  const allocLayers = [
+    ...allocTop.map((k, i) => ({ name: k, color: allocColors[i % allocColors.length], points: r.map((x) => [x.t, featureMbPerSec(x, k)]) })),
+    { name: "the mod's other features", color: css("--faint"), points: r.map((x) => [x.t, modMbPerSec(x) - allocTop.reduce((a, k) => a + featureMbPerSec(x, k), 0)]) },
     { name: "the mod's searches", color: css("--violet"), points: r.map((x) => [x.t, simMbPerSec(x)]) },
     { name: "the rest of the game", color: css("--line"), points: r.map((x) => [x.t, Math.max(0, x.allocatedMb / Math.max(x.seconds, 0.01) - modMbPerSec(x) - simMbPerSec(x))]) },
-  ], { unit: " MB/s" });
+  ];
+  stacked("pfAlloc", allocLayers, { unit: " MB/s" });
+  setHTML($("pfAllocLegend"), allocLayers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
   lines("pfGc", [{ name: "memory in use", color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { name: "full collection (memory in use)", color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) },
     { name: "clean-up pauses", color: css("--warn"), right: true, points: r.map((x) => [x.t, x.gcPauseMs / Math.max(x.seconds, 0.01)]) }], { unit: " MB", rightUnit: " ms/s" });
   lines("pfEngine", [{ name: "shader compiles", color: css("--warn"), dots: true, points: r.filter((x) => x.compiles > 0).map((x) => [x.t, x.compiles]) }, { name: "orphan nodes", color: css("--teal"), points: r.filter((x) => x.orphanNodes != null).map((x) => [x.t, x.orphanNodes]) }], {});
