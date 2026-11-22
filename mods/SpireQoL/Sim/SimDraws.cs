@@ -113,6 +113,18 @@ public sealed class SimDrawPile
         return new() { Top = new() { fits[0].Card }, Rest = Discard.Where(group => !group.Card.PerfectFit).ToList(), Discard = new() };
     }
 
+    /// <summary>
+    /// CardPileCmd.Shuffle: every card of the draw pile (its known top too) and the discard pile, with <paramref name="added"/> put
+    /// into the draw pile first (Reboot: your hand), shuffled together: order unknown, except a single Perfect Fit card on top.
+    /// </summary>
+    internal SimDrawPile ShuffledWithDiscard(IEnumerable<SimDrawGroup> added)
+    {
+        var all = Top.Select(card => new SimDrawGroup(card, Count: 1)).Concat(Rest).Concat(Discard).Concat(added)
+            .GroupBy(group => group.Card.Key).Select(sameProfile => new SimDrawGroup(sameProfile.First().Card, sameProfile.Sum(group => group.Count)))
+            .Where(group => group.Count > 0).OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList();
+        return new SimDrawPile { Discard = all }.Shuffled();
+    }
+
     /// <summary>For the branch key: what's left, by profile.</summary>
     internal void Hash(Action<long> add)
     {

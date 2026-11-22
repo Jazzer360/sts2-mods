@@ -170,6 +170,12 @@ public sealed record AutoPlayFromDrawAction(int Count) : SimAction
     public bool Upgrade { get; init; }
 }
 
+/// <summary>
+/// The play owner's draw pile shuffled with their discard pile (CardPileCmd.Shuffle), after <paramref name="HandIn"/> joined the draw
+/// pile (Reboot: every card in your hand, CardPileCmd.Add to the draw pile; the hand itself leaves with LeaveHandAction).
+/// </summary>
+public sealed record ShuffleDrawPileAction(IReadOnlyList<SimDrawGroup> HandIn) : SimAction;
+
 /// <summary>How a play picks the cards it exhausts (ExhaustFromHandAction).</summary>
 public enum ExhaustPick { Random, All, Chosen }
 

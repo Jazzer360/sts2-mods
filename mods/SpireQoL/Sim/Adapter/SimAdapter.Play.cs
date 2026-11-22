@@ -130,6 +130,11 @@ public static partial class SimAdapter
                 if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
         play.Body.AddRange(TakesToHand(facts, me, name));
         AddCardEvents(play, facts, plays);
+        // Reboot: your hand into your draw pile and a shuffle (CardPileCmd.Shuffle) before its draws, right after the hand leaves.
+        if (PlayFacts.ShuffleCards.Contains(name) && play.Body.FindIndex(action => action is LeaveHandAction { Whole: true }) is var leaves and >= 0)
+            play.Body.Insert(leaves + 1, new ShuffleDrawPileAction(PileType.Hand.GetPile(me).Cards.Where(other => other != card)
+                .Select(other => DrawProfiles.GetValueOrDefault(other)).OfType<SimDrawCard>().GroupBy(profile => profile.Key)
+                .Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()));
         // Cards it auto-plays from the top of your draw pile, after what it does to your hand (The Devil exhausts it first).
         if (PlaysFromDrawPile.Contains(name)) play.Body.Add(new AutoPlayFromDrawAction(name switch
         {
@@ -499,7 +504,7 @@ public static partial class SimAdapter
     {
         var counts = new Dictionary<string, int>();
         foreach (var other in (fromDiscard ? PileType.Discard : PileType.Draw).GetPile(me).Cards)
-            if (eligible(other) && DrawProfiles.TryGetValue(other, out var key)) counts[key] = counts.GetValueOrDefault(key) + 1;
+            if (eligible(other) && DrawProfiles.TryGetValue(other, out var profile)) counts[profile.Key] = counts.GetValueOrDefault(profile.Key) + 1;
         return counts;
     }
 

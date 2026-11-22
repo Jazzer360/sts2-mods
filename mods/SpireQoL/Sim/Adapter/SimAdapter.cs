@@ -383,10 +383,11 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// Each card in your piles and its draw profile's key (SimDrawCard.Key), from the last board read (FillDrawPile, on the game's
-    /// thread): what a play taking cards from your draw pile names as the ones it can take (TakeFromDrawAction).
+    /// Each card in your piles and its draw profile, from the last board read (FillDrawPile, on the game's thread): what a play
+    /// taking cards from your piles names as the ones it can take (TakeToHandAction), and with Reboot in your hand, your hand's
+    /// cards as they join your draw pile (ShuffleDrawPileAction).
     /// </summary>
-    internal static IReadOnlyDictionary<CardModel, string> DrawProfiles { get; private set; } = new Dictionary<CardModel, string>();
+    internal static IReadOnlyDictionary<CardModel, SimDrawCard> DrawProfiles { get; private set; } = new Dictionary<CardModel, SimDrawCard>();
 
     /// <summary>
     /// Your draw and discard piles by profile (decision #90): what about each card matters if you draw it on this board, never
@@ -396,7 +397,7 @@ public static partial class SimAdapter
     /// </summary>
     private static void FillDrawPile(SimPlayer player, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
     {
-        DrawProfiles = new Dictionary<CardModel, string>(ReferenceEqualityComparer.Instance);
+        DrawProfiles = new Dictionary<CardModel, SimDrawCard>(ReferenceEqualityComparer.Instance);
         try
         {
             var iteration = me.Creature.HasPower<IterationPower>();
@@ -466,11 +467,11 @@ public static partial class SimAdapter
                     Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly,
                 };
             }
-            var profiles = new Dictionary<CardModel, string>(ReferenceEqualityComparer.Instance);
+            var profiles = new Dictionary<CardModel, SimDrawCard>(ReferenceEqualityComparer.Instance);
             SimDrawCard Remembered(CardModel card)
             {
                 var profile = Profile(card);
-                profiles[card] = profile.Key;
+                profiles[card] = profile;
                 return profile;
             }
             List<SimDrawGroup> Groups(IEnumerable<CardModel> cards) => cards.Select(Remembered).GroupBy(drawn => drawn.Key)
@@ -483,6 +484,9 @@ public static partial class SimAdapter
                 Rest = Groups(PileType.Draw.GetPile(me).Cards.Where(card => !known.Contains(card))),
                 Discard = Groups(PileType.Discard.GetPile(me).Cards),
             };
+            // The cards in your hand too, for a play that puts them into your draw pile (Reboot).
+            if (handCards.Any(card => PlayFacts.ShuffleCards.Contains(card.GetType().Name)))
+                foreach (var card in handCards) Remembered(card);
             DrawProfiles = profiles;
             // Iteration counts the Status cards drawn this turn (CardDrawnEntry: you watched them come).
             if (iteration)

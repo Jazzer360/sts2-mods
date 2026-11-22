@@ -295,5 +295,23 @@ public class SimDrawTests
         var branch = Assert.Single(SimEngine.Run(state, make).Branches);
         Assert.Equal(10, branch.You.HandCount);
     }
-}
 
+    [Fact]
+    public void RebootShufflesYourHandAndDiscardPileIntoYourDrawPileBeforeItDraws()
+    {
+        // Reboot (decompile: CardPileCmd.Add of each hand card to the draw pile, CardPileCmd.Shuffle, CardPileCmd.Draw): a Burn in your
+        // hand and one in your discard pile join the two plain cards, so its one draw is a Burn half the time.
+        var state = You();
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(Plain, 2) }, Discard = { new SimDrawGroup(Burn, 1) } };
+        var play = new SimPlay
+        {
+            Name = "Reboot", HandCard = 7, HandDelta = -1 + 1, Draws = 1,
+            Body = { new LeaveHandAction(Count: 0) { Whole = true }, new ShuffleDrawPileAction(new[] { new SimDrawGroup(Burn, 1) }), new CardEventAction(CardEvent.Drawn, 1) },
+        };
+        var outcome = SimEngine.Run(state, play);
+        var burnt = outcome.Chance(branch => branch.You.Taken > 0);
+        Assert.Equal(0.5, burnt.Low, precision: 9);
+        Assert.All(outcome.Branches, branch => Assert.Equal(0, branch.You.Draw!.DiscardCount));
+        Assert.All(outcome.Branches, branch => Assert.Equal(3, branch.You.Draw!.Count));
+    }
+}

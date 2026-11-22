@@ -803,6 +803,13 @@ public static partial class SimEngine
             case AutoPlayFromDrawAction autoPlayFromDrawAction:
                 branches.Each(branch => AutoPlayFromDraw(branch, branch.CurrentPlay?.Owner ?? Who.You, autoPlayFromDrawAction.Count, autoPlayFromDrawAction.ForceExhaust, autoPlayFromDrawAction.Upgrade));
                 break;
+            case ShuffleDrawPileAction shuffleDrawPileAction:
+                branches.Do(branch =>
+                {
+                    var owner = branch.CurrentPlay?.Owner ?? Who.You;
+                    if (DrawsFromPile(branch, owner)) branch.MutablePlayer(owner).Draw = branch.Player(owner)!.Draw!.ShuffledWithDiscard(shuffleDrawPileAction.HandIn);
+                });
+                break;
             case TakeToHandAction takeToHandAction: branches.Each(branch => RunTakeToHand(branch, takeToHandAction)); break;
             case ExhaustFromHandAction exhaustFromHandAction: branches.Each(branch => RunExhaustFromHand(branch, exhaustFromHandAction)); break;
             case LeaveHandAction leaveHandAction: branches.Do(branch => RunLeaveHand(branch, leaveHandAction)); break;

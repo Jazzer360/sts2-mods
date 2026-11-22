@@ -106,7 +106,7 @@ public class SimJsonTests
     /// <summary>A value of a type that isn't its default: collections hold one sample, objects have every member set.</summary>
     private static object Sample(Type type, int depth = 0)
     {
-        if (depth > 6) throw new InvalidOperationException($"{type.Name} nests too deep to sample");
+        if (depth > 10) throw new InvalidOperationException($"{type.Name} nests too deep to sample");
         if (Nullable.GetUnderlyingType(type) is { } inner) return Sample(inner, depth);
         if (type == typeof(int)) return 3;
         if (type == typeof(long)) return 4L;
