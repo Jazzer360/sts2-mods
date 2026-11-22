@@ -130,6 +130,13 @@ public static partial class SimAdapter
                 if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
         play.Body.AddRange(TakesToHand(facts, me, name));
         AddCardEvents(play, facts, plays);
+        // Cards it auto-plays from the top of your draw pile, after what it does to your hand (The Devil exhausts it first).
+        if (PlaysFromDrawPile.Contains(name)) play.Body.Add(new AutoPlayFromDrawAction(name switch
+        {
+            nameof(Havoc) => 1,
+            nameof(Cascade) => SafeInt(() => Hook.ModifyXValue(combat, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0),
+            _ => PileType.Hand.GetPile(me).Cards.Count(other => other != card), // The Devil: the cards in your hand as it plays
+        }) { ForceExhaust = name == nameof(Havoc), Upgrade = name == nameof(TheDevil) && card.IsUpgraded });
         // A replay of a card whose numbers change with each play in a way its code doesn't show (decision #160: Thrash).
         if (plays > 1 && PlayGrowth.Of(card).Unmodelled is { } growthUnknown) play.Body.Add(new NotModelledAction(growthUnknown));
         if (DrawnCardReaders.ContainsKey(name)) UseDrawnCard(play, name);

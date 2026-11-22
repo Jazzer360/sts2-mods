@@ -800,6 +800,9 @@ public static partial class SimEngine
             case ApplyPowerAction applyPowerAction: RunApplyPower(branches, applyPowerAction); break;
             case CardEventAction cardEventAction: RunCardEvent(branches, cardEventAction); break;
             case DrawnCardAction drawnCardAction: branches.Each(branch => RunDrawnCard(branch, drawnCardAction)); break;
+            case AutoPlayFromDrawAction autoPlayFromDrawAction:
+                branches.Each(branch => AutoPlayFromDraw(branch, branch.CurrentPlay?.Owner ?? Who.You, autoPlayFromDrawAction.Count, autoPlayFromDrawAction.ForceExhaust, autoPlayFromDrawAction.Upgrade));
+                break;
             case TakeToHandAction takeToHandAction: branches.Each(branch => RunTakeToHand(branch, takeToHandAction)); break;
             case ExhaustFromHandAction exhaustFromHandAction: branches.Each(branch => RunExhaustFromHand(branch, exhaustFromHandAction)); break;
             case LeaveHandAction leaveHandAction: branches.Do(branch => RunLeaveHand(branch, leaveHandAction)); break;

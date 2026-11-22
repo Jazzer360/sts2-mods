@@ -356,11 +356,16 @@ public sealed class MotifPower : ProcModel
             : One(state);
 }
 
-/// <summary>LostLutePower.AfterCardPlayed: the first Wah, Cho and Ki each turn play the top card of your draw pile.</summary>
+/// <summary>
+/// LostLutePower.AfterCardPlayed: each melody (Wah, Cho, Ki) the card is the first this turn to play auto-plays its amount of cards
+/// from the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile(num * Amount, Top)).
+/// </summary>
 public sealed class LostLutePower : ProcModel
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Melodies.AnyFirst(state, play) ? Fire(state, owner) : One(state);
+        Mine(play, owner) && Melodies.Tags.Count(simCardTag => Melodies.First(state, play, simCardTag)) is var tagCount and > 0
+            ? Fire(state, owner).SelectMany(branch => SimEngine.AutoPlayFromDraw(branch, owner, tagCount * Amount(branch, owner), forceExhaust: false)).ToList()
+            : One(state);
 }
 
 /// <summary>ExplosiveArrowsPower.AfterArrowImpaled: its owner's arrow impales an enemy: its amount to every hittable enemy (unpowered).</summary>

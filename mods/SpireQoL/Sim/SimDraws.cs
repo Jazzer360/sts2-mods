@@ -27,6 +27,16 @@ public sealed record SimDrawCard(string Key)
     /// <summary>Stampede or Simpleton could pick it once it's in your hand; Auto is how it plays (null: not simulated).</summary>
     public bool Pickable { get; init; }
     public SimHandCard? Auto { get; init; }
+    /// <summary>
+    /// How it plays when auto-played from the pile itself (CardPileCmd.AutoPlayFromDrawPile: Havoc, Cascade, The Devil, Lost Lute),
+    /// while something that does that is in your hand or on you: as built for a card that isn't in your hand (no hand card, its hand
+    /// delta its own). No plays: it goes to the discard pile unplayed (Unplayable, or aimed at a teammate). Null: not simulated (`?`).
+    /// FromPileUpgraded: the same, upgraded first (The Devil+).
+    /// </summary>
+    public SimHandCard? FromPile { get; init; }
+    public SimHandCard? FromPileUpgraded { get; init; }
+    /// <summary>Its play exhausts it (PlayFacts.ExhaustsSelf): played from the pile, it goes to the exhaust pile, not the discard pile.</summary>
+    public bool ExhaustsWhenPlayed { get; init; }
     /// <summary>Enchanted with Perfect Fit: a shuffle puts it on top (PerfectFit.ModifyShuffleOrder).</summary>
     public bool PerfectFit { get; init; }
     /// <summary>I Am Invincible: its block when it's the top card as your turn ends (it plays itself from there).</summary>

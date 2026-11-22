@@ -159,6 +159,17 @@ public sealed record TakeToHandAction(int Count, IReadOnlyDictionary<string, int
     public bool FromDiscard { get; init; }
 }
 
+/// <summary>
+/// Cards auto-played from the top of the play owner's draw pile (CardPileCmd.AutoPlayFromDrawPile with CardPilePosition.Top), one
+/// after another: Havoc (one, exhausted after: ForceExhaust), Cascade (X), The Devil (one per card it exhausted; Upgrade: The Devil+
+/// upgrades each first).
+/// </summary>
+public sealed record AutoPlayFromDrawAction(int Count) : SimAction
+{
+    public bool ForceExhaust { get; init; }
+    public bool Upgrade { get; init; }
+}
+
 /// <summary>How a play picks the cards it exhausts (ExhaustFromHandAction).</summary>
 public enum ExhaustPick { Random, All, Chosen }
 

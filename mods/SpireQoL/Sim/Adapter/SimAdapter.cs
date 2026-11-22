@@ -408,6 +408,13 @@ public static partial class SimAdapter
             var readsType = readers.Any(drawnCardReader => drawnCardReader.What == DrawnCardReader.Reads.Type);
             var readsCost = readers.Any(drawnCardReader => drawnCardReader.What == DrawnCardReader.Reads.Cost);
             var autoByKey = new Dictionary<string, SimHandCard?>();
+            // Something that auto-plays the top of your draw pile (Havoc, Cascade, The Devil in your hand; Lost Lute's power): how each
+            // card plays from there goes into its profile, and which card it is.
+            var handCards = PileType.Hand.GetPile(me).Cards;
+            var topPlays = handCards.Any(card => PlaysFromDrawPile.Contains(card.GetType().Name) || card.GetType().Name == nameof(LostLute))
+                           || me.Creature.Powers.Any(power => power.GetType().Name == nameof(LostLutePower));
+            var topUpgrades = handCards.Any(card => card.GetType().Name == nameof(TheDevil) && card.IsUpgraded);
+            var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
             SimDrawCard Profile(CardModel card)
             {
                 var turnEnd = TurnEndOf(card);
@@ -421,7 +428,7 @@ public static partial class SimAdapter
                 var hellraised = strike && !me.Creature.CombatState!.HittableEnemies.All(creature => creature.HpDisplay.IsInfinite());
                 var pickable = picks && !card.Keywords.Contains(CardKeyword.Unplayable) && (player.Simpleton > 0 || card.Type == CardType.Attack);
                 var cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved();
-                var who = pickable || strike ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
+                var who = pickable || strike || topPlays ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
                 var invincible = card is IAmInvincible ? CardBlock(card, combat, me) : 0;
                 var perfectFit = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit;
@@ -444,8 +451,15 @@ public static partial class SimAdapter
                     auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, Plays = plays };
                     autoByKey[key] = auto;
                 }
+                (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts) fromPile = default;
+                if (topPlays && !fromPileByKey.TryGetValue(key, out fromPile))
+                {
+                    fromPile = (FromPile(card, card, me, combat, ids, out var exhausts), topUpgrades ? UpgradedFromPile(card, me, combat, ids) : null, exhausts);
+                    fromPileByKey[key] = fromPile;
+                }
                 return new SimDrawCard(key)
                 {
+                    FromPile = fromPile.Plain, FromPileUpgraded = fromPile.Upgraded, ExhaustsWhenPlayed = fromPile.Exhausts,
                     EnergyLostOnDraw = energyLost,
                     Exhausting = exhaustEnergy > 0 ? new ExhaustingCard(HandCard: 0, exhaustEnergy, SimReaders.TypeOf(card)) : null,
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
@@ -536,6 +550,59 @@ public static partial class SimAdapter
 
     /// <summary>Which card in your hand a play is (SimPlay.HandCard, SimHandCard.Id): its object identity.</summary>
     public static int HandId(CardModel card) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(card) | 1;
+
+    /// <summary>
+    /// Cards whose play auto-plays cards from the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile, CardPilePosition.Top), from
+    /// each OnPlay: Havoc one (exhausted after), Cascade X, The Devil one per card it exhausted from your hand. The card scan holds every
+    /// card calling it to this list.
+    /// </summary>
+    internal static readonly HashSet<string> PlaysFromDrawPile = new() { nameof(Havoc), nameof(Cascade), nameof(TheDevil) };
+
+    /// <summary>
+    /// How <paramref name="played"/> plays when a card auto-plays it from your draw pile (SimDrawCard.FromPile): as an auto-play of a
+    /// card that isn't in your hand (its hand delta its own, no hand card). <paramref name="pileCard"/> is the card in your pile (the
+    /// same, or the one an upgraded copy stands for). No plays for an Unplayable card (it goes to the discard pile unplayed). Null when
+    /// it can't be built.
+    /// </summary>
+    private static SimHandCard? FromPile(CardModel played, CardModel pileCard, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, out bool exhausts)
+    {
+        exhausts = false;
+        try
+        {
+            var facts = PlayFacts.For(played, me, combat, CardPlays.Count(played));
+            exhausts = facts.ExhaustsSelf;
+            var plays = played.Keywords.Contains(CardKeyword.Unplayable) ? new List<SimPlay>() : AutoPlays(played, me, combat, ids);
+            // Built for a card leaving your hand unless it's in your draw pile (SimPlay's HandDelta): it isn't in your hand.
+            if (played.Pile?.Type != PileType.Draw) foreach (var play in plays) play.HandDelta += 1;
+            var cost = played.EnergyCost.CostsX ? 999999999 : played.EnergyCost.GetResolved();
+            return new SimHandCard { Id = 0, Name = pileCard.GetType().Name, IsAttack = played.Type == CardType.Attack, Cost = cost, Plays = plays };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// FromPile for the card upgraded first (The Devil+: CardCmd.Upgrade before each auto-play), from an upgraded copy made the way the
+    /// game makes its upgrade previews (MutableClone, UpgradeInternal); the card itself when it can't be upgraded further (the game's
+    /// upgrade does nothing then). Null when the copy can't be made or played.
+    /// </summary>
+    private static SimHandCard? UpgradedFromPile(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
+    {
+        if (!card.IsUpgradable) return FromPile(card, card, me, combat, ids, out _);
+        try
+        {
+            var copy = (CardModel)card.MutableClone();
+            copy.UpgradeInternal();
+            copy.FinalizeUpgradeInternal();
+            return FromPile(copy, card, me, combat, ids, out _);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// A hand card's auto-plays: one per hittable enemy for a card aimed at one (CardCmd.AutoPlay picks one at random),

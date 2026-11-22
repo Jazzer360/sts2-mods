@@ -300,6 +300,102 @@ public static partial class SimEngine
         JoinHand(state, simPlayer, card, TakenId(simPlayer.TakenToHand));
     }
 
+    /// <summary>
+    /// Cards auto-played from the top of a player's draw pile (CardPileCmd.AutoPlayFromDrawPile, CardPilePosition.Top), one after
+    /// another: the discard pile shuffled in when the draw pile is empty (ShuffleIfNecessary); the known top card, else one card of the
+    /// rest, a branch per profile by its count (the order is hidden). Each plays as built for the pile (SimDrawCard.FromPile, or
+    /// FromPileUpgraded when <paramref name="upgrade"/>): free, at a random hittable enemy for a card aimed at one (CardCmd.AutoPlay),
+    /// a branch each, in the middle of whatever played it (its own state put back after, as Hellraiser's). Then it goes to the
+    /// discard pile, or to the exhaust pile when <paramref name="forceExhaust"/> (Havoc: ExhaustOnNextPlay) or it exhausts itself.
+    /// </summary>
+    internal static IEnumerable<SimState> AutoPlayFromDraw(SimState state, int player, int count, bool forceExhaust, bool upgrade = false)
+    {
+        IEnumerable<SimState> states = new[] { state };
+        for (var i = 0; i < count; i++) states = Then(states, branch => AutoPlayTop(branch, player, forceExhaust, upgrade));
+        return states;
+    }
+
+    private static IEnumerable<SimState> AutoPlayTop(SimState state, int player, bool forceExhaust, bool upgrade)
+    {
+        if (state.Player(player) is not { } simPlayer || !state.TakesPart(player)) return new[] { state };
+        if (!DrawsFromPile(state, player))
+        {
+            state.AutoPlaysUnknown = true;
+            state.Unmodelled ??= "a card auto-played from a draw pile the simulator doesn't read";
+            return new[] { state };
+        }
+        var pile = simPlayer.Draw!;
+        if (pile.Count == 0)
+        {
+            if (pile.DiscardCount == 0) return new[] { state };
+            state.MutablePlayer(player).Draw = pile.Shuffled();
+            return Then(ProcCardEvent(state, CardEvent.Shuffled, count: 1, player), branch => AutoPlayTop(branch, player, forceExhaust, upgrade));
+        }
+        if (pile.Top.Count > 0)
+        {
+            state.MutablePlayer(player).Draw = pile.WithoutTop();
+            return PlayFromPile(state, player, pile.Top[0], forceExhaust, upgrade);
+        }
+        var total = pile.RestCount;
+        var result = new List<SimState>();
+        for (var i = 0; i < pile.Rest.Count; i++)
+        {
+            var branch = pile.Rest.Count == 1 ? state : state.Clone();
+            branch.Weight = state.Weight * pile.Rest[i].Count / total;
+            branch.MutablePlayer(player).Draw = pile.WithoutOneOf(i);
+            result.AddRange(PlayFromPile(branch, player, pile.Rest[i].Card, forceExhaust, upgrade));
+        }
+        return result;
+    }
+
+    /// <summary>A card off the top of the draw pile plays itself (AutoPlayFromDraw), then goes where it goes.</summary>
+    private static IEnumerable<SimState> PlayFromPile(SimState state, int player, SimDrawCard card, bool forceExhaust, bool upgrade)
+    {
+        if ((upgrade ? card.FromPileUpgraded : card.FromPile) is not { } built)
+        {
+            state.AutoPlaysUnknown = true;
+            state.Unmodelled ??= "a card auto-played from your draw pile whose play isn't built";
+            return new[] { state };
+        }
+        if (player == Who.You) state.AutoPlayed++;
+        var plays = built.Plays.Count == 1 && built.Plays[0].TargetId < 0
+            ? built.Plays
+            : built.Plays.Where(play => state.Enemy(play.TargetId) is { Alive: true, Hittable: true }).ToList();
+        if (plays.Count == 0)
+        {
+            // Unplayable, or no enemy to hit: to the discard pile unplayed (CardCmd.MoveToResultPileWithoutPlaying).
+            Discarded(state, player, card);
+            return new[] { state };
+        }
+        var (current, events, blockGains, attack) = (state.CurrentPlay, state.PlayEvents, state.PlayCardBlockGains, state.CurrentAttack);
+        var result = new List<SimState>();
+        foreach (var play in plays)
+        {
+            var branch = plays.Count == 1 ? state : state.Clone();
+            branch.Weight = state.Weight / plays.Count;
+            var sub = new BranchSet(branch, nested: true);
+            ApplyPlay(sub, play);
+            foreach (var copy in sub.States)
+            {
+                (copy.CurrentPlay, copy.PlayEvents, copy.PlayCardBlockGains, copy.CurrentAttack) = (current, events, blockGains, attack);
+                if (card.ExhaustsWhenPlayed) result.Add(copy);
+                else if (forceExhaust) result.AddRange(ProcCardEvent(copy, CardEvent.Exhausted, count: 1, player, indirect: true));
+                else
+                {
+                    Discarded(copy, player, card);
+                    result.Add(copy);
+                }
+            }
+        }
+        return result;
+    }
+
+    private static void Discarded(SimState state, int player, SimDrawCard card)
+    {
+        var simPlayer = state.MutablePlayer(player);
+        simPlayer.Draw = simPlayer.Draw!.WithDiscarded(card);
+    }
+
     /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
     private static IEnumerable<SimState> Drawn(SimState state, int player, SimDrawCard card, bool indirect, bool record = false)
     {

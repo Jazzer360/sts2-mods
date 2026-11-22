@@ -191,6 +191,25 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void LostLutePlaysTheTopOfYourDrawPileOnTheFirstMelody()
+    {
+        // LostLutePower.AfterCardPlayed: AutoPlayFromDrawPile(melodies first this turn × Amount, Top). The top card is a 6-damage hit.
+        var wah = Card("WahSlap", SimCardType.Attack, SimCardTag.Wah);
+        var state = Power(State(), PowerId.LostLute, amount: 1);
+        var strike = new SimPlay
+        {
+            Name = "StrikeIronclad", IsAttack = true, AutoPlay = true, TargetId = 0,
+            Card = new SimCardPlay(new SimCard("StrikeIronclad", SimCardType.Attack), Who.You, 0, PlayIndex: 0, PlayCount: 1, AutoPlay: true),
+            Body = { new AttackAction(Hits: 1, SimPlay.Target.Single, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [0] = 6 }, Fixed = true }) },
+        };
+        state.You.Draw = new SimDrawPile { Top = { new SimDrawCard("strike") { FromPile = new SimHandCard { Name = "StrikeIronclad", IsAttack = true, Plays = { strike } } } } };
+        var after = One(state, Play(wah, target: 0, plays: 1, Attack(baseDamage: 0)));
+        Assert.Equal(94, after.Enemy(id: 0)!.Hp);
+        Assert.Equal(1, after.AutoPlayed);
+        Assert.Equal(0, after.You.Draw!.Count);
+    }
+
+    [Fact]
     public void LullabyAndConductorsBatonFireOnTheThirdMelody()
     {
         var card = Card("KiStep", SimCardType.Skill, SimCardTag.Ki);
