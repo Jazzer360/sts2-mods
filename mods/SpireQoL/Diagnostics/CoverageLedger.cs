@@ -453,10 +453,9 @@ internal static partial class CoverageLedger
     /// <summary>
     /// Earlier game versions players still run whose coverage was reviewed before the ledger moved on (decision #125): not
     /// reported as a version the coverage wasn't checked against. v0.113.0, the first beta build (patched to v0.113.1), was reviewed in 0.31.29.
-    /// The main branch's version is reviewed against the main decompile (decision #163: GameBranchTests.MainReviewed, which must be here):
-    /// v0.111.1, code-identical to v0.111.0.
+    /// Main's (SupportedVersions.Main) and the one before it, v0.111.0 (code-identical to v0.111.1), too.
     /// </summary>
-    internal static readonly string[] ReviewedGameVersions = { "v0.113.0", "v0.111.0", "v0.111.1" };
+    internal static readonly string[] ReviewedGameVersions = { "v0.113.0", "v0.111.0", SupportedVersions.Main };
 
     /// <summary>Whether the coverage was checked against this game version: the ledger's, or one reviewed before it.</summary>
     internal static bool ReviewedVersion(string game) =>
@@ -498,6 +497,18 @@ internal static partial class CoverageLedger
         try { return MegaCrit.Sts2.Core.Nodes.NGame.GetGameVersion() ?? ""; }
         catch { return ""; }
     }
+}
+
+/// <summary>
+/// The game versions the mod is reviewed for, one per Steam branch (decision #170): beta's is the coverage ledger's (generated from the beta
+/// decompile, which the mod is written for: decision #163), main's is set once docs/DEVELOPMENT.md "When main updates" is done. The branch
+/// checks (GameBranchTests) fail when either decompile, or the installed game, is a build these don't name, so a new build on either branch
+/// can't go unreviewed. Players still on an older build of a branch aren't supported apart from it.
+/// </summary>
+internal static class SupportedVersions
+{
+    public const string Beta = CoverageLedger.LedgerGameVersion;
+    public const string Main = "v0.111.1";
 }
 
 /// <summary>

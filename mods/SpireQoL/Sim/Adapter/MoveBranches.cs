@@ -33,8 +33,9 @@ internal static class MoveBranches
         // Below 3 Personal Hive (or none): +1 Personal Hive and +1 Strength; at 3 or more: +2 Strength.
         ["Entomancer.SpitMove"] = new(new[] { nameof(PersonalHivePower), nameof(StrengthPower), nameof(StrengthPower) },
             (monster, all) => monster.Creature.GetPower<PersonalHivePower>() is { Amount: < 3 } ? new[] { all[0], all[1] } : new[] { all[2] }),
-        // Strength only while it still has Plow (its Plow is taken away once it's stunned out of the charge).
-        ["CeremonialBeast.PlowMove"] = new(new[] { nameof(StrengthPower) }, (monster, all) => monster.Creature.HasPower<PlowPower>() ? all : Array.Empty<Applied>()),
+        // Strength only while it still has Plow (its Plow is taken away once it's stunned out of the charge); always on main (decision #169).
+        ["CeremonialBeast.PlowMove"] = new(new[] { nameof(StrengthPower) }, (monster, all) =>
+            monster.Creature.HasPower<PlowPower>() || !BranchRules.BetaBehaviour(BranchRules.PlowStrengthNeedsPlow) ? all : Array.Empty<Applied>()),
         // Dampen on a target that doesn't have it yet (one that does only adds the caster): yours decides what's shown.
         ["MagiKnight.DampenMove"] = new(new[] { nameof(DampenPower) }, (monster, all) => Sts2State.Me?.Creature.HasPower<DampenPower>() == true ? Array.Empty<Applied>() : all),
         // Minion on each egg it lays, one per free slot of the encounter (up to 3).

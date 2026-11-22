@@ -206,7 +206,7 @@ public static partial class SimAdapter
     {
         var idMap = new Dictionary<Creature, int>();
         ids = idMap;
-        var state = new SimState();
+        var state = new SimState { MainRules = BranchRules.MainRulesNow() };
         var mates = Teammates(me, combat);
         // Any creature's simulator id (Who): an enemy's, you, or teammate k.
         int? IdOf(Creature creature) => idMap.TryGetValue(creature, out var enemyId) ? enemyId : creature == me.Creature ? Who.You

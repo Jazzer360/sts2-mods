@@ -1,3 +1,4 @@
+using SpireQoL.Diagnostics;
 using System.Text.RegularExpressions;
 using SpireQoL.Sim;
 using Xunit;
@@ -80,7 +81,6 @@ public class GameBranchTests
     /// The main branch's version this code was last reviewed against (docs/DEVELOPMENT.md "When main updates"). A newer main
     /// decompile fails <see cref="MainIsReviewedAtItsVersion"/> until the review is done and this is moved up.
     /// </summary>
-    private const string MainReviewed = "v0.111.1";
 
     private static string MainDecompile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "git", "sts2-decompiled-main");
 
@@ -176,7 +176,7 @@ public class GameBranchTests
 
     /// <summary>
     /// The main decompile is the version this code was reviewed against: a newer one (Steam's main updated) fails until the steps
-    /// in docs/DEVELOPMENT.md "When main updates" are done and <see cref="MainReviewed"/> is moved up.
+    /// in docs/DEVELOPMENT.md "When main updates" are done and SupportedVersions.Main is moved up.
     /// </summary>
     [Fact]
     public void MainIsReviewedAtItsVersion()
@@ -184,9 +184,9 @@ public class GameBranchTests
         var version = Path.Combine(MainDecompile, "VERSION.json");
         if (!File.Exists(version)) return;
         var decompiled = System.Text.Json.JsonDocument.Parse(File.ReadAllText(version)).RootElement.GetProperty("version").GetString();
-        Assert.True(decompiled == MainReviewed, $"The main decompile is {decompiled}, reviewed at {MainReviewed}: follow docs/DEVELOPMENT.md \"When main updates\", then set MainReviewed.");
+        Assert.True(decompiled == SupportedVersions.Main, $"The main decompile is {decompiled}, reviewed at {SupportedVersions.Main}: follow docs/DEVELOPMENT.md \"When main updates\", then set SupportedVersions.Main.");
         // Players on main run the reviewed version: the coverage check accepts it (no report that coverage wasn't checked against it).
-        Assert.Contains(MainReviewed, SpireQoL.Diagnostics.CoverageLedger.ReviewedGameVersions);
+        Assert.Contains(SupportedVersions.Main, SpireQoL.Diagnostics.CoverageLedger.ReviewedGameVersions);
     }
 
     /// <summary>The late damage multiplier's gate: open on beta, and 1 for a model with no late multiplier.</summary>
@@ -202,5 +202,89 @@ public class GameBranchTests
         GameModels.EnsureLoaded();
         var model = MegaCrit.Sts2.Core.Models.ModelDb.Power<MegaCrit.Sts2.Core.Models.Powers.StrengthPower>();
         Assert.Equal(1m, SimReaders.LateMultiplier!.Invoke(model, null, 10m, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move, null, null));
+    }
+
+    // ---- supported versions (decision #170)
+
+    private static string BetaDecompile => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "git", "sts2-decompiled");
+
+    private static string? VersionJson(string decompile, string field)
+    {
+        var version = Path.Combine(decompile, "VERSION.json");
+        return File.Exists(version) ? Regex.Match(File.ReadAllText(version), $"\"{field}\"\\s*:\\s*\"([^\"]+)\"").Groups[1].Value : null;
+    }
+
+    /// <summary>The beta decompile is the build the coverage ledger (SupportedVersions.Beta) was generated and reviewed from (docs/DEVELOPMENT.md "After a game patch").</summary>
+    [Fact]
+    public void BetaIsReviewedAtItsVersion()
+    {
+        if (VersionJson(BetaDecompile, "version") is not { Length: > 0 } decompiled) return;
+        Assert.True(decompiled == SupportedVersions.Beta, $"The beta decompile is {decompiled}, the coverage ledger {SupportedVersions.Beta}: follow docs/DEVELOPMENT.md \"After a game patch\".");
+    }
+
+    /// <summary>
+    /// The installed game is the build of a decompile at its supported version (its assembly's commit), so a Steam update to either branch fails
+    /// the check until it's decompiled and reviewed.
+    /// </summary>
+    [Fact]
+    public void TheInstalledGameIsASupportedBuild()
+    {
+        var installed = typeof(MegaCrit.Sts2.Core.Models.ModelDb).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), inherit: false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion.Split('+').LastOrDefault() ?? "";
+        bool Is(string decompile, string supported) => VersionJson(decompile, "commit") is { Length: > 0 } commit && installed.StartsWith(commit, StringComparison.Ordinal)
+                                                       && VersionJson(decompile, "version") == supported;
+        Assert.True(Is(BetaDecompile, SupportedVersions.Beta) || Is(MainDecompile, SupportedVersions.Main),
+            $"The installed game (build {installed}) is neither beta's {SupportedVersions.Beta} nor main's {SupportedVersions.Main} as decompiled: decompile it (scripts/decompile.ps1) and review it (docs/DEVELOPMENT.md \"After a game patch\", \"When main updates\").");
+    }
+
+    // ---- branch rules (decision #169): a rule whose code differs between the branches, told from the game's code
+
+    private static string BetaAssembly => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "git", "sts2-decompiled", "assembly", "sts2.dll");
+    private static string MainAssembly => Path.Combine(MainDecompile, "assembly", "sts2.dll");
+
+    /// <summary>
+    /// Each branch rule's fact reads as the rule says on beta's assembly and the other way on main's (decision #165's cached assemblies). One
+    /// both branches agree on means main has caught up: beta's behaviour stays, and the rule comes out with main's path, so no branch
+    /// distinction outlives its difference.
+    /// </summary>
+    [Fact]
+    public void EveryBranchRuleStillDiffersBetweenTheBranches()
+    {
+        if (!File.Exists(BetaAssembly) || !File.Exists(MainAssembly)) return;
+        var problems = new List<string>();
+        foreach (var rule in BranchRules.All)
+        {
+            var beta = CodeFacts.Holds(BetaAssembly, rule.Fact);
+            var main = CodeFacts.Holds(MainAssembly, rule.Fact);
+            if (beta != rule.OnBeta) problems.Add($"{rule.Name}: its fact reads {beta} on beta's assembly, the rule says {rule.OnBeta}: fix the fact");
+            else if (main == beta) problems.Add($"{rule.Name}: main's code now does it beta's way ({rule.Why}): take the rule out, and main's path with it");
+        }
+        Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
+    }
+
+    /// <summary>
+    /// The running game reads each fact as its assembly's metadata has it (BranchRules.Holds against CodeFacts.Holds), and has every rule
+    /// beta's way on beta and main's way on main.
+    /// </summary>
+    [Fact]
+    public void TheRunningGameReadsEachRuleAsItsBranchHasIt()
+    {
+        GameModels.EnsureLoaded();
+        var installed = typeof(MegaCrit.Sts2.Core.Models.ModelDb).Assembly.Location;
+        var main = InstalledIsMain();
+        foreach (var rule in BranchRules.All)
+        {
+            Assert.True(BranchRules.Holds(rule.Fact) == CodeFacts.Holds(installed, rule.Fact), $"{rule.Name}: the running game and its assembly read its fact differently");
+            Assert.True(BranchRules.BetaBehaviour(rule) != main, $"{rule.Name}: {(main ? "beta's" : "main's")} way on {(main ? "main" : "beta")}");
+        }
+    }
+
+    /// <summary>Every simulator flag for main's way (MainRule) is set by a branch rule.</summary>
+    [Fact]
+    public void EveryMainRuleFlagHasItsBranchRule()
+    {
+        foreach (var flag in Enum.GetValues<MainRule>().Where(flag => flag != MainRule.None))
+            Assert.True(BranchRules.All.Any(rule => rule.Sim == flag), $"MainRule.{flag} has no branch rule");
     }
 }

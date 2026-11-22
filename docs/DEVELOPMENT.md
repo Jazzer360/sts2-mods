@@ -62,7 +62,8 @@ The Steam branches workflow opens a `steam-update` issue when main (or beta) get
 2. `node scripts/game-names.mjs` (the beta-only and main-only names move).
 3. `dotnet test tests/SpireQoL.Catalog.Tests`: take every gate the tests say main has caught up on off (plain code, main's fallback gone), and move anything main now lacks behind a gate.
 4. `git -C ~/git/sts2-decompiled diff <old main> main --stat` for what else changed on main that the mod reads (docs/FEATURES.md lists every class it touches); a class main changed differently from beta gets a gate of its own.
-5. Set `MainReviewed` to the new version.
+5. Review what main's code does differently from beta's in what the simulator models (`git -C ~/git/sts2-decompiled diff main beta` on the classes the models and card tables name): each difference is a `BranchRule` (decision #169). `EveryBranchRuleStillDiffersBetweenTheBranches` fails a rule main has caught up on: take it out with main's path.
+6. Set `SupportedVersions.Main` (Diagnostics/CoverageLedger.cs) to the new version (decision #170).
 
 ## After a game patch
 

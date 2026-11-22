@@ -5,6 +5,22 @@ using System.Text.Json.Serialization;
 namespace SpireQoL.Sim;
 
 /// <summary>
+/// Where the running game is main's build and main's code does a rule differently from beta's (decision #169: the adapter tells it from
+/// the game's code, SimAdapter.BranchRules): the simulator follows main's way for each flag set. None (the default): beta's, every rule.
+/// </summary>
+[Flags]
+public enum MainRule
+{
+    None = 0,
+    /// <summary>Buffer stops HP lost to Brightest Flame too (beta lets it through).</summary>
+    BufferStopsBrightestFlame = 1,
+    /// <summary>Omnislice's splash is unpowered (Unpowered | Move) through every damage modifier, and Thorns answers it (beta: a powered hit, caps only).</summary>
+    SplashIsUnpowered = 2,
+    /// <summary>Juggling copies the third Attack into your hand as it's played (beta: once it's played).</summary>
+    JugglingCopiesBeforeThePlay = 4,
+}
+
+/// <summary>
 /// Plain combat state for the outcome simulator: no game types, so the simulator can be tested on
 /// its own (tests/SpireQoL.Sim.Tests). SimAdapter builds it from the live game.
 /// Amounts are already through the game's modifiers where the game would apply them (damage per
@@ -724,6 +740,9 @@ public sealed class SimState
     /// and never changed; models read them with SimEngine.Var.
     /// </summary>
     public Dictionary<string, int> Vars = new();
+
+    /// <summary>The rules the running game does main's way (decision #169); None: beta's. Read once from the game, never changed.</summary>
+    public MainRule MainRules;
 
     /// <summary>A card event is being dispatched (draw, exhaust, discard...): what fires then is an indirect proc (the Indirect procs setting).</summary>
     internal bool IndirectNow;

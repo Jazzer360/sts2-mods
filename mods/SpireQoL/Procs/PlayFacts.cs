@@ -1212,9 +1212,11 @@ public sealed class PlayFacts
 
     private static int BaseHitsPerPlay(CardModel card, string name, ICombatState combat, Creature? target, int energy, int stars, int otherCards)
     {
-        // The card's hit count (v0.113.0: HitCount; v0.111.0: Repeat, or the fixed 2 in OnPlay).
+        // The card's hit count: its HitCount var, else its Repeat; main passes the cards below a fixed number in OnPlay instead (decision #169:
+        // AttackHitCountsAreVars, which comes out with the fixed numbers once main has the vars).
         int Hits(int fixedBefore) => card.DynamicVars.ContainsKey("HitCount") ? Sts2State.Var(card, "HitCount", fixedBefore)
-            : fixedBefore > 0 ? fixedBefore : Sts2State.Var(card, "Repeat", fallback: 1);
+            : fixedBefore > 0 && !SpireQoL.Sim.BranchRules.BetaBehaviour(SpireQoL.Sim.BranchRules.AttackHitCountsAreVars) ? fixedBefore
+            : Sts2State.Var(card, "Repeat", fallback: 1);
         try
         {
             // A Shoot card with no arrow to shoot does nothing at all (ArrowCmd.ShootArrowAtTarget returns before
@@ -1228,7 +1230,7 @@ public sealed class PlayFacts
                 // Twice once you've played a Cho or a Ki this turn (WahBlast.HitsTwice: the card glows gold).
                 case nameof(WahBlast):
                     return Sts2State.Private(card, "ShouldGlowGoldInternal", fallback: false) ? 2 : 1;
-                // v0.111.0 passed a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits).
+                // Main passes a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits): AttackHitCountsAreVars.
                 case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
                     return Hits(fixedBefore: 2);
                 case var _ when XHitCards.Contains(name):

@@ -76,7 +76,8 @@ public sealed class MonologuePower : BoundPower
 
 /// <summary>
 /// JugglingPower: the third Attack its owner plays each turn (its own count, Data) is copied into their hand, its amount of times
-/// (BeforeCardPlayed counts and binds the third; AfterCardPlayed adds the copies).
+/// (BeforeCardPlayed counts and binds the third; AfterCardPlayed adds the copies). Main (MainRule.JugglingCopiesBeforeThePlay) adds them as
+/// it counts, before the card resolves.
 /// </summary>
 public sealed class JugglingPower : ProcModel
 {
@@ -85,7 +86,9 @@ public sealed class JugglingPower : ProcModel
         if (!Mine(play, owner) || play.Card.Type != SimCardType.Attack) return One(state);
         var count = Data(state, owner) + 1;
         Set(state, owner, Amount(state, owner), count);
-        if (count == 3) Bind(state, owner, Amount(state, owner));
+        if (count != 3) return One(state);
+        if (state.MainRules.HasFlag(MainRule.JugglingCopiesBeforeThePlay)) return MakeInHand(Fire(state, owner), CardEvent.Generated, Amount(state, owner), owner);
+        Bind(state, owner, Amount(state, owner));
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>

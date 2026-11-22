@@ -13,7 +13,9 @@ public sealed class ThornsPower : SimModel
     public override bool Harmful => true;
     public override void BeforeDamageReceived(SimState state, int owner, DamageCtx damage, int amount)
     {
-        if (damage.Target != owner || owner < 0 || damage.Dealer is not { } dealer || !damage.Props.IsPoweredAttack()) return;
+        // Main's Thorns answers Omnislice's unpowered splash too (cardSource is Omnislice: MainRule.SplashIsUnpowered).
+        var answers = damage.Props.IsPoweredAttack() || state.MainRules.HasFlag(MainRule.SplashIsUnpowered) && damage.Card?.Name == CardId.Omnislice.Name;
+        if (damage.Target != owner || owner < 0 || damage.Dealer is not { } dealer || !answers) return;
         var thorns = SimEngine.PowerOn(state, owner, ThisPower);
         if (thorns <= 0) return;
         var name = (state.Enemy(owner)?.Name ?? "Enemy") + " Thorns";

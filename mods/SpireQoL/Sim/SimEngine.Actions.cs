@@ -269,8 +269,18 @@ public static partial class SimEngine
         if (card != null && !at.ByOsty && !state.FirstHits.ContainsKey(target) && !state.Fired.Has(nameof(Models.MightyWings))) state.FirstHits = state.FirstHits.Add(target, amount);
         if (amount <= 0) return new[] { state };
         if (state.Enemy(target) is { Alive: true } enemy) Damage(state, enemy, amount, dealer, spec.Props, card);
-        // Rain Shot: the target's damage to every other hittable enemy (only caps apply).
-        if (at.Splash) foreach (var other in state.Targetable.Where(simEnemy => simEnemy.Id != target).ToList()) Damage(state, other, amount, dealer, spec.Props, card);
+        // Rain Shot, Omnislice: the target's damage to every other hittable enemy. Beta: a powered hit, only caps apply. Main (MainRule
+        // .SplashIsUnpowered): unpowered (Unpowered | Move), through every damage modifier.
+        if (at.Splash)
+        {
+            var unpowered = state.MainRules.HasFlag(MainRule.SplashIsUnpowered);
+            var props = unpowered ? SimProps.Unpowered | SimProps.Move : spec.Props;
+            foreach (var other in state.Targetable.Where(simEnemy => simEnemy.Id != target).ToList())
+            {
+                var splash = unpowered ? CalcDamage(state, amount, new DamageCtx(dealer, other.Id, props, card, state.CurrentPlay)) : amount;
+                if (splash > 0) Damage(state, other, splash, dealer, props, card);
+            }
+        }
         AllyDeaths(state); // a death runs its hooks as it happens (AfterDeath: Impaled lets its arrows go, Crab Rage, Explosive)
         return DrainPending(state); // what the hit set off where hooks can't branch (an arrow knocked loose: Yah, Twine)
     }
