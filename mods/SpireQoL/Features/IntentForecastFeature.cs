@@ -66,7 +66,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                .AttachTo(() => IntentRect(_enemy), AttachSide.RightOfBottom);
         // No backdrop: the intents float like the game's own (the labels carry an outline instead).
         _rows = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        _rows.AddThemeConstantOverride("separation", 2);
+        _rows.AddThemeConstantOverride(GodotNames.Name("separation"), 2);
         _widget.Content.AddChild(_rows);
     }
 
@@ -137,7 +137,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     private static float? IconCentre(Control holder)
     {
         if (holder.GetParent()?.GetChildren().OfType<NIntent>().FirstOrDefault() is not { } intent) return null;
-        if (intent.GetNodeOrNull<Node2D>("%Intent") is not { } sprite) return null;
+        if (intent.GetNodeOrNull<Node2D>(GodotNames.Path("%Intent")) is not { } sprite) return null;
         return (holder.GetGlobalTransform().AffineInverse() * sprite.GlobalPosition).Y;
     }
 
@@ -155,8 +155,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
 
     private static Label Outlined(Label label)
     {
-        label.AddThemeConstantOverride("outline_size", 6);
-        label.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
+        label.AddThemeConstantOverride(GodotNames.Name("outline_size"), 6);
+        label.AddThemeColorOverride(GodotNames.Name("font_outline_color"), new Color(0, 0, 0, 0.9f));
         return label;
     }
 
@@ -196,7 +196,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             foreach (var (moveId, chance) in turn.Moves)
             {
                 var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.Center };
-                column.AddThemeConstantOverride("separation", 0);
+                column.AddThemeConstantOverride(GodotNames.Name("separation"), 0);
                 row.AddChild(column);
                 var pct = Outlined(UiKit.Label($"{Math.Round(chance * 100)}%", size: 18, ChanceColor));
                 pct.HorizontalAlignment = HorizontalAlignment.Center;

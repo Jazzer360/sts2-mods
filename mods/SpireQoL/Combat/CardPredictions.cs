@@ -43,8 +43,10 @@ public sealed class CardPredictions
 
     private readonly Dictionary<CardModel, PlayFacts> _lastFacts = new(ReferenceEqualityComparer.Instance);
 
-    public IReadOnlyDictionary<CardModel, PlayFacts> PreviousFacts { get; private set; }
-        = new Dictionary<CardModel, PlayFacts>(ReferenceEqualityComparer.Instance);
+    public IReadOnlyDictionary<CardModel, PlayFacts> PreviousFacts => _previousFacts;
+
+    /// <summary>Last frame's facts and this frame's swap places every frame: two dictionaries, none made per frame.</summary>
+    private Dictionary<CardModel, PlayFacts> _previousFacts = new(ReferenceEqualityComparer.Instance);
 
     private Dictionary<CardModel, PlayFacts> _facts = new(ReferenceEqualityComparer.Instance);
     /// <summary>The frame _facts were filled on (worked out or reused).</summary>
@@ -69,10 +71,10 @@ public sealed class CardPredictions
     {
         // Keep last frame's facts for the audit, even on frames where nothing is computed (the
         // hand just emptied, the turn is ending).
-        if (_facts.Count > 0 || PreviousFacts.Count > 0)
+        if (_facts.Count > 0 || _previousFacts.Count > 0)
         {
-            PreviousFacts = _facts;
-            _facts = new Dictionary<CardModel, PlayFacts>(ReferenceEqualityComparer.Instance);
+            (_previousFacts, _facts) = (_facts, _previousFacts);
+            _facts.Clear();
         }
 
         var me = Sts2State.Me;
@@ -87,7 +89,7 @@ public sealed class CardPredictions
         _indirect = _ctx.Settings.ProcIndirect;
 
         // Nothing changed since a frame whose every result was final: its facts and tabs again, without reading each card again
-        // (decision #114). In dev mode every 30th such frame is worked out anyway and checked against what would have been reused.
+        // (decision #114). In dev mode once a second such a frame is worked out anyway and checked against what would have been reused.
         // The forecast's start, not its result (decision #166): every card's search starts from it alongside the forecast's own.
         var begun = Start();
         // The frame key reads every card through the game's hooks (its play count, whether it can be played): on a frame where the
@@ -194,7 +196,7 @@ public sealed class CardPredictions
     /// <summary>Last frame's facts and tabs again: kept for the audits (PreviousFacts, LastTabs) as a frame of their own.</summary>
     private List<(CardModel Card, List<TabSpec> Tabs)> Reuse(ICombatState combat)
     {
-        foreach (var entry in PreviousFacts) _facts[entry.Key] = entry.Value;
+        foreach (var entry in _previousFacts) _facts[entry.Key] = entry.Value;
         _factsFrame = Godot.Engine.GetProcessFrames();
         foreach (var (card, tabs) in _reuseTabs) _lastTabs[card] = (_ctx.Decor.Frame, tabs, combat, Sts2State.TurnNumber);
         return _reuseTabs;

@@ -120,10 +120,10 @@ public sealed partial class SettingsMenu
     private static MarginContainer Indented(Control control, int left = 8, int top = 0, int bottom = 0)
     {
         var marginContainer = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Pass };
-        marginContainer.AddThemeConstantOverride("margin_left", left);
-        marginContainer.AddThemeConstantOverride("margin_right", 8);
-        marginContainer.AddThemeConstantOverride("margin_top", top);
-        marginContainer.AddThemeConstantOverride("margin_bottom", bottom);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_left"), left);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_right"), 8);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_top"), top);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_bottom"), bottom);
         marginContainer.AddChild(control);
         return marginContainer;
     }

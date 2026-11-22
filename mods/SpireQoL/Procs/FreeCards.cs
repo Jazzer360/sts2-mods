@@ -67,6 +67,24 @@ internal static class FreeCards
         return uses;
     }
 
+    private static readonly List<CardModel> Gone = new();
+
+    private static bool InHand(IReadOnlyList<CardModel> hand, CardModel card)
+    {
+        for (var i = 0; i < hand.Count; i++)
+            if (ReferenceEquals(hand[i], card)) return true;
+        return false;
+    }
+
+    /// <summary>ActiveOn(card, me).Count > 0, without the list (Observe, every frame).</summary>
+    private static bool AnyActiveOn(CardModel card, Player me)
+    {
+        var powers = me.Creature.Powers;
+        for (var i = 0; i < powers.Count; i++)
+            if (powers[i].Amount > 0 && Powers.Contains(powers[i].GetType().Name) && Applies(powers[i], card)) return true;
+        return false;
+    }
+
     private static List<PowerModel> ActiveOn(CardModel card, Player me) =>
         me.Creature.Powers.Where(power => power.Amount > 0 && Powers.Contains(power.GetType().Name) && Applies(power, card)).ToList();
 
@@ -83,10 +101,13 @@ internal static class FreeCards
     {
         try
         {
-            var inHand = new HashSet<CardModel>(hand, ReferenceEqualityComparer.Instance);
-            foreach (var gone in Seen.Keys.Where(card => !inHand.Contains(card)).ToList()) Seen.Remove(gone);
-            foreach (var card in hand)
-                if (ActiveOn(card, me).Count == 0 && LocalModifiers(card) is { } mods) Seen[card] = mods.Count;
+            // Every frame: nothing made unless a card left your hand (Gone, kept between frames).
+            Gone.Clear();
+            foreach (var card in Seen.Keys)
+                if (!InHand(hand, card)) Gone.Add(card);
+            foreach (var card in Gone) Seen.Remove(card);
+            for (var i = 0; i < hand.Count; i++)
+                if (!AnyActiveOn(hand[i], me) && LocalModifiers(hand[i]) is { } mods) Seen[hand[i]] = mods.Count;
         }
         catch
         {

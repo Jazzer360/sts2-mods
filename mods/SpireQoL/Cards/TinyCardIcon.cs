@@ -1,6 +1,7 @@
 using Godot;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.RunHistoryScreen;
+using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Cards;
 
@@ -38,9 +39,9 @@ internal sealed class TinyCardIcon
     public void Fit()
     {
         if (_entry == null || !GodotObject.IsInstanceValid(_entry)) return;
-        if (_entry.GetNodeOrNull<Control>("%Label") is { } label && label.GetParent() is Control labelBox) labelBox.Visible = false;
-        if (_entry.GetNodeOrNull<Control>("%Enchantment") is { } ench) ench.Visible = false;
-        if (_entry.GetNodeOrNull<Control>("%Card") is not { } tiny || tiny.Size.X < 1 || tiny.Size.Y < 1) return;
+        if (_entry.GetNodeOrNull<Control>(GodotNames.Path("%Label")) is { } label && label.GetParent() is Control labelBox) labelBox.Visible = false;
+        if (_entry.GetNodeOrNull<Control>(GodotNames.Path("%Enchantment")) is { } ench) ench.Visible = false;
+        if (_entry.GetNodeOrNull<Control>(GodotNames.Path("%Card")) is not { } tiny || tiny.Size.X < 1 || tiny.Size.Y < 1) return;
         // Centre what the tiny card draws, not its layout box: its art needn't fill the box or sit in its middle.
         // In the entry's own unscaled units (the tiny card can be nested).
         var toEntry = _entry.GetGlobalTransform().AffineInverse();

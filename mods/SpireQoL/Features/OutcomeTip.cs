@@ -24,10 +24,10 @@ internal sealed class OutcomeTip
     public OutcomeTip(Control parent)
     {
         _root = new PanelContainer { TopLevel = true, Visible = false, MouseFilter = Control.MouseFilterEnum.Ignore, ZIndex = 100 };
-        _root.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.06f, 0.06f, 0.09f, 0.94f), radius: 6, margin: 10));
+        _root.AddThemeStyleboxOverride(GodotNames.Name("panel"), UiKit.PanelStyle(new Color(0.06f, 0.06f, 0.09f, 0.94f), radius: 6, margin: 10));
         _rows = new GridContainer { Columns = 3, MouseFilter = Control.MouseFilterEnum.Ignore };
-        _rows.AddThemeConstantOverride("h_separation", 12);
-        _rows.AddThemeConstantOverride("v_separation", 3);
+        _rows.AddThemeConstantOverride(GodotNames.Name("h_separation"), 12);
+        _rows.AddThemeConstantOverride(GodotNames.Name("v_separation"), 3);
         _root.AddChild(_rows);
         parent.AddChild(_root);
     }

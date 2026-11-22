@@ -368,11 +368,14 @@ public sealed class TurnEndModel
         if (me?.PlayerCombatState == null || combat == null) return null;
 
         // Nothing a prediction reads changed since last frame, and its search is over (decision #130): last frame's model,
-        // without reading the board again. Dev mode works it out anyway every 30th such frame and logs it if the key differs.
+        // without reading the board again. Dev mode works it out anyway on such a frame once a second and logs it if the key differs.
         var probe = BoardProbe.Hash(me, combat);
         var reuse = ForecastReuse.Decide(!ownBudget && _lastModel is { Job.Ready.IsCompleted: true } && _lastModelProbe == probe);
         if (reuse == FrameReuse.Reuse && _lastModel is { Job: { } lastJob } reused)
-            return new ForecastStart(reused.State, reused.StateKey, reused.FullState, reused._fullKey, reused.Ids, reused.Teammates, reused._myHp, probe, lastJob, reused);
+            // The same start as the last reused frame when it was for this model and probe: nothing made on a quiet board.
+            return _reusedStart is { } same && ReferenceEquals(same.Reused, reused) && same.Probe == probe && ReferenceEquals(same.Job, lastJob)
+                ? same
+                : _reusedStart = new ForecastStart(reused.State, reused.StateKey, reused.FullState, reused._fullKey, reused.Ids, reused.Teammates, reused._myHp, probe, lastJob, reused);
         var probeCheck = reuse == FrameReuse.WorkOutAndCheck ? _lastModel : null;
 
         // The board as it is, even mid-resolution (decision #28): the tabs don't run plays still resolving.
@@ -421,6 +424,8 @@ public sealed class TurnEndModel
     /// <summary>The board probe <see cref="_lastModel"/> was worked out from (decision #130).</summary>
     private static int _lastModelProbe;
     private static readonly ReuseCheck ForecastReuse = new("the turn forecast");
+    /// <summary>The start BeginNow last handed back for a reused model (kept while the model and the probe stay the same).</summary>
+    private static ForecastStart? _reusedStart;
 
     private static TurnEndModel From(SimState state, long key, SimOutcome outcome, IReadOnlyDictionary<Creature, int> ids,
         IReadOnlyList<Player> teammates, int myHp)

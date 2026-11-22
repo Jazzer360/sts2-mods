@@ -17,7 +17,7 @@ public sealed class TickBar
         _segWidth = segWidth;
         _height = height;
         Root = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        Root.AddThemeConstantOverride("separation", 2);
+        Root.AddThemeConstantOverride(GodotNames.Name("separation"), 2);
         Root.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
     }
 
@@ -29,7 +29,7 @@ public sealed class TickBar
         // Long counters (e.g. 33) get thinner segments so every bar stays about the same length.
         var width = total <= 12 ? _segWidth : Math.Max(2f, _segWidth * 12f / total);
         var gap = total <= 12 ? 2 : 1;
-        Root.AddThemeConstantOverride("separation", gap);
+        Root.AddThemeConstantOverride(GodotNames.Name("separation"), gap);
         while (_segments.Count < total)
         {
             var seg = new ColorRect { MouseFilter = Control.MouseFilterEnum.Ignore };

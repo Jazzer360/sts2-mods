@@ -46,8 +46,8 @@ internal static class IntentCorner
     /// <summary>Puts these chips in the intent's corner (none: removes them). Rebuilt only when what they show changes.</summary>
     public static void Place(NIntent intent, IReadOnlyList<MovePowers.Applied>? powers)
     {
-        if (intent.GetNodeOrNull<Control>("%IntentHolder") is not { } holder) return;
-        var row = holder.GetNodeOrNull<HBoxContainer>(PowersName);
+        if (intent.GetNodeOrNull<Control>(GodotNames.Path("%IntentHolder")) is not { } holder) return;
+        var row = holder.GetNodeOrNull<HBoxContainer>(GodotNames.Path(PowersName));
         if (powers is not { Count: > 0 })
         {
             row.RemoveAndFree();
@@ -71,7 +71,7 @@ internal static class IntentCorner
         var size = row.GetCombinedMinimumSize();
         row.Size = size;
         // The bottom-right corner, as the game's %Value label (an attack's damage); else the holder's own corner.
-        if (intent.GetNodeOrNull<Control>("%Value") is { } value)
+        if (intent.GetNodeOrNull<Control>(GodotNames.Path("%Value")) is { } value)
             row.Position = new Vector2(value.Position.X + value.Size.X - size.X, value.Position.Y + value.Size.Y - size.Y);
         else
             row.Position = new Vector2(holder.Size.X - size.X, holder.Size.Y - size.Y);
@@ -88,8 +88,8 @@ internal static class IntentCorner
         if (applied.Amount is { } otherAmount)
         {
             var amount = UiKit.Label(otherAmount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture), FontSize, Colors.White);
-            amount.AddThemeConstantOverride("outline_size", 4);
-            amount.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.95f));
+            amount.AddThemeConstantOverride(GodotNames.Name("outline_size"), 4);
+            amount.AddThemeColorOverride(GodotNames.Name("font_outline_color"), new Color(0, 0, 0, 0.95f));
             amount.VerticalAlignment = VerticalAlignment.Bottom;
             amount.MouseFilter = Control.MouseFilterEnum.Ignore;
             chip.AddChild(amount);
@@ -98,8 +98,8 @@ internal static class IntentCorner
         {
             // Only on some of the move's branches, and nothing tells which yet (decision #109).
             var maybe = UiKit.Label("?", FontSize, Colors.White);
-            maybe.AddThemeConstantOverride("outline_size", 4);
-            maybe.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.95f));
+            maybe.AddThemeConstantOverride(GodotNames.Name("outline_size"), 4);
+            maybe.AddThemeColorOverride(GodotNames.Name("font_outline_color"), new Color(0, 0, 0, 0.95f));
             maybe.VerticalAlignment = VerticalAlignment.Bottom;
             maybe.MouseFilter = Control.MouseFilterEnum.Ignore;
             chip.AddChild(maybe);

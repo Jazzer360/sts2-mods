@@ -135,7 +135,7 @@ public sealed class CardOverlayRenderer
         // don't linger on a reused node.
         if (existing?.TagLayer != null && GodotObject.IsInstanceValid(existing.TagLayer)) existing.TagLayer.QueueFree();
 
-        var container = card.GetNodeOrNull<Control>("%CardContainer") ?? card;
+        var container = card.GetNodeOrNull<Control>(GodotNames.Path("%CardContainer")) ?? card;
 
         var overlay = new Control { Name = OverlayName, MouseFilter = Control.MouseFilterEnum.Ignore };
         container.AddChild(overlay);
@@ -156,7 +156,7 @@ public sealed class CardOverlayRenderer
 
         public Example(NCard card)
         {
-            var container = card.GetNodeOrNull<Control>("%CardContainer") ?? card;
+            var container = card.GetNodeOrNull<Control>(GodotNames.Path("%CardContainer")) ?? card;
             var overlay = new Control { Name = OverlayName, MouseFilter = Control.MouseFilterEnum.Ignore };
             container.AddChild(overlay);
             _entry = new Entry { Card = card, Container = container, Overlay = overlay };
@@ -172,7 +172,7 @@ public sealed class CardOverlayRenderer
     private static void Apply(Entry entry, CardDecor decor)
     {
         // Follow the card frame's transform inside the container.
-        var frame = entry.Card.GetNodeOrNull<Control>("%Frame");
+        var frame = entry.Card.GetNodeOrNull<Control>(GodotNames.Path("%Frame"));
         Vector2 size;
         if (frame != null && frame != entry.Container && frame.Size.X > 1)
         {
@@ -376,9 +376,9 @@ public sealed class CardOverlayRenderer
                 own.SetShaderParameter("s", 0.4);
                 own.SetShaderParameter("v", 0.6);
             }
-            if (tab.GetNodeOrNull<Label>("Label") is { } tint) tint.SelfModulate = Colors.White;
+            if (tab.GetNodeOrNull<Label>(GodotNames.Path("Label")) is { } tint) tint.SelfModulate = Colors.White;
 
-            if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
+            if (tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } icon)
             {
                 // Keep the icon upright, slightly smaller, and centered in the part of the tag that
                 // sticks out above the card. In the tab's own (unrotated) coordinates the length
@@ -397,7 +397,7 @@ public sealed class CardOverlayRenderer
                 // through the backdrop's green colorize shader; Duplicate() copies whatever it was.
                 icon.UseParentMaterial = false;
                 icon.Modulate = spec.Crossed ? new Color(1, 1, 1, 0.8f) : Colors.White;
-                if (icon.GetNodeOrNull<ColorRect>("SpireQoL_Slash") is { } slash)
+                if (icon.GetNodeOrNull<ColorRect>(GodotNames.Path("SpireQoL_Slash")) is { } slash)
                 {
                     slash.Visible = spec.Crossed;
                     if (spec.Crossed) LayoutSlash(slash, icon.Size);
@@ -405,7 +405,7 @@ public sealed class CardOverlayRenderer
                 // Aim marker (decision #55): it happens only at some targets. The targeting arrow's head in the icon's top-left
                 // corner, clear of the slash (bottom-left to top-right) and the number (bottom-right). A tab's own marker (the heart:
                 // decision #83) goes in the same corner.
-                if (icon.GetNodeOrNull<TextureRect>("SpireQoL_Aim") is { } aim)
+                if (icon.GetNodeOrNull<TextureRect>(GodotNames.Path("SpireQoL_Aim")) is { } aim)
                 {
                     var arrow = spec.Marker ?? (spec.Aimed ? GameIcons.TargetArrow() : null);
                     aim.Visible = GameIcons.Valid(arrow);
@@ -413,10 +413,10 @@ public sealed class CardOverlayRenderer
                 }
             }
             // The tab's number label shows only on quantified tabs (block / damage / summon procs, energy a free card saves or "?").
-            if (tab.GetNodeOrNull<Label>("Label") is { } label)
+            if (tab.GetNodeOrNull<Label>(GodotNames.Path("Label")) is { } label)
             {
                 label.Visible = spec.Number != null || spec.Text != null || spec.NumberText != null;
-                if (spec.Text != null && tab.GetNodeOrNull<TextureRect>("Icon") is { } otherIcon)
+                if (spec.Text != null && tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } otherIcon)
                 {
                     // Text tab: the text fills the icon's slot, upright. The label is the game's
                     // auto-sizing MegaLabel: give it the icon's box and a large max font size, and
@@ -443,7 +443,7 @@ public sealed class CardOverlayRenderer
                     label.Rotation = -Mathf.Pi / 2f;
                     label.Position = otherIcon.Position + otherIcon.Size / 2f + new Vector2(two ? box.X * 0.24f : 0, 0) - label.Size / 2f;
                 }
-                else if ((spec.Number?.ToString() ?? spec.NumberText) is { } numberText && tab.GetNodeOrNull<TextureRect>("Icon") is { } nextIcon)
+                else if ((spec.Number?.ToString() ?? spec.NumberText) is { } numberText && tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } nextIcon)
                 {
                     RestoreLabel(label);
                     InCorner(label, numberText, nextIcon);
@@ -451,10 +451,10 @@ public sealed class CardOverlayRenderer
             }
             // A text tab with a count too (a drawn-card chance tab: how many, centred above its chance: decisions #119, #124): the
             // count on a second label made with the tab, in the game's number style.
-            if (tab.GetNodeOrNull<Label>("SpireQoL_Corner") is { } second)
+            if (tab.GetNodeOrNull<Label>(GodotNames.Path("SpireQoL_Corner")) is { } second)
             {
                 second.Visible = spec.Text != null && spec.NumberText != null;
-                if (second.Visible && tab.GetNodeOrNull<TextureRect>("Icon") is { } ic2) AboveText(second, spec.NumberText!, ic2);
+                if (second.Visible && tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } ic2) AboveText(second, spec.NumberText!, ic2);
             }
         }
     }
@@ -549,7 +549,7 @@ public sealed class CardOverlayRenderer
             own.SetShaderParameter("v", 0.6);
             tab.Material = own;
         }
-        if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
+        if (tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } icon)
         {
             icon.AddChild(new ColorRect
             {
@@ -568,7 +568,7 @@ public sealed class CardOverlayRenderer
             });
         }
         // The corner number of a text tab that has one (decision #119), copied from the game's label before anything changes it.
-        if (tab.GetNodeOrNull<Label>("Label") is { } number)
+        if (tab.GetNodeOrNull<Label>(GodotNames.Path("Label")) is { } number)
         {
             var second = (Label)number.Duplicate();
             second.Name = "SpireQoL_Corner";

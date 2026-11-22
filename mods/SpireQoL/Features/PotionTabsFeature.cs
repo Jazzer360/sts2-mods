@@ -73,6 +73,9 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     /// <summary>Main's potion slots: its private list (main has no Holders).</summary>
     private static readonly System.Reflection.FieldInfo? MainHoldersField = AccessTools.Field(typeof(NPotionContainer), "_holders");
 
+    /// <summary>What the tabs were last drawn for (OnFrame): drawn again only when it changes.</summary>
+    private int _drawnFor;
+
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
@@ -81,6 +84,19 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             : null;
         if (_proto == null) TakeProto();
         Check(me);
+        // The same potions in the same slots, the same board (settings among it) and container as last frame: the tabs stand as drawn.
+        var drawnFor = new HashCode();
+        drawnFor.Add(host.HideAll);
+        drawnFor.Add(Sts2State.InCombat);
+        drawnFor.Add(NRun.Instance?.GlobalUi?.TopBar?.PotionContainer is { } shownContainer && GodotObject.IsInstanceValid(shownContainer) ? shownContainer.GetInstanceId() : 0);
+        if (me != null)
+        {
+            if (Sts2State.Combat is { } combat) drawnFor.Add(SpireQoL.Combat.BoardProbe.Hash(me, combat));
+            var slots = me.PotionSlots;
+            for (var i = 0; i < slots.Count; i++) drawnFor.Add(slots[i] == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(slots[i]));
+        }
+        if (drawnFor.ToHashCode() == _drawnFor) return;
+        _drawnFor = drawnFor.ToHashCode();
         var seen = new HashSet<ulong>();
         if (me != null && holders != null && Sts2State.InCombat && !host.HideAll)
         {
@@ -171,8 +187,8 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             tab.Position = new Vector2(left + i * step, top + tagH);
             tab.Modulate = Colors.White;
             tab.SelfModulate = Colors.White;
-            if (tab.GetNodeOrNull<Label>("Label") is { } label) label.Visible = false;
-            if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
+            if (tab.GetNodeOrNull<Label>(GodotNames.Path("Label")) is { } label) label.Visible = false;
+            if (tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } icon)
             {
                 // Upright and centered in the part that hangs below the potion (x ∈ [0, length × (1 − overlap)]).
                 var center = new Vector2(tab.Size.X * (1f - TabOverlap) / 2f, tab.Size.Y / 2f);
@@ -185,7 +201,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
                 icon.Texture = GameIcons.Valid(tex) ? tex : null;
                 icon.UseParentMaterial = false;
                 icon.Modulate = crossed ? new Color(1, 1, 1, 0.8f) : Colors.White;
-                if (icon.GetNodeOrNull<ColorRect>("SpireQoL_Slash") is { } slash)
+                if (icon.GetNodeOrNull<ColorRect>(GodotNames.Path("SpireQoL_Slash")) is { } slash)
                 {
                     slash.Visible = crossed;
                     if (crossed) CardOverlayRenderer.LayoutSlash(slash, icon.Size);
@@ -208,7 +224,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             own.SetShaderParameter("v", 0.6);
             tab.Material = own;
         }
-        if (tab.GetNodeOrNull<TextureRect>("Icon") is { } icon)
+        if (tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } icon)
         {
             icon.AddChild(new ColorRect { Name = "SpireQoL_Slash", Color = SlashColor, MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false });
         }

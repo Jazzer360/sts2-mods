@@ -74,6 +74,11 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
                .AttachTo(Sts2State.PlayerHpBarRect, AttachSide.RightOfBottom);
     }
 
+    private readonly List<(AbstractModel Model, int Sort, RowState State, int Order)> _entries = new();
+    private readonly List<AbstractModel> _gone = new();
+    private static readonly Comparison<(AbstractModel Model, int Sort, RowState State, int Order)> ByKey =
+        (left, right) => left.Sort != right.Sort ? left.Sort.CompareTo(right.Sort) : left.Order.CompareTo(right.Order);
+
     public void OnFrame(OverlayHost host)
     {
         var widget = _widget!;
@@ -86,8 +91,9 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
 
         foreach (var row in _rows.Values) row.Seen = false;
 
-        // (model, sort key, state)
-        var entries = new List<(AbstractModel Model, int Sort, RowState State)>();
+        // (model, sort key, state): kept between frames, filled again each one
+        var entries = _entries;
+        entries.Clear();
 
         foreach (var relic in me.Relics)
         {
@@ -95,21 +101,24 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             if (spec == null || !spec.InTray || !_ctx.Settings.TrackerEnabled(spec.TypeName, !spec.TurnTimer)) continue;
             if (Evaluate(relic, spec, me) is { } state)
             {
-                entries.Add((relic, spec.CrossTurn ? 0 : 2, state));
+                entries.Add((relic, spec.CrossTurn ? 0 : 2, state, 0));
             }
         }
 
         foreach (var (power, spec) in CountdownPowers(me))
         {
             if (!_ctx.Settings.TrackerEnabled(spec.TypeName)) continue;
-            entries.Add((power, spec.CrossTurn ? 1 : 3, EvaluatePower(power, spec)));
+            entries.Add((power, spec.CrossTurn ? 1 : 3, EvaluatePower(power, spec), 0));
         }
 
         // Make It So (a card, decision #42): your Skills this turn toward its next return.
-        if (Sts2State.InCombat && _ctx.Settings.TrackerEnabled(Procs.ReturnToHand.MakeItSo) && MakeItSo(me) is { } mis) entries.Add((mis.Card, 3, mis.State));
+        if (Sts2State.InCombat && _ctx.Settings.TrackerEnabled(Procs.ReturnToHand.MakeItSo) && MakeItSo(me) is { } mis) entries.Add((mis.Card, 3, mis.State, 0));
 
+        // By sort key, in the order they were found within one (a stable sort: List.Sort isn't, so the order found breaks ties).
+        for (var i = 0; i < entries.Count; i++) entries[i] = entries[i] with { Order = i };
+        entries.Sort(ByKey);
         var index = 0;
-        foreach (var (model, _, state) in entries.OrderBy(entry => entry.Sort))
+        foreach (var (model, _, state, _) in entries)
         {
             if (!_rows.TryGetValue(model, out var row))
             {
@@ -129,11 +138,13 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             Paint(row, state, OverlayHost.Time, _ctx.Settings.FlashHz);
         }
 
-        foreach (var (model, row) in _rows.ToList())
+        _gone.Clear();
+        foreach (var (model, row) in _rows)
+            if (!row.Seen) _gone.Add(model);
+        foreach (var model in _gone)
         {
-            if (row.Seen) continue;
-            row.Root.Visible = false;
-            row.Root.QueueFree();
+            _rows[model].Root.Visible = false;
+            _rows[model].Root.QueueFree();
             _rows.Remove(model);
         }
 
@@ -158,7 +169,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         row.Bar.Root.Visible = showBar;
         if (showBar) row.Bar.Set(state.Filled, state.Total, fill, Empty);
         row.Text.Text = state.Label;
-        if (!showBar) row.Text.AddThemeColorOverride("font_color", fill);
+        if (!showBar) row.Text.AddThemeColorOverride(GodotNames.Name("font_color"), fill);
     }
 
     /// <summary>The bar colors, by what a row counts (the Guide page names them).</summary>

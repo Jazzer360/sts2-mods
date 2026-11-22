@@ -13,14 +13,14 @@ public enum FrameReuse
 
 /// <summary>
 /// The rule every result kept between frames follows (decisions #114, #130): reused while nothing it reads has changed (the board
-/// probe, a key), except that dev mode works it out anyway every <see cref="BoardProbe.CheckEvery"/>th such frame and compares. A
+/// probe, a key), except that dev mode works it out anyway on such a frame once every <see cref="BoardProbe.CheckSeconds"/> and compares. A
 /// difference means the probe or the key missed a change: logged once (<see cref="BoardProbe.Missed"/>), so a stale result shows up
 /// in the logs before it shows on screen. An optimization that can be wrong carries the check that says when it is.
 /// </summary>
 public sealed class ReuseCheck
 {
     private readonly string _what;
-    private int _reusedSinceCheck;
+    private long _lastCheck;
 
     /// <param name="what">What's kept, as the log names it ("the turn forecast", "Card Indicators").</param>
     public ReuseCheck(string what) => _what = what;
@@ -29,8 +29,10 @@ public sealed class ReuseCheck
     public FrameReuse Decide(bool unchanged)
     {
         if (!unchanged) return FrameReuse.WorkOut;
-        if (!ModEntry.DevMode || ++_reusedSinceCheck < BoardProbe.CheckEvery) return FrameReuse.Reuse;
-        _reusedSinceCheck = 0;
+        if (!ModEntry.DevMode) return FrameReuse.Reuse;
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        if (System.Diagnostics.Stopwatch.GetElapsedTime(_lastCheck, now).TotalSeconds < BoardProbe.CheckSeconds) return FrameReuse.Reuse;
+        _lastCheck = now;
         return FrameReuse.WorkOutAndCheck;
     }
 

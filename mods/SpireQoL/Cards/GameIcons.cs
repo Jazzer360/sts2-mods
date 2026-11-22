@@ -1,6 +1,7 @@
 using Godot;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Cards;
 
@@ -179,7 +180,7 @@ public static class GameIcons
     {
         try
         {
-            var icon = button?.GetNodeOrNull<Control>("Icon");
+            var icon = button?.GetNodeOrNull<Control>(GodotNames.Path("Icon"));
             return icon switch
             {
                 TextureRect otherIcon => otherIcon.Texture,

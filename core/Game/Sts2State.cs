@@ -1,3 +1,4 @@
+using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Context;
@@ -6,6 +7,7 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using Sts2Mods.Core.Ui;
 
 namespace Sts2Mods.Core.Game;
 
@@ -33,8 +35,26 @@ public static class Sts2State
 
     public static CombatState? Combat => InCombat ? _combat : null;
 
-    /// <summary>The local player in the current combat, or null.</summary>
-    public static Player? Me => Combat is { } combat ? LocalContext.GetMe(combat) : null;
+    /// <summary>
+    /// The local player in the current combat, or null. Kept for the fight (the same combat and local id): the game's lookup
+    /// (CombatState.GetPlayer) builds three lists every call, and every feature asks several times a frame.
+    /// </summary>
+    public static Player? Me
+    {
+        get
+        {
+            if (Combat is not { } combat) return null;
+            var netId = LocalContext.NetId;
+            if (ReferenceEquals(combat, _meCombat) && netId == _meNetId && _me != null) return _me;
+            var me = LocalContext.GetMe(combat);
+            (_me, _meCombat, _meNetId) = (me, combat, netId);
+            return me;
+        }
+    }
+
+    private static Player? _me;
+    private static CombatState? _meCombat;
+    private static ulong? _meNetId;
 
     public static bool IsPlayerTurn => Combat is { } combat && combat.CurrentSide == CombatSide.Player
         && !CombatManager.Instance.EndingPlayerTurnPhaseOne && !CombatManager.Instance.EndingPlayerTurnPhaseTwo
@@ -57,8 +77,11 @@ public static class Sts2State
         var hand = NPlayerHand.Instance;
         if (hand == null) yield break;
         NCard? first = null;
-        foreach (var holder in hand.ActiveHolders)
+        // ActiveHolders makes three lists and a child array each call: the visible holders by index instead.
+        var container = hand.CardHolderContainer;
+        for (var i = 0; container != null && i < container.GetChildCount(); i++)
         {
+            if (container.GetChild(i) is not MegaCrit.Sts2.Core.Nodes.Cards.Holders.NHandCardHolder holder || !holder.IsVisibleInTree()) continue;
             var node = holder.CardNode;
             var model = node?.Model;
             if (node != null && model != null && Godot.GodotObject.IsInstanceValid(node))
@@ -75,11 +98,14 @@ public static class Sts2State
         if (held is { } nodeCard && nodeCard.Node != first) yield return nodeCard;
     }
 
+    private static readonly AccessTools.FieldRef<NPlayerHand, MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay?> CurrentCardPlay =
+        AccessTools.FieldRefAccess<NPlayerHand, MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay?>("_currentCardPlay");
+
     private static (NCard Node, CardModel Card)? HeldCard(NPlayerHand hand)
     {
         try
         {
-            var play = HarmonyLib.Traverse.Create(hand).Field("_currentCardPlay").GetValue<MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay>();
+            var play = CurrentCardPlay(hand);
             if (play == null || !Godot.GodotObject.IsInstanceValid(play)) return null;
             var node = play.Holder?.CardNode;
             var model = node?.Model;
@@ -104,16 +130,9 @@ public static class Sts2State
 
         // The power container doesn't size itself to its icons (it reported a tiny rect in game
         // while an icon drew below it), so measure the icons themselves.
-        var powers = display.GetNodeOrNull<Godot.Control>("%PowerContainer");
+        var powers = display.GetNodeOrNull<Godot.Control>(GodotNames.Path("%PowerContainer"));
         var iconHeight = 0f;
-        if (powers != null)
-        {
-            foreach (var visibleControlRect in VisibleControlRects(powers))
-            {
-                rect = rect.Merge(visibleControlRect);
-                iconHeight = Math.Max(iconHeight, visibleControlRect.Size.Y);
-            }
-        }
+        if (powers != null) rect = MergeVisibleControls(rect, powers, out iconHeight);
 
         // Always leave room for one row of power icons under the bar, so the widget doesn't
         // jump when the first buff or debuff appears.
@@ -162,7 +181,7 @@ public static class Sts2State
     public static Godot.Rect2? BlockRect(MegaCrit.Sts2.Core.Entities.Creatures.Creature who)
     {
         if (HealthBarOf(who) is not var (display, bar)) return null;
-        var block = bar?.GetNodeOrNull<Godot.Control>("%BlockContainer");
+        var block = bar?.GetNodeOrNull<Godot.Control>(GodotNames.Path("%BlockContainer"));
         if (block != null && block.Size.X >= 1)
         {
             // Vertically, use the HP bar's band so the widget centers on the bar, not the icon.
@@ -173,17 +192,31 @@ public static class Sts2State
         return bar != null && bar.Size.X >= 1 ? ScreenRect(bar) : ScreenRect(display);
     }
 
-    /// <summary>Screen rects of visible, non-empty controls under a node (one level of nesting deep enough for power icons).</summary>
-    private static IEnumerable<Godot.Rect2> VisibleControlRects(Godot.Node parent)
+    /// <summary>
+    /// A rect merged with the screen rects of the visible, non-empty controls under a node (one level of nesting deep enough for power
+    /// icons). By index, not GetChildren: every frame, for each widget beside the HP bar, and GetChildren makes an array each call.
+    /// </summary>
+    private static Godot.Rect2 MergeVisibleControls(Godot.Rect2 rect, Godot.Node parent) => MergeVisibleControls(rect, parent, out _);
+
+    /// <summary>MergeVisibleControls, with the tallest of those controls (0: none).</summary>
+    private static Godot.Rect2 MergeVisibleControls(Godot.Rect2 rect, Godot.Node parent, out float tallest)
     {
-        foreach (var child in parent.GetChildren())
+        var tallestSeen = 0f;
+        for (var i = 0; i < parent.GetChildCount(); i++)
         {
-            if (child is not Godot.Control control || !control.IsVisibleInTree()) continue;
-            if (control.Size.X >= 4 && control.Size.Y >= 4) yield return ScreenRect(control);
-            foreach (var grand in control.GetChildren())
-            {
-                if (grand is Godot.Control otherControl && otherControl.IsVisibleInTree() && otherControl.Size.X >= 4 && otherControl.Size.Y >= 4) yield return ScreenRect(otherControl);
-            }
+            if (parent.GetChild(i) is not Godot.Control control || !control.IsVisibleInTree()) continue;
+            if (control.Size.X >= 4 && control.Size.Y >= 4) Merge(ScreenRect(control));
+            for (var j = 0; j < control.GetChildCount(); j++)
+                if (control.GetChild(j) is Godot.Control otherControl && otherControl.IsVisibleInTree() && otherControl.Size.X >= 4 && otherControl.Size.Y >= 4)
+                    Merge(ScreenRect(otherControl));
+        }
+        tallest = tallestSeen;
+        return rect;
+
+        void Merge(Godot.Rect2 controlRect)
+        {
+            rect = rect.Merge(controlRect);
+            tallestSeen = Math.Max(tallestSeen, controlRect.Size.Y);
         }
     }
 
@@ -212,14 +245,10 @@ public static class Sts2State
         if (HealthBarOf(who) is not var (display, bar)) return null;
         if (bar == null) return ScreenRect(display);
 
-        var container = bar.GetNodeOrNull<Godot.Control>("%HpBarContainer");
+        var container = bar.GetNodeOrNull<Godot.Control>(GodotNames.Path("%HpBarContainer"));
         if (container == null) return ScreenRect(bar);
 
-        var rect = ScreenRect(container);
-        foreach (var visibleControlRect in VisibleControlRects(container))
-        {
-            rect = rect.Merge(visibleControlRect);
-        }
+        var rect = MergeVisibleControls(ScreenRect(container), container);
 
         // One log line per combat, so placement can be checked against the game log.
         var combatId = MegaCrit.Sts2.Core.Combat.CombatManager.Instance.CurrentCombatId;
@@ -240,10 +269,12 @@ public static class Sts2State
     {
         var room = MegaCrit.Sts2.Core.Nodes.Rooms.NCombatRoom.Instance;
         if (room == null) return null;
-        var creature = room.CreatureNodes.FirstOrDefault(creatureNode => Godot.GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == who);
-        var display = creature?.GetNodeOrNull<Godot.Control>("%HealthBar");
+        MegaCrit.Sts2.Core.Nodes.Combat.NCreature? creature = null;
+        foreach (var creatureNode in room.CreatureNodes)
+            if (Godot.GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == who) { creature = creatureNode; break; }
+        var display = creature?.GetNodeOrNull<Godot.Control>(GodotNames.Path("%HealthBar"));
         if (display == null || !BarShown(creature!, display)) return null;
-        return (display, display.GetNodeOrNull<Godot.Control>("%HealthBar"));
+        return (display, display.GetNodeOrNull<Godot.Control>(GodotNames.Path("%HealthBar")));
     }
 
     /// <summary>
@@ -368,15 +399,14 @@ public static class Sts2State
     /// </summary>
     public static T Private<T>(object obj, string member, T fallback)
     {
-        var name = $"{obj?.GetType().Name}.{member}";
         try
         {
-            var traverse = Traverse.Create(obj);
-            var otherTraverse = traverse.Property(member);
-            if (otherTraverse.PropertyExists()) return otherTraverse.GetValue<T>();
-            var nextTraverse = traverse.Field(member);
-            if (nextTraverse.FieldExists()) return nextTraverse.GetValue<T>();
-            _current?.Missed(name);
+            // The property or field found once per type and name (a Traverse made three objects every call, and the features read
+            // some of these every frame: decision #173).
+            var found = obj == null ? null : Members.GetOrAdd((obj.GetType(), member), FindMember);
+            if (found is PropertyInfo property) return (T)property.GetValue(obj)!;
+            if (found is FieldInfo field) return (T)field.GetValue(obj)!;
+            _current?.Missed($"{obj?.GetType().Name}.{member}");
             lock (_missing)
             {
                 if (!_missing.Add((obj!.GetType(), member))) return fallback;
@@ -386,13 +416,19 @@ public static class Sts2State
         }
         catch (Exception ex)
         {
-            _current?.Missed(name); // there, but not a T (a game update changed its type)
+            _current?.Missed($"{obj?.GetType().Name}.{member}"); // there, but not a T (a game update changed its type)
             bool first;
             lock (_missing) first = obj != null && _missing.Add((obj.GetType(), member));
             if (first) UnreadableMember?.Invoke(obj!.GetType().Name, member, $"{ex.GetType().Name}: {ex.Message}");
         }
         return fallback;
     }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Type, string Member), MemberInfo?> Members = new();
+
+    /// <summary>A member by name as Traverse finds it: a property first, then a field, declared on the type or a base type.</summary>
+    private static MemberInfo? FindMember((Type Type, string Member) key) =>
+        (MemberInfo?)AccessTools.Property(key.Type, key.Member) ?? AccessTools.Field(key.Type, key.Member);
 
     public static int Var(AbstractModel model, string key, int fallback = 0)
     {

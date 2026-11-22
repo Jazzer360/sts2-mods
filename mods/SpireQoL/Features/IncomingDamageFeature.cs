@@ -20,6 +20,8 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     private MovableWidget? _widget;
     private DamageMathPanel? _panel;
     private OutcomeTip? _tip;
+    /// <summary>What the panel last showed (the forecast, its ?, the board probe): shown again only when it changes.</summary>
+    private (TurnEndModel? Forecast, string? Mark, int Probe) _shownFor;
 
     public IncomingDamageFeature(QolContext ctx) => _ctx = ctx;
 
@@ -60,6 +62,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         {
             _widget!.HasContent = false;
             _tip?.Hide();
+            _shownFor = default;
             return;
         }
 
@@ -69,12 +72,17 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         {
             _panel!.ShowUnknown();
             _tip?.Hide();
+            _shownFor = default;
             return;
         }
         // Hovering the sum: every way the enemy turn can go (decision #155). Polled: the sum takes no mouse input.
         var root = _panel!.Root;
         if (root.IsVisibleInTree() && root.GetGlobalRect().HasPoint(root.GetGlobalMousePosition())) _tip!.Show(root, forecast, _ctx.Settings.Chances);
         else _tip!.Hide();
+        // The same forecast, its ? and the board (the settings among it) as last frame: the panel shows it already.
+        var shownFor = (forecast, forecast.ShownMark, Sts2State.Me is { } player && Sts2State.Combat is { } combat ? BoardProbe.Hash(player, combat) : 0);
+        if (shownFor == _shownFor) return;
+        _shownFor = shownFor;
         // The most likely way the enemy turn goes, when a roll decides between several (decision #155); else the worst, as before.
         var likely = _ctx.Settings.ShowMostLikely && forecast.Outcomes.Count > 1 ? forecast.MostLikely : null;
         // A lethal enemy turn: the skull. One something keeps you alive through (Fairy in a Bottle first, then

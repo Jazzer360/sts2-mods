@@ -53,10 +53,10 @@ public sealed class MovableWidget
         _unlockedStyle.BorderColor = new Color(1f, 0.55f, 0.1f);
 
         Root = new PanelContainer { Name = "Widget_" + id, MouseFilter = Control.MouseFilterEnum.Ignore };
-        Root.AddThemeStyleboxOverride("panel", _lockedStyle);
+        Root.AddThemeStyleboxOverride(GodotNames.Name("panel"), _lockedStyle);
 
         var box = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        box.AddThemeConstantOverride("separation", 4);
+        box.AddThemeConstantOverride(GodotNames.Name("separation"), 4);
         Root.AddChild(box);
 
         // Header, shown only while the layout is unlocked.
@@ -66,8 +66,8 @@ public sealed class MovableWidget
         _header.AddChild(_headerLabel);
 
         var pinGrid = new GridContainer { Columns = 3, MouseFilter = Control.MouseFilterEnum.Ignore, TooltipText = "Pin: which corner stays put" };
-        pinGrid.AddThemeConstantOverride("h_separation", 2);
-        pinGrid.AddThemeConstantOverride("v_separation", 2);
+        pinGrid.AddThemeConstantOverride(GodotNames.Name("h_separation"), 2);
+        pinGrid.AddThemeConstantOverride(GodotNames.Name("v_separation"), 2);
         var anchors = Enum.GetValues<ScreenAnchor>();
         for (var i = 0; i < 9; i++)
         {
@@ -79,9 +79,9 @@ public sealed class MovableWidget
                 MouseFilter = Control.MouseFilterEnum.Stop,
                 TooltipText = $"Pin {anchor}",
             };
-            button.AddThemeStyleboxOverride("normal", UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
-            button.AddThemeStyleboxOverride("hover", UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
-            button.AddThemeStyleboxOverride("pressed", UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
+            button.AddThemeStyleboxOverride(GodotNames.Name("normal"), UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
+            button.AddThemeStyleboxOverride(GodotNames.Name("hover"), UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
+            button.AddThemeStyleboxOverride(GodotNames.Name("pressed"), UiKit.PanelStyle(Colors.White, radius: 2, margin: 0));
             button.Pressed += () => SetPin(anchor);
             _pinButtons[i] = button;
             pinGrid.AddChild(button);
@@ -96,13 +96,13 @@ public sealed class MovableWidget
             TooltipText = "Follow your character, or stay fixed on screen",
             Visible = false,
         };
-        _attachButton.AddThemeFontSizeOverride("font_size", 13);
+        _attachButton.AddThemeFontSizeOverride(GodotNames.Name("font_size"), 13);
         _attachButton.Pressed += ToggleAttach;
         _header.AddChild(_attachButton);
         box.AddChild(_header);
 
         Content = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        Content.AddThemeConstantOverride("separation", 3);
+        Content.AddThemeConstantOverride(GodotNames.Name("separation"), 3);
         box.AddChild(Content);
 
         Root.GuiInput += OnGuiInput;
@@ -213,12 +213,20 @@ public sealed class MovableWidget
         return topLeft + new Vector2(size.X * fx, size.Y * fy);
     }
 
+    /// <summary>The panel style last set (UpdateLayout sets it only when it changes).</summary>
+    private StyleBox? _shownStyle;
+
     internal void UpdateLayout(OverlayHost host)
     {
         var unlocked = host.LayoutUnlocked;
         Root.Visible = !host.HideAll && (!host.Suppressed || (ShowsOverCardChoice && host.InCardChoice)) && host.OwnerOn(this) && (HasContent || unlocked);
         Root.MouseFilter = unlocked ? Control.MouseFilterEnum.Stop : Control.MouseFilterEnum.Ignore;
-        Root.AddThemeStyleboxOverride("panel", unlocked ? _unlockedStyle : Frameless ? NoFrame : _lockedStyle);
+        StyleBox style = unlocked ? _unlockedStyle : Frameless ? NoFrame : _lockedStyle;
+        if (!ReferenceEquals(style, _shownStyle))
+        {
+            Root.AddThemeStyleboxOverride(GodotNames.Name("panel"), style);
+            _shownStyle = style;
+        }
         Root.Modulate = new Color(1, 1, 1, Mathf.Clamp(_layout.Opacity, 0.1f, 1f));
 
         _header.Visible = unlocked;

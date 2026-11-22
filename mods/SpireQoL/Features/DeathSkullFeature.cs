@@ -27,7 +27,14 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
         public required Control Root;
         public required TextureRect Icon;
         public required Label Chance;
+        /// <summary>What it was last placed for (its chance, the creature's HP, the label's size): placed again only when it changes.</summary>
+        public (string? Chance, int Hp, int MaxHp, Vector2 Size) PlacedFor;
     }
+
+    /// <summary>Enemy → the chance shown, worked out again only when what it reads changed (ShownFor): the same every frame otherwise.</summary>
+    private readonly Dictionary<Creature, string?> _show = new(ReferenceEqualityComparer.Instance);
+    private (TurnEndModel? Model, string? Mark, int Probe) _shownFor;
+    private readonly List<Creature> _gone = new();
 
     public DeathSkullFeature(QolContext ctx) => _ctx = ctx;
 
@@ -49,9 +56,13 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
     {
         // Enemy → the chance shown beside the skull (null: certain). Decision #88: once some outcome kills it; a range and a ? when the
         // search stopped at a cap (decision #107), counting the deaths settled before it.
-        var show = new Dictionary<Creature, string?>(ReferenceEqualityComparer.Instance);
-        if (Sts2State.IsPlayerTurn && TurnEndModel.Shown() is { } model)
+        var shownModel = Sts2State.IsPlayerTurn ? TurnEndModel.Shown() : null;
+        var probe = Sts2State.Me is { } me && Sts2State.Combat is { } combat ? BoardProbe.Hash(me, combat) : 0;
+        var shownFor = (shownModel, shownModel?.ShownMark, probe);
+        var show = _show;
+        if (shownFor != _shownFor && shownModel is { } model)
         {
+            show.Clear();
             foreach (var (enemy, id) in model.Ids)
             {
                 if (!enemy.IsAlive || !enemy.IsEnemy) continue;
@@ -64,11 +75,15 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
                 if (_ctx.Settings.ShowDeathChance && chance.Seen) show[enemy] = chance.Text() + (model.ShownMark ?? "");
             }
         }
+        else if (shownModel == null) show.Clear();
+        _shownFor = shownFor;
 
-        foreach (var (creature, mark) in _marks.ToList())
+        _gone.Clear();
+        foreach (var (creature, mark) in _marks)
+            if (!show.ContainsKey(creature) || !GodotObject.IsInstanceValid(mark.Root)) _gone.Add(creature);
+        foreach (var creature in _gone)
         {
-            if (show.ContainsKey(creature) && GodotObject.IsInstanceValid(mark.Root)) continue;
-            if (GodotObject.IsInstanceValid(mark.Root)) mark.Root.QueueFree();
+            if (GodotObject.IsInstanceValid(_marks[creature].Root)) _marks[creature].Root.QueueFree();
             _marks.Remove(creature);
         }
         foreach (var (creature, text) in show)
@@ -79,15 +94,19 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
                 mark = Create(label);
                 _marks[creature] = mark;
             }
-            Place(mark, text);
+            if (mark.Root.GetParent() is Label parent && (text, creature.CurrentHp, creature.MaxHp, parent.Size) is var placedFor && placedFor != mark.PlacedFor)
+            {
+                Place(mark, text);
+                mark.PlacedFor = placedFor;
+            }
         }
     }
 
     private static Mark Create(Label label)
     {
-        var size = label.GetThemeFontSize("font_size");
+        var size = label.GetThemeFontSize(GodotNames.Name("font_size"));
         var root = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        root.AddThemeConstantOverride("separation", 2);
+        root.AddThemeConstantOverride(GodotNames.Name("separation"), 2);
         var icon = new TextureRect
         {
             Texture = GameIcons.Skull(),
@@ -111,8 +130,8 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
         mark.Chance.Text = chance ?? "";
         var height = Math.Max(12f, label.Size.Y * 0.9f);
         mark.Icon.CustomMinimumSize = new Vector2(height, height);
-        var font = label.GetThemeFont("font");
-        var fontSize = label.GetThemeFontSize("font_size");
+        var font = label.GetThemeFont(GodotNames.Name("font"));
+        var fontSize = label.GetThemeFontSize(GodotNames.Name("font_size"));
         var textWidth = font?.GetStringSize(label.Text, HorizontalAlignment.Left, -1, fontSize).X ?? label.Size.X / 2;
         var textLeft = label.HorizontalAlignment == HorizontalAlignment.Center ? (label.Size.X - textWidth) / 2 : 0;
         var min = mark.Root.GetCombinedMinimumSize();
@@ -127,10 +146,12 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
     {
         var room = NCombatRoom.Instance;
         if (room == null) return null;
-        var node = room.CreatureNodes.FirstOrDefault(creatureNode => GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == creature);
-        var display = node?.GetNodeOrNull<Control>("%HealthBar");
+        MegaCrit.Sts2.Core.Nodes.Combat.NCreature? node = null;
+        foreach (var creatureNode in room.CreatureNodes)
+            if (GodotObject.IsInstanceValid(creatureNode) && creatureNode.Entity == creature) { node = creatureNode; break; }
+        var display = node?.GetNodeOrNull<Control>(GodotNames.Path("%HealthBar"));
         if (display == null) return null;
-        return display.GetNodeOrNull<Control>("%HealthBar")?.GetNodeOrNull<Label>("%HpLabel")
-               ?? display.GetNodeOrNull<Label>("%HpLabel");
+        return display.GetNodeOrNull<Control>(GodotNames.Path("%HealthBar"))?.GetNodeOrNull<Label>(GodotNames.Path("%HpLabel"))
+               ?? display.GetNodeOrNull<Label>(GodotNames.Path("%HpLabel"));
     }
 }

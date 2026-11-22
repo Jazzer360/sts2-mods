@@ -273,7 +273,7 @@ public sealed partial class SettingsMenu
     private static PanelContainer ExampleBox(Action<VBoxContainer> fill)
     {
         var box = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin };
-        box.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0, 0, 0, 0.35f), radius: 6, margin: 14));
+        box.AddThemeStyleboxOverride(GodotNames.Name("panel"), UiKit.PanelStyle(new Color(0, 0, 0, 0.35f), radius: 6, margin: 14));
         var inner = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         box.AddChild(inner);
         fill(inner);
@@ -324,7 +324,7 @@ public sealed partial class SettingsMenu
                 var row = UiKit.Row(separation: 10);
                 row.AddChild(RunRemindersFeature.ExampleEventIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
                 var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-                option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), radius: 6, margin: 12));
+                option.AddThemeStyleboxOverride(GodotNames.Name("panel"), UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), radius: 6, margin: 12));
                 option.AddChild(UiKit.Label(text, size: 18, Colors.White));
                 row.AddChild(option);
                 inner.AddChild(row);
@@ -344,7 +344,7 @@ public sealed partial class SettingsMenu
         {
             var row = UiKit.Row(separation: 10);
             var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-            option.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), radius: 6, margin: 12));
+            option.AddThemeStyleboxOverride(GodotNames.Name("panel"), UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), radius: 6, margin: 12));
             option.AddChild(UiKit.Label("Gorge: choose 2 of 8 commons", size: 18, Colors.White));
             row.AddChild(option);
             var icon = UiKit.Icon(RunRemindersFeature.InspectIcon(), size: 40);
@@ -548,9 +548,9 @@ public sealed partial class SettingsMenu
         label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         var marginContainer = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        marginContainer.AddThemeConstantOverride("margin_left", 8);
-        marginContainer.AddThemeConstantOverride("margin_right", 8);
-        marginContainer.AddThemeConstantOverride("margin_bottom", 8);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_left"), 8);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_right"), 8);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_bottom"), 8);
         marginContainer.AddChild(label);
         _rows!.AddChild(marginContainer);
     }
@@ -566,15 +566,15 @@ public sealed partial class SettingsMenu
     private static HFlowContainer Flow()
     {
         var flow = new HFlowContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        flow.AddThemeConstantOverride("h_separation", 24);
-        flow.AddThemeConstantOverride("v_separation", 26);
+        flow.AddThemeConstantOverride(GodotNames.Name("h_separation"), 24);
+        flow.AddThemeConstantOverride(GodotNames.Name("v_separation"), 26);
         return flow;
     }
 
     private static VBoxContainer Cell()
     {
         var cell = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, CustomMinimumSize = new Vector2(GuideCellWidth, 0) };
-        cell.AddThemeConstantOverride("separation", 6);
+        cell.AddThemeConstantOverride(GodotNames.Name("separation"), 6);
         return cell;
     }
 

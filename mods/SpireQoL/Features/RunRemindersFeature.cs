@@ -306,7 +306,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var row = UiKit.Row(separation: 6);
         foreach (var (relic, crossed) in icons) row.AddChild(Backed(Crossable(IconOf(relic), size, crossed), size));
         var col = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        col.AddThemeConstantOverride("separation", 0);
+        col.AddThemeConstantOverride(GodotNames.Name("separation"), 0);
         var priceLabel = UiKit.Label($"{price}", size: 26, new Color(1f, 0.85f, 0.3f));
         priceLabel.HorizontalAlignment = HorizontalAlignment.Center;
         col.AddChild(priceLabel);
@@ -485,7 +485,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// <summary>A row of relic icons left of the option button, vertically centered; removed when empty.</summary>
     private static void Show(NEventOptionButton button, List<(RelicModel Relic, bool Crossed, string? Odds)> icons)
     {
-        var box = button.GetNodeOrNull<HBoxContainer>(NodeName);
+        var box = button.GetNodeOrNull<HBoxContainer>(GodotNames.Path(NodeName));
         var key = string.Join(",", icons.Select(icon => icon.Relic.GetType().Name + (icon.Crossed ? "x" : "") + icon.Odds));
         if (icons.Count == 0)
         {
@@ -496,7 +496,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         {
             box.RemoveAndFree();
             box = new HBoxContainer { Name = NodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
-            box.AddThemeConstantOverride("separation", 4);
+            box.AddThemeConstantOverride(GodotNames.Name("separation"), 4);
             box.SetMeta("key", key);
             foreach (var (relic, crossed, odds) in icons)
             {
@@ -599,7 +599,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     {
         var price = Sts2State.Private<Control?>(slot, "_costLabel", fallback: null);
         if (price == null || !GodotObject.IsInstanceValid(price)) return;
-        var box = price.GetNodeOrNull<Control>(ShopNodeName);
+        var box = price.GetNodeOrNull<Control>(GodotNames.Path(ShopNodeName));
         var key = string.Join(",", icons.Select(icon => icon.Relic.GetType().Name + (icon.Crossed ? "x" : ""))) + "|" + net;
         if (icons.Count == 0)
         {
@@ -613,7 +613,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             box = new Control { Name = ShopNodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
             box.SetMeta("key", key);
             var row = new HBoxContainer { Name = "Icons", MouseFilter = Control.MouseFilterEnum.Ignore };
-            row.AddThemeConstantOverride("separation", (int)Math.Round(size * ShopIconGap));
+            row.AddThemeConstantOverride(GodotNames.Name("separation"), (int)Math.Round(size * ShopIconGap));
             foreach (var (relic, crossed) in icons) row.AddChild(Backed(Crossable(IconOf(relic), size, crossed), size));
             box.AddChild(row);
             if (net is { } netGold)
@@ -630,9 +630,9 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var width = icons.Count * (size + gap) - gap;
         // Left of the game's coin, which sits beside the label, not over it, with room for the icons' backdrops.
         var left = PriceLeft(slot, price) - price.GlobalPosition.X;
-        if (box.GetNodeOrNull<Control>("Icons") is { } row2) row2.Position = new Vector2(left - width - size * BackdropPad - 4, (price.Size.Y - size) / 2);
+        if (box.GetNodeOrNull<Control>(GodotNames.Path("Icons")) is { } row2) row2.Position = new Vector2(left - width - size * BackdropPad - 4, (price.Size.Y - size) / 2);
         // Under the price's number, centered on it.
-        if (box.GetNodeOrNull<Control>("Net") is { } netLabel)
+        if (box.GetNodeOrNull<Control>(GodotNames.Path("Net")) is { } netLabel)
         {
             var (textLeft, textWidth) = TextSpan(price);
             netLabel.Size = new Vector2(NetWidth, netLabel.Size.Y);
@@ -650,9 +650,9 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     {
         try
         {
-            if (control is Label label && label.GetThemeFont("font") is { } font)
+            if (control is Label label && label.GetThemeFont(GodotNames.Name("font")) is { } font)
             {
-                var otherX = font.GetStringSize(label.Text, HorizontalAlignment.Left, -1, label.GetThemeFontSize("font_size")).X;
+                var otherX = font.GetStringSize(label.Text, HorizontalAlignment.Left, -1, label.GetThemeFontSize(GodotNames.Name("font_size"))).X;
                 var left = label.HorizontalAlignment switch
                 {
                     HorizontalAlignment.Center => (label.Size.X - otherX) / 2,
@@ -676,7 +676,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var left = rect.Position.X;
         foreach (var pic in Pictures(slot))
         {
-            if (price.GetNodeOrNull(ShopNodeName) is { } ours && ours.IsAncestorOf(pic) || !pic.IsVisibleInTree()) continue;
+            if (price.GetNodeOrNull(GodotNames.Path(ShopNodeName)) is { } ours && ours.IsAncestorOf(pic) || !pic.IsVisibleInTree()) continue;
             var otherRect = pic.GetGlobalRect();
             var level = otherRect.End.Y > rect.Position.Y && otherRect.Position.Y < rect.End.Y;
             var beside = otherRect.End.X <= rect.Position.X + rect.Size.Y && otherRect.End.X >= rect.Position.X - rect.Size.Y;

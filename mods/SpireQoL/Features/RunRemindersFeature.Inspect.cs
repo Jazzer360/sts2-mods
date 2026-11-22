@@ -32,7 +32,7 @@ public sealed partial class RunRemindersFeature
 
     private void ShowInspect(NEventOptionButton button, Player? me)
     {
-        var existing = button.GetNodeOrNull<TextureButton>(InspectNodeName);
+        var existing = button.GetNodeOrNull<TextureButton>(GodotNames.Path(InspectNodeName));
         var option = me != null && button.Option is { IsLocked: false, IsProceed: false } eventOption ? eventOption : null;
         var groups = option != null && _ctx.Settings.EventInspect ? GroupsOf(option, me!) : null;
         if (groups == null || !groups.Any(drawGroup => drawGroup.IsRandom))

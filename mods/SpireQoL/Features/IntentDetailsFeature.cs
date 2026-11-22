@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using SpireQoL.Combat;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
@@ -21,6 +22,9 @@ namespace SpireQoL.Features;
 public sealed class IntentDetailsFeature : IFeature, IFrameFeature
 {
     private const string BlockName = "SpireQoLIntentBlock";
+
+    /// <summary>Each enemy's intents as last drawn (the board probe, the turn, its intent nodes): drawn again only when that changes.</summary>
+    private readonly Dictionary<NCreature, int> _drawnFor = new(ReferenceEqualityComparer.Instance);
     internal static readonly Color BlockColor = new(0.55f, 0.8f, 1f);
 
     public IntentDetailsFeature(QolContext ctx) { }
@@ -48,19 +52,30 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         if (NCombatRoom.Instance is not { } room) return;
+        var playerTurn = Sts2State.IsPlayerTurn;
+        var probe = Sts2State.Me is { } me && Sts2State.Combat is { } combat ? BoardProbe.Hash(me, combat) : 0;
         foreach (var node in room.CreatureNodes)
         {
             if (!GodotObject.IsInstanceValid(node) || node.IntentContainer is not { } container || !GodotObject.IsInstanceValid(container)) continue;
+            // The same intent nodes on screen, the same board and turn as last frame: what's on them already stands.
+            var drawnFor = new HashCode();
+            drawnFor.Add(probe);
+            drawnFor.Add(playerTurn);
+            for (var i = 0; i < container.GetChildCount(); i++) drawnFor.Add(container.GetChild(i).GetInstanceId());
+            var drawnKey = drawnFor.ToHashCode();
+            if (_drawnFor.TryGetValue(node, out var drawn) && drawn == drawnKey) continue;
+            _drawnFor[node] = drawnKey;
+            if (_drawnFor.Count > 64) _drawnFor.Clear();
             var intents = container.GetChildren().OfType<NIntent>().Where(GodotObject.IsInstanceValid).ToList();
             // As the intent on screen says: nothing while it's hidden there (its move would be given away).
             var hidden = intents.Any(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", fallback: null) is HiddenIntent or UnknownIntent);
-            var shown = Sts2State.IsPlayerTurn && !hidden && node.Entity is { } creature ? For(creature) : null;
+            var shown = playerTurn && !hidden && node.Entity is { } creature ? For(creature) : null;
             var onScreen = intents.Select(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", fallback: null)).ToList();
             var corners = shown != null && onScreen.All(abstractIntent => abstractIntent != null) ? IntentCorner.Assign(onScreen!, shown.Powers) : new();
             for (var intentIndex = 0; intentIndex < intents.Count; intentIndex++)
             {
                 var intent = intents[intentIndex];
-                var holder = intent.GetNodeOrNull<Control>("%IntentHolder");
+                var holder = intent.GetNodeOrNull<Control>(GodotNames.Path("%IntentHolder"));
                 if (holder == null) continue;
                 Block(holder, intent, onScreen[intentIndex] is DefendIntent && shown?.Block is > 0 ? shown.Block : null);
                 // Each power in the corner of the intent it belongs to (decision #99).
@@ -72,7 +87,7 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
     /// <summary>The block number on a defend intent, where the game puts an attack's damage (its %Value label).</summary>
     private static void Block(Control holder, NIntent intent, int? amount)
     {
-        var label = holder.GetNodeOrNull<Label>(BlockName);
+        var label = holder.GetNodeOrNull<Label>(GodotNames.Path(BlockName));
         if (amount == null)
         {
             label.RemoveAndFree();
@@ -83,8 +98,8 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             label = UiKit.Label("", size: 22, BlockColor);
             label.Name = BlockName;
             label.MouseFilter = Control.MouseFilterEnum.Ignore;
-            label.AddThemeConstantOverride("outline_size", 8);
-            label.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.95f));
+            label.AddThemeConstantOverride(GodotNames.Name("outline_size"), 8);
+            label.AddThemeColorOverride(GodotNames.Name("font_outline_color"), new Color(0, 0, 0, 0.95f));
             label.HorizontalAlignment = HorizontalAlignment.Right;
             label.VerticalAlignment = VerticalAlignment.Bottom;
             holder.AddChild(label);
@@ -92,7 +107,7 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
         var text = amount.Value.ToString();
         if (label.Text != text) label.Text = text;
         // Over the game's own value label (empty on a defend intent): bottom right of the icon, as an attack's damage.
-        if (intent.GetNodeOrNull<Control>("%Value") is { } value)
+        if (intent.GetNodeOrNull<Control>(GodotNames.Path("%Value")) is { } value)
         {
             label.Position = value.Position;
             label.Size = value.Size;

@@ -4,6 +4,7 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Nodes.Cards;
+using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Cards;
 
@@ -100,9 +101,9 @@ internal sealed class FlatFade
             _placed = true;
             Quiet(_copy);
             _copy.CardHighlight.Visible = false; // the live card's own glow stays drawn
-            if (_copy.GetNodeOrNull<CanvasItem>("CardContainer/CardSparkles") is { } sparkles) sparkles.Visible = false;
+            if (_copy.GetNodeOrNull<CanvasItem>(GodotNames.Path("CardContainer/CardSparkles")) is { } sparkles) sparkles.Visible = false;
             // The card frame's top-left corner at the margin, wherever the scene puts its origin.
-            if (_copy.GetNodeOrNull<Control>("%Frame") is { } frame)
+            if (_copy.GetNodeOrNull<Control>(GodotNames.Path("%Frame")) is { } frame)
                 _copy.Position += new Vector2(Margin, Margin) * Res - frame.GetGlobalTransform().Origin;
             _signature = 0;
         }
@@ -229,7 +230,7 @@ internal sealed class FlatFade
             if (canvasItem.SelfModulate != Colors.White) line += " self " + canvasItem.SelfModulate.ToHtml();
             switch (child)
             {
-                case Label label: line += $" \"{label.Text}\" {label.GetThemeColor("font_color").ToHtml()}"; break;
+                case Label label: line += $" \"{label.Text}\" {label.GetThemeColor(GodotNames.Name("font_color")).ToHtml()}"; break;
                 case RichTextLabel richTextLabel: line += $" \"{richTextLabel.Text}\""; break;
                 case TextureRect icon: line += " tex " + (icon.Texture?.ResourcePath is { Length: > 0 } resourcePath ? resourcePath : icon.Texture?.GetInstanceId().ToString() ?? "none"); break;
             }

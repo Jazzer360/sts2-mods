@@ -26,8 +26,8 @@ internal sealed class RestMathPanel
     public RestMathPanel(Control parent)
     {
         _grid = new GridContainer { Columns = 2, MouseFilter = Control.MouseFilterEnum.Ignore };
-        _grid.AddThemeConstantOverride("h_separation", 8);
-        _grid.AddThemeConstantOverride("v_separation", 2);
+        _grid.AddThemeConstantOverride(GodotNames.Name("h_separation"), 8);
+        _grid.AddThemeConstantOverride(GodotNames.Name("v_separation"), 2);
         parent.AddChild(_grid);
     }
 
@@ -67,7 +67,7 @@ internal sealed class RestMathPanel
             _grid.AddChild(new Control { CustomMinimumSize = new Vector2(DamageMathPanel.IconSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
             var label = DamageMathPanel.Number(OverColor);
             label.Text = $"{over} over";
-            label.AddThemeFontSizeOverride("font_size", DamageMathPanel.FontSize - 4);
+            label.AddThemeFontSizeOverride(GodotNames.Name("font_size"), DamageMathPanel.FontSize - 4);
             _grid.AddChild(label);
         }
     }

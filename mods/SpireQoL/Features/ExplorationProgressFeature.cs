@@ -86,8 +86,8 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
         track.SetCornerRadiusAll(3);
         var fill = new StyleBoxFlat { BgColor = new Color(0.9f, 0.9f, 0.85f, 0.85f) };
         fill.SetCornerRadiusAll(3);
-        bar.AddThemeStyleboxOverride("background", track);
-        bar.AddThemeStyleboxOverride("fill", fill);
+        bar.AddThemeStyleboxOverride(GodotNames.Name("background"), track);
+        bar.AddThemeStyleboxOverride(GodotNames.Name("fill"), fill);
         return bar;
     }
 }

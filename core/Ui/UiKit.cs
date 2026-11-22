@@ -20,10 +20,10 @@ public static class UiKit
     public static Label Label(string text, int size, Color color)
     {
         var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
-        label.AddThemeFontSizeOverride("font_size", size);
-        label.AddThemeColorOverride("font_color", color);
-        label.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
-        label.AddThemeConstantOverride("outline_size", Math.Max(2, size / 4));
+        label.AddThemeFontSizeOverride(GodotNames.Name("font_size"), size);
+        label.AddThemeColorOverride(GodotNames.Name("font_color"), color);
+        label.AddThemeColorOverride(GodotNames.Name("font_outline_color"), new Color(0, 0, 0, 0.9f));
+        label.AddThemeConstantOverride(GodotNames.Name("outline_size"), Math.Max(2, size / 4));
         return label;
     }
 
@@ -41,7 +41,7 @@ public static class UiKit
     public static HBoxContainer Row(int separation = 6)
     {
         var hBoxContainer = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        hBoxContainer.AddThemeConstantOverride("separation", separation);
+        hBoxContainer.AddThemeConstantOverride(GodotNames.Name("separation"), separation);
         return hBoxContainer;
     }
 

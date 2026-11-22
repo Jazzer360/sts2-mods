@@ -16,6 +16,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Centennial Puzzle's draws count when a play loses you HP some other way than its own cost (an enemy's Galvanic on a Galvanized card, Thorns hitting back, a Corrupted card): the Shuffle Warning shows the shuffle they cause, and the checks expect them.
 - Red Skull's Strength counts from the moment a play's HP loss takes you to its threshold, so the rest of the play hits harder: Hemokinesis' own HP cost, then its attack (it predicted the hit without the Strength).
 - The checks no longer report No Draw stopping a play's draws (none were predicted), nor cards a play would have made when the fight ended before it made them (Stomp killing the last enemy with Personal Hive's Dazed still to come).
+- The mod makes far less garbage while nothing changes in a fight (it made most of the game's), so the memory clean-ups that pause the game for a few milliseconds come much less often.
 
 #### Changed
 - A card whose draws No Draw (Battle Trance) would stop gets No Draw's tab, plain (its icon already shows the crossed card).
@@ -24,6 +25,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 ### Main Saves 1.0.26
 #### Changed
 - Shared code: a replaced on-screen row is taken out at once, so the one replacing it isn't renamed (a stale row left behind). No change in Main Saves.
+- Shared code: Godot's names made once, the local player kept for the fight, the mod's code in the game's hooks timed. No change in Main Saves.
 
 ### Spire QoL 1.27.0
 #### Added

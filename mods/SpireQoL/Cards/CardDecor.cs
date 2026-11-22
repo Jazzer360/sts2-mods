@@ -49,17 +49,17 @@ public sealed class CardDecor
     public bool IsEmpty => Tabs.Count == 0 && Opacity == null;
 
     /// <summary>Settings filter (QolSettings.TabEnabled); null = everything shown.</summary>
-    internal Func<string, bool>? Filter { get; init; }
+    internal Func<string, bool>? Filter { get; set; }
 
     /// <summary>The settings by kind (QolSettings.Shown): null hides the tab; else the tab as shown. Null = as given.</summary>
-    internal Func<TabSpec, TabSpec?>? Shape { get; init; }
+    internal Func<TabSpec, TabSpec?>? Shape { get; set; }
 
     /// <returns>Whether the tab was added (false if a tab with this key exists or it's turned off).</returns>
     /// <param name="kind">What <paramref name="amount"/> counts, for a tab with an amount; else null.</param>
     public bool AddTab(string key, Texture2D? icon, bool crossed = false, int? number = null, TabAmount? kind = null, int amount = 0,
         int auditMin = 0, int auditMax = 0, string? text = null, CardModel? card = null)
     {
-        if (Predicted.Any(tab => tab.Key == key)) return false;
+        if (HasKey(key)) return false;
         return AddTab(new TabSpec(key, icon, crossed, number, kind, amount, auditMin, auditMax, text, card));
     }
 
@@ -67,13 +67,30 @@ public sealed class CardDecor
     /// <returns>Whether the tab was added (false if a tab with this key exists or it's turned off).</returns>
     public bool AddTab(TabSpec spec)
     {
-        if (Predicted.Any(tab => tab.Key == spec.Key)) return false;
+        if (HasKey(spec.Key)) return false;
         Predicted.Add(spec);
         if (Filter != null && !Filter(spec.Key)) return false;
         var shown = Shape == null ? spec : Shape(spec);
         if (shown == null) return false;
         Tabs.Add(shown);
         return true;
+    }
+
+    private bool HasKey(string key)
+    {
+        for (var i = 0; i < Predicted.Count; i++)
+            if (Predicted[i].Key == key) return true;
+        return false;
+    }
+
+    /// <summary>Empty again, for another card on another frame (CardDecorFrame keeps them: none made per card per frame).</summary>
+    internal void Reset(Func<string, bool>? filter, Func<TabSpec, TabSpec?>? shape)
+    {
+        Tabs.Clear();
+        Predicted.Clear();
+        Opacity = null;
+        Filter = filter;
+        Shape = shape;
     }
 
     /// <summary>Whether a tab kind is turned on in settings (for things that aren't tabs, like dimming).</summary>
@@ -95,7 +112,8 @@ public sealed class CardDecorFrame
     {
         if (!_decor.TryGetValue(card, out var decor))
         {
-            decor = new CardDecor { Filter = Filter, Shape = Shape };
+            if (_spare.Count > 0) (decor = _spare.Pop()).Reset(Filter, Shape);
+            else decor = new CardDecor { Filter = Filter, Shape = Shape };
             _decor[card] = decor;
         }
         return decor;
@@ -103,9 +121,15 @@ public sealed class CardDecorFrame
 
     public CardDecor? Get(CardModel card) => _decor.TryGetValue(card, out var decor) ? decor : null;
 
-    /// <summary>Last frame's tabs per card (what was predicted just before a card was played; used by ProcAudit).</summary>
-    public IReadOnlyDictionary<CardModel, IReadOnlyList<TabSpec>> Previous { get; private set; }
-        = new Dictionary<CardModel, IReadOnlyList<TabSpec>>(ReferenceEqualityComparer.Instance);
+    /// <summary>
+    /// Last frame's tabs per card (what was predicted just before a card was played; used by ProcAudit). Each list is kept while the
+    /// card's tabs stay the same and replaced when they change, never changed in place, so a list read from here stays as it was.
+    /// </summary>
+    public IReadOnlyDictionary<CardModel, IReadOnlyList<TabSpec>> Previous => _previous;
+
+    private readonly Dictionary<CardModel, IReadOnlyList<TabSpec>> _previous = new(ReferenceEqualityComparer.Instance);
+    private readonly Stack<CardDecor> _spare = new();
+    private readonly List<CardModel> _gone = new();
 
     /// <summary>
     /// Each card's tabs from the last frame it was in your hand (empty if it had none). Kept after
@@ -129,12 +153,17 @@ public sealed class CardDecorFrame
 
     public void Clear()
     {
-        var snap = new Dictionary<CardModel, IReadOnlyList<TabSpec>>(ReferenceEqualityComparer.Instance);
+        // This frame's tabs as last frame's: a card's list again while its tabs are the same (nothing made on a quiet board).
+        _gone.Clear();
+        foreach (var card in _previous.Keys)
+            if (!_decor.TryGetValue(card, out var decor) || decor.Predicted.Count == 0) _gone.Add(card);
+        foreach (var card in _gone) _previous.Remove(card);
         foreach (var (card, decor) in _decor)
         {
-            if (decor.Predicted.Count > 0) snap[card] = decor.Predicted.ToList();
+            if (decor.Predicted.Count > 0 && !(_previous.TryGetValue(card, out var before) && Same(before, decor.Predicted)))
+                _previous[card] = decor.Predicted.ToArray();
         }
-        Previous = snap;
+        var snap = _previous;
         foreach (var card in _seenThisFrame)
         {
             _lastInHand[card] = snap.TryGetValue(card, out var tabs) ? tabs : Array.Empty<TabSpec>();
@@ -147,6 +176,15 @@ public sealed class CardDecorFrame
         }
         Frame++;
         _seenThisFrame.Clear();
+        foreach (var decor in _decor.Values) _spare.Push(decor);
         _decor.Clear();
+    }
+
+    private static bool Same(IReadOnlyList<TabSpec> before, List<TabSpec> now)
+    {
+        if (before.Count != now.Count) return false;
+        for (var i = 0; i < now.Count; i++)
+            if (!Equals(before[i], now[i])) return false;
+        return true;
     }
 }

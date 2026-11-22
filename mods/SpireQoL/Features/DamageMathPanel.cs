@@ -64,8 +64,8 @@ internal sealed class DamageMathPanel
     {
         var grid = new GridContainer { Columns = 2, MouseFilter = Control.MouseFilterEnum.Ignore };
         Root = grid;
-        grid.AddThemeConstantOverride("h_separation", 8);
-        grid.AddThemeConstantOverride("v_separation", 2);
+        grid.AddThemeConstantOverride(GodotNames.Name("h_separation"), 8);
+        grid.AddThemeConstantOverride(GodotNames.Name("v_separation"), 2);
 
         for (var tier = 1; tier <= 5; tier++)
         {
@@ -106,7 +106,7 @@ internal sealed class DamageMathPanel
         grid.AddChild(label);
         // The result, with the skull just left of it when the enemy turn kills you.
         var resultRow = _resultRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        resultRow.AddThemeConstantOverride("separation", 4);
+        resultRow.AddThemeConstantOverride(GodotNames.Name("separation"), 4);
         // The chance it kills you, left of the skull, when a roll decides (decision #87).
         _deathChance = UiKit.Label("", (int)(FontSize * 0.75f), Colors.White);
         _deathChance.Visible = false;
@@ -131,7 +131,7 @@ internal sealed class DamageMathPanel
         _heartIcon.Visible = false;
         grid.AddChild(_heartIcon);
         _unblockableRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, Visible = false };
-        _unblockableRow.AddThemeConstantOverride("separation", 4);
+        _unblockableRow.AddThemeConstantOverride(GodotNames.Name("separation"), 4);
         _unblockable = Number(TakeColor);
         _unblockableRow.AddChild(_unblockable);
         grid.AddChild(_unblockableRow);
@@ -143,7 +143,7 @@ internal sealed class DamageMathPanel
         _revive = Number(SafeColor);
         _revive.Visible = false;
         var reviveRow = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        reviveRow.AddThemeConstantOverride("separation", 4);
+        reviveRow.AddThemeConstantOverride(GodotNames.Name("separation"), 4);
         _reviveChance = UiKit.Label("", (int)(FontSize * 0.75f), ChanceColor);
         _reviveChance.Visible = false;
         reviveRow.AddChild(_reviveChance); // before the HP it's for
@@ -219,10 +219,10 @@ internal sealed class DamageMathPanel
         {
             _osty.Text = $"− {takenDies.Taken}";
             // Red when the enemy turn kills Osty (its overkill already counts toward yours).
-            _osty.AddThemeColorOverride("font_color", takenDies.Dies ? TakeColor : OstyColor);
+            _osty.AddThemeColorOverride(GodotNames.Name("font_color"), takenDies.Dies ? TakeColor : OstyColor);
         }
         _result.Text = $"{take}";
-        _result.AddThemeColorOverride("font_color", take > 0 ? TakeColor : SafeColor);
+        _result.AddThemeColorOverride(GodotNames.Name("font_color"), take > 0 ? TakeColor : SafeColor);
     }
 
     /// <summary>
@@ -239,7 +239,7 @@ internal sealed class DamageMathPanel
         _reviveIcon.Visible = _revive.Visible = false;
         _ostyIcon.Visible = _osty.Visible = false;
         _result.Text = "?";
-        _result.AddThemeColorOverride("font_color", TakeColor);
+        _result.AddThemeColorOverride(GodotNames.Name("font_color"), TakeColor);
     }
 
     internal static Label Number(Color color)

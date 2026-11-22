@@ -155,8 +155,8 @@ public sealed partial class SettingsMenu
     private static Control? ModsScreenAnchor()
     {
         if (NGame.Instance?.MainMenu?.SubmenuStack?.Peek() is not NModdingScreen screen || !screen.IsVisibleInTree()) return null;
-        var info = screen.GetNodeOrNull<Control>("%ModInfoContainer");
-        var title = info?.GetNodeOrNull<RichTextLabel>("ModTitle")?.Text ?? "";
+        var info = screen.GetNodeOrNull<Control>(GodotNames.Path("%ModInfoContainer"));
+        var title = info?.GetNodeOrNull<RichTextLabel>(GodotNames.Path("ModTitle"))?.Text ?? "";
         return title.Contains("Spire QoL") ? info : null;
     }
 
@@ -256,11 +256,11 @@ public sealed partial class SettingsMenu
         style.ContentMarginBottom = 14;
         style.SetBorderWidthAll(2);
         style.BorderColor = Accent;
-        _panel.AddThemeStyleboxOverride("panel", style);
+        _panel.AddThemeStyleboxOverride(GodotNames.Name("panel"), style);
         _root.AddChild(_panel);
 
         var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 10);
+        box.AddThemeConstantOverride(GodotNames.Name("separation"), 10);
         _panel.AddChild(box);
 
         // Header: title, search, filter, close.
@@ -270,7 +270,7 @@ public sealed partial class SettingsMenu
         header.AddChild(title);
         header.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
         _search = new LineEdit { PlaceholderText = "Search", CustomMinimumSize = new Vector2(260, 0), ClearButtonEnabled = true };
-        _search.AddThemeFontSizeOverride("font_size", 20);
+        _search.AddThemeFontSizeOverride(GodotNames.Name("font_size"), 20);
         _search.TextChanged += _ => Rebuild();
         header.AddChild(_search);
         var (only, onlyBox) = Check(value: false, _ => Rebuild(), "Only what I have", "Show only what you have right now: your relics, the cards in your deck and, in a fight, the powers on you and the enemies.");
@@ -312,7 +312,7 @@ public sealed partial class SettingsMenu
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
         };
         _rows = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        _rows.AddThemeConstantOverride("separation", 0);
+        _rows.AddThemeConstantOverride(GodotNames.Name("separation"), 0);
         _scroll.AddChild(_rows);
         box.AddChild(_scroll);
 
@@ -814,8 +814,8 @@ public sealed partial class SettingsMenu
     {
         var label = Label(title, size: 24, Accent);
         var marginContainer = new MarginContainer();
-        marginContainer.AddThemeConstantOverride("margin_top", _rows!.GetChildCount() == 0 ? 2 : 18);
-        marginContainer.AddThemeConstantOverride("margin_bottom", 6);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_top"), _rows!.GetChildCount() == 0 ? 2 : 18);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_bottom"), 6);
         marginContainer.AddChild(label);
         _rows.AddChild(marginContainer);
         _row = 0;
@@ -832,7 +832,7 @@ public sealed partial class SettingsMenu
     private void AddRow(HBoxContainer row)
     {
         var panelContainer = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Pass };
-        panelContainer.AddThemeStyleboxOverride("panel", UiKit.PanelStyle(_row++ % 2 == 0 ? RowA : RowB, radius: 4, margin: 8));
+        panelContainer.AddThemeStyleboxOverride(GodotNames.Name("panel"), UiKit.PanelStyle(_row++ % 2 == 0 ? RowA : RowB, radius: 4, margin: 8));
         panelContainer.AddChild(row);
         _rows!.AddChild(panelContainer);
     }
@@ -1028,12 +1028,12 @@ public sealed partial class SettingsMenu
         var offHover = Box(new Color(0.16f, 0.16f, 0.2f), Accent);
         var on = Box(Accent, Accent.Lightened(0.3f));
         var onHover = Box(Accent.Lightened(0.15f), Colors.White);
-        button.AddThemeStyleboxOverride("normal", off);
-        button.AddThemeStyleboxOverride("hover", offHover);
-        button.AddThemeStyleboxOverride("pressed", on);
-        button.AddThemeStyleboxOverride("hover_pressed", onHover);
-        button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-        button.AddThemeStyleboxOverride("disabled", Box(new Color(0.1f, 0.1f, 0.1f, 0.5f), new Color(0.3f, 0.3f, 0.3f)));
+        button.AddThemeStyleboxOverride(GodotNames.Name("normal"), off);
+        button.AddThemeStyleboxOverride(GodotNames.Name("hover"), offHover);
+        button.AddThemeStyleboxOverride(GodotNames.Name("pressed"), on);
+        button.AddThemeStyleboxOverride(GodotNames.Name("hover_pressed"), onHover);
+        button.AddThemeStyleboxOverride(GodotNames.Name("focus"), new StyleBoxEmpty());
+        button.AddThemeStyleboxOverride(GodotNames.Name("disabled"), Box(new Color(0.1f, 0.1f, 0.1f, 0.5f), new Color(0.3f, 0.3f, 0.3f)));
         button.Toggled += on2 => changed(on2);
 
         if (text == null) return (button, button);
@@ -1061,7 +1061,7 @@ public sealed partial class SettingsMenu
     internal static Button MakeButton(string text, int size)
     {
         var button = new Button { Text = text, FocusMode = Control.FocusModeEnum.None };
-        button.AddThemeFontSizeOverride("font_size", size);
+        button.AddThemeFontSizeOverride(GodotNames.Name("font_size"), size);
         var normal = UiKit.PanelStyle(new Color(0.13f, 0.13f, 0.17f), radius: 6, margin: 14);
         normal.SetBorderWidthAll(1);
         normal.BorderColor = new Color(0.4f, 0.4f, 0.45f);
@@ -1072,23 +1072,23 @@ public sealed partial class SettingsMenu
         pressed.SetBorderWidthAll(2);
         pressed.BorderColor = Accent;
         foreach (var styleBoxFlat in new[] { normal, hover, pressed }) { styleBoxFlat.ContentMarginTop = 6; styleBoxFlat.ContentMarginBottom = 6; }
-        button.AddThemeStyleboxOverride("normal", normal);
-        button.AddThemeStyleboxOverride("hover", hover);
-        button.AddThemeStyleboxOverride("pressed", pressed);
-        button.AddThemeStyleboxOverride("hover_pressed", pressed);
-        button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
-        button.AddThemeColorOverride("font_color", Text);
-        button.AddThemeColorOverride("font_hover_color", Colors.White);
-        button.AddThemeColorOverride("font_pressed_color", Accent.Lightened(0.4f));
-        button.AddThemeColorOverride("font_hover_pressed_color", Colors.White);
+        button.AddThemeStyleboxOverride(GodotNames.Name("normal"), normal);
+        button.AddThemeStyleboxOverride(GodotNames.Name("hover"), hover);
+        button.AddThemeStyleboxOverride(GodotNames.Name("pressed"), pressed);
+        button.AddThemeStyleboxOverride(GodotNames.Name("hover_pressed"), pressed);
+        button.AddThemeStyleboxOverride(GodotNames.Name("focus"), new StyleBoxEmpty());
+        button.AddThemeColorOverride(GodotNames.Name("font_color"), Text);
+        button.AddThemeColorOverride(GodotNames.Name("font_hover_color"), Colors.White);
+        button.AddThemeColorOverride(GodotNames.Name("font_pressed_color"), Accent.Lightened(0.4f));
+        button.AddThemeColorOverride(GodotNames.Name("font_hover_pressed_color"), Colors.White);
         return button;
     }
 
     internal static Label Label(string text, int size, Color color, float width = 0)
     {
         var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore, VerticalAlignment = VerticalAlignment.Center };
-        label.AddThemeFontSizeOverride("font_size", size);
-        label.AddThemeColorOverride("font_color", color);
+        label.AddThemeFontSizeOverride(GodotNames.Name("font_size"), size);
+        label.AddThemeColorOverride(GodotNames.Name("font_color"), color);
         if (width > 0)
         {
             label.CustomMinimumSize = new Vector2(width, 0);

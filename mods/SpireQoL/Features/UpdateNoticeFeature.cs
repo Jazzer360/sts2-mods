@@ -94,12 +94,12 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         if (_status is { } status)
         {
             label.Text = Text(status);
-            label.AddThemeColorOverride("font_color", IsTestBuild(status) ? TestBuild : status.Newer > 0 ? Behind : UpToDate);
+            label.AddThemeColorOverride(GodotNames.Name("font_color"), IsTestBuild(status) ? TestBuild : status.Newer > 0 ? Behind : UpToDate);
         }
         else if (_check != null)
         {
             label.Text = "Checking for Spire QoL updates…";
-            label.AddThemeColorOverride("font_color", Checking);
+            label.AddThemeColorOverride(GodotNames.Name("font_color"), Checking);
         }
         gear.Visible = OpenSettings != null && Cards.GameIcons.Valid(gear.Texture);
         gear.Modulate = gear.GetGlobalRect().HasPoint(gear.GetGlobalMousePosition()) ? Colors.White : new Color(0.85f, 0.85f, 0.85f, 0.85f);
@@ -141,7 +141,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             _loggedMissing = true;
             return false;
         }
-        var size = _warning.GetThemeFontSize("font_size");
+        var size = _warning.GetThemeFontSize(GodotNames.Name("font_size"));
         _fontSize = size > 0 ? size : 18;
         _label = UiKit.Label("", _fontSize, Behind);
         _label.HorizontalAlignment = HorizontalAlignment.Right;
@@ -198,7 +198,7 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
     // The visible one (the game keeps another for in-run screens).
     private static Control? Find(Node node)
     {
-        if (node is NDebugInfoLabelManager && node.GetNodeOrNull<Control>("%ModdedWarning") is { } control && control.IsVisibleInTree()) return control;
+        if (node is NDebugInfoLabelManager && node.GetNodeOrNull<Control>(GodotNames.Path("%ModdedWarning")) is { } control && control.IsVisibleInTree()) return control;
         foreach (var otherNode in node.GetChildren())
             if (Find(otherNode) is { } found) return found;
         return null;

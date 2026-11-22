@@ -57,11 +57,10 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         var hand = Sts2State.Hand(me);
 
         // Nothing changed since last frame (decision #130): its results again, without asking the game's hooks for every card
-        // (how many times it plays, whether it can be played). Dev mode works them out anyway every 30th such frame and logs a
+        // (how many times it plays, whether it can be played). Dev mode works them out anyway on such a frame once a second and logs a
         // difference (a change the probe missed).
         var combat = Sts2State.Combat;
-        var reuse = _reuse.Decide(combat != null && _last.Count == hand.Count && _last.Select(cardEthereal => cardEthereal.Card).SequenceEqual(hand, ReferenceEqualityComparer.Instance)
-                                  && BoardProbe.Hash(me, combat) == _lastProbe);
+        var reuse = _reuse.Decide(combat != null && SameHand(hand) && BoardProbe.Hash(me, combat) == _lastProbe);
         if (reuse == FrameReuse.Reuse)
         {
             foreach (var (card, ethereal, tabs) in _last) Show(card, ethereal, tabs, settings);
@@ -84,6 +83,15 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         _last.Clear();
         _last.AddRange(now);
         if (combat != null) _lastProbe = BoardProbe.Hash(me, combat);
+    }
+
+    /// <summary>The hand holds the cards last worked out, in the same order (by index: this runs every frame).</summary>
+    private bool SameHand(IReadOnlyList<CardModel> hand)
+    {
+        if (_last.Count != hand.Count) return false;
+        for (var i = 0; i < hand.Count; i++)
+            if (!ReferenceEquals(_last[i].Card, hand[i])) return false;
+        return true;
     }
 
     private void Show(CardModel card, bool ethereal, List<TabSpec> tabs, QolSettings settings)

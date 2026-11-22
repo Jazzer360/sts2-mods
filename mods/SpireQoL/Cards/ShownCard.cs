@@ -3,6 +3,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Helpers;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
+using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Cards;
 
@@ -85,11 +86,11 @@ internal sealed class ShownCard
             {
                 _visuals = true;
                 _card.UpdateVisuals(PileType.None, CardPreviewMode.Normal);
-                if (FreeCost && _card.GetNodeOrNull<Label>("%EnergyLabel") is { } cost)
+                if (FreeCost && _card.GetNodeOrNull<Label>(GodotNames.Path("%EnergyLabel")) is { } cost)
                 {
                     cost.Text = "0";
-                    cost.AddThemeColorOverride("font_color", StsColors.green);
-                    cost.AddThemeColorOverride("font_outline_color", StsColors.energyGreenOutline);
+                    cost.AddThemeColorOverride(GodotNames.Name("font_color"), StsColors.green);
+                    cost.AddThemeColorOverride(GodotNames.Name("font_outline_color"), StsColors.energyGreenOutline);
                 }
                 Quiet(_card);
             }
@@ -129,7 +130,7 @@ internal sealed class ShownCard
     /// <summary>Moves the card so its frame sits centred at the bottom of the box (wherever the scene puts its origin). True if it moved.</summary>
     private bool Place()
     {
-        if (_card!.GetNodeOrNull<Control>("%Frame") is not { } frame || frame.Size.X < 1) return true;
+        if (_card!.GetNodeOrNull<Control>(GodotNames.Path("%Frame")) is not { } frame || frame.Size.X < 1) return true;
         var rel = Root.GetGlobalTransform().AffineInverse() * frame.GetGlobalTransform();
         var shown = frame.Size * _scale;
         var want = new Vector2((Root.Size.X - shown.X) / 2f, Root.Size.Y - shown.Y);

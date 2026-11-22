@@ -130,7 +130,7 @@ internal sealed class InspectScreen
         if (!_transformRow.Visible) return;
         _transformRow.AddChild(Text("Card you transform:", size: 20, SettingsMenu.Text));
         var pick = new OptionButton { FocusMode = Control.FocusModeEnum.None };
-        pick.AddThemeFontSizeOverride("font_size", 18);
+        pick.AddThemeFontSizeOverride(GodotNames.Name("font_size"), 18);
         pick.AddItem("Any of your cards");
         // One entry per card as you'd see it (same card, upgrade and enchantment), in your deck's order.
         var cards = me.Deck.Cards.GroupBy(card => (card.Id, card.CurrentUpgradeLevel, card.Enchantment?.GetType())).Select(sameCard => sameCard.First()).ToList();
@@ -172,11 +172,11 @@ internal sealed class InspectScreen
         style.ContentMarginBottom = 14;
         style.SetBorderWidthAll(2);
         style.BorderColor = SettingsMenu.Accent;
-        _panel.AddThemeStyleboxOverride("panel", style);
+        _panel.AddThemeStyleboxOverride(GodotNames.Name("panel"), style);
         _root.AddChild(_panel);
 
         var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 10);
+        box.AddThemeConstantOverride(GodotNames.Name("separation"), 10);
         _panel.AddChild(box);
 
         var header = UiKit.Row(separation: 14);
@@ -203,7 +203,7 @@ internal sealed class InspectScreen
 
         var scroll = new ScrollContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         _body = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-        _body.AddThemeConstantOverride("separation", 14);
+        _body.AddThemeConstantOverride(GodotNames.Name("separation"), 14);
         scroll.AddChild(_body);
         box.AddChild(scroll);
         box.AddChild(Text("Click the cards you'd be happy with. Marks are kept for this run. Every card the rules allow, never the roll. Esc: close.", size: 16, SettingsMenu.Muted));
@@ -241,7 +241,7 @@ internal sealed class InspectScreen
             var button = SettingsMenu.MakeButton($"Mark {Title(relic)}'s cards ({mine.Count})", size: 18);
             button.Icon = GameIcons.Relic(relic);
             button.ExpandIcon = true;
-            button.AddThemeConstantOverride("icon_max_width", 28);
+            button.AddThemeConstantOverride(GodotNames.Name("icon_max_width"), 28);
             button.Pressed += () => { foreach (var card in mine) _marks.Add(card.Id.ToString()); Refresh(); };
             _relicButtons!.AddChild(button);
         }
@@ -255,8 +255,8 @@ internal sealed class InspectScreen
             _body!.AddChild(head);
             _groupLabels.Add((head, group, times));
             var flow = new HFlowContainer { MouseFilter = Control.MouseFilterEnum.Ignore, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-            flow.AddThemeConstantOverride("h_separation", 6);
-            flow.AddThemeConstantOverride("v_separation", 6);
+            flow.AddThemeConstantOverride(GodotNames.Name("h_separation"), 6);
+            flow.AddThemeConstantOverride(GodotNames.Name("v_separation"), 6);
             foreach (var card in group.Cards) flow.AddChild(Cell(card, held, group.Upgraded));
             _body.AddChild(flow);
         }
@@ -273,13 +273,13 @@ internal sealed class InspectScreen
         _cards.Add(shown);
         var frame = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Stop, MouseDefaultCursorShape = Control.CursorShape.PointingHand, TooltipText = card.Title };
         // Room around the card for its ring (RingGap and the border).
-        frame.AddThemeStyleboxOverride("panel", new StyleBoxEmpty { ContentMarginLeft = 4, ContentMarginRight = 4, ContentMarginTop = 4, ContentMarginBottom = RingGap + 6 });
+        frame.AddThemeStyleboxOverride(GodotNames.Name("panel"), new StyleBoxEmpty { ContentMarginLeft = 4, ContentMarginRight = 4, ContentMarginTop = 4, ContentMarginBottom = RingGap + 6 });
         frame.AddChild(shown.Root);
         var ringStyle = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0), BorderColor = MarkColor };
         ringStyle.SetBorderWidthAll(3);
         ringStyle.SetCornerRadiusAll(10);
         var ring = new Panel { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
-        ring.AddThemeStyleboxOverride("panel", ringStyle);
+        ring.AddThemeStyleboxOverride(GodotNames.Name("panel"), ringStyle);
         shown.Root.AddChild(ring); // after the card: drawn over it
         frame.GuiInput += inputEvent =>
         {
@@ -353,8 +353,8 @@ internal sealed class InspectScreen
     private static Label Text(string text, int size, Color color)
     {
         var label = new Label { Text = text, MouseFilter = Control.MouseFilterEnum.Ignore };
-        label.AddThemeFontSizeOverride("font_size", size);
-        label.AddThemeColorOverride("font_color", color);
+        label.AddThemeFontSizeOverride(GodotNames.Name("font_size"), size);
+        label.AddThemeColorOverride(GodotNames.Name("font_color"), color);
         return label;
     }
 

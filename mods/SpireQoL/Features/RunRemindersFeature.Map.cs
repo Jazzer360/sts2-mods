@@ -42,7 +42,7 @@ public sealed partial class RunRemindersFeature
             var type = PointTypeField?.GetValue(item) is MapPointType mapPointType ? mapPointType : MapPointType.Unassigned;
             var shown = me == null ? new List<PathMark>() : PathMarks(me, RoomOf(type));
             var signature = string.Join("|", shown.Select(pathMark => $"{pathMark.Model.GetType().Name}:{pathMark.Crossed}:{pathMark.Note}"));
-            var row = item.GetNodeOrNull<HBoxContainer>(PathNodeName);
+            var row = item.GetNodeOrNull<HBoxContainer>(GodotNames.Path(PathNodeName));
             if (!_pathShown.TryGetValue(item, out var was) || was != signature || (row == null) != (shown.Count == 0))
             {
                 row.RemoveAndFree();
@@ -71,7 +71,7 @@ public sealed partial class RunRemindersFeature
             var scale = item.GetGlobalTransform().Scale.Y;
             foreach (var pic in Pictures(item))
             {
-                if (item.GetNodeOrNull(PathNodeName) is { } ours && ours.IsAncestorOf(pic) || !pic.IsVisibleInTree() || pic.Size.Y < 2) continue;
+                if (item.GetNodeOrNull(GodotNames.Path(PathNodeName)) is { } ours && ours.IsAncestorOf(pic) || !pic.IsVisibleInTree() || pic.Size.Y < 2) continue;
                 return (pic.GetGlobalRect().GetCenter().Y - item.GlobalPosition.Y) / (scale == 0 ? 1 : scale);
             }
         }
