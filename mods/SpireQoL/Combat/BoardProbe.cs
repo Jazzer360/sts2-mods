@@ -1,4 +1,3 @@
-using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Players;
@@ -95,10 +94,18 @@ internal static class BoardProbe
         }
     }
 
-    private static readonly AccessTools.FieldRef<CardModel, HashSet<CardKeyword>?> OwnKeywords = AccessTools.FieldRefAccess<CardModel, HashSet<CardKeyword>?>("_keywords");
-    private static readonly AccessTools.FieldRef<CardModel, HashSet<CardKeyword>> AddedKeywords = AccessTools.FieldRefAccess<CardModel, HashSet<CardKeyword>>("_keywordsAddedFromOutside");
-    private static readonly AccessTools.FieldRef<CardModel, HashSet<CardKeyword>> RemovedKeywords = AccessTools.FieldRefAccess<CardModel, HashSet<CardKeyword>>("_keywordsRemovedFromOutside");
-    private static readonly AccessTools.FieldRef<CardEnergyCost, int> BaseCost = AccessTools.FieldRefAccess<CardEnergyCost, int>("_base");
+    // The game's private fields the probe reads, through the runtime's own accessors (UnsafeAccessor): nothing generated when the
+    // class starts (FieldRefAccess generates code then, and a failure there, two threads at once, would break the class for good)
+    // and nothing allocated per read. A field a game update renamed throws when it's read: Compute's fallback (never the same).
+    [System.Runtime.CompilerServices.UnsafeAccessor(System.Runtime.CompilerServices.UnsafeAccessorKind.Field, Name = "_keywords")]
+    private static extern ref HashSet<CardKeyword>? OwnKeywords(CardModel card);
+    [System.Runtime.CompilerServices.UnsafeAccessor(System.Runtime.CompilerServices.UnsafeAccessorKind.Field, Name = "_keywordsAddedFromOutside")]
+    private static extern ref HashSet<CardKeyword> AddedKeywords(CardModel card);
+    [System.Runtime.CompilerServices.UnsafeAccessor(System.Runtime.CompilerServices.UnsafeAccessorKind.Field, Name = "_keywordsRemovedFromOutside")]
+    private static extern ref HashSet<CardKeyword> RemovedKeywords(CardModel card);
+    [System.Runtime.CompilerServices.UnsafeAccessor(System.Runtime.CompilerServices.UnsafeAccessorKind.Field, Name = "_base")]
+    private static extern ref int BaseCost(CardEnergyCost cost);
+    private static bool _warned;
     /// <summary>The Fool's arrows you can shoot (beta only: null on main, which has no arrows).</summary>
     private static readonly Func<PlayerCombatState, int>? Arrows = Procs.Fool.ArrowCount;
 
@@ -115,9 +122,15 @@ internal static class BoardProbe
             AddCreatures(ref hashCode, combat.Allies);
             AddCreatures(ref hashCode, combat.Enemies);
         }
-        catch
+        catch (Exception ex)
         {
             hashCode.Add(Godot.Engine.GetProcessFrames()); // couldn't read it all: never the same as last frame
+            // Once a launch: every frame is then worked out from the game (correct, only slower), which nothing else would show.
+            if (!_warned)
+            {
+                _warned = true;
+                ModEntry.Log.Warn($"[probe] the board probe couldn't read the board, so nothing is reused between frames: {ex.GetType().Name}: {ex.Message}");
+            }
         }
         return hashCode.ToHashCode();
     }

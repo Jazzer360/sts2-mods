@@ -79,9 +79,6 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
-        var holders = NRun.Instance?.GlobalUi?.TopBar?.PotionContainer is { } container
-            ? Holders?.Invoke(container) ?? MainHoldersField?.GetValue(container) as IReadOnlyList<NPotionHolder>
-            : null;
         if (_proto == null) TakeProto();
         Check(me);
         // The same potions in the same slots, the same board (settings among it) and container as last frame: the tabs stand as drawn.
@@ -97,6 +94,10 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         }
         if (drawnFor.ToHashCode() == _drawnFor) return;
         _drawnFor = drawnFor.ToHashCode();
+        // Read only when drawing: the holders' list is made fresh on each read.
+        var holders = NRun.Instance?.GlobalUi?.TopBar?.PotionContainer is { } container
+            ? Holders?.Invoke(container) ?? MainHoldersField?.GetValue(container) as IReadOnlyList<NPotionHolder>
+            : null;
         var seen = new HashSet<ulong>();
         if (me != null && holders != null && Sts2State.InCombat && !host.HideAll)
         {
