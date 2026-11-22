@@ -305,7 +305,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
   </section>
 
   <section class="page" id="p-perf">
-    <div class="row" style="margin-bottom:10px"><span class="dim" title="Each window draws its points averaged over a stretch that suits it: 1.25 s over a minute, 3 s over five, 10 s over fifteen, and over the whole launch about a three-hundredth of it. Spikes still count in the tiles and the log.">Window</span><span class="seg" id="perfWindow"><button data-v="60">1 minute</button><button data-v="300">5 minutes</button><button data-v="900">15 minutes</button><button data-v="0">whole launch</button></span><label><input type="checkbox" id="logTimesBox"> log scale for times</label><label title="Leave out the frames before the game settled: the launch, the menus and map before your first fight, and that fight's first 15 s (loading, and the mod's code compiling on first use). They dwarf everything after."><input type="checkbox" id="skipLaunchBox"> skip the launch</label></div>
+    <div class="row" style="margin-bottom:10px"><span class="dim" title="Each window draws its points averaged over a stretch that suits it: 1.25 s over a minute, 3 s over five, 10 s over fifteen, and over the whole launch about a three-hundredth of it. Spikes still count in the tiles and the log.">Window</span><span class="seg" id="perfWindow"><button data-v="60">1 minute</button><button data-v="300">5 minutes</button><button data-v="900">15 minutes</button><button data-v="0">whole launch</button></span><label><input type="checkbox" id="logTimesBox"> log scale for times</label><label title="Keep the launch's spikes off the charts' scales and out of the tiles: its first 20 s (loading) and its first fight's first 15 s (the mod's code compiling on first use). They still draw, running off the top, so nothing disappears."><input type="checkbox" id="skipLaunchBox"> skip the launch</label></div>
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><h3>Is the mod making frames slow?</h3>
@@ -462,18 +462,25 @@ const FIGHT_LOAD_S = 3;
  */
 const launchAt = (t) => M.launches.findLast((at) => at <= t) ?? 0;
 const warmingUp = (t) => t - launchAt(t) < WARMUP_S;
-/** The launch settles once the first fight has loaded and made its first predictions (the mod's fight code compiling on first use), or at the warm-up's end before any fight. */
+/** The first fight's first seconds: it loads and makes its first predictions (the mod's fight code compiling on first use). */
 const LAUNCH_FIGHT_S = 15;
-/** When the launch t belongs to settled: its first fight's start plus LAUNCH_FIGHT_S, or its warm-up's end before any fight. */
-function settledAt(t) {
-  const at = launchAt(t), first = M.combats.find((c) => c.t >= at);
-  return first ? first.t + LAUNCH_FIGHT_S : at + WARMUP_S;
-}
 /** The Performance page's "skip the launch" (on by default; kept per browser, and for the page while open). */
 let skipLaunchChosen = true;
 const skipLaunch = () => { try { const v = localStorage.getItem("skipLaunch"); return v == null ? skipLaunchChosen : v !== "0"; } catch { return skipLaunchChosen; } };
-/** Rollups for the charts: without the launch's (its loading and first-use frames dwarf everything after) when skipped. */
-const afterLaunch = (arr) => (skipLaunch() ? arr.filter((e) => e.t >= settledAt(e.t)) : arr);
+/**
+ * The launch's spikes at t: its warm-up (loading, WARMUP_S) or its first fight's first LAUNCH_FIGHT_S (the mod's fight code compiling
+ * on first use). Only those moments, not everything before the first fight: the menus and the map are part of the launch.
+ */
+function launchSpikeAt(t) {
+  const at = launchAt(t);
+  if (t - at < WARMUP_S) return true;
+  const first = M.combats.find((c) => c.t >= at);
+  return first != null && t >= first.t && t < first.t + LAUNCH_FIGHT_S;
+}
+/** Whether a moment sets a chart's scale: not a launch spike while "skip the launch" is on (the spike still draws, off the top). */
+const scalesAt = (t) => !(skipLaunch() && launchSpikeAt(t));
+/** Rollups for the verdicts (tiles, the feature table, the Overview): without the launch's spikes when skipped. The charts draw them all. */
+const afterLaunch = (arr) => (skipLaunch() ? arr.filter((e) => !launchSpikeAt(e.t)) : arr);
 /** Whether the game was loading a scene at t: the launch's warm-up, anywhere outside a fight (menus, the map, rooms, events, rewards: scene changes the game makes) or a fight's first seconds.
  *  The game's own hitches there are its loading, nothing the mod can do about; they're shown but don't count against the verdicts. Hitches inside a fight still do (a full memory clean-up the mod's allocations set off, say). */
 function loadingAt(t) {
@@ -1021,10 +1028,12 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
   const t0 = Math.min(...all.map((p) => p[0])), t1 = Math.max(...all.map((p) => p[0]), t0 + 1);
   // refs: numbers, or { v, label, color, below } (frame-rate lines): each drawn only once the data nears it (nearRefs), the axis
   // then reaching it.
-  const left = series.filter((s) => !s.right).flatMap((s) => s.points), leftValues = (left.length ? left : all).map((p) => p[1]);
+  const left = series.filter((s) => !s.right).flatMap((s) => s.points), leftAll = left.length ? left : all;
+  const leftScaled = leftAll.filter((p) => scalesAt(p[0])), leftValues = (leftScaled.length ? leftScaled : leftAll).map((p) => p[1]);
   const refv = nearRefs(refs.map((r) => (typeof r === "number" ? { v: r } : r)), leftValues);
   const yMax = fixedMax ?? Math.max(...leftValues, ...refv.map((r) => r.v), 1) * (log ? 1.5 : 1.08);
-  const rightMax = hasRight ? Math.max(...rightSeries.flatMap((s) => s.points.map((p) => p[1])), 1) * 1.08 : 1;
+  const rightAll = rightSeries.flatMap((s) => s.points), rightScaled = rightAll.filter((p) => scalesAt(p[0]));
+  const rightMax = hasRight ? Math.max(...(rightScaled.length ? rightScaled : rightAll).map((p) => p[1]), 1) * 1.08 : 1;
   const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r);
   let Y;
   if (log) {
@@ -1052,6 +1061,8 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
   }
   drawRefLines(g, refv, yMax, Y, pad, w);
   const refLabels = () => { if (!mini) drawRefLabels(g, refv, yMax, Y, pad, w); };
+  // Clipped to the plot: a launch spike that doesn't set the scale runs off its top.
+  g.save(); g.beginPath(); g.rect(pad.l, pad.t - 2, w - pad.l - pad.r, h - pad.t - pad.b + 4); g.clip();
   for (const s of [...series].sort((a, b) => faded(id, b.color) - faded(id, a.color))) {
     const SY = s.right ? YR : Y;
     s.Y = SY;
@@ -1063,6 +1074,7 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
     g.stroke();
   }
   g.globalAlpha = 1;
+  g.restore();
   refLabels();
   g.font = "11px system-ui";
   if (!mini) { g.fillStyle = css("--faint"); g.fillText(clock(t0), pad.l, h - 2); const e = clock(t1); g.fillText(e, w - pad.r - g.measureText(e).width, h - 2); }
@@ -1110,8 +1122,9 @@ function stacked(id, layers, { refs = [], unit = " ms", log = false } = {}) {
   if (!layers.length || !layers[0].points.length) { g.fillStyle = css("--faint"); g.font = "12px system-ui"; g.fillText("Nothing yet", w / 2 - 30, h / 2); return; }
   const ts = layers[0].points.map((p) => p[0]), n = ts.length;
   const tot = ts.map((_, i) => layers.reduce((a, l) => a + (l.points[i]?.[1] || 0), 0));
-  refs = nearRefs(refs, tot);
-  const yMax = Math.max(...tot, ...refs.map((r) => r.v), 0.1) * (log ? 1.5 : 1.08), t0 = ts[0], t1 = Math.max(ts.at(-1), t0 + 1);
+  const scaledTot = tot.filter((_, i) => scalesAt(ts[i])), scaleTot = scaledTot.length ? scaledTot : tot;
+  refs = nearRefs(refs, scaleTot);
+  const yMax = Math.max(...scaleTot, ...refs.map((r) => r.v), 0.1) * (log ? 1.5 : 1.08), t0 = ts[0], t1 = Math.max(ts.at(-1), t0 + 1);
   const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r);
   let Y;
   if (log) {
@@ -1130,6 +1143,7 @@ function stacked(id, layers, { refs = [], unit = " ms", log = false } = {}) {
     Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - v / yMax);
   }
   const base = new Array(n).fill(0);
+  g.save(); g.beginPath(); g.rect(pad.l, pad.t - 2, w - pad.l - pad.r, h - pad.t - pad.b + 4); g.clip();
   for (const l of layers) {
     g.fillStyle = l.color; g.globalAlpha = faded(id, l.color) ? 0.12 : 0.75; g.beginPath();
     for (let i = 0; i < n; i++) g.lineTo(X(ts[i]), Y(base[i] + (l.points[i]?.[1] || 0)));
@@ -1137,6 +1151,7 @@ function stacked(id, layers, { refs = [], unit = " ms", log = false } = {}) {
     g.closePath(); g.fill(); g.globalAlpha = 1;
     for (let i = 0; i < n; i++) base[i] += l.points[i]?.[1] || 0;
   }
+  g.restore();
   drawRefLines(g, refs, yMax, Y, pad, w);
   drawRefLabels(g, refs, yMax, Y, pad, w);
   HOVER[id] = { kind: "stacked", layers, ts, t0, t1, pad, w, h, X, Y, unit };
@@ -1368,7 +1383,7 @@ function renderOverview() {
     else if (st5.level !== "good") setCheck("chk-perf", st5.level, `Stuttering from the mod: ${spellText(st5)} in 5 minutes.`, stats, causeLine);
     else if (p95 > MOD_BUDGET_MS || stalls5 > 3) setCheck("chk-perf", "warn", p95 > MOD_BUDGET_MS ? `The mod is heavier than usual: ${fmt(p95, 1)} ms in a busy frame.` : `${stalls5} hitches from the game itself during fights in 5 minutes.`, stats, causeLine);
     else setCheck("chk-perf", "good", `Smooth: the mod takes ${fmt(p95, 1)} ms in a busy frame${st5.oneOffs ? `; ${st5.oneOffs} one-off slow frame(s), not a pattern` : ""}.`, stats, causeLine);
-    lines("sparkFrames", [{ name: "busy frame (p95)", color: css("--accent"), points: afterLaunch(r5).map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: afterLaunch(r5).map((r) => [r.t, r.modMax]) }],
+    lines("sparkFrames", [{ name: "busy frame (p95)", color: css("--accent"), points: r5.map((r) => [r.t, r.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r5.map((r) => [r.t, r.modMax]) }],
       { refs: MOD_REFS(), unit: " ms", log: logTimes() });
   }
   // ---- what needs a look
@@ -1583,7 +1598,7 @@ function renderSearches() {
 }
 
 function renderPerf() {
-  const win = perfWindow(), r = afterLaunch(since(M.rollups, win)), colors = seriesColors();
+  const win = perfWindow(), rc = since(M.rollups, win), r = afterLaunch(rc), colors = seriesColors();
   const p95s = r.map((x) => x.modP95), frames = r.reduce((a, x) => a + x.frames, 0), secs = r.reduce((a, x) => a + x.seconds, 0);
   const waits = since(M.waits, win), uns = since(M.unsettled, win);
   const busy = quant(p95s, 0.5), st = stutters(r), stalls = r.filter((x) => isHitch(x) && !loadingAt(x.t)).length;
@@ -1597,20 +1612,20 @@ function renderPerf() {
     tile("The mod's new memory", `${fmt(modMb / Math.max(secs, 0.01), 1)} MB/s`, `${pct(modMb, r.reduce((a, x) => a + x.allocatedMb, 0))} of the whole game's: ${fmt(frameMb, 0)} MB from its frames and hooks, ${fmt(simMb, 0)} MB from its searches. The garbage behind the quick clean-ups`, modMb / Math.max(secs, 0.01) > 20 ? "bad" : modMb / Math.max(secs, 0.01) > 5 ? "warn" : "good"),
     tile("Full memory clean-ups", fmt(gen2, 0), `${fmt(r.reduce((a, x) => a + x.gcPauseMs, 0), 0)} ms paused in all (the whole game)`, gen2 > 5 ? "warn" : "good"),
   ].join(""));
-  lines("pfFrame", [{ name: "typical frame", color: css("--good"), points: r.map((x) => [x.t, x.modP50]) }, { name: "busy frame (p95)", color: css("--accent"), points: r.map((x) => [x.t, x.modP95]) }, { name: "slowest frame", color: css("--bad"), points: r.map((x) => [x.t, x.modMax]) }], { refs: MOD_REFS(), unit: " ms", log: logTimes() });
+  lines("pfFrame", [{ name: "typical frame", color: css("--good"), points: rc.map((x) => [x.t, x.modP50]) }, { name: "busy frame (p95)", color: css("--accent"), points: rc.map((x) => [x.t, x.modP95]) }, { name: "slowest frame", color: css("--bad"), points: rc.map((x) => [x.t, x.modMax]) }], { refs: MOD_REFS(), unit: " ms", log: logTimes() });
   // features: the six with the most time, then the rest together
   const totals = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) totals[k] = (totals[k] || 0) + v;
   const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k);
-  const layers = top.map((k, i) => ({ name: k, color: colors[i % colors.length], points: r.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
-  layers.push({ name: "the rest", color: css("--faint"), points: r.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
+  const layers = top.map((k, i) => ({ name: k, color: colors[i % colors.length], points: rc.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
+  layers.push({ name: "the rest", color: css("--faint"), points: rc.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
   // On a log scale a pile hides all but its bottom layer: each feature its own line instead, with the mod in all (the pile's top).
-  if (logTimes()) lines("pfFeatures", [...layers, { name: "the mod in all", color: css("--text"), points: r.map((x) => [x.t, Object.values(x.featureMean || {}).reduce((a, v) => a + v, 0)]) }], { refs: FPS_REFS(), unit: " ms", log: true, logFloor: 0.001 });
+  if (logTimes()) lines("pfFeatures", [...layers, { name: "the mod in all", color: css("--text"), points: rc.map((x) => [x.t, Object.values(x.featureMean || {}).reduce((a, v) => a + v, 0)]) }], { refs: FPS_REFS(), unit: " ms", log: true, logFloor: 0.001 });
   else stacked("pfFeatures", layers, { refs: FPS_REFS() });
-  shareBars("pfShare", r);
-  lines("pfFps", [{ name: "frames per second", color: css("--teal"), points: r.filter((x) => x.seconds > 0).map((x) => [x.t, x.frames / x.seconds]) }], { unit: " fps", refs: FPS_REFS().map((f) => ({ ...f, v: Math.round(1000 / f.v), below: true })) });
+  shareBars("pfShare", rc);
+  lines("pfFps", [{ name: "frames per second", color: css("--teal"), points: rc.filter((x) => x.seconds > 0).map((x) => [x.t, x.frames / x.seconds]) }], { unit: " fps", refs: FPS_REFS().map((f) => ({ ...f, v: Math.round(1000 / f.v), below: true })) });
   setHTML($("pfFeaturesLegend"), [...layers, ...(logTimes() ? [{ name: "the mod in all", color: css("--text") }] : [])].map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
-  lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: r.map((x) => [x.t, x.gapMax]) }], { refs: [{ v: 50, label: "50 ms" }, ...FPS_REFS()], unit: " ms" } /* linear always: a gap is a frame long or short, read against the frame-rate lines */);
+  lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: rc.map((x) => [x.t, x.gapMax]) }], { refs: [{ v: 50, label: "50 ms" }, ...FPS_REFS()], unit: " ms" } /* linear always: a gap is a frame long or short, read against the frame-rate lines */);
   // featureKb is KB per frame (a mean over the rollup's frames): times the frames, it's the rollup's total
   const modMbPerSec = (x) => Object.values(x.featureKb || {}).reduce((a, v) => a + v, 0) * x.frames / 1024 / Math.max(x.seconds, 0.01);
   const simMbPerSec = (x) => (x.simMb || 0) / Math.max(x.seconds, 0.01);
@@ -1622,19 +1637,19 @@ function renderPerf() {
   // The palette without the searches' violet, so no feature shares its colour (or its legend hover).
   const allocColors = colors.filter((c) => sameColor(c) !== sameColor(css("--violet")));
   const allocLayers = [
-    ...allocTop.map((k, i) => ({ name: k, color: allocColors[i % allocColors.length], points: r.map((x) => [x.t, featureMbPerSec(x, k)]) })),
-    { name: "the mod's other features", color: css("--faint"), points: r.map((x) => [x.t, modMbPerSec(x) - allocTop.reduce((a, k) => a + featureMbPerSec(x, k), 0)]) },
-    { name: "the mod's searches", color: css("--violet"), points: r.map((x) => [x.t, simMbPerSec(x)]) },
-    { name: "the rest of the game", color: css("--line"), points: r.map((x) => [x.t, Math.max(0, x.allocatedMb / Math.max(x.seconds, 0.01) - modMbPerSec(x) - simMbPerSec(x))]) },
+    ...allocTop.map((k, i) => ({ name: k, color: allocColors[i % allocColors.length], points: rc.map((x) => [x.t, featureMbPerSec(x, k)]) })),
+    { name: "the mod's other features", color: css("--faint"), points: rc.map((x) => [x.t, modMbPerSec(x) - allocTop.reduce((a, k) => a + featureMbPerSec(x, k), 0)]) },
+    { name: "the mod's searches", color: css("--violet"), points: rc.map((x) => [x.t, simMbPerSec(x)]) },
+    { name: "the rest of the game", color: css("--line"), points: rc.map((x) => [x.t, Math.max(0, x.allocatedMb / Math.max(x.seconds, 0.01) - modMbPerSec(x) - simMbPerSec(x))]) },
   ];
   stacked("pfAlloc", allocLayers, { unit: " MB/s" });
   setHTML($("pfAllocLegend"), allocLayers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
-  lines("pfGc", [{ name: "memory in use", color: css("--teal"), points: r.map((x) => [x.t, x.heapMb]) }, { name: "full collection (memory in use)", color: css("--bad"), dots: true, points: r.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) },
-    { name: "clean-up pauses", color: css("--warn"), right: true, points: r.map((x) => [x.t, x.gcPauseMs / Math.max(x.seconds, 0.01)]) }], { unit: " MB", rightUnit: " ms/s" });
-  lines("pfEngine", [{ name: "shader compiles", color: css("--warn"), dots: true, points: r.filter((x) => x.compiles > 0).map((x) => [x.t, x.compiles]) }, { name: "orphan nodes", color: css("--teal"), points: r.filter((x) => x.orphanNodes != null).map((x) => [x.t, x.orphanNodes]) }], {});
+  lines("pfGc", [{ name: "memory in use", color: css("--teal"), points: rc.map((x) => [x.t, x.heapMb]) }, { name: "full collection (memory in use)", color: css("--bad"), dots: true, points: rc.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) },
+    { name: "clean-up pauses", color: css("--warn"), right: true, points: rc.map((x) => [x.t, x.gcPauseMs / Math.max(x.seconds, 0.01)]) }], { unit: " MB", rightUnit: " ms/s" });
+  lines("pfEngine", [{ name: "shader compiles", color: css("--warn"), dots: true, points: rc.filter((x) => x.compiles > 0).map((x) => [x.t, x.compiles]) }, { name: "orphan nodes", color: css("--teal"), points: rc.filter((x) => x.orphanNodes != null).map((x) => [x.t, x.orphanNodes]) }], {});
   const searches = since(M.searches, win).filter((x) => !x.cancelled && !loadingAt(x.t));
   lines("pfSearchTime", [{ name: "card play", color: css("--accent"), dots: true, points: searches.filter((x) => !isForecast(x) && !x.background).map((x) => [x.t, x.ms]) }, { name: "the turn forecast", color: css("--teal"), dots: true, points: searches.filter((x) => isForecast(x) && !x.background).map((x) => [x.t, x.ms]) }, { name: "in the background", color: css("--bad"), dots: true, points: searches.filter((x) => x.background).map((x) => [x.t, x.ms]) }], { refs: [{ v: 8, label: "8 ms wait" }], unit: " ms", log: logTimes() });
-  lines("pfSimPerf", [{ name: "states held", color: css("--violet"), points: r.map((x) => [x.t, x.heldStates]) }, { name: "searches running", show: (v) => fmt(v / 1000, 0), color: css("--teal"), points: r.map((x) => [x.t, x.searching * 1000]) }], {});
+  lines("pfSimPerf", [{ name: "states held", color: css("--violet"), points: rc.map((x) => [x.t, x.heldStates]) }, { name: "searches running", show: (v) => fmt(v / 1000, 0), color: css("--teal"), points: rc.map((x) => [x.t, x.searching * 1000]) }], {});
   lines("pfWait", [{ name: "frame wait", color: css("--accent"), dots: true, points: waits.filter((x) => !x.missed).map((x) => [x.t, x.ms]) }, { name: "wait, left to the background", color: css("--bad"), dots: true, points: waits.filter((x) => x.missed).map((x) => [x.t, x.ms]) }, { name: "board settling", color: css("--warn"), dots: true, points: uns.map((x) => [x.t, x.ms]) }], { refs: FPS_REFS(), unit: " ms", log: logTimes() });
   const feat = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) { const f = (feat[k] ??= { mean: 0, max: 0, n: 0, kb: 0 }); f.mean += v; f.n++; f.max = Math.max(f.max, x.featureMax?.[k] || 0); f.kb += x.featureKb?.[k] || 0; }
