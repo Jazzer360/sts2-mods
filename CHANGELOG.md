@@ -32,6 +32,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Gremlin Merc: the Sneaky and Fat Gremlins its death calls join the prediction at once (with every HP each can roll), so a later hit of the same play, an attack on every enemy, or a random target (Lightning, Juggernaut) can land on them.
 - Unceasing Top: its draw when your last card resolves is part of the prediction (the card it draws, and what reacts to the draw), at the moment the game makes it, also for cards played by Stampede at the end of your turn.
 - Blossom Shot: the Stretch it gives (the damage it dealt) is part of the prediction, for block later in the turn (I Am Invincible at its end).
+- Co-op: with Count teammates' hands on, a teammate's Stampede and Simpleton plays at the end of their turn are predicted from their hand; a teammate's Sic 'Em is no longer read as yours.
 - Card tabs settle sooner after the board changes: each card's simulation starts alongside the turn forecast's instead of after it.
 - The checks hold The Boot's tab to the target you played at (it shows with the aim marker when only some targets have a hit it raises), and accept a move's power that lands with no applier (Slimed Berserker's Weak).
 - The Boot has a tab: on an attack with a hit that gets past block for less than its minimum (6 into 5 block loses the enemy 5, not 1), with the aim marker when only some targets have one. The checks hold it to The Boot's flash; other relics and powers that only change a number still need no tab.

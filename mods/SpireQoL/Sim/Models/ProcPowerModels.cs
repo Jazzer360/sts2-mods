@@ -199,8 +199,8 @@ public sealed class DevourLifePower : ProcModel
 
 /// <summary>
 /// SicEmPower (yours, on an enemy; InstancedPerApplier).AfterDamageGiven: each time its applier's Osty damages the enemy that has it,
-/// its applier summons its amount (OstyCmd.Summon). Owner: the enemy. Taken as yours: a teammate's Sic 'Em on the same enemy isn't
-/// told apart (the adapter reads the power by its type).
+/// its applier summons its amount (OstyCmd.Summon). Owner: the enemy. Only yours is read (SimReaders.Powers: a teammate's instance
+/// reacts to their Osty, whose hits aren't simulated in your turn).
 /// </summary>
 public sealed class SicEmPower : ProcModel
 {

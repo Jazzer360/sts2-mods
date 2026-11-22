@@ -345,13 +345,15 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (!sawEnemy) endOfTurn.Add(entry);
         }
 
-        // A teammate's end-of-turn pick from their hand (Stampede, Simpleton) isn't predicted (a random card; decisions #25, #80): what
-        // it did to the enemies isn't in the forecast, so the enemies and your HP can't be held to it (issue #430). Counted, not reported.
-        var mates = forecast.Teammates.Where(player => player.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.StampedePower>() || (SimAdapter.SimpletonOf?.Invoke(player.Creature) ?? 0) > 0).ToList();
+        // A teammate's end-of-turn pick from their hand (Stampede, Simpleton) is predicted from their hand (decision #25: the check uses
+        // it), a branch per card it can be; one whose hand couldn't be read into the forecast (no auto-play hand built) isn't, so what it
+        // did to the enemies can't be held to it (issue #430). Counted, not reported.
+        var mates = forecast.Teammates.Where((player, index) => (player.Creature.HasPower<MegaCrit.Sts2.Core.Models.Powers.StampedePower>() || (SimAdapter.SimpletonOf?.Invoke(player.Creature) ?? 0) > 0)
+                                                              && (index >= forecast.FullState.Teammates.Count || forecast.FullState.Teammates[index].AutoHand == null)).ToList();
         if (mates.Count > 0 && endOfTurn.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && mates.Contains(cardPlayStartedEntry.CardPlay.Card.Owner)))
         {
-            ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (a teammate's Stampede or Simpleton played a card at end of turn, which isn't predicted)");
-            Skip("a teammate's end-of-turn pick from their hand (not predicted)");
+            ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (a teammate's Stampede or Simpleton played a card at end of turn from a hand the forecast couldn't read)");
+            Skip("a teammate's end-of-turn pick from a hand not read");
             return;
         }
 

@@ -38,6 +38,9 @@ public static class SimReaders
             // Withering Presence: Aeonglass has one per player, each counting its Target's cards (AfterCardPlayed:
             // cardPlay.Card.Owner == Target.Player). Only yours reacts to your plays; a teammate's would mix in their count.
             if (name == nameof(WitheringPresencePower) && power.Target is { } otherCreature && idOf(otherCreature) != Who.You) continue;
+            // Sic 'Em is one instance per applier (InstancedPerApplier): only yours summons for your Osty's hits. A teammate's reacts to their
+            // Osty, whose hits aren't part of your turn's simulation, and would otherwise be read as yours.
+            if (name == nameof(SicEmPower) && (power.Applier is not { } sicEmApplier || idOf(sicEmApplier) != Who.You)) continue;
             int amount = power.Amount, data = 0;
             switch (name)
             {

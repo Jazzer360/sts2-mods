@@ -116,6 +116,19 @@ public class SimAutoPlayTests
     }
 
     [Fact]
+    public void ATeammatesStampedePlaysAnAttackFromTheirHand()
+    {
+        // Decision #25: the checks use a teammate's hand. Their Stampede plays their Strike (built as theirs: SimAdapter.AutoPlays
+        // with them as the owner) at the enemy; what's shown leaves their hand out (WithoutTeammateHands).
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4) } };
+        var strike = Strike(target: 1, damage: 6, hand: 21);
+        strike.Card = new SimCardPlay(new SimCard("Strike", SimCardType.Attack), Who.Teammate(teammateIndex: 0), 1, PlayIndex: 0, PlayCount: 1, AutoPlay: true);
+        state.Teammates.Add(new SimPlayer { Hp = 30, Stampede = 1, AutoHand = new() { new SimHandCard { Id = 21, Name = "Strike", IsAttack = true, Cost = 1, Plays = { strike } } } });
+        Assert.True(SimEngine.Run(state).DeadInAll(enemyId: 1));
+        Assert.False(SimEngine.Run(state.WithoutTeammateHands()).DeadInAny(enemyId: 1));
+    }
+
+    [Fact]
     public void StampedePicksOnlyAttacks()
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4) } };

@@ -340,15 +340,16 @@ public static partial class SimAdapter
     /// A player's end-of-turn auto-plays (the auto-play phase, before BeforeSideTurnEnd): Stampede and Simpleton pick from
     /// their hand, Howl from Beyond plays from their exhaust pile, and I Am Invincible from the top of their draw pile when
     /// that's certain (every card there is a copy of it). Auto-plays get no procs from the rules (Combat/CardPredictions).
-    /// For a teammate (<paramref name="owner"/>), the piles only: Stampede never counts (a random card), and Simpleton's pick
-    /// would need their card plays built as theirs, which only Howl from Beyond's is (reviewed: decision #80).
+    /// For a teammate (<paramref name="owner"/>) the same, with their hand's cards played as theirs (SimAdapter.Play with them as the
+    /// owner): what the checks use (decision #25: everything that isn't a roll); what's shown leaves their hand out
+    /// (SimState.WithoutTeammateHands) unless Count teammates' hands is on.
     /// </summary>
     private static void FillAutoPlays(SimPlayer player, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int owner = Who.You)
     {
         try
         {
-            player.Stampede = owner == Who.You ? me.Creature.GetPower<StampedePower>()?.Amount ?? 0 : 0;
-            player.Simpleton = owner == Who.You ? SimpletonOf?.Invoke(me.Creature) ?? 0 : 0;
+            player.Stampede = me.Creature.GetPower<StampedePower>()?.Amount ?? 0;
+            player.Simpleton = SimpletonOf?.Invoke(me.Creature) ?? 0;
             if (player.Stampede > 0 || player.Simpleton > 0)
             {
                 player.AutoHand = new List<SimHandCard>();
@@ -361,7 +362,7 @@ public static partial class SimAdapter
                         Name = card.GetType().Name,
                         IsAttack = card.Type == CardType.Attack,
                         Cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved(),
-                        Plays = AutoPlays(card, me, combat, ids),
+                        Plays = AutoPlays(card, me, combat, ids, owner),
                     });
                 }
             }
@@ -625,12 +626,12 @@ public static partial class SimAdapter
     /// else one. A card that draws or makes cards plays too (its hits land; the simulator stops predicting later auto-plays,
     /// whose hand it changed). None when it aims at a teammate.
     /// </summary>
-    private static List<SimPlay> AutoPlays(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
+    private static List<SimPlay> AutoPlays(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int owner = Who.You)
     {
         var facts = PlayFacts.For(card, me, combat, CardPlays.Count(card));
         if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
-        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: Who.None, facts) };
-        return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, facts)).ToList();
+        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: Who.None, facts, owner) };
+        return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, facts, owner)).ToList();
     }
 
     /// <summary>
