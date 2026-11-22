@@ -4,14 +4,14 @@ using MegaCrit.Sts2.Core.Models;
 namespace SpireQoL.Cards;
 
 /// <summary>What a tab's amount counts (TabSpec.Amount): the block, damage, summon, draw and energy tabs (decision #132), and a free card's saving.</summary>
-public enum TabAmount { Block, Damage, Summon, CardsDrawn, EnergyGained, EnergySaved }
+public enum TabAmount { Block, Damage, Summon, CardsDrawn, EnergyGained, EnergySaved, CardsMade }
 
 /// <summary>
 /// One on-card indicator. Every on-card indicator uses this same form: a native-style tab (a copy
 /// of the card's own enchantment tab) in a row along the card's top edge, with
 ///  - Icon: what's affecting the card (a relic, power, enchantment, the draw pile...),
 ///  - Crossed: a red slash = playing this card breaks or blocks something, or helps the enemy.
-///  - Number: only on quantified proc tabs (block gained, damage dealt, summon, cards drawn, energy gained), else null.
+///  - Number: only on quantified proc tabs (block gained, damage dealt, summon, cards drawn, energy gained, cards made), else null.
 /// Key de-duplicates (one tab per source per card) and is the tab's settings key.
 /// Kind: what Amount counts, for a tab with an amount (null for the rest).
 /// Amount is the proc amount even when the number isn't displayed (ProcNumbers off), for the audit.

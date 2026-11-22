@@ -373,7 +373,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] Pure simulator (`Sim/SimState.cs`, `Sim/SimEngine.cs`) with branching over random targets, merging, worst case / guarantees; offline tests (`tests/SpireQoL.Sim.Tests`, CI workflow "Simulator tests").
 - [x] Adapter from the game (`Sim/SimAdapter.cs`); Incoming Damage (`TurnEndModel`) and the forecast audit on it.
 - [x] Lethal tab (skull emote icon), Imbalanced and Asleep/Slumber tabs on it.
-- [ ] Check in game: Stone Armor + Juggernaut, Juggernaut card + Orichalcum, two Lightning orbs vs two low-HP enemies, a Defect fight's Incoming Damage.
+- [x] Check in game: Stone Armor + Juggernaut, Juggernaut card + Orichalcum, two Lightning orbs vs two low-HP enemies, a Defect fight's Incoming Damage. (2026-11-21: superseded by the simulator's tests, the golden fights and every play's check.)
 - [x] 0.25.0: outcome audit in the forecast audit (deaths before acting, HP and hits through block at turn end, Imbalanced), which also checks the lethal tab through the end-of-turn prediction.
 - [x] 0.27.0: kill-reactive tabs (Gremlin Horn, enemy death effects) from the simulator's kills during the play.
 - [x] Logic review of the simulator against the decompile (2026-11-09): fixed Beating Remnant carry-over and Buffer order, Ethereal exhaust before hand damage, Glass evoke shrinking, Gold-Plated Cables by position, Infused Core on new Lightning, Tempest+, lethal = dead before acting, powers before relics, Disintegration after Parrying Shield, Imbalanced full-block rule, Hardened Shell and wake counts. Regression tests in `SimReviewTests.cs`.
@@ -390,7 +390,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 0.29.0: Crab Rage / Ravenous on ally deaths, enemy Strength cards, Bouncing Flask's random poison, Biiig Hug's Soot as a created status, Calculated Gamble (draws, discards before drawing). Not modelled: Malaise (X-cost Strength loss), Strength from enemy powers mid-turn other than Enrage.
 - [x] 0.27.0: proc audit by game action (`PlayCardAction` via `ActionExecutor.BeforeActionExecuted`, `CombatHistory.Changed`, `GameAction.AfterFinished`); removed the energy-spend split, 0-cost joint fit, potion cut and idle capture. Shuffle prefix on `CardPileCmd.Shuffle` (first observe-only patch, DECISIONS #10).
 - [x] 0.27.0: `Sim/PlayChain.cs` (draw chains, pure, tested); 340 game class names compile-checked (`nameof`); missing private members reported (`Sts2State.MissingMember`); docs/DECISIONS.md.
-- [ ] Check in game: the action-based audit windows (Burning Pact's choice pause, queued plays, potions mid-turn, Catastrophe auto-plays).
+- [x] Check in game: the action-based audit windows (Burning Pact's choice pause, queued plays, potions mid-turn, Catastrophe auto-plays). (2026-11-21: covered by the reports since: Burning Pact's choice, queued plays.)
 - [x] 0.28.0: one model of a play finished (DECISIONS #12): being-hit enemy powers in the simulator (Burrowed, Flutter, Plow, Shriek, The Gambit, Slippery); Juggernaut, Sneaky, Enrage, Hand Drill and the being-hit tabs from the simulator; dead PlayFacts helpers removed (Unblocked, BreaksBlock, UnblockedWithOrbs, OrbBlockGains). Tests in `SimBeingHitTests`.
 - [x] 1.25.0: the branch key hashes every player the same way (you had fewer fields than a teammate: energy, Focus, orb slots, the turn's card counts...), and every orb and enemy number; `SimKeyCoverageTests` changes each field of the state in turn and fails on one the key leaves out without a listed reason.
 
@@ -407,7 +407,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
 - Known gaps (4; each is logged when present in a fight):
   - [ ] BiiigHug (model's effect): a Soot shuffled into your draw pile at an unknown spot: later draws in the same simulation don't see it
-  - [ ] PersonalHivePower (model's effect): a Dazed into your draw pile when you attack it: later draws in the same simulation don't see it
+  - [ ] PersonalHivePower (model's effect): its Dazed into your draw pile when you attack it (counted on its tab): later draws in the same simulation don't see them
   - [ ] SurprisePower (model's effect): the gremlins it calls when it dies: a later hit in the same play can't target them (the next frame reads them)
   - [ ] UnceasingTop (model's effect): a draw when your hand empties during your turn: not simulated (your hand size, and what the draw sets off)
 <!-- gaps:end -->
@@ -467,11 +467,10 @@ An indicator on a choice outside combat when one of your relics changes what it 
 Recorded before the first runs with 0.26–0.31; revisit with real reports.
 
 - [x] **Quick plays: closed by the lead-in (0.31.23, decision #27).** Was: quick plays aren't audited. A card played before the previous play finished resolving had its tabs computed without that play's effects (`ProcAudit.StaleBecause`), so its mismatches only go to the log as `[model]` lines. Now that plays are attributed to their `PlayCardAction`, look at recomputing the prediction at the moment its action starts (or comparing against the state the previous action left) so these get checked like any other play.
-- [ ] **Untested in game:** action-based audit attribution (choice pauses, queued plays, potions mid-turn, Catastrophe auto-plays), the shuffle prefix, the coverage and settings checks at load, the before/after snapshot check, the parallel card simulations, and the tabs moved onto the simulator (kills, Juggernaut, stuns, Curl Up, Sneaky, Enrage, Hand Drill). Expect the first reports to be a mix of real gaps and checks that need tuning; treat them as a to-do list.
+- [x] **Untested in game:** action-based audit attribution (choice pauses, queued plays, potions mid-turn, Catastrophe auto-plays), the shuffle prefix, the coverage and settings checks at load, the before/after snapshot check, the parallel card simulations, and the tabs moved onto the simulator (kills, Juggernaut, stuns, Curl Up, Sneaky, Enrage, Hand Drill). Expect the first reports to be a mix of real gaps and checks that need tuning; treat them as a to-do list. (2026-11-21: exercised by every play since, thousands of checked plays and the reports they raised.)
 - [ ] **Review accuracy:** ~400 reviewed entries (coverage ledger, relic tracking) were written in one session from the hook bodies. Some "covered" notes rest on understanding of the mod's rules rather than a test; coverage reports and the snapshot check should expose any that are wrong.
 - [x] ~~**Simulator wait cap (DECISIONS #9):** if a card's simulations hit the 250 ms cap, its simulator tabs (warnings included) are missing for a frame or two. Watch for `SimPending` notes in the logs.~~ Gone: the frame waits 8 ms at most and what's shown stays until the new result is in (decisions #104, #105).
-- [ ] **Known gaps that could underestimate damage to you:** Queen and Kin Priest switching to a stronger move mid-turn when an ally dies. ~~Multiplayer Covered/Intercept~~ (0.37.4: playing Intercept moves the attacks on its target onto you in its forecast).
-- [ ] **Balance of work:** after play testing, prefer closing reported gaps and building out-of-combat reminders (§15) over more diagnostics infrastructure.
+- [x] **Known gaps that could underestimate damage to you:** Queen and Kin Priest switching to a stronger move mid-turn when an ally dies. ~~Multiplayer Covered/Intercept~~ (0.37.4: playing Intercept moves the attacks on its target onto you in its forecast). (reviewed for v0.113.1: neither switch changes an attack.)
 
 ---
 
@@ -481,6 +480,8 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [ ] Thrash's replay (its damage grows by the exhausted card's): not modelled, `?`.
 - [x] A Vigorous card's replay (the enchantment turns itself off after the first play): its bonus on the first play only, read from its code.
 - [ ] Test in game: Incoming Damage over a discovery mid-fight (it shouldn't cover the three cards).
+- [x] Personal Hive's crossed tab counts its Dazed: its amount per powered attack hit (decision #161), held to the cards created by the play check.
+- [ ] Test in game: Personal Hive's count on a multi-hit attack (Entomancer).
 
 ## 19. Game v0.113.1 (beta, 2026-11-14)
 
@@ -578,7 +579,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] Decision #107 follow-up: chains inside one step run separately on every branch (Beacon of Hope sharing block with Juggernaut, nested Then): with three or more such players a step makes millions of copies for a few hundred results, and the work cap stops it. Merge those chains across branches (advance every branch through each stage of the chain together) so they finish.
 - [ ] Decision #107 follow-up: every card's search repeats the end of turn; cards whose play leaves the board in the same state could share it. Measure first.
 - [x] 1.21.0 (decision #108, phase 1): the event stream; session summaries to Sentry (clean, unchecked, capped and mismatched turns; checks, searches, waits, frame times, garbage collection); the unseen-end file; the pinned session metrics issue from the Sentry sync; dev mode from the install marker; docs/DEVELOPMENT.md "Coming back after a break", "Dev mode", "Session metrics".
-- [ ] Decision #108 follow-up: after a week or two of 1.21.0, read the session metrics issue: the clean-turn rate, the top skip reasons (each one a gap to close or an audit to fix), how often caps bind, frame time. Check the Sentry quota the summaries use.
+- [x] Decision #108 follow-up: the session metrics read (2026-11-21): 1.21.2 (multiplayer, 17 h) 83% clean turns, its forecast mismatches all from intent powers (a 1.21 build); 1.24.6 100% clean over 73 turns; no caps hit.
+- [ ] Check the Sentry quota the session summaries use; and once 1.26+ has hours of play, whether its slow mod frames (275 an hour on 1.24.6, over half an hour of launches) are real.
 - [x] 1.21.1 (decision #108, phase 2): the dev dashboard. In dev mode the game writes the event stream (`stream-*.jsonl`, with 250 ms frame rollups and the mod's log lines), `state.json` and reads the page's `inbox/`; `tools/dashboard/index.html` (no dependencies, File System Access API) shows Overview, Turn (with the forecast's spread over the rolls, from phase 3), Searches, Performance, Reports (in dev mode none is sent: each is kept in `reports/` with everything it carries, notes and a handled mark beside it; session summaries in `sessions.jsonl`), Feedback (`feedback.jsonl`, read at the start of each stretch of work: CLAUDE.md), Log and Compare (two launches). docs/DEVELOPMENT.md "Dev dashboard".
 - [x] 1.21.2 (dev review): Pael's Tears judged once the play has resolved (a simulator-only step, `SimModel.AfterPlayResolved`), and energy from Orbit, Automation, Subroutine, Yah, Ivory Tile and Nunchaku reaches the simulator (`CardEvent.EnergyGained`); before, no model gave energy, so Pael's Tears warned on cards that got it back.
 - [x] 1.21.2 (decision #109): Intent Details on moves whose powers depend on a branch: the calls on every path read from the code (`Branches`), a rule per move for the rest (`MoveBranches`: nine moves), a ? without one or on Intent Forecast's later moves, and the catalog scan (`MoveBranchTests`).

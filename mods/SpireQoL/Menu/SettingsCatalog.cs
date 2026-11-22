@@ -326,7 +326,7 @@ public static class SettingsCatalog
         new(nameof(VitalSparkPower), SourceGroup.EnemyPower, Crossed + "Tainted cards"),
         new(nameof(ThornsPower), SourceGroup.EnemyPower, Crossed + "attacks that hit it: damage to you"),
         new(nameof(CurlUpPower), SourceGroup.EnemyPower, Crossed + "attacks that hit it: it gains block"),
-        new(nameof(PersonalHivePower), SourceGroup.EnemyPower, Crossed + "attacks that hit it: Dazed in your draw pile"),
+        new(nameof(PersonalHivePower), SourceGroup.EnemyPower, Crossed + "attacks that hit it: Dazed in your draw pile, how many (its amount per hit)"),
         new(nameof(AsleepPower), SourceGroup.EnemyPower, Crossed + "cards after which damage could get through its block by the end of your turn (procs and end-of-turn damage included): wakes it"),
         new(nameof(SlumberPower), SourceGroup.EnemyPower, Crossed + "cards after which enough damage instances could get through its block by the end of your turn: wakes it"),
         new(nameof(SlipperyPower), SourceGroup.EnemyPower, Crossed + "attacks that hit it: HP loss capped at 1"),

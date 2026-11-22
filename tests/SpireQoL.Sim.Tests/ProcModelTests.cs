@@ -69,6 +69,18 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void PersonalHiveCountsItsDazedForEveryHit()
+    {
+        // PersonalHivePower.AfterDamageReceived: each powered attack hit from a player makes its amount of Dazed (decision #161).
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50) } };
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.PersonalHive, amount: 2);
+        var after = After(state, Play(Card("Flurry"), target: 1, plays: 1, Attack(baseDamage: 3, hits: 3))).Single();
+        Assert.Equal(6, after.Fired.DataOf(SimKeys.Owned("PersonalHivePower", owner: 1)));
+        var unpowered = After(state, Play(Card("Flurry"), target: 1, plays: 1, Attack(baseDamage: 3, hits: 3, props: SimProps.Move | SimProps.Unpowered))).Single();
+        Assert.False(unpowered.Fired.Has(SimKeys.Owned("PersonalHivePower", owner: 1)));
+    }
+
+    [Fact]
     public void GravityHitsEveryEnemyAndSerpentFormBranchesOnItsTarget()
     {
         var after = One(Power(State(enemies: 2), PowerId.Gravity, amount: 3), Events(Card("Defend", SimCardType.Skill), plays: 1));

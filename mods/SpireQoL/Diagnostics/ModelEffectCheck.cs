@@ -58,7 +58,7 @@ internal static class ModelEffectCheck
         ["RupturePower"] = "Strength after the card that lost you HP (AfterCardPlayed), or at once for HP lost to something else on your turn (end-of-turn damage: unpowered, Strength doesn't touch it): later plays read it from the game",
         // Not simulated yet.
         ["BiiigHug"] = "gap: a Soot shuffled into your draw pile at an unknown spot: later draws in the same simulation don't see it",
-        ["PersonalHivePower"] = "gap: a Dazed into your draw pile when you attack it: later draws in the same simulation don't see it",
+        ["PersonalHivePower"] = "gap: its Dazed into your draw pile when you attack it (counted on its tab): later draws in the same simulation don't see them",
         ["SurprisePower"] = "gap: the gremlins it calls when it dies: a later hit in the same play can't target them (the next frame reads them)",
         ["UnceasingTop"] = "gap: a draw when your hand empties during your turn: not simulated (your hand size, and what the draw sets off)",
     };

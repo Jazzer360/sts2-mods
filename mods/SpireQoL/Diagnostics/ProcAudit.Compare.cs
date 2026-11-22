@@ -290,6 +290,23 @@ public sealed partial class ProcAudit
         var summons = SimAdapter.AllPlayersSummonCards.Contains(window.Card.GetType().Name)
             ? summoned.GroupBy(summonedEntry => summonedEntry.Actor).Select(byActor => byActor.Count()).DefaultIfEmpty(0).Max()
             : summoned.Count;
+        // Tabs that count the cards they make (Personal Hive's Dazed, decision #161): the cards created beyond the card's own are
+        // theirs, between the least and the most their branches made, unless another source that creates cards fired too.
+        void MadeByTabs(int own)
+        {
+            var made = sourceOf.Values.Where(tab => tab.Kind == TabAmount.CardsMade).ToList();
+            if (made.Count == 0) return;
+            var otherMakers = sourceOf.Where(entry => entry.Value.Kind != TabAmount.CardsMade)
+                .Where(entry => SourceEffects.TryGetValue(entry.Key, out var effects) && effects.Contains(Effect.Generate)).Select(entry => entry.Key).ToList();
+            if (otherMakers.Count > 0) { modelLines.Skip("cards made by tabs", "another source made cards", string.Join(", ", otherMakers)); return; }
+            var (least, most) = (made.Sum(tab => tab.AuditMin), made.Sum(tab => tab.AuditMax));
+            var what = $"cards made: tabs {least}-{most} beyond the card's own {own}, created {generated}";
+            if (generated > own + most || generated < least)
+            {
+                if (randomKill) modelLines.Skip("cards made by tabs", "after a random kill", what);
+                else issues.Add(what);
+            }
+        }
         if (facts != null)
         {
             // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit),
@@ -303,6 +320,7 @@ public sealed partial class ProcAudit
             Budget(Effect.Discard, "discards", discards, facts.Discards);
             // Transformed cards are logged as created too (CardCmd.Transform), up to what the card can transform.
             Budget(Effect.Generate, "created cards", generated, facts.Generated + facts.Transforms);
+            MadeByTabs(facts.Generated + facts.Transforms);
             Budget(Effect.Orb, "orbs channeled", orbs, facts.Channels);
             Budget(Effect.Summon, "summons", summons, window.Card.DynamicVars.ContainsKey("Summon") ? facts.Plays : 0);
         }

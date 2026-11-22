@@ -66,7 +66,7 @@ public sealed partial class SettingsMenu
             "Playing this sets off what the icon shows. Here Dagger Throw is your third Attack this turn, so Kunai gives you Dexterity.",
             Tab("proc:Kunai", Relic<Kunai>()));
         GuideCardCell(flow, Card<BallLightning>(), "A number: how much",
-            "Block gained, damage dealt, the amount summoned, cards drawn or energy gained, after everything that changes it (a full hand draws fewer). Only those tabs carry a number "
+            "Block gained, damage dealt, the amount summoned, cards drawn or energy gained, after everything that changes it (a full hand draws fewer), or on a warning the cards put into your piles (Personal Hive's Dazed). Only those tabs carry a number "
             + "(General: Amounts on proc tabs). Here Ornamental Fan gives 4 block.",
             Tab("proc:OrnamentalFan", Relic<OrnamentalFan>(), number: 4));
         GuideCardCell(flow, Card<KinglyPunch>(), "Crossed: a warning",

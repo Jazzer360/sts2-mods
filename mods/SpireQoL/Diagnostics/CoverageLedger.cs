@@ -230,7 +230,7 @@ internal static partial class CoverageLedger
         ["PaleBlueDotPower"] = "covered: AfterCardPlayed draws next turn after 5 cards (proc tab, tracker)",
         ["PanachePower"] = "covered: AfterCardPlayed damages all enemies every 5 cards (proc damage, tracker)",
         ["PaperCutsPower"] = "ignore: AfterDamageGiven max HP",
-        ["PersonalHivePower"] = "covered: AfterDamageReceived Dazed into your draw pile (crossed proc tab)",
+        ["PersonalHivePower"] = "covered: AfterDamageReceived Dazed into your draw pile, its amount per hit (crossed proc tab with the count: decision #161)",
         ["PillarOfCreationPower"] = "covered: AfterCardGeneratedForCombat block per created card (proc block)",
         ["PlatingPower"] = "covered: BeforeSideTurnEndEarly block (model PlatingPower)",
         ["PlowPower"] = "covered: AfterDamageReceived stuns at its HP threshold (simulator)",

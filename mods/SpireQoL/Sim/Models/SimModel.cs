@@ -4,9 +4,9 @@ namespace SpireQoL.Sim;
 
 /// <summary>
 /// A model's tab: a trigger (no number), or one with the amount it gives (block, damage, summon, the cards it draws, the energy it
-/// gives: decision #132).
+/// gives: decision #132), or the cards it puts into your piles (CardsMade: Personal Hive's Dazed, decision #161).
 /// </summary>
-public enum TabKind { Trigger, Block, Damage, Summon, Draw, Energy }
+public enum TabKind { Trigger, Block, Damage, Summon, Draw, Energy, CardsMade }
 
 /// <summary>
 /// A card event the hooks see (AfterCardDrawn, AfterCardExhausted, AfterCardDiscarded, AfterCardGeneratedForCombat, AfterStarsGained,

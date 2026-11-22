@@ -713,13 +713,17 @@ public sealed class GalvanicPower : ProcModel
             : One(state);
 }
 
-/// <summary>PersonalHivePower.AfterDamageReceived: a player's attack on it puts a Dazed into their draw pile (bad for you).</summary>
+/// <summary>
+/// PersonalHivePower.AfterDamageReceived: each powered attack hit on it from a player puts its amount of Dazed into their draw pile
+/// (bad for you). Its tab counts them (decision #161): the hits of the play times its amount.
+/// </summary>
 public sealed class PersonalHivePower : ProcModel
 {
+    public override TabKind? Tab => TabKind.CardsMade;
     public override bool Harmful => true;
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
-        if (hit.Target == owner && hit.Dealer is { } dealer && Who.IsPlayer(dealer) && hit.Props.IsPoweredAttack()) state.LogFired(Name, amount: 0, owner);
+        if (hit.Target == owner && hit.Dealer is { } dealer && Who.IsPlayer(dealer) && hit.Props.IsPoweredAttack()) state.LogFired(Name, Amount(state, owner), owner);
     }
 }
 

@@ -716,6 +716,7 @@ public sealed class CardPredictions
         {
             TabKind.Block => TabAmount.Block, TabKind.Damage => TabAmount.Damage, TabKind.Summon => TabAmount.Summon,
             TabKind.Draw => TabAmount.CardsDrawn, TabKind.Energy => TabAmount.EnergyGained, // decision #132
+            TabKind.CardsMade => TabAmount.CardsMade, // decision #161
             _ => null,
         };
         tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, counts, amount, min, max, NumberText: chance, Aimed: aimed);

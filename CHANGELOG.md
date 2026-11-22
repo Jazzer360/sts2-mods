@@ -12,6 +12,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Incoming Damage: hover the sum for every way the enemy turn can go for you, the most likely first, each with its chance and what's different (`Lose 11 HP (+2)`, `Burn +2`, `I Am Invincible block +10`), in a box no wider than what it lists.
 - Setting **Incoming Damage: most likely outcome** (under Show chances, on by default).
 - Incoming Damage stays up while you pick one of a few cards mid-fight (a discovery, a potion's choice), so you can weigh what to take against the enemy turn.
+- Personal Hive's crossed tab shows how many Dazed the play puts into your draw pile: every hit makes its amount, so it grows through the fight and with multi-hit attacks.
 
 #### Changed
 - Writes far less to the game's log, which the game and every other mod share: the checks' lines, timings and summaries stay inside the mod (error reports still carry them), and a warning appears once per launch.
