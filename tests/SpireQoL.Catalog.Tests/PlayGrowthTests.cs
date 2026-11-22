@@ -31,7 +31,7 @@ public class PlayGrowthTests
             .Where(type => !type.IsAbstract && typeof(EnchantmentModel).IsAssignableFrom(type) && type.Namespace == typeof(Goopy).Namespace)
             .Select(type => (type.Name, Read: PlayGrowth.EnchantmentRead(type))).Where(read => read.Read != null)
             .OrderBy(read => read.Name).Select(read => $"{read.Name}: {read.Read}").ToList();
-        // Vigorous turns itself off after a play (Status Disabled): its replay loses the bonus, not modelled yet (tracker).
-        Assert.Equal(new[] { "Goopy: block by 1", "Momentum: damage by Amount", "Vigorous: unreadable" }, reads);
+        // Vigorous turns itself off after a play (Status Disabled, and its bonus reads its Status): its replay loses the bonus.
+        Assert.Equal(new[] { "Goopy: block by 1", "Momentum: damage by Amount", "Vigorous: damage on the first play only" }, reads);
     }
 }

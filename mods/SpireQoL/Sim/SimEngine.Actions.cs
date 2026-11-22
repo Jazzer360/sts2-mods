@@ -210,7 +210,9 @@ public static partial class SimEngine
         var mods = spec.Fixed ? null : new List<(SimModel Model, int Owner)>();
         // A replay's damage has what the card gained from its plays before it (decision #160).
         var baseDamage = spec.BaseFor(target) + spec.GrowsEachPlay * (state.CurrentPlay?.PlayIndex ?? 0);
-        var amount = spec.Fixed ? Math.Max(0, (int)baseDamage) : CalcDamage(state, baseDamage, ctx, spec.TermsFor(target), mods);
+        var terms = spec.TermsFor(target);
+        if (spec.EnchantFirstPlayOnly && state.CurrentPlay?.PlayIndex > 0) terms = WithoutEnchantment(terms);
+        var amount = spec.Fixed ? Math.Max(0, (int)baseDamage) : CalcDamage(state, baseDamage, ctx, terms, mods);
         if (mods != null) foreach (var (model, o) in mods) model.AfterModifyingDamageAmount(state, o, card);
         // The first hit on each enemy, for the damage-formula audit (not after Mighty Wings gave Strength mid-attack: the preview
         // can't know that).
@@ -222,6 +224,9 @@ public static partial class SimEngine
         AllyDeaths(state); // a death runs its hooks as it happens (AfterDeath: Impaled lets its arrows go, Crab Rage, Explosive)
         return DrainPending(state); // what the hit set off where hooks can't branch (an arrow knocked loose: Yah, Twine)
     }
+
+    /// <summary>The terms without the card's enchantment: it turned itself off after the play before (Vigorous).</summary>
+    private static CapturedTerms WithoutEnchantment(CapturedTerms terms) => terms with { EnchantAdd = 0m, EnchantMul = 1m };
 
     // ------------------------------------------------------------------ block, powers, HP
 
@@ -237,8 +242,10 @@ public static partial class SimEngine
         var mods = gainBlockAction.Fixed ? null : new List<(SimModel Model, int Owner)>();
         // A replay's block has what the card gained from its plays before it (decision #160).
         var baseBlock = gainBlockAction.Base + gainBlockAction.GrowsEachPlay * (state.CurrentPlay?.PlayIndex ?? 0);
+        var blockTerms = gainBlockAction.Captured;
+        if (blockTerms != null && gainBlockAction.EnchantFirstPlayOnly && state.CurrentPlay?.PlayIndex > 0) blockTerms = WithoutEnchantment(blockTerms);
         var amount = gainBlockAction.Fixed ? Math.Max(0, (int)baseBlock)
-            : CalcBlock(state, baseBlock, new BlockCtx(gainBlockAction.To, gainBlockAction.Props, state.CurrentPlay?.Card, state.CurrentPlay), gainBlockAction.Captured, mods);
+            : CalcBlock(state, baseBlock, new BlockCtx(gainBlockAction.To, gainBlockAction.Props, state.CurrentPlay?.Card, state.CurrentPlay), blockTerms, mods);
         var states = GainBlock(state, amount, state.EndOfTurnNow && gainBlockAction.To == Who.You && state.Log ? state.CurrentPlay?.Card.Name ?? "block" : null, gainBlockAction.To);
         // Block from a card play this turn (Unmovable counts the ones from earlier plays).
         if (amount > 0 && state.CurrentPlay != null && gainBlockAction.Props.IsCardOrMonsterMove())

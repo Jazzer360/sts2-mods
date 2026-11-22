@@ -34,6 +34,8 @@ public sealed record DamageSpec(decimal Base, SimProps Props)
     public bool Fixed { get; init; }
     /// <summary>What the base gains with each play of the card before this one (decision #160: Rampage's Increase, Momentum).</summary>
     public decimal GrowsEachPlay { get; init; }
+    /// <summary>The enchantment's captured terms are on the first play only: it turns itself off after a play (decision #160: Vigorous).</summary>
+    public bool EnchantFirstPlayOnly { get; init; }
 
     public decimal BaseFor(int target) => BaseOn != null && BaseOn.TryGetValue(target, out var baseOnTarget) ? baseOnTarget : Base;
     public CapturedTerms TermsFor(int target) => Captured != null && Captured.TryGetValue(target, out var terms) ? terms : CapturedTerms.None;
@@ -105,6 +107,8 @@ public sealed record GainBlockAction(int Times, decimal Base, SimProps Props) : 
     public int To { get; init; } = Who.You;
     /// <summary>What the base gains with each play of the card before this one (decision #160: Goopy's +1).</summary>
     public decimal GrowsEachPlay { get; init; }
+    /// <summary>The enchantment's captured terms are on the first play only: it turns itself off after a play (decision #160).</summary>
+    public bool EnchantFirstPlayOnly { get; init; }
 }
 
 /// <summary>Applies a power (PowerCmd.Apply): to the play's target, every enemy, or one creature. Artifact takes a debuff.</summary>

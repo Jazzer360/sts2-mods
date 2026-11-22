@@ -405,8 +405,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 1.20.11: 94 unused usings removed (IDE0005, which the normal build doesn't check); `scripts/dead-code.mjs` now lists them too (`--fix-usings` removes them). `TurnEndModel.Incomplete` removed (replaced by ProgressMark in 1.17.0).
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
-- Known gaps (5; each is logged when present in a fight):
-  - [ ] Vigorous (ledger): AfterCardPlayed disables it after the first play (its bonus is read through the game on later turns), so a replay in the same play loses the bonus: not modelled (?) there (PlayGrowth)
+- Known gaps (4; each is logged when present in a fight):
   - [ ] BiiigHug (model's effect): a Soot shuffled into your draw pile at an unknown spot: later draws in the same simulation don't see it
   - [ ] PersonalHivePower (model's effect): a Dazed into your draw pile when you attack it: later draws in the same simulation don't see it
   - [ ] SurprisePower (model's effect): the gremlins it calls when it dies: a later hit in the same play can't target them (the next frame reads them)
@@ -480,7 +479,7 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 
 - [x] 1.27.0: a replay has what the card's earlier plays gave it, read from its code (PlayGrowth: Rampage, The Ball, Claw, Maul; Goopy, Momentum), checked against every card and enchantment of the installed game (catalog `PlayGrowthTests`).
 - [ ] Thrash's replay (its damage grows by the exhausted card's): not modelled, `?`.
-- [ ] A Vigorous card's replay (the enchantment turns itself off after the first play): not modelled, `?` (ledger gap).
+- [x] A Vigorous card's replay (the enchantment turns itself off after the first play): its bonus on the first play only, read from its code.
 - [ ] Test in game: Incoming Damage over a discovery mid-fight (it shouldn't cover the three cards).
 
 ## 19. Game v0.113.1 (beta, 2026-11-14)

@@ -310,8 +310,9 @@ public static partial class SimAdapter
                 if (creature.IsAlive && creature.IsHittable) killTerms[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, kdv.BaseValue, kdv.Props);
             onKill = new DamageSpec(kdv.BaseValue, SimReaders.Props(kdv.Props)) { Captured = killTerms };
         }
-        var grows = plays > 1 && !fixedNumbers ? PlayGrowth.Of(card).Damage : 0m;
-        return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props)) { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers, GrowsEachPlay = grows })
+        var growth = plays > 1 && !fixedNumbers ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
+        return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props))
+            { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers, GrowsEachPlay = growth.Damage, EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly })
         {
             ByOsty = facts.ByOsty, // a single target: the play's (SimPlay.TargetId)
             OnKill = onKill,
@@ -354,9 +355,11 @@ public static partial class SimAdapter
         else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) baseValue = otherDynamicVar.BaseValue;
         else return new GainBlockAction(gains, CardBlock(card, combat, me), SimProps.Move) { Fixed = true, To = to };
         var gainer = toAlly && ally != null ? ally : me.Creature;
+        var growth = plays > 1 ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
         return new GainBlockAction(gains, baseValue, SimProps.Move)
         {
-            Captured = SimReaders.Block(combat, card, gainer, baseValue, ValueProp.Move), To = to, GrowsEachPlay = plays > 1 ? PlayGrowth.Of(card).Block : 0m,
+            Captured = SimReaders.Block(combat, card, gainer, baseValue, ValueProp.Move), To = to, GrowsEachPlay = growth.Block,
+            EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly,
         };
     }
 

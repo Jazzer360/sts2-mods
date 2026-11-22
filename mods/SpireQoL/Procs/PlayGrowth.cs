@@ -11,12 +11,14 @@ namespace SpireQoL.Procs;
 /// gives it: read from the card's code and its enchantment's, not from a list. The card's play adding its Increase value to its own
 /// damage after the attack (Rampage, The Ball; Claw and Maul through their helper): that much more damage each play. Its
 /// enchantment raising its own number when the card is played (Goopy's Amount: block; Momentum's extra damage by its Amount): that
-/// much more each play. A play that changes its own numbers some other way (Thrash: the exhausted card's damage) can't be told,
-/// so a replay of it is not modelled (Unmodelled).
+/// much more each play. Its enchantment turning itself off when the card is played (Vigorous: Status = Disabled in
+/// AfterCardPlayed, and its bonus is 0 when not Normal): only the first play has its bonus. A play that changes its own numbers some
+/// other way (Thrash: the exhausted card's damage) can't be told, so a replay of it is not modelled (Unmodelled).
 /// </summary>
 internal static class PlayGrowth
 {
-    public sealed record Growth(decimal Damage, decimal Block, string? Unmodelled)
+    /// <summary>EnchantFirstPlayOnly: the enchantment's bonus (its captured terms) is on the first play only.</summary>
+    public sealed record Growth(decimal Damage, decimal Block, string? Unmodelled, bool EnchantFirstPlayOnly = false)
     {
         public static readonly Growth None = new(0m, 0m, null);
     }
@@ -26,8 +28,11 @@ internal static class PlayGrowth
     /// <summary>How the card's own play changes its numbers.</summary>
     private enum CardGrowth { None, DamageByIncrease, Unreadable }
 
-    /// <summary>How an enchantment's play hooks change the number it adds: by a constant, by its Amount, or a way that can't be read.</summary>
-    private sealed record EnchantGrowth(bool Damage, bool Block, int? ByConstant, bool ByAmount, bool Unreadable);
+    /// <summary>
+    /// How an enchantment's play hooks change the number it adds: by a constant, by its Amount, turning itself off (its bonus on
+    /// the first play only), or a way that can't be read.
+    /// </summary>
+    private sealed record EnchantGrowth(bool Damage, bool Block, int? ByConstant, bool ByAmount, bool Unreadable, bool DisablesItself = false);
 
     private static readonly ConcurrentDictionary<Type, CardGrowth> CardCache = new();
     private static readonly ConcurrentDictionary<Type, EnchantGrowth?> EnchantCache = new();
@@ -36,6 +41,7 @@ internal static class PlayGrowth
     {
         decimal damage = 0m, block = 0m;
         string? unmodelled = null;
+        var firstPlayOnly = false;
         switch (CardCache.GetOrAdd(card.GetType(), ReadCard))
         {
             case CardGrowth.DamageByIncrease:
@@ -48,6 +54,7 @@ internal static class PlayGrowth
         if (card.Enchantment is { } enchantment && EnchantCache.GetOrAdd(enchantment.GetType(), ReadEnchantment) is { } grows)
         {
             if (grows.Unreadable) unmodelled ??= $"its enchantment ({enchantment.GetType().Name}) changes its numbers with each play";
+            else if (grows.DisablesItself) firstPlayOnly = true;
             else
             {
                 var each = grows.ByConstant ?? (grows.ByAmount ? enchantment.Amount : 0);
@@ -55,7 +62,7 @@ internal static class PlayGrowth
                 if (grows.Block) block += each;
             }
         }
-        return damage == 0m && block == 0m && unmodelled == null ? Growth.None : new Growth(damage, block, unmodelled);
+        return damage == 0m && block == 0m && unmodelled == null && !firstPlayOnly ? Growth.None : new Growth(damage, block, unmodelled, firstPlayOnly);
     }
 
     /// <summary>
@@ -109,7 +116,8 @@ internal static class PlayGrowth
     /// <summary>
     /// The enchantment's OnPlay and AfterCardPlayed (with their state machines) setting one of its own properties to itself plus
     /// a constant or its Amount (Goopy's Amount++, Momentum's ExtraDamage += Amount), when it adds to the card's damage or block
-    /// (EnchantDamageAdditive, EnchantBlockAdditive); one that also multiplies, or sets them another way, can't be read.
+    /// (EnchantDamageAdditive, EnchantBlockAdditive); one that also multiplies, or sets them another way, can't be read. Setting its
+    /// Status (Vigorous: Disabled) when every one of its damage and block hooks reads its Status: its bonus is on the first play only.
     /// </summary>
     private static EnchantGrowth? ReadEnchantment(Type enchantmentType)
     {
@@ -120,6 +128,7 @@ internal static class PlayGrowth
             var multiplies = Overrides(enchantmentType, nameof(EnchantmentModel.EnchantDamageMultiplicative)) || Overrides(enchantmentType, nameof(EnchantmentModel.EnchantBlockMultiplicative));
             if (!damage && !block) return null;
             var increments = new List<(int? Constant, bool Amount)>();
+            var disables = false;
             foreach (var method in PlayHooks(enchantmentType))
             {
                 var instructions = SpireQoL.Diagnostics.GameCode.Instructions(method);
@@ -127,11 +136,23 @@ internal static class PlayGrowth
                 {
                     if (instructions[i].operand is not MethodInfo { Name: var setter } called || !setter.StartsWith("set_", StringComparison.Ordinal)
                         || called.DeclaringType == null || !called.DeclaringType.IsAssignableFrom(enchantmentType)) continue;
+                    if (setter == "set_Status")
+                    {
+                        disables = true;
+                        continue;
+                    }
                     var addend = i >= 2 && instructions[i - 1].opcode == OpCodes.Add ? instructions[i - 2] : null;
                     if (addend != null && ConstantOf(addend) is { } constant) increments.Add((constant, false));
                     else if (addend?.operand is MethodInfo { Name: "get_Amount" }) increments.Add((null, true));
                     else increments.Add((null, false));
                 }
+            }
+            if (disables)
+            {
+                // Its bonus stops with its Status only if every damage and block hook it overrides reads it.
+                var readsStatus = NumberHooks(enchantmentType).All(hook => SpireQoL.Diagnostics.GameCode.Instructions(hook)
+                    .Any(instruction => instruction.operand is MethodInfo { Name: "get_Status" }));
+                return new EnchantGrowth(damage, block, null, false, Unreadable: increments.Count > 0 || !readsStatus, DisablesItself: true);
             }
             if (increments.Count == 0) return null;
             var first = increments[0];
@@ -143,6 +164,16 @@ internal static class PlayGrowth
             return null; // unreadable code: nothing found
         }
     }
+
+    private static readonly string[] NumberHookNames =
+    {
+        nameof(EnchantmentModel.EnchantDamageAdditive), nameof(EnchantmentModel.EnchantDamageMultiplicative),
+        nameof(EnchantmentModel.EnchantBlockAdditive), nameof(EnchantmentModel.EnchantBlockMultiplicative),
+    };
+
+    /// <summary>The damage and block hooks the enchantment overrides.</summary>
+    private static IEnumerable<MethodInfo> NumberHooks(Type type) =>
+        type.GetMethods(All).Where(method => NumberHookNames.Contains(method.Name) && method.GetBaseDefinition().DeclaringType != type);
 
     private static bool Overrides(Type type, string name) =>
         type.GetMethods(All).Any(method => method.Name == name && method.GetBaseDefinition().DeclaringType != type);
@@ -163,7 +194,8 @@ internal static class PlayGrowth
 
     /// <summary>What an enchantment class's play hooks read as (the scan's check): null when its numbers don't change with a play.</summary>
     internal static string? EnchantmentRead(Type enchantmentType) => EnchantCache.GetOrAdd(enchantmentType, ReadEnchantment) is { } grows
-        ? (grows.Unreadable ? "unreadable" : (grows.Damage ? "damage" : "") + (grows.Block ? "block" : "") + " by " + (grows.ByAmount ? "Amount" : grows.ByConstant.ToString()))
+        ? (grows.Unreadable ? "unreadable" : (grows.Damage ? "damage" : "") + (grows.Block ? "block" : "")
+            + (grows.DisablesItself ? " on the first play only" : " by " + (grows.ByAmount ? "Amount" : grows.ByConstant.ToString())))
         : null;
 
     private static int? ConstantOf(HarmonyLib.CodeInstruction instruction)

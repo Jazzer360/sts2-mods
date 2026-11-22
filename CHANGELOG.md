@@ -18,7 +18,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Incoming Damage shows the most likely outcome, its chance before the number, when a roll decides how the enemy turn goes (a draw at the end of your turn, I Am Invincible somewhere in your draw pile, a random target); it used to show the worst. The skull still shows whenever you might die, with its chance, and the Fairy in a Bottle or Lizard Tail line whenever one might save you, with its chance.
 
 #### Fixed
-- A replayed card (Echo Form, Burst) has the numbers its earlier plays gave it, read from the card's code: Rampage, The Ball, Claw and Maul hit harder on the replay, a Goopy card blocks 1 more, a Momentum card hits harder by its amount. A Vigorous card's replay (it loses the bonus) and Thrash's are `?` for now.
+- A replayed card (Echo Form, Burst) has the numbers its earlier plays gave it, read from the card's code: Rampage, The Ball, Claw and Maul hit harder on the replay, a Goopy card blocks 1 more, a Momentum card hits harder by its amount, and a Vigorous card's replay loses its bonus (the enchantment turns itself off after the first play). Thrash's replay is `?` for now.
 - FTL draws only on the plays that start with fewer than its limit of plays finished this turn: a replay that makes the third doesn't draw.
 - Incoming Damage no longer flickers between the chance and the number every frame.
 - The block check counts a Frost orb the play channels and then pushes out (Chill into full slots), from the simulator's own evokes.

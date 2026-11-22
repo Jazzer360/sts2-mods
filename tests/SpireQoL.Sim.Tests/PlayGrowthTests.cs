@@ -30,6 +30,29 @@ public class PlayGrowthTests
     }
 
     [Fact]
+    public void AnEnchantmentThatTurnsItselfOffGivesOnlyTheFirstPlayItsBonus()
+    {
+        // Vigorous: its damage bonus (8) while its Status is Normal, and AfterCardPlayed (after every play) disables it: 6 + 8, then 6.
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 50) } };
+        var attack = Attack(baseDamage: 6);
+        var vigorous = attack with
+        {
+            Damage = attack.Damage with { Captured = new Dictionary<int, CapturedTerms> { [1] = new() { EnchantAdd = 8 } }, EnchantFirstPlayOnly = true },
+        };
+        var after = After(state, Play(Card("Strike"), target: 1, plays: 2, vigorous)).Single();
+        Assert.Equal(30, after.Enemy(id: 1)!.Hp);
+    }
+
+    [Fact]
+    public void ABlockEnchantmentThatTurnsItselfOffGivesOnlyTheFirstPlayItsBonus()
+    {
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 30) } };
+        var after = After(state, Play(Card("Defend", SimCardType.Skill), target: Who.None, plays: 2,
+            new GainBlockAction(Times: 1, Base: 5, SimProps.Move) { Captured = new CapturedTerms { EnchantAdd = 3 }, EnchantFirstPlayOnly = true })).Single();
+        Assert.Equal(13, after.You.Block);
+    }
+
+    [Fact]
     public void OnePlayGainsNothing()
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50) } };
