@@ -145,7 +145,7 @@ public static class DevDashboard
             {
                 CountCompiles();
                 WatchSteady(host, gapMs);
-                Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
+                if (_focused) Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
             };
             // What the garbage is made of: the runtime's allocation ticks, by type (dev mode only).
             try { _sampler = new AllocationSampler(AllocationSampler.CurrentOsThread()); }
@@ -179,11 +179,42 @@ public static class DevDashboard
     /// <summary>A play session's summary, kept in sessions.jsonl instead of sent (dev mode).</summary>
     public static void SaveSession(SessionSummary sessionSummary) => _sink?.SaveSession(sessionSummary.ToJson());
 
+    /// <summary>The game's window is in front (decision #179): while it isn't, nothing about frames is written.</summary>
+    private static bool _focused = true;
+
+    /// <summary>
+    /// The game's window went to the background or came back (decision #179). In the background the game runs at 30 fps and nobody is
+    /// playing: its frames would only blur the charts, so no rollups or samples are written, and the sampler stops listening. Back in
+    /// front, every running count starts from now, so the first rollup isn't the whole time away in one.
+    /// </summary>
+    private static void FocusChanged(DevSink sink, bool focused, double now)
+    {
+        _focused = focused;
+        sink.Post(new FocusChanged(focused));
+        if (!focused)
+        {
+            _sampler?.Stop();
+            return;
+        }
+        Window.Clear();
+        _lastRollup = now;
+        _gc = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), GC.GetTotalAllocatedBytes(), GC.GetTotalPauseDuration());
+        _simAllocated = SimJob.AllocatedBytes;
+        _compilesInWindow = 0;
+        _checksAtRollup = ReuseCheck.ChecksRun;
+        _quietAllWindow = true;
+        _sampler?.Take();
+        _sampledSecondsInSample = _quietSecondsInSample = 0;
+        _lastSample = now;
+    }
+
     private static void Tick()
     {
         if (_sink is not { } sink) return;
         var now = Clock.Elapsed.TotalSeconds;
-        if (now - _lastRollup >= RollupSeconds)
+        var focused = Godot.DisplayServer.WindowIsFocused();
+        if (focused != _focused) FocusChanged(sink, focused, now);
+        if (focused && now - _lastRollup >= RollupSeconds)
         {
             var seconds = _lastRollup == 0 ? RollupSeconds : now - _lastRollup;
             _lastRollup = now;

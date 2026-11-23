@@ -123,4 +123,19 @@ public sealed class DevSinkTests : IDisposable
         Assert.Equal((1.5, 4, 900, 3, true, 2), (frameRollup.SimMb, frameRollup.Compiles, frameRollup.Nodes, frameRollup.OrphanNodes, frameRollup.Quiet, frameRollup.DevChecks));
         Assert.Equal(0, frameWindow.Take(seconds: 0.25, extra: default, engine: default).Frames);
     }
+
+    [Fact]
+    public void FramesWhileTheWindowWasAwayAreDropped()
+    {
+        // Decision #179: back in front, the frames from the background aren't in the next rollup.
+        var frameWindow = new FrameWindow();
+        frameWindow.Add(modMs: 3, gapMs: 33, new[] { ("card-tabs", 0.2) }, new[] { ("card-tabs", 5.0) });
+        frameWindow.Clear();
+        frameWindow.Add(modMs: 1, gapMs: 6, new[] { ("card-tabs", 0.1) }, Array.Empty<(string, double)>());
+        var frameRollup = frameWindow.Take(seconds: 0.25, extra: default, engine: default);
+        Assert.Equal(1, frameRollup.Frames);
+        Assert.Equal(6, frameRollup.GapMax);
+        Assert.False(frameRollup.FeatureKb.ContainsKey("card-tabs"));
+        Assert.Equal(0.1, frameRollup.FeatureMax["card-tabs"]);
+    }
 }

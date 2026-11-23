@@ -73,6 +73,14 @@ public sealed class AllocationSampler : EventListener
         else DisableEvents(_runtime);
     }
 
+    /// <summary>Stops listening (the game's window went to the background: decision #179); Cycle starts it again.</summary>
+    public void Stop()
+    {
+        if (!Sampling || _runtime == null) return;
+        Sampling = false;
+        DisableEvents(_runtime);
+    }
+
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
     {
         if (_thisOsThread == 0) _thisOsThread = CurrentOsThread();

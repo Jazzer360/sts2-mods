@@ -44,6 +44,12 @@ public sealed record SteadyTime(int Frames, double Seconds);
 /// </summary>
 public sealed record SteadyGarbage(string Where, string Id, int Frames, double Kb, double MaxKb, int Period);
 
+/// <summary>
+/// The game's window went to the background (Focused false) or came back (decision #179): in between, no frame rollups, allocation or
+/// steady samples are written (the game runs at 30 fps there and nobody is playing), and the dashboard's charts break their lines.
+/// </summary>
+public sealed record FocusChanged(bool Focused) : DevEvent;
+
 /// <summary>A line of the mod's own log ([SpireQoL] lines).</summary>
 public sealed record LogLine(string Level, string Text) : DevEvent;
 
@@ -66,17 +72,29 @@ public sealed class FrameWindow
 
     public int Frames => _mod.Count;
 
-    public void Add(double modMs, double gapMs, IEnumerable<(string Id, double Ms)> features, IEnumerable<(string Id, double Kb)> kb)
+    public void Add(double modMs, double gapMs, IReadOnlyList<(string Id, double Ms)> features, IReadOnlyList<(string Id, double Kb)> kb)
     {
         _mod.Add(modMs);
         if (gapMs > _gapMax) _gapMax = gapMs;
         if (modMs > SessionStats.SlowModFrameMs) _slow++;
-        foreach (var (id, ms) in features)
+        // By index: every frame, and a foreach through the interface boxes an enumerator.
+        for (var i = 0; i < features.Count; i++)
         {
+            var (id, ms) = features[i];
             var totals = _features.TryGetValue(id, out var feature) ? feature : (0, 0);
             _features[id] = (totals.Sum + ms, Math.Max(totals.Max, ms));
         }
-        foreach (var (id, k) in kb) _kb[id] = _kb.GetValueOrDefault(id) + k;
+        for (var i = 0; i < kb.Count; i++) _kb[kb[i].Id] = _kb.GetValueOrDefault(kb[i].Id) + kb[i].Kb;
+    }
+
+    /// <summary>Drops the frames since the last rollup (the game's window was in the background: decision #179).</summary>
+    public void Clear()
+    {
+        _mod.Clear();
+        _gapMax = 0;
+        _slow = 0;
+        _features.Clear();
+        _kb.Clear();
     }
 
     /// <summary>The rollup, then starts again. <paramref name="extra"/>: the process and simulator numbers the caller read.</summary>
