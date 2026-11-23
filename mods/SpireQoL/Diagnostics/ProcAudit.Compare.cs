@@ -254,7 +254,7 @@ public sealed partial class ProcAudit
         else if (frostSpread > 0 && procBlock >= predictedBlock && procBlock <= predictedBlock + frostSpread)
             modelLines.Add($"block {procBlock}: Frost evokes give {frostBlock} to {frostBlock + frostSpread} by outcome");
         // Cards auto-played at random (Lost Lute, The Fool) set off block procs of their own (Song Path on a Cho it played).
-        else if (procBlock > predictedBlock && UnpredictedAutoPlay(window, entries, me)) modelLines.Skip("block", "random auto-plays", $"predicted {predictedBlock}, actual {procBlock}");
+        else if (procBlock > predictedBlock && UnpredictedAutoPlay(window, entries, me)) modelLines.Skip("block", AutoPlayReason(window, entries, "random auto-plays"), $"predicted {predictedBlock}, actual {procBlock}");
         else if (procBlock != predictedBlock) issues.Add($"block: predicted {predictedBlock}, actual {procBlock}");
 
         // ---- damage from procs (no card source), against each tab's range
@@ -280,14 +280,14 @@ public sealed partial class ProcAudit
         var capped = flashed.Any(Caps);
         if (toEnemies < eMin && capped) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}, capped by {string.Join(", ", flashed.Where(Caps).Select(otherModel => otherModel.GetType().Name).Distinct())}");
         else if (toEnemies < eMin && window.FightEnded) Shortfall("damage to enemies", Range(eMin, eMax), toEnemies);
-        else if (toEnemies > eMax && UnpredictedAutoPlay(window, entries, me)) modelLines.Skip("damage to enemies", "random auto-plays", $"predicted {Range(eMin, eMax)}, actual {toEnemies}");
+        else if (toEnemies > eMax && UnpredictedAutoPlay(window, entries, me)) modelLines.Skip("damage to enemies", AutoPlayReason(window, entries, "random auto-plays"), $"predicted {Range(eMin, eMax)}, actual {toEnemies}");
         else if (toEnemies < eMin || toEnemies > eMax) issues.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}");
         if (toMe < mMin && window.FightEnded) Shortfall("damage to you", Range(mMin, mMax), toMe);
         else if (toMe < mMin || toMe > mMax) issues.Add($"damage to you: predicted {Range(mMin, mMax)}, actual {toMe}");
 
         // ---- budget: everything else the play caused
         var autoPlayed = UnpredictedAutoPlay(window, entries, me);
-        if (autoPlayed) modelLines.Skip("budget", "random auto-plays");
+        if (autoPlayed) modelLines.Skip("budget", AutoPlayReason(window, entries, "random auto-plays"));
         var facts = autoPlayed ? null : window.Facts;
         bool Explained(Effect effect) => sourceOf.Keys.Any(key => SourceEffects.TryGetValue(key, out var effects) && effects.Contains(effect));
         void Budget(Effect effect, string what, int actual, int own)
@@ -370,7 +370,7 @@ public sealed partial class ProcAudit
         if (foreign.Count > 0 && !Explained(Effect.Power))
         {
             if (randomKill) modelLines.Skip("unexplained powers", "after a random kill", string.Join(", ", foreign));
-            else if (autoPlayed) modelLines.Skip("unexplained powers", "random auto-plays", string.Join(", ", foreign));
+            else if (autoPlayed) modelLines.Skip("unexplained powers", AutoPlayReason(window, entries, "random auto-plays"), string.Join(", ", foreign));
             else if (window.Chosen != null) modelLines.Skip("unexplained powers", PickApart, string.Join(", ", foreign));
             else issues.Add($"unexplained: powers applied ({string.Join(", ", foreign)})");
         }

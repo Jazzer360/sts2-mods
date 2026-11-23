@@ -31,7 +31,7 @@ public sealed partial class ProcAudit
         if (entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)
                 && !HellraiserDrew(window, entries, window.Card.Owner, cardPlayStartedEntry.CardPlay.Card)))
         {
-            model.Skip("lethal", "auto-played cards");
+            model.Skip("lethal", AutoPlayReason(window, entries, "auto-played cards"));
             return;
         }
         if (sim.AimFor(window.Target) is not { } lethalAim || !deaths.TryGetValue(lethalAim, out var card))
@@ -134,7 +134,7 @@ public sealed partial class ProcAudit
         if (entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)
                 && !HellraiserDrew(window, entries, window.Card.Owner, cardPlayStartedEntry.CardPlay.Card)))
         {
-            model.Skip("state after the play", "auto-played cards");
+            model.Skip("state after the play", AutoPlayReason(window, entries, "auto-played cards"));
             return;
         }
         if (window.Chosen != null && window.Chosen.TargetType == TargetType.AnyEnemy && window.Target == null)

@@ -87,7 +87,7 @@ public sealed partial class ProcAudit
             var randomPlays = UnpredictedAutoPlay(window, entries, me);
             foreach (var name in cameBack.Except(tabbedBack))
             {
-                if (randomPlays) model.Skip("no tab", "random auto-plays", $"{name} came back to your hand");
+                if (randomPlays) model.Skip("no tab", AutoPlayReason(window, entries, "random auto-plays"), $"{name} came back to your hand");
                 else issues.Add($"no tab: {name} came back to your hand");
             }
             foreach (var name in tabbedBack.Except(cameBack))

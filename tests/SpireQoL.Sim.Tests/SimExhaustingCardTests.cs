@@ -71,17 +71,20 @@ public class SimExhaustingCardTests
     }
 
     [Fact]
-    public void ACardYouChooseToExhaustIsOneThatChangesNothingWhenThereIsOne()
+    public void ACardYouChooseToExhaustIsACardNeverAParticularOne()
     {
-        // Decision #167: your pick is your later decision. With a card besides the Drum, the prediction exhausts that one: no energy.
+        // Decision #92: your pick is a card, never a particular one. The play does what any pick would do: with a card besides the
+        // Drum, nothing that only the Drum would do (no energy), and nothing marked unknown.
         var chosen = new ExhaustFromHandAction(ExhaustPick.Chosen);
         var plain = Assert.Single(SimEngine.Run(Hand(cards: 3, Drum(id: 21)), Exhausting(chosen)).Branches);
         Assert.Null(plain.Unmodelled);
         Assert.Equal(0, plain.You.Energy);
-        // Only the Drum to take: it's exhausted, its energy given.
+        // Only the Drum to take: any pick is it, so its energy is what the play does.
         Assert.Equal(2, Assert.Single(SimEngine.Run(Hand(cards: 1, Drum(id: 21)), Exhausting(chosen)).Branches).You.Energy);
-        // Only Drums that differ: which one is unknown.
-        Assert.All(SimEngine.Run(Hand(cards: 2, Drum(id: 21), Drum(id: 22, energy: 3)), Exhausting(chosen)).Branches, branch => Assert.NotNull(branch.Unmodelled));
+        // Only Drums that differ: which one is the player's decision, neither simulated nor marked.
+        var differing = Assert.Single(SimEngine.Run(Hand(cards: 2, Drum(id: 21), Drum(id: 22, energy: 3)), Exhausting(chosen)).Branches);
+        Assert.Null(differing.Unmodelled);
+        Assert.Equal(0, differing.You.Energy);
     }
 
     [Fact]
@@ -98,12 +101,16 @@ public class SimExhaustingCardTests
     }
 
     [Fact]
-    public void CleanseIsUnknownWhenADrumIsInTheDrawPile()
+    public void CleansesPickFromTheDrawPileIsACardNeverAParticularOne()
     {
+        // A Drum among cards that differ: which one you exhaust is your decision (decision #92), so the Drum's energy isn't given and
+        // nothing is marked unknown.
         var drum = new SimDrawCard("drum") { Type = SimCardType.Skill, Exhausting = Drum(id: 0) };
         var state = Hand(cards: 2);
         state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(drum, Count: 1), new SimDrawGroup(new SimDrawCard("skill") { Type = SimCardType.Skill }, Count: 2) } };
-        Assert.All(SimEngine.Run(state, Exhausting(new ExhaustFromHandAction(ExhaustPick.Chosen) { FromDrawPile = true })).Branches, branch => Assert.NotNull(branch.Unmodelled));
+        var after = Assert.Single(SimEngine.Run(state, Exhausting(new ExhaustFromHandAction(ExhaustPick.Chosen) { FromDrawPile = true })).Branches);
+        Assert.Null(after.Unmodelled);
+        Assert.Equal(0, after.You.Energy);
     }
 
     [Fact]

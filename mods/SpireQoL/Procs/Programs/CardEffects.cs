@@ -53,6 +53,29 @@ public static class CardEffects
         return attacks.Count >= 2 && attacks.Skip(1).Any(attack => attack.Condition != null && attack.Builder.Contains("TargetingAllOpponents"));
     }
 
+    public static bool DiscardsOnlyPicks(Type cardType) => DiscardsOnlyPicks(CardPrograms.Of(cardType));
+
+    /// <summary>
+    /// Every card it discards is one you pick: each CardCmd.Discard (or DiscardAndDraw) follows a choice (CardSelectCmd) in its code
+    /// (Acrobatics, Prepared, The Hermit), not the whole hand (Storm of Steel, Calculated Gamble). A pick is a card, never a particular
+    /// one (decision #92): what only a particular card would do then (a Sly card playing itself) isn't followed.
+    /// </summary>
+    public static bool DiscardsOnlyPicks(CardProgram program)
+    {
+        var picked = false;
+        var discards = false;
+        foreach (var step in program.All())
+        {
+            if (step is ChoiceStep) picked = true;
+            if (step is CommandStep command && command.Command.DeclaringType == "CardCmd" && command.Command.Name is "Discard" or "DiscardAndDraw")
+            {
+                if (!picked) return false;
+                discards = true;
+            }
+        }
+        return discards;
+    }
+
     private static bool Is(CommandStep command, string type, string name) => command.Command.DeclaringType == type && command.Command.Name == name;
 
     private static string? Argument(CommandStep command, int index) => index < command.Arguments.Count ? command.Arguments[index] : null;

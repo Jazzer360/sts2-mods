@@ -199,6 +199,38 @@ public class PlayBehaviourTests
         Assert.Equal(1, after.You.HandCount);
     }
 
+    // ---- a pick in the middle of a play is a card, never a particular one (decision #92)
+
+    [Fact]
+    public void AcrobaticsWithASlyCardInHandPredictsItsDrawAndOneDiscardAndNothingAboutTheSlyCard()
+    {
+        // Acrobatics draws, then you pick a card to discard. Which one is your own decision: a Sly card playing itself when it's the one
+        // isn't simulated, and nothing is marked unknown. The draw and the discard (with what a discard sets off) are exact.
+        var gameFight = Fight();
+        Enemy(gameFight);
+        var card = gameFight.Add<Acrobatics>();
+        gameFight.Add<Reflex>();
+        Cards<DefendIronclad>(gameFight, count: 5, PileType.Draw);
+        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
+        Assert.False(facts.MayDiscardSly);
+        var after = Only(PlayOut(gameFight, card));
+        Assert.Null(after.Unmodelled);
+        Assert.Equal(3, after.PlayEvents[CardEvent.Drawn]);
+        Assert.Equal(1, after.PlayEvents[CardEvent.Discarded]);
+        Assert.Equal(1 + 3 - 1, after.You.HandCount);
+    }
+
+    [Fact]
+    public void StormOfSteelDiscardingASlyCardWithoutAChoiceIsStillNotModelled()
+    {
+        // The whole hand goes, no pick: the Sly card certainly plays itself, which the simulator doesn't follow yet (tracker).
+        var gameFight = Fight();
+        Enemy(gameFight);
+        var card = gameFight.Add<StormOfSteel>();
+        gameFight.Add<Reflex>();
+        Assert.True(PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).MayDiscardSly);
+    }
+
     // ---- the cards' own hooks: they listen from your piles, after your powers and relics
 
     [Fact]

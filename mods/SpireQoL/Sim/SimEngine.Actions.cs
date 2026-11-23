@@ -68,9 +68,9 @@ public static partial class SimEngine
     /// A play exhausting others: the cards that act when exhausted among the ones it can take (ExhaustFromHandAction) give their
     /// energy (Drum of Battle's AfterCardExhausted: PlayerCmd.GainEnergy). All of them; one card at random, a branch per such card by
     /// its share of the cards in the hand and one where another card went. When you choose (decision #167: a choice inside the play
-    /// is your later decision), the option that changes nothing the simulation follows: a card that doesn't act when exhausted, when
-    /// the hand has one; with only cards that do, the same whichever you take, or unknown when they differ. Cleanse's pick from
-    /// your draw pile leaves it the same way: a plain card when there is one.
+    /// is your later decision), your pick is a card, never a particular one: the play does what any pick would do. Only when every
+    /// card you could take acts alike when exhausted is that what any pick does; otherwise nothing that depends on which card is
+    /// followed, and nothing is marked unknown. Cleanse's pick from your draw pile the same way.
     /// </summary>
     private static IEnumerable<SimState> RunExhaustFromHand(SimState state, ExhaustFromHandAction exhaust)
     {
@@ -84,14 +84,10 @@ public static partial class SimEngine
         {
             case ExhaustPick.Chosen:
             {
+                // Your pick is a card (decision #92: never which one): what any pick would do, nothing that depends on which.
                 var inHand = player.HandCount - player.PlayingFromHand;
                 var filtered = exhaust.Only != SimCardType.None || exhaust.Except != SimCardType.None;
-                if (!filtered && inHand > taken.Count) return new[] { state }; // a card that doesn't act when exhausted: yours to take
-                if (filtered || taken.Select(card => (card.Energy, card.Type)).Distinct().Count() > 1)
-                {
-                    state.Unmodelled ??= "you choose the card it exhausts, and every card you could take acts when exhausted, not all alike";
-                    return new[] { state };
-                }
+                if (filtered || inHand > taken.Count || taken.Select(card => (card.Energy, card.Type)).Distinct().Count() > 1) return new[] { state };
                 // Only cards that act when exhausted, all alike: one of them.
                 var mine = state.MutablePlayer(owner);
                 mine.ExhaustingInHand = mine.ExhaustingInHand.Where(other => other.HandCard != taken[0].HandCard).ToList();
@@ -135,19 +131,16 @@ public static partial class SimEngine
 
     /// <summary>
     /// Cleanse: the card you choose from your draw pile is exhausted (decision #167: your later decision): a plain card when the pile
-    /// has one, else the same whichever you take (its energy when it acts when exhausted), or unknown when they differ. With no pile
-    /// read, only its count is kept.
+    /// has one, else the same whichever you take (its energy when it acts when exhausted). When they differ, the pick is a card and
+    /// never a particular one (decision #92): the pile is left as it was, nothing a particular card would do is followed. With no
+    /// pile read, only its count is kept.
     /// </summary>
     private static IEnumerable<SimState> ExhaustChosenFromDrawPile(SimState state, int owner)
     {
         if (state.Player(owner)?.Draw is not { Count: > 0 } pile) return new[] { state };
         var profiles = pile.Top.Concat(pile.Rest.Select(group => group.Card)).DistinctBy(card => card.Key).ToList();
         var card = profiles.FirstOrDefault(profile => profile.Plain) ?? (profiles.Count == 1 ? profiles[0] : null);
-        if (card == null)
-        {
-            state.Unmodelled ??= "you choose the card it exhausts from your draw pile, and the ones there differ in what the simulation follows";
-            return new[] { state };
-        }
+        if (card == null) return new[] { state };
         var simPlayer = state.MutablePlayer(owner);
         simPlayer.Draw = pile.Rest.FindIndex(group => group.Card.Key == card.Key) is var restIndex and >= 0
             ? pile.WithoutOneOf(restIndex)

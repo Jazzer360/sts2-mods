@@ -26,7 +26,7 @@ public sealed partial class ProcAudit
         }
         if (entries.OfType<CardPlayStartedEntry>().Any(started => started.CardPlay.IsAutoPlay && !ReferenceEquals(started.CardPlay.Card, window.Chosen)))
         {
-            model.Skip("preview", "auto-played cards");
+            model.Skip("preview", AutoPlayReason(window, entries, "auto-played cards"));
             return;
         }
         if (window.FightEnded || window.After == null || window.AfterIds == null)

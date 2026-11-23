@@ -75,9 +75,21 @@ A program is a tree of steps:
     Ki Chant or Burning Pact; that is true in the simulator today too, checked.
   - A step that acts on the pick knows its count (one card discarded, one exhausted). So `Discarded` and `Exhausted` with
     their count, and what they set off (Tough Bandages, Feel No Pain, Dark Embrace), stay exact.
-  - Only what depends on which card (its own exhaust or discard hook, a Sly card playing itself, its cost) is not modelled,
-    unless every card it could be gives the same result. That is checked by trying each card in hand, the way the hand pick
-    models do today.
+  - **A pick is "a card", never a particular one** (the owner's rule, 2026-11-23). The play does what any pick would do, and
+    that is predicted exactly: the card leaves the hand, the Discarded or Exhausted event fires with its count, and what those
+    set off (Tough Bandages, Feel No Pain, Dark Embrace, the counters) is included. No favourable or unfavourable pick is
+    assumed. What depends on which card is chosen (its own discard or exhaust hook, such as Drum of Battle's energy; a Sly card
+    playing itself; its cost) is neither simulated nor marked: no `NotModelledAction`, no `?`. Like the next card you play, it's
+    the player's own decision (decision #92). Only when every card it could be acts alike is that what any pick does
+    (`ExhaustPick.Chosen` with only identical Drums in hand).
+  - Cards taken **without** a choice stay specific: Fiend Fire's whole hand, The Hermit's Curse, a whole-hand discard with a
+    Sly card in it (`PlayFacts.MayDiscardSly`, which `CardEffects.DiscardsOnlyPicks` leaves out for picks: every discard
+    follows a `Choice` step in the program).
+  - A choice of **how many** (Neow's Fury, `HandTakeChosen`) keeps its `NotModelledAction`: the count changes what's predicted,
+    not just which card.
+  - The Play audit doesn't report what the chosen card itself caused: a Sly card you discarded playing itself (skipped as "the
+    card you picked played itself (Sly)"), a picked Drum of Battle's energy. Each skip is counted under its own reason, the way
+    a random roll is excused.
 
 The compiler's own patterns are skipped: the `await` pattern (`GetAwaiter`, `get_IsCompleted`, the state switch), visual
 and sound commands (`TriggerAnim`, `Vfx`, `Sfx`, `Preview`, `PlayMelodyVfx`, waits) and `ThrowIfNull`.

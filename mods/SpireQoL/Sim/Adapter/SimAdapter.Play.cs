@@ -251,8 +251,10 @@ public static partial class SimAdapter
             else if (facts.LeavesHand / plays > 0) into.Add(new LeaveHandAction(facts.LeavesHand / plays));
             Each(into, CardEvent.Discarded, facts.Discards, indirect: true);
             Each(into, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
-            // A Sly card it discards plays itself (CardCmd.Discard: AutoPlay, SlyDiscard): not simulated yet (tracker).
-            if (facts.MayDiscardSly) into.Add(new NotModelledAction("a Sly card in your hand it may discard plays itself"));
+            // A Sly card it discards without a choice (the whole hand: CardCmd.Discard's AutoPlay, SlyDiscard) plays itself: not
+            // simulated yet (tracker). One you pick is a card, never a particular one (decision #92): your own decision, neither
+            // simulated nor marked (PlayFacts.MayDiscardSly leaves picks out).
+            if (facts.MayDiscardSly) into.Add(new NotModelledAction("a Sly card in your hand it discards plays itself"));
             // How many it takes into your hand is your choice (Neow's Fury): your hand after it isn't known.
             if (facts.HandTakeChosen) into.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
         }

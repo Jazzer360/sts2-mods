@@ -63,7 +63,10 @@ public sealed class PlayFacts
     /// <summary>It takes your whole hand (Fiend Fire, Storm of Steel, Calculated Gamble...): everything in it goes, whatever it was.</summary>
     public bool TakesWholeHand { get; init; }
 
-    /// <summary>It discards from your hand while a Sly card is there (CardModel.IsSlyThisTurn): one it discards plays itself (CardCmd.Discard).</summary>
+    /// <summary>
+    /// It discards from your hand without a choice (its whole hand) while a Sly card is there (CardModel.IsSlyThisTurn): the Sly card plays
+    /// itself (CardCmd.Discard). A discard you pick isn't counted: a pick is a card, never a particular one (decision #92).
+    /// </summary>
     public bool MayDiscardSly { get; init; }
 
     /// <summary>
@@ -497,7 +500,8 @@ public sealed class PlayFacts
             Discards = DiscardCount(card, name, others, draws) * (name == nameof(KiChant) ? Math.Max(1, plays) : 1),
             LeavesHand = LeavingHand(card, name, others, drawPile, draws, plays),
             TakesWholeHand = WholeHandCards.Contains(name),
-            MayDiscardSly = name is not (nameof(KiChant) or nameof(Scrape)) && DiscardCount(card, name, others, draws) > 0 && others.Any(other => other.IsSlyThisTurn),
+            MayDiscardSly = name is not (nameof(KiChant) or nameof(Scrape)) && DiscardCount(card, name, others, draws) > 0 && others.Any(other => other.IsSlyThisTurn)
+                            && !Programs.CardEffects.DiscardsOnlyPicks(card.GetType()),
             OwnDraws = draws + swiftDraws,
             DrawsAtMost = SpireQoL.Sim.SimAdapter.DrawnCardReaders.GetValueOrDefault(name) is { DrawsAgain: true }
                 ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,

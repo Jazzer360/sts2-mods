@@ -33,7 +33,7 @@ public class CardPlaySnapshotTests
         Standard,
         /// <summary>The same with the card upgraded.</summary>
         Upgraded,
-        /// <summary>Two enemies, a full hand, an empty draw pile and three cards in the discard pile.</summary>
+        /// <summary>Two enemies, a full hand with a Sly card and Drum of Battle, an empty draw pile and three cards in the discard pile.</summary>
         Crowded,
     }
 
@@ -100,7 +100,12 @@ public class CardPlaySnapshotTests
             gameFight.Add<DefendIronclad>();
             gameFight.Add<Dazed>();
             if (board == Board.Crowded)
-                for (var i = 0; i < 6; i++) gameFight.Add<StrikeIronclad>();
+            {
+                // A Sly card (Reflex: it plays itself when discarded) and a card that acts when exhausted (Drum of Battle).
+                gameFight.Add<Reflex>();
+                gameFight.Add<DrumOfBattle>();
+                for (var i = 0; i < 4; i++) gameFight.Add<StrikeIronclad>();
+            }
             else
                 for (var i = 0; i < 3; i++)
                 {
