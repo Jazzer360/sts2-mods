@@ -51,6 +51,9 @@ public class SimBatchTests
         var job = SimJob.Start(SimSearch.Of(Board(), Strike(target: 0)), "batch test cancelled");
         job.Cancel(); // a cancelled job never completes (nobody reads it)
         var batch = new SimBatch(new[] { job });
-        Assert.False(batch.IsCompleted);
+        // The search may have ended on its worker before the cancel reached it: then it's done, and so is the batch. Either way the
+        // batch says what its job says.
+        SpinWait.SpinUntil(() => job.Ready.IsCompleted, TimeSpan.FromMilliseconds(500));
+        Assert.Equal(job.Finished, batch.IsCompleted);
     }
 }
