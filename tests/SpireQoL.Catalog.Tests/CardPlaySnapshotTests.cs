@@ -35,6 +35,13 @@ public class CardPlaySnapshotTests
         Upgraded,
         /// <summary>Two enemies, a full hand with a Sly card and Drum of Battle, an empty draw pile and three cards in the discard pile.</summary>
         Crowded,
+        /// <summary>The standard board with the card played twice (as Echo Form or Burst gives): its later play's actions and counts.</summary>
+        Replayed,
+        /// <summary>
+        /// The standard board with a teammate in the fight (a Strike and a Defend in their hand, three cards to draw, one discarded): a
+        /// card aimed at an ally is aimed at them, and what it gives or makes for teammates shows.
+        /// </summary>
+        Teammate,
     }
 
     [Fact]
@@ -82,7 +89,17 @@ public class CardPlaySnapshotTests
     {
         try
         {
-            var gameFight = new GameFight();
+            var gameFight = new GameFight(teammates: board == Board.Teammate ? 1 : 0);
+            foreach (var teammate in gameFight.Teammates)
+            {
+                teammate.Creature.SetMaxHpInternal(70);
+                teammate.Creature.SetCurrentHpInternal(70);
+                teammate.PlayerCombatState!.Energy = 3;
+                gameFight.AddFor<StrikeIronclad>(teammate, PileType.Hand);
+                gameFight.AddFor<DefendIronclad>(teammate, PileType.Hand);
+                for (var i = 0; i < 3; i++) gameFight.AddFor<StrikeIronclad>(teammate, PileType.Draw);
+                gameFight.AddFor<DefendIronclad>(teammate, PileType.Discard);
+            }
             gameFight.Me.Creature.SetMaxHpInternal(80);
             gameFight.Me.Creature.SetCurrentHpInternal(80);
             gameFight.Me.PlayerCombatState!.Energy = 3;
@@ -117,8 +134,13 @@ public class CardPlaySnapshotTests
             gameFight.Add<DefendIronclad>(PileType.Discard);
 
             SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
-            var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
-            var targetId = card.TargetType == TargetType.AnyEnemy ? ids[enemies[0]] : Who.None;
+            var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: board == Board.Replayed ? 2 : 1);
+            var targetId = card.TargetType switch
+            {
+                TargetType.AnyEnemy => ids[enemies[0]],
+                TargetType.AnyAlly when gameFight.Teammates.Count > 0 => Who.Teammate(teammateIndex: 0),
+                _ => Who.None,
+            };
             var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, ids, targetId);
             return FactsText(facts, enemies) + " play " + PlayText(play, gameFight);
         }
@@ -186,11 +208,12 @@ public class CardPlaySnapshotTests
     private static string PlayText(SimPlay play, GameFight gameFight)
     {
         var places = new Dictionary<string, string>();
-        foreach (var pile in new[] { PileType.Hand, PileType.Draw, PileType.Discard })
-        {
-            var cards = pile.GetPile(gameFight.Me).Cards;
-            for (var i = 0; i < cards.Count; i++) places.TryAdd(SimAdapter.HandId(cards[i]).ToString(), "\"" + pile + i + "\"");
-        }
+        foreach (var (player, prefix) in gameFight.Teammates.Select((teammate, index) => (teammate, "Teammate" + index)).Prepend((gameFight.Me, "")))
+            foreach (var pile in new[] { PileType.Hand, PileType.Draw, PileType.Discard })
+            {
+                var cards = pile.GetPile(player).Cards;
+                for (var i = 0; i < cards.Count; i++) places.TryAdd(SimAdapter.HandId(cards[i]).ToString(), "\"" + prefix + pile + i + "\"");
+            }
         try
         {
             var json = JsonSerializer.Serialize(play, PlayJson);

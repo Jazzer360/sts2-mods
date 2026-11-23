@@ -18,14 +18,31 @@ internal sealed class GameFight
     public CombatState Combat { get; }
     public Player Me { get; }
 
-    public GameFight()
+    /// <summary>The other players in the fight, after you (none by default).</summary>
+    public IReadOnlyList<Player> Teammates { get; }
+
+    public GameFight(int teammates = 0)
     {
         GameModels.EnsureLoaded();
-        Me = Player.CreateForNewRun<Deprived>(MegaCrit.Sts2.Core.Unlocks.UnlockState.all, 1uL);
-        Run = RunState.CreateForTest(new[] { Me }, seed: "TESTSEED");
+        var players = Enumerable.Range(1, 1 + teammates)
+            .Select(netId => Player.CreateForNewRun<Deprived>(MegaCrit.Sts2.Core.Unlocks.UnlockState.all, (ulong)netId)).ToArray();
+        Me = players[0];
+        Teammates = players.Skip(1).ToList();
+        Run = RunState.CreateForTest(players, seed: "TESTSEED");
         Combat = new CombatState(null, Run);
-        Me.ResetCombatState();
-        Combat.AddPlayer(Me);
+        foreach (var player in players)
+        {
+            player.ResetCombatState();
+            Combat.AddPlayer(player);
+        }
+    }
+
+    /// <summary>A new card of this type, owned by <paramref name="owner"/>, put into one of their piles.</summary>
+    public T AddFor<T>(Player owner, PileType pile) where T : CardModel
+    {
+        var card = Combat.CreateCard<T>(owner);
+        pile.GetPile(owner).AddInternal(card);
+        return card;
     }
 
     /// <summary>A new card of this type, owned by you, put into a pile (your hand by default).</summary>
