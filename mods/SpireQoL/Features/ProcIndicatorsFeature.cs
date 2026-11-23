@@ -44,8 +44,10 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
         if (_ctx.Predictions.Update() is not { } predicted) return;
         if (Sts2State.Me is { } me)
             foreach (var card in Sts2State.Hand(me)) _ctx.Decor.SeenInHand(card);
-        foreach (var (card, tabs) in predicted)
+        // By index: a foreach through the list's interface makes an enumerator every frame (decision #177).
+        for (var i = 0; i < predicted.Count; i++)
         {
+            var (card, tabs) = predicted[i];
             var decor = _ctx.Decor.For(card);
             foreach (var tab in tabs) decor.AddTab(tab);
         }

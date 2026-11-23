@@ -157,7 +157,7 @@ internal sealed class InspectScreen
 
     private void Build(SceneTree tree)
     {
-        _layer = new CanvasLayer { Name = "SpireQoL_Inspect", Layer = 100, Visible = false };
+        _layer = new CanvasLayer { Name = GodotNames.Name("SpireQoL_Inspect"), Layer = 100, Visible = false };
         tree.Root.AddChild(_layer);
         _root = new Control { MouseFilter = Control.MouseFilterEnum.Stop };
         _root.SetAnchorsPreset(Control.LayoutPreset.FullRect);

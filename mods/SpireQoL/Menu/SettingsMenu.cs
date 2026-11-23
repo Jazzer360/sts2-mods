@@ -239,10 +239,10 @@ public sealed partial class SettingsMenu
 
     private void Build(SceneTree tree)
     {
-        _layer = new CanvasLayer { Name = "SpireQoL_Settings", Layer = 100, Visible = false };
+        _layer = new CanvasLayer { Name = GodotNames.Name("SpireQoL_Settings"), Layer = 100, Visible = false };
         tree.Root.AddChild(_layer);
 
-        _root = new Control { Name = "Root", MouseFilter = Control.MouseFilterEnum.Stop };
+        _root = new Control { Name = GodotNames.Name("Root"), MouseFilter = Control.MouseFilterEnum.Stop };
         _root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         _layer.AddChild(_root);
 

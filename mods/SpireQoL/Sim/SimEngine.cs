@@ -52,7 +52,16 @@ public sealed class SimOutcome
     public int Most(Func<SimState, int> valueOf) => Branches.Max(valueOf);
 
     /// <summary>Some branch has something not modelled (decision #92): what's shown carries the ?.</summary>
-    public bool AnyUnmodelled => Branches.Any(branch => branch.Unmodelled != null);
+    /// <remarks>By index: the forecast's widgets read it every frame, and LINQ's Any boxed the list's enumerator each time (decision #177).</remarks>
+    public bool AnyUnmodelled
+    {
+        get
+        {
+            for (var i = 0; i < Branches.Count; i++)
+                if (Branches[i].Unmodelled != null) return true;
+            return false;
+        }
+    }
 
     /// <summary>Why, over the branches: the gaps to model.</summary>
     public IReadOnlyList<string> UnmodelledReasons => Branches.Where(branch => branch.Unmodelled != null).Select(branch => branch.Unmodelled!).Distinct().ToList();

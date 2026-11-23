@@ -52,7 +52,7 @@ public sealed class MovableWidget
         _unlockedStyle.SetBorderWidthAll(2);
         _unlockedStyle.BorderColor = new Color(1f, 0.55f, 0.1f);
 
-        Root = new PanelContainer { Name = "Widget_" + id, MouseFilter = Control.MouseFilterEnum.Ignore };
+        Root = new PanelContainer { Name = GodotNames.Name("Widget_" + id), MouseFilter = Control.MouseFilterEnum.Ignore };
         Root.AddThemeStyleboxOverride(GodotNames.Name("panel"), _lockedStyle);
 
         var box = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };

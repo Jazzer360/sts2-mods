@@ -9,10 +9,11 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 ### Spire QoL 1.27.2
 #### Fixed
 - An Ethereal card's fade looks at the card again only when its board, the creature it's aimed at or its pile changes, instead of every 15th frame: on a still board it was the mod's largest garbage. The mod's own frame timing no longer makes a little garbage of its own every frame either.
+- Almost nothing is made while nothing changes, in a fight or out of one: the map legend's reminders are worked out again only when your relics, deck, gold, HP or the legend change (they were worked out every few frames while the map was open); Intent Forecast reads a hovered enemy's moves once, not every frame; an Ethereal card's glow no longer makes Godot names every frame; Rest Site Preview does nothing away from the fire; and the card tabs, Proc Indicators, Shuffle Warning, Incoming Damage, Teammate Incoming Damage and Potion Tabs no longer make a small object or two every frame.
 
 ### Main Saves 1.0.27
 #### Changed
-- Shared code: the frame loop's timing makes no garbage of its own, and counts dev mode's checks apart. No change in Main Saves.
+- Shared code: the frame loop's timing makes no garbage of its own, and counts dev mode's checks apart; the hand, the local player in a run and nodes' keys read without making anything; node names made once. No change in Main Saves.
 
 ### Spire QoL 1.27.1
 #### Fixed

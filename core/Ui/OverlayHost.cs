@@ -186,6 +186,32 @@ public sealed class OverlayHost
     }
 
     /// <summary>
+    /// Times one part of the running feature until disposed (<c>using var part = host.Part("run-reminders:map");</c>): its own entry in the
+    /// frame's times and memory, taken out of the feature's (AddPartTime), so the dev dashboard's steady table names the part that
+    /// allocates (decision #177). A struct: nothing made to time it.
+    /// </summary>
+    public PartTiming Part(string id) => new(this, id);
+
+    /// <summary>One part's timing (Part).</summary>
+    public readonly struct PartTiming : IDisposable
+    {
+        private readonly OverlayHost _host;
+        private readonly string _id;
+        private readonly ulong _startUs;
+        private readonly long _allocatedBefore;
+
+        internal PartTiming(OverlayHost host, string id)
+        {
+            _host = host;
+            _id = id;
+            _startUs = Godot.Time.GetTicksUsec();
+            _allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+        }
+
+        public void Dispose() => _host.AddPartTime(_id, (Godot.Time.GetTicksUsec() - _startUs) / 1000.0, KbSince(_allocatedBefore));
+    }
+
+    /// <summary>
     /// True while the mod's frame run is going (features' OnFrame): the game changes nothing in between, so what's read once in it
     /// holds for the rest of it. False in a game callback (a hook mid-frame), where the board may have just changed.
     /// </summary>
@@ -260,10 +286,10 @@ public sealed class OverlayHost
         }
 
         _mainThread = System.Environment.CurrentManagedThreadId;
-        Layer = new CanvasLayer { Name = ModId + "_Overlay", Layer = 10 };
+        Layer = new CanvasLayer { Name = GodotNames.Name(ModId + "_Overlay"), Layer = 10 };
         tree.Root.AddChild(Layer);
 
-        WidgetRoot = new Control { Name = ModId + "_Widgets", MouseFilter = Control.MouseFilterEnum.Ignore };
+        WidgetRoot = new Control { Name = GodotNames.Name(ModId + "_Widgets"), MouseFilter = Control.MouseFilterEnum.Ignore };
         Layer.AddChild(WidgetRoot);
 
         _toast = UiKit.Label("", size: 20, Colors.White);

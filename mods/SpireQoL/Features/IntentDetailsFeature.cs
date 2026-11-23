@@ -96,7 +96,7 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
         if (label == null)
         {
             label = UiKit.Label("", size: 22, BlockColor);
-            label.Name = BlockName;
+            label.Name = GodotNames.Name(BlockName);
             label.MouseFilter = Control.MouseFilterEnum.Ignore;
             label.AddThemeConstantOverride(GodotNames.Name("outline_size"), 8);
             label.AddThemeColorOverride(GodotNames.Name("font_outline_color"), new Color(0, 0, 0, 0.95f));

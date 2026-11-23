@@ -70,11 +70,53 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         _widget.Content.AddChild(_rows);
     }
 
+    /// <summary>The hovered enemy's forecast as last read, what it was read for, and dev mode's check of it.</summary>
+    private (List<ForecastTurn> Turns, MoveStateMachineView View, string Key)? _read;
+    private Creature? _readFor;
+    private int _readProbe, _readRevision;
+    private bool _haveRead;
+    private readonly SpireQoL.Combat.ReuseCheck _readReuse = new("Intent Forecast");
+
+    /// <summary>
+    /// The enemy's next turns, as shown (the certain ones only with chances off: decision #122), with the key Build is keyed by; null
+    /// when there are none to show.
+    /// </summary>
+    private (List<ForecastTurn> Turns, MoveStateMachineView View, string Key)? Read(Creature enemy)
+    {
+        if (IntentReader.Forecast(enemy) is not { } forecast) return null;
+        var (turns, view) = forecast;
+        if (!_ctx.Settings.ShowIntentOdds) turns = turns.TakeWhile(forecastTurn => forecastTurn.Certain).ToList();
+        if (turns.Count == 0) return null;
+        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(forecastTurn => string.Join(",", forecastTurn.Moves.Select(move => $"{move.Move}:{move.Chance:0.###}"))));
+        return (turns, view, key);
+    }
+
+    /// <summary>The width a row's side takes (each shown child and a gap), by index: every frame while shown.</summary>
+    private static float Side(List<Control> controls)
+    {
+        var width = 0f;
+        for (var i = 0; i < controls.Count; i++)
+            if (GodotObject.IsInstanceValid(controls[i])) width += controls[i].CustomMinimumSize.X + RowGap;
+        return width;
+    }
+
     public void OnFrame(OverlayHost host)
     {
         var enemy = Sts2State.IsPlayerTurn ? HoveredIntentEnemy() : null;
-        var forecast = enemy != null ? IntentReader.Forecast(enemy) : null;
-        if (enemy == null || forecast == null)
+        if (enemy != null)
+        {
+            // Read again only when the hovered enemy, the board (its moves, HP and powers: the probe) or the settings change: reading
+            // its move rules every frame while you hovered it made garbage the whole time (decision #177).
+            var probe = Sts2State.Me is { } me && Sts2State.Combat is { } combat ? SpireQoL.Combat.BoardProbe.Hash(me, combat) : 0;
+            var reuse = _readReuse.Decide(_haveRead && ReferenceEquals(enemy, _readFor) && probe == _readProbe && QolSettings.Revision == _readRevision);
+            if (reuse != SpireQoL.Combat.FrameReuse.Reuse)
+            {
+                var read = Read(enemy);
+                if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck) _readReuse.Compare(read?.Key == _read?.Key, "its forecast changed while the board probe didn't");
+                (_read, _readFor, _readProbe, _readRevision, _haveRead) = (read, enemy, probe, QolSettings.Revision, true);
+            }
+        }
+        if (enemy == null || _read is not { } now)
         {
             _enemy = null;
             _key = "";
@@ -82,21 +124,10 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             return;
         }
         _enemy = enemy;
-        var (turns, view) = forecast.Value;
-        // Chances off (decision #122): the certain turns only.
-        if (!_ctx.Settings.ShowIntentOdds) turns = turns.TakeWhile(forecastTurn => forecastTurn.Certain).ToList();
-        if (turns.Count == 0)
+        if (now.Key != _key)
         {
-            _enemy = null;
-            _key = "";
-            _widget!.HasContent = false;
-            return;
-        }
-        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(forecastTurn => string.Join(",", forecastTurn.Moves.Select(move => $"{move.Move}:{move.Chance:0.###}"))));
-        if (key != _key)
-        {
-            _key = key;
-            Build(enemy, turns, view);
+            _key = now.Key;
+            Build(enemy, now.Turns, now.View);
         }
         _widget!.HasContent = true;
         foreach (var (node, powers) in _corners)
@@ -107,7 +138,6 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         foreach (var (leftSpacer, left, right, rightSpacer) in _balance)
         {
             if (!GodotObject.IsInstanceValid(leftSpacer) || !GodotObject.IsInstanceValid(rightSpacer)) continue;
-            float Side(List<Control> controls) => controls.Where(GodotObject.IsInstanceValid).Sum(control => control.CustomMinimumSize.X + RowGap);
             var gap = Side(right) - Side(left);
             Pad(leftSpacer, gap);
             Pad(rightSpacer, -gap);

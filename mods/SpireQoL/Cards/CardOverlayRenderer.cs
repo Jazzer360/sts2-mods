@@ -82,13 +82,18 @@ public sealed class CardOverlayRenderer
     /// </summary>
     internal static readonly List<(NCard Node, CardDecor Decor)> Outside = new();
 
+    /// <summary>The hand's cards this frame, and the entries to drop: kept, not made every frame (decision #177).</summary>
+    private readonly List<(NCard Node, MegaCrit.Sts2.Core.Models.CardModel Card)> _hand = new();
+    private readonly List<ulong> _dead = new();
+
     public void Render()
     {
         foreach (var entry in _entries.Values) entry.Seen = false;
 
         if (!_host.HideAll && Sts2State.InCombat)
         {
-            foreach (var (node, card) in Sts2State.HandNodes())
+            Sts2State.HandNodes(_hand);
+            foreach (var (node, card) in _hand)
             {
                 var decor = _frame.Get(card);
                 if (decor == null || decor.IsEmpty) continue;
@@ -116,7 +121,8 @@ public sealed class CardOverlayRenderer
         _flatKb = 0;
 
         // Undo anything on nodes that are no longer decorated hand cards.
-        var dead = new List<ulong>();
+        var dead = _dead;
+        dead.Clear();
         foreach (var (id, otherEntry) in _entries)
         {
             if (!GodotObject.IsInstanceValid(otherEntry.Card) || !GodotObject.IsInstanceValid(otherEntry.Overlay))
@@ -147,7 +153,7 @@ public sealed class CardOverlayRenderer
 
         var container = card.GetNodeOrNull<Control>(GodotNames.Path("%CardContainer")) ?? card;
 
-        var overlay = new Control { Name = OverlayName, MouseFilter = Control.MouseFilterEnum.Ignore };
+        var overlay = new Control { Name = GodotNames.Name(OverlayName), MouseFilter = Control.MouseFilterEnum.Ignore };
         container.AddChild(overlay);
 
         var entry = new Entry { Card = card, Container = container, Overlay = overlay };
@@ -167,7 +173,7 @@ public sealed class CardOverlayRenderer
         public Example(NCard card)
         {
             var container = card.GetNodeOrNull<Control>(GodotNames.Path("%CardContainer")) ?? card;
-            var overlay = new Control { Name = OverlayName, MouseFilter = Control.MouseFilterEnum.Ignore };
+            var overlay = new Control { Name = GodotNames.Name(OverlayName), MouseFilter = Control.MouseFilterEnum.Ignore };
             container.AddChild(overlay);
             _entry = new Entry { Card = card, Container = container, Overlay = overlay };
         }
@@ -285,7 +291,7 @@ public sealed class CardOverlayRenderer
 
         if (entry.TagLayer == null || !GodotObject.IsInstanceValid(entry.TagLayer))
         {
-            entry.TagLayer = new Control { Name = "SpireQoL_TagLayer", MouseFilter = Control.MouseFilterEnum.Ignore };
+            entry.TagLayer = new Control { Name = GodotNames.Name("SpireQoL_TagLayer"), MouseFilter = Control.MouseFilterEnum.Ignore };
             parent.AddChild(entry.TagLayer);
         }
         var layer = entry.TagLayer;
@@ -399,9 +405,9 @@ public sealed class CardOverlayRenderer
             tab.SelfModulate = Colors.White;
             if (tab.Material is ShaderMaterial own)
             {
-                own.SetShaderParameter("h", 0.25);
-                own.SetShaderParameter("s", 0.4);
-                own.SetShaderParameter("v", 0.6);
+                own.SetShaderParameter(GodotNames.Name("h"), 0.25);
+                own.SetShaderParameter(GodotNames.Name("s"), 0.4);
+                own.SetShaderParameter(GodotNames.Name("v"), 0.6);
             }
             if (tab.GetNodeOrNull<Label>(GodotNames.Path("Label")) is { } tint) tint.SelfModulate = Colors.White;
 
@@ -457,7 +463,7 @@ public sealed class CardOverlayRenderer
                     if (label is MegaCrit.Sts2.addons.mega_text.MegaLabel mega)
                     {
                         mega.AutoSizeEnabled = true;
-                        mega.MaxFontSize = Math.Max((int)label.GetMeta(MetaMaxFont), (int)(box.X * 0.8f));
+                        mega.MaxFontSize = Math.Max((int)label.GetMeta(GodotNames.Name(MetaMaxFont)), (int)(box.X * 0.8f));
                         mega.SetTextAutoSize(spec.Text);
                     }
                     else
@@ -546,23 +552,23 @@ public sealed class CardOverlayRenderer
     /// <summary>Saves the tab label's own size and max font size once (tab nodes are reused).</summary>
     private static void RememberLabel(Label label)
     {
-        if (label.HasMeta(MetaSize)) return;
-        label.SetMeta(MetaSize, label.Size);
-        label.SetMeta(MetaMaxFont, label is MegaCrit.Sts2.addons.mega_text.MegaLabel megaLabel ? megaLabel.MaxFontSize : 0);
+        if (label.HasMeta(GodotNames.Name(MetaSize))) return;
+        label.SetMeta(GodotNames.Name(MetaSize), label.Size);
+        label.SetMeta(GodotNames.Name(MetaMaxFont), label is MegaCrit.Sts2.addons.mega_text.MegaLabel megaLabel ? megaLabel.MaxFontSize : 0);
     }
 
     /// <summary>Puts back what a text tab changed, for a number tab on the same node.</summary>
     private static void RestoreLabel(Label label)
     {
-        if (!label.HasMeta(MetaSize)) return;
-        label.Size = (Vector2)label.GetMeta(MetaSize);
-        if (label is MegaCrit.Sts2.addons.mega_text.MegaLabel megaLabel) megaLabel.MaxFontSize = (int)label.GetMeta(MetaMaxFont);
+        if (!label.HasMeta(GodotNames.Name(MetaSize))) return;
+        label.Size = (Vector2)label.GetMeta(GodotNames.Name(MetaSize));
+        if (label is MegaCrit.Sts2.addons.mega_text.MegaLabel megaLabel) megaLabel.MaxFontSize = (int)label.GetMeta(GodotNames.Name(MetaMaxFont));
     }
 
     private static Control MakeTab(Control template, Control overlay)
     {
         var tab = (Control)template.Duplicate();
-        tab.Name = "SpireQoL_Tab";
+        tab.Name = GodotNames.Name("SpireQoL_Tab");
         ClearUniqueNames(tab);
         tab.MouseFilter = Control.MouseFilterEnum.Ignore;
         // The tab's backdrop uses a colorize shader (NCard.SetEnchantmentStatus sets h/s/v on it).
@@ -571,23 +577,23 @@ public sealed class CardOverlayRenderer
         if (tab.Material is ShaderMaterial shaderMaterial)
         {
             var own = (ShaderMaterial)shaderMaterial.Duplicate();
-            own.SetShaderParameter("h", 0.25);
-            own.SetShaderParameter("s", 0.4);
-            own.SetShaderParameter("v", 0.6);
+            own.SetShaderParameter(GodotNames.Name("h"), 0.25);
+            own.SetShaderParameter(GodotNames.Name("s"), 0.4);
+            own.SetShaderParameter(GodotNames.Name("v"), 0.6);
             tab.Material = own;
         }
         if (tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } icon)
         {
             icon.AddChild(new ColorRect
             {
-                Name = "SpireQoL_Slash",
+                Name = GodotNames.Name("SpireQoL_Slash"),
                 Color = SlashColor,
                 MouseFilter = Control.MouseFilterEnum.Ignore,
                 Visible = false,
             });
             icon.AddChild(new TextureRect
             {
-                Name = "SpireQoL_Aim",
+                Name = GodotNames.Name("SpireQoL_Aim"),
                 MouseFilter = Control.MouseFilterEnum.Ignore,
                 ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
@@ -598,7 +604,7 @@ public sealed class CardOverlayRenderer
         if (tab.GetNodeOrNull<Label>(GodotNames.Path("Label")) is { } number)
         {
             var second = (Label)number.Duplicate();
-            second.Name = "SpireQoL_Corner";
+            second.Name = GodotNames.Name("SpireQoL_Corner");
             second.Visible = false;
             tab.AddChild(second);
         }

@@ -56,6 +56,31 @@ public static class Sts2State
     private static CombatState? _meCombat;
     private static ulong? _meNetId;
 
+    /// <summary>
+    /// The local player in the run, in a fight or not (the fight's when there is one). Kept for the run (the same run state and local
+    /// id): the game's lookup (RunState.GetPlayer) makes a closure and an enumerator every call, and the features outside fights ask every
+    /// frame (decision #177).
+    /// </summary>
+    public static Player? MeInRun
+    {
+        get
+        {
+            if (Me is { } me) return me;
+            if (MegaCrit.Sts2.Core.Runs.RunManager.Instance is not { } runManager) return null;
+            var state = Private<MegaCrit.Sts2.Core.Runs.RunState?>(runManager, "State", fallback: null);
+            if (state == null) return null;
+            var netId = LocalContext.NetId;
+            if (ReferenceEquals(state, _runMeState) && netId == _runMeNetId && _runMe != null) return _runMe;
+            var found = LocalContext.GetMe(state);
+            (_runMe, _runMeState, _runMeNetId) = (found, state, netId);
+            return found;
+        }
+    }
+
+    private static Player? _runMe;
+    private static MegaCrit.Sts2.Core.Runs.RunState? _runMeState;
+    private static ulong? _runMeNetId;
+
     public static bool IsPlayerTurn => Combat is { } combat && combat.CurrentSide == CombatSide.Player
         && !CombatManager.Instance.EndingPlayerTurnPhaseOne && !CombatManager.Instance.EndingPlayerTurnPhaseTwo
         // Between the two end-of-turn phases (multiplayer waits for every player's ReadyToBeginEnemyTurnAction)
@@ -65,17 +90,28 @@ public static class Sts2State
 
     public static int TurnNumber => Me?.PlayerCombatState?.TurnNumber ?? 0;
 
-    public static IReadOnlyList<CardModel> Hand(Player me) => me.PlayerCombatState?.Hand.Cards ?? (IReadOnlyList<CardModel>)Array.Empty<CardModel>();
+    /// <summary>
+    /// Your hand as the game's own list (its pile keeps one behind an IReadOnlyList): a foreach through the interface boxes an enumerator,
+    /// garbage on every frame for every feature that looks at the hand (decision #177).
+    /// </summary>
+    public static List<CardModel> Hand(Player me) =>
+        me.PlayerCombatState?.Hand.Cards is { } cards ? cards as List<CardModel> ?? new List<CardModel>(cards) : NoCards;
+
+    private static readonly List<CardModel> NoCards = new();
 
     public static int DrawPileCount(Player me) => me.PlayerCombatState?.DrawPile.Cards.Count ?? 0;
 
     public static int DiscardPileCount(Player me) => me.PlayerCombatState?.DiscardPile.Cards.Count ?? 0;
 
-    /// <summary>Card nodes currently shown in the hand, paired with their models.</summary>
-    public static IEnumerable<(NCard Node, CardModel Card)> HandNodes()
+    /// <summary>
+    /// Card nodes currently shown in the hand, paired with their models, into <paramref name="into"/> (cleared first). A list the caller
+    /// keeps, not an iterator: an iterator is an object made on every call, every frame (decision #177).
+    /// </summary>
+    public static void HandNodes(List<(NCard Node, CardModel Card)> into)
     {
+        into.Clear();
         var hand = NPlayerHand.Instance;
-        if (hand == null) yield break;
+        if (hand == null) return;
         NCard? first = null;
         // ActiveHolders makes three lists and a child array each call: the visible holders by index instead.
         var container = hand.CardHolderContainer;
@@ -87,7 +123,7 @@ public static class Sts2State
             if (node != null && model != null && Godot.GodotObject.IsInstanceValid(node))
             {
                 first ??= node;
-                yield return (node, model);
+                into.Add((node, model));
             }
         }
 
@@ -95,7 +131,7 @@ public static class Sts2State
         // the holder container to the hand itself, so it isn't in ActiveHolders. Its model is
         // still in the hand pile until the play starts.
         var held = HeldCard(hand);
-        if (held is { } nodeCard && nodeCard.Node != first) yield return nodeCard;
+        if (held is { } nodeCard && nodeCard.Node != first) into.Add(nodeCard);
     }
 
     /// <summary>

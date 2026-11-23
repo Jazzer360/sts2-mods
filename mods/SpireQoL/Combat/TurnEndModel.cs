@@ -386,12 +386,18 @@ public sealed class TurnEndModel
         var state = CountTeammateHands || full.Teammates.Count == 0 ? full : full.WithoutTeammateHands();
         // The game state rarely changes between frames: rerun only when it did.
         var key = ReferenceEquals(state, full) ? fullKey : state.FullKey();
-        if (probeCheck != null)
-            ForecastReuse.Compare(probeCheck.StateKey == key && probeCheck._fullKey == fullKey, "its start state changed while the board probe didn't",
-                () => BoardProbe.Diff(probeCheck.FullState, full));
+        if (probeCheck != null) CheckProbe(probeCheck, full, key, fullKey);
         var job = Explore(ref _lastKey, ref _lastJob, key, state, "the turn forecast");
         return new ForecastStart(state, key, full, fullKey, ids, SimAdapter.Teammates(me, combat), me.Creature.CurrentHp, probe, job, Reused: null);
     }
+
+    /// <summary>
+    /// Dev mode's check of a reused forecast. Its own method: the lambda capturing the states made its closure at the top of BeginNow,
+    /// on every frame, reused or not (decision #177).
+    /// </summary>
+    private static void CheckProbe(TurnEndModel probeCheck, SimState full, long key, long fullKey) =>
+        ForecastReuse.Compare(probeCheck.StateKey == key && probeCheck._fullKey == fullKey, "its start state changed while the board probe didn't",
+            () => BoardProbe.Diff(probeCheck.FullState, full));
 
     /// <summary>
     /// The forecast from its start, once its search has a result: null while it's still on its way past the frame's wait (decision

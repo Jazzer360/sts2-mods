@@ -3,7 +3,6 @@ using OpCodes = System.Reflection.Emit.OpCodes;
 using System.Runtime.CompilerServices;
 using Godot;
 using HarmonyLib;
-using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Merchant;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Events;
@@ -14,7 +13,6 @@ using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
-using MegaCrit.Sts2.Core.Runs;
 using SpireQoL.Cards;
 using SpireQoL.Data;
 using Sts2Mods.Core.Features;
@@ -229,18 +227,22 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        TickWindow();
-        WatchReward();
+        // Each job its own part of the frame's times and memory (decision #177: the dev dashboard's steady table names the one that allocates).
+        using (host.Part("run-reminders:watch"))
+        {
+            TickWindow();
+            WatchReward();
+        }
         // Event options and shop items change only when the page does: every few frames is plenty.
         if (++_frame % 6 == 0)
         {
-            EventOptions();
-            ShopSlots();
-            MapLegend();
+            using (host.Part("run-reminders:events")) EventOptions();
+            using (host.Part("run-reminders:shop")) ShopSlots();
+            using (host.Part("run-reminders:map")) MapLegend();
         }
-        TickShopWatch();
-        OfferedCardTabs();
-        _inspect?.OnFrame();
+        using (host.Part("run-reminders:watch")) TickShopWatch();
+        using (host.Part("run-reminders:offered")) OfferedCardTabs();
+        using (host.Part("run-reminders:inspect")) _inspect?.OnFrame();
     }
 
     // ------------------------------------------------------------------ card reward tabs
@@ -492,12 +494,12 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             box.RemoveAndFree();
             return;
         }
-        if (box == null || (string)box.GetMeta("key", "") != key)
+        if (box == null || UiKit.KeyOf(box) != key)
         {
             box.RemoveAndFree();
-            box = new HBoxContainer { Name = NodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
+            box = new HBoxContainer { Name = GodotNames.Name(NodeName), MouseFilter = Control.MouseFilterEnum.Ignore };
             box.AddThemeConstantOverride(GodotNames.Name("separation"), 4);
-            box.SetMeta("key", key);
+            UiKit.SetKey(box, key);
             foreach (var (relic, crossed, odds) in icons)
             {
                 var icon = UiKit.Icon(IconOf(relic), EventIcon);
@@ -607,19 +609,19 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
             return;
         }
         var size = Math.Clamp(price.Size.Y, 20f, 36f);
-        if (box == null || (string)box.GetMeta("key", "") != key)
+        if (box == null || UiKit.KeyOf(box) != key)
         {
             box.RemoveAndFree();
-            box = new Control { Name = ShopNodeName, MouseFilter = Control.MouseFilterEnum.Ignore };
-            box.SetMeta("key", key);
-            var row = new HBoxContainer { Name = "Icons", MouseFilter = Control.MouseFilterEnum.Ignore };
+            box = new Control { Name = GodotNames.Name(ShopNodeName), MouseFilter = Control.MouseFilterEnum.Ignore };
+            UiKit.SetKey(box, key);
+            var row = new HBoxContainer { Name = GodotNames.Name("Icons"), MouseFilter = Control.MouseFilterEnum.Ignore };
             row.AddThemeConstantOverride(GodotNames.Name("separation"), (int)Math.Round(size * ShopIconGap));
             foreach (var (relic, crossed) in icons) row.AddChild(Backed(Crossable(IconOf(relic), size, crossed), size));
             box.AddChild(row);
             if (net is { } netGold)
             {
                 var label = UiKit.Label($"{netGold}", (int)Math.Round(size * NetScale), NetColor);
-                label.Name = "Net";
+                label.Name = GodotNames.Name("Net");
                 label.MouseFilter = Control.MouseFilterEnum.Ignore;
                 label.HorizontalAlignment = HorizontalAlignment.Center;
                 box.AddChild(label);
@@ -948,10 +950,5 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     // ------------------------------------------------------------------ helpers
 
     /// <summary>The local player outside combat (RunManager's run state).</summary>
-    private static Player? RunMe()
-    {
-        if (Sts2State.Me is { } me) return me;
-        var state = Sts2State.Private<RunState?>(RunManager.Instance, "State", fallback: null);
-        return state == null ? null : LocalContext.GetMe(state);
-    }
+    private static Player? RunMe() => Sts2State.MeInRun;
 }

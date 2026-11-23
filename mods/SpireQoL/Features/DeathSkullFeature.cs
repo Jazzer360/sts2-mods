@@ -52,6 +52,23 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
     {
     }
 
+    /// <summary>Each enemy's chance to die, worked out again only when the forecast or the board changes (its own method: decision #177).</summary>
+    private void Chances(TurnEndModel model, Dictionary<Creature, string?> show)
+    {
+        show.Clear();
+        foreach (var (enemy, id) in model.Ids)
+        {
+            if (!enemy.IsAlive || !enemy.IsEnemy) continue;
+            var chance = model.Outcome.DeadChanceRange(id);
+            if (chance.Certain)
+            {
+                show[enemy] = null;
+                continue;
+            }
+            if (_ctx.Settings.ShowDeathChance && chance.Seen) show[enemy] = chance.Text() + (model.ShownMark ?? "");
+        }
+    }
+
     public void OnFrame(OverlayHost host)
     {
         // Enemy → the chance shown beside the skull (null: certain). Decision #88: once some outcome kills it; a range and a ? when the
@@ -60,21 +77,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
         var probe = Sts2State.Me is { } me && Sts2State.Combat is { } combat ? BoardProbe.Hash(me, combat) : 0;
         var shownFor = (shownModel, shownModel?.ShownMark, probe);
         var show = _show;
-        if (shownFor != _shownFor && shownModel is { } model)
-        {
-            show.Clear();
-            foreach (var (enemy, id) in model.Ids)
-            {
-                if (!enemy.IsAlive || !enemy.IsEnemy) continue;
-                var chance = model.Outcome.DeadChanceRange(id);
-                if (chance.Certain)
-                {
-                    show[enemy] = null;
-                    continue;
-                }
-                if (_ctx.Settings.ShowDeathChance && chance.Seen) show[enemy] = chance.Text() + (model.ShownMark ?? "");
-            }
-        }
+        if (shownFor != _shownFor && shownModel is { } model) Chances(model, show);
         else if (shownModel == null) show.Clear();
         _shownFor = shownFor;
 

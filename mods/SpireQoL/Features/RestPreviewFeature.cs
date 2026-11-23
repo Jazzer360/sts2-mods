@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using Godot;
 using HarmonyLib;
-using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Entities.Relics;
 using MegaCrit.Sts2.Core.Entities.RestSite;
@@ -231,6 +230,16 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         Check(me);
         CheckMend();
         var inRoom = room != null && GodotObject.IsInstanceValid(room) && room.IsVisibleInTree() && me != null;
+        // Away from the fire: nothing to show, and nothing to work out (looking through no options made garbage every frame).
+        if (!inRoom)
+        {
+            _options = null;
+            _shownFor = 0;
+            _hoveredMate = null;
+            _mine!.HasContent = false;
+            _mate!.HasContent = false;
+            return;
+        }
         // The site's options change only when one is chosen: read every few frames, not made into a new list every frame.
         if (!inRoom) _options = null;
         else if (_options == null || ++_optionsFrame % 10 == 0) _options = LocalOptions();
@@ -385,10 +394,5 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         _pendingMend = null;
     }
 
-    private static Player? RunMe()
-    {
-        if (Sts2State.Me is { } me) return me;
-        var state = Sts2State.Private<RunState?>(RunManager.Instance, "State", fallback: null);
-        return state == null ? null : LocalContext.GetMe(state);
-    }
+    private static Player? RunMe() => Sts2State.MeInRun;
 }

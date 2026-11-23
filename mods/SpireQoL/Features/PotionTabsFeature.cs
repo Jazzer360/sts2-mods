@@ -79,7 +79,8 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
-        if (_proto == null) TakeProto();
+        // Only in a fight, where there's a hand to copy from: looking every frame before the first fight made garbage on the menu.
+        if (_proto == null && Sts2State.InCombat) TakeProto();
         Check(me);
         // The same potions in the same slots, the same board (settings among it) and container as last frame: the tabs stand as drawn.
         var drawnFor = new HashCode();
@@ -94,6 +95,12 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         }
         if (drawnFor.ToHashCode() == _drawnFor) return;
         _drawnFor = drawnFor.ToHashCode();
+        Draw(me, host);
+    }
+
+    /// <summary>Every holder's tabs, drawn again: only when the potions, the slots or the board changed (its own method: decision #177).</summary>
+    private void Draw(MegaCrit.Sts2.Core.Entities.Players.Player? me, OverlayHost host)
+    {
         // Read only when drawing: the holders' list is made fresh on each read.
         var holders = NRun.Instance?.GlobalUi?.TopBar?.PotionContainer is { } container
             ? Holders?.Invoke(container) ?? MainHoldersField?.GetValue(container) as IReadOnlyList<NPotionHolder>
@@ -136,9 +143,12 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     }
 
     /// <summary>A copy of a hand card's enchantment tab (the card tabs' art), once.</summary>
+    private readonly List<(MegaCrit.Sts2.Core.Nodes.Cards.NCard Node, MegaCrit.Sts2.Core.Models.CardModel Card)> _hand = new();
+
     private void TakeProto()
     {
-        foreach (var (node, _) in Sts2State.HandNodes())
+        Sts2State.HandNodes(_hand);
+        foreach (var (node, _) in _hand)
         {
             if (node.EnchantmentTab is { } control && GodotObject.IsInstanceValid(control))
             {
@@ -214,20 +224,20 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     private Control MakeTab(NPotionHolder holder)
     {
         var tab = (Control)_proto!.Duplicate();
-        tab.Name = TabName;
+        tab.Name = GodotNames.Name(TabName);
         ClearUniqueNames(tab);
         tab.MouseFilter = Control.MouseFilterEnum.Ignore;
         if (tab.Material is ShaderMaterial shaderMaterial)
         {
             var own = (ShaderMaterial)shaderMaterial.Duplicate();
-            own.SetShaderParameter("h", 0.25);
-            own.SetShaderParameter("s", 0.4);
-            own.SetShaderParameter("v", 0.6);
+            own.SetShaderParameter(GodotNames.Name("h"), 0.25);
+            own.SetShaderParameter(GodotNames.Name("s"), 0.4);
+            own.SetShaderParameter(GodotNames.Name("v"), 0.6);
             tab.Material = own;
         }
         if (tab.GetNodeOrNull<TextureRect>(GodotNames.Path("Icon")) is { } icon)
         {
-            icon.AddChild(new ColorRect { Name = "SpireQoL_Slash", Color = SlashColor, MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false });
+            icon.AddChild(new ColorRect { Name = GodotNames.Name("SpireQoL_Slash"), Color = SlashColor, MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false });
         }
         holder.AddChild(tab);
         holder.MoveChild(tab, 0); // drawn first: the potion covers the tucked end

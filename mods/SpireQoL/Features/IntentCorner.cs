@@ -54,7 +54,7 @@ internal static class IntentCorner
             return;
         }
         var key = string.Join(",", powers.Select(applied => $"{applied.Power.Name}:{applied.Amount}"));
-        if (row != null && row.GetMeta("key", "").AsString() != key)
+        if (row != null && UiKit.KeyOf(row) != key)
         {
             row.QueueFree();
             row = null;
@@ -62,9 +62,9 @@ internal static class IntentCorner
         if (row == null)
         {
             row = UiKit.Row(separation: 2);
-            row.Name = PowersName;
+            row.Name = GodotNames.Name(PowersName);
             row.MouseFilter = Control.MouseFilterEnum.Ignore;
-            row.SetMeta("key", key);
+            UiKit.SetKey(row, key);
             foreach (var applied in powers) row.AddChild(Chip(applied));
             holder.AddChild(row);
         }

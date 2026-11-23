@@ -62,7 +62,7 @@ internal sealed class FlatFade
         var size = (NCard.defaultSize + new Vector2(Margin, Margin) * 2) * Res;
         _view = new SubViewport
         {
-            Name = "SpireQoL_FlatFadeView",
+            Name = GodotNames.Name("SpireQoL_FlatFadeView"),
             TransparentBg = true,
             Disable3D = true,
             Size = new Vector2I(Mathf.CeilToInt(size.X), Mathf.CeilToInt(size.Y)),
@@ -71,7 +71,7 @@ internal sealed class FlatFade
         _view.AddChild(_copy);
         _image = new TextureRect
         {
-            Name = "SpireQoL_FlatFade",
+            Name = GodotNames.Name("SpireQoL_FlatFade"),
             Texture = _view.GetTexture(),
             MouseFilter = Control.MouseFilterEnum.Ignore,
             TextureFilter = CanvasItem.TextureFilterEnum.Linear,

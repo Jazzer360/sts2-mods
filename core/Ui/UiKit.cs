@@ -5,6 +5,18 @@ namespace Sts2Mods.Core.Ui;
 /// <summary>Small factory helpers for plain Godot controls. Everything is click-through.</summary>
 public static class UiKit
 {
+    /// <summary>What each node was built from (KeyOf, SetKey): kept for as long as its node, outside Godot.</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<GodotObject, string> Keys = new();
+
+    /// <summary>
+    /// The key a node was last built from (SetKey), or null: what code compares with to rebuild the node only when it changes. Kept in
+    /// C# beside the node, not in its meta: reading a meta made a Godot name and a Godot string every call (decision #177).
+    /// </summary>
+    public static string? KeyOf(GodotObject node) => Keys.TryGetValue(node, out var key) ? key : null;
+
+    /// <summary>Records what a node was built from (KeyOf).</summary>
+    public static void SetKey(GodotObject node, string key) => Keys.AddOrUpdate(node, key);
+
     /// <summary>
     /// The node's first child of a type, or null. By index: GetChildren makes an array each call, garbage in code that runs every frame
     /// (decision #173).

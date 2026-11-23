@@ -117,8 +117,10 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         var entries = _entries;
         entries.Clear();
 
-        foreach (var relic in me.Relics)
+        var relics = me.Relics;
+        for (var i = 0; i < relics.Count; i++)
         {
+            var relic = relics[i];
             var spec = RelicSpecs.For(relic.GetType().Name);
             if (spec == null || !spec.InTray || !_ctx.Settings.TrackerEnabled(spec.TypeName, !spec.TurnTimer)) continue;
             if (spec.Kind == CounterKind.OneShot) _paintedOneShot = true;
@@ -128,7 +130,8 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
             }
         }
 
-        foreach (var (power, spec) in CountdownPowers(me))
+        CountdownPowers(me, _countdowns);
+        foreach (var (power, spec) in _countdowns)
         {
             if (!_ctx.Settings.TrackerEnabled(spec.TypeName)) continue;
             entries.Add((power, spec.CrossTurn ? 1 : 3, EvaluatePower(power, spec), 0));
@@ -217,27 +220,31 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         return row.Root;
     }
 
-    /// <summary>Countdown powers on you, plus ones on enemies that count your plays.</summary>
-    private static IEnumerable<(PowerModel Power, PowerCounterSpec Spec)> CountdownPowers(Player me)
+    /// <summary>
+    /// Countdown powers on you, plus ones on enemies that count your plays, into <paramref name="into"/> (cleared first), by index: with a one-shot relic this runs every frame, and an iterator or a foreach
+    /// through the game's lists made garbage each time (decision #177).
+    /// </summary>
+    private static void CountdownPowers(Player me, List<(PowerModel Power, PowerCounterSpec Spec)> into)
     {
-        foreach (var power in me.Creature.Powers)
-        {
-            if (PowerSpecs.For(power.GetType().Name) is { OnEnemy: false } spec) yield return (power, spec);
-        }
+        into.Clear();
+        var mine = me.Creature.Powers;
+        for (var i = 0; i < mine.Count; i++)
+            if (PowerSpecs.For(mine[i].GetType().Name) is { OnEnemy: false } spec) into.Add((mine[i], spec));
         var combat = Sts2State.Combat;
-        if (combat == null) yield break;
-        foreach (var enemy in combat.Enemies)
+        if (combat == null) return;
+        var enemies = combat.Enemies;
+        for (var i = 0; i < enemies.Count; i++)
         {
+            var enemy = enemies[i];
             if (!enemy.IsAlive) continue;
-            foreach (var power in enemy.Powers)
-            {
-                if (PowerSpecs.For(power.GetType().Name) is { OnEnemy: true } spec && (power.Target == null || power.Target == me.Creature))
-                {
-                    yield return (power, spec);
-                }
-            }
+            var powers = enemy.Powers;
+            for (var j = 0; j < powers.Count; j++)
+                if (PowerSpecs.For(powers[j].GetType().Name) is { OnEnemy: true } spec && (powers[j].Target == null || powers[j].Target == me.Creature))
+                    into.Add((powers[j], spec));
         }
     }
+
+    private readonly List<(PowerModel Power, PowerCounterSpec Spec)> _countdowns = new();
 
     private static RowState EvaluatePower(PowerModel power, PowerCounterSpec spec)
     {

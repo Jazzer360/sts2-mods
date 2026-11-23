@@ -29,14 +29,64 @@ public sealed partial class RunRemindersFeature
     private static readonly System.Reflection.FieldInfo? PointTypeField = AccessTools.Field(typeof(NMapLegendItem), "_pointType");
     private readonly Dictionary<NMapLegendItem, string> _pathShown = new(ReferenceEqualityComparer.Instance);
     private readonly List<Cards.TinyCardIcon> _pathCards = new();
+    /// <summary>What the legend's rows were last built from (LegendKey; 0: the map was closed), and dev mode's check of it.</summary>
+    private int _legendKey;
+    private readonly SpireQoL.Combat.ReuseCheck _legendReuse = new("the map legend's reminders");
+
+    /// <summary>
+    /// Everything the legend's rows are worked out from, as one number, read without making anything: the settings, your relics and
+    /// deck (how many, and each relic as it is: used up or not), gold and HP, and the legend's rows, where they are and our rows' sizes. Working the rows
+    /// out every few frames made garbage the whole time the map was open (decision #177).
+    /// </summary>
+    private static int LegendKey(Control items, Player? me)
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(QolSettings.Revision);
+        for (var i = 0; i < items.GetChildCount(); i++)
+            if (items.GetChild(i) is Control item)
+            {
+                hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(item));
+                hashCode.Add(item.GlobalPosition);
+                hashCode.Add(item.Size);
+                hashCode.Add(item.IsVisibleInTree());
+                // Our own row's size: known only once Godot has laid it out, and the row is placed from it.
+                if (item.GetNodeOrNull<Control>(GodotNames.Path(PathNodeName)) is { } row) hashCode.Add(row.GetCombinedMinimumSize());
+            }
+        if (me == null) return hashCode.ToHashCode();
+        hashCode.Add(me.Gold);
+        hashCode.Add(me.Creature.CurrentHp);
+        hashCode.Add(me.Creature.MaxHp);
+        hashCode.Add(me.Deck.Cards.Count);
+        var relics = me.Relics;
+        for (var i = 0; i < relics.Count; i++)
+        {
+            hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(relics[i]));
+            hashCode.Add(relics[i].IsUsedUp);
+        }
+        var key = hashCode.ToHashCode();
+        return key == 0 ? 1 : key;
+    }
 
     private void MapLegend()
     {
         foreach (var tiny in _pathCards) tiny.Fit();
         var screen = NMapScreen.Instance;
-        if (screen == null || !GodotObject.IsInstanceValid(screen) || !screen.IsOpen) return;
-        if (LegendItemsField?.GetValue(screen) is not Control items || !GodotObject.IsInstanceValid(items)) return;
+        if (screen == null || !GodotObject.IsInstanceValid(screen) || !screen.IsOpen || LegendItemsField?.GetValue(screen) is not Control items || !GodotObject.IsInstanceValid(items))
+        {
+            _legendKey = 0; // opened again: worked out again
+            return;
+        }
         var me = RunMe();
+        var key = LegendKey(items, me);
+        var reuse = _legendReuse.Decide(key == _legendKey);
+        if (reuse == SpireQoL.Combat.FrameReuse.Reuse) return;
+        _legendKey = key;
+        LegendRows(items, me, check: reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck);
+    }
+
+    /// <summary>The legend's rows worked out and placed (on a change; dev mode's check compares them with what it kept, and logs a difference).</summary>
+    private void LegendRows(Control items, Player? me, bool check)
+    {
         foreach (var item in items.GetChildren().OfType<NMapLegendItem>())
         {
             var type = PointTypeField?.GetValue(item) is MapPointType mapPointType ? mapPointType : MapPointType.Unassigned;
@@ -45,6 +95,7 @@ public sealed partial class RunRemindersFeature
             var row = item.GetNodeOrNull<HBoxContainer>(GodotNames.Path(PathNodeName));
             if (!_pathShown.TryGetValue(item, out var was) || was != signature || (row == null) != (shown.Count == 0))
             {
+                if (check) _legendReuse.Compare(same: false, "a legend row changed while its key didn't");
                 row.RemoveAndFree();
                 row = null;
                 _pathShown[item] = signature;
@@ -179,7 +230,7 @@ public sealed partial class RunRemindersFeature
     private HBoxContainer PathRow(List<PathMark> marks, MapPointType type)
     {
         var row = UiKit.Row(separation: 6);
-        row.Name = PathNodeName;
+        row.Name = GodotNames.Name(PathNodeName);
         row.MouseFilter = Control.MouseFilterEnum.Ignore;
         foreach (var mark in marks)
         {

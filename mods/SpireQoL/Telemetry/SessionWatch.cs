@@ -118,8 +118,13 @@ public sealed class SessionWatch : IFeature, IFrameFeature
             SavePending(stats);
         }
         Interlocked.Exchange(ref SimJob.Context, playerTurn ? SearchDone.ContextOf(stats.Combat, turn) : 0);
-        if (DevDashboard.Running)
-            Where = new { inRun = true, inCombat = otherCombat != null, encounter = otherCombat?.Encounter?.GetType().Name, combat = stats.Combat, turn = Sts2State.TurnNumber, playerTurn };
+        // Made again only when it changes (decision #177: an object every frame was garbage on a steady board).
+        var where = (InCombat: otherCombat != null, Encounter: otherCombat?.Encounter?.GetType(), stats.Combat, Turn: Sts2State.TurnNumber, PlayerTurn: playerTurn);
+        if (DevDashboard.Running && where != _where)
+        {
+            _where = where;
+            Where = new { inRun = true, inCombat = where.InCombat, encounter = where.Encounter?.Name, combat = where.Combat, turn = where.Turn, playerTurn };
+        }
 
         // The progress bar's spells (searches still running on your turn): how long until the board settles.
         var running = playerTurn && SimJob.Progress().Count > 0;
@@ -130,6 +135,8 @@ public sealed class SessionWatch : IFeature, IFrameFeature
             _unsettledSince = 0;
         }
     }
+
+    private static (bool InCombat, Type? Encounter, int Combat, int Turn, bool PlayerTurn) _where;
 
     private void Begin()
     {

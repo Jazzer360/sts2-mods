@@ -44,7 +44,7 @@ public sealed partial class RunRemindersFeature
         {
             existing = new TextureButton
             {
-                Name = InspectNodeName,
+                Name = GodotNames.Name(InspectNodeName),
                 TextureNormal = InspectIcon(),
                 IgnoreTextureSize = true,
                 StretchMode = TextureButton.StretchModeEnum.KeepAspectCentered,

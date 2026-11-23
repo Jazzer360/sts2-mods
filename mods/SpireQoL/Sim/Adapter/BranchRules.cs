@@ -57,7 +57,10 @@ internal static class BranchRules
     public static bool BetaBehaviour(BranchRule rule) => Beta.GetOrAdd(rule, branchRule => Holds(branchRule.Fact) == branchRule.OnBeta);
 
     /// <summary>The simulator's flags for main's behaviour in the running game (SimState.MainRules).</summary>
-    public static MainRule MainRulesNow() => All.Where(rule => rule.Sim != MainRule.None && !BetaBehaviour(rule)).Aggregate(MainRule.None, (flags, rule) => flags | rule.Sim);
+    /// <remarks>Worked out once: the running game's code doesn't change, and it's read on every board read.</remarks>
+    public static MainRule MainRulesNow() => _mainRules ??= All.Where(rule => rule.Sim != MainRule.None && !BetaBehaviour(rule)).Aggregate(MainRule.None, (flags, rule) => flags | rule.Sim);
+
+    private static MainRule? _mainRules;
 
     /// <summary>Whether the fact holds in the running game's code (false when its method isn't there).</summary>
     internal static bool Holds(CodeFact fact)

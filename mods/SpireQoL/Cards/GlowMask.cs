@@ -1,4 +1,5 @@
 using Godot;
+using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Cards;
 
@@ -14,6 +15,14 @@ namespace SpireQoL.Cards;
 internal sealed class GlowMask
 {
     private const string Mask = "spireqol_mask", Row0 = "spireqol_row0", Row1 = "spireqol_row1", Origin = "spireqol_origin", Size = "spireqol_size";
+    /// <summary>
+    /// The same names as Godot's, made once: a string passed to SetShaderParameter is a new StringName every call, five every frame per
+    /// faded card (decision #177).
+    /// </summary>
+    private static readonly StringName MaskName = GodotNames.Name(Mask), Row0Name = GodotNames.Name(Row0), Row1Name = GodotNames.Name(Row1),
+        OriginName = GodotNames.Name(Origin), SizeName = GodotNames.Name(Size);
+    /// <summary>The uniform list's name key, made once.</summary>
+    private static readonly Variant NameKey = "name";
 
     private static readonly Dictionary<ulong, Shader?> Masked = new();
     private static readonly HashSet<ulong> Warned = new();
@@ -29,7 +38,7 @@ internal sealed class GlowMask
         _original = glow.Material;
         _copy = new ShaderMaterial { Shader = masked };
         foreach (var variant in original.Shader.GetShaderUniformList())
-            if (variant.AsGodotDictionary()["name"].AsString() is { Length: > 0 } name) _params.Add(name);
+            if (variant.AsGodotDictionary()[NameKey].AsString() is { Length: > 0 } name) _params.Add(GodotNames.Name(name));
         glow.Material = _copy;
     }
 
@@ -119,11 +128,11 @@ internal sealed class GlowMask
             foreach (var stringName in _params) _copy.SetShaderParameter(stringName, shaderMaterial.GetShaderParameter(stringName));
         // A point in the glow's own coordinates to the image's (both CanvasItems: their global transforms).
         var toImage = image.GetGlobalTransform().AffineInverse() * _glow.GetGlobalTransform();
-        _copy.SetShaderParameter(Mask, texture);
-        _copy.SetShaderParameter(Row0, toImage.X);
-        _copy.SetShaderParameter(Row1, toImage.Y);
-        _copy.SetShaderParameter(Origin, toImage.Origin);
-        _copy.SetShaderParameter(Size, image.Size);
+        _copy.SetShaderParameter(MaskName, texture);
+        _copy.SetShaderParameter(Row0Name, toImage.X);
+        _copy.SetShaderParameter(Row1Name, toImage.Y);
+        _copy.SetShaderParameter(OriginName, toImage.Origin);
+        _copy.SetShaderParameter(SizeName, image.Size);
     }
 
     public void Dispose()
