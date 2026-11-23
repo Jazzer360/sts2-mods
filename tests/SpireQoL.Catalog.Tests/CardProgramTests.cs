@@ -108,6 +108,31 @@ public class CardProgramTests
                     yield return method;
     }
 
+    [Theory]
+    [MemberData(nameof(Branches))]
+    public void AValueTwoWaysLeaveIsEachWaysValue(string branch)
+    {
+        // Where two ways meet with a value each, the value is each way's on its condition, never one way's alone: bool flag = a && b (the
+        // jump past b leaves false), a local stored on several ways (AllForOne's Filter: flag2 = flag; if (flag2) flag2 = a type test), and
+        // a number (EvilEye: blockGains = WasCardExhaustedThisTurn ? 2 : 1).
+        if (!File.Exists(PathOf(branch))) return;
+        using var code = new BranchCode(PathOf(branch));
+        var cards = code.Cards().ToDictionary(type => type.Name);
+        if (cards.TryGetValue("AllForOne", out var allForOne))
+        {
+            var taken = CardProgramReader.Read(allForOne, code.Read).All().OfType<LoopStep>().Single(loop => loop.Items != null);
+            Assert.DoesNotContain(taken.Items!.Parts(), part => part is UnknownValue);
+            Assert.Contains(taken.Items!.Parts(), part => part is QueryValue { Name: "CostsX" });
+            Assert.Contains(taken.Items!.Parts(), part => part is QueryValue { Name: "Type" });
+        }
+        if (cards.TryGetValue("EvilEye", out var evilEye))
+        {
+            var loop = CardProgramReader.Read(evilEye, code.Read).All().OfType<LoopStep>().Single();
+            var ways = loop.While!.Literals.SelectMany(literal => literal.Test.Parts()).OfType<WaysValue>().Single();
+            Assert.Equal(new long[] { 1, 2 }, ways.Ways.Select(way => ((ConstantValue)way.Value).Value).Order());
+        }
+    }
+
     [Fact]
     public void ConditionsRejoinWhereTheWaysMeet()
     {

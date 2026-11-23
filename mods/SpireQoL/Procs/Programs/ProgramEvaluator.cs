@@ -133,6 +133,7 @@ public static class ProgramEvaluator
                 CardValue card => CardNumber(card.Key, context.Board),
                 StoredValue stored => Evaluate(stored.Value, context),
                 ConditionValue flag => Holds(flag.Condition, context) is { } holds ? holds : Unknown,
+                WaysValue ways => FirstWay(ways, context),
                 CompareValue compare => Compare(compare, context),
                 ArithmeticValue arithmetic => Arithmetic(arithmetic, context),
                 ArrayValue array => array.Items.Select(item => Evaluate(item, context)).ToList() is var items && items.Any(item => item == Unknown) ? Unknown : items,
@@ -145,6 +146,18 @@ public static class ProgramEvaluator
         {
             return Unknown; // a member that throws (the game's template card has no owner): not known
         }
+    }
+
+    /// <summary>The value of the first way whose condition holds; unknown when one before it can't be told.</summary>
+    private static object? FirstWay(WaysValue ways, Context context)
+    {
+        foreach (var (when, value) in ways.Ways)
+            switch (Holds(when, context))
+            {
+                case null: return Unknown;
+                case true: return Evaluate(value, context);
+            }
+        return Unknown;
     }
 
     private static object CardNumber(string key, ProgramBoard board)

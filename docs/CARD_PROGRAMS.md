@@ -78,6 +78,11 @@ A program is a tree of steps:
     passes, with the machinery's jumps followed as they always go (an await resumes past its suspend, the dispatch starts at
     the top) and a return (a leave to the end) ending its way. Ways that meet again are merged and simplified, so both sides
     of an if leave nothing behind it, `a || b` reads as `a or b`, and `if (!x) return;` puts `x` on what follows (Restlessness).
+  - **A value two ways leave** (2026-11-23, round three): where ways meet with a value on the stack (`bool flag = a && b`: the jump past
+    `b` leaves false; `x = c ? 2 : 1`; `target?.GetPowerAmount()`), the value is each way's on its condition (`ConditionValue` for a
+    true-or-false, else `WaysValue`: the first way whose condition holds), and a local stored on several ways is its last store's on
+    each way (AllForOne's `Filter`; Evil Eye's `blockGains`). Before, one way's value was read for all of them (AllForOne's filter
+    read as false). A store in a loop with the read (a loop's counter) isn't read.
   - A loop's body runs on the loop's own condition (Wrest's `while` inside its `if`: the loop and the draw after it both wait
     on the if's test); its round's tests are the loop's `While` (Pillage: the drawn card, its type, your hand's room). A way out
     of a loop goes on with the loop's condition.

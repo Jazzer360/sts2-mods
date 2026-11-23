@@ -199,6 +199,28 @@ public sealed record ConditionValue(ProgramCondition Condition) : ProgramValue
     public override string ToString() => "(" + Condition + ")";
 }
 
+/// <summary>
+/// A value two or more ways through the code leave in one place (x = a ? 3 : 2; target?.GetPowerAmount()): each way's condition and value,
+/// in the code's order. It's the value of the first way whose condition holds.
+/// </summary>
+public sealed record WaysValue(IReadOnlyList<(ProgramCondition When, ProgramValue Value)> Ways) : ProgramValue
+{
+    public override IEnumerable<ProgramValue> Parts()
+    {
+        yield return this;
+        foreach (var (when, value) in Ways)
+        {
+            foreach (var literal in when.Literals) foreach (var part in literal.Test.Parts()) yield return part;
+            foreach (var part in value.Parts()) yield return part;
+        }
+    }
+
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) =>
+        replace(this) ?? this with { Ways = Ways.Select(way => (way.When.Map(replace), way.Value.Map(replace))).ToList() };
+
+    public override string ToString() => "{" + string.Join("; ", Ways.Select(way => (way.When.IsAlways ? "" : way.When + ": ") + way.Value)) + "}";
+}
+
 /// <summary>An array the code builds (new[] { a, b }: a pile list given to a query).</summary>
 public sealed record ArrayValue(IReadOnlyList<ProgramValue> Items) : ProgramValue
 {
@@ -280,6 +302,17 @@ public sealed class ProgramCondition
     }
 
     public ProgramCondition And(ConditionLiteral literal) => And(Of(literal));
+
+    /// <summary>When this doesn't hold: not any of its ways (each way fails on one of its tests).</summary>
+    public ProgramCondition Not()
+    {
+        if (IsAlways) return Never;
+        if (IsNever) return Always;
+        var not = Always;
+        foreach (var term in _terms)
+            not = not.And(term.Aggregate(Never, (either, literal) => either.Or(Of(literal.Negate()))));
+        return not;
+    }
 
     public ProgramCondition Or(ProgramCondition other)
     {

@@ -509,9 +509,121 @@ public static class CardProgramReader
             var flow = new Flow(ops, method, lambdaOf, helperOf);
             flow.MarkMachinery();
             flow.FindLoops();
+            flow.FindStackDepths();
             flow.FindConditions();
             return flow;
         }
+
+        /// <summary>How many values are on the stack before each instruction (null: not known, or not reached by straight flow).</summary>
+        private int?[] _stackDepth = Array.Empty<int?>();
+
+        /// <summary>The jumps landing on each instruction (their indexes).</summary>
+        private readonly Dictionary<int, List<int>> _jumpsTo = new();
+
+        /// <summary>
+        /// The stack's depth before each instruction, followed from the start along every jump and fall-through: a place two ways meet with a
+        /// value on the stack (bool flag = a &amp;&amp; b: the jump past b leaves false) is a merge (ReadBack reads each way's value).
+        /// </summary>
+        private void FindStackDepths()
+        {
+            _stackDepth = new int?[Ops.Count];
+            for (var i = 0; i < Ops.Count; i++)
+                foreach (var target in Ops[i].Targets)
+                {
+                    var to = IndexOf(target);
+                    if (!_jumpsTo.TryGetValue(to, out var from)) _jumpsTo[to] = from = new List<int>();
+                    from.Add(i);
+                }
+            if (Ops.Count == 0) return;
+            _stackDepth[0] = 0;
+            var work = new Stack<int>();
+            work.Push(0);
+            while (work.Count > 0)
+            {
+                var index = work.Pop();
+                var instruction = Ops[index];
+                if (_stackDepth[index] is not { } depth || CodeDecoder.StackEffect(instruction) is not var (pop, push)) continue;
+                var after = depth - pop + push;
+                if (after < 0) continue;
+                void Flow(int to, int value)
+                {
+                    if (to >= Ops.Count || _stackDepth[to] != null) return;
+                    _stackDepth[to] = value;
+                    work.Push(to);
+                }
+                // A leave empties the stack; ret, throw and the like end the way.
+                if (instruction.OpCode == OpCodes.Leave || instruction.OpCode == OpCodes.Leave_S)
+                {
+                    Flow(IndexOf(instruction.Targets[0]), 0);
+                    continue;
+                }
+                if (instruction.OpCode.FlowControl is FlowControl.Return or FlowControl.Throw) continue;
+                foreach (var target in instruction.Targets) Flow(IndexOf(target), after);
+                if (instruction.OpCode.FlowControl != FlowControl.Branch) Flow(index + 1, after);
+            }
+        }
+
+        /// <summary>
+        /// The value on the stack where two or more ways meet with one (<paramref name="at"/>: the instruction they meet at), as a true-or-false:
+        /// each way's condition and the value it leaves (bool flag = a &amp;&amp; b: a and b). Null when it isn't such a place; Unknown when a way
+        /// leaves something that isn't a true-or-false, or comes from later in the code.
+        /// </summary>
+        private (ProgramValue Value, int Start)? Merged(int at, int depth)
+        {
+            if (at >= Ops.Count || !_jumpsTo.TryGetValue(at, out var jumps) || _stackDepth.ElementAtOrDefault(at) is not > 0) return null;
+            var ways = new List<(int Source, bool Jump)>();
+            // A conditional jump carrying a value keeps the one it tested a copy of (dup; brtrue: a cached lambda, x ?? y): read as before.
+            if (jumps.Any(jump => Ops[jump].OpCode.FlowControl != FlowControl.Branch)) return null;
+            foreach (var jump in jumps)
+            {
+                if (jump > at) return (new UnknownValue("merge"), -1);
+                ways.Add((jump, Jump: true));
+            }
+            if (at > 0 && Ops[at - 1].OpCode.FlowControl is not (FlowControl.Branch or FlowControl.Cond_Branch or FlowControl.Return or FlowControl.Throw))
+                ways.Add((at - 1, Jump: false));
+            var merged = ProgramCondition.Never;
+            var each = new List<(ProgramCondition When, ProgramValue Value)>();
+            var start = at;
+            var truths = true;
+            foreach (var (source, jump) in ways)
+            {
+                if (source >= _reached.Length || _reached[source] is not { IsNever: false } reached) continue;
+                // A jump's value is the one before it; a fall-through's is the instruction's own.
+                var value = jump ? ReadBack(source, depth + 1) : ReadBack(at, depth + 1, merge: false);
+                if (value.Start < 0) return (new UnknownValue("merge"), -1);
+                start = Math.Min(start, value.Start);
+                each.Add((reached, value.Value));
+                if (AsCondition(value.Value, $"{_site}:{Ops[source].Offset:X4}:value") is { } holds) merged = merged.Or(reached.And(holds));
+                else truths = false;
+            }
+            // The expression starts where its first test's operand does (a && b: a's code, before the jump past b).
+            for (var changed = true; changed;)
+            {
+                changed = false;
+                for (var i = start; i < at; i++)
+                {
+                    if (Ops[i].OpCode.FlowControl != FlowControl.Cond_Branch || CodeDecoder.StackEffect(Ops[i]) is not var (pops, _)) continue;
+                    var cursor = i;
+                    for (var operand = 0; operand < pops && cursor >= 0; operand++) cursor = ReadBack(cursor, depth + 1).Start;
+                    if (cursor < 0 || cursor >= start) continue;
+                    start = cursor;
+                    changed = true;
+                }
+            }
+            return (truths ? new ConditionValue(merged) : new WaysValue(each), start);
+        }
+
+        /// <summary>A true-or-false value as a condition (a constant, a comparison, a test the code made, a bool property); null otherwise.</summary>
+        private static ProgramCondition? AsCondition(ProgramValue value, string at) => value switch
+        {
+            ConstantValue { Value: 0 } => ProgramCondition.Never,
+            ConstantValue { Value: 1 } => ProgramCondition.Always,
+            ConditionValue flag => flag.Condition,
+            StoredValue { Value: ConditionValue stored } => stored.Condition,
+            CompareValue or QueryValue { ValueType: "Boolean" } or StoredValue { Value: CompareValue or QueryValue { ValueType: "Boolean" } }
+                => ProgramCondition.Of(new ConditionLiteral(at, value, Holds: true)),
+            _ => null,
+        };
 
         /// <summary>
         /// The condition each instruction runs on: every way to it from the start, each the tests it passes (a branch taken or not),
@@ -699,10 +811,12 @@ public static class CardProgramReader
         /// the card's values, properties and methods of what they're asked of, comparisons, arithmetic, a lambda, a local or a field
         /// stored once (what was stored), and what an awaited command gave back.
         /// </summary>
-        private (ProgramValue Value, int Start) ReadBack(int end, int depth)
+        private (ProgramValue Value, int Start) ReadBack(int end, int depth, bool merge = true)
         {
             var at = end - 1;
             if (at < 0 || depth > 16) return (new UnknownValue("value"), -1);
+            // Two ways meeting here with a value each (bool flag = a && b): the value is each way's, on its condition.
+            if (merge && Merged(end, depth) is { } merged) return merged;
             var instruction = Ops[at];
             var name = instruction.OpCode.Name!;
             if (instruction.Integer is { } constant && name.StartsWith("ldc", StringComparison.Ordinal)) return (new ConstantValue(constant), at);
@@ -716,6 +830,7 @@ public static class CardProgramReader
                     // was where it was stored.
                     return (stored.Value is NamedValue or ConstantValue or ParameterValue ? stored.Value : new StoredValue("", stored.Value, Ops[store].Offset), at);
                 if (instruction.Slot is { } flagSlot && FlagOf(flagSlot) is { } flag) return (new ConditionValue(flag), at);
+                if (instruction.Slot is { } lastSlot && LastStored(lastSlot, at, depth) is { } last) return (last, at);
                 if (instruction.Slot is { } builtSlot && BuiltOnce(builtSlot, depth) is { } built) return (built, at);
                 return (new UnknownValue("local"), at);
             }
@@ -1051,6 +1166,44 @@ public static class CardProgramReader
                 flag = flag.Or(reached);
             }
             return stores > 1 ? flag : null;
+        }
+
+        /// <summary>
+        /// A true-or-false local stored on several ways before it's read at <paramref name="loadAt"/> (bool flag2 = flag; if (flag2) flag2 =
+        /// type test: AllForOne's Filter), as a condition: each store's value on the ways it's the last store made (no later one reached).
+        /// Null when a store isn't a true-or-false, isn't reached yet, or a store after the read is in a loop with it.
+        /// </summary>
+        private ProgramValue? LastStored(int slot, int loadAt, int depth)
+        {
+            var stores = new List<int>();
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].Slot != slot || !Ops[i].OpCode.Name!.StartsWith("stloc", StringComparison.Ordinal)) continue;
+                // A store in a loop the read is in can come from an earlier round (a loop's counter): not read.
+                if (_loopEnds.Any(loop => loop.Key <= loadAt && loadAt <= loop.Value && loop.Key <= i && i <= loop.Value)) return null;
+                if (i < loadAt) stores.Add(i);
+            }
+            if (stores.Count == 0) return null;
+            if (stores.Count == 1)
+                return ReadBack(stores[0], depth + 1) is { Start: >= 0 } only ? new StoredValue("", only.Value, Ops[stores[0]].Offset) : null;
+            var value = ProgramCondition.Never;
+            var later = ProgramCondition.Never;
+            var ways = new List<(ProgramCondition When, ProgramValue Value)>();
+            var truths = true;
+            for (var storeIndex = stores.Count - 1; storeIndex >= 0; storeIndex--)
+            {
+                var store = stores[storeIndex];
+                if (store >= _reached.Length || _reached[store] is not { } reached) return null;
+                var stored = ReadBack(store, depth + 1);
+                if (stored.Start < 0) return null;
+                var last = reached.And(later.Not());
+                later = later.Or(reached);
+                if (last.IsNever) continue;
+                ways.Insert(0, (last, stored.Value));
+                if (AsCondition(stored.Value, $"{_site}:{Ops[store].Offset:X4}:stored") is { } holds) value = value.Or(last.And(holds));
+                else truths = false;
+            }
+            return truths ? new ConditionValue(value) : new WaysValue(ways);
         }
 
         /// <summary>
