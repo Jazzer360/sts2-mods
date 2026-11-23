@@ -158,6 +158,34 @@ public static class SimReaders
         }
     }
 
+    /// <summary>
+    /// Relics whose model's amount is one of the relic's values (DynamicVars, with the fallback when it can't be read): Relics reads
+    /// that value into the amount, and ModelAmountCheck reads the model's Amount as it.
+    /// </summary>
+    internal static readonly Dictionary<string, (string Var, int Fallback)> RelicAmountVars = new()
+    {
+        [nameof(MightyWings)] = Var("StrengthPower", fallback: 2),
+        [nameof(TungstenRod)] = Var("HpLossReduction", fallback: 1),
+        [nameof(BeatingRemnant)] = Var("MaxHpLoss", fallback: int.MaxValue),
+        [nameof(TheBoot)] = Var("DamageMinimum", fallback: 5),
+        [nameof(SneckoSkull)] = Var("PoisonPower", fallback: 1),
+        // End-of-turn relics: their block, damage or stars.
+        [nameof(Orichalcum)] = Var("Block"),
+        [nameof(FakeOrichalcum)] = Var("Block"),
+        [nameof(CloakClasp)] = Var("Block"),
+        [nameof(RippleBasin)] = Var("Block"),
+        [nameof(ScreamingFlagon)] = Var("Damage"),
+        [nameof(CharonsAshes)] = Var("Damage"),
+        [nameof(ForgottenSoul)] = Var("Damage"),
+        [nameof(ObsidianVice)] = Var("Damage", fallback: 1),
+        [nameof(StoneCalendar)] = Var("Damage"),
+        [nameof(ParryingShield)] = Var("Damage"),
+        [nameof(LunarPastry)] = Var("Stars", fallback: 1),
+    };
+
+    /// <summary>A relic's value by its DynamicVars key, and what to take when it can't be read.</summary>
+    private static (string Var, int Fallback) Var(string key, int fallback = 0) => (key, fallback);
+
     /// <summary>A player's relics in relic order (melted ones don't listen), each with the numbers its model keeps.</summary>
     public static RelicSet Relics(Player player)
     {
@@ -166,14 +194,15 @@ public static class SimReaders
         {
             if (relic.IsMelted) continue;
             var name = relic.GetType().Name;
-            int amount = 0, data = 0;
+            var amountIsVar = RelicAmountVars.TryGetValue(name, out var amountVar);
+            int amount = amountIsVar ? Sts2State.Var(relic, amountVar.Var, amountVar.Fallback) : 0, data = 0;
             switch (name)
             {
                 case nameof(PenNib):
                     amount = Sts2State.Private(relic, "AttacksPlayed", fallback: 0);
                     data = Sts2State.Private<object?>(relic, "AttackToDouble", fallback: null) != null ? Models.PenNib.GameCardBound : 0;
                     break;
-                case nameof(MightyWings): amount = Sts2State.Var(relic, "StrengthPower", fallback: 2); data = Sts2State.Var(relic, "DamageThreshold", fallback: 30); break;
+                case nameof(MightyWings): data = Sts2State.Var(relic, "DamageThreshold", fallback: 30); break;
                 case nameof(Vambrace):
                     data = (Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) != null ? Models.Vambrace.Bound : 0) | (Sts2State.Private(relic, "BlockGainedThisCombat", fallback: false) ? Models.Vambrace.GainedThisCombat : 0);
                     break;
@@ -181,15 +210,9 @@ public static class SimReaders
                     amount = Sts2State.Private(relic, "Cooldown", fallback: 0);
                     data = Sts2State.Private<object?>(relic, "AffectedCardPlay", fallback: null) != null ? Models.PaelsLegion.BoundToPlay : 0;
                     break;
-                case nameof(TungstenRod): amount = Sts2State.Var(relic, "HpLossReduction", fallback: 1); break;
                 case nameof(CentennialPuzzle): amount = Sts2State.Private(relic, "UsedThisCombat", fallback: false) ? 1 : 0; break; // used up this combat
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
-                case nameof(BeatingRemnant):
-                    amount = Sts2State.Var(relic, "MaxHpLoss", int.MaxValue);
-                    data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", fallback: 0m);
-                    break;
-                case nameof(TheBoot): amount = Sts2State.Var(relic, "DamageMinimum", fallback: 5); break;
-                case nameof(SneckoSkull): amount = Sts2State.Var(relic, "PoisonPower", fallback: 1); break;
+                case nameof(BeatingRemnant): data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", fallback: 0m); break;
                 // Counters the models keep counting (their tray number, or the private count behind it).
                 case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); break;
                 case nameof(GalacticDust): amount = relic is GalacticDust dust ? dust.StarsSpent : 0; break;
@@ -203,23 +226,19 @@ public static class SimReaders
                     amount = (int)Math.Floor(player.Creature.MaxHp * Sts2State.Var(relic, "HpThreshold", fallback: 50) / 100m);
                     data = Sts2State.Private(relic, "StrengthApplied", fallback: true) ? Models.RedSkull.StrengthGiven : 0; // its Strength already given
                     break;
-                // End-of-turn relics: their block or damage (amount), and what they wait for (Data).
-                case nameof(Orichalcum) or nameof(FakeOrichalcum) or nameof(CloakClasp) or nameof(RippleBasin): amount = Sts2State.Var(relic, "Block"); break;
-                case nameof(ScreamingFlagon) or nameof(CharonsAshes) or nameof(ForgottenSoul): amount = Sts2State.Var(relic, "Damage"); break;
-                case nameof(ObsidianVice): amount = Sts2State.Var(relic, "Damage", fallback: 1); break;
+                // End-of-turn relics (their block, damage or stars: RelicAmountVars), and what they wait for (Data).
                 case nameof(StoneCalendar):
-                    amount = Sts2State.Var(relic, "Damage");
                     data = Math.Max(0, Sts2State.Var(relic, "DamageTurn", fallback: 7) - Sts2State.TurnNumber); // turns until it fires (0: this one)
                     if (Sts2State.TurnNumber > Sts2State.Var(relic, "DamageTurn", fallback: 7)) amount = 0; // its turn has passed
                     break;
-                case nameof(ParryingShield): amount = Sts2State.Var(relic, "Damage"); data = Sts2State.Var(relic, "Block"); break;
-                case nameof(LunarPastry): amount = Sts2State.Var(relic, "Stars", fallback: 1); break;
+                case nameof(ParryingShield): data = Sts2State.Var(relic, "Block"); break;
                 // Its Data is the model's own: energy spent during the play being simulated (PaelsTears), so none yet.
                 case nameof(PaelsTears): data = 0; break;
                 case nameof(UnsettlingLamp):
                     data = Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) == null && !Sts2State.Private(relic, "IsFinishedTriggering", fallback: true) ? (int)RelicUse.Armed : 0;
                     break;
                 default:
+                    if (amountIsVar) break; // its amount is its value (RelicAmountVars), and it keeps no data
                     amount = Math.Max(0, relic.DisplayAmount);
                     data = Features.RelicCountersFeature.IsArmed(relic) ? (int)RelicUse.Armed : 0;
                     break;

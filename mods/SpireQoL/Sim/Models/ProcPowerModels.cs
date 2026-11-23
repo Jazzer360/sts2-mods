@@ -63,10 +63,13 @@ public sealed class CalamityPower : BoundPower
     protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => MakeInHand(Fire(state, owner), CardEvent.Generated, amount, owner);
 }
 
-/// <summary>MonologuePower: each card its owner plays gives Strength (its Strength value, bound at the play's start).</summary>
+/// <summary>
+/// MonologuePower: each card its owner plays gives Strength (its Strength value, DynamicVars.Strength kept as "StrengthPower", bound
+/// at the play's start).
+/// </summary>
 public sealed class MonologuePower : BoundPower
 {
-    protected override int BoundAmount(SimState state, int owner) => Var(state, owner, "Strength", fallback: 1);
+    protected override int BoundAmount(SimState state, int owner) => Var(state, owner, "StrengthPower", fallback: 1);
     protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount)
     {
         SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, amount, debuff: false);
