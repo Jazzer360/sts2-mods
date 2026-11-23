@@ -220,8 +220,9 @@ public class ProcModelTests
     [Fact]
     public void MonologueGivesStrengthThatTheReplayUses()
     {
+        // MonologuePower.BeforeCardPlayed binds DynamicVars.Strength.IntValue, kept as "StrengthPower" (PowerVar<StrengthPower>).
         var state = Power(State(), PowerId.Monologue, amount: 1);
-        state.Vars[$"{Who.You}:MonologuePower:Strength"] = 2;
+        state.Vars[$"{Who.You}:MonologuePower:StrengthPower"] = 2;
         var after = One(state, Play(Card("Strike"), target: 0, plays: 2, Attack(baseDamage: 5)));
         Assert.Equal(100 - 5 - 7, after.Enemy(id: 0)!.Hp);
         Assert.Equal(4, after.You.Powers[PowerId.Strength]);
@@ -749,7 +750,7 @@ public class ProcModelTests
     [Fact]
     public void CounterRelicsFireOnTheCardThatCompletesTheCount()
     {
-        var state = Relic(State(), RelicId.Kunai, amount: 2, vars: new[] { ("Cards", 3), ("Dexterity", 1) });
+        var state = Relic(State(), RelicId.Kunai, amount: 2, vars: new[] { ("Cards", 3), ("DexterityPower", 1) });
         var after = One(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1)));
         Assert.True(after.Fired.Has("Kunai"));
         Assert.Equal(1, after.You.Powers[PowerId.Dexterity]);
@@ -761,6 +762,35 @@ public class ProcModelTests
         var opened = One(opener, Events(Card("Defend", SimCardType.Skill), plays: 1));
         Assert.Equal(95, opened.Enemy(id: 1)!.Hp);
         Assert.Equal(10, opened.Fired.DataOf("LetterOpener"));
+    }
+
+    [Fact]
+    public void KunaiAndShurikenGiveTheirPowerValues()
+    {
+        // Kunai.AfterCardPlayed: PowerCmd.Apply<DexterityPower>(DynamicVars.Dexterity.BaseValue); Shuriken the same with Strength. Their
+        // values are kept as "DexterityPower" and "StrengthPower" (PowerVar<T>): a model reading "Dexterity" got its fallback, 1.
+        var kunai = Relic(State(), RelicId.Kunai, amount: 2, vars: new[] { ("Cards", 3), ("DexterityPower", 2) });
+        Assert.Equal(2, One(kunai, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).You.Powers[PowerId.Dexterity]);
+        var shuriken = Relic(State(), RelicId.Shuriken, amount: 2, vars: new[] { ("Cards", 3), ("StrengthPower", 2) });
+        Assert.Equal(2, One(shuriken, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).You.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
+    public void GamePieceDrawsItsCardsValue()
+    {
+        // GamePiece.AfterCardPlayed: CardPileCmd.Draw(DynamicVars.Cards.BaseValue) for each Power its owner plays.
+        SimState WithCards(int cards)
+        {
+            var state = Relic(State(), RelicId.GamePiece, vars: ("Cards", cards));
+            state.You.HandCount = 4;
+            state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), Count: 10) } };
+            return state;
+        }
+        var two = One(WithCards(cards: 2), Events(Card("Inflame", SimCardType.Power), plays: 1));
+        var one = One(WithCards(cards: 1), Events(Card("Inflame", SimCardType.Power), plays: 1));
+        Assert.Equal(one.You.HandCount + 1, two.You.HandCount);
+        Assert.Equal(2, two.Fired.DataOf("GamePiece"));
+        Assert.Equal(0, One(WithCards(cards: 2), Events(Card("Defend", SimCardType.Skill), plays: 1)).Fired.DataOf("GamePiece"));
     }
 
     [Fact]

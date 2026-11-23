@@ -234,12 +234,12 @@ public sealed class LostWisp : RelicProc
         Mine(play, owner) && play.Card.Type == SimCardType.Power ? RelicDamageAll(state, owner) : One(state);
 }
 
-/// <summary>GamePiece.AfterCardPlayed: a draw for each Power you play.</summary>
+/// <summary>GamePiece.AfterCardPlayed: its Cards value of draws for each Power you play (CardPileCmd.Draw(DynamicVars.Cards)).</summary>
 public sealed class GamePiece : RelicProc
 {
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Power ? Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner) : One(state);
+        Mine(play, owner) && play.Card.Type == SimCardType.Power ? Cause(Fire(state, owner), CardEvent.Drawn, count: Var(state, owner, "Cards", fallback: 1), owner) : One(state);
 }
 
 /// <summary>
@@ -358,22 +358,24 @@ public sealed class UnceasingTop : RelicProc
 
 // ---- counters
 
+/// <summary>Kunai: its Dexterity value (DynamicVars.Dexterity, kept as "DexterityPower") every Cards Attacks.</summary>
 public sealed class Kunai : CounterRelic
 {
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState state, int owner)
     {
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, Var(state, owner, "Dexterity", fallback: 1), debuff: false);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, Var(state, owner, "DexterityPower", fallback: 1), debuff: false);
         return Fire(state, owner);
     }
 }
 
+/// <summary>Shuriken: its Strength value (DynamicVars.Strength, kept as "StrengthPower") every Cards Attacks.</summary>
 public sealed class Shuriken : CounterRelic
 {
     protected override bool Counts(SimCard card) => card.Type == SimCardType.Attack;
     protected override IEnumerable<SimState> OnComplete(SimState state, int owner)
     {
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "Strength", fallback: 1), debuff: false);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "StrengthPower", fallback: 1), debuff: false);
         return Fire(state, owner);
     }
 }

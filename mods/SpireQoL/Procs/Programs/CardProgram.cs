@@ -433,24 +433,8 @@ public static class CardProgramReader
         /// Where argument <paramref name="parameter"/> of the call at <paramref name="callAt"/> comes from: the value it reads
         /// ("Block", "Damage", a DynamicVars key), a constant, a field, or "?" when the way back isn't straight.
         /// </summary>
-        public string Source(int callAt, CodeMember called, int parameter)
-        {
-            var count = called.ParameterCount + (called.HasThis ? 1 : 0);
-            var wanted = count - (parameter + (called.HasThis ? 1 : 0));
-            for (var i = callAt - 1; i >= 0; i--)
-            {
-                var instruction = Ops[i];
-                if (_noise[i] || instruction.IsBranch) return "?";
-                if (CodeDecoder.StackEffect(instruction) is not var (pop, push)) return "?";
-                if (wanted <= push)
-                {
-                    if (push != 1) return "?";
-                    return Describe(i);
-                }
-                wanted += pop - push;
-            }
-            return "?";
-        }
+        public string Source(int callAt, CodeMember called, int parameter) =>
+            CodeDecoder.Producer(Ops, callAt, CodeDecoder.ArgumentDepth(called, parameter), stop: index => _noise[index]) is { } producer ? Describe(producer) : "?";
 
         private string Describe(int index)
         {

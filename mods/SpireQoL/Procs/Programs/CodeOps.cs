@@ -16,6 +16,10 @@ public sealed record CodeMember(CodeMemberKind Kind, string DeclaringType, strin
     public IReadOnlyList<string> GenericArguments { get; init; } = Array.Empty<string>();
     /// <summary>A method's parameters (without its instance).</summary>
     public int ParameterCount { get; init; }
+    /// <summary>A method's parameters' types, in order (simple names: "Decimal", "BlockVar").</summary>
+    public IReadOnlyList<string> ParameterTypes { get; init; } = Array.Empty<string>();
+    /// <summary>A method's parameters' names, in order; empty when they can't be read (a reference in an assembly file names none).</summary>
+    public IReadOnlyList<string> ParameterNames { get; init; } = Array.Empty<string>();
     /// <summary>A method that takes an instance (not static), or a constructor.</summary>
     public bool HasThis { get; init; }
     /// <summary>A method that leaves a value (not void).</summary>
@@ -178,6 +182,33 @@ public static class CodeDecoder
         if (opCode == OpCodes.Newobj) push = 1;
         return (pop, push);
     }
+
+    /// <summary>
+    /// The instruction that leaves the value <paramref name="depth"/> deep on the stack (0: the top) just before instruction
+    /// <paramref name="at"/>, walking back through straight code: null when the way back isn't straight (a jump, an instruction
+    /// <paramref name="stop"/> names, one whose stack effect can't be told or that leaves two values), or when a jump in
+    /// <paramref name="landings"/> lands on the way (the value could come from either path).
+    /// </summary>
+    public static int? Producer(IReadOnlyList<CodeOp> ops, int at, int depth, Func<int, bool>? stop = null, IReadOnlySet<int>? landings = null)
+    {
+        var wanted = depth + 1;
+        for (var i = at - 1; i >= 0; i--)
+        {
+            var instruction = ops[i];
+            if (stop?.Invoke(i) == true || instruction.IsBranch) return null;
+            if (landings != null && landings.Contains(ops[i + 1].Offset)) return null;
+            if (StackEffect(instruction) is not var (pop, push)) return null;
+            if (wanted <= push) return push == 1 ? i : null;
+            wanted += pop - push;
+        }
+        return null;
+    }
+
+    /// <summary>The offsets jumps land on (branches' and switches' targets).</summary>
+    public static IReadOnlySet<int> Landings(IEnumerable<CodeOp> ops) => ops.SelectMany(instruction => instruction.Targets).ToHashSet();
+
+    /// <summary>How deep (0: the top) argument <paramref name="parameter"/> of a call is on the stack just before the call.</summary>
+    public static int ArgumentDepth(CodeMember called, int parameter) => called.ParameterCount - parameter - 1;
 }
 
 /// <summary>A method of the loaded game read into instructions (cached: the code doesn't change while the game runs).</summary>
@@ -211,6 +242,8 @@ public static class RuntimeCode
         {
             GenericArguments = method.IsGenericMethod ? method.GetGenericArguments().Select(type => type.Name).ToArray() : Array.Empty<string>(),
             ParameterCount = method.GetParameters().Length,
+            ParameterTypes = method.GetParameters().Select(parameter => parameter.ParameterType.Name).ToArray(),
+            ParameterNames = method.GetParameters().Select(parameter => parameter.Name ?? "").ToArray(),
             HasThis = !method.IsStatic,
             ReturnsValue = method is MethodInfo info && info.ReturnType != typeof(void),
             ValueType = method is MethodInfo returning ? returning.ReturnType.Name : "",

@@ -77,14 +77,27 @@ internal static class ModelEffectCheck
     /// <summary>"Type.Method" for every call in a game class's hooks (After*, Before*), their async state machines and lambdas.</summary>
     private static IEnumerable<string> HookCalls(Type gameType)
     {
-        static bool IsHook(string name) => name.StartsWith("After", StringComparison.Ordinal) || name.StartsWith("Before", StringComparison.Ordinal);
-        static string Inner(string name) => name.StartsWith('<') ? name[1..] : name;
-        var methods = gameType.GetMethods(All).Where(method => IsHook(Inner(method.Name))).Cast<MethodBase>()
-            .Concat(Nested(gameType).Where(type => IsHook(Inner(type.Name))).SelectMany(type => type.GetMethods(All)))
-            .Concat(Nested(gameType).SelectMany(type => type.GetMethods(All)).Where(method => IsHook(Inner(method.Name))));
-        foreach (var method in methods)
+        foreach (var method in HookMethods(gameType))
             foreach (var call in Calls(method))
                 yield return call.DeclaringType!.Name + "." + call.Name;
+    }
+
+    /// <summary>A game class's hooks (After*, Before*), their async state machines' methods and their lambdas.</summary>
+    internal static IEnumerable<MethodBase> HookMethods(Type gameType)
+    {
+        static bool IsHook(string name) => name.StartsWith("After", StringComparison.Ordinal) || name.StartsWith("Before", StringComparison.Ordinal);
+        static string Inner(string name) => name.StartsWith('<') ? name[1..] : name;
+        return gameType.GetMethods(All).Where(method => IsHook(Inner(method.Name))).Cast<MethodBase>()
+            .Concat(Nested(gameType).Where(type => IsHook(Inner(type.Name))).SelectMany(type => type.GetMethods(All)))
+            .Concat(Nested(gameType).SelectMany(type => type.GetMethods(All)).Where(method => IsHook(Inner(method.Name))));
+    }
+
+    /// <summary>A model's own code: its class and the model classes it builds on (not the framework), with their nested types.</summary>
+    internal static List<Type> OwnTypes(Type modelType)
+    {
+        var types = new List<Type>();
+        for (var type = modelType; type != null && !Framework.Contains(type) && type != typeof(object); type = type.BaseType) types.Add(type);
+        return types.Concat(types.SelectMany(Nested)).ToList();
     }
 
     /// <summary>The model's own code (its class, the model classes it builds on, their lambdas) changes the simulation somewhere.</summary>

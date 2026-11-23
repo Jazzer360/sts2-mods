@@ -118,6 +118,7 @@ internal sealed class BranchCode : IDisposable
         {
             GenericArguments = generic,
             ParameterCount = signature.ParameterTypes.Length,
+            ParameterTypes = signature.ParameterTypes,
             HasThis = signature.Header.IsInstance,
             ReturnsValue = signature.ReturnType != "Void",
             ValueType = signature.ReturnType,
