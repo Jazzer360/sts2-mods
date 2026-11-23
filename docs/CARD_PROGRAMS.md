@@ -286,6 +286,11 @@ One source for both the tabs and the simulator.
   every `PlayFacts` field and the adapter's play (`SimAdapter.Play`) written as text. Moving a table onto the program must leave
   it unchanged; a difference that is a real fix regenerates it (`SPIREQOL_UPDATE_SNAPSHOT=1`), named in the commit with the card
   and why. A game update regenerates it too.
+  - **Outcomes** (`Snapshots/card-outcomes.txt`, 2026-11-23): what each play results in, on the same boards and a sixth, the card
+    alone in hand (so a condition on your hand goes the other way: Impatience draws, Restlessness draws and gains energy). The play
+    is run through the simulator (`SimEngine.ApplyPlayTo`), and each branch it ends in is written with its weight, your HP, block,
+    energy, hand and piles, each teammate's, the enemies' HP and block, and the play's card events (a replay's last play's). A
+    change to a play's result shows here even when its actions read the same.
 - **Program tests** (`tests/SpireQoL.Catalog.Tests/CardProgramTests.cs`): known programs on both branches' assemblies (Iron
   Wave, Fiend Fire, Sunder, Pillage, Whirlwind, Battle Trance, Growth, Second Wind, Blossom Shot's local function, an X-cost
   card, a selection card), and the shapes of conditions: Impatience's negated lambda over your hand, Ki Hop's local stored before

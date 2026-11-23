@@ -42,7 +42,15 @@ public class CardPlaySnapshotTests
         /// card aimed at an ally is aimed at them, and what it gives or makes for teammates shows.
         /// </summary>
         Teammate,
+        /// <summary>
+        /// The standard board with the card alone in hand (outcomes only): conditions on your hand take the other way here (Impatience's
+        /// "no Attack in hand", Restlessness' empty hand), so each is seen both ways.
+        /// </summary>
+        Alone,
     }
+
+    /// <summary>The boards the play snapshot reads (Alone is for outcomes only).</summary>
+    private static readonly Board[] PlayBoards = { Board.Standard, Board.Upgraded, Board.Crowded, Board.Replayed, Board.Teammate };
 
     [Fact]
     public void EveryCardsFactsAndPlayAreUnchanged()
@@ -50,9 +58,33 @@ public class CardPlaySnapshotTests
         GameModels.EnsureLoaded();
         var actual = new List<string>();
         foreach (var canon in ModelDb.AllCards.OrderBy(card => card.GetType().Name, StringComparer.Ordinal).ToList())
+            foreach (var board in PlayBoards)
+                actual.Add($"{canon.GetType().Name} [{board}] {Read(canon, board).Play}");
+        Compare(FileName, actual);
+    }
+
+    /// <summary>
+    /// What each card's play results in, on every board: the play run through the simulator (SimEngine.ApplyPlayTo), and for each branch
+    /// it ends in (identical ones merged) its weight, your HP, block, energy, hand and piles, each teammate's, the enemies' HP and block,
+    /// and the card events of the play (its last play's, for a replay). A change to what a play does, not just to how it's built, shows
+    /// here even when the play's actions read the same.
+    /// </summary>
+    [Fact]
+    public void EveryCardsOutcomeIsUnchanged()
+    {
+        GameModels.EnsureLoaded();
+        var actual = new List<string>();
+        foreach (var canon in ModelDb.AllCards.OrderBy(card => card.GetType().Name, StringComparer.Ordinal).ToList())
             foreach (var board in Enum.GetValues<Board>())
-                actual.Add($"{canon.GetType().Name} [{board}] {Describe(canon, board)}");
-        var path = Path.Combine(SourceFolder(), "Snapshots", FileName);
+                actual.Add($"{canon.GetType().Name} [{board}] {Read(canon, board).Outcome}");
+        Compare(OutcomesFileName, actual);
+    }
+
+    private const string OutcomesFileName = "card-outcomes.txt";
+
+    private static void Compare(string fileName, List<string> actual)
+    {
+        var path = Path.Combine(SourceFolder(), "Snapshots", fileName);
         if (Environment.GetEnvironmentVariable("SPIREQOL_UPDATE_SNAPSHOT") == "1")
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -71,7 +103,7 @@ public class CardPlaySnapshotTests
             report.AppendLine("before: " + (expectedByKey.TryGetValue(KeyOf(line), out var before) ? before : "(none)"));
         }
         foreach (var key in gone.Take(5)) report.AppendLine("gone: " + key);
-        Assert.True(changed.Count == 0 && gone.Count == 0, $"{changed.Count} card plays changed, {gone.Count} gone:\n{report}");
+        Assert.True(changed.Count == 0 && gone.Count == 0, $"{fileName}: {changed.Count} lines changed, {gone.Count} gone:\n{report}");
     }
 
     /// <summary>"Card [Board]": what a line is about.</summary>
@@ -84,8 +116,15 @@ public class CardPlaySnapshotTests
         return folder?.FullName ?? throw new InvalidOperationException("test project folder not found");
     }
 
-    /// <summary>The card's facts and play on that board, as one line.</summary>
-    private static string Describe(CardModel canon, Board board)
+    /// <summary>The card's facts and play on a board, and what the play results in, each as one line.</summary>
+    private sealed record Reading(string Play, string Outcome);
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type, Board), Reading> Readings = new();
+
+    /// <summary>The card on that board, read once for both snapshots.</summary>
+    private static Reading Read(CardModel canon, Board board) => Readings.GetOrAdd((canon.GetType(), board), _ => Describe(canon, board));
+
+    private static Reading Describe(CardModel canon, Board board)
     {
         try
         {
@@ -108,14 +147,17 @@ public class CardPlaySnapshotTests
             var card = gameFight.Combat.CreateCard(canon, gameFight.Me);
             if (board == Board.Upgraded)
             {
-                if (card.MaxUpgradeLevel < 1) return "(no upgrade)";
+                if (card.MaxUpgradeLevel < 1) return new Reading("(no upgrade)", "(no upgrade)");
                 card.UpgradeInternal();
                 card.FinalizeUpgradeInternal();
             }
             PileType.Hand.GetPile(gameFight.Me).AddInternal(card);
-            gameFight.Add<StrikeIronclad>();
-            gameFight.Add<DefendIronclad>();
-            gameFight.Add<Dazed>();
+            if (board != Board.Alone)
+            {
+                gameFight.Add<StrikeIronclad>();
+                gameFight.Add<DefendIronclad>();
+                gameFight.Add<Dazed>();
+            }
             if (board == Board.Crowded)
             {
                 // A Sly card (Reflex: it plays itself when discarded) and a card that acts when exhausted (Drum of Battle).
@@ -133,7 +175,7 @@ public class CardPlaySnapshotTests
             gameFight.Add<StrikeIronclad>(PileType.Discard);
             gameFight.Add<DefendIronclad>(PileType.Discard);
 
-            SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+            var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
             var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: board == Board.Replayed ? 2 : 1);
             var targetId = card.TargetType switch
             {
@@ -142,12 +184,39 @@ public class CardPlaySnapshotTests
                 _ => Who.None,
             };
             var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, ids, targetId);
-            return FactsText(facts, enemies) + " play " + PlayText(play, gameFight);
+            return new Reading(FactsText(facts, enemies) + " play " + PlayText(play, gameFight), OutcomeText(start, play));
         }
         catch (Exception ex)
         {
-            return "error " + ex.GetType().Name;
+            var error = "error " + ex.GetType().Name;
+            return new Reading(error, error);
         }
+    }
+
+    /// <summary>
+    /// The play's outcome: each branch it ends in, in the simulator's order, as "weight you=HP/block e(energy) h(hand) d(draw)/(discard)
+    /// [teammates] enemies [the play's card events] ?(what isn't modelled)", and "capped" when the search stopped at a cap.
+    /// </summary>
+    private static string OutcomeText(SimState start, SimPlay play)
+    {
+        List<SimState> branches;
+        bool capped;
+        try { SimEngine.ApplyPlayTo(start, play, out branches, out capped); }
+        catch (Exception ex) { return "sim error " + ex.GetType().Name; }
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        static string Player(SimPlayer player) =>
+            $"{player.Hp}/{player.Block} e{player.Energy} h{player.HandCount}" + (player.Draw is { } piles ? $" d{piles.Count}/{piles.DiscardCount}" : "");
+        var lines = branches.Select(branch =>
+        {
+            var parts = new List<string> { branch.Weight.ToString("0.####", culture), "you=" + Player(branch.You) };
+            for (var i = 0; i < branch.Teammates.Count; i++) parts.Add($"mate{i}=" + Player(branch.Teammates[i]));
+            parts.AddRange(branch.Enemies.Select(enemy => $"enemy{enemy.Id}={enemy.Hp}/{enemy.Block}"));
+            var events = Enum.GetValues<CardEvent>().Where(cardEvent => branch.PlayEvents[cardEvent] > 0).Select(cardEvent => $"{cardEvent}{branch.PlayEvents[cardEvent]}");
+            parts.Add("[" + string.Join(" ", events) + "]");
+            if (branch.Unmodelled != null) parts.Add("?" + branch.Unmodelled);
+            return string.Join(" ", parts);
+        });
+        return (capped ? "capped " : "") + string.Join(" | ", lines);
     }
 
     private static Creature Enemy(GameFight gameFight, int hp)
