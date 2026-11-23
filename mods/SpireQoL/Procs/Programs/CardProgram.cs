@@ -20,6 +20,12 @@ public sealed record CommandStep(int Offset, CodeMember Command, IReadOnlyList<s
     public IReadOnlyList<string> Builder { get; init; } = Array.Empty<string>();
 
     /// <summary>
+    /// Where an attack's WithHitCount gets its count ("HitCount", "Repeat", a constant, "ResolveEnergyXValue" for an X-cost card's X);
+    /// null when its builder sets none (one hit).
+    /// </summary>
+    public string? HitCount { get; init; }
+
+    /// <summary>
     /// The steps of a delegate the command is given and runs (ArrowCmd.ShootArrowAtTarget runs Blossom Shot's attack after the
     /// shot): they follow the command.
     /// </summary>
@@ -38,6 +44,15 @@ public sealed record ChoiceStep(int Offset, CodeMember Command) : ProgramStep(Of
     public IReadOnlyList<string> Arguments { get; init; } = Array.Empty<string>();
 
     public override string ToString() => "choice " + Command.Name;
+}
+
+/// <summary>
+/// A card the code makes (CombatState.CreateCard&lt;T&gt;: Jest's Sadness, Mourning Blow's): not a change by itself (a command adds it to
+/// a pile, or the card turns into it after the play), but what it makes, by type, for the rules that ask (CardEffects.MakesSadness).
+/// </summary>
+public sealed record CreateStep(int Offset, string Card) : ProgramStep(Offset)
+{
+    public override string ToString() => "create " + Card;
 }
 
 /// <summary>A loop: its body runs once per round (a foreach over cards, a for up to a value, a do-while).</summary>
@@ -230,6 +245,11 @@ public static class CardProgramReader
                     into.Add(new ChoiceStep(instruction.Offset, member) { Condition = condition, Arguments = Arguments(flow, i, member) });
                     continue;
                 }
+                if (member.Name == "CreateCard" && member.GenericArguments.Count == 1)
+                {
+                    into.Add(new CreateStep(instruction.Offset, member.GenericArguments[0]) { Condition = condition });
+                    continue;
+                }
                 if (member.DeclaringType == "DamageCmd" && member.Name == "Attack")
                 {
                     into.Add(Attack(flow, i, member) with { Condition = condition });
@@ -284,13 +304,15 @@ public static class CardProgramReader
         private static CommandStep Attack(Flow flow, int at, CodeMember member)
         {
             var builder = new List<string>();
+            string? hitCount = null;
             for (var j = at + 1; j < flow.Ops.Count; j++)
             {
                 if (flow.Ops[j].Member is not { DeclaringType: "AttackCommand" } call || !flow.Ops[j].IsCall) continue;
                 if (call.Name == "Execute") break;
                 builder.Add(call.Name);
+                if (call.Name == "WithHitCount" && call.ParameterCount >= 1) hitCount = flow.Source(j, call, parameter: 0);
             }
-            return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member)) { Builder = builder };
+            return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member)) { Builder = builder, HitCount = hitCount };
         }
 
         /// <summary>The card's own method (its type or a base type's private helper) or a local function OnPlay declares.</summary>
@@ -493,7 +515,27 @@ public static class CardProgramReader
                 return name;
             }
             if (instruction.Text is { } text) return "\"" + text + "\"";
+            // A local stored once in the method (int x = ResolveEnergyXValue(); ... WithHitCount(x)): what was stored.
+            if (instruction.Slot is { } slot && instruction.OpCode.Name!.StartsWith("ldloc", StringComparison.Ordinal) && depth < 3 && StoredOnce(slot) is { } store
+                && CodeDecoder.Producer(Ops, store, depth: 0, stop: at => _noise[at]) is { } stored)
+            {
+                var described = Describe(stored, depth + 1);
+                if (described != "?" && !described.StartsWith("ld", StringComparison.Ordinal)) return described;
+            }
             return instruction.OpCode.Name ?? "?";
+        }
+
+        /// <summary>The one instruction that stores local <paramref name="slot"/>, when only one does (else null: which value is meant isn't straight).</summary>
+        private int? StoredOnce(int slot)
+        {
+            int? found = null;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].Slot != slot || !Ops[i].OpCode.Name!.StartsWith("stloc", StringComparison.Ordinal)) continue;
+                if (found != null) return null;
+                found = i;
+            }
+            return found;
         }
 
         /// <summary>"&lt;&gt;4__this" is the card; "&lt;target&gt;5__2" is the local "target"; a parameter keeps its name.</summary>

@@ -473,7 +473,7 @@ public sealed class PlayFacts
         var name = card.GetType().Name;
         var evoked = EvokedOrbs(card, name, me, combat, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
         var orbs = OrbDamageFor(evoked, me, combat);
-        var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me);
+        var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(card.GetType(), me);
         // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
         var createdInHand = MadeIntoHand(card, generated);
 
@@ -506,7 +506,7 @@ public sealed class PlayFacts
             Generated = generated,
             GeneratedInHand = createdInHand,
             GeneratedStatuses = statuses * Math.Max(1, plays),
-            SadnessCreated = SadnessCards.Contains(name) ? statuses * Math.Max(1, plays) : 0,
+            SadnessCreated = Programs.CardEffects.MakesSadness(card.GetType()) ? statuses * Math.Max(1, plays) : 0,
             CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,
                 Fool.Shoots(card, me) ? Math.Max(1, plays) : 0),
             TakenToHand = TakenToHandCount(card, name, me, Math.Max(1, plays),
@@ -1200,14 +1200,8 @@ public sealed class PlayFacts
         }
     }
 
-    /// <summary>
-    /// Attacks with a Repeat value that isn't their hit count: one attack, then Repeat of something else (Ice Lance
-    /// channels Repeat Frost, Heirloom Hammer makes Repeat copies; decompile v0.113.1). The card scan flags a new one.
-    /// </summary>
-    internal static readonly HashSet<string> SingleHitRepeatCards = new() { nameof(IceLance), nameof(HeirloomHammer) };
-
-    /// <summary>X-cost attacks that hit X times (WithHitCount(X)); Repeat Shot is a shot (v0.113.0). The card scan flags a new one.</summary>
-    internal static readonly HashSet<string> XHitCards = new() { nameof(Eradicate), nameof(Skewer), nameof(Volley), nameof(Whirlwind), nameof(RepeatShot) };
+    // Read from each card's program (decision #182): an attack that hits X times (CardEffects.HitsXTimes: WithHitCount(X)), and one
+    // that attacks once and repeats something else its Repeat times (CardEffects.AttacksOnceRepeatingSomethingElse: Ice Lance's Frost).
 
     private static int BaseHitsPerPlay(CardModel card, string name, ICombatState combat, Creature? target, int energy, int stars, int otherCards)
     {
@@ -1232,9 +1226,9 @@ public sealed class PlayFacts
                 // Main passes a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits): AttackHitCountsAreVars.
                 case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
                     return Hits(fixedBefore: 2);
-                case var _ when XHitCards.Contains(name):
+                case var _ when Programs.CardEffects.HitsXTimes(card.GetType()):
                     return XValue(combat, card, energy);
-                case var _ when SingleHitRepeatCards.Contains(name):
+                case var _ when Programs.CardEffects.AttacksOnceRepeatingSomethingElse(card.GetType()):
                     return 1;
                 case nameof(HeavenlyDrill):
                 {
@@ -1322,12 +1316,8 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ generated cards
 
-    /// <summary>
-    /// Cards that create Sadness when played (CreateCard&lt;Sadness&gt; in OnPlay, or Mourning Blow turning into one after
-    /// it; v0.113.1): their created statuses are all Sadness (GeneratedCount), so that count is the Sadness made.
-    /// </summary>
-    internal static readonly HashSet<string> SadnessCards = new() { nameof(BrightenUp), nameof(Jest), nameof(MourningBlow), nameof(Rummage), nameof(SelfDeprecate), nameof(SorrowfulStrike), nameof(Vitriol) };
-
+    // A card that makes Sadness (CardEffects.MakesSadness, from its program): its created statuses are all Sadness (GeneratedCount),
+    // so that count is the Sadness made.
 
     internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses)
     {
@@ -1388,21 +1378,14 @@ public sealed class PlayFacts
         return 0;
     }
 
-    // Cards that Forge when played (ForgeCmd.Forge in OnPlay; decompile v0.111.0).
-    internal static readonly HashSet<string> ForgeCards = new()
-    {
-        nameof(BeatIntoShape), nameof(BigBang), nameof(Bulwark), nameof(Conqueror), nameof(RefineBlade),
-        nameof(SeekingEdge), nameof(SpoilsOfBattle), nameof(SummonForth), nameof(TheSmith), nameof(WroughtInWar),
-    };
-
     /// <summary>
-    /// Forging creates a Sovereign Blade in your hand when you have none outside your exhaust pile
+    /// A card that forges (CardEffects.Forges: ForgeCmd.Forge in its program). Forging creates a Sovereign Blade in your hand when you have none outside your exhaust pile
     /// (ForgeCmd.Forge, through AddGeneratedCardToCombat); later forges only add damage. Once per play
     /// chain: a replay finds the blade the first play made.
     /// </summary>
-    private static int ForgedBlade(string name, Player me)
+    private static int ForgedBlade(Type cardType, Player me)
     {
-        if (!ForgeCards.Contains(name)) return 0;
+        if (!Programs.CardEffects.Forges(cardType)) return 0;
         try
         {
             var hasBlade = me.PlayerCombatState?.AllCards.Any(card => card is SovereignBlade && !card.IsDupe && card.Pile?.Type != PileType.Exhaust) ?? true;

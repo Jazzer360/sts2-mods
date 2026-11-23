@@ -222,12 +222,12 @@ internal static class CardCoverage
             && !(program.Commands.Any(command => command.Command.Name is "Discard" or "Exhaust" or "DiscardAndDraw") && program.Commands.Any(command => command.Command.Name is "Draw" or "DiscardAndDraw")))
             issues.Add("takes cards from your hand and draws, and its program doesn't show which comes first (the hand limit)");
         // An X-cost attack: its hits are X (unless its count is one of the named exceptions).
-        if (card.Type == CardType.Attack && card.EnergyCost.CostsX && !PlayFacts.XHitCards.Contains(name) && name is not (nameof(HeavenlyDrill) or nameof(Stardust)))
+        if (card.Type == CardType.Attack && card.EnergyCost.CostsX && !Procs.Programs.CardEffects.HitsXTimes(card.GetType()) && name is not (nameof(HeavenlyDrill) or nameof(Stardust)))
             issues.Add("an X-cost attack whose hits aren't counted as X (damage, lethal)");
         // An attack whose code sets no hit count but has a Repeat value: its hits would be read from Repeat (Ice Lance's
         // Repeat is its Frost channels). A card that really attacks Repeat times in a loop goes in Reviewed.
         if (card.Type == CardType.Attack && !Calls("AttackCommand", "WithHitCount") && !card.DynamicVars.ContainsKey("HitCount")
-            && !PlayFacts.SingleHitRepeatCards.Contains(name)
+            && !Procs.Programs.CardEffects.AttacksOnceRepeatingSomethingElse(card.GetType())
             && (Sts2Mods.Core.Game.Sts2State.Var(card, "Repeat", fallback: 1) > 1 || (upgraded != null && Sts2Mods.Core.Game.Sts2State.Var(upgraded, "Repeat", fallback: 1) > 1)))
             issues.Add("an attack with a Repeat value and no hit count in its code (its hits would be read as Repeat: damage, lethal)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
@@ -264,10 +264,10 @@ internal static class CardCoverage
         if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !SimAdapter.PlaysFromDrawPile.Contains(name))
             issues.Add("auto-plays cards from your draw pile (not simulated: what they do)");
         // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
-        if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !PlayFacts.SadnessCards.Contains(name))
+        if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !Procs.Programs.CardEffects.MakesSadness(card.GetType()))
             issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");
         // Forging creates the Sovereign Blade through ForgeCmd, not in the card's own code.
-        if (Calls("ForgeCmd", "Forge") && !PlayFacts.ForgeCards.Contains(name))
+        if (Calls("ForgeCmd", "Forge") && !Procs.Programs.CardEffects.Forges(card.GetType()))
             issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");
         // Every game card as the hand, so any filter (statuses, attacks) finds something to transform.
         if ((Calls("CardCmd", "Transform") || Calls("CardCmd", "TransformTo") || Calls("CardCmd", "TransformToRandom"))

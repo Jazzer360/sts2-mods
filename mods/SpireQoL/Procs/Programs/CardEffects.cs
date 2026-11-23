@@ -37,10 +37,10 @@ public static class CardEffects
         Outside(program.Steps).Any(command => Is(command, "CreatureCmd", "GainBlock") && Argument(command, 0) is { } gainer && gainer != You
                                              && (gainer == Target || gainer.EndsWith(".Creature", StringComparison.Ordinal)));
 
-    /// <summary>Gains block for each creature a loop goes over (Rally: every living player).</summary>
+    /// <summary>Gains block for each creature a loop goes over (Rally: every living player), not for you or the target each round.</summary>
     public static bool BlocksEachPlayer(CardProgram program) =>
         program.All().OfType<LoopStep>().Any(loop => loop.Body.OfType<CommandStep>().Any(command => Is(command, "CreatureCmd", "GainBlock") && Argument(command, 0) is { } gainer
-                                                                                                    && gainer.StartsWith("ld", StringComparison.Ordinal)));
+                                                                                                    && gainer != You && gainer != Target));
 
     /// <summary>Channels an orb for its target's player (Ignition: into a teammate's orbs).</summary>
     public static bool ChannelsForTarget(CardProgram program) =>
@@ -129,6 +129,37 @@ public static class CardEffects
     /// </summary>
     public static bool MovesCardsElsewhere(CardProgram program) =>
         Moves(program).ToList() is var moves && moves.Contains(Move.Elsewhere) && !moves.Contains(Move.IntoYourHand) && !moves.Contains(Move.PutBack);
+
+    public static bool HitsXTimes(Type cardType) => HitsXTimes(CardPrograms.Of(cardType));
+    public static bool AttacksOnceRepeatingSomethingElse(Type cardType) => AttacksOnceRepeatingSomethingElse(CardPrograms.Of(cardType));
+
+    // ---- attacks
+
+    /// <summary>An attack whose hit count is the card's X (WithHitCount(ResolveEnergyXValue()): Whirlwind, Skewer, Volley).</summary>
+    public static bool HitsXTimes(CardProgram program) =>
+        program.Commands.Any(command => Is(command, "DamageCmd", "Attack") && command.HitCount == "ResolveEnergyXValue");
+
+    /// <summary>
+    /// Attacks once (no hit count) and repeats something else its Repeat times (Ice Lance channels Repeat Frost, Heirloom Hammer makes
+    /// Repeat copies): its Repeat value isn't its hits.
+    /// </summary>
+    public static bool AttacksOnceRepeatingSomethingElse(CardProgram program) =>
+        program.Commands.Any(command => Is(command, "DamageCmd", "Attack") && command.HitCount == null)
+        && program.All().OfType<LoopStep>().Any(loop => loop.Over == "Repeat" && !new CardProgram("", loop.Body).Commands.Any(command => Is(command, "DamageCmd", "Attack")));
+
+    public static bool MakesSadness(Type cardType) => MakesSadness(CardPrograms.Of(cardType));
+    public static bool Forges(Type cardType) => Forges(CardPrograms.Of(cardType));
+
+    // ---- made cards
+
+    /// <summary>
+    /// Makes Sadness (CombatState.CreateCard&lt;Sadness&gt; in its play: Jest's into your hand, Mourning Blow turning into one): the
+    /// statuses it makes are Sadness, which Fertilizer and All Is Well react to.
+    /// </summary>
+    public static bool MakesSadness(CardProgram program) => program.All().OfType<CreateStep>().Any(create => create.Card == nameof(MegaCrit.Sts2.Core.Models.Cards.Sadness));
+
+    /// <summary>Forges (ForgeCmd.Forge: a Sovereign Blade made the first time, more damage after).</summary>
+    public static bool Forges(CardProgram program) => program.Commands.Any(command => Is(command, "ForgeCmd", "Forge"));
 
     public static bool DiscardsOnlyPicks(Type cardType) => DiscardsOnlyPicks(CardPrograms.Of(cardType));
 

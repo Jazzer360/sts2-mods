@@ -195,6 +195,13 @@ hooks.
     your draw pile after a pick from your hand (`PutsBackFromHand`), or elsewhere after a pick (`MovesCardsElsewhere`: your
     discard pile onto your draw pile, a teammate's draw pile into their hand). They replaced `TakenToHandCards`,
     `PutBackCards` and `MovedElsewhereCards`.
+  - Made cards (2026-11-23): the reader records each card the code makes (`CreateStep`: `CombatState.CreateCard<T>`, by
+    type), so `MakesSadness` replaced `SadnessCards` (Mourning Blow turning into one included); `Forges` (`ForgeCmd.Forge`)
+    replaced `ForgeCards`.
+  - Attacks (2026-11-23): an attack keeps where `WithHitCount` gets its count (`CommandStep.HitCount`), and an argument read
+    from a local stored once is described by what was stored (Whirlwind's `int x = ResolveEnergyXValue()`). `HitsXTimes`
+    replaced `XHitCards`; `AttacksOnceRepeatingSomethingElse` (an attack with no hit count, and a loop over `Repeat` with no
+    attack in it: Ice Lance, Heirloom Hammer) replaced `SingleHitRepeatCards`.
   - Each was proven to give exactly its table's cards on both branches before the table was deleted
     (`CardEffectsTests.EachRuleFindsExactlyTheTableItReplaced` keeps the tables as they were), and the catalog snapshot was
     unchanged by the swap.

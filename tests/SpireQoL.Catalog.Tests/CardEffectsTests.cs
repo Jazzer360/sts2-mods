@@ -56,6 +56,17 @@ public class CardEffectsTests
             var expected = table.Where(programs.ContainsKey).OrderBy(name => name, StringComparer.Ordinal).ToList();
             if (!found.SequenceEqual(expected)) failures.Add($"{rule} ({branch}): found {string.Join(", ", found)}; the table: {string.Join(", ", expected)}");
         }
+        // The first eight rules (KillsOstyCards, ExecuteCards, ...).
+        Exactly(nameof(CardEffects.KillsOsty), CardEffects.KillsOsty, "Sacrifice", "BoneShards");
+        Exactly(nameof(CardEffects.SetsTargetsHp), CardEffects.SetsTargetsHp, "Judgement");
+        Exactly(nameof(CardEffects.TakesTargetsBlock), CardEffects.TakesTargetsBlock, "Expose");
+        // Also Omnislice's and Rain Shot's first hit (CreatureCmd.Damage on the target): attacks, which the adapter and the scan leave
+        // out (only a card that isn't an attack is asked), as ExecuteCards' table did.
+        Exactly(nameof(CardEffects.DamagesTargetWithoutAttacking), CardEffects.DamagesTargetWithoutAttacking, "CaptureSpirit", "Omnislice", "RainShot");
+        Exactly(nameof(CardEffects.BlocksAnother), CardEffects.BlocksAnother, "Lift", "Constellation", "DemonicShield");
+        Exactly(nameof(CardEffects.BlocksEachPlayer), CardEffects.BlocksEachPlayer, "Rally");
+        Exactly(nameof(CardEffects.ChannelsForTarget), CardEffects.ChannelsForTarget, "Ignition");
+        Exactly(nameof(CardEffects.HitsAllOnKill), CardEffects.HitsAllOnKill, "Timber");
         Exactly(nameof(CardEffects.DrawsForTarget), CardEffects.DrawsForTarget, Tables.AllyDrawCards);
         Exactly(nameof(CardEffects.DrawsForEachTeammate), CardEffects.DrawsForEachTeammate, Tables.TeammatesDrawCards);
         Exactly(nameof(CardEffects.ShufflesDiscardPileIn), CardEffects.ShufflesDiscardPileIn, Tables.ShuffleCards);
@@ -63,6 +74,10 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.TakesIntoHand), CardEffects.TakesIntoHand, Tables.TakenToHandCards);
         Exactly(nameof(CardEffects.PutsBackFromHand), CardEffects.PutsBackFromHand, Tables.PutBackCards);
         Exactly(nameof(CardEffects.MovesCardsElsewhere), CardEffects.MovesCardsElsewhere, Tables.MovedElsewhereCards);
+        Exactly(nameof(CardEffects.MakesSadness), CardEffects.MakesSadness, Tables.SadnessCards);
+        Exactly(nameof(CardEffects.Forges), CardEffects.Forges, Tables.ForgeCards);
+        Exactly(nameof(CardEffects.HitsXTimes), CardEffects.HitsXTimes, Tables.XHitCards);
+        Exactly(nameof(CardEffects.AttacksOnceRepeatingSomethingElse), CardEffects.AttacksOnceRepeatingSomethingElse, Tables.SingleHitRepeatCards);
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
@@ -82,5 +97,14 @@ public class CardEffectsTests
         };
         public static readonly string[] PutBackCards = { "Glimmer", "PhotonCut", "ThinkingAhead" };
         public static readonly string[] MovedElsewhereCards = { "CosmicIndifference", "Headbutt", "Recall", "Tutor" };
+        // Attacks (PlayFacts.XHitCards, SingleHitRepeatCards).
+        public static readonly string[] XHitCards = { "Eradicate", "Skewer", "Volley", "Whirlwind", "RepeatShot" };
+        public static readonly string[] SingleHitRepeatCards = { "IceLance", "HeirloomHammer" };
+        // Made cards (PlayFacts.SadnessCards, ForgeCards).
+        public static readonly string[] SadnessCards = { "BrightenUp", "Jest", "MourningBlow", "Rummage", "SelfDeprecate", "SorrowfulStrike", "Vitriol" };
+        public static readonly string[] ForgeCards =
+        {
+            "BeatIntoShape", "BigBang", "Bulwark", "Conqueror", "RefineBlade", "SeekingEdge", "SpoilsOfBattle", "SummonForth", "TheSmith", "WroughtInWar",
+        };
     }
 }
