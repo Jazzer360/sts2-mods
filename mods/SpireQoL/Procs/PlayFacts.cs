@@ -494,7 +494,7 @@ public sealed class PlayFacts
             DrawsAtMost = SpireQoL.Sim.SimAdapter.DrawnCardReaders.GetValueOrDefault(name) is { DrawsAgain: true }
                 ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,
             EnchantmentDraws = swiftDraws,
-            BlockGains = BlockGainCount(card, name, others) * Math.Max(1, plays),
+            BlockGains = BlockGainCount(card) * Math.Max(1, plays),
             Generated = generated,
             GeneratedInHand = createdInHand,
             GeneratedStatuses = statuses * Math.Max(1, plays),
@@ -1157,36 +1157,29 @@ public sealed class PlayFacts
     // ------------------------------------------------------------------ block
 
     /// <summary>
-    /// Cards whose OnPlay can gain block more than once (a loop, or two GainBlock calls), each counted by a rule in BlockGainCount;
-    /// the card scan (CardCoverage) flags any other card that does.
+    /// Separate times one play gains you block, read from its program (decision #182: each CreatureCmd.GainBlock, CardEffects.Find), on
+    /// the board: each gain on its condition (Mad Science's rider), times its loops' rounds (Second Wind your non-Attacks, Cho Limbs 2,
+    /// Evil Eye twice after an exhaust this turn, Death's Door one more Repeat after Doom, Cho Firm twice with an arrow to shoot); a loop
+    /// over every player (Rally) gains yours once. None when the game says the card gains no block now (CardModel.GainsBlock: Sovereign
+    /// Blade without Parry, Mad Science not a Skill, a Power whose Block is for later); one when it does and its program shows no gain.
+    /// The game's template card (no owner: the coverage scan) counts every gain its code makes.
     /// </summary>
-    internal static readonly HashSet<string> RepeatedBlockCards = new()
+    internal static int BlockGainCount(CardModel card)
     {
-        nameof(SecondWind), nameof(ChoLimbs), nameof(ChoFirm), nameof(EvilEye), nameof(DeathsDoor),
-        // Its loop is over the living players: each gains block once, you included (once), so the default count holds.
-        nameof(Rally),
-    };
-
-    internal static int BlockGainCount(CardModel card, string name, List<CardModel> others)
-    {
-        if (name == nameof(SecondWind)) return others.Count(other => other.Type != CardType.Attack);
-        // Twice when its owner exhausted a card this turn (EvilEye.WasCardExhaustedThisTurn, the game's own answer, read by name).
-        if (name == nameof(EvilEye)) return OwnerOf(card) != null && Sts2State.Private(card, "WasCardExhaustedThisTurn", fallback: false) ? 2 : 1;
-        // 1, plus its Repeat when its owner applied Doom this turn (DeathsDoor.WasDoomAppliedThisTurn, read by name).
-        if (name == nameof(DeathsDoor))
-            return 1 + (OwnerOf(card) != null && Sts2State.Private(card, "WasDoomAppliedThisTurn", fallback: false) ? Sts2State.Var(card, "Repeat", fallback: 0) : 0);
-        // Block equal to the damage it dealt / to your current block: no Block value.
-        if (name is nameof(Fisticuffs) or nameof(Entrench)) return 1;
-        // Gains its Block twice (ChoLimbs); Cho Firm a second time while you have an arrow to shoot.
-        if (name == nameof(ChoLimbs)) return 2;
-        if (name == nameof(ChoFirm)) return OwnerOf(card) is { } player && Fool.ArrowsAvailable(player) > 0 ? 2 : 1;
-        // The game's own answer (CardModel.GainsBlock, on both branches): Sovereign Blade only while you have Parry, Mad Science only
-        // as a Skill, and no block on play from a Power whose Block value is for later (Pillar of Creation, Shroud). PlayFactsTests
-        // checks it against every card.
-        // The game's template card (no owner, for the coverage scan) counts by its value: it can gain block.
-        var hasValue = card.DynamicVars.ContainsKey("Block") || card.DynamicVars.ContainsKey("CalculatedBlock");
-        if (OwnerOf(card) == null) return hasValue ? 1 : 0;
-        return card.GainsBlock ? 1 : 0;
+        if (OwnerOf(card) != null && !card.GainsBlock) return 0;
+        var type = card.GetType();
+        var program = Programs.CardPrograms.Of(type);
+        var board = new Programs.ProgramBoard(card);
+        var gains = Programs.CardEffects.BlockGains(type);
+        if (gains.Count == 0) return OwnerOf(card) != null ? 1 : 0;
+        var count = 0;
+        foreach (var gain in gains)
+        {
+            if (Programs.ProgramEvaluator.Holds(gain.Condition, board, program) == false) continue;
+            // The loop over the players it gains each one's block in: yours once.
+            count += gain.Loops.Aggregate(1, (times, loop) => times * (Programs.CardEffects.GainsForEachOfLoop(gain.Command) ? 1 : Rounds(loop, board, program)));
+        }
+        return count;
     }
 
     /// <summary>

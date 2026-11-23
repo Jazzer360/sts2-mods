@@ -264,6 +264,12 @@ hooks.
     the X hooks). They replaced `SimAdapter.Channels`, `RepeatChannels`, `SlotChange`, `ChannelKind`, `HandlesChannel`, the evoke cards'
     switch in `OrbsOf` and `EvokedOrbs`, and `PlayFacts.ChannelCount`'s cases. Fix: upgraded Tempest's extra Lightning is counted for
     Metronome (its channels already were).
+  - Block gains (2026-11-23, round three): `PlayFacts.BlockGainCount` counts each `CreatureCmd.GainBlock` of the play
+    (`CardEffects.BlockGains`) on its condition, times its loops' rounds (Second Wind, Cho Limbs, Evil Eye, Death's Door, Cho Firm;
+    Rally's loop over every player gains yours once), none when the game's `GainsBlock` says none. `RepeatedBlockCards`,
+    `BlockGainCount`'s cases and Fool's `BlockWithoutVar` (the props are the gain's own argument) are gone; the card scan holds a gain in
+    a loop to its rounds being readable (`CardEffects.RoundsReadable`). Fix: Bone Shards and Sacrifice with Osty missing gain no block
+    (their code returns first; the game's flag doesn't say so).
   - **The evaluator** (`ProgramEvaluator`) evaluates a condition before the play, each query translated once: a property of the
     game's objects is read (the game's own answer), a method only when it only asks (`Is`, `Has`, `Can`, `Get`, `Contains`,
     `HappenedThisTurn`), never anything about the RNG; Linq over a collection with the code's own lambda; your hand without the
@@ -351,11 +357,11 @@ references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter
 | `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The tests are read now (Pillage's loop's `While`: the drawn card, its type, your hand's room; Escape Plan's block on the drawn card being a Skill); what's left is turning a test of a command's result into the simulator's `DrawnCardAction`. |
 | (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
 | `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
-| `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | block and multi-hit cards | Counts from loops and conditions (Evil Eye's `i < blockGains`, a `WaysValue` now; Cho Firm's arrow test). The orbs show the way (`PlayFacts.Rounds`: a loop's rounds on the board); what's left is the count rule for block gains and hits. |
+| `HitsPerPlay`'s cases | multi-hit and conditional attacks | An attack's hit count as a value (`WithHitCount`'s argument), its condition (Dismantle's Vulnerable target, Nail's Impaled one, Spite's HP lost, Pact's End's exhausts) and its loops' rounds, as block gains are counted now. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TriggerPoisonCards`, `TeammatesShivCards`, `EnemyStrengthCards` | Outbreak, Blade Symphony, Strength takers | A call on a power (`PoisonPower.Trigger` isn't a command); the player a helper's Shivs go to (an argument inside the helper); a power's sign and duration. |
 | `GlowGatedAttackCards`, `GlowNotTheAttack` | Pact's End; Fetch, Flatten, Nail | Whether the card's glow (`ShouldGlowGoldInternal`) is its attack's condition. Both can be read now (`CardProgramReader.ReadProperty` reads the glow's getter; the attack's condition is a value), so the attack's condition can simply be evaluated instead: the tables can go with `HitsPerPlay`'s cases. |
-| `AutoPlayFromDrawAction`'s count, `Fool.BlockWithoutVar` | Havoc, Cascade, The Devil | The count argument (`cards.Count`, X + 1 upgraded: a `WaysValue` now). |
+| `AutoPlayFromDrawAction`'s count | Havoc, Cascade, The Devil | The count argument (`cards.Count`, X + 1 upgraded: a `WaysValue` now). |
 
 ## Part B: pipelines and models checked against the game's code
 

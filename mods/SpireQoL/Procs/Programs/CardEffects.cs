@@ -513,6 +513,25 @@ public static class CardEffects
         return found;
     }
 
+    // ---- block
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<Found>> BlockSteps = new();
+
+    /// <summary>The play's block gains (CreatureCmd.GainBlock: for you, the teammate it's aimed at, or each player a loop goes over), in order.</summary>
+    public static IReadOnlyList<Found> BlockGains(Type cardType) => BlockSteps.GetOrAdd(cardType, type => BlockGains(CardPrograms.Of(type)));
+    public static IReadOnlyList<Found> BlockGains(CardProgram program) => Find(program, command => Is(command, "CreatureCmd", "GainBlock"));
+
+    /// <summary>The gain is for each item of the loop it's in (Rally: each living player), not the same creature each round.</summary>
+    public static bool GainsForEachOfLoop(CommandStep gain) => gain.Values.Count > 0 && Unstored(gain.Values[0]) is NamedValue { Name: "each" };
+
+    /// <summary>
+    /// How many rounds a loop goes can be read from its code: a foreach over a collection read whole, or a counter below a bound read
+    /// whole (i &lt; Repeat, i &lt; blockGains). The card scan holds a loop doing something the predictions count to it.
+    /// </summary>
+    public static bool RoundsReadable(LoopStep loop) =>
+        loop.Items != null && !loop.Items.Parts().Any(part => part is UnknownValue)
+        || loop.While is { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] } && !bound.Right.Parts().Any(part => part is UnknownValue);
+
     // ---- orbs
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<Found>> ChannelSteps = new();

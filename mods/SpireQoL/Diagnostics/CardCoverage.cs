@@ -192,16 +192,20 @@ internal static class CardCoverage
             issues.Add("channels orbs (the simulator doesn't add them)");
         if (Calls("OrbCmd", "Channel") && None(PlayFacts.ChannelCount))
             issues.Add("channels orbs (not counted for Metronome)");
-        if (Calls("CreatureCmd", "GainBlock") && None(otherCard => PlayFacts.BlockGainCount(otherCard, name, others)))
-            issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");
-        // Block more than once in one play (Evil Eye twice after an exhaust): each gain sets off Juggernaut and block reactions.
-        if (Calls("CreatureCmd", "GainBlock") && RepeatsCall(card.GetType(), "CreatureCmd", "GainBlock") && !PlayFacts.RepeatedBlockCards.Contains(name))
-            issues.Add("can gain block more than once in a play (a loop or two calls: counted once; PlayFacts.BlockGainCount needs a rule)");
+        if (Calls("CreatureCmd", "GainBlock") && None(PlayFacts.BlockGainCount))
+            issues.Add("gains block its program doesn't show (not in the simulator or Juggernaut)");
+        // Block more than once in one play (Evil Eye twice after an exhaust): each gain sets off Juggernaut and block reactions, counted
+        // by its loops' rounds (PlayFacts.BlockGainCount), which must be readable.
+        if (Procs.Programs.CardEffects.BlockGains(card.GetType()).Any(gain => gain.Loops.Any(loop => !Procs.Programs.CardEffects.RoundsReadable(loop))
+                                                                              && !Procs.Programs.CardEffects.GainsForEachOfLoop(gain.Command)))
+            issues.Add("gains block in a loop whose rounds can't be read (counted once: PlayFacts.BlockGainCount)");
         // A block card that applies Stretch keeps it for a replay's later plays (Cho Ki); the simulator spends it otherwise.
         if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !Procs.Programs.CardEffects.KeepsStretchForReplays(card.GetType()))
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
-        // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
-        if (card.GainsBlock && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
+        // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or from the props its code
+        // gives its gain (Fisticuffs the damage it dealt as a Move, Entrench your block Unpowered).
+        if (card.GainsBlock && Fool.BlockProps(card) == null
+            && !Procs.Programs.CardEffects.BlockGains(card.GetType()).Any(gain => gain.Command.Values.Count > 2 && gain.Command.Values[2] is Procs.Programs.ConstantValue))
             issues.Add("gains block without a Block value (whether it spends Stretch isn't known: Stretch tab)");
         // A card that isn't an attack but damages its target (Capture Spirit), read from its program: one damaging anything else isn't modelled.
         if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !Procs.Programs.CardEffects.DamagesTargetWithoutAttacking(card.GetType()))
@@ -349,34 +353,6 @@ internal static class CardCoverage
             }
         }
         return set;
-    }
-
-    /// <summary>
-    /// The card's OnPlay calls Type.Method more than once, or inside a loop (a call between a backward branch and its target).
-    /// </summary>
-    private static bool RepeatsCall(Type cardType, string type, string method)
-    {
-        foreach (var onPlayMethod in OnPlayMethods(cardType))
-        {
-            try
-            {
-                var code = SpireQoL.Diagnostics.GameCode.Instructions(onPlayMethod);
-                var at = Enumerable.Range(0, code.Count)
-                    .Where(index => code[index].operand is MethodInfo nextMethod && nextMethod.Name == method && nextMethod.DeclaringType?.Name == type).ToList();
-                if (at.Count > 1) return true;
-                if (at.Count == 0) continue;
-                var labels = new Dictionary<System.Reflection.Emit.Label, int>();
-                for (var i = 0; i < code.Count; i++) foreach (var label in code[i].labels) labels[label] = i;
-                for (var i = 0; i < code.Count; i++)
-                    if (code[i].operand is System.Reflection.Emit.Label otherLabel && labels.TryGetValue(otherLabel, out var to) && to < i && at.Any(call => call >= to && call < i))
-                        return true;
-            }
-            catch
-            {
-                // unreadable method
-            }
-        }
-        return false;
     }
 
     /// <summary>"Type.Method" (and "PowerCmd.Apply&lt;T&gt;") for every call in the card's play (CardCode.OnPlayCalls).</summary>

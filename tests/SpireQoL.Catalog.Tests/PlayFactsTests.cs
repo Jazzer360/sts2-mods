@@ -53,7 +53,13 @@ public class PlayFactsTests
     {
         // CardModel.GainsBlock: the game's own flag (its card glow, Stretch). A Power whose Block value is for later gains none
         // on play; Sovereign Blade only with Parry.
-        var wrong = EveryCard().Where(cardFacts => cardFacts.Facts != null && (cardFacts.Facts.BlockGains > 0) != cardFacts.Card.GainsBlock)
+        // A card whose every gain waits on a condition that fails on this board (Bone Shards and Sacrifice: Osty missing) gains none,
+        // which the game's flag doesn't say.
+        static bool GainsWaitOnAFailedTest(MegaCrit.Sts2.Core.Models.CardModel card) =>
+            Procs.Programs.CardEffects.BlockGains(card.GetType()) is { Count: > 0 } gains
+            && gains.All(gain => Procs.Programs.ProgramEvaluator.Holds(gain.Condition, new Procs.Programs.ProgramBoard(card), Procs.Programs.CardPrograms.Of(card.GetType())) == false);
+        var wrong = EveryCard().Where(cardFacts => cardFacts.Facts != null && (cardFacts.Facts.BlockGains > 0) != cardFacts.Card.GainsBlock
+                                                   && !(cardFacts.Facts.BlockGains == 0 && GainsWaitOnAFailedTest(cardFacts.Card)))
             .Select(cardFacts => $"{cardFacts.Card.GetType().Name}: counted {cardFacts.Facts!.BlockGains}, the game says {cardFacts.Card.GainsBlock}").ToList();
         Assert.True(wrong.Count == 0, string.Join("\n", wrong));
     }

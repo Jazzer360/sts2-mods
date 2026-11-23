@@ -1,4 +1,3 @@
-using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
@@ -124,12 +123,6 @@ internal static class Fool
 
     private static readonly Func<MegaCrit.Sts2.Core.Models.EnchantmentModel, bool>? EnchantmentGainsBlockOf =
         BetaOnly.Gate<Func<MegaCrit.Sts2.Core.Models.EnchantmentModel, bool>>(EnchantmentFlag);
-
-    /// <summary>
-    /// Block cards with no Block value, and whether their block is powered (a Move without Unpowered): Fisticuffs
-    /// gains the damage it dealt (ValueProp.Move), Entrench doubles your block (Unpowered). The card scan flags a new one.
-    /// </summary>
-    internal static readonly Dictionary<string, bool> BlockWithoutVar = new() { [nameof(Fisticuffs)] = true, [nameof(Entrench)] = false };
 
     /// <summary>The props of the card's block value (a BlockVar, or a CalculatedBlockVar: Stack, Mimic), or null without one.</summary>
     public static MegaCrit.Sts2.Core.ValueProps.ValueProp? BlockProps(CardModel card)
