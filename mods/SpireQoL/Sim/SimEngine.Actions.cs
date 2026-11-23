@@ -132,15 +132,19 @@ public static partial class SimEngine
     /// <summary>
     /// Cleanse: the card you choose from your draw pile is exhausted (decision #167: your later decision): a plain card when the pile
     /// has one, else the same whichever you take (its energy when it acts when exhausted). When they differ, the pick is a card and
-    /// never a particular one (decision #92): the pile is left as it was, nothing a particular card would do is followed. With no
-    /// pile read, only its count is kept.
+    /// never a particular one (decisions #92, #188): the pile holds one card fewer (SimDrawPile.Picked), and nothing a particular card
+    /// would do is followed. With no pile read, only its count is kept.
     /// </summary>
     private static IEnumerable<SimState> ExhaustChosenFromDrawPile(SimState state, int owner)
     {
         if (state.Player(owner)?.Draw is not { Count: > 0 } pile) return new[] { state };
         var profiles = pile.Top.Concat(pile.Rest.Select(group => group.Card)).DistinctBy(card => card.Key).ToList();
         var card = profiles.FirstOrDefault(profile => profile.Plain) ?? (profiles.Count == 1 ? profiles[0] : null);
-        if (card == null) return new[] { state };
+        if (card == null)
+        {
+            state.MutablePlayer(owner).Draw = pile.WithOnePicked();
+            return new[] { state };
+        }
         var simPlayer = state.MutablePlayer(owner);
         simPlayer.Draw = pile.Rest.FindIndex(group => group.Card.Key == card.Key) is var restIndex and >= 0
             ? pile.WithoutOneOf(restIndex)

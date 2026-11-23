@@ -71,15 +71,24 @@ public sealed class SimDrawPile
     public List<SimDrawGroup> Rest { get; init; } = new();
     public List<SimDrawGroup> Discard { get; init; } = new();
 
+    /// <summary>
+    /// Cards a pick took from the pile with no profile taken for them (Cleanse: you choose which, among cards that differ; decision
+    /// #188, a pick is a card, never a particular one): the pile holds that many fewer, each draw still weighted by the profiles' counts.
+    /// </summary>
+    public int Picked { get; init; }
+
     public int RestCount => Rest.Sum(group => group.Count);
-    public int Count => Top.Count + RestCount;
+    public int Count => Math.Max(0, Top.Count + RestCount - Picked);
     public int DiscardCount => Discard.Sum(group => group.Count);
 
     /// <summary>The top card drawn.</summary>
     internal SimDrawPile WithoutTop() => WithoutTopAt(0);
 
     /// <summary>The known top card at <paramref name="index"/> taken out (the cards above it stay on top, in order).</summary>
-    internal SimDrawPile WithoutTopAt(int index) => new() { Top = Top.Where((_, at) => at != index).ToList(), Rest = Rest, Discard = Discard };
+    internal SimDrawPile WithoutTopAt(int index) => new() { Top = Top.Where((_, at) => at != index).ToList(), Rest = Rest, Discard = Discard, Picked = Picked };
+
+    /// <summary>One card a pick took, which isn't followed (Picked).</summary>
+    internal SimDrawPile WithOnePicked() => new() { Top = Top, Rest = Rest, Discard = Discard, Picked = Picked + 1 };
 
     /// <summary>One card of the group at <paramref name="groupIndex"/> drawn from the rest.</summary>
     internal SimDrawPile WithoutOneOf(int groupIndex) => new()
@@ -87,6 +96,7 @@ public sealed class SimDrawPile
         Top = Top,
         Rest = Rest.Select((group, index) => index == groupIndex ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
         Discard = Discard,
+        Picked = Picked,
     };
 
     /// <summary>One card of the discard pile's group at <paramref name="groupIndex"/> taken out.</summary>
@@ -94,6 +104,7 @@ public sealed class SimDrawPile
     {
         Top = Top, Rest = Rest,
         Discard = Discard.Select((group, index) => index == groupIndex ? group with { Count = group.Count - 1 } : group).Where(group => group.Count > 0).ToList(),
+        Picked = Picked,
     };
 
     /// <summary>A card put among the known top cards, at <paramref name="index"/> (the ones above it stay above).</summary>
@@ -101,7 +112,7 @@ public sealed class SimDrawPile
     {
         var top = new List<SimDrawCard>(Top);
         top.Insert(index, card);
-        return new() { Top = top, Rest = Rest, Discard = Discard };
+        return new() { Top = top, Rest = Rest, Discard = Discard, Picked = Picked };
     }
 
     /// <summary>A card put somewhere in the unordered rest.</summary>
@@ -112,6 +123,7 @@ public sealed class SimDrawPile
             ? Rest.Select(group => group.Card.Key == card.Key ? group with { Count = group.Count + 1 } : group).ToList()
             : Rest.Append(new SimDrawGroup(card, Count: 1)).OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList(),
         Discard = Discard,
+        Picked = Picked,
     };
 
     /// <summary>Some I Am Invincible in the pile.</summary>
@@ -124,6 +136,7 @@ public sealed class SimDrawPile
         Discard = Discard.Any(group => group.Card.Key == card.Key)
             ? Discard.Select(group => group.Card.Key == card.Key ? group with { Count = group.Count + 1 } : group).ToList()
             : new List<SimDrawGroup>(Discard) { new(card, Count: 1) },
+        Picked = Picked,
     };
 
     /// <summary>
@@ -146,7 +159,9 @@ public sealed class SimDrawPile
         var all = Top.Select(card => new SimDrawGroup(card, Count: 1)).Concat(Rest).Concat(Discard).Concat(added)
             .GroupBy(group => group.Card.Key).Select(sameProfile => new SimDrawGroup(sameProfile.First().Card, sameProfile.Sum(group => group.Count)))
             .Where(group => group.Count > 0).OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList();
-        return new SimDrawPile { Discard = all }.Shuffled();
+        // The cards a pick took stay gone: which ones isn't known, so the shuffled pile holds that many fewer.
+        var shuffled = new SimDrawPile { Discard = all }.Shuffled();
+        return new SimDrawPile { Top = shuffled.Top, Rest = shuffled.Rest, Discard = shuffled.Discard, Picked = Picked };
     }
 
     /// <summary>For the branch key: what's left, by profile.</summary>
@@ -156,5 +171,6 @@ public sealed class SimDrawPile
         foreach (var drawn in Top) add(drawn.Key.GetHashCode());
         foreach (var group in Rest) { add(group.Card.Key.GetHashCode()); add(group.Count); }
         add(DiscardCount);
+        add(Picked);
     }
 }

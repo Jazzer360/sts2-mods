@@ -111,6 +111,29 @@ public class SimExhaustingCardTests
         var after = Assert.Single(SimEngine.Run(state, Exhausting(new ExhaustFromHandAction(ExhaustPick.Chosen) { FromDrawPile = true })).Branches);
         Assert.Null(after.Unmodelled);
         Assert.Equal(0, after.You.Energy);
+        // A card left the pile whichever you took (decision #188): one fewer to draw, no particular one taken.
+        Assert.Equal(2, after.You.Draw!.Count);
+    }
+
+    [Fact]
+    public void CleansesPickLeavesOneCardFewerToDraw()
+    {
+        // Three cards that differ, one picked and exhausted: a draw of three later this turn draws two, then shuffles the discard
+        // pile in for the third (the game: CardPileCmd.Draw's ShuffleIfNecessary once the draw pile is empty).
+        var state = Hand(cards: 2);
+        state.You.Draw = new SimDrawPile
+        {
+            Rest = { new SimDrawGroup(new SimDrawCard("drum") { Type = SimCardType.Skill, Exhausting = Drum(id: 0) }, Count: 1), new SimDrawGroup(new SimDrawCard("skill") { Type = SimCardType.Skill }, Count: 2) },
+            Discard = { new SimDrawGroup(new SimDrawCard("plain"), Count: 4) },
+        };
+        var play = Exhausting(new ExhaustFromHandAction(ExhaustPick.Chosen) { FromDrawPile = true });
+        play.Body.Add(new CardEventAction(CardEvent.Drawn, Count: 3));
+        var result = SimEngine.Run(state, play);
+        Assert.All(result.Branches, branch =>
+        {
+            Assert.Equal(3, branch.You.Draw!.Count); // the discard pile's four, one drawn
+            Assert.Equal(0, branch.You.Draw.DiscardCount);
+        });
     }
 
     [Fact]
