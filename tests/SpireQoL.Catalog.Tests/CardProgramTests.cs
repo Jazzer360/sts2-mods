@@ -19,12 +19,12 @@ public class CardProgramTests
     {
         // Block, then the attack: Thorns' answer hits the block.
         ["IronWave"] = "IronWave: CreatureCmd.GainBlock, DamageCmd.Attack",
-        // Exhausts the hand one card at a time, then attacks once per card.
-        ["FiendFire"] = "FiendFire: loop over each item [CardCmd.Exhaust], DamageCmd.Attack",
+        // Exhausts the hand one card at a time (a loop over your hand's cards), then attacks once per card.
+        ["FiendFire"] = "FiendFire: loop over each of Hand.Cards.ToList [CardCmd.Exhaust], DamageCmd.Attack",
         // Energy only when a hit killed (a condition on the attack's results).
         ["Sunder"] = "Sunder: DamageCmd.Attack, PlayerCmd.GainEnergy if Any",
         // Exhaust, then block, card by card.
-        ["SecondWind"] = "SecondWind: loop over each item [CardCmd.Exhaust, CreatureCmd.GainBlock]",
+        ["SecondWind"] = "SecondWind: loop over each of GetCards.ToList [CardCmd.Exhaust, CreatureCmd.GainBlock]",
         // Draws, then the pick, then the discard of what was picked.
         ["Acrobatics"] = "Acrobatics: CardPileCmd.Draw, choice FromHandForDiscard, CardCmd.Discard if FirstOrDefault",
         // Draws before its No Draw.

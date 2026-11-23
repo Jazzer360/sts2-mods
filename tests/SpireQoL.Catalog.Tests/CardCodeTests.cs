@@ -42,7 +42,7 @@ public class CardCodeTests
         GameModels.EnsureLoaded();
         var notCounted = ModelDb.AllCards
             .Where(card => CardCode.Calls(card.GetType(), "CardPileCmd", "Draw"))
-            .Where(card => !PlayFacts.AllyDrawCards.Contains(card.GetType().Name) && !PlayFacts.TargetDrawCards.Contains(card.GetType().Name)
+            .Where(card => !SpireQoL.Procs.Programs.CardEffects.DrawsForTarget(card.GetType()) && !PlayFacts.TargetDrawCards.Contains(card.GetType().Name)
                            && !PlayFacts.ConditionalDrawCards.Contains(card.GetType().Name)
                            && !card.DynamicVars.ContainsKey("CalculatedCards")) // a count from the fight: none on the template card
             .Where(card => PlayFacts.CardsDrawn(card, handCount: 5) + PlayFacts.CardsDrawn(card, handCount: 1) == 0)
@@ -57,7 +57,7 @@ public class CardCodeTests
         // Gather Light gains stars on every play; Knockout Blow only when its attack kills (the attack's, not the play's).
         Assert.Equal(1, PlayFacts.StarGainsOf(ModelDb.Card<GatherLight>()));
         Assert.Equal(0, PlayFacts.StarGainsOf(ModelDb.Card<KnockoutBlow>()));
-        Assert.Contains(nameof(KnockoutBlow), PlayFacts.KillStarCards);
+        Assert.True(SpireQoL.Procs.Programs.CardEffects.GainsStarsOnKill(typeof(KnockoutBlow)));
     }
 
     [Fact]

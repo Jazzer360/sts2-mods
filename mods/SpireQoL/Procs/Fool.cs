@@ -58,8 +58,6 @@ internal static class Fool
     /// </summary>
     public static bool Shoots(CardModel card, Player me) => TriesShot(card) && ArrowsAvailable(me) > 0;
 
-    /// <summary>Cards that pull every arrow of yours out of their target (ArrowCmd.DislodgeArrow in OnPlay).</summary>
-    public static readonly HashSet<string> DislodgeCards = new() { nameof(Recall), nameof(Uproot), nameof(Wrest) };
 
     public static IEnumerable<SimCardTag> Melodies(CardModel card) => MelodyTags.Where(simCardTag => HasTag(card, simCardTag));
 
@@ -107,7 +105,7 @@ internal static class Fool
     public static IEnumerable<string> PowersTouched(CardModel card)
     {
         if (IsShot(card)) { yield return nameof(ImpaledPower); yield return nameof(AimPower); yield return nameof(QuietusPower); }
-        if (card.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Attack || DislodgeCards.Contains(card.GetType().Name)) yield return nameof(ImpaledPower);
+        if (card.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Attack || Programs.CardEffects.DislodgesArrows(card.GetType())) yield return nameof(ImpaledPower);
         if (StretchCard(card)) yield return nameof(StretchPower);
     }
 

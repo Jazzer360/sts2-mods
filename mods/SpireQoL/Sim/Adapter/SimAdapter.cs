@@ -81,29 +81,11 @@ public static partial class SimAdapter
         return 0;
     }
 
-    /// <summary>
-    /// Block cards that put back the Stretch they use (Cho Ki: applies the Stretch it had when played, before the play
-    /// spends it), so a replay's later plays get Stretch too (v0.113.0). The card scan flags a new one.
-    /// </summary>
-    internal static readonly HashSet<string> KeepsStretchCards = new() { nameof(ChoKi) };
-
     /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
     internal static readonly HashSet<string> RepeatPerKillCards = new() { nameof(EchoingSlash) };
 
     /// <summary>Cards that set off every enemy's poison during the play (Outbreak: PoisonPower.Trigger on each).</summary>
     internal static readonly HashSet<string> TriggerPoisonCards = new() { nameof(Outbreak) };
-
-    /// <summary>
-    /// Cards that summon every living player's Osty (LegionOfBone.OnPlay: OstyCmd.Summon for each of CombatState.PlayerCreatures),
-    /// reviewed in CardCoverage.TeammateTargetModelled: the play check expects their summon on each player.
-    /// </summary>
-    internal static readonly HashSet<string> AllPlayersSummonCards = new() { nameof(LegionOfBone) };
-
-    /// <summary>
-    /// Cards that make every living teammate draw (HuddleUp.OnPlay: CardPileCmd.DrawWithoutBlockingOnOtherPlayers for each),
-    /// not you: their draws are their card events (their draw procs), as many as their hand has room for and their piles hold.
-    /// </summary>
-    internal static readonly HashSet<string> TeammatesDrawCards = new() { nameof(HuddleUp) };
 
     /// <summary>
     /// Cards that put Shivs into every living teammate's hand, not yours (BladeSymphony.OnPlay: Shiv.CreateInHand(teammate),
@@ -384,7 +366,7 @@ public static partial class SimAdapter
             // Something that auto-plays the top of your draw pile (Havoc, Cascade, The Devil in your hand; Lost Lute's power): how each
             // card plays from there goes into its profile, and which card it is.
             var handCards = PileType.Hand.GetPile(me).Cards;
-            var topPlays = handCards.Any(card => PlaysFromDrawPile.Contains(card.GetType().Name) || card.GetType().Name == nameof(LostLute))
+            var topPlays = handCards.Any(card => Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()) || card.GetType().Name == nameof(LostLute))
                            || me.Creature.Powers.Any(power => power.GetType().Name == nameof(LostLutePower));
             var topUpgrades = handCards.Any(card => card.GetType().Name == nameof(TheDevil) && card.IsUpgraded);
             var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
@@ -457,7 +439,7 @@ public static partial class SimAdapter
                 Discard = Groups(PileType.Discard.GetPile(me).Cards),
             };
             // The cards in your hand too, for a play that puts them into your draw pile (Reboot).
-            if (handCards.Any(card => PlayFacts.ShuffleCards.Contains(card.GetType().Name)))
+            if (handCards.Any(card => Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())))
                 foreach (var card in handCards) Remembered(card);
             DrawProfiles = profiles;
             // Cards something on this board makes into your draw pile (Personal Hive's Dazed, Biiig Hug's Soot): their profiles, from
@@ -544,12 +526,6 @@ public static partial class SimAdapter
     /// <summary>Which card in your hand a play is (SimPlay.HandCard, SimHandCard.Id): its object identity.</summary>
     public static int HandId(CardModel card) => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(card) | 1;
 
-    /// <summary>
-    /// Cards whose play auto-plays cards from the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile, CardPilePosition.Top), from
-    /// each OnPlay: Havoc one (exhausted after), Cascade X, The Devil one per card it exhausted from your hand. The card scan holds every
-    /// card calling it to this list.
-    /// </summary>
-    internal static readonly HashSet<string> PlaysFromDrawPile = new() { nameof(Havoc), nameof(Cascade), nameof(TheDevil) };
 
     /// <summary>
     /// How <paramref name="played"/> plays when a card auto-plays it from your draw pile (SimDrawCard.FromPile): as an auto-play of a

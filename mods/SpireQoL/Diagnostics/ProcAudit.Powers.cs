@@ -161,7 +161,7 @@ public sealed partial class ProcAudit
             // The fight's cleanup clears the relics' status as the play ends it (AfterCombatEnd: Status = Normal).
             if (window.FightEnded) { model.Skip(tabbed ? "didn't fire" : "no tab", FightEndedSkip, name); continue; }
             // Cards the play auto-played at random (Lost Lute, The Fool) can be the turn's first Attack, or spend energy.
-            if (UnpredictedAutoPlay(window, entries, me)) { model.Skip(tabbed ? "didn't fire" : "no tab", "random auto-plays", name); continue; }
+            if (UnpredictedAutoPlay(window, entries, me)) { model.Skip(tabbed ? "didn't fire" : "no tab", AutoPlayReason(window, entries, "random auto-plays"), name); continue; }
             issues.Add(tabbed ? $"didn't fire: {name} (crossed: {what})" : $"no tab: {name} gave up its bonus ({what})");
         }
     }
@@ -185,7 +185,7 @@ public sealed partial class ProcAudit
             return;
         }
         if (window.FightEnded) { model.Skip("drawn", FightEndedSkip, name); return; }
-        if (UnpredictedAutoPlay(window, entries, me)) { model.Skip("drawn", "random auto-plays", name); return; }
+        if (UnpredictedAutoPlay(window, entries, me)) { model.Skip("drawn", AutoPlayReason(window, entries, "random auto-plays"), name); return; }
         if (window.Facts.SimIncomplete || window.Facts.Unmodelled.Count > 0) { model.Skip("drawn", "its simulation stopped at a cap or met something not modelled", name); return; }
         var drawn = entries.OfType<CardDrawnEntry>().Where(cardDrawnEntry => !cardDrawnEntry.FromHandDraw && cardDrawnEntry.Card.Owner == me).Select(cardDrawnEntry => cardDrawnEntry.Card).ToList();
         static bool Free(CardModel card)
@@ -226,6 +226,24 @@ public sealed partial class ProcAudit
     private static bool UnpredictedAutoPlay(Window window, List<CombatHistoryEntry> entries, Player me)
         => entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && cardPlayStartedEntry.CardPlay.Card.Owner == me && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)
             && !HellraiserDrew(window, entries, me, cardPlayStartedEntry.CardPlay.Card));
+
+    /// <summary>
+    /// Why an auto-play's effects aren't checked: when every card auto-played (other than the pick you chose) is one you picked for the
+    /// play to discard (a Sly card playing itself), it's what your pick caused. A pick is a card, never a particular one (decision #92):
+    /// what only that card does isn't predicted, so it's excused like a roll and counted under its own reason. Otherwise
+    /// <paramref name="otherwise"/>.
+    /// </summary>
+    private static string AutoPlayReason(Window window, List<CombatHistoryEntry> entries, string otherwise)
+    {
+        if (!Procs.Programs.CardEffects.DiscardsOnlyPicks(window.Card.GetType())) return otherwise;
+        var discarded = entries.OfType<CardDiscardedEntry>().Select(cardDiscardedEntry => cardDiscardedEntry.Card).ToHashSet(ReferenceEqualityComparer.Instance);
+        var autoPlayed = entries.OfType<CardPlayStartedEntry>()
+            .Where(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)).ToList();
+        return autoPlayed.Count > 0 && autoPlayed.All(cardPlayStartedEntry => discarded.Contains(cardPlayStartedEntry.CardPlay.Card)) ? PickPlayedItself : otherwise;
+    }
+
+    /// <summary>The skip reason for what a card you picked did itself (a Sly card you discarded playing itself).</summary>
+    internal const string PickPlayedItself = "the card you picked played itself (Sly)";
 
     /// <summary>A Strike drawn in the play while you have Hellraiser, with a simulation that modelled everything (decision #121).</summary>
     private static bool HellraiserDrew(Window window, List<CombatHistoryEntry> entries, Player me, CardModel card)

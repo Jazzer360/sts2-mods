@@ -82,7 +82,7 @@ public static partial class SimAdapter
             play.Body.Add((shot ? attack with { NeedsArrow = true } : attack) with { StretchFromDamage = name == nameof(BlossomShot) });
         if (shot) play.Body.Add(new ImpaleAction());
         // Recall, Uproot, Wrest: every arrow of yours out of the target.
-        if (Fool.DislodgeCards.Contains(name)) play.Body.Add(new DislodgeAllAction());
+        if (Procs.Programs.CardEffects.DislodgesArrows(card.GetType())) play.Body.Add(new DislodgeAllAction());
         if (facts.BlockGains > 0 && BlockOf(card, facts, me, combat, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
         // Block for every player (Rally): the same value to each living teammate too, worked out on them (their Dexterity, Frail).
         if (facts.BlockGains > 0 && Procs.Programs.CardEffects.BlocksEachPlayer(card.GetType()) && card.DynamicVars.TryGetValue("Block", out var allBlock))
@@ -97,14 +97,15 @@ public static partial class SimAdapter
         }
         // Teammates' draws and created cards (Huddle Up, Blade Symphony, Constellation's draws for its target): their card
         // events, for their procs. Indirect, like your own draws and created cards.
-        if (TeammatesDrawCards.Contains(name) || TeammatesShivCards.Contains(name) || (PlayFacts.AllyDrawCards.Contains(name) && ally != null))
+        var drawsForTarget = Procs.Programs.CardEffects.DrawsForTarget(card.GetType());
+        if (Procs.Programs.CardEffects.DrawsForEachTeammate(card.GetType()) || TeammatesShivCards.Contains(name) || (drawsForTarget && ally != null))
         {
             var mates = Teammates(me, combat);
             var cards = Sts2State.Var(card, "Cards");
             for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
             {
                 if (mates[teammateIndex].Creature is not { IsAlive: true } mate) continue;
-                if (PlayFacts.AllyDrawCards.Contains(name) && mate != ally) continue;
+                if (drawsForTarget && mate != ally) continue;
                 var who = Who.Teammate(teammateIndex);
                 if (TeammatesShivCards.Contains(name))
                 {
@@ -127,18 +128,18 @@ public static partial class SimAdapter
         // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
         CardEnergy.AddTo(play, card, me, combat, ids.FirstOrDefault(entry => entry.Value == targetId).Key, owner, allyId);
         // Stars that wait on the attack's kill (Knockout Blow): the attack's, when its target dies.
-        if (PlayFacts.KillStarCards.Contains(name))
+        if (Procs.Programs.CardEffects.GainsStarsOnKill(card.GetType()))
             for (var i = 0; i < play.Body.Count; i++)
                 if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
         play.Body.AddRange(TakesToHand(facts, me, name));
         AddCardEvents(play, facts, plays);
         // Reboot: your hand into your draw pile and a shuffle (CardPileCmd.Shuffle) before its draws, right after the hand leaves.
-        if (PlayFacts.ShuffleCards.Contains(name) && play.Body.FindIndex(action => action is LeaveHandAction { Whole: true }) is var leaves and >= 0)
+        if (Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType()) && play.Body.FindIndex(action => action is LeaveHandAction { Whole: true }) is var leaves and >= 0)
             play.Body.Insert(leaves + 1, new ShuffleDrawPileAction(PileType.Hand.GetPile(me).Cards.Where(other => other != card)
                 .Select(other => DrawProfiles.GetValueOrDefault(other)).OfType<SimDrawCard>().GroupBy(profile => profile.Key)
                 .Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()));
         // Cards it auto-plays from the top of your draw pile, after what it does to your hand (The Devil exhausts it first).
-        if (PlaysFromDrawPile.Contains(name)) play.Body.Add(new AutoPlayFromDrawAction(name switch
+        if (Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType())) play.Body.Add(new AutoPlayFromDrawAction(name switch
         {
             nameof(Havoc) => 1,
             nameof(Cascade) => SafeInt(() => Hook.ModifyXValue(combat, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0),
@@ -251,8 +252,10 @@ public static partial class SimAdapter
             else if (facts.LeavesHand / plays > 0) into.Add(new LeaveHandAction(facts.LeavesHand / plays));
             Each(into, CardEvent.Discarded, facts.Discards, indirect: true);
             Each(into, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
-            // A Sly card it discards plays itself (CardCmd.Discard: AutoPlay, SlyDiscard): not simulated yet (tracker).
-            if (facts.MayDiscardSly) into.Add(new NotModelledAction("a Sly card in your hand it may discard plays itself"));
+            // A Sly card it discards without a choice (the whole hand: CardCmd.Discard's AutoPlay, SlyDiscard) plays itself: not
+            // simulated yet (tracker). One you pick is a card, never a particular one (decision #92): your own decision, neither
+            // simulated nor marked (PlayFacts.MayDiscardSly leaves picks out).
+            if (facts.MayDiscardSly) into.Add(new NotModelledAction("a Sly card in your hand it discards plays itself"));
             // How many it takes into your hand is your choice (Neow's Fury): your hand after it isn't known.
             if (facts.HandTakeChosen) into.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
         }
@@ -430,7 +433,7 @@ public static partial class SimAdapter
             {
                 actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
             }
-            else if (simPowerName == nameof(StretchPower) && KeepsStretchCards.Contains(name))
+            else if (simPowerName == nameof(StretchPower) && Procs.Programs.CardEffects.KeepsStretchForReplays(card.GetType()))
             {
                 // Cho Ki: your Stretch again, as much as you have (so the play keeps it).
                 actions.Add(new ApplyPowerAction(new PowerId(simPowerName), Amount: 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });
@@ -458,8 +461,8 @@ public static partial class SimAdapter
     internal sealed record HandTake(bool FromDiscard, Func<CardModel, bool> Eligible, bool Random = false, bool AllAtOnce = false);
 
     /// <summary>
-    /// How every card in PlayFacts.TakenToHandCards takes cards into your hand, from each card's OnPlay (decompile v0.113.1), so the
-    /// cards it takes leave their pile in the simulation (TakeToHandAction). The card scan holds every TakenToHandCards card to this
+    /// How every card that takes cards into your hand (CardEffects.TakesIntoHand, from its program) takes cards into your hand, from each card's OnPlay (decompile v0.113.1), so the
+    /// cards it takes leave their pile in the simulation (TakeToHandAction). The card scan holds every card the rule finds to this
     /// table (CardCoverage). Summon Forth takes its Sovereign Blades from both piles (SummonForthTakes); Neow's Fury takes as many as
     /// you choose (none counted).
     /// </summary>

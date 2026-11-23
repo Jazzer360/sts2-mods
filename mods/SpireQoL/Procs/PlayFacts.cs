@@ -63,7 +63,10 @@ public sealed class PlayFacts
     /// <summary>It takes your whole hand (Fiend Fire, Storm of Steel, Calculated Gamble...): everything in it goes, whatever it was.</summary>
     public bool TakesWholeHand { get; init; }
 
-    /// <summary>It discards from your hand while a Sly card is there (CardModel.IsSlyThisTurn): one it discards plays itself (CardCmd.Discard).</summary>
+    /// <summary>
+    /// It discards from your hand without a choice (its whole hand) while a Sly card is there (CardModel.IsSlyThisTurn): the Sly card plays
+    /// itself (CardCmd.Discard). A discard you pick isn't counted: a pick is a card, never a particular one (decision #92).
+    /// </summary>
     public bool MayDiscardSly { get; init; }
 
     /// <summary>
@@ -160,18 +163,14 @@ public sealed class PlayFacts
     /// </summary>
     private static Player? OwnerOf(CardModel card) => card.IsCanonical ? null : card.Owner;
 
-    // Cards whose play shuffles your discard pile into your draw pile (CardPileCmd.Shuffle in OnPlay; decompile v0.111.0).
-    internal static readonly HashSet<string> ShuffleCards = new() { nameof(Reboot) };
-
-    /// <summary>Cards that shuffle your discard pile in first only when your draw pile is short (Ki Chant, v0.113.0).</summary>
-    internal static readonly HashSet<string> ShuffleWhenShortCards = new() { nameof(KiChant) };
-
-    /// <summary>The play shuffles your discard pile into your draw pile before its draws (Reboot; Ki Chant when the draw pile is short).</summary>
+    /// <summary>
+    /// The play shuffles your discard pile into your draw pile before its draws, read from its program (decision #182): on every play
+    /// (CardEffects.ShufflesDiscardPileIn: Reboot), or when the draw pile is short (CardEffects.ShufflesWhenShort: Ki Chant).
+    /// </summary>
     internal static bool ShufflesFirst(CardModel card)
     {
-        var name = card.GetType().Name;
-        if (ShuffleCards.Contains(name)) return true;
-        if (!ShuffleWhenShortCards.Contains(name) || OwnerOf(card) is not { } me) return false;
+        if (Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())) return true;
+        if (!Programs.CardEffects.ShufflesWhenShort(card.GetType()) || OwnerOf(card) is not { } me) return false;
         // KiChant.OnPlay: an empty draw pile shuffles if it must; a short one shuffles when the discard pile has cards.
         var draw = Sts2State.DrawPileCount(me);
         return draw < Sts2State.Var(card, "Cards", fallback: 3) && Sts2State.DiscardPileCount(me) > 0;
@@ -217,7 +216,7 @@ public sealed class PlayFacts
     public int ReturnsToHand => CardsBack.Count;
     /// <summary>
     /// Cards the play itself moves into your hand from a pile (CardPileCmd.Add to PileType.Hand: Hologram, Wish, Dredge...,
-    /// TakenToHandCards), as many as the piles hold and your hand has room for; in your hand after it.
+    /// read from its program: CardEffects.TakesIntoHand), as many as the piles hold and your hand has room for; in your hand after it.
     /// </summary>
     public int TakenToHand { get; init; }
     /// <summary>The play moves cards into your hand and you choose how many (Neow's Fury: 0 or more): your hand after it is your later decision.</summary>
@@ -474,7 +473,7 @@ public sealed class PlayFacts
         var name = card.GetType().Name;
         var evoked = EvokedOrbs(card, name, me, combat, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
         var orbs = OrbDamageFor(evoked, me, combat);
-        var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(name, me);
+        var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(card.GetType(), me);
         // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
         var createdInHand = MadeIntoHand(card, generated);
 
@@ -496,8 +495,9 @@ public sealed class PlayFacts
             // Ki Chant looks at your draw pile, so each play discards its share; the others depend on the hand.
             Discards = DiscardCount(card, name, others, draws) * (name == nameof(KiChant) ? Math.Max(1, plays) : 1),
             LeavesHand = LeavingHand(card, name, others, drawPile, draws, plays),
-            TakesWholeHand = WholeHandCards.Contains(name),
-            MayDiscardSly = name is not (nameof(KiChant) or nameof(Scrape)) && DiscardCount(card, name, others, draws) > 0 && others.Any(other => other.IsSlyThisTurn),
+            TakesWholeHand = Programs.CardEffects.TakesWholeHand(card.GetType()),
+            MayDiscardSly = name is not (nameof(KiChant) or nameof(Scrape)) && DiscardCount(card, name, others, draws) > 0 && others.Any(other => other.IsSlyThisTurn)
+                            && !Programs.CardEffects.DiscardsOnlyPicks(card.GetType()),
             OwnDraws = draws + swiftDraws,
             DrawsAtMost = SpireQoL.Sim.SimAdapter.DrawnCardReaders.GetValueOrDefault(name) is { DrawsAgain: true }
                 ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,
@@ -506,7 +506,7 @@ public sealed class PlayFacts
             Generated = generated,
             GeneratedInHand = createdInHand,
             GeneratedStatuses = statuses * Math.Max(1, plays),
-            SadnessCreated = SadnessCards.Contains(name) ? statuses * Math.Max(1, plays) : 0,
+            SadnessCreated = Programs.CardEffects.MakesSadness(card.GetType()) ? statuses * Math.Max(1, plays) : 0,
             CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,
                 Fool.Shoots(card, me) ? Math.Max(1, plays) : 0),
             TakenToHand = TakenToHandCount(card, name, me, Math.Max(1, plays),
@@ -578,7 +578,7 @@ public sealed class PlayFacts
             DiscardedBeforeDraw = !Programs.CardPrograms.DiscardsBeforeDraws(Card.GetType()) ? 0
                 : Card.GetType().Name == nameof(TheHermit) ? Math.Max(0, Math.Min(1, OtherHandCards) - ExhaustsOthers) : Discards,
             ShufflesFirst = ShufflesFirst(Card),
-            HandShuffledIn = ShuffleCards.Contains(Card.GetType().Name),
+            HandShuffledIn = Programs.CardEffects.ShufflesDiscardPileIn(Card.GetType()),
             // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
             AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
             // Motif draws its amount per melody (Wah, Cho, Ki) this card plays first this turn, once (a replay's
@@ -607,7 +607,7 @@ public sealed class PlayFacts
                 case CentennialPuzzle when !Sts2State.Private(relic, "UsedThisCombat", fallback: true): drawInputs.CentennialPuzzle += Sts2State.Var(relic, "Cards", fallback: 3); break;
             }
         }
-        if (ShuffleWhenShortCards.Contains(Card.GetType().Name))
+        if (Programs.CardEffects.ShufflesWhenShort(Card.GetType()))
         {
             // Ki Chant takes the top cards it looks at off the draw pile: one to your hand, the rest discarded.
             var looked = KiChantLooksAt(Card);
@@ -621,7 +621,7 @@ public sealed class PlayFacts
         ChainedDraws = result.Chained;
         Draws = result.Draws;
         // Ki Chant replayed: a later play can find the draw pile short and shuffle (its own text, like its first play's).
-        var laterShuffle = ShuffleWhenShortCards.Contains(Card.GetType().Name)
+        var laterShuffle = Programs.CardEffects.ShufflesWhenShort(Card.GetType())
                            && PlayChain.ShortPileShufflesOnLaterPlay(drawPile, drawInputs.DiscardPile, Sts2State.Var(Card, "Cards", fallback: 3), Math.Max(1, Plays));
         Shuffles = result.Shuffles || laterShuffle;
         ShufflesItself = drawInputs.ShufflesFirst || laterShuffle;
@@ -821,7 +821,7 @@ public sealed class PlayFacts
         }
         // Every other card that draws in its play (CardPileCmd.Draw, read from its own code: CardCode): its Cards value, or one card
         // when it has none (Dagger Throw, Escape Plan). Not a card that makes a teammate draw (Constellation, Huddle Up).
-        if (CardCode.Calls(card.GetType(), "CardPileCmd", "Draw") && !AllyDrawCards.Contains(name) && !SpireQoL.Sim.SimAdapter.TeammatesDrawCards.Contains(name))
+        if (CardCode.Calls(card.GetType(), "CardPileCmd", "Draw") && !Programs.CardEffects.DrawsForTarget(card.GetType()) && !Programs.CardEffects.DrawsForEachTeammate(card.GetType()))
             return card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
         return 0;
     }
@@ -831,9 +831,6 @@ public sealed class PlayFacts
     /// so the coverage scan counts these as drawing by this list.
     /// </summary>
     internal static readonly HashSet<string> TargetDrawCards = new() { nameof(KiHop), nameof(Wrest) };
-
-    /// <summary>Cards aimed at a teammate that make them draw, not you (Constellation: CardPileCmd.Draw for the target's player).</summary>
-    internal static readonly HashSet<string> AllyDrawCards = new() { nameof(Constellation) };
 
     /// <summary>
     /// Draws of all <paramref name="plays"/> plays aimed at <paramref name="target"/>, for cards whose draws depend on their
@@ -999,17 +996,6 @@ public sealed class PlayFacts
     };
 
     /// <summary>
-    /// Cards whose own play moves cards into your hand from a pile (CardPileCmd.Add to PileType.Hand), each counted by
-    /// TakenToHandCount from its OnPlay. CardCoverage's scan holds every card calling CardPileCmd.Add in its play to this list,
-    /// PutBackCards, WholeHandCards or MovedElsewhereCards.
-    /// </summary>
-    internal static readonly HashSet<string> TakenToHandCards = new()
-    {
-        nameof(AllForOne), nameof(Anointed), nameof(ArrowStab), nameof(Dredge), nameof(Graveblast), nameof(Hologram), nameof(KiChant), nameof(LockedIn),
-        nameof(NeowsFury), nameof(SecretTechnique), nameof(SecretWeapon), nameof(SeekerStrike), nameof(SummonForth), nameof(TheWorld), nameof(Wish),
-    };
-
-    /// <summary>
     /// Cards that hit their target, then deal that hit's damage (overkill included: DamageResult.TotalDamage + OverkillDamage) to
     /// every other hittable enemy, with only the damage caps applied (ModifyDamageHookType.Cap): RainShot.OnPlay, Omnislice.OnPlay.
     /// The card scan holds every card reading a hit's overkill to this list or OverkillReaders.
@@ -1021,18 +1007,6 @@ public sealed class PlayFacts
     {
         [nameof(Fisticuffs)] = "block equal to the damage it dealt (SimAdapter: Fisticuffs)",
         [nameof(BlossomShot)] = "Stretch equal to the damage it dealt (AttackAction.StretchFromDamage): for block later in the turn (I Am Invincible at its end)",
-    };
-
-    /// <summary>Cards that draw, then put cards from your hand back on your draw pile (their PutBack value; Thinking Ahead's one).</summary>
-    internal static readonly HashSet<string> PutBackCards = new() { nameof(Glimmer), nameof(PhotonCut), nameof(ThinkingAhead) };
-
-    /// <summary>Cards whose own play moves cards with CardPileCmd.Add, but never into or out of your hand, and where they go.</summary>
-    internal static readonly Dictionary<string, string> MovedElsewhereCards = new()
-    {
-        [nameof(CosmicIndifference)] = "a card from your discard pile onto your draw pile",
-        [nameof(Headbutt)] = "a card from your discard pile onto your draw pile",
-        [nameof(Recall)] = "a card from your discard pile onto your draw pile",
-        [nameof(Tutor)] = "a card from the teammate's draw pile into their hand (it aims only at a teammate)",
     };
 
     private static List<CardModel> PileCards(Player me, PileType pile)
@@ -1047,7 +1021,7 @@ public sealed class PlayFacts
     /// </summary>
     internal static int TakenToHandCount(CardModel card, string name, Player me, int plays, int room)
     {
-        if (!TakenToHandCards.Contains(name) || room <= 0) return 0;
+        if (!Programs.CardEffects.TakesIntoHand(card.GetType()) || room <= 0) return 0;
         var draw = PileCards(me, PileType.Draw);
         var discard = PileCards(me, PileType.Discard);
         var cards = Sts2State.Var(card, "Cards", fallback: 1);
@@ -1098,18 +1072,10 @@ public sealed class PlayFacts
         };
         var discards = name is nameof(KiChant) or nameof(Scrape) ? 0 : DiscardCount(card, name, others, draws);
         // Put back on your draw pile after the draws, from the cards in hand then (you choose which).
-        var putBack = PutBackCards.Contains(name)
+        var putBack = Programs.CardEffects.PutsBackFromHand(card.GetType())
             ? Math.Min(name == nameof(ThinkingAhead) ? 1 : Sts2State.Var(card, "PutBack", fallback: 1), others.Count + draws) * Math.Max(1, plays) : 0;
         return exhausts + discards + putBack;
     }
-
-    /// <summary>Cards that take your whole hand (exhaust or discard every card in it), from each OnPlay.</summary>
-    internal static readonly HashSet<string> WholeHandCards = new()
-    {
-        nameof(FiendFire), nameof(Stoke), nameof(TheDevil),                                                  // exhaust it
-        nameof(CalculatedGamble), nameof(ShadowStep), nameof(StormOfSteel), nameof(WheelOfFortune),          // discard it
-        nameof(Reboot),                                                                               // shuffle it into your draw pile, then draw
-    };
 
     internal static int DiscardCount(CardModel card, string name, List<CardModel> others, int draws)
     {
@@ -1226,14 +1192,8 @@ public sealed class PlayFacts
         }
     }
 
-    /// <summary>
-    /// Attacks with a Repeat value that isn't their hit count: one attack, then Repeat of something else (Ice Lance
-    /// channels Repeat Frost, Heirloom Hammer makes Repeat copies; decompile v0.113.1). The card scan flags a new one.
-    /// </summary>
-    internal static readonly HashSet<string> SingleHitRepeatCards = new() { nameof(IceLance), nameof(HeirloomHammer) };
-
-    /// <summary>X-cost attacks that hit X times (WithHitCount(X)); Repeat Shot is a shot (v0.113.0). The card scan flags a new one.</summary>
-    internal static readonly HashSet<string> XHitCards = new() { nameof(Eradicate), nameof(Skewer), nameof(Volley), nameof(Whirlwind), nameof(RepeatShot) };
+    // Read from each card's program (decision #182): an attack that hits X times (CardEffects.HitsXTimes: WithHitCount(X)), and one
+    // that attacks once and repeats something else its Repeat times (CardEffects.AttacksOnceRepeatingSomethingElse: Ice Lance's Frost).
 
     private static int BaseHitsPerPlay(CardModel card, string name, ICombatState combat, Creature? target, int energy, int stars, int otherCards)
     {
@@ -1258,9 +1218,9 @@ public sealed class PlayFacts
                 // Main passes a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits): AttackHitCountsAreVars.
                 case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
                     return Hits(fixedBefore: 2);
-                case var _ when XHitCards.Contains(name):
+                case var _ when Programs.CardEffects.HitsXTimes(card.GetType()):
                     return XValue(combat, card, energy);
-                case var _ when SingleHitRepeatCards.Contains(name):
+                case var _ when Programs.CardEffects.AttacksOnceRepeatingSomethingElse(card.GetType()):
                     return 1;
                 case nameof(HeavenlyDrill):
                 {
@@ -1328,13 +1288,10 @@ public sealed class PlayFacts
 
     /// <summary>
     /// The star gains of one play of the card: each PlayerCmd.GainStars in its play, on every way through it, to its owner, read from
-    /// its own code (CardEnergy.CallsOf). A gain that waits on its attack's kill is the attack's instead (KillStarCards).
+    /// its own code (CardEnergy.CallsOf). A gain that waits on its attack's kill is the attack's instead (CardEffects.GainsStarsOnKill: AttackAction.KillRewards).
     /// </summary>
     internal static int StarGainsOf(CardModel card) =>
         SpireQoL.Sim.CardEnergy.CallsOf(card.GetType(), "GainStars").Count(call => call is { Method: "OnPlay", Certain: true, ToOwner: true });
-
-    /// <summary>Cards that gain stars only when their attack kills its target (WasTargetKilled): the attack's (AttackAction.KillRewards).</summary>
-    internal static readonly HashSet<string> KillStarCards = new() { nameof(KnockoutBlow) };
 
     /// <summary>
     /// A card that makes Osty attack: the game's own tag on it (CardTag.OstyAttack, on every card whose OnPlay attacks FromOsty). A list
@@ -1348,12 +1305,8 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ generated cards
 
-    /// <summary>
-    /// Cards that create Sadness when played (CreateCard&lt;Sadness&gt; in OnPlay, or Mourning Blow turning into one after
-    /// it; v0.113.1): their created statuses are all Sadness (GeneratedCount), so that count is the Sadness made.
-    /// </summary>
-    internal static readonly HashSet<string> SadnessCards = new() { nameof(BrightenUp), nameof(Jest), nameof(MourningBlow), nameof(Rummage), nameof(SelfDeprecate), nameof(SorrowfulStrike), nameof(Vitriol) };
-
+    // A card that makes Sadness (CardEffects.MakesSadness, from its program): its created statuses are all Sadness (GeneratedCount),
+    // so that count is the Sadness made.
 
     internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses)
     {
@@ -1414,21 +1367,14 @@ public sealed class PlayFacts
         return 0;
     }
 
-    // Cards that Forge when played (ForgeCmd.Forge in OnPlay; decompile v0.111.0).
-    internal static readonly HashSet<string> ForgeCards = new()
-    {
-        nameof(BeatIntoShape), nameof(BigBang), nameof(Bulwark), nameof(Conqueror), nameof(RefineBlade),
-        nameof(SeekingEdge), nameof(SpoilsOfBattle), nameof(SummonForth), nameof(TheSmith), nameof(WroughtInWar),
-    };
-
     /// <summary>
-    /// Forging creates a Sovereign Blade in your hand when you have none outside your exhaust pile
+    /// A card that forges (CardEffects.Forges: ForgeCmd.Forge in its program). Forging creates a Sovereign Blade in your hand when you have none outside your exhaust pile
     /// (ForgeCmd.Forge, through AddGeneratedCardToCombat); later forges only add damage. Once per play
     /// chain: a replay finds the blade the first play made.
     /// </summary>
-    private static int ForgedBlade(string name, Player me)
+    private static int ForgedBlade(Type cardType, Player me)
     {
-        if (!ForgeCards.Contains(name)) return 0;
+        if (!Programs.CardEffects.Forges(cardType)) return 0;
         try
         {
             var hasBlade = me.PlayerCombatState?.AllCards.Any(card => card is SovereignBlade && !card.IsDupe && card.Pile?.Type != PileType.Exhaust) ?? true;

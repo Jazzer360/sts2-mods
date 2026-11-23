@@ -401,7 +401,7 @@ public class ProcModelTests
     [Fact]
     public void ATeammatesDrawsSetOffTheirDrawProcsNotYours()
     {
-        // Huddle Up: every teammate draws 2, you don't (SimAdapter.TeammatesDrawCards). Their Speedster hits every enemy for each
+        // Huddle Up: every teammate draws 2, you don't (CardEffects.DrawsForEachTeammate, from its code). Their Speedster hits every enemy for each
         // card they draw; yours doesn't hear their draws.
         var state = State(hp: 100);
         state.You.Powers = state.You.Powers.With(PowerId.Speedster, amount: 3);

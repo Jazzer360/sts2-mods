@@ -7,7 +7,7 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Cards whose own play moves cards into or out of your hand (CardPileCmd.Add: PlayFacts.TakenToHand, PutBackCards), on the
+/// Cards whose own play moves cards into or out of your hand (CardPileCmd.Add: PlayFacts.TakenToHand, CardEffects.PutsBackFromHand), on the
 /// installed game's cards and piles (GameFight). Reports: after Wish your hand had a card more than predicted.
 /// </summary>
 [Collection(GameFightCollection.Name)]

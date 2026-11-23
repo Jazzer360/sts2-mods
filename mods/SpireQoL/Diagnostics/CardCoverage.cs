@@ -70,12 +70,12 @@ internal static class CardCoverage
     {
         // Modelled: what lands on the teammate goes to them.
         [nameof(Lift)] = "block to the teammate (CardEffects.BlocksAnother, from its code)",
-        [nameof(Constellation)] = "block to the teammate (CardEffects.BlocksAnother); its draws and energy are theirs (PlayFacts.AllyDrawCards): their draws are their card events, for their draw procs",
+        [nameof(Constellation)] = "block to the teammate (CardEffects.BlocksAnother); its draws and energy are theirs (CardEffects.DrawsForTarget): their draws are their card events, for their draw procs",
         [nameof(DemonicShield)] = "HP loss to you, block (worked out on the teammate) to them (CardEffects.BlocksAnother)",
         [nameof(Ignition)] = "a Plasma orb into the teammate's orbs, evoking their front orb when full (CardEffects.ChannelsForTarget)",
         [nameof(Mimic)] = "block to you equal to the teammate's block (CalculatedBlock on the target)",
         [nameof(Rally)] = "its block to you and to every living teammate, worked out on each (CardEffects.BlocksEachPlayer)",
-        [nameof(HuddleUp)] = "every living teammate draws, not you: their draws (as many as their hand and piles allow) are their card events (SimAdapter.TeammatesDrawCards)",
+        [nameof(HuddleUp)] = "every living teammate draws, not you: their draws (as many as their hand and piles allow) are their card events (CardEffects.DrawsForEachTeammate)",
         [nameof(BladeSymphony)] = "Shivs into every living teammate's hand, created by them: their created-card events (SimAdapter.TeammatesShivCards)",
         [nameof(GlimpseBeyond)] = "Souls into every living teammate's draw pile, created by you: your created-card events, per Soul (PlayFacts.GeneratedCount)",
         // LegionOfBone.OnPlay: OstyCmd.Summon for every living player. Nothing reacts to a summon (no model overrides AfterSummon
@@ -168,7 +168,7 @@ internal static class CardCoverage
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
+            && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !Procs.Programs.CardEffects.DrawsForTarget(card.GetType()))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         // A card that takes block away: the simulator models a card taking its target's (Expose), read from its program.
         if (Calls("CreatureCmd", "LoseBlock") && !Procs.Programs.CardEffects.TakesTargetsBlock(card.GetType()))
@@ -200,7 +200,7 @@ internal static class CardCoverage
         if (Calls("CreatureCmd", "GainBlock") && RepeatsCall(card.GetType(), "CreatureCmd", "GainBlock") && !PlayFacts.RepeatedBlockCards.Contains(name))
             issues.Add("can gain block more than once in a play (a loop or two calls: counted once; PlayFacts.BlockGainCount needs a rule)");
         // A block card that applies Stretch keeps it for a replay's later plays (Cho Ki); the simulator spends it otherwise.
-        if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !SimAdapter.KeepsStretchCards.Contains(name))
+        if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !Procs.Programs.CardEffects.KeepsStretchForReplays(card.GetType()))
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
         // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
         if (card.GainsBlock && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
@@ -222,12 +222,12 @@ internal static class CardCoverage
             && !(program.Commands.Any(command => command.Command.Name is "Discard" or "Exhaust" or "DiscardAndDraw") && program.Commands.Any(command => command.Command.Name is "Draw" or "DiscardAndDraw")))
             issues.Add("takes cards from your hand and draws, and its program doesn't show which comes first (the hand limit)");
         // An X-cost attack: its hits are X (unless its count is one of the named exceptions).
-        if (card.Type == CardType.Attack && card.EnergyCost.CostsX && !PlayFacts.XHitCards.Contains(name) && name is not (nameof(HeavenlyDrill) or nameof(Stardust)))
+        if (card.Type == CardType.Attack && card.EnergyCost.CostsX && !Procs.Programs.CardEffects.HitsXTimes(card.GetType()) && name is not (nameof(HeavenlyDrill) or nameof(Stardust)))
             issues.Add("an X-cost attack whose hits aren't counted as X (damage, lethal)");
         // An attack whose code sets no hit count but has a Repeat value: its hits would be read from Repeat (Ice Lance's
         // Repeat is its Frost channels). A card that really attacks Repeat times in a loop goes in Reviewed.
         if (card.Type == CardType.Attack && !Calls("AttackCommand", "WithHitCount") && !card.DynamicVars.ContainsKey("HitCount")
-            && !PlayFacts.SingleHitRepeatCards.Contains(name)
+            && !Procs.Programs.CardEffects.AttacksOnceRepeatingSomethingElse(card.GetType())
             && (Sts2Mods.Core.Game.Sts2State.Var(card, "Repeat", fallback: 1) > 1 || (upgraded != null && Sts2Mods.Core.Game.Sts2State.Var(upgraded, "Repeat", fallback: 1) > 1)))
             issues.Add("an attack with a Repeat value and no hit count in its code (its hits would be read as Repeat: damage, lethal)");
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
@@ -254,20 +254,20 @@ internal static class CardCoverage
             issues.Add("reads a hit's overkill (deals it again to the other enemies? not counted: damage, lethal)");
         // A card whose own play moves cards (CardPileCmd.Add): into your hand (Hologram, Wish: your hand size after), back out of it
         // onto your draw pile (Glimmer), or somewhere your hand doesn't see. Each is counted or reviewed by where it moves them.
-        if (Calls("CardPileCmd", "Add") && !PlayFacts.TakenToHandCards.Contains(name) && !PlayFacts.PutBackCards.Contains(name)
-            && !PlayFacts.WholeHandCards.Contains(name) && !PlayFacts.MovedElsewhereCards.ContainsKey(name))
+        if (Calls("CardPileCmd", "Add") && !Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !Procs.Programs.CardEffects.PutsBackFromHand(card.GetType())
+            && !Procs.Programs.CardEffects.TakesWholeHand(card.GetType()) && !Procs.Programs.CardEffects.MovesCardsElsewhere(card.GetType()))
             issues.Add("moves cards with CardPileCmd.Add in its play (into or out of your hand? not counted: hand size after)");
         // A card counted as taking cards into your hand: the simulator takes them out of their pile (which pile, which cards).
-        if (PlayFacts.TakenToHandCards.Contains(name) && !SimAdapter.HandTakes.ContainsKey(name))
+        if (Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !SimAdapter.HandTakes.ContainsKey(name))
             issues.Add("takes cards into your hand without saying from which pile (they'd stay there in the simulation: later draws)");
         // A card that auto-plays cards from your draw pile: the simulator plays them (which pile position, how many).
-        if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !SimAdapter.PlaysFromDrawPile.Contains(name))
+        if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()))
             issues.Add("auto-plays cards from your draw pile (not simulated: what they do)");
         // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
-        if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !PlayFacts.SadnessCards.Contains(name))
+        if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !Procs.Programs.CardEffects.MakesSadness(card.GetType()))
             issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");
         // Forging creates the Sovereign Blade through ForgeCmd, not in the card's own code.
-        if (Calls("ForgeCmd", "Forge") && !PlayFacts.ForgeCards.Contains(name))
+        if (Calls("ForgeCmd", "Forge") && !Procs.Programs.CardEffects.Forges(card.GetType()))
             issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");
         // Every game card as the hand, so any filter (statuses, attacks) finds something to transform.
         if ((Calls("CardCmd", "Transform") || Calls("CardCmd", "TransformTo") || Calls("CardCmd", "TransformToRandom"))
@@ -286,15 +286,15 @@ internal static class CardCoverage
         // A card that becomes another card once played (Mourning Blow into a Sadness): a created card.
         if (Calls("CardModel", "set_TransformIntoAfterPlay") && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))
             issues.Add("turns into another card after the play (not counted: created-card procs)");
-        if (Calls("CardPileCmd", "Shuffle") && !PlayFacts.ShuffleCards.Contains(name) && !PlayFacts.ShuffleWhenShortCards.Contains(name))
+        if (Calls("CardPileCmd", "Shuffle") && !Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType()) && !Procs.Programs.CardEffects.ShufflesWhenShort(card.GetType()))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");
         // The Fool (v0.113.0): a shot does nothing without an arrow, which PlayFacts knows by the Shoot tag; arrows
         // pulled out by the card itself count for Twine and Yah only for the cards listed.
         if ((Calls("ArrowCmd", "ShootArrowAtTarget") || Calls("ArrowCmd", "TryShootArrow")) && !Procs.Fool.IsShot(card))
             issues.Add("shoots an arrow without the Shoot tag (its damage is counted even with no arrow to shoot)");
-        if (Calls("ArrowCmd", "DislodgeArrow") && !Procs.Fool.DislodgeCards.Contains(name))
+        if (Calls("ArrowCmd", "DislodgeArrow") && !Procs.Programs.CardEffects.DislodgesArrows(card.GetType()))
             issues.Add("knocks arrows loose (not counted: Twine, Yah)");
-        if (Calls("PlayerCmd", "GainStars") && PlayFacts.StarGainsOf(card) == 0 && !PlayFacts.KillStarCards.Contains(name))
+        if (Calls("PlayerCmd", "GainStars") && PlayFacts.StarGainsOf(card) == 0 && !Procs.Programs.CardEffects.GainsStarsOnKill(card.GetType()))
             issues.Add("gains stars (not counted for Black Hole)");
         return issues;
     }

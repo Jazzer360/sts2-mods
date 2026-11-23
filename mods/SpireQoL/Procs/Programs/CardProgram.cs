@@ -20,6 +20,12 @@ public sealed record CommandStep(int Offset, CodeMember Command, IReadOnlyList<s
     public IReadOnlyList<string> Builder { get; init; } = Array.Empty<string>();
 
     /// <summary>
+    /// Where an attack's WithHitCount gets its count ("HitCount", "Repeat", a constant, "ResolveEnergyXValue" for an X-cost card's X);
+    /// null when its builder sets none (one hit).
+    /// </summary>
+    public string? HitCount { get; init; }
+
+    /// <summary>
     /// The steps of a delegate the command is given and runs (ArrowCmd.ShootArrowAtTarget runs Blossom Shot's attack after the
     /// shot): they follow the command.
     /// </summary>
@@ -34,7 +40,19 @@ public sealed record CommandStep(int Offset, CodeMember Command, IReadOnlyList<s
 /// <summary>A player's pick in the middle of the play (CardSelectCmd): which card is theirs to choose, not whether the play goes on.</summary>
 public sealed record ChoiceStep(int Offset, CodeMember Command) : ProgramStep(Offset)
 {
+    /// <summary>Where each of its arguments comes from (whose pile, whose pick: "Owner" is you), as a command's.</summary>
+    public IReadOnlyList<string> Arguments { get; init; } = Array.Empty<string>();
+
     public override string ToString() => "choice " + Command.Name;
+}
+
+/// <summary>
+/// A card the code makes (CombatState.CreateCard&lt;T&gt;: Jest's Sadness, Mourning Blow's): not a change by itself (a command adds it to
+/// a pile, or the card turns into it after the play), but what it makes, by type, for the rules that ask (CardEffects.MakesSadness).
+/// </summary>
+public sealed record CreateStep(int Offset, string Card) : ProgramStep(Offset)
+{
+    public override string ToString() => "create " + Card;
 }
 
 /// <summary>A loop: its body runs once per round (a foreach over cards, a for up to a value, a do-while).</summary>
@@ -224,7 +242,12 @@ public static class CardProgramReader
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
                 if (member.Namespace == "MegaCrit.Sts2.Core.Commands" && member.DeclaringType == "CardSelectCmd")
                 {
-                    into.Add(new ChoiceStep(instruction.Offset, member) { Condition = condition });
+                    into.Add(new ChoiceStep(instruction.Offset, member) { Condition = condition, Arguments = Arguments(flow, i, member) });
+                    continue;
+                }
+                if (member.Name == "CreateCard" && member.GenericArguments.Count == 1)
+                {
+                    into.Add(new CreateStep(instruction.Offset, member.GenericArguments[0]) { Condition = condition });
                     continue;
                 }
                 if (member.DeclaringType == "DamageCmd" && member.Name == "Attack")
@@ -281,13 +304,15 @@ public static class CardProgramReader
         private static CommandStep Attack(Flow flow, int at, CodeMember member)
         {
             var builder = new List<string>();
+            string? hitCount = null;
             for (var j = at + 1; j < flow.Ops.Count; j++)
             {
                 if (flow.Ops[j].Member is not { DeclaringType: "AttackCommand" } call || !flow.Ops[j].IsCall) continue;
                 if (call.Name == "Execute") break;
                 builder.Add(call.Name);
+                if (call.Name == "WithHitCount" && call.ParameterCount >= 1) hitCount = flow.Source(j, call, parameter: 0);
             }
-            return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member)) { Builder = builder };
+            return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member)) { Builder = builder, HitCount = hitCount };
         }
 
         /// <summary>The card's own method (its type or a base type's private helper) or a local function OnPlay declares.</summary>
@@ -439,11 +464,23 @@ public static class CardProgramReader
             for (var i = end; i > start; i--)
             {
                 var member = Ops[i].Member;
-                if (member is { Name: "MoveNext" }) return "each item";
+                if (member is { Name: "MoveNext" }) return EnumeratedBefore(start) is { } items ? "each of " + items : "each item";
                 if (member is { Name: "get_IntValue" or "get_BaseValue" } && i > 0 && Ops[i - 1].Member is { } value) return value.Name.Replace("get_", "");
                 if (member is { Name: "get_Item" } && Ops[i - 1].Text is { } key) return key;
             }
             return "?";
+        }
+
+        /// <summary>What a foreach starting at <paramref name="start"/> goes over: the collection whose GetEnumerator it calls first ("Hand.Cards.ToList").</summary>
+        private string? EnumeratedBefore(int start)
+        {
+            for (var i = start - 1; i >= 0 && i >= start - 24; i--)
+            {
+                if (Ops[i].Member is not { Name: "GetEnumerator" } enumerator || !Ops[i].IsCall) continue;
+                var items = Source(i, enumerator, parameter: enumerator.HasThis ? -1 : 0);
+                return items == "?" || items.StartsWith("ld", StringComparison.Ordinal) ? null : items;
+            }
+            return null;
         }
 
         /// <summary>The condition a branch tests, named by the last thing it asks the game (a property, a method, a delegate's).</summary>
@@ -479,7 +516,17 @@ public static class CardProgramReader
                     return holder.Name == "get_Item" && index > 1 && Ops[index - 2].Text is { } key ? key : holder.Name.Replace("get_", "");
                 if (member.Name == "get_Item" && index > 0 && Ops[index - 1].Text is { } itemKey) return itemKey;
                 // A state machine's field: the card itself, a parameter (cardPlay) or a local kept across awaits (<target>5__2).
-                if (member.Kind == CodeMemberKind.Field) return FieldName(member.Name);
+                if (member.Kind == CodeMemberKind.Field)
+                {
+                    // A local kept across awaits and stored once (<cards>5__2 = hand.Cards.ToList()): what was stored.
+                    if (member.Name.Contains(">5__", StringComparison.Ordinal) && depth < 3 && FieldStoredOnce(member.Name) is { } fieldStore
+                        && CodeDecoder.Producer(Ops, fieldStore, depth: 0, stop: at => _noise[at]) is { } fieldValue)
+                    {
+                        var storedInField = Describe(fieldValue, depth + 1);
+                        if (storedInField != "?" && !storedInField.StartsWith("ld", StringComparison.Ordinal)) return storedInField;
+                    }
+                    return FieldName(member.Name);
+                }
                 var name = member.Name.Replace("get_", "");
                 // A property of something: whose (base.Owner.Creature, cardPlay.Target, a chosen teammate's Creature).
                 if (member.Kind == CodeMemberKind.Method && member.HasThis && member.Name.StartsWith("get_", StringComparison.Ordinal) && depth < 3)
@@ -487,10 +534,57 @@ public static class CardProgramReader
                     var receiver = Source(index, member, parameter: -1, depth + 1);
                     if (receiver is not ("this" or "?") && !receiver.StartsWith("ld", StringComparison.Ordinal)) name = receiver + "." + name;
                 }
+                // A pile (PileType.Hand.GetPile(owner)): by its type, "Hand".
+                if (member is { Kind: CodeMemberKind.Method, HasThis: false, Name: "GetPile", ParameterCount: >= 1 } && depth < 4
+                    && int.TryParse(Source(index, member, parameter: 0, depth + 1), out var pileType)
+                    && Enum.IsDefined(typeof(MegaCrit.Sts2.Core.Entities.Cards.PileType), pileType))
+                    return ((MegaCrit.Sts2.Core.Entities.Cards.PileType)pileType).ToString();
+                // A query over a collection (cards.ToList(), cards.Where(...)): of what.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: false, Namespace: "System.Linq", ParameterCount: >= 1 } && depth < 3)
+                {
+                    var source = Source(index, member, parameter: 0, depth + 1);
+                    if (source != "?" && !source.StartsWith("ld", StringComparison.Ordinal)) name = source + "." + name;
+                }
                 return name;
             }
             if (instruction.Text is { } text) return "\"" + text + "\"";
+            // A local stored once in the method (int x = ResolveEnergyXValue(); ... WithHitCount(x)): what was stored.
+            if (instruction.Slot is { } slot && instruction.OpCode.Name!.StartsWith("ldloc", StringComparison.Ordinal) && depth < 3 && StoredOnce(slot) is { } store
+                && CodeDecoder.Producer(Ops, store, depth: 0, stop: at => _noise[at]) is { } stored)
+            {
+                var described = Describe(stored, depth + 1);
+                if (described != "?" && !described.StartsWith("ld", StringComparison.Ordinal)) return described;
+            }
             return instruction.OpCode.Name ?? "?";
+        }
+
+        /// <summary>
+        /// The one instruction that stores the state machine's field <paramref name="field"/>, when only one does (the machine clearing
+        /// it to null when it finishes isn't a value of it).
+        /// </summary>
+        private int? FieldStoredOnce(string field)
+        {
+            int? found = null;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].OpCode != OpCodes.Stfld || Ops[i].Member?.Name != field || i > 0 && Ops[i - 1].OpCode == OpCodes.Ldnull) continue;
+                if (found != null) return null;
+                found = i;
+            }
+            return found;
+        }
+
+        /// <summary>The one instruction that stores local <paramref name="slot"/>, when only one does (else null: which value is meant isn't straight).</summary>
+        private int? StoredOnce(int slot)
+        {
+            int? found = null;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].Slot != slot || !Ops[i].OpCode.Name!.StartsWith("stloc", StringComparison.Ordinal)) continue;
+                if (found != null) return null;
+                found = i;
+            }
+            return found;
         }
 
         /// <summary>"&lt;&gt;4__this" is the card; "&lt;target&gt;5__2" is the local "target"; a parameter keeps its name.</summary>
