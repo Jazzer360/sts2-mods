@@ -117,17 +117,26 @@ public sealed class SurroundedPower : SimModel
 }
 
 /// <summary>
-/// CoveredPower (on a teammate you cover with Intercept): powered attacks on its owner deal nothing; Data is its applier
-/// (DataCreature). Applying it gives the applier Intercept, counting one more covered player (CoveredPower.AfterApplied).
+/// CoveredPower (on a teammate covered with Intercept): powered attacks on its owner deal nothing. Each Intercept played on them
+/// is a copy of its own (instanced), each zeroing the same attacks; Data holds the players covering them, a bit each (CovererBit).
+/// Each copy gives its applier Intercept counting its owner once (CoveredPower.AfterApplied: InterceptPower.AddCoveredCreature
+/// skips a creature it already covers), so a second player's Intercept on them gives that player Intercept too.
 /// </summary>
 public sealed class CoveredPower : SimModel
 {
+    public override bool Instanced => true;
+
+    /// <summary>A covering player's bit in Data (you: 1, teammate i: 2 &lt;&lt; i, from their ids -1, -2 - i); 0 for anyone else.</summary>
+    public static int CovererBit(int player) => Who.IsPlayer(player) && -1 - player is var bit and < 30 ? 1 << bit : 0;
+
     public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
         damage.Target == owner && damage.Props.IsPoweredAttack() ? 0m : 1m;
     public override void AfterApplied(SimState state, int owner, int applier, int amount)
     {
         var powers = SimEngine.PowersOf(state, owner);
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], DataCreature.Of(applier)));
+        var bit = CovererBit(applier);
+        if ((powers.DataOf(ThisPower) & bit) != 0) return;
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) | bit));
         var otherPowers = SimEngine.PowersOf(state, applier);
         SimEngine.SetPowers(state, applier, otherPowers.With(PowerId.Intercept, otherPowers[PowerId.Intercept] + 1));
     }

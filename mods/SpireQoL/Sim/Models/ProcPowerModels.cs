@@ -65,11 +65,13 @@ public sealed class CalamityPower : BoundPower
 
 /// <summary>
 /// MonologuePower: each card its owner plays gives Strength (its Strength value, DynamicVars.Strength kept as "StrengthPower", bound
-/// at the play's start).
+/// at the play's start). Each Monologue played is a copy of its own (instanced), each binding and giving its own Strength: two
+/// copies give 2 a card, so it binds the total over its copies.
 /// </summary>
 public sealed class MonologuePower : BoundPower
 {
-    protected override int BoundAmount(SimState state, int owner) => Var(state, owner, "StrengthPower", fallback: 1);
+    public override bool Instanced => true;
+    protected override int BoundAmount(SimState state, int owner) => VarTotal(state, owner, "StrengthPower", fallback: 1);
     protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount)
     {
         SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, amount, debuff: false);
@@ -293,6 +295,8 @@ public sealed class PaleBlueDotPower : ProcModel
 /// <summary>ImitationLearningPower (a teammate's, Data = the player it copies + 100): a Power card that player plays is copied and played for its owner.</summary>
 public sealed class ImitationLearningPower : ProcModel
 {
+    /// <summary>One copy per player it copies; the adapter reads you into Data when any copy copies you (SimReaders.Read).</summary>
+    public override bool Instanced => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
         play.Owner != owner && DataCreature.In(Data(state, owner)) == play.Owner && play.Card.Type == SimCardType.Power ? Fire(state, owner) : One(state);
 }
@@ -525,20 +529,19 @@ public abstract class EventCountdownPower : CounterPower
 /// </summary>
 public abstract class CounterPower : ProcModel
 {
+    public override bool Instanced => true;
+
     /// <summary>A new copy's count (Panache: 0, just applied: the card that applied it doesn't count).</summary>
     public abstract int StartCount { get; }
 
-    protected IReadOnlyList<CounterCopy> Copies(SimState state, int owner)
-    {
-        if (state.Player(owner) is { } player && player.Counters.Any(copy => copy.Power == ThisPower)) return player.Counters.Where(copy => copy.Power == ThisPower).ToList();
-        return new[] { new CounterCopy(ThisPower, Data(state, owner), Amount(state, owner)) };
-    }
+    protected IReadOnlyList<CounterCopy> Copies(SimState state, int owner) =>
+        CounterCopies.Listed(state, owner, ThisPower) ?? new List<CounterCopy> { new(ThisPower, Data(state, owner), Amount(state, owner)) };
 
     protected void SetCopies(SimState state, int owner, IReadOnlyList<CounterCopy> copies)
     {
-        if (state.Player(owner) is { } player && player.Counters.Any(copy => copy.Power == ThisPower))
+        if (CounterCopies.Listed(state, owner, ThisPower) != null)
         {
-            state.MutablePlayer(owner).Counters = player.Counters.Where(copy => copy.Power != ThisPower).Concat(copies).ToList();
+            CounterCopies.SetListed(state, owner, ThisPower, copies);
             return;
         }
         Set(state, owner, copies[0].Amount, copies[0].Left);
@@ -560,6 +563,23 @@ public abstract class CounterPower : ProcModel
             ? player.Counters.Where(copy => copy.Power == ThisPower).ToList()
             : new List<CounterCopy> { new(ThisPower, Data(state, target), Amount(state, target) - amount) };
         state.MutablePlayer(target).Counters = player.Counters.Where(copy => copy.Power != ThisPower).Concat(before).Append(new CounterCopy(ThisPower, StartCount, amount)).ToList();
+    }
+}
+
+/// <summary>
+/// The copies of an instanced power listed in its player's SimPlayer.Counters (SimReaders.Counters reads every copy there), each
+/// with its own count and amount; none listed: its Powers entry is the one copy.
+/// </summary>
+internal static class CounterCopies
+{
+    public static List<CounterCopy>? Listed(SimState state, int owner, PowerId power) =>
+        state.Player(owner) is { } player && player.Counters.Any(copy => copy.Power == power) ? player.Counters.Where(copy => copy.Power == power).ToList() : null;
+
+    /// <summary>Its copies now (none: it's gone), in place of the ones listed.</summary>
+    public static void SetListed(SimState state, int owner, PowerId power, IEnumerable<CounterCopy> copies)
+    {
+        if (state.Player(owner) is not { } player) return;
+        state.MutablePlayer(owner).Counters = player.Counters.Where(copy => copy.Power != power).Concat(copies).ToList();
     }
 }
 
@@ -723,6 +743,8 @@ public sealed class ReaperFormPower : ProcModel
 /// </summary>
 public sealed class WitheringPresencePower : ProcModel
 {
+    /// <summary>One copy per player (Aeonglass.AfterAddedToRoom), each counting its Target's cards: only yours is read (SimReaders.Powers).</summary>
+    public override bool Instanced => true;
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {

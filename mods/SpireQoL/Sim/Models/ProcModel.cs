@@ -28,6 +28,8 @@ public abstract class ProcModel : SimModel
 
     /// <summary>One of its values (DynamicVars) as the adapter read it.</summary>
     protected int Var(SimState state, int owner, string var, int fallback) => SimEngine.Var(state, owner, Name, var, fallback);
+    /// <summary>One of its values summed over its copies (an instanced power whose copies each act on their own value).</summary>
+    protected int VarTotal(SimState state, int owner, string var, int fallback) => SimEngine.VarTotal(state, owner, Name, var, fallback);
     /// <summary>The props of one of its values (a BlockVar's or DamageVar's), Unpowered when unknown.</summary>
     protected SimProps PropsOf(SimState state, int owner, string var) => (SimProps)SimEngine.Var(state, owner, Name, var + ".Props", (int)Unpowered);
 

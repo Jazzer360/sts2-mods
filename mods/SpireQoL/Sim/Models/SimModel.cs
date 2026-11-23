@@ -201,6 +201,14 @@ public abstract class SimModel
     public virtual bool FlashesOnDamageModified => false;
 
     /// <summary>
+    /// A power each application of which is a copy of its own, with its own amount and values (PowerInstanceType.Instanced: each
+    /// Monologue or The Bomb played). Its Powers entry holds them merged (amounts added), so its model must say how its copies act:
+    /// each on its own counter (SimPlayer.Counters), on their values' total (VarTotal), or all the same. Its AfterApplied runs for
+    /// every copy. InstancedPowerTests holds this to the game's InstanceType.
+    /// </summary>
+    public virtual bool Instanced => false;
+
+    /// <summary>
     /// Its tab on a card whose play makes it fire (from the play log; the amount from what it logged): a trigger, or the block,
     /// damage or summon it adds. Null: no tab from the log (its tab, if any, comes from the outcome comparisons).
     /// </summary>
@@ -319,7 +327,10 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> AfterPowerApplied(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) => One(state);
     /// <summary>A creature died (AfterDeath; once per death): Crab Rage, Ravenous.</summary>
     public virtual void AfterDeath(SimState state, int owner, int dead) { }
-    /// <summary>After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier.</summary>
+    /// <summary>
+    /// After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier. Once, when it
+    /// lands on a creature without it; for an instanced power (<see cref="Instanced"/>) on every copy.
+    /// </summary>
     public virtual void AfterApplied(SimState state, int owner, int applier, int amount) { }
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     public virtual void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play) { }
