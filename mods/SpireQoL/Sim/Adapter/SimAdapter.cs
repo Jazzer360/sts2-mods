@@ -318,7 +318,7 @@ public static partial class SimAdapter
             var hellraiser = me.Creature.HasPower<HellraiserPower>();
             var picks = player.AutoHand != null;
             // A card in your hand that acts on the cards it draws (decision #118): what it reads goes into the profile.
-            var readers = PileType.Hand.GetPile(me).Cards.Select(card => DrawnCardReaders.GetValueOrDefault(card.GetType().Name)).OfType<DrawnCardReader>().ToList();
+            var readers = PileType.Hand.GetPile(me).Cards.Select(card => DrawnCardReaderOf(card.GetType())).OfType<DrawnCardReader>().ToList();
             var readsType = readers.Any(drawnCardReader => drawnCardReader.What == DrawnCardReader.Reads.Type);
             var readsCost = readers.Any(drawnCardReader => drawnCardReader.What == DrawnCardReader.Reads.Cost);
             var autoByKey = new Dictionary<string, SimHandCard?>();
@@ -327,7 +327,7 @@ public static partial class SimAdapter
             var handCards = PileType.Hand.GetPile(me).Cards;
             var topPlays = handCards.Any(card => Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()) || card.GetType().Name == nameof(LostLute))
                            || me.Creature.Powers.Any(power => power.GetType().Name == nameof(LostLutePower));
-            var topUpgrades = handCards.Any(card => card.GetType().Name == nameof(TheDevil) && card.IsUpgraded);
+            var topUpgrades = handCards.Any(card => AutoPlaysOf(card) is { Upgrade: true });
             var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
             SimDrawCard Profile(CardModel card)
             {
@@ -429,26 +429,63 @@ public static partial class SimAdapter
         }
     }
 
-    /// <summary>
-    /// Cards that act on the cards their own draw gives (decision #118): what each reads ("type: ..." or "cost: ..."), from the
-    /// result of its CardPileCmd.Draw. The draw profile carries it while one is in your hand, and the play runs as a DrawnCardAction.
-    /// DrawScanTests (catalog tests) finds every card that uses what it draws, so a new one can't be read as a plain draw.
-    /// </summary>
-    internal static readonly IReadOnlyDictionary<string, DrawnCardReader> DrawnCardReaders = new Dictionary<string, DrawnCardReader>
-    {
-        [nameof(EscapePlan)] = new(DrawnCardReader.Reads.Type, "its block only when the card it draws is a Skill"),
-        [nameof(Pillage)] = new(DrawnCardReader.Reads.Type, "draws again while the card it draws is an Attack and your hand has room", DrawsAgain: true, Counts: true),
-        [nameof(Scrape)] = new(DrawnCardReader.Reads.Cost, "discards the cards it draws unless they cost 0 (an X cost counts as not 0)", Counts: true),
-    };
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, DrawnCardReader?> DrawnReaders = new();
 
     /// <summary>
-    /// What a card reads about the cards it draws (DrawnCardReaders). DrawsAgain: how many it draws depends on them. Counts: its chance
+    /// How a card acts on the cards its own draw gives (decision #118), read from its program (decision #182): a test of the result of
+    /// its CardPileCmd.Draw on a later step. A loop going round while the drawn card is of a type, drawing again (Pillage: Attacks); its
+    /// block only when the drawn card is of a type (Escape Plan: a Skill); a discard of the drawn cards its filter on their cost keeps
+    /// (Scrape: those that cost energy). The draw profile carries what it reads while one is in your hand, and the play runs as a
+    /// DrawnCardAction. Null for a card that doesn't act on what it draws. DrawScanTests (catalog tests) finds every card that uses what it
+    /// draws, so a new one whose reaction isn't one of these is caught.
+    /// </summary>
+    internal static DrawnCardReader? DrawnCardReaderOf(Type cardType) => DrawnReaders.GetOrAdd(cardType, type =>
+    {
+        var program = Procs.Programs.CardPrograms.Of(type);
+        static bool OnDrawn(Procs.Programs.ProgramValue value) => value.Parts().Any(part => part is Procs.Programs.ResultValue { Command: "CardPileCmd.Draw" });
+        // A test that the drawn card is of a type (Type == T holding, or Type != T failing).
+        static SimCardType? TypeTested(Procs.Programs.ProgramCondition? condition) => condition?.Literals
+            .Where(literal => literal.Test is Procs.Programs.CompareValue { Left: Procs.Programs.QueryValue { Name: "Type" } tested, Right: Procs.Programs.ConstantValue } compare
+                              && OnDrawn(tested) && (compare.Op == Procs.Programs.Comparison.Equal) == literal.Holds
+                              && compare.Op is Procs.Programs.Comparison.Equal or Procs.Programs.Comparison.NotEqual)
+            .Select(literal => (Procs.Programs.CompareValue)literal.Test).FirstOrDefault()
+            is { Right: Procs.Programs.ConstantValue { Value: var cardType } } && Enum.TryParse<SimCardType>(((CardType)cardType).ToString(), out var simType) ? simType : null;
+        foreach (var step in program.All())
+        {
+            switch (step)
+            {
+                case Procs.Programs.LoopStep loop when loop.While?.Literals.Any(literal => OnDrawn(literal.Test)) == true
+                                                     && new Procs.Programs.CardProgram("", loop.Body).Commands.Any(command => command.Command is { DeclaringType: "CardPileCmd", Name: "Draw" })
+                                                     && TypeTested(loop.While) is { } again:
+                    return new DrawnCardReader(DrawnCardReader.Reads.Type, $"draws again while the card it draws is a {again} and your hand has room", DrawsAgain: true, Counts: true)
+                        { Type = again };
+                case Procs.Programs.CommandStep { Command: { DeclaringType: "CreatureCmd", Name: "GainBlock" } } gain when TypeTested(gain.Condition) is { } blockIf:
+                    return new DrawnCardReader(DrawnCardReader.Reads.Type, $"its block only when the card it draws is a {blockIf}") { Type = blockIf, BlockIf = true };
+                case Procs.Programs.CommandStep { Command: { DeclaringType: "CardCmd", Name: "Discard" } } discard
+                    when discard.Values.Count > 1 && Unstored(discard.Values[1]) is Procs.Programs.QueryValue { Name: "Where", Arguments: [var drawn, Procs.Programs.LambdaValue filter] } && OnDrawn(drawn)
+                         && filter.Parts().Any(part => part is Procs.Programs.QueryValue { Name: "CostsX" or "GetWithModifiers" }):
+                    return new DrawnCardReader(DrawnCardReader.Reads.Cost, "discards the cards it draws unless they cost 0 (an X cost counts as not 0)", Counts: true);
+            }
+        }
+        return null;
+    });
+
+    private static Procs.Programs.ProgramValue Unstored(Procs.Programs.ProgramValue value) => value is Procs.Programs.StoredValue stored ? Unstored(stored.Value) : value;
+
+    /// <summary>
+    /// What a card reads about the cards it draws (DrawnCardReaderOf). DrawsAgain: how many it draws depends on them. Counts: its chance
     /// tab shows the most likely number (Attacks drawn, cards drawn that cost 0) with its chance, not just the chance its effect happens
     /// (decision #119).
     /// </summary>
     internal sealed record DrawnCardReader(DrawnCardReader.Reads What, string Note, bool DrawsAgain = false, bool Counts = false)
     {
         internal enum Reads { Type, Cost }
+
+        /// <summary>The card type its reaction tests (Pillage: Attack; Escape Plan: Skill); None for a test of the cost.</summary>
+        public SimCardType Type { get; init; }
+
+        /// <summary>Its block only when the drawn card is of <see cref="Type"/> (Escape Plan).</summary>
+        public bool BlockIf { get; init; }
     }
 
     /// <summary>

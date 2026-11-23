@@ -189,6 +189,20 @@ public class CardsTakenTests
     }
 
     [Fact]
+    public void AutoPlaysFromYourDrawPileAreReadFromTheCommand()
+    {
+        // CardPileCmd.AutoPlayFromDrawPile's count, its exhaust and its upgrading callback (the table it replaced: Havoc 1 that exhausts,
+        // Cascade its X and one more upgraded, The Devil your hand's cards, upgraded when it is).
+        var gameFight = new GameFight();
+        gameFight.Me.PlayerCombatState!.Energy = 2;
+        Assert.Equal((1, true, false), SimAdapter.AutoPlaysOf(gameFight.Add<Havoc>()));
+        Assert.Equal((3, false, false), SimAdapter.AutoPlaysOf(gameFight.Add<Cascade>(upgraded: true)));
+        var devil = gameFight.Add<TheDevil>(upgraded: true);
+        Assert.Equal((Others(gameFight, devil).Count, false, true), SimAdapter.AutoPlaysOf(devil));
+        Assert.Null(SimAdapter.AutoPlaysOf(gameFight.Add<StrikeIronclad>()));
+    }
+
+    [Fact]
     public void NeowsFuryLetsYouChooseHowMany()
     {
         var gameFight = new GameFight();

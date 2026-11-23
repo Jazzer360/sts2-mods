@@ -178,7 +178,7 @@ public sealed partial class ProcAudit
     private static void DrawnIssues(Window window, Player me, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
         var name = window.Card.GetType().Name;
-        if (!SimAdapter.DrawnCardReaders.TryGetValue(name, out var reader)) return; // a card that doesn't act on what it draws
+        if (SimAdapter.DrawnCardReaderOf(window.Card.GetType()) is not { } reader) return; // a card that doesn't act on what it draws
         if (window.Facts?.Drawn is not { } distribution)
         {
             model.Skip("drawn", "no chances worked out for what it draws (its simulation didn't finish)", name);
@@ -193,8 +193,8 @@ public sealed partial class ProcAudit
             try { return !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.All) == 0; } catch { return false; }
         }
         var actual = reader.What == SimAdapter.DrawnCardReader.Reads.Cost ? drawn.Count(Free)
-            : reader.Counts ? drawn.Count(card => card.Type == CardType.Attack)
-            : drawn.Count > 0 && drawn[0].Type == CardType.Skill ? 1 : 0;
+            : reader.Counts ? drawn.Count(card => SimReaders.TypeOf(card) == reader.Type)
+            : drawn.Count > 0 && SimReaders.TypeOf(drawn[0]) == reader.Type ? 1 : 0;
         if (!distribution.TryGetValue(actual, out var share) || share <= 0)
         {
             issues.Add($"drawn: {name} gave {actual}, which its simulation had no chance of ({string.Join(", ", distribution.Select(entry => $"{entry.Key}: {entry.Value:0.###}"))})");

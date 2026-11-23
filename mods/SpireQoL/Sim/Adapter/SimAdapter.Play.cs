@@ -2,7 +2,6 @@ using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
-using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -139,15 +138,13 @@ public static partial class SimAdapter
                 .Select(other => DrawProfiles.GetValueOrDefault(other)).OfType<SimDrawCard>().GroupBy(profile => profile.Key)
                 .Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()));
         // Cards it auto-plays from the top of your draw pile, after what it does to your hand (The Devil exhausts it first).
-        if (Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType())) play.Body.Add(new AutoPlayFromDrawAction(name switch
-        {
-            nameof(Havoc) => 1,
-            nameof(Cascade) => SafeInt(() => Hook.ModifyXValue(combat, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0),
-            _ => PileType.Hand.GetPile(me).Cards.Count(other => other != card), // The Devil: the cards in your hand as it plays
-        }) { ForceExhaust = name == nameof(Havoc), Upgrade = name == nameof(TheDevil) && card.IsUpgraded });
+        // How many, whether they exhaust and whether they're upgraded first, read from its program (AutoPlaysOf): Havoc one that
+        // exhausts, Cascade its X (one more upgraded), The Devil the cards in your hand as it plays, upgraded when it is.
+        if (AutoPlaysOf(card) is { } autoPlays)
+            play.Body.Add(new AutoPlayFromDrawAction(autoPlays.Count) { ForceExhaust = autoPlays.ForceExhaust, Upgrade = autoPlays.Upgrade });
         // A replay of a card whose numbers change with each play in a way its code doesn't show (decision #160: Thrash).
         if (plays > 1 && PlayGrowth.Of(card).Unmodelled is { } growthUnknown) play.Body.Add(new NotModelledAction(growthUnknown));
-        if (DrawnCardReaders.ContainsKey(name)) UseDrawnCard(play, name);
+        if (DrawnCardReaderOf(card.GetType()) is { } reader) UseDrawnCard(play, reader);
 
         // ---- summary fields (not actions yet)
         play.ByOsty = facts.ByOsty;
@@ -195,32 +192,30 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// A card that acts on what its own draw gave (decision #118: DrawnCardReaders): its draw and its reaction become one
-    /// DrawnCardAction in the draw's place, so the reaction sees the card each branch drew. Escape Plan's block moves into it (the game
-    /// gains it after the draw, only for a Skill); Scrape's discards are the ones it makes there, not the plain count.
+    /// A card that acts on what its own draw gave (decision #118: DrawnCardReaderOf, read from its program): its draw and its reaction
+    /// become one DrawnCardAction in the draw's place, so the reaction sees the card each branch drew. A block only for a type moves into
+    /// it (Escape Plan: the game gains it after the draw, only for a Skill); a draw again while a type (Pillage); discards of the drawn
+    /// cards that cost energy are the ones it makes there, not the plain count (Scrape).
     /// </summary>
-    private static void UseDrawnCard(SimPlay play, string name)
+    private static void UseDrawnCard(SimPlay play, DrawnCardReader reader)
     {
         var at = play.Body.FindIndex(simAction => simAction is CardEventAction { Event: CardEvent.Drawn });
         if (at < 0) return; // nothing drawn (a full hand, empty piles): nothing to act on
         var draw = (CardEventAction)play.Body[at];
         var action = new DrawnCardAction(draw.Count) { Indirect = draw.Indirect };
-        switch (name)
+        if (reader.BlockIf)
         {
-            case nameof(EscapePlan):
-                if (play.Body.OfType<GainBlockAction>().FirstOrDefault() is { } block)
-                {
-                    play.Body.Remove(block);
-                    action = action with { BlockIf = SimCardType.Skill, Block = block };
-                }
-                break;
-            case nameof(Pillage):
-                action = action with { DrawAgainIf = SimCardType.Attack };
-                break;
-            case nameof(Scrape):
-                play.Body.RemoveAll(simAction => simAction is CardEventAction { Event: CardEvent.Discarded });
-                action = action with { DiscardUnlessFree = true };
-                break;
+            if (play.Body.OfType<GainBlockAction>().FirstOrDefault() is { } block)
+            {
+                play.Body.Remove(block);
+                action = action with { BlockIf = reader.Type, Block = block };
+            }
+        }
+        else if (reader.DrawsAgain) action = action with { DrawAgainIf = reader.Type };
+        else if (reader.What == DrawnCardReader.Reads.Cost)
+        {
+            play.Body.RemoveAll(simAction => simAction is CardEventAction { Event: CardEvent.Discarded });
+            action = action with { DiscardUnlessFree = true };
         }
         play.Body[play.Body.FindIndex(simAction => simAction is CardEventAction { Event: CardEvent.Drawn })] = action;
     }
@@ -513,6 +508,26 @@ public static partial class SimAdapter
             else
                 yield return new TakeToHandAction(Count: 1, counts) { Random = take.Random, FromDiscard = fromDiscard };
         }
+    }
+
+    /// <summary>
+    /// The cards a play auto-plays from the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile in its program): how many (its count
+    /// argument on the board: Havoc 1, Cascade its X and one more upgraded, The Devil the cards in your hand), whether they exhaust (its
+    /// exhaust argument: Havoc's), and whether they're upgraded first (the callback it gives upgrading them, on its condition: The Devil
+    /// upgraded). Null for a card that auto-plays none.
+    /// </summary>
+    internal static (int Count, bool ForceExhaust, bool Upgrade)? AutoPlaysOf(CardModel card)
+    {
+        var program = Procs.Programs.CardPrograms.Of(card.GetType());
+        if (Procs.Programs.CardEffects.Find(program, command => command.Command is { DeclaringType: "CardPileCmd", Name: "AutoPlayFromDrawPile" }) is not [var autoPlay, ..])
+            return null;
+        var board = new Procs.Programs.ProgramBoard(card);
+        var values = autoPlay.Command.Values;
+        var count = values.Count > 2 && Procs.Programs.ProgramEvaluator.Number(values[2], board, program) is { } read ? (int)read : 1;
+        var exhausts = values.Count > 4 && values[4] is Procs.Programs.ConstantValue { Value: not 0 };
+        var upgrades = autoPlay.Command.Inner.OfType<Procs.Programs.CommandStep>().Any(inner => inner.Command is { DeclaringType: "CardCmd", Name: "Upgrade" }
+                                                                                              && Procs.Programs.ProgramEvaluator.Holds(inner.Condition ?? Procs.Programs.ProgramCondition.Always, board, program) != false);
+        return (Math.Max(0, count), exhausts, upgrades);
     }
 
     /// <summary>How many cards of each profile in your draw or discard pile pass the filter.</summary>

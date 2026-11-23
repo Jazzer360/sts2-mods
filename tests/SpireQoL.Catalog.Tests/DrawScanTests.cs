@@ -64,14 +64,31 @@ public class DrawScanTests
     }
 
     [Fact]
+    public void EachReadersReactionIsReadFromItsProgram()
+    {
+        // The table it replaced (SimAdapter.DrawnCardReaders): Pillage draws again while it draws an Attack, Escape Plan blocks only for
+        // a Skill, Scrape discards the drawn cards that cost energy.
+        GameModels.EnsureLoaded();
+        var pillage = SimAdapter.DrawnCardReaderOf(typeof(MegaCrit.Sts2.Core.Models.Cards.Pillage))!;
+        Assert.Equal((SimAdapter.DrawnCardReader.Reads.Type, true, true, SimCardType.Attack, false), (pillage.What, pillage.DrawsAgain, pillage.Counts, pillage.Type, pillage.BlockIf));
+        var escapePlan = SimAdapter.DrawnCardReaderOf(typeof(MegaCrit.Sts2.Core.Models.Cards.EscapePlan))!;
+        Assert.Equal((SimAdapter.DrawnCardReader.Reads.Type, false, false, SimCardType.Skill, true), (escapePlan.What, escapePlan.DrawsAgain, escapePlan.Counts, escapePlan.Type, escapePlan.BlockIf));
+        var scrape = SimAdapter.DrawnCardReaderOf(typeof(MegaCrit.Sts2.Core.Models.Cards.Scrape))!;
+        Assert.Equal((SimAdapter.DrawnCardReader.Reads.Cost, false, true), (scrape.What, scrape.DrawsAgain, scrape.Counts));
+        Assert.Null(SimAdapter.DrawnCardReaderOf(typeof(MegaCrit.Sts2.Core.Models.Cards.Acrobatics)));
+    }
+
+    [Fact]
     public void EveryCardThatUsesWhatItDrawsIsAReader()
     {
         GameModels.EnsureLoaded();
         var users = ModelDb.AllCards.Select(card => card.GetType()).Distinct().Where(UsesWhatItDraws).Select(type => type.Name).OrderBy(name => name).ToList();
         Assert.Contains("EscapePlan", users); // the scan finds the known ones
-        var missing = users.Where(user => !SimAdapter.DrawnCardReaders.ContainsKey(user)).ToList();
-        Assert.True(missing.Count == 0, "Cards that act on what they draw, not in SimAdapter.DrawnCardReaders: " + string.Join(", ", missing));
-        foreach (var name in SimAdapter.DrawnCardReaders.Keys)
-            Assert.True(users.Contains(name), $"{name} is a DrawnCardReader but no longer uses what it draws");
+        var readers = ModelDb.AllCards.Select(card => card.GetType()).Distinct().Where(type => SimAdapter.DrawnCardReaderOf(type) != null)
+            .Select(type => type.Name).OrderBy(name => name).ToList();
+        var missing = users.Except(readers).ToList();
+        Assert.True(missing.Count == 0, "Cards that act on what they draw whose reaction their program doesn't say (SimAdapter.DrawnCardReaderOf): " + string.Join(", ", missing));
+        foreach (var name in readers)
+            Assert.True(users.Contains(name), $"{name} is read as acting on what it draws but no longer uses what it draws");
     }
 }

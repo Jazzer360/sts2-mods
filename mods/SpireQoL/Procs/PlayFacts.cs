@@ -491,7 +491,7 @@ public sealed class PlayFacts
             MayDiscardSly = Programs.CardEffects.Discards(card.GetType()).Any(discard => discard.Way == Programs.CardEffects.TakeWay.Each)
                             && DiscardedFromHand(card, others, draws) > 0 && others.Any(other => other.IsSlyThisTurn),
             OwnDraws = draws + swiftDraws,
-            DrawsAtMost = SpireQoL.Sim.SimAdapter.DrawnCardReaders.GetValueOrDefault(name) is { DrawsAgain: true }
+            DrawsAtMost = SpireQoL.Sim.SimAdapter.DrawnCardReaderOf(card.GetType()) is { DrawsAgain: true }
                 ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,
             EnchantmentDraws = swiftDraws,
             BlockGains = BlockGainCount(card) * Math.Max(1, plays),

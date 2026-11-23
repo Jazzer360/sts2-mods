@@ -521,7 +521,7 @@ public sealed class CardPredictions
     /// </summary>
     private static void DrawnTab(PlayFacts facts, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs)
     {
-        if (outcomes.Length == 0 || !SimAdapter.DrawnCardReaders.TryGetValue(facts.Card.GetType().Name, out var reader)) return;
+        if (outcomes.Length == 0 || SimAdapter.DrawnCardReaderOf(facts.Card.GetType()) is not { } reader) return;
         if (DrawnChance.Distribution(outcomes[0]) is not { } distribution) return;
         facts.Drawn = distribution;
         var unsure = outcomes[0].Truncated || outcomes[0].AnyUnmodelled;

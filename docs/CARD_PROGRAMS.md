@@ -278,6 +278,13 @@ hooks.
     least. It replaced `HitsPerPlay`'s eleven cases, `GlowGatedAttackCards`, `GlowNotTheAttack`, `AttacksConditionallyAndGlows` and
     the branch rule `AttackHitCountsAreVars` (main's fixed 2 is read from main's code). The card scan holds the attack's condition and
     hit count to being readable.
+  - What a card does with what it draws, and auto-plays (2026-11-23, round three): `SimAdapter.DrawnCardReaderOf` reads a test of
+    the result of the card's `CardPileCmd.Draw` on a later step into the simulator's `DrawnCardAction`: a loop going round while the
+    drawn card is of a type, drawing again (Pillage), a block only when it's of a type (Escape Plan), a discard of the drawn cards a
+    filter on their cost keeps (Scrape). It replaced the `DrawnCardReaders` table and `UseDrawnCard`'s cases; DrawScanTests holds every
+    card that uses what it draws to one of these. `SimAdapter.AutoPlaysOf` reads `CardPileCmd.AutoPlayFromDrawPile`'s count, its
+    exhaust argument and the upgrading callback it's given (Havoc, Cascade's X, The Devil's hand, upgraded), replacing those cards'
+    names in the adapter.
   - **The evaluator** (`ProgramEvaluator`) evaluates a condition before the play, each query translated once: a property of the
     game's objects is read (the game's own answer), a method only when it only asks (`Is`, `Has`, `Can`, `Get`, `Contains`,
     `HappenedThisTurn`), never anything about the RNG; Linq over a collection with the code's own lambda; your hand without the
@@ -362,12 +369,10 @@ references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter
 
 | Table (where) | Cards | What the program doesn't say yet |
 |---|---|---|
-| `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The tests are read now (Pillage's loop's `While`: the drawn card, its type, your hand's room; Escape Plan's block on the drawn card being a Skill); what's left is turning a test of a command's result into the simulator's `DrawnCardAction`. |
 | (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
 | `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TriggerPoisonCards`, `TeammatesShivCards`, `EnemyStrengthCards` | Outbreak, Blade Symphony, Strength takers | A call on a power (`PoisonPower.Trigger` isn't a command); the player a helper's Shivs go to (an argument inside the helper); a power's sign and duration. |
-| `AutoPlayFromDrawAction`'s count | Havoc, Cascade, The Devil | The count argument (`cards.Count`, X + 1 upgraded: a `WaysValue` now). |
 
 ## Part B: pipelines and models checked against the game's code
 
