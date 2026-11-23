@@ -21,19 +21,33 @@ public class CardProgramTests
         ["IronWave"] = "IronWave: CreatureCmd.GainBlock, DamageCmd.Attack",
         // Exhausts the hand one card at a time (a loop over your hand's cards), then attacks once per card.
         ["FiendFire"] = "FiendFire: loop over each of Hand.Cards.ToList [CardCmd.Exhaust], DamageCmd.Attack",
-        // Energy only when a hit killed (a condition on the attack's results).
-        ["Sunder"] = "Sunder: DamageCmd.Attack, PlayerCmd.GainEnergy if Any",
+        // Energy only when a hit killed (a condition on the attack's results: a lambda over them).
+        ["Sunder"] = "Sunder: DamageCmd.Attack, PlayerCmd.GainEnergy if Any(SelectMany(result of AttackCommand.Execute.Results, r => r), r => r.WasTargetKilled)",
         // Exhaust, then block, card by card.
         ["SecondWind"] = "SecondWind: loop over each of GetCards.ToList [CardCmd.Exhaust, CreatureCmd.GainBlock]",
         // Draws, then the pick, then the discard of what was picked.
-        ["Acrobatics"] = "Acrobatics: CardPileCmd.Draw, choice FromHandForDiscard, CardCmd.Discard if FirstOrDefault",
+        ["Acrobatics"] = "Acrobatics: CardPileCmd.Draw, choice FromHandForDiscard, CardCmd.Discard if FirstOrDefault(result of CardSelectCmd.FromHandForDiscard)",
         // Draws before its No Draw.
         ["BattleTrance"] = "BattleTrance: CardPileCmd.Draw, PowerCmd.Apply<NoDrawPower>",
-        // A do-while that draws while it draws Attacks.
-        ["Pillage"] = "Pillage: DamageCmd.Attack, loop over ? [CardPileCmd.Draw]",
+        // A do-while that draws again while the card it drew is an Attack and your hand has room: its round's tests, in order.
+        ["Pillage"] = "Pillage: DamageCmd.Attack, loop while result of CardPileCmd.Draw and result of CardPileCmd.Draw.Type == Attack"
+                      + " and Count(GetCards(this.Owner, [2])) < MaxCardsInHand [CardPileCmd.Draw]",
         // The attack runs inside the shot (a local function the shot is given).
-        ["BlossomShot"] = "BlossomShot: ArrowCmd.ShootArrowAtTarget [DamageCmd.Attack, PowerCmd.Apply<StretchPower>] if not IsDead",
+        ["BlossomShot"] = "BlossomShot: ArrowCmd.ShootArrowAtTarget [DamageCmd.Attack, PowerCmd.Apply<StretchPower>] if not cardPlay.Target.IsDead",
         ["Bash"] = "Bash: DamageCmd.Attack, PowerCmd.Apply<VulnerablePower>",
+        // Conditions as values: a negated lambda over your hand (no Attack in it).
+        ["Impatience"] = "Impatience: CardPileCmd.Draw if not Any(GetPile(2, this.Owner).Cards, c => c.Type == Attack)",
+        // A local stored before the attack (whether the target was Impaled then), read after it.
+        ["KiHop"] = "KiHop: DamageCmd.Attack, CardPileCmd.Draw if wasImpaled=CreatureIsImpaledByArrow(cardPlay.Target)",
+        // An if holding a while: the loop and the draw after it both wait on the if's test.
+        ["Wrest"] = "Wrest: loop while CreatureIsImpaledByPlayersArrow(cardPlay.Target, this.Owner) [ArrowCmd.DislodgeArrow] if CreatureIsImpaledByPlayersArrow(cardPlay.Target, this.Owner),"
+                    + " CardPileCmd.Draw if CreatureIsImpaledByPlayersArrow(cardPlay.Target, this.Owner)",
+        // The other way round: if (!IsOnlyCardInHand) return; then the draws and the energy. The test's direction is kept.
+        ["Restlessness"] = "Restlessness: loop over Cards [CardPileCmd.Draw] if this.IsOnlyCardInHand, PlayerCmd.GainEnergy if this.IsOnlyCardInHand",
+        // && in the test (a null check, then the drawn card's type).
+        ["EscapePlan"] = "EscapePlan: CardPileCmd.Draw, CreatureCmd.GainBlock if FirstOrDefault(result of CardPileCmd.Draw) and FirstOrDefault(result of CardPileCmd.Draw).Type == Skill",
+        // An Osty check, then a test of the card's own property, negated.
+        ["Fetch"] = "Fetch: DamageCmd.Attack if not CheckMissingWithAnim(this.Owner), CardPileCmd.Draw if not CheckMissingWithAnim(this.Owner) and not this.HasBeenPlayedThisTurn",
     };
 
     [Theory]
@@ -92,6 +106,28 @@ public class CardProgramTests
             foreach (var method in nested.GetMethods(all))
                 if (method.Name.StartsWith("<OnPlay>", StringComparison.Ordinal) || method.Name == "MoveNext" && nested.Name.Contains("<OnPlay>"))
                     yield return method;
+    }
+
+    [Fact]
+    public void ConditionsRejoinWhereTheWaysMeet()
+    {
+        // The ways round an if meet again after it: what follows has no condition. Each test is its branch's (a test at another place
+        // is another test, even of the same thing).
+        var first = new ConditionLiteral("m:0010", new NamedValue("a"), Holds: true);
+        var second = new ConditionLiteral("m:0020", new NamedValue("b"), Holds: true);
+        var always = ProgramCondition.Always;
+        Assert.True(always.And(first).Or(always.And(first.Negate())).IsAlways);
+        // if (a && b) {...}: the else is not a, or a and not b; after it, every way.
+        var elseWay = always.And(first.Negate()).Or(always.And(first).And(second.Negate()));
+        Assert.Equal("not a or not b", elseWay.ToString());
+        Assert.True(elseWay.Or(always.And(first).And(second)).IsAlways);
+        // if (a || b): a, or not a and b, is a or b.
+        Assert.Equal("a or b", always.And(first).Or(always.And(first.Negate()).And(second)).ToString());
+        // Inside a loop that runs on a: its body's steps don't repeat it.
+        Assert.Equal("b", always.And(first).And(second).Without(always.And(first)).ToString());
+        // The same test at another branch is another literal.
+        var again = new ConditionLiteral("m:0030", new NamedValue("a"), Holds: false);
+        Assert.False(always.And(first).Or(always.And(again)).IsAlways);
     }
 
     [Fact]

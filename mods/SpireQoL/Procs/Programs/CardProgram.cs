@@ -6,8 +6,14 @@ namespace SpireQoL.Procs.Programs;
 /// <summary>One step of a play, in the order the card's code runs it (decision #182, docs/CARD_PROGRAMS.md).</summary>
 public abstract record ProgramStep(int Offset)
 {
-    /// <summary>Runs only when a condition holds (an if around it).</summary>
-    public string? Condition { get; init; }
+    /// <summary>
+    /// Runs only when this holds (the tests on the way to it: an if around it, an early return before it), relative to the loop it's
+    /// in; null on every way.
+    /// </summary>
+    public ProgramCondition? Condition { get; init; }
+
+    /// <summary>" if ..." when it has a condition.</summary>
+    protected string When => Condition != null ? " if " + Condition : "";
 }
 
 /// <summary>
@@ -34,7 +40,7 @@ public sealed record CommandStep(int Offset, CodeMember Command, IReadOnlyList<s
     /// <summary>"CreatureCmd.GainBlock", "PowerCmd.Apply&lt;VulnerablePower&gt;".</summary>
     public string Name => Command.ToString();
 
-    public override string ToString() => Name + (Inner.Count > 0 ? " [" + string.Join(", ", Inner) + "]" : "") + (Condition != null ? " if " + Condition : "");
+    public override string ToString() => Name + (Inner.Count > 0 ? " [" + string.Join(", ", Inner) + "]" : "") + When;
 }
 
 /// <summary>A player's pick in the middle of the play (CardSelectCmd): which card is theirs to choose, not whether the play goes on.</summary>
@@ -43,7 +49,7 @@ public sealed record ChoiceStep(int Offset, CodeMember Command) : ProgramStep(Of
     /// <summary>Where each of its arguments comes from (whose pile, whose pick: "Owner" is you), as a command's.</summary>
     public IReadOnlyList<string> Arguments { get; init; } = Array.Empty<string>();
 
-    public override string ToString() => "choice " + Command.Name;
+    public override string ToString() => "choice " + Command.Name + When;
 }
 
 /// <summary>
@@ -52,19 +58,25 @@ public sealed record ChoiceStep(int Offset, CodeMember Command) : ProgramStep(Of
 /// </summary>
 public sealed record CreateStep(int Offset, string Card) : ProgramStep(Offset)
 {
-    public override string ToString() => "create " + Card;
+    public override string ToString() => "create " + Card + When;
 }
 
 /// <summary>A loop: its body runs once per round (a foreach over cards, a for up to a value, a do-while).</summary>
 public sealed record LoopStep(int Offset, string Over, IReadOnlyList<ProgramStep> Body) : ProgramStep(Offset)
 {
-    public override string ToString() => $"loop over {Over} [{string.Join(", ", Body)}]";
+    /// <summary>
+    /// What its code tests to go round again (i &lt; Cards, MoveNext, Pillage's drawn card being an Attack while your hand has room),
+    /// besides the loop's own condition; null when it can't be read (a jump back with no test).
+    /// </summary>
+    public ProgramCondition? While { get; init; }
+
+    public override string ToString() => (Over == "?" && While != null ? $"loop while {While}" : $"loop over {Over}") + $" [{string.Join(", ", Body)}]" + When;
 }
 
 /// <summary>Something the reader couldn't follow: the steps it holds or stands for aren't known.</summary>
 public sealed record UnknownStep(int Offset, string Reason) : ProgramStep(Offset)
 {
-    public override string ToString() => "unknown: " + Reason;
+    public override string ToString() => "unknown: " + Reason + When;
 }
 
 /// <summary>A card's play as its code runs it: its steps in order, and what the reader couldn't follow.</summary>
@@ -193,14 +205,30 @@ public static class CardProgramReader
             List<CodeOp> ops;
             try { ops = _read(method); }
             catch (Exception ex) { return new List<ProgramStep> { new UnknownStep(0, $"{method.Name} can't be read ({ex.GetType().Name})") }; }
-            var flow = Flow.Of(ops);
+            var flow = Flow.Of(ops, method, depth < MaxDepth ? LambdaOf : null);
             var steps = new List<ProgramStep>();
-            Parse(flow, 0, flow.Ops.Count, steps, condition: null, depth);
+            Parse(flow, 0, flow.Ops.Count, steps, outer: null, depth);
             return steps;
         }
 
-        /// <summary>The steps of ops[start, end): commands in order, loops as bodies, an if's steps marked with its condition.</summary>
-        private void Parse(Flow flow, int start, int end, List<ProgramStep> into, string? condition, int depth)
+        /// <summary>A lambda the code makes (a predicate for Any, Where...): its parameter and what it returns.</summary>
+        private LambdaValue? LambdaOf(CodeMember member)
+        {
+            if (Lambda(member) is not { } body) return null;
+            try
+            {
+                var flow = Flow.Of(_read(body), body, lambdaOf: null);
+                var parameter = body.GetParameters() is { Length: > 0 } parameters ? parameters[0].Name ?? "x" : "x";
+                return new LambdaValue(parameter, flow.Returned());
+            }
+            catch { return null; }
+        }
+
+        /// <summary>
+        /// The steps of ops[start, end): commands in order, loops as bodies, each step with the condition it runs on (the tests on the way
+        /// to it), inside <paramref name="outer"/> (the loop it's in: its own condition isn't repeated on each step).
+        /// </summary>
+        private void Parse(Flow flow, int start, int end, List<ProgramStep> into, ProgramCondition? outer, int depth)
         {
             var ops = flow.Ops;
             List<ProgramStep>? callback = null;
@@ -210,35 +238,21 @@ public static class CardProgramReader
                 // A loop that starts here (a backward jump to this instruction later on): its body up to that jump.
                 if (flow.LoopEndAt(i) is { } loopEnd && loopEnd < end)
                 {
-                    var body = new List<ProgramStep>();
-                    Parse(flow, i, loopEnd, body, condition: null, depth);
-                    if (body.Count > 0) into.Add(new LoopStep(instruction.Offset, flow.LoopOver(i, loopEnd), body) { Condition = condition });
+                    var entry = flow.LoopEntry(i);
+                    if (entry is { IsNever: false })
+                    {
+                        var body = new List<ProgramStep>();
+                        Parse(flow, i, loopEnd, body, entry, depth);
+                        if (body.Count > 0)
+                            into.Add(new LoopStep(instruction.Offset, flow.LoopOver(i, loopEnd), body) { Condition = Relative(entry, outer), While = flow.While(i, loopEnd) });
+                    }
                     i = loopEnd;
                     continue;
                 }
-                if (flow.IsNoise(i)) continue;
-                if (instruction.IsBranch)
-                {
-                    var target = flow.IndexOf(instruction.Targets[0]);
-                    // The jump into a loop's condition (for, while, foreach): the loop starts right after it.
-                    if (instruction.OpCode.FlowControl == FlowControl.Branch && target > i && flow.LoopEndAt(i + 1) is { } entered && entered >= target) continue;
-                    if (instruction.OpCode.FlowControl == FlowControl.Cond_Branch && target > i + 1 && target <= end)
-                    {
-                        // if (...) { then } [else { ... }]: what runs only when the condition holds, marked with it.
-                        var query = flow.Query(i);
-                        var thenEnd = target;
-                        var elseEnd = target;
-                        if (target - 1 > i && ops[target - 1] is { OpCode.FlowControl: FlowControl.Branch } skip && flow.IndexOf(skip.Targets[0]) is var after && after > target && after <= end)
-                        {
-                            thenEnd = target - 1;
-                            elseEnd = after;
-                        }
-                        Parse(flow, i + 1, thenEnd, into, Join(condition, query), depth);
-                        if (elseEnd > target) Parse(flow, target, elseEnd, into, Join(condition, "not " + query), depth);
-                        i = elseEnd - 1;
-                    }
-                    continue;
-                }
+                if (flow.IsNoise(i) || instruction.IsBranch) continue;
+                // Code no way reaches (a handler, a resume point): nothing of it runs in a play.
+                if (flow.ReachedAt(i) is not { IsNever: false } reached) continue;
+                var condition = Relative(reached, outer);
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
                 if (member.Namespace == "MegaCrit.Sts2.Core.Commands" && member.DeclaringType == "CardSelectCmd")
                 {
@@ -268,7 +282,7 @@ public static class CardProgramReader
                     else
                     {
                         var inner = new Reader(_card, _read).Steps(own, depth + 1);
-                        into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = Join(condition, step.Condition) }));
+                        into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
                     }
                     continue;
                 }
@@ -276,7 +290,7 @@ public static class CardProgramReader
                 if (depth < MaxDepth && GameHelper(member) is { } helper)
                 {
                     var inner = new Reader(helper.Owner, _read).Steps(helper.Body, depth + 1);
-                    if (Acts(inner)) into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = Join(condition, step.Condition) }));
+                    if (Acts(inner)) into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
                     continue;
                 }
                 // A delegate whose code calls commands: the next command it's given to runs it (its Inner steps). One left over, or
@@ -292,10 +306,13 @@ public static class CardProgramReader
                     }
                 }
             }
-            if (callback != null) into.Add(new UnknownStep(ops.Count > 0 ? ops[^1].Offset : 0, "commands in a callback") { Condition = condition });
+            if (callback != null) into.Add(new UnknownStep(ops.Count > 0 ? ops[^1].Offset : 0, "commands in a callback"));
         }
 
-        private static string Join(string? outer, string? inner) => outer == null ? inner ?? "" : inner == null ? outer : outer + " and " + inner;
+        private static ProgramCondition? And(ProgramCondition? outer, ProgramCondition? inner) => outer == null ? inner : inner == null ? outer : outer.And(inner);
+
+        /// <summary>A step's condition inside the loop it's in (null when it holds on every way).</summary>
+        private static ProgramCondition? Relative(ProgramCondition reached, ProgramCondition? outer) => reached.Without(outer) is { IsAlways: false } relative ? relative : null;
 
         /// <summary>Steps that do something: a command or a choice (a helper or delegate with neither only asks or shows).</summary>
         private static bool Acts(List<ProgramStep> steps) => new CardProgram("", steps).All().Any(step => step is CommandStep or ChoiceStep or UnknownStep);
@@ -380,24 +397,339 @@ public static class CardProgramReader
         private readonly Dictionary<int, int> _indexOf = new();
         private readonly bool[] _noise;
         private readonly Dictionary<int, int> _loopEnds = new();
+        /// <summary>Each await's jump past its suspend (index of the jump, index it resumes at).</summary>
+        private readonly Dictionary<int, int> _awaitJumps = new();
+        /// <summary>The state dispatch's jumps (where to resume): not the card's flow.</summary>
+        private readonly HashSet<int> _dispatch = new();
+        /// <summary>The condition each instruction is reached on (null: never reached).</summary>
+        private ProgramCondition?[] _reached = Array.Empty<ProgramCondition?>();
+        private readonly Dictionary<int, ProgramCondition?> _loopEntries = new();
+        /// <summary>The method read (names its literals' places and its parameters).</summary>
+        private readonly System.Reflection.MethodBase? _method;
+        private readonly string _site;
+        private readonly Func<CodeMember, LambdaValue?>? _lambdaOf;
 
-        private Flow(List<CodeOp> ops)
+        private Flow(List<CodeOp> ops, System.Reflection.MethodBase? method, Func<CodeMember, LambdaValue?>? lambdaOf)
         {
             Ops = ops;
             for (var i = 0; i < ops.Count; i++) _indexOf[ops[i].Offset] = i;
             _noise = new bool[ops.Count];
+            _method = method;
+            _site = method == null ? "" : method.DeclaringType?.Name + "." + method.Name;
+            _lambdaOf = lambdaOf;
         }
 
         public int IndexOf(int offset) => _indexOf.TryGetValue(offset, out var index) ? index : Ops.Count;
         public bool IsNoise(int index) => _noise[index];
         public int? LoopEndAt(int index) => _loopEnds.TryGetValue(index, out var end) ? end : null;
+        public ProgramCondition? ReachedAt(int index) => index < _reached.Length ? _reached[index] : null;
+        public ProgramCondition? LoopEntry(int start) => _loopEntries.TryGetValue(start, out var entry) ? entry : null;
 
-        public static Flow Of(List<CodeOp> ops)
+        public static Flow Of(List<CodeOp> ops, System.Reflection.MethodBase? method = null, Func<CodeMember, LambdaValue?>? lambdaOf = null)
         {
-            var flow = new Flow(ops);
+            var flow = new Flow(ops, method, lambdaOf);
             flow.MarkMachinery();
             flow.FindLoops();
+            flow.FindConditions();
             return flow;
+        }
+
+        /// <summary>
+        /// The condition each instruction runs on: every way to it from the start, each the tests it passes (a branch taken or not),
+        /// with the machinery's jumps followed as they always go (an await resumes past its suspend; the dispatch starts at the top).
+        /// A loop's body runs on the loop's own condition (its round's test is the loop's While); a way out of a loop goes on with the
+        /// condition the loop had; a return (a leave to the end) ends its way.
+        /// </summary>
+        private void FindConditions()
+        {
+            var count = Ops.Count;
+            var incoming = new ProgramCondition?[count + 1];
+            _reached = new ProgramCondition?[count];
+            incoming[0] = ProgramCondition.Always;
+            var loops = _loopEnds.OrderBy(loop => loop.Key).Select(loop => (Start: loop.Key, End: loop.Value)).ToList();
+            for (var i = 0; i < count; i++)
+            {
+                if (_loopEnds.TryGetValue(i, out var loopEnd))
+                {
+                    // Entered at its top, or by the jump to its test (a for or while): from before it, so all known by now.
+                    var entry = incoming[i];
+                    for (var inside = i + 1; inside <= loopEnd; inside++)
+                        if (incoming[inside] is { } from) entry = entry == null ? from : entry.Or(from);
+                    _loopEntries[i] = entry;
+                    incoming[i] = entry;
+                }
+                var here = incoming[i];
+                _reached[i] = here;
+                if (here == null || here.IsNever) continue;
+                var instruction = Ops[i];
+                var at = i;
+                void Edge(int target, ProgramCondition condition)
+                {
+                    if (target <= at) return; // a loop's round: its condition is the loop's
+                    foreach (var (start, end) in loops)
+                        if (start <= at && at <= end && target > end && _loopEntries.GetValueOrDefault(start) is { } loopEntry)
+                        {
+                            condition = loopEntry;
+                            break;
+                        }
+                    incoming[target] = incoming[target] is { } already ? already.Or(condition) : condition;
+                }
+                if (_awaitJumps.TryGetValue(i, out var resume)) { Edge(resume, here); continue; }
+                if (_dispatch.Contains(i)) { Edge(i + 1, here); continue; }
+                if (instruction.OpCode == OpCodes.Leave || instruction.OpCode == OpCodes.Leave_S)
+                {
+                    var target = IndexOf(instruction.Targets[0]);
+                    if (!Returns(target)) Edge(target, here);
+                    continue;
+                }
+                if (instruction.OpCode == OpCodes.Ret || instruction.OpCode == OpCodes.Throw || instruction.OpCode == OpCodes.Rethrow
+                    || instruction.OpCode == OpCodes.Endfinally || instruction.OpCode == OpCodes.Endfilter) continue;
+                if (instruction.OpCode == OpCodes.Switch)
+                {
+                    // A switch on a value: each case runs when the value is its number, the rest when it's none of them.
+                    var tested = ValueBefore(i);
+                    var none = here;
+                    for (var number = 0; number < instruction.Targets.Count; number++)
+                    {
+                        var literal = new ConditionLiteral($"{_site}:{instruction.Offset:X4}:{number}", new CompareValue(Comparison.Equal, tested, new ConstantValue(number)), Holds: true);
+                        Edge(IndexOf(instruction.Targets[number]), here.And(literal));
+                        none = none.And(literal.Negate());
+                    }
+                    Edge(i + 1, none);
+                    continue;
+                }
+                if (instruction.OpCode.FlowControl == FlowControl.Branch) { Edge(IndexOf(instruction.Targets[0]), here); continue; }
+                if (instruction.OpCode.FlowControl == FlowControl.Cond_Branch)
+                {
+                    var taken = Taken(i);
+                    Edge(IndexOf(instruction.Targets[0]), here.And(taken));
+                    Edge(i + 1, here.And(taken.Negate()));
+                    continue;
+                }
+                Edge(i + 1, here);
+            }
+        }
+
+        /// <summary>A jump to <paramref name="index"/> ends the method: it reaches the return (or the builder's SetResult) with no call or jump on the way.</summary>
+        private bool Returns(int index)
+        {
+            for (var i = index; i < Ops.Count && i < index + 12; i++)
+            {
+                var instruction = Ops[i];
+                if (instruction.OpCode == OpCodes.Ret || instruction.Member is { Name: "SetResult" }) return true;
+                if (instruction.IsCall || instruction.IsBranch) return false;
+            }
+            return index >= Ops.Count;
+        }
+
+        /// <summary>What the conditional jump at <paramref name="branch"/> tests, the way that makes it jump.</summary>
+        private ConditionLiteral Taken(int branch)
+        {
+            var instruction = Ops[branch];
+            var at = $"{_site}:{instruction.Offset:X4}";
+            var name = instruction.OpCode.Name!.Replace(".s", "", StringComparison.Ordinal).Replace(".un", "", StringComparison.Ordinal);
+            if (name is "brtrue" or "brfalse") return new ConditionLiteral(at, ValueBefore(branch), Holds: name == "brtrue");
+            var right = ReadBack(branch, depth: 0);
+            var left = right.Start >= 0 ? ReadBack(right.Start, depth: 0).Value : new UnknownValue("operand");
+            var comparison = name switch
+            {
+                "beq" => Comparison.Equal,
+                "bne" => Comparison.NotEqual,
+                "blt" => Comparison.Less,
+                "ble" => Comparison.LessOrEqual,
+                "bgt" => Comparison.Greater,
+                _ => Comparison.GreaterOrEqual,
+            };
+            return new ConditionLiteral(at, new CompareValue(comparison, left, right.Value), Holds: true);
+        }
+
+        /// <summary>When a loop goes round again (its jump back's test, and the tests on the way to it inside the loop); null when it can't be read.</summary>
+        public ProgramCondition? While(int start, int end)
+        {
+            if (Ops[end].OpCode.FlowControl != FlowControl.Cond_Branch || ReachedAt(end) is not { } path) return null;
+            var round = path.And(Taken(end)).Without(LoopEntry(start));
+            return round.IsAlways ? null : round;
+        }
+
+        /// <summary>
+        /// What a lambda (a method returning a value) returns, as a condition: each way to a return, with the value it returns (a constant
+        /// true or false, or a test of its own).
+        /// </summary>
+        public ProgramCondition Returned()
+        {
+            var returned = ProgramCondition.Never;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].OpCode != OpCodes.Ret || ReachedAt(i) is not { IsNever: false } reached) continue;
+                var value = ValueBefore(i);
+                returned = value switch
+                {
+                    ConstantValue { Value: 0 } => returned,
+                    ConstantValue => returned.Or(reached),
+                    _ => returned.Or(reached.And(new ConditionLiteral($"{_site}:{Ops[i].Offset:X4}", value, Holds: true))),
+                };
+            }
+            return returned;
+        }
+
+        /// <summary>The value on top of the stack just before <paramref name="index"/>, read back as an expression.</summary>
+        public ProgramValue ValueBefore(int index) => ReadBack(index, depth: 0).Value;
+
+        /// <summary>
+        /// The value the code just before <paramref name="end"/> leaves, and where its code starts (-1 when it can't be read): constants,
+        /// the card's values, properties and methods of what they're asked of, comparisons, arithmetic, a lambda, a local or a field
+        /// stored once (what was stored), and what an awaited command gave back.
+        /// </summary>
+        private (ProgramValue Value, int Start) ReadBack(int end, int depth)
+        {
+            var at = end - 1;
+            if (at < 0 || depth > 16) return (new UnknownValue("value"), -1);
+            var instruction = Ops[at];
+            var name = instruction.OpCode.Name!;
+            if (instruction.Integer is { } constant && name.StartsWith("ldc", StringComparison.Ordinal)) return (new ConstantValue(constant), at);
+            if (instruction.OpCode == OpCodes.Ldnull) return (NullValue.Instance, at);
+            if (instruction.OpCode == OpCodes.Ldstr) return (new NamedValue("\"" + instruction.Text + "\""), at);
+            if (name.StartsWith("ldarg", StringComparison.Ordinal)) return (Argument(instruction.Slot ?? 0), at);
+            if (name.StartsWith("ldloc", StringComparison.Ordinal))
+            {
+                if (instruction.Slot is { } slot && StoredOnce(slot) is { } store && ReadBack(store, depth + 1) is { Start: >= 0 } stored)
+                    return (new StoredValue("", stored.Value, Ops[store].Offset), at);
+                return (new UnknownValue("local"), at);
+            }
+            if (name.StartsWith("conv", StringComparison.Ordinal) || instruction.OpCode == OpCodes.Box || instruction.OpCode == OpCodes.Unbox_Any
+                || instruction.OpCode == OpCodes.Castclass)
+                return ReadBack(at, depth + 1);
+            if (instruction.OpCode == OpCodes.Ldsfld && instruction.Member is { } staticField) return (new NamedValue(staticField.DeclaringType + "." + staticField.Name), at);
+            // A cached lambda (ldsfld <>9__x; dup; brtrue; pop; ldsfld <>9; ldftn; newobj; dup; stsfld <>9__x): the lambda.
+            if (instruction.OpCode == OpCodes.Stsfld && instruction.Member is { } cache && cache.Name.StartsWith("<>9__", StringComparison.Ordinal))
+            {
+                for (var back = at - 1; back >= 0 && back >= at - 12; back--)
+                    if (Ops[back].OpCode == OpCodes.Ldsfld && Ops[back].Member?.Name == cache.Name)
+                        return (LambdaBetween(back, at), back);
+                return (new UnknownValue("lambda"), -1);
+            }
+            if ((instruction.OpCode == OpCodes.Ldfld || instruction.OpCode == OpCodes.Ldflda) && instruction.Member is { } field)
+            {
+                var receiver = ReadBack(at, depth + 1);
+                // The state machine's or a closure's fields: the card, a parameter (cardPlay), a local kept across awaits.
+                if (field.DeclaringType.StartsWith('<') || field.Name.StartsWith('<'))
+                {
+                    if (field.Name == "<>4__this") return (NamedValue.This, receiver.Start);
+                    if (field.Name.Contains(">5__", StringComparison.Ordinal) && FieldStoredOnce(field.Name) is { } fieldStore && ReadBack(fieldStore, depth + 1) is { Start: >= 0 } stored)
+                        return (new StoredValue(FieldName(field.Name), stored.Value, Ops[fieldStore].Offset), receiver.Start);
+                    return (new NamedValue(FieldName(field.Name)), receiver.Start);
+                }
+                return (new QueryValue(field.DeclaringType, field.Name, receiver.Value, Array.Empty<ProgramValue>(), field.ValueType), receiver.Start);
+            }
+            if (name is "ceq" or "cgt" or "cgt.un" or "clt" or "clt.un")
+            {
+                var right = ReadBack(at, depth + 1);
+                if (right.Start < 0) return (new UnknownValue(name), -1);
+                var left = ReadBack(right.Start, depth + 1);
+                var comparison = name switch
+                {
+                    "ceq" => Comparison.Equal,
+                    // x != null: cgt.un against null.
+                    "cgt.un" when right.Value is NullValue => Comparison.NotEqual,
+                    "cgt" or "cgt.un" => Comparison.Greater,
+                    _ => Comparison.Less,
+                };
+                return (new CompareValue(comparison, left.Value, right.Value), left.Start);
+            }
+            if (name is "add" or "sub" or "mul" or "div" or "rem")
+            {
+                var right = ReadBack(at, depth + 1);
+                if (right.Start < 0) return (new UnknownValue(name), -1);
+                var left = ReadBack(right.Start, depth + 1);
+                return (new ArithmeticValue(name, left.Value, right.Value), left.Start);
+            }
+            // An array the code fills (newarr; dup; index; value; stelem, for each item).
+            if (instruction.OpCode == OpCodes.Newarr)
+            {
+                var length = ReadBack(at, depth + 1);
+                return (new ArrayValue(Array.Empty<ProgramValue>()), length.Start);
+            }
+            if (name.StartsWith("stelem", StringComparison.Ordinal))
+            {
+                var item = ReadBack(at, depth + 1);
+                var index = item.Start >= 0 ? ReadBack(item.Start, depth + 1) : item;
+                if (index.Start < 1 || Ops[index.Start - 1].OpCode != OpCodes.Dup) return (new UnknownValue("array"), -1);
+                var array = ReadBack(index.Start - 1, depth + 1);
+                return array.Value is ArrayValue filled ? (new ArrayValue(filled.Items.Append(item.Value).ToList()), array.Start) : (new UnknownValue("array"), -1);
+            }
+            if (instruction.OpCode == OpCodes.Newobj && at > 0 && Ops[at - 1].OpCode == OpCodes.Ldftn)
+            {
+                var target = ReadBack(at - 1, depth + 1);
+                return (LambdaBetween(at - 1, at), target.Start);
+            }
+            if (!instruction.IsCall || instruction.Member is not { } member) return (new UnknownValue(name), -1);
+            if (member.Name == "GetResult") return AwaitedResult(at, depth);
+            if (member.Name is "op_Implicit" or "op_Explicit") return ReadBack(at, depth + 1);
+            var cursor = at;
+            var arguments = new ProgramValue[member.ParameterCount];
+            for (var parameter = member.ParameterCount - 1; parameter >= 0; parameter--)
+            {
+                var argument = ReadBack(cursor, depth + 1);
+                if (argument.Start < 0) return (new UnknownValue(member.Name), -1);
+                arguments[parameter] = argument.Value;
+                cursor = argument.Start;
+            }
+            ProgramValue? of = null;
+            if (member.HasThis && instruction.OpCode != OpCodes.Newobj)
+            {
+                var receiver = ReadBack(cursor, depth + 1);
+                if (receiver.Start < 0) return (new UnknownValue(member.Name), -1);
+                of = receiver.Value;
+                cursor = receiver.Start;
+            }
+            // DynamicVars.Cards.BaseValue, DynamicVars["PlayMax"].IntValue: the card's value.
+            if (member.Name is "get_BaseValue" or "get_IntValue")
+            {
+                if (of is QueryValue { Of: QueryValue { Name: "DynamicVars" } } value) return (new CardValue(value.Name), cursor);
+                if (of is QueryValue { Name: "Item", Arguments: [NamedValue key] }) return (new CardValue(key.Name.Trim('"')), cursor);
+            }
+            // A foreach's item (enumerator.Current): each item it goes over.
+            if (member.Name == "get_Current") return (new NamedValue("each"), cursor);
+            var property = member.Name.StartsWith("get_", StringComparison.Ordinal);
+            return (new QueryValue(member.DeclaringType, property ? member.Name[4..] : member.Name, of, arguments, member.ValueType)
+                { IsProperty = property && arguments.Length == 0, GenericArguments = member.GenericArguments }, cursor);
+        }
+
+        /// <summary>What an await gave back (the call GetAwaiter was asked of, before the suspend): the command's result.</summary>
+        private (ProgramValue Value, int Start) AwaitedResult(int getResult, int depth)
+        {
+            // ... call X; callvirt GetAwaiter; stloc a; ldloca a; call get_IsCompleted; brtrue resume; (suspend) resume: ldloca a; call GetResult
+            var resume = getResult - 1;
+            var jump = _awaitJumps.FirstOrDefault(entry => entry.Value == resume).Key;
+            if (jump < 4 || Ops[jump - 4].Member is not { Name: "GetAwaiter" }) return (new UnknownValue("await"), -1);
+            var awaited = ReadBack(jump - 4, depth + 1);
+            if (awaited.Start < 0) return awaited;
+            return awaited.Value is QueryValue query
+                ? (new ResultValue(query.Type + "." + query.Name, Ops[jump - 5].Offset, query.Arguments), awaited.Start)
+                : awaited;
+        }
+
+        /// <summary>The lambda an ldftn in [from, to) points to.</summary>
+        private ProgramValue LambdaBetween(int from, int to)
+        {
+            for (var i = from; i < to; i++)
+                if (Ops[i].OpCode == OpCodes.Ldftn && Ops[i].Member is { } lambda)
+                    return _lambdaOf?.Invoke(lambda) is { } read ? read : new UnknownValue(lambda.Name);
+            return new UnknownValue("lambda");
+        }
+
+        /// <summary>A load of argument <paramref name="slot"/>: the card in its own methods, a lambda's parameter, the state machine.</summary>
+        private ProgramValue Argument(int slot)
+        {
+            if (_method == null) return new UnknownValue("argument");
+            var parameters = _method.GetParameters();
+            if (_method.IsStatic) return slot < parameters.Length ? new ParameterValue(parameters[slot].Name ?? "x") : new UnknownValue("argument");
+            if (slot == 0)
+            {
+                var owner = _method.DeclaringType?.Name ?? "";
+                return owner.StartsWith('<') ? new NamedValue("closure") : NamedValue.This;
+            }
+            return slot - 1 < parameters.Length ? new ParameterValue(parameters[slot - 1].Name ?? "x") : new UnknownValue("argument");
         }
 
         private void MarkMachinery()
@@ -417,12 +749,17 @@ public static class CardProgramReader
                 if (instruction.OpCode == OpCodes.Leave || instruction.OpCode == OpCodes.Leave_S || instruction.OpCode == OpCodes.Endfinally || instruction.OpCode == OpCodes.Ret) _noise[i] = true;
                 if (!instruction.IsBranch && instruction.OpCode != OpCodes.Switch) continue;
                 // The dispatch on the state (where to resume), and a finally's "not suspended" check.
-                if (stateSlot != null && LoadsState(i, stateSlot.Value)) _noise[i] = true;
+                if (stateSlot != null && LoadsState(i, stateSlot.Value))
+                {
+                    _noise[i] = true;
+                    _dispatch.Add(i);
+                }
                 // An await: awaiter.IsCompleted, else suspend (and later resume) before GetResult. Everything up to the jump's target
                 // is the machinery.
                 if (i > 0 && Ops[i - 1].Member is { Name: "get_IsCompleted" } && instruction.OpCode.FlowControl == FlowControl.Cond_Branch)
                 {
                     var target = IndexOf(instruction.Targets[0]);
+                    _awaitJumps[i] = target;
                     for (var j = i; j < target && j < Ops.Count; j++) _noise[j] = true;
                 }
             }
@@ -481,19 +818,6 @@ public static class CardProgramReader
                 return items == "?" || items.StartsWith("ld", StringComparison.Ordinal) ? null : items;
             }
             return null;
-        }
-
-        /// <summary>The condition a branch tests, named by the last thing it asks the game (a property, a method, a delegate's).</summary>
-        public string Query(int branch)
-        {
-            for (var i = branch - 1; i >= 0 && i >= branch - 12; i--)
-            {
-                var instruction = Ops[i];
-                if (instruction.Member is { Kind: CodeMemberKind.Method } member && member.Name != "op_Implicit" && member.Name != nameof(Action.Invoke))
-                    return member.Name.Replace("get_", "");
-                if (instruction.Member is { Kind: CodeMemberKind.Field } field && !field.Name.StartsWith("<>", StringComparison.Ordinal)) return field.Name;
-            }
-            return "?";
         }
 
         /// <summary>

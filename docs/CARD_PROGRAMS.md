@@ -67,6 +67,20 @@ A program is a tree of steps:
       outcome and is skipped.
     - A null check on what a `Choice` returned is "the player picked a card" (41 cards).
   - A query with no translation yet is `Unknown`: the steps behind it are not modelled, with the card and the query named.
+  - **Conditions as values (2026-11-23).** A step's condition is a `ProgramCondition`: an or of ands of tests, each test a branch's
+    own (`ConditionLiteral`: where it is, what it tests, which way). What a test tests is a `ProgramValue` read back from the
+    instructions: a property or method of what it's asked of (`QueryValue`: `cardPlay.Target.IsDead`,
+    `CreatureIsImpaledByArrow(cardPlay.Target)`), a card value (`Cards`), a constant (an enum's by name: `Type == Attack`), a
+    comparison, arithmetic, a lambda with its own condition (`Any(hand, c => c.Type == Attack)`), what an awaited command gave
+    back (`result of CardPileCmd.Draw`), an array, and a local or field stored once, with where it was stored (Ki Hop's
+    `wasImpaled`, taken before its attack).
+  - The conditions come from the method's flow, not from its layout: every way from the start to a step, each the tests it
+    passes, with the machinery's jumps followed as they always go (an await resumes past its suspend, the dispatch starts at
+    the top) and a return (a leave to the end) ending its way. Ways that meet again are merged and simplified, so both sides
+    of an if leave nothing behind it, `a || b` reads as `a or b`, and `if (!x) return;` puts `x` on what follows (Restlessness).
+  - A loop's body runs on the loop's own condition (Wrest's `while` inside its `if`: the loop and the draw after it both wait
+    on the if's test); its round's tests are the loop's `While` (Pillage: the drawn card, its type, your hand's room). A way out
+    of a loop goes on with the loop's condition.
 - **Amounts the code works out** (Growth: `CalculationExtra × the cards exhausted`): simple arithmetic over known sources
   (values, counts, constants) is read. Anything else is an `Unknown` amount.
 - **`Choice`**: a `CardSelectCmd` the player answers mid-play. Choices stay out of the model (decision #92: one decision, never

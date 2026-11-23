@@ -73,7 +73,7 @@ public static class CardEffects
 
     /// <summary>Shuffles your discard pile into your draw pile on every play (Reboot: CardPileCmd.Shuffle, no condition around it).</summary>
     public static bool ShufflesDiscardPileIn(CardProgram program) =>
-        program.Commands.Any(command => Is(command, "CardPileCmd", "Shuffle") && string.IsNullOrEmpty(command.Condition));
+        program.Commands.Any(command => Is(command, "CardPileCmd", "Shuffle") && command.Condition == null);
 
     /// <summary>Shuffles your discard pile in only on a condition (Ki Chant: when your draw pile is short of what it looks at).</summary>
     public static bool ShufflesWhenShort(CardProgram program) =>
@@ -187,7 +187,7 @@ public static class CardEffects
         foreach (var command in program.Commands)
         {
             if (Is(command, "DamageCmd", "Attack")) attacked = true;
-            else if (attacked && Is(command, "PlayerCmd", "GainStars") && !string.IsNullOrEmpty(command.Condition)) return true;
+            else if (attacked && Is(command, "PlayerCmd", "GainStars") && command.Condition != null) return true;
         }
         return false;
     }
