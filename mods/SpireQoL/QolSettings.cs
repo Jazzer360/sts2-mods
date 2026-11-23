@@ -88,7 +88,7 @@ public sealed class QolSettings
     public bool SetupDone { get; set; }
 
     /// <summary>
-    /// Developer mode (decision #108; not in the settings menu): null follows the marker file the developer's own builds install
+    /// Developer mode (decision #108; on the settings menu's General page only in a developer's game, decision #186): null follows the marker file the developer's own builds install
     /// (SpireQoL.dev beside the DLL, never in a release zip); true or false overrides it. On: reports and session summaries are
     /// tagged dev, and the session metrics leave them out. See docs/DEVELOPMENT.md "Dev mode".
     /// </summary>

@@ -80,6 +80,9 @@ internal static class CatalogCheck
         var switches = SettingsMenu.FeatureRows.Select(featureRow => featureRow.Id).ToHashSet();
         foreach (var name in registered.Except(switches).Order()) problems.Add($"feature without a settings switch: {name}");
         foreach (var name in switches.Except(registered).Order()) problems.Add($"settings switch without a feature: {name}");
+        // Each kind of tag sits under a feature's switch (decision #186): that feature must have one.
+        foreach (var tabEntry in SettingsCatalog.CardTabs.Concat(SettingsCatalog.TabGroups))
+            if (!switches.Contains(tabEntry.Feature)) problems.Add($"tag kind under a feature without a settings switch: {tabEntry.Key} ({tabEntry.Feature})");
         // Each switch is named as its feature is (decision #185: the name players read is in both, the dev dashboard showing the feature's).
         var names = Features().ToDictionary(feature => feature.Id, feature => feature.DisplayName);
         foreach (var (id, name, _, _) in SettingsMenu.FeatureRows)

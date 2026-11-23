@@ -42,23 +42,31 @@ public sealed partial class SettingsMenu
             + "When a roll decides something, you see the range or the worst case, never the result. "
             + "The other pages say exactly what each tag and row covers; this page shows how the pieces look.");
 
+        // In the order of the pages and their sections (decision #186): each feature's entry where its switch is.
+        BuildGuideSetup();
         BuildGuideTabs();
-        BuildGuideCounters();
+        BuildGuideEnemies();
+        Section(SectionTitle(FeatureSection.BesideYou));
         BuildGuideIncoming();
-        BuildGuideRest();
+        BuildGuideCounters();
+        BuildGuidePotions();
+        BuildGuideHolding();
+        BuildGuideProgress();
+        Section(SectionTitle(FeatureSection.BetweenFights));
         BuildGuideReminders();
-        BuildGuideElsewhere();
+        BuildGuideRest();
+        BuildGuideGeneral();
     }
 
     // ------------------------------------------------------------------ card tabs
 
     private void BuildGuideTabs()
     {
-        Section("Tags on cards");
+        Section(SectionTitle(FeatureSection.OnYourCards));
         Paragraph("A tag hanging off the top of a card in your hand answers one question: does something happen the moment I play this card, right now? "
             + "Keyword Tags mark what the card picks up (Retain, Sly, playing more than once), Proc Tags what playing it sets off, and the Shuffle Tag a reshuffle. "
             + "The icon is what sets it off (a relic, your power, an enemy's power, an enchantment, a pile). One tag per source; a card can carry several. "
-            + "Each kind of tag can be switched off on the Card tags, Relics and powers pages.");
+            + "Each kind of tag can be switched off here (In fights, On your cards) and each source on the Tags by source page.");
 
         var flow = Flow();
         // A mix of every character's cards, each one a card the example could really happen on.
@@ -131,17 +139,24 @@ public sealed partial class SettingsMenu
             Settings.EtherealOpacity);
         _rows!.AddChild(flow);
 
-        Paragraph("Potion Tags: the same tag hangs under a potion in the top bar when drinking it sets off a relic "
-            + "(Reptile Trinket, Belt Buckle, White Beast Statue).");
         Paragraph("Teammates' tags: in multiplayer, a teammate's power or relic that your card sets off gets a tag like your own, "
             + "with their icon (Rally's block setting off their Juggernaut). One you both have shares a tag, the amounts added.");
+    }
+
+    // ------------------------------------------------------------------ beside you: potion tags
+
+    private void BuildGuidePotions()
+    {
+        SubSection("Potion Tags");
+        Paragraph("The same tag as on cards hangs under a potion in the top bar when drinking it sets off a relic "
+            + "(Reptile Trinket, Belt Buckle, White Beast Statue).");
     }
 
     // ------------------------------------------------------------------ relic counters
 
     private void BuildGuideCounters()
     {
-        Section("Relic Counters");
+        SubSection("Relic Counters");
         Paragraph("Beside your HP bar, one row per relic or power that counts what you do: its icon, a bar with one segment per step, and a label. "
             + "A row flashes when your next qualifying play sets it off. Counters that carry across turns come first.");
 
@@ -159,7 +174,7 @@ public sealed partial class SettingsMenu
             "Red: an enemy's power counting your plays (Withering Presence adds a Wither to your hand).");
         CounterRow(PowerOf<CacophonyPower>(), filled: 12, total: 33, RelicCountersFeature.Shade.Power, "21 draws left", flash: false,
             "A long count shows just the number.");
-        Paragraph("Relics that only count turns (Horn Cleat, Captain's Wheel...) are off by default: switch each on in the Tracker column of the Relics page.");
+        Paragraph("Relics that only count turns (Horn Cleat, Captain's Wheel...) are off by default: switch each on in the Tracker column of the Tags by source page (Relics).");
     }
 
     private void CounterRow(AbstractModel? model, int filled, int total, RelicCountersFeature.Shade shade, string label, bool flash, string text)
@@ -180,7 +195,7 @@ public sealed partial class SettingsMenu
 
     private void BuildGuideIncoming()
     {
-        Section("Incoming Damage");
+        SubSection("Incoming Damage");
         Paragraph("Left of your block during your turn, a sum: what the enemies will deal on their turn, minus the block you'll have, "
             + "equals what you'll lose. Worked out hit by hit, in the game's order. It stays up while you pick one of a few cards mid-fight "
             + "(a discovery, a potion's choice).");
@@ -241,7 +256,7 @@ public sealed partial class SettingsMenu
 
     private void BuildGuideRest()
     {
-        Section("Rest Preview");
+        SubSection("Rest Preview");
         Paragraph("At a rest site, beside your character, the same kind of sum: your HP, plus what resting heals, plus anything that changes it, "
             + "equals the HP you'll have. In multiplayer, hover a teammate while Mend is on offer to see the sum for them.");
 
@@ -285,10 +300,10 @@ public sealed partial class SettingsMenu
 
     private void BuildGuideReminders()
     {
-        Section("Reminders outside fights");
-        Paragraph("Outside fights, your relics that change what a choice does show on the choice itself, "
+        SubSection("Reminders");
+        Paragraph("Between fights, your relics that change what a choice does show on the choice itself, "
             + "with the same plain and crossed icons as the tags on cards: crossed means the relic works against you there. "
-            + "Each place is its own switch (Outside fights page): Reward Tags, Event Reminders, Shop Reminders and Map Reminders.");
+            + "Each place is its own switch (Between fights page): Reward Tags, Event Reminders, Shop Reminders and Map Reminders.");
 
         var flow = Flow();
 
@@ -392,11 +407,17 @@ public sealed partial class SettingsMenu
         _rows!.AddChild(flow);
     }
 
-    // ------------------------------------------------------------------ the rest
+    // ------------------------------------------------------------------ in fights: on enemies, while you hold a card, under End Turn
 
-    private void BuildGuideElsewhere()
+    private void BuildGuideEnemies()
     {
-        Section("Elsewhere");
+        Section(SectionTitle(FeatureSection.OnEnemies));
+        GuideRow(example: null, "Intent Details",
+            "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
+            + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
+        GuideRow(example: null, "Intent Forecast",
+            "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
+            + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");
         var skull = UiKit.Icon(GameIcons.Skull(), IconSize * 0.7f);
         var example = UiKit.Row(separation: 4);
         example.AddChild(skull);
@@ -405,6 +426,20 @@ public sealed partial class SettingsMenu
         GuideRow(example, "Death Skull",
             "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
             + "With a chance when a roll decides it (In fights: Chances, Death chances). With a range and ? when the fight was too big to work out (from the kills already certain up).");
+    }
+
+    private void BuildGuideHolding()
+    {
+        Section(SectionTitle(FeatureSection.WhileHoldingACard));
+        GuideRow(example: null, "Play Preview",
+            "Hold a card (and aim it, for one that needs a target): Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, "
+            + "tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it (Weak lowering it, Strength raising it; the line alone for an enemy the play kills). "
+            + "Every outcome of the play is already worked out for each card and target, so it shows at once. The card tags don't change.");
+    }
+
+    private void BuildGuideProgress()
+    {
+        Section(SectionTitle(FeatureSection.UnderEndTurn));
         var progress = UiKit.Row(separation: 6);
         progress.AddChild(UiKit.Icon(GameIcons.Clock(), size: 22));
         progress.AddChild(new ProgressBar
@@ -416,22 +451,36 @@ public sealed partial class SettingsMenu
             "Rarely, under the End Turn button: the mod hasn't finished working out its predictions for this board yet (it has too many possible "
             + "outcomes to finish within a frame), and keeps working in the background. The bar fills as it gets through them. Meanwhile you see "
             + "the last finished results: Incoming Damage and the Death Skull add a ? after a tenth of a second, and each card's tags change as soon as that card is done.");
-        GuideRow(example: null, "Intent Details",
-            "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
-            + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
-        GuideRow(example: null, "Play Preview",
-            "Hold a card (and aim it, for one that needs a target): Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, "
-            + "tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it (Weak lowering it, Strength raising it; the line alone for an enemy the play kills). "
-            + "Every outcome of the play is already worked out for each card and target, so it shows at once. The card tags don't change.");
-        GuideRow(example: null, "Intent Forecast",
-            "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
-            + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");
+    }
+
+    // ------------------------------------------------------------------ quick setup, general
+
+    private void BuildGuideSetup()
+    {
+        Section("Quick setup");
+        GuideRow(example: null, "Quick setup",
+            "The first page of this menu, which opens on it at your first launch: card tags as four levels shown on real cards, then a switch for each group of features "
+            + "(On enemies, Beside you, Play Preview, Ethereal Fade, Between fights), Show chances, and Everything for every default.");
+    }
+
+    private void BuildGuideGeneral()
+    {
+        Section("General");
         GuideRow(example: null, "Update Notice",
             "On the main menu, above the game's MODDED note: how many Spire QoL versions behind you are, or that you're up to date.");
-        GuideRow(example: null, "Quick setup",
-            "The first page of this menu, which opens on it at your first launch: a switch for each part of the mod, card tags as four levels shown on real cards, and Everything for every default.");
         GuideRow(example: null, "Moving things",
             $"{Settings.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {Settings.HideAllKey} hides everything.");
+    }
+
+    /// <summary>A heading inside a section (one feature of several in it).</summary>
+    private void SubSection(string title)
+    {
+        var label = Label(title, size: 21, Text);
+        var marginContainer = new MarginContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_top"), 10);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_bottom"), 4);
+        marginContainer.AddChild(label);
+        _rows!.AddChild(marginContainer);
     }
 
     private void GuideRow(Control? example, string name, string text)

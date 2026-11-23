@@ -32,34 +32,25 @@ public sealed partial class SettingsMenu
             new HashSet<string>(CardTabFeatures), ProcIndirect: true),
     };
 
-    /// <summary>One switch on the page: the features it turns on and off together.</summary>
-    private sealed record SetupSwitch(string Name, string Description, string[] Features);
+    /// <summary>One switch on the page: the features it turns on and off together (on while all of them are).</summary>
+    internal sealed record SetupSwitch(string Name, string Description, string[] Features);
 
-    private static readonly SetupSwitch[] FightSwitches =
+    /// <summary>
+    /// Quick setup's groups (decision #186), in the order of the pages: each a switch for every feature it names, on while all of them
+    /// are. The card tag levels come first; Chances and Everything after them.
+    /// </summary>
+    internal static readonly SetupSwitch[] SetupGroups =
     {
-        new("Damage you'll take", "What ending your turn costs you, after block, beside your HP (and a teammate's, when you hover them).",
-            new[] { "incoming-damage", "teammate-incoming-damage" }),
-        new("Enemies that die", "A skull beside an enemy that dies before it acts if you end your turn now.", new[] { "death-skull" }),
-        new("Enemy intents", "On each enemy's intent: the block its move gains, and the buffs and debuffs it applies with their amounts.",
-            new[] { "intent-details" }),
-        new("Enemy's next moves", "Hover an enemy: its moves after this one, every turn its rules make certain, then what a random pick can make.",
-            new[] { "intent-forecast" }),
-        new("Counter relics", "A tray beside your HP of the relics and powers that count up to something, flashing when they're about to fire.",
-            new[] { "relic-counters" }),
-        new("Potion tags", "A tag under a potion for each relic that drinking it sets off.", new[] { "potion-tabs" }),
-        new("Ethereal cards fade", "An Ethereal card in your hand is see-through: it exhausts if it's still there at the end of your turn.",
+        new("On enemies", "On each enemy: the block and the buffs and debuffs its intent's move gives, its next moves when you hover it, and a skull when it dies before it acts if you end your turn now.",
+            new[] { "intent-details", "intent-forecast", "death-skull" }),
+        new("Beside you", "What ending your turn costs you, after block, beside your HP (and a teammate's when you hover them); the tray of relics that count up to something; tags under your potions for the relics drinking one sets off.",
+            new[] { "incoming-damage", "teammate-incoming-damage", "relic-counters", "potion-tabs" }),
+        new("Play Preview", "While you hold a card, the damage you'll take, the enemies' intents and the skulls show the turn as it would go after you play it.",
+            new[] { "play-preview" }),
+        new("Ethereal Fade", "An Ethereal card in your hand is see-through: it exhausts if it's still there at the end of your turn.",
             new[] { Features.EtherealFadeFeature.FeatureId }),
-    };
-
-    /// <summary>The reminders outside fights, one feature per place (decision #185).</summary>
-    private static readonly SetupSwitch[] ReminderSwitches =
-    {
-        new("Card rewards", "A tag on a card you're offered when one of your relics cares about it (an egg upgrades it, a relic counts it).",
-            new[] { Features.RewardTagsFeature.FeatureId }),
-        new("Events", "Your relics that change an event's choice, beside the option, and Inspect for an option that gives random cards.",
-            new[] { Features.EventRemindersFeature.FeatureId }),
-        new("Shops", "Your relics that change a price or a card for sale, beside it.", new[] { Features.ShopRemindersFeature.FeatureId }),
-        new("Map", "Your relics that care about a kind of room, beside the map legend's row.", new[] { Features.MapRemindersFeature.FeatureId }),
+        new("Between fights", "Your relics that change a choice, on the choice: tags on the cards you're offered, icons beside event options, shop prices and the map legend; and the HP resting would leave you with.",
+            new[] { Features.RewardTagsFeature.FeatureId, Features.EventRemindersFeature.FeatureId, Features.ShopRemindersFeature.FeatureId, Features.MapRemindersFeature.FeatureId, "rest-preview" }),
     };
 
     private bool _setupShown;
@@ -79,13 +70,6 @@ public sealed partial class SettingsMenu
         Section("Quick setup");
         Paragraph("Spire QoL works out what the game already knows: the damage you'll take, which enemies die before they act, and what each card would set off. "
             + "It never looks ahead at a random roll or the draw pile's order. Pick what you'd like to see; every change applies at once, and the other pages have the rest.");
-        var everythingRow = RowBox();
-        var everything = MakeButton("Everything", size: 22);
-        everything.TooltipText = "Every feature and option on: the mod's defaults.";
-        everything.Pressed += () => { ApplyEverything(); Close(); };
-        everythingRow.AddChild(everything);
-        everythingRow.AddChild(Wrapped("Every feature and option on, the mod's defaults, and done. Busy turns show four or five tags on a card; most show one or two."));
-        AddRow(everythingRow);
 
         Section("Card tags");
         // One row of equal cells, so each Choose button sits on one line under its card.
@@ -98,18 +82,27 @@ public sealed partial class SettingsMenu
         Option("Target marker", "The game's targeting arrow in a tag's corner when it happens only at some targets (aim at the right enemy).",
             Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabsShown ? null : "Moderate or Full card tags", icon: ArtIcon(GameIcons.TargetArrow()));
 
-        Section("In fights");
-        foreach (var setupSwitch in FightSwitches) SwitchRow(setupSwitch);
-
-        Section("Between fights");
-        foreach (var setupSwitch in ReminderSwitches) SwitchRow(setupSwitch);
-        SwitchRow(new SetupSwitch("Rest sites", "Beside your character at a rest site: the HP resting would leave you with, and what each relic adds.",
-            new[] { "rest-preview" }));
+        // Each group under the page its features are on.
+        foreach (var page in new[] { FeaturePage.Fights, FeaturePage.Between })
+        {
+            Section(page == FeaturePage.Fights ? "In fights" : "Between fights");
+            foreach (var setupSwitch in SetupGroups)
+                if (PageOf(FeatureRows.First(featureRow => featureRow.Id == setupSwitch.Features[0]).Where) == page) SwitchRow(setupSwitch);
+        }
 
         Section("Chances");
         var chance = TextIcon("50%");
         SimpleRow("Show chances", "When a roll decides something (which enemy a Lightning orb hits), its chance. Off: only what's certain; a range or ? still marks what isn't settled.",
             Settings.Chances, enabled => { Settings.Chances = enabled; Saved(); }, chance);
+
+        Section("Everything");
+        var everythingRow = RowBox();
+        var everything = MakeButton("Everything", size: 22);
+        everything.TooltipText = "Every feature and option on: the mod's defaults.";
+        everything.Pressed += () => { ApplyEverything(); Close(); };
+        everythingRow.AddChild(everything);
+        everythingRow.AddChild(Wrapped("Every feature and option on, the mod's defaults, and done. Busy turns show four or five tags on a card; most show one or two."));
+        AddRow(everythingRow);
     }
 
     /// <summary>A card tab level: a real card carrying what it shows, its name and what it adds, and a button (marked when it's the current one).</summary>
@@ -163,19 +156,19 @@ public sealed partial class SettingsMenu
     {
         Everything(Settings);
         foreach (var (id, _, _, where) in FeatureRows)
-            if (where != FeaturePage.General) _features.EnableLate(id);
+            if (PageOf(where) != FeaturePage.General) _features.EnableLate(id);
         Saved();
     }
 
     /// <summary>
-    /// What Everything sets: every feature that shows something on (the In fights and Outside fights pages), every option on those
+    /// What Everything sets: every feature that shows something on (the In fights and Between fights pages), every option on those
     /// pages and every reminder place at its default, chances included. Per-relic switches, the checks and error reports stay.
     /// </summary>
     internal static void Everything(QolSettings settings)
     {
         var defaults = new QolSettings();
         foreach (var (id, _, _, where) in FeatureRows)
-            if (where != FeaturePage.General) settings.Features[id] = true;
+            if (PageOf(where) != FeaturePage.General) settings.Features[id] = true;
         settings.ProcNumbers = defaults.ProcNumbers;
         settings.ProcIndirect = defaults.ProcIndirect;
         settings.AimMarker = defaults.AimMarker;

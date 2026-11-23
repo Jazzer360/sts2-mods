@@ -45,7 +45,8 @@ public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, st
 }
 
 /// <summary>An on-card tab that isn't tied to one relic or power.</summary>
-public sealed record TabEntry(string Key, string Name, string Description);
+/// <param name="Feature">The feature whose tags these are: its row sits under that feature's switch (decision #186).</param>
+public sealed record TabEntry(string Key, string Name, string Description, string Feature = "proc-indicators");
 
 /// <summary>
 /// Everything the settings menu lists. Must cover every rule in the card predictions (Combat/CardPredictions), every
@@ -57,22 +58,22 @@ public static class SettingsCatalog
 {
     public static readonly IReadOnlyList<TabEntry> CardTabs = new[]
     {
-        new TabEntry("retain", "Retain", "Cards that stay in your hand at end of turn (permanently or this turn only). Steady icon."),
-        new TabEntry("sly", "Sly", "Cards with Sly (permanently or this turn only). Master Planner icon."),
-        new TabEntry("replay", "Replay", "Cards that replay themselves (Hidden Gem, Transfigure, Sword Sage, enchantments): a \"2×\" tag with the total plays."),
+        new TabEntry("retain", "Retain", "Cards that stay in your hand at end of turn (permanently or this turn only). Steady icon.", Feature: "card-indicators"),
+        new TabEntry("sly", "Sly", "Cards with Sly (permanently or this turn only). Master Planner icon.", Feature: "card-indicators"),
+        new TabEntry("replay", "Replay", "Cards that replay themselves (Hidden Gem, Transfigure, Sword Sage, enchantments): a \"2×\" tag with the total plays.", Feature: "card-indicators"),
         new TabEntry("lethal", "Lethal", "Skull on cards that kill an enemy before it acts, or make it surely more likely than ending your turn now: the card's hits, orbs it evokes, procs it sets off, and your end of turn (Juggernaut, orb passives, poison...). When a roll decides it, the tag carries the chance (the Death chances setting, under Show chances; a range while the outcomes are still being explored). The aim marker (the targeting arrow head in the corner) means only some targets give it."),
         new TabEntry("drawn", "Draw chance", "Cards whose effect depends on what they draw: Escape Plan shows the chance it draws a Skill (its block); Pillage the most likely number of Attacks it draws, Scrape the most likely number of cards it draws that cost 0, each with its chance (ties go to the higher number). Worked out from your draw pile, never its order."),
-        new TabEntry("shuffle", "Reshuffle", "Discard pile icon on cards whose draw would shuffle your discard pile back into your draw pile."),
+        new TabEntry("shuffle", "Reshuffle", "Discard pile icon on cards whose draw would shuffle your discard pile back into your draw pile.", Feature: "shuffle-warning"),
     };
 
     /// <summary>Group switches: off hides the whole family.</summary>
     public static readonly IReadOnlyList<TabEntry> TabGroups = new[]
     {
-        new TabEntry("proc:*", "All proc tags", "Every relic and power tag below (Relics, Your powers, Enemy powers)."),
+        new TabEntry("proc:*", "All proc tags", "Every relic and power tag (the Tags by source page: relics, your powers, enemy powers)."),
         new TabEntry("return:*", "All return tags", "Tags on cards whose play brings a card back to your hand (Make It So, Right Hand Hand, Whistling Arrows)."),
-        new TabEntry("potion:*", "All potion tags", "Tags under your potions (Reptile Trinket, Belt Buckle, White Beast Statue)."),
+        new TabEntry("potion:*", "All potion tags", "Tags under your potions (Reptile Trinket, Belt Buckle, White Beast Statue).", Feature: "potion-tabs"),
         new TabEntry("free:*", "All free-card tags", "Tags on cards that would use up a free card (Tune, Unrelenting, Pounce, Synthesis): the energy saved, or crossed when it's wasted."),
-        new TabEntry("double-play:*", "All double-play tags", "Tags on cards that will play more than once (Echo Form, Burst, Duplication...)."),
+        new TabEntry("double-play:*", "All double-play tags", "Tags on cards that will play more than once (Echo Form, Burst, Duplication...).", Feature: "card-indicators"),
     };
 
     /// <summary>Marks a crossed tab (helps the enemy, hurts you, or gives up a relic); the menu draws the red slash.</summary>

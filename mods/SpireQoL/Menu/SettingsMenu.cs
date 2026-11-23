@@ -33,53 +33,75 @@ public sealed partial class SettingsMenu
     private static readonly Color RowA = new(1, 1, 1, 0.035f);
     private static readonly Color RowB = new(1, 1, 1, 0f);
 
-    // Pages (decision #66): what shows in fights (its features and options, then the tab kinds and every relic, power and card's
-    // switches), what shows outside fights (its features and options, then every reminder's switches), and the rest.
-    private enum Page { Setup, Fights, CardTabs, Relics, YourPowers, EnemyPowers, Cards, Outside, General, Guide, About }
+    // Pages (decisions #66, #186): grouped by where each thing shows. In fights, in sections by where on screen; Between fights; the
+    // tags by their source (relics, your powers, enemy powers, cards: one page, a filter for which); the rest; and the Guide and About.
+    private enum Page { Setup, Fights, Between, Sources, General, Guide, About }
 
     private static readonly (Page Page, string Title)[] Pages =
     {
         (Page.Setup, "Quick setup"),
         (Page.Fights, "In fights"),
-        (Page.CardTabs, "Card tags"),
-        (Page.Relics, "Relics"),
-        (Page.YourPowers, "Your powers"),
-        (Page.EnemyPowers, "Enemy powers"),
-        (Page.Cards, "Cards"),
-        (Page.Outside, "Outside fights"),
+        (Page.Between, "Between fights"),
+        (Page.Sources, "Tags by source"),
         (Page.General, "General"),
         (Page.Guide, "Guide"),
         (Page.About, "About"),
     };
 
     /// <summary>The page a feature's switch is on.</summary>
-    internal enum FeaturePage { Fights, Outside, General }
+    internal enum FeaturePage { Fights, Between, General }
 
-    internal static readonly (string Id, string Name, string Description, FeaturePage Where)[] FeatureRows =
+    /// <summary>Where a feature shows (decision #186): its section, in page order; each section is on one page (PageOf).</summary>
+    internal enum FeatureSection { OnYourCards, OnEnemies, BesideYou, WhileHoldingACard, UnderEndTurn, BetweenFights, MainMenu, Audits, Sessions }
+
+    /// <summary>Each section's title, on its page and in the Guide.</summary>
+    internal static string SectionTitle(FeatureSection section) => section switch
     {
-        ("card-indicators", "Keyword Tags", "Retain, Sly, replay and double-play tags on the cards in your hand.", FeaturePage.Fights),
-        ("ethereal-fade", "Ethereal Fade", "An Ethereal card in your hand is see-through, so you can tell it will exhaust at the end of your turn.", FeaturePage.Fights),
-        ("proc-indicators", "Proc Tags", "A tag for every relic or power a card would set off (the Relics, powers and Cards pages).", FeaturePage.Fights),
-        ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar.", FeaturePage.Fights),
-        ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes).", FeaturePage.Fights),
-        ("teammate-incoming-damage", "Teammate Incoming Damage", "Multiplayer: hovering a teammate shows what they'll take, after their block (from what you can see, not their hand).", FeaturePage.Fights),
-        ("shuffle-warning", "Shuffle Tag", "Discard pile tag on cards whose draw reshuffles your discard pile.", FeaturePage.Fights),
-        ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it).", FeaturePage.Fights),
-        ("exploration-progress", "Prediction Progress", "A clock and progress bar under the End Turn button while predictions are still working through every outcome (rare: most fights finish at once). Until then, what's uncertain carries a ?.", FeaturePage.Fights),
-        ("intent-details", "Intent Details", "On each enemy's intent during your turn: the block its move gains, as a number on its defend intent, and each buff or debuff it applies (icon and amount), in the corner of its buff or debuff intent.", FeaturePage.Fights),
-        ("play-preview", "Play Preview", "While you hold a card (aimed at its target, for one that needs one): Incoming Damage, the enemies' intents and the Death Skull show the turn as it would go after you play it. The card tags stay as they are.", FeaturePage.Fights),
-        ("intent-forecast", "Intent Forecast", "Hovering an enemy shows its next moves after the intent on screen: every turn its rules make certain, then each move a random pick can make, with its chance.", FeaturePage.Fights),
-        ("potion-tabs", "Potion Tags", "Tags under your potions for the relics that drinking one sets off (the Relics page).", FeaturePage.Fights),
-        ("reward-tags", "Reward Tags", "Tags on the cards you're offered (card rewards, an event's choice of cards, the shop) for your relics that taking the card sets off or that make it stronger in fights.", FeaturePage.Outside),
-        ("event-reminders", "Event Reminders", "Beside each event option, your relics that change what it does, with the chance a card relic's cards come up, and Inspect for an option that gives random cards.", FeaturePage.Outside),
-        ("shop-reminders", "Shop Reminders", "Beside each shop price, your relics that buying it sets off, and with Lucky Fysh the price after its gold.", FeaturePage.Outside),
-        ("map-reminders", "Map Reminders", "Beside the map legend's rows, your relics and quest cards that make that kind of room unusually good or bad.", FeaturePage.Outside),
-        ("rest-preview", "Rest Preview", "At rest sites, a sum beside your character: your HP, the rest heal and each relic that changes it, and the HP you end with (and how much is wasted). Before the boss, Pantograph and Bath Robes are lines too. In multiplayer, hover a teammate while Mend is on offer for theirs.", FeaturePage.Outside),
-        ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit), with a gear beside it that opens this menu.", FeaturePage.General),
-        ("forecast-audit", "Forecast audit", "Compares Incoming Damage with what really happened (logs, and error reports).", FeaturePage.General),
-        ("proc-audit", "Play audit", "Compares each card's tags with what playing it really did (logs, and error reports).", FeaturePage.General),
-        ("coverage-watch", "Coverage audit", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports).", FeaturePage.General),
-        ("session-summary", "Session summary", "Counts each play session's turns, checks and calculation times, and sends the totals with error reports when the session ends.", FeaturePage.General),
+        FeatureSection.OnYourCards => "On your cards",
+        FeatureSection.OnEnemies => "On enemies",
+        FeatureSection.BesideYou => "Beside you",
+        FeatureSection.WhileHoldingACard => "While you hold a card",
+        FeatureSection.UnderEndTurn => "Under End Turn",
+        FeatureSection.BetweenFights => "Between fights",
+        FeatureSection.MainMenu => "On the main menu",
+        FeatureSection.Audits => "Audits",
+        _ => "Play sessions",
+    };
+
+    /// <summary>The page a section is on.</summary>
+    internal static FeaturePage PageOf(FeatureSection section) => section switch
+    {
+        FeatureSection.BetweenFights => FeaturePage.Between,
+        FeatureSection.MainMenu or FeatureSection.Audits or FeatureSection.Sessions => FeaturePage.General,
+        _ => FeaturePage.Fights,
+    };
+
+    /// <summary>Every feature's switch, in the order its page shows them: a section's features together, the sections in page order.</summary>
+    internal static readonly (string Id, string Name, string Description, FeatureSection Where)[] FeatureRows =
+    {
+        ("card-indicators", "Keyword Tags", "Retain, Sly, replay and double-play tags on the cards in your hand.", FeatureSection.OnYourCards),
+        ("proc-indicators", "Proc Tags", "A tag for every relic or power a card would set off (each one's switch is on the Tags by source page).", FeatureSection.OnYourCards),
+        ("shuffle-warning", "Shuffle Tag", "Discard pile tag on cards whose draw reshuffles your discard pile.", FeatureSection.OnYourCards),
+        ("ethereal-fade", "Ethereal Fade", "An Ethereal card in your hand is see-through, so you can tell it will exhaust at the end of your turn.", FeatureSection.OnYourCards),
+        ("intent-details", "Intent Details", "On each enemy's intent during your turn: the block its move gains, as a number on its defend intent, and each buff or debuff it applies (icon and amount), in the corner of its buff or debuff intent.", FeatureSection.OnEnemies),
+        ("intent-forecast", "Intent Forecast", "Hovering an enemy shows its next moves after the intent on screen: every turn its rules make certain, then each move a random pick can make, with its chance.", FeatureSection.OnEnemies),
+        ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it).", FeatureSection.OnEnemies),
+        ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes).", FeatureSection.BesideYou),
+        ("teammate-incoming-damage", "Teammate Incoming Damage", "Multiplayer: hovering a teammate shows what they'll take, after their block (from what you can see, not their hand).", FeatureSection.BesideYou),
+        ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar.", FeatureSection.BesideYou),
+        ("potion-tabs", "Potion Tags", "Tags under your potions for the relics that drinking one sets off (each relic's switch is on the Tags by source page).", FeatureSection.BesideYou),
+        ("play-preview", "Play Preview", "While you hold a card (aimed at its target, for one that needs one): Incoming Damage, the enemies' intents and the Death Skull show the turn as it would go after you play it. The card tags stay as they are.", FeatureSection.WhileHoldingACard),
+        ("exploration-progress", "Prediction Progress", "A clock and progress bar under the End Turn button while predictions are still working through every outcome (rare: most fights finish at once). Until then, what's uncertain carries a ?.", FeatureSection.UnderEndTurn),
+        ("reward-tags", "Reward Tags", "Tags on the cards you're offered (card rewards, an event's choice of cards, the shop) for your relics that taking the card sets off or that make it stronger in fights.", FeatureSection.BetweenFights),
+        ("event-reminders", "Event Reminders", "Beside each event option, your relics that change what it does, with the chance a card relic's cards come up, and Inspect for an option that gives random cards.", FeatureSection.BetweenFights),
+        ("shop-reminders", "Shop Reminders", "Beside each shop price, your relics that buying it sets off, and with Lucky Fysh the price after its gold.", FeatureSection.BetweenFights),
+        ("map-reminders", "Map Reminders", "Beside the map legend's rows, your relics and quest cards that make that kind of room unusually good or bad.", FeatureSection.BetweenFights),
+        ("rest-preview", "Rest Preview", "At rest sites, a sum beside your character: your HP, the rest heal and each relic that changes it, and the HP you end with (and how much is wasted). Before the boss, Pantograph and Bath Robes are lines too. In multiplayer, hover a teammate while Mend is on offer for theirs.", FeatureSection.BetweenFights),
+        ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit), with a gear beside it that opens this menu.", FeatureSection.MainMenu),
+        ("forecast-audit", "Forecast audit", "Compares Incoming Damage with what really happened (logs, and error reports).", FeatureSection.Audits),
+        ("proc-audit", "Play audit", "Compares each card's tags with what playing it really did (logs, and error reports).", FeatureSection.Audits),
+        ("coverage-watch", "Coverage audit", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports).", FeatureSection.Audits),
+        ("session-summary", "Session summary", "Counts each play session's turns, checks and calculation times, and sends the totals with error reports when the session ends.", FeatureSection.Sessions),
     };
 
     private readonly QolContext _ctx;
@@ -90,6 +112,8 @@ public sealed partial class SettingsMenu
     private Control? _root;
     private VBoxContainer? _rows;
     private HBoxContainer? _columnHeader;
+    /// <summary>A page's filter row above its list (Tags by source: which source), hidden on the other pages.</summary>
+    private HBoxContainer? _filterRow;
     private ScrollContainer? _scroll;
     private LineEdit? _search;
     private Button? _onlyHere;
@@ -307,6 +331,10 @@ public sealed partial class SettingsMenu
         }
         box.AddChild(tabs);
 
+        _filterRow = UiKit.Row(separation: 6);
+        _filterRow.MouseFilter = Control.MouseFilterEnum.Pass;
+        box.AddChild(_filterRow);
+
         _columnHeader = UiKit.Row(separation: 12);
         _columnHeader.MouseFilter = Control.MouseFilterEnum.Pass;
         box.AddChild(_columnHeader);
@@ -340,9 +368,11 @@ public sealed partial class SettingsMenu
 
     private void Rebuild()
     {
-        if (_rows == null || _columnHeader == null) return;
+        if (_rows == null || _columnHeader == null || _filterRow == null) return;
         UiKit.Clear(_rows);
         UiKit.Clear(_columnHeader);
+        UiKit.Clear(_filterRow);
+        _filterRow.Visible = false;
         _guideTicks.Clear();
         foreach (var (page, button) in _pageButtons) button.ButtonPressed = page == _page;
         _onlyHere!.Disabled = Sts2State.Me == null;
@@ -353,13 +383,9 @@ public sealed partial class SettingsMenu
             {
                 case Page.Setup: BuildSetup(); break;
                 case Page.Fights: BuildFights(); break;
-                case Page.Outside: BuildOutside(); break;
+                case Page.Between: BuildBetween(); break;
+                case Page.Sources: BuildSources(); break;
                 case Page.General: BuildGeneral(); break;
-                case Page.CardTabs: BuildCardTabs(); break;
-                case Page.Relics: BuildSources(SourceGroup.Relic); break;
-                case Page.YourPowers: BuildSources(SourceGroup.YourPower); break;
-                case Page.EnemyPowers: BuildSources(SourceGroup.EnemyPower); break;
-                case Page.Cards: BuildSources(SourceGroup.Card); break;
                 case Page.Guide: BuildGuide(); break;
                 case Page.About: BuildAbout(); break;
             }
@@ -373,15 +399,16 @@ public sealed partial class SettingsMenu
     }
 
     /// <summary>
-    /// The feature switches on one page, each followed by its own options, indented under it (decision #122): every indented row
-    /// sits under the switch it depends on.
+    /// One section's feature switches, each followed by its own options, indented under it (decision #122): every indented row sits
+    /// under the switch it depends on. <paramref name="before"/>: rows at the top of the section, before its first feature.
     /// </summary>
-    private void FeatureSwitches(FeaturePage where, Dictionary<string, Action>? options = null)
+    private void FeatureSwitches(FeatureSection section, Dictionary<string, Action>? options = null, Action? before = null)
     {
-        Section("Features");
-        foreach (var (id, name, desc, page) in FeatureRows)
+        Section(SectionTitle(section));
+        before?.Invoke();
+        foreach (var (id, name, desc, where) in FeatureRows)
         {
-            if (page != where) continue;
+            if (where != section) continue;
             if (Matches(name, desc))
             {
                 var failed = _features.States.TryGetValue(id, out var featureState) && featureState == FeatureState.Failed;
@@ -391,20 +418,50 @@ public sealed partial class SettingsMenu
         }
     }
 
-    /// <summary>In fights: its features, then each one's options under its name (the tabs and rows themselves are on the next pages).</summary>
+    /// <summary>
+    /// In fights (decision #186), by where each thing shows: on your cards (every tag on cards and its options, each tag kind under
+    /// its feature), on enemies, beside you, while you hold a card, under End Turn; then the chances and multiplayer, which span them.
+    /// </summary>
     private void BuildFights()
     {
-        FeatureSwitches(FeaturePage.Fights, new()
+        // Tags on cards: one switch for all of them, its kinds under it, then each feature with its own kinds of tag (decision #122).
+        var tags = Settings.CardTabs ? null : "Tags on cards";
+        FeatureSwitches(FeatureSection.OnYourCards, new()
         {
-            ["ethereal-fade"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", Settings.EtherealOpacity, min: 0.25, max: 1, step: 0.05,
-                value => Settings.EtherealOpacity = (float)value, value => $"{value:0.00}", Needs("ethereal-fade")),
+            ["card-indicators"] = () => TagRows("card-indicators", tags),
             ["proc-indicators"] = () =>
             {
                 Option("Amounts on proc tags", "Show the amount on proc tags: block gained, damage dealt, the amount summoned, cards drawn and energy gained. Off: icon only.",
                     Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, Needs("proc-indicators"), icon: TextIcon("4"));
                 Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
                     Settings.ProcIndirect, enabled => Settings.ProcIndirect = enabled, Needs("proc-indicators"));
+                TagRows("proc-indicators", tags);
             },
+            ["shuffle-warning"] = () => TagRows("shuffle-warning", tags),
+            ["ethereal-fade"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", Settings.EtherealOpacity, min: 0.25, max: 1, step: 0.05,
+                value => Settings.EtherealOpacity = (float)value, value => $"{value:0.00}", Needs("ethereal-fade")),
+        }, before: () =>
+        {
+            Option("Tags on cards", "Every tag the mod hangs on cards: in your hand, and on the cards you're offered between fights. Off: none (the features' other parts stay).",
+                Settings.CardTabs, enabled => { Settings.CardTabs = enabled; Refresh(); }, indent: false, icon: FeatureIcon("proc-indicators"));
+            var kinds = tags ?? Needs("card-indicators", "proc-indicators", "shuffle-warning", "potion-tabs", Features.RewardTagsFeature.FeatureId);
+            Option("Plain tags", "Tags that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only. Potion tags too.",
+                Settings.PlainTabs, enabled => Settings.PlainTabs = enabled, kinds, icon: FeatureIcon("proc-indicators"));
+            Option("Crossed tags", "Tags with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus). Potion tags too.",
+                Settings.CrossedTabs, enabled => Settings.CrossedTabs = enabled, kinds, icon: ArtIcon(Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.ThornsPower>(), slashed: true));
+            Option("Target marker", "The targeting arrow head in a tag's corner when it happens only at some targets. Off: the tag shows without it.",
+                Settings.AimMarker, enabled => Settings.AimMarker = enabled, kinds, icon: ArtIcon(Cards.GameIcons.TargetArrow()));
+            // Tag kinds seen in play that the catalog doesn't know (a newer rule): still switchable, under the switch for every tag.
+            var other = Settings.Tabs.Keys.Where(key => !key.EndsWith(":*", StringComparison.Ordinal) && !key.StartsWith("reminder-", StringComparison.Ordinal) && !SettingsCatalog.IsKnownTabKey(key)).OrderBy(key => key).ToList();
+            foreach (var key in other)
+            {
+                if (!Matches(key)) continue;
+                SimpleRow(key, NeedsText("A tag kind without a description yet.", tags), Settings.TabOwn(key), on => SetTab(key, on), IconSpacer(), tags == null, indent: true);
+            }
+        });
+        FeatureSwitches(FeatureSection.OnEnemies);
+        FeatureSwitches(FeatureSection.BesideYou, new()
+        {
             ["relic-counters"] = () =>
             {
                 Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
@@ -412,9 +469,12 @@ public sealed partial class SettingsMenu
                 Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", Settings.FlashHz, min: 0.5, max: 6, step: 0.5,
                     value => Settings.FlashHz = (float)value, value => $"{value:0.0}/s", Needs("relic-counters"));
             },
+            ["potion-tabs"] = () => TagRows("potion-tabs", tags),
         });
+        FeatureSwitches(FeatureSection.WhileHoldingACard);
+        FeatureSwitches(FeatureSection.UnderEndTurn);
 
-        ChancesSection(fights: true);
+        ChancesSection();
 
         Section("Multiplayer");
         Option("Multiplayer predictions (experimental)", "Count teammates in predictions: their orbs and end-of-turn effects, their block and Beacon of Hope, and each enemy hit on every player. Still being checked against real co-op games.",
@@ -425,52 +485,70 @@ public sealed partial class SettingsMenu
     }
 
     /// <summary>
+    /// A feature's kinds of tag (SettingsCatalog.CardTabs and TabGroups by their Feature), indented under its switch: greyed out while
+    /// Tags on cards (<paramref name="tags"/>) or the feature is off.
+    /// </summary>
+    private void TagRows(string feature, string? tags)
+    {
+        var needs = tags ?? Needs(feature);
+        foreach (var tabEntry in SettingsCatalog.CardTabs)
+        {
+            if (tabEntry.Feature != feature || !Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
+            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, needs), Settings.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), TabPreview(tabEntry.Key), needs == null, indent: true);
+        }
+        foreach (var tabEntry in SettingsCatalog.TabGroups)
+        {
+            if (tabEntry.Feature != feature || !Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
+            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, needs), Settings.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), IconSpacer(), needs == null, indent: true);
+        }
+    }
+
+    /// <summary>
     /// What an option needs on (decision #122): null when it's on, else its name, for the greyed-out row. An option shown under
     /// a feature needs that feature (any one of several, for an option several features show).
     /// </summary>
     private string? Needs(params string[] features)
         => features.Any(FeatureOn) ? null : string.Join(" or ", features.Select(id => FeatureRows.First(featureRow => featureRow.Id == id).Name));
 
+    /// <summary>What a chance needs on: Show chances first, then the feature that shows it.</summary>
+    private string? NeedsChances(string? feature) => !Settings.Chances ? "Show chances" : feature;
+
     /// <summary>
-    /// Chances (decision #122): one switch for every chance the mod shows, then each one under it, greyed out while it's off or
-    /// while the feature that shows it is. The same switch on both pages that show chances.
+    /// Chances in fights (decision #122): one switch for every chance the mod shows, then each one under it, greyed out while it's off
+    /// or while the feature that shows it is. The chance under event icons is under Event Reminders, on Between fights (decision #186).
     /// </summary>
-    private void ChancesSection(bool fights)
+    private void ChancesSection()
     {
         Section("Chances");
         Option("Show chances", "Every chance the mod shows, when a roll decides an outcome. Off: only what's certain. A ? or a range on what's shown stays: it marks what isn't settled yet.",
             Settings.Chances, enabled => { Settings.Chances = enabled; Refresh(); }, indent: false, icon: TextIcon("50%"));
-        string? Under(string? feature) => !Settings.Chances ? "Show chances" : feature;
-        if (fights)
-        {
-            Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tags, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
-                Settings.DeathChance, enabled => Settings.DeathChance = enabled, Under(Needs("death-skull", "incoming-damage", "proc-indicators")), icon: ArtIcon(Cards.GameIcons.Skull()));
-            Option("Incoming Damage: most likely outcome", "When a roll decides how the enemy turn goes (a draw at the end of your turn, a random target), the sum shows the most likely way, with its chance; the skull still shows whenever you might die. Hover the sum for every outcome. Off: the worst case.",
-                Settings.MostLikely, enabled => Settings.MostLikely = enabled, Under(Needs("incoming-damage")), icon: ArtIcon(Cards.GameIcons.Heart()));
-            Option("Draw chance tag", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the Card tags page has the same switch).",
-                Settings.TabOwn(QolSettings.DrawChanceKey), enabled => SetTab(QolSettings.DrawChanceKey, enabled), Under(Needs("proc-indicators")), icon: TextIcon("40%"));
-            Option("Intent Forecast's random moves", "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",
-                Settings.IntentOdds, enabled => Settings.IntentOdds = enabled, Under(Needs("intent-forecast")), icon: ArtIcon(Cards.GameIcons.Intent("unknown")));
-        }
-        else
-            Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
-                Settings.EventOdds, enabled => Settings.EventOdds = enabled, Under(Needs(Features.EventRemindersFeature.FeatureId)), icon: TextIcon("25%"));
+        Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tags, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
+            Settings.DeathChance, enabled => Settings.DeathChance = enabled, NeedsChances(Needs("death-skull", "incoming-damage", "proc-indicators")), icon: ArtIcon(Cards.GameIcons.Skull()));
+        Option("Incoming Damage: most likely outcome", "When a roll decides how the enemy turn goes (a draw at the end of your turn, a random target), the sum shows the most likely way, with its chance; the skull still shows whenever you might die. Hover the sum for every outcome. Off: the worst case.",
+            Settings.MostLikely, enabled => Settings.MostLikely = enabled, NeedsChances(Needs("incoming-damage")), icon: ArtIcon(Cards.GameIcons.Heart()));
+        Option("Draw chance tag", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the same switch as Draw chance under Proc Tags).",
+            Settings.TabOwn(QolSettings.DrawChanceKey), enabled => SetTab(QolSettings.DrawChanceKey, enabled), NeedsChances(Needs("proc-indicators")), icon: TextIcon("40%"));
+        Option("Intent Forecast's random moves", "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",
+            Settings.IntentOdds, enabled => Settings.IntentOdds = enabled, NeedsChances(Needs("intent-forecast")), icon: ArtIcon(Cards.GameIcons.Intent("unknown")));
     }
 
     /// <summary>The page again, for rows that depend on a switch just changed (deferred: the switch is mid-signal).</summary>
     private void Refresh() => Callable.From(Rebuild).CallDeferred();
 
-    /// <summary>Outside fights: its features and options, then a switch per relic or card for each place its reminder shows.</summary>
-    private void BuildOutside()
+    /// <summary>Between fights: its features and options, then a switch per relic or card for each place its reminder shows.</summary>
+    private void BuildBetween()
     {
-        FeatureSwitches(FeaturePage.Outside, new()
+        var eventReminders = Features.EventRemindersFeature.FeatureId;
+        FeatureSwitches(FeatureSection.BetweenFights, new()
         {
-            [Features.EventRemindersFeature.FeatureId] = () =>
+            [eventReminders] = () =>
+            {
                 Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
-                    Settings.EventInspect, enabled => Settings.EventInspect = enabled, Needs(Features.EventRemindersFeature.FeatureId), icon: ArtIcon(Features.RunReminders.InspectIcon())),
+                    Settings.EventInspect, enabled => Settings.EventInspect = enabled, Needs(eventReminders), icon: ArtIcon(Features.RunReminders.InspectIcon()));
+                Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up (Show chances, In fights, turns every chance off). Off: icon only.",
+                    Settings.EventOdds, enabled => Settings.EventOdds = enabled, NeedsChances(Needs(eventReminders)), icon: TextIcon("25%"));
+            },
         });
-
-        ChancesSection(fights: false);
 
         var here = _onlyHere!.ButtonPressed ? PresentTypes() : null;
         var shown = SettingsCatalog.Sources.Where(sourceEntry => sourceEntry.OutsideFights)
@@ -488,10 +566,10 @@ public sealed partial class SettingsMenu
         ReminderRows(shown);
     }
 
-    /// <summary>The rest: the main menu notice, the checks and error reports.</summary>
+    /// <summary>The rest: the main menu notice, error reports, the audits, the session summary, and dev mode in a developer's game.</summary>
     private void BuildGeneral()
     {
-        FeatureSwitches(FeaturePage.General);
+        FeatureSwitches(FeatureSection.MainMenu);
 
         Section("Error reports");
         Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time, and a summary of counts per play session (nothing personal), so they can be fixed.",
@@ -500,60 +578,73 @@ public sealed partial class SettingsMenu
                 Settings.ReportErrors = enabled;
                 if (Sts2Mods.Core.Diagnostics.ErrorReporter.Instance is { } errorReporter) errorReporter.Active = enabled;
             }, indent: false);
+
+        FeatureSwitches(FeatureSection.Audits);
+        FeatureSwitches(FeatureSection.Sessions);
+
+        // Dev mode (decision #108): only in a developer's game (on there, or set in the file). Off for players: their reports reach Sentry.
+        if (!ModEntry.DevMode && Settings.DevMode == null) return;
+        Section("Developer");
+        Option("Dev mode", "Keeps error reports and session summaries on this computer instead of sending them, and writes the dev dashboard's files. Applies at the next launch.",
+            Settings.DevMode ?? ModEntry.DevMode, enabled => Settings.DevMode = enabled, indent: false);
     }
 
-    private void BuildCardTabs()
+    /// <summary>Which source the Tags by source page lists (decision #186): relics until another is picked.</summary>
+    private SourceGroup _sourceGroup = SourceGroup.Relic;
+
+    private static readonly (SourceGroup Group, string Title)[] SourceGroups =
     {
-        // One switch for every tab on cards, then everything under it (decision #122): the kinds, each tab, the families.
-        Section("Tags on cards");
-        Option("Tags on cards", "Every tag the mod hangs on cards: in your hand, and on the cards you're offered outside fights. Off: none (the features' other parts stay).",
-            Settings.CardTabs, enabled => { Settings.CardTabs = enabled; Refresh(); }, indent: false, icon: FeatureIcon("proc-indicators"));
-        var tabs = Settings.CardTabs ? Needs("card-indicators", "proc-indicators", "shuffle-warning", "potion-tabs", Features.RewardTagsFeature.FeatureId) : "Tags on cards";
-        Option("Plain tags", "Tags that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only. Potion tags too.",
-            Settings.PlainTabs, enabled => Settings.PlainTabs = enabled, tabs, icon: FeatureIcon("proc-indicators"));
-        Option("Crossed tags", "Tags with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus). Potion tags too.",
-            Settings.CrossedTabs, enabled => Settings.CrossedTabs = enabled, tabs, icon: ArtIcon(Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.ThornsPower>(), slashed: true));
-        Option("Aim marker", "The targeting arrow head in a tag's corner when it happens only at some targets. Off: the tag shows without it.",
-            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabs, icon: ArtIcon(Cards.GameIcons.TargetArrow()));
-        foreach (var tabEntry in SettingsCatalog.CardTabs)
-        {
-            if (!Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
-            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, tabs), Settings.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), TabPreview(tabEntry.Key), tabs == null, indent: true);
-        }
-        foreach (var tabEntry in SettingsCatalog.TabGroups)
-        {
-            if (!Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
-            var spacer = new Control { CustomMinimumSize = new Vector2(IconSize, IconSize), MouseFilter = Control.MouseFilterEnum.Ignore };
-            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, tabs), Settings.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), spacer, tabs == null, indent: true);
-        }
+        (SourceGroup.Relic, "Relics"),
+        (SourceGroup.YourPower, "Your powers"),
+        (SourceGroup.EnemyPower, "Enemy powers"),
+        (SourceGroup.Card, "Cards"),
+    };
 
-        // Tab kinds seen in play that the catalog doesn't know (a newer rule): still switchable.
-        var other = Settings.Tabs.Keys.Where(key => !key.EndsWith(":*", StringComparison.Ordinal) && !key.StartsWith("reminder-", StringComparison.Ordinal) && !SettingsCatalog.IsKnownTabKey(key)).OrderBy(key => key).ToList();
-        foreach (var key in other)
-        {
-            if (!Matches(key)) continue;
-            SimpleRow(key, NeedsText("A tag kind without a description yet.", tabs), Settings.TabOwn(key), on => SetTab(key, on), IconSpacer(), tabs == null, indent: true);
-        }
-    }
-
-    private void BuildSources(SourceGroup group)
+    /// <summary>
+    /// Tags by source (decision #186): every relic, power and card with a tag or a tracker row, one source at a time (the filter row
+    /// above the list). A search lists its matches from every source, each under its own heading.
+    /// </summary>
+    private void BuildSources()
     {
-        var entries = SettingsCatalog.Sources.Where(sourceEntry => sourceEntry.Group == group && sourceEntry.InFights).ToList();
-        var here = _onlyHere!.ButtonPressed ? PresentTypes() : null;
-        var shown = entries
-            .Where(sourceEntry => here == null || here.Contains(sourceEntry.Type))
-            .Select(sourceEntry => (Entry: sourceEntry, Name: DisplayName(sourceEntry.Type)))
-            .Where(entryName => Matches(entryName.Name, entryName.Entry.Type, entryName.Entry.Tag, entryName.Entry.Tracker, entryName.Entry.Reward, entryName.Entry.Event, entryName.Entry.Shop, entryName.Entry.Map))
-            .OrderBy(entryName => entryName.Name, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
-
-        if (shown.Count == 0)
+        foreach (var (group, title) in SourceGroups)
         {
-            _rows!.AddChild(Label(here != null ? "You have none of these right now." : "No matches.", size: 20, Muted));
-            return;
+            var button = MakeButton(title, size: 19);
+            button.ToggleMode = true;
+            button.ButtonPressed = group == _sourceGroup;
+            button.Pressed += () => { _sourceGroup = group; _scroll!.ScrollVertical = 0; Rebuild(); };
+            _filterRow!.AddChild(button);
         }
-        // What they do outside fights (Run Reminders) is on the Outside fights page.
-        FightRows(entries, shown, _columnHeader!);
+        _filterRow!.Visible = true;
+
+        var searching = !string.IsNullOrWhiteSpace(_search?.Text);
+        var any = false;
+        foreach (var (group, title) in SourceGroups)
+        {
+            if (!searching && group != _sourceGroup) continue;
+            var entries = SettingsCatalog.Sources.Where(sourceEntry => sourceEntry.Group == group && sourceEntry.InFights).ToList();
+            var here = _onlyHere!.ButtonPressed ? PresentTypes() : null;
+            var shown = entries
+                .Where(sourceEntry => here == null || here.Contains(sourceEntry.Type))
+                .Select(sourceEntry => (Entry: sourceEntry, Name: DisplayName(sourceEntry.Type)))
+                .Where(entryName => Matches(entryName.Name, entryName.Entry.Type, entryName.Entry.Tag, entryName.Entry.Tracker, entryName.Entry.Reward, entryName.Entry.Event, entryName.Entry.Shop, entryName.Entry.Map))
+                .OrderBy(entryName => entryName.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            if (shown.Count == 0) continue;
+            any = true;
+            // One source: its column headers stay above the list. Several (a search): each its own heading and headers.
+            HBoxContainer header;
+            if (searching)
+            {
+                Section(title);
+                header = UiKit.Row(separation: 12);
+                header.MouseFilter = Control.MouseFilterEnum.Pass;
+                _rows!.AddChild(header);
+            }
+            else header = _columnHeader!;
+            // What they do between fights (the reminders) is on the Between fights page.
+            FightRows(entries, shown, header);
+        }
+        if (!any) _rows!.AddChild(Label(_onlyHere!.ButtonPressed ? "You have none of these right now." : "No matches.", size: 20, Muted));
     }
 
     /// <summary>On-card tabs and tracker rows, with their column headers in <paramref name="header"/>.</summary>
@@ -572,7 +663,7 @@ public sealed partial class SettingsMenu
         });
         var groupKeys = shown.Where(entryName => entryName.Entry.TagKey != null).Select(entryName => entryName.Entry.TagPrefix + "*").Distinct();
         var groupOff = groupKeys.Where(groupKey => !Settings.TabOwn(groupKey)).ToList();
-        if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off on the Card tags page)", size: 16, Colors.OrangeRed));
+        if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off: In fights, On your cards)", size: 16, Colors.OrangeRed));
         header.AddChild(tagHead);
         if (anyTracker)
         {
