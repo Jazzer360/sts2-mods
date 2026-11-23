@@ -22,6 +22,9 @@ public abstract record ProgramStep(int Offset)
 /// </summary>
 public sealed record CommandStep(int Offset, CodeMember Command, IReadOnlyList<string> Arguments) : ProgramStep(Offset)
 {
+    /// <summary>Its arguments as values (what the code works out for each: a card value, a count, a constant), in order.</summary>
+    public IReadOnlyList<ProgramValue> Values { get; init; } = Array.Empty<ProgramValue>();
+
     /// <summary>An attack's builder calls (WithHitCount, Targeting, TargetingAllOpponents, BeforeDamage...), in order.</summary>
     public IReadOnlyList<string> Builder { get; init; } = Array.Empty<string>();
 
@@ -161,6 +164,18 @@ public static class CardProgramReader
         return new CardProgram(cardType.Name, steps);
     }
 
+    /// <summary>
+    /// What a property of a card's type (or a base type's) returns, as a condition, read from its getter's code (Ftl.CanDrawCard: the plays
+    /// finished this turn, fewer than PlayMax); null when there's no such property.
+    /// </summary>
+    public static ProgramCondition? ReadProperty(Type cardType, string property, Func<MethodBase, List<CodeOp>> read)
+    {
+        for (var type = cardType; type != null; type = type.BaseType)
+            if (type.GetProperty(property, All) is { GetMethod: { } getter })
+                return new Reader(cardType, read).Returned(getter);
+        return null;
+    }
+
     /// <summary>The method whose code runs: an async method's state machine's MoveNext, else the method itself.</summary>
     internal static MethodBase? Body(Type owner, string method) =>
         owner.GetMethods(All).FirstOrDefault(candidate => candidate.Name == method) is { } found ? BodyOf(found) : null;
@@ -210,6 +225,9 @@ public static class CardProgramReader
             Parse(flow, 0, flow.Ops.Count, steps, outer: null, depth);
             return steps;
         }
+
+        /// <summary>What a method returns, as a condition (a getter's value).</summary>
+        public ProgramCondition Returned(MethodBase method) => Flow.Of(_read(method), method, LambdaOf).Returned();
 
         /// <summary>A lambda the code makes (a predicate for Any, Where...): its parameter and what it returns.</summary>
         private LambdaValue? LambdaOf(CodeMember member)
@@ -271,7 +289,8 @@ public static class CardProgramReader
                 }
                 if (IsCommand(member))
                 {
-                    into.Add(new CommandStep(instruction.Offset, member, Arguments(flow, i, member)) { Condition = condition, Inner = callback ?? (IReadOnlyList<ProgramStep>)Array.Empty<ProgramStep>() });
+                    into.Add(new CommandStep(instruction.Offset, member, Arguments(flow, i, member))
+                        { Condition = condition, Values = flow.ArgumentValues(i, member), Inner = callback ?? (IReadOnlyList<ProgramStep>)Array.Empty<ProgramStep>() });
                     callback = null;
                     continue;
                 }
@@ -281,7 +300,20 @@ public static class CardProgramReader
                     if (depth >= MaxDepth) into.Add(new UnknownStep(instruction.Offset, $"{member.Name}: calls nested too deep") { Condition = condition });
                     else
                     {
-                        var inner = new Reader(_card, _read).Steps(own, depth + 1);
+                        // Its parameters are what this call passes (MadScience.ExecuteRider(TinkerTimeRider, ...): its tests of rider are tests
+                        // of the card's rider).
+                        var passed = new Dictionary<string, ProgramValue>();
+                        var names = own.Called.GetParameters();
+                        var values = flow.ArgumentValues(i, member);
+                        for (var parameter = 0; parameter < names.Length && parameter < values.Count; parameter++)
+                            if (names[parameter].Name is { } parameterName && values[parameter] is not UnknownValue) passed[parameterName] = values[parameter];
+                        ProgramValue? Passed(ProgramValue value) => value switch
+                        {
+                            ParameterValue parameterValue when passed.TryGetValue(parameterValue.Name, out var given) => given,
+                            NamedValue namedValue when passed.TryGetValue(namedValue.Name, out var given) => given,
+                            _ => null,
+                        };
+                        var inner = new Reader(_card, _read).Steps(own.Body, depth + 1).Select(step => Bound(step, Passed));
                         into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
                     }
                     continue;
@@ -309,6 +341,21 @@ public static class CardProgramReader
             if (callback != null) into.Add(new UnknownStep(ops.Count > 0 ? ops[^1].Offset : 0, "commands in a callback"));
         }
 
+        /// <summary>A step with the values in its conditions mapped (a helper's parameters by what its caller passed), its inner steps too.</summary>
+        private static ProgramStep Bound(ProgramStep step, Func<ProgramValue, ProgramValue?> replace)
+        {
+            var bound = step with { Condition = step.Condition?.Map(replace) };
+            return bound switch
+            {
+                LoopStep loop => loop with { While = loop.While?.Map(replace), Body = loop.Body.Select(inner => Bound(inner, replace)).ToList() },
+                CommandStep command => command with
+                {
+                    Values = command.Values.Select(value => value.Map(replace)).ToList(), Inner = command.Inner.Select(inner => Bound(inner, replace)).ToList(),
+                },
+                _ => bound,
+            };
+        }
+
         private static ProgramCondition? And(ProgramCondition? outer, ProgramCondition? inner) => outer == null ? inner : inner == null ? outer : outer.And(inner);
 
         /// <summary>A step's condition inside the loop it's in (null when it holds on every way).</summary>
@@ -329,11 +376,11 @@ public static class CardProgramReader
                 builder.Add(call.Name);
                 if (call.Name == "WithHitCount" && call.ParameterCount >= 1) hitCount = flow.Source(j, call, parameter: 0);
             }
-            return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member)) { Builder = builder, HitCount = hitCount };
+            return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member)) { Builder = builder, HitCount = hitCount, Values = flow.ArgumentValues(at, member) };
         }
 
         /// <summary>The card's own method (its type or a base type's private helper) or a local function OnPlay declares.</summary>
-        private MethodBase? OwnMethod(CodeMember member)
+        private (MethodBase Called, MethodBase Body)? OwnMethod(CodeMember member)
         {
             if (member.Kind != CodeMemberKind.Method || member.HasThis == false && !member.Name.StartsWith('<')) return null;
             if (member.DeclaringType != _card.Name && !member.DeclaringType.StartsWith("<>c", StringComparison.Ordinal)) return null;
@@ -345,7 +392,7 @@ public static class CardProgramReader
                 var found = type.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount);
                 if (found == null) continue;
                 // An async helper's code is its state machine's (nested in its type, or in the card for a local function).
-                return BodyOf(found);
+                return (found, BodyOf(found));
             }
             return null;
         }
@@ -527,6 +574,7 @@ public static class CardProgramReader
         {
             var instruction = Ops[branch];
             var at = $"{_site}:{instruction.Offset:X4}";
+            var unsigned = instruction.OpCode.Name!.Contains(".un", StringComparison.Ordinal);
             var name = instruction.OpCode.Name!.Replace(".s", "", StringComparison.Ordinal).Replace(".un", "", StringComparison.Ordinal);
             if (name is "brtrue" or "brfalse") return new ConditionLiteral(at, ValueBefore(branch), Holds: name == "brtrue");
             var right = ReadBack(branch, depth: 0);
@@ -540,7 +588,7 @@ public static class CardProgramReader
                 "bgt" => Comparison.Greater,
                 _ => Comparison.GreaterOrEqual,
             };
-            return new ConditionLiteral(at, new CompareValue(comparison, left, right.Value), Holds: true);
+            return new ConditionLiteral(at, new CompareValue(comparison, left, right.Value) { Unsigned = unsigned && name != "bne" }, Holds: true);
         }
 
         /// <summary>When a loop goes round again (its jump back's test, and the tests on the way to it inside the loop); null when it can't be read.</summary>
@@ -572,6 +620,20 @@ public static class CardProgramReader
             return returned;
         }
 
+        /// <summary>The values the call at <paramref name="callAt"/> passes, in order (unknown ones as UnknownValue).</summary>
+        public IReadOnlyList<ProgramValue> ArgumentValues(int callAt, CodeMember member)
+        {
+            var values = new ProgramValue[member.ParameterCount];
+            var cursor = callAt;
+            for (var parameter = member.ParameterCount - 1; parameter >= 0; parameter--)
+            {
+                var argument = cursor >= 0 ? ReadBack(cursor, depth: 0) : (Value: new UnknownValue("argument"), Start: -1);
+                values[parameter] = argument.Value;
+                cursor = argument.Start;
+            }
+            return values;
+        }
+
         /// <summary>The value on top of the stack just before <paramref name="index"/>, read back as an expression.</summary>
         public ProgramValue ValueBefore(int index) => ReadBack(index, depth: 0).Value;
 
@@ -593,7 +655,10 @@ public static class CardProgramReader
             if (name.StartsWith("ldloc", StringComparison.Ordinal))
             {
                 if (instruction.Slot is { } slot && StoredOnce(slot) is { } store && ReadBack(store, depth + 1) is { Start: >= 0 } stored)
-                    return (new StoredValue("", stored.Value, Ops[store].Offset), at);
+                    // A name (the card itself, kept in a local by the state machine) is the same wherever it's read; anything else is as it
+                    // was where it was stored.
+                    return (stored.Value is NamedValue or ConstantValue or ParameterValue ? stored.Value : new StoredValue("", stored.Value, Ops[store].Offset), at);
+                if (instruction.Slot is { } flagSlot && FlagOf(flagSlot) is { } flag) return (new ConditionValue(flag), at);
                 return (new UnknownValue("local"), at);
             }
             if (name.StartsWith("conv", StringComparison.Ordinal) || instruction.OpCode == OpCodes.Box || instruction.OpCode == OpCodes.Unbox_Any
@@ -634,7 +699,7 @@ public static class CardProgramReader
                     "cgt" or "cgt.un" => Comparison.Greater,
                     _ => Comparison.Less,
                 };
-                return (new CompareValue(comparison, left.Value, right.Value), left.Start);
+                return (new CompareValue(comparison, left.Value, right.Value) { Unsigned = name is "clt.un" || name == "cgt.un" && right.Value is not NullValue }, left.Start);
             }
             if (name is "add" or "sub" or "mul" or "div" or "rem")
             {
@@ -683,10 +748,11 @@ public static class CardProgramReader
                 cursor = receiver.Start;
             }
             // DynamicVars.Cards.BaseValue, DynamicVars["PlayMax"].IntValue: the card's value.
-            if (member.Name is "get_BaseValue" or "get_IntValue")
+            // A calculated value worked out (DynamicVars.CalculatedCards.Calculate(target)): the card's value, on the play's target.
+            if (member.Name is "get_BaseValue" or "get_IntValue" or "Calculate")
             {
-                if (of is QueryValue { Of: QueryValue { Name: "DynamicVars" } } value) return (new CardValue(value.Name), cursor);
                 if (of is QueryValue { Name: "Item", Arguments: [NamedValue key] }) return (new CardValue(key.Name.Trim('"')), cursor);
+                if (of is QueryValue { Of: QueryValue { Name: "DynamicVars" } } value) return (new CardValue(value.Name), cursor);
             }
             // A foreach's item (enumerator.Current): each item it goes over.
             if (member.Name == "get_Current") return (new NamedValue("each"), cursor);
@@ -896,6 +962,26 @@ public static class CardProgramReader
                 found = i;
             }
             return found;
+        }
+
+        /// <summary>
+        /// A local set to true or false on several ways (bool flag = a || b ? true : false): when it's true, each way that stores true;
+        /// null when one of its stores isn't a constant or isn't reached yet.
+        /// </summary>
+        private ProgramCondition? FlagOf(int slot)
+        {
+            var flag = ProgramCondition.Never;
+            var stores = 0;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].Slot != slot || !Ops[i].OpCode.Name!.StartsWith("stloc", StringComparison.Ordinal)) continue;
+                stores++;
+                if (i == 0 || Ops[i - 1].Integer is not { } stored || !Ops[i - 1].OpCode.Name!.StartsWith("ldc", StringComparison.Ordinal)) return null;
+                if (stored == 0) continue;
+                if (i >= _reached.Length || _reached[i] is not { } reached) return null;
+                flag = flag.Or(reached);
+            }
+            return stores > 1 ? flag : null;
         }
 
         /// <summary>The one instruction that stores local <paramref name="slot"/>, when only one does (else null: which value is meant isn't straight).</summary>

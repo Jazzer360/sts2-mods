@@ -168,7 +168,7 @@ internal static class CardCoverage
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !Procs.Programs.CardEffects.DrawsForTarget(card.GetType()))
+            && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !Procs.Programs.CardEffects.DrawsForTarget(card.GetType()))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         // A card that takes block away: the simulator models a card taking its target's (Expose), read from its program.
         if (Calls("CreatureCmd", "LoseBlock") && !Procs.Programs.CardEffects.TakesTargetsBlock(card.GetType()))
@@ -181,12 +181,10 @@ internal static class CardCoverage
         if (Calls("DamageResult", "get_WasTargetKilled") && !Procs.Programs.CardEffects.HitsAllOnKill(card.GetType())
             && !SimAdapter.RepeatPerKillCards.Contains(name) && !KillRewardCards.Contains(name))
             issues.Add("reacts to its own kills (not simulated)");
-        // A drawing card that glows gold has a condition on what it does (Impatience: no Attack in hand): its draw count
-        // must check it.
-        if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && card.GetType().GetProperty("ShouldGlowGoldInternal", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly) != null
-            && !PlayFacts.ConditionalDrawCards.Contains(name))
-            issues.Add("draws only on a condition (it glows gold; not checked in PlayFacts.CardsDrawn)");
+        // A draw on a condition (Impatience: no Attack in hand) is counted when its condition holds on the board (PlayFacts.CardsDrawn,
+        // evaluated from its program): one the evaluator can't read (a test of something the play itself gives) isn't checked.
+        if (Procs.Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => !Procs.Programs.ProgramEvaluator.CanEvaluate(draw.Condition)))
+            issues.Add("draws only on a condition its program's evaluator can't read (not checked in PlayFacts.CardsDrawn)");
         // An attack on a condition, on a card that glows gold: is the glow that condition (Pact's End)? Its hits must say.
         if (PlayFacts.AttacksConditionallyAndGlows(card.GetType()) && !PlayFacts.GlowGatedAttackCards.Contains(name) && !PlayFacts.GlowNotTheAttack.ContainsKey(name))
             issues.Add("attacks only on a condition and glows gold (is the glow its condition? PlayFacts.GlowGatedAttackCards)");

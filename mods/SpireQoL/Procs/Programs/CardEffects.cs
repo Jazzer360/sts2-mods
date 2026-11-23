@@ -82,6 +82,63 @@ public static class CardEffects
     private static bool IsDraw(CommandStep command) =>
         command.Command.DeclaringType == "CardPileCmd" && command.Command.Name.StartsWith("Draw", StringComparison.Ordinal);
 
+    /// <summary>
+    /// One draw of the play for you (CardPileCmd.Draw to its owner, or CardCmd.DiscardAndDraw), with everything it runs on (its own
+    /// condition and every loop's around it) and the loops it's in.
+    /// </summary>
+    public sealed record DrawForYou(CommandStep Command, ProgramCondition Condition, IReadOnlyList<LoopStep> Loops)
+    {
+        /// <summary>How many one call draws: its count argument (Draw(choiceContext, player) draws one).</summary>
+        public ProgramValue Count => Command.Command.Name == "DiscardAndDraw" ? Value(2) : Command.Command.ParameterCount == 2 ? new ConstantValue(1) : Value(1);
+
+        private ProgramValue Value(int index) => index < Command.Values.Count ? Command.Values[index] : new UnknownValue("count");
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<DrawForYou>> Draws = new();
+
+    /// <summary>The card type's draws for you, read once per type (its program doesn't change while the game runs).</summary>
+    public static IReadOnlyList<DrawForYou> DrawsForYou(Type cardType) => Draws.GetOrAdd(cardType, type => DrawsForYou(CardPrograms.Of(type)));
+
+    /// <summary>The play's draws for you, in order.</summary>
+    public static IReadOnlyList<DrawForYou> DrawsForYou(CardProgram program)
+    {
+        var draws = new List<DrawForYou>();
+        void Walk(IEnumerable<ProgramStep> steps, ProgramCondition outer, IReadOnlyList<LoopStep> loops)
+        {
+            foreach (var step in steps)
+            {
+                var condition = step.Condition is { } own ? outer.And(own) : outer;
+                switch (step)
+                {
+                    case LoopStep loop:
+                        Walk(loop.Body, condition, loops.Append(loop).ToList());
+                        break;
+                    case CommandStep command:
+                        if (command.Command.DeclaringType == "CardCmd" && command.Command.Name == "DiscardAndDraw"
+                            || IsDraw(command) && command.Arguments.Contains("Owner"))
+                            draws.Add(new DrawForYou(command, condition, loops));
+                        Walk(command.Inner, condition, loops);
+                        break;
+                }
+            }
+        }
+        Walk(program.Steps, ProgramCondition.Always, Array.Empty<LoopStep>());
+        return draws;
+    }
+
+    public static bool DrawsOnACondition(Type cardType) => DrawsOnACondition(CardPrograms.Of(cardType));
+    public static bool DrawsDependOnTarget(Type cardType) => DrawsForYou(cardType).Any(draw => ProgramEvaluator.AsksTarget(draw.Condition));
+
+    /// <summary>
+    /// Its draws for you wait on a condition (Impatience: no Attack in your hand; FTL: fewer plays this turn than PlayMax; Mad Science:
+    /// its rider), not on every way through its play (Wheel of Fortune draws one way or the other).
+    /// </summary>
+    public static bool DrawsOnACondition(CardProgram program) =>
+        DrawsForYou(program).Aggregate(ProgramCondition.Never, (either, draw) => either.Or(draw.Condition)) is { IsNever: false, IsAlways: false };
+
+    /// <summary>Whether it draws depends on its target (Ki Hop: an Impaled target; Wrest: one your arrow Impales).</summary>
+    public static bool DrawsDependOnTarget(CardProgram program) => DrawsForYou(program).Any(draw => ProgramEvaluator.AsksTarget(draw.Condition));
+
     // ---- cards moved between piles (CardPileCmd.Add)
 
     /// <summary>What a CardPileCmd.Add in a card's play does with the cards it moves.</summary>

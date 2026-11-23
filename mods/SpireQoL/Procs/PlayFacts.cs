@@ -785,157 +785,90 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ draws
 
-    /// <summary>How many cards one play of this card draws right now (0 if it doesn't draw).</summary>
+    /// <summary>
+    /// How many cards one play of this card draws right now (0 if it doesn't draw), read from its program (decision #182): each draw
+    /// for you its code makes (CardPileCmd.Draw to its owner, CardCmd.DiscardAndDraw), on the condition its code puts it on, evaluated
+    /// against the board (ProgramEvaluator: Impatience's hand, Restlessness alone in your hand, FTL's plays this turn, Fetch's Osty,
+    /// Mad Science's rider), its count from its own argument (Cards, Scrawl's room in your hand, Calculated Gamble's hand, a count the
+    /// game calculates) and its loops' rounds. A draw whose condition asks the target (Ki Hop, Wrest) counts what the worst target it
+    /// could be aimed at would draw. <paramref name="handCount"/> isn't read: the hand is the board's.
+    /// </summary>
     public static int CardsDrawn(CardModel card, int handCount)
     {
-        var name = card.GetType().Name;
-        // A card's condition or its own count first (the card scan holds every drawing card that glows gold to ConditionalDrawCards).
-        switch (card)
-        {
-            // Draws up to a full hand; Scrawl itself has left the hand by then.
-            case Scrawl: return Math.Max(0, CardPile.MaxCardsInHand - (handCount - 1));
-            // Discards the rest of your hand, then draws that many (CardCmd.DiscardAndDraw).
-            case CalculatedGamble: return Math.Max(0, handCount - 1);
-            // A count the game calculates from the fight (its CalculatedCards: Compile Driver per orb type channeled, Steady Cadence per
-            // melody played this turn).
-            case var _ when card.DynamicVars.TryGetValue("CalculatedCards", out var dynamicVar) && dynamicVar is CalculatedVar calculatedVar:
-                return (int)calculatedVar.Calculate(null);
-            // Draws only while you've finished fewer than PlayMax plays this turn (Ftl.CanDrawCard; the
-            // game's template card, with no owner, counts as drawing).
-            case Ftl: return FtlCanDraw(card) ? Sts2State.Var(card, "Cards") : 0;
-            // Draws only when no Attack is in your hand (Impatience.OnPlay; it's a Skill itself).
-            case Impatience: return HandHasAttack(card) ? 0 : Sts2State.Var(card, "Cards");
-            // Draws only while Osty is alive (Osty.CheckMissingWithAnim) and on this copy's first finished play this turn
-            // (Fetch.HasBeenPlayedThisTurn); CardsDrawnTotal counts it once for a replay.
-            case Fetch: return FetchCanDraw(card) ? Sts2State.Var(card, "Cards") : 0;
-            // Only draws when it's the only card in hand.
-            case Restlessness: return handCount == 1 ? Sts2State.Var(card, "Cards") : 0;
-            // Draws only when its target is Impaled (Ki Hop: anyone's arrow; Wrest: yours): counted when every
-            // enemy you could aim at is, so whatever you aim at draws.
-            case var _ when card.GetType().Name == nameof(KiHop):
-                return AllTargets(card, Fool.IsImpaled) ? Sts2State.Var(card, "Cards") : 0;
-            case var _ when card.GetType().Name == nameof(Wrest):
-                return OwnerOf(card) is { } player && AllTargets(card, creature => Fool.ImpaledBy(creature, player.Creature) != null) ? Sts2State.Var(card, "Cards") : 0;
-            // Mad Science with the Wisdom rider (Tinker Time).
-            case MadScience madScience when madScience.TinkerTimeRider.ToString() == "Wisdom": return Sts2State.Var(card, "WisdomCards");
-        }
-        // Every other card that draws in its play (CardPileCmd.Draw, read from its own code: CardCode): its Cards value, or one card
-        // when it has none (Dagger Throw, Escape Plan). Not a card that makes a teammate draw (Constellation, Huddle Up).
-        if (CardCode.Calls(card.GetType(), "CardPileCmd", "Draw") && !Programs.CardEffects.DrawsForTarget(card.GetType()) && !Programs.CardEffects.DrawsForEachTeammate(card.GetType()))
-            return card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
-        return 0;
+        if (!Programs.CardEffects.DrawsDependOnTarget(card.GetType())) return DrawsOnPlay(card, target: null, playsBefore: 0);
+        var targets = Targets(card);
+        if (targets == null) return DrawsOnPlay(card, target: null, playsBefore: 0); // no fight to aim at (the game's template card)
+        return targets.Count > 0 ? targets.Min(target => DrawsOnPlay(card, target, playsBefore: 0)) : 0;
     }
 
     /// <summary>
-    /// Cards whose draws depend on their target (TargetDraws). The game's template card has no fight to aim at,
-    /// so the coverage scan counts these as drawing by this list.
+    /// Draws of one play of <paramref name="card"/> aimed at <paramref name="target"/>, after <paramref name="playsBefore"/> of its replay's
+    /// plays: each draw its condition lets through, its count times its loops' rounds. A count that can't be read is its Cards value, or
+    /// one card when it has none (Dagger Throw, Escape Plan).
     /// </summary>
-    internal static readonly HashSet<string> TargetDrawCards = new() { nameof(KiHop), nameof(Wrest) };
+    private static int DrawsOnPlay(CardModel card, Creature? target, int playsBefore)
+    {
+        var program = Programs.CardPrograms.Of(card.GetType());
+        var draws = Programs.CardEffects.DrawsForYou(program);
+        if (draws.Count == 0) return 0;
+        var board = new Programs.ProgramBoard(card, target, playsBefore);
+        var total = 0;
+        foreach (var draw in draws)
+        {
+            if (Programs.ProgramEvaluator.Holds(draw.Condition, board, program) == false) continue;
+            var count = Programs.ProgramEvaluator.Number(draw.Count, board, program) is { } read ? (int)read
+                : card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
+            foreach (var loop in draw.Loops)
+                count *= card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(card, loop.Over) : 1;
+            total += Math.Max(0, count);
+        }
+        return total;
+    }
+
+    /// <summary>The enemies the card could be aimed at; null when it isn't in a fight (the game's template card).</summary>
+    private static List<Creature>? Targets(CardModel card)
+    {
+        try { return card.CombatState?.HittableEnemies.Where(creature => creature.IsAlive).ToList(); }
+        catch { return null; }
+    }
 
     /// <summary>
-    /// Draws of all <paramref name="plays"/> plays aimed at <paramref name="target"/>, for cards whose draws depend on their
-    /// target, from the board before the first play. Null for other cards. Ki Hop draws on each play that starts with the target
-    /// Impaled, and its own hit can loosen the last arrow (SimEngine.PlaysStartingImpaled); Wrest pulls all your arrows out on
-    /// its first play, so only that one draws. The audit takes it with the play's actual target as the play starts; the
-    /// prediction counts what the worst target would draw (CardsDrawnTotal).
+    /// Draws of all <paramref name="plays"/> plays aimed at <paramref name="target"/>, for a card whose draws depend on its target
+    /// (CardEffects.DrawsDependOnTarget), from the board before the first play; null for other cards. Each play's condition is
+    /// evaluated after the plays before it: Ki Hop draws on each play that starts with the target Impaled, its own hit loosening the
+    /// last arrow (SimEngine.PlaysStartingImpaled); Wrest pulls every arrow of yours out on its first play, so only that one draws. The
+    /// audit takes it with the play's actual target as the play starts; the prediction counts what the worst target would draw
+    /// (CardsDrawnTotal).
     /// </summary>
     public static int? TargetDraws(CardModel card, Creature target, int plays)
     {
-        plays = Math.Max(1, plays);
-        switch (card.GetType().Name)
-        {
-            case nameof(KiHop):
-            {
-                var cards = Sts2State.Var(card, "Cards");
-                if (OwnerOf(card) is not { } owner) return Fool.IsImpaled(target) ? cards * plays : 0;
-                var yours = Fool.ImpaledBy(target, owner.Creature);
-                var teammate = target.Powers.Any(power => power.GetType().Name == nameof(ImpaledPower) && power.Applier != owner.Creature);
-                // One hit a play (KiHop.OnPlay: DamageCmd.Attack with no hit count).
-                return cards * SimEngine.PlaysStartingImpaled(teammate, yours == null ? 0 : Fool.ArrowsIn(yours),
-                    yours == null ? 3 : Fool.HitCounter(yours), hitsPerPlay: 1, plays);
-            }
-            case nameof(Wrest):
-                return OwnerOf(card) is { } player && Fool.ImpaledBy(target, player.Creature) != null ? Sts2State.Var(card, "Cards") : 0;
-            default:
-                return null;
-        }
+        if (!Programs.CardEffects.DrawsDependOnTarget(card.GetType())) return null;
+        var total = 0;
+        for (var playIndex = 0; playIndex < Math.Max(1, plays); playIndex++) total += DrawsOnPlay(card, target, playIndex);
+        return total;
     }
 
     /// <summary>
-    /// How many cards all <paramref name="plays"/> plays of this card draw right now. A card whose draws depend on its target
-    /// counts what the worst target it could be aimed at would draw.
+    /// How many cards all <paramref name="plays"/> plays of this card draw right now, each play's conditions after the plays before it
+    /// (FTL draws while fewer than PlayMax plays have finished this turn, a replay's earlier plays included; Fetch only on its first).
+    /// A card whose draws depend on its target counts what the worst target it could be aimed at would draw.
     /// </summary>
     public static int CardsDrawnTotal(CardModel card, int handCount, int plays)
     {
         plays = Math.Max(1, plays);
-        if (card is Fetch) return CardsDrawn(card, handCount); // only the first play draws (its replay has finished a play)
-        // FTL draws on each play that starts with fewer than PlayMax plays finished this turn: a replay counts the plays before it.
-        if (card is Ftl) return FtlCanDraw(card) ? Sts2State.Var(card, "Cards") * PlaysUnder(FtlFinishedBefore(card), Sts2State.Var(card, "PlayMax", fallback: 3), plays) : 0;
-        if (!TargetDrawCards.Contains(card.GetType().Name)) return CardsDrawn(card, handCount) * plays;
-        try
+        if (!Programs.CardEffects.DrawsDependOnTarget(card.GetType()))
         {
-            var targets = card.CombatState?.HittableEnemies.Where(creature => creature.IsAlive).ToList();
-            return targets is { Count: > 0 } ? targets.Min(creature => TargetDraws(card, creature, plays) ?? 0) : 0;
+            var total = 0;
+            for (var playIndex = 0; playIndex < plays; playIndex++) total += DrawsOnPlay(card, target: null, playIndex);
+            return total;
         }
-        catch
-        {
-            return 0;
-        }
+        var targets = Targets(card);
+        if (targets == null) return DrawsOnPlay(card, target: null, playsBefore: 0) * plays;
+        return targets.Count > 0 ? targets.Min(target => TargetDraws(card, target, plays) ?? 0) : 0;
     }
-
-    /// <summary>Every enemy the card could target matches (none to target: false).</summary>
-    private static bool AllTargets(CardModel card, Func<Creature, bool> match)
-    {
-        try
-        {
-            var targets = card.CombatState?.HittableEnemies.Where(creature => creature.IsAlive).ToList();
-            return targets is { Count: > 0 } && targets.All(match);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool HandHasAttack(CardModel card)
-    {
-        try { return OwnerOf(card) is { } me && PileType.Hand.GetPile(me).Cards.Any(otherCard => !ReferenceEquals(otherCard, card) && otherCard.Type == CardType.Attack); }
-        catch { return false; }
-    }
-
-    private static bool FetchCanDraw(CardModel card)
-    {
-        try
-        {
-            if (OwnerOf(card) is not { } me) return true; // the game's template card counts as drawing
-            if (!me.IsOstyAlive) return false;
-            var combat = card.CombatState;
-            return combat == null || !CombatManager.Instance.History.CardPlaysFinished.Any(cardPlayFinishedEntry => ReferenceEquals(cardPlayFinishedEntry.CardPlay.Card, card) && cardPlayFinishedEntry.HappenedThisTurn(combat));
-        }
-        catch { return true; }
-    }
-
-    /// <summary>
-    /// Drawing cards whose draw has a condition, which the game shows by glowing them gold (ShouldGlowGoldInternal), all
-    /// checked in CardsDrawn or TargetDraws. The card scan flags a drawing card that glows gold and isn't here.
-    /// </summary>
-    internal static readonly HashSet<string> ConditionalDrawCards = new()
-        { nameof(Impatience), nameof(Fetch), nameof(Ftl), nameof(Restlessness), nameof(KiHop), nameof(Wrest) };
 
     /// <summary>How many of <paramref name="plays"/> plays in a row start with fewer than <paramref name="max"/> plays finished, <paramref name="finishedBefore"/> before the first.</summary>
     internal static int PlaysUnder(int finishedBefore, int max, int plays) => Math.Clamp(max - finishedBefore, 0, Math.Max(1, plays));
-
-    private static int FtlFinishedBefore(CardModel card)
-    {
-        try { return card.Owner == null ? 0 : Sts2State.CountPlayedThisTurn(card.Owner); }
-        catch { return 0; }
-    }
-
-    private static bool FtlCanDraw(CardModel card)
-    {
-        try { return card.Owner == null || Sts2State.CountPlayedThisTurn(card.Owner) < Sts2State.Var(card, "PlayMax", fallback: 3); }
-        catch { return true; }
-    }
 
     // ------------------------------------------------------------------ exhaust / discard
 

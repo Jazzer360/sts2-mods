@@ -37,13 +37,13 @@ public class CardCodeTests
     [Fact]
     public void EveryCardThatDrawsInItsPlayIsCounted()
     {
-        // Every card whose play calls the game's draw command, apart from the ones that draw for a teammate and the ones whose
-        // draw depends on the board (a condition, the target, a count the game calculates), draws at least one.
+        // Every card whose play calls the game's draw command, apart from the ones that draw for a teammate and the ones whose count
+        // the game calculates from the fight, draws at least one on the game's template card (a condition that can't be told there,
+        // with no owner or fight, counts as holding).
         GameModels.EnsureLoaded();
         var notCounted = ModelDb.AllCards
             .Where(card => CardCode.Calls(card.GetType(), "CardPileCmd", "Draw"))
-            .Where(card => !SpireQoL.Procs.Programs.CardEffects.DrawsForTarget(card.GetType()) && !PlayFacts.TargetDrawCards.Contains(card.GetType().Name)
-                           && !PlayFacts.ConditionalDrawCards.Contains(card.GetType().Name)
+            .Where(card => !SpireQoL.Procs.Programs.CardEffects.DrawsForTarget(card.GetType())
                            && !card.DynamicVars.ContainsKey("CalculatedCards")) // a count from the fight: none on the template card
             .Where(card => PlayFacts.CardsDrawn(card, handCount: 5) + PlayFacts.CardsDrawn(card, handCount: 1) == 0)
             .Select(card => card.GetType().Name).ToList();

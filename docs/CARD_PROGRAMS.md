@@ -224,6 +224,21 @@ hooks.
     its type (`PileType.Hand.GetPile(owner)` reads as `Hand`), a query over a collection by what it queries (`Hand.Cards.ToList`),
     and a local kept across awaits and stored once by what was stored (The Devil's `cards`). `TakesWholeHand` (a loop over your
     hand's cards that exhausts, discards or moves each, or a discard of the hand's cards) replaced `WholeHandCards`.
+  - Draws on a condition (2026-11-23, with conditions as values): `PlayFacts.CardsDrawn` reads every draw for you in the program
+    (`CardEffects.DrawsForYou`: `CardPileCmd.Draw` to its owner, `CardCmd.DiscardAndDraw`), each with the condition it runs on and
+    the loops around it, evaluated against the board by `ProgramEvaluator`, its count from its own argument (a card value, Scrawl's
+    room in your hand, Calculated Gamble's hand, a calculated value). `DrawsOnACondition` and `DrawsDependOnTarget` (the condition
+    asks `cardPlay.Target`) replaced `ConditionalDrawCards` and `TargetDrawCards`, and with them `CardsDrawn`'s cases for FTL,
+    Impatience, Fetch, Restlessness, Ki Hop, Wrest, Scrawl, Calculated Gamble, a calculated count and Mad Science's Wisdom rider.
+    The card scan flags a draw on a condition the evaluator can't read, in place of a gold-glowing card missing from the table.
+  - **The evaluator** (`ProgramEvaluator`) evaluates a condition before the play, each query translated once: a property of the
+    game's objects is read (the game's own answer), a method only when it only asks (`Is`, `Has`, `Can`, `Get`, `Contains`,
+    `HappenedThisTurn`), never anything about the RNG; Linq over a collection with the code's own lambda; your hand without the
+    played card (it's in play while its `OnPlay` runs); `Osty.CheckMissingWithAnim` as Osty missing. On a replay's later plays,
+    the earlier plays have finished (a query over `CardPlaysFinished` counts them, through the card's own property read from its
+    getter: FTL, Fetch), a test a loop ran until it failed stays failed (Wrest), and an arrow test follows your hits (Ki Hop:
+    `SimEngine.PlaysStartingImpaled`). A test it can't evaluate counts as holding (the old tables' practice on the game's template
+    card), and the card scan holds every draw's condition to being readable.
   - Each was proven to give exactly its table's cards on both branches before the table was deleted
     (`CardEffectsTests.EachRuleFindsExactlyTheTableItReplaced` keeps the tables as they were), and the catalog snapshot was
     unchanged by the swap.
@@ -290,8 +305,8 @@ The aim is every card read by the interpreter, with no card named. What is left 
 
 | Table (where) | Cards | What the program doesn't say yet |
 |---|---|---|
-| `ConditionalDrawCards`, `TargetDrawCards` (PlayFacts) and `CardsDrawn`'s cases | Impatience, Fetch, FTL, Restlessness, Ki Hop, Wrest | A condition's value. The reader names a condition by its last query but doesn't keep its polarity (`brtrue` against `brfalse`) or the expression behind it: a local's origin (Ki Hop's `wasImpaled`, taken before the attack), a lambda over your hand (Impatience). Wrest's draw sits behind an `if` holding a `while`, which the reader reads as unconditioned. A replay's later plays also need per-play state (FTL's plays this turn, Fetch's first play, Ki Hop's arrow coming loose). |
-| `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The loop's exit test reads the drawn card (Pillage's do-while while it draws an Attack); needs a condition's expression, as above. |
+| `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The tests are read now (Pillage's loop's `While`: the drawn card, its type, your hand's room; Escape Plan's block on the drawn card being a Skill); what's left is turning a test of a command's result into the simulator's `DrawnCardAction`. |
+| (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
 | `ExhaustOthers`, `ExhaustPickOf`, `ExhaustTakesNoActingCard`, `DiscardCount`, `TransformCount`, `TakenToHandCount`, `GeneratedCount` (PlayFacts) | most cards that exhaust, discard, transform, take or make cards | The count: a loop over a filtered collection (`Where` with a lambda: Second Wind's non-Attacks, Growth's Sadness) or a pick's size. Loops now say what they go over (`each of Hand.Cards.ToList`), so the unfiltered cases are within reach; filters need the lambda read. |
 | `ChannelCount`, `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | orb, block and multi-hit cards | Counts from loops and conditions (`loop over Repeat`, Chill's loop over enemies, Cho Firm's arrow test): needs loop counts as values and conditions as queries. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |

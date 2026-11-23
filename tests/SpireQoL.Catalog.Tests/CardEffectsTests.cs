@@ -84,6 +84,10 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.DislodgesArrows), CardEffects.DislodgesArrows, Tables.DislodgeCards);
         Exactly(nameof(CardEffects.KeepsStretchForReplays), CardEffects.KeepsStretchForReplays, Tables.KeepsStretchCards);
         Exactly(nameof(CardEffects.TakesWholeHand), CardEffects.TakesWholeHand, Tables.WholeHandCards);
+        // Draws on a condition, evaluated against the board (ProgramEvaluator): the table and Mad Science's own case in CardsDrawn (its
+        // rider), both deleted with it.
+        Exactly(nameof(CardEffects.DrawsOnACondition), CardEffects.DrawsOnACondition, Tables.ConditionalDrawCards.Append("MadScience").ToArray());
+        Exactly(nameof(CardEffects.DrawsDependOnTarget), CardEffects.DrawsDependOnTarget, Tables.TargetDrawCards);
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
@@ -114,6 +118,9 @@ public class CardEffectsTests
         public static readonly string[] KeepsStretchCards = { "ChoKi" };
         // The whole hand (PlayFacts.WholeHandCards).
         public static readonly string[] WholeHandCards = { "FiendFire", "Stoke", "TheDevil", "CalculatedGamble", "ShadowStep", "StormOfSteel", "WheelOfFortune", "Reboot" };
+        // Draws on a condition (PlayFacts.ConditionalDrawCards, TargetDrawCards).
+        public static readonly string[] ConditionalDrawCards = { "Impatience", "Fetch", "Ftl", "Restlessness", "KiHop", "Wrest" };
+        public static readonly string[] TargetDrawCards = { "KiHop", "Wrest" };
         // Made cards (PlayFacts.SadnessCards, ForgeCards).
         public static readonly string[] SadnessCards = { "BrightenUp", "Jest", "MourningBlow", "Rummage", "SelfDeprecate", "SorrowfulStrike", "Vitriol" };
         public static readonly string[] ForgeCards =

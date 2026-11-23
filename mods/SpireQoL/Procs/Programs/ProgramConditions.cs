@@ -8,6 +8,12 @@ public abstract record ProgramValue
 {
     /// <summary>The value's own query and every value inside it (receivers, arguments, lambda bodies, stored values).</summary>
     public virtual IEnumerable<ProgramValue> Parts() { yield return this; }
+
+    /// <summary>
+    /// The value with each part <paramref name="replace"/> gives a value for replaced (a helper's parameters by what its caller passed):
+    /// a part it gives null for is kept, with its own parts mapped.
+    /// </summary>
+    public virtual ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) => replace(this) ?? this;
 }
 
 /// <summary>A constant in the code (a number, an enum's value, true as 1).</summary>
@@ -61,6 +67,9 @@ public sealed record QueryValue(string Type, string Name, ProgramValue? Of, IRea
         foreach (var argument in Arguments) foreach (var part in argument.Parts()) yield return part;
     }
 
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) =>
+        replace(this) ?? this with { Of = Of?.Map(replace), Arguments = Arguments.Select(argument => argument.Map(replace)).ToList() };
+
     public override string ToString()
     {
         if (Name == ".ctor") return "new " + Type + "(" + string.Join(", ", Arguments) + ")";
@@ -78,6 +87,9 @@ public sealed record ResultValue(string Command, int Offset, IReadOnlyList<Progr
         foreach (var argument in Arguments) foreach (var part in argument.Parts()) yield return part;
     }
 
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) =>
+        replace(this) ?? this with { Arguments = Arguments.Select(argument => argument.Map(replace)).ToList() };
+
     public override string ToString() => "result of " + Command;
 }
 
@@ -93,6 +105,8 @@ public sealed record StoredValue(string Name, ProgramValue Value, int Offset) : 
         foreach (var part in Value.Parts()) yield return part;
     }
 
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) => replace(this) ?? this with { Value = Value.Map(replace) };
+
     public override string ToString() => Name.Length == 0 ? Value.ToString()! : Name + "=" + Value;
 }
 
@@ -102,6 +116,11 @@ public enum Comparison { Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrE
 /// <summary>A comparison (x == 1, i &lt; Cards, x != null): true or false.</summary>
 public sealed record CompareValue(Comparison Op, ProgramValue Left, ProgramValue Right) : ProgramValue
 {
+    /// <summary>Compared as unsigned numbers (a negative one is above every positive one: (uint)(x - 3) &lt;= 3).</summary>
+    public bool Unsigned { get; init; }
+
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) => replace(this) ?? this with { Left = Left.Map(replace), Right = Right.Map(replace) };
+
     public override IEnumerable<ProgramValue> Parts()
     {
         yield return this;
@@ -143,6 +162,8 @@ public sealed record ArithmeticValue(string Op, ProgramValue Left, ProgramValue 
         foreach (var part in Right.Parts()) yield return part;
     }
 
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) => replace(this) ?? this with { Left = Left.Map(replace), Right = Right.Map(replace) };
+
     public override string ToString() => $"({Left} {Op} {Right})";
 }
 
@@ -155,7 +176,26 @@ public sealed record LambdaValue(string Parameter, ProgramCondition Body) : Prog
         foreach (var literal in Body.Literals) foreach (var part in literal.Test.Parts()) yield return part;
     }
 
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) => replace(this) ?? this with { Body = Body.Map(replace) };
+
     public override string ToString() => Parameter + " => " + Body;
+}
+
+/// <summary>
+/// A true-or-false the code works out on several ways (bool flag = a ? true : false; a local set in each branch): when it's true, as a
+/// condition.
+/// </summary>
+public sealed record ConditionValue(ProgramCondition Condition) : ProgramValue
+{
+    public override IEnumerable<ProgramValue> Parts()
+    {
+        yield return this;
+        foreach (var literal in Condition.Literals) foreach (var part in literal.Test.Parts()) yield return part;
+    }
+
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) => replace(this) ?? this with { Condition = Condition.Map(replace) };
+
+    public override string ToString() => "(" + Condition + ")";
 }
 
 /// <summary>An array the code builds (new[] { a, b }: a pile list given to a query).</summary>
@@ -166,6 +206,8 @@ public sealed record ArrayValue(IReadOnlyList<ProgramValue> Items) : ProgramValu
         yield return this;
         foreach (var item in Items) foreach (var part in item.Parts()) yield return part;
     }
+
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) => replace(this) ?? this with { Items = Items.Select(item => item.Map(replace)).ToList() };
 
     public override string ToString() => "[" + string.Join(", ", Items) + "]";
 }
@@ -216,6 +258,10 @@ public sealed class ProgramCondition
     public IReadOnlyList<IReadOnlyList<ConditionLiteral>> Terms => _terms;
 
     public bool IsAlways => _terms.Count == 1 && _terms[0].Count == 0;
+
+    /// <summary>The same condition with each test's values mapped (Map on each).</summary>
+    public ProgramCondition Map(Func<ProgramValue, ProgramValue?> replace) =>
+        new(_terms.Select(term => (IReadOnlyList<ConditionLiteral>)term.Select(literal => literal with { Test = literal.Test.Map(replace) }).ToList()).ToList());
     public bool IsNever => _terms.Count == 0;
 
     /// <summary>Every test in it.</summary>
