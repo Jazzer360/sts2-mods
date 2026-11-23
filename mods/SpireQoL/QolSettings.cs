@@ -29,7 +29,49 @@ public sealed class QolSettings
     /// <summary>Bumped when default widget positions change; older saved positions get reset.</summary>
     public int LayoutVersion { get; set; }
 
-    public const int CurrentSettingsVersion = 4;
+    public const int CurrentSettingsVersion = 5;
+
+    /// <summary>
+    /// Features split out of another (decision #185): each new id and the id it came out of. Ethereal Fade came out of Keyword Tags
+    /// (card-indicators); Reward Tags, Event Reminders, Shop Reminders and Map Reminders out of the old run-reminders.
+    /// </summary>
+    public static readonly IReadOnlyList<(string Id, string From)> SplitFeatures = new[]
+    {
+        (SpireQoL.Features.EtherealFadeFeature.FeatureId, "card-indicators"),
+        (SpireQoL.Features.RewardTagsFeature.FeatureId, RetiredRunReminders),
+        (SpireQoL.Features.EventRemindersFeature.FeatureId, RetiredRunReminders),
+        (SpireQoL.Features.ShopRemindersFeature.FeatureId, RetiredRunReminders),
+        (SpireQoL.Features.MapRemindersFeature.FeatureId, RetiredRunReminders),
+    };
+
+    /// <summary>The feature the four reminders outside fights were, before decision #185: no feature has the id now.</summary>
+    public const string RetiredRunReminders = "run-reminders";
+
+    /// <summary>
+    /// The first load after a split (decision #185): a feature with no saved switch starts as the one it came out of was (the old one's
+    /// saved switch; none saved, it keeps its default). The retired id's switch is dropped once read, so the file lists only features.
+    /// Run every load, before the features are applied: a feature already saved keeps its own switch.
+    /// </summary>
+    public static void CarryOverSplitFeatures(Dictionary<string, bool> features)
+    {
+        foreach (var (id, from) in SplitFeatures)
+            if (!features.ContainsKey(id) && features.TryGetValue(from, out var on)) features[id] = on;
+        features.Remove(RetiredRunReminders);
+    }
+
+    /// <summary>
+    /// Decision #185: each reminder place has its own feature switch now, in place of its group switch ("reminder-event:*": every relic's
+    /// reminder there). A group switched off becomes each relic's switch there off (what you saw stays as it was), and the group key goes.
+    /// </summary>
+    /// <param name="typesAt">The relics and cards with a reminder at a place (the settings menu's rows: SettingsCatalog.Sources).</param>
+    public void FoldReminderPlaceSwitches(Func<Data.ReminderPlace, IEnumerable<string>> typesAt)
+    {
+        foreach (var place in Enum.GetValues<Data.ReminderPlace>())
+        {
+            if (!Tabs.Remove(Data.ChoiceReminders.Key(place, "*"), out var on) || on) continue;
+            foreach (var type in typesAt(place)) Tabs[Data.ChoiceReminders.Key(place, type)] = false;
+        }
+    }
 
     /// <summary>Bumped when a setting's meaning changes; older files are migrated once (ModEntry.Migrate).</summary>
     public int SettingsVersion { get; set; }
@@ -138,13 +180,13 @@ public sealed class QolSettings
     /// <summary>Count procs one step removed (a card that exhausts or discards other cards, or draws into a shuffle).</summary>
     public bool ProcIndirect { get; set; } = true;
 
-    /// <summary>Run Reminders: the chance under a card relic's icon beside an event option (off = icon only).</summary>
+    /// <summary>Event Reminders: the chance under a card relic's icon beside an event option (off = icon only).</summary>
     public bool EventOdds { get; set; } = true;
 
-    /// <summary>Run Reminders: the Inspect button beside event options whose cards are drawn at random from a known pool.</summary>
+    /// <summary>Event Reminders: the Inspect button beside event options whose cards are drawn at random from a known pool.</summary>
     public bool EventInspect { get; set; } = true;
 
-    // Card Indicators
+    // Ethereal Fade: how see-through an Ethereal card is
     public float EtherealOpacity { get; set; } = 0.8f;
 
     // Replaced by Tabs in 0.19.0; read once from older files, then dropped (see ModEntry.Migrate).

@@ -8,7 +8,7 @@ namespace SpireQoL.Features;
 
 /// <summary>
 /// "Does something happen the moment I play this card that the card doesn't say?" One tab per power or relic that playing the
-/// card sets off, with that source's icon. Spec: docs/FEATURES.md#proc-indicators.
+/// card sets off, with that source's icon. Spec: docs/FEATURES.md#proc-tags (Proc Tags; id proc-indicators, kept as the settings key: decision #185).
 ///
 ///  - Trigger: plain icon ("this sets off that").
 ///  - Block / damage / summon / draw / energy: icon plus the amount (QolSettings.ProcNumbers; draws and energy: decision #132).
@@ -26,7 +26,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
     public ProcIndicatorsFeature(QolContext ctx) => _ctx = ctx;
 
     public string Id => "proc-indicators";
-    public string DisplayName => "Proc Indicators";
+    public string DisplayName => "Proc Tags";
     public bool EnabledByDefault => true;
 
     public void Apply(Harmony harmony)

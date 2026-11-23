@@ -50,6 +50,30 @@ public sealed record SteadyGarbage(string Where, string Id, int Frames, double K
 /// </summary>
 public sealed record FocusChanged(bool Focused) : DevEvent;
 
+/// <summary>
+/// The names players read for what the frame times are kept under (decision #185), once per launch after StreamStarted: each feature's
+/// display name by its id (the id stays the settings key and the frame times' key), and the mod's other timed work (the jobs after the
+/// features, dev mode's own entries). The dashboard shows the names, with the id on hover; a part ("rest-preview:read") is its
+/// feature's name and the part ("Rest Preview: read").
+/// </summary>
+public sealed record FeatureNames(Dictionary<string, string> Names) : DevEvent
+{
+    /// <summary>What a diagnostic feature's name ends with (it shows nothing): left off here, every entry being the mod's own work.</summary>
+    public const string LogOnly = " (log only)";
+
+    /// <param name="features">Each feature's id and display name.</param>
+    /// <param name="others">The timed work that isn't a feature, by its id.</param>
+    public static FeatureNames Of(IReadOnlyDictionary<string, string> features, IReadOnlyDictionary<string, string> others)
+    {
+        var names = new Dictionary<string, string>(others);
+        foreach (var (id, name) in features) names[id] = Plain(name);
+        return new FeatureNames(names);
+    }
+
+    /// <summary>A feature's display name without <see cref="LogOnly"/>.</summary>
+    public static string Plain(string displayName) => displayName.EndsWith(LogOnly, StringComparison.Ordinal) ? displayName[..^LogOnly.Length] : displayName;
+}
+
 /// <summary>A line of the mod's own log ([SpireQoL] lines).</summary>
 public sealed record LogLine(string Level, string Text) : DevEvent;
 

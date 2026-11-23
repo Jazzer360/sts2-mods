@@ -524,7 +524,7 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
     public CoverageWatch(QolContext ctx) => _ctx = ctx;
 
     public string Id => "coverage-watch";
-    public string DisplayName => "Coverage Watch (log only)";
+    public string DisplayName => "Coverage Audit (log only)";
     public bool EnabledByDefault => true;
 
     private readonly HashSet<Type> _checked = new();

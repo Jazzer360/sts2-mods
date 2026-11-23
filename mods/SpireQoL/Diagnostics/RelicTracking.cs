@@ -127,7 +127,7 @@ internal static class RelicTracking
         ["ObsidianVice"] = "none: end of turn, damage per card in hand to a random enemy (simulator: lethal, Death Skull)",
 
         // ---- other
-        ["Fiddle"] = "none: blocks your draws during your turn (the Shuffle Warning and draw counts account for it)",
+        ["Fiddle"] = "none: blocks your draws during your turn (the Shuffle Tag and draw counts account for it)",
         ["LizardTail"] = "none: saves you from dying once (simulator; Incoming Damage shows it when it will)",
         ["LavaLamp"] = "none: notes damage taken for its end-of-combat upgrade",
         ["BookRepairKnife"] = "none: heals when enemies die to Doom",

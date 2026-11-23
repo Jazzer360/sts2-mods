@@ -11,7 +11,7 @@ namespace SpireQoL.Features;
 /// The Inspect button (decision #64): the game's inspect cursor art right of an event option whose cards are drawn at random
 /// from a known pool (a reward, a transform); it opens the Inspect screen on what the option draws from.
 /// </summary>
-public sealed partial class RunRemindersFeature
+public sealed partial class RunReminders
 {
     private const string InspectNodeName = "SpireQoL_Inspect";
     private const float InspectSize = 40f;

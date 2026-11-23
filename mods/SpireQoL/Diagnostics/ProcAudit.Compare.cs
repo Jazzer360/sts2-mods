@@ -51,7 +51,7 @@ public sealed partial class ProcAudit
                 continue;
             }
             // A double-play source (Throwing Axe flashes in AfterModifyingCardPlayCount) when the card did play more
-            // than once: its tab is Card Indicators' (the game's own play-count query), not a proc rule.
+            // than once: its tag is Keyword Tags' (the game's own play-count query), not a proc rule.
             if (CodeIndex.Does(otherModel.GetType(), Array.Empty<string>(), new[] { "ModifyCardPlayCount" })
                 && entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.Card == window.Card && cardPlayStartedEntry.CardPlay.PlayCount > 1)) continue;
             // A random-target hit or kill (several enemies) can set off enemy powers and kill relics

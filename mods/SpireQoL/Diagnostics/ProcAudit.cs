@@ -55,7 +55,7 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     public ProcAudit(QolContext ctx) => _ctx = ctx;
 
     public string Id => "proc-audit";
-    public string DisplayName => "Proc Audit (log only)";
+    public string DisplayName => "Play Audit (log only)";
     public bool EnabledByDefault => true;
 
     public void Apply(Harmony harmony)

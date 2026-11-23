@@ -14,7 +14,7 @@ namespace SpireQoL.Menu;
 
 /// <summary>
 /// The Guide page (decision #56): how to read what the mod shows, with live examples built from the game's own pieces: real
-/// cards with tabs drawn by the same renderer as the hand, Relic Counters rows and Incoming Damage sums built by their own
+/// cards with tags drawn by the same renderer as the hand, Relic Counters rows and Incoming Damage sums built by their own
 /// features' code. Nothing on it is about the current fight; every example is made up.
 /// </summary>
 public sealed partial class SettingsMenu
@@ -40,7 +40,7 @@ public sealed partial class SettingsMenu
         Paragraph("Everything the mod shows is something you could work out yourself from what's on screen and the game's rules. "
             + "It never looks ahead: not the draw pile's order, not a random roll, not an enemy's move beyond its intent. "
             + "When a roll decides something, you see the range or the worst case, never the result. "
-            + "The other pages say exactly what each tab and row covers; this page shows how the pieces look.");
+            + "The other pages say exactly what each tag and row covers; this page shows how the pieces look.");
 
         BuildGuideTabs();
         BuildGuideCounters();
@@ -54,10 +54,11 @@ public sealed partial class SettingsMenu
 
     private void BuildGuideTabs()
     {
-        Section("Tabs on cards");
-        Paragraph("A tab hanging off the top of a card in your hand answers one question: does something happen the moment I play this card, right now? "
-            + "The icon is what sets it off (a relic, your power, an enemy's power, an enchantment, a pile). One tab per source; a card can carry several. "
-            + "Each kind of tab can be switched off on the Card tabs, Relics and powers pages.");
+        Section("Tags on cards");
+        Paragraph("A tag hanging off the top of a card in your hand answers one question: does something happen the moment I play this card, right now? "
+            + "Keyword Tags mark what the card picks up (Retain, Sly, playing more than once), Proc Tags what playing it sets off, and the Shuffle Tag a reshuffle. "
+            + "The icon is what sets it off (a relic, your power, an enemy's power, an enchantment, a pile). One tag per source; a card can carry several. "
+            + "Each kind of tag can be switched off on the Card tags, Relics and powers pages.");
 
         var flow = Flow();
         // A mix of every character's cards, each one a card the example could really happen on.
@@ -66,27 +67,27 @@ public sealed partial class SettingsMenu
             "Playing this sets off what the icon shows. Here Dagger Throw is your third Attack this turn, so Kunai gives you Dexterity.",
             Tab("proc:Kunai", Relic<Kunai>()));
         GuideCardCell(flow, Card<BallLightning>(), "A number: how much",
-            "Block gained, damage dealt, the amount summoned, cards drawn or energy gained, after everything that changes it (a full hand draws fewer), or on a warning the cards put into your piles (Personal Hive's Dazed). Only those tabs carry a number "
-            + "(General: Amounts on proc tabs). Here Ornamental Fan gives 4 block.",
+            "Block gained, damage dealt, the amount summoned, cards drawn or energy gained, after everything that changes it (a full hand draws fewer), or on a warning the cards put into your piles (Personal Hive's Dazed). Only those tags carry a number "
+            + "(General: Amounts on proc tags). Here Ornamental Fan gives 4 block.",
             Tab("proc:OrnamentalFan", Relic<OrnamentalFan>(), number: 4));
         GuideCardCell(flow, Card<KinglyPunch>(), "Crossed: a warning",
             "Playing this might be bad for you: it helps an enemy, hurts you, or gives up a relic's bonus. Often still the right play; "
             + "the slash makes sure you know. Here the enemy's Thorns hits you for 3.",
             Tab("proc:ThornsPower", Power<ThornsPower>(), crossed: true, number: 3));
         GuideCardCell(flow, Card<BallLightning>(), "A chance on a warning",
-            "When only some outcomes set the warning off (here, the Lightning orb waking the sleeping enemy if it hits that one), the tab "
+            "When only some outcomes set the warning off (here, the Lightning orb waking the sleeping enemy if it hits that one), the tag "
             + "carries the chance. No number: it's certain. Shown with Show chances on.",
             Tab("proc:AsleepPower", Power<AsleepPower>(), crossed: true, numberText: "50%"));
         GuideCardCell(flow, Card<BallLightning>(), "A chance on the skull",
-            "When a roll decides the kill (here, which enemy the Lightning orb hits), the lethal tab carries the chance. "
+            "When a roll decides the kill (here, which enemy the Lightning orb hits), the lethal tag carries the chance. "
             + "Shown only when the card surely makes a death more likely than ending your turn now.",
             Tab("lethal", GameIcons.Skull(), numberText: "50%"));
         GuideCardCell(flow, Card<Bash>(), "The arrow: only at some targets",
             "The game's targeting arrow in the corner means it happens only at some of the targets you could pick. "
-            + "Here Bash kills an enemy before it acts (the skull), but only aimed at the right one. On a crossed tab, aim elsewhere to avoid it.",
+            + "Here Bash kills an enemy before it acts (the skull), but only aimed at the right one. On a crossed tag, aim elsewhere to avoid it.",
             Tab("lethal", GameIcons.Skull(), aimed: true));
         GuideCardCell(flow, Card<Claw>(), "Several at once",
-            "Each source gets its own tab, in a row. If the row is wider than the card, the tabs overlap. "
+            "Each source gets its own tag, in a row. If the row is wider than the card, the tags overlap. "
             + "Here: Pen Nib doubles it, Ornamental Fan gives 4 block, and the enemy curls up if you aim at it.",
             Tab("proc:PenNib", Relic<PenNib>()), Tab("proc:OrnamentalFan", Relic<OrnamentalFan>(), number: 4),
             Tab("proc:CurlUpPower", Power<CurlUpPower>(), crossed: true, aimed: true));
@@ -97,7 +98,7 @@ public sealed partial class SettingsMenu
         ShowLastCardFree();
         GuideCardCell(flow, Card<CrescentSpear>(), "?: a cost you couldn't know",
             "A free card shows every cost as 0. When nothing on screen tells you this copy's real cost (Snecko Eye re-rolled it, "
-            + "Frantic Escape raised copies like it), the tab says ? instead of telling you.",
+            + "Frantic Escape raised copies like it), the tag says ? instead of telling you.",
             Tab("free:FreeAttackPower", Power<FreeAttackPower>(), numberText: "?"));
         ShowLastCardFree();
         GuideCardCell(flow, Card<Reave>(), "Text: played more than once",
@@ -119,21 +120,21 @@ public sealed partial class SettingsMenu
             new TabSpec("return:MakeItSo", Icon: null, Card: Card<MakeItSo>()));
         GuideCardCell(flow, Card<Backflip>(CardKeyword.Retain, CardKeyword.Sly), "Retain and Sly",
             "The card stays in your hand at end of turn (Retain), or is Sly (Hand Trick, Master Planner). The card's text says so too; "
-            + "the tabs are there because they're about the card, not about playing it, and they show even when it's only for this turn.",
+            + "the tags are there because they're about the card, not about playing it, and they show even when it's only for this turn.",
             Tab("retain", Enchantment<Steady>()), Tab("sly", Power<MasterPlannerPower>()));
         GuideCardCell(flow, Card<Acrobatics>(), "Discard pile: a reshuffle",
             "It draws more cards than your draw pile has, so playing it shuffles your discard pile back into your draw pile.",
             Tab("shuffle", GameIcons.DiscardPile()));
-        GuideHandCell(flow, Card<StrikeIronclad>(), Card<AscendersBane>(), "See-through: Ethereal",
-            "The one marker that isn't a tab: an Ethereal card exhausts if it's still in your hand at the end of your turn, "
-            + "so it shows the card behind it. How see-through: In fights, Card Indicators, Ethereal opacity.",
+        GuideHandCell(flow, Card<StrikeIronclad>(), Card<AscendersBane>(), "See-through: Ethereal Fade",
+            "Not a tag: an Ethereal card exhausts if it's still in your hand at the end of your turn, "
+            + "so it shows the card behind it. How see-through: In fights, Ethereal Fade, Ethereal opacity.",
             Settings.EtherealOpacity);
         _rows!.AddChild(flow);
 
-        Paragraph("Potion tabs: the same tab hangs under a potion in the top bar when drinking it sets off a relic "
+        Paragraph("Potion Tags: the same tag hangs under a potion in the top bar when drinking it sets off a relic "
             + "(Reptile Trinket, Belt Buckle, White Beast Statue).");
-        Paragraph("Teammates' tabs: in multiplayer, a teammate's power or relic that your card sets off gets a tab like your own, "
-            + "with their icon (Rally's block setting off their Juggernaut). One you both have shares a tab, the amounts added.");
+        Paragraph("Teammates' tags: in multiplayer, a teammate's power or relic that your card sets off gets a tag like your own, "
+            + "with their icon (Rally's block setting off their Juggernaut). One you both have shares a tag, the amounts added.");
     }
 
     // ------------------------------------------------------------------ relic counters
@@ -280,18 +281,19 @@ public sealed partial class SettingsMenu
         return box;
     }
 
-    // ------------------------------------------------------------------ run reminders
+    // ------------------------------------------------------------------ reminders outside fights
 
     private void BuildGuideReminders()
     {
-        Section("Run Reminders");
+        Section("Reminders outside fights");
         Paragraph("Outside fights, your relics that change what a choice does show on the choice itself, "
-            + "with the same plain and crossed icons as the tabs on cards: crossed means the relic works against you there.");
+            + "with the same plain and crossed icons as the tags on cards: crossed means the relic works against you there. "
+            + "Each place is its own switch (Outside fights page): Reward Tags, Event Reminders, Shop Reminders and Map Reminders.");
 
         var flow = Flow();
 
-        // Card rewards: a tab on each offered card for every relic that taking it sets off.
-        GuideCardCell(flow, Card<PommelStrike>(), "Card rewards",
+        // Card rewards: a tag on each offered card for every relic that taking it sets off.
+        GuideCardCell(flow, Card<PommelStrike>(), "Reward Tags: card rewards",
             "On each card a reward offers: your relics that taking it sets off. Bing Bong copies the card, Lucky Fysh gives gold, and "
             + "every card counts toward Book of Five Rings' heal. With the green plus in its corner, taking this card heals you now; crossed, "
             + "part of that heal is wasted (you're missing less HP than it heals).",
@@ -300,14 +302,14 @@ public sealed partial class SettingsMenu
 
         // Shops: icons left of the price, the net price under it.
         var shop = Cell();
-        shop.AddChild(Label("Shops", size: 20, Accent));
+        shop.AddChild(Label("Shop Reminders", size: 20, Accent));
         shop.AddChild(ExampleBox(inner =>
         {
             var pair = UiKit.Row(separation: 28);
             if (RelicOf<LuckyFysh>() is { } fysh)
-                pair.AddChild(RunRemindersFeature.ExampleShopPrice(new[] { (fysh, false) }, price: 75, net: 60));
+                pair.AddChild(RunReminders.ExampleShopPrice(new[] { (fysh, false) }, price: 75, net: 60));
             if (RelicOf<Sozu>() is { } sozu)
-                pair.AddChild(RunRemindersFeature.ExampleShopPrice(new[] { (sozu, true) }, price: 50, net: null));
+                pair.AddChild(RunReminders.ExampleShopPrice(new[] { (sozu, true) }, price: 50, net: null));
             inner.AddChild(pair);
         }));
         shop.AddChild(CellText("Beside each price: the relics buying it sets off. On a card with Lucky Fysh, the green number is what it "
@@ -316,13 +318,13 @@ public sealed partial class SettingsMenu
 
         // Events: icons left of the option.
         var vBoxContainer = Cell();
-        vBoxContainer.AddChild(Label("Events", size: 20, Accent));
+        vBoxContainer.AddChild(Label("Event Reminders", size: 20, Accent));
         vBoxContainer.AddChild(ExampleBox(inner =>
         {
             void Option(string text, params (RelicModel?, bool, string?)[] relics)
             {
                 var row = UiKit.Row(separation: 10);
-                row.AddChild(RunRemindersFeature.ExampleEventIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
+                row.AddChild(RunReminders.ExampleEventIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
                 var option = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
                 option.AddThemeStyleboxOverride(GodotNames.Name("panel"), UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), radius: 6, margin: 12));
                 option.AddChild(UiKit.Label(text, size: 18, Colors.White));
@@ -339,7 +341,7 @@ public sealed partial class SettingsMenu
 
         // Inspect: the magnifier beside an option with random cards (decision #64).
         var inspect = Cell();
-        inspect.AddChild(Label("Inspect", size: 20, Accent));
+        inspect.AddChild(Label("Event Reminders: Inspect", size: 20, Accent));
         inspect.AddChild(ExampleBox(inner =>
         {
             var row = UiKit.Row(separation: 10);
@@ -347,7 +349,7 @@ public sealed partial class SettingsMenu
             option.AddThemeStyleboxOverride(GodotNames.Name("panel"), UiKit.PanelStyle(new Color(0.25f, 0.2f, 0.15f, 0.9f), radius: 6, margin: 12));
             option.AddChild(UiKit.Label("Gorge: choose 2 of 8 commons", size: 18, Colors.White));
             row.AddChild(option);
-            var icon = UiKit.Icon(RunRemindersFeature.InspectIcon(), size: 40);
+            var icon = UiKit.Icon(RunReminders.InspectIcon(), size: 40);
             icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
             row.AddChild(icon);
             inner.AddChild(row);
@@ -359,13 +361,13 @@ public sealed partial class SettingsMenu
 
         // Map: icons left of the legend's rows (decision #65).
         var map = Cell();
-        map.AddChild(Label("Map", size: 20, Accent));
+        map.AddChild(Label("Map Reminders", size: 20, Accent));
         map.AddChild(ExampleBox(inner =>
         {
             void Legend(string room, params (RelicModel?, bool, string?)[] relics)
             {
                 var row = UiKit.Row(separation: 10);
-                row.AddChild(RunRemindersFeature.ExamplePathIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
+                row.AddChild(RunReminders.ExamplePathIcons(relics.Where(relic => relic.Item1 != null).Select(relic => (relic.Item1!, relic.Item2, relic.Item3))));
                 var name = UiKit.Label(room, size: 20, Colors.White);
                 name.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
                 row.AddChild(name);
@@ -381,9 +383,9 @@ public sealed partial class SettingsMenu
             + "one for its text and to light up those rooms on the map."));
         flow.AddChild(map);
 
-        // Offered cards: a tab per relic that makes the card stronger in fights in a way it doesn't show (decision #62).
-        GuideCardCell(flow, Card<Begone>(), "Cards you're offered",
-            "On card rewards, an event's choice of cards and in the shop: a tab for each of your relics that makes the card stronger "
+        // Offered cards: a tag per relic that makes the card stronger in fights in a way it doesn't show (decision #62).
+        GuideCardCell(flow, Card<Begone>(), "Reward Tags: cards you're offered",
+            "On card rewards, an event's choice of cards and in the shop: a tag for each of your relics that makes the card stronger "
             + "in fights in a way the card doesn't show. Begone! makes a Minion Strike, so Strike Dummy and Vitruvian Minion both apply. "
             + "Also Miniature Cannon on upgraded Attacks and Mystic Lighter on enchanted ones.",
             Tab("reminder-reward:StrikeDummy", Relic<StrikeDummy>()), Tab("reminder-reward:VitruvianMinion", Relic<VitruvianMinion>()));
@@ -410,24 +412,24 @@ public sealed partial class SettingsMenu
             MinValue = 0, MaxValue = 1, Value = 0.6, ShowPercentage = false, CustomMinimumSize = new Vector2(90, 8),
             SizeFlagsVertical = Control.SizeFlags.ShrinkCenter, MouseFilter = Control.MouseFilterEnum.Ignore,
         });
-        GuideRow(progress, "Exploration Progress",
+        GuideRow(progress, "Prediction Progress",
             "Rarely, under the End Turn button: the mod hasn't finished working out its predictions for this board yet (it has too many possible "
             + "outcomes to finish within a frame), and keeps working in the background. The bar fills as it gets through them. Meanwhile you see "
-            + "the last finished results: Incoming Damage and the Death Skull add a ? after a tenth of a second, and each card's tabs change as soon as that card is done.");
+            + "the last finished results: Incoming Damage and the Death Skull add a ? after a tenth of a second, and each card's tags change as soon as that card is done.");
         GuideRow(example: null, "Intent Details",
             "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
             + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
         GuideRow(example: null, "Play Preview",
             "Hold a card (and aim it, for one that needs a target): Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, "
             + "tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it (Weak lowering it, Strength raising it; the line alone for an enemy the play kills). "
-            + "Every outcome of the play is already worked out for each card and target, so it shows at once. The card tabs don't change.");
+            + "Every outcome of the play is already worked out for each card and target, so it shows at once. The card tags don't change.");
         GuideRow(example: null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");
         GuideRow(example: null, "Update Notice",
             "On the main menu, above the game's MODDED note: how many Spire QoL versions behind you are, or that you're up to date.");
         GuideRow(example: null, "Quick setup",
-            "The first page of this menu, which opens on it at your first launch: a switch for each part of the mod, card tabs as four levels shown on real cards, and Everything for every default.");
+            "The first page of this menu, which opens on it at your first launch: a switch for each part of the mod, card tags as four levels shown on real cards, and Everything for every default.");
         GuideRow(example: null, "Moving things",
             $"{Settings.UnlockLayoutKey} unlocks the layout: drag a widget to move it, scroll over it to resize, right-click to reset. {Settings.HideAllKey} hides everything.");
     }

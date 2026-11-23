@@ -28,16 +28,16 @@ What Spire QoL is for. Everything else serves these, and all of them serve **the
 | Spire QoL feature | Status | Covers |
 | --- | --- | --- |
 | Settings and layout | built | the settings menu (Guide and About pages), movable and anchored widgets, lock and reset |
-| Proc Indicators | built | a tab on each card for what playing it sets off: procs, lethal, kills, replays, returns, free cards (from the outcome simulator) |
-| Card Indicators | built | Retain and Sly tabs, Ethereal translucency |
+| Proc Tags | built | a tag on each card for what playing it sets off: procs, lethal, kills, replays, returns, free cards (from the outcome simulator) |
+| Keyword Tags, Ethereal Fade | built | Retain, Sly, replay and double-play tags; Ethereal cards see-through (decision #185) |
 | Relic Counters | built | the tracker beside your HP bar: counters, countdowns, Make It So |
 | Incoming Damage | built | the end-of-turn sum, lethal and revives, teammates' on hover |
 | Death Skull | built | an enemy that dies before acting if you end your turn now, with its chance |
 | Intent Details | built (1.20.0) | the block and powers of the move on screen that its intent doesn't show (decisions #98, #99) |
-| Exploration Progress | built (1.18.0) | a clock and bar under End Turn while a prediction is still searching (decision #89) |
-| Shuffle Warning | built | plays whose draws reshuffle your discard pile |
-| Potion Tabs | built | relics that drinking a potion sets off |
-| Run Reminders | built | relic icons on events, card rewards, shops and the map; tabs on offered cards; card odds and the Inspect screen |
+| Prediction Progress | built (1.18.0) | a clock and bar under End Turn while a prediction is still searching (decision #89) |
+| Shuffle Tag | built | plays whose draws reshuffle your discard pile |
+| Potion Tags | built | relics that drinking a potion sets off |
+| Reward Tags, Event Reminders, Shop Reminders, Map Reminders | built | tags on offered cards; relic icons on events (with card odds and the Inspect screen), shops and the map (Run Reminders until decision #185) |
 | Rest Preview | built | HP after resting, Mend, the boss fight's start |
 | Update Notice | built | versions behind, on the main menu |
 | Intent Forecast | built (1.12.0) | an enemy's next moves where its rules decide them, the odds when a roll does (decision #72, tracker §7) |

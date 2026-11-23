@@ -24,11 +24,11 @@ public sealed partial class SettingsMenu
 
     internal static readonly CardTabLevel[] CardTabLevels =
     {
-        new("None", "No tabs on cards.", new HashSet<string>(), ProcIndirect: false),
-        new("Minimal", "What the card picks up: Retain, Sly, played twice. Ethereal cards fade.", new HashSet<string> { "card-indicators" }, ProcIndirect: false),
-        new("Moderate", "Plus a tab for each relic or power playing it sets off, and a crossed tab when that's bad for you.",
+        new("None", "No tags on cards.", new HashSet<string>(), ProcIndirect: false),
+        new("Minimal", "What the card picks up: Retain, Sly, played twice.", new HashSet<string> { "card-indicators" }, ProcIndirect: false),
+        new("Moderate", "Plus a tag for each relic or power playing it sets off, and a crossed tag when that's bad for you.",
             new HashSet<string> { "card-indicators", "proc-indicators" }, ProcIndirect: false),
-        new("Full", "Plus what it sets off through the cards it draws, exhausts or discards, and a tab when a draw reshuffles your discard pile.",
+        new("Full", "Plus what it sets off through the cards it draws, exhausts or discards, and a tag when a draw reshuffles your discard pile.",
             new HashSet<string>(CardTabFeatures), ProcIndirect: true),
     };
 
@@ -46,16 +46,20 @@ public sealed partial class SettingsMenu
             new[] { "intent-forecast" }),
         new("Counter relics", "A tray beside your HP of the relics and powers that count up to something, flashing when they're about to fire.",
             new[] { "relic-counters" }),
-        new("Potion tabs", "A tab under a potion for each relic that drinking it sets off.", new[] { "potion-tabs" }),
+        new("Potion tags", "A tag under a potion for each relic that drinking it sets off.", new[] { "potion-tabs" }),
+        new("Ethereal cards fade", "An Ethereal card in your hand is see-through: it exhausts if it's still there at the end of your turn.",
+            new[] { Features.EtherealFadeFeature.FeatureId }),
     };
 
-    /// <summary>Run Reminders by place (one switch each); the feature itself is on while any of them is.</summary>
-    private static readonly (ReminderPlace Place, string Name, string Description)[] ReminderSwitches =
+    /// <summary>The reminders outside fights, one feature per place (decision #185).</summary>
+    private static readonly SetupSwitch[] ReminderSwitches =
     {
-        (ReminderPlace.Reward, "Card rewards", "A tab on a card you're offered when one of your relics cares about it (an egg upgrades it, a relic counts it)."),
-        (ReminderPlace.Event, "Events", "Your relics that change an event's choice, beside the option, and Inspect for an option that gives random cards."),
-        (ReminderPlace.Shop, "Shops", "Your relics that change a price or a card for sale, beside it."),
-        (ReminderPlace.Map, "Map", "Your relics that care about a kind of room, beside the map legend's row."),
+        new("Card rewards", "A tag on a card you're offered when one of your relics cares about it (an egg upgrades it, a relic counts it).",
+            new[] { Features.RewardTagsFeature.FeatureId }),
+        new("Events", "Your relics that change an event's choice, beside the option, and Inspect for an option that gives random cards.",
+            new[] { Features.EventRemindersFeature.FeatureId }),
+        new("Shops", "Your relics that change a price or a card for sale, beside it.", new[] { Features.ShopRemindersFeature.FeatureId }),
+        new("Map", "Your relics that care about a kind of room, beside the map legend's row.", new[] { Features.MapRemindersFeature.FeatureId }),
     };
 
     private bool _setupShown;
@@ -80,34 +84,25 @@ public sealed partial class SettingsMenu
         everything.TooltipText = "Every feature and option on: the mod's defaults.";
         everything.Pressed += () => { ApplyEverything(); Close(); };
         everythingRow.AddChild(everything);
-        everythingRow.AddChild(Wrapped("Every feature and option on, the mod's defaults, and done. Busy turns show four or five tabs on a card; most show one or two."));
+        everythingRow.AddChild(Wrapped("Every feature and option on, the mod's defaults, and done. Busy turns show four or five tags on a card; most show one or two."));
         AddRow(everythingRow);
 
-        Section("Card tabs");
+        Section("Card tags");
         // One row of equal cells, so each Choose button sits on one line under its card.
         var levels = UiKit.Row(separation: 24);
         foreach (var level in CardTabLevels) LevelCell(levels, level);
         _rows!.AddChild(levels);
         var tabsShown = CurrentCardTabLevel() is { Features.Count: > 1 };
-        Option("Amounts on tabs", "The block, damage, draws or energy a tab's source gives, on the tab (Ornamental Fan's 4 block). Off: icon only.",
-            Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, tabsShown ? null : "Moderate or Full card tabs", icon: TextIcon("4"));
-        Option("Target marker", "The game's targeting arrow in a tab's corner when it happens only at some targets (aim at the right enemy).",
-            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabsShown ? null : "Moderate or Full card tabs", icon: ArtIcon(GameIcons.TargetArrow()));
+        Option("Amounts on tags", "The block, damage, draws or energy a tag's source gives, on the tag (Ornamental Fan's 4 block). Off: icon only.",
+            Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, tabsShown ? null : "Moderate or Full card tags", icon: TextIcon("4"));
+        Option("Target marker", "The game's targeting arrow in a tag's corner when it happens only at some targets (aim at the right enemy).",
+            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabsShown ? null : "Moderate or Full card tags", icon: ArtIcon(GameIcons.TargetArrow()));
 
         Section("In fights");
         foreach (var setupSwitch in FightSwitches) SwitchRow(setupSwitch);
 
         Section("Between fights");
-        foreach (var (place, name, desc) in ReminderSwitches)
-        {
-            var key = ChoiceReminders.Key(place, "*");
-            SimpleRow(name, desc, FeatureOn("run-reminders") && Settings.TabOwn(key), on =>
-            {
-                Settings.Tabs[key] = on;
-                // Run Reminders is on while any place is.
-                SetFeature("run-reminders", ReminderSwitches.Any(other => Settings.TabOwn(ChoiceReminders.Key(other.Place, "*"))));
-            }, ArtIcon(ReminderPlaceArt(place)));
-        }
+        foreach (var setupSwitch in ReminderSwitches) SwitchRow(setupSwitch);
         SwitchRow(new SetupSwitch("Rest sites", "Beside your character at a rest site: the HP resting would leave you with, and what each relic adds.",
             new[] { "rest-preview" }));
 
@@ -194,6 +189,7 @@ public sealed partial class SettingsMenu
         settings.EventOdds = defaults.EventOdds;
         settings.EventInspect = defaults.EventInspect;
         settings.Tabs[QolSettings.DrawChanceKey] = true;
-        foreach (var (place, _, _) in ReminderSwitches) settings.Tabs[ChoiceReminders.Key(place, "*")] = true;
+        // The places' old group switches (folded into the features by decision #185): on, should a file still have one off.
+        foreach (var place in Enum.GetValues<ReminderPlace>()) settings.Tabs[ChoiceReminders.Key(place, "*")] = true;
     }
 }

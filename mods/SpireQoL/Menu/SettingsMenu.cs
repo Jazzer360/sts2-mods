@@ -41,7 +41,7 @@ public sealed partial class SettingsMenu
     {
         (Page.Setup, "Quick setup"),
         (Page.Fights, "In fights"),
-        (Page.CardTabs, "Card tabs"),
+        (Page.CardTabs, "Card tags"),
         (Page.Relics, "Relics"),
         (Page.YourPowers, "Your powers"),
         (Page.EnemyPowers, "Enemy powers"),
@@ -57,24 +57,28 @@ public sealed partial class SettingsMenu
 
     internal static readonly (string Id, string Name, string Description, FeaturePage Where)[] FeatureRows =
     {
-        ("card-indicators", "Card Indicators", "Retain, Sly, replay and double-play tabs; Ethereal cards fade.", FeaturePage.Fights),
-        ("proc-indicators", "Proc Indicators", "A tab for every relic or power a card would set off (the Relics, powers and Cards pages).", FeaturePage.Fights),
+        ("card-indicators", "Keyword Tags", "Retain, Sly, replay and double-play tags on the cards in your hand.", FeaturePage.Fights),
+        ("ethereal-fade", "Ethereal Fade", "An Ethereal card in your hand is see-through, so you can tell it will exhaust at the end of your turn.", FeaturePage.Fights),
+        ("proc-indicators", "Proc Tags", "A tag for every relic or power a card would set off (the Relics, powers and Cards pages).", FeaturePage.Fights),
         ("relic-counters", "Relic Counters", "The tray of counter relics and countdown powers next to your HP bar.", FeaturePage.Fights),
         ("incoming-damage", "Incoming Damage", "What you'll take at end of turn, after block (and what Osty takes).", FeaturePage.Fights),
         ("teammate-incoming-damage", "Teammate Incoming Damage", "Multiplayer: hovering a teammate shows what they'll take, after their block (from what you can see, not their hand).", FeaturePage.Fights),
-        ("shuffle-warning", "Shuffle Warning", "Discard pile tab on cards whose draw reshuffles your discard pile.", FeaturePage.Fights),
+        ("shuffle-warning", "Shuffle Tag", "Discard pile tag on cards whose draw reshuffles your discard pile.", FeaturePage.Fights),
         ("death-skull", "Death Skull", "Skull beside an enemy's HP when it dies before acting if you end your turn now (with the chance when a roll decides it).", FeaturePage.Fights),
-        ("exploration-progress", "Exploration Progress", "A clock and progress bar under the End Turn button while predictions are still working through every outcome (rare: most fights finish at once). Until then, what's uncertain carries a ?.", FeaturePage.Fights),
+        ("exploration-progress", "Prediction Progress", "A clock and progress bar under the End Turn button while predictions are still working through every outcome (rare: most fights finish at once). Until then, what's uncertain carries a ?.", FeaturePage.Fights),
         ("intent-details", "Intent Details", "On each enemy's intent during your turn: the block its move gains, as a number on its defend intent, and each buff or debuff it applies (icon and amount), in the corner of its buff or debuff intent.", FeaturePage.Fights),
-        ("play-preview", "Play Preview", "While you hold a card (aimed at its target, for one that needs one): Incoming Damage, the enemies' intents and the Death Skull show the turn as it would go after you play it. The card tabs stay as they are.", FeaturePage.Fights),
+        ("play-preview", "Play Preview", "While you hold a card (aimed at its target, for one that needs one): Incoming Damage, the enemies' intents and the Death Skull show the turn as it would go after you play it. The card tags stay as they are.", FeaturePage.Fights),
         ("intent-forecast", "Intent Forecast", "Hovering an enemy shows its next moves after the intent on screen: every turn its rules make certain, then each move a random pick can make, with its chance.", FeaturePage.Fights),
-        ("potion-tabs", "Potion Tabs", "Tabs under your potions for the relics that drinking one sets off (the Relics page).", FeaturePage.Fights),
-        ("run-reminders", "Run Reminders", "Your relics that change a choice, on the choice: tabs on cards you're offered (card rewards, event choices, the shop), icons beside event options and shop prices, and on the map beside the legend's rows.", FeaturePage.Outside),
+        ("potion-tabs", "Potion Tags", "Tags under your potions for the relics that drinking one sets off (the Relics page).", FeaturePage.Fights),
+        ("reward-tags", "Reward Tags", "Tags on the cards you're offered (card rewards, an event's choice of cards, the shop) for your relics that taking the card sets off or that make it stronger in fights.", FeaturePage.Outside),
+        ("event-reminders", "Event Reminders", "Beside each event option, your relics that change what it does, with the chance a card relic's cards come up, and Inspect for an option that gives random cards.", FeaturePage.Outside),
+        ("shop-reminders", "Shop Reminders", "Beside each shop price, your relics that buying it sets off, and with Lucky Fysh the price after its gold.", FeaturePage.Outside),
+        ("map-reminders", "Map Reminders", "Beside the map legend's rows, your relics and quest cards that make that kind of room unusually good or bad.", FeaturePage.Outside),
         ("rest-preview", "Rest Preview", "At rest sites, a sum beside your character: your HP, the rest heal and each relic that changes it, and the HP you end with (and how much is wasted). Before the boss, Pantograph and Bath Robes are lines too. In multiplayer, hover a teammate while Mend is on offer for theirs.", FeaturePage.Outside),
         ("update-notice", "Update Notice", "On the main menu, how many Spire QoL versions behind you are (checks GitHub once per visit), with a gear beside it that opens this menu.", FeaturePage.General),
-        ("forecast-audit", "Forecast check", "Compares Incoming Damage with what really happened (logs, and error reports).", FeaturePage.General),
-        ("proc-audit", "Proc check", "Compares proc tabs with what really happened (logs, and error reports).", FeaturePage.General),
-        ("coverage-watch", "Coverage check", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports).", FeaturePage.General),
+        ("forecast-audit", "Forecast audit", "Compares Incoming Damage with what really happened (logs, and error reports).", FeaturePage.General),
+        ("proc-audit", "Play audit", "Compares each card's tags with what playing it really did (logs, and error reports).", FeaturePage.General),
+        ("coverage-watch", "Coverage audit", "Reports game mechanics the mod doesn't cover yet when they show up (logs, and error reports).", FeaturePage.General),
         ("session-summary", "Session summary", "Counts each play session's turns, checks and calculation times, and sends the totals with error reports when the session ends.", FeaturePage.General),
     };
 
@@ -278,7 +282,7 @@ public sealed partial class SettingsMenu
         _onlyHere = only;
         header.AddChild(onlyBox);
         var reset = MakeButton("Reset defaults", size: 20);
-        reset.TooltipText = "Every feature, option, card tab and tracker row back to its default. Keeps hotkeys, widget positions and error reporting.";
+        reset.TooltipText = "Every feature, option, card tag and tracker row back to its default. Keeps hotkeys, widget positions and error reporting.";
         reset.CustomMinimumSize = new Vector2(230, 0); // fits "Click again to reset" without moving the header
         reset.Pressed += () => ConfirmReset(reset);
         header.AddChild(reset);
@@ -392,11 +396,11 @@ public sealed partial class SettingsMenu
     {
         FeatureSwitches(FeaturePage.Fights, new()
         {
-            ["card-indicators"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", Settings.EtherealOpacity, min: 0.25, max: 1, step: 0.05,
-                value => Settings.EtherealOpacity = (float)value, value => $"{value:0.00}", Needs("card-indicators")),
+            ["ethereal-fade"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", Settings.EtherealOpacity, min: 0.25, max: 1, step: 0.05,
+                value => Settings.EtherealOpacity = (float)value, value => $"{value:0.00}", Needs("ethereal-fade")),
             ["proc-indicators"] = () =>
             {
-                Option("Amounts on proc tabs", "Show the amount on proc tabs: block gained, damage dealt, the amount summoned, cards drawn and energy gained. Off: icon only.",
+                Option("Amounts on proc tags", "Show the amount on proc tags: block gained, damage dealt, the amount summoned, cards drawn and energy gained. Off: icon only.",
                     Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, Needs("proc-indicators"), icon: TextIcon("4"));
                 Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
                     Settings.ProcIndirect, enabled => Settings.ProcIndirect = enabled, Needs("proc-indicators"));
@@ -439,18 +443,18 @@ public sealed partial class SettingsMenu
         string? Under(string? feature) => !Settings.Chances ? "Show chances" : feature;
         if (fights)
         {
-            Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tabs, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
+            Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tags, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
                 Settings.DeathChance, enabled => Settings.DeathChance = enabled, Under(Needs("death-skull", "incoming-damage", "proc-indicators")), icon: ArtIcon(Cards.GameIcons.Skull()));
             Option("Incoming Damage: most likely outcome", "When a roll decides how the enemy turn goes (a draw at the end of your turn, a random target), the sum shows the most likely way, with its chance; the skull still shows whenever you might die. Hover the sum for every outcome. Off: the worst case.",
                 Settings.MostLikely, enabled => Settings.MostLikely = enabled, Under(Needs("incoming-damage")), icon: ArtIcon(Cards.GameIcons.Heart()));
-            Option("Draw chance tab", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the Card tabs page has the same switch).",
+            Option("Draw chance tag", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the Card tags page has the same switch).",
                 Settings.TabOwn(QolSettings.DrawChanceKey), enabled => SetTab(QolSettings.DrawChanceKey, enabled), Under(Needs("proc-indicators")), icon: TextIcon("40%"));
             Option("Intent Forecast's random moves", "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",
                 Settings.IntentOdds, enabled => Settings.IntentOdds = enabled, Under(Needs("intent-forecast")), icon: ArtIcon(Cards.GameIcons.Intent("unknown")));
         }
         else
             Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up. Off: icon only.",
-                Settings.EventOdds, enabled => Settings.EventOdds = enabled, Under(Needs("run-reminders")), icon: TextIcon("25%"));
+                Settings.EventOdds, enabled => Settings.EventOdds = enabled, Under(Needs(Features.EventRemindersFeature.FeatureId)), icon: TextIcon("25%"));
     }
 
     /// <summary>The page again, for rows that depend on a switch just changed (deferred: the switch is mid-signal).</summary>
@@ -461,17 +465,9 @@ public sealed partial class SettingsMenu
     {
         FeatureSwitches(FeaturePage.Outside, new()
         {
-            ["run-reminders"] = () =>
-            {
-                // Each place: one switch for every relic's reminder there (the per-relic columns below are under it).
-                foreach (var (place, name, desc) in ReminderPlaceRows)
-                {
-                    var key = SpireQoL.Data.ChoiceReminders.Key(place, "*");
-                    Option(name, desc, Settings.TabOwn(key), enabled => SetTab(key, enabled), Needs("run-reminders"), icon: ArtIcon(ReminderPlaceArt(place)));
-                }
+            [Features.EventRemindersFeature.FeatureId] = () =>
                 Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
-                    Settings.EventInspect, enabled => Settings.EventInspect = enabled, Needs("run-reminders"), icon: ArtIcon(Features.RunRemindersFeature.InspectIcon()));
-            },
+                    Settings.EventInspect, enabled => Settings.EventInspect = enabled, Needs(Features.EventRemindersFeature.FeatureId), icon: ArtIcon(Features.RunReminders.InspectIcon())),
         });
 
         ChancesSection(fights: false);
@@ -506,27 +502,18 @@ public sealed partial class SettingsMenu
             }, indent: false);
     }
 
-    /// <summary>Run Reminders' places: one switch for every relic's reminder there (decision #122; the group key of their switches).</summary>
-    private static readonly (SpireQoL.Data.ReminderPlace Place, string Name, string Description)[] ReminderPlaceRows =
-    {
-        (SpireQoL.Data.ReminderPlace.Reward, "On card rewards", "Tabs on the cards you're offered after a fight."),
-        (SpireQoL.Data.ReminderPlace.Event, "At events", "Icons beside event options, and tabs on the cards an event offers."),
-        (SpireQoL.Data.ReminderPlace.Shop, "In shops", "Icons beside shop prices, and tabs on the cards for sale."),
-        (SpireQoL.Data.ReminderPlace.Map, "On the map", "Icons beside the map legend's rows."),
-    };
-
     private void BuildCardTabs()
     {
         // One switch for every tab on cards, then everything under it (decision #122): the kinds, each tab, the families.
-        Section("Tabs on cards");
-        Option("Tabs on cards", "Every tab the mod hangs on cards: in your hand, and on the cards you're offered outside fights. Off: none (the features' other parts stay).",
+        Section("Tags on cards");
+        Option("Tags on cards", "Every tag the mod hangs on cards: in your hand, and on the cards you're offered outside fights. Off: none (the features' other parts stay).",
             Settings.CardTabs, enabled => { Settings.CardTabs = enabled; Refresh(); }, indent: false, icon: FeatureIcon("proc-indicators"));
-        var tabs = Settings.CardTabs ? Needs("card-indicators", "proc-indicators", "shuffle-warning", "run-reminders") : "Tabs on cards";
-        Option("Plain tabs", "Tabs that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only. Potion tabs too.",
+        var tabs = Settings.CardTabs ? Needs("card-indicators", "proc-indicators", "shuffle-warning", "potion-tabs", Features.RewardTagsFeature.FeatureId) : "Tags on cards";
+        Option("Plain tags", "Tags that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only. Potion tags too.",
             Settings.PlainTabs, enabled => Settings.PlainTabs = enabled, tabs, icon: FeatureIcon("proc-indicators"));
-        Option("Crossed tabs", "Tabs with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus). Potion tabs too.",
+        Option("Crossed tags", "Tags with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus). Potion tags too.",
             Settings.CrossedTabs, enabled => Settings.CrossedTabs = enabled, tabs, icon: ArtIcon(Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.ThornsPower>(), slashed: true));
-        Option("Aim marker", "The targeting arrow head in a tab's corner when it happens only at some targets. Off: the tab shows without it.",
+        Option("Aim marker", "The targeting arrow head in a tag's corner when it happens only at some targets. Off: the tag shows without it.",
             Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabs, icon: ArtIcon(Cards.GameIcons.TargetArrow()));
         foreach (var tabEntry in SettingsCatalog.CardTabs)
         {
@@ -545,7 +532,7 @@ public sealed partial class SettingsMenu
         foreach (var key in other)
         {
             if (!Matches(key)) continue;
-            SimpleRow(key, NeedsText("A tab kind without a description yet.", tabs), Settings.TabOwn(key), on => SetTab(key, on), IconSpacer(), tabs == null, indent: true);
+            SimpleRow(key, NeedsText("A tag kind without a description yet.", tabs), Settings.TabOwn(key), on => SetTab(key, on), IconSpacer(), tabs == null, indent: true);
         }
     }
 
@@ -585,7 +572,7 @@ public sealed partial class SettingsMenu
         });
         var groupKeys = shown.Where(entryName => entryName.Entry.TagKey != null).Select(entryName => entryName.Entry.TagPrefix + "*").Distinct();
         var groupOff = groupKeys.Where(groupKey => !Settings.TabOwn(groupKey)).ToList();
-        if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off on the Card tabs page)", size: 16, Colors.OrangeRed));
+        if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off on the Card tags page)", size: 16, Colors.OrangeRed));
         header.AddChild(tagHead);
         if (anyTracker)
         {
@@ -615,7 +602,7 @@ public sealed partial class SettingsMenu
             }
             else
             {
-                tagCell.AddChild(Label("no card tab", size: 17, Muted));
+                tagCell.AddChild(Label("no card tag", size: 17, Muted));
             }
             row.AddChild(tagCell);
 
@@ -642,11 +629,18 @@ public sealed partial class SettingsMenu
         (ReminderPlace.Map, "Map"),
     };
 
-    /// <summary>Run Reminders: a column per place they show (card reward tabs, event options, shop prices), each its own switch.</summary>
+    /// <summary>The four reminders outside fights (decision #185): the features whose work the Reminders columns switch, relic by relic.</summary>
+    internal static readonly string[] ReminderFeatures =
+    {
+        Features.RewardTagsFeature.FeatureId, Features.EventRemindersFeature.FeatureId, Features.ShopRemindersFeature.FeatureId, Features.MapRemindersFeature.FeatureId,
+    };
+
+    /// <summary>The reminders: a column per place they show (card reward tags, event options, shop prices, the map), each its own switch.</summary>
     private void ReminderRows(List<(SourceEntry Entry, string Name)> shown)
     {
-        if (!FeatureOn("run-reminders"))
-            _rows!.AddChild(Label("Run Reminders is off (above): none of these show.", size: 16, Colors.OrangeRed));
+        var off = ReminderFeatures.Where(id => !FeatureOn(id)).Select(id => FeatureRows.First(featureRow => featureRow.Id == id).Name).ToList();
+        if (off.Count > 0)
+            _rows!.AddChild(Label($"Off (above): {string.Join(", ", off)}. What {(off.Count == 1 ? "it shows" : "they show")} doesn't show, whatever its switches here.", size: 16, Colors.OrangeRed));
         var head = UiKit.Row(separation: 12);
         head.MouseFilter = Control.MouseFilterEnum.Pass;
         head.AddChild(new Control { CustomMinimumSize = new Vector2(IconSize + NameWidth + 12, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
@@ -888,7 +882,10 @@ public sealed partial class SettingsMenu
                 "potion-tabs" => ModelDb.AllPotions.Select(potion => Cards.GameIcons.Potion(potion)).FirstOrDefault(Cards.GameIcons.Valid),
                 "shuffle-warning" => Cards.GameIcons.DiscardPile(),
                 "exploration-progress" => Cards.GameIcons.Clock(),
-                "run-reminders" => Cards.GameIcons.CardReward(),
+                "reward-tags" => ReminderPlaceArt(ReminderPlace.Reward),
+                "event-reminders" => ReminderPlaceArt(ReminderPlace.Event),
+                "shop-reminders" => ReminderPlaceArt(ReminderPlace.Shop),
+                "map-reminders" => ReminderPlaceArt(ReminderPlace.Map),
                 "rest-preview" => Cards.GameIcons.Heal(),
                 _ => null,
             };
@@ -899,7 +896,7 @@ public sealed partial class SettingsMenu
         }
     }
 
-    /// <summary>Run Reminders' art for a place: the card reward icon, the event and shop room icons, the top bar's map button.</summary>
+    /// <summary>A reminder place's art: the card reward icon, the event and shop room icons, the top bar's map button.</summary>
     internal static Texture2D? ReminderPlaceArt(ReminderPlace place) => place switch
     {
         ReminderPlace.Reward => Cards.GameIcons.CardReward(),

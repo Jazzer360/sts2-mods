@@ -130,7 +130,22 @@ public static class DevDashboard
 
     public static string Folder { get; private set; } = DefaultFolder;
 
-    public static void Start(OverlayHost host, string? folder)
+    /// <summary>The mod's timed work that isn't a feature, by the id its frame times are kept under (decision #185: the dashboard's names).</summary>
+    private static readonly Dictionary<string, string> OtherNames = new()
+    {
+        ["widgets"] = "Widget layout",
+        ["settings-menu"] = "Settings menu",
+        ["card-tabs"] = "Card tags (drawing)",
+        ["settings-save"] = "Saving settings",
+        ["turn-forecast"] = "Turn forecast",
+        ["draw-pile-memory"] = "Draw pile memory",
+        ["dev-dashboard"] = "Dev dashboard",
+        [OverlayHost.DevChecksId] = "Dev checks",
+        [WatchId] = "Steady watch",
+    };
+
+    /// <param name="featureNames">Each feature's id and display name: the dashboard shows the names (decision #185).</param>
+    public static void Start(OverlayHost host, string? folder, IReadOnlyDictionary<string, string> featureNames)
     {
         if (!ModEntry.DevMode || _sink != null) return;
         try
@@ -139,6 +154,7 @@ public static class DevDashboard
             var sink = new DevSink(Folder, () => Clock.Elapsed.TotalSeconds, DateTime.UtcNow, warn: text => ModEntry.Log.Warn("[dev] " + text));
             var tags = ErrorReporter.Instance?.Tags;
             sink.Post(new StreamStarted(DevEvents.Version, tags?.GetValueOrDefault("mod_version") ?? "?", tags?.GetValueOrDefault("game_version") ?? "?", DateTime.UtcNow, BuildInfo.Label));
+            sink.Post(FeatureNames.Of(featureNames, OtherNames));
             DevEvents.Posted += sink.Post;
             ModEntry.Log.Written += (level, text) => sink.Post(new LogLine(level, text));
             host.FrameMeasured += (modMs, gapMs) =>

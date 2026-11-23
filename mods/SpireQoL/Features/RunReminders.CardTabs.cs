@@ -22,14 +22,14 @@ namespace SpireQoL.Features;
 /// On a card reward, also a tab for each relic that taking the card sets off (Bing Bong, Lucky Fysh, Book of Five Rings: decision
 /// #83): in events and the shop those show beside the option or the price instead.
 /// </summary>
-public sealed partial class RunRemindersFeature
+public sealed partial class RunReminders
 {
     private readonly Dictionary<ulong, (CardModel Model, CardDecor Decor)> _offeredTabs = new();
     /// <summary>What the offered cards' tabs were worked out from (the settings and you: AddRunState), and dev mode's check of it.</summary>
     private int _offeredRunKey;
     private readonly SpireQoL.Combat.ReuseCheck _offeredTabsReuse = new("the offered cards' tabs");
 
-    private void OfferedCardTabs()
+    internal void OfferedCardTabs()
     {
         var nodes = OfferedCards();
         var me = nodes.Count > 0 ? RunMe() : null;

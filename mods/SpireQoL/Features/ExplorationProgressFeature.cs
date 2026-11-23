@@ -13,7 +13,7 @@ namespace SpireQoL.Features;
 /// A small clock (the run timer's, from the top bar) and progress bar under the End Turn button while predictions are still exploring their outcomes in the
 /// background (decision #89): how far along they are together. Hidden the rest of the time, which is nearly always: most
 /// fights finish within the frame. Anything not yet certain carries a ? where it's shown (decision #88).
-/// Spec: docs/FEATURES.md#exploration-progress.
+/// Spec: docs/FEATURES.md#prediction-progress (Prediction Progress; id exploration-progress, kept as the settings key: decision #185).
 /// </summary>
 public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
 {
@@ -25,7 +25,7 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
     public ExplorationProgressFeature(QolContext ctx) => _ctx = ctx;
 
     public string Id => "exploration-progress";
-    public string DisplayName => "Exploration Progress";
+    public string DisplayName => "Prediction Progress";
     public bool EnabledByDefault => true;
 
     public static readonly WidgetLayout DefaultLayout = new()
@@ -41,7 +41,7 @@ public sealed class ExplorationProgressFeature : IFeature, IFrameFeature
 
     public void Attach(OverlayHost host)
     {
-        _widget = _ctx.Widget(Id, "Exploration Progress", DefaultLayout);
+        _widget = _ctx.Widget(Id, DisplayName, DefaultLayout);
         _widget.AttachTo(EndTurnRect, AttachSide.Below);
         var row = UiKit.Row(separation: 6);
         _clock = UiKit.Icon(GameIcons.Clock(), size: 22);

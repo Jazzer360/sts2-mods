@@ -10,14 +10,8 @@ namespace SpireQoL.Catalog.Tests;
 /// </summary>
 public class GuideTests
 {
-    /// <summary>Features the Guide covers under another name.</summary>
-    private static readonly Dictionary<string, string> CoveredAs = new()
-    {
-        ["Card Indicators"] = "Tabs on cards",
-        ["Proc Indicators"] = "Tabs on cards",
-        ["Potion Tabs"] = "Potion tabs",
-        ["Shuffle Warning"] = "a reshuffle",
-    };
+    /// <summary>Features the Guide covers under another name (none since decision #185: every feature by its own name).</summary>
+    private static readonly Dictionary<string, string> CoveredAs = new();
 
     private static string GuideSource([CallerFilePath] string here = "")
     {

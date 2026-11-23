@@ -7,7 +7,7 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// The reminders check reads what a relic an event option gave you does as you obtain it (RunRemindersFeature.ObtainEffects:
+/// The reminders check reads what a relic an event option gave you does as you obtain it (RunReminders.ObtainEffects:
 /// its AfterObtained), so that isn't counted against the option's code. A report: This or That's Ornate gave a random relic,
 /// Cursed Pearl, whose gold was reported as the option's.
 /// </summary>
@@ -19,13 +19,13 @@ public class ObtainEffectsTests
     {
         GameModels.EnsureLoaded();
         foreach (var relic in new RelicModel[] { ModelDb.Relic<CursedPearl>(), ModelDb.Relic<GoldenPearl>(), ModelDb.Relic<OldCoin>(), ModelDb.Relic<SignetRing>() })
-            Assert.True(RunRemindersFeature.ObtainEffects(relic).HasFlag(ChoiceEffect.GoldGain), relic.GetType().Name);
+            Assert.True(RunReminders.ObtainEffects(relic).HasFlag(ChoiceEffect.GoldGain), relic.GetType().Name);
     }
 
     [Fact]
     public void ARelicThatDoesNothingWhenObtainedReadsAsNothing()
     {
         GameModels.EnsureLoaded();
-        Assert.Equal(ChoiceEffect.None, RunRemindersFeature.ObtainEffects(ModelDb.Relic<Anchor>()));
+        Assert.Equal(ChoiceEffect.None, RunReminders.ObtainEffects(ModelDb.Relic<Anchor>()));
     }
 }
