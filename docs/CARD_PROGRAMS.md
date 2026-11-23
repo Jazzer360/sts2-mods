@@ -13,7 +13,7 @@ Kunai fires in `AfterCardPlayed` between the plays, and Dexterity is live in the
 
 | What went wrong | Example | Source |
 |---|---|---|
-| The order of a play's effects | Fiend Fire (attacked before its exhausts), Iron Wave, Dash, Wah Cho, Wah Cho Ki (attack before block: Thorns unblocked) | the adapter's fixed order |
+| The order of a play's effects | Fiend Fire (attacked before its exhausts), Iron Wave, Dash, Wah Cho, Wah Cho Ki (attack before block: the Thorns hit predicted unblocked; the crossed tab is right either way) | the adapter's fixed order |
 | Which cards draw before they discard or exhaust | `DiscardThenDrawCards`, `ExhaustThenDrawCards`... | hand-kept lists |
 | A pipeline missing a step | No Draw: the game's draw asks `Hook.ShouldDraw` first | a copied pipeline |
 | An amount copied wrong | Vicious and Dark Embrace drew 1, not their amount | a copied hook body |
@@ -54,10 +54,21 @@ A program is a tree of steps:
     `BeforeDamage`) become the attack's hit count, spread and hooks.
 - **`Repeat`**: a loop. The count is a card value (`for i < Repeat`), the cards a pile holds (a `foreach` over a list taken from
   a pile: one step per card, its count read when played), or `Unknown`.
-- **`If`**: a condition the reader knows, or `Unknown`.
-  - Known so far: the attack killed its target (`Results...WasTargetKilled`), the card's upgrade, the target has a power, a
-    count against a value.
-  - A recognizer is added when a card needs one. Until then the branch is `Unknown`.
+- **`If`**: a condition. Like a command, a condition is a **game query** (a property or method of the game's objects),
+  translated once into a simulator test and used by every card that asks it. There is no per-card code.
+  - What beta's cards ask: whether the card is upgraded (28 cards), whether the attack killed (Sunder, Feed, Hand of Greed,
+    The Hunt, Knockout Blow, Timber: `Results...WasTargetKilled`), whether the target is dead or has a power, whether Osty is
+    alive, X cost, orb, arrow and pile counts against a value, and whether Doom was applied this turn. About twenty queries;
+    each one's cards are found by the coverage test, not listed.
+  - Sunder therefore reads as `Attack`, then `If(killed) GainEnergy(Energy)`. The simulator already has the kill-reward
+    action for this, so its energy follows the attack's kill in every branch.
+  - Rules that need no list:
+    - A branch with no effect command in it (a visual's null check, the fast-mode setting, test mode) doesn't change the
+      outcome and is skipped.
+    - A null check on what a `Choice` returned is "the player picked a card" (41 cards).
+  - A query with no translation yet is `Unknown`: the steps behind it are not modelled, with the card and the query named.
+- **Amounts the code works out** (Growth: `CalculationExtra × the cards exhausted`): simple arithmetic over known sources
+  (values, counts, constants) is read. Anything else is an `Unknown` amount.
 - **`Choice`**: a `CardSelectCmd` the player answers mid-play. Choices stay out of the model (decision #92: one decision, never
   a sequence), but a choice decides only **which** card. It doesn't decide **that** the play goes on.
   - The steps after it still run, and the hooks around the play still fire. Tuning Fork at 9 fires its block on Acrobatics,
@@ -70,6 +81,12 @@ A program is a tree of steps:
 
 The compiler's own patterns are skipped: the `await` pattern (`GetAwaiter`, `get_IsCompleted`, the state switch), visual
 and sound commands (`TriggerAnim`, `Vfx`, `Sfx`, `Preview`, `PlayMelodyVfx`, waits) and `ThrowIfNull`.
+
+Control flow is read from the method's basic blocks, not line by line: the `await` pattern first, then loops (a jump back)
+and branches (a conditional jump forward, with the commands on each side). A shape it doesn't recognize is `Unknown`.
+
+The same reader reads an enchantment's and an affliction's `OnPlay`, and a potion's `OnUse` (drinking a potion is one of the
+contract's decisions), into programs that use the same translators.
 
 Calls into the card's own methods are read into the program, to a fixed depth. Calls into anything else that isn't a known
 command become `Unknown`.
@@ -118,6 +135,12 @@ Commands, by how many beta cards call them:
 | `CreatureCmd.Damage`, `Kill`, `LoseHp` (self) | 14+ | `DamageAction`, `ExecuteAction`, `LoseHpAction` |
 | `ForgeCmd`, `OstyCmd`, `PlayerCmd.GainStars`, `CardCmd.AutoPlay`, `Transform` | 40 | their actions today |
 
+Each translation is written once, and every card, enchantment and potion that calls the command goes through it. Relics' and
+powers' models already call the same engine functions for the same commands (`SimEngine.ApplyPower`, the block and damage
+pipelines), so a command's pipeline is one piece of code wherever it is used. The models themselves stay written by hand,
+checked against their game hooks by Part B. Reading their hooks as programs too is the natural next step once this works;
+it isn't part of this plan.
+
 There are 58 commands on beta and 49 on main. A command with no translation becomes `NotModelledAction("<Command> in
 <Card>.OnPlay")`. It is counted like every `SimState.Unmodelled` reason, and each one is a tracker item. It is never guessed.
 
@@ -145,6 +168,25 @@ One source for both the tabs and the simulator.
 
 ### A4. Checks
 
+- **Behaviour tests, written first** (`tests/SpireQoL.Catalog.Tests/PlayBehaviourTests.cs`). End to end: a real card built
+  from the game's objects (`GameFight`), through the adapter and the simulator, with the outcome asserted (HP, block, powers,
+  hand, piles, energy, the tabs' sources). They test what happens, not how the code is built, so they survive this rewrite
+  and the next one.
+  - They are written against today's code before anything changes: a case that is right today must stay right, and a case
+    that is wrong today (Iron Wave into Thorns) is written to fail, then passes at the switch.
+  - The documented cases:
+    - Iron Wave and Dash into Thorns: the block takes the Thorns hit, and the crossed Thorns tab still shows. The tab means
+      the attack sets Thorns off, which uses up your block even when no HP is lost.
+    - Fiend Fire with Charon's Ashes (the exhausts' hits land before its kill), and with Dark Embrace (the draws stay).
+    - Vicious and Dark Embrace drawing their amount.
+    - Battle Trance drawing before its No Draw.
+    - Sunder's energy only on a kill.
+    - A double-played Iron Wave with Kunai at 2 (more block on the second play).
+    - Tuning Fork at 9 on Acrobatics, Ki Chant and Burning Pact (fires; only the pick is uncertain).
+    - Pillage's draws, Whirlwind's X, Second Wind with Feel No Pain and Juggernaut, Growth's Stretch.
+    - The TRACKER's and DECISIONS' other play-order and play-count cases.
+  - The rule from now on: a bug in a card's play gets a behaviour test here, besides its simulator test, so later rewrites
+    keep it.
 - **Program tests** (`tests/SpireQoL.Catalog.Tests/CardProgramTests.cs`): known programs on both branches' assemblies (Iron
   Wave, Fiend Fire, Sunder, Pillage, Whirlwind, Battle Trance, Growth, Second Wind, Blossom Shot's local function, an X-cost
   card, a selection card).
@@ -173,12 +215,14 @@ One source for both the tabs and the simulator.
 
 ## Order of work (one session)
 
-1. Baseline: `scripts/check.ps1` green; save the shadow comparison's first list of differences.
+1. Baseline: `scripts/check.ps1` green. Write the behaviour tests (A4) against today's code: the right cases pass and the
+   known-wrong ones fail.
 2. Instruction view (Harmony and Metadata) and the program reader, with the program tests on both branches.
 3. Coverage test and report.
 4. Translators per command, with the old builders refactored to take steps.
 5. Shadow comparison until only reviewed differences remain.
-6. Switch the adapter, delete the fixed order and the tables, regenerate the golden fights with reasons.
+6. Switch the adapter: every behaviour test passes, including the known-wrong ones. Delete the fixed order and the tables,
+   and regenerate the golden fights with reasons.
 7. B1 pipeline parity, B2 model amounts, then B3 listeners.
 8. Docs: SIMULATOR.md (Card scripts, The adapter), FEATURES (only the corrected predictions show), CHANGELOG under Spire
    QoL 2.0.0, TRACKER, DECISIONS.
@@ -189,9 +233,14 @@ One source for both the tabs and the simulator.
 - **The compiler's shapes.** Async state machines, closures and local functions. The reader recognizes the patterns it knows
   and marks the rest `Unknown`: a wrong read becomes uncertainty, not a wrong certainty. The program tests run on both
   branches, so a compiler change shows up in tests.
-- **Coverage on day one.** Of 677 beta cards, 443 are straight lists of commands. 171 have a condition, 112 a loop and 68 a
-  choice (they overlap). Cards with conditions keep today's translations where the shadow comparison shows them right, and
-  get a recognizer, until the coverage test says otherwise.
+- **Coverage on day one.** Of 677 beta cards, 443 are straight lists of commands. 162 have a condition (most are visual
+  checks or a pick's null check), 112 a loop and 68 a choice (they overlap).
+  - A card whose program isn't fully read yet keeps today's script, so nothing that is exact today becomes a `?`.
+  - The coverage test counts those cards. The aim is none left by the end of the session; any left over are tracker items,
+    and today's builder is deleted with the last one.
 - **Speed.** A program is read once per card type. Translation runs per play, as the script builder does now. The
   performance tests hold the line.
+- **Size.** Steps 1–6 are the core and fit one session. Most of the time goes into the shadow comparison over 677 cards.
+  B1 and B2 are small. B3 (orbs, monsters, potions and cards as listeners) may spill into a second session; it doesn't block
+  the release.
 - **Hidden information.** Unchanged: the reader reads code, never the RNG, the seed or the draw order.
