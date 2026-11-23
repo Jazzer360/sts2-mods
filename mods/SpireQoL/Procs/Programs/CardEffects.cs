@@ -483,6 +483,81 @@ public static class CardEffects
     /// <summary>Forges (ForgeCmd.Forge: a Sovereign Blade made the first time, more damage after).</summary>
     public static bool Forges(CardProgram program) => program.Commands.Any(command => Is(command, "ForgeCmd", "Forge"));
 
+    // ---- commands found with what they run on
+
+    /// <summary>A command of the play, with everything it runs on (its own condition and every loop's around it) and the loops it's in.</summary>
+    public sealed record Found(CommandStep Command, ProgramCondition Condition, IReadOnlyList<LoopStep> Loops);
+
+    /// <summary>The play's commands <paramref name="which"/> picks, in order, each with its condition and loops.</summary>
+    public static IReadOnlyList<Found> Find(CardProgram program, Func<CommandStep, bool> which)
+    {
+        var found = new List<Found>();
+        void Walk(IEnumerable<ProgramStep> steps, ProgramCondition outer, IReadOnlyList<LoopStep> loops)
+        {
+            foreach (var step in steps)
+            {
+                var condition = step.Condition is { } own ? outer.And(own) : outer;
+                switch (step)
+                {
+                    case LoopStep loop:
+                        Walk(loop.Body, condition, loops.Append(loop).ToList());
+                        break;
+                    case CommandStep command:
+                        if (which(command)) found.Add(new Found(command, condition, loops));
+                        Walk(command.Inner, condition, loops);
+                        break;
+                }
+            }
+        }
+        Walk(program.Steps, ProgramCondition.Always, Array.Empty<LoopStep>());
+        return found;
+    }
+
+    // ---- orbs
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<Found>> ChannelSteps = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<Found>> EvokeSteps = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<Found>> SlotSteps = new();
+
+    /// <summary>The play's channels (OrbCmd.Channel&lt;T&gt;, or Channel of a random orb: Chaos, The Magician), in order.</summary>
+    public static IReadOnlyList<Found> OrbChannels(Type cardType) => ChannelSteps.GetOrAdd(cardType, type => OrbChannels(CardPrograms.Of(type)));
+    public static IReadOnlyList<Found> OrbChannels(CardProgram program) => Find(program, command => Is(command, "OrbCmd", "Channel"));
+
+    /// <summary>The play's evokes of your front orb (OrbCmd.EvokeNext: Dualcast, Quadcast, Multicast, Shatter), in order.</summary>
+    public static IReadOnlyList<Found> OrbEvokes(Type cardType) => EvokeSteps.GetOrAdd(cardType, type => OrbEvokes(CardPrograms.Of(type)));
+    public static IReadOnlyList<Found> OrbEvokes(CardProgram program) => Find(program, command => Is(command, "OrbCmd", "EvokeNext"));
+
+    /// <summary>The play's orb slots added or removed (OrbCmd.AddSlots, RemoveSlots: their count is the second argument).</summary>
+    public static IReadOnlyList<Found> OrbSlotChanges(Type cardType) => SlotSteps.GetOrAdd(cardType, type => OrbSlotChanges(CardPrograms.Of(type)));
+    public static IReadOnlyList<Found> OrbSlotChanges(CardProgram program) =>
+        Find(program, command => command.Command.DeclaringType == "OrbCmd" && command.Command.Name is "AddSlots" or "RemoveSlots");
+
+    /// <summary>
+    /// The orb a channel makes: its class's kind (Channel&lt;FrostOrb&gt;: Frost), Random for a random orb (a Channel given
+    /// OrbModel.GetRandomOrb's orb), or null for an orb the simulator doesn't know.
+    /// </summary>
+    public static SpireQoL.Sim.OrbKind? OrbOf(CommandStep channel)
+    {
+        if (channel.Command.GenericArguments is [var orb])
+            return orb.EndsWith("Orb", StringComparison.Ordinal) && Enum.TryParse<SpireQoL.Sim.OrbKind>(orb[..^3], out var kind) && kind is not (SpireQoL.Sim.OrbKind.Unknown or SpireQoL.Sim.OrbKind.Random)
+                ? kind : null;
+        return channel.Values.Any(value => value.Parts().Any(part => part is QueryValue { Name: "GetRandomOrb" })) ? SpireQoL.Sim.OrbKind.Random : null;
+    }
+
+    /// <summary>The simulator channels every orb the card does (each channel's orb is a kind it knows, or a random one).</summary>
+    public static bool ChannelsKnownOrbs(Type cardType) => OrbChannels(cardType) is { Count: > 0 } channels && channels.All(channel => OrbOf(channel.Command) != null);
+
+    /// <summary>
+    /// The evokes go over every orb you have (a loop whose rounds are your orbs' count: Shatter), each orb evoked that many times; 0 when
+    /// they evoke the front orb (Dualcast, Quadcast, Multicast).
+    /// </summary>
+    public static int EvokesPerOrbOfAll(Type cardType)
+    {
+        var evokes = OrbEvokes(cardType);
+        var overAll = evokes.Where(evoke => evoke.Loops.Any(loop => loop.While?.Literals.Any(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "Orbs" })) == true)).ToList();
+        return overAll.Count;
+    }
+
     public static bool DiscardsOnlyPicks(Type cardType) => DiscardsOnlyPicks(CardPrograms.Of(cardType));
 
     /// <summary>

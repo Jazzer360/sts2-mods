@@ -256,6 +256,14 @@ hooks.
     (`SimAdapter.HandTakeOf`: which piles, which cards, a roll or a pick, one a play or all), and the name checks on Guards, Neow's Fury, Ki
     Chant, Scrape and The Hermit with them (a pick shared by an exhaust and a discard: `SharedPickSize`). Fix: The Hermit with only
     Curses in hand no longer counts a discard.
+  - Orbs (2026-11-23, round three): `PlayFacts.OrbsOf` reads what a play does to your orbs from its program
+    (`CardEffects.OrbChannels`, `OrbEvokes`, `OrbSlotChanges`, all found with `CardEffects.Find`: a command with its condition and
+    loops): each channel's orb (its class, or random: a `GetRandomOrb` orb) and its loops' rounds on the board (`PlayFacts.Rounds`:
+    a foreach's collection, a counter's bound, the card value it's over), the evokes of your front orb or of every orb (a loop over
+    your orbs: Shatter), the slots added or removed. An X is the card's X (`ResolveEnergyXValue`: what playing it now spends, through
+    the X hooks). They replaced `SimAdapter.Channels`, `RepeatChannels`, `SlotChange`, `ChannelKind`, `HandlesChannel`, the evoke cards'
+    switch in `OrbsOf` and `EvokedOrbs`, and `PlayFacts.ChannelCount`'s cases. Fix: upgraded Tempest's extra Lightning is counted for
+    Metronome (its channels already were).
   - **The evaluator** (`ProgramEvaluator`) evaluates a condition before the play, each query translated once: a property of the
     game's objects is read (the game's own answer), a method only when it only asks (`Is`, `Has`, `Can`, `Get`, `Contains`,
     `HappenedThisTurn`), never anything about the RNG; Linq over a collection with the code's own lambda; your hand without the
@@ -343,7 +351,7 @@ references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter
 | `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The tests are read now (Pillage's loop's `While`: the drawn card, its type, your hand's room; Escape Plan's block on the drawn card being a Skill); what's left is turning a test of a command's result into the simulator's `DrawnCardAction`. |
 | (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
 | `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
-| `ChannelCount`, `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | orb, block and multi-hit cards | Counts from loops and conditions (`loop over Repeat`, Chill's loop over enemies, Cho Firm's arrow test). Both are read now (a loop's `While`: `i < 2`, `i < blockGains`; conditions evaluate); what's left is a count rule per command (channels, block gains, hits) built on them. |
+| `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | block and multi-hit cards | Counts from loops and conditions (Evil Eye's `i < blockGains`, a `WaysValue` now; Cho Firm's arrow test). The orbs show the way (`PlayFacts.Rounds`: a loop's rounds on the board); what's left is the count rule for block gains and hits. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TriggerPoisonCards`, `TeammatesShivCards`, `EnemyStrengthCards` | Outbreak, Blade Symphony, Strength takers | A call on a power (`PoisonPower.Trigger` isn't a command); the player a helper's Shivs go to (an argument inside the helper); a power's sign and duration. |
 | `GlowGatedAttackCards`, `GlowNotTheAttack` | Pact's End; Fetch, Flatten, Nail | Whether the card's glow (`ShouldGlowGoldInternal`) is its attack's condition. Both can be read now (`CardProgramReader.ReadProperty` reads the glow's getter; the attack's condition is a value), so the attack's condition can simply be evaluated instead: the tables can go with `HitsPerPlay`'s cases. |

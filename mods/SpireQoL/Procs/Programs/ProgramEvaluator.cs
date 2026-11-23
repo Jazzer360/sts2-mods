@@ -148,6 +148,20 @@ public static class ProgramEvaluator
         }
     }
 
+    /// <summary>The card's X for a play now: the energy (or stars) it would spend, through Hook.ModifyXValue.</summary>
+    private static object XValue(CardModel card, bool stars)
+    {
+        int spent;
+        if (stars)
+        {
+            if (!card.HasStarCostX && card.CurrentStarCost < 0) return 0m;
+            spent = Math.Max(0, card.GetStarCostWithModifiers());
+        }
+        else spent = card.EnergyCost.GetAmountToSpend();
+        if (card.CombatState is not { } combat) return Unknown;
+        return (decimal)Math.Max(0, MegaCrit.Sts2.Core.Hooks.Hook.ModifyXValue(combat, card, spent));
+    }
+
     /// <summary>The value of the first way whose condition holds; unknown when one before it can't be told.</summary>
     private static object? FirstWay(WaysValue ways, Context context)
     {
@@ -237,6 +251,10 @@ public static class ProgramEvaluator
         }
         // Osty.CheckMissingWithAnim: Osty missing or dead (it plays an animation besides; never called).
         if (query.Of == null && query.Name == "CheckMissingWithAnim" && arguments is [Player player]) return player.IsOstyMissing;
+        // The card's X (ResolveEnergyXValue, ResolveStarXValue: what the play spends, through the X hooks): what playing it now would
+        // spend, as the play's facts read it (PlayFacts' energy and stars), the play itself not yet made.
+        if (query is { Name: "ResolveEnergyXValue" or "ResolveStarXValue", Arguments.Count: 0 } && ReferenceEquals(asked, board.Card))
+            return XValue(board.Card, stars: query.Name == "ResolveStarXValue");
         if (board.PlaysBefore > 0 && LaterPlay(query, asked, arguments, context) is var later && later != Unknown) return later;
         // x is T: x when it's a T, else null.
         if (query.Name == "is" && query.Of != null) return asked != null && IsOfType(asked.GetType(), query.Type) ? asked : null;

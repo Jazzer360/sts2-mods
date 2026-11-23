@@ -22,29 +22,6 @@ namespace SpireQoL.Sim;
 /// </summary>
 public static partial class SimAdapter
 {
-    /// <summary>Orbs each card channels (OrbCmd.Channel&lt;T&gt; in its OnPlay; decompile v0.111.0). Chaos is random (OrbKind.Random: a branch per orb).</summary>
-    private static readonly Dictionary<string, OrbKind[]> Channels = new()
-    {
-        [nameof(BallLightning)] = new[] { OrbKind.Lightning }, [nameof(Zap)] = new[] { OrbKind.Lightning },
-        [nameof(Chill)] = new[] { OrbKind.Frost }, [nameof(ColdSnap)] = new[] { OrbKind.Frost }, [nameof(Coolheaded)] = new[] { OrbKind.Frost },
-        [nameof(Glacier)] = new[] { OrbKind.Frost, OrbKind.Frost },
-        [nameof(Fusion)] = new[] { OrbKind.Plasma }, [nameof(Ignition)] = new[] { OrbKind.Plasma },
-        [nameof(MeteorStrike)] = new[] { OrbKind.Plasma, OrbKind.Plasma, OrbKind.Plasma },
-        [nameof(Glasswork)] = new[] { OrbKind.Glass }, [nameof(Spinner)] = new[] { OrbKind.Glass },
-        [nameof(Null)] = new[] { OrbKind.Dark }, [nameof(ShadowShield)] = new[] { OrbKind.Dark }, [nameof(Darkness)] = new[] { OrbKind.Dark },
-        [nameof(Rainbow)] = new[] { OrbKind.Lightning, OrbKind.Frost, OrbKind.Dark },
-    };
-
-    /// <summary>
-    /// Orb slots a card's play adds or removes (OrbCmd.AddSlots / RemoveSlots in OnPlay; decompile
-    /// v0.111.0): Bulk Up loses its OrbSlots, Capacitor and Modded add their Repeat.
-    /// </summary>
-    internal static int SlotChange(CardModel card, string name) => name switch
-    {
-        nameof(BulkUp) => -Sts2State.Var(card, "OrbSlots", fallback: 1),
-        nameof(Capacitor) or nameof(Modded) or nameof(TheMagician) => Sts2State.Var(card, "Repeat", fallback: 1),
-        _ => 0,
-    };
 
     /// <summary>Your powers the simulator tracks (Plating, Juggernaut, Feel No Pain, Thorns, Flame Barrier).</summary>
     internal static readonly HashSet<string> SelfPowers = new()
@@ -106,24 +83,6 @@ public static partial class SimAdapter
     /// </summary>
     internal static bool IsTemporaryThorns(Type power) => power.BaseType?.Name == "TemporaryThornsPower";
 
-    /// <summary>The kind of orb every channel of this card makes, when it's one kind (null: mixed, random or none).</summary>
-    internal static OrbKind? ChannelKind(string card) =>
-        card is nameof(Tempest) or nameof(Voltaic) ? OrbKind.Lightning
-        : Channels.TryGetValue(card, out var kinds) && kinds.Distinct().Count() == 1 ? kinds[0]
-        : RepeatChannels.TryGetValue(card, out var orbKind) && orbKind != OrbKind.Random ? orbKind
-        : null;
-
-    /// <summary>The simulator channels this card's orbs (for the coverage check).</summary>
-    internal static bool HandlesChannel(string card) => Channels.ContainsKey(card) || RepeatChannels.ContainsKey(card) || card is nameof(Tempest) or nameof(Voltaic);
-
-    /// <summary>Cards that channel their Repeat value of one orb kind.</summary>
-    private static readonly Dictionary<string, OrbKind> RepeatChannels = new()
-    {
-        [nameof(ConsumingShadow)] = OrbKind.Dark, [nameof(Hibernate)] = OrbKind.Frost, [nameof(IceLance)] = OrbKind.Frost,
-        [nameof(Refract)] = OrbKind.Glass, [nameof(Chaos)] = OrbKind.Random,
-        [nameof(TheMagician)] = OrbKind.Random, // random orbs (v0.113.0), after adding as many slots
-
-    };
 
     /// <summary>
     /// Cards that change enemies' Strength this turn (decompile v0.111.0): the value's key ("" = 1),

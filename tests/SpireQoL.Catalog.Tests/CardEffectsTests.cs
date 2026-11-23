@@ -114,6 +114,18 @@ public class CardEffectsTests
         Ways("discards", CardEffects.Discards, Tables.DiscardCards);
         Ways("transforms", CardEffects.Transforms, Tables.TransformCards);
         Ways("takes into hand", CardEffects.TakesIntoHandOf, Tables.HandTakes);
+        // Orbs (SimAdapter.Channels, RepeatChannels, SlotChange, the evoke cards in OrbsOf and EvokedOrbs; PlayFacts.ChannelCount):
+        // each channel's orb, in order, "each round" inside a loop.
+        Exactly(nameof(CardEffects.OrbChannels), program => CardEffects.OrbChannels(program).Count > 0, Tables.ChannelCards.Keys.ToArray());
+        foreach (var (card, orbs) in Tables.ChannelCards)
+        {
+            if (!programs.TryGetValue(card, out var program)) continue;
+            var read = string.Join(", ", CardEffects.OrbChannels(program).Select(channel =>
+                (CardEffects.OrbOf(channel.Command)?.ToString() ?? "?") + (channel.Loops.Count > 0 ? " each round" : "")));
+            if (read != orbs) failures.Add($"{card} ({branch}) channels: {read}; the table: {orbs}");
+        }
+        Exactly(nameof(CardEffects.OrbSlotChanges), program => CardEffects.OrbSlotChanges(program).Count > 0, "BulkUp", "Capacitor", "Modded", "TheMagician");
+        Exactly(nameof(CardEffects.OrbEvokes), program => CardEffects.OrbEvokes(program).Count > 0, "Dualcast", "Quadcast", "MultiCast", "Shatter");
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
@@ -185,6 +197,17 @@ public class CardEffectsTests
         public static readonly string[] ForgeCards =
         {
             "BeatIntoShape", "BigBang", "Bulwark", "Conqueror", "RefineBlade", "SeekingEdge", "SpoilsOfBattle", "SummonForth", "TheSmith", "WroughtInWar",
+        };
+        // Channels (SimAdapter.Channels: the kinds in order, Glacier two Frost, Meteor Strike three Plasma, Chill one Frost per enemy;
+        // RepeatChannels: one kind its Repeat times, Chaos and The Magician random; Tempest's and Voltaic's Lightning).
+        public static readonly Dictionary<string, string> ChannelCards = new()
+        {
+            ["BallLightning"] = "Lightning", ["Zap"] = "Lightning", ["Chill"] = "Frost each round", ["ColdSnap"] = "Frost", ["Coolheaded"] = "Frost",
+            ["Glacier"] = "Frost each round", ["Fusion"] = "Plasma", ["Ignition"] = "Plasma", ["MeteorStrike"] = "Plasma each round",
+            ["Glasswork"] = "Glass", ["Spinner"] = "Glass", ["Null"] = "Dark", ["ShadowShield"] = "Dark", ["Darkness"] = "Dark",
+            ["Rainbow"] = "Lightning, Frost, Dark", ["ConsumingShadow"] = "Dark each round", ["Hibernate"] = "Frost each round",
+            ["IceLance"] = "Frost each round", ["Refract"] = "Glass each round", ["Chaos"] = "Random each round", ["TheMagician"] = "Random each round",
+            ["Tempest"] = "Lightning each round", ["Voltaic"] = "Lightning each round",
         };
         // Discards (PlayFacts.DiscardCount), with how each takes them: a pick from your hand (one, or its Cards), your whole hand, the
         // cards it drew (Scrape), the ones looked at on top of your draw pile (Ki Chant).

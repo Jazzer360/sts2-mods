@@ -31,6 +31,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - No Draw and Fiddle stop the draws a play sets off (Dark Embrace on an exhaust) in the predictions too, not only in the card's own draws.
 - Flak Cannon counts the statuses it exhausts (read from its code: every status outside your exhaust pile), so Feel No Pain, Dark Embrace and the exhaust counters react to them.
 - The Hermit with only Curses in hand exhausts the one you pick and discards nothing: discard reactions (Tough Bandages, Tingsha) no longer show for it.
+- Upgraded Tempest's extra Lightning counts for Metronome.
 - Cleanse's pick from your draw pile takes a card out of it whichever you pick: later draws this turn have one card fewer to draw before the discard pile is shuffled in (with cards that differ in the pile, none was taken).
 - A card's draws are read from its own code, on the condition its code puts them on, evaluated against the board (Impatience's hand, Restlessness alone in your hand, FTL's plays this turn, Fetch's Osty, Ki Hop's and Wrest's arrows, Mad Science's rider): Normality no longer counts as drawing 3 (it draws nothing), and Scrawl played from your draw pile (Havoc) draws up to a full hand, not one more.
 - The checks no longer report Self-Forming Clay as not firing (its code never flashes: a relic like it is now checked by what it does), nor a draw relic or power that fired with nothing to draw (both piles empty).

@@ -462,7 +462,7 @@ public sealed class PlayFacts
             swiftDraws = swift.Amount;
         var drawPile = Sts2State.DrawPileCount(me);
         var name = card.GetType().Name;
-        var evoked = EvokedOrbs(card, name, me, combat, ChannelCount(card, name, me) * Math.Max(1, plays), Math.Max(1, plays));
+        var evoked = EvokedOrbs(card, me, ChannelCount(card) * Math.Max(1, plays), Math.Max(1, plays));
         var orbs = OrbDamageFor(evoked, me, combat);
         var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(card.GetType(), me);
         // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
@@ -510,7 +510,7 @@ public sealed class PlayFacts
             EnemyDebuffs = Fool.IsShot(card) && !Fool.Shoots(card, me) ? Array.Empty<Type>() : EnemyDebuffTypes(card),
             EnemyTemporaryDebuffs = Fool.IsShot(card) && !Fool.Shoots(card, me) ? Array.Empty<Type>() : EnemyDebuffTypes(card, temporary: true),
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
-            Channels = ChannelCount(card, name, me) * Math.Max(1, plays),
+            Channels = ChannelCount(card) * Math.Max(1, plays),
             StarGains = StarGainsOf(card) * Math.Max(1, plays),
             OstyAttacks = IsOstyAttack(card) ? Math.Max(1, plays) : 0,
             LosesHp = card.DynamicVars.ContainsKey("HpLoss"),
@@ -633,16 +633,17 @@ public sealed class PlayFacts
     /// slots (each channel past capacity evokes the front orb first; OrbCmd.Channel). Orbs the play
     /// channels and then evokes itself aren't counted (their type may be random).
     /// </summary>
-    private static List<OrbModel> EvokedOrbs(CardModel card, string name, Player me, ICombatState combat, int channels, int plays)
+    private static List<OrbModel> EvokedOrbs(CardModel card, Player me, int channels, int plays)
     {
         var result = new List<OrbModel>();
         var orbQueue = me.PlayerCombatState?.OrbQueue;
         if (orbQueue == null) return result;
         var queue = orbQueue.Orbs.Cast<OrbModel?>().ToList();
         var cap = orbQueue.Capacity;
+        var plan = OrbsOf(card);
         // A new orb pushed out by a later channel (Voltaic's Lightning filling every slot) evokes too: one of yours
         // of the same kind stands in for it when its evoke doesn't depend on the orb itself (Lightning, Frost).
-        var kind = SpireQoL.Sim.SimAdapter.ChannelKind(name);
+        var kind = plan.ChannelKind;
         OrbModel? template = kind switch
         {
             SpireQoL.Sim.OrbKind.Lightning => orbQueue.Orbs.OfType<LightningOrb>().FirstOrDefault(),
@@ -658,17 +659,12 @@ public sealed class PlayFacts
         }
         for (var playIndex = 0; playIndex < plays; playIndex++)
         {
-            switch (name)
-            {
-                case nameof(Dualcast): EvokeFront(times: 2, remove: true); break;
-                case nameof(Quadcast): EvokeFront(Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 4)), remove: true); break;
-                case nameof(MultiCast): EvokeFront(XValue(combat, card, SafeEnergy(card)) + (card.IsUpgraded ? 1 : 0), remove: true); break;
-                case nameof(Shatter):
-                    while (queue.Count > 0) EvokeFront(times: 2, remove: true);
-                    break;
-            }
+            // Its own evokes (read from its program: OrbsOf): every orb that many times (Shatter), or the front orb (Dualcast, Quadcast, Multicast).
+            if (plan.EvokesEachOrb > 0)
+                while (queue.Count > 0) EvokeFront(plan.EvokesEachOrb, remove: true);
+            else if (plan.EvokesFront > 0) EvokeFront(plan.EvokesFront, remove: true);
             // Slots the card adds before it channels (The Magician: OrbCmd.AddSlots, up to 10).
-            var added = SpireQoL.Sim.SimAdapter.SlotChange(card, name);
+            var added = plan.Slots;
             if (added > 0) cap = Math.Min(10, cap + added);
             for (var channelIndex = 0; channelIndex < channels / Math.Max(1, plays); channelIndex++)
             {
@@ -1326,24 +1322,58 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ orbs, stars, Osty
 
-    internal static int ChannelCount(CardModel card, string name, Player me) => name switch
-    {
-        nameof(BallLightning) or nameof(ColdSnap) or nameof(Coolheaded) or nameof(Fusion) or nameof(Glasswork) or nameof(Ignition)
-            or nameof(Null) or nameof(ShadowShield) or nameof(Zap) or nameof(Darkness) => 1,
-        nameof(Spinner) => card.IsUpgraded ? 1 : 0, // only Spinner+ channels on play; Spinner's power channels at turn start
-        nameof(Chill) => ChillChannels(card), // one Frost per hittable enemy
-        nameof(Glacier) => 2,
-        nameof(MeteorStrike) or nameof(Rainbow) => 3,
-        nameof(Chaos) or nameof(ConsumingShadow) or nameof(Hibernate) or nameof(IceLance) or nameof(Refract) or nameof(TheMagician) => Sts2State.Var(card, "Repeat", fallback: 1),
-        nameof(Tempest) => me?.PlayerCombatState?.Energy ?? 1, // X lightning
-        // One Lightning per Lightning channeled this combat (its calculation reads the history).
-        nameof(Voltaic) => card.DynamicVars.TryGetValue("CalculatedChannels", out var dynamicVar) && dynamicVar is CalculatedVar calc ? (int)calc.Calculate(null) : 0,
-        _ => 0,
-    };
+    /// <summary>Orbs one play channels (Metronome), read from its program (OrbsOf).</summary>
+    internal static int ChannelCount(CardModel card) => OrbsOf(card).Channels.Sum(channel => channel.Times);
 
-    private static int ChillChannels(CardModel card)
+    /// <summary>
+    /// What one play does to your orbs, read from its program (decision #182: CardEffects.OrbChannels, OrbEvokes, OrbSlotChanges) and
+    /// worked out on the board: the slots it adds or removes (their count argument: Capacitor's Repeat, Bulk Up's OrbSlots), how many
+    /// times it evokes your front orb (each OrbCmd.EvokeNext times its loops' rounds: Dualcast twice, Quadcast its Repeat, Multicast its
+    /// X, one more upgraded) or every orb (a loop over your orbs: Shatter twice each), and each channel, in order, with its orb (its
+    /// class, or random: Chaos) and how many times (its loops' rounds: Glacier 2, Chill your enemies, Tempest its X, Voltaic its count),
+    /// on its condition (Spinner+ only). An evoke with no orb to evoke does nothing (as OrbCmd.EvokeNext), so its test isn't asked.
+    /// </summary>
+    internal static OrbPlan OrbsOf(CardModel card)
     {
-        try { return card.CombatState is { } combat ? combat.HittableEnemies.Count : 1; } catch { return 1; }
+        var type = card.GetType();
+        var program = Programs.CardPrograms.Of(type);
+        var board = new Programs.ProgramBoard(card);
+        int Number(Programs.ProgramValue value, int fallback) => Programs.ProgramEvaluator.Number(value, board, program) is { } read ? (int)read : fallback;
+        int Times(Programs.CardEffects.Found found) => found.Loops.Aggregate(1, (times, loop) => times * Rounds(loop, board, program));
+        var slots = 0;
+        foreach (var change in Programs.CardEffects.OrbSlotChanges(type))
+            if (Programs.ProgramEvaluator.Holds(change.Condition, board, program) != false && change.Command.Values.Count > 1)
+                slots += (change.Command.Command.Name == "RemoveSlots" ? -1 : 1) * Number(change.Command.Values[1], fallback: 1) * Times(change);
+        var eachOrb = Programs.CardEffects.EvokesPerOrbOfAll(type);
+        var front = eachOrb > 0 ? 0 : Programs.CardEffects.OrbEvokes(type).Sum(Times);
+        var channels = new List<(SpireQoL.Sim.OrbKind Kind, int Times)>();
+        foreach (var channel in Programs.CardEffects.OrbChannels(type))
+        {
+            if (Programs.CardEffects.OrbOf(channel.Command) is not { } kind || Programs.ProgramEvaluator.Holds(channel.Condition, board, program) == false) continue;
+            var times = Times(channel);
+            if (times > 0) channels.Add((kind, times));
+        }
+        return new OrbPlan(slots, front, eachOrb, channels);
+    }
+
+    /// <summary>One play's orbs (OrbsOf).</summary>
+    internal sealed record OrbPlan(int Slots, int EvokesFront, int EvokesEachOrb, IReadOnlyList<(SpireQoL.Sim.OrbKind Kind, int Times)> Channels)
+    {
+        /// <summary>The kind every channel makes, when it's one kind (null: mixed, random or none).</summary>
+        public SpireQoL.Sim.OrbKind? ChannelKind => Channels.Select(channel => channel.Kind).Distinct().ToList() is [var only] && only != SpireQoL.Sim.OrbKind.Random ? only : null;
+    }
+
+    /// <summary>
+    /// How many rounds a loop of the play goes on the board: its foreach's collection (Chill: the enemies you can hit), its counter's
+    /// bound (i &lt; Repeat, i &lt; 2, i &lt; your X), or the card value it's over; one when none can be told (the game's template card).
+    /// </summary>
+    internal static int Rounds(Programs.LoopStep loop, Programs.ProgramBoard board, Programs.CardProgram program)
+    {
+        if (loop.Items != null) return Programs.ProgramEvaluator.Items(loop.Items, board, program) is { } items ? items.Count : 1;
+        if (loop.While is { Terms: [[{ Holds: true, Test: Programs.CompareValue { Op: Programs.Comparison.Less or Programs.Comparison.LessOrEqual } bound }]] }
+            && Programs.ProgramEvaluator.Number(bound.Right, board, program) is { } most)
+            return Math.Max(0, (int)most + (bound.Op == Programs.Comparison.LessOrEqual ? 1 : 0));
+        return board.Card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(board.Card, loop.Over) : 1;
     }
 
     /// <summary>

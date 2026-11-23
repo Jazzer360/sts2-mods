@@ -532,29 +532,15 @@ public static partial class SimAdapter
     private static IEnumerable<SimAction> OrbsOf(CardModel card, Player me, ICombatState combat, string name, int channelTo)
     {
         var actions = new List<SimAction>();
-        var slots = SlotChange(card, name);
-        if (slots != 0) actions.Add(new OrbAction(OrbAction.Op.Slots) { Slots = slots });
-        int X() => SafeInt(() => Hook.ModifyXValue(combat, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0);
-        switch (name)
-        {
-            case nameof(Dualcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = 2 }); break;
-            case nameof(Quadcast): actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 4)) }); break;
-            case nameof(MultiCast) when X() is var evokes and > 0: actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = evokes }); break;
-            case nameof(Shatter): actions.Add(new OrbAction(OrbAction.Op.EvokeAllTwice)); break;
-        }
-        void Channel(OrbKind kind, int times)
-        {
-            // Aimed at no teammate (Ignition with none to aim at): nothing channelled.
-            if (times > 0 && channelTo != Who.None) actions.Add(new OrbAction(OrbAction.Op.Channel) { Orb = kind, Times = times, To = channelTo });
-        }
-        if (Channels.TryGetValue(name, out var kinds))
-        {
-            var times = name is nameof(Spinner) or nameof(Chill) ? PlayFacts.ChannelCount(card, name, me) : 1;
-            for (var time = 0; time < times; time++) foreach (var orbKind in kinds) Channel(orbKind, times: 1);
-        }
-        else if (RepeatChannels.TryGetValue(name, out var otherOrbKind)) Channel(otherOrbKind, Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 1)));
-        else if (name == nameof(Voltaic)) Channel(OrbKind.Lightning, PlayFacts.ChannelCount(card, name, me));
-        else if (name == nameof(Tempest)) Channel(OrbKind.Lightning, X());
+        // What it does to your orbs, read from its program (PlayFacts.OrbsOf): slots, evokes, then each channel in its code's order.
+        var plan = PlayFacts.OrbsOf(card);
+        if (plan.Slots != 0) actions.Add(new OrbAction(OrbAction.Op.Slots) { Slots = plan.Slots });
+        if (plan.EvokesEachOrb == 2) actions.Add(new OrbAction(OrbAction.Op.EvokeAllTwice));
+        else if (plan.EvokesEachOrb > 0) actions.Add(new NotModelledAction($"every orb evoked {plan.EvokesEachOrb} times"));
+        else if (plan.EvokesFront > 0) actions.Add(new OrbAction(OrbAction.Op.EvokeFront) { Times = plan.EvokesFront });
+        // Aimed at no teammate (Ignition with none to aim at): nothing channelled.
+        foreach (var (kind, times) in plan.Channels)
+            if (channelTo != Who.None) actions.Add(new OrbAction(OrbAction.Op.Channel) { Orb = kind, Times = times, To = channelTo });
         var focus = FocusChange(card);
         if (focus != 0) actions.Add(new FocusAction(focus));
         return actions;

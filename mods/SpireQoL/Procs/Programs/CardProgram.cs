@@ -874,6 +874,9 @@ public static class CardProgramReader
                     if (field.DeclaringType.StartsWith("<>c__DisplayClass", StringComparison.Ordinal) && !field.Name.StartsWith('<')
                         && FieldStoredOnce(field.Name) is { } capturedStore && ReadBack(capturedStore, depth + 1) is { Start: >= 0, Value: not (ParameterValue or NamedValue) } captured)
                         return (captured.Value is ConstantValue ? captured.Value : new StoredValue(field.Name, captured.Value, Ops[capturedStore].Offset), receiver.Start);
+                    // A local kept across awaits and stored on several ways (Tempest's X, one more upgraded): its last store on each way.
+                    if (field.Name.Contains(">5__", StringComparison.Ordinal) && FieldLastStored(field.Name, at, depth) is { } last)
+                        return (last is StoredValue lastStore ? lastStore with { Name = FieldName(field.Name) } : last, receiver.Start);
                     return (new NamedValue(FieldName(field.Name)), receiver.Start);
                 }
                 return (new QueryValue(field.DeclaringType, field.Name, receiver.Value, Array.Empty<ProgramValue>(), field.ValueType), receiver.Start);
@@ -1203,12 +1206,20 @@ public static class CardProgramReader
         /// type test: AllForOne's Filter), as a condition: each store's value on the ways it's the last store made (no later one reached).
         /// Null when a store isn't a true-or-false, isn't reached yet, or a store after the read is in a loop with it.
         /// </summary>
-        private ProgramValue? LastStored(int slot, int loadAt, int depth)
+        private ProgramValue? LastStored(int slot, int loadAt, int depth) =>
+            LastStored(index => Ops[index].Slot == slot && Ops[index].OpCode.Name!.StartsWith("stloc", StringComparison.Ordinal), loadAt, depth);
+
+        /// <summary>The same for a local the state machine keeps across awaits (a field: Tempest's numOfOrbs = X, then one more upgraded).</summary>
+        private ProgramValue? FieldLastStored(string field, int loadAt, int depth) =>
+            LastStored(index => Ops[index].OpCode == OpCodes.Stfld && Ops[index].Member?.Name == field && !(index > 0 && Ops[index - 1].OpCode == OpCodes.Ldnull),
+                loadAt, depth);
+
+        private ProgramValue? LastStored(Func<int, bool> isStore, int loadAt, int depth)
         {
             var stores = new List<int>();
             for (var i = 0; i < Ops.Count; i++)
             {
-                if (Ops[i].Slot != slot || !Ops[i].OpCode.Name!.StartsWith("stloc", StringComparison.Ordinal)) continue;
+                if (!isStore(i)) continue;
                 // A store in a loop the read is in can come from an earlier round (a loop's counter): not read.
                 if (_loopEnds.Any(loop => loop.Key <= loadAt && loadAt <= loop.Value && loop.Key <= i && i <= loop.Value)) return null;
                 if (i < loadAt) stores.Add(i);

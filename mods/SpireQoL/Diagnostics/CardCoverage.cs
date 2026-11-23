@@ -188,9 +188,9 @@ internal static class CardCoverage
         // An attack on a condition, on a card that glows gold: is the glow that condition (Pact's End)? Its hits must say.
         if (PlayFacts.AttacksConditionallyAndGlows(card.GetType()) && !PlayFacts.GlowGatedAttackCards.Contains(name) && !PlayFacts.GlowNotTheAttack.ContainsKey(name))
             issues.Add("attacks only on a condition and glows gold (is the glow its condition? PlayFacts.GlowGatedAttackCards)");
-        if (Calls("OrbCmd", "Channel") && !SimAdapter.HandlesChannel(name))
+        if (Calls("OrbCmd", "Channel") && !Procs.Programs.CardEffects.ChannelsKnownOrbs(card.GetType()))
             issues.Add("channels orbs (the simulator doesn't add them)");
-        if (Calls("OrbCmd", "Channel") && None(otherCard => PlayFacts.ChannelCount(otherCard, name, null!)))
+        if (Calls("OrbCmd", "Channel") && None(PlayFacts.ChannelCount))
             issues.Add("channels orbs (not counted for Metronome)");
         if (Calls("CreatureCmd", "GainBlock") && None(otherCard => PlayFacts.BlockGainCount(otherCard, name, others)))
             issues.Add("gains block without a Block value (not in the simulator or Juggernaut)");
@@ -271,7 +271,7 @@ internal static class CardCoverage
         if ((Calls("CardCmd", "Transform") || Calls("CardCmd", "TransformTo") || Calls("CardCmd", "TransformToRandom"))
             && None(otherCard => PlayFacts.TransformCount(otherCard, all, drawPile: 5)))
             issues.Add("transforms cards (not counted: the proc check's created-card budget)");
-        if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(otherCard => Math.Abs(SimAdapter.SlotChange(otherCard, name))))
+        if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(otherCard => Math.Abs(PlayFacts.OrbsOf(otherCard).Slots)))
             issues.Add("changes your orb slots (the simulator doesn't change them)");
         foreach (var applied in PowersApplied(card.GetType()))
             if (SimAdapter.PlainSelfPowerAmount(card, applied) == 0)
