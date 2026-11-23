@@ -83,6 +83,7 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.GainsStarsOnKill), CardEffects.GainsStarsOnKill, Tables.KillStarCards);
         Exactly(nameof(CardEffects.DislodgesArrows), CardEffects.DislodgesArrows, Tables.DislodgeCards);
         Exactly(nameof(CardEffects.KeepsStretchForReplays), CardEffects.KeepsStretchForReplays, Tables.KeepsStretchCards);
+        Exactly(nameof(CardEffects.TakesWholeHand), CardEffects.TakesWholeHand, Tables.WholeHandCards);
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
@@ -111,6 +112,8 @@ public class CardEffectsTests
         public static readonly string[] KillStarCards = { "KnockoutBlow" };
         public static readonly string[] DislodgeCards = { "Recall", "Uproot", "Wrest" };
         public static readonly string[] KeepsStretchCards = { "ChoKi" };
+        // The whole hand (PlayFacts.WholeHandCards).
+        public static readonly string[] WholeHandCards = { "FiendFire", "Stoke", "TheDevil", "CalculatedGamble", "ShadowStep", "StormOfSteel", "WheelOfFortune", "Reboot" };
         // Made cards (PlayFacts.SadnessCards, ForgeCards).
         public static readonly string[] SadnessCards = { "BrightenUp", "Jest", "MourningBlow", "Rummage", "SelfDeprecate", "SorrowfulStrike", "Vitriol" };
         public static readonly string[] ForgeCards =

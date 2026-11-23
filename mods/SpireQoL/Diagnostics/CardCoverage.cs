@@ -255,7 +255,7 @@ internal static class CardCoverage
         // A card whose own play moves cards (CardPileCmd.Add): into your hand (Hologram, Wish: your hand size after), back out of it
         // onto your draw pile (Glimmer), or somewhere your hand doesn't see. Each is counted or reviewed by where it moves them.
         if (Calls("CardPileCmd", "Add") && !Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !Procs.Programs.CardEffects.PutsBackFromHand(card.GetType())
-            && !PlayFacts.WholeHandCards.Contains(name) && !Procs.Programs.CardEffects.MovesCardsElsewhere(card.GetType()))
+            && !Procs.Programs.CardEffects.TakesWholeHand(card.GetType()) && !Procs.Programs.CardEffects.MovesCardsElsewhere(card.GetType()))
             issues.Add("moves cards with CardPileCmd.Add in its play (into or out of your hand? not counted: hand size after)");
         // A card counted as taking cards into your hand: the simulator takes them out of their pile (which pile, which cards).
         if (Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !SimAdapter.HandTakes.ContainsKey(name))

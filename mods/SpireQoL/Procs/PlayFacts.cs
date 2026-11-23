@@ -495,7 +495,7 @@ public sealed class PlayFacts
             // Ki Chant looks at your draw pile, so each play discards its share; the others depend on the hand.
             Discards = DiscardCount(card, name, others, draws) * (name == nameof(KiChant) ? Math.Max(1, plays) : 1),
             LeavesHand = LeavingHand(card, name, others, drawPile, draws, plays),
-            TakesWholeHand = WholeHandCards.Contains(name),
+            TakesWholeHand = Programs.CardEffects.TakesWholeHand(card.GetType()),
             MayDiscardSly = name is not (nameof(KiChant) or nameof(Scrape)) && DiscardCount(card, name, others, draws) > 0 && others.Any(other => other.IsSlyThisTurn)
                             && !Programs.CardEffects.DiscardsOnlyPicks(card.GetType()),
             OwnDraws = draws + swiftDraws,
@@ -1076,14 +1076,6 @@ public sealed class PlayFacts
             ? Math.Min(name == nameof(ThinkingAhead) ? 1 : Sts2State.Var(card, "PutBack", fallback: 1), others.Count + draws) * Math.Max(1, plays) : 0;
         return exhausts + discards + putBack;
     }
-
-    /// <summary>Cards that take your whole hand (exhaust or discard every card in it), from each OnPlay.</summary>
-    internal static readonly HashSet<string> WholeHandCards = new()
-    {
-        nameof(FiendFire), nameof(Stoke), nameof(TheDevil),                                                  // exhaust it
-        nameof(CalculatedGamble), nameof(ShadowStep), nameof(StormOfSteel), nameof(WheelOfFortune),          // discard it
-        nameof(Reboot),                                                                               // shuffle it into your draw pile, then draw
-    };
 
     internal static int DiscardCount(CardModel card, string name, List<CardModel> others, int draws)
     {

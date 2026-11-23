@@ -153,6 +153,24 @@ public static class CardEffects
     public static bool DislodgesArrows(Type cardType) => DislodgesArrows(CardPrograms.Of(cardType));
     public static bool KeepsStretchForReplays(Type cardType) => KeepsStretchForReplays(CardPrograms.Of(cardType));
 
+    public static bool TakesWholeHand(Type cardType) => TakesWholeHand(CardPrograms.Of(cardType));
+
+    /// <summary>
+    /// Takes every card in your hand, whatever it is: a loop over your hand's cards that exhausts, discards or moves each (Fiend Fire,
+    /// The Devil, Reboot), or a discard of the hand's cards (Storm of Steel, Calculated Gamble). Not a loop over some of them (Second
+    /// Wind's non-Attacks, Growth's Sadness: a filter, Where).
+    /// </summary>
+    public static bool TakesWholeHand(CardProgram program) =>
+        program.All().OfType<LoopStep>().Any(loop => IsWholeHand(loop.Over.Replace("each of ", ""))
+                                                     && loop.Body.OfType<CommandStep>().Any(command => TakesFromHand(command)))
+        || program.Commands.Any(command => command.Command.DeclaringType == "CardCmd" && command.Command.Name is "Discard" or "DiscardAndDraw"
+                                           && IsWholeHand(Argument(command, 1)));
+
+    private static bool IsWholeHand(string? cards) => cards is "Hand.Cards" or "Hand.Cards.ToList";
+
+    private static bool TakesFromHand(CommandStep command) =>
+        command.Command.DeclaringType == "CardCmd" && command.Command.Name is "Exhaust" or "Discard" || Is(command, "CardPileCmd", "Add");
+
     // ---- the rest
 
     /// <summary>Plays cards from the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile: Havoc, Cascade, The Devil).</summary>

@@ -204,8 +204,12 @@ hooks.
     attack in it: Ice Lance, Heirloom Hammer) replaced `SingleHitRepeatCards`.
   - The rest (2026-11-23): `AutoPlaysFromDrawPile` (`PlaysFromDrawPile`), `SummonsEachPlayer` (an Osty summon for each player a
     loop goes over: `AllPlayersSummonCards`), `GainsStarsOnKill` (a star gain behind a test after its attack: `KillStarCards`),
-    `DislodgesArrows` (`ArrowCmd.DislodgeArrow` on the target: `Fool.DislodgeCards`), `KeepsStretchForReplays` (Stretch to you
+    `DislodgesArrows` (`ArrowCmd.DislodgeArrow` on the target: Fool's `DislodgeCards`), `KeepsStretchForReplays` (Stretch to you
     after your block: `KeepsStretchCards`).
+  - The whole hand (2026-11-23): a foreach now says what it goes over (`loop over each of Hand.Cards.ToList`), a pile is named by
+    its type (`PileType.Hand.GetPile(owner)` reads as `Hand`), a query over a collection by what it queries (`Hand.Cards.ToList`),
+    and a local kept across awaits and stored once by what was stored (The Devil's `cards`). `TakesWholeHand` (a loop over your
+    hand's cards that exhausts, discards or moves each, or a discard of the hand's cards) replaced `WholeHandCards`.
   - Each was proven to give exactly its table's cards on both branches before the table was deleted
     (`CardEffectsTests.EachRuleFindsExactlyTheTableItReplaced` keeps the tables as they were), and the catalog snapshot was
     unchanged by the swap.
@@ -254,6 +258,30 @@ One source for both the tabs and the simulator.
 - **Golden fights**: `SinglePlayerGoldenTests` is regenerated once, in the commit that switches, with the expected changes
   named (block before attack, events at their command). The replay cases and performance tests must pass unchanged, or with
   a stated reason.
+
+### A5. What code can't say
+
+The aim is every card read by the interpreter, with no card named. What is left falls in two groups.
+
+**Can't, by the contract (the player's choice decides it).** These stay out on purpose, each with its scan:
+- **Which card a pick takes** (A1, `Choice`): a pick is a card, never a particular one. What only a particular card would do
+  (a Sly card playing itself, Drum of Battle's energy, the card's cost) is the player's own decision, neither simulated nor
+  marked.
+- **How many a pick takes** (Neow's Fury: `HandTakeChosen`): the count changes what's predicted, so it keeps its
+  `NotModelledAction`.
+
+**Not yet read (reader gaps, not limits).** Each still has its table and its scan, and what the reader needs to read it:
+
+| Table (where) | Cards | What the program doesn't say yet |
+|---|---|---|
+| `ConditionalDrawCards`, `TargetDrawCards` (PlayFacts) and `CardsDrawn`'s cases | Impatience, Fetch, FTL, Restlessness, Ki Hop, Wrest | A condition's value. The reader names a condition by its last query but doesn't keep its polarity (`brtrue` against `brfalse`) or the expression behind it: a local's origin (Ki Hop's `wasImpaled`, taken before the attack), a lambda over your hand (Impatience). Wrest's draw sits behind an `if` holding a `while`, which the reader reads as unconditioned. A replay's later plays also need per-play state (FTL's plays this turn, Fetch's first play, Ki Hop's arrow coming loose). |
+| `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The loop's exit test reads the drawn card (Pillage's do-while while it draws an Attack); needs a condition's expression, as above. |
+| `ExhaustOthers`, `ExhaustPickOf`, `ExhaustTakesNoActingCard`, `DiscardCount`, `TransformCount`, `TakenToHandCount`, `GeneratedCount` (PlayFacts) | most cards that exhaust, discard, transform, take or make cards | The count: a loop over a filtered collection (`Where` with a lambda: Second Wind's non-Attacks, Growth's Sadness) or a pick's size. Loops now say what they go over (`each of Hand.Cards.ToList`), so the unfiltered cases are within reach; filters need the lambda read. |
+| `ChannelCount`, `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | orb, block and multi-hit cards | Counts from loops and conditions (`loop over Repeat`, Chill's loop over enemies, Cho Firm's arrow test): needs loop counts as values and conditions as queries. |
+| `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
+| `TriggerPoisonCards`, `TeammatesShivCards`, `EnemyStrengthCards` | Outbreak, Blade Symphony, Strength takers | A call on a power (`PoisonPower.Trigger` isn't a command); the player a helper's Shivs go to (an argument inside the helper); a power's sign and duration. |
+| `GlowGatedAttackCards`, `GlowNotTheAttack` | Pact's End; Fetch, Flatten, Nail | Whether the card's glow (`ShouldGlowGoldInternal`) is its attack's condition: comparing two expressions. |
+| `HandTakes`, `AutoPlayFromDrawAction`'s count, `Fool.BlockWithoutVar` | the take-into-hand cards, Havoc, Cascade, The Devil | Which pile and filter a take uses, and the count argument (`cards.Count`, X + 1 upgraded). |
 
 ## Part B: pipelines and models checked against the game's code
 

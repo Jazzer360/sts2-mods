@@ -464,11 +464,23 @@ public static class CardProgramReader
             for (var i = end; i > start; i--)
             {
                 var member = Ops[i].Member;
-                if (member is { Name: "MoveNext" }) return "each item";
+                if (member is { Name: "MoveNext" }) return EnumeratedBefore(start) is { } items ? "each of " + items : "each item";
                 if (member is { Name: "get_IntValue" or "get_BaseValue" } && i > 0 && Ops[i - 1].Member is { } value) return value.Name.Replace("get_", "");
                 if (member is { Name: "get_Item" } && Ops[i - 1].Text is { } key) return key;
             }
             return "?";
+        }
+
+        /// <summary>What a foreach starting at <paramref name="start"/> goes over: the collection whose GetEnumerator it calls first ("Hand.Cards.ToList").</summary>
+        private string? EnumeratedBefore(int start)
+        {
+            for (var i = start - 1; i >= 0 && i >= start - 24; i--)
+            {
+                if (Ops[i].Member is not { Name: "GetEnumerator" } enumerator || !Ops[i].IsCall) continue;
+                var items = Source(i, enumerator, parameter: enumerator.HasThis ? -1 : 0);
+                return items == "?" || items.StartsWith("ld", StringComparison.Ordinal) ? null : items;
+            }
+            return null;
         }
 
         /// <summary>The condition a branch tests, named by the last thing it asks the game (a property, a method, a delegate's).</summary>
@@ -504,13 +516,34 @@ public static class CardProgramReader
                     return holder.Name == "get_Item" && index > 1 && Ops[index - 2].Text is { } key ? key : holder.Name.Replace("get_", "");
                 if (member.Name == "get_Item" && index > 0 && Ops[index - 1].Text is { } itemKey) return itemKey;
                 // A state machine's field: the card itself, a parameter (cardPlay) or a local kept across awaits (<target>5__2).
-                if (member.Kind == CodeMemberKind.Field) return FieldName(member.Name);
+                if (member.Kind == CodeMemberKind.Field)
+                {
+                    // A local kept across awaits and stored once (<cards>5__2 = hand.Cards.ToList()): what was stored.
+                    if (member.Name.Contains(">5__", StringComparison.Ordinal) && depth < 3 && FieldStoredOnce(member.Name) is { } fieldStore
+                        && CodeDecoder.Producer(Ops, fieldStore, depth: 0, stop: at => _noise[at]) is { } fieldValue)
+                    {
+                        var storedInField = Describe(fieldValue, depth + 1);
+                        if (storedInField != "?" && !storedInField.StartsWith("ld", StringComparison.Ordinal)) return storedInField;
+                    }
+                    return FieldName(member.Name);
+                }
                 var name = member.Name.Replace("get_", "");
                 // A property of something: whose (base.Owner.Creature, cardPlay.Target, a chosen teammate's Creature).
                 if (member.Kind == CodeMemberKind.Method && member.HasThis && member.Name.StartsWith("get_", StringComparison.Ordinal) && depth < 3)
                 {
                     var receiver = Source(index, member, parameter: -1, depth + 1);
                     if (receiver is not ("this" or "?") && !receiver.StartsWith("ld", StringComparison.Ordinal)) name = receiver + "." + name;
+                }
+                // A pile (PileType.Hand.GetPile(owner)): by its type, "Hand".
+                if (member is { Kind: CodeMemberKind.Method, HasThis: false, Name: "GetPile", ParameterCount: >= 1 } && depth < 4
+                    && int.TryParse(Source(index, member, parameter: 0, depth + 1), out var pileType)
+                    && Enum.IsDefined(typeof(MegaCrit.Sts2.Core.Entities.Cards.PileType), pileType))
+                    return ((MegaCrit.Sts2.Core.Entities.Cards.PileType)pileType).ToString();
+                // A query over a collection (cards.ToList(), cards.Where(...)): of what.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: false, Namespace: "System.Linq", ParameterCount: >= 1 } && depth < 3)
+                {
+                    var source = Source(index, member, parameter: 0, depth + 1);
+                    if (source != "?" && !source.StartsWith("ld", StringComparison.Ordinal)) name = source + "." + name;
                 }
                 return name;
             }
@@ -523,6 +556,22 @@ public static class CardProgramReader
                 if (described != "?" && !described.StartsWith("ld", StringComparison.Ordinal)) return described;
             }
             return instruction.OpCode.Name ?? "?";
+        }
+
+        /// <summary>
+        /// The one instruction that stores the state machine's field <paramref name="field"/>, when only one does (the machine clearing
+        /// it to null when it finishes isn't a value of it).
+        /// </summary>
+        private int? FieldStoredOnce(string field)
+        {
+            int? found = null;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].OpCode != OpCodes.Stfld || Ops[i].Member?.Name != field || i > 0 && Ops[i - 1].OpCode == OpCodes.Ldnull) continue;
+                if (found != null) return null;
+                found = i;
+            }
+            return found;
         }
 
         /// <summary>The one instruction that stores local <paramref name="slot"/>, when only one does (else null: which value is meant isn't straight).</summary>
