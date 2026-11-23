@@ -1,0 +1,197 @@
+# Card programs: a card plays in its own code's order (decision #182)
+
+The simulator never decides the order of a card's effects. Each card's play is read from the game's code in the running game:
+its commands in the order the code calls them, with where each amount comes from. The simulator runs each command through
+the game's pipeline for it, with its hooks inside, in that order. When a card's code changes in a game update, or differs
+between beta and main, the prediction follows with no change to the mod. Spire QoL 2.0.0.
+
+## Why
+
+The listener engine is right: hooks named as the game names them, listeners in the game's order, damage and block through
+the game's pipelines on every hit. A double-played Iron Wave with Kunai at 2 already gains one more block on the second play:
+Kunai fires in `AfterCardPlayed` between the plays, and Dexterity is live in the block math. Recent bugs came from elsewhere:
+
+| What went wrong | Example | Source |
+|---|---|---|
+| The order of a play's effects | Fiend Fire (attacked before its exhausts), Iron Wave, Dash, Wah Cho, Wah Cho Ki (attack before block: Thorns unblocked) | the adapter's fixed order |
+| Which cards draw before they discard or exhaust | `DiscardThenDrawCards`, `ExhaustThenDrawCards`... | hand-kept lists |
+| A pipeline missing a step | No Draw: the game's draw asks `Hook.ShouldDraw` first | a copied pipeline |
+| An amount copied wrong | Vicious and Dark Embrace drew 1, not their amount | a copied hook body |
+
+The first two are the adapter (`Sim/Adapter/SimAdapter.Play.cs`). It builds every play in one fixed order: HP loss, attack,
+block, powers, orbs, energy, draws, cards leaving the hand, created cards. It also uses about 45 per-card tables (about 300
+card names) in `Procs/PlayFacts.cs` and `Sim/Adapter/SimAdapter.cs`. This plan replaces that order with the card's own order,
+and the tables with what the code says. The last two rows get checks against the game's code (Part B).
+
+## The game's flow (what's mirrored)
+
+- **A play** (`CardModel.OnPlayWrapper`): result pile chosen (`Hook.ModifyCardPlayResultLocation`); play count
+  (`GeneratePlayCount`). Then, for each play: `Hook.BeforeCardPlayed`, the card's `OnPlay`, its enchantment's `OnPlay`, its
+  affliction's `OnPlay`, then `Hook.AfterCardPlayed` and `AfterCardPlayedLate`. `SimEngine`'s `CardPlayAction` already has
+  this shape.
+- **A command** is a pipeline whose hooks run before the card's next line. For example, `CreatureCmd.GainBlock` runs
+  `BeforeBlockGained`, then `ModifyBlock` (additive, multiplicative), then `AfterModifyingBlockAmount`, then the gain, then
+  `AfterBlockGained`. `CardCmd.Exhaust`, `CardPileCmd.Draw` and `DamageCmd.Attack...Execute` work the same way. Nothing is
+  queued: each `await` finishes, with everything it sets off, before the next line.
+- **Listeners** (`CombatState.IterateHookListeners`): for each creature in order (allies, then enemies), its powers. Then its
+  monster, or its player's relics, potions, orbs and the cards in every pile.
+
+## Part A: card programs
+
+### A1. Reading a program
+
+`Procs/CardProgram.cs` reads a card type's play into a `CardProgram`, once per type and cached. It reads the loaded game's
+code (`GameCode.Instructions` over `CardCode.OnPlayMethods`: `OnPlay`, its state machine and its local functions), so a player
+on main gets main's program. It reads only code, never state or the RNG.
+
+A program is a tree of steps:
+
+- **`Command`**: one game command, kept by name (`CreatureCmd.GainBlock`, `PowerCmd.Apply<VulnerablePower>`, the attack
+  builder down to `Execute`), with its arguments' sources.
+  - A source is one of: a card value (`DynamicVars.Block`, `Damage.BaseValue`, `Repeat`, `Cards`, `PowerVar<T>`), a constant,
+    a count the code works out (the hand's size, the cards a loop goes over), the target, or `Unknown`.
+  - The attack builder's calls (`WithHitCount`, `Targeting`, `TargetingAllOpponents`, `TargetingRandomOpponents`, `FromCard`,
+    `BeforeDamage`) become the attack's hit count, spread and hooks.
+- **`Repeat`**: a loop. The count is a card value (`for i < Repeat`), the cards a pile holds (a `foreach` over a list taken from
+  a pile: one step per card, its count read when played), or `Unknown`.
+- **`If`**: a condition the reader knows, or `Unknown`.
+  - Known so far: the attack killed its target (`Results...WasTargetKilled`), the card's upgrade, the target has a power, a
+    count against a value.
+  - A recognizer is added when a card needs one. Until then the branch is `Unknown`.
+- **`Choice`**: a `CardSelectCmd` the player answers mid-play. Choices stay out of the model (decision #92: one decision, never
+  a sequence), but a choice decides only **which** card. It doesn't decide **that** the play goes on.
+  - The steps after it still run, and the hooks around the play still fire. Tuning Fork at 9 fires its block on Acrobatics,
+    Ki Chant or Burning Pact; that is true in the simulator today too, checked.
+  - A step that acts on the pick knows its count (one card discarded, one exhausted). So `Discarded` and `Exhausted` with
+    their count, and what they set off (Tough Bandages, Feel No Pain, Dark Embrace), stay exact.
+  - Only what depends on which card (its own exhaust or discard hook, a Sly card playing itself, its cost) is not modelled,
+    unless every card it could be gives the same result. That is checked by trying each card in hand, the way the hand pick
+    models do today.
+
+The compiler's own patterns are skipped: the `await` pattern (`GetAwaiter`, `get_IsCompleted`, the state switch), visual
+and sound commands (`TriggerAnim`, `Vfx`, `Sfx`, `Preview`, `PlayMelodyVfx`, waits) and `ThrowIfNull`.
+
+Calls into the card's own methods are read into the program, to a fixed depth. Calls into anything else that isn't a known
+command become `Unknown`.
+
+The reader works over a small instruction view, read from either source:
+- in the game, Harmony's `CodeInstruction`;
+- in the tests, `System.Reflection.Metadata` over each decompile's `assembly/sts2.dll` (decision #165, the way `CodeFacts`
+  reads them).
+
+So the catalog tests read every card on **both** branches.
+
+Read from Iron Wave's state machine today (the spike):
+
+```
+25  CreatureCmd.GainBlock(Creature, Block, cardPlay)
+63  DamageCmd.Attack(Damage.BaseValue) .FromCard .Targeting(Target) .Execute
+```
+
+Fiend Fire reads as a `foreach` with `CardCmd.Exhaust`, then `Attack.WithHitCount(<cardCount>)`. Sunder reads as an attack,
+then `PlayerCmd.GainEnergy` behind a branch on its results.
+
+### A2. Translating a step
+
+`Sim/Adapter/ProgramTranslator.cs` turns each step into simulator actions, in program order. Its values come from today's
+readers (`AttackOf`, `BlockOf`, `PowersOf`, `OrbsOf`, `CardEnergy`, `SimReaders`: captured terms, calculated values), changed
+to take a step instead of a card.
+
+The card events a command causes come from that command's step, not appended at the end:
+- an `Exhaust` step is the card leaving the hand, then `Exhausted`;
+- a `Draw` step is `Drawn` (or the drawn-card readers' `DrawnCardAction`);
+- an `AddGeneratedCardToCombat` step is `Generated`.
+
+Commands, by how many beta cards call them:
+
+| Command | Cards | Today's action |
+|---|---|---|
+| `PowerCmd.Apply<T>` | 291 | `ApplyPowerAction` |
+| `DamageCmd.Attack` | 237 | `AttackAction` (shots: `ShootAction`/`ImpaleAction`) |
+| `CreatureCmd.GainBlock` | 93 | `GainBlockAction` |
+| `CardPileCmd.Draw` | 61 | `CardEventAction(Drawn)` / `DrawnCardAction` |
+| `CardPileCmd.AddGeneratedCard(s)ToCombat` | 45 | `CardEventAction(Generated...)` |
+| `PlayerCmd.GainEnergy` | 27 | `CardEventAction(EnergyGained)` / kill reward |
+| `OrbCmd.Channel`, `EvokeNext`, `AddSlots` | 30 | `OrbAction` |
+| `CardCmd.Upgrade`, `CardPileCmd.Add`, `CardSelectCmd.*` | 60+ | hand changes, pick models, or not modelled |
+| `CardCmd.Exhaust`, `Discard`, `DiscardAndDraw` | 28 | `LeaveHandAction` + card events |
+| `CreatureCmd.Damage`, `Kill`, `LoseHp` (self) | 14+ | `DamageAction`, `ExecuteAction`, `LoseHpAction` |
+| `ForgeCmd`, `OstyCmd`, `PlayerCmd.GainStars`, `CardCmd.AutoPlay`, `Transform` | 40 | their actions today |
+
+There are 58 commands on beta and 49 on main. A command with no translation becomes `NotModelledAction("<Command> in
+<Card>.OnPlay")`. It is counted like every `SimState.Unmodelled` reason, and each one is a tracker item. It is never guessed.
+
+### A3. Order from the program, nothing else
+
+`SimAdapter.Play` builds the body by walking the program:
+- `Repeat` repeats its steps;
+- a known `If` becomes a branch or a conditional action (a kill reward, as today);
+- an `Unknown` `If` makes its steps uncertain (not modelled, with the card and the condition).
+
+What happens around the play is unchanged: energy and stars spent before it, its own exhaust after it, `CardResolvedAction`,
+the play count, the enchantment's and affliction's `OnPlay` after the card's (also read as programs), and the Before and After
+hooks.
+
+**Removed:**
+- the fixed order;
+- `CardCode.TakesBeforeAttacking`;
+- `DiscardThenDrawCards`, `DrawThenDiscardCards`, `ExhaustThenDrawCards`, `DrawThenExhaustCards` and the takes-first logic;
+- every per-card table whose subject the program now says (each table's scan in `Diagnostics/CardCoverage.cs` goes with it).
+
+A table stays only for what code can't say. Each one keeps its scan and gets a line in this doc saying why.
+
+`PlayFacts` keeps the counts that tabs and checks read (draws, exhausts, energy), worked out from the program where it can be.
+One source for both the tabs and the simulator.
+
+### A4. Checks
+
+- **Program tests** (`tests/SpireQoL.Catalog.Tests/CardProgramTests.cs`): known programs on both branches' assemblies (Iron
+  Wave, Fiend Fire, Sunder, Pillage, Whirlwind, Battle Trance, Growth, Second Wind, Blossom Shot's local function, an X-cost
+  card, a selection card).
+- **Coverage** (`CardProgramCoverageTests`): every card on both branches is read fully, or partly with its reasons, and the
+  counts are kept in the test. A card that gets worse fails it; a card that gets better updates the counts. The same counts
+  go into the coverage report.
+- **Shadow comparison** (`CardProgramShadowTests`, during the build-out, then deleted): for every card in a `GameFight`, the
+  old script and the new one are compared as action lists. Each difference is either an old bug (expected: the five order
+  cards) or a translator gap. The switch happens when only reviewed differences remain.
+- **Golden fights**: `SinglePlayerGoldenTests` is regenerated once, in the commit that switches, with the expected changes
+  named (block before attack, events at their command). The replay cases and performance tests must pass unchanged, or with
+  a stated reason.
+
+## Part B: pipelines and models checked against the game's code
+
+- **B1. Pipeline steps.** Each simulator command declares the game command it mirrors and its hook calls in order (for
+  example `GainBlock: BeforeBlockGained, ModifyBlock, AfterModifyingBlockAmount, AfterBlockGained`). `PipelineParityTests`
+  reads each game command method's `Hook.*` calls, in order, on both branches, and fails on a difference. That would have
+  caught `ShouldDraw`.
+- **B2. Model amounts.** `ModelEffectCheck` also reads where each command's amount comes from in a model's game hook
+  (`base.Amount`, a value, a constant). It fails when the model takes it from somewhere else. That would have caught Vicious
+  and Dark Embrace.
+- **B3. Listeners beyond powers and relics** (after A and B1–B2, in the same push if time allows): the listener list follows
+  `IterateHookListeners` fully. That adds orbs (today `SimEngine.Orbs`), monsters (today `EnemyModels`), potions, and cards
+  with their own hooks in your piles (38 beta cards override a hook). Each is added as a model in that order, with a test.
+
+## Order of work (one session)
+
+1. Baseline: `scripts/check.ps1` green; save the shadow comparison's first list of differences.
+2. Instruction view (Harmony and Metadata) and the program reader, with the program tests on both branches.
+3. Coverage test and report.
+4. Translators per command, with the old builders refactored to take steps.
+5. Shadow comparison until only reviewed differences remain.
+6. Switch the adapter, delete the fixed order and the tables, regenerate the golden fights with reasons.
+7. B1 pipeline parity, B2 model amounts, then B3 listeners.
+8. Docs: SIMULATOR.md (Card scripts, The adapter), FEATURES (only the corrected predictions show), CHANGELOG under Spire
+   QoL 2.0.0, TRACKER, DECISIONS.
+9. Build and install, then the owner plays (the audits are the final check). Released as 2.0.0, not batched with 1.27.x.
+
+## Risks
+
+- **The compiler's shapes.** Async state machines, closures and local functions. The reader recognizes the patterns it knows
+  and marks the rest `Unknown`: a wrong read becomes uncertainty, not a wrong certainty. The program tests run on both
+  branches, so a compiler change shows up in tests.
+- **Coverage on day one.** Of 677 beta cards, 443 are straight lists of commands. 171 have a condition, 112 a loop and 68 a
+  choice (they overlap). Cards with conditions keep today's translations where the shadow comparison shows them right, and
+  get a recognizer, until the coverage test says otherwise.
+- **Speed.** A program is read once per card type. Translation runs per play, as the script builder does now. The
+  performance tests hold the line.
+- **Hidden information.** Unchanged: the reader reads code, never the RNG, the seed or the draw order.
