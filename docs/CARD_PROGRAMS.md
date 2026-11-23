@@ -144,6 +144,17 @@ it isn't part of this plan.
 There are 58 commands on beta and 49 on main. A command with no translation becomes `NotModelledAction("<Command> in
 <Card>.OnPlay")`. It is counted like every `SimState.Unmodelled` reason, and each one is a tracker item. It is never guessed.
 
+**Built first (2026-11-23): the order.** `PlayOrder` gives each action the command it stands for (`KeyOf`) and each program
+command the actions it can take (`KeysOf`). It then puts the adapter's actions in the program's order:
+- a loop doing two or more things per round is split into rounds;
+- an action no command stands for keeps its place after the one it followed.
+
+The values still come from today's builders, which already read the code where they can (decision #157) and are tested. They
+move to the program's arguments one table at a time; that is the next step, tracked in TRACKER.
+
+A command a card calls that has no action yet adds no `NotModelledAction` in this first step. A new `?` on screen is the
+owner's call, so those commands are listed, not shown.
+
 ### A3. Order from the program, nothing else
 
 `SimAdapter.Play` builds the body by walking the program:
@@ -157,7 +168,7 @@ hooks.
 
 **Removed:**
 - the fixed order;
-- `CardCode.TakesBeforeAttacking`;
+- the check that put Fiend Fire's exhausts before its attack;
 - `DiscardThenDrawCards`, `DrawThenDiscardCards`, `ExhaustThenDrawCards`, `DrawThenExhaustCards` and the takes-first logic;
 - every per-card table whose subject the program now says (each table's scan in `Diagnostics/CardCoverage.cs` goes with it).
 

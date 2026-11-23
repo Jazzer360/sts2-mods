@@ -115,6 +115,12 @@ and `SimAdapter`, moved). A card whose script isn't known gets the facts it has 
 The script runs once per play (play count from the game: `ModifyCardPlayCount`), with `BeforeCardPlayed` and
 `AfterCardPlayed` around each play, then the enchantment's and affliction's scripts.
 
+Its actions run in the order the card's own code runs its commands (decision #182, docs/CARD_PROGRAMS.md): `CardProgramReader`
+reads the card's `OnPlay` (its state machine, local functions and the delegates it hands to commands) from the running game
+into a program, and `PlayOrder` puts each action at the command it stands for (block before attack for Iron Wave, exhausts
+before attack for Fiend Fire, round by round for Second Wind's loop). An action no command stands for keeps its place after
+the one it followed.
+
 ### Outputs
 `SimOutcome` keeps every field consumers read today (kills, block breaks, stuns, HP, taken, Death Skull chances...). New:
 the play's **event log** per branch (model flashes with their damage, block, summons; cards drawn, exhausted, created;

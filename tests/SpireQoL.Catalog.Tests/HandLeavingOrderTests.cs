@@ -29,7 +29,7 @@ public class HandLeavingOrderTests
         Assert.True(leave < exhausts, "the hand leaves after its exhausts: " + string.Join(", ", play.Body.Select(simAction => simAction.ToString())));
         // Its code exhausts the hand, then attacks (FiendFire.OnPlay): what the exhausts set off (Charon's Ashes' hits) lands before its
         // kill (a dev review: the lethal play showed no Charon's Ashes tab).
-        Assert.True(CardCode.TakesBeforeAttacking(typeof(FiendFire)));
+        Assert.True(Procs.Programs.CardPrograms.Before(Procs.Programs.CardPrograms.Of(typeof(FiendFire)), "Exhaust", "Attack"));
         var attack = play.Body.FindIndex(simAction => simAction is AttackAction);
         Assert.True(exhausts < attack, "its exhausts come after its attack");
     }

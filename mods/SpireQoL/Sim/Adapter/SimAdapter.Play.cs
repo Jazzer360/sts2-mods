@@ -32,6 +32,12 @@ public static partial class SimAdapter
         return play;
     }
 
+    /// <summary>
+    /// Plays follow the card's program (decision #182). Off only in the comparison of the program's order with the one it replaced
+    /// (CardProgramShadowTests).
+    /// </summary>
+    internal static bool UseCardPrograms = true;
+
     /// <summary>What a Corrupted card deals its owner on every play (Corrupted._damageAmount, a constant in its code).</summary>
     private const int CorruptedSelfDamage = 2;
 
@@ -113,12 +119,6 @@ public static partial class SimAdapter
                 if (drawn > 0) play.Body.Add(new CardEventAction(CardEvent.Drawn, drawn) { Player = who, Indirect = true });
             }
         }
-        // Adroit (enchantment): its block on every play, after the card's own (EnchantmentModel.OnPlay → CreatureCmd.GainBlock).
-        if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit)
-        {
-            var baseValue = adroit.DynamicVars.Block.BaseValue;
-            play.Body.Add(new GainBlockAction(Times: 1, baseValue, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, baseValue, ValueProp.Move) });
-        }
         if (StripBlockCards.Contains(name)) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
         play.Body.AddRange(PowersOf(card, facts, name, allyId));
         if (TriggerPoisonCards.Contains(name)) play.Body.Add(new TriggerPoisonAction());
@@ -160,10 +160,17 @@ public static partial class SimAdapter
             play.Body.Add(new ApplyPowerAction(PowerId.Poison, (int)flask.BaseValue)
                 { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 1)), Debuff = true });
         if (KillsOstyCards.Contains(name)) play.Body.Add(new KillOstyAction());
-        // The card's enchantment acts after the card itself, on every play (CardModel: EnchantmentModel.OnPlay after OnPlay; Adroit's
-        // block is above). The coverage ledger reviews every enchantment's OnPlay.
+        // What the card does, in the order its code does it (decision #182: its program).
+        if (UseCardPrograms) play.Body = PlayOrder.Arrange(play.Body, PlayOrder.ProgramOf(card.GetType()));
+        // The card's enchantment acts after the card itself, on every play (CardModel: EnchantmentModel.OnPlay after OnPlay). The
+        // coverage ledger reviews every enchantment's OnPlay.
         switch (card.Enchantment)
         {
+            // Adroit: its block (EnchantmentModel.OnPlay → CreatureCmd.GainBlock).
+            case MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit:
+                var baseValue = adroit.DynamicVars.Block.BaseValue;
+                play.Body.Add(new GainBlockAction(Times: 1, baseValue, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, baseValue, ValueProp.Move) });
+                break;
             // Corrupted: damage to its owner, unblockable (Corrupted._damageAmount): your HP-loss modifiers and the damage hooks hear it
             // (Centennial Puzzle).
             case MegaCrit.Sts2.Core.Models.Enchantments.Corrupted when owner == Who.You:
@@ -230,7 +237,8 @@ public static partial class SimAdapter
         }
         Each(play.Before, CardEvent.EnergyGained, facts.EnergyBack, indirect: false, perPlay: false);
         Each(play.Before, CardEvent.EnergySpent, facts.EnergySpent, indirect: false, perPlay: false);
-        // What it takes from your hand (discards, exhausts) and its draws, in its OnPlay's order: the room the draws have.
+        // What it takes from your hand (discards, exhausts) and its draws: PlayOrder puts them in its code's order (decision #182),
+        // which decides the room the draws have.
         void Leaving(List<SimAction> into)
         {
             // Which cards it takes (what those that act when exhausted do: Drum of Battle), read from the hand as it is.
@@ -247,23 +255,8 @@ public static partial class SimAdapter
             // How many it takes into your hand is your choice (Neow's Fury): your hand after it isn't known.
             if (facts.HandTakeChosen) into.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
         }
-        // A card whose code takes them before it attacks (Fiend Fire: what their exhausts set off, Charon's Ashes' hits, lands first):
-        // before its attack. Otherwise in the play's order below.
-        void Place()
-        {
-            if (CardCode.TakesBeforeAttacking(facts.Card.GetType()) && play.Body.FindIndex(simAction => simAction is AttackAction) is var attackAt and >= 0)
-            {
-                var first = new List<SimAction>();
-                Leaving(first);
-                play.Body.InsertRange(attackAt, first);
-            }
-            else Leaving(play.Body);
-        }
-        var cardName = facts.Card.GetType().Name;
-        var takesFirst = PlayFacts.DiscardThenDrawCards.Contains(cardName) || PlayFacts.ExhaustThenDrawCards.Contains(cardName) || facts.TakesWholeHand;
-        if (takesFirst) Place();
+        Leaving(play.Body);
         Each(play.Body, CardEvent.Drawn, Math.Min(facts.OwnDraws, facts.Draws), indirect: true);
-        if (!takesFirst) Place();
         var sadness = facts.SadnessCreated;
         var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
         Each(play.Body, CardEvent.Generated, Math.Max(0, facts.Generated + facts.TransformsCertain - statuses - sadness), indirect: true);

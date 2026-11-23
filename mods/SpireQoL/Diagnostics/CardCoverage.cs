@@ -214,14 +214,13 @@ internal static class CardCoverage
         // A card that sets an enemy's HP (Judgement kills at or below a threshold): the simulator models the ones it knows.
         if (Calls("CreatureCmd", "SetCurrentHp") && !SimAdapter.ExecuteCards.Contains(name))
             issues.Add("sets a creature's HP (not in the simulator: kills, lethal)");
-        // A card that discards and draws: which comes first decides the room in your hand (The Hermit discards first).
-        if (Calls("CardCmd", "Discard") && Calls("CardPileCmd", "Draw") && !PlayFacts.DiscardThenDrawCards.Contains(name) && !PlayFacts.DrawThenDiscardCards.Contains(name))
-            issues.Add("discards and draws (which comes first isn't known: the hand limit)");
-        if (Calls("CardCmd", "Exhaust") && Calls("CardPileCmd", "Draw") && !None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, drawPile: 5, plays: 1))
-            && !PlayFacts.ExhaustThenDrawCards.Contains(name) && !PlayFacts.DrawThenExhaustCards.Contains(name))
-            issues.Add("exhausts others and draws (which comes first isn't known: the hand limit)");
-        if (Calls("CardCmd", "DiscardAndDraw") && !PlayFacts.DiscardThenDrawCards.Contains(name))
-            issues.Add("discards your hand, then draws (the hand limit isn't counted after the discard)");
+        // A card that takes cards from your hand and draws: which comes first decides the room in your hand, read from its program
+        // (decision #182). One whose program doesn't show both can't be put in order.
+        var takes = Calls("CardCmd", "Discard") || Calls("CardCmd", "Exhaust") || Calls("CardCmd", "DiscardAndDraw");
+        var program = Procs.Programs.CardPrograms.Of(card.GetType());
+        if (takes && (Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
+            && !(program.Commands.Any(command => command.Command.Name is "Discard" or "Exhaust" or "DiscardAndDraw") && program.Commands.Any(command => command.Command.Name is "Draw" or "DiscardAndDraw")))
+            issues.Add("takes cards from your hand and draws, and its program doesn't show which comes first (the hand limit)");
         // An X-cost attack: its hits are X (unless its count is one of the named exceptions).
         if (card.Type == CardType.Attack && card.EnergyCost.CostsX && !PlayFacts.XHitCards.Contains(name) && name is not (nameof(HeavenlyDrill) or nameof(Stardust)))
             issues.Add("an X-cost attack whose hits aren't counted as X (damage, lethal)");

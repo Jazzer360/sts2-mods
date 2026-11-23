@@ -533,12 +533,6 @@ public sealed class PlayFacts
     }
 
     /// <summary>
-    /// Cards that discard your hand, then draw (CardCmd.DiscardAndDraw): the hand limit counts the hand after the
-    /// discard. The card scan flags a new one.
-    /// </summary>
-    internal static readonly HashSet<string> DiscardThenDrawCards = new() { nameof(CalculatedGamble), nameof(WheelOfFortune), nameof(TheHermit) };
-
-    /// <summary>
     /// How many of the <paramref name="generated"/> cards a play makes go into your hand: the share of its make calls that name your
     /// hand (CardCode.MadeInto, the pile each passes, read from its code: Anger's copy into your discard pile, Severance's one of
     /// three into your hand), exact when each call makes as many (they do). Made some other way (a forge): into your hand.
@@ -550,13 +544,6 @@ public sealed class PlayFacts
         var hand = piles.Count(pile => pile is null or PileType.Hand);
         return hand == piles.Count ? generated : generated * hand / piles.Count;
     }
-
-    /// <summary>Cards that draw, then discard (Acrobatics: the hand limit counts the hand before the discard).</summary>
-    internal static readonly HashSet<string> DrawThenDiscardCards = new() { nameof(Acrobatics), nameof(DaggerThrow), nameof(Prepared), nameof(Scrape) };
-
-    /// <summary>Cards that exhaust others from your hand and draw: which comes first (the room the draws have), from each OnPlay.</summary>
-    internal static readonly HashSet<string> ExhaustThenDrawCards = new() { nameof(BurningPact), nameof(TheHermit) };
-    internal static readonly HashSet<string> DrawThenExhaustCards = new();
 
     /// <summary>
     /// Total draws (own + chained), the hand limit, draw blockers, and whether they shuffle: the
@@ -580,8 +567,9 @@ public sealed class PlayFacts
             HandCount = handCount,
             DrawPile = drawPile,
             DiscardPile = Sts2State.DiscardPileCount(me),
-            // The Hermit discards one card or, if it's a Curse, exhausts it (counted in ExhaustedFromHand already).
-            DiscardedBeforeDraw = !DiscardThenDrawCards.Contains(Card.GetType().Name) ? 0
+            // Discards before its draws, in its code's order (decision #182: its program; Acrobatics draws first). The Hermit discards
+            // one card or, if it's a Curse, exhausts it (counted in ExhaustedFromHand already).
+            DiscardedBeforeDraw = !Programs.CardPrograms.DiscardsBeforeDraws(Card.GetType()) ? 0
                 : Card.GetType().Name == nameof(TheHermit) ? Math.Max(0, Math.Min(1, OtherHandCards) - ExhaustsOthers) : Discards,
             ShufflesFirst = ShufflesFirst(Card),
             HandShuffledIn = ShuffleCards.Contains(Card.GetType().Name),

@@ -8,6 +8,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 1.27.2
 #### Fixed
+- A card's effects happen in the order its own code runs them, read from the game's code (on Steam's main branch and beta alike), so the predictions follow a card whose order changes in a game update: Iron Wave, Dash, Wah Cho and Wah Cho Ki gain their block before they attack, so the block takes an enemy's Thorns (the crossed Thorns tab still shows: the attack sets it off and uses up your block); Second Wind exhausts and blocks card by card (Feel No Pain and Juggernaut in between); Brand, Bulk Up, Sacrifice, Big Bang, The Sun, Glow, Conqueror, Spoils of Battle, Capture Spirit and Consuming Shadow in their own order too.
 - Vicious and Dark Embrace draw their amount each time (two stacks draw two), as in the game: their tabs, the Shuffle Warning and the checks counted one.
 - A card that takes cards from your hand takes them before what their leaving sets off: Fiend Fire with Dark Embrace draws into the room each exhausted card leaves (7 were drawn where 2 were predicted), and the cards drawn stay in your hand. Fiend Fire exhausts before it attacks, so Charon's Ashes' hits land first and show even when Fiend Fire kills (read from the card's own code).
 - No Draw and Fiddle stop the draws a play sets off (Dark Embrace on an exhaust) in the predictions too, not only in the card's own draws.

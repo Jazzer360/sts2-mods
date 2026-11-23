@@ -22,5 +22,7 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
     <!-- Parses the main branch's decompiled source for GameBranchTests (the game members the mod names). -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <!-- Loads each branch's game assembly for reading only (card programs read main's code as the game reads beta's: decision #182). -->
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="7.0.0" />
   </ItemGroup>
 </Project>
