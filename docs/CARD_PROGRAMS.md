@@ -370,9 +370,12 @@ The aim is every card read by the interpreter, with no card named. What is left 
   `NotModelledAction`.
 
 **Not yet read (reader gaps, not limits).** Each still has its table and its scan, and what the reader needs to read it. Where
-it stands (2026-11-23, after conditions as values): five more tables read from the program (`ConditionalDrawCards`,
-`TargetDrawCards`, `ExhaustOthers`, `ExhaustPickOf`, `ExhaustTakesNoActingCard`), with `CardsDrawn`'s ten cases; card-name
-references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter/` went from 344 to 286.
+it stands (2026-11-23, after round three): the count tables (`DiscardCount`, `TransformCount`, `TakenToHandCount`, `HandTakes`,
+`ChannelCount` with `Channels`, `RepeatChannels` and `SlotChange`, `RepeatedBlockCards`, `HitsPerPlay`'s cases), `DrawnCardReaders`,
+`EnemyStrengthCards`, `TriggerPoisonCards`, the glow tables, Fool's `BlockWithoutVar` and the auto-plays' counts read from the program;
+card-name references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter/` went from 286 to 106 (344 before
+round two). What's left, by file: `PlayFacts` 62 (`GeneratedCount` and the forged blade 57, the splash and overkill tables 4, Thinking Ahead 1), `CardEnergy` 23, `SimAdapter` 8, `ReturnToHand` 5,
+`SimAdapter.Play` 4, `BranchRules` 4.
 
 | Table (where) | Cards | What the program doesn't say yet |
 |---|---|---|
@@ -380,6 +383,11 @@ references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter
 | `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TeammatesShivCards` | Blade Symphony | The player a helper's Shivs go to (an argument inside the helper: a game helper's parameters aren't bound to its caller's arguments yet). |
+| `CardEnergy.Rules` (Sim/Adapter) | Sunder, Bow Smack, Restlessness, Forgotten Ritual, Double Energy, Mad Science, Epic Retrieval, Believe in You, Constellation, Energy Surge, Drum of Battle | Each energy gain's condition can be evaluated now (`PlayerCmd.GainEnergy`'s condition and amount, as the draws are); what's left is the kill reward (an attack's result), the arrow test before the hit, "as much as you have" (Double Energy) and whose energy it is. |
+| `BlockOf`'s cases (SimAdapter.Play) | Fisticuffs, Entrench, Mimic | The gain's amount argument: the attack's result (Fisticuffs, with Blossom Shot's Stretch: arithmetic over a command's result), your block (Entrench), the teammate's (Mimic). |
+| `PutBack`'s count (PlayFacts) | Thinking Ahead | The put-back pick's selector, as the discards' picks are read. |
+| Cards' own hooks, not plays | Make It So, Right Hand Hand, Whistling Arrows, Bolas, Bounce, Thrumming Hatchet (`ReturnToHand`); Howl from Beyond, I Am Invincible (end-of-turn auto-plays); Kingly Kick, Kingly Punch (their cost on draw) | A card's hooks (After*, Before*) aren't its play: reading them as programs is Part B3's next step. Each is reviewed by its scan. |
+| `BranchRules`' facts | Brightest Flame, Omnislice | Not a table: the code facts a branch rule is told by (decision #169) name the class their code mentions. They go when main catches up. |
 
 ## Part B: pipelines and models checked against the game's code
 
