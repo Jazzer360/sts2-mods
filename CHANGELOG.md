@@ -23,6 +23,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Main Saves 1.0.27
 #### Changed
+- Shared code: the card you're holding can be read (Spire QoL's Play Preview).
 - Shared code: the frame loop's timing makes no garbage of its own, and counts dev mode's checks apart; the hand, the local player in a run and nodes' keys read without making anything; node names made once. No change in Main Saves.
 
 ### Spire QoL 1.27.1
