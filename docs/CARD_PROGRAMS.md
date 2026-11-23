@@ -201,6 +201,12 @@ One source for both the tabs and the simulator.
     - The TRACKER's and DECISIONS' other play-order and play-count cases.
   - The rule from now on: a bug in a card's play gets a behaviour test here, besides its simulator test, so later rewrites
     keep it.
+- **Catalog snapshot** (`CardPlaySnapshotTests`, `tests/SpireQoL.Catalog.Tests/Snapshots/card-plays.txt`): every card in the
+  installed game on three boards built from the game's objects (one enemy with a Strike, a Defend and a Dazed beside the card,
+  six cards to draw and three in the discard pile; the same upgraded; two enemies, a full hand and an empty draw pile), with
+  every `PlayFacts` field and the adapter's play (`SimAdapter.Play`) written as text. Moving a table onto the program must leave
+  it unchanged; a difference that is a real fix regenerates it (`SPIREQOL_UPDATE_SNAPSHOT=1`), named in the commit with the card
+  and why. A game update regenerates it too.
 - **Program tests** (`tests/SpireQoL.Catalog.Tests/CardProgramTests.cs`): known programs on both branches' assemblies (Iron
   Wave, Fiend Fire, Sunder, Pillage, Whirlwind, Battle Trance, Growth, Second Wind, Blossom Shot's local function, an X-cost
   card, a selection card).

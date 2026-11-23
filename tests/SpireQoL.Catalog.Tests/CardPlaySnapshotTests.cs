@@ -1,0 +1,196 @@
+using System.Collections;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Entities.Cards;
+using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.Models.Cards;
+using MegaCrit.Sts2.Core.Models.Monsters;
+using SpireQoL.Procs;
+using SpireQoL.Sim;
+using Xunit;
+
+namespace SpireQoL.Catalog.Tests;
+
+/// <summary>
+/// Every card in the installed game on a few standard boards built from the game's own objects (GameFight): what PlayFacts reads
+/// from it and the play the adapter builds (SimAdapter.Play), written as text and compared with Snapshots/card-plays.txt. The safety
+/// net under moving per-card tables onto the card programs (decision #182, docs/CARD_PROGRAMS.md): a change that should only move
+/// where a value comes from leaves it unchanged. A difference that is a real fix regenerates it (SPIREQOL_UPDATE_SNAPSHOT=1), with
+/// the card and why in the commit. A game update regenerates it too.
+/// </summary>
+[Collection(GameFightCollection.Name)]
+public class CardPlaySnapshotTests
+{
+    private const string FileName = "card-plays.txt";
+
+    /// <summary>The boards each card is read on.</summary>
+    private enum Board
+    {
+        /// <summary>One enemy; a Strike, a Defend and a Dazed beside it in hand; six cards to draw, three in the discard pile.</summary>
+        Standard,
+        /// <summary>The same with the card upgraded.</summary>
+        Upgraded,
+        /// <summary>Two enemies, a full hand, an empty draw pile and three cards in the discard pile.</summary>
+        Crowded,
+    }
+
+    [Fact]
+    public void EveryCardsFactsAndPlayAreUnchanged()
+    {
+        GameModels.EnsureLoaded();
+        var actual = new List<string>();
+        foreach (var canon in ModelDb.AllCards.OrderBy(card => card.GetType().Name, StringComparer.Ordinal).ToList())
+            foreach (var board in Enum.GetValues<Board>())
+                actual.Add($"{canon.GetType().Name} [{board}] {Describe(canon, board)}");
+        var path = Path.Combine(SourceFolder(), "Snapshots", FileName);
+        if (Environment.GetEnvironmentVariable("SPIREQOL_UPDATE_SNAPSHOT") == "1")
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllLines(path, actual);
+            return;
+        }
+        Assert.True(File.Exists(path), $"missing {path}: generate it with SPIREQOL_UPDATE_SNAPSHOT=1");
+        var expected = File.ReadAllLines(path);
+        var expectedByKey = expected.ToDictionary(KeyOf, line => line);
+        var changed = actual.Where(line => !expectedByKey.TryGetValue(KeyOf(line), out var before) || before != line).ToList();
+        var gone = expected.Select(KeyOf).Except(actual.Select(KeyOf)).ToList();
+        var report = new StringBuilder();
+        foreach (var line in changed.Take(12))
+        {
+            report.AppendLine("now:    " + line);
+            report.AppendLine("before: " + (expectedByKey.TryGetValue(KeyOf(line), out var before) ? before : "(none)"));
+        }
+        foreach (var key in gone.Take(5)) report.AppendLine("gone: " + key);
+        Assert.True(changed.Count == 0 && gone.Count == 0, $"{changed.Count} card plays changed, {gone.Count} gone:\n{report}");
+    }
+
+    /// <summary>"Card [Board]": what a line is about.</summary>
+    private static string KeyOf(string line) => line[..(line.IndexOf(']') + 1)];
+
+    private static string SourceFolder()
+    {
+        var folder = new DirectoryInfo(AppContext.BaseDirectory);
+        while (folder != null && !File.Exists(Path.Combine(folder.FullName, "SpireQoL.Catalog.Tests.csproj"))) folder = folder.Parent;
+        return folder?.FullName ?? throw new InvalidOperationException("test project folder not found");
+    }
+
+    /// <summary>The card's facts and play on that board, as one line.</summary>
+    private static string Describe(CardModel canon, Board board)
+    {
+        try
+        {
+            var gameFight = new GameFight();
+            gameFight.Me.Creature.SetMaxHpInternal(80);
+            gameFight.Me.Creature.SetCurrentHpInternal(80);
+            gameFight.Me.PlayerCombatState!.Energy = 3;
+            var enemies = new List<Creature> { Enemy(gameFight, hp: 200) };
+            if (board == Board.Crowded) enemies.Add(Enemy(gameFight, hp: 30));
+            var card = gameFight.Combat.CreateCard(canon, gameFight.Me);
+            if (board == Board.Upgraded)
+            {
+                if (card.MaxUpgradeLevel < 1) return "(no upgrade)";
+                card.UpgradeInternal();
+                card.FinalizeUpgradeInternal();
+            }
+            PileType.Hand.GetPile(gameFight.Me).AddInternal(card);
+            gameFight.Add<StrikeIronclad>();
+            gameFight.Add<DefendIronclad>();
+            gameFight.Add<Dazed>();
+            if (board == Board.Crowded)
+                for (var i = 0; i < 6; i++) gameFight.Add<StrikeIronclad>();
+            else
+                for (var i = 0; i < 3; i++)
+                {
+                    gameFight.Add<StrikeIronclad>(PileType.Draw);
+                    gameFight.Add<DefendIronclad>(PileType.Draw);
+                }
+            gameFight.Add<StrikeIronclad>(PileType.Discard);
+            gameFight.Add<StrikeIronclad>(PileType.Discard);
+            gameFight.Add<DefendIronclad>(PileType.Discard);
+
+            SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+            var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
+            var targetId = card.TargetType == TargetType.AnyEnemy ? ids[enemies[0]] : Who.None;
+            var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, ids, targetId);
+            return FactsText(facts, enemies) + " play " + PlayText(play, gameFight);
+        }
+        catch (Exception ex)
+        {
+            return "error " + ex.GetType().Name;
+        }
+    }
+
+    private static Creature Enemy(GameFight gameFight, int hp)
+    {
+        var enemy = gameFight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        gameFight.Combat.AddCreature(enemy);
+        enemy.SetMaxHpInternal(hp);
+        enemy.SetCurrentHpInternal(hp);
+        return enemy;
+    }
+
+    /// <summary>What the proc check and the simulation's own results set (none of it is read from the card).</summary>
+    private static readonly HashSet<string> SetLater = new()
+    {
+        nameof(PlayFacts.Card), nameof(PlayFacts.Me), nameof(PlayFacts.Combat), nameof(PlayFacts.Sim), nameof(PlayFacts.Drawn),
+        nameof(PlayFacts.DeathByAim), nameof(PlayFacts.OutcomeByAim), nameof(PlayFacts.FrostBlockByAim), nameof(PlayFacts.FiresEveryByAim),
+        nameof(PlayFacts.FiresAnyByAim), nameof(PlayFacts.Unmodelled), nameof(PlayFacts.SimPending), nameof(PlayFacts.SimIncomplete),
+    };
+
+    /// <summary>Every fact PlayFacts reads from the card and the board, by name, the ones at their default left out; then hits and damage per enemy.</summary>
+    private static string FactsText(PlayFacts facts, List<Creature> enemies)
+    {
+        var parts = new List<string>();
+        foreach (var property in typeof(PlayFacts).GetProperties(BindingFlags.Instance | BindingFlags.Public).OrderBy(property => property.Name, StringComparer.Ordinal))
+        {
+            if (SetLater.Contains(property.Name)) continue;
+            var value = ValueText(property.GetValue(facts), enemies);
+            if (value is "0" or "False" or "" or null) continue;
+            parts.Add(property.Name + "=" + value);
+        }
+        for (var i = 0; i < enemies.Count; i++)
+        {
+            var hits = facts.HitsOn(enemies[i]);
+            if (hits > 0) parts.Add($"enemy{i}={hits}x{facts.DamagePerHit(enemies[i])}");
+        }
+        return "{" + string.Join(" ", parts) + "}";
+    }
+
+    private static string? ValueText(object? value, List<Creature> enemies) => value switch
+    {
+        null => null,
+        Type type => type.Name,
+        CardModel card => card.GetType().Name,
+        IDictionary dictionary => string.Join(",", dictionary.Keys.Cast<object>()
+            .Select(key => (key is Creature creature ? "enemy" + enemies.IndexOf(creature) : key.ToString()) + ":" + dictionary[key])),
+        string text => text,
+        IEnumerable items => string.Join(",", items.Cast<object?>().Select(item => ValueText(item, enemies))),
+        _ => value.ToString(),
+    };
+
+    /// <summary>The simulator's JSON (SimJson), without the members at their default: shorter lines, the same differences.</summary>
+    private static readonly JsonSerializerOptions PlayJson = new(SimJson.Options) { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault };
+
+    /// <summary>
+    /// The play as JSON, each hand card's id (SimAdapter.HandId: the object's hash, different every run) written as where the card
+    /// is ("Hand0" is the card played, "Draw2" the third card of the draw pile).
+    /// </summary>
+    private static string PlayText(SimPlay play, GameFight gameFight)
+    {
+        var places = new Dictionary<string, string>();
+        foreach (var pile in new[] { PileType.Hand, PileType.Draw, PileType.Discard })
+        {
+            var cards = pile.GetPile(gameFight.Me).Cards;
+            for (var i = 0; i < cards.Count; i++) places.TryAdd(SimAdapter.HandId(cards[i]).ToString(), "\"" + pile + i + "\"");
+        }
+        try
+        {
+            var json = JsonSerializer.Serialize(play, PlayJson);
+            return System.Text.RegularExpressions.Regex.Replace(json, @"(?<=""(HandId|HandCard|Id)"":)\d+", match => places.GetValueOrDefault(match.Value, match.Value));
+        }
+        catch (Exception ex) { return "(not written: " + ex.GetType().Name + ")"; }
+    }
+}
