@@ -170,7 +170,10 @@ hooks.
 - the fixed order;
 - the check that put Fiend Fire's exhausts before its attack;
 - `DiscardThenDrawCards`, `DrawThenDiscardCards`, `ExhaustThenDrawCards`, `DrawThenExhaustCards` and the takes-first logic;
-- every per-card table whose subject the program now says (each table's scan in `Diagnostics/CardCoverage.cs` goes with it).
+- every per-card table whose subject the program now says (each table's scan in `Diagnostics/CardCoverage.cs` goes with it). Done
+  so far (`CardEffects`): the tables for Osty killed, a target's HP set, a target's block taken, damage without an attack, block
+  for another or each player, a channel for the target's player, and a second attack on every enemy after a kill. Each scan
+  now asks the same rule, so a card calling the command some other way is still flagged.
 
 A table stays only for what code can't say. Each one keeps its scan and gets a line in this doc saying why.
 

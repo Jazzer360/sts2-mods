@@ -15,3 +15,6 @@ decompiled/
 
 # Release packaging output (scripts/release.ps1)
 dist/
+
+# Worktrees made for parallel work (each its own checkout)
+.claude/worktrees/

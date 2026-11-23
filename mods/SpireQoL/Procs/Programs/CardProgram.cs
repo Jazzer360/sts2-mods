@@ -132,12 +132,18 @@ public static class CardProgramReader
     }
 
     /// <summary>The method whose code runs: an async method's state machine's MoveNext, else the method itself.</summary>
-    internal static MethodBase? Body(Type owner, string method)
+    internal static MethodBase? Body(Type owner, string method) =>
+        owner.GetMethods(All).FirstOrDefault(candidate => candidate.Name == method) is { } found ? BodyOf(found) : null;
+
+    /// <summary>
+    /// The code that runs for <paramref name="method"/>: an async method's state machine's MoveNext (the machine its
+    /// AsyncStateMachine attribute names: each overload has its own), else the method itself.
+    /// </summary>
+    internal static MethodBase BodyOf(MethodBase method)
     {
-        var machine = owner.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)
-            .FirstOrDefault(type => type.Name.StartsWith("<" + method + ">d", StringComparison.Ordinal));
-        if (machine?.GetMethod("MoveNext", All) is { } moveNext) return moveNext;
-        return owner.GetMethods(All).FirstOrDefault(candidate => candidate.Name == method);
+        var machine = method.CustomAttributes.FirstOrDefault(attribute => attribute.AttributeType.Name == "AsyncStateMachineAttribute")?
+            .ConstructorArguments.FirstOrDefault().Value as Type;
+        return machine?.GetMethod("MoveNext", All) ?? method;
     }
 
     internal static bool IsCommand(CodeMember member) =>
@@ -243,13 +249,20 @@ public static class CardProgramReader
                     }
                     continue;
                 }
+                // A static helper of the game's models that runs commands (Shiv.CreateInHand: Blade Symphony's Shivs): its steps run here.
+                if (depth < MaxDepth && GameHelper(member) is { } helper)
+                {
+                    var inner = new Reader(helper.Owner, _read).Steps(helper.Body, depth + 1);
+                    if (Acts(inner)) into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = Join(condition, step.Condition) }));
+                    continue;
+                }
                 // A delegate whose code calls commands: the next command it's given to runs it (its Inner steps). One left over, or
                 // given to something else (an attack builder's BeforeDamage), runs when something else decides: not followed.
                 if (instruction.OpCode == OpCodes.Newobj && i > 0 && ops[i - 1].OpCode == OpCodes.Ldftn && ops[i - 1].Member is { } lambda && Lambda(lambda) is { } lambdaBody
                     && depth < MaxDepth)
                 {
                     var inner = new Reader(_card, _read).Steps(lambdaBody, depth + 1);
-                    if (inner.Count > 0)
+                    if (Acts(inner))
                     {
                         if (callback != null) into.Add(new UnknownStep(instruction.Offset, "commands in a callback") { Condition = condition });
                         callback = inner;
@@ -260,6 +273,9 @@ public static class CardProgramReader
         }
 
         private static string Join(string? outer, string? inner) => outer == null ? inner ?? "" : inner == null ? outer : outer + " and " + inner;
+
+        /// <summary>Steps that do something: a command or a choice (a helper or delegate with neither only asks or shows).</summary>
+        private static bool Acts(List<ProgramStep> steps) => new CardProgram("", steps).All().Any(step => step is CommandStep or ChoiceStep or UnknownStep);
 
         /// <summary>The attack DamageCmd.Attack starts: its builder calls up to Execute.</summary>
         private static CommandStep Attack(Flow flow, int at, CodeMember member)
@@ -287,9 +303,19 @@ public static class CardProgramReader
                 var found = type.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount);
                 if (found == null) continue;
                 // An async helper's code is its state machine's (nested in its type, or in the card for a local function).
-                return OwnTypes().Select(owner => Body(owner, member.Name)).FirstOrDefault(body => body != null && body.DeclaringType!.Name.StartsWith("<" + member.Name + ">d", StringComparison.Ordinal)) ?? found;
+                return BodyOf(found);
             }
             return null;
+        }
+
+        /// <summary>A static method of another of the game's models (not a command, not a property): the type it's on and its code.</summary>
+        private (Type Owner, MethodBase Body)? GameHelper(CodeMember member)
+        {
+            if (member.Kind != CodeMemberKind.Method || member.HasThis || IsCommand(member) || member.Name.StartsWith('<') || member.Name.StartsWith("op_", StringComparison.Ordinal)) return null;
+            if (!member.Namespace.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal) || member.Name.StartsWith("get_", StringComparison.Ordinal)) return null;
+            if (_card.Assembly.GetType(member.Namespace + "." + member.DeclaringType) is not { } owner) return null;
+            if (owner.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is not { } found) return null;
+            return (owner, BodyOf(found));
         }
 
         private MethodBase? Lambda(CodeMember member)
@@ -298,7 +324,7 @@ public static class CardProgramReader
             {
                 if (type.Name != member.DeclaringType) continue;
                 if (type.GetMethods(All).FirstOrDefault(method => method.Name == member.Name) is not { } found) continue;
-                return OwnTypes().Select(owner => Body(owner, member.Name)).FirstOrDefault(body => body != null && body.DeclaringType!.Name.StartsWith("<" + member.Name + ">d", StringComparison.Ordinal)) ?? found;
+                return BodyOf(found);
             }
             return null;
         }
@@ -377,14 +403,18 @@ public static class CardProgramReader
             }
         }
 
-        /// <summary>The branch at <paramref name="index"/> tests the state local (ldloc state [; ldc; ...]).</summary>
+        /// <summary>
+        /// The branch at <paramref name="index"/> tests the state local: ldloc state, then constants and arithmetic on them
+        /// (state == 1, state - 1 &lt;= 1).
+        /// </summary>
         private bool LoadsState(int index, int stateSlot)
         {
-            for (var back = 1; back <= 3 && index - back >= 0; back++)
+            for (var back = 1; back <= 5 && index - back >= 0; back++)
             {
                 var previous = Ops[index - back];
-                if (previous.OpCode.Name!.StartsWith("ldloc", StringComparison.Ordinal) && previous.Slot == stateSlot) return true;
-                if (previous.Integer == null && !(previous.OpCode.Name!.StartsWith("ldloc", StringComparison.Ordinal))) return false;
+                var name = previous.OpCode.Name!;
+                if (name.StartsWith("ldloc", StringComparison.Ordinal) && previous.Slot == stateSlot) return true;
+                if (previous.Integer == null && name is not ("sub" or "add" or "conv.u4" or "conv.i4")) return false;
             }
             return false;
         }
@@ -430,10 +460,11 @@ public static class CardProgramReader
         }
 
         /// <summary>
-        /// Where argument <paramref name="parameter"/> of the call at <paramref name="callAt"/> comes from: the value it reads
-        /// ("Block", "Damage", a DynamicVars key), a constant, a field, or "?" when the way back isn't straight.
+        /// Where argument <paramref name="parameter"/> of the call at <paramref name="callAt"/> comes from (-1: the instance it's
+        /// called on): the value it reads ("Block", "Damage", a DynamicVars key), whose property it is ("Owner.Creature",
+        /// "cardPlay.Target", "target.Creature"), a constant, or "?" when the way back isn't straight.
         /// </summary>
-        public string Source(int callAt, CodeMember called, int parameter)
+        public string Source(int callAt, CodeMember called, int parameter, int depth = 0)
         {
             var count = called.ParameterCount + (called.HasThis ? 1 : 0);
             var wanted = count - (parameter + (called.HasThis ? 1 : 0));
@@ -445,14 +476,14 @@ public static class CardProgramReader
                 if (wanted <= push)
                 {
                     if (push != 1) return "?";
-                    return Describe(i);
+                    return Describe(i, depth);
                 }
                 wanted += pop - push;
             }
             return "?";
         }
 
-        private string Describe(int index)
+        private string Describe(int index, int depth)
         {
             var instruction = Ops[index];
             if (instruction.Integer is { } constant) return constant.ToString();
@@ -463,10 +494,27 @@ public static class CardProgramReader
                 if (member.Name is "get_BaseValue" or "get_IntValue" && index > 0 && Ops[index - 1].Member is { } holder)
                     return holder.Name == "get_Item" && index > 1 && Ops[index - 2].Text is { } key ? key : holder.Name.Replace("get_", "");
                 if (member.Name == "get_Item" && index > 0 && Ops[index - 1].Text is { } itemKey) return itemKey;
-                return member.Name.Replace("get_", "");
+                // A state machine's field: the card itself, a parameter (cardPlay) or a local kept across awaits (<target>5__2).
+                if (member.Kind == CodeMemberKind.Field) return FieldName(member.Name);
+                var name = member.Name.Replace("get_", "");
+                // A property of something: whose (base.Owner.Creature, cardPlay.Target, a chosen teammate's Creature).
+                if (member.Kind == CodeMemberKind.Method && member.HasThis && member.Name.StartsWith("get_", StringComparison.Ordinal) && depth < 3)
+                {
+                    var receiver = Source(index, member, parameter: -1, depth + 1);
+                    if (receiver is not ("this" or "?") && !receiver.StartsWith("ld", StringComparison.Ordinal)) name = receiver + "." + name;
+                }
+                return name;
             }
             if (instruction.Text is { } text) return "\"" + text + "\"";
             return instruction.OpCode.Name ?? "?";
+        }
+
+        /// <summary>"&lt;&gt;4__this" is the card; "&lt;target&gt;5__2" is the local "target"; a parameter keeps its name.</summary>
+        private static string FieldName(string field)
+        {
+            if (field == "<>4__this") return "this";
+            if (field.StartsWith('<') && field.IndexOf('>') is var close and > 1) return field[1..close];
+            return field;
         }
     }
 }

@@ -452,7 +452,7 @@ public class ProcModelTests
     [Fact]
     public void BlockForEveryPlayerSetsOffATeammatesJuggernaut()
     {
-        // Rally (decision #75): block to you, then to each living teammate (SimAdapter.AllPlayersBlockCards). A teammate's
+        // Rally (decision #75): block to you, then to each living teammate (CardEffects.BlocksEachPlayer, read from its code). A teammate's
         // Juggernaut hits a random enemy for its amount when they gain block: the only enemy (5 HP) dies.
         var state = State(hp: 5);
         var mate = new SimPlayer { Hp = 50 };

@@ -69,12 +69,12 @@ internal static class CardCoverage
     private static readonly Dictionary<string, string> TeammateTargetModelled = new()
     {
         // Modelled: what lands on the teammate goes to them.
-        [nameof(Lift)] = "block to the teammate (SimAdapter.BlockToAllyCards)",
-        [nameof(Constellation)] = "block to the teammate (BlockToAllyCards); its draws and energy are theirs (PlayFacts.AllyDrawCards): their draws are their card events, for their draw procs",
-        [nameof(DemonicShield)] = "HP loss to you, block (worked out on the teammate) to them (BlockToAllyCards)",
-        [nameof(Ignition)] = "a Plasma orb into the teammate's orbs, evoking their front orb when full (SimAdapter.ChannelToAllyCards)",
+        [nameof(Lift)] = "block to the teammate (CardEffects.BlocksAnother, from its code)",
+        [nameof(Constellation)] = "block to the teammate (CardEffects.BlocksAnother); its draws and energy are theirs (PlayFacts.AllyDrawCards): their draws are their card events, for their draw procs",
+        [nameof(DemonicShield)] = "HP loss to you, block (worked out on the teammate) to them (CardEffects.BlocksAnother)",
+        [nameof(Ignition)] = "a Plasma orb into the teammate's orbs, evoking their front orb when full (CardEffects.ChannelsForTarget)",
         [nameof(Mimic)] = "block to you equal to the teammate's block (CalculatedBlock on the target)",
-        [nameof(Rally)] = "its block to you and to every living teammate, worked out on each (SimAdapter.AllPlayersBlockCards)",
+        [nameof(Rally)] = "its block to you and to every living teammate, worked out on each (CardEffects.BlocksEachPlayer)",
         [nameof(HuddleUp)] = "every living teammate draws, not you: their draws (as many as their hand and piles allow) are their card events (SimAdapter.TeammatesDrawCards)",
         [nameof(BladeSymphony)] = "Shivs into every living teammate's hand, created by them: their created-card events (SimAdapter.TeammatesShivCards)",
         [nameof(GlimpseBeyond)] = "Souls into every living teammate's draw pile, created by you: your created-card events, per Soul (PlayFacts.GeneratedCount)",
@@ -170,15 +170,15 @@ internal static class CardCoverage
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
             && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
-        // A card that takes block away (Expose): the simulator models the ones it knows.
-        if (Calls("CreatureCmd", "LoseBlock") && !SimAdapter.StripBlockCards.Contains(name))
-            issues.Add("takes block away (the simulator doesn't remove it)");
+        // A card that takes block away: the simulator models a card taking its target's (Expose), read from its program.
+        if (Calls("CreatureCmd", "LoseBlock") && !Procs.Programs.CardEffects.TakesTargetsBlock(card.GetType()))
+            issues.Add("takes block away from something other than its target (the simulator doesn't remove it)");
         // A card that sets off poison during the play (Outbreak).
         if (Calls(nameof(PoisonPower), "Trigger") && !SimAdapter.TriggerPoisonCards.Contains(name))
             issues.Add("sets off poison now (the simulator only ticks it at the start of the enemies' turn)");
         // A card that reacts to its own kills: more damage (Timber's hit on every enemy, Echoing Slash's repeats) is simulated;
         // a reward for the kill (energy, stars, gold, max HP, a power) changes nothing the turn's outcome shows.
-        if (Calls("DamageResult", "get_WasTargetKilled") && !SimAdapter.OnKillHitAllCards.Contains(name)
+        if (Calls("DamageResult", "get_WasTargetKilled") && !Procs.Programs.CardEffects.HitsAllOnKill(card.GetType())
             && !SimAdapter.RepeatPerKillCards.Contains(name) && !KillRewardCards.Contains(name))
             issues.Add("reacts to its own kills (not simulated)");
         // A drawing card that glows gold has a condition on what it does (Impatience: no Attack in hand): its draw count
@@ -205,14 +205,14 @@ internal static class CardCoverage
         // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
         if (card.GainsBlock && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
             issues.Add("gains block without a Block value (whether it spends Stretch isn't known: Stretch tab)");
-        // A card that isn't an attack but damages its target (Capture Spirit): the simulator models the ones it knows.
-        if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !SimAdapter.TargetDamageCards.Contains(name))
+        // A card that isn't an attack but damages its target (Capture Spirit), read from its program: one damaging anything else isn't modelled.
+        if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !Procs.Programs.CardEffects.DamagesTargetWithoutAttacking(card.GetType()))
             issues.Add("damages an enemy without attacking (not in the simulator: kills, lethal, Slippery)");
         // A second damage value (Timber's hit on every enemy after a kill): the simulator models the ones it knows.
-        if (card.DynamicVars.Any(entry => entry.Key != "Damage" && entry.Value is DamageVar) && !SimAdapter.OnKillHitAllCards.Contains(name))
+        if (card.DynamicVars.Any(entry => entry.Key != "Damage" && entry.Value is DamageVar) && !Procs.Programs.CardEffects.HitsAllOnKill(card.GetType()))
             issues.Add("has a second damage value (not in the simulator: kills, lethal)");
-        // A card that sets an enemy's HP (Judgement kills at or below a threshold): the simulator models the ones it knows.
-        if (Calls("CreatureCmd", "SetCurrentHp") && !SimAdapter.ExecuteCards.Contains(name))
+        // A card that sets an enemy's HP (Judgement kills at or below a threshold), read from its program: its target's.
+        if (Calls("CreatureCmd", "SetCurrentHp") && !Procs.Programs.CardEffects.SetsTargetsHp(card.GetType()))
             issues.Add("sets a creature's HP (not in the simulator: kills, lethal)");
         // A card that takes cards from your hand and draws: which comes first decides the room in your hand, read from its program
         // (decision #182). One whose program doesn't show both can't be put in order.
@@ -281,7 +281,7 @@ internal static class CardCoverage
         // Osty attacks are read from the game's tag (PlayFacts.IsOstyAttack): a card attacking from Osty without it wouldn't be simulated.
         if (Calls("AttackCommand", "FromOsty") && !PlayFacts.IsOstyAttack(card))
             issues.Add("attacks from Osty without the OstyAttack tag (its hit isn't simulated: PlayFacts.IsOstyAttack)");
-        if (Calls("CreatureCmd", "Kill") && !SimAdapter.KillsOstyCards.Contains(name))
+        if (Calls("CreatureCmd", "Kill") && !Procs.Programs.CardEffects.KillsOsty(card.GetType()))
             issues.Add("kills a creature (not in the simulator)");
         // A card that becomes another card once played (Mourning Blow into a Sadness): a created card.
         if (Calls("CardModel", "set_TransformIntoAfterPlay") && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))

@@ -66,8 +66,9 @@ public static partial class SimAdapter
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
         play.Draws = facts.Draws;
-        play.BlockToAlly = BlockToAllyCards.Contains(name);
-        play.ChannelToAlly = ChannelToAllyCards.Contains(name);
+        // Whom its block and channels are for, read from its code (decision #182): a teammate it's aimed at (Lift, Ignition).
+        play.BlockToAlly = Procs.Programs.CardEffects.BlocksAnother(card.GetType());
+        play.ChannelToAlly = Procs.Programs.CardEffects.ChannelsForTarget(card.GetType());
 
         // ---- the card play and what each play does
         play.TargetId = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
@@ -84,7 +85,7 @@ public static partial class SimAdapter
         if (Fool.DislodgeCards.Contains(name)) play.Body.Add(new DislodgeAllAction());
         if (facts.BlockGains > 0 && BlockOf(card, facts, me, combat, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
         // Block for every player (Rally): the same value to each living teammate too, worked out on them (their Dexterity, Frail).
-        if (facts.BlockGains > 0 && AllPlayersBlockCards.Contains(name) && card.DynamicVars.TryGetValue("Block", out var allBlock))
+        if (facts.BlockGains > 0 && Procs.Programs.CardEffects.BlocksEachPlayer(card.GetType()) && card.DynamicVars.TryGetValue("Block", out var allBlock))
         {
             var mates = Teammates(me, combat);
             for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
@@ -119,7 +120,7 @@ public static partial class SimAdapter
                 if (drawn > 0) play.Body.Add(new CardEventAction(CardEvent.Drawn, drawn) { Player = who, Indirect = true });
             }
         }
-        if (StripBlockCards.Contains(name)) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
+        if (Procs.Programs.CardEffects.TakesTargetsBlock(card.GetType())) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
         play.Body.AddRange(PowersOf(card, facts, name, allyId));
         if (TriggerPoisonCards.Contains(name)) play.Body.Add(new TriggerPoisonAction());
         play.Body.AddRange(OrbsOf(card, me, combat, name, play.ChannelToAlly ? allyId : owner));
@@ -152,14 +153,14 @@ public static partial class SimAdapter
         // The rest of what each play does, after the card's own actions above: Capture Spirit's damage, Judgement, Bouncing Flask's
         // poison on random enemies, Osty's death (Sacrifice, Bone Shards; Necro Mastery reacts).
         var target2 = ids.FirstOrDefault(entry => entry.Value == targetId).Key;
-        if (TargetDamageCards.Contains(name) && target2 != null && card.DynamicVars.TryGetValue("Damage", out var tdVar) && tdVar is DamageVar tdv)
+        if (card.Type != CardType.Attack && Procs.Programs.CardEffects.DamagesTargetWithoutAttacking(card.GetType()) && target2 != null && card.DynamicVars.TryGetValue("Damage", out var tdVar) && tdVar is DamageVar tdv)
             play.Body.Add(new DamageAction(new DamageSpec(tdv.BaseValue, SimReaders.Props(tdv.Props))
                 { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(me.RunState, combat, card, me.Creature, target2, tdv.BaseValue, tdv.Props) } }));
-        if (ExecuteCards.Contains(name)) play.Body.Add(new ExecuteAction(Sts2State.Var(card, "Threshold")));
+        if (Procs.Programs.CardEffects.SetsTargetsHp(card.GetType())) play.Body.Add(new ExecuteAction(Sts2State.Var(card, "Threshold")));
         if (card.TargetType == TargetType.RandomEnemy && card.DynamicVars.Values.FirstOrDefault(IsPowerVar<PoisonPower>) is { } flask)
             play.Body.Add(new ApplyPowerAction(PowerId.Poison, (int)flask.BaseValue)
                 { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 1)), Debuff = true });
-        if (KillsOstyCards.Contains(name)) play.Body.Add(new KillOstyAction());
+        if (Procs.Programs.CardEffects.KillsOsty(card.GetType())) play.Body.Add(new KillOstyAction());
         // What the card does, in the order its code does it (decision #182: its program).
         if (UseCardPrograms) play.Body = PlayOrder.Arrange(play.Body, PlayOrder.ProgramOf(card.GetType()));
         // The card's enchantment acts after the card itself, on every play (CardModel: EnchantmentModel.OnPlay after OnPlay). The
@@ -325,7 +326,7 @@ public static partial class SimAdapter
             captured[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, baseValue, props);
         }
         DamageSpec? onKill = null;
-        if (OnKillHitAllCards.Contains(name) && card.DynamicVars.TryGetValue("OnKillDamage", out var kv2) && kv2 is DamageVar kdv)
+        if (Procs.Programs.CardEffects.HitsAllOnKill(card.GetType()) && card.DynamicVars.TryGetValue("OnKillDamage", out var kv2) && kv2 is DamageVar kdv)
         {
             var killTerms = new Dictionary<int, CapturedTerms>();
             foreach (var (creature, id) in ids)
@@ -354,7 +355,7 @@ public static partial class SimAdapter
     {
         var gains = facts.BlockGains / plays;
         if (gains <= 0) return null;
-        var toAlly = BlockToAllyCards.Contains(name);
+        var toAlly = Procs.Programs.CardEffects.BlocksAnother(card.GetType());
         var to = toAlly ? allyId : Who.You;
         if (toAlly && allyId == Who.None) return null; // no teammate to aim at: the block goes to no one
         var aimed = ids.FirstOrDefault(entry => entry.Value == targetId).Key;

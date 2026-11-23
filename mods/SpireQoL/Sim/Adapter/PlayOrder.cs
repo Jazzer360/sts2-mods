@@ -53,7 +53,7 @@ internal static class PlayOrder
             case ("CreatureCmd", "LoseBlock"): yield return "lose-block"; break;
             case ("CreatureCmd", "Damage"):
                 // Its target: the card's owner (Offering, Bloodletting) or another creature (the first argument after the choice context).
-                yield return step.Arguments.Skip(1).FirstOrDefault() == "Creature" ? "self-damage" : "damage";
+                yield return step.Arguments.Count > 1 && step.Arguments[1] == "Owner.Creature" ? "self-damage" : "damage";
                 break;
             case ("CreatureCmd", "Kill"): yield return "kill"; break;
             case ("CreatureCmd", "SetCurrentHp"): yield return "execute"; break;

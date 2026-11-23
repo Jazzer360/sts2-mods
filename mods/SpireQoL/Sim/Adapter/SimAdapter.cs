@@ -87,36 +87,11 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly HashSet<string> KeepsStretchCards = new() { nameof(ChoKi) };
 
-    /// <summary>Cards whose play kills your Osty (CreatureCmd.Kill on Owner.Osty; decompile v0.111.0).</summary>
-    internal static readonly HashSet<string> KillsOstyCards = new() { nameof(Sacrifice), nameof(BoneShards) };
-
-    /// <summary>Cards that kill an enemy at or below a threshold (Judgement: SetCurrentHp to 0). The card scan flags a new one.</summary>
-    internal static readonly HashSet<string> ExecuteCards = new() { nameof(Judgement) };
-
-    /// <summary>Cards whose kill sets off a hit on every enemy (Timber: OnKillDamage). The card scan flags a new damage value.</summary>
-    internal static readonly HashSet<string> OnKillHitAllCards = new() { nameof(Timber) };
-
     /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
     internal static readonly HashSet<string> RepeatPerKillCards = new() { nameof(EchoingSlash) };
 
     /// <summary>Cards that set off every enemy's poison during the play (Outbreak: PoisonPower.Trigger on each).</summary>
     internal static readonly HashSet<string> TriggerPoisonCards = new() { nameof(Outbreak) };
-
-    /// <summary>Cards that take all of their target's block, then its Artifact (Expose: CreatureCmd.LoseBlock, PowerCmd.Remove).</summary>
-    internal static readonly HashSet<string> StripBlockCards = new() { nameof(Expose) };
-
-    /// <summary>
-    /// Cards aimed at a teammate (AnyAlly) whose block goes to that teammate (CreatureCmd.GainBlock on cardPlay.Target: Lift,
-    /// Constellation, Demonic Shield). Your Dexterity and doublers count (they key on the card's owner), their Frail too
-    /// (it keys on the target): the game's block math with them as the target. The card scan flags a new ally card.
-    /// </summary>
-    internal static readonly HashSet<string> BlockToAllyCards = new() { nameof(Lift), nameof(Constellation), nameof(DemonicShield) };
-
-    /// <summary>
-    /// Cards that give their block to every living player (Rally.OnPlay: CreatureCmd.GainBlock for each player on your side): you
-    /// first, then each teammate (decision #75: what it does for teammates counts).
-    /// </summary>
-    internal static readonly HashSet<string> AllPlayersBlockCards = new() { nameof(Rally) };
 
     /// <summary>
     /// Cards that summon every living player's Osty (LegionOfBone.OnPlay: OstyCmd.Summon for each of CombatState.PlayerCreatures),
@@ -136,12 +111,6 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly HashSet<string> TeammatesShivCards = new() { nameof(BladeSymphony) };
 
-    /// <summary>Cards aimed at a teammate whose channels go into that teammate's orbs (Ignition: OrbCmd.Channel on the target's player).</summary>
-    internal static readonly HashSet<string> ChannelToAllyCards = new() { nameof(Ignition) };
-
-
-    /// <summary>Cards that aren't attacks but damage their target (Capture Spirit: CreatureCmd.Damage). The card scan flags a new one.</summary>
-    internal static readonly HashSet<string> TargetDamageCards = new() { nameof(CaptureSpirit) };
 
     /// <summary>
     /// The power the simulator models for a power type: a temporary Thorns power (Cho Barbs, v0.113.0) gives real
