@@ -503,7 +503,7 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ## Play Preview
 
-Setting: **Play Preview** (`play-preview`, on by default). While you hold a card (the game's card play in progress, `NPlayerHand._currentCardPlay`), and for a card that needs a target only once it's aimed (`NCard._previewTarget`, set while the targeting arrow is on a creature), the displays that show the end of your turn show it as it would go after playing that card there (decision #183):
+Setting: **Play Preview** (`play-preview`, on by default). While you hold a card (the game's card play in progress, `NPlayerHand._currentCardPlay`), and for a card that needs a target only once it's aimed (`NCard._previewTarget`, set while the targeting arrow is on a creature); for one that doesn't (every enemy, a random one, you), only where letting go of the mouse plays it (the game's own test, `NMouseCardPlay.IsCardInPlayZone`: above the play zone's line). A controller's card play isn't followed yet (no preview for an untargeted card), the displays that show the end of your turn show it as it would go after playing that card there (decision #183):
 - **Incoming Damage** and **Teammate Incoming Damage**: the damage you (they) would take, tinted lavender while it's a preview.
 - **Death Skull**: each enemy's chance of dying before it acts after the play.
 - **Enemy intents**: an attack whose damage the play changes (Weak, Strength, Vulnerable on you, a kill) gets a lavender line through the game's damage number and the new number above it, in the game's font (`%Value`'s); a range when the play's outcomes differ; the line alone for an enemy the play kills in every outcome. Our nodes under the intent's `%IntentHolder`; the game's aren't changed.

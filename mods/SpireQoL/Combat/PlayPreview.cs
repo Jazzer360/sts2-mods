@@ -4,6 +4,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Cards;
+using MegaCrit.Sts2.Core.Nodes.Combat;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Game;
 
@@ -22,6 +23,10 @@ internal static class PlayPreview
     /// <summary>NCard._previewTarget: the creature the card is aimed at while you target (NCardPlay.OnCreatureHover sets it).</summary>
     private static readonly FieldInfo? PreviewTarget = AccessTools.Field(typeof(NCard), "_previewTarget");
 
+    /// <summary>NMouseCardPlay.IsCardInPlayZone: letting go of the mouse now plays the card (a read of the mouse's height, nothing else).</summary>
+    private static readonly Func<NMouseCardPlay, bool>? InPlayZone =
+        AccessTools.Method(typeof(NMouseCardPlay), "IsCardInPlayZone") is { } method ? AccessTools.MethodDelegate<Func<NMouseCardPlay, bool>>(method) : null;
+
     /// <summary>The preview last built, kept while the held card's outcome is the same one (no model rebuilt every frame).</summary>
     private static Shown? _built;
 
@@ -37,7 +42,14 @@ internal static class PlayPreview
         if (!Sts2State.IsPlayerTurn || !(ctx.Settings.Features.TryGetValue(FeatureId, out var on) ? on : true)) return null;
         if (Sts2State.HeldCard() is not var (node, card)) return null;
         var target = PreviewTarget?.GetValue(node) as Creature;
-        if (target == null && card.TargetType is TargetType.AnyEnemy or TargetType.AnyAlly) return null;
+        if (card.TargetType is TargetType.AnyEnemy or TargetType.AnyAlly)
+        {
+            // Aimed: letting go plays it at its target.
+            if (target == null) return null;
+        }
+        // Not aimed (every enemy, a random one, you): only where letting go plays it, the game's own test
+        // (NMouseCardPlay.IsCardInPlayZone: above the play zone's line). A controller's play isn't followed yet (TRACKER).
+        else if (Sts2State.CurrentCardPlay() is not NMouseCardPlay mouse || InPlayZone?.Invoke(mouse) != true) return null;
         if (!ctx.Predictions.LastFacts.TryGetValue(card, out var facts) || facts.Sim is not { } inputs || facts.OutcomeByAim is not { } outcomes) return null;
         if (inputs.AimFor(target) is not { } aim || !outcomes.TryGetValue(aim, out var outcome)) return null;
         // Its outcome must be for the board now: the forecast's start this frame is the one the card's search started from.

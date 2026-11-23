@@ -145,6 +145,9 @@ public static class Sts2State
     /// <summary>The card you're holding (dragging or aiming, NPlayerHand._currentCardPlay): its node and model, or null.</summary>
     public static (NCard Node, CardModel Card)? HeldCard() => NPlayerHand.Instance is { } hand ? HeldCard(hand) : null;
 
+    /// <summary>The card play in progress (NPlayerHand._currentCardPlay: the mouse's or a controller's), or null.</summary>
+    public static MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay? CurrentCardPlay() => NPlayerHand.Instance is { } hand ? CurrentCardPlay(hand) : null;
+
     private static (NCard Node, CardModel Card)? HeldCard(NPlayerHand hand)
     {
         try
