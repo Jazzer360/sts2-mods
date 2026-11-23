@@ -245,6 +245,17 @@ hooks.
     `ExhaustTakesNoActingCard`: the card scan now evaluates a filter that isn't a type (Growth's Sadness, Florescence's Shoot cards,
     Flak Cannon's statuses) on every card that acts when exhausted, and flags one any could pass. The reader now also reads a
     helper's returned value, `is`, a struct built in place (a selector's prefs) and what a foreach goes over (`LoopStep.Items`).
+  - Cards taken (2026-11-23, round three): one rule reads every command that takes cards (`CardEffects.Takes`, behind
+    `ExhaustsOfOthers`, `Discards`, `Transforms` and `TakesIntoHandOf`) by what its cards argument is: a pick's card or cards (with the
+    pick's pile, its filter and its selector: how many, and whether you choose how many: Guards, Neow's Fury), a roll (`NextItem`,
+    `TakeRandom` with its count), each card of a collection (a loop's, or one given whole: your hand, a `Where`, a list the play
+    filled in a loop, the first of one), the cards a draw gave (Scrape) or the top of your draw pile looked at, less the ones picked
+    (Ki Chant's `Except(Take(drawPile, count), picked)`). `PlayFacts.Taken` counts them on the board (a pick from your hand has the
+    cards the play drew before it; one from your draw pile the discard pile its play shuffles in first; a transform only what
+    `CardCmd.Transform` can take). They replaced `DiscardCount`, `TransformCount`, `TakenToHandCount` and the adapter's `HandTakes` table
+    (`SimAdapter.HandTakeOf`: which piles, which cards, a roll or a pick, one a play or all), and the name checks on Guards, Neow's Fury, Ki
+    Chant, Scrape and The Hermit with them (a pick shared by an exhaust and a discard: `SharedPickSize`). Fix: The Hermit with only
+    Curses in hand no longer counts a discard.
   - **The evaluator** (`ProgramEvaluator`) evaluates a condition before the play, each query translated once: a property of the
     game's objects is read (the game's own answer), a method only when it only asks (`Is`, `Has`, `Can`, `Get`, `Contains`,
     `HappenedThisTurn`), never anything about the RNG; Linq over a collection with the code's own lambda; your hand without the
@@ -331,12 +342,12 @@ references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter
 |---|---|---|
 | `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The tests are read now (Pillage's loop's `While`: the drawn card, its type, your hand's room; Escape Plan's block on the drawn card being a Skill); what's left is turning a test of a command's result into the simulator's `DrawnCardAction`. |
 | (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
-| `DiscardCount`, `TransformCount`, `TakenToHandCount`, `GeneratedCount` (PlayFacts) | most cards that discard, transform, take or make cards | Within reach now: the exhausts show the way (a pick's size from its selector, a loop's collection evaluated with its lambda). Not done yet. |
+| `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
 | `ChannelCount`, `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | orb, block and multi-hit cards | Counts from loops and conditions (`loop over Repeat`, Chill's loop over enemies, Cho Firm's arrow test). Both are read now (a loop's `While`: `i < 2`, `i < blockGains`; conditions evaluate); what's left is a count rule per command (channels, block gains, hits) built on them. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TriggerPoisonCards`, `TeammatesShivCards`, `EnemyStrengthCards` | Outbreak, Blade Symphony, Strength takers | A call on a power (`PoisonPower.Trigger` isn't a command); the player a helper's Shivs go to (an argument inside the helper); a power's sign and duration. |
 | `GlowGatedAttackCards`, `GlowNotTheAttack` | Pact's End; Fetch, Flatten, Nail | Whether the card's glow (`ShouldGlowGoldInternal`) is its attack's condition. Both can be read now (`CardProgramReader.ReadProperty` reads the glow's getter; the attack's condition is a value), so the attack's condition can simply be evaluated instead: the tables can go with `HitsPerPlay`'s cases. |
-| `HandTakes`, `AutoPlayFromDrawAction`'s count, `Fool.BlockWithoutVar` | the take-into-hand cards, Havoc, Cascade, The Devil | Which pile and filter a take uses, and the count argument (`cards.Count`, X + 1 upgraded). |
+| `AutoPlayFromDrawAction`'s count, `Fool.BlockWithoutVar` | Havoc, Cascade, The Devil | The count argument (`cards.Count`, X + 1 upgraded: a `WaysValue` now). |
 
 ## Part B: pipelines and models checked against the game's code
 

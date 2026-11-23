@@ -241,6 +241,15 @@ public static class ProgramEvaluator
         // x is T: x when it's a T, else null.
         if (query.Name == "is" && query.Of != null) return asked != null && IsOfType(asked.GetType(), query.Type) ? asked : null;
         if (query.Of == null && query.Type == "Enumerable") return Linq(query, arguments, context);
+        // Math.Min, Max, Abs over numbers (Dredge's Min(Cards, your hand's room)).
+        if (query.Of == null && query.Type == "Math")
+            return (query.Name, arguments.Select(ToNumber).ToList()) switch
+            {
+                ("Min", [{ } left, { } right]) => Math.Min(left, right),
+                ("Max", [{ } left, { } right]) => Math.Max(left, right),
+                ("Abs", [{ } only]) => Math.Abs(only),
+                _ => Unknown,
+            };
         if (query.Of == null) return StaticMember(query, arguments);
         if (asked == null) return Unknown;
         var result = Member(asked, query, arguments);

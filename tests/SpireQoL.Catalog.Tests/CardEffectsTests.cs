@@ -97,7 +97,40 @@ public class CardEffectsTests
                 exhaust.Way + (exhaust.FromDrawPile ? " from the draw pile" : "") + (exhaust.Filter != null || !exhaust.ItemTest.IsAlways ? " filtered" : "")));
             if (read != ways) failures.Add($"{card} ({branch}) exhausts: {read}; the table: {ways}");
         }
+        // Cards discarded, transformed and moved into your hand (PlayFacts.DiscardCount's, TransformCount's and TakenToHandCount's cases,
+        // SimAdapter.HandTakes), and how each takes them.
+        Exactly(nameof(CardEffects.Discards), program => CardEffects.Discards(program).Count > 0, Tables.DiscardCards.Keys.ToArray());
+        Exactly(nameof(CardEffects.Transforms), program => CardEffects.Transforms(program).Count > 0, Tables.TransformCards.Keys.ToArray());
+        Exactly(nameof(CardEffects.TakesIntoHandOf), program => CardEffects.TakesIntoHandOf(program).Count > 0, Tables.HandTakes.Keys.ToArray());
+        void Ways(string rule, Func<CardProgram, IReadOnlyList<CardEffects.CardsTaken>> takes, Dictionary<string, string> table)
+        {
+            foreach (var (card, ways) in table)
+            {
+                if (!programs.TryGetValue(card, out var program)) continue;
+                var read = string.Join(", ", takes(program).Select(Described));
+                if (read != ways) failures.Add($"{card} ({branch}) {rule}: {read}; the table: {ways}");
+            }
+        }
+        Ways("discards", CardEffects.Discards, Tables.DiscardCards);
+        Ways("transforms", CardEffects.Transforms, Tables.TransformCards);
+        Ways("takes into hand", CardEffects.TakesIntoHandOf, Tables.HandTakes);
         Assert.True(failures.Count == 0, string.Join("\n", failures));
+    }
+
+    /// <summary>How a take reads: its way, its pile, one or all, a filter, a choice of how many.</summary>
+    private static string Described(CardEffects.CardsTaken take)
+    {
+        var parts = new List<string> { take.Way.ToString() };
+        var piles = take.Way == CardEffects.TakeWay.Picked
+            ? take.PickPile is { } pile ? new[] { pile.ToString() } : Array.Empty<string>()
+            : take.Items?.Parts().OfType<QueryValue>().Where(value => value is { Name: "GetPile", Arguments: [ConstantValue, ..] })
+                .Select(value => ((MegaCrit.Sts2.Core.Entities.Cards.PileType)((ConstantValue)value.Arguments[0]).Value).ToString()).Distinct().ToArray() ?? Array.Empty<string>();
+        if (piles.Length > 0) parts.Add("from " + string.Join("+", piles));
+        if (take.Single) parts.Add("one");
+        if (take.Way == CardEffects.TakeWay.Picked && take.PerPick is not ConstantValue { Value: 1 }) parts.Add("several");
+        if (take.Filter != null || take.PickFilter != null || !take.ItemTest.IsAlways) parts.Add("filtered");
+        if (take.ChoosesHowMany) parts.Add("how many chosen");
+        return string.Join(" ", parts);
     }
 
     /// <summary>The per-card tables the rules replaced, as they were when they were deleted.</summary>
@@ -152,6 +185,32 @@ public class CardEffectsTests
         public static readonly string[] ForgeCards =
         {
             "BeatIntoShape", "BigBang", "Bulwark", "Conqueror", "RefineBlade", "SeekingEdge", "SpoilsOfBattle", "SummonForth", "TheSmith", "WroughtInWar",
+        };
+        // Discards (PlayFacts.DiscardCount), with how each takes them: a pick from your hand (one, or its Cards), your whole hand, the
+        // cards it drew (Scrape), the ones looked at on top of your draw pile (Ki Chant).
+        public static readonly Dictionary<string, string> DiscardCards = new()
+        {
+            ["Acrobatics"] = "Picked from Hand", ["DaggerThrow"] = "Picked from Hand", ["Prepared"] = "Picked from Hand several", ["Survivor"] = "Picked from Hand",
+            ["HiddenDaggers"] = "Picked from Hand several",
+            ["CalculatedGamble"] = "Each from Hand", ["ShadowStep"] = "Each from Hand", ["StormOfSteel"] = "Each from Hand", ["WheelOfFortune"] = "Each from Hand",
+            // The Hermit: the pick is discarded when it isn't a Curse; Ki Chant: what it looked at, less the card it took.
+            ["TheHermit"] = "Picked from Hand filtered", ["KiChant"] = "LookedAt from Draw filtered", ["Scrape"] = "Drawn filtered",
+        };
+        // Transforms (PlayFacts.TransformCount).
+        public static readonly Dictionary<string, string> TransformCards = new()
+        {
+            ["Begone"] = "Picked from Hand", ["Guards"] = "Picked from Hand several how many chosen", ["Charge"] = "Picked from Draw several",
+            ["Seance"] = "Picked from Draw several", ["Compact"] = "Each from Hand filtered", ["PrimalForce"] = "Each from Hand filtered", ["PunchOfJoy"] = "Each from Hand one",
+        };
+        // Moved into your hand (PlayFacts.TakenToHandCount, SimAdapter.HandTakes: FromDiscard, Eligible, Random, AllAtOnce).
+        public static readonly Dictionary<string, string> HandTakes = new()
+        {
+            ["Anointed"] = "Random from Draw filtered", ["Wish"] = "Picked from Draw", ["SeekerStrike"] = "Picked from Draw filtered", ["KiChant"] = "Picked from Draw filtered",
+            ["SecretWeapon"] = "Picked from Draw filtered", ["SecretTechnique"] = "Picked from Draw filtered",
+            ["LockedIn"] = "Picked from Draw filtered", ["AllForOne"] = "Each from Discard filtered", ["ArrowStab"] = "Picked from Discard filtered",
+            ["Dredge"] = "Picked from Discard several", ["TheWorld"] = "Random from Discard", ["Graveblast"] = "Picked from Discard",
+            // Summon Forth: every Sovereign Blade not in your hand, from every pile; Neow's Fury: you choose how many.
+            ["Hologram"] = "Picked from Discard", ["SummonForth"] = "Each filtered", ["NeowsFury"] = "Picked from Discard several how many chosen",
         };
     }
 }

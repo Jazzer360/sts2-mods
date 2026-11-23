@@ -126,37 +126,75 @@ public static class CardEffects
         return draws;
     }
 
-    // ---- other cards exhausted (CardCmd.Exhaust in a play, of cards that aren't the one played)
+    // ---- cards a play takes: other cards exhausted, discarded, transformed or moved into your hand
 
-    /// <summary>How an exhaust of other cards takes them.</summary>
-    public enum ExhaustWay
+    /// <summary>How a command of the play takes the cards it acts on.</summary>
+    public enum TakeWay
     {
-        /// <summary>Cards you pick (CardSelectCmd): Brand, Burning Pact, Purity, Cleanse from your draw pile, The Hermit's Curse.</summary>
+        /// <summary>Cards you pick (CardSelectCmd): Brand, Burning Pact, Purity, Cleanse from your draw pile, The Hermit's Curse, Acrobatics' discard.</summary>
         Picked,
-        /// <summary>One card at random from a collection (CombatCardSelection.NextItem: Cinder, Thrash).</summary>
+        /// <summary>Cards a roll takes from a collection (NextItem: Cinder, Thrash; TakeRandom: Anointed, The World).</summary>
         Random,
-        /// <summary>Each card of a collection (Fiend Fire your hand, Second Wind its non-Attacks, Growth its Sadness, Flak Cannon your statuses).</summary>
+        /// <summary>Each card of a collection (Fiend Fire your hand, Second Wind its non-Attacks, Storm of Steel your hand, Compact your statuses).</summary>
         Each,
+        /// <summary>Cards the play drew, by what they are (Scrape: the ones that cost energy): at most what it drew.</summary>
+        Drawn,
+        /// <summary>
+        /// The top cards of your draw pile it looks at, less the ones picked from them (Ki Chant: Except(Take(drawPile, count), picked)):
+        /// how many it looks at, after the shuffle its play makes first when the pile is short.
+        /// </summary>
+        LookedAt,
     }
 
     /// <summary>
-    /// One CardCmd.Exhaust of other cards in a play, with everything it runs on: how it takes them, what it goes over (the collection a
-    /// loop or a roll is over), the pick it takes them from, and the tests on the picked card (The Hermit: a Curse).
+    /// One command of the play that takes cards (CardCmd.Exhaust, Discard, Transform, CardPileCmd.Add into your hand), with everything it
+    /// runs on: how it takes them, what it goes over (the collection a loop, a roll or the command itself is over), the pick it takes them
+    /// from, and the tests on the card taken (The Hermit: a Curse).
     /// </summary>
-    public sealed record ExhaustOfOthers(CommandStep Command, ProgramCondition Condition, ExhaustWay Way, ProgramValue? Items, ChoiceStep? Pick)
+    public sealed record CardsTaken(CommandStep Command, ProgramCondition Condition, TakeWay Way, ProgramValue? Items, ChoiceStep? Pick)
     {
+        /// <summary>At most one card of its collection (FirstOrDefault, Item(0): Punch of Joy's Sadness), not a pick.</summary>
+        public bool Single { get; init; }
+
+        /// <summary>A roll's count (TakeRandom's: Anointed your hand's room); null for one (NextItem).</summary>
+        public ProgramValue? RollCount { get; init; }
+
+        /// <summary>The pile a pick is from (CardSelectCmd.FromCombatPile's pile; FromHand and the like: your hand).</summary>
+        public MegaCrit.Sts2.Core.Entities.Cards.PileType? PickPile => Pick == null ? null
+            : Pick.Values.Select(Unstored).OfType<QueryValue>().FirstOrDefault(value => value is { Name: "GetPile", Arguments: [ConstantValue, ..] }) is { Arguments: [ConstantValue { Value: var pile }, ..] }
+                ? (MegaCrit.Sts2.Core.Entities.Cards.PileType)pile
+            : Pick.Command.Name.StartsWith("FromHand", StringComparison.Ordinal) ? MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand
+            : null;
+
+        /// <summary>
+        /// Where it takes from can be read from its code: a pick from a pile, or a roll or a loop over a collection read whole (the card
+        /// scan holds a card moving cards into your hand to it: SimAdapter.HandTakeOf takes them out of that pile).
+        /// </summary>
+        public bool PileReadable => Way == TakeWay.Picked ? PickPile is MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw or MegaCrit.Sts2.Core.Entities.Cards.PileType.Discard
+            : Way is TakeWay.Random or TakeWay.Each && Items != null && !Items.Parts().Any(part => part is UnknownValue);
+
         /// <summary>The pick is from your draw pile (Cleanse: CardSelectCmd.FromCombatPile on PileType.Draw), not your hand.</summary>
-        public bool FromDrawPile => Pick?.Values.Any(value => value is QueryValue { Name: "GetPile", Arguments: [ConstantValue { Value: var pile }, ..] }
-                                                                && pile == (long)MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw) == true;
+        public bool FromDrawPile => PickPile == MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw;
+
+        /// <summary>The pick's filter (FromCombatPile's last argument: Secret Weapon's Attacks), null when it has none.</summary>
+        public LambdaValue? PickFilter => Pick?.Values.Count > 0 ? Pick.Values[^1] as LambdaValue : null;
+
+        /// <summary>The selector the pick is made with (CardSelectorPrefs: its prompt, then how many: exactly, or at least and at most).</summary>
+        private QueryValue? Prefs => Pick?.Values.OfType<QueryValue>().FirstOrDefault(value => value.Name == ".ctor" && value.Type == "CardSelectorPrefs");
 
         /// <summary>
         /// How many one pick takes at most: one for its first card (FirstOrDefault), else the selector's most (CardSelectorPrefs' last
         /// number: Purity's Cards).
         /// </summary>
-        public ProgramValue PerPick => Command.Values.Count > 1 && Command.Values[1] is QueryValue { Name: "FirstOrDefault" } || Pick == null
+        public ProgramValue PerPick => Command.Values.Count > 1 && Command.Values.Any(value => Unstored(value) is QueryValue { Name: "FirstOrDefault" }) || Pick == null
             ? new ConstantValue(1)
-            : Pick.Values.OfType<QueryValue>().FirstOrDefault(value => value.Name == ".ctor" && value.Type == "CardSelectorPrefs") is { Arguments.Count: > 0 } prefs
-                ? prefs.Arguments[^1] : new UnknownValue("pick size");
+            : Prefs is { Arguments.Count: > 1 } prefs ? prefs.Arguments[^1] : new UnknownValue("pick size");
+
+        /// <summary>
+        /// You choose how many it takes (CardSelectorPrefs with a least and a most that differ: Guards' 0 to any, Neow's Fury's 0 to its
+        /// Cards): what it takes is your later decision, not the play's.
+        /// </summary>
+        public bool ChoosesHowMany => Prefs is { Arguments.Count: >= 3 } prefs && !Equals(prefs.Arguments[1], prefs.Arguments[2]);
 
         /// <summary>The tests its condition makes on the card it takes (each: a loop's item), as a filter; the rest of its condition apart.</summary>
         public ProgramCondition ItemTest => Only(Condition, onItem: true);
@@ -165,12 +203,9 @@ public static class CardEffects
         /// <summary>What it takes from the collection it goes over (Items' Where lambda; null when it's all of it).</summary>
         public LambdaValue? Filter => Unwrapped(Items) is QueryValue { Name: "Where", Arguments: [_, LambdaValue lambda] } ? lambda : null;
 
-        private static ProgramValue? Unwrapped(ProgramValue? value) => value switch
-        {
-            QueryValue { Name: "ToList" or "ToArray", Arguments: [var inner] } => Unwrapped(inner),
-            StoredValue stored => Unwrapped(stored.Value),
-            _ => value,
-        };
+        /// <summary>The top of your draw pile it looks at (Take(drawPile.Cards, count): its count), for LookedAt.</summary>
+        public ProgramValue? Looks => Items?.Parts().OfType<QueryValue>().FirstOrDefault(value => value is { Name: "Take", Arguments.Count: 2 }) is { } take
+            ? take.Arguments[1] : null;
 
         private static ProgramCondition Only(ProgramCondition condition, bool onItem)
         {
@@ -182,18 +217,55 @@ public static class CardEffects
         }
     }
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<ExhaustOfOthers>> Exhausts = new();
+    /// <summary>A collection's value without what doesn't change its cards (ToList, a local holding it).</summary>
+    private static ProgramValue? Unwrapped(ProgramValue? value) => value switch
+    {
+        QueryValue { Name: "ToList" or "ToArray" or "AsEnumerable", Arguments: [var inner] } => Unwrapped(inner),
+        StoredValue stored => Unwrapped(stored.Value),
+        _ => value,
+    };
 
-    public static IReadOnlyList<ExhaustOfOthers> ExhaustsOfOthers(Type cardType) => Exhausts.GetOrAdd(cardType, type => ExhaustsOfOthers(CardPrograms.Of(type)));
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<CardsTaken>> Exhausts = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<CardsTaken>> DiscardTakes = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<CardsTaken>> TransformTakes = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<CardsTaken>> HandTakeSteps = new();
+
+    public static IReadOnlyList<CardsTaken> ExhaustsOfOthers(Type cardType) => Exhausts.GetOrAdd(cardType, type => ExhaustsOfOthers(CardPrograms.Of(type)));
+    public static IReadOnlyList<CardsTaken> Discards(Type cardType) => DiscardTakes.GetOrAdd(cardType, type => Discards(CardPrograms.Of(type)));
+    public static IReadOnlyList<CardsTaken> Transforms(Type cardType) => TransformTakes.GetOrAdd(cardType, type => Transforms(CardPrograms.Of(type)));
+    public static IReadOnlyList<CardsTaken> TakesIntoHandOf(Type cardType) => HandTakeSteps.GetOrAdd(cardType, type => TakesIntoHandOf(CardPrograms.Of(type)));
 
     /// <summary>
     /// The play's exhausts of other cards, in order: CardCmd.Exhaust of a pick's card (Picked), of a roll's (Random), or of each card a
     /// loop goes over (Each; a loop over a pick's result is Picked). An exhaust of the card itself, or of a card it can't tell, isn't one.
     /// </summary>
-    public static IReadOnlyList<ExhaustOfOthers> ExhaustsOfOthers(CardProgram program)
+    public static IReadOnlyList<CardsTaken> ExhaustsOfOthers(CardProgram program) =>
+        Takes(program, command => Is(command, "CardCmd", "Exhaust") ? 1 : null, collections: false);
+
+    /// <summary>The play's discards (CardCmd.Discard, DiscardAndDraw: the cards are their second argument), in order.</summary>
+    public static IReadOnlyList<CardsTaken> Discards(CardProgram program) =>
+        Takes(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name is "Discard" or "DiscardAndDraw" ? 1 : null, collections: true);
+
+    /// <summary>The play's transforms (CardCmd.Transform, TransformTo, TransformToRandom: the card or the list is their first argument), in order.</summary>
+    public static IReadOnlyList<CardsTaken> Transforms(CardProgram program) =>
+        Takes(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name.StartsWith("Transform", StringComparison.Ordinal) ? 0 : null, collections: true);
+
+    /// <summary>The play's moves into your hand (CardPileCmd.Add to the hand, after no pick from another player's cards), in order.</summary>
+    public static IReadOnlyList<CardsTaken> TakesIntoHandOf(CardProgram program) =>
+        Takes(program, command => Is(command, "CardPileCmd", "Add") && Argument(command, 1) == HandPile ? 0 : null, collections: true)
+            .Where(take => take.Pick == null || PicksYourCards(take.Pick)).ToList();
+
+    /// <summary>
+    /// Each command <paramref name="cardsArgument"/> names (with the argument holding the cards it acts on), by how it takes them: a pick's
+    /// card or cards (Picked), a roll's (Random), each card of a collection a loop goes over (Each; a loop over a pick's result is
+    /// Picked), and with <paramref name="collections"/> a collection given whole (your hand, a Where of it: Each), the cards a draw gave
+    /// (Drawn) or the ones looked at on top of your draw pile (LookedAt). Anything else (the card itself, a card it can't tell) isn't one.
+    /// </summary>
+    private static IReadOnlyList<CardsTaken> Takes(CardProgram program, Func<CommandStep, int?> cardsArgument, bool collections)
     {
-        var exhausts = new List<ExhaustOfOthers>();
+        var takes = new List<CardsTaken>();
         ChoiceStep? lastPick = null;
+        LoopStep? lastLoop = null;
         void Walk(IEnumerable<ProgramStep> steps, ProgramCondition outer, LoopStep? loop)
         {
             foreach (var step in steps)
@@ -206,32 +278,48 @@ public static class CardEffects
                         break;
                     case LoopStep inner:
                         Walk(inner.Body, condition, inner);
+                        lastLoop = inner;
                         break;
                     case CommandStep command:
-                        if (Is(command, "CardCmd", "Exhaust") && command.Values.Count > 1)
-                        {
-                            // What it exhausts (a local holding a roll's or a pick's card is that card).
-                            var exhausted = Unstored(command.Values[1])!;
-                            if (exhausted is NamedValue { Name: "each" } && loop != null)
-                            {
-                                if (Unstored(loop.Items) is ResultValue { Command: var picked } && picked.StartsWith("CardSelectCmd.", StringComparison.Ordinal))
-                                    exhausts.Add(new ExhaustOfOthers(command, condition, ExhaustWay.Picked, loop.Items, lastPick));
-                                else if (loop.Items != null)
-                                    exhausts.Add(new ExhaustOfOthers(command, condition, ExhaustWay.Each, loop.Items, Pick: null));
-                            }
-                            else if (exhausted.Parts().Any(part => part is ResultValue { Command: var result } && result.StartsWith("CardSelectCmd.", StringComparison.Ordinal)))
-                                exhausts.Add(new ExhaustOfOthers(command, condition, ExhaustWay.Picked, Items: null, lastPick));
-                            else if (exhausted is QueryValue { Name: "NextItem", Arguments: [var from] })
-                                exhausts.Add(new ExhaustOfOthers(command, condition, ExhaustWay.Random, from, Pick: null));
-                        }
+                        if (cardsArgument(command) is { } index && index < command.Values.Count && Taken(command, Unstored(command.Values[index])!, condition, loop, lastPick, lastLoop, collections) is { } take)
+                            takes.Add(take);
                         Walk(command.Inner, condition, loop);
                         break;
                 }
             }
         }
         Walk(program.Steps, ProgramCondition.Always, loop: null);
-        return exhausts;
+        return takes;
     }
+
+    private static CardsTaken? Taken(CommandStep command, ProgramValue cards, ProgramCondition condition, LoopStep? loop, ChoiceStep? lastPick, LoopStep? lastLoop, bool collections)
+    {
+        static bool IsPick(ProgramValue? value) => value != null && value.Parts().Any(part => part is ResultValue { Command: var result } && result.StartsWith("CardSelectCmd.", StringComparison.Ordinal));
+        if (cards is NamedValue { Name: "each" } && loop != null)
+        {
+            if (IsPick(Unwrapped(loop.Items)) && Unwrapped(loop.Items) is ResultValue) return new CardsTaken(command, condition, TakeWay.Picked, loop.Items, lastPick);
+            return loop.Items != null ? new CardsTaken(command, condition, TakeWay.Each, loop.Items, Pick: null) : null;
+        }
+        if (IsPick(cards) && !(collections && cards.Parts().Any(part => part is QueryValue { Name: "Take" }))) return new CardsTaken(command, condition, TakeWay.Picked, Items: null, lastPick);
+        if (cards is QueryValue { Name: "NextItem", Arguments: [var from] }) return new CardsTaken(command, condition, TakeWay.Random, from, Pick: null);
+        if (!collections) return null;
+        if (Unwrapped(cards) is QueryValue { Name: "TakeRandom", Arguments: [var rolledFrom, var count, ..] })
+            return new CardsTaken(command, condition, TakeWay.Random, rolledFrom, Pick: null) { RollCount = count };
+        if (cards.Parts().Any(part => part is ResultValue { Command: "CardPileCmd.Draw" })) return new CardsTaken(command, condition, TakeWay.Drawn, cards, Pick: null);
+        if (cards.Parts().Any(part => part is QueryValue { Name: "Take", Arguments.Count: 2 })) return new CardsTaken(command, condition, TakeWay.LookedAt, cards, lastPick);
+        // A list the play fills in a loop and then gives whole (Compact's transformations): that loop's cards.
+        if (Unwrapped(cards) is QueryValue { Name: ".ctor", Type: var listType } && listType.StartsWith("List", StringComparison.Ordinal) && lastLoop?.Items != null)
+            return new CardsTaken(command, condition, TakeWay.Each, lastLoop.Items, Pick: null);
+        // The first card of a collection (Punch of Joy's Sadness): one at most.
+        if (Unwrapped(cards) is QueryValue { Name: "FirstOrDefault" or "First" or "Item" or "get_Item" } single && (single.Of ?? (single.Arguments.Count > 0 ? single.Arguments[0] : null)) is { } collection)
+            return new CardsTaken(command, condition, TakeWay.Each, collection, Pick: null) { Single = true };
+        return IsCollection(cards) ? new CardsTaken(command, condition, TakeWay.Each, cards, Pick: null) : null;
+    }
+
+    /// <summary>A value that holds cards (a pile's Cards, a Where, a ToList of them), not one card.</summary>
+    private static bool IsCollection(ProgramValue value) => Unwrapped(value) is QueryValue query
+        && (query.Name is "Cards" or "Where" or "OfType" or "ToList" or "Except" || query.ValueType.Contains("List", StringComparison.Ordinal)
+            || query.ValueType.Contains("Enumerable", StringComparison.Ordinal));
 
     /// <summary>A value as stored (a local holding it is it).</summary>
     private static ProgramValue? Unstored(ProgramValue? value) => value is StoredValue stored ? Unstored(stored.Value) : value;

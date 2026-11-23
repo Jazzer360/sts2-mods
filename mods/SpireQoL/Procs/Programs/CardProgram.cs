@@ -572,6 +572,10 @@ public static class CardProgramReader
         {
             if (at >= Ops.Count || !_jumpsTo.TryGetValue(at, out var jumps) || _stackDepth.ElementAtOrDefault(at) is not > 0) return null;
             var ways = new List<(int Source, bool Jump)>();
+            // Reached only by tests of a copy (x?.y: dup; brtrue to here, the way on ends before it): the value copied.
+            if (jumps.All(jump => Ops[jump].OpCode.FlowControl == FlowControl.Cond_Branch && jump > 0 && Ops[jump - 1].OpCode == OpCodes.Dup)
+                && at > 0 && Ops[at - 1].OpCode.FlowControl is FlowControl.Branch or FlowControl.Return or FlowControl.Throw)
+                return ReadBack(jumps[0] - 1, depth + 1);
             // A conditional jump carrying a value keeps the one it tested a copy of (dup; brtrue: a cached lambda, x ?? y): read as before.
             if (jumps.Any(jump => Ops[jump].OpCode.FlowControl != FlowControl.Branch)) return null;
             foreach (var jump in jumps)
@@ -837,6 +841,11 @@ public static class CardProgramReader
             if (name.StartsWith("conv", StringComparison.Ordinal) || instruction.OpCode == OpCodes.Box || instruction.OpCode == OpCodes.Unbox_Any
                 || instruction.OpCode == OpCodes.Castclass)
                 return ReadBack(at, depth + 1);
+            // A copy (dup) is the value it copies; so is what a test of a copy leaves below it (x?.y, pile == null || pile.Type...: dup, brfalse).
+            if (instruction.OpCode == OpCodes.Dup) return ReadBack(at, depth + 1);
+            if (instruction.OpCode.FlowControl == FlowControl.Cond_Branch && at > 0 && Ops[at - 1].OpCode == OpCodes.Dup
+                && CodeDecoder.StackEffect(instruction) is (1, 0))
+                return ReadBack(at - 1, depth + 1);
             // x is T (isinst): x when it's a T, else null.
             if (instruction.OpCode == OpCodes.Isinst && instruction.Member is { } tested)
             {
@@ -861,6 +870,10 @@ public static class CardProgramReader
                     if (field.Name == "<>4__this") return (NamedValue.This, receiver.Start);
                     if (field.Name.Contains(">5__", StringComparison.Ordinal) && FieldStoredOnce(field.Name) is { } fieldStore && ReadBack(fieldStore, depth + 1) is { Start: >= 0 } stored)
                         return (new StoredValue(FieldName(field.Name), stored.Value, Ops[fieldStore].Offset), receiver.Start);
+                    // A local a lambda captures (a closure's field: Ki Chant's drawPile), stored once here: what was stored.
+                    if (field.DeclaringType.StartsWith("<>c__DisplayClass", StringComparison.Ordinal) && !field.Name.StartsWith('<')
+                        && FieldStoredOnce(field.Name) is { } capturedStore && ReadBack(capturedStore, depth + 1) is { Start: >= 0, Value: not (ParameterValue or NamedValue) } captured)
+                        return (captured.Value is ConstantValue ? captured.Value : new StoredValue(field.Name, captured.Value, Ops[capturedStore].Offset), receiver.Start);
                     return (new NamedValue(FieldName(field.Name)), receiver.Start);
                 }
                 return (new QueryValue(field.DeclaringType, field.Name, receiver.Value, Array.Empty<ProgramValue>(), field.ValueType), receiver.Start);
@@ -907,7 +920,13 @@ public static class CardProgramReader
             if (instruction.OpCode == OpCodes.Newobj && at > 0 && Ops[at - 1].OpCode == OpCodes.Ldftn)
             {
                 var target = ReadBack(at - 1, depth + 1);
-                return (LambdaBetween(at - 1, at), target.Start);
+                return (MethodGroup(LambdaBetween(at - 1, at), Ops[at - 1].Member, target.Value), target.Start);
+            }
+            // A method of an object as a delegate (topCards.Contains: x; dup; ldvirtftn; newobj).
+            if (instruction.OpCode == OpCodes.Newobj && at > 1 && Ops[at - 1].OpCode == OpCodes.Ldvirtftn && Ops[at - 2].OpCode == OpCodes.Dup)
+            {
+                var target = ReadBack(at - 2, depth + 1);
+                return (MethodGroup(new UnknownValue("delegate"), Ops[at - 1].Member, target.Value), target.Start);
             }
             if (!instruction.IsCall || instruction.Member is not { } member) return (new UnknownValue(name), -1);
             if (member.Name == "GetResult") return AwaitedResult(at, depth);
@@ -957,6 +976,17 @@ public static class CardProgramReader
             return awaited.Value is QueryValue query
                 ? (new ResultValue(query.Type + "." + query.Name, Ops[jump - 5].Offset, query.Arguments), awaited.Start)
                 : awaited;
+        }
+
+        /// <summary>
+        /// A delegate read: the lambda when its code was read, else a test a method of another object makes of its one argument
+        /// (topCards.Contains as x => topCards.Contains(x)); the lambda as read otherwise.
+        /// </summary>
+        private static ProgramValue MethodGroup(ProgramValue read, CodeMember? method, ProgramValue receiver)
+        {
+            if (read is not UnknownValue || method is not { Kind: CodeMemberKind.Method, ParameterCount: 1, ValueType: "Boolean" }) return read;
+            var test = new QueryValue(method.DeclaringType, method.Name, method.HasThis ? receiver : null, new ProgramValue[] { new ParameterValue("x") }, method.ValueType);
+            return new LambdaValue("x", ProgramCondition.Of(new ConditionLiteral($"delegate:{method.FullName}", test, Holds: true)));
         }
 
         /// <summary>The lambda an ldftn in [from, to) points to.</summary>
@@ -1184,8 +1214,14 @@ public static class CardProgramReader
                 if (i < loadAt) stores.Add(i);
             }
             if (stores.Count == 0) return null;
-            if (stores.Count == 1)
-                return ReadBack(stores[0], depth + 1) is { Start: >= 0 } only ? new StoredValue("", only.Value, Ops[stores[0]].Offset) : null;
+            // The last store, when the code runs straight from it to the read (no jump on the way or into it: a temporary the compiler
+            // reuses, an awaited result kept a moment), is the value.
+            var lastStore = stores[^1];
+            var straight = true;
+            for (var i = lastStore; i < loadAt && straight; i++)
+                straight = !Ops[i].IsBranch && !_jumpsTo.ContainsKey(i + 1);
+            if (stores.Count == 1 || straight)
+                return ReadBack(lastStore, depth + 1) is { Start: >= 0 } only ? new StoredValue("", only.Value, Ops[lastStore].Offset) : null;
             var value = ProgramCondition.Never;
             var later = ProgramCondition.Never;
             var ways = new List<(ProgramCondition When, ProgramValue Value)>();

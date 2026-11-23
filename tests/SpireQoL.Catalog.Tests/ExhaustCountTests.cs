@@ -16,7 +16,7 @@ public class ExhaustCountTests
     private static int Exhausts(GameFight gameFight, CardModel card, int plays = 1)
     {
         var others = PileType.Hand.GetPile(gameFight.Me).Cards.Where(other => !ReferenceEquals(other, card)).ToList();
-        return PlayFacts.ExhaustOthers(card, card.GetType().Name, others, drawPile: PileType.Draw.GetPile(gameFight.Me).Cards.Count, plays);
+        return PlayFacts.ExhaustOthers(card, others, drawPile: PileType.Draw.GetPile(gameFight.Me).Cards.Count, plays);
     }
 
     [Fact]

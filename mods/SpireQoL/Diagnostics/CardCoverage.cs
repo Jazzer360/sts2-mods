@@ -231,13 +231,13 @@ internal static class CardCoverage
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
         // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.
-        if (Calls("CardCmd", "Exhaust") && None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, drawPile: 5, plays: 1)))
+        if (Calls("CardCmd", "Exhaust") && None(otherCard => PlayFacts.ExhaustOthers(otherCard, all, drawPile: 5, plays: 1)))
             issues.Add("exhausts cards (not counted: Feel No Pain, Dark Embrace...)");
         // How it picks them decides whether a card that acts when exhausted goes (Drum of Battle's energy).
-        if (Calls("CardCmd", "Exhaust") && !None(otherCard => PlayFacts.ExhaustOthers(otherCard, name, all, drawPile: 5, plays: 1))
+        if (Calls("CardCmd", "Exhaust") && !None(otherCard => PlayFacts.ExhaustOthers(otherCard, all, drawPile: 5, plays: 1))
             && PlayFacts.ExhaustPickOf(card) == null && PlayFacts.ExhaustFilterTakesActingCard(card, all))
             issues.Add("exhausts other cards with a filter a card that acts when exhausted passes (Drum of Battle's energy when exhausted isn't followed)");
-        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, name, others, PlayFacts.CardsDrawn(otherCard, handCount: 5))))
+        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, others, PlayFacts.CardsDrawn(otherCard, handCount: 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
             && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))
@@ -256,7 +256,7 @@ internal static class CardCoverage
             && !Procs.Programs.CardEffects.TakesWholeHand(card.GetType()) && !Procs.Programs.CardEffects.MovesCardsElsewhere(card.GetType()))
             issues.Add("moves cards with CardPileCmd.Add in its play (into or out of your hand? not counted: hand size after)");
         // A card counted as taking cards into your hand: the simulator takes them out of their pile (which pile, which cards).
-        if (Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !SimAdapter.HandTakes.ContainsKey(name))
+        if (Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !Procs.Programs.CardEffects.TakesIntoHandOf(card.GetType()).Any(take => take.ChoosesHowMany || take.PileReadable))
             issues.Add("takes cards into your hand without saying from which pile (they'd stay there in the simulation: later draws)");
         // A card that auto-plays cards from your draw pile: the simulator plays them (which pile position, how many).
         if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()))
@@ -269,7 +269,7 @@ internal static class CardCoverage
             issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");
         // Every game card as the hand, so any filter (statuses, attacks) finds something to transform.
         if ((Calls("CardCmd", "Transform") || Calls("CardCmd", "TransformTo") || Calls("CardCmd", "TransformToRandom"))
-            && None(otherCard => PlayFacts.TransformCount(otherCard, name, all, drawPile: 5)))
+            && None(otherCard => PlayFacts.TransformCount(otherCard, all, drawPile: 5)))
             issues.Add("transforms cards (not counted: the proc check's created-card budget)");
         if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(otherCard => Math.Abs(SimAdapter.SlotChange(otherCard, name))))
             issues.Add("changes your orb slots (the simulator doesn't change them)");
