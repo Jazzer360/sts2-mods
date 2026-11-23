@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -42,13 +41,9 @@ internal static class BranchRules
         new CodeFact(typeof(CeremonialBeast), "PlowMove", nameof(PlowPower)), OnBeta: true, MainRule.None,
         "beta's CeremonialBeast.PlowMove gives its Strength only while it still has Plow (MoveBranches); main's always does");
 
-    public static readonly BranchRule AttackHitCountsAreVars = new(nameof(AttackHitCountsAreVars),
-        new CodeFact(typeof(TwinStrike), "get_CanonicalVars", nameof(HitCountVar)), OnBeta: true, MainRule.None,
-        "beta's multi-hit attacks keep their hit count in a HitCount var; main's in Repeat, or a fixed number in OnPlay (PlayFacts.HitsPerPlay)");
-
     public static IReadOnlyList<BranchRule> All { get; } = new[]
     {
-        BufferLetsBrightestFlameThrough, OmnisliceSplashIsPowered, JugglingCopiesAfterThePlay, PlowStrengthNeedsPlow, AttackHitCountsAreVars,
+        BufferLetsBrightestFlameThrough, OmnisliceSplashIsPowered, JugglingCopiesAfterThePlay, PlowStrengthNeedsPlow,
     };
 
     private static readonly ConcurrentDictionary<BranchRule, bool> Beta = new();

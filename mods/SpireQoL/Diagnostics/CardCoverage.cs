@@ -186,8 +186,11 @@ internal static class CardCoverage
         if (Procs.Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => !Procs.Programs.ProgramEvaluator.CanEvaluate(draw.Condition)))
             issues.Add("draws only on a condition its program's evaluator can't read (not checked in PlayFacts.CardsDrawn)");
         // An attack on a condition, on a card that glows gold: is the glow that condition (Pact's End)? Its hits must say.
-        if (PlayFacts.AttacksConditionallyAndGlows(card.GetType()) && !PlayFacts.GlowGatedAttackCards.Contains(name) && !PlayFacts.GlowNotTheAttack.ContainsKey(name))
-            issues.Add("attacks only on a condition and glows gold (is the glow its condition? PlayFacts.GlowGatedAttackCards)");
+        // Its attack's hits are its program's (PlayFacts.HitsPerPlay): the attack's condition and hit count, evaluated on the board.
+        if (Procs.Programs.CardEffects.Attacks(card.GetType()) is [var attack, ..]
+            && (!Procs.Programs.ProgramEvaluator.CanEvaluate(attack.Condition)
+                || attack.Command.HitCountValue is { } hitCount && hitCount.Parts().Any(part => part is Procs.Programs.UnknownValue or Procs.Programs.ResultValue)))
+            issues.Add("attacks on a condition or with a hit count its program's evaluator can't read (its hits: PlayFacts.HitsPerPlay)");
         if (Calls("OrbCmd", "Channel") && !Procs.Programs.CardEffects.ChannelsKnownOrbs(card.GetType()))
             issues.Add("channels orbs (the simulator doesn't add them)");
         if (Calls("OrbCmd", "Channel") && None(PlayFacts.ChannelCount))

@@ -513,6 +513,14 @@ public static class CardEffects
         return found;
     }
 
+    // ---- attacks
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<Found>> AttackSteps = new();
+
+    /// <summary>The play's attacks (DamageCmd.Attack, built up to Execute), in order, each with its condition and loops.</summary>
+    public static IReadOnlyList<Found> Attacks(Type cardType) => AttackSteps.GetOrAdd(cardType, type => Attacks(CardPrograms.Of(type)));
+    public static IReadOnlyList<Found> Attacks(CardProgram program) => Find(program, command => Is(command, "DamageCmd", "Attack"));
+
     // ---- block
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<Found>> BlockSteps = new();

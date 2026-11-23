@@ -34,6 +34,9 @@ public sealed record CommandStep(int Offset, CodeMember Command, IReadOnlyList<s
     /// </summary>
     public string? HitCount { get; init; }
 
+    /// <summary>WithHitCount's argument as a value (Dismantle's {target Vulnerable: HitCount; else 1}, a card's X); null with no hit count (one hit).</summary>
+    public ProgramValue? HitCountValue { get; init; }
+
     /// <summary>
     /// The steps of a delegate the command is given and runs (ArrowCmd.ShootArrowAtTarget runs Blossom Shot's attack after the
     /// shot): they follow the command.
@@ -379,6 +382,7 @@ public static class CardProgramReader
                 CommandStep command => command with
                 {
                     Values = command.Values.Select(value => value.Map(replace)).ToList(), Inner = command.Inner.Select(inner => Bound(inner, replace)).ToList(),
+                    HitCountValue = command.HitCountValue?.Map(replace),
                 },
                 _ => bound,
             };
@@ -397,14 +401,20 @@ public static class CardProgramReader
         {
             var builder = new List<string>();
             string? hitCount = null;
+            ProgramValue? hitCountValue = null;
             for (var j = at + 1; j < flow.Ops.Count; j++)
             {
                 if (flow.Ops[j].Member is not { DeclaringType: "AttackCommand" } call || !flow.Ops[j].IsCall) continue;
                 if (call.Name == "Execute") break;
                 builder.Add(call.Name);
-                if (call.Name == "WithHitCount" && call.ParameterCount >= 1) hitCount = flow.Source(j, call, parameter: 0);
+                if (call.Name == "WithHitCount" && call.ParameterCount >= 1)
+                {
+                    hitCount = flow.Source(j, call, parameter: 0);
+                    hitCountValue = flow.ArgumentValues(j, call)[0];
+                }
             }
-            return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member)) { Builder = builder, HitCount = hitCount, Values = flow.ArgumentValues(at, member) };
+            return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member))
+                { Builder = builder, HitCount = hitCount, HitCountValue = hitCountValue, Values = flow.ArgumentValues(at, member) };
         }
 
         /// <summary>The card's own method (its type or a base type's private helper) or a local function OnPlay declares.</summary>

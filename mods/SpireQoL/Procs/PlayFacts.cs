@@ -267,7 +267,7 @@ public sealed class PlayFacts
 
     /// <summary>Hits on this enemy across plays (Dismantle hits Vulnerable enemies twice).</summary>
     public int HitsOn(Creature enemy)
-        => AttackHits == 0 ? 0 : HitsPerPlay(Card, Card.GetType().Name, Combat, enemy, Energy, Stars, OtherHandCards) * Math.Max(1, Plays);
+        => AttackHits == 0 ? 0 : HitsPerPlay(Card, Combat, enemy) * Math.Max(1, Plays);
 
     /// <summary>
     /// Whether this card can hit <paramref name="enemy"/> with a powered attack (your attack, not
@@ -517,7 +517,7 @@ public sealed class PlayFacts
             HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
             OtherHandCards = others.Count,
             ByOsty = IsOstyAttack(card),
-            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, name, combat, target: null, SafeEnergy(card), SafeStars(card), others.Count) * Math.Max(1, plays) : 0,
+            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, combat, target: null) * Math.Max(1, plays) : 0,
             OrbDamage = orbs.Exact,
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
@@ -1183,50 +1183,16 @@ public sealed class PlayFacts
     }
 
     /// <summary>
-    /// Hits per play of an attack card, matching each card's OnPlay: from v0.113.0 a card's hit count is its
-    /// HitCount value (CalculatedHits when it's computed); before, Repeat, or a fixed number in OnPlay. The
-    /// names are read as strings so both game versions work. Cards that use their X value or a condition
-    /// are listed. Unknown target (null): target-dependent cards count their minimum.
+    /// Hits per play of an attack card, read from its program (decision #182): its attack (the play's first DamageCmd.Attack) on its
+    /// condition (Pact's End's exhausts, Nail's Impaled target, Fetch's and Flatten's Osty, Mad Science's type), its hit count's value
+    /// (WithHitCount's argument: a card value, a constant on main, a card's X, Heavenly Drill's doubled X, Dismantle's Vulnerable target,
+    /// Spite's HP lost this turn, Wah Blast's melodies, Fiend Fire's hand, a calculated count; one with none) times its loops' rounds,
+    /// then the game's hit-count modifiers. With no target (null) a test of the target holds when it does for some enemy you could aim
+    /// at, and a count that asks the target is its least.
     /// </summary>
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> GlowGated = new();
-
-    /// <summary>Cards that attack only on the condition they glow gold for (Pact's End: 3 cards exhausted), from each OnPlay.</summary>
-    internal static readonly HashSet<string> GlowGatedAttackCards = new() { nameof(PactsEnd) };
-
-    /// <summary>
-    /// Cards that attack on a condition and glow gold, but whose glow isn't the attack's condition (the card scan's reviewed reasons).
-    /// </summary>
-    internal static readonly Dictionary<string, string> GlowNotTheAttack = new()
+    internal static int HitsPerPlay(CardModel card, ICombatState combat, Creature? target)
     {
-        [nameof(Fetch)] = "its attack waits on Osty being there (Osty.CheckMissingWithAnim: AttackHits); its glow is its draw, once a turn",
-        [nameof(Flatten)] = "its attack waits on Osty being there (Osty.CheckMissingWithAnim: AttackHits); its glow is its cost",
-        [nameof(Nail)] = "its attack waits on its target being Impaled (BaseHitsPerPlay's Nail case, per target); its glow is any enemy being Impaled",
-    };
-
-    /// <summary>
-    /// A card whose attack is only on some ways through its OnPlay and that glows gold (ShouldGlowGoldInternal), read from its code: the
-    /// card scan holds each to GlowGatedAttackCards or GlowNotTheAttack, since the code can't say whether the glow is the condition.
-    /// </summary>
-    internal static bool AttacksConditionallyAndGlows(Type cardType) => GlowGated.GetOrAdd(cardType, type =>
-    {
-        const System.Reflection.BindingFlags declared = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
-            | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
-        if (type.GetProperty("ShouldGlowGoldInternal", declared) == null || type.GetMethod("OnPlay", declared) is not { } onPlay) return false;
-        var body = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Runtime.CompilerServices.AsyncStateMachineAttribute>(onPlay)?.StateMachineType
-            .GetMethod("MoveNext", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic) ?? (System.Reflection.MethodBase)onPlay;
-        List<HarmonyLib.CodeInstruction> code;
-        try { code = Diagnostics.GameCode.Instructions(body); } catch { return false; }
-        var attacks = code.Select((instruction, index) => (instruction, index))
-            .Where(entry => entry.instruction.operand is System.Reflection.MethodInfo { Name: "Attack" } method && method.DeclaringType?.Name == "DamageCmd")
-            .Select(entry => entry.index).ToList();
-        return attacks.Count > 0 && SpireQoL.Sim.Branches.OnEveryPath(code, attacks).Any(certain => !certain);
-    });
-
-    internal static int HitsPerPlay(CardModel card, string name, ICombatState combat, Creature? target, int energy, int stars, int otherCards)
-    {
-        // Its attack waits on the condition the card glows gold for (Pact's End): not glowing, it doesn't attack.
-        if (GlowGatedAttackCards.Contains(name) && !Sts2State.Private(card, "ShouldGlowGoldInternal", fallback: true)) return 0;
-        var hits = BaseHitsPerPlay(card, name, combat, target, energy, stars, otherCards);
+        var hits = BaseHitsPerPlay(card, target);
         // Then the game's hit-count modifiers (Thumbscrew: +1 on your multi-hit attacks), the way its card
         // preview applies them (HitCountVar.GetPreviewValue; the attack itself in AttackCommand.Execute).
         if (hits <= 0 || card.Type != CardType.Attack) return hits;
@@ -1241,62 +1207,32 @@ public sealed class PlayFacts
         }
     }
 
-    // Read from each card's program (decision #182): an attack that hits X times (CardEffects.HitsXTimes: WithHitCount(X)), and one
-    // that attacks once and repeats something else its Repeat times (CardEffects.AttacksOnceRepeatingSomethingElse: Ice Lance's Frost).
-
-    private static int BaseHitsPerPlay(CardModel card, string name, ICombatState combat, Creature? target, int energy, int stars, int otherCards)
+    private static int BaseHitsPerPlay(CardModel card, Creature? target)
     {
-        // The card's hit count: its HitCount var, else its Repeat; main passes the cards below a fixed number in OnPlay instead (decision #169:
-        // AttackHitCountsAreVars, which comes out with the fixed numbers once main has the vars).
-        int Hits(int fixedBefore) => card.DynamicVars.ContainsKey("HitCount") ? Sts2State.Var(card, "HitCount", fixedBefore)
-            : fixedBefore > 0 && !SpireQoL.Sim.BranchRules.BetaBehaviour(SpireQoL.Sim.BranchRules.AttackHitCountsAreVars) ? fixedBefore
-            : Sts2State.Var(card, "Repeat", fallback: 1);
-        try
+        // A Shoot card with no arrow to shoot does nothing at all (ArrowCmd.ShootArrowAtTarget returns before its attack; the card
+        // glows red).
+        if (Fool.IsShot(card) && OwnerOf(card) is { } owner && !Fool.Shoots(card, owner)) return 0;
+        var program = Programs.CardPrograms.Of(card.GetType());
+        if (Programs.CardEffects.Attacks(card.GetType()) is not [var attack, ..]) return Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 1));
+        var board = new Programs.ProgramBoard(card, target);
+        if (target == null && Programs.ProgramEvaluator.AsksTarget(attack.Condition))
         {
-            // A Shoot card with no arrow to shoot does nothing at all (ArrowCmd.ShootArrowAtTarget returns before
-            // its attack; the card glows red).
-            if (Fool.IsShot(card) && OwnerOf(card) is { } owner && !Fool.Shoots(card, owner)) return 0;
-            switch (name)
-            {
-                // Nail attacks only an Impaled enemy (any player's arrow). Unknown target: it can hit if some enemy is.
-                case nameof(Nail):
-                    return target != null ? (Fool.IsImpaled(target) ? 1 : 0) : (combat.HittableEnemies.Any(Fool.IsImpaled) ? 1 : 0);
-                // Twice once you've played a Cho or a Ki this turn (WahBlast.HitsTwice: the card glows gold).
-                case nameof(WahBlast):
-                    return Sts2State.Private(card, "ShouldGlowGoldInternal", fallback: false) ? 2 : 1;
-                // Main passes a fixed 2 to WithHitCount (Refract's Repeat is its orb count, not hits): AttackHitCountsAreVars.
-                case nameof(AstralPulse) or nameof(DaggerSpray) or nameof(Maul) or nameof(Refract) or nameof(RipAndTear) or nameof(Thrash) or nameof(TwinStrike) or nameof(Uproar):
-                    return Hits(fixedBefore: 2);
-                case var _ when Programs.CardEffects.HitsXTimes(card.GetType()):
-                    return XValue(combat, card, energy);
-                case var _ when Programs.CardEffects.AttacksOnceRepeatingSomethingElse(card.GetType()):
-                    return 1;
-                case nameof(HeavenlyDrill):
-                {
-                    var xValue = XValue(combat, card, energy);
-                    return xValue >= Sts2State.Var(card, "Energy") ? xValue * 2 : xValue;
-                }
-                case nameof(Stardust):
-                    return XValue(combat, card, stars);
-                case nameof(Dismantle):
-                    return target != null && target.HasPower<VulnerablePower>() ? Hits(fixedBefore: 2) : 1;
-                case nameof(Spite): // its hit count only after you lost HP this turn (when the card glows gold)
-                    return Sts2State.Private(card, "ShouldGlowGoldInternal", fallback: false) ? Hits(fixedBefore: 0) : 1;
-                case nameof(FiendFire):
-                    return otherCards;
-                case nameof(MadScience):
-                    return card is MadScience madScience && madScience.TinkerTimeRider == MegaCrit.Sts2.Core.Models.Events.TinkerTime.RiderEffect.Violence
-                        ? Sts2State.Var(card, "ViolenceHits", fallback: 1)
-                        : 1;
-            }
-            if (card.DynamicVars.TryGetValue("CalculatedHits", out var dynamicVar) && dynamicVar is CalculatedVar calc)
-                return Math.Max(0, (int)calc.Calculate(target));
+            if (Targets(card) is { } enemies && !enemies.Any(enemy => Programs.ProgramEvaluator.Holds(attack.Condition, board with { Target = enemy }, program) != false)) return 0;
         }
-        catch
-        {
-            // fall through to the hit count
-        }
-        return Math.Max(1, Hits(fixedBefore: 0));
+        else if (Programs.ProgramEvaluator.Holds(attack.Condition, board, program) == false) return 0;
+        var hits = attack.Command.HitCountValue is not { } count ? 1
+            : Programs.ProgramEvaluator.Number(count, board, program) is { } read ? (int)read
+            : Least(count, board, program) ?? Math.Max(1, Sts2State.Var(card, "HitCount", Sts2State.Var(card, "Repeat", fallback: 1)));
+        return Math.Max(0, hits * attack.Loops.Aggregate(1, (times, loop) => times * Rounds(loop, board, program)));
+    }
+
+    /// <summary>The least a value two ways leave can be (Dismantle with no target: one hit), when each way's value can be told.</summary>
+    private static int? Least(Programs.ProgramValue value, Programs.ProgramBoard board, Programs.CardProgram program)
+    {
+        while (value is Programs.StoredValue stored) value = stored.Value;
+        if (value is not Programs.WaysValue ways) return null;
+        var each = ways.Ways.Select(way => Programs.ProgramEvaluator.Number(way.Value, board, program)).ToList();
+        return each.All(number => number != null) && each.Count > 0 ? (int)each.Min()!.Value : null;
     }
 
     private static int XValue(ICombatState combat, CardModel card, int spent)
