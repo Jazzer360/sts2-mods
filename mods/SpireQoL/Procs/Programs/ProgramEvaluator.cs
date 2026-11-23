@@ -332,7 +332,9 @@ public static class ProgramEvaluator
             case "Where":
                 return Filtered() is { } where ? where : Unknown;
             case "FirstOrDefault":
-                return Filtered() is { } first ? first.FirstOrDefault() : Unknown;
+                // The first of your draw pile's cards is its hidden order (CLAUDE.md, "Only knowable information"): unknown when more
+                // than one could be first. Which one is never read; its count and contents are.
+                return Filtered() is { } first && !OrderHidden(first) ? first.FirstOrDefault() : Unknown;
             case "Except" when arguments.Length > 1 && arguments[1] is IEnumerable others:
             {
                 var left = others.Cast<object?>().ToList();
@@ -346,6 +348,15 @@ public static class ProgramEvaluator
             default:
                 return Unknown;
         }
+    }
+
+    /// <summary>Two or more of these are in a draw pile: which comes first is the pile's hidden order.</summary>
+    internal static bool OrderHidden(IReadOnlyList<object?> items)
+    {
+        var inDrawPile = 0;
+        foreach (var item in items)
+            if (item is CardModel { Pile.Type: PileType.Draw } && ++inDrawPile > 1) return true;
+        return false;
     }
 
     private static bool IsOfType(Type type, string name)

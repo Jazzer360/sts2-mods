@@ -118,3 +118,25 @@ public class ConditionalDrawTests
         Assert.Null(PlayFacts.TargetDraws(gameFight.Add<Impatience>(), enemy, plays: 1));
     }
 }
+
+/// <summary>
+/// The evaluator never reads your draw pile's order (CLAUDE.md, "Only knowable information"): the first of two or more of its cards
+/// is unknown; one card alone is the same whatever the order.
+/// </summary>
+[Collection(GameFightCollection.Name)]
+public class DrawPileOrderTests
+{
+    [Fact]
+    public void TheFirstOfYourDrawPileIsUnknownWhenMoreThanOneCouldBeFirst()
+    {
+        var gameFight = new GameFight();
+        var first = gameFight.Add<StrikeIronclad>(PileType.Draw);
+        Assert.False(Procs.Programs.ProgramEvaluator.OrderHidden(new object?[] { first }));
+        var second = gameFight.Add<DefendIronclad>(PileType.Draw);
+        Assert.True(Procs.Programs.ProgramEvaluator.OrderHidden(new object?[] { first, second }));
+        // Cards in your hand: their order is on screen.
+        var inHand = gameFight.Add<StrikeIronclad>();
+        var alsoInHand = gameFight.Add<DefendIronclad>();
+        Assert.False(Procs.Programs.ProgramEvaluator.OrderHidden(new object?[] { inHand, alsoInHand }));
+    }
+}
