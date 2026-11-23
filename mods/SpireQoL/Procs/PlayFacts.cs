@@ -163,18 +163,14 @@ public sealed class PlayFacts
     /// </summary>
     private static Player? OwnerOf(CardModel card) => card.IsCanonical ? null : card.Owner;
 
-    // Cards whose play shuffles your discard pile into your draw pile (CardPileCmd.Shuffle in OnPlay; decompile v0.111.0).
-    internal static readonly HashSet<string> ShuffleCards = new() { nameof(Reboot) };
-
-    /// <summary>Cards that shuffle your discard pile in first only when your draw pile is short (Ki Chant, v0.113.0).</summary>
-    internal static readonly HashSet<string> ShuffleWhenShortCards = new() { nameof(KiChant) };
-
-    /// <summary>The play shuffles your discard pile into your draw pile before its draws (Reboot; Ki Chant when the draw pile is short).</summary>
+    /// <summary>
+    /// The play shuffles your discard pile into your draw pile before its draws, read from its program (decision #182): on every play
+    /// (CardEffects.ShufflesDiscardPileIn: Reboot), or when the draw pile is short (CardEffects.ShufflesWhenShort: Ki Chant).
+    /// </summary>
     internal static bool ShufflesFirst(CardModel card)
     {
-        var name = card.GetType().Name;
-        if (ShuffleCards.Contains(name)) return true;
-        if (!ShuffleWhenShortCards.Contains(name) || OwnerOf(card) is not { } me) return false;
+        if (Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())) return true;
+        if (!Programs.CardEffects.ShufflesWhenShort(card.GetType()) || OwnerOf(card) is not { } me) return false;
         // KiChant.OnPlay: an empty draw pile shuffles if it must; a short one shuffles when the discard pile has cards.
         var draw = Sts2State.DrawPileCount(me);
         return draw < Sts2State.Var(card, "Cards", fallback: 3) && Sts2State.DiscardPileCount(me) > 0;
@@ -220,7 +216,7 @@ public sealed class PlayFacts
     public int ReturnsToHand => CardsBack.Count;
     /// <summary>
     /// Cards the play itself moves into your hand from a pile (CardPileCmd.Add to PileType.Hand: Hologram, Wish, Dredge...,
-    /// TakenToHandCards), as many as the piles hold and your hand has room for; in your hand after it.
+    /// read from its program: CardEffects.TakesIntoHand), as many as the piles hold and your hand has room for; in your hand after it.
     /// </summary>
     public int TakenToHand { get; init; }
     /// <summary>The play moves cards into your hand and you choose how many (Neow's Fury: 0 or more): your hand after it is your later decision.</summary>
@@ -582,7 +578,7 @@ public sealed class PlayFacts
             DiscardedBeforeDraw = !Programs.CardPrograms.DiscardsBeforeDraws(Card.GetType()) ? 0
                 : Card.GetType().Name == nameof(TheHermit) ? Math.Max(0, Math.Min(1, OtherHandCards) - ExhaustsOthers) : Discards,
             ShufflesFirst = ShufflesFirst(Card),
-            HandShuffledIn = ShuffleCards.Contains(Card.GetType().Name),
+            HandShuffledIn = Programs.CardEffects.ShufflesDiscardPileIn(Card.GetType()),
             // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
             AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
             // Motif draws its amount per melody (Wah, Cho, Ki) this card plays first this turn, once (a replay's
@@ -611,7 +607,7 @@ public sealed class PlayFacts
                 case CentennialPuzzle when !Sts2State.Private(relic, "UsedThisCombat", fallback: true): drawInputs.CentennialPuzzle += Sts2State.Var(relic, "Cards", fallback: 3); break;
             }
         }
-        if (ShuffleWhenShortCards.Contains(Card.GetType().Name))
+        if (Programs.CardEffects.ShufflesWhenShort(Card.GetType()))
         {
             // Ki Chant takes the top cards it looks at off the draw pile: one to your hand, the rest discarded.
             var looked = KiChantLooksAt(Card);
@@ -625,7 +621,7 @@ public sealed class PlayFacts
         ChainedDraws = result.Chained;
         Draws = result.Draws;
         // Ki Chant replayed: a later play can find the draw pile short and shuffle (its own text, like its first play's).
-        var laterShuffle = ShuffleWhenShortCards.Contains(Card.GetType().Name)
+        var laterShuffle = Programs.CardEffects.ShufflesWhenShort(Card.GetType())
                            && PlayChain.ShortPileShufflesOnLaterPlay(drawPile, drawInputs.DiscardPile, Sts2State.Var(Card, "Cards", fallback: 3), Math.Max(1, Plays));
         Shuffles = result.Shuffles || laterShuffle;
         ShufflesItself = drawInputs.ShufflesFirst || laterShuffle;
@@ -825,7 +821,7 @@ public sealed class PlayFacts
         }
         // Every other card that draws in its play (CardPileCmd.Draw, read from its own code: CardCode): its Cards value, or one card
         // when it has none (Dagger Throw, Escape Plan). Not a card that makes a teammate draw (Constellation, Huddle Up).
-        if (CardCode.Calls(card.GetType(), "CardPileCmd", "Draw") && !AllyDrawCards.Contains(name) && !SpireQoL.Sim.SimAdapter.TeammatesDrawCards.Contains(name))
+        if (CardCode.Calls(card.GetType(), "CardPileCmd", "Draw") && !Programs.CardEffects.DrawsForTarget(card.GetType()) && !Programs.CardEffects.DrawsForEachTeammate(card.GetType()))
             return card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
         return 0;
     }
@@ -835,9 +831,6 @@ public sealed class PlayFacts
     /// so the coverage scan counts these as drawing by this list.
     /// </summary>
     internal static readonly HashSet<string> TargetDrawCards = new() { nameof(KiHop), nameof(Wrest) };
-
-    /// <summary>Cards aimed at a teammate that make them draw, not you (Constellation: CardPileCmd.Draw for the target's player).</summary>
-    internal static readonly HashSet<string> AllyDrawCards = new() { nameof(Constellation) };
 
     /// <summary>
     /// Draws of all <paramref name="plays"/> plays aimed at <paramref name="target"/>, for cards whose draws depend on their
@@ -1003,17 +996,6 @@ public sealed class PlayFacts
     };
 
     /// <summary>
-    /// Cards whose own play moves cards into your hand from a pile (CardPileCmd.Add to PileType.Hand), each counted by
-    /// TakenToHandCount from its OnPlay. CardCoverage's scan holds every card calling CardPileCmd.Add in its play to this list,
-    /// PutBackCards, WholeHandCards or MovedElsewhereCards.
-    /// </summary>
-    internal static readonly HashSet<string> TakenToHandCards = new()
-    {
-        nameof(AllForOne), nameof(Anointed), nameof(ArrowStab), nameof(Dredge), nameof(Graveblast), nameof(Hologram), nameof(KiChant), nameof(LockedIn),
-        nameof(NeowsFury), nameof(SecretTechnique), nameof(SecretWeapon), nameof(SeekerStrike), nameof(SummonForth), nameof(TheWorld), nameof(Wish),
-    };
-
-    /// <summary>
     /// Cards that hit their target, then deal that hit's damage (overkill included: DamageResult.TotalDamage + OverkillDamage) to
     /// every other hittable enemy, with only the damage caps applied (ModifyDamageHookType.Cap): RainShot.OnPlay, Omnislice.OnPlay.
     /// The card scan holds every card reading a hit's overkill to this list or OverkillReaders.
@@ -1025,18 +1007,6 @@ public sealed class PlayFacts
     {
         [nameof(Fisticuffs)] = "block equal to the damage it dealt (SimAdapter: Fisticuffs)",
         [nameof(BlossomShot)] = "Stretch equal to the damage it dealt (AttackAction.StretchFromDamage): for block later in the turn (I Am Invincible at its end)",
-    };
-
-    /// <summary>Cards that draw, then put cards from your hand back on your draw pile (their PutBack value; Thinking Ahead's one).</summary>
-    internal static readonly HashSet<string> PutBackCards = new() { nameof(Glimmer), nameof(PhotonCut), nameof(ThinkingAhead) };
-
-    /// <summary>Cards whose own play moves cards with CardPileCmd.Add, but never into or out of your hand, and where they go.</summary>
-    internal static readonly Dictionary<string, string> MovedElsewhereCards = new()
-    {
-        [nameof(CosmicIndifference)] = "a card from your discard pile onto your draw pile",
-        [nameof(Headbutt)] = "a card from your discard pile onto your draw pile",
-        [nameof(Recall)] = "a card from your discard pile onto your draw pile",
-        [nameof(Tutor)] = "a card from the teammate's draw pile into their hand (it aims only at a teammate)",
     };
 
     private static List<CardModel> PileCards(Player me, PileType pile)
@@ -1051,7 +1021,7 @@ public sealed class PlayFacts
     /// </summary>
     internal static int TakenToHandCount(CardModel card, string name, Player me, int plays, int room)
     {
-        if (!TakenToHandCards.Contains(name) || room <= 0) return 0;
+        if (!Programs.CardEffects.TakesIntoHand(card.GetType()) || room <= 0) return 0;
         var draw = PileCards(me, PileType.Draw);
         var discard = PileCards(me, PileType.Discard);
         var cards = Sts2State.Var(card, "Cards", fallback: 1);
@@ -1102,7 +1072,7 @@ public sealed class PlayFacts
         };
         var discards = name is nameof(KiChant) or nameof(Scrape) ? 0 : DiscardCount(card, name, others, draws);
         // Put back on your draw pile after the draws, from the cards in hand then (you choose which).
-        var putBack = PutBackCards.Contains(name)
+        var putBack = Programs.CardEffects.PutsBackFromHand(card.GetType())
             ? Math.Min(name == nameof(ThinkingAhead) ? 1 : Sts2State.Var(card, "PutBack", fallback: 1), others.Count + draws) * Math.Max(1, plays) : 0;
         return exhausts + discards + putBack;
     }

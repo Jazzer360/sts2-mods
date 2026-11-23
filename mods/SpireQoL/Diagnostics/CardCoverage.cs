@@ -70,12 +70,12 @@ internal static class CardCoverage
     {
         // Modelled: what lands on the teammate goes to them.
         [nameof(Lift)] = "block to the teammate (CardEffects.BlocksAnother, from its code)",
-        [nameof(Constellation)] = "block to the teammate (CardEffects.BlocksAnother); its draws and energy are theirs (PlayFacts.AllyDrawCards): their draws are their card events, for their draw procs",
+        [nameof(Constellation)] = "block to the teammate (CardEffects.BlocksAnother); its draws and energy are theirs (CardEffects.DrawsForTarget): their draws are their card events, for their draw procs",
         [nameof(DemonicShield)] = "HP loss to you, block (worked out on the teammate) to them (CardEffects.BlocksAnother)",
         [nameof(Ignition)] = "a Plasma orb into the teammate's orbs, evoking their front orb when full (CardEffects.ChannelsForTarget)",
         [nameof(Mimic)] = "block to you equal to the teammate's block (CalculatedBlock on the target)",
         [nameof(Rally)] = "its block to you and to every living teammate, worked out on each (CardEffects.BlocksEachPlayer)",
-        [nameof(HuddleUp)] = "every living teammate draws, not you: their draws (as many as their hand and piles allow) are their card events (SimAdapter.TeammatesDrawCards)",
+        [nameof(HuddleUp)] = "every living teammate draws, not you: their draws (as many as their hand and piles allow) are their card events (CardEffects.DrawsForEachTeammate)",
         [nameof(BladeSymphony)] = "Shivs into every living teammate's hand, created by them: their created-card events (SimAdapter.TeammatesShivCards)",
         [nameof(GlimpseBeyond)] = "Souls into every living teammate's draw pile, created by you: your created-card events, per Soul (PlayFacts.GeneratedCount)",
         // LegionOfBone.OnPlay: OstyCmd.Summon for every living player. Nothing reacts to a summon (no model overrides AfterSummon
@@ -168,7 +168,7 @@ internal static class CardCoverage
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !PlayFacts.AllyDrawCards.Contains(name))
+            && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !PlayFacts.TargetDrawCards.Contains(name) && !Procs.Programs.CardEffects.DrawsForTarget(card.GetType()))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         // A card that takes block away: the simulator models a card taking its target's (Expose), read from its program.
         if (Calls("CreatureCmd", "LoseBlock") && !Procs.Programs.CardEffects.TakesTargetsBlock(card.GetType()))
@@ -254,11 +254,11 @@ internal static class CardCoverage
             issues.Add("reads a hit's overkill (deals it again to the other enemies? not counted: damage, lethal)");
         // A card whose own play moves cards (CardPileCmd.Add): into your hand (Hologram, Wish: your hand size after), back out of it
         // onto your draw pile (Glimmer), or somewhere your hand doesn't see. Each is counted or reviewed by where it moves them.
-        if (Calls("CardPileCmd", "Add") && !PlayFacts.TakenToHandCards.Contains(name) && !PlayFacts.PutBackCards.Contains(name)
-            && !PlayFacts.WholeHandCards.Contains(name) && !PlayFacts.MovedElsewhereCards.ContainsKey(name))
+        if (Calls("CardPileCmd", "Add") && !Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !Procs.Programs.CardEffects.PutsBackFromHand(card.GetType())
+            && !PlayFacts.WholeHandCards.Contains(name) && !Procs.Programs.CardEffects.MovesCardsElsewhere(card.GetType()))
             issues.Add("moves cards with CardPileCmd.Add in its play (into or out of your hand? not counted: hand size after)");
         // A card counted as taking cards into your hand: the simulator takes them out of their pile (which pile, which cards).
-        if (PlayFacts.TakenToHandCards.Contains(name) && !SimAdapter.HandTakes.ContainsKey(name))
+        if (Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !SimAdapter.HandTakes.ContainsKey(name))
             issues.Add("takes cards into your hand without saying from which pile (they'd stay there in the simulation: later draws)");
         // A card that auto-plays cards from your draw pile: the simulator plays them (which pile position, how many).
         if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !SimAdapter.PlaysFromDrawPile.Contains(name))
@@ -286,7 +286,7 @@ internal static class CardCoverage
         // A card that becomes another card once played (Mourning Blow into a Sadness): a created card.
         if (Calls("CardModel", "set_TransformIntoAfterPlay") && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))
             issues.Add("turns into another card after the play (not counted: created-card procs)");
-        if (Calls("CardPileCmd", "Shuffle") && !PlayFacts.ShuffleCards.Contains(name) && !PlayFacts.ShuffleWhenShortCards.Contains(name))
+        if (Calls("CardPileCmd", "Shuffle") && !Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType()) && !Procs.Programs.CardEffects.ShufflesWhenShort(card.GetType()))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");
         // The Fool (v0.113.0): a shot does nothing without an arrow, which PlayFacts knows by the Shoot tag; arrows
         // pulled out by the card itself count for Twine and Yah only for the cards listed.

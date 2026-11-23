@@ -53,6 +53,83 @@ public static class CardEffects
         return attacks.Count >= 2 && attacks.Skip(1).Any(attack => attack.Condition != null && attack.Builder.Contains("TargetingAllOpponents"));
     }
 
+    public static bool DrawsForTarget(Type cardType) => DrawsForTarget(CardPrograms.Of(cardType));
+    public static bool DrawsForEachTeammate(Type cardType) => DrawsForEachTeammate(CardPrograms.Of(cardType));
+    public static bool ShufflesDiscardPileIn(Type cardType) => ShufflesDiscardPileIn(CardPrograms.Of(cardType));
+    public static bool ShufflesWhenShort(Type cardType) => ShufflesWhenShort(CardPrograms.Of(cardType));
+    public static bool TakesIntoHand(Type cardType) => TakesIntoHand(CardPrograms.Of(cardType));
+    public static bool PutsBackFromHand(Type cardType) => PutsBackFromHand(CardPrograms.Of(cardType));
+    public static bool MovesCardsElsewhere(Type cardType) => MovesCardsElsewhere(CardPrograms.Of(cardType));
+
+    // ---- draws and shuffles
+
+    /// <summary>Draws for a player that isn't you, outside a loop over players (Constellation: CardPileCmd.Draw for its target's player).</summary>
+    public static bool DrawsForTarget(CardProgram program) =>
+        Outside(program.Steps).Any(command => IsDraw(command) && Argument(command, 2) is { } player && player != "Owner");
+
+    /// <summary>Draws for each player a loop goes over, not you (Huddle Up: every teammate draws).</summary>
+    public static bool DrawsForEachTeammate(CardProgram program) =>
+        program.All().OfType<LoopStep>().Any(loop => loop.Body.OfType<CommandStep>().Any(command => IsDraw(command) && Argument(command, 2) is { } player && player != "Owner"));
+
+    /// <summary>Shuffles your discard pile into your draw pile on every play (Reboot: CardPileCmd.Shuffle, no condition around it).</summary>
+    public static bool ShufflesDiscardPileIn(CardProgram program) =>
+        program.Commands.Any(command => Is(command, "CardPileCmd", "Shuffle") && string.IsNullOrEmpty(command.Condition));
+
+    /// <summary>Shuffles your discard pile in only on a condition (Ki Chant: when your draw pile is short of what it looks at).</summary>
+    public static bool ShufflesWhenShort(CardProgram program) =>
+        program.Commands.Any(command => Is(command, "CardPileCmd", "Shuffle")) && !ShufflesDiscardPileIn(program);
+
+    private static bool IsDraw(CommandStep command) =>
+        command.Command.DeclaringType == "CardPileCmd" && command.Command.Name.StartsWith("Draw", StringComparison.Ordinal);
+
+    // ---- cards moved between piles (CardPileCmd.Add)
+
+    /// <summary>What a CardPileCmd.Add in a card's play does with the cards it moves.</summary>
+    private enum Move { IntoYourHand, PutBack, Elsewhere, Unpicked }
+
+    /// <summary>The pile an Add names (its second argument: PileType as a number).</summary>
+    private static readonly string HandPile = ((int)MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand).ToString();
+    private static readonly string DrawPile = ((int)MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw).ToString();
+
+    /// <summary>
+    /// Each CardPileCmd.Add of the play, by what it does: into your hand (its pile is the hand, and no pick before it is from another
+    /// player's cards: Hologram, Wish, Summon Forth); back onto your draw pile after a pick from your hand (Glimmer); after a pick,
+    /// anywhere else (Headbutt onto your draw pile, Tutor into a teammate's hand); or with no pick before it (Reboot's whole hand).
+    /// </summary>
+    private static IEnumerable<Move> Moves(CardProgram program)
+    {
+        ChoiceStep? pick = null;
+        foreach (var step in program.All())
+        {
+            if (step is ChoiceStep choice) pick = choice;
+            if (step is not CommandStep command || !Is(command, "CardPileCmd", "Add")) continue;
+            var pile = Argument(command, 1);
+            if (pile == HandPile && (pick == null || PicksYourCards(pick))) yield return Move.IntoYourHand;
+            else if (pick == null) yield return Move.Unpicked;
+            else if (pile == DrawPile && pick.Command.Name == "FromHand") yield return Move.PutBack;
+            else yield return Move.Elsewhere;
+        }
+    }
+
+    /// <summary>
+    /// The pick is from your cards: it names you (Owner) among its arguments, or its arguments can't be read (Arrow Stab's). One whose
+    /// arguments are all read and never name you picks another player's (Tutor: its target's draw pile).
+    /// </summary>
+    private static bool PicksYourCards(ChoiceStep pick) => pick.Arguments.Contains("Owner") || pick.Arguments.Contains("?");
+
+    /// <summary>Moves cards from your piles into your hand (CardPileCmd.Add to the hand: Hologram, Wish, Dredge, Summon Forth...).</summary>
+    public static bool TakesIntoHand(CardProgram program) => Moves(program).Contains(Move.IntoYourHand);
+
+    /// <summary>Puts cards you pick from your hand back on your draw pile (Glimmer, Photon Cut, Thinking Ahead).</summary>
+    public static bool PutsBackFromHand(CardProgram program) => Moves(program).Contains(Move.PutBack);
+
+    /// <summary>
+    /// Moves a card it picks somewhere your hand doesn't see: from your discard pile onto your draw pile (Headbutt, Recall, Cosmic
+    /// Indifference), or into a teammate's hand (Tutor).
+    /// </summary>
+    public static bool MovesCardsElsewhere(CardProgram program) =>
+        Moves(program).ToList() is var moves && moves.Contains(Move.Elsewhere) && !moves.Contains(Move.IntoYourHand) && !moves.Contains(Move.PutBack);
+
     public static bool DiscardsOnlyPicks(Type cardType) => DiscardsOnlyPicks(CardPrograms.Of(cardType));
 
     /// <summary>

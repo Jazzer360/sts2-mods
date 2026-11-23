@@ -97,14 +97,15 @@ public static partial class SimAdapter
         }
         // Teammates' draws and created cards (Huddle Up, Blade Symphony, Constellation's draws for its target): their card
         // events, for their procs. Indirect, like your own draws and created cards.
-        if (TeammatesDrawCards.Contains(name) || TeammatesShivCards.Contains(name) || (PlayFacts.AllyDrawCards.Contains(name) && ally != null))
+        var drawsForTarget = Procs.Programs.CardEffects.DrawsForTarget(card.GetType());
+        if (Procs.Programs.CardEffects.DrawsForEachTeammate(card.GetType()) || TeammatesShivCards.Contains(name) || (drawsForTarget && ally != null))
         {
             var mates = Teammates(me, combat);
             var cards = Sts2State.Var(card, "Cards");
             for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
             {
                 if (mates[teammateIndex].Creature is not { IsAlive: true } mate) continue;
-                if (PlayFacts.AllyDrawCards.Contains(name) && mate != ally) continue;
+                if (drawsForTarget && mate != ally) continue;
                 var who = Who.Teammate(teammateIndex);
                 if (TeammatesShivCards.Contains(name))
                 {
@@ -133,7 +134,7 @@ public static partial class SimAdapter
         play.Body.AddRange(TakesToHand(facts, me, name));
         AddCardEvents(play, facts, plays);
         // Reboot: your hand into your draw pile and a shuffle (CardPileCmd.Shuffle) before its draws, right after the hand leaves.
-        if (PlayFacts.ShuffleCards.Contains(name) && play.Body.FindIndex(action => action is LeaveHandAction { Whole: true }) is var leaves and >= 0)
+        if (Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType()) && play.Body.FindIndex(action => action is LeaveHandAction { Whole: true }) is var leaves and >= 0)
             play.Body.Insert(leaves + 1, new ShuffleDrawPileAction(PileType.Hand.GetPile(me).Cards.Where(other => other != card)
                 .Select(other => DrawProfiles.GetValueOrDefault(other)).OfType<SimDrawCard>().GroupBy(profile => profile.Key)
                 .Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()));
@@ -460,8 +461,8 @@ public static partial class SimAdapter
     internal sealed record HandTake(bool FromDiscard, Func<CardModel, bool> Eligible, bool Random = false, bool AllAtOnce = false);
 
     /// <summary>
-    /// How every card in PlayFacts.TakenToHandCards takes cards into your hand, from each card's OnPlay (decompile v0.113.1), so the
-    /// cards it takes leave their pile in the simulation (TakeToHandAction). The card scan holds every TakenToHandCards card to this
+    /// How every card that takes cards into your hand (CardEffects.TakesIntoHand, from its program) takes cards into your hand, from each card's OnPlay (decompile v0.113.1), so the
+    /// cards it takes leave their pile in the simulation (TakeToHandAction). The card scan holds every card the rule finds to this
     /// table (CardCoverage). Summon Forth takes its Sovereign Blades from both piles (SummonForthTakes); Neow's Fury takes as many as
     /// you choose (none counted).
     /// </summary>

@@ -100,12 +100,6 @@ public static partial class SimAdapter
     internal static readonly HashSet<string> AllPlayersSummonCards = new() { nameof(LegionOfBone) };
 
     /// <summary>
-    /// Cards that make every living teammate draw (HuddleUp.OnPlay: CardPileCmd.DrawWithoutBlockingOnOtherPlayers for each),
-    /// not you: their draws are their card events (their draw procs), as many as their hand has room for and their piles hold.
-    /// </summary>
-    internal static readonly HashSet<string> TeammatesDrawCards = new() { nameof(HuddleUp) };
-
-    /// <summary>
     /// Cards that put Shivs into every living teammate's hand, not yours (BladeSymphony.OnPlay: Shiv.CreateInHand(teammate),
     /// so the teammate is the creator: their created-card procs, Arsenal, Pillar of Creation, Regalite).
     /// </summary>
@@ -457,7 +451,7 @@ public static partial class SimAdapter
                 Discard = Groups(PileType.Discard.GetPile(me).Cards),
             };
             // The cards in your hand too, for a play that puts them into your draw pile (Reboot).
-            if (handCards.Any(card => PlayFacts.ShuffleCards.Contains(card.GetType().Name)))
+            if (handCards.Any(card => Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())))
                 foreach (var card in handCards) Remembered(card);
             DrawProfiles = profiles;
             // Cards something on this board makes into your draw pile (Personal Hive's Dazed, Biiig Hug's Soot): their profiles, from

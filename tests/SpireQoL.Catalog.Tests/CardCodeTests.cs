@@ -42,7 +42,7 @@ public class CardCodeTests
         GameModels.EnsureLoaded();
         var notCounted = ModelDb.AllCards
             .Where(card => CardCode.Calls(card.GetType(), "CardPileCmd", "Draw"))
-            .Where(card => !PlayFacts.AllyDrawCards.Contains(card.GetType().Name) && !PlayFacts.TargetDrawCards.Contains(card.GetType().Name)
+            .Where(card => !SpireQoL.Procs.Programs.CardEffects.DrawsForTarget(card.GetType()) && !PlayFacts.TargetDrawCards.Contains(card.GetType().Name)
                            && !PlayFacts.ConditionalDrawCards.Contains(card.GetType().Name)
                            && !card.DynamicVars.ContainsKey("CalculatedCards")) // a count from the fight: none on the template card
             .Where(card => PlayFacts.CardsDrawn(card, handCount: 5) + PlayFacts.CardsDrawn(card, handCount: 1) == 0)

@@ -34,6 +34,9 @@ public sealed record CommandStep(int Offset, CodeMember Command, IReadOnlyList<s
 /// <summary>A player's pick in the middle of the play (CardSelectCmd): which card is theirs to choose, not whether the play goes on.</summary>
 public sealed record ChoiceStep(int Offset, CodeMember Command) : ProgramStep(Offset)
 {
+    /// <summary>Where each of its arguments comes from (whose pile, whose pick: "Owner" is you), as a command's.</summary>
+    public IReadOnlyList<string> Arguments { get; init; } = Array.Empty<string>();
+
     public override string ToString() => "choice " + Command.Name;
 }
 
@@ -224,7 +227,7 @@ public static class CardProgramReader
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
                 if (member.Namespace == "MegaCrit.Sts2.Core.Commands" && member.DeclaringType == "CardSelectCmd")
                 {
-                    into.Add(new ChoiceStep(instruction.Offset, member) { Condition = condition });
+                    into.Add(new ChoiceStep(instruction.Offset, member) { Condition = condition, Arguments = Arguments(flow, i, member) });
                     continue;
                 }
                 if (member.DeclaringType == "DamageCmd" && member.Name == "Attack")

@@ -186,6 +186,18 @@ hooks.
   so far (`CardEffects`): the tables for Osty killed, a target's HP set, a target's block taken, damage without an attack, block
   for another or each player, a channel for the target's player, and a second attack on every enemy after a kill. Each scan
   now asks the same rule, so a card calling the command some other way is still flagged.
+  - Draws and shuffles (2026-11-23): a draw for the target's player (`DrawsForTarget`: the draw's player argument isn't you),
+    a draw for each teammate a loop goes over (`DrawsForEachTeammate`), a shuffle on every play (`ShufflesDiscardPileIn`: no
+    condition around it) or only on a condition (`ShufflesWhenShort`). They replaced `AllyDrawCards`, `TeammatesDrawCards`,
+    `ShuffleCards` and `ShuffleWhenShortCards`.
+  - Cards moved between piles (2026-11-23): each `CardPileCmd.Add` is read by its pile argument and the pick before it (a
+    `Choice` step now keeps its arguments, so whose pile it picks from is read): into your hand (`TakesIntoHand`), back onto
+    your draw pile after a pick from your hand (`PutsBackFromHand`), or elsewhere after a pick (`MovesCardsElsewhere`: your
+    discard pile onto your draw pile, a teammate's draw pile into their hand). They replaced `TakenToHandCards`,
+    `PutBackCards` and `MovedElsewhereCards`.
+  - Each was proven to give exactly its table's cards on both branches before the table was deleted
+    (`CardEffectsTests.EachRuleFindsExactlyTheTableItReplaced` keeps the tables as they were), and the catalog snapshot was
+    unchanged by the swap.
 
 A table stays only for what code can't say. Each one keeps its scan and gets a line in this doc saying why.
 
