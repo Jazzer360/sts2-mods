@@ -77,10 +77,6 @@ public sealed partial class SettingsMenu
         "When a roll decides how the enemy turn goes (a draw at the end of your turn, a random target), the sum shows the most likely way, with its chance; the skull still shows whenever you might die. Hover the sum for every outcome. Off: the worst case.",
         settings => settings.MostLikely, Any(ShowChances.Id), Any("incoming-damage"));
 
-    internal static readonly MenuOption DrawChanceTag = new("draw-chance", "Draw chance tag",
-        "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the same switch as Draw chance under Proc Tags).",
-        settings => settings.TabOwn(QolSettings.DrawChanceKey), Any(ShowChances.Id), Any(TagsOnCards.Id), Any("proc-indicators"));
-
     internal static readonly MenuOption IntentRandomMoves = new("intent-odds", "Intent Forecast's random moves",
         "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",
         settings => settings.IntentOdds, Any(ShowChances.Id), Any("intent-forecast"));

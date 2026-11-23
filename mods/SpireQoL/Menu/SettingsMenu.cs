@@ -535,7 +535,6 @@ public sealed partial class SettingsMenu
         Option(ShowChances, enabled => Settings.Chances = enabled, TextIcon("50%"));
         Option(DeathChances, enabled => Settings.DeathChance = enabled, ArtIcon(Cards.GameIcons.Skull(), corner: "%"));
         Option(MostLikely, enabled => Settings.MostLikely = enabled, ArtIcon(Cards.GameIcons.Heart(), corner: "%"));
-        Option(DrawChanceTag, enabled => Settings.Tabs[QolSettings.DrawChanceKey] = enabled, TabPreview(QolSettings.DrawChanceKey));
         Option(IntentRandomMoves, enabled => Settings.IntentOdds = enabled, ArtIcon(Cards.GameIcons.Intent("unknown"), corner: "%"));
     }
 
@@ -864,6 +863,7 @@ public sealed partial class SettingsMenu
         icon.MouseFilter = Control.MouseFilterEnum.Pass;
         icon.TooltipText = GameDescription(sourceEntry.Type);
         if (crossed) AddSlash(icon);
+        icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         row.AddChild(icon);
         if (Model(sourceEntry.Type) is CardModel card)
         {
@@ -1197,7 +1197,12 @@ public sealed partial class SettingsMenu
         button.Disabled = !enabled;
         if (!enabled) row.Modulate = new Color(1, 1, 1, 0.5f);
         row.AddChild(check);
-        if (icon != null) row.AddChild(icon);
+        if (icon != null)
+        {
+            // Centred in the row: a row a long description makes taller kept it at the top.
+            icon.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            row.AddChild(icon);
+        }
         row.AddChild(Label(name, size: 20, Text, NameWidth));
         var label = Label(desc, size: 18, Muted);
         label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;

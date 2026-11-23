@@ -55,10 +55,11 @@ public class TabKindSettingsTests
     }
 
     [Fact]
-    public void ChancesOffHidesTheDrawChanceTabAndEveryChance()
+    public void ChancesOffHidesEveryChanceButTheDrawChanceTag()
     {
+        // The draw chance tag is the card's own (what its draw gives), switched under Proc Tags alone: Show chances doesn't hide it.
         var settings = new QolSettings { Chances = false };
-        Assert.False(Decor(settings).AddTab(new TabSpec(QolSettings.DrawChanceKey, Icon: null, Text: "40%")));
+        Assert.True(Decor(settings).AddTab(new TabSpec(QolSettings.DrawChanceKey, Icon: null, Text: "40%")));
         Assert.False(settings.ShowDeathChance);
         Assert.False(settings.ShowIntentOdds);
         Assert.False(settings.ShowEventOdds);

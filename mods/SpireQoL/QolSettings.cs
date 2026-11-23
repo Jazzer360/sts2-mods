@@ -170,7 +170,6 @@ public sealed class QolSettings
     public Cards.TabSpec? Shown(Cards.TabSpec tab)
     {
         if (!CardTabs || (tab.Crossed ? !CrossedTabs : !PlainTabs)) return null;
-        if (tab.Key == DrawChanceKey && !Chances) return null;
         return tab.Aimed && !AimMarker ? tab with { Aimed = false } : tab;
     }
 

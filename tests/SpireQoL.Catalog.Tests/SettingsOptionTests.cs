@@ -23,7 +23,7 @@ public class SettingsOptionTests
     public void EveryOptionHasItsOwnId()
     {
         var options = OptionFields();
-        Assert.True(options.Count >= 20, $"only {options.Count} options found");
+        Assert.True(options.Count >= 15, $"only {options.Count} options found"); // the reflection found the table
         Assert.Equal(options.Count, SettingsMenu.Options.Count);
         var clash = options.Where(option => FeatureIds.Contains(option.Id)).Select(option => option.Id).ToList();
         Assert.True(clash.Count == 0, "Option ids that are also feature ids: " + string.Join(", ", clash));
@@ -80,7 +80,6 @@ public class SettingsOptionTests
         var chances = SettingsMenu.ShowChances.Id;
         Assert.True(NeedsAll(SettingsMenu.AmountsOnProcTags, tags, "proc-indicators"));
         Assert.True(NeedsAll(SettingsMenu.IndirectProcs, tags, "proc-indicators"));
-        Assert.True(NeedsAll(SettingsMenu.DrawChanceTag, chances, tags, "proc-indicators"));
         Assert.True(NeedsAll(SettingsMenu.InspectEventCards, Features.EventRemindersFeature.FeatureId));
         Assert.True(NeedsAll(SettingsMenu.EventChance, chances, Features.EventRemindersFeature.FeatureId));
         Assert.True(NeedsAll(SettingsMenu.EtherealOpacity, Features.EtherealFadeFeature.FeatureId));
@@ -92,7 +91,7 @@ public class SettingsOptionTests
         foreach (var kind in new[] { SettingsMenu.PlainTags, SettingsMenu.CrossedTags })
             Assert.Contains(kind.Needs, group => group.Contains(tags) && group.Contains("potion-tabs"));
         // Every chance needs Show chances.
-        foreach (var chance in new[] { SettingsMenu.DeathChances, SettingsMenu.MostLikely, SettingsMenu.DrawChanceTag, SettingsMenu.IntentRandomMoves, SettingsMenu.EventChance })
+        foreach (var chance in new[] { SettingsMenu.DeathChances, SettingsMenu.MostLikely, SettingsMenu.IntentRandomMoves, SettingsMenu.EventChance })
             Assert.True(NeedsAll(chance, chances), $"{chance.Name} doesn't need Show chances");
         // The masters stand alone.
         foreach (var master in new[] { SettingsMenu.TagsOnCards, SettingsMenu.ShowChances, SettingsMenu.MultiplayerPredictions, SettingsMenu.SendErrorReports, SettingsMenu.DevMode })
