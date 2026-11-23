@@ -33,6 +33,17 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
     {
     }
 
+    private TabSpec? _shuffleTab;
+
+    /// <summary>The tab, made once its icon is loaded: a new one for each card on every frame was garbage (decision #177).</summary>
+    private TabSpec ShuffleTab()
+    {
+        if (_shuffleTab != null) return _shuffleTab;
+        var tab = new TabSpec("shuffle", GameIcons.DiscardPile());
+        if (tab.Icon != null) _shuffleTab = tab;
+        return tab;
+    }
+
     public void OnFrame(OverlayHost host)
     {
         var me = Sts2State.Me;
@@ -50,7 +61,7 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
         {
             if (_kept.TryGetValue(card, out var kept) && kept.Probe == probe)
             {
-                if (kept.Shuffles) _ctx.Decor.For(card).AddTab("shuffle", GameIcons.DiscardPile());
+                if (kept.Shuffles) _ctx.Decor.For(card).AddTab(ShuffleTab());
                 continue;
             }
             // A card you can't play draws nothing (a Dazed, a curse).
@@ -73,7 +84,7 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
                 shuffles = PlayFacts.CardsDrawnTotal(card, hand.Count, CardPlays.Count(card)) > Sts2State.DrawPileCount(me);
             }
             _kept[card] = (probe, shuffles);
-            if (shuffles) _ctx.Decor.For(card).AddTab("shuffle", GameIcons.DiscardPile());
+            if (shuffles) _ctx.Decor.For(card).AddTab(ShuffleTab());
         }
     }
 

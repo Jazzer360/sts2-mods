@@ -231,24 +231,39 @@ public static partial class SimAdapter
         Each(play.Before, CardEvent.EnergyGained, facts.EnergyBack, indirect: false, perPlay: false);
         Each(play.Before, CardEvent.EnergySpent, facts.EnergySpent, indirect: false, perPlay: false);
         // What it takes from your hand (discards, exhausts) and its draws, in its OnPlay's order: the room the draws have.
-        void Leaving()
+        void Leaving(List<SimAction> into)
         {
-            Each(play.Body, CardEvent.Discarded, facts.Discards, indirect: true);
-            Each(play.Body, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
-            // What the cards it takes do when exhausted (Drum of Battle), by how it picks them.
-            if (facts.ExhaustsOthers > 0 && PlayFacts.ExhaustPickOf(facts.Card) is { } exhaustPick) play.Body.Add(exhaustPick);
+            // Which cards it takes (what those that act when exhausted do: Drum of Battle), read from the hand as it is.
+            if (facts.ExhaustsOthers > 0 && PlayFacts.ExhaustPickOf(facts.Card) is { } exhaustPick) into.Add(exhaustPick);
+            // Then they leave, before what their leaving sets off: the game takes them one at a time, each draw it sets off (Dark
+            // Embrace, Tough Bandages) following a card out, so those draws have its room, and a play that takes the whole hand takes
+            // what was in it, not what the draws bring in (a dev review: Fiend Fire with Dark Embrace drew 7, predicted 2).
+            if (facts.TakesWholeHand) into.Add(new LeaveHandAction(Count: 0) { Whole = true });
+            else if (facts.LeavesHand / plays > 0) into.Add(new LeaveHandAction(facts.LeavesHand / plays));
+            Each(into, CardEvent.Discarded, facts.Discards, indirect: true);
+            Each(into, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
             // A Sly card it discards plays itself (CardCmd.Discard: AutoPlay, SlyDiscard): not simulated yet (tracker).
-            if (facts.MayDiscardSly) play.Body.Add(new NotModelledAction("a Sly card in your hand it may discard plays itself"));
+            if (facts.MayDiscardSly) into.Add(new NotModelledAction("a Sly card in your hand it may discard plays itself"));
             // How many it takes into your hand is your choice (Neow's Fury): your hand after it isn't known.
-            if (facts.HandTakeChosen) play.Body.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
-            if (facts.TakesWholeHand) play.Body.Add(new LeaveHandAction(Count: 0) { Whole = true });
-            else if (facts.LeavesHand / plays > 0) play.Body.Add(new LeaveHandAction(facts.LeavesHand / plays));
+            if (facts.HandTakeChosen) into.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
+        }
+        // A card whose code takes them before it attacks (Fiend Fire: what their exhausts set off, Charon's Ashes' hits, lands first):
+        // before its attack. Otherwise in the play's order below.
+        void Place()
+        {
+            if (CardCode.TakesBeforeAttacking(facts.Card.GetType()) && play.Body.FindIndex(simAction => simAction is AttackAction) is var attackAt and >= 0)
+            {
+                var first = new List<SimAction>();
+                Leaving(first);
+                play.Body.InsertRange(attackAt, first);
+            }
+            else Leaving(play.Body);
         }
         var cardName = facts.Card.GetType().Name;
         var takesFirst = PlayFacts.DiscardThenDrawCards.Contains(cardName) || PlayFacts.ExhaustThenDrawCards.Contains(cardName) || facts.TakesWholeHand;
-        if (takesFirst) Leaving();
+        if (takesFirst) Place();
         Each(play.Body, CardEvent.Drawn, Math.Min(facts.OwnDraws, facts.Draws), indirect: true);
-        if (!takesFirst) Leaving();
+        if (!takesFirst) Place();
         var sadness = facts.SadnessCreated;
         var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
         Each(play.Body, CardEvent.Generated, Math.Max(0, facts.Generated + facts.TransformsCertain - statuses - sadness), indirect: true);

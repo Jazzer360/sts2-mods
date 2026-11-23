@@ -226,9 +226,15 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     public void OnFrame(OverlayHost host)
     {
         var room = NRestSiteRoom.Instance;
-        var me = RunMe();
-        Check(me);
-        CheckMend();
+        Player? me;
+        // Each step its own part of the frame's memory (decision #177): the dev dashboard's steady table names the one that allocates
+        // at the fire.
+        using (host.Part("rest-preview:read"))
+        {
+            me = RunMe();
+            Check(me);
+            CheckMend();
+        }
         var inRoom = room != null && GodotObject.IsInstanceValid(room) && room.IsVisibleInTree() && me != null;
         // Away from the fire: nothing to show, and nothing to work out (looking through no options made garbage every frame).
         if (!inRoom)
@@ -241,13 +247,25 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
             return;
         }
         // The site's options change only when one is chosen: read every few frames, not made into a new list every frame.
-        if (!inRoom) _options = null;
-        else if (_options == null || ++_optionsFrame % 10 == 0) _options = LocalOptions();
+        using (host.Part("rest-preview:read"))
+        {
+            if (!inRoom) _options = null;
+            else if (_optionsGate.Decide(HashCode.Combine(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(room!), Input.IsAnythingPressed()), Time.GetTicksMsec()) is var reuse
+                     && (_options == null || reuse != SpireQoL.Combat.FrameReuse.Reuse))
+            {
+                var read = LocalOptions();
+                if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck && _options != null)
+                    _optionsGate.Compare(read.SequenceEqual(_options), "the fire's options changed with no click");
+                _options = read;
+            }
+        }
         var options = _options ?? NoOptions;
         // What the panels show depends only on these (a dev review: the heal worked out through every relic, every frame while idle at
         // the fire): drawn again when one changes.
-        var hovered = inRoom ? HoveredMate(room!, me!) : null;
-        var shownFor = inRoom ? ShownFor(me!, options, hovered) : 0;
+        Player? hovered;
+        using (host.Part("rest-preview:hover")) hovered = inRoom ? HoveredMate(room!, me!) : null;
+        int shownFor;
+        using (host.Part("rest-preview:key")) shownFor = inRoom ? ShownFor(me!, options, hovered) : 0;
         if (inRoom && shownFor == _shownFor) return;
         _shownFor = shownFor;
 
@@ -267,7 +285,12 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
     }
 
     private List<RestSiteOption>? _options;
-    private int _optionsFrame, _shownFor;
+    private int _shownFor;
+    /// <summary>
+    /// The site's options are read again only when they could have changed: a click (choosing one), a few times in the second after,
+    /// or a new room (decision #177: every 10th frame before, a new list each time).
+    /// </summary>
+    private readonly SpireQoL.Combat.ChangeGate _optionsGate = new("the fire's options");
 
     /// <summary>
     /// Everything the panels read, as one number: the settings, your HP and relics (their counters and status), the options and whether each is on

@@ -8,8 +8,13 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 1.27.2
 #### Fixed
+- Vicious and Dark Embrace draw their amount each time (two stacks draw two), as in the game: their tabs, the Shuffle Warning and the checks counted one.
+- A card that takes cards from your hand takes them before what their leaving sets off: Fiend Fire with Dark Embrace draws into the room each exhausted card leaves (7 were drawn where 2 were predicted), and the cards drawn stay in your hand. Fiend Fire exhausts before it attacks, so Charon's Ashes' hits land first and show even when Fiend Fire kills (read from the card's own code).
+- No Draw and Fiddle stop the draws a play sets off (Dark Embrace on an exhaust) in the predictions too, not only in the card's own draws.
+- The checks no longer report Self-Forming Clay as not firing (its code never flashes: a relic like it is now checked by what it does), nor a draw relic or power that fired with nothing to draw (both piles empty).
+- A won run is counted as won in the session summary (the game's ending kills every player, which read as a death).
 - An Ethereal card's fade looks at the card again only when its board, the creature it's aimed at or its pile changes, instead of every 15th frame: on a still board it was the mod's largest garbage. The mod's own frame timing no longer makes a little garbage of its own every frame either.
-- Almost nothing is made while nothing changes, in a fight or out of one: the map legend's reminders are worked out again only when your relics, deck, gold, HP or the legend change (they were worked out every few frames while the map was open); Intent Forecast reads a hovered enemy's moves once, not every frame; an Ethereal card's glow no longer makes Godot names every frame; Rest Site Preview does nothing away from the fire; and the card tabs, Proc Indicators, Shuffle Warning, Incoming Damage, Teammate Incoming Damage and Potion Tabs no longer make a small object or two every frame.
+- Almost nothing is made while nothing changes, in a fight or out of one (and less while you look at a shop, an event or the fire: Run Reminders and Rest Site Preview work out again only when you click, the screen changes or your run does; Incoming Damage, an Ethereal card's glow and the Shuffle Warning stopped making a little every frame): the map legend's reminders are worked out again only when your relics, deck, gold, HP or the legend change (they were worked out every few frames while the map was open); Intent Forecast reads a hovered enemy's moves once, not every frame; an Ethereal card's glow no longer makes Godot names every frame; Rest Site Preview does nothing away from the fire; and the card tabs, Proc Indicators, Shuffle Warning, Incoming Damage, Teammate Incoming Damage and Potion Tabs no longer make a small object or two every frame.
 
 ### Main Saves 1.0.27
 #### Changed

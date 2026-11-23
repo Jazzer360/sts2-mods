@@ -122,13 +122,21 @@ public sealed partial class ProcAudit
                 modelLines.Add($"{otherModel.GetType().Name} fired as the play ended the fight (nothing left for it to act on)");
                 continue;
             }
+            // A draw source that fired with nothing to draw (both piles empty, or a full hand: Vicious flashes before its draw finds
+            // nothing): nothing happened, so its tab rightly showed nothing (a tab says something happens when you play the card).
+            if (SimModels.Get(otherModel.GetType().Name)?.Tab == TabKind.Draw
+                && !entries.OfType<CardDrawnEntry>().Any(cardDrawnEntry => !cardDrawnEntry.FromHandDraw && cardDrawnEntry.Card.Owner == me))
+            {
+                modelLines.Add($"{otherModel.GetType().Name} fired with nothing to draw (empty piles or a full hand): nothing happened");
+                continue;
+            }
             issues.Add($"no tab: {otherModel.GetType().Name} fired");
         }
 
         // ---- relic tabs whose relic didn't fire (crossed ones mean "this breaks it": no flash)
         foreach (var (name, otherTab) in sourceOf)
         {
-            if (otherTab.Crossed || !otherTab.Key.StartsWith("proc:", StringComparison.Ordinal) || EndOfTurnRelicTabs.Contains(name) || SilentRelics.Contains(name)) continue;
+            if (otherTab.Crossed || !otherTab.Key.StartsWith("proc:", StringComparison.Ordinal) || EndOfTurnRelicTabs.Contains(name)) continue;
             // The play ended the fight: the game stops at the killing hit, so a relic that acts after it (Bone Flute after
             // Osty's attack) never gets to.
             if (window.FightEnded) continue;
@@ -160,7 +168,15 @@ public sealed partial class ProcAudit
                 continue;
             }
             var players = me.Creature.CombatState?.Players ?? (IReadOnlyList<Player>)new[] { me };
-            if (players.Any(player => player.Relics.Any(relic => relic.GetType().Name == name)) && !flashed.Any(otherModel => otherModel.GetType().Name == name))
+            var relic = players.SelectMany(player => player.Relics).FirstOrDefault(relicModel => relicModel.GetType().Name == name);
+            // A relic whose code never flashes (Mummified Hand, Self-Forming Clay: no Flash call) can't be held to a flash; what it
+            // does is checked by what the game shows instead (the card cost, the powers, the block, the cards).
+            if (relic != null && !CodeIndex.FlashesOutsideAmountHooks(relic.GetType()))
+            {
+                modelLines.Add($"{name} never flashes (its code has no Flash call): checked by what it does, not by a flash");
+                continue;
+            }
+            if (relic != null && !flashed.Any(otherModel => otherModel.GetType().Name == name))
                 issues.Add($"didn't fire: {name}");
         }
 

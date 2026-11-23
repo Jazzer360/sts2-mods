@@ -21,8 +21,8 @@ internal sealed class GlowMask
     /// </summary>
     private static readonly StringName MaskName = GodotNames.Name(Mask), Row0Name = GodotNames.Name(Row0), Row1Name = GodotNames.Name(Row1),
         OriginName = GodotNames.Name(Origin), SizeName = GodotNames.Name(Size);
-    /// <summary>The uniform list's name key, made once.</summary>
-    private static readonly Variant NameKey = "name";
+    /// <summary>The uniform list's name and type keys, made once.</summary>
+    private static readonly Variant NameKey = "name", TypeKey = "type";
 
     private static readonly Dictionary<ulong, Shader?> Masked = new();
     private static readonly HashSet<ulong> Warned = new();
@@ -30,7 +30,13 @@ internal sealed class GlowMask
     private readonly CanvasItem _glow;
     private readonly Material? _original;
     private readonly ShaderMaterial _copy;
-    private readonly List<StringName> _params = new();
+    /// <summary>
+    /// The glow's own parameters to follow: numbers, colours and vectors every frame (a plain Variant, nothing made); a texture once
+    /// (a Variant holding a resource carries a finalizable disposer, made on every read: decision #177).
+    /// </summary>
+    private readonly List<StringName> _params = new(), _textureParams = new();
+    private Texture2D? _maskShown;
+    private bool _texturesCopied;
 
     private GlowMask(CanvasItem glow, ShaderMaterial original, Shader masked)
     {
@@ -38,7 +44,11 @@ internal sealed class GlowMask
         _original = glow.Material;
         _copy = new ShaderMaterial { Shader = masked };
         foreach (var variant in original.Shader.GetShaderUniformList())
-            if (variant.AsGodotDictionary()[NameKey].AsString() is { Length: > 0 } name) _params.Add(GodotNames.Name(name));
+        {
+            var uniform = variant.AsGodotDictionary();
+            if (uniform[NameKey].AsString() is not { Length: > 0 } name) continue;
+            (uniform[TypeKey].AsInt32() == (int)Variant.Type.Object ? _textureParams : _params).Add(GodotNames.Name(name));
+        }
         glow.Material = _copy;
     }
 
@@ -125,10 +135,21 @@ internal sealed class GlowMask
         if (!GodotObject.IsInstanceValid(_glow)) return;
         if (_glow.Material != _copy) _glow.Material = _copy; // the game put its own back (a pooled node reset)
         if (_original is ShaderMaterial shaderMaterial)
-            foreach (var stringName in _params) _copy.SetShaderParameter(stringName, shaderMaterial.GetShaderParameter(stringName));
+        {
+            for (var i = 0; i < _params.Count; i++) _copy.SetShaderParameter(_params[i], shaderMaterial.GetShaderParameter(_params[i]));
+            if (!_texturesCopied)
+            {
+                _texturesCopied = true;
+                for (var i = 0; i < _textureParams.Count; i++) _copy.SetShaderParameter(_textureParams[i], shaderMaterial.GetShaderParameter(_textureParams[i]));
+            }
+        }
         // A point in the glow's own coordinates to the image's (both CanvasItems: their global transforms).
         var toImage = image.GetGlobalTransform().AffineInverse() * _glow.GetGlobalTransform();
-        _copy.SetShaderParameter(MaskName, texture);
+        if (!ReferenceEquals(texture, _maskShown))
+        {
+            _maskShown = texture;
+            _copy.SetShaderParameter(MaskName, texture);
+        }
         _copy.SetShaderParameter(Row0Name, toImage.X);
         _copy.SetShaderParameter(Row1Name, toImage.Y);
         _copy.SetShaderParameter(OriginName, toImage.Origin);

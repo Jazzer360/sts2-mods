@@ -89,6 +89,14 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// The game's ShouldDraw (CardPileCmd.DrawInternal checks it first: no draw, no shuffle): a draw inside a play does nothing while
+    /// its player has No Draw (NoDrawPower.ShouldDraw), or Fiddle (Fiddle.ShouldDraw: on its owner's own turn, which a play is). A dev
+    /// review: Dark Embrace's draw on Forgotten Ritual's exhaust was counted under No Draw.
+    /// </summary>
+    internal static bool DrawsStopped(SimState state, int player) =>
+        state.CurrentPlay != null && (PowersOf(state, player).Has(PowerId.NoDraw) || RelicsOf(state, player).Has(RelicId.Fiddle));
+
+    /// <summary>
     /// One draw (CardPileCmd.Draw): none into a full hand (the card stays in the pile); the discard pile shuffled in when the
     /// draw pile is empty; then the top card when it's known, else a branch per profile in the rest, weighted by its count
     /// (each card equally likely: the order is hidden). The card joins your hand (what acts at end of turn, Ethereal, what
@@ -96,6 +104,7 @@ public static partial class SimEngine
     /// </summary>
     private static IEnumerable<SimState> DrawOne(SimState state, int player, bool indirect, bool record = false, Action<SimState>? onDrawn = null)
     {
+        if (DrawsStopped(state, player)) return new[] { state };
         var simPlayer = state.Player(player)!;
         // The cards being played have left their owner's hand already (the game moves each before OnPlay); HandCount drops each at CardResolved.
         var inHand = simPlayer.HandCount - simPlayer.PlayingFromHand;

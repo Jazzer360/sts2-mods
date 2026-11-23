@@ -63,3 +63,33 @@ public sealed class ReuseCheck
         if (!same) BoardProbe.Missed(_what, why, detail?.Invoke());
     }
 }
+
+/// <summary>
+/// Work outside fights that changes only when something it reads does (decision #177): a key of what it reads (the screen, anything
+/// held, your run), worked out again when the key changes and a few times in the second after it (about 50, 100, 200, 400 and
+/// 800 ms: what animates in after a click), kept otherwise. Dev mode works it out anyway once a second (ReuseCheck) and logs a
+/// difference.
+/// </summary>
+public sealed class ChangeGate
+{
+    private readonly ReuseCheck _check;
+    private int _key;
+    private bool _have;
+    private ulong _changedMs, _nextMs;
+
+    /// <param name="what">What's kept, as the log names it.</param>
+    public ChangeGate(string what) => _check = new ReuseCheck(what);
+
+    /// <summary>This frame: work it out (the key changed, or a look after a change), keep it, or work it out to check.</summary>
+    public FrameReuse Decide(int key, ulong nowMs)
+    {
+        var changed = !_have || key != _key;
+        var lookAgain = !changed && _nextMs != 0 && nowMs >= _nextMs;
+        if (changed) (_have, _key, _changedMs, _nextMs) = (true, key, nowMs, nowMs + 50);
+        else if (lookAgain) _nextMs = 2 * (nowMs - _changedMs) <= 1000 ? _changedMs + 2 * (nowMs - _changedMs) : 0;
+        return changed || lookAgain ? FrameReuse.WorkOut : _check.Decide(unchanged: true);
+    }
+
+    /// <summary>After <see cref="FrameReuse.WorkOutAndCheck"/>: whether what was worked out is what was kept; logged when not.</summary>
+    public void Compare(bool same, string why) => _check.Compare(same, why);
+}

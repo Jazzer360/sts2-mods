@@ -435,11 +435,33 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     // ------------------------------------------------------------------ event options
 
+    /// <summary>What the event's and the shop's icons were last worked out from, and what they showed (dev mode's check compares).</summary>
+    private readonly SpireQoL.Combat.ChangeGate _eventsGate = new("the event options' reminders"), _shopGate = new("the shop's reminders");
+    private int _eventsShown, _shopShown;
+
+    /// <summary>
+    /// The key of what the event's or the shop's icons read: the screen, anything held (a click picks an option or buys), the
+    /// settings and you (AddRunState). Worked out again only when it changes (decision #177: every 6th frame before, garbage while
+    /// you read an event or looked at a shop).
+    /// </summary>
+    private static int ScreenKey(GodotObject screen, MegaCrit.Sts2.Core.Entities.Players.Player? me)
+    {
+        var hashCode = new HashCode();
+        hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(screen));
+        hashCode.Add(Godot.Input.IsAnythingPressed());
+        hashCode.Add(QolSettings.Revision);
+        if (me != null) AddRunState(ref hashCode, me);
+        return hashCode.ToHashCode();
+    }
+
     private void EventOptions()
     {
         var layout = NEventRoom.Instance?.Layout;
         if (layout == null || !GodotObject.IsInstanceValid(layout)) return;
         var me = RunMe();
+        var reuse = _eventsGate.Decide(ScreenKey(layout, me), Godot.Time.GetTicksMsec());
+        if (reuse == SpireQoL.Combat.FrameReuse.Reuse) return;
+        var shown = new HashCode();
         foreach (var button in layout.OptionButtons)
         {
             if (!GodotObject.IsInstanceValid(button)) continue;
@@ -447,9 +469,13 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                 ? IconsFor(option, me).Where(relicCrossed => _ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Event, relicCrossed.Relic.GetType().Name)))
                     .Select(relicCrossed => (relicCrossed.Relic, relicCrossed.Crossed, _ctx.Settings.ShowEventOdds ? relicCrossed.Odds : null)).ToList()
                 : new List<(RelicModel Relic, bool Crossed, string? Odds)>();
+            shown.Add(button);
+            foreach (var icon in icons) shown.Add(icon);
             Show(button, icons);
             ShowInspect(button, me);
         }
+        if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck) _eventsGate.Compare(shown.ToHashCode() == _eventsShown, "an event option's reminders changed with no change of screen, press or run");
+        _eventsShown = shown.ToHashCode();
     }
 
     /// <summary>
@@ -548,6 +574,9 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         var inv = NMerchantRoom.Instance?.Inventory;
         if (inv == null || !GodotObject.IsInstanceValid(inv) || !inv.IsOpen) return;
         var me = RunMe();
+        var reuse = _shopGate.Decide(ScreenKey(inv, me), Godot.Time.GetTicksMsec());
+        if (reuse == SpireQoL.Combat.FrameReuse.Reuse) return;
+        var shown = new HashCode();
         foreach (var slot in inv.GetAllSlots())
         {
             if (!GodotObject.IsInstanceValid(slot)) continue;
@@ -591,8 +620,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
                     _shopWatch = (entry, _shopGold, predicted, 0);
                 }
             }
+            shown.Add(slot);
+            shown.Add(entry?.IsStocked);
+            shown.Add(net);
+            foreach (var icon in icons) shown.Add(icon);
             ShowShop(slot, icons, net);
         }
+        if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck) _shopGate.Compare(shown.ToHashCode() == _shopShown, "a shop slot's reminders changed with no change of screen, press or run");
+        _shopShown = shown.ToHashCode();
         if (me != null) _shopGold = me.Gold;
     }
 

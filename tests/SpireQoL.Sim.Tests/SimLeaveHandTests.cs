@@ -42,6 +42,24 @@ public class SimLeaveHandTests
     }
 
     [Fact]
+    public void ExhaustingTheWholeHandWithDarkEmbraceDrawsIntoTheRoomItLeft()
+    {
+        // Fiend Fire in a full hand of 10 with Dark Embrace and 6 cards to draw: its 9 others leave, each exhaust draws one (a dev
+        // review: 2 were predicted, the hand still counted full), and the cards drawn stay in hand: 6.
+        var state = Hand(cards: 10, pile: 6);
+        state.You.Powers = PowerSet.Empty.With(PowerId.DarkEmbrace, amount: 1);
+        var play = new SimPlay
+        {
+            Name = "FiendFire", HandCard = 7, HandDelta = -1,
+            Body = { new LeaveHandAction(Count: 0) { Whole = true }, new CardEventAction(CardEvent.Exhausted, Count: 9) { Indirect = true } },
+        };
+        var branch = Assert.Single(SimEngine.Run(state, play).Branches);
+        Assert.Equal(6, branch.You.Drawn);
+        Assert.Equal(6, branch.You.HandCount);
+        Assert.Equal(6, branch.Fired.DataOf("DarkEmbracePower"));
+    }
+
+    [Fact]
     public void TakingTheWholeHandTakesItsBurnsAndEtherealCards()
     {
         // Storm of Steel with a Burn and an Ethereal card in hand: both are discarded, so neither acts at the end of the turn.

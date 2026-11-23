@@ -89,9 +89,10 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         if (runManager.IsGameOver) _gameOver = true;
         if (!_endSeen && HasRunEnded?.Invoke(runManager) == true)
         {
-            // A win ends the run before the false end kills every player; a death ends it with everyone dead already.
+            // A win ends the run in the victory room (RunManager.WinRun: OnEnded, then every player killed for the ending, which can
+            // land before this look, so "everyone dead" alone said died after a win); a death ends it with everyone dead.
             _endSeen = true;
-            _won = !runManager.IsGameOver;
+            _won = (run as RunState)?.CurrentRoom is { IsVictoryRoom: true } || !runManager.IsGameOver;
         }
 
         var otherCombat = Sts2State.Combat;

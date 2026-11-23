@@ -470,12 +470,12 @@ public sealed class FeelNoPainPower : ProcModel
         cardEvent == CardEvent.Exhausted && player == owner ? Block(state, owner, Amount(state, owner)) : One(state);
 }
 
-/// <summary>DarkEmbracePower.AfterCardExhausted: a draw for each card its owner exhausts.</summary>
+/// <summary>DarkEmbracePower.AfterCardExhausted: for each card its owner exhausts, draws its amount (CardPileCmd.Draw(Amount)).</summary>
 public sealed class DarkEmbracePower : ProcModel
 {
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner) : One(state);
+        cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, count: Amount(state, owner), owner) : One(state);
 }
 
 /// <summary>ChildOfTheStarsPower.AfterStarsSpent: its amount of block per star spent (one gain).</summary>
@@ -665,12 +665,12 @@ public sealed class SleightOfFleshPower : ProcModel
         debuff && applier == owner && target >= 0 ? SimEngine.ProcDamageOn(state, owner, Name, target, Amount(state, owner), Unpowered) : One(state);
 }
 
-/// <summary>ViciousPower.AfterPowerAmountChanged: a draw for each Vulnerable its owner lands on an enemy.</summary>
+/// <summary>ViciousPower.AfterPowerAmountChanged: for each Vulnerable its owner lands on an enemy, draws its amount (CardPileCmd.Draw(Amount)).</summary>
 public sealed class ViciousPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterPowerApplied(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) =>
-        power == PowerId.Vulnerable && applier == owner && target >= 0 ? Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner) : One(state);
+        power == PowerId.Vulnerable && applier == owner && target >= 0 ? Cause(Fire(state, owner), CardEvent.Drawn, count: Amount(state, owner), owner) : One(state);
 }
 
 /// <summary>ShroudPower.AfterPowerAmountChanged: block (unpowered) for each Doom its owner lands on an enemy.</summary>

@@ -553,6 +553,52 @@ public class ProcModelTests
         Assert.Equal(100, One(state, Play(Card("Bash"), target: 0, plays: 1, new ApplyPowerAction(PowerId.Vulnerable, Amount: 2) { Debuff = true })).Enemy(id: 0)!.Hp);
     }
 
+    [Fact]
+    public void DarkEmbraceDrawsItsAmountForEachExhaust()
+    {
+        // DarkEmbracePower.AfterCardExhausted: CardPileCmd.Draw(base.Amount): two Dark Embraces draw two a card.
+        var state = Power(State(), PowerId.DarkEmbrace, amount: 2);
+        state.You.HandCount = 4;
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), Count: 10) } };
+        var after = One(state, Events(Card("TrueGrit", SimCardType.Skill), plays: 1, new CardEventAction(CardEvent.Exhausted, Count: 1) { Indirect = true }));
+        Assert.Equal(6, after.You.HandCount);
+        Assert.Equal(2, after.Fired.DataOf("DarkEmbracePower"));
+    }
+
+    [Fact]
+    public void NoDrawAndFiddleStopADrawInsideAPlay()
+    {
+        // CardPileCmd.DrawInternal: Hook.ShouldDraw first. No Draw (NoDrawPower.ShouldDraw) stops its owner's draws but the turn's
+        // hand draw; Fiddle on its owner's turn. A dev review: Dark Embrace's draw on Forgotten Ritual's exhaust under No Draw.
+        SimState Drawing(SimState state)
+        {
+            state.You.HandCount = 4;
+            state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), Count: 10) } };
+            return state;
+        }
+        var exhaust = Events(Card("ForgottenRitual", SimCardType.Skill), plays: 1, new CardEventAction(CardEvent.Exhausted, Count: 1) { Indirect = true });
+        var noDraw = One(Drawing(Power(Power(State(), PowerId.DarkEmbrace, amount: 1), PowerId.NoDraw, amount: 1)), exhaust);
+        Assert.Equal(4, noDraw.You.HandCount);
+        Assert.Equal(0, noDraw.Fired.DataOf("DarkEmbracePower"));
+        var fiddle = One(Drawing(Relic(Power(State(), PowerId.DarkEmbrace, amount: 1), RelicId.Fiddle, amount: 0)), exhaust);
+        Assert.Equal(4, fiddle.You.HandCount);
+        var free = One(Drawing(Power(State(), PowerId.DarkEmbrace, amount: 1)), exhaust);
+        Assert.Equal(5, free.You.HandCount);
+    }
+
+    [Fact]
+    public void ViciousDrawsItsAmountForEachVulnerableYouApply()
+    {
+        // ViciousPower.AfterPowerAmountChanged: CardPileCmd.Draw(base.Amount): Vicious 2 draws two (a dev review: Bash drew 2, the tab said 1).
+        var state = Power(State(), PowerId.Vicious, amount: 2);
+        state.You.HandCount = 4;
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), Count: 10) } };
+        var after = One(state, Play(Card("Bash"), target: 0, plays: 1, new ApplyPowerAction(PowerId.Vulnerable, Amount: 2) { Debuff = true }));
+        Assert.Equal(2, after.PlayEvents[CardEvent.Drawn]);
+        Assert.Equal(6, after.You.HandCount);
+        Assert.Equal(2, after.Fired.DataOf("ViciousPower"));
+    }
+
     // ---- enemy powers
 
     [Fact]

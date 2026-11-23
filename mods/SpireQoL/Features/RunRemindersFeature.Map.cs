@@ -52,7 +52,14 @@ public sealed partial class RunRemindersFeature
                 // Our own row's size: known only once Godot has laid it out, and the row is placed from it.
                 if (item.GetNodeOrNull<Control>(GodotNames.Path(PathNodeName)) is { } row) hashCode.Add(row.GetCombinedMinimumSize());
             }
-        if (me == null) return hashCode.ToHashCode();
+        if (me != null) AddRunState(ref hashCode, me);
+        var key = hashCode.ToHashCode();
+        return key == 0 ? 1 : key;
+    }
+
+    /// <summary>What the reminders read of you, without making anything: gold, HP, the deck's size, each relic as it is (used up or not, its counter).</summary>
+    private static void AddRunState(ref HashCode hashCode, Player me)
+    {
         hashCode.Add(me.Gold);
         hashCode.Add(me.Creature.CurrentHp);
         hashCode.Add(me.Creature.MaxHp);
@@ -62,9 +69,8 @@ public sealed partial class RunRemindersFeature
         {
             hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(relics[i]));
             hashCode.Add(relics[i].IsUsedUp);
+            hashCode.Add(relics[i].DisplayAmount);
         }
-        var key = hashCode.ToHashCode();
-        return key == 0 ? 1 : key;
     }
 
     private void MapLegend()

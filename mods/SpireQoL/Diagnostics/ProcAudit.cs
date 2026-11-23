@@ -195,12 +195,6 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> LaterPlayOnly = new() { nameof(ShowOffPower) };
 
     /// <summary>
-    /// Relics that act without flashing, so "didn't fire" can't be checked by a flash (their effect still is: the
-    /// card cost check). Mummified Hand makes a card in your hand free (MummifiedHand.AfterCardPlayed: no Flash call).
-    /// </summary>
-    private static readonly HashSet<string> SilentRelics = new() { nameof(MummifiedHand) };
-
-    /// <summary>
     /// Your powers a card play uses up whatever the card costs (BeforeCardPlayed): Free Card, Free Attack, Free Skill and Free Power make
     /// your next card (Attack, Skill, Power) from hand free and go, and the costs they lowered go back up. The free-card check
     /// compares their charges with the "free:" tabs.

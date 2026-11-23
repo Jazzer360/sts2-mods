@@ -25,7 +25,9 @@ namespace SpireQoL.Features;
 public sealed partial class RunRemindersFeature
 {
     private readonly Dictionary<ulong, (CardModel Model, CardDecor Decor)> _offeredTabs = new();
-    private int _offeredFrame;
+    /// <summary>What the offered cards' tabs were worked out from (the settings and you: AddRunState), and dev mode's check of it.</summary>
+    private int _offeredRunKey;
+    private readonly SpireQoL.Combat.ReuseCheck _offeredTabsReuse = new("the offered cards' tabs");
 
     private void OfferedCardTabs()
     {
@@ -36,8 +38,15 @@ public sealed partial class RunRemindersFeature
             _offeredTabs.Clear();
             return;
         }
-        // Relics and settings change rarely: the tabs are worked out again a few times a second, drawn every frame.
-        var recompute = ++_offeredFrame % 10 == 0;
+        // Worked out again only when the settings or what they read of you change (decision #177: every 10th frame before, garbage
+        // while you looked at a shop); drawn every frame.
+        var runState = new HashCode();
+        runState.Add(QolSettings.Revision);
+        AddRunState(ref runState, me);
+        var runKey = runState.ToHashCode();
+        var reuse = _offeredTabsReuse.Decide(runKey == _offeredRunKey);
+        _offeredRunKey = runKey;
+        var recompute = reuse != SpireQoL.Combat.FrameReuse.Reuse;
         var seen = _seenOffered;
         seen.Clear();
         foreach (var (node, place) in nodes)
@@ -51,7 +60,10 @@ public sealed partial class RunRemindersFeature
             if (_window is { } window) window.Offered.Add(model);
             if (recompute || !_offeredTabs.TryGetValue(id, out var have) || have.Model != model)
             {
+                var had = _offeredTabs.TryGetValue(id, out var kept) && kept.Model == model ? kept.Decor : null;
                 have = (model, Boosts(model, me, place));
+                if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck && had != null)
+                    _offeredTabsReuse.Compare(had.Tabs.Select(tab => tab.Key).SequenceEqual(have.Decor.Tabs.Select(tab => tab.Key)), "an offered card's tabs changed while the settings and your run didn't");
                 _offeredTabs[id] = have;
             }
             if (!have.Decor.IsEmpty) CardOverlayRenderer.Outside.Add((node, have.Decor));
@@ -90,13 +102,52 @@ public sealed partial class RunRemindersFeature
     /// <summary>The cards on screen (OfferedCards), one list kept and filled again each frame.</summary>
     private static readonly List<(NCard Node, ReminderPlace Place)> Found = new();
 
+    /// <summary>The cards found by the last search, and what decides when to search again.</summary>
+    private static readonly List<(NCard Node, ReminderPlace Place)> Searched = new();
+    private static readonly SpireQoL.Combat.ChangeGate OfferedGate = new("the offered cards' search");
+
     /// <summary>
-    /// The card nodes on screen that you're being offered: the card reward screen, an event's choice of cards out of combat
-    /// (choose a card, a bundle, a grid of cards), and the open shop.
+    /// The cards on offer. Searched only when what could change them does: the screen on top, the shop opening, a press or release (a
+    /// purchase), and a few more times in the second after (cards that animate in); otherwise the cards found last time, less any
+    /// gone. Walking the screen's whole tree every frame touched every node in it (decision #177: a shop made garbage every frame).
+    /// Dev mode searches anyway once a second and logs it if the kept cards were stale.
     /// </summary>
     private static List<(NCard Node, ReminderPlace Place)> OfferedCards()
     {
+        var hashCode = new HashCode();
+        try
+        {
+            var top = NOverlayStack.Instance?.Peek();
+            hashCode.Add(top == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(top));
+            hashCode.Add(Sts2State.InCombat);
+            var inventory = NMerchantRoom.Instance?.Inventory;
+            hashCode.Add(inventory == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(inventory));
+            hashCode.Add(inventory != null && GodotObject.IsInstanceValid(inventory) && inventory.IsOpen);
+            hashCode.Add(Godot.Input.IsAnythingPressed());
+        }
+        catch { hashCode.Add(-1); }
+        var reuse = OfferedGate.Decide(hashCode.ToHashCode(), Godot.Time.GetTicksMsec());
         var found = Found;
+        if (reuse == SpireQoL.Combat.FrameReuse.Reuse)
+        {
+            found.RemoveAll(static entry => !GodotObject.IsInstanceValid(entry.Node) || !entry.Node.IsVisibleInTree());
+            return found;
+        }
+        Search(Searched);
+        if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck)
+            OfferedGate.Compare(Searched.Count == found.Count && Searched.Select(entry => entry.Node).SequenceEqual(found.Select(entry => entry.Node)),
+                "the cards on offer changed with no change of screen and no press");
+        found.Clear();
+        found.AddRange(Searched);
+        return found;
+    }
+
+    /// <summary>
+    /// Every visible card you're being offered now: the card reward screen, an event's choice of cards out of combat (choose a card, a
+    /// bundle, a grid of cards), and the open shop, walking the screen on top and the shop's inventory.
+    /// </summary>
+    private static void Search(List<(NCard Node, ReminderPlace Place)> found)
+    {
         found.Clear();
         try
         {
@@ -109,7 +160,6 @@ public sealed partial class RunRemindersFeature
             if (NMerchantRoom.Instance?.Inventory is { } inv && GodotObject.IsInstanceValid(inv) && inv.IsOpen) Collect(inv, found, ReminderPlace.Shop, depth: 0);
         }
         catch { /* a screen closing under us */ }
-        return found;
     }
 
     /// <summary>

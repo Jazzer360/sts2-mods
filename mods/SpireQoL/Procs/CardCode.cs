@@ -20,6 +20,34 @@ internal static class CardCode
     /// <summary>The card's play calls Type.Method.</summary>
     public static bool Calls(Type cardType, string type, string method) => OnPlayCalls(cardType).Contains(type + "." + method);
 
+    private static readonly ConcurrentDictionary<Type, bool> TakesFirstCache = new();
+
+    /// <summary>
+    /// The card's play exhausts or discards cards (CardCmd.Exhaust, CardCmd.Discard) before its first attack (DamageCmd.Attack), in its
+    /// code's order: Fiend Fire exhausts your hand, then hits once for each card (a dev review: its kill came before Charon's Ashes'
+    /// hits in the simulation). Unreadable code: false.
+    /// </summary>
+    public static bool TakesBeforeAttacking(Type cardType) => TakesFirstCache.GetOrAdd(cardType, type =>
+    {
+        foreach (var method in OnPlayMethods(type))
+        {
+            try
+            {
+                foreach (var instruction in SpireQoL.Diagnostics.GameCode.Instructions(method))
+                {
+                    if (instruction.operand is not MethodInfo { DeclaringType: { } declaring } called) continue;
+                    if (declaring.Name == "DamageCmd" && called.Name == "Attack") break;
+                    if (declaring.Name == "CardCmd" && called.Name is "Exhaust" or "Discard") return true;
+                }
+            }
+            catch
+            {
+                // unreadable method: nothing found
+            }
+        }
+        return false;
+    });
+
     private static IReadOnlySet<string> Read(Type cardType)
     {
         var set = new HashSet<string>();

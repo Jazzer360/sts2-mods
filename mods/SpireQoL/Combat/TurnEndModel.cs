@@ -82,14 +82,22 @@ public sealed class TurnEndModel
             OstyHp > 0 ? (branch.OstyTaken, branch.OstyTaken >= OstyHp) : null, outcome.Taken - (unblockable ?? 0), unblockable);
     }
 
-    public int BlockGain => EndOfTurnBlock.Sum(source => source.Amount);
-    public int BlockableTotal => Blockable.Sum(source => source.Amount);
+    public int BlockGain => Total(EndOfTurnBlock);
+    public int BlockableTotal => Total(Blockable);
+
+    /// <summary>The amounts added up, by index: the widgets read these every frame, and LINQ's Sum boxed an enumerator each time (decision #177).</summary>
+    private static int Total(List<Source> sources)
+    {
+        var total = 0;
+        for (var i = 0; i < sources.Count; i++) total += sources[i].Amount;
+        return total;
+    }
     /// <summary>
     /// What you lose in the worst outcome that no block could stop (Regret, Beckon, Bad Luck), after the HP-loss modifiers:
     /// Incoming Damage shows it on its own line, under what gets through your block (Taken − this).
     /// </summary>
     public int UnblockableTaken { get; private set; }
-    public int UnblockableTotal => Unblockable.Sum(source => source.Amount);
+    public int UnblockableTotal => Total(Unblockable);
     public int ExpectedBlock => CurrentBlock + BlockGain;
 
     /// <summary>
