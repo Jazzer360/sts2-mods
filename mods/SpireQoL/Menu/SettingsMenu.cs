@@ -79,7 +79,7 @@ public sealed partial class SettingsMenu
     /// <summary>Every feature's switch, in the order its page shows them: a section's features together, the sections in page order.</summary>
     internal static readonly (string Id, string Name, string Description, FeatureSection Where)[] FeatureRows =
     {
-        ("card-indicators", "Keyword Tags", "Retain, Sly, replay and double-play tags on the cards in your hand.", FeatureSection.OnYourCards),
+        ("card-indicators", "Keyword Tags", "Retain, Sly, replay and double-play tags on the cards in your hand (each double-play source's switch, and All double-play tags, is on the Tags by source page).", FeatureSection.OnYourCards),
         ("proc-indicators", "Proc Tags", "A tag for every relic or power a card would set off (each one's switch is on the Tags by source page).", FeatureSection.OnYourCards),
         ("shuffle-warning", "Shuffle Tag", "Discard pile tag on cards whose draw reshuffles your discard pile.", FeatureSection.OnYourCards),
         ("ethereal-fade", "Ethereal Fade", "An Ethereal card in your hand is see-through, so you can tell it will exhaust at the end of your turn.", FeatureSection.OnYourCards),
@@ -424,52 +424,46 @@ public sealed partial class SettingsMenu
     /// </summary>
     private void BuildFights()
     {
-        // Tags on cards: one switch for all of them, its kinds under it, then each feature with its own kinds of tag (decision #122).
-        var tags = Settings.CardTabs ? null : "Tags on cards";
+        // Tags on cards: one switch for all of them, which kinds show under it, then each feature with its own kinds of tag (decisions
+        // #122, #187). Each source's tag, and each family's switch, is on Tags by source (the note under Tags on cards says so).
         FeatureSwitches(FeatureSection.OnYourCards, new()
         {
-            ["card-indicators"] = () => TagRows("card-indicators", tags),
+            ["card-indicators"] = () => TagRows("card-indicators"),
             ["proc-indicators"] = () =>
             {
-                Option("Amounts on proc tags", "Show the amount on proc tags: block gained, damage dealt, the amount summoned, cards drawn and energy gained. Off: icon only.",
-                    Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, Needs("proc-indicators"), icon: TextIcon("4"));
-                Option("Indirect procs", "Also count procs set off through the card's other effects (exhausting or discarding other cards, drawing, creating cards) and everything those set off in turn.",
-                    Settings.ProcIndirect, enabled => Settings.ProcIndirect = enabled, Needs("proc-indicators"));
-                TagRows("proc-indicators", tags);
+                Option(AmountsOnProcTags, enabled => Settings.ProcNumbers = enabled, TextIcon("4"));
+                Option(IndirectProcs, enabled => Settings.ProcIndirect = enabled);
+                TagRows("proc-indicators");
             },
-            ["shuffle-warning"] = () => TagRows("shuffle-warning", tags),
-            ["ethereal-fade"] = () => Slider("Ethereal opacity", "How see-through Ethereal cards are (1 = not at all).", Settings.EtherealOpacity, min: 0.25, max: 1, step: 0.05,
-                value => Settings.EtherealOpacity = (float)value, value => $"{value:0.00}", Needs("ethereal-fade")),
+            ["shuffle-warning"] = () => TagRows("shuffle-warning"),
+            [Features.EtherealFadeFeature.FeatureId] = () => Slider(EtherealOpacity, Settings.EtherealOpacity, min: 0.25, max: 1, step: 0.05,
+                value => Settings.EtherealOpacity = (float)value, value => $"{value:0.00}"),
         }, before: () =>
         {
-            Option("Tags on cards", "Every tag the mod hangs on cards: in your hand, and on the cards you're offered between fights. Off: none (the features' other parts stay).",
-                Settings.CardTabs, enabled => { Settings.CardTabs = enabled; Refresh(); }, indent: false, icon: FeatureIcon("proc-indicators"));
-            var kinds = tags ?? Needs("card-indicators", "proc-indicators", "shuffle-warning", "potion-tabs", Features.RewardTagsFeature.FeatureId);
-            Option("Plain tags", "Tags that mean playing the card does something extra (a proc, a replay, a reshuffle, a chance). Off: warnings only. Potion tags too.",
-                Settings.PlainTabs, enabled => Settings.PlainTabs = enabled, kinds, icon: FeatureIcon("proc-indicators"));
-            Option("Crossed tags", "Tags with a red slash: playing the card might be bad for you (it helps the enemy, hurts you, or gives up a relic's bonus). Potion tags too.",
-                Settings.CrossedTabs, enabled => Settings.CrossedTabs = enabled, kinds, icon: ArtIcon(Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.ThornsPower>(), slashed: true));
-            Option("Target marker", "The targeting arrow head in a tag's corner when it happens only at some targets. Off: the tag shows without it.",
-                Settings.AimMarker, enabled => Settings.AimMarker = enabled, kinds, icon: ArtIcon(Cards.GameIcons.TargetArrow()));
+            Option(TagsOnCards, enabled => Settings.CardTabs = enabled, TagIcon(PlainBanner, CrossedBanner));
+            Option(PlainTags, enabled => Settings.PlainTabs = enabled, TagIcon(PlainBanner));
+            Option(CrossedTags, enabled => Settings.CrossedTabs = enabled, TagIcon(CrossedBanner));
+            Option(TargetMarker, enabled => Settings.AimMarker = enabled, ArtIcon(Cards.GameIcons.TargetArrow()));
             // Tag kinds seen in play that the catalog doesn't know (a newer rule): still switchable, under the switch for every tag.
+            var needs = NeedsOf(Any(TagsOnCards.Id));
             var other = Settings.Tabs.Keys.Where(key => !key.EndsWith(":*", StringComparison.Ordinal) && !key.StartsWith("reminder-", StringComparison.Ordinal) && !SettingsCatalog.IsKnownTabKey(key)).OrderBy(key => key).ToList();
             foreach (var key in other)
             {
                 if (!Matches(key)) continue;
-                SimpleRow(key, NeedsText("A tag kind without a description yet.", tags), Settings.TabOwn(key), on => SetTab(key, on), IconSpacer(), tags == null, indent: true);
+                SimpleRow(key, NeedsText("A tag kind without a description yet.", needs), Settings.TabOwn(key), on => SetTab(key, on), IconSpacer(), needs == null, indent: true);
             }
+            GoToNote("Each relic's, power's and card's own tag is switched on Tags by source, under a switch for its whole family (All proc tags, All double-play tags...).",
+                "Tags by source", () => _page = Page.Sources);
         });
         FeatureSwitches(FeatureSection.OnEnemies);
         FeatureSwitches(FeatureSection.BesideYou, new()
         {
             ["relic-counters"] = () =>
             {
-                Option("Tracker flashes early", "Relic Counters rows also flash two steps before firing (not just one).",
-                    Settings.PulseOneStepEarly, enabled => Settings.PulseOneStepEarly = enabled, Needs("relic-counters"));
-                Slider("Tracker flash speed", "Flashes per second on Relic Counters rows about to fire.", Settings.FlashHz, min: 0.5, max: 6, step: 0.5,
-                    value => Settings.FlashHz = (float)value, value => $"{value:0.0}/s", Needs("relic-counters"));
+                Option(TrackerFlashesEarly, enabled => Settings.PulseOneStepEarly = enabled);
+                Slider(TrackerFlashSpeed, Settings.FlashHz, min: 0.5, max: 6, step: 0.5, value => Settings.FlashHz = (float)value, value => $"{value:0.0}/s");
             },
-            ["potion-tabs"] = () => TagRows("potion-tabs", tags),
+            ["potion-tabs"] = () => TagRows("potion-tabs"),
         });
         FeatureSwitches(FeatureSection.WhileHoldingACard);
         FeatureSwitches(FeatureSection.UnderEndTurn);
@@ -477,59 +471,98 @@ public sealed partial class SettingsMenu
         ChancesSection();
 
         Section("Multiplayer");
-        Option("Multiplayer predictions (experimental)", "Count teammates in predictions: their orbs and end-of-turn effects, their block and Beacon of Hope, and each enemy hit on every player. Still being checked against real co-op games.",
-            Settings.MultiplayerPredictions, enabled => { Settings.MultiplayerPredictions = enabled; Sim.SimAdapter.IncludeTeammates = enabled; Refresh(); }, indent: false);
-        Option("Count teammates' hands", "Multiplayer: predictions also use the cards in teammates' hands, which you can't see unless they tell you: Ethereal cards exhausting at end of turn (Feel No Pain block, Charon's Ashes and Forgotten Soul damage), Burn, Decay and Regret. Off: only their hand size counts.",
-            Settings.TeammateHands, enabled => { Settings.TeammateHands = enabled; Combat.TurnEndModel.CountTeammateHands = enabled; },
-            Settings.MultiplayerPredictions ? null : "Multiplayer predictions");
+        Option(MultiplayerPredictions, enabled => { Settings.MultiplayerPredictions = enabled; Sim.SimAdapter.IncludeTeammates = enabled; });
+        Option(TeammateHands, enabled => { Settings.TeammateHands = enabled; Combat.TurnEndModel.CountTeammateHands = enabled; });
     }
 
     /// <summary>
-    /// A feature's kinds of tag (SettingsCatalog.CardTabs and TabGroups by their Feature), indented under its switch: greyed out while
-    /// Tags on cards (<paramref name="tags"/>) or the feature is off.
+    /// A feature's kinds of tag (SettingsCatalog.CardTabs by their Feature), indented under its switch: greyed out while Tags on cards
+    /// (for tags on cards), the feature, or Show chances (for a chance) is off. The families' switches are on Tags by source.
     /// </summary>
-    private void TagRows(string feature, string? tags)
+    private void TagRows(string feature)
     {
-        var needs = tags ?? Needs(feature);
         foreach (var tabEntry in SettingsCatalog.CardTabs)
         {
             if (tabEntry.Feature != feature || !Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
+            var needs = NeedsOf(TagNeeds(tabEntry));
             SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, needs), Settings.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), TabPreview(tabEntry.Key), needs == null, indent: true);
-        }
-        foreach (var tabEntry in SettingsCatalog.TabGroups)
-        {
-            if (tabEntry.Feature != feature || !Matches(tabEntry.Name, tabEntry.Description, tabEntry.Key)) continue;
-            SimpleRow(tabEntry.Name, NeedsText(tabEntry.Description, needs), Settings.TabOwn(tabEntry.Key), on => SetTab(tabEntry.Key, on), IconSpacer(), needs == null, indent: true);
         }
     }
 
     /// <summary>
-    /// What an option needs on (decision #122): null when it's on, else its name, for the greyed-out row. An option shown under
-    /// a feature needs that feature (any one of several, for an option several features show).
+    /// What a kind of tag, or a family's switch, needs on (decision #187): Tags on cards for a tag on cards, the feature that shows it,
+    /// and Show chances for a chance.
     /// </summary>
-    private string? Needs(params string[] features)
-        => features.Any(FeatureOn) ? null : string.Join(" or ", features.Select(id => FeatureRows.First(featureRow => featureRow.Id == id).Name));
+    internal static string[][] TagNeeds(TabEntry tabEntry)
+    {
+        var needs = new List<string[]>();
+        if (tabEntry.OnCards) needs.Add(Any(TagsOnCards.Id));
+        needs.Add(Any(tabEntry.Feature));
+        if (tabEntry.Chance) needs.Add(Any(ShowChances.Id));
+        return needs.ToArray();
+    }
 
-    /// <summary>What a chance needs on: Show chances first, then the feature that shows it.</summary>
-    private string? NeedsChances(string? feature) => !Settings.Chances ? "Show chances" : feature;
+    /// <summary>Whether a switch is on: a feature by its id, or an option by its id.</summary>
+    private bool SwitchOn(string id) => Options.TryGetValue(id, out var option) ? option.Value?.Invoke(Settings) ?? true : FeatureOn(id);
+
+    /// <summary>A switch's name, as its row shows it.</summary>
+    internal static string SwitchName(string id) =>
+        Options.TryGetValue(id, out var option) ? option.Name : FeatureRows.First(featureRow => featureRow.Id == id).Name;
+
+    /// <summary>
+    /// What a row needs on (decisions #122, #187): null when every group has a switch on, else the first group that hasn't, by name
+    /// (any one of them will do), for the greyed-out row.
+    /// </summary>
+    private string? NeedsOf(params string[][] needs)
+    {
+        foreach (var group in needs)
+            if (!group.Any(SwitchOn)) return string.Join(" or ", group.Select(SwitchName));
+        return null;
+    }
+
+    /// <summary>Whether another row greys out with this option (it's named in some row's needs): its page is built again when it changes.</summary>
+    private static bool IsParent(MenuOption option) =>
+        Options.Values.Any(other => other.Needs.Any(group => group.Contains(option.Id)));
 
     /// <summary>
     /// Chances in fights (decision #122): one switch for every chance the mod shows, then each one under it, greyed out while it's off
     /// or while the feature that shows it is. The chance under event icons is under Event Reminders, on Between fights (decision #186).
+    /// Each chance has the art of what it's on with a % in its corner (decision #187), apart from the draw chance, drawn as its tag.
     /// </summary>
     private void ChancesSection()
     {
         Section("Chances");
-        Option("Show chances", "Every chance the mod shows, when a roll decides an outcome. Off: only what's certain. A ? or a range on what's shown stays: it marks what isn't settled yet.",
-            Settings.Chances, enabled => { Settings.Chances = enabled; Refresh(); }, indent: false, icon: TextIcon("50%"));
-        Option("Death chances", "On the Death Skull, on your skull on Incoming Damage, and on lethal tags, when a roll decides a death (a random Lightning target). Off: certain deaths only (your skull still shows whenever you might die).",
-            Settings.DeathChance, enabled => Settings.DeathChance = enabled, NeedsChances(Needs("death-skull", "incoming-damage", "proc-indicators")), icon: ArtIcon(Cards.GameIcons.Skull()));
-        Option("Incoming Damage: most likely outcome", "When a roll decides how the enemy turn goes (a draw at the end of your turn, a random target), the sum shows the most likely way, with its chance; the skull still shows whenever you might die. Hover the sum for every outcome. Off: the worst case.",
-            Settings.MostLikely, enabled => Settings.MostLikely = enabled, NeedsChances(Needs("incoming-damage")), icon: ArtIcon(Cards.GameIcons.Heart()));
-        Option("Draw chance tag", "On Escape Plan, Pillage and Scrape: the chance of what their draw gives (the same switch as Draw chance under Proc Tags).",
-            Settings.TabOwn(QolSettings.DrawChanceKey), enabled => SetTab(QolSettings.DrawChanceKey, enabled), NeedsChances(Needs("proc-indicators")), icon: TextIcon("40%"));
-        Option("Intent Forecast's random moves", "After the turns an enemy's rules make certain, the move a random pick can make, each with its chance. Off: the certain turns only.",
-            Settings.IntentOdds, enabled => Settings.IntentOdds = enabled, NeedsChances(Needs("intent-forecast")), icon: ArtIcon(Cards.GameIcons.Intent("unknown")));
+        Option(ShowChances, enabled => Settings.Chances = enabled, TextIcon("50%"));
+        Option(DeathChances, enabled => Settings.DeathChance = enabled, ArtIcon(Cards.GameIcons.Skull(), corner: "%"));
+        Option(MostLikely, enabled => Settings.MostLikely = enabled, ArtIcon(Cards.GameIcons.Heart(), corner: "%"));
+        Option(DrawChanceTag, enabled => Settings.Tabs[QolSettings.DrawChanceKey] = enabled, TabPreview(QolSettings.DrawChanceKey));
+        Option(IntentRandomMoves, enabled => Settings.IntentOdds = enabled, ArtIcon(Cards.GameIcons.Intent("unknown"), corner: "%"));
+    }
+
+    /// <summary>
+    /// A note indented under the rows above it, with a button that opens where it points (another page, or a source on Tags by source).
+    /// No setting of its own.
+    /// </summary>
+    private void GoToNote(string text, string button, Action openPage)
+    {
+        if (!Matches(text, button)) return;
+        var row = RowBox();
+        row.AddChild(new Control { CustomMinimumSize = new Vector2(Indent + CheckSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        row.AddChild(IconSpacer());
+        var label = Label(text, size: 18, Muted);
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        row.AddChild(label);
+        var open = MakeButton(button, size: 17);
+        open.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        open.Pressed += () =>
+        {
+            openPage();
+            _scroll!.ScrollVertical = 0;
+            Refresh();
+        };
+        row.AddChild(open);
+        AddRow(row);
     }
 
     /// <summary>The page again, for rows that depend on a switch just changed (deferred: the switch is mid-signal).</summary>
@@ -538,15 +571,12 @@ public sealed partial class SettingsMenu
     /// <summary>Between fights: its features and options, then a switch per relic or card for each place its reminder shows.</summary>
     private void BuildBetween()
     {
-        var eventReminders = Features.EventRemindersFeature.FeatureId;
         FeatureSwitches(FeatureSection.BetweenFights, new()
         {
-            [eventReminders] = () =>
+            [Features.EventRemindersFeature.FeatureId] = () =>
             {
-                Option("Inspect event cards", "A magnifier beside an event option that gives cards at random from a known pool (a reward, a transform). Click it to see every card it can give, mark the ones you'd like, and get your chance of being offered one.",
-                    Settings.EventInspect, enabled => Settings.EventInspect = enabled, Needs(eventReminders), icon: ArtIcon(Features.RunReminders.InspectIcon()));
-                Option("Chance under event icons", "Under the icon of a relic that cares about certain cards (an egg, Fresnel Lens, Strike Dummy...) beside an event option, the chance one of its cards comes up (Show chances, In fights, turns every chance off). Off: icon only.",
-                    Settings.EventOdds, enabled => Settings.EventOdds = enabled, NeedsChances(Needs(eventReminders)), icon: TextIcon("25%"));
+                Option(InspectEventCards, enabled => Settings.EventInspect = enabled, ArtIcon(Features.RunReminders.InspectIcon()));
+                Option(EventChance, enabled => Settings.EventOdds = enabled, TextIcon("25%"));
             },
         });
 
@@ -572,12 +602,11 @@ public sealed partial class SettingsMenu
         FeatureSwitches(FeatureSection.MainMenu);
 
         Section("Error reports");
-        Option("Send error reports", "Send crashes and prediction mismatches, with the game state at the time, and a summary of counts per play session (nothing personal), so they can be fixed.",
-            Settings.ReportErrors, enabled =>
-            {
-                Settings.ReportErrors = enabled;
-                if (Sts2Mods.Core.Diagnostics.ErrorReporter.Instance is { } errorReporter) errorReporter.Active = enabled;
-            }, indent: false);
+        Option(SendErrorReports, enabled =>
+        {
+            Settings.ReportErrors = enabled;
+            if (Sts2Mods.Core.Diagnostics.ErrorReporter.Instance is { } errorReporter) errorReporter.Active = enabled;
+        });
 
         FeatureSwitches(FeatureSection.Audits);
         FeatureSwitches(FeatureSection.Sessions);
@@ -585,8 +614,7 @@ public sealed partial class SettingsMenu
         // Dev mode (decision #108): only in a developer's game (on there, or set in the file). Off for players: their reports reach Sentry.
         if (!ModEntry.DevMode && Settings.DevMode == null) return;
         Section("Developer");
-        Option("Dev mode", "Keeps error reports and session summaries on this computer instead of sending them, and writes the dev dashboard's files. Applies at the next launch.",
-            Settings.DevMode ?? ModEntry.DevMode, enabled => Settings.DevMode = enabled, indent: false);
+        Option(DevMode, enabled => Settings.DevMode = enabled);
     }
 
     /// <summary>Which source the Tags by source page lists (decision #186): relics until another is picked.</summary>
@@ -629,7 +657,8 @@ public sealed partial class SettingsMenu
                 .Where(entryName => Matches(entryName.Name, entryName.Entry.Type, entryName.Entry.Tag, entryName.Entry.Tracker, entryName.Entry.Reward, entryName.Entry.Event, entryName.Entry.Shop, entryName.Entry.Map))
                 .OrderBy(entryName => entryName.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
-            if (shown.Count == 0) continue;
+            var familyMatch = here == null && FamiliesIn(entries).Any(family => Matches(family.Name, family.Description, family.Key));
+            if (shown.Count == 0 && !familyMatch) continue;
             any = true;
             // One source: its column headers stay above the list. Several (a search): each its own heading and headers.
             HBoxContainer header;
@@ -647,13 +676,20 @@ public sealed partial class SettingsMenu
         if (!any) _rows!.AddChild(Label(_onlyHere!.ButtonPressed ? "You have none of these right now." : "No matches.", size: 20, Muted));
     }
 
-    /// <summary>On-card tabs and tracker rows, with their column headers in <paramref name="header"/>.</summary>
+    /// <summary>The families (SettingsCatalog.TabGroups) with a source among <paramref name="entries"/>, in the catalog's order.</summary>
+    private static IEnumerable<TabEntry> FamiliesIn(List<SourceEntry> entries) =>
+        SettingsCatalog.TabGroups.Where(family => entries.Any(sourceEntry => SettingsCatalog.FamilyOf(sourceEntry) == family));
+
+    /// <summary>
+    /// On-card tabs and tracker rows, with their column headers in <paramref name="header"/> (decision #187): each family's switch, with
+    /// its sources indented under it and greyed out while it's off; then the sources with only a Relic Counters row.
+    /// </summary>
     private void FightRows(List<SourceEntry> entries, List<(SourceEntry Entry, string Name)> shown, HBoxContainer header)
     {
         var anyTracker = entries.Any(sourceEntry => sourceEntry.Tracker != null);
 
-        // Column headers with all-on / all-off for what's listed.
-        header.AddChild(new Control { CustomMinimumSize = new Vector2(IconSize + NameWidth + 12, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        // Column headers with all-on / all-off for what's listed. Every source row is indented under its family's switch.
+        header.AddChild(new Control { CustomMinimumSize = new Vector2(Indent + IconSize + NameWidth + 24, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
         var tagHead = UiKit.Row(separation: 8);
         tagHead.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         tagHead.AddChild(Label("On cards", size: 20, Accent));
@@ -661,9 +697,6 @@ public sealed partial class SettingsMenu
         {
             foreach (var (sourceEntry, _) in shown) if (sourceEntry.TagKey != null) Settings.Tabs[sourceEntry.TagKey] = on;
         });
-        var groupKeys = shown.Where(entryName => entryName.Entry.TagKey != null).Select(entryName => entryName.Entry.TagPrefix + "*").Distinct();
-        var groupOff = groupKeys.Where(groupKey => !Settings.TabOwn(groupKey)).ToList();
-        if (groupOff.Count > 0) tagHead.AddChild(Label("(a whole family is off: In fights, On your cards)", size: 16, Colors.OrangeRed));
         header.AddChild(tagHead);
         if (anyTracker)
         {
@@ -677,39 +710,85 @@ public sealed partial class SettingsMenu
             header.AddChild(trackHead);
         }
 
-        foreach (var (otherSourceEntry, name) in shown)
+        // Each family's switch at the top of its sources (decision #187): a family over several sources heads each of their lists.
+        foreach (var family in FamiliesIn(entries))
         {
-            // The icon as the tab shows it: crossed tabs get the same red slash as on cards.
-            var crossed = otherSourceEntry.Tag?.StartsWith(SettingsCatalog.CrossedPrefix, StringComparison.Ordinal) == true;
-            var row = SourceRow(otherSourceEntry, name, crossed);
-
-            var tagCell = UiKit.Row(separation: 10);
-            tagCell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-            if (otherSourceEntry.TagKey is { } key)
-            {
-                var text = crossed ? "Crossed. " + Capitalize(otherSourceEntry.Tag![SettingsCatalog.CrossedPrefix.Length..]) : otherSourceEntry.Tag!;
-                var (_, control) = Check(Settings.TabOwn(key), on => SetTab(key, on), text, tooltip: null, expand: true);
-                tagCell.AddChild(control);
-            }
-            else
-            {
-                tagCell.AddChild(Label("no card tag", size: 17, Muted));
-            }
-            row.AddChild(tagCell);
-
-            if (anyTracker)
-            {
-                var trackCell = UiKit.Row(separation: 10);
-                trackCell.CustomMinimumSize = new Vector2(TrackerWidth, 0);
-                if (otherSourceEntry.Tracker != null)
-                {
-                    var (_, control) = Check(Settings.TrackerEnabled(otherSourceEntry.Type, otherSourceEntry.TrackerDefault), on => SetTracker(otherSourceEntry.Type, on), otherSourceEntry.Tracker, tooltip: null, expand: true);
-                    trackCell.AddChild(control);
-                }
-                row.AddChild(trackCell);
-            }
-            AddRow(row);
+            var members = shown.Where(entryName => SettingsCatalog.FamilyOf(entryName.Entry) == family).ToList();
+            if (members.Count == 0 && (_onlyHere!.ButtonPressed || !Matches(family.Name, family.Description, family.Key))) continue;
+            FamilyRow(family);
+            foreach (var (sourceEntry, name) in members) SourceTableRow(sourceEntry, name, family, anyTracker);
         }
+        var trackerOnly = shown.Where(entryName => entryName.Entry.TagKey == null).ToList();
+        if (trackerOnly.Count == 0) return;
+        var heading = Label("Only a Relic Counters row (no card tag)", size: 20, Text);
+        var marginContainer = new MarginContainer();
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_top"), 12);
+        marginContainer.AddThemeConstantOverride(GodotNames.Name("margin_bottom"), 4);
+        marginContainer.AddChild(heading);
+        _rows!.AddChild(marginContainer);
+        foreach (var (sourceEntry, name) in trackerOnly) SourceTableRow(sourceEntry, name, family: null, anyTracker);
+    }
+
+    /// <summary>
+    /// A family's switch (SettingsCatalog.TabGroups: "proc:*" and the rest) at the top of its sources: off hides every tag in it,
+    /// whatever each one's own switch. Greyed out while Tags on cards (for tags on cards) or the feature showing them is off.
+    /// </summary>
+    private void FamilyRow(TabEntry family)
+    {
+        var lists = SourceGroups.Where(sourceGroup => SettingsCatalog.Sources.Any(sourceEntry => sourceEntry.Group == sourceGroup.Group && SettingsCatalog.FamilyOf(sourceEntry) == family))
+            .Select(sourceGroup => sourceGroup.Title).ToList();
+        var desc = lists.Count > 1 ? $"{family.Description} One switch at the top of each list it covers: {string.Join(", ", lists)}." : family.Description;
+        var needs = NeedsOf(TagNeeds(family));
+        SimpleRow(family.Name, NeedsText(desc, needs), Settings.TabOwn(family.Key), on => { SetTab(family.Key, on); Refresh(); }, FamilyIcon(family.Key), needs == null);
+    }
+
+    /// <summary>
+    /// A source's row: its tag (greyed out while its family, Tags on cards or the feature showing it is off) and its Relic Counters
+    /// row (greyed out while Relic Counters is off), indented under its family's switch.
+    /// </summary>
+    private void SourceTableRow(SourceEntry sourceEntry, string name, TabEntry? family, bool anyTracker)
+    {
+        // The icon as the tab shows it: crossed tabs get the same red slash as on cards.
+        var crossed = sourceEntry.Tag?.StartsWith(SettingsCatalog.CrossedPrefix, StringComparison.Ordinal) == true;
+        var tagNeeds = family == null ? null : NeedsOf(TagNeeds(family)) ?? (Settings.TabOwn(family.Key) ? null : family.Name);
+        var trackerNeeds = sourceEntry.Tracker == null ? null : NeedsOf(Any("relic-counters"));
+        // Everything on the row waits on a switch that's off: the whole row greys out, its icon and name too.
+        var blocked = (sourceEntry.TagKey == null || tagNeeds != null) && (sourceEntry.Tracker == null || trackerNeeds != null);
+        var row = SourceRow(sourceEntry, name, crossed, indent: true);
+        if (blocked) row.Modulate = new Color(1, 1, 1, 0.5f);
+
+        var tagCell = UiKit.Row(separation: 10);
+        tagCell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        if (sourceEntry.TagKey is { } key)
+        {
+            var text = crossed ? "Crossed. " + Capitalize(sourceEntry.Tag![SettingsCatalog.CrossedPrefix.Length..]) : sourceEntry.Tag!;
+            tagCell.AddChild(TableCheck(Settings.TabOwn(key), on => SetTab(key, on), text, tagNeeds, dim: !blocked));
+        }
+        else
+        {
+            tagCell.AddChild(Label("no card tag", size: 17, Muted));
+        }
+        row.AddChild(tagCell);
+
+        if (anyTracker)
+        {
+            var trackCell = UiKit.Row(separation: 10);
+            trackCell.CustomMinimumSize = new Vector2(TrackerWidth, 0);
+            if (sourceEntry.Tracker != null)
+                trackCell.AddChild(TableCheck(Settings.TrackerEnabled(sourceEntry.Type, sourceEntry.TrackerDefault), on => SetTracker(sourceEntry.Type, on), sourceEntry.Tracker, trackerNeeds, dim: !blocked));
+            row.AddChild(trackCell);
+        }
+        AddRow(row);
+    }
+
+    /// <summary>A table cell's checkbox with its text: greyed out and saying what it needs while <paramref name="needs"/> is set.</summary>
+    private static Control TableCheck(bool value, Action<bool> set, string text, string? needs, bool dim)
+    {
+        var (button, control) = Check(value, set, text, needs == null ? null : $"Needs {needs} on.", expand: true);
+        if (needs == null) return control;
+        button.Disabled = true;
+        if (dim) control.Modulate = new Color(1, 1, 1, 0.5f);
+        return control;
     }
 
     private static readonly (ReminderPlace Place, string Title)[] ReminderColumns =
@@ -753,16 +832,18 @@ public sealed partial class SettingsMenu
         foreach (var (otherSourceEntry, name) in shown)
         {
             var row = SourceRow(otherSourceEntry, name, crossed: false);
-            foreach (var (place, _) in ReminderColumns)
+            for (var i = 0; i < ReminderColumns.Length; i++)
             {
+                var place = ReminderColumns[i].Place;
+                // Each column waits on its feature (the columns and ReminderFeatures are in the same order).
+                var needs = NeedsOf(Any(ReminderFeatures[i]));
                 var cell = UiKit.Row(separation: 10);
                 cell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
                 cell.SizeFlagsStretchRatio = 1;
                 if (otherSourceEntry.Reminder(place) is { } text)
                 {
                     var key = ChoiceReminders.Key(place, otherSourceEntry.Type);
-                    var (_, control) = Check(Settings.TabOwn(key), on => SetTab(key, on), text, tooltip: null, expand: true);
-                    cell.AddChild(control);
+                    cell.AddChild(TableCheck(Settings.TabOwn(key), on => SetTab(key, on), text, needs, dim: true));
                 }
                 else
                 {
@@ -775,9 +856,10 @@ public sealed partial class SettingsMenu
     }
 
     /// <summary>A row with the source's icon (a tiny card for cards, decision #42) and name.</summary>
-    private HBoxContainer SourceRow(SourceEntry sourceEntry, string name, bool crossed)
+    private HBoxContainer SourceRow(SourceEntry sourceEntry, string name, bool crossed, bool indent = false)
     {
         var row = RowBox();
+        if (indent) row.AddChild(new Control { CustomMinimumSize = new Vector2(Indent, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
         var icon = UiKit.Icon(Icon(sourceEntry.Type), IconSize);
         icon.MouseFilter = Control.MouseFilterEnum.Pass;
         icon.TooltipText = GameDescription(sourceEntry.Type);
@@ -853,6 +935,13 @@ public sealed partial class SettingsMenu
         Settings.EventInspect = settings.EventInspect;
         Settings.EtherealOpacity = settings.EtherealOpacity;
         Settings.FlashHz = settings.FlashHz;
+        Settings.CardTabs = settings.CardTabs;
+        Settings.PlainTabs = settings.PlainTabs;
+        Settings.CrossedTabs = settings.CrossedTabs;
+        Settings.AimMarker = settings.AimMarker;
+        Settings.Chances = settings.Chances;
+        Settings.MostLikely = settings.MostLikely;
+        Settings.IntentOdds = settings.IntentOdds;
         foreach (var (id, _, _, _) in FeatureRows)
             if (FeatureOn(id)) _features.EnableLate(id);
         Saved();
@@ -874,13 +963,21 @@ public sealed partial class SettingsMenu
     private static string NeedsText(string desc, string? needs) => needs == null ? desc : $"{desc} Needs {needs} on.";
 
     /// <summary>
-    /// An option, indented under what it changes (decision #122). <paramref name="needs"/>: what has to be on first (a feature, or
-    /// Show chances), null when it is; the row is greyed out and says so until it is.
+    /// An option's row from its table entry (decisions #122, #187): a master at its section's level; any other indented under the
+    /// switch it depends on, greyed out and saying what it needs while that's off. When other rows grey out with it, the page is built
+    /// again on a change.
     /// </summary>
-    private void Option(string name, string desc, bool value, Action<bool> set, string? needs = null, bool indent = true, Control? icon = null)
+    private void Option(MenuOption option, Action<bool> set, Control? icon = null)
     {
-        if (!Matches(name, desc)) return;
-        SimpleRow(name, needs == null ? desc : $"{desc} Needs {needs} on.", value, enabled => { set(enabled); Saved(); }, icon ?? IconSpacer(), needs == null, indent);
+        if (!Matches(option.Name, option.Description)) return;
+        var needs = NeedsOf(option.Needs);
+        var parent = IsParent(option);
+        SimpleRow(option.Name, NeedsText(option.Description, needs), option.Value!(Settings), enabled =>
+        {
+            set(enabled);
+            Saved();
+            if (parent) Refresh();
+        }, icon ?? IconSpacer(), needs == null, indent: !option.IsMaster);
     }
 
     private void Saved()
@@ -923,36 +1020,86 @@ public sealed partial class SettingsMenu
         _rows!.AddChild(panelContainer);
     }
 
-    /// <summary>The icon a Card tabs row shows on cards (null = none to show here).</summary>
-    private static Control? TabPreview(string key)
+    /// <summary>
+    /// A kind of tag's row icon: the tag as cards show it (decision #187), the tag art with its icon or text, so a kind of tag reads
+    /// apart from the feature or display whose art it carries (the lethal tag's skull from the Death Skull). Its bare icon or text
+    /// when the tag art can't be had.
+    /// </summary>
+    private static Control TabPreview(string key)
     {
-        Texture2D? tex = null;
+        Cards.TabSpec? spec;
         try
         {
-            switch (key)
+            spec = key switch
             {
-                case "retain": tex = Cards.GameIcons.Enchantment<MegaCrit.Sts2.Core.Models.Enchantments.Steady>(); break;
-                case "sly": tex = Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.MasterPlannerPower>(); break;
-                case "shuffle": tex = Cards.GameIcons.DiscardPile(); break;
-                case "lethal": tex = Cards.GameIcons.Skull(); break;
-                case "drawn":
-                    var label = Label("40%", size: 18, Text);
-                    label.CustomMinimumSize = new Vector2(IconSize, IconSize);
-                    label.HorizontalAlignment = HorizontalAlignment.Center;
-                    return label;
-                case "replay":
-                    var replayLabel = Label("2×", size: 22, Text);
-                    replayLabel.CustomMinimumSize = new Vector2(IconSize, IconSize);
-                    replayLabel.HorizontalAlignment = HorizontalAlignment.Center;
-                    return replayLabel;
-            }
+                "retain" => new Cards.TabSpec(key, Cards.GameIcons.Enchantment<MegaCrit.Sts2.Core.Models.Enchantments.Steady>()),
+                "sly" => new Cards.TabSpec(key, Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.MasterPlannerPower>()),
+                "shuffle" => new Cards.TabSpec(key, Cards.GameIcons.DiscardPile()),
+                "lethal" => new Cards.TabSpec(key, Cards.GameIcons.Skull()),
+                "drawn" => new Cards.TabSpec(key, Icon: null, Text: "40%"),
+                "replay" => new Cards.TabSpec(key, Icon: null, Text: "2×"),
+                _ => null,
+            };
         }
         catch
         {
-            tex = null;
+            spec = null;
         }
-        var icon = UiKit.Icon(Cards.GameIcons.Valid(tex) ? tex : null, IconSize);
-        return icon;
+        if (spec == null) return IconSpacer();
+        return TagIcon(spec) is { } tag ? tag : spec.Text != null ? TextIcon(spec.Text) : ArtIcon(spec.Icon);
+    }
+
+    /// <summary>A bare plain tag, and a bare crossed one: the tag art itself (Tags on cards, Plain tags, Crossed tags).</summary>
+    private static Cards.TabSpec PlainBanner => new("plain", Icon: null);
+    private static Cards.TabSpec CrossedBanner => new("crossed", Icon: null, Crossed: true);
+
+    /// <summary>
+    /// Tags drawn as on a card, the game's enchantment tab every tag copies (decision #187), overlapping as on a crowded card; null when
+    /// the tag art can't be had (the caller's fallback is a blank or the bare icon, never another row's art).
+    /// </summary>
+    private static Control? TagIcon(params Cards.TabSpec[] tabs) => Cards.CardOverlayRenderer.Standalone(tabs, IconSize);
+
+    /// <summary>
+    /// A family's switch on Tags by source (decision #187): a few of its tags as cards show them, so it reads as that family's whole set,
+    /// apart from any one source's row; the card glyph for the tags whose icon is a card (return tags).
+    /// </summary>
+    private static Control FamilyIcon(string key)
+    {
+        Cards.TabSpec[] tabs;
+        try
+        {
+            tabs = key switch
+            {
+                "proc:*" => new[]
+                {
+                    new Cards.TabSpec(key, ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.OrnamentalFan>().Icon),
+                    new Cards.TabSpec(key, Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.FeelNoPainPower>()),
+                    new Cards.TabSpec(key, Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.ThornsPower>(), Crossed: true),
+                },
+                "double-play:*" => new[]
+                {
+                    new Cards.TabSpec(key, Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.EchoFormPower>()),
+                    new Cards.TabSpec(key, Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.BurstPower>()),
+                },
+                "potion:*" => new[]
+                {
+                    new Cards.TabSpec(key, ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.ReptileTrinket>().Icon),
+                    new Cards.TabSpec(key, ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.BeltBuckle>().Icon),
+                },
+                "free:*" => new[]
+                {
+                    new Cards.TabSpec(key, Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.FreeAttackPower>()),
+                    new Cards.TabSpec(key, Cards.GameIcons.Power<MegaCrit.Sts2.Core.Models.Powers.FreeSkillPower>()),
+                },
+                "return:*" => new[] { new Cards.TabSpec(key, Cards.GameIcons.CardGlyph()) },
+                _ => new[] { PlainBanner },
+            };
+        }
+        catch
+        {
+            tabs = new[] { PlainBanner };
+        }
+        return TagIcon(tabs) ?? IconSpacer();
     }
 
     /// <summary>The game's art for a feature, beside its switch here and on Quick setup (null: none that reads as it).</summary>
@@ -962,7 +1109,8 @@ public sealed partial class SettingsMenu
         {
             return id switch
             {
-                "incoming-damage" or "teammate-incoming-damage" => Cards.GameIcons.Heart(),
+                "incoming-damage" => Cards.GameIcons.Heart(),
+                "teammate-incoming-damage" => Cards.GameIcons.Teammate(),
                 "death-skull" => Cards.GameIcons.Skull(),
                 "intent-details" => Cards.GameIcons.Intent("buff"),
                 "intent-forecast" => Cards.GameIcons.Intent("unknown"),
@@ -1000,12 +1148,22 @@ public sealed partial class SettingsMenu
     /// <summary>The icon beside a feature's switch (a blank of the same size when it has none).</summary>
     private static Control FeatureIcon(string id) => ArtIcon(FeatureArt(id));
 
-    /// <summary>A row's icon from the game's art; a blank of the same size when there's none.</summary>
-    private static Control ArtIcon(Texture2D? tex, bool slashed = false)
+    /// <summary>
+    /// A row's icon from the game's art; a blank of the same size when there's none. <paramref name="corner"/>: text in its lower-right
+    /// corner, as the game places a power's amount (a chance's "%" on the art of what it's on: decision #187).
+    /// </summary>
+    private static Control ArtIcon(Texture2D? tex, string? corner = null)
     {
-        if (!Cards.GameIcons.Valid(tex)) return IconSpacer();
+        if (!Cards.GameIcons.Valid(tex)) return corner == null ? IconSpacer() : TextIcon(corner);
         var icon = UiKit.Icon(tex, IconSize);
-        if (slashed) AddSlash(icon);
+        if (corner == null) return icon;
+        var label = Label(corner, size: 18, Colors.White);
+        label.AddThemeColorOverride(GodotNames.Name("font_outline_color"), Colors.Black);
+        label.AddThemeConstantOverride(GodotNames.Name("outline_size"), 6);
+        label.HorizontalAlignment = HorizontalAlignment.Right;
+        label.VerticalAlignment = VerticalAlignment.Bottom;
+        label.Size = new Vector2(IconSize + 6, IconSize + 6);
+        icon.AddChild(label);
         return icon;
     }
 
@@ -1048,11 +1206,13 @@ public sealed partial class SettingsMenu
         AddRow(row);
     }
 
-    private void Slider(string name, string desc, double value, double min, double max, double step, Action<double> set, Func<double, string> fmt,
-        string? needs = null)
+    /// <summary>A slider option's row from its table entry, indented under the switch it depends on and greyed out while that's off.</summary>
+    private void Slider(MenuOption option, double value, double min, double max, double step, Action<double> set, Func<double, string> fmt)
     {
-        if (!Matches(name, desc)) return;
-        if (needs != null) desc = $"{desc} Needs {needs} on.";
+        if (!Matches(option.Name, option.Description)) return;
+        var name = option.Name;
+        var needs = NeedsOf(option.Needs);
+        var desc = NeedsText(option.Description, needs);
         var row = RowBox();
         row.AddChild(new Control { CustomMinimumSize = new Vector2(Indent + CheckSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
         if (needs != null) row.Modulate = new Color(1, 1, 1, 0.5f);

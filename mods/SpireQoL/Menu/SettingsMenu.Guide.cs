@@ -66,7 +66,8 @@ public sealed partial class SettingsMenu
         Paragraph("A tag hanging off the top of a card in your hand answers one question: does something happen the moment I play this card, right now? "
             + "Keyword Tags mark what the card picks up (Retain, Sly, playing more than once), Proc Tags what playing it sets off, and the Shuffle Tag a reshuffle. "
             + "The icon is what sets it off (a relic, your power, an enemy's power, an enchantment, a pile). One tag per source; a card can carry several. "
-            + "Each kind of tag can be switched off here (In fights, On your cards) and each source on the Tags by source page.");
+            + "In fights, On your cards: Tags on cards turns them all off, Plain tags and Crossed tags choose which kinds show (on potions too), and each feature lists its own kinds. "
+            + "Each relic's, power's and card's tag is on the Tags by source page, under a switch for its whole family (All proc tags, All double-play tags...).");
 
         var flow = Flow();
         // A mix of every character's cards, each one a card the example could really happen on.
@@ -76,7 +77,7 @@ public sealed partial class SettingsMenu
             Tab("proc:Kunai", Relic<Kunai>()));
         GuideCardCell(flow, Card<BallLightning>(), "A number: how much",
             "Block gained, damage dealt, the amount summoned, cards drawn or energy gained, after everything that changes it (a full hand draws fewer), or on a warning the cards put into your piles (Personal Hive's Dazed). Only those tags carry a number "
-            + "(General: Amounts on proc tags). Here Ornamental Fan gives 4 block.",
+            + "(In fights, Proc Tags: Amounts on proc tags). Here Ornamental Fan gives 4 block.",
             Tab("proc:OrnamentalFan", Relic<OrnamentalFan>(), number: 4));
         GuideCardCell(flow, Card<KinglyPunch>(), "Crossed: a warning",
             "Playing this might be bad for you: it helps an enemy, hurts you, or gives up a relic's bonus. Often still the right play; "
@@ -149,7 +150,7 @@ public sealed partial class SettingsMenu
     {
         SubSection("Potion Tags");
         Paragraph("The same tag as on cards hangs under a potion in the top bar when drinking it sets off a relic "
-            + "(Reptile Trinket, Belt Buckle, White Beast Statue).");
+            + "(Reptile Trinket, Belt Buckle, White Beast Statue). Each relic's potion tag, and All potion tags, is on the Tags by source page (Relics).");
     }
 
     // ------------------------------------------------------------------ relic counters
@@ -163,7 +164,7 @@ public sealed partial class SettingsMenu
         CounterRow(RelicOf<PenNib>(), filled: 7, total: 10, RelicCountersFeature.Shade.Relic, "7/10", flash: false,
             "Gold: a relic's counter. Pen Nib has counted 7 of its 10 Attacks; it carries across turns and fights.");
         CounterRow(RelicOf<Kunai>(), filled: 2, total: 3, RelicCountersFeature.Shade.Relic, "2/3", flash: true,
-            "Flashing: your next Attack sets Kunai off. (General: Tracker flashes early starts it one step sooner.)");
+            "Flashing: your next Attack sets Kunai off. (In fights, Relic Counters: Tracker flashes early starts it one step sooner.)");
         CounterRow(RelicOf<VelvetChoker>(), filled: 5, total: 6, RelicCountersFeature.Shade.Warning, "1 left", flash: true,
             "A limit: Velvet Choker's plays left this turn, red at the last one, then LIMIT.");
         CounterRow(RelicOf<Pocketwatch>(), filled: 2, total: 3, RelicCountersFeature.Shade.Good, "2/3 ok", flash: false,

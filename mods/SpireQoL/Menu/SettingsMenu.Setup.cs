@@ -76,11 +76,12 @@ public sealed partial class SettingsMenu
         var levels = UiKit.Row(separation: 24);
         foreach (var level in CardTabLevels) LevelCell(levels, level);
         _rows!.AddChild(levels);
-        var tabsShown = CurrentCardTabLevel() is { Features.Count: > 1 };
-        Option("Amounts on tags", "The block, damage, draws or energy a tag's source gives, on the tag (Ornamental Fan's 4 block). Off: icon only.",
-            Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, tabsShown ? null : "Moderate or Full card tags", icon: TextIcon("4"));
-        Option("Target marker", "The game's targeting arrow in a tag's corner when it happens only at some targets (aim at the right enemy).",
-            Settings.AimMarker, enabled => Settings.AimMarker = enabled, tabsShown ? null : "Moderate or Full card tags", icon: ArtIcon(GameIcons.TargetArrow()));
+        // Under the levels, greyed out until a level shows proc tags (the In fights page has the same switches, under Proc Tags).
+        var needs = CurrentCardTabLevel() is { Features.Count: > 1 } ? null : "Moderate or Full card tags";
+        SetupOption("Amounts on tags", "The block, damage, draws or energy a tag's source gives, on the tag (Ornamental Fan's 4 block). Off: icon only.",
+            Settings.ProcNumbers, enabled => Settings.ProcNumbers = enabled, needs, TextIcon("4"));
+        SetupOption("Target marker", "The game's targeting arrow in a tag's corner when it happens only at some targets (aim at the right enemy).",
+            Settings.AimMarker, enabled => Settings.AimMarker = enabled, needs, ArtIcon(GameIcons.TargetArrow()));
 
         // Each group under the page its features are on.
         foreach (var page in new[] { FeaturePage.Fights, FeaturePage.Between })
@@ -131,6 +132,13 @@ public sealed partial class SettingsMenu
         choose.Pressed += () => { ApplyCardTabs(level); Saved(); Refresh(); };
         cell.AddChild(choose);
         row.AddChild(cell);
+    }
+
+    /// <summary>An option under the card tag levels: indented, greyed out while <paramref name="needs"/> is set.</summary>
+    private void SetupOption(string name, string desc, bool value, Action<bool> set, string? needs, Control icon)
+    {
+        if (!Matches(name, desc)) return;
+        SimpleRow(name, NeedsText(desc, needs), value, enabled => { set(enabled); Saved(); }, icon, needs == null, indent: true);
     }
 
     private void SwitchRow(SetupSwitch setupSwitch) =>

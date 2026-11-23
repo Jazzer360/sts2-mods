@@ -112,6 +112,29 @@ public static class GameIcons
 
     private static Texture2D? _heart;
 
+    /// <summary>
+    /// A teammate: the top panel's icon of a character (CharacterModel.IconTexture), the second in the game's list so it reads as
+    /// another player beside the first. Null when it can't load.
+    /// </summary>
+    public static Texture2D? Teammate()
+    {
+        if (Valid(_teammate)) return _teammate;
+        try { _teammate = ModelDb.AllCharacters.Skip(1).FirstOrDefault()?.IconTexture; } catch { _teammate = null; }
+        return _teammate;
+    }
+
+    private static Texture2D? _teammate;
+
+    /// <summary>The small card the game writes into its text where it means a card (sprite_fonts/card_icon.png).</summary>
+    public static Texture2D? CardGlyph()
+    {
+        if (Valid(_cardGlyph)) return _cardGlyph;
+        _cardGlyph = LoadTexture("res://images/packed/sprite_fonts/card_icon.png");
+        return _cardGlyph;
+    }
+
+    private static Texture2D? _cardGlyph;
+
     /// <summary>A rest-site option's own icon (RestSiteOption.Icon's path: ui/rest_site/option_&lt;id&gt;.png), e.g. "heal", "mend".</summary>
     public static Texture2D? RestOption(string id) =>
         LoadTexture(MegaCrit.Sts2.Core.Helpers.ImageHelper.GetImagePath($"ui/rest_site/option_{id}.png"));

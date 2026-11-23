@@ -643,6 +643,85 @@ public sealed class CardOverlayRenderer
         }
     }
 
+    /// <summary>The card scene's enchantment tab, copied once (never in the tree): the art every tag is a copy of, for <see cref="Standalone"/>.</summary>
+    private static Control? _tabArt;
+
+    private static Control? TabArt()
+    {
+        if (_tabArt != null && GodotObject.IsInstanceValid(_tabArt)) return _tabArt;
+        _tabArt = null;
+        NCard? card = null;
+        try
+        {
+            card = ResourceLoader.Load<PackedScene>("res://scenes/cards/card.tscn").Instantiate<NCard>();
+            var tab = card.GetNodeOrNull<Control>(GodotNames.Path("%Enchantment")) ?? card.FindChild("Enchantment", recursive: true, owned: false) as Control;
+            if (tab != null && tab.Size.X >= 1 && tab.Size.Y >= 1) _tabArt = (Control)tab.Duplicate();
+        }
+        catch (Exception ex)
+        {
+            ModEntry.Log.Warn($"tag art unavailable: {ex.Message}");
+        }
+        finally
+        {
+            if (card != null && GodotObject.IsInstanceValid(card)) card.Free();
+        }
+        return _tabArt;
+    }
+
+    /// <summary>
+    /// Tags on their own (the settings menu's rows, decision #187): copies of the card's enchantment tab, each laid out as on a card
+    /// (its icon or text, the red slash on a crossed one), hanging up in a square of <paramref name="side"/> with the part a card
+    /// covers cut off. Several overlap as on a crowded card. Laid out once the square is in the tree (the text tags' labels size
+    /// themselves there). Null when the tab art can't be had.
+    /// </summary>
+    internal static Control? Standalone(IReadOnlyList<TabSpec> tabs, float side)
+    {
+        var template = TabArt();
+        if (template == null || tabs.Count == 0) return null;
+        var square = new Control { CustomMinimumSize = new Vector2(side, side), Size = new Vector2(side, side), MouseFilter = Control.MouseFilterEnum.Ignore };
+        // Rotated a quarter turn as on a card, a tag is its thickness wide and its length tall; the part above the card shows.
+        var length = template.Size.X;
+        var thickness = template.Size.Y;
+        var shown = 1f - TabOverlap - TagDrop;
+        var scale = Math.Min(side / (length * shown), side / thickness);
+        var tagWidth = thickness * scale;
+        var tagHeight = length * shown * scale;
+        var gap = TabGap * scale;
+        var step = tagWidth + gap;
+        var width = tabs.Count * tagWidth + (tabs.Count - 1) * gap;
+        if (width > side && tabs.Count > 1)
+        {
+            step = Math.Max(0f, (side - tagWidth) / (tabs.Count - 1));
+            width = side;
+        }
+        var clip = new Control
+        {
+            Position = new Vector2((side - width) / 2f, (side - tagHeight) / 2f),
+            Size = new Vector2(width, tagHeight),
+            ClipContents = true,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        square.AddChild(clip);
+        square.Ready += () =>
+        {
+            try
+            {
+                for (var i = 0; i < tabs.Count; i++)
+                {
+                    var tab = MakeTab(template, clip);
+                    tab.Visible = true;
+                    LayoutTab(tab, tabs[i], i * step, 0, tagWidth, new Vector2(scale, scale));
+                }
+            }
+            catch (Exception ex)
+            {
+                clip.Visible = false;
+                ModEntry.Log.Warn($"tag drawn on its own failed: {ex.Message}");
+            }
+        };
+        return square;
+    }
+
     /// <summary>A duplicated scene piece keeps "%unique" flags; clear them so the card's own lookups aren't confused.</summary>
     private static void ClearUniqueNames(Node node)
     {
