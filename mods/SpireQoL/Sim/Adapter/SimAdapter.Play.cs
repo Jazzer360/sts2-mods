@@ -82,7 +82,7 @@ public static partial class SimAdapter
             play.Body.Add((shot ? attack with { NeedsArrow = true } : attack) with { StretchFromDamage = name == nameof(BlossomShot) });
         if (shot) play.Body.Add(new ImpaleAction());
         // Recall, Uproot, Wrest: every arrow of yours out of the target.
-        if (Fool.DislodgeCards.Contains(name)) play.Body.Add(new DislodgeAllAction());
+        if (Procs.Programs.CardEffects.DislodgesArrows(card.GetType())) play.Body.Add(new DislodgeAllAction());
         if (facts.BlockGains > 0 && BlockOf(card, facts, me, combat, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
         // Block for every player (Rally): the same value to each living teammate too, worked out on them (their Dexterity, Frail).
         if (facts.BlockGains > 0 && Procs.Programs.CardEffects.BlocksEachPlayer(card.GetType()) && card.DynamicVars.TryGetValue("Block", out var allBlock))
@@ -128,7 +128,7 @@ public static partial class SimAdapter
         // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
         CardEnergy.AddTo(play, card, me, combat, ids.FirstOrDefault(entry => entry.Value == targetId).Key, owner, allyId);
         // Stars that wait on the attack's kill (Knockout Blow): the attack's, when its target dies.
-        if (PlayFacts.KillStarCards.Contains(name))
+        if (Procs.Programs.CardEffects.GainsStarsOnKill(card.GetType()))
             for (var i = 0; i < play.Body.Count; i++)
                 if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
         play.Body.AddRange(TakesToHand(facts, me, name));
@@ -139,7 +139,7 @@ public static partial class SimAdapter
                 .Select(other => DrawProfiles.GetValueOrDefault(other)).OfType<SimDrawCard>().GroupBy(profile => profile.Key)
                 .Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()));
         // Cards it auto-plays from the top of your draw pile, after what it does to your hand (The Devil exhausts it first).
-        if (PlaysFromDrawPile.Contains(name)) play.Body.Add(new AutoPlayFromDrawAction(name switch
+        if (Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType())) play.Body.Add(new AutoPlayFromDrawAction(name switch
         {
             nameof(Havoc) => 1,
             nameof(Cascade) => SafeInt(() => Hook.ModifyXValue(combat, card, card.EnergyCost.GetAmountToSpend())) + (card.IsUpgraded ? 1 : 0),
@@ -433,7 +433,7 @@ public static partial class SimAdapter
             {
                 actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = ApplyPowerAction.Where.Creature, Creature = allyId });
             }
-            else if (simPowerName == nameof(StretchPower) && KeepsStretchCards.Contains(name))
+            else if (simPowerName == nameof(StretchPower) && Procs.Programs.CardEffects.KeepsStretchForReplays(card.GetType()))
             {
                 // Cho Ki: your Stretch again, as much as you have (so the play keeps it).
                 actions.Add(new ApplyPowerAction(new PowerId(simPowerName), Amount: 0) { To = ApplyPowerAction.Where.You, CopiesOwn = true });

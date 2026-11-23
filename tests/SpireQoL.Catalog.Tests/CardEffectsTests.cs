@@ -78,6 +78,11 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.Forges), CardEffects.Forges, Tables.ForgeCards);
         Exactly(nameof(CardEffects.HitsXTimes), CardEffects.HitsXTimes, Tables.XHitCards);
         Exactly(nameof(CardEffects.AttacksOnceRepeatingSomethingElse), CardEffects.AttacksOnceRepeatingSomethingElse, Tables.SingleHitRepeatCards);
+        Exactly(nameof(CardEffects.AutoPlaysFromDrawPile), CardEffects.AutoPlaysFromDrawPile, Tables.PlaysFromDrawPile);
+        Exactly(nameof(CardEffects.SummonsEachPlayer), CardEffects.SummonsEachPlayer, Tables.AllPlayersSummonCards);
+        Exactly(nameof(CardEffects.GainsStarsOnKill), CardEffects.GainsStarsOnKill, Tables.KillStarCards);
+        Exactly(nameof(CardEffects.DislodgesArrows), CardEffects.DislodgesArrows, Tables.DislodgeCards);
+        Exactly(nameof(CardEffects.KeepsStretchForReplays), CardEffects.KeepsStretchForReplays, Tables.KeepsStretchCards);
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
@@ -100,6 +105,12 @@ public class CardEffectsTests
         // Attacks (PlayFacts.XHitCards, SingleHitRepeatCards).
         public static readonly string[] XHitCards = { "Eradicate", "Skewer", "Volley", "Whirlwind", "RepeatShot" };
         public static readonly string[] SingleHitRepeatCards = { "IceLance", "HeirloomHammer" };
+        // The rest (SimAdapter.PlaysFromDrawPile, AllPlayersSummonCards, KeepsStretchCards; PlayFacts.KillStarCards; Fool.DislodgeCards).
+        public static readonly string[] PlaysFromDrawPile = { "Havoc", "Cascade", "TheDevil" };
+        public static readonly string[] AllPlayersSummonCards = { "LegionOfBone" };
+        public static readonly string[] KillStarCards = { "KnockoutBlow" };
+        public static readonly string[] DislodgeCards = { "Recall", "Uproot", "Wrest" };
+        public static readonly string[] KeepsStretchCards = { "ChoKi" };
         // Made cards (PlayFacts.SadnessCards, ForgeCards).
         public static readonly string[] SadnessCards = { "BrightenUp", "Jest", "MourningBlow", "Rummage", "SelfDeprecate", "SorrowfulStrike", "Vitriol" };
         public static readonly string[] ForgeCards =

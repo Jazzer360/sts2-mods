@@ -147,6 +147,52 @@ public static class CardEffects
         program.Commands.Any(command => Is(command, "DamageCmd", "Attack") && command.HitCount == null)
         && program.All().OfType<LoopStep>().Any(loop => loop.Over == "Repeat" && !new CardProgram("", loop.Body).Commands.Any(command => Is(command, "DamageCmd", "Attack")));
 
+    public static bool AutoPlaysFromDrawPile(Type cardType) => AutoPlaysFromDrawPile(CardPrograms.Of(cardType));
+    public static bool SummonsEachPlayer(Type cardType) => SummonsEachPlayer(CardPrograms.Of(cardType));
+    public static bool GainsStarsOnKill(Type cardType) => GainsStarsOnKill(CardPrograms.Of(cardType));
+    public static bool DislodgesArrows(Type cardType) => DislodgesArrows(CardPrograms.Of(cardType));
+    public static bool KeepsStretchForReplays(Type cardType) => KeepsStretchForReplays(CardPrograms.Of(cardType));
+
+    // ---- the rest
+
+    /// <summary>Plays cards from the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile: Havoc, Cascade, The Devil).</summary>
+    public static bool AutoPlaysFromDrawPile(CardProgram program) => program.Commands.Any(command => Is(command, "CardPileCmd", "AutoPlayFromDrawPile"));
+
+    /// <summary>Summons each player's Osty, a loop over the players (Legion of Bone: OstyCmd.Summon for each, not only you).</summary>
+    public static bool SummonsEachPlayer(CardProgram program) =>
+        program.All().OfType<LoopStep>().Any(loop => loop.Body.OfType<CommandStep>().Any(command => Is(command, "OstyCmd", "Summon") && Argument(command, 1) is { } player && player != "Owner"));
+
+    /// <summary>Gains stars only when its attack kills (Knockout Blow: PlayerCmd.GainStars behind a test of the attack's results).</summary>
+    public static bool GainsStarsOnKill(CardProgram program)
+    {
+        var attacked = false;
+        foreach (var command in program.Commands)
+        {
+            if (Is(command, "DamageCmd", "Attack")) attacked = true;
+            else if (attacked && Is(command, "PlayerCmd", "GainStars") && !string.IsNullOrEmpty(command.Condition)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Knocks your arrows out of its target (ArrowCmd.DislodgeArrow on the target: Recall, Uproot, Wrest).</summary>
+    public static bool DislodgesArrows(CardProgram program) => program.Commands.Any(command => Is(command, "ArrowCmd", "DislodgeArrow") && Argument(command, 0) == Target);
+
+    /// <summary>
+    /// Gains block, then gives you Stretch (Cho Ki): the Stretch is for a replay's later plays, so this play's block doesn't spend it.
+    /// </summary>
+    public static bool KeepsStretchForReplays(CardProgram program)
+    {
+        var blocked = false;
+        foreach (var command in program.Commands)
+        {
+            if (Is(command, "CreatureCmd", "GainBlock") && Argument(command, 0) == You) blocked = true;
+            else if (blocked && command.Command.DeclaringType == "PowerCmd" && command.Command.Name == "Apply"
+                     && command.Command.GenericArguments.SequenceEqual(new[] { nameof(MegaCrit.Sts2.Core.Models.Powers.StretchPower) }) && Argument(command, 1) == You)
+                return true;
+        }
+        return false;
+    }
+
     public static bool MakesSadness(Type cardType) => MakesSadness(CardPrograms.Of(cardType));
     public static bool Forges(Type cardType) => Forges(CardPrograms.Of(cardType));
 

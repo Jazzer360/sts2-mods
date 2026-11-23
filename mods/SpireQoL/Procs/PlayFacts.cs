@@ -1296,13 +1296,10 @@ public sealed class PlayFacts
 
     /// <summary>
     /// The star gains of one play of the card: each PlayerCmd.GainStars in its play, on every way through it, to its owner, read from
-    /// its own code (CardEnergy.CallsOf). A gain that waits on its attack's kill is the attack's instead (KillStarCards).
+    /// its own code (CardEnergy.CallsOf). A gain that waits on its attack's kill is the attack's instead (CardEffects.GainsStarsOnKill: AttackAction.KillRewards).
     /// </summary>
     internal static int StarGainsOf(CardModel card) =>
         SpireQoL.Sim.CardEnergy.CallsOf(card.GetType(), "GainStars").Count(call => call is { Method: "OnPlay", Certain: true, ToOwner: true });
-
-    /// <summary>Cards that gain stars only when their attack kills its target (WasTargetKilled): the attack's (AttackAction.KillRewards).</summary>
-    internal static readonly HashSet<string> KillStarCards = new() { nameof(KnockoutBlow) };
 
     /// <summary>
     /// A card that makes Osty attack: the game's own tag on it (CardTag.OstyAttack, on every card whose OnPlay attacks FromOsty). A list

@@ -309,7 +309,7 @@ public sealed partial class ProcAudit
         var orbs = entries.OfType<OrbChanneledEntry>().Count();
         // A card that summons every player (Legion of Bone) summons each up to its own count; any other card's summons all count as its own.
         var summoned = entries.OfType<SummonedEntry>().ToList();
-        var summons = SimAdapter.AllPlayersSummonCards.Contains(window.Card.GetType().Name)
+        var summons = Procs.Programs.CardEffects.SummonsEachPlayer(window.Card.GetType())
             ? summoned.GroupBy(summonedEntry => summonedEntry.Actor).Select(byActor => byActor.Count()).DefaultIfEmpty(0).Max()
             : summoned.Count;
         // Tabs that count the cards they make (Personal Hive's Dazed, decision #161): the cards created beyond the card's own are

@@ -200,7 +200,7 @@ internal static class CardCoverage
         if (Calls("CreatureCmd", "GainBlock") && RepeatsCall(card.GetType(), "CreatureCmd", "GainBlock") && !PlayFacts.RepeatedBlockCards.Contains(name))
             issues.Add("can gain block more than once in a play (a loop or two calls: counted once; PlayFacts.BlockGainCount needs a rule)");
         // A block card that applies Stretch keeps it for a replay's later plays (Cho Ki); the simulator spends it otherwise.
-        if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !SimAdapter.KeepsStretchCards.Contains(name))
+        if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !Procs.Programs.CardEffects.KeepsStretchForReplays(card.GetType()))
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
         // Whether a block card spends Stretch depends on its block being powered: read from its Block value, or listed.
         if (card.GainsBlock && Fool.BlockProps(card) == null && !Fool.BlockWithoutVar.ContainsKey(name))
@@ -261,7 +261,7 @@ internal static class CardCoverage
         if (Procs.Programs.CardEffects.TakesIntoHand(card.GetType()) && !SimAdapter.HandTakes.ContainsKey(name))
             issues.Add("takes cards into your hand without saying from which pile (they'd stay there in the simulation: later draws)");
         // A card that auto-plays cards from your draw pile: the simulator plays them (which pile position, how many).
-        if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !SimAdapter.PlaysFromDrawPile.Contains(name))
+        if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()))
             issues.Add("auto-plays cards from your draw pile (not simulated: what they do)");
         // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
         if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !Procs.Programs.CardEffects.MakesSadness(card.GetType()))
@@ -292,9 +292,9 @@ internal static class CardCoverage
         // pulled out by the card itself count for Twine and Yah only for the cards listed.
         if ((Calls("ArrowCmd", "ShootArrowAtTarget") || Calls("ArrowCmd", "TryShootArrow")) && !Procs.Fool.IsShot(card))
             issues.Add("shoots an arrow without the Shoot tag (its damage is counted even with no arrow to shoot)");
-        if (Calls("ArrowCmd", "DislodgeArrow") && !Procs.Fool.DislodgeCards.Contains(name))
+        if (Calls("ArrowCmd", "DislodgeArrow") && !Procs.Programs.CardEffects.DislodgesArrows(card.GetType()))
             issues.Add("knocks arrows loose (not counted: Twine, Yah)");
-        if (Calls("PlayerCmd", "GainStars") && PlayFacts.StarGainsOf(card) == 0 && !PlayFacts.KillStarCards.Contains(name))
+        if (Calls("PlayerCmd", "GainStars") && PlayFacts.StarGainsOf(card) == 0 && !Procs.Programs.CardEffects.GainsStarsOnKill(card.GetType()))
             issues.Add("gains stars (not counted for Black Hole)");
         return issues;
     }

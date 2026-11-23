@@ -57,7 +57,7 @@ public class CardCodeTests
         // Gather Light gains stars on every play; Knockout Blow only when its attack kills (the attack's, not the play's).
         Assert.Equal(1, PlayFacts.StarGainsOf(ModelDb.Card<GatherLight>()));
         Assert.Equal(0, PlayFacts.StarGainsOf(ModelDb.Card<KnockoutBlow>()));
-        Assert.Contains(nameof(KnockoutBlow), PlayFacts.KillStarCards);
+        Assert.True(SpireQoL.Procs.Programs.CardEffects.GainsStarsOnKill(typeof(KnockoutBlow)));
     }
 
     [Fact]

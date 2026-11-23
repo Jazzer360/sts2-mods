@@ -202,6 +202,10 @@ hooks.
     from a local stored once is described by what was stored (Whirlwind's `int x = ResolveEnergyXValue()`). `HitsXTimes`
     replaced `XHitCards`; `AttacksOnceRepeatingSomethingElse` (an attack with no hit count, and a loop over `Repeat` with no
     attack in it: Ice Lance, Heirloom Hammer) replaced `SingleHitRepeatCards`.
+  - The rest (2026-11-23): `AutoPlaysFromDrawPile` (`PlaysFromDrawPile`), `SummonsEachPlayer` (an Osty summon for each player a
+    loop goes over: `AllPlayersSummonCards`), `GainsStarsOnKill` (a star gain behind a test after its attack: `KillStarCards`),
+    `DislodgesArrows` (`ArrowCmd.DislodgeArrow` on the target: `Fool.DislodgeCards`), `KeepsStretchForReplays` (Stretch to you
+    after your block: `KeepsStretchCards`).
   - Each was proven to give exactly its table's cards on both branches before the table was deleted
     (`CardEffectsTests.EachRuleFindsExactlyTheTableItReplaced` keeps the tables as they were), and the catalog snapshot was
     unchanged by the swap.
