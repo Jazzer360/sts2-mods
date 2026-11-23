@@ -186,7 +186,7 @@ public sealed class OverlayHost
     }
 
     /// <summary>
-    /// Times one part of the running feature until disposed (<c>using var part = host.Part("run-reminders:map");</c>): its own entry in the
+    /// Times one part of the running feature until disposed (<c>using var part = host.Part("rest-preview:read");</c>): its own entry in the
     /// frame's times and memory, taken out of the feature's (AddPartTime), so the dev dashboard's steady table names the part that
     /// allocates (decision #177). A struct: nothing made to time it.
     /// </summary>

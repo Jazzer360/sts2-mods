@@ -504,8 +504,24 @@ const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
   rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], paused: [],
   combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null, launches: [0],
-  searchTotals: newSearchTotals(), searchCards: new Map(),
+  searchTotals: newSearchTotals(), searchCards: new Map(), names: {},
 };
+/**
+ * The name players read for what a frame time is kept under (decision #185: the game sends them once a launch, feature-names): a
+ * feature's display name, a part of one as "Rest Preview: read", its code in the game's hooks as "Rest Preview (hook)"; the id when the
+ * stream has no name for it (one from before the names were sent).
+ */
+function featName(id) {
+  if (Object.hasOwn(M.names, id)) return M.names[id];
+  if (id.startsWith("hook:")) return `${featName(id.slice(5))} (hook)`;
+  const at = id.indexOf(":");
+  if (at > 0 && Object.hasOwn(M.names, id.slice(0, at))) return `${M.names[id.slice(0, at)]}: ${id.slice(at + 1)}`;
+  return id;
+}
+/** A feature's name for a table cell or a list, its id on hover. */
+const featHtml = (id) => `<span title="${esc(id)}">${esc(featName(id))}</span>`;
+/** A chart legend's entries, a feature's id on hover. */
+const legendHtml = (layers) => layers.map((l) => `<span${l.id ? ` title="${esc(l.id)}"` : ""}><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join("");
 /** Every search this launch, counted as it comes (M.searches keeps only the last MAX.searches, for the charts and times). */
 function newSearchTotals() { return { n: 0, bg: 0, cancelled: 0, cancelledCopies: 0, caps: {} }; }
 const searchKey = (x) => isForecast(x) ? "the turn forecast" : x.label.replace(/ \(target [^)]*\)$/, "");
@@ -526,7 +542,7 @@ function countSearch(e) {
 }
 function reset() {
   Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], paused: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
-    searchTotals: newSearchTotals(), searchCards: new Map() });
+    searchTotals: newSearchTotals(), searchCards: new Map(), names: {} });
   FS.base = 0;
 }
 const push = (arr, v, max) => { arr.push(v); if (max && arr.length > max) arr.splice(0, arr.length - max); };
@@ -540,6 +556,7 @@ function ingest(e) {
   M.lastT = Math.max(M.lastT, e.t);
   switch (e.kind) {
     case "stream-started": M.started = e; break;
+    case "feature-names": Object.assign(M.names, e.names); break;
     case "frame-rollup": push(M.rollups, e, MAX.rollups); break;
     case "allocation-sample": push(M.allocSamples, e, MAX.rollups); break;
     case "steady-sample": push(M.steadySamples, e, MAX.rollups); break;
@@ -1412,7 +1429,7 @@ function renderOverview() {
       [fmt(loads5, 0), "while loading (expected)"]];
     const feat = {};
     for (const x of r5) for (const [k, v] of Object.entries(x.featureMean || {})) feat[k] = (feat[k] || 0) + v;
-    const causes = top3(Object.entries(feat).sort((a, b) => b[1] - a[1]), ([k, v]) => `${esc(k)} <b>${fmt(v / Math.max(1, r5.length), 2)} ms</b>`);
+    const causes = top3(Object.entries(feat).sort((a, b) => b[1] - a[1]), ([k, v]) => `${featHtml(k)} <b>${fmt(v / Math.max(1, r5.length), 2)} ms</b>`);
     const causeLine = causes ? `Costs the most: ${causes}` : "";
     if (!r1.length) setCheck("chk-perf", "", "No frames measured yet.", stats, "");
     else if (st5.level !== "good") setCheck("chk-perf", st5.level, `Stuttering from the mod: ${spellText(st5)} in 5 minutes.`, stats, causeLine);
@@ -1558,7 +1575,7 @@ document.addEventListener("keydown", (e) => {
   e.preventDefault();
   openNote();
 });
-const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${k} ${fmt(v, 0)} ms`).join(", ");
+const topFeature = (r) => Object.entries(r.featureMax || {}).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, v]) => `${featName(k)} ${fmt(v, 0)} ms`).join(", ");
 
 function renderTurn() {
   const w = M.state?.where, f = M.state?.forecast;
@@ -1652,14 +1669,14 @@ function renderPerf() {
   const totals = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) totals[k] = (totals[k] || 0) + v;
   const top = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k]) => k);
-  const layers = top.map((k, i) => ({ name: k, color: colors[i % colors.length], points: rc.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
+  const layers = top.map((k, i) => ({ name: featName(k), id: k, color: colors[i % colors.length], points: rc.map((x) => [x.t, x.featureMean?.[k] || 0]) }));
   layers.push({ name: "the rest", color: css("--faint"), points: rc.map((x) => [x.t, Object.entries(x.featureMean || {}).filter(([k]) => !top.includes(k)).reduce((a, [, v]) => a + v, 0)]) });
   // On a log scale a pile hides all but its bottom layer: each feature its own line instead, with the mod in all (the pile's top).
   if (logTimes()) lines("pfFeatures", [...layers, { name: "the mod in all", color: css("--text"), points: rc.map((x) => [x.t, Object.values(x.featureMean || {}).reduce((a, v) => a + v, 0)]) }], { refs: FPS_REFS(), unit: " ms", log: true, logFloor: 0.001 });
   else stacked("pfFeatures", layers, { refs: FPS_REFS() });
   shareBars("pfShare", rc);
   lines("pfFps", [{ name: "frames per second", color: css("--teal"), points: rc.filter((x) => x.seconds > 0).map((x) => [x.t, x.frames / x.seconds]) }], { unit: " fps", refs: FPS_REFS().map((f) => ({ ...f, v: Math.round(1000 / f.v), below: true })) });
-  setHTML($("pfFeaturesLegend"), [...layers, ...(logTimes() ? [{ name: "the mod in all", color: css("--text") }] : [])].map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
+  setHTML($("pfFeaturesLegend"), legendHtml([...layers, ...(logTimes() ? [{ name: "the mod in all", color: css("--text") }] : [])]));
   lines("pfGap", [{ name: "longest gap", color: css("--warn"), points: rc.map((x) => [x.t, x.gapMax]) }], { refs: [{ v: 50, label: "50 ms" }, ...FPS_REFS()], unit: " ms" } /* linear always: a gap is a frame long or short, read against the frame-rate lines */);
   // featureKb is KB per frame (a mean over the rollup's frames): times the frames, it's the rollup's total
   const modMbPerSec = (x) => Object.values(x.featureKb || {}).reduce((a, v) => a + v, 0) * x.frames / 1024 / Math.max(x.seconds, 0.01);
@@ -1672,13 +1689,13 @@ function renderPerf() {
   // The palette without the searches' violet, so no feature shares its colour (or its legend hover).
   const allocColors = colors.filter((c) => sameColor(c) !== sameColor(css("--violet")));
   const allocLayers = [
-    ...allocTop.map((k, i) => ({ name: k, color: allocColors[i % allocColors.length], points: rc.map((x) => [x.t, featureMbPerSec(x, k)]) })),
+    ...allocTop.map((k, i) => ({ name: featName(k), id: k, color: allocColors[i % allocColors.length], points: rc.map((x) => [x.t, featureMbPerSec(x, k)]) })),
     { name: "the mod's other features", color: css("--faint"), points: rc.map((x) => [x.t, modMbPerSec(x) - allocTop.reduce((a, k) => a + featureMbPerSec(x, k), 0)]) },
     { name: "the mod's searches", color: css("--violet"), points: rc.map((x) => [x.t, simMbPerSec(x)]) },
     { name: "the rest of the game", color: css("--line"), points: rc.map((x) => [x.t, Math.max(0, x.allocatedMb / Math.max(x.seconds, 0.01) - modMbPerSec(x) - simMbPerSec(x))]) },
   ];
   stacked("pfAlloc", allocLayers, { unit: " MB/s" });
-  setHTML($("pfAllocLegend"), allocLayers.map((l) => `<span><i style="background:${l.color}"></i>${esc(l.name)}</span>`).join(""));
+  setHTML($("pfAllocLegend"), legendHtml(allocLayers));
   lines("pfGc", [{ name: "memory in use", color: css("--teal"), points: rc.map((x) => [x.t, x.heapMb]) }, { name: "full collection (memory in use)", color: css("--bad"), dots: true, points: rc.filter((x) => x.gen2).map((x) => [x.t, x.heapMb]) },
     { name: "clean-up pauses", color: css("--warn"), right: true, points: rc.map((x) => [x.t, x.gcPauseMs / Math.max(x.seconds, 0.01)]) }], { unit: " MB", rightUnit: " ms/s" });
   lines("pfEngine", [{ name: "shader compiles", color: css("--warn"), dots: true, points: rc.filter((x) => x.compiles > 0).map((x) => [x.t, x.compiles]) }, { name: "orphan nodes", color: css("--teal"), points: rc.filter((x) => x.orphanNodes != null).map((x) => [x.t, x.orphanNodes]) }], {});
@@ -1696,7 +1713,7 @@ function renderPerf() {
   for (const x of quietRollups) for (const [k, v] of Object.entries(x.featureKb || {})) quietKb[k] = (quietKb[k] || 0) + v * x.frames;
   const quietCell = (k) => (quietFrames ? (() => { const v = (quietKb[k] || 0) / quietFrames; return `<td class="n ${v > 1 ? "bad" : v > 0.1 ? "warn" : ""}">${fmt(v, 2)} KB</td>`; })() : `<td class="n faint">–</td>`);
   setHTML($("featureTable"), `<tr><th>Feature</th><th class="n">Mean per frame</th><th class="n">Largest in one frame</th><th class="n">Share of the mod's time</th><th class="n">Memory per frame</th><th class="n" title="Memory per frame in quiet moments (steady: nothing the mod reads changed for a second, the window in front; none with a dev check): what a feature allocates while nothing changes. Amber over 0.1 KB, red over 1 KB.">While quiet</th></tr>` +
-    rows.map(([k, f]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(f.mean / f.n, 3)} ms</td><td class="n ${f.max > 16.7 ? "bad" : f.max > 8 ? "warn" : ""}">${fmt(f.max, 1)} ms</td><td class="n">${pct(f.mean, rows.reduce((a, [, g]) => a + g.mean, 0))}</td><td class="n ${f.kb / f.n > 100 ? "bad" : f.kb / f.n > 20 ? "warn" : ""}">${fmt(f.kb / f.n, 1)} KB</td>${quietCell(k)}</tr>`).join(""));
+    rows.map(([k, f]) => `<tr><td>${featHtml(k)}</td><td class="n">${fmt(f.mean / f.n, 3)} ms</td><td class="n ${f.max > 16.7 ? "bad" : f.max > 8 ? "warn" : ""}">${fmt(f.max, 1)} ms</td><td class="n">${pct(f.mean, rows.reduce((a, [, g]) => a + g.mean, 0))}</td><td class="n ${f.kb / f.n > 100 ? "bad" : f.kb / f.n > 20 ? "warn" : ""}">${fmt(f.kb / f.n, 1)} KB</td>${quietCell(k)}</tr>`).join(""));
   // What allocates while nothing changes (decision #177): every feature seen on a steady frame in the window, by place.
   const steadyS = since(M.steadySamples, win), steadyTime = {}, steadyRows = {};
   for (const x of steadyS) {
@@ -1712,7 +1729,7 @@ function renderPerf() {
   const steadyTotal = Object.values(steadyTime).reduce((a, s) => a + s.seconds, 0);
   setHTML($("steadyNote"), steadyS.length ? `Steady for ${fmt(steadyTotal, 0)} s in this window (${Object.entries(steadyTime).map(([w, s]) => `${esc(w)} ${fmt(s.seconds, 0)} s`).join(", ") || "none"}). ${steadyList.length ? "" : "Nothing allocated on a steady frame."}` : "No samples yet: the game writes one every 10 s in dev mode.");
   setHTML($("steadyTable"), `<tr><th>Feature</th><th>Where</th><th class="n">KB/s while steady</th><th class="n">Steady frames it allocated on</th><th class="n">Apart</th><th class="n">KB each</th><th class="n">Largest</th></tr>` +
-    (steadyList.length ? steadyList.map((x) => `<tr><td>${esc(x.id)}</td><td>${esc(x.where)}</td><td class="n ${x.perSec > 50 ? "bad" : x.perSec > 5 ? "warn" : ""}">${fmt(x.perSec, 2)}</td><td class="n">${fmt(x.frames, 0)} (${pct(x.frames, steadyTime[x.where]?.frames || 0)})</td><td class="n">${x.period ? (x.period >= 120 ? "120+" : x.period) : "once"}</td><td class="n">${fmt(x.kb / x.frames, 2)}</td><td class="n">${fmt(x.maxKb, 2)}</td></tr>`).join("") : `<tr><td colspan="7" class="empty">None</td></tr>`));
+    (steadyList.length ? steadyList.map((x) => `<tr><td>${featHtml(x.id)}</td><td>${esc(x.where)}</td><td class="n ${x.perSec > 50 ? "bad" : x.perSec > 5 ? "warn" : ""}">${fmt(x.perSec, 2)}</td><td class="n">${fmt(x.frames, 0)} (${pct(x.frames, steadyTime[x.where]?.frames || 0)})</td><td class="n">${x.period ? (x.period >= 120 ? "120+" : x.period) : "once"}</td><td class="n">${fmt(x.kb / x.frames, 2)}</td><td class="n">${fmt(x.maxKb, 2)}</td></tr>`).join("") : `<tr><td colspan="7" class="empty">None</td></tr>`));
   // What the garbage is made of: the samples in the window, each type's rate while quiet and while active.
   const samples = since(M.allocSamples, win);
   const quietS = samples.reduce((a, x) => a + (x.quietSeconds || 0), 0), activeS = samples.reduce((a, x) => a + Math.max(0, x.seconds - (x.quietSeconds || 0)), 0);
@@ -2178,9 +2195,14 @@ function demoInit() {
 }
 function demoEmit(e) { e.t = DEMO.t; ingest(e); DEMO.files[M.file] += JSON.stringify(e) + "\n"; }
 function demoTick(fast) {
-  if (DEMO.t === 0) demoEmit({ kind: "stream-started", format: 1, mod: "1.21.0", game: "v0.113.1" });
+  if (DEMO.t === 0) {
+    demoEmit({ kind: "stream-started", format: 1, mod: "1.21.0", game: "v0.113.1" });
+    demoEmit({ kind: "feature-names", names: { "proc-indicators": "Proc Tags", "incoming-damage": "Incoming Damage", "forecast-audit": "Forecast Audit", "proc-audit": "Play Audit",
+      "ethereal-fade": "Ethereal Fade", "rest-preview": "Rest Preview", widgets: "Widget layout", "card-tabs": "Card tags (drawing)", "settings-menu": "Settings menu",
+      "dev-dashboard": "Dev dashboard", "dev-checks": "Dev checks", "steady-watch": "Steady watch" } });
+  }
   DEMO.t += 0.5;
-  const busy = rand() < 0.15, feat = { "proc-indicators": 0.8 + rand() * (busy ? 6 : 1), "incoming-damage": 0.3 + rand() * 0.4, "forecast-audit": 0.1 + rand() * 0.2, "proc-audit": 0.2 + rand() * 0.3, widgets: 0.2, "card-tabs": 0.3, "settings-menu": 0.05, "dev-dashboard": 0.05 };
+  const busy = rand() < 0.15, feat = { "proc-indicators": 0.8 + rand() * (busy ? 6 : 1), "incoming-damage": 0.3 + rand() * 0.4, "forecast-audit": 0.1 + rand() * 0.2, "proc-audit": 0.2 + rand() * 0.3, widgets: 0.2, "card-tabs": 0.3, "settings-menu": 0.05, "dev-dashboard": 0.05, "rest-preview:read": 0.02, "hook:proc-audit": 0.04 };
   const sum = Object.values(feat).reduce((a, b) => a + b, 0);
   // Tabbed out for 20 s of every 90 (decision #179): no frame data, the window's changes marked.
   const away = DEMO.t % 90 >= 60 && DEMO.t % 90 < 80;

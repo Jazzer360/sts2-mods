@@ -130,15 +130,21 @@ public static class ModEntry
         };
 
         // Order matters for card decorations: later features add badges after earlier ones.
+        // The reminders outside fights: one feature per place they show, sharing their rules and state (decision #185).
+        var reminders = new RunReminders(ctx);
         IFeature[] features =
         {
             new CardIndicatorsFeature(ctx),
+            new EtherealFadeFeature(ctx),
             new RelicCountersFeature(ctx),
             new ProcIndicatorsFeature(ctx),
             new IncomingDamageFeature(ctx),
             new TeammateIncomingDamageFeature(ctx),
             new ShuffleWarningFeature(ctx),
-            new RunRemindersFeature(ctx),
+            new RewardTagsFeature(reminders),
+            new EventRemindersFeature(reminders),
+            new ShopRemindersFeature(reminders),
+            new MapRemindersFeature(reminders),
             new PotionTabsFeature(ctx),
             new RestPreviewFeature(ctx),
             new DeathSkullFeature(ctx),
@@ -154,6 +160,8 @@ public static class ModEntry
         };
         foreach (var feature in features) Features.Add(feature);
 
+        // A feature split out of another starts as that one was (decision #185).
+        QolSettings.CarryOverSplitFeatures(settings.Features);
         Features.ApplyAll(feature => settings.Features.TryGetValue(feature.Id, out var on) ? on : feature.EnabledByDefault);
 
         // Write every feature id into settings so players can see what can be toggled.
@@ -201,12 +209,12 @@ public static class ModEntry
             {
                 if (!key.EndsWith(":*", StringComparison.Ordinal) && !Menu.SettingsCatalog.IsKnownTabKey(key) && warnedKeys.Add(key))
                 {
-                    Log.Warn($"tab kind {key} isn't in the settings menu catalog (Menu/SettingsCatalog.cs); it's listed under Card tabs > Other");
+                    Log.Warn($"tab kind {key} isn't in the settings menu catalog (Menu/SettingsCatalog.cs); it's listed under Card tags > Other");
                 }
             }
         });
         // Dev mode (decision #108): the dev dashboard's files. Nothing at all for players.
-        Telemetry.DevDashboard.Start(host, settings.DevFolder);
+        Telemetry.DevDashboard.Start(host, settings.DevFolder, features.ToDictionary(feature => feature.Id, feature => feature.DisplayName));
         host.Start();
     }
 
@@ -268,7 +276,7 @@ public static class ModEntry
             {
                 settings.Tabs.Remove(key);
                 if (on) continue;
-                if (key == "reminder:*") { settings.Features["run-reminders"] = false; continue; }
+                if (key == "reminder:*") { settings.Features[QolSettings.RetiredRunReminders] = false; continue; }
                 foreach (var place in Enum.GetValues<Data.ReminderPlace>())
                     settings.Tabs[Data.ChoiceReminders.Key(place, key["reminder:".Length..])] = false;
             }
@@ -279,6 +287,9 @@ public static class ModEntry
         // not by a choice, so they go off there too.
         if (settings.SettingsVersion < 4)
             foreach (var key in Menu.SettingsCatalog.TabsOffByDefault) settings.Tabs[key] = false;
+        // 2.0.0 (decision #185): each reminder place is a feature of its own; a place's group switch off becomes its relics' switches off.
+        if (settings.SettingsVersion < 5)
+            settings.FoldReminderPlaceSwitches(place => Menu.SettingsCatalog.Sources.Where(source => source.Reminder(place) != null).Select(source => source.Type));
         settings.ShowTurnTimers = null;
         settings.SettingsVersion = QolSettings.CurrentSettingsVersion;
     }

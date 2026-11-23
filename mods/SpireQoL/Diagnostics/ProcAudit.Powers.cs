@@ -59,7 +59,7 @@ public sealed partial class ProcAudit
             if (creature == me.Creature && SpentByAnyPlay.Contains(type)) continue;
             if (creature == me.Creature && SpentByAttack.Contains(type) && window.Card.Type == CardType.Attack) continue;
             // A double-play source this play used (Burst, Duplication: ModifyCardPlayCount, then a stack goes) when the card
-            // played more than once: its tab is Card Indicators' (the game's own play-count query), not a proc rule.
+            // played more than once: its tag is Keyword Tags' (the game's own play-count query), not a proc rule.
             if (creature == me.Creature && PowerTypeNamed(type) is { } countSource
                 && CodeIndex.Does(countSource, Array.Empty<string>(), new[] { "ModifyCardPlayCount" })
                 && entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.Card == window.Card && cardPlayStartedEntry.CardPlay.PlayCount > 1)) continue;

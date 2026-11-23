@@ -12,7 +12,7 @@ namespace SpireQoL.Combat;
 /// play, hit, power, draw and move adds to it), each creature's HP, block, powers (their amount and shown count) and next move, each player's energy, stars,
 /// piles, hand (each card: its upgrade, cost, enchantment, affliction and own keywords), relic counters, orbs, arrows and potions, the
 /// turn and side, and the mod's settings. When it's the same as the probe a result was worked out from, the turn forecast, Proc
-/// Indicators and Card Indicators use that result instead of working it out again from the game. Dev mode works them out anyway on
+/// Tags, Keyword Tags and Ethereal Fade use that result instead of working it out again from the game. Dev mode works them out anyway on
 /// such a frame once a second and logs it when they differ (a change this misses), so a gap shows up in the logs before it shows on screen.
 /// </summary>
 internal static class BoardProbe

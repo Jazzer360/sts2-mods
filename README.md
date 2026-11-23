@@ -21,7 +21,7 @@ Slay the Spire 2 mods. **Spire QoL** is display-only: it shows information the g
 
 The game keeps modded progress separate from your unmodded saves: the first time you play with mods it copies your profiles into a separate modded set, and from then on the two drift apart. To keep using your normal profiles with mods installed, also install **Main Saves** (below).
 
-**Using it:** press **F10** (or use the **Spire QoL settings** button on the Mods screen or the pause menu) for the settings menu, where every feature, card tab and tracker row can be switched on or off. In combat, press **F8** to unlock the layout and drag indicators around (F8 again to lock it), and **F9** to hide or show all overlays. Every feature and setting is described in the [feature reference](docs/FEATURES.md). Settings live in `mods/SpireQoL/SpireQoL.settings.cfg`, which is created on first run; edit it while the game is closed.
+**Using it:** press **F10** (or use the **Spire QoL settings** button on the Mods screen or the pause menu) for the settings menu, where every feature, card tag and tracker row can be switched on or off. In combat, press **F8** to unlock the layout and drag indicators around (F8 again to lock it), and **F9** to hide or show all overlays. Every feature and setting is described in the [feature reference](docs/FEATURES.md). Settings live in `mods/SpireQoL/SpireQoL.settings.cfg`, which is created on first run; edit it while the game is closed.
 
 ### Main Saves (optional)
 
@@ -46,7 +46,7 @@ A development monorepo: every mod shares one build setup and a small `core` libr
 | Mod | Folder | What it does | Status |
 | --- | --- | --- | --- |
 | **Main Saves** | [`mods/MainSaves`](mods/MainSaves) | Keeps using your normal profiles while mods are installed (the game otherwise switches to separate modded profiles). | [Releases](https://github.com/Jazzer360/sts2-mods/releases) |
-| **Spire QoL** | [`mods/SpireQoL`](mods/SpireQoL) | Display-only QoL: tabs on cards for what playing them sets off, relic and power counters, incoming damage and enemy deaths at end of turn, enemy intent details and forecasts, reminders outside fights (events, rewards, shops, the map, resting). Each feature can be toggled, and indicators can be placed anywhere. | [Latest release](https://github.com/Jazzer360/sts2-mods/releases/latest) |
+| **Spire QoL** | [`mods/SpireQoL`](mods/SpireQoL) | Display-only QoL: tags on cards for what playing them sets off, relic and power counters, incoming damage and enemy deaths at end of turn, enemy intent details and forecasts, reminders outside fights (events, rewards, shops, the map, resting). Each feature can be toggled, and indicators can be placed anywhere. | [Latest release](https://github.com/Jazzer360/sts2-mods/releases/latest) |
 
 **Docs:** [Feature reference](docs/FEATURES.md) (everything the mods change) · [Tracker](docs/TRACKER.md) (work list) · [Changelog](CHANGELOG.md) (patch notes) · [Roadmap](docs/ROADMAP.md)
 

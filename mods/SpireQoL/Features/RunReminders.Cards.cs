@@ -30,7 +30,7 @@ namespace SpireQoL.Features;
 /// (Tezcatara's soup), whether it upgrades cards of your deck. When something can't be read, the cards are unknown (null) and
 /// the relics keep their icon.
 /// </summary>
-public sealed partial class RunRemindersFeature
+public sealed partial class RunReminders
 {
     private static readonly ConditionalWeakTable<EventOption, OptionCards> CardsRead = new();
     private static readonly ConditionalWeakTable<EventOption, StrongBox<List<CardModel>?>> CardsCache = new();
@@ -777,7 +777,7 @@ internal sealed record DrawGroup(DrawKind Kind, List<CardModel> Cards, CardRarit
     {
         DrawKind.Certain => Cards.Any(good) ? 1 : 0,
         DrawKind.Transform => Cards.Count == 0 ? null : (double)Cards.Count(good) / Cards.Count,
-        DrawKind.Reward when Count is { } count => RunRemindersFeature.OptionCards.RewardChance(Cards, good, Odds, count),
+        DrawKind.Reward when Count is { } count => RunReminders.OptionCards.RewardChance(Cards, good, Odds, count),
         _ => null,
     };
 

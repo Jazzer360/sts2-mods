@@ -12,7 +12,7 @@ namespace SpireQoL.Features;
 /// <summary>
 /// A discard-pile tab on cards in hand whose draws (their own, plus the draws they set off) would run
 /// past the end of your draw pile and reshuffle the discard pile mid-turn. Same on-card tab language as every other indicator.
-/// Spec: docs/FEATURES.md#shuffle-warning.
+/// Spec: docs/FEATURES.md#shuffle-tag (Shuffle Tag; id shuffle-warning, kept as the settings key: decision #185).
 /// </summary>
 public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
 {
@@ -21,7 +21,7 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
     public ShuffleWarningFeature(QolContext ctx) => _ctx = ctx;
 
     public string Id => "shuffle-warning";
-    public string DisplayName => "Shuffle Warning";
+    public string DisplayName => "Shuffle Tag";
     public bool EnabledByDefault => true;
 
     public void Apply(Harmony harmony)

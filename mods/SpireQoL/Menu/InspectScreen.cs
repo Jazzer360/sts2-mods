@@ -114,7 +114,7 @@ internal sealed class InspectScreen
             var first = groups.FindIndex(drawGroup => drawGroup.Kind == DrawKind.Transform);
             groups.RemoveAll(drawGroup => drawGroup.Kind == DrawKind.Transform);
             var upgraded = _baseGroups.First(drawGroup => drawGroup.Kind == DrawKind.Transform).Upgraded;
-            groups.Insert(Math.Min(first, groups.Count), new DrawGroup(DrawKind.Transform, RunRemindersFeature.OptionCards.TransformResults(_transformFrom),
+            groups.Insert(Math.Min(first, groups.Count), new DrawGroup(DrawKind.Transform, RunReminders.OptionCards.TransformResults(_transformFrom),
                 MegaCrit.Sts2.Core.Runs.CardRarityOddsType.Uniform, Count: 1, upgraded));
         }
         _groups = groups
@@ -339,7 +339,7 @@ internal sealed class InspectScreen
 
     /// <summary>A reward that rolls its rarity first, then a card of it: each rarity's chance (" (rarity first: rare 1.5%, uncommon 98.5%)").</summary>
     private static string Roll(DrawGroup drawGroup)
-        => drawGroup.Cards.Select(card => card.Rarity).Distinct().Count() > 1 && Features.RunRemindersFeature.OptionCards.RarityRoll(drawGroup.Cards, drawGroup.Odds) is { } rarityRoll
+        => drawGroup.Cards.Select(card => card.Rarity).Distinct().Count() > 1 && Features.RunReminders.OptionCards.RarityRoll(drawGroup.Cards, drawGroup.Odds) is { } rarityRoll
             ? $" (rarity first: {rarityRoll})"
             : "";
 

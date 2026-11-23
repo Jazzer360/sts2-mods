@@ -33,7 +33,7 @@ public class HeldDelegateTests
         Assert.NotNull(onChosen);
         onChosen!.SetValue(option, grab);
 
-        var effects = RunRemindersFeature.EffectsOf(option);
+        var effects = RunReminders.EffectsOf(option);
         Assert.True(effects.HasFlag(ChoiceEffect.CardToDeck), $"read {effects}");
     }
 }

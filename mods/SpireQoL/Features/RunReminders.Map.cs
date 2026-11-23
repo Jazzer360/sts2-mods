@@ -21,7 +21,7 @@ namespace SpireQoL.Features;
 /// (Data/ChoiceReminders, Map). Hovering one shows its tooltip and highlights that kind of room on the map, as the legend does.
 /// Hidden with the legend (its hotkey) and the map.
 /// </summary>
-public sealed partial class RunRemindersFeature
+public sealed partial class RunReminders
 {
     private const string PathNodeName = "SpireQoL_Path";
     private const float PathIcon = 44f;
@@ -73,7 +73,7 @@ public sealed partial class RunRemindersFeature
         }
     }
 
-    private void MapLegend()
+    internal void MapLegend()
     {
         foreach (var tiny in _pathCards) tiny.Fit();
         var screen = NMapScreen.Instance;

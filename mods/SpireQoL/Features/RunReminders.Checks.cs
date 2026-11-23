@@ -15,7 +15,7 @@ namespace SpireQoL.Features;
 ///  - Odds: for each icon with a chance, whether one of its cards came up (among the cards offered while the option ran, or
 ///    the cards it added). Logged only (<c>[audit] [odds]</c>): a chance can't be checked on one choice, only across many.
 /// </summary>
-public sealed partial class RunRemindersFeature
+public sealed partial class RunReminders
 {
     private static void CheckCardRules(Player me, List<CardModel> added, bool givesUpgraded, ICollection<RelicModel>? shown, string where)
     {

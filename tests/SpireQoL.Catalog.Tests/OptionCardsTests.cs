@@ -11,9 +11,9 @@ namespace SpireQoL.Catalog.Tests;
 /// </summary>
 public class OptionCardsTests
 {
-    private static RunRemindersFeature.OptionCards Read(Type eventType)
+    private static RunReminders.OptionCards Read(Type eventType)
     {
-        var cards = new RunRemindersFeature.OptionCards();
+        var cards = new RunReminders.OptionCards();
         var types = new[] { eventType }.Concat(eventType.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic));
         foreach (var type in types)
         foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))

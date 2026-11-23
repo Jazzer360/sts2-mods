@@ -40,6 +40,20 @@ public sealed class DevSinkTests : IDisposable
     }
 
     [Fact]
+    public void FeatureNamesKeepTheIdsAsKeysAndLeaveOffLogOnly()
+    {
+        // Decision #185: the dashboard shows each feature's name, keyed by the id its frame times are kept under.
+        var featureNames = FeatureNames.Of(new Dictionary<string, string> { ["proc-indicators"] = "Proc Tags", ["proc-audit"] = "Play Audit (log only)" },
+            new Dictionary<string, string> { ["dev-checks"] = "Dev checks", ["proc-audit"] = "overridden by the feature" });
+        using var doc = JsonDocument.Parse(DevSink.Line(seconds: 0, featureNames));
+        Assert.Equal("feature-names", doc.RootElement.GetProperty("kind").GetString());
+        var names = doc.RootElement.GetProperty("names");
+        Assert.Equal("Proc Tags", names.GetProperty("proc-indicators").GetString());
+        Assert.Equal("Play Audit", names.GetProperty("proc-audit").GetString());
+        Assert.Equal("Dev checks", names.GetProperty("dev-checks").GetString());
+    }
+
+    [Fact]
     public void ALineIsTheTimeTheKindAndTheFieldsInCamelCase()
     {
         var line = DevSink.Line(seconds: 1.23456, new SearchDone("Bash (target 0)", SearchDone.ContextOf(combat: 2, turn: 3), Steps: 5, Copies: 100, PeakHeld: 10, Ms: 1.5, Background: true, "the memory cap", Cancelled: false));

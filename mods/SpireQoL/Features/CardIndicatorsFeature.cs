@@ -1,4 +1,3 @@
-using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
@@ -14,15 +13,13 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// Mid-combat card modifiers made visible. Spec: docs/FEATURES.md#card-indicators.
-/// Everything is an on-card tab (CardOverlayRenderer), except Ethereal translucency and dimming.
+/// Keyword Tags (id card-indicators, kept as the settings key: decision #185): mid-combat card modifiers made visible as on-card
+/// tags (CardOverlayRenderer). Spec: docs/FEATURES.md#keyword-tags.
 ///  - Retain: Steady (the Retain enchantment). Sly: Master Planner (the Sly power).
 ///    (This-turn-only Retain/Sly look the same as permanent ones: tags are icon-only.)
-///  - Replay on the card (Hidden Gem, Transfigure, Sword Sage, enchantments): a text tab "N×" (total plays).
+///  - Replay on the card (Hidden Gem, Transfigure, Sword Sage, enchantments): a text tag "N×" (total plays).
 ///  - Double play: the icon of whatever causes it (Burst, Echo Form, Throwing Axe, ...).
-///  - Blocked by Bound / Ringing / Smog / Velvet Choker: card dimmed + crossed tab with the
-///    blocking power's or relic's icon.
-///  - Ethereal (on the card itself, not from Hex): translucent.
+/// Ethereal cards fading is Ethereal Fade's (EtherealFadeFeature): not a tag.
 /// </summary>
 public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
 {
@@ -31,7 +28,7 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
     public CardIndicatorsFeature(QolContext ctx) => _ctx = ctx;
 
     public string Id => "card-indicators";
-    public string DisplayName => "Card Indicators";
+    public string DisplayName => "Keyword Tags";
     public bool EnabledByDefault => true;
 
     public void Apply(Harmony harmony)
@@ -43,9 +40,9 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
     {
     }
 
-    /// <summary>Last frame's result per hand card: Ethereal (faded) and its tabs, kept while the board probe sees nothing change.</summary>
-    private readonly List<(CardModel Card, bool Ethereal, List<TabSpec> Tabs)> _last = new();
-    private readonly ReuseCheck _reuse = new("Card Indicators");
+    /// <summary>Last frame's tabs per hand card, kept while the board probe sees nothing change.</summary>
+    private readonly List<(CardModel Card, List<TabSpec> Tabs)> _last = new();
+    private readonly ReuseCheck _reuse = new("Keyword Tags");
     /// <summary>The board probe _last was worked out from.</summary>
     private int _lastProbe;
 
@@ -53,7 +50,6 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
     {
         var me = Sts2State.Me;
         if (me == null) return;
-        var settings = _ctx.Settings;
         var hand = Sts2State.Hand(me);
 
         // Nothing changed since last frame (decision #130): its results again, without asking the game's hooks for every card
@@ -63,21 +59,21 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         var reuse = _reuse.Decide(combat != null && SameHand(hand) && BoardProbe.Hash(me, combat) == _lastProbe);
         if (reuse == FrameReuse.Reuse)
         {
-            foreach (var (card, ethereal, tabs) in _last) Show(card, ethereal, tabs, settings);
+            foreach (var (card, tabs) in _last) Show(card, tabs);
             return;
         }
 
-        var now = new List<(CardModel Card, bool Ethereal, List<TabSpec> Tabs)>(hand.Count);
+        var now = new List<(CardModel Card, List<TabSpec> Tabs)>(hand.Count);
         foreach (var card in hand)
         {
-            var (ethereal, tabs) = Work(card);
-            now.Add((card, ethereal, tabs));
-            Show(card, ethereal, tabs, settings);
+            var tabs = Work(card);
+            now.Add((card, tabs));
+            Show(card, tabs);
         }
         if (reuse == FrameReuse.WorkOutAndCheck)
         {
-            var changed = now.Zip(_last).FirstOrDefault(pair => pair.First.Ethereal != pair.Second.Ethereal || !pair.First.Tabs.SequenceEqual(pair.Second.Tabs));
-            _reuse.Compare(changed.First.Card == null, "a card's tabs changed while the board probe didn't",
+            var changed = now.Zip(_last).FirstOrDefault(pair => !pair.First.Tabs.SequenceEqual(pair.Second.Tabs));
+            _reuse.Compare(changed.First.Card == null, "a card's tags changed while the board probe didn't",
                 () => $"{changed.First.Card!.GetType().Name}: [{string.Join(", ", changed.Second.Tabs.Select(tab => tab.Key))}] → [{string.Join(", ", changed.First.Tabs.Select(tab => tab.Key))}]");
         }
         _last.Clear();
@@ -94,32 +90,27 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
         return true;
     }
 
-    private void Show(CardModel card, bool ethereal, List<TabSpec> tabs, QolSettings settings)
+    private void Show(CardModel card, List<TabSpec> tabs)
     {
         _ctx.Decor.SeenInHand(card);
+        if (tabs.Count == 0) return;
         var decor = _ctx.Decor.For(card);
-        if (ethereal) decor.Opacity = Mathf.Clamp(settings.EtherealOpacity, 0.25f, 1f);
         foreach (var tab in tabs) decor.AddTab(tab);
     }
 
-    /// <summary>A card's Ethereal fade and its tabs (Retain, Sly, replay, double-play), from the game.</summary>
-    private static (bool Ethereal, List<TabSpec> Tabs) Work(CardModel card)
+    /// <summary>A card's tags (Retain, Sly, replay, double-play), from the game.</summary>
+    private static List<TabSpec> Work(CardModel card)
     {
         var tabs = new List<TabSpec>();
         var keywords = card.Keywords;
-        // Only Ethereal that's on the card itself (KeywordSources.Local: the card's own keyword,
-        // or Music Box's copy). Ethereal granted by Hex (the Hexed affliction, via
-        // HexPower.TryModifyKeywordsInCombat) is a Global source and is skipped: when Hex hits,
-        // every card is Ethereal and the game's own affliction overlay already shows it.
-        var ethereal = card.GetKeywordsWithSources(KeywordSources.Local).Contains(CardKeyword.Ethereal);
 
         if (keywords.Contains(CardKeyword.Retain) || card.ShouldRetainThisTurn) tabs.Add(new TabSpec("retain", GameIcons.Enchantment<Steady>()));
         if (keywords.Contains(CardKeyword.Sly) || card.IsSlyThisTurn) tabs.Add(new TabSpec("sly", GameIcons.Power<MasterPlannerPower>()));
 
         // Replay on the card itself (Hidden Gem, Transfigure, Sword Sage on Sovereign Blade, or
-        // an enchantment): no power or relic to show, so the tab reads "2×" (total plays).
+        // an enchantment): no power or relic to show, so the tag reads "2×" (total plays).
         // A card that can't be played (curses, Unplayable statuses, blocked cards) plays nothing twice.
-        if (!CardPlays.CanPlayThisTurn(card)) return (ethereal, tabs);
+        if (!CardPlays.CanPlayThisTurn(card)) return tabs;
         var replays = card.GetEnchantedReplayCount();
         if (replays > 0) tabs.Add(new TabSpec("replay", Icon: null, Text: $"{replays + 1}×"));
 
@@ -137,6 +128,6 @@ public sealed class CardIndicatorsFeature : IFeature, IFrameFeature
             };
             tabs.Add(new TabSpec("double-play:" + src.GetType().Name, icon ?? GameIcons.Power<EchoFormPower>()));
         }
-        return (ethereal, tabs);
+        return tabs;
     }
 }

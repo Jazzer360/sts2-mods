@@ -148,11 +148,11 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         {
             if (!_rows.TryGetValue(model, out var row))
             {
-                // Timed on its own ("relic-counters-row"): a new row loads its icon, which can be slow the first time.
+                // Timed on its own ("relic-counters:row"): a new row loads its icon, which can be slow the first time.
                 var start = Godot.Time.GetTicksUsec();
                 var allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
                 row = MakeRow(model);
-                host.AddPartTime("relic-counters-row", (Godot.Time.GetTicksUsec() - start) / 1000.0, (GC.GetAllocatedBytesForCurrentThread() - allocatedBefore) / 1024.0);
+                host.AddPartTime("relic-counters:row", (Godot.Time.GetTicksUsec() - start) / 1000.0, (GC.GetAllocatedBytesForCurrentThread() - allocatedBefore) / 1024.0);
                 _rows[model] = row;
                 widget.Content.AddChild(row.Root);
             }

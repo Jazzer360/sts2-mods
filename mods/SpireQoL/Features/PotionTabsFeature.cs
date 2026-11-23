@@ -15,7 +15,7 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// Potion tabs (docs/FEATURES.md "Potion Tabs"): in fights, the on-card tab's design hanging under each potion in the top
+/// Potion Tags (docs/FEATURES.md "Potion Tags"): in fights, the on-card tag's design hanging under each potion in the top
 /// bar, point down like a banner, with the icon of a relic that drinking that potion sets off. Keys "potion:&lt;Relic&gt;".
 ///  - Reptile Trinket: every potion (3 Strength this turn: ReptileTrinket.AfterPotionUsed).
 ///  - Belt Buckle: your last potion, while its Dexterity isn't up (holding none gives it: AfterPotionUsed/Discarded).
@@ -52,7 +52,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     public PotionTabsFeature(QolContext ctx) => _ctx = ctx;
 
     public string Id => "potion-tabs";
-    public string DisplayName => "Potion Tabs";
+    public string DisplayName => "Potion Tags";
     public bool EnabledByDefault => true;
 
     public void Apply(Harmony harmony)

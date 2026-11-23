@@ -31,7 +31,7 @@ public enum ChoiceEffect
 /// <param name="Relic">The relic's class name.</param>
 /// <param name="On">Choices it reacts to: its icon goes next to those event options.</param>
 /// <param name="CrossedOn">Choices where it works against you (red slash).</param>
-/// <param name="OnCardReward">It shows as a tab on every card a card reward offers when taking that card sets it off (RunRemindersFeature.SetOffByTaking).</param>
+/// <param name="OnCardReward">It shows as a tab on every card a card reward offers when taking that card sets it off (RunReminders.SetOffByTaking).</param>
 /// <param name="Expect">Effects that always make it flash when they happen (the check reports an icon
 /// whose effect happened without the relic reacting). Relics that react without flashing leave it empty.</param>
 /// <param name="ShopIcon">Its icon goes beside shop items it reacts to; false when the shop already shows the effect on the item

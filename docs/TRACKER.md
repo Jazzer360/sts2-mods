@@ -24,7 +24,7 @@ Legend: `[ ]` to do · `[~]` built, needs an in-game check · `[x]` done · **(v
 
 ---
 
-## 1. Card modifiers → `card-indicators`
+## 1. Card modifiers → Keyword Tags (`card-indicators`) and Ethereal Fade (`ethereal-fade`)
 
 - [x] **Decide: keep the Sly tab?** (2026-11-09) Kept, on by default (decision #77). It doesn't fit "happens when you play this card". It helped when choosing cards to retain before Well Laid Plans changed; the game already makes Sly cards glow when you pick cards to discard. Stays for now.
 
@@ -128,7 +128,7 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 
 ---
 
-## 3. Condition relics → `proc-indicators` (tabs on cards in hand; Relic Reminders was merged into Proc Indicators)
+## 3. Condition relics → `proc-indicators` (Proc Tags: tags on cards in hand; Relic Reminders was merged into it)
 
 | Done | Relic | Show on | Meaning |
 | --- | --- | --- | --- |
@@ -217,7 +217,7 @@ Shows "+N at end of turn" beside current block, so you don't overblock.
 
 ---
 
-## 6. Shuffle warning → `shuffle-warning`
+## 6. Shuffle Tag → `shuffle-warning`
 - [x] 1.11.1: Ki Chant's own shuffle keeps your hand out of the draw pile (only Reboot puts it in), its pick takes hand room, its looked-at cards leave the draw pile (auto-report: Motif's draws past a full hand).
 
 - ~~Draw-pile counter~~: dropped in 0.3.0 (the card badges are enough).
@@ -258,7 +258,7 @@ Rules:
 
 ---
 
-## 9. Proc indicators → `proc-indicators` (built in 0.19.0; full source list in FEATURES.md)
+## 9. Proc Tags → `proc-indicators` (built in 0.19.0; full source list in FEATURES.md)
 
 **Goal:** show, on each card in hand, every power or relic that playing it would set off. "Damage is damage, block is block": if a card's play gains block or deals damage through a proc, the card should say so, including procs one step removed (a card that *exhausts another card* while Feel No Pain is up).
 
@@ -414,7 +414,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 
 ---
 
-## 15. Out-of-combat reminders (Run Reminders; goal 3 in ROADMAP)
+## 15. Out-of-combat reminders (Reward Tags, Event Reminders, Shop Reminders, Map Reminders: `reward-tags`, `event-reminders`, `shop-reminders`, `map-reminders`; Run Reminders until decision #185; goal 3 in ROADMAP)
 
 An indicator on a choice outside combat when one of your relics changes what it does. Same language as on-card tabs (the relic's icon, crossed when it's against you).
 
@@ -567,7 +567,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] Gate detection on main's real assembly (2026-11-22): with v0.111.1 installed, `EveryGateOpensOnBeta` lists all 14 gates closed, as they should be on main. When a simulator rule first depends on the game version (decision #163: detected from the game's code, never the version string), test its detection on main's `assembly/sts2.dll` the same way.
 - [x] Decompile main's v0.111.1 (2026-11-22): code-identical to v0.111.0 (only the build's commit string changed); no gate came off, `MainReviewed` is v0.111.1, and the coverage check accepts main's reviewed version (`CoverageLedger.ReviewedGameVersions`).
 - [ ] **Replays of states with auto-play picks:** a report's start state with `AutoHand` plays (Stampede, Simpleton) doesn't load back (`SimAction` is abstract: no JSON type info), so those reports can't be added as replay cases yet.
-- [ ] **Decision #95 follow-ups:** total Intent Forecast's odds (logged per roll, not totalled) and the lethal tab's own chances; events' odds and Run Reminders' "logged only" lines (after combat).
+- [ ] **Decision #95 follow-ups:** total Intent Forecast's odds (logged per roll, not totalled) and the lethal tab's own chances; events' odds and Event Reminders' "logged only" lines (after combat).
 - [ ] **Decision #92: the gaps.** Each of these is a check skipped (rule 1) or an outcome not modelled (rule 2); the combat summaries count them, and each is closed by modelling it, until none is left:
   - Not modelled: Hellraiser auto-playing a drawn Strike whose play isn't built (aimed at a teammate, or every enemy you could hit can't die: the game caps those auto-plays); an end-of-turn auto-play from a hand that changed in a way not simulated (cards made or brought back; a drawn card whose play isn't built); an auto-played card whose play isn't built (aimed at a teammate).
   - Not checked (enemy turn): an extra turn (no enemy turn follows); an end-of-turn auto-play that changed your hand; an auto-play no branch made (another source); a teammate's end-of-turn auto-play.
@@ -644,7 +644,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] The dev stream pauses its frame data while the game's window is in the background; the charts show the time away as a shaded gap (decision #179).
 - [x] 2026-11-22 dev review (Ironclad win): Vicious and Dark Embrace draw their amount; a play's cards leave the hand before their events, and before the attack when its code takes them first (Fiend Fire: CardCode.TakesBeforeAttacking); No Draw and Fiddle in the simulator; Self-Forming Clay and empty-pile draws in the checks (decision #181); a win counted as won; the second steady session's leftovers (decision #180). The shop hitch on buying a card was the game's own (its frame rate dropped for a second with the mod's work under half a millisecond and none of its hooks running).
 - [x] Decision #177, second session: fights' steady garbage down to about 19 KB/s; out of fights, Run Reminders and Rest Site Preview on change (decision #180).
-- [ ] Decision #177, third session: read the steady table again. Rest Site Preview at the fire (about 1.8 KB a frame) is timed in parts now (rest-preview:read, :hover, :key). Card Indicators (small, now and then). The settings menu's Guide and Setup pages (about 14 KB a frame while open). The Battleworn Dummy fight's Fiend Fire predicted no Charon's Ashes damage: retest with the exhaust-first order.
+- [ ] Decision #177, third session: read the steady table again. Rest Site Preview at the fire (about 1.8 KB a frame) is timed in parts now (rest-preview:read, :hover, :key). Keyword Tags and Ethereal Fade (small, now and then; one feature, Card Indicators, until decision #185). The settings menu's Guide and Setup pages (about 14 KB a frame while open). The Battleworn Dummy fight's Fiend Fire predicted no Charon's Ashes damage: retest with the exhaust-first order.
 - [ ] No Draw and Fiddle at the end of your turn (Dark Embrace's saved Ethereal draws): the simulator stops draws only inside a play.
 - [x] Card programs, first step (decision #182): a card's actions in its code's order, read from the running game (beta and main), with behaviour tests (PlayBehaviourTests) and program tests on both branches. Iron Wave, Dash, Wah Cho, Wah Cho Ki, Second Wind and 10 more now in their own order.
 - [x] Card programs: eight value tables read from the program's commands and whom they act on instead (`CardEffects`: Osty killed, a target's HP set, a target's block taken, damage without an attack, block for another or for each player, a channel for the target's player, a second attack on every enemy after a kill). The reader follows static helpers of the game's models (Blade Symphony's `Shiv.CreateInHand`) and names each argument's owner (`Owner.Creature`, `cardPlay.Target`).
@@ -659,6 +659,8 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] Play Preview with a controller or keyboard: an untargeted card previews once selected (NControllerCardPlay plays it on confirm); targeted cards once aimed.
 - [x] Play Preview (decision #183): the held card's outcome on Incoming Damage, Teammate Incoming Damage, the Death Skull and the enemies' intents; checked by the play check. Test in game: the intent overlay's place and font, the tint, untargeted and targeted cards.
 - [x] Listeners (decision #184, part B3 of #182): cards in your piles listen after your powers and relics, in the game's order; Void and Regret fixed; Iteration and Pagestorm in their place.
+- [x] Names players read (decision #185): Keyword Tags, Proc Tags, Shuffle Tag, Potion Tags, Prediction Progress and the Forecast, Play and Coverage audits, ids kept as the settings keys; Ethereal Fade split out of Keyword Tags; Run Reminders split into Reward Tags, Event Reminders, Shop Reminders and Map Reminders, each starting as the old switch was; on-card and potion tabs are tags wherever a player reads them; the dev dashboard shows the names (`FeatureNames.Of`).
+- [ ] Test in game (decision #185): an old settings file (Card Indicators off, Run Reminders off, a place's group switch off) loads into the new switches as it was; the Outside fights page (four switches, the note naming those off, Inspect and the event chance under Event Reminders); Quick setup's Between fights rows; the dashboard's names, and ids on hover.
 - [ ] Drum of Battle with several cards exhausted: the game runs each card's exhaust and its reactions in turn; the simulator all exhausts, then Drum's energy (differs at 0 energy when Dark Embrace draws a Void). One exhaust action per card.
 - [ ] Cards a play returns to your hand (Make It So, Right Hand Hand, Whistling Arrows) never enter the simulated hand: the hand's size, room for later draws and Regret's count miss them.
 - [ ] Withering Presence: a Wither made into your hand during the turn isn't added to the cards acting at the end of the turn (its damage isn't simulated); then Aeonglass upgrading it as a monster listener.
@@ -692,7 +694,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [x] 1.10.0 (decision #64): the Inspect screen (groups, marks, chances, relic tabs and mark buttons, transform picker by card).
 - [ ] Test in game: Inspect at Colorful Philosophers, Room Full of Cheese, Glass Eye and a transform (Pandora's Box, an event transform); that Esc closes it and the game's keys are blocked while open.
 - [ ] Look across runs: `[audit] [odds]` lines (predicted chance against how often a card came up).
-- [ ] Test in game: the Guide page's Rest Preview, Run Reminders examples and the green 0 on the free-card examples.
+- [ ] Test in game: the Guide page's Rest Preview, reminders examples (Reward Tags, Event, Shop and Map Reminders) and the green 0 on the free-card examples.
 - [ ] **Dread mode:** boss stats and moves change in Dread runs (read live from intents); Dominion powers reviewed in the ledger. Queen's Dread opening applies 99 Frail, Weak and Vulnerable.
 
 ---

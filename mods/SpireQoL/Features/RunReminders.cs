@@ -15,44 +15,44 @@ using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Nodes.Screens.Shops;
 using SpireQoL.Cards;
 using SpireQoL.Data;
-using Sts2Mods.Core.Features;
 using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Features;
 
 /// <summary>
-/// Out-of-combat reminders (docs/FEATURES.md "Run Reminders", decision #37), like StS1's Relic
-/// Reminders:
-///  - Card rewards: a tab on each offered card for every relic that taking it sets off (Bing Bong,
-///    Lucky Fysh, Book of Five Rings on the pick that heals), with the offered-card tabs (CardTabs).
+/// What the four reminders outside fights share (docs/FEATURES.md "Reminders outside fights", decisions #37, #185), like StS1's
+/// Relic Reminders: the rules, the state each one keeps and the checks. Each place is a feature of its own, which runs its part of
+/// the frame here: Reward Tags (tags on cards you're offered: RewardTagsFeature), Event Reminders (icons beside event options, the
+/// chance under them and Inspect: EventRemindersFeature), Shop Reminders (icons beside shop prices: ShopRemindersFeature) and Map
+/// Reminders (icons beside the map legend's rows: MapRemindersFeature).
+///  - Card rewards: a tag on each offered card for every relic that taking it sets off (Bing Bong,
+///    Lucky Fysh, Book of Five Rings on the pick that heals), with the offered-card tags (CardTabs).
 ///  - Events: the icons of your relics that change what an option does, beside that option (Tungsten
 ///    Rod on HP loss, Bing Bong on a card or curse, Ectoplasm crossed on gold...). What an option does
 ///    is read from its own code: the game commands its OnChosen calls, following the event's own
 ///    methods but not the options it opens next. That's the option's rule, not a roll.
 /// Rules: Data/ChoiceReminders.cs.
 /// </summary>
-public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
+public sealed partial class RunReminders
 {
     private const string NodeName = "SpireQoL_Reminders";
     private const float EventIcon = 40f;
     private static readonly Color SlashColor = new(1f, 0.15f, 0.1f, 0.95f);
 
+    /// <summary>The feature whose time the event option check's hooks count under (OverlayHost.TimeHook).</summary>
+    private const string EventHookId = EventRemindersFeature.FeatureId;
+
     private readonly QolContext _ctx;
-    private int _frame;
 
-    public RunRemindersFeature(QolContext ctx) => _ctx = ctx;
+    public RunReminders(QolContext ctx) => _ctx = ctx;
 
-    public string Id => "run-reminders";
-    public string DisplayName => "Run Reminders";
-    public bool EnabledByDefault => true;
-
-    public void Apply(Harmony harmony)
+    /// <summary>Event Reminders' patch. Observe-only: the event-option check (what flashed after you chose an option).</summary>
+    internal static void PatchEventChosen(Harmony harmony)
     {
-        // Observe-only: the event-option check (what flashed after you chose an option).
         harmony.Patch(AccessTools.Method(typeof(EventOption), nameof(EventOption.Chosen)),
-            prefix: new HarmonyMethod(typeof(RunRemindersFeature), nameof(BeforeChosen)),
-            postfix: new HarmonyMethod(typeof(RunRemindersFeature), nameof(AfterChosen)));
+            prefix: new HarmonyMethod(typeof(RunReminders), nameof(BeforeChosen)),
+            postfix: new HarmonyMethod(typeof(RunReminders), nameof(AfterChosen)));
     }
 
     // ------------------------------------------------------------------ check (audit)
@@ -87,7 +87,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
 
     private static void BeforeChosen(EventOption __instance)
     {
-        using var timing = OverlayHost.TimeHook("run-reminders");
+        using var timing = OverlayHost.TimeHook(EventHookId);
         try
         {
             Close();
@@ -111,14 +111,14 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// <summary>The option's task: the window stays open until it ends (card choices can take a while).</summary>
     private static void AfterChosen(EventOption __instance, Task __result)
     {
-        using var timing = OverlayHost.TimeHook("run-reminders");
+        using var timing = OverlayHost.TimeHook(EventHookId);
         try { if (_window is { } window && window.Option == __instance) window.Task = __result; }
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-chosen"); }
     }
 
     private static void OnFlashed(RelicModel relic, IEnumerable<MegaCrit.Sts2.Core.Entities.Creatures.Creature> _)
     {
-        using var timing = OverlayHost.TimeHook("run-reminders");
+        using var timing = OverlayHost.TimeHook(EventHookId);
         try { if (_window is { } window && !window.Flashed.Contains(relic)) window.Flashed.Add(relic); }
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-flash"); }
     }
@@ -210,7 +210,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         LogOdds(window, added);
     }
 
-    private static void TickWindow()
+    internal static void TickWindow()
     {
         if (_window is not { } window) return;
         // A fight from the event: what happens in it isn't the option's.
@@ -220,30 +220,11 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         else if (++window.Frames > 100_000) Close();
     }
 
-    public void Attach(OverlayHost host)
-    {
-        _inspect = new SpireQoL.Menu.InspectScreen(_ctx.Host);
-    }
+    /// <summary>Event Reminders' Inspect screen, made once the overlay exists.</summary>
+    internal void AttachInspect() => _inspect ??= new SpireQoL.Menu.InspectScreen(_ctx.Host);
 
-    public void OnFrame(OverlayHost host)
-    {
-        // Each job its own part of the frame's times and memory (decision #177: the dev dashboard's steady table names the one that allocates).
-        using (host.Part("run-reminders:watch"))
-        {
-            TickWindow();
-            WatchReward();
-        }
-        // Event options and shop items change only when the page does: every few frames is plenty.
-        if (++_frame % 6 == 0)
-        {
-            using (host.Part("run-reminders:events")) EventOptions();
-            using (host.Part("run-reminders:shop")) ShopSlots();
-            using (host.Part("run-reminders:map")) MapLegend();
-        }
-        using (host.Part("run-reminders:watch")) TickShopWatch();
-        using (host.Part("run-reminders:offered")) OfferedCardTabs();
-        using (host.Part("run-reminders:inspect")) _inspect?.OnFrame();
-    }
+    /// <summary>The Inspect screen's frame (open or not).</summary>
+    internal void InspectFrame() => _inspect?.OnFrame();
 
     // ------------------------------------------------------------------ card reward tabs
 
@@ -370,7 +351,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// Bong), Lucky Fysh's gold, and whether Book of Five Rings healed exactly when its tab showed.
     /// Skipping or sacrificing adds no card and isn't checked.
     /// </summary>
-    private void WatchReward()
+    internal void WatchReward()
     {
         Player? me = null;
         try
@@ -454,7 +435,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
         return hashCode.ToHashCode();
     }
 
-    private void EventOptions()
+    internal void EventOptions()
     {
         var layout = NEventRoom.Instance?.Layout;
         if (layout == null || !GodotObject.IsInstanceValid(layout)) return;
@@ -569,7 +550,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// Book of Five Rings, Lucky Fysh), a potion is one you'd hold (Sozu and Belt Buckle crossed), and any purchase ends
     /// Maw Bank's gold (crossed). Cards the eggs or Fresnel Lens change already show it on the shop's own card.
     /// </summary>
-    private void ShopSlots()
+    internal void ShopSlots()
     {
         var inv = NMerchantRoom.Instance?.Inventory;
         if (inv == null || !GodotObject.IsInstanceValid(inv) || !inv.IsOpen) return;
@@ -809,7 +790,7 @@ public sealed partial class RunRemindersFeature : IFeature, IFrameFeature
     /// After you buy a card with Lucky Fysh: what the purchase cost you in the end against the net price shown, once the
     /// gold has settled (about a second and a half); a newer purchase replaces the watch.
     /// </summary>
-    private void TickShopWatch()
+    internal void TickShopWatch()
     {
         if (_shopWatch is not { } entryGoldBefore) return;
         if (entryGoldBefore.Frames < 90)

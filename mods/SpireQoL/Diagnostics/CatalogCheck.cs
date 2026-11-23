@@ -80,17 +80,24 @@ internal static class CatalogCheck
         var switches = SettingsMenu.FeatureRows.Select(featureRow => featureRow.Id).ToHashSet();
         foreach (var name in registered.Except(switches).Order()) problems.Add($"feature without a settings switch: {name}");
         foreach (var name in switches.Except(registered).Order()) problems.Add($"settings switch without a feature: {name}");
+        // Each switch is named as its feature is (decision #185: the name players read is in both, the dev dashboard showing the feature's).
+        var names = Features().ToDictionary(feature => feature.Id, feature => feature.DisplayName);
+        foreach (var (id, name, _, _) in SettingsMenu.FeatureRows)
+            if (names.TryGetValue(id, out var displayName) && !string.Equals(Telemetry.FeatureNames.Plain(displayName), name, StringComparison.OrdinalIgnoreCase))
+                problems.Add($"settings switch named apart from its feature: {id} is \"{name}\" in the menu, \"{displayName}\" as a feature");
         return problems;
     }
 
     /// <summary>The id of every feature class in the mod (Id is a constant on each: read from an instance made without its constructor).</summary>
-    public static IEnumerable<string> FeatureIds()
+    public static IEnumerable<string> FeatureIds() => Features().Select(feature => feature.Id);
+
+    /// <summary>Every feature class in the mod, as an instance made without its constructor (its Id and DisplayName are constants).</summary>
+    private static IEnumerable<Sts2Mods.Core.Features.IFeature> Features()
     {
         foreach (var type in typeof(CatalogCheck).Assembly.GetTypes())
         {
             if (type is not { IsAbstract: false, IsClass: true } || !typeof(Sts2Mods.Core.Features.IFeature).IsAssignableFrom(type)) continue;
-            var feature = (Sts2Mods.Core.Features.IFeature)RuntimeHelpers.GetUninitializedObject(type);
-            yield return feature.Id;
+            yield return (Sts2Mods.Core.Features.IFeature)RuntimeHelpers.GetUninitializedObject(type);
         }
     }
 
