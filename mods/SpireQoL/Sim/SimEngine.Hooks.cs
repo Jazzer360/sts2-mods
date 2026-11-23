@@ -142,6 +142,20 @@ public static partial class SimEngine
         return Math.Max(0, (int)num);
     }
 
+    /// <summary>
+    /// CreatureCmd.Damage's first steps (SimPipelines): Hook.ModifyDamage (<see cref="CalcDamage(SimState, decimal, DamageCtx, CapturedTerms?)"/>),
+    /// then AfterModifyingDamageAmount for each modelled source whose term changed the amount (Slow, Hard to Kill and Intangible
+    /// flash), for every damage: a card's hits, a proc's, a card's damage that isn't an attack.
+    /// </summary>
+    internal static int ModifiedDamage(SimState state, decimal baseDamage, DamageCtx damage, CapturedTerms? captured)
+    {
+        if (Listeners(state).Count == 0) return CalcDamage(state, baseDamage, damage, captured);
+        var modifiers = new List<(SimModel Model, int Owner)>();
+        var amount = CalcDamage(state, baseDamage, damage, captured, modifiers);
+        foreach (var (model, owner) in modifiers) model.AfterModifyingDamageAmount(state, owner, damage.Card);
+        return amount;
+    }
+
     /// <summary>Hook.ModifyBlock: the base, the enchantment, additive terms, then multipliers; the game's int cast.</summary>
     public static int CalcBlock(SimState state, decimal baseBlock, BlockCtx block, CapturedTerms? captured = null) => CalcBlock(state, baseBlock, block, captured, modifiers: null);
 

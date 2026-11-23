@@ -106,6 +106,10 @@ machinery.)
 - **Enemy attacks** use the same pipeline with the enemy as dealer and you (or a teammate) as target, so Weak or Strength
   loss a card applies, Colossus, Surrounded, Intercept and Tainted change the enemy's hits by the same rules, with no
   special code.
+- **Pipeline steps** (`Sim/SimPipelines.cs`, docs/CARD_PROGRAMS.md B1): each game command the simulator mirrors (GainBlock,
+  Damage on an enemy and on a player, an attack, PowerCmd.Apply, Draw, Exhaust, Discard, GainEnergy, Channel) lists the game
+  hooks its simulated version runs, in order. `PipelineParityTests` (catalog tests) reads each command's `Hook` calls from the
+  game's code on both branches and fails on a hook missing, extra or out of order that isn't modelled or reviewed there.
 
 ### Card scripts (`Sim/Scripts` + `Procs/ScriptBuilder.cs`)
 The adapter turns a card into a script: generic actions from its dynamic values (Damage/HitCount → attack; Block → gain
