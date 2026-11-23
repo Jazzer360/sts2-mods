@@ -387,7 +387,7 @@ public static partial class SimAdapter
     /// <summary>
     /// The powers the card's code applies (CardCoverage.PowersApplied), each play: buffs to you (or the targeted teammate:
     /// Intercept's Covered), the debuffs PlayFacts finds it lands on enemies to its target or every enemy, and the Strength it
-    /// takes or gives (EnemyStrengthCards). Amounts from the card's PowerVar, its plain value, or 1. Only powers the simulator
+    /// takes or gives (EnemyStrengthOf). Amounts from the card's PowerVar, its plain value, or 1. Only powers the simulator
     /// reads: modelled ones, the ones it keeps as numbers, and poison.
     /// </summary>
     private static IEnumerable<SimAction> PowersOf(CardModel card, PlayFacts facts, string name, int allyId)
@@ -403,6 +403,7 @@ public static partial class SimAdapter
             return PlainSelfPowerAmount(card, type) ?? 1;
         }
         bool Simulated(string powerName) => SimModels.Has(powerName) || SelfPowers.Contains(powerName) || powerName == nameof(PoisonPower) || powerName == nameof(ArtifactPower);
+        var enemyStrength = EnemyStrengthOf(card);
         var debuffs = facts.EnemyDebuffs.Concat(facts.EnemyTemporaryDebuffs).ToHashSet();
         var whereEnemies = card.TargetType switch
         {
@@ -415,10 +416,10 @@ public static partial class SimAdapter
             var simPowerName = SimPowerName(type);
             if (!Simulated(simPowerName) && !(PlayFacts.IsDebuffType(type) && debuffs.Contains(type))) continue;
             if (simPowerName == nameof(PoisonPower) && card.TargetType == TargetType.RandomEnemy) continue; // Bouncing Flask: random, a summary field
-            // A temporary Strength loss (Piercing Wail, Dark Shackles: TemporaryStrengthPower) is the Strength action below
-            // (EnemyStrengthCards): one debuff, so one Artifact charge takes all of it (issue #371: applied twice, Artifact took
-            // the first and the Strength still landed).
-            if (typeof(TemporaryStrengthPower).IsAssignableFrom(type) && EnemyStrengthCards.ContainsKey(name)) continue;
+            // A temporary Strength loss on enemies (Piercing Wail, Dark Shackles: TemporaryStrengthPower) is the Strength action below
+            // (EnemyStrengthOf): one debuff, so one Artifact charge takes all of it (issue #371: applied twice, Artifact took the first
+            // and the Strength still landed).
+            if (typeof(TemporaryStrengthPower).IsAssignableFrom(type) && enemyStrength.Any(change => change.Power == type)) continue;
             if (PlayFacts.IsDebuffType(type))
             {
                 if (!debuffs.Contains(type) || whereEnemies is not { } where) continue;
@@ -439,13 +440,39 @@ public static partial class SimAdapter
             }
         }
         // Strength the card takes from enemies (this turn or for good) or gives them (Fight Me).
-        if (EnemyStrengthCards.TryGetValue(name, out var str) && str.Var != null)
-        {
-            var amount = str.Sign * (str.Var == "" ? 1 : Sts2State.Var(card, str.Var));
-            var where = str.All ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target;
-            actions.Add(new ApplyPowerAction(PowerId.Strength, amount) { To = where, Debuff = amount < 0 });
-        }
+        foreach (var (_, amount, all) in enemyStrength)
+            actions.Add(new ApplyPowerAction(PowerId.Strength, amount) { To = all ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = amount < 0 });
         return actions;
+    }
+
+    /// <summary>
+    /// The Strength a play takes from enemies or gives them, read from its program (decision #182): each PowerCmd.Apply of StrengthPower
+    /// or of a temporary Strength power (TemporaryStrengthPower: Piercing Wail, Dark Shackles take Strength until the end of the turn, a
+    /// debuff's sign) to its target when it's aimed at an enemy, or to every enemy you can hit (a loop over them, or all of them at once:
+    /// Crush Under), on its condition: the power, the amount (its argument on the board: Shared Fate's -EnemyStrengthLoss, Resonance's -1)
+    /// and whether it's every enemy.
+    /// </summary>
+    internal static List<(Type Power, int Amount, bool All)> EnemyStrengthOf(CardModel card)
+    {
+        var changes = new List<(Type, int, bool)>();
+        var program = Procs.Programs.CardPrograms.Of(card.GetType());
+        var board = new Procs.Programs.ProgramBoard(card);
+        var applied = Diagnostics.CardCoverage.PowersApplied(card.GetType());
+        foreach (var apply in Procs.Programs.CardEffects.Find(program, command => command.Command is { DeclaringType: "PowerCmd", Name: "Apply", GenericArguments.Count: 1 }))
+        {
+            if (applied.FirstOrDefault(type => type.Name == apply.Command.Command.GenericArguments[0]) is not { } power
+                || power != typeof(StrengthPower) && !typeof(TemporaryStrengthPower).IsAssignableFrom(power)
+                || apply.Command.Values.Count < 3 || Procs.Programs.ProgramEvaluator.Holds(apply.Condition, board, program) == false) continue;
+            var whom = apply.Command.Values[1];
+            var all = whom.Parts().Concat(apply.Loops.SelectMany(loop => loop.Items?.Parts() ?? Array.Empty<Procs.Programs.ProgramValue>()))
+                .Any(part => part is Procs.Programs.QueryValue { Name: "HittableEnemies" });
+            var atTarget = card.TargetType == TargetType.AnyEnemy && whom.Parts().Any(part => part is Procs.Programs.QueryValue { Name: "Target", Of: Procs.Programs.NamedValue { Name: "cardPlay" } });
+            if (!all && !atTarget) continue;
+            var amount = Procs.Programs.ProgramEvaluator.Number(apply.Command.Values[2], board, program) is { } read ? (int)read : 1;
+            var sign = typeof(TemporaryStrengthPower).IsAssignableFrom(power) && PlayFacts.IsDebuffType(power) ? -1 : 1;
+            changes.Add((power, sign * amount, all));
+        }
+        return changes;
     }
 
     /// <summary>How a card's play takes cards into your hand (HandTakeOf).</summary>

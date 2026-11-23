@@ -128,6 +128,10 @@ public static class ProgramEvaluator
                 NullValue => null,
                 NamedValue { Name: "this" } => context.Board.Card,
                 NamedValue { Name: "cardPlay" } => ThePlay,
+                // decimal's constants (Decimal.One, Zero, MinusOne: Resonance's -1 Strength).
+                NamedValue { Name: "Decimal.One" } => 1m,
+                NamedValue { Name: "Decimal.Zero" } => 0m,
+                NamedValue { Name: "Decimal.MinusOne" } => -1m,
                 NamedValue named when context.Parameters.TryGetValue(named.Name, out var bound) => bound,
                 ParameterValue parameter => context.Parameters.TryGetValue(parameter.Name, out var bound) ? bound : Unknown,
                 CardValue card => CardNumber(card.Key, context.Board),
@@ -259,6 +263,16 @@ public static class ProgramEvaluator
         // x is T: x when it's a T, else null.
         if (query.Name == "is" && query.Of != null) return asked != null && IsOfType(asked.GetType(), query.Type) ? asked : null;
         if (query.Of == null && query.Type == "Enumerable") return Linq(query, arguments, context);
+        // decimal's operators on numbers (Shared Fate's -EnemyStrengthLoss).
+        if (query.Of == null && query.Name is "op_UnaryNegation" or "op_Addition" or "op_Subtraction" or "op_Multiply")
+            return (query.Name, arguments.Select(ToNumber).ToList()) switch
+            {
+                ("op_UnaryNegation", [{ } only]) => -only,
+                ("op_Addition", [{ } left, { } right]) => left + right,
+                ("op_Subtraction", [{ } left, { } right]) => left - right,
+                ("op_Multiply", [{ } left, { } right]) => left * right,
+                _ => Unknown,
+            };
         // Math.Min, Max, Abs over numbers (Dredge's Min(Cards, your hand's room)).
         if (query.Of == null && query.Type == "Math")
             return (query.Name, arguments.Select(ToNumber).ToList()) switch

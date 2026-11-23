@@ -83,21 +83,6 @@ public static partial class SimAdapter
     /// </summary>
     internal static bool IsTemporaryThorns(Type power) => power.BaseType?.Name == "TemporaryThornsPower";
 
-
-    /// <summary>
-    /// Cards that change enemies' Strength this turn (decompile v0.111.0): the value's key ("" = 1),
-    /// all enemies or the target, and the sign. The temporary ones (Piercing Wail, Dark Shackles...)
-    /// apply TemporaryStrengthPower subclasses that take Strength away until the end of the turn.
-    /// </summary>
-    internal static readonly Dictionary<string, (string? Var, bool All, int Sign)> EnemyStrengthCards = new()
-    {
-        [nameof(PiercingWail)] = ("StrengthLoss", true, -1), [nameof(DarkShackles)] = ("StrengthLoss", false, -1),
-        [nameof(EnfeeblingTouch)] = ("StrengthLoss", false, -1), [nameof(CrushUnder)] = ("StrengthLoss", true, -1),
-        [nameof(Mangle)] = ("StrengthLoss", false, -1), [nameof(DyingStar)] = ("StrengthLoss", true, -1),
-        [nameof(SharedFate)] = ("EnemyStrengthLoss", false, -1), [nameof(Resonance)] = ("", true, -1),
-        [nameof(FightMe)] = ("EnemyStrength", false, 1),
-    };
-
     // ------------------------------------------------------------------ state
 
     /// <summary>
