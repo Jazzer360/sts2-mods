@@ -513,6 +513,12 @@ public static class CardEffects
         return found;
     }
 
+    public static bool TriggersPoison(Type cardType) => TriggersPoison(CardPrograms.Of(cardType));
+
+    /// <summary>Sets off poison during the play (PoisonPower.Trigger, a power's action the card runs: Outbreak on every enemy's poison).</summary>
+    public static bool TriggersPoison(CardProgram program) =>
+        program.Commands.Any(command => command.Command is { DeclaringType: nameof(MegaCrit.Sts2.Core.Models.Powers.PoisonPower), Name: "Trigger" });
+
     // ---- attacks
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<Found>> AttackSteps = new();

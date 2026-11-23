@@ -122,7 +122,7 @@ public static partial class SimAdapter
         }
         if (Procs.Programs.CardEffects.TakesTargetsBlock(card.GetType())) play.Body.Add(new StripBlockAction(RemoveArtifact: true));
         play.Body.AddRange(PowersOf(card, facts, name, allyId));
-        if (TriggerPoisonCards.Contains(name)) play.Body.Add(new TriggerPoisonAction());
+        if (Procs.Programs.CardEffects.TriggersPoison(card.GetType())) play.Body.Add(new TriggerPoisonAction());
         play.Body.AddRange(OrbsOf(card, me, combat, name, play.ChannelToAlly ? allyId : owner));
         // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
         CardEnergy.AddTo(play, card, me, combat, ids.FirstOrDefault(entry => entry.Value == targetId).Key, owner, allyId);

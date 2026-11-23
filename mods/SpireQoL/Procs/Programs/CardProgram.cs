@@ -204,6 +204,14 @@ public static class CardProgramReader
         member.Kind == CodeMemberKind.Method && member.Namespace == "MegaCrit.Sts2.Core.Commands" && !ShowOnlyTypes.Contains(member.DeclaringType)
         && !ShowsOnly(member.Name) && !Asks(member.Name);
 
+    /// <summary>
+    /// A power's own action the card runs, awaited (Outbreak's PoisonPower.Trigger on each enemy's poison): a method of a power that
+    /// returns a task, not a question (Get..., Is...). It's a step like a command, named by its power and method.
+    /// </summary>
+    internal static bool IsPowerAction(CodeMember member) =>
+        member is { Kind: CodeMemberKind.Method, HasThis: true, Namespace: "MegaCrit.Sts2.Core.Models.Powers" } && member.ValueType.StartsWith("Task", StringComparison.Ordinal)
+        && !Asks(member.Name) && !member.Name.StartsWith("get_", StringComparison.Ordinal);
+
     private static bool ShowsOnly(string name) =>
         name.StartsWith("Preview", StringComparison.Ordinal) || name.StartsWith("TriggerAnim", StringComparison.Ordinal) || name.Contains("Vfx")
         || name.Contains("Wait") || name.StartsWith("Shake", StringComparison.Ordinal) || name.StartsWith("Play", StringComparison.Ordinal) && name.EndsWith("Anim", StringComparison.Ordinal);
@@ -317,7 +325,7 @@ public static class CardProgramReader
                     into.Add(Attack(flow, i, member) with { Condition = condition });
                     continue;
                 }
-                if (IsCommand(member))
+                if (IsCommand(member) || IsPowerAction(member))
                 {
                     into.Add(new CommandStep(instruction.Offset, member, Arguments(flow, i, member))
                         { Condition = condition, Values = flow.ArgumentValues(i, member), Inner = callback ?? (IReadOnlyList<ProgramStep>)Array.Empty<ProgramStep>() });

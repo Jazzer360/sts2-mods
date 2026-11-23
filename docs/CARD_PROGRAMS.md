@@ -290,6 +290,8 @@ hooks.
     every enemy you can hit (a loop over them or all at once), its amount evaluated (decimal's operators and constants now evaluate:
     Shared Fate's `-EnemyStrengthLoss`, Resonance's `Decimal.MinusOne`). It replaced `EnemyStrengthCards`; StrengthLossTests proves
     the cards and amounts are the table's.
+  - A power's own action the card runs, awaited (`CardProgramReader.IsPowerAction`: Outbreak's `PoisonPower.Trigger` on each enemy's
+    poison) is a step like a command; `CardEffects.TriggersPoison` replaced `TriggerPoisonCards` (only Outbreak has one, on both branches).
   - **The evaluator** (`ProgramEvaluator`) evaluates a condition before the play, each query translated once: a property of the
     game's objects is read (the game's own answer), a method only when it only asks (`Is`, `Has`, `Can`, `Get`, `Contains`,
     `HappenedThisTurn`), never anything about the RNG; Linq over a collection with the code's own lambda; your hand without the
@@ -377,7 +379,7 @@ references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter
 | (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
 | `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
-| `TriggerPoisonCards`, `TeammatesShivCards` | Outbreak, Blade Symphony | A call on a power (`PoisonPower.Trigger` isn't a command); the player a helper's Shivs go to (an argument inside the helper: a game helper's parameters aren't bound to its caller's arguments yet). |
+| `TeammatesShivCards` | Blade Symphony | The player a helper's Shivs go to (an argument inside the helper: a game helper's parameters aren't bound to its caller's arguments yet). |
 
 ## Part B: pipelines and models checked against the game's code
 

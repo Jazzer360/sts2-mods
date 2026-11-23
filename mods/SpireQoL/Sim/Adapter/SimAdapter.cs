@@ -61,9 +61,6 @@ public static partial class SimAdapter
     /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
     internal static readonly HashSet<string> RepeatPerKillCards = new() { nameof(EchoingSlash) };
 
-    /// <summary>Cards that set off every enemy's poison during the play (Outbreak: PoisonPower.Trigger on each).</summary>
-    internal static readonly HashSet<string> TriggerPoisonCards = new() { nameof(Outbreak) };
-
     /// <summary>
     /// Cards that put Shivs into every living teammate's hand, not yours (BladeSymphony.OnPlay: Shiv.CreateInHand(teammate),
     /// so the teammate is the creator: their created-card procs, Arsenal, Pillar of Creation, Regalite).

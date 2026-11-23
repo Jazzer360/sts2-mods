@@ -261,7 +261,7 @@ public sealed partial class ProcAudit
         var procDamage = entries.OfType<DamageReceivedEntry>().Where(damage => damage.CardSource == null).ToList();
         // A card that sets off poison (Outbreak: PoisonPower.Trigger) deals it with no card and no dealer: the card's own effect,
         // checked by the enemies' HP after the play (the simulator), not a proc.
-        if (Sim.SimAdapter.TriggerPoisonCards.Contains(window.Card.GetType().Name))
+        if (Procs.Programs.CardEffects.TriggersPoison(window.Card.GetType()))
             procDamage = procDamage.Where(damage => !(damage.Dealer == null && damage.Result.Receiver.IsEnemy)).ToList();
         int Dealt(DamageReceivedEntry damage) => damage.Result.TotalDamage + damage.Result.OverkillDamage;
         var toEnemies = procDamage.Where(damage => damage.Result.Receiver.IsEnemy).Sum(Dealt);
