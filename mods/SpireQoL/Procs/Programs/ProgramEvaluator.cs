@@ -56,6 +56,18 @@ public static class ProgramEvaluator
     public static decimal? Number(ProgramValue value, ProgramBoard board, CardProgram program) =>
         ToNumber(Evaluate(value, new Context(board, program, new Dictionary<string, object?>())));
 
+    /// <summary>Whether <paramref name="condition"/> holds for <paramref name="item"/> (the card a loop or a pick takes: "each").</summary>
+    public static bool? HoldsFor(ProgramCondition condition, object? item, ProgramBoard board, CardProgram program) =>
+        Holds(condition, new Context(board, program, new Dictionary<string, object?> { ["each"] = item }));
+
+    /// <summary>Whether a lambda (a filter) holds for <paramref name="item"/>.</summary>
+    public static bool? Passes(LambdaValue lambda, object? item, ProgramBoard board, CardProgram program) =>
+        Holds(lambda.Body, new Context(board, program, new Dictionary<string, object?> { [lambda.Parameter] = item }));
+
+    /// <summary>The items a collection value holds on the board (your hand without the played card); null when it can't be told.</summary>
+    public static IReadOnlyList<object?>? Items(ProgramValue value, ProgramBoard board, CardProgram program) =>
+        Evaluate(value, new Context(board, program, new Dictionary<string, object?>())) is IEnumerable items and not string ? items.Cast<object?>().ToList() : null;
+
     /// <summary>The condition asks about the play's target (cardPlay.Target): it can differ from one target to the next.</summary>
     public static bool AsksTarget(ProgramCondition condition) =>
         condition.Literals.Any(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "Target", Of: NamedValue { Name: "cardPlay" } }));
@@ -213,6 +225,8 @@ public static class ProgramEvaluator
         // Osty.CheckMissingWithAnim: Osty missing or dead (it plays an animation besides; never called).
         if (query.Of == null && query.Name == "CheckMissingWithAnim" && arguments is [Player player]) return player.IsOstyMissing;
         if (board.PlaysBefore > 0 && LaterPlay(query, asked, arguments, context) is var later && later != Unknown) return later;
+        // x is T: x when it's a T, else null.
+        if (query.Name == "is" && query.Of != null) return asked != null && IsOfType(asked.GetType(), query.Type) ? asked : null;
         if (query.Of == null && query.Type == "Enumerable") return Linq(query, arguments, context);
         if (query.Of == null) return StaticMember(query, arguments);
         if (asked == null) return Unknown;
@@ -325,7 +339,8 @@ public static class ProgramEvaluator
                 return items.Where(item => !left.Any(other => ReferenceEquals(other, item))).ToList();
             }
             case "Contains" when arguments.Length > 1:
-                return items.Any(item => ReferenceEquals(item, arguments[1]) || item != null && item.Equals(arguments[1]));
+                return items.Any(item => ReferenceEquals(item, arguments[1]) || item != null && item.Equals(arguments[1])
+                                         || ToNumber(item) is { } number && number == ToNumber(arguments[1]));
             case "OfType" when query.GenericArguments.Count == 1:
                 return items.Where(item => item != null && IsOfType(item.GetType(), query.GenericArguments[0])).ToList();
             default:

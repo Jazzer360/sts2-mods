@@ -231,6 +231,15 @@ hooks.
     asks `cardPlay.Target`) replaced `ConditionalDrawCards` and `TargetDrawCards`, and with them `CardsDrawn`'s cases for FTL,
     Impatience, Fetch, Restlessness, Ki Hop, Wrest, Scrawl, Calculated Gamble, a calculated count and Mad Science's Wisdom rider.
     The card scan flags a draw on a condition the evaluator can't read, in place of a gold-glowing card missing from the table.
+  - Other cards exhausted (2026-11-23): `CardEffects.ExhaustsOfOthers` reads each `CardCmd.Exhaust` of other cards as a pick
+    (`Picked`: the card a `CardSelectCmd` gave, or a loop over its result; from your draw pile when the pick names it; with a test on
+    the picked card, The Hermit's Curse), a roll (`Random`: `NextItem` over a collection, never called) or a loop over a collection
+    (`Each`: your hand, a `Where` of it, a helper's value such as Second Wind's `GetCards`). `PlayFacts.ExhaustOthers` counts them on
+    the board (a pick one card a play or the selector's most, a roll one a play, a loop each card once), and `ExhaustPickOf` takes
+    the pick, a filter by type as its `Only` or `Except`. They replaced `ExhaustOthers`' cases, `ExhaustPickOf`'s and
+    `ExhaustTakesNoActingCard`: the card scan now evaluates a filter that isn't a type (Growth's Sadness, Florescence's Shoot cards,
+    Flak Cannon's statuses) on every card that acts when exhausted, and flags one any could pass. The reader now also reads a
+    helper's returned value, `is`, a struct built in place (a selector's prefs) and what a foreach goes over (`LoopStep.Items`).
   - **The evaluator** (`ProgramEvaluator`) evaluates a condition before the play, each query translated once: a property of the
     game's objects is read (the game's own answer), a method only when it only asks (`Is`, `Has`, `Can`, `Get`, `Contains`,
     `HappenedThisTurn`), never anything about the RNG; Linq over a collection with the code's own lambda; your hand without the
@@ -307,7 +316,7 @@ The aim is every card read by the interpreter, with no card named. What is left 
 |---|---|---|
 | `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The tests are read now (Pillage's loop's `While`: the drawn card, its type, your hand's room; Escape Plan's block on the drawn card being a Skill); what's left is turning a test of a command's result into the simulator's `DrawnCardAction`. |
 | (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
-| `ExhaustOthers`, `ExhaustPickOf`, `ExhaustTakesNoActingCard`, `DiscardCount`, `TransformCount`, `TakenToHandCount`, `GeneratedCount` (PlayFacts) | most cards that exhaust, discard, transform, take or make cards | The count: a loop over a filtered collection (`Where` with a lambda: Second Wind's non-Attacks, Growth's Sadness) or a pick's size. Loops now say what they go over (`each of Hand.Cards.ToList`), so the unfiltered cases are within reach; filters need the lambda read. |
+| `DiscardCount`, `TransformCount`, `TakenToHandCount`, `GeneratedCount` (PlayFacts) | most cards that discard, transform, take or make cards | Within reach now: the exhausts show the way (a pick's size from its selector, a loop's collection evaluated with its lambda). Not done yet. |
 | `ChannelCount`, `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | orb, block and multi-hit cards | Counts from loops and conditions (`loop over Repeat`, Chill's loop over enemies, Cho Firm's arrow test): needs loop counts as values and conditions as queries. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TriggerPoisonCards`, `TeammatesShivCards`, `EnemyStrengthCards` | Outbreak, Blade Symphony, Strength takers | A call on a power (`PoisonPower.Trigger` isn't a command); the player a helper's Shivs go to (an argument inside the helper); a power's sign and duration. |

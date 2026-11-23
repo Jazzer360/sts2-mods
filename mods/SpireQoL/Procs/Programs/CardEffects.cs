@@ -126,6 +126,119 @@ public static class CardEffects
         return draws;
     }
 
+    // ---- other cards exhausted (CardCmd.Exhaust in a play, of cards that aren't the one played)
+
+    /// <summary>How an exhaust of other cards takes them.</summary>
+    public enum ExhaustWay
+    {
+        /// <summary>Cards you pick (CardSelectCmd): Brand, Burning Pact, Purity, Cleanse from your draw pile, The Hermit's Curse.</summary>
+        Picked,
+        /// <summary>One card at random from a collection (CombatCardSelection.NextItem: Cinder, Thrash).</summary>
+        Random,
+        /// <summary>Each card of a collection (Fiend Fire your hand, Second Wind its non-Attacks, Growth its Sadness, Flak Cannon your statuses).</summary>
+        Each,
+    }
+
+    /// <summary>
+    /// One CardCmd.Exhaust of other cards in a play, with everything it runs on: how it takes them, what it goes over (the collection a
+    /// loop or a roll is over), the pick it takes them from, and the tests on the picked card (The Hermit: a Curse).
+    /// </summary>
+    public sealed record ExhaustOfOthers(CommandStep Command, ProgramCondition Condition, ExhaustWay Way, ProgramValue? Items, ChoiceStep? Pick)
+    {
+        /// <summary>The pick is from your draw pile (Cleanse: CardSelectCmd.FromCombatPile on PileType.Draw), not your hand.</summary>
+        public bool FromDrawPile => Pick?.Values.Any(value => value is QueryValue { Name: "GetPile", Arguments: [ConstantValue { Value: var pile }, ..] }
+                                                                && pile == (long)MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw) == true;
+
+        /// <summary>
+        /// How many one pick takes at most: one for its first card (FirstOrDefault), else the selector's most (CardSelectorPrefs' last
+        /// number: Purity's Cards).
+        /// </summary>
+        public ProgramValue PerPick => Command.Values.Count > 1 && Command.Values[1] is QueryValue { Name: "FirstOrDefault" } || Pick == null
+            ? new ConstantValue(1)
+            : Pick.Values.OfType<QueryValue>().FirstOrDefault(value => value.Name == ".ctor" && value.Type == "CardSelectorPrefs") is { Arguments.Count: > 0 } prefs
+                ? prefs.Arguments[^1] : new UnknownValue("pick size");
+
+        /// <summary>The tests its condition makes on the card it takes (each: a loop's item), as a filter; the rest of its condition apart.</summary>
+        public ProgramCondition ItemTest => Only(Condition, onItem: true);
+        public ProgramCondition PlayTest => Only(Condition, onItem: false);
+
+        /// <summary>What it takes from the collection it goes over (Items' Where lambda; null when it's all of it).</summary>
+        public LambdaValue? Filter => Unwrapped(Items) is QueryValue { Name: "Where", Arguments: [_, LambdaValue lambda] } ? lambda : null;
+
+        private static ProgramValue? Unwrapped(ProgramValue? value) => value switch
+        {
+            QueryValue { Name: "ToList" or "ToArray", Arguments: [var inner] } => Unwrapped(inner),
+            StoredValue stored => Unwrapped(stored.Value),
+            _ => value,
+        };
+
+        private static ProgramCondition Only(ProgramCondition condition, bool onItem)
+        {
+            if (condition.Terms.Count != 1) return onItem ? ProgramCondition.Always : condition;
+            var kept = ProgramCondition.Always;
+            foreach (var literal in condition.Terms[0])
+                if (literal.Test.Parts().Any(part => part is NamedValue { Name: "each" }) == onItem) kept = kept.And(literal);
+            return kept;
+        }
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<ExhaustOfOthers>> Exhausts = new();
+
+    public static IReadOnlyList<ExhaustOfOthers> ExhaustsOfOthers(Type cardType) => Exhausts.GetOrAdd(cardType, type => ExhaustsOfOthers(CardPrograms.Of(type)));
+
+    /// <summary>
+    /// The play's exhausts of other cards, in order: CardCmd.Exhaust of a pick's card (Picked), of a roll's (Random), or of each card a
+    /// loop goes over (Each; a loop over a pick's result is Picked). An exhaust of the card itself, or of a card it can't tell, isn't one.
+    /// </summary>
+    public static IReadOnlyList<ExhaustOfOthers> ExhaustsOfOthers(CardProgram program)
+    {
+        var exhausts = new List<ExhaustOfOthers>();
+        ChoiceStep? lastPick = null;
+        void Walk(IEnumerable<ProgramStep> steps, ProgramCondition outer, LoopStep? loop)
+        {
+            foreach (var step in steps)
+            {
+                var condition = step.Condition is { } own ? outer.And(own) : outer;
+                switch (step)
+                {
+                    case ChoiceStep choice:
+                        lastPick = choice;
+                        break;
+                    case LoopStep inner:
+                        Walk(inner.Body, condition, inner);
+                        break;
+                    case CommandStep command:
+                        if (Is(command, "CardCmd", "Exhaust") && command.Values.Count > 1)
+                        {
+                            // What it exhausts (a local holding a roll's or a pick's card is that card).
+                            var exhausted = Unstored(command.Values[1])!;
+                            if (exhausted is NamedValue { Name: "each" } && loop != null)
+                            {
+                                if (Unstored(loop.Items) is ResultValue { Command: var picked } && picked.StartsWith("CardSelectCmd.", StringComparison.Ordinal))
+                                    exhausts.Add(new ExhaustOfOthers(command, condition, ExhaustWay.Picked, loop.Items, lastPick));
+                                else if (loop.Items != null)
+                                    exhausts.Add(new ExhaustOfOthers(command, condition, ExhaustWay.Each, loop.Items, Pick: null));
+                            }
+                            else if (exhausted.Parts().Any(part => part is ResultValue { Command: var result } && result.StartsWith("CardSelectCmd.", StringComparison.Ordinal)))
+                                exhausts.Add(new ExhaustOfOthers(command, condition, ExhaustWay.Picked, Items: null, lastPick));
+                            else if (exhausted is QueryValue { Name: "NextItem", Arguments: [var from] })
+                                exhausts.Add(new ExhaustOfOthers(command, condition, ExhaustWay.Random, from, Pick: null));
+                        }
+                        Walk(command.Inner, condition, loop);
+                        break;
+                }
+            }
+        }
+        Walk(program.Steps, ProgramCondition.Always, loop: null);
+        return exhausts;
+    }
+
+    /// <summary>A value as stored (a local holding it is it).</summary>
+    private static ProgramValue? Unstored(ProgramValue? value) => value is StoredValue stored ? Unstored(stored.Value) : value;
+
+    /// <summary>It exhausts other cards in its play, read from its program (True Grit, Fiend Fire, Second Wind, Cleanse...).</summary>
+    public static bool ExhaustsOthers(CardProgram program) => ExhaustsOfOthers(program).Count > 0;
+
     public static bool DrawsOnACondition(Type cardType) => DrawsOnACondition(CardPrograms.Of(cardType));
     public static bool DrawsDependOnTarget(Type cardType) => DrawsForYou(cardType).Any(draw => ProgramEvaluator.AsksTarget(draw.Condition));
 

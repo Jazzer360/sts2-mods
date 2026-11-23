@@ -534,7 +534,8 @@ public sealed class PlayFacts
             RandomOutcome = combat.HittableEnemies.Count(creature => creature.IsAlive) > 1
                             && (evoked.Any(orb => orb is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
         };
-        facts.ResolveDraws(hand.Count, drawPile, name == nameof(Cleanse));
+        // Exhausts from your draw pile (Cleanse's pick, read from its program) leave your hand's room alone.
+        facts.ResolveDraws(hand.Count, drawPile, Programs.CardEffects.ExhaustsOfOthers(card.GetType()).Any(exhaust => exhaust.FromDrawPile));
         return facts;
     }
 
@@ -872,61 +873,123 @@ public sealed class PlayFacts
 
     // ------------------------------------------------------------------ exhaust / discard
 
-    internal static int ExhaustOthers(CardModel card, string name, List<CardModel> others, int drawPile, int plays)
+    /// <summary>
+    /// Other cards the play exhausts, read from its program (decision #182: CardEffects.ExhaustsOfOthers), on the board: a pick takes
+    /// one card a play (a pick's first: Brand, Burning Pact) or the selector's most (Purity), from your hand or your draw pile
+    /// (Cleanse), of the cards its test on the picked card lets through (The Hermit: a Curse); a roll takes one card a play from what it
+    /// rolls over (Thrash: your Attacks); a loop takes each card of what it goes over once (Fiend Fire your hand, Second Wind its
+    /// non-Attacks, Growth its Sadness, Flak Cannon your statuses: a later play finds them gone). Only the exhausts whose condition holds
+    /// (True Grit's pick when upgraded, its roll when not). A collection that can't be told on the board (the game's template card) is
+    /// <paramref name="others"/>.
+    /// </summary>
+    internal static int ExhaustOthers(CardModel card, string name, List<CardModel> others, int drawPile, int plays) =>
+        Exhausted(card, others, drawPile, plays, fromHandOnly: false);
+
+    /// <summary>Of those, the ones that leave your hand: not Cleanse's (your draw pile); of a collection from every pile, the ones in your hand.</summary>
+    private static int ExhaustedFromHand(CardModel card, List<CardModel> others, int drawPile, int plays) =>
+        Exhausted(card, others, drawPile, plays, fromHandOnly: true);
+
+    private static int Exhausted(CardModel card, List<CardModel> others, int drawPile, int plays, bool fromHandOnly)
     {
-        var otherCount = others.Count;
         var playCount = Math.Max(1, plays);
-        return name switch
+        var program = Programs.CardPrograms.Of(card.GetType());
+        var board = new Programs.ProgramBoard(card);
+        var total = 0;
+        foreach (var exhaust in Programs.CardEffects.ExhaustsOfOthers(card.GetType()))
         {
-            // One chosen or random card from hand, per play.
-            nameof(Brand) or nameof(BurningPact) or nameof(TrueGrit) or nameof(Scavenge) or nameof(Cinder) => Math.Min(playCount, otherCount),
-            nameof(Thrash) => Math.Min(playCount, others.Count(other => other.Type == CardType.Attack)),
-            nameof(Cleanse) => Math.Min(playCount, drawPile), // from the draw pile
-            // The whole rest of the hand (a second play finds the hand empty).
-            nameof(FiendFire) or nameof(Stoke) => otherCount,
-            nameof(SecondWind) => others.Count(other => other.Type != CardType.Attack),
-            // v0.113.0: The Devil exhausts your hand; Growth every Sadness in it; Florescence every Shoot card
-            // you have outside your exhaust pile (any pile).
-            nameof(TheDevil) => otherCount,
-            nameof(Growth) => others.Count(other => other.GetType().Name == nameof(Sadness)),
-            nameof(Florescence) => OwnerOf(card)?.PlayerCombatState is { } pcs
-                ? pcs.AllCards.Count(combatCard => combatCard != card && Fool.IsShot(combatCard) && combatCard.Pile?.Type != PileType.Exhaust)
-                : others.Count(Fool.IsShot),
-            // Up to Cards chosen cards: counted as the most it can exhaust.
-            nameof(Purity) => Math.Min(otherCount, Sts2State.Var(card, "Cards") * playCount),
-            // The Hermit: the card you pick is exhausted instead of discarded when it's a Curse (counted as the most it can do).
-            nameof(TheHermit) => Math.Min(playCount, others.Count(other => other.Type == CardType.Curse)),
-            // Every status card in your piles.
-            nameof(FlakCannon) => card.DynamicVars.TryGetValue("CalculatedHits", out var dynamicVar) && dynamicVar is CalculatedVar calculatedVar ? (int)calculatedVar.Calculate(null) : 0,
-            _ => 0,
-        };
+            if (Programs.ProgramEvaluator.Holds(exhaust.PlayTest, board, program) == false) continue;
+            switch (exhaust.Way)
+            {
+                case Programs.CardEffects.ExhaustWay.Picked:
+                {
+                    if (exhaust.FromDrawPile)
+                    {
+                        if (!fromHandOnly) total += Math.Min(playCount, drawPile);
+                        break;
+                    }
+                    var pool = others.Count(other => Programs.ProgramEvaluator.HoldsFor(exhaust.ItemTest, other, board, program) != false);
+                    var perPick = Programs.ProgramEvaluator.Number(exhaust.PerPick, board, program) is { } most ? (int)most : 1;
+                    total += Math.Min(pool, perPick * playCount);
+                    break;
+                }
+                case Programs.CardEffects.ExhaustWay.Random:
+                    total += Math.Min(playCount, Collection(exhaust, others, board, program, fromHandOnly));
+                    break;
+                default:
+                    total += Collection(exhaust, others, board, program, fromHandOnly);
+                    break;
+            }
+        }
+        return total;
+    }
+
+    /// <summary>How many cards the exhaust's collection holds on the board (only your hand's, when asked); <paramref name="others"/> when it can't be told.</summary>
+    private static int Collection(Programs.CardEffects.ExhaustOfOthers exhaust, List<CardModel> others, Programs.ProgramBoard board, Programs.CardProgram program, bool fromHandOnly)
+    {
+        if (exhaust.Items == null || Programs.ProgramEvaluator.Items(exhaust.Items, board, program) is not { } items) return others.Count;
+        return items.Count(item => !ReferenceEquals(item, board.Card) && (!fromHandOnly || item is CardModel { Pile.Type: PileType.Hand }));
     }
 
     /// <summary>
-    /// How a card that exhausts others picks them (ExhaustFromHandAction: what a card that acts when exhausted, Drum of Battle, does
-    /// then), from each card's OnPlay; null for a card that takes none of those (ExhaustTakesNoActingCard) or isn't listed. The card
-    /// scan flags one that exhausts others with neither.
+    /// How a card that exhausts others takes them (ExhaustFromHandAction: what a card that acts when exhausted, Drum of Battle, does
+    /// then), read from its program: a pick is Chosen (from your draw pile for Cleanse), a roll Random, a loop over a collection All;
+    /// a filter by type (Second Wind's non-Attacks, Thrash's Attacks, The Hermit's Curse) is its Only or Except. A filter that isn't a
+    /// type (Growth's Sadness, Florescence's Shoot cards, Flak Cannon's statuses outside the exhaust pile) takes no card in your hand
+    /// that acts when exhausted unless one passes it, evaluated on the board: then none is followed. Null for a card that exhausts no
+    /// other card.
     /// </summary>
-    internal static ExhaustFromHandAction? ExhaustPickOf(CardModel card) => card.GetType().Name switch
+    internal static ExhaustFromHandAction? ExhaustPickOf(CardModel card)
     {
-        nameof(Cinder) => new ExhaustFromHandAction(ExhaustPick.Random),                                           // CombatCardSelection.NextItem
-        nameof(TrueGrit) => new ExhaustFromHandAction(card.IsUpgraded ? ExhaustPick.Chosen : ExhaustPick.Random), // upgraded: CardSelectCmd
-        nameof(Thrash) => new ExhaustFromHandAction(ExhaustPick.Random) { Only = SimCardType.Attack },
-        nameof(Brand) or nameof(BurningPact) or nameof(Scavenge) or nameof(Purity) => new ExhaustFromHandAction(ExhaustPick.Chosen),
-        nameof(Cleanse) => new ExhaustFromHandAction(ExhaustPick.Chosen) { FromDrawPile = true },
-        nameof(FiendFire) or nameof(Stoke) or nameof(TheDevil) => new ExhaustFromHandAction(ExhaustPick.All),
-        nameof(SecondWind) => new ExhaustFromHandAction(ExhaustPick.All) { Except = SimCardType.Attack },
-        _ => null,
-    };
+        var program = Programs.CardPrograms.Of(card.GetType());
+        var board = new Programs.ProgramBoard(card);
+        foreach (var exhaust in Programs.CardEffects.ExhaustsOfOthers(card.GetType()))
+        {
+            if (Programs.ProgramEvaluator.Holds(exhaust.PlayTest, board, program) == false) continue;
+            var pick = exhaust.Way switch
+            {
+                Programs.CardEffects.ExhaustWay.Picked => ExhaustPick.Chosen,
+                Programs.CardEffects.ExhaustWay.Random => ExhaustPick.Random,
+                _ => ExhaustPick.All,
+            };
+            var filter = exhaust.Way == Programs.CardEffects.ExhaustWay.Picked ? exhaust.ItemTest : exhaust.Filter?.Body ?? Programs.ProgramCondition.Always;
+            if (filter.IsAlways) return new ExhaustFromHandAction(pick) { FromDrawPile = exhaust.FromDrawPile };
+            if (TypeTest(filter) is var (type, holds))
+                return holds ? new ExhaustFromHandAction(pick) { Only = type, FromDrawPile = exhaust.FromDrawPile } : new ExhaustFromHandAction(pick) { Except = type, FromDrawPile = exhaust.FromDrawPile };
+            return null;
+        }
+        return null;
+    }
 
-    /// <summary>Cards that exhaust others but only of a kind no card that acts when exhausted is (CardEnergy.WhenExhausted: Drum of Battle, a Skill).</summary>
-    internal static readonly Dictionary<string, string> ExhaustTakesNoActingCard = new()
+    /// <summary>
+    /// The card exhausts others with a filter that isn't a type (ExhaustPickOf: none followed) and one of <paramref name="candidates"/>
+    /// that acts when exhausted (CardEnergy.WhenExhausted: Drum of Battle) passes it, or might: the card scan's check that such a filter
+    /// takes no card whose exhaust does something.
+    /// </summary>
+    internal static bool ExhaustFilterTakesActingCard(CardModel card, IEnumerable<CardModel> candidates)
     {
-        [nameof(Growth)] = "only Sadness cards",
-        [nameof(Florescence)] = "only Shoot cards",
-        [nameof(FlakCannon)] = "only status cards",
-        [nameof(TheHermit)] = "only a Curse",
-    };
+        var program = Programs.CardPrograms.Of(card.GetType());
+        var board = new Programs.ProgramBoard(card);
+        var acting = candidates.Where(candidate => SpireQoL.Sim.CardEnergy.WhenExhausted(candidate) > 0).ToList();
+        foreach (var exhaust in Programs.CardEffects.ExhaustsOfOthers(card.GetType()))
+        {
+            var filter = exhaust.Way == Programs.CardEffects.ExhaustWay.Picked ? exhaust.ItemTest : exhaust.Filter?.Body ?? Programs.ProgramCondition.Always;
+            if (filter.IsAlways || TypeTest(filter) != null) continue;
+            if (exhaust.Way == Programs.CardEffects.ExhaustWay.Picked
+                    ? acting.Any(candidate => Programs.ProgramEvaluator.HoldsFor(filter, candidate, board, program) != false)
+                    : acting.Any(candidate => Programs.ProgramEvaluator.Passes(exhaust.Filter!, candidate, board, program) != false))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>A filter that's one test of a card's type (c.Type == Attack, each.Type != Curse): the type, and whether it's kept or left.</summary>
+    private static (SimCardType Type, bool Kept)? TypeTest(Programs.ProgramCondition filter)
+    {
+        if (filter.Terms is not [[{ Test: Programs.CompareValue { Op: Programs.Comparison.Equal or Programs.Comparison.NotEqual, Left: Programs.QueryValue { Name: "Type" }, Right: Programs.ConstantValue constant } compare } literal]])
+            return null;
+        if (!Enum.TryParse<SimCardType>(((CardType)constant.Value).ToString(), out var type) || type == SimCardType.None) return null;
+        return (type, (compare.Op == Programs.Comparison.Equal) == literal.Holds);
+    }
 
     /// <summary>
     /// Cards that hit their target, then deal that hit's damage (overkill included: DamageResult.TotalDamage + OverkillDamage) to
@@ -996,13 +1059,7 @@ public sealed class PlayFacts
     /// </summary>
     internal static int LeavingHand(CardModel card, string name, List<CardModel> others, int drawPile, int draws, int plays)
     {
-        var exhausts = name switch
-        {
-            nameof(Cleanse) => 0,
-            nameof(Florescence) => others.Count(Fool.IsShot),
-            nameof(FlakCannon) => others.Count(other => other.Type == CardType.Status),
-            _ => ExhaustOthers(card, name, others, drawPile, plays),
-        };
+        var exhausts = ExhaustedFromHand(card, others, drawPile, plays);
         var discards = name is nameof(KiChant) or nameof(Scrape) ? 0 : DiscardCount(card, name, others, draws);
         // Put back on your draw pile after the draws, from the cards in hand then (you choose which).
         var putBack = Programs.CardEffects.PutsBackFromHand(card.GetType())

@@ -88,6 +88,15 @@ public class CardEffectsTests
         // rider), both deleted with it.
         Exactly(nameof(CardEffects.DrawsOnACondition), CardEffects.DrawsOnACondition, Tables.ConditionalDrawCards.Append("MadScience").ToArray());
         Exactly(nameof(CardEffects.DrawsDependOnTarget), CardEffects.DrawsDependOnTarget, Tables.TargetDrawCards);
+        // Other cards exhausted (PlayFacts.ExhaustOthers' cases), and how each takes them (ExhaustPickOf, ExhaustTakesNoActingCard).
+        Exactly(nameof(CardEffects.ExhaustsOthers), CardEffects.ExhaustsOthers, Tables.ExhaustOthersCards);
+        foreach (var (card, ways) in Tables.ExhaustWays)
+        {
+            if (!programs.TryGetValue(card, out var program)) continue;
+            var read = string.Join(", ", CardEffects.ExhaustsOfOthers(program).Select(exhaust =>
+                exhaust.Way + (exhaust.FromDrawPile ? " from the draw pile" : "") + (exhaust.Filter != null || !exhaust.ItemTest.IsAlways ? " filtered" : "")));
+            if (read != ways) failures.Add($"{card} ({branch}) exhausts: {read}; the table: {ways}");
+        }
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
@@ -118,6 +127,23 @@ public class CardEffectsTests
         public static readonly string[] KeepsStretchCards = { "ChoKi" };
         // The whole hand (PlayFacts.WholeHandCards).
         public static readonly string[] WholeHandCards = { "FiendFire", "Stoke", "TheDevil", "CalculatedGamble", "ShadowStep", "StormOfSteel", "WheelOfFortune", "Reboot" };
+        // Other cards exhausted (PlayFacts.ExhaustOthers), and how (ExhaustPickOf: Chosen, Random, All; ExhaustTakesNoActingCard: a filter).
+        public static readonly string[] ExhaustOthersCards =
+        {
+            "Brand", "BurningPact", "TrueGrit", "Scavenge", "Cinder", "Thrash", "Cleanse", "FiendFire", "Stoke", "SecondWind", "TheDevil", "Growth",
+            "Florescence", "Purity", "TheHermit", "FlakCannon",
+        };
+        public static readonly Dictionary<string, string> ExhaustWays = new()
+        {
+            ["Cinder"] = "Random", ["Thrash"] = "Random filtered",
+            // Upgraded: a pick (CardSelectCmd); else a roll.
+            ["TrueGrit"] = "Picked, Random",
+            ["Brand"] = "Picked", ["BurningPact"] = "Picked", ["Scavenge"] = "Picked", ["Purity"] = "Picked",
+            ["Cleanse"] = "Picked from the draw pile",
+            ["FiendFire"] = "Each", ["Stoke"] = "Each", ["TheDevil"] = "Each", ["SecondWind"] = "Each filtered",
+            // ExhaustTakesNoActingCard: only Sadness, only Shoot cards, only status cards, only a Curse.
+            ["Growth"] = "Each filtered", ["Florescence"] = "Each filtered", ["FlakCannon"] = "Each filtered", ["TheHermit"] = "Picked filtered",
+        };
         // Draws on a condition (PlayFacts.ConditionalDrawCards, TargetDrawCards).
         public static readonly string[] ConditionalDrawCards = { "Impatience", "Fetch", "Ftl", "Restlessness", "KiHop", "Wrest" };
         public static readonly string[] TargetDrawCards = { "KiHop", "Wrest" };

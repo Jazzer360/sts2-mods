@@ -73,6 +73,7 @@ public sealed record QueryValue(string Type, string Name, ProgramValue? Of, IRea
     public override string ToString()
     {
         if (Name == ".ctor") return "new " + Type + "(" + string.Join(", ", Arguments) + ")";
+        if (Name == "is") return Of + " is " + Type;
         var name = (Of != null ? Of + "." + Name : Name) + (GenericArguments.Count > 0 && Type != "Enumerable" ? "<" + string.Join(",", GenericArguments) + ">" : "");
         return IsProperty ? name : name + "(" + string.Join(", ", Arguments) + ")";
     }

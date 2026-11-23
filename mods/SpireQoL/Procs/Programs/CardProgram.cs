@@ -52,6 +52,9 @@ public sealed record ChoiceStep(int Offset, CodeMember Command) : ProgramStep(Of
     /// <summary>Where each of its arguments comes from (whose pile, whose pick: "Owner" is you), as a command's.</summary>
     public IReadOnlyList<string> Arguments { get; init; } = Array.Empty<string>();
 
+    /// <summary>Its arguments as values (the selector's prefs: how many at most; whose pile).</summary>
+    public IReadOnlyList<ProgramValue> Values { get; init; } = Array.Empty<ProgramValue>();
+
     public override string ToString() => "choice " + Command.Name + When;
 }
 
@@ -72,6 +75,9 @@ public sealed record LoopStep(int Offset, string Over, IReadOnlyList<ProgramStep
     /// besides the loop's own condition; null when it can't be read (a jump back with no test).
     /// </summary>
     public ProgramCondition? While { get; init; }
+
+    /// <summary>What a foreach goes over, as a value (the hand's cards, a filter of them, a pick's result); null for other loops.</summary>
+    public ProgramValue? Items { get; init; }
 
     public override string ToString() => (Over == "?" && While != null ? $"loop while {While}" : $"loop over {Over}") + $" [{string.Join(", ", Body)}]" + When;
 }
@@ -220,14 +226,34 @@ public static class CardProgramReader
             List<CodeOp> ops;
             try { ops = _read(method); }
             catch (Exception ex) { return new List<ProgramStep> { new UnknownStep(0, $"{method.Name} can't be read ({ex.GetType().Name})") }; }
-            var flow = Flow.Of(ops, method, depth < MaxDepth ? LambdaOf : null);
+            var flow = Flow.Of(ops, method, depth < MaxDepth ? LambdaOf : null, depth < MaxDepth ? HelperValue : null);
             var steps = new List<ProgramStep>();
             Parse(flow, 0, flow.Ops.Count, steps, outer: null, depth);
             return steps;
         }
 
         /// <summary>What a method returns, as a condition (a getter's value).</summary>
-        public ProgramCondition Returned(MethodBase method) => Flow.Of(_read(method), method, LambdaOf).Returned();
+        public ProgramCondition Returned(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).Returned();
+
+        /// <summary>
+        /// What a helper of the card's own (not async: SecondWind.GetCards, FlakCannon.GetStatuses) returns, from its one way to a return,
+        /// with its parameters as the call passes them; null when it isn't one or can't be read.
+        /// </summary>
+        private ProgramValue? HelperValue(CodeMember member, IReadOnlyList<ProgramValue> passed)
+        {
+            if (member.Kind != CodeMemberKind.Method || !member.ReturnsValue || member.Name.StartsWith("get_", StringComparison.Ordinal) || member.DeclaringType != _card.Name) return null;
+            if (_card.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is not MethodInfo found
+                || BodyOf(found) != found) return null;
+            try
+            {
+                var returned = Flow.Of(_read(found), found, LambdaOf, helperOf: null).ReturnedValue();
+                if (returned == null) return null;
+                var names = found.GetParameters();
+                return returned.Map(value => value is ParameterValue parameter && Array.FindIndex(names, name => name.Name == parameter.Name) is var index and >= 0 && index < passed.Count
+                    ? passed[index] : null);
+            }
+            catch { return null; }
+        }
 
         /// <summary>A lambda the code makes (a predicate for Any, Where...): its parameter and what it returns.</summary>
         private LambdaValue? LambdaOf(CodeMember member)
@@ -235,7 +261,7 @@ public static class CardProgramReader
             if (Lambda(member) is not { } body) return null;
             try
             {
-                var flow = Flow.Of(_read(body), body, lambdaOf: null);
+                var flow = Flow.Of(_read(body), body, lambdaOf: null, helperOf: null);
                 var parameter = body.GetParameters() is { Length: > 0 } parameters ? parameters[0].Name ?? "x" : "x";
                 return new LambdaValue(parameter, flow.Returned());
             }
@@ -262,7 +288,8 @@ public static class CardProgramReader
                         var body = new List<ProgramStep>();
                         Parse(flow, i, loopEnd, body, entry, depth);
                         if (body.Count > 0)
-                            into.Add(new LoopStep(instruction.Offset, flow.LoopOver(i, loopEnd), body) { Condition = Relative(entry, outer), While = flow.While(i, loopEnd) });
+                            into.Add(new LoopStep(instruction.Offset, flow.LoopOver(i, loopEnd), body)
+                                { Condition = Relative(entry, outer), While = flow.While(i, loopEnd), Items = flow.LoopItems(i) });
                     }
                     i = loopEnd;
                     continue;
@@ -274,7 +301,7 @@ public static class CardProgramReader
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
                 if (member.Namespace == "MegaCrit.Sts2.Core.Commands" && member.DeclaringType == "CardSelectCmd")
                 {
-                    into.Add(new ChoiceStep(instruction.Offset, member) { Condition = condition, Arguments = Arguments(flow, i, member) });
+                    into.Add(new ChoiceStep(instruction.Offset, member) { Condition = condition, Arguments = Arguments(flow, i, member), Values = flow.ArgumentValues(i, member) });
                     continue;
                 }
                 if (member.Name == "CreateCard" && member.GenericArguments.Count == 1)
@@ -347,7 +374,8 @@ public static class CardProgramReader
             var bound = step with { Condition = step.Condition?.Map(replace) };
             return bound switch
             {
-                LoopStep loop => loop with { While = loop.While?.Map(replace), Body = loop.Body.Select(inner => Bound(inner, replace)).ToList() },
+                LoopStep loop => loop with { While = loop.While?.Map(replace), Items = loop.Items?.Map(replace), Body = loop.Body.Select(inner => Bound(inner, replace)).ToList() },
+                ChoiceStep choice => choice with { Values = choice.Values.Select(value => value.Map(replace)).ToList() },
                 CommandStep command => command with
                 {
                     Values = command.Values.Select(value => value.Map(replace)).ToList(), Inner = command.Inner.Select(inner => Bound(inner, replace)).ToList(),
@@ -455,8 +483,10 @@ public static class CardProgramReader
         private readonly System.Reflection.MethodBase? _method;
         private readonly string _site;
         private readonly Func<CodeMember, LambdaValue?>? _lambdaOf;
+        private readonly Func<CodeMember, IReadOnlyList<ProgramValue>, ProgramValue?>? _helperOf;
 
-        private Flow(List<CodeOp> ops, System.Reflection.MethodBase? method, Func<CodeMember, LambdaValue?>? lambdaOf)
+        private Flow(List<CodeOp> ops, System.Reflection.MethodBase? method, Func<CodeMember, LambdaValue?>? lambdaOf,
+            Func<CodeMember, IReadOnlyList<ProgramValue>, ProgramValue?>? helperOf)
         {
             Ops = ops;
             for (var i = 0; i < ops.Count; i++) _indexOf[ops[i].Offset] = i;
@@ -464,6 +494,7 @@ public static class CardProgramReader
             _method = method;
             _site = method == null ? "" : method.DeclaringType?.Name + "." + method.Name;
             _lambdaOf = lambdaOf;
+            _helperOf = helperOf;
         }
 
         public int IndexOf(int offset) => _indexOf.TryGetValue(offset, out var index) ? index : Ops.Count;
@@ -472,9 +503,10 @@ public static class CardProgramReader
         public ProgramCondition? ReachedAt(int index) => index < _reached.Length ? _reached[index] : null;
         public ProgramCondition? LoopEntry(int start) => _loopEntries.TryGetValue(start, out var entry) ? entry : null;
 
-        public static Flow Of(List<CodeOp> ops, System.Reflection.MethodBase? method = null, Func<CodeMember, LambdaValue?>? lambdaOf = null)
+        public static Flow Of(List<CodeOp> ops, System.Reflection.MethodBase? method = null, Func<CodeMember, LambdaValue?>? lambdaOf = null,
+            Func<CodeMember, IReadOnlyList<ProgramValue>, ProgramValue?>? helperOf = null)
         {
-            var flow = new Flow(ops, method, lambdaOf);
+            var flow = new Flow(ops, method, lambdaOf, helperOf);
             flow.MarkMachinery();
             flow.FindLoops();
             flow.FindConditions();
@@ -634,6 +666,31 @@ public static class CardProgramReader
             return values;
         }
 
+        /// <summary>What a method returns when one way reaches its return (a helper's value); null otherwise.</summary>
+        public ProgramValue? ReturnedValue()
+        {
+            ProgramValue? returned = null;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].OpCode != OpCodes.Ret || ReachedAt(i) is not { IsNever: false }) continue;
+                if (returned != null) return null;
+                returned = ValueBefore(i);
+            }
+            return returned is UnknownValue ? null : returned;
+        }
+
+        /// <summary>What a foreach starting at <paramref name="start"/> goes over, as a value: the collection its GetEnumerator is asked of.</summary>
+        public ProgramValue? LoopItems(int start)
+        {
+            for (var i = start - 1; i >= 0 && i >= start - 24; i--)
+            {
+                if (Ops[i].Member is not { Name: "GetEnumerator" } || !Ops[i].IsCall) continue;
+                var items = ReadBack(i, depth: 0).Value;
+                return items is UnknownValue ? null : items;
+            }
+            return null;
+        }
+
         /// <summary>The value on top of the stack just before <paramref name="index"/>, read back as an expression.</summary>
         public ProgramValue ValueBefore(int index) => ReadBack(index, depth: 0).Value;
 
@@ -659,11 +716,18 @@ public static class CardProgramReader
                     // was where it was stored.
                     return (stored.Value is NamedValue or ConstantValue or ParameterValue ? stored.Value : new StoredValue("", stored.Value, Ops[store].Offset), at);
                 if (instruction.Slot is { } flagSlot && FlagOf(flagSlot) is { } flag) return (new ConditionValue(flag), at);
+                if (instruction.Slot is { } builtSlot && BuiltOnce(builtSlot, depth) is { } built) return (built, at);
                 return (new UnknownValue("local"), at);
             }
             if (name.StartsWith("conv", StringComparison.Ordinal) || instruction.OpCode == OpCodes.Box || instruction.OpCode == OpCodes.Unbox_Any
                 || instruction.OpCode == OpCodes.Castclass)
                 return ReadBack(at, depth + 1);
+            // x is T (isinst): x when it's a T, else null.
+            if (instruction.OpCode == OpCodes.Isinst && instruction.Member is { } tested)
+            {
+                var inner = ReadBack(at, depth + 1);
+                return (new QueryValue(tested.Name, "is", inner.Value, Array.Empty<ProgramValue>(), tested.Name), inner.Start);
+            }
             if (instruction.OpCode == OpCodes.Ldsfld && instruction.Member is { } staticField) return (new NamedValue(staticField.DeclaringType + "." + staticField.Name), at);
             // A cached lambda (ldsfld <>9__x; dup; brtrue; pop; ldsfld <>9; ldftn; newobj; dup; stsfld <>9__x): the lambda.
             if (instruction.OpCode == OpCodes.Stsfld && instruction.Member is { } cache && cache.Name.StartsWith("<>9__", StringComparison.Ordinal))
@@ -699,6 +763,9 @@ public static class CardProgramReader
                     "cgt" or "cgt.un" => Comparison.Greater,
                     _ => Comparison.Less,
                 };
+                // !(a == b): ceq against 0 of a comparison is the other comparison.
+                if (name == "ceq" && right.Value is ConstantValue { Value: 0 } && left.Value is CompareValue negated)
+                    return (negated with { Op = CompareValue.Negated(negated.Op) }, left.Start);
                 return (new CompareValue(comparison, left.Value, right.Value) { Unsigned = name is "clt.un" || name == "cgt.un" && right.Value is not NullValue }, left.Start);
             }
             if (name is "add" or "sub" or "mul" or "div" or "rem")
@@ -756,6 +823,8 @@ public static class CardProgramReader
             }
             // A foreach's item (enumerator.Current): each item it goes over.
             if (member.Name == "get_Current") return (new NamedValue("each"), cursor);
+            // A helper of the card's own that works out a value: what it returns.
+            if (_helperOf?.Invoke(member, arguments) is { } helped) return (helped, cursor);
             var property = member.Name.StartsWith("get_", StringComparison.Ordinal);
             return (new QueryValue(member.DeclaringType, property ? member.Name[4..] : member.Name, of, arguments, member.ValueType)
                 { IsProperty = property && arguments.Length == 0, GenericArguments = member.GenericArguments }, cursor);
@@ -982,6 +1051,25 @@ public static class CardProgramReader
                 flag = flag.Or(reached);
             }
             return stores > 1 ? flag : null;
+        }
+
+        /// <summary>
+        /// A struct local built in place once (ldloca slot; ...; call T::.ctor: Purity's CardSelectorPrefs): the constructor with its
+        /// arguments; null otherwise.
+        /// </summary>
+        private ProgramValue? BuiltOnce(int slot, int depth)
+        {
+            ProgramValue? built = null;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i] is not { Member: { Name: ".ctor", HasThis: true } constructor } || Ops[i].OpCode != OpCodes.Call) continue;
+                if (CodeDecoder.Producer(Ops, i, constructor.ParameterCount) is not { } receiver || Ops[receiver].Slot != slot
+                    || !Ops[receiver].OpCode.Name!.StartsWith("ldloca", StringComparison.Ordinal)) continue;
+                if (built != null) return null;
+                var arguments = ArgumentValues(i, constructor);
+                built = new QueryValue(constructor.DeclaringType, ".ctor", null, arguments, constructor.DeclaringType);
+            }
+            return depth > 8 ? null : built;
         }
 
         /// <summary>The one instruction that stores local <paramref name="slot"/>, when only one does (else null: which value is meant isn't straight).</summary>
