@@ -288,7 +288,9 @@ One source for both the tabs and the simulator.
   and why. A game update regenerates it too.
 - **Program tests** (`tests/SpireQoL.Catalog.Tests/CardProgramTests.cs`): known programs on both branches' assemblies (Iron
   Wave, Fiend Fire, Sunder, Pillage, Whirlwind, Battle Trance, Growth, Second Wind, Blossom Shot's local function, an X-cost
-  card, a selection card).
+  card, a selection card), and the shapes of conditions: Impatience's negated lambda over your hand, Ki Hop's local stored before
+  its attack, Wrest's `while` inside its `if`, Restlessness' early return, Escape Plan's `&&`, Fetch's Osty check and own
+  property, Pillage's round test; `ConditionsRejoinWhereTheWaysMeet` holds the simplification.
 - **Coverage** (`CardProgramCoverageTests`): every card on both branches is read fully, or partly with its reasons, and the
   counts are kept in the test. A card that gets worse fails it; a card that gets better updates the counts. The same counts
   go into the coverage report.
@@ -310,17 +312,20 @@ The aim is every card read by the interpreter, with no card named. What is left 
 - **How many a pick takes** (Neow's Fury: `HandTakeChosen`): the count changes what's predicted, so it keeps its
   `NotModelledAction`.
 
-**Not yet read (reader gaps, not limits).** Each still has its table and its scan, and what the reader needs to read it:
+**Not yet read (reader gaps, not limits).** Each still has its table and its scan, and what the reader needs to read it. Where
+it stands (2026-11-23, after conditions as values): five more tables read from the program (`ConditionalDrawCards`,
+`TargetDrawCards`, `ExhaustOthers`, `ExhaustPickOf`, `ExhaustTakesNoActingCard`), with `CardsDrawn`'s ten cases; card-name
+references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter/` went from 344 to 286.
 
 | Table (where) | Cards | What the program doesn't say yet |
 |---|---|---|
 | `DrawnCardReaders` (SimAdapter) | Pillage, Scrape and others acting on what they draw | The tests are read now (Pillage's loop's `While`: the drawn card, its type, your hand's room; Escape Plan's block on the drawn card being a Skill); what's left is turning a test of a command's result into the simulator's `DrawnCardAction`. |
 | (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
 | `DiscardCount`, `TransformCount`, `TakenToHandCount`, `GeneratedCount` (PlayFacts) | most cards that discard, transform, take or make cards | Within reach now: the exhausts show the way (a pick's size from its selector, a loop's collection evaluated with its lambda). Not done yet. |
-| `ChannelCount`, `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | orb, block and multi-hit cards | Counts from loops and conditions (`loop over Repeat`, Chill's loop over enemies, Cho Firm's arrow test): needs loop counts as values and conditions as queries. |
+| `ChannelCount`, `RepeatedBlockCards`, `BlockGainCount`'s cases, `HitsPerPlay`'s cases | orb, block and multi-hit cards | Counts from loops and conditions (`loop over Repeat`, Chill's loop over enemies, Cho Firm's arrow test). Both are read now (a loop's `While`: `i < 2`, `i < blockGains`; conditions evaluate); what's left is a count rule per command (channels, block gains, hits) built on them. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TriggerPoisonCards`, `TeammatesShivCards`, `EnemyStrengthCards` | Outbreak, Blade Symphony, Strength takers | A call on a power (`PoisonPower.Trigger` isn't a command); the player a helper's Shivs go to (an argument inside the helper); a power's sign and duration. |
-| `GlowGatedAttackCards`, `GlowNotTheAttack` | Pact's End; Fetch, Flatten, Nail | Whether the card's glow (`ShouldGlowGoldInternal`) is its attack's condition: comparing two expressions. |
+| `GlowGatedAttackCards`, `GlowNotTheAttack` | Pact's End; Fetch, Flatten, Nail | Whether the card's glow (`ShouldGlowGoldInternal`) is its attack's condition. Both can be read now (`CardProgramReader.ReadProperty` reads the glow's getter; the attack's condition is a value), so the attack's condition can simply be evaluated instead: the tables can go with `HitsPerPlay`'s cases. |
 | `HandTakes`, `AutoPlayFromDrawAction`'s count, `Fool.BlockWithoutVar` | the take-into-hand cards, Havoc, Cascade, The Devil | Which pile and filter a take uses, and the count argument (`cards.Count`, X + 1 upgraded). |
 
 ## Part B: pipelines and models checked against the game's code
