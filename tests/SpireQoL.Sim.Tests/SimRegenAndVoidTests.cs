@@ -42,6 +42,7 @@ public class SimRegenAndVoidTests
         var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 50 } } };
         state.You.Energy = 2;
         state.You.HandCount = 3;
+        state.You.Cards = state.You.Cards.With(CardId.Void, amount: 1); // its own AfterCardDrawn (VoidCard)
         state.You.Draw = new SimDrawPile
         {
             Rest = { new SimDrawGroup(new SimDrawCard("void") { Type = SimCardType.Status, EnergyLostOnDraw = 1 }, Count: 1), new SimDrawGroup(new SimDrawCard("skill") { Type = SimCardType.Skill }, Count: 1) },

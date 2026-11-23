@@ -265,6 +265,13 @@ public sealed class SimPlayer
     /// <summary>Their relics the simulator models, in relic order, with each one's counter (Amount) and flag (Data).</summary>
     public RelicSet Relics = RelicSet.Empty;
     /// <summary>
+    /// The cards in their piles that listen for a hook the simulator models (SimEngine.Listeners: the game lists every card in every
+    /// pile after the player's relics, potions and orbs), by class, with how many copies, in the order the game lists them (hand,
+    /// draw, discard, exhaust); and the ones something on this board can make into their piles. Read by the adapter and fixed
+    /// during a simulation: a card's model acts only on its own cards' events (the card drawn, the cards in hand).
+    /// </summary>
+    public CardSet Cards = CardSet.Empty;
+    /// <summary>
     /// What they played this turn, as the hooks count it (the game's CardPlaysStarted and CardPlaysFinished), under SimKeys.Plays: "Started",
     /// "Started:Attack", "Finished:Skill", "Finished#Shiv" (by tag)... Each play of a replay counts.
     /// </summary>
@@ -775,6 +782,12 @@ public sealed class SimState
     internal int ArrowAwayAt = Who.None;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
     internal SimCard? EventCard;
+    /// <summary>
+    /// The card whose draw the AfterCardDrawn listeners are answering (from the draw pile: SimEngine.Drawn), null otherwise: Iteration
+    /// reads that it's a Status, Pagestorm that it's Ethereal, Void's own hook that it's itself. A draw inside a listener's sets its own
+    /// card and gives the outer one back.
+    /// </summary>
+    internal SimDrawCard? DrawnCard;
     /// <summary>Card events during the current card play, for its player (Unceasing Top: nothing drawn or created).</summary>
     internal CardEventCounts PlayEvents = CardEventCounts.None;
     /// <summary>Block gains from the current card play (Unmovable doesn't count them).</summary>
@@ -827,6 +840,7 @@ public sealed class SimState
             player.Fading = player.HexFading = 0;
             player.Draw = null;
             player.MadeCards = null;
+            player.Cards = CardSet.Empty;
             player.Stampede = player.Simpleton = 0;
             player.AutoHand = null;
         }
@@ -939,6 +953,8 @@ public sealed class SimState
             foreach (var cardHash in DrawRecord.Select(draw => draw.Card.Key.GetHashCode()).Order()) Add(cardHash);
             if (DrawRecord.Count > 0) Add((int)DrawRecord[^1].Card.Type); // Pillage reads the last one's type
         }
+        // Mid-draw (between AfterCardDrawn listeners), branches that drew different cards stay apart.
+        if (DrawnCard != null) Add(DrawnCard.Key.GetHashCode());
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
         foreach (var pick in AutoPicks) { Add(pick.Card.GetHashCode()); Add(pick.Target); } // branches that picked different cards stay apart (the check tells them apart)
         foreach (var enemy in Enemies) enemy.Hash(Add);

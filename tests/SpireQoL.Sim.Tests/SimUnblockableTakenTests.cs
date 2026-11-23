@@ -18,6 +18,7 @@ public class SimUnblockableTakenTests
         state.You.Block = 6;
         state.You.HandCount = 3;
         state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
+        state.You.Cards = state.You.Cards.With(CardId.Regret, amount: 1); // its BeforeSideTurnEnd counts the hand (RegretCard)
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(7, branch.Taken);
         Assert.Equal(3, branch.UnblockableTaken);

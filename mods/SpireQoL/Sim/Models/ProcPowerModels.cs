@@ -590,6 +590,28 @@ public sealed class CacophonyPower : EventCountdownPower
     protected override IEnumerable<SimState> OnZero(SimState state, int owner, int amount) => DamageRandom(state, owner, amount);
 }
 
+/// <summary>
+/// IterationPower.AfterCardDrawn: the first Status its owner draws this turn (the turn's CardDrawnEntry count, this one included:
+/// SimPlayer.StatusDrawn) draws its amount more, in its place among the listeners (before relics and Void's own energy loss). No tab.
+/// </summary>
+public sealed class IterationPower : SimModel
+{
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (cardEvent != CardEvent.Drawn || player != owner || state.DrawnCard is not { Status: true } || state.Player(owner) is not { StatusDrawn: <= 1 }) return One(state);
+        return SimEngine.ProcCardEvent(state, CardEvent.Drawn, count: SimEngine.PowerOn(state, owner, ThisPower), owner, indirect: true);
+    }
+}
+
+/// <summary>PagestormPower.AfterCardDrawn: each Ethereal card its owner draws draws its amount more, in its place among the listeners. No tab.</summary>
+public sealed class PagestormPower : SimModel
+{
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
+        cardEvent == CardEvent.Drawn && player == owner && state.DrawnCard is { Ethereal: true }
+            ? SimEngine.ProcCardEvent(state, CardEvent.Drawn, count: SimEngine.PowerOn(state, owner, ThisPower), owner, indirect: true)
+            : One(state);
+}
+
 /// <summary>SpeedsterPower.AfterCardDrawn: its amount to every hittable enemy for each card its owner draws.</summary>
 public sealed class SpeedsterPower : ProcModel
 {

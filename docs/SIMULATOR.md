@@ -54,8 +54,21 @@ Non-goals:
 - **HP loss** (`Hook.ModifyHpLost*`): BeforeOsty, BeforeOstyLate, (Osty takes his share), AfterOsty, AfterOstyLate; a
   source "modified" the amount when the truncated value changed (Tungsten Rod's flash).
 - **Listener order** (`CombatState.IterateHookListeners`): for each creature (allies, then enemies): its powers; then the
-  monster (enemies) or, for an active player, relics, potions, orbs, then cards in piles. "Powers fire before relics" is
-  this order.
+  monster (enemies) or, for an active player, relics (not melted), potions, orbs, then the cards in every pile (hand, draw,
+  discard, exhaust, play), each followed by its affliction and enchantment. "Powers fire before relics" is this order. The
+  simulator's list (`SimEngine.Listeners`) is the same: each player in player order (their powers in the order applied,
+  their relics, then their cards: `SimPlayer.Cards`, the card classes in their piles with a `CardListener` model, one per
+  class since each copy's hook answers only its own card's events), then each enemy's powers. Its kinds are `ListenerKind`.
+  `ListenerOrderTests` (catalog tests) compares it with the game's list for a fight built from the game's own objects.
+  - Cards with a model: Void (its `AfterCardDrawn` loses energy after your powers' and relics' draw reactions: Automation,
+    Iteration, Pagestorm) and Regret (its `BeforeSideTurnEnd` counts the hand before the Ethereal cards exhaust).
+  - No potion, orb or monster has a model: no orb class overrides a hook (passives run from `DoTurnEnd`, `OrbQueue`), the
+    one potion with combat hooks (Fairy in a Bottle: `ShouldDie`) has no power or relic answering the same hook before it
+    (Lizard Tail's is `ShouldDieLate`), and the monsters' hooks only change music, textures or talk (coverage ledger).
+  - Card hooks kept elsewhere, in the game's order: Drum of Battle's energy on its exhaust (after the exhaust's listeners;
+    a play exhausting several cards runs every exhaust's listeners first, the game each card's in turn), Epic Retrieval's energy on a dislodged arrow (`SimCardPlay.ArrowEnergy`, after Yah), Howl from Beyond and
+    I Am Invincible at the auto-play phase (after Stampede and Simpleton), the enchantments' `AfterCardPlayed` (`PlayGrowth`,
+    only their own card's later plays).
 - **A card play** (`CardModel.OnPlayWrapper`): result location; play count (`ModifyCardPlayCount`); then for each play:
   `BeforeCardPlayed`; `OnPlay` (the card's commands, each awaited in turn, hooks nested inside); the enchantment's
   `OnPlay`; the affliction's `OnPlay`; card play finished; `AfterCardPlayed` (Early, normal, Late).

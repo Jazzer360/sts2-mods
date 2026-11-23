@@ -327,6 +327,16 @@ public abstract class SimModel
     public virtual void AfterModifyingDamageAmount(SimState state, int owner, SimCard? card) { if (FlashesOnDamageModified) state.LogFired(Name, amount: 0, owner); }
 }
 
+/// <summary>
+/// A card's own hooks (its class's overrides of the game's hooks), listening from its owner's piles: the game lists every card in
+/// every pile after its owner's relics, potions and orbs (CombatState.IterateHookListeners), so a card answers a hook after every
+/// power and relic of its owner. One model per class (SimPlayer.Cards), named after the game's card class; each acts only on its own
+/// cards' events (the card drawn, the cards in hand), as each copy's hook does in the game.
+/// </summary>
+public abstract class CardListener : SimModel
+{
+}
+
 /// <summary>The models the simulator knows, by the game's class name. A name not here isn't modelled.</summary>
 public static class SimModels
 {

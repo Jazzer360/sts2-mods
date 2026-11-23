@@ -13,7 +13,10 @@ public static partial class SimEngine
         Damage,
         /// <summary>Its HpLoss (Unblockable, Unpowered, Move).</summary>
         HpLoss,
-        /// <summary>The cards in its owner's hand (Unblockable, Unpowered, Move: Regret counts them at BeforeSideTurnEnd).</summary>
+        /// <summary>
+        /// The cards in its owner's hand as their side's turn ends (Unblockable, Unpowered, Move: Regret counts them at
+        /// BeforeSideTurnEnd, its model RegretCard, into its Amount).
+        /// </summary>
         HandSize,
     }
 
@@ -29,13 +32,11 @@ public static partial class SimEngine
     private static void CardsActInHand(SimState state, int player)
     {
         if (!state.TakesPart(player) || state.Player(player) is not { TurnEndCards.Count: > 0 } simPlayer) return;
-        var handSize = Math.Max(0, simPlayer.HandCount);
         foreach (var card in simPlayer.TurnEndCards)
         {
             if (!HandAtTurnEnd.TryGetValue(card.Card, out var kind)) continue;
             var props = kind == InHand.Damage ? SimProps.Unpowered | SimProps.Move : SimProps.Unblockable | SimProps.Unpowered | SimProps.Move;
-            var baseAmount = kind == InHand.HandSize ? handSize : card.Amount;
-            var amount = CalcDamage(state, baseAmount, new DamageCtx(Dealer: null, player, props, Card: null, Play: null));
+            var amount = CalcDamage(state, card.Amount, new DamageCtx(Dealer: null, player, props, Card: null, Play: null));
             if (kind == InHand.Damage) LandBlockable(state, card.Title, amount, player, dealer: null, props);
             else LandUnblockable(state, card.Title, amount, player, dealer: null, props);
         }

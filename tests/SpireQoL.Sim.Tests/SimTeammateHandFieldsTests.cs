@@ -21,6 +21,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.MadeCards),       // what goes into their draw pile: only with it (never filled for a teammate), cleared all the same
         nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...
         nameof(SimPlayer.ExhaustingInHand), // Drum of Battle: which of their cards a play could exhaust
+        nameof(SimPlayer.Cards),           // the cards in their piles that listen for hooks (their hand's among them: a Regret)
         // End-of-turn auto-plays picked from the hand (Stampede, Simpleton; never filled for a teammate today, decision #80).
         nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand),
     };
@@ -104,6 +105,7 @@ public class SimTeammateHandFieldsTests
         else if (type == typeof(List<SimPlay>)) field.SetValue(player, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });
         else if (type == typeof(PowerSet)) field.SetValue(player, PowerSet.Empty.With(PowerId.Strength, amount: 2));
         else if (type == typeof(RelicSet)) field.SetValue(player, RelicSet.Empty.With(RelicId.PenNib, amount: 2));
+        else if (type == typeof(CardSet)) field.SetValue(player, CardSet.Empty.With(CardId.Regret, amount: 1));
         else if (type == typeof(NamedCounts)) field.SetValue(player, NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started), delta: 2));
         else if (type == typeof(List<SimOrb>)) field.SetValue(player, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
         else if (type == typeof(SimDrawPile)) field.SetValue(player, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), Count: 2) } });

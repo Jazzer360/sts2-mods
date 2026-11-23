@@ -149,7 +149,7 @@ public static partial class SimEngine
             : null;
 
     /// <summary>One card event's bookkeeping and its listeners (AfterCardEvent).</summary>
-    internal static IEnumerable<SimState> FireCardEvent(SimState state, CardEvent cardEvent, int player, bool indirect)
+    internal static List<SimState> FireCardEvent(SimState state, CardEvent cardEvent, int player, bool indirect)
     {
         CountEvent(state, cardEvent, player);
         var was = state.IndirectNow;

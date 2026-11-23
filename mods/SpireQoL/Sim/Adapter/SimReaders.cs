@@ -249,6 +249,29 @@ public static class SimReaders
     }
 
     /// <summary>
+    /// The cards in a player's piles that listen for a hook the simulator models (SimPlayer.Cards), in the game's listener order
+    /// (every pile, hand first: PlayerCombatState.AllCards), with how many copies.
+    /// </summary>
+    public static CardSet Cards(Player player)
+    {
+        var set = CardSet.Empty;
+        foreach (var card in player.PlayerCombatState?.AllCards ?? Enumerable.Empty<CardModel>())
+            if (CardListenerOf(card) is { } listener) set = set.Add(listener, delta: 1);
+        return set;
+    }
+
+    /// <summary>
+    /// The card model a card listens as: its class's (a CardListener named after it), or the model of a card whose own code does what
+    /// its code does (it loses energy when drawn: Void's, CardEnergy.LostWhenDrawn); null for a card with neither.
+    /// </summary>
+    public static CardId? CardListenerOf(CardModel card)
+    {
+        var name = card.GetType().Name;
+        if (SimModels.Get(name) is CardListener) return new CardId(name);
+        return CardEnergy.LostWhenDrawn(card) > 0 ? CardId.Void : null;
+    }
+
+    /// <summary>
     /// A player's turn counters (SimPlayer.Turn) from the combat history: card plays started and finished this turn (all, by
     /// type, by tag), and block gains from their card plays (Unmovable).
     /// </summary>
