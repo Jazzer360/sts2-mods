@@ -49,9 +49,8 @@ public sealed partial class ProcAudit
             model.Skip("lethal", window.AfterSkipped ?? "the board after the play wasn't captured");
             return;
         }
-        // What's shown leaves teammates' hands out when the setting is off (decisions #25, #94): the same here.
-        var post = SimEngine.Run(sim.FullStart != null ? window.After.WithoutTeammateHands() : window.After);
-        if (post.Truncated || post.AnyUnmodelled || post.Branches.Count == 0)
+        // What's shown leaves teammates' hands out when the setting is off (decisions #25, #94): the same here (PostPlay).
+        if (PostPlay(window, sim) is not { } post)
         {
             model.Skip("lethal", "the board after the play: its search stopped at a cap or met something not modelled");
             return;

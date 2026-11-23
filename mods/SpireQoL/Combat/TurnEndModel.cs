@@ -441,6 +441,20 @@ public sealed class TurnEndModel
     /// <summary>The start BeginNow last handed back for a reused model (kept while the model and the probe stay the same).</summary>
     private static ForecastStart? _reusedStart;
 
+    /// <summary>
+    /// The turn as it would go after playing a card (Play Preview): the same view built from that card's outcome at its aim, which
+    /// searched the play, then the end of your turn and the enemy turn, from this start.
+    /// </summary>
+    internal static TurnEndModel Preview(ForecastStart start, SimOutcome outcome)
+    {
+        var preview = From(start.State, start.StateKey, outcome, start.Ids, start.Teammates, start.MyHp);
+        preview.IsPreview = true;
+        return preview;
+    }
+
+    /// <summary>Built from a held card's outcome (Play Preview), not from ending the turn now.</summary>
+    public bool IsPreview { get; private set; }
+
     private static TurnEndModel From(SimState state, long key, SimOutcome outcome, IReadOnlyDictionary<Creature, int> ids,
         IReadOnlyList<Player> teammates, int myHp)
     {

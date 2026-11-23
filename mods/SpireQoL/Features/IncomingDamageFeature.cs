@@ -57,7 +57,8 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
 
     public void OnFrame(OverlayHost host)
     {
-        var forecast = Sts2State.IsPlayerTurn ? TurnEndModel.Shown() : null;
+        // The held card's turn while you hold one (Play Preview, decision #183), else ending it now.
+        var forecast = Sts2State.IsPlayerTurn ? PlayPreview.Model(_ctx) : null;
         if (forecast == null || (!forecast.Unknown && forecast.BlockableTotal == 0 && forecast.UnblockableTotal == 0))
         {
             _widget!.HasContent = false;
@@ -67,6 +68,9 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         }
 
         _widget!.HasContent = true;
+        // A preview (the held card's turn) is tinted, so it isn't taken for the turn as it stands.
+        var tint = forecast.IsPreview ? PlayPreview.Tint : Godot.Colors.White;
+        if (_widget.Content.Modulate != tint) _widget.Content.Modulate = tint;
         // The search stopped at its memory cap (decision #107): ? in place of the damage, and no promise either way.
         if (forecast.Unknown)
         {

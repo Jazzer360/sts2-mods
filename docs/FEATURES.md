@@ -501,6 +501,15 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ---
 
+## Play Preview
+
+Setting: **Play Preview** (`play-preview`, on by default). While you hold a card (the game's card play in progress, `NPlayerHand._currentCardPlay`), and for a card that needs a target only once it's aimed (`NCard._previewTarget`, set while the targeting arrow is on a creature), the displays that show the end of your turn show it as it would go after playing that card there (decision #183):
+- **Incoming Damage** and **Teammate Incoming Damage**: the damage you (they) would take, tinted lavender while it's a preview.
+- **Death Skull**: each enemy's chance of dying before it acts after the play.
+- **Enemy intents**: an attack whose damage the play changes (Weak, Strength, Vulnerable on you, a kill) gets a lavender line through the game's damage number and the new number above it, in the game's font (`%Value`'s); a range when the play's outcomes differ; the line alone for an enemy the play kills in every outcome. Our nodes under the intent's `%IntentHolder`; the game's aren't changed.
+
+Nothing is worked out for it: each card's simulation already searches its play, the end of your turn and the enemy turn at every target (`PlayFacts.OutcomeByAim`, `SimOutcome.IntentsAfterPlay`). The card tabs don't change. No Harmony patch. Checked by the play check (`ProcAudit.PreviewIssues`): the damage you take at the end of the turn from the board the play left, and each enemy's intent on it, must lie in what the preview showed.
+
 ## Intent Forecast
 
 **What you see** (decisions #72, #73), during your turn, while you hover an enemy's intent (the intent icons, not the enemy): a backdrop-free stack right above the intent (a certain turn's intents centred over the intent on screen with its power icons to the right, kept level with the intent icon in their row as it bobs; the widget is frameless while locked) (beside it, to the right, when there's no room above; a movable widget) with its next moves after the intent on screen, a row per move stacked upward (`+1` nearest the intent, later turns higher; a random pick's moves at the top), each drawn with the game's own intent node (`NIntent`: the icon, its animation, bobbing in step with the intent on screen, and its damage number, worked out as things stand now):

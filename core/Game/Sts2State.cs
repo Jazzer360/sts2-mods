@@ -142,6 +142,9 @@ public static class Sts2State
 
     private static MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay? CurrentCardPlay(NPlayerHand hand) => CurrentCardPlayField?.GetValue(hand) as MegaCrit.Sts2.Core.Nodes.Combat.NCardPlay;
 
+    /// <summary>The card you're holding (dragging or aiming, NPlayerHand._currentCardPlay): its node and model, or null.</summary>
+    public static (NCard Node, CardModel Card)? HeldCard() => NPlayerHand.Instance is { } hand ? HeldCard(hand) : null;
+
     private static (NCard Node, CardModel Card)? HeldCard(NPlayerHand hand)
     {
         try

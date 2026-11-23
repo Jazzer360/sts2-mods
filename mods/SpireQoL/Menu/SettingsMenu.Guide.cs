@@ -417,6 +417,10 @@ public sealed partial class SettingsMenu
         GuideRow(example: null, "Intent Details",
             "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
             + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
+        GuideRow(example: null, "Play Preview",
+            "Hold a card (and aim it, for one that needs a target): Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, "
+            + "tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it (Weak lowering it, Strength raising it; the line alone for an enemy the play kills). "
+            + "Every outcome of the play is already worked out for each card and target, so it shows at once. The card tabs don't change.");
         GuideRow(example: null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");

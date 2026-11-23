@@ -376,6 +376,12 @@ public sealed class PlayFacts
     public IReadOnlyDictionary<int, IReadOnlyDictionary<int, SimChance>>? DeathByAim { get; set; }
 
     /// <summary>
+    /// Per aim: the whole outcome of playing it there and ending the turn (Play Preview shows it while the card is held and aimed:
+    /// Incoming Damage, the enemies' intents and their death odds after the play).
+    /// </summary>
+    public IReadOnlyDictionary<int, SimOutcome>? OutcomeByAim { get; set; }
+
+    /// <summary>
     /// Per aim: the block the play gives you from evoking Frost orbs, least and most over its outcomes (the simulator's, every orb it
     /// evokes, the ones it channels included): the play audit's block check.
     /// </summary>

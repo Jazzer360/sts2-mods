@@ -1,5 +1,12 @@
 namespace SpireQoL.Sim;
 
+/// <summary>An enemy's intent against you right after a play (SimOutcome.IntentsAfterPlay): a hit's damage before and after, and its hits.</summary>
+public sealed record IntentAfterPlay(int Before, int Least, int Most, int Hits, bool DeadInAll, bool DeadInSome)
+{
+    /// <summary>The play changes what the intent shows: a hit's damage, or the enemy dies in every branch.</summary>
+    public bool Changed => DeadInAll || Least != Before || Most != Before;
+}
+
 /// <summary>The branches still possible after the simulation, with helpers for guarantees and the worst case.</summary>
 public sealed class SimOutcome
 {
@@ -101,6 +108,13 @@ public sealed class SimOutcome
     public bool ParryingShieldInAny => InSome(branch => branch.ParryingShieldFired);
     /// <summary>Teammate k in the branch where they lose the most HP: their Incoming Damage.</summary>
     public SimPlayer TeammateWorst(int teammateIndex) => Branches.Select(branch => branch.Teammates[teammateIndex]).OrderByDescending(player => player.Taken).First();
+
+    /// <summary>
+    /// Each attacking enemy's intent against you right after the play, before your end of turn (Play Preview): a hit's damage as the
+    /// game would show it then (its Weak, Strength, your Vulnerable...), least and most over the play's branches, before the play,
+    /// and whether the play kills it in every branch or some. Empty when the play's search didn't finish.
+    /// </summary>
+    public IReadOnlyDictionary<int, IntentAfterPlay> IntentsAfterPlay = new Dictionary<int, IntentAfterPlay>();
 
     /// <summary>Enemies the play itself kills (before your end of turn) in some branch / in every branch.</summary>
     public HashSet<int> KilledByPlayInAny = new();
@@ -269,7 +283,38 @@ public static partial class SimEngine
             PlayFiredEvery = firedEvery,
             PlayFiredAny = firedAny,
             PlayFirstHits = firstHits,
+            IntentsAfterPlay = complete ? IntentsAfter(states, start) : new Dictionary<int, IntentAfterPlay>(),
         };
+    }
+
+    /// <summary>
+    /// Each attacking enemy's hit on you as its intent reads right after the play, in every branch (SimOutcome.IntentsAfterPlay):
+    /// the intent's own numbers through the damage math (IntentDamage), as the game recalculates the intent it shows.
+    /// </summary>
+    private static Dictionary<int, IntentAfterPlay> IntentsAfter(List<SimState> states, SimState start)
+    {
+        var result = new Dictionary<int, IntentAfterPlay>();
+        if (states.Count == 0) return result;
+        foreach (var enemy in start.Enemies)
+        {
+            if (!enemy.Alive || enemy.Intent is not { Count: > 0 }) continue;
+            var before = IntentDamage(start, enemy, hit: 0, Who.You);
+            int? least = null, most = null;
+            var dead = 0;
+            foreach (var branch in states)
+            {
+                if (branch.Enemy(enemy.Id) is not { Alive: true } after)
+                {
+                    dead++;
+                    continue;
+                }
+                var amount = IntentDamage(branch, after, hit: 0, Who.You);
+                least = least == null ? amount : Math.Min(least.Value, amount);
+                most = most == null ? amount : Math.Max(most.Value, amount);
+            }
+            result[enemy.Id] = new IntentAfterPlay(before, least ?? 0, most ?? 0, enemy.Intent.Count, DeadInAll: dead == states.Count, DeadInSome: dead > 0);
+        }
+        return result;
     }
 
     // ------------------------------------------------------------------ branching

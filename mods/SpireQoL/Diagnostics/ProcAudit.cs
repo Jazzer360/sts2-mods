@@ -101,6 +101,8 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
         public Creature? Target;
         /// <summary>The simulator's state rebuilt from the game when the play's action finished.</summary>
         public SimState? After;
+        /// <summary>The end of turn searched from <see cref="After"/>, once, for the lethal and preview checks (ProcAudit.PostPlay).</summary>
+        public SimOutcome? PostPlay;
         public Dictionary<Creature, int>? AfterIds;
         /// <summary>Why the after-play state wasn't captured.</summary>
         public string? AfterSkipped;

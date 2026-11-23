@@ -21,6 +21,7 @@ public sealed partial class ProcAudit
             var snapshot = new List<string>();
             AfterPlayIssues(window, entries, snapshot, model);
             LethalIssues(window, entries, snapshot, model);
+            PreviewIssues(window, entries, snapshot, model);
             PowerChangeIssues(window, me, entries, flashed, snapshot, model);
             EverythingIssues(window, me, entries, flashed, snapshot, model);
             if (window.RanDuringPause != null)

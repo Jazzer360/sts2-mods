@@ -73,7 +73,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
     {
         // Enemy → the chance shown beside the skull (null: certain). Decision #88: once some outcome kills it; a range and a ? when the
         // search stopped at a cap (decision #107), counting the deaths settled before it.
-        var shownModel = Sts2State.IsPlayerTurn ? TurnEndModel.Shown() : null;
+        var shownModel = Sts2State.IsPlayerTurn ? PlayPreview.Model(_ctx) : null;
         var probe = Sts2State.Me is { } me && Sts2State.Combat is { } combat ? BoardProbe.Hash(me, combat) : 0;
         var shownFor = (shownModel, shownModel?.ShownMark, probe);
         var show = _show;

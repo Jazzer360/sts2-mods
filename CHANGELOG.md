@@ -6,7 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
-### Spire QoL 1.27.2
+### Spire QoL 2.0.0
+#### Added
+- Play Preview: while you hold a card (aimed at its target, for one that needs one), Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it in the same font (Weak lowering it, Strength raising it; the line alone for an enemy the play kills in every outcome). Every outcome of the play was already worked out for each card and target, so it shows at once; the card tabs don't change. A new check holds it to the board the play leaves.
+
 #### Fixed
 - Each simulated game command runs its hooks in the game's order, checked against the game's code on both branches: Hard to Kill and Intangible flash when they cap a relic's or power's damage, a card's damage that isn't an attack and poison, as in the game; a broken block's reactions come after the hit's HP loss; block's "amount changed" reactions come before the block lands.
 - A card's effects happen in the order its own code runs them, read from the game's code (on Steam's main branch and beta alike), so the predictions follow a card whose order changes in a game update: Iron Wave, Dash, Wah Cho and Wah Cho Ki gain their block before they attack, so the block takes an enemy's Thorns (the crossed Thorns tab still shows: the attack sets it off and uses up your block); Second Wind exhausts and blocks card by card (Feel No Pain and Juggernaut in between); Brand, Bulk Up, Sacrifice, Big Bang, The Sun, Glow, Conqueror, Spoils of Battle, Capture Spirit and Consuming Shadow in their own order too.

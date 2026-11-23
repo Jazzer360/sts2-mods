@@ -145,6 +145,7 @@ public static class ModEntry
             new ExplorationProgressFeature(ctx),
             new IntentForecastFeature(ctx),
             new IntentDetailsFeature(ctx),
+            new PlayPreviewFeature(ctx),
             new UpdateNoticeFeature(),
             new Diagnostics.ForecastAudit(),
             new Diagnostics.ProcAudit(ctx),
