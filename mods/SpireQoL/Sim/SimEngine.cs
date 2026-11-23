@@ -379,11 +379,12 @@ public static partial class SimEngine
     // ------------------------------------------------------------------ primitives
 
     /// <summary>
-    /// Damage to an enemy (CreatureCmd.Damage), in the game's order: the damage caps (Hard to Kill, Intangible: the damage math
-    /// applies them, amounts given as final numbers get them here), BeforeDamageReceived (Thorns hits the dealer back), its
-    /// block (AfterBlockBroken when it breaks: Burrowed), the HP-loss pipeline (Hardened Shell, Slippery, The Boot...), its HP,
-    /// then AfterDamageGiven and AfterDamageReceived (Envenom, Mighty Wings, Asleep, Slumber, Plow, Shriek, Flutter, The
-    /// Gambit...), even when its block took it all. Returns the HP it lost (overkill included).
+    /// Damage to an enemy (CreatureCmd.Damage, its hooks in SimPipelines), in the game's order: the damage caps (Hard to Kill,
+    /// Intangible: the damage math applies them, amounts given as final numbers get them here, the cap flashing when it changes
+    /// one), BeforeDamageReceived (Thorns hits the dealer back), its block, the HP-loss pipeline (Hardened Shell, Slippery, The
+    /// Boot...), its HP, AfterBlockBroken when its block broke (Burrowed, Hand Drill), then AfterDamageGiven and AfterDamageReceived
+    /// (Envenom, Mighty Wings, Asleep, Slumber, Plow, Shriek, Flutter, The Gambit...), even when its block took it all. Returns the HP
+    /// it lost (overkill included).
     /// </summary>
     /// <param name="dealer">Who deals it (you by default; Who.YourOsty for Osty's hits).</param>
     /// <param name="props">The damage's props: a card's hit is a powered Move; procs, orbs and the like are Unpowered.</param>
@@ -393,17 +394,26 @@ public static partial class SimEngine
         var listeners = Listeners(state);
         if (!AnyListensToDamage(listeners)) return PlainDamage(state, enemy, amount, dealer, props);
         var ctx = new DamageCtx(dealer, enemy.Id, props, card, state.CurrentPlay);
-        foreach (var (model, o) in listeners) amount = (int)Math.Min(amount, model.ModifyDamageCap(state, o, ctx));
+        // The smallest cap (Hook.ModifyDamage's last term); the one that set it flashes when it lowers the amount (AfterModifyingDamageAmount).
+        var cap = decimal.MaxValue;
+        (SimModel Model, int Owner)? capper = null;
+        foreach (var (model, o) in listeners)
+        {
+            var term = model.ModifyDamageCap(state, o, ctx);
+            if (term < cap) (cap, capper) = (term, (model, o));
+        }
+        if (amount > cap)
+        {
+            amount = (int)cap;
+            capper!.Value.Model.AfterModifyingDamageAmount(state, capper.Value.Owner, card);
+        }
         foreach (var (simModel, o) in listeners) simModel.BeforeDamageReceived(state, o, ctx, amount);
         if (!enemy.Alive) return 0;
         var hadBlock = enemy.Block > 0;
         var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(enemy.Block, amount);
         enemy.Block -= absorbed;
-        if (hadBlock && enemy.Block == 0)
-        {
-            enemy.BlockBroken = true;
-            foreach (var (model, o) in Listeners(state)) model.AfterBlockBroken(state, o, enemy.Id, dealer);
-        }
+        var blockBroken = hadBlock && enemy.Block == 0;
+        if (blockBroken) enemy.BlockBroken = true;
         var hpBefore = enemy.Hp;
         var toHp = 0;
         if (amount - absorbed > 0)
@@ -416,6 +426,8 @@ public static partial class SimEngine
             }
         }
         state.AttackDealt += absorbed + toHp;
+        // After the HP loss, before the damage hooks (the game's results loop in CreatureCmd.Damage).
+        if (blockBroken) foreach (var (model, o) in Listeners(state)) model.AfterBlockBroken(state, o, enemy.Id, dealer);
         var hit = new DamageEvent(dealer, enemy.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && enemy.Hp <= 0);
         if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(state, hit.Total);
         foreach (var (m, o) in Listeners(state)) m.AfterDamageGiven(state, o, hit);
@@ -450,8 +462,10 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// Hook.ModifyHpLost*: every listener's BeforeOsty, BeforeOstyLate, AfterOsty, then AfterOstyLate term; a listener that
-    /// changes the (whole-number) amount gets AfterModifyingHpLost (it flashes).
+    /// Hook.ModifyHpLost*, as CreatureCmd.Damage runs it: every listener's BeforeOsty then BeforeOstyLate term, AfterModifyingHpLost
+    /// for the listeners that changed the (whole-number) amount there (the game's AfterModifyingHpLostBeforeOsty: Hardened Shell), then
+    /// every AfterOsty and AfterOstyLate term and AfterModifyingHpLost for theirs (AfterModifyingHpLostAfterOsty: most flash, Buffer
+    /// loses a stack).
     /// </summary>
     internal static decimal HpLossPipeline(SimState state, DamageCtx ctx, decimal amount)
     {
@@ -466,11 +480,17 @@ public static partial class SimEngine
                 if (decimal.Truncate(before) != decimal.Truncate(amount)) changed.Add((model, o));
             }
         }
+        void AfterModifying()
+        {
+            foreach (var (simModel, o) in changed) simModel.AfterModifyingHpLost(state, o);
+            changed.Clear();
+        }
         Phase((model, owner, running) => model.ModifyHpLostBeforeOsty(state, owner, ctx, running));
         Phase((model, owner, running) => model.ModifyHpLostBeforeOstyLate(state, owner, ctx, running));
+        AfterModifying();
         Phase((model, owner, running) => model.ModifyHpLostAfterOsty(state, owner, ctx, running));
         Phase((model, owner, running) => model.ModifyHpLostAfterOstyLate(state, owner, ctx, running));
-        foreach (var (simModel, o) in changed) simModel.AfterModifyingHpLost(state, o);
+        AfterModifying();
         return amount;
     }
 

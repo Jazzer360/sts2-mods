@@ -257,13 +257,11 @@ public static partial class SimEngine
         var spec = at.Damage;
         var card = state.CurrentPlay?.Card;
         var ctx = new DamageCtx(dealer, target, spec.Props, card, state.CurrentPlay);
-        var mods = spec.Fixed ? null : new List<(SimModel Model, int Owner)>();
         // A replay's damage has what the card gained from its plays before it (decision #160).
         var baseDamage = spec.BaseFor(target) + spec.GrowsEachPlay * (state.CurrentPlay?.PlayIndex ?? 0);
         var terms = spec.TermsFor(target);
         if (spec.EnchantFirstPlayOnly && state.CurrentPlay?.PlayIndex > 0) terms = WithoutEnchantment(terms);
-        var amount = spec.Fixed ? Math.Max(0, (int)baseDamage) : CalcDamage(state, baseDamage, ctx, terms, mods);
-        if (mods != null) foreach (var (model, o) in mods) model.AfterModifyingDamageAmount(state, o, card);
+        var amount = spec.Fixed ? Math.Max(0, (int)baseDamage) : ModifiedDamage(state, baseDamage, ctx, terms);
         // The first hit on each enemy, for the damage-formula audit (not after Mighty Wings gave Strength mid-attack: the preview
         // can't know that).
         if (card != null && !at.ByOsty && !state.FirstHits.ContainsKey(target) && !state.Fired.Has(nameof(Models.MightyWings))) state.FirstHits = state.FirstHits.Add(target, amount);
@@ -277,7 +275,7 @@ public static partial class SimEngine
             var props = unpowered ? SimProps.Unpowered | SimProps.Move : spec.Props;
             foreach (var other in state.Targetable.Where(simEnemy => simEnemy.Id != target).ToList())
             {
-                var splash = unpowered ? CalcDamage(state, amount, new DamageCtx(dealer, other.Id, props, card, state.CurrentPlay)) : amount;
+                var splash = unpowered ? ModifiedDamage(state, amount, new DamageCtx(dealer, other.Id, props, card, state.CurrentPlay), captured: null) : amount;
                 if (splash > 0) Damage(state, other, splash, dealer, props, card);
             }
         }
@@ -295,7 +293,10 @@ public static partial class SimEngine
         for (var i = 0; i < gainBlockAction.Times; i++) branches.Each(branch => BlockOnce(branch, gainBlockAction));
     }
 
-    /// <summary>One block gain of the action, through the block pipeline, with what reacts to it.</summary>
+    /// <summary>
+    /// One block gain of the action (CreatureCmd.GainBlock, its hooks in SimPipelines): the block pipeline (ModifyBlock), then
+    /// AfterModifyingBlockAmount for the sources that changed the amount, the gain (Juggernaut, Beacon of Hope), then AfterBlockGained.
+    /// </summary>
     internal static IEnumerable<SimState> BlockOnce(SimState state, GainBlockAction gainBlockAction)
     {
         if (!state.TakesPart(gainBlockAction.To)) return new[] { state };
@@ -306,11 +307,12 @@ public static partial class SimEngine
         if (blockTerms != null && gainBlockAction.EnchantFirstPlayOnly && state.CurrentPlay?.PlayIndex > 0) blockTerms = WithoutEnchantment(blockTerms);
         var amount = gainBlockAction.Fixed ? Math.Max(0, (int)baseBlock)
             : CalcBlock(state, baseBlock, new BlockCtx(gainBlockAction.To, gainBlockAction.Props, state.CurrentPlay?.Card, state.CurrentPlay), blockTerms, mods);
+        // Before the gain (CreatureCmd.GainBlock): what changed the amount hears it first, then the block lands.
+        if (mods != null && amount > 0) foreach (var (model, o) in mods) model.AfterModifyingBlockAmount(state, o, amount, state.CurrentPlay);
         var states = GainBlock(state, amount, state.EndOfTurnNow && gainBlockAction.To == Who.You && state.Log ? state.CurrentPlay?.Card.Name ?? "block" : null, gainBlockAction.To);
         // Block from a card play this turn (Unmovable counts the ones from earlier plays).
         if (amount > 0 && state.CurrentPlay != null && gainBlockAction.Props.IsCardOrMonsterMove())
             states = states.Select(branch => { branch.PlayCardBlockGains++; if (branch.CurrentPlay!.Owner == Who.You) branch.You.Turn = branch.You.Turn.Add(SimKeys.CardBlock, delta: 1); return branch; }).ToList();
-        if (mods != null && amount > 0) states = states.Select(branch => { foreach (var (model, o) in mods) model.AfterModifyingBlockAmount(branch, o, amount, branch.CurrentPlay); return branch; }).ToList();
         return Then(states, branch => Hook(branch, nameof(SimModel.AfterBlockGained), (model, owner, copy) => model.AfterBlockGained(copy, owner, gainBlockAction.To, amount, copy.CurrentPlay?.Card)));
     }
 

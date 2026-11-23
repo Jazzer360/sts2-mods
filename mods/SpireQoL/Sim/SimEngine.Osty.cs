@@ -26,7 +26,7 @@ public static partial class SimEngine
         var spec = damageAction.Damage;
         var card = branch.CurrentPlay?.Card;
         var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target))
-            : CalcDamage(branch, spec.BaseFor(target), new DamageCtx(Who.You, target, spec.Props, card, branch.CurrentPlay), spec.TermsFor(target));
+            : ModifiedDamage(branch, spec.BaseFor(target), new DamageCtx(Who.You, target, spec.Props, card, branch.CurrentPlay), spec.TermsFor(target));
         if (amount > 0) Damage(branch, enemy, amount, Who.You, spec.Props, card);
         AllyDeaths(branch);
         return DrainPending(branch);

@@ -62,6 +62,34 @@ internal sealed class BranchCode : IDisposable
         });
     }
 
+    /// <summary>
+    /// The method a call in <paramref name="caller"/>'s body names, when it's defined on this branch (a method of the same assembly,
+    /// a generic one's definition included): null for anything elsewhere.
+    /// </summary>
+    public MethodBase? Callee(MethodBase caller, CodeOp call)
+    {
+        var code = caller.GetMethodBody()?.GetILAsByteArray();
+        if (code == null || !call.IsCall) return null;
+        var handle = MetadataTokens.EntityHandle(BitConverter.ToInt32(code, call.Offset + call.OpCode.Size));
+        if (handle.Kind == HandleKind.MethodSpecification) handle = _reader.GetMethodSpecification((MethodSpecificationHandle)handle).Method;
+        if (handle.Kind != HandleKind.MethodDefinition) return null;
+        var token = MetadataTokens.GetToken(handle);
+        var declaring = _reader.GetMethodDefinition((MethodDefinitionHandle)handle).GetDeclaringType();
+        if (Assembly.GetType(FullName(declaring)) is not { } type) return null;
+        const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        return type.GetMethods(all).Cast<MethodBase>().Concat(type.GetConstructors(all)).FirstOrDefault(method => method.MetadataToken == token);
+    }
+
+    /// <summary>A type definition's reflection name (Namespace.Outer+Inner).</summary>
+    private string FullName(TypeDefinitionHandle handle)
+    {
+        var type = _reader.GetTypeDefinition(handle);
+        var name = _reader.GetString(type.Name);
+        if (!type.GetDeclaringType().IsNil) return FullName(type.GetDeclaringType()) + "+" + name;
+        var space = _reader.GetString(type.Namespace);
+        return space.Length == 0 ? name : space + "." + name;
+    }
+
     private CodeMember? Member(EntityHandle handle)
     {
         try

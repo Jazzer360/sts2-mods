@@ -7,9 +7,9 @@ namespace SpireQoL.Sim;
 public static partial class SimEngine
 {
     /// <summary>
-    /// Block for a player from a relic or power (CreatureCmd.GainBlock without a card), <paramref name="times"/> separate gains,
-    /// each through the block pipeline (Dexterity and Frail only for powered block), then the gain (Juggernaut, Beacon of Hope)
-    /// and AfterBlockGained. Logged with the block gained.
+    /// Block for a player from a relic or power (CreatureCmd.GainBlock without a card, its hooks in SimPipelines), <paramref name="times"/>
+    /// separate gains, each through the block pipeline (Dexterity and Frail only for powered block), AfterModifyingBlockAmount for the
+    /// sources that changed it, then the gain (Juggernaut, Beacon of Hope) and AfterBlockGained. Logged with the block gained.
     /// </summary>
     public static IEnumerable<SimState> ProcBlock(SimState state, int owner, string name, decimal baseBlock, SimProps props, int times = 1, string? label = null) =>
         ProcBlockFor(state, owner, name, owner, baseBlock, props, times, label);
@@ -24,9 +24,11 @@ public static partial class SimEngine
             states = Then(states, branch =>
             {
                 if (!branch.TakesPart(gainer)) return new[] { branch };
-                var amount = CalcBlock(branch, baseBlock, new BlockCtx(gainer, props, Card: null, Play: null));
+                var modifiers = Listeners(branch).Count > 0 ? new List<(SimModel Model, int Owner)>() : null;
+                var amount = CalcBlock(branch, baseBlock, new BlockCtx(gainer, props, Card: null, Play: null), captured: null, modifiers);
                 branch.LogFired(name, amount, owner);
                 if (amount <= 0) return new[] { branch };
+                if (modifiers != null) foreach (var (model, listenerOwner) in modifiers) model.AfterModifyingBlockAmount(branch, listenerOwner, amount, play: null);
                 return Then(GainBlock(branch, amount, gainer == Who.You ? Breakdown(branch, owner, name, label) : null, gainer), copy => Hook(copy, nameof(SimModel.AfterBlockGained), (model, listenerOwner, simState) => model.AfterBlockGained(simState, listenerOwner, gainer, amount, card: null)));
             });
         }
@@ -57,7 +59,7 @@ public static partial class SimEngine
     private static int ProcHitOn(SimState state, int? dealer, SimEnemy enemy, decimal baseDamage, SimProps props)
     {
         if (!enemy.Alive) return 0;
-        var amount = CalcDamage(state, baseDamage, new DamageCtx(dealer, enemy.Id, props, Card: null, Play: null));
+        var amount = ModifiedDamage(state, baseDamage, new DamageCtx(dealer, enemy.Id, props, Card: null, Play: null), captured: null);
         if (amount > 0) Damage(state, enemy, amount, dealer, props);
         return amount;
     }
