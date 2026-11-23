@@ -39,7 +39,12 @@ internal sealed class FlatFade
     private readonly List<(CanvasItem Node, float Alpha)> _hidden = new();
     private bool _placed;
     private int _signature;
-    private int _poll;
+    /// <summary>Dev mode looks anyway once a second when nothing it watches changed, and logs it if the card showed something new.</summary>
+    private readonly SpireQoL.Combat.ReuseCheck _reuse = new("the Ethereal fade");
+    /// <summary>When what it watches last changed, and the next look after it (0: none; Godot's ms clock).</summary>
+    private ulong _changedAtMs, _nextLookMs;
+    /// <summary>Looks after a change stop once they'd be this long after it (ms): the dev dashboard's steady watch settles in a second.</summary>
+    private const ulong LookAfterChangeMs = 1000;
     private int _renderedFrames = -1; // frames since the last render was asked for (-1: none yet)
     private bool _verify;
     /// <summary>The glow left out where the card covers it (decision #127), once the image is drawn; null when its shader can't take it.</summary>
@@ -111,14 +116,26 @@ internal sealed class FlatFade
             _signature = 0;
         }
 
-        // Drawn again only when the card shows something new (cost, text, an upgrade, a target's numbers): looked at when the board
-        // changes (the probe), and every 15th frame for what it doesn't see (aiming the card at a target). Each look reads every label's
-        // text from Godot, a new string each: every third frame was garbage while idle (a dev review).
+        // Drawn again only when the card shows something new (cost, text, an upgrade, a target's numbers). Looked at only when what the
+        // card's text is worked out from changes: the board (the probe), the creature it's aimed at and the pile it's shown in (the game
+        // redraws the card's text on those). Each look reads every label's text from Godot, a new string each: a look every 15th frame
+        // was the mod's largest garbage on a steady board (decision #177). Dev mode looks anyway once a second and logs a difference.
         var probe = Sts2State.Me is { } me && Sts2State.Combat is { } combat ? SpireQoL.Combat.BoardProbe.Hash(me, combat) : 0;
-        if (_signature == 0 || probe != _probeLooked || ++_poll % 15 == 0)
+        var target = PreviewTarget?.GetValue(_live);
+        var watched = HashCode.Combine(probe, target == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(target), _live.DisplayingPile);
+        // The game can update a label a frame or two after the change that set it off: looked at again after about 50, 100, 200,
+        // 400 and 800 ms, then left.
+        var nowMs = Time.GetTicksMsec();
+        var changed = _signature == 0 || watched != _probeLooked;
+        var lookAgain = !changed && _nextLookMs != 0 && nowMs >= _nextLookMs;
+        if (changed) (_changedAtMs, _nextLookMs) = (nowMs, nowMs + 50);
+        else if (lookAgain) _nextLookMs = 2 * (nowMs - _changedAtMs) <= LookAfterChangeMs ? _changedAtMs + 2 * (nowMs - _changedAtMs) : 0;
+        var reuse = changed || lookAgain ? SpireQoL.Combat.FrameReuse.WorkOut : _reuse.Decide(unchanged: true);
+        if (reuse != SpireQoL.Combat.FrameReuse.Reuse)
         {
-            _probeLooked = probe;
+            _probeLooked = watched;
             var now = Signature(_container, keep);
+            if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck) _reuse.Compare(now == _signature, "the card showed something new while its board, target and pile didn't change");
             if (now != _signature)
             {
                 var start = Time.GetTicksUsec();

@@ -6,6 +6,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 1.27.2
+#### Fixed
+- An Ethereal card's fade looks at the card again only when its board, the creature it's aimed at or its pile changes, instead of every 15th frame: on a still board it was the mod's largest garbage. The mod's own frame timing no longer makes a little garbage of its own every frame either.
+
+### Main Saves 1.0.27
+#### Changed
+- Shared code: the frame loop's timing makes no garbage of its own, and counts dev mode's checks apart. No change in Main Saves.
+
 ### Spire QoL 1.27.1
 #### Fixed
 - Minions die with the last enemy that isn't one, as in the game: killing the Ovicopter takes its Hatchlings with it, so the lethal tab and Incoming Damage count them gone (their attacks were still predicted).

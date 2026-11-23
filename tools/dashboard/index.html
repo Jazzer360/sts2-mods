@@ -352,8 +352,12 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
         <canvas id="pfWait" height="150"></canvas>
         <div class="legend"><span><i style="background:var(--accent)"></i>finished within the frame</span><span><i style="background:var(--bad)"></i>left to the background</span><span><i style="background:var(--warn)"></i>time to settle</span></div></div>
     </div>
+    <div class="card" style="margin-top:12px"><h3>What allocates while nothing changes?</h3>
+      <p class="hint">Every feature that allocated on a <b>steady</b> frame, however little. A frame is steady once nothing the mod reads has changed for a second: the board, the screen, the control under the mouse, anything held, the settings, searches running (the mouse moving over nothing doesn't count), with the game's window in front. The mod works things out when something changes and only draws them after that, so on a steady frame every feature should allocate nothing. Dev mode's own work is left out (the dashboard, and its once-a-second reuse checks, counted as dev-checks). <b>Apart</b> is the commonest gap between the frames it allocated on: 1 is every frame, 15 a poll every 15th frame. steady-watch is this check's own work. Each one is in the game's log too, the first time it's seen ([steady] lines).</p>
+      <div class="row" style="margin:6px 0"><span class="dim" id="steadyNote"></span></div>
+      <div class="scroll"><table id="steadyTable"></table></div></div>
     <div class="card" style="margin-top:12px"><h3>What is the garbage made of?</h3>
-      <p class="hint">A sample of every allocation by type (the .NET runtime names the type about every 100 KB allocated, so each row's rate is an estimate), split by whether you were <b>quiet</b>: no mouse movement, nothing held and no change on the board for 2 s, with the game's window in front. On a quiet board nothing of the mod's should allocate, so a quiet row of the mod's own types (bold), or of strings and lists while the game's thread is the one allocating, is garbage to find and stop. "game" is the game's thread (the mod's frame work and the game's own code), "other" every other thread (the mod's searches among them). The feature table below has each feature's memory while quiet too.</p>
+      <p class="hint">A sample of every allocation by type (the .NET runtime names the type about every 100 KB allocated, so each row's rate is an estimate), split by whether the moment was <b>quiet</b>: steady, as above. On a quiet board nothing of the mod's should allocate, so a quiet row of the mod's own types (bold), or of strings and lists while the game's thread is the one allocating, is garbage to find and stop. "game" is the game's thread (the mod's frame work and the game's own code), "other" every other thread (the mod's searches among them). The feature table below has each feature's memory while quiet too, and the table above every feature that allocated then, however little.</p>
       <div class="row" style="margin:6px 0"><span class="dim" id="allocQuietNote"></span></div>
       <div class="scroll"><table id="allocTable"></table></div></div>
     <div class="card" style="margin-top:12px"><h3>Each feature over this window</h3>
@@ -498,7 +502,7 @@ const isHitch = (r) => r.gapMax > 50 && r.modMax < 30;
 const warmupWarning = (l) => l.level === "WARN" && /^\[perf\] slow frame/.test(l.text) && warmingUp(l.t);
 const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
-  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [],
+  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [],
   combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null, launches: [0],
   searchTotals: newSearchTotals(), searchCards: new Map(),
 };
@@ -521,7 +525,7 @@ function countSearch(e) {
   M.searchCards.set(key, c);
 }
 function reset() {
-  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
+  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
     searchTotals: newSearchTotals(), searchCards: new Map() });
   FS.base = 0;
 }
@@ -538,6 +542,7 @@ function ingest(e) {
     case "stream-started": M.started = e; break;
     case "frame-rollup": push(M.rollups, e, MAX.rollups); break;
     case "allocation-sample": push(M.allocSamples, e, MAX.rollups); break;
+    case "steady-sample": push(M.steadySamples, e, MAX.rollups); break;
     case "search-done": {
       push(M.searches, e, MAX.searches);
       countSearch(e);
@@ -1659,14 +1664,30 @@ function renderPerf() {
   const feat = {};
   for (const x of r) for (const [k, v] of Object.entries(x.featureMean || {})) { const f = (feat[k] ??= { mean: 0, max: 0, n: 0, kb: 0 }); f.mean += v; f.n++; f.max = Math.max(f.max, x.featureMax?.[k] || 0); f.kb += x.featureKb?.[k] || 0; }
   const rows = Object.entries(feat).sort((a, b) => b[1].mean - a[1].mean);
-  // While quiet (decision #176): the moments with no input and no board change, without a dev check in them (dev mode works a kept
-  // result out again once a second, which players' builds never do).
+  // While quiet (decisions #176, #177): the steady moments, nothing the mod reads changing, without a dev check in them (dev mode works
+  // a kept result out again once a second, which players' builds never do).
   const quietRollups = r.filter((x) => x.quiet && !x.devChecks), quietFrames = quietRollups.reduce((a, x) => a + x.frames, 0);
   const quietKb = {};
   for (const x of quietRollups) for (const [k, v] of Object.entries(x.featureKb || {})) quietKb[k] = (quietKb[k] || 0) + v * x.frames;
   const quietCell = (k) => (quietFrames ? (() => { const v = (quietKb[k] || 0) / quietFrames; return `<td class="n ${v > 1 ? "bad" : v > 0.1 ? "warn" : ""}">${fmt(v, 2)} KB</td>`; })() : `<td class="n faint">–</td>`);
-  setHTML($("featureTable"), `<tr><th>Feature</th><th class="n">Mean per frame</th><th class="n">Largest in one frame</th><th class="n">Share of the mod's time</th><th class="n">Memory per frame</th><th class="n" title="Memory per frame in quiet moments (no input, no board change for 2 s, the window in front; none with a dev check): what a feature allocates while nothing changes. Amber over 0.1 KB, red over 1 KB.">While quiet</th></tr>` +
+  setHTML($("featureTable"), `<tr><th>Feature</th><th class="n">Mean per frame</th><th class="n">Largest in one frame</th><th class="n">Share of the mod's time</th><th class="n">Memory per frame</th><th class="n" title="Memory per frame in quiet moments (steady: nothing the mod reads changed for a second, the window in front; none with a dev check): what a feature allocates while nothing changes. Amber over 0.1 KB, red over 1 KB.">While quiet</th></tr>` +
     rows.map(([k, f]) => `<tr><td>${esc(k)}</td><td class="n">${fmt(f.mean / f.n, 3)} ms</td><td class="n ${f.max > 16.7 ? "bad" : f.max > 8 ? "warn" : ""}">${fmt(f.max, 1)} ms</td><td class="n">${pct(f.mean, rows.reduce((a, [, g]) => a + g.mean, 0))}</td><td class="n ${f.kb / f.n > 100 ? "bad" : f.kb / f.n > 20 ? "warn" : ""}">${fmt(f.kb / f.n, 1)} KB</td>${quietCell(k)}</tr>`).join(""));
+  // What allocates while nothing changes (decision #177): every feature seen on a steady frame in the window, by place.
+  const steadyS = since(M.steadySamples, win), steadyTime = {}, steadyRows = {};
+  for (const x of steadyS) {
+    for (const [where, v] of Object.entries(x.steady || {})) { const s = (steadyTime[where] ??= { frames: 0, seconds: 0 }); s.frames += v.frames; s.seconds += v.seconds; }
+    for (const g of x.garbage || []) {
+      const row = (steadyRows[g.where + "|" + g.id] ??= { where: g.where, id: g.id, frames: 0, kb: 0, maxKb: 0, periods: {} });
+      row.frames += g.frames; row.kb += g.kb; row.maxKb = Math.max(row.maxKb, g.maxKb);
+      if (g.period) row.periods[g.period] = (row.periods[g.period] || 0) + g.frames;
+    }
+  }
+  const steadyList = Object.values(steadyRows).map((x) => ({ ...x, period: +(Object.entries(x.periods).sort((a, b) => b[1] - a[1])[0]?.[0] || 0), perSec: x.kb / Math.max(steadyTime[x.where]?.seconds || 0, 0.01) }))
+    .sort((a, b) => b.perSec - a.perSec);
+  const steadyTotal = Object.values(steadyTime).reduce((a, s) => a + s.seconds, 0);
+  setHTML($("steadyNote"), steadyS.length ? `Steady for ${fmt(steadyTotal, 0)} s in this window (${Object.entries(steadyTime).map(([w, s]) => `${esc(w)} ${fmt(s.seconds, 0)} s`).join(", ") || "none"}). ${steadyList.length ? "" : "Nothing allocated on a steady frame."}` : "No samples yet: the game writes one every 10 s in dev mode.");
+  setHTML($("steadyTable"), `<tr><th>Feature</th><th>Where</th><th class="n">KB/s while steady</th><th class="n">Steady frames it allocated on</th><th class="n">Apart</th><th class="n">KB each</th><th class="n">Largest</th></tr>` +
+    (steadyList.length ? steadyList.map((x) => `<tr><td>${esc(x.id)}</td><td>${esc(x.where)}</td><td class="n ${x.perSec > 50 ? "bad" : x.perSec > 5 ? "warn" : ""}">${fmt(x.perSec, 2)}</td><td class="n">${fmt(x.frames, 0)} (${pct(x.frames, steadyTime[x.where]?.frames || 0)})</td><td class="n">${x.period ? (x.period >= 120 ? "120+" : x.period) : "once"}</td><td class="n">${fmt(x.kb / x.frames, 2)}</td><td class="n">${fmt(x.maxKb, 2)}</td></tr>`).join("") : `<tr><td colspan="7" class="empty">None</td></tr>`));
   // What the garbage is made of: the samples in the window, each type's rate while quiet and while active.
   const samples = since(M.allocSamples, win);
   const quietS = samples.reduce((a, x) => a + (x.quietSeconds || 0), 0), activeS = samples.reduce((a, x) => a + Math.max(0, x.seconds - (x.quietSeconds || 0)), 0);
@@ -2139,6 +2160,7 @@ function demoTick(fast) {
   for (let k = 0; k < 2; k++) demoEmit({ kind: "frame-rollup", seconds: 0.25, frames: 30, modP50: sum * 0.7, modP95: sum * (1.2 + rand() * 0.3), modMax: sum * (1.5 + rand() * (busy ? 4 : 0.5)), gapMax: 16 + (rand() < 0.03 ? 80 : rand() * 6), slow: busy && rand() < 0.2 ? 1 : 0, featureMean: feat, featureMax: Object.fromEntries(Object.entries(feat).map(([a, b]) => [a, b * 2])), featureKb: Object.fromEntries(Object.entries(feat).map(([a, b]) => [a, b * 30])), heapMb: 480 + 40 * Math.sin(DEMO.t / 40) + rand() * 5, allocatedMb: 1 + rand() * (busy ? 30 : 3), gen0: rand() < 0.3 ? 1 : 0, gen1: 0, gen2: rand() < 0.01 ? 1 : 0, gcPauseMs: rand() * 2, heldStates: busy ? Math.floor(rand() * 40000) : Math.floor(rand() * 400), searching: busy ? Math.floor(rand() * 6) : 0, simMb: busy ? rand() * 8 : 0, compiles: rand() < 0.02 ? 1 + Math.floor(rand() * 6) : 0, nodes: 2400, orphanNodes: 12, quiet: !busy && rand() < 0.6, devChecks: rand() < 0.25 ? 1 : 0 });
   if (Math.floor(DEMO.t) % 10 === 0 && Math.floor(DEMO.t) !== DEMO.lastSample) {
     DEMO.lastSample = Math.floor(DEMO.t);
+    demoEmit({ kind: "steady-sample", steady: { fight: { frames: 900, seconds: 6 } }, garbage: [{ where: "fight", id: "ethereal-fade", frames: 60, kb: 480, maxKb: 8.1, period: 15 }, { where: "fight", id: "card-tabs", frames: 900, kb: 90, maxKb: 0.1, period: 1 }] });
     demoEmit({ kind: "allocation-sample", seconds: 10, quietSeconds: 4, quietKb: { "game|System.String": 40 + rand() * 20, "game|SpireQoL.Cards.TabSpec": 12, "game|System.Collections.Generic.List`1[SpireQoL.Cards.TabSpec]": 6 }, activeKb: { "game|System.String": 900, "other|SpireQoL.Sim.SimState": 4000, "game|MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry": 300 } });
   }
   if (DEMO.turn === 0 || rand() < 0.05) {

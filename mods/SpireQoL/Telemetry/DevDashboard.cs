@@ -2,6 +2,7 @@ using System.Diagnostics;
 using SpireQoL.Combat;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Diagnostics;
+using Sts2Mods.Core.Game;
 using Sts2Mods.Core.Ui;
 
 namespace SpireQoL.Telemetry;
@@ -28,27 +29,60 @@ public static class DevDashboard
     private static AllocationSampler? _sampler;
     private static double _lastSample, _quietSecondsInSample, _sampledSecondsInSample;
 
-    // ---- quiet moments (decision #176): no input and no change on the board for QuietSeconds, when the mod should allocate nothing.
-    private const double QuietSeconds = 2;
-    private static Godot.Vector2I _lastMouse;
-    private static ulong _lastInputMs;
+    // ---- steady moments (decision #177, replacing #176's quiet ones): nothing the mod reads changed for a second, when no feature
+    // should allocate anything. The rollups' and the sampler's "quiet" are these.
+    private static readonly SteadyWatch Steady = new(new[] { "dev-dashboard", OverlayHost.DevChecksId });
+    /// <summary>The watch's own entry: what working out the frame's key allocated (on the frame before), so it reports itself.</summary>
+    private const string WatchId = "steady-watch";
+    private static readonly List<(string Id, double Kb)> FrameKb = new();
+    private static double _watchKb;
+    private static int _unfocusedFrames;
     private static bool _quietAllWindow = true;
-    private static int _checksAtRollup;
+    private static int _checksAtRollup, _checksAtFrame;
 
-    /// <summary>Every frame: input (the mouse moved, anything held), the game's window not in front, and the board probe changing end a quiet moment.</summary>
-    private static void WatchQuiet(double gapMs)
+    /// <summary>
+    /// The frame's key: what the mod reads. The board probe (it moves when anything a prediction reads does), a fight or not, the settings,
+    /// anything held, searches running, the game's screen and the control under the mouse (a hover changes what's shown; the mouse moving
+    /// over nothing doesn't). In the background (another window in front) the game runs at 30 fps and nobody is watching: never steady.
+    /// </summary>
+    private static int FrameKey()
     {
-        var now = Godot.Time.GetTicksMsec();
-        var mouse = Godot.DisplayServer.MouseGetPosition();
-        // In the background (another window focused) the game runs at 30 fps and nobody is watching: never quiet, and quiet starts over
-        // only once it's back in front.
-        if (mouse != _lastMouse || Godot.Input.IsAnythingPressed() || !Godot.DisplayServer.WindowIsFocused())
+        if (!Godot.DisplayServer.WindowIsFocused()) return unchecked(++_unfocusedFrames);
+        var hash = new HashCode();
+        hash.Add(BoardProbe.ChangedAtMs);
+        hash.Add(Sts2State.InCombat);
+        hash.Add(QolSettings.Revision);
+        hash.Add(Godot.Input.IsAnythingPressed());
+        hash.Add(SimWork.HeldEverywhere > 0);
+        try
         {
-            _lastMouse = mouse;
-            _lastInputMs = now;
+            var screen = MegaCrit.Sts2.Core.Nodes.Screens.ScreenContext.ActiveScreenContext.Instance.GetCurrentScreen();
+            hash.Add(screen == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(screen));
+            var hovered = (Godot.Engine.GetMainLoop() as Godot.SceneTree)?.Root.GuiGetHoveredControl();
+            hash.Add(hovered == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(hovered));
         }
-        var settled = Math.Max(_lastInputMs, BoardProbe.ChangedAtMs);
-        var quiet = now - settled >= QuietSeconds * 1000;
+        catch
+        {
+            hash.Add(-1);
+        }
+        return hash.ToHashCode();
+    }
+
+    /// <summary>Every frame: the frame's key and each feature's memory to the steady watch.</summary>
+    private static void WatchSteady(OverlayHost host, double gapMs)
+    {
+        var allocated = GC.GetAllocatedBytesForCurrentThread();
+        var key = FrameKey();
+        var devCheck = ReuseCheck.ChecksRun != _checksAtFrame;
+        _checksAtFrame = ReuseCheck.ChecksRun;
+        var where = Sts2State.InCombat ? "fight" : MegaCrit.Sts2.Core.Runs.RunManager.Instance is { IsInProgress: true } ? "run" : "menu";
+        FrameKb.Clear();
+        var featureKb = host.FeatureKb;
+        for (var i = 0; i < featureKb.Count; i++) FrameKb.Add(featureKb[i]);
+        FrameKb.Add((WatchId, _watchKb));
+        Steady.Frame(key, Clock.Elapsed.TotalSeconds, gapMs / 1000, where, devCheck, FrameKb);
+        var quiet = Steady.Steady;
+        _watchKb = (GC.GetAllocatedBytesForCurrentThread() - allocated) / 1024.0;
         _sampler?.SetQuiet(quiet);
         if (_sampler is { Sampling: true })
         {
@@ -110,7 +144,7 @@ public static class DevDashboard
             host.FrameMeasured += (modMs, gapMs) =>
             {
                 CountCompiles();
-                WatchQuiet(gapMs);
+                WatchSteady(host, gapMs);
                 Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
             };
             // What the garbage is made of: the runtime's allocation ticks, by type (dev mode only).
@@ -163,11 +197,18 @@ public static class DevDashboard
             _gc = collections;
             _simAllocated = SimJob.AllocatedBytes;
             _sampler?.Cycle(now);
-            if (_sampler != null && now - _lastSample >= SampleSeconds)
+            if (now - _lastSample >= SampleSeconds)
             {
-                // Seconds: those sampled (the bursts), so the rates are over the time listened.
-                var (quietKb, activeKb) = _sampler.Take();
-                sink.Post(new AllocationSample(Math.Round(_sampledSecondsInSample, 2), Math.Round(_quietSecondsInSample, 2), Rounded(quietKb), Rounded(activeKb)));
+                // What allocated while nothing changed: every feature, however little; each one the first time in the log too.
+                var (steady, firstSeen) = Steady.Take();
+                sink.Post(steady);
+                foreach (var garbage in firstSeen) ModEntry.Log.Detail(SteadyWatch.Describe(garbage, steady.Steady.GetValueOrDefault(garbage.Where)?.Frames ?? 0));
+                if (_sampler != null)
+                {
+                    // Seconds: those sampled (the bursts), so the rates are over the time listened.
+                    var (quietKb, activeKb) = _sampler.Take();
+                    sink.Post(new AllocationSample(Math.Round(_sampledSecondsInSample, 2), Math.Round(_quietSecondsInSample, 2), Rounded(quietKb), Rounded(activeKb)));
+                }
                 _lastSample = now;
                 _quietSecondsInSample = 0;
                 _sampledSecondsInSample = 0;

@@ -24,10 +24,25 @@ public sealed record FrameRollup(double Seconds, int Frames, double ModP50, doub
 
 /// <summary>
 /// What the garbage was made of over the last few seconds (AllocationSampler, decision #176): KB by "thread|type" (thread: game or
-/// other), from the runtime's allocation ticks, split by whether the moment was quiet (no input, no board change) or active.
+/// other), from the runtime's allocation ticks, split by whether the moment was quiet (steady: nothing the mod reads changed, decision #177) or active.
 /// Seconds and QuietSeconds count only the time the sampler listened (its bursts), so KB over them is a rate.
 /// </summary>
 public sealed record AllocationSample(double Seconds, double QuietSeconds, Dictionary<string, double> QuietKb, Dictionary<string, double> ActiveKb) : DevEvent;
+
+/// <summary>
+/// Garbage while nothing changed (SteadyWatch, decision #177), over the last few seconds: the steady time in each place ("fight",
+/// "run", "menu") and every feature that allocated on a steady frame there, however little.
+/// </summary>
+public sealed record SteadySample(Dictionary<string, SteadyTime> Steady, List<SteadyGarbage> Garbage) : DevEvent;
+
+/// <summary>Steady frames in one place and how long they lasted (seconds).</summary>
+public sealed record SteadyTime(int Frames, double Seconds);
+
+/// <summary>
+/// A feature that allocated on steady frames: on how many, the KB in all and in its largest one, and the commonest gap between them in
+/// steady frames (1: every frame; 15: every 15th, a poll; 0: only once).
+/// </summary>
+public sealed record SteadyGarbage(string Where, string Id, int Frames, double Kb, double MaxKb, int Period);
 
 /// <summary>A line of the mod's own log ([SpireQoL] lines).</summary>
 public sealed record LogLine(string Level, string Text) : DevEvent;

@@ -100,7 +100,18 @@ public sealed class OverlayHost
     // ---- the mod's code in the game's hooks (Harmony patches, the game's events): outside the frame's run, so the frame's own
     // times can't see it. Timed where it runs (TimeHook) and shown with the next frame's times as "hook:<id>".
     private static readonly List<(string Id, double Ms, double Kb)> HookTimes = new();
+    private static readonly Dictionary<string, string> HookEntries = new(StringComparer.Ordinal);
     private static int _mainThread, _hookDepth;
+
+    /// <summary>
+    /// The entry dev mode's own checks are counted under (decision #177): a feature's time and memory on a frame where it ran one (a
+    /// result worked out again to check what was reused, which players' builds never do), so every feature's own numbers are a player's.
+    /// </summary>
+    public const string DevChecksId = "dev-checks";
+    private static int _devWork;
+
+    /// <summary>Dev mode's check ran in the code being timed: its time and memory go under <see cref="DevChecksId"/>.</summary>
+    public static void CountDevWork() => _devWork++;
     private static double _hookMsSinceFrame;
 
     /// <summary>
@@ -117,6 +128,7 @@ public sealed class OverlayHost
         private readonly string? _id;
         private readonly ulong _startUs;
         private readonly long _allocatedBefore;
+        private readonly int _devWorkBefore;
 
         internal HookTiming(string id)
         {
@@ -125,11 +137,13 @@ public sealed class OverlayHost
                 _id = null;
                 _startUs = 0;
                 _allocatedBefore = 0;
+                _devWorkBefore = 0;
                 return;
             }
             _id = id;
             _startUs = Godot.Time.GetTicksUsec();
             _allocatedBefore = GC.GetAllocatedBytesForCurrentThread();
+            _devWorkBefore = _devWork;
         }
 
         public void Dispose()
@@ -139,7 +153,7 @@ public sealed class OverlayHost
             if (_id == null) return;
             var milliseconds = (Godot.Time.GetTicksUsec() - _startUs) / 1000.0;
             _hookMsSinceFrame += milliseconds;
-            HookTimes.Add((_id, milliseconds, KbSince(_allocatedBefore)));
+            HookTimes.Add((_devWork != _devWorkBefore ? DevChecksId : _id, milliseconds, KbSince(_allocatedBefore)));
         }
     }
 
@@ -148,13 +162,9 @@ public sealed class OverlayHost
     {
         foreach (var (id, milliseconds, kilobytes) in HookTimes)
         {
-            var entry = "hook:" + id;
-            var timeIndex = _featureMs.FindIndex(timing => timing.Id == entry);
-            if (timeIndex >= 0) _featureMs[timeIndex] = (entry, _featureMs[timeIndex].Ms + milliseconds);
-            else _featureMs.Add((entry, milliseconds));
-            var memoryIndex = _featureKb.FindIndex(memory => memory.Id == entry);
-            if (memoryIndex >= 0) _featureKb[memoryIndex] = (entry, _featureKb[memoryIndex].Kb + kilobytes);
-            else _featureKb.Add((entry, kilobytes));
+            // Named once per hook (a string made every frame would be garbage of its own).
+            if (!HookEntries.TryGetValue(id, out var entry)) HookEntries[id] = entry = id == DevChecksId ? id : "hook:" + id;
+            AddEntry(entry, milliseconds, kilobytes);
         }
         HookTimes.Clear();
     }
@@ -189,8 +199,9 @@ public sealed class OverlayHost
     {
         var start = Godot.Time.GetTicksUsec();
         var alloc = GC.GetAllocatedBytesForCurrentThread();
+        var devWork = _devWork;
         run(state);
-        AddTimed(id, (Godot.Time.GetTicksUsec() - start) / 1000.0, KbSince(alloc));
+        AddTimed(_devWork != devWork ? DevChecksId : id, (Godot.Time.GetTicksUsec() - start) / 1000.0, KbSince(alloc));
     }
 
     /// <summary>A feature's time this frame, less the parts it timed on its own (each its own entry).</summary>
@@ -198,18 +209,26 @@ public sealed class OverlayHost
     {
         foreach (var (part, partMs, partKb) in _parts)
         {
-            var timeIndex = _featureMs.FindIndex(timing => timing.Id == part);
-            if (timeIndex >= 0) _featureMs[timeIndex] = (part, _featureMs[timeIndex].Ms + partMs);
-            else _featureMs.Add((part, partMs));
-            var memoryIndex = _featureKb.FindIndex(memory => memory.Id == part);
-            if (memoryIndex >= 0) _featureKb[memoryIndex] = (part, _featureKb[memoryIndex].Kb + partKb);
-            else _featureKb.Add((part, partKb));
+            AddEntry(part, partMs, partKb);
             milliseconds -= partMs;
             kilobytes -= partKb;
         }
         _parts.Clear();
-        _featureMs.Add((id, Math.Max(0, milliseconds)));
-        _featureKb.Add((id, Math.Max(0, kilobytes)));
+        AddEntry(id, Math.Max(0, milliseconds), Math.Max(0, kilobytes));
+    }
+
+    /// <summary>Adds to an entry of the frame's times and memory, or starts it (a plain loop: a lambda capturing the id is garbage every call).</summary>
+    private void AddEntry(string id, double milliseconds, double kilobytes)
+    {
+        for (var i = 0; i < _featureMs.Count; i++)
+            if (_featureMs[i].Id == id)
+            {
+                _featureMs[i] = (id, _featureMs[i].Ms + milliseconds);
+                _featureKb[i] = (id, _featureKb[i].Kb + kilobytes);
+                return;
+            }
+        _featureMs.Add((id, milliseconds));
+        _featureKb.Add((id, kilobytes));
     }
 
     /// <summary>Memory this thread allocated since <paramref name="start"/>, in KB (GC.GetAllocatedBytesForCurrentThread: no allocation itself).</summary>

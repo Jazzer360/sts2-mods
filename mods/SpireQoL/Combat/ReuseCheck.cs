@@ -16,11 +16,17 @@ public enum FrameReuse
 /// probe, a key), except that dev mode works it out anyway on such a frame once every <see cref="BoardProbe.CheckSeconds"/> and compares. A
 /// difference means the probe or the key missed a change: logged once (<see cref="BoardProbe.Missed"/>), so a stale result shows up
 /// in the logs before it shows on screen. An optimization that can be wrong carries the check that says when it is.
+/// Every kept result checks on the same frame (decision #177: one check frame a second, not one per result at its own moment), and
+/// tells the frame loop it did (OverlayHost.CountDevWork), so its time and memory are dev mode's, not the feature's, and the steady
+/// watch leaves out one moment a second instead of several.
 /// </summary>
 public sealed class ReuseCheck
 {
     private readonly string _what;
-    private long _lastCheck;
+    private ulong _checkedFrame = ulong.MaxValue;
+    /// <summary>The frame every result checks on, and when it was picked.</summary>
+    private static ulong _checkFrame = ulong.MaxValue;
+    private static long _checkFrameAt;
 
     /// <summary>Dev checks run since launch, every result's together (the dev stream marks the moments that had one: decision #176).</summary>
     public static int ChecksRun { get; private set; }
@@ -33,10 +39,19 @@ public sealed class ReuseCheck
     {
         if (!unchanged) return FrameReuse.WorkOut;
         if (!ModEntry.DevMode) return FrameReuse.Reuse;
-        var now = System.Diagnostics.Stopwatch.GetTimestamp();
-        if (System.Diagnostics.Stopwatch.GetElapsedTime(_lastCheck, now).TotalSeconds < BoardProbe.CheckSeconds) return FrameReuse.Reuse;
-        _lastCheck = now;
+        var frame = Godot.Engine.GetProcessFrames();
+        if (frame != _checkFrame)
+        {
+            var now = System.Diagnostics.Stopwatch.GetTimestamp();
+            if (_checkFrameAt != 0 && System.Diagnostics.Stopwatch.GetElapsedTime(_checkFrameAt, now).TotalSeconds < BoardProbe.CheckSeconds) return FrameReuse.Reuse;
+            _checkFrame = frame;
+            _checkFrameAt = now;
+        }
+        // Once on the check frame (a result asked for twice in it checks the first time).
+        if (_checkedFrame == frame) return FrameReuse.Reuse;
+        _checkedFrame = frame;
         ChecksRun++;
+        Sts2Mods.Core.Ui.OverlayHost.CountDevWork();
         return FrameReuse.WorkOutAndCheck;
     }
 
