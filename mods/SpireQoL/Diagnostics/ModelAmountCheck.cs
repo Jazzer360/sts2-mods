@@ -74,7 +74,8 @@ internal static class ModelAmountCheck
             "its amount × the melodies (Wah, Cho, Ki) the card is the first this turn to play, counted from the turn's plays in both (Melodies.First)",
         ["DarkEmbracePower Draw: game Amount | mul(Amount, ?field etherealCount); model Amount"] =
             "its amount per card exhausted; the Ethereal ones exhausted as the turn ends draw together at AfterSideTurnEnd (amount × etherealCount), the same number",
-        ["TheBombPower Damage: game Var Damage; model ?ProcModel.Data"] = "its Damage value, which the adapter reads into its Data (SimReaders.Powers)",
+        ["TheBombPower Damage: game Var Damage; model ?CounterCopy.get_Amount"] =
+            "each copy's own Damage value, which the adapter reads into the copy's Amount (SimReaders.Counters) or, with none listed, its entry's Data (SimReaders.Powers)",
     };
 
     /// <summary>The check on the loaded game.</summary>
@@ -391,7 +392,8 @@ internal static class ModelAmountCheck
             if (member.DeclaringType == "Decimal" && Arithmetic(member.Name) is { } operation)
                 return $"{operation}({Describe(Operand(at, 1), depth + 1)}, {Describe(Operand(at, 0), depth + 1)})";
             // The game's: base.Amount, base.DynamicVars.Name(.BaseValue / .IntValue), base.DynamicVars["Name"].
-            if (member.Name == "get_Amount") return "Amount";
+            // (Not a copy's amount on the model's side: CounterCopy.Amount is what that copy gives, read below as unread.)
+            if (member.Name == "get_Amount" && member.DeclaringType != nameof(CounterCopy)) return "Amount";
             if (member.Name is "get_BaseValue" or "get_IntValue") return VarName(Operand(at, 0)) ?? "?" + member.Name;
             if (member.DeclaringType == "DynamicVarSet") return VarName(at) ?? "?" + member.Name;
             // The model's: Amount(state, owner), PowerOn(state, owner, ThisPower), RelicsOf(...)[ThisRelic], Var(..., "Name", ...),
@@ -404,7 +406,9 @@ internal static class ModelAmountCheck
                 if (member.Name == nameof(SimEngine.PowerOn))
                     return Argument(at, member, names.IndexOf("power")) is { } power && _ops[power].Member is { Name: "get_ThisPower" } ? "Amount" : "?PowerOn";
                 if (member.Name == "get_Item" && Operand(at, 0) is { } key && _ops[key].Member is { Name: "get_ThisPower" or "get_ThisRelic" }) return "Amount";
-                if (member.Name == nameof(SimEngine.Var) && Argument(at, member, names.IndexOf("var")) is { } varName && _ops[varName].Text is { } text)
+                // VarTotal: a value summed over an instanced power's copies, as the game's copies each take their own (its hook's
+                // per-copy value); with one copy, that copy's.
+                if (member.Name is nameof(SimEngine.Var) or nameof(SimEngine.VarTotal) && Argument(at, member, names.IndexOf("var")) is { } varName && _ops[varName].Text is { } text)
                     return "Var " + text;
                 if (_set.ReturnSource(member, depth) is { } returned) return returned;
             }

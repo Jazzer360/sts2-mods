@@ -350,7 +350,8 @@ public static partial class SimEngine
         var powerModel = SimModels.Get(power.Name);
         // Each application of a counter power is a copy of its own, counting from the start (Orbit played twice: two Orbits).
         if (powerModel is Models.CounterPower counter) counter.NewCopy(state, target, amount, had);
-        if (!had) powerModel?.AfterApplied(state, target, applier, amount);
+        // Each copy of an instanced power is applied on its own (a second Intercept on a covered teammate: a Covered of its own).
+        if (!had || powerModel is { Instanced: true }) powerModel?.AfterApplied(state, target, applier, amount);
         return true;
     }
 
@@ -414,6 +415,16 @@ public static partial class SimEngine
     /// <summary>A relic's or power's value (its DynamicVar) as the adapter read it (SimState.Vars), or the fallback.</summary>
     public static int Var(SimState state, int owner, string model, string var, int fallback) =>
         state.Vars.TryGetValue($"{owner}:{model}:{var}", out var value) ? value : fallback;
+
+    /// <summary>What the adapter adds to a value's key for its total over an instanced power's copies (SimReaders.AddVars).</summary>
+    public const string TotalSuffix = ".Total";
+
+    /// <summary>
+    /// A value summed over every copy of an instanced power on its owner (PowerInstanceType.Instanced: each Monologue played is a
+    /// copy with its own Strength, and each gives its own), as the adapter read it; one copy's (Var) when no total was read.
+    /// </summary>
+    public static int VarTotal(SimState state, int owner, string model, string var, int fallback) =>
+        state.Vars.TryGetValue($"{owner}:{model}:{var}{TotalSuffix}", out var total) ? total : Var(state, owner, model, var, fallback);
 }
 
 public static partial class SimEngine

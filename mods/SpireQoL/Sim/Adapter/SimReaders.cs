@@ -77,7 +77,11 @@ public static class SimReaders
             case nameof(HardenedShellPower): data = Math.Max(0, power.DisplayAmount); break;
             case nameof(FlutterPower): data = Sts2State.Var(power, "DamageDecrease", fallback: 50); break;
             case nameof(SurroundedPower): data = Sts2State.Private<object?>(power, "Facing", fallback: null)?.ToString() == "Left" ? Models.SurroundedPower.FacingLeft : Models.SurroundedPower.FacingRight; break;
-            case nameof(CoveredPower): data = DataCreature.Of(power.Applier is { } coverer ? idOf(coverer) : null); break;
+            // The players covering it, over every copy (one per Intercept played on it): a bit each.
+            case nameof(CoveredPower):
+                data = power.Owner.Powers.Where(copy => copy is CoveredPower && copy.Applier != null)
+                    .Aggregate(0, (bits, copy) => bits | (idOf(copy.Applier!) is { } coverer ? Models.CoveredPower.CovererBit(coverer) : 0));
+                break;
             // Counters the proc models count down (the power's own number: DisplayAmount, or its CardsLeft value).
             case nameof(FeralPower) or nameof(OrbitPower) or nameof(AutomationPower) or nameof(CacophonyPower): data = Math.Max(0, power.DisplayAmount); break;
             case nameof(PanachePower) or nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
@@ -95,10 +99,16 @@ public static class SimReaders
             // Gone with their applier (AfterDeath), Magic Bomb only while it lives: the applier.
             case nameof(ConstrictPower) or nameof(MagicBombPower): data = DataCreature.Of(power.Applier is { } caster ? idOf(caster) : null); break;
             case nameof(StranglePower) or nameof(OblivionPower): data = DataCreature.Of(power.Applier is { } strangler ? idOf(strangler) : null); break;
+            // One copy per player it copies (ImitationLearning adds to the copy already copying its target), merged into one entry:
+            // you when any copy copies you, so your Power cards set it off whichever copy is read last.
             case nameof(ImitationLearningPower):
-                data = DataCreature.Of(power is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower imitationLearningPower
-                       && Combat.CardPredictions.CopiesFrom(imitationLearningPower)?.Creature is { } copied ? idOf(copied) : null);
+            {
+                int? CopiedBy(PowerModel copy) => copy is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower imitationLearningPower
+                    && Combat.CardPredictions.CopiesFrom(imitationLearningPower)?.Creature is { } copied ? idOf(copied) : null;
+                var copiesYou = power.Owner.Powers.Any(copy => copy is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower && CopiedBy(copy) == Who.You);
+                data = DataCreature.Of(copiesYou ? Who.You : CopiedBy(power));
                 break;
+            }
             case nameof(InterceptPower):
             {
                 // The players it covers (InterceptPower's internal coveredCreatures): Intercept multiplies by count + 1.
@@ -114,18 +124,22 @@ public static class SimReaders
     /// <summary>
     /// Counter powers a creature can have several copies of (PowerInstanceType.Instanced: each Orbit card played makes its own), each
     /// copy with its own count and amount: read one by one into SimPlayer.Counters (Counters), each counted on its own by its model
-    /// (CounterPower). CountdownTests holds every countdown model of an instanced power to this list.
+    /// (CounterPower). The Bomb too: each copy's turns left and its own Damage (TheBombPower). CountdownTests holds every countdown
+    /// model of an instanced power to this list.
     /// </summary>
-    internal static readonly HashSet<string> InstancedCounters = new() { nameof(OrbitPower), nameof(AutomationPower), nameof(CacophonyPower), nameof(PanachePower) };
+    internal static readonly HashSet<string> InstancedCounters = new() { nameof(OrbitPower), nameof(AutomationPower), nameof(CacophonyPower), nameof(PanachePower), nameof(TheBombPower) };
 
     /// <summary>Each copy of a counter power on this creature (InstancedCounters), in the game's order: its count and its amount.</summary>
     public static List<CounterCopy> Counters(Creature creature) =>
         creature.Powers.Where(power => InstancedCounters.Contains(power.GetType().Name))
-            .Select(power => new CounterCopy(new PowerId(power.GetType().Name), CountOf(power), power.Amount)).ToList();
+            .Select(power => new CounterCopy(new PowerId(power.GetType().Name), CountOf(power), AmountOf(power))).ToList();
 
-    /// <summary>A counter power's count, as Powers reads it into its Data.</summary>
+    /// <summary>A counter power's count, as Powers reads it into its Data (The Bomb: its turns left, its amount).</summary>
     private static int CountOf(PowerModel power) =>
         power is PanachePower ? Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)) : Math.Max(0, power.DisplayAmount);
+
+    /// <summary>What a copy gives when its count runs out: its amount (The Bomb: its Damage; its amount is its turns).</summary>
+    private static int AmountOf(PowerModel power) => power is TheBombPower ? Sts2State.Var(power, "Damage") : power.Amount;
 
     /// <summary>A flag in a power's internal data (PowerModel._internalData), true when unreadable (so a once-a-turn proc isn't promised).</summary>
     private static bool Internal(PowerModel power, string field) =>
@@ -134,7 +148,9 @@ public static class SimReaders
     /// <summary>
     /// The values of every relic and power of these creatures and players (their DynamicVars) for SimState.Vars: "id:Name:Var",
     /// and its name as the game shows it (SimState.Titles),
-    /// with a BlockVar's or DamageVar's props as "id:Name:Var.Props".
+    /// with a BlockVar's or DamageVar's props as "id:Name:Var.Props". An instanced power's copies (each Monologue played) each
+    /// have their own values: "id:Name:Var" is the last copy's, "id:Name:Var.Total" the sum over them (SimEngine.VarTotal).
+    /// Called once for each of a creature's powers, so the totals count each copy once.
     /// </summary>
     public static void AddVars(SimState state, int id, AbstractModel model)
     {
@@ -145,9 +161,15 @@ public static class SimReaders
         {
             var dv0 = model switch { RelicModel relic => relic.DynamicVars, PowerModel power => power.DynamicVars, _ => null };
             if (dv0 == null) return;
+            var instanced = model is PowerModel { InstanceType: MegaCrit.Sts2.Core.Entities.Powers.PowerInstanceType.Instanced };
             foreach (var (key, dynamicVar) in dv0)
             {
                 vars[$"{id}:{name}:{key}"] = dynamicVar.IntValue;
+                if (instanced)
+                {
+                    var totalKey = $"{id}:{name}:{key}{SimEngine.TotalSuffix}";
+                    vars[totalKey] = vars.GetValueOrDefault(totalKey) + dynamicVar.IntValue;
+                }
                 if (dynamicVar is MegaCrit.Sts2.Core.Localization.DynamicVars.BlockVar blockVar) vars[$"{id}:{name}:{key}.Props"] = (int)blockVar.Props;
                 else if (dynamicVar is MegaCrit.Sts2.Core.Localization.DynamicVars.DamageVar damageVar) vars[$"{id}:{name}:{key}.Props"] = (int)damageVar.Props;
             }

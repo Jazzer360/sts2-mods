@@ -18,10 +18,10 @@ public class GameBranchTests
     private static readonly Regex ReviewTables = new(@"CoverageLedger|RelicTracking|RelicChoiceTracking|ModelEffectCheck|ChoiceReminders|SettingsCatalog|CardAffinity|RelicSpecs|GameNames\.g\.cs");
 
     /// <summary>A literal inside these calls is a value's or a private member's name that can match a class's (DynamicVars["StrengthPower"]).</summary>
-    private static readonly Regex KeyCall = new(@"\b(Var|TryGetValue|Private|Internal|GetValue)\([^()""]*$");
+    private static readonly Regex KeyCall = new(@"\b(Var|VarTotal|TryGetValue|Private|Internal|GetValue)\([^()""]*$");
 
     /// <summary>A class's nameof where a value's key goes: Var(card, nameof(StrengthPower)).</summary>
-    private static readonly Regex KeyNameof = new(@"\b(Var|TryGetValue|Private|Internal)\([^()]*nameof\(");
+    private static readonly Regex KeyNameof = new(@"\b(Var|VarTotal|TryGetValue|Private|Internal)\([^()]*nameof\(");
 
     /// <summary>Literals that name something else that shares a class's name: the text, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
