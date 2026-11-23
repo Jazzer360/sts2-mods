@@ -83,6 +83,7 @@ public class SimReviveTests
         state.You.Hp = 3;
         state.You.TurnEndCards.Add(new TurnEndCard("BadLuck", "Bad Luck", Amount: 2));
         state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
+        state.You.Cards = state.You.Cards.With(CardId.Regret, amount: 1); // its BeforeSideTurnEnd counts the hand (RegretCard)
         state.You.HandCount = 2;
         Assert.True(SimEngine.Run(state).Worst.Died);
     }

@@ -465,7 +465,14 @@ public static partial class SimAdapter
             var made = new Dictionary<string, SimDrawCard>();
             void Made<T>() where T : CardModel
             {
-                try { made[typeof(T).Name] = Profile(ModelDb.Card<T>()); } catch { /* not built: a draw of it is unknown */ }
+                try
+                {
+                    var card = ModelDb.Card<T>();
+                    made[typeof(T).Name] = Profile(card);
+                    // It listens from your piles once made (none of it there yet).
+                    if (SimReaders.CardListenerOf(card) is { } listener) player.Cards = player.Cards.Add(listener, delta: 0);
+                }
+                catch { /* not built: a draw of it is unknown */ }
             }
             if (combat.Enemies.Any(enemy => enemy.Powers.Any(power => power.GetType().Name == nameof(PersonalHivePower)))) Made<Dazed>();
             if (me.Relics.Any(relic => relic.GetType().Name == nameof(MegaCrit.Sts2.Core.Models.Relics.BiiigHug))) Made<Soot>();
@@ -521,7 +528,7 @@ public static partial class SimAdapter
         [nameof(ConfusedPower)] = "a random cost (costs matter to Simpleton only: read live in hand; a drawn card keeps the cost it had)",
         [nameof(KinglyKick)] = "its own cost on draw (Simpleton: the cost it had in the pile)",
         [nameof(KinglyPunch)] = "its own cost on draw (Simpleton: the cost it had in the pile)",
-        [nameof(MegaCrit.Sts2.Core.Models.Cards.Void)] = "loses energy when drawn (not simulated: energy only matters at end of turn to Pael's Tears)",
+        [nameof(MegaCrit.Sts2.Core.Models.Cards.Void)] = "itself: loses energy when drawn (the profile's EnergyLostOnDraw; model VoidCard, after your powers and relics)",
         ["Slither"] = "a random cost on draw (Simpleton: the cost it had in the pile)",
         ["MockRemoveDrawnCardsFromCombatPower"] = "the game's test mock: never in a real fight",
     };
@@ -684,6 +691,7 @@ public static partial class SimAdapter
         player.Powers = SimReaders.Powers(creature, idOf);
         player.Counters = SimReaders.Counters(creature);
         player.Relics = SimReaders.Relics(me);
+        player.Cards = SimReaders.Cards(me);
         player.Turn = SimReaders.Turn(me, combat);
         player.Reflect = creature.Powers.Any(power => power is ReflectPower);
         foreach (var relic in me.Relics)

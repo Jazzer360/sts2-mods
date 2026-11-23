@@ -113,6 +113,7 @@ public class EndOfTurnModelTests
         state.You.Powers = state.You.Powers.With(PowerId.Intangible, amount: 1);
         state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn+", Amount: 5));
         state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
+        state.You.Cards = state.You.Cards.With(CardId.Regret, amount: 1); // its BeforeSideTurnEnd counts the hand (RegretCard)
         var outcome = SimEngine.Run(state);
         Assert.Equal(9, outcome.Worst.BlockAtEnemyTurn);
         Assert.Equal(1, outcome.TakenMax); // Regret's 3, capped at 1 HP too

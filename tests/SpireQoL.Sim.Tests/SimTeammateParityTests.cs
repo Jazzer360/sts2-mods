@@ -127,7 +127,7 @@ public class SimTeammateParityTests
                 case "Wuppy": player.WuppyHp = 8; break;
                 case "Osty": player.OstyHp = 10; player.OstyShields = true; break;
                 case "Tungsten Rod": player.TungstenRod = 1; break;
-                case "Regret": player.HandCount = 3; player.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0)); break;
+                case "Regret": player.HandCount = 3; player.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0)); player.Cards = player.Cards.With(CardId.Regret, amount: 1); break;
                 case "Fairy in a Bottle": player.Hp = 15; player.Fairies = 1; player.FairyHeal = 20; break;
                 case "Lizard Tail": player.Hp = 15; player.LizardTailHeal = 25; break;
                 case "death": player.Hp = 15; break;
@@ -157,6 +157,7 @@ public class SimTeammateParityTests
         var state = new SimState { Enemies = { Target(hp: 50, hits: 10) } };
         var mate = new SimPlayer { Hp = 60, HandCount = 3, Fading = 2, FeelNoPain = 3 };
         mate.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
+        mate.Cards = mate.Cards.With(CardId.Regret, amount: 1); // its BeforeSideTurnEnd counts the hand (RegretCard)
         state.Teammates.Add(mate);
         var play = new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 6 }, Hits = 1, HandCard = 7, HandDelta = -1 };
         SimEngine.ApplyPlayTo(state, play, out var full, out _);
@@ -172,6 +173,7 @@ public class SimTeammateParityTests
         var state = new SimState { Enemies = { Target(hp: 50, hits: 10) } };
         var mate = new SimPlayer { Hp = 60, Block = 4, HandCount = 3 };
         mate.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
+        mate.Cards = mate.Cards.With(CardId.Regret, amount: 1); // its BeforeSideTurnEnd counts the hand (RegretCard)
         state.Teammates.Add(mate);
         var full = SimEngine.Run(state).TeammateWorst(teammateIndex: 0);
         Assert.Equal((10, 3, 9), (full.Incoming, full.UnblockableTaken, full.Taken));

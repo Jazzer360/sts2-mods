@@ -1,5 +1,6 @@
 global using PowerSet = SpireQoL.Sim.NamedSet<SpireQoL.Sim.PowerId>;
 global using RelicSet = SpireQoL.Sim.NamedSet<SpireQoL.Sim.RelicId>;
+global using CardSet = SpireQoL.Sim.NamedSet<SpireQoL.Sim.CardId>;
 global using NamedCounts = SpireQoL.Sim.NamedSet<string>;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -7,12 +8,14 @@ using System.Text.Json.Serialization;
 namespace SpireQoL.Sim;
 
 /// <summary>
-/// The simulator's named numbers: name → amount, plus one number of data a model may keep (a counter, a flag). Three kinds, each
+/// The simulator's named numbers: name → amount, plus one number of data a model may keep (a counter, a flag). Four kinds, each
 /// its own type, so one can't stand in for another:
 /// <list type="bullet">
 /// <item><see cref="PowerSet"/>: the powers on a creature, by <see cref="PowerId"/>, in the order they were applied (the game's hook
 /// listener order: CombatState.IterateHookListeners runs a creature's powers in that order).</item>
 /// <item><see cref="RelicSet"/>: a player's relics, by <see cref="RelicId"/>, with each one's counter and flag.</item>
+/// <item><see cref="CardSet"/>: the cards in a player's piles that listen for a hook the simulator models, by <see cref="CardId"/>,
+/// with how many copies (SimPlayer.Cards).</item>
 /// <item><see cref="NamedCounts"/>: counts under names <see cref="SimKeys"/> builds (the play log, what's bound to a play, a player's
 /// turn counts).</item>
 /// </list>

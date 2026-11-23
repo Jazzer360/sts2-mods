@@ -441,7 +441,11 @@ public static partial class SimEngine
         return result;
     }
 
-    /// <summary>The card is in your hand: what it changes there, then the draw reactions and the draws they chain.</summary>
+    /// <summary>
+    /// The card is in your hand: what it changes there, then the draw reactions (Hook.AfterCardDrawn: every listener's Early, then
+    /// every listener's AfterCardDrawn, in listener order: Iteration's and Pagestorm's draws among your powers, Void's own energy
+    /// loss after your relics) and the draws they chain.
+    /// </summary>
     private static IEnumerable<SimState> Drawn(SimState state, int player, SimDrawCard card, bool indirect, bool record = false)
     {
         var simPlayer = state.MutablePlayer(player);
@@ -449,20 +453,21 @@ public static partial class SimEngine
         simPlayer.Drawn++;
         // The draw a card acts on (RunDrawnCard): this card, and its id in AutoHand. Copied, not added to: branches share the list.
         if (record && state.DrawRecord != null) state.DrawRecord = new List<(SimDrawCard, int)>(state.DrawRecord) { (card, -1000 - simPlayer.Drawn) };
-        // Void: you lose its energy as it's drawn (PlayerCmd.LoseEnergy: no hooks, never below 0).
-        if (card.EnergyLostOnDraw > 0) simPlayer.Energy = Math.Max(0, simPlayer.Energy - card.EnergyLostOnDraw);
         if (card.Status) simPlayer.StatusDrawn++;
         JoinHand(state, simPlayer, card, -1000 - simPlayer.Drawn);
         // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly: before the other draw reactions).
-        IEnumerable<SimState> states = card.Strike && simPlayer.Powers[PowerId.Hellraiser] > 0
-            ? Then(HellraiserPlays(state, player, card, -1000 - simPlayer.Drawn), branch => FireCardEvent(branch, CardEvent.Drawn, player, indirect))
-            : FireCardEvent(state, CardEvent.Drawn, player, indirect);
-        // Iteration (IterationPower.AfterCardDrawn): the first Status you draw this turn draws its amount more.
-        if (card.Status && simPlayer.Powers[PowerId.Iteration] is > 0 and var iteration && simPlayer.StatusDrawn <= 1)
-            states = Then(states, branch => DrawCards(branch, player, iteration, indirect: true));
-        // Pagestorm (PagestormPower.AfterCardDrawn): each Ethereal card you draw draws its amount more.
-        if (card.Ethereal && simPlayer.Powers[PowerId.Pagestorm] is > 0 and var pagestorm)
-            states = Then(states, branch => DrawCards(branch, player, pagestorm, indirect: true));
-        return states;
+        return card.Strike && simPlayer.Powers[PowerId.Hellraiser] > 0
+            ? Then(HellraiserPlays(state, player, card, -1000 - simPlayer.Drawn), branch => DrawReactions(branch, player, card, indirect))
+            : DrawReactions(state, player, card, indirect);
+    }
+
+    /// <summary>The AfterCardDrawn listeners on <paramref name="card"/>'s draw (SimState.DrawnCard while they run).</summary>
+    private static List<SimState> DrawReactions(SimState state, int player, SimDrawCard card, bool indirect)
+    {
+        var outer = state.DrawnCard;
+        state.DrawnCard = card;
+        var after = FireCardEvent(state, CardEvent.Drawn, player, indirect);
+        foreach (var branch in after) branch.DrawnCard = outer;
+        return after;
     }
 }

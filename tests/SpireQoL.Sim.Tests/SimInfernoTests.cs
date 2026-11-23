@@ -16,6 +16,7 @@ public class SimInfernoTests
         // Regret with 2 cards in hand: 2 HP lost on your turn, so 6 to each enemy (E2's 4 block takes some).
         var state = new SimState { Enemies = { E(id: 1, hp: 30), E(id: 2, hp: 30, block: 4) } };
         state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
+        state.You.Cards = state.You.Cards.With(CardId.Regret, amount: 1); // its BeforeSideTurnEnd counts the hand (RegretCard)
         state.You.HandCount = 2;
         state.You.Inferno = 6;
         var outcome = SimEngine.Run(state);
@@ -42,6 +43,7 @@ public class SimInfernoTests
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 5, block: 0, hits: 10) } };
         state.You.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0));
+        state.You.Cards = state.You.Cards.With(CardId.Regret, amount: 1); // its BeforeSideTurnEnd counts the hand (RegretCard)
         state.You.HandCount = 1;
         state.You.Inferno = 6;
         var outcome = SimEngine.Run(state);

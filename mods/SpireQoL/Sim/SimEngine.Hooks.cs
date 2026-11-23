@@ -19,79 +19,105 @@ public sealed record CapturedTerms
     public decimal Cap { get; init; } = decimal.MaxValue;
 }
 
+/// <summary>
+/// What a hook listener is, in the order CombatState.IterateHookListeners lists a creature's (allies, then enemies): its powers, then
+/// for a player their relics (not melted), potions, orbs and the cards in every pile, or for a monster the monster itself. The
+/// simulator has models for powers, relics and cards; no potion, orb or monster class acts on a hook in a way the order changes
+/// (docs/SIMULATOR.md "Listener order").
+/// </summary>
+public enum ListenerKind { Power, Relic, Potion, Orb, Card, Monster }
+
 public static partial class SimEngine
 {
     /// <summary>
-    /// The models listening for hooks, in the game's order (CombatState.IterateHookListeners): each player in player order
-    /// (their powers, then their relics), then each enemy (its powers). Only modelled names; with each one's owner.
+    /// The models listening for hooks, in the game's order (CombatState.IterateHookListeners): each player in player order (their
+    /// powers, then their relics, then the cards in their piles: SimPlayer.Cards), then each enemy (its powers). Only modelled names;
+    /// with each one's owner.
     /// </summary>
     internal static List<(SimModel Model, int Owner)> Listeners(SimState state)
     {
         // Cached on the state until one of the sets it was built from changes (they're immutable: a change is a new set).
         if (state.ListenerCache != null && SameSets(state, state.ListenerSets!)) return state.ListenerCache;
         var sets = CurrentSets(state);
-        var result = AnyModelled(state) ? BuildListeners(state) : NoListeners;
+        var result = AnyModelled(state) ? BuildListeners(state, kinds: null) : NoListeners;
         state.ListenerCache = result;
         state.ListenerSets = sets;
         return result;
     }
 
-    /// <summary>Every power and relic set listeners come from, in listener order.</summary>
+    /// <summary>The listeners as the order test reads them (ListenerOrderTests): each one's kind, name and owner, in listener order.</summary>
+    internal static List<(ListenerKind Kind, string Name, int Owner)> ListenerOrder(SimState state)
+    {
+        var kinds = new List<ListenerKind>();
+        var listeners = BuildListeners(state, kinds);
+        return listeners.Select((listener, index) => (kinds[index], listener.Model.Name, listener.Owner)).ToList();
+    }
+
+    /// <summary>Sets kept per player: their powers, relics and cards.</summary>
+    private const int SetsPerPlayer = 3;
+
+    /// <summary>Every set listeners come from, in listener order.</summary>
     private static object[] CurrentSets(SimState state)
     {
-        var sets = new object[2 + 2 * state.Teammates.Count + state.Enemies.Count];
+        var sets = new object[SetsPerPlayer * (1 + state.Teammates.Count) + state.Enemies.Count];
         var next = 0;
-        sets[next++] = state.You.Powers; sets[next++] = state.You.Relics;
-        foreach (var player in state.Teammates) { sets[next++] = player.Powers; sets[next++] = player.Relics; }
+        sets[next++] = state.You.Powers; sets[next++] = state.You.Relics; sets[next++] = state.You.Cards;
+        foreach (var player in state.Teammates) { sets[next++] = player.Powers; sets[next++] = player.Relics; sets[next++] = player.Cards; }
         foreach (var enemy in state.Enemies) sets[next++] = enemy.Powers;
         return sets;
     }
 
     private static bool SameSets(SimState state, object[] sets)
     {
-        if (sets.Length != 2 + 2 * state.Teammates.Count + state.Enemies.Count) return false;
+        if (sets.Length != SetsPerPlayer * (1 + state.Teammates.Count) + state.Enemies.Count) return false;
         var next = 0;
-        if (!ReferenceEquals(sets[next++], state.You.Powers) || !ReferenceEquals(sets[next++], state.You.Relics)) return false;
-        foreach (var player in state.Teammates) if (!ReferenceEquals(sets[next++], player.Powers) || !ReferenceEquals(sets[next++], player.Relics)) return false;
+        static bool Same(object[] sets, ref int next, SimPlayer player) =>
+            ReferenceEquals(sets[next++], player.Powers) && ReferenceEquals(sets[next++], player.Relics) && ReferenceEquals(sets[next++], player.Cards);
+        if (!Same(sets, ref next, state.You)) return false;
+        foreach (var player in state.Teammates) if (!Same(sets, ref next, player)) return false;
         foreach (var enemy in state.Enemies) if (!ReferenceEquals(sets[next++], enemy.Powers)) return false;
         return true;
     }
 
-    private static List<(SimModel Model, int Owner)> BuildListeners(SimState state)
+    /// <param name="kinds">Gets each listener's kind, in step with the list, when given.</param>
+    private static List<(SimModel Model, int Owner)> BuildListeners(SimState state, List<ListenerKind>? kinds)
     {
         var list = new List<(SimModel, int)>();
-        void Add(IEnumerable<string> names, int owner)
+        void Add(IEnumerable<string> names, int owner, ListenerKind kind)
         {
             foreach (var name in names)
-                if (SimModels.Get(name) is { } model) list.Add((model, owner));
+            {
+                // A card's model listens only from a player's piles, and a power's or relic's never from there.
+                if (SimModels.Get(name) is not { } model || (model is CardListener) != (kind == ListenerKind.Card)) continue;
+                list.Add((model, owner));
+                kinds?.Add(kind);
+            }
         }
         foreach (var id in state.PlayerIds)
         {
             var player = state.Player(id)!;
-            Add(player.Powers.Items.Select(entry => entry.Name.Name), id);
-            Add(player.Relics.Items.Select(entry => entry.Name.Name), id);
+            Add(player.Powers.Items.Select(entry => entry.Name.Name), id, ListenerKind.Power);
+            Add(player.Relics.Items.Select(entry => entry.Name.Name), id, ListenerKind.Relic);
+            // Their potions and orbs come here: none has a model (no potion's or orb's hook changes with its place in the order).
+            Add(player.Cards.Items.Select(entry => entry.Name.Name), id, ListenerKind.Card);
         }
-        foreach (var enemy in state.Enemies) Add(enemy.Powers.Items.Select(entry => entry.Name.Name), enemy.Id);
+        foreach (var enemy in state.Enemies) Add(enemy.Powers.Items.Select(entry => entry.Name.Name), enemy.Id, ListenerKind.Power);
         return list;
     }
 
     private static readonly List<(SimModel Model, int Owner)> NoListeners = new();
 
-    /// <summary>Whether any creature or player holds a modelled power or relic (most fights' cheap path: nothing to call).</summary>
+    /// <summary>Whether any creature or player holds a modelled power, relic or card (most fights' cheap path: nothing to call).</summary>
     private static bool AnyModelled(SimState state)
     {
-        static bool Any(PowerSet powers)
+        static bool Any<TName>(NamedSet<TName> named) where TName : ISimName<TName>
         {
-            foreach (var entry in powers.Items) if (SimModels.Has(entry.Name.Name)) return true;
+            foreach (var entry in named.Items) if (SimModels.Has(entry.Name.Name)) return true;
             return false;
         }
-        static bool AnyRelic(RelicSet relics)
-        {
-            foreach (var entry in relics.Items) if (SimModels.Has(entry.Name.Name)) return true;
-            return false;
-        }
-        if (Any(state.You.Powers) || AnyRelic(state.You.Relics)) return true;
-        foreach (var player in state.Teammates) if (Any(player.Powers) || AnyRelic(player.Relics)) return true;
+        static bool AnyOf(SimPlayer player) => Any(player.Powers) || Any(player.Relics) || Any(player.Cards);
+        if (AnyOf(state.You)) return true;
+        foreach (var player in state.Teammates) if (AnyOf(player)) return true;
         foreach (var enemy in state.Enemies) if (Any(enemy.Powers)) return true;
         return false;
     }

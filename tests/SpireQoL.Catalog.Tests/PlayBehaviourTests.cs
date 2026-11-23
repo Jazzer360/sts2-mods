@@ -199,6 +199,24 @@ public class PlayBehaviourTests
         Assert.Equal(1, after.You.HandCount);
     }
 
+    // ---- the cards' own hooks: they listen from your piles, after your powers and relics
+
+    [Fact]
+    public void AVoidItDrawsTakesItsEnergy()
+    {
+        // Shrug It Off draws the Void, whose own AfterCardDrawn takes 1 energy: the adapter reads it among the cards that listen from
+        // your piles (SimPlayer.Cards), with its energy in its draw profile.
+        int EnergyAfterDrawing<T>() where T : CardModel
+        {
+            var gameFight = Fight();
+            Enemy(gameFight);
+            var card = gameFight.Add<ShrugItOff>();
+            gameFight.Add<T>(PileType.Draw);
+            return Only(PlayOut(gameFight, card)).You.Energy;
+        }
+        Assert.Equal(EnergyAfterDrawing<DefendIronclad>() - 1, EnergyAfterDrawing<MegaCrit.Sts2.Core.Models.Cards.Void>());
+    }
+
     // ---- what happens between plays
 
     [Fact]

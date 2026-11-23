@@ -67,7 +67,7 @@ public static class SimPipelines
             "ShouldDraw",           // DrawsStopped: No Draw, Fiddle
             "ModifyShuffleOrder",   // the discard pile shuffled in (SimDrawPile.Shuffled: Perfect Fit on top)...
             "AfterShuffle",         // ...and its event (CardEvent.Shuffled)
-            "AfterCardDrawn",       // CardEvent.Drawn (Hellraiser first: AfterCardDrawnEarly), Iteration, Pagestorm
+            "AfterCardDrawn",       // CardEvent.Drawn (Hellraiser first: AfterCardDrawnEarly), its listeners: Iteration, Pagestorm, Void
         }),
         new("CardCmd.Exhaust", "CardCmd.Exhaust", "SimEngine.FireCardEvent (CardEvent.Exhausted)", new[]
         {
