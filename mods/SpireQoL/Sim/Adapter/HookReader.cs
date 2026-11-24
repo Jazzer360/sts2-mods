@@ -56,6 +56,8 @@ public static class HookReader
         ["PowerCmd.Decrement"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.Decrement(this))",
         ["PowerCmd.TickDownDuration"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.TickDownDuration(this))",
         ["OrbCmd.Channel"] = "ChannelStep: an orb of the kind named channeled for the owner",
+        ["CardCmd.Upgrade"] = "UpgradeCardStep: the card played upgraded, its later plays its upgraded copy's",
+        ["CardCmd.ApplyKeyword"] = "ApplyKeywordStep: a keyword added to the card played, for its later plays",
     };
 
     /// <summary>
@@ -382,7 +384,7 @@ public static class HookReader
                 case GainEnergyStep: return TabKind.Energy;
             }
         // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot).
-        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep)
+        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or ApplyKeywordStep)
             || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyHpLostBeforeOsty or HookName.ModifyHpLostBeforeOstyLate or HookName.ModifyHpLostAfterOsty or HookName.ModifyHpLostAfterOstyLate)
             ? TabKind.Trigger : null;
     }
@@ -981,9 +983,31 @@ public static class HookReader
                 case "PowerCmd.Remove" or "PowerCmd.Decrement" or "PowerCmd.TickDownDuration":
                     if (values[0] is not NamedValue { Name: "this" }) throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: {member.FullName} of another power");
                     return member.Name == "Remove" ? new RemovePowerStep() : new DecrementPowerStep();
+                // A change to the card played (decision #218): an upgrade, or a keyword added. Another card (one in the hand, a pick) is a gap.
+                case "CardCmd.Upgrade":
+                    if (values.Count == 0 || !IsPlayCard(values[0])) throw new Gap(ReaderCapability.CardChanged, $"gap: upgrades {(values.Count > 0 ? values[0] : "nothing")}, not the card played");
+                    return new UpgradeCardStep();
+                case "CardCmd.ApplyKeyword":
+                {
+                    if (values.Count < 2 || !IsPlayCard(values[0])) throw new Gap(ReaderCapability.CardChanged, $"gap: a keyword on {(values.Count > 0 ? values[0] : "nothing")}, not the card played");
+                    var keywords = KeywordsOf(values[1]);
+                    if (keywords is not [var keyword]) throw new Gap(ReaderCapability.CardChanged, $"gap: the keywords {values[1]}");
+                    return new ApplyKeywordStep(keyword);
+                }
                 default:
                     throw new Gap(ReaderCapabilities.OfCommand(member.FullName), $"gap: {member} isn't translated");
             }
+        }
+
+        /// <summary>The keywords a params array of the game's CardKeyword names (ApplyKeyword(card, CardKeyword.Sly)), each by its name; null for any other value.</summary>
+        private List<string>? KeywordsOf(ProgramValue value)
+        {
+            if (value is not ArrayValue { Items: var items }) return null;
+            var names = new List<string>();
+            foreach (var item in items)
+                if (item is ConstantValue constant && EnumName(_type.Assembly, "CardKeyword", constant.Value) is { } name) names.Add(name);
+                else return null;
+            return names;
         }
 
         private readonly HashSet<string> _inlining = new(StringComparer.Ordinal);
@@ -1253,6 +1277,9 @@ public static class HookReader
                     return new HookFactValue(HookFact.PoweredBlock);
                 case QueryValue { Name: "IsCardOrMonsterMove", Arguments: [var props] } when IsProps(props):
                     return new HookFactValue(HookFact.CardOrMonsterMove);
+                // The card played can still be upgraded (Razor Tooth's cardPlay.Card.IsUpgradable).
+                case QueryValue { Name: "IsUpgradable", Of: { } upgradableOf } when IsPlayCard(upgradableOf):
+                    return new HookFactValue(HookFact.CardUpgradable);
                 case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf) || IsEventCard(keywordsOf):
                     return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's keyword {keyword.Value}");
                 case QueryValue { Name: "is", Of: NamedValue { Name: "power" }, Type: var powerClass }:
@@ -1438,6 +1465,21 @@ public static class HookReader
                 return compare.Op == Comparison.Equal ? new HookFactValue(HookFact.DeadIsApplier) : Not(new HookFactValue(HookFact.DeadIsApplier));
             if (compare.Op is Comparison.Equal or Comparison.NotEqual && IsSideOfPlayers(compare.Left, compare.Right))
                 return compare.Op == Comparison.Equal ? new HookFactValue(HookFact.OwnersTurn) : Not(new HookFactValue(HookFact.OwnersTurn));
+            // The compiler's range test of a card's type ((uint)(type - 1) > 1u: neither an Attack nor a Skill): the type is one of the game's values
+            // from the one subtracted to it plus the bound (<=), or none of them (>).
+            if (compare is { Unsigned: true, Op: Comparison.Greater or Comparison.LessOrEqual, Left: ArithmeticValue { Op: "sub", Left: var rangedType, Right: ConstantValue { Value: var low } }, Right: ConstantValue { Value: var span } }
+                && Unstored(rangedType) is QueryValue { Type: "CardModel", Name: "Type", Of: { } rangedOf } && (IsPlayCard(rangedOf) || IsEventCard(rangedOf)) && span is >= 0 and < 8)
+            {
+                HookValue? any = null;
+                for (var value = low; value <= low + span; value++)
+                {
+                    var simType = EnumName(_type.Assembly, "CardType", value) is { } typeName && Enum.TryParse<SimCardType>(typeName, out var parsed) ? parsed
+                        : throw new Gap(ReaderCapability.CardFacts, $"gap: a card type {value}");
+                    var isIt = new HookMath(HookOperation.Equal, new HookFactValue(HookFact.CardType), new HookConstant((int)simType));
+                    any = any == null ? isIt : new HookMath(HookOperation.Or, any, isIt);
+                }
+                return compare.Op == Comparison.LessOrEqual ? any! : Not(any!);
+            }
             if (compare.Left is QueryValue { Type: "CardModel", Name: "Type", Of: { } typeOf } && (IsPlayCard(typeOf) || IsEventCard(typeOf)) && compare.Right is ConstantValue cardType)
             {
                 var simType = EnumName(_type.Assembly, "CardType", cardType.Value) is { } typeName && Enum.TryParse<SimCardType>(typeName, out var parsed) ? parsed

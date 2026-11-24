@@ -74,6 +74,34 @@ public class CardChangeTests
     }
 
     [Fact]
+    public void AKeywordAddedStaysOnTheCardInPlay()
+    {
+        // CardCmd.ApplyKeyword(cardPlay.Card, ...): card.AddKeyword on the card itself. Ethereal is a fact the simulator's card carries (a hook's
+        // test of it reads it from then on); Sly, which acts as the card is discarded, changes nothing in a play and keeps nothing.
+        var state = Board();
+        state.CurrentPlay = new SimCardPlay(new SimCard("Survivor", SimCardType.Skill), Who.You, Who.None, PlayIndex: 0, PlayCount: 2, AutoPlay: false);
+        SimEngine.KeywordCardInPlay(state, keyword: "Sly");
+        Assert.False(state.CurrentPlay.Card.Ethereal);
+        Assert.Equal(0, state.PlayChanges.Keywords.Count);
+        SimEngine.KeywordCardInPlay(state, keyword: "Ethereal");
+        Assert.True(state.CurrentPlay.Card.Ethereal);
+        Assert.True(state.PlayChanges.Keywords.Has("Ethereal"));
+    }
+
+    [Fact]
+    public void MasterPlannerActsOnEachSkillPlayedAndChangesNoNumber()
+    {
+        // MasterPlannerPower.AfterCardPlayed (read from its code): Flash, then CardCmd.ApplyKeyword(cardPlay.Card, Sly) on its owner's Skills.
+        var state = Board();
+        state.You.Powers = PowerSet.Empty.With(PowerId.MasterPlanner, amount: 1);
+        var play = Strike(plays: 2);
+        play.Card = play.Card! with { Card = play.Card.Card with { Type = SimCardType.Skill } };
+        var branch = Assert.Single(SimEngine.Run(state, play).Branches);
+        Assert.Equal(2, branch.Fired[PowerId.MasterPlanner.Name]);
+        Assert.Equal(100 - 6 - 6, branch.Enemies[0].Hp);
+    }
+
+    [Fact]
     public void AnUpgradeAfterTheLastPlayChangesNoPlay()
     {
         // Played once: Razor Tooth upgrades it after its only play; nothing plays it again, so nothing is unknown.

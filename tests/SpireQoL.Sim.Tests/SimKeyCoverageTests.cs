@@ -81,6 +81,7 @@ public class SimKeyCoverageTests
         if (type == typeof(PowerSet)) return ((PowerSet)v!).With(new PowerId("ProbePower"), amount: 3);
         if (type == typeof(RelicSet)) return ((RelicSet)v!).With(new RelicId("ProbeRelic"), amount: 3);
         if (type == typeof(NamedCounts)) return ((NamedCounts)v!).Add("Probe", delta: 3);
+        if (type == typeof(SimState.CardChanges)) return (SimState.CardChanges)v! with { Upgrades = ((SimState.CardChanges)v!).Upgrades + 1 };
         if (type == typeof(List<int>)) return ((List<int>?)v ?? new()).Append(9).ToList();
         if (type == typeof(List<SimPick>)) return new List<SimPick>((List<SimPick>)v!) { new(Card: new HandCardKey("Probe", Digest: 1), Target: 0) };
         if (type == typeof(List<ExhaustingCard>)) return new List<ExhaustingCard>((List<ExhaustingCard>)v!) { new(HandCard: 7, Energy: 2, SimCardType.Skill) };

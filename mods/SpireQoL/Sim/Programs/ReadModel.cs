@@ -78,6 +78,10 @@ public sealed class ReadModel : SimModel
 
     public override TabKind? Tab => Spec.Tab;
 
+    /// <summary>Its code upgrades the card played (an UpgradeCardStep): the adapter reads that card's upgraded copy for a replay's later plays.</summary>
+    public override bool UpgradesCardInPlay => _upgradesCardInPlay;
+    private readonly bool _upgradesCardInPlay;
+
     /// <summary>
     /// Crossed by whose side its effect helps (decision #198): a play anyone makes setting off something that helps its owner (ModelSpec.HelpsOwner)
     /// is a warning only on an enemy, your play helping the other side; a teammate's (Sneaky's block on your Attack) helps yours. A play setting
@@ -105,6 +109,7 @@ public sealed class ReadModel : SimModel
         Spec = spec;
         HasCopies = spec.Kind == ModelKind.Power && spec.Copies != PowerCopies.One;
         _copyPrefix = spec.Name + "@";
+        _upgradesCardInPlay = spec.Steps().Any(step => step is UpgradeCardStep);
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
         foreach (var let in spec.Steps().OfType<LetStep>()) _localSlots.TryAdd(let.Name, _localSlots.Count);
         if (spec.Kind == ModelKind.Orb)
@@ -281,7 +286,7 @@ public sealed class ReadModel : SimModel
         var compiled = new List<CompiledStep>();
         foreach (var step in steps)
         {
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep;
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep;
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
             var fires = firstRound && acts && Spec.Kind != ModelKind.Enchantment && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
@@ -911,7 +916,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1072,6 +1077,24 @@ public sealed class ReadModel : SimModel
                     else SimEngine.DecrementPower(args.State, args.Owner, ThisPower);
                     return One(args.State);
                 };
+            // A change to the card played (decision #218): its later plays in this card play see it.
+            case UpgradeCardStep:
+                return args =>
+                {
+                    SimEngine.UpgradeCardInPlay(args.State);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    return One(args.State);
+                };
+            case ApplyKeywordStep keywordStep:
+            {
+                var keyword = keywordStep.Keyword;
+                return args =>
+                {
+                    SimEngine.KeywordCardInPlay(args.State, keyword);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    return One(args.State);
+                };
+            }
             default:
                 throw new InvalidOperationException($"{Name}: no command for {step.GetType().Name}");
         }
@@ -1289,6 +1312,8 @@ public sealed class ReadModel : SimModel
             case HookFact.CardEthereal: return (in HookArgs args) => (args.Hook == HookName.AfterCardDrawn ? args.State.DrawnCard?.Ethereal
                 : IsCardEventHook(args.Hook) ? args.State.EventCard?.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
             case HookFact.CardEnergy: return (in HookArgs args) => args.Play?.Card.Energy ?? 0;
+            // As the plays before left it: once upgraded, the card in play is its upgraded copy (decision #218).
+            case HookFact.CardUpgradable: return (in HookArgs args) => args.Play?.Card.Upgradable == true ? 1m : 0m;
             case HookFact.HpLostSoFar: return (in HookArgs args) => args.HpLost;
             case HookFact.CausedByEthereal: return (in HookArgs args) => args.Hook == HookName.AfterCardExhausted && args.State.EtherealNow ? 1m : 0m;
             case HookFact.CardTag:

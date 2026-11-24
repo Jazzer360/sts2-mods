@@ -103,7 +103,7 @@ public static partial class SimEngine
         {
             if (branch.PlayResultLocation == SimResultLocation.HandTop) AddToHand(branch, cardPlayAction.Play.Owner, count: 1);
             branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty;
-            branch.PlayCountNow = 0; branch.PlayResultLocation = SimResultLocation.Default; branch.PlayUpgrades = 0;
+            branch.PlayCountNow = 0; branch.PlayResultLocation = SimResultLocation.Default; branch.PlayChanges = SimState.CardChanges.None;
         });
     }
 
@@ -113,7 +113,7 @@ public static partial class SimEngine
     /// </summary>
     private static void PlayOnce(BranchSet branches, SimCardPlay play, IReadOnlyList<SimAction> body, int index)
     {
-        branches.Do(branch => { branch.CurrentPlay = play with { PlayIndex = index, PlayCount = branch.PlayCountNow }; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
+        branches.Do(branch => { branch.CurrentPlay = play with { Card = WithKeywords(play.Card, branch.PlayChanges.Keywords), PlayIndex = index, PlayCount = branch.PlayCountNow }; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
         HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, branch.CurrentPlay!));
         branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Started));
         foreach (var action in body) Run(branches, action);
@@ -131,14 +131,35 @@ public static partial class SimEngine
     /// <summary>
     /// CardCmd.Upgrade of the card in play (cardPlay.Card): a card that can still be upgraded is (UpgradeInternal), so its later plays in this card
     /// play are its upgraded copy's (CardPlayAction.Upgraded); one that can't is left as it is (the command's !IsUpgradable). A card upgraded a
-    /// second time in one card play (a card with more than one upgrade) makes its later plays unknown: only one upgraded copy is read.
+    /// second time in one card play (a card with more than one upgrade) makes its later plays unknown: only one upgraded copy is read. The card
+    /// itself changes (UpgradeInternal on it), so the listeners after this one in the same play see it upgraded.
     /// </summary>
     internal static void UpgradeCardInPlay(SimState state)
     {
-        if (state.CurrentPlay is not { Card.Upgradable: true }) return;
-        state.PlayUpgrades++;
-        if (state.PlayUpgrades > 1) state.Unmodelled ??= "the card was upgraded twice during its play: its later plays aren't known";
+        if (state.CurrentPlay is not { Card.Upgradable: true } play) return;
+        state.PlayChanges = state.PlayChanges with { Upgrades = state.PlayChanges.Upgrades + 1 };
+        if (state.PlayChanges.Upgrades > 1) state.Unmodelled ??= "the card was upgraded twice during its play: its later plays aren't known";
+        else if (state.PlayChanges.Upgraded is { } upgraded) state.CurrentPlay = play with { Card = WithKeywords(upgraded.Card, state.PlayChanges.Keywords) };
     }
+
+    /// <summary>
+    /// CardCmd.ApplyKeyword of the card in play (cardPlay.Card: Master Planner's Sly): it has it from now on, for the listeners after this one and
+    /// its later plays in this card play (card.AddKeyword). Of the keywords, the simulator's card carries Ethereal (SimCard.Ethereal, a hook's
+    /// fact); nothing in a play reads the others, so nothing is kept for them (Sly acts as the card is discarded; Exhaust doesn't send it to the
+    /// exhaust pile: its result pile was decided before its first play, CardModel.GetResultLocationForCardPlay).
+    /// </summary>
+    internal static void KeywordCardInPlay(SimState state, string keyword)
+    {
+        if (keyword != EtherealKeyword || state.CurrentPlay is not { } play || state.PlayChanges.Keywords.Has(keyword)) return;
+        state.PlayChanges = state.PlayChanges with { Keywords = state.PlayChanges.Keywords.With(keyword, amount: 1) };
+        state.CurrentPlay = play with { Card = WithKeywords(play.Card, state.PlayChanges.Keywords) };
+    }
+
+    /// <summary>The card with the keywords a play added that the simulator's card carries (Ethereal).</summary>
+    private static SimCard WithKeywords(SimCard card, NamedCounts keywords) =>
+        keywords.Has(EtherealKeyword) && !card.Ethereal ? card with { Ethereal = true } : card;
+
+    private const string EtherealKeyword = "Ethereal";
 
     /// <summary>
     /// One of a card's enchantment's programs on each branch (decision #217: SimModels.Enchantment, read from its class's code). An enchantment whose
@@ -190,7 +211,7 @@ public static partial class SimEngine
             if (counted != null) foreach (var (model, owner) in counted) model.AfterModifyingCardPlayCount(state, owner, play);
         }
         state.PlayCountNow = Math.Max(1, count);
-        state.PlayUpgrades = 0;
+        state.PlayChanges = SimState.CardChanges.None with { Upgraded = cardPlayAction.Upgraded };
     }
 
     /// <summary>

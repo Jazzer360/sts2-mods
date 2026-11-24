@@ -115,6 +115,8 @@ public enum HookFact
     CardType,
     /// <summary>The card played is Ethereal (its Keywords contain Ethereal).</summary>
     CardEthereal,
+    /// <summary>The card played can still be upgraded (cardPlay.Card.IsUpgradable: Razor Tooth's test), as the plays before left it.</summary>
+    CardUpgradable,
     /// <summary>The card played has the tag named in Of (its Tags contain Shiv).</summary>
     CardTag,
     /// <summary>The card played's cost as it's played (EnergyCost.GetResolved()).</summary>
@@ -486,6 +488,18 @@ public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) 
 
 /// <summary>OrbCmd.Channel&lt;T&gt; for the owner: one orb of the kind named (SimEngine.ChannelKind).</summary>
 public sealed record ChannelStep(OrbKind Orb) : HookStep;
+
+/// <summary>
+/// CardCmd.Upgrade of the card played (cardPlay.Card): a card that can still be upgraded is, so its later plays in this card play are its
+/// upgraded copy's (SimEngine.UpgradeCardInPlay, decision #218).
+/// </summary>
+public sealed record UpgradeCardStep : HookStep;
+
+/// <summary>
+/// CardCmd.ApplyKeyword of the card played (cardPlay.Card), with the keyword named (the game's CardKeyword): it has it for its later plays in
+/// this card play (SimEngine.KeywordCardInPlay, decision #218).
+/// </summary>
+public sealed record ApplyKeywordStep(string Keyword) : HookStep;
 
 /// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
 public sealed record RemovePowerStep : HookStep;

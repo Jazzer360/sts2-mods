@@ -8185,6 +8185,82 @@
     "HelpsOwner": false
   },
   {
+    "Name": "MasterPlannerPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "MasterPlannerPower.AfterCardPlayed:0016",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "MasterPlannerPower.AfterCardPlayed:002A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyKeywordStep",
+            "Keyword": "Sly",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "MasterPlannerPower.AfterCardPlayed:0016",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "MasterPlannerPower.AfterCardPlayed:002A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
     "Name": "Metronome",
     "Kind": "Relic",
     "Hooks": [
@@ -13770,6 +13846,100 @@
                       "Value": 0
                     }
                   }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "RazorTooth",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "UpgradeCardStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "RazorTooth.AfterCardPlayed:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "RazorTooth.AfterCardPlayed:0032",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "RazorTooth.AfterCardPlayed:0011",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "RazorTooth.AfterCardPlayed:0029",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "RazorTooth.AfterCardPlayed:0045",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardUpgradable"
                 }
               }
             }

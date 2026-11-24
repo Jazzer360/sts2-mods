@@ -95,7 +95,7 @@ power LagavulinMatriarchDominionPower: AfterSideTurnEnd: read
 power LostLutePower: AfterCardPlayed: gap: CardPileCmd.AutoPlayFromDrawPile isn't translated
 power LullabyPower: AfterApplied: read | AfterCardPlayed: read | BeforeSideTurnStart: read
 power MagicBombPower: AfterDeath: read | AfterSideTurnEnd: gap: tests this.Applier.IsDead
-power MasterPlannerPower: AfterCardPlayed: gap: CardCmd.ApplyKeyword isn't translated
+power MasterPlannerPower: AfterCardPlayed: read
 power MayhemPower: AfterAutoPrePlayPhaseEntered: gap: the simulator runs no read model's AfterAutoPrePlayPhaseEntered
 power MonarchsGazePower: AfterDamageGiven: read
 power MonologuePower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
@@ -244,7 +244,7 @@ relic Metronome: AfterCombatEnd: not run: after the fight: no prediction reaches
 relic MightyWings: AfterDamageGiven: read
 relic MiniRegent: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterStarsSpent: read | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
 relic MummifiedHand: AfterCardPlayed: gap: changes a game object outside a command (CardModel.SetToFreeThisTurn)
-relic MusicBox: AfterCardPlayed: gap: CardCmd.ApplyKeyword isn't translated | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCardPlayed: gap: the value cardPlay.Card | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
+relic MusicBox: AfterCardPlayed: gap: a keyword on cardPlay.Card.CreateClone(), not the card played | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCardPlayed: gap: the value cardPlay.Card | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
 relic Nunchaku: AfterCardPlayed: read
 relic ObsidianVice: BeforeSideTurnEnd: read
 relic Orichalcum: BeforeSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
@@ -258,7 +258,7 @@ relic Permafrost: AfterCardPlayed: read | AfterRoomEntered: not run: entering a 
 relic PhilosophersStone: AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterRoomEntered: not run: entering a room: outside the fight's turns | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
 relic Pocketwatch: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | AfterSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic RainbowRing: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
-relic RazorTooth: AfterCardPlayed: gap: CardCmd.Upgrade isn't translated
+relic RazorTooth: AfterCardPlayed: read
 relic RedSkull: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic Regalite: AfterCardGeneratedForCombat: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
 relic RippleBasin: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnEnd: read | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers

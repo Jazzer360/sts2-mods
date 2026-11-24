@@ -14,6 +14,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Changed
 - Adroit, Corrupted, Inky, Swift and Sown are worked out from their own code (what each does when its card is played). What's shown is unchanged.
+- Razor Tooth and Master Planner are worked out from their own code (the upgrade and the Sly they give the card you play). What's shown is unchanged but for Razor Tooth's replay fix below.
 - The predictions make less garbage: about half as much in the busiest multiplayer fights (four Defects), a fifth less in a typical one.
 - Orbs are worked out from their own code (Lightning, Frost, Dark, Glass and Plasma: what each passive and evoke does, and their values), and so are Focus, Infused Core, Thunder and Gold-Plated Cables. What's shown is unchanged but for the fixes below. Joss Paper, Haunt and Centennial Puzzle are worked out from their own code too, with what's shown unchanged.
 - Tungsten Rod, The Boot and Beating Remnant are worked out from their own code (what each does to the HP a hit takes). What's shown is unchanged.

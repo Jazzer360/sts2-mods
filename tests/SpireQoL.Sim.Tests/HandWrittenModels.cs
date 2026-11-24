@@ -1419,3 +1419,27 @@ public sealed class CentennialPuzzle : RelicProc
     }
 }
 
+
+// ---- a card changed in its play (Sim/Models/ProcRelicModels.cs and ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// RazorTooth.AfterCardPlayed: an Attack or Skill you play that can be upgraded is upgraded (CardCmd.Upgrade): a replay's later plays are the
+/// upgraded card's (SimEngine.UpgradeCardInPlay), which can't be upgraded again.
+/// </summary>
+public sealed class RazorTooth : RelicProc
+{
+    public override bool UpgradesCardInPlay => true;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner) || play.Card.Type is not (SimCardType.Attack or SimCardType.Skill) || !play.Card.Upgradable) return One(state);
+        SimEngine.UpgradeCardInPlay(state);
+        return Fire(state, owner);
+    }
+}
+
+/// <summary>MasterPlannerPower.AfterCardPlayed: each Skill its owner plays gains Sly.</summary>
+public sealed class MasterPlannerPower : ProcModel
+{
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && play.Card.Type == SimCardType.Skill ? Fire(state, owner) : One(state);
+}

@@ -7,7 +7,6 @@ using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
 using SpireQoL.Sim;
 using MegaCrit.Sts2.Core.Models.Powers;
-using MegaCrit.Sts2.Core.Models.Relics;
 
 namespace SpireQoL.Diagnostics;
 
@@ -166,9 +165,9 @@ public sealed partial class ProcAudit
                     issues.Add($"no tab: {name} fired (its tab aims at other targets)");
                 continue;
             }
-            // Razor Tooth upgrades the played card without flashing (RazorTooth.AfterCardPlayed: no Flash call): its
-            // effect is checked instead (CardCmd.Upgrade does nothing once the fight is ending).
-            if (name == nameof(RazorTooth))
+            // A model whose code upgrades the played card (Razor Tooth: RazorTooth.AfterCardPlayed, no Flash call) is checked by its
+            // effect instead (CardCmd.Upgrade does nothing once the fight is ending), read from its code (SimModel.UpgradesCardInPlay).
+            if (SimModels.Get(name) is { UpgradesCardInPlay: true })
             {
                 if (window.UpgradeBefore < 0 || window.FightEnded) continue;
                 if (window.Card.CurrentUpgradeLevel <= window.UpgradeBefore) issues.Add($"didn't fire: {name} (the card wasn't upgraded)");

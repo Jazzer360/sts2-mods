@@ -90,13 +90,6 @@ public sealed class SicEmPower : ProcModel
     }
 }
 
-/// <summary>MasterPlannerPower.AfterCardPlayed: each Skill its owner plays gains Sly.</summary>
-public sealed class MasterPlannerPower : ProcModel
-{
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Skill ? Fire(state, owner) : One(state);
-}
-
 /// <summary>SmoggyPower.AfterCardPlayed: each Skill its owner plays afflicts their other Skills with Smog (bad for you).</summary>
 public sealed class SmoggyPower : ProcModel
 {

@@ -1,5 +1,5 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 103 hand-written models.
+# 101 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
@@ -8,7 +8,6 @@ its own data: a card or a play kept, a field used directly: 14 classes, 7 alone:
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 4 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower, Twine*, YahPower*
 hooks: BeforeAttack and AfterAttack: 6 classes, 3 alone: AimPower, BoneFlute*, GigantificationPower*, QuietusPower, SkittishPower, VigorPower*
-commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 4 classes, 3 alone: MasterPlannerPower*, MummifiedHand*, MusicBox, RazorTooth*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: BiiigHug*, BurningSticks*, PersonalHivePower*
 the damage cap and AfterModifyingDamageAmount: 3 classes, 3 alone: HardToKillPower*, IntangiblePower*, SlowPower*
 the fight's log (the history ledger, decision #191): 3 classes, 3 alone: SongPathPower*, UnmovablePower*, ViolentChordPower*
@@ -30,6 +29,7 @@ a command on another creature (the players, a card's owner, a roll's list): 3 cl
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
 hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SmoggyPower, SurroundedPower, UnceasingTop*
 queries: the damage's or block's props: 3 classes, 1 alone: AimPower, NoBlockPower*, QuietusPower
+commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 2 classes, 1 alone: MummifiedHand*, MusicBox
 hooks: the power amount given: 2 classes, 1 alone: SneckoSkull*, UnsettlingLamp
 a pick: 1 classes, 1 alone: StratagemPower*
 commands: AutoPlayFromDrawPile: 1 classes, 1 alone: LostLutePower*
@@ -91,10 +91,9 @@ JugglingPower: [its own data: a card or a play kept, a field used directly] Afte
 LethalityPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyDamageMultiplicative: gap: tests cardSource.Pile
 LostLutePower: [commands: AutoPlayFromDrawPile] AfterCardPlayed: gap: CardPileCmd.AutoPlayFromDrawPile isn't translated
 MagicBombPower: [queries: the power's applier (alive, its side)] AfterSideTurnEnd: gap: tests this.Applier.IsDead
-MasterPlannerPower: [commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn)] AfterCardPlayed: gap: CardCmd.ApplyKeyword isn't translated
 MonarchsGazePower: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 MummifiedHand: [commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn)] AfterCardPlayed: gap: changes a game object outside a command (CardModel.SetToFreeThisTurn)
-MusicBox: [commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn)] AfterCardPlayed: gap: CardCmd.ApplyKeyword isn't translated | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: the value cardPlay.Card
+MusicBox: [commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn)] AfterCardPlayed: gap: a keyword on cardPlay.Card.CreateClone(), not the card played | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: the value cardPlay.Card
 NecroMasteryPower: [hooks: AfterCurrentHpChanged] AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
 NoBlockPower: [queries: the damage's or block's props] ModifyBlockMultiplicative: gap: tests props.HasFlag(4)
 NostalgiaPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
@@ -111,7 +110,6 @@ PlowPower: [a monster's own state set (its flag, its next move)] AfterDamageRece
 Pocketwatch: [hooks: the hand draw] AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | [hooks: the hand draw] ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 QuietusPower: [arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd)] AfterArrowShot: gap: the simulator runs no read model's AfterArrowShot | [hooks: BeforeAttack and AfterAttack] AfterAttack: gap: the simulator runs no read model's AfterAttack | [hooks: BeforeAttack and AfterAttack] BeforeAttack: gap: the simulator runs no read model's BeforeAttack | [queries: the damage's or block's props] ModifyDamageMultiplicative: gap: tests props.HasFlag(32)
 RavenousPower: [a monster's own state set (its flag, its next move)] AfterDeath: gap: sets CorpseSlug.IsRavenous where the reader reads no store
-RazorTooth: [commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn)] AfterCardPlayed: gap: CardCmd.Upgrade isn't translated
 ReboundPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
 RedSkull: [hooks: AfterCurrentHpChanged] AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
 Regret: [the simulator's own model (no game class by its name)] no game class
